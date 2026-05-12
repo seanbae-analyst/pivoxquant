@@ -212,7 +212,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
         <div style={{ border: "1.5px solid var(--r-neg)", padding: 22, borderRadius: 6, marginBottom: 14 }}>
           <PdfFlexBetween>
             <div>
-              <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
+              <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                 {data.watchPrimary.lbl}
               </div>
               <h3 style={{ fontSize: 24, margin: "6px 0", fontWeight: 500 }} className="font-serif" >
@@ -231,7 +231,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
             key={i}
             style={{ borderLeft: "3px solid var(--r-warn)", padding: 18, background: "var(--r-bg-soft)", marginBottom: 14, borderRadius: 4 }}
           >
-            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
+            <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               {w.lbl}
             </div>
             <p style={{ fontSize: 12, lineHeight: 1.6, color: "var(--r-ink-2)", marginTop: 6 }}>{w.body}</p>

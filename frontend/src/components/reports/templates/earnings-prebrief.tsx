@@ -260,7 +260,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                 <div className="pq-pdf-kpi-lbl">Straddle Implied</div>
                 <div
                   style={{
-                    fontSize: 36,
+                    fontSize: "var(--pq-text-pdf-hero)",
                   }}
                 className="font-serif" >
                   {data.impliedMovePct}
@@ -293,7 +293,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                     Original mock said "BUY · 0.82"; reclassified for legal safety. */}
                 <div
                   style={{
-                    fontSize: 36,
+                    fontSize: "var(--pq-text-pdf-hero)",
                     color: SIGNAL_TONE[data.quantLabel],
                   }}
                   data-pq-signal-label={data.quantLabel}

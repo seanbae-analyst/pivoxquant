@@ -144,7 +144,7 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
       <div style={{ minWidth: 0 }}>
         <div
           className="pq-paper-kicker"
-          style={{ fontSize: 9, letterSpacing: "0.22em" }}
+          style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: "0.22em" }}
         >
           {quote.symbol}
         </div>

@@ -104,7 +104,7 @@ export function PortfolioSnapshotCard() {
         className="font-mono"
         style={{
           fontVariantNumeric: "tabular-nums",
-          fontSize: 28,
+          fontSize: "var(--pq-text-avatar)",
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",
           fontWeight: 500,

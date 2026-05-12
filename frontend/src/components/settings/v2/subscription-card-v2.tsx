@@ -211,7 +211,7 @@ export function SubscriptionCardV2({
                 className="font-display"
                 style={{
                   fontWeight: 500,
-                  fontSize: 28,
+                  fontSize: "var(--pq-text-avatar)",
                   color: "var(--pq-ivory)",
                   marginTop: 6,
                   letterSpacing: "-0.02em",

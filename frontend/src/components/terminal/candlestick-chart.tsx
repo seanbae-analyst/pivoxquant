@@ -392,7 +392,7 @@ export function CandlestickChart({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 9,
+            fontSize: "var(--pq-text-kicker)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.45)",
           }}
@@ -429,7 +429,7 @@ export function CandlestickChart({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 9,
+                  fontSize: "var(--pq-text-kicker)",
                   letterSpacing: "0.2em",
                   color: "rgba(245,240,232,0.45)",
                 }}

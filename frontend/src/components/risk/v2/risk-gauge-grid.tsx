@@ -80,7 +80,7 @@ function BigGaugeCard({
         {unit ? (
           <span
             style={{
-              fontSize: 26,
+              fontSize: "var(--pq-text-quote)",
               color: "rgba(245,240,232,0.55)",
               marginLeft: 2,
             }}

@@ -141,7 +141,7 @@ export function CorrelationHeatmap() {
                   style={{
                     height: 32,
                     width: 48,
-                    fontSize: 9,
+                    fontSize: "var(--pq-text-kicker)",
                     letterSpacing: "0.18em",
                     color: "var(--pq-bronze)",
                   }}
@@ -153,7 +153,7 @@ export function CorrelationHeatmap() {
                     style={{
                       height: 32,
                       width: 48,
-                      fontSize: 9,
+                      fontSize: "var(--pq-text-kicker)",
                       letterSpacing: "0.12em",
                       color: "var(--pq-bronze)",
                     }}
@@ -173,7 +173,7 @@ export function CorrelationHeatmap() {
                       width: 48,
                       paddingRight: 8,
                       textAlign: "right",
-                      fontSize: 9,
+                      fontSize: "var(--pq-text-kicker)",
                       letterSpacing: "0.12em",
                       color: "var(--pq-bronze)",
                     }}

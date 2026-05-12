@@ -93,7 +93,7 @@ export default function SampleReportsIndexPage() {
             >
               <div
                 style={{
-                  fontSize: 9,
+                  fontSize: "var(--pq-text-kicker)",
                   letterSpacing: "1.6px",
                   textTransform: "uppercase",
                   color: "#8a8a8a",

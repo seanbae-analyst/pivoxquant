@@ -148,7 +148,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
         <PdfSectionTitle variant="sm">Equity Curve · 20Y</PdfSectionTitle>
         <PdfCard>
           <PdfFlexBetween>
-            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
+            <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               Cumulative Return · 2006-01 → 2026-04
             </div>
             <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--r-ink-3)", }} className="font-mono" >

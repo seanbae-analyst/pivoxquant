@@ -262,7 +262,7 @@ export function LedgerBookPaper({
           </div>
           <div
             className="pq-paper-kicker"
-            style={{ fontSize: 9, color: "rgba(20,20,20,0.48)" }}
+            style={{ fontSize: "var(--pq-text-kicker)", color: "rgba(20,20,20,0.48)" }}
           >
             {positions.length} held
           </div>
@@ -322,7 +322,7 @@ export function LedgerBookPaper({
                         textAlign: h.a as "left" | "right",
                         padding: "0 6px 10px 6px",
                         borderBottom: "0.5px solid rgba(184,149,106,0.32)",
-                        fontSize: 9,
+                        fontSize: "var(--pq-text-kicker)",
                       }}
                     >
                       {h.l}

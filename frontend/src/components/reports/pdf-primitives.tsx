@@ -662,7 +662,7 @@ export function PdfWaterfall({ items }: { items: PdfWaterfallItem[] }) {
                   <small
                     style={{
                       color: "var(--r-ink-3)",
-                      fontSize: 9,
+                      fontSize: "var(--pq-text-kicker)",
                     }}
                   >
                     {it.detail}

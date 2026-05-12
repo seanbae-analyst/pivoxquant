@@ -193,7 +193,7 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
           >
             <div
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "1.5px",
                 textTransform: "uppercase",
                 color: "var(--r-ink-4)",
@@ -205,7 +205,7 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
           </div>
           <div
             style={{
-              fontSize: 26,
+              fontSize: "var(--pq-text-quote)",
               fontWeight: 500,
               letterSpacing: "-0.012em",
               marginBottom: 8,

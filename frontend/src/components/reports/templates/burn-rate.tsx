@@ -211,7 +211,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
             <PdfCard key={c.ticker}>
               <PdfFlexBetween style={{ marginBottom: 8 }}>
                 <div>
-                  <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
+                  <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                     {c.ticker} · {c.name}
                   </div>
                   <h3 style={{ fontSize: "var(--pq-text-quote)", margin: 0, fontWeight: 500 }} className="font-serif" >
@@ -261,7 +261,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
         <div style={{ background: "var(--r-bg-soft)", borderRadius: 6, padding: 16, marginBottom: 14 }}>
           <PdfFlexBetween>
             <div>
-              <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
+              <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                 {data.watch.ticker} · {data.watch.name}
               </div>
               <strong>{data.watch.runway}</strong>

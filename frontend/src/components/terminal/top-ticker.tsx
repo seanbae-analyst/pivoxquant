@@ -205,7 +205,7 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
           className="uppercase"
           aria-label="Stale market data"
           style={{
-            fontSize: 9,
+            fontSize: "var(--pq-text-kicker)",
             letterSpacing: "0.18em",
             padding: "1px 4px",
             border: "0.5px solid rgba(245,240,232,0.25)",
@@ -461,7 +461,7 @@ export function TopTicker() {
       <span
         className="ml-auto pr-4 font-mono"
         style={{
-          fontSize: 9,
+          fontSize: "var(--pq-text-kicker)",
           letterSpacing: "0.22em",
           color: rt.connected
             ? "rgba(125,180,135,0.85)"

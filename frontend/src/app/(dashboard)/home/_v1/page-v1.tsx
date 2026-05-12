@@ -606,7 +606,7 @@ export default function HomePageV1() {
               href="/reports"
               className="font-mono uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -739,7 +739,7 @@ export default function HomePageV1() {
               href="/portfolio"
               className="font-mono uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -775,7 +775,7 @@ export default function HomePageV1() {
               href="/watchlist"
               className="font-mono uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -815,7 +815,7 @@ export default function HomePageV1() {
               href="/portfolio"
               className="font-mono uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -844,7 +844,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -928,7 +928,7 @@ export default function HomePageV1() {
               href={`/detail/${encodeURIComponent(topTicker)}`}
               className="font-mono uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -986,7 +986,7 @@ export default function HomePageV1() {
               href="/signals"
               className="font-mono uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -1020,7 +1020,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -1085,7 +1085,7 @@ export default function HomePageV1() {
           <span
             className="font-mono uppercase ml-auto"
             style={{
-              fontSize: 9,
+              fontSize: "var(--pq-text-kicker)",
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.4)",
               marginTop: "auto",

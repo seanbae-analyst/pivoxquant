@@ -196,7 +196,7 @@ export function SectorAllocationDonut({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 9,
+            fontSize: "var(--pq-text-kicker)",
             letterSpacing: "0.24em",
             color: "rgba(245, 240, 232, 0.4)",
           }}
@@ -304,7 +304,7 @@ export function SectorAllocationDonut({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 9,
+              fontSize: "var(--pq-text-kicker)",
               letterSpacing: "0.22em",
               color: "rgba(245, 240, 232, 0.5)",
               marginBottom: 2,

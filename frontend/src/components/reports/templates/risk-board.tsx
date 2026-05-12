@@ -562,7 +562,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
               >
                 <div
                   style={{
-                    fontSize: 36,
+                    fontSize: "var(--pq-text-pdf-hero)",
                     fontWeight: 500,
                     lineHeight: 1,
                   }}

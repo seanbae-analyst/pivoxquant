@@ -260,7 +260,7 @@ export function InteractiveLineChart({
           <div
             className="uppercase"
             style={{
-              fontSize: "9px",
+              fontSize: "var(--pq-text-kicker)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze, #B8956A)",
               marginBottom: "4px",

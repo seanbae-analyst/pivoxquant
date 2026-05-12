@@ -269,7 +269,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
         {data.lessons.map((l) => (
           <PdfCard key={l.num}>
-            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
+            <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               {l.num}
             </div>
             <h3 style={{ fontSize: 24, margin: "6px 0", fontWeight: 500 }} className="font-serif" >

@@ -425,22 +425,35 @@ jobs:
           count=$(grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
             --include="*.tsx" --include="*.ts" \
             | grep -v '__tests__' | wc -l | xargs)
-          # Baseline ratcheted by PR `refactor/wave15-fontsize-phase5`
-          # (Wave 15) migrating Top 21-30 offender files: profile/v2
-          # /danger-zone-card-v2, reports/templates/self-audit,
-          # reports/v2/generate-artifact-cta, risk/v2/risk-timeline-chart,
-          # risk/v2/seven-layer-breakdown, settings/v2/identity-card-v2,
-          # signals/v2/signals-timeline-grid, app/(auth)/signup
-          # /oauth-finalize, app/features/explorer, home/v2
-          # /companion-archive-card — 593 → 519 inline literals (Δ -74).
-          # Prior baselines: W12 692 → 593, W10 733 → 692,
-          # W9 868 → 733, W8 961 → 868. Remaining inline sites are
-          # dominated by size-9 mono kickers / 11px PDF caption / 28px
-          # avatar / 36px PDF hero which have no token equivalent and
-          # are intentionally retained. Future waves should target
-          # remaining Top 31+ tree-wide sweep + Phase 6 token-less sites.
-          # Ratchet is one-way — new code must not increase this count.
-          baseline=477
+          # Baseline ratcheted by PR `feat/typography-tokens-phase7-w17`
+          # (Wave 17 — Phase 7) adding 3 new tokens to globals.css §3.3
+          # (--pq-text-kicker 9px / --pq-text-avatar 28px /
+          # --pq-text-pdf-hero 36px) and sweeping the remaining
+          # token-less buckets that prior waves left behind. Migrated
+          # surfaces: home/today-memo-hero, home/equity-curve-chart,
+          # home/sector-allocation-donut, home/v2/portfolio-snapshot-card,
+          # market/indices-detail-paper, market/overview-paper,
+          # portfolio/ledger-book-paper, profile/v2/identity-card-v2,
+          # risk/v2/correlation-heatmap, risk/v2/risk-gauge-grid,
+          # settings/v2/subscription-card-v2,
+          # reports/{pdf-primitives, brag-card, burn-rate, credit-rating,
+          # insider-mirror, kpi-dashboard, monthly-finance, sp500-backtest,
+          # year-end-letter, earnings-prebrief, morning-brief-plus,
+          # risk-board}, reports/v2/{artifact-kind-card,
+          # year-timeline-block}, terminal/{candlestick-chart, top-ticker},
+          # layout/terminal-sidebar, charts/interactive-line-chart,
+          # companion/chat-panel, sample-reports, home/_v1/page-v1,
+          # (auth)/signup/oauth-finalize — 477 → 415 inline literals (Δ -62).
+          # Prior baselines: W16 519 → 477, W15 593 → 519, W12 692 → 593,
+          # W10 733 → 692, W9 868 → 733, W8 961 → 868. The single
+          # remaining 36px site (app/opengraph-image.tsx) is an
+          # ImageResponse target — CSS custom properties do not resolve
+          # in Next.js Edge/Node ImageResponse runtime, so inline is
+          # intentional. Other residual buckets (10/11/17/19/22px) need
+          # separate KR-friendly micro-token decisions and are deferred
+          # to a future wave. Ratchet is one-way — new code must not
+          # increase this count.
+          baseline=415
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
