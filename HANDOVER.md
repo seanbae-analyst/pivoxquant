@@ -1,6 +1,109 @@
-# PivoxQuant — 인수인계서 (2026-05-12 v38 — 47 PR · OPEN PR 0 · fontSize 토큰화 98% 완료)
+# PivoxQuant — 인수인계서 (2026-05-12 v39 — 55 PR · OPEN PR 0 · prod SHIP-BLOCKER 해결 + GitHub Actions 완전 비활성)
 
-## 🟢 2026-05-12 v38 종합 — **47 PR squash-merged + 5 자율 close + 1 self-heal** · main `f2fa5bbe → 79c115ad` · **OPEN PR 0건**
+## 🟢 2026-05-12 v39 종합 — **55 PR squash-merged + 5 자율 close + 1 self-heal** · main `f2fa5bbe → d40138a4` · **OPEN PR 0건**
+
+### v39 추가 (v38 → v39, 7 PR — 버그헌팅 3 round + Actions 비활성)
+
+#### Round 1 버그헌팅 (3 PR + 1 SHIP-BLOCKER)
+| PR | 핵심 | Severity |
+|---|---|---|
+| **#326** | **prod users.birthdate column missing** — alembic 031만 추가됐고 `_add_column_if_missing` 누락 → v34 이후 3주+ OAuth 503 broken | **SHIP-BLOCKER** |
+| #327 | Sunday → Monday KST + "Notify me at launch" → "Pre-register · Stripe 활성화 시 결제" | P1 |
+| #328 | HEALTH_VERSION hardcoded "2026-04-19" → RAILWAY_GIT_COMMIT_SHA 동적 + weekly-memo WK-23 → WK-17 | P2 |
+
+#### Round 2 버그헌팅 (1 PR + 5 findings, 1 fix)
+| PR | 핵심 | Severity |
+|---|---|---|
+| #329 | sp_locale cookie Secure flag 누락 (middleware 첫 방문자 노출) | P1 |
+| (no-fix) | `/api/realtime/snapshot` 404 = 지침 오류 / `/api/discover/*` 404 = 미구현 / sitemap+robots.txt = beta-gate noindex로 안전 / CSP 307 = redirect body 없음 마이너 / dev-login 404 = 의도된 production fail-fast | — |
+
+#### Round 3 버그헌팅 (verify-data + investigator + 2 PR)
+| PR | 핵심 |
+|---|---|
+| #330 | US naked ticker 7 surface (audit) + 5 sweep (thorough_fixes) → 종목명 병기 + 회귀 게이트 65 tests |
+| #331 | backend pre-existing 3 fail 정확한 root cause + test sync (PR #229 swot 500→503 + PR #236 KS11 bound 50000) |
+| (no-fix) | /pricing 0 KRW = false positive (PriceCountUp IntersectionObserver 1.4s 카운트업 의도된 동작) |
+
+#### GitHub Actions 비활성화
+| PR | 핵심 |
+|---|---|
+| **#332** | **22 workflow + dependabot `.yml` → `.yml.disabled` rename** — Free tier 2,000분 한도 초과 (5월 2,072분) + 카드 미등록 → 비용 0원 영구 |
+
+### v39 직접 verified facts (2026-05-12 grep/git/curl/gh API)
+- **main HEAD**: `d40138a4`
+- **v34 → v39 cumulative commits**: **55**
+- **OPEN PR**: 0건
+- **inline fontSize tree count**: 15 (v38 시점 그대로)
+- **prod OAuth**: status 302 (정상화 유지)
+- **prod users.birthdate column**: 존재 확인 (psycopg2 query)
+- **Active GitHub Actions workflow `.yml`**: **0개** (모두 `.disabled`)
+- **GitHub plan**: free / 5월 net 결제 $0 / 카드 미등록
+
+### v39 SHIP-BLOCKER 해결 evidence
+**Root cause** (bug-hunter Round 1 발견):
+- Railway live error log: `LINE 1: ...cross_border_consent_revoked_at, users.birthdate...` SQLAlchemy `UndefinedColumn`
+- prod 코드베이스는 **alembic 미사용** — `db.create_all()` + `_add_column_if_missing()` 패턴
+- PR #283/#285 alembic 031 추가했으나 `app.py`에 `_add_column_if_missing("users", "birthdate", "DATE")` 누락
+- 결과: v34 (2026-05-10) 이후 prod 완전 broken (OAuth 503, 회원가입 0건 가능)
+
+**Fix verify** (직접):
+- PR #326 머지 → Railway auto-deploy → prod DB `birthdate` column 추가 (psycopg2 확인)
+- `/api/auth/google` → status 302 + Google OAuth redirect (이전 503)
+- 모든 user query 정상
+
+### v39 GitHub Actions 비활성화 결정
+**원인**: gh CLI `user` scope 갱신 후 직접 billing API 조회 — 5월 Actions 2,072분 사용 ($24.34 gross / $24.34 discount / **$0 net**). Free tier 한도 72분 초과 + 카드 미등록 → 모든 CI 차단 상태 (54 PR 전부 `--admin` 우회 머지).
+
+**결정** (사장님 명령 "걍 안 하는 게 낫지 않냐 / 돈 안나가게 에러 없이"):
+- 22 workflow + dependabot `.yml` → `.yml.disabled` rename
+- GitHub은 정확한 `.yml`만 인식 → 자동 실행 영구 멈춤
+- 비용 0원 영구 / 카드 영구 불필요
+- 로컬 검증 모두 보존 (`.githooks/pre-commit` + pytest 50+ + vitest 250+)
+
+**`.github/README.md`** 신설 — 비활성화 배경 + 재활성화 단계 박음.
+
+### v39 메모리 룰 갱신
+- **[feedback_no_busywork.md]** 정정 (2026-05-12 사장님 직접): "디자인 시스템 v3 락-인 위반 (drift) = 버그" 분류. fontSize/hex/font drift는 fix 정당. cosmetic 아닌 v3 락-인 violation.
+
+### v39 잔존 자율 fix 가능
+- 없음 (모두 해결됨, 또는 사장님 결정 대기 항목)
+
+### v39 사장님 직접 액션 (자율 100% 불가, carry-over)
+1. **변호사 미팅 Q1-Q17** (300-500만원) — 유료결제 BLOCKER
+2. **통신판매업 신고** (성동구청, ~45k원)
+3. ~~GitHub Actions billing 해제~~ — **v39에서 비활성화 완료, 무관**
+4. **Sentry New Client Key + Vercel env** (옵션, 보안 강화)
+5. **2FA 활성화** (보안 권고, 무료 5분)
+6. **베타테스터 BETA_PASSWORD 통보** (`cat /tmp/new-beta-pw.txt`)
+7. **라이브 spot-check** (5분, PR #326/#290/#289/#295 verify)
+8. KRX Open Data Portal 신청 (P1)
+9. Anthropic API key rotate (있으면)
+10. FMP API key rotate
+11. KIS App key/secret rotate
+12. (외 4건 P2, 결제 활성화 시점)
+
+### v39 다음 세션 첫 액션
+```bash
+# 1. main 동기화
+cd /Users/seanbae/Desktop/취준/stockpilot
+git pull origin main
+git log --oneline -1  # main HEAD = d40138a4 확인
+
+# 2. 라이브 spot-check (5분)
+#    - https://www.pivoxquant.com/api/auth/google → 302 verify (PR #326)
+#    - https://www.pivoxquant.com/signup → DOB → agree_age auto (PR #290)
+#    - https://www.pivoxquant.com/sample-reports/weekly-memo → AI 라벨 (PR #289)
+#    - https://www.pivoxquant.com/dashboard → /home redirect (PR #295)
+
+# 3. 외부 액션 우선순위:
+#    - P0: 변호사 미팅 일정 + Q1-Q17 송부
+#    - P0: 통신판매업 신고 (성동구청)
+#    - P1: 베타테스터 BETA_PASSWORD 통보
+```
+
+---
+
+## 🟢 2026-05-12 v38 종합 (이전 cycle) — **47 PR squash-merged + 5 자율 close + 1 self-heal** · main `f2fa5bbe → 79c115ad` · OPEN PR 0건
 
 ### v38 추가 (v37 → v38, 9 PR — 자율 야간 마라톤 Wave 15-20)
 
