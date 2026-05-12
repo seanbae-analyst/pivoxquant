@@ -1,4 +1,6 @@
 """Market data routes: overview, macro, sectors, news, prices, chart, etc."""
+from __future__ import annotations
+
 import json
 import logging
 import time as _time

@@ -2,6 +2,8 @@
 PivoxQuant — AI Service (Claude Integration)
 Uses Claude Haiku for cost-efficient, beginner-friendly financial insights.
 """
+from __future__ import annotations
+
 
 import os
 import re

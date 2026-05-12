@@ -7,6 +7,8 @@ persists the report, and sends a Slack notification.
 
 Capital-markets-law guard: identical to other Growth OS scenarios.
 """
+from __future__ import annotations
+
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone

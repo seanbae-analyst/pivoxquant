@@ -15,6 +15,8 @@ Design notes:
   *current* rate to a years-old transaction silently drifts results by the
   full USD/KRW path since (single-digit %, sometimes more for long windows).
 """
+from __future__ import annotations
+
 import logging
 import threading
 import time

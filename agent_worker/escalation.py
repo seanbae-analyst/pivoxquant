@@ -1,4 +1,6 @@
 """Human-in-the-loop escalation — Slack webhook for critical decisions."""
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timezone
 

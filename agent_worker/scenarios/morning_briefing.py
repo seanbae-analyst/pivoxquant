@@ -8,6 +8,8 @@ persists the result, and sends a Slack notification.
 Capital-markets-law guard: scans all AI output for forbidden terms
 (BUY/SELL/HOLD/etc.) and escalates at risk=100 if detected.
 """
+from __future__ import annotations
+
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone

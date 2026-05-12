@@ -49,6 +49,15 @@ def maybe_generate(user_id: int, r: dict):
         name = resolved or ticker
     else:
         name = raw_name
+
+    # Bug fix 2026-05-13 (feedback_ticker_display): when name resolution
+    # fails the previous code rendered "124500.KQ (124500.KQ) — Score …",
+    # duplicating the ticker. Build the subject so the parenthesised
+    # ticker only appears when ``name`` is a real, distinct company name.
+    # Caveats: ``name`` may be whitespace-padded or, in rare cases, a
+    # display variant that equals the ticker after strip — collapse both
+    # sides before comparing.
+    subject = ticker if (name or "").strip() == ticker.strip() else f"{name} ({ticker})"
     score = r.get("score", 0)
 
     # Dedup: skip if same ticker alerted within 4 hours
@@ -74,12 +83,12 @@ def maybe_generate(user_id: int, r: dict):
         # 2026-04-24: "Rec:" abbreviation for "Recommendation" triggered a
         # 자본시장법 §17 (투자자문업 미등록) 경계 flag in compliance sweep.
         # Replaced with "Sized:" (neutral sizing observation, not advice).
-        msg = (f"{name} ({ticker}) — Score {score:.0f}/100. "
+        msg = (f"{subject} — Score {score:.0f}/100. "
                f"Sized: {sh} shares · {inv_str}. {tim}.")
     else:
         sell_pct = r.get("sell_pct", 50)
         # "Consider reducing" also directive — rephrased as observational.
-        msg = (f"{name} ({ticker}) — Score {score:.0f}/100. "
+        msg = (f"{subject} — Score {score:.0f}/100. "
                f"Quant flags weakness. Observation: {sell_pct}% position weight elevated.")
 
     # Legal scrub — rewrite advisory verbs (Consider reducing, Scale in, etc.)

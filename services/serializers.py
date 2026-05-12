@@ -1,5 +1,7 @@
 """Model serialization helpers."""
 
+from __future__ import annotations
+
 from services.name_resolver import (
     lookup_name_from_signal_cache,
     resolve_stock_name,

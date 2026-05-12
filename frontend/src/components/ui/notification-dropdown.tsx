@@ -139,14 +139,14 @@ export function NotificationDropdown() {
           color: open
             ? "var(--pq-bronze)"
             : unread > 0
-              ? "var(--pq-ivory)"
-              : "rgba(245, 240, 232, 0.72)",
+              ? "var(--pq-bronze)"
+              : "var(--pq-ivory)",
         }}
       >
-        <Bell className="h-[18px] w-[18px]" strokeWidth={1.5} />
+        <Bell className="h-5 w-5" strokeWidth={1.75} />
         {unread > 0 && (
           <span
-            className="absolute right-1.5 top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold"
+            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold"
             style={{ background: "var(--pq-bronze)", color: "var(--pq-ivory)" }}
           >
             {unread > 99 ? "99+" : unread}
@@ -258,7 +258,7 @@ export function NotificationDropdown() {
                       <p
                         className="text-[14px] leading-snug font-serif"
                         style={{
-                          color: unreadRow ? "var(--pq-ink)" : "var(--pq-muted)",
+                          color: unreadRow ? "var(--pq-ivory)" : "var(--pq-muted)",
                           fontWeight: unreadRow ? 600 : 400,
                         }}
                       >

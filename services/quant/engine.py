@@ -10,6 +10,8 @@ Scoring:
 Each signal carries both English (msg) and Korean (msg_kr) text for the
 language-toggle feature in the frontend.
 """
+from __future__ import annotations
+
 
 import numpy as np
 import pandas as pd
