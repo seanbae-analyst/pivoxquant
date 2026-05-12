@@ -48,7 +48,7 @@ export interface WeeklyMemoData {
 
 const DEFAULT_DATA: WeeklyMemoData = {
   asOf: "2026-04-26",
-  weekTag: "WK-2026-23",
+  weekTag: "WK-2026-17",
   portfolioReturn: "+2.4%",
   benchmarkReturn: "vs S&P +1.1%",
   portfolioValue: "$1,242,150",
