@@ -634,13 +634,16 @@ class TestMarketIndicesKR:
         from routes.market import _indices_cache
         _indices_cache.clear()
 
-        # KIS history ~5778 — survives 30% staleness vs live 7498 (~22%
-        # divergence) but is wildly outside the [1500, 4500] sanity bound.
-        kis_hist_kospi = [5750.0 + i * 0.5 for i in range(60)]
+        # KIS history ~575_800 — survives 30% staleness vs live 749_800 (~22%
+        # divergence) but is wildly outside the [1500, 50000] sanity bound.
+        # PR #236 (2026-05-10) widened ^KS11 bound from (1500, 4500) →
+        # (1500, 50000); sibling tests were updated but this one was missed.
+        # Mock values rescaled to 100× so the bound check still rejects them.
+        kis_hist_kospi = [575_000.0 + i * 50.0 for i in range(60)]
 
         MockKIS = self._kis_service_mock(
             price_map={
-                "0001": 7498.0,    # KIS quirk
+                "0001": 749_800.0,  # KIS quirk — well above 50_000 wide bound
                 "1001": 1207.0,
                 "2001": 337.0,
                 "2203": 1240.0,
