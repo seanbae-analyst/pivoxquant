@@ -153,7 +153,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.14em",
               color: "rgba(245,240,232,0.45)",
               marginTop: 4,
@@ -166,7 +166,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             <p
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.78)",
                 margin: "10px 0 0 0",
@@ -183,7 +183,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.2em",
                 padding: "3px 8px",
                 border: `1px solid ${tone.fg}`,
@@ -197,7 +197,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             <span
               className="font-mono"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.04em",
                 color: "rgba(245,240,232,0.55)",
                 fontVariantNumeric: "tabular-nums",
@@ -245,7 +245,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               fontVariantNumeric: "tabular-nums",
               display: "flex",
               gap: 10,
@@ -262,7 +262,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               fontVariantNumeric: "tabular-nums",
               color: "rgba(245,240,232,0.55)",
             }}
@@ -272,7 +272,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.06em",
               color: "rgba(245,240,232,0.55)",
               marginTop: 4,

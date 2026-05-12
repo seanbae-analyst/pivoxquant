@@ -80,7 +80,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         <p
           className="font-serif italic"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.01em",
             lineHeight: 1.5,
             margin: 0,
@@ -112,7 +112,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
           <span
             className="font-serif uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
             }}
@@ -123,7 +123,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         <p
           className="font-serif"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.65,
             color: "rgba(245,240,232,0.78)",
           }}
@@ -133,7 +133,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         <p
           className="mt-3 font-serif italic"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
           }}
@@ -162,7 +162,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         <span
           className="font-serif uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
           }}
@@ -186,7 +186,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
       <p
         className="mt-2 font-serif italic"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.5,
           color: "rgba(184,149,106,0.85)",
         }}
@@ -196,7 +196,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
       <p
         className="mt-5 font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.7,
           color: "rgba(245,240,232,0.75)",
         }}
@@ -206,7 +206,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
       <p
         className="mt-2 font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.7,
           color: "rgba(245,240,232,0.55)",
         }}
@@ -221,7 +221,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
           style={{
             background: "var(--pq-bronze)",
             color: "var(--pq-ink)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
           }}
         >

@@ -126,7 +126,7 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
         className="font-mono uppercase"
         style={{
           fontVariantNumeric: "tabular-nums",
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.16em",
           color: "var(--pq-bronze)",
         }}
@@ -136,7 +136,7 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
       <span
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           color: "rgba(245,240,232,0.82)",
         }}
       >
@@ -145,7 +145,7 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
       <span
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: dim ? "rgba(245,240,232,0.55)" : "var(--pq-bronze)",
         }}
@@ -539,7 +539,7 @@ export default function ProfilePageV2() {
               position: "absolute",
               top: 14,
               right: 14,
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.55)",
             }}
@@ -549,7 +549,7 @@ export default function ProfilePageV2() {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -619,7 +619,7 @@ export default function ProfilePageV2() {
                 position: "absolute",
                 top: 14,
                 right: 14,
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.55)",
               }}
@@ -629,7 +629,7 @@ export default function ProfilePageV2() {
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
                 marginBottom: 12,
@@ -646,7 +646,7 @@ export default function ProfilePageV2() {
             <p
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.82)",
                 marginBottom: 20,
@@ -696,7 +696,7 @@ export default function ProfilePageV2() {
             marginTop: 64,
             padding: "18px 24px",
             border: "1px dashed rgba(245,240,232,0.14)",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
           }}

@@ -106,7 +106,7 @@ export function CalendarNewsPaper({
             </span>
             <span
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(20,20,20,0.55)",
                 textTransform: "uppercase",
                 letterSpacing: "0.18em",
@@ -206,7 +206,7 @@ export function CalendarNewsPaper({
                 <span
                   style={{
                     fontVariantNumeric: "tabular-nums",
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "var(--pq-bronze, #B8956A)",
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
@@ -219,7 +219,7 @@ export function CalendarNewsPaper({
                 </span>
                 <span
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     color: "#1a1a1a",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -230,7 +230,7 @@ export function CalendarNewsPaper({
                 </span>
                 <span
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     textTransform: "uppercase",
                     letterSpacing: "0.18em",
                     color: "rgba(20,20,20,0.55)",
@@ -271,7 +271,7 @@ export function CalendarNewsPaper({
                 <span
                   style={{
                     fontVariantNumeric: "tabular-nums",
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "var(--pq-bronze, #B8956A)",
                     letterSpacing: "0.08em",
                   }}
@@ -280,7 +280,7 @@ export function CalendarNewsPaper({
                 </span>
                 <p
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     lineHeight: 1.5,
                     color: "rgba(20,20,20,0.78)",
                     margin: 0,
@@ -293,7 +293,7 @@ export function CalendarNewsPaper({
           ) : (
             <p
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 fontStyle: "italic",
                 color: "rgba(20,20,20,0.5)",
                 margin: "8px 0 0",

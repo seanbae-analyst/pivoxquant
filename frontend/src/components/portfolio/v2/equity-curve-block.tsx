@@ -154,7 +154,7 @@ export function EquityCurveBlock({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -180,7 +180,7 @@ export function EquityCurveBlock({
                 onClick={() => setRange(r.key)}
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   padding: "6px 12px",
                   background: active
@@ -259,7 +259,7 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
               }}
             className="font-serif" >
               Loading equity history…
@@ -273,7 +273,7 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
               }}
             className="font-serif" >
               Unable to load equity history.
@@ -286,7 +286,7 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
               }}
             className="font-serif" >
               Not enough history yet.
@@ -393,7 +393,7 @@ function KpiCell({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.55)",
           marginBottom: 6,
@@ -440,7 +440,7 @@ function LegendSwatch({
       <span
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.55)",
         }}

@@ -34,7 +34,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -58,7 +58,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
           }}
@@ -80,7 +80,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
           <div
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color: "rgba(245,240,232,0.55)",
               padding: "32px 0",
               textAlign: "center",
@@ -134,7 +134,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                   <div
                     className="font-mono"
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       color: "rgba(245,240,232,0.55)",
                       letterSpacing: "0.14em",
                       marginTop: 4,

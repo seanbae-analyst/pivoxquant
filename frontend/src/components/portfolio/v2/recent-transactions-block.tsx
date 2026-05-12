@@ -86,7 +86,7 @@ export function RecentTransactionsBlock({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
@@ -103,7 +103,7 @@ export function RecentTransactionsBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
           Loading entries…
@@ -116,7 +116,7 @@ export function RecentTransactionsBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
           No recent entries.
@@ -158,7 +158,7 @@ export function RecentTransactionsBlock({
                   <div
                     className="font-display"
                     style={{
-                      fontSize: 14,
+                      fontSize: "var(--pq-text-body)",
                       fontWeight: 500,
                       color: "var(--pq-ivory)",
                       lineHeight: 1.2,
@@ -169,7 +169,7 @@ export function RecentTransactionsBlock({
                   <div
                     className="font-serif"
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       color: "rgba(245,240,232,0.55)",
                       marginTop: 2,
                     }}
@@ -180,7 +180,7 @@ export function RecentTransactionsBlock({
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     color: amountColor(signed),
                     whiteSpace: "nowrap",
                   }}
@@ -207,7 +207,7 @@ export function RecentTransactionsBlock({
           href="/portfolio"
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             color: "var(--pq-bronze)",
             textDecoration: "none",

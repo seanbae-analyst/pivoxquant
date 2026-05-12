@@ -61,7 +61,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
@@ -78,7 +78,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
           No tickers on watch.
@@ -134,7 +134,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                   <div
                     className="font-mono uppercase"
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.18em",
                       color: "rgba(245,240,232,0.55)",
                       marginTop: 2,
@@ -146,7 +146,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(245,240,232,0.82)",
                   }}
                 >
@@ -155,7 +155,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: pctColor(change),
                   }}
                 >
@@ -180,7 +180,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
           }}
@@ -191,7 +191,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
           href="/watchlist"
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             color: "var(--pq-bronze)",
             textDecoration: "none",

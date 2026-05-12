@@ -222,7 +222,7 @@ export function TradeModalV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 14,
@@ -250,7 +250,7 @@ export function TradeModalV2({
           <p
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.5,
               color: "rgba(245,240,232,0.65)",
               margin: 0,
@@ -262,7 +262,7 @@ export function TradeModalV2({
             <span
               className="font-mono"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(245,240,232,0.55)",
                 letterSpacing: "0.16em",
               }}
@@ -380,7 +380,7 @@ export function TradeModalV2({
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.55)",
               }}
@@ -396,7 +396,7 @@ export function TradeModalV2({
                   background: "transparent",
                   border: "none",
                   color: "rgba(245,240,232,0.55)",
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   cursor: "pointer",
                   padding: 4,
@@ -419,7 +419,7 @@ export function TradeModalV2({
                   color: "var(--pq-ink, #050505)",
                   border: "none",
                   borderRadius: "var(--pq-radius-cta, 2px)",
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
@@ -442,7 +442,7 @@ const fieldInputStyle: React.CSSProperties = {
   borderBottom: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.16))",
   outline: "none",
   color: "var(--pq-ivory)",
-  fontSize: 14,
+  fontSize: "var(--pq-text-body)",
   letterSpacing: "0.01em",
 };
 
@@ -464,7 +464,7 @@ function FormField({
       <span
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
         }}

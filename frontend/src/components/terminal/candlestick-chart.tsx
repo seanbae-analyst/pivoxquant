@@ -187,6 +187,9 @@ export function CandlestickChart({
           textColor: ivoryMid,
           fontFamily:
             "var(--font-serif), Georgia, 'Source Serif 4', serif",
+          // Lightweight Charts requires a numeric fontSize — CSS vars are
+          // not supported by the chart rendering layer. Keep this inline
+          // literal (mirrors --pq-text-eyebrow = 12px).
           fontSize: 12,
         },
         grid: {
@@ -368,7 +371,7 @@ export function CandlestickChart({
           <span
             className="font-mono"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.12em",
               color: "rgba(245,240,232,0.98)",
               fontWeight: 500,
@@ -379,7 +382,7 @@ export function CandlestickChart({
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               borderLeft: "1px solid var(--pq-terminal-line)",
@@ -439,7 +442,7 @@ export function CandlestickChart({
               <div
                 className="font-mono tabular-nums"
                 style={{
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   fontWeight: 500,
                   marginTop: 2,
                   color:
@@ -470,7 +473,7 @@ export function CandlestickChart({
             justifyContent: "center",
             pointerEvents: "none",
             color: "rgba(245,240,232,0.45)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
           }}
         >
           chart data unavailable

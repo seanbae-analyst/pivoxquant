@@ -84,7 +84,7 @@ export function SixDimensionsGrid({
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
                 marginBottom: 8,
@@ -109,7 +109,7 @@ export function SixDimensionsGrid({
             href={methodologyHref}
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               color: "var(--pq-bronze)",
               borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -149,7 +149,7 @@ export function SixDimensionsGrid({
           <p
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.55,
               color: "rgba(245,240,232,0.55)",
               maxWidth: 520,
@@ -184,7 +184,7 @@ export function SixDimensionsGrid({
                 position: "absolute",
                 top: 14,
                 right: 14,
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.55)",
               }}
@@ -214,7 +214,7 @@ export function SixDimensionsGrid({
                 <p
                   className="font-serif"
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     lineHeight: 1.5,
                     color: "rgba(245,240,232,0.55)",
                     marginTop: 4,
@@ -227,7 +227,7 @@ export function SixDimensionsGrid({
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   color: "var(--pq-bronze)",
                   whiteSpace: "nowrap",
                 }}

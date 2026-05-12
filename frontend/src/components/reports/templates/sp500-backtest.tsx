@@ -123,7 +123,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
           <br />
           twenty years, honestly backtested.
         </PdfCoverTitle>
-        <p style={{ color: "var(--r-ink-3)", fontSize: 14, lineHeight: 1.55, marginTop: 12 }}>
+        <p style={{ color: "var(--r-ink-3)", fontSize: "var(--pq-text-body)", lineHeight: 1.55, marginTop: 12 }}>
           5bp costs · monthly rebalance · survivorship-bias adjusted · no look-ahead · in-sample / out-of-sample split.
         </p>
 
@@ -140,7 +140,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
 
         <PdfSectionTitle variant="sm">Strategy Definition · 전략 정의</PdfSectionTitle>
         <PdfCard>
-          <p style={{ fontSize: 14, lineHeight: 1.7, color: "var(--r-ink-2)", }} className="font-serif" >
+          <p style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.7, color: "var(--r-ink-2)", }} className="font-serif" >
             {data.strategyDef}
           </p>
         </PdfCard>
@@ -151,7 +151,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
             <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               Cumulative Return · 2006-01 → 2026-04
             </div>
-            <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--r-ink-3)", }} className="font-mono" >
+            <div style={{ display: "flex", gap: 14, fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)", }} className="font-mono" >
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Strategy</span>
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500 TR</span>
             </div>
@@ -248,7 +248,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
                 <text x="200" y="115" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">−35</text>
                 <text x="260" y="115" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">−45%</text>
               </svg>
-              <div style={{ fontSize: 12, color: "var(--r-ink-3)", marginTop: 8 }}>
+              <div style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)", marginTop: 8 }}>
                 DD &gt; −15% 빈도: 24개월. 회복 평균 8.4개월. 최장 회복 18개월 (2008).
               </div>
             </PdfCard>

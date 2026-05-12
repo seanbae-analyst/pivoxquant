@@ -119,7 +119,7 @@ export function PortfolioSnapshotCard() {
         className="font-mono"
         style={{
           fontVariantNumeric: "tabular-nums",
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           color: deltaColor,
           marginBottom: 28,
         }}
@@ -161,7 +161,7 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245, 240, 232, 0.6)",
               textTransform: "uppercase",
@@ -173,7 +173,7 @@ export function PortfolioSnapshotCard() {
             className="font-mono"
             style={{
               fontVariantNumeric: "tabular-nums",
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color: deltaColor,
               marginTop: 2,
             }}
@@ -185,7 +185,7 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245, 240, 232, 0.6)",
               textTransform: "uppercase",
@@ -197,7 +197,7 @@ export function PortfolioSnapshotCard() {
             className="font-mono"
             style={{
               fontVariantNumeric: "tabular-nums",
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color: "var(--pq-ivory)",
               marginTop: 2,
             }}
@@ -209,7 +209,7 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245, 240, 232, 0.6)",
               textTransform: "uppercase",
@@ -221,7 +221,7 @@ export function PortfolioSnapshotCard() {
             className="font-mono"
             style={{
               fontVariantNumeric: "tabular-nums",
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color:
                 cashPct != null ? "var(--pq-ivory)" : PRICE_COLOR_HEX.flat,
               marginTop: 2,
