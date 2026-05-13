@@ -264,3 +264,86 @@ class TestQueryRateLimit:
         body = r2.get_json()
         assert body["error"] == "rate-limited"
         assert body["retry_after_sec"] > 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Regression: _rate_limit_ok bootstrap window
+#
+# 2026-05-13 — fix commit 5423c288 ("admit first request when monotonic clock
+# is still small"). The previous implementation did
+# ``prev = _last_request.get(user_id, 0.0)`` and then compared
+# ``now - prev < _RATE_WINDOW_SEC``. For a brand-new caller, ``prev`` was
+# ``0.0``, so the comparison reduced to ``now < 20``. Any time the process
+# clock was still in the first 20 seconds (every pytest run, every freshly
+# booted Railway dyno), the very first request for each user was wrongly
+# rate-limited.
+#
+# These tests pin the fix in place:
+#   - small monotonic (bootstrap)       — `now = 10.0`, prev=None → True
+#   - second call within window         — same user, immediate retry → False
+#   - large monotonic (long-lived dyno) — `now = 30.0`, prev=None → True
+#
+# Reverting `routes/agent.py` `_rate_limit_ok` back to the `0.0` default
+# will fail `test_first_request_admitted_during_bootstrap_window`.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestRateLimitUnit:
+    """Direct unit tests for routes.agent._rate_limit_ok.
+
+    Bypasses Flask/auth/entitlement — we are guarding the pure function so a
+    later refactor cannot silently regress the sentinel branch.
+    """
+
+    def test_first_request_admitted_during_bootstrap_window(
+        self, monkeypatch, _reset_agent_rate_limit
+    ):
+        """Bootstrap scenario: process started <20s ago.
+
+        Pre-fix this returned False because ``prev`` defaulted to 0.0
+        and ``10.0 - 0.0 = 10.0 < 20.0`` triggered the limiter on the
+        very first call.
+        """
+        from routes import agent as agent_module
+
+        monkeypatch.setattr(agent_module.time, "monotonic", lambda: 10.0)
+        assert agent_module._rate_limit_ok(4242) is True
+
+    def test_second_request_within_window_blocked(
+        self, monkeypatch, _reset_agent_rate_limit
+    ):
+        """Rate limit is preserved after the bootstrap admit — same caller
+        hitting again inside _RATE_WINDOW_SEC must be rejected."""
+        from routes import agent as agent_module
+
+        monkeypatch.setattr(agent_module.time, "monotonic", lambda: 10.0)
+        assert agent_module._rate_limit_ok(4242) is True
+        # Second call at the same instant must be blocked.
+        assert agent_module._rate_limit_ok(4242) is False
+
+    def test_first_request_admitted_on_long_lived_dyno(
+        self, monkeypatch, _reset_agent_rate_limit
+    ):
+        """Long-lived process scenario: monotonic well past the window.
+
+        A new caller showing up after the dyno has been up for a while
+        must also be admitted (sanity check that the sentinel branch is
+        correct in both regimes).
+        """
+        from routes import agent as agent_module
+
+        monkeypatch.setattr(agent_module.time, "monotonic", lambda: 30.0)
+        assert agent_module._rate_limit_ok(9999) is True
+
+    def test_distinct_users_do_not_share_window(
+        self, monkeypatch, _reset_agent_rate_limit
+    ):
+        """Per-user isolation — one user being rate-limited must not
+        affect another user's first request. Pre-fix this also failed
+        whenever `now < 20`."""
+        from routes import agent as agent_module
+
+        monkeypatch.setattr(agent_module.time, "monotonic", lambda: 5.0)
+        assert agent_module._rate_limit_ok(1111) is True
+        assert agent_module._rate_limit_ok(1111) is False  # same user blocked
+        assert agent_module._rate_limit_ok(2222) is True  # different user OK

@@ -92,8 +92,14 @@ _last_request: dict[int, float] = {}
 
 def _rate_limit_ok(user_id: int) -> bool:
     now = time.monotonic()
-    prev = _last_request.get(user_id, 0.0)
-    if now - prev < _RATE_WINDOW_SEC:
+    prev = _last_request.get(user_id)
+    # 2026-05-13 fix: a brand-new caller (no entry yet) must always be admitted.
+    # The previous implementation defaulted ``prev`` to 0.0 and compared
+    # ``now - 0.0 < 20``, which spuriously rate-limited the very first request
+    # whenever ``time.monotonic()`` was still small (i.e. in the first 20s of
+    # the process lifetime — every pytest run, every freshly-booted dyno).
+    # Use ``None`` sentinel to distinguish "never seen" from "seen long ago".
+    if prev is not None and (now - prev) < _RATE_WINDOW_SEC:
         return False
     _last_request[user_id] = now
     return True
