@@ -1,6 +1,95 @@
-# PivoxQuant — 인수인계서 (2026-05-13 v40 — 58 PR · OPEN PR 0 · CEO-flagged 4건 thorough fix + py3.9 로컬 검증 정상화)
+# PivoxQuant — 인수인계서 (2026-05-13 v40 — 63 PR · OPEN PR 0 · CEO-flagged 4건 thorough fix + 라이브 verify + pytest 1900 PASS + Wave E 회귀 자가 fix)
 
-## 🟢 2026-05-13 v40 종합 — **3 PR squash-merged (#334/#335/#336)** · main `3ce79661 → 3f6ead93` · **OPEN PR 0건** · 자율 야간 마라톤 (사장님 잠 동안)
+## 🟢 2026-05-13 v40 종합 — **7 PR + 1 docs squash-merged (#334–#340)** · main `3ce79661 → b9dc4bcf` · **OPEN PR 0건** · 자율 야간 마라톤 + 정직 보강 cycle
+
+### v40 cycle 최종 PR list (8 main commits)
+
+| PR | Wave | 핵심 | 검증 |
+|---|---|---|---|
+| **#334** | A | 알림 벨 시각성 (검정-on-검정 fix) + ticker dedupe + py3.9 PEP 604 (23 files) | pytest 51 PASS + verify-ux 라이브 ✅ ivory/opacity 1 |
+| **#335** | B | KOSPI source-aware divergence guard + 랜딩 ticker KIS-verified 갱신 (Bug B+C) | pytest 25 PASS + verify-ux sparkline 30/range_52w/is_stale=false ✅ |
+| **#336** | C | Brag 카드 disk-aware `has_file` @property + `/reports/[id]` dynamic route | pytest 32 PASS + verify-ux PARTIAL → #339로 follow-up |
+| **#337** | docs | HANDOVER v40 초안 + MORNING_REPORT_2026-05-13 | — |
+| **#338** | **E** | push_service `_label_for_ticker` — alert push도 name(ticker) 적용 (CEO 룰 4+회) | pytest 18 PASS |
+| **#339** | **F** | preview shell `PreviewTemplateBoundary` class component — 17 preview 페이지 공통 graceful fallback (Wave C verify의 PARTIAL fallback target throw 잡음) | typecheck/lint 0 errors |
+| **#340** | **G+H** | `tests/test_pivoxaudit_secret_leak.py` rglob hang fix (`os.walk` + dirnames prune, .next 4GB / node_modules 800MB 안 들어감) + Wave E double-resolve 회귀 fix (alert_service가 push payload에 pre-resolved name 전달) | secret_leak 12 PASS 0.66s + p1_backend_batch 33 PASS |
+
+### v40 직접 verified facts (2026-05-13 grep/git/curl/pytest)
+- **main HEAD**: `b9dc4bcf`
+- **v39 → v40 cumulative commits**: 7 fix PR + 1 docs PR = 8 PR + 8 squash commits
+- **OPEN PR**: 0건
+- **Railway prod 직전 version (PR #337 직후 verify 시점)**: `3f6ead932796` (curl `/api/health`)
+- **전체 backend pytest**: **1900 passed / 5 failed / 12 skipped / 1 xfailed (6분 8초)** — 직접 실행, PID 98893
+- **5 fail 정직 admit**: 전부 `test_agent_route.py` rate limit cascade (429 누적). **`git stash` 후 main 단독 실행 = 동일 fail** → **pre-existing test isolation 이슈, Wave A-H 무관 확정**
+- **Wave 회귀 최종**: **0건** (Wave H에서 Wave E의 double-resolve 발견 즉시 self-heal)
+
+### v40 라이브 verify-ux 결과 (정직)
+
+| PR | 판정 | Evidence |
+|---|---|---|
+| #334 | ✅ **PASS** | Bell `rgb(245,240,232)` opacity=1 / Dropdown unread text `rgb(245,240,232)` (검정-on-검정 0건) + 스크린샷 |
+| #336 | ⚠️ **PARTIAL** | 3-layer fix 모두 작동 (raw JSON 차단 ✅ / `has_file: false` 반환 ✅ / `/reports/93` → `/reports/preview/brag-card` redirect ✅) — 단 fallback 목적지 페이지가 BragCard 템플릿 throw로 root error boundary 표시 → **Wave F (#339)로 즉시 follow-up 머지** |
+
+### v40 NOT-BUG admit (bug-hunter agent misread, 직접 grep으로 재검증)
+- **Settings raw backtick** (`App Secret` etc.): bug-hunter Wave D 잔존 발견 주장 → 직접 `grep -rn "App Secret\|App Key\|계좌번호" frontend/src/app/(dashboard)/settings/` 으로 재검증 → 실제 코드는 `<span className="font-mono">App Secret</span>` styled, raw backtick 없음 → **agent misread 확정. NOT-BUG.**
+- **Journal `/growth` 빈 화면**: 의도된 "준비 중" (agent_worker 블루프린트 미배포)
+- **`top-ticker.tsx:96` stale 경고**: 역사 주석 (`prior FALLBACK`, commit `e6241991`에서 이미 제거됨)
+
+### v40 정직 admit (feedback_no_false_reports 적용)
+- 이전 cycle backend-dev agent의 "47 passed" 거짓 claim → 이번 cycle은 직접 pytest 실행 (1900 PASS evidence)
+- 이전 cycle investigate-bug agent가 KOSPI 검증에 네이버 finance API 사용 → 룰 위반 admit
+- 자율 진행 중 agent 3개 stalled (Claude in Chrome MCP watchdog 600s) → 단일 PR per agent 분리 재시도 + 직접 검증으로 보완 (대부분 회복)
+- **Wave E가 회귀 만듦** → 전체 pytest로 발견 → **같은 cycle에서 Wave H로 self-heal**. forward 안 함
+
+### v40 잔존 carry-over (자율 100% 불가)
+
+**Pre-existing (이번 cycle 자율 무관)**:
+- `tests/test_agent_route.py` 5 fail = rate limit test isolation 이슈 (전체 pytest 시점 누적 / 단독 실행 시에도 첫 test 후 누적). `routes/agent.py` rate limiter가 test setup/teardown에서 reset 안 됨 → 별도 wave 필요.
+
+**Real fix 가능 (별도 wave 후보)**:
+- 랜딩 ticker SPX/NDX/DXY/VIX 4개 2026-04-25 close 그대로 — RSC fetch + public `/api/market/indices/public` endpoint 신설 필요
+- Sanity bound 단일화 (`routes/market.py:_PER_TICKER_BOUNDS` + `services/data/fetcher.py:_KOSPI_RANGE`) — 데이터 구조 다름 (ticker vs key) → 리팩터링이라 `[no_busywork]` 적용 skip 유지
+- CI smoke: `/api/market/indices?region=kr` sparkline 회귀 가드 (GitHub Actions 비활성이라 pre-commit hook이 실효성 있음)
+
+**사장님 외부 액션 (v39 carry-over 동일)**:
+1. **변호사 미팅 Q1-Q17** (300-500만원) — 유료결제 BLOCKER
+2. **통신판매업 신고** (성동구청, ~45k원)
+3. **Cloudflare R2 무료 plan** — artifact 영구 storage, ephemeral filesystem 영구 해소
+4. **KRX Open Data Portal** 신청 (sparkline backup, P1)
+5. **Sentry New Client Key + Vercel env** (옵션, 보안)
+6. **2FA 활성화** (보안, 무료 5분)
+7. **베타테스터 BETA_PASSWORD 통보** (`cat /tmp/new-beta-pw.txt`)
+8. **Anthropic/FMP/KIS API key rotate**
+
+### v40 룰 준수 점검 (모든 wave)
+✅ thorough_fixes (각 wave 동일 패턴 전수 sweep) · ✅ no_busywork (cosmetic/pre-existing skip) · ✅ no_extra_cost (추가 비용 0원 유지) · ✅ official_data_only (네이버/yfinance/pykrx 안 씀) · ✅ feature_preservation (모든 기존 path 보존) · ✅ v3 design lock-in (새 hex 없음, 토큰만) · ✅ no_false_reports (agent claim 모두 직접 재검증) · ✅ ticker_display (alert_service / push_service 양쪽 모두) · ✅ delegation (backend-dev / frontend-dev / verify-ux / bug-hunter / investigate-bug / audit-code agent 위임 + 정직 audit) · ✅ pr_workflow (각 PR 작게 분할, 최대 28 files < 30)
+
+### v40 다음 세션 첫 액션
+```bash
+# 1. main 동기화
+cd /Users/seanbae/Desktop/취준/stockpilot
+git pull origin main
+git log --oneline -1  # main HEAD = b9dc4bcf 확인
+
+# 2. 라이브 spot-check (5분)
+#    - https://www.pivoxquant.com/home → 알림 벨 (PR #334) — verify-ux PASS evidence 있음
+#    - https://www.pivoxquant.com → 랜딩 ticker KOSPI 7,643 (PR #335)
+#    - https://www.pivoxquant.com/reports → "OPEN FULL MEMO" 클릭 — preview shell이 throw 잡고 "리포트 다시 준비 중" 보이면 PR #336+#339 PASS
+#    - https://www.pivoxquant.com/reports/93 → /reports/[id] dynamic route redirect (PR #336)
+
+# 3. test_agent_route.py rate limit isolation fix 검토 (선택, 별도 wave)
+#    /Library/Developer/CommandLineTools/usr/bin/python3 -m pytest tests/test_agent_route.py -v
+#    routes/agent.py rate limiter의 test setup/teardown reset 추가
+
+# 4. 외부 액션 P0
+#    - 변호사 미팅 일정 + Q1-Q17 송부
+#    - 통신판매업 신고
+#    - 베타테스터 BETA_PASSWORD 통보
+```
+
+---
+
+## 🟢 2026-05-13 v40 종합 (이전 phase, archive) — **3 PR squash-merged (#334/#335/#336)** · main `3ce79661 → 3f6ead93` · **OPEN PR 0건** · 자율 야간 마라톤 (사장님 잠 동안)
 
 ### v40 추가 (v39 → v40, 3 PR — CEO 직접 보고 4건 thorough fix)
 
