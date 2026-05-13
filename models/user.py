@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timezone
+import sqlalchemy as sa
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
@@ -94,6 +95,17 @@ class User(UserMixin, db.Model):
     # 후속 PR 권고: 모든 row backfill 후 ``nullable=False`` 전환.
     # Managed via migration 031_user_birthdate.
     birthdate = db.Column(db.Date, nullable=True)
+    # Continuous User Simulation (CAUS) Phase 1 격리 플래그.
+    # ``docs/specs/continuous-user-sim-spec.md`` Q3 — 시뮬 user 와 실 user
+    # 를 단일 BOOLEAN 으로 격리한다. TRUE 인 row 는:
+    #   * EmailSender 가 발송 스킵 (정통망법 §50 안전판, 후속 PR)
+    #   * Analytics / KPI 쿼리에서 ``WHERE is_simulated = FALSE`` 필터로 제외
+    #   * Sentry tag ``user_type=sim`` 분리
+    #   * 일요일 04:30 KST cron 이 7일 이상 묵은 로그/artifact truncate
+    # 일반 user response 에는 노출하지 않는다 (admin 전용). Managed via
+    # migration 032_users_is_simulated.
+    is_simulated = db.Column(db.Boolean, nullable=False, default=False,
+                              server_default=sa.false())
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")
