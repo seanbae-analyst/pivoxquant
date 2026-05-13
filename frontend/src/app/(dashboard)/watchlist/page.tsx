@@ -14,7 +14,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useWatchlist } from "@/lib/hooks";
-import { fmtPct, pctColorClass } from "@/lib/format";
+import { fmtPct, fmtRange52w, pctColorClass } from "@/lib/format";
 import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
@@ -32,11 +32,13 @@ import {
 } from "@/components/ui/price-with-timestamp";
 
 
-// Never synthesize 52W ranges from the current price — fabricated price
-// history rendered alongside live data is a misrepresentation risk under
-// 자본시장법. Same policy as portfolio/page.tsx (no MOCK_POSITIONS) and
-// discover/page.tsx (no MOCK_INDICES). Until WatchlistItem carries real
-// `high_52w` / `low_52w` fields from the backend, render an em dash.
+// 52W ranges are sourced from the backend `range_52w: [lo, hi]` envelope
+// (routes/watchlist.py:74-87 — Bug #9 wire-up 2026-05-13). KRW=integer /
+// USD=2dp, or `null` when either bound is missing — in which case we render
+// an em-dash rather than fabricating "$0.00 – $0.00". Same anti-synthesis
+// policy as portfolio/page.tsx (no MOCK_POSITIONS) and discover/page.tsx
+// (no MOCK_INDICES) — fabricated price history rendered alongside live
+// data is a misrepresentation risk under 자본시장법.
 
 function weekTag(): string {
   const d = new Date();
@@ -232,8 +234,7 @@ export default function WatchlistPage() {
                           {fmtPct(item.change_pct ?? 0)}
                         </td>
                         <td className="font-mono text-[11px] text-[rgba(245,240,232,0.55)]">
-                          {/* 52W range pending real backend field — see note above. */}
-                          —
+                          {fmtRange52w(item.range_52w, item.currency)}
                         </td>
                         <td className="text-[11px] text-[rgba(245,240,232,0.6)] truncate max-w-[220px]">
                           {item.note && item.note.length > 0

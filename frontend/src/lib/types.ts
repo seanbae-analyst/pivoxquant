@@ -159,6 +159,13 @@ export interface WatchlistItem {
   added_at: string;
   /** ISO 8601 timestamp the backend observed the last `price`. */
   observed_at?: string | null;
+  /**
+   * 52-week price range `[low, high]`. Backend emits KRW=integer / USD=2dp,
+   * or `null` when either bound is missing (routes/watchlist.py:74-87 — Bug
+   * #9 wire-up 2026-05-13). Frontend renders em-dash on null instead of
+   * fabricating "$0.00 - $0.00".
+   */
+  range_52w?: [number, number] | null;
 }
 
 export interface WatchlistResponse {

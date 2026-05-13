@@ -15,6 +15,37 @@ export function fmtKrw(v: number | null | undefined): string {
   return "₩" + Math.round(n).toLocaleString("ko-KR");
 }
 
+/**
+ * Format a 52-week range envelope as displayed text.
+ *
+ * Backend contract (routes/watchlist.py:74-87 — Bug #9 wire-up 2026-05-13):
+ * - KRW: `[low_int, high_int]` (zero decimals)
+ * - USD: `[low_2dp, high_2dp]`
+ * - `null` when either bound is missing (NEVER fabricate "0 ~ 0")
+ *
+ * KR rows use "₩{lo} ~ ₩{hi}" with comma thousands.
+ * US rows use "${lo} – {hi}" with en-dash.
+ * Missing / malformed → "—".
+ */
+export function fmtRange52w(
+  range: [number, number] | null | undefined,
+  currency: "USD" | "KRW",
+): string {
+  if (!range || range.length !== 2) return "—";
+  const [lo, hi] = range;
+  if (
+    lo == null || hi == null ||
+    !Number.isFinite(lo) || !Number.isFinite(hi) ||
+    lo <= 0 || hi <= 0 || hi < lo
+  ) {
+    return "—";
+  }
+  if (currency === "KRW") {
+    return `₩${Math.round(lo).toLocaleString("ko-KR")} ~ ₩${Math.round(hi).toLocaleString("ko-KR")}`;
+  }
+  return `$${lo.toFixed(2)} – $${hi.toFixed(2)}`;
+}
+
 export function fmtPct(v: number | null | undefined): string {
   const n = v ?? 0;
   if (!isFinite(n)) return "\u2014";
