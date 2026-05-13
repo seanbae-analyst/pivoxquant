@@ -509,7 +509,7 @@ export default function AiPage() {
                       <option value="">내 보유 종목에서 선택</option>
                       {userTickers.map((u) => (
                         <option key={u.ticker} value={u.ticker}>
-                          {u.ticker} — {u.name}
+                          {u.name && u.name !== u.ticker ? `${u.name} (${u.ticker})` : u.ticker}
                         </option>
                       ))}
                     </select>

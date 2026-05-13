@@ -176,12 +176,33 @@ export default function SignalsPageV2() {
     return { positive, negative, neutral, symbols: symbols.size };
   }, [filtered]);
 
+  // CEO directive [feedback_ticker_display] (4+ times): the symbol
+  // autocomplete dropdown must show human names ("삼성전자"), not naked
+  // tickers ("005930.KS"). We collect a {ticker, name} pair per symbol
+  // by consulting positions → watchlist → resolver (signals payload has
+  // no name). Sorted by display name for a friendly browse order.
   const symbolHints = React.useMemo(() => {
-    const set = new Set<string>();
-    for (const p of positions) if (p?.ticker) set.add(p.ticker);
-    for (const w of watchlist) if (w?.ticker) set.add(w.ticker);
-    for (const s of allSignals) if (s?.ticker) set.add(s.ticker);
-    return Array.from(set).sort();
+    const map = new Map<string, { ticker: string; name: string }>();
+    const add = (ticker: string | undefined, name?: string | null) => {
+      if (!ticker) return;
+      const key = ticker.toUpperCase();
+      const existing = map.get(key);
+      const resolvedName = name && name.trim() ? name.trim() : "";
+      // Prefer the first non-empty name we encounter (positions > watchlist).
+      if (!existing || (!existing.name && resolvedName)) {
+        map.set(key, { ticker, name: resolvedName || existing?.name || "" });
+      }
+    };
+    for (const p of positions) add(p?.ticker, p?.name);
+    for (const w of watchlist) add(w?.ticker, w?.name);
+    for (const s of allSignals) {
+      if (!s?.ticker) continue;
+      const fallback = resolveTickerName(s.ticker, positions, watchlist);
+      add(s.ticker, fallback !== s.ticker ? fallback : "");
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      (a.name || a.ticker).localeCompare(b.name || b.ticker, "ko"),
+    );
   }, [positions, watchlist, allSignals]);
 
   const handleRefresh = React.useCallback(async () => {

@@ -212,7 +212,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
               <PdfFlexBetween style={{ marginBottom: 8 }}>
                 <div>
                   <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
-                    {c.ticker} · {c.name}
+                    {c.name && c.name !== c.ticker ? `${c.name} · ${c.ticker}` : c.ticker}
                   </div>
                   <h3 style={{ fontSize: "var(--pq-text-quote)", margin: 0, fontWeight: 500 }} className="font-serif" >
                     Runway:{" "}
@@ -262,7 +262,9 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
           <PdfFlexBetween>
             <div>
               <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
-                {data.watch.ticker} · {data.watch.name}
+                {data.watch.name && data.watch.name !== data.watch.ticker
+                  ? `${data.watch.name} · ${data.watch.ticker}`
+                  : data.watch.ticker}
               </div>
               <strong>{data.watch.runway}</strong>
             </div>

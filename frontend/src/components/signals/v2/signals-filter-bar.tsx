@@ -26,11 +26,23 @@ interface FilterValue {
   window: "today" | "7d" | "30d" | "all";
 }
 
+/**
+ * Each symbol hint carries both the raw ticker (filter key, what gets
+ * typed into the input) and the display name (what the user sees). CEO
+ * directive [feedback_ticker_display] — never show naked tickers like
+ * "005930.KS" in user-facing dropdowns; surface "삼성전자" instead, with
+ * the ticker in parentheses only as disambiguation.
+ */
+export interface SymbolHint {
+  ticker: string;
+  name?: string | null;
+}
+
 interface Props {
   value: FilterValue;
   onChange: (next: FilterValue) => void;
   counts?: { positive: number; negative: number; neutral: number };
-  symbolHints?: string[];
+  symbolHints?: SymbolHint[];
   onRefresh?: () => void;
   refreshing?: boolean;
 }
@@ -230,7 +242,7 @@ export function SignalsFilterBar({
             list={dataListId}
             value={value.symbol ?? ""}
             onChange={(e) => onChange({ ...value, symbol: e.target.value || null })}
-            placeholder="AAPL · 005930.KS …"
+            placeholder="삼성전자 · Apple …"
             style={{
               width: "100%",
               background: "transparent",
@@ -246,9 +258,15 @@ export function SignalsFilterBar({
           className="font-mono" />
           {symbolHints && symbolHints.length > 0 && (
             <datalist id={dataListId}>
-              {symbolHints.map((t) => (
-                <option key={t} value={t} />
-              ))}
+              {symbolHints.map((h) => {
+                // CEO rule [feedback_ticker_display]: name first, ticker only as
+                // disambiguation. `value` is the raw ticker because the upstream
+                // filter compares uppercase ticker equality; `label` is what the
+                // browser surfaces in the autocomplete UI.
+                const display =
+                  h.name && h.name !== h.ticker ? `${h.name} (${h.ticker})` : h.ticker;
+                return <option key={h.ticker} value={h.ticker} label={display} />;
+              })}
             </datalist>
           )}
         </div>
