@@ -33,12 +33,38 @@ import json
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+# --- SSL context (cron-safe) -------------------------------------------
+# Mirror of `scripts/caus_daily_sweep.py::_build_ssl_context`. The legal
+# monitor is invoked from GitHub Actions and (optionally) cron — both run
+# detached from the user shell, so the macOS Python build's stale system
+# trust store can yield CERTIFICATE_VERIFY_FAILED against pivoxquant.com /
+# GitHub API endpoints. We pin to certifi when available; otherwise we
+# still verify against the system store rather than disabling verification.
+
+
+def _build_ssl_context() -> ssl.SSLContext:
+    """Build an SSLContext rooted at certifi's CA bundle when possible.
+
+    Lazy import keeps unit tests decoupled from the certifi package. The
+    fallback path still verifies — it just uses the system trust store.
+    """
+    try:
+        import certifi  # type: ignore[import-not-found]
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return ssl.create_default_context()
+
+
+_SSL_CONTEXT: ssl.SSLContext = _build_ssl_context()
 OUT_DIR = Path(os.environ.get(
     "LEGAL_MONITOR_OUT", ROOT / "legal_monitor_artifacts"
 ))
@@ -463,7 +489,7 @@ def scan_runtime_db() -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with urllib.request.urlopen(req, timeout=20, context=_SSL_CONTEXT) as resp:
             data = json.loads(resp.read().decode("utf-8"))
     except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
         findings.append({
