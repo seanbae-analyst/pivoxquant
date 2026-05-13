@@ -20,11 +20,37 @@ TRANSACTIONAL_BELL_KINDS = frozenset({
 })
 
 
+def _label_for_ticker(ticker: str) -> str:
+    """Return "name (ticker)" when the resolver hits, else ticker alone.
+
+    Centralised so notify_alert / notify_trade / any future push helper
+    follow the feedback_ticker_display rule consistently with the in-app
+    surfaces (services/alert_service.py:53-61). Resolver miss falls back
+    to ticker so the push is never empty. Failures are swallowed: a push
+    is a side channel and must never block the caller.
+    """
+    if not ticker:
+        return ""
+    try:
+        from services.name_resolver import resolve_stock_name_with_db
+        name = resolve_stock_name_with_db(ticker)
+    except Exception:
+        logger.debug("silent-fallback: _label_for_ticker resolver", exc_info=True)
+        name = None
+    if name and name.strip() and name.strip() != ticker.strip():
+        return f"{name} ({ticker})"
+    return ticker
+
+
 def notify_alert(user_id: int, alert_data: dict):
     """Send a push notification for a new alert.
 
     Called after an Alert is persisted to DB.
     Gracefully no-ops if push is not configured.
+
+    2026-05-13: title now prefers "name (ticker)" via _label_for_ticker,
+    aligning with services/alert_service.py and the CEO directive
+    (feedback_ticker_display, repeated 3+ times).
     """
     try:
         from routes.push import send_push_to_user
@@ -37,7 +63,8 @@ def notify_alert(user_id: int, alert_data: dict):
     message = alert_data.get("message", "")
 
     icon_map = {"POSITIVE": "Positive Signal", "NEGATIVE": "Negative Signal"}
-    title = f"PivoxQuant — {icon_map.get(sig, 'Alert')}: {ticker}"
+    label = _label_for_ticker(ticker)
+    title = f"PivoxQuant — {icon_map.get(sig, 'Alert')}: {label}"
 
     send_push_to_user(
         user_id=user_id,
@@ -91,8 +118,11 @@ def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: flo
         logger.debug("silent-fallback: notify_trade", exc_info=True)
         return
 
+    # 2026-05-13: include readable name when available
+    # (feedback_ticker_display rule applied consistently).
+    label = _label_for_ticker(ticker)
     title = "PivoxQuant — Trade Executed"
-    body = f"{action.upper()} {shares} shares of {ticker} @ ${price:,.2f}"
+    body = f"{action.upper()} {shares} shares of {label} @ ${price:,.2f}"
 
     send_push_to_user(user_id=user_id, title=title, body=body, url="/trades")
 
