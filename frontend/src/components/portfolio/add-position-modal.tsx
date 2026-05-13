@@ -110,7 +110,7 @@ export function AddPositionModal({
             <input
               required
               className={inputClass}
-              placeholder="AAPL"
+              placeholder="AAPL · 005930.KS"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
               autoComplete="off"
