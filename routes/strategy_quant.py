@@ -8,7 +8,7 @@ All URL paths preserved exactly (`/api/...`). No behaviour change.
 import logging
 import time as _time
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
 from .decorators import api_auth, legal_scrub_response

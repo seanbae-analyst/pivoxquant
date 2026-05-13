@@ -10,8 +10,6 @@ Wave 11 SRP split. Behaviour is byte-identical to the original.
 import json
 import logging
 import math
-import time as _time
-from typing import Any
 
 import numpy as np
 from flask_login import current_user
