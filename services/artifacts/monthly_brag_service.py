@@ -673,7 +673,11 @@ background:#0B0D12;color:#F6F3EC;padding:32px;">
 
         from services.artifacts import iter_users_chunked
 
-        users = User.query.all()
+        # Continuous User Simulation Phase 1 — exclude ``is_simulated=True``
+        # rows from the mass artefact send (see brag_card_service for full
+        # rationale). EmailSender also short-circuits, but query-level
+        # filtering avoids the render cycle per sim user.
+        users = User.query.filter_by(is_simulated=False).all()
 
         successes = 0
         failures = 0

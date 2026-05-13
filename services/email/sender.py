@@ -140,7 +140,22 @@ class EmailSender:
             Header overrides; sensible defaults for every artefact
             type.
         """
-        # ── 1. opt-out gate ────────────────────────────────────────────
+        # ── 1a. simulated-user guard (Continuous User Simulation Phase 1) ──
+        # ``User.is_simulated`` (migration 032) tags synthetic test users the
+        # Sunday 04:30 KST simulation cron generates. Their email column is
+        # a real-looking address routed to a sink, but we still must NEVER
+        # actually dispatch to a provider — both for 정통망법 §50 safety
+        # (sim users never give marketing consent) and SendGrid quota.
+        # Short-circuits BEFORE the opt-out tuple so we don't burn the
+        # opt-out log line on every sim send.
+        if getattr(user, "is_simulated", False):
+            logger.info(
+                "skipping email for simulated user id=%s",
+                getattr(user, "id", "?"),
+            )
+            return False
+
+        # ── 1b. opt-out gate ───────────────────────────────────────────
         for attr in opt_out_attrs:
             if getattr(user, attr, False):
                 logger.info(

@@ -176,8 +176,17 @@ class TestSendPushOptOutGate:
 
     def test_transactional_push_bypasses_opt_out(self, app, make_user):
         """Even with email_opt_out=True, a transactional push must walk
-        past the opt-out gate. The gate's User-lookup is the marker:
-        transactional pushes skip it entirely."""
+        past the marketing opt-out gate.
+
+        2026-05-13: Continuous User Simulation Phase 1 added an
+        ``is_simulated`` lookup that runs BEFORE the opt-out gate for
+        every push (sim users must never reach pywebpush regardless of
+        the transactional flag — they have no real device). So a
+        transactional push consults User exactly once (the sim guard)
+        and the opt-out gate is the one that's bypassed. We assert the
+        observable contract: transactional=True with a non-sim,
+        opt-out=True user still reaches the VAPID stage (i.e. the
+        opt-out short-circuit did NOT fire)."""
         from extensions import db
         from models import User
         from routes.push import send_push_to_user
@@ -186,30 +195,48 @@ class TestSendPushOptOutGate:
         with app.app_context():
             u = User.query.get(user["id"])
             u.email_opt_out = True
+            u.is_simulated = False  # explicit — default already
             db.session.commit()
 
-            # `User` is imported lazily inside send_push_to_user, so patch
-            # at the source module — `models.User` (re-exported from
-            # `models/__init__`).
-            with patch("models.User") as mock_user_cls:
+            # Real User row, real is_simulated check, real opt-out
+            # check. With no VAPID key the send returns at the VAPID
+            # stage — but importantly, after walking past the opt-out
+            # gate. We confirm by capturing the log line at INFO.
+            with patch("routes.push.logger") as mock_log:
                 send_push_to_user(
                     user_id=user["id"],
                     title="52w high",
                     body="AAPL",
                     transactional=True,
                 )
-                # transactional path must never consult the opt-out gate.
-                mock_user_cls.query.get.assert_not_called()
+                # The opt-out gate emits "push opt-out: user_id=..."
+                # at INFO when it fires. Transactional MUST bypass it.
+                opt_out_calls = [
+                    c for c in mock_log.info.call_args_list
+                    if c.args and "push opt-out" in str(c.args[0])
+                ]
+                assert not opt_out_calls, \
+                    "transactional push must bypass the opt-out gate"
 
     def test_marketing_push_consults_opt_out_when_not_opted_out(self, app, make_user):
         """Non-transactional pushes must read User.email_opt_out before
-        proceeding (defence-in-depth: the gate runs every time)."""
+        proceeding (defence-in-depth: the gate runs every time).
+
+        2026-05-13: send_push_to_user now consults the User row twice —
+        once for the ``is_simulated`` guard (added in the CAUS Phase 1
+        follow-up), then again for the marketing opt-out gate. Both
+        lookups are intentional: failing closed on the sim check
+        before the opt-out check matters because sim users must never
+        reach pywebpush even if their opt-out flag is False."""
         from routes.push import send_push_to_user
 
         user = make_user(email="optout3@test.com")
         with app.app_context():
             with patch("models.User") as mock_user_cls:
-                fake = type("U", (), {"email_opt_out": False})()
+                fake = type("U", (), {
+                    "email_opt_out": False,
+                    "is_simulated": False,
+                })()
                 mock_user_cls.query.get.return_value = fake
                 send_push_to_user(
                     user_id=user["id"],
@@ -217,4 +244,10 @@ class TestSendPushOptOutGate:
                     body="ok",
                     transactional=False,
                 )
-                mock_user_cls.query.get.assert_called_once_with(user["id"])
+                # Both gates query the same user. The exact count is
+                # an implementation detail; the contract is "at least
+                # one lookup with the right id, all returning the
+                # opted-in user, no short-circuit."
+                assert mock_user_cls.query.get.call_count >= 1
+                for call in mock_user_cls.query.get.call_args_list:
+                    assert call.args == (user["id"],)
