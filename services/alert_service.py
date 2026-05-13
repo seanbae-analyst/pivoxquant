@@ -110,7 +110,19 @@ def maybe_generate(user_id: int, r: dict):
     # Send push notification (no-ops if not configured)
     try:
         from services.push_service import notify_alert
-        notify_alert(user_id, {"signal": sig, "ticker": ticker, "message": msg})
+        # 2026-05-13 (Wave H): pass the already-resolved `name` so the
+        # push surface does NOT re-run resolve_stock_name_with_db. Wave E
+        # added a resolver call inside push_service._label_for_ticker;
+        # before this payload key the resolver fired twice per alert
+        # (once for the alert subject, once for the push title), which
+        # broke test_resolver_skipped_when_snapshot_already_has_name in
+        # tests/test_p1_backend_batch.py. Same label, half the I/O.
+        notify_alert(user_id, {
+            "signal":  sig,
+            "ticker":  ticker,
+            "message": msg,
+            "name":    name,
+        })
     except Exception:
         logger.debug("silent-fallback: Send push notification (no-ops if not configured) | maybe_generate", exc_info=True)
         pass

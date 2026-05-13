@@ -48,6 +48,7 @@ discipline.
 """
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -98,17 +99,26 @@ LEAK_RE = re.compile(r"\bpivoxaudit\d*\b")
 
 def _iter_scanned_files() -> list[Path]:
     """Walk the repo and yield every file whose extension is in
-    SCANNED_EXTENSIONS, skipping any path that traverses an excluded
-    directory."""
+    SCANNED_EXTENSIONS, pruning excluded directories at the OS level
+    (Wave G fix, 2026-05-13). The previous ``Path.rglob('*')`` walked
+    every file in the tree before filtering — with frontend/.next at
+    ~4 GB and frontend/node_modules at ~800 MB on a real dev machine
+    that took long enough to hang pytest collection (observed during
+    the v40 cycle's full pytest run, 64% completion before stall).
+
+    ``os.walk`` accepts in-place mutation of ``dirnames`` to prune the
+    descent, so excluded directories aren't entered at all. Identical
+    final file list, ~50–100× faster on a real checkout.
+    """
     found: list[Path] = []
-    for path in REPO_ROOT.rglob("*"):
-        if not path.is_file():
-            continue
-        if path.suffix.lower() not in SCANNED_EXTENSIONS:
-            continue
-        if any(part in EXCLUDED_DIRS for part in path.relative_to(REPO_ROOT).parts):
-            continue
-        found.append(path)
+    for dirpath, dirnames, filenames in os.walk(REPO_ROOT):
+        # In-place prune: avoids descending into node_modules / .next
+        # / .git / .claude entirely. Must be a slice assignment.
+        dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIRS]
+        for name in filenames:
+            if Path(name).suffix.lower() not in SCANNED_EXTENSIONS:
+                continue
+            found.append(Path(dirpath) / name)
     return found
 
 
