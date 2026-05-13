@@ -161,6 +161,38 @@ export default function MarketPage() {
     // 2024-vintage levels. Render an empty board and let the editorial empty
     // state surface "data unavailable" instead.
     if (!Array.isArray(data) || data.length < 3) return [];
+    // Bug #5 (HANDOVER v42): SWR `keepPreviousData: true` is preserved to
+    // avoid flicker during the 5s in-region revalidation. But when the user
+    // flips the region tab the cache key changes (`?region=us` → `?region=kr`)
+    // and SWR briefly returns the prior region's payload until the new fetch
+    // resolves, producing a "S&P 500" headline under the "KOREA" masthead.
+    // Guard at the display boundary: if the payload looks like the wrong
+    // region (US tickers under KR, or vice versa), render an empty board so
+    // the editorial empty state surfaces instead of the wrong region's data.
+    const US_TICKERS = new Set([
+      "^GSPC",
+      "^IXIC",
+      "^DJI",
+      "^RUT",
+      "^VIX",
+      "SPY",
+      "QQQ",
+      "DIA",
+      "IWM",
+      "VIXY",
+    ]);
+    const KR_TICKERS = new Set(["^KS11", "^KQ11", "KOSPI", "KOSDAQ"]);
+    const looksLikeRegion = (() => {
+      const probe = data[0];
+      if (!probe) return null;
+      const t = probe.ticker;
+      const proxy = probe.proxy_ticker;
+      if (US_TICKERS.has(t) || (proxy && US_TICKERS.has(proxy))) return "US";
+      if (KR_TICKERS.has(t) || probe.name === "KOSPI" || probe.name === "KOSDAQ")
+        return "KR";
+      return null;
+    })();
+    if (looksLikeRegion && looksLikeRegion !== tab) return [];
     // KR sanity guard (2026-04-28 KIS scaling glitch defense). Backend now
     // drops out-of-range readings, but a second guard at the display
     // boundary protects against any cached payload or alt path.
