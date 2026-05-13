@@ -46,6 +46,7 @@ import hmac
 import json
 import os
 import shutil
+import ssl
 import subprocess
 import sys
 import urllib.error
@@ -103,6 +104,38 @@ SEVERITY_ICONS: dict[str, str] = {
 }
 
 
+# --- SSL context (cron-compat) ----------------------------------------------
+#
+# macOS system Python (and any environment using LibreSSL or with a stale
+# system trust store) raises `SSL: CERTIFICATE_VERIFY_FAILED` against
+# pivoxquant.com when urllib uses its default context. Cron runs detached
+# from the user shell so `SSL_CERT_FILE` / `REQUESTS_CA_BUNDLE` env vars
+# can't be relied on either.
+#
+# We build an explicit context off of `certifi.where()` once at import time
+# and pass it to every `urlopen()` call (sim-onboard + Slack webhook).
+# Falls back to the system default context when certifi is unavailable —
+# the sweep still runs, just without the cron-grade trust store.
+
+
+def _build_ssl_context() -> ssl.SSLContext:
+    """Build an SSLContext rooted at certifi's CA bundle when possible.
+
+    Importing certifi at module top would couple unit tests to the package,
+    so we lazy-import here. ``ssl.create_default_context()`` is the safe
+    fallback — it still verifies, just using the (potentially stale) system
+    trust store.
+    """
+    try:
+        import certifi  # type: ignore[import-not-found]
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return ssl.create_default_context()
+
+
+_SSL_CONTEXT: ssl.SSLContext = _build_ssl_context()
+
+
 # --- Slack ------------------------------------------------------------------
 
 
@@ -126,7 +159,7 @@ def slack_notify(text: str, severity: str = "info") -> None:
         headers={"Content-Type": "application/json"},
     )
     try:
-        urllib.request.urlopen(req, timeout=10).read()
+        urllib.request.urlopen(req, timeout=10, context=_SSL_CONTEXT).read()
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
         # Print but never fail — cron must exit 0 on Slack outage.
         print(f"[slack-fail] {exc}", file=sys.stderr)
@@ -195,7 +228,7 @@ def sim_onboard_login(user_id: str) -> Path | None:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=15, context=_SSL_CONTEXT) as resp:
             status = resp.status
             cookie_header = resp.headers.get("Set-Cookie", "") or ""
             body_text = resp.read().decode("utf-8", errors="replace")

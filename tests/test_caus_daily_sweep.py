@@ -121,6 +121,81 @@ def test_load_scenario_module_unknown_returns_none(caus):
     assert caus._load_scenario_module("not_a_real_scenario_xyz") is None
 
 
+# --- SSL context regression (cron-compat) -----------------------------------
+
+
+def test_ssl_context_is_built_at_import(caus):
+    """Module-level _SSL_CONTEXT must be a verifying SSLContext.
+
+    Regression guard for the 2026-05-13 cron failure where urllib's default
+    context could not verify pivoxquant.com against macOS LibreSSL.
+    """
+    import ssl as _ssl
+
+    ctx = caus._SSL_CONTEXT
+    assert isinstance(ctx, _ssl.SSLContext)
+    # Must verify — never silently disable cert checking.
+    assert ctx.verify_mode == _ssl.CERT_REQUIRED
+    assert ctx.check_hostname is True
+
+
+def test_build_ssl_context_prefers_certifi(caus):
+    """When certifi is installed, the context must load its CA bundle."""
+    try:
+        import certifi  # noqa: F401
+    except ImportError:
+        import pytest as _pytest
+        _pytest.skip("certifi not installed in this env")
+
+    ctx = caus._build_ssl_context()
+    # get_ca_certs() returns the loaded trust store. With certifi we expect
+    # a non-empty bundle (the system default may also be non-empty, but the
+    # certifi path is the one that survived prior LibreSSL failures).
+    assert len(ctx.get_ca_certs()) > 0
+
+
+def test_sim_onboard_passes_ssl_context(caus, monkeypatch):
+    """sim_onboard_login must hand _SSL_CONTEXT to urlopen.
+
+    This guards against a regression where a future edit drops the
+    `context=...` kwarg and silently falls back to the broken default.
+    """
+    captured: dict = {}
+
+    class _FakeResp:
+        status = 200
+        headers = {"Set-Cookie": "sid=test"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def read(self):
+            return b'{"ok": true}'
+
+    def fake_urlopen(req, timeout=15, context=None):
+        captured["context"] = context
+        captured["url"] = req.full_url
+        return _FakeResp()
+
+    monkeypatch.setattr(caus, "SIM_ONBOARD_SECRET", "test-secret")
+    monkeypatch.setattr(
+        caus.urllib.request, "urlopen", fake_urlopen
+    )
+    monkeypatch.setattr(caus, "SESSION_DIR", caus.SESSION_DIR)  # noop
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        monkeypatch.setattr(caus, "SESSION_DIR", Path(tmp))
+        sess = caus.sim_onboard_login("simX")
+        assert sess is not None
+        assert captured["context"] is caus._SSL_CONTEXT, (
+            "sim_onboard_login must pass _SSL_CONTEXT to urlopen"
+        )
+
+
 def test_run_user_tester_dry_run_no_browser(caus, capsys, tmp_path):
     """dry_run prints invocation and returns [] without launching browser."""
     cookies = tmp_path / "sim.json"
