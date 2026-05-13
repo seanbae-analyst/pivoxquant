@@ -401,11 +401,29 @@ function SetupStep(props: {
         </div>
       </Field>
 
-      <div className="flex justify-end pt-2">
+      {/* Bug #6 (P2): button stays `disabled` until both ticker + thesis
+          are filled, but earlier UI gave no hint *why* the CTA wouldn't
+          fire. Inline aria-live hint surfaces the exact missing piece(s)
+          so the user does not click into silence. */}
+      <div className="flex flex-col items-end gap-2 pt-2">
+        {!canAdvance && (
+          <p
+            aria-live="polite"
+            role="status"
+            className="text-[11px] text-[rgba(245,240,232,0.5)] tracking-[0.06em]"
+          >
+            {ticker.trim().length === 0 && !rationaleOk
+              ? "Ticker와 Thesis를 채워야 진행합니다."
+              : ticker.trim().length === 0
+                ? "Ticker를 입력해야 진행합니다."
+                : `Thesis ${MIN_RATIONALE_CHARS}자 이상 필요합니다.`}
+          </p>
+        )}
         <button
           type="button"
           onClick={onNext}
           disabled={!canAdvance}
+          aria-disabled={!canAdvance}
           className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-[11px] uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
         >
           Continue · 7 questions
@@ -488,6 +506,7 @@ function QuestionsStep(props: {
           type="button"
           onClick={onStart}
           disabled={!allAcked || submitting}
+          aria-disabled={!allAcked || submitting}
           className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-[11px] uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {submitting ? "Starting…" : "Start cooldown · 진입 시계"}
@@ -495,8 +514,12 @@ function QuestionsStep(props: {
         </button>
       </div>
       {!allAcked && (
-        <p className="text-[11px] text-[rgba(245,240,232,0.4)] text-right">
-          모든 질문에 ✓ 표시해야 진입 시계가 시작됩니다.
+        <p
+          aria-live="polite"
+          role="status"
+          className="text-[11px] text-[rgba(245,240,232,0.5)] text-right tracking-[0.06em]"
+        >
+          {`모든 질문에 ✓ 표시해야 진입 시계가 시작됩니다 (${QUESTIONS.filter((q) => acks[q.n]).length}/${QUESTIONS.length}).`}
         </p>
       )}
     </section>
