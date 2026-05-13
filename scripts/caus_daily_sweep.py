@@ -30,7 +30,10 @@ Cost: $0. Zero non-stdlib dependencies (urllib only).
 """
 from __future__ import annotations
 
+import base64
 import datetime
+import hashlib
+import hmac
 import json
 import os
 import sys
@@ -46,6 +49,13 @@ SESSION_DIR = Path.home() / ".pivoxquant-sim" / "sessions"
 SLACK_WEBHOOK = os.environ.get("SLACK_WEBHOOK_URL", "") or os.environ.get(
     "SLACK_WEBHOOK_CAUS", ""
 )
+# Sim-onboard endpoint — autonomous sim user login (HMAC ticket + sim regex).
+# See routes/sim_onboard.py for the security model.
+PIVOXQUANT_BASE_URL = os.environ.get(
+    "PIVOXQUANT_BASE_URL", "https://www.pivoxquant.com"
+).rstrip("/")
+SIM_ONBOARD_SECRET = os.environ.get("SIM_ONBOARD_SECRET", "")
+SIM_ONBOARD_UA = "PivoxQuantCAUS/1.0"
 
 # Day-N scenarios (Mon=0 ... Sun=6). Mirrors spec §5.
 DAY_SCENARIOS: list[str] = [
@@ -112,6 +122,94 @@ def session_file_for(user_id: str) -> Path:
     return SESSION_DIR / f"{user_id}.json"
 
 
+# --- Sim-onboard (HMAC ticket → session cookie) -----------------------------
+
+
+def _build_sim_ticket(email: str, secret: str) -> str:
+    """Construct the HMAC ticket consumed by /api/auth/sim-onboard.
+
+    Mirrors the format expected by ``routes.sim_onboard._verify_ticket``::
+
+        urlsafe_b64encode(
+          f"{utc_isoformat}:{email}:{hex hmac_sha256(ts:email, secret)}"
+        )
+    """
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    sig = hmac.new(
+        secret.encode("utf-8"),
+        f"{ts}:{email}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return base64.urlsafe_b64encode(f"{ts}:{email}:{sig}".encode()).decode()
+
+
+def sim_onboard_login(user_id: str) -> Path | None:
+    """POST to /api/auth/sim-onboard and persist the session cookie.
+
+    Returns the path the session JSON was written to on success, or None if
+    SIM_ONBOARD_SECRET is unset / the endpoint returned non-2xx. Never raises
+    — the cron must exit 0 on transient failure (the Slack notify upstream
+    surfaces the issue to the operator).
+    """
+    if not SIM_ONBOARD_SECRET:
+        return None
+
+    email = f"seanbae1521+{user_id}@gmail.com"
+    ticket = _build_sim_ticket(email, SIM_ONBOARD_SECRET)
+    url = f"{PIVOXQUANT_BASE_URL}/api/auth/sim-onboard"
+    payload = json.dumps({"ticket": ticket, "email": email}).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": SIM_ONBOARD_UA,
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            status = resp.status
+            cookie_header = resp.headers.get("Set-Cookie", "") or ""
+            body_text = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        slack_notify(
+            f"sim-onboard HTTP {exc.code} for `{user_id}` ({exc.reason})",
+            "warn",
+        )
+        return None
+    except (urllib.error.URLError, TimeoutError) as exc:
+        slack_notify(f"sim-onboard transport error for `{user_id}`: {exc}", "warn")
+        return None
+
+    if status != 200:
+        slack_notify(f"sim-onboard non-200 ({status}) for `{user_id}`", "warn")
+        return None
+
+    SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    sess_path = session_file_for(user_id)
+    # Persist enough state for the user-tester agent (Phase 2) to replay the
+    # cookie. We intentionally store the Set-Cookie header verbatim — the
+    # browser-automation layer parses it. NEVER log the secret.
+    sess_path.write_text(
+        json.dumps({
+            "user_id": user_id,
+            "email": email,
+            "set_cookie": cookie_header,
+            "obtained_at": datetime.datetime.now(
+                datetime.timezone.utc
+            ).isoformat(timespec="seconds"),
+            "response_body": json.loads(body_text) if body_text else {},
+        }, indent=2),
+        encoding="utf-8",
+    )
+    try:
+        os.chmod(sess_path, 0o600)
+    except OSError:
+        pass
+    return sess_path
+
+
 # --- Report stub ------------------------------------------------------------
 
 
@@ -158,17 +256,33 @@ def main() -> int:
         "info",
     )
 
-    # Session-file gate. Option B (Gmail alias) requires CEO to OAuth-onboard
-    # each sim alias ONCE and persist cookies/session JSON. Without that file,
-    # we cannot drive the browser, so degrade gracefully — never fail the cron.
+    # Sim-onboard bypass — if SIM_ONBOARD_SECRET is set we can mint a session
+    # autonomously via the /api/auth/sim-onboard HMAC ticket endpoint, with no
+    # operator-side OAuth onboarding. Falls back to the legacy session-file
+    # gate when the secret is unset (D+0 manual flow).
     sess = session_file_for(user_id)
-    if not sess.exists():
+    if SIM_ONBOARD_SECRET:
+        minted = sim_onboard_login(user_id)
+        if minted is not None:
+            slack_notify(
+                f"sim-onboard ok for `{user_id}` (session minted via HMAC ticket)",
+                "info",
+            )
+            sess = minted
+        elif not sess.exists():
+            slack_notify(
+                f"sim-onboard failed AND no fallback session for `{user_id}`",
+                "warn",
+            )
+            return 0
+    elif not sess.exists():
         slack_notify(
             (
                 f"user `{user_id}` session missing at `{sess}`. "
                 f"One-time OAuth onboarding required: login as "
                 f"`seanbae1521+{user_id}@gmail.com` and save cookies "
-                f"(see spec §8.B + scripts/README.md)."
+                f"(see spec §8.B + scripts/README.md), OR set "
+                f"SIM_ONBOARD_SECRET for autonomous HMAC ticket login."
             ),
             "warn",
         )

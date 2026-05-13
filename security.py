@@ -119,6 +119,7 @@ _CSRF_SAFE_METHODS = frozenset(["GET", "HEAD", "OPTIONS"])
 _CSRF_EXEMPT_PREFIXES = (
     "/api/billing/webhook",
     "/api/auth/dev-login",
+    "/api/auth/sim-onboard",
     "/api/auth/logout",
     "/api/logout",
     "/api/email/unsubscribe",
