@@ -15,6 +15,7 @@ from services import fx_service, cache_service
 from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.container import engine, fetcher, realtime
 from services.price_overlay import overlay_prices, parse_price_display
+from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -238,7 +239,13 @@ def add_position():
             }), 403
 
     d = request.get_json() or {}
-    ticker = (d.get("ticker") or "").strip().upper()
+    raw_ticker = (d.get("ticker") or "").strip().upper()
+    # Bug #1 fix (2026-05-13): route through normalize_ticker so bare
+    # 6-digit KRX codes (e.g. "005930") auto-resolve to "005930.KS" /
+    # "035760.KQ". Without this every KR user's portfolio rows were
+    # stored as bare digits → name_resolver never matched → currency
+    # fell through to USD → "$54,000" instead of "₩54,000".
+    ticker = normalize_ticker(raw_ticker)
     thesis = (d.get("thesis") or "").strip()[:500] or None
     try:
         shares = float(d.get("shares") or 0)
@@ -459,7 +466,11 @@ def buy_new_position():
             }), 403
 
     d = request.get_json() or {}
-    ticker = (d.get("ticker") or "").strip().upper()
+    raw_ticker = (d.get("ticker") or "").strip().upper()
+    # Bug #1 fix (2026-05-13): normalize before any downstream usage so
+    # "005930" routes to "005930.KS" / "035760.KQ" via the registry. See
+    # add_position for the full rationale.
+    ticker = normalize_ticker(raw_ticker)
     try:
         shares = float(d.get("shares") or 0)
         price = float(d.get("price") or 0)
@@ -942,7 +953,13 @@ def create_position_alias():
     purchase_date, note} and funnels into the existing add_position flow.
     """
     d = request.get_json() or {}
-    symbol = (d.get("symbol") or d.get("ticker") or "").strip().upper()
+    raw_symbol = (d.get("symbol") or d.get("ticker") or "").strip().upper()
+    # Bug #1 fix (2026-05-13): this is the *production* endpoint hit by
+    # the new frontend (POST /api/portfolio/positions). Previously stored
+    # bare "005930" → portfolio surfaces rendered "$54,000" / raw ticker /
+    # missing name. Funnel every input through normalize_ticker so KR
+    # codes always land as canonical .KS / .KQ.
+    symbol = normalize_ticker(raw_symbol)
     try:
         quantity = float(d.get("quantity") or d.get("shares") or 0)
         price = float(d.get("price") or d.get("avg_cost") or 0)
@@ -950,6 +967,9 @@ def create_position_alias():
         return jsonify({"error": "Quantity and price must be numbers"}), 400
     if not symbol or quantity <= 0 or price <= 0:
         return jsonify({"error": "Symbol, quantity, and price required"}), 400
+    # SEC-004 parity with add_position: Position.ticker is db.String(20).
+    if len(symbol) > 20:
+        return jsonify({"error": "Invalid ticker"}), 400
 
     # Proxy to legacy add_position logic by rewriting request body.
     # Reuse free-plan cap check.

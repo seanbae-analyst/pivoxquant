@@ -213,7 +213,7 @@ export function AddPositionModalV2({
               required
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-              placeholder="AAPL · 005930"
+              placeholder="AAPL · 005930.KS"
               style={fieldInputStyle}
             />
           </FormField>
