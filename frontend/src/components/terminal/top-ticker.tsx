@@ -5,7 +5,7 @@
  *
  * 32px-tall Bloomberg-style live ribbon that spans the full width of the
  * dashboard stage. Renders a KST clock, USD/KRW, VIX, and the four
- * headline indices (S&P 500 / NASDAQ / KOSPI / KOSDAQ). Reads live prices
+ * headline indices (S&P 500 / NASDAQ 100 / KOSPI / KOSDAQ). Reads live prices
  * from the existing <RealtimeProvider/> SSE stream so we don't open a
  * second EventSource; falls back to a static snapshot when the stream is
  * unavailable or the ticker hasn't been observed yet.
@@ -96,13 +96,19 @@ type Snapshot = {
 //  60%+ from reality, e.g. KOSPI 2,623 vs actual 6,641. Showing stale numbers
 //  as if live is a capital-markets-law misrepresentation risk.)
 const PLACEHOLDER_DELTA = "—";
+// Note: the `NDX` map key is an internal alias only. Backend keys US indices
+// by their ^-prefixed Yahoo symbols (^GSPC, ^IXIC, ^VIX) and proxies `^IXIC`
+// via QQQ which tracks NASDAQ 100 (routes/market.py:_US_INDEX_PROXY). The
+// user-facing label MUST be "NASDAQ 100" — a bare "NASDAQ" label is
+// misleading (NASDAQ Composite ≠ NASDAQ 100; capital-markets-law
+// misrepresentation risk per PR #343 audit).
 const TRACKED: readonly { symbol: string; label: string }[] = [
-  { symbol: "SPX",    label: "S&P 500" },
-  { symbol: "NDX",    label: "NASDAQ"  },
-  { symbol: "KOSPI",  label: "KOSPI"   },
-  { symbol: "KOSDAQ", label: "KOSDAQ"  },
-  { symbol: "USDKRW", label: "USD/KRW" },
-  { symbol: "VIX",    label: "VIX"     },
+  { symbol: "SPX",    label: "S&P 500"    },
+  { symbol: "NDX",    label: "NASDAQ 100" },
+  { symbol: "KOSPI",  label: "KOSPI"      },
+  { symbol: "KOSDAQ", label: "KOSDAQ"     },
+  { symbol: "USDKRW", label: "USD/KRW"    },
+  { symbol: "VIX",    label: "VIX"        },
 ];
 
 // Korean market convention (CEO directive 2026-04-26): ▲ red, ▼ blue.
