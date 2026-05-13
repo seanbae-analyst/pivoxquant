@@ -149,9 +149,18 @@ def _data_unavailable(endpoint: str, *, retry_after: int = 60):
     fake market levels as if real would mislead users on financial data
     (legal/ethical violation, 자본시장법 거짓 정보 제공). Stale-but-real cache
     (≤ 24h old) is served at the call site BEFORE this fallback fires.
+
+    Bug #4 (2026-05-13): UX message reworded — the old "Data temporarily
+    unavailable" sounded like a panic state. FMP's soft daily quota
+    (10k req/day) routinely cools off mid-afternoon; the new copy makes
+    it explicit that the *live tape* is paused (not the whole product)
+    and the wait is finite. The machine-readable ``code`` stays
+    ``DISCOVER_FMP_UNAVAILABLE`` so existing log/alert tooling and the
+    frontend SWR retry path keep working.
     """
     body = {
-        "error":       "Data temporarily unavailable",
+        "error":       "Live tape paused — provider quota cooling off",
+        "error_kr":    "라이브 시세 일시 중단 — 데이터 제공사 한도 진정 중",
         "code":        "DISCOVER_FMP_UNAVAILABLE",
         "endpoint":    endpoint,
         "retry_after": retry_after,

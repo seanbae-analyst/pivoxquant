@@ -63,6 +63,29 @@ def _serialize(w: Watchlist, overlay_entry: dict | None = None) -> dict:
             if not price_source or price_source == "stale":
                 price_source = "stale_display"
 
+    # Bug #9 (2026-05-13): 52W range was rendered "—" on watchlist for every
+    # row even though detail/market pages already publish honest values
+    # (KIS-sourced for KR, FMP/Alpaca for US). The numbers live in the
+    # SignalCache snapshot under week52_high/week52_low — surface them as a
+    # `range_52w: [lo, hi]` envelope matching the convention already used by
+    # /api/market/indices and /api/market/profile/<t>. Returns None (not 0/0)
+    # when either bound is missing so the UI shows em-dash honestly instead
+    # of fabricating "$0.00 - $0.00".
+    range_52w: list[float] | None = None
+    snap = sd.get("snapshot") or {}
+    lo = snap.get("week52_low")
+    hi = snap.get("week52_high")
+    try:
+        if lo is not None and hi is not None:
+            lo_f = float(lo)
+            hi_f = float(hi)
+            if lo_f > 0 and hi_f > 0 and hi_f >= lo_f:
+                # KRW = integer display, USD = 2 dp. Matches market.py:842.
+                dp = 0 if (sd.get("currency") == "KRW" or is_kr) else 2
+                range_52w = [round(lo_f, dp), round(hi_f, dp)]
+    except (TypeError, ValueError):
+        range_52w = None
+
     return {
         "id": w.id,
         "ticker": w.ticker,
@@ -80,6 +103,7 @@ def _serialize(w: Watchlist, overlay_entry: dict | None = None) -> dict:
         "score": sd.get("score", 0),
         "currency": sd.get("currency", "KRW" if is_kr else "USD"),
         "is_korean": sd.get("is_korean", is_kr),
+        "range_52w": range_52w,
     }
 
 
