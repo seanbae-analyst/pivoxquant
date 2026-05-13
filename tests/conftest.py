@@ -28,6 +28,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# ── live_api auto-skip ────────────────────────────────────────────────────────
+# Tests marked @pytest.mark.live_api require a live backend + network.
+# They are skipped unless the user explicitly selects them:
+#     pytest -m live_api
+# This keeps the default `pytest tests/` suite (mocked backend) unaffected.
+def pytest_collection_modifyitems(config, items):
+    if "live_api" not in (config.getoption("-m", default="") or ""):
+        skip_live = pytest.mark.skip(reason="live_api: requires live backend + network. Run: pytest -m live_api")
+        for item in items:
+            if item.get_closest_marker("live_api"):
+                item.add_marker(skip_live)
+
+
 # ── Path + environment isolation ─────────────────────────────────────────────
 # Must happen BEFORE importing the app, so env-backed constants pick up the
 # test values (DATABASE_URL, SECRET_KEY, rate-limit storage, etc).
