@@ -34,11 +34,20 @@ function labelOf(s: SignalEntry): SignalLabel {
 }
 
 function labelTone(label: SignalLabel) {
+  // CEO directive 2026-05-13: 전체 한국어화. 동일 패턴 → signal-card.tsx.
   if (label === "POSITIVE")
-    return { fg: "var(--pq-positive, #dc2626)", bg: "rgba(220,38,38,0.08)", display: "Positive" };
+    return { fg: "var(--pq-positive, #dc2626)", bg: "rgba(220,38,38,0.08)", display: "긍정" };
   if (label === "NEGATIVE")
-    return { fg: "var(--pq-negative, #2563eb)", bg: "rgba(37,99,235,0.08)", display: "Negative" };
-  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)", display: "Neutral" };
+    return { fg: "var(--pq-negative, #2563eb)", bg: "rgba(37,99,235,0.08)", display: "부정" };
+  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)", display: "중립" };
+}
+
+// CEO directive 2026-05-13: 한국 종목 우선 표시.
+function isKr(s: SignalEntry): boolean {
+  if (s.is_korean === true) return true;
+  if (s.currency === "KRW") return true;
+  const t = (s.ticker ?? "").toUpperCase();
+  return t.endsWith(".KS") || t.endsWith(".KQ") || t.endsWith(".KRX");
 }
 
 function fmtPrice(s: SignalEntry): string {
@@ -60,14 +69,20 @@ function fmtPct(n: number | null | undefined): string {
 
 export function TopMoversStrip({ entries, resolveName }: Props) {
   const top5 = React.useMemo(() => {
-    const sorted = [...entries].sort((a, b) => strengthOf(b) - strengthOf(a));
+    // CEO 2026-05-13: 1차 정렬 한국 종목 우선, 2차 정렬 강도 내림차순.
+    const sorted = [...entries].sort((a, b) => {
+      const aKr = isKr(a);
+      const bKr = isKr(b);
+      if (aKr !== bKr) return aKr ? -1 : 1;
+      return strengthOf(b) - strengthOf(a);
+    });
     return sorted.slice(0, 5);
   }, [entries]);
 
   if (top5.length === 0) return null;
 
   return (
-    <section style={{ marginBottom: 56 }} aria-label="Loudest five observations">
+    <section style={{ marginBottom: 56 }} aria-label="강도 상위 5개 관측">
       <div
         className="font-mono uppercase"
         style={{
@@ -77,7 +92,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
           marginBottom: 8,
         }}
       >
-        Top movers · By strength
+        강도 상위 · 한국 종목 우선
       </div>
       <h2
         className="font-display"
@@ -86,10 +101,14 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
           fontSize: "clamp(26px, 3vw, 40px)",
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory, #F5F0E8)",
+          // CEO bug "폰트가 겹친다": Playfair 26-40px 헤딩이 1.0
+          // 라인-height (브라우저 기본)였음. KR 글리프 descender
+          // 확보를 위해 1.2로 명시.
+          lineHeight: 1.2,
           margin: "0 0 22px 0",
         }}
       >
-        Loudest five.
+        오늘의 큰 관측 다섯.
       </h2>
 
       <div
@@ -135,16 +154,25 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                 <Link
                   href={`/detail/${s.ticker}`}
                   prefetch={false}
-                  aria-label={`${name} · ${tone.display} · strength ${strength.toFixed(2)}`}
+                  aria-label={`${name} · ${tone.display} · 강도 ${strength.toFixed(2)}`}
                   className="font-display mover-title-link"
                   style={{
                     fontSize: "var(--pq-text-h5)",
                     fontWeight: 500,
                     color: "var(--pq-ivory, #F5F0E8)",
-                    lineHeight: 1.2,
+                    // CEO bug "symbol 아래에 폰트가 걸린다" — 1.2가 KR
+                    // 글리프 descender를 cover 못 함. 1.35로 늘려서
+                    // 아래 ticker-sub 라인과 시각적 충돌 제거.
+                    lineHeight: 1.35,
                     letterSpacing: "-0.005em",
                     textDecoration: "none",
-                    display: "inline-block",
+                    // block + ellipsis: 긴 한국어/영어 종목명이 카드
+                    // bounds를 깨고 흘러나오지 않도록.
+                    display: "block",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    maxWidth: "100%",
                   }}
                 >
                   {name}
@@ -157,6 +185,10 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                     fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.14em",
                     color: "rgba(245,240,232,0.45)",
+                    // 카드의 gap: 10 + ticker 본인 margin = 충분한 여백.
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {s.ticker}

@@ -40,11 +40,16 @@ function labelOf(s: SignalEntry): SignalLabel {
 }
 
 function labelTone(label: SignalLabel) {
+  // CEO directive 2026-05-13: signal 페이지 전체 한국어화. Display
+  // labels in Korean ("긍정/부정/중립") instead of English. Legal
+  // vocabulary (POSITIVE/NEGATIVE/NEUTRAL) is preserved internally;
+  // only the user-facing text is localised. Bilingual aria-label
+  // below carries both forms for screen readers + audit.
   if (label === "POSITIVE")
-    return { fg: "var(--pq-positive, #dc2626)", bg: "rgba(220,38,38,0.08)", display: "Positive" };
+    return { fg: "var(--pq-positive, #dc2626)", bg: "rgba(220,38,38,0.08)", display: "긍정" };
   if (label === "NEGATIVE")
-    return { fg: "var(--pq-negative, #2563eb)", bg: "rgba(37,99,235,0.08)", display: "Negative" };
-  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)", display: "Neutral" };
+    return { fg: "var(--pq-negative, #2563eb)", bg: "rgba(37,99,235,0.08)", display: "부정" };
+  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)", display: "중립" };
 }
 
 function fmtPrice(s: SignalEntry): string {
@@ -77,20 +82,21 @@ function fmtKstClock(iso: string | null | undefined): string {
   }
 }
 
+// CEO directive 2026-05-13: 시간 표시도 한국어 ("3시간 전" / "방금").
 function fmtAgo(iso: string | null | undefined): string {
   if (!iso) return "";
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "";
     const diff = Date.now() - d.getTime();
-    if (diff < 0) return "just now";
+    if (diff < 0) return "방금";
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1) return "방금";
+    if (mins < 60) return `${mins}분 전`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
+    if (hrs < 24) return `${hrs}시간 전`;
     const days = Math.floor(hrs / 24);
-    return `${days}d ago`;
+    return `${days}일 전`;
   } catch {
     return "";
   }
@@ -124,11 +130,15 @@ export function SignalCard({ entry, resolveName }: Props) {
       className="signal-row"
       style={{
         display: "grid",
-        gridTemplateColumns: "1fr 280px 120px",
+        gridTemplateColumns: "minmax(0, 1fr) 280px 120px",
         gap: 28,
-        padding: "20px 0",
+        padding: "22px 0",
         borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
         transition: "background 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms",
+        // CEO 2026-05-13: align all 3 columns to the top so the right
+        // timestamp doesn't visually overlap the rationale below the
+        // strength bar on narrow desktop widths.
+        alignItems: "start",
       }}
     >
         {/* LEFT — name + ticker + rationale */}
@@ -136,16 +146,29 @@ export function SignalCard({ entry, resolveName }: Props) {
           <Link
             href={detailHref}
             prefetch={false}
-            aria-label={`${name} · ${entry.ticker} · ${tone.display} · strength ${strength.toFixed(2)} · ${fmtKstClock(observed)}`}
+            aria-label={`${name} · ${entry.ticker} · ${tone.display} · 강도 ${strength.toFixed(2)} · ${fmtKstClock(observed)}`}
             className="font-display signal-title-link"
             style={{
               fontSize: "var(--pq-text-quote)",
               fontWeight: 500,
               letterSpacing: "-0.01em",
               color: "var(--pq-ivory, #F5F0E8)",
-              lineHeight: 1.15,
+              // CEO bug "symbol 아래에 폰트가 걸린다" (2026-05-13):
+              // Playfair Display has no KR glyph coverage; KR titles
+              // (e.g. "삼성전자") fall through to a system serif whose
+              // descenders extend past Playfair's metrics. 1.15 was too
+              // tight — descenders clipped onto the ticker sub-line.
+              // 1.3 gives KR ink + Latin ink consistent breathing room.
+              lineHeight: 1.3,
               textDecoration: "none",
-              display: "inline-block",
+              display: "block",
+              // truncate long Latin names (e.g. "Berkshire Hathaway Inc.
+              // Class B") instead of letting them wrap and shove the
+              // ticker sub-line further down into rationale territory.
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: "100%",
             }}
           >
             {name}
@@ -156,7 +179,12 @@ export function SignalCard({ entry, resolveName }: Props) {
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.14em",
               color: "rgba(245,240,232,0.45)",
-              marginTop: 4,
+              // CEO bug "폰트가 겹친다" — was 4px which let descenders
+              // overlap. 8px clears any KR descender at 24px Playfair.
+              marginTop: 8,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             {entry.ticker}
@@ -203,12 +231,12 @@ export function SignalCard({ entry, resolveName }: Props) {
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              strength {strength.toFixed(2)}
+              강도 {strength.toFixed(2)}
             </span>
             {entry.is_stale && (
               <span
                 className="font-mono uppercase"
-                title="Cached observation past freshness TTL"
+                title="신선도 TTL 경과된 캐시 관측"
                 style={{
                   fontSize: "var(--pq-text-eyebrow-sm)",
                   letterSpacing: "0.18em",
@@ -219,7 +247,7 @@ export function SignalCard({ entry, resolveName }: Props) {
                   background: "var(--pq-ivory-line-faint)",
                 }}
               >
-                stale
+                오래됨
               </span>
             )}
           </div>

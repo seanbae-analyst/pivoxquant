@@ -551,9 +551,12 @@ export default function HomePageV1() {
       {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════
           Mobile fix (2026-05-05): top:0 was overlapping the 56px TopBar
           when scrolled. Anchor below the TopBar so the sticky bar slides
-          under the header rather than colliding with it. */}
+          under the header rather than colliding with it.
+          z-10 (2026-05-13 thorough-fix sweep): z-40 created stacking
+          context above the TopBar wrapper (z=20), clipping
+          NotificationDropdown. */}
       <div
-        className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10 mb-4"
+        className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-4"
         style={{
           top: 56,
           background: "rgba(10,10,10,0.78)",

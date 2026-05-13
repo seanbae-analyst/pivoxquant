@@ -47,17 +47,18 @@ interface Props {
   refreshing?: boolean;
 }
 
+// CEO directive 2026-05-13: 전체 한국어 UI.
 const LABELS: Array<{ key: SignalLabel; display: string; tone: string }> = [
-  { key: "POSITIVE", display: "Positive", tone: "var(--pq-positive, #dc2626)" },
-  { key: "NEGATIVE", display: "Negative", tone: "var(--pq-negative, #2563eb)" },
-  { key: "NEUTRAL", display: "Neutral", tone: "rgba(245,240,232,0.55)" },
+  { key: "POSITIVE", display: "긍정", tone: "var(--pq-positive, #dc2626)" },
+  { key: "NEGATIVE", display: "부정", tone: "var(--pq-negative, #2563eb)" },
+  { key: "NEUTRAL", display: "중립", tone: "rgba(245,240,232,0.55)" },
 ];
 
 const WINDOWS: Array<{ key: FilterValue["window"]; display: string }> = [
-  { key: "all", display: "All" },
-  { key: "today", display: "Today" },
-  { key: "7d", display: "7d" },
-  { key: "30d", display: "30d" },
+  { key: "all", display: "전체" },
+  { key: "today", display: "오늘" },
+  { key: "7d", display: "7일" },
+  { key: "30d", display: "30일" },
 ];
 
 function chipBaseStyle(active: boolean): React.CSSProperties {
@@ -108,8 +109,14 @@ export function SignalsFilterBar({
       className="signals-filter-bar"
       style={{
         position: "sticky",
-        top: 0,
-        zIndex: 12,
+        // CEO bug 2026-05-13: top:0 caused the filter bar to stick at
+        // the very top of the viewport, which is exactly where the
+        // TopBar (z=20 in globals.css) sticks. With this bar at z=12 it
+        // was visually clipped by the TopBar mid-scroll. Anchor below
+        // the TopBar (56px) + LivingCFOStatusBar (~28px hairline) so
+        // it slides under both rather than colliding with them.
+        top: 84,
+        zIndex: 8,
         background: "rgba(5,5,5,0.92)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
@@ -187,7 +194,7 @@ export function SignalsFilterBar({
               marginBottom: 6,
             }}
           >
-            Strength{" "}
+            강도{" "}
             <span style={{ color: "var(--pq-ivory, #F5F0E8)", fontVariantNumeric: "tabular-nums" }}>
               {value.strengthMin.toFixed(2)} – {value.strengthMax.toFixed(2)}
             </span>
@@ -200,7 +207,7 @@ export function SignalsFilterBar({
               step={0.05}
               value={value.strengthMin}
               onChange={(e) => setStrengthMin(parseFloat(e.target.value))}
-              aria-label="Minimum strength"
+              aria-label="최소 강도"
               aria-valuemin={0}
               aria-valuemax={1}
               aria-valuenow={value.strengthMin}
@@ -213,7 +220,7 @@ export function SignalsFilterBar({
               step={0.05}
               value={value.strengthMax}
               onChange={(e) => setStrengthMax(parseFloat(e.target.value))}
-              aria-label="Maximum strength"
+              aria-label="최대 강도"
               aria-valuemin={0}
               aria-valuemax={1}
               aria-valuenow={value.strengthMax}
@@ -235,14 +242,14 @@ export function SignalsFilterBar({
               marginBottom: 6,
             }}
           >
-            Symbol
+            종목
           </label>
           <input
             id={symbolInputId}
             list={dataListId}
             value={value.symbol ?? ""}
             onChange={(e) => onChange({ ...value, symbol: e.target.value || null })}
-            placeholder="삼성전자 · Apple …"
+            placeholder="삼성전자 · 카카오 · Apple …"
             style={{
               width: "100%",
               background: "transparent",
@@ -293,7 +300,7 @@ export function SignalsFilterBar({
               type="button"
               onClick={onRefresh}
               disabled={refreshing}
-              aria-label="Refresh signals"
+              aria-label="시그널 새로고침"
               style={{
                 appearance: "none",
                 background: "transparent",
@@ -316,7 +323,7 @@ export function SignalsFilterBar({
                 strokeWidth={1.6}
                 className={refreshing ? "animate-spin" : ""}
               />
-              Refresh
+              새로고침
             </button>
           )}
         </div>
