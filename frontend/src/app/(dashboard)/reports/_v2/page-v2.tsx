@@ -121,9 +121,12 @@ export default function ReportsPageV2() {
         <TopTicker />
       </div>
 
-      {/* LIVING CFO STATUS — sticky */}
+      {/* LIVING CFO STATUS — sticky.
+       * z-10 (2026-05-13 thorough-fix sweep): was z-40, clipped the
+       * NotificationDropdown panel by stacking above the TopBar wrapper
+       * (z=20 in globals.css). */}
       <div
-        className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10 mb-2"
+        className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
           top: 56,
           background: "rgba(5,5,5,0.78)",

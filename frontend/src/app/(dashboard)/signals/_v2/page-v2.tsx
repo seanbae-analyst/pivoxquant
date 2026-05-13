@@ -180,7 +180,7 @@ export default function SignalsPageV2() {
   // autocomplete dropdown must show human names ("삼성전자"), not naked
   // tickers ("005930.KS"). We collect a {ticker, name} pair per symbol
   // by consulting positions → watchlist → resolver (signals payload has
-  // no name). Sorted by display name for a friendly browse order.
+  // no name). 2026-05-13 CEO 추가: KR 종목 우선 표시.
   const symbolHints = React.useMemo(() => {
     const map = new Map<string, { ticker: string; name: string }>();
     const add = (ticker: string | undefined, name?: string | null) => {
@@ -200,9 +200,16 @@ export default function SignalsPageV2() {
       const fallback = resolveTickerName(s.ticker, positions, watchlist);
       add(s.ticker, fallback !== s.ticker ? fallback : "");
     }
-    return Array.from(map.values()).sort((a, b) =>
-      (a.name || a.ticker).localeCompare(b.name || b.ticker, "ko"),
-    );
+    const isKrTicker = (t: string) => {
+      const u = t.toUpperCase();
+      return u.endsWith(".KS") || u.endsWith(".KQ") || u.endsWith(".KRX");
+    };
+    return Array.from(map.values()).sort((a, b) => {
+      const aKr = isKrTicker(a.ticker);
+      const bKr = isKrTicker(b.ticker);
+      if (aKr !== bKr) return aKr ? -1 : 1;
+      return (a.name || a.ticker).localeCompare(b.name || b.ticker, "ko");
+    });
   }, [positions, watchlist, allSignals]);
 
   const handleRefresh = React.useCallback(async () => {
@@ -241,9 +248,24 @@ export default function SignalsPageV2() {
         <TopTicker />
       </div>
 
-      {/* LIVING CFO STATUS — sticky */}
+      {/* LIVING CFO STATUS — sticky.
+       *
+       * CEO bug 2026-05-13 "알림 거기 레이어에 겹쳐서 안보여 중간에":
+       * the TopBar wrapper `[data-pq-dash-topbar]` is `position: sticky;
+       * z-index: 20` (set in globals.css L3665). The NotificationDropdown
+       * panel (z-100) lives inside it, so the panel's effective stacking
+       * is bounded by that z=20 wrapper. This in-page status bar was at
+       * z=40 with `top: 56` (right under the TopBar) — its sticky
+       * position creates its OWN stacking context that sat ABOVE the
+       * TopBar wrapper, **clipping the dropdown panel** from below.
+       *
+       * Fix: drop this bar to z-10 (below TopBar's z=20). The bar still
+       * sticks correctly because `top: 56` keeps it pinned under the
+       * TopBar, and it never needed to be above the TopBar — it sits
+       * BENEATH it visually. Pattern mirrored in the other v2 pages
+       * (see thorough-fix sweep below). */}
       <div
-        className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10 mb-2"
+        className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
           top: 56,
           background: "rgba(5,5,5,0.78)",
@@ -256,7 +278,7 @@ export default function SignalsPageV2() {
 
       {/* HERO */}
       <SignalsHeroV2
-        eyebrow="Signals · live"
+        eyebrow="시그널 · 실시간"
         counts={counts}
         loading={swr.isLoading && allSignals.length === 0}
       />

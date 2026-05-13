@@ -82,9 +82,15 @@ export default function HomePageV2() {
         <TopTicker />
       </div>
 
-      {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════ */}
+      {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════
+       * z-10 (2026-05-13 thorough-fix sweep): was z-40 which created a
+       * stacking context above the TopBar wrapper (z=20 in globals.css),
+       * clipping the NotificationDropdown panel from the topbar. The bar
+       * sticks under the TopBar (`top: 56`) so it never needs to render
+       * above it. Pattern mirrored across home / portfolio / risk /
+       * settings / reports / profile v2 pages + home v1. */}
       <div
-        className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10 mb-2"
+        className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
           top: 56,
           background: "rgba(5,5,5,0.78)",

@@ -34,25 +34,42 @@ function dayKey(iso: string | null | undefined): string {
 }
 
 function dayHeading(iso: string | null | undefined): { weekday: string; meta: string } {
-  if (!iso) return { weekday: "Earlier", meta: "Date unavailable" };
+  // CEO directive 2026-05-13: 한국어 요일/날짜 표기.
+  if (!iso) return { weekday: "이전", meta: "날짜 정보 없음" };
   try {
     const d = new Date(iso);
-    if (isNaN(d.getTime())) return { weekday: "Earlier", meta: "Date unavailable" };
-    const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
-    const day = String(d.getDate());
-    const month = d.toLocaleDateString("en-US", { month: "short" });
-    return { weekday, meta: `${day} ${month}` };
+    if (isNaN(d.getTime())) return { weekday: "이전", meta: "날짜 정보 없음" };
+    const weekday = d.toLocaleDateString("ko-KR", { weekday: "long" }); // "월요일"
+    const meta = d.toLocaleDateString("ko-KR", {
+      month: "long",
+      day: "numeric",
+    }); // "5월 13일"
+    return { weekday, meta };
   } catch {
-    return { weekday: "Earlier", meta: "Date unavailable" };
+    return { weekday: "이전", meta: "날짜 정보 없음" };
   }
+}
+
+// CEO directive 2026-05-13: 동일 시간대 내에서 한국 종목 우선.
+function isKr(s: SignalEntry): boolean {
+  if (s.is_korean === true) return true;
+  if (s.currency === "KRW") return true;
+  const t = (s.ticker ?? "").toUpperCase();
+  return t.endsWith(".KS") || t.endsWith(".KQ") || t.endsWith(".KRX");
 }
 
 export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) {
   const grouped = React.useMemo(() => {
+    // CEO 2026-05-13: 동일 day-bucket 내에서 KR 종목 우선. 일 단위
+    // 그룹핑은 시간 desc로 유지 (chronological stream 보존).
     const sorted = [...entries].sort((a, b) => {
       const av = a.observed_at ? new Date(a.observed_at).getTime() : 0;
       const bv = b.observed_at ? new Date(b.observed_at).getTime() : 0;
-      return bv - av;
+      if (av !== bv) return bv - av;
+      const aKr = isKr(a);
+      const bKr = isKr(b);
+      if (aKr !== bKr) return aKr ? -1 : 1;
+      return 0;
     });
     const out: Array<{ key: string; heading: ReturnType<typeof dayHeading>; rows: SignalEntry[] }> = [];
     let last = "";
@@ -79,7 +96,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             marginBottom: 8,
           }}
         >
-          Stream · loading
+          스트림 · 불러오는 중
         </div>
         <div
           className="font-serif"
@@ -90,7 +107,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             textAlign: "center",
           }}
         >
-          Reading observations…
+          관측을 읽고 있습니다…
         </div>
       </section>
     );
@@ -108,7 +125,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             marginBottom: 8,
           }}
         >
-          Stream · empty
+          스트림 · 비어 있음
         </div>
         <div
           style={{
@@ -122,20 +139,23 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             className="font-display"
             style={{
               fontSize: "var(--pq-text-quote)",
+              // CEO bug "폰트 겹친다" — heading 1.05 → 1.3 for KR descenders.
+              lineHeight: 1.3,
               color: "var(--pq-ivory, #F5F0E8)",
               marginBottom: 8,
             }}
           >
-            No observations match these filters.
+            조건에 맞는 관측이 없습니다.
           </div>
           <div
             className="font-serif"
             style={{
               fontSize: "var(--pq-text-body)",
+              lineHeight: 1.6,
               color: "rgba(245,240,232,0.55)",
             }}
           >
-            Widen the strength range or extend the time window to see more.
+            강도 범위를 넓히거나 기간을 늘려 다시 확인해 보세요.
           </div>
         </div>
       </section>
@@ -153,19 +173,22 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           marginBottom: 8,
         }}
       >
-        Stream · {entries.length} observations
+        스트림 · 관측 {entries.length}건
       </div>
       <h2
         className="font-display"
         style={{
           fontWeight: 500,
           fontSize: "clamp(26px, 3vw, 40px)",
+          // CEO bug "폰트 겹친다": Playfair heading + KR mixed glyph
+          // 줄간격 확보.
+          lineHeight: 1.2,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory, #F5F0E8)",
           margin: "0 0 22px 0",
         }}
       >
-        Today&apos;s observations.
+        오늘의 관측.
       </h2>
 
       {grouped.map((group) => (
@@ -187,6 +210,9 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
               style={{
                 fontWeight: 500,
                 fontSize: "var(--pq-text-quote)",
+                // CEO bug "폰트 겹친다" — KR 요일명("화요일")이 baseline-
+                // hugging Playfair에 들어가면 디센더 충돌. 1.3 lock-in.
+                lineHeight: 1.3,
                 letterSpacing: "-0.01em",
                 color: "var(--pq-ivory, #F5F0E8)",
                 margin: 0,
@@ -202,7 +228,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
                 color: "rgba(245,240,232,0.55)",
               }}
             >
-              {group.heading.meta} · {group.rows.length} observations
+              {group.heading.meta} · 관측 {group.rows.length}건
             </span>
             <span aria-hidden style={{ display: "block", height: 1 }} />
           </div>
