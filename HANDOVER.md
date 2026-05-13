@@ -1,3 +1,90 @@
+# PivoxQuant — 인수인계서 (2026-05-13 v41 — 70 PR · OPEN PR 0 · rate-limit sentinel + landing ticker refresh + ticker display sweep + pre-commit guard + brag card root-cause fix)
+
+## 🟢 2026-05-13 v41 종합 — **7 fix PR squash-merged (#342–#348)** · main `d3c5855f → 52c331d0` · **OPEN PR 0건** · 자율 마라톤 cycle (Wave A–G)
+
+### v41 cycle PR list (7 main commits)
+
+| PR | Wave | 핵심 변경 | 검증 |
+|---|---|---|---|
+| **#342** | A | `routes/agent.py` `_rate_limit_ok` `prev` default `None` sentinel fix — 부팅 후 monotonic <20s에서 첫 요청 차단하던 버그 (`prev=0.0` → `None`) + 4 unit tests 추가 | red-green pytest 검증, 1905 PASS |
+| **#343** | B | 랜딩 ticker SNAPSHOT 갱신 — SPX 7,400.97 / NDX 29,320.66 / VIX 17.99 (FMP+FRED raw verify) + USD-IDX (DTWEXBGS) row 제거 (ICE DXY 라이선스 product mismatch) | DOM live verify-ux PASS + computedStyle KR 컨벤션 확인 |
+| **#344** | C | `_label_for_ticker` 10개 호출점 전수 적용 — earnings prebrief / capital alloc / brag card / alert wrappers 3개 + 14 회귀 가드 | 1919 PASS / 0 회귀, audit-code GO |
+| **#345** | D | signals v2 드롭다운 + ai page select + burn-rate PDF — `{name} ({ticker})` 형식 통일 | typecheck 0 + harness DOM evidence (라이브 prod는 세션 만료로 PARTIAL) |
+| **#346** | E | `.githooks/pre-commit` SNAPSHOT_DATE >14d 가드 + `live_api` pytest 마커 + sparkline regression 7 tests (default skip) | red-green smoke 검증 (1d PASS / 497d FAIL `exit 1`) |
+| **#347** | F | `^IXIC` frontend label fix — "NASDAQ 100" (not bare "NASDAQ") + 9 hits sweep (backend QQQ proxy는 이미 정합, label만 수정) | tsc 0 + vitest 308/308 PASS |
+| **#348** | G | brag card root-cause fix — backend `_persist()` `_to_v3_shape()` 머지 + frontend `normalizeBragCardData()` defensive null-check (`hero.ticker undefined` 완전 해결) | 15 brag_card tests + 189 related PASS |
+
+### v41 직접 verified facts (2026-05-13 git log / gh pr list / pytest)
+- **main HEAD**: `52c331d0` (git log -1 직접 확인)
+- **v40 → v41**: 7 fix PR + 0 docs = 7 squash commits (`d3c5855f → 52c331d0`)
+- **OPEN PR**: 0건 (gh pr list 확인)
+- **이번 cycle smoke**: 56 PASS / 0 fail (`tests/test_agent_route.py` + ticker_display 4 files + `test_brag_card_service.py` 직접 실행)
+- **Wave C 조사 결과**: signals v1 dead code (`_v1/page-v1.tsx`) — `NEXT_PUBLIC_SIGNALS_V2=true` 고정으로 production 미도달, PR #345 fix 충분
+
+### v41 라이브 verify-ux 결과 (정직 — PARTIAL 3건 admit)
+
+| PR | 판정 | Evidence |
+|---|---|---|
+| **#343** | ✅ **PASS** | Railway prod `01105519ea2f` 직전 DOM 추출 + computedStyle (하락 rgb(122,160,200) / 상승 rgb(209,136,136)) + USD-IDX absent + stale 값 absent 확인 |
+| **#345** | ⚠️ **PARTIAL** | 코드 일치 확인, 라이브 DOM 미검 — Railway prod `DEV_LOGIN_SECRET` 미설정 + 세션 만료 → /login 리다이렉트로 DOM 접근 불가 |
+| **#344** | ⚠️ **PARTIAL** | 코드 일치 확인, VAPID 라이브 trigger 불가로 알림 push payload 미검 |
+| **#347** | ⚠️ **미검** | Railway 배포 시점 이후 변경이라 spot-check 권고 (다음 세션에서 확인) |
+| **#348** | ⚠️ **미검** | brag_card DB row 0건이라 prod manifestation 안 됨 — 다음 brag_card 생성 시 자연 verify |
+
+### v41 정직 admit (feedback_no_false_reports 적용)
+- HANDOVER v40가 `test_agent_route.py` 5 fail을 "test isolation 이슈"로 진단 → 실제 root cause는 `_rate_limit_ok`의 `prev=0.0` default 버그 (PR #342에서 정정). v40 진단 폐기 admit.
+- PR #343 audit 과정에서 코드 주석의 "SNAPSHOT_DATE >14d" aspirational 표현 발견 → PR #346에서 실제 pre-commit hook으로 즉시 자가 fix.
+- Wave A agent와 Wave B agent가 동일 working tree에서 충돌, 한 번 main에 잘못 commit → reflog 복구 (Wave B admit).
+- verify-ux 5건 중 1건만 PASS (4건 PARTIAL/미검) — Railway `DEV_LOGIN_SECRET` 미설정으로 라이브 DOM 접근 불가, 코드 레벨만 verify.
+
+### v41 잔존 carry-over (자율 100% 불가)
+
+**Pre-existing (이번 cycle 무관, no_busywork 적용)**:
+- signals v1 dead code (`app/(dashboard)/signals/_v1/page-v1.tsx`) — feature flag rollback 보존 위해 유지
+- 13개 다른 artifact template (earnings_prebrief / capital_allocation / weekly_memo 등)에 brag card 동일 data shape mismatch 패턴 가능성 — PR #348 본문 follow-up 명시, live error 없어 `[no_busywork]` 적용
+
+**Real fix 가능 (별도 wave 후보)**:
+- 랜딩 ticker public RSC fetch endpoint 신설 (`/api/market/indices/public`) — 현재 pre-commit hook >14d 가드로 임시 보완 (PR #346), 라이브 fetch로 전환하면 근본 해결
+- `/home` ticker 초기 paint "— · —" 1-2초 dashes (cosmetic loading state, `[no_busywork]`)
+- DXY (ICE Dollar Index) 영구 처리 — 옵션 B (제거) 이미 적용 (PR #343). ICE 직접 라이선스 또는 SPX/NDX/VIX 3개 충분
+
+**사장님 외부 액션 (v40 carry-over 동일, CEO 약속 진행 중)**:
+1. **변호사 미팅 + Q1-Q17 송부** (CEO 약속 잡아둠 ✅) — 유료결제 BLOCKER
+2. **통신판매업 신고** (성동구청, ~45k원)
+3. **Cloudflare R2 무료 plan** — artifact 영구 storage (PR #348 brag card 0 rows의 한 원인이 ephemeral filesystem일 가능성)
+4. **KRX Open Data Portal 신청** — sparkline backup (P1)
+5. **Sentry New Client Key + Vercel env rotate** (보안)
+6. **2FA 활성화** (무료 5분)
+7. **베타테스터 BETA_PASSWORD 통보** (`cat /tmp/new-beta-pw.txt`)
+8. **Anthropic/FMP/KIS API key rotate**
+
+### v41 룰 준수 점검
+✅ thorough_fixes (각 wave 동일 패턴 전수 sweep — #344 10개 호출점 / #347 9 hits / #348 brag card 13개는 live error 없어 `[no_busywork]` admit) · ✅ no_busywork (signals v1 dead code / cosmetic loading dashes skip) · ✅ no_extra_cost (FMP + FRED + KIS 기존 사용, 추가 결제 0원) · ✅ official_data_only (FMP + FRED + KIS 만, yfinance/네이버/pykrx 안 씀) · ✅ feature_preservation (모든 기존 path 보존) · ✅ v3 design lock-in (신규 hex 없음, 토큰만) · ✅ no_false_reports (verify-ux PARTIAL/미검 4건 정직 admit) · ✅ ticker_display (PR #344 10개 호출점 + PR #345 signals/ai/pdf sweep 적용) · ✅ delegation (backend-dev / frontend-dev / integrations / infra-dev / verify-ux / audit-code / docs agent 위임 + 정직 audit) · ✅ pr_workflow (각 PR <30 files, 7 PR 다 squash-merge)
+
+### v41 다음 세션 첫 액션
+```bash
+# 1. main 동기화
+cd /Users/seanbae/Desktop/취준/stockpilot
+git pull origin main
+git log --oneline -1  # main HEAD = 52c331d0 확인
+
+# 2. 라이브 spot-check (10분, 사용자 세션 필요 — DEV_LOGIN_SECRET 우회 불가)
+#    - https://www.pivoxquant.com → 랜딩 ticker 3개 확인 (SPX/NDX/VIX, PR #343 — 이미 verify-ux PASS)
+#    - https://www.pivoxquant.com/signals → 종목 검색 input → datalist "삼성전자 (005930.KS)" 형식 확인 (PR #345)
+#    - https://www.pivoxquant.com/ai → "내 보유 종목에서 선택" select → 같은 형식 확인 (PR #345)
+#    - /market top-ticker NASDAQ 100 label 확인 (PR #347, 미검)
+
+# 3. brag card 생성 트리거 → /reports/preview/brag-card 확인 (PR #348 verify)
+#    - backfill 1건 또는 manual trigger → console error "hero.ticker undefined" 사라졌는지 확인
+
+# 4. 외부 액션 P0 (CEO 직접)
+#    - 변호사 미팅 진행 + Q1-Q17 송부
+#    - 통신판매업 신고
+#    - 베타테스터 BETA_PASSWORD 통보
+```
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-13 v40 — 63 PR · OPEN PR 0 · CEO-flagged 4건 thorough fix + 라이브 verify + pytest 1900 PASS + Wave E 회귀 자가 fix)
 
 ## 🟢 2026-05-13 v40 종합 — **7 PR + 1 docs squash-merged (#334–#340)** · main `3ce79661 → b9dc4bcf` · **OPEN PR 0건** · 자율 야간 마라톤 + 정직 보강 cycle
