@@ -575,16 +575,23 @@ class BragCardService:
         # imply forward action.
         ticker = data.get("best_ticker")
         if ticker:
+            # 2026-05-13: prefer "name (ticker)" over raw ticker in body
+            # (feedback_ticker_display rule). Falls back to ticker on miss.
+            try:
+                from services.push_service import _label_for_ticker
+                _t_label = _label_for_ticker(ticker)
+            except Exception:
+                _t_label = ticker
             hero_title = "이번 달 단일 의사결정 기록"
             if best_ret is not None:
                 hero_body = (
-                    f"{ticker} 종목에서 단일 의사결정을 관찰했습니다. "
+                    f"{_t_label} 종목에서 단일 의사결정을 관찰했습니다. "
                     f"실현 수익률은 {best_decision_pct}로 기록되었습니다. "
                     "이 카드는 결과의 기록일 뿐 향후 의사결정에 대한 안내가 아닙니다."
                 )
             else:
                 hero_body = (
-                    f"{ticker} 종목에서 단일 의사결정을 관찰했습니다. "
+                    f"{_t_label} 종목에서 단일 의사결정을 관찰했습니다. "
                     "이 카드는 결과의 기록일 뿐 향후 의사결정에 대한 안내가 아닙니다."
                 )
             hero_pnl = best_decision_pct
