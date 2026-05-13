@@ -64,96 +64,74 @@ def test_normalize_severity(caus, raw, expected):
     assert caus._normalize_severity(raw) == expected
 
 
-# --- _parse_agent_findings -------------------------------------------------
+# --- Phase 3 — _validate_finding -------------------------------------------
 
 
-def test_parse_findings_clean_envelope(caus):
-    """Standard claude-cli envelope with assistant text containing JSON array."""
-    payload = json.dumps([
-        {"severity": "P1", "category": "UX", "page": "/home", "summary": "x", "repro": "y", "screenshot": "/tmp/a.png"},
-    ])
-    envelope = json.dumps({"type": "result", "result": payload})
-    findings = caus._parse_agent_findings(envelope, "agent-x")
-    assert len(findings) == 1
-    assert findings[0]["severity"] == "P1"
+def test_validate_finding_accepts_minimal(caus):
+    """Required keys present → finding returned with agent_id injected."""
+    raw = {"severity": "P0", "category": "법규", "page": "/ai", "summary": "x"}
+    out = caus._validate_finding(raw, "agent-x")
+    assert out is not None
+    assert out["agent_id"] == "agent-x"
+    assert out["severity"] == "P0"
 
 
-def test_parse_findings_markdown_fenced(caus):
-    """Some models wrap output in ```json ... ``` fences — we strip them."""
-    payload = "```json\n" + json.dumps([{"severity": "P0", "summary": "boom"}]) + "\n```"
-    envelope = json.dumps({"result": payload})
-    findings = caus._parse_agent_findings(envelope, "agent-x")
-    assert len(findings) == 1
-    assert findings[0]["summary"] == "boom"
+def test_validate_finding_rejects_missing_keys(caus, capsys):
+    raw = {"severity": "P0", "summary": "x"}  # missing category, page
+    out = caus._validate_finding(raw, "agent-x")
+    assert out is None
 
 
-def test_parse_findings_empty_array(caus):
-    """Clean sweep — agent reports no issues."""
-    envelope = json.dumps({"result": "[]"})
-    assert caus._parse_agent_findings(envelope, "agent-x") == []
+def test_validate_finding_rejects_non_dict(caus):
+    assert caus._validate_finding("not-a-dict", "agent-x") is None
+    assert caus._validate_finding(None, "agent-x") is None
+    assert caus._validate_finding(42, "agent-x") is None
 
 
-def test_parse_findings_envelope_not_json(caus):
-    """Malformed CLI stdout — graceful empty return."""
-    assert caus._parse_agent_findings("not-json-at-all", "agent-x") == []
+def test_validate_finding_coerces_str_fields(caus):
+    """Non-string values for str fields are coerced (no downstream crash)."""
+    raw = {"severity": 0, "category": ["x"], "page": "/h", "summary": 9}
+    out = caus._validate_finding(raw, "agent-x")
+    assert out is not None
+    assert isinstance(out["severity"], str)
+    assert isinstance(out["summary"], str)
 
 
-def test_parse_findings_payload_not_array(caus):
-    """Agent returned an object, not a list — graceful empty."""
-    envelope = json.dumps({"result": json.dumps({"severity": "P0"})})
-    assert caus._parse_agent_findings(envelope, "agent-x") == []
+# --- Phase 3 — scenario module surface --------------------------------------
 
 
-def test_parse_findings_empty_stdout(caus):
-    """Empty stdout — graceful empty."""
-    assert caus._parse_agent_findings("", "agent-x") == []
-    assert caus._parse_agent_findings("   ", "agent-x") == []
+def test_scenario_module_map_complete(caus):
+    """All 7 day{N} short forms + 7 module names map into valid indices."""
+    for i in range(7):
+        assert caus.SCENARIO_MODULE_MAP[f"day{i}"] == i
+    for idx, (module_name, _) in enumerate(caus.DAY_SCENARIOS):
+        assert caus.SCENARIO_MODULE_MAP[module_name] == idx
 
 
-def test_parse_findings_top_level_array(caus):
-    """If CLI somehow returned the array directly, accept it."""
-    raw = json.dumps([{"severity": "P2", "summary": "z"}])
-    findings = caus._parse_agent_findings(raw, "agent-x")
-    assert len(findings) == 1
+def test_load_scenario_module_resolves(caus):
+    """All 7 modules import cleanly and expose run()."""
+    for module_name, _ in caus.DAY_SCENARIOS:
+        mod = caus._load_scenario_module(module_name)
+        assert mod is not None, f"failed to import {module_name}"
+        assert callable(getattr(mod, "run", None)), \
+            f"{module_name} missing run() callable"
 
 
-def test_parse_findings_messages_format(caus):
-    """Alt CLI schema: {messages: [{role: assistant, content: '...'}]}."""
-    payload = json.dumps([{"severity": "P1", "summary": "via-messages"}])
-    envelope = json.dumps({
-        "messages": [
-            {"role": "user", "content": "go"},
-            {"role": "assistant", "content": payload},
-        ]
-    })
-    findings = caus._parse_agent_findings(envelope, "agent-x")
-    assert len(findings) == 1
-    assert findings[0]["summary"] == "via-messages"
+def test_load_scenario_module_unknown_returns_none(caus):
+    assert caus._load_scenario_module("not_a_real_scenario_xyz") is None
 
 
-def test_parse_findings_filters_non_dicts(caus):
-    """If agent returns mixed list, only dict entries survive."""
-    payload = json.dumps([{"severity": "P1"}, "garbage", 42, None])
-    envelope = json.dumps({"result": payload})
-    findings = caus._parse_agent_findings(envelope, "agent-x")
-    assert len(findings) == 1
-
-
-# --- _build_agent_prompt ----------------------------------------------------
-
-
-def test_build_agent_prompt_contents(caus, tmp_path):
-    cookies = tmp_path / "sim3.json"
+def test_run_user_tester_dry_run_no_browser(caus, capsys, tmp_path):
+    """dry_run prints invocation and returns [] without launching browser."""
+    cookies = tmp_path / "sim.json"
     cookies.write_text("{}")
-    prompt = caus._build_agent_prompt(
-        cookies, "Day 2: AAPL", 2, "caus-day2-2026-05-13-sim3"
+    result = caus.run_user_tester(
+        cookies, "day2_us_watchlist", 2, "agent-x", dry_run=True
     )
-    assert "Day 2: AAPL" in prompt
-    assert str(cookies) in prompt
-    assert "caus-day2-2026-05-13-sim3" in prompt
-    assert "pivoxquant.com" in prompt
-    # Iron Rule: forbids recommendation lexicon in prod UI — agent must enforce.
-    assert "BUY/SELL" in prompt or "BUY" in prompt
+    assert result == []
+    out = capsys.readouterr().out
+    assert "Playwright scenario" in out
+    assert "day2_us_watchlist" in out
 
 
 # --- ensure_labels + create_github_issue (dry-run) -------------------------
@@ -281,11 +259,17 @@ def test_main_no_session_no_secret_admits(caus, tmp_path, monkeypatch, capsys):
 
 
 def test_day_scenarios_complete(caus):
-    """7 scenarios, one per weekday — no IndexError on any weekday."""
+    """7 scenarios, one per weekday — no IndexError on any weekday.
+
+    Phase 3 changed DAY_SCENARIOS to a list of (module_name, label) tuples.
+    """
     assert len(caus.DAY_SCENARIOS) == 7
     for i in range(7):
-        assert isinstance(caus.DAY_SCENARIOS[i], str)
-        assert len(caus.DAY_SCENARIOS[i]) > 10
+        entry = caus.DAY_SCENARIOS[i]
+        assert isinstance(entry, tuple) and len(entry) == 2
+        module_name, label = entry
+        assert isinstance(module_name, str) and module_name.startswith(f"day{i}")
+        assert isinstance(label, str) and len(label) > 10
 
 
 def test_caus_labels_canonical(caus):
