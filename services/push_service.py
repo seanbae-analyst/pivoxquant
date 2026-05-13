@@ -61,9 +61,20 @@ def notify_alert(user_id: int, alert_data: dict):
     sig = alert_data.get("signal", "")
     ticker = alert_data.get("ticker", "")
     message = alert_data.get("message", "")
+    # 2026-05-13 (Wave H): callers that already resolved the name
+    # (e.g. services/alert_service.maybe_generate) hand it in here so we
+    # skip the resolver. Falls back to _label_for_ticker when missing or
+    # degenerate, preserving the standalone push surface contract.
+    preresolved_name = (alert_data.get("name") or "").strip()
+    if (
+        preresolved_name
+        and preresolved_name != ticker.strip()
+    ):
+        label = f"{preresolved_name} ({ticker})"
+    else:
+        label = _label_for_ticker(ticker)
 
     icon_map = {"POSITIVE": "Positive Signal", "NEGATIVE": "Negative Signal"}
-    label = _label_for_ticker(ticker)
     title = f"PivoxQuant — {icon_map.get(sig, 'Alert')}: {label}"
 
     send_push_to_user(
