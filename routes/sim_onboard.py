@@ -152,7 +152,7 @@ def _enabled() -> bool:
     return bool(os.environ.get("SIM_ONBOARD_SECRET"))
 
 
-@sim_onboard_bp.route("/api/auth/sim-onboard", methods=["POST"])
+@sim_onboard_bp.route("/api/auth/sim-onboard", methods=["POST"])  # legal-exempt: internal CAUS-only endpoint, no user-facing financial content
 @limiter.limit("3 per minute")  # IP-level brute-force defense.
 @limiter.limit("1 per hour", key_func=_email_rate_key)  # Per-email throttle.
 def sim_onboard():
