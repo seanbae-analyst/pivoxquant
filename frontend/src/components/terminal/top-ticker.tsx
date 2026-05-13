@@ -228,7 +228,7 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
 
 /** Map a /market/indices block onto our ribbon symbol. */
 function _macroFromIndex(block: IndexBlock | undefined, symbol: string):
-  | { level: string; pct: number; isStale: boolean }
+  | { level: string; pct: number | null; isStale: boolean }
   | null {
   if (!block || typeof block.level !== "number") return null;
   // KR sanity boundary at the consumer too — protects from cached
@@ -239,14 +239,21 @@ function _macroFromIndex(block: IndexBlock | undefined, symbol: string):
     if (safe == null) return null;
     level = safe;
   }
-  const pct = typeof block.change_1d_pct === "number" ? block.change_1d_pct : 0;
+  // Bug #11: preserve null when the upstream block omits change_1d_pct so
+  // a missing-data state is distinguishable from a real flat 0.00% day.
+  // The render layer maps null → "—" placeholder, while 0 → "0.00%".
+  const pct: number | null =
+    typeof block.change_1d_pct === "number" ? block.change_1d_pct : null;
   // Format level — KR indices use comma-grouping with 2 decimals, USD/KRW
-  // is a 4-digit FX value, US/VIX use 2 decimals.
+  // is a 4-digit FX value with 2 decimals (Bug #11: prior `maximumFractionDigits: 0`
+  // truncated "1,487.48" to "1,487", which combined with the missing
+  // change% rendered as "1,487 · —" — visually identical to a clipped
+  // value. KR FX desks quote USDKRW to 2 decimals.)
   let levelStr: string;
   if (symbol === "USDKRW") {
     levelStr = level.toLocaleString("ko-KR", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
   } else {
     levelStr = level.toLocaleString("en-US", {
@@ -306,13 +313,24 @@ export function TopTicker() {
       // Pull change_1d_pct from the KR indices payload when available — the
       // /api/market/fx endpoint only carries the level, but
       // /api/market/indices?region=kr already exposes USDKRW with a daily
-      // change. Falls back to 0 when the indices endpoint is empty/loading.
+      // change. If the indices payload doesn't carry a numeric change yet,
+      // prefer the KR-block fallback rather than synthesizing 0%, so the
+      // delta cell shows "—" only when the upstream truly omits it. (Bug
+      // #11: previous `?? 0` coerced missing data to 0 → "—" placeholder
+      // was indistinguishable from a real flat day, and visually clipped
+      // the line to "1,487 · —".)
       const krUsdKrw = find(krIdx, "USDKRW");
+      const krPct =
+        typeof krUsdKrw?.change_1d_pct === "number"
+          ? krUsdKrw.change_1d_pct
+          : null;
       m.set("USDKRW", {
         ticker: "USDKRW",
         name: "USD/KRW",
         level: fxData.usd_krw,
-        change_1d_pct: krUsdKrw?.change_1d_pct ?? 0,
+        // `null as unknown as number` — IndexBlock declares change_1d_pct
+        // as required; _macroFromIndex below already guards with typeof.
+        change_1d_pct: (krPct ?? null) as unknown as number,
         // Forward `is_stale` so the ribbon dims when /api/market/fx is stale
         // (offline FX feed) — Bug #13 follow-through.
         is_stale: fxData.is_stale === true,
@@ -370,14 +388,24 @@ export function TopTicker() {
       // Fallback: macro SWR feed for ribbon-only symbols (SPX/NDX/KOSPI/...).
       const macro = _macroFromIndex(macroMap.get(t.symbol), t.symbol);
       if (macro) {
+        // Bug #11: macro.pct === null now means "upstream didn't carry a
+        // change" (render placeholder) while macro.pct === 0 means
+        // "upstream sent a flat 0.00%" (render "0.00%"). Resolves the
+        // USDKRW "1,487 · —" ambiguity.
         const dir: Snapshot["dir"] =
-          macro.pct > 0 ? "up" : macro.pct < 0 ? "down" : "flat";
+          macro.pct == null
+            ? "flat"
+            : macro.pct > 0
+              ? "up"
+              : macro.pct < 0
+                ? "down"
+                : "flat";
         return {
           symbol: t.symbol,
           label: t.label,
           level: macro.level,
           delta:
-            macro.pct === 0
+            macro.pct == null
               ? PLACEHOLDER_DELTA
               : `${macro.pct >= 0 ? "+" : ""}${macro.pct.toFixed(2)}%`,
           dir,

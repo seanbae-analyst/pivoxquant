@@ -155,6 +155,14 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   href={`/detail/${s.ticker}`}
                   prefetch={false}
                   aria-label={`${name} · ${tone.display} · 강도 ${strength.toFixed(2)}`}
+                  // Bug #11: at mid-viewport widths (1024–1279px) the 5-col
+                  // grid squeezed each card to ~190px, clipping "Apple Inc."
+                  // to "App…". `title` exposes the full name on hover/focus
+                  // (browsers also surface it to assistive tech), and the
+                  // line-clamp-2 / break-words style lets names occupy two
+                  // lines before falling back to ellipsis — keeps the brand
+                  // name legible without ballooning card height.
+                  title={name}
                   className="font-display mover-title-link"
                   style={{
                     fontSize: "var(--pq-text-h5)",
@@ -166,12 +174,13 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                     lineHeight: 1.35,
                     letterSpacing: "-0.005em",
                     textDecoration: "none",
-                    // block + ellipsis: 긴 한국어/영어 종목명이 카드
-                    // bounds를 깨고 흘러나오지 않도록.
-                    display: "block",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
                     maxWidth: "100%",
                   }}
                 >

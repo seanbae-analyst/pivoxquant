@@ -147,6 +147,12 @@ export function SignalCard({ entry, resolveName }: Props) {
             href={detailHref}
             prefetch={false}
             aria-label={`${name} · ${entry.ticker} · ${tone.display} · 강도 ${strength.toFixed(2)} · ${fmtKstClock(observed)}`}
+            // Bug #11 sweep: same hover-tooltip exposure as the mover
+            // card. Single-line ellipsis is preserved (the rationale
+            // sits below and any wrap would push it into the next
+            // row), but `title` keeps the full name reachable without
+            // resizing the viewport.
+            title={name}
             className="font-display signal-title-link"
             style={{
               fontSize: "var(--pq-text-quote)",

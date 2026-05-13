@@ -447,9 +447,32 @@ function ConsentModal({
           className="px-6 py-5"
           style={{ borderTop: "0.5pt solid rgba(245,240,232,0.10)" }}
         >
+          {/* Bug #10 (P2): the CTA used to sit `disabled` with no inline
+              copy explaining why a click did nothing — users tried it,
+              got silence, and assumed the page was broken. Tally the
+              outstanding required checkboxes and surface the count via
+              aria-live so screen readers + sighted users both learn the
+              exact gate condition. */}
+          {!allAgreed && (
+            <p
+              aria-live="polite"
+              role="status"
+              className="mb-3 text-center font-serif"
+              style={{
+                fontSize: "var(--pq-text-eyebrow)",
+                color: "rgba(245,240,232,0.55)",
+                letterSpacing: "0.04em",
+              }}
+            >
+              {`결제 진행 전 필수 체크박스 3개에 모두 동의해야 합니다 (${
+                [agreeKey, agreeRecurring, agreeStripe].filter(Boolean).length
+              }/3).`}
+            </p>
+          )}
           <button
             type="button"
             disabled={!allAgreed || submitting}
+            aria-disabled={!allAgreed || submitting}
             onClick={onConfirm}
             className="w-full py-3 font-serif transition-all"
             style={{
