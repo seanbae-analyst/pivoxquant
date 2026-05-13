@@ -903,7 +903,22 @@ class BragCardService:
 
         # Allocate a share token on first persist (UNIQUE col; lazy retry).
         token = _generate_share_token()
-        data_payload = {**data, "share_token": token}
+        # 2026-05-13 root-cause fix: persist BOTH the flat snake_case
+        # generate_for_user() shape AND the v3 (template-ready) shape.
+        # The /reports/preview/brag-card surface hands `data_json` straight
+        # to the React `<BragCard>` template, which expected `hero.ticker`,
+        # `monthLabel`, etc. — keys that only existed inside the HTML/PDF
+        # render path. The frontend normaliser also handles this defensively
+        # (frontend/src/components/reports/templates/brag-card.tsx), so
+        # this serves as the explicit contract: persisted brag rows include
+        # both legacy flat fields (referral_code/return_pct/etc.) and the
+        # template-friendly v3 fields (hero/why_it_worked/...).
+        try:
+            v3_payload = self._to_v3_shape(data)
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.warning("v3 shape build failed for user %s: %s", user_id, exc)
+            v3_payload = {}
+        data_payload = {**data, **v3_payload, "share_token": token}
 
         if artefact:
             # Upsert path — keep the original share_token if present.
