@@ -1,6 +1,19 @@
-# PivoxQuant — 인수인계서 (2026-05-13 v41 final — 80 PR · OPEN PR 0 · CAUS Phase 1+2+3 완전 가동 + SHIP-BLOCKER prod alembic fix + crontab 등록 + Playwright 7 시나리오 + clean smoke run)
+# PivoxQuant — 인수인계서 (2026-05-13 v41 final — 81 PR · OPEN PR 0 · CAUS Phase 1+2+3 완전 가동 + SHIP-BLOCKER 2건 자동 발견/fix (prod alembic + cron SSL) + crontab + Playwright 7 시나리오 + 실 sim user prod DB 생성 verified)
 
-## 🟢 2026-05-13 v41 final — **Phase 1+2+3 완전 가동 · 17 PR squash-merged (#342–#360)** · main `d3c5855f → 154728bf` · **OPEN PR 0건** · 자율 cycle 실 가동
+## 🟢 2026-05-13 v41 final — **Phase 1+2+3 + SSL fix 완전 가동 · 18 PR squash-merged (#342–#362)** · main `d3c5855f → 2475f441` · **OPEN PR 0건** · 자율 cycle 실 작동 verified
+
+### v41 SSL fix patch (PR #362, 2026-05-13 추가)
+- **증상**: CEO "확실히 다 했냐" 직격탄 후 직접 verify 진행 중 발견 — `SIM_ONBOARD_SECRET=$(cat) venv/bin/python scripts/caus_daily_sweep.py --scenario day1` → `urlopen error [SSL: CERTIFICATE_VERIFY_FAILED]`
+- **원인**: macOS Python 3.9 LibreSSL 2.8.3 default SSL context가 pivoxquant.com 인증서 chain 못 잡음. cron 실행 시 동일 fail → 진짜 시뮬 안 됨
+- **Fix (PR #362)**: `_build_ssl_context()` helper (certifi import + fallback) + `_SSL_CONTEXT` 모듈 상수 + sim-onboard + Slack webhook 둘 다 `context=_SSL_CONTEXT` 명시
+- **검증 (실 prod evidence)**:
+  - sim7 fresh email → HTTP 200 + `user_id=17` prod DB 생성 + Set-Cookie 발급
+  - sim4 재시도 → HTTP 429 "Too Many Requests" (rate-limit 1/h 소진, **server 도달 = SSL 통과**)
+  - = SSL fail 해소 + 진짜 자율 cycle 실 작동 verified
+- **다음 cron tick (2026-05-14 03:00 KST)**: sim5 fresh bucket + day-3 시나리오 자동
+- **회귀 admit (out-of-scope)**: `scripts/legal_monitor/monitor.py:464-466` 동일 패턴 (urllib + default SSL context against GitHub API) — 현재 작동, 향후 위험 carry-over
+
+### v41 cycle 누적 통계 (PR #362 포함)
 
 ### v41 final cycle 누적 통계
 - **main HEAD**: `154728bf` (git log -1 직접 확인)
