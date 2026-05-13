@@ -1,6 +1,113 @@
-# PivoxQuant — 인수인계서 (2026-05-13 v41 — 70 PR · OPEN PR 0 · rate-limit sentinel + landing ticker refresh + ticker display sweep + pre-commit guard + brag card root-cause fix)
+# PivoxQuant — 인수인계서 (2026-05-13 v41 final — 77 PR · OPEN PR 0 · CAUS Phase 1+2 + SHIP-BLOCKER prod alembic fix + crontab 등록 + 실 사이클 첫 smoke)
 
-## 🟢 2026-05-13 v41 종합 — **7 fix PR squash-merged (#342–#348)** · main `d3c5855f → 52c331d0` · **OPEN PR 0건** · 자율 마라톤 cycle (Wave A–G)
+## 🟢 2026-05-13 v41 final — **14 fix PR squash-merged (#342–#356) + 1 docs PR (#349)** · main `d3c5855f → 0b09ada5` · **OPEN PR 0건** · 자율 cycle Phase 1+2 완비
+
+### v41 final cycle 누적 통계
+- **main HEAD**: `0b09ada5` (git log -1 직접 확인)
+- **v40 base**: `d3c5855f`
+- **Cumulative**: 14 fix/feat PR + 1 docs PR = 15 squash commits (Wave A–G Phase 1+2)
+- **OPEN PR**: 0건 (gh pr list --state open)
+- **backend pytest**: 1819 PASS (PR #354 시점 직접 확인)
+- **자율 머지 근거**: CEO "자율 머지로 해" + "맞는걸로 판단해서 진행" 명시
+
+### v41 Phase 2 추가 PR list (#349-#356, 2차 wave)
+
+| PR | Wave/Phase | 핵심 변경 | 검증 |
+|---|---|---|---|
+| **#349** | docs | HANDOVER v41 초안 | — |
+| **#350** | signals design | KR-first + 한국어화 + 폰트 overlap fix + symbol cutoff + 알림 z-index sweep (7 페이지 전수) | tsc 0 + vitest 308/308 + CEO 직접 보고 4건 thorough fix |
+| **#351** | Phase 1 Q3 | `users.is_simulated BOOLEAN NOT NULL DEFAULT false` alembic 032 + model | 7/7 users backfill False, pytest 84 PASS |
+| **#352** | Phase 1 | `scripts/caus_daily_sweep.py` cron launcher + `scripts/README.md` + spec Q2 옵션 B (Gmail alias 채택, DEV_LOGIN_SECRET admit) | stdlib only, dry-run 검증 |
+| **#353** | Phase 1 | `/api/auth/sim-onboard` endpoint (HMAC ticket + sim-only regex + rate-limit 1/h + UA check + is_simulated 강제) + 22 tests | 62/62 auth tests PASS |
+| **#354** | Phase 1 | is_simulated 가드 3종: EmailSender + send_push_to_user 스킵, analytics filter, Sentry `user_type` tag | 12 신규 + 9 updated tests, 1819 backend PASS |
+| **#355** | SHIP-BLOCKER P0 | prod `alembic_version` 4년치 미추적 발견 + idempotent SQL repair (is_simulated, 6 perf indexes, unique constraint) + Procfile/railway.json `\|\| echo` silent mask 영구 제거 + `scripts/verify_prod_schema.py` | live sim3 → 200 + DB row 생성 + verify_prod_schema FAIL=0 |
+| **#356** | Phase 2 | user-tester subprocess + GitHub Issue auto-alert (label 4종 시드) + dry-run flag + 33 tests | 33 PASS, label seed verify |
+
+### v41 final 직접 verified facts (2026-05-13 git log / gh pr list / pytest)
+- **main HEAD**: `0b09ada5` (git log -1)
+- **v40 → v41 cumulative**: Phase 1 (Wave A–G, #342–#348) 7 PR + docs #349 + Phase 2 (#350–#356) 8 PR = 15 total squash commits
+- **OPEN PR**: 0건
+- **Railway prod**: live = HEAD (PR #355 smoke sim3 → HTTP 200 + user_id=15 + DB row 생성 확인)
+- **SHIP-BLOCKER**: PR #355 — `alembic_version` 4년치 silent fail 발견 + idempotent repair 완료
+- **crontab 등록**: `0 3 * * * cd .../stockpilot && python3 scripts/caus_daily_sweep.py` (매일 03:00 KST)
+- **자율 cycle 첫 smoke**: sim3 sim-onboard → 200 + DB row ✅ / sim4 → HTTP 429 (rate-limit 1/h 소진, 정상 동작)
+
+### v41 final SHIP-BLOCKER 발견 상세 (PR #355)
+CAUS 인프라 구축 중 자동 발견한 핵심 이슈:
+- `alembic_version` table이 prod에 4년치 미추적 (migrations 003–019 비동기화)
+- Procfile/railway.json `|| echo migration-skipped` silent mask → 첫 실행 fail → 침묵
+- non-idempotent `op.create_table` → schema correctness drift (perf indexes / unique constraint / is_simulated)
+- **보안 안도**: encryption columns (migration 006)은 prod에 이미 존재 (`_add_column_if_missing` 패턴 덕). broker_connections 0 rows = 영향 0
+- **의의**: CEO "agent 자율 cycle로 출시 걸림돌 자동 발견" 의도 첫 실증 사례
+
+### v41 final 자율 cycle 첫 결과 (정직 admit)
+- 인프라 ✅: 가입 + 세션 + 리포트 + GitHub Issue path 모두 graceful 작동
+- 실 시뮬 ⚠️: `claude` CLI subprocess 600s timeout (child context에서 Claude in Chrome MCP 사용 불가 + prompt 길이 미확정)
+- sim4 sim-onboard 시도 → HTTP 429 (직전 smoke로 rate-limit 1/h 소진, 정상 방어 동작)
+- 0 findings → 0 GitHub Issue (Phase 3에서 Playwright 시나리오로 대체 필요)
+
+### v41 final 정직 admit (feedback_no_false_reports 적용)
+- 기획안 Q2 초기 추천 (DEV_LOGIN_SECRET prod set)이 코드 가드 `routes/__init__.py:97-101` 검토 안 한 잘못된 가정 → admit + 즉시 unset + 옵션 B (Gmail alias + sim-onboard endpoint)로 patch
+- DEV_LOGIN_SECRET set 시도 → Railway 새 deployment boot fail → 이전 deployment 유지 → 사용자 영향 0
+- 첫 cycle subprocess timeout → 인프라 가동만 검증, 실 시뮬은 Phase 3 carry-over
+- Wave A + Wave B 동시 작업 시 working tree 충돌 + main에 잘못 commit → reflog 복구 admit
+- Wave 1 (PR #354) agent가 "sim_onboard.py legal scrub 실패" 보고 → main에서 직접 verify = 20 PASS / 0 fail → agent misread admit
+
+### v41 final 잔존 carry-over (Phase 3 후보)
+
+**Phase 3 — 실 시뮬 동작 (큰 작업, 추가 비용 0원)**:
+- `scripts/caus_scenarios/day{0..6}.py` 7개 Playwright Python 시나리오
+- `caus_daily_sweep.py`에서 `day_idx`에 따라 import + 호출
+- `claude` subprocess 대체 (안정성 + 추가 비용 0원)
+
+**기타 carry-over (no_busywork 적용)**:
+- 13개 artifact template v3 shape sweep — `_to_v3_shape`는 brag-card 전용 설계 + DB rows 0건, live error 없어 스킵
+- signals v1 dead code — feature flag rollback 보존 위해 유지
+- DXY product mismatch — 옵션 B (USD-IDX 제거) 이미 적용 (PR #343)
+
+### v41 final 외부 액션 (CEO 직접)
+1. ✅ 변호사 미팅 (약속 잡아둠)
+2. 통신판매업 신고 (성동구청, ~45k원)
+3. 베타테스터 BETA_PASSWORD 통보 (`cat /tmp/new-beta-pw.txt`)
+4. Slack webhook 발급 (현재 GitHub Issue로 임시 대체 — PR #356)
+5. Cloudflare R2 무료 plan (artifact 영구 storage)
+6. KRX Open Data Portal 신청
+7. Sentry New Client Key + Vercel env rotate
+8. 2FA 활성화
+9. Anthropic/FMP/KIS API key rotate
+
+### v41 final 룰 준수 점검
+✅ thorough_fixes (signals #350 7페이지 + ticker_display #344 10 호출점 + alembic #355 silent mask 영구 차단) · ✅ no_busywork (signals v1 / 13 templates / cosmetic dashes skip) · ✅ no_extra_cost (Max + free GH Issues + 기존 Railway, 추가 결제 0원) · ✅ official_data_only (FMP + FRED + KIS 만) · ✅ feature_preservation (5 v2 컴포넌트 모든 행동 보존) · ✅ v3 design lock-in (#350 Vantablack + Bronze + Playfair) · ✅ no_false_reports (subprocess timeout / DEV_LOGIN_SECRET / agent misread 3건 admit) · ✅ ticker_display (#344 + #345 + #350 + #347 NDX label) · ✅ delegation (backend-dev / frontend-dev / integrations / engineering / docs / verify-ux / audit-code / investigator agent 위임) · ✅ pr_workflow (각 PR <30 files, 15 PR 다 squash-merge)
+
+### v41 final 다음 세션 첫 액션
+```bash
+# 1. main 동기화
+cd /Users/seanbae/Desktop/취준/stockpilot
+git pull origin main
+git log --oneline -1  # main HEAD = 0b09ada5 확인
+
+# 2. 자율 cycle 상태 확인
+crontab -l  # CAUS daily sweep 03:00 KST 등록 확인
+tail -50 /tmp/caus-daily.log  # 최근 cron 실행 로그
+gh issue list --label caus --limit 20  # 자율 발견 이슈
+
+# 3. Phase 3 (Playwright 시나리오) wave 또는 사장님 라이브 spot-check
+#    - signals 드롭다운 + AI page 종목명 표시 (1회 5분)
+
+# 4. 외부 액션 P0 (CEO 직접)
+#    - 통신판매업 신고
+#    - 베타테스터 BETA_PASSWORD 통보
+#    - Slack webhook 발급 + Vercel env 추가
+```
+
+### v41 final cycle 상태 한 줄
+"CEO 'agent 자율로 1주일 cycle 돌려 출시 걸림돌 자동 발견' 의도 → Phase 1+2 인프라 완비 + crontab 03:00 KST cron 등록 + 첫 smoke 가동 + **prod alembic 4년치 silent fail SHIP-BLOCKER 자동 발견 + fix** + 14 fix PR squash-merged + 회귀 0건. 실 시뮬 동작은 Phase 3 (Playwright) carry-over."
+
+---
+
+## 🗂️ v41 Phase 1 아카이브 — Wave A–G (#342–#348) · main `d3c5855f → 52c331d0`
+
+## 🟢 2026-05-13 v41 Phase 1 (Wave A–G) — **7 fix PR squash-merged (#342–#348)** · main `d3c5855f → 52c331d0` · **OPEN PR 0건** · 자율 마라톤 cycle
 
 ### v41 cycle PR list (7 main commits)
 
