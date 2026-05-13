@@ -278,10 +278,17 @@ def _resolve_scenario(user_id: int, s: ScenarioInput) -> ScenarioResult:
                 max_dd=None, sharpe=None,
                 note="티커가 비어 있거나 형식이 올바르지 않습니다.",
             )
+        # 2026-05-13: prefer "name (ticker)" in user-facing scenario label
+        # (feedback_ticker_display rule). Falls back to ticker on miss.
+        try:
+            from services.push_service import _label_for_ticker
+            _label = _label_for_ticker(ticker)
+        except Exception:
+            _label = ticker
         closes = _safe_history(ticker)
         if closes is None:
             return ScenarioResult(
-                label=f"New Position — {ticker}",
+                label=f"New Position — {_label}",
                 type=stype, tickers=[ticker], weights=[1.0],
                 return_cagr=None, volatility=None,
                 max_dd=None, sharpe=None,
@@ -289,7 +296,7 @@ def _resolve_scenario(user_id: int, s: ScenarioInput) -> ScenarioResult:
             )
         cagr, vol, dd, sh = _stats_single(closes)
         return ScenarioResult(
-            label=f"New Position — {ticker}",
+            label=f"New Position — {_label}",
             type=stype, tickers=[ticker], weights=[1.0],
             return_cagr=cagr, volatility=vol, max_dd=dd, sharpe=sh,
             note="과거 5년 단독 수익률/변동성 기준.",

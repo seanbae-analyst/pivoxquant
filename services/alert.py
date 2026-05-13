@@ -104,8 +104,27 @@ def create_alert(
 
 # ── Convenience wrappers ────────────────────────────────────────────────────
 
+def _ticker_label(ticker: str, name: Optional[str]) -> str:
+    """Render "name (ticker)" when a non-degenerate name is available.
+
+    2026-05-13: aligns wrappers with feedback_ticker_display (CEO directive,
+    3+ times). When the caller didn't pass a name, fall back to the central
+    resolver via services.push_service._label_for_ticker. On total miss
+    returns the ticker alone — never produces "X (X)".
+    """
+    nm = (name or "").strip()
+    if nm and nm != (ticker or "").strip():
+        return f"{nm} ({ticker})"
+    # Caller didn't resolve — try the shared resolver.
+    try:
+        from services.push_service import _label_for_ticker
+        return _label_for_ticker(ticker)
+    except Exception:
+        return ticker or ""
+
+
 def alert_52w_high(user_id: int, ticker: str, name: Optional[str] = None):
-    label = name or ticker
+    label = _ticker_label(ticker, name)
     return create_alert(
         user_id,
         kind="price_52w_high",
@@ -118,7 +137,7 @@ def alert_52w_high(user_id: int, ticker: str, name: Optional[str] = None):
 
 
 def alert_52w_low(user_id: int, ticker: str, name: Optional[str] = None):
-    label = name or ticker
+    label = _ticker_label(ticker, name)
     return create_alert(
         user_id,
         kind="price_52w_low",
@@ -175,7 +194,7 @@ def alert_account_sync(user_id: int, broker: str = "KIS"):
 
 
 def alert_watchlist_event(user_id: int, ticker: str, name: Optional[str] = None):
-    label = name or ticker
+    label = _ticker_label(ticker, name)
     return create_alert(
         user_id,
         kind="watchlist_event",

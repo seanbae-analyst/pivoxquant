@@ -1205,10 +1205,15 @@ class EarningsPreBriefService:
 
         # 2) Push — via services.push_service.notify_insight (read-only call)
         try:
-            from services.push_service import notify_insight
+            from services.push_service import _label_for_ticker, notify_insight
             ticker = data.get("ticker", "?")
+            # 2026-05-13: prefer "name (ticker)" over raw ticker in push title
+            # to align with feedback_ticker_display (CEO directive, 3+ times).
+            # _label_for_ticker collapses to ticker alone when the resolver
+            # misses, so we never produce "X (X)".
+            label = _label_for_ticker(ticker)
             # E3: KR tickers (.KS / .KQ) use ₩, US tickers $.
-            title_text = f"{currency_prefix(ticker)}{ticker} 실적 30분 전"
+            title_text = f"{currency_prefix(ticker)}{label} 실적 30분 전"
             body_text = "예상 질문 5개 + 컨센서스 브리프 도착"
             # The underlying send_push_to_user accepts an explicit `url`
             # param; notify_insight hardcodes it. We call the lower-level
@@ -1242,15 +1247,20 @@ class EarningsPreBriefService:
         override is preserved by resolving the chain inline.
         """
         from services.email import EmailSender
+        from services.push_service import _label_for_ticker
 
         ticker = data.get("ticker", "?")
+        # 2026-05-13: subject prefers "name (ticker)" via _label_for_ticker
+        # (feedback_ticker_display rule). Falls back to ticker alone on
+        # resolver miss — never produces "X (X)".
+        label = _label_for_ticker(ticker)
         # Two-tier env fallback — earnings-specific then global default.
         fallback = os.environ.get(
             "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
         return EmailSender().send(
             user,
-            subject=f"[Pre-Brief] ${ticker} — Earnings in {_lead_minutes()} min",
+            subject=f"[Pre-Brief] {label} — Earnings in {_lead_minutes()} min",
             html_body=html_body,
             from_env_var="EARNINGS_PREBRIEF_FROM_EMAIL",
             from_default=fallback,
@@ -1269,12 +1279,21 @@ class EarningsPreBriefService:
     def _title_for(self, ticker: str, earnings_date: datetime) -> str:
         """Deterministic title → UNIQUE (user_id, type, title) prevents dupes.
 
-        Format: "$TSLA Q1 2026 Earnings Pre-Brief — 2026-04-22 20:30".
+        Format: "₩삼성전자 (005930.KS) Q1 2026 Earnings Pre-Brief — 2026-04-22 20:30"
+        when the name resolves, else "$TSLA Q1 2026 …" (ticker alone).
+
+        2026-05-13: prefer "name (ticker)" via _label_for_ticker
+        (feedback_ticker_display rule). Falls back to ticker-only on miss
+        so dedup still works for unresolved names. Currency prefix retained
+        so the user can tell KR ($-prefix would be wrong) vs US at a glance.
         """
+        from services.push_service import _label_for_ticker
+
         period = _fiscal_period_label(earnings_date)
         ts = earnings_date.strftime("%Y-%m-%d %H:%M")
+        label = _label_for_ticker(ticker)
         # E3: KR tickers (.KS / .KQ) use ₩, US tickers $.
-        return f"{currency_prefix(ticker)}{ticker} {period} Earnings Pre-Brief — {ts}"
+        return f"{currency_prefix(ticker)}{label} {period} Earnings Pre-Brief — {ts}"
 
     def _persist(self, user_id: int, data: dict[str, Any],
                  pdf_bytes: Optional[bytes], earnings_date: datetime,
@@ -1580,11 +1599,16 @@ class EarningsPreBriefService:
         Subject summarises count + leading ticker.
         """
         from services.email import EmailSender
+        from services.push_service import _label_for_ticker
 
         count = len(entries)
         first_ticker = entries[0].get("ticker", "?") if entries else "?"
         if count == 1:
-            subject = f"[Pre-Brief] ${first_ticker} 실적 발표"
+            # 2026-05-13: prefer "name (ticker)" via _label_for_ticker
+            # (feedback_ticker_display). Drops the hardcoded `$` since
+            # the label form disambiguates KR vs US already.
+            first_label = _label_for_ticker(first_ticker)
+            subject = f"[Pre-Brief] {first_label} 실적 발표"
         else:
             subject = f"[Pre-Brief] 오늘 {count}개 종목 실적 발표"
 
