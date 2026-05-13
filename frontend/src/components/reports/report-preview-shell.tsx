@@ -33,6 +33,52 @@ import { EmptyState, type EmptyStateReason } from "./empty-state";
 import { TierGate } from "@/components/ui/tier-gate";
 import { AiContentBadge } from "@/components/ui/ai-content-badge";
 
+/**
+ * Local error boundary for the template render path.
+ *
+ * Backend artefact rows can drift from a template's expected `*Data`
+ * shape after a serializer change — when that happens the template
+ * throws inside `render(data)` (typically destructuring a missing
+ * `hero.ticker` etc.) and the user sees the root error boundary
+ * ("The desk hit a snag"). That surface was observed live on
+ * /reports/preview/brag-card on 2026-05-13.
+ *
+ * Wave F (Wave C follow-up): catch render-time throws at the shell
+ * level and fall through to <EmptyState reason="render_error" />,
+ * which carries graceful KR copy ("리포트를 다시 준비하고 있어요").
+ * Single boundary covers all 17 preview pages.
+ *
+ * Logging side-effect is intentional — without it a regression would
+ * be invisible.
+ */
+class PreviewTemplateBoundary extends React.Component<
+  { type: ArtifactType; children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    // Surface to console for live debugging; Sentry hook left to the
+    // top-level provider so we don't duplicate.
+    console.error(
+      `[ReportPreviewShell] template render threw for type=${this.props.type}:`,
+      error,
+      info.componentStack,
+    );
+  }
+
+  render(): React.ReactNode {
+    if (this.state.hasError) {
+      return <EmptyState type={this.props.type} reason="render_error" />;
+    }
+    return this.props.children;
+  }
+}
+
 export interface ReportPreviewShellProps<TData> {
   /** Backend artifact type — must match `_ARTIFACT_DISPATCH` literal. */
   type: ArtifactType;
@@ -96,7 +142,11 @@ export function ReportPreviewShell<TData>({
         ? (preview as unknown as TData)
         : undefined;
 
-    return render(data);
+    return (
+      <PreviewTemplateBoundary type={type}>
+        {render(data)}
+      </PreviewTemplateBoundary>
+    );
   })();
 
   // Tier gate wraps the whole rendered surface — TierGate compares
