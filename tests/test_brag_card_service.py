@@ -341,3 +341,41 @@ def test_brag_card_privacy_toggle(client, auth_user):
     body = resp.get_json()
     assert body["ok"] is True
     assert body["privacy_mode"] is True
+
+
+# ─── 10. persisted data_json carries the v3 (template) shape ─────────────────
+
+def test_persist_payload_carries_v3_template_shape(
+    app, make_user, seed_trades, target_month, brag_svc,
+):
+    """Root-cause guard (2026-05-13): /reports/preview/brag-card feeds
+    `data_json` directly to the React <BragCard> template, which expects
+    keys like `hero.ticker`, `month_label`, `report_tag`. Persisting only
+    the flat `generate_for_user` shape (without these) crashes the
+    template with `Cannot read properties of undefined (reading 'ticker')`.
+    The persist path MUST include the v3 shape alongside the flat fields.
+    """
+    u = make_user(email="v3shape@test.com", tier="free")
+    seed_trades(u["id"], ticker="ABC", buy_cost=1000, pnl=50)
+
+    with patch.object(brag_svc, "send_email", return_value=True), \
+         patch.object(brag_svc, "render_png", return_value=None):
+        with app.app_context():
+            user = db.session.get(User, u["id"])
+            brag_svc.run_for_user(user, target_month=target_month)
+            artefact = Artifact.query.filter_by(
+                user_id=u["id"], type="brag_card",
+            ).first()
+            assert artefact is not None
+            payload = artefact.data_json or {}
+
+    # v3 keys consumed by the React template (BragCardData).
+    assert "hero" in payload, "persisted payload missing `hero` (template will crash)"
+    assert isinstance(payload["hero"], dict)
+    assert "ticker" in payload["hero"], "hero.ticker missing — same crash path"
+    assert "month_label" in payload
+    assert "report_tag" in payload
+    assert "best_decision_pct" in payload
+    # Flat fields preserved (backward-compat / referral_code shareable).
+    assert "referral_code" in payload
+    assert "return_pct" in payload

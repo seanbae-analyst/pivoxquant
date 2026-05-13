@@ -53,6 +53,30 @@ export interface BragCardData {
   pullquote: string;
 }
 
+/**
+ * Backend artifact `data_json` (from `BragCardService.generate_for_user`)
+ * is a flat snake_case shape — *not* the `BragCardData` shape this
+ * template expects. Without normalisation, `data.hero.ticker` throws
+ * `Cannot read properties of undefined (reading 'ticker')` and the
+ * `<ReportPreviewShell>` boundary catches it into a "리포트를 다시
+ * 준비하고 있어요" empty state — the user never sees their card.
+ *
+ * 2026-05-13 root-cause fix: accept either shape. The flat backend
+ * payload is mapped to the `BragCardData` shape here (mirror of
+ * `BragCardService._to_v3_shape` on the Python side). When `data` is
+ * undefined or genuinely empty, we hand back `DEFAULT` so the marketing
+ * preview surface still renders.
+ */
+type BackendBragPayload = {
+  month_label?: string;
+  month_label_long?: string;
+  month_start?: string;
+  return_pct?: number | null;
+  trade_count?: number | null;
+  best_ticker?: string | null;
+  best_return_pct?: number | null;
+};
+
 const DEFAULT: BragCardData = {
   monthLabel: "April 2026",
   reportTag: "BC-2026-04",
@@ -87,6 +111,82 @@ const DEFAULT: BragCardData = {
     "운이 아니라 <em>프로세스</em>였다. 다음 달도 같은 프로세스로.",
 };
 
+function fmtPct(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const sign = value >= 0 ? "+" : "";
+  return `${sign}${value.toFixed(2)}%`;
+}
+
+function normalizeBragCardData(
+  raw: BragCardData | BackendBragPayload | undefined | null,
+): BragCardData {
+  if (!raw || typeof raw !== "object") return DEFAULT;
+  // Already in the template shape — trust it but still defend `hero`.
+  const candidate = raw as Partial<BragCardData>;
+  if (
+    candidate.hero &&
+    typeof candidate.hero === "object" &&
+    typeof candidate.hero.ticker === "string"
+  ) {
+    return {
+      ...DEFAULT,
+      ...candidate,
+      hero: { ...DEFAULT.hero, ...candidate.hero },
+    } as BragCardData;
+  }
+
+  // Backend flat snake_case payload — map onto BragCardData.
+  const flat = raw as BackendBragPayload;
+  const hasAnyBackendField =
+    "best_ticker" in flat ||
+    "return_pct" in flat ||
+    "month_label" in flat ||
+    "month_label_long" in flat;
+  if (!hasAnyBackendField) return DEFAULT;
+
+  const monthLabel = flat.month_label_long || flat.month_label || DEFAULT.monthLabel;
+  const monthStart = (flat.month_start || "").slice(0, 7);
+  const reportTag = monthStart ? `BC-${monthStart}` : DEFAULT.reportTag;
+
+  const bestRet = flat.best_return_pct;
+  const bestDecisionPct = bestRet == null ? "—" : fmtPct(bestRet);
+  const monthReturn = flat.return_pct == null ? "—" : fmtPct(flat.return_pct);
+  const tradeCount = flat.trade_count ?? 0;
+
+  const hitRate = tradeCount > 0 ? `${tradeCount} 건` : "—";
+  const hitRateDetail = tradeCount > 0 ? `${tradeCount} closed lot(s)` : "";
+
+  const ticker = flat.best_ticker || "—";
+  const heroBody =
+    bestRet == null
+      ? "이번 달 단일 의사결정 기록을 준비하고 있어요."
+      : `${ticker} 종목에서 단일 의사결정을 관찰했습니다. ` +
+        `실현 수익률은 ${bestDecisionPct}로 기록되었습니다.`;
+
+  return {
+    monthLabel,
+    reportTag,
+    bestDecisionPct,
+    contribution: "",
+    hitRate,
+    hitRateDetail,
+    monthReturn,
+    benchmark: "",
+    hero: {
+      ticker,
+      name: "",
+      title: "이번 달 단일 의사결정 기록",
+      body: heroBody,
+      entry: "—",
+      mark: "—",
+      pnl: bestDecisionPct,
+    },
+    whyItWorked: DEFAULT.whyItWorked,
+    lessonForNext: DEFAULT.lessonForNext,
+    pullquote: DEFAULT.pullquote,
+  };
+}
+
 /** Renders inline `**bold**` segments inside body strings. */
 function renderInline(text: string) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -116,7 +216,19 @@ function renderPullquote(text: string) {
   );
 }
 
-export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
+export function BragCard({
+  data: rawData,
+}: {
+  /**
+   * Accepts either the `BragCardData` template shape OR the raw backend
+   * `data_json` payload (snake_case from `BragCardService.generate_for_user`).
+   * `normalizeBragCardData` reshapes both into `BragCardData` so the
+   * template never crashes on `data.hero.ticker` when the boundary
+   * shell hands it a flat backend payload (2026-05-13 root-cause fix).
+   */
+  data?: BragCardData | BackendBragPayload;
+}) {
+  const data = normalizeBragCardData(rawData ?? null);
   return (
     <>
     <PdfPage>
