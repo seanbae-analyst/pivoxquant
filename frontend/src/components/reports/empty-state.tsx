@@ -28,7 +28,12 @@ export type EmptyStateReason =
   | "insufficient_history"
   | "interactive"
   // Default fallback — no artifact of this type yet, no specific backend reason.
-  | "no_artifact";
+  | "no_artifact"
+  // 2026-05-13 (Wave F): preview shell caught a render-time throw from a
+  // template (typically caused by a backend data shape change that an
+  // older template doesn't yet understand). Treat as "report is being
+  // refreshed" so the user never sees the raw error boundary surface.
+  | "render_error";
 
 interface CopyEntry {
   eyebrow: string;
@@ -89,6 +94,14 @@ const COPY: Record<EmptyStateReason, CopyEntry> = {
     body:
       "이 유형의 리포트는 아직 생성되지 않았습니다. 다음 자동 발송 주기에 도착하거나, 직접 생성을 요청할 수 있어요.",
     ctaLabel: "내 리포트 보기",
+    ctaHref: "/reports",
+  },
+  render_error: {
+    eyebrow: "REPORT REFRESHING",
+    title: "리포트를 다시 준비하고 있어요",
+    body:
+      "이 리포트의 데이터 형식이 잠시 어긋났습니다. 다음 자동 발송 주기에 새 버전이 도착해요. 그동안은 다른 리포트를 살펴봐 주세요.",
+    ctaLabel: "리포트 목록",
     ctaHref: "/reports",
   },
 };
