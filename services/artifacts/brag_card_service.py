@@ -1018,7 +1018,13 @@ class BragCardService:
 
         from services.artifacts import iter_users_chunked
 
-        users = User.query.all()
+        # Continuous User Simulation Phase 1 — sim users (``is_simulated=True``)
+        # are excluded from every artefact mass-send. The EmailSender layer
+        # also short-circuits per-row, but filtering at the query level
+        # avoids burning a render cycle (PNG + Jinja + DB persist) per sim
+        # user. ``filter_by(is_simulated=False)`` survives a NULL gracefully
+        # because the column is NOT NULL with server_default=false.
+        users = User.query.filter_by(is_simulated=False).all()
 
         successes = 0
         failures = 0

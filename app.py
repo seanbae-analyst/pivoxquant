@@ -98,6 +98,35 @@ if _sentry_dsn:
                     send_default_pii=False, before_send=_sentry_filter)
 
 
+def _set_sentry_user_type_tag() -> str:
+    """Emit the ``user_type`` Sentry tag for the current request.
+
+    Returns the tag value chosen (``"sim"`` / ``"real"`` / ``"anon"``) so
+    unit tests can assert the classification without standing up a full
+    Sentry initialisation. The tag itself goes through ``sentry_sdk.set_tag``
+    which is a no-op when Sentry isn't initialised (no DSN) — safe in dev
+    and tests.
+
+    Continuous User Simulation Phase 1: sim user errors must be distinguishable
+    from real-user errors in the dashboard so the simulation harness doesn't
+    drown out genuine production issues.
+    """
+    try:
+        from flask_login import current_user
+        if not getattr(current_user, "is_authenticated", False):
+            sentry_sdk.set_tag("user_type", "anon")
+            return "anon"
+        user_type = "sim" if bool(
+            getattr(current_user, "is_simulated", False)
+        ) else "real"
+        sentry_sdk.set_tag("user_type", user_type)
+        return user_type
+    except Exception:
+        # Sentry tagging must never break a request. Best-effort.
+        logger.debug("sentry user_type tag failed", exc_info=True)
+        return "anon"
+
+
 # ── App factory ───────────────────────────────────────────────────────────────
 
 def create_app():
@@ -219,6 +248,17 @@ def create_app():
 
         frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
         return redirect(f"{frontend_url}/login?error=server_error&rid={request_id}")
+
+    # ── Sentry user-type tag (Continuous User Simulation Phase 1) ─────────
+    # Tag every Sentry event with ``user_type=sim`` / ``real`` / ``anon``
+    # so the dashboard can filter / alert separately. Sim user errors are
+    # expected (the Sunday 04:30 KST simulation deliberately exercises edge
+    # cases) and would otherwise drown the real-user signal in noise.
+    # ``send_default_pii=False`` (line 98) keeps email/id out of payloads —
+    # we only emit the boolean classification.
+    @app.before_request
+    def _sentry_user_type_tag():
+        _set_sentry_user_type_tag()
 
     @app.after_request
     def no_cache(r):
@@ -603,7 +643,17 @@ def _init_scheduler(app):
         from models import Position, User
         with app.app_context():
             positions = Position.query.all()
-            users = {u.id: u for u in User.query.all()}
+            # Continuous User Simulation Phase 1 — exclude ``is_simulated=True``
+            # from the alert-generation refresh. Sim users would otherwise
+            # trigger real Alert rows + push/email side effects via
+            # alert_service.maybe_generate. The push/email layers also
+            # short-circuit per-row, but excluding here saves the engine
+            # analyse loop overhead. Position rows owned by a sim user
+            # fall through with available_capital=10_000 default (no user
+            # row found) and produce a signal only when a *real* user also
+            # holds the same ticker — which is the intended behaviour.
+            users = {u.id: u for u in
+                     User.query.filter_by(is_simulated=False).all()}
             tku: dict[str, list[int]] = {}
             for p in positions:
                 tku.setdefault(p.ticker, []).append(p.user_id)

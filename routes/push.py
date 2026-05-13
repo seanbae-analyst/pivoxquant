@@ -104,6 +104,22 @@ def send_push_to_user(user_id: int, title: str, body: str,
         logger.warning("pywebpush not installed — skipping push notification")
         return
 
+    # Continuous User Simulation Phase 1 — sim users must NEVER reach a real
+    # device subscription. ``User.is_simulated`` (migration 032) is the
+    # single SoT; this check runs before the opt-out gate AND before the
+    # transactional bypass, because the transactional channel is also
+    # forbidden for sim users (no real recipient, VAPID quota waste).
+    try:
+        from models import User
+        sim_user = User.query.get(user_id)
+        if sim_user is not None and bool(getattr(sim_user, "is_simulated", False)):
+            logger.info("skipping push for simulated user id=%s", user_id)
+            return
+    except Exception:
+        # Never fail-closed for an unrelated DB hiccup — same posture as
+        # the opt-out gate below.
+        logger.debug("is_simulated gate lookup failed", exc_info=True)
+
     # 정통망법 §50 marketing opt-out gate. Mirrors the email path —
     # ``User.email_opt_out`` is the global kill-switch that disables every
     # marketing channel. Until a dedicated ``push_opt_out`` column exists
