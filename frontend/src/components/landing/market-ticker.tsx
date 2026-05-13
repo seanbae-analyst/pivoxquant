@@ -21,6 +21,21 @@
  *     (top-ticker.tsx:93-97 warns about exactly this); next step is
  *     a public Server-Component fetch to eliminate the manual ritual
  *     entirely. Tracked in HANDOVER v40 follow-up.
+ *   - 2026-05-13 (second pass): SPX / NDX / VIX re-anchored against
+ *     official-licensed feeds. SPX & VIX from FMP $29 stable
+ *     `historical-price-eod/full` (2026-05-12 close). NDX from FRED
+ *     `NASDAQ100` series (Fed-published, T+1 lag — 2026-05-11 close,
+ *     latest available at refresh time). Prior values (SPX 5,520 /
+ *     NDX 19,840 / VIX 14.85) were pre-pandemic-era levels off by
+ *     30-48% from reality — active misrepresentation, not just stale.
+ *   - 2026-05-13 (PR #343 audit, option B): USD-IDX row dropped.
+ *     DXY removed pending ICE direct license (FMP premium gated).
+ *     DTWEXBGS swap rejected due to product mismatch — see PR #343
+ *     audit. DXY (ICE, 6-country, ~100) and DTWEXBGS (Fed, 26-country,
+ *     ~118) are different products; the ~12% absolute-level scale gap
+ *     is itself a capital-markets-law misrepresentation risk even with
+ *     a distinct label. Remaining 6 rows (SPX/NDX/KOSPI/KOSDAQ/USDKRW/
+ *     VIX) carry the ticker without forcing a mislabeled proxy.
  *
  * Legal: pure snapshot framing. No BUY/SELL/HOLD. No recommend/advice.
  */
@@ -33,24 +48,32 @@ type Tick = {
   dir: "up" | "down" | "flat";
 };
 
-// Static snapshot. KOSPI/KOSDAQ/USDKRW values from KIS API 2026-05-12 close
-// (verified via routes/market.py /api/market/indices?region=kr live probe).
-// US indices remain at 2026-04-25 close estimates (not verified at refresh
-// time — flagged for next dynamic-fetch wave). The kicker label is explicit
-// so visitors read this as reference, not live.
+// Static snapshot. All values from official-licensed feeds verified at refresh
+// time (2026-05-13 KST). Source-per-row:
+//   - SPX  : FMP stable `historical-price-eod/full` symbol=^GSPC, 2026-05-12 close = 7,400.97 (prev 7,412.85 → -0.16%).
+//   - NDX  : FRED series=NASDAQ100, 2026-05-11 close = 29,320.66 (prev 29,234.99 → +0.29%). FRED publishes T+1 so the 2026-05-12 NDX print posts overnight; using the latest official value avoids fabricating a 5/12 number we can't license.
+//   - KOSPI / KOSDAQ / USDKRW: KIS API 2026-05-12 close (verified via routes/market.py /api/market/indices?region=kr live probe — unchanged from PR #335).
+//   - VIX  : FMP stable `historical-price-eod/full` symbol=^VIX, 2026-05-12 close = 17.99 (prev 18.38 → -2.12%).
 //
-// SNAPSHOT_DATE is also exported for the kicker text and the pre-commit
-// stale-guard (.githooks/pre-commit) which fails the commit if this date
-// is older than 14 days.
+// DXY removed pending ICE direct license (FMP premium gated). DTWEXBGS swap
+// rejected due to product mismatch — see PR #343 audit. Six remaining tickers
+// are enough surface area without forcing a misleading proxy.
+//
+// The kicker label is explicit so visitors read this as reference, not live.
+//
+// SNAPSHOT_DATE is exported for the kicker text and the pre-commit stale-guard
+// referenced in earlier comments. NOTE: the current .githooks/pre-commit does
+// not actually contain a SNAPSHOT_DATE >14d check; treat that earlier comment
+// as aspirational. A real value-vs-FMP regression gate is the right next step
+// (see PR body).
 export const SNAPSHOT_DATE = "2026-05-12";
 const SNAPSHOT: readonly Tick[] = [
-  { symbol: "SPX",    name: "S&P 500",        level: "5,520.30",  change: "+0.18%",  dir: "up"   },
-  { symbol: "NDX",    name: "Nasdaq 100",     level: "19,840.15", change: "-0.32%",  dir: "down" },
-  { symbol: "DXY",    name: "Dollar Index",   level: "103.45",    change: "+0.04%",  dir: "flat" },
-  { symbol: "KOSPI",  name: "KOSPI",          level: "7,643.15",  change: "-2.29%",  dir: "down" },
-  { symbol: "KOSDAQ", name: "KOSDAQ",         level: "1,179.29",  change: "-2.32%",  dir: "down" },
-  { symbol: "USDKRW", name: "USD / KRW",      level: "1,487.48",  change: "+0.82%",  dir: "up"   },
-  { symbol: "VIX",    name: "Volatility Idx", level: "14.85",     change: "-1.06%",  dir: "down" },
+  { symbol: "SPX",     name: "S&P 500",           level: "7,400.97",  change: "-0.16%",  dir: "down" },
+  { symbol: "NDX",     name: "Nasdaq 100",        level: "29,320.66", change: "+0.29%",  dir: "up"   },
+  { symbol: "KOSPI",   name: "KOSPI",             level: "7,643.15",  change: "-2.29%",  dir: "down" },
+  { symbol: "KOSDAQ",  name: "KOSDAQ",            level: "1,179.29",  change: "-2.32%",  dir: "down" },
+  { symbol: "USDKRW",  name: "USD / KRW",         level: "1,487.48",  change: "+0.82%",  dir: "up"   },
+  { symbol: "VIX",     name: "Volatility Idx",    level: "17.99",     change: "-2.12%",  dir: "down" },
 ] as const;
 
 // Korean market convention: ▲ rising = red, ▼ falling = blue.
