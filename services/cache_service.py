@@ -216,7 +216,11 @@ def risk_snapshot_cache_clear() -> None:
 _discover_section_cache: dict = {}    # key -> {"ts": float, "data": ...}
 _discover_section_lock = threading.Lock()
 
-DISCOVER_FRESH_TTL = 1800             # 30 min — under this is "fresh"
+DISCOVER_FRESH_TTL = 3600             # 60 min — extended 2026-05-13 (Bug #4)
+                                      # to absorb FMP daily-quota cool-offs.
+                                      # Market microstructure on movers/sectors
+                                      # is stable on hour scales; fresh ⇒ stale
+                                      # transition still tagged in payload.
 DISCOVER_MAX_AGE = 86400              # 24 h — over this we refuse to serve
 
 # Override TTLs for ad-hoc test scenarios. Tests set these via

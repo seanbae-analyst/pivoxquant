@@ -1113,6 +1113,22 @@ Reply ONLY in this exact JSON format, nothing else:
                        info.get("shortName", ticker))
             dp = 0 if curr == "KRW" else 2
 
+            # Bug #8 (2026-05-13): KR fundamentals data-source hint.
+            # FMP Starter has zero KRX coverage and the KIS path
+            # (kr_fundamentals.py) only publishes PER/EPS/PBR/시가총액 —
+            # NOT profitMargin/revenueGrowth/debtToEquity. The detail page
+            # was rendering "—" for those three with no UX cue that the gap
+            # was structural (license-bounded), not transient. We tag the
+            # snapshot with ``fundamentals_limited`` so the UI can render
+            # an honest tooltip ("KIS 라이선스 범위 내 데이터만 제공")
+            # instead of looking broken. US tickers always get False.
+            rev_growth = info.get("revenueGrowth")
+            margin     = info.get("netProfitMargin")
+            d2e        = info.get("debtToEquity")
+            fundamentals_limited = bool(
+                is_kr and rev_growth is None and margin is None and d2e is None
+            )
+
             return {
                 "ticker":         ticker.upper(),
                 "name":           name,
@@ -1125,9 +1141,9 @@ Reply ONLY in this exact JSON format, nothing else:
                 "pe_ratio":       info.get("trailingPE"),
                 "forward_pe":     info.get("forwardPE"),
                 "eps":            info.get("trailingEps"),
-                "revenue_growth": info.get("revenueGrowth"),
-                "profit_margin":  info.get("netProfitMargin"),
-                "debt_equity":    info.get("debtToEquity"),
+                "revenue_growth": rev_growth,
+                "profit_margin":  margin,
+                "debt_equity":    d2e,
                 "week52_high":    round(float(hist["High"].max()), dp),
                 "week52_low":     round(float(hist["Low"].min()), dp),
                 "sector":         _resolve_sector(ticker, info, is_kr),
@@ -1135,6 +1151,8 @@ Reply ONLY in this exact JSON format, nothing else:
                 "beta":           info.get("beta"),
                 "currency":       curr,
                 "is_korean":      is_kr,
+                "fundamentals_limited": fundamentals_limited,
+                "fundamentals_source":  "kis" if is_kr else "fmp",
             }
         except Exception as e:
             logger.error("Snapshot failed %s: %s", ticker, e)
