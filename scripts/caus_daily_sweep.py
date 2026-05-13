@@ -13,19 +13,28 @@ Architecture (per docs/specs/continuous-user-sim-spec.md):
   5. Parse JSON findings, create GitHub Issues (auto-labels) and Slack alerts
   6. P0 issues — TODO: spawn self-healing agent for draft PR (Phase 3)
 
-Phase 2 changes (PR — feat/caus-phase-2-user-tester-invocation-github-issue):
+Phase 2 changes (PR #356):
   - Real `claude -p ... --output-format json` subprocess invocation
   - GitHub Issue creation via `gh issue create` (Slack fallback when webhook unset)
   - Idempotent label seeding (`caus`, `severity:p0/p1/p2`)
   - Findings embedded directly in daily report
-  - `--dry-run` flag prints all subprocess args without executing
 
-Phase 3 (future):
+Phase 3 changes (this PR — feat/caus-phase-3-playwright-scenarios):
+  - Replace `claude` CLI subprocess (600s timeout in child context — Claude in
+    Chrome MCP unreachable from detached subprocesses) with Playwright Python
+    direct browser automation. $0 incremental cost (OSS, already in
+    requirements.txt; chromium browser ~120 MB local install).
+  - 7 scenario modules under `scripts/caus_scenarios/` — one per Day-N rotation,
+    each exposing `run(page, context, *, agent_id, base_url) -> list[dict]`.
+  - `--scenario dayN` flag to run a single scenario manually for smoke testing.
+  - Timeout per scenario reduced to 180s (browser nav is fast).
+
+Phase 4 (future):
   - Self-healing draft PR for P0
   - Sentry breadcrumb tagging
   - Cross-session learning loop
 
-Cost: $0. stdlib + `gh` CLI + `claude` CLI (Max plan).
+Cost: $0. stdlib + `gh` CLI + Playwright (OSS).
 """
 from __future__ import annotations
 
@@ -59,21 +68,29 @@ PIVOXQUANT_BASE_URL = os.environ.get(
 SIM_ONBOARD_SECRET = os.environ.get("SIM_ONBOARD_SECRET", "")
 SIM_ONBOARD_UA = "PivoxQuantCAUS/1.0"
 
-# User-tester agent invocation — Claude Code CLI (Max plan, $0).
-CLAUDE_CLI_TIMEOUT_SEC = int(os.environ.get("CAUS_AGENT_TIMEOUT_SEC", "600"))
-CLAUDE_CLI_BIN = os.environ.get("CAUS_CLAUDE_BIN", "claude")
+# Per-scenario Playwright timeout (Phase 3). Browser nav is fast; 180s
+# accommodates slow first paint on cold edge cache while staying well under
+# the daily cron budget.
+PLAYWRIGHT_TIMEOUT_SEC = int(os.environ.get("CAUS_SCENARIO_TIMEOUT_SEC", "180"))
 GH_CLI_BIN = os.environ.get("CAUS_GH_BIN", "gh")
 
 # Day-N scenarios (Mon=0 ... Sun=6). Mirrors spec §5.
-DAY_SCENARIOS: list[str] = [
-    "Day 0 가입: OAuth 가입 → 온보딩 20문항 → 투자자 유형",
-    "Day 1: KR 종목 검색 (삼성전자, 카카오) → 시그널 → 알림 toggle",
-    "Day 2: 미국 종목 (AAPL, NVDA) → 워치리스트 → AI 챗 1턴",
-    "Day 3: portfolio 입력 → 리스크 페이지 → 시뮬레이터",
-    "Day 4: price alert 시뮬 → push notification 검증",
-    "Day 5: brag card / weekly memo / earnings prebrief → /reports 열기",
-    "Day 6: 결제 페이지 → Stripe test mode → 구독 시뮬 (sk_test_* 강제)",
+# `module` is the importable path under `scripts.caus_scenarios`.
+DAY_SCENARIOS: list[tuple[str, str]] = [
+    ("day0_signup", "Day 0 가입: 온보딩 완료 + /home 진입 검증"),
+    ("day1_kr_search", "Day 1: /signals KR 종목 (삼성전자) → 알림 toggle"),
+    ("day2_us_watchlist", "Day 2: /watchlist AAPL → /ai 챗 검증"),
+    ("day3_portfolio_risk", "Day 3: /portfolio → /risk 7-Layer 노출 검증"),
+    ("day4_alert_simulation", "Day 4: /alerts dropdown + mark-all-read"),
+    ("day5_reports", "Day 5: /reports brag/memo/prebrief 카드"),
+    ("day6_payment", "Day 6: /pricing Stripe test-mode 진입 (실 결제 X)"),
 ]
+
+# Scenario-id → module path (also accepts the short form `day2` etc.).
+SCENARIO_MODULE_MAP: dict[str, int] = {
+    name: idx for idx, (name, _) in enumerate(DAY_SCENARIOS)
+}
+SCENARIO_MODULE_MAP.update({f"day{idx}": idx for idx, _ in enumerate(DAY_SCENARIOS)})
 
 # Severity normalization map — accepts upper/lower, P0/P1/P2 or p0/p1/p2.
 VALID_SEVERITIES = {"p0", "p1", "p2"}
@@ -220,218 +237,161 @@ def sim_onboard_login(user_id: str) -> Path | None:
     return sess_path
 
 
-# --- User-tester agent invocation (Phase 2) ---------------------------------
+# --- Scenario invocation (Phase 3 — Playwright Python) ----------------------
 
 
-def _build_agent_prompt(
-    cookies_path: Path, scenario: str, day_idx: int, agent_id: str
-) -> str:
-    """Build the prompt handed to `claude -p` via subprocess.
+REQUIRED_FINDING_KEYS = {"severity", "category", "page", "summary"}
 
-    Keep this self-contained — the spawned session has no memory of this
-    conversation. File paths must be absolute (per CEO rule).
+
+def _load_scenario_module(module_name: str):
+    """Import scripts.caus_scenarios.<module_name>.
+
+    Returns the module or None on failure (logs to Slack).
+
+    When the script is executed directly (`python scripts/caus_daily_sweep.py`),
+    REPO_ROOT is not on sys.path. We add it here so `scripts.*` imports resolve
+    whether invoked via cron or via pytest.
     """
-    return f"""[CAUS Day {day_idx}] PivoxQuant 라이브 prod 시뮬 user 검증.
+    import importlib
 
-WD: {REPO_ROOT}
-시나리오: {scenario}
+    repo_str = str(REPO_ROOT)
+    if repo_str not in sys.path:
+        sys.path.insert(0, repo_str)
 
-세션 cookies 파일: {cookies_path}
-prod URL: {PIVOXQUANT_BASE_URL}
+    try:
+        return importlib.import_module(f"scripts.caus_scenarios.{module_name}")
+    except ImportError as exc:
+        slack_notify(
+            f"scenario `{module_name}` import failed: {exc}", "warn"
+        )
+        return None
 
-작업:
-1. Claude in Chrome MCP로 prod 브라우저 열기 ({PIVOXQUANT_BASE_URL})
-2. {cookies_path} 의 set_cookie 헤더 + response_body 를 읽어
-   document.cookie / Set-Cookie 로 세션 주입
-3. 시나리오 따라 페이지 클릭 + 폼 입력 + 검증
-4. 발견된 버그 / UX 문제 / 회귀 / 법규 위반 (BUY·SELL·추천·조언) 모두 수집
-5. 최종 출력은 반드시 JSON array (top-level), 다른 설명 텍스트 금지:
 
-   [
-     {{
-       "severity": "P0" | "P1" | "P2",
-       "category": "기능" | "법규" | "UX" | "결제" | "성능" | "데이터",
-       "page": "/path/or/url",
-       "summary": "한 줄 요약",
-       "repro": "재현 절차 (단계별)",
-       "screenshot": "/tmp/caus-<agent_id>-step-NN.png 또는 'N/A'"
-     }}
-   ]
-
-룰:
-- [feedback_ticker_display] 종목명 우선 표시 검증 (005930.KS → "삼성전자")
-- [feedback_no_false_reports] evidence 없으면 admit, 추측 금지
-- read-only: 실제 결제 금지, 회원 탈퇴 금지 (Day 7 시나리오만 sk_test_* 모드 한정)
-- BUY/SELL/HOLD/추천/조언 단어 prod UI에 등장 시 P0 (자본시장법)
-- 발견 0건이면 빈 배열 [] 반환 (이 또한 정상 종료)
-
-agent_id: {agent_id}
-"""
+def _validate_finding(finding: dict, agent_id: str) -> dict | None:
+    """Ensure finding has the required schema. Returns sanitized dict or None."""
+    if not isinstance(finding, dict):
+        return None
+    missing = REQUIRED_FINDING_KEYS - set(finding.keys())
+    if missing:
+        slack_notify(
+            f"scenario `{agent_id}` finding missing keys {missing}", "warn"
+        )
+        return None
+    # Coerce all string fields to str — never let an unexpected type crash
+    # the downstream GitHub Issue body.
+    out = dict(finding)
+    for k in ("severity", "category", "page", "summary", "repro", "screenshot"):
+        if k in out:
+            out[k] = str(out[k])
+    out.setdefault("agent_id", agent_id)
+    return out
 
 
 def run_user_tester(
     cookies_path: Path,
-    scenario: str,
+    scenario_module_name: str,
     day_idx: int,
     agent_id: str,
     *,
     dry_run: bool = False,
 ) -> list[dict]:
-    """Spawn user-tester agent via Claude Code CLI and parse JSON findings.
+    """Run a Playwright scenario module and return its findings.
 
-    Returns a list of finding dicts (possibly empty). Never raises — on any
-    failure (timeout / non-zero exit / malformed JSON) we slack_notify and
-    return []. The cron must exit 0 even when the agent crashes.
+    Replaces the Phase 2 `claude` CLI subprocess (which timed out at 600s in
+    the cron child context — Claude in Chrome MCP unreachable from detached
+    subprocesses).
 
-    When `dry_run=True`, prints the invocation args + truncated prompt and
-    returns [] without spawning.
+    Returns [] on any failure (import error / playwright missing / scenario
+    raises). Never re-raises — the cron must exit 0.
     """
-    prompt = _build_agent_prompt(cookies_path, scenario, day_idx, agent_id)
-
-    cmd = [
-        CLAUDE_CLI_BIN,
-        "-p",
-        prompt,
-        "--output-format",
-        "json",
-        # Long-running browser automation needs Bash + MCP tools. We rely on
-        # the operator's existing settings.json for permissions (Max plan,
-        # acceptEdits / dontAsk for Chrome MCP). If perms missing, the agent
-        # will exit non-zero and we admit gracefully.
-        "--permission-mode",
-        "acceptEdits",
-    ]
-
     if dry_run:
-        print("[caus][dry-run] would invoke:")
-        print(f"  bin     : {CLAUDE_CLI_BIN}")
-        print(f"  timeout : {CLAUDE_CLI_TIMEOUT_SEC}s")
-        print(f"  agent_id: {agent_id}")
-        print(f"  cookies : {cookies_path}")
-        print(f"  scenario: {scenario}")
-        print(f"  prompt[:200]: {prompt[:200]!r}")
+        print("[caus][dry-run] would run Playwright scenario:")
+        print(f"  module       : scripts.caus_scenarios.{scenario_module_name}")
+        print(f"  timeout      : {PLAYWRIGHT_TIMEOUT_SEC}s")
+        print(f"  agent_id     : {agent_id}")
+        print(f"  cookies      : {cookies_path}")
+        print(f"  base_url     : {PIVOXQUANT_BASE_URL}")
         return []
 
-    # Verify CLI exists — if absent we admit instead of subprocess error.
-    if shutil.which(CLAUDE_CLI_BIN) is None:
-        slack_notify(
-            f"`{CLAUDE_CLI_BIN}` CLI not found on PATH — user-tester skipped",
-            "warn",
-        )
-        return []
-
+    # Lazy import — playwright is optional at install time for parts of the
+    # codebase that only need the rest of the sweep helpers (e.g. unit tests).
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            timeout=CLAUDE_CLI_TIMEOUT_SEC,
-            text=True,
-            check=False,
-        )
-    except subprocess.TimeoutExpired:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
         slack_notify(
-            f"user-tester `{agent_id}` timed out after {CLAUDE_CLI_TIMEOUT_SEC}s",
-            "warn",
-        )
-        return []
-    except OSError as exc:
-        slack_notify(f"user-tester `{agent_id}` OSError: {exc}", "warn")
-        return []
-
-    if result.returncode != 0:
-        # Stderr may contain auth/permission errors — admit them.
-        stderr_tail = (result.stderr or "")[-400:]
-        slack_notify(
-            f"user-tester `{agent_id}` exit {result.returncode}: {stderr_tail!r}",
+            "Playwright not installed — run `pip install playwright && "
+            "python3 -m playwright install chromium`. Scenario skipped.",
             "warn",
         )
         return []
 
-    findings = _parse_agent_findings(result.stdout or "", agent_id)
-    # Inject agent_id into every finding for downstream GitHub Issue body.
-    for f in findings:
-        f.setdefault("agent_id", agent_id)
+    module = _load_scenario_module(scenario_module_name)
+    if module is None:
+        return []
+
+    run_fn = getattr(module, "run", None)
+    if not callable(run_fn):
+        slack_notify(
+            f"scenario `{scenario_module_name}` has no callable run()", "warn"
+        )
+        return []
+
+    # Lazy import — keep _base import on the same path as scenarios.
+    from scripts.caus_scenarios import _base as scenario_base
+
+    findings: list[dict] = []
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            try:
+                context = browser.new_context(
+                    user_agent=(
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/124.0.0.0 Safari/537.36 PivoxQuantCAUS/3.0"
+                    ),
+                    viewport={"width": 1440, "height": 900},
+                    locale="ko-KR",
+                )
+                # Per-scenario hard timeout cap.
+                context.set_default_navigation_timeout(
+                    min(30_000, PLAYWRIGHT_TIMEOUT_SEC * 1000)
+                )
+                context.set_default_timeout(15_000)
+
+                scenario_base.inject_session(
+                    context, cookies_path, PIVOXQUANT_BASE_URL
+                )
+
+                page = context.new_page()
+                raw_findings = run_fn(
+                    page,
+                    context,
+                    agent_id=agent_id,
+                    base_url=PIVOXQUANT_BASE_URL,
+                )
+                if not isinstance(raw_findings, list):
+                    slack_notify(
+                        f"scenario `{scenario_module_name}` returned "
+                        f"non-list ({type(raw_findings).__name__})",
+                        "warn",
+                    )
+                    raw_findings = []
+
+                for f in raw_findings:
+                    validated = _validate_finding(f, agent_id)
+                    if validated is not None:
+                        findings.append(validated)
+            finally:
+                browser.close()
+    except Exception as exc:
+        slack_notify(
+            f"Playwright scenario `{scenario_module_name}` crashed: {exc}",
+            "warn",
+        )
+        return findings  # may still have partial findings collected pre-crash
+
     return findings
-
-
-def _parse_agent_findings(raw_stdout: str, agent_id: str) -> list[dict]:
-    """Parse `claude -p --output-format json` output and extract findings.
-
-    The CLI wraps the model's final assistant message in a JSON envelope:
-      {"type": "result", "result": "<assistant text>", ...}
-    The assistant text is itself the JSON array we asked for.
-
-    Graceful: returns [] on any parse failure with a warn-level slack notify.
-    """
-    if not raw_stdout.strip():
-        slack_notify(f"user-tester `{agent_id}` returned empty stdout", "warn")
-        return []
-
-    # Step 1: parse the CLI envelope.
-    try:
-        envelope = json.loads(raw_stdout)
-    except json.JSONDecodeError as exc:
-        slack_notify(
-            f"user-tester `{agent_id}` envelope not JSON: {exc}", "warn"
-        )
-        return []
-
-    # Step 2: extract the assistant-text payload. Be defensive — CLI schema
-    # has evolved over versions.
-    payload: str | None = None
-    if isinstance(envelope, dict):
-        for key in ("result", "response", "text", "output"):
-            v = envelope.get(key)
-            if isinstance(v, str) and v.strip():
-                payload = v
-                break
-        # Some versions: {"messages": [..., {"role": "assistant", "content": "..."}]}
-        if payload is None and isinstance(envelope.get("messages"), list):
-            for msg in reversed(envelope["messages"]):
-                if isinstance(msg, dict) and msg.get("role") == "assistant":
-                    content = msg.get("content")
-                    if isinstance(content, str):
-                        payload = content
-                        break
-    elif isinstance(envelope, list):
-        # CLI already returned the array directly — accept it.
-        return [f for f in envelope if isinstance(f, dict)]
-
-    if not payload:
-        slack_notify(
-            f"user-tester `{agent_id}` no assistant payload in envelope",
-            "warn",
-        )
-        return []
-
-    # Step 3: assistant text may have markdown fencing — strip ```json ... ```.
-    cleaned = payload.strip()
-    if cleaned.startswith("```"):
-        # Drop first line (``` or ```json) and trailing ```
-        lines = cleaned.splitlines()
-        if lines and lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        cleaned = "\n".join(lines).strip()
-
-    try:
-        findings = json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        slack_notify(
-            f"user-tester `{agent_id}` payload not JSON array: {exc}", "warn"
-        )
-        return []
-
-    if not isinstance(findings, list):
-        slack_notify(
-            f"user-tester `{agent_id}` payload not a list (got {type(findings).__name__})",
-            "warn",
-        )
-        return []
-
-    # Filter out non-dict entries defensively.
-    return [f for f in findings if isinstance(f, dict)]
 
 
 # --- GitHub Issue alerting (Slack fallback) ---------------------------------
@@ -604,7 +564,7 @@ def write_daily_report(
         f"- user: `{user_id}` (Gmail alias: `seanbae1521+{user_id}@gmail.com`)\n"
         f"- scenario: {scenario}\n"
         f"- started: {started_iso}\n"
-        f"- launcher: `scripts/caus_daily_sweep.py` (Phase 2)\n"
+        f"- launcher: `scripts/caus_daily_sweep.py` (Phase 3 — Playwright)\n"
         f"- findings: {len(findings)} ({sum(1 for f in findings if _normalize_severity(f.get('severity')) == 'p0')} P0)\n\n"
         f"## Findings\n\n{findings_md}"
     )
@@ -620,7 +580,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print agent invocation args + skip subprocess calls. "
+        help="Print scenario invocation args + skip browser launch. "
              "Sim-onboard still hits prod (cheap, idempotent).",
     )
     p.add_argument(
@@ -628,14 +588,35 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Skip sim-onboard HTTP call (uses existing session file if any).",
     )
+    p.add_argument(
+        "--scenario",
+        default=None,
+        help=(
+            "Override day-of-week rotation and run a specific scenario "
+            "(e.g. `day2` or `day2_us_watchlist`). Useful for manual smoke."
+        ),
+    )
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     today = datetime.date.today()
-    day_idx = today.weekday()  # 0=Mon..6=Sun
-    scenario = DAY_SCENARIOS[day_idx]
+    # Allow --scenario override; falls back to weekday rotation.
+    if args.scenario:
+        idx = SCENARIO_MODULE_MAP.get(args.scenario)
+        if idx is None:
+            print(
+                f"[caus] unknown --scenario `{args.scenario}`. "
+                f"Available: {sorted(SCENARIO_MODULE_MAP.keys())}",
+                file=sys.stderr,
+            )
+            return 2
+        day_idx = idx
+    else:
+        day_idx = today.weekday()  # 0=Mon..6=Sun
+    scenario_module, scenario_label = DAY_SCENARIOS[day_idx]
+    scenario = scenario_label  # legacy name used in report text
     user_id = pick_user_id(today)
     agent_id = f"caus-day{day_idx}-{today.isoformat()}-{user_id}"
 
@@ -687,9 +668,9 @@ def main(argv: list[str] | None = None) -> int:
         write_daily_report(today, user_id, scenario, [], [])
         return 0
 
-    # Phase 2 — invoke user-tester agent and parse findings.
+    # Phase 3 — run Playwright scenario module against prod.
     findings = run_user_tester(
-        sess, scenario, day_idx, agent_id, dry_run=args.dry_run
+        sess, scenario_module, day_idx, agent_id, dry_run=args.dry_run
     )
 
     issue_urls: list[str | None] = []
