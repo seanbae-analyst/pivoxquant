@@ -36,6 +36,17 @@
  *     is itself a capital-markets-law misrepresentation risk even with
  *     a distinct label. Remaining 6 rows (SPX/NDX/KOSPI/KOSDAQ/USDKRW/
  *     VIX) carry the ticker without forcing a mislabeled proxy.
+ *   - 2026-05-13 (FMP paid-plan retry): CEO confirmed FMP $29 plan
+ *     billed. Re-tested `^NDX` and `^DXY` on the active key — both
+ *     STILL return 402 Premium Query Parameter ("not available under
+ *     your current subscription"). Caret-prefixed index symbols are
+ *     gated to an Enterprise tier above the $29 Starter. Plain `NDX`
+ *     (no caret) returns stale 2023-05-23 data; plain `DXY` returns
+ *     `[]`. Conclusion: FMP cannot license `^NDX`/`^DXY` at our price
+ *     point — FRED stays as the official NDX source, DXY row stays
+ *     omitted. NDX value refreshed to FRED's newly-published 2026-05-12
+ *     close (29,064.80, posted overnight) — was the missing T+1 print
+ *     PR #343 anticipated.
  *
  * Legal: pure snapshot framing. No BUY/SELL/HOLD. No recommend/advice.
  */
@@ -50,14 +61,16 @@ type Tick = {
 
 // Static snapshot. All values from official-licensed feeds verified at refresh
 // time (2026-05-13 KST). Source-per-row:
-//   - SPX  : FMP stable `historical-price-eod/full` symbol=^GSPC, 2026-05-12 close = 7,400.97 (prev 7,412.85 → -0.16%).
-//   - NDX  : FRED series=NASDAQ100, 2026-05-11 close = 29,320.66 (prev 29,234.99 → +0.29%). FRED publishes T+1 so the 2026-05-12 NDX print posts overnight; using the latest official value avoids fabricating a 5/12 number we can't license.
+//   - SPX  : FMP stable `historical-price-eod/light` symbol=^GSPC, 2026-05-12 close = 7,400.97 (prev 7,412.85 → -0.16%).
+//   - NDX  : FRED series=NASDAQ100, 2026-05-12 close = 29,064.80 (prev 29,320.66 → -0.87%). FMP $29 plan cannot license `^NDX` (still 402 after paid-plan retry on 2026-05-13); FRED's overnight T+1 publish is the latest official US value.
 //   - KOSPI / KOSDAQ / USDKRW: KIS API 2026-05-12 close (verified via routes/market.py /api/market/indices?region=kr live probe — unchanged from PR #335).
-//   - VIX  : FMP stable `historical-price-eod/full` symbol=^VIX, 2026-05-12 close = 17.99 (prev 18.38 → -2.12%).
+//   - VIX  : FMP stable `historical-price-eod/light` symbol=^VIX, 2026-05-12 close = 17.99 (prev 18.38 → -2.12%).
 //
-// DXY removed pending ICE direct license (FMP premium gated). DTWEXBGS swap
-// rejected due to product mismatch — see PR #343 audit. Six remaining tickers
-// are enough surface area without forcing a misleading proxy.
+// DXY remains omitted. Re-verified 2026-05-13 on the paid FMP key — `^DXY`
+// still returns 402 Premium Query Parameter, plain `DXY` returns `[]`. ICE
+// direct license still the only honest path; DTWEXBGS swap remains rejected
+// (product mismatch, see PR #343 audit). Six rows is enough surface area
+// without forcing a misleading proxy.
 //
 // The kicker label is explicit so visitors read this as reference, not live.
 //
@@ -69,7 +82,7 @@ type Tick = {
 export const SNAPSHOT_DATE = "2026-05-12";
 const SNAPSHOT: readonly Tick[] = [
   { symbol: "SPX",     name: "S&P 500",           level: "7,400.97",  change: "-0.16%",  dir: "down" },
-  { symbol: "NDX",     name: "Nasdaq 100",        level: "29,320.66", change: "+0.29%",  dir: "up"   },
+  { symbol: "NDX",     name: "Nasdaq 100",        level: "29,064.80", change: "-0.87%",  dir: "down" },
   { symbol: "KOSPI",   name: "KOSPI",             level: "7,643.15",  change: "-2.29%",  dir: "down" },
   { symbol: "KOSDAQ",  name: "KOSDAQ",            level: "1,179.29",  change: "-2.32%",  dir: "down" },
   { symbol: "USDKRW",  name: "USD / KRW",         level: "1,487.48",  change: "+0.82%",  dir: "up"   },
