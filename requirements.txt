@@ -19,6 +19,11 @@ stripe>=8.0.0
 pywebpush>=2.0.0
 flask-limiter>=3.5.0
 cryptography>=42.0.0
+# CA bundle for the CAUS cron — macOS/LibreSSL Python and headless cron
+# environments can't always rely on the system trust store, so the sweep
+# points every urllib call at certifi explicitly
+# (scripts/caus_daily_sweep.py::_build_ssl_context).
+certifi>=2024.7.4
 gunicorn>=22.0.0
 gevent>=24.2.1
 # Kiwoom 영웅문 balance file parser (.xlsx path). .xls handled via optional
