@@ -373,7 +373,9 @@ def _do_migrations():
 
     is_postgres = db.engine.dialect.name == "postgresql"
 
-    def _add_column_if_missing(table, column, col_type, default=None, unique=False):
+    def _add_column_if_missing(
+        table, column, col_type, default=None, unique=False, not_null=False,
+    ):
         existing = _existing_columns(table)
         if column in existing:
             return
@@ -389,6 +391,10 @@ def _do_migrations():
                 elif str(default).strip() in ("1", "'1'"):
                     resolved_default = "true"
             sql += f" DEFAULT {resolved_default}"
+        # NOT NULL must come AFTER DEFAULT so existing rows are backfilled
+        # by the server default (otherwise PG aborts the ALTER).
+        if not_null:
+            sql += " NOT NULL"
         # PostgreSQL supports UNIQUE inline; SQLite does not (raises OperationalError)
         if unique and is_postgres:
             sql += " UNIQUE"
@@ -455,6 +461,15 @@ def _do_migrations():
     # 인해 prod에서 SELECT users.birthdate ProgrammingError 발생 (2026-05-12
     # bug-hunter 발견, Railway logs). 본 fallback은 prod safety net.
     _add_column_if_missing("users", "birthdate", "DATE")
+    # Continuous User Simulation (CAUS) Phase 1 — sim/real user 격리 플래그.
+    # Alembic migration 032_users_is_simulated (PR #351). prod 가 alembic 미적용
+    # 상태로 운영되어 (alembic_version 테이블 부재 — 2026-05-13 발견) 본 컬럼이
+    # 누락된 채 sim-onboard endpoint 500 발생 (UndefinedColumn: users.is_simulated).
+    # 본 runtime fallback 으로 alembic 실행 여부와 무관하게 boot 시 안전하게 추가.
+    # NOT NULL DEFAULT FALSE 로 backfill — 기존 user 는 모두 real user 로 분류.
+    _add_column_if_missing(
+        "users", "is_simulated", "BOOLEAN", default="false", not_null=True,
+    )
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but
