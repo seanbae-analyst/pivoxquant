@@ -721,10 +721,14 @@ function SiteFooter() {
               © {new Date().getFullYear()} PivoxQuant &nbsp;·&nbsp; All rights
               reserved.
             </p>
+            {/* FINDING-LAND-002 (design-audit-20260514): the footer
+                compliance disclaimer was 11px (--pq-text-mono-sm) — raised
+                to the --pq-text-body-sm (13px) token so the legal notice
+                is legible rather than visually minimized. */}
             <p
               className="font-serif italic text-center"
               style={{
-                fontSize: "var(--pq-text-mono-sm)",
+                fontSize: "var(--pq-text-body-sm)",
                 lineHeight: 1.6,
                 color: "rgba(245,240,232,0.4)",
               }}

@@ -29,7 +29,8 @@ const COPY: Record<"ko" | "en", Copy> = {
     placeholder: "비밀번호 입력",
     submit: "입장하기",
     submitting: "확인 중…",
-    invalid: "비밀번호가 올바르지 않습니다.",
+    // FINDING-GATE-004 (design-audit-20260514): brand-voiced error copy.
+    invalid: "코드가 일치하지 않습니다. CEO로부터 전달받은 코드를 다시 확인해주세요.",
     networkError: "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
     notConfigured: "베타 게이트가 아직 설정되지 않았습니다.",
     footer: "한 번 인증하면 30일 동안 유지됩니다.",
@@ -44,7 +45,8 @@ const COPY: Record<"ko" | "en", Copy> = {
     placeholder: "Enter access code",
     submit: "Enter",
     submitting: "Verifying…",
-    invalid: "That access code isn't valid.",
+    // FINDING-GATE-004 (design-audit-20260514): brand-voiced error copy.
+    invalid: "That code doesn't match. Double-check the code the CEO shared with you.",
     networkError: "Network error. Please try again in a moment.",
     notConfigured: "Beta gate is not configured yet.",
     footer: "Verified once, remembered for 30 days.",
@@ -188,8 +190,17 @@ export default function BetaGateForm() {
         </p>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="mt-7 space-y-4" noValidate>
+      {/* Form — FINDING-GATE-001 (design-audit-20260514): method="post"
+          so that if JS is disabled the browser does not fall back to a
+          GET that leaks `?password=...` into the URL, history, and access
+          logs. The onSubmit handler (preventDefault + fetch) is the JS
+          path and is unchanged. */}
+      <form
+        onSubmit={handleSubmit}
+        method="post"
+        className="mt-7 space-y-4"
+        noValidate
+      >
         <div>
           <label
             htmlFor="beta-password"

@@ -227,9 +227,12 @@ export function DepositionTeaser() {
               ))}
             </div>
 
+            {/* FINDING-LAND-002 sweep (design-audit-20260514): compliance
+                disclaimers must not render below 13px — raised from
+                --pq-text-eyebrow (10.5px) to --pq-text-body-sm (13px). */}
             <p
               className="mt-8 font-serif italic"
-              style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.45)" }}
+              style={{ fontSize: "var(--pq-text-body-sm)", color: "rgba(10,10,10,0.45)" }}
             >
               Not investment advice. A reflection tool, logged to your
               compounding memory.
