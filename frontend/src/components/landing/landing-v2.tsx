@@ -737,30 +737,11 @@ function SiteFooter() {
               manager, or broker-dealer. Research tool only. Past performance
               does not guarantee future results.
             </p>
+            {/* FINDING-LAND-006 (design-audit-20260514): removed the public
+                GitHub repo link — PivoxQuant is a private beta on the §101
+                exemption track, so the repository is not advertised. The
+                ❦ separator was dropped with it since only one link remains. */}
             <div className="flex items-center gap-4 md:justify-end">
-              <a
-                href="https://github.com/seanbae-analyst/pivoxquant"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-serif transition-colors"
-                style={{
-                  fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.12em",
-                  color: "rgba(245,240,232,0.4)",
-                }}
-              >
-                GITHUB
-              </a>
-              <span
-                aria-hidden
-                className="font-serif"
-                style={{
-                  fontSize: "var(--pq-text-mono-sm)",
-                  color: "rgba(184,149,106,0.55)",
-                }}
-              >
-                ❦
-              </span>
               <a
                 href="mailto:hello@pivoxquant.com"
                 className="font-serif transition-colors"
