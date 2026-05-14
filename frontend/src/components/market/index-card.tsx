@@ -111,9 +111,9 @@ function RangeBar({
           style={{ left: `${pct * 100}%` }}
         />
       </div>
-      <div className="mt-1 flex justify-between text-[10px] tabular-nums text-slate-400">
+      <div className="mt-1 flex justify-between text-pq-eyebrow tabular-nums text-slate-400">
         <span>{fmtLevel(low, "en")}</span>
-        <span className="text-[10px] uppercase tracking-wider text-slate-400">
+        <span className="text-pq-eyebrow uppercase tracking-wider text-slate-400">
           52W
         </span>
         <span>{fmtLevel(high, "en")}</span>
@@ -168,7 +168,7 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
     <article className="border-t border-slate-200 pt-4">
       <div className="flex items-baseline justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-widest text-slate-400">
+          <p className="text-pq-eyebrow uppercase tracking-widest text-slate-400">
             {quote.symbol}
           </p>
           <h3 className="font-serif text-base font-bold text-slate-900 truncate">

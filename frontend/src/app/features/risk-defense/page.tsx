@@ -142,13 +142,13 @@ export default function RiskDefensePage() {
                       <span className="font-[var(--font-serif)] text-pq-h5 tracking-[0.04em] text-[var(--pq-ivory)]">
                         {layer.code}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.65)] tabular-nums">
+                      <span className="font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[rgba(245,240,232,0.65)] tabular-nums">
                         {ordinal} / 07
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-[10px] font-medium uppercase tracking-[0.16em] px-2 py-0.5 border border-[rgba(245,240,232,0.18)] text-[var(--pq-bronze)] rounded-sm">
+                        <span className="text-pq-eyebrow font-medium uppercase tracking-[0.16em] px-2 py-0.5 border border-[rgba(245,240,232,0.18)] text-[var(--pq-bronze)] rounded-sm">
                           Layer {layer.number}
                         </span>
                         <h3 className="text-base font-semibold text-[var(--pq-ivory)]">{layer.title}</h3>

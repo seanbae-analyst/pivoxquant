@@ -32,7 +32,7 @@ function ScoreBar() {
         <span>70</span>
         <span>100</span>
       </div>
-      <div className="flex justify-between mt-1 text-[10px] uppercase tracking-[0.18em]">
+      <div className="flex justify-between mt-1 text-pq-eyebrow uppercase tracking-[0.18em]">
         <span className="text-[#7AA0C8] font-medium">NEGATIVE</span>
         <span className="text-[rgba(245,240,232,0.55)] font-medium">NEUTRAL</span>
         <span className="text-[#D18888] font-medium">POSITIVE</span>
@@ -185,7 +185,7 @@ export default function QuantScoringPage() {
                       <span className="font-[var(--font-serif)] text-pq-h5 tracking-[0.04em] text-[var(--pq-ivory)]">
                         {pillar.code}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.65)] tabular-nums">
+                      <span className="font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[rgba(245,240,232,0.65)] tabular-nums">
                         {ordinal} / 04
                       </span>
                     </div>

@@ -107,7 +107,7 @@ export default function AiAssistantPage() {
                       <span className="font-[var(--font-serif)] text-pq-h5 tracking-[0.04em] text-[var(--pq-ivory)]">
                         {conv.code}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">
+                      <span className="font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">
                         {ordinal} / 04
                       </span>
                     </div>

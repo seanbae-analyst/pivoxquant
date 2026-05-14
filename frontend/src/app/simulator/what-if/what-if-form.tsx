@@ -294,7 +294,7 @@ export function WhatIfForm({
                       </div>
                     </div>
                     <span
-                      className="rounded-sm px-2 py-0.5 font-mono text-[10px] font-semibold"
+                      className="rounded-sm px-2 py-0.5 font-mono text-pq-eyebrow font-semibold"
                       style={{
                         backgroundColor: "rgba(184, 149, 106, 0.12)",
                         color: "var(--pq-bronze)",

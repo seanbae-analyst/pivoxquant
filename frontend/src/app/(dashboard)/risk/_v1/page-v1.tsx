@@ -428,7 +428,7 @@ export default function RiskPage() {
         </div>
 
         {/* Gradient legend */}
-        <div className="mb-5 flex items-center gap-3 text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
+        <div className="mb-5 flex items-center gap-3 text-pq-eyebrow uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
           <span>−1</span>
           <span
             className="h-2 max-w-[220px] flex-1"
@@ -475,7 +475,7 @@ export default function RiskPage() {
                       <td
                         key={`${i}-${j}`}
                         title={`${displayCorrLabels[i]} × ${displayCorrLabels[j]}: ${v.toFixed(2)}`}
-                        className="h-10 w-12 cursor-default text-center font-mono text-[10px] tabular-nums text-[var(--pq-ivory)] transition-[outline] hover:outline hover:outline-1 hover:outline-[var(--pq-bronze)]"
+                        className="h-10 w-12 cursor-default text-center font-mono text-pq-eyebrow tabular-nums text-[var(--pq-ivory)] transition-[outline] hover:outline hover:outline-1 hover:outline-[var(--pq-bronze)]"
                         style={{
                           backgroundColor: bg,
                           border: "0.5px solid var(--pq-ivory-line-soft)",
@@ -611,7 +611,7 @@ function RollingVarInk({
         yLabel="1-day 95% VaR (observed)"
         ariaLabel="Rolling 30-day VaR"
       />
-      <div className="mt-2 flex justify-between font-mono text-[10px] text-[rgba(245,240,232,0.45)]">
+      <div className="mt-2 flex justify-between font-mono text-pq-eyebrow text-[rgba(245,240,232,0.45)]">
         <span>max {hi.toFixed(2)}%</span>
         <span>min {lo.toFixed(2)}%</span>
       </div>

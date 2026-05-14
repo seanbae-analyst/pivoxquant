@@ -130,7 +130,7 @@ function ArtifactCard({
         </div>
       )}
 
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-2">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-2">
         <span aria-hidden="true" style={{ display: "inline-block", width: 16, height: 1, background: "var(--pq-bronze)", opacity: 0.6 }} />
         {entry.cadence} &middot; {entry.minTier}
       </div>
@@ -138,7 +138,7 @@ function ArtifactCard({
         {entry.title}
       </h3>
       {personaMatch && declaredPersona && (
-        <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+        <p className="mt-1 text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           Optimised for {PERSONA_LABELS[declaredPersona]}
         </p>
       )}
@@ -274,7 +274,7 @@ function ReportsPageInner() {
 
       {/* ── Persona filter — Layer 1 targeting ── */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mr-1">
+        <span className="text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)] mr-1">
           Persona
         </span>
         {(

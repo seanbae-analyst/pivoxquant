@@ -86,7 +86,7 @@ function StreamingDots() {
 function AssistantAvatar() {
   return (
     <div className="w-7 h-7 rounded-full bg-[rgba(139,111,71,0.15)] border border-[rgba(139,111,71,0.3)] flex items-center justify-center shrink-0">
-      <span className="text-[10px] text-[var(--pq-bronze)] font-serif">
+      <span className="text-pq-eyebrow text-[var(--pq-bronze)] font-serif">
         PQ
       </span>
     </div>
@@ -449,7 +449,7 @@ function ChatInner() {
           </h1>
         </div>
         <div
-          className="font-mono text-[10px] uppercase mt-2"
+          className="font-mono text-pq-eyebrow uppercase mt-2"
           style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
         >
           {streaming ? "Streaming" : "Idle"}
@@ -516,8 +516,8 @@ function ChatInner() {
 
         <p className="mt-3 text-pq-mono-sm text-[rgba(245,240,232,0.45)] font-serif">
           Press{" "}
-          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not- text-[rgba(245,240,232,0.7)]">Enter</kbd> to send ·{" "}
-          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not- text-[rgba(245,240,232,0.7)]">Shift+Enter</kbd> for new line
+          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-pq-eyebrow not- text-[rgba(245,240,232,0.7)]">Enter</kbd> to send ·{" "}
+          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-pq-eyebrow not- text-[rgba(245,240,232,0.7)]">Shift+Enter</kbd> for new line
         </p>
       </footer>
 

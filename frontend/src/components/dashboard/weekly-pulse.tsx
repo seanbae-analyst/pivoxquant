@@ -149,7 +149,7 @@ export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <div className="text-[10px] tracking-[0.26em] uppercase text-[var(--pq-bronze)]">
+                <div className="text-pq-eyebrow tracking-[0.26em] uppercase text-[var(--pq-bronze)]">
                   Layer 2 · Monday pulse
                 </div>
                 <h3 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
@@ -228,7 +228,7 @@ function PulseForm({
 
       <div>
         <label
-          className="block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
+          className="block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
           htmlFor="pulse-worry"
         >
           One concern on your mind
@@ -245,7 +245,7 @@ function PulseForm({
       </div>
 
       <div>
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
           Topics you&apos;re watching
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -276,7 +276,7 @@ function PulseForm({
 
       <div>
         <label
-          className="block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
+          className="block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
           htmlFor="pulse-learn"
         >
           Something you want to learn
@@ -314,7 +314,7 @@ function LikertRow({
 }) {
   return (
     <div>
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5">
         {label}
       </div>
       <div className="flex gap-1.5">
@@ -377,7 +377,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
 
   return (
     <section className="mt-6 pt-5 border-t border-[var(--pq-ivory-line)]">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Pulse history · last {recent.length} weeks
       </div>
       <svg

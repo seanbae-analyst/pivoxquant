@@ -199,7 +199,7 @@ export function DepositionTeaser() {
                   className="grid grid-cols-[auto_minmax(0,1fr)] gap-3"
                 >
                   <span
-                    className="font-mono text-[10px] tabular-nums"
+                    className="font-mono text-pq-eyebrow tabular-nums"
                     style={{
                       color: "rgba(139,111,71,0.85)",
                       letterSpacing: "0.1em",

@@ -164,7 +164,7 @@ export function KoreaUsDesk() {
                       {t.local}
                     </span>
                     <span
-                      className="font-mono text-[10px] uppercase tabular-nums"
+                      className="font-mono text-pq-eyebrow uppercase tabular-nums"
                       style={{
                         color: "var(--pq-bronze)",
                         letterSpacing: "0.2em",

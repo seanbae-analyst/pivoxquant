@@ -42,7 +42,7 @@ export function KisCard({
       {/* Header — kicker + name + status */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
-          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
+          <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
             Korea Investment &amp; Securities
           </div>
           <h3 className="font-serif text-lg text-[var(--pq-ivory)]">
@@ -50,12 +50,12 @@ export function KisCard({
           </h3>
         </div>
         {connected ? (
-          <span className="inline-flex items-center gap-1 border border-[var(--pq-bronze)] px-2 py-0.5 text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] shrink-0">
+          <span className="inline-flex items-center gap-1 border border-[var(--pq-bronze)] px-2 py-0.5 text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-bronze)] shrink-0">
             <Check className="h-2.5 w-2.5" />
             Connected
           </span>
         ) : (
-          <span className="inline-flex items-center border border-[rgba(245,240,232,0.2)] px-2 py-0.5 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] shrink-0">
+          <span className="inline-flex items-center border border-[rgba(245,240,232,0.2)] px-2 py-0.5 text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] shrink-0">
             Not connected
           </span>
         )}
@@ -68,7 +68,7 @@ export function KisCard({
       </p>
 
       {connected && lastSync && (
-        <p className="mb-4 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+        <p className="mb-4 text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
           Last sync · <span className="tabular-nums normal-case tracking-normal text-[rgba(245,240,232,0.6)]">{lastSync}</span>
         </p>
       )}
@@ -117,7 +117,7 @@ export function KisCard({
 
       {/* Issuance guide — expandable */}
       <details className="group mt-5 pt-4 border-t border-[var(--pq-ivory-line)]">
-        <summary className="cursor-pointer list-none text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
+        <summary className="cursor-pointer list-none text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
           <span>How to issue KIS API credentials</span>
           <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>
         </summary>

@@ -69,7 +69,7 @@ export function TopBar() {
             Find a ticker, an artifact, a page…
           </span>
           <kbd
-            className="hidden md:inline-flex rounded px-1.5 py-0.5 font-mono text-[10px]"
+            className="hidden md:inline-flex rounded px-1.5 py-0.5 font-mono text-pq-eyebrow"
             style={{
               border: "0.5px solid rgba(245, 240, 232, 0.15)",
               color: "rgba(245, 240, 232, 0.55)",

@@ -354,7 +354,7 @@ function SetupStep(props: {
                 type="button"
                 onClick={() => setSide(s)}
                 aria-label={sideLabel(s)}
-                className={`px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition-colors ${
+                className={`px-4 py-2 text-pq-eyebrow uppercase tracking-[0.2em] transition-colors ${
                   side === s
                     ? "bg-[var(--pq-bronze)] text-[var(--pq-ink)]"
                     : "border border-[rgba(245,240,232,0.15)] text-[rgba(245,240,232,0.65)] hover:border-[var(--pq-bronze)]"
@@ -458,7 +458,7 @@ function QuestionsStep(props: {
           >
             <div className="flex items-baseline gap-3">
               <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-0.5"
+                className="font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-0.5"
                 style={{ minWidth: 18 }}
               >
                 {String(q.n).padStart(2, "0")}
@@ -579,7 +579,7 @@ function CooldownStep({
           >
             {String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}
           </div>
-          <div className="mt-3 text-[10px] tracking-[0.22em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="mt-3 text-pq-eyebrow tracking-[0.22em] uppercase text-[rgba(245,240,232,0.45)]">
             {isReady ? "Cooldown complete" : "Time remaining · 남은 시간"}
           </div>
         </div>
@@ -597,7 +597,7 @@ function CooldownStep({
           <div className="flex items-start gap-2 rounded-[2px] border border-[rgba(184,149,106,0.3)] bg-[rgba(184,149,106,0.05)] p-3">
             <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-[var(--pq-bronze)] shrink-0" />
             <p className="text-pq-caption leading-relaxed text-[rgba(245,240,232,0.75)]">
-              <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] mr-2">
+              <span className="font-mono text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-bronze)] mr-2">
                 Extended
               </span>
               {extendReasonLabel(reflection.auto_extended_reason)}
@@ -749,7 +749,7 @@ function Field({
       <div className="block">
         <label
           htmlFor={htmlFor}
-          className="block text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1"
+          className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1"
         >
           {label}
         </label>
@@ -759,7 +759,7 @@ function Field({
   }
   return (
     <label className="block">
-      <span className="block text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1">
+      <span className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1">
         {label}
       </span>
       {children}

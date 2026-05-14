@@ -87,7 +87,7 @@ export function PushPermission() {
             </div>
             <div>
               <div
-                className="mb-1 text-[10px] font-medium uppercase tracking-[0.24em]"
+                className="mb-1 text-pq-eyebrow font-medium uppercase tracking-[0.24em]"
                 style={{ color: "var(--pq-bronze)" }}
               >
                 Observation alerts

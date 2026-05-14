@@ -207,7 +207,7 @@ export default function AdminArtifactPreviewPage() {
       {data && (
         <p className="mt-8 text-xs text-slate-400">
           Showing {items.length} of {data.count} artifacts · 샘플 데이터는
-          <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">
+          <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-pq-eyebrow">
             services/artifacts/sample_data.py
           </code>
           에서 제공
@@ -254,13 +254,13 @@ function ArtifactCard({
       <header className="flex items-center justify-between gap-2 px-4 pt-4">
         <span
           className={cn(
-            "rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+            "rounded border px-2 py-0.5 text-pq-eyebrow font-bold uppercase tracking-wider",
             TIER_STYLE[entry.tier],
           )}
         >
           {entry.tier}
         </span>
-        <span className="text-[10px] text-slate-400">
+        <span className="text-pq-eyebrow text-slate-400">
           {CADENCE_LABEL[entry.cadence] ?? entry.cadence}
         </span>
       </header>
@@ -355,10 +355,10 @@ function PreviewModal({
           <h2 className="truncate text-sm font-semibold text-slate-900 md:text-base">
             {title}
           </h2>
-          <span className="hidden rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-600 md:inline">
+          <span className="hidden rounded bg-slate-100 px-2 py-0.5 text-pq-eyebrow font-medium uppercase tracking-wider text-slate-600 md:inline">
             {format}
           </span>
-          <span className="hidden rounded bg-amber-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-700 md:inline">
+          <span className="hidden rounded bg-amber-50 px-2 py-0.5 text-pq-eyebrow font-medium uppercase tracking-wider text-amber-700 md:inline">
             sample data
           </span>
         </div>

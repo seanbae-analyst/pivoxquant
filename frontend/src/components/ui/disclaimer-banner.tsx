@@ -127,7 +127,7 @@ export function DisclaimerBanner({
           </p>
           <p
             className={cn(
-              "mt-1.5 text-[10px] leading-relaxed",
+              "mt-1.5 text-pq-eyebrow leading-relaxed",
               isDark ? "text-[rgba(245,240,232,0.55)]" : "text-slate-500",
             )}
           >
@@ -135,7 +135,7 @@ export function DisclaimerBanner({
           </p>
           <p
             className={cn(
-              "mt-1.5 text-[10px] leading-relaxed italic",
+              "mt-1.5 text-pq-eyebrow leading-relaxed italic",
               isDark ? "text-[rgba(245,240,232,0.45)]" : "text-slate-500",
             )}
           >

@@ -156,14 +156,14 @@ export default function ProfilesPage() {
                       <span className="font-[var(--font-serif)] text-pq-h5 tracking-[0.04em] text-[var(--pq-ivory)]">
                         {profile.code}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">
+                      <span className="font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">
                         {ordinal} / 08
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="text-sm font-semibold text-[var(--pq-ivory)]">{profile.title}</h3>
-                        <span className="text-[10px] font-medium uppercase tracking-[0.16em] px-2 py-0.5 border border-[rgba(184,149,106,0.28)] text-[var(--pq-bronze)] rounded-sm">
+                        <span className="text-pq-eyebrow font-medium uppercase tracking-[0.16em] px-2 py-0.5 border border-[rgba(184,149,106,0.28)] text-[var(--pq-bronze)] rounded-sm">
                           {profile.tag}
                         </span>
                       </div>

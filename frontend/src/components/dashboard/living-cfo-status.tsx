@@ -319,7 +319,7 @@ function StatusModal({
         <div className="flex items-start justify-between mb-4">
           <div>
             <div
-              className="text-[10px] tracking-[0.26em] uppercase"
+              className="text-pq-eyebrow tracking-[0.26em] uppercase"
               style={{ color: "var(--pq-bronze)" }}
             >
               Living CFO · What it knows
@@ -376,7 +376,7 @@ function StatusModal({
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+                    <span className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
                       Layer {l.id} · {l.name}
                     </span>
                     {l.state === "locked" && (

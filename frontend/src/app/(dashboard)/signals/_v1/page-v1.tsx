@@ -192,7 +192,7 @@ export default function SignalsPageV1() {
             tickers. Clip any memo to unfold its four-pillar readout in place.
           </p>
           {/* Objective threshold legend — score-based classification, not opinion. */}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] text-[rgba(245,240,232,0.55)]">
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-pq-eyebrow text-[rgba(245,240,232,0.55)]">
             <span className="pq-ink-pill pq-ink-pill--pos">Positive</span>
             <span className="-ml-1">= score ≥ 65</span>
             <span className="pq-ink-pill pq-ink-pill--neu">Neutral</span>

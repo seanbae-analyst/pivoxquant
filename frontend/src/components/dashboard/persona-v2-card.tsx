@@ -39,7 +39,7 @@ const PAPER_BORDER = "var(--pq-ivory-line)";
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+    <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
       {children}
     </div>
   );
@@ -101,7 +101,7 @@ function PersonaHeader({
           >
             confidence · {confidence}
           </div>
-          <div className="mt-1 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="mt-1 text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
             {tradeCount} {tradeCount === 1 ? "trade" : "trades"} observed
           </div>
         </div>
@@ -287,7 +287,7 @@ function WhyThisPersona({
             }}
           >
             <span
-              className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-mono text-[10px]"
+              className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-mono text-pq-eyebrow"
               style={{
                 border: "0.5px solid var(--pq-bronze)",
                 color: "var(--pq-bronze)",

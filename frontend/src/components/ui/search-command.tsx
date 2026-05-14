@@ -336,7 +336,7 @@ export function SearchCommandMenu() {
                       {s.name}
                     </span>
                     <span
-                      className="text-[10px] uppercase"
+                      className="text-pq-eyebrow uppercase"
                       style={{ letterSpacing: "0.12em", color: "var(--pq-muted)" }}
                     >
                       {s.market}
@@ -426,7 +426,7 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
   return (
     <div className="py-1">
       <div
-        className="flex items-center gap-1.5 px-5 pb-1 pt-2 text-[10px] uppercase"
+        className="flex items-center gap-1.5 px-5 pb-1 pt-2 text-pq-eyebrow uppercase"
         style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
       >
         {icon}
@@ -473,7 +473,7 @@ function CommandRow({
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
     <kbd
-      className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+      className="rounded px-1.5 py-0.5 font-mono text-pq-eyebrow"
       style={{ border: "0.5px solid var(--pq-hairline)", color: "var(--pq-muted)" }}
     >
       {children}

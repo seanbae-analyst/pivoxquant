@@ -142,7 +142,7 @@ export function ProfileDropdown() {
               </div>
               <div className="mt-3">
                 <span
-                  className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-mono"
+                  className="inline-flex items-center rounded px-2 py-0.5 text-pq-eyebrow font-mono"
                   style={{
                     border: "0.5px solid var(--pq-bronze)",
                     color: "var(--pq-bronze)",
@@ -278,7 +278,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
           style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
         >
           <div
-            className="text-[10px] uppercase"
+            className="text-pq-eyebrow uppercase"
             style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
           >
             Reference

@@ -21,7 +21,7 @@ export default function AdminIndexPage() {
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="text-[10px] uppercase tracking-[0.22em] text-slate-400">
+      <div className="text-pq-eyebrow uppercase tracking-[0.22em] text-slate-400">
         Verifying admin…
       </div>
     </div>

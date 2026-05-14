@@ -95,7 +95,7 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setWin(t.key)}
-                className="px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] rounded-[2px] border transition-colors"
+                className="px-2.5 py-1 text-pq-eyebrow uppercase tracking-[0.18em] rounded-[2px] border transition-colors"
                 style={{
                   borderColor: active
                     ? "#B8956A"

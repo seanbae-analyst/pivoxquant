@@ -310,7 +310,7 @@ export default function DiscoverPage() {
           <button
             type="button"
             onClick={() => mutate()}
-            className="shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.5)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.8)] transition-colors"
+            className="shrink-0 font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[rgba(245,240,232,0.5)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.8)] transition-colors"
           >
             Retry
           </button>
@@ -396,7 +396,7 @@ export default function DiscoverPage() {
                 return (
                   <div key={region} className="flex flex-col">
                     <div
-                      className="mb-2 font-mono text-[10px] uppercase"
+                      className="mb-2 font-mono text-pq-eyebrow uppercase"
                       style={{
                         letterSpacing: "0.22em",
                         color: "var(--pq-bronze)",
@@ -563,14 +563,14 @@ export default function DiscoverPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/portfolio")}
-                  className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] underline underline-offset-2 hover:text-[var(--pq-ivory)] transition-colors"
+                  className="font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[var(--pq-bronze)] underline underline-offset-2 hover:text-[var(--pq-ivory)] transition-colors"
                 >
                   포지션 추가
                 </button>
                 <button
                   type="button"
                   onClick={() => router.push("/watchlist")}
-                  className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.5)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.85)] transition-colors"
+                  className="font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[rgba(245,240,232,0.5)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.85)] transition-colors"
                 >
                   관심종목 추가
                 </button>
@@ -638,7 +638,7 @@ export default function DiscoverPage() {
                             {item.name || item.ticker}
                           </div>
                           {item.name && (
-                            <div className="font-mono text-[10px] tracking-[0.06em] text-[rgba(245,240,232,0.45)] truncate">
+                            <div className="font-mono text-pq-eyebrow tracking-[0.06em] text-[rgba(245,240,232,0.45)] truncate">
                               {item.ticker}
                             </div>
                           )}
@@ -699,7 +699,7 @@ function SectionKicker({
       style={{ borderTopColor: "rgba(184,149,106,0.32)", borderTopWidth: 0.5 }}
     >
       <div
-        className="font-mono text-[10px] uppercase"
+        className="font-mono text-pq-eyebrow uppercase"
         style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
       >
         {eyebrow}
@@ -763,7 +763,7 @@ function EditorialEmpty({
         <button
           type="button"
           onClick={onCta}
-          className="font-mono text-[10px] uppercase underline underline-offset-4 transition-colors"
+          className="font-mono text-pq-eyebrow uppercase underline underline-offset-4 transition-colors"
           style={{
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.5)",
@@ -786,7 +786,7 @@ function MoversBlock({
 }) {
   return (
     <div>
-      <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+      <div className="mb-2 font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
         {title}
       </div>
       <div className="overflow-x-auto">
@@ -817,7 +817,7 @@ function EmptyBlock({ title }: { title: string }) {
   return (
     <div>
       <div
-        className="mb-2 font-mono text-[10px] uppercase"
+        className="mb-2 font-mono text-pq-eyebrow uppercase"
         style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
       >
         {title}
@@ -844,7 +844,7 @@ function ThematicBlockInk({
 }) {
   return (
     <div>
-      <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+      <div className="mb-2 font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
         {title}
       </div>
       <ul className="divide-y divide-[var(--pq-ivory-line-soft)]">

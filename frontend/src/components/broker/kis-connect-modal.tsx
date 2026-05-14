@@ -74,7 +74,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
+            <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
               Korea Investment &amp; Securities
             </div>
             <h3 className="font-serif text-xl text-[var(--pq-ivory)]">
@@ -113,7 +113,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           <div>
             <label
               htmlFor="kis-app-key"
-              className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+              className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
             >
               App Key
             </label>
@@ -136,7 +136,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           <div>
             <label
               htmlFor="kis-app-secret"
-              className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+              className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
             >
               App Secret
             </label>
@@ -158,7 +158,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <div className="col-span-2">
               <label
                 htmlFor="kis-account-no"
-                className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+                className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
               >
                 Account No.
               </label>
@@ -179,7 +179,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
                 className="pq-ink-input w-full tabular-nums"
               />
               {accountNo.length > 0 && !accountNoValid && (
-                <p id="kis-account-no-hint" role="alert" className="mt-1.5 text-[10px] text-[#d18888]">
+                <p id="kis-account-no-hint" role="alert" className="mt-1.5 text-pq-eyebrow text-[#d18888]">
                   {t("brokerOnboarding.kis.accountNoHint")}
                 </p>
               )}
@@ -187,7 +187,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <div>
               <label
                 htmlFor="kis-account-prod"
-                className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+                className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
               >
                 Product
               </label>
@@ -235,7 +235,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
 
         {/* Issuance guide */}
         <details className="group mt-6 pt-5 border-t border-[var(--pq-ivory-line)]">
-          <summary className="cursor-pointer list-none text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
+          <summary className="cursor-pointer list-none text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
             <span>How to issue KIS API credentials</span>
             <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>
           </summary>
@@ -266,7 +266,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
         </details>
 
         {/* Disclaimer */}
-        <p className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-[10px] leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
+        <p className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-pq-eyebrow leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
           KIS integration is read-only. Orders are disabled in this release.
         </p>
       </div>

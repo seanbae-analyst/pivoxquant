@@ -276,7 +276,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
             style={{ borderRight: "1px solid var(--pq-ivory-line-soft)" }}
           >
             <div
-              className="text-[10px] font-semibold uppercase tracking-wider"
+              className="text-pq-eyebrow font-semibold uppercase tracking-wider"
               style={{ color: "rgba(245, 240, 232, 0.4)" }}
             >
               {t("whatIf.result.invested")}
@@ -293,7 +293,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
             style={{ borderRight: "1px solid var(--pq-ivory-line-soft)" }}
           >
             <div
-              className="text-[10px] font-semibold uppercase tracking-wider"
+              className="text-pq-eyebrow font-semibold uppercase tracking-wider"
               style={{ color: "rgba(245, 240, 232, 0.4)" }}
             >
               {t("whatIf.result.annualized")}
@@ -311,7 +311,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
           </div>
           <div className="px-3 py-3 sm:px-5 sm:py-4">
             <div
-              className="text-[10px] font-semibold uppercase tracking-wider"
+              className="text-pq-eyebrow font-semibold uppercase tracking-wider"
               style={{ color: "rgba(245, 240, 232, 0.4)" }}
             >
               {t("whatIf.result.duration")}
@@ -453,7 +453,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
             </span>
           </div>
           <span
-            className="text-[10px]"
+            className="text-pq-eyebrow"
             style={{ color: "rgba(245, 240, 232, 0.45)" }}
           >
             {t("whatIf.result.watermark")}

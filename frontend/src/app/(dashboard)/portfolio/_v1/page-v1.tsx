@@ -283,7 +283,7 @@ export default function PortfolioPage() {
       {/* Terminal header row */}
       <header className="mb-6 flex items-center justify-between gap-4">
         <RuledKicker>PivoxQuant &middot; Portfolio &middot; {weekTag()}</RuledKicker>
-        <div className="flex items-center gap-1.5 font-mono tabular-nums text-[10px]">
+        <div className="flex items-center gap-1.5 font-mono tabular-nums text-pq-eyebrow">
           <span
             className={`h-1.5 w-1.5 rounded-full ${
               marketOpen

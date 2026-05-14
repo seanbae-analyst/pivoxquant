@@ -147,7 +147,7 @@ export function NotificationDropdown() {
         <Bell className="h-5 w-5" strokeWidth={1.75} />
         {unread > 0 && (
           <span
-            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold"
+            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-pq-eyebrow font-semibold"
             style={{ background: "var(--pq-bronze)", color: "var(--pq-ivory)" }}
           >
             {unread > 99 ? "99+" : unread}
@@ -168,7 +168,7 @@ export function NotificationDropdown() {
           >
             <div>
               <div
-                className="text-[10px] uppercase"
+                className="text-pq-eyebrow uppercase"
                 style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
               >
                 Notifications

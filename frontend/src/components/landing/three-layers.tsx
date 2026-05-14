@@ -296,7 +296,7 @@ export function ThreeLayers() {
                   <div>
                     <div className="flex items-baseline gap-3 mb-2">
                       <span
-                        className="font-mono text-[10px] uppercase tabular-nums"
+                        className="font-mono text-pq-eyebrow uppercase tabular-nums"
                         style={{
                           letterSpacing: "0.22em",
                           color: "var(--pq-bronze)",
