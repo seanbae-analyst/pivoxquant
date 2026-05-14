@@ -369,7 +369,7 @@ function PillarCard({
         <FieldLabel>{label}</FieldLabel>
         <span
           className={cn(
-            "text-[var(--pq-text-mono-tiny)] tracking-[0.18em] uppercase font-medium",
+            "text-pq-mono-tiny tracking-[0.18em] uppercase font-medium",
             textColor,
           )}
         >
@@ -386,7 +386,7 @@ function PillarCard({
           style={{ width: `${safe}%` }}
         />
       </div>
-      <p className="mt-3 pq-detail-body text-[13px]">
+      <p className="mt-3 pq-detail-body text-pq-body-sm">
         {observation}
       </p>
     </div>
@@ -433,7 +433,7 @@ function AccessDeniedScreen({
       <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
         분석은 보유/관심 종목 한정입니다.
       </p>
-      <p className="mt-3 text-[13px] leading-relaxed text-[var(--pq-ivory-mid)]">
+      <p className="mt-3 text-pq-body-sm leading-relaxed text-[var(--pq-ivory-mid)]">
         {/* Name-first (FINDING-026): "Apple (AAPL)" not a naked code. */}
         <span className="text-[var(--pq-bronze)]">
           {(() => {
@@ -464,9 +464,9 @@ function AccessDeniedScreen({
         </button>
       </div>
       {errMsg ? (
-        <p className="mt-4 text-[var(--pq-text-mono-xs)] text-[rgba(209,136,136,0.8)]">{errMsg}</p>
+        <p className="mt-4 text-pq-mono-xs text-[rgba(209,136,136,0.8)]">{errMsg}</p>
       ) : null}
-      <p className="mt-6 text-[var(--pq-text-eyebrow)] uppercase tracking-[0.22em] text-[var(--pq-ivory-faint)]">
+      <p className="mt-6 text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-ivory-faint)]">
         Observational research only · Not investment advice
       </p>
     </div>
@@ -696,7 +696,7 @@ export default function StockDetailPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex items-center gap-1.5 text-[var(--pq-text-mono-xs)] tracking-[0.14em] uppercase text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)] transition-colors"
+            className="inline-flex items-center gap-1.5 text-pq-mono-xs tracking-[0.14em] uppercase text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)] transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
@@ -788,7 +788,7 @@ export default function StockDetailPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="inline-flex min-h-[44px] items-center gap-1.5 -mx-2 px-2 py-2 text-[var(--pq-text-mono-xs)] tracking-[0.14em] uppercase text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)] transition-colors"
+          className="inline-flex min-h-[44px] items-center gap-1.5 -mx-2 px-2 py-2 text-pq-mono-xs tracking-[0.14em] uppercase text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back
@@ -800,7 +800,7 @@ export default function StockDetailPage() {
         <section className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-[2px]">
           {/* Kicker strip */}
           <div className="flex items-center justify-between gap-3 px-6 md:px-8 pt-6 md:pt-7 flex-wrap">
-            <div className="inline-flex items-center gap-3 text-[var(--pq-text-eyebrow-sm)] tracking-[0.18em] uppercase text-[var(--pq-bronze)] font-medium">
+            <div className="inline-flex items-center gap-3 text-pq-eyebrow-sm tracking-[0.18em] uppercase text-[var(--pq-bronze)] font-medium">
               <span
                 aria-hidden="true"
                 className="inline-block w-6 h-[0.5px] bg-[var(--pq-bronze)] opacity-70"
@@ -847,7 +847,7 @@ export default function StockDetailPage() {
                 <h1 className="pq-detail-ticker-display mt-2">
                   {displayName}
                 </h1>
-                <p className="mt-2 font-mono tabular-nums text-[13px] text-[var(--pq-ivory-mid)] leading-snug">
+                <p className="mt-2 font-mono tabular-nums text-pq-body-sm text-[var(--pq-ivory-mid)] leading-snug">
                   {ticker}
                 </p>
                 {/* Chips (FINDING-027): sector and industry were 3 separate
@@ -876,7 +876,7 @@ export default function StockDetailPage() {
                 <div className="mt-4">
                   <FieldLabel tone="muted">Market cap</FieldLabel>
                   {/* FINDING-035: unit suffix (조/억/T/B) subordinate to digits. */}
-                  <div className="pq-ink-num mt-1 text-[18px]">
+                  <div className="pq-ink-num mt-1 text-pq-h5">
                     {(() => {
                       const { num, suffix } = splitMcap(fmtMcap(mcap, krw));
                       return (
@@ -884,7 +884,7 @@ export default function StockDetailPage() {
                           <span className="tabular-nums">{num}</span>
                           {suffix && (
                             <span
-                              className="ml-0.5 text-[13px] align-baseline text-[var(--pq-muted)]"
+                              className="ml-0.5 text-pq-body-sm align-baseline text-[var(--pq-muted)]"
                               style={{ fontWeight: 400 }}
                             >
                               {suffix}
@@ -924,7 +924,7 @@ export default function StockDetailPage() {
                 </div>
                 <div
                   className={cn(
-                    "mt-3 inline-flex items-center gap-1.5 tabular-nums font-mono text-[15px]",
+                    "mt-3 inline-flex items-center gap-1.5 tabular-nums font-mono text-pq-lead",
                     pctColorClass(signal?.change_pct),
                   )}
                 >
@@ -940,7 +940,7 @@ export default function StockDetailPage() {
                         <TrendingDown className="h-4 w-4" />
                       )}
                       {fmtPct(signal?.change_pct)}
-                      <span className="ml-2 text-[var(--pq-text-eyebrow-sm)] tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)] font-sans">
+                      <span className="ml-2 text-pq-eyebrow-sm tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)] font-sans">
                         · 1D Δ
                       </span>
                     </>
@@ -950,9 +950,9 @@ export default function StockDetailPage() {
                 {/* 52W range rail */}
                 {hasRange && (
                   <div className="mt-6">
-                    <div className="flex items-center justify-between text-[var(--pq-text-mono-xs)] font-mono tabular-nums text-[var(--pq-ivory-dim)]">
+                    <div className="flex items-center justify-between text-pq-mono-xs font-mono tabular-nums text-[var(--pq-ivory-dim)]">
                       <span>{fmtPrice(week52Low, krw)}</span>
-                      <span className="text-[var(--pq-text-mono-tiny)] tracking-[0.18em] uppercase text-[var(--pq-bronze)]">
+                      <span className="text-pq-mono-tiny tracking-[0.18em] uppercase text-[var(--pq-bronze)]">
                         52W Range
                       </span>
                       <span>{fmtPrice(week52High, krw)}</span>
@@ -991,7 +991,7 @@ export default function StockDetailPage() {
                   {signal?.score != null && Number.isFinite(signal.score)
                     ? signal.score
                     : "—"}
-                  <span className="text-[13px] text-[var(--pq-ivory-faint)] ml-1.5 font-sans tracking-[0.08em]">
+                  <span className="text-pq-body-sm text-[var(--pq-ivory-faint)] ml-1.5 font-sans tracking-[0.08em]">
                     / 100
                   </span>
                 </div>
@@ -1032,7 +1032,7 @@ export default function StockDetailPage() {
                   aria-selected={period === p}
                   onClick={() => setPeriod(p)}
                   className={cn(
-                    "px-3 py-1 text-[var(--pq-text-eyebrow-sm)] tracking-[0.18em] uppercase transition-all",
+                    "px-3 py-1 text-pq-eyebrow-sm tracking-[0.18em] uppercase transition-all",
                     period === p
                       ? "text-[var(--pq-ivory)] border-b border-[var(--pq-bronze)]"
                       : "text-[var(--pq-ivory-faint)] hover:text-[var(--pq-bronze)]",
@@ -1270,16 +1270,16 @@ export default function StockDetailPage() {
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="min-w-0 flex-1">
-                                <p className="font-serif text-[15px] leading-snug text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors line-clamp-2">
+                                <p className="font-serif text-pq-lead leading-snug text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors line-clamp-2">
                                   {n.title}
                                 </p>
                                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                                   <span className={chipClass}>{chipLabel}</span>
-                                  <span className="text-[var(--pq-text-mono-xs)] text-[var(--pq-ivory-faint)] font-sans tracking-tight">
+                                  <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)] font-sans tracking-tight">
                                     {n.source}
                                   </span>
-                                  <span className="text-[var(--pq-text-mono-xs)] text-[var(--pq-ivory-faint)]">·</span>
-                                  <span className="text-[var(--pq-text-mono-xs)] text-[var(--pq-ivory-faint)] font-sans tabular-nums tracking-tight">
+                                  <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)]">·</span>
+                                  <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)] font-sans tabular-nums tracking-tight">
                                     {n.published}
                                   </span>
                                 </div>
@@ -1329,7 +1329,7 @@ export default function StockDetailPage() {
                         className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-[rgba(139,111,71,0.03)] transition-colors"
                       >
                         <div className="min-w-0 flex-1">
-                          <span className="text-[14px] text-[var(--pq-ivory)] font-serif">
+                          <span className="text-pq-body text-[var(--pq-ivory)] font-serif">
                             {f.insider || "—"}
                           </span>
                           {f.relationship && (
@@ -1347,10 +1347,10 @@ export default function StockDetailPage() {
                           >
                             {acquired ? "Acquired" : "Disposed"}
                           </span>
-                          <span className="font-mono tabular-nums text-[12px] text-[var(--pq-ivory)]">
+                          <span className="font-mono tabular-nums text-pq-caption text-[var(--pq-ivory)]">
                             {shares.toLocaleString()}
                           </span>
-                          <span className="text-[var(--pq-text-eyebrow-sm)] tracking-[0.14em] uppercase text-[var(--pq-ivory-faint)]">
+                          <span className="text-pq-eyebrow-sm tracking-[0.14em] uppercase text-[var(--pq-ivory-faint)]">
                             {formatRelative(f.transaction_date)}
                           </span>
                         </div>
@@ -1396,7 +1396,7 @@ export default function StockDetailPage() {
                 {swot.swot_kr ? (
                   <div>
                     <FieldLabel>한국어</FieldLabel>
-                    <p className="mt-2 whitespace-pre-line font-sans text-[14px] leading-[1.6] text-[var(--pq-ivory)]/85">
+                    <p className="mt-2 whitespace-pre-line font-sans text-pq-body leading-[1.6] text-[var(--pq-ivory)]/85">
                       {swot.swot_kr}
                     </p>
                   </div>
@@ -1404,7 +1404,7 @@ export default function StockDetailPage() {
                 {swot.swot ? (
                   <div className="pt-3 border-t border-[var(--pq-ivory-line-soft)]">
                     <FieldLabel>English</FieldLabel>
-                    <p className="mt-2 whitespace-pre-line font-serif text-[14px] leading-[1.65] text-[var(--pq-ivory)]/75">
+                    <p className="mt-2 whitespace-pre-line font-serif text-pq-body leading-[1.65] text-[var(--pq-ivory)]/75">
                       {swot.swot}
                     </p>
                   </div>
@@ -1423,13 +1423,13 @@ export default function StockDetailPage() {
                   type="button"
                   onClick={handleGenerateSwot}
                   disabled={swotLoading || !ticker}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-[var(--pq-text-mono-xs)] uppercase tracking-[0.18em] border border-[var(--pq-bronze)] text-[var(--pq-bronze)] hover:bg-[rgba(184,149,106,0.08)] hover:text-[var(--pq-bronze-light)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors rounded-[2px]"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-xs uppercase tracking-[0.18em] border border-[var(--pq-bronze)] text-[var(--pq-bronze)] hover:bg-[rgba(184,149,106,0.08)] hover:text-[var(--pq-bronze-light)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors rounded-[2px]"
                 >
                   <Sparkles className="h-3 w-3" strokeWidth={1.6} />
                   {swotLoading ? "Generating…" : "Generate AI summary"}
                 </button>
                 {swotError ? (
-                  <p className="text-[var(--pq-text-mono-xs)] text-[var(--pq-ivory-dim)]">
+                  <p className="text-pq-mono-xs text-[var(--pq-ivory-dim)]">
                     Unable to generate right now ({swotError}). Try again later.
                   </p>
                 ) : null}
@@ -1465,16 +1465,16 @@ export default function StockDetailPage() {
                 eliminated since these fields are not currency-bound. */}
             {earningsForTicker.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-[14px]">
+                <table className="w-full text-pq-body">
                   <thead>
                     <tr className="text-left border-b border-[var(--pq-ivory-line)]">
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[var(--pq-text-mono-xs)] text-[var(--pq-ivory-faint)]">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-pq-mono-xs text-[var(--pq-ivory-faint)]">
                         Date
                       </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[var(--pq-text-mono-xs)] text-[var(--pq-ivory-faint)]">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-pq-mono-xs text-[var(--pq-ivory-faint)]">
                         Signal
                       </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[var(--pq-text-mono-xs)] text-[var(--pq-ivory-faint)] text-right">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-pq-mono-xs text-[var(--pq-ivory-faint)] text-right">
                         Score
                       </th>
                     </tr>
@@ -1494,7 +1494,7 @@ export default function StockDetailPage() {
                               })
                             : "—"}
                         </td>
-                        <td className="py-2.5 font-mono uppercase tracking-[0.18em] text-[var(--pq-text-mono-xs)] text-[var(--pq-ivory)]/85">
+                        <td className="py-2.5 font-mono uppercase tracking-[0.18em] text-pq-mono-xs text-[var(--pq-ivory)]/85">
                           {(e.signal as string | undefined) ?? "—"}
                         </td>
                         <td className="py-2.5 text-right font-mono tabular-nums text-[var(--pq-ivory)]/75">
@@ -1553,7 +1553,7 @@ export default function StockDetailPage() {
                   fundamentals, signal label, and recent coverage.
                 </p>
               </div>
-              <div className="text-[var(--pq-text-eyebrow-sm)] uppercase tracking-[0.18em] text-[var(--pq-bronze)] opacity-60 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5 self-center">
+              <div className="text-pq-eyebrow-sm uppercase tracking-[0.18em] text-[var(--pq-bronze)] opacity-60 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5 self-center">
                 Open
                 <ExternalLink className="h-3 w-3" />
               </div>
@@ -1585,7 +1585,7 @@ export default function StockDetailPage() {
               </p>
               <Link
                 href="/reports"
-                className="mt-3 inline-flex items-center gap-1.5 text-[var(--pq-text-eyebrow-sm)] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
+                className="mt-3 inline-flex items-center gap-1.5 text-pq-eyebrow-sm uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
               >
                 Open Reports
                 <ExternalLink className="h-3 w-3" />
@@ -1625,7 +1625,7 @@ export default function StockDetailPage() {
                     <p className="mt-2 pq-detail-caption truncate">
                       {a.title || "Open the document for context."}
                     </p>
-                    <div className="mt-4 text-[var(--pq-text-eyebrow-sm)] uppercase tracking-[0.18em] text-[var(--pq-bronze)] opacity-60 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5">
+                    <div className="mt-4 text-pq-eyebrow-sm uppercase tracking-[0.18em] text-[var(--pq-bronze)] opacity-60 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5">
                       Open
                       <ExternalLink className="h-3 w-3" />
                     </div>

@@ -262,7 +262,7 @@ function LivingCFOControls() {
         </div>
 
         {observed30 && (
-          <p className="mt-3 font-serif text-[13px] text-[rgba(245,240,232,0.65)]">
+          <p className="mt-3 font-serif text-pq-body-sm text-[rgba(245,240,232,0.65)]">
             Your last 30 days look like{" "}
             <strong className="text-[var(--pq-ivory)]">
               {PERSONA_LABELS[observed30.persona]} {observed30.score}
@@ -401,7 +401,7 @@ function JournalCompanionSubsection({
       </div>
       {entitled ? (
         <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-pq-lead">
             Your Companion is active.
           </div>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
@@ -415,7 +415,7 @@ function JournalCompanionSubsection({
         </>
       ) : waitlistDone ? (
         <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-pq-lead">
             You&rsquo;re on the waitlist.
           </div>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
@@ -424,7 +424,7 @@ function JournalCompanionSubsection({
         </>
       ) : (
         <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-pq-lead">
             Closed Beta — join the waitlist.
           </div>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">

@@ -233,10 +233,10 @@ export default function WatchlistPage() {
                         >
                           {fmtPct(item.change_pct ?? 0)}
                         </td>
-                        <td className="font-mono text-[11px] text-[rgba(245,240,232,0.55)]">
+                        <td className="font-mono text-pq-mono-sm text-[rgba(245,240,232,0.55)]">
                           {fmtRange52w(item.range_52w, item.currency)}
                         </td>
-                        <td className="text-[11px] text-[rgba(245,240,232,0.6)] truncate max-w-[220px]">
+                        <td className="text-pq-mono-sm text-[rgba(245,240,232,0.6)] truncate max-w-[220px]">
                           {item.note && item.note.length > 0
                             ? item.note
                             : item.signal === "POSITIVE"
@@ -294,10 +294,10 @@ export default function WatchlistPage() {
                   >
                     {/* Row 1 — Symbol + Name */}
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="font-mono text-[var(--pq-bronze)] text-[13px] tracking-wide whitespace-nowrap">
+                      <span className="font-mono text-[var(--pq-bronze)] text-pq-body-sm tracking-wide whitespace-nowrap">
                         {item.ticker}
                       </span>
-                      <span className="text-[12px] text-[rgba(245,240,232,0.65)] truncate text-right">
+                      <span className="text-pq-caption text-[rgba(245,240,232,0.65)] truncate text-right">
                         {item.name || item.ticker}
                       </span>
                     </div>
@@ -312,7 +312,7 @@ export default function WatchlistPage() {
                       />
                       <span
                         className={
-                          "tabular-nums text-[13px] " +
+                          "tabular-nums text-pq-body-sm " +
                           pctColorClass(item.change_pct)
                         }
                       >
@@ -322,7 +322,7 @@ export default function WatchlistPage() {
 
                     {/* Row 3 — Note + Remove */}
                     <div className="mt-1.5 flex items-center justify-between gap-3">
-                      <span className="text-[12px] text-[rgba(245,240,232,0.55)] truncate flex-1 min-w-0">
+                      <span className="text-pq-caption text-[rgba(245,240,232,0.55)] truncate flex-1 min-w-0">
                         {noteText}
                       </span>
                       <button

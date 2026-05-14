@@ -444,7 +444,7 @@ export default function AlertsPage() {
                   <div className="mt-1.5">
                     <div
                       className={cn(
-                        "font-serif text-[15px] text-[var(--pq-ivory)] leading-snug",
+                        "font-serif text-pq-lead text-[var(--pq-ivory)] leading-snug",
                         !a.is_read && "font-semibold",
                       )}
                     >

@@ -184,7 +184,7 @@ export default function SignalsPageV1() {
             SIGNALS · {weekTag()}
           </div>
           <h1 className="pq-ink-h1 mt-2">The Clip Board</h1>
-          <p className="mt-1 text-[12px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          <p className="mt-1 text-pq-caption uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
             내 포지션 시그널 — {signals.length} covered
           </p>
           <p className="mt-2 max-w-xl font-serif text-sm text-[rgba(245,240,232,0.55)]">
@@ -200,7 +200,7 @@ export default function SignalsPageV1() {
             <span className="pq-ink-pill pq-ink-pill--neg">Negative</span>
             <span className="-ml-1">= score &lt; 35</span>
           </div>
-          <p className="mt-2 max-w-xl text-[11px] italic text-[rgba(245,240,232,0.45)]">
+          <p className="mt-2 max-w-xl text-pq-mono-sm italic text-[rgba(245,240,232,0.45)]">
             Objective classification by composite score — not advice or recommendation.
           </p>
         </div>
@@ -266,7 +266,7 @@ export default function SignalsPageV1() {
 
       {/* ═══════════ LOADING / EMPTY ═══════════ */}
       {isLoading && signals.length === 0 ? (
-        <div className="py-24 text-center font-serif text-[13px] text-[rgba(245,240,232,0.4)]">
+        <div className="py-24 text-center font-serif text-pq-body-sm text-[rgba(245,240,232,0.4)]">
           Loading observations…
         </div>
       ) : signals.length === 0 ? (
@@ -275,10 +275,10 @@ export default function SignalsPageV1() {
             className="mx-auto h-8 w-8 text-[var(--pq-bronze)]"
             strokeWidth={1.3}
           />
-          <div className="mt-3 font-serif text-[14px] text-[rgba(245,240,232,0.6)]">
+          <div className="mt-3 font-serif text-pq-body text-[rgba(245,240,232,0.6)]">
             No observations on record.
           </div>
-          <p className="mt-1 text-[12px] text-[rgba(245,240,232,0.4)]">
+          <p className="mt-1 text-pq-caption text-[rgba(245,240,232,0.4)]">
             Add positions or tickers to your watchlist to surface memos.
           </p>
         </div>

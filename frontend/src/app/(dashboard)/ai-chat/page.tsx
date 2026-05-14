@@ -114,12 +114,12 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         {isEmpty ? (
           <StreamingDots />
         ) : (
-          <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">
+          <p className="text-pq-body-sm leading-relaxed whitespace-pre-wrap break-words">
             {message.content}
           </p>
         )}
         {message.timestamp && !isEmpty && (
-          <div className="text-[9px] tracking-[0.2em] uppercase text-[rgba(245,240,232,0.55)] mt-2 font-mono">
+          <div className="text-pq-kicker tracking-[0.2em] uppercase text-[rgba(245,240,232,0.55)] mt-2 font-mono">
             {formatTime(message.timestamp)}
           </div>
         )}
@@ -135,7 +135,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
     <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="max-w-md mb-12">
         <div
-          className="font-mono text-[12px] uppercase mb-4"
+          className="font-mono text-pq-caption uppercase mb-4"
           style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
         >
           Observation Assistant
@@ -426,7 +426,7 @@ function ChatInner() {
       >
         <div>
           <div
-            className="font-mono text-[12px] uppercase mb-3"
+            className="font-mono text-pq-caption uppercase mb-3"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             AI &middot; Observation Assistant
@@ -490,7 +490,7 @@ function ChatInner() {
             placeholder="Ask about your portfolio observation…"
             disabled={streaming}
             rows={1}
-            className="pq-ink-input w-full resize-none pr-14 py-3.5 leading-relaxed text-[13px]"
+            className="pq-ink-input w-full resize-none pr-14 py-3.5 leading-relaxed text-pq-body-sm"
             style={{ maxHeight: 180 }}
           />
           {streaming ? (
@@ -514,7 +514,7 @@ function ChatInner() {
           )}
         </form>
 
-        <p className="mt-3 text-[11px] text-[rgba(245,240,232,0.45)] font-serif">
+        <p className="mt-3 text-pq-mono-sm text-[rgba(245,240,232,0.45)] font-serif">
           Press{" "}
           <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not- text-[rgba(245,240,232,0.7)]">Enter</kbd> to send ·{" "}
           <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not- text-[rgba(245,240,232,0.7)]">Shift+Enter</kbd> for new line

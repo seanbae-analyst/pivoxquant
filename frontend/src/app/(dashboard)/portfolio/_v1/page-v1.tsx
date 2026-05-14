@@ -308,7 +308,7 @@ export default function PortfolioPage() {
       {hasLoadError && (
         <div
           role="alert"
-          className="mb-4 flex items-center justify-between gap-3 px-4 py-3 font-serif text-[14px]"
+          className="mb-4 flex items-center justify-between gap-3 px-4 py-3 font-serif text-pq-body"
           style={{
             background: "rgba(184, 149, 106, 0.06)",
             borderTop: "1px solid var(--pq-bronze)",

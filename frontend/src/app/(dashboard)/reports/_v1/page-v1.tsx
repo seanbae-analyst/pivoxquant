@@ -142,7 +142,7 @@ function ArtifactCard({
           Optimised for {PERSONA_LABELS[declaredPersona]}
         </p>
       )}
-      <p className="mt-2 font-serif text-[12px] text-[rgba(245,240,232,0.55)]">
+      <p className="mt-2 font-serif text-pq-caption text-[rgba(245,240,232,0.55)]">
         Last generated &mdash; <span className="tabular-nums font-mono">{lastGenerated}</span>
       </p>
 
@@ -231,7 +231,7 @@ function ReportsPageInner() {
         <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
           Reports
         </h1>
-        <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)] max-w-2xl">
+        <p className="mt-2 font-serif text-pq-lead text-[var(--pq-ivory)] max-w-2xl">
           Every artifact the desk can deliver &mdash; from the weekly memo to the year-end letter.
         </p>
         <Caption className="mt-1 max-w-2xl">
@@ -296,7 +296,7 @@ function ReportsPageInner() {
               type="button"
               onClick={() => setPersonaFilter(p)}
               aria-pressed={active}
-              className="text-[12px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-[2px] border transition-colors"
+              className="text-pq-caption uppercase tracking-[0.18em] px-2.5 py-1 rounded-[2px] border transition-colors"
               style={{
                 borderColor: active
                   ? "var(--pq-bronze)"

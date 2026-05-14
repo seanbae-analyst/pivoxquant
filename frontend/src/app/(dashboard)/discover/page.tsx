@@ -293,7 +293,7 @@ export default function DiscoverPage() {
           Replaces the bare `pq-ink-kicker` span the old card-grid layout used. */}
       <header className="mb-8 flex items-center justify-between gap-4">
         <RuledKicker>PivoxQuant &middot; Discover &middot; {weekTag()}</RuledKicker>
-        <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+        <span className="font-mono text-pq-caption uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
           {hasLoadError ? "Stale tape" : "Live observation"}
         </span>
       </header>
@@ -304,7 +304,7 @@ export default function DiscoverPage() {
           role="alert"
           className="mb-8 flex items-center justify-between gap-4 rounded border border-[rgba(209,136,136,0.3)] bg-[rgba(209,136,136,0.07)] px-4 py-3"
         >
-          <p className="text-[12px] text-[rgba(209,136,136,0.9)]">
+          <p className="text-pq-caption text-[rgba(209,136,136,0.9)]">
             Unable to load market data. The data source may be temporarily unavailable.
           </p>
           <button
@@ -321,7 +321,7 @@ export default function DiscoverPage() {
       {isLoading && !data && !hasLoadError && (
         <div className="pq-ink-empty mb-12 flex flex-col items-center gap-4 py-20 text-center">
           <Fleuron />
-          <p className="text-[12px] text-[rgba(245,240,232,0.4)]">
+          <p className="text-pq-caption text-[rgba(245,240,232,0.4)]">
             Loading market data…
           </p>
         </div>
@@ -335,7 +335,7 @@ export default function DiscoverPage() {
       <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div
-            className="font-mono text-[12px] uppercase"
+            className="font-mono text-pq-caption uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             Discovery &middot; US + KR
@@ -411,20 +411,20 @@ export default function DiscoverPage() {
                           className="grid grid-cols-[1fr_auto_64px] items-baseline gap-3 border-b border-[var(--pq-ivory-line-soft)] py-3"
                         >
                           <span
-                            className="font-serif text-[14px]"
+                            className="font-serif text-pq-body"
                             style={{ color: "var(--pq-ivory)" }}
                           >
                             {o.name}
                           </span>
                           <span
-                            className="font-mono tabular-nums text-[15px]"
+                            className="font-mono tabular-nums text-pq-lead"
                             style={{ color: "var(--pq-ivory)" }}
                           >
                             {o.level}
                           </span>
                           <span
                             className={
-                              "text-right font-mono tabular-nums text-[12px] " +
+                              "text-right font-mono tabular-nums text-pq-caption " +
                               deltaCls(o.changePct)
                             }
                           >
@@ -437,7 +437,7 @@ export default function DiscoverPage() {
                         the strip, not on every row, to keep the rhythm clean. */}
                     {rows.some((r) => r.observed_at) && (
                       <p
-                        className="mt-2 font-serif italic text-[12px]"
+                        className="mt-2 font-serif italic text-pq-caption"
                         style={{ color: "rgba(245,240,232,0.4)" }}
                       >
                         Last observed{" "}
@@ -524,7 +524,7 @@ export default function DiscoverPage() {
               </table>
             </div>
           ) : (
-            <p className="mt-5 text-[12px] italic text-[rgba(245,240,232,0.4)]">
+            <p className="mt-5 text-pq-caption italic text-[rgba(245,240,232,0.4)]">
               Sector rotation data unavailable.
             </p>
           )}
@@ -556,7 +556,7 @@ export default function DiscoverPage() {
           ) : (
             <div className="pq-ink-empty mt-5 flex flex-col items-center gap-3 rounded border border-[var(--pq-ivory-line-soft)] py-10 text-center">
               <Fleuron />
-              <p className="text-[12px] text-[rgba(245,240,232,0.55)]">
+              <p className="text-pq-caption text-[rgba(245,240,232,0.55)]">
                 보유 종목이나 관심종목을 추가하면 자동으로 분석합니다.
               </p>
               <div className="flex gap-2">
@@ -660,7 +660,7 @@ export default function DiscoverPage() {
             </div>
           )}
           {data?.cached && data.cached_at && (
-            <p className="mt-3 font-serif italic text-[12px] text-[rgba(245,240,232,0.4)]">
+            <p className="mt-3 font-serif italic text-pq-caption text-[rgba(245,240,232,0.4)]">
               Cached at{" "}
               <span className="font-mono not-italic tabular-nums">
                 {new Date(data.cached_at).toLocaleString("en-US")}
@@ -850,9 +850,9 @@ function ThematicBlockInk({
       <ul className="divide-y divide-[var(--pq-ivory-line-soft)]">
         {items.slice(0, 6).map((x) => (
           <li key={x.ticker} className="grid grid-cols-[auto_1fr_auto] items-baseline gap-2 py-2.5">
-            <span className="font-mono text-[12px] text-[var(--pq-bronze)]">{x.ticker}</span>
-            <span className="truncate text-[11px] text-[rgba(245,240,232,0.7)]">{x.name}</span>
-            <span className="font-mono text-[11px] tabular-nums text-[var(--pq-ivory)]">
+            <span className="font-mono text-pq-caption text-[var(--pq-bronze)]">{x.ticker}</span>
+            <span className="truncate text-pq-mono-sm text-[rgba(245,240,232,0.7)]">{x.name}</span>
+            <span className="font-mono text-pq-mono-sm tabular-nums text-[var(--pq-ivory)]">
               {x.metricValue}
             </span>
           </li>
