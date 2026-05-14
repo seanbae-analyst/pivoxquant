@@ -14,13 +14,16 @@
  * Refresh history (Bug C, observed 2026-05-12):
  *   - 2026-04-26: re-anchored to 2026-04-25 close per CEO "싼마이 느낌"
  *     audit; pulsing dot removed for legal/visual honesty.
- *   - 2026-05-13: KOSPI/KOSDAQ/USDKRW re-anchored to KIS-verified live
- *     levels (KOSPI 7,643 / KOSDAQ 1,179 / USDKRW 1,487 — see
- *     routes/market.py Bug B fix log). 18-day stale on the landing
- *     was an active capital-markets-law misrepresentation risk
- *     (top-ticker.tsx:93-97 warns about exactly this); next step is
- *     a public Server-Component fetch to eliminate the manual ritual
- *     entirely. Tracked in HANDOVER v40 follow-up.
+ *   - 2026-05-13: KOSPI/KOSDAQ/USDKRW re-anchored from the KIS feed
+ *     (KOSPI 7,643 / KOSDAQ 1,179 / USDKRW 1,487). NOTE: the KOSPI value
+ *     here was WRONG — see the 2026-05-14 entry below.
+ *   - 2026-05-14 (Bug #1, bug-hunt-live): the KOSPI row (7,643.15) was
+ *     ~3x the real index level. Root cause is the KIS "0001" current-level
+ *     endpoint returning an inflated value (Bug #2, owned by backend-dev).
+ *     KOSPI row REMOVED rather than shipping a wrong number to
+ *     unauthenticated visitors. Re-add once backend-dev confirms a
+ *     KRX-cross-validated level. Next step remains a public
+ *     Server-Component fetch to retire the manual snapshot ritual.
  *   - 2026-05-13 (second pass): SPX / NDX / VIX re-anchored against
  *     official-licensed feeds. SPX & VIX from FMP $29 stable
  *     `historical-price-eod/full` (2026-05-12 close). NDX from FRED
@@ -63,7 +66,8 @@ type Tick = {
 // time (2026-05-13 KST). Source-per-row:
 //   - SPX  : FMP stable `historical-price-eod/light` symbol=^GSPC, 2026-05-12 close = 7,400.97 (prev 7,412.85 → -0.16%).
 //   - NDX  : FRED series=NASDAQ100, 2026-05-12 close = 29,064.80 (prev 29,320.66 → -0.87%). FMP $29 plan cannot license `^NDX` (still 402 after paid-plan retry on 2026-05-13); FRED's overnight T+1 publish is the latest official US value.
-//   - KOSPI / KOSDAQ / USDKRW: KIS API 2026-05-12 close (verified via routes/market.py /api/market/indices?region=kr live probe — unchanged from PR #335).
+//   - KOSDAQ / USDKRW: KIS API 2026-05-12 close (verified via routes/market.py /api/market/indices?region=kr live probe — unchanged from PR #335).
+//   - KOSPI: ROW REMOVED 2026-05-14 (Bug #1) — KIS "0001" current-level endpoint returns an inflated (~3x) value. Awaiting backend-dev Bug #2 fix before re-adding.
 //   - VIX  : FMP stable `historical-price-eod/light` symbol=^VIX, 2026-05-12 close = 17.99 (prev 18.38 → -2.12%).
 //
 // DXY remains omitted. Re-verified 2026-05-13 on the paid FMP key — `^DXY`
@@ -80,10 +84,28 @@ type Tick = {
 // as aspirational. A real value-vs-FMP regression gate is the right next step
 // (see PR body).
 export const SNAPSHOT_DATE = "2026-05-12";
+// Bug #1 (2026-05-14, bug-hunt-live): the KOSPI row was hardcoded at
+// 7,643.15 — real KOSPI trades in the ~2,500–3,200 range, i.e. the value
+// was ~3x reality. Per bug-hunt-live.md the snapshot was taken from the
+// KIS "0001" current-level endpoint, which itself returns an anomalous
+// inflated value (Bug #2 — same root cause, owned by backend-dev). The
+// landing ticker is unauthenticated by design (no auth, no fetch, no CLS),
+// so it cannot connect to /api/market/indices at runtime — and we must NOT
+// substitute a guessed real KOSPI level here.
+//
+// Honest interim fix: REMOVE the KOSPI row entirely rather than ship a
+// factually-wrong number to unauthenticated visitors (active
+// capital-markets-law misrepresentation risk). KOSDAQ/USDKRW are sourced
+// from different KIS codes than the inflated "0001" KOSPI endpoint and
+// bug-hunt-live only flagged KOSPI with 100% confidence — they stay.
+//
+// RE-ADD path (blocked on backend-dev Bug #2 / Phase 0): once backend-dev
+// confirms a correct, KRX/KIS-cross-validated KOSPI level, re-insert the
+// row here with that value (and ideally move the whole strip to a public
+// Server-Component fetch to retire the manual snapshot ritual).
 const SNAPSHOT: readonly Tick[] = [
   { symbol: "SPX",     name: "S&P 500",           level: "7,400.97",  change: "-0.16%",  dir: "down" },
   { symbol: "NDX",     name: "Nasdaq 100",        level: "29,064.80", change: "-0.87%",  dir: "down" },
-  { symbol: "KOSPI",   name: "KOSPI",             level: "7,643.15",  change: "-2.29%",  dir: "down" },
   { symbol: "KOSDAQ",  name: "KOSDAQ",            level: "1,179.29",  change: "-2.32%",  dir: "down" },
   { symbol: "USDKRW",  name: "USD / KRW",         level: "1,487.48",  change: "+0.82%",  dir: "up"   },
   { symbol: "VIX",     name: "Volatility Idx",    level: "17.99",     change: "-2.12%",  dir: "down" },
