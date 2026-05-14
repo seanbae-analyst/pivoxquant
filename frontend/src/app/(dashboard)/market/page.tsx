@@ -160,7 +160,14 @@ export default function MarketPage() {
     // No mock fallback (2026-04-28). Static US_INDICES / KR_INDICES carried
     // 2024-vintage levels. Render an empty board and let the editorial empty
     // state surface "data unavailable" instead.
-    if (!Array.isArray(data) || data.length < 3) return [];
+    //
+    // FINDING-016 (design-audit-20260514): the guard was `length < 3`, which
+    // blanked the ENTIRE board whenever KIS returned a partial KR response
+    // (e.g. KOSPI present but KOSDAQ/USDKRW missing) — while the /home
+    // TopTicker, sharing the same SWR key, still rendered whatever arrived.
+    // That produced "KOSPI 7,892" on /home vs "— ·—" on /market. Relax to
+    // `< 1`: render the indices that DID arrive instead of dropping all.
+    if (!Array.isArray(data) || data.length < 1) return [];
     // Bug #5 (HANDOVER v42): SWR `keepPreviousData: true` is preserved to
     // avoid flicker during the 5s in-region revalidation. But when the user
     // flips the region tab the cache key changes (`?region=us` → `?region=kr`)
