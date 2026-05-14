@@ -18,12 +18,16 @@
  *     (KOSPI 7,643 / KOSDAQ 1,179 / USDKRW 1,487). NOTE: the KOSPI value
  *     here was WRONG — see the 2026-05-14 entry below.
  *   - 2026-05-14 (Bug #1, bug-hunt-live): the KOSPI row (7,643.15) was
- *     ~3x the real index level. Root cause is the KIS "0001" current-level
- *     endpoint returning an inflated value (Bug #2, owned by backend-dev).
- *     KOSPI row REMOVED rather than shipping a wrong number to
- *     unauthenticated visitors. Re-add once backend-dev confirms a
- *     KRX-cross-validated level. Next step remains a public
- *     Server-Component fetch to retire the manual snapshot ritual.
+ *     flagged as wrong against then-assumed ~2,500-3,200 levels and was
+ *     REMOVED as an honest interim fix (commit 945c9394).
+ *   - 2026-05-15 (Bug #1 followup): KOSPI row RE-ADDED with a CEO-confirmed
+ *     level (~7,981, verified 2026-05-15 against Naver Finance + a
+ *     brokerage app). The KR market has run +197% YoY on the AI-semis
+ *     rally, so high-7,000s/low-8,000s IS the real index level — the
+ *     2026-05-14 "~3x reality" assumption was itself based on stale
+ *     pre-rally range estimates. KOSDAQ/USDKRW were never wrong. Next step
+ *     remains a public Server-Component fetch to retire the manual
+ *     snapshot ritual (see staleness note below).
  *   - 2026-05-13 (second pass): SPX / NDX / VIX re-anchored against
  *     official-licensed feeds. SPX & VIX from FMP $29 stable
  *     `historical-price-eod/full` (2026-05-12 close). NDX from FRED
@@ -66,8 +70,8 @@ type Tick = {
 // time (2026-05-13 KST). Source-per-row:
 //   - SPX  : FMP stable `historical-price-eod/light` symbol=^GSPC, 2026-05-12 close = 7,400.97 (prev 7,412.85 → -0.16%).
 //   - NDX  : FRED series=NASDAQ100, 2026-05-12 close = 29,064.80 (prev 29,320.66 → -0.87%). FMP $29 plan cannot license `^NDX` (still 402 after paid-plan retry on 2026-05-13); FRED's overnight T+1 publish is the latest official US value.
+//   - KOSPI: SNAPSHOT 2026-05-15 — CEO-confirmed ~7,981 level (verified against Naver Finance + brokerage app on 2026-05-15). KR market is up +197% YoY on the AI-semis rally, so high-7,000s is the real index level. Re-added per Bug #1 followup after the 2026-05-14 removal (945c9394). Needs periodic refresh — see Bug #1 staleness note below.
 //   - KOSDAQ / USDKRW: KIS API 2026-05-12 close (verified via routes/market.py /api/market/indices?region=kr live probe — unchanged from PR #335).
-//   - KOSPI: ROW REMOVED 2026-05-14 (Bug #1) — KIS "0001" current-level endpoint returns an inflated (~3x) value. Awaiting backend-dev Bug #2 fix before re-adding.
 //   - VIX  : FMP stable `historical-price-eod/light` symbol=^VIX, 2026-05-12 close = 17.99 (prev 18.38 → -2.12%).
 //
 // DXY remains omitted. Re-verified 2026-05-13 on the paid FMP key — `^DXY`
@@ -84,28 +88,35 @@ type Tick = {
 // as aspirational. A real value-vs-FMP regression gate is the right next step
 // (see PR body).
 export const SNAPSHOT_DATE = "2026-05-12";
-// Bug #1 (2026-05-14, bug-hunt-live): the KOSPI row was hardcoded at
-// 7,643.15 — real KOSPI trades in the ~2,500–3,200 range, i.e. the value
-// was ~3x reality. Per bug-hunt-live.md the snapshot was taken from the
-// KIS "0001" current-level endpoint, which itself returns an anomalous
-// inflated value (Bug #2 — same root cause, owned by backend-dev). The
-// landing ticker is unauthenticated by design (no auth, no fetch, no CLS),
-// so it cannot connect to /api/market/indices at runtime — and we must NOT
-// substitute a guessed real KOSPI level here.
+
+// KR_SNAPSHOT_DATE — the KOSPI row is anchored to a later, separately-confirmed
+// snapshot than SNAPSHOT_DATE (the US/KOSDAQ/USDKRW rows). Kept as its own
+// constant so a future refresh has ONE place to update the KR-side date.
+export const KR_SNAPSHOT_DATE = "2026-05-15";
+
+// ── Bug #1 staleness note (2026-05-15 followup) ──────────────────────────────
+// This ticker is unauthenticated by design (no auth, no fetch, no CLS — pure
+// static snapshot), so it CANNOT call /api/market/indices at runtime: every
+// market endpoint in endpoints.ts is behind a Flask session. That means every
+// row here is a hand-maintained snapshot and WILL go stale again.
 //
-// Honest interim fix: REMOVE the KOSPI row entirely rather than ship a
-// factually-wrong number to unauthenticated visitors (active
-// capital-markets-law misrepresentation risk). KOSDAQ/USDKRW are sourced
-// from different KIS codes than the inflated "0001" KOSPI endpoint and
-// bug-hunt-live only flagged KOSPI with 100% confidence — they stay.
+// The honest structural fix is a public (no-auth) build-time or Server-
+// Component fetch — but that requires a NEW unauthenticated backend route,
+// which is a backend-dept change and out of scope for this frontend task.
+// RECOMMENDED as a separate task: expose a cache-only public market-snapshot
+// endpoint, then have this component (or a Server Component wrapper) read it
+// at build time so the manual refresh ritual is retired.
 //
-// RE-ADD path (blocked on backend-dev Bug #2 / Phase 0): once backend-dev
-// confirms a correct, KRX/KIS-cross-validated KOSPI level, re-insert the
-// row here with that value (and ideally move the whole strip to a public
-// Server-Component fetch to retire the manual snapshot ritual).
+// Until then: each `level`/`change` below is a SNAPSHOT. When refreshing,
+// update the value AND the relevant *_SNAPSHOT_DATE constant. The KOSPI row
+// in particular was wrongly removed on 2026-05-14 (945c9394) on a stale
+// pre-rally range assumption; re-added 2026-05-15 with a CEO-confirmed level.
 const SNAPSHOT: readonly Tick[] = [
   { symbol: "SPX",     name: "S&P 500",           level: "7,400.97",  change: "-0.16%",  dir: "down" },
   { symbol: "NDX",     name: "Nasdaq 100",        level: "29,064.80", change: "-0.87%",  dir: "down" },
+  // SNAPSHOT 2026-05-15 — CEO-confirmed ~7,981 (Naver Finance + brokerage app).
+  // needs periodic refresh, see Bug #1 staleness note above.
+  { symbol: "KOSPI",   name: "KOSPI",             level: "7,981.04",  change: "-2.30%",  dir: "down" },
   { symbol: "KOSDAQ",  name: "KOSDAQ",            level: "1,179.29",  change: "-2.32%",  dir: "down" },
   { symbol: "USDKRW",  name: "USD / KRW",         level: "1,487.48",  change: "+0.82%",  dir: "up"   },
   { symbol: "VIX",     name: "Volatility Idx",    level: "17.99",     change: "-2.12%",  dir: "down" },
