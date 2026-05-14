@@ -88,6 +88,15 @@ type Snapshot = {
   // tag a "STALE" mini-label so users can tell live ribbon values from
   // last-observed values without ambiguity.
   isStale?: boolean;
+  // Bug #3 (2026-05-14): when the backend serves a US index level via a
+  // liquid ETF proxy (FMP $29 plan 402s on caret-prefixed index symbols),
+  // the displayed "level" is the ETF price (e.g. SPY 742.31), NOT the
+  // underlying index level (S&P 500 ≈ 5,700). The /market page already
+  // discloses this with a "via SPY · ETF proxy" pill — the ribbon used to
+  // render the bare "S&P 500" label with no disclosure, which is a
+  // capital-markets-law misrepresentation risk. When set, the Cell renders
+  // a "VIA <proxy>" chip so the reader knows the number is an ETF proxy.
+  proxyTicker?: string;
 };
 
 // Macro symbols the strip tracks. Levels are NEVER hard-coded — every cell
@@ -146,6 +155,14 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
   // not live. Resolves the capital-markets-law misrepresentation guard noted
   // in the file header.
   const stale = snap.isStale === true;
+  // Bug #3 (2026-05-14): ETF-proxy disclosure. When the level is an ETF
+  // price standing in for a caret-prefixed index symbol, surface a
+  // "VIA <proxy>" chip so the reader doesn't mistake e.g. SPY 742.31 for
+  // the S&P 500 index level (~5,700). Mirrors the /market page disclosure.
+  const proxy =
+    typeof snap.proxyTicker === "string" && snap.proxyTicker
+      ? snap.proxyTicker
+      : null;
   // Direct DOM-mutation flash: avoids setState-in-effect by writing the
   // tinted background straight to the element via ref, then clearing it
   // after 300ms. Behaves identically to the previous setState/setTimeout.
@@ -190,7 +207,13 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
         transition: reducedMotion ? "none" : "background-color 0.3s ease",
         opacity: stale ? 0.6 : 1,
       }}
-      title={stale ? `${snap.label} — last observed (delayed)` : undefined}
+      title={
+        stale
+          ? `${snap.label} — last observed (delayed)`
+          : proxy
+            ? `Level sourced from ${proxy} ETF proxy — this is the ETF price, not the underlying ${snap.label} index level.`
+            : undefined
+      }
     >
       <span
         className="uppercase"
@@ -206,6 +229,22 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
         <span style={{ marginRight: 2 }}>{DIR_GLYPH[snap.dir]}</span>
         {snap.delta}
       </span>
+      {proxy && (
+        <span
+          className="uppercase"
+          aria-label={`Level via ${proxy} ETF proxy`}
+          style={{
+            fontSize: "var(--pq-text-kicker)",
+            letterSpacing: "0.18em",
+            padding: "1px 4px",
+            border: "0.5px solid rgba(184,149,106,0.4)",
+            color: "var(--pq-bronze, #B8956A)",
+            borderRadius: 2,
+          }}
+        >
+          via {proxy}
+        </span>
+      )}
       {stale && (
         <span
           className="uppercase"
@@ -228,7 +267,7 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
 
 /** Map a /market/indices block onto our ribbon symbol. */
 function _macroFromIndex(block: IndexBlock | undefined, symbol: string):
-  | { level: string; pct: number | null; isStale: boolean }
+  | { level: string; pct: number | null; isStale: boolean; proxyTicker?: string }
   | null {
   if (!block || typeof block.level !== "number") return null;
   // KR sanity boundary at the consumer too — protects from cached
@@ -261,7 +300,17 @@ function _macroFromIndex(block: IndexBlock | undefined, symbol: string):
       maximumFractionDigits: 2,
     });
   }
-  return { level: levelStr, pct, isStale: block.is_stale === true };
+  // Bug #3: forward proxy_ticker so the ribbon can disclose ETF-proxied
+  // US index levels. KR indices and FX never carry one.
+  return {
+    level: levelStr,
+    pct,
+    isStale: block.is_stale === true,
+    proxyTicker:
+      typeof block.proxy_ticker === "string" && block.proxy_ticker
+        ? block.proxy_ticker
+        : undefined,
+  };
 }
 
 const RIBBON_SWR_OPTS = {
@@ -410,6 +459,7 @@ export function TopTicker() {
               : `${macro.pct >= 0 ? "+" : ""}${macro.pct.toFixed(2)}%`,
           dir,
           isStale: macro.isStale,
+          proxyTicker: macro.proxyTicker,
         };
       }
       return {
