@@ -399,18 +399,20 @@ export default function TopNav() {
               className="group flex items-baseline gap-3"
               onMouseEnter={() => setActiveKey(null)}
             >
+              {/* FINDING-030: canonical wordmark — italic Playfair Display,
+                  mixed-case "PivoxQuant" (unified across splash / sidebar /
+                  market masthead). Was roman uppercase "PIVOXQUANT". */}
               <span
-                className="font-serif"
+                className="font-serif italic"
                 style={{
                   color: "var(--pq-ivory)",
-                  letterSpacing: "0.22em",
-                  fontSize: scrolled ? "12px" : "13px",
+                  letterSpacing: "0.01em",
+                  fontSize: scrolled ? "15px" : "16px",
                   fontWeight: 500,
-                  textTransform: "uppercase",
                   transition: "font-size 280ms cubic-bezier(0.16,1,0.3,1)",
                 }}
               >
-                PIVOXQUANT
+                PivoxQuant
               </span>
               <span
                 aria-hidden

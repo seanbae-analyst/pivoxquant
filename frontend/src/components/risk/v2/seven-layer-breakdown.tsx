@@ -36,10 +36,14 @@ const SCAFFOLD: LayerScaffold[] = [
   { num: 7, name: "Cash buffer", description: "Idle cash share of NAV." },
 ];
 
+// §7 three-color system (audit FINDING-019): POSITIVE = "evaluated &
+// passing" reads neutral-bronze (NOT green/red); NEGATIVE = the carmine
+// alarm hue; NEUTRAL = muted ivory. Tokens in globals.css; literal
+// fallbacks match so SSR never flashes the old Tailwind red/blue.
 function statusColor(s: RiskLayerStatus): string {
-  if (s === "POSITIVE") return "var(--pq-positive, #dc2626)";
-  if (s === "NEGATIVE") return "var(--pq-negative, #2563eb)";
-  return "rgba(245,240,232,0.55)";
+  if (s === "POSITIVE") return "var(--pq-positive, #b8956a)";
+  if (s === "NEGATIVE") return "var(--pq-negative, #d18888)";
+  return "var(--pq-neutral, rgba(245,240,232,0.55))";
 }
 
 export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {

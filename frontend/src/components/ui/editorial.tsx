@@ -301,8 +301,14 @@ export function StatRow({
  * Footer signature — placed at the base of each dashboard page, just
  * above the DisclaimerBanner. Fleuron + italic caption.
  */
+// FINDING-038: this default used to repeat "Observational research only \u00b7
+// Not investment advice" \u2014 the SAME legal text the page-level
+// DisclaimerBanner (mounted by (dashboard)/layout.tsx) already carries.
+// Stacking the legal disclaimer twice is trust-by-volume, not
+// trust-by-clarity. The signature is now a pure brand mark; the single
+// consolidated legal disclaimer lives in the DisclaimerBanner only.
 export function FootSignature({
-  note = "PivoxQuant \u00b7 Observational research only \u00b7 Not investment advice",
+  note = "PivoxQuant \u00b7 Living CFO",
 }: {
   note?: string;
 }) {

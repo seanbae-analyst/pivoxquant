@@ -1497,6 +1497,10 @@ button:hover > .pq-ink-pill,
 }
 
 /* Bronze primary button on ink */
+/* FINDING-036: ivory-on-bronze measured 2.45:1 — fails WCAG AA 4.5:1 for
+   normal text. Fix is ink text on bronze (7.32:1 ✓), and a LIGHTER bronze
+   on hover (ink on bronze-light = 5.84:1 ✓) instead of bronze-deep (ink on
+   bronze-deep was only 2.97:1). Both states now pass AA. */
 .pq-ink-btn-bronze {
   display: inline-flex;
   align-items: center;
@@ -1505,7 +1509,7 @@ button:hover > .pq-ink-pill,
   height: 36px;
   padding: 0 18px;
   background: var(--pq-bronze);
-  color: var(--pq-ivory);
+  color: var(--pq-ink);
   font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 11px;
   letter-spacing: 0.18em;
@@ -1517,7 +1521,7 @@ button:hover > .pq-ink-pill,
   transition: background-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .pq-ink-btn-bronze:hover {
-  background: var(--pq-bronze-deep);
+  background: var(--pq-bronze-light);
 }
 .pq-ink-btn-bronze:focus-visible {
   outline: 1px solid var(--pq-bronze-light);
@@ -2459,10 +2463,15 @@ i.italic,
     box-shadow 300ms ease,
     opacity 400ms ease,
     filter 400ms ease;
+  /* FINDING-025: the ivory sheet read as a hard cut against Vantablack.
+     Depth shadow integrates it onto "the desk"; the extra 0.5px ivory
+     hairline (last layer) gives the warm edge definition the audit asked
+     for so the paper feels laid down, not pasted. */
   box-shadow:
     6px 20px 40px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(184, 149, 106, 0.08);
+    inset 0 0 0 1px rgba(184, 149, 106, 0.08),
+    0 0 0 0.5px rgba(245, 240, 232, 0.07);
   will-change: transform, box-shadow;
   outline: none;
 }

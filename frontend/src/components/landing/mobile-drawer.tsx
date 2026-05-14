@@ -108,17 +108,17 @@ export default function MobileDrawer({
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4">
+              {/* FINDING-030: canonical italic Playfair mixed-case wordmark. */}
               <span
-                className="font-serif"
+                className="font-serif italic"
                 style={{
                   color: "var(--pq-ivory)",
-                  letterSpacing: "0.22em",
-                  fontSize: "var(--pq-text-eyebrow)",
-                  textTransform: "uppercase",
+                  letterSpacing: "0.01em",
+                  fontSize: "var(--pq-text-h6)",
                   fontWeight: 500,
                 }}
               >
-                PIVOXQUANT
+                PivoxQuant
               </span>
               <button
                 type="button"

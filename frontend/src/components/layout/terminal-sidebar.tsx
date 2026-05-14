@@ -146,18 +146,21 @@ export function TerminalSidebar({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Brand mark */}
+      {/* Brand mark — FINDING-030: canonical wordmark is italic Playfair
+          Display mixed-case "PivoxQuant" (splash + landing + market all use
+          this form). The sidebar previously rendered roman uppercase
+          "PIVOXQUANT", a competing second treatment. Now unified. */}
       <div className="px-6 pt-7 pb-6">
         <span
-          className="font-serif uppercase"
+          className="font-serif italic"
           style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
+            fontSize: "var(--pq-text-h6)",
+            letterSpacing: "0.01em",
             color: "var(--pq-ivory)",
             fontWeight: 500,
           }}
         >
-          PIVOXQUANT
+          PivoxQuant
         </span>
       </div>
 
@@ -203,7 +206,9 @@ export function TerminalSidebar({
         </ul>
       </nav>
 
-      {/* Footer meta */}
+      {/* Footer meta — FINDING-040: "v1.0 · Paper" was ambiguous ("paper"
+          as document? paper trade?). Spell out the mode so the observation-
+          only posture is unmistakable. */}
       <div className="px-6 pb-6 pt-4">
         <span
           className="block font-mono uppercase"
@@ -212,8 +217,9 @@ export function TerminalSidebar({
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
           }}
+          title="Paper mode — broker orders disabled, observation only"
         >
-          v1.0 · Paper
+          v1.0 · Paper mode (observation only)
         </span>
       </div>
     </div>

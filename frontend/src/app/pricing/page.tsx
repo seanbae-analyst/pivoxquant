@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
