@@ -183,8 +183,8 @@ export default function LoginPageV2() {
                 alignItems: "flex-start",
                 gap: 12,
                 padding: "12px 14px",
-                border: "1px solid rgba(220,38,38,0.45)",
-                background: "rgba(220,38,38,0.06)",
+                border: "1px solid rgba(209,136,136,0.45)",
+                background: "rgba(209,136,136,0.06)",
                 borderRadius: "var(--pq-radius-cta, 2px)",
                 fontSize: "var(--pq-text-button)",
                 lineHeight: 1.5,
@@ -198,7 +198,7 @@ export default function LoginPageV2() {
                   height: 6,
                   width: 6,
                   borderRadius: 999,
-                  background: "var(--pq-negative, #dc2626)",
+                  background: "var(--pq-negative, #d18888)",
                   flexShrink: 0,
                 }}
               />

@@ -106,7 +106,7 @@ function InkSpark({
     .join(" ");
   // FINDING-015: match the KR-convention paper delta hues (pq-paper-pos red /
   // pq-paper-neg blue) so the sparkline and the % delta agree on direction.
-  const stroke = isPositive ? "#b85b5b" : "#5b7ab8";
+  const stroke = isPositive ? "var(--pq-paper-pos)" : "var(--pq-paper-neg)";
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}

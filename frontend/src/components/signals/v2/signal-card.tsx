@@ -46,9 +46,9 @@ function labelTone(label: SignalLabel) {
   // only the user-facing text is localised. Bilingual aria-label
   // below carries both forms for screen readers + audit.
   if (label === "POSITIVE")
-    return { fg: "var(--pq-positive, #dc2626)", bg: "rgba(220,38,38,0.08)", display: "긍정" };
+    return { fg: "var(--pq-positive, #b8956a)", bg: "rgba(184,149,106,0.08)", display: "긍정" };
   if (label === "NEGATIVE")
-    return { fg: "var(--pq-negative, #2563eb)", bg: "rgba(37,99,235,0.08)", display: "부정" };
+    return { fg: "var(--pq-negative, #d18888)", bg: "rgba(209,136,136,0.08)", display: "부정" };
   return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)", display: "중립" };
 }
 
@@ -112,8 +112,8 @@ export function SignalCard({ entry, resolveName }: Props) {
     pct == null
       ? "rgba(245,240,232,0.55)"
       : pct >= 0
-        ? "var(--pq-positive, #dc2626)"
-        : "var(--pq-negative, #2563eb)";
+        ? "var(--pq-positive, #b8956a)"
+        : "var(--pq-negative, #d18888)";
 
   const observed = entry.observed_at ?? null;
 

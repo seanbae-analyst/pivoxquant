@@ -104,7 +104,7 @@ export function SignalsHeroV2({ eyebrow = "시그널 · 실시간", counts, load
               className="font-mono"
               style={{
                 fontVariantNumeric: "tabular-nums",
-                color: "var(--pq-positive, #dc2626)",
+                color: "var(--pq-positive, #b8956a)",
               }}
             >
               {counts.positive}
@@ -114,7 +114,7 @@ export function SignalsHeroV2({ eyebrow = "시그널 · 실시간", counts, load
               className="font-mono"
               style={{
                 fontVariantNumeric: "tabular-nums",
-                color: "var(--pq-negative, #2563eb)",
+                color: "var(--pq-negative, #d18888)",
               }}
             >
               {counts.negative}

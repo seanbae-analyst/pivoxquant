@@ -55,8 +55,8 @@ function shortDate(iso?: string): string {
 }
 
 function amountColor(signed: number): string {
-  if (signed > 0) return "var(--pq-positive, #dc2626)"; // KR convention
-  if (signed < 0) return "var(--pq-negative, #2563eb)";
+  if (signed > 0) return "var(--pq-positive, #b8956a)"; // KR convention
+  if (signed < 0) return "var(--pq-negative, #d18888)";
   return "rgba(245,240,232,0.55)";
 }
 

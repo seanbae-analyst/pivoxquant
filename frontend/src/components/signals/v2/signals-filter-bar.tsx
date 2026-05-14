@@ -49,8 +49,8 @@ interface Props {
 
 // CEO directive 2026-05-13: 전체 한국어 UI.
 const LABELS: Array<{ key: SignalLabel; display: string; tone: string }> = [
-  { key: "POSITIVE", display: "긍정", tone: "var(--pq-positive, #dc2626)" },
-  { key: "NEGATIVE", display: "부정", tone: "var(--pq-negative, #2563eb)" },
+  { key: "POSITIVE", display: "긍정", tone: "var(--pq-positive, #b8956a)" },
+  { key: "NEGATIVE", display: "부정", tone: "var(--pq-negative, #d18888)" },
   { key: "NEUTRAL", display: "중립", tone: "rgba(245,240,232,0.55)" },
 ];
 

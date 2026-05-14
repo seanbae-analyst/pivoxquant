@@ -2597,9 +2597,15 @@ i.italic,
   font-feature-settings: "tnum";
 }
 
-/* KR convention: 상승=빨강(▲), 하락=파랑(▼) — paper tone (lower saturation) */
-.pq-paper-pos { color: #b85b5b; }
-.pq-paper-neg { color: #5b7ab8; }
+/* KR convention: 상승=빨강(▲), 하락=파랑(▼) — paper tone (lower saturation).
+   Exposed as tokens so SVG sparklines can reference the same hue as the
+   delta text instead of re-hardcoding the hex (FINDING-002 followup). */
+:root {
+  --pq-paper-pos: #b85b5b;
+  --pq-paper-neg: #5b7ab8;
+}
+.pq-paper-pos { color: var(--pq-paper-pos); }
+.pq-paper-neg { color: var(--pq-paper-neg); }
 .pq-paper-neu { color: rgba(20, 20, 20, 0.55); }
 
 /* Ledger row — hairline separator + hover lift */

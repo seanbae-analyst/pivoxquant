@@ -321,7 +321,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                     letterSpacing: "0.18em",
                     color:
                       state.status === "error"
-                        ? "var(--pq-negative, #2563eb)"
+                        ? "var(--pq-negative, #d18888)"
                         : "rgba(245,240,232,0.55)",
                     marginTop: 12,
                   }}

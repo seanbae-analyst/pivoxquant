@@ -117,7 +117,7 @@ function PaperSparkline({
   // FINDING-015: the sparkline used green/red while the delta text uses KR
   // convention (pq-paper-pos red / pq-paper-neg blue) — the SAME data point
   // encoded with two opposite-meaning colors. Match the paper delta hues.
-  const stroke = isPositive ? "#b85b5b" : "#5b7ab8";
+  const stroke = isPositive ? "var(--pq-paper-pos)" : "var(--pq-paper-neg)";
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}

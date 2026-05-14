@@ -47,8 +47,8 @@ function fmtPct(n: number | undefined): string {
 
 function pctColor(n: number | undefined): string {
   if (n == null || !Number.isFinite(n)) return "rgba(245,240,232,0.55)";
-  if (n > 0) return "var(--pq-positive, #dc2626)"; // KR convention
-  if (n < 0) return "var(--pq-negative, #2563eb)";
+  if (n > 0) return "var(--pq-positive, #b8956a)"; // KR convention
+  if (n < 0) return "var(--pq-negative, #d18888)";
   return "rgba(245,240,232,0.55)";
 }
 

@@ -167,7 +167,7 @@ export function RiskTimelineChart({
               y="0"
               width={W}
               height={strainY}
-              fill="rgba(220,38,38,0.04)"
+              fill="rgba(209,136,136,0.04)"
             />
 
             {/* Gridlines */}
