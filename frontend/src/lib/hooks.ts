@@ -7,6 +7,7 @@ import {
   RISK_LAYERS,
   RISK_ROLLING_VAR,
   RISK_CORRELATION,
+  PUBLIC_MARKET_SNAPSHOT,
 } from "./endpoints";
 import { liveRefresh } from "./market-hours";
 import type {
@@ -35,6 +36,63 @@ const fetcher = async (url: string) => {
   }
   return r.json();
 };
+
+/* ── Public Market Snapshot (no-auth — landing ticker) ── */
+
+/**
+ * Unauthenticated fetcher for public endpoints. Unlike `fetcher` above it
+ * does NOT send the session cookie (`credentials: "omit"`) — the public
+ * market-snapshot route is rate-limited and cache-only and must not be
+ * coupled to a login session. The backend always returns HTTP 200, but we
+ * still guard `r.ok` defensively so a proxy/edge failure surfaces as an
+ * SWR error (consumers degrade gracefully rather than render garbage).
+ */
+const publicFetcher = async (url: string) => {
+  const r = await fetch(url, { credentials: "omit" });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+};
+
+export interface PublicMarketSnapshotItem {
+  symbol: string;
+  name: string;
+  value: number | null;
+  change_pct: number | null;
+  direction: "up" | "down" | "flat";
+  is_stale: boolean;
+  observed_at: string | null;
+}
+
+export interface PublicMarketSnapshotResponse {
+  ok: boolean;
+  items: PublicMarketSnapshotItem[];
+  generated_at: string;
+  cache_warm: boolean;
+}
+
+/**
+ * Landing-page market ticker feed. Polls every 60s — the backend cache
+ * refreshes on its own cadence and the route is rate-limited, so a tight
+ * interval buys no freshness. `keepPreviousData` holds the last good
+ * payload across refreshes so the marquee never flashes empty; on a hard
+ * error the consumer falls back to whatever `data` last held (or an empty
+ * ticker — never a fabricated value).
+ */
+export function usePublicMarketSnapshot() {
+  return useSWR<PublicMarketSnapshotResponse>(
+    PUBLIC_MARKET_SNAPSHOT,
+    publicFetcher,
+    {
+      refreshInterval: 60_000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 30_000,
+      keepPreviousData: true,
+      errorRetryCount: 2,
+      errorRetryInterval: 10_000,
+    },
+  );
+}
 
 /* ── Market ── */
 

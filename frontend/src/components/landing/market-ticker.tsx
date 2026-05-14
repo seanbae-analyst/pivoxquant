@@ -4,206 +4,162 @@
  * MarketTicker — Hero v3 top strip.
  * ------------------------------------------------------------------
  * A thin (32px) editorial ticker band sitting above the Hero.
- * Seamless left-drift marquee. Manually refreshed snapshot of major
- * indices. Kicker label is explicit so visitors never read these as
- * live; we update in code and surface the refresh date.
+ * Seamless left-drift marquee. Pure CSS animation (.pq-marquee-track),
+ * respects prefers-reduced-motion via globals.css.
  *
- * No auth, no fetch, no CLS. Pure CSS animation (.pq-marquee-track).
- * Respects prefers-reduced-motion via globals.css.
+ * 2026-05-15 (Bug #1, bug-hunt-live): retired the hand-maintained static
+ * snapshot. Every prior value here (SPX/NDX/KOSPI/KOSDAQ/USDKRW/VIX) was a
+ * manually-refreshed literal that went stale and — per the long comment
+ * history this file used to carry — repeatedly drifted far from reality.
+ * The ticker now reads the public, cache-only `GET /api/public/market-
+ * snapshot` endpoint (no auth, rate-limited, always HTTP 200) via the
+ * `usePublicMarketSnapshot` SWR hook (60s poll). The backend owns the
+ * refresh cadence and the staleness flag; the frontend just renders what
+ * the cache holds.
  *
- * Refresh history (Bug C, observed 2026-05-12):
- *   - 2026-04-26: re-anchored to 2026-04-25 close per CEO "싼마이 느낌"
- *     audit; pulsing dot removed for legal/visual honesty.
- *   - 2026-05-13: KOSPI/KOSDAQ/USDKRW re-anchored from the KIS feed
- *     (KOSPI 7,643 / KOSDAQ 1,179 / USDKRW 1,487). NOTE: the KOSPI value
- *     here was WRONG — see the 2026-05-14 entry below.
- *   - 2026-05-14 (Bug #1, bug-hunt-live): the KOSPI row (7,643.15) was
- *     flagged as wrong against then-assumed ~2,500-3,200 levels and was
- *     REMOVED as an honest interim fix (commit 945c9394).
- *   - 2026-05-15 (Bug #1 followup): KOSPI row RE-ADDED with a CEO-confirmed
- *     level (~7,981, verified 2026-05-15 against Naver Finance + a
- *     brokerage app). The KR market has run +197% YoY on the AI-semis
- *     rally, so high-7,000s/low-8,000s IS the real index level — the
- *     2026-05-14 "~3x reality" assumption was itself based on stale
- *     pre-rally range estimates. KOSDAQ/USDKRW were never wrong. Next step
- *     remains a public Server-Component fetch to retire the manual
- *     snapshot ritual (see staleness note below).
- *   - 2026-05-13 (second pass): SPX / NDX / VIX re-anchored against
- *     official-licensed feeds. SPX & VIX from FMP $29 stable
- *     `historical-price-eod/full` (2026-05-12 close). NDX from FRED
- *     `NASDAQ100` series (Fed-published, T+1 lag — 2026-05-11 close,
- *     latest available at refresh time). Prior values (SPX 5,520 /
- *     NDX 19,840 / VIX 14.85) were pre-pandemic-era levels off by
- *     30-48% from reality — active misrepresentation, not just stale.
- *   - 2026-05-13 (PR #343 audit, option B): USD-IDX row dropped.
- *     DXY removed pending ICE direct license (FMP premium gated).
- *     DTWEXBGS swap rejected due to product mismatch — see PR #343
- *     audit. DXY (ICE, 6-country, ~100) and DTWEXBGS (Fed, 26-country,
- *     ~118) are different products; the ~12% absolute-level scale gap
- *     is itself a capital-markets-law misrepresentation risk even with
- *     a distinct label. Remaining 6 rows (SPX/NDX/KOSPI/KOSDAQ/USDKRW/
- *     VIX) carry the ticker without forcing a mislabeled proxy.
- *   - 2026-05-13 (FMP paid-plan retry): CEO confirmed FMP $29 plan
- *     billed. Re-tested `^NDX` and `^DXY` on the active key — both
- *     STILL return 402 Premium Query Parameter ("not available under
- *     your current subscription"). Caret-prefixed index symbols are
- *     gated to an Enterprise tier above the $29 Starter. Plain `NDX`
- *     (no caret) returns stale 2023-05-23 data; plain `DXY` returns
- *     `[]`. Conclusion: FMP cannot license `^NDX`/`^DXY` at our price
- *     point — FRED stays as the official NDX source, DXY row stays
- *     omitted. NDX value refreshed to FRED's newly-published 2026-05-12
- *     close (29,064.80, posted overnight) — was the missing T+1 print
- *     PR #343 anticipated.
+ * State handling:
+ *   - Loading (no data yet): a minimal placeholder band (no fabricated
+ *     numbers, no CLS — same 32px height).
+ *   - Error / endpoint down: SWR's `keepPreviousData` holds the last good
+ *     payload; if there was never any data we render the placeholder band.
+ *     We NEVER render an invented value.
+ *   - `is_stale: true` row: rendered normally (the value is the last good
+ *     cached close) with a subtle dimmed treatment.
+ *   - `value: null` row: rendered as "—" so the row count stays stable.
  *
  * Legal: pure snapshot framing. No BUY/SELL/HOLD. No recommend/advice.
  */
 
-type Tick = {
-  symbol: string;
-  name: string;
-  level: string;
-  change: string;
-  dir: "up" | "down" | "flat";
-};
-
-// Static snapshot. All values from official-licensed feeds verified at refresh
-// time (2026-05-13 KST). Source-per-row:
-//   - SPX  : FMP stable `historical-price-eod/light` symbol=^GSPC, 2026-05-12 close = 7,400.97 (prev 7,412.85 → -0.16%).
-//   - NDX  : FRED series=NASDAQ100, 2026-05-12 close = 29,064.80 (prev 29,320.66 → -0.87%). FMP $29 plan cannot license `^NDX` (still 402 after paid-plan retry on 2026-05-13); FRED's overnight T+1 publish is the latest official US value.
-//   - KOSPI: SNAPSHOT 2026-05-15 — CEO-confirmed ~7,981 level (verified against Naver Finance + brokerage app on 2026-05-15). KR market is up +197% YoY on the AI-semis rally, so high-7,000s is the real index level. Re-added per Bug #1 followup after the 2026-05-14 removal (945c9394). Needs periodic refresh — see Bug #1 staleness note below.
-//   - KOSDAQ / USDKRW: KIS API 2026-05-12 close (verified via routes/market.py /api/market/indices?region=kr live probe — unchanged from PR #335).
-//   - VIX  : FMP stable `historical-price-eod/light` symbol=^VIX, 2026-05-12 close = 17.99 (prev 18.38 → -2.12%).
-//
-// DXY remains omitted. Re-verified 2026-05-13 on the paid FMP key — `^DXY`
-// still returns 402 Premium Query Parameter, plain `DXY` returns `[]`. ICE
-// direct license still the only honest path; DTWEXBGS swap remains rejected
-// (product mismatch, see PR #343 audit). Six rows is enough surface area
-// without forcing a misleading proxy.
-//
-// The kicker label is explicit so visitors read this as reference, not live.
-//
-// SNAPSHOT_DATE is exported for the kicker text and the pre-commit stale-guard
-// referenced in earlier comments. NOTE: the current .githooks/pre-commit does
-// not actually contain a SNAPSHOT_DATE >14d check; treat that earlier comment
-// as aspirational. A real value-vs-FMP regression gate is the right next step
-// (see PR body).
-export const SNAPSHOT_DATE = "2026-05-12";
-
-// KR_SNAPSHOT_DATE — the KOSPI row is anchored to a later, separately-confirmed
-// snapshot than SNAPSHOT_DATE (the US/KOSDAQ/USDKRW rows). Kept as its own
-// constant so a future refresh has ONE place to update the KR-side date.
-export const KR_SNAPSHOT_DATE = "2026-05-15";
-
-// ── Bug #1 staleness note (2026-05-15 followup) ──────────────────────────────
-// This ticker is unauthenticated by design (no auth, no fetch, no CLS — pure
-// static snapshot), so it CANNOT call /api/market/indices at runtime: every
-// market endpoint in endpoints.ts is behind a Flask session. That means every
-// row here is a hand-maintained snapshot and WILL go stale again.
-//
-// The honest structural fix is a public (no-auth) build-time or Server-
-// Component fetch — but that requires a NEW unauthenticated backend route,
-// which is a backend-dept change and out of scope for this frontend task.
-// RECOMMENDED as a separate task: expose a cache-only public market-snapshot
-// endpoint, then have this component (or a Server Component wrapper) read it
-// at build time so the manual refresh ritual is retired.
-//
-// Until then: each `level`/`change` below is a SNAPSHOT. When refreshing,
-// update the value AND the relevant *_SNAPSHOT_DATE constant. The KOSPI row
-// in particular was wrongly removed on 2026-05-14 (945c9394) on a stale
-// pre-rally range assumption; re-added 2026-05-15 with a CEO-confirmed level.
-const SNAPSHOT: readonly Tick[] = [
-  { symbol: "SPX",     name: "S&P 500",           level: "7,400.97",  change: "-0.16%",  dir: "down" },
-  { symbol: "NDX",     name: "Nasdaq 100",        level: "29,064.80", change: "-0.87%",  dir: "down" },
-  // SNAPSHOT 2026-05-15 — CEO-confirmed ~7,981 (Naver Finance + brokerage app).
-  // needs periodic refresh, see Bug #1 staleness note above.
-  { symbol: "KOSPI",   name: "KOSPI",             level: "7,981.04",  change: "-2.30%",  dir: "down" },
-  { symbol: "KOSDAQ",  name: "KOSDAQ",            level: "1,179.29",  change: "-2.32%",  dir: "down" },
-  { symbol: "USDKRW",  name: "USD / KRW",         level: "1,487.48",  change: "+0.82%",  dir: "up"   },
-  { symbol: "VIX",     name: "Volatility Idx",    level: "17.99",     change: "-2.12%",  dir: "down" },
-] as const;
+import {
+  usePublicMarketSnapshot,
+  type PublicMarketSnapshotItem,
+} from "@/lib/hooks";
 
 // Korean market convention: ▲ rising = red, ▼ falling = blue.
-// CEO directive (2026-04-26) — single KR convention applied to both KR and US
-// symbols on PivoxQuant. Swapped from prior US convention (sage up / carmine
-// down). Tones kept editorial — muted carmine/indigo within bronze family
-// temperature, not pure RGB primaries.
+// CEO directive (2026-04-26) — single KR convention applied to both KR and
+// US symbols on PivoxQuant. Tones kept editorial — muted carmine/indigo
+// within the bronze family temperature, not pure RGB primaries.
 const DIR_COLOR = {
-  up:   "#D18888",
+  up: "#D18888",
   down: "#7AA0C8",
   flat: "rgba(245, 240, 232, 0.55)",
 } as const;
 
 const DIR_GLYPH = {
-  up:   "▲",
+  up: "▲",
   down: "▼",
   flat: "·",
 } as const;
 
-function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boolean }) {
+// Display symbol overrides — the backend emits Yahoo-style symbols
+// (^KS11, ^GSPC, …); the ticker shows the desk-floor shorthand.
+const SYMBOL_LABEL: Record<string, string> = {
+  "^KS11": "KOSPI",
+  "^KQ11": "KOSDAQ",
+  "^GSPC": "SPX",
+  "^IXIC": "NDX",
+  "^VIX": "VIX",
+  USDKRW: "USDKRW",
+};
+
+function dirOf(item: PublicMarketSnapshotItem): "up" | "down" | "flat" {
+  if (item.direction === "up" || item.direction === "down") {
+    return item.direction;
+  }
+  return "flat";
+}
+
+// Group-3 digit formatting. `null` → "—" so the row count never changes.
+// USD/KRW and VIX-style sub-100 values keep 2 decimals; index levels show
+// 2 decimals as well to match the prior snapshot's precision.
+function fmtLevel(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function fmtChange(pct: number | null): string {
+  if (pct == null || !Number.isFinite(pct)) return "—";
+  const sign = pct > 0 ? "+" : "";
+  return `${sign}${pct.toFixed(2)}%`;
+}
+
+function Row({
+  ticks,
+  ariaHidden,
+}: {
+  ticks: readonly PublicMarketSnapshotItem[];
+  ariaHidden?: boolean;
+}) {
   return (
     <div
       className="flex shrink-0 items-center"
       aria-hidden={ariaHidden ? true : undefined}
     >
-      {ticks.map((t, i) => (
-        <span
-          key={`${t.symbol}-${i}`}
-          className="inline-flex items-center whitespace-nowrap px-6"
-        >
+      {ticks.map((t, i) => {
+        const dir = dirOf(t);
+        const label = SYMBOL_LABEL[t.symbol] ?? t.symbol;
+        return (
           <span
-            className="font-serif text-pq-caption uppercase"
-            style={{
-              letterSpacing: "0.22em",
-              color: "rgba(245, 240, 232, 0.82)",
-            }}
+            key={`${t.symbol}-${i}`}
+            className="inline-flex items-center whitespace-nowrap px-6"
+            style={{ opacity: t.is_stale ? 0.62 : 1 }}
           >
-            {t.symbol}
+            <span
+              className="font-serif text-pq-caption uppercase"
+              style={{
+                letterSpacing: "0.22em",
+                color: "rgba(245, 240, 232, 0.82)",
+              }}
+            >
+              {label}
+            </span>
+            <span
+              className="ml-2 font-mono tabular-nums text-pq-caption"
+              style={{
+                color: "var(--pq-bronze-light)",
+                fontFeatureSettings: '"tnum", "lnum"',
+                letterSpacing: "-0.005em",
+              }}
+            >
+              {fmtLevel(t.value)}
+            </span>
+            <span
+              className="ml-2 font-mono tabular-nums text-pq-caption"
+              style={{
+                color: DIR_COLOR[dir],
+                fontFeatureSettings: '"tnum", "lnum"',
+              }}
+            >
+              {DIR_GLYPH[dir]} {fmtChange(t.change_pct)}
+            </span>
+            <span
+              aria-hidden
+              className="ml-6 inline-block h-[9px] w-px"
+              style={{ backgroundColor: "rgba(184, 149, 106, 0.28)" }}
+            />
           </span>
-          <span
-            className="ml-2 font-mono tabular-nums text-pq-caption"
-            style={{
-              color: "var(--pq-bronze-light)",
-              fontFeatureSettings: '"tnum", "lnum"',
-              letterSpacing: "-0.005em",
-            }}
-          >
-            {t.level}
-          </span>
-          <span
-            className="ml-2 font-mono tabular-nums text-pq-caption"
-            style={{
-              color: DIR_COLOR[t.dir],
-              fontFeatureSettings: '"tnum", "lnum"',
-            }}
-          >
-            {DIR_GLYPH[t.dir]} {t.change}
-          </span>
-          <span
-            aria-hidden
-            className="ml-6 inline-block h-[9px] w-px"
-            style={{ backgroundColor: "rgba(184, 149, 106, 0.28)" }}
-          />
-        </span>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-export function MarketTicker() {
-  // Doubled row so the CSS -50% translate wraps seamlessly.
-  //
-  // Overflow hygiene:
-  //   - Outer wrapper uses `w-full max-w-full overflow-x-clip` so the inner
-  //     `w-max` track can never push `document.body.scrollWidth` past the
-  //     viewport. `overflow-x-clip` (Tailwind 4) is stricter than
-  //     `overflow-hidden` in border-box math and prevents 1–2px border
-  //     leaks that produced the +14px horizontal scroll on 614px.
-  //   - `box-border` pins border-width inside the width budget so the
-  //     `border-b` hairline never contributes to scrollWidth.
+// Thin band shell — shared by the loading/empty placeholder and the live
+// marquee so there is zero CLS between states.
+function TickerShell({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label: string;
+}) {
   return (
     <div
       role="marquee"
-      aria-label={`Global market snapshot ticker (refreshed ${SNAPSHOT_DATE}, indicative levels)`}
+      aria-label={label}
       className="relative w-full max-w-full overflow-x-clip overflow-y-hidden border-b box-border"
       style={{
         height: 32,
@@ -213,9 +169,59 @@ export function MarketTicker() {
         WebkitBackdropFilter: "blur(6px)",
       }}
     >
-      {/* Edge masks — editorial fade at both ends so text dissolves into the void.
-          Left edge mask is intentionally smaller than the kicker zone below so
-          it does not compete with the kicker's opaque backdrop. */}
+      {children}
+    </div>
+  );
+}
+
+export function MarketTicker() {
+  const { data } = usePublicMarketSnapshot();
+
+  // `keepPreviousData` means `data` survives across refreshes and through a
+  // transient error. When the endpoint has never resolved (cold load or a
+  // hard failure on first paint) we render the empty shell — no fabricated
+  // numbers, ever.
+  const items = data?.items ?? [];
+
+  if (items.length === 0) {
+    // Loading / unavailable — render the band silhouette only. No CLS, no
+    // invented values. The marquee simply has nothing to drift yet.
+    return (
+      <TickerShell label="Global market snapshot ticker (loading)">
+        <div
+          aria-hidden
+          className="absolute inset-y-0 left-0 z-30 flex items-center pl-4"
+        >
+          <span
+            className="font-serif text-pq-mono-sm uppercase whitespace-nowrap"
+            style={{
+              letterSpacing: "0.24em",
+              color: "var(--pq-bronze)",
+            }}
+          >
+            <span
+              aria-hidden
+              className="mr-1.5 inline-block h-[5px] w-[5px] rounded-full align-middle"
+              style={{ backgroundColor: "rgba(184, 149, 106, 0.35)" }}
+            />
+            Market snapshot · loading
+          </span>
+        </div>
+      </TickerShell>
+    );
+  }
+
+  // Doubled row so the CSS -50% translate wraps seamlessly.
+  //
+  // Overflow hygiene:
+  //   - Outer wrapper uses `w-full max-w-full overflow-x-clip` so the inner
+  //     `w-max` track can never push `document.body.scrollWidth` past the
+  //     viewport.
+  //   - `box-border` pins border-width inside the width budget so the
+  //     `border-b` hairline never contributes to scrollWidth.
+  return (
+    <TickerShell label="Global market snapshot ticker (live, indicative levels)">
+      {/* Right edge mask — editorial fade so text dissolves into the void. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32"
@@ -225,16 +231,10 @@ export function MarketTicker() {
         }}
       />
 
-      {/* Kicker — "As of 2026-04-25 close · indicative levels" editorial label,
-          pinned left. Backdrop is a FIXED-WIDTH solid ink block (not a partial
-          gradient) followed by a short gradient tail.
-
-          2026-05-07: widened from 240→320 + marquee padding 288→368 because the
-          older 240+48 budget was tight (~296px text width @ 11px serif + 0.24em
-          tracking + pl-4) and "INDICATIVE LEVELS" trailing word could spill over
-          the marquee text at certain scroll positions, producing "INDICATIVE
-          IKEO/VSEIS" garbled overlap. Fixed by giving the kicker text 8% more
-          horizontal slack. */}
+      {/* Kicker — pinned left. Backdrop is a FIXED-WIDTH solid ink block
+          followed by a short gradient tail so the marquee text never spills
+          over the kicker label. 320px block + 48px gradient tail; the
+          marquee track clears 368px (pl-[23rem]). */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-y-0 left-0 z-20"
@@ -266,22 +266,21 @@ export function MarketTicker() {
             className="mr-1.5 inline-block h-[5px] w-[5px] rounded-full align-middle"
             style={{ backgroundColor: "rgba(184, 149, 106, 0.55)" }}
           />
-          Snapshot · {SNAPSHOT_DATE} · indicative levels
+          Market snapshot · indicative levels
         </span>
       </div>
 
       {/* Marquee track — duplicated content for seamless wrap.
           `pl-[23rem]` (368px) clears the 320px opaque kicker block + 48px
-          gradient tail (2026-05-07: widened from 18rem/288 to 23rem/368 to
-          eliminate "INDICATIVE LEVELS" spillover seen in bug-hunter audit).
-          `shrink-0` on each Row prevents flex-container width calculations
-          from shrinking the symbol pills. Track sits at z-0 so both the
-          kicker zone (z-20) and right fade mask (z-10) render above it. */}
+          gradient tail. `shrink-0` on each Row prevents flex width
+          calculations from shrinking the symbol pills. Track sits at z-0
+          so both the kicker zone (z-20) and right fade mask (z-10) render
+          above it. */}
       <div className="pq-marquee-track relative z-0 flex h-full w-max items-center pl-[23rem]">
-        <Row ticks={SNAPSHOT} />
-        <Row ticks={SNAPSHOT} ariaHidden />
+        <Row ticks={items} />
+        <Row ticks={items} ariaHidden />
       </div>
-    </div>
+    </TickerShell>
   );
 }
 
