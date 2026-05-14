@@ -1157,6 +1157,196 @@ def market_indices():
     return jsonify(out)
 
 
+# ─────────────────────────────────────────────────────────────────────
+# Public, cache-only market snapshot for the UNAUTHENTICATED landing page.
+#
+# Why this exists (Bug #1 root fix):
+#   The landing page ticker (frontend market-ticker.tsx) used to hardcode
+#   KOSPI / KOSDAQ / S&P / NASDAQ / USDKRW / VIX snapshot values, which
+#   guarantees staleness. The landing page is unauthenticated and cannot
+#   call /api/market/indices (it sits behind @api_auth). This endpoint
+#   gives the landing page a public, abuse-safe source.
+#
+# Hard rules baked in:
+#   * NO @api_auth — must be reachable without a login.
+#   * CACHE-ONLY — never triggers a synchronous KIS/FMP/Alpaca fetch.
+#     It reads ONLY the in-process _indices_cache (populated as a
+#     side-effect of authenticated /api/market/indices calls) and
+#     fx_service (refreshed by the background scheduler tick). On a
+#     cache miss it returns 200 with whatever it has (possibly empty),
+#     each item flagged is_stale — never a paid-API call from an
+#     unauthenticated path (abuse + cost protection).
+#   * @general_rate_limit — per-IP budget, abuse defense for a public route.
+#   * §101 compliance — generalized macro data only (index levels, FX,
+#     volatility). No individual-stock data, no specificity, no
+#     recommendations. Index levels are general information published in
+#     every news outlet.
+#
+# Cache-warming dependency (documented for the parent agent):
+#   _indices_cache is filled by /api/market/indices, which runs whenever
+#   ANY authenticated user opens the /market tab. fx_service is filled by
+#   the background scheduler (refreshes USD/KRW every ~60s on app boot +
+#   tick). So as long as the app has had at least one authenticated
+#   /market visitor since boot, the index tiles are warm; FX is always
+#   warm. If a deployment has zero authenticated traffic, the index
+#   portion returns empty (200, is_stale implied by absence) until the
+#   first /market visit. A dedicated scheduled cache-warm job for indices
+#   would close that gap — see report. No new infra cost required; it
+#   would reuse the existing APScheduler.
+# ─────────────────────────────────────────────────────────────────────
+@market_bp.route("/public/market-snapshot")
+@general_rate_limit
+def public_market_snapshot():
+    """Public (no-auth), cache-only macro snapshot for the landing ticker.
+
+    Returns generalized macro market data — index levels, FX, volatility —
+    read straight from the in-process caches. Never performs a live
+    upstream fetch (see module comment above).
+
+    Response (always HTTP 200):
+        {
+          "ok": true,
+          "items": [
+            {
+              "symbol": "^KS11",        # stable identifier
+              "name": "KOSPI",          # display label
+              "value": 7981.23,         # level / rate / VIX value
+              "change_pct": 0.42,       # 1d % change (0.0 when unknown)
+              "direction": "up",        # "up" | "down" | "flat"
+              "is_stale": false,        # true when cache is cold/aged
+              "observed_at": "2026-05-15T01:23:45Z"  # ISO-8601 UTC, or null
+            },
+            ...
+          ],
+          "generated_at": "2026-05-15T01:24:00Z",
+          "cache_warm": true            # false ⇒ index cache cold (FX only)
+        }
+
+    Symbols emitted: ^KS11 (KOSPI), ^KQ11 (KOSDAQ), ^GSPC (S&P 500 via SPY
+    proxy), ^IXIC (Nasdaq via QQQ proxy), ^VIX (volatility via VIXY proxy),
+    USDKRW. Any symbol whose cache entry is missing is still emitted with
+    value=null, is_stale=true so the frontend renders a stable row count.
+    """
+    now = _time.time()
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ttl = _indices_ttl()
+
+    def _direction(change_pct) -> str:
+        try:
+            v = float(change_pct)
+        except (TypeError, ValueError):
+            return "flat"
+        if v > 0.001:
+            return "up"
+        if v < -0.001:
+            return "down"
+        return "flat"
+
+    # Map cache ticker -> (display name) for the symbols the landing ticker
+    # needs. US entries live under cache_key "us_v2", KR under "kr_v2" —
+    # the exact keys /api/market/indices writes.
+    _WANTED = [
+        ("kr_v2", "^KS11", "KOSPI"),
+        ("kr_v2", "^KQ11", "KOSDAQ"),
+        ("kr_v2", "USDKRW", "USD / KRW"),
+        ("us_v2", "^GSPC", "S&P 500"),
+        ("us_v2", "^IXIC", "NASDAQ"),
+        ("us_v2", "^VIX", "VIX"),
+    ]
+
+    # Pull each region's cached list once. Cache-only: if absent or aged
+    # past TTL we simply treat it as cold — we do NOT recompute.
+    region_data: dict = {}
+    region_fresh: dict = {}
+    for region_key in ("us_v2", "kr_v2"):
+        entry = _indices_cache.get(region_key)
+        if entry and isinstance(entry.get("data"), list):
+            by_ticker = {}
+            for snap in entry["data"]:
+                if isinstance(snap, dict) and snap.get("ticker"):
+                    by_ticker[snap["ticker"]] = snap
+            region_data[region_key] = by_ticker
+            region_fresh[region_key] = (now - entry.get("ts", 0)) < ttl
+        else:
+            region_data[region_key] = {}
+            region_fresh[region_key] = False
+
+    items: list[dict] = []
+    index_cache_warm = False
+    for region_key, ticker, display in _WANTED:
+        snap = region_data.get(region_key, {}).get(ticker)
+        if snap is not None:
+            index_cache_warm = True
+            # is_stale: honor the snapshot's own flag, OR mark stale when
+            # the region cache itself has aged past TTL.
+            stale = bool(snap.get("is_stale")) or not region_fresh.get(region_key, False)
+            change_pct = snap.get("change_1d_pct", 0.0) or 0.0
+            items.append({
+                "symbol": ticker,
+                "name": display,
+                "value": snap.get("level"),
+                "change_pct": round(float(change_pct), 2),
+                "direction": _direction(change_pct),
+                "is_stale": stale,
+                "observed_at": snap.get("observed_at"),
+            })
+        else:
+            # Cache miss for this symbol — emit a placeholder row so the
+            # frontend keeps a stable layout. Never a live fetch.
+            items.append({
+                "symbol": ticker,
+                "name": display,
+                "value": None,
+                "change_pct": 0.0,
+                "direction": "flat",
+                "is_stale": True,
+                "observed_at": None,
+            })
+
+    # USD/KRW: fx_service is refreshed by the background scheduler, so it is
+    # effectively always warm even with zero authenticated traffic. Prefer
+    # it over the kr_v2 cache entry when available — it is the freshest
+    # cache-resident source and still requires NO live fetch here.
+    try:
+        fx_rate = float(fx_service.get_rate() or 0) or None
+    except Exception:
+        fx_rate = None
+    if fx_rate is not None:
+        try:
+            fx_ts = fx_service.last_updated()
+        except Exception:
+            fx_ts = None
+        try:
+            fx_stale = bool(fx_service.is_stale())
+        except Exception:
+            fx_stale = True
+        fx_observed = (
+            datetime.fromtimestamp(fx_ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if fx_ts else None
+        )
+        # Replace the USDKRW row (sourced from kr_v2 above) with the
+        # fresher fx_service value. Keep the kr_v2 change_pct if present.
+        for it in items:
+            if it["symbol"] == "USDKRW":
+                kr_change = it.get("change_pct", 0.0)
+                it.update({
+                    "value": round(fx_rate, 2),
+                    "is_stale": fx_stale,
+                    "observed_at": fx_observed,
+                    # change_pct only available from kr_v2 history; keep it.
+                    "change_pct": kr_change,
+                    "direction": _direction(kr_change),
+                })
+                break
+
+    return jsonify({
+        "ok": True,
+        "items": items,
+        "generated_at": now_iso,
+        "cache_warm": index_cache_warm,
+    })
+
+
 @market_bp.route("/dividend/<ticker>")
 @api_auth
 def dividend_data(ticker):
