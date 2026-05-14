@@ -4,6 +4,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* FINDING-014 — JetBrains Mono's ₩ (U+20A9) glyph has double horizontal
+   strokes that read as a strikethrough on price displays. Map ONLY the
+   ₩ codepoint onto an already-loaded font with a clean Won glyph
+   (Pretendard Variable, loaded via CDN; Geist as fallback). Zero new
+   payload, zero call-site changes — the family is prepended to the mono
+   stacks below so every `font-mono` surface inherits the fix while
+   digits, tabular-nums, and all other glyphs stay in JetBrains Mono. */
+@font-face {
+  font-family: "PQ Won Fix";
+  src: local("Pretendard Variable"), local("Pretendard"), local("Geist");
+  unicode-range: U+20A9;
+}
+
 /* ══════════════════════════════════════════════════════════
    PivoxQuant Design System v3 — Apple HIG + Bloomberg Terminal
    Serious financial SaaS. Neutral-heavy + single accent.
@@ -47,7 +60,10 @@
 
   /* Typography */
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  /* "PQ Won Fix" prepended so the ₩ glyph (U+20A9) renders cleanly —
+     see @font-face above (FINDING-014). All other codepoints fall
+     through to JetBrains Mono via --font-mono. */
+  --font-mono: "PQ Won Fix", var(--font-mono);
   --font-serif: var(--font-serif);
   --font-display: var(--font-display);
 
@@ -206,7 +222,8 @@
      instead of JetBrains Mono / Source Serif 4 / Playfair Display. */
   --pq-font-sans: var(--font-sans);
   --pq-font-serif: var(--font-serif);
-  --pq-font-mono: var(--font-mono);
+  /* "PQ Won Fix" prepended — see @font-face / FINDING-014. */
+  --pq-font-mono: "PQ Won Fix", var(--font-mono);
   --pq-font-display: var(--font-display);
 
   /* Type scale (8 steps + 3 fluid) — §3.3 grid: 12/14/15/18/24/32/48.
