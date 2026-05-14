@@ -77,7 +77,7 @@ export function KoreaUsDesk() {
             style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
           />
           <span
-            className="font-serif text-[11px] uppercase"
+            className="font-serif text-pq-mono-sm uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             Korea × US · A CFO That Doesn&rsquo;t Sleep
@@ -155,7 +155,7 @@ export function KoreaUsDesk() {
                 <div className="pt-8 md:pt-12">
                   <div className="mb-3 flex items-baseline gap-2">
                     <span
-                      className="font-mono tabular-nums text-[22px]"
+                      className="font-mono tabular-nums text-pq-callout"
                       style={{
                         color: "var(--pq-ivory)",
                         letterSpacing: "-0.01em",
@@ -194,7 +194,7 @@ export function KoreaUsDesk() {
                     {t.title_ko}
                   </p>
                   <p
-                    className="font-mono text-[12px] tabular-nums"
+                    className="font-mono text-pq-caption tabular-nums"
                     style={{
                       color: "rgba(245,240,232,0.45)",
                       letterSpacing: "0.02em",

@@ -84,7 +84,7 @@ export function Hero() {
               }}
             />
             <span
-              className="font-serif text-[11px] uppercase"
+              className="font-serif text-pq-mono-sm uppercase"
               style={{
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",

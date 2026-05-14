@@ -95,9 +95,9 @@ export function PriceWithTimestamp({
   const isLive = rel === "live";
 
   const sizeCls = {
-    sm: "text-[13px]",
-    md: "text-[16px]",
-    lg: "text-[22px]",
+    sm: "text-pq-body-sm",
+    md: "text-pq-h6",
+    lg: "text-pq-callout",
   }[size];
 
   return (
@@ -113,14 +113,14 @@ export function PriceWithTimestamp({
           Render an explicit "OBSERVATION PENDING" label instead — no dot. */}
       {showTimestamp && !hasObservation && (
         <span
-          className="font-mono text-[11px] uppercase tracking-[0.16em]"
+          className="font-mono text-pq-mono-sm uppercase tracking-[0.16em]"
           style={{ color: "rgba(245,240,232,0.45)" }}
         >
           Observation pending
         </span>
       )}
       {showTimestamp && hasObservation && (
-        <span className="inline-flex items-center gap-1 font-mono text-[12px] uppercase tracking-[0.16em]">
+        <span className="inline-flex items-center gap-1 font-mono text-pq-caption uppercase tracking-[0.16em]">
           {isStale ? (
             <span
               className="h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-500/70"

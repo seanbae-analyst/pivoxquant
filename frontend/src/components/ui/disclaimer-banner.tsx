@@ -83,13 +83,13 @@ export function DisclaimerBanner({
           )}
         />
         {isDark && (
-          <span className="text-[9px] tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mr-1">
+          <span className="text-pq-kicker tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mr-1">
             Disclaimer
           </span>
         )}
         <span
           className={cn(
-            "flex-1 text-[11px] font-semibold",
+            "flex-1 text-pq-mono-sm font-semibold",
             isDark ? "text-[rgba(245,240,232,0.85)]" : "text-slate-700",
           )}
         >
@@ -119,7 +119,7 @@ export function DisclaimerBanner({
         >
           <p
             className={cn(
-              "text-[11px] leading-relaxed",
+              "text-pq-mono-sm leading-relaxed",
               isDark ? "text-[rgba(245,240,232,0.75)]" : "text-slate-600",
             )}
           >

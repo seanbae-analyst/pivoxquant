@@ -276,7 +276,7 @@ export function SearchCommandMenu() {
                 ? `cmd-opt-${activeIdx}`
                 : undefined
             }
-            className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[color:var(--pq-muted)]"
+            className="flex-1 bg-transparent text-pq-lead outline-none placeholder:text-[color:var(--pq-muted)]"
             style={{ color: "var(--pq-ivory)" }}
           />
           {loading && (
@@ -401,7 +401,7 @@ export function SearchCommandMenu() {
 
         {/* Footer */}
         <div
-          className="flex items-center justify-between px-5 py-2.5 text-[11px]"
+          className="flex items-center justify-between px-5 py-2.5 text-pq-mono-sm"
           style={{
             borderTop: "0.5px solid var(--pq-hairline)",
             color: "var(--pq-muted)",

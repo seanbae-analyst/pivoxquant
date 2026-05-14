@@ -282,7 +282,7 @@ export function LegalConsentModal({
               className="flex flex-col gap-1"
             >
               <span
-                className="text-[11px] uppercase tracking-[0.18em]"
+                className="text-pq-mono-sm uppercase tracking-[0.18em]"
                 style={{ color: "var(--pq-bronze)" }}
               >
                 {BIRTHDATE_LABEL_KO} · {BIRTHDATE_LABEL_EN}
@@ -310,7 +310,7 @@ export function LegalConsentModal({
                 <span
                   id="consent_birthdate_msg"
                   role="alert"
-                  className="text-[11px] leading-relaxed"
+                  className="text-pq-mono-sm leading-relaxed"
                   style={{ color: "rgba(244,108,108,0.92)" }}
                 >
                   {UNDER_AGE_KO}
@@ -404,7 +404,7 @@ export function LegalConsentModal({
 
         {!allRequired && (
           <p
-            className="mt-2 text-center text-[11px]"
+            className="mt-2 text-center text-pq-mono-sm"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.4)" }}
           >
             필수 항목 3개에 모두 동의해야 진행할 수 있습니다.

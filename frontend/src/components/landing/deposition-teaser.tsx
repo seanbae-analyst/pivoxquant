@@ -84,7 +84,7 @@ export function DepositionTeaser() {
             style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
           />
           <span
-            className="font-serif text-[11px] uppercase"
+            className="font-serif text-pq-mono-sm uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             Signature · Pre-Trade Checklist
@@ -151,7 +151,7 @@ export function DepositionTeaser() {
                     aria-hidden
                   />
                   <span
-                    className="font-mono text-[9px] uppercase tabular-nums"
+                    className="font-mono text-pq-kicker uppercase tabular-nums"
                     style={{
                       letterSpacing: "0.22em",
                       color: "rgba(139,111,71,0.8)",
@@ -254,7 +254,7 @@ export function DepositionTeaser() {
                 style={{ borderColor: "var(--pq-border)" }}
               >
                 <span
-                  className="font-mono text-[11px] tabular-nums"
+                  className="font-mono text-pq-mono-sm tabular-nums"
                   style={{
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",

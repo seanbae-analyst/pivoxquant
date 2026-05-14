@@ -136,7 +136,7 @@ function IsoLayer({
         className="absolute left-3 top-3 flex items-center gap-1.5 font-mono"
       >
         <span
-          className="text-[9px] uppercase tracking-widest font-mono"
+          className="text-pq-kicker uppercase tracking-widest font-mono"
           style={{
             color:
               idx === 2 ? "rgba(184,149,106,0.85)" : "rgba(10,10,10,0.55)",
@@ -195,7 +195,7 @@ export function ThreeLayers() {
             style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
           />
           <span
-            className="font-serif text-[11px] uppercase"
+            className="font-serif text-pq-mono-sm uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             The Architecture · 3-Layer Stack
@@ -305,7 +305,7 @@ export function ThreeLayers() {
                         {layer.label}
                       </span>
                       <span
-                        className="font-serif text-[11px] italic"
+                        className="font-serif text-pq-mono-sm italic"
                         style={{ color: "rgba(245,240,232,0.45)" }}
                       >
                         {layer.korean}

@@ -257,7 +257,7 @@ export function NotificationDropdown() {
                     />
                     <div className="min-w-0 flex-1">
                       <p
-                        className="text-[14px] leading-snug font-serif"
+                        className="text-pq-body leading-snug font-serif"
                         style={{
                           color: unreadRow ? "var(--pq-ivory)" : "var(--pq-muted)",
                           fontWeight: unreadRow ? 600 : 400,
@@ -274,7 +274,7 @@ export function NotificationDropdown() {
                         </p>
                       )}
                       <p
-                        className="mt-1 text-[11px] uppercase tabular-nums"
+                        className="mt-1 text-pq-mono-sm uppercase tabular-nums"
                         style={{ letterSpacing: "0.12em", color: "var(--pq-muted)" }}
                       >
                         {relativeTime(n.created_at)}

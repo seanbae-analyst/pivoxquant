@@ -21,7 +21,7 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
       <div className="w-14 h-14 rounded-[2px] bg-[rgba(139,111,71,0.12)] border border-[rgba(139,111,71,0.3)] flex items-center justify-center mb-5">
         <AlertTriangle className="w-6 h-6 text-[var(--pq-bronze-light)]" />
       </div>
-      <div className="text-[9px] tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mb-2">
+      <div className="text-pq-kicker tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mb-2">
         Error
       </div>
       <h2 className="text-xl font-bold text-[var(--pq-ivory)] mb-2">
