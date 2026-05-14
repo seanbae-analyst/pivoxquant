@@ -97,6 +97,16 @@ type Snapshot = {
   // capital-markets-law misrepresentation risk. When set, the Cell renders
   // a "VIA <proxy>" chip so the reader knows the number is an ETF proxy.
   proxyTicker?: string;
+  // Bug #6 (2026-05-14): when the KR indices SWR poll has SETTLED (data
+  // arrived or errored) but carries no usable KOSPI/KOSDAQ block, the
+  // ribbon used to render the same "— · —" placeholder it shows during
+  // the initial loading window — indistinguishable from "still loading".
+  // When `unavailable` is true the Cell renders an explicit "관측 대기"
+  // (awaiting observation) state instead. Distinct from `isStale`, which
+  // means "we have a value, it's just delayed". Resolution of the upstream
+  // KR data path is backend-dev's Bug #2 — this is the honest empty state
+  // for the meantime.
+  unavailable?: boolean;
 };
 
 // Macro symbols the strip tracks. Levels are NEVER hard-coded — every cell
@@ -163,6 +173,11 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
     typeof snap.proxyTicker === "string" && snap.proxyTicker
       ? snap.proxyTicker
       : null;
+  // Bug #6 (2026-05-14): the KR poll settled with no usable block. Render an
+  // explicit "관측 대기" (awaiting observation) state so the reader can tell
+  // this apart from the loading placeholder. Upstream KR data path is
+  // backend-dev's Bug #2 — once it returns data this branch is never hit.
+  const unavailable = snap.unavailable === true;
   // Direct DOM-mutation flash: avoids setState-in-effect by writing the
   // tinted background straight to the element via ref, then clearing it
   // after 300ms. Behaves identically to the previous setState/setTimeout.
@@ -208,11 +223,13 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
         opacity: stale ? 0.6 : 1,
       }}
       title={
-        stale
-          ? `${snap.label} — last observed (delayed)`
-          : proxy
-            ? `Level sourced from ${proxy} ETF proxy — this is the ETF price, not the underlying ${snap.label} index level.`
-            : undefined
+        unavailable
+          ? `${snap.label} — market data temporarily unavailable`
+          : stale
+            ? `${snap.label} — last observed (delayed)`
+            : proxy
+              ? `Level sourced from ${proxy} ETF proxy — this is the ETF price, not the underlying ${snap.label} index level.`
+              : undefined
       }
     >
       <span
@@ -224,12 +241,25 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
       >
         {snap.label}
       </span>
-      <span style={{ color: "rgba(245,240,232,0.92)" }}>{snap.level}</span>
-      <span style={{ color }}>
-        <span style={{ marginRight: 2 }}>{DIR_GLYPH[snap.dir]}</span>
-        {snap.delta}
-      </span>
-      {proxy && (
+      {unavailable ? (
+        <span
+          style={{
+            color: "rgba(245,240,232,0.45)",
+            letterSpacing: "0.04em",
+          }}
+        >
+          관측 대기
+        </span>
+      ) : (
+        <>
+          <span style={{ color: "rgba(245,240,232,0.92)" }}>{snap.level}</span>
+          <span style={{ color }}>
+            <span style={{ marginRight: 2 }}>{DIR_GLYPH[snap.dir]}</span>
+            {snap.delta}
+          </span>
+        </>
+      )}
+      {!unavailable && proxy && (
         <span
           className="uppercase"
           aria-label={`Level via ${proxy} ETF proxy`}
@@ -245,7 +275,7 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
           via {proxy}
         </span>
       )}
-      {stale && (
+      {!unavailable && stale && (
         <span
           className="uppercase"
           aria-label="Stale market data"
@@ -332,7 +362,7 @@ export function TopTicker() {
     fetchIndices,
     RIBBON_SWR_OPTS,
   );
-  const { data: krIdx } = useSWR<IndexBlock[]>(
+  const { data: krIdx, error: krError } = useSWR<IndexBlock[]>(
     `${MARKET_INDICES}?region=kr`,
     fetchIndices,
     RIBBON_SWR_OPTS,
@@ -396,6 +426,11 @@ export function TopTicker() {
     getNowSnapshot,
     getNowServerSnapshot,
   );
+
+  // Bug #6: the KR indices poll has SETTLED once SWR has either delivered a
+  // payload (`krIdx` defined) or surfaced an error (`krError`). Before that
+  // we're genuinely still loading and "— · —" is the honest placeholder.
+  const krSettled = krIdx !== undefined || krError != null;
 
   // Build rows: SSE detail wins (intra-second freshness for held tickers);
   // SWR macro feed fills the rest. Either path renders "—" if the symbol
@@ -462,15 +497,21 @@ export function TopTicker() {
           proxyTicker: macro.proxyTicker,
         };
       }
+      // Bug #6: no SSE detail, no macro block. For KR indices, if the KR
+      // poll has already settled this is "data unavailable" — render the
+      // explicit 관측 대기 state rather than a loading-looking "— · —".
+      // For US symbols (or KR before settle) keep the neutral placeholder.
+      const isKr = t.symbol === "KOSPI" || t.symbol === "KOSDAQ";
       return {
         symbol: t.symbol,
         label: t.label,
         level: PLACEHOLDER_DELTA,
         delta: PLACEHOLDER_DELTA,
         dir: "flat" as const,
+        unavailable: isKr && krSettled,
       };
     });
-  }, [rt.details, macroMap]);
+  }, [rt.details, macroMap, krSettled]);
 
   return (
     /* Mobile fix (2026-05-05): the 6 cells + brand pip total ~700px which
