@@ -134,7 +134,8 @@ export function NotificationDropdown() {
         onClick={() => setOpen((p) => !p)}
         aria-label="Notifications"
         aria-expanded={open}
-        className="pq-topbar-icon-btn relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-0"
+        /* FINDING-020: rounded-full → rounded (4px) — §0 editorial radius. */
+        className="pq-topbar-icon-btn relative flex h-10 w-10 items-center justify-center rounded transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-0"
         style={{
           color: open
             ? "var(--pq-bronze)"

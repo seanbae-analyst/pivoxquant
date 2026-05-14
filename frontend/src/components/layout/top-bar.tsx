@@ -42,12 +42,14 @@ export function TopBar() {
           borderBottom: "0.5px solid var(--pq-ivory-line)",
         }}
       >
-        {/* ── Search trigger (opens command palette) ── */}
+        {/* ── Search trigger (opens command palette) ──
+            FINDING-020: rounded-full → rounded (4px). §0 forbids pill/full
+            radius in the editorial tone; only the avatar stays circular. */}
         <button
           type="button"
           onClick={() => openSearchCommand()}
-          aria-label="Search ticker or page"
-          className="flex h-9 w-full max-w-[440px] items-center gap-3 rounded-full px-4 text-left transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+          aria-label="Find a ticker, an artifact, or a page"
+          className="flex h-9 w-full max-w-[440px] items-center gap-3 rounded px-4 text-left transition-colors hover:bg-[rgba(139,111,71,0.08)]"
           style={{
             border: "0.5px solid rgba(245, 240, 232, 0.12)",
             background: "rgba(255, 255, 255, 0.02)",
@@ -57,13 +59,14 @@ export function TopBar() {
             className="h-[14px] w-[14px] shrink-0"
             style={{ color: "var(--pq-bronze)" }}
           />
+          {/* FINDING-039: brand-voice placeholder, not generic "Search …". */}
           <span
             className="flex-1 text-sm italic font-serif"
             style={{
               color: "rgba(245, 240, 232, 0.45)",
             }}
           >
-            Search ticker, page…
+            Find a ticker, an artifact, a page…
           </span>
           <kbd
             className="hidden md:inline-flex rounded px-1.5 py-0.5 font-mono text-[10px]"

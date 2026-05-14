@@ -21,7 +21,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { X, Check, Circle, Loader2, Lock } from "lucide-react";
+import { X, Check, Circle, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useInvestmentProfile, useArtifacts } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
@@ -212,7 +212,13 @@ function LayerDot({
     layer.state === "ready" ? (
       <Check className="h-2.5 w-2.5" strokeWidth={3} />
     ) : layer.state === "learning" ? (
-      <Loader2 className="h-2.5 w-2.5 animate-spin" />
+      // FINDING-032: §6 forbids spinners on dark surfaces — a shimmer
+      // skeleton block carries the "in progress" meaning without the
+      // banned animate-spin.
+      <span
+        className="pq-skeleton-dark inline-block h-2.5 w-2.5"
+        style={{ borderRadius: 1 }}
+      />
     ) : layer.state === "locked" ? (
       <Lock className="h-2.5 w-2.5" />
     ) : (
