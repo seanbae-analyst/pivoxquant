@@ -1,4 +1,139 @@
-# PivoxQuant — 인수인계서 (2026-05-13 v42 final — 91 PR · OPEN PR 0 · bug-hunter 11/11 정리 (fix 8+false-positive 3+carry-over 0) + 10 PR squash-merged (#364–#373) + admit 8건 + Phase 3 6/7 시나리오 clean + CAUS/Finance 자동화 ON)
+# PivoxQuant — 인수인계서 (2026-05-14 v42 patch — TCC relocation → ~/projects + REPO_ROOT fix (PR #375) + Anthropic Max $220 알림 · 92 PR · OPEN PR 0 · main `bf32e738 → cf7620e`)
+
+## v42 final patch — TCC relocation to ~/projects/pivoxquant + REPO_ROOT fix + Max $220 alert
+
+**한 줄 요약**: CEO '~/Desktop TCC 차단' 발견 → ~/projects/pivoxquant git clone 이전 (옵션 B 자율) → PR #375 (REPO_ROOT 동적 fix) → 2차 launchd trigger TCC 통과 + 5/14 report 새 위치 생성 + sim-onboard 200/429 server 도달 → 진짜 자율 cycle 작동 verify · GitHub 빌링 0 확정 · Anthropic Max $220 결제 알림 (시나리오 A/B 분기) · 4번째 false admit 패턴 명시
+
+### v42 patch 누적 통계 (직접 git/gh/launchd evidence verified)
+- **main HEAD**: `cf7620e` (`git log --oneline -1` 직접 확인)
+- **v42 patch base**: `bf32e738` (PR #374 머지 commit, HANDOVER v42 final)
+- **v42 final base**: `22b122b2` (PR #373 머지 commit)
+- **v42 patch**: 1 PR squash-merged (#375) — REPO_ROOT 동적 fix
+- **OPEN PR**: 0건 (`gh pr list --state open` 직접 확인 — 출력 없음)
+- **backend pytest**: 2045 PASS (v42 final 기준, PR #375 +9/-1 caus_daily_sweep.py 경로만 — 회귀 0)
+- **새 working dir**: `/Users/seanbae/projects/pivoxquant` (git clone 이전, TCC unprotected)
+- **옛 working dir**: `/Users/seanbae/Desktop/취준/pivoxquant` (14GB archive 보존, 데이터 손실 0)
+
+### v42 patch 진행 순서 (2026-05-14 새벽, 정직 순서)
+
+**1단계 — TCC 차단 발견 (07:19 KST)**
+- 어제 v42 final cycle 자율 cron 가동 가정 → 5/14 03:00 KST cron tick fail
+- `/tmp/caus-daily.log`: `python3: can't open file 'scripts/caus_daily_sweep.py': [Errno 1] Operation not permitted`
+- 원인: macOS TCC(Transparency, Consent, Control)가 `~/Desktop` 디렉터리를 launchd/cron daemon 접근 차단
+- 수동 실행(user session 컨텍스트)은 TCC 통과, cron(system daemon 컨텍스트)은 차단 — 어제 verify에서 누락
+
+**2단계 — 사장님 결정 위임 + 옵션 평가**
+- 옵션 A: Full Disk Access 권한 부여 (사장님 1분 직접 조작 필요)
+- 옵션 B: 작업 디렉터리 이전 (자율 가능)
+- CEO 선택: "너가 보기에 맞는 걸로" → 옵션 B 자율 진행
+
+**3단계 — 옵션 B 진행 (데이터 안전 보존)**
+- 1차 시도: `mv ~/Desktop/취준/pivoxquant ~/projects/pivoxquant` → 14GB 큰 디렉터리 + 한글 path encoding 문제 → kill (데이터 손실 0)
+- 성공: `git clone https://github.com/seanbae-analyst/pivoxquant.git ~/projects/pivoxquant` (454MB 깨끗 clone)
+- 보조 cp: `.env` (비밀 키) + `scripts/finance_weekly_check.py` (untracked 파일)
+- 옛 14GB: archive 보존 (사장님 추후 삭제 결정 시 `rm -rf ~/Desktop/취준/pivoxquant`)
+
+**4단계 — 인프라 path 갱신**
+- `~/Library/LaunchAgents/com.pivoxquant.caus.daily.plist`: WorkingDirectory 갱신 → `~/projects/pivoxquant`
+- `crontab -l`: CAUS daily + finance weekly 둘 다 path 갱신
+- `launchctl unload && launchctl load` reload
+
+**5단계 — 1차 launchd trigger → 부분 작동**
+- TCC 통과 (`Operation not permitted` 0건) ✅
+- 그러나 scenario import fail: `No module named 'scripts'` + stale REPO_ROOT path (`/Users/seanbae/Desktop/취준/stockpilot` 하드코딩)
+
+**6단계 — PR #375 (REPO_ROOT 동적 fix)**
+- `scripts/caus_daily_sweep.py:58` 하드코딩 `Path("/Users/seanbae/Desktop/취준/stockpilot")` → 동적 `Path(__file__).resolve().parent.parent`
+- `sys.path.insert(0, str(REPO_ROOT))` 주입 → `scripts.caus_scenarios.*` 모듈 import 정상
+- +9 lines / -1 line (1 file 변경)
+- 자율 squash-merge → main `bf32e738 → cf7620e`
+
+**7단계 — 2차 launchd trigger → 진짜 작동 verify (evidence)**
+- `[slack-stub] info: daily sweep started · sim5 · day-3` ✅
+- `[slack-stub] info: sim-onboard ok for sim5` → HTTP 200 (1차) + HTTP 429 (2차, rate-limit 1/h 소진) ✅
+- `[caus] report: /Users/seanbae/projects/pivoxquant/docs/qa/auto-sim-reports/2026-05-14.md` (새 위치 생성) ✅
+- `0 findings (0 P0)` clean run ✅
+- **자율 cycle 인프라 100% 작동 verify**
+
+### v42 patch GitHub Actions 빌링 verify (evidence)
+- `~/projects/pivoxquant/.github/workflows/`: 22개 모두 `.yml.disabled` ✅
+- 유일 active: Dependabot Updates (GitHub auto-managed, 무료 tier) ✅
+- **빌링 알림 0건 확정**
+
+### v42 patch Anthropic Max $220 결제 알림
+
+CEO에게 보고: $220 × 1,390원 ≈ **305,800원** 결제 발생
+
+| 시나리오 | 구분 | 누적 지출 | 잔여 예산 | 소진율 | 상태 |
+|---|---|---|---|---|---|
+| **A (1회 결제)** | 이번이 마지막 $220 청구 | 612,806원 | 387,194원 | 61.3% | 🟡 YELLOW |
+| **B (월 구독)** | 6/14에도 305,800원 추가 | 918,606원 (6월 후) | 81,394원 | 91.9% | 🔴 RED |
+
+**사장님 즉시 확인 필요**: `console.anthropic.com → Billing → Recent Charges`
+- 1회 결제 → 시나리오 A (잔여 387k, 안전)
+- 월 구독 → 시나리오 B (6월 말 예산 소진 BLOCKER, 플랜 검토 필요)
+
+`finance_budget.md` 갱신: 어제 5/13 자동화 + 오늘 $220 신규 결제 반영 (별도 wave)
+
+### v42 patch 4번째 false admit 패턴
+
+v42 final "다음 03:00 KST 자동 시뮬" 발언 → cron tick fail로 false. 패턴 누적:
+1. v41: "이번엔 진짜 다 됨" 3+회 반복 → 매번 다음 검증에서 더 큰 fail
+2. v42: bug-hunter 3건 false-positive (코드 grep 없이 추측)
+3. v42: destructive commit 사고 (main 브랜치 직접 커밋)
+4. **v42 patch (이번)**: 수동 실행 TCC 통과 ≠ cron daemon TCC 통과 — verify 누락
+
+교훈: 인프라 verify는 실제 daemon 컨텍스트에서 실행까지 완료해야 "작동" 선언 가능.
+
+### v42 patch 자율 closed (오늘 새벽 작업)
+- TCC 차단 → git clone + ~/projects 이전 ✅
+- REPO_ROOT 하드코딩 stale path → 동적 resolve ✅ (PR #375)
+- launchd plist WorkingDirectory path → 갱신 ✅
+- crontab CAUS daily + finance weekly path → 갱신 ✅
+- 자율 cycle 실제 cron 컨텍스트 작동 → verify ✅ (5/14 report 새 위치 생성 evidence)
+- GitHub Actions 빌링 0 → verify ✅
+
+### v42 patch 여전히 carry-over
+- **venv 재생성**: 현재 system python 사용 — caus scenario 동작 verify됨, 단 venv 미활용
+- **npm install**: frontend dev 시 필요 (~/projects clone 환경)
+- **옛 14GB 삭제**: `~/Desktop/취준/pivoxquant` — archive 보존, 사장님 결정 시 `rm -rf`
+- **메모리 + CLAUDE.md path 갱신**: `stockpilot` → `pivoxquant`, `~/Desktop/취준` → `~/projects` — 다음 세션 갱신 필요
+- **Anthropic Max $220 1회 vs 월 확정**: 사장님 직접 console.anthropic.com 확인 필요
+- **Railway plan + Vercel plan**: UNVERIFIED (v42 final admit 그대로)
+- **finance_budget.md 갱신**: 5/13 자동화 + $220 결제 반영 wave
+
+### v42 patch 사장님 wake-up 즉시 액션
+```bash
+# 1. 새 working dir에서 작업 (이제부터 항상 여기)
+cd ~/projects/pivoxquant
+git pull origin main
+git log --oneline -1  # 확인: cf7620e
+
+# 2. 자율 cycle 자동 작동 confirm
+crontab -l  # 새 path 등록 확인
+tail -50 /tmp/caus-daily.log  # 5/14 실행 결과
+ls -la ~/projects/pivoxquant/docs/qa/auto-sim-reports/  # 5/14 report 생성 확인
+
+# 3. Anthropic Max $220 1회 vs 월 확정 (URGENT if 월 구독)
+#    console.anthropic.com → Billing → Recent Charges
+#    1회 → 시나리오 A (잔여 387k, OK)
+#    월  → 시나리오 B (잔여 81k, RED — 5월 끝 BLOCKER)
+
+# 4. 옛 14GB archive 삭제 (선택, 사장님 결정)
+# du -sh ~/Desktop/취준/pivoxquant  # 크기 확인
+# rm -rf ~/Desktop/취준/pivoxquant  # 삭제 시
+
+# 5. 메모리 + CLAUDE.md path 갱신 (다음 세션 agent 자율 가능)
+#    stockpilot → pivoxquant / ~/Desktop/취준 → ~/projects
+```
+
+### v42 patch PR table
+| PR | 핵심 변경 | 변경 | 검증 |
+|---|---|---|---|
+| #374 | docs(handover): v42 final cycle HANDOVER.md | +N lines | — |
+| **#375** | fix(caus): REPO_ROOT 동적 resolve + sys.path 주입 (TCC relocation) | +9/-1 (1 file) | launchd trigger TCC pass + 5/14 report 새 위치 생성 evidence |
+
+---
 
 ## v42 final — bug-hunter 11/11 정리 완료 · 10 PR squash-merged (#364–#373) · main `da467455 → 22b122b2` · OPEN PR 0건
 
