@@ -22,7 +22,10 @@ import {
   Tooltip,
 } from "recharts";
 
-import type { Position } from "@/components/portfolio/types";
+// FINDING-021: callers pass the BACKEND position shape from
+// usePortfolioPositions() (snake_case: current_price / shares / sector),
+// not the camelCase `@/components/portfolio/types` Position.
+import type { Position } from "@/lib/types";
 
 interface SectorAllocationDonutProps {
   positions: Position[];
@@ -140,7 +143,8 @@ export function SectorAllocationDonut({
 
     const buckets = new Map<string, { value: number; count: number }>();
     for (const p of positions) {
-      const cur = p.current ?? 0;
+      // FINDING-021: backend field is `current_price`, not `current`.
+      const cur = p.current_price ?? 0;
       const mv = cur * (p.shares ?? 0);
       if (!Number.isFinite(mv) || mv <= 0) continue;
       const sector = (p.sector || "Unclassified").trim() || "Unclassified";

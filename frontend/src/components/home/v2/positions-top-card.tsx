@@ -20,7 +20,12 @@ import * as React from "react";
 import { HomeCard } from "./home-card";
 import { usePortfolioPositions } from "@/lib/hooks";
 import { pctColor, displayName, isKrTicker } from "@/lib/format";
-import type { Position } from "@/components/portfolio/types";
+// FINDING-021: the SWR payload from /api/portfolio carries the BACKEND
+// position shape (snake_case: ticker / avg_cost / current_price), NOT the
+// camelCase `@/components/portfolio/types` Position. Importing the wrong
+// type let `p.symbol` / `p.avgCost` / `p.current` typecheck while being
+// `undefined` at runtime → cur=0, avg=0, pnl=0. Use the real backend type.
+import type { Position } from "@/lib/types";
 
 interface PositionsShape {
   positions?: Position[];
@@ -63,24 +68,27 @@ export function PositionsTopCard() {
 
   const ranked: MiniRow[] = [...positions]
     .sort((a, b) => {
-      const av = (a.current ?? 0) * (a.shares ?? 0);
-      const bv = (b.current ?? 0) * (b.shares ?? 0);
+      const av = (a.current_price ?? 0) * (a.shares ?? 0);
+      const bv = (b.current_price ?? 0) * (b.shares ?? 0);
       return bv - av;
     })
     .slice(0, 5)
     .map((p) => {
-      const cur = p.current ?? 0;
-      const avg = p.avgCost ?? 0;
+      // FINDING-021: backend Position fields are snake_case. `current_price`
+      // and `avg_cost` (NOT `current` / `avgCost`) are the live values; the
+      // old camelCase access yielded undefined → cur=0, avg=0, pnl=0.
+      const cur = p.current_price ?? 0;
+      const avg = p.avg_cost ?? 0;
       const pnl = avg > 0 ? ((cur - avg) / avg) * 100 : 0;
       // Name-first (FINDING-011): backend name → static seed → raw ticker.
       // Currency from the ticker shape, not the (seed-leaky) p.currency.
       return {
-        id: p.id,
-        ticker: p.symbol,
-        name: displayName(p.symbol, p.name),
+        id: String(p.id),
+        ticker: p.ticker,
+        name: displayName(p.ticker, p.name),
         current: cur,
         pnlPct: pnl,
-        currency: (isKrTicker(p.symbol) ? "KRW" : "USD") as "USD" | "KRW",
+        currency: (isKrTicker(p.ticker) ? "KRW" : "USD") as "USD" | "KRW",
       };
     });
 

@@ -39,14 +39,22 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { liveRefresh, isMarketOpen } from "@/lib/market-hours";
 import { relativeTime } from "@/components/ui/price-with-timestamp";
 import { toast } from "sonner";
-import type { Position, Trade, TradeAction } from "@/components/portfolio/types";
+import {
+  toPosition,
+  type Position,
+  type BackendPositionRow,
+  type Trade,
+  type TradeAction,
+} from "@/components/portfolio/types";
 
 // FX_FALLBACK removed 2026-04-29 (was 1342, ~9% off live rate ~1478).
 // Use the live rate from /api/market/fx via useFxRate(); when both
 // sumData.fxRate and the live feed are unavailable we keep KRW positions
 // in their native unit rather than fabricate a USD equivalence.
 
-interface PositionsResponse { positions?: Position[]; }
+// FINDING-021: the SWR payload is the BACKEND snake_case shape — adapt it
+// to the camelCase `Position` the portfolio UI consumes (see toPosition).
+interface PositionsResponse { positions?: BackendPositionRow[]; }
 interface TradesResponse { trades?: Trade[]; }
 interface SummaryResponse {
   totalNav?: number;
@@ -138,9 +146,11 @@ export default function PortfolioPage() {
   // misrepresentation risk under 자본시장법, and a trust risk regardless.
   // Same policy as discover/page.tsx (see comment near MOCK_INDICES).
   // On error we render an empty state + an explicit retry banner below.
+  // FINDING-021: map the raw backend rows to the camelCase `Position`
+  // shape before any consumer touches `.current` / `.avgCost` / `.symbol`.
   const positions: Position[] = useMemo(() => {
     if (posErr) return [];
-    return posData?.positions ?? [];
+    return (posData?.positions ?? []).map(toPosition);
   }, [posData, posErr]);
 
   const trades: Trade[] = useMemo(() => {
