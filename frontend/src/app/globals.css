@@ -103,9 +103,12 @@
   --ring: #B8956A;
   --destructive: #dc2626;
 
-  /* Semantic — price direction (Korean convention default) */
-  --up: #dc2626;                    /* red-600 — rise */
-  --down: #2563eb;                  /* blue-600 — fall */
+  /* Semantic — price direction (Korean convention default).
+     v3 spec: muted carmine rise / muted indigo fall — sits inside the
+     Vantablack+bronze editorial palette (was Tailwind red-600/blue-600
+     which fought the bronze). Matches lib/format.ts PRICE_COLOR_HEX. */
+  --up: #D18888;                    /* KR carmine — rise */
+  --down: #7AA0C8;                  /* KR indigo — fall */
   --neutral: #64748b;               /* slate-500 */
 
   --success: #1a7a4c;
@@ -206,17 +209,25 @@
   --pq-font-mono: var(--font-mono);
   --pq-font-display: var(--font-display);
 
-  /* Type scale (8 steps + 3 fluid) — §3.3 grid: 12/14/15/18/24/32/48 */
-  --pq-text-eyebrow: 12px;
-  --pq-text-mono-sm: 12px;
+  /* Type scale (8 steps + 3 fluid) — §3.3 grid: 12/14/15/18/24/32/48.
+     eyebrow / mono-sm / body-sm matched to v3 spec (10.5 / 11 / 13) —
+     restores the calibrated editorial rhythm (eyebrow whispers below
+     caption, body-sm reads as a true small step under body). */
+  --pq-text-eyebrow: 10.5px;
+  --pq-text-mono-sm: 11px;
   --pq-text-caption: 12px;
-  --pq-text-body-sm: 14px;
+  --pq-text-body-sm: 13px;
   --pq-text-body: 14px;
   --pq-text-quote: 24px;
   --pq-text-h3: 32px;
   --pq-text-h2: clamp(1.875rem, 3.6vw, 2.75rem);
   --pq-text-h1: clamp(2.4rem, 5.6vw, 4.5rem);
   --pq-text-display: clamp(3rem, 7vw, 6rem);
+
+  /* Deck — standfirst / sub-hero lead paragraph (v3 spec: 17px).
+     Was referenced by spec but never defined in CSS, so any
+     var(--pq-text-deck) consumer silently fell back to inherited size. */
+  --pq-text-deck: 17px;
 
   /* Tokenized sub-12px sizes (PR #213/#214 follow-up F4).
      Replaces 18+ inline text-[9px..11px] sites in detail page.
@@ -292,6 +303,16 @@
   --pq-text-gauge: 44px;         /* risk-gauge numeric solo (between h3/hero-num) */
   --pq-text-hero-num: 48px;      /* hero stat numeric (settings/risk/year-end-letter) */
   --pq-text-pdf-micro: 6px;      /* PDF micro footnote (pdf-primitives print only) */
+
+  /* PWA safe-area insets — base definition so consumers can reference
+     var(--pq-safe-*) on every surface, not just standalone mode. In a
+     normal browser env(safe-area-inset-*) resolves to 0px (harmless);
+     the @media (display-mode: standalone) block below re-declares them
+     for installed-PWA notch / home-indicator handling. */
+  --pq-safe-top: env(safe-area-inset-top, 0px);
+  --pq-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --pq-safe-left: env(safe-area-inset-left, 0px);
+  --pq-safe-right: env(safe-area-inset-right, 0px);
 
   /* Tracking */
   --pq-track-eyebrow: 0.22em;
@@ -405,7 +426,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-background text-foreground;
+    /* The page floor IS the v3 Vantablack design system — not Tailwind
+       defaults (#fff / slate-900). Prevents white FOUC flashes on slow
+       networks and white-out on any surface missing a .bg-pq-ink wrapper
+       (error pages, embeds, PDF preview iframes). */
+    background: var(--pq-ink);
+    color: var(--pq-ivory);
     font-size: 15px;
     line-height: 1.55;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
