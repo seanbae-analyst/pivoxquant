@@ -55,7 +55,15 @@ from pathlib import Path
 
 # --- Constants ---------------------------------------------------------------
 
-REPO_ROOT = Path("/Users/seanbae/Desktop/취준/stockpilot")
+# 2026-05-14: REPO_ROOT was hardcoded to ~/Desktop/취준/stockpilot which broke
+# after the relocation to ~/projects/pivoxquant (TCC: ~/Desktop is protected
+# from launchd/cron daemons, see HANDOVER v42 final patch). Resolve from
+# __file__ so the script follows the repo wherever it lives. Also push
+# REPO_ROOT onto sys.path so `scripts.caus_scenarios.*` imports work when
+# invoked directly by launchd/cron.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 LOG_DIR = REPO_ROOT / "docs" / "qa" / "auto-sim-reports"
 SESSION_DIR = Path.home() / ".pivoxquant-sim" / "sessions"
 SLACK_WEBHOOK = os.environ.get("SLACK_WEBHOOK_URL", "") or os.environ.get(
