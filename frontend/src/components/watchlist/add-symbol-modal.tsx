@@ -258,7 +258,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               }}
             />
             <p
-              className="mt-1 text-[11px] font-serif"
+              className="mt-1 text-pq-mono-sm font-serif"
               style={{ color: "var(--pq-muted)" }}
             >
               Observations only — no targets, no recommendations.

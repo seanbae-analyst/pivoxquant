@@ -92,7 +92,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
         </div>
 
         {/* Description */}
-        <p className="mb-5 text-[12px] leading-relaxed text-[rgba(245,240,232,0.65)]">
+        <p className="mb-5 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.65)]">
           Enter your KIS API credentials to link your brokerage account. This is
           read-only — we observe holdings and transactions without trading.
         </p>
@@ -102,7 +102,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           href="https://apiportal.koreainvestment.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-5 inline-flex items-center gap-1.5 text-[11px] tracking-[0.15em] uppercase text-[var(--pq-bronze)] hover:opacity-80 transition-opacity"
+          className="mb-5 inline-flex items-center gap-1.5 text-pq-mono-sm tracking-[0.15em] uppercase text-[var(--pq-bronze)] hover:opacity-80 transition-opacity"
         >
           <ExternalLink className="h-3 w-3" />
           KIS OpenAPI portal
@@ -207,7 +207,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           </div>
 
           {errorMsg && (
-            <p id="kis-error" role="alert" className="text-[11px] text-[#d18888] leading-relaxed">
+            <p id="kis-error" role="alert" className="text-pq-mono-sm text-[#d18888] leading-relaxed">
               {errorMsg}
             </p>
           )}
@@ -239,7 +239,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <span>How to issue KIS API credentials</span>
             <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>
           </summary>
-          <ol className="mt-4 space-y-3 text-[12px] leading-relaxed text-[rgba(245,240,232,0.7)]">
+          <ol className="mt-4 space-y-3 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.7)]">
             <li>
               <span className="text-[var(--pq-bronze)] font-serif mr-2">I.</span>
               Visit the KIS OpenAPI portal (apiportal.koreainvestment.com) and sign in with your brokerage account.
@@ -252,7 +252,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <li>
               <span className="text-[var(--pq-bronze)] font-serif mr-2">III.</span>
               Copy your 8-digit account number in the format{" "}
-              <code className="font-mono text-[var(--pq-ivory)] text-[11px] tabular-nums">12345678-01</code>.
+              <code className="font-mono text-[var(--pq-ivory)] text-pq-mono-sm tabular-nums">12345678-01</code>.
             </li>
             <li>
               <span className="text-[var(--pq-bronze)] font-serif mr-2">IV.</span>

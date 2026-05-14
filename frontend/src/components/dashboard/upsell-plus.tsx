@@ -90,13 +90,13 @@ export function UpsellPlus() {
 
         <div className="flex-1 min-w-0">
           <div
-            className="font-mono uppercase text-[12px] tracking-[0.26em]"
+            className="font-mono uppercase text-pq-caption tracking-[0.26em]"
             style={{ color: "var(--pq-bronze)" }}
           >
             Living CFO · Layer 4 · Closed Beta
           </div>
           <p
-            className="mt-1 font-serif text-[15px] leading-snug"
+            className="mt-1 font-serif text-pq-lead leading-snug"
             style={{ color: "var(--pq-ivory)", letterSpacing: "-0.005em" }}
           >
             Personal Journal Companion is rolling out to Premium Plus.
@@ -127,7 +127,7 @@ export function UpsellPlus() {
               />
             </div>
             <span
-              className="font-mono tabular-nums text-[11px]"
+              className="font-mono tabular-nums text-pq-mono-sm"
               style={{ color: "rgba(245,240,232,0.72)" }}
             >
               {FOUNDING_REMAINING} of {FOUNDING_TOTAL} remaining

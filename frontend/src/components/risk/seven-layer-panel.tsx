@@ -153,7 +153,7 @@ export function SevenLayerPanel({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <StatusDot status={layer.status} />
-                <h3 className="font-serif font-bold text-[15px] text-slate-900">
+                <h3 className="font-serif font-bold text-pq-lead text-slate-900">
                   {layer.name}
                 </h3>
               </div>

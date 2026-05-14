@@ -256,7 +256,7 @@ function PulseForm({
                 key={t}
                 type="button"
                 onClick={() => toggleTopic(t)}
-                className="text-[11px] px-2.5 py-1 rounded-[2px] border transition-colors"
+                className="text-pq-mono-sm px-2.5 py-1 rounded-[2px] border transition-colors"
                 style={{
                   borderColor: active
                     ? "var(--pq-bronze)"
@@ -327,7 +327,7 @@ function LikertRow({
               onClick={() => onChange(n)}
               aria-label={`${label} — ${n} of 5`}
               aria-pressed={active}
-              className="flex-1 h-9 rounded-[2px] border font-mono text-[13px] transition-colors"
+              className="flex-1 h-9 rounded-[2px] border font-mono text-pq-body-sm transition-colors"
               style={{
                 borderColor: active
                   ? "var(--pq-bronze)"
@@ -392,7 +392,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
         {path(moodValues, "#B8956A")}
         {path(confValues, "#7db487")}
       </svg>
-      <div className="mt-2 flex gap-4 text-[12px]">
+      <div className="mt-2 flex gap-4 text-pq-caption">
         <span className="flex items-center gap-1.5" style={{ color: "rgba(245,240,232,0.7)" }}>
           <span
             aria-hidden

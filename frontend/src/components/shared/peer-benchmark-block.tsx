@@ -244,7 +244,7 @@ export function PeerBenchmarkBlock({
             {s.most_held_sectors.slice(0, 5).map((sec) => (
               <li
                 key={sec.sector}
-                className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px]"
+                className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-pq-mono-sm"
                 style={{
                   background: "rgba(184,149,106,0.08)",
                   border: "0.5px solid rgba(184,149,106,0.25)",

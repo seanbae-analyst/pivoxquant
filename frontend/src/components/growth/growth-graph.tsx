@@ -230,7 +230,7 @@ export function GrowthGraph({ data, onDayClick }: GrowthGraphProps) {
       )}
 
       {/* Legend */}
-      <div className="mt-2 flex items-center justify-end gap-1 font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
+      <div className="mt-2 flex items-center justify-end gap-1 font-mono text-pq-mono-sm uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
         <span>Less</span>
         {[0, 20, 40, 60, 80].map((level) => (
           <div

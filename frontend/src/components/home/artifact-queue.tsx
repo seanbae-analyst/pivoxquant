@@ -199,13 +199,13 @@ export function ArtifactQueue() {
       <header className="flex items-baseline justify-between gap-3 mb-2">
         <div>
           <div
-            className="font-mono uppercase text-[12px] tracking-[0.26em]"
+            className="font-mono uppercase text-pq-caption tracking-[0.26em]"
             style={{ color: "var(--pq-bronze)" }}
           >
             Today · Artifact Queue
           </div>
           <h3
-            className="mt-1 font-serif text-[17px]"
+            className="mt-1 font-serif text-pq-deck"
             style={{ color: "var(--pq-ivory)" }}
           >
             The four things your CFO is producing
@@ -259,14 +259,14 @@ function ArtifactRow({ row }: { row: QueueRow }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span
-              className="font-mono uppercase text-[12px] tracking-[0.24em]"
+              className="font-mono uppercase text-pq-caption tracking-[0.24em]"
               style={{ color: "var(--pq-bronze)" }}
             >
               {label}
             </span>
             {state && (
               <span
-                className="font-mono uppercase text-[9px] tracking-[0.22em] px-1.5 py-[1px] rounded-[2px]"
+                className="font-mono uppercase text-pq-kicker tracking-[0.22em] px-1.5 py-[1px] rounded-[2px]"
                 style={{
                   color: stateColor,
                   background: "rgba(245,240,232,0.03)",
@@ -285,13 +285,13 @@ function ArtifactRow({ row }: { row: QueueRow }) {
             )}
           </div>
           <div
-            className="mt-0.5 font-serif text-[14px] leading-tight truncate"
+            className="mt-0.5 font-serif text-pq-body leading-tight truncate"
             style={{ color: "var(--pq-ivory)" }}
           >
             {title}
           </div>
           <div
-            className="mt-0.5 text-[12px]"
+            className="mt-0.5 text-pq-caption"
             style={{ color: "rgba(245,240,232,0.55)" }}
           >
             {meta}
@@ -299,7 +299,7 @@ function ArtifactRow({ row }: { row: QueueRow }) {
         </div>
 
         <span
-          className="shrink-0 inline-flex items-center gap-1 font-mono uppercase text-[9px] tracking-[0.22em] opacity-0 group-hover:opacity-100 transition-opacity"
+          className="shrink-0 inline-flex items-center gap-1 font-mono uppercase text-pq-kicker tracking-[0.22em] opacity-0 group-hover:opacity-100 transition-opacity"
           style={{ color: "var(--pq-bronze)" }}
         >
           open

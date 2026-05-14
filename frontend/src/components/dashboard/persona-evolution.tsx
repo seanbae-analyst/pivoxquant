@@ -78,13 +78,13 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
       <header className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div
-            className="font-mono uppercase text-[12px] tracking-[0.26em]"
+            className="font-mono uppercase text-pq-caption tracking-[0.26em]"
             style={{ color: bare ? "var(--pq-bronze)" : "#B8956A" }}
           >
             Persona Evolution · 12 weeks
           </div>
           <h3
-            className="mt-1 font-serif text-[18px]"
+            className="mt-1 font-serif text-pq-h5"
             style={{ color: bare ? "var(--pq-ivory)" : "#1a1612" }}
           >
             How your {declaredLabel.toLowerCase()} has drifted
@@ -92,7 +92,7 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
         </div>
         {hasDrift && (
           <span
-            className="inline-flex items-center gap-1 font-mono uppercase text-[12px] tracking-[0.22em] px-2 py-1 rounded-[2px]"
+            className="inline-flex items-center gap-1 font-mono uppercase text-pq-caption tracking-[0.22em] px-2 py-1 rounded-[2px]"
             style={{
               color: "#a35b3b",
               background: bare ? "rgba(163,91,59,0.10)" : "rgba(163,91,59,0.12)",
@@ -130,7 +130,7 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
 
       {/* Legend */}
       <div
-        className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]"
+        className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-pq-caption"
         style={{ color: bare ? "rgba(245,240,232,0.55)" : "rgba(26,22,18,0.55)" }}
       >
         <span className="inline-flex items-center gap-1.5">
@@ -186,7 +186,7 @@ function EvolutionChart({
   if (points.length === 0) {
     return (
       <p
-        className="font-serif text-[13px]"
+        className="font-serif text-pq-body-sm"
         style={{ color: bare ? "rgba(245,240,232,0.5)" : "rgba(26,22,18,0.55)" }}
       >
         Your evolution chart fills in as weekly snapshots accumulate.
@@ -333,7 +333,7 @@ function EvolutionChart({
 
       {/* X-axis sparse labels — first/middle/last */}
       <div
-        className="mt-2 flex justify-between font-mono text-[12px] uppercase tracking-[0.2em] tabular-nums"
+        className="mt-2 flex justify-between font-mono text-pq-caption uppercase tracking-[0.2em] tabular-nums"
         style={{ color: labelColor }}
       >
         <span>{points[0]?.week.slice(5) ?? ""}</span>
@@ -384,7 +384,7 @@ function HoverCard({
       }}
     >
       <div
-        className="font-mono uppercase text-[12px] tracking-[0.22em]"
+        className="font-mono uppercase text-pq-caption tracking-[0.22em]"
         style={{ color: "var(--pq-bronze, #B8956A)" }}
       >
         Week of {weekIso}
@@ -394,18 +394,18 @@ function HoverCard({
         {drifted && (
           <span
             style={{ marginLeft: 8, color: "#d68965" }}
-            className="text-[11px]"
+            className="text-pq-mono-sm"
           >
             · drift flagged
           </span>
         )}
       </div>
       {pulse ? (
-        <div className="mt-1 text-[12px]" style={{ opacity: 0.85 }}>
+        <div className="mt-1 text-pq-caption" style={{ opacity: 0.85 }}>
           Pulse · mood {pulse.mood}/5 · confidence {pulse.confidence}/5
         </div>
       ) : (
-        <div className="mt-1 text-[12px]" style={{ opacity: 0.65 }}>
+        <div className="mt-1 text-pq-caption" style={{ opacity: 0.65 }}>
           No pulse submitted this week
         </div>
       )}

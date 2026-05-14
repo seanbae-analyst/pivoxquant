@@ -42,7 +42,7 @@ export function StreakCounter({ streak }: StreakCounterProps) {
           {streak}
           <span className="ml-1 text-sm font-normal text-[rgba(245,240,232,0.55)]">days</span>
         </p>
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+        <p className="font-mono text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           Current streak
         </p>
       </div>

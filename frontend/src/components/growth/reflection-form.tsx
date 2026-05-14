@@ -85,7 +85,7 @@ export function ReflectionForm({ reflection, onSubmitted }: ReflectionFormProps)
           <div key={i} className="space-y-2">
             <label
               htmlFor={fieldId}
-              className="block font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]"
+              className="block font-mono text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)]"
             >
               Q{i + 1}. <span className="font-serif normal-case tracking-normal text-[rgba(245,240,232,0.82)]">{question}</span>
             </label>
@@ -104,7 +104,7 @@ export function ReflectionForm({ reflection, onSubmitted }: ReflectionFormProps)
 
       {/* Mood selector */}
       <div className="space-y-2">
-        <label className="block font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+        <label className="block font-mono text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           오늘 기분 (1-5)
         </label>
         <div className="flex gap-2">

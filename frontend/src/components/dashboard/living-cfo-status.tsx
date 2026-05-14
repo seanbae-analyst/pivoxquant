@@ -164,7 +164,7 @@ export function LivingCFOStatusBar() {
         aria-label="Living CFO status — click for details"
       >
         <span
-          className="uppercase text-[12px] tracking-[0.26em]"
+          className="uppercase text-pq-caption tracking-[0.26em]"
           style={{ color: "var(--pq-bronze)" }}
         >
           Living CFO
@@ -238,7 +238,7 @@ function LayerDot({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] px-1 py-0.5 rounded-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
+      className="flex items-center gap-1.5 text-pq-caption uppercase tracking-[0.22em] px-1 py-0.5 rounded-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
       style={{ color, background: "transparent" }}
       title={layer.summary}
       aria-label={`Layer ${layer.id} ${layer.name} — ${layer.state}`}
@@ -338,7 +338,7 @@ function StatusModal({
           </button>
         </div>
 
-        <p className="font-serif text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">
+        <p className="font-serif text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed">
           Two years in, this dashboard knows your style better than you do.
           It learns from every position you own and every pulse you submit.
         </p>
@@ -393,7 +393,7 @@ function StatusModal({
                     <Link
                       href={l.cta.href}
                       onClick={onClose}
-                      className="mt-2 inline-flex items-center gap-1 text-[12px] uppercase tracking-[0.22em]"
+                      className="mt-2 inline-flex items-center gap-1 text-pq-caption uppercase tracking-[0.22em]"
                       style={{ color: "var(--pq-bronze)" }}
                     >
                       {l.cta.label}
@@ -406,7 +406,7 @@ function StatusModal({
           })}
         </ul>
 
-        <p className="mt-5 text-[12px] text-[rgba(245,240,232,0.4)]">
+        <p className="mt-5 text-pq-caption text-[rgba(245,240,232,0.4)]">
           Observational only. Not investment advice.
         </p>
       </motion.div>

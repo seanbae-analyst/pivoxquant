@@ -98,7 +98,7 @@ export function SectionFeedbackBar({
       aria-label="Section feedback"
     >
       <span
-        className="text-[12px] uppercase tracking-[0.22em]"
+        className="text-pq-caption uppercase tracking-[0.22em]"
         style={{ color: "var(--pq-bronze)" }}
       >
         {vote ? "Recorded" : "Helpful?"}
@@ -134,7 +134,7 @@ export function SectionFeedbackBar({
             >
               <span aria-hidden>{b.glyph}</span>
               <span
-                className="hidden sm:inline text-[12px] uppercase tracking-[0.18em]"
+                className="hidden sm:inline text-pq-caption uppercase tracking-[0.18em]"
               >
                 {b.label}
               </span>

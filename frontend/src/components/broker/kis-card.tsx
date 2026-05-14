@@ -62,7 +62,7 @@ export function KisCard({
       </div>
 
       {/* Description */}
-      <p className="mb-5 text-[12px] leading-relaxed text-[rgba(245,240,232,0.6)]">
+      <p className="mb-5 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.6)]">
         Read-only account integration. Observes holdings, transactions, and
         balances. Order execution is disabled — informational only.
       </p>
@@ -121,7 +121,7 @@ export function KisCard({
           <span>How to issue KIS API credentials</span>
           <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>
         </summary>
-        <ol className="mt-4 space-y-3 text-[12px] leading-relaxed text-[rgba(245,240,232,0.7)]">
+        <ol className="mt-4 space-y-3 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.7)]">
           <li>
             <span className="text-[var(--pq-bronze)] font-serif mr-2">I.</span>
             Visit the KIS OpenAPI portal (
@@ -143,7 +143,7 @@ export function KisCard({
           <li>
             <span className="text-[var(--pq-bronze)] font-serif mr-2">III.</span>
             Copy your 8-digit account number in the format{" "}
-            <code className="font-mono text-[var(--pq-ivory)] text-[11px] tabular-nums">12345678-01</code>.
+            <code className="font-mono text-[var(--pq-ivory)] text-pq-mono-sm tabular-nums">12345678-01</code>.
           </li>
           <li>
             <span className="text-[var(--pq-bronze)] font-serif mr-2">IV.</span>

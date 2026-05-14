@@ -71,7 +71,7 @@ export function AlpacaCard({
       </div>
 
       {/* Description */}
-      <p className="mb-5 text-[12px] leading-relaxed text-[rgba(245,240,232,0.6)]">
+      <p className="mb-5 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.6)]">
         US equity paper trading integration. Observes holdings, historical
         trades, and allows paper order logging. Real-money trading is
         disabled in this release.
@@ -145,7 +145,7 @@ export function AlpacaCard({
             ↓
           </span>
         </summary>
-        <ol className="mt-4 space-y-3 text-[12px] leading-relaxed text-[rgba(245,240,232,0.7)]">
+        <ol className="mt-4 space-y-3 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.7)]">
           <li>
             <span className="text-[var(--pq-bronze)] font-serif mr-2">
               I.

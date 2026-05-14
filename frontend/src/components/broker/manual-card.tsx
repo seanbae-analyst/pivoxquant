@@ -22,7 +22,7 @@ export function ManualCard({ onSelect }: { onSelect: () => void }) {
           <h3 className="font-serif text-lg text-[var(--pq-ivory)]">
             {t("brokerOnboarding.manual.title")}
           </h3>
-          <p className="mt-1 text-[11px] text-[rgba(245,240,232,0.5)]">
+          <p className="mt-1 text-pq-mono-sm text-[rgba(245,240,232,0.5)]">
             {t("brokerOnboarding.manual.subtitle")}
           </p>
         </div>
@@ -32,7 +32,7 @@ export function ManualCard({ onSelect }: { onSelect: () => void }) {
         </span>
       </div>
 
-      <p className="text-[12px] leading-relaxed text-[rgba(245,240,232,0.6)]">
+      <p className="text-pq-caption leading-relaxed text-[rgba(245,240,232,0.6)]">
         {t("brokerOnboarding.manual.description")}
       </p>
 
