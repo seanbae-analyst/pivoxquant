@@ -38,7 +38,7 @@
 ### FINDING-GATE-001 · 베타 게이트 form method="get" (JS 비활성 시 비번 URL 노출)
 - **Page:** `/beta-gate`
 - **증거:** `<form action="..." method="get">` + React `onSubmit` 핸들러. 정상 JS 환경은 안전하나 JS 비활성 시 `?password=XXXX`가 URL/히스토리/액세스로그에 남음.
-- **왜:** `pivoxaudit` 이전 비번 GitHub 노출 전례. defense-in-depth.
+- **왜:** 직전 베타 비번이 GitHub에 노출돼 폐기된 전례 있음 (MEMORY.md 참조). defense-in-depth.
 - **수정:** form `method="post"` 설정. JS는 그대로 onSubmit intercept.
 
 ### FINDING-GATE-002 · 루트 URL `/` 베타 게이트 우회 가능 — **CEO 결정 필요**
