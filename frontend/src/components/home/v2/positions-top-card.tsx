@@ -19,13 +19,17 @@
 import * as React from "react";
 import { HomeCard } from "./home-card";
 import { usePortfolioPositions } from "@/lib/hooks";
-import { pctColor } from "@/lib/format";
+import { pctColor, displayName, isKrTicker } from "@/lib/format";
 import type { Position } from "@/components/portfolio/types";
 
 interface PositionsShape {
   positions?: Position[];
 }
 
+// Currency is derived from the TICKER, not the position.currency field —
+// audit FINDING-021: a KOSPI holding (005930) was rendered with a "$" prefix
+// because position.currency leaked "USD" from seed data. The ticker shape is
+// the trustworthy signal: a 6-digit / .KS|.KQ symbol is always KRW-quoted.
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   if (n == null || !Number.isFinite(n)) return "—";
   const abs = Math.abs(n);
@@ -68,13 +72,15 @@ export function PositionsTopCard() {
       const cur = p.current ?? 0;
       const avg = p.avgCost ?? 0;
       const pnl = avg > 0 ? ((cur - avg) / avg) * 100 : 0;
+      // Name-first (FINDING-011): backend name → static seed → raw ticker.
+      // Currency from the ticker shape, not the (seed-leaky) p.currency.
       return {
         id: p.id,
         ticker: p.symbol,
-        name: p.name || p.symbol,
+        name: displayName(p.symbol, p.name),
         current: cur,
         pnlPct: pnl,
-        currency: (p.currency as "USD" | "KRW") ?? "USD",
+        currency: (isKrTicker(p.symbol) ? "KRW" : "USD") as "USD" | "KRW",
       };
     });
 

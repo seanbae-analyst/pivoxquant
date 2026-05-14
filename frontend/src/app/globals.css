@@ -329,6 +329,15 @@
      is the same hue, semantically distinct from `up/down` price colors. */
   --pq-error: #d18888;
 
+  /* Signal posture tokens — §7 three-color system (audit FINDING-019).
+     POSITIVE is NOT "up/green/red" — it means a layer evaluated and passed,
+     so it reads neutral-bronze (calm, not alarming). NEGATIVE reuses the
+     carmine --pq-error (the only alarm hue). NEUTRAL / PENDING is muted ivory.
+     Frontend never invents a posture — it only colors what the backend authored. */
+  --pq-positive: #b8956a;   /* bronze — evaluated & passing (calm, not "green") */
+  --pq-negative: #d18888;   /* carmine — evaluated & breached (the alarm hue) */
+  --pq-neutral:  rgba(245, 240, 232, 0.55);  /* muted ivory — pending / observing */
+
   /* ── Motion Tokens (motion-spec skill SoT) ──────────────────────────────
      Added 2026-05-06 per .claude/skills/motion-spec/SKILL.md §2-A~2-C.
      Single source of truth for duration / easing / distance.

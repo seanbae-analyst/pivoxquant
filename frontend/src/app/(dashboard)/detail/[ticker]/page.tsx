@@ -22,7 +22,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { API, WATCHLIST, WATCHLIST_ITEM } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { fmtUsd, fmtKrw, fmtPct, pctColorClass } from "@/lib/format";
+import { fmtUsd, fmtKrw, fmtPct, pctColorClass, tickerToName } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
 import { Skeleton } from "@/components/ui/loading-skeleton";
@@ -199,6 +199,19 @@ function fmtMcap(value: number | null | undefined, krw: boolean): string {
   if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
   return `$${value.toLocaleString()}`;
+}
+
+/**
+ * Split a formatted market cap into { number, suffix } so the unit modifier
+ * (조 / 억 / T / B / M) can render visually subordinate to the digits
+ * (audit FINDING-035). The suffix is the trailing run of non-digit, non-dot,
+ * non-comma characters; "$" prefixes stay with the number.
+ */
+function splitMcap(formatted: string): { num: string; suffix: string } {
+  if (formatted === "—") return { num: "—", suffix: "" };
+  const m = formatted.match(/^([$]?[\d.,]+)([^\d.,]*)$/);
+  if (!m) return { num: formatted, suffix: "" };
+  return { num: m[1], suffix: m[2] };
 }
 
 function pillarToken(label: string): "POSITIVE" | "NEGATIVE" | "NEUTRAL" {
@@ -421,7 +434,13 @@ function AccessDeniedScreen({
         분석은 보유/관심 종목 한정입니다.
       </p>
       <p className="mt-3 text-[13px] leading-relaxed text-[var(--pq-ivory-mid)]">
-        <span className="font-mono tabular-nums text-[var(--pq-bronze)]">{ticker}</span>
+        {/* Name-first (FINDING-026): "Apple (AAPL)" not a naked code. */}
+        <span className="text-[var(--pq-bronze)]">
+          {(() => {
+            const nm = tickerToName(ticker);
+            return nm ? `${nm} (${ticker})` : ticker;
+          })()}
+        </span>
         {" "}분석은 관심종목 또는 보유 포지션으로 등록한 후 이용 가능합니다.
         한 번 추가하면 즉시 분석을 볼 수 있습니다.
       </p>
@@ -831,23 +850,49 @@ export default function StockDetailPage() {
                 <p className="mt-2 font-mono tabular-nums text-[13px] text-[var(--pq-ivory-mid)] leading-snug">
                   {ticker}
                 </p>
+                {/* Chips (FINDING-027): sector and industry were 3 separate
+                    redundant chips (TECHNOLOGY · KRW · KOSPI · CONSUMER
+                    ELECTRONICS). Render sector › industry as ONE hierarchical
+                    chip; the listing/currency stays its own chip. */}
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
-                  <span className="pq-sent-chip pq-sent-chip--neu">
-                    {sectorLine}
-                  </span>
+                  {(() => {
+                    const sec =
+                      sectorLine && sectorLine !== "—" ? sectorLine : "";
+                    const ind = (signal?.snapshot?.industry || "").trim();
+                    const taxon =
+                      sec && ind && ind.toUpperCase() !== sec.toUpperCase()
+                        ? `${sec} › ${ind}`
+                        : sec || ind;
+                    return taxon ? (
+                      <span className="pq-sent-chip pq-sent-chip--neu">
+                        {taxon}
+                      </span>
+                    ) : null;
+                  })()}
                   <span className="pq-sent-chip pq-sent-chip--neu">
                     {krw ? "KRW · KOSPI" : "USD · US Listed"}
                   </span>
-                  {signal?.snapshot?.industry && (
-                    <span className="pq-sent-chip pq-sent-chip--neu">
-                      {signal.snapshot.industry}
-                    </span>
-                  )}
                 </div>
                 <div className="mt-4">
                   <FieldLabel tone="muted">Market cap</FieldLabel>
+                  {/* FINDING-035: unit suffix (조/억/T/B) subordinate to digits. */}
                   <div className="pq-ink-num mt-1 text-[18px]">
-                    {fmtMcap(mcap, krw)}
+                    {(() => {
+                      const { num, suffix } = splitMcap(fmtMcap(mcap, krw));
+                      return (
+                        <>
+                          <span className="tabular-nums">{num}</span>
+                          {suffix && (
+                            <span
+                              className="ml-0.5 text-[13px] align-baseline text-[var(--pq-muted)]"
+                              style={{ fontWeight: 400 }}
+                            >
+                              {suffix}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

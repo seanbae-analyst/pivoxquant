@@ -90,6 +90,7 @@ export function PriceWithTimestamp({
   const priceStr = formatPrice(price, currency);
   const rel = relativeTime(observedAt, now);
   const obsMs = observedAt ? new Date(observedAt).getTime() : 0;
+  const hasObservation = !!observedAt && Number.isFinite(obsMs);
   const isStale = !observedAt || now - obsMs > staleThresholdMs;
   const isLive = rel === "live";
 
@@ -107,7 +108,18 @@ export function PriceWithTimestamp({
       >
         {priceStr}
       </span>
-      {showTimestamp && (
+      {/* FINDING-037: with no observedAt the chip used to render a pulsing
+          dot + bare "—" ("· —") whose meaning was undefined to the user.
+          Render an explicit "OBSERVATION PENDING" label instead — no dot. */}
+      {showTimestamp && !hasObservation && (
+        <span
+          className="font-mono text-[11px] uppercase tracking-[0.16em]"
+          style={{ color: "rgba(245,240,232,0.45)" }}
+        >
+          Observation pending
+        </span>
+      )}
+      {showTimestamp && hasObservation && (
         <span className="inline-flex items-center gap-1 font-mono text-[12px] uppercase tracking-[0.16em]">
           {isStale ? (
             <span

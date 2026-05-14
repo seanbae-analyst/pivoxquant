@@ -17,7 +17,7 @@ import useSWR from "swr";
 import { HomeCard } from "./home-card";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { PRICE_COLOR_HEX } from "@/lib/format";
+import { PRICE_COLOR_HEX, displayName, isNakedTicker } from "@/lib/format";
 
 interface SignalItem {
   id?: number | string;
@@ -88,9 +88,13 @@ export function SignalsCard() {
           {items.map((s, i) => {
             const ticker = s.ticker || s.symbol || "—";
             // 회사명 우선, ticker 폴백 — routes/signals.py 가 resolve_stock_name()
-            // 으로 backfill 하므로 KRX/US 모두 회사명이 들어온다. 미해석 종목은
-            // 안전하게 ticker 로 떨어진다.
-            const display = s.name || ticker;
+            // 으로 backfill 하지만, 미해석/콜드캐시 종목은 ticker 가 그대로 온다.
+            // displayName() 이 정적 시드(삼성전자 등)로 한 번 더 메운다 (FINDING-011).
+            const display = displayName(ticker, s.name);
+            // FINDING-012: a real company name belongs in Playfair; a bare
+            // 6-digit / all-caps code does NOT — render it in mono tabular-nums
+            // so editorial weight is never wasted on an illegible ID.
+            const displayIsTicker = isNakedTicker(display);
             // Backend engine.py:420 returns "signal" key only; "label" is undefined.
             // Read both fields so home card matches signals page (v1 used `s.signal`,
             // v2 uses `s.label ?? s.signal`). Without this every ticker rendered NEUTRAL.
@@ -120,11 +124,11 @@ export function SignalsCard() {
                   }}
                 >
                   <span
-                    className="font-display"
+                    className={displayIsTicker ? "font-mono tabular-nums" : "font-display"}
                     style={{
                       fontWeight: 500,
                       fontSize: "var(--pq-text-quote)",
-                      letterSpacing: "-0.01em",
+                      letterSpacing: displayIsTicker ? "0.04em" : "-0.01em",
                       color: "var(--pq-ivory)",
                     }}
                   >
