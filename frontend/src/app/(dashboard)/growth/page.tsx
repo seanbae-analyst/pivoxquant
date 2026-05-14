@@ -151,7 +151,6 @@ function DayDetail({ date, onClose }: DayDetailProps) {
 export default function GrowthPage() {
   const {
     data: graphData,
-    isLoading: graphLoading,
     error: graphError,
   } = useGrowthData("365d");
   const {
@@ -421,13 +420,22 @@ export default function GrowthPage() {
             Past 365 days. Click a day for details.
           </p>
           <div className="mt-4">
-            {graphLoading ? (
+            {/* Bug #8 (2026-05-14): useGrowthData carries fallbackData: [] so
+                `graphData` is ALWAYS defined — but SWR keeps `isLoading` true
+                for the whole in-flight window, and on a hung/never-settling
+                request the section stuck on "Loading..." forever. Gate on the
+                actual data identity instead: show the spinner only while
+                `graphData` is genuinely undefined (it never is here, but the
+                guard is honest), otherwise render the graph. An empty array
+                is a valid "no entries yet" state — GrowthGraph already paints
+                the empty heatmap, so a new account sees the grid, not a spin. */}
+            {graphData === undefined ? (
               <div className="flex h-32 items-center justify-center">
                 <p className="text-sm text-[rgba(245,240,232,0.55)]">Loading...</p>
               </div>
             ) : (
               <GrowthGraph
-                data={graphData ?? []}
+                data={graphData}
                 onDayClick={handleDayClick}
               />
             )}
@@ -443,12 +451,16 @@ export default function GrowthPage() {
             Activity vs reflection over the last 4 weeks.
           </p>
           <div className="mt-4">
-            {graphLoading ? (
+            {/* Bug #8 (2026-05-14): same fix as Growth Graph above — gate on
+                `graphData === undefined` rather than SWR `isLoading`, so a
+                hung request can't strand this section on "Loading...". An
+                empty array renders the chart's own empty state. */}
+            {graphData === undefined ? (
               <div className="flex h-40 items-center justify-center">
                 <p className="text-sm text-[rgba(245,240,232,0.55)]">Loading...</p>
               </div>
             ) : (
-              <WeeklyTrendChart data={graphData ?? []} />
+              <WeeklyTrendChart data={graphData} />
             )}
           </div>
         </section>
