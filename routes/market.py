@@ -1007,18 +1007,14 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     }
 
 
-@market_bp.route("/market/indices")
-@api_auth
-@legal_scrub_response
-def market_indices():
-    """Headline indices for the ``/market`` tab.
+def _compute_indices_snapshot(region: str) -> list[dict]:
+    """Live-fetch the headline index snapshot list for ``region``.
 
-    Query params:
-        region: "us" (default) or "kr"
-
-    Response: list of index snapshots with
-        ticker, name, level, change_1d_pct, range_52w:[lo,hi],
-        sparkline_30d:[...], observed_at, is_stale
+    Extracted from ``market_indices`` so the same upstream-fetch path can
+    be reused by the background cache-warm scheduler job (see
+    ``warm_indices_cache``). Performs live upstream calls — callers that
+    must stay cache-only (e.g. the public landing snapshot) MUST NOT call
+    this directly.
 
     Sources:
         - US: Alpaca ETF proxies (SPY/QQQ/DIA/IWM/VIXY) — FMP refuses
@@ -1026,21 +1022,10 @@ def market_indices():
         - KR: KIS index API for KOSPI/KOSDAQ (codes 0001/1001) and
           KOSPI200/KOSDAQ150 (codes 2001/2203); fx_service / macro for USD/KRW.
         - Partial failure: skip the failing ticker. Never mock.
+
+    Returns the list of index snapshots (may be empty on total upstream
+    failure). Does NOT touch ``_indices_cache`` — see ``warm_indices_cache``.
     """
-    region = (request.args.get("region") or "us").lower()
-    if region not in ("us", "kr"):
-        region = "us"
-
-    # Cache-key version bump: the v1 key may contain an empty-array payload
-    # produced by the regressed ``ama.get_quote``-only snapshot (commit
-    # 80c7d26). Versioning the key guarantees we bypass any poisoned entry
-    # instead of waiting for the TTL to expire.
-    cache_key = f"{region}_v2"
-    entry = _indices_cache.get(cache_key)
-    now = _time.time()
-    if entry and now - entry["ts"] < _indices_ttl():
-        return jsonify(entry["data"])
-
     out: list[dict] = []
 
     if region == "us":
@@ -1148,13 +1133,78 @@ def market_indices():
                 "is_stale":      fx_is_stale,
             })
 
-    # Only cache successful responses. Caching a thin failure for 30s locks
-    # users into mock-looking data for the whole cache window — better to
-    # re-try upstream on every request until it succeeds.
+    return out
+
+
+def warm_indices_cache(region: str, *, force: bool = False) -> int:
+    """Refresh ``_indices_cache[region+"_v2"]`` via a live upstream fetch.
+
+    Shared by the ``/api/market/indices`` request path and the background
+    APScheduler cache-warm job (``app._scheduled_indices_cache_warm``).
+
+    TTL-gated: unless ``force`` is set, skips the upstream fetch when the
+    cached entry is still within ``_indices_ttl()``. Because that TTL is
+    itself market-aware (15s intraday / 300s off-hours via
+    ``services.cache_ttl.indices_ttl``), a fixed-interval scheduler tick
+    naturally fetches often during market hours and rarely off-hours —
+    no separate market-hours branch needed here.
+
+    Only caches non-empty results: caching a thin failure would lock
+    readers into empty data for the whole window.
+
+    Returns the number of index rows now cached for the region (0 when
+    the upstream fetch failed and no prior entry exists).
+    """
+    region = (region or "us").lower()
+    if region not in ("us", "kr"):
+        region = "us"
+    cache_key = f"{region}_v2"
+    now = _time.time()
+    entry = _indices_cache.get(cache_key)
+    if not force and entry and now - entry["ts"] < _indices_ttl():
+        return len(entry.get("data") or [])
+
+    out = _compute_indices_snapshot(region)
     if out:
         _indices_cache[cache_key] = {"ts": now, "data": out}
+        return len(out)
+    # Upstream failed — leave any prior (possibly aged) entry in place.
+    return len(entry.get("data") or []) if entry else 0
 
-    return jsonify(out)
+
+@market_bp.route("/market/indices")
+@api_auth
+@legal_scrub_response
+def market_indices():
+    """Headline indices for the ``/market`` tab.
+
+    Query params:
+        region: "us" (default) or "kr"
+
+    Response: list of index snapshots with
+        ticker, name, level, change_1d_pct, range_52w:[lo,hi],
+        sparkline_30d:[...], observed_at, is_stale
+
+    Cache-key version bump: the v1 key may contain an empty-array payload
+    produced by the regressed ``ama.get_quote``-only snapshot (commit
+    80c7d26). Versioning the key guarantees we bypass any poisoned entry
+    instead of waiting for the TTL to expire.
+    """
+    region = (request.args.get("region") or "us").lower()
+    if region not in ("us", "kr"):
+        region = "us"
+
+    cache_key = f"{region}_v2"
+    entry = _indices_cache.get(cache_key)
+    now = _time.time()
+    if entry and now - entry["ts"] < _indices_ttl():
+        return jsonify(entry["data"])
+
+    # Cache miss / stale — refresh through the shared warm path so the
+    # request and the scheduler job share one upstream code path.
+    warm_indices_cache(region, force=True)
+    entry = _indices_cache.get(cache_key)
+    return jsonify(entry["data"] if entry else [])
 
 
 # ─────────────────────────────────────────────────────────────────────
