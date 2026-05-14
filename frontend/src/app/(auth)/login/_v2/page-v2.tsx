@@ -137,6 +137,7 @@ export default function LoginPageV2() {
         }}
       >
         <div
+          className="pq-auth-card-inner"
           style={{
             width: "100%",
             maxWidth: 420,
@@ -292,9 +293,15 @@ export default function LoginPageV2() {
         </div>
       </div>
 
-      {/* Mobile collapse: single column. Inline media query via <style>. */}
+      {/* Mobile collapse: single column. Inline media query via <style>.
+          FINDING-MOB-001 (design-audit-20260514): the split grid
+          (grid-template-columns: 1fr 1fr) must collapse to a single column
+          on phones or the right-hand login card is pushed off-screen.
+          Breakpoint aligned to the 768px tablet threshold per the audit
+          spec; the inner card/hero horizontal padding is also reduced so
+          375px viewports never trigger a horizontal scrollbar. */}
       <style jsx>{`
-        @media (max-width: 900px) {
+        @media (max-width: 767px) {
           :global(.pq-auth-shell-v2) {
             grid-template-columns: 1fr !important;
           }
@@ -307,6 +314,9 @@ export default function LoginPageV2() {
           :global(.pq-auth-card-pane) {
             min-height: auto !important;
             justify-content: center !important;
+          }
+          :global(.pq-auth-card-inner) {
+            padding: 40px 24px !important;
           }
         }
       `}</style>

@@ -487,12 +487,17 @@ export default function TopNav() {
 
             {/* Right cluster */}
             <div className="flex items-center gap-2">
+              {/* FINDING-MOB-002 (design-audit-20260514): the "Log in"
+                  link was a 38px tap target — below WCAG 2.5.5's 44px
+                  minimum. inline-flex + min-height:44 lifts it to spec
+                  without changing the visual padding rhythm. */}
               <Link
                 href={user ? "/home" : "/login"}
-                className="hidden font-serif text-[14px] transition-colors lg:inline-block"
+                className="hidden items-center font-serif text-[14px] transition-colors lg:inline-flex"
                 style={{
                   color: "rgba(245,240,232,0.68)",
                   letterSpacing: "0.02em",
+                  minHeight: 44,
                   padding: "8px 12px",
                 }}
               >
@@ -531,12 +536,15 @@ export default function TopNav() {
               </Link>
 
               {/* Mobile hamburger */}
+              {/* FINDING-LAND-007 (design-audit-20260514): 40px
+                  (h-10 w-10) is below the 44px WCAG 2.5.5 minimum touch
+                  target. Bumped to h-11 w-11 (44px). */}
               <button
                 type="button"
                 aria-label="Open menu"
                 aria-expanded={drawerOpen}
                 onClick={() => setDrawerOpen(true)}
-                className="ml-1 inline-flex h-10 w-10 items-center justify-center rounded-sm lg:hidden"
+                className="ml-1 inline-flex h-11 w-11 items-center justify-center rounded-sm lg:hidden"
                 style={{ color: "var(--pq-ivory)" }}
               >
                 <Menu className="h-5 w-5" aria-hidden />

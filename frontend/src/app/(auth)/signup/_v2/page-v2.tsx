@@ -377,6 +377,7 @@ export default function SignupPageV2() {
         }}
       >
         <div
+          className="pq-auth-card-inner"
           style={{
             width: "100%",
             maxWidth: 460,
@@ -662,8 +663,13 @@ export default function SignupPageV2() {
         </div>
       </div>
 
+      {/* FINDING-MOB-001 (design-audit-20260514): collapse the split grid
+          to a single column on phones so the signup form is never pushed
+          off-screen. Breakpoint aligned to the 768px tablet threshold; the
+          inner card horizontal padding is reduced so 375px viewports never
+          trigger a horizontal scrollbar. */}
       <style jsx>{`
-        @media (max-width: 900px) {
+        @media (max-width: 767px) {
           :global(.pq-auth-shell-v2) {
             grid-template-columns: 1fr !important;
           }
@@ -674,6 +680,9 @@ export default function SignupPageV2() {
           }
           :global(.pq-auth-card-pane) {
             justify-content: center !important;
+          }
+          :global(.pq-auth-card-inner) {
+            padding: 40px 24px !important;
           }
           :global(.pq-auth-nav-v2) {
             padding: 16px 20px !important;
