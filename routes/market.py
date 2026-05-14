@@ -841,6 +841,39 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
         range_52w = [round(float(closes.min()), 2),
                      round(float(closes.max()), 2)]
+
+        # Bug #2 (2026-05-14): stale-window cross-validation.
+        #
+        # Phase-0 finding: the KIS "0001" current level (~7,981 on
+        # 2026-05-14) is REAL — KOSPI hit an all-time high ~7,844 on
+        # 2026-05-13 (AI-chip rally, +31% MoM). There is NO 3x scaling
+        # bug; the wide sanity bounds are correct and must NOT be
+        # tightened (a 4,500 ceiling would reject the real index).
+        #
+        # The genuine defect: KIS's `inquire-index-daily-price` endpoint
+        # lags — on 2026-05-14 its newest row was 2026-04-14 (5,967.75),
+        # a full month behind the live quote. The history is internally
+        # consistent (a legitimate uptrend), just from an older window.
+        # When `level` sits well above the whole sparkline, the frontend
+        # would draw a chart whose every point is below the headline
+        # number — visually a "contradiction" even though both values
+        # are real. This is the symptom the live bug-hunt flagged.
+        #
+        # Fix: when the live level exceeds the sparkline max by >15%,
+        # tag `is_stale=true` so the consumer can suppress / annotate
+        # the lagging chart. We keep the real `level` and the real
+        # (stale) sparkline — no data is discarded, the consumer just
+        # gets an honest staleness signal.
+        if level is not None and sparkline:
+            spark_max = max(sparkline)
+            if spark_max > 0 and level > spark_max * 1.15:
+                logger.info(
+                    "market.indices %s: live level %.2f exceeds sparkline "
+                    "max %.2f by >15%% — KIS daily-history window lags the "
+                    "live quote; tagging is_stale",
+                    ticker, level, spark_max,
+                )
+                is_stale = True
     else:
         # No trustworthy history — return null range so the frontend
         # renders "N/A" rather than [0.0, 0.0] (which the bar chart
@@ -848,15 +881,19 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         sparkline = []
         range_52w = None
 
-    # 2026-05-09 fix: per-ticker sanity bound replaces the wide [100,10000]
-    # bracket. The wide bracket let through a KIS API quirk where the
-    # KOSPI ("0001") code occasionally returns the KOSPI-200 mark-to-mid
-    # value scaled by ~3x, producing levels around 7,400 that the frontend
-    # then rendered as the headline KOSPI level. CEO live sanity flagged
-    # "KOSPI 7,498" — the real index has been trading 2,500–3,200.
-    # Tighten the bound per-ticker so only realistic values pass.
-    # 2026-05-10 (B-06): wide bounds — KOSPI 7498 confirmed real via
-    # live KIS API; see services/data/fetcher.py:_KOSPI_RANGE comment.
+    # Per-ticker sanity bounds. These exist only to catch gross unit
+    # confusion (e.g. KOSPI returned as 749,800 — a 100x scaling glitch),
+    # NOT to second-guess a high-but-real index level.
+    #
+    # 2026-05-14 (Bug #2 Phase-0, DEFINITIVE): the KIS "0001" level of
+    # ~7,981 IS the real KOSPI. Confirmed against external press
+    # (KOSPI all-time high ~7,844 on 2026-05-13; +31% MoM, +197% YoY on
+    # the AI-chipmaker rally). The earlier "~3x scaled KOSPI-200" and
+    # "real index trades 2,500–3,200" comments were a WRONG hypothesis —
+    # they have been removed to stop misleading future readers. KIS
+    # `0001` live and KIS `0001` daily-history are the same product;
+    # the only real defect is the daily-history endpoint lagging by ~1
+    # month (handled by the is_stale tag above). Bounds stay wide.
     _PER_TICKER_BOUNDS = {
         "^KS11":  (1_500.0, 50_000.0),  # KOSPI composite — head-room to 50k
         "^KQ11":  (500.0,   50_000.0),  # KOSDAQ composite
