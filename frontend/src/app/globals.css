@@ -441,6 +441,41 @@
   --sidebar-ring: #d4a558;
 }
 
+/* ── Typography token utilities (FINDING-004) ──
+   font-size ONLY — deliberately no line-height. Mirrors the exact
+   behaviour of the raw `text-[Npx]` arbitrary classes these replace
+   (which also set font-size only, leaving line-height inherited).
+   Setting line-height here would shift layout, so it is omitted.
+   One utility per --pq-text-* token defined in @theme above. */
+@utility text-pq-eyebrow { font-size: var(--pq-text-eyebrow); }
+@utility text-pq-mono-sm { font-size: var(--pq-text-mono-sm); }
+@utility text-pq-caption { font-size: var(--pq-text-caption); }
+@utility text-pq-body-sm { font-size: var(--pq-text-body-sm); }
+@utility text-pq-body { font-size: var(--pq-text-body); }
+@utility text-pq-quote { font-size: var(--pq-text-quote); }
+@utility text-pq-h3 { font-size: var(--pq-text-h3); }
+@utility text-pq-h2 { font-size: var(--pq-text-h2); }
+@utility text-pq-h1 { font-size: var(--pq-text-h1); }
+@utility text-pq-display { font-size: var(--pq-text-display); }
+@utility text-pq-deck { font-size: var(--pq-text-deck); }
+@utility text-pq-mono-xs { font-size: var(--pq-text-mono-xs); }
+@utility text-pq-eyebrow-sm { font-size: var(--pq-text-eyebrow-sm); }
+@utility text-pq-mono-tiny { font-size: var(--pq-text-mono-tiny); }
+@utility text-pq-button { font-size: var(--pq-text-button); }
+@utility text-pq-lead { font-size: var(--pq-text-lead); }
+@utility text-pq-h6 { font-size: var(--pq-text-h6); }
+@utility text-pq-h5 { font-size: var(--pq-text-h5); }
+@utility text-pq-h4 { font-size: var(--pq-text-h4); }
+@utility text-pq-kicker { font-size: var(--pq-text-kicker); }
+@utility text-pq-avatar { font-size: var(--pq-text-avatar); }
+@utility text-pq-pdf-hero { font-size: var(--pq-text-pdf-hero); }
+@utility text-pq-micro { font-size: var(--pq-text-micro); }
+@utility text-pq-mono-md { font-size: var(--pq-text-mono-md); }
+@utility text-pq-callout { font-size: var(--pq-text-callout); }
+@utility text-pq-gauge { font-size: var(--pq-text-gauge); }
+@utility text-pq-hero-num { font-size: var(--pq-text-hero-num); }
+@utility text-pq-pdf-micro { font-size: var(--pq-text-pdf-micro); }
+
 /* ── Base layer ── */
 @layer base {
   * {
