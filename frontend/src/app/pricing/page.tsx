@@ -511,7 +511,7 @@ export default function PricingPage() {
                 style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
               />
               <span
-                className="font-serif text-[11px] uppercase"
+                className="font-serif text-pq-mono-sm uppercase"
                 style={{
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
@@ -637,7 +637,7 @@ export default function PricingPage() {
                   {/* Tier name + bronze hairline */}
                   <div className="mb-6 flex items-center gap-3">
                     <span
-                      className="font-serif text-[11px] uppercase"
+                      className="font-serif text-pq-mono-sm uppercase"
                       style={{
                         letterSpacing: "0.26em",
                         color: "var(--pq-bronze)",
@@ -674,7 +674,7 @@ export default function PricingPage() {
                       <PriceCountUp value={p.price} />
                     </span>
                     <span
-                      className="font-serif text-[11px] uppercase"
+                      className="font-serif text-pq-mono-sm uppercase"
                       style={{
                         letterSpacing: "0.2em",
                         color: isDark ? "rgba(245,240,232,0.55)" : "#6B6B6B",
@@ -684,7 +684,7 @@ export default function PricingPage() {
                     </span>
                   </div>
                   <p
-                    className="font-serif text-[12px] mb-7"
+                    className="font-serif text-pq-caption mb-7"
                     style={{
                       color: isDark ? "rgba(245,240,232,0.48)" : "#6B6B6B",
                       letterSpacing: "0.02em",
@@ -695,7 +695,7 @@ export default function PricingPage() {
 
                   {/* Tagline */}
                   <p
-                    className="font-serif text-[13px] leading-snug mb-7 pb-6"
+                    className="font-serif text-pq-body-sm leading-snug mb-7 pb-6"
                     style={{
                       color: isDark ? "rgba(245,240,232,0.72)" : "#2A2A2A",
                       borderBottom: isDark
@@ -721,7 +721,7 @@ export default function PricingPage() {
                           }}
                         />
                         <span
-                          className="font-serif text-[14px] leading-snug"
+                          className="font-serif text-pq-body leading-snug"
                           style={{
                             color: isDark
                               ? "rgba(245,240,232,0.78)"
@@ -737,7 +737,7 @@ export default function PricingPage() {
                   {p.href ? (
                     <Link
                       href={p.href}
-                      className="block text-center w-full py-3 px-4 font-serif text-[14px] transition-colors"
+                      className="block text-center w-full py-3 px-4 font-serif text-pq-body transition-colors"
                       style={{
                         backgroundColor: p.recommended
                           ? "var(--pq-bronze)"
@@ -759,7 +759,7 @@ export default function PricingPage() {
                     <button
                       type="button"
                       onClick={() => handleCheckout(p.key)}
-                      className="block text-center w-full py-3 px-4 font-serif text-[14px] transition-colors"
+                      className="block text-center w-full py-3 px-4 font-serif text-pq-body transition-colors"
                       style={{
                         backgroundColor: p.recommended
                           ? "var(--pq-bronze)"
@@ -785,7 +785,7 @@ export default function PricingPage() {
 
           {/* Billing footnote */}
           <p
-            className="mt-12 font-serif text-[11px] leading-relaxed"
+            className="mt-12 font-serif text-pq-mono-sm leading-relaxed"
             style={{ color: "rgba(245,240,232,0.45)" }}
           >
             Billed in KRW. VAT included. Cancel anytime. Informational research
@@ -802,7 +802,7 @@ export default function PricingPage() {
               style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
             />
             <span
-              className="font-serif text-[11px] uppercase"
+              className="font-serif text-pq-mono-sm uppercase"
               style={{
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",

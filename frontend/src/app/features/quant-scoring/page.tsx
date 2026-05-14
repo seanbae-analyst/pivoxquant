@@ -25,7 +25,7 @@ function ScoreBar() {
         <div className="absolute inset-y-0 left-[50%] w-[20%] bg-[rgba(184,149,106,0.5)]" />
         <div className="absolute inset-y-0 left-[70%] w-[30%] bg-[rgba(209,136,136,0.55)]" />
       </div>
-      <div className="flex justify-between mt-2 text-[11px] font-mono tabular-nums text-[rgba(245,240,232,0.55)]">
+      <div className="flex justify-between mt-2 text-pq-mono-sm font-mono tabular-nums text-[rgba(245,240,232,0.55)]">
         <span>0</span>
         <span>30</span>
         <span>50</span>
@@ -182,7 +182,7 @@ export default function QuantScoringPage() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 flex flex-col items-start gap-1">
-                      <span className="font-[var(--font-serif)] text-[18px] tracking-[0.04em] text-[var(--pq-ivory)]">
+                      <span className="font-[var(--font-serif)] text-pq-h5 tracking-[0.04em] text-[var(--pq-ivory)]">
                         {pillar.code}
                       </span>
                       <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.65)] tabular-nums">
@@ -191,7 +191,7 @@ export default function QuantScoringPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold text-[var(--pq-ivory)] mb-1">{pillar.title}</h3>
-                      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--pq-bronze)] mb-2">{pillar.count}</p>
+                      <p className="text-pq-mono-sm font-medium uppercase tracking-[0.16em] text-[var(--pq-bronze)] mb-2">{pillar.count}</p>
                       <p className="text-sm text-[rgba(245,240,232,0.62)] italic">&ldquo;{pillar.question}&rdquo;</p>
                     </div>
                   </div>

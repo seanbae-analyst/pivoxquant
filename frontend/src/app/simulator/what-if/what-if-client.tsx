@@ -336,7 +336,7 @@ export function WhatIfClient() {
               </div>
               {apiError?.suggestion?.value ? (
                 <div
-                  className="mt-1 text-[11px]"
+                  className="mt-1 text-pq-mono-sm"
                   style={{ color: "rgba(245, 240, 232, 0.55)" }}
                 >
                   → {apiError.suggestion.reason || apiError.suggestion.value}
@@ -362,7 +362,7 @@ export function WhatIfClient() {
 
         {/* Disclaimer — ink-themed, bronze-tinted */}
         <section
-          className="mt-8 rounded-sm border px-4 py-3 text-[11px] leading-relaxed"
+          className="mt-8 rounded-sm border px-4 py-3 text-pq-mono-sm leading-relaxed"
           style={{
             borderColor: "rgba(184, 149, 106, 0.18)",
             backgroundColor: "rgba(184, 149, 106, 0.04)",

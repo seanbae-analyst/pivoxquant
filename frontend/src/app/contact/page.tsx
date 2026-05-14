@@ -32,7 +32,7 @@ export default function ContactPage() {
           <h1 className="font-serif italic text-4xl md:text-5xl mb-4">
             How to reach the desk.
           </h1>
-          <p className="text-[14px] text-[rgba(245,240,232,0.7)] max-w-xl">
+          <p className="text-pq-body text-[rgba(245,240,232,0.7)] max-w-xl">
             We do not staff a phone line. Email is the primary channel — pick
             the address that fits your question and we will reply.
           </p>
@@ -56,11 +56,11 @@ export default function ContactPage() {
                 </div>
                 <a
                   href={`mailto:${c.address}`}
-                  className="font-mono text-[14px] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] tracking-wide block mb-2"
+                  className="font-mono text-pq-body text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] tracking-wide block mb-2"
                 >
                   {c.address}
                 </a>
-                <p className="text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">
+                <p className="text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed">
                   {c.helper}
                 </p>
               </section>
@@ -70,12 +70,12 @@ export default function ContactPage() {
 
         <section className="mt-12 pt-10 border-t border-[var(--pq-ivory-line)]">
           <h2 className="font-serif italic text-xl mb-4">Before you write</h2>
-          <p className="text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed mb-3">
+          <p className="text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed mb-3">
             Most product questions are answered in our docs.
           </p>
           <Link
             href="/docs"
-            className="inline-flex items-center gap-2 text-[12px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+            className="inline-flex items-center gap-2 text-pq-caption uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
           >
             <FileText className="h-3.5 w-3.5" />
             Read the docs
@@ -90,14 +90,14 @@ export default function ContactPage() {
           <div className="flex items-center justify-center gap-4 mt-4 flex-wrap">
             <Link
               href="/terms"
-              className="text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+              className="text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
             >
               Terms
             </Link>
             <span className="text-[rgba(245,240,232,0.3)]">·</span>
             <Link
               href="/privacy"
-              className="text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+              className="text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
             >
               Privacy
             </Link>

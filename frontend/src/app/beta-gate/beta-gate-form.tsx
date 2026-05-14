@@ -161,7 +161,7 @@ export default function BetaGateForm() {
       {/* Header */}
       <div className="mt-8">
         <div
-          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider"
+          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-pq-mono-sm font-semibold uppercase tracking-wider"
           style={{
             borderColor: "rgba(184, 149, 106, 0.32)",
             backgroundColor: "rgba(184, 149, 106, 0.06)",
@@ -177,7 +177,7 @@ export default function BetaGateForm() {
         </div>
 
         <h1
-          className="mt-4 text-2xl font-semibold leading-tight tracking-tight sm:text-[28px]"
+          className="mt-4 text-2xl font-semibold leading-tight tracking-tight sm:text-pq-avatar"
           style={{ color: "var(--pq-ivory)" }}
         >
           {copy.title}
@@ -225,7 +225,7 @@ export default function BetaGateForm() {
             placeholder={copy.placeholder}
             aria-invalid={!!error}
             aria-describedby={error ? "beta-error" : undefined}
-            className="w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-[box-shadow,border-color] duration-200 focus:border-[var(--pq-bronze)] focus:shadow-[0_0_0_4px_rgba(184,149,106,0.32)]"
+            className="w-full rounded-xl border px-4 py-3 text-pq-lead outline-none transition-[box-shadow,border-color] duration-200 focus:border-[var(--pq-bronze)] focus:shadow-[0_0_0_4px_rgba(184,149,106,0.32)]"
             style={{
               backgroundColor: "rgba(10, 10, 10, 0.6)",
               borderColor: "rgba(184, 149, 106, 0.32)",

@@ -446,7 +446,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
               style={{ backgroundColor: "var(--pq-bronze)" }}
             />
             <span
-              className="text-[11px] font-bold"
+              className="text-pq-mono-sm font-bold"
               style={{ color: "var(--pq-ivory)" }}
             >
               PivoxQuant

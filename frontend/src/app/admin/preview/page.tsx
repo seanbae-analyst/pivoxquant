@@ -300,7 +300,7 @@ function ArtifactCard({
               type="button"
               onClick={() => onSelect(entry, fmt)}
               className={cn(
-                "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors",
+                "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-pq-mono-sm font-medium transition-colors",
                 fmt === "pdf" || fmt === "png"
                   ? "border border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
                   : "border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50",

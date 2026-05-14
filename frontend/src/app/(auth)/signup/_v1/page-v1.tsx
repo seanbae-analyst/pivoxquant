@@ -305,7 +305,7 @@ export default function SignupPageV1() {
         {/* 3. 만 14세 이상 (PIPA §22 ⑥) — 생년월일 + 자가선언 이중 방어선 */}
         <div className="flex flex-col gap-2">
           <label htmlFor="agree_birthdate" className="flex flex-col gap-1">
-            <span className="text-[11px] font-semibold text-slate-700">
+            <span className="text-pq-mono-sm font-semibold text-slate-700">
               {BIRTHDATE_LABEL_KO} · {BIRTHDATE_LABEL_EN}
             </span>
             <input
@@ -327,7 +327,7 @@ export default function SignupPageV1() {
               <span
                 id="agree_birthdate_msg"
                 role="alert"
-                className="text-[11px] leading-relaxed text-rose-600"
+                className="text-pq-mono-sm leading-relaxed text-rose-600"
               >
                 {UNDER_AGE_KO}
                 <br />
@@ -448,7 +448,7 @@ export default function SignupPageV1() {
 
       {!allRequired && (
         <p
-          className={`mt-3 text-center text-[12px] ${pulseUnchecked ? "text-rose-500 font-medium" : "text-slate-500"}`}
+          className={`mt-3 text-center text-pq-caption ${pulseUnchecked ? "text-rose-500 font-medium" : "text-slate-500"}`}
           role={pulseUnchecked ? "alert" : undefined}
         >
           필수 항목 4개에 모두 동의해야 가입할 수 있습니다.

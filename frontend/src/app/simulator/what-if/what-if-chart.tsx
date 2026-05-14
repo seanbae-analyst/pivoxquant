@@ -95,7 +95,7 @@ function ChartTooltip({
       }}
     >
       <p
-        className="text-[11px]"
+        className="text-pq-mono-sm"
         style={{ color: "rgba(245, 240, 232, 0.55)" }}
       >
         {new Date(point.date).toLocaleDateString(
@@ -113,7 +113,7 @@ function ChartTooltip({
       ) : null}
       {investedItem && investedItem.value !== valueItem?.value ? (
         <p
-          className="font-mono text-[11px] tabular-nums"
+          className="font-mono text-pq-mono-sm tabular-nums"
           style={{ color: "rgba(245, 240, 232, 0.55)" }}
         >
           {t("whatIf.result.invested")}: {fmtFull(investedItem.value, currency)}

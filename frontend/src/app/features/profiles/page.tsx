@@ -153,7 +153,7 @@ export default function ProfilesPage() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 flex flex-col items-start gap-1">
-                      <span className="font-[var(--font-serif)] text-[18px] tracking-[0.04em] text-[var(--pq-ivory)]">
+                      <span className="font-[var(--font-serif)] text-pq-h5 tracking-[0.04em] text-[var(--pq-ivory)]">
                         {profile.code}
                       </span>
                       <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">

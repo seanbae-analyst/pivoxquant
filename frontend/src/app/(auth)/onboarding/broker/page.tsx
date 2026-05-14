@@ -131,7 +131,7 @@ export default function OnboardingBrokerPage() {
             <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
               {t("brokerOnboarding.stepLabel")}
             </span>
-            <span className="text-[11px] tabular-nums text-[rgba(245,240,232,0.5)]">
+            <span className="text-pq-mono-sm tabular-nums text-[rgba(245,240,232,0.5)]">
               0 · 21
             </span>
           </div>
@@ -180,7 +180,7 @@ export default function OnboardingBrokerPage() {
             </div>
           )}
 
-          <p className="mt-6 text-[11px] text-[rgba(245,240,232,0.4)] text-center leading-relaxed">
+          <p className="mt-6 text-pq-mono-sm text-[rgba(245,240,232,0.4)] text-center leading-relaxed">
             {t("brokerOnboarding.note")}
           </p>
         </div>

@@ -45,7 +45,7 @@ export default function Error({
         />
 
         <div
-          className="text-[11px] tracking-[0.22em] uppercase mb-4"
+          className="text-pq-mono-sm tracking-[0.22em] uppercase mb-4"
           style={{ color: "#B8956A" }}
         >
           Something interrupted the observation
@@ -69,7 +69,7 @@ export default function Error({
         {isProduction ? (
           error.digest ? (
             <p
-              className="text-[11px] font-mono mb-6"
+              className="text-pq-mono-sm font-mono mb-6"
               style={{ color: "rgba(247,245,239,0.3)" }}
             >
               ref: {error.digest}
@@ -77,7 +77,7 @@ export default function Error({
           ) : null
         ) : (
           <pre
-            className="text-left text-[11px] font-mono rounded p-3 mb-6 max-h-32 overflow-auto whitespace-pre-wrap break-words"
+            className="text-left text-pq-mono-sm font-mono rounded p-3 mb-6 max-h-32 overflow-auto whitespace-pre-wrap break-words"
             style={{
               color: "rgba(247,245,239,0.55)",
               background: "rgba(255,255,255,0.04)",
@@ -111,7 +111,7 @@ export default function Error({
         </div>
 
         <p
-          className="text-[11px] mt-8 leading-relaxed"
+          className="text-pq-mono-sm mt-8 leading-relaxed"
           style={{ color: "rgba(247,245,239,0.3)" }}
         >
           PivoxQuant does not lose data on errors. All positions and settings
