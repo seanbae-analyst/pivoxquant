@@ -70,6 +70,28 @@ class TestRegister:
         assert r.status_code == 200
         assert r.get_json()["user"]["email"] == "mixed@test.com"
 
+    def test_register_blocks_authenticated_caller(self, client, auth_user):
+        """2026-05-15 bug-hunter Wave 7 CRITICAL #2 regression guard:
+        the register endpoint used to silently create a new user AND
+        replace the current session if called by an already-logged-in
+        user. Reproduced on production (DB row id:21 korean@example.com
+        created from a session originally id:3). Account-takeover /
+        session-fixation risk class.
+
+        After the fix, register must short-circuit with 409
+        `ALREADY_AUTHENTICATED` for any authed caller."""
+        # `auth_user` fixture logs the client in as a real user.
+        r = client.post("/api/auth/register", json={
+            "email": "newaccount@test.com",
+            "password": "verystrongpw",
+            "birthdate": _ADULT_BIRTHDATE,
+        })
+        assert r.status_code == 409
+        body = r.get_json()
+        assert body["code"] == "ALREADY_AUTHENTICATED"
+        # Korean error message also present (user-facing).
+        assert "이미 로그인" in body.get("error_kr", "")
+
 
 # ── Login ───────────────────────────────────────────────────────────────────
 
