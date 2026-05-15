@@ -637,6 +637,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "(e.g. `day2` or `day2_us_watchlist`). Useful for manual smoke."
         ),
     )
+    p.add_argument(
+        "--no-auto-fix",
+        action="store_true",
+        help=(
+            "Skip Phase 4 auto-fix subprocess invocation after findings. "
+            "By default the cron tick chains into `scripts/caus_auto_fix.py` "
+            "for P0 findings; pass --no-auto-fix to disable (manual debug)."
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -730,6 +739,64 @@ def main(argv: list[str] | None = None) -> int:
         f"{len(findings)} findings ({p0_count} P0)",
         "p0" if p0_count > 0 else "info",
     )
+
+    # ─────────────────────────────────────────────────────────────────
+    # Phase 4 — autonomous fix loop (CEO directive 2026-05-15:
+    # "바로바로 픽스해 자동으로 하게금해라"). For each P0 finding, hand
+    # off to scripts/caus_auto_fix.py which runs `claude -p` against
+    # the local Max OAuth session ($0 cost — distinct from the
+    # self_healing/propose_fix.py path which uses paid API).
+    # Safety: gated by daily budget (default 3/day) + protected-path
+    # allowlist + cooling-off + idempotency. NEVER auto-merges; only
+    # creates a PR with `caus-auto-fix` label for CEO review.
+    #
+    # We process at most one P0 per tick to limit blast radius. The
+    # remaining P0s are still surfaced via GitHub Issues (above) so
+    # they're not lost — next tick the auto-fix budget rolls. If
+    # multiple P0s land at once (catastrophic regression), the
+    # bug-hunter / verify-ux flow handles bulk fixing under human
+    # supervision.
+    if (
+        not args.dry_run
+        and not getattr(args, "no_auto_fix", False)
+        and not args.skip_onboard  # don't fire from manual smoke runs
+    ):
+        p0_findings = [
+            f for f in findings
+            if _normalize_severity(f.get("severity")) == "p0"
+        ]
+        if p0_findings:
+            target = p0_findings[0]
+            try:
+                af_proc = subprocess.run(
+                    [
+                        sys.executable,
+                        str(REPO_ROOT / "scripts" / "caus_auto_fix.py"),
+                        "--finding-stdin",
+                    ],
+                    input=json.dumps(target),
+                    text=True,
+                    capture_output=True,
+                    timeout=900,
+                )
+                slack_notify(
+                    f"auto-fix exit={af_proc.returncode} for P0 on "
+                    f"{(target.get('page') or '?')[:40]}; "
+                    f"last-line: {(af_proc.stdout or '').strip().splitlines()[-1][:80] if af_proc.stdout else '(empty)'}",
+                    "info" if af_proc.returncode == 0 else "warn",
+                )
+            except subprocess.TimeoutExpired:
+                slack_notify(
+                    f"auto-fix timed out (>15m) for P0 on "
+                    f"{(target.get('page') or '?')[:40]}",
+                    "warn",
+                )
+            except Exception as exc:
+                slack_notify(
+                    f"auto-fix invocation error: {exc}"[:200],
+                    "warn",
+                )
+
     return 0
 
 
