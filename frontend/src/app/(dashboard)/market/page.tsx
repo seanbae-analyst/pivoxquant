@@ -64,7 +64,15 @@ interface BackendIndex {
   name: string;
   level: number;
   change_1d_pct: number;
-  range_52w: [number, number];
+  /**
+   * 52-week extremes. Backend emits `null` when the upstream history
+   * window cannot be trusted alongside the current level (see
+   * routes/market.py _kis_index_snapshot 2026-05-15: when the live
+   * level exceeds the sparkline max by >15% the daily-history endpoint
+   * is lagging and the historical range would visually contradict
+   * the level — capital-markets-law misrepresentation guard).
+   */
+  range_52w: [number, number] | null;
   sparkline_30d: number[];
   observed_at?: string;
   is_stale?: boolean;
@@ -80,7 +88,17 @@ interface BackendIndex {
 const fetcher = <T,>(url: string) => apiFetch<T>(url);
 
 function toQuote(b: BackendIndex, region: MarketTab): IndexQuote {
-  const [lo, hi] = b.range_52w ?? [0, 0];
+  // 2026-05-15 (verify-ux fail on PR #385): the backend emits
+  // range_52w=null when the daily-history endpoint lags the live
+  // level (lev > spark_max × 1.15 — routes/market.py
+  // _kis_index_snapshot). The previous `?? [0, 0]` fallback rendered
+  // as "52W 0.00 · 0.00" on the /market card — an obviously-broken
+  // signal indistinguishable from a literal zero index. Preserve
+  // null all the way to the renderer; IndexQuote weekHigh52/Low52
+  // are nullable and downstream fmtLevel maps null → "—".
+  const r52 = b.range_52w;
+  const hi: number | null = Array.isArray(r52) ? r52[1] : null;
+  const lo: number | null = Array.isArray(r52) ? r52[0] : null;
   return {
     symbol: b.ticker,
     name: b.name,

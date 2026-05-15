@@ -76,7 +76,18 @@ interface Props {
   weekTag: string;
 }
 
-function fmtLevel(v: number, kind: IndexQuote["format"] = "en"): string {
+function fmtLevel(
+  v: number | null | undefined,
+  kind: IndexQuote["format"] = "en",
+): string {
+  // 2026-05-15 (verify-ux fail on PR #385 follow-up): IndexQuote
+  // weekHigh52 / weekLow52 are now nullable — the backend nulls
+  // range_52w when the daily-history endpoint lags the live level
+  // (routes/market.py _kis_index_snapshot 2026-05-15). The previous
+  // `?? [0, 0]` fallback in market/page.tsx::toQuote rendered as
+  // "52W 0.00 · 0.00" on the /market card — indistinguishable from a
+  // literal zero index. Map null / non-finite explicitly to "—".
+  if (v == null || !Number.isFinite(v)) return "—";
   if (kind === "int") return Math.round(v).toLocaleString("en-US");
   if (kind === "kr") {
     return v.toLocaleString("ko-KR", {

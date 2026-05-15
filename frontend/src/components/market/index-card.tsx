@@ -15,8 +15,14 @@ export interface IndexQuote {
   name: string;
   level: number;
   changePct: number;
-  weekHigh52: number;
-  weekLow52: number;
+  /**
+   * 52-week extremes. Null when the upstream source cannot be trusted
+   * (e.g. KIS daily-history endpoint lagging the live level by more
+   * than 15% — see routes/market.py _kis_index_snapshot 2026-05-15).
+   * Renderers MUST treat null as "—" and never as 0.
+   */
+  weekHigh52: number | null;
+  weekLow52: number | null;
   /** 30-point mini series (relative movement) */
   spark: number[];
   /** How to display the level (e.g. 2_612.34 → "2,612.34") */
@@ -79,7 +85,11 @@ export function useNowTick(intervalMs = 1000): number {
   return now;
 }
 
-function fmtLevel(v: number, kind: IndexQuote["format"] = "en"): string {
+function fmtLevel(
+  v: number | null | undefined,
+  kind: IndexQuote["format"] = "en",
+): string {
+  if (v == null || !Number.isFinite(v)) return "—";
   if (kind === "int") return Math.round(v).toLocaleString("en-US");
   if (kind === "kr") {
     return v.toLocaleString("ko-KR", {
@@ -98,17 +108,30 @@ function RangeBar({
   high,
   level,
 }: {
-  low: number;
-  high: number;
+  low: number | null;
+  high: number | null;
   level: number;
 }) {
-  const pct = Math.max(0, Math.min(1, (level - low) / (high - low)));
+  // 2026-05-15 (verify-ux fail on PR #385 follow-up): low/high are
+  // nullable now (backend nulls range_52w when upstream history lags
+  // — _kis_index_snapshot 2026-05-15). When either bound is missing,
+  // collapse the marker to the centre and render "—" for the bounds
+  // rather than computing on null (which previously rendered as
+  // "0.00 · 0.00" via the bogus `?? [0, 0]` fallback upstream).
+  const haveRange =
+    low != null && high != null && Number.isFinite(low) && Number.isFinite(high) && high > low;
+  const pct = haveRange
+    ? Math.max(0, Math.min(1, (level - (low as number)) / ((high as number) - (low as number))))
+    : 0.5;
   return (
     <div>
       <div className="relative h-1 rounded-full bg-slate-100">
         <div
           className="absolute top-0 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--pq-bronze,#B8956A)]"
-          style={{ left: `${pct * 100}%` }}
+          style={{
+            left: `${pct * 100}%`,
+            opacity: haveRange ? 1 : 0.4,
+          }}
         />
       </div>
       <div className="mt-1 flex justify-between text-pq-eyebrow tabular-nums text-slate-400">
