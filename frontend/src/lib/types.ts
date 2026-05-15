@@ -1,10 +1,31 @@
+/**
+ * Backend position row shape — emitted by /api/portfolio + /api/portfolio/positions.
+ *
+ * 2026-05-15 (autonomous wave sweep-3): historically this type
+ * declared only snake_case fields, matching the legacy /api/portfolio
+ * payload (routes/portfolio.py line 227). The newer /api/portfolio/
+ * positions alias (line 826 _build_positions_list) emits camelCase
+ * (`avgCost / current / purchaseDate / isKorean`). Consumers reading
+ * `p.current_price` against the new payload silently produced
+ * undefined → cur=0 → ₩0/$0 rendering across /portfolio, /home v1/v2,
+ * and the sector-allocation donut (bug-hunter P0/P2 findings).
+ *
+ * Both shapes are now declared so the next consumer doesn't repeat
+ * the regression. Defensive reads should use:
+ *   const cur = p.current ?? p.current_price ?? 0;
+ *   const avg = p.avgCost ?? p.avg_cost ?? 0;
+ */
 export interface Position {
   id: number;
   ticker: string;
   shares: number;
   avg_cost: number;
+  /** Camel-case mirror of `avg_cost` (emitted by /api/portfolio/positions). */
+  avgCost?: number;
   price: number;
   current_price: number;
+  /** Camel-case mirror of `current_price` (emitted by /api/portfolio/positions). */
+  current?: number;
   price_display: string;
   pnl_pct: number;
   pnl_krw_pct: number | null;
