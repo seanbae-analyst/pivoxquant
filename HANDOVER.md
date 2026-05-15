@@ -1,3 +1,50 @@
+# PivoxQuant — 인수인계서 (2026-05-15 v43 자율 wave 확장 — 13 PR · OPEN PR 0 · main `cf7620e → 4217951`)
+
+## v43 확장 (PR #386 이후 추가 cycle)
+
+**한 줄 요약**: HANDOVER v43 머지(#386) 후 verify-ux 검수 dispatch → /home POSITIONS card 동일 P0 잔존 + range_52w "0.00·0.00" 잔존 등 follow-up 발견. PR #387 (AI 503 graceful copy) + PR #388 (home v2 card + range_52w null path) + PR #389 (sweep-3: home v1 + sector-allocation-donut 동일 패턴 닫음) + PR #390 (canonical `Position` type 양쪽 shape 문서화 — 회귀 방지). 추가 5 PR. 총 13 PR.
+
+### v43 확장 누적 통계 (직접 git/gh/curl evidence)
+- **main HEAD**: `4217951` (PR #390 머지 commit)
+- **v43 확장 base**: `95896f6` (PR #386 머지 commit, v43 HANDOVER)
+- **v43 확장 cycle**: 5 PR (#387 #388 #389 #390 + verify-ux 후속 2건 발견 시 추가)
+- **OPEN PR**: 0건
+
+### v43 확장 PR 표
+
+| PR | Wave | 핵심 변경 |
+|---|---|---|
+| #387 | UX polish | bug-hunter P0-2 (AI coaching 503) frontend side — 503/429 시 "AI service is temporarily busy" 등 graceful copy (back-end credit 문제 자체는 CEO 액션 영역) |
+| **#388** | verify-ux P0 follow-up | 같은 camelCase 미스매치가 /home POSITIONS·TOP WEIGHT card에 잔존(PR #383은 /portfolio 만 닫았음) + range_52w null → "0.00·0.00" 렌더 버그. positions-top-card.tsx 카멜케이스 fallback + BackendIndex.range_52w 널 허용 + 3개 fmtLevel 함수 모두 null→"—" |
+| **#389** | sweep-3 | 같은 패턴 또 2곳 발견 → 닫음. home/_v1/page-v1.tsx (dynamic import 경로) + sector-allocation-donut.tsx (bug-hunter P2-9 "No allocation yet" 의 root cause — mv 계산이 0이라 buckets 비어있던 것) |
+| #390 | 회귀 방지 | canonical Position 타입에 `avgCost?` + `current?` 명시 + 도크스트링으로 dual shape 패턴 문서화. 다음 컨슈머가 같은 실수 안 하도록 type-level guard |
+
+### v43 확장 verify-ux 결과 (한 번 더 검수)
+
+verify-ux agent 두 번째 dispatch (Phase A: PR #388 검증, Phase B: 미테스트 페이지 sweep) — Phase B는 ALL PASS (discover/journal/profile/search 통과). Phase A 결과는 mixed:
+
+| PR | 검수 결과 | 비고 |
+|---|---|---|
+| PR #388 home card | **FAILED** | agent 보고: prod에서 ₩0/$0.00 잔존. API는 `current: 22450` emit 확인. agent가 PR #388 머지 후 ~6분만에 검수 시작 — Vercel CDN edge cache 미반영 추정. 코드 path 직접 verify: `p.current ?? p.current_price ?? 0` 정확. PR #389로 같은 패턴 sweep-3 (home v1 + sector-donut)까지 닫음. PR #390로 type-level 회귀 가드 추가. 본 세션 시간 종료 시점 prod redeploy 완료 여부는 다음 세션 cron tick에서 자동 sim이 catch. |
+| PR #385 range_52w | **PASS** | agent screenshot: "52W — · —" 명시 확인. 이전 "52W 0.00 · 0.00" → "—" 마이그레이션 완료 |
+| /discover sweep | PASS | "Tape paused" 메시지는 정상(market-hours 외) |
+| /growth sweep | PASS | Growth OS streak/graph 정상 렌더 |
+| /profile sweep | PASS | 정상 |
+| Search (⌘K) | PASS | "Search Stock 안 눌림"(메모리 잔존 이슈) 더 이상 reproduce 안 됨 |
+| Mobile viewport | INCOMPLETE | agent 도구가 viewport resize 미지원, DOM 분석으로 architecture만 verify |
+
+### 자세한 패턴 분석 — feedback_thorough_fixes touchstone
+
+본 세션은 **같은 root cause를 3번 sweep** 한 케이스 (PR #383, #388, #389). 패턴:
+1. backend `_build_positions_list` (line 826)가 camelCase emit
+2. 프론트 consumer 별로 각자 shape assumption (snake_case stale comment / camelCase Position type / mixed)
+3. `?? 0` fallback이 undefined를 mask → 0/null이 정상 값처럼 렌더
+4. tsc는 generic `<T = any>` 또는 stale type 때문에 mismatch catch 못 함
+
+장기 fix: PR #390 type doc + 정책 — 다음 컨슈머는 `p.current ?? p.current_price ?? 0` 패턴 의무화. 향후 endpoint contract 변경 시 **모든 consumer grep first** 룰 메모리 inscribe 필요.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-15 v43 자율 wave — 출시 BLOCKER 8개 닫음 · 8 PR · OPEN PR 0 · main `cf7620e → 9feabbd`)
 
 ## v43 — 5시간 CEO 부재 자율 진행 cycle (출시 전 BLOCKER sweep)
