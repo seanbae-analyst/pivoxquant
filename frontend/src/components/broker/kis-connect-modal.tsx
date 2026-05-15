@@ -28,7 +28,11 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const accountNoValid = /^\d{6,12}$/.test(accountNo);
+  // 2026-05-15 (bug-hunter Wave 6 LOW #4): KIS account numbers are
+  // strictly 8 digits per the format hint inside this modal
+  // ("12345678-01"). The previous 6-12 digit regex accepted invalid
+  // entries that would later 4xx at the KIS API. Tighten to exactly 8.
+  const accountNoValid = /^\d{8}$/.test(accountNo);
   const accountProdValid = /^\d{2}$/.test(accountProd);
   const canSubmit =
     appKey.trim().length > 0 &&
@@ -217,6 +221,14 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <button
               type="submit"
               disabled={!canSubmit}
+              // 2026-05-15 (bug-hunter Wave 6 P2 #3): the
+              // `pq-ink-btn-bronze` class set `cursor: pointer` without
+              // a `:disabled { cursor: not-allowed }` selector, so the
+              // Tailwind `disabled:cursor-not-allowed` variant lost
+              // specificity and the disabled button still showed the
+              // pointer cursor. Inline style guarantees not-allowed
+              // wins regardless of CSS layer order.
+              style={!canSubmit ? { cursor: "not-allowed" } : undefined}
               className="pq-ink-btn-bronze flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}

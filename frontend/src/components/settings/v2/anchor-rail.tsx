@@ -76,10 +76,31 @@ export function AnchorRail() {
       </div>
       {ITEMS.map((item) => {
         const isActive = activeId === item.id;
+        // 2026-05-15 (bug-hunter Wave 6 P2 #2): plain `<a href="#id">` did
+        // not scroll on the /settings v2 page — URL hash updated but
+        // viewport stayed at top. Next.js App Router can intercept
+        // same-document hash links in certain configurations. Replace
+        // with an explicit onClick that uses scrollIntoView + manual
+        // history.replaceState so the App Router doesn't get a chance
+        // to swallow the navigation.
+        const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+          if (typeof document === "undefined") return;
+          const target = document.getElementById(item.id);
+          if (target) {
+            e.preventDefault();
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+            try {
+              window.history.replaceState(null, "", `#${item.id}`);
+            } catch {
+              window.location.hash = item.id;
+            }
+          }
+        };
         return (
           <a
             key={item.id}
             href={`#${item.id}`}
+            onClick={handleClick}
             className="font-mono uppercase"
             style={{
               display: "block",

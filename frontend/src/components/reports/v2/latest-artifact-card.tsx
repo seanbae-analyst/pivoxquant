@@ -12,6 +12,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
 import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import type { Artifact, ArtifactType } from "@/lib/types";
@@ -235,9 +236,57 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             >
               Open full memo ›
             </a>
-            <a
-              href={API.artifacts.download(artifact.id)}
-              download
+            {/*
+              2026-05-15 (bug-hunter Wave 6 P1 #1): the plain `<a download>`
+              tag exposed the user to a raw 410 JSON body on a black
+              page when the artifact's PDF file was missing from
+              Railway's ephemeral disk (artifact #93 brag card was the
+              reported case — `pdf_path: null` / file lost on redeploy).
+              Use a fetch-based handler so we can intercept 4xx /5xx and
+              surface a toast instead of letting the browser navigate
+              to the JSON error page. Backend root cause (persistent
+              storage) is a separate CEO/infra action.
+            */}
+            <button
+              type="button"
+              onClick={async () => {
+                const url = API.artifacts.download(artifact.id);
+                try {
+                  const resp = await fetch(url, { credentials: "include" });
+                  if (!resp.ok) {
+                    if (resp.status === 410 || resp.status === 404) {
+                      toast.error(
+                        "PDF가 아직 준비되지 않았거나 만료됐습니다.",
+                        {
+                          description:
+                            "월간 자동 발송 cron이 다음 1일에 새로 생성합니다. 즉시 필요 시 support@pivoxquant.com",
+                          duration: 7000,
+                        },
+                      );
+                      return;
+                    }
+                    toast.error(
+                      `PDF 다운로드 실패 (${resp.status}). 잠시 후 다시 시도해 주세요.`,
+                    );
+                    return;
+                  }
+                  const blob = await resp.blob();
+                  const blobUrl = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = blobUrl;
+                  a.download = `${artifact.type}-${artifact.id}.pdf`;
+                  a.click();
+                  URL.revokeObjectURL(blobUrl);
+                } catch (err) {
+                  toast.error(
+                    "PDF 다운로드 중 오류 발생. 네트워크 상태를 확인해 주세요.",
+                    {
+                      description:
+                        err instanceof Error ? err.message : undefined,
+                    },
+                  );
+                }
+              }}
               className="font-mono uppercase"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
@@ -245,11 +294,16 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
                 color: "var(--pq-bronze, #B8956A)",
                 borderBottom: "1px solid var(--pq-bronze-15, rgba(184,149,106,0.15))",
                 paddingBottom: 2,
-                textDecoration: "none",
+                background: "transparent",
+                cursor: "pointer",
+                border: "none",
+                borderBottomColor: "var(--pq-bronze-15, rgba(184,149,106,0.15))",
+                borderBottomWidth: "1px",
+                borderBottomStyle: "solid",
               }}
             >
               Download PDF
-            </a>
+            </button>
           </div>
         </div>
 
