@@ -292,3 +292,8 @@ export const DISCOVER_MOVERS    = `${API_BASE}/api/discover/movers`;
 export const DISCOVER_SECTORS   = `${API_BASE}/api/discover/sectors`;
 export const DISCOVER_SCREENERS = `${API_BASE}/api/discover/screeners`;
 export const MARKET_INDICES     = `${API_BASE}/api/market/indices`;
+
+// Public (no-auth) cache-only market snapshot — backs the landing-page
+// MarketTicker. Rate-limited, cache-only, always HTTP 200. No session
+// cookie required. See routes/public.py::market_snapshot.
+export const PUBLIC_MARKET_SNAPSHOT = `${API_BASE}/api/public/market-snapshot`;

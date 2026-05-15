@@ -841,6 +841,39 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
         range_52w = [round(float(closes.min()), 2),
                      round(float(closes.max()), 2)]
+
+        # Bug #2 (2026-05-14): stale-window cross-validation.
+        #
+        # Phase-0 finding: the KIS "0001" current level (~7,981 on
+        # 2026-05-14) is REAL — KOSPI hit an all-time high ~7,844 on
+        # 2026-05-13 (AI-chip rally, +31% MoM). There is NO 3x scaling
+        # bug; the wide sanity bounds are correct and must NOT be
+        # tightened (a 4,500 ceiling would reject the real index).
+        #
+        # The genuine defect: KIS's `inquire-index-daily-price` endpoint
+        # lags — on 2026-05-14 its newest row was 2026-04-14 (5,967.75),
+        # a full month behind the live quote. The history is internally
+        # consistent (a legitimate uptrend), just from an older window.
+        # When `level` sits well above the whole sparkline, the frontend
+        # would draw a chart whose every point is below the headline
+        # number — visually a "contradiction" even though both values
+        # are real. This is the symptom the live bug-hunt flagged.
+        #
+        # Fix: when the live level exceeds the sparkline max by >15%,
+        # tag `is_stale=true` so the consumer can suppress / annotate
+        # the lagging chart. We keep the real `level` and the real
+        # (stale) sparkline — no data is discarded, the consumer just
+        # gets an honest staleness signal.
+        if level is not None and sparkline:
+            spark_max = max(sparkline)
+            if spark_max > 0 and level > spark_max * 1.15:
+                logger.info(
+                    "market.indices %s: live level %.2f exceeds sparkline "
+                    "max %.2f by >15%% — KIS daily-history window lags the "
+                    "live quote; tagging is_stale",
+                    ticker, level, spark_max,
+                )
+                is_stale = True
     else:
         # No trustworthy history — return null range so the frontend
         # renders "N/A" rather than [0.0, 0.0] (which the bar chart
@@ -848,15 +881,19 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         sparkline = []
         range_52w = None
 
-    # 2026-05-09 fix: per-ticker sanity bound replaces the wide [100,10000]
-    # bracket. The wide bracket let through a KIS API quirk where the
-    # KOSPI ("0001") code occasionally returns the KOSPI-200 mark-to-mid
-    # value scaled by ~3x, producing levels around 7,400 that the frontend
-    # then rendered as the headline KOSPI level. CEO live sanity flagged
-    # "KOSPI 7,498" — the real index has been trading 2,500–3,200.
-    # Tighten the bound per-ticker so only realistic values pass.
-    # 2026-05-10 (B-06): wide bounds — KOSPI 7498 confirmed real via
-    # live KIS API; see services/data/fetcher.py:_KOSPI_RANGE comment.
+    # Per-ticker sanity bounds. These exist only to catch gross unit
+    # confusion (e.g. KOSPI returned as 749,800 — a 100x scaling glitch),
+    # NOT to second-guess a high-but-real index level.
+    #
+    # 2026-05-14 (Bug #2 Phase-0, DEFINITIVE): the KIS "0001" level of
+    # ~7,981 IS the real KOSPI. Confirmed against external press
+    # (KOSPI all-time high ~7,844 on 2026-05-13; +31% MoM, +197% YoY on
+    # the AI-chipmaker rally). The earlier "~3x scaled KOSPI-200" and
+    # "real index trades 2,500–3,200" comments were a WRONG hypothesis —
+    # they have been removed to stop misleading future readers. KIS
+    # `0001` live and KIS `0001` daily-history are the same product;
+    # the only real defect is the daily-history endpoint lagging by ~1
+    # month (handled by the is_stale tag above). Bounds stay wide.
     _PER_TICKER_BOUNDS = {
         "^KS11":  (1_500.0, 50_000.0),  # KOSPI composite — head-room to 50k
         "^KQ11":  (500.0,   50_000.0),  # KOSDAQ composite
@@ -970,18 +1007,14 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     }
 
 
-@market_bp.route("/market/indices")
-@api_auth
-@legal_scrub_response
-def market_indices():
-    """Headline indices for the ``/market`` tab.
+def _compute_indices_snapshot(region: str) -> list[dict]:
+    """Live-fetch the headline index snapshot list for ``region``.
 
-    Query params:
-        region: "us" (default) or "kr"
-
-    Response: list of index snapshots with
-        ticker, name, level, change_1d_pct, range_52w:[lo,hi],
-        sparkline_30d:[...], observed_at, is_stale
+    Extracted from ``market_indices`` so the same upstream-fetch path can
+    be reused by the background cache-warm scheduler job (see
+    ``warm_indices_cache``). Performs live upstream calls — callers that
+    must stay cache-only (e.g. the public landing snapshot) MUST NOT call
+    this directly.
 
     Sources:
         - US: Alpaca ETF proxies (SPY/QQQ/DIA/IWM/VIXY) — FMP refuses
@@ -989,21 +1022,10 @@ def market_indices():
         - KR: KIS index API for KOSPI/KOSDAQ (codes 0001/1001) and
           KOSPI200/KOSDAQ150 (codes 2001/2203); fx_service / macro for USD/KRW.
         - Partial failure: skip the failing ticker. Never mock.
+
+    Returns the list of index snapshots (may be empty on total upstream
+    failure). Does NOT touch ``_indices_cache`` — see ``warm_indices_cache``.
     """
-    region = (request.args.get("region") or "us").lower()
-    if region not in ("us", "kr"):
-        region = "us"
-
-    # Cache-key version bump: the v1 key may contain an empty-array payload
-    # produced by the regressed ``ama.get_quote``-only snapshot (commit
-    # 80c7d26). Versioning the key guarantees we bypass any poisoned entry
-    # instead of waiting for the TTL to expire.
-    cache_key = f"{region}_v2"
-    entry = _indices_cache.get(cache_key)
-    now = _time.time()
-    if entry and now - entry["ts"] < _indices_ttl():
-        return jsonify(entry["data"])
-
     out: list[dict] = []
 
     if region == "us":
@@ -1111,13 +1133,268 @@ def market_indices():
                 "is_stale":      fx_is_stale,
             })
 
-    # Only cache successful responses. Caching a thin failure for 30s locks
-    # users into mock-looking data for the whole cache window — better to
-    # re-try upstream on every request until it succeeds.
+    return out
+
+
+def warm_indices_cache(region: str, *, force: bool = False) -> int:
+    """Refresh ``_indices_cache[region+"_v2"]`` via a live upstream fetch.
+
+    Shared by the ``/api/market/indices`` request path and the background
+    APScheduler cache-warm job (``app._scheduled_indices_cache_warm``).
+
+    TTL-gated: unless ``force`` is set, skips the upstream fetch when the
+    cached entry is still within ``_indices_ttl()``. Because that TTL is
+    itself market-aware (15s intraday / 300s off-hours via
+    ``services.cache_ttl.indices_ttl``), a fixed-interval scheduler tick
+    naturally fetches often during market hours and rarely off-hours —
+    no separate market-hours branch needed here.
+
+    Only caches non-empty results: caching a thin failure would lock
+    readers into empty data for the whole window.
+
+    Returns the number of index rows now cached for the region (0 when
+    the upstream fetch failed and no prior entry exists).
+    """
+    region = (region or "us").lower()
+    if region not in ("us", "kr"):
+        region = "us"
+    cache_key = f"{region}_v2"
+    now = _time.time()
+    entry = _indices_cache.get(cache_key)
+    if not force and entry and now - entry["ts"] < _indices_ttl():
+        return len(entry.get("data") or [])
+
+    out = _compute_indices_snapshot(region)
     if out:
         _indices_cache[cache_key] = {"ts": now, "data": out}
+        return len(out)
+    # Upstream failed — leave any prior (possibly aged) entry in place.
+    return len(entry.get("data") or []) if entry else 0
 
-    return jsonify(out)
+
+@market_bp.route("/market/indices")
+@api_auth
+@legal_scrub_response
+def market_indices():
+    """Headline indices for the ``/market`` tab.
+
+    Query params:
+        region: "us" (default) or "kr"
+
+    Response: list of index snapshots with
+        ticker, name, level, change_1d_pct, range_52w:[lo,hi],
+        sparkline_30d:[...], observed_at, is_stale
+
+    Cache-key version bump: the v1 key may contain an empty-array payload
+    produced by the regressed ``ama.get_quote``-only snapshot (commit
+    80c7d26). Versioning the key guarantees we bypass any poisoned entry
+    instead of waiting for the TTL to expire.
+    """
+    region = (request.args.get("region") or "us").lower()
+    if region not in ("us", "kr"):
+        region = "us"
+
+    cache_key = f"{region}_v2"
+    entry = _indices_cache.get(cache_key)
+    now = _time.time()
+    if entry and now - entry["ts"] < _indices_ttl():
+        return jsonify(entry["data"])
+
+    # Cache miss / stale — refresh through the shared warm path so the
+    # request and the scheduler job share one upstream code path.
+    warm_indices_cache(region, force=True)
+    entry = _indices_cache.get(cache_key)
+    return jsonify(entry["data"] if entry else [])
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Public, cache-only market snapshot for the UNAUTHENTICATED landing page.
+#
+# Why this exists (Bug #1 root fix):
+#   The landing page ticker (frontend market-ticker.tsx) used to hardcode
+#   KOSPI / KOSDAQ / S&P / NASDAQ / USDKRW / VIX snapshot values, which
+#   guarantees staleness. The landing page is unauthenticated and cannot
+#   call /api/market/indices (it sits behind @api_auth). This endpoint
+#   gives the landing page a public, abuse-safe source.
+#
+# Hard rules baked in:
+#   * NO @api_auth — must be reachable without a login.
+#   * CACHE-ONLY — never triggers a synchronous KIS/FMP/Alpaca fetch.
+#     It reads ONLY the in-process _indices_cache (populated as a
+#     side-effect of authenticated /api/market/indices calls) and
+#     fx_service (refreshed by the background scheduler tick). On a
+#     cache miss it returns 200 with whatever it has (possibly empty),
+#     each item flagged is_stale — never a paid-API call from an
+#     unauthenticated path (abuse + cost protection).
+#   * @general_rate_limit — per-IP budget, abuse defense for a public route.
+#   * §101 compliance — generalized macro data only (index levels, FX,
+#     volatility). No individual-stock data, no specificity, no
+#     recommendations. Index levels are general information published in
+#     every news outlet.
+#
+# Cache-warming dependency (documented for the parent agent):
+#   _indices_cache is filled by /api/market/indices, which runs whenever
+#   ANY authenticated user opens the /market tab. fx_service is filled by
+#   the background scheduler (refreshes USD/KRW every ~60s on app boot +
+#   tick). So as long as the app has had at least one authenticated
+#   /market visitor since boot, the index tiles are warm; FX is always
+#   warm. If a deployment has zero authenticated traffic, the index
+#   portion returns empty (200, is_stale implied by absence) until the
+#   first /market visit. A dedicated scheduled cache-warm job for indices
+#   would close that gap — see report. No new infra cost required; it
+#   would reuse the existing APScheduler.
+# ─────────────────────────────────────────────────────────────────────
+@market_bp.route("/public/market-snapshot")
+@general_rate_limit
+def public_market_snapshot():
+    """Public (no-auth), cache-only macro snapshot for the landing ticker.
+
+    Returns generalized macro market data — index levels, FX, volatility —
+    read straight from the in-process caches. Never performs a live
+    upstream fetch (see module comment above).
+
+    Response (always HTTP 200):
+        {
+          "ok": true,
+          "items": [
+            {
+              "symbol": "^KS11",        # stable identifier
+              "name": "KOSPI",          # display label
+              "value": 7981.23,         # level / rate / VIX value
+              "change_pct": 0.42,       # 1d % change (0.0 when unknown)
+              "direction": "up",        # "up" | "down" | "flat"
+              "is_stale": false,        # true when cache is cold/aged
+              "observed_at": "2026-05-15T01:23:45Z"  # ISO-8601 UTC, or null
+            },
+            ...
+          ],
+          "generated_at": "2026-05-15T01:24:00Z",
+          "cache_warm": true            # false ⇒ index cache cold (FX only)
+        }
+
+    Symbols emitted: ^KS11 (KOSPI), ^KQ11 (KOSDAQ), ^GSPC (S&P 500 via SPY
+    proxy), ^IXIC (Nasdaq via QQQ proxy), ^VIX (volatility via VIXY proxy),
+    USDKRW. Any symbol whose cache entry is missing is still emitted with
+    value=null, is_stale=true so the frontend renders a stable row count.
+    """
+    now = _time.time()
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ttl = _indices_ttl()
+
+    def _direction(change_pct) -> str:
+        try:
+            v = float(change_pct)
+        except (TypeError, ValueError):
+            return "flat"
+        if v > 0.001:
+            return "up"
+        if v < -0.001:
+            return "down"
+        return "flat"
+
+    # Map cache ticker -> (display name) for the symbols the landing ticker
+    # needs. US entries live under cache_key "us_v2", KR under "kr_v2" —
+    # the exact keys /api/market/indices writes.
+    _WANTED = [
+        ("kr_v2", "^KS11", "KOSPI"),
+        ("kr_v2", "^KQ11", "KOSDAQ"),
+        ("kr_v2", "USDKRW", "USD / KRW"),
+        ("us_v2", "^GSPC", "S&P 500"),
+        ("us_v2", "^IXIC", "NASDAQ"),
+        ("us_v2", "^VIX", "VIX"),
+    ]
+
+    # Pull each region's cached list once. Cache-only: if absent or aged
+    # past TTL we simply treat it as cold — we do NOT recompute.
+    region_data: dict = {}
+    region_fresh: dict = {}
+    for region_key in ("us_v2", "kr_v2"):
+        entry = _indices_cache.get(region_key)
+        if entry and isinstance(entry.get("data"), list):
+            by_ticker = {}
+            for snap in entry["data"]:
+                if isinstance(snap, dict) and snap.get("ticker"):
+                    by_ticker[snap["ticker"]] = snap
+            region_data[region_key] = by_ticker
+            region_fresh[region_key] = (now - entry.get("ts", 0)) < ttl
+        else:
+            region_data[region_key] = {}
+            region_fresh[region_key] = False
+
+    items: list[dict] = []
+    index_cache_warm = False
+    for region_key, ticker, display in _WANTED:
+        snap = region_data.get(region_key, {}).get(ticker)
+        if snap is not None:
+            index_cache_warm = True
+            # is_stale: honor the snapshot's own flag, OR mark stale when
+            # the region cache itself has aged past TTL.
+            stale = bool(snap.get("is_stale")) or not region_fresh.get(region_key, False)
+            change_pct = snap.get("change_1d_pct", 0.0) or 0.0
+            items.append({
+                "symbol": ticker,
+                "name": display,
+                "value": snap.get("level"),
+                "change_pct": round(float(change_pct), 2),
+                "direction": _direction(change_pct),
+                "is_stale": stale,
+                "observed_at": snap.get("observed_at"),
+            })
+        else:
+            # Cache miss for this symbol — emit a placeholder row so the
+            # frontend keeps a stable layout. Never a live fetch.
+            items.append({
+                "symbol": ticker,
+                "name": display,
+                "value": None,
+                "change_pct": 0.0,
+                "direction": "flat",
+                "is_stale": True,
+                "observed_at": None,
+            })
+
+    # USD/KRW: fx_service is refreshed by the background scheduler, so it is
+    # effectively always warm even with zero authenticated traffic. Prefer
+    # it over the kr_v2 cache entry when available — it is the freshest
+    # cache-resident source and still requires NO live fetch here.
+    try:
+        fx_rate = float(fx_service.get_rate() or 0) or None
+    except Exception:
+        fx_rate = None
+    if fx_rate is not None:
+        try:
+            fx_ts = fx_service.last_updated()
+        except Exception:
+            fx_ts = None
+        try:
+            fx_stale = bool(fx_service.is_stale())
+        except Exception:
+            fx_stale = True
+        fx_observed = (
+            datetime.fromtimestamp(fx_ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if fx_ts else None
+        )
+        # Replace the USDKRW row (sourced from kr_v2 above) with the
+        # fresher fx_service value. Keep the kr_v2 change_pct if present.
+        for it in items:
+            if it["symbol"] == "USDKRW":
+                kr_change = it.get("change_pct", 0.0)
+                it.update({
+                    "value": round(fx_rate, 2),
+                    "is_stale": fx_stale,
+                    "observed_at": fx_observed,
+                    # change_pct only available from kr_v2 history; keep it.
+                    "change_pct": kr_change,
+                    "direction": _direction(kr_change),
+                })
+                break
+
+    return jsonify({
+        "ok": True,
+        "items": items,
+        "generated_at": now_iso,
+        "cache_warm": index_cache_warm,
+    })
 
 
 @market_bp.route("/dividend/<ticker>")

@@ -296,24 +296,45 @@ def test_csp_includes_stripe_sentry():
 # T7: KR color — pq-paper-pos is red-dominant
 # ===========================================================================
 
+def _resolve_css_color(css: str, selector: str) -> str:
+    """Resolve a `.selector { color: ... }` rule to a 6-digit hex.
+
+    Handles both the direct-hex form and the design-system token-
+    indirection form (`color: var(--token)` → `--token: #hex`).
+    Returns the lowercase 6-digit hex, or "" if unresolvable.
+    """
+    direct = re.search(
+        re.escape(selector) + r'\s*\{[^}]*color:\s*#([0-9a-fA-F]{6})', css
+    )
+    if direct:
+        return direct.group(1).lower()
+    ref = re.search(
+        re.escape(selector) + r'\s*\{[^}]*color:\s*var\(\s*(--[\w-]+)\s*\)', css
+    )
+    if not ref:
+        return ""
+    token = ref.group(1)
+    token_def = re.search(re.escape(token) + r'\s*:\s*#([0-9a-fA-F]{6})', css)
+    return token_def.group(1).lower() if token_def else ""
+
+
 def test_kr_color_pq_paper_pos_is_red():
     """design wave Fix #1 regression guard: pq-paper-pos must use a
     red-dominant color (Korean market convention: rise = red).
 
-    STATUS: PASS on main — globals.css has #b85b5b (r=184, g=91, b=91).
+    Accepts both a direct hex and the token-indirection form
+    (`.pq-paper-pos { color: var(--pq-paper-pos) }` → `--pq-paper-pos: #hex`).
     """
     if not _GLOBALS_CSS.exists():
         pytest.skip(f"globals.css not found at {_GLOBALS_CSS}")
 
     css = _GLOBALS_CSS.read_text(encoding="utf-8")
-
-    m = re.search(r'\.pq-paper-pos\s*\{[^}]*color:\s*#([0-9a-fA-F]{6})', css)
-    assert m, (
-        "pq-paper-pos color rule not found in globals.css — "
-        "add '.pq-paper-pos { color: <KR-red-hex>; }'"
+    hex_val = _resolve_css_color(css, ".pq-paper-pos")
+    assert hex_val, (
+        "pq-paper-pos color rule not found / unresolvable in globals.css — "
+        "add '.pq-paper-pos { color: <KR-red-hex-or-var> }'"
     )
 
-    hex_val = m.group(1).lower()
     r = int(hex_val[0:2], 16)
     g = int(hex_val[2:4], 16)
     b = int(hex_val[4:6], 16)
@@ -328,20 +349,18 @@ def test_kr_color_pq_paper_neg_is_blue():
     """design wave Fix #1 regression guard: pq-paper-neg must use a
     blue-dominant color (Korean market convention: fall = blue).
 
-    STATUS: PASS on main — globals.css has #5b7ab8 (r=91, g=122, b=184).
+    Accepts both a direct hex and the token-indirection form.
     """
     if not _GLOBALS_CSS.exists():
         pytest.skip(f"globals.css not found at {_GLOBALS_CSS}")
 
     css = _GLOBALS_CSS.read_text(encoding="utf-8")
-
-    m = re.search(r'\.pq-paper-neg\s*\{[^}]*color:\s*#([0-9a-fA-F]{6})', css)
-    assert m, (
-        "pq-paper-neg color rule not found in globals.css — "
-        "add '.pq-paper-neg { color: <KR-blue-hex>; }'"
+    hex_val = _resolve_css_color(css, ".pq-paper-neg")
+    assert hex_val, (
+        "pq-paper-neg color rule not found / unresolvable in globals.css — "
+        "add '.pq-paper-neg { color: <KR-blue-hex-or-var> }'"
     )
 
-    hex_val = m.group(1).lower()
     r = int(hex_val[0:2], 16)
     g = int(hex_val[2:4], 16)
     b = int(hex_val[4:6], 16)

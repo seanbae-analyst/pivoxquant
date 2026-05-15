@@ -116,12 +116,37 @@ class Artifact(db.Model):
         except (OSError, ValueError):
             return False
 
+    @property
+    def pdf_filename(self) -> str | None:
+        """Basename of the rendered artefact, or None.
+
+        Bug #7 (2026-05-14): ``to_dict`` previously emitted the raw
+        ``pdf_path`` column verbatim — an absolute filesystem path like
+        ``/app/artifacts/brag_card/3/2026-04_Brag_Card.png`` on Railway.
+        That path is a Docker container internal; it leaks the deploy
+        layout, is meaningless (and non-existent) in any other
+        environment, and the frontend never consumes it as a path —
+        downloads go through the dedicated ``/api/artifacts/.../download``
+        routes, and ``has_file`` already drives CTA routing. Expose only
+        the basename so the value stays debuggable without leaking the
+        absolute container path.
+        """
+        if not self.pdf_path:
+            return None
+        try:
+            from pathlib import Path
+            return Path(self.pdf_path).name
+        except (OSError, ValueError):
+            return None
+
     def to_dict(self) -> dict:
         return {
             "id":         self.id,
             "type":       self.type,
             "title":      self.title,
-            "pdf_path":   self.pdf_path,
+            # Bug #7 (2026-05-14): emit basename only — never the raw
+            # absolute container path. See pdf_filename docstring.
+            "pdf_filename": self.pdf_filename,
             # 2026-05-02: explicit has_file flag mirrors the per-id
             # /preview endpoint contract so list-consumers can route
             # "Open" CTAs to /download (PDF inline) vs the frontend

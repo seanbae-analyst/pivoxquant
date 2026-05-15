@@ -816,22 +816,21 @@ Reply ONLY in this exact JSON format, nothing else:
                 logger.debug("silent-fallback: _parse_range", exc_info=True)
                 pass
             return default
-        # Default ranges per CEO directive 2026-04-29: ceiling pushed to
-        # 50,000 to absorb future re-rates without code change. The guard
-        # still catches 100x unit-confusion glitches (e.g. KOSPI 660,000).
-        # KOSPI valid floor: 1500 (legacy low) -- ceiling: 50000 (head-room)
-        # KOSDAQ valid floor: 500 -- ceiling: 50000 (head-room)
+        # Wide ranges: ceiling at 50,000 absorbs future re-rates without a
+        # code change. The guard exists ONLY to catch 100x unit-confusion
+        # glitches (e.g. KOSPI 749,800) — never to second-guess a real,
+        # high index level.
+        #   KOSPI  valid floor: 1500  -- ceiling: 50000 (head-room)
+        #   KOSDAQ valid floor:  500  -- ceiling: 50000 (head-room)
         #
-        # 2026-05-10 (B-06 KIS endpoint re-verify): bounds restored to
-        # wide [1500, 50000] / [500, 50000]. The 2026-05-10 narrowing
-        # (W-04) hypothesised that KIS "0001" was returning a 3x-scaled
-        # KOSPI-200 mark-to-mid; live KIS API probe disproved this --
-        # KOSPI=7498 is the real 2026-05-10 level (continuous uptrend in
-        # KIS daily-price history 5052 -> 7498 across 2026-Q2). The
-        # narrow bound was silently suppressing real data. The 100x
-        # unit-confusion guard (e.g. KOSPI=749,800) remains preserved.
-        # See routes/market.py:_kis_index_snapshot for the full evidence
-        # log. Memory [공식 라이선스만] preserved (KIS Open API only).
+        # 2026-05-14 (Bug #2 Phase-0, DEFINITIVE): KIS "0001" returns the
+        # real KOSPI — ~7,981 on 2026-05-14, confirmed against external
+        # press (all-time high ~7,844 on 2026-05-13; +31% MoM on the AI
+        # chip rally). The earlier W-04 "3x-scaled KOSPI-200" hypothesis
+        # was WRONG. Do NOT narrow these bounds — a 4,500 ceiling would
+        # silently drop the real index. The 100x unit-confusion guard is
+        # the only thing these bounds are for. KIS Open API only
+        # (memory [공식 라이선스만]).
         _KOSPI_RANGE = _parse_range("PIVOX_KOSPI_RANGE", (1500.0, 50000.0))
         _KOSDAQ_RANGE = _parse_range("PIVOX_KOSDAQ_RANGE", (500.0, 50000.0))
 

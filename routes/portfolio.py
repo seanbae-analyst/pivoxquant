@@ -87,6 +87,57 @@ def _cache_ticker_async(app, ticker: str, capital: float):
     threading.Thread(target=_run, daemon=True).start()
 
 
+# ── avg_cost plausibility guard (Bug #4, 2026-05-14) ────────────────────────
+# A test/typo position (AAPL avg_cost=$30 — AAPL last traded at $30 in 2013)
+# drove the portfolio equity curve to +593,259%. The position-write paths
+# had no sanity check on avg_cost against a realistic price floor.
+#
+# Guard policy: reject avg_cost that is below 50% of the ticker's trailing
+# 52-week low. This catches stale/typo cost-basis entries (an order of
+# magnitude off) while still allowing legitimate deep-discount holdings —
+# a real long-term holder who bought near a multi-year low is still well
+# within 50% of the *52-week* low.
+#
+# FAIL-OPEN: if the 52-week low cannot be fetched (FMP plan-gated symbol,
+# provider outage, KR ticker without FMP coverage), the guard returns None
+# and the write proceeds. A data outage must never block a legitimate add.
+_AVG_COST_FLOOR_RATIO = 0.5
+
+
+def _avg_cost_implausible(ticker: str, avg_cost: float) -> str | None:
+    """Return a human error string if ``avg_cost`` is implausibly low for
+    ``ticker``, else None. Fails open on any data-fetch failure."""
+    try:
+        if avg_cost <= 0:
+            return None  # zero/negative already rejected upstream
+        from services.data import fmp as _fmp
+        quote = _fmp.get_quote(ticker)
+        if not quote:
+            return None  # fail-open: no quote → cannot validate
+        raw_low = quote.get("yearLow")
+        if raw_low in (None, ""):
+            return None  # fail-open: provider omitted the field
+        year_low = float(raw_low)
+        if year_low <= 0:
+            return None  # fail-open: unusable field
+        floor = year_low * _AVG_COST_FLOOR_RATIO
+        if avg_cost < floor:
+            logger.warning(
+                "avg_cost guard: %s avg_cost=%.2f below floor=%.2f "
+                "(52w low=%.2f x %.2f) — rejecting",
+                ticker, avg_cost, floor, year_low, _AVG_COST_FLOOR_RATIO,
+            )
+            return (
+                f"Average cost {avg_cost:,.2f} is implausibly low for "
+                f"{ticker} (below 50% of its 52-week low of "
+                f"{year_low:,.2f}). Please re-check the cost basis."
+            )
+        return None
+    except Exception as e:  # pragma: no cover - defensive, always fail-open
+        logger.debug("avg_cost guard fail-open for %s: %s", ticker, e)
+        return None
+
+
 @portfolio_bp.route("")
 @api_auth
 @legal_scrub_response
@@ -259,6 +310,10 @@ def add_position():
         return jsonify({"error": "Invalid ticker"}), 400
     if shares <= 0 or cost <= 0:
         return jsonify({"error": "Shares and average cost required"}), 400
+    # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
+    _implausible = _avg_cost_implausible(ticker, cost)
+    if _implausible:
+        return jsonify({"error": _implausible, "code": "AVG_COST_IMPLAUSIBLE"}), 400
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
     # NEW-D (2026-05-09): two-phase race-safe upsert.
@@ -360,6 +415,10 @@ def edit_position(pid):
         return jsonify({"error": "Shares and average cost must be numbers"}), 400
     if shares <= 0 or cost <= 0:
         return jsonify({"error": "Shares and average cost must be positive"}), 400
+    # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
+    _implausible = _avg_cost_implausible(p.ticker, cost)
+    if _implausible:
+        return jsonify({"error": _implausible, "code": "AVG_COST_IMPLAUSIBLE"}), 400
     p.shares = shares
     p.avg_cost = cost
     try:
@@ -970,6 +1029,10 @@ def create_position_alias():
     # SEC-004 parity with add_position: Position.ticker is db.String(20).
     if len(symbol) > 20:
         return jsonify({"error": "Invalid ticker"}), 400
+    # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
+    _implausible = _avg_cost_implausible(symbol, price)
+    if _implausible:
+        return jsonify({"error": _implausible, "code": "AVG_COST_IMPLAUSIBLE"}), 400
 
     # Proxy to legacy add_position logic by rewriting request body.
     # Reuse free-plan cap check.
@@ -1076,6 +1139,10 @@ def patch_position_alias(pid):
             return jsonify({"error": "avg_cost must be a number"}), 400
         if new_cost <= 0:
             return jsonify({"error": "avg_cost must be positive"}), 400
+        # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
+        _implausible = _avg_cost_implausible(p.ticker, new_cost)
+        if _implausible:
+            return jsonify({"error": _implausible, "code": "AVG_COST_IMPLAUSIBLE"}), 400
         p.avg_cost = new_cost
 
     if "note" in d or "notes" in d or "thesis" in d:

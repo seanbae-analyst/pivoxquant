@@ -684,6 +684,38 @@ def _init_scheduler(app):
                     logger.error(f"Scheduler failed {ticker}: {e}")
             logger.info(f"Scheduled refresh done — {len(tku)} tickers")
 
+    def _scheduled_indices_cache_warm():
+        """Keep the headline-index cache warm for the public landing ticker.
+
+        The unauthenticated ``GET /api/public/market-snapshot`` endpoint is
+        strictly cache-only — it reads ``routes.market._indices_cache`` and
+        never fetches upstream itself. That cache used to be filled ONLY
+        when an authenticated user opened the ``/market`` tab, so a
+        deployment with zero authenticated traffic left the landing ticker
+        cold (is_stale / null rows).
+
+        This job closes that gap: a controlled background refresh (NOT a
+        per-request fetch) of both regions via the shared
+        ``warm_indices_cache`` path. It is TTL-gated inside that helper, so
+        with the market-aware ``indices_ttl`` an upstream fetch only
+        actually fires roughly every 15s during market hours and every
+        ~5min off-hours — the fixed 60s tick below is just the upper bound.
+
+        No new infra / cost: reuses the existing KIS + Alpaca licenses and
+        the existing APScheduler. A failure here (KIS down, etc.) is logged
+        and swallowed so it never takes down the scheduler or the app.
+        """
+        with app.app_context():
+            try:
+                from routes.market import warm_indices_cache
+                us_n = warm_indices_cache("us")
+                kr_n = warm_indices_cache("kr")
+                logger.info(
+                    "Indices cache-warm done — us=%s kr=%s rows", us_n, kr_n
+                )
+            except Exception as e:
+                logger.error(f"Indices cache-warm scheduler failed: {e}")
+
     def _scheduled_weekly_memo():
         """Generate + email the weekly investor memo to Pro+ users.
 
@@ -1321,6 +1353,23 @@ def _init_scheduler(app):
         trigger="interval",
         minutes=1,
         id="fx_rate_refresh",
+        max_instances=1,
+        coalesce=True,
+    )
+    # Headline-index cache warm — keeps routes.market._indices_cache fresh
+    # for the public (no-auth) /api/public/market-snapshot landing ticker,
+    # independent of authenticated /market traffic. Mirrors the FX job
+    # above: short fixed interval, TTL-gated inside warm_indices_cache so
+    # it only hits KIS/Alpaca often during market hours. `next_run_time`
+    # fires the first warm ~immediately after scheduler start (boot-time
+    # warm), minimising the post-deploy cold window.
+    from datetime import datetime as _dt_now, timezone as _tz
+    sched.add_job(
+        _scheduled_indices_cache_warm,
+        trigger="interval",
+        minutes=1,
+        id="indices_cache_warm",
+        next_run_time=_dt_now.now(_tz.utc),
         max_instances=1,
         coalesce=True,
     )
