@@ -241,10 +241,20 @@ def env_health_summary() -> dict:
 
     Excludes the full per-var purpose strings to keep the response
     payload small. The boot-time logs carry the verbose detail.
+
+    The ``production`` flag in the summary reflects the REAL
+    ``FLASK_ENV`` value (not the parameter we pass to ``check_env``).
+    We pass ``production=False`` to ``check_env`` to suppress the
+    logging side-effect on every /health hit, but the response must
+    still tell the external monitor "is this a prod box?" so the
+    alert threshold can be conditioned on it.
     """
-    full = check_env(production=False)  # don't re-log when /health hits us
+    full = check_env(production=False)  # silence logging on every hit
+    real_production = (
+        os.environ.get("FLASK_ENV", "development").lower() == "production"
+    )
     return {
-        "production": full["production"],
+        "production": real_production,
         "missing_required": full["summary"]["missing_required"],
         "missing_recommended": full["summary"]["missing_recommended"],
         "total_checked": full["summary"]["total_checked"],

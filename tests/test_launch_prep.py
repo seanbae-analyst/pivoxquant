@@ -152,6 +152,21 @@ class TestEnvHealthSummary:
             + repr([r.message for r in lp_records])
         )
 
+    def test_summary_production_reflects_flask_env(self, lp, monkeypatch):
+        """Bug 2026-05-15 post-PR-#400 regression — the summary's
+        ``production`` field used to leak the suppress-logging
+        parameter (always False) instead of reflecting the real
+        ``FLASK_ENV``. External monitors condition alerts on this
+        flag, so it must be honest about prod-vs-dev."""
+        monkeypatch.setenv("FLASK_ENV", "production")
+        s = lp.env_health_summary()
+        assert s["production"] is True, (
+            "FLASK_ENV=production must surface as production=True"
+        )
+        monkeypatch.setenv("FLASK_ENV", "development")
+        s = lp.env_health_summary()
+        assert s["production"] is False
+
 
 class TestHealthEndpointIncludesEnv:
     def test_health_response_has_env_summary(self, client):
