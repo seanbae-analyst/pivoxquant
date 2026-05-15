@@ -407,7 +407,16 @@ export function LegalConsentModal({
             className="mt-2 text-center text-pq-mono-sm"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.4)" }}
           >
-            필수 항목 3개에 모두 동의해야 진행할 수 있습니다.
+            {/* 2026-05-15 (bug-hunter Wave 7 HIGH #3): hint text was
+                "필수 항목 3개" but actual required checkboxes are 4
+                (이용약관 + 투자자문업 아님 + 만 14세 + 개인정보 국외
+                이전). The `allRequired` check (lines 143-147) already
+                counted 4 fields + the file's own header comment §8
+                names "four required agreements" — only this hint
+                string was stale. Stale agreement count is a PIPA /
+                약관규제법 surface-accuracy issue (consent must be
+                informed). */}
+            필수 항목 4개에 모두 동의해야 진행할 수 있습니다.
           </p>
         )}
       </div>

@@ -258,6 +258,28 @@ def init_oauth(app):
 @auth_bp.route("/register", methods=["POST"])
 @auth_rate_limit
 def register():
+    # 2026-05-15 (bug-hunter Wave 7 CRITICAL #2): the register endpoint
+    # had NO check for an already-authenticated caller. An attacker
+    # could send POST /api/auth/register with a valid CSRF token from
+    # any logged-in session and force-create a new user, then
+    # `login_user()` at the bottom would silently REPLACE the session
+    # with the new account. Wave 7 reproduced this on production —
+    # actual DB row id=21 (korean@example.com) was created from a
+    # session originally logged in as id=3. Session-fixation /
+    # account-takeover risk class.
+    #
+    # Fix: short-circuit at the top of the handler. An already-authed
+    # user has zero legitimate reason to hit this endpoint — the
+    # frontend signup form only fires when /api/auth/me returns
+    # `authenticated: false`. The 409 surfaces a stable error code
+    # the frontend can pattern-match on.
+    if current_user.is_authenticated:
+        return jsonify({
+            "error": "Already logged in. Sign out first.",
+            "error_kr": "이미 로그인되어 있습니다. 먼저 로그아웃해 주세요.",
+            "code": "ALREADY_AUTHENTICATED",
+        }), 409
+
     d = request.get_json() or {}
     email = (d.get("email") or "").strip().lower()
     pw = d.get("password") or ""
@@ -377,12 +399,46 @@ def _logout_origin_ok() -> bool:
 
 
 def _clear_auth_cookies(response):
-    """Expire every cookie the auth stack may have set."""
+    """Expire every cookie the auth stack may have set.
+
+    2026-05-15 (bug-hunter Wave 7 CRITICAL #1): the previous
+    ``response.delete_cookie(name, path="/", domain=cookie_domain)``
+    call did NOT pass the original cookie's ``secure``, ``httponly``,
+    or ``samesite`` attributes. Some browser cookie policies (notably
+    Safari + Firefox in strict mode + cross-origin requests) require
+    the SET-Cookie deletion header to mirror the original cookie's
+    attributes EXACTLY, otherwise the deletion is silently ignored.
+    Wave 7 reproduced this on production: POST /api/auth/logout
+    returned 200 + ``was_authenticated: true``, but GET /api/auth/me
+    immediately after still returned ``authenticated: true`` —
+    cookies hadn't actually been removed by the browser.
+    Account-takeover / session-persistence-after-logout risk class.
+
+    Fix: use ``set_cookie('', max_age=0, expires=0)`` with ALL the
+    original attributes (Secure / HttpOnly / SameSite / Domain /
+    Path) so the deletion mirrors the original Set-Cookie shape
+    byte-for-byte. Browsers reliably honor it under all major
+    browser cookie policies.
+    """
     cookie_domain = current_app.config.get("SESSION_COOKIE_DOMAIN")
     # Flask's session cookie name (defaults to "session")
     session_cookie_name = current_app.config.get("SESSION_COOKIE_NAME", "session")
+    # Mirror the SET attributes from security.py:280-287:
+    is_secure = bool(current_app.config.get("SESSION_COOKIE_SECURE", False))
+    samesite = current_app.config.get("SESSION_COOKIE_SAMESITE") or "Lax"
+    # HttpOnly is True for all three auth cookies we manage.
     for name in (session_cookie_name, "remember_token", "csrf_token"):
-        response.delete_cookie(name, path="/", domain=cookie_domain)
+        response.set_cookie(
+            name,
+            value="",
+            max_age=0,
+            expires=0,
+            path="/",
+            domain=cookie_domain,
+            secure=is_secure,
+            httponly=True,
+            samesite=samesite,
+        )
     return response
 
 
