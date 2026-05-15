@@ -366,50 +366,69 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
         </div>
       </div>
 
-      {/* Column headers */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(140px, 1.2fr) minmax(100px, 1fr) minmax(160px, 1.4fr) minmax(140px, 1fr)",
-          alignItems: "baseline",
-          gap: 18,
-          padding: "0 0 6px",
-          borderBottom: "0.5px solid rgba(184,149,106,0.3)",
-        }}
-      >
-        <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
-          Index
-        </span>
-        <span
-          className="pq-paper-kicker"
-          style={{ fontSize: "var(--pq-text-kicker)", textAlign: "right" }}
-        >
-          Level &middot; 1D
-        </span>
-        <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
-          30-day observation
-        </span>
-        <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
-          52-week range
-        </span>
-      </div>
-
-      <div>
-        {quotes.length > 0 ? (
-          quotes.map((q) => <DetailRow key={q.symbol} quote={q} />)
-        ) : (
-          <p
+      {/*
+        2026-05-15 (bug-hunter P1, mobile-viewport): the column headers
+        + each DetailRow share a 4-column grid with `minmax(140px, …) +
+        minmax(100px, …) + minmax(160px, …) + minmax(140px, …)` —
+        minimum total ≈ 540px. On a 375px iPhone viewport (with the
+        paper's 28px padding either side ≈ 319px content), that
+        overflows the viewport and pushes the 52-week range / sparkline
+        columns off-screen. The same fix pattern as
+        ledger-book-paper.tsx + positions-table-v2.tsx — wrap the
+        grid in an `overflow-x: auto` container so users get horizontal
+        scroll instead of clipped content. Desktop unaffected (column
+        widths already fit). The wrapper carries the same minWidth on
+        the inner block so headers + rows align identically when
+        scrolled.
+      */}
+      <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+        <div style={{ minWidth: 540 }}>
+          {/* Column headers */}
+          <div
             style={{
-              fontSize: "var(--pq-text-body)",
-              fontStyle: "italic",
-              color: "rgba(20,20,20,0.55)",
-              padding: "20px 0",
-              margin: 0,
+              display: "grid",
+              gridTemplateColumns: "minmax(140px, 1.2fr) minmax(100px, 1fr) minmax(160px, 1.4fr) minmax(140px, 1fr)",
+              alignItems: "baseline",
+              gap: 18,
+              padding: "0 0 6px",
+              borderBottom: "0.5px solid rgba(184,149,106,0.3)",
             }}
-          className="font-serif" >
-            Index data temporarily unavailable.
-          </p>
-        )}
+          >
+            <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
+              Index
+            </span>
+            <span
+              className="pq-paper-kicker"
+              style={{ fontSize: "var(--pq-text-kicker)", textAlign: "right" }}
+            >
+              Level &middot; 1D
+            </span>
+            <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
+              30-day observation
+            </span>
+            <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
+              52-week range
+            </span>
+          </div>
+
+          <div>
+            {quotes.length > 0 ? (
+              quotes.map((q) => <DetailRow key={q.symbol} quote={q} />)
+            ) : (
+              <p
+                style={{
+                  fontSize: "var(--pq-text-body)",
+                  fontStyle: "italic",
+                  color: "rgba(20,20,20,0.55)",
+                  padding: "20px 0",
+                  margin: 0,
+                }}
+              className="font-serif" >
+                Index data temporarily unavailable.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       {region === "KR" && derivatives && derivatives.length > 0 ? (
