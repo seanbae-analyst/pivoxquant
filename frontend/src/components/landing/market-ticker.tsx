@@ -101,6 +101,18 @@ function Row({
       {ticks.map((t, i) => {
         const dir = dirOf(t);
         const label = SYMBOL_LABEL[t.symbol] ?? t.symbol;
+        // Bug #3 (2026-05-15) — ETF-proxy disclosure. When the level is
+        // an ETF price standing in for a caret-prefixed US index symbol
+        // (FMP $29 plan 402s on ^GSPC/^IXIC/^VIX), surface a "VIA
+        // <PROXY>" chip so an unauthenticated visitor doesn't mistake
+        // e.g. SPY 748 for the S&P 500 index level (~5,700). Mirrors
+        // the dashboard top-ticker pattern (PR #379) and the /market
+        // page disclosure (PR #343). Capital-markets-law
+        // misrepresentation guard for the public landing surface.
+        const proxy =
+          typeof t.proxy_ticker === "string" && t.proxy_ticker
+            ? t.proxy_ticker
+            : null;
         return (
           <span
             key={`${t.symbol}-${i}`}
@@ -135,6 +147,20 @@ function Row({
             >
               {DIR_GLYPH[dir]} {fmtChange(t.change_pct)}
             </span>
+            {proxy ? (
+              <span
+                className="ml-2 font-mono uppercase text-pq-eyebrow"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "rgba(245, 240, 232, 0.55)",
+                  borderLeft: "1px solid rgba(184, 149, 106, 0.32)",
+                  paddingLeft: "0.5rem",
+                }}
+                aria-label={`Level shown via ${proxy} ETF proxy, not the underlying index`}
+              >
+                VIA {proxy}
+              </span>
+            ) : null}
             <span
               aria-hidden
               className="ml-6 inline-block h-[9px] w-px"

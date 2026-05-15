@@ -155,3 +155,94 @@ class TestRateLimitApplied:
         # the limiter attaches its metadata to the wrapped function.
         assert hasattr(view, "__wrapped__") or hasattr(view, "_rate_limit") \
             or callable(view)
+
+
+class TestProxyTickerDisclosure:
+    """Bug #3 (2026-05-15) — capital-markets-law disclosure for the public
+    landing ticker. The US index `value` fields are ETF-proxy prices
+    (FMP $29 plan 402s on ^GSPC/^IXIC/^VIX). Without a `proxy_ticker`
+    field, an unauthenticated visitor sees "S&P 500 748" against the SPY
+    price instead of the real S&P 500 (~5,700). PR #379 closed the same
+    bug on the authenticated dashboard top-ticker; this guards the
+    public landing surface."""
+
+    def test_us_indices_emit_proxy_ticker(self, client):
+        _seed_indices_cache(
+            us=[
+                {"ticker": "^GSPC", "name": "S&P 500", "level": 748.0,
+                 "change_1d_pct": 0.5, "is_stale": False,
+                 "observed_at": "2026-05-15T01:00:00Z"},
+                {"ticker": "^IXIC", "name": "Nasdaq 100", "level": 720.0,
+                 "change_1d_pct": 0.7, "is_stale": False,
+                 "observed_at": "2026-05-15T01:00:00Z"},
+                {"ticker": "^VIX", "name": "Volatility", "level": 27.0,
+                 "change_1d_pct": -2.0, "is_stale": False,
+                 "observed_at": "2026-05-15T01:00:00Z"},
+            ],
+        )
+        try:
+            r = client.get("/api/public/market-snapshot")
+        finally:
+            _clear_indices_cache()
+        by_sym = {it["symbol"]: it for it in r.get_json()["items"]}
+        assert by_sym["^GSPC"]["proxy_ticker"] == "SPY"
+        assert by_sym["^IXIC"]["proxy_ticker"] == "QQQ"
+        assert by_sym["^VIX"]["proxy_ticker"] == "VIXY"
+
+    def test_kr_indices_and_fx_have_no_proxy_ticker(self, client):
+        _seed_indices_cache(
+            kr=[
+                {"ticker": "^KS11", "name": "KOSPI", "level": 2800.0,
+                 "change_1d_pct": 0.0, "is_stale": False,
+                 "observed_at": "2026-05-15T01:00:00Z"},
+                {"ticker": "^KQ11", "name": "KOSDAQ", "level": 850.0,
+                 "change_1d_pct": 0.0, "is_stale": False,
+                 "observed_at": "2026-05-15T01:00:00Z"},
+            ],
+        )
+        try:
+            r = client.get("/api/public/market-snapshot")
+        finally:
+            _clear_indices_cache()
+        by_sym = {it["symbol"]: it for it in r.get_json()["items"]}
+        # KR indices are sourced from KIS Open API directly — not ETF proxies.
+        assert by_sym["^KS11"]["proxy_ticker"] is None
+        assert by_sym["^KQ11"]["proxy_ticker"] is None
+        # USDKRW is FX, not an index proxy.
+        assert by_sym["USDKRW"]["proxy_ticker"] is None
+
+    def test_placeholder_rows_still_carry_proxy_ticker(self, client):
+        """When the cache is cold for a US symbol, the row falls back to
+        value=null but the `proxy_ticker` field must still be present so
+        the frontend disclosure logic doesn't rely on a sometimes-missing
+        key."""
+        _clear_indices_cache()
+        r = client.get("/api/public/market-snapshot")
+        by_sym = {it["symbol"]: it for it in r.get_json()["items"]}
+        assert by_sym["^GSPC"]["value"] is None
+        assert by_sym["^GSPC"]["proxy_ticker"] == "SPY"
+        assert by_sym["^KS11"]["value"] is None
+        assert by_sym["^KS11"]["proxy_ticker"] is None
+
+    def test_ixic_display_label_is_nasdaq_100_not_bare_nasdaq(self, client):
+        """PR #343 audit: ^IXIC is proxied via QQQ which tracks NASDAQ 100,
+        NOT the NASDAQ Composite. A bare "NASDAQ" label is a
+        capital-markets-law misrepresentation (Composite ≠ 100). The
+        previous landing-ticker code emitted bare "NASDAQ"; this guards
+        against regression."""
+        _seed_indices_cache(
+            us=[
+                {"ticker": "^IXIC", "name": "Nasdaq 100", "level": 720.0,
+                 "change_1d_pct": 0.7, "is_stale": False,
+                 "observed_at": "2026-05-15T01:00:00Z"},
+            ],
+        )
+        try:
+            r = client.get("/api/public/market-snapshot")
+        finally:
+            _clear_indices_cache()
+        by_sym = {it["symbol"]: it for it in r.get_json()["items"]}
+        # Must NOT be bare "NASDAQ" — must include the 100 distinction.
+        assert by_sym["^IXIC"]["name"] != "NASDAQ"
+        assert "100" in by_sym["^IXIC"]["name"] or \
+               by_sym["^IXIC"]["name"].lower().startswith("nasdaq 100")
