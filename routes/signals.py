@@ -1,5 +1,7 @@
 """Signal analysis routes."""
 import json
+import os
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
@@ -241,17 +243,79 @@ def signal_detail(ticker):
     if not is_user_allowed_ticker(current_user.id, t_up):
         body, status = access_denied_response()
         return jsonify(body), status
-    r = engine.analyze(t_up, current_user.available_capital,
-                       getattr(current_user, "available_capital_krw", 0.0) or 0.0,
-                       fx_rate=fx_service.get_rate(),
-                       profile_params=_get_profile_params())
+
+    # 2026-05-15 (bug-hunter P0): /detail/<ticker> for AAPL was rendering
+    # an indefinite skeleton because `engine.analyze('AAPL')` blocked the
+    # Flask thread with no timeout — the FMP / data fetcher path hung
+    # specifically for this ticker (Samsung 005930.KS returned 200 in
+    # the same session, confirming the hang is ticker-specific, not
+    # systemic). SWR stayed in `loadingSignal=true` forever because the
+    # response never resolved. The cache-fallback branch below never
+    # executed because it only fires when `analyze` returns falsy — a
+    # hanging call returns neither.
+    #
+    # Fix: run engine.analyze in a worker thread with a hard timeout.
+    # On timeout we treat it as a soft failure and fall through to the
+    # SignalCache fallback (same path as if analyze had returned None).
+    # The hung worker is detached — Flask's gunicorn worker keeps
+    # serving, and the runaway thread either completes in the
+    # background (its result is discarded) or eventually crashes its
+    # own thread. Worst case = leaked thread for the gunicorn worker's
+    # lifetime; gunicorn's --keep-alive 5 + restart-on-failure policy
+    # bounds the leak.
+    timeout_s = float(os.environ.get("SIGNAL_DETAIL_TIMEOUT_S", "15"))
+    r = None
+    timed_out = False
+    try:
+        with ThreadPoolExecutor(max_workers=1) as _ex:
+            future = _ex.submit(
+                engine.analyze,
+                t_up,
+                current_user.available_capital,
+                getattr(current_user, "available_capital_krw", 0.0) or 0.0,
+                fx_rate=fx_service.get_rate(),
+                profile_params=_get_profile_params(),
+            )
+            try:
+                r = future.result(timeout=timeout_s)
+            except FuturesTimeoutError:
+                timed_out = True
+                logger.warning(
+                    "signal_detail %s: engine.analyze timed out after %.1fs — "
+                    "falling through to SignalCache. user_id=%s",
+                    t_up, timeout_s, current_user.id,
+                )
+                # Note: do NOT cancel the worker; ThreadPoolExecutor's
+                # cancel() is best-effort on running tasks. Let the
+                # worker complete in the background; gunicorn worker
+                # recycling will reclaim if it leaks.
+    except Exception as exc:
+        # ThreadPoolExecutor setup or pool shutdown error — extremely
+        # rare. Log and fall through to cache path.
+        logger.exception(
+            "signal_detail %s: ThreadPoolExecutor failure: %s", t_up, exc
+        )
+
     if not r:
         cached = db.session.get(SignalCache, t_up)
         if cached and cached.data_json:
             d = json.loads(cached.data_json)
             d["name"] = _canonical_name(d, t_up)
+            # Tell the client this is a stale cache hit, not a fresh
+            # analyze result. The frontend can render an "approximate"
+            # / "last observed" annotation. Honest disclosure beats a
+            # silent stale value.
+            if timed_out:
+                d["is_stale"] = True
+                d["stale_reason"] = "analyze_timeout"
             return jsonify(d)
-        return jsonify({"error": f"Analysis failed for '{ticker}'. Check the ticker symbol."}), 404
+        # Cache empty AND analyze failed — return a structured error
+        # the frontend can render as a real error state instead of an
+        # indefinite skeleton.
+        return jsonify({
+            "error": f"Analysis unavailable for '{ticker}'.",
+            "code": "ANALYZE_TIMEOUT" if timed_out else "ANALYZE_FAILED",
+        }), 504 if timed_out else 404
     cache_service.save_signal(t_up, r)
     r["name"] = _canonical_name(r, t_up)
     return jsonify(r)
