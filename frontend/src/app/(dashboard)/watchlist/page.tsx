@@ -212,7 +212,21 @@ export default function WatchlistPage() {
                         onClick={() => router.push(`/detail/${item.ticker}`)}
                       >
                         <td className="font-mono text-[var(--pq-bronze)] tracking-wide">
-                          {item.ticker}
+                          {/*
+                            2026-05-15 (bug-hunter Wave 4 P2 #3,
+                            feedback_ticker_display memory rule, 3rd
+                            enforcement): KR tickers used to render
+                            as "005930.KS" in the SYMBOL column while
+                            US showed "AAPL" — asymmetric, and the
+                            naked ".KS" suffix is exactly what the
+                            ticker_display rule is meant to prevent.
+                            The NAME column already shows the Korean
+                            name (삼성전자), so the SYMBOL column
+                            stripping the suffix gives the same
+                            "short ticker" treatment to both regions.
+                            US tickers pass through unchanged.
+                          */}
+                          {item.ticker.replace(/\.(KS|KQ)$/i, "")}
                         </td>
                         <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[240px]">
                           {item.name || item.ticker}
