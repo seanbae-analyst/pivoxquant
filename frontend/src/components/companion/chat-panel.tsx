@@ -408,20 +408,21 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
           padding: "14px 16px",
         }}
       >
-        {msg.request_id && (
-          <div className="mb-2 flex items-center gap-2">
-            <span
-              className="font-mono tabular-nums uppercase"
-              style={{
-                fontSize: "var(--pq-text-kicker)",
-                letterSpacing: "0.2em",
-                color: "rgba(184, 149, 106, 0.7)",
-              }}
-            >
-              {msg.request_id}
-            </span>
-          </div>
-        )}
+        {/*
+          2026-05-15 (bug-hunter P2 finding): the backend request_id
+          (a 12-char hex trace tag) was rendered as visible text above
+          every AI response. End users have no use for an internal
+          trace ID — it looked like debug-mode leakage in production.
+          Stored on the message object for Sentry correlation and
+          accessible via inspect / data attribute below; not rendered.
+        */}
+        {msg.request_id ? (
+          <span
+            aria-hidden
+            data-request-id={msg.request_id}
+            className="sr-only"
+          />
+        ) : null}
 
         {msg.pending ? (
           <div className="flex items-center gap-2">
