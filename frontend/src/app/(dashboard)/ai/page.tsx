@@ -39,7 +39,7 @@ import {
   RuledKicker,
 } from "@/components/ui/editorial";
 import { API } from "@/lib/endpoints";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type {
@@ -266,7 +266,27 @@ export default function AiPage() {
       });
       setCoaching({ data: result, loading: false, error: null });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to load";
+      // 2026-05-15 (bug-hunter P0-2 follow-up): the backend AI service
+      // can return 503 when its upstream LLM quota is exhausted
+      // (Anthropic credit window) or while the service restarts. The
+      // previous error path surfaced a raw "Failed to generate
+      // coaching" / "HTTP 503" in a red alert band — alarming for a
+      // user who just clicked GET INSIGHT and worse for a launch
+      // surface. Detect the 503 specifically and replace with a calm
+      // "temporarily busy, try again shortly" copy. The error
+      // boundary on every other code path is preserved.
+      let message: string;
+      if (err instanceof ApiError && err.status === 503) {
+        message =
+          "AI service is temporarily busy — please try again in a moment.";
+      } else if (err instanceof ApiError && err.status === 429) {
+        message =
+          "Too many requests right now. Please wait a moment and retry.";
+      } else if (err instanceof Error) {
+        message = err.message;
+      } else {
+        message = "Failed to load";
+      }
       setCoaching({ data: null, loading: false, error: message });
     }
   }, []);
