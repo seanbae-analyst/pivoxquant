@@ -862,15 +862,28 @@ def get_info(ticker):
     # above always comes back empty for `.KS` / `.KQ` tickers. Route
     # KR tickers through the licensed KIS `inquire-price` path which
     # publishes PER/EPS/PBR/시가총액 on a commercial ToS. Overlays on
-    # any US fallback already populated above — never overwrites a
-    # non-null value.
+    # any US fallback already populated above.
+    #
+    # FINDING-008 (2026-05-14): FMP DOES serve a `marketCap` for some KR
+    # tickers (e.g. 005930.KS → 1942조), but it is inflated relative to
+    # the licensed KIS 시가총액 (hts_avls → 1707조). Live API confirmed:
+    #   FMP marketCap 1.9426e15 / price 293000 → implied 6.63B shares
+    #   KIS marketCap 1.7071e15 / price 291750 → implied 5.85B shares
+    # Samsung has ~5.97B common shares; FMP's figure folds in preferred
+    # shares (and possibly treasury). KIS is the authoritative licensed
+    # source for KR 시가총액, so `marketCap` is force-overwritten for KR
+    # tickers rather than treated as a fill-only fallback. Every other
+    # KIS field keeps the non-destructive fill-only semantics.
+    _KR_AUTHORITATIVE = {"marketCap"}
     if isinstance(ticker, str) and (ticker.endswith(".KS") or ticker.endswith(".KQ")):
         try:
             from services.data.kr_fundamentals import get_kr_fundamentals
             kr = get_kr_fundamentals(ticker)
             if kr:
                 for k, v in kr.items():
-                    if v is not None and not info.get(k):
+                    if v is None:
+                        continue
+                    if k in _KR_AUTHORITATIVE or not info.get(k):
                         info[k] = v
         except Exception as e:
             logger.debug("KR fundamentals routing failed for %s: %s", ticker, e)

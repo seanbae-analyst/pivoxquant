@@ -17,7 +17,9 @@ import * as React from "react";
 import { HomeCard } from "./home-card";
 import { usePortfolioSummary, usePortfolioPositions } from "@/lib/hooks";
 import { pctColor, PRICE_COLOR_HEX } from "@/lib/format";
-import type { Position } from "@/components/portfolio/types";
+// FINDING-021: usePortfolioPositions() returns the BACKEND position shape,
+// not the camelCase `@/components/portfolio/types` Position.
+import type { Position } from "@/lib/types";
 
 interface SummaryShape {
   totalNav?: number;

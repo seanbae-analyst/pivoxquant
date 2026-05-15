@@ -55,7 +55,11 @@ import {
   usePortfolioPositions,
   useWatchlist,
 } from "@/lib/hooks";
-import type { Position } from "@/components/portfolio/types";
+// FINDING-021: usePortfolioPositions() returns the BACKEND position shape
+// (snake_case: ticker / avg_cost / current_price). The camelCase
+// `@/components/portfolio/types` Position let `.symbol` / `.avgCost` /
+// `.current` typecheck while being `undefined` at runtime.
+import type { Position } from "@/lib/types";
 
 /* ── Response shapes ── */
 
@@ -231,13 +235,13 @@ export default function HomePageV1() {
   const topHolding = useMemo<{ ticker: string; name: string } | null>(() => {
     if (!positions || positions.length === 0) return null;
     const ranked = [...positions].sort((a, b) => {
-      const av = (a.current ?? 0) * (a.shares ?? 0);
-      const bv = (b.current ?? 0) * (b.shares ?? 0);
+      const av = (a.current_price ?? 0) * (a.shares ?? 0);
+      const bv = (b.current_price ?? 0) * (b.shares ?? 0);
       return bv - av;
     });
     const top = ranked[0];
-    if (!top?.symbol) return null;
-    return { ticker: top.symbol, name: top.name || top.symbol };
+    if (!top?.ticker) return null;
+    return { ticker: top.ticker, name: top.name || top.ticker };
   }, [positions]);
   const topTicker = topHolding?.ticker ?? null;
 
@@ -257,12 +261,14 @@ export default function HomePageV1() {
   /* Positions table rows */
   const posRows: PosRow[] = useMemo(() => {
     return positions.map((p) => {
-      const cur = p.current ?? 0;
-      const avg = p.avgCost ?? 0;
+      // FINDING-021: backend Position fields are snake_case. `current_price`
+      // / `avg_cost` (NOT `current` / `avgCost`) carry the live values.
+      const cur = p.current_price ?? 0;
+      const avg = p.avg_cost ?? 0;
       const pnl = avg > 0 ? ((cur - avg) / avg) * 100 : 0;
       return {
-        id: p.id,
-        ticker: p.symbol,
+        id: String(p.id),
+        ticker: p.ticker,
         name: p.name,
         shares: p.shares,
         avgCost: avg,

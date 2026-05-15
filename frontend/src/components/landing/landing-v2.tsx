@@ -547,16 +547,17 @@ function SiteFooter() {
         <div className="mb-14 grid grid-cols-2 gap-8 md:grid-cols-6 md:gap-10">
           <div className="col-span-2">
             <Link href="/" className="mb-5 inline-block">
+              {/* FINDING-030: canonical italic Playfair mixed-case wordmark. */}
               <span
-                className="font-serif"
+                className="font-serif italic"
                 style={{
                   fontSize: "var(--pq-text-h5)",
-                  letterSpacing: "0.28em",
+                  letterSpacing: "0.01em",
                   color: "var(--pq-ivory)",
                   fontWeight: 500,
                 }}
               >
-                PIVOXQUANT
+                PivoxQuant
               </span>
             </Link>
             <p
@@ -720,10 +721,14 @@ function SiteFooter() {
               © {new Date().getFullYear()} PivoxQuant &nbsp;·&nbsp; All rights
               reserved.
             </p>
+            {/* FINDING-LAND-002 (design-audit-20260514): the footer
+                compliance disclaimer was 11px (--pq-text-mono-sm) — raised
+                to the --pq-text-body-sm (13px) token so the legal notice
+                is legible rather than visually minimized. */}
             <p
               className="font-serif italic text-center"
               style={{
-                fontSize: "var(--pq-text-mono-sm)",
+                fontSize: "var(--pq-text-body-sm)",
                 lineHeight: 1.6,
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -732,30 +737,11 @@ function SiteFooter() {
               manager, or broker-dealer. Research tool only. Past performance
               does not guarantee future results.
             </p>
+            {/* FINDING-LAND-006 (design-audit-20260514): removed the public
+                GitHub repo link — PivoxQuant is a private beta on the §101
+                exemption track, so the repository is not advertised. The
+                ❦ separator was dropped with it since only one link remains. */}
             <div className="flex items-center gap-4 md:justify-end">
-              <a
-                href="https://github.com/seanbae-analyst/pivoxquant"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-serif transition-colors"
-                style={{
-                  fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.12em",
-                  color: "rgba(245,240,232,0.4)",
-                }}
-              >
-                GITHUB
-              </a>
-              <span
-                aria-hidden
-                className="font-serif"
-                style={{
-                  fontSize: "var(--pq-text-mono-sm)",
-                  color: "rgba(184,149,106,0.55)",
-                }}
-              >
-                ❦
-              </span>
               <a
                 href="mailto:hello@pivoxquant.com"
                 className="font-serif transition-colors"

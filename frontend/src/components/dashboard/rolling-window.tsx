@@ -69,7 +69,7 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
       <header className="flex items-start justify-between gap-3">
         <div>
           <div
-            className="text-[12px] uppercase tracking-[0.26em]"
+            className="text-pq-caption uppercase tracking-[0.26em]"
             style={{ color: paper ? "#B8956A" : "var(--pq-bronze)" }}
           >
             Layer 2 · Learning · Rolling window
@@ -95,7 +95,7 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setWin(t.key)}
-                className="px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] rounded-[2px] border transition-colors"
+                className="px-2.5 py-1 text-pq-eyebrow uppercase tracking-[0.18em] rounded-[2px] border transition-colors"
                 style={{
                   borderColor: active
                     ? "#B8956A"
@@ -130,7 +130,7 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18 }}
-          className="mt-3 font-serif text-[13px]"
+          className="mt-3 font-serif text-pq-body-sm"
           style={{ color: paper ? "rgba(26,22,18,0.75)" : "var(--pq-ivory)" }}
         >
           Declared ·{" "}
@@ -221,13 +221,13 @@ function MiniChart({
   return (
     <div>
       <div
-        className="text-[12px] uppercase tracking-[0.22em]"
+        className="text-pq-caption uppercase tracking-[0.22em]"
         style={{ color: labelColor }}
       >
         {label}
       </div>
       <div
-        className="mt-1 font-mono tabular-nums text-[15px]"
+        className="mt-1 font-mono tabular-nums text-pq-lead"
         style={{ color: valueColor }}
       >
         {isLoading ? "…" : latest !== null ? formatter(latest) : "—"}

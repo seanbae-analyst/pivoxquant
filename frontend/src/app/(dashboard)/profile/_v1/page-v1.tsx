@@ -85,7 +85,7 @@ function Section({
   return (
     <section className="space-y-4">
       <header>
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           {kicker}
         </div>
         <h2 className="mt-1 font-serif text-2xl text-[var(--pq-ivory)]">
@@ -244,7 +244,7 @@ function LivingCFOControls() {
     <>
       {/* Persona overview */}
       <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           Declared persona
         </div>
         <div className="mt-2 flex items-baseline justify-between gap-3 flex-wrap">
@@ -262,7 +262,7 @@ function LivingCFOControls() {
         </div>
 
         {observed30 && (
-          <p className="mt-3 font-serif text-[13px] text-[rgba(245,240,232,0.65)]">
+          <p className="mt-3 font-serif text-pq-body-sm text-[rgba(245,240,232,0.65)]">
             Your last 30 days look like{" "}
             <strong className="text-[var(--pq-ivory)]">
               {PERSONA_LABELS[observed30.persona]} {observed30.score}
@@ -297,7 +297,7 @@ function LivingCFOControls() {
         </div>
 
         <div className="pt-3 border-t border-[var(--pq-ivory-line-soft)]">
-          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+          <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
             Pulse cadence
           </div>
           <div className="flex flex-wrap gap-2">
@@ -327,7 +327,7 @@ function LivingCFOControls() {
 
       {/* Feedback */}
       <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           Section feedback
         </div>
         <div className="mt-2 font-serif text-[var(--pq-ivory)]">
@@ -341,7 +341,7 @@ function LivingCFOControls() {
 
       {/* Inline pulse */}
       <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
           Submit a pulse
         </div>
         <WeeklyPulseCard inline />
@@ -396,12 +396,12 @@ function JournalCompanionSubsection({
 
   return (
     <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Journal Companion · Layer 4
       </div>
       {entitled ? (
         <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-pq-lead">
             Your Companion is active.
           </div>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
@@ -415,7 +415,7 @@ function JournalCompanionSubsection({
         </>
       ) : waitlistDone ? (
         <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-pq-lead">
             You&rsquo;re on the waitlist.
           </div>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
@@ -424,7 +424,7 @@ function JournalCompanionSubsection({
         </>
       ) : (
         <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-pq-lead">
             Closed Beta — join the waitlist.
           </div>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
@@ -555,7 +555,7 @@ function AgentDataSubsection() {
 
   return (
     <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Agent data
       </div>
       <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
@@ -665,7 +665,7 @@ export default function ProfilePageV1() {
             aria-live="polite"
             className="border border-[var(--pq-bronze)]/40 bg-[rgba(184,149,106,0.06)] px-4 py-3 rounded-[2px] flex items-start gap-3"
           >
-            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mt-0.5 shrink-0">
+            <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mt-0.5 shrink-0">
               Sample
             </div>
             <p className="text-xs leading-relaxed text-[rgba(245,240,232,0.72)]">
@@ -679,7 +679,7 @@ export default function ProfilePageV1() {
 
         {/* ── Header ── */}
         <header>
-          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Identity · Persona
           </div>
           <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
@@ -718,7 +718,7 @@ export default function ProfilePageV1() {
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <span
-                    className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-mono"
+                    className="inline-flex items-center rounded px-2 py-0.5 text-pq-eyebrow font-mono"
                     style={{
                       border: "0.5px solid var(--pq-bronze)",
                       color: "var(--pq-bronze)",
@@ -729,7 +729,7 @@ export default function ProfilePageV1() {
                     {tierLabel}
                   </span>
                   {user.oauth_provider && (
-                    <span className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+                    <span className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
                       via {user.oauth_provider === "kakao" ? "Kakao" : user.oauth_provider}
                     </span>
                   )}
@@ -747,7 +747,7 @@ export default function ProfilePageV1() {
           >
             <label
               htmlFor="profile-name"
-              className="block text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)]"
+              className="block text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)]"
             >
               Display name
             </label>
@@ -761,7 +761,7 @@ export default function ProfilePageV1() {
               placeholder="Your name"
             />
             <div className="flex items-center gap-3">
-              <span className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+              <span className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
                 Email is read-only
               </span>
               <button
@@ -830,7 +830,7 @@ export default function ProfilePageV1() {
 
         {/* ── Danger zone ── */}
         <section className="pt-8 border-t border-[var(--pq-ivory-line)]">
-          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Danger zone
           </div>
           <p className="mt-2 text-xs text-[rgba(245,240,232,0.5)]">

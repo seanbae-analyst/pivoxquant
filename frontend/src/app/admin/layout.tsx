@@ -82,10 +82,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="flex items-baseline gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-900">
+            <span className="text-pq-mono-sm font-bold uppercase tracking-widest text-slate-900">
               Admin
             </span>
-            <span className="text-[11px] text-slate-400">·</span>
+            <span className="text-pq-mono-sm text-slate-400">·</span>
             <span className="text-xs text-slate-500">Artifact Preview</span>
           </div>
         </div>

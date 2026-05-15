@@ -86,7 +86,7 @@ export default function ReportByIdPage() {
       aria-live="polite"
     >
       <span
-        className="font-serif text-[13px] uppercase"
+        className="font-serif text-pq-body-sm uppercase"
         style={{
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",

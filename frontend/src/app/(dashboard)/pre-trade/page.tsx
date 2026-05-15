@@ -342,7 +342,7 @@ function SetupStep(props: {
             onChange={(e) => setTicker(e.target.value)}
             placeholder="AAPL · 005930.KS"
             autoFocus
-            className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-[15px] uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+            className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
             style={{ letterSpacing: "0.04em" }}
           />
         </Field>
@@ -354,7 +354,7 @@ function SetupStep(props: {
                 type="button"
                 onClick={() => setSide(s)}
                 aria-label={sideLabel(s)}
-                className={`px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition-colors ${
+                className={`px-4 py-2 text-pq-eyebrow uppercase tracking-[0.2em] transition-colors ${
                   side === s
                     ? "bg-[var(--pq-bronze)] text-[var(--pq-ink)]"
                     : "border border-[rgba(245,240,232,0.15)] text-[rgba(245,240,232,0.65)] hover:border-[var(--pq-bronze)]"
@@ -379,7 +379,7 @@ function SetupStep(props: {
             value={sharesText}
             onChange={(e) => setSharesText(e.target.value)}
             placeholder="0"
-            className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-[15px] outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+            className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
           />
         </Field>
       </div>
@@ -394,7 +394,7 @@ function SetupStep(props: {
           className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
           style={{ resize: "vertical" }}
         />
-        <div className="mt-1 text-[11px] text-[rgba(245,240,232,0.45)] tracking-[0.06em]">
+        <div className="mt-1 text-pq-mono-sm text-[rgba(245,240,232,0.45)] tracking-[0.06em]">
           {rationaleOk
             ? <span className="text-[var(--pq-bronze)]">✓ {rationale.trim().length} chars</span>
             : <span>{remaining} chars more required ({rationale.trim().length}/{MIN_RATIONALE_CHARS})</span>}
@@ -410,7 +410,7 @@ function SetupStep(props: {
           <p
             aria-live="polite"
             role="status"
-            className="text-[11px] text-[rgba(245,240,232,0.5)] tracking-[0.06em]"
+            className="text-pq-mono-sm text-[rgba(245,240,232,0.5)] tracking-[0.06em]"
           >
             {ticker.trim().length === 0 && !rationaleOk
               ? "Ticker와 Thesis를 채워야 진행합니다."
@@ -424,7 +424,7 @@ function SetupStep(props: {
           onClick={onNext}
           disabled={!canAdvance}
           aria-disabled={!canAdvance}
-          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-[11px] uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
         >
           Continue · 7 questions
           <ChevronRight className="h-3.5 w-3.5" />
@@ -458,16 +458,16 @@ function QuestionsStep(props: {
           >
             <div className="flex items-baseline gap-3">
               <span
-                className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-0.5"
+                className="font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-0.5"
                 style={{ minWidth: 18 }}
               >
                 {String(q.n).padStart(2, "0")}
               </span>
               <div className="flex-1 space-y-1">
-                <p className="font-serif text-[17px] leading-snug text-[var(--pq-ivory)]" style={{ fontStyle: "italic" }}>
+                <p className="font-serif text-pq-deck leading-snug text-[var(--pq-ivory)]" style={{ fontStyle: "italic" }}>
                   {q.en}
                 </p>
-                <p className="font-serif text-[13px] text-[rgba(245,240,232,0.55)]">
+                <p className="font-serif text-pq-body-sm text-[rgba(245,240,232,0.55)]">
                   {q.ko}
                 </p>
               </div>
@@ -477,9 +477,9 @@ function QuestionsStep(props: {
                 value={answers[q.n] ?? ""}
                 onChange={(e) => setAnswers((prev) => ({ ...prev, [q.n]: e.target.value }))}
                 placeholder="(optional) 한 줄로 답해보라"
-                className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-[13px] font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+                className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
               />
-              <label className="inline-flex items-center gap-2 cursor-pointer text-[11px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)]">
+              <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm tracking-[0.18em] uppercase text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)]">
                 <input
                   type="checkbox"
                   checked={!!acks[q.n]}
@@ -498,7 +498,7 @@ function QuestionsStep(props: {
           type="button"
           onClick={onBack}
           disabled={submitting}
-          className="px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)]"
+          className="px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)]"
         >
           ← Back
         </button>
@@ -507,7 +507,7 @@ function QuestionsStep(props: {
           onClick={onStart}
           disabled={!allAcked || submitting}
           aria-disabled={!allAcked || submitting}
-          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-[11px] uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {submitting ? "Starting…" : "Start cooldown · 진입 시계"}
           <Gavel className="h-3.5 w-3.5" />
@@ -517,7 +517,7 @@ function QuestionsStep(props: {
         <p
           aria-live="polite"
           role="status"
-          className="text-[11px] text-[rgba(245,240,232,0.5)] text-right tracking-[0.06em]"
+          className="text-pq-mono-sm text-[rgba(245,240,232,0.5)] text-right tracking-[0.06em]"
         >
           {`모든 질문에 ✓ 표시해야 진입 시계가 시작됩니다 (${QUESTIONS.filter((q) => acks[q.n]).length}/${QUESTIONS.length}).`}
         </p>
@@ -555,17 +555,17 @@ function CooldownStep({
       <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-6">
         {/* Trade summary */}
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          <span className="font-mono text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
             {sideLabel(reflection.intended_side)}
           </span>
           <span
-            className="font-serif text-[28px] text-[var(--pq-ivory)]"
+            className="font-serif text-pq-avatar text-[var(--pq-ivory)]"
             style={{ letterSpacing: "-0.01em" }}
           >
             {reflection.intended_ticker_name || reflection.intended_ticker}
           </span>
           {reflection.intended_shares !== null && (
-            <span className="font-mono text-[13px] text-[rgba(245,240,232,0.6)]">
+            <span className="font-mono text-pq-body-sm text-[rgba(245,240,232,0.6)]">
               {reflection.intended_shares} shares
             </span>
           )}
@@ -579,7 +579,7 @@ function CooldownStep({
           >
             {String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}
           </div>
-          <div className="mt-3 text-[10px] tracking-[0.22em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="mt-3 text-pq-eyebrow tracking-[0.22em] uppercase text-[rgba(245,240,232,0.45)]">
             {isReady ? "Cooldown complete" : "Time remaining · 남은 시간"}
           </div>
         </div>
@@ -596,8 +596,8 @@ function CooldownStep({
         {reflection.auto_extended_reason && (
           <div className="flex items-start gap-2 rounded-[2px] border border-[rgba(184,149,106,0.3)] bg-[rgba(184,149,106,0.05)] p-3">
             <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-[var(--pq-bronze)] shrink-0" />
-            <p className="text-[12px] leading-relaxed text-[rgba(245,240,232,0.75)]">
-              <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] mr-2">
+            <p className="text-pq-caption leading-relaxed text-[rgba(245,240,232,0.75)]">
+              <span className="font-mono text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-bronze)] mr-2">
                 Extended
               </span>
               {extendReasonLabel(reflection.auto_extended_reason)}
@@ -608,7 +608,7 @@ function CooldownStep({
         {/* Rationale recap */}
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-4">
           <Caption>Your thesis</Caption>
-          <p className="mt-2 font-serif text-[14px] leading-relaxed italic text-[rgba(245,240,232,0.78)]">
+          <p className="mt-2 font-serif text-pq-body leading-relaxed italic text-[rgba(245,240,232,0.78)]">
             &ldquo;{reflection.rationale}&rdquo;
           </p>
         </div>
@@ -620,7 +620,7 @@ function CooldownStep({
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-red-400"
+          className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-red-400"
         >
           <X className="h-3.5 w-3.5" />
           Cancel · 취소
@@ -629,7 +629,7 @@ function CooldownStep({
           type="button"
           onClick={onProceed}
           disabled={!isReady || submitting}
-          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-[11px] uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Check className="h-3.5 w-3.5" />
           {isReady ? "I am ready · 진행" : "Wait…"}
@@ -656,7 +656,7 @@ function TerminalStep({
       />
       <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
         <div
-          className="font-serif text-[28px] text-[var(--pq-ivory)]"
+          className="font-serif text-pq-avatar text-[var(--pq-ivory)]"
           style={{ letterSpacing: "-0.01em" }}
         >
           {proceeded ? (
@@ -665,12 +665,12 @@ function TerminalStep({
             <>Step away. <em style={{ color: "var(--pq-bronze)" }}>The desk waits.</em></>
           )}
         </div>
-        <p className="font-serif text-[14px] leading-relaxed text-[rgba(245,240,232,0.65)]">
+        <p className="font-serif text-pq-body leading-relaxed text-[rgba(245,240,232,0.65)]">
           {proceeded
             ? "We stamped your reflection. PivoxQuant does not place trades — open your broker (Alpaca, KIS, etc.) and submit the order yourself."
             : "취소되었습니다. 다음 진입 결정 때 다시 7개 질문을 거치세요."}
         </p>
-        <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-[12px] font-mono text-[rgba(245,240,232,0.55)]">
+        <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[rgba(245,240,232,0.55)]">
           <span>{sideLabel(reflection.intended_side)} · {reflection.intended_ticker_name || reflection.intended_ticker}</span>
           {reflection.intended_shares !== null && <span>{reflection.intended_shares} shares</span>}
           <span>
@@ -685,7 +685,7 @@ function TerminalStep({
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex items-center gap-2 px-5 py-2 text-[11px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.65)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
+          className="inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] text-[rgba(245,240,232,0.65)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           New checklist · 새로 시작
@@ -749,7 +749,7 @@ function Field({
       <div className="block">
         <label
           htmlFor={htmlFor}
-          className="block text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1"
+          className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1"
         >
           {label}
         </label>
@@ -759,7 +759,7 @@ function Field({
   }
   return (
     <label className="block">
-      <span className="block text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1">
+      <span className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1">
         {label}
       </span>
       {children}

@@ -342,9 +342,9 @@ function HeroKpi({
   // with text labels in the parent prose for accessibility.
   const valueColor =
     tone === "positive"
-      ? "var(--pq-positive, #dc2626)"
+      ? "var(--pq-positive, #b8956a)"
       : tone === "negative"
-        ? "var(--pq-negative, #2563eb)"
+        ? "var(--pq-negative, #d18888)"
         : "var(--pq-bronze)";
 
   return (

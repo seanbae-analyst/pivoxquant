@@ -132,7 +132,7 @@ export function InteractiveLineChart({
   if (sampled.length < 2) {
     return (
       <div
-        className="relative w-full flex items-center justify-center text-[11px] text-[rgba(245,240,232,0.4)]"
+        className="relative w-full flex items-center justify-center text-pq-mono-sm text-[rgba(245,240,232,0.4)]"
         style={{ height }}
         role="img"
         aria-label={`${ariaLabel} (no data)`}

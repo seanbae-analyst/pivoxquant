@@ -55,7 +55,7 @@ export function AiContentBadge({
       />
       <span className="flex flex-col leading-tight">
         <span
-          className="font-mono text-[11px] uppercase"
+          className="font-mono text-pq-mono-sm uppercase"
           style={{
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
@@ -64,7 +64,7 @@ export function AiContentBadge({
           {AI_CONTENT_LABEL_KO}
         </span>
         <span
-          className="font-mono text-[10px] uppercase opacity-70"
+          className="font-mono text-pq-eyebrow uppercase opacity-70"
           style={{
             letterSpacing: "0.16em",
             color: "var(--pq-bronze-light, var(--pq-bronze))",

@@ -34,8 +34,8 @@ function fmtPctSigned(n: number): string {
 
 function pctColor(n: number): string {
   if (!Number.isFinite(n)) return "rgba(245,240,232,0.55)";
-  if (n > 0) return "var(--pq-positive, #dc2626)";
-  if (n < 0) return "var(--pq-negative, #2563eb)";
+  if (n > 0) return "var(--pq-positive, #b8956a)";
+  if (n < 0) return "var(--pq-negative, #d18888)";
   return "rgba(245,240,232,0.55)";
 }
 

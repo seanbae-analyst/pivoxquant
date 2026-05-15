@@ -200,7 +200,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
       </svg>
 
       {/* Legend */}
-      <div className="mt-1 flex items-center justify-center gap-4 font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
+      <div className="mt-1 flex items-center justify-center gap-4 font-mono text-pq-mono-sm uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-2 w-2 rounded-full"

@@ -134,7 +134,8 @@ export function NotificationDropdown() {
         onClick={() => setOpen((p) => !p)}
         aria-label="Notifications"
         aria-expanded={open}
-        className="pq-topbar-icon-btn relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-0"
+        /* FINDING-020: rounded-full → rounded (4px) — §0 editorial radius. */
+        className="pq-topbar-icon-btn relative flex h-10 w-10 items-center justify-center rounded transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-0"
         style={{
           color: open
             ? "var(--pq-bronze)"
@@ -146,7 +147,7 @@ export function NotificationDropdown() {
         <Bell className="h-5 w-5" strokeWidth={1.75} />
         {unread > 0 && (
           <span
-            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold"
+            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-pq-eyebrow font-semibold"
             style={{ background: "var(--pq-bronze)", color: "var(--pq-ivory)" }}
           >
             {unread > 99 ? "99+" : unread}
@@ -167,7 +168,7 @@ export function NotificationDropdown() {
           >
             <div>
               <div
-                className="text-[10px] uppercase"
+                className="text-pq-eyebrow uppercase"
                 style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
               >
                 Notifications
@@ -256,7 +257,7 @@ export function NotificationDropdown() {
                     />
                     <div className="min-w-0 flex-1">
                       <p
-                        className="text-[14px] leading-snug font-serif"
+                        className="text-pq-body leading-snug font-serif"
                         style={{
                           color: unreadRow ? "var(--pq-ivory)" : "var(--pq-muted)",
                           fontWeight: unreadRow ? 600 : 400,
@@ -273,7 +274,7 @@ export function NotificationDropdown() {
                         </p>
                       )}
                       <p
-                        className="mt-1 text-[11px] uppercase tabular-nums"
+                        className="mt-1 text-pq-mono-sm uppercase tabular-nums"
                         style={{ letterSpacing: "0.12em", color: "var(--pq-muted)" }}
                       >
                         {relativeTime(n.created_at)}

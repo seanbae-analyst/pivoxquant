@@ -121,17 +121,17 @@ export default function OnboardingBrokerPage() {
             <button
               type="button"
               onClick={handleSkip}
-              className="text-[10px] tracking-[0.22em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] transition-colors"
+              className="text-pq-eyebrow tracking-[0.22em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] transition-colors"
             >
               {t("brokerOnboarding.skip")}
             </button>
           </div>
 
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+            <span className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
               {t("brokerOnboarding.stepLabel")}
             </span>
-            <span className="text-[11px] tabular-nums text-[rgba(245,240,232,0.5)]">
+            <span className="text-pq-mono-sm tabular-nums text-[rgba(245,240,232,0.5)]">
               0 · 21
             </span>
           </div>
@@ -151,7 +151,7 @@ export default function OnboardingBrokerPage() {
       <main className="flex-1 overflow-y-auto px-4 sm:px-6">
         <div className="mx-auto max-w-3xl py-10">
           <div className="mb-8">
-            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+            <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
               Step 0 · Connection
             </div>
             <h1 className="font-serif italic text-3xl text-[var(--pq-ivory)] sm:text-4xl">
@@ -180,7 +180,7 @@ export default function OnboardingBrokerPage() {
             </div>
           )}
 
-          <p className="mt-6 text-[11px] text-[rgba(245,240,232,0.4)] text-center leading-relaxed">
+          <p className="mt-6 text-pq-mono-sm text-[rgba(245,240,232,0.4)] text-center leading-relaxed">
             {t("brokerOnboarding.note")}
           </p>
         </div>

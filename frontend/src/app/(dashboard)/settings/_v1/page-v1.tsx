@@ -84,7 +84,7 @@ function Section({
   return (
     <section className="space-y-4">
       <header>
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           {kicker}
         </div>
         <h2 className="mt-1 font-serif text-2xl text-[var(--pq-ivory)]">
@@ -229,7 +229,7 @@ function SeedCapitalSection() {
 
   return (
     <div id="capital" className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px] scroll-mt-24">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Seed capital · Analysis basis
       </div>
       <p className="mt-2 text-xs text-[rgba(245,240,232,0.5)]">
@@ -238,7 +238,7 @@ function SeedCapitalSection() {
 
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+          <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
             Current USD
           </div>
           <div className="mt-1 font-mono text-sm text-[var(--pq-ivory)] tabular-nums">
@@ -246,7 +246,7 @@ function SeedCapitalSection() {
           </div>
         </div>
         <div>
-          <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+          <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
             Current KRW
           </div>
           <div className="mt-1 font-mono text-sm text-[var(--pq-ivory)] tabular-nums">
@@ -259,7 +259,7 @@ function SeedCapitalSection() {
         <div>
           <label
             htmlFor="seed-usd"
-            className="block text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] mb-1"
+            className="block text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] mb-1"
           >
             USD
           </label>
@@ -279,7 +279,7 @@ function SeedCapitalSection() {
         <div>
           <label
             htmlFor="seed-krw"
-            className="block text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] mb-1"
+            className="block text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] mb-1"
           >
             KRW
           </label>
@@ -330,7 +330,7 @@ function SubscriptionSection() {
           <>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-1.5">
+                <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-1.5">
                   <Crown className="h-3 w-3" />
                   {tier} plan
                 </div>
@@ -340,7 +340,7 @@ function SubscriptionSection() {
               </div>
               {subData?.current_period_end && isPaid && (
                 <div className="text-right">
-                  <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+                  <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
                     {subData.cancel_at_period_end ? "Cancels" : "Renews"}
                   </div>
                   <div className="mt-1 text-sm text-[var(--pq-ivory)] tabular-nums">
@@ -722,7 +722,7 @@ function PreferencesSection() {
       </div>
 
       <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-3">
+        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-3">
           Language
         </div>
         <div className="flex gap-2">
@@ -817,7 +817,7 @@ export default function SettingsPageV1() {
       <div className="space-y-10">
         {/* ── Header ── */}
         <header>
-          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Account · Preferences
           </div>
           <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
@@ -840,7 +840,7 @@ export default function SettingsPageV1() {
 
         {/* ── Danger zone ── */}
         <section className="pt-8 border-t border-[var(--pq-ivory-line)]">
-          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Danger zone
           </div>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">

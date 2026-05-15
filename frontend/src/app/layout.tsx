@@ -241,7 +241,8 @@ export default async function RootLayout({
         {/* SEO audit (2026-05-09): JSON-LD Organization structured data so
             Google Knowledge Graph can resolve the brand entity. The site
             isn't yet listed; declaring this gives the crawler the canonical
-            wordmark + sameAs hooks (Twitter / GitHub) when it's indexed. */}
+            wordmark when it's indexed. sameAs (GitHub) intentionally omitted
+            during private beta — see FINDING-LAND-006. */}
         <script
           type="application/ld+json"
           nonce={nonce}
@@ -254,9 +255,6 @@ export default async function RootLayout({
               logo: "https://pivoxquant.com/icons/icon-512x512.png",
               description:
                 "Observational quant research tool. Informational only — not investment advice.",
-              sameAs: [
-                "https://github.com/seanbae-analyst/pivoxquant",
-              ],
             }),
           }}
         />
@@ -270,7 +268,7 @@ export default async function RootLayout({
          */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-[var(--pq-bronze)] focus:text-[var(--pq-ink)] focus:px-3 focus:py-2 focus:rounded-sm focus:font-mono focus:text-[11px] focus:uppercase focus:tracking-[0.18em] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--pq-bronze)]"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-[var(--pq-bronze)] focus:text-[var(--pq-ink)] focus:px-3 focus:py-2 focus:rounded-sm focus:font-mono focus:text-pq-mono-sm focus:uppercase focus:tracking-[0.18em] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--pq-bronze)]"
         >
           Skip to main content
         </a>

@@ -60,7 +60,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
 
         {isToday && today?.briefing && (
           <div className="mt-4">
-            <h4 className="font-mono text-[12px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+            <h4 className="font-mono text-pq-caption uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
               Priorities
             </h4>
             <ul className="mt-2 space-y-1">
@@ -83,7 +83,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
 
         {isToday && today?.reflection && (
           <div className="mt-4">
-            <h4 className="font-mono text-[12px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+            <h4 className="font-mono text-pq-caption uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
               Reflection
             </h4>
             {today.reflection.answers ? (
@@ -113,7 +113,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
               <p className="font-mono text-lg font-bold tabular-nums text-[var(--pq-ivory)]">
                 {today.score.total}
               </p>
-              <p className="mt-0.5 font-mono text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+              <p className="mt-0.5 font-mono text-pq-caption uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
                 Total
               </p>
             </div>
@@ -121,7 +121,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
               <p className="font-mono text-lg font-bold tabular-nums text-[var(--pq-bronze)]">
                 {today.score.activity}
               </p>
-              <p className="mt-0.5 font-mono text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+              <p className="mt-0.5 font-mono text-pq-caption uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
                 Activity
               </p>
             </div>
@@ -129,7 +129,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
               <p className="font-mono text-lg font-bold tabular-nums text-[var(--pq-bronze-light)]">
                 {today.score.reflection}
               </p>
-              <p className="mt-0.5 font-mono text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+              <p className="mt-0.5 font-mono text-pq-caption uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
                 Reflection
               </p>
             </div>

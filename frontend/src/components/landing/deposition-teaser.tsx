@@ -84,7 +84,7 @@ export function DepositionTeaser() {
             style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
           />
           <span
-            className="font-serif text-[11px] uppercase"
+            className="font-serif text-pq-mono-sm uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             Signature · Pre-Trade Checklist
@@ -151,7 +151,7 @@ export function DepositionTeaser() {
                     aria-hidden
                   />
                   <span
-                    className="font-mono text-[9px] uppercase tabular-nums"
+                    className="font-mono text-pq-kicker uppercase tabular-nums"
                     style={{
                       letterSpacing: "0.22em",
                       color: "rgba(139,111,71,0.8)",
@@ -199,7 +199,7 @@ export function DepositionTeaser() {
                   className="grid grid-cols-[auto_minmax(0,1fr)] gap-3"
                 >
                   <span
-                    className="font-mono text-[10px] tabular-nums"
+                    className="font-mono text-pq-eyebrow tabular-nums"
                     style={{
                       color: "rgba(139,111,71,0.85)",
                       letterSpacing: "0.1em",
@@ -227,9 +227,12 @@ export function DepositionTeaser() {
               ))}
             </div>
 
+            {/* FINDING-LAND-002 sweep (design-audit-20260514): compliance
+                disclaimers must not render below 13px — raised from
+                --pq-text-eyebrow (10.5px) to --pq-text-body-sm (13px). */}
             <p
               className="mt-8 font-serif italic"
-              style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.45)" }}
+              style={{ fontSize: "var(--pq-text-body-sm)", color: "rgba(10,10,10,0.45)" }}
             >
               Not investment advice. A reflection tool, logged to your
               compounding memory.
@@ -251,7 +254,7 @@ export function DepositionTeaser() {
                 style={{ borderColor: "var(--pq-border)" }}
               >
                 <span
-                  className="font-mono text-[11px] tabular-nums"
+                  className="font-mono text-pq-mono-sm tabular-nums"
                   style={{
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",

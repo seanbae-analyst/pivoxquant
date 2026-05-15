@@ -39,7 +39,7 @@ const PAPER_BORDER = "var(--pq-ivory-line)";
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+    <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
       {children}
     </div>
   );
@@ -88,7 +88,7 @@ function PersonaHeader({
           <div className="font-serif text-2xl text-[var(--pq-ivory)]">
             {label}
           </div>
-          <div className="mt-1 font-serif italic text-[13px] text-[rgba(184,149,106,0.85)]">
+          <div className="mt-1 font-serif italic text-pq-body-sm text-[rgba(184,149,106,0.85)]">
             {tagline}
           </div>
         </div>
@@ -101,7 +101,7 @@ function PersonaHeader({
           >
             confidence · {confidence}
           </div>
-          <div className="mt-1 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="mt-1 text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
             {tradeCount} {tradeCount === 1 ? "trade" : "trades"} observed
           </div>
         </div>
@@ -190,7 +190,7 @@ function FeatureBars({
               <div className="min-w-0">
                 <div
                   className={
-                    "font-serif text-[13px] truncate " +
+                    "font-serif text-pq-body-sm truncate " +
                     (sparse
                       ? "text-[rgba(245,240,232,0.55)]"
                       : "text-[var(--pq-ivory)]")
@@ -199,7 +199,7 @@ function FeatureBars({
                   {row.label}
                 </div>
                 {sparse && (
-                  <div className="text-[12px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.3)]">
+                  <div className="text-pq-caption uppercase tracking-[0.18em] text-[rgba(245,240,232,0.3)]">
                     no evidence · default
                   </div>
                 )}
@@ -238,7 +238,7 @@ function FeatureBars({
                 />
               </div>
 
-              <div className="text-right font-mono tabular-nums text-[12px] text-[rgba(245,240,232,0.65)]">
+              <div className="text-right font-mono tabular-nums text-pq-caption text-[rgba(245,240,232,0.65)]">
                 {fmt(observed, 2)}
               </div>
             </li>
@@ -287,7 +287,7 @@ function WhyThisPersona({
             }}
           >
             <span
-              className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-mono text-[10px]"
+              className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full font-mono text-pq-eyebrow"
               style={{
                 border: "0.5px solid var(--pq-bronze)",
                 color: "var(--pq-bronze)",
@@ -297,7 +297,7 @@ function WhyThisPersona({
               {i + 1}
             </span>
             <div className="min-w-0 flex-1">
-              <div className="font-serif text-[14px] text-[var(--pq-ivory)]">
+              <div className="font-serif text-pq-body text-[var(--pq-ivory)]">
                 {row.label}
               </div>
               <div className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">

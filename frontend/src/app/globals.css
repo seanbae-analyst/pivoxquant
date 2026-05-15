@@ -4,6 +4,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* FINDING-014 — JetBrains Mono's ₩ (U+20A9) glyph has double horizontal
+   strokes that read as a strikethrough on price displays. Map ONLY the
+   ₩ codepoint onto an already-loaded font with a clean Won glyph
+   (Pretendard Variable, loaded via CDN; Geist as fallback). Zero new
+   payload, zero call-site changes — the family is prepended to the mono
+   stacks below so every `font-mono` surface inherits the fix while
+   digits, tabular-nums, and all other glyphs stay in JetBrains Mono. */
+@font-face {
+  font-family: "PQ Won Fix";
+  src: local("Pretendard Variable"), local("Pretendard"), local("Geist");
+  unicode-range: U+20A9;
+}
+
 /* ══════════════════════════════════════════════════════════
    PivoxQuant Design System v3 — Apple HIG + Bloomberg Terminal
    Serious financial SaaS. Neutral-heavy + single accent.
@@ -47,7 +60,10 @@
 
   /* Typography */
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  /* "PQ Won Fix" prepended so the ₩ glyph (U+20A9) renders cleanly —
+     see @font-face above (FINDING-014). All other codepoints fall
+     through to JetBrains Mono via --font-mono. */
+  --font-mono: "PQ Won Fix", var(--font-mono);
   --font-serif: var(--font-serif);
   --font-display: var(--font-display);
 
@@ -103,9 +119,12 @@
   --ring: #B8956A;
   --destructive: #dc2626;
 
-  /* Semantic — price direction (Korean convention default) */
-  --up: #dc2626;                    /* red-600 — rise */
-  --down: #2563eb;                  /* blue-600 — fall */
+  /* Semantic — price direction (Korean convention default).
+     v3 spec: muted carmine rise / muted indigo fall — sits inside the
+     Vantablack+bronze editorial palette (was Tailwind red-600/blue-600
+     which fought the bronze). Matches lib/format.ts PRICE_COLOR_HEX. */
+  --up: #D18888;                    /* KR carmine — rise */
+  --down: #7AA0C8;                  /* KR indigo — fall */
   --neutral: #64748b;               /* slate-500 */
 
   --success: #1a7a4c;
@@ -203,20 +222,29 @@
      instead of JetBrains Mono / Source Serif 4 / Playfair Display. */
   --pq-font-sans: var(--font-sans);
   --pq-font-serif: var(--font-serif);
-  --pq-font-mono: var(--font-mono);
+  /* "PQ Won Fix" prepended — see @font-face / FINDING-014. */
+  --pq-font-mono: "PQ Won Fix", var(--font-mono);
   --pq-font-display: var(--font-display);
 
-  /* Type scale (8 steps + 3 fluid) — §3.3 grid: 12/14/15/18/24/32/48 */
-  --pq-text-eyebrow: 12px;
-  --pq-text-mono-sm: 12px;
+  /* Type scale (8 steps + 3 fluid) — §3.3 grid: 12/14/15/18/24/32/48.
+     eyebrow / mono-sm / body-sm matched to v3 spec (10.5 / 11 / 13) —
+     restores the calibrated editorial rhythm (eyebrow whispers below
+     caption, body-sm reads as a true small step under body). */
+  --pq-text-eyebrow: 10.5px;
+  --pq-text-mono-sm: 11px;
   --pq-text-caption: 12px;
-  --pq-text-body-sm: 14px;
+  --pq-text-body-sm: 13px;
   --pq-text-body: 14px;
   --pq-text-quote: 24px;
   --pq-text-h3: 32px;
   --pq-text-h2: clamp(1.875rem, 3.6vw, 2.75rem);
   --pq-text-h1: clamp(2.4rem, 5.6vw, 4.5rem);
   --pq-text-display: clamp(3rem, 7vw, 6rem);
+
+  /* Deck — standfirst / sub-hero lead paragraph (v3 spec: 17px).
+     Was referenced by spec but never defined in CSS, so any
+     var(--pq-text-deck) consumer silently fell back to inherited size. */
+  --pq-text-deck: 17px;
 
   /* Tokenized sub-12px sizes (PR #213/#214 follow-up F4).
      Replaces 18+ inline text-[9px..11px] sites in detail page.
@@ -293,6 +321,16 @@
   --pq-text-hero-num: 48px;      /* hero stat numeric (settings/risk/year-end-letter) */
   --pq-text-pdf-micro: 6px;      /* PDF micro footnote (pdf-primitives print only) */
 
+  /* PWA safe-area insets — base definition so consumers can reference
+     var(--pq-safe-*) on every surface, not just standalone mode. In a
+     normal browser env(safe-area-inset-*) resolves to 0px (harmless);
+     the @media (display-mode: standalone) block below re-declares them
+     for installed-PWA notch / home-indicator handling. */
+  --pq-safe-top: env(safe-area-inset-top, 0px);
+  --pq-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --pq-safe-left: env(safe-area-inset-left, 0px);
+  --pq-safe-right: env(safe-area-inset-right, 0px);
+
   /* Tracking */
   --pq-track-eyebrow: 0.22em;
   --pq-track-wordmark: 0.16em;
@@ -307,6 +345,15 @@
      KR convention reserves #D18888 (muted red) for losses; --pq-error
      is the same hue, semantically distinct from `up/down` price colors. */
   --pq-error: #d18888;
+
+  /* Signal posture tokens — §7 three-color system (audit FINDING-019).
+     POSITIVE is NOT "up/green/red" — it means a layer evaluated and passed,
+     so it reads neutral-bronze (calm, not alarming). NEGATIVE reuses the
+     carmine --pq-error (the only alarm hue). NEUTRAL / PENDING is muted ivory.
+     Frontend never invents a posture — it only colors what the backend authored. */
+  --pq-positive: #b8956a;   /* bronze — evaluated & passing (calm, not "green") */
+  --pq-negative: #d18888;   /* carmine — evaluated & breached (the alarm hue) */
+  --pq-neutral:  rgba(245, 240, 232, 0.55);  /* muted ivory — pending / observing */
 
   /* ── Motion Tokens (motion-spec skill SoT) ──────────────────────────────
      Added 2026-05-06 per .claude/skills/motion-spec/SKILL.md §2-A~2-C.
@@ -394,6 +441,41 @@
   --sidebar-ring: #d4a558;
 }
 
+/* ── Typography token utilities (FINDING-004) ──
+   font-size ONLY — deliberately no line-height. Mirrors the exact
+   behaviour of the raw `text-[Npx]` arbitrary classes these replace
+   (which also set font-size only, leaving line-height inherited).
+   Setting line-height here would shift layout, so it is omitted.
+   One utility per --pq-text-* token defined in @theme above. */
+@utility text-pq-eyebrow { font-size: var(--pq-text-eyebrow); }
+@utility text-pq-mono-sm { font-size: var(--pq-text-mono-sm); }
+@utility text-pq-caption { font-size: var(--pq-text-caption); }
+@utility text-pq-body-sm { font-size: var(--pq-text-body-sm); }
+@utility text-pq-body { font-size: var(--pq-text-body); }
+@utility text-pq-quote { font-size: var(--pq-text-quote); }
+@utility text-pq-h3 { font-size: var(--pq-text-h3); }
+@utility text-pq-h2 { font-size: var(--pq-text-h2); }
+@utility text-pq-h1 { font-size: var(--pq-text-h1); }
+@utility text-pq-display { font-size: var(--pq-text-display); }
+@utility text-pq-deck { font-size: var(--pq-text-deck); }
+@utility text-pq-mono-xs { font-size: var(--pq-text-mono-xs); }
+@utility text-pq-eyebrow-sm { font-size: var(--pq-text-eyebrow-sm); }
+@utility text-pq-mono-tiny { font-size: var(--pq-text-mono-tiny); }
+@utility text-pq-button { font-size: var(--pq-text-button); }
+@utility text-pq-lead { font-size: var(--pq-text-lead); }
+@utility text-pq-h6 { font-size: var(--pq-text-h6); }
+@utility text-pq-h5 { font-size: var(--pq-text-h5); }
+@utility text-pq-h4 { font-size: var(--pq-text-h4); }
+@utility text-pq-kicker { font-size: var(--pq-text-kicker); }
+@utility text-pq-avatar { font-size: var(--pq-text-avatar); }
+@utility text-pq-pdf-hero { font-size: var(--pq-text-pdf-hero); }
+@utility text-pq-micro { font-size: var(--pq-text-micro); }
+@utility text-pq-mono-md { font-size: var(--pq-text-mono-md); }
+@utility text-pq-callout { font-size: var(--pq-text-callout); }
+@utility text-pq-gauge { font-size: var(--pq-text-gauge); }
+@utility text-pq-hero-num { font-size: var(--pq-text-hero-num); }
+@utility text-pq-pdf-micro { font-size: var(--pq-text-pdf-micro); }
+
 /* ── Base layer ── */
 @layer base {
   * {
@@ -405,7 +487,12 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-background text-foreground;
+    /* The page floor IS the v3 Vantablack design system — not Tailwind
+       defaults (#fff / slate-900). Prevents white FOUC flashes on slow
+       networks and white-out on any surface missing a .bg-pq-ink wrapper
+       (error pages, embeds, PDF preview iframes). */
+    background: var(--pq-ink);
+    color: var(--pq-ivory);
     font-size: 15px;
     line-height: 1.55;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -1462,6 +1549,10 @@ button:hover > .pq-ink-pill,
 }
 
 /* Bronze primary button on ink */
+/* FINDING-036: ivory-on-bronze measured 2.45:1 — fails WCAG AA 4.5:1 for
+   normal text. Fix is ink text on bronze (7.32:1 ✓), and a LIGHTER bronze
+   on hover (ink on bronze-light = 5.84:1 ✓) instead of bronze-deep (ink on
+   bronze-deep was only 2.97:1). Both states now pass AA. */
 .pq-ink-btn-bronze {
   display: inline-flex;
   align-items: center;
@@ -1470,7 +1561,7 @@ button:hover > .pq-ink-pill,
   height: 36px;
   padding: 0 18px;
   background: var(--pq-bronze);
-  color: var(--pq-ivory);
+  color: var(--pq-ink);
   font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 11px;
   letter-spacing: 0.18em;
@@ -1482,7 +1573,7 @@ button:hover > .pq-ink-pill,
   transition: background-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .pq-ink-btn-bronze:hover {
-  background: var(--pq-bronze-deep);
+  background: var(--pq-bronze-light);
 }
 .pq-ink-btn-bronze:focus-visible {
   outline: 1px solid var(--pq-bronze-light);
@@ -2424,10 +2515,15 @@ i.italic,
     box-shadow 300ms ease,
     opacity 400ms ease,
     filter 400ms ease;
+  /* FINDING-025: the ivory sheet read as a hard cut against Vantablack.
+     Depth shadow integrates it onto "the desk"; the extra 0.5px ivory
+     hairline (last layer) gives the warm edge definition the audit asked
+     for so the paper feels laid down, not pasted. */
   box-shadow:
     6px 20px 40px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(184, 149, 106, 0.08);
+    inset 0 0 0 1px rgba(184, 149, 106, 0.08),
+    0 0 0 0.5px rgba(245, 240, 232, 0.07);
   will-change: transform, box-shadow;
   outline: none;
 }
@@ -2536,9 +2632,15 @@ i.italic,
   font-feature-settings: "tnum";
 }
 
-/* KR convention: 상승=빨강(▲), 하락=파랑(▼) — paper tone (lower saturation) */
-.pq-paper-pos { color: #b85b5b; }
-.pq-paper-neg { color: #5b7ab8; }
+/* KR convention: 상승=빨강(▲), 하락=파랑(▼) — paper tone (lower saturation).
+   Exposed as tokens so SVG sparklines can reference the same hue as the
+   delta text instead of re-hardcoding the hex (FINDING-002 followup). */
+:root {
+  --pq-paper-pos: #b85b5b;
+  --pq-paper-neg: #5b7ab8;
+}
+.pq-paper-pos { color: var(--pq-paper-pos); }
+.pq-paper-neg { color: var(--pq-paper-neg); }
 .pq-paper-neu { color: rgba(20, 20, 20, 0.55); }
 
 /* Ledger row — hairline separator + hover lift */

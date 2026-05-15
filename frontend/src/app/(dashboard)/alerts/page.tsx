@@ -237,7 +237,7 @@ export default function AlertsPage() {
           ].map((s) => (
             <div key={s.label} className="flex flex-col">
               <span
-                className="font-mono text-[10px] uppercase"
+                className="font-mono text-pq-eyebrow uppercase"
                 style={{
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
@@ -266,7 +266,7 @@ export default function AlertsPage() {
             >
               {f.label}
               {f.key === "unread" && stats.unread > 0 && (
-                <span className="ml-1.5 text-[10px] text-[var(--pq-bronze)]">
+                <span className="ml-1.5 text-pq-eyebrow text-[var(--pq-bronze)]">
                   {stats.unread}
                 </span>
               )}
@@ -331,13 +331,13 @@ export default function AlertsPage() {
               <table className="pq-ink-table w-full min-w-[460px]">
                 <thead>
                   <tr>
-                    <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                    <th className="text-left px-5 py-3 text-pq-eyebrow tracking-[0.22em] uppercase">
                       Time
                     </th>
-                    <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                    <th className="text-left px-5 py-3 text-pq-eyebrow tracking-[0.22em] uppercase">
                       Kind
                     </th>
-                    <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                    <th className="text-left px-5 py-3 text-pq-eyebrow tracking-[0.22em] uppercase">
                       Title
                     </th>
                   </tr>
@@ -358,7 +358,7 @@ export default function AlertsPage() {
                         {relativeTime(a.created_at)}
                       </td>
                       <td className="px-5 py-3">
-                        <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+                        <span className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
                           {kindLabel(a.kind)}
                         </span>
                       </td>
@@ -382,7 +382,7 @@ export default function AlertsPage() {
                                 hero name so the symbol code is still visible
                                 without the extra column. */}
                             {a.name && a.ticker && (
-                              <div className="mt-0.5 text-[10px] tracking-[0.06em] font-mono text-[rgba(245,240,232,0.45)] truncate">
+                              <div className="mt-0.5 text-pq-eyebrow tracking-[0.06em] font-mono text-[rgba(245,240,232,0.45)] truncate">
                                 {a.ticker}
                               </div>
                             )}
@@ -393,7 +393,7 @@ export default function AlertsPage() {
                               <Link
                                 href="/settings#capital"
                                 onClick={(e) => e.stopPropagation()}
-                                className="mt-1 inline-block text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
+                                className="mt-1 inline-block text-pq-eyebrow uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
                               >
                                 → Set capital in Settings
                               </Link>
@@ -435,7 +435,7 @@ export default function AlertsPage() {
                     <span className="text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
                       {relativeTime(a.created_at)}
                     </span>
-                    <span className="text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] whitespace-nowrap">
+                    <span className="text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-bronze)] whitespace-nowrap">
                       {kindLabel(a.kind)}
                     </span>
                   </div>
@@ -444,14 +444,14 @@ export default function AlertsPage() {
                   <div className="mt-1.5">
                     <div
                       className={cn(
-                        "font-serif text-[15px] text-[var(--pq-ivory)] leading-snug",
+                        "font-serif text-pq-lead text-[var(--pq-ivory)] leading-snug",
                         !a.is_read && "font-semibold",
                       )}
                     >
                       {a.name || a.ticker || kindLabel(a.kind)}
                     </div>
                     {a.name && a.ticker && (
-                      <div className="mt-0.5 text-[10px] tracking-[0.06em] font-mono text-[rgba(245,240,232,0.45)]">
+                      <div className="mt-0.5 text-pq-eyebrow tracking-[0.06em] font-mono text-[rgba(245,240,232,0.45)]">
                         {a.ticker}
                       </div>
                     )}
@@ -464,7 +464,7 @@ export default function AlertsPage() {
                       <Link
                         href="/settings#capital"
                         onClick={(e) => e.stopPropagation()}
-                        className="mt-1 inline-block text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
+                        className="mt-1 inline-block text-pq-eyebrow uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
                       >
                         → Set capital in Settings
                       </Link>

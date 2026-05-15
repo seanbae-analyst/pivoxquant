@@ -90,13 +90,14 @@ export function PriceWithTimestamp({
   const priceStr = formatPrice(price, currency);
   const rel = relativeTime(observedAt, now);
   const obsMs = observedAt ? new Date(observedAt).getTime() : 0;
+  const hasObservation = !!observedAt && Number.isFinite(obsMs);
   const isStale = !observedAt || now - obsMs > staleThresholdMs;
   const isLive = rel === "live";
 
   const sizeCls = {
-    sm: "text-[13px]",
-    md: "text-[16px]",
-    lg: "text-[22px]",
+    sm: "text-pq-body-sm",
+    md: "text-pq-h6",
+    lg: "text-pq-callout",
   }[size];
 
   return (
@@ -107,8 +108,19 @@ export function PriceWithTimestamp({
       >
         {priceStr}
       </span>
-      {showTimestamp && (
-        <span className="inline-flex items-center gap-1 font-mono text-[12px] uppercase tracking-[0.16em]">
+      {/* FINDING-037: with no observedAt the chip used to render a pulsing
+          dot + bare "—" ("· —") whose meaning was undefined to the user.
+          Render an explicit "OBSERVATION PENDING" label instead — no dot. */}
+      {showTimestamp && !hasObservation && (
+        <span
+          className="font-mono text-pq-mono-sm uppercase tracking-[0.16em]"
+          style={{ color: "rgba(245,240,232,0.45)" }}
+        >
+          Observation pending
+        </span>
+      )}
+      {showTimestamp && hasObservation && (
+        <span className="inline-flex items-center gap-1 font-mono text-pq-caption uppercase tracking-[0.16em]">
           {isStale ? (
             <span
               className="h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-500/70"

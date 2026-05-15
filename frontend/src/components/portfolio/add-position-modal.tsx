@@ -160,7 +160,7 @@ export function AddPositionModal({
           </Field>
         </div>
 
-        <p className="col-span-2 text-[11px] text-[rgba(245,240,232,0.5)]">
+        <p className="col-span-2 text-pq-mono-sm text-[rgba(245,240,232,0.5)]">
           User-entered record only. Not investment advice.
         </p>
       </form>

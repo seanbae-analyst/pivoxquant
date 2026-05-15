@@ -294,7 +294,7 @@ export function WhatIfForm({
                       </div>
                     </div>
                     <span
-                      className="rounded-sm px-2 py-0.5 font-mono text-[10px] font-semibold"
+                      className="rounded-sm px-2 py-0.5 font-mono text-pq-eyebrow font-semibold"
                       style={{
                         backgroundColor: "rgba(184, 149, 106, 0.12)",
                         color: "var(--pq-bronze)",
@@ -487,7 +487,7 @@ export function WhatIfForm({
               key={`${p.ticker}-${p.date}`}
               type="button"
               onClick={() => applyPreset(p)}
-              className="rounded-full px-3 py-1.5 text-[11px] font-semibold transition hover:bg-[rgba(184,149,106,0.08)]"
+              className="rounded-full px-3 py-1.5 text-pq-mono-sm font-semibold transition hover:bg-[rgba(184,149,106,0.08)]"
               style={{
                 border: "1px solid var(--pq-ivory-line)",
                 backgroundColor: "rgba(255, 255, 255, 0.02)",

@@ -103,7 +103,7 @@ export function ProfileDropdown() {
           className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)]"
         >
           <span
-            className="flex h-8 w-8 items-center justify-center rounded-full font-mono text-[11px] font-semibold"
+            className="flex h-8 w-8 items-center justify-center rounded-full font-mono text-pq-mono-sm font-semibold"
             style={{
               background: "transparent",
               border: "0.5px solid var(--pq-bronze)",
@@ -127,7 +127,7 @@ export function ProfileDropdown() {
               style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
             >
               <div
-                className="text-[15px] font-serif"
+                className="text-pq-lead font-serif"
                 style={{
                   color: "var(--pq-ivory)",
                 }}
@@ -142,7 +142,7 @@ export function ProfileDropdown() {
               </div>
               <div className="mt-3">
                 <span
-                  className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-mono"
+                  className="inline-flex items-center rounded px-2 py-0.5 text-pq-eyebrow font-mono"
                   style={{
                     border: "0.5px solid var(--pq-bronze)",
                     color: "var(--pq-bronze)",
@@ -278,7 +278,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
           style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
         >
           <div
-            className="text-[10px] uppercase"
+            className="text-pq-eyebrow uppercase"
             style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
           >
             Reference

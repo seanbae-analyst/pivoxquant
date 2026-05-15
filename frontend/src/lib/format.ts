@@ -200,3 +200,131 @@ export const PRICE_GLYPH = {
 export function priceGlyph(value: number | null | undefined): string {
   return PRICE_GLYPH[priceDir(value)];
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Ticker → company name (audit FINDING-011/012/013/017/026).
+ *
+ * CEO directive [feedback_ticker_display] (repeated 3+ times): a naked
+ * 6-digit code ("005930") is illegible to a KR retail user — always prefer
+ * the company name ("삼성전자"), with the ticker demoted to a subtitle.
+ *
+ * Resolution order at every callsite should be:
+ *   backend payload `name`  →  resolveTickerName(positions/watchlist)
+ *   →  tickerToName() static seed  →  raw ticker (last resort)
+ *
+ * This static seed only needs to cover the seed dataset + KOSPI/KOSDAQ
+ * majors so that even an unauthenticated / cold-cache surface never leaks a
+ * bare code. The backend resolve_stock_name() remains the source of truth
+ * for the long tail.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** Strip exchange suffix and uppercase: "005930.KS" → "005930". */
+export function normalizeTicker(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/\.(KS|KQ|KRX|KR)$/i, "");
+}
+
+// Curated seed — KR majors keyed by bare 6-digit code, US seed names by symbol.
+// Keep small and high-confidence; the backend covers the long tail.
+const TICKER_NAME_SEED: Readonly<Record<string, string>> = {
+  // KOSPI majors
+  "005930": "삼성전자",
+  "000660": "SK하이닉스",
+  "207940": "삼성바이오로직스",
+  "005380": "현대차",
+  "051910": "LG화학",
+  "006400": "삼성SDI",
+  "035420": "NAVER",
+  "035720": "카카오",
+  "005490": "POSCO홀딩스",
+  "000270": "기아",
+  "068270": "셀트리온",
+  "105560": "KB금융",
+  "055550": "신한지주",
+  "012330": "현대모비스",
+  "066570": "LG전자",
+  "003670": "포스코퓨처엠",
+  "028260": "삼성물산",
+  "096770": "SK이노베이션",
+  "017670": "SK텔레콤",
+  "015760": "한국전력",
+  // KOSDAQ majors
+  "247540": "에코프로비엠",
+  "086520": "에코프로",
+  "091990": "셀트리온헬스케어",
+  "196170": "알테오젠",
+  "263750": "펄어비스",
+  // US seed names
+  AAPL: "Apple",
+  MSFT: "Microsoft",
+  GOOGL: "Alphabet",
+  AMZN: "Amazon",
+  NVDA: "NVIDIA",
+  META: "Meta",
+  TSLA: "Tesla",
+  BRK: "Berkshire Hathaway",
+  JPM: "JPMorgan Chase",
+  V: "Visa",
+};
+
+/**
+ * Resolve a ticker to its display name from the static seed.
+ * Returns `null` when unknown — callers should fall back to the raw ticker
+ * (or, better, a backend-supplied name) themselves.
+ */
+export function tickerToName(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const bare = normalizeTicker(raw);
+  if (bare in TICKER_NAME_SEED) return TICKER_NAME_SEED[bare];
+  const upper = (raw ?? "").trim().toUpperCase();
+  if (upper in TICKER_NAME_SEED) return TICKER_NAME_SEED[upper];
+  return null;
+}
+
+/**
+ * Best-effort display name: prefer an explicit backend name, else the static
+ * seed, else the raw ticker. Never returns an empty string for a real input.
+ */
+export function displayName(
+  ticker: string | null | undefined,
+  backendName?: string | null,
+): string {
+  const trimmed = (backendName ?? "").trim();
+  // Reject a backend "name" that is just the ticker echoed back.
+  if (
+    trimmed &&
+    normalizeTicker(trimmed) !== normalizeTicker(ticker) &&
+    trimmed.toUpperCase() !== (ticker ?? "").trim().toUpperCase()
+  ) {
+    return trimmed;
+  }
+  return tickerToName(ticker) ?? (ticker ?? "").trim();
+}
+
+/** True when a string looks like a bare exchange ticker (no company name). */
+export function isNakedTicker(s: string | null | undefined): boolean {
+  if (!s) return false;
+  const t = s.trim();
+  // 6-digit KR code (optionally suffixed) or 1-5 char all-caps US symbol.
+  return /^\d{6}(\.\w{1,4})?$/.test(t) || /^[A-Z]{1,5}(\.\w{1,4})?$/.test(t);
+}
+
+/** Is this ticker a KR-listed (KRW-quoted) symbol? */
+export function isKrTicker(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  const t = raw.trim().toUpperCase();
+  if (/\.(KS|KQ|KRX|KR)$/.test(t)) return true;
+  // Bare 6-digit numeric code with no suffix — KR convention.
+  return /^\d{6}$/.test(t);
+}
+
+/** Currency-aware money format chosen from the ticker, not a hardcoded "$". */
+export function fmtMoneyForTicker(
+  value: number | null | undefined,
+  ticker: string | null | undefined,
+): string {
+  return isKrTicker(ticker) ? fmtKrw(value) : fmtUsd(value);
+}

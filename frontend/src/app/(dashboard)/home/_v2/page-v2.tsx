@@ -93,9 +93,10 @@ export default function HomePageV2() {
         className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
           top: 56,
-          background: "rgba(5,5,5,0.78)",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
+          // FINDING-022: was rgba(5,5,5,0.78) + blur — scrolled content
+          // bled through the semi-transparent bar. Solid ink so the sticky
+          // header always wins the stack cleanly.
+          background: "var(--pq-ink)",
         }}
       >
         <LivingCFOStatusBar />

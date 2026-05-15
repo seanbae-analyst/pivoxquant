@@ -459,7 +459,7 @@ export default function ProfilePageV2() {
           aria-live="polite"
           className="mb-6 border border-[var(--pq-bronze)]/40 bg-[rgba(184,149,106,0.06)] px-4 py-3 rounded-[2px] flex items-start gap-3"
         >
-          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mt-0.5 shrink-0">
+          <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mt-0.5 shrink-0">
             Sample
           </div>
           <p className="text-xs leading-relaxed text-[rgba(245,240,232,0.72)]">
@@ -479,9 +479,8 @@ export default function ProfilePageV2() {
         className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
           top: 56,
-          background: "rgba(5,5,5,0.78)",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
+          // FINDING-022: solid ink — semi-transparent bar bled scrolled content.
+          background: "var(--pq-ink)",
         }}
       >
         <LivingCFOStatusBar />

@@ -9,7 +9,7 @@ export default function NotFound() {
     >
       <div className="max-w-xl text-center">
         <div
-          className="text-[11px] tracking-[0.22em] uppercase mb-4"
+          className="text-pq-mono-sm tracking-[0.22em] uppercase mb-4"
           style={{ color: "#B8956A" }}
         >
           Error 404 · Page not found
@@ -37,7 +37,7 @@ export default function NotFound() {
           </Link>
         </div>
         <p
-          className="mt-12 text-[11px] tracking-[0.14em]"
+          className="mt-12 text-pq-mono-sm tracking-[0.14em]"
           style={{ color: "rgba(247,245,239,0.3)" }}
         >
           PivoxQuant · Observational research only

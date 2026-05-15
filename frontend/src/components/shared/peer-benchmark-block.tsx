@@ -59,7 +59,7 @@ function fmt(
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+    <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
       {children}
     </div>
   );
@@ -91,7 +91,7 @@ function BenchmarkCompareRow({
         </span>
         {delta !== null && (
           <span
-            className="font-mono tabular-nums text-[10px]"
+            className="font-mono tabular-nums text-pq-eyebrow"
             style={{
               color:
                 delta > 0
@@ -189,7 +189,7 @@ export function PeerBenchmarkBlock({
     >
       <div className="flex items-baseline justify-between gap-3">
         <Kicker>{_kicker}</Kicker>
-        <span className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+        <span className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
           N ≥ 20 · anonymized
         </span>
       </div>
@@ -237,14 +237,14 @@ export function PeerBenchmarkBlock({
 
       {s.most_held_sectors && s.most_held_sectors.length > 0 && (
         <div className="mt-4">
-          <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
             Most-held sectors
           </div>
           <ul className="mt-2 flex flex-wrap gap-2">
             {s.most_held_sectors.slice(0, 5).map((sec) => (
               <li
                 key={sec.sector}
-                className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px]"
+                className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-pq-mono-sm"
                 style={{
                   background: "rgba(184,149,106,0.08)",
                   border: "0.5px solid rgba(184,149,106,0.25)",
@@ -263,7 +263,7 @@ export function PeerBenchmarkBlock({
 
       {s.common_mistakes && s.common_mistakes.length > 0 && (
         <div className="mt-4">
-          <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
             Common behavioural patterns in this group
           </div>
           <ul className="mt-2 flex flex-col gap-1.5">

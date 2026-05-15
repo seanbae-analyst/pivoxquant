@@ -58,7 +58,12 @@ import { RecentTransactionsBlock } from "@/components/portfolio/v2/recent-transa
 import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal-v2";
 import { TradeModalV2 } from "@/components/portfolio/v2/trade-modal-v2";
 
-import type { Position, TradeAction } from "@/components/portfolio/types";
+import {
+  toPosition,
+  type Position,
+  type BackendPositionRow,
+  type TradeAction,
+} from "@/components/portfolio/types";
 
 // FX_FALLBACK removed 2026-04-29 (was 1342, ~9% off live ~1478).
 // Resolution: server fxRate → live /api/market/fx (useFxRate) → null.
@@ -66,8 +71,10 @@ import type { Position, TradeAction } from "@/components/portfolio/types";
 const SAFE_FX = (sumFx: number | undefined, liveFx: number | null) =>
   sumFx && sumFx > 0 ? sumFx : liveFx && liveFx > 0 ? liveFx : null;
 
+// FINDING-021: the SWR payload is the BACKEND snake_case shape — adapt it
+// to the camelCase `Position` the portfolio UI consumes (see toPosition).
 interface PositionsResponse {
-  positions?: Position[];
+  positions?: BackendPositionRow[];
 }
 
 export default function PortfolioPageV2() {
@@ -124,8 +131,10 @@ export default function PortfolioPageV2() {
 
   const hasLoadError = Boolean(posErr || sumErr);
 
+  // FINDING-021: map the raw backend rows to the camelCase `Position`
+  // shape before any consumer touches `.current` / `.avgCost` / `.symbol`.
   const positions: Position[] = React.useMemo(
-    () => posData?.positions ?? [],
+    () => (posData?.positions ?? []).map(toPosition),
     [posData],
   );
 
@@ -235,9 +244,8 @@ export default function PortfolioPageV2() {
         className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
           top: 56,
-          background: "rgba(5,5,5,0.78)",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
+          // FINDING-022: solid ink — semi-transparent bar bled scrolled content.
+          background: "var(--pq-ink)",
         }}
       >
         <LivingCFOStatusBar />

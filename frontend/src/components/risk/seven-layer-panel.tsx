@@ -109,7 +109,7 @@ function StatusLabel({ status }: { status: LayerStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide",
+        "inline-flex items-center rounded-full px-2 py-0.5 text-pq-eyebrow font-semibold tracking-wide",
         cls,
       )}
     >
@@ -153,7 +153,7 @@ export function SevenLayerPanel({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <StatusDot status={layer.status} />
-                <h3 className="font-serif font-bold text-[15px] text-slate-900">
+                <h3 className="font-serif font-bold text-pq-lead text-slate-900">
                   {layer.name}
                 </h3>
               </div>
@@ -164,7 +164,7 @@ export function SevenLayerPanel({
 
             {/* metric */}
             <div className="text-right shrink-0">
-              <p className="text-[10px] uppercase tracking-wider text-slate-400">
+              <p className="text-pq-eyebrow uppercase tracking-wider text-slate-400">
                 {layer.metricLabel}
               </p>
               <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-900">

@@ -156,10 +156,10 @@ function AnalysisSectionCard({
           <Icon className="h-4 w-4 text-[var(--pq-bronze)]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-serif text-[15px] text-[var(--pq-ivory)]">
+          <p className="font-serif text-pq-lead text-[var(--pq-ivory)]">
             {config.label}
           </p>
-          <p className="text-[12px] text-[rgba(245,240,232,0.55)] truncate">
+          <p className="text-pq-caption text-[rgba(245,240,232,0.55)] truncate">
             {config.description}
           </p>
         </div>
@@ -180,27 +180,27 @@ function AnalysisSectionCard({
           {state.loading && !content && (
             <div className="flex items-center justify-center gap-2 py-8">
               <Loader2 className="h-5 w-5 animate-spin text-[var(--pq-bronze)]" />
-              <span className="text-[12px] text-[rgba(245,240,232,0.55)] uppercase tracking-[0.18em]">
+              <span className="text-pq-caption text-[rgba(245,240,232,0.55)] uppercase tracking-[0.18em]">
                 Analyzing with AI…
               </span>
             </div>
           )}
           {state.error && (
             <div className="rounded-[2px] border border-red-500/30 bg-red-500/5 px-4 py-3">
-              <p className="text-[14px] text-red-400">{state.error}</p>
+              <p className="text-pq-body text-red-400">{state.error}</p>
             </div>
           )}
           {content && (
             <div className="space-y-3">
-              <div className="whitespace-pre-wrap font-serif text-[14px] leading-relaxed text-[var(--pq-ivory)]">
+              <div className="whitespace-pre-wrap font-serif text-pq-body leading-relaxed text-[var(--pq-ivory)]">
                 {content}
               </div>
               {contentKr && (
                 <details className="group">
-                  <summary className="cursor-pointer text-[12px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
+                  <summary className="cursor-pointer text-pq-caption font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
                     Korean translation
                   </summary>
-                  <div className="mt-3 whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.6)]">
+                  <div className="mt-3 whitespace-pre-wrap font-serif text-pq-body-sm leading-relaxed text-[rgba(245,240,232,0.6)]">
                     {contentKr}
                   </div>
                 </details>
@@ -208,7 +208,7 @@ function AnalysisSectionCard({
             </div>
           )}
           {!state.loading && !state.error && !content && (
-            <p className="text-center text-[12px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.4)] py-4">
+            <p className="text-center text-pq-caption uppercase tracking-[0.18em] text-[rgba(245,240,232,0.4)] py-4">
               Click to load analysis
             </p>
           )}
@@ -379,7 +379,7 @@ export default function AiPage() {
             <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
               AI Analysis Tools
             </h1>
-            <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)] max-w-2xl">
+            <p className="mt-2 font-serif text-pq-lead text-[var(--pq-ivory)] max-w-2xl">
               Claude-driven research notes, drawn over 58 quant signals.
             </p>
             <Caption className="mt-1 max-w-2xl">
@@ -413,7 +413,7 @@ export default function AiPage() {
                 {coaching.loading && (
                   <div className="mt-4 flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-[var(--pq-bronze)]" />
-                    <span className="text-[12px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)]">
+                    <span className="text-pq-caption uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)]">
                       Generating insight…
                     </span>
                   </div>
@@ -421,24 +421,24 @@ export default function AiPage() {
 
                 {coaching.error && (
                   <div className="mt-4 rounded-[2px] border border-red-500/30 bg-red-500/5 px-4 py-3">
-                    <p className="text-[14px] text-red-400">{coaching.error}</p>
+                    <p className="text-pq-body text-red-400">{coaching.error}</p>
                   </div>
                 )}
 
                 {coaching.data && (
                   <div className="mt-4 space-y-3">
                     <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.015)] p-4">
-                      <p className="whitespace-pre-wrap font-serif text-[14px] leading-relaxed text-[var(--pq-ivory)]">
+                      <p className="whitespace-pre-wrap font-serif text-pq-body leading-relaxed text-[var(--pq-ivory)]">
                         {coaching.data.insight}
                       </p>
                     </div>
                     {coaching.data.insight_kr && (
                       <details className="group">
-                        <summary className="cursor-pointer text-[12px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
+                        <summary className="cursor-pointer text-pq-caption font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
                           Korean translation
                         </summary>
                         <div className="mt-3 rounded-[2px] border border-[var(--pq-ivory-line-soft)] bg-[rgba(255,255,255,0.015)] p-4">
-                          <p className="whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.6)]">
+                          <p className="whitespace-pre-wrap font-serif text-pq-body-sm leading-relaxed text-[rgba(245,240,232,0.6)]">
                             {coaching.data.insight_kr}
                           </p>
                         </div>
@@ -462,7 +462,7 @@ export default function AiPage() {
                   <button
                     type="button"
                     onClick={fetchCoaching}
-                    className="mt-3 text-[12px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors"
+                    className="mt-3 text-pq-caption uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors"
                   >
                     Refresh insight
                   </button>
@@ -486,7 +486,7 @@ export default function AiPage() {
               </Caption>
 
               {tickersLoading ? (
-                <div className="flex items-center gap-2 text-[12px] text-[rgba(245,240,232,0.5)]">
+                <div className="flex items-center gap-2 text-pq-caption text-[rgba(245,240,232,0.5)]">
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--pq-bronze)]" />
                   Loading your symbols…
                 </div>
@@ -501,7 +501,7 @@ export default function AiPage() {
                       value={activeTicker}
                       onChange={(e) => handleTickerSelect(e.target.value)}
                       className={cn(
-                        "w-full appearance-none rounded-[2px] border border-[rgba(245,240,232,0.12)] bg-[rgba(255,255,255,0.02)] px-3 pr-9 py-2.5 text-[13px] font-mono tracking-wide text-[var(--pq-ivory)]",
+                        "w-full appearance-none rounded-[2px] border border-[rgba(245,240,232,0.12)] bg-[rgba(255,255,255,0.02)] px-3 pr-9 py-2.5 text-pq-body-sm font-mono tracking-wide text-[var(--pq-ivory)]",
                         "outline-none transition-all duration-200",
                         "focus:border-[var(--pq-bronze)] focus:bg-[rgba(255,255,255,0.04)]",
                       )}
@@ -515,13 +515,13 @@ export default function AiPage() {
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgba(245,240,232,0.5)]" />
                   </div>
-                  <span className="text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.65)]">
+                  <span className="text-pq-caption uppercase tracking-[0.22em] text-[rgba(245,240,232,0.65)]">
                     {userTickers.length} symbol{userTickers.length === 1 ? "" : "s"} eligible
                   </span>
                 </div>
               ) : (
                 <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.015)] px-4 py-5">
-                  <p className="font-serif text-[14px] text-[var(--pq-ivory)]">
+                  <p className="font-serif text-pq-body text-[var(--pq-ivory)]">
                     보유 종목이나 관심종목을 먼저 추가하세요.
                   </p>
                   <Caption className="mt-1.5">
@@ -539,7 +539,7 @@ export default function AiPage() {
               )}
 
               {activeTicker && (
-                <p className="mt-3 text-[12px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)]">
+                <p className="mt-3 text-pq-caption uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)]">
                   Showing analysis for{" "}
                   <span className="font-mono tabular-nums">{activeTicker}</span>
                 </p>
@@ -571,7 +571,7 @@ export default function AiPage() {
             {!activeTicker && hasUserTickers && (
               <div className="border-t border-[var(--pq-ivory-line)] pq-ink-empty text-center py-12">
                 <Fleuron size={14} />
-                <div className="font-serif text-[15px] text-[var(--pq-ivory)] mt-3">
+                <div className="font-serif text-pq-lead text-[var(--pq-ivory)] mt-3">
                   No symbol selected.
                 </div>
                 <Caption className="mt-2">

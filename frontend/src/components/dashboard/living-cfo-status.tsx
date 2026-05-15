@@ -21,7 +21,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { X, Check, Circle, Loader2, Lock } from "lucide-react";
+import { X, Check, Circle, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useInvestmentProfile, useArtifacts } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
@@ -164,7 +164,7 @@ export function LivingCFOStatusBar() {
         aria-label="Living CFO status — click for details"
       >
         <span
-          className="uppercase text-[12px] tracking-[0.26em]"
+          className="uppercase text-pq-caption tracking-[0.26em]"
           style={{ color: "var(--pq-bronze)" }}
         >
           Living CFO
@@ -212,7 +212,13 @@ function LayerDot({
     layer.state === "ready" ? (
       <Check className="h-2.5 w-2.5" strokeWidth={3} />
     ) : layer.state === "learning" ? (
-      <Loader2 className="h-2.5 w-2.5 animate-spin" />
+      // FINDING-032: §6 forbids spinners on dark surfaces — a shimmer
+      // skeleton block carries the "in progress" meaning without the
+      // banned animate-spin.
+      <span
+        className="pq-skeleton-dark inline-block h-2.5 w-2.5"
+        style={{ borderRadius: 1 }}
+      />
     ) : layer.state === "locked" ? (
       <Lock className="h-2.5 w-2.5" />
     ) : (
@@ -232,7 +238,7 @@ function LayerDot({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 text-[12px] uppercase tracking-[0.22em] px-1 py-0.5 rounded-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
+      className="flex items-center gap-1.5 text-pq-caption uppercase tracking-[0.22em] px-1 py-0.5 rounded-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
       style={{ color, background: "transparent" }}
       title={layer.summary}
       aria-label={`Layer ${layer.id} ${layer.name} — ${layer.state}`}
@@ -313,7 +319,7 @@ function StatusModal({
         <div className="flex items-start justify-between mb-4">
           <div>
             <div
-              className="text-[10px] tracking-[0.26em] uppercase"
+              className="text-pq-eyebrow tracking-[0.26em] uppercase"
               style={{ color: "var(--pq-bronze)" }}
             >
               Living CFO · What it knows
@@ -332,7 +338,7 @@ function StatusModal({
           </button>
         </div>
 
-        <p className="font-serif text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">
+        <p className="font-serif text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed">
           Two years in, this dashboard knows your style better than you do.
           It learns from every position you own and every pulse you submit.
         </p>
@@ -370,7 +376,7 @@ function StatusModal({
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+                    <span className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
                       Layer {l.id} · {l.name}
                     </span>
                     {l.state === "locked" && (
@@ -387,7 +393,7 @@ function StatusModal({
                     <Link
                       href={l.cta.href}
                       onClick={onClose}
-                      className="mt-2 inline-flex items-center gap-1 text-[12px] uppercase tracking-[0.22em]"
+                      className="mt-2 inline-flex items-center gap-1 text-pq-caption uppercase tracking-[0.22em]"
                       style={{ color: "var(--pq-bronze)" }}
                     >
                       {l.cta.label}
@@ -400,7 +406,7 @@ function StatusModal({
           })}
         </ul>
 
-        <p className="mt-5 text-[12px] text-[rgba(245,240,232,0.4)]">
+        <p className="mt-5 text-pq-caption text-[rgba(245,240,232,0.4)]">
           Observational only. Not investment advice.
         </p>
       </motion.div>

@@ -289,7 +289,7 @@ export default function RiskPage() {
       {/* Terminal header */}
       <header className="mb-8 flex items-center justify-between gap-4">
         <span className="pq-ink-kicker">PIVOXQUANT · RISK</span>
-        <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+        <span className="font-mono text-pq-caption uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           {weekTag()}
         </span>
       </header>
@@ -312,7 +312,7 @@ export default function RiskPage() {
                 ? "Sample preview · log in to see yours"
                 : "Sample preview · add positions to populate"}
             </div>
-            <p className="text-[14px] leading-relaxed text-[rgba(245,240,232,0.75)]">
+            <p className="text-pq-body leading-relaxed text-[rgba(245,240,232,0.75)]">
               {isAuthError
                 ? "You are viewing an illustrative risk board with representative observations. Sign in with Google or Kakao to observe your own holdings."
                 : "You are viewing an illustrative risk board. Once you add positions in Portfolio, this page will show observations specific to your book."}
@@ -320,11 +320,11 @@ export default function RiskPage() {
             <div className="mt-3 flex flex-wrap gap-3">
               <a
                 href={isAuthError ? "/login" : "/portfolio"}
-                className="pq-ink-btn-bronze text-[11px]"
+                className="pq-ink-btn-bronze text-pq-mono-sm"
               >
                 {isAuthError ? "Sign in" : "Add a position"}
               </a>
-              <a href="/pricing" className="pq-ink-btn-ghost text-[11px]">
+              <a href="/pricing" className="pq-ink-btn-ghost text-pq-mono-sm">
                 View plans
               </a>
             </div>
@@ -371,7 +371,7 @@ export default function RiskPage() {
             <div className="pq-ink-label mb-1">Defense · 7 independent lines</div>
             <h2 className="pq-ink-h2">Seven-Layer Risk Defense</h2>
           </div>
-          <div className="max-w-md text-[11px] leading-relaxed text-[rgba(245,240,232,0.6)]">
+          <div className="max-w-md text-pq-mono-sm leading-relaxed text-[rgba(245,240,232,0.6)]">
             Disclaimer: seven independent observations of portfolio risk. Any
             single line turning{" "}
             <span className="text-[var(--pq-bronze)]">elevated</span> is noted —
@@ -384,14 +384,14 @@ export default function RiskPage() {
               key={l.no}
               className="grid grid-cols-[28px_1fr_120px] items-center gap-4 border-b border-[var(--pq-ivory-line-soft)] py-4"
             >
-              <span className="font-mono text-[11px] text-[rgba(245,240,232,0.45)]">
+              <span className="font-mono text-pq-mono-sm text-[rgba(245,240,232,0.45)]">
                 {String(l.no).padStart(2, "0")}
               </span>
               <div className="min-w-0">
-                <div className="font-serif text-[15px] text-[var(--pq-ivory)]">
+                <div className="font-serif text-pq-lead text-[var(--pq-ivory)]">
                   {l.name}
                 </div>
-                <div className="mt-0.5 text-[11px] text-[rgba(245,240,232,0.55)]">
+                <div className="mt-0.5 text-pq-mono-sm text-[rgba(245,240,232,0.55)]">
                   {l.metricLabel} · <span className="font-mono text-[var(--pq-bronze)]">{l.metricValue}</span> · {l.observation}
                 </div>
               </div>
@@ -414,7 +414,7 @@ export default function RiskPage() {
               How closely your holdings move together
             </h2>
           </div>
-          <div className="max-w-md text-[11px] leading-relaxed text-[rgba(245,240,232,0.6)]">
+          <div className="max-w-md text-pq-mono-sm leading-relaxed text-[rgba(245,240,232,0.6)]">
             Each cell shows how two holdings have moved together over the last 90
             trading days.
             <span className="mx-1 text-[var(--pq-bronze)]">+1.00</span>
@@ -428,7 +428,7 @@ export default function RiskPage() {
         </div>
 
         {/* Gradient legend */}
-        <div className="mb-5 flex items-center gap-3 text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
+        <div className="mb-5 flex items-center gap-3 text-pq-eyebrow uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
           <span>−1</span>
           <span
             className="h-2 max-w-[220px] flex-1"
@@ -447,11 +447,11 @@ export default function RiskPage() {
           <table className="border-collapse">
             <thead>
               <tr>
-                <th className="h-8 w-12 text-[9px] uppercase tracking-[0.18em] text-[var(--pq-bronze)]" />
+                <th className="h-8 w-12 text-pq-kicker uppercase tracking-[0.18em] text-[var(--pq-bronze)]" />
                 {displayCorrLabels.map((l) => (
                   <th
                     key={l}
-                    className="h-8 w-12 text-[9px] font-mono uppercase tracking-[0.12em] text-[var(--pq-bronze)]"
+                    className="h-8 w-12 text-pq-kicker font-mono uppercase tracking-[0.12em] text-[var(--pq-bronze)]"
                   >
                     {l}
                   </th>
@@ -461,7 +461,7 @@ export default function RiskPage() {
             <tbody>
               {displayCorrMatrix.map((row, i) => (
                 <tr key={displayCorrLabels[i]}>
-                  <td className="h-10 w-12 pr-2 text-right font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--pq-bronze)]">
+                  <td className="h-10 w-12 pr-2 text-right font-mono text-pq-kicker uppercase tracking-[0.12em] text-[var(--pq-bronze)]">
                     {displayCorrLabels[i]}
                   </td>
                   {row.map((v, j) => {
@@ -475,7 +475,7 @@ export default function RiskPage() {
                       <td
                         key={`${i}-${j}`}
                         title={`${displayCorrLabels[i]} × ${displayCorrLabels[j]}: ${v.toFixed(2)}`}
-                        className="h-10 w-12 cursor-default text-center font-mono text-[10px] tabular-nums text-[var(--pq-ivory)] transition-[outline] hover:outline hover:outline-1 hover:outline-[var(--pq-bronze)]"
+                        className="h-10 w-12 cursor-default text-center font-mono text-pq-eyebrow tabular-nums text-[var(--pq-ivory)] transition-[outline] hover:outline hover:outline-1 hover:outline-[var(--pq-bronze)]"
                         style={{
                           backgroundColor: bg,
                           border: "0.5px solid var(--pq-ivory-line-soft)",
@@ -499,7 +499,7 @@ export default function RiskPage() {
             <div className="pq-ink-label mb-1">Value at Risk · 30-day trace</div>
             <h2 className="pq-ink-h2">Rolling 30-day VaR</h2>
           </div>
-          <div className="max-w-md text-[11px] leading-relaxed text-[rgba(245,240,232,0.6)]">
+          <div className="max-w-md text-pq-mono-sm leading-relaxed text-[rgba(245,240,232,0.6)]">
             Daily 1-day 95% VaR observed over the last 30 sessions. The line
             shows the worst observed loss under each day&rsquo;s portfolio — a
             moving picture of downside, not a forecast.
@@ -511,7 +511,7 @@ export default function RiskPage() {
       {/* Methodology rail */}
       <section className="mb-12">
         <h2 className="pq-ink-h2 mb-4">Methodology Notes</h2>
-        <ul className="space-y-2 border-t border-[rgba(245,240,232,0.12)] pt-4 text-[12px] text-[rgba(245,240,232,0.7)]">
+        <ul className="space-y-2 border-t border-[rgba(245,240,232,0.12)] pt-4 text-pq-caption text-[rgba(245,240,232,0.7)]">
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">01</span>
             <span><em className="font-serif not- text-[var(--pq-ivory)]">VaR (1-day, 95%)</em> — historical percentile on the 90-day return window, weighted by position size.</span>
@@ -566,7 +566,7 @@ function KpiStat({
       <div className="flex items-baseline justify-between">
         <span className="pq-ink-label">{label}</span>
         {sub ? (
-          <span className="font-mono text-[9px] text-[rgba(245,240,232,0.4)]">
+          <span className="font-mono text-pq-kicker text-[rgba(245,240,232,0.4)]">
             {sub}
           </span>
         ) : null}
@@ -611,7 +611,7 @@ function RollingVarInk({
         yLabel="1-day 95% VaR (observed)"
         ariaLabel="Rolling 30-day VaR"
       />
-      <div className="mt-2 flex justify-between font-mono text-[10px] text-[rgba(245,240,232,0.45)]">
+      <div className="mt-2 flex justify-between font-mono text-pq-eyebrow text-[rgba(245,240,232,0.45)]">
         <span>max {hi.toFixed(2)}%</span>
         <span>min {lo.toFixed(2)}%</span>
       </div>

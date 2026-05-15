@@ -87,14 +87,14 @@ export function PushPermission() {
             </div>
             <div>
               <div
-                className="mb-1 text-[10px] font-medium uppercase tracking-[0.24em]"
+                className="mb-1 text-pq-eyebrow font-medium uppercase tracking-[0.24em]"
                 style={{ color: "var(--pq-bronze)" }}
               >
                 Observation alerts
               </div>
               <h3
                 id="pq-push-title"
-                className="font-serif text-[17px] leading-tight"
+                className="font-serif text-pq-deck leading-tight"
                 style={{ color: "var(--pq-ivory)" }}
               >
                 Be notified when the picture changes.
@@ -113,7 +113,7 @@ export function PushPermission() {
         </div>
         <p
           id="pq-push-body"
-          className="mb-5 text-[13px] leading-relaxed"
+          className="mb-5 text-pq-body-sm leading-relaxed"
           style={{ color: "rgba(245, 240, 232, 0.68)" }}
         >
           Material signal shifts, risk threshold breaches, and weekly memo

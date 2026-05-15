@@ -130,7 +130,7 @@ function ArtifactCard({
         </div>
       )}
 
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-2">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-2">
         <span aria-hidden="true" style={{ display: "inline-block", width: 16, height: 1, background: "var(--pq-bronze)", opacity: 0.6 }} />
         {entry.cadence} &middot; {entry.minTier}
       </div>
@@ -138,11 +138,11 @@ function ArtifactCard({
         {entry.title}
       </h3>
       {personaMatch && declaredPersona && (
-        <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+        <p className="mt-1 text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           Optimised for {PERSONA_LABELS[declaredPersona]}
         </p>
       )}
-      <p className="mt-2 font-serif text-[12px] text-[rgba(245,240,232,0.55)]">
+      <p className="mt-2 font-serif text-pq-caption text-[rgba(245,240,232,0.55)]">
         Last generated &mdash; <span className="tabular-nums font-mono">{lastGenerated}</span>
       </p>
 
@@ -231,7 +231,7 @@ function ReportsPageInner() {
         <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
           Reports
         </h1>
-        <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)] max-w-2xl">
+        <p className="mt-2 font-serif text-pq-lead text-[var(--pq-ivory)] max-w-2xl">
           Every artifact the desk can deliver &mdash; from the weekly memo to the year-end letter.
         </p>
         <Caption className="mt-1 max-w-2xl">
@@ -274,7 +274,7 @@ function ReportsPageInner() {
 
       {/* ── Persona filter — Layer 1 targeting ── */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mr-1">
+        <span className="text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)] mr-1">
           Persona
         </span>
         {(
@@ -296,7 +296,7 @@ function ReportsPageInner() {
               type="button"
               onClick={() => setPersonaFilter(p)}
               aria-pressed={active}
-              className="text-[12px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-[2px] border transition-colors"
+              className="text-pq-caption uppercase tracking-[0.18em] px-2.5 py-1 rounded-[2px] border transition-colors"
               style={{
                 borderColor: active
                   ? "var(--pq-bronze)"

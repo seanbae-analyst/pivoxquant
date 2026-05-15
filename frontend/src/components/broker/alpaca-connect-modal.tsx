@@ -72,7 +72,7 @@ export function AlpacaConnectModal({
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
+            <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
               Alpaca Markets · US
             </div>
             <h3 className="font-serif text-xl text-[var(--pq-ivory)]">
@@ -90,12 +90,12 @@ export function AlpacaConnectModal({
         </div>
 
         {/* Description — BYO (Bring Your Own Key) model, per legal 2026-04-27 */}
-        <p className="mb-3 text-[12px] leading-relaxed text-[rgba(245,240,232,0.65)]">
+        <p className="mb-3 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.65)]">
           Enter your Alpaca paper trading keys. We store them encrypted and only
           use them to observe your paper account. Live trading is disabled in
           this release.
         </p>
-        <p className="mb-5 text-[11px] leading-relaxed text-[rgba(245,240,232,0.55)]">
+        <p className="mb-5 text-pq-mono-sm leading-relaxed text-[rgba(245,240,232,0.55)]">
           Bring Your Own Key (BYO): market data is fetched under your own
           Alpaca account license. PivoxQuant does not redistribute Alpaca
           market data — your keys, your license.
@@ -106,7 +106,7 @@ export function AlpacaConnectModal({
           href="https://alpaca.markets"
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-5 inline-flex items-center gap-1.5 text-[11px] tracking-[0.15em] uppercase text-[var(--pq-bronze)] hover:opacity-80 transition-opacity"
+          className="mb-5 inline-flex items-center gap-1.5 text-pq-mono-sm tracking-[0.15em] uppercase text-[var(--pq-bronze)] hover:opacity-80 transition-opacity"
         >
           <ExternalLink className="h-3 w-3" />
           alpaca.markets
@@ -115,7 +115,7 @@ export function AlpacaConnectModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Environment — paper only */}
           <div>
-            <div className="mb-1.5 text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+            <div className="mb-1.5 text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
               Environment
             </div>
             <div className="flex gap-2">
@@ -123,7 +123,7 @@ export function AlpacaConnectModal({
                 type="button"
                 disabled
                 aria-pressed={true}
-                className="pq-ink-btn-bronze text-[11px]"
+                className="pq-ink-btn-bronze text-pq-mono-sm"
               >
                 Paper
               </button>
@@ -131,13 +131,13 @@ export function AlpacaConnectModal({
                 type="button"
                 disabled
                 aria-pressed={false}
-                className="pq-ink-btn-ghost text-[11px] opacity-40 cursor-not-allowed"
+                className="pq-ink-btn-ghost text-pq-mono-sm opacity-40 cursor-not-allowed"
                 title="Live trading is disabled in this release."
               >
                 Live · disabled
               </button>
             </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-[rgba(245,240,232,0.45)]">
+            <p className="mt-2 text-pq-eyebrow leading-relaxed text-[rgba(245,240,232,0.45)]">
               Live brokerage routing is off. This release observes your paper
               account only.
             </p>
@@ -147,7 +147,7 @@ export function AlpacaConnectModal({
           <div>
             <label
               htmlFor="alpaca-key-id"
-              className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+              className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
             >
               API Key ID
             </label>
@@ -170,7 +170,7 @@ export function AlpacaConnectModal({
           <div>
             <label
               htmlFor="alpaca-secret"
-              className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+              className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
             >
               API Secret Key
             </label>
@@ -188,7 +188,7 @@ export function AlpacaConnectModal({
           </div>
 
           {errorMsg && (
-            <p id="alpaca-error" role="alert" className="text-[11px] text-[#d18888] leading-relaxed">
+            <p id="alpaca-error" role="alert" className="text-pq-mono-sm text-[#d18888] leading-relaxed">
               {errorMsg}
             </p>
           )}
@@ -215,7 +215,7 @@ export function AlpacaConnectModal({
         </form>
 
         {/* Disclaimer */}
-        <p className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-[10px] leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
+        <p className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-pq-eyebrow leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
           Alpaca integration is paper-only. No live orders will be placed. This
           is not investment advice.
         </p>

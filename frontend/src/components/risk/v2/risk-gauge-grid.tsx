@@ -14,6 +14,11 @@
 import * as React from "react";
 import type { RiskSummaryV2, RiskLayerV2, RiskLayerStatus } from "@/lib/hooks";
 
+// Display posture — adds a PENDING state on top of the backend's three so a
+// gauge with no observed data can't show a false "POSITIVE" safety signal
+// (audit FINDING-018).
+type DisplayPosture = RiskLayerStatus | "PENDING";
+
 interface BigGaugeProps {
   eyebrow: string;
   value: string;
@@ -24,10 +29,15 @@ interface BigGaugeProps {
   posture: RiskLayerStatus;
 }
 
-function postureColor(p: RiskLayerStatus): string {
-  if (p === "POSITIVE") return "var(--pq-positive, #dc2626)";
-  if (p === "NEGATIVE") return "var(--pq-negative, #2563eb)";
-  return "rgba(245,240,232,0.55)";
+// §7 three-color system (audit FINDING-019): POSITIVE means "evaluated &
+// passing" — it reads NEUTRAL-bronze, NOT green/red. NEGATIVE is the only
+// alarm hue (carmine). NEUTRAL / PENDING is muted ivory. Tokens defined in
+// globals.css; the literal fallbacks match them so SSR never flashes the
+// old Tailwind red/blue.
+function postureColor(p: DisplayPosture): string {
+  if (p === "POSITIVE") return "var(--pq-positive, #b8956a)";
+  if (p === "NEGATIVE") return "var(--pq-negative, #d18888)";
+  return "var(--pq-neutral, rgba(245,240,232,0.55))";
 }
 
 function BigGaugeCard({
@@ -40,6 +50,9 @@ function BigGaugeCard({
   posture,
 }: BigGaugeProps) {
   const pct = Math.min(100, Math.max(0, gaugePct));
+  // FINDING-018: a "—" value means the gauge has no observed data — the
+  // posture chip must NOT claim POSITIVE (false safety signal). Show PENDING.
+  const displayPosture: DisplayPosture = value === "—" ? "PENDING" : posture;
   return (
     <div
       className="pq-card"
@@ -54,7 +67,7 @@ function BigGaugeCard({
         gap: 12,
       }}
       role="group"
-      aria-label={`${eyebrow}: ${value}${unit ?? ""}, ${posture}`}
+      aria-label={`${eyebrow}: ${value}${unit ?? ""}, ${displayPosture}`}
     >
       <div
         className="font-mono uppercase"
@@ -144,10 +157,10 @@ function BigGaugeCard({
             marginTop: 10,
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
-            color: postureColor(posture),
+            color: postureColor(displayPosture),
           }}
         >
-          Posture · {posture}
+          Posture · {displayPosture}
         </div>
       </div>
     </div>

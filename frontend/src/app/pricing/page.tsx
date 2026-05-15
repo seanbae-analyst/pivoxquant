@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
@@ -10,20 +10,19 @@ import { ModalShell } from "@/components/ui/modal-shell";
 import { Check, ChevronDown, ArrowLeft, Info, X as IconClose } from "lucide-react";
 
 /* ── PriceCountUp ──────────────────────────────────────────────────────────
-   Scroll-triggered count-up for tier price numbers.
-   - IntersectionObserver fires once when the card enters viewport.
-   - Honors prefers-reduced-motion: renders the final value immediately,
-     preserving the locale-formatted string (e.g. "9,900").
-   - SSR / first client paint renders the ORIGINAL `value` string verbatim
-     so server + client markup agree byte-for-byte (Node ICU and browser
-     ICU can otherwise disagree on `toLocaleString` output for the same
-     locale tag, triggering a React hydration warning). After hydration,
-     an effect rewrites the display to the locale-formatted target, and
-     the IntersectionObserver then drives the 0 → target count-up if
-     motion is allowed. A ref flag locks in the fired state so re-renders
-     never reset to zero.
-   - Zero is rendered verbatim (no animation) — animating "0" to "0" is
-     a no-op and would otherwise still repaint a "0" mid-tick.
+   STATIC price display — NEVER animate currency.
+
+   Audit FINDING-007: this used to scroll-trigger a 0 → target count-up over
+   ~1.4s. A user landing on the page mid-animation saw an inaccurate price
+   for the same product — a contractual misrepresentation, not a decoration
+   (§6 forbids decorative motion; 표시광고법 §3 forbids misleading price
+   representation). The "premium reveal" feel now lives on the CARD
+   (opacity / translate), not the digit content.
+
+   The component name is kept so callsites don't churn; it now simply
+   renders the locale-formatted value. SSR renders the raw `value` (already
+   thousand-separated in TIERS) so server + client markup agree; an effect
+   normalizes to the locale string post-hydration without ever animating.
    ─────────────────────────────────────────────────────────────────────── */
 function PriceCountUp({
   value,
@@ -32,83 +31,16 @@ function PriceCountUp({
   value: string; // e.g. "0" | "9,900" | "19,900"
   locale?: string;
 }) {
-  // Parse the numeric target once — tolerate any non-digit separators.
   const target = Number(value.replace(/[^0-9.-]/g, ""));
-
-  // Skip animation for zero or unparsable values.
-  const shouldAnimate = Number.isFinite(target) && target > 0;
-
-  // SSR-safe: start with the raw `value` prop (already thousand-separated
-  // in TIERS). First client paint matches server markup exactly. We swap
-  // to the locale-formatted string inside useEffect on the client.
+  // SSR-safe: start with the raw prop, normalize to locale string after mount.
   const [display, setDisplay] = useState<string>(value);
-  const ref = useRef<HTMLSpanElement>(null);
-  const firedRef = useRef(false);
 
   useEffect(() => {
-    // Compute locale-formatted strings client-side only, so server and
-    // client-initial render don't diverge on ICU output differences.
-    const finalString = Number.isFinite(target)
-      ? target.toLocaleString(locale)
-      : value;
-
-    if (!shouldAnimate) {
-      // Zero / unparsable: snap display to the (client-formatted) final
-      // string and we're done.
-      setDisplay(finalString);
-      firedRef.current = true;
-      return;
-    }
-
-    const prefersReduced =
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) {
-      setDisplay(finalString);
-      firedRef.current = true;
-      return;
-    }
-
-    const el = ref.current;
-    if (!el) return;
-
-    // Reset to 0 before the card enters the viewport so the count-up has
-    // somewhere to travel from. We only do this once per mount.
-    if (!firedRef.current) {
-      setDisplay((0).toLocaleString(locale));
-    }
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting || firedRef.current) continue;
-          firedRef.current = true;
-          const durationMs = 1400;
-          const startTs = performance.now();
-          const tick = (now: number) => {
-            const t = Math.min(1, (now - startTs) / durationMs);
-            // ease-out cubic
-            const eased = 1 - Math.pow(1 - t, 3);
-            const n = Math.round(target * eased);
-            setDisplay(n.toLocaleString(locale));
-            if (t < 1) {
-              requestAnimationFrame(tick);
-            } else {
-              setDisplay(finalString);
-            }
-          };
-          requestAnimationFrame(tick);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.3 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-    // target/finalString are derived from `value`; guard with `value` only.
+    setDisplay(Number.isFinite(target) ? target.toLocaleString(locale) : value);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  return <span ref={ref}>{display}</span>;
+  return <span>{display}</span>;
 }
 
 /* ── Tier data (3 tiers — matched to landing Pricing section) ── */
@@ -579,7 +511,7 @@ export default function PricingPage() {
                 style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
               />
               <span
-                className="font-serif text-[11px] uppercase"
+                className="font-serif text-pq-mono-sm uppercase"
                 style={{
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
@@ -589,8 +521,11 @@ export default function PricingPage() {
               </span>
             </div>
 
+            {/* FINDING-028: italic-emphasis is the signature pattern — only
+                the emphasis word is italic, not the whole phrase (cf. /risk
+                "Risk *board*.", /portfolio "Your *book*."). */}
             <h1
-              className="font-serif italic mb-6"
+              className="font-serif mb-6"
               style={{
                 fontSize: "clamp(2rem, 4.2vw, 3.25rem)",
                 lineHeight: 1.08,
@@ -599,7 +534,8 @@ export default function PricingPage() {
                 color: "var(--pq-ivory)",
               }}
             >
-              Pick the tier that matches your cadence.
+              Pick the tier that matches your{" "}
+              <span className="italic">cadence</span>.
             </h1>
 
             <p
@@ -641,6 +577,8 @@ export default function PricingPage() {
               style={{ color: "var(--pq-bronze)" }}
             />
             <div>
+              {/* FINDING-029: no mid-eyebrow EN↔KR language switch — the
+                  banner body below is Korean, so the eyebrow is fully Korean. */}
               <p
                 className="font-mono uppercase mb-1"
                 style={{
@@ -649,7 +587,7 @@ export default function PricingPage() {
                   color: "var(--pq-bronze)",
                 }}
               >
-                Coming Soon · 정식 출시 후 활성화
+                출시 임박 · 정식 출시 후 결제 활성화
               </p>
               <p
                 className="font-serif leading-relaxed"
@@ -699,7 +637,7 @@ export default function PricingPage() {
                   {/* Tier name + bronze hairline */}
                   <div className="mb-6 flex items-center gap-3">
                     <span
-                      className="font-serif text-[11px] uppercase"
+                      className="font-serif text-pq-mono-sm uppercase"
                       style={{
                         letterSpacing: "0.26em",
                         color: "var(--pq-bronze)",
@@ -736,7 +674,7 @@ export default function PricingPage() {
                       <PriceCountUp value={p.price} />
                     </span>
                     <span
-                      className="font-serif text-[11px] uppercase"
+                      className="font-serif text-pq-mono-sm uppercase"
                       style={{
                         letterSpacing: "0.2em",
                         color: isDark ? "rgba(245,240,232,0.55)" : "#6B6B6B",
@@ -746,7 +684,7 @@ export default function PricingPage() {
                     </span>
                   </div>
                   <p
-                    className="font-serif text-[12px] mb-7"
+                    className="font-serif text-pq-caption mb-7"
                     style={{
                       color: isDark ? "rgba(245,240,232,0.48)" : "#6B6B6B",
                       letterSpacing: "0.02em",
@@ -757,7 +695,7 @@ export default function PricingPage() {
 
                   {/* Tagline */}
                   <p
-                    className="font-serif text-[13px] leading-snug mb-7 pb-6"
+                    className="font-serif text-pq-body-sm leading-snug mb-7 pb-6"
                     style={{
                       color: isDark ? "rgba(245,240,232,0.72)" : "#2A2A2A",
                       borderBottom: isDark
@@ -783,7 +721,7 @@ export default function PricingPage() {
                           }}
                         />
                         <span
-                          className="font-serif text-[14px] leading-snug"
+                          className="font-serif text-pq-body leading-snug"
                           style={{
                             color: isDark
                               ? "rgba(245,240,232,0.78)"
@@ -799,7 +737,7 @@ export default function PricingPage() {
                   {p.href ? (
                     <Link
                       href={p.href}
-                      className="block text-center w-full py-3 px-4 font-serif text-[14px] transition-colors"
+                      className="block text-center w-full py-3 px-4 font-serif text-pq-body transition-colors"
                       style={{
                         backgroundColor: p.recommended
                           ? "var(--pq-bronze)"
@@ -821,7 +759,7 @@ export default function PricingPage() {
                     <button
                       type="button"
                       onClick={() => handleCheckout(p.key)}
-                      className="block text-center w-full py-3 px-4 font-serif text-[14px] transition-colors"
+                      className="block text-center w-full py-3 px-4 font-serif text-pq-body transition-colors"
                       style={{
                         backgroundColor: p.recommended
                           ? "var(--pq-bronze)"
@@ -847,7 +785,7 @@ export default function PricingPage() {
 
           {/* Billing footnote */}
           <p
-            className="mt-12 font-serif text-[11px] leading-relaxed"
+            className="mt-12 font-serif text-pq-mono-sm leading-relaxed"
             style={{ color: "rgba(245,240,232,0.45)" }}
           >
             Billed in KRW. VAT included. Cancel anytime. Informational research
@@ -864,7 +802,7 @@ export default function PricingPage() {
               style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
             />
             <span
-              className="font-serif text-[11px] uppercase"
+              className="font-serif text-pq-mono-sm uppercase"
               style={{
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",

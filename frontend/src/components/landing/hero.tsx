@@ -84,7 +84,7 @@ export function Hero() {
               }}
             />
             <span
-              className="font-serif text-[11px] uppercase"
+              className="font-serif text-pq-mono-sm uppercase"
               style={{
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
@@ -157,10 +157,15 @@ export function Hero() {
           </div>
 
           {/* Disclaimer — same italic Playfair micro-copy seen on every
-              /features page footer + the disclaimer-banner. */}
+              /features page footer + the disclaimer-banner.
+              FINDING-MOB-003 / LAND-001 (design-audit-20260514): the
+              compliance disclaimer was the smallest type on the page
+              (11px) — a legal + UX risk and an iOS Safari auto-zoom
+              trigger. Raised to the --pq-text-body-sm (13px) token. */}
           <p
-            className="mt-12 max-w-2xl border-t pt-6 font-serif text-[11px] italic leading-relaxed tracking-wide"
+            className="mt-12 max-w-2xl border-t pt-6 font-serif italic leading-relaxed tracking-wide"
             style={{
+              fontSize: "var(--pq-text-body-sm)",
               borderColor: "var(--pq-border)",
               color: "var(--pq-muted)",
             }}

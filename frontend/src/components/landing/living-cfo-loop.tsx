@@ -107,7 +107,7 @@ export function LivingCfoLoop() {
             style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
           />
           <span
-            className="font-serif text-[11px] uppercase"
+            className="font-serif text-pq-mono-sm uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             The Loop · Why It Gets Smarter
@@ -180,7 +180,7 @@ export function LivingCfoLoop() {
                     <Icon className="h-4 w-4" />
                   </div>
                   <span
-                    className="font-mono tabular-nums text-[11px]"
+                    className="font-mono tabular-nums text-pq-mono-sm"
                     style={{
                       letterSpacing: "0.22em",
                       color: "var(--pq-bronze)",

@@ -122,7 +122,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
         >
           <div>
             <div
-              className="text-[10px] uppercase"
+              className="text-pq-eyebrow uppercase"
               style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
             >
               Watchlist
@@ -150,7 +150,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
           {/* Ticker input */}
           <div className="relative">
             <label
-              className="block text-[10px] uppercase"
+              className="block text-pq-eyebrow uppercase"
               style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
             >
               Ticker
@@ -182,7 +182,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
                 type="button"
                 onClick={() => openSearchCommand()}
                 aria-label="Open search palette"
-                className="flex items-center gap-1.5 rounded px-2 py-1 text-[10px] uppercase transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-pq-eyebrow uppercase transition-colors hover:bg-[rgba(139,111,71,0.08)]"
                 style={{ color: "var(--pq-bronze)", letterSpacing: "0.15em" }}
               >
                 <Search className="h-3 w-3" />
@@ -225,7 +225,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
                     </span>
                     {s.exchange && (
                       <span
-                        className="text-[10px] uppercase"
+                        className="text-pq-eyebrow uppercase"
                         style={{ letterSpacing: "0.12em", color: "var(--pq-muted)" }}
                       >
                         {s.exchange}
@@ -240,7 +240,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
           {/* Note */}
           <div>
             <label
-              className="block text-[10px] uppercase"
+              className="block text-pq-eyebrow uppercase"
               style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
             >
               Note <span className="normal-case" style={{ letterSpacing: 0 }}>(optional)</span>
@@ -258,7 +258,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               }}
             />
             <p
-              className="mt-1 text-[11px] font-serif"
+              className="mt-1 text-pq-mono-sm font-serif"
               style={{ color: "var(--pq-muted)" }}
             >
               Observations only — no targets, no recommendations.

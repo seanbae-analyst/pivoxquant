@@ -108,7 +108,7 @@ export default function DocsPage() {
           <h1 className="font-serif italic text-4xl md:text-5xl mb-4">
             How PivoxQuant works.
           </h1>
-          <p className="text-[14px] text-[rgba(245,240,232,0.7)] max-w-2xl">
+          <p className="text-pq-body text-[rgba(245,240,232,0.7)] max-w-2xl">
             Everything you need to observe your book, read the weekly memo, and
             understand what the engine does — and what it does not.
           </p>
@@ -126,10 +126,10 @@ export default function DocsPage() {
                 <dl className="space-y-5">
                   {section.items.map((item) => (
                     <div key={item.q}>
-                      <dt className="text-[14px] text-[var(--pq-ivory)] mb-1.5">
+                      <dt className="text-pq-body text-[var(--pq-ivory)] mb-1.5">
                         {item.q}
                       </dt>
-                      <dd className="text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">
+                      <dd className="text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed">
                         {item.a}
                       </dd>
                     </div>
@@ -146,25 +146,16 @@ export default function DocsPage() {
             More questions? Email us · hello@pivoxquant.com
           </p>
           <div className="flex items-center justify-center gap-4 mt-4 flex-wrap">
-            <a
-              href="https://github.com/seanbae-analyst/pivoxquant"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
-            >
-              GitHub
-            </a>
-            <span className="text-[rgba(245,240,232,0.3)]">·</span>
             <Link
               href="/terms"
-              className="text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+              className="text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
             >
               Terms
             </Link>
             <span className="text-[rgba(245,240,232,0.3)]">·</span>
             <Link
               href="/privacy"
-              className="text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+              className="text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
             >
               Privacy
             </Link>

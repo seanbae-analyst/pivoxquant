@@ -29,7 +29,8 @@ const COPY: Record<"ko" | "en", Copy> = {
     placeholder: "비밀번호 입력",
     submit: "입장하기",
     submitting: "확인 중…",
-    invalid: "비밀번호가 올바르지 않습니다.",
+    // FINDING-GATE-004 (design-audit-20260514): brand-voiced error copy.
+    invalid: "코드가 일치하지 않습니다. CEO로부터 전달받은 코드를 다시 확인해주세요.",
     networkError: "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
     notConfigured: "베타 게이트가 아직 설정되지 않았습니다.",
     footer: "한 번 인증하면 30일 동안 유지됩니다.",
@@ -44,7 +45,8 @@ const COPY: Record<"ko" | "en", Copy> = {
     placeholder: "Enter access code",
     submit: "Enter",
     submitting: "Verifying…",
-    invalid: "That access code isn't valid.",
+    // FINDING-GATE-004 (design-audit-20260514): brand-voiced error copy.
+    invalid: "That code doesn't match. Double-check the code the CEO shared with you.",
     networkError: "Network error. Please try again in a moment.",
     notConfigured: "Beta gate is not configured yet.",
     footer: "Verified once, remembered for 30 days.",
@@ -159,7 +161,7 @@ export default function BetaGateForm() {
       {/* Header */}
       <div className="mt-8">
         <div
-          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider"
+          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-pq-mono-sm font-semibold uppercase tracking-wider"
           style={{
             borderColor: "rgba(184, 149, 106, 0.32)",
             backgroundColor: "rgba(184, 149, 106, 0.06)",
@@ -175,7 +177,7 @@ export default function BetaGateForm() {
         </div>
 
         <h1
-          className="mt-4 text-2xl font-semibold leading-tight tracking-tight sm:text-[28px]"
+          className="mt-4 text-2xl font-semibold leading-tight tracking-tight sm:text-pq-avatar"
           style={{ color: "var(--pq-ivory)" }}
         >
           {copy.title}
@@ -188,8 +190,17 @@ export default function BetaGateForm() {
         </p>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="mt-7 space-y-4" noValidate>
+      {/* Form — FINDING-GATE-001 (design-audit-20260514): method="post"
+          so that if JS is disabled the browser does not fall back to a
+          GET that leaks `?password=...` into the URL, history, and access
+          logs. The onSubmit handler (preventDefault + fetch) is the JS
+          path and is unchanged. */}
+      <form
+        onSubmit={handleSubmit}
+        method="post"
+        className="mt-7 space-y-4"
+        noValidate
+      >
         <div>
           <label
             htmlFor="beta-password"
@@ -214,7 +225,7 @@ export default function BetaGateForm() {
             placeholder={copy.placeholder}
             aria-invalid={!!error}
             aria-describedby={error ? "beta-error" : undefined}
-            className="w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-[box-shadow,border-color] duration-200 focus:border-[var(--pq-bronze)] focus:shadow-[0_0_0_4px_rgba(184,149,106,0.32)]"
+            className="w-full rounded-xl border px-4 py-3 text-pq-lead outline-none transition-[box-shadow,border-color] duration-200 focus:border-[var(--pq-bronze)] focus:shadow-[0_0_0_4px_rgba(184,149,106,0.32)]"
             style={{
               backgroundColor: "rgba(10, 10, 10, 0.6)",
               borderColor: "rgba(184, 149, 106, 0.32)",

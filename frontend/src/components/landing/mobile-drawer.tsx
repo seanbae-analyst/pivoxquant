@@ -108,23 +108,26 @@ export default function MobileDrawer({
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4">
+              {/* FINDING-030: canonical italic Playfair mixed-case wordmark. */}
               <span
-                className="font-serif"
+                className="font-serif italic"
                 style={{
                   color: "var(--pq-ivory)",
-                  letterSpacing: "0.22em",
-                  fontSize: "var(--pq-text-eyebrow)",
-                  textTransform: "uppercase",
+                  letterSpacing: "0.01em",
+                  fontSize: "var(--pq-text-h6)",
                   fontWeight: 500,
                 }}
               >
-                PIVOXQUANT
+                PivoxQuant
               </span>
+              {/* FINDING-LAND-007 sweep (design-audit-20260514): drawer
+                  close button matched the hamburger at 40px — below the
+                  44px WCAG 2.5.5 minimum. Bumped to h-11 w-11 (44px). */}
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close menu"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-sm"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-sm"
                 style={{ color: "var(--pq-ivory)" }}
               >
                 <X className="h-5 w-5" aria-hidden />

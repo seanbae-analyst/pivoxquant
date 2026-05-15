@@ -149,7 +149,7 @@ export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <div className="text-[10px] tracking-[0.26em] uppercase text-[var(--pq-bronze)]">
+                <div className="text-pq-eyebrow tracking-[0.26em] uppercase text-[var(--pq-bronze)]">
                   Layer 2 · Monday pulse
                 </div>
                 <h3 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
@@ -228,7 +228,7 @@ function PulseForm({
 
       <div>
         <label
-          className="block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
+          className="block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
           htmlFor="pulse-worry"
         >
           One concern on your mind
@@ -245,7 +245,7 @@ function PulseForm({
       </div>
 
       <div>
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
           Topics you&apos;re watching
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -256,7 +256,7 @@ function PulseForm({
                 key={t}
                 type="button"
                 onClick={() => toggleTopic(t)}
-                className="text-[11px] px-2.5 py-1 rounded-[2px] border transition-colors"
+                className="text-pq-mono-sm px-2.5 py-1 rounded-[2px] border transition-colors"
                 style={{
                   borderColor: active
                     ? "var(--pq-bronze)"
@@ -276,7 +276,7 @@ function PulseForm({
 
       <div>
         <label
-          className="block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
+          className="block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
           htmlFor="pulse-learn"
         >
           Something you want to learn
@@ -314,7 +314,7 @@ function LikertRow({
 }) {
   return (
     <div>
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5">
         {label}
       </div>
       <div className="flex gap-1.5">
@@ -327,7 +327,7 @@ function LikertRow({
               onClick={() => onChange(n)}
               aria-label={`${label} — ${n} of 5`}
               aria-pressed={active}
-              className="flex-1 h-9 rounded-[2px] border font-mono text-[13px] transition-colors"
+              className="flex-1 h-9 rounded-[2px] border font-mono text-pq-body-sm transition-colors"
               style={{
                 borderColor: active
                   ? "var(--pq-bronze)"
@@ -377,7 +377,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
 
   return (
     <section className="mt-6 pt-5 border-t border-[var(--pq-ivory-line)]">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Pulse history · last {recent.length} weeks
       </div>
       <svg
@@ -392,7 +392,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
         {path(moodValues, "#B8956A")}
         {path(confValues, "#7db487")}
       </svg>
-      <div className="mt-2 flex gap-4 text-[12px]">
+      <div className="mt-2 flex gap-4 text-pq-caption">
         <span className="flex items-center gap-1.5" style={{ color: "rgba(245,240,232,0.7)" }}>
           <span
             aria-hidden

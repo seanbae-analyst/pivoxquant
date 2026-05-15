@@ -159,7 +159,7 @@ function OptionCard({
 
       {/* Text */}
       <span
-        className="text-[15px] leading-snug font-medium"
+        className="text-pq-lead leading-snug font-medium"
         style={{
           color: selected
             ? "var(--pq-ivory)"
@@ -217,7 +217,7 @@ function MultiOptionCard({
 
       {/* Text */}
       <span
-        className="text-[15px] leading-snug font-medium"
+        className="text-pq-lead leading-snug font-medium"
         style={{
           color: selected
             ? "var(--pq-ivory)"
@@ -388,7 +388,7 @@ function LegalStep({
               {checked && <Check size={12} strokeWidth={3} style={{ color: "var(--pq-ink)" }} />}
             </div>
             <span
-              className="text-[14px] leading-relaxed"
+              className="text-pq-body leading-relaxed"
               style={{
                 color: checked
                   ? "var(--pq-ivory)"
@@ -475,7 +475,7 @@ function ResultScreen({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="mt-3 max-w-sm text-center text-[15px] leading-relaxed"
+        className="mt-3 max-w-sm text-center text-pq-lead leading-relaxed"
         style={{ color: "rgba(var(--pq-ivory-rgb), 0.7)" }}
       >
         {highlights.tagline}

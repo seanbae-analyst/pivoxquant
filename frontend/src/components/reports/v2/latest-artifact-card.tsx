@@ -306,9 +306,9 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
                 const isUp = typeof pct === "number" && pct > 0;
                 const isDown = typeof pct === "number" && pct < 0;
                 const pctColor = isUp
-                  ? "var(--pq-positive, #dc2626)"
+                  ? "var(--pq-positive, #b8956a)"
                   : isDown
-                    ? "var(--pq-negative, #2563eb)"
+                    ? "var(--pq-negative, #d18888)"
                     : "rgba(245,240,232,0.55)";
                 const sign = isUp ? "+" : "";
                 return (

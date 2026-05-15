@@ -118,7 +118,7 @@ function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boole
           className="inline-flex items-center whitespace-nowrap px-6"
         >
           <span
-            className="font-serif text-[12px] uppercase"
+            className="font-serif text-pq-caption uppercase"
             style={{
               letterSpacing: "0.22em",
               color: "rgba(245, 240, 232, 0.82)",
@@ -127,7 +127,7 @@ function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boole
             {t.symbol}
           </span>
           <span
-            className="ml-2 font-mono tabular-nums text-[12px]"
+            className="ml-2 font-mono tabular-nums text-pq-caption"
             style={{
               color: "var(--pq-bronze-light)",
               fontFeatureSettings: '"tnum", "lnum"',
@@ -137,7 +137,7 @@ function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boole
             {t.level}
           </span>
           <span
-            className="ml-2 font-mono tabular-nums text-[12px]"
+            className="ml-2 font-mono tabular-nums text-pq-caption"
             style={{
               color: DIR_COLOR[t.dir],
               fontFeatureSettings: '"tnum", "lnum"',
@@ -222,7 +222,7 @@ export function MarketTicker() {
       />
       <div className="absolute inset-y-0 left-0 z-30 flex items-center pl-4 pr-3">
         <span
-          className="font-serif text-[11px] uppercase whitespace-nowrap"
+          className="font-serif text-pq-mono-sm uppercase whitespace-nowrap"
           style={{
             letterSpacing: "0.24em",
             color: "var(--pq-bronze)",
