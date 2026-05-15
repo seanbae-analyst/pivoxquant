@@ -96,6 +96,47 @@ const nextConfig: NextConfig = {
             value:
               "camera=(), microphone=(), geolocation=(), payment=(self), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()",
           },
+          {
+            // 2026-05-15 (P1 verify-security finding): Vercel HTML
+            // responses shipped no Content-Security-Policy header,
+            // leaving the browser unable to enforce script/style/
+            // connect-src restrictions. The Railway backend has its own
+            // CSP (security.py) but the static HTML the user actually
+            // loads from Vercel was unguarded — a real XSS guard gap on
+            // the public landing surface. Added here so every Vercel
+            // response carries CSP.
+            //
+            // Directive notes:
+            // - `script-src` allows `'unsafe-inline'` for Next.js
+            //   hydration markers and Sentry browser SDK boot snippet.
+            //   Strict-CSP with nonces is a future refinement; current
+            //   priority is closing the no-CSP gap before launch.
+            // - `connect-src` covers Sentry ingest (event reporting)
+            //   and `'self'` (Next.js rewrites proxy /api → Railway).
+            // - `img-src` allows Google + Kakao avatar CDNs (OAuth
+            //   profile photos render in the top-nav and profile page).
+            // - `frame-ancestors 'none'` mirrors X-Frame-Options DENY.
+            // - `object-src 'none'` blocks the Flash/PDF embed vector.
+            // - `base-uri 'self'` blocks <base> tag injection redirect.
+            // - `form-action 'self'` blocks form hijack to attacker URL.
+            // - `upgrade-insecure-requests` forces https on any mixed
+            //   resource.
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://*.googleusercontent.com https://*.kakaocdn.net https://k.kakaocdn.net https://t1.kakaocdn.net",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
+              "frame-src 'self'",
+              "frame-ancestors 'none'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "upgrade-insecure-requests",
+            ].join("; "),
+          },
         ],
       },
     ];
