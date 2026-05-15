@@ -143,8 +143,17 @@ export function SectorAllocationDonut({
 
     const buckets = new Map<string, { value: number; count: number }>();
     for (const p of positions) {
-      // FINDING-021: backend field is `current_price`, not `current`.
-      const cur = p.current_price ?? 0;
+      // FINDING-021 (original): legacy /api/portfolio = snake_case.
+      // 2026-05-15 sweep-3: new /api/portfolio/positions = camelCase
+      // (routes/portfolio.py:826 _build_positions_list emits
+      // `current` not `current_price`). Reading only snake_case here
+      // is the root cause of the bug-hunter P2-9 finding "Sector
+      // allocation shows 'No allocation yet'" — every mv computed
+      // from 0 = total 0 = nothing to bucket. Mirrors the toPosition
+      // / home-card / home-v1 defensive pattern (#383 / #388 / this
+      // PR).
+      const _p = p as typeof p & { current?: number };
+      const cur = _p.current ?? _p.current_price ?? 0;
       const mv = cur * (p.shares ?? 0);
       if (!Number.isFinite(mv) || mv <= 0) continue;
       const sector = (p.sector || "Unclassified").trim() || "Unclassified";
