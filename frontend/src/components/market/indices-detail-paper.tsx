@@ -68,7 +68,11 @@ interface Props {
   derivatives?: DerivativeRow[];
 }
 
-function fmtLevel(v: number, kind: IndexQuote["format"] = "en"): string {
+function fmtLevel(
+  v: number | null | undefined,
+  kind: IndexQuote["format"] = "en",
+): string {
+  if (v == null || !Number.isFinite(v)) return "—";
   if (kind === "int") return Math.round(v).toLocaleString("en-US");
   if (kind === "kr") {
     return v.toLocaleString("ko-KR", {
@@ -126,14 +130,19 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
   const stale = Boolean(quote.is_stale);
   const marketOpenNow = isMarketOpen();
 
+  // 2026-05-15: weekHigh52/Low52 are nullable (backend nulls when
+  // upstream history lags — _kis_index_snapshot 15% guard). Treat
+  // missing bounds as "centred marker" placeholder rather than
+  // computing arithmetic on null.
+  const _hi = quote.weekHigh52;
+  const _lo = quote.weekLow52;
   const rangePct =
-    quote.weekHigh52 > quote.weekLow52
+    _hi != null && _lo != null && Number.isFinite(_hi) && Number.isFinite(_lo) && _hi > _lo
       ? Math.max(
           0,
           Math.min(
             1,
-            (quote.level - quote.weekLow52) /
-              (quote.weekHigh52 - quote.weekLow52),
+            (quote.level - _lo) / (_hi - _lo),
           ),
         )
       : 0.5;

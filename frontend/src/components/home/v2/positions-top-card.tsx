@@ -66,19 +66,35 @@ export function PositionsTopCard() {
   const { data: posData } = usePortfolioPositions<PositionsShape>();
   const positions = posData?.positions ?? [];
 
+  // 2026-05-15 (bug-hunter P0 + verify-ux fail on PR #383 follow-up):
+  // /api/portfolio/positions emits **camelCase** (avgCost / current /
+  // purchaseDate / isKorean — routes/portfolio.py:826
+  // _build_positions_list). The earlier FINDING-021 comment claimed
+  // backend was snake_case — true of the legacy /api/portfolio endpoint
+  // (line 227), false of the new /positions alias the frontend now
+  // hits. Reading current_price / avg_cost only yielded undefined →
+  // cur=0, avg=0, pnl=0 → every row rendered ₩0/$0/0.00% in prod.
+  // verify-ux 2026-05-15 confirmed PR #383 fixed /portfolio but this
+  // home card was the unaddressed sibling. Read camelCase first,
+  // snake_case fallback for legacy compat — same defensive pattern as
+  // toPosition() in components/portfolio/types.ts.
+  const _curPx = (
+    p: Position & { current?: number; avgCost?: number },
+  ): number => p.current ?? p.current_price ?? 0;
+  const _avgCost = (
+    p: Position & { current?: number; avgCost?: number },
+  ): number => p.avgCost ?? p.avg_cost ?? 0;
+
   const ranked: MiniRow[] = [...positions]
     .sort((a, b) => {
-      const av = (a.current_price ?? 0) * (a.shares ?? 0);
-      const bv = (b.current_price ?? 0) * (b.shares ?? 0);
+      const av = _curPx(a as never) * (a.shares ?? 0);
+      const bv = _curPx(b as never) * (b.shares ?? 0);
       return bv - av;
     })
     .slice(0, 5)
     .map((p) => {
-      // FINDING-021: backend Position fields are snake_case. `current_price`
-      // and `avg_cost` (NOT `current` / `avgCost`) are the live values; the
-      // old camelCase access yielded undefined → cur=0, avg=0, pnl=0.
-      const cur = p.current_price ?? 0;
-      const avg = p.avg_cost ?? 0;
+      const cur = _curPx(p as never);
+      const avg = _avgCost(p as never);
       const pnl = avg > 0 ? ((cur - avg) / avg) * 100 : 0;
       // Name-first (FINDING-011): backend name → static seed → raw ticker.
       // Currency from the ticker shape, not the (seed-leaky) p.currency.
