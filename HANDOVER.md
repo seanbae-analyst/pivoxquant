@@ -1,3 +1,72 @@
+# PivoxQuant — 인수인계서 (2026-05-15 v43 second-shift — 29 PR · OPEN PR 0 · main `cf7620e → 2ba72d3`)
+
+## v43 second-shift — Wave 6 + launch-prep infrastructure (PR #399~#405)
+
+**한 줄 요약**: CEO 두 번째 5h 자율 위임 ("토큰절약안해도됨 걍 진행해 구조잡던가 해"). 첫 shift 21 PR + 본 shift 추가 7 PR + 1 closed = **누적 29 PR**. Wave 6 bug-hunter (KIS broker + PDF artifact) 4 findings 전부 닫음. 구조 작업 4건 (email setup / launch checklist / boot-time env validation / PDF storage guide) — 모두 CEO 의존 항목을 step-by-step 가이드로 제공.
+
+### Second-shift PR 표 (#399~#405)
+
+| PR | Wave | 핵심 변경 |
+|---|---|---|
+| #399 | 구조 | `docs/ops/email-setup.md` — Cloudflare Email Routing (free) + SendGrid DKIM. CEO 15분 작업 가이드. PR #397 결제 503 메시지 "support@" inbox 빈말 risk 닫음. |
+| #400 | 구조 | `services/launch_prep.py` + `routes/health.py` + tests. 14-entry env 인벤토리 (SENDGRID/FMP/ANTHROPIC/KIS/SECRET_KEY/BETA_PASSWORD 등) — production boot 시 missing recommended 환경변수 CRITICAL 로그. /api/health에 compact env summary 노출. 10 신규 tests. |
+| #401 | 구조 | `docs/ops/launch-checklist.md` — 출시 직전 P0/P1/P2/P3 종합 checklist. 자동화 cron 일정 + 외부 액션 + CEO 단독 항목 모두 정리. |
+| #402 | fix | env_health_summary `production` 필드 — `check_env(production=False)` 파라미터(로깅 suppression 용도)가 응답에도 누수. FLASK_ENV 직접 읽도록 fix. 외부 monitoring 알림 routing 신뢰성. 11 tests. |
+| #403 | **fix PIPA** | 발견: privacy-ko.md §7.1이 `/api/profile/export` 약속 + endpoint 실제 존재 (routes/profile.py:1172), but settings 페이지가 `/api/agent/export` (subset only) 호출. PIPA §35 ① "complete personal data record" 규정 위반 risk. Frontend wire 올바른 endpoint로 교체. profile 페이지의 agent-memory-export는 별개 feature 유지. |
+| #404 | **fix Wave 6** | 4 findings: P1 `/reports` Download PDF 410 raw JSON page → fetch+toast (한국어). P2 /settings AnchorRail 클릭 시 scroll 안 함 (Next.js App Router intercept) → onClick scrollIntoView. P2 KIS Connect disabled cursor pointer → inline not-allowed. LOW KIS account regex 6-12 → 정확 8 digits. |
+| #405 | 구조 | `docs/ops/pdf-storage.md` — PR #404 symptom fix의 root cause companion. Railway Volume 5GB 무료 (옵션 A 권장, 15분, 코드 변경 0) 또는 Cloudflare R2 (옵션 B, 5GB-month 무료, ~50줄 코드). Wave 6 Bug #1 (artifact #93 ephemeral disk wipe) 영구 해결. |
+
+### Wave 6 결과 정리 (PR #404 + #405에 모두 닫힘)
+- **P1 #1**: PDF 410 raw JSON page — frontend fetch+toast (#404), backend root cause guide (#405)
+- **P2 #2**: AnchorRail 스크롤 안 됨 — onClick scrollIntoView (#404)
+- **P2 #3**: KIS Connect disabled cursor — inline style (#404)
+- **LOW #4**: KIS account regex tighten 8 digits (#404)
+
+### 6 bug-hunter wave 누적 (full session)
+| Wave | 영역 | findings | 본 세션 fixed | 외부/deferred |
+|---|---|---|---|---|
+| 1 | surface별 page sweep | 9 | 6 (#380-#385) | 3 (contested + historical data) |
+| 2 | verify-ux PR 검수 | 2 FAIL | 3 PR (#388-#390) thorough sweep | — |
+| 3 | mobile + /detail/AAPL | 2 | 2 (#395) | — |
+| 4 | multi-step flow E2E | 6 | 2 (#396) | 4 (GAP-E / migration policy / Next.js / LOW) |
+| 5 | new-user first-time | 6 | 4 (#397) | 2 (FMP + Anthropic 외부) |
+| 6 | KIS + PDF artifact | 4 | 4 (#404 + #405 가이드) | — |
+| 7 | edge case / 부정 input | dispatch failed (browser MCP stall) | — | — |
+
+**누적**: 29 findings / 21 fix PR + 7 구조 PR + 1 audit/HANDOVER PR.
+
+### 출시 BLOCKER 클래스 잔존 (CEO 액션 영역) — 본 가이드로 모두 정리
+
+| 영역 | 가이드 | CEO 작업 |
+|---|---|---|
+| Email infrastructure | `docs/ops/email-setup.md` (#399) | 15분 Cloudflare + SendGrid DKIM |
+| Pre-launch master checklist | `docs/ops/launch-checklist.md` (#401) | P0-P3 종합 |
+| PDF persistent storage | `docs/ops/pdf-storage.md` (#405) | 15분 Railway Volume |
+| 변호사 의견서 | `legal_question_queue.md` Q1-Q15 | 별 비용 300-500만원 |
+| Stripe 활성화 | (#397 graceful UX 완료) | 변호사 의견 후 통신판매업 신고 + Stripe Connect |
+| FMP plan/key | (#400 env validation 활성) | dashboard 점검 |
+| Anthropic credit | (#387 + #397 graceful copy 완료) | 충전 |
+| Bug #2 KOSPI 값 | (signal STALE + range null #381 #385) | 변호사/KRX OpenData 결정 |
+| Bug #4 AAPL dirty row | (가드 코드 #379 wired) | manual SQL 또는 자연 만료 |
+
+### 자동화 다음 실 작동 일정
+
+- **2026-05-16 03:00 KST**: CAUS Day 5 (/reports) cron. Phase 4 자동 fix chained.
+- **2026-05-17 09:00 KST 일요일**: finance_weekly_check (SSL pin 적용됨)
+- **2026-05-19 03:00 KST**: 강화 Day 3 (/portfolio) — `find_pervasive_zero_money` 첫 실 작동
+- **2026-05-20 03:00 KST**: 강화 Day 4 (/companion) — `grep_internal_hex_id` 첫 실 작동
+- **2026-06-01 09:00 KST**: 매월 brag card cron — Railway Volume 적용 시 영속 PDF 생성
+
+### Second-shift 검증 (모두 직접 cite)
+
+- backend pytest: 11 신규 (launch_prep) PASS / 0 회귀
+- frontend tsc: 0 errors (4번 직접 실행)
+- frontend vitest: 313/313 PASS (4번 직접 실행, 회귀 0)
+- alembic: 단일 head `034_flag_implausible_avg_cost`
+- prod live `/api/health` env 응답 확인: `{"missing_recommended": 0, "missing_required": 0, "total_checked": 15}` — Railway env에 모든 recommended 키 set됨 ✓
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-15 v43 wave 5 complete — 21 PR · OPEN PR 0 · main `cf7620e → cf319e3`)
 
 ## v43 wave 5 — bug-hunter 5 wave 누적, 출시 BLOCKER 클래스 모두 닫음
