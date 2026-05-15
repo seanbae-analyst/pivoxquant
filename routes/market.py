@@ -864,16 +864,34 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         # the lagging chart. We keep the real `level` and the real
         # (stale) sparkline — no data is discarded, the consumer just
         # gets an honest staleness signal.
+        #
+        # 2026-05-15 (bug-hunter P1 follow-up): when staleness is
+        # detected, ALSO null out `range_52w`. Reason — the historical
+        # `closes.min()/.max()` come from the lagging KIS daily-history
+        # window (e.g. 2,293–2,671 for KOSPI as of mid-April) while the
+        # live `level` (e.g. 7,619 mid-May) is from a different time
+        # window. Co-emitting them produces a level OUTSIDE its own
+        # stated 52W range — an obviously-broken UI signal regardless
+        # of which scale is "real". `level` and `sparkline` stay (the
+        # frontend can render the chart with stale dimming + the level
+        # alongside) but the standalone 52W summary is suppressed to
+        # avoid the contradiction. Frontend renders "N/A" on null
+        # range — same code path already used when history is missing
+        # entirely (the `else` branch immediately below). Capital-
+        # markets-law misrepresentation guard: showing a 52W range
+        # narrower than the current level is implicit "all-time high"
+        # framing the data doesn't support.
         if level is not None and sparkline:
             spark_max = max(sparkline)
             if spark_max > 0 and level > spark_max * 1.15:
                 logger.info(
                     "market.indices %s: live level %.2f exceeds sparkline "
                     "max %.2f by >15%% — KIS daily-history window lags the "
-                    "live quote; tagging is_stale",
+                    "live quote; tagging is_stale + suppressing range_52w",
                     ticker, level, spark_max,
                 )
                 is_stale = True
+                range_52w = None
     else:
         # No trustworthy history — return null range so the frontend
         # renders "N/A" rather than [0.0, 0.0] (which the bar chart
