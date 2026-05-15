@@ -206,6 +206,111 @@ def sanity_kospi(level: float | int | None) -> bool:
     return KOSPI_MIN <= v <= KOSPI_MAX
 
 
+# ---------------------------------------------------------------------------
+# 2026-05-15: stronger assertions — CAUS was reporting "0 findings clean"
+# while bug-hunter (manual agent) found 9 launch-blocker bugs on the same
+# surfaces in the same period. Root cause: scenarios only checked HTTP 200
+# + keyword presence + 5xx absence. A real user looks at the rendered
+# numbers and goes "this is ₩0, broken." These helpers give scenarios that
+# same shape of judgment so they actually catch the bug-hunter-class
+# regressions next tick.
+# ---------------------------------------------------------------------------
+
+# Money-formatted strings the frontend emits via fmtMoney / fmtMoneyCell.
+# KRW: "₩" + digits (no decimals, ko-KR thousand sep).
+# USD: "$" + digits + "." + 2 decimals (en-US thousand sep).
+# Negative form prepends "-".
+_MONEY_KRW_RE = re.compile(r"-?₩(?:0|[1-9][\d,]*)")
+_MONEY_USD_RE = re.compile(r"-?\$(?:0\.\d{2}|[1-9][\d,]*\.\d{2})")
+_MONEY_ZERO_KRW = "₩0"
+_MONEY_ZERO_USD_RE = re.compile(r"\$0\.0+\b")
+
+
+def find_pervasive_zero_money(
+    text: str, *, min_total_money: int = 2
+) -> tuple[int, int]:
+    """Count money-formatted strings + how many are literal-zero.
+
+    Returns (total_money_strings, zero_money_strings). A scenario can
+    treat ``total >= min_total_money and zero == total`` as P0 — the
+    page is rendering money everywhere but every single value is zero,
+    indistinguishable from "every position is worthless" only by being
+    impossible (positions wouldn't all be exactly zero in a real book).
+
+    Calibrated against the 2026-05-15 P0 bug: bug-hunter saw all 4
+    Holdings rows render as ``₩0 / $0.00 / 0.00%`` for every user
+    because the frontend read ``avg_cost`` / ``current_price`` against
+    a payload that emitted camelCase. CAUS day3 scenario didn't catch
+    it because it only checked page-load + 7-Layer-keyword presence.
+
+    NOT a fingerprint for ad-hoc zero rows (a user might genuinely
+    own a stock that's gone to zero in a single position). The
+    pervasive-zero pattern only fires when EVERY money string the page
+    rendered is zero AND the page rendered at least ``min_total_money``
+    money strings (so a placeholder skeleton with one "₩0" doesn't
+    false-positive).
+    """
+    krw_all = _MONEY_KRW_RE.findall(text)
+    usd_all = _MONEY_USD_RE.findall(text)
+    total = len(krw_all) + len(usd_all)
+    if total < min_total_money:
+        return total, 0
+    zero_krw = sum(1 for s in krw_all if s == _MONEY_ZERO_KRW or s == "-₩0")
+    zero_usd = sum(1 for s in usd_all if _MONEY_ZERO_USD_RE.fullmatch(s.lstrip("-")))
+    return total, zero_krw + zero_usd
+
+
+# Internal trace IDs that occasionally leak into JSX (Companion request_id
+# was a 12-char uppercase hex chunk). General pattern: long hex
+# sequences in visible text that aren't a known SHA / build hash position.
+_INTERNAL_HEX_RE = re.compile(r"\b[0-9A-F]{12,16}\b")
+
+
+def grep_internal_hex_id(text: str) -> list[str]:
+    """Return uppercase-hex strings 12-16 chars long appearing in visible text.
+
+    Calibrated against the 2026-05-15 Companion finding (PR #384): the
+    backend request_id was rendered as "919790CD3943" above every AI
+    bubble. End users have no use for an internal trace tag and it
+    reads as debug-mode leakage in production. This catches the
+    pattern in any scenario that visits a chat / artifact page.
+
+    Returns empty list when clean.
+    """
+    hits: list[str] = []
+    seen: set[str] = set()
+    for m in _INTERNAL_HEX_RE.finditer(text):
+        v = m.group(0)
+        if v not in seen:
+            seen.add(v)
+            hits.append(v)
+    return hits
+
+
+# Docker absolute paths that occasionally leak into API responses (the
+# Bug #7 artifact path leak shipped with PR #379's d1cb297b but a future
+# regression should re-fire this). Matches "/app/..." prefixes in visible
+# text only — JSON API responses are out of CAUS scope.
+_DOCKER_PATH_RE = re.compile(r"/app/[\w./\-]+")
+
+
+def grep_container_path_leak(text: str) -> list[str]:
+    """Return ``/app/<path>`` occurrences visible to the user.
+
+    Calibrated against Bug #7 (PR #379): artifact API used to emit
+    ``pdf_path: '/app/artifacts/brag_card/.../2026-04_Brag_Card.png'``,
+    a Railway container path of no use to the user.
+    """
+    hits: list[str] = []
+    seen: set[str] = set()
+    for m in _DOCKER_PATH_RE.finditer(text):
+        v = m.group(0)
+        if v not in seen:
+            seen.add(v)
+            hits.append(v)
+    return hits
+
+
 def snap(page, agent_id: str, label: str) -> str:
     """Take a screenshot and return its absolute path (or 'N/A' on failure)."""
     safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", label)[:40]

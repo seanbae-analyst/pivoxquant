@@ -212,6 +212,85 @@ def test_is_beta_gate_negative(base):
     assert base.is_beta_gate(FakePage()) is False
 
 
+def test_find_pervasive_zero_money_all_zero(base):
+    """2026-05-15 stronger CAUS assertion: when every money string on
+    the page is literal zero, fire the P0 finding. Calibrated against
+    the bug-hunter P0 (every Holdings row rendering ₩0/$0 for every
+    user) — the previous Day 3 scenario reported "0 findings clean"
+    against the broken page."""
+    text = (
+        "POSITIONS · TOP WEIGHT\n"
+        "대한광통신 ₩0 0.00%\n"
+        "삼성전자 ₩0 0.00%\n"
+        "아이티센글로벌 ₩0 0.00%\n"
+        "Apple Inc. $0.00 0.00%\n"
+    )
+    total, zero = base.find_pervasive_zero_money(text)
+    assert total == 4
+    assert zero == 4
+
+
+def test_find_pervasive_zero_money_mixed_real_values(base):
+    """Mixed real + placeholder values must NOT fire — only pervasive
+    zero is the launch-blocker pattern."""
+    text = (
+        "삼성전자 ₩276,000 +0.91%\n"
+        "Apple Inc. $298.21 -0.31%\n"
+        "대한광통신 ₩22,450 0.00%\n"
+        "Apple Inc. $0.00 (one row only)\n"
+    )
+    total, zero = base.find_pervasive_zero_money(text)
+    assert total == 4
+    assert zero == 1
+    assert zero != total
+
+
+def test_find_pervasive_zero_money_short_circuit_low_count(base):
+    """A loading-skeleton placeholder with a single '₩0' must not fire
+    — the min_total_money gate (default 2) protects against the
+    `still loading` false-positive."""
+    text = "Loading ₩0 ..."
+    total, zero = base.find_pervasive_zero_money(text)
+    assert total == 1
+    assert zero == 0  # short-circuited because total < 2
+
+
+def test_grep_internal_hex_id_finds_request_id(base):
+    """2026-05-15 — Companion request_id leak guard. PR #384 closed the
+    original "919790CD3943" rendered above every AI bubble; this helper
+    must detect the 12-16 char uppercase hex pattern in visible text."""
+    text = "AI ANALYSIS · OBSERVATION\n919790CD3943\nResponse text here..."
+    hits = base.grep_internal_hex_id(text)
+    assert "919790CD3943" in hits
+
+
+def test_grep_internal_hex_id_ignores_lowercase_sha(base):
+    """Lowercase hex (commit SHAs in URLs, CSS IDs) must NOT fire — too
+    noisy. Only the all-uppercase pattern matches the request_id leak
+    shape that PR #384 closed."""
+    text = "deploy commit d422a19 sha 4217951f62d89b"
+    hits = base.grep_internal_hex_id(text)
+    assert hits == []
+
+
+def test_grep_container_path_leak_finds_app_prefix(base):
+    """Bug #7 (PR #379) — the artifact API used to emit
+    `/app/artifacts/brag_card/...`, a Railway container path of no use
+    to the user. Helper must detect any `/app/<path>` in visible text."""
+    text = "Brag card: /app/artifacts/brag_card/3/2026-04_Brag_Card.png"
+    hits = base.grep_container_path_leak(text)
+    assert any("/app/artifacts" in h for h in hits)
+
+
+def test_grep_container_path_leak_clean(base):
+    """Normal /app routing (e.g. '/app/page.tsx' in Next.js source) does
+    NOT appear in user-visible page text — only API responses that
+    accidentally leak container paths would surface here."""
+    text = "Welcome to PivoxQuant. View your portfolio at /portfolio."
+    hits = base.grep_container_path_leak(text)
+    assert hits == []
+
+
 def test_inject_session_parses_set_cookie(base, tmp_path):
     sess = tmp_path / "sim.json"
     sess.write_text(
