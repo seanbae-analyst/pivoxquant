@@ -2,8 +2,10 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
+import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -441,6 +443,11 @@ function ConsentModal({
 /* ── Page ── */
 
 export default function PricingPage() {
+  // 2026-05-15 (bug-hunter Wave 5 P2 #6): the Free plan CTA hard-coded
+  // `href="/signup"`; logged-in users who clicked it bounced through
+  // /signup → /home with no indication of where they went or why.
+  // Use the auth state to route logged-in users to /home directly.
+  const { user } = useAuth();
   const [loadingCheckout, setLoadingCheckout] = useState<TierKey | null>(null);
   const [consentTier, setConsentTier] = useState<TierKey | null>(null);
 
@@ -471,8 +478,41 @@ export default function PricingPage() {
       if (result.url) {
         window.location.href = result.url;
       }
-    } catch {
-      window.location.href = "/signup";
+    } catch (err: unknown) {
+      // 2026-05-15 (bug-hunter Wave 5 P1/SHIP-BLOCKER #1): the previous
+      // `catch { window.location.href = "/signup"; }` swallowed the
+      // 503 BUSINESS_REGISTRATION_PENDING response silently — logged-in
+      // users bounced to /home (because /signup auto-redirects when
+      // already authed) with NO indication that checkout was blocked.
+      // Surface a clear inline error so the user knows why the
+      // checkout didn't proceed.
+      if (
+        err instanceof ApiError &&
+        err.status === 503 &&
+        /BUSINESS_REGISTRATION_PENDING|Subscription not yet available/i.test(
+          err.message,
+        )
+      ) {
+        toast.error(
+          "구독 가입 준비 중입니다. 사업자등록·결제 시스템 활성화 후 이용 가능합니다.",
+          {
+            description: "support@pivoxquant.com 으로 문의해 주세요.",
+            duration: 7000,
+          },
+        );
+      } else if (err instanceof ApiError && err.status === 429) {
+        toast.error("요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
+      } else if (err instanceof ApiError && err.status === 401) {
+        // Genuinely unauthed → existing /signup redirect is correct.
+        window.location.href = "/signup";
+      } else {
+        toast.error(
+          "결제 페이지 연결 실패. 잠시 후 다시 시도해 주세요.",
+          {
+            description: err instanceof Error ? err.message : undefined,
+          },
+        );
+      }
     } finally {
       setLoadingCheckout(null);
       setConsentTier(null);
@@ -736,7 +776,10 @@ export default function PricingPage() {
 
                   {p.href ? (
                     <Link
-                      href={p.href}
+                      // Wave 5 #6: logged-in users go straight to /home
+                      // (the Free tier landing) rather than bouncing
+                      // through /signup → auto-redirect.
+                      href={user ? "/home" : p.href}
                       className="block text-center w-full py-3 px-4 font-serif text-pq-body transition-colors"
                       style={{
                         backgroundColor: p.recommended
