@@ -96,8 +96,15 @@ export function SubscriptionCardV2({
   pricingHref = "/pricing",
 }: Props) {
   return (
+    // 2026-05-15 (bug-hunter Wave 4 P2 #4): the `id="section-d"` anchor
+    // ALSO lives on the outer wrapper in (dashboard)/settings/_v2/
+    // page-v2.tsx — emitting it here too produced duplicate IDs in
+    // production DOM (HTML standard violation + AnchorRail's
+    // getElementById ambiguity that broke "C NOTIFICATIONS" sidebar
+    // scroll). The outer page-v2.tsx wrapper retains the id (it's the
+    // anchor target); this inner card drops it. aria-label is fine to
+    // keep — multiple aria-labels are valid.
     <section
-      id="section-d"
       style={{ scrollMarginTop: 96 }}
       aria-label="Subscription"
     >

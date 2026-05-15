@@ -284,8 +284,11 @@ export function PrivacyCardV2({
   };
 
   return (
+    // 2026-05-15 (bug-hunter Wave 4 P2 #4 sibling): same root cause as
+    // subscription-card-v2.tsx — duplicate `id="section-e"` (both here
+    // and on outer page-v2.tsx wrapper) broke AnchorRail sidebar
+    // scroll. Outer keeps the id; inner drops it.
     <section
-      id="section-e"
       style={{ scrollMarginTop: 96 }}
       aria-label="Privacy"
     >
