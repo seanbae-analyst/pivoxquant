@@ -10,8 +10,12 @@
  *   - E1 Cookie consent (4 categories — Strictly necessary always-on, Analytics,
  *     Performance, Marketing). Persisted to localStorage (GAP-C — backend
  *     `consent_log` table not yet present).
- *   - E2 Data export (last export timestamp + "Request new export →" CTA;
- *     GAP-X — backend `/api/profile/export` endpoint not yet declared).
+ *   - E2 Data export (last export timestamp + "Request new export →" CTA).
+ *     2026-05-15: GAP-X resolved — backend `/api/profile/export` IS
+ *     declared (routes/profile.py:1172) and covers positions + watchlist
+ *     + trades + alerts + consent state per PIPA §35 ① "complete personal
+ *     data record" requirement. settings/_v2/page-v2.tsx export handler
+ *     now calls /api/profile/export (was /api/agent/export, subset only).
  *   - E3 Danger zone (Sign out + Delete account; mailto fallback per v1 — GAP-J).
  *     ModalShell is reused for the delete-account confirmation flow.
  *

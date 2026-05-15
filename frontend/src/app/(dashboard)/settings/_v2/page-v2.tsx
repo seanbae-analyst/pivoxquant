@@ -344,13 +344,20 @@ export default function SettingsPageV2() {
     }
   }, [logout, router]);
 
-  /* ── Data export (GAP-X) ── */
+  /* ── Data export (PIPA §35 — 정보주체 열람권) ── */
   const handleRequestExport = React.useCallback(async () => {
     try {
-      // Best-effort: backend `/api/profile/export` not yet declared (GAP-X).
-      // Try the agent export endpoint as a graceful fallback so the button is
-      // not a dead-end.
-      const data: unknown = await apiFetch("/api/agent/export");
+      // 2026-05-15 (PIPA compliance fix): the comment+fallback above used
+      // to say "GAP-X — /api/profile/export not yet declared" and call
+      // the agent-data-only endpoint /api/agent/export. But the full
+      // PIPA endpoint IS live (routes/profile.py:1172
+      // `@profile_bp.route("/export", methods=["GET"])`) and covers
+      // positions + watchlist + trades + alerts + consent state — the
+      // exact scope privacy-ko.md §7.1 promises to the user. Calling
+      // /api/agent/export returned a SUBSET of the data, which would
+      // fail the PIPA §35 ① "complete personal data record" gate if
+      // anyone ever audited a user's export.
+      const data: unknown = await apiFetch("/api/profile/export");
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });
