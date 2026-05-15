@@ -161,6 +161,36 @@ function Row({
                 VIA {proxy}
               </span>
             ) : null}
+            {/*
+              Bug #2 (2026-05-15) — explicit STALE chip on the landing
+              ticker. The backend tags is_stale=true when (a) the region
+              cache has aged past TTL, (b) the upstream KIS
+              daily-history endpoint lags behind the live quote by >15%
+              (routes/market.py:867-876), or (c) the snapshot itself
+              flagged staleness. Until now the landing ticker only
+              communicated this via opacity dimming (~62%) — visually
+              ambiguous, especially on the bronze-on-vantablack palette
+              where the difference is sub-perceptual. Mirror the
+              dashboard top-ticker pattern (PR #379, bug-hunter Bug #13)
+              and surface an explicit "STALE" mini-label so users can
+              tell a live value from a last-observed one without
+              ambiguity. Capital-markets-law misrepresentation guard.
+            */}
+            {t.is_stale ? (
+              <span
+                className="ml-2 font-mono uppercase text-pq-eyebrow"
+                aria-label="Stale market data — last-observed value, not live"
+                style={{
+                  letterSpacing: "0.18em",
+                  padding: "1px 4px",
+                  border: "0.5px solid rgba(245, 240, 232, 0.25)",
+                  color: "rgba(245, 240, 232, 0.55)",
+                  borderRadius: 2,
+                }}
+              >
+                STALE
+              </span>
+            ) : null}
             <span
               aria-hidden
               className="ml-6 inline-block h-[9px] w-px"
