@@ -21,7 +21,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { toast } from "sonner";
 import { API, WATCHLIST, WATCHLIST_ITEM } from "@/lib/endpoints";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { fmtUsd, fmtKrw, fmtPct, pctColorClass, tickerToName } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
@@ -594,7 +594,23 @@ export default function StockDetailPage() {
       });
       setSwot(res);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Request failed";
+      // 2026-05-15 (bug-hunter Wave 5 P1 #3): /api/ai/swot returns
+      // 503 when the upstream LLM quota is exhausted or the service
+      // is restarting — same root cause as the /api/ai/coaching 503
+      // closed by PR #387. Mirror that fix's graceful copy here so
+      // the /detail page doesn't surface "Failed to generate SWOT"
+      // (alarming) on the launch surface when the actual fact is
+      // "service busy, try again."
+      let msg: string;
+      if (e instanceof ApiError && e.status === 503) {
+        msg = "AI service is temporarily busy — please try again in a moment.";
+      } else if (e instanceof ApiError && e.status === 429) {
+        msg = "Too many requests right now. Please wait a moment and retry.";
+      } else if (e instanceof Error) {
+        msg = e.message;
+      } else {
+        msg = "Request failed";
+      }
       setSwotError(msg);
     } finally {
       setSwotLoading(false);

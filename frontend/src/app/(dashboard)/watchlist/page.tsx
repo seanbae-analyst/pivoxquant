@@ -309,7 +309,15 @@ export default function WatchlistPage() {
                     {/* Row 1 — Symbol + Name */}
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="font-mono text-[var(--pq-bronze)] text-pq-body-sm tracking-wide whitespace-nowrap">
-                        {item.ticker}
+                        {/*
+                          2026-05-15 (bug-hunter Wave 5 P2 #4): same
+                          `.KS`/`.KQ` suffix strip as the desktop
+                          table (PR #396), missed on the mobile card
+                          path — `feedback_thorough_fixes` regression.
+                          Routing still uses the full `item.ticker`
+                          (line 303); only display is normalized.
+                        */}
+                        {item.ticker.replace(/\.(KS|KQ)$/i, "")}
                       </span>
                       <span className="text-pq-caption text-[rgba(245,240,232,0.65)] truncate text-right">
                         {item.name || item.ticker}
