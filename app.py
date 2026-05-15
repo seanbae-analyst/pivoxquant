@@ -168,6 +168,18 @@ def create_app():
         )
         logger.info("SECURITY: ProxyFix enabled (1 trusted proxy hop)")
 
+        # 2026-05-15 (launch prep): emit a boot-time inventory of every
+        # env var that, if missing, silently degrades a real product
+        # feature. Logs CRITICAL/WARNING per-var so Railway "Deploy
+        # Logs" surfaces it. Reference: services/launch_prep.py +
+        # docs/ops/email-setup.md.
+        try:
+            from services.launch_prep import check_env
+            check_env(production=True)
+        except Exception as exc:
+            # Never let env validation crash boot.
+            logger.warning("launch_prep.check_env failed: %s", exc)
+
     # Security middleware (CORS, Rate Limiting, CSRF, Session, Headers)
     init_security(app)
 

@@ -41,12 +41,25 @@ HEALTH_VERSION = (
 
 @health_bp.route("/api/health", methods=["GET"])
 def health():
-    """Lightweight health probe — intentionally no auth, no DB writes."""
+    """Lightweight health probe — intentionally no auth, no DB writes.
+
+    2026-05-15 (launch prep): also surfaces a compact env_health
+    summary so external monitoring can alert on missing recommended
+    keys without needing to scrape Railway logs. The summary excludes
+    full per-var purpose strings (those live in the boot-time log).
+    """
     payload: dict = {
         "status":    "ok",
         "version":   HEALTH_VERSION,
         "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
     }
+
+    # env_health summary (cheap — pure env read, no DB / network).
+    try:
+        from services.launch_prep import env_health_summary
+        payload["env"] = env_health_summary()
+    except Exception as exc:
+        payload["env"] = {"error": str(exc)[:120]}
 
     # Best-effort DB ping. SQLAlchemy 2.x requires an explicit `text()`
     # around raw SQL, so we wrap the trivial SELECT here.
