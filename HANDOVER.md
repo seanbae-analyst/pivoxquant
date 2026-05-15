@@ -1,3 +1,73 @@
+# PivoxQuant — 인수인계서 (2026-05-15 v43 자율 wave 최종 — CAUS Phase 4 자동 fix loop 완성 · 17 PR · OPEN PR 0 · main `cf7620e → e3ec47e`)
+
+## v43 최종 — CAUS 자동 fix loop (Phase 4) 활성화
+
+**한 줄 요약**: CEO 두 차례 추가 명령 (1) "유저처럼 우리 쓰고 문제점 바로바로 보고하는 그 기능 잘 되어가고있나" + (2) "바로바로 픽스해 자동으로 하게금해라" → CAUS 자체 약점 진단 + 강화 + 자동 fix loop 구현.
+
+**CAUS 자체 진단**:
+- 2026-05-13/14/15 cron 3일 연속 "0 findings clean" 보고
+- 같은 기간 bug-hunter agent는 9건 launch-blocker 발견 (모두 PR #380~#389로 닫음)
+- 원인: 시나리오 assertion이 "HTTP 200 + 단어 1개 + 5xx 없음"만 검사. 진짜 유저가 보는 ₩0 / hex leak / proxy 미고지를 못 봄.
+
+### v43 최종 누적 통계
+- **main HEAD**: `e3ec47e` (PR #393 머지 commit)
+- **v43 최종 cycle**: 추가 2 PR (#392 #393) — 총 17 PR 누적
+- **OPEN PR**: 0건
+- **backend pytest**: 2051+ PASS (PR #393 새 29건 추가 — 총 2080 예상)
+- **frontend vitest**: 313/313 PASS
+
+### v43 최종 PR
+
+| PR | Wave | 핵심 변경 |
+|---|---|---|
+| **#392** | CAUS 강화 | scripts/caus_scenarios/_base.py에 3개 신규 helper. `find_pervasive_zero_money` (각 fmtMoney 결과가 전부 ₩0 패턴 catch), `grep_internal_hex_id` (12-16자 대문자 hex leak), `grep_container_path_leak` (`/app/...` Docker path). day3_portfolio_risk + day4_alert_simulation wire. tests/test_caus_scenarios.py +8건 (총 38 PASS) |
+| **#393** | CAUS Phase 4 자동 fix | scripts/caus_auto_fix.py 신규 (~480줄). 안전 게이트(severity/protected-path/budget/cooling-off/idempotency) + claude -p subprocess(Max OAuth, $0) + 출력 contract(PR_URL/INSUFFICIENT_EVIDENCE/ESCALATE) + state 파일(.bkit/state/caus_auto_fix_state.json). scripts/caus_daily_sweep.py 후처리 chain (P0 발견 시 최대 1건 auto-fix 호출, 15분 timeout). tests/test_caus_auto_fix.py +29건 |
+
+### CAUS Phase 4 작동 시퀀스 (CEO 부재 무인 동작)
+
+```
+03:00 KST cron tick → Playwright sim Day N → 강화된 assertion
+    ↓ if P0 found
+GitHub Issue 생성 + Slack 알림
+    ↓
+scripts/caus_auto_fix.py 호출 (subprocess 15min cap)
+    ↓ 안전 게이트 전부 통과 시 (P0/P1 only · 보호경로 X · 일일 3건 한도 · 24h cool 아님 · 같은 finding 재시도 아님)
+claude -p (Max OAuth, $0 incremental cost) 600s
+    ↓ Subagent flow:
+      1. 코드 읽고 root cause 분석
+      2. 최소 fix 작성
+      3. pytest + tsc + vitest verify
+      4. caus-auto-fix/<hash12> 브랜치 commit+push
+      5. PR 생성 (caus-auto-fix label)
+      6. 마지막 stdout: PR_URL / INSUFFICIENT_EVIDENCE / ESCALATE
+    ↓ outcome 기록 + state 업데이트
+Slack: "auto-fix exit=N · last-line=PR_URL https://...·"
+    ↓
+CEO 깨면 PR review + merge
+```
+
+### Phase 4 안전 정책 (전부 enforced)
+
+| 보호 | 메커니즘 | 위반 시 |
+|---|---|---|
+| **PROTECTED_PATTERNS** | billing/, routes/auth*, services/legal*, risk_defense.py, security.py, migrations/, routes/portfolio.py, scripts/caus_*.py | 즉시 SKIP, state 변경 없음 |
+| **DAILY_BUDGET** | 환경변수 `CAUS_AUTO_FIX_BUDGET` 기본 3건/UTC day | 즉시 SKIP, 다음 날 자동 reset |
+| **COOLING_OFF** | 최근 outcomes 3건 연속 non-success → 24h halt | next-day 자동 reset 없음, 명시 `--reset-state` 필요 |
+| **IDEMPOTENCY** | 같은 finding hash 12자 (severity+page+summary) 중복 SKIP | 24h 후 같은 finding 재시도 가능 |
+| **NO AUTO-MERGE** | gh pr create만, gh pr merge 없음 | label `caus-auto-fix` 으로 CEO 검토 표시 |
+| **자기 수정 금지** | PROTECTED_PATTERNS에 scripts/caus_*.py 포함 | defense-in-depth |
+| **추가 비용 0원** | Max OAuth via local `claude` CLI, API key 안 씀 | Anthropic credit 영구 차단 (memory feedback_no_extra_cost) |
+
+### 다음 실제 작동 검증 시점
+
+- **2026-05-16 03:00 KST** (오늘 밤): Day 5 (/reports) cron tick. 기존 + 강화 assertion + Phase 4 chained.
+- **2026-05-19 03:00 KST**: 첫 강화된 Day 3 (/portfolio) tick. 이전 ₩0 P0가 ★ 실제 prod에서 ★ 잡혔다면 → auto-fix PR 자동 생성 시도.
+- **2026-05-20 03:00 KST**: 첫 강화된 Day 4 (/alerts + /companion) tick. hex leak / forbidden words catch.
+
+state 모니터링: `python scripts/caus_auto_fix.py --state-dump`. 로그: `docs/qa/auto-fix-log/YYYY-MM-DD.md`.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-15 v43 자율 wave 확장 — 13 PR · OPEN PR 0 · main `cf7620e → 4217951`)
 
 ## v43 확장 (PR #386 이후 추가 cycle)
