@@ -1,6 +1,37 @@
-# PivoxQuant — 인수인계서 (2026-05-15 v43 자율 wave 최종 — CAUS Phase 4 자동 fix loop 완성 · 17 PR · OPEN PR 0 · main `cf7620e → e3ec47e`)
+# PivoxQuant — 인수인계서 (2026-05-15 v43 wave 5 complete — 21 PR · OPEN PR 0 · main `cf7620e → cf319e3`)
 
-## v43 최종 — CAUS 자동 fix loop (Phase 4) 활성화
+## v43 wave 5 — bug-hunter 5 wave 누적, 출시 BLOCKER 클래스 모두 닫음
+
+**한 줄 요약**: CEO "계속 버그헌팅진행해" 명령에 따라 Wave 4 (multi-step flow) + Wave 5 (new-user first-time experience) 추가 dispatch. Wave 4: 6 findings → 2 fix (#395/#396), 4 defer. Wave 5: 6 findings → 4 fix (#397), 2 외부 서비스 defer (FMP / Anthropic). **21 PR 누적** (cleanup 2 + 신규 19).
+
+### Wave 4 + 5 추가 PR
+
+| PR | Wave | 핵심 변경 |
+|---|---|---|
+| #395 | W3 verify-data + W4 mobile | P0 signal_detail timeout (ThreadPoolExecutor 15s + cache fallback + 504 structured error) + P1 IndicesDetailPaper mobile 4-col grid overflow (overflow-x auto wrapper) |
+| #396 | W4 flow | P2 watchlist desktop .KS/.KQ suffix strip + P2 settings duplicate section IDs (subscription/privacy inner cards) |
+| #397 | W5 new-user | **P1 SHIP-BLOCKER pricing 503 silent redirect** (catch ApiError 503 + BUSINESS_REGISTRATION_PENDING → toast.error 한국어) + P1 SWOT 503 graceful copy (PR #387 패턴 mirror to /detail) + P2 mobile watchlist .KS suffix (#396 sweep 누락, thorough_fixes 회귀) + P2 Free CTA 로그인 유저 처리 (useAuth → /home 분기) |
+
+### 5개 bug-hunter wave 누적 결과
+
+| Wave | 영역 | findings | fixed | deferred |
+|---|---|---|---|---|
+| 1 | surface별 page sweep | 9 | 6 (#380-#385) | 3 (contested + historical data) |
+| 2 | verify-ux PR 검수 | 2 FAIL | 3 PR (#388-#390) — thorough sweep | — |
+| 3 | mobile + /detail/AAPL focused | 2 | 2 (#395) | — |
+| 4 | multi-step flow E2E | 6 | 2 (#396) | 4 (GAP-E backend / migration 034 policy / Next.js SSR investigation / LOW SWR) |
+| 5 | new-user first-time | 6 | 4 (#397) | 2 (FMP + Anthropic external service) |
+
+### 출시 BLOCKER 클래스 잔존 (CEO 외부 액션 필요)
+
+1. **FMP API state**: chart + news 전 surface empty (`source: "none"`). PR #379 graceful copy(`Live tape paused — provider quota cooling off`) 일부 있으나 chart/news 전체는 그대로. CEO: FMP $29 plan key 확인 + billing
+2. **Anthropic credit**: /api/ai/coaching + /api/ai/swot 503. PR #387 + #397에서 frontend graceful copy 완료 (사용자에게 "AI service is temporarily busy"). 실 fix는 credit 충전 또는 fallback path 구현
+3. **Stripe 결제 활성화**: BUSINESS_REGISTRATION_PENDING — 사업자등록 완료(2026-05-08)됐으나 통신판매업 신고 + Stripe Connect 활성화 미완. PR #397에서 사용자 인지 가능하게 fix
+4. **Bug #2 KOSPI 7,699 값 자체**: 코드 주석 vs bug-hunt 리포트 충돌, 외부 근거 부재 (CEO/변호사 결정 영역, STALE chip + range_52w null로 signal 명시만)
+5. **Bug #4 AAPL dirty row**: migration 034 정책 (CEO 데모 계정만 영향)
+6. **CAUS Phase 4 첫 실 작동**: 2026-05-19 03:00 KST 강화 Day 3 tick이 진짜 P0 catch 시도 (₩0 패턴 회귀 시)
+
+### 이전 v43 (PR #386-#390) 누적
 
 **한 줄 요약**: CEO 두 차례 추가 명령 (1) "유저처럼 우리 쓰고 문제점 바로바로 보고하는 그 기능 잘 되어가고있나" + (2) "바로바로 픽스해 자동으로 하게금해라" → CAUS 자체 약점 진단 + 강화 + 자동 fix loop 구현.
 
