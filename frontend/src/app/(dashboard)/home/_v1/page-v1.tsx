@@ -261,10 +261,18 @@ export default function HomePageV1() {
   /* Positions table rows */
   const posRows: PosRow[] = useMemo(() => {
     return positions.map((p) => {
-      // FINDING-021: backend Position fields are snake_case. `current_price`
-      // / `avg_cost` (NOT `current` / `avgCost`) carry the live values.
-      const cur = p.current_price ?? 0;
-      const avg = p.avg_cost ?? 0;
+      // FINDING-021 (original 2026-05-14): the legacy /api/portfolio
+      // endpoint emits snake_case.
+      // 2026-05-15 sweep-3 (bug-hunter + verify-ux follow-up): the new
+      // /api/portfolio/positions alias the frontend now hits emits
+      // camelCase (avgCost / current — routes/portfolio.py:826
+      // _build_positions_list). Reading only snake_case yields
+      // undefined → 0 → every position renders ₩0/$0 across home v1.
+      // Same defensive pattern as toPosition() / home v2 fix
+      // (PR #383 + PR #388).
+      const _p = p as typeof p & { current?: number; avgCost?: number };
+      const cur = _p.current ?? _p.current_price ?? 0;
+      const avg = _p.avgCost ?? _p.avg_cost ?? 0;
       const pnl = avg > 0 ? ((cur - avg) / avg) * 100 : 0;
       return {
         id: String(p.id),
