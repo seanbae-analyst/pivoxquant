@@ -61,6 +61,16 @@ export interface PublicMarketSnapshotItem {
   direction: "up" | "down" | "flat";
   is_stale: boolean;
   observed_at: string | null;
+  // Bug #3 (2026-05-15): ETF-proxy disclosure for the landing ticker.
+  // When the displayed `value` is an ETF price standing in for a
+  // caret-prefixed US index (FMP $29 plan 402s on ^GSPC/^IXIC/^VIX),
+  // the backend sets `proxy_ticker` so the frontend can render a small
+  // "VIA <PROXY>" chip. Without this, an unauthenticated visitor sees
+  // "S&P 500 748" (SPY price) instead of the real S&P 500 ≈ 5,700 — a
+  // capital-markets-law misrepresentation risk. KR indices and FX get
+  // `null` (no proxy involved). Mirrors the dashboard top-ticker
+  // `proxyTicker` field (PR #379).
+  proxy_ticker?: string | null;
 }
 
 export interface PublicMarketSnapshotResponse {

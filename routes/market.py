@@ -1264,7 +1264,11 @@ def public_market_snapshot():
               "change_pct": 0.42,       # 1d % change (0.0 when unknown)
               "direction": "up",        # "up" | "down" | "flat"
               "is_stale": false,        # true when cache is cold/aged
-              "observed_at": "2026-05-15T01:23:45Z"  # ISO-8601 UTC, or null
+              "observed_at": "2026-05-15T01:23:45Z",  # ISO-8601 UTC, or null
+              "proxy_ticker": null      # ETF ticker if `value` is an ETF
+                                        # proxy price (e.g. "SPY" for
+                                        # ^GSPC). Capital-markets-law
+                                        # disclosure (Bug #3, PR #343).
             },
             ...
           ],
@@ -1292,16 +1296,29 @@ def public_market_snapshot():
             return "down"
         return "flat"
 
-    # Map cache ticker -> (display name) for the symbols the landing ticker
-    # needs. US entries live under cache_key "us_v2", KR under "kr_v2" —
-    # the exact keys /api/market/indices writes.
+    # Map cache ticker -> (display name, proxy_ticker) for the symbols the
+    # landing ticker needs. US entries live under cache_key "us_v2", KR
+    # under "kr_v2" — the exact keys /api/market/indices writes.
+    #
+    # 2026-05-15 (Bug #3 + PR #343 regression on landing): the US index
+    # values served here are ETF-proxy levels (SPY/QQQ/VIXY) — FMP $29
+    # plan 402s on caret-prefixed index symbols. Without a `proxy_ticker`
+    # field on the response, the landing ticker would render
+    # "S&P 500 748.17" against the SPY price (real S&P 500 ≈ 5,700) — a
+    # capital-markets-law misrepresentation risk for unauthenticated
+    # visitors. We emit `proxy_ticker` so the frontend can render a "VIA
+    # SPY" disclosure chip mirroring the dashboard top-ticker pattern
+    # (PR #379). The ^IXIC display label is also corrected to "Nasdaq
+    # 100" (QQQ tracks NASDAQ 100, not NASDAQ Composite — bare "NASDAQ"
+    # was the same misrepresentation issue closed for /market in PR
+    # #343, but the landing ticker was never re-aligned).
     _WANTED = [
-        ("kr_v2", "^KS11", "KOSPI"),
-        ("kr_v2", "^KQ11", "KOSDAQ"),
-        ("kr_v2", "USDKRW", "USD / KRW"),
-        ("us_v2", "^GSPC", "S&P 500"),
-        ("us_v2", "^IXIC", "NASDAQ"),
-        ("us_v2", "^VIX", "VIX"),
+        ("kr_v2", "^KS11",  "KOSPI",      None),
+        ("kr_v2", "^KQ11",  "KOSDAQ",     None),
+        ("kr_v2", "USDKRW", "USD / KRW",  None),
+        ("us_v2", "^GSPC",  "S&P 500",    "SPY"),
+        ("us_v2", "^IXIC",  "Nasdaq 100", "QQQ"),
+        ("us_v2", "^VIX",   "VIX",        "VIXY"),
     ]
 
     # Pull each region's cached list once. Cache-only: if absent or aged
@@ -1323,7 +1340,7 @@ def public_market_snapshot():
 
     items: list[dict] = []
     index_cache_warm = False
-    for region_key, ticker, display in _WANTED:
+    for region_key, ticker, display, proxy_ticker in _WANTED:
         snap = region_data.get(region_key, {}).get(ticker)
         if snap is not None:
             index_cache_warm = True
@@ -1339,6 +1356,7 @@ def public_market_snapshot():
                 "direction": _direction(change_pct),
                 "is_stale": stale,
                 "observed_at": snap.get("observed_at"),
+                "proxy_ticker": proxy_ticker,
             })
         else:
             # Cache miss for this symbol — emit a placeholder row so the
@@ -1351,6 +1369,7 @@ def public_market_snapshot():
                 "direction": "flat",
                 "is_stale": True,
                 "observed_at": None,
+                "proxy_ticker": proxy_ticker,
             })
 
     # USD/KRW: fx_service is refreshed by the background scheduler, so it is
