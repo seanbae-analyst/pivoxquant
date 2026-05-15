@@ -1,3 +1,86 @@
+# PivoxQuant — 인수인계서 (2026-05-15 v43 자율 wave — 출시 BLOCKER 8개 닫음 · 8 PR · OPEN PR 0 · main `cf7620e → 9feabbd`)
+
+## v43 — 5시간 CEO 부재 자율 진행 cycle (출시 전 BLOCKER sweep)
+
+**한 줄 요약**: CEO 과제 5시간 부재 + 출시 임박 컨텍스트 → 자율 wave 진행. 세션 시작 시 stale 2 PR(#377/#378→#379) merge 정리 + 새 reconnaissance agents(verify-security/bug-hunter/verify-data) 병렬 dispatch로 출시 BLOCKER 8건 발견 → 6 PR 신규 자율 머지(#380~#385). 핵심 P0 (모든 user 포트폴리오 ₩0 표시) + P1 CSP guard + 자본시장법 misrepresentation 3중(ETF proxy 미고지·"NASDAQ" vs "Nasdaq 100"·STALE chip 부재) + Companion 내부 trace ID 노출 + KOSPI 52W range 모순. contested 영역(Bug #2 KOSPI 값 자체·Bug #4 AAPL dirty row)은 lawyer/CEO 결정 영역으로 명시 회피.
+
+### v43 누적 통계 (직접 git/gh/curl evidence verified)
+- **main HEAD**: `9feabbd` (`git log --oneline -1` 직접 확인)
+- **v43 base**: `cf7620e` (PR #376 머지 commit, v42 patch HANDOVER)
+- **v43 cycle**: 8 PR squash-merged
+  - 세션 시작 stale-PR 정리 2건: #377 (design audit, base main) + #379 (8 bugs, rebased + 리오픈 — #378은 base 삭제로 auto-closed)
+  - 자율 신규 6건: #380 #381 #382 #383 #384 #385
+- **OPEN PR**: 0건 (`gh pr list --state open` 직접 확인 — 출력 없음)
+- **backend pytest**: 2051 PASS (PR #380 검증 시점, 19 skipped, 1 xfailed, 0 회귀)
+- **frontend vitest**: 313/313 PASS (308 baseline + 5 신규 portfolio-camelcase 가드)
+- **frontend tsc**: 0 errors
+- **alembic heads**: 단일 head `034_flag_implausible_avg_cost` (분기 0)
+
+### v43 PR 표 (전체 8 PR)
+
+| PR | Wave | 핵심 변경 | 검증 |
+|---|---|---|---|
+| #377 (cleanup) | design audit | 48 findings (디자인/responsive/data) — 세션 시작 시 OPEN, base main 머지 | Vercel pass |
+| #379 (cleanup) | live-site bug hunt | Bug #1-8 fix — #377 위에 stacked였음. #377 머지 후 base 삭제로 #378 auto-closed → rebase --onto origin/main `dc007efe` (14 commits만) → 새 PR #379 머지 | 2051 PASS / 308 vitest / 0 tsc |
+| #380 | landing 자본시장법 미고지 회귀 | Bug #3 재발(랜딩 ticker ETF proxy "VIA SPY/QQQ/VIXY" chip 누락) + PR #343 회귀("NASDAQ" vs "Nasdaq 100" 라벨) + cron audit trail 커밋 5/14·5/15 (둘 다 0 findings) | proxy_ticker / Nasdaq 100 라이브 verify |
+| #381 | landing STALE chip | top-ticker 패턴 mirror — opacity 62%만으론 sub-perceptual stale 신호를 명시 "STALE" 미니 chip으로 surface (자본시장법 misrepresentation guard) | tsc 0 + vitest 308/308 |
+| #382 | **P1 보안** | verify-security agent finding: Vercel HTML 응답에 `Content-Security-Policy` 헤더 누락 → next.config.ts headers()에 12-directive CSP 추가 (default/script/style/img/font/connect/frame-src + frame-ancestors/object-src/base-uri/form-action/upgrade-insecure-requests + Sentry+Google+Kakao 도메인) | prod curl 헤더 verify ✅ |
+| **#383** | **P0 출시 차단** | bug-hunter agent finding: `/api/portfolio/positions` camelCase(`avgCost/current`) emit vs `toPosition()` snake_case(`avg_cost/current_price`) read mismatch → 모든 user의 Holdings 테이블 ₩0/$0 표시 / NAV 0 / 가중치 0% / "No allocation yet". BackendPositionRow 양쪽 shape 허용 + 5 vitest 회귀 가드 | 313/313 vitest ✅ |
+| #384 | Companion leak | bug-hunter agent finding (ss_2538wg4y6): 모든 AI bubble에 backend `request_id` 12-hex (예: "919790CD3943") 노출됐던 것 제거. sr-only `data-request-id`로 보존(Sentry correlation) | tsc 0 + vitest 313/313 |
+| **#385** | KOSPI 52W 모순 | bug-hunter P1-4 finding: KOSPI level=7619 (KIS live) vs range_52w=[2293, 2671] (KIS daily-history lag) 동시 emit → level이 자기 52W 위로 튀어나옴(자본시장법 implicit ATH 함의). 기존 1.15x stale-tag guard 확장 → 같은 분기에서 `range_52w = None` (frontend "—" 렌더). contested Bug #2 root cause 건드리지 않음 (level/sparkline 유지). | pytest 36 PASS |
+
+### v43 자율 reconnaissance agents 결과 (병렬 dispatch)
+
+| Agent | 결과 요약 | 액션 |
+|---|---|---|
+| **verify-security** | OK 9건 + WARN 2건. P1: Vercel CSP 헤더 누락 → #382로 닫음. P2: rate-limit `memory://` Railway 재시작 시 카운터 리셋 — Vercel/CF edge layer가 진짜 DDoS guard, app-layer memory 무방으로 판단 SKIP (no-busywork 룰) | #382 머지 |
+| **bug-hunter** | 14 페이지 / 1.5h prod sweep. P0 3건, P1 3건, P2 3건 발견. P0-1 Portfolio ₩0 → #383 / P1-4 KOSPI 52W 모순 → #385 / P2 Companion UUID → #384 닫음. P0-2 AI coaching 503 = Anthropic 크레딧 (CEO 액션) / P0-3 + P1-5 = 구 alert message body raw ticker (새 alert는 fix됨, 구 데이터는 마이그레이션 034 정책상 auto-mutation 금지) | 3 PR 닫음 |
+| **verify-data** | 7 페이지 / 200초 prod 데이터 sampling. PASS: 삼성전자 ₩275,250 / SPY $748.17 exact match / DIA $500.80 / USDKRW 1,498. P0-1: /detail/AAPL 현재가 미렌더 — 별도 코드 경로(/api/signals/AAPL 응답 shape). 인증 필요 repro, 본 세션 defer | finding 기록 |
+| **verify-ux** (in-flight) | 5 PR 라이브 prod 검수 dispatch (#380~#385 각 PR fix 동작 확인) | background |
+
+### v43 contested 영역 (자율 결정 회피, lawyer/CEO 판단 영역 명시)
+
+1. **Bug #2 KOSPI 값 7,699 자체**: services/data/fetcher.py:826-833 코드 주석 ("Do NOT narrow — KIS 7,981 is REAL, +31% MoM AI chip rally confirmed against external press") vs bug-hunt-live.md Bug #2 ("sparkline_30d [2,293-2,640] contradicts current level 7,981, physically impossible 3.2x discontinuity 1d"). 외부 근거(KRX OpenData·DART) 부재 상태에서 unilateral fix = 5번째 false-admit 패턴 위험. STALE chip(#381) + range_52w null(#385)로 signal 명시화는 가능했지만, **level 자체는 유지**. 변호사/CEO 결정 영역.
+
+2. **Bug #4 AAPL avgCost=$30 dirty row**: migration 034 자체 원칙 ("auto-mutation = data fabrication, human action 만 safe default") 충돌. 코드 가드(_avg_cost_implausible)는 PR #379로 routes/portfolio.py 3개 write path 모두 wired → 새 데이터 오염 차단. 기존 1 row (CEO 데모 계정만)는 영향. 자율 마이그레이션 금지 영역.
+
+3. **AI coaching 503 (bug-hunter P0-2)**: Anthropic 크레딧 소진 추정 (메모리 session_2026-05-09 동일 패턴). CEO 액션 (recharge 또는 fallback path). 코드 fix 영역 아님.
+
+### v43 검증 evidence (각 PR 직접 확인)
+
+```bash
+# CSP 라이브 (PR #382)
+$ curl -sI https://www.pivoxquant.com/ | grep content-security
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.ingest.sentry.io ...
+
+# proxy_ticker 라이브 (PR #380)
+$ curl -sS https://web-production-7b484b.up.railway.app/api/public/market-snapshot | python3 -m json.tool
+^GSPC name=S&P 500       proxy_ticker='SPY'
+^IXIC name=Nasdaq 100    proxy_ticker='QQQ'   # ← name 교정 + proxy 표시
+^VIX  name=VIX           proxy_ticker='VIXY'
+^KS11 name=KOSPI         proxy_ticker=null    is_stale=True
+^KQ11 name=KOSDAQ        proxy_ticker=null    is_stale=True
+USDKRW name=USD / KRW    proxy_ticker=null
+
+# Portfolio 백엔드 응답 shape (PR #383 root cause)
+$ grep -n "\"avgCost\"\|\"avg_cost\"\|\"current\"\|\"current_price\"" routes/portfolio.py | head
+227:            "avg_cost": p.avg_cost, "price": cur_px, "current_price": cur_px,  # legacy /api/portfolio
+826:            "avgCost": round(p.avg_cost, 4),                                    # new /api/portfolio/positions
+827:            "current": round(cur_px, 4),                                        # ← frontend 이거 읽음
+```
+
+### v43 untouched (의도된 local-only)
+- `scripts/finance_weekly_check.py`: SSL context(certifi pin, legal_monitor PR #370 패턴) 적용 — 본 세션 직전 v42 마무리에서 local 적용. git untracked 의도(5bb080a2 chore: untrack). 다음 일요일 09:00 KST cron tick에 적용됨.
+
+### v43 인프라 상태 confirm
+- canonical working dir: `~/projects/pivoxquant` @ `9feabbd` (synced)
+- archive working dir: `~/Desktop/취준/pivoxquant` @ `9feabbd` (synced)
+- launchctl `com.pivoxquant.caus.daily`: ACTIVE, 마지막 tick 2026-05-15 Day 4 sim6 — 0 findings clean
+- crontab CAUS daily 03:00 KST + finance weekly 일요일 09:00 KST 둘 다 active
+- 다음 자동 tick: 2026-05-16 03:00 KST (Day 5)
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-14 v42 patch — TCC relocation → ~/projects + REPO_ROOT fix (PR #375) + Anthropic Max $220 알림 · 92 PR · OPEN PR 0 · main `bf32e738 → cf7620e`)
 
 ## v42 final patch — TCC relocation to ~/projects/pivoxquant + REPO_ROOT fix + Max $220 alert
