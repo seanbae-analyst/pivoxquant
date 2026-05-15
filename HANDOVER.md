@@ -1,3 +1,48 @@
+# PivoxQuant — 인수인계서 (2026-05-15 v43 second-shift Wave 7 — 33 PR · OPEN PR 0 · main `cf7620e → 019627c`)
+
+## v43 second-shift Wave 7 — 2 CRITICAL security fixes + 5 docs + 11 PR (#399~#409)
+
+**한 줄 요약**: CEO 두 번째 5h shift 진행. Wave 6 (KIS+PDF 4 findings) + Wave 7 (signup 4 findings, **2 CRITICAL security**) 추가 dispatch. **누적 33 PR**. Wave 7 발견: ① `/api/auth/register` 인증 사용자 차단 없음 (DB 실제 오염 확인 — id:21 + id:22 두 rogue row, prod에서 reproduce + 본 검증에서 1개 추가). ② logout 후 cookie 미삭제 (Secure/SameSite 매칭 누락). 둘 다 PR #409로 fix + 152 auth tests PASS.
+
+### Wave 7 PR 표
+
+| PR | Wave | 핵심 변경 |
+|---|---|---|
+| **#409** | **W7 CRITICAL** | (1) routes/auth.py register endpoint에 `current_user.is_authenticated` 가드 + 409 ALREADY_AUTHENTICATED. (2) `_clear_auth_cookies` Flask `delete_cookie` 대신 `set_cookie('', max_age=0, expires=0)` + Secure/HttpOnly/SameSite/Domain 명시 (browser cookie 정책 매칭). (3) legal-consent-modal hint "필수 항목 3개" → "4개" (PIPA 약관규제법 surface 정확성). |
+
+### 7개 bug-hunter wave 누적 정리
+
+| Wave | 영역 | findings | 본 세션 fixed | 외부/deferred |
+|---|---|---|---|---|
+| 1 | surface별 page | 9 | 6 (#380-#385) | 3 contested + historical |
+| 2 | verify-ux PR 검수 | 2 FAIL | 3 PR (#388-#390) sweep | — |
+| 3 | mobile + /detail/AAPL | 2 | 2 (#395) | — |
+| 4 | multi-step flow E2E | 6 | 2 (#396) | 4 (GAP-E + migration policy + Next.js + LOW) |
+| 5 | new-user first-time | 6 | 4 (#397) | 2 외부 (FMP + Anthropic) |
+| 6 | KIS + PDF artifact | 4 | 4 (#404 + #405 guide) | — |
+| **7** | **signup auth edge case** | 4 | 3 (#409) | 1 UX defer + 1 DB cleanup |
+
+**누적**: 33 findings / 22 fix PR + 8 docs/HANDOVER PR + 1 cleanup.
+
+### ⚠️ CEO 즉시 cleanup 필요 — prod DB rogue rows
+
+Wave 7 reproduction과정에서 prod DB에 test user rows 생성됨 (`auto-mutation 금지` 메모리 룰상 자동 삭제 안 함):
+- **id=21 korean@example.com** (Wave 7 bug-hunter Bug #2 reproduce 시 생성)
+- **id=22 newtest@example.com** (본 세션 verify 검증 시 — 인증 없는 register는 정상 동작 — 만든 본인 의도와 무관)
+
+**CEO 절차**:
+```sql
+-- Railway connect Postgres
+DELETE FROM positions WHERE user_id IN (21, 22);
+DELETE FROM watchlist WHERE user_id IN (21, 22);
+DELETE FROM alerts WHERE user_id IN (21, 22);
+DELETE FROM users WHERE id IN (21, 22) AND email IN ('korean@example.com','newtest@example.com');
+```
+
+또는 `routes/auth.py:755 delete_account()` endpoint 활용 가능 (본인 계정 삭제 path).
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-15 v43 second-shift — 29 PR · OPEN PR 0 · main `cf7620e → 2ba72d3`)
 
 ## v43 second-shift — Wave 6 + launch-prep infrastructure (PR #399~#405)
