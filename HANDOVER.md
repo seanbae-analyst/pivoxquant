@@ -1,3 +1,77 @@
+# PivoxQuant — 인수인계서 (2026-05-16 v43 final close — 34 PR · OPEN PR 0 · main `cf7620e → 1c7a231` · 첫 overnight cron tick verified clean)
+
+## v43 final close — 두 5h shift 완료, overnight verification
+
+**한 줄 요약**: CEO 요청 "핸드오버 작성하고 멈춰". 2 자율 shift 누적 결과 confirm + overnight Phase 4 cron tick 실 동작 verify. 2026-05-16 03:06 KST Day 5 cron tick → 0 findings clean (sim7 user, /reports brag/memo/prebrief 카드 시나리오). 강화된 assertion(#392)도 새 P0 발견 없음 — 어제 fix들이 회귀 없이 안정.
+
+### 자동 cron 실 작동 verify (overnight 2026-05-16 03:06 KST)
+
+```
+docs/qa/auto-sim-reports/2026-05-16.md (이번 새 audit trail):
+- user: sim7 (seanbae1521+sim7@gmail.com)
+- scenario: Day 5 — /reports brag/memo/prebrief 카드
+- launcher: scripts/caus_daily_sweep.py (Phase 3 Playwright)
+- findings: 0 (0 P0)
+```
+
+Phase 4 auto-fix loop: P0 발견 없어 fire 안 됨 (expected). 첫 실 작동 시점은 강화된 Day 3 (2026-05-19 03:00 KST) 또는 Day 4 (2026-05-20).
+
+### 본 세션 34 PR 전체 정리
+
+**Shift 1 (#377-#398, 21 PR)**: Wave 1-5 + CAUS Phase 4 + 자율 fix loop 인프라
+- 자본시장법 misrepresentation guard 4중 (#380 #381 #385)
+- 모든 Portfolio P0 (#383 #388 #389)
+- CSP P1 #382 / Companion #384 / AI 503 graceful #387 + #397
+- CAUS strengthened assertions #392 + Phase 4 auto-fix loop #393
+
+**Shift 2 (#399-#410, 13 PR)**: Wave 6-7 + launch infrastructure + ops docs
+- 🟥 Wave 7 2 CRITICAL security: register auth 가드 + logout cookie 정확 deletion (#409)
+- 🟥 PIPA `/api/profile/export` wire-up (#403)
+- 🟧 launch_prep env validation + /api/health surface (#400 + #402)
+- 🟨 Wave 6 KIS + PDF 4 findings (#404 + #405)
+- 📘 5 operational docs: email-setup / launch-checklist / pdf-storage / kis-broker-onboarding / post-launch-monitoring
+
+### 7 bug-hunter wave 누적 — 33 findings → 22 fix + 8 docs + 1 cleanup
+2 verify-ux + 1 verify-security + 1 verify-data + 1 user-tester(equiv) 보조 agent.
+
+### ⚠️ CEO 즉시 cleanup todos (출시 직전)
+
+1. **prod DB rogue rows (Wave 7 reproduce + verify 부산물)**:
+   ```sql
+   DELETE FROM positions WHERE user_id IN (21, 22);
+   DELETE FROM watchlist WHERE user_id IN (21, 22);
+   DELETE FROM alerts WHERE user_id IN (21, 22);
+   DELETE FROM users WHERE id IN (21, 22)
+     AND email IN ('korean@example.com','newtest@example.com');
+   ```
+
+2. **Email infrastructure (15분, $0)**: `docs/ops/email-setup.md` 따라 진행
+3. **PDF persistent storage (15분, $0)**: `docs/ops/pdf-storage.md` Option A (Railway Volume)
+4. **종합 checklist**: `docs/ops/launch-checklist.md` P0-P3
+5. **출시 후 7일**: `docs/ops/post-launch-monitoring.md`
+
+### 다음 자동 cron 일정
+
+| 시각 | 작업 |
+|---|---|
+| 2026-05-16 03:00 KST | ✅ Day 5 완료 (0 findings) |
+| 2026-05-17 09:00 KST 일 | finance_weekly_check (SSL pin 적용됨) |
+| 2026-05-17 03:00 KST | Day 6 /pricing |
+| 2026-05-18 03:00 KST | Day 0 signup |
+| 2026-05-19 03:00 KST | **강화 Day 3 (/portfolio)** — ₩0 패턴 catch 첫 실 시도 |
+| 2026-05-20 03:00 KST | **강화 Day 4 (/companion)** — hex leak catch 첫 실 시도 |
+| 2026-06-01 09:00 KST | 매월 brag card cron (Volume 적용 후 영속) |
+
+### 본 세션 종료 시점 main 상태
+
+- HEAD: `1c7a231` (PR #410 docs HANDOVER)
+- prod live: Railway `019627c24707` (PR #409 critical security fix 라이브 ✓)
+- /api/health: `production:true, missing_required:0, missing_recommended:0`
+- OPEN PR: 0건
+- 다음 작동 자동 cron tick까지 정지
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-15 v43 second-shift Wave 7 — 33 PR · OPEN PR 0 · main `cf7620e → 019627c`)
 
 ## v43 second-shift Wave 7 — 2 CRITICAL security fixes + 5 docs + 11 PR (#399~#409)
