@@ -186,7 +186,12 @@ export default function OnboardingBrokerPage() {
         </div>
       </main>
 
-      {/* Footer */}
+      {/* Footer
+          2026-05-17 wave 12 UX P1: pre-fix had two buttons (Next + Skip)
+          that did the EXACT same thing — both routed to /onboarding without
+          any state change. Users could mistake "Next" for "broker connected,
+          proceed". Now: when not connected, label clarifies the action
+          ("Continue without broker"); when connected, plain "Continue". */}
       <footer className="sticky bottom-0 z-20 border-t border-[var(--pq-ivory-line)] bg-[rgba(10,10,10,0.9)] backdrop-blur-xl px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-end gap-3">
           <button
@@ -194,7 +199,9 @@ export default function OnboardingBrokerPage() {
             onClick={goNext}
             className="pq-ink-btn-bronze inline-flex items-center gap-1"
           >
-            {t("brokerOnboarding.nextStep")}
+            {kisConnected
+              ? t("brokerOnboarding.nextStep")
+              : "브로커 없이 계속하기"}
             <ChevronRight size={14} />
           </button>
         </div>

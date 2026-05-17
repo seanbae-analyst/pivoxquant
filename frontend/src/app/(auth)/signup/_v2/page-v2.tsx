@@ -610,7 +610,25 @@ export default function SignupPageV2() {
             disabled={!allRequired}
             onGoogleClick={handleOAuthClick(API.auth.google)}
             onKakaoClick={handleOAuthClick(API.auth.kakao)}
-            onDisabledClick={() => setPulseUnchecked(true)}
+            onDisabledClick={() => {
+              // 2026-05-17 wave 12 UX P0: on mobile (375px) the OAuth
+              // button can sit 600px+ below the first unchecked consent;
+              // the pulse-on-click was invisible. Scroll the first
+              // missing requirement into view so the user can see what
+              // they need to fix. age-by-DOB falls through to the
+              // birthdate input, which is the actual fix path.
+              setPulseUnchecked(true);
+              const firstMissing =
+                (!consents.terms && "agree_terms") ||
+                (!consents.non_advisory && "agree_non_advisory") ||
+                ((!consents.age || !ageCheck.eligible) && "agree_birthdate") ||
+                (!consents.cross_border && "agree_cross_border") ||
+                null;
+              if (firstMissing && typeof document !== "undefined") {
+                const el = document.getElementById(firstMissing);
+                el?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+            }}
             hint="필수 항목 4개에 모두 동의해야 가입할 수 있습니다."
             hintEmphasized={pulseUnchecked}
           />

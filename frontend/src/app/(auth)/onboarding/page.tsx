@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
@@ -689,6 +690,20 @@ export default function OnboardingPage() {
   const [skipping, setSkipping] = useState(false);
   const handleSkip = useCallback(async () => {
     if (skipping) return;
+    // 2026-05-17 wave 12 UX P2: "Skip for now" sits in the sticky header
+    // at rgba opacity 0.5 — mid-onboarding mis-tap would permanently
+    // mark the user's investor profile as "skipped" with no recovery.
+    // Confirm step protects against that without blocking the deliberate
+    // skip flow. window.confirm is fine here — this is a one-off click,
+    // not a recurring surface (no design system promotion needed).
+    if (typeof window !== "undefined") {
+      const ok = window.confirm(
+        "투자자 유형 분석을 건너뛰시겠습니까?\n" +
+          "(Skip investor-type questionnaire?)\n" +
+          "지금 건너뛰면 분석 정확도가 떨어집니다.",
+      );
+      if (!ok) return;
+    }
     setSkipping(true);
     try {
       // Mark onboarding completed on the backend with empty answers,
@@ -737,8 +752,15 @@ export default function OnboardingPage() {
 
       router.replace("/home");
     } catch {
-      // Don't redirect — show error and let user retry
-      alert("Failed to save profile. Please try again.");
+      // 2026-05-17 wave 12 UX P2: native `alert()` was a 20-question
+      // dead-end — user had to re-tap "Go to Dashboard" with no clear
+      // retry path. Sonner toast keeps the user in-flow + state is
+      // preserved (answers stay in localStorage) so the next click of
+      // the submit button retries cleanly.
+      toast.error(
+        "프로필 저장에 실패했습니다. 다시 시도해 주세요. " +
+          "(Failed to save — please retry)",
+      );
     } finally {
       setSubmitting(false);
     }
