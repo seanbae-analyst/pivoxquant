@@ -12,6 +12,7 @@ from extensions import db
 from models import Position, SignalCache, TradeHistory
 from security import trade_rate_limit
 from services import fx_service, cache_service
+from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.container import engine, fetcher, realtime
 from services.price_overlay import overlay_prices, parse_price_display
@@ -302,18 +303,31 @@ def add_position():
         shares = float(d.get("shares") or 0)
         cost = float(d.get("avg_cost") or 0)
     except (TypeError, ValueError):
-        return jsonify({"error": "Shares and average cost must be numbers"}), 400
+        return api_error(
+            en="Shares and average cost must be numbers", kr="주식 수와 평균가는 숫자여야 합니다.",
+            code="POSITION_NUMERIC_REQUIRED", status=400,
+        )
     # SEC-004: Position.ticker is db.String(20). Reject before SQL so the DB
     # never raises DataError (which would have bubbled up via the leaky
     # f-string error response).
     if not ticker or len(ticker) > 20:
-        return jsonify({"error": "Invalid ticker"}), 400
+        return api_error(
+            en="Invalid ticker", kr="유효하지 않은 종목입니다.",
+            code="INVALID_TICKER", status=400,
+        )
     if shares <= 0 or cost <= 0:
-        return jsonify({"error": "Shares and average cost required"}), 400
+        return api_error(
+            en="Shares and average cost required", kr="주식 수와 평균가가 필요합니다.",
+            code="POSITION_FIELDS_REQUIRED", status=400,
+        )
     # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
     _implausible = _avg_cost_implausible(ticker, cost)
     if _implausible:
-        return jsonify({"error": _implausible, "code": "AVG_COST_IMPLAUSIBLE"}), 400
+        return api_error(
+            en=_implausible,
+            kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
+            code="AVG_COST_IMPLAUSIBLE", status=400,
+        )
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
     # NEW-D (2026-05-09): two-phase race-safe upsert.
@@ -372,11 +386,17 @@ def add_position():
         except Exception:
             db.session.rollback()
             logger.exception("add_position race recovery failed")
-            return jsonify({"error": "Failed to save position"}), 500
+            return api_error(
+            en="Failed to save position", kr="포지션 저장에 실패했습니다.",
+            code="POSITION_SAVE_FAILED", status=500,
+        )
     except Exception:
         db.session.rollback()
         logger.exception("add_position DB commit failed")
-        return jsonify({"error": "Failed to save position"}), 500
+        return api_error(
+            en="Failed to save position", kr="포지션 저장에 실패했습니다.",
+            code="POSITION_SAVE_FAILED", status=500,
+        )
 
     # Warm the signal cache in the background — see _cache_ticker_async.
     _cache_ticker_async(
@@ -406,19 +426,32 @@ def add_position():
 def edit_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
-        return jsonify({"error": "Position not found"}), 404
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
     d = request.get_json() or {}
     try:
         shares = float(d.get("shares") or 0)
         cost = float(d.get("avg_cost") or 0)
     except (TypeError, ValueError):
-        return jsonify({"error": "Shares and average cost must be numbers"}), 400
+        return api_error(
+            en="Shares and average cost must be numbers", kr="주식 수와 평균가는 숫자여야 합니다.",
+            code="POSITION_NUMERIC_REQUIRED", status=400,
+        )
     if shares <= 0 or cost <= 0:
-        return jsonify({"error": "Shares and average cost must be positive"}), 400
+        return api_error(
+            en="Shares and average cost must be positive", kr="주식 수와 평균가는 양수여야 합니다.",
+            code="POSITION_POSITIVE_REQUIRED", status=400,
+        )
     # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
     _implausible = _avg_cost_implausible(p.ticker, cost)
     if _implausible:
-        return jsonify({"error": _implausible, "code": "AVG_COST_IMPLAUSIBLE"}), 400
+        return api_error(
+            en=_implausible,
+            kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
+            code="AVG_COST_IMPLAUSIBLE", status=400,
+        )
     p.shares = shares
     p.avg_cost = cost
     try:
@@ -426,7 +459,10 @@ def edit_position(pid):
     except Exception:
         db.session.rollback()
         logger.exception("edit_position commit failed")
-        return jsonify({"error": "Failed to update position"}), 500
+        return api_error(
+            en="Failed to update position", kr="포지션 업데이트에 실패했습니다.",
+            code="POSITION_UPDATE_FAILED", status=500,
+        )
     cache_service.cache_ticker(p.ticker, current_user.available_capital, engine)
     return jsonify({"ok": True})
 
@@ -438,14 +474,20 @@ def edit_position(pid):
 def del_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
-        return jsonify({"error": "Position not found"}), 404
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
     try:
         db.session.delete(p)
         db.session.commit()
     except Exception:
         db.session.rollback()
         logger.exception("del_position failed")
-        return jsonify({"error": "Failed to delete position"}), 500
+        return api_error(
+            en="Failed to delete position", kr="포지션 삭제에 실패했습니다.",
+            code="POSITION_DELETE_FAILED", status=500,
+        )
     return jsonify({"ok": True})
 
 
@@ -456,15 +498,24 @@ def del_position(pid):
 def buy_more(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
-        return jsonify({"error": "Position not found"}), 404
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
     d = request.get_json() or {}
     try:
         buy_shares = float(d.get("shares") or 0)
         buy_price = float(d.get("price") or 0)
     except (TypeError, ValueError):
-        return jsonify({"error": "Shares and price must be numbers"}), 400
+        return api_error(
+            en="Shares and price must be numbers", kr="주식 수와 가격은 숫자여야 합니다.",
+            code="TRADE_NUMERIC_REQUIRED", status=400,
+        )
     if buy_shares <= 0 or buy_price <= 0:
-        return jsonify({"error": "Shares and price required"}), 400
+        return api_error(
+            en="Shares and price required", kr="주식 수와 가격이 필요합니다.",
+            code="TRADE_FIELDS_REQUIRED", status=400,
+        )
 
     cost = buy_shares * buy_price
     # Use TTL-aware cache accessor for consistency with the rest of the codebase.
@@ -479,12 +530,20 @@ def buy_more(pid):
     if is_kr:
         avail = getattr(current_user, "available_capital_krw", 0) or 0
         if avail < cost:
-            return jsonify({"error": f"Insufficient KRW capital (need ₩{cost:,.0f}, have ₩{avail:,.0f})"}), 400
+            return api_error(
+                en=f"Insufficient KRW capital (need ₩{cost:,.0f}, have ₩{avail:,.0f})",
+                kr=f"KRW 시드머니 부족 (필요 ₩{cost:,.0f}, 보유 ₩{avail:,.0f}).",
+                code="INSUFFICIENT_CAPITAL_KRW", status=400,
+            )
         current_user.available_capital_krw = avail - cost
     else:
         avail = current_user.available_capital or 0
         if avail < cost:
-            return jsonify({"error": f"Insufficient capital (need ${cost:,.2f}, have ${avail:,.2f})"}), 400
+            return api_error(
+                en=f"Insufficient capital (need ${cost:,.2f}, have ${avail:,.2f})",
+                kr=f"USD 시드머니 부족 (필요 ${cost:,.2f}, 보유 ${avail:,.2f}).",
+                code="INSUFFICIENT_CAPITAL_USD", status=400,
+            )
         current_user.available_capital = avail - cost
 
     total_cost = p.shares * p.avg_cost + buy_shares * buy_price
@@ -534,12 +593,21 @@ def buy_new_position():
         shares = float(d.get("shares") or 0)
         price = float(d.get("price") or 0)
     except (TypeError, ValueError):
-        return jsonify({"error": "Shares and price must be numbers"}), 400
+        return api_error(
+            en="Shares and price must be numbers", kr="주식 수와 가격은 숫자여야 합니다.",
+            code="TRADE_NUMERIC_REQUIRED", status=400,
+        )
     # SEC-004: Position.ticker is db.String(20); validate before persisting.
     if not ticker or len(ticker) > 20:
-        return jsonify({"error": "Invalid ticker"}), 400
+        return api_error(
+            en="Invalid ticker", kr="유효하지 않은 종목입니다.",
+            code="INVALID_TICKER", status=400,
+        )
     if shares <= 0 or price <= 0:
-        return jsonify({"error": "Ticker, shares, and price required"}), 400
+        return api_error(
+            en="Ticker, shares, and price required", kr="종목, 주식 수, 가격이 필요합니다.",
+            code="TRADE_FIELDS_REQUIRED", status=400,
+        )
 
     cost = shares * price
     currency = fetcher.currency(ticker)
@@ -548,7 +616,11 @@ def buy_new_position():
     cap = (getattr(current_user, "available_capital_krw", 0) or 0) if is_kr else (current_user.available_capital or 0)
     if cap < cost:
         sym = "₩" if is_kr else "$"
-        return jsonify({"error": f"Insufficient capital (need {sym}{cost:,.0f}, have {sym}{cap:,.0f})"}), 400
+        return api_error(
+            en=f"Insufficient capital (need {sym}{cost:,.0f}, have {sym}{cap:,.0f})",
+            kr=f"시드머니 부족 (필요 {sym}{cost:,.0f}, 보유 {sym}{cap:,.0f}).",
+            code="INSUFFICIENT_CAPITAL", status=400,
+        )
 
     # NEW-D (2026-05-09): race-safe upsert against uq_positions_user_ticker.
     def _merge_buy_new(ex_row):
@@ -609,7 +681,10 @@ def buy_new_position():
         except Exception:
             db.session.rollback()
             logger.exception("buy_new_position race recovery failed")
-            return jsonify({"error": "Failed to record trade"}), 500
+            return api_error(
+            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
+            code="TRADE_RECORD_FAILED", status=500,
+        )
     return jsonify({
         "ok": True,
         "new_shares": round(p.shares, 4),
@@ -626,19 +701,28 @@ def buy_new_position():
 def sell_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
-        return jsonify({"error": "Position not found"}), 404
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
     d = request.get_json() or {}
     try:
         sell_shares = float(d.get("shares") or p.shares)
         sell_price = float(d.get("price") or 0)
     except (TypeError, ValueError):
-        return jsonify({"error": "Shares and price must be numbers"}), 400
+        return api_error(
+            en="Shares and price must be numbers", kr="주식 수와 가격은 숫자여야 합니다.",
+            code="TRADE_NUMERIC_REQUIRED", status=400,
+        )
 
     # SEC-001: reject non-positive share counts. `float(d.get("shares") or p.shares)`
     # passes negative numbers through (negative is truthy), which would invert the
     # sign of proceeds/PnL and could be abused to credit the user.
     if sell_shares <= 0:
-        return jsonify({"error": "Shares must be positive"}), 400
+        return api_error(
+            en="Shares must be positive", kr="주식 수는 양수여야 합니다.",
+            code="TRADE_SHARES_POSITIVE", status=400,
+        )
 
     cached = cache_service.get_signal(p.ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
@@ -709,9 +793,15 @@ def set_capital():
         cap_usd = float(d.get("capital_usd") or d.get("capital") or 0)
         cap_krw = float(d.get("capital_krw") or 0)
     except (TypeError, ValueError):
-        return jsonify({"error": "Capital must be numbers"}), 400
+        return api_error(
+            en="Capital must be numbers", kr="자본은 숫자여야 합니다.",
+            code="CAPITAL_NUMERIC_REQUIRED", status=400,
+        )
     if cap_usd < 0 or cap_krw < 0:
-        return jsonify({"error": "Capital must be ≥ 0"}), 400
+        return api_error(
+            en="Capital must be ≥ 0", kr="자본은 0 이상이어야 합니다.",
+            code="CAPITAL_NON_NEGATIVE", status=400,
+        )
     current_user.available_capital = cap_usd
     current_user.available_capital_krw = cap_krw
     try:
@@ -719,7 +809,10 @@ def set_capital():
     except Exception:
         db.session.rollback()
         logger.exception("set_capital commit failed")
-        return jsonify({"error": "Failed to update capital"}), 500
+        return api_error(
+            en="Failed to update capital", kr="자본 업데이트에 실패했습니다.",
+            code="CAPITAL_UPDATE_FAILED", status=500,
+        )
     return jsonify({"ok": True, "capital_usd": cap_usd, "capital_krw": cap_krw})
 
 
@@ -851,7 +944,10 @@ def list_positions_alias():
         return jsonify({"positions": _build_positions_list()})
     except Exception:
         logger.exception("list_positions_alias failed")
-        return jsonify({"error": "Failed to load positions"}), 500
+        return api_error(
+            en="Failed to load positions", kr="포지션 목록을 불러오지 못했습니다.",
+            code="POSITIONS_LOAD_FAILED", status=500,
+        )
 
 
 @portfolio_bp.route("/summary", methods=["GET"])
@@ -965,7 +1061,10 @@ def portfolio_summary_alias():
         })
     except Exception:
         logger.exception("portfolio_summary_alias failed")
-        return jsonify({"error": "Failed to load summary"}), 500
+        return api_error(
+            en="Failed to load summary", kr="요약을 불러오지 못했습니다.",
+            code="PORTFOLIO_SUMMARY_FAILED", status=500,
+        )
 
 
 @portfolio_bp.route("/trades", methods=["GET"])
@@ -1001,7 +1100,10 @@ def list_trades_alias():
         return jsonify({"trades": trades})
     except Exception:
         logger.exception("list_trades_alias failed")
-        return jsonify({"error": "Failed to load trades"}), 500
+        return api_error(
+            en="Failed to load trades", kr="거래 내역을 불러오지 못했습니다.",
+            code="TRADES_LOAD_FAILED", status=500,
+        )
 
 
 @portfolio_bp.route("/positions", methods=["POST"])
@@ -1023,16 +1125,29 @@ def create_position_alias():
         quantity = float(d.get("quantity") or d.get("shares") or 0)
         price = float(d.get("price") or d.get("avg_cost") or 0)
     except (TypeError, ValueError):
-        return jsonify({"error": "Quantity and price must be numbers"}), 400
+        return api_error(
+            en="Quantity and price must be numbers", kr="수량과 가격은 숫자여야 합니다.",
+            code="TRADE_NUMERIC_REQUIRED", status=400,
+        )
     if not symbol or quantity <= 0 or price <= 0:
-        return jsonify({"error": "Symbol, quantity, and price required"}), 400
+        return api_error(
+            en="Symbol, quantity, and price required", kr="종목, 수량, 가격이 필요합니다.",
+            code="TRADE_FIELDS_REQUIRED", status=400,
+        )
     # SEC-004 parity with add_position: Position.ticker is db.String(20).
     if len(symbol) > 20:
-        return jsonify({"error": "Invalid ticker"}), 400
+        return api_error(
+            en="Invalid ticker", kr="유효하지 않은 종목입니다.",
+            code="INVALID_TICKER", status=400,
+        )
     # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
     _implausible = _avg_cost_implausible(symbol, price)
     if _implausible:
-        return jsonify({"error": _implausible, "code": "AVG_COST_IMPLAUSIBLE"}), 400
+        return api_error(
+            en=_implausible,
+            kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
+            code="AVG_COST_IMPLAUSIBLE", status=400,
+        )
 
     # Proxy to legacy add_position logic by rewriting request body.
     # Reuse free-plan cap check.
@@ -1098,11 +1213,17 @@ def create_position_alias():
         except Exception:
             db.session.rollback()
             logger.exception("create_position_alias race recovery failed")
-            return jsonify({"error": "Failed to save position"}), 500
+            return api_error(
+            en="Failed to save position", kr="포지션 저장에 실패했습니다.",
+            code="POSITION_SAVE_FAILED", status=500,
+        )
     except Exception:
         db.session.rollback()
         logger.exception("create_position_alias commit failed")
-        return jsonify({"error": "Failed to save position"}), 500
+        return api_error(
+            en="Failed to save position", kr="포지션 저장에 실패했습니다.",
+            code="POSITION_SAVE_FAILED", status=500,
+        )
 
     _cache_ticker_async(
         current_app._get_current_object(),
@@ -1129,20 +1250,33 @@ def patch_position_alias(pid):
     """Partial update: note and/or avg_cost only. Shares untouched."""
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
-        return jsonify({"error": "Position not found"}), 404
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
     d = request.get_json() or {}
 
     if "avg_cost" in d or "avgCost" in d:
         try:
             new_cost = float(d.get("avg_cost") if "avg_cost" in d else d.get("avgCost"))
         except (TypeError, ValueError):
-            return jsonify({"error": "avg_cost must be a number"}), 400
+            return api_error(
+            en="avg_cost must be a number", kr="avg_cost 는 숫자여야 합니다.",
+            code="AVG_COST_NUMERIC", status=400,
+        )
         if new_cost <= 0:
-            return jsonify({"error": "avg_cost must be positive"}), 400
+            return api_error(
+            en="avg_cost must be positive", kr="avg_cost 는 양수여야 합니다.",
+            code="AVG_COST_POSITIVE", status=400,
+        )
         # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
         _implausible = _avg_cost_implausible(p.ticker, new_cost)
         if _implausible:
-            return jsonify({"error": _implausible, "code": "AVG_COST_IMPLAUSIBLE"}), 400
+            return api_error(
+            en=_implausible,
+            kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
+            code="AVG_COST_IMPLAUSIBLE", status=400,
+        )
         p.avg_cost = new_cost
 
     if "note" in d or "notes" in d or "thesis" in d:
@@ -1158,7 +1292,10 @@ def patch_position_alias(pid):
     except Exception:
         db.session.rollback()
         logger.exception("patch_position_alias failed")
-        return jsonify({"error": "Failed to update"}), 500
+        return api_error(
+            en="Failed to update", kr="업데이트에 실패했습니다.",
+            code="POSITION_UPDATE_FAILED", status=500,
+        )
     return jsonify({"ok": True, "id": str(p.id)})
 
 
@@ -1168,14 +1305,20 @@ def patch_position_alias(pid):
 def delete_position_alias(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
-        return jsonify({"error": "Position not found"}), 404
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
     try:
         db.session.delete(p)
         db.session.commit()
     except Exception:
         db.session.rollback()
         logger.exception("delete_position_alias failed")
-        return jsonify({"error": "Failed to delete"}), 500
+        return api_error(
+            en="Failed to delete", kr="삭제에 실패했습니다.",
+            code="POSITION_DELETE_FAILED", status=500,
+        )
     return jsonify({"ok": True})
 
 
@@ -1193,17 +1336,29 @@ def create_trade_alias():
         quantity = float(d.get("quantity") or d.get("shares") or 0)
         price = float(d.get("price") or 0)
     except (TypeError, ValueError):
-        return jsonify({"error": "position_id/quantity/price must be numeric"}), 400
+        return api_error(
+            en="position_id/quantity/price must be numeric", kr="position_id / quantity / price 는 숫자여야 합니다.",
+            code="TRADE_NUMERIC_REQUIRED", status=400,
+        )
     action = (d.get("action") or "").lower()
 
     if action not in ("buy", "sell"):
-        return jsonify({"error": "action must be 'buy' or 'sell'"}), 400
+        return api_error(
+            en="action must be 'buy' or 'sell'", kr="action 은 'buy' 또는 'sell' 이어야 합니다.",
+            code="TRADE_ACTION_INVALID", status=400,
+        )
     if pid <= 0 or quantity <= 0 or price <= 0:
-        return jsonify({"error": "position_id, quantity, and price required"}), 400
+        return api_error(
+            en="position_id, quantity, and price required", kr="position_id, quantity, price 가 필요합니다.",
+            code="TRADE_FIELDS_REQUIRED", status=400,
+        )
 
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
-        return jsonify({"error": "Position not found"}), 404
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
 
     cached = cache_service.get_signal(p.ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
@@ -1240,7 +1395,10 @@ def create_trade_alias():
         except Exception:
             db.session.rollback()
             logger.exception("create_trade_alias buy failed")
-            return jsonify({"error": "Failed to record trade"}), 500
+            return api_error(
+            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
+            code="TRADE_RECORD_FAILED", status=500,
+        )
         return jsonify({
             "ok": True,
             "action": "buy",
@@ -1282,7 +1440,10 @@ def create_trade_alias():
     except Exception:
         db.session.rollback()
         logger.exception("create_trade_alias sell failed")
-        return jsonify({"error": "Failed to record trade"}), 500
+        return api_error(
+            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
+            code="TRADE_RECORD_FAILED", status=500,
+        )
     return jsonify({
         "ok": True,
         "action": "sell",
