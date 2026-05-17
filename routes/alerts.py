@@ -29,6 +29,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import Position, Alert, SignalCache
+from services.error_responses import api_error
 from services.serializers import serialize_alert
 from services.name_resolver import canonical_display_name
 from .decorators import api_auth, legal_scrub_response
@@ -101,7 +102,13 @@ def unread_count():
         ).count()
     except Exception:
         logger.exception("alerts.unread_count failed")
-        return jsonify({"error": "Failed to load unread count", "count": 0}), 500
+        return api_error(
+            en="Failed to load unread count",
+            kr="안 읽은 알림 수를 불러오지 못했습니다.",
+            code="ALERTS_UNREAD_COUNT_FAILED",
+            status=500,
+            count=0,
+        )
     return jsonify({"count": int(count)})
 
 
@@ -118,7 +125,12 @@ def read_all():
     except Exception:
         db.session.rollback()
         logger.exception("alerts.read_all commit failed")
-        return jsonify({"error": "Failed to update alerts"}), 500
+        return api_error(
+            en="Failed to update alerts",
+            kr="알림 업데이트에 실패했습니다.",
+            code="ALERTS_UPDATE_FAILED",
+            status=500,
+        )
     return jsonify({"ok": True})
 
 
@@ -128,7 +140,10 @@ def read_all():
 def mark_one_read(alert_id: int):
     a = Alert.query.filter_by(id=alert_id, user_id=current_user.id).first()
     if a is None:
-        return jsonify({"error": "Not found"}), 404
+        return api_error(
+            en="Alert not found", kr="알림을 찾을 수 없습니다.",
+            code="ALERT_NOT_FOUND", status=404,
+        )
     try:
         a.is_read = True
         a.read_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -136,7 +151,12 @@ def mark_one_read(alert_id: int):
     except Exception:
         db.session.rollback()
         logger.exception("alerts.mark_one_read commit failed id=%s", alert_id)
-        return jsonify({"error": "Failed to update alert"}), 500
+        return api_error(
+            en="Failed to update alert",
+            kr="알림 업데이트에 실패했습니다.",
+            code="ALERT_UPDATE_FAILED",
+            status=500,
+        )
     return jsonify({"ok": True})
 
 
@@ -146,14 +166,22 @@ def mark_one_read(alert_id: int):
 def delete_one(alert_id: int):
     a = Alert.query.filter_by(id=alert_id, user_id=current_user.id).first()
     if a is None:
-        return jsonify({"error": "Not found"}), 404
+        return api_error(
+            en="Alert not found", kr="알림을 찾을 수 없습니다.",
+            code="ALERT_NOT_FOUND", status=404,
+        )
     try:
         db.session.delete(a)
         db.session.commit()
     except Exception:
         db.session.rollback()
         logger.exception("alerts.delete_one commit failed id=%s", alert_id)
-        return jsonify({"error": "Failed to delete alert"}), 500
+        return api_error(
+            en="Failed to delete alert",
+            kr="알림 삭제에 실패했습니다.",
+            code="ALERT_DELETE_FAILED",
+            status=500,
+        )
     return jsonify({"ok": True})
 
 
@@ -172,7 +200,12 @@ def mark_read():
     except Exception:
         db.session.rollback()
         logger.exception("alerts.mark_read commit failed")
-        return jsonify({"error": "Failed to update alerts"}), 500
+        return api_error(
+            en="Failed to update alerts",
+            kr="알림 업데이트에 실패했습니다.",
+            code="ALERTS_UPDATE_FAILED",
+            status=500,
+        )
     return jsonify({"ok": True})
 
 
@@ -186,7 +219,12 @@ def clear():
     except Exception:
         db.session.rollback()
         logger.exception("alerts.clear commit failed")
-        return jsonify({"error": "Failed to clear alerts"}), 500
+        return api_error(
+            en="Failed to clear alerts",
+            kr="알림 전체 삭제에 실패했습니다.",
+            code="ALERTS_CLEAR_FAILED",
+            status=500,
+        )
     return jsonify({"ok": True})
 
 
@@ -303,7 +341,10 @@ def admin_check_alerts():
       mode=price (default) | daily | full
     """
     if not _is_admin_email(getattr(current_user, "email", None)):
-        return jsonify({"error": "admin only"}), 403
+        return api_error(
+            en="admin only", kr="관리자 전용입니다.",
+            code="ADMIN_ONLY", status=403,
+        )
 
     mode = (request.args.get("mode") or "price").lower()
     from services.alert import check_52w_highs_lows, check_concentration_alerts
@@ -320,6 +361,11 @@ def admin_check_alerts():
         # chars to match the convention in routes/auth.py:511 + agent.py:457
         # — prevents stack-trace fragments / SQL details / file paths from
         # leaking through unbounded exception messages.
-        return jsonify({"error": str(exc)[:200]}), 500
+        return api_error(
+            en=str(exc)[:200],
+            kr="알림 점검 중 오류가 발생했습니다.",
+            code="ALERTS_ADMIN_CHECK_FAILED",
+            status=500,
+        )
 
     return jsonify({"ok": True, **result})
