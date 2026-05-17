@@ -10,6 +10,7 @@ from flask_login import current_user
 from models import Position
 from services.container import realtime
 from services.market_status import get_market_status
+from security import general_rate_limit
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -216,6 +217,7 @@ def portfolio_stream():
 
 @realtime_bp.route("/price/<ticker>")
 @api_auth
+@general_rate_limit
 def single(ticker):
     """Single-ticker realtime price.
 

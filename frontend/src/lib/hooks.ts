@@ -1,4 +1,5 @@
 import useSWR from "swr";
+import { apiFetch } from "./api";
 import {
   API,
   PORTFOLIO_SUMMARY,
@@ -992,19 +993,14 @@ export interface GenerateArtifactResponse {
 export async function generateArtifact(
   body: GenerateArtifactBody,
 ): Promise<GenerateArtifactResponse> {
-  const r = await fetch(API.artifacts.generate, {
+  // 2026-05-17 wave 12 P1: the raw `fetch(...)` here previously did NOT
+  // attach the X-CSRF-Token header that `apiFetch` injects automatically.
+  // Backend CSRF middleware (security.py:_csrf_protect) would reject any
+  // POST from an authenticated client, so artifact generation silently
+  // failed for the strict CSRF flow. Routed through `apiFetch` so CSRF +
+  // timeout + sentry breadcrumbs all match the rest of the SPA.
+  return apiFetch<GenerateArtifactResponse>(API.artifacts.generate, {
     method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!r.ok) {
-    const detail = await r.json().catch(() => ({}));
-    throw new Error(
-      (detail as { error?: string }).error ||
-        r.statusText ||
-        `HTTP ${r.status}`,
-    );
-  }
-  return r.json() as Promise<GenerateArtifactResponse>;
 }

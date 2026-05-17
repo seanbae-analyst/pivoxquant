@@ -24,6 +24,18 @@ export interface User {
   risk_profile?: string;
   profile_changes_left?: number;
   subscription_tier?: string;
+  /**
+   * 2026-05-17 (wave 12 P1): backend serializer emits these three fields
+   * but the User interface never declared them. Adding so callers that
+   * read `user.effective_tier` / `user.subscription_status` /
+   * `user.raw_subscription_status` type-check correctly and don't fall
+   * back to undefined → FREE gate silently. Same drift class as the
+   * SubscriptionResponse fix in PR #416. See
+   * `services/serializers.py:serialize_user`.
+   */
+  effective_tier?: string;
+  subscription_status?: string;
+  raw_subscription_status?: string;
   onboarding_completed?: boolean;
   /**
    * PIPA §22 ⑥ — true iff the User row has ``birthdate IS NULL``.
