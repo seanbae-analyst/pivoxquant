@@ -482,6 +482,11 @@ def _do_migrations():
     _add_column_if_missing(
         "users", "is_simulated", "BOOLEAN", default="false", not_null=True,
     )
+    # Onboarding partial-save draft slot. Alembic migration 035_user_onboarding_draft
+    # (PR #427). 본 runtime fallback 은 prod alembic 미실행 박스 보호 — "계정 프로비저닝"
+    # 에러 (psycopg2.errors.UndefinedColumn: users.onboarding_draft_json) hotfix.
+    # 2026-05-17 Railway prod logs 직접 cite.
+    _add_column_if_missing("users", "onboarding_draft_json", "TEXT")
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but
