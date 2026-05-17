@@ -324,7 +324,7 @@ class QuantEngine:
             elif current_pnl_pct < -30 and composite < 55:
                 # Deep loss + weak score = thesis is dead
                 sell_override = True
-                sell_reason = f"Down {current_pnl_pct:.0f}% with weak outlook (score {composite}) — cut losses"
+                sell_reason = f"Down {current_pnl_pct:.0f}% with weak outlook (score {composite}) — indicator threshold breached"
             elif current_pnl_pct < -15 and fund_score < 35:
                 # Moderate loss + terrible fundamentals
                 sell_override = True
@@ -332,7 +332,7 @@ class QuantEngine:
             elif current_pnl_pct > 40 and composite < 55:
                 # Big gain + deteriorating outlook = take profit
                 sell_override = True
-                sell_reason = f"Up {current_pnl_pct:.0f}% but weakening (score {composite}) — lock in profits"
+                sell_reason = f"Up {current_pnl_pct:.0f}% but weakening (score {composite}) — indicator ceiling reached"
 
             if sell_override:
                 signal = "NEGATIVE"
@@ -521,8 +521,8 @@ class QuantEngine:
                 if above_200ma:
                     score += 20
                     sigs.append({"type": "bullish",
-                                  "msg":    f"RSI oversold ({r:.0f}) in uptrend — strong bounce expected",
-                                  "msg_kr": f"RSI 과매도 ({r:.0f}) 상승추세 중 — 강한 반등 기대"})
+                                  "msg":    f"RSI oversold ({r:.0f}) in uptrend — oversold indicator region",
+                                  "msg_kr": f"RSI 과매도 ({r:.0f}) 상승추세 중 — 지표 저점 구간 관찰"})
                 elif above_50ma:
                     score += 5
                     sigs.append({"type": "neutral",
@@ -701,7 +701,7 @@ class QuantEngine:
                         score -= 5
                         sigs.append({"type": "bearish",
                                       "msg": "OBV declining — smart money distributing",
-                                      "msg_kr": "OBV 하락 — 스마트머니 매도 중"})
+                                      "msg_kr": "OBV 하락 — 스마트머니 유출 중"})
 
         # ── Advanced Indicators (ta library) ─────────────────────────────────
         try:
@@ -1134,8 +1134,8 @@ class QuantEngine:
                 if z < -2:
                     score += 20
                     sigs.append({"type": "bullish",
-                                 "msg": f"Mean Reversion: Price {abs(z):.1f}σ below mean — strong bounce expected",
-                                 "msg_kr": f"평균회귀: 가격이 평균보다 {abs(z):.1f}σ 아래 — 강한 반등 예상"})
+                                 "msg": f"Mean Reversion: Price {abs(z):.1f}σ below mean — oversold indicator region",
+                                 "msg_kr": f"평균회귀: 가격이 평균보다 {abs(z):.1f}σ 아래 — 지표 저점 구간 관찰"})
                 elif z < -1:
                     score += 10
                     sigs.append({"type": "bullish",
