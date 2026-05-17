@@ -31,7 +31,12 @@ export const API = {
     // the plural `/api/portfolio/positions[/<id>]` aliases (see PORTFOLIO_POSITIONS
     // and add-position-modal-v2.tsx). Backend handlers remain for back-compat
     // but emit a Deprecation header and warning log on every call.
-    capital: "/api/portfolio/capital",
+    //
+    // 2026-05-17: `capital: "/api/portfolio/capital"` removed. The constant had
+    // zero call sites in frontend/src — `update_capital` is wired through
+    // `API.profile.capital` ("/api/profile/capital", PUT) instead. The backend
+    // PUT /api/portfolio/capital handler is still live (test_security.py +
+    // test_portfolio.py exercise it); deleting only the unused frontend slot.
   },
   signals: {
     all: "/api/signals",

@@ -11,6 +11,13 @@ export default defineConfig({
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["node_modules", "e2e", ".next"],
     css: false,
+    // 2026-05-17: vitest 4.x + React 19 + @testing-library/user-event runs
+    // noticeably slower in jsdom than vitest 1.x — the 3 signup tests that
+    // chain 3+ `user.click()` awaits time out at the 5000ms default. Bumping
+    // the global ceiling clears those without slowing fast tests (most still
+    // complete in <50ms). If a real assertion ever hangs it still fails —
+    // just after 15s instead of 5s.
+    testTimeout: 15000,
   },
   resolve: {
     alias: {
