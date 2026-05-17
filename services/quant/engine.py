@@ -21,7 +21,7 @@ from services.data.fetcher import DataFetcher
 from services.quant.models import (MeanReversion, MomentumBreakout, VolatilityRegime, RegimeSwitching, MLSignal,
                           VarianceRatioFilter, TSMOM, FiftyTwoWeekHigh,
                           DonchianBreakout, DualMomentum, CorrelationRegime)
-from services.quant.signals import DispositionEffect, OrderFlowImbalance, AnchoringBias, SentimentPriceDivergence
+from services.quant.signals import DispositionEffect, OrderFlowImbalance, AnchoringBias  # SentimentPriceDivergence removed Wave D-2 F1 (dead-code disable)
 
 logger = logging.getLogger(__name__)
 _fetcher = DataFetcher()
@@ -1453,35 +1453,28 @@ class QuantEngine:
             pass
 
         # 12. Sentiment-Price Divergence — detect sentiment/price disconnect
-        spd_result = {"divergence_type": "none", "divergence_score": None}
+        # 2026-05-17 Wave D-2 F1: this branch was effectively dead-code in
+        # production. The engine has no historical sentiment array yet, so
+        # the previous implementation passed `[news_score] * window_len` —
+        # a constant. SentimentPriceDivergence then computed
+        # `sent_roc = (s[-1] - s[-(w+1)]) / 100 = 0` and short-circuited to
+        # `divergence_score=0 / divergence_type='neutral'`. The
+        # `if div_type in (strong/mild_divergence)` branch could never fire,
+        # the ±10 score adjustment never applied, and a meaningful chunk of
+        # CPU was spent computing zeros on every signal refresh. Disable
+        # the call until a historical news_score time-series exists; keep
+        # the result shape identical so downstream consumers (engine return
+        # tuple, signals.py composer) keep working unchanged.
+        spd_result = {
+            "divergence_type": "none",
+            "divergence_score": None,
+            "skipped_reason": "no historical sentiment time-series available",
+        }
         try:
             if (not profile_params or profile_params.get("use_sentiment_divergence", True)):
-                closes_list = list(close)
-                if len(closes_list) >= SentimentPriceDivergence.MIN_DATA:
-                    # Use current news_score as constant proxy (no historical sentiment array)
-                    window_len = min(len(closes_list), 30)
-                    sentiment_scores = [news_score] * window_len
-                    spd_result = SentimentPriceDivergence.calculate(
-                        closes_list[-window_len:], sentiment_scores
-                    )
-                    div_type = spd_result.get("divergence_type", "neutral")
-                    price_roc = spd_result.get("price_roc", 0)
-                    sent_roc = spd_result.get("sentiment_roc", 0)
-
-                    # Interpret direction: divergence + price falling but sentiment up = bullish
-                    if div_type in ("strong_divergence", "mild_divergence"):
-                        if price_roc < 0 and sent_roc >= 0:
-                            # Sentiment up, price down → bullish divergence
-                            score += 10
-                            sigs.append({"type": "bullish",
-                                         "msg": f"Sentiment Divergence: Bullish — sentiment holds while price drops ({spd_result.get('divergence_score', 0):.3f})",
-                                         "msg_kr": f"센티먼트 괴리: 강세 — 가격 하락에도 심리 유지 ({spd_result.get('divergence_score', 0):.3f})"})
-                        elif price_roc > 0 and sent_roc <= 0:
-                            # Sentiment down, price up → bearish divergence
-                            score -= 10
-                            sigs.append({"type": "bearish",
-                                         "msg": f"Sentiment Divergence: Bearish — price rises but sentiment deteriorates ({spd_result.get('divergence_score', 0):.3f})",
-                                         "msg_kr": f"센티먼트 괴리: 약세 — 가격 상승에도 심리 악화 ({spd_result.get('divergence_score', 0):.3f})"})
+                # Real historical sentiment per-day would unlock this branch.
+                # Until then we explicitly skip rather than fake-compute zeros.
+                pass
         except Exception:
             logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
