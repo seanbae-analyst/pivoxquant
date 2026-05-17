@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Download } from "lucide-react";
+import { X, Download, Share } from "lucide-react";
 
 // Chromium ships BeforeInstallPromptEvent; TS lib.dom doesn't type it yet.
 interface BeforeInstallPromptEvent extends Event {
@@ -16,10 +16,33 @@ const DISMISS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 // not the second the page loads.
 const APPEAR_DELAY_MS = 8000;
 
+// 2026-05-17 wave 11 PWA P2 (PR #430): iOS Safari never fires
+// beforeinstallprompt, so the Chromium-only flow above silently leaves
+// iPhone users with no install guidance. Detect Safari on iPhone/iPad
+// (incl. iPadOS desktop UA quirk) and render a static "Share → Add to
+// Home Screen" card instead of the Chromium installer button.
+function isIosSafariBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  // iPhone / iPod = explicit iOS UA. iPad on iPadOS 13+ reports a Mac
+  // UA but exposes `maxTouchPoints > 1`; the Safari token still
+  // appears. Exclude Chrome/Firefox/Edge on iOS (they all route
+  // through WebKit but expose CriOS/FxiOS/EdgiOS tokens) since they
+  // share the same A2HS limitation but have a different in-browser
+  // share affordance.
+  const isIosDevice =
+    /iPhone|iPod/.test(ua) ||
+    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (!isIosDevice) return false;
+  return /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+}
+
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
+  // Branch state — drives which body copy + CTA renders.
+  const [variant, setVariant] = useState<"chromium" | "ios" | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -36,8 +59,13 @@ export function InstallPrompt() {
 
     if (typeof window === "undefined") return;
 
-    // Already installed — nothing to prompt.
+    // Already installed (standalone display) — never prompt.
     if (window.matchMedia("(display-mode: standalone)").matches) return;
+    // iOS Safari has a separate `navigator.standalone` flag for the
+    // "added to home screen" mode. Don't prompt those users either.
+    const navStandalone =
+      (window.navigator as Navigator & { standalone?: boolean }).standalone;
+    if (navStandalone === true) return;
 
     // Respect recent dismissal within the 7-day window.
     const dismissedAt = localStorage.getItem(DISMISS_KEY);
@@ -46,9 +74,25 @@ export function InstallPrompt() {
       if (Number.isFinite(age) && age < DISMISS_WINDOW_MS) return;
     }
 
+    // iOS Safari branch: schedule the static A2HS card immediately.
+    if (isIosSafariBrowser()) {
+      timerRef.current = setTimeout(() => {
+        setVariant("ios");
+        setVisible(true);
+      }, APPEAR_DELAY_MS);
+      return () => {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+    }
+
+    // Chromium branch — listen for the native event.
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setVariant("chromium");
       timerRef.current = setTimeout(() => setVisible(true), APPEAR_DELAY_MS);
     };
 
@@ -76,7 +120,11 @@ export function InstallPrompt() {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
   };
 
-  if (!visible || !deferredPrompt) return null;
+  // Render guard: visible + at least one supported variant. iOS branch has
+  // no deferredPrompt (Apple doesn't expose one); Chromium needs it.
+  if (!visible) return null;
+  if (variant === "chromium" && !deferredPrompt) return null;
+  if (!variant) return null;
 
   return (
     <div
@@ -146,18 +194,40 @@ export function InstallPrompt() {
             letterSpacing: "-0.003em",
           }}
         >
-          어느 창에서든 포트폴리오를 관찰하세요 — 설치형, 오프라인 지원,
-          중요한 변화 발생 시 푸시 알림.
+          {variant === "ios" ? (
+            <>
+              어느 창에서든 포트폴리오를 관찰하세요. iOS Safari 에선
+              하단의 <Share className="inline h-3.5 w-3.5 align-text-bottom" />
+              {" "}공유 아이콘 → "홈 화면에 추가" 를 눌러주세요.
+            </>
+          ) : (
+            <>
+              어느 창에서든 포트폴리오를 관찰하세요 — 설치형, 오프라인 지원,
+              중요한 변화 발생 시 푸시 알림.
+            </>
+          )}
         </p>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={install}
-            className="pq-ink-btn-bronze inline-flex flex-1 items-center justify-center gap-2"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>설치</span>
-          </button>
+          {variant === "chromium" ? (
+            <button
+              type="button"
+              onClick={install}
+              className="pq-ink-btn-bronze inline-flex flex-1 items-center justify-center gap-2"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>설치</span>
+            </button>
+          ) : (
+            // iOS — no programmatic install; just acknowledge.
+            <button
+              type="button"
+              onClick={dismiss}
+              className="pq-ink-btn-bronze inline-flex flex-1 items-center justify-center gap-2"
+            >
+              <Share className="h-3.5 w-3.5" />
+              <span>알겠습니다</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={dismiss}
