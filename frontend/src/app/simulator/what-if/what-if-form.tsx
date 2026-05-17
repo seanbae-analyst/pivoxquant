@@ -220,7 +220,12 @@ export function WhatIfForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Ticker search */}
         <div className="relative sm:col-span-2" ref={wrapperRef}>
+          {/* 2026-05-17 a11y P1: label/input pair must share htmlFor↔id
+              so screen readers can announce the field name when the input
+              receives focus. Without this the user hears only "edit text"
+              with no label context. */}
           <label
+            htmlFor="what-if-ticker"
             className="pq-ink-label mb-1.5 flex items-center gap-1.5"
             style={{ color: "var(--pq-bronze)" }}
           >
@@ -228,6 +233,7 @@ export function WhatIfForm({
             {t("whatIf.form.ticker")}
           </label>
           <input
+            id="what-if-ticker"
             type="text"
             inputMode="text"
             autoComplete="off"
@@ -312,6 +318,7 @@ export function WhatIfForm({
         {/* Start date */}
         <div>
           <label
+            htmlFor="what-if-start-date"
             className="pq-ink-label mb-1.5 flex items-center gap-1.5"
             style={{ color: "var(--pq-bronze)" }}
           >
@@ -319,6 +326,7 @@ export function WhatIfForm({
             {t("whatIf.form.startDate")}
           </label>
           <input
+            id="what-if-start-date"
             type="date"
             min={MIN_DATE}
             max={TODAY}
@@ -340,6 +348,7 @@ export function WhatIfForm({
         {/* Amount + currency */}
         <div>
           <label
+            htmlFor="what-if-amount"
             className="pq-ink-label mb-1.5 flex items-center gap-1.5"
             style={{ color: "var(--pq-bronze)" }}
           >
@@ -355,6 +364,7 @@ export function WhatIfForm({
             }}
           >
             <input
+              id="what-if-amount"
               type="number"
               inputMode="numeric"
               min={1000}
@@ -403,15 +413,25 @@ export function WhatIfForm({
         </div>
 
         {/* Recurring strategy */}
+        {/* 2026-05-17 a11y P1: the label here doesn't point at a single
+            input — it labels a 3-way button group. Promoted to a div with
+            id + the button row carries role="radiogroup" aria-labelledby
+            so assistive tech announces the group name + member count
+            instead of treating each button as an unrelated control. */}
         <div className="sm:col-span-2">
-          <label
+          <div
+            id="what-if-recurring-label"
             className="pq-ink-label mb-1.5 flex items-center gap-1.5"
             style={{ color: "var(--pq-bronze)" }}
           >
             <Repeat className="h-3.5 w-3.5" />
             {t("whatIf.form.recurring")}
-          </label>
-          <div className="grid grid-cols-3 gap-2">
+          </div>
+          <div
+            role="radiogroup"
+            aria-labelledby="what-if-recurring-label"
+            className="grid grid-cols-3 gap-2"
+          >
             {(
               [
                 { mode: null, label: t("whatIf.form.lumpSum") },
@@ -424,6 +444,8 @@ export function WhatIfForm({
                 <button
                   key={String(opt.mode)}
                   type="button"
+                  role="radio"
+                  aria-checked={active}
                   onClick={() =>
                     onChange({
                       ...value,

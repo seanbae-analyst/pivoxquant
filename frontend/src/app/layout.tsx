@@ -228,6 +228,12 @@ export default async function RootLayout({
             of the head, then load it as a regular stylesheet. The KR woff2
             payload then starts its handshake earlier — measurably shorter
             FOIT on the first paint of any page above the fold. */}
+        {/* 2026-05-17 perf P1: the preload + stylesheet pair MUST share
+            the same CORS mode or the browser treats them as distinct
+            resources, discards the preload, and re-fetches the CSS on
+            every first paint (double network round-trip → render-blocking
+            delay). Adding `crossOrigin="anonymous"` to the stylesheet
+            link so the preload is actually reused. */}
         <link
           rel="preload"
           as="style"
@@ -237,6 +243,7 @@ export default async function RootLayout({
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+          crossOrigin="anonymous"
         />
         {/* SEO audit (2026-05-09): JSON-LD Organization structured data so
             Google Knowledge Graph can resolve the brand entity. The site
