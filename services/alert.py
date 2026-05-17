@@ -51,6 +51,22 @@ def create_alert(
         logger.warning("alert.create_alert rejected kind=%s", kind)
         return None
 
+    # F3-05 (2026-05-17): defense-in-depth scrub. All current callers pass
+    # hardcoded observation-neutral text, but any future caller piping
+    # advisory/recommendation language (e.g. an LLM-rendered macro blurb)
+    # would write it straight into the Alert row AND fan it out as the
+    # push payload. Run the same legal_filter that ai_service / routes/ai
+    # already use. safe_scrub returns None on internal failure; we keep
+    # the original text in that case so a scrubber bug never empties
+    # legitimate alerts.
+    try:
+        from services.legal_filter import safe_scrub
+        title = safe_scrub(title, context="alert.title") or title
+        if body:
+            body = safe_scrub(body, context="alert.body") or body
+    except Exception:
+        logger.debug("safe_scrub import/call failed in create_alert", exc_info=True)
+
     if dedup_window_hours and dedup_window_hours > 0:
         cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
             hours=dedup_window_hours

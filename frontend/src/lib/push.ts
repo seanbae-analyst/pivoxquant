@@ -28,7 +28,14 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
   }
 
   if (!VAPID_PUBLIC_KEY) {
-    return null;
+    // F3-04 (2026-05-17): previously returned null silently. The caller
+    // (components/pwa/push-permission.tsx) caught the null-return as
+    // "subscription not needed" — UI dismissed the prompt as if push
+    // had been enabled, but 0 actual subscriptions were ever created.
+    // Throw so callers can surface a real error toast.
+    throw new Error(
+      "Push notifications not configured (NEXT_PUBLIC_VAPID_PUBLIC_KEY missing).",
+    );
   }
 
   const subscription = await registration.pushManager.subscribe({

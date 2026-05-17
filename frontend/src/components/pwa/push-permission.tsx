@@ -40,9 +40,14 @@ export function PushPermission() {
         try {
           const { subscribeToPush } = await import("@/lib/push");
           await subscribeToPush();
-        } catch {
-          // Subscription may fail if the SW isn't ready yet; the user can
-          // retry from Settings. Permission itself is already granted.
+        } catch (err) {
+          // F3-04 (2026-05-17): previously swallowed silently — the user
+          // saw the prompt vanish and assumed push was enabled, but no
+          // subscription was ever created (e.g. VAPID public key missing).
+          // Log the failure so it shows up in Sentry / console. We do not
+          // raise a toast here because the prompt UI itself is dismissing;
+          // Settings page surfaces the actionable retry path.
+          console.error("[pq-push] subscribe failed after permission grant:", err);
         }
       }
     } finally {
