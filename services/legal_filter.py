@@ -259,17 +259,67 @@ _SCRUB_FIELDS: tuple[str, ...] = (
 )
 
 
+# Bug #5 (Wave F-1) — required-disclaimer fragments that MUST survive
+# scrub_text intact. SYSTEM_PROMPT mandates an English + Korean disclaimer
+# at the end of every AI response (services/ai/service.py:25-32). Those
+# sentences contain "advice" / "investment advice" — which the Group 6
+# rule `\badvice\b → information` previously mangled into
+#   "This is informational only and not investment information."
+# inverting the legal meaning. Each fragment is matched verbatim (case-
+# insensitive), tokenized to a sentinel, scrubbed-around, then restored.
+# Sentinels use a private-use char that no Anthropic output ever contains.
+_DISCLAIMER_PRESERVE_FRAGMENTS: tuple[str, ...] = (
+    "This content is informational only and not investment advice.",
+    "This is informational only and not investment advice.",
+    "This is informational only and not investment advice",  # missing period variant
+    "PivoxQuant does not provide individualized recommendations.",
+    "Not investment advice. Your record, your decision.",
+    "— Not investment advice. Your record, your decision.",
+    "not investment advice",
+)
+_DISCLAIMER_SENTINEL_PREFIX = "PQDISC"  # U+E000 = private use area
+_DISCLAIMER_SENTINEL_SUFFIX = ""
+
+
 def scrub_text(text: str | None) -> str | None:
     """Replace legally risky phrases with safe alternatives.
 
     None/empty-string passthrough. Returns the original text unchanged if
-    no patterns match — cheap happy-path.
+    no patterns match — cheap happy-path. Required-disclaimer fragments
+    (see ``_DISCLAIMER_PRESERVE_FRAGMENTS``) are protected via tokenization
+    so scrub rules cannot corrupt the mandated legal language.
     """
     if not text or not isinstance(text, str):
         return text
     result = text
+    # Protect disclaimer fragments. Longest-first match prevents the shorter
+    # "not investment advice" from claiming the territory of the full sentence.
+    saved: list[tuple[str, str]] = []
+    for i, frag in enumerate(
+        sorted(_DISCLAIMER_PRESERVE_FRAGMENTS, key=len, reverse=True)
+    ):
+        # Case-insensitive find loop, single pass per fragment.
+        lower = result.lower()
+        target = frag.lower()
+        pos = 0
+        out_parts: list[str] = []
+        while True:
+            idx = lower.find(target, pos)
+            if idx < 0:
+                out_parts.append(result[pos:])
+                break
+            token = f"{_DISCLAIMER_SENTINEL_PREFIX}{i}_{len(saved)}{_DISCLAIMER_SENTINEL_SUFFIX}"
+            saved.append((token, result[idx:idx + len(frag)]))
+            out_parts.append(result[pos:idx])
+            out_parts.append(token)
+            pos = idx + len(frag)
+        result = "".join(out_parts)
+        lower = result.lower()  # not strictly needed (re-set per fragment)
     for pattern, replacement in _REPLACEMENTS:
         result = pattern.sub(replacement, result)
+    # Restore protected fragments verbatim.
+    for token, original in saved:
+        result = result.replace(token, original)
     return result
 
 

@@ -205,6 +205,7 @@ def sector_trend():
 
 @ai_bp.route("/chat", methods=["POST"])
 @api_auth
+@require_tier("pro")
 @ai_rate_limit
 def chat():
     if not ai.available:
@@ -215,7 +216,25 @@ def chat():
         }), 503
     d = request.get_json() or {}
     message = (d.get("message") or "").strip()
-    history = d.get("history") or []
+    # Bug #3 (Wave F-1) — incoming `history` is user-controlled but flows
+    # straight into Anthropic `messages` API at services/ai/service.py:333.
+    # Without role/content validation a caller can inject a fake `assistant`
+    # turn carrying advisory language; Claude will trust it as prior context
+    # and continue the pattern, defeating SYSTEM_PROMPT compliance. Cap the
+    # window to last 10 turns and 1000 chars/content to bound prompt cost too.
+    raw_history = d.get("history") or []
+    history: list[dict] = []
+    if isinstance(raw_history, list):
+        for h in raw_history[-10:]:
+            if not isinstance(h, dict):
+                continue
+            role = h.get("role")
+            content = h.get("content")
+            if role not in ("user", "assistant"):
+                continue
+            if not isinstance(content, str) or not content:
+                continue
+            history.append({"role": role, "content": content[:1000]})
     if not message:
         return jsonify({"error": "Message required"}), 400
 

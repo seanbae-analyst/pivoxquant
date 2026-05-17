@@ -317,6 +317,59 @@ function ChatInner() {
         const decoder = new TextDecoder();
         let accumulated = "";
         let buffer = "";
+        let streamErrored = false;
+        let streamDone = false;
+
+        // Bug #2 (Wave F-1) — backend emits SSE frames as
+        //   data: {"text": "..."}
+        //   data: {"done": true}
+        //   data: {"error": "..."}
+        // (routes/ai.py:248-253). The previous parser treated the payload as
+        // a literal string and only checked for "[DONE]", so users saw the
+        // raw JSON envelope ({"text":"..."}{"done":true}) in the chat bubble
+        // and the stream never terminated cleanly. Parse each frame as JSON
+        // and accumulate only the `text` field; honor `done`/`error` signals.
+        const applyFrame = (raw: string): void => {
+          if (!raw) return;
+          let parsed: { text?: string; done?: boolean; error?: string };
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            // Malformed chunk (e.g. partial bytes wrapped at decoder
+            // boundary). Skip — buffer will reassemble on next read.
+            return;
+          }
+          if (parsed.done) {
+            streamDone = true;
+            return;
+          }
+          if (parsed.error) {
+            streamErrored = true;
+            const msg = parsed.error;
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: accumulated
+                  ? `${accumulated}\n\n[Error] ${msg}`
+                  : `Error: ${msg}`,
+              };
+              return updated;
+            });
+            return;
+          }
+          if (typeof parsed.text === "string" && parsed.text.length > 0) {
+            accumulated += parsed.text;
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: accumulated,
+              };
+              return updated;
+            });
+          }
+        };
 
         while (true) {
           const { done, value } = await reader.read();
@@ -327,34 +380,15 @@ function ChatInner() {
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") break;
-              accumulated += data;
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1] = {
-                  ...updated[updated.length - 1],
-                  content: accumulated,
-                };
-                return updated;
-              });
+              applyFrame(line.slice(6));
+              if (streamDone || streamErrored) break;
             }
           }
+          if (streamDone || streamErrored) break;
         }
 
-        if (buffer.startsWith("data: ")) {
-          const data = buffer.slice(6);
-          if (data !== "[DONE]") {
-            accumulated += data;
-            setMessages((prev) => {
-              const updated = [...prev];
-              updated[updated.length - 1] = {
-                ...updated[updated.length - 1],
-                content: accumulated,
-              };
-              return updated;
-            });
-          }
+        if (!streamDone && !streamErrored && buffer.startsWith("data: ")) {
+          applyFrame(buffer.slice(6));
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") {
