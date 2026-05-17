@@ -617,6 +617,36 @@ export default function OnboardingPage() {
     return () => clearTimeout(t);
   }, [answers]);
 
+  // 2026-05-17 wave 12 UX P1 (PR #428): beforeunload guard. The wizard
+  // has localStorage + server-side draft (PR #427) but those sync 2s
+  // after the most recent answer change — a user who answers a question
+  // then immediately closes the tab inside that window can still lose
+  // the most recent answer. The guard fires only when the user has
+  // invested non-trivial progress (>=3 questions answered) so it never
+  // annoys someone who barely started. The result-screen / submitting
+  // path is excluded inline (step === TOTAL_STEPS) so we don't
+  // shadow-reference `isResultScreen` which is declared a few lines
+  // below.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const answeredCount = Object.keys(answers).length;
+    const onResult = step === TOTAL_STEPS;
+    const shouldGuard = answeredCount >= 3 && !onResult && !submitting;
+    if (!shouldGuard) return;
+
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      // Per the spec, browsers ignore the custom message and show a
+      // native confirm dialog. Setting returnValue triggers it.
+      e.preventDefault();
+      e.returnValue = "";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [answers, step, submitting]);
+
   // Current question
   const isLegalStep = step === WIZARD_QUESTIONS.length;
   const isResultScreen = step === TOTAL_STEPS;
