@@ -20,6 +20,7 @@ import { ModalShell } from "@/components/ui/modal-shell";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API, SEARCH } from "@/lib/endpoints";
 import { openSearchCommand } from "@/components/ui/search-command";
+import { useT } from "@/lib/locale";
 
 interface Props {
   onClose: () => void;
@@ -34,6 +35,7 @@ interface Suggestion {
 }
 
 export function AddSymbolModal({ onClose, onAdded }: Props) {
+  const tr = useT();
   const [ticker, setTicker] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -94,14 +96,14 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
         method: "POST",
         body: JSON.stringify({ ticker: clean, note: note.trim() || undefined }),
       });
-      toast.success(`${clean} added to watchlist`);
+      toast.success(tr("watchlistModal.added", { ticker: clean }));
       onAdded();
       onClose();
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        toast.error("Already in watchlist");
+        toast.error(tr("watchlistModal.alreadyExists"));
       } else {
-        toast.error(`Could not add ${clean}`);
+        toast.error(tr("watchlistModal.failed", { ticker: clean }));
       }
     } finally {
       setSubmitting(false);

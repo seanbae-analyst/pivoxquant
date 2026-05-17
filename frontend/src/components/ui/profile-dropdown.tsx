@@ -14,6 +14,7 @@ import { User, Settings, CreditCard, Keyboard, HelpCircle, LogOut } from "lucide
 import { useAuth } from "@/lib/auth";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/locale";
 
 type Tier = "Free" | "Pro" | "Premium" | "Founding";
 
@@ -47,6 +48,7 @@ function initials(name?: string, email?: string): string {
 export function ProfileDropdown() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -60,7 +62,7 @@ export function ProfileDropdown() {
   const tierRaw = user?.subscription_tier;
   const tier: Tier = (tierRaw && TIER_LABELS[tierRaw]) || "Free";
 
-  const displayName = user?.name || "Guest";
+  const displayName = user?.name || t("profileMenu.guest");
   const displayEmail = user?.email || "—";
   const init = initials(displayName, displayEmail);
 
@@ -97,7 +99,7 @@ export function ProfileDropdown() {
         <button
           type="button"
           onClick={() => setOpen((p) => !p)}
-          aria-label="Profile menu"
+          aria-label={t("profileMenu.ariaLabel")}
           aria-haspopup="menu"
           aria-expanded={open}
           className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)]"
@@ -158,13 +160,13 @@ export function ProfileDropdown() {
             {/* Menu items */}
             <nav className="py-1.5">
               <MenuLink href="/profile" icon={<User className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                My Profile
+                {t("profileMenu.myProfile")}
               </MenuLink>
               <MenuLink href="/settings" icon={<Settings className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                Settings
+                {t("profileMenu.settings")}
               </MenuLink>
               <MenuLink href="/pricing" icon={<CreditCard className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                Billing
+                {t("profileMenu.billing")}
               </MenuLink>
               <MenuButton
                 icon={<Keyboard className="h-4 w-4" />}
@@ -173,10 +175,10 @@ export function ProfileDropdown() {
                   setShowShortcuts(true);
                 }}
               >
-                Keyboard shortcuts
+                {t("profileMenu.keyboardShortcuts")}
               </MenuButton>
               <MenuLink href="/docs" icon={<HelpCircle className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                Help &amp; Docs
+                {t("profileMenu.helpDocs")}
               </MenuLink>
             </nav>
 
@@ -190,7 +192,7 @@ export function ProfileDropdown() {
                 style={{ color: "var(--pq-bronze)" }}
               >
                 <LogOut className="h-4 w-4" />
-                Sign out
+                {t("profileMenu.signOut")}
               </button>
             </div>
           </div>
@@ -257,18 +259,19 @@ function MenuButton({
 /* ── shortcuts modal ────────────────────────────────── */
 
 function ShortcutsModal({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const rows: Array<[string, string]> = [
-    ["Open search palette", "⌘ K"],
-    ["Go to Home", "G then H"],
-    ["Go to Portfolio", "G then P"],
-    ["Go to Watchlist", "G then W"],
-    ["Close modal", "Esc"],
-    ["Navigate list", "↑ ↓"],
-    ["Select", "Enter"],
+    [t("profileMenu.shortcuts.openSearch"), "⌘ K"],
+    [t("profileMenu.shortcuts.goHome"), "G then H"],
+    [t("profileMenu.shortcuts.goPortfolio"), "G then P"],
+    [t("profileMenu.shortcuts.goWatchlist"), "G then W"],
+    [t("profileMenu.shortcuts.closeModal"), "Esc"],
+    [t("profileMenu.shortcuts.navList"), "↑ ↓"],
+    [t("profileMenu.shortcuts.select"), "Enter"],
   ];
 
   return (
-    <ModalShell onClose={onClose} ariaLabel="Keyboard shortcuts">
+    <ModalShell onClose={onClose} ariaLabel={t("profileMenu.shortcutsModalTitle")}>
       <div
         className="w-full max-w-md overflow-hidden rounded-2xl shadow-[0_24px_60px_-20px_rgba(10,10,10,0.35)]"
         style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
@@ -281,13 +284,13 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
             className="text-pq-eyebrow uppercase"
             style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
           >
-            Reference
+            {t("profileMenu.shortcutsKicker")}
           </div>
           <div
             className="mt-0.5 text-xl font-serif"
             style={{ color: "var(--pq-ivory)" }}
           >
-            Keyboard shortcuts
+            {t("profileMenu.shortcutsModalTitle")}
           </div>
         </div>
         <div className="divide-y" style={{ borderColor: "var(--pq-hairline-soft)" }}>
@@ -314,7 +317,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
             className="text-xs uppercase underline underline-offset-4"
             style={{ letterSpacing: "0.18em", color: "var(--pq-bronze)" }}
           >
-            Close
+            {t("profileMenu.close")}
           </button>
         </div>
       </div>

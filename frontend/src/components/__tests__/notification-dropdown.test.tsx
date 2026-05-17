@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { LocaleProvider } from "@/lib/locale";
 
 // Mock SWR — return canned alert state per test
 vi.mock("swr", () => ({
@@ -39,9 +40,14 @@ describe("NotificationDropdown", () => {
 
   it("renders the bell button in closed state without exposing menu items", () => {
     mockedSWR.mockReturnValue(makeSwrResult({ alerts: [], unread: 0 }));
-    render(<NotificationDropdown />);
+    render(
+      <LocaleProvider>
+        <NotificationDropdown />
+      </LocaleProvider>,
+    );
 
-    const bell = screen.getByRole("button", { name: /Notifications/i });
+    // KR-first locale (LocaleProvider default = "ko"): bell aria-label is "알림".
+    const bell = screen.getByRole("button", { name: /알림/ });
     expect(bell).toBeInTheDocument();
     expect(bell).toHaveAttribute("aria-expanded", "false");
 
@@ -51,14 +57,22 @@ describe("NotificationDropdown", () => {
 
   it("displays unread count badge when unread > 0", () => {
     mockedSWR.mockReturnValue(makeSwrResult({ alerts: [], unread: 5 }));
-    render(<NotificationDropdown />);
+    render(
+      <LocaleProvider>
+        <NotificationDropdown />
+      </LocaleProvider>,
+    );
 
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
   it("caps unread display at 99+", () => {
     mockedSWR.mockReturnValue(makeSwrResult({ alerts: [], unread: 250 }));
-    render(<NotificationDropdown />);
+    render(
+      <LocaleProvider>
+        <NotificationDropdown />
+      </LocaleProvider>,
+    );
 
     expect(screen.getByText("99+")).toBeInTheDocument();
   });
@@ -81,14 +95,19 @@ describe("NotificationDropdown", () => {
     );
 
     const user = userEvent.setup();
-    render(<NotificationDropdown />);
+    render(
+      <LocaleProvider>
+        <NotificationDropdown />
+      </LocaleProvider>,
+    );
 
-    const bell = screen.getByRole("button", { name: /Notifications/i });
+    const bell = screen.getByRole("button", { name: /알림/ });
     await user.click(bell);
 
     expect(bell).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("menu")).toBeInTheDocument();
     expect(screen.getByText(/Threshold reached/)).toBeInTheDocument();
-    expect(screen.getByText(/View all/i)).toBeInTheDocument();
+    // KR footer link: "전체 보기" (was "View all" pre-Wave C-1).
+    expect(screen.getByText(/전체 보기/)).toBeInTheDocument();
   });
 });

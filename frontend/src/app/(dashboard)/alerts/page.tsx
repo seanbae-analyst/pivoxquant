@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { useAlerts } from "@/lib/hooks";
 import type { AlertItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { useLocale } from "@/lib/locale";
+import { relativeTime as relativeTimeIntl } from "@/lib/relative-time";
 import {
   Caption,
   Fleuron,
@@ -34,21 +36,9 @@ import { BellOff, CheckCheck, Trash2 } from "lucide-react";
 
 /* ── Helpers ── */
 
-function relativeTime(dateStr: string): string {
-  if (!dateStr) return "";
-  const now = Date.now();
-  const d = new Date(dateStr).getTime();
-  if (Number.isNaN(d)) return "";
-  const diff = now - d;
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return `${Math.floor(days / 7)}w`;
-}
+// Local relativeTime helper retired (Wave C-1, 2026-05-17). Use the shared
+// locale-aware formatter from lib/relative-time.ts so the /alerts page and
+// the bell dropdown stay in lockstep.
 
 function kindLabel(type: string | null | undefined): string {
   if (!type) return "INFO";
@@ -64,18 +54,21 @@ function kindLabel(type: string | null | undefined): string {
 
 type FilterKey = "all" | "unread" | "read";
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "unread", label: "Unread" },
-  { key: "read", label: "Read" },
-];
-
 /* ── Page ── */
 
 export default function AlertsPage() {
   const router = useRouter();
+  const { locale, t } = useLocale();
   const { data, isLoading, mutate } = useAlerts();
   const [filter, setFilter] = useState<FilterKey>("all");
+
+  // Filter tabs are locale-aware — built per-render so the active locale
+  // resolves at the call-site (Wave C-1, 2026-05-17).
+  const FILTERS: { key: FilterKey; label: string }[] = [
+    { key: "all", label: t("alertsPage.filters.all") },
+    { key: "unread", label: t("alertsPage.filters.unread") },
+    { key: "read", label: t("alertsPage.filters.read") },
+  ];
   const [markingRead, setMarkingRead] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -126,13 +119,13 @@ export default function AlertsPage() {
     try {
       await apiFetch(API.alerts.read, { method: "POST" });
       await mutate();
-      toast.success("Marked all as read");
+      toast.success(t("alertsPage.toast.marked"));
     } catch {
-      toast.error("Failed to mark as read");
+      toast.error(t("alertsPage.toast.markFailed"));
     } finally {
       setMarkingRead(false);
     }
-  }, [mutate]);
+  }, [mutate, t]);
 
   /* ── Clear all ── */
   const handleClearAll = useCallback(async () => {
@@ -144,14 +137,14 @@ export default function AlertsPage() {
     try {
       await apiFetch(API.alerts.clear, { method: "POST" });
       await mutate();
-      toast.success("All alerts cleared");
+      toast.success(t("alertsPage.toast.cleared"));
     } catch {
-      toast.error("Failed to clear");
+      toast.error(t("alertsPage.toast.clearFailed"));
     } finally {
       setClearing(false);
       setConfirmClear(false);
     }
-  }, [confirmClear, mutate]);
+  }, [confirmClear, mutate, t]);
 
   /* ── Click row ── */
   const handleAlertClick = useCallback(
@@ -211,7 +204,7 @@ export default function AlertsPage() {
               className="pq-ink-btn-ghost inline-flex items-center gap-1.5 disabled:opacity-50"
             >
               <CheckCheck className="h-3.5 w-3.5" />
-              Mark all as read
+              {t("alertsPage.actions.markAllRead")}
             </button>
           )}
         </header>
@@ -230,10 +223,10 @@ export default function AlertsPage() {
           }}
         >
           {[
-            { label: "Total", value: stats.total },
-            { label: "Unread", value: stats.unread },
-            { label: "Today", value: stats.today },
-            { label: "This week", value: stats.week },
+            { label: t("alertsPage.stats.total"), value: stats.total },
+            { label: t("alertsPage.stats.unread"), value: stats.unread },
+            { label: t("alertsPage.stats.today"), value: stats.today },
+            { label: t("alertsPage.stats.thisWeek"), value: stats.week },
           ].map((s) => (
             <div key={s.label} className="flex flex-col">
               <span
@@ -332,13 +325,13 @@ export default function AlertsPage() {
                 <thead>
                   <tr>
                     <th className="text-left px-5 py-3 text-pq-eyebrow tracking-[0.22em] uppercase">
-                      Time
+                      {t("alertsPage.table.time")}
                     </th>
                     <th className="text-left px-5 py-3 text-pq-eyebrow tracking-[0.22em] uppercase">
-                      Kind
+                      {t("alertsPage.table.kind")}
                     </th>
                     <th className="text-left px-5 py-3 text-pq-eyebrow tracking-[0.22em] uppercase">
-                      Title
+                      {t("alertsPage.table.title")}
                     </th>
                   </tr>
                 </thead>
@@ -355,7 +348,7 @@ export default function AlertsPage() {
                       className={a.ticker ? "cursor-pointer" : "cursor-default"}
                     >
                       <td className="px-5 py-3 text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
-                        {relativeTime(a.created_at)}
+                        {relativeTimeIntl(a.created_at, locale)}
                       </td>
                       <td className="px-5 py-3">
                         <span className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
@@ -433,7 +426,7 @@ export default function AlertsPage() {
                       <span className="h-1.5 w-1.5 rounded-full bg-[var(--pq-bronze)] shrink-0" />
                     )}
                     <span className="text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
-                      {relativeTime(a.created_at)}
+                      {relativeTimeIntl(a.created_at, locale)}
                     </span>
                     <span className="text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-bronze)] whitespace-nowrap">
                       {kindLabel(a.kind)}
@@ -495,7 +488,9 @@ export default function AlertsPage() {
               )}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              {confirmClear ? "Confirm · delete all" : "Clear all"}
+              {confirmClear
+                ? t("alertsPage.actions.confirmClear")
+                : t("alertsPage.actions.clearAll")}
             </button>
           </div>
         )}

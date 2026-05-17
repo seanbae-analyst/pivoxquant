@@ -11,6 +11,7 @@ import {
 } from "./portfolio-modal";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useT } from "@/lib/locale";
 
 interface AddPositionModalProps {
   open: boolean;
@@ -23,6 +24,7 @@ export function AddPositionModal({
   onClose,
   onSuccess,
 }: AddPositionModalProps) {
+  const t = useT();
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
@@ -44,7 +46,7 @@ export function AddPositionModal({
       note: notes.trim(),
     };
     if (!payload.symbol || payload.quantity <= 0 || payload.price <= 0) {
-      toast.error("Symbol, quantity, and price required.");
+      toast.error(t("portfolioModal.addPosition.errorRequired"));
       return;
     }
 
@@ -54,7 +56,7 @@ export function AddPositionModal({
         method: "POST",
         body: JSON.stringify(payload),
       });
-      toast.success("Position recorded — informational only, not advice.");
+      toast.success(t("portfolioModal.addPosition.success"));
       onSuccess?.();
       reset();
       onClose();
@@ -63,7 +65,7 @@ export function AddPositionModal({
         if (typeof window !== "undefined") window.location.href = "/login";
         return;
       }
-      const message = err instanceof Error ? err.message : "Failed to add position";
+      const message = err instanceof Error ? err.message : t("portfolioModal.addPosition.failed");
       toast.error(message);
     } finally {
       setSubmitting(false);

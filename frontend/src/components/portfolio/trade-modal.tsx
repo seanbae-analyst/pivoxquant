@@ -12,6 +12,7 @@ import {
 import type { Position, TradeAction } from "./types";
 import { PORTFOLIO_POSITIONS, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useT } from "@/lib/locale";
 
 interface TradeModalProps {
   open: boolean;
@@ -52,6 +53,7 @@ export function TradeModal({
   position,
   onSuccess,
 }: TradeModalProps) {
+  const t = useT();
   const copy = COPY[action];
 
   const [quantity, setQuantity] = useState("");
@@ -80,7 +82,7 @@ export function TradeModal({
       if (action === "edit") {
         const parsedCost = Number(avgCost) || 0;
         if (parsedCost <= 0) {
-          toast.error("Average cost must be positive.");
+          toast.error(t("portfolioModal.tradeModal.errorAvgCost"));
           setSubmitting(false);
           return;
         }
@@ -96,12 +98,14 @@ export function TradeModal({
         const parsedQty = Number(quantity) || 0;
         const parsedPrice = Number(price) || 0;
         if (parsedQty <= 0 || parsedPrice <= 0) {
-          toast.error("Quantity and price required.");
+          toast.error(t("portfolioModal.tradeModal.errorRequired"));
           setSubmitting(false);
           return;
         }
         if (action === "sell" && parsedQty > position.shares) {
-          toast.error(`Cannot sell more than ${position.shares} shares held.`);
+          toast.error(
+            t("portfolioModal.tradeModal.errorOverSell", { shares: String(position.shares) }),
+          );
           setSubmitting(false);
           return;
         }
@@ -126,7 +130,7 @@ export function TradeModal({
         return;
       }
       const message =
-        err instanceof Error ? err.message : "Failed to record trade";
+        err instanceof Error ? err.message : t("portfolioModal.tradeModal.failed");
       toast.error(message);
     } finally {
       setSubmitting(false);
