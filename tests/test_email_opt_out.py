@@ -365,3 +365,60 @@ def test_build_unsubscribe_url_shape(app):
     # The token must be non-empty (it sits between `token=` and `&type=`).
     token_part = url.split("token=", 1)[1].split("&", 1)[0]
     assert len(token_part) > 10
+
+
+# ── GET /api/profile surfaces email_opt_out (settings/_v2 hydrate) ───────────
+# 2026-05-17: settings v2 reads `data.email_opt_out` from /api/profile to set
+# the "email delivery enabled" toggle. Without server-side surface the toggle
+# always read `false` (email enabled) regardless of DB state — opt-out from a
+# different device would silently reset on next settings open. 정통망법 §50
+# surface accuracy guard.
+
+
+def test_get_profile_surfaces_email_opt_out_when_profile_exists(
+    app, client, auth_user
+):
+    """Authenticated GET /api/profile must include `email_opt_out`.
+
+    Setting flips via the live PATCH endpoint rather than poking the DB
+    directly — that path goes through the same Flask-SQLAlchemy session as
+    the next request's user_loader, so the GET reliably sees the change.
+    Bypassing the route with a raw `db.session` write leaves the request's
+    user_loader cache pointing at the pre-flip row in the identity map.
+    """
+    patch = client.patch(
+        "/api/profile/email-preferences",
+        json={"email_opt_out": True, "email_opt_out_earnings": False},
+    )
+    assert patch.status_code == 200, patch.get_data(as_text=True)
+
+    r = client.get("/api/profile")
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["email_opt_out"] is True
+    assert body["email_opt_out_earnings"] is False
+
+
+def test_get_profile_surfaces_email_opt_out_when_no_profile_yet(
+    app, client, auth_user
+):
+    """`has_profile=False` branch must also surface the email flags."""
+    from extensions import db
+    from models.investment_profile import InvestmentProfile
+
+    with app.app_context():
+        InvestmentProfile.query.filter_by(user_id=auth_user["id"]).delete()
+        db.session.commit()
+
+    patch = client.patch(
+        "/api/profile/email-preferences",
+        json={"email_opt_out": False, "email_opt_out_earnings": True},
+    )
+    assert patch.status_code == 200, patch.get_data(as_text=True)
+
+    r = client.get("/api/profile")
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["has_profile"] is False
+    assert body["email_opt_out"] is False
+    assert body["email_opt_out_earnings"] is True
