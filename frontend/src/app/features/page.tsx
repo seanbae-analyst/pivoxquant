@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * /features — Feature index page.
  * -------------------------------------------------------------
@@ -12,11 +10,15 @@
  *  • Body renders all 13 feature cards in a responsive grid so this
  *    page doubles as a sitemap-grade discovery index.
  *  • Design v3 lock-in: Vantablack ink, bronze accent, Playfair serif.
+ *
+ *  2026-05-17 wave 12 frontend P1 (PR #432) — page is now a Server
+ *  Component so it can `export const metadata` (Next.js disallows it
+ *  in "use client" modules). useReducedMotion + motion.div live in
+ *  the FeatureCardsGrid child client component. SEO + bundle win: the
+ *  static FEATURE_CARDS data + shell never enter the client bundle.
  */
 
-import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
-import { ArrowRight, type LucideIcon } from "lucide-react";
+import type { Metadata } from "next";
 import {
   Layers,
   CircuitBoard,
@@ -34,15 +36,12 @@ import {
 } from "lucide-react";
 
 import FeaturePageShell from "@/components/landing/feature-page-shell";
-import { Eyebrow } from "@/components/landing/eyebrow";
-import { fadeUp } from "@/lib/motion";
+import { FeatureCardsGrid, type FeatureCard } from "./feature-cards-grid";
 
-type FeatureCard = {
-  href: string;
-  eyebrow: string;
-  title: string;
-  description: string;
-  icon: LucideIcon;
+export const metadata: Metadata = {
+  title: "기능 · Features",
+  description:
+    "PivoxQuant의 13개 기능 surface를 한눈에. 40-Model Engine, 8 CFO Personas, 7-Layer Risk Defense 등 리서치 데스크 전체 카탈로그.",
 };
 
 // Mirrors top-nav.tsx NAV_GROUPS taxonomy + extends to cover the
@@ -157,8 +156,6 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
 ];
 
 export default function FeaturesIndexPage() {
-  const reduce = useReducedMotion();
-
   return (
     <FeaturePageShell
       eyebrow="Features · 13 Surfaces"
@@ -188,119 +185,7 @@ export default function FeaturesIndexPage() {
         },
       ]}
     >
-      <section
-        className="py-20 md:py-28"
-        style={{ backgroundColor: "var(--pq-ink)" }}
-      >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={reduce ? undefined : "hidden"}
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={fadeUp}
-            className="mb-10 flex"
-          >
-            <Eyebrow>The catalogue</Eyebrow>
-          </motion.div>
-
-          <div
-            data-testid="features-index-grid"
-            className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {FEATURE_CARDS.map((card, i) => (
-              <motion.div
-                key={card.href}
-                initial={reduce ? undefined : { opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{
-                  duration: 0.42,
-                  delay: Math.min(i * 0.04, 0.24),
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-              >
-                <Link
-                  href={card.href}
-                  data-testid={`feature-card-${card.href.replace("/features/", "")}`}
-                  className="group relative flex h-full flex-col gap-3 overflow-hidden rounded-sm p-6 transition-all hover:-translate-y-0.5"
-                  style={{
-                    backgroundColor: "#0D0D0D",
-                    border: "0.5px solid rgba(184,149,106,0.22)",
-                  }}
-                >
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent 0%, rgba(184,149,106,0.5) 50%, transparent 100%)",
-                    }}
-                  />
-
-                  <span
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-sm"
-                    style={{
-                      backgroundColor: "rgba(184,149,106,0.1)",
-                      border: "0.5px solid rgba(184,149,106,0.26)",
-                      color: "var(--pq-bronze)",
-                    }}
-                  >
-                    <card.icon className="h-4 w-4" aria-hidden />
-                  </span>
-
-                  <span
-                    className="font-serif uppercase"
-                    style={{
-                      color: "var(--pq-bronze)",
-                      fontSize: "var(--pq-text-eyebrow)",
-                      letterSpacing: "0.22em",
-                    }}
-                  >
-                    {card.eyebrow}
-                  </span>
-
-                  <h3
-                    className="font-serif"
-                    style={{
-                      color: "var(--pq-ivory)",
-                      fontSize: "var(--pq-text-h4)",
-                      fontWeight: 500,
-                      letterSpacing: "-0.01em",
-                    }}
-                  >
-                    {card.title}
-                  </h3>
-
-                  <p
-                    className="font-serif"
-                    style={{
-                      color: "rgba(245,240,232,0.6)",
-                      fontSize: "var(--pq-text-body)",
-                      lineHeight: 1.55,
-                    }}
-                  >
-                    {card.description}
-                  </p>
-
-                  <span
-                    className="mt-auto inline-flex items-center gap-1.5 pt-3 font-serif italic"
-                    style={{
-                      color: "var(--pq-bronze)",
-                      fontSize: "var(--pq-text-body)",
-                    }}
-                  >
-                    Open
-                    <ArrowRight
-                      className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
-                      aria-hidden
-                    />
-                  </span>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FeatureCardsGrid cards={FEATURE_CARDS} />
     </FeaturePageShell>
   );
 }
