@@ -9,7 +9,8 @@ import type { Metadata } from "next";
  * /reports + /companion + /growth + /pre-trade.
  */
 export const metadata: Metadata = {
-  title: "Editorial Reports — PivoxQuant",
+  // Wave C-2 SEO (2026-05-17): root template adds " | PivoxQuant".
+  title: "Editorial Reports",
   description:
     "Weekly Memo · Brag Card · Earnings Pre-Brief · Risk Board — AI가 작성한 18종 PDF 리포트. 정보 제공 목적.",
   alternates: { canonical: "/features/reports" },

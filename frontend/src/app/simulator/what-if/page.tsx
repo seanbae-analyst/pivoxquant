@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: "타임머신 — 만약에 샀다면? | What-If Simulator",
   description:
     "과거에 이 종목을 샀다면 지금 얼마? 코로나 바닥 NVDA, 금융위기 AAPL — 1분 시뮬레이션. PivoxQuant Time Machine.",
+  alternates: { canonical: "/simulator/what-if" },
   openGraph: {
     title: "PivoxQuant — 타임머신 시뮬레이터",
     description:

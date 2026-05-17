@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   title: "Paper Trading",
   description:
     "Practice with real market data. Risk zero real money. Test all 40 quant models before committing real capital.",
+  alternates: { canonical: "/features/paper-trading" },
 };
 
 /* ── Steps (v3 + AutoTrader removal post 2026-04-27 legal review) ── */

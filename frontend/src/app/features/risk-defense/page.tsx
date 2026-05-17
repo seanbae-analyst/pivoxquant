@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   title: "7-Layer Risk Defense",
   description:
     "Monitoring downside risk is the other half of return. A seven-layer observation system that surfaces risk concentrations in your portfolio.",
+  alternates: { canonical: "/features/risk-defense" },
 };
 
 const layers = [

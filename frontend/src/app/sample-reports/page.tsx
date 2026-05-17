@@ -31,6 +31,7 @@ const REPORTS: { slug: string; title: string; tier: string; cadence: string; pag
 
 export const metadata = {
   title: "Sample Reports",
+  alternates: { canonical: "/sample-reports" },
 };
 
 export default function SampleReportsIndexPage() {

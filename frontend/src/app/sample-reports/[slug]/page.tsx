@@ -70,6 +70,7 @@ export async function generateMetadata({
   const entry = TEMPLATES[slug as Slug];
   return {
     title: entry ? entry.title : "Report",
+    alternates: { canonical: `/sample-reports/${slug}` },
   };
 }
 

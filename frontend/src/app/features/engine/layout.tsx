@@ -9,7 +9,12 @@ import type { Metadata } from "next";
  * /reports + /companion + /growth + /pre-trade.
  */
 export const metadata: Metadata = {
-  title: "Quant Engine — PivoxQuant",
+  // Wave C-2 SEO (2026-05-17): top-level title runs through the
+  // root layout template (`%s | PivoxQuant`), so the brand suffix
+  // here previously produced "Quant Engine — PivoxQuant | PivoxQuant"
+  // in the <title>. OG/Twitter titles below stay branded — they
+  // bypass the template and need standalone context.
+  title: "Quant Engine",
   description:
     "58개 퀀트 모델 + 7-Layer Risk Defense. 머신이 읽고, 사람이 결정합니다. 정보 제공 목적의 관찰 도구.",
   alternates: { canonical: "/features/engine" },

@@ -4,6 +4,7 @@ import { Book, HelpCircle, MessageSquare, FileText, Shield } from "lucide-react"
 export const metadata = {
   title: "Docs",
   description: "Product documentation and help.",
+  alternates: { canonical: "/docs" },
 };
 
 const SECTIONS = [

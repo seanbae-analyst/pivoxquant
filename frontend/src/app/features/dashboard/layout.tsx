@@ -9,7 +9,8 @@ import type { Metadata } from "next";
  * /reports + /companion + /growth + /pre-trade.
  */
 export const metadata: Metadata = {
-  title: "Dashboard — PivoxQuant",
+  // Wave C-2 SEO (2026-05-17): root template adds " | PivoxQuant".
+  title: "Dashboard",
   description:
     "당신의 포트폴리오 한 화면 — 시그널, 가격, 리스크, 리포트가 한 자리에. 정보 제공 목적의 관찰 도구.",
   alternates: { canonical: "/features/dashboard" },

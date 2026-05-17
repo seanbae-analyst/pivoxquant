@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   title: "CAN SLIM Stock Screener",
   description:
     "William O'Neil's systematic 7-factor method, automated. Screen stocks using the CAN SLIM strategy.",
+  alternates: { canonical: "/features/canslim" },
 };
 
 /* ── CAN SLIM factors (v3: bronze accent uniform) ── */

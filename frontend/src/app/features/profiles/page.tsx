@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Find Your Investor Type",
   description:
     "8 distinct investor profiles. Each gets a customized strategy tailored to your risk tolerance and goals.",
+  alternates: { canonical: "/features/profiles" },
 };
 
 const profiles = [
