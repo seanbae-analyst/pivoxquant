@@ -200,3 +200,77 @@ class TestPlaceholderFilteredOut:
         assert r.status_code == 200
         sigs = r.get_json().get("signals") or []
         assert len(sigs) == 0
+
+
+# ── Wave 10 (QA gap fill) — POST /api/signals/refresh ───────────────────────
+# 2026-05-17: handler at routes/signals.py:324 had ZERO test cite. Refresh
+# mutates SignalCache via engine.analyze() — locking the auth gate and the
+# success-shape contract here. engine.analyze is mocked so the test stays
+# fast and deterministic across data feed availability.
+
+
+class TestSignalsRefreshAuth:
+    def test_refresh_unauthenticated_returns_401(self, client):
+        r = client.post("/api/signals/refresh")
+        assert r.status_code == 401
+
+
+class TestSignalsRefreshContract:
+    def test_refresh_with_no_positions_returns_empty_list(self, client, auth_user):
+        """No positions → 200 with an empty 'refreshed' list. Frontend
+        relies on this shape."""
+        r = client.post("/api/signals/refresh")
+        assert r.status_code == 200
+        body = r.get_json()
+        assert body.get("ok") is True
+        assert body.get("refreshed") == []
+
+    def test_refresh_with_position_invokes_engine_and_caches(
+        self, app, client, auth_user
+    ):
+        """One position → engine.analyze called, ticker echoed in refreshed,
+        SignalCache row written."""
+        _seed_position(app, auth_user["id"], "AAPL")
+
+        mock_result = {
+            "ticker": "AAPL",
+            "label": "POSITIVE",
+            "score": 82,
+            "price": 175.0,
+            "as_of": "2026-05-17T00:00:00Z",
+        }
+        with patch("routes.signals.engine.analyze", return_value=mock_result) as m:
+            r = client.post("/api/signals/refresh")
+        assert r.status_code == 200
+        body = r.get_json()
+        assert body.get("ok") is True
+        assert body.get("refreshed") == ["AAPL"]
+        assert m.call_count == 1
+
+        from extensions import db
+        from models import SignalCache
+        with app.app_context():
+            row = SignalCache.query.filter_by(ticker="AAPL").first()
+            assert row is not None
+            payload = json.loads(row.data_json)
+            assert payload["label"] == "POSITIVE"
+            assert payload["score"] == 82
+
+    def test_refresh_skips_position_when_engine_returns_none(
+        self, app, client, auth_user
+    ):
+        """engine.analyze can return None (data feed gap). The ticker must
+        NOT appear in `refreshed` and no SignalCache write happens."""
+        _seed_position(app, auth_user["id"], "TSLA")
+
+        with patch("routes.signals.engine.analyze", return_value=None):
+            r = client.post("/api/signals/refresh")
+        assert r.status_code == 200
+        body = r.get_json()
+        assert body.get("ok") is True
+        assert body.get("refreshed") == []
+
+        from extensions import db
+        from models import SignalCache
+        with app.app_context():
+            assert SignalCache.query.filter_by(ticker="TSLA").first() is None
