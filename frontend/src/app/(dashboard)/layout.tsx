@@ -8,7 +8,12 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { PushPermission } from "@/components/pwa/push-permission";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { RealtimeStatusBanner } from "@/components/ui/realtime-status-banner";
-import { flushPendingCrossBorderConsent, flushPendingMarketingConsent } from "@/lib/consents";
+import {
+  clearStagedSnapshot,
+  flushPendingCrossBorderConsent,
+  flushPendingMarketingConsent,
+  readStagedSnapshot,
+} from "@/lib/consents";
 import { useKeyboardNav } from "@/lib/use-keyboard-nav";
 
 /* ──────────────────────────────────────────────────────────────────
@@ -100,8 +105,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // backend `/api/consents/marketing` POST endpoint.
   useEffect(() => {
     if (!loading && user) {
-      void flushPendingMarketingConsent();
-      void flushPendingCrossBorderConsent();
+      // 2026-05-17 Wave F-4 Bug #2 P0 — previously parallel `void` calls
+      // caused a deterministic race: flushPendingMarketingConsent cleared
+      // localStorage synchronously BEFORE its first await, so the second
+      // call read null and exited without ever sending the PIPA §28-8
+      // cross-border consent. Now we read the snapshot once, pass it to
+      // both flushes, and clear only after both settle.
+      void (async () => {
+        const snapshot = readStagedSnapshot();
+        if (!snapshot) return;
+        await Promise.allSettled([
+          flushPendingMarketingConsent(snapshot),
+          flushPendingCrossBorderConsent(snapshot),
+        ]);
+        clearStagedSnapshot();
+      })();
     }
   }, [loading, user]);
 

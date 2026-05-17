@@ -61,7 +61,7 @@ interface SignupConsentSnapshot {
   consented_at?: string;
 }
 
-function readStagedSnapshot(): SignupConsentSnapshot | null {
+export function readStagedSnapshot(): SignupConsentSnapshot | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(CONSENT_STORAGE_KEY);
@@ -72,7 +72,7 @@ function readStagedSnapshot(): SignupConsentSnapshot | null {
   }
 }
 
-function clearStagedSnapshot() {
+export function clearStagedSnapshot() {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(CONSENT_STORAGE_KEY);
@@ -90,16 +90,16 @@ function clearStagedSnapshot() {
  * Returns `true` when a flush was attempted (regardless of HTTP result),
  * `false` when there was nothing staged.
  */
-export async function flushPendingMarketingConsent(): Promise<boolean> {
-  const staged = readStagedSnapshot();
+export async function flushPendingMarketingConsent(
+  stagedOverride?: SignupConsentSnapshot | null,
+): Promise<boolean> {
+  // 2026-05-17 wave F-4 P0 — caller (dashboard layout) now reads the
+  // snapshot once and passes it to both marketing + cross-border flushes
+  // before clearing, eliminating the race where marketing cleared the
+  // localStorage slot synchronously and cross-border then read null.
+  // We still accept ``undefined`` for back-compat with any direct caller.
+  const staged = stagedOverride !== undefined ? stagedOverride : readStagedSnapshot();
   if (!staged) return false;
-
-  // Always clear the staging slot once we've observed it — leaving it
-  // around would cause repeated POSTs on every subsequent page load,
-  // which would re-stamp `marketing_consent_at` and corrupt the audit
-  // trail. The backend DELETE flow is the only legitimate way to opt
-  // back out from here on.
-  clearStagedSnapshot();
 
   if (!staged.marketing) {
     // User explicitly declined — nothing to record. The §50 default-deny
@@ -189,8 +189,14 @@ export async function revokeMarketingConsent(): Promise<MarketingConsentState> {
  * snapshot that's already been read once but not yet wiped — which is fine
  * because the MARKETING_CONSENT_KEY clear is idempotent.
  */
-export async function flushPendingCrossBorderConsent(): Promise<boolean> {
-  const staged = readStagedSnapshot();
+export async function flushPendingCrossBorderConsent(
+  stagedOverride?: SignupConsentSnapshot | null,
+): Promise<boolean> {
+  // 2026-05-17 wave F-4 P0 — see flushPendingMarketingConsent for the
+  // race fix; this helper now accepts an explicit snapshot so the
+  // caller can read the localStorage slot once and feed both flushes
+  // before clearing.
+  const staged = stagedOverride !== undefined ? stagedOverride : readStagedSnapshot();
   if (!staged) return false;
   if (!staged.cross_border) return true;
 
