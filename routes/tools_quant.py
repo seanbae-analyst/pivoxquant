@@ -15,6 +15,7 @@ import numpy as np
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
+from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name
 from security import general_rate_limit
 from .decorators import api_auth, legal_scrub_response
@@ -77,11 +78,21 @@ def position_sizing_calculator():
     """
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "Request body required (JSON)"}), 400
+        return api_error(
+            en="Request body required (JSON)",
+            kr="요청 본문(JSON)이 필요합니다.",
+            code="TOOL_QUANT_INVALID_PARAMS",
+            status=400,
+        )
 
     ticker = (data.get("ticker") or "").upper().strip()
     if not ticker or len(ticker) > 20:
-        return jsonify({"error": "Invalid or missing ticker"}), 400
+        return api_error(
+            en="Invalid or missing ticker",
+            kr="유효하지 않거나 누락된 종목 코드입니다.",
+            code="TOOL_QUANT_INVALID_PARAMS",
+            status=400,
+        )
 
     # ── Input validation ──
     try:
@@ -89,14 +100,34 @@ def position_sizing_calculator():
         avg_win = float(data.get("avg_win", 0))
         avg_loss = float(data.get("avg_loss", 0))
     except (TypeError, ValueError):
-        return jsonify({"error": "win_probability, avg_win, avg_loss must be numbers"}), 400
+        return api_error(
+            en="win_probability, avg_win, avg_loss must be numbers",
+            kr="win_probability, avg_win, avg_loss 값은 숫자여야 합니다.",
+            code="TOOL_QUANT_INVALID_PARAMS",
+            status=400,
+        )
 
     if not (0 < win_prob < 1):
-        return jsonify({"error": "win_probability must be between 0 and 1 (exclusive)"}), 400
+        return api_error(
+            en="win_probability must be between 0 and 1 (exclusive)",
+            kr="win_probability 값은 0과 1 사이여야 합니다 (양 끝값 제외).",
+            code="TOOL_QUANT_INVALID_PARAMS",
+            status=400,
+        )
     if avg_win <= 0:
-        return jsonify({"error": "avg_win must be positive"}), 400
+        return api_error(
+            en="avg_win must be positive",
+            kr="avg_win 값은 양수여야 합니다.",
+            code="TOOL_QUANT_INVALID_PARAMS",
+            status=400,
+        )
     if avg_loss <= 0:
-        return jsonify({"error": "avg_loss must be positive"}), 400
+        return api_error(
+            en="avg_loss must be positive",
+            kr="avg_loss 값은 양수여야 합니다.",
+            code="TOOL_QUANT_INVALID_PARAMS",
+            status=400,
+        )
 
     # ── Kelly Criterion ──
     # Full Kelly: f* = (p * b - q) / b
@@ -195,7 +226,12 @@ def extended_indicators(ticker):
     fetcher = DataFetcher()
     hist = fetcher.get_price_history(ticker, period=period)
     if hist is None or hist.empty or len(hist) < 20:
-        return jsonify({"error": "Insufficient price data for indicators"}), 400
+        return api_error(
+            en="Insufficient price data for indicators",
+            kr="지표 계산에 필요한 가격 데이터가 부족합니다.",
+            code="TOOL_QUANT_COMPUTATION_FAILED",
+            status=400,
+        )
 
     opens = hist["Open"].values.astype(float).tolist()
     highs = hist["High"].values.astype(float).tolist()
@@ -275,7 +311,12 @@ def correlation_matrix():
 
     items, total_value = _load_positions_with_prices()
     if not items or len(items) < 2:
-        return jsonify({"error": "Need at least 2 positions for correlation matrix"}), 400
+        return api_error(
+            en="Need at least 2 positions for correlation matrix",
+            kr="상관관계 행렬 계산에는 최소 2개의 보유 종목이 필요합니다.",
+            code="TOOL_QUANT_INVALID_PARAMS",
+            status=400,
+        )
 
     tickers = [it["ticker"] for it in items]
 
@@ -303,7 +344,12 @@ def correlation_matrix():
 
     included = [t for t in tickers if t in ticker_returns]
     if len(included) < 2:
-        return jsonify({"error": "Insufficient data for correlation (need 2+ tickers with history)"}), 400
+        return api_error(
+            en="Insufficient data for correlation (need 2+ tickers with history)",
+            kr="상관관계 계산에 필요한 데이터가 부족합니다 (과거 데이터가 있는 2개 이상 종목 필요).",
+            code="TOOL_QUANT_COMPUTATION_FAILED",
+            status=400,
+        )
 
     # Align on common dates
     common_dates = sorted(all_dates)
@@ -312,7 +358,12 @@ def correlation_matrix():
         common_dates = [d for d in common_dates if d in ticker_returns[t]]
 
     if len(common_dates) < 20:
-        return jsonify({"error": "Insufficient overlapping trading days (need 20+)"}), 400
+        return api_error(
+            en="Insufficient overlapping trading days (need 20+)",
+            kr="공통 거래일 수가 부족합니다 (20일 이상 필요).",
+            code="TOOL_QUANT_COMPUTATION_FAILED",
+            status=400,
+        )
 
     # Build returns matrix
     returns_matrix = np.array([
@@ -421,7 +472,12 @@ def sector_heatmap():
             continue
 
     if not sectors:
-        return jsonify({"error": "Sector data unavailable"}), 500
+        return api_error(
+            en="Sector data unavailable",
+            kr="섹터 데이터를 가져올 수 없습니다.",
+            code="TOOL_QUANT_COMPUTATION_FAILED",
+            status=500,
+        )
 
     # Sort by day return (strongest first)
     sectors.sort(key=lambda x: x["day_return"], reverse=True)
