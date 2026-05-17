@@ -28,6 +28,15 @@ class RealtimeService:
         self.kis_available = False
         self._price_cache = {}  # {ticker: {price, timestamp, ...}}
         self._cache_ttl = 5     # seconds
+        # Wave F-2 Bug #3: serialize check-then-set on the cache. KIS
+        # WebSocket writes from an OS thread (`_on_ws_tick`) race with
+        # gevent greenlets reading from the SSE generator. CPython's GIL
+        # makes the underlying dict mutation safe from corruption, but
+        # the *check-then-fetch* sequence in ``get_price`` is not atomic
+        # — two greenlets can both miss the cache and fire duplicate
+        # FMP calls (real $$ on the metered plan). The lock guards only
+        # the cache read/write, never network I/O.
+        self._price_cache_lock = threading.Lock()
 
         # KIS WebSocket (lazy init on first KR request)
         # SSE-2 fix (2026-05-09): TTL'd cooldown so a transient KIS gateway
@@ -97,10 +106,15 @@ class RealtimeService:
         """Get real-time price for any ticker. Routes to appropriate API."""
         ticker = ticker.upper().strip()
 
-        # Check cache
-        cached = self._price_cache.get(ticker)
-        if cached and time.time() - cached.get("_ts", 0) < self._cache_ttl:
-            return cached
+        # Wave F-2 Bug #3: lock-guarded cache read so concurrent callers
+        # don't both observe a miss and race to call the upstream API
+        # (duplicate FMP calls = wasted budget). Network I/O stays
+        # outside the lock so a slow upstream doesn't block other
+        # tickers.
+        with self._price_cache_lock:
+            cached = self._price_cache.get(ticker)
+            if cached and time.time() - cached.get("_ts", 0) < self._cache_ttl:
+                return cached
 
         if self.is_korean(ticker):
             result = self._get_kis_price(ticker)
@@ -113,7 +127,8 @@ class RealtimeService:
 
         if result:
             result["_ts"] = time.time()
-            self._price_cache[ticker] = result
+            with self._price_cache_lock:
+                self._price_cache[ticker] = result
 
         return result
 
@@ -202,7 +217,13 @@ class RealtimeService:
 
     def get_all_realtime(self):
         """Get real-time snapshot for SSE streaming (all cached + fresh)."""
-        return {k: v for k, v in self._price_cache.items() if time.time() - v.get("_ts", 0) < 30}
+        # Wave F-2 Bug #3: snapshot the cache under lock to avoid
+        # "dictionary changed size during iteration" when the KIS WS
+        # thread mutates concurrently.
+        now = time.time()
+        with self._price_cache_lock:
+            items = list(self._price_cache.items())
+        return {k: v for k, v in items if now - v.get("_ts", 0) < 30}
 
     # ── Alpaca (US) ───────────────────────────────────────────
 
@@ -330,11 +351,14 @@ class RealtimeService:
             if not ticker:
                 return
             data["_ts"] = time.time()
-            self._price_cache[ticker] = data
-            # Also index by 6-digit code so either form hits cache
-            code = ticker.replace(".KS", "").replace(".KQ", "")
-            if code.isdigit() and len(code) == 6:
-                self._price_cache[code] = data
+            # Wave F-2 Bug #3: serialize WS-thread writes against
+            # greenlet readers in get_price/get_prices_batch.
+            with self._price_cache_lock:
+                self._price_cache[ticker] = data
+                # Also index by 6-digit code so either form hits cache
+                code = ticker.replace(".KS", "").replace(".KQ", "")
+                if code.isdigit() and len(code) == 6:
+                    self._price_cache[code] = data
         except Exception as e:
             logger.debug("WS tick cache error: %s", e)
 
@@ -375,8 +399,11 @@ class RealtimeService:
         ws = self._ensure_kis_ws()
         if ws is not None:
             ws.subscribe(kr_code)
-            # Serve fresh cached tick (<30s) if any
-            cached = self._price_cache.get(f"{kr_code}.KS") or self._price_cache.get(kr_code)
+            # Serve fresh cached tick (<30s) if any.
+            # Wave F-2 Bug #3: lock-guarded read so we never observe a
+            # half-mutated dict from the WS thread.
+            with self._price_cache_lock:
+                cached = self._price_cache.get(f"{kr_code}.KS") or self._price_cache.get(kr_code)
             if cached and cached.get("source") == "kis_ws" and time.time() - cached.get("_ts", 0) < 30:
                 return cached
             # Otherwise fall through to REST — first tick seeds cache for next call
