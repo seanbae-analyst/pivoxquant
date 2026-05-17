@@ -202,6 +202,24 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"팔아\b"), "관찰 중"),
     (re.compile(r"주식\s*사면\s*(됩니다|돼요|된다)"), "관찰 중"),
     (re.compile(r"지금\s*사야\s*(해요|합니다|돼요|한다)"), "관찰 중"),
+
+    # ── Group 11b: 합성 동사형 매수/매도 명령 (Wave E P1-01 2026-05-17) ──
+    # Group 11 보강 — "매수하세요" / "매도하시면" 등 verb-stem 결합형. Group 9
+    # \bBUY\b/\bSELL\b (영문 단어 단독) 과 직교 — 한글 verb stem 만 매치.
+    (re.compile(r"매수\s*(하세요|하세|하시면|해야|하면|하라|하십시오)\b"), "관찰 중"),
+    (re.compile(r"매도\s*(하세요|하세|하시면|해야|하면|하라|하십시오)\b"), "관찰 중"),
+
+    # ── Group 11c: 영문 sell_reason 백업 (Wave E P1-02 2026-05-17) ────────
+    # services/quant/engine.py:327,335 sell_reason 소스 직접 수정이 primary,
+    # 본 정규식은 향후 신규 호출 사이트 추가 시 defense-in-depth.
+    (re.compile(r"\bcut\s+(?:the\s+)?loss(?:es)?\b", re.IGNORECASE), "indicator threshold breached"),
+    (re.compile(r"\block\s+in\s+(?:the\s+)?profits?\b", re.IGNORECASE), "indicator ceiling reached"),
+
+    # ── Group 11d: KR/EN 잔존 가드 (Wave E P2-03/P2-05 2026-05-17) ────────
+    # services/quant/engine.py:525,704 소스 직접 수정 primary + 회귀 가드.
+    (re.compile(r"스마트머니\s*매도\s*중"), "스마트머니 유출 중"),
+    (re.compile(r"\bstrong\s+bounce\s+expected\b", re.IGNORECASE), "oversold indicator region"),
+    (re.compile(r"강한\s*반등\s*(기대|예상)"), "지표 저점 구간 관찰"),
 ]
 
 # ── Prohibited patterns (log only, 설계 오류 조기 발견용) ─────────────────
@@ -352,6 +370,37 @@ def scrub_signal(data: Any) -> Any:
         nested = data.get(key)
         if isinstance(nested, dict):
             scrub_signal(nested)
+
+    # Wave E P2-06 (2026-05-17): generic recursive walk for non-whitelisted
+    # nested dict shapes. Whitelisted keys (above) processed first for
+    # correctness; this catches future engine output shapes where free text
+    # lives under unknown keys (e.g. ``deep_nested.recommendation`` or
+    # ``deep_nested.msg_kr``). Mutates string leaves under known free-text
+    # sub-keys only — numeric leaves (ticker / score / price) untouched.
+    _NESTED_TEXT_KEYS = _SCRUB_FIELDS + (
+        "msg", "msg_kr", "message_kr",
+        "reason", "reason_kr",
+        "label", "label_kr",
+        "recommendation", "recommendation_kr",
+        "note", "note_kr",
+        "description", "description_kr",
+        "title", "title_kr",
+    )
+
+    def _walk_unknown(obj: Any) -> None:
+        if isinstance(obj, dict):
+            for sub_k, sub_v in obj.items():
+                if isinstance(sub_v, str) and sub_k in _NESTED_TEXT_KEYS:
+                    scrubbed = safe_scrub(sub_v, context=f"signal.nested.{sub_k}")
+                    if scrubbed != sub_v:
+                        obj[sub_k] = scrubbed
+                elif isinstance(sub_v, (dict, list)):
+                    _walk_unknown(sub_v)
+        elif isinstance(obj, list):
+            for item in obj:
+                if isinstance(item, (dict, list)):
+                    _walk_unknown(item)
+    _walk_unknown(data)
     return data
 
 
@@ -381,7 +430,13 @@ def scrub_response(data: Any) -> Any:
 # services.morning_brief_service module.
 _COMPLIANCE_FORBIDDEN_PATTERNS = [
     r"추천", r"조언", r"권(?:고|유|장)",
-    r"매수", r"매도",
+    # Wave E P2-04 (2026-05-17): 매수/매도 false-positive 제외.
+    # 기존 r"매수" / r"매도" 는 "과매수" "과매도" "매수세" "매도량" "매수자"
+    # 같은 기술 용어를 hard-drop → AI 응답 통째로 fallback disclaimer 만 노출.
+    # negative lookbehind (?<!과) + negative lookahead (?!세|량|자) 로
+    # advisory 동사형 ("매수하세요" / "매수 권고") 만 잡고 기술 용어는 통과.
+    r"(?<!과)매수(?!세|량|자|인)",
+    r"(?<!과)매도(?!세|량|자|인)",
     r"사세요", r"파세요", r"사라", r"팔아",
     r"오를\s*것", r"내릴\s*것", r"오른다", r"내린다",
     r"\b(?:buy|sell|recommend|advice|advise)\b",
