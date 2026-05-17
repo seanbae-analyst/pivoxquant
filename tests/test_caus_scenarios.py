@@ -56,6 +56,10 @@ SCENARIO_NAMES = [
     "day4_alert_simulation",
     "day5_reports",
     "day6_payment",
+    # 2026-05-17 PR #434 — coverage gap closures.
+    "day7_simulator",
+    "day8_features",
+    "day9_onboarding_draft",
 ]
 
 
