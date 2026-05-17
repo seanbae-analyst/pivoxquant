@@ -122,6 +122,23 @@ def serialize_alert(a) -> dict:
     raw_title = getattr(a, "title", None) or raw_msg
     title = _strip_signal_bracket_prefix(raw_title)
     message = _strip_signal_bracket_prefix(raw_msg)
+
+    # F3-06 (2026-05-17): feedback_ticker_display recovery gate. When the
+    # alert row was persisted with a raw-ticker title (resolver miss at
+    # write-time — e.g. "005930.KS reached 52-week high"), but the name
+    # resolver hits at read-time, substitute the readable label so the
+    # API response carries "삼성전자 (005930.KS) reached 52-week high"
+    # instead of leaking the bare ticker. Skip when name == ticker
+    # (degenerate) or when neither the title nor the message references
+    # the ticker (already correct or unrelated).
+    if a.ticker and name and name.strip() and name.strip() != a.ticker.strip():
+        replacement = f"{name} ({a.ticker})"
+        # Only rewrite if the bare ticker actually appears AND the
+        # "name (ticker)" form is NOT already present (avoid double-wrap).
+        if title and a.ticker in title and replacement not in title:
+            title = title.replace(a.ticker, replacement)
+        if message and a.ticker in message and replacement not in message:
+            message = message.replace(a.ticker, replacement)
     return {
         "id": a.id,
         "ticker": a.ticker,
@@ -131,13 +148,20 @@ def serialize_alert(a) -> dict:
         "title": title,
         "body": getattr(a, "body", None),
         "link": getattr(a, "link", None),
-        "read_at": a.read_at.isoformat() if getattr(a, "read_at", None) else None,
+        # F3-02 (2026-05-17): Alert.created_at / read_at are stored as
+        # naive UTC (models/alert.py uses datetime.now(timezone.utc)
+        # .replace(tzinfo=None)). Without an explicit timezone suffix,
+        # ``new Date("2026-05-17T10:30:00")`` in the frontend parses as
+        # local time → KST users saw alert times off by 9 hours. Append
+        # the "Z" suffix so consumers parse UTC correctly. Defense in
+        # depth lives in frontend/src/lib/relative-time.ts.
+        "read_at": (a.read_at.isoformat() + "Z") if getattr(a, "read_at", None) else None,
         # Legacy fields
         "message": message,
         "signal": a.signal,
         "score": a.score,
         "rec_shares": a.rec_shares,
         "rec_investment": a.rec_investment,
-        "created_at": a.created_at.isoformat(),
+        "created_at": (a.created_at.isoformat() + "Z") if a.created_at else None,
         "is_read": a.is_read,
     }

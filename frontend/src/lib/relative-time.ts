@@ -31,7 +31,23 @@ export function relativeTime(
   opts: RelativeTimeOptions = {},
 ): string {
   if (!input) return "";
-  const t = input instanceof Date ? input.getTime() : new Date(input).getTime();
+  // F3-02 (2026-05-17): defense-in-depth UTC guard. The backend
+  // (services/serializers.py) now appends "Z" to naive UTC timestamps,
+  // but legacy responses or other surfaces may still hand us a bare
+  // "YYYY-MM-DDTHH:MM:SS" string. ``new Date()`` parses that as LOCAL
+  // time per ECMA-262 — for KST users this drifted relative-time
+  // readings by 9 hours. Force UTC interpretation when no timezone
+  // marker is present.
+  let t: number;
+  if (input instanceof Date) {
+    t = input.getTime();
+  } else {
+    const needsUtcGuard =
+      typeof input === "string" &&
+      !input.endsWith("Z") &&
+      !/[+-]\d{2}:?\d{2}$/.test(input);
+    t = new Date(needsUtcGuard ? input + "Z" : input).getTime();
+  }
   if (Number.isNaN(t)) return "";
 
   const diff = Date.now() - t;

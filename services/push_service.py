@@ -219,11 +219,18 @@ def notify_alert(user_id: int, alert_data: dict):
     icon_map = {"POSITIVE": "Positive Signal", "NEGATIVE": "Negative Signal"}
     title = f"PivoxQuant — {icon_map.get(sig, 'Alert')}: {label}"
 
+    # F3-01 (2026-05-17): signal pushes are transactional — the user
+    # explicitly subscribed to alerts for tickers they care about. Without
+    # ``transactional=True`` the marketing opt-out gate (정통망법 §50,
+    # ``User.email_opt_out``) silenced every signal push for opted-out
+    # users, even though the bell-alert path (notify_bell_alert) already
+    # treats the same kinds as transactional. Aligns the two surfaces.
     send_push_to_user(
         user_id=user_id,
         title=title,
         body=message[:200],
         url="/alerts",
+        transactional=True,
     )
 
 

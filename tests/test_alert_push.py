@@ -161,8 +161,11 @@ class TestSendPushOptOutGate:
             u.email_opt_out = True
             db.session.commit()
 
-            # Patch pywebpush so we can detect any actual delivery attempt.
-            with patch("routes.push.PushSubscription") as mock_sub_q:
+            # F3-03 (2026-05-17): patch path was ``routes.push.*`` but
+            # send_push_to_user lives in services.push_service since PR
+            # #437 — the patch never bound, the assertion was vacuous.
+            # Patch the actual module-level import.
+            with patch("models.PushSubscription") as mock_sub_q:
                 mock_sub_q.query.filter_by.return_value.all.return_value = ["x"]
                 send_push_to_user(
                     user_id=user["id"],
@@ -202,7 +205,9 @@ class TestSendPushOptOutGate:
             # check. With no VAPID key the send returns at the VAPID
             # stage — but importantly, after walking past the opt-out
             # gate. We confirm by capturing the log line at INFO.
-            with patch("routes.push.logger") as mock_log:
+            # F3-03 (2026-05-17): patch services.push_service.logger
+            # (where the opt-out log actually emits), not routes.push.
+            with patch("services.push_service.logger") as mock_log:
                 send_push_to_user(
                     user_id=user["id"],
                     title="52w high",

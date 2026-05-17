@@ -321,7 +321,17 @@ function isStaticAsset(pathname) {
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
-  const data = event.data.json();
+  // F3-07 (2026-05-17): wrap event.data.json() — a malformed payload
+  // (non-JSON body, encoding mismatch) previously crashed the push
+  // handler silently, dropping the notification with no diagnostics.
+  let data;
+  try {
+    data = event.data.json();
+  } catch (err) {
+    console.error("[sw] push payload parse failed:", err);
+    return;
+  }
+
   const options = {
     body: data.body || "",
     icon: "/icons/icon-192x192.png",

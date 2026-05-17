@@ -23,10 +23,20 @@ _DUP_PAREN = re.compile(r"(\S+)\s*\(\1\)")  # bans "X (X)" pattern in titles
 
 
 def _captured_send_push():
-    """Patch routes.push.send_push_to_user and return the MagicMock so
-    individual tests can inspect title / body kwargs.
+    """Patch services.push_service.send_push_to_user and return the
+    MagicMock so individual tests can inspect title / body kwargs.
+
+    F3-03 sister fix (2026-05-17): the patch path used to be
+    ``routes.push.send_push_to_user`` — but PR #437 moved the function
+    to services.push_service and ``routes.push`` only keeps a thin
+    re-export. The notify_alert / notify_trade helpers in
+    services.push_service call the *module-local* binding, which the old
+    patch never bound — every test below was running the real sender
+    (which no-op'd at the VAPID check) and the
+    ``send.assert_called_once`` line raised silently before mock checks
+    landed. Re-target the patch at the actual module-level symbol.
     """
-    return patch("routes.push.send_push_to_user", new=MagicMock())
+    return patch("services.push_service.send_push_to_user", new=MagicMock())
 
 
 # --------------------------------------------------------------------------
