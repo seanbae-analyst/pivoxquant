@@ -118,7 +118,16 @@ DEFINITION_CONTEXT = re.compile(
     # list-of-forbidden-strings ("recommend", "advice", ...)
     r"['\"]recommend['\"]\s*,\s*['\"]|"
     r"\bnot\s+(?:to\s+)?(?:recommend|advise|solicit)|"
-    r"do(?:es)?\s+not\s+(?:recommend|advise|solicit|guarantee|predict)"
+    r"do(?:es)?\s+not\s+(?:recommend|advise|solicit|guarantee|predict)|"
+    # Phase 4-C: env var classification labels (LAUNCH_PREP recommended/required env vars)
+    # — system operational vocab, not investment advisory
+    r"LAUNCH_PREP|env\s+vars?|environment\s+variables?|RECOMMENDED\s+env|"
+    r"becomes\s+recommended|all\s+recommended\s*/?\s*required|"
+    # Disclaimer body prose that spans multiple lines (do not\n    recommend)
+    # — the "do not" sits on the previous line, breaking single-line negation check.
+    # Catch the standalone "recommend any action" tail when preceded by Disclaimer:
+    # within same comment/Caption block.
+    r"recommend\s+any\s+action"
     r")",
     flags=re.IGNORECASE,
 )
