@@ -195,9 +195,20 @@ def run_gate(output: str, *, max_length: int = 2400) -> GateResult:
             safe_output=T5_REFUSAL,
         )
 
+    # Bug #4 (Wave F-1) — T3 IPS Covenant Check renders the user's own IPS
+    # text verbatim inside double quotes (companion_system.md T3 template),
+    # e.g. `"Position sizes should not exceed 15%."`. The bare "should"/"must"
+    # rule in ADVICE_PATTERNS fires on that quoted source even though the
+    # Agent itself is not making the recommendation — it is mirroring the
+    # user's own policy back to them, which is the entire point of T3.
+    # Strip quoted spans before pattern detection so the Agent's own prose
+    # is still gated, but IPS verbatim quotes are not. Original `stripped`
+    # remains in use for length/footer checks and the safe_output.
+    deadvice_input = _strip_quoted_spans(stripped)
+
     # Layer 1: advice-specific patterns (20 rules)
     for pattern, label in ADVICE_PATTERNS:
-        m = re.search(pattern, stripped, flags=re.IGNORECASE | re.MULTILINE)
+        m = re.search(pattern, deadvice_input, flags=re.IGNORECASE | re.MULTILINE)
         if m:
             logger.warning(
                 "agent.gate.deny advice_pattern=%s matched=%r",
@@ -251,3 +262,24 @@ def _context(text: str, start: int, end: int, window: int = 40) -> str:
     lo = max(0, start - window)
     hi = min(len(text), end + window)
     return text[lo:hi]
+
+
+# Quoted-span stripping — see Bug #4 note in run_gate(). Replaces matched
+# `"..."` runs with whitespace of equal length so downstream regex match
+# offsets stay aligned with the original `_context()` slice. Smart quotes
+# (U+201C/U+201D) and Korean 「」 are also handled because the T3 template
+# is rendered for KO users too. Single quotes are deliberately NOT stripped
+# — they overlap with apostrophes ("I'd advise") and would create a hole
+# the gate cannot recover from.
+_QUOTED_SPAN_RE = re.compile(r'"[^"]*"|“[^”]*”|「[^」]*」')
+
+
+def _strip_quoted_spans(text: str) -> str:
+    """Return `text` with quoted spans replaced by equal-length whitespace.
+
+    Used to keep regex match offsets stable for diagnostics while preventing
+    IPS verbatim quotes inside T3 responses from tripping ADVICE_PATTERNS.
+    """
+    if not text or '"' not in text and '“' not in text and '「' not in text:
+        return text
+    return _QUOTED_SPAN_RE.sub(lambda m: " " * len(m.group(0)), text)
