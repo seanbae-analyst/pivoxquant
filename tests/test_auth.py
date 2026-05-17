@@ -196,6 +196,104 @@ class TestLogout:
         assert r.get_json()["code"] == "UNTRUSTED_ORIGIN"
 
 
+# ── Account-deletion + session-expiry cookie cleanup ──────────────────────────
+# 2026-05-17 thorough sweep after PR #409. The Wave 7 fix only patched the
+# canonical /logout pair, so two other termination paths still left cookies
+# in the browser jar after server-side session clear. Regression guard.
+
+class TestAuthCookieCleanupSweep:
+    def test_delete_account_emits_cookie_deletion_headers(self, raw_client, make_user):
+        """DELETE /api/auth/delete-account must mirror /logout's cookie
+        cleanup. Previously only logout_user() was called, leaving a
+        stale session cookie in the browser jar after the user's row
+        was removed from the DB.
+        """
+        u = make_user(email="cookiedelete@test.com", password="pass1234")
+        login = raw_client.post(
+            "/api/auth/login",
+            json={"email": u["email"], "password": u["password"]},
+        )
+        assert login.status_code == 200
+        # delete_account requires the CSRF header (api_auth decorator).
+        csrf_value = None
+        for h in login.headers.getlist("Set-Cookie"):
+            if h.startswith("csrf_token="):
+                csrf_value = h.split(";", 1)[0].split("=", 1)[1]
+                break
+        assert csrf_value, "login should have issued a csrf_token cookie"
+        r = raw_client.delete(
+            "/api/auth/delete-account",
+            headers={"X-CSRF-Token": csrf_value},
+        )
+        assert r.status_code == 200, r.get_data(as_text=True)
+        set_cookies = r.headers.getlist("Set-Cookie")
+        # All three auth cookies must be expired.
+        for name in ("session=", "remember_token=", "csrf_token="):
+            assert any(
+                name in h and ("Expires=" in h or "Max-Age=0" in h)
+                for h in set_cookies
+            ), f"{name} not expired in delete-account response; headers={set_cookies}"
+
+    def test_session_expiry_emits_cookie_deletion_headers(
+        self, raw_client, make_user, app, monkeypatch
+    ):
+        """When the inactivity timer fires (_enforce_session), the 401
+        response must also expire the auth cookies. Previously only the
+        server-side session was cleared, so the next request from the
+        same browser would re-attach a stale session cookie pointing at
+        a now-empty server session — confusing the login flow."""
+        u = make_user(email="cookieexpiry@test.com", password="pass1234")
+        login = raw_client.post(
+            "/api/auth/login",
+            json={"email": u["email"], "password": u["password"]},
+        )
+        assert login.status_code == 200
+        # Force inactivity by dropping the _last_active marker far into
+        # the past via a session transaction. The next request will be
+        # past the configured INACTIVITY_TIMEOUT.
+        from flask import session as _flask_session
+        from datetime import datetime, timezone, timedelta
+
+        with raw_client.session_transaction() as sess:
+            sess["_last_active"] = (
+                datetime.now(timezone.utc) - timedelta(days=365)
+            ).isoformat()
+        r = raw_client.get("/api/auth/me")
+        assert r.status_code == 401
+        body = r.get_json()
+        assert body["code"] == "SESSION_EXPIRED"
+        set_cookies = r.headers.getlist("Set-Cookie")
+        for name in ("session=", "remember_token=", "csrf_token="):
+            assert any(
+                name in h and ("Expires=" in h or "Max-Age=0" in h)
+                for h in set_cookies
+            ), f"{name} not expired in session-expiry 401; headers={set_cookies}"
+
+    def test_csrf_set_cookie_passes_domain_when_configured(self, raw_client, app):
+        """The csrf_token SET-Cookie must include the same Domain= attribute
+        that _clear_auth_cookies uses on the DELETE side. RFC 6265 treats
+        host-only and Domain= cookies as separate slots — a SET without
+        domain followed by a DELETE with domain leaves a stale csrf_token
+        in the jar that breaks the double-submit pair on the next session.
+        """
+        old_domain = app.config.get("SESSION_COOKIE_DOMAIN")
+        try:
+            app.config["SESSION_COOKIE_DOMAIN"] = ".example.test"
+            r = raw_client.get("/api/auth/me")
+            set_cookies = r.headers.getlist("Set-Cookie")
+            csrf_headers = [h for h in set_cookies if h.startswith("csrf_token=")]
+            assert csrf_headers, f"no csrf_token Set-Cookie; headers={set_cookies}"
+            assert any(
+                "Domain=.example.test" in h or "Domain=example.test" in h
+                for h in csrf_headers
+            ), (
+                "csrf_token Set-Cookie missing Domain= attribute; "
+                f"headers={csrf_headers}"
+            )
+        finally:
+            app.config["SESSION_COOKIE_DOMAIN"] = old_domain
+
+
 # ── CSRF cookie issuance ────────────────────────────────────────────────────
 
 class TestCSRFCookie:

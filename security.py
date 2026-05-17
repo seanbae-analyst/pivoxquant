@@ -17,7 +17,7 @@ import logging
 from datetime import timedelta
 from functools import wraps
 
-from flask import request, jsonify, session
+from flask import current_app, request, jsonify, session
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -324,11 +324,19 @@ def init_security(app):
                                 "SECURITY: logout_user() failed during session expiry — %s", e
                             )
                         if request.path.startswith("/api/"):
-                            return jsonify({
+                            # 2026-05-17 thorough cookie cleanup (PR #409 follow-up):
+                            # inactivity timeout cleared server-side session but left
+                            # browser cookies in jar. Mirror /logout cookie cleanup so
+                            # next request from the user isn't quietly re-authenticated
+                            # by a lingering Set-Cookie. Lazy import avoids the
+                            # routes.auth ↔ security circular at module load time.
+                            from routes.auth import _clear_auth_cookies
+                            response = jsonify({
                                 "error": "Session expired due to inactivity.",
                                 "error_kr": "비활성으로 인해 세션이 만료되었습니다.",
                                 "code": "SESSION_EXPIRED",
-                            }), 401
+                            })
+                            return _clear_auth_cookies(response), 401
                     return
             except (ValueError, TypeError):
                 logger.debug("silent-fallback: _enforce_session", exc_info=True)
@@ -454,6 +462,14 @@ def init_security(app):
         # Double-submit 패턴상 httpOnly=False 불가피 (SPA가 JS로 토큰 읽어 헤더에 실음).
         # XSS가 1건이라도 발생하면 이 토큰은 탈취 가능 → XSS 방어가 1차 방어선.
         # TODO: frontend CSP에서 'unsafe-inline' 제거 필요 (script-src, style-src).
+        # 2026-05-17 (PR #409 cookie sweep follow-up): pass domain= so the SET
+        # attributes match _clear_auth_cookies' DELETE attributes. RFC 6265
+        # treats {Domain=}-prefixed and host-only cookies as distinct slots,
+        # so when SESSION_COOKIE_DOMAIN is set (production) the previous SET
+        # was creating a host-only cookie that delete_cookie(..., domain=…)
+        # would never clear on logout. Result: stale csrf_token after logout,
+        # double-submit pair mismatch on next session.
+        cookie_domain = current_app.config.get("SESSION_COOKIE_DOMAIN")
         response.set_cookie(
             _CSRF_COOKIE_NAME,
             csrf_token,
@@ -462,6 +478,7 @@ def init_security(app):
             secure=_IS_PRODUCTION,
             max_age=int(_SESSION_LIFETIME.total_seconds()),
             path="/",
+            domain=cookie_domain,
         )
 
         return response
