@@ -335,7 +335,23 @@ export default function AiPage() {
           [section]: { data: result, loading: false, error: null, expanded: true },
         }));
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : "Failed to load";
+        // 2026-05-17 thorough fix (PR #387 / #397 thread): coaching got
+        // calm copy on 503/429; the section fetches (SWOT / Competitor /
+        // SectorTrend / Commentary) kept the raw "HTTP 503" path. Same
+        // regression class as the cookie sweep in PR #412 — fixing the
+        // missed siblings now.
+        let message: string;
+        if (err instanceof ApiError && err.status === 503) {
+          message =
+            "AI service is temporarily busy — please try again in a moment.";
+        } else if (err instanceof ApiError && err.status === 429) {
+          message =
+            "Too many requests right now. Please wait a moment and retry.";
+        } else if (err instanceof Error) {
+          message = err.message;
+        } else {
+          message = "Failed to load";
+        }
         setSections((prev) => ({
           ...prev,
           [section]: { ...prev[section], loading: false, error: message },
