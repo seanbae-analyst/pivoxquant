@@ -219,16 +219,37 @@ def submit_onboarding():
 @profile_bp.route("", methods=["GET"])
 @api_auth
 def get_profile():
-    """Get current user's investment profile."""
+    """Get current user's investment profile.
+
+    2026-05-17: surface ``email_opt_out`` + ``email_opt_out_earnings`` at the
+    top level so settings/_v2 page can hydrate the "email delivery enabled"
+    toggle from server truth, not just localStorage. The fields live on the
+    ``User`` row (see ``models/user.py:43,52``) not on ``InvestmentProfile``,
+    which is why ``profile.to_dict()`` alone did not include them. Without
+    this, a user who opted out on a different device would see the toggle
+    re-flipped to "enabled" the next time they opened settings — a 정통망법
+    §50 surface accuracy issue.
+    """
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
+    email_opt_out = bool(getattr(current_user, "email_opt_out", False))
+    email_opt_out_earnings = bool(
+        getattr(current_user, "email_opt_out_earnings", False)
+    )
     if not profile:
-        return jsonify({"profile": None, "has_profile": False})
+        return jsonify({
+            "profile": None,
+            "has_profile": False,
+            "email_opt_out": email_opt_out,
+            "email_opt_out_earnings": email_opt_out_earnings,
+        })
 
     return jsonify({
         "profile": profile.to_dict(),
         "has_profile": True,
         "changes_left": current_user.profile_changes_left,
         "subscription_tier": current_user.subscription_tier,
+        "email_opt_out": email_opt_out,
+        "email_opt_out_earnings": email_opt_out_earnings,
     })
 
 
