@@ -9,7 +9,8 @@ import type { Metadata } from "next";
  * /reports + /companion + /growth + /pre-trade.
  */
 export const metadata: Metadata = {
-  title: "Pre-Trade Reflection — PivoxQuant",
+  // Wave C-2 SEO (2026-05-17): root template adds " | PivoxQuant".
+  title: "Pre-Trade Reflection",
   description:
     "거래 전 5문항 자기 검토 + 24시간 쿨다운 — 충동 매매를 줄이는 관찰 보조 도구. 정보 제공 목적.",
   alternates: { canonical: "/features/pre-trade" },

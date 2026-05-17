@@ -2,8 +2,20 @@ import type { MetadataRoute } from "next";
 
 const BASE_URL = "https://pivoxquant.com";
 
+// Wave C-2 SEO (2026-05-17): `new Date()` per request signalled "every URL
+// updated right now" on every crawl — false freshness that trains Googlebot
+// to ignore lastmod. Captured once at module-load (build time on Vercel) so
+// the timestamp reflects the deploy, not the request. Pair with `force-static`
+// below so the sitemap is generated at build, not regenerated on hit.
+const LAST_MODIFIED = new Date();
+
+// Force-static so the sitemap is materialised at build and served from the
+// edge cache. Without this Next.js can opt the route into dynamic rendering
+// (defeating the static lastmod fix above).
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
+  const now = LAST_MODIFIED;
 
   return [
     // ── Marketing / public ─────────────────────────────────
@@ -39,6 +51,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.6,
+    },
+
+    // ── Docs (Wave C-2 SEO 2026-05-17: was missing — public Q&A surface) ─
+    {
+      url: `${BASE_URL}/docs`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.5,
     },
 
     // ── Feature pages (all 13 directories under /features/ + index) ───

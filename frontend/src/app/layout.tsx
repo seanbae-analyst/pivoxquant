@@ -250,6 +250,14 @@ export default async function RootLayout({
             isn't yet listed; declaring this gives the crawler the canonical
             wordmark when it's indexed. sameAs (GitHub) intentionally omitted
             during private beta — see FINDING-LAND-006. */}
+        {/*
+         * Wave C-2 SEO (2026-05-17): JSON-LD url/logo previously hard-coded
+         * to https://pivoxquant.com — created a mismatch risk if SITE_URL
+         * env (e.g. www.pivoxquant.com or preview domains) ever diverged.
+         * Switched to SITE_URL so the Organization entity always matches the
+         * site's actual canonical (mirrors metadataBase + alternates.canonical
+         * + sitemap host + robots.host — single source of truth).
+         */}
         <script
           type="application/ld+json"
           nonce={nonce}
@@ -257,9 +265,9 @@ export default async function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              name: "PivoxQuant",
-              url: "https://pivoxquant.com",
-              logo: "https://pivoxquant.com/icons/icon-512x512.png",
+              name: SITE_NAME,
+              url: SITE_URL,
+              logo: `${SITE_URL}/icons/icon-512x512.png`,
               description:
                 "Observational quant research tool. Informational only — not investment advice.",
             }),

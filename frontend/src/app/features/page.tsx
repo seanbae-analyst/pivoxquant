@@ -36,6 +36,7 @@ export const metadata: Metadata = {
   title: "기능 · Features",
   description:
     "PivoxQuant의 13개 기능 surface를 한눈에. 40-Model Engine, 8 CFO Personas, 7-Layer Risk Defense 등 리서치 데스크 전체 카탈로그.",
+  alternates: { canonical: "/features" },
 };
 
 // Mirrors top-nav.tsx NAV_GROUPS taxonomy + extends to cover the

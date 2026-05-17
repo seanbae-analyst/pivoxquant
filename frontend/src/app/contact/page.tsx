@@ -4,6 +4,7 @@ import { Mail, MessageSquare, FileText } from "lucide-react";
 export const metadata = {
   title: "Contact",
   description: "How to reach the PivoxQuant desk.",
+  alternates: { canonical: "/contact" },
 };
 
 const CHANNELS = [

@@ -9,7 +9,8 @@ import type { Metadata } from "next";
  * /reports + /companion + /growth + /pre-trade.
  */
 export const metadata: Metadata = {
-  title: "Global Desk — PivoxQuant",
+  // Wave C-2 SEO (2026-05-17): root template adds " | PivoxQuant".
+  title: "Global Desk",
   description:
     "한국과 미국 시장을 한 데스크에서. 글로벌 시세 통합 피드, 환율, 매크로 관찰. 정보 제공 목적.",
   alternates: { canonical: "/features/global-desk" },

@@ -9,7 +9,8 @@ import type { Metadata } from "next";
  * /reports + /companion + /growth + /pre-trade.
  */
 export const metadata: Metadata = {
-  title: "Stock Explorer — PivoxQuant",
+  // Wave C-2 SEO (2026-05-17): root template adds " | PivoxQuant".
+  title: "Stock Explorer",
   description:
     "한국 코스피/코스닥 + 미국 NASDAQ/NYSE — 한 검색창 한 시그널 카드. 정보 제공 목적의 관찰 도구.",
   alternates: { canonical: "/features/explorer" },

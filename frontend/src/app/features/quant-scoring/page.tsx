@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   title: "How Quant Scoring Works",
   description:
     "Every stock gets a score from 0 to 100. Learn the 4 pillars behind PivoxQuant's quant scoring system.",
+  alternates: { canonical: "/features/quant-scoring" },
 };
 
 /* ── Score range bar (v3: KR convention — carmine ▲ / indigo ▼ band) ── */

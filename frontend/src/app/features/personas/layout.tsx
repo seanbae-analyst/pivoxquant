@@ -9,7 +9,8 @@ import type { Metadata } from "next";
  * /reports + /companion + /growth + /pre-trade.
  */
 export const metadata: Metadata = {
-  title: "Investor Personas — PivoxQuant",
+  // Wave C-2 SEO (2026-05-17): root template adds " | PivoxQuant".
+  title: "Investor Personas",
   description:
     "8가지 투자자 유형으로 본 당신의 거래 패턴 — 본인 거래 회고 데이터 기반. 정보 제공 목적의 관찰 도구.",
   alternates: { canonical: "/features/personas" },
