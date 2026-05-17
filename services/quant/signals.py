@@ -61,8 +61,24 @@ class DispositionEffect:
         c = np.array(closes[-n:], dtype=np.float64)
         v = np.array(volumes[-n:], dtype=np.float64)
 
-        total_vol = np.sum(v)
-        if total_vol == 0:
+        # 2026-05-17 Wave D-2 F3: NaN leak guard. yfinance / KIS occasionally
+        # returns a row with NaN Volume on illiquid days, which becomes
+        # float64 NaN here. np.sum(v) → NaN, the `total_vol == 0` check
+        # passes (NaN != 0), and the function returns NaN cgo / NaN
+        # reference_price. cache_service.save_signal uses
+        # json.dumps(..., allow_nan=False) → raises ValueError and the
+        # silent-fallback in engine.py swallows it, but the cached payload
+        # is corrupted. Filter NaN/Inf rows before the math so partial-data
+        # tickers still produce a clean (or explicit-None) result.
+        finite_mask = np.isfinite(c) & np.isfinite(v)
+        if not finite_mask.all():
+            c = c[finite_mask]
+            v = v[finite_mask]
+        if len(c) < DispositionEffect.MIN_WINDOW:
+            return {"cgo": None, "reference_price": None}
+
+        total_vol = float(np.sum(v))
+        if total_vol <= 0:
             return {"cgo": None, "reference_price": None}
 
         # VWAP over the lookback as proxy for aggregate cost basis
@@ -166,7 +182,17 @@ class HerdingIntensity:
 
         # Herding detection: during extreme market moves (|Rm| > 2 sigma),
         # does CSAD drop? If so, stocks are moving in lockstep (herding).
-        mkt_std = float(np.std(mkt, ddof=1)) if len(mkt) > 1 else 0.01
+        # 2026-05-17 Wave D-2 F2: zero-variance market guard. When mkt is
+        # nearly constant (e.g. synthetic / closed-market data) np.std → 0
+        # (or float-noise ~1e-18), then `|mkt| > 2 * 0` flags every day as
+        # "extreme" → csad_during_normal becomes mean of empty slice (NaN +
+        # RuntimeWarning) and the ratio collapses to a meaningless 1.0.
+        # The original `if len(mkt) > 1` guard never triggers in practice
+        # because callers always pass window-length arrays. Detect the
+        # numerical-zero std explicitly and fall back to the same 0.01
+        # constant the original code intended.
+        raw_std = float(np.std(mkt, ddof=1)) if len(mkt) > 1 else 0.0
+        mkt_std = raw_std if raw_std > 1e-12 else 0.01
         extreme_mask = np.abs(mkt) > 2 * mkt_std
         extreme_count = int(np.sum(extreme_mask))
 
@@ -342,9 +368,28 @@ class OrderFlowImbalance:
         c = np.array(closes[-n:], dtype=np.float64)
         v = np.array(volumes[-n:], dtype=np.float64)
 
+        # 2026-05-17 Wave D-2 F3: same NaN leak as DispositionEffect.
+        # Partial-data days (None / NaN volume or O/C from the fetcher) must
+        # be removed before any sum/ratio computation; otherwise
+        # ofi_cumulative / total_volume go NaN and cache_service blows up
+        # with allow_nan=False.
+        finite_mask = np.isfinite(o) & np.isfinite(c) & np.isfinite(v)
+        if not finite_mask.all():
+            o = o[finite_mask]
+            c = c[finite_mask]
+            v = v[finite_mask]
+        if len(c) < OrderFlowImbalance.MIN_WINDOW:
+            return {"ofi_cumulative": None, "error": "Insufficient data"}
+
         if vwaps is not None and len(vwaps) >= n:
             vw = np.array(vwaps[-n:], dtype=np.float64)
-            direction = c - vw
+            # vwaps may have been longer than the trimmed (o, c, v) — align
+            # to the shortest valid arm after the finite-filter above.
+            vw = vw[-len(c):] if len(vw) >= len(c) else vw
+            if len(vw) != len(c):
+                direction = c - o
+            else:
+                direction = c - vw
         else:
             # Proxy: close - open captures intraday direction
             direction = c - o
@@ -444,6 +489,17 @@ class AnchoringBias:
         n = min(window, len(closes), len(volumes))
         c = np.array(closes[-n:], dtype=np.float64)
         v = np.array(volumes[-n:], dtype=np.float64)
+
+        # 2026-05-17 Wave D-2 F3: NaN leak guard (matches DispositionEffect /
+        # OrderFlowImbalance). Without this, np.max / np.sum propagate NaN
+        # into nearness / cgo / interaction_score and the entire payload
+        # fails json.dumps(allow_nan=False) at cache write.
+        finite_mask = np.isfinite(c) & np.isfinite(v)
+        if not finite_mask.all():
+            c = c[finite_mask]
+            v = v[finite_mask]
+        if len(c) < AnchoringBias.MIN_WINDOW:
+            return {"nearness": None, "error": "Insufficient data"}
 
         current = float(c[-1])
         high_52w = float(np.max(c))
