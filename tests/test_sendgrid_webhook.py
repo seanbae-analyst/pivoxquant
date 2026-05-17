@@ -147,6 +147,98 @@ def test_unsubscribe_events_set_unsubscribed_at(app, raw_client, make_user, evt_
         assert Artifact.query.get(art_id).unsubscribed_at is not None
 
 
+# ── Wave 13 P1 (PR #439) — auto-opt-out on terminal email events ───────────
+# Pre-fix: bounce/unsubscribe set Artifact columns but never flipped
+# User.email_opt_out. The daily artifact cron continued to mail bounced
+# or hostile addresses → §50 + SendGrid sender-reputation risk. spamreport
+# wasn't handled at all. Tests pin the new contract.
+
+
+@pytest.mark.parametrize("evt_type", ["bounce", "spamreport", "unsubscribe", "group_unsubscribe"])
+def test_terminal_event_auto_flips_email_opt_out(
+    app, raw_client, make_user, evt_type
+):
+    user = make_user(email=f"optout-{evt_type}@test.com")
+    art_id = _make_artifact(app, user["id"], sg_message_id=f"opt-{evt_type}")
+
+    # Confirm precondition: opt-out starts False.
+    from extensions import db
+    from models import User
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        assert u.email_opt_out is False
+
+    resp = _post_events(raw_client, [
+        {"sg_message_id": f"opt-{evt_type}.fs-1",
+         "event": evt_type,
+         "timestamp": _ts()},
+    ])
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    assert resp.get_json() == {"processed": 1}
+
+    # User row now has opt-out flipped.
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        assert u.email_opt_out is True, (
+            f"event '{evt_type}' must auto-flip email_opt_out — "
+            "see PR #439 / wave 13 integrations P1"
+        )
+
+
+def test_spamreport_also_records_artifact_bounced_at(
+    app, raw_client, make_user
+):
+    """Pre-fix: spamreport was silently ignored. The handler now treats
+    it as a terminal event and also records bounced_at if not already
+    set — gives ops a single column to filter on for both classes of
+    'this address must not receive more mail'."""
+    user = make_user(email="spamreport-art@test.com")
+    art_id = _make_artifact(app, user["id"], sg_message_id="spamart")
+
+    resp = _post_events(raw_client, [
+        {"sg_message_id": "spamart.fs-1",
+         "event": "spamreport",
+         "timestamp": _ts()},
+    ])
+    assert resp.status_code == 200
+    assert resp.get_json() == {"processed": 1}
+
+    from models import Artifact
+    with app.app_context():
+        art = Artifact.query.get(art_id)
+        assert art.bounced_at is not None
+
+
+def test_bounce_does_not_flip_when_already_opted_out(
+    app, raw_client, make_user
+):
+    """Idempotent — a repeated bounce on an already-opted-out user
+    doesn't toggle anything (no DB write churn, no log spam)."""
+    user = make_user(email="already-out@test.com")
+    art_id = _make_artifact(app, user["id"], sg_message_id="alreadyout")
+
+    from extensions import db
+    from models import User
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.email_opt_out = True
+        db.session.commit()
+
+    resp = _post_events(raw_client, [
+        {"sg_message_id": "alreadyout.fs-1",
+         "event": "bounce",
+         "timestamp": _ts()},
+    ])
+    assert resp.status_code == 200
+    # Artifact bounce still recorded.
+    from models import Artifact
+    with app.app_context():
+        assert Artifact.query.get(art_id).bounced_at is not None
+        # User flag unchanged.
+        u = db.session.get(User, user["id"])
+        assert u.email_opt_out is True
+
+
 def test_unknown_message_id_silently_ignored(app, raw_client, make_user):
     """Events for messages we never sent (e.g. auth emails) must not 500."""
     make_user()  # ensure DB is initialised
