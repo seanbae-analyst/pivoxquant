@@ -11,6 +11,7 @@ from extensions import db
 from models import Position, SignalCache, User
 from models.portfolio_share import PortfolioShare
 from services import fx_service
+from services.error_responses import api_error
 from services.name_resolver import canonical_display_name
 from services.price_overlay import parse_price_display
 from .decorators import api_auth
@@ -42,7 +43,12 @@ def create_share():
     except Exception:
         db.session.rollback()
         logger.exception("share.create_share commit failed (user_id=%s)", current_user.id)
-        return jsonify({"error": "Failed to create share link"}), 500
+        return api_error(
+            en="Failed to create share link",
+            kr="공유 링크를 생성하지 못했습니다.",
+            code="SHARE_CREATE_FAILED",
+            status=500,
+        )
 
     base_url = current_app.config.get("FRONTEND_URL", "http://localhost:3000")
     share_url = f"{base_url}/portfolio/shared/{token}"
@@ -59,18 +65,38 @@ def create_share():
 def get_shared_portfolio(token):
     """Return a shared portfolio by token. No authentication required."""
     if not token or len(token) > 64:
-        return jsonify({"error": "Invalid token"}), 400
+        return api_error(
+            en="Invalid token",
+            kr="유효하지 않은 토큰입니다.",
+            code="SHARE_TOKEN_INVALID",
+            status=400,
+        )
 
     share = PortfolioShare.query.filter_by(token=token).first()
     if not share:
-        return jsonify({"error": "Share link not found"}), 404
+        return api_error(
+            en="Share link not found",
+            kr="공유 링크를 찾을 수 없습니다.",
+            code="SHARE_NOT_FOUND",
+            status=404,
+        )
 
     if datetime.now(timezone.utc).replace(tzinfo=None) > share.expires_at:
-        return jsonify({"error": "Share link has expired"}), 410
+        return api_error(
+            en="Share link has expired",
+            kr="공유 링크가 만료되었습니다.",
+            code="SHARE_EXPIRED",
+            status=410,
+        )
 
     owner = db.session.get(User, share.user_id)
     if not owner:
-        return jsonify({"error": "Owner not found"}), 404
+        return api_error(
+            en="Owner not found",
+            kr="소유자를 찾을 수 없습니다.",
+            code="SHARE_OWNER_NOT_FOUND",
+            status=404,
+        )
 
     fx_service.refresh()
     fx_rate = fx_service.get_rate()

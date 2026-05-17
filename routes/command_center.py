@@ -17,6 +17,8 @@ from collections import deque
 from datetime import datetime, timezone, timedelta
 
 from flask import Blueprint, request, jsonify, Response, send_from_directory
+
+from services.error_responses import api_error
 from flask_login import current_user
 
 from security import general_rate_limit
@@ -43,10 +45,20 @@ def _deny_non_admin():
     admins = _admin_emails()
     if not admins:
         logger.warning("ADMIN_EMAILS not configured — denying command-center route")
-        return jsonify({"error": "Admin access not configured"}), 403
+        return api_error(
+            en="Admin access not configured",
+            kr="관리자 접근이 설정되지 않았습니다.",
+            code="COMMAND_ADMIN_NOT_CONFIGURED",
+            status=403,
+        )
     email = (getattr(current_user, "email", "") or "").lower()
     if email not in admins:
-        return jsonify({"error": "Forbidden"}), 403
+        return api_error(
+            en="Forbidden",
+            kr="접근이 금지되었습니다.",
+            code="COMMAND_FORBIDDEN",
+            status=403,
+        )
     return None
 
 # ── Blueprint ────────────────────────────────────────────────────────────────
@@ -231,18 +243,38 @@ def log_activity():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "JSON body required"}), 400
+        return api_error(
+            en="JSON body required",
+            kr="JSON 본문이 필요합니다.",
+            code="COMMAND_JSON_REQUIRED",
+            status=400,
+        )
 
     source = (data.get("source") or "").strip()
     command = (data.get("command") or "").strip()
     status = (data.get("status") or "").strip()
 
     if not source:
-        return jsonify({"error": "source is required"}), 400
+        return api_error(
+            en="source is required",
+            kr="source 필드가 필요합니다.",
+            code="COMMAND_SOURCE_REQUIRED",
+            status=400,
+        )
     if not command:
-        return jsonify({"error": "command is required"}), 400
+        return api_error(
+            en="command is required",
+            kr="command 필드가 필요합니다.",
+            code="COMMAND_COMMAND_REQUIRED",
+            status=400,
+        )
     if status not in _VALID_STATUSES:
-        return jsonify({"error": f"status must be one of: {', '.join(sorted(_VALID_STATUSES))}"}), 400
+        return api_error(
+            en=f"status must be one of: {', '.join(sorted(_VALID_STATUSES))}",
+            kr=f"status는 다음 중 하나여야 합니다: {', '.join(sorted(_VALID_STATUSES))}",
+            code="COMMAND_STATUS_INVALID",
+            status=400,
+        )
 
     department = (data.get("department") or "").strip() or _resolve_dept(source)
 
@@ -250,7 +282,12 @@ def log_activity():
         ("source", source), ("command", command), ("department", department),
     ]:
         if len(field_val) > _FIELD_MAX_LEN:
-            return jsonify({"error": f"{field_name} exceeds max length of {_FIELD_MAX_LEN}"}), 400
+            return api_error(
+                en=f"{field_name} exceeds max length of {_FIELD_MAX_LEN}",
+                kr=f"{field_name} 필드가 최대 길이({_FIELD_MAX_LEN})를 초과합니다.",
+                code="COMMAND_FIELD_TOO_LONG",
+                status=400,
+            )
 
     entry = _build_entry(source, department, command, status)
     _append_log(entry)
@@ -363,17 +400,32 @@ def dispatch():
 
     data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "JSON body required"}), 400
+        return api_error(
+            en="JSON body required",
+            kr="JSON 본문이 필요합니다.",
+            code="COMMAND_JSON_REQUIRED",
+            status=400,
+        )
 
     target = (data.get("target") or "").strip()
     command = (data.get("command") or "").strip()
 
     if not command:
-        return jsonify({"error": "command is required"}), 400
+        return api_error(
+            en="command is required",
+            kr="command 필드가 필요합니다.",
+            code="COMMAND_COMMAND_REQUIRED",
+            status=400,
+        )
 
     for field_name, field_val in [("target", target), ("command", command)]:
         if len(field_val) > _FIELD_MAX_LEN:
-            return jsonify({"error": f"{field_name} exceeds max length of {_FIELD_MAX_LEN}"}), 400
+            return api_error(
+                en=f"{field_name} exceeds max length of {_FIELD_MAX_LEN}",
+                kr=f"{field_name} 필드가 최대 길이({_FIELD_MAX_LEN})를 초과합니다.",
+                code="COMMAND_FIELD_TOO_LONG",
+                status=400,
+            )
 
     # target이 없으면 command에서 /스킬명 자동 파싱
     if not target:
