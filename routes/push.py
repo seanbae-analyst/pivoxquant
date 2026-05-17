@@ -1,16 +1,22 @@
-"""Web Push subscription routes."""
+"""Web Push subscription routes.
+
+2026-05-17 wave 13 structure P1 (PR #437): ``send_push_to_user``
+moved from here to ``services/push_service.py`` (its proper layer —
+it never was a route handler, it was a service function in the wrong
+file). The re-export below preserves any external caller that still
+has ``from routes.push import send_push_to_user`` in their import
+path.
+"""
 from __future__ import annotations
 
-import json
 import logging
-import os
-from typing import Optional
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from extensions import db
 from models import PushSubscription
+from services.push_service import send_push_to_user  # noqa: F401 — re-export
 from .decorators import api_auth
 from security import general_rate_limit
 
@@ -85,96 +91,5 @@ def status():
     return jsonify({"subscribed": count > 0, "count": count})
 
 
-def send_push_to_user(user_id: int, title: str, body: str,
-                      url: str = "/alerts", actions: Optional[list] = None,
-                      transactional: bool = False):
-    """Send push notification to all subscriptions for a user.
-
-    Call this from services (e.g. alert_service) after creating an alert.
-
-    ``transactional=True`` bypasses the marketing opt-out gate
-    (``User.email_opt_out`` — 정통망법 §50). Use it only for service-info
-    pushes the user explicitly subscribed to (price alerts, portfolio
-    events, account sync, artifact-ready). Marketing pushes must leave
-    it ``False`` so opted-out users are silenced.
-    """
-    try:
-        from pywebpush import webpush, WebPushException  # noqa: F401 — runtime exception type
-    except ImportError:
-        logger.warning("pywebpush not installed — skipping push notification")
-        return
-
-    # Continuous User Simulation Phase 1 — sim users must NEVER reach a real
-    # device subscription. ``User.is_simulated`` (migration 032) is the
-    # single SoT; this check runs before the opt-out gate AND before the
-    # transactional bypass, because the transactional channel is also
-    # forbidden for sim users (no real recipient, VAPID quota waste).
-    try:
-        from models import User
-        sim_user = User.query.get(user_id)
-        if sim_user is not None and bool(getattr(sim_user, "is_simulated", False)):
-            logger.info("skipping push for simulated user id=%s", user_id)
-            return
-    except Exception:
-        # Never fail-closed for an unrelated DB hiccup — same posture as
-        # the opt-out gate below.
-        logger.debug("is_simulated gate lookup failed", exc_info=True)
-
-    # 정통망법 §50 marketing opt-out gate. Mirrors the email path —
-    # ``User.email_opt_out`` is the global kill-switch that disables every
-    # marketing channel. Until a dedicated ``push_opt_out`` column exists
-    # we honour the email flag for non-transactional pushes.
-    if not transactional:
-        try:
-            from models import User
-            user = User.query.get(user_id)
-            if user is not None and bool(getattr(user, "email_opt_out", False)):
-                logger.info("push opt-out: user_id=%s skipped (email_opt_out=True)",
-                            user_id)
-                return
-        except Exception:
-            # Never fail-closed on push delivery for an unrelated DB hiccup.
-            logger.debug("opt-out gate lookup failed", exc_info=True)
-
-    vapid_private = os.environ.get("VAPID_PRIVATE_KEY", "")
-    vapid_email = os.environ.get("VAPID_EMAIL", "mailto:admin@pivoxquant.com")
-
-    if not vapid_private:
-        logger.warning("VAPID_PRIVATE_KEY not set — skipping push notification")
-        return
-
-    subs = PushSubscription.query.filter_by(user_id=user_id).all()
-    if not subs:
-        return
-
-    payload = json.dumps({
-        "title": title,
-        "body": body,
-        "url": url,
-        "actions": actions or [],
-    })
-
-    for sub in subs:
-        try:
-            webpush(
-                subscription_info={
-                    "endpoint": sub.endpoint,
-                    "keys": {"p256dh": sub.p256dh, "auth": sub.auth},
-                },
-                data=payload,
-                vapid_private_key=vapid_private,
-                vapid_claims={"sub": vapid_email},
-            )
-        except Exception as e:
-            err_msg = str(e)
-            # Remove expired/invalid subscriptions
-            if "410" in err_msg or "404" in err_msg:
-                logger.info("Removing expired push subscription %s", sub.id)
-                try:
-                    db.session.delete(sub)
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-                    logger.exception("push send cleanup failed for sub %s", sub.id)
-            else:
-                logger.error("Push send failed for sub %s: %s", sub.id, e)
+# send_push_to_user moved to services/push_service.py (PR #437) —
+# re-exported at the top of this file so existing callers still work.

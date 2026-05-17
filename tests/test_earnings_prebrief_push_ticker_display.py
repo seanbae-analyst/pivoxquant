@@ -50,7 +50,7 @@ class TestEarningsPrebriefPushTitle:
             "services.name_resolver.resolve_stock_name_with_db",
             return_value="삼성전자",
         ), patch(
-            "routes.push.send_push_to_user", new=MagicMock(),
+            "services.push_service.send_push_to_user", new=MagicMock(),
         ) as send, patch.object(
             svc, "_send_email", return_value=False,
         ):
@@ -79,7 +79,7 @@ class TestEarningsPrebriefPushTitle:
             "services.name_resolver.resolve_stock_name_with_db",
             return_value=None,
         ), patch(
-            "routes.push.send_push_to_user", new=MagicMock(),
+            "services.push_service.send_push_to_user", new=MagicMock(),
         ) as send, patch.object(
             svc, "_send_email", return_value=False,
         ):
@@ -106,7 +106,7 @@ class TestEarningsPrebriefPushTitle:
             "services.name_resolver.resolve_stock_name_with_db",
             return_value="Apple Inc.",
         ), patch(
-            "routes.push.send_push_to_user", new=MagicMock(),
+            "services.push_service.send_push_to_user", new=MagicMock(),
         ) as send, patch.object(
             svc, "_send_email", return_value=False,
         ):

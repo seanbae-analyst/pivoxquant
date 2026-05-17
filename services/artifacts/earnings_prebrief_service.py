@@ -1220,7 +1220,10 @@ class EarningsPreBriefService:
             # function when possible to hit /reports?highlight=... but fall
             # back to notify_insight on any import failure.
             try:
-                from routes.push import send_push_to_user
+                # 2026-05-17 PR #437: send_push_to_user now lives in
+                # services/push_service.py (same layer as this file)
+                # so the cross-layer routes.push import is gone.
+                from services.push_service import send_push_to_user
                 send_push_to_user(
                     user_id=user.id,
                     title=f"PivoxQuant — {title_text}",

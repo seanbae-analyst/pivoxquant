@@ -5,7 +5,7 @@ Confirms:
    after a successful DB insert.
 2. Bell-alert kinds flow through as transactional (bypass marketing
    opt-out gate).
-3. ``routes.push.send_push_to_user`` honours ``User.email_opt_out`` for
+3. ``services.push_service.send_push_to_user`` honours ``User.email_opt_out`` for
    non-transactional pushes (정통망법 §50).
 4. A push delivery failure does NOT prevent the bell alert from being
    persisted.
@@ -117,7 +117,7 @@ class TestNotifyBellAlertRouting:
 
         user = make_user(email="route1@test.com")
         with app.app_context(), \
-             patch("routes.push.send_push_to_user") as mock_send:
+             patch("services.push_service.send_push_to_user") as mock_send:
             notify_bell_alert(
                 user_id=user["id"],
                 kind="price_52w_high",
@@ -137,7 +137,7 @@ class TestNotifyBellAlertRouting:
 
         user = make_user(email="route2@test.com")
         with app.app_context(), \
-             patch("routes.push.send_push_to_user") as mock_send:
+             patch("services.push_service.send_push_to_user") as mock_send:
             notify_bell_alert(
                 user_id=user["id"],
                 kind="brand_new_unknown",
@@ -153,7 +153,7 @@ class TestSendPushOptOutGate:
     def test_marketing_push_blocked_when_email_opt_out(self, app, make_user):
         from extensions import db
         from models import User
-        from routes.push import send_push_to_user
+        from services.push_service import send_push_to_user
 
         user = make_user(email="optout1@test.com")
         with app.app_context():
@@ -189,7 +189,7 @@ class TestSendPushOptOutGate:
         opt-out short-circuit did NOT fire)."""
         from extensions import db
         from models import User
-        from routes.push import send_push_to_user
+        from services.push_service import send_push_to_user
 
         user = make_user(email="optout2@test.com")
         with app.app_context():
@@ -228,7 +228,7 @@ class TestSendPushOptOutGate:
         lookups are intentional: failing closed on the sim check
         before the opt-out check matters because sim users must never
         reach pywebpush even if their opt-out flag is False."""
-        from routes.push import send_push_to_user
+        from services.push_service import send_push_to_user
 
         user = make_user(email="optout3@test.com")
         with app.app_context():

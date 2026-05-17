@@ -1,7 +1,153 @@
-"""Push notification service — wraps routes.push.send_push_to_user for use from services."""
+"""Push notification service — Web Push delivery + helpers.
+
+2026-05-17 wave 13 structure P1 (PR #437): ``send_push_to_user`` lives
+here now, not in ``routes/push.py``. Previously it sat on the route
+layer and every service caller did
+``from routes.push import send_push_to_user`` — a `services → routes`
+reverse import that only worked through lazy imports. If
+``routes/push.py`` ever needed to import anything from ``services``,
+the cycle would deadlock at module load. The function migrated here
+where it belongs; ``routes/push.py`` keeps a thin re-export so
+external callers (or any code still on the old import path) still
+work.
+"""
+from __future__ import annotations
+
+import json
 import logging
+import os
+from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+def send_push_to_user(
+    user_id: int,
+    title: str,
+    body: str,
+    url: str = "/alerts",
+    actions: Optional[list] = None,
+    transactional: bool = False,
+):
+    """Send push notification to all subscriptions for a user.
+
+    Call this from services (e.g. alert_service) after creating an alert.
+
+    ``transactional=True`` bypasses the marketing opt-out gate
+    (``User.email_opt_out`` — 정통망법 §50). Use it only for
+    service-info pushes the user explicitly subscribed to (price
+    alerts, portfolio events, account sync, artifact-ready). Marketing
+    pushes must leave it ``False`` so opted-out users are silenced.
+    """
+    # Lazy import of the runtime deps so unit tests that don't touch the
+    # push path don't have to install pywebpush, and the function still
+    # behaves as a no-op when the package is missing.
+    try:
+        from pywebpush import webpush, WebPushException  # noqa: F401
+    except ImportError:
+        logger.warning(
+            "pywebpush not installed — skipping push notification"
+        )
+        return
+
+    # Model imports are also lazy to keep this module importable from
+    # test contexts that haven't initialised SQLAlchemy yet.
+    from extensions import db
+    from models import PushSubscription, User
+
+    # Continuous User Simulation Phase 1 — sim users must NEVER reach
+    # a real device subscription. ``User.is_simulated`` (migration 032)
+    # is the single SoT; this check runs before the opt-out gate AND
+    # before the transactional bypass, because the transactional
+    # channel is also forbidden for sim users (no real recipient,
+    # VAPID quota waste).
+    try:
+        sim_user = User.query.get(user_id)
+        if sim_user is not None and bool(
+            getattr(sim_user, "is_simulated", False)
+        ):
+            logger.info(
+                "skipping push for simulated user id=%s", user_id
+            )
+            return
+    except Exception:
+        # Never fail-closed for an unrelated DB hiccup — same posture
+        # as the opt-out gate below.
+        logger.debug("is_simulated gate lookup failed", exc_info=True)
+
+    # 정통망법 §50 marketing opt-out gate. Mirrors the email path —
+    # ``User.email_opt_out`` is the global kill-switch that disables
+    # every marketing channel. Until a dedicated ``push_opt_out``
+    # column exists we honour the email flag for non-transactional
+    # pushes.
+    if not transactional:
+        try:
+            user = User.query.get(user_id)
+            if user is not None and bool(
+                getattr(user, "email_opt_out", False)
+            ):
+                logger.info(
+                    "push opt-out: user_id=%s skipped "
+                    "(email_opt_out=True)", user_id,
+                )
+                return
+        except Exception:
+            # Never fail-closed on push delivery for an unrelated DB
+            # hiccup.
+            logger.debug("opt-out gate lookup failed", exc_info=True)
+
+    vapid_private = os.environ.get("VAPID_PRIVATE_KEY", "")
+    vapid_email = os.environ.get(
+        "VAPID_EMAIL", "mailto:admin@pivoxquant.com"
+    )
+
+    if not vapid_private:
+        logger.warning(
+            "VAPID_PRIVATE_KEY not set — skipping push notification"
+        )
+        return
+
+    subs = PushSubscription.query.filter_by(user_id=user_id).all()
+    if not subs:
+        return
+
+    payload = json.dumps({
+        "title": title,
+        "body": body,
+        "url": url,
+        "actions": actions or [],
+    })
+
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub.endpoint,
+                    "keys": {"p256dh": sub.p256dh, "auth": sub.auth},
+                },
+                data=payload,
+                vapid_private_key=vapid_private,
+                vapid_claims={"sub": vapid_email},
+            )
+        except Exception as e:
+            err_msg = str(e)
+            # Remove expired/invalid subscriptions.
+            if "410" in err_msg or "404" in err_msg:
+                logger.info(
+                    "Removing expired push subscription %s", sub.id
+                )
+                try:
+                    db.session.delete(sub)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                    logger.exception(
+                        "push send cleanup failed for sub %s", sub.id
+                    )
+            else:
+                logger.error(
+                    "Push send failed for sub %s: %s", sub.id, e
+                )
 
 
 # Bell-alert kinds that are TRANSACTIONAL (service info). The 정통망법 §50
@@ -52,12 +198,8 @@ def notify_alert(user_id: int, alert_data: dict):
     aligning with services/alert_service.py and the CEO directive
     (feedback_ticker_display, repeated 3+ times).
     """
-    try:
-        from routes.push import send_push_to_user
-    except ImportError:
-        logger.debug("silent-fallback: notify_alert", exc_info=True)
-        return
-
+    # send_push_to_user lives in this module now (PR #437) — no
+    # cross-layer import needed.
     sig = alert_data.get("signal", "")
     ticker = alert_data.get("ticker", "")
     message = alert_data.get("message", "")
@@ -99,12 +241,7 @@ def notify_bell_alert(user_id: int, kind: str, title: str,
     advertising kinds must be added to ``TRANSACTIONAL_BELL_KINDS`` only
     when they qualify.
     """
-    try:
-        from routes.push import send_push_to_user
-    except ImportError:
-        logger.debug("silent-fallback: notify_bell_alert", exc_info=True)
-        return
-
+    # send_push_to_user lives in this module now (PR #437).
     transactional = kind in TRANSACTIONAL_BELL_KINDS
     full_title = f"PivoxQuant — {title}" if title else "PivoxQuant"
 
@@ -123,12 +260,7 @@ def notify_bell_alert(user_id: int, kind: str, title: str,
 
 def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: float):
     """Send push for trade execution."""
-    try:
-        from routes.push import send_push_to_user
-    except ImportError:
-        logger.debug("silent-fallback: notify_trade", exc_info=True)
-        return
-
+    # send_push_to_user lives in this module now (PR #437).
     # 2026-05-13: include readable name when available
     # (feedback_ticker_display rule applied consistently).
     label = _label_for_ticker(ticker)
@@ -140,12 +272,7 @@ def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: flo
 
 def notify_insight(user_id: int, title_text: str, body_text: str):
     """Send push for AI insights."""
-    try:
-        from routes.push import send_push_to_user
-    except ImportError:
-        logger.debug("silent-fallback: notify_insight", exc_info=True)
-        return
-
+    # send_push_to_user lives in this module now (PR #437).
     send_push_to_user(
         user_id=user_id,
         title=f"PivoxQuant — {title_text}",
