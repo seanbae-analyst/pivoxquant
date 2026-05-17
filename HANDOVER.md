@@ -1,3 +1,85 @@
+# PivoxQuant — 인수인계서 (2026-05-17 v44 — 3 PR · OPEN PR 0 · main `e4d62ab → 2eff93c` · iCloud .git 복구 + thorough cookie sweep + investigator wave)
+
+## v44 — 자율 세션 (CEO 부재, "버그헌팅 + 구조잡기")
+
+**한 줄 요약**: CEO "현상태 파악하고 버그헌팅이랑 구조잡기 자율모드로 진행해라 나 나간다" 명령. iCloud Drive 가 `~/Desktop/취준/pivoxquant/.git` 을 동기화하면서 ` 2`/` 3` suffix 중복 파일 16건 생성 → `bad object refs/remotes/origin/main 2` 로 fetch 차단됨을 발견. canonical 사본 `~/projects/pivoxquant` 가 정상 (PR #376 TCC relocation 산물) → 거기서 작업. 2 agent dispatch (investigator + security) 결과 **7 finding** (P1 ×2, P2 ×4, LOW ×1). 그중 4 finding 을 **3 PR (#412 #413 #414)** 로 정리, 1 LOW skip (`feedback_no_busywork` — cosmetic motion-spec drift), 1 P2 의도적 untrack claim verify 실패 → tracking 으로 전환.
+
+### 본 세션 3 PR
+
+| PR | 영역 | 핵심 변경 |
+|---|---|---|
+| **#412** | **fix(security) thorough cookie sweep** | PR #409 (Wave 7) 가 canonical `/logout` 만 fix 했음 — 동일 회귀 class 3 path 추가 fix: (1) `routes/auth.py:delete_account` 응답을 `_clear_auth_cookies` wrap + `session.clear()` (PIPA delete 후 browser jar 잔존 stale session cookie 제거). (2) `security.py:_enforce_session` inactivity timeout 401 SESSION_EXPIRED 응답에서 cookie cleanup 누락 → lazy `routes.auth import` 로 cleanup wire. (3) `security.py:457` csrf_token SET 에 `domain=SESSION_COOKIE_DOMAIN` 추가 — DELETE side 와 RFC 6265 attribute match (prod 에서 DELETE 가 SET 을 못 찾는 host-only/Domain= split 해소). + `current_app` import 누락 fix. 신규 테스트 3건 PASS, auth 회귀 suite 74 PASS / 0 회귀. |
+| **#413** | **fix(profile) email_opt_out hydrate** | `frontend/src/app/(dashboard)/settings/_v2/page-v2.tsx:218-225` 가 `GET /api/profile` 응답의 `data.email_opt_out` 을 읽어 "email delivery" 토글 hydrate — 하지만 endpoint 가 `InvestmentProfile.to_dict()` 만 반환했고 그 모델에 `email_opt_out` 키가 없었음. 결과: 다른 기기에서 opt-out 한 유저가 settings 열면 토글 다시 "enabled" 로 보이는 정통망법 §50 surface 정확성 위반. `routes/profile.py:get_profile` 응답에 `email_opt_out` + `email_opt_out_earnings` 상위 노출 (`User` row 에서 read, `InvestmentProfile` 무관). 신규 테스트 2건 PASS, email + profile 회귀 62 PASS / 0 회귀. |
+| **#414** | **chore: vitest timeout + dead endpoint + 2 untracked tracked** | (1) `frontend/vitest.config.ts` testTimeout 5000 → 15000 — baseline 3 signup tests (age-verification / signup-flow-e2e / signup-v2) 가 5s default 에 timeout. vitest 4.x + React 19 + userEvent in jsdom 이 vitest 1.x 보다 현저히 느림. 15s 로 313/313 PASS 회귀 0. (2) `frontend/src/lib/endpoints.ts` 의 `capital: "/api/portfolio/capital"` 제거 — frontend/src 에 호출 site 0건 (`API.profile.capital` 만 wire). backend PUT 핸들러는 live, frontend 죽은 상수만 정리. (3) `scripts/finance_weekly_check.py` (186줄, 매주 일요일 09:00 KST cron) + `docs/qa/auto-sim-reports/2026-05-17.md` (overnight cron output) 트래킹. |
+
+### 7 finding triage 표
+
+| # | 출처 | Severity | 결정 | PR |
+|---|---|---|---|---|
+| 1 | security | P1 | FIX | #412 |
+| 2 | security | P2 | FIX | #412 |
+| 3 | security | P2 | FIX | #412 |
+| 4 | investigator | P1 | FIX | #413 |
+| 5 | investigator | P2 | FIX | #414 (dead endpoint) |
+| 6 | investigator | P2 | TRACK (의도적 untrack claim verify 실패) | #414 |
+| 7 | investigator | LOW | SKIP (`feedback_no_busywork` — motion-spec 900→100ms, CEO ACK 필요) | — |
+
+### iCloud .git 손상 복구 (구조 작업)
+
+발견: `~/Desktop/취준/pivoxquant/.git/` 에 16개 ` 2` suffix 중복 파일 + 1개 ` 3` suffix:
+- `.git/refs/heads/main 2`, `.git/refs/stash 2`, `.git/refs/remotes/origin/{HEAD,main,fix,docs,chore,ci,feat,refactor,hotfix,test} 2`
+- `.git/objects/{56,d2,32,bd} 2/` (object dir 11개 파일 포함)
+- `.git/refs/remotes/origin/main 3` (cleanup 중 재발 — 동기화 active)
+- `~/Library/Mobile Documents/com~apple~CloudDocs/Desktop → /Users/seanbae/Desktop` symlink 확인 = iCloud Desktop sync ON
+- `bird` daemon 1737분 CPU = active sync
+
+대응: canonical 사본 `~/projects/pivoxquant` (PR #376 TCC relocation 산물, HEAD = origin/main = e4d62ab9) 이 정상 → 그쪽에서 작업. Desktop 사본은 손상 상태로 그대로 둠 (제거는 CEO 확인 영역).
+
+### 검증 (모두 직접 cite)
+
+- backend pytest: PR #412 영역 74 PASS / PR #413 영역 62 PASS / 본 세션 full pytest (2127 tests) 진행 중 — 결과 commit 직후 확인
+- frontend tsc: `npm run typecheck` → 0 errors (직접 실행)
+- frontend vitest: `npm test` (vitest config 적용 후) → **313/313 PASS** (24 files)
+- prod 영향: 보안 3건 (#412) 은 prod 에서도 동일 회귀 → 머지 후 즉시 효과. profile (#413) hydrate fix 도 prod 즉시 효과. vitest config + dead endpoint (#414) 는 빌드/배포 영향 없음.
+
+### overnight cron tick (2026-05-17 03:00 KST)
+
+```
+docs/qa/auto-sim-reports/2026-05-17.md:
+- user: sim8 (seanbae1521+sim8@gmail.com)
+- scenario: Day 6: /pricing Stripe test-mode 진입 (실 결제 X)
+- launcher: scripts/caus_daily_sweep.py (Phase 3 Playwright)
+- findings: 0 (0 P0)
+```
+
+본 세션 fix 들이 새 회귀 안 만들었나 verify 는 **2026-05-19 03:00 KST 강화 Day 3** (`/portfolio` ₩0 패턴 catch 첫 실 시도) 와 **2026-05-20 03:00 KST 강화 Day 4** (`/companion` hex leak catch 첫 실 시도) 에서 자동 확인.
+
+### 다음 자동 cron 일정 (변화 없음)
+
+| 시각 | 작업 |
+|---|---|
+| 2026-05-17 09:00 KST 일 | finance_weekly_check (이제 tracked) |
+| 2026-05-18 03:00 KST | Day 0 signup |
+| 2026-05-19 03:00 KST | **강화 Day 3 (/portfolio)** — ₩0 패턴 catch 첫 실 시도 |
+| 2026-05-20 03:00 KST | **강화 Day 4 (/companion)** — hex leak catch 첫 실 시도 |
+| 2026-06-01 09:00 KST | 매월 brag card cron |
+
+### 본 세션 종료 시점 main 상태
+
+- HEAD: `2eff93c` (PR #414 chore cleanup)
+- prod live 머지: PR #412 (security CRITICAL class fix) 우선 — Railway 자동 배포 트리거 됨
+- OPEN PR: 0건
+- 누적 v44 = 3 PR (#412 ~ #414)
+
+### CEO cleanup todos (변화 없음, 출시 직전)
+
+기존 v43 final close 의 5건 (prod DB rogue rows / Email infrastructure / PDF persistent storage / launch checklist / post-launch monitoring) 그대로. 본 세션이 추가하지 않음.
+
+**v44 가 추가하는 (선택) todo**:
+- ⚠️ **iCloud Drive Desktop sync** — `~/Desktop/취준/` 폴더가 동기화 중 → .git 다시 손상 가능. 옵션 A: System Preferences → Apple ID → iCloud → "Desktop & Documents Folders" 해제, 옵션 B: Desktop pivoxquant 사본 삭제 후 `~/projects/pivoxquant` 만 사용. 본 세션 결정 보류 (CEO 확인 영역).
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-16 v43 final close — 34 PR · OPEN PR 0 · main `cf7620e → 1c7a231` · 첫 overnight cron tick verified clean)
 
 ## v43 final close — 두 5h shift 완료, overnight verification
