@@ -1,5 +1,70 @@
 # PivoxQuant — 인수인계서 (2026-05-17 v44.6 final close — 36 PR · OPEN PR 0 · main `e4d62ab → 1415220` · wave 14 6 PR + Vercel build 회생 + 금융 race fix)
 
+## v44.6 정확한 잔존 작업 분류 (CEO "다 fix한거냐" 응답)
+
+세션 끝 시점 정확한 status — `feedback_no_false_reports` 룰 준수, "다 했다" 류 모호한 단언 금지. 다음 세션 첫 ACTION 은 본 절의 ❌ 잔존 항목부터 시작.
+
+### ✅ 완전 fix (36 PR 머지, deploy success 직접 verify)
+- **모든 P0 + P1 finding fix 완료** (security/finance/structure/infra/data/UX)
+- Vercel + Railway 둘 다 success 직접 cite (commit `1415220` 시점)
+- 영역별 누적 1000+ PASS / 0 회귀
+
+### ⚠️ 의도적 DEFER (사유 명시, 코드 무관)
+| Finding | Severity | 사유 |
+|---|---|---|
+| Stripe customer 중복 race | P2 | BUSINESS_REGISTRATION_PENDING 게이트 차단 중. Stripe 활성 직후 PR #449 동일 SELECT FOR UPDATE 패턴 적용 |
+| IP-only rate limit (credential stuffing) | P2 | email-keyed bucket 변경 범위 큼. 출시 후 모니터링 + 별도 PR |
+| save_signal UPDATE rollback / sim_onboard IntegrityError / discover_cache lock | LOW | gevent atomic + HMAC TTL + 게이트로 차단. 회귀 위험 낮음 |
+| Web Vitals wiring (wave 9 P1) | P1→DEFER | 신규 인프라 (backend endpoint + reporter). `feedback_no_busywork` skip — observability nice-to-have |
+
+### ❌ 본 세션 안 한 것 (다음 세션 후보)
+
+**1. error_responses sweep 잔존 약 274 sites** (전체 393 중 119 = 30% 완료):
+| 파일 | 잔존 사이트 |
+|---|---|
+| routes/artifacts.py | ~100 (PR #448 은 `{exc}` 누설만 scrub, api_error 변환은 미수행) |
+| routes/risk_quant.py | 23 |
+| routes/alt_data.py | 15 |
+| routes/signals_quant.py | 12 |
+| routes/quant_composer.py | 12 |
+| routes/tools_quant.py | 11 |
+| routes/auth.py | 11 |
+| routes/command_center.py | 10 |
+| routes/daytrade.py / sim_onboard.py / performance_quant.py / dev_auth.py / ai.py | 각 8 |
+| routes/pre_trade.py / share.py / 등 작은 파일 | 5 이하 |
+
+→ PR 당 1-2 파일 sweep 권장 (`feedback_pr_workflow` >30 files 룰).
+
+**2. CEO 외부 액션 (코드 무관, 변호사 5/29 미팅 D-12)**:
+| 항목 | 비용 | 기한 |
+|---|---|---|
+| 변호사 일괄 의견서 Q1-Q16 | 300-500만원 | 5/29 |
+| Stripe 활성화 + 통신판매업 신고 | $0 + 수수료 | 5/29 직후 |
+| 사업자 추가 업태 등재 | $0 | D-12 ASAP |
+| Vercel env `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | $0 | D-Day |
+| Cloudflare Email Routing | $0 | D-Day |
+| Anthropic credit 충전 | $50-100 | D-Day |
+| FMP plan 점검 | $29/mo | D-Day |
+| Railway Volume PDF 영속 | $0 | D-Day |
+| **iCloud Desktop sync OFF** (.git 무한 손상) | $0 | ASAP |
+| prod DB rogue rows id 21/22 정리 | $0 | ASAP |
+
+**3. 미감사 영역 (추가 wave 가능)**:
+- frontend i18n 정확성 (8개 언어, 미감사)
+- 결제 활성 후 path (Stripe Connect 활성 전엔 검증 불가)
+- mobile responsive 전수 (랜덤 sampling 만 wave 9)
+- SEO/sitemap.xml/robots.txt 정확성
+- accessibility 깊이 (wave 9 surface-level만)
+- 백엔드 미 audit 모듈 (legal_filter / questionnaire / canslim / behavior models 등)
+
+### 다음 세션 첫 ACTION 추천 (cron 회귀 verify 시각 기준)
+
+1. **2026-05-18 03:00 KST day4 alerts** cron 결과 확인 (`docs/qa/auto-sim-reports/2026-05-18.md`) — PR #412/#422/#435/#449/#450 회귀 catch
+2. 결과 0 findings 면 error_responses sweep continue (artifacts.py 우선)
+3. 결과 P0 발견 시 Phase 4 auto-fix loop 가 PR 자동 생성 시도 (PR #393)
+
+---
+
 ## v44.6 final close — Wave 14 6 PR (Vercel build + 금융 race + 보안 info leak)
 
 **한 줄 요약**: CEO "vercel fail 확인 + 버그 계속 잡아" → wave 14 진행. Vercel prerender 실패 (PR #432 RSC 회귀) 즉시 복구 + 2 agent dispatch (concurrency + security 2nd pass) 결과 finance race 1건 + 보안 누설 1건 + 추가 race/access 2건. **6 PR 추가**, 누적 v44 = **36 PR (#412~#450)**.
