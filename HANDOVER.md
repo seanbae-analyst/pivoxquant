@@ -1,3 +1,88 @@
+# PivoxQuant — 인수인계서 (2026-05-17 v44.4 final close — 19 PR · OPEN PR 0 · main `e4d62ab → 18f5c9f` · defer queue 전부 소진 + 6 P0/P1/P2 follow-up)
+
+## v44.4 final close — defer queue 6건 PR 화 (UX P0/P1×3 + PWA P2 + perf P1/P2)
+
+**한 줄 요약**: CEO "코드 먼저 굴려" 명령에 따라 v44.3 defer queue 6건 ([14-19 in CEO todo]) 전부 PR 화 + 머지. 누적 **19 PR (#412~#432)**, OPEN PR 0건. 출시 직전 코드 작업 영역 전부 닫음 — 남은 작업은 전부 CEO 외부 액션 (변호사 5/29 / Stripe / Vercel env / Anthropic credit 등).
+
+### 추가 6 PR (v44.3 base #412-#425 + #426 docs 이후)
+
+| PR | 영역 | 핵심 변경 |
+|---|---|---|
+| **#427** | **feat(onboarding) partial-save (UX P0)** | `migrations/035_user_onboarding_draft` 신규 + `users.onboarding_draft_json TEXT NULL` 컬럼 + GET/PUT `/api/profile/onboarding/draft` (32KB 한도, corrupt blob 안전, Korean text round-trip). 프론트 `onboarding/page.tsx` 마운트 localStorage→server hydrate + 2s debounced PUT. submit 완료 시 draft 자동 클리어. 11 신규 tests + 113 PASS / 0 회귀. |
+| **#428** | **feat(onboarding) beforeunload guard (UX P1)** | 3+ 답한 후 + result 아닌 + !submitting 일 때만 native confirm dialog. 2s debounce sync window 잃는 시나리오 차단. tsc 0 / vitest 313/313 PASS. |
+| **#429** | **feat(oauth-finalize) DOB auto-hydrate (UX P1)** | signup_v2 가 이미 `pivox_signup_consents` 에 DOB 저장 → oauth-finalize 마운트 시 자동 promote 후 POST. 90% Google/Kakao 사용자 interstitial 폼 skip. edge case (missing/corrupt/server reject) 전부 manual form fallthrough. |
+| **#430** | **feat(pwa) iOS Safari install variant (P2)** | iPhone/iPad + Safari token (CriOS/FxiOS/EdgiOS 제외) + iPadOS desktop UA quirk (`maxTouchPoints > 1`) 감지. "Share → 홈 화면에 추가" 한국어 안내 card render. `navigator.standalone` short-circuit 추가. 7일 dismiss window + APPEAR_DELAY_MS variant 간 공유. |
+| **#431** | **perf(simulator) WhatIfChart dynamic (P2)** | `what-if-chart-dynamic.tsx` 신규 next/dynamic wrapper (`ssr: false` + `ChartSkeleton height={320}`). recharts ~112KB gzip 가 simulator 폼 첫 paint 에서 사라짐 (form-only LCP +0.5-1s 예상). home pattern (equity-curve-chart-dynamic) mirror. |
+| **#432** | **perf(features) Server Component split (P1)** | /features 가 `useReducedMotion` 1개 때문에 전체 client. metadata export 불가 (SEO 손실) + 정적 FEATURE_CARDS + FeaturePageShell unnecessarily ship. `feature-cards-grid.tsx` 신규 client subtree 분리. page.tsx 는 Server Component + `export const metadata` ("기능 · Features" + 한국어 description). |
+
+### 누적 19 PR — v44 전체
+
+| PR | 영역 |
+|---|---|
+| #412 | fix(security) cookie cleanup thorough sweep |
+| #413 | fix(profile) email_opt_out hydrate |
+| #414 | chore vitest timeout + dead endpoint + 2 untracked |
+| #415 | docs HANDOVER v44 base |
+| #416 | fix(wave8) subscription shape + KIS regex + ProfileResponse type |
+| #417 | fix(wave9) Pretendard crossOrigin + Simulator a11y + vitest 30s |
+| #418 | test(wave10) Stripe webhook + KIS boundary + signals refresh (17 tests) |
+| #419 | fix(ai) thorough graceful — fetchSection 503 + error_kr × 14 |
+| #420 | docs HANDOVER v44.2 |
+| #421 | fix(quant) numerical safety (np.log×4 + json allow_nan) |
+| #422 | **fix(wave12) 2 P0 race conditions** (register + cache) |
+| #423 | fix(wave12) User type + generateArtifact CSRF + /price rate limit |
+| #424 | fix(wave12) backtester 7× sweep + signals ThreadPool |
+| #425 | fix(wave12 UX) signup scroll + broker label + onboarding toast + skip confirm |
+| #426 | docs HANDOVER v44.3 |
+| **#427** | **feat(onboarding) partial-save** (UX P0) |
+| **#428** | **feat(onboarding) beforeunload guard** (UX P1) |
+| **#429** | **feat(oauth-finalize) DOB auto-hydrate** (UX P1) |
+| **#430** | **feat(pwa) iOS Safari install variant** (P2) |
+| **#431** | **perf(simulator) WhatIfChart dynamic** (P2) |
+| **#432** | **perf(features) Server Component split** (P1) |
+
+### 검증 (모두 직접 cite)
+
+- **full backend pytest (마지막 시도, v44.2 후)**: 2129 PASS / 19 skipped / 1 xfailed / 0 fail (12:38)
+- **wave 11/12/UX 영역별**: 113 + 33 + 47 + 49 + 154 + 11 = **407 PASS / 0 회귀** (각 PR 별 직접 실행)
+- **frontend tsc**: 매 PR 별 0 errors
+- **frontend vitest**: 매 PR 별 313/313 PASS (vitest 30s timeout 적용 후 flake 0)
+
+### 본 세션 종료 시점 main 상태
+
+- HEAD: `18f5c9f` (PR #432 features Server Component split)
+- OPEN PR: 0건
+- defer queue: **empty** (전부 PR 화 완료)
+- 누적 v44 = **19 PR (#412 ~ #432)**
+
+### CEO 외부 액션 (출시 직전, 코드 무관)
+
+**5/29 변호사 미팅 전 (D-12)**:
+1. 사업자등록 추가 업태 등재 (전자상거래업 + 응용소프트웨어개발 및 공급업)
+2. 통신판매업 신고 (시군구청 / 정부24)
+3. iCloud Drive Desktop sync OFF (.git 무한 재손상 차단)
+4. prod DB rogue rows 정리 (id 21, 22)
+
+**환경변수 (₩0)**:
+5. Cloudflare Email Routing (15분, `docs/ops/email-setup.md`)
+6. Railway env: `SENDGRID_API_KEY` / `STRIPE_*` 4종 / `STRIPE_WEBHOOK_SECRET`
+7. Vercel env: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (push 활성화)
+8. (선택) Railway env: `SIGNAL_REFRESH_WORKERS` (기본 4)
+9. FMP plan 점검 (`financialmodelingprep.com` Billing)
+10. Anthropic credit 충전 ($50-100)
+11. PDF persistent storage (Railway Volume 5GB 무료, `docs/ops/pdf-storage.md`)
+
+**5/29 변호사 미팅 (300-500만원)**:
+- Q1-Q16 일괄 의견서 (Q16 신규: PIPA §35 ① birthdate export 의무 여부)
+- P0 우선: Q5/Q6/Q7/Q8/Q13
+
+**5/29 변호사 미팅 직후**:
+- Stripe 활성화 (계정 + Price ID + webhook 등록)
+- terms-ko.md / privacy-ko.md 변호사 의견 반영
+- AI surface 양방향 채널 차단 결정 (Q13)
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-17 v44.3 final close — 13 PR · OPEN PR 0 · main `e4d62ab → c0a5909` · wave 1~12 누적 + 2 P0 race + 7x bare except sweep + UX P0×2)
 
 ## v44.3 final close — Wave 11 + 12 누적 5 PR 추가
