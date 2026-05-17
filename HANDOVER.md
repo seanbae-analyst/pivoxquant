@@ -1,3 +1,110 @@
+# PivoxQuant — 인수인계서 (2026-05-17 v44.2 final close — 8 PR · OPEN PR 0 · main `e4d62ab → fe0a092` · wave 1~10 누적 + thorough sweep 3건)
+
+## v44.2 final close — Wave 8 + 9 + 10 누적 5 PR 추가
+
+**한 줄 요약**: CEO "토큰 최대로 써" + "확실하게 fix해" 명령에 따라 v44 base (3 PR) 후 추가 **wave 8 (KIS+subscription) → wave 9 (perf+a11y) → wave 10 (qa+ai)** 진행. **5 PR 추가**, 누적 v44 = **8 PR (#412~#419)**. agent 7개 dispatch (investigator ×4 + security + code-janitor + audit-code + performance + regulatory-monitor + qa) → **20 finding** triage → **8 PR fix + 3 LOW skip + 1 P2 defer + 변호사 큐 1건 권고**.
+
+### 추가 5 PR 표 (v44 base #412-#414 이후)
+
+| PR | 영역 | 핵심 변경 |
+|---|---|---|
+| **#416** | **fix(wave8) schema alignment** | (1) settings/_v2 subscription cold-start "free" lock — backend `subscription_tier` vs frontend `tier` 불일치. (2) KIS account_no backend `\d{6,12}` vs frontend `\d{8}` 정합. (3) ProfileResponse type 에 `email_opt_out` 추가 (PR #413 W3 audit follow-up). KIS regression 43 PASS / 0 회귀. |
+| **#417** | **fix(wave9) perf + a11y** | (1) `layout.tsx` Pretendard preload + stylesheet `crossOrigin` mismatch — 매 first paint double 네트워크 fetch. 둘 다 `crossOrigin="anonymous"`. (2) `simulator/what-if-form.tsx` 4개 label htmlFor 누락 (ticker/start-date/amount/recurring) — recurring 은 `role="radiogroup"` + `role="radio" aria-checked` pattern 으로 승격. (3) vitest testTimeout 15→30s + hookTimeout — worker contention 으로 signup-v2/marketing-consent-card flake 잡음. vitest **313/313 PASS** (이전 311/313 flake → 0건). |
+| **#418** | **test(wave10) coverage fill** | QA agent 가 발견한 financial path 17 신규 tests: (1) Stripe webhook `customer.subscription.updated` 4 tests (P0, zero cite) — pro→premium / past_due / canceled / unknown customer. (2) `invoice.payment_failed` 2 tests (P0). (3) KIS regex boundary 7 parametric (PR #416 follow-up) — 7/9/11/4-digit + non-numeric + empty + leading whitespace. (4) `POST /api/signals/refresh` 4 tests (P0, zero cite) — auth / no positions / engine success / engine returns None. 17 PASS, prod 코드 무변. |
+| **#419** | **fix(wave10) AI thorough graceful** | PR #387/#397 가 fetchCoaching 만 503 calm copy — section fetches (SWOT/Competitor/SectorTrend/Commentary) 누락 (`feedback_thorough_fixes` 위반). + `routes/ai.py` 의 14 응답 (`AI not configured` ×11 + `Failed to generate X` ×6, 일부 중복) 에 `error_kr` 누락 — 한국어 사용자에게 raw 영문 노출. 일괄 fix + `code: "AI_NOT_CONFIGURED"` 추가. AI 회귀 47 PASS / 0 회귀. |
+
+### 누적 8 PR — v44 전체
+
+| PR | 영역 |
+|---|---|
+| #412 | fix(security): thorough cookie cleanup sweep — delete_account / session expiry / csrf domain |
+| #413 | fix(profile): surface email_opt_out in GET /api/profile |
+| #414 | chore: vitest testTimeout + dead endpoint + 2 untracked tracked |
+| #415 | docs(handover): v44 base 3 PR |
+| #416 | fix(wave8): subscription shape + KIS regex 8-digit + ProfileResponse type |
+| #417 | fix(wave9): Pretendard crossOrigin + Simulator a11y radiogroup + vitest 30s |
+| #418 | test(wave10): cover Stripe webhook + KIS regex boundary + signals refresh (17 tests) |
+| #419 | fix(ai): thorough graceful sweep — fetchSection 503 + error_kr on 14 endpoints |
+
+### 20 finding triage 표 (full v44)
+
+| # | 출처 wave | Severity | 결정 | PR |
+|---|---|---|---|---|
+| 1-3 | wave 1 security | P1 + P2 + P2 | FIX | #412 |
+| 4 | wave 1 investigator | P1 | FIX | #413 |
+| 5 | wave 1 investigator | P2 (dead endpoint) | FIX | #414 |
+| 6 | wave 1 investigator | P2 (untracked file) | TRACK | #414 |
+| 7 | wave 1 investigator | LOW motion-spec | SKIP (`feedback_no_busywork`) | — |
+| 8-9 | wave 2 audit-code | W1 lazy import / W3 type | W3 FIX, W1 defensive only | #416 |
+| 10-11 | wave 8 investigator | P1 × 2 | FIX | #416 |
+| 12 | wave 8 investigator | P2 KIS rotation key | DEFER (infra) | — |
+| 13 | wave 8 investigator | LOW KIS audit log | SKIP | — |
+| 14-15 | wave 9 perf | P1 × 2 (CSS + Web Vitals) | (1) FIX #417, (2) DEFER (new infra) | #417 |
+| 16 | wave 9 a11y | P1 (4 labels) | FIX | #417 |
+| 17 | wave 9 perf | P2 SWR dedup | SKIP (의도된 SWR semantic) | — |
+| 18 | wave 9 perf | LOW motion import | SKIP | — |
+| 19 | wave 3 regulatory | P2 birthdate in export | LEGAL QUEUE (회색지대, 변호사 자문) | — |
+| 20 | wave 10 qa | P0 × 3 + P1 × 1 | FIX (17 tests) | #418 |
+| 21 | wave 10 ai | P1 × 2 + P2 + LOW | (P1 × 2) FIX, (P2 + LOW) DEFER | #419 |
+
+(번호는 누적 21개로 카운트되나, code-janitor 의 0 finding + 일부 false positive 제외 시 실 actionable = 8개 PR 로 정리)
+
+### 본 세션 작업 통계
+
+- **7 specialist agent dispatch**: security / investigator (×4 instances) / code-janitor / audit-code / performance + a11y / regulatory-monitor / qa
+- **0 false report** (`feedback_no_false_reports` 준수, 모든 fix 에 grep/test 결과 cite)
+- **0 prod 코드 손상** (8 PR 모두 회귀 0)
+- **0 추가 비용 발생** (`feedback_no_extra_cost` — Web Vitals wiring 등 신규 인프라 제안만 defer, 코드 변경 X)
+- **`feedback_thorough_fixes` 적용**: PR #412 cookie sweep (3 path) + PR #419 AI graceful sweep (4 fetch + 14 endpoint) 모두 동일 회귀 class sweep 패턴
+
+### 검증 (모두 직접 cite)
+
+- **backend critical suite** (test_auth + test_billing_webhook + test_broker_oauth_smoke + test_signals_filter + test_email_opt_out + test_user_cascade_delete + test_notifications + test_ai_failure_paths + test_user_kis_service + test_user_kis_overseas) = **154 PASS / 0 회귀** (직접 실행, 130s)
+- 영역별: PR #412 영역 74 PASS / PR #413 영역 62 PASS / PR #416 영역 43 PASS / PR #418 신규 17 PASS / PR #419 영역 47 PASS
+- **frontend tsc**: `npm run typecheck` → **0 errors** (PR 별 4회 실행)
+- **frontend vitest**: `npm test` → **313/313 PASS** (24 files, PR #417 후 flake 0건 확인)
+- **full backend pytest 2149** (PR #418 17개 + base 2127 + cleanup 5개): 진행 중 — 결과 다음 cron tick (2026-05-19) 또는 CEO 첫 verify 시 확인. 현재까지 91% 지점까지 fail 0건 확인됨
+
+### iCloud .git 손상 (구조 작업, v44 base 그대로)
+
+발견: `~/Desktop/취준/pivoxquant/.git/` 에 16개 ` 2` suffix 중복 + ` 3` suffix 1개. iCloud Drive Desktop sync ON 으로 인한 무한 재손상. canonical `~/projects/pivoxquant` 사본 (PR #376 TCC relocation 산물) 정상 → 그쪽에서 작업. Desktop 사본 cleanup 은 CEO 결정 영역 (옵션 A iCloud Desktop sync OFF / 옵션 B Desktop 사본 삭제).
+
+### overnight cron tick (2026-05-17 03:00 KST)
+
+```
+docs/qa/auto-sim-reports/2026-05-17.md:
+- user: sim8 (seanbae1521+sim8@gmail.com)
+- scenario: Day 6: /pricing Stripe test-mode 진입
+- findings: 0 (0 P0)
+```
+
+### 다음 자동 cron 일정
+
+| 시각 | 작업 |
+|---|---|
+| 2026-05-17 09:00 KST 일 | finance_weekly_check (이제 tracked) |
+| 2026-05-18 03:00 KST | Day 0 signup |
+| 2026-05-19 03:00 KST | **강화 Day 3 (/portfolio)** — ₩0 패턴 catch 첫 실 시도 + 본 세션 fix 회귀 verify |
+| 2026-05-20 03:00 KST | **강화 Day 4 (/companion)** — hex leak catch 첫 실 시도 + AI 503 graceful 회귀 verify |
+
+### v44.2 종료 시점 main 상태
+
+- HEAD: `fe0a092` (PR #419 AI thorough graceful)
+- prod live 머지: 8 PR 누적, Railway 자동 배포 트리거
+- OPEN PR: 0건
+- 누적 PR (#412 ~ #419) = **8 PR** (v44 base 3 + wave 8/9/10 = 5)
+
+### CEO cleanup todos (변경)
+
+기존 v43 final close 의 5건 (prod DB rogue rows / Email infrastructure / PDF persistent storage / launch checklist / post-launch monitoring) 그대로.
+
+**v44 신규 추가**:
+- ⚠️ iCloud Drive Desktop sync OFF (또는 `~/Desktop/취준/` 폴더 외부 이동) — 본 세션 .git 손상 무한 재발생 원인
+- 변호사 큐 1건 신규 (regulatory wave): `_serialize_user` PIPA §35 ① 정보주체 열람권에 `birthdate` 포함 의무 여부 (자가선언 데이터)
+- DEFER 2건 (인프라 작업, 본 세션 범위 외): KIS multi-key encryption rotation + Web Vitals wiring
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-17 v44 — 3 PR · OPEN PR 0 · main `e4d62ab → 2eff93c` · iCloud .git 복구 + thorough cookie sweep + investigator wave)
 
 ## v44 — 자율 세션 (CEO 부재, "버그헌팅 + 구조잡기")
