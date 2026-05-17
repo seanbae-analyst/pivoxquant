@@ -287,6 +287,15 @@ def init_security(app):
     app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
     if _IS_PRODUCTION:
         app.config["REMEMBER_COOKIE_SECURE"] = True
+        # Wave F-4 Bug #1 P0 (2026-05-17): without this, Flask-Login issues
+        # remember_token as a host-only cookie (no Domain attr). Logout uses
+        # SESSION_COOKIE_DOMAIN=.pivoxquant.com — Domain mismatch per
+        # RFC 6265 §5.3 step 11 → browser silently ignores the deletion →
+        # user stays authenticated after logout. Aligning REMEMBER_COOKIE_DOMAIN
+        # with SESSION_COOKIE_DOMAIN makes _clear_auth_cookies() actually work.
+        _session_domain = os.environ.get("SESSION_COOKIE_DOMAIN")
+        if _session_domain:
+            app.config["REMEMBER_COOKIE_DOMAIN"] = _session_domain
 
     logger.info(
         f"SECURITY: Session lifetime={_SESSION_LIFETIME}, "
