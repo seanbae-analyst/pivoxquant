@@ -150,13 +150,22 @@ export function ArtifactGalleryGrid({ artifacts, tier }: Props) {
         Kinds.
       </h2>
 
+      {/*
+        2026-05-17 wave C-3 P1: previously inline `gridTemplateColumns:
+        "repeat(3, minmax(0, 1fr))"` always won over the Tailwind
+        responsive `sm:!grid-cols-1 md:!grid-cols-2` classes (inline style
+        beats !important class rules in the CSS cascade). On <640px the
+        grid forced 3 cramped columns regardless of intent, truncating
+        every card name/value. Drop the conflicting inline column rule
+        and let Tailwind's mobile-first responsive classes drive layout:
+        1 col <640px, 2 cols 640–768px, 3 cols ≥768px.
+      */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
           gap: 12,
         }}
-        className="md:!grid-cols-2 sm:!grid-cols-1"
+        className="grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
       >
         {enriched.map((entry) => (
           <ArtifactKindCard

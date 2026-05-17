@@ -150,8 +150,13 @@ export function ModalShell({
     <div
       ref={containerRef}
       className={cn(
-        // Mobile: scrollable container with bottom-anchored sheet feel; sm+: centered dialog
-        "fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/40 p-3 sm:items-center sm:p-4",
+        // Mobile: scrollable container with bottom-anchored sheet feel; sm+: centered dialog.
+        // 2026-05-17 wave C-3 P1: BottomNav also sits at z-50, so a mobile modal
+        // rendered above the nav was visually clipped by the nav bar (modal
+        // backdrop + close button hidden behind the bottom 64px). Lift to z-[60]
+        // so the entire modal surface (including bottom-anchored sheet edge on
+        // small screens) layers above BottomNav without collision.
+        "fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto bg-black/40 p-3 sm:items-center sm:p-4",
         className,
       )}
       onMouseDown={handleBackdropMouseDown}

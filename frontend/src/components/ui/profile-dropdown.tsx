@@ -100,7 +100,9 @@ export function ProfileDropdown() {
           aria-label="Profile menu"
           aria-haspopup="menu"
           aria-expanded={open}
-          className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+          /* 2026-05-17 wave C-3 P2: h-10/w-10 (40px) below Apple HIG 44px tap-target.
+             Bump to h-11/w-11 so profile avatar is reliably tappable on mobile. */
+          className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)]"
         >
           <span
             className="flex h-8 w-8 items-center justify-center rounded-full font-mono text-pq-mono-sm font-semibold"

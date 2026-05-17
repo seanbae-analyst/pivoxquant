@@ -49,7 +49,10 @@ export function TopBar() {
           type="button"
           onClick={() => openSearchCommand()}
           aria-label="Find a ticker, an artifact, or a page"
-          className="flex h-9 w-full max-w-[440px] items-center gap-3 rounded px-4 text-left transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+          // 2026-05-17 wave C-3 P2: h-9 = 36px is below Apple HIG / Material 44px
+          // minimum tap target — small but persistent miss-tap source on mobile
+          // top bar. Bump to h-11 (44px).
+          className="flex h-11 w-full max-w-[440px] items-center gap-3 rounded px-4 text-left transition-colors hover:bg-[rgba(139,111,71,0.08)]"
           style={{
             border: "0.5px solid rgba(245, 240, 232, 0.12)",
             background: "rgba(255, 255, 255, 0.02)",

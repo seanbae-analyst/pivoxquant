@@ -127,11 +127,16 @@ export function InstallPrompt() {
   if (!variant) return null;
 
   return (
+    // 2026-05-17 wave C-3 P1: mobile BottomNav is h-16 (64px) + safe-area
+    // and sits at z-50. Previous `bottom-4` placed this card directly under
+    // (or fully behind) the nav on every <md viewport — buttons untappable
+    // on phones. Lift the mobile variant clear with bottom-[80px] (64px
+    // nav + 16px gap). Desktop keeps md:bottom-6 (BottomNav hidden ≥md).
     <div
       role="dialog"
       aria-labelledby="pq-install-title"
       aria-describedby="pq-install-body"
-      className="pointer-events-auto fixed bottom-4 left-4 right-4 z-50 md:bottom-6 md:left-auto md:right-6 md:w-[360px]"
+      className="pointer-events-auto fixed bottom-[80px] left-4 right-4 z-50 md:bottom-6 md:left-auto md:right-6 md:w-[360px]"
     >
       <div
         className="relative overflow-hidden p-5"
