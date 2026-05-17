@@ -11,6 +11,7 @@ from extensions import db
 from models import Watchlist, SignalCache
 from services import cache_service
 from services.container import engine
+from services.error_responses import api_error
 from services.name_resolver import canonical_display_name
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
@@ -127,18 +128,32 @@ def add():
     raw = (d.get("ticker") or "").strip()
     note = (d.get("note") or "").strip() or None
     if not raw:
-        return jsonify({"error": "Ticker required"}), 400
+        return api_error(
+            en="Ticker required", kr="종목 코드가 필요합니다.",
+            code="WATCHLIST_TICKER_REQUIRED", status=400,
+        )
     if note and len(note) > 500:
-        return jsonify({"error": "Note too long (max 500 characters)"}), 400
+        return api_error(
+            en="Note too long (max 500 characters)",
+            kr="메모는 최대 500자까지 가능합니다.",
+            code="WATCHLIST_NOTE_TOO_LONG", status=400,
+        )
     # Single-source normalization: bare 6-digit code → registry-guided
     # .KS/.KQ. Replaces the ad-hoc default-to-.KS rule that mis-routed
     # KOSDAQ tickers (e.g. 035760 CJ ENM).
     ticker = normalize_ticker(raw)
     if not ticker:
-        return jsonify({"error": "Ticker required"}), 400
+        return api_error(
+            en="Ticker required", kr="종목 코드가 필요합니다.",
+            code="WATCHLIST_TICKER_REQUIRED", status=400,
+        )
     existing = Watchlist.query.filter_by(user_id=current_user.id, ticker=ticker).first()
     if existing:
-        return jsonify({"error": "Already in watchlist"}), 409
+        return api_error(
+            en="Already in watchlist",
+            kr="이미 관심 종목에 추가되어 있습니다.",
+            code="WATCHLIST_DUPLICATE", status=409,
+        )
     try:
         row = Watchlist(user_id=current_user.id, ticker=ticker, note=note)
         db.session.add(row)
@@ -146,7 +161,11 @@ def add():
     except Exception:
         db.session.rollback()
         logger.exception("watchlist.add commit failed (ticker=%s)", ticker)
-        return jsonify({"error": "Failed to add to watchlist"}), 500
+        return api_error(
+            en="Failed to add to watchlist",
+            kr="관심 종목 추가에 실패했습니다.",
+            code="WATCHLIST_ADD_FAILED", status=500,
+        )
     # Best-effort cache warm — never block the response on cache failures.
     try:
         cache_service.cache_ticker(ticker, current_user.available_capital, engine)
@@ -162,14 +181,21 @@ def add():
 def remove(wid):
     w = db.session.get(Watchlist, wid)
     if not w or w.user_id != current_user.id:
-        return jsonify({"error": "Not found"}), 404
+        return api_error(
+            en="Not found", kr="관심 종목을 찾을 수 없습니다.",
+            code="WATCHLIST_NOT_FOUND", status=404,
+        )
     try:
         db.session.delete(w)
         db.session.commit()
     except Exception:
         db.session.rollback()
         logger.exception("watchlist.remove commit failed (wid=%s)", wid)
-        return jsonify({"error": "Failed to remove from watchlist"}), 500
+        return api_error(
+            en="Failed to remove from watchlist",
+            kr="관심 종목 삭제에 실패했습니다.",
+            code="WATCHLIST_REMOVE_FAILED", status=500,
+        )
     return jsonify({"ok": True})
 
 
@@ -185,7 +211,10 @@ def update(wid):
     """
     w = db.session.get(Watchlist, wid)
     if not w or w.user_id != current_user.id:
-        return jsonify({"error": "Not found"}), 404
+        return api_error(
+            en="Not found", kr="관심 종목을 찾을 수 없습니다.",
+            code="WATCHLIST_NOT_FOUND", status=404,
+        )
     d = request.get_json() or {}
     if "note" in d:
         raw = d.get("note")
@@ -194,13 +223,21 @@ def update(wid):
         else:
             s = str(raw).strip()
             if len(s) > 500:
-                return jsonify({"error": "Note too long (max 500 characters)"}), 400
+                return api_error(
+            en="Note too long (max 500 characters)",
+            kr="메모는 최대 500자까지 가능합니다.",
+            code="WATCHLIST_NOTE_TOO_LONG", status=400,
+        )
             w.note = s or None
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
         logger.exception("watchlist.update commit failed (wid=%s)", wid)
-        return jsonify({"error": "Failed to update watchlist"}), 500
+        return api_error(
+            en="Failed to update watchlist",
+            kr="관심 종목 업데이트에 실패했습니다.",
+            code="WATCHLIST_UPDATE_FAILED", status=500,
+        )
     overlay = overlay_prices([w.ticker])
     return jsonify({"ok": True, "item": _serialize(w, overlay.get(w.ticker))})
