@@ -573,17 +573,48 @@ export default function OnboardingPage() {
     }
   }, [authLoading, user, router]);
 
-  // Restore saved step from answers
+  // Restore saved step from answers — server draft wins if present so
+  // a user who answered N questions on mobile picks up at N on desktop.
+  // localStorage is the fallback when the network call fails / first paint.
   useEffect(() => {
-    const saved = loadSavedAnswers();
-    if (Object.keys(saved).length > 0) {
-      setAnswers(saved);
+    const local = loadSavedAnswers();
+    if (Object.keys(local).length > 0) {
+      setAnswers(local);
     }
+    // Fire-and-forget server hydrate. apiFetch handles CSRF + cookies.
+    apiFetch<{ draft: Record<string, string | string[] | number> | null }>(
+      API.profile.onboardingDraft,
+    )
+      .then((data) => {
+        if (data?.draft && Object.keys(data.draft).length > 0) {
+          // Server has fresher data (or local was empty) → adopt it.
+          setAnswers(data.draft);
+        }
+      })
+      .catch(() => {
+        // Best-effort hydrate. localStorage already populated above.
+      });
   }, []);
 
-  // Save answers to localStorage whenever they change
+  // Save answers to localStorage + server draft whenever they change.
+  // 2026-05-17 wave 12 UX P0 (PR #427): localStorage stays as the hot
+  // path (synchronous, instant); a debounced server PUT every 2 seconds
+  // syncs the draft so device switch / ITP eviction doesn't lose work.
+  // 2s debounce balances network chatter vs how much answer drift we
+  // tolerate (≤2s, well under the wizard's per-question rhythm).
   useEffect(() => {
     saveAnswers(answers);
+    if (Object.keys(answers).length === 0) return;
+    const t = setTimeout(() => {
+      apiFetch(API.profile.onboardingDraft, {
+        method: "PUT",
+        body: JSON.stringify({ answers }),
+      }).catch(() => {
+        // Silent — localStorage already holds the answers and the next
+        // change will retry. No user-facing toast for background syncs.
+      });
+    }, 2_000);
+    return () => clearTimeout(t);
   }, [answers]);
 
   // Current question

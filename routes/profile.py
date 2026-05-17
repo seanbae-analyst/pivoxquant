@@ -160,6 +160,79 @@ def get_questionnaire():
         return jsonify({"questions": QUESTIONNAIRE})
 
 
+# 2026-05-17 wave 12 UX P0 — onboarding partial-save / device handoff.
+# Pre-fix the wizard stored progress in localStorage only; a user who
+# answered 15 of 20 questions on mobile and then logged in on desktop
+# saw an empty wizard. These two endpoints let the frontend round-trip
+# the draft through the server every few questions so any signed-in
+# device picks up where the last one left off.
+
+_DRAFT_MAX_BYTES = 32 * 1024  # 32KB ceiling — well above the realistic
+# answer payload, gives a hard upper bound against pathological clients.
+
+
+@profile_bp.route("/onboarding/draft", methods=["GET"])
+@api_auth
+def get_onboarding_draft():
+    """Read the current user's saved onboarding draft.
+
+    Returns ``{"draft": null}`` when nothing is saved (brand-new user
+    or one who already completed onboarding — the submit handler clears
+    the draft on success).
+    """
+    raw = getattr(current_user, "onboarding_draft_json", None)
+    if not raw:
+        return jsonify({"draft": None})
+    try:
+        return jsonify({"draft": json.loads(raw)})
+    except (TypeError, ValueError):
+        # Corrupt blob (manual DB edit, partial write). Treat as no draft
+        # so the wizard restarts cleanly rather than crashing on parse.
+        logger.warning(
+            "profile.get_onboarding_draft: corrupt JSON for user_id=%s",
+            current_user.id,
+        )
+        return jsonify({"draft": None})
+
+
+@profile_bp.route("/onboarding/draft", methods=["PUT"])
+@api_auth
+@general_rate_limit
+def save_onboarding_draft():
+    """Save / overwrite the current user's onboarding draft.
+
+    Body: ``{"answers": {...}}`` — the wizard's full answer object.
+    Empty object is allowed (treat as "reset").
+    """
+    data = request.get_json(silent=True) or {}
+    answers = data.get("answers")
+    if answers is None or not isinstance(answers, dict):
+        return jsonify({
+            "error": "Body must include 'answers' object.",
+            "error_kr": "answers 객체가 필요합니다.",
+        }), 400
+
+    payload = json.dumps(answers, ensure_ascii=False)
+    if len(payload.encode("utf-8")) > _DRAFT_MAX_BYTES:
+        return jsonify({
+            "error": "Draft payload exceeds 32KB.",
+            "error_kr": "임시 저장 데이터가 너무 큽니다.",
+        }), 413
+
+    current_user.onboarding_draft_json = payload
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "profile.save_onboarding_draft commit failed user_id=%s",
+            current_user.id,
+        )
+        return jsonify({"error": "Failed to save draft. Please try again."}), 500
+
+    return jsonify({"ok": True, "bytes": len(payload.encode("utf-8"))})
+
+
 @profile_bp.route("/onboarding", methods=["POST"])
 @api_auth
 @general_rate_limit
@@ -200,6 +273,11 @@ def submit_onboarding():
     # Update user
     current_user.risk_profile = profile_type
     current_user.onboarding_completed = True
+    # 2026-05-17 wave 12 UX P0 — clear the partial-save draft on successful
+    # completion so a future device session doesn't resurrect a stale
+    # wizard for an already-onboarded user. ``onboarding_completed`` is
+    # the authoritative flag; the draft becomes vestigial.
+    current_user.onboarding_draft_json = None
 
     try:
         db.session.commit()
