@@ -83,8 +83,12 @@ SIM_ONBOARD_UA = "PivoxQuantCAUS/1.0"
 PLAYWRIGHT_TIMEOUT_SEC = int(os.environ.get("CAUS_SCENARIO_TIMEOUT_SEC", "180"))
 GH_CLI_BIN = os.environ.get("CAUS_GH_BIN", "gh")
 
-# Day-N scenarios (Mon=0 ... Sun=6). Mirrors spec §5.
-# `module` is the importable path under `scripts.caus_scenarios`.
+# Day-N scenarios. Originally Mon=0..Sun=6 (spec §5); 2026-05-17 PR #434
+# extended to 10 entries (days 7/8/9 cover v44 PR additions that the
+# weekday-only rotation could never reach). Rotation switched from
+# today.weekday() to today.toordinal() % len(DAY_SCENARIOS) so every
+# entry cycles — see main(). `module` is the importable path under
+# `scripts.caus_scenarios`.
 DAY_SCENARIOS: list[tuple[str, str]] = [
     ("day0_signup", "Day 0 가입: 온보딩 완료 + /home 진입 검증"),
     ("day1_kr_search", "Day 1: /signals KR 종목 (삼성전자) → 알림 toggle"),
@@ -93,6 +97,10 @@ DAY_SCENARIOS: list[tuple[str, str]] = [
     ("day4_alert_simulation", "Day 4: /alerts dropdown + mark-all-read"),
     ("day5_reports", "Day 5: /reports brag/memo/prebrief 카드"),
     ("day6_payment", "Day 6: /pricing Stripe test-mode 진입 (실 결제 X)"),
+    # 2026-05-17 PR #434 — coverage gap closures.
+    ("day7_simulator", "Day 7: /simulator/what-if form + recharts dynamic 차트 render"),
+    ("day8_features", "Day 8: /features index Server Component + 13 card 렌더 + metadata"),
+    ("day9_onboarding_draft", "Day 9: onboarding partial-save API round-trip + 32KB 한도"),
 ]
 
 # Scenario-id → module path (also accepts the short form `day2` etc.).
@@ -664,7 +672,12 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         day_idx = idx
     else:
-        day_idx = today.weekday()  # 0=Mon..6=Sun
+        # 2026-05-17 PR #434: switched from today.weekday() (0..6) to
+        # ordinal-modulo so the extended scenarios (day7/8/9) actually
+        # cycle. Previously days 7+ never ran. The cycle deterministic
+        # per calendar date so each PR change gets verified within 10
+        # days regardless of what weekday we add it on.
+        day_idx = today.toordinal() % len(DAY_SCENARIOS)
     scenario_module, scenario_label = DAY_SCENARIOS[day_idx]
     scenario = scenario_label  # legacy name used in report text
     user_id = pick_user_id(today)
