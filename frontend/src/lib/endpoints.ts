@@ -112,7 +112,14 @@ export const API = {
     update: (id: number) => `/api/watchlist/${id}`,
   },
   realtime: {
-    stream: "/api/realtime/stream",
+    // 2026-05-17 — Wave F-2 Bug #5: `/api/realtime/stream` removed.
+    // Had zero frontend consumers yet still shared the per-user SSE
+    // slot counter (`_MAX_SSE_PER_USER=3`) with `/portfolio-stream`,
+    // creating a cheap slot-exhaustion DoS surface. Backend now
+    // returns 410 Gone. Restore path:
+    //   1. add a real frontend consumer (otherwise: dead code)
+    //   2. revert backend stub in routes/realtime.py
+    //   3. restore this slot here
     portfolioStream: "/api/realtime/portfolio-stream",
     price: (ticker: string) => `/api/realtime/price/${ticker}`,
     status: "/api/realtime/status",

@@ -40,6 +40,19 @@ export interface RealtimePriceDetail {
   price: number;
   price_display: string;
   change_pct?: number;
+  /**
+   * Wave F-2 Bug #1: true when the backend served this quote from the
+   * fmp_stale cache (FMP 402 cooldown / daily-budget exhausted). UI
+   * surfaces (top-ticker, portfolio rows) must render a visible "STALE"
+   * chip when set — capital-markets-law §6 misrepresentation guard.
+   */
+  stale?: boolean;
+  /** ISO/epoch timestamp when the cached value was last observed live. */
+  stale_at?: string | number | null;
+  /** Provider key: "alpaca" | "kis" | "kis_ws" | "fmp" | "fmp_stale". */
+  source?: string;
+  /** ISO timestamp of the most recent observation forwarded by the backend. */
+  observed_at?: string | null;
 }
 
 /** Direction a ticker price moved: "up" (green flash), "down" (red flash). */
@@ -48,7 +61,7 @@ export type PriceDirection = "up" | "down";
 export interface RealtimeState {
   /** Flat price map: ticker -> price number */
   prices: Record<string, number>;
-  /** Full detail map: ticker -> {price, price_display, change_pct} */
+  /** Full detail map: ticker -> {price, price_display, change_pct, stale, ...} */
   details: Record<string, RealtimePriceDetail>;
   /** Whether the SSE EventSource is currently connected */
   connected: boolean;
@@ -58,6 +71,14 @@ export interface RealtimeState {
   updatedTickers: Map<string, PriceDirection>;
   /** True when max retries exceeded — SSE gave up */
   failed: boolean;
+  /**
+   * Wave F-2 Bug #2: distinct from `failed`. True when the backend
+   * sent an explicit ``event: error`` (e.g. SSE_LIMIT_EXCEEDED — the
+   * user already has 3 concurrent streams open in other tabs). The
+   * UI should stop retrying and tell the user *why*; the auto-reconnect
+   * exponential backoff that powers `failed` is the wrong UX here.
+   */
+  limitExceeded: boolean;
   /**
    * True when the provider is actively trying to maintain an SSE connection
    * (i.e. user is signed in, has positions, and tab is visible). False when
@@ -88,6 +109,9 @@ interface PositionAliasRow {
   change_pct?: number;
   observed_at?: string | null;
   price_source?: string;
+  /** Wave F-2 Bug #1: forward stale flag to row consumers. */
+  stale?: boolean;
+  stale_at?: string | number | null;
   /** Preserve any additional backend fields we don't explicitly touch. */
   [key: string]: unknown;
 }
@@ -116,6 +140,7 @@ const INITIAL_STATE: RealtimeState = {
   lastUpdate: null,
   updatedTickers: new Map(),
   failed: false,
+  limitExceeded: false,
   streamActive: false,
 };
 
@@ -207,8 +232,49 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
     es.onopen = () => {
       retryRef.current = 0;
-      setState((s) => ({ ...s, connected: true, streamActive: true }));
+      setState((s) => ({
+        ...s,
+        connected: true,
+        streamActive: true,
+        // A fresh successful open clears any prior limit-exceeded state.
+        limitExceeded: false,
+      }));
     };
+
+    // Wave F-2 Bug #2: backend signals SSE_LIMIT_EXCEEDED as a 200
+    // text/event-stream with a single ``event: error`` payload (not a
+    // 429). EventSource can't read a non-200 body, so a JSON 429 would
+    // surface only as ``onerror`` → 7-step backoff → permanent
+    // ``failed:true`` with no diagnostic. Handle the named event
+    // explicitly: stop retrying, set ``limitExceeded`` so the status
+    // banner can show an actionable message ("이미 다른 탭에서…"),
+    // and tear down without scheduling a reconnect.
+    es.addEventListener("error", (event: MessageEvent) => {
+      if (ac.signal.aborted) return;
+      let code: string | undefined;
+      try {
+        const body = JSON.parse(event.data ?? "{}");
+        code = body?.code;
+      } catch {
+        // Native EventSource ``onerror`` events have no data field —
+        // those are handled by the assignment-based ``es.onerror``
+        // below. Only the backend-emitted ``event: error`` carries
+        // a JSON body, so a parse failure means this is a transport
+        // error to be handled by the reconnect path.
+        return;
+      }
+      if (code === "SSE_LIMIT_EXCEEDED") {
+        es.close();
+        esRef.current = null;
+        retryRef.current = MAX_RETRIES; // belt+suspenders: stop reconnects
+        setState((s) => ({
+          ...s,
+          connected: false,
+          streamActive: false,
+          limitExceeded: true,
+        }));
+      }
+    });
 
     es.onmessage = (event) => {
       if (ac.signal.aborted) return;
@@ -230,6 +296,9 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
             change_pct?: number | null;
             timestamp?: string;
             observed_at?: string;
+            stale?: boolean;
+            stale_at?: string | number | null;
+            price_source?: string;
           }>;
           error?: string;
         };
@@ -254,15 +323,18 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         // Store current prices for next comparison
         prevPricesRef.current = { ...prev, ...prices };
 
-        setState({
+        setState((s) => ({
+          ...s,
           prices,
           details,
           connected: true,
           lastUpdate: now,
           updatedTickers: directionMap,
           failed: false,
+          // A successful payload clears any prior limit-exceeded flag.
+          limitExceeded: false,
           streamActive: true,
-        });
+        }));
 
         // Clear flash after FLASH_DURATION_MS
         if (directionMap.size > 0) {
@@ -312,6 +384,12 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
               if (!detail) return p;
               const chg =
                 detail.change_pct != null ? detail.change_pct : p.change_pct;
+              // Wave F-2 Bug #1: a stale detail tagged by the backend
+              // (fmp_stale fallback) must propagate to row consumers
+              // so the "지연" chip renders on /portfolio rows — not
+              // just on the ribbon. Same misrepresentation guard as
+              // the landing ticker (PR #381).
+              const isStale = detail.stale === true;
               return {
                 ...p,
                 current: detail.price,
@@ -319,7 +397,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
                 price: detail.price,
                 change_pct: chg,
                 observed_at: detail.observed_at || new Date().toISOString(),
-                price_source: "realtime",
+                stale: isStale,
+                stale_at: detail.stale_at ?? null,
+                price_source: isStale
+                  ? (detail.source ?? "fmp_stale")
+                  : (detail.source ?? "realtime"),
               };
             });
             return { ...current, positions };

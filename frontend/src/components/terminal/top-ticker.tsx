@@ -467,6 +467,12 @@ export function TopTicker() {
           level: sse.price_display || PLACEHOLDER_DELTA,
           delta: deltaStr,
           dir,
+          // Wave F-2 Bug #1: forward the SSE-emitted stale flag so the
+          // ribbon dims + "STALE" mini-chip renders the same way as
+          // the macro-path stale state. Without this, a held ticker
+          // served from fmp_stale cache would render as if live — §6
+          // misrepresentation guard.
+          isStale: sse.stale === true,
         };
       }
       // Fallback: macro SWR feed for ribbon-only symbols (SPX/NDX/KOSPI/...).
