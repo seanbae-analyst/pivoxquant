@@ -65,20 +65,21 @@ export default function SplashPage() {
         }}
       >
         <span
-          className="pq-splash-wordmark font-serif italic"
+          className="pq-splash-wordmark font-serif"
           style={{
-            // FINDING-030: canonical wordmark — italic Playfair Display,
-            // mixed-case "PivoxQuant". Matches the landing header + sidebar
-            // + market masthead so there is ONE brand treatment everywhere.
+            // Matches the landing header wordmark (top-left) — same font
+            // family, weight, tracking, casing. Only the size is scaled up
+            // since this is the full-viewport cover treatment.
             fontSize: "clamp(2rem, 6.5vw, 5rem)",
-            letterSpacing: "0.01em",
+            letterSpacing: "0.22em",
             lineHeight: 1,
             fontWeight: 500,
+            textTransform: "uppercase",
             textAlign: "center",
             color: "var(--pq-ivory)",
           }}
         >
-          PivoxQuant
+          PIVOXQUANT
         </span>
       </div>
 
