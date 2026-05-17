@@ -104,6 +104,55 @@ export default function OAuthFinalizePage() {
     }
   }, [loading, user, searchParams, router]);
 
+  // 2026-05-17 wave 12 UX P1 (PR #429): DOB unify. The signup_v2 page
+  // already captured + validated the user's birthdate before OAuth and
+  // stashed it in `pivox_signup_consents` localStorage. Pre-fix this
+  // page forced the same user to type their DOB again — pure double
+  // entry. Auto-hydrate from the staging slot so the 90%-case Google /
+  // Kakao signup skips this interstitial entirely. If the slot is
+  // missing (cleared, direct bookmark) we fall through to manual entry.
+  useEffect(() => {
+    if (loading || !user) return;
+    if (user.birthdate_required !== true) return;
+    if (typeof window === "undefined") return;
+    if (birthdate || submitting) return;
+    try {
+      const raw = window.localStorage.getItem("pivox_signup_consents");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { birthdate?: string };
+      const staged = parsed?.birthdate;
+      if (!staged || typeof staged !== "string") return;
+      if (!isValidBirthdate(staged) || !isAtLeastMinAge(staged)) return;
+      // Auto-fill — the next render's ageCheck will be eligible, and we
+      // POST directly without waiting for a click. Keeps the user
+      // in-flow; no interstitial form rendered at all.
+      setBirthdate(staged);
+      setSubmitting(true);
+      apiFetch(API.auth.oauthFinalize, {
+        method: "POST",
+        body: JSON.stringify({ birthdate: staged }),
+      })
+        .then(async () => {
+          await refresh();
+          const next = searchParams.get("next") || "/home";
+          router.replace(next);
+        })
+        .catch((err) => {
+          // Don't block — fall back to manual entry so the user can
+          // correct any server-side rejection (PIPA <14 etc.).
+          const code =
+            err instanceof ApiError && typeof err.message === "string"
+              ? err.message
+              : "birthdate_invalid_format";
+          setErrorCode(code in ERROR_COPY ? code : "birthdate_invalid_format");
+          setSubmitting(false);
+        });
+    } catch {
+      // Malformed JSON or storage access denied — just show the form.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ageCheck.eligible || submitting) return;
