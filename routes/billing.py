@@ -17,6 +17,7 @@ from models import (
     STRIPE_EVENT_STATUS_ERROR,
 )
 from flask_login import current_user
+from services.error_responses import api_error
 from .decorators import api_auth
 from security import general_rate_limit
 
@@ -133,11 +134,19 @@ def create_checkout():
     d = request.get_json() or {}
     plan = (d.get("plan") or "").lower()
     if plan not in PLAN_PRICES:
-        return jsonify({"error": "Invalid plan. Choose 'pro' or 'premium'."}), 400
+        return api_error(
+            en="Invalid plan. Choose 'pro' or 'premium'.",
+            kr="유효하지 않은 플랜입니다. 'pro' 또는 'premium' 을 선택해 주세요.",
+            code="BILLING_INVALID_PLAN", status=400,
+        )
 
     price_id = PLAN_PRICES[plan]
     if not price_id:
-        return jsonify({"error": f"Price ID not configured for {plan} plan."}), 500
+        return api_error(
+            en=f"Price ID not configured for {plan} plan.",
+            kr="결제 플랜 설정이 누락되었습니다. 잠시 후 다시 시도해 주세요.",
+            code="BILLING_PRICE_ID_MISSING", status=500,
+        )
 
     try:
         customer_id = _get_or_create_customer(current_user)
@@ -152,7 +161,11 @@ def create_checkout():
         return jsonify({"url": session.url})
     except stripe.StripeError as e:
         logger.error("Stripe checkout error: %s", e)
-        return jsonify({"error": "Failed to create checkout session."}), 500
+        return api_error(
+            en="Failed to create checkout session.",
+            kr="결제 세션을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.",
+            code="BILLING_CHECKOUT_FAILED", status=500,
+        )
 
 
 # ── Webhook ──────────────────────────────────────────────────────────────────
@@ -165,16 +178,28 @@ def stripe_webhook():
 
     if not STRIPE_WEBHOOK_SECRET:
         logger.error("STRIPE_WEBHOOK_SECRET not configured")
-        return jsonify({"error": "Webhook secret not configured"}), 500
+        return api_error(
+            en="Webhook secret not configured",
+            kr="Stripe 웹훅 설정이 누락되었습니다.",
+            code="STRIPE_WEBHOOK_SECRET_MISSING", status=500,
+        )
 
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, STRIPE_WEBHOOK_SECRET
         )
     except ValueError:
-        return jsonify({"error": "Invalid payload"}), 400
+        return api_error(
+            en="Invalid payload",
+            kr="잘못된 요청 본문입니다.",
+            code="STRIPE_WEBHOOK_INVALID_PAYLOAD", status=400,
+        )
     except stripe.SignatureVerificationError:
-        return jsonify({"error": "Invalid signature"}), 400
+        return api_error(
+            en="Invalid signature",
+            kr="잘못된 웹훅 서명입니다.",
+            code="STRIPE_WEBHOOK_INVALID_SIGNATURE", status=400,
+        )
 
     event_type = event["type"]
     event_id = event.get("id") or ""
@@ -399,7 +424,11 @@ def get_subscription():
 def create_portal():
     """Create a Stripe Customer Portal session for managing subscription."""
     if not current_user.stripe_customer_id:
-        return jsonify({"error": "No billing account found."}), 400
+        return api_error(
+            en="No billing account found.",
+            kr="연결된 결제 계정이 없습니다. 먼저 구독을 등록해 주세요.",
+            code="BILLING_NO_ACCOUNT", status=400,
+        )
 
     try:
         session = stripe.billing_portal.Session.create(
@@ -409,7 +438,11 @@ def create_portal():
         return jsonify({"url": session.url})
     except stripe.StripeError as e:
         logger.error("Stripe portal error: %s", e)
-        return jsonify({"error": "Failed to create portal session."}), 500
+        return api_error(
+            en="Failed to create portal session.",
+            kr="결제 관리 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요.",
+            code="BILLING_PORTAL_FAILED", status=500,
+        )
 
 
 # ── Billing Availability ─────────────────────────────────────────────────────
