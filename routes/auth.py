@@ -11,6 +11,7 @@ from authlib.integrations.flask_client import OAuth
 from flask import Blueprint, request, jsonify, redirect, session, current_app
 from flask_login import login_user, logout_user, current_user
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from sqlalchemy.exc import IntegrityError
 
 
 def _safe_next(next_url):
@@ -304,6 +305,14 @@ def register():
     except BirthdateValidationError as exc:
         # ``code`` is the stable machine-readable key; frontend matches on it.
         return jsonify({"error": exc.code}), 400
+    # 2026-05-17 wave 12 P0: TOCTOU race. The previous "check then add"
+    # let two concurrent POSTs with the same email both pass the existence
+    # check and both reach commit(); the second raised IntegrityError that
+    # bubbled as 500 and left the SQLAlchemy session on that gunicorn
+    # worker in a failed state until the next request rolled it back.
+    # Closing the race by relying on the DB's UNIQUE(email) constraint —
+    # the check below is now best-effort UX (faster 409) and the
+    # try/except is the actual gate.
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 409
     u = User(
@@ -313,7 +322,13 @@ def register():
     )
     u.set_pw(pw)
     db.session.add(u)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Concurrent registration won the race. Roll back the session so
+        # subsequent requests on this worker aren't poisoned.
+        db.session.rollback()
+        return jsonify({"error": "Email already registered"}), 409
     session.clear()  # Session fixation 방어
     login_user(u, remember=True)
     return jsonify({"ok": True, "user": serialize_user(u)})

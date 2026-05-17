@@ -5,6 +5,8 @@ import threading
 import time
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError
+
 from extensions import db
 from models import SignalCache
 from services.legal_filter import scrub_signal
@@ -113,17 +115,43 @@ def save_signal(ticker: str, data: dict):
     # `allow_nan=False` raises `ValueError` here so the offending model
     # surfaces in logs immediately (paired with wave 11 P1 fixes in
     # services/quant/models.py to scrub the upstream zeros).
+    # 2026-05-17 wave 12 P0: SignalCache upsert race. The previous
+    # check-then-add let two concurrent background `_refresh` threads
+    # (signals.py:199-210 spawns one per stale ticker per user) both
+    # see `c=None` for the same ticker, both `db.session.add(...)`,
+    # and the second `commit()` raised IntegrityError that poisoned
+    # the worker's session for the next request.
+    #
+    # Fix: optimistic UPDATE-first; if no row exists, INSERT and
+    # gracefully catch the IntegrityError that means a sibling thread
+    # raced us — fall back to UPDATE for that case so the writer that
+    # finishes last still gets its data in.
     c = db.session.get(SignalCache, ticker)
+    json_payload = json.dumps(data, ensure_ascii=False, allow_nan=False)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if c:
-        c.data_json = json.dumps(data, ensure_ascii=False, allow_nan=False)
-        c.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    else:
-        db.session.add(SignalCache(
-            ticker=ticker,
-            data_json=json.dumps(data, ensure_ascii=False, allow_nan=False),
-            updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
-        ))
-    db.session.commit()
+        c.data_json = json_payload
+        c.updated_at = now
+        db.session.commit()
+        return
+
+    db.session.add(SignalCache(
+        ticker=ticker,
+        data_json=json_payload,
+        updated_at=now,
+    ))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Sibling thread won the race; roll back and retry as UPDATE.
+        db.session.rollback()
+        c = db.session.get(SignalCache, ticker)
+        if c is None:
+            # Genuinely couldn't reconcile — re-raise so the caller sees it.
+            raise
+        c.data_json = json_payload
+        c.updated_at = now
+        db.session.commit()
 
 
 def cache_ticker(ticker: str, capital: float, engine):
