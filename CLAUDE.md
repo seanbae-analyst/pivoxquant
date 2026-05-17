@@ -42,15 +42,15 @@ AI + Quant 기반 개인 투자 어드바이저 플랫폼.
 
 ## 백엔드 구조
 ```
-stockpilot/
+pivoxquant/               # 2026-05-17 wave 13: 'stockpilot/' 명칭은 폐기
 ├── app.py              # create_app() factory
 ├── config.py           # Config 클래스
 ├── extensions.py       # db, login_manager
 ├── run.py              # 진입점 (port 5050)
 ├── security.py         # CORS/RateLimit/CSRF/세션만료
-├── models/             # SQLAlchemy 모델 (10개)
-├── routes/             # Flask Blueprint (20개, 85+ endpoints)
-├── services/           # 비즈니스 로직 (container, serializers, fx, cache, alert)
+├── models/             # SQLAlchemy 모델 (10개+)
+├── routes/             # Flask Blueprint (40+ 파일, 200+ endpoints)
+├── services/           # 비즈니스 로직 (container, serializers, fx, cache, alert, push, error_responses)
 ├── engine.py           # QuantEngine (1146줄) — 4-pillar scoring
 ├── quant_models.py     # 58 퀀트 모델 (StatArb, MeanReversion, TSMOM, ML 등)
 ├── risk_defense.py     # 7-Layer Risk Defense (VaR, Correlation, VIX, Tail, Daily, Sector, Cash)
@@ -102,11 +102,15 @@ frontend/src/
 
 ## 서버 기동
 ```bash
+# 2026-05-17 wave 13: 경로 갱신. iCloud Desktop sync 가 ~/Desktop/취준/ 의
+# .git 을 무한히 손상시켜 PR #376 에서 ~/projects/pivoxquant 로 relocation
+# 완료. Desktop 사본은 사용 금지.
+
 # 백엔드 (port 5050)
-cd /Users/seanbae/Desktop/취준/stockpilot && python3 run.py
+cd ~/projects/pivoxquant && ./venv/bin/python run.py
 
 # 프론트엔드 (port 3000)
-cd /Users/seanbae/Desktop/취준/stockpilot/frontend && npm run dev
+cd ~/projects/pivoxquant/frontend && npm run dev
 ```
 
 ## 테스트 계정
