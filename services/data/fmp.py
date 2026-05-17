@@ -69,6 +69,28 @@ _cache_lock = threading.Lock()
 _daily_calls = 0
 _daily_calls_reset = 0.0
 
+# 2026-05-17 wave 13 P1 (PR #440) — per-minute rate-limit enforcement.
+# Pre-fix: docstring claimed "Premium $29 plan: 750 req/min" but the
+# code only enforced the DAILY soft cap + reactively handled the 429
+# (by clamping daily counter to hard-stop). A bursty prefetch could
+# exceed 750/min, trigger a 429, and disable FMP for the rest of the
+# day — single-spike → full-day outage.
+#
+# Fix: deque of last-call timestamps within a 60s sliding window.
+# When the window is full we sleep just enough to land inside the
+# limit, smoothing the burst instead of triggering a 429. We keep
+# the threshold conservatively under the plan ceiling so transient
+# clock skew or coincident worker bursts don't tip over.
+import collections  # noqa: E402
+
+_RATE_LIMIT_PER_MIN = int(os.environ.get("FMP_RATE_LIMIT_PER_MIN", "700"))
+_RATE_WINDOW_SEC = 60.0
+_recent_call_ts: collections.deque[float] = collections.deque()
+# A single max-window sleep ceiling so a wedged caller can never hold a
+# request thread beyond this — better to fail-fast and let the caller
+# decide than to block forever on a saturated FMP.
+_RATE_MAX_SLEEP_SEC = float(os.environ.get("FMP_RATE_MAX_SLEEP_SEC", "5.0"))
+
 # 402 tracking — plan-gated endpoints should short-circuit after repeated failures
 # so callers can fall back to Alpaca/KIS without wasting network calls.
 _endpoint_402_counts = {}       # {endpoint_path: count}
@@ -133,8 +155,47 @@ def _is_budget_exhausted():
     return _daily_calls >= _BUDGET_HARD_STOP
 
 
+def _throttle_per_minute() -> None:
+    """Sliding-window per-minute throttle for FMP calls.
+
+    Holds the caller inside ``_RATE_WINDOW_SEC`` of the configured
+    per-minute limit so we never trip the FMP 429 (which would freeze
+    the daily budget for ≤24h via the reactive clamp). Sleeps the
+    minimum amount to bring the oldest call out of the window. If
+    that sleep would exceed ``_RATE_MAX_SLEEP_SEC`` we give up and
+    return immediately — the caller's request still goes out and
+    triggers the existing 429 path (better fail-fast than wedging a
+    request thread on a saturated upstream).
+    """
+    while True:
+        now = time.time()
+        with _cache_lock:
+            # Drop timestamps older than the window.
+            while _recent_call_ts and now - _recent_call_ts[0] >= _RATE_WINDOW_SEC:
+                _recent_call_ts.popleft()
+            if len(_recent_call_ts) < _RATE_LIMIT_PER_MIN:
+                _recent_call_ts.append(now)
+                return
+            wait_for = _RATE_WINDOW_SEC - (now - _recent_call_ts[0])
+        if wait_for <= 0:
+            # Race — another thread aged a slot off; loop and re-check.
+            continue
+        if wait_for > _RATE_MAX_SLEEP_SEC:
+            logger.warning(
+                "FMP per-min throttle would sleep %.2fs (>%s) — letting "
+                "call through, 429 path will absorb it",
+                wait_for, _RATE_MAX_SLEEP_SEC,
+            )
+            return
+        time.sleep(min(wait_for, _RATE_MAX_SLEEP_SEC))
+
+
 def _track_call():
     global _daily_calls, _daily_calls_reset
+    # 2026-05-17 wave 13 P1 (PR #440): per-minute throttle runs first so
+    # the daily counter only increments after we've made sure we're
+    # inside the plan's per-minute window.
+    _throttle_per_minute()
     with _cache_lock:
         now = time.time()
         if now - _daily_calls_reset > 86400:
