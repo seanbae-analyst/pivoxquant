@@ -1,3 +1,77 @@
+# PivoxQuant — 인수인계서 (2026-05-17 v44.3 final close — 13 PR · OPEN PR 0 · main `e4d62ab → c0a5909` · wave 1~12 누적 + 2 P0 race + 7x bare except sweep + UX P0×2)
+
+## v44.3 final close — Wave 11 + 12 누적 5 PR 추가
+
+**한 줄 요약**: CEO "토큰 아끼지말아라" 명령에 따라 v44.2 (8 PR) 후 wave 11 (quant + PWA) + wave 12 (engineering + frontend + UX) 진행. **5 PR 추가**, 누적 v44 = **13 PR (#412~#425, #420 docs 포함)**. 추가 agent 5 dispatch (quant + PWA + engineering + frontend-dev + ux-researcher) → 19 finding triage → 5 PR fix + LOW skip + 2 P2 defer + 변호사 큐 0건.
+
+### 추가 5 PR (v44.2 base #412-#419 이후)
+
+| PR | 영역 | 핵심 변경 |
+|---|---|---|
+| **#421** | **fix(quant) wave 11 numerical safety** | (1) `risk_defense.py:471` dead overage expression — refactor remnant, surfaced in warning ('+10pp' style). (2) `models.py:1486` TSMOM 0-divisor guard (`max(arr[-252], 1e-8)` + `np.maximum` for log). (3) `models.py:339, 419, 1451` 3 sites — `VolatilityRegime`/`RegimeSwitching`/`VarianceRatioFilter` `np.log(closes)` → `np.log(np.maximum(closes, 1e-8))` thorough sweep (MLSignal pattern). (4) `cache_service.py:110,115` json.dumps `allow_nan=False` fail-fast at write boundary (NaN/Inf → browser JSON.parse crash). Quant 회귀 47 PASS / 0. |
+| **#422** | **fix(wave12) 2 P0 race conditions** | (1) `routes/auth.py` register TOCTOU race — concurrent same-email POST → IntegrityError 500 + session poison. (2) `services/cache_service.py:save_signal` 동일 race — 동일 ticker 동시 background `_refresh` thread → IntegrityError. Both: `try/except IntegrityError` + `rollback` + recover. Register fast-path 409 / cache retry-as-UPDATE. 신규 `TestRegisterRaceGuard` 2 tests. 회귀 82 PASS. |
+| **#423** | **fix(wave12) P1 + P2 misc** | (1) `frontend/src/lib/auth.tsx` User 인터페이스에 `effective_tier` / `subscription_status` / `raw_subscription_status` 추가 — 백엔드 emit 하지만 frontend type 누락 → 사용자가 user.subscription_status 읽으면 undefined → 무음 FREE fallback (PR #416 와 동일 drift class). (2) `frontend/src/lib/hooks.ts` `generateArtifact` raw fetch 가 X-CSRF-Token 누락 — `apiFetch` 로 routing. (3) `routes/realtime.py /price/<ticker>` `@general_rate_limit` 추가 — broker round-trip endpoint, 인증된 사용자가 100+ rps 로 pin 가능했음. 회귀 45 PASS. |
+| **#424** | **fix(wave12) backtester sweep + thread pool** | (1) `services/quant/backtester.py` 7× `except: pass` → `except Exception as exc: logger.debug(...)` — KeyboardInterrupt + schema drift error swallowing 차단. 모든 7 사이트 동일 패턴 (`feedback_thorough_fixes`). (2) `routes/signals.py:192-216` unbounded thread spawn — N stale ticker × M user = thousands of threads, app_context 누설. 모듈 레벨 `ThreadPoolExecutor(max_workers=4)` (env override `SIGNAL_REFRESH_WORKERS`) 로 bound. 회귀 33 PASS. |
+| **#425** | **fix(wave12 UX) 4 quick wins** | (1) signup/_v2 OAuth disabled-click `scrollIntoView` 첫 missing consent (UX P0 — mobile 375px 에서 600px 떨어진 unchecked checkbox 보이게). (2) onboarding/broker Next vs Skip 라벨 disambiguation — `kisConnected`이면 "Next step", 아니면 "브로커 없이 계속하기". (3) onboarding submit 실패 `alert()` → sonner toast — 20문항 dead-end 해소. (4) "Skip for now" `window.confirm` 추가 — 모바일 mis-tap 영구 skip 방지. tsc 0 / vitest 313/313 PASS. |
+
+### 최종 누적 14 PR — v44 전체
+
+| PR | 영역 |
+|---|---|
+| #412 | fix(security): thorough cookie cleanup sweep |
+| #413 | fix(profile): email_opt_out hydrate |
+| #414 | chore: vitest timeout + dead endpoint + 2 untracked |
+| #415 | docs(handover): v44 base |
+| #416 | fix(wave8): subscription shape + KIS regex + ProfileResponse type |
+| #417 | fix(wave9): Pretendard crossOrigin + Simulator a11y + vitest 30s |
+| #418 | test(wave10): cover Stripe webhook + KIS regex boundary + signals refresh (17 tests) |
+| #419 | fix(ai): thorough graceful sweep — fetchSection 503 + error_kr × 14 |
+| #420 | docs(handover): v44.2 |
+| #421 | fix(quant): wave 11 numerical safety |
+| #422 | fix(wave12): 2 P0 race conditions |
+| #423 | fix(wave12): User type + generateArtifact CSRF + /price rate limit |
+| #424 | fix(wave12): backtester 7× sweep + signals ThreadPool |
+| #425 | fix(wave12 UX): signup scroll + broker label + onboarding toast + skip confirm |
+
+### 전체 v44 agent dispatch (12 agent / 11 wave)
+- security ×1 / investigator ×5 (wave1 / wave4 / wave8 / wave10 / wave11) / code-janitor ×1 / audit-code ×1 / performance+a11y ×1 / regulatory-monitor ×1 / qa ×1 / **quant ×1 (wave11)** / **engineering ×1 (wave12)** / **frontend-dev ×1 (wave12)** / **ux-researcher ×1 (wave12)**
+
+### 검증 (모두 직접 cite)
+
+- **full backend pytest**: ✅ **2129 PASS / 19 skipped / 1 xfailed / 0 fail (12:38)** — 본 세션 cycle 끝에 unbuffered 직접 실행해서 verify
+- **backend critical suite**: 154 + 49 + 33 + 47 + 45 = **328 PASS / 0 회귀** (각 PR 별 직접 실행)
+- **frontend `npm run typecheck`**: **0 errors** (각 PR 별 직접 실행)
+- **frontend `npm test`**: **313/313 PASS** (PR #417 vitest 30s 적용 후 flake 0건)
+- **prod 영향**: race 2 (#422) + CSRF (#423) + rate limit (#423) 는 prod 즉시 효과. UX (#425) 는 다음 deploy. Railway 자동 배포 트리거.
+
+### 본 세션 종료 시점 main 상태
+
+- HEAD: `c0a5909` (PR #425 UX quick wins)
+- OPEN PR: 0건
+- 누적 PR (#412 ~ #425) = **14 PR**
+
+### 누적 21 + 9 (wave 11/12) finding triage
+
+- 8 PR (#412 #413 #416 #419) fix wave 1-10 / 3 LOW skip / 2 P2 defer / 1 변호사 큐
+- wave 11 quant: 3 P1 + 2 P2 (#421) / 3 LOW skip
+- wave 11 PWA: 1 P1 defer (CEO Vercel env action) / 1 P2 defer (iOS Safari)
+- wave 12 engineering: 2 P0 (#422) + 1 P1 (#423) + 7× P1 sweep (#424) + 1 P2 (#423) + 1 P2 (#424)
+- wave 12 frontend: 1 P1 (#423) + 1 P2 defer / 1 LOW skip
+- wave 12 UX: 4 P0/P1/P2 (#425) + 3 P0/P1 defer (partial-save + beforeunload + DOB double-entry — 큰 scope)
+
+### CEO cleanup todos 갱신
+
+기존 v43 final close 5건 + v44.2 신규 2건 그대로. 본 세션 추가 액션:
+- ⚠️ **Vercel env `NEXT_PUBLIC_VAPID_PUBLIC_KEY`** — wave 11 PWA agent 발견. 미설정 시 push subscribe silent fail.
+- ⚠️ **prod env `SIGNAL_REFRESH_WORKERS`** (선택) — 기본 4, 부하 따라 조정.
+- 본 세션 defer 영역 4건 (future PR 후보):
+  - onboarding partial-save endpoint (UX P0, 백엔드 신규 + frontend hook)
+  - signup-finalize DOB 통합 (UX P1, OAuth callback 변경)
+  - PWA install prompt iOS Safari 분기 (P2)
+  - WhatIfChart recharts dynamic import (P2)
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-17 v44.2 final close — 8 PR · OPEN PR 0 · main `e4d62ab → fe0a092` · wave 1~10 누적 + thorough sweep 3건)
 
 ## v44.2 final close — Wave 8 + 9 + 10 누적 5 PR 추가
