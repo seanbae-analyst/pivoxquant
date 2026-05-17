@@ -106,6 +106,12 @@ class User(UserMixin, db.Model):
     # migration 032_users_is_simulated.
     is_simulated = db.Column(db.Boolean, nullable=False, default=False,
                               server_default=sa.false())
+    # 2026-05-17 wave 12 UX P0 — onboarding partial-save draft slot. Holds an
+    # opaque JSON string of whatever the wizard's answer dict shape currently
+    # is. Cleared by routes/profile.py:submit_onboarding on completion.
+    # NULL means "no draft" (brand-new user or already completed). Managed
+    # via migration 035_user_onboarding_draft.
+    onboarding_draft_json = db.Column(db.Text, nullable=True)
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")

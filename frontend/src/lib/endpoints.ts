@@ -173,6 +173,11 @@ export const API = {
   profile: {
     get: "/api/profile",
     onboarding: "/api/profile/onboarding",
+    // 2026-05-17 wave 12 UX P0 — onboarding partial-save (device handoff).
+    // GET returns {draft: {...} | null}; PUT accepts {answers: {...}}.
+    // The wizard PUTs every few questions so progress survives ITP / device
+    // switch / private browsing without relying on localStorage alone.
+    onboardingDraft: "/api/profile/onboarding/draft",
     update: "/api/profile",
     questionnaire: "/api/profile/questionnaire",
     capital: "/api/profile/capital",
