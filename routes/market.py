@@ -13,6 +13,7 @@ from models import Position, SignalCache
 from security import general_rate_limit
 from services import fx_service
 from services.container import fetcher, realtime
+from services.error_responses import api_error
 from services.market_status import get_market_status
 from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.ticker_normalizer import normalize_ticker
@@ -299,7 +300,12 @@ def get_fx_rates():
         })
     except Exception as e:
         logger.error("FX endpoint error: %s", e)
-        return jsonify({"error": "Unable to fetch FX rate"}), 500
+        return api_error(
+            en="Unable to fetch FX rate",
+            kr="환율 정보를 가져올 수 없습니다.",
+            code="MARKET_FX_UNAVAILABLE",
+            status=500,
+        )
 
 
 @market_bp.route("/macro")
@@ -489,7 +495,12 @@ def peer_comparison(ticker):
     ticker = normalize_ticker(ticker)
     c = db.session.get(SignalCache, ticker)
     if not c or not c.data_json:
-        return jsonify({"error": "Analyze this stock first"}), 404
+        return api_error(
+            en="Analyze this stock first",
+            kr="이 종목을 먼저 분석해주세요.",
+            code="MARKET_ANALYZE_FIRST",
+            status=404,
+        )
     target = json.loads(c.data_json)
     sector = target.get("sector", "Unknown")
     if sector in ("Unknown", "ETF"):
@@ -558,7 +569,12 @@ def company_profile(ticker):
         })
     except Exception as e:
         logger.error("Profile error %s: %s", ticker, e)
-        return jsonify({"error": "Unable to fetch company profile"}), 500
+        return api_error(
+            en="Unable to fetch company profile",
+            kr="회사 프로필을 가져올 수 없습니다.",
+            code="MARKET_PROFILE_UNAVAILABLE",
+            status=500,
+        )
 
 
 # US indices → liquid ETF proxies. FMP Starter and Alpaca both refuse to

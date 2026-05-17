@@ -32,6 +32,7 @@ from security import ai_rate_limit
 from services.container import ai, fetcher
 from services import cache_service
 from services.access_guard import is_user_allowed_ticker, access_denied_response
+from services.error_responses import api_error
 from services.legal_filter import scrub_response
 from services.ai.models import EarningsCallToneAnalyzer, AISectorRotation, AIRiskSummary
 from .decorators import api_auth, require_tier
@@ -86,7 +87,12 @@ def swot():
     # §101 회피 — SWOT 은 종목 단위 분석이므로 보유/관심 외 ticker 거부.
     ticker = _extract_ticker_from_payload(d)
     if not ticker:
-        return jsonify({"error": "ticker is required"}), 400
+        return api_error(
+            en="ticker is required",
+            kr="종목 코드가 필요합니다.",
+            code="AI_TICKER_REQUIRED",
+            status=400,
+        )
     if not is_user_allowed_ticker(current_user.id, ticker):
         body, status = access_denied_response()
         return jsonify(body), status
@@ -125,7 +131,12 @@ def competitor():
     # §101 회피 — competitor 분석은 ticker 기준이므로 보유/관심 외 거부.
     ticker_check = _extract_ticker_from_payload(d)
     if not ticker_check:
-        return jsonify({"error": "ticker is required"}), 400
+        return api_error(
+            en="ticker is required",
+            kr="종목 코드가 필요합니다.",
+            code="AI_TICKER_REQUIRED",
+            status=400,
+        )
     if not is_user_allowed_ticker(current_user.id, ticker_check):
         body, status = access_denied_response()
         return jsonify(body), status
@@ -236,7 +247,12 @@ def chat():
                 continue
             history.append({"role": role, "content": content[:1000]})
     if not message:
-        return jsonify({"error": "Message required"}), 400
+        return api_error(
+            en="Message required",
+            kr="메시지가 필요합니다.",
+            code="AI_MESSAGE_REQUIRED",
+            status=400,
+        )
 
     positions = Position.query.filter_by(user_id=current_user.id).all()
     # Batch-load SignalCache for all user positions in a single query (avoid N+1).
@@ -409,10 +425,20 @@ def earnings_tone():
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip()
     if not ticker:
-        return jsonify({"error": "ticker is required"}), 400
+        return api_error(
+            en="ticker is required",
+            kr="종목 코드가 필요합니다.",
+            code="AI_TICKER_REQUIRED",
+            status=400,
+        )
     transcript = d.get("transcript")
     if transcript is not None and not isinstance(transcript, str):
-        return jsonify({"error": "transcript must be a string"}), 400
+        return api_error(
+            en="transcript must be a string",
+            kr="transcript 필드는 문자열이어야 합니다.",
+            code="AI_TRANSCRIPT_INVALID",
+            status=400,
+        )
 
     ticker = ticker.upper()
 
@@ -468,11 +494,21 @@ def earnings_tone_get(ticker):
         }), 503
 
     if not ticker or not isinstance(ticker, str):
-        return jsonify({"error": "ticker is required"}), 400
+        return api_error(
+            en="ticker is required",
+            kr="종목 코드가 필요합니다.",
+            code="AI_TICKER_REQUIRED",
+            status=400,
+        )
 
     ticker = ticker.upper().strip()
     if not ticker or len(ticker) > 20:
-        return jsonify({"error": "Invalid ticker"}), 400
+        return api_error(
+            en="Invalid ticker",
+            kr="유효하지 않은 종목 코드입니다.",
+            code="AI_TICKER_INVALID",
+            status=400,
+        )
 
     # §101 회피 — earnings tone 은 ticker 단위 분석이므로 화이트리스트 검사.
     if not is_user_allowed_ticker(current_user.id, ticker):
@@ -548,7 +584,12 @@ def risk_summary():
     # Build portfolio_data from user's positions
     positions = Position.query.filter_by(user_id=current_user.id).all()
     if not positions:
-        return jsonify({"error": "No positions in portfolio"}), 400
+        return api_error(
+            en="No positions in portfolio",
+            kr="포트폴리오에 보유 종목이 없습니다.",
+            code="AI_NO_POSITIONS",
+            status=400,
+        )
 
     # Batch-load SignalCache for all user positions in a single query (avoid N+1).
     tickers = [p.ticker for p in positions]

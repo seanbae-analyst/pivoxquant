@@ -55,6 +55,7 @@ from services.age_verification import (
     BirthdateValidationError,
     check_birthdate_payload,
 )
+from services.error_responses import api_error
 from services.serializers import serialize_user
 from .decorators import api_auth
 
@@ -289,12 +290,27 @@ def register():
     import re as _re
     _EMAIL_RE = _re.compile(r"^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$")
     if not email or not pw:
-        return jsonify({"error": "Email and password required"}), 400
+        return api_error(
+            en="Email and password required",
+            kr="이메일과 비밀번호를 입력해주세요.",
+            code="AUTH_CREDENTIALS_REQUIRED",
+            status=400,
+        )
     if len(email) > 254 or not _EMAIL_RE.match(email):
-        return jsonify({"error": "Invalid email format"}), 400
+        return api_error(
+            en="Invalid email format",
+            kr="이메일 형식이 올바르지 않습니다.",
+            code="AUTH_EMAIL_INVALID",
+            status=400,
+        )
     # H2 fix (2026-05-09 release-prep): bumped from ≥6 to ≥8 (NIST 800-63B).
     if len(pw) < 8:
-        return jsonify({"error": "Password must be ≥ 8 characters"}), 400
+        return api_error(
+            en="Password must be ≥ 8 characters",
+            kr="비밀번호는 8자 이상이어야 합니다.",
+            code="AUTH_PASSWORD_TOO_SHORT",
+            status=400,
+        )
     # PIPA §22 ⑥ — server-side under-14 gate. The frontend (signup _v1/_v2)
     # already fail-fasts client-side, but a direct curl POST bypasses that.
     # Audit W1.4 P0 finding: the client check was the *only* gate. Every
@@ -304,7 +320,12 @@ def register():
         age_result = check_birthdate_payload(d.get("birthdate"))
     except BirthdateValidationError as exc:
         # ``code`` is the stable machine-readable key; frontend matches on it.
-        return jsonify({"error": exc.code}), 400
+        return api_error(
+            en=exc.code,
+            kr="생년월일이 올바르지 않습니다.",
+            code=exc.code,
+            status=400,
+        )
     # 2026-05-17 wave 12 P0: TOCTOU race. The previous "check then add"
     # let two concurrent POSTs with the same email both pass the existence
     # check and both reach commit(); the second raised IntegrityError that
@@ -314,7 +335,12 @@ def register():
     # the check below is now best-effort UX (faster 409) and the
     # try/except is the actual gate.
     if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already registered"}), 409
+        return api_error(
+            en="Email already registered",
+            kr="이미 가입된 이메일입니다.",
+            code="AUTH_EMAIL_ALREADY_REGISTERED",
+            status=409,
+        )
     u = User(
         email=email,
         name=name or email.split("@")[0],
@@ -328,7 +354,12 @@ def register():
         # Concurrent registration won the race. Roll back the session so
         # subsequent requests on this worker aren't poisoned.
         db.session.rollback()
-        return jsonify({"error": "Email already registered"}), 409
+        return api_error(
+            en="Email already registered",
+            kr="이미 가입된 이메일입니다.",
+            code="AUTH_EMAIL_ALREADY_REGISTERED",
+            status=409,
+        )
     session.clear()  # Session fixation 방어
     login_user(u, remember=True)
     return jsonify({"ok": True, "user": serialize_user(u)})
@@ -340,7 +371,12 @@ def login():
     d = request.get_json() or {}
     u = User.query.filter_by(email=(d.get("email") or "").strip().lower()).first()
     if not u or not u.chk_pw(d.get("password") or ""):
-        return jsonify({"error": "Invalid email or password"}), 401
+        return api_error(
+            en="Invalid email or password",
+            kr="이메일 또는 비밀번호가 올바르지 않습니다.",
+            code="AUTH_INVALID_CREDENTIALS",
+            status=401,
+        )
     session.clear()  # Session fixation 방어
     login_user(u, remember=True)
     return jsonify({"ok": True, "user": serialize_user(u)})
@@ -793,19 +829,34 @@ def oauth_finalize():
     if not current_user.is_authenticated:
         # ``@api_auth`` already gates this, but double-check explicitly so
         # the contract is obvious to anyone reading the route.
-        return jsonify({"error": "unauthenticated"}), 401
+        return api_error(
+            en="unauthenticated",
+            kr="로그인이 필요합니다.",
+            code="AUTH_UNAUTHENTICATED",
+            status=401,
+        )
 
     d = request.get_json() or {}
     try:
         age_result = check_birthdate_payload(d.get("birthdate"))
     except BirthdateValidationError as exc:
-        return jsonify({"error": exc.code}), 400
+        return api_error(
+            en=exc.code,
+            kr="생년월일이 올바르지 않습니다.",
+            code=exc.code,
+            status=400,
+        )
 
     user = current_user
     if user.birthdate is not None and user.birthdate != age_result.birthdate:
         # Already set to a *different* value — refuse rather than silently
         # overwrite. PIPA audit trail requirement.
-        return jsonify({"error": "birthdate_already_set"}), 409
+        return api_error(
+            en="birthdate_already_set",
+            kr="생년월일이 이미 설정되어 있습니다.",
+            code="birthdate_already_set",
+            status=409,
+        )
 
     if user.birthdate is None:
         user.birthdate = age_result.birthdate
@@ -886,4 +937,9 @@ def delete_account():
     except Exception:
         db.session.rollback()
         logger.exception("Account deletion failed for user_id=%s", user_id)
-        return jsonify({"error": "An internal error occurred. Please try again."}), 500
+        return api_error(
+            en="An internal error occurred. Please try again.",
+            kr="계정 삭제 중 오류가 발생했습니다. 다시 시도해주세요.",
+            code="AUTH_DELETE_ACCOUNT_FAILED",
+            status=500,
+        )

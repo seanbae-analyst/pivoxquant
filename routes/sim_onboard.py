@@ -53,6 +53,7 @@ from flask_login import login_user
 from extensions import db
 from models.user import User
 from security import limiter
+from services.error_responses import api_error
 
 logger = logging.getLogger(__name__)
 
@@ -180,26 +181,51 @@ def sim_onboard():
     if not secret:
         # Belt-and-braces: blueprint only mounts when secret is set at boot,
         # but if it's unset at runtime we still 404 instead of leaking signal.
-        return jsonify({"error": "endpoint disabled"}), 404
+        return api_error(
+            en="endpoint disabled",
+            kr="이 엔드포인트는 비활성 상태입니다.",
+            code="SIM_ENDPOINT_DISABLED",
+            status=404,
+        )
 
     ua = request.headers.get("User-Agent", "")
     if not ua.startswith(REQUIRED_UA_PREFIX):
         logger.warning("sim-onboard: rejected UA=%r", ua[:64])
-        return jsonify({"error": "invalid client"}), 403
+        return api_error(
+            en="invalid client",
+            kr="유효하지 않은 클라이언트입니다.",
+            code="SIM_INVALID_CLIENT",
+            status=403,
+        )
 
     body = request.get_json(silent=True) or {}
     ticket = body.get("ticket")
     if not ticket or not isinstance(ticket, str):
-        return jsonify({"error": "missing ticket"}), 400
+        return api_error(
+            en="missing ticket",
+            kr="티켓이 누락되었습니다.",
+            code="SIM_TICKET_MISSING",
+            status=400,
+        )
 
     body_email = (body.get("email") or "").strip().lower()
     if not body_email:
-        return jsonify({"error": "missing email"}), 400
+        return api_error(
+            en="missing email",
+            kr="이메일이 누락되었습니다.",
+            code="SIM_EMAIL_MISSING",
+            status=400,
+        )
 
     verified = _verify_ticket(ticket, secret)
     if not verified:
         logger.warning("sim-onboard: ticket verify failed for email=%s", body_email)
-        return jsonify({"error": "invalid ticket"}), 401
+        return api_error(
+            en="invalid ticket",
+            kr="유효하지 않은 티켓입니다.",
+            code="SIM_TICKET_INVALID",
+            status=401,
+        )
 
     _, ticket_email = verified
     # Defense in depth — body email must match ticket email (case-insensitive,
@@ -209,12 +235,22 @@ def sim_onboard():
             "sim-onboard: email mismatch ticket=%s body=%s",
             ticket_email, body_email,
         )
-        return jsonify({"error": "email mismatch"}), 400
+        return api_error(
+            en="email mismatch",
+            kr="이메일이 일치하지 않습니다.",
+            code="SIM_EMAIL_MISMATCH",
+            status=400,
+        )
 
     email = ticket_email.lower()
     if not SIM_EMAIL_REGEX.match(email):
         logger.warning("sim-onboard: email not in sim allow-list: %s", email)
-        return jsonify({"error": "email not allowed for sim"}), 403
+        return api_error(
+            en="email not allowed for sim",
+            kr="시뮬레이션에 허용되지 않은 이메일입니다.",
+            code="SIM_EMAIL_NOT_ALLOWED",
+            status=403,
+        )
 
     # Find-or-create. CRITICAL: never flip an existing real user's flag.
     user = User.query.filter(db.func.lower(User.email) == email).first()
@@ -238,7 +274,12 @@ def sim_onboard():
             "sim-onboard: REFUSED — email %s reserved by real user id=%s",
             email, user.id,
         )
-        return jsonify({"error": "email reserved for real user"}), 409
+        return api_error(
+            en="email reserved for real user",
+            kr="이미 실제 계정이 사용 중인 이메일입니다.",
+            code="SIM_EMAIL_RESERVED",
+            status=409,
+        )
     else:
         # Existing sim user — re-login. Update is_simulated server-side as a
         # belt-and-braces guard against historical rows missing the flag.

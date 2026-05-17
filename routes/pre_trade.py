@@ -23,6 +23,7 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
+from services.error_responses import api_error
 from services.pre_trade import (
     cancel as cancel_reflection,
     check_status,
@@ -76,7 +77,12 @@ def start():
             market_volatility=market_volatility,
         )
     except ValueError as exc:
-        return jsonify({"error": str(exc), "code": "BAD_INPUT"}), 400
+        return api_error(
+            en=str(exc),
+            kr="입력값이 올바르지 않습니다.",
+            code="PRE_TRADE_BAD_INPUT",
+            status=400,
+        )
     return _envelope({"reflection": result})
 
 
@@ -88,7 +94,12 @@ def get_status(reflection_id: int):
     try:
         result = check_status(reflection_id, current_user.id)
     except LookupError:
-        return jsonify({"error": "Not found", "code": "NOT_FOUND"}), 404
+        return api_error(
+            en="Not found",
+            kr="reflection을 찾을 수 없습니다.",
+            code="PRE_TRADE_NOT_FOUND",
+            status=404,
+        )
     return _envelope({"reflection": result})
 
 
@@ -101,11 +112,21 @@ def proceed(reflection_id: int):
     try:
         result = proceed_reflection(reflection_id, current_user.id)
     except LookupError:
-        return jsonify({"error": "Not found", "code": "NOT_FOUND"}), 404
+        return api_error(
+            en="Not found",
+            kr="reflection을 찾을 수 없습니다.",
+            code="PRE_TRADE_NOT_FOUND",
+            status=404,
+        )
     except ValueError as exc:
         # 409 Conflict — the resource exists but the requested transition
         # is invalid (cooldown not elapsed, or already terminal).
-        return jsonify({"error": str(exc), "code": "INVALID_STATE"}), 409
+        return api_error(
+            en=str(exc),
+            kr="현재 상태에서 처리할 수 없습니다.",
+            code="PRE_TRADE_INVALID_STATE",
+            status=409,
+        )
     return _envelope({"reflection": result})
 
 
@@ -118,7 +139,17 @@ def cancel(reflection_id: int):
     try:
         result = cancel_reflection(reflection_id, current_user.id)
     except LookupError:
-        return jsonify({"error": "Not found", "code": "NOT_FOUND"}), 404
+        return api_error(
+            en="Not found",
+            kr="reflection을 찾을 수 없습니다.",
+            code="PRE_TRADE_NOT_FOUND",
+            status=404,
+        )
     except ValueError as exc:
-        return jsonify({"error": str(exc), "code": "INVALID_STATE"}), 409
+        return api_error(
+            en=str(exc),
+            kr="현재 상태에서 처리할 수 없습니다.",
+            code="PRE_TRADE_INVALID_STATE",
+            status=409,
+        )
     return _envelope({"reflection": result})

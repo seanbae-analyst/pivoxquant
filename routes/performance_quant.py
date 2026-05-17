@@ -15,6 +15,7 @@ import numpy as np
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
+from services.error_responses import api_error
 from services.name_resolver import canonical_display_name, resolve_stock_name
 from .decorators import api_auth, legal_scrub_response
 from .quant_helpers import (
@@ -77,7 +78,12 @@ def regime_report():
         # Get user's top 5 positions by market value
         positions = Position.query.filter_by(user_id=uid).all()
         if not positions:
-            return jsonify({"error": "No positions in portfolio"}), 400
+            return api_error(
+                en="No positions in portfolio",
+                kr="포트폴리오에 보유 종목이 없습니다.",
+                code="PERFORMANCE_NO_POSITIONS",
+                status=400,
+            )
 
         # Batch-load SignalCache for all user positions in a single query (avoid N+1).
         pos_tickers = [p.ticker for p in positions]
@@ -102,7 +108,12 @@ def regime_report():
         tickers_to_test = [p["ticker"] for p in pos_with_value[:5]]
 
     if not tickers_to_test:
-        return jsonify({"error": "No tickers to test"}), 400
+        return api_error(
+            en="No tickers to test",
+            kr="테스트할 종목이 없습니다.",
+            code="PERFORMANCE_NO_TICKERS",
+            status=400,
+        )
 
     # Run backtests and aggregate regime stats
     per_ticker = {}
@@ -259,7 +270,12 @@ def benchmark_analytics():
         }), 400
 
     if not benchmark_ticker or len(benchmark_ticker) > 20:
-        return jsonify({"error": "Invalid benchmark ticker"}), 400
+        return api_error(
+            en="Invalid benchmark ticker",
+            kr="유효하지 않은 벤치마크 종목입니다.",
+            code="PERFORMANCE_BENCHMARK_INVALID",
+            status=400,
+        )
 
     benchmark_ticker = benchmark_ticker.upper().strip()
 
@@ -275,16 +291,31 @@ def benchmark_analytics():
     # ── Load portfolio positions and compute daily returns ──
     items, total_value = _load_positions_with_prices()
     if not items:
-        return jsonify({"error": "No positions in portfolio"}), 400
+        return api_error(
+            en="No positions in portfolio",
+            kr="포트폴리오에 보유 종목이 없습니다.",
+            code="PERFORMANCE_NO_POSITIONS",
+            status=400,
+        )
 
     port_daily, port_dates = _get_portfolio_returns(items, total_value, period=period)
     if len(port_daily) < 20:
-        return jsonify({"error": "Insufficient portfolio history (need 20+ trading days)"}), 400
+        return api_error(
+            en="Insufficient portfolio history (need 20+ trading days)",
+            kr="포트폴리오 이력이 부족합니다 (최소 20거래일 필요).",
+            code="PERFORMANCE_INSUFFICIENT_HISTORY",
+            status=400,
+        )
 
     # ── Fetch benchmark returns ──
     bench_hist = fetcher.get_price_history(benchmark_ticker, period=period)
     if bench_hist is None or bench_hist.empty or len(bench_hist) < 20:
-        return jsonify({"error": f"Insufficient benchmark data for {benchmark_ticker}"}), 400
+        return api_error(
+            en=f"Insufficient benchmark data for {benchmark_ticker}",
+            kr=f"{benchmark_ticker} 벤치마크 데이터가 부족합니다.",
+            code="PERFORMANCE_INSUFFICIENT_BENCHMARK",
+            status=400,
+        )
 
     bench_closes = bench_hist["Close"]
     bench_pct = bench_closes.pct_change().dropna()
@@ -562,7 +593,12 @@ def turnover_report():
     trades = query.all()
 
     if not trades:
-        return jsonify({"error": "No trade history found for the selected period"}), 404
+        return api_error(
+            en="No trade history found for the selected period",
+            kr="선택한 기간에 거래 이력이 없습니다.",
+            code="PERFORMANCE_NO_TRADES_PERIOD",
+            status=404,
+        )
 
     total_trades = len(trades)
     buys = [t for t in trades if t.action == "BUY"]
@@ -698,7 +734,12 @@ def performance_ledger():
     trades = query.all()
 
     if not trades:
-        return jsonify({"error": "No trade history found"}), 404
+        return api_error(
+            en="No trade history found",
+            kr="거래 이력이 없습니다.",
+            code="PERFORMANCE_NO_TRADES",
+            status=404,
+        )
 
     # ── Aggregate stats ──
     total_signals = len(trades)
