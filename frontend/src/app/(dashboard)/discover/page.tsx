@@ -28,7 +28,7 @@ import {
 } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { fmtPct, pctColorClass } from "@/lib/format";
+import { fmtPct, pctColorClass, displayName } from "@/lib/format";
 import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type { DiscoverResult, Position } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
@@ -784,6 +784,8 @@ function MoversBlock({
   title: string;
   rows: { ticker: string; name: string; price: string; changePct: number }[];
 }) {
+  // 2026-05-17 P3-01: name-first per feedback_ticker_display (사용자 반복 지시 3+회).
+  // Ticker becomes a small mono-style subtitle under the canonical name.
   return (
     <div>
       <div className="mb-2 font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
@@ -792,14 +794,19 @@ function MoversBlock({
       <div className="overflow-x-auto">
         <table className="pq-ink-table min-w-[320px]">
           <tbody>
-            {rows.slice(0, 10).map((r) => (
-              <tr key={r.ticker}>
-                <td className="font-mono text-[var(--pq-bronze)] w-16">{r.ticker}</td>
-                <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[160px]">{r.name}</td>
-                <td className="num">{r.price}</td>
-                <td className={"num " + deltaCls(r.changePct)}>{fmtPct(r.changePct)}</td>
-              </tr>
-            ))}
+            {rows.slice(0, 10).map((r) => {
+              const name = displayName(r.ticker, r.name);
+              return (
+                <tr key={r.ticker}>
+                  <td className="text-[rgba(245,240,232,0.85)] truncate max-w-[200px]">{name}</td>
+                  <td className="font-mono text-pq-eyebrow text-[var(--pq-bronze)] tabular-nums w-20">
+                    {r.ticker}
+                  </td>
+                  <td className="num">{r.price}</td>
+                  <td className={"num " + deltaCls(r.changePct)}>{fmtPct(r.changePct)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -842,21 +849,28 @@ function ThematicBlockInk({
   title: string;
   items: { ticker: string; name: string; metric: string; metricValue: string }[];
 }) {
+  // 2026-05-17 P3-01: name-first ordering per feedback_ticker_display.
+  // Layout: [name (truncated) | ticker (mono caption) | metric value (num)].
   return (
     <div>
       <div className="mb-2 font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
         {title}
       </div>
       <ul className="divide-y divide-[var(--pq-ivory-line-soft)]">
-        {items.slice(0, 6).map((x) => (
-          <li key={x.ticker} className="grid grid-cols-[auto_1fr_auto] items-baseline gap-2 py-2.5">
-            <span className="font-mono text-pq-caption text-[var(--pq-bronze)]">{x.ticker}</span>
-            <span className="truncate text-pq-mono-sm text-[rgba(245,240,232,0.7)]">{x.name}</span>
-            <span className="font-mono text-pq-mono-sm tabular-nums text-[var(--pq-ivory)]">
-              {x.metricValue}
-            </span>
-          </li>
-        ))}
+        {items.slice(0, 6).map((x) => {
+          const name = displayName(x.ticker, x.name);
+          return (
+            <li key={x.ticker} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-2 py-2.5">
+              <span className="truncate text-pq-mono-sm text-[rgba(245,240,232,0.85)]">{name}</span>
+              <span className="font-mono text-pq-caption text-[var(--pq-bronze)] tabular-nums">
+                {x.ticker}
+              </span>
+              <span className="font-mono text-pq-mono-sm tabular-nums text-[var(--pq-ivory)]">
+                {x.metricValue}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

@@ -137,14 +137,25 @@ def canslim_screener(ticker):
         logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
-    # Market regime from RegimeSwitching
+    # Market regime from RegimeSwitching.
+    # 2026-05-17 P1-01: regime MUST be derived from a market *index*, not from
+    # the candidate ticker's own price series. Passing per-ticker closes here
+    # made every uptrending stock auto-pass M, defeating the point of the M
+    # filter (the M in CAN SLIM is explicitly "Market direction", not "stock
+    # direction"). Use ^GSPC (S&P 500) for US tickers and ^KS11 (KOSPI) for
+    # Korean tickers.
     regime = None
     try:
-        rs = RegimeSwitching.analyze(list(closes))
-        if rs:
-            regime = rs.get("regime")
+        is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
+        market_index = "^KS11" if is_kr else "^GSPC"
+        market_hist = fetcher.get_price_history(market_index, period="1y")
+        if market_hist is not None and not market_hist.empty and len(market_hist) >= 80:
+            market_closes = market_hist["Close"].values.astype(float)
+            rs = RegimeSwitching.analyze(list(market_closes))
+            if rs:
+                regime = rs.get("regime")
     except Exception:
-        logger.debug("silent-fallback: canslim_screener", exc_info=True)
+        logger.debug("silent-fallback: canslim_screener_market_regime", exc_info=True)
         pass
 
     result = CANSLIMScreener.score(ticker, closes, volumes, fundamentals, regime, float_shares=float_shares)
