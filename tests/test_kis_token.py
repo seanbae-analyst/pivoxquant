@@ -130,3 +130,45 @@ class TestKISTokenManager:
             f"Expected 1 HTTP call under lock, got {call_count['n']} — race condition!"
         )
         assert all(r == "single-shared-token" for r in results)
+
+
+# ── Wave 13 P2 (PR #441) — load vs refresh threshold split ──────────────────
+
+
+def test_is_loadable_accepts_token_under_refresh_threshold():
+    """A 30-min-remaining token must be loadable (was discarded pre-fix
+    because _is_fresh required >1h). Pinned so the redeploy race
+    (EGW00133 / KIS 60s rate-limit window) can't regress."""
+    from services.kis.token_manager import KISTokenManager
+    from datetime import datetime, timezone, timedelta
+
+    expires = datetime.now(timezone.utc) + timedelta(minutes=30)
+    assert KISTokenManager._is_loadable("tok", expires) is True
+    # 30-min remaining is BELOW the 1h refresh threshold, so _is_fresh
+    # should still return False (proactive refresh kicks in).
+    assert KISTokenManager._is_fresh("tok", expires) is False
+
+
+def test_is_loadable_rejects_already_expired_token():
+    from services.kis.token_manager import KISTokenManager
+    from datetime import datetime, timezone, timedelta
+
+    expired = datetime.now(timezone.utc) - timedelta(minutes=5)
+    assert KISTokenManager._is_loadable("tok", expired) is False
+
+
+def test_is_loadable_handles_naive_datetime():
+    """Legacy cache files were written with naive datetimes; the loader
+    must promote to UTC, same as _is_fresh."""
+    from services.kis.token_manager import KISTokenManager
+    from datetime import datetime, timezone, timedelta
+
+    naive = (datetime.now(timezone.utc) + timedelta(minutes=20)).replace(tzinfo=None)
+    assert KISTokenManager._is_loadable("tok", naive) is True
+
+
+def test_is_loadable_returns_false_for_missing_inputs():
+    from services.kis.token_manager import KISTokenManager
+    assert KISTokenManager._is_loadable(None, None) is False
+    assert KISTokenManager._is_loadable("tok", None) is False
+    assert KISTokenManager._is_loadable(None, "2030-01-01") is False
