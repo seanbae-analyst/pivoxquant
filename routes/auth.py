@@ -855,10 +855,19 @@ def delete_account():
         db.session.delete(current_user)
         db.session.commit()
 
-        # Logout
+        # 2026-05-17 thorough cookie cleanup (Wave 7 PR #409 follow-up):
+        # delete_account previously called logout_user() then returned a bare
+        # jsonify(). Server-side session was cleared but browser cookies were
+        # left in the jar — same regression class PR #409 fixed for /logout.
+        # Per Safari/Firefox strict cookie policy, the only way to reliably
+        # remove cookies is to mirror the original Set-Cookie attributes in
+        # the deletion header. Route both through _clear_auth_cookies for
+        # consistency (feedback_thorough_fixes — every termination path must
+        # clear cookies, not only canonical /logout).
         logout_user()
-
-        return jsonify({"ok": True, "message": "Account and all data deleted."})
+        session.clear()
+        response = jsonify({"ok": True, "message": "Account and all data deleted."})
+        return _clear_auth_cookies(response)
     except Exception:
         db.session.rollback()
         logger.exception("Account deletion failed for user_id=%s", user_id)
