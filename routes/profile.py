@@ -245,14 +245,49 @@ def submit_onboarding():
     """Submit onboarding answers → calculate profile → save → return result."""
     data = request.get_json() or {}
     answers = data.get("answers", {})
+    if not isinstance(answers, dict):
+        return api_error(
+            en="'answers' must be an object.",
+            kr="answers 객체가 필요합니다.",
+            code="ONBOARDING_INVALID_PAYLOAD", status=400,
+        )
 
-    # Try v2 classification first (20-question), fall back to v1
-    profile_v2_result = None
-    try:
-        from services.profile.questionnaire import calculate_profile_v2
-        profile_v2_result = calculate_profile_v2(answers)
+    # 2026-05-17 wave D-1 — legal gate. The V2 questionnaire's last block
+    # (``legal_confirmations`` multi_required) is the disclaimer wall: age 18+,
+    # risk acknowledgment, "past performance ≠ future results", "AI-generated
+    # analysis, not licensed financial advice". Pre-fix the route only computed
+    # ``legal_confirmed`` and never enforced it, so a client that omitted the
+    # block could complete onboarding without confirming the disclaimer — a
+    # 자본시장법 §6 / 정통망법 §50 compliance hole. The frontend's "Skip" path
+    # (page.tsx ~770) submits ``{}`` and is still allowed; we only reject
+    # submissions that include partial answers but omit the legal block.
+    from services.profile.questionnaire import calculate_profile_v2
+    profile_v2_result = calculate_profile_v2(answers)
+    is_v2_submission = bool(answers) and any(
+        k in answers for k in (
+            "experience_years", "portfolio_size", "scenario_portfolio_drop",
+            "legal_confirmations",
+        )
+    )
+    if is_v2_submission and not profile_v2_result.get("legal_confirmed", False):
+        return api_error(
+            en=(
+                "Required legal confirmations missing: age 18+, risk acknowledgment, "
+                "past performance disclaimer, and AI-analysis (not licensed advice) "
+                "acknowledgment must all be checked to proceed."
+            ),
+            kr=(
+                "법적 확인 항목이 누락되었습니다. 만 18세 이상, 투자 위험 인지, "
+                "과거 수익률 면책, AI 분석(공인 투자자문 아님) 확인을 모두 체크해 "
+                "주셔야 진행할 수 있습니다."
+            ),
+            code="ONBOARDING_LEGAL_REQUIRED", status=400,
+        )
+
+    if is_v2_submission:
         profile_type = profile_v2_result.get("investor_type", "risk_managed_growth")
-    except (ImportError, Exception):
+    else:
+        # Skip path (empty answers) or legacy v1 submission.
         profile_type = calculate_profile_type(answers)
 
     # Create or update investment profile
@@ -261,15 +296,76 @@ def submit_onboarding():
         profile = InvestmentProfile(user_id=current_user.id)
         db.session.add(profile)
 
-    # Store answers
-    profile.experience_level = answers.get("experience_level", "beginner")
-    profile.investment_goal = answers.get("investment_goal", "growth")
-    profile.risk_tolerance = answers.get("risk_tolerance", 5)
-    profile.time_horizon = answers.get("time_horizon", "medium")
-    profile.preferred_markets = answers.get("preferred_markets", "both")
-    profile.preferred_sectors = json.dumps(answers.get("preferred_sectors", []))
-    profile.auto_trade_preference = answers.get("auto_trade_preference", "manual")
-    profile.daily_time = answers.get("daily_time", "moderate")
+    # 2026-05-17 wave D-1 — persist V2 answers under the V2 IDs the wizard
+    # actually emits, not the V1 IDs (``experience_level`` / ``investment_goal``
+    # etc.) which no longer appear in the payload. Pre-fix every V2 submission
+    # caused the ``InvestmentProfile`` row to be filled with the ``.get(..., default)``
+    # defaults ("beginner" / "growth" / 5 / "medium" / "both" / "manual" /
+    # "moderate") regardless of what the user actually answered.
+    if is_v2_submission:
+        # Translate V2 IDs → existing ORM columns (kept stable so analytics
+        # downstream code that filters on ``profile_type`` / ``experience_level``
+        # keeps working). Use the V2-derived fields when available, fall back
+        # to the raw answer for direct-mapped fields.
+        profile.experience_level = profile_v2_result.get(
+            "experience_level", profile.experience_level or "beginner"
+        )
+        profile.risk_tolerance = int(round(profile_v2_result.get("risk_score", 50) / 10))
+        # holding_period is the V2 analogue of time_horizon
+        hold_to_horizon = {
+            "intraday": "short", "days": "short",
+            "weeks": "short", "months": "medium", "years": "long",
+        }
+        profile.time_horizon = hold_to_horizon.get(
+            answers.get("holding_period"), profile.time_horizon or "medium"
+        )
+        profile.preferred_markets = answers.get(
+            "preferred_markets", profile.preferred_markets or "both"
+        )
+        profile.preferred_sectors = json.dumps(
+            answers.get("preferred_sectors", [])
+            if isinstance(answers.get("preferred_sectors"), list) else []
+        )
+        # rebalance_preference maps to auto_trade_preference (auto_daily ≈
+        # full_auto; manual rebalance ≈ manual)
+        rebal_to_auto = {
+            "auto_daily": "full_auto", "weekly": "semi_auto",
+            "biweekly": "semi_auto", "monthly": "signals",
+            "quarterly": "manual",
+        }
+        profile.auto_trade_preference = rebal_to_auto.get(
+            answers.get("rebalance_preference"),
+            profile.auto_trade_preference or "manual",
+        )
+        # time_commitment from V2 maps to daily_time
+        commit_to_daily = {
+            "minimal": "minimal", "moderate": "moderate",
+            "active": "active", "full_time": "active",
+        }
+        profile.daily_time = commit_to_daily.get(
+            profile_v2_result.get("time_commitment"),
+            profile.daily_time or "moderate",
+        )
+        # investment_goal: derive from return ambition + risk tolerance
+        risk_score = profile_v2_result.get("risk_score", 50)
+        if risk_score <= 25:
+            profile.investment_goal = "preservation"
+        elif risk_score <= 45:
+            profile.investment_goal = "income"
+        elif risk_score <= 70:
+            profile.investment_goal = "growth"
+        else:
+            profile.investment_goal = "aggressive_growth"
+    else:
+        # Legacy v1 / skip-path: preserve existing behaviour exactly.
+        profile.experience_level = answers.get("experience_level", "beginner")
+        profile.investment_goal = answers.get("investment_goal", "growth")
+        profile.risk_tolerance = answers.get("risk_tolerance", 5)
+        profile.time_horizon = answers.get("time_horizon", "medium")
+        profile.preferred_markets = answers.get("preferred_markets", "both")
+        profile.preferred_sectors = json.dumps(answers.get("preferred_sectors", []))
+        profile.auto_trade_preference = answers.get("auto_trade_preference", "manual")
+        profile.daily_time = answers.get("daily_time", "moderate")
 
     # Set profile type and apply quant presets
     profile.profile_type = profile_type
@@ -428,7 +524,47 @@ def update_profile():
 
     data = request.get_json() or {}
     answers = data.get("answers", {})
-    profile_type = calculate_profile_type(answers)
+    if not isinstance(answers, dict):
+        return api_error(
+            en="'answers' must be an object.",
+            kr="answers 객체가 필요합니다.",
+            code="PROFILE_INVALID_PAYLOAD", status=400,
+        )
+
+    # 2026-05-17 wave D-1 — mirror the V2 path from ``submit_onboarding`` so
+    # re-taking the questionnaire actually re-classifies the user against
+    # the 8-type V2 system. Pre-fix this PUT path called only
+    # ``calculate_profile_type`` (V1 4-tier) — so a Pro user who re-took the
+    # 20-question wizard silently collapsed back to one of the 4 legacy types
+    # and lost any V2 preset (max_alloc_pct, leverage_allowed, preferred_models,
+    # etc.) the original submit had derived.
+    from services.profile.questionnaire import calculate_profile_v2
+    profile_v2_result = calculate_profile_v2(answers)
+    is_v2_submission = bool(answers) and any(
+        k in answers for k in (
+            "experience_years", "portfolio_size", "scenario_portfolio_drop",
+            "legal_confirmations",
+        )
+    )
+    if is_v2_submission and not profile_v2_result.get("legal_confirmed", False):
+        return api_error(
+            en=(
+                "Required legal confirmations missing: age 18+, risk acknowledgment, "
+                "past performance disclaimer, and AI-analysis (not licensed advice) "
+                "acknowledgment must all be checked to proceed."
+            ),
+            kr=(
+                "법적 확인 항목이 누락되었습니다. 만 18세 이상, 투자 위험 인지, "
+                "과거 수익률 면책, AI 분석(공인 투자자문 아님) 확인을 모두 체크해 "
+                "주셔야 진행할 수 있습니다."
+            ),
+            code="PROFILE_LEGAL_REQUIRED", status=400,
+        )
+
+    if is_v2_submission:
+        profile_type = profile_v2_result.get("investor_type", "risk_managed_growth")
+    else:
+        profile_type = calculate_profile_type(answers)
 
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
     if not profile:
@@ -438,15 +574,57 @@ def update_profile():
             code="PROFILE_NOT_FOUND", status=404,
         )
 
-    # Store answers
-    profile.experience_level = answers.get("experience_level", profile.experience_level)
-    profile.investment_goal = answers.get("investment_goal", profile.investment_goal)
-    profile.risk_tolerance = answers.get("risk_tolerance", profile.risk_tolerance)
-    profile.time_horizon = answers.get("time_horizon", profile.time_horizon)
-    profile.preferred_markets = answers.get("preferred_markets", profile.preferred_markets)
-    profile.preferred_sectors = json.dumps(answers.get("preferred_sectors", []))
-    profile.auto_trade_preference = answers.get("auto_trade_preference", profile.auto_trade_preference)
-    profile.daily_time = answers.get("daily_time", profile.daily_time)
+    if is_v2_submission:
+        profile.experience_level = profile_v2_result.get(
+            "experience_level", profile.experience_level
+        )
+        profile.risk_tolerance = int(round(profile_v2_result.get("risk_score", 50) / 10))
+        hold_to_horizon = {
+            "intraday": "short", "days": "short",
+            "weeks": "short", "months": "medium", "years": "long",
+        }
+        profile.time_horizon = hold_to_horizon.get(
+            answers.get("holding_period"), profile.time_horizon
+        )
+        profile.preferred_markets = answers.get(
+            "preferred_markets", profile.preferred_markets
+        )
+        if isinstance(answers.get("preferred_sectors"), list):
+            profile.preferred_sectors = json.dumps(answers.get("preferred_sectors", []))
+        rebal_to_auto = {
+            "auto_daily": "full_auto", "weekly": "semi_auto",
+            "biweekly": "semi_auto", "monthly": "signals",
+            "quarterly": "manual",
+        }
+        profile.auto_trade_preference = rebal_to_auto.get(
+            answers.get("rebalance_preference"), profile.auto_trade_preference
+        )
+        commit_to_daily = {
+            "minimal": "minimal", "moderate": "moderate",
+            "active": "active", "full_time": "active",
+        }
+        profile.daily_time = commit_to_daily.get(
+            profile_v2_result.get("time_commitment"), profile.daily_time
+        )
+        risk_score = profile_v2_result.get("risk_score", 50)
+        if risk_score <= 25:
+            profile.investment_goal = "preservation"
+        elif risk_score <= 45:
+            profile.investment_goal = "income"
+        elif risk_score <= 70:
+            profile.investment_goal = "growth"
+        else:
+            profile.investment_goal = "aggressive_growth"
+    else:
+        # Store answers
+        profile.experience_level = answers.get("experience_level", profile.experience_level)
+        profile.investment_goal = answers.get("investment_goal", profile.investment_goal)
+        profile.risk_tolerance = answers.get("risk_tolerance", profile.risk_tolerance)
+        profile.time_horizon = answers.get("time_horizon", profile.time_horizon)
+        profile.preferred_markets = answers.get("preferred_markets", profile.preferred_markets)
+        profile.preferred_sectors = json.dumps(answers.get("preferred_sectors", []))
+        profile.auto_trade_preference = answers.get("auto_trade_preference", profile.auto_trade_preference)
+        profile.daily_time = answers.get("daily_time", profile.daily_time)
 
     profile.profile_type = profile_type
     profile.apply_preset()

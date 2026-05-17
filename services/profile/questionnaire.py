@@ -709,9 +709,12 @@ def calculate_profile_v2(answers: dict) -> dict:
     capital_map = {"lt1k": 1, "1k_10k": 3, "10k_50k": 5, "50k_200k": 8, "200k_plus": 10}
     capital_score = capital_map.get(answers.get("portfolio_size", ""), 3)
 
-    # A4: Monthly investable
+    # A4: Monthly investable — feeds capital tier (DCA cadence + sustainable
+    # add-on flow). Prior to 2026-05-17 wave D-1 this line computed the value
+    # and immediately discarded it (no ``+=`` / no assignment), so the
+    # ``monthly_investable`` answer had zero effect on the resulting profile.
     monthly_map = {"lt100": 1, "100_500": 3, "500_2k": 5, "2k_5k": 7, "5k_plus": 10}
-    monthly_map.get(answers.get("monthly_investable", ""), 3)
+    monthly_score = monthly_map.get(answers.get("monthly_investable", ""), 3)
 
     # A5: Income stability -> inverse risk capacity
     stability_map = {"very_stable": 8, "stable": 6, "variable": 4, "volatile": 2, "student": 1}
@@ -793,13 +796,19 @@ def calculate_profile_v2(answers: dict) -> dict:
     knowledge_raw = sum(concept_scores.get(c, 0) for c in concepts)
     knowledge_raw = min(knowledge_raw, 10)  # cap at 10
 
-    # E2: Self-rating
-    self_rating = answers.get("knowledge_self_rating", 3)
-    if isinstance(self_rating, str):
-        try:
-            self_rating = int(self_rating)
-        except (ValueError, TypeError):
-            self_rating = 3
+    # E2: Self-rating — accept int / float / numeric string. Pre-2026-05-17
+    # a ``None`` value (slider skipped on mobile) or a non-numeric list/dict
+    # (corrupt client payload) raised TypeError, which the bare ``except
+    # Exception`` in routes/profile.py swallowed silently and fell back to
+    # the legacy V1 4-tier classifier — masking the bug and downgrading the
+    # user's profile. Clamp to 1..5 (slider range) and default to 3 on bad
+    # input so every code path stays inside the documented range.
+    raw_self_rating = answers.get("knowledge_self_rating", 3)
+    try:
+        self_rating = float(raw_self_rating) if raw_self_rating is not None else 3.0
+    except (ValueError, TypeError):
+        self_rating = 3.0
+    self_rating = max(1.0, min(5.0, self_rating))
     knowledge_raw = (knowledge_raw + (self_rating * 2)) / 2  # blend
     knowledge_raw = min(knowledge_raw, 10)
 
@@ -875,14 +884,18 @@ def calculate_profile_v2(answers: dict) -> dict:
     else:
         time_commitment = "full_time"
 
-    # Capital tier
-    if capital_score <= 2:
+    # Capital tier — blend lump-sum (portfolio_size) with monthly recurring
+    # capacity so e.g. a student with $500 saved but $2k/month going in
+    # doesn't get pinned to "micro" forever. Weight portfolio_size 70 / 30
+    # — current AUM still dominates classification.
+    combined_capital = capital_score * 0.7 + monthly_score * 0.3
+    if combined_capital <= 2:
         capital_tier = "micro"
-    elif capital_score <= 4:
+    elif combined_capital <= 4:
         capital_tier = "small"
-    elif capital_score <= 6:
+    elif combined_capital <= 6:
         capital_tier = "mid"
-    elif capital_score <= 8:
+    elif combined_capital <= 8:
         capital_tier = "large"
     else:
         capital_tier = "whale"
