@@ -22,7 +22,7 @@
 //   - v5 → v6: bug-fix wave (auth.tsx 8s timeout, reports routing,
 //     companion premium gate, etc.) needed cache flush.
 // Going forward, the build script does this work — no manual bump.
-const CACHE_VERSION = "pq-build-d5f9ce5b";
+const CACHE_VERSION = "pq-build-2d0699bf";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
@@ -240,7 +240,7 @@ async function staleWhileRevalidate(request, cacheName, maxAge) {
   return fetchPromise;
 }
 
-async function networkFirst(request, cacheName) {
+async function networkFirst(request, cacheName, maxAge) {
   const cache = await caches.open(cacheName);
 
   try {
@@ -264,8 +264,30 @@ async function networkFirst(request, cacheName) {
     // and skeletons stay on screen forever. Serve a genuine cache hit when we
     // have one, otherwise let the real network error propagate so SWR can
     // reject, retry, and show an error state.
+    //
+    // 2026-05-17 wave C-3 P0: previously the maxAge argument from
+    // NETWORK_FIRST_CONFIG was silently dropped — any cached entry,
+    // even days old, would be served on offline fallback. For mutation-
+    // sensitive endpoints (portfolio, watchlist, alerts, trades) this
+    // is a data-freshness risk. Honor maxAge: if the cache entry is
+    // older than the configured budget, propagate the network error
+    // instead so SWR can show "offline / stale" UI rather than
+    // pretending stale data is live. Entries without a `sw-cached-at`
+    // stamp (legacy) are treated as fresh to avoid a one-time mass
+    // expiry the moment this code ships.
     const cached = await cache.match(request);
-    if (cached) return cached;
+    if (cached) {
+      if (maxAge) {
+        const cachedAt = cached.headers.get("sw-cached-at");
+        if (cachedAt) {
+          const age = Date.now() - parseInt(cachedAt, 10);
+          if (Number.isFinite(age) && age >= maxAge) {
+            throw err;
+          }
+        }
+      }
+      return cached;
+    }
     throw err;
   }
 }
