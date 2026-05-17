@@ -286,6 +286,7 @@ export function DataTable<R extends { id: string | number }>({
                         {isEditing ? (
                           <input
                             autoFocus
+                            aria-label={`Edit ${c.header}`}
                             defaultValue={cellRaw == null ? "" : String(cellRaw)}
                             onBlur={(e) => {
                               onEdit?.(row.id, c.key, e.target.value);

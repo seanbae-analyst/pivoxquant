@@ -419,7 +419,15 @@ export default function AlertsPage() {
                 <li
                   key={a.id}
                   onClick={() => handleAlertClick(a)}
-                  className="cursor-pointer px-1 py-3"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleAlertClick(a);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer px-1 py-3 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--pq-bronze)] focus-visible:outline-offset-2"
                   style={{
                     borderBottom: "0.5px solid var(--pq-ivory-line-soft)",
                   }}

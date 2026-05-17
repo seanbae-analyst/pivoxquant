@@ -301,7 +301,16 @@ export default function WatchlistPage() {
                   <li
                     key={item.id}
                     onClick={() => router.push(`/detail/${item.ticker}`)}
-                    className="cursor-pointer px-1 py-3"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/detail/${item.ticker}`);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open detail for ${item.ticker}`}
+                    className="cursor-pointer px-1 py-3 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--pq-bronze)] focus-visible:outline-offset-2"
                     style={{
                       borderBottom: "0.5px solid var(--pq-ivory-line-soft)",
                     }}

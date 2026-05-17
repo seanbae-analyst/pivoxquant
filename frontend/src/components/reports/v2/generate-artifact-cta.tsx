@@ -264,6 +264,11 @@ export function GenerateArtifactCta({ tier }: Props) {
                   placeholder={
                     tile.needsTicker ? "AAPL" : "e.g. tail risk in semis"
                   }
+                  aria-label={
+                    tile.needsTicker
+                      ? `Ticker symbol for ${tile.displayName}`
+                      : `Topic for ${tile.displayName}`
+                  }
                   className="font-mono"
                   style={{
                     width: "100%",

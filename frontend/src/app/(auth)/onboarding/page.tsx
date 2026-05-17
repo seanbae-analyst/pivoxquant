@@ -274,6 +274,11 @@ function SliderInput({
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
+          aria-label={question.question}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={value}
+          aria-valuetext={currentOption?.label}
           className="slider-input w-full"
         />
 
