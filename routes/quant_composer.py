@@ -26,6 +26,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import InvestmentProfile
+from services.error_responses import api_error
 from services.quant.composer import (
     PERSONA_QUANT_PRESETS,
     apply_persona_preset,
@@ -212,7 +213,12 @@ def put_composition():
     """
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return jsonify({"error": "Body must be a JSON object"}), 400
+        return api_error(
+            en="Body must be a JSON object",
+            kr="요청 본문은 JSON 객체여야 합니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     try:
         enabled, weights = validate_composition(
@@ -221,11 +227,21 @@ def put_composition():
     except ValueError as exc:
         # Hardening (2026-05-09 audit): clamp to 200 chars (matches
         # routes/auth.py:511 + agent.py:457 conventions).
-        return jsonify({"error": str(exc)[:200]}), 400
+        return api_error(
+            en=str(exc)[:200],
+            kr="잘못된 구성입니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     profile = _get_or_create_profile(current_user.id)
     if profile is None:
-        return jsonify({"error": "Investment profile not found. Complete onboarding first."}), 404
+        return api_error(
+            en="Investment profile not found. Complete onboarding first.",
+            kr="투자 프로필을 찾을 수 없습니다. 먼저 온보딩을 완료해주세요.",
+            code="COMPOSER_NOT_FOUND",
+            status=404,
+        )
 
     profile.enabled_quant_models = json.dumps(enabled)
     profile.model_weights = json.dumps(weights)
@@ -300,19 +316,39 @@ def post_backtest():
     """
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return jsonify({"error": "Body must be a JSON object"}), 400
+        return api_error(
+            en="Body must be a JSON object",
+            kr="요청 본문은 JSON 객체여야 합니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     ticker = body.get("ticker")
     if not isinstance(ticker, str) or not ticker.strip():
-        return jsonify({"error": "'ticker' is required"}), 400
+        return api_error(
+            en="'ticker' is required",
+            kr="'ticker' 필드는 필수입니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     days = body.get("days", 90)
     try:
         days = int(days)
     except (TypeError, ValueError):
-        return jsonify({"error": "'days' must be an integer"}), 400
+        return api_error(
+            en="'days' must be an integer",
+            kr="'days' 값은 정수여야 합니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
     if days < 7 or days > 365:
-        return jsonify({"error": "'days' must be in [7, 365]"}), 400
+        return api_error(
+            en="'days' must be in [7, 365]",
+            kr="'days' 값은 7에서 365 사이여야 합니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     try:
         enabled, weights = validate_composition(
@@ -321,7 +357,12 @@ def post_backtest():
     except ValueError as exc:
         # Hardening (2026-05-09 audit): clamp to 200 chars (matches
         # routes/auth.py:511 + agent.py:457 conventions).
-        return jsonify({"error": str(exc)[:200]}), 400
+        return api_error(
+            en=str(exc)[:200],
+            kr="잘못된 구성입니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     result = _paper_backtest(enabled, weights, ticker.strip(), days)
     payload = {"ok": True, "result": result}
@@ -346,29 +387,52 @@ def post_preset():
     """
     body = request.get_json(silent=True) or {}
     if not isinstance(body, dict):
-        return jsonify({"error": "Body must be a JSON object"}), 400
+        return api_error(
+            en="Body must be a JSON object",
+            kr="요청 본문은 JSON 객체여야 합니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     # Accept both spellings used by the spec / frontend mocks.
     persona_code = body.get("persona_code") or body.get("persona")
     if not isinstance(persona_code, str) or not persona_code.strip():
-        return jsonify({"error": "'persona_code' is required"}), 400
+        return api_error(
+            en="'persona_code' is required",
+            kr="'persona_code' 필드는 필수입니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     if persona_code not in PERSONA_QUANT_PRESETS:
-        return jsonify({
-            "error": f"unknown persona_code: {persona_code!r}",
-            "valid": sorted(PERSONA_QUANT_PRESETS.keys()),
-        }), 400
+        return api_error(
+            en=f"unknown persona_code: {persona_code!r}",
+            kr=f"알 수 없는 페르소나 코드입니다: {persona_code!r}",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+            valid=sorted(PERSONA_QUANT_PRESETS.keys()),
+        )
 
     profile = _get_or_create_profile(current_user.id)
     if profile is None:
-        return jsonify({"error": "Investment profile not found. Complete onboarding first."}), 404
+        return api_error(
+            en="Investment profile not found. Complete onboarding first.",
+            kr="투자 프로필을 찾을 수 없습니다. 먼저 온보딩을 완료해주세요.",
+            code="COMPOSER_NOT_FOUND",
+            status=404,
+        )
 
     try:
         summary = apply_persona_preset(int(current_user.id), persona_code)
     except ValueError as exc:
         # Hardening (2026-05-09 audit): clamp to 200 chars (matches
         # routes/auth.py:511 + agent.py:457 conventions).
-        return jsonify({"error": str(exc)[:200]}), 400
+        return api_error(
+            en=str(exc)[:200],
+            kr="페르소나 프리셋 적용에 실패했습니다.",
+            code="COMPOSER_INVALID_STRATEGY",
+            status=400,
+        )
 
     payload = {
         "ok": True,

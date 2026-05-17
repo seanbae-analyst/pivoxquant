@@ -12,6 +12,7 @@ import time as _time
 import numpy as np
 from flask import Blueprint, jsonify, request
 
+from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth, legal_scrub_response
 from .quant_helpers import (
@@ -203,7 +204,12 @@ def short_interest_signal(ticker):
     """
     ticker = ticker.upper().strip()
     if not ticker or len(ticker) > 10:
-        return jsonify({"error": "Invalid ticker"}), 400
+        return api_error(
+            en="Invalid ticker",
+            kr="유효하지 않은 종목 코드입니다.",
+            code="SIGNAL_QUANT_INVALID_INPUT",
+            status=400,
+        )
 
     # per-ticker cache
     now = _time.time()
@@ -215,13 +221,23 @@ def short_interest_signal(ticker):
 
     records = fmp.get_short_interest(ticker)
     if not records:
-        return jsonify({"error": f"No short interest data for {ticker}"}), 404
+        return api_error(
+            en=f"No short interest data for {ticker}",
+            kr=f"{ticker} 종목의 공매도 데이터가 없습니다.",
+            code="SIGNAL_QUANT_NOT_FOUND",
+            status=404,
+        )
 
     quote = fmp.get_quote(ticker)
 
     result = _compute_short_signal(records, quote)
     if not result:
-        return jsonify({"error": "Could not compute short interest signal"}), 500
+        return api_error(
+            en="Could not compute short interest signal",
+            kr="공매도 시그널을 계산할 수 없습니다.",
+            code="SIGNAL_QUANT_COMPUTATION_FAILED",
+            status=500,
+        )
 
     payload = {"ticker": ticker, "name": resolve_stock_name(ticker) or ticker, **result}
     add_disclaimer(payload, "indicator")
@@ -365,17 +381,32 @@ def insider_signal(ticker):
     # Validate ticker
     ticker = ticker.upper().strip()
     if not re.match(r"^[A-Z]{1,5}(\.[A-Z]{1,2})?$", ticker):
-        return jsonify({"error": "Invalid ticker format"}), 400
+        return api_error(
+            en="Invalid ticker format",
+            kr="유효하지 않은 종목 코드 형식입니다.",
+            code="SIGNAL_QUANT_INVALID_INPUT",
+            status=400,
+        )
 
     # Korean tickers not supported for insider data (SEC/FMP only)
     if ticker.endswith(".KS") or ticker.endswith(".KQ"):
-        return jsonify({"error": "Insider data not available for Korean stocks"}), 400
+        return api_error(
+            en="Insider data not available for Korean stocks",
+            kr="국내 종목은 내부자 거래 데이터를 제공하지 않습니다.",
+            code="SIGNAL_QUANT_INVALID_INPUT",
+            status=400,
+        )
 
     from services.data import fmp as fmp_service
 
     raw = fmp_service.get_insider_trades(ticker, limit=50)
     if raw is None:
-        return jsonify({"error": "Failed to fetch insider data (API unavailable)"}), 503
+        return api_error(
+            en="Failed to fetch insider data (API unavailable)",
+            kr="내부자 거래 데이터를 가져올 수 없습니다 (API 일시 장애).",
+            code="SIGNAL_QUANT_RATE_LIMITED",
+            status=503,
+        )
 
     if not raw:
         empty_payload = {
@@ -447,7 +478,12 @@ def signal_disposition(ticker):
         return data_err
 
     if volumes is None:
-        return jsonify({"error": "Volume data unavailable"}), 404
+        return api_error(
+            en="Volume data unavailable",
+            kr="거래량 데이터가 없습니다.",
+            code="SIGNAL_QUANT_INSUFFICIENT_DATA",
+            status=404,
+        )
 
     from services.quant.signals import DispositionEffect
 
@@ -498,7 +534,12 @@ def signal_ofi(ticker):
         return data_err
 
     if opens is None or volumes is None:
-        return jsonify({"error": "OHLCV data incomplete"}), 404
+        return api_error(
+            en="OHLCV data incomplete",
+            kr="OHLCV 데이터가 불완전합니다.",
+            code="SIGNAL_QUANT_INSUFFICIENT_DATA",
+            status=404,
+        )
 
     from services.quant.signals import OrderFlowImbalance
 
@@ -558,7 +599,12 @@ def signal_sentiment_divergence(ticker):
     prices_arr = np.array(closes, dtype=np.float64)
     n = len(prices_arr)
     if n < window + 1:
-        return jsonify({"error": "Insufficient data for requested window"}), 400
+        return api_error(
+            en="Insufficient data for requested window",
+            kr="요청한 윈도우에 대한 데이터가 부족합니다.",
+            code="SIGNAL_QUANT_INSUFFICIENT_DATA",
+            status=400,
+        )
 
     pct_changes = np.diff(prices_arr) / prices_arr[:-1]
     synthetic_sentiment = np.full(n, sentiment_score, dtype=np.float64)
@@ -615,7 +661,12 @@ def signal_anchoring(ticker):
         return data_err
 
     if volumes is None:
-        return jsonify({"error": "Volume data unavailable"}), 404
+        return api_error(
+            en="Volume data unavailable",
+            kr="거래량 데이터가 없습니다.",
+            code="SIGNAL_QUANT_INSUFFICIENT_DATA",
+            status=404,
+        )
 
     from services.quant.signals import AnchoringBias
 
@@ -666,7 +717,12 @@ def signal_herding():
 
     mkt_hist = fetcher.get_price_history(market_ticker, period="6mo")
     if mkt_hist is None or mkt_hist.empty or len(mkt_hist) < window + 1:
-        return jsonify({"error": "Market data unavailable"}), 503
+        return api_error(
+            en="Market data unavailable",
+            kr="시장 데이터를 가져올 수 없습니다.",
+            code="SIGNAL_QUANT_RATE_LIMITED",
+            status=503,
+        )
 
     mkt_closes = mkt_hist["Close"].values.astype(float)
     mkt_returns = list(np.diff(mkt_closes) / mkt_closes[:-1])
@@ -687,7 +743,12 @@ def signal_herding():
             continue
 
     if len(stock_returns_list) < 3:
-        return jsonify({"error": "Insufficient stock data for herding analysis"}), 503
+        return api_error(
+            en="Insufficient stock data for herding analysis",
+            kr="허딩 분석에 필요한 종목 데이터가 부족합니다.",
+            code="SIGNAL_QUANT_INSUFFICIENT_DATA",
+            status=503,
+        )
 
     result = HerdingIntensity.calculate(stock_returns_list, mkt_returns, window=window)
 
