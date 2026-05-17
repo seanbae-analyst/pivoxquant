@@ -19,6 +19,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# 2026-05-17 wave 12 P2: bounded background-refresh pool. The previous
+# pattern spawned a fresh `Thread(daemon=True)` per stale ticker per
+# request — a single user with N stale tickers minted N threads, each
+# opening an app_context + DB session. Under cache cold-start that
+# scales to thousands of threads. Pinning a small module-level pool
+# so the worst case is `_REFRESH_WORKERS` concurrent refreshes
+# regardless of how many requests pile in.
+_REFRESH_WORKERS = int(os.environ.get("SIGNAL_REFRESH_WORKERS", "4"))
+_refresh_executor = ThreadPoolExecutor(
+    max_workers=_REFRESH_WORKERS, thread_name_prefix="signal-refresh"
+)
+
+
 def _get_profile_params():
     """Get current user's investment profile engine params, or None."""
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
@@ -191,7 +204,6 @@ def get_signals():
             # see fresh data. Never blocks the current response.
             if stale:
                 try:
-                    from threading import Thread
                     from flask import current_app
                     app_obj = current_app._get_current_object()
                     capital = current_user.available_capital
@@ -207,10 +219,15 @@ def get_signals():
                                     exc_info=True,
                                 )
 
-                    Thread(target=_refresh, daemon=True).start()
+                    # 2026-05-17 wave 12 P2: submit to the bounded pool
+                    # instead of spawning a fresh Thread per ticker.
+                    # ThreadPoolExecutor queues over-capacity tasks and
+                    # reuses workers, bounding the concurrent app_context +
+                    # DB session count regardless of request burst size.
+                    _refresh_executor.submit(_refresh)
                 except Exception:
                     logger.warning(
-                        "failed to spawn background refresh ticker=%s",
+                        "failed to submit background refresh ticker=%s",
                         t,
                         exc_info=True,
                     )

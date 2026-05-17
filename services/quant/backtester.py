@@ -587,14 +587,28 @@ class Backtester:
                 elif z < -1: score += 8
                 elif z > 2: score -= 15
                 elif z > 1: score -= 8
-        except: pass
+        except Exception as exc:
+            # 2026-05-17 wave 12 P1: was bare `except: pass` which swallowed
+            # KeyboardInterrupt/SystemExit + every legitimate AttributeError
+            # from schema drift. Backtest scores looked stable but were
+            # silently degenerate. Catching Exception only (Ctrl-C still
+            # works) and logging at DEBUG so the score loop stays performant
+            # while keeping a breadcrumb when an indicator faults.
+            logger.debug("backtester indicator skipped: %s", exc, exc_info=False)
 
         # Momentum Breakout
         try:
             mb = MomentumBreakout.analyze(closes, highs, lows, volumes)
             if mb and mb["signal"] == "POSITIVE": score += 12
             elif mb and mb["signal"] == "NEGATIVE": score -= 12
-        except: pass
+        except Exception as exc:
+            # 2026-05-17 wave 12 P1: was bare `except: pass` which swallowed
+            # KeyboardInterrupt/SystemExit + every legitimate AttributeError
+            # from schema drift. Backtest scores looked stable but were
+            # silently degenerate. Catching Exception only (Ctrl-C still
+            # works) and logging at DEBUG so the score loop stays performant
+            # while keeping a breadcrumb when an indicator faults.
+            logger.debug("backtester indicator skipped: %s", exc, exc_info=False)
 
         # Volatility Regime
         try:
@@ -603,7 +617,14 @@ class Backtester:
                 if vr["regime"] == "LOW_VOL": score += 5
                 elif vr["regime"] == "HIGH_VOL": score -= 8 * regime_weight
                 elif vr["regime"] == "CRISIS": score -= 15 * regime_weight
-        except: pass
+        except Exception as exc:
+            # 2026-05-17 wave 12 P1: was bare `except: pass` which swallowed
+            # KeyboardInterrupt/SystemExit + every legitimate AttributeError
+            # from schema drift. Backtest scores looked stable but were
+            # silently degenerate. Catching Exception only (Ctrl-C still
+            # works) and logging at DEBUG so the score loop stays performant
+            # while keeping a breadcrumb when an indicator faults.
+            logger.debug("backtester indicator skipped: %s", exc, exc_info=False)
 
         # Regime Switching
         try:
@@ -611,14 +632,28 @@ class Backtester:
             if rs:
                 if rs["regime"] == "BULL": score += 10 * regime_weight
                 elif rs["regime"] == "BEAR": score -= 10 * regime_weight
-        except: pass
+        except Exception as exc:
+            # 2026-05-17 wave 12 P1: was bare `except: pass` which swallowed
+            # KeyboardInterrupt/SystemExit + every legitimate AttributeError
+            # from schema drift. Backtest scores looked stable but were
+            # silently degenerate. Catching Exception only (Ctrl-C still
+            # works) and logging at DEBUG so the score loop stays performant
+            # while keeping a breadcrumb when an indicator faults.
+            logger.debug("backtester indicator skipped: %s", exc, exc_info=False)
 
         # Variance Ratio Filter
         try:
             vr_m = VarianceRatioFilter.calculate(list(closes))
             if vr_m.get("use_momentum"):
                 score += 10
-        except: pass
+        except Exception as exc:
+            # 2026-05-17 wave 12 P1: was bare `except: pass` which swallowed
+            # KeyboardInterrupt/SystemExit + every legitimate AttributeError
+            # from schema drift. Backtest scores looked stable but were
+            # silently degenerate. Catching Exception only (Ctrl-C still
+            # works) and logging at DEBUG so the score loop stays performant
+            # while keeping a breadcrumb when an indicator faults.
+            logger.debug("backtester indicator skipped: %s", exc, exc_info=False)
 
         # TSMOM — 12-month time-series momentum
         try:
@@ -627,13 +662,27 @@ class Backtester:
                 score += 12
             elif tsmom_m.get("signal") == "NEGATIVE":
                 score -= 12
-        except: pass
+        except Exception as exc:
+            # 2026-05-17 wave 12 P1: was bare `except: pass` which swallowed
+            # KeyboardInterrupt/SystemExit + every legitimate AttributeError
+            # from schema drift. Backtest scores looked stable but were
+            # silently degenerate. Catching Exception only (Ctrl-C still
+            # works) and logging at DEBUG so the score loop stays performant
+            # while keeping a breadcrumb when an indicator faults.
+            logger.debug("backtester indicator skipped: %s", exc, exc_info=False)
 
         # 52-Week High Momentum — boost applied to final score
         try:
             h52_m = FiftyTwoWeekHigh.calculate(list(closes))
             score *= h52_m.get("boost", 1.0)
-        except: pass
+        except Exception as exc:
+            # 2026-05-17 wave 12 P1: was bare `except: pass` which swallowed
+            # KeyboardInterrupt/SystemExit + every legitimate AttributeError
+            # from schema drift. Backtest scores looked stable but were
+            # silently degenerate. Catching Exception only (Ctrl-C still
+            # works) and logging at DEBUG so the score loop stays performant
+            # while keeping a breadcrumb when an indicator faults.
+            logger.debug("backtester indicator skipped: %s", exc, exc_info=False)
 
         # Disposition Effect — Capital Gains Overhang (Frazzini 2006)
         # Requires 252+ bars of closes + volumes for meaningful CGO calculation
