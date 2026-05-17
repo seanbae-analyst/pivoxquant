@@ -76,6 +76,49 @@ class TestAiSwotSmoke:
         assert body.get("detail") == "swot: APIStatusError: rate limited"
         assert body.get("retry_after") == 60
 
+    def test_swot_503_detail_scrubbed_in_production(
+        self, app, client, make_user, monkeypatch
+    ):
+        """2026-05-17 wave 13 P0: routes/ai.py:_AI_DETAIL_IN_RESPONSE
+        gates `body[detail]` by FLASK_ENV. Production must scrub the
+        Anthropic SDK error string (which can embed 'Your credit
+        balance is too low', request-id, model name, org hints,
+        API-key prefix) — only dev/test sees it. This test pins that
+        contract.
+        """
+        u = make_user(email="prodleak@test.com", tier="pro")
+        from models import Watchlist
+        from extensions import db
+        with app.app_context():
+            db.session.add(Watchlist(user_id=u["id"], ticker="AAPL"))
+            db.session.commit()
+        client.post("/api/auth/login",
+                    json={"email": u["email"], "password": u["password"]})
+        # Simulate the production code-path. The gate is computed at
+        # module import time so we patch the resolved constant
+        # directly rather than the env var.
+        monkeypatch.setattr("routes.ai._AI_DETAIL_IN_RESPONSE", False)
+        with patch("routes.ai.ai") as mock_ai:
+            mock_ai.available = True
+            mock_ai.generate_swot.return_value = None
+            mock_ai.last_error = (
+                "swot: AuthenticationError: Your credit balance is too low. "
+                "request_id=req_abc123 model=claude-3-opus"
+            )
+            r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
+        assert r.status_code == 503
+        body = r.get_json()
+        assert body.get("error") == "Failed to generate SWOT"
+        # CRITICAL: detail MUST NOT appear in production responses.
+        assert "detail" not in body, (
+            "detail leaked in prod-gated response — Anthropic SDK message "
+            "would surface 'credit balance' / request_id / model name to "
+            "any authenticated API consumer"
+        )
+        # The user-facing copy stays Korean-friendly.
+        assert body.get("retry_after") == 60
+        assert "error_kr" in body
+
     def test_swot_500_no_detail_when_last_error_unset(self, app, client, make_user):
         """Backwards-compat: if `last_error` isn't set, the route must NOT
         include `detail` (avoid leaking ``None`` into the JSON body)."""

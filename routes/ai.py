@@ -9,10 +9,25 @@ helper instead of calling ``jsonify`` directly.
 """
 import json
 import logging
+import os
 from flask import Blueprint, request, jsonify, Response
 from flask_login import current_user
 
 from models import Position, SignalCache
+
+# 2026-05-17 wave 13 P0 — detail-leak gate. routes/ai.py wraps the
+# Anthropic SDK; `ai.last_error` strings frequently embed sensitive
+# upstream context: "Your credit balance is too low", request-id,
+# model name, organization hint, and (in some SDK versions) the
+# leading prefix of the API key. The pre-fix code forwarded that
+# string as `body["detail"]` on every 503 response, unconditionally.
+# That surfaced provider identity + credit state to anyone hitting
+# an authenticated endpoint. Production responses now scrub the
+# detail; dev / test deployments keep it so operator debugging
+# stays cheap.
+_AI_DETAIL_IN_RESPONSE = (
+    os.environ.get("FLASK_ENV", "development").lower() != "production"
+)
 from security import ai_rate_limit
 from services.container import ai, fetcher
 from services import cache_service
@@ -88,7 +103,7 @@ def swot():
         "error": "Failed to generate SWOT",
         "error_kr": "SWOT 분석을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     }
-    if detail:
+    if detail and _AI_DETAIL_IN_RESPONSE:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
     return jsonify(body), 503
@@ -136,7 +151,7 @@ def competitor():
         "error": "Failed to generate competitor analysis",
         "error_kr": "경쟁사 분석을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     }
-    if detail:
+    if detail and _AI_DETAIL_IN_RESPONSE:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
     return jsonify(body), 503
@@ -182,7 +197,7 @@ def sector_trend():
         "error": "Failed to generate sector trend",
         "error_kr": "섹터 트렌드 분석을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     }
-    if detail:
+    if detail and _AI_DETAIL_IN_RESPONSE:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
     return jsonify(body), 503
@@ -266,7 +281,7 @@ def commentary():
         "error": "Failed to generate commentary",
         "error_kr": "코멘터리를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     }
-    if detail:
+    if detail and _AI_DETAIL_IN_RESPONSE:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
     return jsonify(body), 503
@@ -292,7 +307,7 @@ def morning_summary():
         "error": "Failed to generate summary",
         "error_kr": "요약을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     }
-    if detail:
+    if detail and _AI_DETAIL_IN_RESPONSE:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
     return jsonify(body), 503
@@ -333,7 +348,7 @@ def coaching():
         "error": "Failed to generate coaching",
         "error_kr": "코칭 메시지를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     }
-    if detail:
+    if detail and _AI_DETAIL_IN_RESPONSE:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
     return jsonify(body), 503
