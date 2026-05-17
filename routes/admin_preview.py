@@ -260,10 +260,10 @@ def preview(artifact_type: str):
     try:
         body, mimetype = render(fmt)
     except KeyError as exc:
-        return jsonify({"error": f"sample data missing: {exc}"}), 500
+        return jsonify({"error": "sample data missing (internal error)"}), 500
     except Exception as exc:
         logger.exception("preview render failed for %s (%s)", artifact_type, fmt)
-        return jsonify({"error": f"render failed: {exc}"}), 500
+        return jsonify({"error": "render failed (internal error)"}), 500
 
     # Disposition: attachment only when explicitly requested (PDF download).
     headers: dict[str, str] = {
