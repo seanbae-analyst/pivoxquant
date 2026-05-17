@@ -14,29 +14,23 @@
  *  2026-05-17 wave 12 frontend P1 (PR #432) — page is now a Server
  *  Component so it can `export const metadata` (Next.js disallows it
  *  in "use client" modules). useReducedMotion + motion.div live in
- *  the FeatureCardsGrid child client component. SEO + bundle win: the
- *  static FEATURE_CARDS data + shell never enter the client bundle.
+ *  the FeatureCardsGrid child client component.
+ *
+ *  2026-05-17 wave 13 (PR #446) — `iconKey` string instead of `icon`
+ *  component. React Server Components cannot serialise component
+ *  types across the RSC → client boundary (caught by `npm run build`
+ *  prerender of /features after PR #432: "Functions cannot be passed
+ *  directly to Client Components..."). The child component maps the
+ *  key to the actual LucideIcon at render time.
  */
 
 import type { Metadata } from "next";
-import {
-  Layers,
-  CircuitBoard,
-  Compass,
-  Users,
-  FileText,
-  LineChart,
-  Shield,
-  Globe2,
-  Brain,
-  Target,
-  Sparkles,
-  BarChart3,
-  Gavel,
-} from "lucide-react";
 
 import FeaturePageShell from "@/components/landing/feature-page-shell";
-import { FeatureCardsGrid, type FeatureCard } from "./feature-cards-grid";
+import {
+  FeatureCardsGrid,
+  type FeatureCard,
+} from "./feature-cards-grid";
 
 export const metadata: Metadata = {
   title: "기능 · Features",
@@ -55,7 +49,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "40-Model Engine",
     description:
       "Identity, learning, and artifact — three strata that turn holdings into a research desk.",
-    icon: Brain,
+    iconKey: "Brain",
   },
   {
     href: "/features/personas",
@@ -63,7 +57,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "8 CFO Personas",
     description:
       "Growth, Value, Balanced, Income, Quant, and more — eight investor archetypes.",
-    icon: Users,
+    iconKey: "Users",
   },
   {
     href: "/features/dashboard",
@@ -71,7 +65,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "Dashboard Preview",
     description:
       "The research terminal — equity curve, signals, ledger, and risk board.",
-    icon: LineChart,
+    iconKey: "LineChart",
   },
   {
     href: "/features/explorer",
@@ -79,7 +73,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "Feature Explorer",
     description:
       "Browse the seventeen research artifacts, one at a time.",
-    icon: Compass,
+    iconKey: "Compass",
   },
   {
     href: "/features/reports",
@@ -87,7 +81,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "Sample Reports",
     description:
       "Weekly Memo, Earnings Pre-Brief, Risk Board deck — sample PDFs.",
-    icon: FileText,
+    iconKey: "FileText",
   },
   {
     href: "/features/pre-trade",
@@ -95,7 +89,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "Pre-Trade Checklist",
     description:
       "Seven gates before any position change — friction by design.",
-    icon: Shield,
+    iconKey: "Shield",
   },
   {
     href: "/features/global-desk",
@@ -103,7 +97,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "Korea × US Desk",
     description:
       "One pane. KRW and USD. Unified market feed for global portfolios.",
-    icon: Globe2,
+    iconKey: "Globe2",
   },
   {
     href: "/features/risk-defense",
@@ -111,7 +105,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "7-Layer Risk Defense",
     description:
       "VaR, correlation, VIX, tail, daily, sector, and cash gates.",
-    icon: Layers,
+    iconKey: "Layers",
   },
   {
     href: "/features/quant-scoring",
@@ -119,7 +113,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "Quant Scoring",
     description:
       "Four-pillar composite — momentum, value, quality, and low-volatility.",
-    icon: BarChart3,
+    iconKey: "BarChart3",
   },
   {
     href: "/features/canslim",
@@ -127,7 +121,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "CAN SLIM",
     description:
       "Seven-factor growth screener after William O'Neil's framework.",
-    icon: Target,
+    iconKey: "Target",
   },
   {
     href: "/features/profiles",
@@ -135,7 +129,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "Investor Profiles",
     description:
       "Twenty-question questionnaire that maps you to a persona.",
-    icon: Gavel,
+    iconKey: "Gavel",
   },
   {
     href: "/features/paper-trading",
@@ -143,7 +137,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "Paper Trading",
     description:
       "Rehearse decisions on a sandbox account. No real capital at risk.",
-    icon: CircuitBoard,
+    iconKey: "CircuitBoard",
   },
   {
     href: "/features/ai-assistant",
@@ -151,7 +145,7 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
     title: "AI Assistant",
     description:
       "Claude-powered research notes. Observational, never directive.",
-    icon: Sparkles,
+    iconKey: "Sparkles",
   },
 ];
 
