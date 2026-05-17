@@ -73,3 +73,41 @@ class TestAlpacaSurfaceSmoke:
     def test_unauthenticated_alpaca_disconnect_returns_401(self, client):
         r = client.delete("/api/broker/alpaca/disconnect")
         assert r.status_code == 401
+
+
+# ── Wave 10 (QA gap fill) — KIS account_no boundary rejection ──────────────
+# 2026-05-17: PR #416 tightened the backend regex from \d{6,12} to \d{8} to
+# match the frontend Wave 6 fix. Only the valid 8-digit happy path was
+# tested; this parametric set pins the boundary so any future regex drift
+# (e.g. reverting to \d{6,12}) breaks a test immediately.
+
+
+import pytest as _pytest
+
+
+@_pytest.mark.parametrize("bad_account_no", [
+    "1234567",      # 7 digits — was valid under \d{6,12}, now invalid
+    "123456789",    # 9 digits — was valid, now invalid
+    "12345678901",  # 11 digits — was valid, now invalid
+    "1234",         # 4 digits — always invalid
+    "12345678a",    # non-numeric — always invalid
+    "",             # empty — always invalid
+    "  12345678",   # leading whitespace — always invalid
+])
+def test_connect_rejects_non_8_digit_account_no(client, auth_user, bad_account_no):
+    """Regression guard for PR #416 — backend MUST mirror the frontend
+    `/^\\d{8}$/` regex exactly. Anything else is a 400 before we touch KIS."""
+    r = client.post(
+        "/api/broker/kis/connect",
+        json={
+            "app_key": "k" * 16,
+            "app_secret": "s" * 32,
+            "account_no": bad_account_no,
+            "account_prod": "01",
+            "is_paper": False,
+        },
+    )
+    assert r.status_code == 400, (
+        f"account_no={bad_account_no!r} should be rejected; "
+        f"got {r.status_code} body={r.get_data(as_text=True)}"
+    )

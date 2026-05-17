@@ -149,3 +149,165 @@ class TestWebhookInvoicePaid:
             u = db.session.get(User, user_id)
             assert u.subscription_tier == "pro"
             assert u.subscription_status == "active"
+
+
+# ── Wave 10 (QA gap fill) — webhook handlers without prior tests ────────────
+# 2026-05-17: customer.subscription.updated + invoice.payment_failed had
+# ZERO test coverage (qa-agent P0 finding). These mutate subscription_tier
+# / subscription_status — silent regressions are an immediate revenue +
+# legal surface bug. Same Stripe SDK patching pattern as TestWebhookInvoicePaid.
+
+
+def _post_webhook(raw_client, fake_event):
+    """Shared mini-driver for the new event-handler tests below."""
+    with patch("routes.billing.STRIPE_WEBHOOK_SECRET", "whsec_test"), \
+         patch("routes.billing.stripe") as mock_stripe:
+        mock_stripe.SignatureVerificationError = type(
+            "SigErr", (Exception,), {}
+        )
+        mock_stripe.Webhook.construct_event.return_value = fake_event
+        return raw_client.post(
+            "/api/billing/webhook",
+            data=b"{}",
+            headers={"Stripe-Signature": "t=1,v1=ok"},
+        )
+
+
+class TestWebhookSubscriptionUpdated:
+    """customer.subscription.updated — handler at routes/billing.py:297."""
+
+    def test_subscription_updated_pro_to_premium(self, raw_client, app, monkeypatch):
+        """Upgrade pro→premium via price_id swap must lift the tier."""
+        monkeypatch.setattr("routes.billing.STRIPE_PRICE_PRO", "price_pro_test")
+        monkeypatch.setattr(
+            "routes.billing.STRIPE_PRICE_PREMIUM", "price_premium_test"
+        )
+        user_id = _make_user_with_sub(app, tier="pro", status="active")
+
+        fake_event = {
+            "id": "evt_sub_upgrade",
+            "type": "customer.subscription.updated",
+            "data": {"object": {
+                "customer": "cus_test_123",
+                "status": "active",
+                "items": {"data": [
+                    {"price": {"id": "price_premium_test"}}
+                ]},
+            }},
+        }
+        r = _post_webhook(raw_client, fake_event)
+        assert r.status_code == 200
+
+        from extensions import db
+        from models import User
+        with app.app_context():
+            u = db.session.get(User, user_id)
+            assert u.subscription_tier == "premium"
+            assert u.subscription_status == "active"
+
+    def test_subscription_updated_past_due_keeps_tier(self, raw_client, app):
+        """status=past_due updates status only; tier stays so the user can
+        still load their data while Stripe retries the charge."""
+        user_id = _make_user_with_sub(app, tier="pro", status="active")
+
+        fake_event = {
+            "id": "evt_sub_past_due",
+            "type": "customer.subscription.updated",
+            "data": {"object": {
+                "customer": "cus_test_123",
+                "status": "past_due",
+                "items": {"data": []},
+            }},
+        }
+        r = _post_webhook(raw_client, fake_event)
+        assert r.status_code == 200
+
+        from extensions import db
+        from models import User
+        with app.app_context():
+            u = db.session.get(User, user_id)
+            assert u.subscription_status == "past_due"
+            assert u.subscription_tier == "pro"
+
+    def test_subscription_updated_canceled_drops_to_free(self, raw_client, app):
+        """status=canceled normalises to tier=free + status=inactive."""
+        user_id = _make_user_with_sub(app, tier="premium", status="active")
+
+        fake_event = {
+            "id": "evt_sub_canceled",
+            "type": "customer.subscription.updated",
+            "data": {"object": {
+                "customer": "cus_test_123",
+                "status": "canceled",
+                "items": {"data": []},
+            }},
+        }
+        r = _post_webhook(raw_client, fake_event)
+        assert r.status_code == 200
+
+        from extensions import db
+        from models import User
+        with app.app_context():
+            u = db.session.get(User, user_id)
+            assert u.subscription_tier == "free"
+            assert u.subscription_status == "inactive"
+
+    def test_subscription_updated_unknown_customer_is_noop(self, raw_client, app):
+        """Missing customer row must not 500 — Stripe routinely emits events
+        for customers we no longer own."""
+        fake_event = {
+            "id": "evt_sub_unknown",
+            "type": "customer.subscription.updated",
+            "data": {"object": {
+                "customer": "cus_does_not_exist",
+                "status": "active",
+                "items": {"data": []},
+            }},
+        }
+        r = _post_webhook(raw_client, fake_event)
+        assert r.status_code == 200
+
+
+class TestWebhookInvoicePaymentFailed:
+    """invoice.payment_failed — handler at routes/billing.py:338."""
+
+    def test_invoice_payment_failed_logs_no_mutation(self, raw_client, app):
+        """Per the handler docstring, tier is *intentionally* kept on a
+        failed invoice — Stripe retries automatically. This test pins
+        that contract so a future drift (e.g. flipping tier to free) is
+        caught immediately."""
+        user_id = _make_user_with_sub(app, tier="pro", status="active")
+
+        fake_event = {
+            "id": "evt_invoice_failed",
+            "type": "invoice.payment_failed",
+            "data": {"object": {
+                "id": "in_failed_456",
+                "customer": "cus_test_123",
+                "attempt_count": 2,
+            }},
+        }
+        r = _post_webhook(raw_client, fake_event)
+        assert r.status_code == 200
+        assert r.get_json().get("ok") is True
+
+        from extensions import db
+        from models import User
+        with app.app_context():
+            u = db.session.get(User, user_id)
+            assert u.subscription_tier == "pro"
+            assert u.subscription_status == "active"
+
+    def test_invoice_payment_failed_unknown_customer_is_noop(self, raw_client, app):
+        """Unknown customer must 200 + skip (covers 'user_id=unknown' log)."""
+        fake_event = {
+            "id": "evt_invoice_failed_unknown",
+            "type": "invoice.payment_failed",
+            "data": {"object": {
+                "id": "in_failed_999",
+                "customer": "cus_does_not_exist",
+                "attempt_count": 1,
+            }},
+        }
+        r = _post_webhook(raw_client, fake_event)
+        assert r.status_code == 200
