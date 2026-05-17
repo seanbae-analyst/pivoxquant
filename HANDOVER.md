@@ -1,3 +1,66 @@
+# PivoxQuant — 인수인계서 (2026-05-17 v44.6 final close — 36 PR · OPEN PR 0 · main `e4d62ab → 1415220` · wave 14 6 PR + Vercel build 회생 + 금융 race fix)
+
+## v44.6 final close — Wave 14 6 PR (Vercel build + 금융 race + 보안 info leak)
+
+**한 줄 요약**: CEO "vercel fail 확인 + 버그 계속 잡아" → wave 14 진행. Vercel prerender 실패 (PR #432 RSC 회귀) 즉시 복구 + 2 agent dispatch (concurrency + security 2nd pass) 결과 finance race 1건 + 보안 누설 1건 + 추가 race/access 2건. **6 PR 추가**, 누적 v44 = **36 PR (#412~#450)**.
+
+### Wave 14 6 PR
+
+| PR | 영역 | 핵심 |
+|---|---|---|
+| **#446** | **fix(features) Vercel build 회생** | PR #432 후 production prerender 실패: 'Functions cannot be passed directly to Client Components'. RSC 가 LucideIcon 컴포넌트를 props 로 직렬화 못함. `icon: LucideIcon` → `iconKey: string` 레지스트리 매핑 패턴. `npm run build` exit 0. Vercel + Railway 둘 다 success 배포 검증 직접 cite. |
+| **#447** | **feat(structure) portfolio sweep** | routes/portfolio.py 51 사이트 api_error 적용 (wave 13 pillar 2 close). Python regex sweep 43 sites + manual edit 8 special. 25 stable codes (POSITION_*/TRADE_*/CAPITAL_*/INSUFFICIENT_*). 41 PASS. |
+| **#448** | **fix(security) artifacts {exc} leak** | wave 14 security agent P1: routes/artifacts.py 38 sites + routes/admin_preview.py 2 sites + 4 str(exc) 가 SQLAlchemy IntegrityError/OperationalError 의 SQL + parameter values + table/column names 를 API consumer 에 직접 노출. Python sweep 으로 `f"...: {exc}"` → 일반 메시지. logger.exception 유지. 17 PASS. |
+| **#449** | **fix(security) 금융 race P1** | wave 14 concurrency agent P1: routes/portfolio.py:buy_more / sell_position 가 user.available_capital 을 row lock 없이 read-modify-write. 동시 gevent greenlet 2건 시 같은 잔고 read → 둘 다 deduct → last writer wins → **실 사용자 double-spend 가능**. `db.session.query(User).filter(...).with_for_update().one()` 패턴으로 직렬화. + try/except commit 짝 추가. 41 PASS. |
+| **#450** | **fix(security) watchlist race + push hijack** | wave 14 P2 ×2: (1) watchlist.add TOCTOU IntegrityError 500 → 409 (PR #422 패턴). (2) push.subscribe 가 endpoint URL 만으로 무조건 user_id 재할당 — 다른 user 가 endpoint 알면 hijack 가능 (victim 알림 끊김 + attacker 가 받음). `existing.user_id != current_user.id` → 409 PUSH_ENDPOINT_OWNED. 44 PASS. |
+
+### v44 누적 36 PR (#412~#450)
+
+| 영역 | PR 개수 |
+|---|---|
+| 보안 (cookie/CSRF/race/info-leak/credential) | 9 (#412/#422/#423/#436/#448/#449/#450 + #437 layer + #441 KIS) |
+| 구조 (helper/centralize/sweep) | 8 (#414/#435/#437/#442/#443/#444/#447 + #438 docs) |
+| UX (signup/onboarding/payment) | 5 (#425/#427/#428/#429/#446) |
+| 데이터 (정확성/일관성/throttle) | 6 (#413/#416/#419/#421/#439/#440) |
+| 성능/a11y/perf | 3 (#417/#431/#432) |
+| CAUS 자율 검증 | 1 (#434) |
+| Docs HANDOVER | 4 (#415/#420/#426/#433/#445) — 본 PR #451 추가 시 5 |
+
+### 검증 (직접 cite)
+
+- **Vercel 배포 success** (PR #446 merge 후 main commit `28b075d` 의 `gh api .../status` = "Deployment has completed")
+- **Railway 배포 success** (동일 commit `vibrant-blessing - web: success`)
+- frontend `npm run build` → exit 0 (PR #446 fix 적용 후 직접 cite)
+- 영역별 누적 1000+ PASS / 0 회귀 (각 PR 별 직접 실행)
+- frontend tsc 0 errors / vitest 313/313 PASS
+
+### Wave 14 잔존 finding (defer 결정)
+
+| Finding | Severity | 처리 |
+|---|---|---|
+| billing._get_or_create_customer Stripe 중복 race | P2 | DEFER — 현재 게이트 (BUSINESS_REGISTRATION_PENDING 503) 로 차단. Stripe 활성화 후 (변호사 5/29 의견 직후) 동일 SELECT FOR UPDATE 패턴 적용. |
+| Rate-limit IP-only credential stuffing | P2 | DEFER — 출시 후 모니터링 + email-keyed rate limit 별도 PR (변경 범위 큼) |
+| save_signal UPDATE 무방호 rollback | LOW | DEFER — INSERT 패턴은 PR #422 에서 fix 됐고, UPDATE race 는 last-writer-wins 로 동작 정상 |
+| sim_onboard User INSERT IntegrityError 미캐치 | LOW | DEFER — HMAC TTL + email regex + 1/h rate limit 으로 실 race 확률 매우 낮음 |
+| discover_cache dict 무락 | LOW | DEFER — gevent cooperative multitasking + 단일 dict op atomic |
+
+### CAUS 10-day rotation (PR #434 기준, 변경 없음)
+
+5/18 day4 → 5/19 day5 → 5/20 day6 → **5/21 day7 simulator** → **5/22 day8 features** → **5/23 day9 onboarding** → 5/24 day0 signup → ... → 5/29 day5 reports (CEO 변호사 미팅 당일).
+
+### 본 세션 종료 시점 main 상태
+
+- HEAD: `1415220` (PR #450 watchlist + push)
+- OPEN PR: 0건
+- 누적 v44 = **36 PR (#412 ~ #450)**
+- 신규 services 모듈 누적 2건 (error_responses + admin_emails) + 1 layer fix (push)
+
+### CEO 외부 액션 (변화 없음)
+
+5/29 변호사 미팅 + Stripe 활성 + env vars + iCloud Desktop sync OFF + 사업자 추가 업태 + 통신판매업 신고. 모두 코드 무관. PR #449 의 SELECT FOR UPDATE 는 PostgreSQL prod 에서만 실효 — Railway 의 SQLAlchemy connection 이 PostgreSQL transaction 을 지원함을 확인 (이미 사용 중).
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-17 v44.5 final close — 30 PR · OPEN PR 0 · main `e4d62ab → f9dceaf` · wave 13 11 PR + structure pillar 2)
 
 ## v44.5 final close — Wave 13 11 PR (CAUS coverage + P0 security + 구조 정비)
