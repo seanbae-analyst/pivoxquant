@@ -92,8 +92,16 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"이기"), "benchmark 대비 기록하"),  # "이기다", "이겼다", "이겼습니다"의 어간
 
     # ── Group 6: 영문 — 동사형 / 명령형 ──────────────────────────────────
+    # 순서 주의: "BUY signal" / "SELL signal" 복합구문이 단독 \bBUY\b / \bSELL\b
+    # 보다 먼저 매칭되어야 한다. 그렇지 않으면 "BUY signal" → "ENTRY signal" 로
+    # 부분 치환되어 Group 6 기존 의미("POSITIVE indicator") 유지가 깨진다.
     (re.compile(r"\bBUY\s+signal\b", re.IGNORECASE), "POSITIVE indicator"),
     (re.compile(r"\bSELL\s+signal\b", re.IGNORECASE), "NEGATIVE indicator"),
+    # Naked BUY / SELL — backtester.py trades[].action 및 AI Twin side 노출 경계.
+    # 단어 단독 형태만 매치 (case-sensitive, no IGNORECASE) — 영문 "buy"/"sell"
+    # 가 산문 내부에서 의도 없이 치환되지 않도록 대문자만 한정.
+    (re.compile(r"\bBUY\b"), "ENTRY"),
+    (re.compile(r"\bSELL\b"), "EXIT"),
     (re.compile(r"\brecommend(ation|ed|ing|s)?\b", re.IGNORECASE), "note"),
     (re.compile(r"\badvise(d|s|ing)?\b", re.IGNORECASE), "provide information"),
     (re.compile(r"\badvice\b", re.IGNORECASE), "information"),
@@ -177,6 +185,23 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"분할\s*진입\s*권장"), "분할 패턴 영역"),
     (re.compile(r"분할\s*진입\s*권고"), "분할 패턴 영역"),
     (re.compile(r"매수\s*압력"), "유입 강도"),
+    # Wave 4 (2026-05-17) — engine.py msg_kr 잔존 4종.
+    # services/quant/engine.py:639,644,1220,1350 sites 의 한국어 메시지.
+    (re.compile(r"기관\s*매수\s*추정"), "기관 유입 관찰"),
+    (re.compile(r"기관\s*매도\s*추정"), "기관 유출 관찰"),
+    (re.compile(r"신규\s*매수\s*회피"), "신규 진입 보류 구간"),
+    (re.compile(r"강한\s*매도\s*압력"), "강한 유출 강도"),
+
+    # ── Group 11: 구어체 직접 매수/매도 명령 (Wave 4 2026-05-17) ──────────
+    # scrub_text() 경로에서 _COMPLIANCE_FORBIDDEN_PATTERNS hard-drop 와 별개로
+    # surgical replacement 보강 — AI/cache 출력 경계에서 무조건 치환되도록.
+    (re.compile(r"사세요\b"), "관찰 중"),
+    (re.compile(r"파세요\b"), "관찰 중"),
+    (re.compile(r"팔아요\b"), "관찰 중"),
+    (re.compile(r"사라\b"), "관찰 중"),
+    (re.compile(r"팔아\b"), "관찰 중"),
+    (re.compile(r"주식\s*사면\s*(됩니다|돼요|된다)"), "관찰 중"),
+    (re.compile(r"지금\s*사야\s*(해요|합니다|돼요|한다)"), "관찰 중"),
 ]
 
 # ── Prohibited patterns (log only, 설계 오류 조기 발견용) ─────────────────
@@ -293,6 +318,12 @@ def scrub_signal(data: Any) -> Any:
     Walks known free-text fields in a SignalCache payload and scrubs each.
     Unknown fields pass through untouched (score/price/ticker stay as-is).
     Safe for arbitrary dict shape — no-op on non-dict inputs.
+
+    Wave 4 (2026-05-17): also walks the ``signals`` list (engine.py emits
+    ``{"signals": [{"msg": ..., "msg_kr": ...}, ...]}``) so msg_kr advisory
+    phrases from engine.py:639/644/1220/1350 are scrubbed before SignalCache
+    write / API response. Group 10 patterns ("기관 매수 추정" 등) handle the
+    surgical replacement.
     """
     if not isinstance(data, dict):
         return data
@@ -302,6 +333,20 @@ def scrub_signal(data: Any) -> Any:
             scrubbed = safe_scrub(original, context=f"signal.{field}")
             if scrubbed != original:
                 data[field] = scrubbed
+    # Wave 4: nested signal-entries list. Each entry is a dict with at minimum
+    # ``msg`` / ``msg_kr`` free-text fields. Scrub every string leaf without
+    # mutating ticker / type / score numerics.
+    signals_list = data.get("signals")
+    if isinstance(signals_list, list):
+        for entry in signals_list:
+            if isinstance(entry, dict):
+                for sub_field in ("msg", "msg_kr", "message", "message_kr",
+                                  "reason", "reason_kr", "label", "label_kr"):
+                    val = entry.get(sub_field)
+                    if isinstance(val, str):
+                        scrubbed = safe_scrub(val, context=f"signal.signals[].{sub_field}")
+                        if scrubbed != val:
+                            entry[sub_field] = scrubbed
     # Nested: some engines put free-text inside a sub-dict
     for key in ("commentary_block", "ai", "ai_commentary"):
         nested = data.get(key)

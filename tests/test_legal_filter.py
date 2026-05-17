@@ -242,6 +242,94 @@ class TestScrubResponse:
         assert "상승 관찰" in out["note"]
 
 
+class TestWave4LegalFilterShipBlocker:
+    """Wave 4 (2026-05-17) — F1+F2+F3 SHIP-BLOCKER 회귀 게이트.
+
+    verify-security agent 발견 자본시장법 §6 미등록 투자자문 위험 6건 중
+    legal_filter 영역 3건 (F1 engine msg_kr, F2 구어체, F3 naked BUY/SELL)
+    의 회귀 방지. legal-guard.yml CI 도 활성화되어 PR 단계에서 차단된다.
+    """
+
+    # ── F1: Group 10 expansion ────────────────────────────────────────────
+    def test_f1_kigwan_buy_estimate(self):
+        assert "매수" not in scrub_text("기관 매수 추정")
+        assert "기관 유입 관찰" == scrub_text("기관 매수 추정")
+
+    def test_f1_kigwan_sell_estimate(self):
+        assert "매도" not in scrub_text("기관 매도 추정")
+        assert "기관 유출 관찰" == scrub_text("기관 매도 추정")
+
+    def test_f1_new_buy_avoidance(self):
+        assert "매수" not in scrub_text("신규 매수 회피")
+
+    def test_f1_strong_sell_pressure(self):
+        assert "매도" not in scrub_text("강한 매도 압력")
+        assert "강한 유출 강도" == scrub_text("강한 매도 압력")
+
+    def test_f1_signals_list_traversal(self):
+        """scrub_signal walks signals[].msg_kr — was bypass site."""
+        payload = {
+            "ticker": "005930.KS",
+            "score": 72,
+            "signals": [
+                {"type": "bullish", "msg": "High-volume breakout — institutional accumulation detected",
+                 "msg_kr": "거래량 급증 상승 — 기관 매수 추정"},
+                {"type": "bearish", "msg": "Order Flow: Strong selling pressure",
+                 "msg_kr": "주문흐름: 강한 매도 압력"},
+            ],
+        }
+        out = scrub_signal(payload)
+        assert "기관 매수 추정" not in out["signals"][0]["msg_kr"]
+        assert "기관 유입 관찰" in out["signals"][0]["msg_kr"]
+        assert "강한 매도 압력" not in out["signals"][1]["msg_kr"]
+        assert "강한 유출 강도" in out["signals"][1]["msg_kr"]
+        # non-string fields intact
+        assert out["signals"][0]["type"] == "bullish"
+        assert out["score"] == 72
+
+    # ── F2: Group 11 구어체 ───────────────────────────────────────────────
+    @pytest.mark.parametrize(
+        "directive",
+        ["사세요", "파세요", "팔아요", "사라", "팔아",
+         "주식 사면 됩니다", "주식 사면 돼요",
+         "지금 사야 해요", "지금 사야 합니다"],
+    )
+    def test_f2_colloquial_directive_scrubbed(self, directive):
+        result = scrub_text(directive)
+        # 매수/매도 동사가 완전히 제거되어야 함
+        for forbidden in ("사세요", "파세요", "팔아요", "사라", "팔아", "사면", "사야"):
+            assert forbidden not in result, f"'{forbidden}' bypassed scrub of '{directive}' → '{result}'"
+
+    # ── F3: naked BUY/SELL (Group 6 보강) ─────────────────────────────────
+    def test_f3_naked_buy(self):
+        assert "ENTRY" == scrub_text("BUY")
+        assert "BUY" not in scrub_text("BUY")
+
+    def test_f3_naked_sell(self):
+        assert "EXIT" == scrub_text("SELL")
+        assert "SELL" not in scrub_text("SELL")
+
+    def test_f3_buy_signal_unchanged(self):
+        """기존 'BUY signal' 케이스가 깨지지 않아야 함 (Group 6 순서 의존)."""
+        assert "POSITIVE indicator" == scrub_text("BUY signal")
+        assert "NEGATIVE indicator" == scrub_text("SELL signal")
+
+    def test_f3_backtester_trade_dict(self):
+        """backtester trades[].action raw BUY/SELL → ENTRY/EXIT via scrub_response."""
+        trades_payload = {
+            "trades": [
+                {"date": "2024-01-15", "action": "BUY", "price": 150.0, "shares": 10},
+                {"date": "2024-02-20", "action": "SELL", "price": 165.0, "shares": 10},
+            ],
+            "summary": "1 round-trip",
+        }
+        out = scrub_response(trades_payload)
+        assert out["trades"][0]["action"] == "ENTRY"
+        assert out["trades"][1]["action"] == "EXIT"
+        # numeric fields untouched
+        assert out["trades"][0]["price"] == 150.0
+
+
 class TestEnsureDisclaimer:
     def test_append_kr(self):
         out = ensure_disclaimer("관찰 지표입니다.", "kr")

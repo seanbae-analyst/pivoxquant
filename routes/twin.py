@@ -29,7 +29,7 @@ from models import (
 from services import container as svc
 from services.twin import initialize_twin, generate_weekly_report
 
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 from security import ai_rate_limit
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,7 @@ def _envelope(data: dict | list, status: int = 200):
 
 @twin_bp.route("/initialize", methods=["POST"])
 @api_auth
+@legal_scrub_response
 @ai_rate_limit
 def init_twin_endpoint():
     """Idempotent. Creates the user's $10K paper Twin if absent."""
@@ -86,6 +87,7 @@ def init_twin_endpoint():
 
 @twin_bp.route("/portfolio", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def twin_portfolio():
     twin = AITwinPortfolio.query.filter_by(user_id=current_user.id).first()
     if twin is None:
@@ -138,6 +140,7 @@ def twin_portfolio():
 
 @twin_bp.route("/trades", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def twin_trades():
     twin = AITwinPortfolio.query.filter_by(user_id=current_user.id).first()
     if twin is None:
@@ -179,6 +182,7 @@ def twin_trades():
 
 @twin_bp.route("/weekly-reports", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def twin_weekly_reports():
     try:
         n = int(request.args.get("n", "12"))
@@ -206,6 +210,7 @@ def twin_weekly_reports():
 
 @twin_bp.route("/comparison", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def twin_comparison():
     """Cumulative since-inception comparison (user vs twin)."""
     twin = AITwinPortfolio.query.filter_by(user_id=current_user.id).first()
@@ -267,6 +272,7 @@ def twin_comparison():
 
 @twin_bp.route("/weekly-reports/generate", methods=["POST"])
 @api_auth
+@legal_scrub_response
 @ai_rate_limit
 def twin_generate_weekly():
     """Compute (or fetch) the user's weekly comparison row.
