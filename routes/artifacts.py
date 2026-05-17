@@ -9,6 +9,19 @@ to any authenticated caller of preview/manual-run endpoints.
 ``logger.exception(...)`` still captures the full traceback for ops;
 only the response body changed.
 
+2026-05-17 wave B api_error sweep: 142 error sites in this file were
+converted from raw ``jsonify({"error": ...})`` to the centralized
+``api_error(en=..., kr=..., code=..., status=...)`` helper. Adds
+Korean copy + a machine-readable stable ``code`` to every endpoint so
+the frontend toast UX and pattern-matching contract stay uniform.
+The English ``error`` text is preserved verbatim so existing test
+substring assertions in ``tests/test_artifacts_generate_unified.py``
+keep passing.
+
+The 2 admin-only ``/_diag/weekly-memo-pipeline`` diagnostic responses
+keep the ``{ok, stage, error: dict, stages: ...}`` shape on purpose
+— see the docstring on ``diag_weekly_memo_pipeline`` for why.
+
 
 Endpoints (all under /api/artifacts, all require auth unless noted):
 
@@ -51,6 +64,7 @@ from extensions import db
 from models import Artifact
 from services.artifacts.monthly_brag_service import MonthlyBragService
 from services.artifacts.weekly_memo_service import WeeklyMemoService
+from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name
 
 from .decorators import api_auth, require_tier
@@ -80,7 +94,7 @@ def _check_cron_admin_secret() -> tuple[Response, int] | None:
     # cron secret 우선. 미설정 시 dev_secret로 fallback (dev/staging).
     expected = cron_secret or dev_secret
     if not expected:
-        return jsonify({"error": "Not found"}), 404
+        return api_error(en="Not found", kr="찾을 수 없습니다.", code="NOT_FOUND", status=404)
 
     provided = request.headers.get("X-Admin-Secret", "")
     # 2026-05-08 (Vuln SEC-B): use hmac.compare_digest for constant-time
@@ -88,7 +102,7 @@ def _check_cron_admin_secret() -> tuple[Response, int] | None:
     # short-circuits on first byte mismatch which leaks secret prefix
     # length over many requests.
     if not hmac.compare_digest(provided, expected):
-        return jsonify({"error": "Admin only"}), 403
+        return api_error(en="Admin only", kr="관리자 전용입니다.", code="ADMIN_ONLY", status=403)
 
     return None
 
@@ -177,7 +191,7 @@ def artifacts_list():
     try:
         limit = int(request.args.get("limit", "50"))
     except ValueError:
-        return jsonify({"error": "limit must be an integer"}), 400
+        return api_error(en="limit must be an integer", kr="limit은 정수여야 합니다.", code="INVALID_LIMIT_TYPE", status=400)
     limit = max(1, min(limit, 200))
 
     q = Artifact.query.filter(Artifact.user_id == current_user.id)
@@ -248,7 +262,7 @@ def artifacts_preview(artifact_id: int):
     """
     artefact = db.session.get(Artifact, artifact_id)
     if not artefact or artefact.user_id != current_user.id:
-        return jsonify({"error": "Artifact not found"}), 404
+        return api_error(en="Artifact not found", kr="아티팩트를 찾을 수 없습니다.", code="ARTIFACT_NOT_FOUND", status=404)
 
     return jsonify({
         "ok":       True,
@@ -275,28 +289,31 @@ def artifacts_download(artifact_id: int):
     """
     artefact = db.session.get(Artifact, artifact_id)
     if not artefact or artefact.user_id != current_user.id:
-        return jsonify({"error": "Artifact not found"}), 404
+        return api_error(en="Artifact not found", kr="아티팩트를 찾을 수 없습니다.", code="ARTIFACT_NOT_FOUND", status=404)
 
     meta = _ARTIFACT_DOWNLOAD_META.get(artefact.type)
     if not meta:
-        return jsonify({
-            "error": f"Download not supported for type={artefact.type}",
-            "code":  "TYPE_NOT_DOWNLOADABLE",
-        }), 415
+        return api_error(
+            en=f"Download not supported for type={artefact.type}",
+            kr="이 아티팩트 유형은 다운로드를 지원하지 않습니다.",
+            code="TYPE_NOT_DOWNLOADABLE", status=415,
+        )
     mimetype, ext = meta
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "File unavailable for this artifact",
-            "code":  "FILE_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="File unavailable for this artifact",
+            kr="이 아티팩트의 파일이 아직 준비되지 않았습니다.",
+            code="FILE_NOT_RENDERED", status=410,
+        )
 
     file_path = Path(artefact.pdf_path)
     if not file_path.exists():
-        return jsonify({
-            "error": "File missing on disk",
-            "code":  "FILE_MISSING",
-        }), 410
+        return api_error(
+            en="File missing on disk",
+            kr="파일이 서버에 존재하지 않습니다.",
+            code="FILE_MISSING", status=410,
+        )
 
     # Mark opened on first successful download — same convention as the
     # per-type endpoints above.
@@ -327,7 +344,7 @@ def artifacts_mark_read(artifact_id: int):
     """Mark an artifact as read. Owner-only. Idempotent."""
     artefact = db.session.get(Artifact, artifact_id)
     if not artefact or artefact.user_id != current_user.id:
-        return jsonify({"error": "Artifact not found"}), 404
+        return api_error(en="Artifact not found", kr="아티팩트를 찾을 수 없습니다.", code="ARTIFACT_NOT_FOUND", status=404)
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -338,7 +355,7 @@ def artifacts_mark_read(artifact_id: int):
             current_app.logger.warning(
                 "markRead failed for artefact %s: %s", artifact_id, exc,
             )
-            return jsonify({"error": "Could not mark as read"}), 500
+            return api_error(en="Could not mark as read", kr="읽음 처리에 실패했습니다.", code="MARK_READ_FAILED", status=500)
 
     return jsonify({
         "ok":         True,
@@ -370,7 +387,7 @@ def weekly_memo_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("weekly memo preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({
         "ok":   True,
@@ -394,20 +411,22 @@ def weekly_memo_download(memo_id: int):
     if (not artefact
             or artefact.type != "weekly_memo"
             or artefact.user_id != current_user.id):
-        return jsonify({"error": "Memo not found"}), 404
+        return api_error(en="Memo not found", kr="메모를 찾을 수 없습니다.", code="MEMO_NOT_FOUND", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this memo",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this memo",
+            kr="이 메모의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     # Mark as opened on first successful download
     if not artefact.opened_at:
@@ -470,14 +489,14 @@ def weekly_memo_trigger():
         try:
             target_date = date.fromisoformat(target_str)
         except ValueError:
-            return jsonify({"error": "invalid target_date (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid target_date (expected YYYY-MM-DD)", kr="target_date 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_TARGET_DATE", status=400)
 
     try:
         summary = WeeklyMemoService().run_weekly(target_date=target_date)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("weekly memo manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -506,11 +525,11 @@ def monthly_brag_preview():
         try:
             month_date = date.fromisoformat(str(month_str))
         except ValueError:
-            return jsonify({"error": "invalid month (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid month (expected YYYY-MM-DD)", kr="month 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_MONTH", status=400)
 
     anon_override = body.get("anonymous")
     if anon_override is not None and not isinstance(anon_override, bool):
-        return jsonify({"error": "anonymous must be a boolean"}), 400
+        return api_error(en="anonymous must be a boolean", kr="anonymous는 boolean이어야 합니다.", code="ANONYMOUS_BOOL_REQUIRED", status=400)
 
     try:
         svc = MonthlyBragService()
@@ -521,7 +540,7 @@ def monthly_brag_preview():
         png_bytes = svc.render_png(data)
     except Exception as exc:
         current_app.logger.error("monthly brag preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     png_b64 = base64.b64encode(png_bytes).decode("ascii") if png_bytes else None
     return jsonify({
@@ -545,20 +564,22 @@ def monthly_brag_download(brag_id: int):
     if (not artefact
             or artefact.type != "monthly_brag"
             or artefact.user_id != current_user.id):
-        return jsonify({"error": "Brag card not found"}), 404
+        return api_error(en="Brag card not found", kr="자랑 카드를 찾을 수 없습니다.", code="BRAG_NOT_FOUND", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PNG unavailable for this brag card",
-            "code":  "PNG_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PNG unavailable for this brag card",
+            kr="이 자랑 카드의 PNG가 아직 준비되지 않았습니다.",
+            code="PNG_NOT_RENDERED", status=410,
+        )
 
     png_file = Path(artefact.pdf_path)
     if not png_file.exists():
-        return jsonify({
-            "error": "PNG file missing on disk",
-            "code":  "PNG_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PNG file missing on disk",
+            kr="PNG 파일이 서버에 존재하지 않습니다.",
+            code="PNG_FILE_MISSING", status=410,
+        )
 
     # Mark as opened on first successful download — same convention as
     # the weekly memo route.
@@ -592,7 +613,7 @@ def monthly_brag_share_link(brag_id: int):
     if (not artefact
             or artefact.type != "monthly_brag"
             or artefact.user_id != current_user.id):
-        return jsonify({"error": "Brag card not found"}), 404
+        return api_error(en="Brag card not found", kr="자랑 카드를 찾을 수 없습니다.", code="BRAG_NOT_FOUND", status=404)
 
     data = artefact.data_json or {}
     referral = data.get("referral_code") or ""
@@ -659,16 +680,18 @@ def monthly_brag_trigger():
         try:
             target_month = date.fromisoformat(str(target_str))
         except ValueError:
-            return jsonify({
-                "error": "invalid target_month (expected YYYY-MM-DD)",
-            }), 400
+            return api_error(
+                en="invalid target_month (expected YYYY-MM-DD)",
+                kr="target_month 형식이 잘못되었습니다 (YYYY-MM-DD).",
+                code="INVALID_TARGET_MONTH", status=400,
+            )
 
     try:
         summary = MonthlyBragService().run_monthly(target_month=target_month)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("monthly brag manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -708,11 +731,11 @@ def brag_card_preview():
         try:
             month_date = date.fromisoformat(str(month_str))
         except ValueError:
-            return jsonify({"error": "invalid month (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid month (expected YYYY-MM-DD)", kr="month 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_MONTH", status=400)
 
     anon_override = body.get("anonymous")
     if anon_override is not None and not isinstance(anon_override, bool):
-        return jsonify({"error": "anonymous must be a boolean"}), 400
+        return api_error(en="anonymous must be a boolean", kr="anonymous는 boolean이어야 합니다.", code="ANONYMOUS_BOOL_REQUIRED", status=400)
 
     try:
         svc = BragCardService()
@@ -723,7 +746,7 @@ def brag_card_preview():
         png_bytes = svc.render_png(html)
     except Exception as exc:
         current_app.logger.error("brag card preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     png_b64 = base64.b64encode(png_bytes).decode("ascii") if png_bytes else None
     return jsonify({
@@ -748,20 +771,22 @@ def brag_card_download(card_id: int):
     if (not artefact
             or artefact.type != "brag_card"
             or artefact.user_id != current_user.id):
-        return jsonify({"error": "Brag card not found"}), 404
+        return api_error(en="Brag card not found", kr="자랑 카드를 찾을 수 없습니다.", code="BRAG_NOT_FOUND", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PNG unavailable for this brag card",
-            "code":  "PNG_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PNG unavailable for this brag card",
+            kr="이 자랑 카드의 PNG가 아직 준비되지 않았습니다.",
+            code="PNG_NOT_RENDERED", status=410,
+        )
 
     png_file = Path(artefact.pdf_path)
     if not png_file.exists():
-        return jsonify({
-            "error": "PNG file missing on disk",
-            "code":  "PNG_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PNG file missing on disk",
+            kr="PNG 파일이 서버에 존재하지 않습니다.",
+            code="PNG_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         from datetime import datetime, timezone
@@ -794,7 +819,7 @@ def brag_card_share(share_token: str):
         content is inherently public by virtue of the share action.
     """
     if not share_token or len(share_token) < 16:
-        return jsonify({"error": "Invalid share token"}), 404
+        return api_error(en="Invalid share token", kr="유효하지 않은 공유 토큰입니다.", code="INVALID_SHARE_TOKEN", status=404)
 
     artefact = (
         Artifact.query
@@ -802,7 +827,7 @@ def brag_card_share(share_token: str):
         .first()
     )
     if not artefact:
-        return jsonify({"error": "Card not found"}), 404
+        return api_error(en="Card not found", kr="카드를 찾을 수 없습니다.", code="CARD_NOT_FOUND", status=404)
 
     data = dict(artefact.data_json or {})
     data.setdefault("share_token", share_token)
@@ -859,16 +884,18 @@ def brag_card_trigger():
         try:
             target_month = date.fromisoformat(str(target_str))
         except ValueError:
-            return jsonify({
-                "error": "invalid target_month (expected YYYY-MM-DD)",
-            }), 400
+            return api_error(
+                en="invalid target_month (expected YYYY-MM-DD)",
+                kr="target_month 형식이 잘못되었습니다 (YYYY-MM-DD).",
+                code="INVALID_TARGET_MONTH", status=400,
+            )
 
     try:
         summary = BragCardService().run_monthly(target_month=target_month)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("brag card manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -886,7 +913,7 @@ def brag_card_privacy():
     body = request.get_json(silent=True) or {}
     val = body.get("privacy_mode")
     if not isinstance(val, bool):
-        return jsonify({"error": "privacy_mode must be a boolean"}), 400
+        return api_error(en="privacy_mode must be a boolean", kr="privacy_mode는 boolean이어야 합니다.", code="PRIVACY_BOOL_REQUIRED", status=400)
 
     try:
         setattr(current_user, "privacy_mode", val)
@@ -896,7 +923,7 @@ def brag_card_privacy():
         current_app.logger.error(
             "privacy toggle failed for user %s: %s", current_user.id, exc,
         )
-        return jsonify({"error": "Could not update privacy flag"}), 500
+        return api_error(en="Could not update privacy flag", kr="개인정보 설정을 변경하지 못했습니다.", code="PRIVACY_UPDATE_FAILED", status=500)
 
     return jsonify({"ok": True, "privacy_mode": val})
 
@@ -933,7 +960,7 @@ def earnings_prebrief_upcoming():
     try:
         hours = int(request.args.get("hours", "168"))
     except ValueError:
-        return jsonify({"error": "hours must be an integer"}), 400
+        return api_error(en="hours must be an integer", kr="hours는 정수여야 합니다.", code="INVALID_HOURS", status=400)
     hours = max(1, min(hours, 336))
 
     svc = EarningsPrebriefService()
@@ -941,7 +968,7 @@ def earnings_prebrief_upcoming():
         all_rows = svc.get_upcoming_earnings(hours=hours)
     except Exception as exc:
         current_app.logger.error("earnings upcoming fetch failed: %s", exc)
-        return jsonify({"error": "Upcoming fetch failed (internal error)"}), 500
+        return api_error(en="Upcoming fetch failed (internal error)", kr="예정된 일정을 불러오는 데 실패했습니다.", code="UPCOMING_FETCH_FAILED", status=500)
 
     # Scope to the caller — the underlying method returns across all Pro+
     # users for the scheduler path.
@@ -977,7 +1004,7 @@ def earnings_prebrief_preview(ticker: str):
     """
     ticker = (ticker or "").upper().strip()
     if not ticker or len(ticker) > 12:
-        return jsonify({"error": "invalid ticker"}), 400
+        return api_error(en="invalid ticker", kr="유효하지 않은 종목입니다.", code="INVALID_TICKER", status=400)
 
     svc = EarningsPrebriefService()
     try:
@@ -985,16 +1012,17 @@ def earnings_prebrief_preview(ticker: str):
     except ValueError as exc:
         # user_id lookup failed — shouldn't happen post-auth but defend
         current_app.logger.warning("prebrief preview value error: %s", exc)
-        return jsonify({"error": "Bad request"}), 404
+        return api_error(en="Bad request", kr="잘못된 요청입니다.", code="BAD_REQUEST_404", status=404)
     except Exception as exc:
         current_app.logger.error("prebrief preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     if data is None:
-        return jsonify({
-            "error": "No upcoming earnings found for this ticker",
-            "code":  "NO_UPCOMING_EARNINGS",
-        }), 404
+        return api_error(
+            en="No upcoming earnings found for this ticker",
+            kr="이 종목의 예정된 실적 발표를 찾을 수 없습니다.",
+            code="NO_UPCOMING_EARNINGS", status=404,
+        )
 
     try:
         html = svc.render_email_html(data)
@@ -1020,20 +1048,22 @@ def earnings_prebrief_download(brief_id: int):
     if (not artefact
             or artefact.type != "earnings_prebrief"
             or artefact.user_id != current_user.id):
-        return jsonify({"error": "Pre-Brief not found"}), 404
+        return api_error(en="Pre-Brief not found", kr="실적 프리브리프를 찾을 수 없습니다.", code="PREBRIEF_NOT_FOUND", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this pre-brief",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this pre-brief",
+            kr="이 프리브리프의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         from datetime import datetime, timezone
@@ -1070,14 +1100,14 @@ def earnings_prebrief_trigger():
     body = request.get_json(silent=True) or {}
     send = body.get("send", True)
     if not isinstance(send, bool):
-        return jsonify({"error": "send must be a boolean"}), 400
+        return api_error(en="send must be a boolean", kr="send는 boolean이어야 합니다.", code="SEND_BOOL_REQUIRED", status=400)
 
     try:
         summary = EarningsPrebriefService().run_scan(send=send)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("prebrief manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1108,7 +1138,7 @@ def kpi_dashboard_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("kpi dashboard preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1133,14 +1163,14 @@ def kpi_dashboard_trigger():
         try:
             target_date = date.fromisoformat(target_str)
         except ValueError:
-            return jsonify({"error": "invalid target_date (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid target_date (expected YYYY-MM-DD)", kr="target_date 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_TARGET_DATE", status=400)
 
     try:
         summary = KPIDashboardService().run_daily(target_date=target_date)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("kpi dashboard manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1171,7 +1201,7 @@ def self_audit_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("self audit preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1196,21 +1226,22 @@ def self_audit_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Self Audit available yet",
-                        "code": "NO_AUDIT"}), 404
+        return api_error(en="No Self Audit available yet", kr="아직 사용 가능한 자가 진단이 없습니다.", code="NO_AUDIT", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this audit",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this audit",
+            kr="이 자가 진단의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1250,14 +1281,14 @@ def self_audit_trigger():
         try:
             quarter_end = date.fromisoformat(qe_str)
         except ValueError:
-            return jsonify({"error": "invalid quarter_end (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid quarter_end (expected YYYY-MM-DD)", kr="quarter_end 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_QUARTER_END", status=400)
 
     try:
         summary = SelfAuditService().run_quarterly(quarter_end=quarter_end)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("self audit manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1287,7 +1318,7 @@ def dd_checklist_pending():
         pending = svc.pending_for_user(current_user.id)
     except Exception as exc:
         current_app.logger.error("dd pending fetch failed: %s", exc)
-        return jsonify({"error": "Pending fetch failed (internal error)"}), 500
+        return api_error(en="Pending fetch failed (internal error)", kr="대기 중 항목 조회에 실패했습니다.", code="PENDING_FETCH_FAILED", status=500)
 
     return jsonify({"ok": True, "count": len(pending), "pending": pending})
 
@@ -1319,19 +1350,19 @@ def dd_checklist_submit():
     try:
         position_id = int(body.get("position_id"))
     except (TypeError, ValueError):
-        return jsonify({"error": "position_id must be an integer"}), 400
+        return api_error(en="position_id must be an integer", kr="position_id는 정수여야 합니다.", code="POSITION_ID_REQUIRED", status=400)
 
     bool_fields = ("financials_checked", "moat_checked", "management_checked",
                    "valuation_checked", "risks_checked")
     for f in bool_fields:
         if not isinstance(body.get(f), bool):
-            return jsonify({"error": f"{f} must be a boolean"}), 400
+            return api_error(en=f"{f} must be a boolean", kr=f"{f}는 boolean이어야 합니다.", code="BOOL_FIELD_REQUIRED", status=400)
 
     note = body.get("note")
     if note is not None and not isinstance(note, str):
-        return jsonify({"error": "note must be a string"}), 400
+        return api_error(en="note must be a string", kr="note는 문자열이어야 합니다.", code="NOTE_STRING_REQUIRED", status=400)
     if isinstance(note, str) and len(note) > 500:
-        return jsonify({"error": "note exceeds 500 characters"}), 400
+        return api_error(en="note exceeds 500 characters", kr="note는 500자를 초과할 수 없습니다.", code="NOTE_TOO_LONG", status=400)
 
     svc = DDChecklistService()
     try:
@@ -1346,14 +1377,14 @@ def dd_checklist_submit():
             note=note,
         )
     except LookupError as exc:
-        return jsonify({"error": "Bad request"}), 404
+        return api_error(en="Bad request", kr="잘못된 요청입니다.", code="BAD_REQUEST_404", status=404)
     except PermissionError:
-        return jsonify({"error": "Position does not belong to you"}), 403
+        return api_error(en="Position does not belong to you", kr="해당 포지션은 본인의 포지션이 아닙니다.", code="POSITION_NOT_OWNER", status=403)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("dd submit failed for user %s: %s",
                                  current_user.id, exc)
-        return jsonify({"error": "Submit failed (internal error)"}), 500
+        return api_error(en="Submit failed (internal error)", kr="제출에 실패했습니다.", code="SUBMIT_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "dd_check": row.to_dict()})
 
@@ -1372,7 +1403,7 @@ def dd_checklist_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("dd manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1404,7 +1435,7 @@ def burn_rate_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("burn_rate preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1425,21 +1456,22 @@ def burn_rate_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Burn Rate report available yet",
-                        "code": "NO_REPORT"}), 404
+        return api_error(en="No Burn Rate report available yet", kr="아직 사용 가능한 번레이트 리포트가 없습니다.", code="NO_REPORT", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this report",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this report",
+            kr="이 리포트의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1480,14 +1512,14 @@ def burn_rate_trigger():
         try:
             target_month = date.fromisoformat(target_str)
         except ValueError:
-            return jsonify({"error": "invalid target_month (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid target_month (expected YYYY-MM-DD)", kr="target_month 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_TARGET_MONTH", status=400)
 
     try:
         summary = BurnRateService().run_monthly(target_month=target_month)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("burn_rate manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1515,7 +1547,7 @@ def credit_rating_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("credit_rating preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1536,14 +1568,14 @@ def credit_rating_trigger():
         try:
             as_of = date.fromisoformat(as_of_str)
         except ValueError:
-            return jsonify({"error": "invalid as_of (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid as_of (expected YYYY-MM-DD)", kr="as_of 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_AS_OF", status=400)
 
     try:
         summary = CreditRatingService().run_monthly(as_of=as_of)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("credit_rating manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1571,7 +1603,7 @@ def dividend_income_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("dividend_income preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1595,21 +1627,22 @@ def dividend_income_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Dividend Statement available yet",
-                        "code": "NO_STATEMENT"}), 404
+        return api_error(en="No Dividend Statement available yet", kr="아직 사용 가능한 배당 명세서가 없습니다.", code="NO_STATEMENT", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this statement",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this statement",
+            kr="이 명세서의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1644,14 +1677,14 @@ def dividend_income_trigger():
         try:
             target_month = date.fromisoformat(target_str)
         except ValueError:
-            return jsonify({"error": "invalid target_month (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid target_month (expected YYYY-MM-DD)", kr="target_month 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_TARGET_MONTH", status=400)
 
     try:
         summary = DividendIncomeService().run_monthly(target_month=target_month)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("dividend_income manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1679,7 +1712,7 @@ def monthly_finance_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("monthly_finance preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1701,21 +1734,22 @@ def monthly_finance_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Finance Report available yet",
-                        "code": "NO_REPORT"}), 404
+        return api_error(en="No Finance Report available yet", kr="아직 사용 가능한 재무 리포트가 없습니다.", code="NO_REPORT", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this report",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this report",
+            kr="이 리포트의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1748,14 +1782,14 @@ def monthly_finance_trigger():
         try:
             target_month = date.fromisoformat(target_str)
         except ValueError:
-            return jsonify({"error": "invalid target_month (expected YYYY-MM-DD)"}), 400
+            return api_error(en="invalid target_month (expected YYYY-MM-DD)", kr="target_month 형식이 잘못되었습니다 (YYYY-MM-DD).", code="INVALID_TARGET_MONTH", status=400)
 
     try:
         summary = MonthlyFinanceService().run_monthly(target_month=target_month)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("monthly_finance manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1786,7 +1820,7 @@ def risk_board_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("risk_board preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1807,21 +1841,22 @@ def risk_board_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Risk Board deck available yet",
-                        "code": "NO_DECK"}), 404
+        return api_error(en="No Risk Board deck available yet", kr="아직 사용 가능한 리스크 보드가 없습니다.", code="NO_DECK", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this deck",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this deck",
+            kr="이 덱의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1860,7 +1895,7 @@ def risk_board_trigger():
     body = request.get_json(silent=True) or {}
     trigger = (body.get("trigger") or "monthly").strip().lower()
     if trigger not in ("monthly", "vix_spike"):
-        return jsonify({"error": "trigger must be 'monthly' or 'vix_spike'"}), 400
+        return api_error(en="trigger must be 'monthly' or 'vix_spike'", kr="trigger는 'monthly' 또는 'vix_spike' 여야 합니다.", code="TRIGGER_INVALID", status=400)
 
     svc = RiskBoardService()
     try:
@@ -1894,7 +1929,7 @@ def risk_board_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("risk_board manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1923,7 +1958,7 @@ def portfolio_segment_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("portfolio_segment preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1943,21 +1978,22 @@ def portfolio_segment_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Portfolio Segment report available yet",
-                        "code": "NO_REPORT"}), 404
+        return api_error(en="No Portfolio Segment report available yet", kr="아직 사용 가능한 포트폴리오 세그먼트 리포트가 없습니다.", code="NO_REPORT", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this report",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this report",
+            kr="이 리포트의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -1997,16 +2033,18 @@ def portfolio_segment_trigger():
         try:
             quarter_end = date.fromisoformat(qe_str)
         except ValueError:
-            return jsonify({
-                "error": "invalid quarter_end (expected YYYY-MM-DD)",
-            }), 400
+            return api_error(
+                en="invalid quarter_end (expected YYYY-MM-DD)",
+                kr="quarter_end 형식이 잘못되었습니다 (YYYY-MM-DD).",
+                code="INVALID_QUARTER_END", status=400,
+            )
 
     try:
         summary = PortfolioSegmentService().run_quarterly(quarter_end=quarter_end)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("portfolio_segment manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2048,9 +2086,9 @@ def capital_allocation_calculate():
     scenarios = body.get("scenarios")
 
     if cash_amount is None:
-        return jsonify({"error": "cash_amount is required"}), 400
+        return api_error(en="cash_amount is required", kr="cash_amount가 필요합니다.", code="CASH_AMOUNT_REQUIRED", status=400)
     if scenarios is None:
-        return jsonify({"error": "scenarios is required"}), 400
+        return api_error(en="scenarios is required", kr="scenarios가 필요합니다.", code="SCENARIOS_REQUIRED", status=400)
 
     svc = CapitalAllocationService()
     try:
@@ -2060,10 +2098,10 @@ def capital_allocation_calculate():
             scenarios=scenarios,
         )
     except ValueError as exc:
-        return jsonify({"error": "Bad request"}), 400
+        return api_error(en="Bad request", kr="잘못된 요청입니다.", code="BAD_REQUEST_400", status=400)
     except Exception as exc:
         current_app.logger.error("capital_allocation calc failed: %s", exc)
-        return jsonify({"error": "Calculation failed (internal error)"}), 500
+        return api_error(en="Calculation failed (internal error)", kr="계산에 실패했습니다.", code="CALCULATION_INTERNAL_ERROR", status=500)
 
     try:
         pdf_bytes = svc.render_pdf(data)
@@ -2071,7 +2109,7 @@ def capital_allocation_calculate():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("capital_allocation persist failed: %s", exc)
-        return jsonify({"error": "Persist failed (internal error)"}), 500
+        return api_error(en="Persist failed (internal error)", kr="저장에 실패했습니다.", code="PERSIST_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "calc_id": artefact.id, "data": data})
 
@@ -2085,14 +2123,14 @@ def capital_allocation_preview(calc_id: int):
     artefact = db.session.get(Artifact, calc_id)
     if (artefact is None or artefact.user_id != current_user.id
             or artefact.type != "capital_allocation"):
-        return jsonify({"error": "Calculation not found"}), 404
+        return api_error(en="Calculation not found", kr="계산을 찾을 수 없습니다.", code="CALCULATION_NOT_FOUND", status=404)
 
     svc = CapitalAllocationService()
     try:
         html = svc.render_html(artefact.data_json or {})
     except Exception as exc:
         current_app.logger.error("capital_allocation preview render failed: %s", exc)
-        return jsonify({"error": "Render failed (internal error)"}), 500
+        return api_error(en="Render failed (internal error)", kr="렌더링에 실패했습니다.", code="RENDER_INTERNAL_ERROR", status=500)
 
     return jsonify({
         "ok":   True,
@@ -2111,20 +2149,22 @@ def capital_allocation_download(calc_id: int):
     artefact = db.session.get(Artifact, calc_id)
     if (artefact is None or artefact.user_id != current_user.id
             or artefact.type != "capital_allocation"):
-        return jsonify({"error": "Calculation not found"}), 404
+        return api_error(en="Calculation not found", kr="계산을 찾을 수 없습니다.", code="CALCULATION_NOT_FOUND", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this calculation",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this calculation",
+            kr="이 계산의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -2159,7 +2199,7 @@ def capital_allocation_reminder_trigger():
         summary = CapitalAllocationService().send_quarterly_reminder()
     except Exception as exc:
         current_app.logger.error("capital_allocation reminder failed: %s", exc)
-        return jsonify({"error": "Reminder run failed (internal error)"}), 500
+        return api_error(en="Reminder run failed (internal error)", kr="리마인더 실행에 실패했습니다.", code="REMINDER_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2189,7 +2229,7 @@ def insider_mirror_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("insider_mirror preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -2206,21 +2246,22 @@ def insider_mirror_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Insider Mirror report available yet",
-                        "code": "NO_REPORT"}), 404
+        return api_error(en="No Insider Mirror report available yet", kr="아직 사용 가능한 내부자 미러 리포트가 없습니다.", code="NO_REPORT", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this report",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this report",
+            kr="이 리포트의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -2254,16 +2295,18 @@ def insider_mirror_trigger():
         try:
             anchor = date.fromisoformat(anchor_str)
         except ValueError:
-            return jsonify({
-                "error": "invalid anchor (expected YYYY-MM-DD)",
-            }), 400
+            return api_error(
+                en="invalid anchor (expected YYYY-MM-DD)",
+                kr="anchor 형식이 잘못되었습니다 (YYYY-MM-DD).",
+                code="INVALID_ANCHOR", status=400,
+            )
 
     try:
         summary = InsiderMirrorService().run_weekly(anchor=anchor)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("insider_mirror manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2299,7 +2342,7 @@ def year_end_letter_preview():
         try:
             target_year = int(year_str)
         except ValueError:
-            return jsonify({"error": "invalid year (expected YYYY)"}), 400
+            return api_error(en="invalid year (expected YYYY)", kr="year 형식이 잘못되었습니다 (YYYY).", code="INVALID_YEAR", status=400)
 
     try:
         svc = YearEndLetterService()
@@ -2307,7 +2350,7 @@ def year_end_letter_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("year_end_letter preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -2328,21 +2371,22 @@ def year_end_letter_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Year-End Letter available yet",
-                        "code": "NO_LETTER"}), 404
+        return api_error(en="No Year-End Letter available yet", kr="아직 사용 가능한 연말 레터가 없습니다.", code="NO_LETTER", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this letter",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this letter",
+            kr="이 레터의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -2381,14 +2425,14 @@ def year_end_letter_trigger():
         try:
             target_year = int(target_year)
         except (TypeError, ValueError):
-            return jsonify({"error": "invalid target_year (expected int)"}), 400
+            return api_error(en="invalid target_year (expected int)", kr="target_year 형식이 잘못되었습니다 (정수).", code="INVALID_TARGET_YEAR", status=400)
 
     try:
         summary = YearEndLetterService().run_annual(target_year=target_year)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("year_end_letter manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2421,9 +2465,11 @@ def quarterly_self_report_preview():
         try:
             quarter_end = date.fromisoformat(qe_str)
         except ValueError:
-            return jsonify({
-                "error": "invalid quarter_end (expected YYYY-MM-DD)",
-            }), 400
+            return api_error(
+                en="invalid quarter_end (expected YYYY-MM-DD)",
+                kr="quarter_end 형식이 잘못되었습니다 (YYYY-MM-DD).",
+                code="INVALID_QUARTER_END", status=400,
+            )
 
     try:
         svc = QuarterlySelfReportService()
@@ -2431,7 +2477,7 @@ def quarterly_self_report_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("quarterly_self preview failed: %s", exc)
-        return jsonify({"error": "Preview failed (internal error)"}), 500
+        return api_error(en="Preview failed (internal error)", kr="미리보기 생성에 실패했습니다.", code="PREVIEW_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -2448,21 +2494,22 @@ def quarterly_self_report_download_latest():
         .first()
     )
     if not artefact:
-        return jsonify({"error": "No Quarterly Self Report available yet",
-                        "code": "NO_REPORT"}), 404
+        return api_error(en="No Quarterly Self Report available yet", kr="아직 사용 가능한 분기 자가 리포트가 없습니다.", code="NO_REPORT", status=404)
 
     if not artefact.pdf_path:
-        return jsonify({
-            "error": "PDF unavailable for this report",
-            "code":  "PDF_NOT_RENDERED",
-        }), 410
+        return api_error(
+            en="PDF unavailable for this report",
+            kr="이 리포트의 PDF가 아직 준비되지 않았습니다.",
+            code="PDF_NOT_RENDERED", status=410,
+        )
 
     pdf_file = Path(artefact.pdf_path)
     if not pdf_file.exists():
-        return jsonify({
-            "error": "PDF file missing on disk",
-            "code":  "PDF_FILE_MISSING",
-        }), 410
+        return api_error(
+            en="PDF file missing on disk",
+            kr="PDF 파일이 서버에 존재하지 않습니다.",
+            code="PDF_FILE_MISSING", status=410,
+        )
 
     if not artefact.opened_at:
         artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -2499,9 +2546,11 @@ def quarterly_self_report_trigger():
         try:
             quarter_end = date.fromisoformat(qe_str)
         except ValueError:
-            return jsonify({
-                "error": "invalid quarter_end (expected YYYY-MM-DD)",
-            }), 400
+            return api_error(
+                en="invalid quarter_end (expected YYYY-MM-DD)",
+                kr="quarter_end 형식이 잘못되었습니다 (YYYY-MM-DD).",
+                code="INVALID_QUARTER_END", status=400,
+            )
 
     try:
         summary = QuarterlySelfReportService().run_quarterly(
@@ -2510,7 +2559,7 @@ def quarterly_self_report_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("quarterly_self manual run failed: %s", exc)
-        return jsonify({"error": "Manual run failed (internal error)"}), 500
+        return api_error(en="Manual run failed (internal error)", kr="수동 실행에 실패했습니다.", code="MANUAL_RUN_INTERNAL_ERROR", status=500)
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2756,16 +2805,18 @@ def artifacts_generate():
     params = body.get("params") or {}
 
     if not isinstance(params, dict):
-        return jsonify({"error": "params must be a JSON object"}), 400
+        return api_error(en="params must be a JSON object", kr="params는 JSON 객체여야 합니다.", code="PARAMS_OBJECT_REQUIRED", status=400)
 
     if not artifact_type:
-        return jsonify({"error": "type is required"}), 400
+        return api_error(en="type is required", kr="type이 필요합니다.", code="TYPE_REQUIRED", status=400)
 
     if artifact_type not in _ARTIFACT_DISPATCH:
-        return jsonify({
-            "error": f"unknown artifact type: {artifact_type}",
-            "allowed": sorted(_ARTIFACT_DISPATCH.keys()),
-        }), 400
+        return api_error(
+            en=f"unknown artifact type: {artifact_type}",
+            kr=f"알 수 없는 아티팩트 유형: {artifact_type}",
+            code="UNKNOWN_ARTIFACT_TYPE", status=400,
+            allowed=sorted(_ARTIFACT_DISPATCH.keys()),
+        )
 
     # ── Interactive artefacts — short-circuit with a redirect hint ──────
     entry = _ARTIFACT_DISPATCH[artifact_type]
@@ -2795,19 +2846,21 @@ def artifacts_generate():
         try:
             kwargs[key] = date.fromisoformat(str(raw))
         except ValueError:
-            return jsonify({
-                "error": f"invalid {key} (expected YYYY-MM-DD)",
-            }), 400
+            return api_error(
+                en=f"invalid {key} (expected YYYY-MM-DD)",
+                kr=f"{key} 형식이 잘못되었습니다 (YYYY-MM-DD).",
+                code="INVALID_DATE_FIELD", status=400,
+            )
 
     if "target_year" in params:
         try:
             kwargs["target_year"] = int(params["target_year"])
         except (TypeError, ValueError):
-            return jsonify({"error": "target_year must be an integer"}), 400
+            return api_error(en="target_year must be an integer", kr="target_year는 정수여야 합니다.", code="TARGET_YEAR_INT_REQUIRED", status=400)
 
     if "anonymous" in params:
         if not isinstance(params["anonymous"], bool):
-            return jsonify({"error": "anonymous must be a boolean"}), 400
+            return api_error(en="anonymous must be a boolean", kr="anonymous는 boolean이어야 합니다.", code="ANONYMOUS_BOOL_REQUIRED", status=400)
         kwargs["anonymous"] = params["anonymous"]
 
     # earnings_prebrief is the one positional-required arg in the table —
@@ -2816,9 +2869,11 @@ def artifacts_generate():
     if artifact_type == "earnings_prebrief":
         ticker = (params.get("ticker") or "").strip().upper()
         if not ticker:
-            return jsonify({
-                "error": "earnings_prebrief requires params.ticker",
-            }), 400
+            return api_error(
+                en="earnings_prebrief requires params.ticker",
+                kr="earnings_prebrief는 params.ticker가 필요합니다.",
+                code="EARNINGS_TICKER_REQUIRED", status=400,
+            )
         positional.append(ticker)
 
     # ── Cheap pre-flight empty check — avoids spinning up the heavy
@@ -2846,7 +2901,7 @@ def artifacts_generate():
     except ValueError as exc:
         # `generate_for_user` raises ValueError for "user not found" —
         # surface as 400 not 500.
-        return jsonify({"error": "Bad request"}), 400
+        return api_error(en="Bad request", kr="잘못된 요청입니다.", code="BAD_REQUEST_400", status=400)
     except Exception as exc:
         db.session.rollback()
         current_app.logger.exception(
@@ -2856,10 +2911,12 @@ def artifacts_generate():
         # 2026-05-17 wave 14 P1: drop raw exc from response body — see
         # the bulk scrub note above. logger.exception already logged
         # full traceback for ops.
-        return jsonify({
-            "error": "Generation failed (internal error)",
-            "type":  artifact_type,
-        }), 500
+        return api_error(
+            en="Generation failed (internal error)",
+            kr="아티팩트 생성에 실패했습니다.",
+            code="GENERATION_INTERNAL_ERROR", status=500,
+            type=artifact_type,
+        )
 
     # ── Service-internal empty signal (e.g. brag_card.is_empty) ────────
     post_empty = _empty_check(current_user.id, artifact_type, data=data)
@@ -3063,6 +3120,15 @@ def diag_weekly_memo_pipeline():
 
     Returns each stage with bytes/keys/error so the bug is pinpointable
     from a single curl response.
+
+    Note (2026-05-17 wave B api_error sweep): the diagnostic responses
+    below intentionally KEEP the `{ok, stage, error, stages, ...}` shape
+    instead of routing through ``api_error()``. They are admin-only and
+    the ``error`` field holds a structured dict (``_err_dict(exc)``) or
+    progress narrative — not a user-facing message. ``api_error()``
+    forces ``error`` to be a string, which would lose the per-stage
+    exception class/traceback that makes this endpoint useful. Frontend
+    never consumes these routes.
     """
     err = _check_cron_admin_secret()
     if err:
@@ -3095,13 +3161,13 @@ def diag_weekly_memo_pipeline():
     try:
         user_id_int = int(user_id_arg) if user_id_arg is not None else None
     except (TypeError, ValueError):
-        return jsonify({"error": "user_id must be int"}), 400
+        return api_error(en="user_id must be int", kr="user_id는 정수여야 합니다.", code="INVALID_USER_ID", status=400)
 
     # ── 1. pick user ────────────────────────────────────────────────────
     if user_id_int is not None:
         user = db.session.get(User, user_id_int)
         if not user:
-            return jsonify({"error": f"user {user_id_int} not found"}), 404
+            return api_error(en=f"user {user_id_int} not found", kr=f"사용자 {user_id_int}를 찾을 수 없습니다.", code="USER_NOT_FOUND", status=404)
         pick_reason = "explicit"
     else:
         user = (
@@ -3297,7 +3363,7 @@ def artifacts_by_month():
         end = datetime(year + (1 if mon == 12 else 0),
                        1 if mon == 12 else mon + 1, 1)
     except (ValueError, TypeError):
-        return jsonify({"error": "month must be YYYY-MM"}), 400
+        return api_error(en="month must be YYYY-MM", kr="month는 YYYY-MM 형식이어야 합니다.", code="INVALID_MONTH_FORMAT", status=400)
 
     rows = (
         Artifact.query
