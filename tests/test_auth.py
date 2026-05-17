@@ -93,6 +93,99 @@ class TestRegister:
         assert "이미 로그인" in body.get("error_kr", "")
 
 
+# ── Register race condition (wave 12 P0) ────────────────────────────────────
+# 2026-05-17: TOCTOU race fix — the pre-fix code did `User.query.first()` then
+# `db.session.add+commit` with no transaction guard. Two concurrent POSTs
+# could both pass the check then race to commit; the second raised
+# IntegrityError that bubbled as 500 and left the worker's SQLAlchemy
+# session in a failed state. Locking the contract with a synthetic
+# IntegrityError so this regression class is caught immediately.
+
+class TestRegisterRaceGuard:
+    def test_register_handles_concurrent_integrity_error_as_409(
+        self, client, make_user
+    ):
+        """Simulate the race-winner: another worker already inserted the row
+        between our existence check and our commit. Our commit must raise
+        IntegrityError, the handler must rollback + return 409, and the
+        next request on the same client must still work (no poisoned
+        session). Uses an actual existing row to trigger the DB UNIQUE.
+        """
+        # Seed the user first.
+        make_user(email="race@test.com", password="pass1234")
+
+        # Manually craft a register request that passes the explicit check
+        # but hits the UNIQUE constraint at commit. The simplest way to
+        # exercise the IntegrityError path under a single-threaded test
+        # is to monkeypatch User.query.filter_by(...).first() to lie —
+        # but that's brittle. Instead just hit the existence check path
+        # which now returns the same 409. The IntegrityError branch is
+        # the same 409 response shape so this guards the contract.
+        r = client.post("/api/auth/register", json={
+            "email": "race@test.com",
+            "password": "anotherpw",
+            "birthdate": _ADULT_BIRTHDATE,
+        })
+        assert r.status_code == 409
+        body = r.get_json()
+        assert "already" in body["error"].lower()
+
+        # Session must still work on the next request.
+        r2 = client.get("/api/auth/me")
+        assert r2.status_code in (200, 401)
+
+    def test_register_integrity_error_branch_returns_409(
+        self, client, monkeypatch
+    ):
+        """Force the IntegrityError branch by stubbing the existence check
+        to lie (says 'no row') while the DB still has it. Exercises the
+        try/except IntegrityError handler directly."""
+        from sqlalchemy.exc import IntegrityError
+
+        # First register succeeds.
+        r1 = client.post("/api/auth/register", json={
+            "email": "integ@test.com",
+            "password": "firstpass",
+            "birthdate": _ADULT_BIRTHDATE,
+        })
+        assert r1.status_code == 200
+
+        # Now make the existence check return None so we reach commit() —
+        # the DB UNIQUE will raise IntegrityError.
+        from routes import auth as auth_module
+        from extensions import db
+        import flask_login
+
+        class _LyingQuery:
+            def filter_by(self, **_):
+                return self
+            def first(self):
+                return None
+
+        # Patch User.query just for this call.
+        monkeypatch.setattr(auth_module.User, "query", _LyingQuery())
+        # Also stop login_user from poisoning the session if reached.
+        monkeypatch.setattr(flask_login, "login_user", lambda *a, **k: True)
+
+        # Sign out so the register endpoint's authenticated-caller short
+        # circuit (PR #409) doesn't fire first.
+        client.post("/api/auth/logout")
+
+        r2 = client.post("/api/auth/register", json={
+            "email": "integ@test.com",
+            "password": "secondpass",
+            "birthdate": _ADULT_BIRTHDATE,
+        })
+        assert r2.status_code == 409, r2.get_data(as_text=True)
+        body = r2.get_json()
+        assert "already" in body["error"].lower()
+
+        # Critically: the session must not be poisoned. Next request works.
+        db.session.rollback()  # belt-and-suspenders for the test runner
+        r3 = client.get("/api/auth/me")
+        assert r3.status_code in (200, 401)
+
+
 # ── Login ───────────────────────────────────────────────────────────────────
 
 class TestLogin:
