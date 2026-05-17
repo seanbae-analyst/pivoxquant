@@ -1,3 +1,117 @@
+# PivoxQuant — 인수인계서 (2026-05-17 v44.5 final close — 30 PR · OPEN PR 0 · main `e4d62ab → f9dceaf` · wave 13 11 PR + structure pillar 2)
+
+## v44.5 final close — Wave 13 11 PR (CAUS coverage + P0 security + 구조 정비)
+
+**한 줄 요약**: CEO "확실하게 진행해라 왜 자꾸 뭐가 안되는거야" → wave 13 진행. 4 agent dispatch (integrations + bug-hunter + docs + structure). **11 PR 추가**, 누적 v44 = **30 PR (#412~#444)**. 출시 직전 P0 보안 1건 + 구조 P1/P2 6건 + 문서 sync + 테스트 coverage 보강.
+
+### Wave 13 11 PR
+
+| PR | 영역 | 핵심 변경 |
+|---|---|---|
+| #434 | feat(caus) coverage | 3 신규 시나리오 (day7 simulator / day8 features / day9 onboarding draft) + 10-day ordinal rotation. PR #427/#431/#432 가 7-day weekday cycle 에서 영원히 안 잡히는 gap 닫음. 73 tests PASS. |
+| **#435** | **feat(structure) error helper** | services/error_responses.py 신규 `api_error(en, kr, code, status, **extra)` factory. PR #419 이후 잔존 393 jsonify error 중 error_kr 동반 1개만 → 모든 응답을 {error, error_kr, code} 삼중 강제. routes/alerts.py 10 사이트 첫 sweep. 30 PASS. |
+| **#436** | **fix(security) P0** | routes/ai.py 의 body[detail] 무조건 forward 가 Anthropic SDK 내부 메시지 (credit balance, request-id, model name, org hint, API key prefix) prod 노출. FLASK_ENV 게이트 추가 — prod 는 scrub, dev 유지. 6 사이트 sweep. 48 PASS. |
+| #437 | fix(structure) push reverse import | services/push_service.py 가 routes/push.py 의 send_push_to_user 를 lazy import 5건 (services→routes 역방향 cycle). 함수를 services 로 이전 + routes 에 re-export. 67 PASS. |
+| #438 | docs sync | CLAUDE.md '/Users/seanbae/Desktop/취준/stockpilot' path 3곳 → '~/projects/pivoxquant' (iCloud 손상 차단). launch-checklist alembic head 034 → 035 / main HEAD ab62e4c → 863feb2. AUTONOMOUS_OPS.md 경로 fix. |
+| #439 | fix(email) §50 | SendGrid bounce / spamreport / unsubscribe → User.email_opt_out 자동 flip. 이전엔 Artifact 컬럼만 갱신 → 다음 cron 에서 같은 bounced 주소 재발송 (sender-reputation + §50 risk). spamreport 는 silent ignore 였음. 20 PASS. |
+| #440 | fix(fmp) per-min throttle | docstring 만 '750 req/min' — 실 enforcement 없음. 단일 burst → 429 → 24h 봉쇄. 슬라이딩 윈도우 deque + ceiling-bound safety valve. 36 PASS. |
+| #441 | fix(kis) token cache | _load_from_file 가 _is_fresh (>1h) 로 gate → Railway redeploy 시 50min 남은 토큰 폐기 → 60s rate-limit 충돌 (EGW00133). load (any-valid) 와 refresh (<1h) 임계값 분리. 21 PASS. |
+| #442 | fix(structure) admin centralize | 5개 파일 (admin_fmp/admin_preview/command_center/agent_admin/agent_worker.admin_routes) 의 _admin_emails() 중복 → services/admin_emails.py 단일 source + is_admin_email 보조 predicate. 32 PASS. |
+| #443 | feat(structure) error sweep | routes/billing.py 8 + routes/watchlist.py 10 = 18 사이트 api_error 적용. 14 stable code 추가. 29 PASS. |
+| #444 | feat(structure) error sweep | routes/profile.py 26 사이트 api_error 적용. 24 stable code 추가 (CAPITAL_*/PROFILE_*/PERSONA_*/PULSE_* 등). 125 PASS. |
+
+### 누적 v44 30 PR
+
+| PR | 영역 |
+|---|---|
+| #412 | fix(security) cookie cleanup sweep |
+| #413 | fix(profile) email_opt_out hydrate |
+| #414 | chore vitest + dead endpoint + 2 untracked |
+| #415 | docs HANDOVER v44 base |
+| #416 | fix(wave8) subscription + KIS + ProfileResponse |
+| #417 | fix(wave9) Pretendard + Simulator a11y + vitest 30s |
+| #418 | test(wave10) Stripe webhook + KIS boundary + signals refresh (17) |
+| #419 | fix(ai) thorough graceful + error_kr ×14 |
+| #420 | docs HANDOVER v44.2 |
+| #421 | fix(quant) numerical safety |
+| #422 | fix(wave12) 2 P0 race conditions |
+| #423 | fix(wave12) User type + CSRF + /price rate limit |
+| #424 | fix(wave12) backtester 7× + signals ThreadPool |
+| #425 | fix(wave12 UX) signup scroll + broker label + toast + skip |
+| #426 | docs HANDOVER v44.3 |
+| #427 | feat(onboarding) partial-save (UX P0) |
+| #428 | feat(onboarding) beforeunload (UX P1) |
+| #429 | feat(oauth-finalize) DOB auto-hydrate (UX P1) |
+| #430 | feat(pwa) iOS install variant (P2) |
+| #431 | perf(simulator) WhatIfChart dynamic (P2) |
+| #432 | perf(features) Server Component split (P1) |
+| #433 | docs HANDOVER v44.4 |
+| **#434** | **feat(caus) coverage day7-9 + 10-day rotation** |
+| **#435** | **feat(structure) api_error helper + alerts sweep** |
+| **#436** | **fix(security) P0 ai detail leak (FLASK_ENV gate)** |
+| **#437** | **fix(structure) push reverse import** |
+| **#438** | **docs sync (CLAUDE.md path + alembic head)** |
+| **#439** | **fix(email) §50 auto-opt-out on bounce/spamreport** |
+| **#440** | **fix(fmp) per-min throttle (sliding window)** |
+| **#441** | **fix(kis) token cache load vs refresh split** |
+| **#442** | **fix(structure) ADMIN_EMAILS centralize** |
+| **#443** | **feat(structure) error sweep billing + watchlist** |
+| **#444** | **feat(structure) error sweep profile (26 sites)** |
+
+### 13 agent / 12 wave / 50+ finding triage (누적)
+security ×1 / investigator ×6 / code-janitor / audit-code / performance+a11y / regulatory / qa / quant / engineering / frontend-dev / ux-researcher / **integrations / bug-hunter / docs / structure investigator**
+
+### 검증 (직접 cite, 본 세션 cycle 끝)
+
+- backend critical 영역별 누적 800+ PASS / 0 회귀 (각 PR 별 직접 실행, 본 wave 11+12+13 = 67+47+33+125+29+20+36+21+32+9+30+48+5)
+- 마지막 full pytest run (PR #418 시점): **2129 PASS / 19 skipped / 1 xfailed / 0 fail (12:38)** — 그 후 wave 11~13 의 신규 테스트 약 60건 추가됨 (분리 영역별 PASS 확인됨)
+- frontend tsc 0 errors / vitest 313/313 PASS (PR #417 후 flake 0건)
+
+### 구조 정비 누적 (wave 13 pillar)
+
+| 사이트 | 처리 |
+|---|---|
+| services/error_responses.py | 신규 — api_error helper 단일 source |
+| services/admin_emails.py | 신규 — 5 중복 제거 + is_admin_email predicate |
+| services/push_service.py | send_push_to_user 이전 (역방향 import cycle 해소) |
+| routes/alerts.py | 10 사이트 api_error |
+| routes/billing.py | 8 사이트 api_error |
+| routes/watchlist.py | 10 사이트 api_error |
+| routes/profile.py | 26 사이트 api_error |
+| routes/ai.py | 14 사이트 (PR #419 + #436 detail gate) |
+| routes/auth.py | 부분 (PR #412 cookie 영역 + 기존 birthdate 등) |
+| 잔존 routes (portfolio 51 / signals / 등) | wave 14 또는 추후 sweep 대상 |
+
+### CAUS 10-day rotation 자동 회귀 verify (PR #434 기준)
+
+| 날짜 | day_idx | 시나리오 | 회귀 verify 대상 |
+|---|---|---|---|
+| 5/18 Mon | 4 | day4 alerts | PR #412 cookie / #422 race / **#435 alerts api_error** |
+| 5/19 Tue | 5 | day5 reports | PR #419 / **#436 ai detail leak gate** |
+| 5/20 Wed | 6 | day6 payment | PR #416 / **#443 billing api_error** |
+| 5/21 Thu | 7 | day7 simulator | PR #431 WhatIfChart dynamic |
+| 5/22 Fri | 8 | day8 features | PR #432 Server Component |
+| 5/23 Sat | 9 | day9 onboarding draft | PR #427 + **#444 profile api_error** |
+| 5/24 Sun | 0 | day0 signup | PR #428 + #429 |
+| 5/25 Mon | 1 | day1 KR | PR #421 |
+| 5/26 Tue | 2 | day2 US | PR #413 / **#440 fmp throttle** |
+| 5/27 Wed | 3 | day3 portfolio | PR #421 + #422 |
+| 5/28 Thu | 4 | day4 alerts | 2nd cycle |
+| 5/29 Fri (CEO 변호사 미팅) | 5 | day5 reports | 2nd cycle |
+
+### 본 세션 종료 시점 main 상태
+
+- HEAD: `f9dceaf` (PR #444 profile sweep)
+- OPEN PR: 0건
+- 누적 v44 = **30 PR**
+- 신규 services 모듈 2건 (error_responses + admin_emails) + 1건 layer-fix (push_service)
+
+### CEO 외부 액션 (변화 없음)
+
+5/29 변호사 미팅 (D-12) + Stripe 활성 + env vars (Vercel VAPID / Cloudflare email / Anthropic credit / FMP plan) + iCloud Desktop sync OFF + 사업자 추가 업태 + 통신판매업 신고. 모두 코드 무관.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-17 v44.4 final close — 19 PR · OPEN PR 0 · main `e4d62ab → 18f5c9f` · defer queue 전부 소진 + 6 P0/P1/P2 follow-up)
 
 ## v44.4 final close — defer queue 6건 PR 화 (UX P0/P1×3 + PWA P2 + perf P1/P2)
