@@ -76,6 +76,15 @@ FORBIDDEN_DIRECTIVE_TERMS: Final[frozenset[str]] = frozenset({
     "매도 추천",
     # Directive form of 보유 — the standalone noun is permitted.
     "보유하세요",
+    # ── 2026-05-17 expansion (F6 SHIP-BLOCKER) ────────────────────────
+    # 구어체 매수/매도 명령. legal_filter._COMPLIANCE_FORBIDDEN_PATTERNS
+    # 와 중복 OK — defense-in-depth. artifact copy 경로는 frozenset
+    # substring 매치, runtime AI 출력 경로는 regex (legal_filter) 검사.
+    "사세요",
+    "팔아요",
+    "팔아",
+    "사라",
+    "파세요",
     # ── 2026-05-08 expansion (§101 회피 후속) ──────────────────────────
     # Korean directive verb-phrases that previously slipped through
     # by being assembled from neutral nouns + 검토/유지 hedges.
