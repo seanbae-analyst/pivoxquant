@@ -43,7 +43,7 @@ import psycopg2  # type: ignore
 # (table, column) pairs that the running code expects to be present.
 # Keep this in lockstep with the latest model + migration.
 REQUIRED_COLUMNS: list[tuple[str, str]] = [
-    # --- users (latest = 032_users_is_simulated) ---
+    # --- users (latest = 035_user_onboarding_draft) ---
     ("users", "id"),
     ("users", "email"),
     ("users", "subscription_tier"),
@@ -52,6 +52,7 @@ REQUIRED_COLUMNS: list[tuple[str, str]] = [
     ("users", "cross_border_consent_at"),        # 024
     ("users", "birthdate"),                      # 031
     ("users", "is_simulated"),                   # 032 — SHIP-BLOCKER P0
+    ("users", "onboarding_draft_json"),          # 035 — SHIP-BLOCKER P0 (PR #427+#466 OAuth provisioning hotfix)
     # --- broker_connections (encrypted) ---
     ("broker_connections", "encrypted_app_key"),
     ("broker_connections", "encrypted_app_secret"),
@@ -188,7 +189,7 @@ def main(argv: Iterable[str]) -> int:
     else:
         warn_count += 1
         print("  WARN: alembic_version table is MISSING — alembic state untracked")
-        print("        Fix: `flask db stamp 032_users_is_simulated` to register state.")
+        print("        Fix: `flask db stamp 035_user_onboarding_draft` to register state.")
 
     print("\n=== Recommended indexes / unique constraints ===")
     for t, idx in RECOMMENDED_INDEXES:
