@@ -8,7 +8,7 @@ effect MUST short-circuit for sim users:
 
 1. **Email** — ``EmailSender.send`` returns ``False`` before any provider
    is contacted (정통망법 §50 + SendGrid quota).
-2. **Push** — ``routes.push.send_push_to_user`` returns before pywebpush
+2. **Push** — ``services.push_service.send_push_to_user`` returns before pywebpush
    is reached. Covers all four ``services.push_service`` helpers
    (``notify_alert``, ``notify_bell_alert``, ``notify_trade``,
    ``notify_insight``) because they all funnel through that one call.
@@ -102,7 +102,7 @@ class TestEmailSenderIsSimulatedGuard:
 
 
 class TestSendPushToUserIsSimulatedGuard:
-    """``routes.push.send_push_to_user`` is the single funnel for every
+    """``services.push_service.send_push_to_user`` is the single funnel for every
     helper in ``services.push_service`` (``notify_alert`` /
     ``notify_bell_alert`` / ``notify_trade`` / ``notify_insight``). One
     guard there → all four helpers covered."""
@@ -117,7 +117,7 @@ class TestSendPushToUserIsSimulatedGuard:
     def test_send_push_skips_simulated_user(self, app, make_user, monkeypatch):
         from extensions import db
         from models import User
-        from routes.push import send_push_to_user
+        from services.push_service import send_push_to_user
 
         user = make_user(email="sim-push@test.com")
         with app.app_context():
@@ -180,7 +180,7 @@ class TestSendPushToUserIsSimulatedGuard:
         through a *different* exit than the sim guard)."""
         from extensions import db
         from models import User
-        from routes.push import send_push_to_user
+        from services.push_service import send_push_to_user
 
         user = make_user(email="real-push@test.com")
         with app.app_context():
@@ -189,11 +189,15 @@ class TestSendPushToUserIsSimulatedGuard:
             db.session.commit()
 
             self._arm_vapid(monkeypatch)
-            # Patch PushSubscription.query to spy whether the lookup ran.
-            # If the sim guard regressed and short-circuited a real user,
-            # this patch wouldn't be hit.
-            from routes import push as push_mod
-            with patch.object(push_mod, "PushSubscription") as ps_mock:
+            # 2026-05-17 PR #437: send_push_to_user moved from
+            # routes.push to services.push_service and imports
+            # PushSubscription lazily from models. The previous
+            # patch.object(push_mod, "PushSubscription") no longer
+            # intercepts the lookup because the routes.push module
+            # never references PushSubscription anymore. Patch the
+            # canonical source instead so the spy still fires.
+            import models as models_mod
+            with patch.object(models_mod, "PushSubscription") as ps_mock:
                 ps_mock.query.filter_by.return_value.all.return_value = []
                 send_push_to_user(
                     user_id=user["id"],
