@@ -62,6 +62,16 @@ TOKEN_TTL_HOURS = 12
 # Refresh when <= REFRESH_BEFORE_HOURS remain in the lifetime.
 REFRESH_BEFORE_HOURS = 1
 
+# 2026-05-17 wave 13 P2 (PR #441) — split the load threshold from the
+# refresh threshold. Pre-fix `_load_from_file` discarded any cached
+# token with <1h life by reusing `_is_fresh`. On a Railway redeploy
+# with a 50-min-remaining token on disk, the new worker treated the
+# cache as empty and immediately called `/oauth2/tokenP`, racing the
+# KIS 60-s rate-limit window (EGW00133). Load accepts any not-yet-
+# expired token; the per-request `_is_fresh` check still triggers a
+# proactive refresh when <1h remains.
+LOAD_GRACE_SECONDS = 0  # accept any token whose expires_at is in the future
+
 # ── Cache file ───────────────────────────────────────────────────────────
 # NOTE: kept at the project root (not next to this file) so the cache
 # location did not change when the module moved from root → services/kis/
@@ -162,7 +172,12 @@ class KISTokenManager:
 
     @staticmethod
     def _is_fresh(token: Optional[str], expires_at: Optional[datetime]) -> bool:
-        """Return True when the token is set and has >1h life remaining."""
+        """Return True when the token is set and has >1h life remaining.
+
+        Used by the per-request hot path — falling under the 1h threshold
+        triggers a proactive refresh so a serving worker never holds an
+        almost-expired token.
+        """
         if not token or not expires_at:
             return False
         threshold = datetime.now(timezone.utc) + timedelta(hours=REFRESH_BEFORE_HOURS)
@@ -172,8 +187,34 @@ class KISTokenManager:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         return expires_at > threshold
 
+    @staticmethod
+    def _is_loadable(token: Optional[str], expires_at: Optional[datetime]) -> bool:
+        """Return True when the cached token still has positive lifetime.
+
+        2026-05-17 wave 13 P2 (PR #441): a separate, looser threshold
+        from _is_fresh. _load_from_file used to gate on >1h life and
+        discarded everything below — Railway redeploys with a 50-min
+        cached token then raced the KIS 60-s rate-limit window
+        (EGW00133). A loadable token is reused immediately; the next
+        request's _is_fresh check is what triggers the eventual
+        refresh.
+        """
+        if not token or not expires_at:
+            return False
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return expires_at > datetime.now(timezone.utc) + timedelta(
+            seconds=LOAD_GRACE_SECONDS
+        )
+
     def _load_from_file(self) -> None:
-        """Populate in-memory token from disk, if a valid cache exists."""
+        """Populate in-memory token from disk, if a valid cache exists.
+
+        2026-05-17 wave 13 P2 (PR #441): gates on _is_loadable, not
+        _is_fresh — see the docstring on _is_loadable for the redeploy
+        race rationale. The per-request hot path still calls _is_fresh
+        and refreshes proactively when <1h remains.
+        """
         try:
             if not os.path.exists(_CACHE_FILE):
                 return
@@ -188,7 +229,7 @@ class KISTokenManager:
             # datetimes; promote them to UTC for safe comparison.
             if expires.tzinfo is None:
                 expires = expires.replace(tzinfo=timezone.utc)
-            if self._is_fresh(token, expires):
+            if self._is_loadable(token, expires):
                 self._token = token
                 self._expires_at = expires
                 logger.info("KIS token loaded from file cache (expires=%s)", expires.isoformat())
