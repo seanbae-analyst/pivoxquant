@@ -35,6 +35,7 @@ from models import (
     WeeklyPulse,
 )
 from models.investment_profile import calculate_profile_type
+from services.error_responses import api_error
 from services.profile import (
     compute_persona_response,
     compute_rolling_response,
@@ -228,7 +229,11 @@ def save_onboarding_draft():
             "profile.save_onboarding_draft commit failed user_id=%s",
             current_user.id,
         )
-        return jsonify({"error": "Failed to save draft. Please try again."}), 500
+        return api_error(
+            en="Failed to save draft. Please try again.",
+            kr="임시 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+            code="ONBOARDING_DRAFT_SAVE_FAILED", status=500,
+        )
 
     return jsonify({"ok": True, "bytes": len(payload.encode("utf-8"))})
 
@@ -284,7 +289,11 @@ def submit_onboarding():
     except Exception:
         db.session.rollback()
         logger.exception("profile.submit_onboarding commit failed (user_id=%s)", current_user.id)
-        return jsonify({"error": "Failed to save onboarding answers. Please try again."}), 500
+        return api_error(
+            en="Failed to save onboarding answers. Please try again.",
+            kr="온보딩 응답 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+            code="ONBOARDING_SAVE_FAILED", status=500,
+        )
 
     return jsonify({
         "ok": True,
@@ -370,10 +379,17 @@ def update_capital():
         keep_usd, usd = _coerce(data.get("available_capital_usd"), "available_capital_usd")
         keep_krw, krw = _coerce(data.get("available_capital_krw"), "available_capital_krw")
     except ValueError as err:
-        return jsonify({"error": str(err)}), 400
+        return api_error(
+            en=str(err), kr="시드머니 값이 유효하지 않습니다.",
+            code="CAPITAL_INVALID_VALUE", status=400,
+        )
 
     if keep_usd and keep_krw:
-        return jsonify({"error": "Provide at least one of available_capital_usd or available_capital_krw"}), 400
+        return api_error(
+            en="Provide at least one of available_capital_usd or available_capital_krw",
+            kr="시드머니 (USD 또는 KRW) 중 최소 한 가지는 입력해 주세요.",
+            code="CAPITAL_AT_LEAST_ONE_REQUIRED", status=400,
+        )
 
     if not keep_usd:
         current_user.available_capital = usd
@@ -385,7 +401,11 @@ def update_capital():
     except Exception:
         db.session.rollback()
         logger.exception("profile.update_capital commit failed (user_id=%s)", current_user.id)
-        return jsonify({"error": "Failed to update capital. Please try again."}), 500
+        return api_error(
+            en="Failed to update capital. Please try again.",
+            kr="시드머니 업데이트에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+            code="CAPITAL_UPDATE_FAILED", status=500,
+        )
 
     return jsonify({
         "ok": True,
@@ -400,7 +420,11 @@ def update_capital():
 def update_profile():
     """Update profile (re-take questionnaire). Free users: 3 changes max."""
     if current_user.subscription_tier == "free" and current_user.profile_changes_left <= 0:
-        return jsonify({"error": "Profile change limit reached. Upgrade to Pro for unlimited changes."}), 403
+        return api_error(
+            en="Profile change limit reached. Upgrade to Pro for unlimited changes.",
+            kr="투자 성향 변경 횟수 한도에 도달했습니다. Pro 로 업그레이드하면 무제한 변경할 수 있습니다.",
+            code="PROFILE_CHANGE_LIMIT", status=403,
+        )
 
     data = request.get_json() or {}
     answers = data.get("answers", {})
@@ -408,7 +432,11 @@ def update_profile():
 
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
     if not profile:
-        return jsonify({"error": "No profile found. Complete onboarding first."}), 404
+        return api_error(
+            en="No profile found. Complete onboarding first.",
+            kr="프로필이 없습니다. 먼저 온보딩을 완료해 주세요.",
+            code="PROFILE_NOT_FOUND", status=404,
+        )
 
     # Store answers
     profile.experience_level = answers.get("experience_level", profile.experience_level)
@@ -432,7 +460,11 @@ def update_profile():
     except Exception:
         db.session.rollback()
         logger.exception("profile.update_profile commit failed (user_id=%s)", current_user.id)
-        return jsonify({"error": "Failed to update profile. Please try again."}), 500
+        return api_error(
+            en="Failed to update profile. Please try again.",
+            kr="프로필 업데이트에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+            code="PROFILE_UPDATE_FAILED", status=500,
+        )
 
     return jsonify({
         "ok": True,
@@ -461,7 +493,11 @@ def get_persona_analysis():
         payload = compute_persona_response(current_user.id)
     except Exception:
         logger.exception("profile.get_persona_analysis failed (user_id=%s)", current_user.id)
-        return jsonify({"error": "Failed to compute persona"}), 500
+        return api_error(
+            en="Failed to compute persona",
+            kr="페르소나 분석에 실패했습니다.",
+            code="PERSONA_COMPUTE_FAILED", status=500,
+        )
     return jsonify(payload)
 
 
@@ -505,7 +541,11 @@ def get_persona_detail():
             "profile.get_persona_detail failed (user_id=%s, window=%s)",
             current_user.id, window_days,
         )
-        return jsonify({"error": "Failed to compute persona detail"}), 500
+        return api_error(
+            en="Failed to compute persona detail",
+            kr="페르소나 상세 분석에 실패했습니다.",
+            code="PERSONA_DETAIL_FAILED", status=500,
+        )
     return jsonify(payload)
 
 
@@ -525,7 +565,11 @@ def get_persona_explain():
             "profile.get_persona_explain failed (user_id=%s)",
             current_user.id,
         )
-        return jsonify({"error": "Failed to compute persona explanation"}), 500
+        return api_error(
+            en="Failed to compute persona explanation",
+            kr="페르소나 설명 생성에 실패했습니다.",
+            code="PERSONA_EXPLAIN_FAILED", status=500,
+        )
     return jsonify(payload)
 
 
@@ -541,7 +585,11 @@ def get_rolling_window():
         payload = compute_rolling_response(current_user.id)
     except Exception:
         logger.exception("profile.get_rolling_window failed (user_id=%s)", current_user.id)
-        return jsonify({"error": "Failed to compute rolling window"}), 500
+        return api_error(
+            en="Failed to compute rolling window",
+            kr="롤링 윈도우 분석에 실패했습니다.",
+            code="ROLLING_WINDOW_FAILED", status=500,
+        )
     return jsonify(payload)
 
 
@@ -574,9 +622,17 @@ def submit_feedback():
     vote = (data.get("vote") or "").strip().lower()
 
     if not artifact_id:
-        return jsonify({"error": "artifact_id is required"}), 400
+        return api_error(
+            en="artifact_id is required",
+            kr="artifact_id 가 필요합니다.",
+            code="FEEDBACK_ARTIFACT_ID_REQUIRED", status=400,
+        )
     if not section:
-        return jsonify({"error": "section is required"}), 400
+        return api_error(
+            en="section is required",
+            kr="section 필드가 필요합니다.",
+            code="FEEDBACK_SECTION_REQUIRED", status=400,
+        )
     if vote not in VOTE_CHOICES:
         return jsonify({
             "error": f"vote must be one of: {', '.join(VOTE_CHOICES)}",
@@ -601,7 +657,11 @@ def submit_feedback():
     except Exception:
         db.session.rollback()
         logger.exception("profile.submit_feedback commit failed (user_id=%s)", current_user.id)
-        return jsonify({"error": "Failed to save feedback"}), 500
+        return api_error(
+            en="Failed to save feedback",
+            kr="피드백 저장에 실패했습니다.",
+            code="FEEDBACK_SAVE_FAILED", status=500,
+        )
 
     return jsonify({"ok": True})
 
@@ -680,9 +740,17 @@ def submit_pulse():
         mood = int(data.get("mood"))
         confidence = int(data.get("confidence"))
     except (TypeError, ValueError):
-        return jsonify({"error": "mood and confidence must be integers 1..5"}), 400
+        return api_error(
+            en="mood and confidence must be integers 1..5",
+            kr="기분(mood)과 확신(confidence)은 1~5 정수여야 합니다.",
+            code="PULSE_INVALID_RANGE", status=400,
+        )
     if not (1 <= mood <= 5 and 1 <= confidence <= 5):
-        return jsonify({"error": "mood and confidence must be integers 1..5"}), 400
+        return api_error(
+            en="mood and confidence must be integers 1..5",
+            kr="기분(mood)과 확신(confidence)은 1~5 정수여야 합니다.",
+            code="PULSE_INVALID_RANGE", status=400,
+        )
 
     # Free-text fields — truncate silently.
     worry = (data.get("worry") or "")
@@ -749,7 +817,11 @@ def submit_pulse():
     except Exception:
         db.session.rollback()
         logger.exception("profile.submit_pulse commit failed (user_id=%s)", current_user.id)
-        return jsonify({"error": "Failed to save pulse"}), 500
+        return api_error(
+            en="Failed to save pulse",
+            kr="펄스 저장에 실패했습니다.",
+            code="PULSE_SAVE_FAILED", status=500,
+        )
 
     return jsonify({"ok": True})
 
@@ -807,7 +879,11 @@ def get_persona_benchmark():
 
     window = _parse_window(request.args.get("window"))
     if window is None:
-        return jsonify({"error": "window must be one of 30, 90, 365"}), 400
+        return api_error(
+            en="window must be one of 30, 90, 365",
+            kr="window 는 30, 90, 365 중 하나여야 합니다.",
+            code="WINDOW_INVALID", status=400,
+        )
 
     # Resolve the calling user's declared persona.
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
@@ -871,7 +947,11 @@ def get_persona_benchmark_all():
 
     window = _parse_window(request.args.get("window"))
     if window is None:
-        return jsonify({"error": "window must be one of 30, 90, 365"}), 400
+        return api_error(
+            en="window must be one of 30, 90, 365",
+            kr="window 는 30, 90, 365 중 하나여야 합니다.",
+            code="WINDOW_INVALID", status=400,
+        )
 
     published = get_all_persona_stats(window)
 
@@ -970,7 +1050,11 @@ def get_persona_history():
             "profile.get_persona_history failed (user_id=%s, days=%s)",
             current_user.id, days,
         )
-        return jsonify({"error": "Failed to load persona history"}), 500
+        return api_error(
+            en="Failed to load persona history",
+            kr="페르소나 이력을 불러오지 못했습니다.",
+            code="PERSONA_HISTORY_FAILED", status=500,
+        )
 
     return jsonify({
         "snapshots": snapshots,
@@ -1004,7 +1088,11 @@ def get_persona_drift():
             "profile.get_persona_drift failed (user_id=%s)",
             current_user.id,
         )
-        return jsonify({"error": "Failed to compute persona drift"}), 500
+        return api_error(
+            en="Failed to compute persona drift",
+            kr="페르소나 변화 분석에 실패했습니다.",
+            code="PERSONA_DRIFT_FAILED", status=500,
+        )
 
     return jsonify({
         "drift": drift,
@@ -1044,7 +1132,11 @@ def post_persona_snapshot():
             "profile.post_persona_snapshot failed (user_id=%s)",
             current_user.id,
         )
-        return jsonify({"error": "Failed to take persona snapshot"}), 500
+        return api_error(
+            en="Failed to take persona snapshot",
+            kr="페르소나 스냅샷 생성에 실패했습니다.",
+            code="PERSONA_SNAPSHOT_FAILED", status=500,
+        )
 
     if row is None:
         return jsonify({
@@ -1116,7 +1208,11 @@ def patch_email_preferences():
             "email_opt_out_earnings",
         )
     except ValueError as err:
-        return jsonify({"error": str(err)}), 400
+        return api_error(
+            en=str(err),
+            kr="이메일 환경설정 값이 유효하지 않습니다 (boolean 필요).",
+            code="EMAIL_PREFS_INVALID", status=400,
+        )
 
     if new_global is None and new_earnings is None:
         return jsonify({
@@ -1138,7 +1234,11 @@ def patch_email_preferences():
             "profile.patch_email_preferences commit failed (user_id=%s)",
             current_user.id,
         )
-        return jsonify({"error": "Failed to update email preferences"}), 500
+        return api_error(
+            en="Failed to update email preferences",
+            kr="이메일 환경설정 업데이트에 실패했습니다.",
+            code="EMAIL_PREFS_UPDATE_FAILED", status=500,
+        )
 
     return jsonify({
         "ok": True,
@@ -1336,7 +1436,11 @@ def export_profile():
         logger.exception(
             "profile.export_profile query failed (user_id=%s)", user_id,
         )
-        return jsonify({"error": "Failed to compile export. Please try again."}), 500
+        return api_error(
+            en="Failed to compile export. Please try again.",
+            kr="데이터 내보내기 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+            code="PROFILE_EXPORT_FAILED", status=500,
+        )
 
     payload = {
         "format_version": "1.0",
