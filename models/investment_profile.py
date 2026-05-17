@@ -109,8 +109,40 @@ class InvestmentProfile(db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     def apply_preset(self):
-        """Apply preset quant params based on profile_type."""
-        preset = PROFILE_PRESETS.get(self.profile_type, PROFILE_PRESETS["balanced"])
+        """Apply preset quant params based on ``profile_type``.
+
+        Lookup order (2026-05-17 wave D-1 fix):
+          1. V2 presets (``services.profile.questionnaire.PROFILE_PRESETS_V2``)
+             — the 8 investor types produced by the 20-question wizard.
+          2. V1 legacy presets (``PROFILE_PRESETS`` in this module)
+             — conservative / balanced / growth / aggressive.
+          3. ``balanced`` fallback.
+
+        Pre-fix every V2 type silently collapsed to ``balanced`` because the
+        V1 map had no overlapping keys, so e.g. a user classified as
+        ``momentum_rider`` (tp_max 30%, max_positions 6, leverage_allowed)
+        was running the 15%/15 pos/no-lev "balanced" preset against the
+        engine. Only the V1 4-tier flow (``calculate_profile_type``) ever
+        produced keys that the preset map could resolve.
+        """
+        # V2 preset has additional keys (max_alloc_pct, rebalance_interval_days,
+        # trailing_stop_pct, max_daily_trades, leverage_allowed, preferred_models,
+        # scan_interval_sec) that don't exist as ORM columns. ``setattr`` on a
+        # SQLAlchemy model with a name that isn't mapped creates an instance
+        # attribute that's silently dropped at commit — harmless but noisy.
+        # Filter to the intersection with V1 keys (which mirror the ORM cols).
+        try:
+            from services.profile.questionnaire import PROFILE_PRESETS_V2
+            v2_preset = PROFILE_PRESETS_V2.get(self.profile_type)
+        except ImportError:
+            v2_preset = None
+
+        if v2_preset is not None:
+            v1_keys = set(PROFILE_PRESETS["balanced"].keys())
+            preset = {k: v for k, v in v2_preset.items() if k in v1_keys}
+        else:
+            preset = PROFILE_PRESETS.get(self.profile_type, PROFILE_PRESETS["balanced"])
+
         for k, v in preset.items():
             setattr(self, k, v)
 
