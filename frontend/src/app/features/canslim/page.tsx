@@ -17,6 +17,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { SectionCurtain } from "@/components/landing/section-curtain";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 
 export const metadata: Metadata = {
   title: "CAN SLIM Stock Screener",
@@ -56,10 +57,10 @@ const factors = [
   },
   {
     letter: "L",
-    title: "Leader",
-    description: "The stock shows higher relative strength versus its sector (benchmark comparison, information only).",
+    title: "Leader (1m Momentum)",
+    description: "The stock has shown a positive 1-month return — a momentum proxy used as a stand-in for relative strength. Information only; not a sector-relative benchmark.",
     icon: Award,
-    threshold: "Higher relative strength vs sector",
+    threshold: "1-month positive return",
   },
   {
     letter: "I",
@@ -222,6 +223,13 @@ export default function CanslimPage() {
               );
             })}
           </div>
+        </section>
+        </SectionCurtain>
+
+        {/* ── Disclaimer (2026-05-17 P2-05: 자본시장법 §49 광고 표시) ── */}
+        <SectionCurtain>
+        <section className="mb-12">
+          <DisclaimerBanner type="signal" theme="dark" />
         </section>
         </SectionCurtain>
 

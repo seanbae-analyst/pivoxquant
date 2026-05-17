@@ -23,23 +23,36 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 DISCLAIMERS = {
+    # 2026-05-17 P2-04: KO + EN bilingual per CLAUDE.md domestic-first rule.
+    # Korean users are the primary audience; English suffix supports overseas
+    # beta testers + audit/legal review.
     "simulation": (
+        "포트폴리오 시뮬레이션 — 교육 목적의 참고 자료입니다. "
+        "투자자문 또는 포트폴리오 배분 권유가 아닙니다. "
         "Portfolio simulation for educational reference only. "
         "Does not constitute investment advice or portfolio allocation guidance."
     ),
     "indicator": (
+        "분석 지표 — 정보 제공 목적만 입니다. "
+        "특정 매매 행위를 권유하는 것이 아닙니다. "
         "Market analysis indicator for informational purposes only. "
         "Does not suggest any specific trading action."
     ),
     "analysis": (
+        "과거 데이터와 수학적 모델에 기반한 분석입니다. "
+        "과거 성과는 미래 수익을 보장하지 않습니다. "
         "Analysis based on historical data and mathematical models. "
         "Past performance does not guarantee future results."
     ),
     "tax": (
+        "세금 정보는 추정치이며 참고용입니다. "
+        "실제 세무 자문은 공인 세무사와 상담하시기 바랍니다. "
         "Tax information is estimated and for reference only. "
         "Consult a licensed tax professional for actual tax advice."
     ),
     "regime": (
+        "거시 국면 분류 및 과거 섹터 성과 데이터로, 정보 제공 목적입니다. "
+        "특정 섹터를 권유하지 않습니다. "
         "Macro regime classification and historical sector performance data "
         "for informational purposes. Does not suggest specific sectors."
     ),

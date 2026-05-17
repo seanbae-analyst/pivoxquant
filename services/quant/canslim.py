@@ -5,19 +5,59 @@ with EDGAR fallback on 402/plan-gated errors. Price/volume inputs supplied by
 the caller (engine or quant route).
 
 Pure mathematical screening; not investment advice.
+
+KR ticker policy (2026-05-17 Wave C-4):
+    .KS / .KQ tickers route through FMP, which does not cover Korean fundamentals
+    (income statement / institutional ownership endpoints return empty). Instead
+    of silently failing C/A/I with reason="fetch error" — which the prior code did
+    and which made KR scores systematically low for no diagnosable reason — we now
+    short-circuit with method="UNAVAILABLE" + an explicit reason. Frontend can
+    surface "N/A" rather than show a misleading red "fail". Future KIS API
+    integration is tracked separately.
 """
 
 import logging
+import math
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
 
+def _is_kr_ticker(ticker):
+    """Return True for Korean exchange tickers (.KS / .KQ).
+
+    Used to short-circuit C/A/I factors which depend on FMP fundamental
+    endpoints that have zero KR coverage.
+    """
+    if not ticker:
+        return False
+    t = ticker.upper()
+    return t.endswith(".KS") or t.endswith(".KQ")
+
+
+def _kr_unavailable(factor_letter):
+    """Standard payload for KR tickers on FMP-dependent factors."""
+    return {
+        "value": None,
+        "pass": None,  # Tri-state: None = N/A, not False
+        "method": "UNAVAILABLE",
+        "reason": (
+            f"KR fundamental data not supported for {factor_letter} "
+            "(FMP coverage gap; KIS integration tracked separately)"
+        ),
+    }
+
+
 def _safe_growth(curr, prev):
-    """Compute YoY growth % with safe handling of None/zero/negative base.
+    """Compute YoY growth % with safe handling of None/zero/negative base/NaN.
 
     Returns float or None. Uses abs(prev) in the denominator so a swing
     from negative to positive still produces a finite, interpretable number.
+
+    NaN guard (2026-05-17 P3-02): float('nan') silently coerces through
+    float() and produces a NaN growth value that breaks JSON serialization
+    downstream. Detect via math.isnan and return None.
     """
     if curr is None or prev is None:
         return None
@@ -27,20 +67,60 @@ def _safe_growth(curr, prev):
     except (TypeError, ValueError):
         logger.debug("silent-fallback: _safe_growth", exc_info=True)
         return None
+    if math.isnan(curr_f) or math.isnan(prev_f):
+        return None
     if prev_f == 0:
         return None
     return ((curr_f - prev_f) / abs(prev_f)) * 100.0
 
 
+def _find_yoy_quarter(quarterly_data, target_quarter):
+    """Locate the same fiscal period from one calendar year prior.
+
+    The prior implementation assumed ``quarterly[4]`` was always seasonally
+    aligned with ``quarterly[0]`` — which silently breaks whenever FMP omits a
+    quarter (restatements, late filers, calendar/fiscal-year shifts). We now
+    match on (calendarYear - 1, period) explicitly.
+
+    Args:
+        quarterly_data: list of dicts most-recent-first from
+            ``fmp.get_quarterly_eps``.
+        target_quarter: the reference quarter dict (typically ``quarterly[0]``).
+
+    Returns the matching quarter dict or None if no exact match is found.
+    """
+    if not target_quarter:
+        return None
+    target_year = target_quarter.get("calendarYear")
+    target_period = target_quarter.get("period")  # 'Q1' .. 'Q4'
+    if target_year is None or not target_period:
+        return None
+    try:
+        target_year = int(target_year)
+    except (TypeError, ValueError):
+        return None
+    for q in quarterly_data:
+        try:
+            q_year = int(q.get("calendarYear")) if q.get("calendarYear") is not None else None
+        except (TypeError, ValueError):
+            continue
+        if q_year == target_year - 1 and q.get("period") == target_period:
+            return q
+    return None
+
+
 def _check_current_eps(ticker):
     """C -- Current quarterly EPS YoY growth >= 25%.
 
-    Compares the most recent quarterly EPS to the same quarter one year ago
-    (4 quarters back, which is seasonally aligned).
+    Compares the most recent quarterly EPS to the *same fiscal quarter* one
+    calendar year ago (matched by (calendarYear-1, period), not list index).
 
     Returns dict: {"value": growth_pct, "pass": bool, "source": ...}
                   or {"value": None, "pass": False, "reason": ...}.
     """
+    if _is_kr_ticker(ticker):
+        return _kr_unavailable("C")
+
     try:
         from services.data import fmp
     except Exception as e:
@@ -56,8 +136,20 @@ def _check_current_eps(ticker):
     if not quarterly or len(quarterly) < 5:
         return {"value": None, "pass": False, "reason": "insufficient quarterly data"}
 
-    current_eps = quarterly[0].get("eps")
-    yoy_eps = quarterly[4].get("eps")  # 4 quarters back = same fiscal quarter prior year
+    current_q = quarterly[0]
+    yoy_q = _find_yoy_quarter(quarterly, current_q)
+    if yoy_q is None:
+        return {
+            "value": None,
+            "pass": False,
+            "reason": (
+                f"no seasonally-aligned prior-year quarter found for "
+                f"{current_q.get('period')} {current_q.get('calendarYear')}"
+            ),
+        }
+
+    current_eps = current_q.get("eps")
+    yoy_eps = yoy_q.get("eps")
     growth = _safe_growth(current_eps, yoy_eps)
     if growth is None:
         return {"value": None, "pass": False, "reason": "prior-year EPS is zero or missing"}
@@ -68,7 +160,8 @@ def _check_current_eps(ticker):
         "pass": growth >= 25.0,
         "current_eps": current_eps,
         "yoy_eps": yoy_eps,
-        "current_period": f"{quarterly[0].get('period', '')} {quarterly[0].get('calendarYear', '')}".strip(),
+        "current_period": f"{current_q.get('period', '')} {current_q.get('calendarYear', '')}".strip(),
+        "yoy_period": f"{yoy_q.get('period', '')} {yoy_q.get('calendarYear', '')}".strip(),
         "source": "FMP /income-statement (quarter)",
     }
 
@@ -80,6 +173,9 @@ def _check_annual_eps(ticker):
 
     Returns dict with per-year growth list + pass flag.
     """
+    if _is_kr_ticker(ticker):
+        return _kr_unavailable("A")
+
     try:
         from services.data import fmp
     except Exception as e:
@@ -129,6 +225,9 @@ def _check_institutional(ticker, closes):
     surge in the recent 20-day window). Marked as proxy in the result so the
     frontend can surface the caveat.
     """
+    if _is_kr_ticker(ticker):
+        return _kr_unavailable("I")
+
     proxy_result = None
     # Compute proxy ahead of time so we can fall back gracefully.
     if closes is not None and len(closes) >= 63:
@@ -205,29 +304,51 @@ class CANSLIMScreener:
         Returns: dict with score, per-criterion pass/fail + details.
         """
 
-        results = {"ticker": ticker, "total_score": 0, "max_score": 7, "criteria": {}}
+        # ``max_score`` decrements by 1 for every N/A factor (pass=None) so the
+        # rating tier reflects the *applicable* checks. Without this, KR tickers
+        # would systematically AVOID because 3 N/A factors are 3 silent failures.
+        results = {"ticker": ticker, "total_score": 0, "max_score": 7, "na_count": 0, "criteria": {}}
+
+        def _accumulate(letter, payload):
+            results["criteria"][letter] = payload
+            p = payload.get("pass")
+            if p is None:
+                # N/A — drop from denominator
+                results["max_score"] -= 1
+                results["na_count"] += 1
+            elif p:
+                results["total_score"] += 1
 
         # ── C: Current quarterly EPS YoY ≥ 25% ──────────────────
         c = _check_current_eps(ticker)
-        if c.get("value") is None and fundamentals:
+        # EDGAR fallback only when C is hard-fail (value=None, pass=False).
+        # KR N/A short-circuits (pass=None) and should NOT fall through to
+        # EDGAR — EDGAR has no KR coverage either.
+        if c.get("value") is None and c.get("pass") is False and fundamentals:
             # EDGAR fallback: use revenue_growth as a degraded proxy.
+            # Net income guard added 2026-05-17 P2-03: revenue growth without
+            # positive earnings is not a CAN SLIM C-factor pass.
             rg = fundamentals.get("revenue_growth")
+            net_income = fundamentals.get("net_income")
             if rg is not None:
+                rg_pass = bool(rg > 25 and (net_income is None or net_income > 0))
                 c = {
                     "value": rg,
                     "threshold": 25,
-                    "pass": bool(rg is not None and rg > 25),
-                    "method": "EDGAR_FALLBACK",
-                    "note": "Using revenue_growth (EDGAR) — quarterly EPS unavailable",
+                    "pass": rg_pass,
+                    "method": "EDGAR_REVENUE_PROXY",
+                    "note": (
+                        "Using revenue_growth (EDGAR) — quarterly EPS unavailable. "
+                        "Requires revenue growth >25% AND net income >0."
+                    ),
+                    "net_income": net_income,
                 }
         c["name"] = "Current Quarterly EPS Growth"
-        results["criteria"]["C"] = c
-        if c.get("pass"):
-            results["total_score"] += 1
+        _accumulate("C", c)
 
         # ── A: Annual EPS 3y consecutive ≥ 25% ──────────────────
         a = _check_annual_eps(ticker)
-        if a.get("value") is None and fundamentals:
+        if a.get("value") is None and a.get("pass") is False and fundamentals:
             # EDGAR fallback: single-year revenue-up-and-positive check.
             rg = fundamentals.get("revenue_growth")
             rev = fundamentals.get("revenue")
@@ -237,39 +358,39 @@ class CANSLIMScreener:
                     "value": rg,
                     "threshold": 25,
                     "pass": bool(rg > 0 and rev > prev),
-                    "method": "EDGAR_FALLBACK",
+                    "method": "EDGAR_REVENUE_PROXY",
                     "note": "Using 1y revenue trend (EDGAR) — multi-year EPS unavailable",
                 }
         a["name"] = "Annual EPS Growth (3y)"
-        results["criteria"]["A"] = a
-        if a.get("pass"):
-            results["total_score"] += 1
+        _accumulate("A", a)
 
         # ── N: Near 52-week high (within 5%) ────────────────────
-        n_pass = False
         if len(closes) >= 252:
             high_52w = np.max(closes[-252:])
             ratio = closes[-1] / high_52w if high_52w > 0 else 0
             n_pass = bool(ratio > 0.95)
-            results["criteria"]["N"] = {
+            n_payload = {
                 "name": "Near 52-Week High",
                 "ratio": round(float(ratio), 4),
                 "pass": n_pass,
             }
         else:
-            results["criteria"]["N"] = {
+            n_payload = {
                 "name": "Near 52-Week High",
                 "pass": False,
                 "reason": "Insufficient history (need 252 bars)",
             }
-        if n_pass:
-            results["total_score"] += 1
+        _accumulate("N", n_payload)
 
         # ── S: Supply/demand (volume surge + float) ─────────────
+        # 2026-05-17 P2-02: average excludes today (volumes[-21:-1]).
+        # Including today in the denominator dampens the ratio whenever today
+        # is itself a surge, which is exactly the case CAN SLIM is designed
+        # to detect. Needs >=21 bars now (one extra) for the same window.
         s_score = 0.0
         s_details = {"name": "Supply/Demand"}
-        if len(volumes) >= 20:
-            avg_vol = np.mean(volumes[-20:])
+        if len(volumes) >= 21:
+            avg_vol = np.mean(volumes[-21:-1])
             vol_ratio = volumes[-1] / avg_vol if avg_vol > 0 else 0
             if vol_ratio > 1.5:
                 s_score += 1
@@ -298,53 +419,68 @@ class CANSLIMScreener:
         s_pass = bool(s_score >= 1)
         s_details["sub_score"] = float(s_score)
         s_details["pass"] = s_pass
-        results["criteria"]["S"] = s_details
-        if s_pass:
-            results["total_score"] += 1
+        _accumulate("S", s_details)
 
-        # ── L: Leader (1-month return > 0) ──────────────────────
-        l_pass = False
+        # ── L: Leader — 1-month positive return ─────────────────
+        # NOTE: This is a momentum heuristic (1-month return > 0), NOT a true
+        # relative-strength-vs-sector comparison. The marketing page intentionally
+        # describes it as "1-month positive return" so wording matches behaviour.
+        # A future PR may introduce a real sector benchmark (FMP /profile industry
+        # + sector ETF universe), at which point both code and copy should change
+        # together.
         if len(closes) >= 21:
             ret_1m = (closes[-1] / max(closes[-21], 1e-8)) - 1
             l_pass = bool(ret_1m > 0)
-            results["criteria"]["L"] = {
-                "name": "Sector Leader",
+            l_payload = {
+                "name": "Leader (1m Momentum)",
                 "return_1m": round(float(ret_1m * 100), 2),
                 "pass": l_pass,
+                "method": "1M_RETURN",
+                "note": "1-month positive return (momentum proxy, not sector-relative)",
             }
         else:
-            results["criteria"]["L"] = {"name": "Sector Leader", "pass": False}
-        if l_pass:
-            results["total_score"] += 1
+            l_payload = {
+                "name": "Leader (1m Momentum)",
+                "pass": False,
+                "reason": "Insufficient history (need 21 bars)",
+            }
+        _accumulate("L", l_payload)
 
         # ── I: Institutional sponsorship ────────────────────────
         i = _check_institutional(ticker, closes)
         i["name"] = "Institutional Sponsorship"
-        results["criteria"]["I"] = i
-        if i.get("pass"):
-            results["total_score"] += 1
+        _accumulate("I", i)
 
         # ── M: Market direction ─────────────────────────────────
-        m_pass = False
+        # ``regime`` MUST be derived from a market index (^GSPC for US, ^KS11 for
+        # KR) by the caller, not from the candidate ticker's own price series.
+        # Passing per-ticker regime here previously made every uptrending stock
+        # auto-pass M, defeating the point of the market filter.
         if regime:
             m_pass = regime in ("BULL", "MILD_BULL")
-            results["criteria"]["M"] = {
+            m_payload = {
                 "name": "Market Direction",
                 "regime": regime,
                 "pass": m_pass,
             }
         else:
-            results["criteria"]["M"] = {"name": "Market Direction", "pass": False}
-        if m_pass:
-            results["total_score"] += 1
+            m_payload = {
+                "name": "Market Direction",
+                "pass": False,
+                "reason": "regime unavailable",
+            }
+        _accumulate("M", m_payload)
 
         # ── Overall rating ──────────────────────────────────────
+        # Scale rating thresholds to the effective max_score (after N/A drops).
         score = results["total_score"]
-        if score >= 6:
+        max_score = max(results["max_score"], 1)
+        score_pct = score / max_score
+        if score_pct >= 6.0 / 7.0:
             results["rating"] = "STRONG"
-        elif score >= 4:
+        elif score_pct >= 4.0 / 7.0:
             results["rating"] = "MODERATE"
-        elif score >= 2:
+        elif score_pct >= 2.0 / 7.0:
             results["rating"] = "WEAK"
         else:
             results["rating"] = "AVOID"
