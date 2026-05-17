@@ -150,6 +150,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
           {/* Ticker input */}
           <div className="relative">
             <label
+              htmlFor="watchlist-add-ticker"
               className="block text-pq-eyebrow uppercase"
               style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
             >
@@ -160,6 +161,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               style={{ border: "0.5px solid var(--pq-hairline)", background: "transparent" }}
             >
               <input
+                id="watchlist-add-ticker"
                 type="text"
                 value={ticker}
                 onChange={(e) => {
@@ -240,12 +242,14 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
           {/* Note */}
           <div>
             <label
+              htmlFor="watchlist-add-note"
               className="block text-pq-eyebrow uppercase"
               style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
             >
               Note <span className="normal-case" style={{ letterSpacing: 0 }}>(optional)</span>
             </label>
             <textarea
+              id="watchlist-add-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}

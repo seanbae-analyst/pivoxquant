@@ -477,6 +477,7 @@ function QuestionsStep(props: {
                 value={answers[q.n] ?? ""}
                 onChange={(e) => setAnswers((prev) => ({ ...prev, [q.n]: e.target.value }))}
                 placeholder="(optional) 한 줄로 답해보라"
+                aria-label={`Answer to question ${q.n}: ${q.en}`}
                 className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
               />
               <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm tracking-[0.18em] uppercase text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)]">
