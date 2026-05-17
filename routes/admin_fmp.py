@@ -39,10 +39,10 @@ logger = logging.getLogger(__name__)
 admin_fmp_bp = Blueprint("admin_fmp", __name__, url_prefix="/api/admin")
 
 
-def _admin_emails() -> set[str]:
-    """Parse the ``ADMIN_EMAILS`` env var into a set of lowercased addresses."""
-    raw = os.getenv("ADMIN_EMAILS", "")
-    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+# 2026-05-17 wave 13 P2 (PR #442): parser centralized in
+# services/admin_emails.py — keep the local name as a thin alias so
+# the route bodies below don't churn.
+from services.admin_emails import get_admin_emails as _admin_emails  # noqa: E402
 
 
 def _deny_non_admin():
