@@ -62,7 +62,11 @@ def status():
 @ai_rate_limit
 def swot():
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
     d = request.get_json() or {}
     # §101 회피 — SWOT 은 종목 단위 분석이므로 보유/관심 외 ticker 거부.
     ticker = _extract_ticker_from_payload(d)
@@ -80,7 +84,10 @@ def swot():
     # contract (returns None on transient errors — see test_ai_failure_paths)
     # but stashes the type+message in ``ai.last_error`` for diagnostics.
     detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate SWOT"}
+    body = {
+        "error": "Failed to generate SWOT",
+        "error_kr": "SWOT 분석을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    }
     if detail:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
@@ -93,7 +100,11 @@ def swot():
 @ai_rate_limit
 def competitor():
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
     d = request.get_json() or {}
     ticker = d.get("ticker", "")
     # §101 회피 — competitor 분석은 ticker 기준이므로 보유/관심 외 거부.
@@ -121,7 +132,10 @@ def competitor():
     if result:
         return _scrub_and_jsonify(result)
     detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate competitor analysis"}
+    body = {
+        "error": "Failed to generate competitor analysis",
+        "error_kr": "경쟁사 분석을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    }
     if detail:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
@@ -134,7 +148,11 @@ def competitor():
 @ai_rate_limit
 def sector_trend():
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
     d = request.get_json() or {}
     # §101 회피 — sector-trend 가 ticker 와 함께 호출되는 경우 (예: Detail page
     # context) 에는 ticker 화이트리스트 검사를 우선 적용. ticker 없이 sector
@@ -160,7 +178,10 @@ def sector_trend():
     if result:
         return _scrub_and_jsonify(result)
     detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate sector trend"}
+    body = {
+        "error": "Failed to generate sector trend",
+        "error_kr": "섹터 트렌드 분석을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    }
     if detail:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
@@ -172,7 +193,11 @@ def sector_trend():
 @ai_rate_limit
 def chat():
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
     d = request.get_json() or {}
     message = (d.get("message") or "").strip()
     history = d.get("history") or []
@@ -222,7 +247,11 @@ def chat():
 @ai_rate_limit
 def commentary():
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
     d = request.get_json() or {}
     # §101 회피 — commentary 가 단일 ticker 분석과 함께 호출되는 경우만 가드.
     ticker_check = _extract_ticker_from_payload(d)
@@ -233,7 +262,10 @@ def commentary():
     if result:
         return _scrub_and_jsonify(result)
     detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate commentary"}
+    body = {
+        "error": "Failed to generate commentary",
+        "error_kr": "코멘터리를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    }
     if detail:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
@@ -246,13 +278,20 @@ def commentary():
 @ai_rate_limit
 def morning_summary():
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
     d = request.get_json() or {}
     result = ai.generate_morning_summary(d)
     if result:
         return _scrub_and_jsonify(result)
     detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate summary"}
+    body = {
+        "error": "Failed to generate summary",
+        "error_kr": "요약을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    }
     if detail:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
@@ -265,7 +304,11 @@ def morning_summary():
 @ai_rate_limit
 def coaching():
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
     positions = Position.query.filter_by(user_id=current_user.id).all()
     if not positions:
         return jsonify({"insight": "Add some positions first to use the AI Assistant!",
@@ -286,7 +329,10 @@ def coaching():
     if result:
         return _scrub_and_jsonify(result)
     detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate coaching"}
+    body = {
+        "error": "Failed to generate coaching",
+        "error_kr": "코칭 메시지를 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    }
     if detail:
         body["detail"] = detail
     body["retry_after"] = 60  # B-08 graceful
@@ -320,7 +366,11 @@ def earnings_tone():
     Returns cached result when available (90-day TTL).
     """
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
 
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip()
@@ -377,7 +427,11 @@ def earnings_tone_get(ticker):
     one Claude call subject to daily budget. Designed for the Detail page.
     """
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
 
     if not ticker or not isinstance(ticker, str):
         return jsonify({"error": "ticker is required"}), 400
@@ -428,7 +482,11 @@ def sector_regime():
     LEGAL: Informational only. Does not recommend buying or selling sectors.
     """
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
     result, status_code = AISectorRotation.analyze()
     return _scrub_and_jsonify(result, status_code)
 
@@ -447,7 +505,11 @@ def risk_summary():
     LEGAL: GREEN — analysis of user's own data, no advisory content.
     """
     if not ai.available:
-        return jsonify({"error": "AI not configured"}), 503
+        return jsonify({
+            "error": "AI not configured",
+            "error_kr": "AI 서비스가 일시적으로 사용 불가합니다. 잠시 후 다시 시도해 주세요.",
+            "code": "AI_NOT_CONFIGURED",
+        }), 503
 
     # Build portfolio_data from user's positions
     positions = Position.query.filter_by(user_id=current_user.id).all()
