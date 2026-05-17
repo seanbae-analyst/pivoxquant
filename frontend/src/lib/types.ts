@@ -130,6 +130,12 @@ export interface ProfileResponse {
   has_profile: boolean;
   changes_left?: number;
   subscription_tier?: string;
+  // 2026-05-17 (PR #413): GET /api/profile surfaces global email opt-out
+  // flags so settings/_v2 can hydrate the "email delivery" toggle from
+  // server truth, not just localStorage. Both optional so older
+  // deployments without the surface still type-check.
+  email_opt_out?: boolean;
+  email_opt_out_earnings?: boolean;
 }
 
 /* ── AI ── */

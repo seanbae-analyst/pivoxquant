@@ -60,9 +60,22 @@ import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-conse
 import { SubscriptionCardV2 } from "@/components/settings/v2/subscription-card-v2";
 import { PrivacyCardV2 } from "@/components/settings/v2/privacy-card-v2";
 
+// 2026-05-17: keys aligned with backend `routes/billing.py:372` which
+// actually returns `subscription_tier` / `subscription_status` /
+// `has_active_subscription`. The old `tier` / `status` shape never
+// matched, so `subData?.tier` always evaluated `undefined`. The
+// fallback chain (`user?.subscription_tier || subData?.tier || "free"`)
+// silently masked the bug because `user` SWR almost always loads
+// first; but in cold-start or a user-SWR error the tier would lock
+// to "free" regardless of the real subscription. `tier` / `status`
+// kept as optional aliases so any other transitional consumer still
+// type-checks until it's swept.
 interface SubscriptionResponse {
-  tier: string;
-  status: string;
+  subscription_tier?: string;
+  subscription_status?: string;
+  has_active_subscription?: boolean;
+  tier?: string;
+  status?: string;
   current_period_end?: string;
   cancel_at_period_end?: boolean;
 }
@@ -92,8 +105,12 @@ export default function SettingsPageV2() {
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 60_000 },
   );
+  // Prefer the canonical backend key (`subscription_tier`) but keep the
+  // legacy `tier` alias as a fallback so any half-deployed env doesn't
+  // regress mid-rollout. 2026-05-17 — Wave 8 schema alignment.
   const tier = (
     user?.subscription_tier ||
+    subData?.subscription_tier ||
     subData?.tier ||
     "free"
   ).toLowerCase();

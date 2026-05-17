@@ -50,7 +50,14 @@ logger = logging.getLogger(__name__)
 broker_oauth_bp = Blueprint("broker_oauth", __name__, url_prefix="/api/broker")
 
 # ── Validation helpers ────────────────────────────────────────────────────
-_ACCOUNT_RE = re.compile(r"^\d{6,12}$")  # KIS 계좌는 8자리가 일반적, 여유 허용
+# 2026-05-17: backend regex sync with frontend Wave 6 LOW #4 fix
+# (kis-connect-modal.tsx:35 = `/^\d{8}$/`). KIS retail accounts are
+# exactly 8 digits — the prior `\d{6,12}` window was a defensive guess
+# that let a non-browser caller (curl, mobile dev tools) submit a 6- or
+# 12-digit string that we then forwarded to KIS only to hit
+# `INVALID_ACCOUNT` four hops later. Closing the gap so frontend and
+# backend agree on the canonical shape.
+_ACCOUNT_RE = re.compile(r"^\d{8}$")
 _PROD_RE = re.compile(r"^\d{2}$")
 
 
