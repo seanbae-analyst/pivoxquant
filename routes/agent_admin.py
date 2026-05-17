@@ -48,9 +48,8 @@ agent_admin_bp = Blueprint(
 # ── Access control ───────────────────────────────────────────────────────────
 
 
-def _admin_emails() -> set[str]:
-    raw = os.getenv("ADMIN_EMAILS", "")
-    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+# 2026-05-17 wave 13 P2 (PR #442): centralized parser; alias kept.
+from services.admin_emails import get_admin_emails as _admin_emails  # noqa: E402
 
 
 def _deny_non_admin():
