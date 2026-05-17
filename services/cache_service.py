@@ -105,14 +105,22 @@ def save_signal(ticker: str, data: dict):
     stays untouched — scrubbing happens at the storage boundary.
     """
     data = scrub_signal(data)
+    # 2026-05-17 wave 11 P2: fail-fast at the write boundary if any upstream
+    # numerical pipeline let NaN/Inf through. Python's default `allow_nan=True`
+    # emits `NaN`/`Infinity` literals — valid JSON neither the browser
+    # `JSON.parse` nor any strict downstream consumer can read. The frontend
+    # would crash with `Unexpected token N` and the server would have no idea.
+    # `allow_nan=False` raises `ValueError` here so the offending model
+    # surfaces in logs immediately (paired with wave 11 P1 fixes in
+    # services/quant/models.py to scrub the upstream zeros).
     c = db.session.get(SignalCache, ticker)
     if c:
-        c.data_json = json.dumps(data, ensure_ascii=False)
+        c.data_json = json.dumps(data, ensure_ascii=False, allow_nan=False)
         c.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         db.session.add(SignalCache(
             ticker=ticker,
-            data_json=json.dumps(data, ensure_ascii=False),
+            data_json=json.dumps(data, ensure_ascii=False, allow_nan=False),
             updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
         ))
     db.session.commit()

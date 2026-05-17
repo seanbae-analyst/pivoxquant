@@ -466,15 +466,22 @@ class RiskDefenseSystem:
             if not sector_positions:
                 continue
 
-            # Flag the largest position in the overweight sector
+            # Flag the largest position in the overweight sector.
+            # 2026-05-17 wave 11 P1: the previous `weight - self.config[...]`
+            # bare expression was a stale refactor remnant — the computed
+            # overage was meant to drive the warning intensity but the
+            # assignment was lost. Surfacing the actual overage in the
+            # message so operators can see how far past the cap a sector
+            # has drifted (10pp vs 30pp matters for triage).
             largest = max(sector_positions, key=lambda p: p.get("value", 0))
-            weight - self.config["max_sector_pct"]
+            overage_pct = weight - self.config["max_sector_pct"]
             actions["risk_exposure"].append(
                 (
                     largest.get("ticker", "?"),
                     round(weight, 1),
                     f"Sector {sector} at {weight:.0f}% exceeds "
-                    f"{self.config['max_sector_pct']}% limit",
+                    f"{self.config['max_sector_pct']}% limit "
+                    f"(+{overage_pct:.0f}pp)",
                 )
             )
             if "L6_SECTOR_CONCENTRATION" not in actions["layers_triggered"]:

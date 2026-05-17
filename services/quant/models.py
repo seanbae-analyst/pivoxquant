@@ -336,7 +336,11 @@ class VolatilityRegime:
             return None
 
         closes = np.array(closes, dtype=float)
-        returns = np.diff(np.log(closes))
+        # 2026-05-17 wave 11 P1: 0-price guard before log() — MLSignal
+        # already uses this floor (line 737). Stale-data / halt-day rows
+        # of 0 produce -inf returns that propagate as NaN through std()
+        # and percentile chains.
+        returns = np.diff(np.log(np.maximum(closes, 1e-8)))
 
         # Current vol (annualized)
         current_vol = np.std(returns[-period:]) * np.sqrt(252) * 100
@@ -416,7 +420,10 @@ class RegimeSwitching:
             return None
 
         closes = np.array(closes, dtype=float)
-        returns = np.diff(np.log(closes))
+        # 2026-05-17 wave 11 P1: 0-price guard before log() — same pattern
+        # as VolatilityRegime/MLSignal. Without it a halted/delisted entry
+        # yields -inf returns and silently breaks the regime decision.
+        returns = np.diff(np.log(np.maximum(closes, 1e-8)))
 
         # Short-term stats (20 days)
         ret_20 = np.mean(returns[-20:]) * 252  # annualized
@@ -1448,7 +1455,10 @@ class VarianceRatioFilter:
         if len(closes) < 252:
             return {"vr": 1.0, "regime": "unknown", "use_momentum": False}
 
-        returns = np.diff(np.log(np.array(closes[-252:], dtype=float)))
+        # 2026-05-17 wave 11 P1: 0-price guard before log() — same pattern
+        # as VolatilityRegime/RegimeSwitching. Stale/halt 0-price → -inf
+        # would corrupt the variance ratio decision.
+        returns = np.diff(np.log(np.maximum(np.array(closes[-252:], dtype=float), 1e-8)))
 
         # Variance of 1-day returns
         var_1 = np.var(returns, ddof=1)
@@ -1483,10 +1493,19 @@ class TSMOM:
             return {"signal": "NEUTRAL", "momentum_12m": 0, "strength": 0}
 
         arr = np.array(closes, dtype=float)
-        ret_12m = (arr[-1] / arr[-252]) - 1  # 12-month return
+        # 2026-05-17 wave 11 P1: guard against 0-price entries in the 252-bar
+        # window. A delisted/halt/stale-data 0 would make `arr[-1] / 0 = inf`
+        # which propagates to `strength`, the engine's `quant_score`, the
+        # composite, then into json.dumps as `Infinity`/`NaN` tokens that
+        # JSON.parse rejects on the frontend. DualMomentum already uses the
+        # same `max(..., 1e-8)` pattern (line 1636) — aligning TSMOM here.
+        denom = max(arr[-252], 1e-8)
+        ret_12m = (arr[-1] / denom) - 1  # 12-month return
 
-        # Volatility-scaled strength
-        returns = np.diff(np.log(arr[-63:]))
+        # Volatility-scaled strength. Same 1e-8 floor applied to log() input —
+        # a single 0-price entry in the 63-bar window would produce -inf
+        # and break the std() / sqrt(252) chain.
+        returns = np.diff(np.log(np.maximum(arr[-63:], 1e-8)))
         vol_63d = np.std(returns) * np.sqrt(252) if len(returns) > 1 else 0.2
         strength = min(abs(ret_12m) / max(vol_63d, 0.01), 2.0)  # capped at 2x
 
