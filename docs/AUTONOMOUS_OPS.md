@@ -184,7 +184,8 @@ Graduation path:
 ## Local dev smoke tests
 
 ```bash
-cd /Users/seanbae/Desktop/취준/stockpilot
+# 2026-05-17 wave 13: 경로 갱신 — repo relocated to ~/projects/pivoxquant
+cd ~/projects/pivoxquant
 
 # morning-triage dry-run — prints prompts but no API calls
 TRIAGE_DRY_RUN=1 GITHUB_REPOSITORY=seanbae-analyst/pivoxquant \
