@@ -359,6 +359,22 @@ class KISWebSocketService:
                 break
             except (ConnectionClosed, WebSocketException, InvalidStatusCode, OSError) as e:
                 logger.warning("KIS WS connection lost: %s", e)
+            except RuntimeError as e:
+                # Phase 4-B (2026-05-17): graceful shutdown distinguishes from
+                # actual error. SIGTERM 또는 atexit 시점에 ThreadPoolExecutor
+                # 가 이미 shutdown되어 새 future schedule 불가 →
+                # "cannot schedule new futures after interpreter shutdown" /
+                # "Event loop is closed" 등. 이는 정상 종료 sequence 이므로
+                # ERROR (log noise) 가 아니라 INFO + break.
+                msg = str(e)
+                if any(s in msg for s in (
+                    "cannot schedule new futures",
+                    "interpreter shutdown",
+                    "Event loop is closed",
+                )):
+                    logger.info("KIS WS shutdown detected (%s) — exiting reconnect loop", msg)
+                    break
+                logger.error("KIS WS unexpected RuntimeError: %s", e)
             except Exception as e:
                 logger.error("KIS WS unexpected error: %s", e)
             finally:
@@ -431,8 +447,24 @@ class KISWebSocketService:
         if rt_cd == "0":
             logger.debug("KIS WS ack tr_id=%s: %s", tr_id, msg1 or "OK")
         elif rt_cd is not None:
+            # Phase 4-B (2026-05-17): repeated invalid-approval / already-in-use
+            # 에러는 KIS 서버 측 상태로 매 재연결마다 동일 메시지 반복 (68회
+            # 누적 confirmed in prod logs). 로그 노이즈 회피 + CEO 외부 액션
+            # (KIS key rotate / billing 검증) 영역. 1분당 1회로 throttle.
             # Most common VTS failure: "해당 계좌는 실시간시세 이용이 불가합니다"
-            logger.warning("KIS WS server error tr_id=%s code=%s msg=%s", tr_id, msg_cd, msg1)
+            now = time.time()
+            recent = getattr(self, "_last_server_error_log", 0.0)
+            if msg_cd in ("OPSP0011", "OPSP8996") and (now - recent) < 60:
+                logger.debug(
+                    "KIS WS server error throttled tr_id=%s code=%s msg=%s",
+                    tr_id, msg_cd, msg1,
+                )
+            else:
+                logger.warning(
+                    "KIS WS server error tr_id=%s code=%s msg=%s",
+                    tr_id, msg_cd, msg1,
+                )
+                self._last_server_error_log = now
 
     def _handle_market_frame(self, msg: str):
         """Parse a '0|<tr>|<count>|<body>' message and emit per-trade events."""
