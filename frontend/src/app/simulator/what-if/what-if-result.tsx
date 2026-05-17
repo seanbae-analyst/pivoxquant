@@ -26,7 +26,10 @@ import {
 import { toast } from "sonner";
 import { useT, useLocale } from "@/lib/locale";
 import type { WhatIfSuccessResponse } from "@/lib/types";
-import { WhatIfChart } from "./what-if-chart";
+// 2026-05-17 wave 12 frontend P2: route through the next/dynamic wrapper
+// so recharts (~112KB gzip) lazy-loads instead of shipping in the simulator
+// route's initial bundle. Public API unchanged — drop-in replacement.
+import { WhatIfChart } from "./what-if-chart-dynamic";
 import { cn } from "@/lib/utils";
 
 interface WhatIfResultProps {
