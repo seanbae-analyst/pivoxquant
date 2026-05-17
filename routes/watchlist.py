@@ -6,6 +6,7 @@ import logging
 
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
+from sqlalchemy.exc import IntegrityError
 
 from extensions import db
 from models import Watchlist, SignalCache
@@ -147,6 +148,13 @@ def add():
             en="Ticker required", kr="종목 코드가 필요합니다.",
             code="WATCHLIST_TICKER_REQUIRED", status=400,
         )
+    # 2026-05-17 wave 14 P2 (PR #450): TOCTOU race fix. Two concurrent
+    # POST /api/watchlist with the same ticker both passed the
+    # check below and both reached commit; the second raised
+    # IntegrityError on the (user_id, ticker) unique constraint and
+    # bubbled as 500. Same regression class as PR #422 register +
+    # cache_service. Pattern: fast-path 409 from the explicit check
+    # (UX), DB UNIQUE as the actual gate via try/except IntegrityError.
     existing = Watchlist.query.filter_by(user_id=current_user.id, ticker=ticker).first()
     if existing:
         return api_error(
@@ -154,10 +162,20 @@ def add():
             kr="이미 관심 종목에 추가되어 있습니다.",
             code="WATCHLIST_DUPLICATE", status=409,
         )
+    row = Watchlist(user_id=current_user.id, ticker=ticker, note=note)
+    db.session.add(row)
     try:
-        row = Watchlist(user_id=current_user.id, ticker=ticker, note=note)
-        db.session.add(row)
         db.session.commit()
+    except IntegrityError:
+        # Concurrent insert won the race — surface the same 409 the
+        # explicit check would have, rollback so the worker session
+        # stays clean.
+        db.session.rollback()
+        return api_error(
+            en="Already in watchlist",
+            kr="이미 관심 종목에 추가되어 있습니다.",
+            code="WATCHLIST_DUPLICATE", status=409,
+        )
     except Exception:
         db.session.rollback()
         logger.exception("watchlist.add commit failed (ticker=%s)", ticker)

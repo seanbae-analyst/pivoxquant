@@ -38,11 +38,33 @@ def subscribe():
     keys = sub.get("keys", {})
     endpoint = sub["endpoint"]
 
-    # Upsert: replace if same endpoint exists
+    # Upsert: replace if same endpoint exists.
+    # 2026-05-17 wave 14 P2 (PR #450): the previous unconditional
+    # ``existing.user_id = current_user.id`` reassignment let any
+    # authenticated caller claim a subscription by submitting the
+    # endpoint URL with their own auth cookie — silent victim
+    # de-registration + attacker receives victim's push payloads on
+    # their device. Endpoint URLs contain a long opaque token so
+    # guessing is impractical, but URLs leak via shared logs / proxy
+    # mirrors / browser history. Refuse to silently reassign — if
+    # the endpoint is bound to a different user we 409 so the client
+    # knows the URL is taken (matches the watchlist duplicate UX).
+    # Same-user resubscribe (browser reset, new install) still
+    # rotates the keys + extends lifetime.
     try:
         existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
         if existing:
-            existing.user_id = current_user.id
+            if existing.user_id != current_user.id:
+                logger.warning(
+                    "push subscribe rejected: endpoint already bound to "
+                    "user_id=%s, requester user_id=%s",
+                    existing.user_id, current_user.id,
+                )
+                return jsonify({
+                    "error": "Subscription endpoint already registered",
+                    "error_kr": "이미 다른 계정에 등록된 푸시 endpoint 입니다.",
+                    "code": "PUSH_ENDPOINT_OWNED",
+                }), 409
             existing.p256dh = keys.get("p256dh", "")
             existing.auth = keys.get("auth", "")
         else:
