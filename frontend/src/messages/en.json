@@ -17,8 +17,12 @@
     "searchPlaceholder": "Search stocks, features...",
     "searchTicker": "Search by ticker (e.g. AAPL, TSLA)...",
     "notifications": "Notifications",
-    "markAllRead": "Mark all read",
+    "observations": "Observations",
+    "markAllRead": "Mark all as read",
     "noNotifications": "No notifications",
+    "noAlertsYet": "No alerts yet. Signals will appear here as we observe them.",
+    "unableToLoad": "Unable to load alerts",
+    "viewAll": "View all",
     "loading": "Loading...",
     "searching": "Searching...",
     "noResults": "No results for \"{query}\"",
@@ -532,5 +536,143 @@
       "riskReport": "Risk Report",
       "custom": "Report"
     }
+  },
+  "profileMenu": {
+    "ariaLabel": "Profile menu",
+    "myProfile": "My Profile",
+    "settings": "Settings",
+    "billing": "Billing",
+    "keyboardShortcuts": "Keyboard shortcuts",
+    "helpDocs": "Help & Docs",
+    "signOut": "Sign out",
+    "guest": "Guest",
+    "shortcutsModalTitle": "Keyboard shortcuts",
+    "shortcutsKicker": "Reference",
+    "shortcuts": {
+      "openSearch": "Open search palette",
+      "goHome": "Go to Home",
+      "goPortfolio": "Go to Portfolio",
+      "goWatchlist": "Go to Watchlist",
+      "closeModal": "Close modal",
+      "navList": "Navigate list",
+      "select": "Select"
+    },
+    "close": "Close"
+  },
+  "search": {
+    "placeholder": "Search ticker, page…",
+    "ariaLabel": "Search ticker or page",
+    "ariaClose": "Close",
+    "ariaSearching": "Searching",
+    "paletteAriaLabel": "Search palette",
+    "unavailable": "Search temporarily unavailable",
+    "noMatches": "No matches for \"{query}\"",
+    "searching": "Searching…",
+    "footerTagline": "observe · view · open",
+    "sections": {
+      "stocks": "Stocks",
+      "pages": "Pages",
+      "recent": "Recent"
+    },
+    "pages": {
+      "home": "Home",
+      "homeHint": "Dashboard overview",
+      "portfolio": "Portfolio",
+      "portfolioHint": "Positions & analytics",
+      "watchlist": "Watchlist",
+      "watchlistHint": "Observed symbols",
+      "risk": "Risk",
+      "riskHint": "Defense status",
+      "discover": "Discover",
+      "discoverHint": "Universe scan",
+      "market": "Market",
+      "marketHint": "Indexes & macro",
+      "alerts": "Alerts",
+      "alertsHint": "Notification log",
+      "settings": "Settings",
+      "settingsHint": "Account & broker"
+    }
+  },
+  "alertsPage": {
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "read": "Read"
+    },
+    "table": {
+      "time": "Time",
+      "kind": "Kind",
+      "title": "Title"
+    },
+    "actions": {
+      "markAllRead": "Mark all as read",
+      "clearAll": "Clear all",
+      "confirmClear": "Confirm · delete all"
+    },
+    "toast": {
+      "marked": "Marked all as read",
+      "markFailed": "Failed to mark as read",
+      "cleared": "All alerts cleared",
+      "clearFailed": "Failed to clear"
+    },
+    "stats": {
+      "total": "Total",
+      "unread": "Unread",
+      "today": "Today",
+      "thisWeek": "This week"
+    }
+  },
+  "settingsV1": {
+    "toast": {
+      "seedRequired": "Enter USD or KRW seed capital.",
+      "seedRangeUsd": "USD must be 0 – {max}.",
+      "seedRangeKrw": "KRW must be 0 – {max}.",
+      "seedSaved": "Seed capital saved.",
+      "seedFailed": "Failed to save.",
+      "billingPortalFailed": "Could not open billing portal.",
+      "kisSynced": "KIS synchronized.",
+      "kisSyncFailed": "Sync failed.",
+      "kisDisconnected": "KIS disconnected.",
+      "kisDisconnectFailed": "Disconnect failed.",
+      "alpacaSynced": "Alpaca synchronized.",
+      "alpacaSyncFailed": "Sync failed.",
+      "alpacaDisconnected": "Alpaca disconnected.",
+      "alpacaDisconnectFailed": "Disconnect failed.",
+      "emailSaved": "Email preferences saved.",
+      "emailSaveFailed": "Failed to save email preferences.",
+      "pushNotSupported": "Push notifications not supported here.",
+      "pushPermissionDenied": "Permission denied.",
+      "pushEnabled": "Push enabled.",
+      "pushDisabled": "Push disabled.",
+      "pushUpdateFailed": "Could not update push.",
+      "emailEnabled": "Email enabled.",
+      "emailDisabled": "Email disabled.",
+      "languageUpdated": "Language updated."
+    },
+    "confirm": {
+      "kisDisconnect": "Disconnect KIS?",
+      "alpacaDisconnect": "Disconnect Alpaca?"
+    }
+  },
+  "portfolioModal": {
+    "addPosition": {
+      "errorRequired": "Symbol, quantity, and price required.",
+      "success": "Position recorded — informational only, not advice.",
+      "failed": "Failed to add position."
+    },
+    "tradeModal": {
+      "errorAvgCost": "Average cost must be positive.",
+      "errorRequired": "Quantity and price required.",
+      "errorOverSell": "Cannot sell more than {shares} shares held.",
+      "failed": "Failed to record trade."
+    }
+  },
+  "watchlistModal": {
+    "added": "{ticker} added to watchlist",
+    "alreadyExists": "Already in watchlist",
+    "failed": "Could not add {ticker}"
+  },
+  "disclaimerLabel": {
+    "kicker": "Disclaimer"
   }
 }

@@ -1,0 +1,61 @@
+/**
+ * Locale-aware relative time helper.
+ *
+ * Eliminates the parallel hardcoded English "{n}m ago / {n}h ago" formatters
+ * that lived in NotificationDropdown and /alerts (Wave C-1, 2026-05-17).
+ *
+ * Returns a short, compact string suitable for inline metadata rows:
+ *   ko: "방금", "5분", "3시간", "2일", "4주"
+ *   en: "just now", "5m", "3h", "2d", "4w"
+ *
+ * The compact form (no " ago" suffix) matches the existing /alerts UI where
+ * the relative time sits in a tabular metadata column. NotificationDropdown
+ * previously used the "{n}m ago" verbose form — the compact form is a small
+ * regression in EN but unifies the two surfaces so the bell and the page
+ * never disagree.
+ *
+ * Set `verbose: true` to opt into the "{n}분 전 / {n}m ago" expanded form
+ * for callers that need it (NotificationDropdown uses verbose).
+ */
+
+import type { Locale } from "@/lib/locale";
+
+export interface RelativeTimeOptions {
+  /** When true, append "전" (ko) / " ago" (en) to non-"just now" outputs. */
+  verbose?: boolean;
+}
+
+export function relativeTime(
+  input: string | Date,
+  locale: Locale,
+  opts: RelativeTimeOptions = {},
+): string {
+  if (!input) return "";
+  const t = input instanceof Date ? input.getTime() : new Date(input).getTime();
+  if (Number.isNaN(t)) return "";
+
+  const diff = Date.now() - t;
+  const mins = Math.floor(diff / 60_000);
+  const verbose = opts.verbose ?? false;
+
+  if (locale === "ko") {
+    if (mins < 1) return "방금";
+    if (mins < 60) return verbose ? `${mins}분 전` : `${mins}분`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return verbose ? `${hrs}시간 전` : `${hrs}시간`;
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return verbose ? `${days}일 전` : `${days}일`;
+    const weeks = Math.floor(days / 7);
+    return verbose ? `${weeks}주 전` : `${weeks}주`;
+  }
+
+  // en
+  if (mins < 1) return "just now";
+  if (mins < 60) return verbose ? `${mins}m ago` : `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return verbose ? `${hrs}h ago` : `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return verbose ? `${days}d ago` : `${days}d`;
+  const weeks = Math.floor(days / 7);
+  return verbose ? `${weeks}w ago` : `${weeks}w`;
+}

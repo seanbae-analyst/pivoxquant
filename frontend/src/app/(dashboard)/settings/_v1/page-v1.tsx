@@ -36,7 +36,7 @@ const ALPACA_ENABLED = process.env.NEXT_PUBLIC_ALPACA_ENABLED === "1";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 import {
   isPushSupported,
   subscribeToPush,
@@ -179,6 +179,7 @@ interface CapitalUpdateResponse {
 
 function SeedCapitalSection() {
   const { user, refresh } = useAuth();
+  const t = useT();
   const [usdInput, setUsdInput] = useState("");
   const [krwInput, setKrwInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -197,15 +198,15 @@ function SeedCapitalSection() {
     const krw = parseCapitalInput(krwInput);
 
     if (usd === null && krw === null) {
-      toast.error("Enter USD or KRW seed capital.");
+      toast.error(t("settingsV1.toast.seedRequired"));
       return;
     }
     if (usd !== null && (usd < 0 || usd > MAX_SEED_CAPITAL)) {
-      toast.error(`USD must be 0 – ${MAX_SEED_CAPITAL.toLocaleString()}.`);
+      toast.error(t("settingsV1.toast.seedRangeUsd", { max: MAX_SEED_CAPITAL.toLocaleString() }));
       return;
     }
     if (krw !== null && (krw < 0 || krw > MAX_SEED_CAPITAL)) {
-      toast.error(`KRW must be 0 – ${MAX_SEED_CAPITAL.toLocaleString()}.`);
+      toast.error(t("settingsV1.toast.seedRangeKrw", { max: MAX_SEED_CAPITAL.toLocaleString() }));
       return;
     }
 
@@ -219,9 +220,9 @@ function SeedCapitalSection() {
         body: JSON.stringify(body),
       });
       await refresh();
-      toast.success("Seed capital saved.");
+      toast.success(t("settingsV1.toast.seedSaved"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed.");
+      toast.error(err instanceof Error ? err.message : t("settingsV1.toast.seedFailed"));
     } finally {
       setSaving(false);
     }
@@ -313,6 +314,7 @@ function SeedCapitalSection() {
 
 function SubscriptionSection() {
   const { user } = useAuth();
+  const t = useT();
   const { data: subData, isLoading } = useSWR<SubscriptionResponse>(
     API.billing.subscription,
     fetcher,
@@ -366,7 +368,7 @@ function SubscriptionSection() {
                       );
                       if (r.url) window.location.href = r.url;
                     } catch {
-                      toast.error("Could not open billing portal.");
+                      toast.error(t("settingsV1.toast.billingPortalFailed"));
                     }
                   }}
                   className="pq-ink-btn-ghost"
@@ -385,6 +387,7 @@ function SubscriptionSection() {
 /* ── Brokers ── */
 
 function BrokersSection() {
+  const t = useT();
   const { data: brokerData, mutate: refreshBrokers } = useBrokerConnections();
   const [kisModalOpen, setKisModalOpen] = useState(false);
   const [kisSyncing, setKisSyncing] = useState(false);
@@ -398,54 +401,54 @@ function BrokersSection() {
     try {
       await apiFetch(API.broker.kisSync, { method: "POST" });
       await refreshBrokers();
-      toast.success("KIS synchronized.");
+      toast.success(t("settingsV1.toast.kisSynced"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sync failed.");
+      toast.error(err instanceof Error ? err.message : t("settingsV1.toast.kisSyncFailed"));
     } finally {
       setKisSyncing(false);
     }
-  }, [refreshBrokers]);
+  }, [refreshBrokers, t]);
 
   const handleKisDisconnect = useCallback(async () => {
-    if (!confirm("Disconnect KIS?")) return;
+    if (!confirm(t("settingsV1.confirm.kisDisconnect"))) return;
     setKisDisconnecting(true);
     try {
       await apiFetch(API.broker.kisDisconnect, { method: "DELETE" });
       await refreshBrokers();
-      toast.success("KIS disconnected.");
+      toast.success(t("settingsV1.toast.kisDisconnected"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Disconnect failed.");
+      toast.error(err instanceof Error ? err.message : t("settingsV1.toast.kisDisconnectFailed"));
     } finally {
       setKisDisconnecting(false);
     }
-  }, [refreshBrokers]);
+  }, [refreshBrokers, t]);
 
   const handleAlpacaSync = useCallback(async () => {
     setAlpacaSyncing(true);
     try {
       await apiFetch(API.broker.alpacaSync, { method: "POST" });
       await refreshBrokers();
-      toast.success("Alpaca synchronized.");
+      toast.success(t("settingsV1.toast.alpacaSynced"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sync failed.");
+      toast.error(err instanceof Error ? err.message : t("settingsV1.toast.alpacaSyncFailed"));
     } finally {
       setAlpacaSyncing(false);
     }
-  }, [refreshBrokers]);
+  }, [refreshBrokers, t]);
 
   const handleAlpacaDisconnect = useCallback(async () => {
-    if (!confirm("Disconnect Alpaca?")) return;
+    if (!confirm(t("settingsV1.confirm.alpacaDisconnect"))) return;
     setAlpacaDisconnecting(true);
     try {
       await apiFetch(API.broker.alpacaDisconnect, { method: "DELETE" });
       await refreshBrokers();
-      toast.success("Alpaca disconnected.");
+      toast.success(t("settingsV1.toast.alpacaDisconnected"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Disconnect failed.");
+      toast.error(err instanceof Error ? err.message : t("settingsV1.toast.alpacaDisconnectFailed"));
     } finally {
       setAlpacaDisconnecting(false);
     }
-  }, [refreshBrokers]);
+  }, [refreshBrokers, t]);
 
   return (
     <Section kicker="03 · Brokers" title="Connections">
@@ -533,6 +536,7 @@ function Toggle({
 
 function PreferencesSection() {
   const { locale, setLocale } = useLocale();
+  const t = useT();
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushSupported, setPushSupported] = useState(true);
   const [pushLoading, setPushLoading] = useState(false);
@@ -597,21 +601,21 @@ function PreferencesSection() {
         });
         setEmailOptOut(resp.preferences.email_opt_out);
         setEmailOptOutEarnings(resp.preferences.email_opt_out_earnings);
-        toast.success("Email preferences saved.");
+        toast.success(t("settingsV1.toast.emailSaved"));
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Failed to save preferences.",
+          err instanceof Error ? err.message : t("settingsV1.toast.emailSaveFailed"),
         );
       } finally {
         setEmailPrefSaving(false);
       }
     },
-    [],
+    [t],
   );
 
   const handlePushToggle = async (next: boolean) => {
     if (!pushSupported) {
-      toast.error("Push notifications not supported here.");
+      toast.error(t("settingsV1.toast.pushNotSupported"));
       return;
     }
     setPushLoading(true);
@@ -619,19 +623,19 @@ function PreferencesSection() {
       if (next) {
         const sub = await subscribeToPush();
         if (!sub) {
-          toast.error("Permission denied.");
+          toast.error(t("settingsV1.toast.pushPermissionDenied"));
           setPushEnabled(false);
           return;
         }
         setPushEnabled(true);
-        toast.success("Push enabled.");
+        toast.success(t("settingsV1.toast.pushEnabled"));
       } else {
         await unsubscribeFromPush();
         setPushEnabled(false);
-        toast.success("Push disabled.");
+        toast.success(t("settingsV1.toast.pushDisabled"));
       }
     } catch {
-      toast.error("Could not update push.");
+      toast.error(t("settingsV1.toast.pushUpdateFailed"));
     } finally {
       setPushLoading(false);
     }
@@ -642,7 +646,9 @@ function PreferencesSection() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("sp_mb_email", next ? "1" : "0");
     }
-    toast.success(next ? "Email enabled." : "Email disabled.");
+    toast.success(
+      next ? t("settingsV1.toast.emailEnabled") : t("settingsV1.toast.emailDisabled"),
+    );
   };
 
   return (
@@ -732,7 +738,7 @@ function PreferencesSection() {
               type="button"
               onClick={() => {
                 setLocale(l);
-                toast.success("Language updated.");
+                toast.success(t("settingsV1.toast.languageUpdated"));
               }}
               className={cn(
                 locale === l ? "pq-ink-btn-bronze" : "pq-ink-btn-ghost",

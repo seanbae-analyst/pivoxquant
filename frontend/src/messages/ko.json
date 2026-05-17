@@ -17,8 +17,12 @@
     "searchPlaceholder": "종목, 기능 검색...",
     "searchTicker": "티커 검색 (예: AAPL, TSLA)...",
     "notifications": "알림",
-    "markAllRead": "모두 읽음",
+    "observations": "관측 기록",
+    "markAllRead": "모두 읽음으로",
     "noNotifications": "알림이 없습니다",
+    "noAlertsYet": "아직 알림이 없습니다. 시그널이 관측되면 여기에 표시됩니다.",
+    "unableToLoad": "알림을 불러올 수 없습니다",
+    "viewAll": "전체 보기",
     "loading": "로딩 중...",
     "searching": "검색 중...",
     "noResults": "'{query}'에 대한 결과 없음",
@@ -532,5 +536,143 @@
       "riskReport": "리스크 리포트",
       "custom": "리포트"
     }
+  },
+  "profileMenu": {
+    "ariaLabel": "프로필 메뉴",
+    "myProfile": "내 프로필",
+    "settings": "설정",
+    "billing": "결제 및 구독",
+    "keyboardShortcuts": "키보드 단축키",
+    "helpDocs": "도움말 및 문서",
+    "signOut": "로그아웃",
+    "guest": "게스트",
+    "shortcutsModalTitle": "키보드 단축키",
+    "shortcutsKicker": "참고",
+    "shortcuts": {
+      "openSearch": "검색 팔레트 열기",
+      "goHome": "홈으로",
+      "goPortfolio": "포트폴리오로",
+      "goWatchlist": "관심종목으로",
+      "closeModal": "모달 닫기",
+      "navList": "리스트 탐색",
+      "select": "선택"
+    },
+    "close": "닫기"
+  },
+  "search": {
+    "placeholder": "티커, 페이지 검색…",
+    "ariaLabel": "티커 또는 페이지 검색",
+    "ariaClose": "닫기",
+    "ariaSearching": "검색 중",
+    "paletteAriaLabel": "검색 팔레트",
+    "unavailable": "검색을 일시적으로 사용할 수 없습니다",
+    "noMatches": "'{query}'에 대한 결과 없음",
+    "searching": "검색 중…",
+    "footerTagline": "관측 · 조회 · 열기",
+    "sections": {
+      "stocks": "종목",
+      "pages": "페이지",
+      "recent": "최근"
+    },
+    "pages": {
+      "home": "홈",
+      "homeHint": "대시보드 개요",
+      "portfolio": "포트폴리오",
+      "portfolioHint": "포지션 및 분석",
+      "watchlist": "관심종목",
+      "watchlistHint": "관측 종목",
+      "risk": "리스크",
+      "riskHint": "방어 상태",
+      "discover": "탐색",
+      "discoverHint": "유니버스 스캔",
+      "market": "시장",
+      "marketHint": "지수 및 매크로",
+      "alerts": "알림",
+      "alertsHint": "알림 로그",
+      "settings": "설정",
+      "settingsHint": "계정 및 브로커"
+    }
+  },
+  "alertsPage": {
+    "filters": {
+      "all": "전체",
+      "unread": "안 읽음",
+      "read": "읽음"
+    },
+    "table": {
+      "time": "시각",
+      "kind": "유형",
+      "title": "내용"
+    },
+    "actions": {
+      "markAllRead": "모두 읽음으로",
+      "clearAll": "모두 삭제",
+      "confirmClear": "확인 · 모두 삭제"
+    },
+    "toast": {
+      "marked": "모두 읽음 처리했습니다",
+      "markFailed": "읽음 처리에 실패했습니다",
+      "cleared": "모든 알림이 삭제됐습니다",
+      "clearFailed": "삭제에 실패했습니다"
+    },
+    "stats": {
+      "total": "전체",
+      "unread": "안 읽음",
+      "today": "오늘",
+      "thisWeek": "이번 주"
+    }
+  },
+  "settingsV1": {
+    "toast": {
+      "seedRequired": "USD 또는 KRW 시드 자본을 입력해 주세요",
+      "seedRangeUsd": "USD는 0 ~ {max} 범위여야 합니다",
+      "seedRangeKrw": "KRW는 0 ~ {max} 범위여야 합니다",
+      "seedSaved": "시드 자본이 저장됐습니다",
+      "seedFailed": "저장에 실패했습니다",
+      "billingPortalFailed": "결제 포털을 열 수 없습니다",
+      "kisSynced": "KIS 잔고를 동기화했습니다",
+      "kisSyncFailed": "동기화에 실패했습니다",
+      "kisDisconnected": "KIS 연결이 해제됐습니다",
+      "kisDisconnectFailed": "연결 해제에 실패했습니다",
+      "alpacaSynced": "Alpaca를 동기화했습니다",
+      "alpacaSyncFailed": "동기화에 실패했습니다",
+      "alpacaDisconnected": "Alpaca 연결이 해제됐습니다",
+      "alpacaDisconnectFailed": "연결 해제에 실패했습니다",
+      "emailSaved": "이메일 설정이 저장됐습니다",
+      "emailSaveFailed": "이메일 설정 저장에 실패했습니다",
+      "pushNotSupported": "이 브라우저에서는 푸시 알림을 지원하지 않습니다",
+      "pushPermissionDenied": "알림 권한이 거부됐습니다",
+      "pushEnabled": "푸시 알림이 활성화됐습니다",
+      "pushDisabled": "푸시 알림이 해제됐습니다",
+      "pushUpdateFailed": "푸시 설정을 변경할 수 없습니다",
+      "emailEnabled": "이메일 알림이 활성화됐습니다",
+      "emailDisabled": "이메일 알림이 해제됐습니다",
+      "languageUpdated": "언어가 변경됐습니다"
+    },
+    "confirm": {
+      "kisDisconnect": "KIS 연결을 해제하시겠어요?",
+      "alpacaDisconnect": "Alpaca 연결을 해제하시겠어요?"
+    }
+  },
+  "portfolioModal": {
+    "addPosition": {
+      "errorRequired": "심볼, 수량, 가격이 모두 필요합니다",
+      "success": "포지션이 기록됐습니다 — 정보 제공 목적이며 투자 권유가 아닙니다",
+      "failed": "포지션 추가에 실패했습니다"
+    },
+    "tradeModal": {
+      "errorAvgCost": "평균 단가는 양수여야 합니다",
+      "errorRequired": "수량과 가격이 필요합니다",
+      "errorOverSell": "보유 수량({shares}주)을 초과해 매도할 수 없습니다",
+      "failed": "거래 기록에 실패했습니다"
+    }
+  },
+  "watchlistModal": {
+    "added": "{ticker}을(를) 관심종목에 추가했습니다",
+    "alreadyExists": "이미 관심종목에 있습니다",
+    "failed": "{ticker} 추가에 실패했습니다"
+  },
+  "disclaimerLabel": {
+    "kicker": "면책"
   }
 }

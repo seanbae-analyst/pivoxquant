@@ -20,22 +20,25 @@ import { Search, X, TrendingUp, LayoutGrid, Clock, CornerDownLeft, Loader2 } fro
 import { ModalShell } from "@/components/ui/modal-shell";
 import { SEARCH } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/locale";
 
 type StockItem = { kind: "stock"; ticker: string; name: string; market: string };
 type PageItem = { kind: "page"; label: string; path: string; hint?: string };
 type RecentItem = { kind: "recent"; label: string; path: string };
 export type CommandItem = StockItem | PageItem | RecentItem;
 
-// Static Pages list — not backed by search (always returned for empty query).
-const PAGES: PageItem[] = [
-  { kind: "page", label: "Home", path: "/home", hint: "Dashboard overview" },
-  { kind: "page", label: "Portfolio", path: "/portfolio", hint: "Positions & analytics" },
-  { kind: "page", label: "Watchlist", path: "/watchlist", hint: "Observed symbols" },
-  { kind: "page", label: "Risk", path: "/risk", hint: "Defense status" },
-  { kind: "page", label: "Discover", path: "/discover", hint: "Universe scan" },
-  { kind: "page", label: "Market", path: "/market", hint: "Indexes & macro" },
-  { kind: "page", label: "Alerts", path: "/alerts", hint: "Notification log" },
-  { kind: "page", label: "Settings", path: "/settings", hint: "Account & broker" },
+// Static Pages list — built per-locale inside the component via useMemo so
+// the labels swap when the user toggles language without remounting the
+// palette. (Was a module-level constant before Wave C-1.)
+const PAGE_DEFS: Array<{ key: string; path: string }> = [
+  { key: "home", path: "/home" },
+  { key: "portfolio", path: "/portfolio" },
+  { key: "watchlist", path: "/watchlist" },
+  { key: "risk", path: "/risk" },
+  { key: "discover", path: "/discover" },
+  { key: "market", path: "/market" },
+  { key: "alerts", path: "/alerts" },
+  { key: "settings", path: "/settings" },
 ];
 
 const EVT_OPEN = "pq:search:open";
@@ -93,6 +96,7 @@ interface BackendSearchResult {
 
 export function SearchCommandMenu() {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -189,21 +193,34 @@ export function SearchCommandMenu() {
     };
   }, [query, open]);
 
+  // Locale-aware Pages list — labels and hints are resolved per render so the
+  // palette respects the active locale (Wave C-1 i18n sweep, 2026-05-17).
+  const localizedPages = useMemo<PageItem[]>(
+    () =>
+      PAGE_DEFS.map((p) => ({
+        kind: "page",
+        label: t(`search.pages.${p.key}`),
+        path: p.path,
+        hint: t(`search.pages.${p.key}Hint`),
+      })),
+    [t],
+  );
+
   // Flat order (keyboard nav) mirrors the on-screen section order.
   const sections = useMemo(() => {
     const q = query.trim();
     const hasQuery = q.length > 0;
     const pages = hasQuery
-      ? PAGES.filter(
+      ? localizedPages.filter(
           (p) =>
             p.label.toLowerCase().includes(q.toLowerCase()) ||
             (p.hint ? p.hint.toLowerCase().includes(q.toLowerCase()) : false),
         )
-      : PAGES;
+      : localizedPages;
     const recentSection = hasQuery ? [] : recents;
     const ordered: CommandItem[] = [...stocks, ...pages, ...recentSection];
     return { stocks, pages, recents: recentSection, flat: ordered };
-  }, [query, stocks, recents]);
+  }, [query, stocks, recents, localizedPages]);
 
   useEffect(() => {
     setActiveIdx(0);
@@ -247,7 +264,7 @@ export function SearchCommandMenu() {
   const hasQuery = query.trim().length > 0;
 
   return (
-    <ModalShell onClose={close} ariaLabel="Search palette" className="!items-start !pt-[12vh]">
+    <ModalShell onClose={close} ariaLabel={t("search.paletteAriaLabel")} className="!items-start !pt-[12vh]">
       <div
         className="w-full max-w-xl overflow-hidden rounded-2xl shadow-[0_24px_60px_-20px_rgba(10,10,10,0.35)]"
         style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
@@ -264,8 +281,8 @@ export function SearchCommandMenu() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search ticker, page…"
-            aria-label="Search ticker or page"
+            placeholder={t("search.placeholder")}
+            aria-label={t("search.ariaLabel")}
             role="combobox"
             aria-expanded={sections.flat.length > 0}
             aria-haspopup="listbox"
@@ -283,13 +300,13 @@ export function SearchCommandMenu() {
             <Loader2
               className="h-4 w-4 animate-spin"
               style={{ color: "var(--pq-muted)" }}
-              aria-label="Searching"
+              aria-label={t("search.ariaSearching")}
             />
           )}
           <button
             onClick={close}
             type="button"
-            aria-label="Close"
+            aria-label={t("search.ariaClose")}
             className="flex h-11 w-11 items-center justify-center rounded-md transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pq-bronze)]"
             style={{ color: "var(--pq-muted)" }}
           >
@@ -301,24 +318,24 @@ export function SearchCommandMenu() {
         <div id="cmd-listbox" role="listbox" className="max-h-[360px] overflow-y-auto">
           {errored && (
             <div className="px-5 py-10 text-center text-sm" style={{ color: "var(--pq-muted)" }}>
-              Search temporarily unavailable
+              {t("search.unavailable")}
             </div>
           )}
 
           {!errored && hasQuery && !loading && sections.flat.length === 0 && (
             <div className="px-5 py-10 text-center text-sm" style={{ color: "var(--pq-muted)" }}>
-              No matches for <span>&ldquo;{query}&rdquo;</span>
+              {t("search.noMatches", { query })}
             </div>
           )}
 
           {hasQuery && loading && sections.flat.length === 0 && (
             <div className="px-5 py-10 text-center text-sm" style={{ color: "var(--pq-muted)" }}>
-              Searching…
+              {t("search.searching")}
             </div>
           )}
 
           {sections.stocks.length > 0 && (
-            <Section title="Stocks" icon={<TrendingUp className="h-3 w-3" />}>
+            <Section title={t("search.sections.stocks")} icon={<TrendingUp className="h-3 w-3" />}>
               {sections.stocks.map((s) => {
                 const idx = nextIdx();
                 return (
@@ -348,7 +365,7 @@ export function SearchCommandMenu() {
           )}
 
           {sections.pages.length > 0 && (
-            <Section title="Pages" icon={<LayoutGrid className="h-3 w-3" />}>
+            <Section title={t("search.sections.pages")} icon={<LayoutGrid className="h-3 w-3" />}>
               {sections.pages.map((p) => {
                 const idx = nextIdx();
                 return (
@@ -378,7 +395,7 @@ export function SearchCommandMenu() {
           )}
 
           {sections.recents.length > 0 && (
-            <Section title="Recent" icon={<Clock className="h-3 w-3" />}>
+            <Section title={t("search.sections.recent")} icon={<Clock className="h-3 w-3" />}>
               {sections.recents.map((r) => {
                 const idx = nextIdx();
                 return (
@@ -408,7 +425,7 @@ export function SearchCommandMenu() {
             letterSpacing: "0.08em",
           }}
         >
-          <span className="uppercase">observe · view · open</span>
+          <span className="uppercase">{t("search.footerTagline")}</span>
           <div className="flex items-center gap-3">
             <Kbd>↑↓</Kbd>
             <Kbd>Enter</Kbd>
