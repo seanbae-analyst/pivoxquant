@@ -23,6 +23,7 @@ from flask import Blueprint, request, jsonify
 from services.data.pykrx_service import pykrx_service, _normalize_ticker
 from services.data.fred_service import FRED_SERIES, get_fred_service
 from services.data.sec_edgar_service import SECEdgarService, SMART_MONEY_CIKS
+from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
@@ -57,14 +58,25 @@ def foreign_flow(ticker: str):
     """Foreign + institutional + individual net-buying (억원), last N trading days."""
     code = _normalize_ticker(ticker)
     if not code:
-        return jsonify({"error": "Invalid KR ticker — expected 6-digit code"}), 400
+        return api_error(
+            en="Invalid KR ticker — expected 6-digit code",
+            kr="유효하지 않은 한국 종목코드입니다 (6자리 숫자).",
+            code="ALT_DATA_INVALID_KR_TICKER", status=400,
+        )
 
     try:
         days = int(request.args.get("days", 30))
     except (TypeError, ValueError):
-        return jsonify({"error": "Invalid 'days' parameter"}), 400
+        return api_error(
+            en="Invalid 'days' parameter", kr="'days' 파라미터가 유효하지 않습니다.",
+            code="ALT_DATA_INVALID_DAYS", status=400,
+        )
     if days < 1 or days > 365:
-        return jsonify({"error": "'days' must be between 1 and 365"}), 400
+        return api_error(
+            en="'days' must be between 1 and 365",
+            kr="'days'는 1~365 범위여야 합니다.",
+            code="ALT_DATA_DAYS_OUT_OF_RANGE_365", status=400,
+        )
 
     data = pykrx_service.get_foreign_flow(code, days)
     cached_at = pykrx_service.cached_at(code, "foreign_flow", days=days)
@@ -77,14 +89,25 @@ def short_interest(ticker: str):
     """Daily short-sale volume + outstanding short balance + latest ratio vs market cap."""
     code = _normalize_ticker(ticker)
     if not code:
-        return jsonify({"error": "Invalid KR ticker — expected 6-digit code"}), 400
+        return api_error(
+            en="Invalid KR ticker — expected 6-digit code",
+            kr="유효하지 않은 한국 종목코드입니다 (6자리 숫자).",
+            code="ALT_DATA_INVALID_KR_TICKER", status=400,
+        )
 
     try:
         days = int(request.args.get("days", 30))
     except (TypeError, ValueError):
-        return jsonify({"error": "Invalid 'days' parameter"}), 400
+        return api_error(
+            en="Invalid 'days' parameter", kr="'days' 파라미터가 유효하지 않습니다.",
+            code="ALT_DATA_INVALID_DAYS", status=400,
+        )
     if days < 1 or days > 365:
-        return jsonify({"error": "'days' must be between 1 and 365"}), 400
+        return api_error(
+            en="'days' must be between 1 and 365",
+            kr="'days'는 1~365 범위여야 합니다.",
+            code="ALT_DATA_DAYS_OUT_OF_RANGE_365", status=400,
+        )
 
     series = pykrx_service.get_short_interest(code, days)
     ratio = pykrx_service.get_short_balance_ratio(code)
@@ -99,7 +122,11 @@ def market_flow():
     """Whole-market investor-type net-buying summary (KOSPI | KOSDAQ)."""
     market = (request.args.get("market") or "KOSPI").upper()
     if market not in ("KOSPI", "KOSDAQ"):
-        return jsonify({"error": "'market' must be KOSPI or KOSDAQ"}), 400
+        return api_error(
+            en="'market' must be KOSPI or KOSDAQ",
+            kr="'market'은 KOSPI 또는 KOSDAQ 이어야 합니다.",
+            code="ALT_DATA_INVALID_MARKET", status=400,
+        )
 
     date = request.args.get("date")  # YYYYMMDD, optional
     data = pykrx_service.get_market_flow_summary(market=market, date=date)
@@ -156,9 +183,16 @@ def us_smart_money(ticker: str):
     try:
         limit = int(request.args.get("limit", 50))
     except (TypeError, ValueError):
-        return jsonify({"error": "Invalid 'limit' parameter"}), 400
+        return api_error(
+            en="Invalid 'limit' parameter", kr="'limit' 파라미터가 유효하지 않습니다.",
+            code="ALT_DATA_INVALID_LIMIT", status=400,
+        )
     if limit < 1 or limit > 100:
-        return jsonify({"error": "'limit' must be between 1 and 100"}), 400
+        return api_error(
+            en="'limit' must be between 1 and 100",
+            kr="'limit'은 1~100 범위여야 합니다.",
+            code="ALT_DATA_LIMIT_OUT_OF_RANGE", status=400,
+        )
 
     data = SECEdgarService.get_institutional_filers_by_ticker(ticker, limit=limit)
     return jsonify(_sec_envelope("ticker", (ticker or "").upper(), data))
@@ -171,9 +205,16 @@ def us_insider_trades(ticker: str):
     try:
         days = int(request.args.get("days", 90))
     except (TypeError, ValueError):
-        return jsonify({"error": "Invalid 'days' parameter"}), 400
+        return api_error(
+            en="Invalid 'days' parameter", kr="'days' 파라미터가 유효하지 않습니다.",
+            code="ALT_DATA_INVALID_DAYS", status=400,
+        )
     if days < 1 or days > 365:
-        return jsonify({"error": "'days' must be between 1 and 365"}), 400
+        return api_error(
+            en="'days' must be between 1 and 365",
+            kr="'days'는 1~365 범위여야 합니다.",
+            code="ALT_DATA_DAYS_OUT_OF_RANGE_365", status=400,
+        )
 
     data = SECEdgarService.get_form4_insider_trades(ticker, days=days)
     return jsonify(_sec_envelope(
@@ -188,16 +229,31 @@ def us_cluster_buys(ticker: str):
     try:
         days = int(request.args.get("days", 30))
     except (TypeError, ValueError):
-        return jsonify({"error": "Invalid 'days' parameter"}), 400
+        return api_error(
+            en="Invalid 'days' parameter", kr="'days' 파라미터가 유효하지 않습니다.",
+            code="ALT_DATA_INVALID_DAYS", status=400,
+        )
     if days < 1 or days > 180:
-        return jsonify({"error": "'days' must be between 1 and 180"}), 400
+        return api_error(
+            en="'days' must be between 1 and 180",
+            kr="'days'는 1~180 범위여야 합니다.",
+            code="ALT_DATA_DAYS_OUT_OF_RANGE_180", status=400,
+        )
 
     try:
         min_insiders = int(request.args.get("min_insiders", 3))
     except (TypeError, ValueError):
-        return jsonify({"error": "Invalid 'min_insiders' parameter"}), 400
+        return api_error(
+            en="Invalid 'min_insiders' parameter",
+            kr="'min_insiders' 파라미터가 유효하지 않습니다.",
+            code="ALT_DATA_INVALID_MIN_INSIDERS", status=400,
+        )
     if min_insiders < 1 or min_insiders > 20:
-        return jsonify({"error": "'min_insiders' must be between 1 and 20"}), 400
+        return api_error(
+            en="'min_insiders' must be between 1 and 20",
+            kr="'min_insiders'는 1~20 범위여야 합니다.",
+            code="ALT_DATA_MIN_INSIDERS_OUT_OF_RANGE", status=400,
+        )
 
     result = SECEdgarService.detect_cluster_buys(
         ticker, days=days, min_insiders=min_insiders

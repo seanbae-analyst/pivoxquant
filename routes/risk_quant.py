@@ -15,6 +15,7 @@ import numpy as np
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
+from services.error_responses import api_error
 from services.name_resolver import canonical_display_name, resolve_stock_name
 from security import general_rate_limit
 from .decorators import api_auth, legal_scrub_response
@@ -86,11 +87,18 @@ def portfolio_var():
 
     items, total_value = _load_positions_with_prices()
     if not items:
-        return jsonify({"error": "No positions in portfolio"}), 400
+        return api_error(
+            en="No positions in portfolio", kr="포트폴리오에 보유 종목이 없습니다.",
+            code="RISK_NO_POSITIONS", status=400,
+        )
 
     daily_returns, dates = _get_portfolio_returns(items, total_value, period=period)
     if len(daily_returns) < 20:
-        return jsonify({"error": "Insufficient history (need 20+ trading days)"}), 400
+        return api_error(
+            en="Insufficient history (need 20+ trading days)",
+            kr="과거 데이터가 부족합니다 (최소 20거래일 필요).",
+            code="RISK_INSUFFICIENT_HISTORY_20D", status=400,
+        )
 
     ret_arr = np.array(daily_returns, dtype=np.float64)
 
@@ -201,11 +209,18 @@ def portfolio_drawdown():
 
     items, total_value = _load_positions_with_prices()
     if not items:
-        return jsonify({"error": "No positions in portfolio"}), 400
+        return api_error(
+            en="No positions in portfolio", kr="포트폴리오에 보유 종목이 없습니다.",
+            code="RISK_NO_POSITIONS", status=400,
+        )
 
     daily_returns, dates = _get_portfolio_returns(items, total_value, period=period)
     if len(daily_returns) < 5:
-        return jsonify({"error": "Insufficient history (need 5+ trading days)"}), 400
+        return api_error(
+            en="Insufficient history (need 5+ trading days)",
+            kr="과거 데이터가 부족합니다 (최소 5거래일 필요).",
+            code="RISK_INSUFFICIENT_HISTORY_5D", status=400,
+        )
 
     ret_arr = np.array(daily_returns, dtype=np.float64)
 
@@ -438,7 +453,10 @@ def portfolio_stress_test():
     """
     items, total_value = _load_positions_with_prices()
     if not items:
-        return jsonify({"error": "No positions in portfolio"}), 400
+        return api_error(
+            en="No positions in portfolio", kr="포트폴리오에 보유 종목이 없습니다.",
+            code="RISK_NO_POSITIONS", status=400,
+        )
 
     scenarios_out = []
     worst_scenario_id = None
@@ -543,7 +561,10 @@ def risk_volatility(ticker):
 
     ticker = ticker.upper().strip()
     if not re.match(r"^[A-Z0-9]{1,10}(\.[A-Z]{1,2})?$", ticker):
-        return jsonify({"error": "Invalid ticker format"}), 400
+        return api_error(
+            en="Invalid ticker format", kr="유효하지 않은 종목 형식입니다.",
+            code="RISK_INVALID_TICKER", status=400,
+        )
 
     try:
         window = max(5, min(int(request.args.get("window", "20")), 120))
@@ -560,9 +581,11 @@ def risk_volatility(ticker):
 
     hist = fetcher.get_price_history(ticker, period="6mo")
     if hist is None or hist.empty or len(hist) < window + 1:
-        return jsonify({
-            "error": f"Insufficient OHLC data for {ticker} (need {window + 1}+ bars)",
-        }), 400
+        return api_error(
+            en=f"Insufficient OHLC data for {ticker} (need {window + 1}+ bars)",
+            kr=f"{ticker} OHLC 데이터가 부족합니다 (최소 {window + 1}개 봉 필요).",
+            code="RISK_INSUFFICIENT_OHLC", status=400,
+        )
 
     from services.quant.risk_metrics import GKYZVolatility
 
@@ -574,7 +597,10 @@ def risk_volatility(ticker):
     result = GKYZVolatility.estimate(opens, highs, lows, closes, window=window)
 
     if result["vol_gkyz"] is None:
-        return jsonify({"error": "Could not compute volatility"}), 500
+        return api_error(
+            en="Could not compute volatility", kr="변동성 계산에 실패했습니다.",
+            code="RISK_VOLATILITY_COMPUTATION_FAILED", status=500,
+        )
 
     payload = {"ticker": ticker, "name": resolve_stock_name(ticker) or ticker, **result}
     add_disclaimer(payload, "indicator")
@@ -612,7 +638,11 @@ def risk_component_es():
 
     items, total_value = _load_positions_with_prices()
     if not items or len(items) < 2:
-        return jsonify({"error": "Need at least 2 positions for ES decomposition"}), 400
+        return api_error(
+            en="Need at least 2 positions for ES decomposition",
+            kr="ES 분해를 위해 최소 2개 포지션이 필요합니다.",
+            code="RISK_ES_NEED_TWO_POSITIONS", status=400,
+        )
 
     # Fetch per-asset daily returns aligned by date
     from services.container import fetcher
@@ -634,7 +664,11 @@ def risk_component_es():
         ticker_returns[it["ticker"]] = date_ret
 
     if len(ticker_returns) < 2:
-        return jsonify({"error": "Insufficient history for ES decomposition"}), 400
+        return api_error(
+            en="Insufficient history for ES decomposition",
+            kr="ES 분해를 위한 과거 데이터가 부족합니다.",
+            code="RISK_ES_INSUFFICIENT_HISTORY", status=400,
+        )
 
     # Align: only dates present for ALL tickers with data
     common_dates = sorted(
@@ -642,9 +676,11 @@ def risk_component_es():
     )
 
     if len(common_dates) < 30:
-        return jsonify({
-            "error": "Insufficient overlapping trading days (need 30+)",
-        }), 400
+        return api_error(
+            en="Insufficient overlapping trading days (need 30+)",
+            kr="공통 거래일이 부족합니다 (최소 30일 필요).",
+            code="RISK_ES_INSUFFICIENT_OVERLAP_30D", status=400,
+        )
 
     # Build returns matrix (n_dates x n_assets) and weights vector
     tickers_used = [it["ticker"] for it in items if it["ticker"] in ticker_returns]
@@ -669,7 +705,11 @@ def risk_component_es():
     result = ComponentES.decompose(returns_matrix, weights, alpha=alpha)
 
     if result["portfolio_es"] is None:
-        return jsonify({"error": "Could not compute Expected Shortfall"}), 500
+        return api_error(
+            en="Could not compute Expected Shortfall",
+            kr="Expected Shortfall 계산에 실패했습니다.",
+            code="RISK_ES_COMPUTATION_FAILED", status=500,
+        )
 
     # Enrich with ticker labels + resolved company name (name primary in UI)
     positions_out = []
@@ -730,7 +770,10 @@ def risk_defense_status():
 
     positions = Position.query.filter_by(user_id=uid).all()
     if not positions:
-        return jsonify({"error": "No positions in portfolio"}), 400
+        return api_error(
+            en="No positions in portfolio", kr="포트폴리오에 보유 종목이 없습니다.",
+            code="RISK_NO_POSITIONS", status=400,
+        )
 
     fetcher = DataFetcher()
 
@@ -760,7 +803,10 @@ def risk_defense_status():
         })
 
     if total_value <= 0:
-        return jsonify({"error": "Portfolio value is zero"}), 400
+        return api_error(
+            en="Portfolio value is zero", kr="포트폴리오 평가액이 0입니다.",
+            code="RISK_PORTFOLIO_VALUE_ZERO", status=400,
+        )
 
     # Assign weights
     for pos in pos_list:
@@ -888,11 +934,18 @@ def risk_conditional_drawdown():
 
     items, total_value = _load_positions_with_prices()
     if not items:
-        return jsonify({"error": "No positions to analyze"}), 400
+        return api_error(
+            en="No positions to analyze", kr="분석할 보유 종목이 없습니다.",
+            code="RISK_NO_POSITIONS", status=400,
+        )
 
     daily_returns, dates = _get_portfolio_returns(items, total_value, period=period)
     if not daily_returns or len(daily_returns) < 20:
-        return jsonify({"error": "Insufficient history (need 20+ trading days)"}), 400
+        return api_error(
+            en="Insufficient history (need 20+ trading days)",
+            kr="과거 데이터가 부족합니다 (최소 20거래일 필요).",
+            code="RISK_INSUFFICIENT_HISTORY_20D", status=400,
+        )
 
     # Reconstruct portfolio equity curve from daily returns
     pv = [1.0]
@@ -903,7 +956,10 @@ def risk_conditional_drawdown():
     result = ConditionalDrawdown.calculate(pv, alpha=alpha)
 
     if result.get("cddar") is None:
-        return jsonify({"error": "Could not compute CDDaR"}), 500
+        return api_error(
+            en="Could not compute CDDaR", kr="조건부 손실폭(CDDaR) 계산에 실패했습니다.",
+            code="RISK_CDDAR_COMPUTATION_FAILED", status=500,
+        )
 
     payload = {
         "cddar_pct": result["cddar"],
@@ -944,17 +1000,27 @@ def risk_tail_ratio():
 
     items, total_value = _load_positions_with_prices()
     if not items:
-        return jsonify({"error": "No positions to analyze"}), 400
+        return api_error(
+            en="No positions to analyze", kr="분석할 보유 종목이 없습니다.",
+            code="RISK_NO_POSITIONS", status=400,
+        )
 
     daily_returns, dates = _get_portfolio_returns(items, total_value, period=period)
     if not daily_returns or len(daily_returns) < 20:
-        return jsonify({"error": "Insufficient history (need 20+ trading days)"}), 400
+        return api_error(
+            en="Insufficient history (need 20+ trading days)",
+            kr="과거 데이터가 부족합니다 (최소 20거래일 필요).",
+            code="RISK_INSUFFICIENT_HISTORY_20D", status=400,
+        )
 
     from services.quant.risk_metrics import TailRatio
     result = TailRatio.calculate(daily_returns)
 
     if result.get("tail_ratio") is None:
-        return jsonify({"error": "Could not compute Tail Ratio"}), 500
+        return api_error(
+            en="Could not compute Tail Ratio", kr="Tail Ratio 계산에 실패했습니다.",
+            code="RISK_TAIL_RATIO_COMPUTATION_FAILED", status=500,
+        )
 
     payload = {
         "tail_ratio": result["tail_ratio"],
@@ -1001,7 +1067,10 @@ def risk_sortino_by_position():
 
     items, total_value = _load_positions_with_prices()
     if not items:
-        return jsonify({"error": "No positions to analyze"}), 400
+        return api_error(
+            en="No positions to analyze", kr="분석할 보유 종목이 없습니다.",
+            code="RISK_NO_POSITIONS", status=400,
+        )
 
     from services.container import fetcher
     from services.quant.risk_metrics import SortinoByPosition
@@ -1082,7 +1151,11 @@ def risk_ledoit_wolf_shrinkage():
 
     items, total_value = _load_positions_with_prices()
     if not items or len(items) < 2:
-        return jsonify({"error": "Need at least 2 positions for covariance"}), 400
+        return api_error(
+            en="Need at least 2 positions for covariance",
+            kr="공분산 추정을 위해 최소 2개 포지션이 필요합니다.",
+            code="RISK_COV_NEED_TWO_POSITIONS", status=400,
+        )
 
     # Build aligned returns matrix (only dates where ALL tickers have data)
     from services.container import fetcher
@@ -1102,13 +1175,21 @@ def risk_ledoit_wolf_shrinkage():
             ticker_returns[it["ticker"]] = dr
 
     if len(ticker_returns) < 2:
-        return jsonify({"error": "Insufficient history for covariance"}), 400
+        return api_error(
+            en="Insufficient history for covariance",
+            kr="공분산 추정을 위한 과거 데이터가 부족합니다.",
+            code="RISK_COV_INSUFFICIENT_HISTORY", status=400,
+        )
 
     common_dates = sorted(
         set.intersection(*(set(dr.keys()) for dr in ticker_returns.values()))
     )
     if len(common_dates) < 20:
-        return jsonify({"error": "Insufficient overlapping trading days (need 20+)"}), 400
+        return api_error(
+            en="Insufficient overlapping trading days (need 20+)",
+            kr="공통 거래일이 부족합니다 (최소 20일 필요).",
+            code="RISK_COV_INSUFFICIENT_OVERLAP_20D", status=400,
+        )
 
     tickers_used = list(ticker_returns.keys())
     n_obs = len(common_dates)
@@ -1123,7 +1204,11 @@ def risk_ledoit_wolf_shrinkage():
 
     result = LedoitWolfShrinkage.estimate(returns_matrix)
     if result.get("shrunk_cov") is None:
-        return jsonify({"error": "Could not estimate shrinkage covariance"}), 500
+        return api_error(
+            en="Could not estimate shrinkage covariance",
+            kr="축소(shrinkage) 공분산 추정에 실패했습니다.",
+            code="RISK_LEDOIT_WOLF_COMPUTATION_FAILED", status=500,
+        )
 
     # Convert matrices to serialisable lists (annualised for readability)
     shrunk = (np.asarray(result["shrunk_cov"]) * 252).round(6).tolist()
