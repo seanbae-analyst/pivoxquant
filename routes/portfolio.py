@@ -527,24 +527,43 @@ def buy_more(pid):
     name = canonical_display_name(sd.get("name"), p.ticker)
     currency = sd.get("currency", "USD")
 
+    # 2026-05-17 wave 14 P1 (PR #449): capital double-spend race fix.
+    # Pre-fix two concurrent buy_more (gevent greenlets, same user) both
+    # read ``current_user.available_capital_krw`` (or USD), both pass the
+    # ``avail < cost`` check, both subtract cost, both commit — last
+    # writer wins and one of the two deductions silently disappears.
+    # User effectively bought 2x for the price of 1x. Locking the User
+    # row with SELECT FOR UPDATE serializes the read-modify-write so
+    # the second greenlet sees the post-deduction balance and rejects.
+    # SQLite (dev) treats with_for_update() as a no-op without erroring.
+    from models import User as _U
+    locked_user = (
+        db.session.query(_U)
+        .filter(_U.id == current_user.id)
+        .with_for_update()
+        .one()
+    )
+
     if is_kr:
-        avail = getattr(current_user, "available_capital_krw", 0) or 0
+        avail = getattr(locked_user, "available_capital_krw", 0) or 0
         if avail < cost:
+            db.session.rollback()
             return api_error(
                 en=f"Insufficient KRW capital (need ₩{cost:,.0f}, have ₩{avail:,.0f})",
                 kr=f"KRW 시드머니 부족 (필요 ₩{cost:,.0f}, 보유 ₩{avail:,.0f}).",
                 code="INSUFFICIENT_CAPITAL_KRW", status=400,
             )
-        current_user.available_capital_krw = avail - cost
+        locked_user.available_capital_krw = avail - cost
     else:
-        avail = current_user.available_capital or 0
+        avail = locked_user.available_capital or 0
         if avail < cost:
+            db.session.rollback()
             return api_error(
                 en=f"Insufficient capital (need ${cost:,.2f}, have ${avail:,.2f})",
                 kr=f"USD 시드머니 부족 (필요 ${cost:,.2f}, 보유 ${avail:,.2f}).",
                 code="INSUFFICIENT_CAPITAL_USD", status=400,
             )
-        current_user.available_capital = avail - cost
+        locked_user.available_capital = avail - cost
 
     total_cost = p.shares * p.avg_cost + buy_shares * buy_price
     p.shares += buy_shares
@@ -555,13 +574,21 @@ def buy_more(pid):
         action="BUY", shares=buy_shares, price_per_share=round(buy_price, 2),
         total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
     ))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("buy_more commit failed pid=%s", pid)
+        return api_error(
+            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
+            code="TRADE_RECORD_FAILED", status=500,
+        )
     return jsonify({
         "ok": True,
         "new_shares": round(p.shares, 4),
         "new_avg_cost": round(p.avg_cost, 2),
-        "new_capital_usd": current_user.available_capital,
-        "new_capital_krw": getattr(current_user, "available_capital_krw", 0) or 0,
+        "new_capital_usd": locked_user.available_capital,
+        "new_capital_krw": getattr(locked_user, "available_capital_krw", 0) or 0,
     })
 
 
@@ -752,10 +779,29 @@ def sell_position(pid):
     else:
         p.shares = round(p.shares - actual_sell, 6)
 
+    # 2026-05-17 wave 14 P1 (PR #449): mirror the buy_more capital-race
+    # fix. Sell-side proceeds credit had the same TOCTOU window as the
+    # buy-side debit — two concurrent sells of the same position both
+    # read the pre-credit balance, both add proceeds, last writer wins
+    # and one proceeds amount silently disappears (user under-credited
+    # rather than over-credited, but still wrong). SELECT FOR UPDATE
+    # serializes the user-row writes.
+    from models import User as _U
+    locked_user = (
+        db.session.query(_U)
+        .filter(_U.id == current_user.id)
+        .with_for_update()
+        .one()
+    )
+
     if is_kr:
-        current_user.available_capital_krw = (getattr(current_user, "available_capital_krw", 0) or 0) + proceeds
+        locked_user.available_capital_krw = (
+            getattr(locked_user, "available_capital_krw", 0) or 0
+        ) + proceeds
     else:
-        current_user.available_capital = (current_user.available_capital or 0) + proceeds
+        locked_user.available_capital = (
+            locked_user.available_capital or 0
+        ) + proceeds
 
     db.session.add(TradeHistory(
         user_id=current_user.id, ticker=p.ticker, name=name,
@@ -763,15 +809,23 @@ def sell_position(pid):
         total_value=round(proceeds, 2), pnl=round(pnl, 2), pnl_pct=round(pnl_pct, 2),
         currency=currency,
     ))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("sell_position commit failed pid=%s", pid)
+        return api_error(
+            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
+            code="TRADE_RECORD_FAILED", status=500,
+        )
     response = {
         "ok": True,
         "proceeds": round(proceeds, 2),
         "pnl": round(pnl, 2),
         "pnl_pct": round(pnl_pct, 2),
         "currency": currency,
-        "new_capital_usd": current_user.available_capital,
-        "new_capital_krw": getattr(current_user, "available_capital_krw", 0) or 0,
+        "new_capital_usd": locked_user.available_capital,
+        "new_capital_krw": getattr(locked_user, "available_capital_krw", 0) or 0,
         "adjusted": adjusted,
     }
     if adjusted:
