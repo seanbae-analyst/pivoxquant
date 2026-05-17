@@ -1,5 +1,15 @@
 """Artifacts API — Weekly Investor Memo, Monthly Brag Card, + future artefact classes.
 
+2026-05-17 wave 14 P1 (PR #448): every ``jsonify({"error": f"...: {exc}"})``
+in this file (38 sites + 4 ``str(exc)`` sites) was scrubbed to drop the
+raw exception interpolation. SQLAlchemy IntegrityError /
+OperationalError / DataError render with full SQL + parameter values
++ table+column names + pgcode in ``str(exc)``; that text was leaking
+to any authenticated caller of preview/manual-run endpoints.
+``logger.exception(...)`` still captures the full traceback for ops;
+only the response body changed.
+
+
 Endpoints (all under /api/artifacts, all require auth unless noted):
 
     POST /api/artifacts/weekly-memo/preview              — JSON preview for self
@@ -360,7 +370,7 @@ def weekly_memo_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("weekly memo preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({
         "ok":   True,
@@ -467,7 +477,7 @@ def weekly_memo_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("weekly memo manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -511,7 +521,7 @@ def monthly_brag_preview():
         png_bytes = svc.render_png(data)
     except Exception as exc:
         current_app.logger.error("monthly brag preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     png_b64 = base64.b64encode(png_bytes).decode("ascii") if png_bytes else None
     return jsonify({
@@ -658,7 +668,7 @@ def monthly_brag_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("monthly brag manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -713,7 +723,7 @@ def brag_card_preview():
         png_bytes = svc.render_png(html)
     except Exception as exc:
         current_app.logger.error("brag card preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     png_b64 = base64.b64encode(png_bytes).decode("ascii") if png_bytes else None
     return jsonify({
@@ -858,7 +868,7 @@ def brag_card_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("brag card manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -931,7 +941,7 @@ def earnings_prebrief_upcoming():
         all_rows = svc.get_upcoming_earnings(hours=hours)
     except Exception as exc:
         current_app.logger.error("earnings upcoming fetch failed: %s", exc)
-        return jsonify({"error": f"Upcoming fetch failed: {exc}"}), 500
+        return jsonify({"error": "Upcoming fetch failed (internal error)"}), 500
 
     # Scope to the caller — the underlying method returns across all Pro+
     # users for the scheduler path.
@@ -975,10 +985,10 @@ def earnings_prebrief_preview(ticker: str):
     except ValueError as exc:
         # user_id lookup failed — shouldn't happen post-auth but defend
         current_app.logger.warning("prebrief preview value error: %s", exc)
-        return jsonify({"error": str(exc)}), 404
+        return jsonify({"error": "Bad request"}), 404
     except Exception as exc:
         current_app.logger.error("prebrief preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     if data is None:
         return jsonify({
@@ -1067,7 +1077,7 @@ def earnings_prebrief_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("prebrief manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1098,7 +1108,7 @@ def kpi_dashboard_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("kpi dashboard preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1130,7 +1140,7 @@ def kpi_dashboard_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("kpi dashboard manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1161,7 +1171,7 @@ def self_audit_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("self audit preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1247,7 +1257,7 @@ def self_audit_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("self audit manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1277,7 +1287,7 @@ def dd_checklist_pending():
         pending = svc.pending_for_user(current_user.id)
     except Exception as exc:
         current_app.logger.error("dd pending fetch failed: %s", exc)
-        return jsonify({"error": f"Pending fetch failed: {exc}"}), 500
+        return jsonify({"error": "Pending fetch failed (internal error)"}), 500
 
     return jsonify({"ok": True, "count": len(pending), "pending": pending})
 
@@ -1336,14 +1346,14 @@ def dd_checklist_submit():
             note=note,
         )
     except LookupError as exc:
-        return jsonify({"error": str(exc)}), 404
+        return jsonify({"error": "Bad request"}), 404
     except PermissionError:
         return jsonify({"error": "Position does not belong to you"}), 403
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("dd submit failed for user %s: %s",
                                  current_user.id, exc)
-        return jsonify({"error": f"Submit failed: {exc}"}), 500
+        return jsonify({"error": "Submit failed (internal error)"}), 500
 
     return jsonify({"ok": True, "dd_check": row.to_dict()})
 
@@ -1362,7 +1372,7 @@ def dd_checklist_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("dd manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1394,7 +1404,7 @@ def burn_rate_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("burn_rate preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1477,7 +1487,7 @@ def burn_rate_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("burn_rate manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1505,7 +1515,7 @@ def credit_rating_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("credit_rating preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1533,7 +1543,7 @@ def credit_rating_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("credit_rating manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1561,7 +1571,7 @@ def dividend_income_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("dividend_income preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1641,7 +1651,7 @@ def dividend_income_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("dividend_income manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1669,7 +1679,7 @@ def monthly_finance_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("monthly_finance preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1745,7 +1755,7 @@ def monthly_finance_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("monthly_finance manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1776,7 +1786,7 @@ def risk_board_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("risk_board preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1884,7 +1894,7 @@ def risk_board_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("risk_board manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -1913,7 +1923,7 @@ def portfolio_segment_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("portfolio_segment preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -1996,7 +2006,7 @@ def portfolio_segment_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("portfolio_segment manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2050,10 +2060,10 @@ def capital_allocation_calculate():
             scenarios=scenarios,
         )
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        return jsonify({"error": "Bad request"}), 400
     except Exception as exc:
         current_app.logger.error("capital_allocation calc failed: %s", exc)
-        return jsonify({"error": f"Calculation failed: {exc}"}), 500
+        return jsonify({"error": "Calculation failed (internal error)"}), 500
 
     try:
         pdf_bytes = svc.render_pdf(data)
@@ -2061,7 +2071,7 @@ def capital_allocation_calculate():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("capital_allocation persist failed: %s", exc)
-        return jsonify({"error": f"Persist failed: {exc}"}), 500
+        return jsonify({"error": "Persist failed (internal error)"}), 500
 
     return jsonify({"ok": True, "calc_id": artefact.id, "data": data})
 
@@ -2082,7 +2092,7 @@ def capital_allocation_preview(calc_id: int):
         html = svc.render_html(artefact.data_json or {})
     except Exception as exc:
         current_app.logger.error("capital_allocation preview render failed: %s", exc)
-        return jsonify({"error": f"Render failed: {exc}"}), 500
+        return jsonify({"error": "Render failed (internal error)"}), 500
 
     return jsonify({
         "ok":   True,
@@ -2149,7 +2159,7 @@ def capital_allocation_reminder_trigger():
         summary = CapitalAllocationService().send_quarterly_reminder()
     except Exception as exc:
         current_app.logger.error("capital_allocation reminder failed: %s", exc)
-        return jsonify({"error": f"Reminder run failed: {exc}"}), 500
+        return jsonify({"error": "Reminder run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2179,7 +2189,7 @@ def insider_mirror_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("insider_mirror preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -2253,7 +2263,7 @@ def insider_mirror_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("insider_mirror manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2297,7 +2307,7 @@ def year_end_letter_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("year_end_letter preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -2378,7 +2388,7 @@ def year_end_letter_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("year_end_letter manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2421,7 +2431,7 @@ def quarterly_self_report_preview():
         html = svc.render_html(data)
     except Exception as exc:
         current_app.logger.error("quarterly_self preview failed: %s", exc)
-        return jsonify({"error": f"Preview failed: {exc}"}), 500
+        return jsonify({"error": "Preview failed (internal error)"}), 500
 
     return jsonify({"ok": True, "data": data, "html": html})
 
@@ -2500,7 +2510,7 @@ def quarterly_self_report_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("quarterly_self manual run failed: %s", exc)
-        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+        return jsonify({"error": "Manual run failed (internal error)"}), 500
 
     return jsonify({"ok": True, "summary": summary})
 
@@ -2836,15 +2846,18 @@ def artifacts_generate():
     except ValueError as exc:
         # `generate_for_user` raises ValueError for "user not found" —
         # surface as 400 not 500.
-        return jsonify({"error": str(exc)}), 400
+        return jsonify({"error": "Bad request"}), 400
     except Exception as exc:
         db.session.rollback()
         current_app.logger.exception(
             "artifacts.generate failed (user=%s type=%s): %s",
             current_user.id, artifact_type, exc,
         )
+        # 2026-05-17 wave 14 P1: drop raw exc from response body — see
+        # the bulk scrub note above. logger.exception already logged
+        # full traceback for ops.
         return jsonify({
-            "error": f"Generation failed: {exc}",
+            "error": "Generation failed (internal error)",
             "type":  artifact_type,
         }), 500
 
