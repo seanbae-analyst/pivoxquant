@@ -140,7 +140,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                       marginTop: 2,
                     }}
                   >
-                    {w.ticker}
+                    {w.ticker.replace(/\.(KS|KQ)$/i, "")}
                   </div>
                 </Link>
                 <span

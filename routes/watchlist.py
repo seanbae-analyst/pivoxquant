@@ -47,7 +47,13 @@ def _serialize(w: Watchlist, overlay_entry: dict | None = None) -> dict:
     # cache builders + price_overlay.py:130). Without this fallback every
     # watchlist row showed +0.00% even though detail/signals pages had
     # the real change. Prefer stale-but-real over fake-zero.
-    if change_1d_pct is None and "change_pct" in sd:
+    # Wave G-5 P2 G5-06 (2026-05-18): 'is None' → 'not' guard. overlay can
+    # return change_pct=0 explicitly on closed-market days (legitimate
+    # stale-but-zero). Previous guard let the literal 0.00% through even
+    # when SignalCache held a real informative non-zero value. trade-off:
+    # legitimate 0.00% loses to stale blob — acceptable per memory rule
+    # "stale-but-real over fake-zero".
+    if not change_1d_pct and "change_pct" in sd:
         try:
             change_1d_pct = float(sd.get("change_pct"))
         except (TypeError, ValueError):
