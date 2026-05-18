@@ -56,7 +56,10 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           account_prod: accountProd.trim(),
         }),
       });
-      toast.success("KIS connected · observing only");
+      // 2026-05-18 Wave G-2 P2 Bug #6: was hardcoded English bypassing
+      // KR-first i18n. brokerOnboarding.kis.connectSuccess exists in both
+      // ko.json + en.json since onboarding wave.
+      toast.success(t("brokerOnboarding.kis.connectSuccess"));
       onSuccess?.();
       onClose();
     } catch (err) {
@@ -172,7 +175,11 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
                 inputMode="numeric"
                 value={accountNo}
                 onChange={(e) =>
-                  setAccountNo(e.target.value.replace(/[^0-9]/g, "").slice(0, 12))
+                  // 2026-05-18 Wave G-2 P1 Bug #3: KIS retail account numbers
+                  // are exactly 8 digits (PR #416). slice(0, 12) was a stale
+                  // value that let users paste extra chars before the regex
+                  // rejected them — confusing UX. Hard-cap at 8.
+                  setAccountNo(e.target.value.replace(/[^0-9]/g, "").slice(0, 8))
                 }
                 placeholder="12345678"
                 autoComplete="off"

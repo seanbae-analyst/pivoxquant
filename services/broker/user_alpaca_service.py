@@ -193,6 +193,13 @@ def upsert_alpaca_connection(
     conn.is_paper = True
     conn.is_active = True
     conn.display_name = display_name or "Alpaca · Paper"
+    # 2026-05-18 Wave G-2 P1 Bug #1 (partial admit): symmetric with KIS upsert.
+    # encryption_key_version is currently schema theater (every row = 1).
+    # Multi-version key ring is a separate wave. We set this explicitly per
+    # write (not via column default) so the write site is greppable when the
+    # ring is implemented. See user_kis_service.upsert_kis_connection for the
+    # full carry-over note.
+    conn.encryption_key_version = 1
     conn.consecutive_failures = 0
     conn.last_sync_error = None
     conn.last_sync_status = None
@@ -201,7 +208,16 @@ def upsert_alpaca_connection(
 
 
 def delete_alpaca_connection(user_id: int) -> bool:
-    """Remove the user's Alpaca connection row. Returns True if one existed."""
+    """Remove the user's Alpaca connection row. Returns True if one existed.
+
+    2026-05-18 Wave G-2 P1 Bug #2 admit (Alpaca arm): unlike KIS, Alpaca's
+    paper API does NOT expose a token-revoke endpoint — paper API keys are
+    long-lived and only invalidated when the user deletes them from the
+    Alpaca dashboard. We therefore cannot proactively revoke from our side.
+    The local row delete still removes our copy of the keys, but a leaked
+    copy stays usable until the user manually deletes the keys at
+    alpaca.markets. Documented for future Alpaca-live work.
+    """
     conn = BrokerConnection.query.filter_by(
         user_id=user_id, broker="alpaca"
     ).first()

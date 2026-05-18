@@ -77,8 +77,12 @@ def _validate_connect_payload(body: dict) -> tuple[dict | None, dict | None]:
     if not app_secret or len(app_secret) < 16:
         return None, {"error": "APP SECRET이 올바르지 않습니다.", "code": "INVALID_APP_SECRET"}
     if not _ACCOUNT_RE.match(account_no):
+        # 2026-05-18 Wave G-2 P1 Bug #3: regex is `\d{8}$` since PR #416
+        # (frontend Wave 6 LOW #4 sync). Error text was stale '6~12자리'
+        # which conflicted with the actual validation rule and confused
+        # API consumers debugging 400s.
         return None, {
-            "error": "계좌번호는 숫자 6~12자리여야 합니다.",
+            "error": "계좌번호는 정확히 8자리 숫자여야 합니다.",
             "code": "INVALID_ACCOUNT",
         }
     if not _PROD_RE.match(account_prod):
@@ -228,13 +232,16 @@ def kis_status():
     full = conn.to_dict()
     safe = {k: v for k, v in full.items() if k in _SAFE_FIELDS}
 
+    # 2026-05-18 Wave G-2 P1 Bug #4: token_expires_at REMOVED from response.
+    # Was bypassing the _SAFE_FIELDS whitelist (spread outside the filter),
+    # exposing the exact KIS bearer token expiry timestamp. Knowing the precise
+    # expiry window enables token re-issue race timing attacks (request a new
+    # token at expiry-N seconds and race the legitimate user's session).
+    # Frontend does not consume this field — verified via repo grep.
     return jsonify({
         "ok": True,
         "connected": conn.is_active,
         **safe,
-        "token_expires_at": conn.token_expires_at.isoformat()
-        if conn.token_expires_at
-        else None,
     })
 
 
