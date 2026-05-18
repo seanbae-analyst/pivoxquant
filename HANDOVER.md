@@ -1,4 +1,64 @@
-# PivoxQuant — 인수인계서 (2026-05-17 v44.7 autonomous overnight — 21 PR merged · main `1415220 → fbd9085f` · CEO 부재 자율 progress + 4 hotfix + landing revert + Wave F + 구조 sweep)
+# PivoxQuant — 인수인계서 (2026-05-18 v44.8 Wave G continuation — 누적 31 PR · main `1415220 → 69ed6335` · v44.7 26 PR + v44.8 5 PR)
+
+## v44.8 — Wave G continuation (2026-05-18, 추가 5 PR squash-merged)
+
+**한 줄 요약**: CEO "버그 헌팅 해 계속" 명령에 따라 v44.7 cycle 후 Wave G 5 영역 (payment / broker / artifact / admin / portfolio) bug-hunter 병렬 dispatch + fix wave 일괄 close. 5 wave 발견 33 findings (P0 3 critical + P1 12 + P2 17 + LOW 1) → **5 PR (#479-#483) 자율 admin squash-merged**.
+
+### v44.8 PR 표
+
+| PR | Wave | 영역 | findings | 검증 |
+|---|---|---|---|---|
+| #479 | G-4 admin | admin endpoints + authz | P0 0 / P1 3 / P2 3. fix P1-B (DEV_PREMIUM_EMAILS gate → ADMIN_EMAILS 일관) + P1-C (waitlist user_id sequential PK leak → suffix 마스킹). P1-A deferred (agent_worker 미마운트, 마운트 시점 발화 명시) | py_compile + 2 files / +14 -5 |
+| #480 | G-2 broker | KIS + Alpaca connect / encrypted credentials / KIS WS | P1 4 + P2 4 = 8건. KIS revoke `/oauth2/revokeP` (24h stale token) + account_no 8-digit text 4곳 (Wave 6 fix 후 잔존) + token_expires_at SAFE_FIELDS 우회 제거 + Alpaca i18n 전체 + cursor:not-allowed. Bug #1 (encryption_key_version multi-version key ring) + Bug #8 (token cache plaintext) docstring admit | 85 PASS (19 broker + 66 broader) / 9 files |
+| #481 | G-3 artifact | weekly_memo/brag_card/earnings_prebrief/PDF/email | **P0 2 critical + P1 2 + P2 2 = 6건**. **Bug #1 brag-card OG image @api_auth → viral loop broken** → 공개 image-serve endpoint (192-bit share_token secret). **Bug #2 SendGrid webhook signature 미강제 → auto-opt-out DoS** → FLASK_ENV check 제거 + 항상 503 + 회귀 test 추가. monthly-brag og-image 패턴 mirror + disclaimer EN 4 service | 279 PASS (20 sendgrid + 31 brag + 37 memo + 191 compliance) / 10 files / +198 -25 |
+| #482 | G-5 portfolio | portfolio + watchlist + detail/[ticker] | **P0 1 데이터 손상 SHIP-BLOCKER + P1 2 + P2 3 = 6건**. **G5-01 equity curve KRW raw 합산 → +52,281.30% 표시** → portfolio_summary 패턴 mirror (1회 fetch, fallback 1370). G5-02 + G5-03 SELECT FOR UPDATE 2곳 (create_trade_alias + buy_new_position capital race) + G5-04/05 ticker_display + G5-06 overlay `not` guard | 80 PASS (72 portfolio + 8 equity benchmark) / 4 files |
+| #483 | G-1 billing | Stripe + billing + email consent | P1 4 + P2 4 = **8건 모두 Stripe Live 전 필수**. consent server audit trail (금소법 §19) + 환불 조항 일치 (표시광고법 §3) + 이중 구독 409 + env runtime read + deeplink useSearchParams + marketing_consent_revoked_at on bounce (정통망법 §50) + Cancel plan UI (전자상거래법 §17) + marketing_consent_at default-deny | 119 PASS (10 modules, 343.60s) / 11 files / +362 -13 |
+
+### v44.7 + v44.8 누적 통계
+
+| 항목 | v44.7 | v44.8 | 누적 |
+|---|---|---|---|
+| PR squash-merged | 26 | 5 | **31** |
+| pytest PASS (별 PR 합산) | 1000+ | 682 | 1600+ |
+| 회귀 | 0 | 0 | 0 |
+| alembic head | 035 | 035 | **단일 유지** |
+| 추가 비용 | 0원 | 0원 | 0원 |
+| main | `1415220 → 856b1c43` | `856b1c43 → 69ed6335` | 31 commits forward |
+
+### v44.8 핵심 SHIP-impact 회로 차단
+
+1. **Viral loop broken** (G-3 #481 Bug #1) — brag-card SNS 공유 시 OG image @api_auth → 크롤러 401 → 카드 깨짐. public image-serve endpoint로 해소
+2. **DoS auto-opt-out** (G-3 #481 Bug #2) — SendGrid webhook signature 미강제로 공격자가 임의 user `email_opt_out=True` 강제 가능 → 항상 503 enforce
+3. **데이터 손상** (G-5 #482 G5-01) — portfolio equity curve KRW raw 합산으로 +52,281.30% 표시 → mixed-currency portfolio 사용자 신뢰 회복
+4. **Stripe Live 5종 규제** (G-1 #483) — 전자상거래법 §17 + 금소법 §19 + 표시광고법 §3 + PIPA §28-8 + 정통망법 §50 모두 회로 차단
+
+### 자율 thoroughness 패턴 (v44.8 cycle)
+- G-2 Bug #1 admit (encryption_key_version multi-version key ring 별 wave deferred, docstring 명시)
+- G-3 Bug #2 신규 회귀 test 추가 (`test_signature_required_when_env_absent`)
+- G-5 G5-03 IntegrityError race recovery + cap2 재검사 (자율 추가)
+- G-4 P1-A agent_worker form CSRF deferred (미마운트, 마운트 시점 발화 명시)
+
+### 외부 액션 carry-over (v44.7 + v44.8 신규 2건 = 14건)
+
+| # | 항목 | 상태 |
+|---|---|---|
+| 1 | 변호사 일괄 의견서 Q1-Q16 (300-500만원) | carry-over (5/29 미팅 D-11) |
+| 2 | Stripe + 통신판매업 신고 | carry-over (PR #483 코드 준비 완료, 활성화만 남음) |
+| 3-10, 12, 13 | (v44.7 carry-over 동일) | carry-over |
+| **+14** | **PIVOX_BROKER_ENCRYPTION_KEY rotation 시 re-encrypt migration script** (PR #480 G-2 Bug #1 admit) | **v44.8 신규** |
+| **+15** | **`.kis_token_cache.json` AES-GCM 암호화** (PR #480 G-2 Bug #8 admit, 별 wave) | **v44.8 신규** |
+| ~~11~~ | ~~BETA_PW 통보~~ | ✅ v44.7 영구 해결 |
+
+### 다음 세션 첫 ACTION 추천
+
+1. **OPEN PR 0** 확인 (현재 main = `69ed6335`)
+2. **외부 액션 #12** GitHub Actions billing 복구 (CI 자동 검사 회복)
+3. **외부 액션 #9** iCloud sync OFF + `~/projects` 이전 (영구 해결)
+4. **외부 액션 #10** prod DB rogue rows id 21/22 SQL DELETE
+5. **외부 액션 #2** Stripe + 통신판매업 신고 (코드 준비 완료)
+6. **외부 액션 #14** encryption key rotation script (별 wave)
+
+---
 
 ## v44.7 — CEO 부재 자율 overnight cycle (2026-05-17, 21 PR squash-merged)
 
