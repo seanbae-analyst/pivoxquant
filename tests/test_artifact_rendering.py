@@ -257,7 +257,20 @@ def test_empty_state_fallback(app):
         svc = WeeklyMemoService()
         out = svc.generate_for_user(seeded.user_id)
     assert isinstance(out, dict)
-    assert out.get("status") == "empty", f"Expected empty-state, got {out!r}"
+    # weekly_memo_service 의 empty-state 표현은 explicit "status" 필드가 아니라
+    # 빈 sector_alloc + 빈 top_movers + None 수익률 + risk_notes 의 "보유 종목 0개"
+    # 메시지 조합. 본 wave 작성 시 "status: empty" 필드 존재 가정은 오류.
+    # graceful empty-state 의 진짜 시그널: 모든 데이터 컨테이너 empty + risk_notes
+    # 에 분산 부족 메시지.
+    assert out.get("sector_alloc") == {}, f"Expected empty sector_alloc, got {out.get('sector_alloc')}"
+    assert out.get("top_movers_up") == [], f"Expected empty top_movers_up"
+    assert out.get("top_movers_down") == [], f"Expected empty top_movers_down"
+    assert out.get("weekly_return_pct") is None, "Expected None weekly_return for 0-position user"
+    # risk_notes 는 한국어 또는 영어로 "분산 부족" 또는 "0 positions" 등 안내
+    risk_notes_text = " ".join(out.get("risk_notes") or [])
+    assert ("0개" in risk_notes_text) or ("분산" in risk_notes_text) or ("0 positions" in risk_notes_text.lower()), (
+        f"Expected empty-state risk_notes mention, got {risk_notes_text!r}"
+    )
 
 
 @pytest.mark.artifact_qa

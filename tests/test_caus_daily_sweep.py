@@ -334,12 +334,14 @@ def test_main_no_session_no_secret_admits(caus, tmp_path, monkeypatch, capsys):
 
 
 def test_day_scenarios_complete(caus):
-    """7 scenarios, one per weekday — no IndexError on any weekday.
+    """10 scenarios — PR #434 (HANDOVER v44.x) day7-9 추가 후 rotation 10-day cycle.
 
     Phase 3 changed DAY_SCENARIOS to a list of (module_name, label) tuples.
+    2026-05-18 audit: 본 test 가 7 기준 stale. SoT (scripts/caus_daily_sweep.py
+    DAY_SCENARIOS) 가 10개. day7_simulator / day8_features / day9_onboarding_draft.
     """
-    assert len(caus.DAY_SCENARIOS) == 7
-    for i in range(7):
+    assert len(caus.DAY_SCENARIOS) == 10
+    for i in range(10):
         entry = caus.DAY_SCENARIOS[i]
         assert isinstance(entry, tuple) and len(entry) == 2
         module_name, label = entry
