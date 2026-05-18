@@ -650,18 +650,24 @@ def risk_component_es():
     ticker_returns: dict[str, dict[str, float]] = {}
     all_dates: set[str] = set()
 
-    for it in items:
-        hist = fetcher.get_price_history(it["ticker"], period=period)
-        if hist is None or hist.empty or len(hist) < 2:
-            continue
-        pct = hist["Close"].pct_change().dropna()
-        date_ret = {}
-        for dt, ret in pct.items():
-            ds = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)
-            if math.isfinite(ret):
-                date_ret[ds] = float(ret)
-                all_dates.add(ds)
-        ticker_returns[it["ticker"]] = date_ret
+    # Wave H-4 P0 (2026-05-18): parallel fetch (same fix as quant_helpers)
+    import concurrent.futures as _cf
+    _tks = [it["ticker"] for it in items]
+    def _f(t):
+        try: return t, fetcher.get_price_history(t, period=period)
+        except Exception: return t, None
+    with _cf.ThreadPoolExecutor(max_workers=min(8, max(1, len(_tks)))) as _ex:
+        for t, hist in _ex.map(_f, _tks):
+            if hist is None or hist.empty or len(hist) < 2:
+                continue
+            pct = hist["Close"].pct_change().dropna()
+            date_ret = {}
+            for dt, ret in pct.items():
+                ds = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)
+                if math.isfinite(ret):
+                    date_ret[ds] = float(ret)
+                    all_dates.add(ds)
+            ticker_returns[t] = date_ret
 
     if len(ticker_returns) < 2:
         return api_error(
@@ -813,19 +819,23 @@ def risk_defense_status():
         pos["weight"] = pos["value"] / total_value
 
     # Build returns matrix from price history (20-day lookback)
+    # Wave H-4 P0 (2026-05-18): parallel fetch
     returns_cols = []
     valid_tickers = []
-    for pos in pos_list:
-        try:
-            hist = fetcher.get_price_history(pos["ticker"], period="3mo")
+    import concurrent.futures as _cf
+    _tks2 = [pos["ticker"] for pos in pos_list]
+    def _f2(t):
+        try: return t, fetcher.get_price_history(t, period="3mo")
+        except Exception:
+            logger.debug("silent-fallback: risk_defense_status", exc_info=True)
+            return t, None
+    with _cf.ThreadPoolExecutor(max_workers=min(8, max(1, len(_tks2)))) as _ex:
+        for t, hist in _ex.map(_f2, _tks2):
             if hist is not None and not hist.empty and len(hist) >= 21:
                 closes = hist["Close"].values[-21:]
                 daily_rets = np.diff(closes) / closes[:-1]
                 returns_cols.append(daily_rets)
-                valid_tickers.append(pos["ticker"])
-        except Exception:
-            logger.debug("silent-fallback: risk_defense_status", exc_info=True)
-            pass
+                valid_tickers.append(t)
 
     returns_matrix = None
     if len(returns_cols) >= 2:
