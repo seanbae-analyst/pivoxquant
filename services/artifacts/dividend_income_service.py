@@ -22,7 +22,11 @@ Compliance
   net income column. Tax numbers are informational only — service is
   not tax advice (disclaimer embedded).
 - `_disclaimer.html` partial included in every page of the PDF.
-- Text routed through `legal_filter.safe_scrub` when touching prose.
+- Pure numerical aggregation — no AI-generated prose, so
+  ``legal_filter.safe_scrub`` is not invoked anywhere in this service.
+  If future commentary is added (e.g. "예상 배당이 전년 대비 …"),
+  route it through ``safe_scrub`` before embedding in ``render_html``
+  to mirror the ``weekly_memo`` / ``brag_card`` pattern.
 
 Data sources
 ------------

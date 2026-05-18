@@ -599,6 +599,48 @@ def monthly_brag_download(brag_id: int):
     )
 
 
+@artifacts_bp.route("/monthly-brag/og-image/<int:brag_id>", methods=["GET"])
+@general_rate_limit
+def monthly_brag_og_image(brag_id: int):
+    """PUBLIC image-serve for OG meta + social link unfurling.
+
+    Wave G-3 Bug #4 (2026-05-18): the ``share-link`` endpoint hands the
+    frontend an ``og:image`` URL that crawlers (Kakao / Twitter /
+    Instagram) hit with no session cookie. The legacy URL pointed at
+    ``/monthly-brag/download/<id>`` which is ``@api_auth`` → 401 →
+    broken unfurl. Routing crawlers here instead.
+
+    monthly_brag rows do not carry a ``share_token`` (only ``brag_card``
+    does), so this endpoint keys on ``brag_id``. Enumeration risk is
+    bounded: the share-link route already publishes ``brag_id`` in its
+    OG meta, and the PNG itself is intentionally public once shared.
+    Owner identity is never echoed back.
+
+    * 404 — row doesn't exist or isn't monthly_brag.
+    * 410 — row exists but no PNG rendered (Pillow unavailable).
+    """
+    artefact = db.session.get(Artifact, brag_id)
+    if not artefact or artefact.type != "monthly_brag":
+        return api_error(en="Brag card not found",
+                         kr="자랑 카드를 찾을 수 없습니다.",
+                         code="BRAG_NOT_FOUND", status=404)
+
+    if not artefact.has_file:
+        return api_error(
+            en="PNG unavailable for this brag card",
+            kr="이 자랑 카드의 PNG가 아직 준비되지 않았습니다.",
+            code="PNG_NOT_RENDERED", status=410,
+        )
+
+    resp = send_file(
+        artefact.pdf_path,
+        mimetype="image/png",
+        max_age=86400,
+    )
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
+
 @artifacts_bp.route("/monthly-brag/share-link/<int:brag_id>", methods=["GET"])
 @api_auth
 def monthly_brag_share_link(brag_id: int):
@@ -646,7 +688,10 @@ def monthly_brag_share_link(brag_id: int):
     og = {
         "og:title":        f"{month_label} {ret_str} — PivoxQuant",
         "og:description":  "월간 브래그 카드 — AI + Quant 리서치 툴",
-        "og:image":        f"{share_domain}/api/artifacts/monthly-brag/download/{artefact.id}",
+        # Wave G-3 Bug #4 (2026-05-18): https:// prefix + route to the
+        # PUBLIC og-image endpoint (above) — /download/<id> is @api_auth
+        # and crawlers were 401'ing → broken card unfurl.
+        "og:image":        f"https://{share_domain}/api/artifacts/monthly-brag/og-image/{artefact.id}",
         "og:url":          share_url,
         "twitter:card":    "summary_large_image",
     }
@@ -804,7 +849,65 @@ def brag_card_download(card_id: int):
     )
 
 
+@artifacts_bp.route("/brag-card/share/<string:share_token>/image", methods=["GET"])
+@general_rate_limit
+def brag_card_share_image(share_token: str):
+    """PUBLIC image-serve for OG meta + social link unfurling.
+
+    Wave G-3 Bug #1 (2026-05-18) P0 SHIP-BLOCKER: previously the
+    ``og:image`` URL on the share landing pointed to
+    ``/api/artifacts/brag-card/download/<id>`` which is gated by
+    ``@api_auth``. Kakao / Twitter / Instagram crawlers never carry a
+    session cookie, so the crawler got 401 and the unfurled card
+    rendered with no image — viral loop completely broken.
+
+    Security model:
+      * The ``share_token`` itself is the secret. ``_generate_share_token``
+        returns ``secrets.token_urlsafe(24)[:32]`` ≈ 192 bits of entropy,
+        so enumeration is infeasible (matches the existing
+        ``brag_card_share`` HTML route, which is already public).
+      * Returns 404 when the row doesn't exist or isn't a brag card
+        (same code — avoids existence leaks).
+      * Returns 410 when the row exists but no PNG file was rendered
+        (Playwright unavailable at generation time).
+      * ``Cache-Control: public, max-age=86400`` since the PNG is
+        immutable per share_token and CDNs / crawlers benefit from
+        aggressive caching.
+    """
+    if not share_token or len(share_token) < 16:
+        return api_error(en="Invalid share token",
+                         kr="유효하지 않은 공유 토큰입니다.",
+                         code="INVALID_SHARE_TOKEN", status=404)
+
+    artefact = (
+        Artifact.query
+        .filter_by(type="brag_card", share_token=share_token)
+        .first()
+    )
+    if not artefact:
+        return api_error(en="Card not found",
+                         kr="카드를 찾을 수 없습니다.",
+                         code="CARD_NOT_FOUND", status=404)
+
+    if not artefact.has_file:
+        return api_error(
+            en="PNG unavailable for this brag card",
+            kr="이 자랑 카드의 PNG가 아직 준비되지 않았습니다.",
+            code="PNG_NOT_RENDERED", status=410,
+        )
+
+    resp = send_file(
+        artefact.pdf_path,
+        mimetype="image/png",
+        max_age=86400,
+    )
+    # send_file's default is private, max-age — override for crawlers.
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
+
 @artifacts_bp.route("/brag-card/share/<string:share_token>", methods=["GET"])
+@general_rate_limit
 def brag_card_share(share_token: str):
     """PUBLIC — return the rendered HTML card for a given share token.
 
@@ -839,8 +942,11 @@ def brag_card_share(share_token: str):
 
     # Inject OG meta so crawlers unfurl correctly. Hack: inject into <head>.
     share_url = svc.get_share_url(artefact.id)
+    # Wave G-3 Bug #1 (2026-05-18): point at the PUBLIC image-serve route
+    # (above) not /download/<id> which is @api_auth — crawlers carry no
+    # session and were getting 401 → broken card unfurl → viral loop dead.
     png_endpoint = (f"{request.host_url.rstrip('/')}"
-                    f"/api/artifacts/brag-card/download/{artefact.id}")
+                    f"/api/artifacts/brag-card/share/{share_token}/image")
     ret = data.get("return_pct")
     ret_str = "—" if ret is None else (f"+{ret:.1f}%" if ret >= 0
                                        else f"{ret:.1f}%")

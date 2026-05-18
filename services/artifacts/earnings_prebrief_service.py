@@ -688,7 +688,8 @@ class EarningsPreBriefService:
             sensitivity_beat=sens_beat,
             sensitivity_miss=sens_miss,
             risk_notes=risk_notes,
-            disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다. / "
+                        "Information only, not investment advice. Decisions are your own."),
             data_sources=data_sources,
             option_source=option_source,
         )

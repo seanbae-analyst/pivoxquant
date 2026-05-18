@@ -381,7 +381,8 @@ class MonthlyBragService:
             worst_return_pct=stats["worst_return_pct"],
             anonymous=anonymous,
             is_empty=is_empty,
-            disclaimer="정보 제공 목적이며 투자 권유가 아닙니다.",
+            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. / "
+                        "Information only, not investment advice."),
         )
         return ctx.to_dict()
 

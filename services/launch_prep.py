@@ -109,6 +109,12 @@ _INVENTORY: tuple[tuple[str, Literal["required", "recommended", "optional"], str
      "Postmark works; smtp.postmarkapp.com:587"),
     ("WEEKLY_MEMO_FROM_EMAIL", "optional",
      "Defaults to reports@pivoxquant.com (services/email/sender.py:75)"),
+    ("SENDGRID_WEBHOOK_PUBLIC_KEY", "recommended",
+     "ECDSA public key for SendGrid Event Webhook signature verification. "
+     "Wave G-3 (2026-05-18): missing key now hard-fails the webhook with "
+     "503 regardless of FLASK_ENV — closes the unsigned-forgery DoS that "
+     "could flip arbitrary users to email_opt_out=True. Pair with "
+     "'Signed Event Webhook' toggle in SendGrid Mail Settings."),
 
     # External APIs (memory: feedback_no_extra_cost — these are the
     # approved paid services in the budget)

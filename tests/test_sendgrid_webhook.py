@@ -27,6 +27,40 @@ import pytest
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Wave G-3 Bug #2 (2026-05-18): the webhook now hard-fails with 503 when
+# SENDGRID_WEBHOOK_PUBLIC_KEY is unset, regardless of FLASK_ENV. Most tests
+# in this file exercise *downstream event handling* (artifact column updates),
+# not signature verification. To keep those tests black-box (no per-test
+# signing), this autouse fixture installs a dummy public key and bypasses
+# signature verification by default. The two tests that specifically cover
+# signature behaviour (test_invalid_signature_returns_403,
+# test_signature_required_when_env_absent, test_valid_signature_accepted)
+# override the env / patch directly via their own monkeypatch calls.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def _webhook_signature_bypass(request, monkeypatch):
+    """Provide a default public key + bypass signature check for most tests.
+
+    Tests that want to exercise the real signature gate opt out by name —
+    they reset the env var themselves and (for valid-sig tests) re-patch
+    ``_verify_signature`` after this fixture has run.
+    """
+    opt_out = {
+        "test_signature_required_when_env_absent",
+        "test_invalid_signature_returns_403",
+        "test_valid_signature_accepted",
+    }
+    if request.node.name in opt_out:
+        return
+    monkeypatch.setenv("SENDGRID_WEBHOOK_PUBLIC_KEY", "dummy-key-for-tests")
+    # Force-accept any signature on unsigned test POSTs.
+    from services.email import webhook as _wh
+    monkeypatch.setattr(_wh, "_verify_signature",
+                        lambda *_args, **_kwargs: True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -344,8 +378,16 @@ def test_invalid_signature_returns_403(app, raw_client, monkeypatch):
     assert resp.status_code == 403
 
 
-def test_signature_skipped_when_env_absent(app, raw_client, monkeypatch, make_user):
-    """Without the env var, the handler must accept events (dev mode)."""
+def test_signature_required_when_env_absent(app, raw_client, monkeypatch, make_user):
+    """Wave G-3 Bug #2 (2026-05-18) P0: without SENDGRID_WEBHOOK_PUBLIC_KEY,
+    the handler must HARD-FAIL with 503 regardless of FLASK_ENV.
+
+    Previously this test asserted 200 (dev-mode bypass), but that allowed
+    unsigned forged webhooks in any env where ``FLASK_ENV`` was not
+    explicitly ``production`` — including railway.json which (until
+    Wave G-3) did not set the var. An attacker could POST a synthetic
+    bounce/spamreport event to flip arbitrary users to email_opt_out=True.
+    """
     monkeypatch.delenv("SENDGRID_WEBHOOK_PUBLIC_KEY", raising=False)
     user = make_user()
     art_id = _make_artifact(app, user["id"], sg_message_id="dev-ok")
@@ -353,11 +395,14 @@ def test_signature_skipped_when_env_absent(app, raw_client, monkeypatch, make_us
     resp = _post_events(raw_client, [
         {"sg_message_id": "dev-ok.x", "event": "open", "timestamp": _ts()},
     ])
-    assert resp.status_code == 200
+    assert resp.status_code == 503
+    body = resp.get_json() or {}
+    assert "not configured" in (body.get("error") or "").lower()
 
+    # No state mutation should have happened.
     from models import Artifact
     with app.app_context():
-        assert Artifact.query.get(art_id).opened_at is not None
+        assert Artifact.query.get(art_id).opened_at is None
 
 
 def test_valid_signature_accepted(app, raw_client, monkeypatch, make_user):
