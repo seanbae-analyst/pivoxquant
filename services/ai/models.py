@@ -176,7 +176,12 @@ class EarningsCallToneAnalyzer:
 
         # Validate and normalize fields
         result = cls._validate_result(result, ticker)
-        _set_cache(cache_key, result)
+        # v44.9 PR #488 fix: transcript_text (Pro user-supplied) 결과는 shared cache
+        # 미저장. 그렇지 않으면 비공개 transcript 결과가 다른 user에게 24h cross-user
+        # 노출됨. FMP-sourced (transcript_text=None) 결과만 cache.
+        # 2026-05-19 Wave 8 hotfix 회귀 점검에서 누락 발견 + 본 fix 적용.
+        if not transcript_text:
+            _set_cache(cache_key, result)
         return result, 200
 
     @classmethod
