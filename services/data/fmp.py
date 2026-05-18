@@ -98,6 +98,14 @@ _endpoint_402_cooldown = {}     # {endpoint_path: unix_ts until cooldown expires
 _ENDPOINT_402_THRESHOLD = 3     # After 3 consecutive 402s, block endpoint
 _ENDPOINT_402_COOLDOWN = 1800   # 30 min cooldown
 
+# 2026-05-18 Wave H-1 P1: 429 short cooldown instead of 24h lockout.
+# Pre-fix: a single 429 clamped _daily_calls to HARD_STOP → every subsequent
+# FMP call returned None for the rest of the 86400s reset window.
+# Fix: a 10-min cooldown (_429_cooldown_until) so transient rate bursts
+# degrade gracefully and service auto-recovers.
+_429_COOLDOWN_SEC = int(os.environ.get("FMP_429_COOLDOWN_SEC", "600"))  # 10 min default
+_429_cooldown_until: float = 0.0
+
 # Budget thresholds — Premium $29 plan default (10k/day soft cap).
 # Override via FMP_DAILY_SOFT_LIMIT env var (e.g. set to 250 if downgrading to Starter).
 _BUDGET_STALE_THRESHOLD = int(_FMP_DAILY_SOFT_LIMIT * _FMP_BUDGET_STALE_PCT)
@@ -155,6 +163,16 @@ def _is_budget_exhausted():
     return _daily_calls >= _BUDGET_HARD_STOP
 
 
+def _is_429_cooldown() -> bool:
+    """True when a recent 429 has tripped the short cooldown window.
+
+    Unlike budget exhaustion, the 429 cooldown expires after
+    ``_429_COOLDOWN_SEC`` (default 10 min) — not 86400s.  Callers see
+    None (stale-cache fallback) during the window, then resume normally.
+    """
+    return time.time() < _429_cooldown_until
+
+
 def _throttle_per_minute() -> None:
     """Sliding-window per-minute throttle for FMP calls.
 
@@ -210,10 +228,23 @@ def _track_call():
 
 
 def _is_endpoint_blocked(endpoint):
-    """Returns True if this endpoint hit 3+ consecutive 402s and is in cooldown."""
+    """Returns True if this endpoint hit 3+ consecutive 402s and is in cooldown.
+
+    2026-05-18 Wave H-1 P2: on cooldown expiry, clear both the cooldown
+    timestamp AND the accumulated count so subsequent failures are measured
+    from a fresh window.  Pre-fix: the count persisted across restarts so
+    an endpoint that recovered and then saw 1 new 402 immediately tripped
+    a second 30-min cooldown (lifetime counter, not fresh-window counter).
+    """
     with _cache_lock:
         until = _endpoint_402_cooldown.get(endpoint, 0)
-        return time.time() < until
+        if time.time() >= until:
+            # Cooldown ended (or never set) — clear accumulated count so the
+            # next failure window starts from zero.
+            _endpoint_402_cooldown.pop(endpoint, None)
+            _endpoint_402_counts.pop(endpoint, None)
+            return False
+        return True
 
 
 def _record_402(endpoint):
@@ -246,11 +277,18 @@ def _fmp_get(endpoint, params=None, timeout=5):
     serial FMP fallback chains were causing 10-17s endpoint latencies.
     """
     global _daily_calls
+    # 2026-05-18 Wave H-1 P1: declare global early — Python requires `global`
+    # before ANY read of the name in this scope (SyntaxError otherwise).
+    global _429_cooldown_until
     if not FMP_KEY:
         logger.error("FMP_API_KEY not set")
         return None
     if _is_budget_exhausted():
         logger.warning("FMP call blocked (budget exhausted at %s/%s): %s", _daily_calls, _FMP_DAILY_SOFT_LIMIT, endpoint)
+        return None
+    if _is_429_cooldown():
+        logger.debug("FMP call deferred (429 cooldown, %.0fs remaining): %s",
+                     _429_cooldown_until - time.time(), endpoint)
         return None
     if _is_endpoint_blocked(endpoint):
         # Endpoint is in 402 cooldown — short-circuit without network call
@@ -274,9 +312,18 @@ def _fmp_get(endpoint, params=None, timeout=5):
                 _record_success(endpoint)
                 return r.json()
             if r.status_code == 429:
-                logger.error("FMP 429 rate limited on %s — stopping further calls this cycle", endpoint)
-                with _cache_lock:
-                    _daily_calls = max(_daily_calls, _BUDGET_HARD_STOP)
+                # 2026-05-18 Wave H-1 P1: short cooldown instead of 24h lockout.
+                # Pre-fix clamped _daily_calls to HARD_STOP which silenced ALL FMP
+                # calls until the 86400s daily reset — a single rate-burst became
+                # a full-day outage.  A 10-min cooldown is proportionate and the
+                # service auto-recovers without manual intervention.
+                # (global declared at function start to avoid SyntaxError)
+                _429_cooldown_until = time.time() + _429_COOLDOWN_SEC
+                logger.warning(
+                    "FMP 429 on %s — entering %ds cooldown (resumes ~%s UTC)",
+                    endpoint, _429_COOLDOWN_SEC,
+                    datetime.utcfromtimestamp(_429_cooldown_until).strftime("%H:%M:%S"),
+                )
                 return None
             elif r.status_code == 402:
                 # 402 = FMP plan-gated endpoint OR per-second rate limit (10/sec on free plan).
