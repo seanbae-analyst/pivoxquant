@@ -1,3 +1,141 @@
+# PivoxQuant — 인수인계서 (2026-05-18 v45 — Agent 인벤토리 대정비 · 신규 15 agent · 0원 · BLOCKER 2건 발견)
+
+## v45 (2026-05-18) — Agent 인벤토리 대정비 (Wave 1-4)
+
+**한 줄 요약**: CEO 지시 "Full Throttle, 토큰 무제한"으로 출시 전 39개 agent 현황 파악 → 갭 분석 → 신규/업그레이드 자율 진행. **15개 신규 agent (3,548 lines, 0원)** + 기존 27개 agent v44.x 학습 반영 업그레이드. P0 17건 + P1 11건 + P2 5건 fix 완료. **SHIP-BLOCKER 2건 발견 (CEO 액션 필요)**.
+
+### 세션 목표 & 권한
+
+CEO 부재 자율 권한 ("Full Throttle, 토큰 무제한, 출시 전 인벤토리 정확히 잡아"):
+- feedback_pre_launch_full_throttle 활성 (Opus 4.7 default + 5-10 agent 병렬 + 토큰 압축 X)
+- feedback_no_extra_cost 유지 (신규 15 agent 전부 추가 비용 0원 검증)
+- feedback_no_false_reports 엄수 (모든 변경 grep verify 후 보고)
+- feedback_thorough_fixes 엄수 (한 번 손대면 유사 패턴 전수 점검 + 확실히 닫기)
+
+### Wave 1: 6 sub-audit 병렬 (현황 파악)
+
+6개 클러스터 병렬 audit, 32 agent 파일 직접 read + line 인용:
+
+| 클러스터 | agent 수 | 핵심 발견 |
+|----------|----------|-----------|
+| Ops (release/migration/canary/cron/health) | 5 | release-coordinator phantom / migration-guard v44.7 OAuth 누락 |
+| Design (motion/visual/ux/onboarding) | 4 | motion/visual/ux-researcher 3건 phantom 참조 |
+| Business (marketing/finance/legal/compliance) | 5 | marketing §101 면제 4요건 미반영 / finance 100만원 vs 변호사 300-500만원 미스매치 |
+| Eng Core (engineering/security/qa/architecture) | 8 | Tech Stack Supabase 잔재 / 9 bug 패턴 SoT divergence |
+| Bug Hunting (bug-hunter/investigate-bug/frontend-test-runner) | 5 | 9 bug 패턴 SoT (feedback_bug_fix_patterns.md) 정합 깨짐 |
+| Verify + Migration (verify-design/audit-code/data-validator) | 5 | stockpilot/ 경로 잔재 11건 (compliance-gatekeeper B-3/B-5/B-7 silent-skip) |
+
+**총 발견**: P0 17건 / P1 11건 / P2 5건 / 신규 agent 필요 15건 / 외부 액션 4건
+
+### Wave 2: P0 17건 fix (10 batch 병렬)
+
+agent 27개 수정. 핵심:
+- **Tech Stack 전면 교체**: engineering / qa / security 등에서 Supabase 가정 → Flask + SQLAlchemy + Railway PostgreSQL 반영
+- **v44.7 OAuth provisioning_failed 학습**: migration-guard + security agent에 alembic 035 prod 미적용 → runtime ADD COLUMN 패턴 박음
+- **9 bug 패턴 SoT 정합**: qa / bug-hunter / investigate-bug / frontend-test-runner / engineering — `feedback_bug_fix_patterns.md` SoT 1-9 + 도메인 확장 #10-12 분리 (SoT는 1-9, 확장은 docs/ 또는 agent 내 별도 섹션)
+- **§101 면제 4요건 marketing 게이트**: 광고 없음 / 매월 청구 없음 / 특정성 회피 / 일반화된 정보 제공만 — 런치 카피 위반 차단 룰 박음
+- **finance Pre-Launch Cash Sink Audit**: 예산 100만원 vs 변호사 자문 예상 300-500만원 정량화 + Google Workspace / SendGrid 결정 트리거
+- **regulatory-monitor**: 7건 신규 규제 (정통망법 §50 / 유사투자자문업 양방향 채널 / AI 생성물 표시제 / PIPA 10% 과징금 / 금소법 / 전자상거래법 가분적 디지털콘텐츠 / KRX) dashboard 박음
+- **PivoxQuant Context v44.8 stanza 표준**: 13개 agent에 통일 형식 (브랜드 / 기술 스택 / 디렉토리 / 베타 PW / SoT 메모리 참조) 적용
+- **stale placeholder 제거**: "신설 예정" 5건 → 실제 작업 항목 또는 삭제
+
+### Wave 3: P1 신규 10 agent 작성 (병렬 5+5)
+
+신규 agent .md 10개 + Wave 2의 phantom 해결 3개 + P0 신규 2개 = **총 15개 신규 agent (3,548 lines, 0원)**
+
+#### P0 신규 (출시 게이트)
+1. **launch-coordinator** — D-day 게이트 (T-7/T-3/T-1/T-0 체크리스트 + 외부 액션 12건 추적)
+2. **compliance-gatekeeper** — BLOCKER 7건 dashboard (변호사 자문 / 통신판매업 / DNS / artifact-qa fixture 등)
+
+#### Phantom 해결 3건 (Wave 1 발견)
+3. **motion-designer** — motion-spec skill SoT + 금융 앱 절대 금지 패턴 (바운스 / 장식 모션)
+4. **visual-designer** — design-token-drift skill SoT + Vantablack/Bronze/Playfair v3 토큰 강제 (40 quant 표기 오류 → 58 quant fix)
+5. **ux-researcher** — Brag Card / Weekly Memo / Earnings Pre-Brief 3 MVP artifact 사용성 평가
+
+#### P1 신규 10건
+6. **secrets-rotator** — BETA_PW / Stripe / OAuth / Anthropic 키 rotation 표준 (v44.7 Vercel REST API 우회 패턴 박음)
+7. **cost-monitor** — Max plan + Railway + FMP $29 외 0원 검증 (feedback_no_extra_cost 자동 enforcement)
+8. **data-freshness-monitor** — FMP / KIS / DART / SEC EDGAR / FX 데이터 stale TTL guard
+9. **mobile-pwa-optimizer** — service worker 캐시 / manifest / 코드 변경 시 SW 무효화 (project_pwa 메모리 박음)
+10. **onboarding-designer** — 20문항 questionnaire + 8 투자자 유형 + 첫 Artifact 생성 플로우
+11. **beta-onboarding-monitor** — 베타 가입 → OAuth → onboarding → 첫 Artifact 시간 측정
+12. **billing-incident-handler** — Stripe webhook 503 / signature 미강제 / 차지백 처리 표준 (v44.8 PR #483 학습 반영)
+13. **release-coordinator** — PR merge → Railway deploy → canary → rollback 표준
+14. **prod-migration-sync-verifier** — alembic heads prod 적용 verify (v44.7 OAuth provisioning_failed 재발 방지)
+15. **pwa-cache-validator** — service worker 버전 / 캐시 무효화 / offline fallback 테스트
+
+### Wave 4-A: audit-code 교차검증 3 sub-wave
+
+신규 15 agent + 수정 27 agent에 대한 교차검증:
+- P0: 0건 (Wave 2-3 fix 후 깨끗)
+- P1: 11건 발견 — 주로 grep evidence 부족 / 메모리 참조 누락 / 표준 stanza 변형
+- P2: 11건 발견 — placeholder / TODO / 미세 wording
+
+### Wave 4-B: P1 11건 + P2 5건 fix (병렬 5)
+
+- 11건 stockpilot/ 경로 → services/ 교체 (compliance-gatekeeper B-3/B-5/B-7 silent-skip 패턴 해결)
+- visual-designer 40 quant → 58 quant 사실 오류 fix
+- 표준 stanza 통일 / grep evidence 박음 / 메모리 참조 정합
+
+### SHIP-BLOCKER 2건 (CEO 액션 필요)
+
+#### BLOCKER #1 — DNS / 이메일 인프라 0%
+실측 `dig pivoxquant.com`:
+- SPF: NOT_CONFIGURED
+- DKIM: NOT_CONFIGURED
+- DMARC: NOT_CONFIGURED
+- MX: NOT_CONFIGURED
+
+**영향**: SendGrid / Stripe webhook / OAuth 이메일 / 베타 onboarding 이메일 전부 deliverability 0%. 정통망법 §50 opt-out 이메일 발송 불가.
+
+**결정 옵션**:
+- **A**. Google Workspace 결제 (월 약 8천원) — feedback_no_extra_cost 충돌, CEO 결정 필요
+- **B**. SendGrid free tier (100/day) + Cloudflare email routing — 0원 유지, deliverability 검증 필요
+
+#### BLOCKER #2 — artifact-qa fixture 0%
+`tests/fixtures/virtual_users.py` 미존재. 출시 전 spawn 필요: **17 Artifact × 10 profile = 170 케이스 매트릭스** 빌드.
+
+### 외부 액션 신규 추가 (HANDOVER 추적)
+
+기존 12건 + 신규 4건 = **총 16건**:
+- #17 **DNS SPF/DKIM/DMARC 설정** (또는 SendGrid 전환) — BLOCKER #1
+- #18 **artifact-qa fixture 빌드** (170 케이스) — BLOCKER #2
+- #19 **Google Workspace 결제 결정** — BLOCKER #1 옵션 A
+- #20 **통신판매업 신고** (기존 #6 강조)
+
+### Iron Rule 준수 evidence
+
+| 룰 | evidence |
+|----|----------|
+| feedback_no_false_reports | 모든 변경 grep verify 후 보고 (아래 Verify Summary 참조) |
+| feedback_no_extra_cost | 신규 15 agent 전부 0원 (구독 / API / 결제 발생 없음, 파일 생성만) |
+| feedback_pre_launch_full_throttle | Opus 4.7 default + Wave 단위 5-10 agent 병렬 + 토큰 압축 X 유지 |
+| feedback_thorough_fixes | 9 bug 패턴 SoT 정합 / Supabase 잔재 전수 / stockpilot/ 경로 전수 / stale placeholder 전수 |
+
+### Verify Summary (grep evidence)
+
+- **신규 15 agent .md 전부 존재** (ls 실측): launch-coordinator / compliance-gatekeeper / motion-designer / visual-designer / ux-researcher / secrets-rotator / cost-monitor / data-freshness-monitor / mobile-pwa-optimizer / onboarding-designer / beta-onboarding-monitor / billing-incident-handler / release-coordinator / prod-migration-sync-verifier / pwa-cache-validator
+- **기존 39 agent .md 전부 유지** (수정만, 삭제 0)
+- **StockPilot 본문 잔재 0건** (brand guard `NOT stockpilot` 메타 라인 제외)
+- **Supabase 가정 잔재 0건** (memory `Supabase 검토 보류` reference 라인 제외)
+- **stockpilot/ 경로 잔재 0건** (3 파일 fix 완료 — services/ 또는 stockpilot/services/ 정확화)
+- **신규 15 agent 매핑 verify-design + autopilot-monitor 등 반영** (cross-ref 살아있음)
+
+### 다음 wave 권고 (CEO 결정 사항)
+
+1. **SoT 메모리 갱신**: `feedback_bug_fix_patterns.md`에 v44.x 도메인 확장 #10-15 추가 결정 (현재 보류 — CEO 권한 필요. 추가하면 SoT 1-15로 확장, 보류하면 agent 내 별도 섹션 유지)
+2. **사업장 주소 반영**: `business_registration.md` 사업장 주소 (서울특별시 성동구 독서당로 272, 107동 401호) 가 `email-deliverability.md` 등에 직접 반영 안 됨 — 후속 작업 (외부 액션 #17 진행 시 동시 처리)
+3. **SoT divergence 통일**: stripe-billing / audit-code agent가 v44.9 (40 PR) 기준 / 나머지는 v44.8 (32 PR) 기준 — 다음 세션에서 v44.9로 통일 (CEO 명시 지시 시)
+
+### 제약 & 다음 세션 ACTION
+
+- **OPEN PR**: 0건 (agent .md 작업은 git commit 없이 진행 — `~/.claude/agents/` 외부 디렉토리)
+- **다음 ACTION 1**: BLOCKER #1 (DNS) CEO 결정 → SendGrid free or Google Workspace
+- **다음 ACTION 2**: BLOCKER #2 (artifact-qa fixture) spawn — 170 케이스 매트릭스
+- **다음 ACTION 3**: 외부 액션 16건 carry-over 우선순위 재정렬
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-18 v44.9 deferred + Wave H + perf — 누적 39 PR · main `1415220 → 54485e79` · v44.7 26 + v44.8 6 + v44.9 7)
 
 ## v44.9 — deferred fix + Wave H audit + perf (2026-05-18, 추가 7 PR squash-merged)
