@@ -235,24 +235,36 @@ def _get_portfolio_returns(items, total_value, period="1y"):
     # weights by current market value
     weights = {it["ticker"]: it["market_value"] / total_value for it in items}
 
-    # fetch history for each ticker
+    # Wave H-4 P0 (2026-05-18): pre-fix was serial fetcher.get_price_history
+    # per position — N positions × ~800ms FMP RTT = 10 positions ≈ 8s wall.
+    # Every risk_quant / performance_quant endpoint paid this cost. Now
+    # parallel via ThreadPoolExecutor (PR #395 signal_detail timeout 패턴
+    # mirror). Bounded max_workers to 8 — typical Pro portfolio <30 positions
+    # but FMP per-second limit + Railway dyno CPU make 8 a safe upper.
+    import concurrent.futures
     ticker_returns: dict[str, dict[str, float]] = {}
     all_dates: set[str] = set()
+    tickers = [it["ticker"] for it in items]
 
-    for it in items:
-        hist = fetcher.get_price_history(it["ticker"], period=period)
-        if hist is None or hist.empty or len(hist) < 2:
-            continue
+    def _fetch_one(tk: str):
+        try:
+            return tk, fetcher.get_price_history(tk, period=period)
+        except Exception:
+            return tk, None
 
-        closes = hist["Close"]
-        pct = closes.pct_change().dropna()
-        date_ret = {}
-        for dt, ret in pct.items():
-            ds = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)
-            if math.isfinite(ret):
-                date_ret[ds] = float(ret)
-                all_dates.add(ds)
-        ticker_returns[it["ticker"]] = date_ret
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, max(1, len(tickers)))) as ex:
+        for tk, hist in ex.map(_fetch_one, tickers):
+            if hist is None or hist.empty or len(hist) < 2:
+                continue
+            closes = hist["Close"]
+            pct = closes.pct_change().dropna()
+            date_ret = {}
+            for dt, ret in pct.items():
+                ds = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)
+                if math.isfinite(ret):
+                    date_ret[ds] = float(ret)
+                    all_dates.add(ds)
+            ticker_returns[tk] = date_ret
 
     if not all_dates:
         return [], []
