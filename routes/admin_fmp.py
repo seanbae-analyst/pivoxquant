@@ -27,7 +27,6 @@ poll.
 from __future__ import annotations
 
 import logging
-import os
 
 from flask import Blueprint, jsonify
 from flask_login import current_user, login_required

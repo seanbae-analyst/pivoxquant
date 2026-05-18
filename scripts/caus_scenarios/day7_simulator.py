@@ -161,7 +161,7 @@ def run(page, context, *, agent_id: str, base_url: str) -> list[dict]:
             severity="P1", category="기능", page="/simulator/what-if",
             summary=f"{len(console_errors)} console error(s) during submit",
             repro=(
-                f"first 3: " + " | ".join(console_errors[:3])[:300]
+                "first 3: " + " | ".join(console_errors[:3])[:300]
             ),
             screenshot=snap,
         ))

@@ -203,7 +203,7 @@ export function InstallPrompt() {
             <>
               어느 창에서든 포트폴리오를 관찰하세요. iOS Safari 에선
               하단의 <Share className="inline h-3.5 w-3.5 align-text-bottom" />
-              {" "}공유 아이콘 → "홈 화면에 추가" 를 눌러주세요.
+              {" "}공유 아이콘 → &ldquo;홈 화면에 추가&rdquo; 를 눌러주세요.
             </>
           ) : (
             <>

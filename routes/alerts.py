@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from flask_login import current_user

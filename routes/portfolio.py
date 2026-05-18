@@ -1609,7 +1609,7 @@ def portfolio_history():
                     mv = float(row["Close"]) * p.shares
                     if is_kr:
                         try:
-                            from datetime import datetime as _dt, date as _date
+                            from datetime import date as _date
                             d_obj = (
                                 date_idx.date()
                                 if hasattr(date_idx, "date")

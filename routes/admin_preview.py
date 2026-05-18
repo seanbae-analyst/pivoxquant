@@ -25,7 +25,6 @@ This route NEVER touches the DB or real user data. All renders flow from
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Callable
 
 from flask import Blueprint, Response, abort, jsonify, request
