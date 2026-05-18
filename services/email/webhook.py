@@ -104,6 +104,15 @@ def _auto_opt_out(user_id, reason: str) -> None:
         if bool(getattr(user, "email_opt_out", False)):
             return  # already opted-out, no-op
         user.email_opt_out = True
+        # Wave G-1 Bug #6 (2026-05-18): bounce / spamreport / hosted-unsubscribe
+        # 는 implicit revocation 으로 취급. consent audit trail 일관성을 위해
+        # marketing_consent_revoked_at 도 함께 기록한다 (정통망법 §50 ① 증빙).
+        # 이미 revoke 이력이 있으면 가장 오래된 stamp 유지 — 첫 revoke 시점이
+        # 법적으로 유의미하므로 덮어쓰지 않는다.
+        if not getattr(user, "marketing_consent_revoked_at", None):
+            user.marketing_consent_revoked_at = (
+                datetime.now(timezone.utc).replace(tzinfo=None)
+            )
         # 정통망법 §50 evidentiary record — caller commits the
         # surrounding artifact update; relying on that commit so we
         # don't fragment the transaction.

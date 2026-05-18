@@ -173,6 +173,11 @@ def test_sendgrid_called_when_key_set(app, make_user, monkeypatch):
 
     with app.app_context():
         u = db.session.get(User, user["id"])
+        # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+        # marketing_consent_at to be set (정통망법 §50 default-deny).
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
         sg_instance = MagicMock()
         sg_instance.send.return_value = MagicMock(status_code=202)
         sg_class = MagicMock(return_value=sg_instance)
@@ -207,6 +212,11 @@ def test_smtp_fallback_when_no_sendgrid(app, make_user, monkeypatch):
 
     with app.app_context():
         u = db.session.get(User, user["id"])
+        # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+        # marketing_consent_at to be set (정통망법 §50 default-deny).
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
         smtp_instance = MagicMock()
         # ``smtplib.SMTP`` is used as a context manager — emulate that.
         smtp_cm = MagicMock()
@@ -281,6 +291,11 @@ def test_list_unsubscribe_header_in_smtp(app, make_user, monkeypatch):
 
     with app.app_context():
         u = db.session.get(User, user["id"])
+        # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+        # marketing_consent_at to be set (정통망법 §50 default-deny).
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
         with patch("smtplib.SMTP", FakeSMTP):
             sent = EmailSender().send(
                 u,
@@ -325,6 +340,11 @@ def test_reply_to_header_set_to_support(app, make_user, monkeypatch):
 
     with app.app_context():
         u = db.session.get(User, user["id"])
+        # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+        # marketing_consent_at to be set (정통망법 §50 default-deny).
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
         with patch("smtplib.SMTP", FakeSMTP):
             EmailSender().send(
                 u,
@@ -362,6 +382,11 @@ def test_display_name_in_from_header(app, make_user, monkeypatch):
 
     with app.app_context():
         u = db.session.get(User, user["id"])
+        # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+        # marketing_consent_at to be set (정통망법 §50 default-deny).
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
         with patch("smtplib.SMTP", FakeSMTP):
             EmailSender().send(
                 u,
@@ -401,6 +426,11 @@ def test_pdf_attachment_smtp_path(app, make_user, monkeypatch):
 
     with app.app_context():
         u = db.session.get(User, user["id"])
+        # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+        # marketing_consent_at to be set (정통망법 §50 default-deny).
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
         with patch("smtplib.SMTP", FakeSMTP):
             EmailSender().send(
                 u,
@@ -451,6 +481,11 @@ def test_png_attachment_via_attachment_mime(app, make_user, monkeypatch):
 
     with app.app_context():
         u = db.session.get(User, user["id"])
+        # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+        # marketing_consent_at to be set (정통망법 §50 default-deny).
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
         with patch("smtplib.SMTP", FakeSMTP):
             EmailSender().send(
                 u,
@@ -500,6 +535,11 @@ def test_unsubscribe_footer_injected_into_html(app, make_user, monkeypatch):
 
     with app.app_context():
         u = db.session.get(User, user["id"])
+        # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+        # marketing_consent_at to be set (정통망법 §50 default-deny).
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
         with patch("smtplib.SMTP", FakeSMTP):
             EmailSender().send(
                 u,

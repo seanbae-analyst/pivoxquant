@@ -177,11 +177,15 @@ class TestWebhookSubscriptionUpdated:
     """customer.subscription.updated — handler at routes/billing.py:297."""
 
     def test_subscription_updated_pro_to_premium(self, raw_client, app, monkeypatch):
-        """Upgrade pro→premium via price_id swap must lift the tier."""
-        monkeypatch.setattr("routes.billing.STRIPE_PRICE_PRO", "price_pro_test")
-        monkeypatch.setattr(
-            "routes.billing.STRIPE_PRICE_PREMIUM", "price_premium_test"
-        )
+        """Upgrade pro→premium via price_id swap must lift the tier.
+
+        Wave G-1 Bug #4 (2026-05-18): handler now reads STRIPE_PRICE_* via
+        ``os.environ.get`` at runtime so a Stripe test-mode → live-mode env
+        swap is picked up without a redeploy. Tests must set the env vars
+        rather than patching the (now-unused) module-level cache.
+        """
+        monkeypatch.setenv("STRIPE_PRICE_PRO", "price_pro_test")
+        monkeypatch.setenv("STRIPE_PRICE_PREMIUM", "price_premium_test")
         user_id = _make_user_with_sub(app, tier="pro", status="active")
 
         fake_event = {

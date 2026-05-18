@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import logging
+from datetime import datetime, timezone
 from functools import wraps
 
 import stripe
@@ -147,6 +148,47 @@ def create_checkout():
             kr="결제 플랜 설정이 누락되었습니다. 잠시 후 다시 시도해 주세요.",
             code="BILLING_PRICE_ID_MISSING", status=500,
         )
+
+    # Wave G-1 Bug #3 (2026-05-18): block double-subscribe.
+    # 이중 구독 시 Stripe customer 가 두 개의 active subscription 을 보유하게 되어
+    # 사용자가 매월 2배 청구를 받게 됨. 변경은 Customer Portal 로 유도.
+    if getattr(current_user, "subscription_status", None) == "active":
+        return api_error(
+            en="Already subscribed. Use the customer portal to change plans.",
+            kr="이미 구독 중입니다. 결제 포털에서 플랜을 변경하세요.",
+            code="BILLING_ALREADY_SUBSCRIBED", status=409,
+        )
+
+    # Wave G-1 Bug #1 (2026-05-18): server-side consent audit trail.
+    # 금소법 §19 (설명의무) + 전자상거래법 §22의2 (정기결제 청약 확인) +
+    # PIPA §28-8 (Stripe 미국 국외이전 동의) — 클라이언트가 보낸 동의 블록을
+    # 서버에서 검증하고 evidentiary timestamp 를 갱신.
+    consent = d.get("consent") or {}
+    required_keys = {"key_info", "recurring", "stripe_overseas"}
+    granted = {k for k, v in consent.items() if v}
+    if not required_keys.issubset(granted):
+        return api_error(
+            en="Billing consent required (key info, recurring billing, "
+               "Stripe overseas transfer).",
+            kr="결제 동의 누락 — 핵심정보·정기결제·해외이전(Stripe) 동의가 모두 필요합니다.",
+            code="BILLING_CONSENT_MISSING", status=400,
+        )
+    # cross_border_consent_at 갱신 — Stripe 는 미국 결제처리자이므로 PIPA §28-8
+    # 국외이전 동의가 갱신되어야 함. (별도 billing_consent_at column 추가는
+    # migration 036 — 본 PR 범위 외.) Naive UTC 컨벤션 유지.
+    try:
+        current_user.cross_border_consent_at = (
+            datetime.now(timezone.utc).replace(tzinfo=None)
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "Failed to persist consent timestamp for user_id=%s",
+            getattr(current_user, "id", "?"),
+        )
+        # consent timestamp 실패는 checkout 진행을 막을 정도는 아님 — Stripe 측
+        # metadata 에도 user_id 가 있어 사후 reconciliation 가능. 로그만 남김.
 
     try:
         customer_id = _get_or_create_customer(current_user)
@@ -334,10 +376,28 @@ def _handle_subscription_updated(subscription):
         items = subscription.get("items", {}).get("data", [])
         if items:
             price_id = items[0].get("price", {}).get("id", "")
-            if price_id == STRIPE_PRICE_PREMIUM:
+            # Wave G-1 Bug #4 (2026-05-18): module-level STRIPE_PRICE_*
+            # 은 import 시점에 한 번만 캡처되어 deploy 후 env 변경이 반영되지
+            # 않는다. webhook 핸들러는 env 를 runtime 마다 read 해서 test-mode
+            # → live-mode 전환 시 재배포 없이 즉시 반영되어야 한다.
+            stripe_price_pro = os.environ.get("STRIPE_PRICE_PRO", "")
+            stripe_price_premium = os.environ.get("STRIPE_PRICE_PREMIUM", "")
+            if not (stripe_price_pro or stripe_price_premium):
+                logger.warning(
+                    "STRIPE_PRICE_* env not set — subscription.updated tier "
+                    "sync skipped (user_id=%s, price_id=%s)",
+                    user.id, price_id,
+                )
+            elif price_id == stripe_price_premium:
                 user.subscription_tier = "premium"
-            elif price_id == STRIPE_PRICE_PRO:
+            elif price_id == stripe_price_pro:
                 user.subscription_tier = "pro"
+            else:
+                logger.warning(
+                    "Unknown price_id in subscription.updated: %s "
+                    "(user_id=%s) — tier kept as %s",
+                    price_id, user.id, user.subscription_tier,
+                )
     elif status in ("canceled", "unpaid"):
         user.subscription_tier = "free"
         user.subscription_status = "inactive"
