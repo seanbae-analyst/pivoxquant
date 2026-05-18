@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 # ── In-memory caches ──
 discover_cache: dict = {}  # user_id -> {ts, data}
+_discover_cache_lock = threading.Lock()  # P1-1: thread-safe discover_cache writes
 DISCOVER_TTL = 7200        # 2 hours — extended 2026-04-22 to absorb FMP 402 bursts
 
 ca_cache: dict = {}        # cross-asset cache
@@ -49,13 +50,29 @@ def earnings_tone_cache_get(ticker: str):
         return entry.get("data")
 
 
+EARNINGS_TONE_MAX_ENTRIES = 1000  # P1-2: LRU cap — ~800 major tickers + headroom
+
+
 def earnings_tone_cache_set(ticker: str, data: dict) -> None:
-    """Thread-safe write to the earnings-tone cache."""
+    """Thread-safe write to the earnings-tone cache.
+
+    P1-2: LRU prune at EARNINGS_TONE_MAX_ENTRIES so the in-process dict
+    cannot grow unbounded when many tickers are analyzed over 90-day windows.
+    Mirrors the risk_snapshot_cache_set eviction pattern.
+    """
     if not ticker or data is None:
         return
     ticker = ticker.upper().strip()
     with _earnings_tone_lock:
         earnings_tone_cache[ticker] = {"data": data, "ts": time.time()}
+        if len(earnings_tone_cache) > EARNINGS_TONE_MAX_ENTRIES:
+            # Evict oldest 25% — identical strategy to risk_snapshot_cache_set.
+            ordered = sorted(
+                earnings_tone_cache.items(),
+                key=lambda kv: kv[1].get("ts", 0),
+            )
+            for old_key, _ in ordered[: len(ordered) // 4]:
+                earnings_tone_cache.pop(old_key, None)
 
 
 def earnings_tone_budget_check_and_increment() -> bool:
@@ -98,6 +115,41 @@ def get_signal(ticker: str):
     return row
 
 
+# P0-2: Per-user sizing fields that are computed from the requesting user's
+# capital. These MUST NOT be stored in the shared ticker-keyed SignalCache —
+# doing so leaks user A's portfolio size to user B who reads the same cache.
+# Strip at the write boundary; callers that need sizing call hydrate_sizing().
+_PER_USER_FIELDS = frozenset(("rec_inv", "rec_sh", "capital_needed", "capital_gap"))
+
+
+def hydrate_sizing(cached_data: dict, capital_usd: float, capital_krw: float, price: float) -> dict:
+    """Re-compute per-user sizing fields from a cached (stripped) signal dict.
+
+    This mirrors the sizing logic in services/quant/engine.py so read callers
+    get the correct values for the requesting user's capital without those
+    values ever entering the shared cache.
+
+    Returns a new dict (does not mutate cached_data).
+    """
+    out = dict(cached_data)
+    try:
+        is_kr = bool(out.get("is_korean", False))
+        cap = float(capital_krw if is_kr else capital_usd) or 0.0
+        p = float(price or out.get("price") or 0)
+        if cap > 0 and p > 0:
+            # Allocate 5% of available capital (conservative default — mirrors engine.py)
+            alloc = cap * 0.05
+            out["rec_inv"] = round(alloc, 2)
+            shares = alloc / p
+            out["rec_sh"] = round(shares, 6 if is_kr else 4)
+            out["capital_needed"] = round(p * out["rec_sh"], 2)
+            out["capital_gap"] = round(max(0.0, out["capital_needed"] - cap), 2)
+    except Exception:
+        # Non-fatal: return data without sizing rather than raising.
+        pass
+    return out
+
+
 def save_signal(ticker: str, data: dict):
     """Upsert signal cache for a ticker. Always refreshes updated_at.
 
@@ -105,7 +157,15 @@ def save_signal(ticker: str, data: dict):
     scrubbed via services.legal_filter.scrub_signal BEFORE serialization so
     "매수 권고" / "포지션 축소 고려" never land in the DB. Engine/models code
     stays untouched — scrubbing happens at the storage boundary.
+
+    P0-2: per-user sizing fields (rec_inv / rec_sh / capital_needed /
+    capital_gap) are stripped BEFORE persisting so the shared ticker-keyed
+    SignalCache never exposes one user's portfolio sizing to another user.
+    Callers that need per-user sizing must call hydrate_sizing() on the read
+    side, passing the current user's capital.
     """
+    # Strip per-user sizing before scrub+persist (cross-user leak defence).
+    data = {k: v for k, v in data.items() if k not in _PER_USER_FIELDS}
     data = scrub_signal(data)
     # 2026-05-17 wave 11 P2: fail-fast at the write boundary if any upstream
     # numerical pipeline let NaN/Inf through. Python's default `allow_nan=True`

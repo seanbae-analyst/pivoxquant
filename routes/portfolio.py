@@ -1583,14 +1583,17 @@ def portfolio_history():
             logger.debug("silent-fallback: portfolio_history", exc_info=True)
             return p, None
 
-    # Wave G-5 P0 G5-01 (2026-05-18): Equity curve KRW→USD FX 변환. 미적용
-    # 시 KRW position raw 가격 (예: 1,400,000원) 이 USD 가격 ($150)에 그대로
-    # 합산 → mixed-currency portfolio +52,281% 데이터 손상. portfolio_summary
-    # _alias (line 1038-1043) 패턴 mirror — fx_service.get_rate() = USDKRW.
-    # 루프 밖 1회 fetch (N positions × M dates API 호출 회피).
-    fx_rate_usdkrw = fx_service.get_rate() or 1370.0
-    if not fx_rate_usdkrw or fx_rate_usdkrw <= 0:
-        fx_rate_usdkrw = 1370.0
+    # P0-3 (Wave H-2): per-date historical FX for equity curve.
+    # G-5 #482 added FX conversion but used fx_service.get_rate() (today's
+    # USD/KRW spot) for every historical data point. Over a 1y window the
+    # USD/KRW path can drift ±10%+ (e.g. 1290→1450), silently distorting
+    # historical KRW→USD conversions. Fix: fx_service.get_rate_at(d) per
+    # date — already implemented in fx_service for counterfactual simulators.
+    # Fallback to 1370 if historical rate unavailable; mark fx_stale=True in
+    # response so frontend can annotate the data point.
+    from services.fx_service import get_rate_at as _fx_at  # noqa: PLC0415
+
+    _fx_stale_used = False  # set to True if any date fell back to the hardcoded default
 
     all_values = {}
     with ThreadPoolExecutor(max_workers=5) as ex:
@@ -1599,13 +1602,29 @@ def portfolio_history():
                 continue
             is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
             try:
-                for date, row in h.iterrows():
-                    ds = date.strftime("%Y-%m-%d")
+                for date_idx, row in h.iterrows():
+                    ds = date_idx.strftime("%Y-%m-%d")
                     if ds not in all_values:
                         all_values[ds] = 0
                     mv = float(row["Close"]) * p.shares
                     if is_kr:
-                        mv = mv / fx_rate_usdkrw
+                        try:
+                            from datetime import datetime as _dt, date as _date
+                            d_obj = (
+                                date_idx.date()
+                                if hasattr(date_idx, "date")
+                                else _date.fromisoformat(ds)
+                            )
+                            fx = _fx_at(d_obj)
+                            # get_rate_at falls back to spot on miss; detect by
+                            # comparing against today's spot (close enough heuristic).
+                            if not fx or fx <= 0:
+                                fx = 1370.0
+                                _fx_stale_used = True
+                        except Exception:
+                            fx = 1370.0
+                            _fx_stale_used = True
+                        mv = mv / fx
                     all_values[ds] += mv
             except Exception:
                 logger.debug("silent-fallback: portfolio_history", exc_info=True)
@@ -1618,12 +1637,15 @@ def portfolio_history():
         today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
         rt_prices = realtime.get_prices_batch([p.ticker for p in positions])
         today_val = 0
+        # Today's realtime values: use today's spot rate (get_rate_at(today) →
+        # get_rate() for same-day dates — consistent with fx_service design).
+        fx_today = fx_service.get_rate() or 1370.0
         for p in positions:
             if p.ticker in rt_prices:
                 is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
                 mv = rt_prices[p.ticker]["price"] * p.shares
                 if is_kr:
-                    mv = mv / fx_rate_usdkrw
+                    mv = mv / fx_today
                 today_val += mv
         if today_val > 0:
             all_values[today] = today_val

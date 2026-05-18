@@ -456,8 +456,29 @@ def earnings_tone():
             "upgrade_required": True,
         }), 403
 
+    # P0-1 (Wave H-2): cross-user cache poisoning guard.
+    # A Pro user can POST an arbitrary `transcript` (fabricated or from a
+    # private earnings call). If we cached that result under the ticker key,
+    # every other user's GET would receive the tampered analysis for 90 days.
+    # Defence: transcript-supplied results are NEVER written to the shared
+    # cache. Only the official path (no transcript) uses the shared cache.
+    if transcript:
+        # User-supplied transcript: bypass shared cache entirely (read + write).
+        # Still gate the Claude budget so a malicious Pro user can't burn $$ at
+        # no cost by flooding custom transcripts.
+        if not cache_service.earnings_tone_budget_check_and_increment():
+            return jsonify({
+                "error": "Daily earnings-tone analysis limit reached. Please try again tomorrow.",
+                "error_kr": "오늘의 실적 톤 분석 한도를 모두 사용했습니다. 내일 다시 시도해 주세요.",
+                "budget_exceeded": True,
+            }), 429
+        result, status_code = EarningsCallToneAnalyzer.analyze(ticker, transcript=transcript)
+        # NOTE: intentionally NOT calling earnings_tone_cache_set() here.
+        return _scrub_and_jsonify(result, status_code)
+
+    # Official path (no transcript): shared cache read is safe.
     cached = cache_service.earnings_tone_cache_get(ticker)
-    if cached is not None and transcript is None:
+    if cached is not None:
         return _scrub_and_jsonify({**cached, "cached": True}, 200)
 
     # 2) Cache miss — enforce daily Claude budget before spending tokens.
@@ -469,7 +490,7 @@ def earnings_tone():
         }), 429
 
     # 3) Run analyzer (also writes to ai_models internal 24h cache).
-    result, status_code = EarningsCallToneAnalyzer.analyze(ticker, transcript)
+    result, status_code = EarningsCallToneAnalyzer.analyze(ticker, transcript=None)
 
     # 4) Persist to 90-day cache on success so engine.analyze() can surface it.
     if status_code == 200 and isinstance(result, dict) and "error" not in result:
