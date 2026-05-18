@@ -448,7 +448,13 @@ def waitlist_list() -> Any:
                     "email": _masked_email(r),
                     "persona": r.persona_interest,
                     "source": r.source,
-                    "user_id": r.user_id,
+                    # 2026-05-18 Wave G-4 P1-C: mask user_id to last-4-digits,
+                    # mirrors the audit/recent endpoint pattern (lines 298-301).
+                    # Sequential PK exposure → user-count estimation + DB scan
+                    # attack surface. Audit endpoint already comments "casual
+                    # log leaks don't expose the full id space" — waitlist
+                    # endpoint needs the same protection.
+                    "user_id_suffix": str(r.user_id)[-4:] if r.user_id else "",
                     "created_at": (
                         r.created_at.isoformat() if r.created_at else None
                     ),

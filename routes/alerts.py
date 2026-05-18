@@ -318,17 +318,16 @@ def price_check():
 
 # ── Admin manual trigger (2026-04-22) ──────────────────────────────────────
 # Used for smoke-testing the alert cron without waiting on Railway cron.
-# Admin gate: email must appear in DEV_PREMIUM_EMAILS. Same allowlist as
-# User.effective_tier — keeps the backdoor surface small.
+# 2026-05-18 Wave G-4 P1-B: gate moved from DEV_PREMIUM_EMAILS (tier override
+# env, not an admin boundary) to ADMIN_EMAILS via services.admin_emails
+# (PR #442 centralized parser). Aligns with admin_fmp / admin_preview /
+# agent_admin / command_center.
 
 def _is_admin_email(email: str | None) -> bool:
     if not email:
         return False
-    raw = os.environ.get("DEV_PREMIUM_EMAILS", "") or ""
-    if not raw:
-        return False
-    allow = {e.strip().lower() for e in raw.split(",") if e.strip()}
-    return email.lower() in allow
+    from services.admin_emails import get_admin_emails
+    return email.lower() in get_admin_emails()
 
 
 @alerts_bp.route("/admin/check", methods=["POST"])
