@@ -375,7 +375,7 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
     question_kr: "Please confirm the following to proceed:",
     type: "multi_required",
     options: [
-      { value: "age_18", label: "I am 18 years or older", label_kr: "I am 18 years or older", required: true },
+      { value: "age_18", label: "I am 14 years or older", label_kr: "I am 14 years or older", required: true },
       { value: "experience_acknowledged", label: "I have confirmed my investment experience level accurately", label_kr: "I have confirmed my investment experience level accurately", required: true },
       { value: "risk_acknowledged", label: "I understand that all investments carry risk and I may lose money", label_kr: "I understand that all investments carry risk and I may lose money", required: true },
       { value: "past_performance", label: "I understand that past performance does not guarantee future results", label_kr: "I understand that past performance does not guarantee future results", required: true },

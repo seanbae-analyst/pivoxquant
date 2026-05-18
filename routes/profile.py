@@ -253,7 +253,7 @@ def submit_onboarding():
         )
 
     # 2026-05-17 wave D-1 — legal gate. The V2 questionnaire's last block
-    # (``legal_confirmations`` multi_required) is the disclaimer wall: age 18+,
+    # (``legal_confirmations`` multi_required) is the disclaimer wall: age 14+,
     # risk acknowledgment, "past performance ≠ future results", "AI-generated
     # analysis, not licensed financial advice". Pre-fix the route only computed
     # ``legal_confirmed`` and never enforced it, so a client that omitted the
@@ -272,12 +272,12 @@ def submit_onboarding():
     if is_v2_submission and not profile_v2_result.get("legal_confirmed", False):
         return api_error(
             en=(
-                "Required legal confirmations missing: age 18+, risk acknowledgment, "
+                "Required legal confirmations missing: age 14+, risk acknowledgment, "
                 "past performance disclaimer, and AI-analysis (not licensed advice) "
                 "acknowledgment must all be checked to proceed."
             ),
             kr=(
-                "법적 확인 항목이 누락되었습니다. 만 18세 이상, 투자 위험 인지, "
+                "법적 확인 항목이 누락되었습니다. 만 14세 이상, 투자 위험 인지, "
                 "과거 수익률 면책, AI 분석(공인 투자자문 아님) 확인을 모두 체크해 "
                 "주셔야 진행할 수 있습니다."
             ),
@@ -549,12 +549,12 @@ def update_profile():
     if is_v2_submission and not profile_v2_result.get("legal_confirmed", False):
         return api_error(
             en=(
-                "Required legal confirmations missing: age 18+, risk acknowledgment, "
+                "Required legal confirmations missing: age 14+, risk acknowledgment, "
                 "past performance disclaimer, and AI-analysis (not licensed advice) "
                 "acknowledgment must all be checked to proceed."
             ),
             kr=(
-                "법적 확인 항목이 누락되었습니다. 만 18세 이상, 투자 위험 인지, "
+                "법적 확인 항목이 누락되었습니다. 만 14세 이상, 투자 위험 인지, "
                 "과거 수익률 면책, AI 분석(공인 투자자문 아님) 확인을 모두 체크해 "
                 "주셔야 진행할 수 있습니다."
             ),

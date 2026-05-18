@@ -431,8 +431,8 @@ QUESTIONNAIRE_V2: list[dict[str, Any]] = [
         "type": "multi_required",
         "options": [
             {"value": "age_18",
-             "label": "I am 18 years or older",
-             "label_kr": "만 18세 이상입니다",
+             "label": "I am 14 years or older",
+             "label_kr": "만 14세 이상입니다",
              "required": True},
             {"value": "experience_acknowledged",
              "label": "I have confirmed my investment experience level accurately",

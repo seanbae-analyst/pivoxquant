@@ -940,8 +940,13 @@ export default function OnboardingPage() {
       </header>
 
       {/* Content */}
+      {/* 2026-05-18 v44.8 F-4 deferred Bug #10: pb-24 (96px) ensures last
+          option of 6+ option multi-select clears the sticky footer (~80px
+          tall). Without bottom padding, the scrollable container's last
+          child sits flush against the footer top edge and the footer's
+          backdrop-blur overlay obscures it. */}
       <main ref={containerRef} className="flex-1 overflow-y-auto px-4 sm:px-6">
-        <div className="mx-auto max-w-lg py-6">
+        <div className="mx-auto max-w-lg py-6 pb-24">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={step}
