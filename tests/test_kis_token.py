@@ -172,3 +172,108 @@ def test_is_loadable_returns_false_for_missing_inputs():
     assert KISTokenManager._is_loadable(None, None) is False
     assert KISTokenManager._is_loadable("tok", None) is False
     assert KISTokenManager._is_loadable(None, "2030-01-01") is False
+
+
+# ── Track A-3 (2026-05-18) — AES-GCM cache encryption ─────────────────────
+
+
+class TestKISTokenCacheEncryption:
+    """Wave G-2 Bug #8 (deferred → implemented): the .kis_token_cache.json
+    file must be AES-GCM ciphertext, never plaintext access_token. These
+    tests pin the bug closed."""
+
+    def test_save_writes_aes_gcm_header_and_no_plaintext_token(self, clean_token_env):
+        """A saved cache file MUST start with PIVOX-AES-GCM-v1\\n and MUST
+        NOT contain the raw access_token bytes anywhere in the file."""
+        ktm = clean_token_env
+        from services.kis import token_manager as _ktm
+        manager = ktm.get_kis_token_manager()
+        secret_token = "SECRET-PIVOX-A3-TOKEN-do-not-leak-xyz"
+        manager._token = secret_token
+        manager._expires_at = datetime.now() + timedelta(hours=11)
+        manager._save_to_file()
+
+        with open(_ktm._CACHE_FILE, "rb") as f:
+            raw = f.read()
+        assert raw.startswith(b"PIVOX-AES-GCM-v1\n"), (
+            f"Cache file missing AES-GCM header. First 32 bytes: {raw[:32]!r}"
+        )
+        assert secret_token.encode() not in raw, (
+            "Raw access_token leaked into ciphertext file — encryption broken!"
+        )
+
+    def test_round_trip_save_load(self, clean_token_env):
+        """save → fresh instance → load must recover the exact token."""
+        ktm = clean_token_env
+        manager = ktm.get_kis_token_manager()
+        expected = "round-trip-token-A3"
+        expected_exp = (datetime.now() + timedelta(hours=10)).replace(microsecond=0)
+        manager._token = expected
+        manager._expires_at = expected_exp
+        manager._save_to_file()
+
+        # Force re-instantiation so we hit _load_from_file fresh.
+        ktm.KISTokenManager._instance = None
+        manager2 = ktm.get_kis_token_manager()
+        assert manager2._token == expected
+        # Loader promotes naive → UTC; compare ignoring tz for the equality.
+        assert manager2._expires_at.replace(tzinfo=None) == expected_exp
+
+    def test_legacy_plaintext_cache_still_loadable_then_migrated(
+        self, clean_token_env, caplog
+    ):
+        """A pre-Track-A3 plaintext JSON file must be readable (back-compat)
+        AND get re-written as ciphertext on the next save."""
+        import json as _json
+        from services.kis import token_manager as _ktm
+
+        legacy_token = "legacy-plaintext-token-pre-A3"
+        legacy_exp = (datetime.now() + timedelta(hours=8)).isoformat()
+        with open(_ktm._CACHE_FILE, "w") as f:
+            _json.dump({"token": legacy_token, "expires": legacy_exp}, f)
+
+        # Sanity: the file we just wrote IS plaintext.
+        with open(_ktm._CACHE_FILE, "rb") as f:
+            assert legacy_token.encode() in f.read()
+
+        ktm = clean_token_env
+        ktm.KISTokenManager._instance = None
+        with caplog.at_level("WARNING"):
+            manager = ktm.get_kis_token_manager()
+        assert manager._token == legacy_token, "Legacy plaintext cache not loaded"
+        assert any(
+            "plaintext detected" in r.message for r in caplog.records
+        ), "Expected plaintext-migration warning was not logged"
+
+        # Trigger a save (refresh) → file must now be ciphertext.
+        manager._save_to_file()
+        with open(_ktm._CACHE_FILE, "rb") as f:
+            after = f.read()
+        assert after.startswith(b"PIVOX-AES-GCM-v1\n"), "Auto-migration to ciphertext failed"
+        assert legacy_token.encode() not in after, "Plaintext leaked after migration"
+
+    def test_corrupt_ciphertext_is_discarded_not_crashing(self, clean_token_env, caplog):
+        """A ciphertext file written with a now-rotated key should NOT crash
+        startup — it should be silently discarded so get_token() can re-issue."""
+        from services.kis import token_manager as _ktm
+
+        # Valid header but garbage body — simulates key rotation.
+        with open(_ktm._CACHE_FILE, "wb") as f:
+            f.write(b"PIVOX-AES-GCM-v1\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+
+        ktm = clean_token_env
+        ktm.KISTokenManager._instance = None
+        with caplog.at_level("WARNING"):
+            manager = ktm.get_kis_token_manager()
+        assert manager._token is None, "Corrupt ciphertext must not populate the token"
+        assert any(
+            "decrypt failed" in r.message for r in caplog.records
+        ), "Expected decrypt-failure warning was not logged"
+
+    def test_aad_is_not_default_broker(self, clean_token_env):
+        """The kis token cache MUST use AAD b'kis-token-cache' so it cannot
+        be cross-decrypted with broker_connections rows (which use b'broker').
+        Pinned to catch accidental AAD regression."""
+        from services.kis import token_manager as _ktm
+        assert _ktm._CACHE_AAD == b"kis-token-cache"
+        assert _ktm._CACHE_AAD != b"broker"

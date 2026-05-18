@@ -80,15 +80,31 @@ LOAD_GRACE_SECONDS = 0  # accept any token whose expires_at is in the future
 _PROJECT_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
-# 2026-05-18 Wave G-2 P2 Bug #8 (admit): .kis_token_cache.json stores the
-# global KIS bearer token in plaintext. We chmod 600 inside a try/except
-# (see _save_to_file below) which may silently fail on filesystems that
-# don't enforce POSIX modes (e.g. some Windows dev setups). Risk is
-# bounded: token is global (not per-user), 12h TTL, ephemeral Railway FS
-# that resets on every redeploy. Encryption via services.crypto_service
-# would be straightforward (encrypt() + decrypt() of the json blob) but
-# is deferred to a separate wave to keep this G-2 PR scoped.
+# 2026-05-18 Track A-3 (Wave G-2 Bug #8 deferred → implemented): the cache
+# file is now AES-GCM encrypted via services.crypto_service. Format:
+#
+#     PIVOX-AES-GCM-v1\n<base64(nonce(12) || ciphertext || tag(16))>
+#
+# Key: PIVOX_BROKER_ENCRYPTION_KEY (reused from broker_connections; prod
+# fail-fast already enforced by crypto_service._load_master_key when
+# missing). AAD = b"kis-token-cache" binds ciphertext to this surface
+# and prevents cross-context replay against broker_connections columns
+# (which use the default b"broker" AAD).
+#
+# Backward compatibility: a legacy plaintext JSON cache from older builds
+# is still readable on load (warning logged) and re-saved as ciphertext
+# on the next _save_to_file call. chmod 0o600 still applied as a defense-
+# in-depth secondary control even though confidentiality now derives from
+# AES-GCM rather than file permissions.
 _CACHE_FILE = os.path.join(_PROJECT_ROOT, ".kis_token_cache.json")
+
+# Header magic — distinguishes ciphertext from legacy plaintext JSON.
+_CACHE_HEADER = b"PIVOX-AES-GCM-v1\n"
+# AAD binds the ciphertext to this specific cache surface. Reusing the
+# generic b"broker" AAD would allow a row from broker_connections to be
+# pasted into .kis_token_cache.json and decrypt successfully, leaking
+# user broker creds through the global token cache code path.
+_CACHE_AAD = b"kis-token-cache"
 
 
 class KISTokenManager:
@@ -222,12 +238,54 @@ class KISTokenManager:
         _is_fresh — see the docstring on _is_loadable for the redeploy
         race rationale. The per-request hot path still calls _is_fresh
         and refreshes proactively when <1h remains.
+
+        2026-05-18 Track A-3: file is AES-GCM ciphertext when the
+        PIVOX-AES-GCM-v1\\n header is present. Legacy plaintext JSON
+        cache files (from before this change) are still accepted on
+        read with a warning — they get re-saved as ciphertext on the
+        next token refresh (auto-migration).
         """
         try:
             if not os.path.exists(_CACHE_FILE):
                 return
-            with open(_CACHE_FILE, "r") as f:
-                cache = json.load(f)
+            with open(_CACHE_FILE, "rb") as f:
+                raw = f.read()
+            if not raw:
+                return
+
+            cache: Optional[dict] = None
+            if raw.startswith(_CACHE_HEADER):
+                # Ciphertext path (current format).
+                try:
+                    from services.crypto_service import decrypt as _decrypt
+                    body_b64 = raw[len(_CACHE_HEADER):].decode("ascii").strip()
+                    plaintext_json = _decrypt(body_b64, aad=_CACHE_AAD)
+                    cache = json.loads(plaintext_json)
+                except Exception as e:
+                    # Decrypt failure: likely PIVOX_BROKER_ENCRYPTION_KEY
+                    # rotated without re-encrypting the cache. Discard
+                    # and force a fresh issue (KIS 60s rate-limit
+                    # cooldown in get_token will absorb any storm).
+                    logger.warning(
+                        "KIS token cache decrypt failed (%s) — discarding; "
+                        "next get_token() will re-issue",
+                        type(e).__name__,
+                    )
+                    return
+            else:
+                # Legacy plaintext path — read once, warn, will be
+                # re-saved as ciphertext on next _save_to_file call.
+                try:
+                    cache = json.loads(raw.decode("utf-8"))
+                    logger.warning(
+                        "KIS token cache plaintext detected — will re-save "
+                        "as AES-GCM ciphertext on next refresh"
+                    )
+                except Exception:
+                    return
+
+            if not cache:
+                return
             token = cache.get("token")
             expires_raw = cache.get("expires")
             if not token or not expires_raw:
@@ -245,19 +303,34 @@ class KISTokenManager:
             logger.debug("KIS token cache read failed: %s", e)
 
     def _save_to_file(self) -> None:
-        """Persist token to disk with restrictive permissions (chmod 600)."""
+        """Persist token to disk as AES-GCM ciphertext + chmod 600.
+
+        2026-05-18 Track A-3: ciphertext only. The plaintext code path
+        was removed — Bug #8 (Wave G-2 PR #480) admit. Defense-in-depth:
+        chmod 0o600 is retained even though confidentiality now derives
+        from AES-GCM (the chmod was the prior sole control and could
+        silently fail on Windows dev / network FS).
+        """
         if not self._token or not self._expires_at:
             return
         try:
-            with open(_CACHE_FILE, "w") as f:
-                json.dump({"token": self._token, "expires": self._expires_at.isoformat()}, f)
+            from services.crypto_service import encrypt as _encrypt
+            plaintext_json = json.dumps(
+                {"token": self._token, "expires": self._expires_at.isoformat()},
+                separators=(",", ":"),
+            )
+            ct_b64 = _encrypt(plaintext_json, aad=_CACHE_AAD)
+            with open(_CACHE_FILE, "wb") as f:
+                f.write(_CACHE_HEADER + ct_b64.encode("ascii"))
             try:
                 os.chmod(_CACHE_FILE, stat.S_IRUSR | stat.S_IWUSR)  # 0o600
             except Exception:
-                logger.debug("silent-fallback: _save_to_file", exc_info=True)
+                logger.debug("silent-fallback: _save_to_file chmod", exc_info=True)
                 pass
         except Exception as e:
-            logger.debug("KIS token cache write failed: %s", e)
+            # Fail-soft: token is still good in memory, just not persisted.
+            # Next process restart will re-issue (rate-limited).
+            logger.warning("KIS token cache write failed: %s", e)
 
     def _issue_new_token_unsafe(self) -> Optional[str]:
         """Actually call /oauth2/tokenP. Caller must hold `self._lock`."""
