@@ -18,6 +18,32 @@ AAD (Additional Authenticated Data) binds ciphertext to a context and prevents
 cross-context replay. Default context is b"broker".
 
 Week 1 — 2026-04-18.
+
+────────────────────────────────────────────────────────────────────────────
+2026-05-18 Wave G-2 P1 Bug #1 (partial admit) — KEY ROTATION LIMITATION
+────────────────────────────────────────────────────────────────────────────
+`BrokerConnection.encryption_key_version` exists as a SmallInteger column on
+the broker_connections table but is currently **schema theater**: every row
+is hardcoded to `1` at write time (see services/broker/user_kis_service.py
+upsert_kis_connection + services/broker/user_alpaca_service.py
+upsert_alpaca_connection). This module loads a SINGLE master key from
+`PIVOX_BROKER_ENCRYPTION_KEY` — there is no key ring, no `decrypt_versioned()`
+selector, and no per-version env var fanout (e.g.
+`PIVOX_BROKER_ENCRYPTION_KEY_V1`, `_V2`, ...).
+
+Operational consequence: rotating `PIVOX_BROKER_ENCRYPTION_KEY` makes every
+existing encrypted column on broker_connections (encrypted_app_key,
+encrypted_app_secret, encrypted_account_no, encrypted_access_token)
+**permanently unrecoverable** on the next decrypt call. Users get a
+DECRYPT_FAILED 500 and must re-enter their KIS credentials.
+
+External-action carry-over: operators MUST run a re-encrypt migration script
+(decrypt with old key → encrypt with new key → persist + bump
+encryption_key_version) BEFORE rotating the env var in production.
+
+Real fix (separate wave): introduce a key-ring loader (dict[int, bytes]
+keyed by version), `decrypt_versioned(ct, version, aad)`, and have callers
+pass `conn.encryption_key_version` through to decrypt.
 """
 from __future__ import annotations
 

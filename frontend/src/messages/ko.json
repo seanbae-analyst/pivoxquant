@@ -405,7 +405,7 @@
       "appKey": "앱키 (App Key)",
       "appSecret": "시크릿 (App Secret)",
       "accountNo": "계좌번호 (앞 8자리)",
-      "accountNoHint": "숫자 6~12자리로 입력해주세요.",
+      "accountNoHint": "정확히 8자리 숫자를 입력해주세요.",
       "accountProd": "상품코드",
       "helpLink": "앱키 발급 방법 안내",
       "connectSuccess": "한국투자증권이 연결됐습니다!",
@@ -415,6 +415,24 @@
       "disconnectConfirm": "KIS 연결을 해제하시겠어요? 저장된 API 키는 영구 삭제됩니다.",
       "disconnectSuccess": "KIS 연결이 해제됐습니다.",
       "disconnectError": "연결 해제에 실패했습니다."
+    },
+    "alpaca": {
+      "eyebrow": "Alpaca Markets · 미국",
+      "modalTitle": "Alpaca 연결",
+      "modalSubtitle": "Alpaca 페이퍼 트레이딩 API 키를 입력하세요. 키는 암호화되어 저장되며, 페이퍼 계좌 관찰 용도로만 사용됩니다. 본 릴리스에서는 라이브 거래가 비활성화되어 있습니다.",
+      "byoNote": "Bring Your Own Key (BYO): 시세 데이터는 사용자 본인의 Alpaca 계정 라이선스로 조회됩니다. PivoxQuant는 Alpaca 시세를 재배포하지 않습니다 — 사용자 키, 사용자 라이선스.",
+      "envLabel": "환경",
+      "envPaper": "페이퍼",
+      "envLiveDisabled": "라이브 · 비활성",
+      "envLiveDisabledTitle": "본 릴리스에서는 라이브 거래가 비활성화되어 있습니다.",
+      "envNote": "라이브 브로커리지 라우팅은 꺼져 있습니다. 본 릴리스는 페이퍼 계좌만 관찰합니다.",
+      "keyId": "API Key ID",
+      "secretKey": "API Secret Key",
+      "connectBtn": "페이퍼 연결",
+      "connecting": "연결 중…",
+      "connectSuccess": "Alpaca 페이퍼 계좌가 연결됐습니다.",
+      "connectError": "Alpaca 연결에 실패했습니다. 키를 확인하고 다시 시도해 주세요.",
+      "disclaimer": "Alpaca 연동은 페이퍼 전용입니다. 라이브 주문은 발생하지 않습니다. 투자 자문이 아닙니다."
     },
     "manual": {
       "title": "직접 입력",

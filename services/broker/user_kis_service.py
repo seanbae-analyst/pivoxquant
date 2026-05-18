@@ -707,6 +707,15 @@ def upsert_kis_connection(
     conn.is_paper = (not _USE_REAL) if is_paper is None else bool(is_paper)
     conn.is_active = True
     conn.account_id = f"***{account_no[-4:]}" if len(account_no) >= 4 else None
+    # 2026-05-18 Wave G-2 P1 Bug #1 (partial admit): encryption_key_version
+    # column is currently schema theater — every row is hardcoded to 1.
+    # A real multi-version key ring (decrypt_versioned + per-version env vars
+    # PIVOX_BROKER_ENCRYPTION_KEY_V{n} loaded into a dict) is a separate wave.
+    # As-is, rotating PIVOX_BROKER_ENCRYPTION_KEY makes ALL broker_connections
+    # rows permanently unreadable on next decrypt. Operators must run a
+    # re-encrypt migration script BEFORE rotating the key (external action
+    # carry-over). We set the column explicitly here (not via default) so the
+    # write site is greppable when the ring is implemented.
     conn.encryption_key_version = 1
     conn.consecutive_failures = 0
     conn.last_sync_status = None
@@ -717,13 +726,71 @@ def upsert_kis_connection(
     return conn
 
 
+def _revoke_kis_token(app_key: str, app_secret: str, token: str) -> None:
+    """POST KIS /oauth2/revokeP. Best-effort — never raises.
+
+    KIS access_tokens have a 24-hour TTL and are NOT invalidated server-side
+    when we delete our local copy. Without an explicit revoke, a stale token
+    can still hit KIS APIs for up to 24h after the user "disconnects" — that
+    is a security surface that contradicts user intent.
+
+    We swallow all exceptions: a failed revoke must not block the local row
+    deletion (sovereignty: user intent to disconnect wins over our cleanup).
+    """
+    url = f"{_BASE_URL}/oauth2/revokeP"
+    try:
+        r = requests.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            data=json.dumps({
+                "appkey": app_key,
+                "appsecret": app_secret,
+                "token": token,
+            }),
+            timeout=5,
+        )
+        if r.status_code != 200:
+            logger.warning(
+                "KIS revoke non-200: status=%s body=%s",
+                r.status_code,
+                _redact_response_snippet(r.text or "", max_len=200),
+            )
+    except requests.RequestException as exc:
+        logger.warning("KIS revoke network error: %s", exc)
+    except Exception as exc:  # pragma: no cover — defensive (must not raise)
+        logger.warning("KIS revoke unexpected error: %s", exc)
+
+
 def delete_kis_connection(user_id: int) -> bool:
-    """Hard-delete the user's KIS connection (and cascade-remove secrets)."""
+    """Hard-delete the user's KIS connection (and cascade-remove secrets).
+
+    2026-05-18 Wave G-2 P1 Bug #2: before deleting the row we attempt to
+    revoke the access_token at KIS. The token has a 24h TTL — without revoke
+    a leaked/cached copy stays usable for up to 24h after disconnect. Revoke
+    is best-effort: failures are logged but never block row deletion.
+    """
     conn = BrokerConnection.query.filter_by(
         user_id=user_id, broker=UserKISService.BROKER
     ).first()
     if conn is None:
         return False
+
+    # Best-effort token revoke. Decrypt failures or missing tokens just skip
+    # the revoke step — the row deletion still proceeds.
+    if conn.encrypted_access_token:
+        try:
+            access_token = decrypt(conn.encrypted_access_token)
+            app_key = decrypt(conn.encrypted_app_key)
+            app_secret = decrypt(conn.encrypted_app_secret)
+            _revoke_kis_token(app_key, app_secret, access_token)
+        except Exception as exc:
+            logger.warning(
+                "KIS pre-delete token decrypt failed (skipping revoke) "
+                "user_id=%s: %s",
+                user_id,
+                exc,
+            )
+
     db.session.delete(conn)
     db.session.commit()
     return True

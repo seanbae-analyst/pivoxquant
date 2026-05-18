@@ -405,7 +405,7 @@
       "appKey": "App Key",
       "appSecret": "App Secret",
       "accountNo": "Account No. (first 8 digits)",
-      "accountNoHint": "Please enter 6–12 digits.",
+      "accountNoHint": "Please enter exactly 8 digits.",
       "accountProd": "Product",
       "helpLink": "How to issue an App Key",
       "connectSuccess": "KIS connected successfully!",
@@ -415,6 +415,24 @@
       "disconnectConfirm": "Disconnect KIS? Your stored API keys will be permanently removed.",
       "disconnectSuccess": "KIS disconnected.",
       "disconnectError": "Failed to disconnect."
+    },
+    "alpaca": {
+      "eyebrow": "Alpaca Markets · US",
+      "modalTitle": "Connect Alpaca",
+      "modalSubtitle": "Enter your Alpaca paper trading keys. We store them encrypted and only use them to observe your paper account. Live trading is disabled in this release.",
+      "byoNote": "Bring Your Own Key (BYO): market data is fetched under your own Alpaca account license. PivoxQuant does not redistribute Alpaca market data — your keys, your license.",
+      "envLabel": "Environment",
+      "envPaper": "Paper",
+      "envLiveDisabled": "Live · disabled",
+      "envLiveDisabledTitle": "Live trading is disabled in this release.",
+      "envNote": "Live brokerage routing is off. This release observes your paper account only.",
+      "keyId": "API Key ID",
+      "secretKey": "API Secret Key",
+      "connectBtn": "Connect paper",
+      "connecting": "Connecting…",
+      "connectSuccess": "Alpaca paper account connected.",
+      "connectError": "Could not connect Alpaca. Check the keys and try again.",
+      "disclaimer": "Alpaca integration is paper-only. No live orders will be placed. This is not investment advice."
     },
     "manual": {
       "title": "Manual",

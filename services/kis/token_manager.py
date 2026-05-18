@@ -80,6 +80,14 @@ LOAD_GRACE_SECONDS = 0  # accept any token whose expires_at is in the future
 _PROJECT_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
 )
+# 2026-05-18 Wave G-2 P2 Bug #8 (admit): .kis_token_cache.json stores the
+# global KIS bearer token in plaintext. We chmod 600 inside a try/except
+# (see _save_to_file below) which may silently fail on filesystems that
+# don't enforce POSIX modes (e.g. some Windows dev setups). Risk is
+# bounded: token is global (not per-user), 12h TTL, ephemeral Railway FS
+# that resets on every redeploy. Encryption via services.crypto_service
+# would be straightforward (encrypt() + decrypt() of the json blob) but
+# is deferred to a separate wave to keep this G-2 PR scoped.
 _CACHE_FILE = os.path.join(_PROJECT_ROOT, ".kis_token_cache.json")
 
 

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
+import { useT } from "@/lib/locale";
 
 interface AlpacaConnectModalProps {
   onClose: () => void;
@@ -25,6 +26,10 @@ export function AlpacaConnectModal({
   onClose,
   onSuccess,
 }: AlpacaConnectModalProps) {
+  // 2026-05-18 Wave G-2 P2 Bug #7: Alpaca modal had zero i18n coverage —
+  // 100% English hardcoded strings while the rest of the broker surface is
+  // KR-first. Added brokerOnboarding.alpaca.* keys mirroring the KIS pattern.
+  const t = useT();
   const [keyId, setKeyId] = useState("");
   const [secretKey, setSecretKey] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -48,14 +53,14 @@ export function AlpacaConnectModal({
           env: "paper",
         }),
       });
-      toast.success("Alpaca paper account connected");
+      toast.success(t("brokerOnboarding.alpaca.connectSuccess"));
       onSuccess?.();
       onClose();
     } catch (err) {
       const msg =
         err instanceof Error
           ? err.message
-          : "Could not connect Alpaca. Check the keys and try again.";
+          : t("brokerOnboarding.alpaca.connectError");
       setErrorMsg(msg);
       toast.error(msg);
     } finally {
@@ -64,7 +69,7 @@ export function AlpacaConnectModal({
   };
 
   return (
-    <ModalShell onClose={onClose} ariaLabel="Connect Alpaca paper account">
+    <ModalShell onClose={onClose} ariaLabel={t("brokerOnboarding.alpaca.modalTitle")}>
       <div
         className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[2px] border border-[rgba(245,240,232,0.12)] p-5 sm:p-6 sm:max-h-[90vh]"
         style={{ background: "rgba(10,10,10,0.96)" }}
@@ -73,17 +78,17 @@ export function AlpacaConnectModal({
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
-              Alpaca Markets · US
+              {t("brokerOnboarding.alpaca.eyebrow")}
             </div>
             <h3 className="font-serif text-xl text-[var(--pq-ivory)]">
-              Connect Alpaca
+              {t("brokerOnboarding.alpaca.modalTitle")}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-[2px] p-1.5 text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] hover:bg-[var(--pq-ivory-line-faint)] transition-colors"
-            aria-label="Close"
+            aria-label={t("brokerOnboarding.cancel")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -91,14 +96,10 @@ export function AlpacaConnectModal({
 
         {/* Description — BYO (Bring Your Own Key) model, per legal 2026-04-27 */}
         <p className="mb-3 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.65)]">
-          Enter your Alpaca paper trading keys. We store them encrypted and only
-          use them to observe your paper account. Live trading is disabled in
-          this release.
+          {t("brokerOnboarding.alpaca.modalSubtitle")}
         </p>
         <p className="mb-5 text-pq-mono-sm leading-relaxed text-[rgba(245,240,232,0.55)]">
-          Bring Your Own Key (BYO): market data is fetched under your own
-          Alpaca account license. PivoxQuant does not redistribute Alpaca
-          market data — your keys, your license.
+          {t("brokerOnboarding.alpaca.byoNote")}
         </p>
 
         {/* Help link */}
@@ -116,7 +117,7 @@ export function AlpacaConnectModal({
           {/* Environment — paper only */}
           <div>
             <div className="mb-1.5 text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-              Environment
+              {t("brokerOnboarding.alpaca.envLabel")}
             </div>
             <div className="flex gap-2">
               <button
@@ -125,21 +126,20 @@ export function AlpacaConnectModal({
                 aria-pressed={true}
                 className="pq-ink-btn-bronze text-pq-mono-sm"
               >
-                Paper
+                {t("brokerOnboarding.alpaca.envPaper")}
               </button>
               <button
                 type="button"
                 disabled
                 aria-pressed={false}
                 className="pq-ink-btn-ghost text-pq-mono-sm opacity-40 cursor-not-allowed"
-                title="Live trading is disabled in this release."
+                title={t("brokerOnboarding.alpaca.envLiveDisabledTitle")}
               >
-                Live · disabled
+                {t("brokerOnboarding.alpaca.envLiveDisabled")}
               </button>
             </div>
             <p className="mt-2 text-pq-eyebrow leading-relaxed text-[rgba(245,240,232,0.45)]">
-              Live brokerage routing is off. This release observes your paper
-              account only.
+              {t("brokerOnboarding.alpaca.envNote")}
             </p>
           </div>
 
@@ -149,7 +149,7 @@ export function AlpacaConnectModal({
               htmlFor="alpaca-key-id"
               className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
             >
-              API Key ID
+              {t("brokerOnboarding.alpaca.keyId")}
             </label>
             <input
               id="alpaca-key-id"
@@ -172,7 +172,7 @@ export function AlpacaConnectModal({
               htmlFor="alpaca-secret"
               className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
             >
-              API Secret Key
+              {t("brokerOnboarding.alpaca.secretKey")}
             </label>
             <input
               id="alpaca-secret"
@@ -198,10 +198,19 @@ export function AlpacaConnectModal({
             <button
               type="submit"
               disabled={!canSubmit}
+              // 2026-05-18 Wave G-2 P2 Bug #5: mirror the KIS modal fix —
+              // `pq-ink-btn-bronze` sets `cursor: pointer` without a
+              // `:disabled { cursor: not-allowed }` selector, so the
+              // Tailwind `disabled:cursor-not-allowed` variant loses
+              // specificity. Inline style guarantees not-allowed wins
+              // regardless of CSS layer order.
+              style={!canSubmit ? { cursor: "not-allowed" } : undefined}
               className="pq-ink-btn-bronze flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {submitting ? "Connecting…" : "Connect paper"}
+              {submitting
+                ? t("brokerOnboarding.alpaca.connecting")
+                : t("brokerOnboarding.alpaca.connectBtn")}
             </button>
             <button
               type="button"
@@ -209,15 +218,14 @@ export function AlpacaConnectModal({
               disabled={submitting}
               className="pq-ink-btn-ghost disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Cancel
+              {t("brokerOnboarding.cancel")}
             </button>
           </div>
         </form>
 
         {/* Disclaimer */}
         <p className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-pq-eyebrow leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
-          Alpaca integration is paper-only. No live orders will be placed. This
-          is not investment advice.
+          {t("brokerOnboarding.alpaca.disclaimer")}
         </p>
       </div>
     </ModalShell>
