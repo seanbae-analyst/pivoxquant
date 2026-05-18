@@ -106,17 +106,20 @@ pivoxquant.com.  600    IN  A   216.198.79.1
 |------|------|----------|
 | **Google Workspace 결제** | ❌ REJECTED (CEO 2026-05-18) | $96/년 비용 거절 — `feedback_no_extra_cost` 충돌. ImprovMX + SendGrid 0원 path 채택 |
 | **ImprovMX free tier** (수신) | ⏳ PENDING_SETUP | CEO 가 `docs/ops/email-setup-2026-05-18.md` §1-1 따라 가입 + alias 4개 + MX 2개 등록 |
-| **SendGrid free tier** (발송) | ⏳ PENDING_SETUP | CEO 가 §1-2 따라 가입 + Domain Auth + API Key 발급 (free tier 100/day) |
+| **SendGrid free tier** (발송 primary) | ⏳ PENDING_SETUP | CEO 가 §1-2 따라 가입 + Domain Auth + API Key 발급 (free tier 100/day) |
+| **Brevo free tier** (발송 fallback, 2026-05-18 추가) | ⏳ PENDING_SETUP | CEO 가 `docs/ops/email-setup-2026-05-18.md` §1-4 따라 가입 + Domain Auth + API Key 발급 (free tier 300/day 영구). `services/email/sender.py` cascade 가 SendGrid 429/5xx 시 자동 전환 |
 | **가비아 DNS 콘솔 접근 권한** | ✅ CEO 보유 (NS 가 가비아) | §1-3 §2 레코드 7개 입력 |
 | **SMTP relay 결정** | ✅ RESOLVED | SendGrid v3 API (free 100/day). SMTP fallback 은 `services/email/sender.py` 자체 cascade 가 처리 |
 
-### 0원 path (확정) — ImprovMX + SendGrid
+### 0원 path (확정) — ImprovMX + SendGrid + Brevo
 
 | 역할 | Provider | 비용 | 한도 |
 |------|----------|------|------|
 | 수신 (`support@` etc.) | **ImprovMX** | $0 free | 25 alias, 무제한 forward |
-| 발송 (`noreply@`) | **SendGrid** | $0 free | 100 emails/day, DKIM 도메인 인증 |
-| DNS | **가비아** (기존) | $0 추가 | NS 변경 없음 — 가비아 콘솔에서 7 레코드만 추가 |
+| 발송 primary (`noreply@`) | **SendGrid** | $0 free | 100 emails/day, DKIM 도메인 인증 |
+| 발송 fallback (`noreply@`) | **Brevo** (구 Sendinblue, 2026-05-18 추가) | $0 free | **300 emails/day 영구**, DKIM (`mail._domainkey` selector) |
+| 결합 발송 한도 | SendGrid + Brevo | **$0** | **400 emails/day = 월 12,000** |
+| DNS | **가비아** (기존) | $0 추가 | NS 변경 없음 — 가비아 콘솔에서 9 레코드 (Brevo CNAME 2개 포함) 추가 |
 | 결제 | — | **$0** | `feedback_no_extra_cost` 100% 정합 |
 
 ### BLOCKER
@@ -255,10 +258,14 @@ services/artifacts/templates/
 
 | Env 변수 | 값 | 사용처 | 등록 위치 |
 |----------|----|----|----------|
-| `SENDGRID_API_KEY` | (SendGrid 콘솔 발급, Mail Send Full Access only) | `services/email/sender.py` 17 artifact cascade + `services/email/sendgrid_provider.py` system mail | Vercel + Railway |
+| `SENDGRID_API_KEY` | (SendGrid 콘솔 발급, Mail Send Full Access only) | `services/email/sender.py` 17 artifact cascade (primary) + `services/email/sendgrid_provider.py` system mail | Vercel + Railway |
 | `SENDGRID_FROM_EMAIL` | `noreply@pivoxquant.com` | `sendgrid_provider.send()` default sender | Vercel + Railway |
 | `SENDGRID_FROM_NAME` | `PivoxQuant` | `sendgrid_provider.send()` display name | Vercel + Railway |
-| `SUPPORT_EMAIL` | `support@pivoxquant.com` | `sendgrid_provider.send()` default reply-to + UI 표시 | Vercel + Railway |
+| `BREVO_API_KEY` | (Brevo 콘솔 발급, transactional API only) | `services/email/sender.py` 17 artifact cascade (fallback) + `services/email/brevo_provider.py` system mail | Vercel + Railway |
+| `BREVO_FROM_EMAIL` | `noreply@pivoxquant.com` (SendGrid 와 동일 sender) | `brevo_provider.send()` default sender | Vercel + Railway |
+| `BREVO_FROM_NAME` | `PivoxQuant` | `brevo_provider.send()` display name | Vercel + Railway |
+| `BREVO_PROVIDER_PRIMARY` | `false` (기본) | sender.py cascade 순서 — `true` 시 Brevo 우선, SendGrid fallback | Vercel + Railway |
+| `SUPPORT_EMAIL` | `support@pivoxquant.com` | `sendgrid_provider.send()` + `brevo_provider.send()` default reply-to + UI 표시 | Vercel + Railway |
 | `LEGAL_EMAIL` | `legal@pivoxquant.com` | DMARC `rua` 집계 리포트 + legal inquiry alias | Vercel + Railway |
 
 > **17 artifact 의 per-mailer `*_FROM_EMAIL` 변수 (예: `WEEKLY_MEMO_FROM_EMAIL`) 는 별도** — `sender.py` 가 직접 읽음. `SENDGRID_FROM_EMAIL` 은 `sendgrid_provider.py` (OAuth 알림 / 2FA / admin alert 등 비-artifact transactional) 만 사용. 두 path 가 분리된 이유는 `services/email/sendgrid_provider.py` 모듈 docstring 참조.
@@ -333,15 +340,21 @@ services/artifacts/templates/
 | 메트릭 | 수집처 | 책임 Agent | 주기 |
 |--------|--------|-----------|------|
 | SendGrid 일일 사용량 (100/day 한도) | SendGrid Activity Feed API (`/v3/messages?limit=...`) | **cost-monitor** | daily 04:00 KST |
-| Bounce / spam complaint | SendGrid Suppressions API + `services/email/webhook.py` | **email-deliverability** (본 agent) | on-event |
-| Domain authentication DKIM rotation (30d) | SendGrid `/v3/whitelabel/domains/<id>` | **cost-monitor** | weekly |
+| **Brevo 일일 사용량 (300/day 한도)** | Brevo Statistics API (`GET /v3/smtp/statistics/aggregatedReport`) | **cost-monitor** (2026-05-18 추가) | daily 04:00 KST |
+| **결합 사용량 (400/day 한도)** | SendGrid + Brevo 합산 — cost-monitor 가 두 provider 결과 sum | **cost-monitor** | daily 04:00 KST |
+| Bounce / spam complaint | SendGrid Suppressions API + Brevo Webhook + `services/email/webhook.py` | **email-deliverability** (본 agent) | on-event |
+| Domain authentication DKIM rotation (30d) | SendGrid `/v3/whitelabel/domains/<id>` + Brevo `/v3/senders/domains/<domain>` | **cost-monitor** | weekly |
 | ImprovMX forward 누락 | Gmail manual 점검 (자동화 어려움 — ImprovMX API tier 한정적) | CEO weekly + **data-freshness-monitor** (incoming bounce log) | weekly |
-| 일 80통 도달 alert | cost-monitor → Slack/Sentry | **cost-monitor** | hourly check |
+| 일 80통 / 240통 도달 alert | cost-monitor → Slack/Sentry | **cost-monitor** | hourly check |
 | SPF/DKIM/DMARC PASS rate | Gmail Postmaster Tools (domain reputation) | **email-deliverability** | weekly |
+| **Provider 사용 분포** | `services/email/sender.py` 로그 (`email dispatched via {SendGrid|Brevo}`) | **cost-monitor** | daily |
 
 **알림 트리거**:
-- SendGrid 일 80통 도달 → cost-monitor alert (free 100/day 임박)
-- SendGrid 5xx 연속 3회 → email-deliverability alert (provider 장애)
+- SendGrid 일 80통 도달 → cost-monitor info alert (free 100/day 임박 — Brevo 자동 fallback 작동 확인)
+- **Brevo 일 240통 도달 → cost-monitor warning alert (free 300/day 임박)**
+- **결합 320통 도달 → cost-monitor critical alert (400/day 한도 80% — 유료 검토 또는 SMTP fallback 확인)**
+- SendGrid 5xx 연속 3회 → email-deliverability alert (provider 장애, Brevo fallback 동작 확인)
+- **Brevo 5xx 연속 3회 → email-deliverability alert (둘 다 fail 시 SMTP 또는 dev-mode)**
 - DMARC `rua` 리포트에 unauthenticated source → email-deliverability alert (spoofing 시도)
 
 **모니터링 환경 의존**:

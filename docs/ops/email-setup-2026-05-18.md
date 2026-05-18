@@ -15,7 +15,8 @@
 | Google Workspace | $6/mo·user = **$96/년** | ❌ `feedback_no_extra_cost` 위반 |
 | Cloudflare Email Routing | $0 (NS 위임 필요) | ⚠️ 가비아 → Cloudflare NS 이전 24h 대기 + import 회귀 위험 |
 | **ImprovMX (수신 forward)** | **$0** (free tier 25 alias, 무제한 forward) | ✅ **선택** — 가비아 DNS 그대로 |
-| **SendGrid (발송)** | **$0** (free tier 100/day) | ✅ **선택** — DKIM 도메인 인증 |
+| **SendGrid (발송 primary)** | **$0** (free tier 100/day) | ✅ **선택** — DKIM 도메인 인증 |
+| **Brevo (발송 fallback, ex-Sendinblue)** | **$0** (free tier **300/day 영구**) | ✅ **선택** (2026-05-18 추가) — SendGrid quota 초과 시 자동 대체. 결합 **400/day** |
 | Postmark / Mailgun | $15+/mo | ❌ 출시 후 검토 |
 
 **조합 근거**:
@@ -61,6 +62,25 @@
     - **Create & View** → 한 번만 보이는 키 복사 → `/tmp/sendgrid-key.txt` (chmod 600) 임시 저장
 11. SendGrid 대시보드 돌아가서 (§2 DNS 입력 + 전파 후) **Verify** 클릭 → 5분 안에 ✅
 
+### 1-4. Brevo 계정 + Domain Auth + API Key (10분) — **0원 fallback**
+
+> **왜 Brevo?** SendGrid free = 100/day 가 베타 100명 단계에서 임박. Brevo (구 Sendinblue) free = **300/day 영구**. 결합 시 400/day, 월 12k 발송. 별도 결제 없음 — `feedback_no_extra_cost` 정합. SendGrid 가 429 (quota) / 5xx (장애) 반환 시 `services/email/sender.py` cascade 가 자동으로 Brevo 로 전환.
+
+1. https://www.brevo.com (구 sendinblue.com 자동 redirect) 접속 → **Sign up free**
+2. 이메일 + 비밀번호만 입력 (신용카드 X). 가입 직후 회사 정보 설문 — "PivoxQuant / Solo founder / Transactional" 응답
+3. 좌측 메뉴 → **Senders, Domains & Dedicated IPs → Domains → Add a domain** → `pivoxquant.com`
+4. Brevo 가 DKIM CNAME 2개 (또는 1개 TXT) 와 Brevo-code TXT 1개 제공:
+   - `mail._domainkey.pivoxquant.com` → `<brevo-provided-target>` (DKIM)
+   - `brevo-code.pivoxquant.com` → `<brevo-provided-code>` (도메인 소유권 확인)
+   - (선택) Brevo 가 별도 DMARC 권고 시 §2 의 `_dmarc` 와 충돌 — 무시. 우리 DMARC 가 SoT.
+5. 위 값을 메모 (§2 가비아 입력에 추가) — **SendGrid `s1./s2._domainkey` 와 충돌 없음** (selector 가 `mail`)
+6. 좌측 → **SMTP & API → API Keys → Generate a new API key**
+   - Name: `pivoxquant-prod-2026-05-18`
+   - **Create** → 한 번만 보이는 키 복사 → `/tmp/brevo-key.txt` (chmod 600) 임시 저장
+7. (§2 DNS 입력 + 전파 후) Brevo 도메인 페이지에서 **Authenticate this domain** 클릭 → 5분 안에 ✅
+
+> **SPF 추가 변경 없음** — Brevo 는 발송 시 **자체 envelope-sender 도메인** (`*.brevosend.com`) 을 사용하고, From 도메인 (`noreply@pivoxquant.com`) 의 DKIM 만 우리 도메인에 위탁. 우리의 SPF 에 `include:spf.brevo.com` **추가 불필요** (만일 Gmail 이 SPF align 강제하면 § 5-A 갱신). DMARC 는 DKIM align 으로 통과.
+
 ### 1-3. 가비아 DNS 콘솔 입력 (§2 표대로, 10분)
 
 1. https://my.gabia.com 로그인 → My가비아 → **도메인 통합 관리툴** → `pivoxquant.com` 선택
@@ -86,6 +106,8 @@
 | CNAME | `s1._domainkey` | `s1.domainkey.u<NUM>.wl<NUM>.sendgrid.net` (SendGrid 화면 복사) | 3600 |
 | CNAME | `s2._domainkey` | `s2.domainkey.u<NUM>.wl<NUM>.sendgrid.net` (SendGrid 화면 복사) | 3600 |
 | CNAME | `em<NUM>` | `u<NUM>.wl<NUM>.sendgrid.net` (SendGrid 화면 복사) | 3600 |
+| CNAME | `mail._domainkey` | (Brevo 화면 복사 — DKIM fallback selector) | 3600 |
+| CNAME | `brevo-code` | (Brevo 화면 복사 — 도메인 소유권 확인) | 3600 |
 | TXT | `_dmarc` | `v=DMARC1; p=quarantine; rua=mailto:legal@pivoxquant.com; pct=100` | 3600 |
 
 ### §2-A. SPF 합본 규칙 (단일 TXT 만 허용)
@@ -193,6 +215,10 @@ Vercel Dashboard → **pivoxquant** 프로젝트 → **Settings → Environment 
 | `SENDGRID_API_KEY` | (§1-2 step 10 에서 복사한 키) | Production, Preview |
 | `SENDGRID_FROM_EMAIL` | `noreply@pivoxquant.com` | Production, Preview |
 | `SENDGRID_FROM_NAME` | `PivoxQuant` | Production, Preview |
+| `BREVO_API_KEY` | (§1-4 step 6 에서 복사한 키) | Production, Preview |
+| `BREVO_FROM_EMAIL` | `noreply@pivoxquant.com` (SendGrid 와 동일 — 1 sender) | Production, Preview |
+| `BREVO_FROM_NAME` | `PivoxQuant` | Production, Preview |
+| `BREVO_PROVIDER_PRIMARY` | `false` (기본 — SendGrid 우선, Brevo fallback). SendGrid 평판 저하 시 `true` 로 토글 | Production, Preview |
 | `SUPPORT_EMAIL` | `support@pivoxquant.com` | Production, Preview |
 | `LEGAL_EMAIL` | `legal@pivoxquant.com` | Production, Preview |
 
@@ -217,18 +243,22 @@ Vercel Dashboard → **pivoxquant** 프로젝트 → **Settings → Environment 
 
 → 25 alias 안쪽이면 영구 0원. 베타 100명 → 1000명 가도 변동 없음.
 
-### 5-2. SendGrid free tier
+### 5-2. SendGrid + Brevo 결합 한도 (2026-05-18 갱신)
 
-| 항목 | 한도 | 초과 시 |
-|------|------|---------|
-| Emails/day | **100** | 다음날까지 차단 (429 + bounce) |
-| API requests | 무제한 | — |
-| Domain auth | 1 도메인 | — |
+| Provider | Emails/day | API requests | Domain auth | 비용 |
+|----------|------------|--------------|-------------|------|
+| **SendGrid** (primary) | **100** | 무제한 | 1 도메인 | $0 |
+| **Brevo** (fallback) | **300 영구** | 무제한 | 1 도메인 | $0 |
+| **결합** | **400/day = 월 12,000** | — | 동일 도메인 | **$0** |
 
-→ **17 artifact 매일 발송 시나리오**:
+초과 시 (둘 다 429) → 다음날 00:00 UTC 까지 차단 (cost-monitor alert + SMTP fallback 동작 시 SMTP, 아니면 dev-mode log).
+
+→ **17 artifact 매일 발송 시나리오** (결합 400/day 기준):
 - 베타 단계 (사용자 5-10명): weekly_memo 1회/주 + earnings_prebrief 산발 = 일평균 10통 미만 ✅
-- 100 사용자 시: 일평균 50통 (artifact 별 발송 빈도 합산) → 한도 도달 임박
-- **트리거**: 일 사용량 80통 도달 시 cost-monitor agent alert
+- 100 사용자 시: 일평균 50통 (artifact 별 발송 빈도 합산) ✅ (SendGrid 단독으로도 OK)
+- 500 사용자 시: 일평균 200-250통 → SendGrid 100 소진 후 Brevo 자동 fallback ✅
+- 1000+ 사용자: 일평균 400+ → Brevo 도 한도 임박, 유료 검토 시점 (§6 트리거)
+- **트리거**: SendGrid 일 80통 → cost-monitor alert (Brevo 자동 fallback 작동) / SendGrid + Brevo 합산 320통 → critical alert (유료 검토)
 
 ### 5-3. 모니터링 연계
 

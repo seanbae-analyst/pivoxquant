@@ -23,12 +23,21 @@ Behaviour parity (must remain identical to the Phase 2 baseline)
    is used for both the inline footer and the ``List-Unsubscribe``
    header.
 3. **Transport priority.** SendGrid first (when ``SENDGRID_API_KEY``
-   is set); SMTP STARTTLS fallback (when ``SMTP_HOST`` is set);
-   otherwise we log + return ``False`` (dev-mode). On a SendGrid
-   exception we fall through to SMTP — *that* is a deliberate
-   improvement over the Phase 2 inlined paths, which used to give up
-   on a SendGrid 5xx. Any SendGrid 2xx or 4xx still short-circuits
-   cleanly because we only fall through on raised exceptions.
+   is set); **Brevo second** (when ``BREVO_API_KEY`` /
+   ``SENDINBLUE_API_KEY`` is set — adds a free 300/day tier for a
+   combined 400/day budget); SMTP STARTTLS fallback (when
+   ``SMTP_HOST`` is set); otherwise we log + return ``False``
+   (dev-mode). On a SendGrid exception (5xx) or
+   :class:`~services.email.sendgrid_provider.SendGridRateLimitExceeded`
+   (429 — daily quota) we fall through to Brevo, then SMTP — *that* is
+   a deliberate improvement over the Phase 2 inlined paths, which used
+   to give up on a SendGrid 5xx. Any SendGrid 2xx still short-circuits
+   cleanly because we return immediately on ``ok=True``.
+
+   **Operational override.** Setting ``BREVO_PROVIDER_PRIMARY=true``
+   flips the order so Brevo is tried first and SendGrid is the
+   fallback — useful when SendGrid's domain reputation degrades or
+   its 100/day cap is exhausted early in the day.
 4. **Headers (RFC 8058).** Every outgoing message — SendGrid or SMTP —
    gets ``List-Unsubscribe: <url>`` plus ``List-Unsubscribe-Post:
    List-Unsubscribe=One-Click``. Gmail / Outlook surface the inbox-
@@ -187,34 +196,91 @@ class EmailSender:
         # alongside the List-Unsubscribe header).
         html_body = inject_unsubscribe_footer(html_body, unsubscribe_url)
 
-        # ── 3. SendGrid first ──────────────────────────────────────────
+        # ── 3. provider cascade: SendGrid → Brevo → SMTP ───────────────
+        # Operational override: ``BREVO_PROVIDER_PRIMARY=true`` flips
+        # the first two tiers (Brevo first, SendGrid fallback). SMTP
+        # remains the last-resort transport in both orderings. The
+        # lazy import below avoids loading the provider modules when
+        # only SMTP / dev-mode is configured.
+        from services.email import brevo_provider as _brevo_provider  # local import
+
         sg_key = os.environ.get("SENDGRID_API_KEY")
-        if sg_key:
+        brevo_first = _brevo_provider.is_primary()
+
+        # Build the ordered tier list once so we don't repeat the
+        # ``brevo_first`` branch logic. Each entry is
+        # ``(label, predicate, callable)``; the predicate gates whether
+        # the tier is even attempted (e.g. SendGrid skipped when
+        # ``SENDGRID_API_KEY`` is unset). Each callable raises on
+        # non-2xx; ``True`` short-circuits the cascade.
+        def _try_sendgrid() -> bool:
+            return self._send_via_sendgrid(
+                sg_key=sg_key or "",
+                from_email=from_email,
+                display_name=display_name,
+                to_email=user.email,
+                subject=subject,
+                html_body=html_body,
+                pdf_bytes=pdf_bytes,
+                pdf_filename=pdf_filename,
+                attachment_mime=attachment_mime,
+                unsubscribe_url=unsubscribe_url,
+                reply_to=reply_to,
+            )
+
+        def _try_brevo() -> bool:
+            return self._send_via_brevo(
+                from_email=from_email,
+                display_name=display_name,
+                to_email=user.email,
+                subject=subject,
+                html_body=html_body,
+                pdf_bytes=pdf_bytes,
+                pdf_filename=pdf_filename,
+                attachment_mime=attachment_mime,
+                unsubscribe_url=unsubscribe_url,
+                reply_to=reply_to,
+            )
+
+        # Brevo predicate: any of the two accepted env keys present.
+        brevo_configured = bool(
+            os.environ.get("BREVO_API_KEY")
+            or os.environ.get("SENDINBLUE_API_KEY")
+        )
+
+        tiers: list[tuple[str, bool, Any]] = (
+            [
+                ("Brevo", brevo_configured, _try_brevo),
+                ("SendGrid", bool(sg_key), _try_sendgrid),
+            ]
+            if brevo_first
+            else [
+                ("SendGrid", bool(sg_key), _try_sendgrid),
+                ("Brevo", brevo_configured, _try_brevo),
+            ]
+        )
+
+        for label, configured, attempt in tiers:
+            if not configured:
+                continue
             try:
-                ok = self._send_via_sendgrid(
-                    sg_key=sg_key,
-                    from_email=from_email,
-                    display_name=display_name,
-                    to_email=user.email,
-                    subject=subject,
-                    html_body=html_body,
-                    pdf_bytes=pdf_bytes,
-                    pdf_filename=pdf_filename,
-                    attachment_mime=attachment_mime,
-                    unsubscribe_url=unsubscribe_url,
-                    reply_to=reply_to,
-                )
-                if ok:
+                if attempt():
+                    # Tag the provider used so cost-monitor can
+                    # attribute usage per provider when scraping logs.
+                    logger.info(
+                        "email dispatched via %s for user %s",
+                        label, getattr(user, "id", "?"),
+                    )
                     return True
             except Exception:
-                # Log + fall through to SMTP. The Phase 2 baseline used
-                # to short-circuit to ``return False`` here, but that
-                # made a transient SendGrid 5xx silently kill the email
-                # even when an SMTP fallback was configured. Retrying
-                # via SMTP is strictly safer.
+                # Log + fall through to the next tier. The Phase 2
+                # baseline used to short-circuit to ``return False``
+                # on the first SendGrid exception, but that made a
+                # transient 5xx silently kill the email even when a
+                # fallback was configured. Cascading is strictly safer.
                 logger.exception(
-                    "SendGrid send failed for user %s; trying SMTP",
-                    getattr(user, "id", "?"),
+                    "%s send failed for user %s; trying next transport",
+                    label, getattr(user, "id", "?"),
                 )
 
         # ── 4. SMTP fallback ───────────────────────────────────────────
@@ -341,6 +407,64 @@ class EmailSender:
             logger.debug("SendGrid timeout set failed", exc_info=True)
         sg_client.send(mail)
         return True
+
+    def _send_via_brevo(
+        self,
+        *,
+        from_email: str,
+        display_name: str,
+        to_email: str,
+        subject: str,
+        html_body: str,
+        pdf_bytes: bytes | None,
+        pdf_filename: str | None,
+        attachment_mime: str,
+        unsubscribe_url: str,
+        reply_to: str,
+    ) -> bool:
+        """Brevo (Sendinblue v3) path. Returns ``True`` on 2xx.
+
+        Bridges the artifact cascade into
+        :mod:`services.email.brevo_provider`. We re-use the same
+        ``SystemMailRecipient`` shape for parity with the system-mail
+        path, but pass the unsubscribe URL via the ``html_body``
+        (already injected upstream by
+        :func:`services.email_token.inject_unsubscribe_footer`) — the
+        Brevo SDK does not have an ``add_header`` equivalent for arbitrary
+        SMTP headers on the v3 transactional API, so RFC 8058
+        ``List-Unsubscribe`` ends up in the body footer only. Gmail /
+        Outlook's inline "Unsubscribe" button is therefore SendGrid-
+        only when this fallback fires; the inline footer link still
+        functions, which is the regulatory minimum (정통망법 §50).
+
+        Imports the provider module lazily so unit tests that don't
+        exercise the fallback don't have to pre-import it.
+        """
+        from services.email import brevo_provider as _brevo_provider
+
+        recipient = _brevo_provider.SystemMailRecipient(
+            email=to_email,
+            # No user_id here — sender.py:_send_via_* are post-opt-out;
+            # the upstream gate already vetted the user.
+        )
+
+        return _brevo_provider.send(
+            recipient,
+            subject=subject,
+            html_body=html_body,
+            from_email=from_email,
+            from_name=display_name,
+            reply_to=reply_to,
+            pdf_bytes=pdf_bytes,
+            pdf_filename=pdf_filename,
+            attachment_mime=attachment_mime,
+            # Artifact mailers already enforce marketing_consent_at at
+            # the EmailSender.send level (sender.py:166) — passing
+            # ``honour_consent=False`` here avoids a double-gate. The
+            # transactional callers of brevo_provider directly still get
+            # the gate when they pass ``honour_consent=True``.
+            honour_consent=False,
+        )
 
     def _send_via_smtp(
         self,
