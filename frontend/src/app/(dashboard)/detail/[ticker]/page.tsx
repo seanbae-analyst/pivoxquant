@@ -438,7 +438,9 @@ function AccessDeniedScreen({
         <span className="text-[var(--pq-bronze)]">
           {(() => {
             const nm = tickerToName(ticker);
-            return nm ? `${nm} (${ticker})` : ticker;
+            // Wave G-5 G5-05 (2026-05-18): strip .KS/.KQ from user-facing label.
+            const display = ticker.replace(/\.(KS|KQ)$/i, "");
+            return nm ? `${nm} (${display})` : display;
           })()}
         </span>
         {" "}분석은 관심종목 또는 보유 포지션으로 등록한 후 이용 가능합니다.
@@ -480,6 +482,10 @@ export default function StockDetailPage() {
   const router = useRouter();
   const raw = (params.ticker ?? "").toUpperCase();
   const ticker = /^\d{6}$/.test(raw) ? `${raw}.KS` : raw;
+  // Wave G-5 P2 G5-05 (2026-05-18): KR ticker UI strip — feedback_ticker_display
+  // 룰. API call 은 raw ticker 유지, SYMBOL sub-label 등 사용자-노출 surface
+  // 만 ".KS"/".KQ" suffix 제거. "005930.KS" → "005930".
+  const displayTicker = ticker.replace(/\.(KS|KQ)$/i, "");
   const [period, setPeriod] = useState<Period>("3M");
 
   const { data: signal, isLoading: loadingSignal } = useSWR<SignalDetail>(
@@ -732,7 +738,7 @@ export default function StockDetailPage() {
         <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-12 rounded-[2px] text-center">
           <SearchX className="mx-auto h-8 w-8 text-[var(--pq-bronze)]" strokeWidth={1.2} />
           <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
-            No data for &ldquo;{ticker}&rdquo;
+            No data for &ldquo;{displayTicker}&rdquo;
           </p>
           <p className="mt-2 text-sm text-[var(--pq-ivory-dim)]">
             Ticker may be unsupported or temporarily unavailable.
@@ -864,7 +870,7 @@ export default function StockDetailPage() {
                   {displayName}
                 </h1>
                 <p className="mt-2 font-mono tabular-nums text-pq-body-sm text-[var(--pq-ivory-mid)] leading-snug">
-                  {ticker}
+                  {displayTicker}
                 </p>
                 {/* Chips (FINDING-027): sector and industry were 3 separate
                     redundant chips (TECHNOLOGY · KRW · KOSPI · CONSUMER

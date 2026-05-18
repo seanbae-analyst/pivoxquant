@@ -640,8 +640,21 @@ def buy_new_position():
     currency = fetcher.currency(ticker)
     is_kr = currency == "KRW"
 
-    cap = (getattr(current_user, "available_capital_krw", 0) or 0) if is_kr else (current_user.available_capital or 0)
+    # Wave G-5 P1 G5-03 (2026-05-18): SELECT FOR UPDATE on User row to
+    # serialize capital read-modify-write across concurrent gevent greenlets.
+    # Mirrors buy_more (PR #449). Without this, two simultaneous /buy-new
+    # calls (same user) can both pass `cap < cost`, both deduct, and one
+    # deduction silently disappears. SQLite (dev) no-ops with_for_update().
+    from models import User as _U
+    locked_user = (
+        db.session.query(_U)
+        .filter(_U.id == current_user.id)
+        .with_for_update()
+        .one()
+    )
+    cap = (getattr(locked_user, "available_capital_krw", 0) or 0) if is_kr else (locked_user.available_capital or 0)
     if cap < cost:
+        db.session.rollback()
         sym = "₩" if is_kr else "$"
         return api_error(
             en=f"Insufficient capital (need {sym}{cost:,.0f}, have {sym}{cap:,.0f})",
@@ -663,9 +676,9 @@ def buy_new_position():
         db.session.add(p)
 
     if is_kr:
-        current_user.available_capital_krw = cap - cost
+        locked_user.available_capital_krw = cap - cost
     else:
-        current_user.available_capital = cap - cost
+        locked_user.available_capital = cap - cost
 
     cached = cache_service.get_signal(ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
@@ -694,10 +707,28 @@ def buy_new_position():
                     "code": "POSITION_RACE",
                 }), 409
             _merge_buy_new(ex)
+            # Wave G-5 G5-03 (2026-05-18): re-acquire User lock after
+            # rollback (locked_user detached). Re-check cap to avoid
+            # double-spending if a parallel writer committed in the gap.
+            relocked = (
+                db.session.query(_U)
+                .filter(_U.id == current_user.id)
+                .with_for_update()
+                .one()
+            )
+            cap2 = (getattr(relocked, "available_capital_krw", 0) or 0) if is_kr else (relocked.available_capital or 0)
+            if cap2 < cost:
+                db.session.rollback()
+                sym = "₩" if is_kr else "$"
+                return api_error(
+                    en=f"Insufficient capital (need {sym}{cost:,.0f}, have {sym}{cap2:,.0f})",
+                    kr=f"시드머니 부족 (필요 {sym}{cost:,.0f}, 보유 {sym}{cap2:,.0f}).",
+                    code="INSUFFICIENT_CAPITAL", status=400,
+                )
             if is_kr:
-                current_user.available_capital_krw = (cap - cost)
+                relocked.available_capital_krw = cap2 - cost
             else:
-                current_user.available_capital = (cap - cost)
+                relocked.available_capital = cap2 - cost
             db.session.add(TradeHistory(
                 user_id=current_user.id, ticker=ticker, name=name,
                 action="BUY", shares=shares, price_per_share=round(price, 2),
@@ -1420,22 +1451,39 @@ def create_trade_alias():
     name = canonical_display_name(sd.get("name"), p.ticker)
     currency = sd.get("currency", "KRW" if is_kr else "USD")
 
+    # Wave G-5 P1 G5-02 (2026-05-18): SELECT FOR UPDATE on User row to
+    # serialize capital read-modify-write across concurrent gevent greenlets.
+    # Without this, two simultaneous TradeModalV2 entries (same user) can
+    # both read `avail`, both pass `avail < cost`, both deduct, and one
+    # deduction silently disappears — user buys 2x for 1x cost. Mirrors
+    # buy_more (PR #449) and buy_new_position fixes. SQLite (dev) treats
+    # with_for_update() as a no-op without erroring.
+    from models import User as _U
+    locked_user = (
+        db.session.query(_U)
+        .filter(_U.id == current_user.id)
+        .with_for_update()
+        .one()
+    )
+
     if action == "buy":
         cost = quantity * price
         if is_kr:
-            avail = getattr(current_user, "available_capital_krw", 0) or 0
+            avail = getattr(locked_user, "available_capital_krw", 0) or 0
             if avail < cost:
+                db.session.rollback()
                 return jsonify({
                     "error": f"Insufficient KRW capital (need ₩{cost:,.0f}, have ₩{avail:,.0f})"
                 }), 400
-            current_user.available_capital_krw = avail - cost
+            locked_user.available_capital_krw = avail - cost
         else:
-            avail = current_user.available_capital or 0
+            avail = locked_user.available_capital or 0
             if avail < cost:
+                db.session.rollback()
                 return jsonify({
                     "error": f"Insufficient capital (need ${cost:,.2f}, have ${avail:,.2f})"
                 }), 400
-            current_user.available_capital = avail - cost
+            locked_user.available_capital = avail - cost
         total_cost = p.shares * p.avg_cost + quantity * price
         p.shares += quantity
         p.avg_cost = total_cost / p.shares
@@ -1476,12 +1524,12 @@ def create_trade_alias():
     else:
         p.shares = round(p.shares - quantity, 6)
     if is_kr:
-        current_user.available_capital_krw = (
-            getattr(current_user, "available_capital_krw", 0) or 0
+        locked_user.available_capital_krw = (
+            getattr(locked_user, "available_capital_krw", 0) or 0
         ) + proceeds
     else:
-        current_user.available_capital = (
-            current_user.available_capital or 0
+        locked_user.available_capital = (
+            locked_user.available_capital or 0
         ) + proceeds
     db.session.add(TradeHistory(
         user_id=current_user.id, ticker=p.ticker, name=name,
@@ -1535,17 +1583,30 @@ def portfolio_history():
             logger.debug("silent-fallback: portfolio_history", exc_info=True)
             return p, None
 
+    # Wave G-5 P0 G5-01 (2026-05-18): Equity curve KRW→USD FX 변환. 미적용
+    # 시 KRW position raw 가격 (예: 1,400,000원) 이 USD 가격 ($150)에 그대로
+    # 합산 → mixed-currency portfolio +52,281% 데이터 손상. portfolio_summary
+    # _alias (line 1038-1043) 패턴 mirror — fx_service.get_rate() = USDKRW.
+    # 루프 밖 1회 fetch (N positions × M dates API 호출 회피).
+    fx_rate_usdkrw = fx_service.get_rate() or 1370.0
+    if not fx_rate_usdkrw or fx_rate_usdkrw <= 0:
+        fx_rate_usdkrw = 1370.0
+
     all_values = {}
     with ThreadPoolExecutor(max_workers=5) as ex:
         for p, h in ex.map(_fetch_one, positions):
             if h is None or h.empty:
                 continue
+            is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
             try:
                 for date, row in h.iterrows():
                     ds = date.strftime("%Y-%m-%d")
                     if ds not in all_values:
                         all_values[ds] = 0
-                    all_values[ds] += float(row["Close"]) * p.shares
+                    mv = float(row["Close"]) * p.shares
+                    if is_kr:
+                        mv = mv / fx_rate_usdkrw
+                    all_values[ds] += mv
             except Exception:
                 logger.debug("silent-fallback: portfolio_history", exc_info=True)
                 pass
@@ -1559,7 +1620,11 @@ def portfolio_history():
         today_val = 0
         for p in positions:
             if p.ticker in rt_prices:
-                today_val += rt_prices[p.ticker]["price"] * p.shares
+                is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
+                mv = rt_prices[p.ticker]["price"] * p.shares
+                if is_kr:
+                    mv = mv / fx_rate_usdkrw
+                today_val += mv
         if today_val > 0:
             all_values[today] = today_val
     except Exception:
