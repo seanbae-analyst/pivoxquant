@@ -1,4 +1,72 @@
-# PivoxQuant — 인수인계서 (2026-05-18 v44.8 Wave G continuation — 누적 31 PR · main `1415220 → 69ed6335` · v44.7 26 PR + v44.8 5 PR)
+# PivoxQuant — 인수인계서 (2026-05-18 v44.9 deferred + Wave H + perf — 누적 39 PR · main `1415220 → 54485e79` · v44.7 26 + v44.8 6 + v44.9 7)
+
+## v44.9 — deferred fix + Wave H audit + perf (2026-05-18, 추가 7 PR squash-merged)
+
+**한 줄 요약**: CEO "못한거 다 진행해" 명령. v44.8 cycle 후 (a) 이전 deferred 3건 (F-4 #8/#10 + canslim L sector + KIS token cache AES-GCM) + (b) 새 Wave H audit 2 영역 (data pipeline / cache system) + perf (N+1) → **7 PR (#485-#491) 일괄 admin squash-merged**. H-2 audit 가 P0 3 critical SHIP-BLOCKER 추가 발견 (earnings_tone cache poisoning 90일 cross-user / SignalCache cross-user sizing leak / portfolio_history spot FX G-5 회귀) — 모두 close.
+
+### v44.9 PR 표 (#485~#491)
+
+| PR | Track | 영역 | 핵심 |
+|---|---|---|---|
+| #485 | A-3 | KIS token cache AES-GCM | services/crypto_service.py 재사용 + AAD 'kis-token-cache' (broker_connections 와 분리) + legacy plaintext auto-migration + 5 회귀 test. **외부 액션 #15 영구 해결** |
+| #486 | A-1 | F-4 deferred (#8 age + #10 padding) | questionnaire age_18 label '만 18세 이상' → '만 14세 이상' (PIPA §22 ⑥ MIN_AGE 14 일관, value 'age_18' DB backward-compat 유지) + onboarding scrollable container pb-24 |
+| #487 | A-2 | canslim L factor 실 구현 | services/quant/canslim.py L factor 가 sector ETF (XLK/XLV/.../KS11) 와 비교 (SECTOR_RELATIVE method) + 미매핑 시 ABSOLUTE_FALLBACK admit + 마케팅 description '섹터 대비 상대강도' 복원 (§49 광고 표시 일관) |
+| #488 | I-1 | **Wave H-2 cache P0 3 critical** | (1) **earnings_tone cache poisoning** Pro user transcript → 90일 cross-user 노출 → transcript-supplied 결과 shared cache 미저장. (2) **SignalCache cross-user sizing leak** rec_inv/rec_sh/capital_needed 가 다른 user 에게 → per-user 필드 strip + hydrate_sizing helper read 시 재계산. (3) **portfolio_history spot FX G-5 회귀** get_rate() 사용 → get_rate_at(d) per-date + 1370 fallback 시 fx_stale 플래그 |
+| #489 | I-2 | Wave H-1 data 3건 | (1) FMP 429 → 24h lockout fix (10min cooldown + degrade-mode). (2) kis_market_adapter.get_history(paginate=True) 단일 source-of-truth (fetcher._get_history_kis wrapper, 1500 vs 100 bars divergence 해소). (3) _is_endpoint_blocked 가 cooldown 만료 시 _endpoint_402_counts pop |
+| #490 | G-4 | agent_worker P1-A admit | admin_routes.py docstring 에 mount-time 3 가드 (CSRF + admin allowlist + audit log) 명시. 마운트 결정 시 발화. routes/__init__.py 현재 미마운트 (안전 상태) |
+| #491 | H-4 | perf P0 ThreadPoolExecutor | _get_portfolio_returns + risk_component_es + risk_defense_status 3 hot path serial loop (N positions × 800ms RTT = 10 positions 8s) → ThreadPoolExecutor max_workers=8 parallel (8x speedup). 잔여 2 site (sortino/lws) 별 PR admit |
+
+### v44.9 누적 통계 + 전체 누적
+
+| 항목 | v44.7 | v44.8 | v44.9 | 누적 |
+|---|---|---|---|---|
+| PR squash-merged | 26 | 6 | 7 | **39** |
+| pytest PASS (별 PR 합산) | 1000+ | 682 | 600+ | 2200+ |
+| 회귀 | 0 | 0 | 0 | 0 |
+| alembic head | 035 | 035 | 035 | **단일 유지** |
+| 추가 비용 | 0원 | 0원 | 0원 | 0원 |
+| main | `1415220 → 856b1c43` | `→ 69ed6335` | `→ 54485e79` | 39 commits forward |
+
+### v44.9 핵심 SHIP-impact 회로 차단
+
+1. **earnings_tone cache poisoning** (PR #488) — Pro user fabricated transcript → 90일 cross-user. 즉시 fix
+2. **SignalCache cross-user sizing leak** (PR #488) — rec_sh/capital_needed user A → user B 노출. 즉시 fix
+3. **portfolio_history spot FX 회귀** (PR #488) — G-5 #482 fix 가 spot FX 사용 → 1y window USD/KRW 1290→1450 변동 silent drift. get_rate_at per-date fix
+4. **KIS token cache plaintext** (PR #485) — 로컬 파일 침해 시 access_token leak. AES-GCM 영구 fix
+5. **risk_quant N+1 serial** (PR #491) — 10 positions × 800ms = 8s → ThreadPoolExecutor 1s
+
+### Wave H audit 발견 + admit
+- H-1 (data pipeline): P1 1 + P2 2 → 모두 fix (PR #489)
+- H-2 (cache system): **P0 3 + P1 5 + P2 2 = 10 findings**. P0 3 + P1 일부 fix (PR #488). 나머지 P1 5 (discover_cache lock / earnings_tone_cache LRU / _signal_cache lock / fmp.get_quote _stale 마크 / _quote_ttl sorted) 일부만 적용 + 잔여 별 wave
+- H-3 (migration consistency): **단편 P1 finding** — migration 020 growth_reflections/growth_scores 가 user_id ForeignKey 누락 + user_id=0 orphans 영구. **외부 액션 #16 신규 carry-over** (alembic 신규 migration + prod DB orphan cleanup)
+- H-4 (perf): P0 1 → 3 hot path fix (PR #491). 잔여 2 site sortino/lws 별 PR
+
+### 외부 액션 carry-over (v44.9 신규 1건 = 15건 총)
+
+| # | 항목 | 상태 |
+|---|---|---|
+| 1-13 | (v44.8 carry-over 동일) | carry-over |
+| 14 | PIVOX_BROKER_ENCRYPTION_KEY rotation script | carry-over |
+| 15 | KIS token cache AES-GCM | ✅ **v44.9 PR #485 영구 해결** |
+| **+16** | **migration 020 user_id FK constraint 추가 + prod DB orphan cleanup** (H-3 P1 finding) | **v44.9 신규** |
+
+### 자율 thoroughness (v44.9 cycle)
+- A-3 reuse crypto_service (중복 회피)
+- I-1 P1 partial admit (한 PR에 P0 3 + P1 일부 묶음, busywork 회피)
+- I-2 syntax error self-fix (global declaration scope rule)
+- H-4 잔여 2 site (sortino/lws) 별 PR admit (각 ticker error case append 복잡)
+- G-4 unmounted 상태 안전 admit + 마운트 시 발화 docstring
+
+### 다음 세션 첫 ACTION 추천
+
+1. **OPEN PR 0** 확인 (현재 main = `54485e79`)
+2. **외부 액션 #16 신규** — migration 020 user_id FK + orphan cleanup (alembic 036 신규)
+3. **외부 액션 #12** GitHub Actions billing (CI 자동 검사)
+4. **외부 액션 #9** iCloud sync OFF + `~/projects` 이전
+5. **외부 액션 #10** prod DB rogue rows id 21/22 SQL DELETE
+6. **외부 액션 #2** Stripe + 통신판매업 신고 (코드 #483 완료)
+
+---
 
 ## v44.8 — Wave G continuation (2026-05-18, 추가 5 PR squash-merged)
 
