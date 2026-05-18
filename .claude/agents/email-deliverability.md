@@ -98,18 +98,32 @@ pivoxquant.com.  600    IN  A   216.198.79.1
 | A | ✅ 216.198.79.1 (Vercel) | 웹사이트는 정상 |
 | NS | ✅ gabia (ns.gabia.co.kr, ns.gabia.net, ns1.gabia.co.kr) | DNS 권한 가비아 |
 
-### 외부 의존성 추적
+> **CEO 가이드 완료 시 본 섹션 갱신 예정** — `docs/ops/email-setup-2026-05-18.md` §3-1 dig 결과를 그대로 옮기고 상태를 ❌ → ✅ 로 토글. 갱신 책임: 본 agent (CEO 가 setup 완료 보고 시).
+
+### 외부 의존성 추적 (2026-05-18 CEO 결정 후 갱신)
 
 | 항목 | 상태 | 다음 액션 |
 |------|------|----------|
-| **Google Workspace 결제** | ❌ NOT_CONFIGURED (MX dig empty 로 확정) | CEO 구독 + MX 등록 또는 SendGrid/Mailgun 대안 결정 |
-| **가비아 DNS 콘솔 접근 권한** | ❓ UNVERIFIED | CEO 로그인 가능 여부 확인 (가비아 계정: TODO MEMORY 미명시) |
-| **SMTP relay 결정** | ❌ 미결정 | Google Workspace ($6/mo·user) vs SendGrid free (100/day) — `feedback_no_extra_cost` 충돌. 무료 경로 우선 |
+| **Google Workspace 결제** | ❌ REJECTED (CEO 2026-05-18) | $96/년 비용 거절 — `feedback_no_extra_cost` 충돌. ImprovMX + SendGrid 0원 path 채택 |
+| **ImprovMX free tier** (수신) | ⏳ PENDING_SETUP | CEO 가 `docs/ops/email-setup-2026-05-18.md` §1-1 따라 가입 + alias 4개 + MX 2개 등록 |
+| **SendGrid free tier** (발송) | ⏳ PENDING_SETUP | CEO 가 §1-2 따라 가입 + Domain Auth + API Key 발급 (free tier 100/day) |
+| **가비아 DNS 콘솔 접근 권한** | ✅ CEO 보유 (NS 가 가비아) | §1-3 §2 레코드 7개 입력 |
+| **SMTP relay 결정** | ✅ RESOLVED | SendGrid v3 API (free 100/day). SMTP fallback 은 `services/email/sender.py` 자체 cascade 가 처리 |
+
+### 0원 path (확정) — ImprovMX + SendGrid
+
+| 역할 | Provider | 비용 | 한도 |
+|------|----------|------|------|
+| 수신 (`support@` etc.) | **ImprovMX** | $0 free | 25 alias, 무제한 forward |
+| 발송 (`noreply@`) | **SendGrid** | $0 free | 100 emails/day, DKIM 도메인 인증 |
+| DNS | **가비아** (기존) | $0 추가 | NS 변경 없음 — 가비아 콘솔에서 7 레코드만 추가 |
+| 결제 | — | **$0** | `feedback_no_extra_cost` 100% 정합 |
 
 ### BLOCKER
 
 - 현재 상태로는 이메일 **수신·발송 모두 불가**. MX 없으면 bounce, SPF/DKIM/DMARC 없으면 Gmail/Naver 가 즉시 spam 처리.
 - 출시 전 17 Artifact 이메일 발송 기능 활성화 시 SHIP-BLOCKER.
+- **언락 조건**: `docs/ops/email-setup-2026-05-18.md` §9 체크리스트 14단계 모두 완료.
 
 ---
 
@@ -237,6 +251,18 @@ services/artifacts/templates/
 | `NEXT_PUBLIC_BUSINESS_TELECOMM_NUMBER` | (신고 후 입력) | footer 통신판매업 신고번호 |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | `contact@pivoxquant.com` | footer 연락처 |
 
+**SendGrid + ImprovMX 인프라 env (2026-05-18 추가 — `docs/ops/email-setup-2026-05-18.md` §4 SoT)**:
+
+| Env 변수 | 값 | 사용처 | 등록 위치 |
+|----------|----|----|----------|
+| `SENDGRID_API_KEY` | (SendGrid 콘솔 발급, Mail Send Full Access only) | `services/email/sender.py` 17 artifact cascade + `services/email/sendgrid_provider.py` system mail | Vercel + Railway |
+| `SENDGRID_FROM_EMAIL` | `noreply@pivoxquant.com` | `sendgrid_provider.send()` default sender | Vercel + Railway |
+| `SENDGRID_FROM_NAME` | `PivoxQuant` | `sendgrid_provider.send()` display name | Vercel + Railway |
+| `SUPPORT_EMAIL` | `support@pivoxquant.com` | `sendgrid_provider.send()` default reply-to + UI 표시 | Vercel + Railway |
+| `LEGAL_EMAIL` | `legal@pivoxquant.com` | DMARC `rua` 집계 리포트 + legal inquiry alias | Vercel + Railway |
+
+> **17 artifact 의 per-mailer `*_FROM_EMAIL` 변수 (예: `WEEKLY_MEMO_FROM_EMAIL`) 는 별도** — `sender.py` 가 직접 읽음. `SENDGRID_FROM_EMAIL` 은 `sendgrid_provider.py` (OAuth 알림 / 2FA / admin alert 등 비-artifact transactional) 만 사용. 두 path 가 분리된 이유는 `services/email/sendgrid_provider.py` 모듈 docstring 참조.
+
 **Cross-reference (SoT)**:
 - `memory/business_registration.md` — 사업자 정보 단일 진실원
 - `memory/legal_decision_no_advisory.md` — §101 면제 트랙 면책 문구 근거
@@ -301,6 +327,28 @@ services/artifacts/templates/
 3. suppression list 업데이트
 4. 반복 반송 계정 격리
 ```
+
+## 🆕 모니터링 연계 (2026-05-18 — ImprovMX + SendGrid 0원 path)
+
+| 메트릭 | 수집처 | 책임 Agent | 주기 |
+|--------|--------|-----------|------|
+| SendGrid 일일 사용량 (100/day 한도) | SendGrid Activity Feed API (`/v3/messages?limit=...`) | **cost-monitor** | daily 04:00 KST |
+| Bounce / spam complaint | SendGrid Suppressions API + `services/email/webhook.py` | **email-deliverability** (본 agent) | on-event |
+| Domain authentication DKIM rotation (30d) | SendGrid `/v3/whitelabel/domains/<id>` | **cost-monitor** | weekly |
+| ImprovMX forward 누락 | Gmail manual 점검 (자동화 어려움 — ImprovMX API tier 한정적) | CEO weekly + **data-freshness-monitor** (incoming bounce log) | weekly |
+| 일 80통 도달 alert | cost-monitor → Slack/Sentry | **cost-monitor** | hourly check |
+| SPF/DKIM/DMARC PASS rate | Gmail Postmaster Tools (domain reputation) | **email-deliverability** | weekly |
+
+**알림 트리거**:
+- SendGrid 일 80통 도달 → cost-monitor alert (free 100/day 임박)
+- SendGrid 5xx 연속 3회 → email-deliverability alert (provider 장애)
+- DMARC `rua` 리포트에 unauthenticated source → email-deliverability alert (spoofing 시도)
+
+**모니터링 환경 의존**:
+- 본 agent + cost-monitor + data-freshness-monitor 가 SoT.
+- 추가 모니터링 SaaS 도입 금지 (`feedback_no_extra_cost`).
+
+---
 
 ## 금지 사항
 - 외부 SMTP 릴레이 없이 localhost SMTP 서버 구축 (IP reputation 낮음)
