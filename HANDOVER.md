@@ -59,7 +59,7 @@
 
 ### 최종 verify (v45.2)
 - ✅ ruff: 어제 v45.1에서 0 violations 유지
-- ✅ pytest: 2305 → **2307** (regression test 2건 추가)
+- ✅ pytest: 2305 → **2317 passed / 0 failed** (regression test 2 + Wave 1 KEY rotation 7 + Wave 2 migration FK 5 = +14 신규, 9m31s)
 - ✅ lint: 0 errors
 - ✅ git: clean / ahead 0 / origin/main 동기화
 - ✅ alembic head: 035 → **036** (single chain)
