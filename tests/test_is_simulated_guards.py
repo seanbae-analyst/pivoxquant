@@ -79,6 +79,10 @@ class TestEmailSenderIsSimulatedGuard:
             u = db.session.get(User, user["id"])
             # explicit for clarity — default is False already
             u.is_simulated = False
+            # Wave G-1 Bug #8 (2026-05-18): EmailSender now requires
+            # marketing_consent_at to be set (정통망법 §50 default-deny).
+            from datetime import datetime
+            u.marketing_consent_at = datetime.utcnow()
             db.session.commit()
 
             monkeypatch.setenv("SENDGRID_API_KEY", "sg-xxx")

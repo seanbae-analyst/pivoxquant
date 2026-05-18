@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
@@ -372,7 +373,7 @@ function ConsentModal({
               <strong style={{ color: "var(--pq-ivory)" }}>
                 Refund window
               </strong>{" "}
-              — Full refund available within 14 days of first payment, regardless of usage. After 14 days the current period is non-refundable and service stops at the next billing date.
+              — 14-day refund period from first payment for the unused portion of your subscription. Per terms §17 and 전자상거래법 §17 ②⑤, refund may be restricted once digital content (artifacts, reports) has been delivered or accessed. After 14 days the current period is non-refundable and service stops at the next billing date.
             </p>
           </div>
         </div>
@@ -448,12 +449,32 @@ export default function PricingPage() {
   // /signup → /home with no indication of where they went or why.
   // Use the auth state to route logged-in users to /home directly.
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [loadingCheckout, setLoadingCheckout] = useState<TierKey | null>(null);
   const [consentTier, setConsentTier] = useState<TierKey | null>(null);
 
   const handleCheckout = useCallback((plan: TierKey) => {
     setConsentTier(plan);
   }, []);
+
+  // Wave G-1 Bug #5 (2026-05-18): /pricing?plan=pro 또는 /pricing?plan=premium
+  // deeplink 진입 시 해당 카드로 스크롤 + (로그인 상태면) consent modal 자동 오픈.
+  // 마케팅 이메일·in-app CTA 에서 plan 별 deeplink 를 보내고 있는데 기존엔
+  // 무시되어 사용자가 다시 카드를 찾아야 했다.
+  useEffect(() => {
+    const planFromUrl = searchParams?.get("plan");
+    if (planFromUrl === "pro" || planFromUrl === "premium") {
+      const el = document.getElementById(`tier-${planFromUrl}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      // 로그인 유저만 consent modal 열기 — 비로그인은 /signup 으로 가야 함.
+      if (user) {
+        setConsentTier(planFromUrl);
+      }
+    }
+    // searchParams + user 둘 다 의존 — user 가 늦게 hydrate 되면 재시도.
+  }, [searchParams, user]);
 
   const proceedToCheckout = useCallback(async () => {
     if (!consentTier) return;
@@ -661,6 +682,7 @@ export default function PricingPage() {
               return (
                 <div
                   key={p.key}
+                  id={`tier-${p.key}`}
                   className="relative rounded-sm p-8 md:p-9 flex flex-col"
                   style={{
                     backgroundColor: isDark ? "#111111" : "var(--pq-ivory)",

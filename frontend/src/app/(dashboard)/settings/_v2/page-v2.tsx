@@ -329,6 +329,20 @@ export default function SettingsPageV2() {
     }
   }, []);
 
+  // Wave G-1 Bug #7 (2026-05-18): 전자상거래법 §17 (청약철회 행사 방법 명시
+  // 의무) — 구독 취소 경로가 UI 에 노출되어야 한다. Stripe Customer Portal
+  // 내부에 cancel section 이 있으므로 그쪽으로 redirect. 사용자 confirm 필수.
+  const handleCancelPlan = React.useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const ok = window.confirm(
+      "구독을 취소하시겠어요? Stripe 결제 포털로 이동합니다. 현재 결제 주기 종료 시까지 서비스가 유지됩니다.",
+    );
+    if (!ok) return;
+    // Portal 내부 cancel flow 로 redirect — 별도 cancel endpoint 추가는
+    // migration + 환불 처리 책임 분리 필요 (별 PR). 현재는 portal 경유.
+    await handleManageBilling();
+  }, [handleManageBilling]);
+
   /* ── Sign in providers (GAP-D) ── */
   const handleProviderConnect = React.useCallback(
     (provider: "google" | "kakao") => {
@@ -888,6 +902,7 @@ export default function SettingsPageV2() {
               currentTier={currentTier}
               renewalLine={renewalLine}
               onManageBilling={handleManageBilling}
+              onCancel={currentTier !== "free" ? handleCancelPlan : undefined}
             />
           </section>
 

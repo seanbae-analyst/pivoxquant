@@ -59,7 +59,7 @@ class TestCreateCheckoutGate:
         assert r.get_json()["code"] == "BUSINESS_REGISTRATION_PENDING"
 
     def test_gate_open_allows_checkout(self, client, auth_user, gate_open):
-        """등록 완료 + Stripe mock → 정상 200."""
+        """등록 완료 + Stripe mock + consent → 정상 200."""
         with patch("routes.billing.PLAN_PRICES", {"pro": "price_123"}), \
              patch("routes.billing.stripe") as mock_stripe:
             mock_customer = MagicMock(id="cus_abc123")
@@ -67,7 +67,18 @@ class TestCreateCheckoutGate:
             mock_session = MagicMock(url="https://checkout.stripe.com/pay/test")
             mock_stripe.checkout.Session.create.return_value = mock_session
             mock_stripe.StripeError = Exception
-            r = client.post("/api/billing/create-checkout", json={"plan": "pro"})
+            # Wave G-1: consent block 이 routes/billing.py 에서 필수가 됐다.
+            r = client.post(
+                "/api/billing/create-checkout",
+                json={
+                    "plan": "pro",
+                    "consent": {
+                        "key_info": True,
+                        "recurring": True,
+                        "stripe_overseas": True,
+                    },
+                },
+            )
         assert r.status_code == 200
         assert r.get_json()["url"].startswith("https://checkout.stripe.com/")
 

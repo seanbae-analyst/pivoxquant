@@ -239,6 +239,71 @@ def test_bounce_does_not_flip_when_already_opted_out(
         assert u.email_opt_out is True
 
 
+# ── Wave G-1 Bug #6 (2026-05-18) ─────────────────────────────────────────
+# bounce / spamreport / hosted-unsubscribe 는 implicit revocation 이므로
+# marketing_consent_revoked_at 도 함께 기록되어야 한다 (정통망법 §50 ①
+# audit trail 일관성). consents.py 의 effective-consent 계산과 동기.
+
+
+@pytest.mark.parametrize(
+    "evt_type", ["bounce", "spamreport", "unsubscribe", "group_unsubscribe"]
+)
+def test_terminal_event_records_marketing_consent_revoked_at(
+    app, raw_client, make_user, evt_type
+):
+    user = make_user(email=f"revoke-{evt_type}@test.com")
+    _make_artifact(app, user["id"], sg_message_id=f"rev-{evt_type}")
+
+    from extensions import db
+    from models import User
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        assert u.marketing_consent_revoked_at is None  # precondition
+
+    resp = _post_events(raw_client, [
+        {"sg_message_id": f"rev-{evt_type}.fs-1",
+         "event": evt_type,
+         "timestamp": _ts()},
+    ])
+    assert resp.status_code == 200
+
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        assert u.marketing_consent_revoked_at is not None, (
+            f"event '{evt_type}' must record marketing_consent_revoked_at "
+            "(Wave G-1 Bug #6 — 정통망법 §50 audit trail)"
+        )
+
+
+def test_existing_revoked_at_not_overwritten(app, raw_client, make_user):
+    """이미 revoke 이력이 있으면 가장 오래된 stamp 유지 — 첫 revoke 시점이
+    법적으로 유의미하므로 덮어쓰지 않는다."""
+    import datetime as _dt
+    user = make_user(email="prior-revoke@test.com")
+    _make_artifact(app, user["id"], sg_message_id="priorrev")
+
+    from extensions import db
+    from models import User
+    earlier = _dt.datetime(2025, 1, 1, 0, 0, 0)
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.marketing_consent_revoked_at = earlier
+        db.session.commit()
+
+    resp = _post_events(raw_client, [
+        {"sg_message_id": "priorrev.fs-1",
+         "event": "bounce",
+         "timestamp": _ts()},
+    ])
+    assert resp.status_code == 200
+
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        assert u.marketing_consent_revoked_at == earlier, (
+            "prior revoke timestamp must be preserved (legally significant)"
+        )
+
+
 def test_unknown_message_id_silently_ignored(app, raw_client, make_user):
     """Events for messages we never sent (e.g. auth emails) must not 500."""
     make_user()  # ensure DB is initialised

@@ -156,6 +156,20 @@ class EmailSender:
             return False
 
         # ── 1b. opt-out gate ───────────────────────────────────────────
+        # Wave G-1 Bug #8 (2026-05-18): consents.py spec —
+        #   effective consent = marketing_consent_at IS NOT NULL
+        #                       AND (revoked_at IS NULL OR revoked_at < consent_at)
+        # email_opt_out flag 만 보고 보냈더니, marketing_consent_at 이 한 번도
+        # set 된 적 없는 (회원가입 직후 settings 미방문) 유저에게도 마케팅성
+        # 이메일이 발송될 수 있었다. 정통망법 §50 ① default-deny 원칙으로
+        # marketing_consent_at NULL = 발송 차단.
+        if not getattr(user, "marketing_consent_at", None):
+            logger.debug(
+                "skipping email for user %s — marketing_consent_at NULL "
+                "(정통망법 §50 default-deny)",
+                getattr(user, "id", "?"),
+            )
+            return False
         for attr in opt_out_attrs:
             if getattr(user, attr, False):
                 logger.info(
