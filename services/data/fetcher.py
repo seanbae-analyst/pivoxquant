@@ -1279,117 +1279,30 @@ Reply ONLY in this exact JSON format, nothing else:
     @staticmethod
     def _get_history_kis(ticker: str, period: str) -> "pd.DataFrame | None":
         """Fetch historical daily bars from KIS API (Korean stocks).
-        KIS daily chart API: /uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice
+
+        2026-05-18 Wave H-1 P2: delegated to ``kis_market_adapter.get_history``
+        (single source of truth).  The original inline re-implementation of
+        auth + 15-page pagination is removed.
+
+        Previously this method and ``kis_market_adapter.get_history`` both
+        called the same KIS chart endpoint but differed:
+          - fetcher.py:  auth inline + 15-page loop  → up to ~1 500 bars
+          - adapter:     auth via _auth_headers       → single call (~100 bars)
+        A ``1y`` history request would return ~252 bars via fetcher.py but
+        only ~70 bars via adapter.py — the two paths diverged silently.
+
+        Now ``fetcher.py`` is a thin wrapper; the paginator lives exclusively
+        in ``kis_market_adapter``.
         """
         try:
-            kis_key = os.environ.get("KIS_APP_KEY", "").strip()
-            kis_secret = os.environ.get("KIS_APP_SECRET", "").strip()
-            if not kis_key or not kis_secret:
+            from services.data import kis_market_adapter as kma
+            if not kma.is_available():
                 return None
-
-            # Get KIS access token via the process-wide token manager
-            # (avoids racing with RealtimeService / KISService for KIS's
-            # 1-token-per-minute quota — see kis_token_manager.py).
-            from services.kis.token_manager import get_kis_token_manager
-            access_token = get_kis_token_manager().get_token()
-            if not access_token:
+            df = kma.get_history(ticker, period=period, paginate=True)
+            if df.empty:
                 return None
-
-            # Convert ticker to 6-digit code
-            stock_code = ticker.upper().replace(".KS", "").replace(".KQ", "")
-            if not stock_code.isdigit():
-                return None
-
-            period_map = {
-                "1d": 1, "5d": 5, "1mo": 30, "3mo": 90,
-                "6mo": 180, "1y": 365, "2y": 730, "3y": 1095, "5y": 1825,
-            }
-            days = period_map.get(period, 90)
-            end_date = datetime.now().strftime("%Y%m%d")
-            start_date = (datetime.now() - timedelta(days=days)).strftime("%Y%m%d")
-
-            headers = {
-                "authorization": f"Bearer {access_token}",
-                "appkey": kis_key,
-                "appsecret": kis_secret,
-                "tr_id": "FHKST03010100",
-                "content-type": "application/json; charset=utf-8",
-            }
-
-            # KIS returns max 100 records per call — paginate backwards
-            import time as _kis_time
-            all_rows = []
-            cursor_end = end_date
-
-            for _page in range(15):  # max 15 pages = ~1500 bars (6y)
-                params = {
-                    "FID_COND_MRKT_DIV_CODE": "J",
-                    "FID_INPUT_ISCD": stock_code,
-                    "FID_INPUT_DATE_1": start_date,
-                    "FID_INPUT_DATE_2": cursor_end,
-                    "FID_PERIOD_DIV_CODE": "D",
-                    "FID_ORG_ADJ_PRC": "0",
-                }
-                r = requests.get(
-                    "https://openapi.koreainvestment.com:9443"
-                    "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
-                    headers=headers,
-                    params=params,
-                    timeout=10,
-                )
-                data = r.json()
-                records = data.get("output2", [])
-                if not records:
-                    break
-
-                page_rows = []
-                earliest_dt = None
-                for rec in records:
-                    try:
-                        dt = rec.get("stck_bsop_date", "")
-                        if not dt or len(dt) != 8:
-                            continue
-                        page_rows.append({
-                            "Date": pd.Timestamp(f"{dt[:4]}-{dt[4:6]}-{dt[6:8]}"),
-                            "Open": float(rec.get("stck_oprc", 0)),
-                            "High": float(rec.get("stck_hgpr", 0)),
-                            "Low": float(rec.get("stck_lwpr", 0)),
-                            "Close": float(rec.get("stck_clpr", 0)),
-                            "Volume": int(rec.get("acml_vol", 0)),
-                        })
-                        if earliest_dt is None or dt < earliest_dt:
-                            earliest_dt = dt
-                    except (ValueError, TypeError):
-                        logger.debug("silent-fallback: _get_history_kis", exc_info=True)
-                        continue
-
-                if not page_rows:
-                    break
-                all_rows.extend(page_rows)
-
-                # If we got fewer than 100 records, no more pages
-                if len(records) < 100:
-                    break
-                # If earliest record is at or before start_date, done
-                if earliest_dt and earliest_dt <= start_date:
-                    break
-                # Move cursor to day before earliest record
-                if earliest_dt:
-                    from datetime import datetime as _dt_cls
-                    prev = _dt_cls.strptime(earliest_dt, "%Y%m%d") - timedelta(days=1)
-                    cursor_end = prev.strftime("%Y%m%d")
-
-                _kis_time.sleep(0.15)  # rate limit courtesy
-
-            if not all_rows:
-                return None
-
-            df = pd.DataFrame(all_rows)
-            df = df.drop_duplicates(subset=["Date"])
-            df = df.set_index("Date").sort_index()
-            logger.debug(f"KIS historical: {ticker} returned {len(df)} bars ({_page+1} pages)")
+            logger.debug("KIS historical (via kma): %s returned %d bars", ticker, len(df))
             return df
-
         except Exception as e:
             logger.warning("KIS historical failed for %s: %s", ticker, e)
             return None
