@@ -58,10 +58,10 @@ const factors = [
   },
   {
     letter: "L",
-    title: "Leader (1m Momentum)",
-    description: "The stock has shown a positive 1-month return — a momentum proxy used as a stand-in for relative strength. Information only; not a sector-relative benchmark.",
+    title: "Leader (Sector Strength)",
+    description: "The stock's 1-month return outperforms its sector ETF (e.g. XLK for Technology, XLV for Healthcare) or the KOSPI/KOSDAQ index for Korean names. Information only; not a buy/sell signal.",
     icon: Award,
-    threshold: "1-month positive return",
+    threshold: "Outperforms sector in 1 month",
   },
   {
     letter: "I",

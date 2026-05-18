@@ -127,12 +127,14 @@ def canslim_screener(ticker):
         logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
-    # Float shares from FMP profile
+    # Float shares + sector from FMP profile
     float_shares = None
+    sector = None
     try:
         profile = fmp_svc.get_profile(ticker)
         if profile:
             float_shares = profile.get("floatShares") or profile.get("sharesFloat")
+            sector = profile.get("sector") or None  # e.g. "Technology"
     except Exception:
         logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
@@ -158,7 +160,7 @@ def canslim_screener(ticker):
         logger.debug("silent-fallback: canslim_screener_market_regime", exc_info=True)
         pass
 
-    result = CANSLIMScreener.score(ticker, closes, volumes, fundamentals, regime, float_shares=float_shares)
+    result = CANSLIMScreener.score(ticker, closes, volumes, fundamentals, regime, float_shares=float_shares, sector=sector)
 
     payload = {
         "ok": True,

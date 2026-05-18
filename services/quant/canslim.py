@@ -14,6 +14,13 @@ KR ticker policy (2026-05-17 Wave C-4):
     short-circuit with method="UNAVAILABLE" + an explicit reason. Frontend can
     surface "N/A" rather than show a misleading red "fail". Future KIS API
     integration is tracked separately.
+
+L factor sector-relative-strength policy (2026-05-18 Wave C-4 P1-02):
+    L factor now compares the stock's 1-month return against its sector ETF
+    (US: XLK/XLV/XLF/… per FMP profile.sector; KR: ^KS11 / ^KQ11).
+    When the benchmark fetch fails, falls back to absolute return > 0 with
+    method="ABSOLUTE_FALLBACK" recorded in the payload.  The fallback is
+    intentionally transparent so consumers can audit which path fired.
 """
 
 import logging
@@ -22,6 +29,117 @@ import math
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+# ── L factor: sector ETF mapping ────────────────────────────────────────────
+# Maps FMP profile.sector strings to their SPDR sector ETF proxies.
+# Covers the 11 GICS sectors tracked by the Select Sector SPDR suite.
+_US_SECTOR_ETF: dict = {
+    "Technology": "XLK",
+    "Healthcare": "XLV",
+    "Financial Services": "XLF",
+    "Consumer Cyclical": "XLY",
+    "Consumer Defensive": "XLP",
+    "Industrials": "XLI",
+    "Energy": "XLE",
+    "Real Estate": "XLRE",
+    "Utilities": "XLU",
+    "Communication Services": "XLC",
+    "Basic Materials": "XLB",
+}
+
+
+def _benchmark_ticker(ticker: str, sector: str | None) -> str:
+    """Return the benchmark ticker for L factor sector comparison.
+
+    KR tickers use their exchange index (KOSPI / KOSDAQ).
+    US/unknown tickers use the relevant SPDR sector ETF when the sector is
+    mapped, or SPY (S&P 500) as the broad-market fallback.
+    """
+    t = (ticker or "").upper()
+    if t.endswith(".KS"):
+        return "^KS11"
+    if t.endswith(".KQ"):
+        return "^KQ11"
+    return _US_SECTOR_ETF.get(sector or "", "SPY")
+
+
+def _fetch_prices_1m(ticker: str) -> list[float] | None:
+    """Fetch ~21 trading-day close prices for a benchmark ticker.
+
+    Uses DataFetcher (same path as the route) to pull 1-month history.
+    Returns a float list (oldest-first) or None on any error.
+    """
+    try:
+        from services.data.fetcher import DataFetcher
+        fetcher = DataFetcher()
+        hist = fetcher.get_price_history(ticker, period="1mo")
+        if hist is None or hist.empty or len(hist) < 2:
+            return None
+        return hist["Close"].values.astype(float).tolist()
+    except Exception as e:
+        logger.debug("_fetch_prices_1m(%s): %s", ticker, e, exc_info=True)
+        return None
+
+
+def _check_leader(ticker: str, prices_1m: list[float], sector: str | None = None) -> dict:
+    """L -- Leader: stock's 1-month return beats its sector benchmark.
+
+    Computes:
+        rel = stock_ret_1m - bench_ret_1m
+
+    Pass condition: rel > 0 (stock outperforms its sector / index).
+
+    If the benchmark fetch fails the function degrades gracefully to an
+    absolute-return check (stock_ret_1m > 0) and marks
+    method="ABSOLUTE_FALLBACK" so callers can audit which path was used.
+
+    Args:
+        ticker:     Candidate ticker (used to select benchmark).
+        prices_1m:  Stock close prices for the past ~21 trading days
+                    (oldest-first), passed in from caller to avoid a
+                    redundant fetch.
+        sector:     FMP profile.sector string (may be None).
+
+    Returns:
+        dict with keys: value, pass, reason, method, benchmark,
+                        stock_ret_1m, bench_ret_1m  (last two absent on
+                        fallback when only absolute return is available).
+    """
+    if not prices_1m or len(prices_1m) < 2:
+        return {
+            "value": None,
+            "pass": False,
+            "reason": "insufficient 1m price data",
+            "method": "NO_DATA",
+        }
+
+    stock_ret = (prices_1m[-1] - prices_1m[0]) / max(abs(prices_1m[0]), 1e-8) * 100.0
+
+    bench = _benchmark_ticker(ticker, sector)
+    bench_prices = _fetch_prices_1m(bench)
+
+    if not bench_prices or len(bench_prices) < 2:
+        return {
+            "value": round(stock_ret, 2),
+            "pass": bool(stock_ret > 0),
+            "reason": f"benchmark {bench} unavailable — absolute fallback",
+            "method": "ABSOLUTE_FALLBACK",
+            "benchmark": bench,
+            "stock_ret_1m": round(stock_ret, 2),
+        }
+
+    bench_ret = (bench_prices[-1] - bench_prices[0]) / max(abs(bench_prices[0]), 1e-8) * 100.0
+    rel = stock_ret - bench_ret
+
+    return {
+        "value": round(rel, 2),
+        "pass": bool(rel > 0),
+        "reason": f"stock {stock_ret:+.1f}% vs {bench} {bench_ret:+.1f}%",
+        "method": "SECTOR_RELATIVE",
+        "benchmark": bench,
+        "stock_ret_1m": round(stock_ret, 2),
+        "bench_ret_1m": round(bench_ret, 2),
+    }
 
 
 def _is_kr_ticker(ticker):
@@ -294,12 +412,17 @@ class CANSLIMScreener:
     """
 
     @classmethod
-    def score(cls, ticker, closes, volumes, fundamentals=None, regime=None, float_shares=None):
+    def score(cls, ticker, closes, volumes, fundamentals=None, regime=None, float_shares=None, sector=None):
         """Score a stock 0-7 on CAN SLIM criteria.
 
         Signature preserved for the existing caller in routes/quant.py.
         ``fundamentals`` (EDGAR) is still accepted as a last-resort fallback
         for C/A when FMP is unavailable.
+
+        Args:
+            sector: FMP profile.sector string (e.g. "Technology").
+                    Used by the L factor to pick the sector ETF benchmark.
+                    None causes SPY broad-market fallback.
 
         Returns: dict with score, per-criterion pass/fail + details.
         """
@@ -421,29 +544,14 @@ class CANSLIMScreener:
         s_details["pass"] = s_pass
         _accumulate("S", s_details)
 
-        # ── L: Leader — 1-month positive return ─────────────────
-        # NOTE: This is a momentum heuristic (1-month return > 0), NOT a true
-        # relative-strength-vs-sector comparison. The marketing page intentionally
-        # describes it as "1-month positive return" so wording matches behaviour.
-        # A future PR may introduce a real sector benchmark (FMP /profile industry
-        # + sector ETF universe), at which point both code and copy should change
-        # together.
-        if len(closes) >= 21:
-            ret_1m = (closes[-1] / max(closes[-21], 1e-8)) - 1
-            l_pass = bool(ret_1m > 0)
-            l_payload = {
-                "name": "Leader (1m Momentum)",
-                "return_1m": round(float(ret_1m * 100), 2),
-                "pass": l_pass,
-                "method": "1M_RETURN",
-                "note": "1-month positive return (momentum proxy, not sector-relative)",
-            }
-        else:
-            l_payload = {
-                "name": "Leader (1m Momentum)",
-                "pass": False,
-                "reason": "Insufficient history (need 21 bars)",
-            }
+        # ── L: Leader — sector-relative-strength ─────────────────
+        # Compares the stock's 1-month return against its sector ETF
+        # (US: XLK/XLV/XLF/… per FMP profile.sector; KR: ^KS11/^KQ11).
+        # Falls back to absolute return > 0 when the benchmark is
+        # unavailable, with method="ABSOLUTE_FALLBACK" recorded.
+        prices_1m = closes[-21:].tolist() if len(closes) >= 21 else closes.tolist()
+        l_payload = _check_leader(ticker, prices_1m, sector=sector)
+        l_payload["name"] = "Leader (Sector Relative Strength)"
         _accumulate("L", l_payload)
 
         # ── I: Institutional sponsorship ────────────────────────
