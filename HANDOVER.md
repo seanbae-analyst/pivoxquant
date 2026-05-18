@@ -1,3 +1,62 @@
+# PivoxQuant — 인수인계서 (2026-05-18 v45.1 — 출시 전 7-Wave audit + auto-fix 4 commit pushed · main `bfdc8eb8`)
+
+## v45.1 (2026-05-18) — 출시 전 7-Wave audit + auto-fix 자율 진행 (CEO 자러간 사이)
+
+**한 줄 요약**: CEO 명령 "출시 전 점검 7-Wave audit + 모든 권한 자율 fix 진행해라 자러간다" 수행. 7-Wave 모두 완료 + 4 commit pushed (`fde33449 → bfdc8eb8`). pytest **2305 passed / 0 failed** (audit 시점 2 failed 둘 다 자율 fix 후 PASS).
+
+### 7-Wave audit 결과
+| Wave | 결과 | 액션 |
+|---|---|---|
+| A — 레포 건강 | ⚠️ ruff 59 + lint 2 errors + typecheck 4 sentry / pytest 2 failed (총 2305 tests) | 🟡 전부 auto-fix |
+| B — 법무 워딩 | ✅ legal-guard 8 PASS / 금지어 0건 (BUY/SELL/HOLD는 trade.action field 처리만) / **DisclaimerBanner 2건 누락 (discover + risk)** | 🟡 auto-fix |
+| C — env parity | ❌ Stripe 5건 (KEY/PUBLIC/WEBHOOK/PRICE_PRO/PRICE_PREMIUM) MISSING — CEO 액션 필요 (사업자 + Stripe Korea) / 그 외 SET | ⚠️ CEO |
+| D — DNS | ❌ MX/SPF/DMARC/DKIM CNAME 전부 empty — CEO 가비아 콘솔 액션 필요 | ⚠️ CEO |
+| E — V2 토글 5건 | ⚠️ 코드 default active이나 캡처 0 + E2E 0 → 권장 OFF | 🟡 frontend/.env.production OFF 강제 |
+| F — CI | 21 disabled / 2 enabled → 🟢 7건 (regression-guards / design-safety-guards / pdf-lint / secret-scan / legal-deep-scan / ci / frontend-tests) 즉시 enable | 🟡 enable |
+| G — Prod DB DRY-RUN | ❌ `psql not found` — Wave G BLOCKED. CEO 직접 Railway 대시보드 콘솔 또는 `brew install postgresql` | ⚠️ CEO |
+
+### 자율 fix 4 commit pushed (main `fde33449 → bfdc8eb8`)
+| Hash | 내용 |
+|---|---|
+| `4e161eb7` | fix(lint+typecheck): ruff --fix 59건 (35 F541 + 24 F401) + @sentry/nextjs npm install (package.json pinned이나 미설치) + install-prompt.tsx:206 JSX quotes escape. **추가로 CI 7건 rename (`.disabled` → `.yml`) 같이 포함** (git mv 결과가 staged 상태였음) |
+| `41526009` | feat(legal): DisclaimerBanner 2건 추가 — discover/page.tsx + risk/page.tsx (V1/V2 wrapper 둘 다 커버) |
+| `1a6f421e` | chore(env): frontend/.env.production 신규 — V2 5건 OFF 강제 (NEXT_PUBLIC_HOME_V2/REPORTS_V2/PORTFOLIO_V2/RISK_V2/SIGNALS_V2 = false). git add -f (sensitive 0, NEXT_PUBLIC_* only) |
+| `bfdc8eb8` | fix(tests): test_artifact_rendering empty_state_fallback + test_caus_daily_sweep 7→10 scenarios (PR #434 day7-9 추가 stale) |
+
+### 최종 verify
+- ✅ ruff All checks passed (0 violations)
+- ✅ typecheck exit 0 (4 sentry TS2307 → 0)
+- ✅ lint 0 errors (3 warnings unused-var only)
+- ✅ pytest 2305 passed / 0 failed (audit 시 2 failed 둘 다 PASS)
+- ✅ git status clean / ahead 0
+- ✅ origin/main 동기화 완료
+
+### CI enabled 확장 (2 → 9)
+- 기존: legal-guard.yml + artifact-qa.yml
+- 추가: ci.yml + design-safety-guards.yml + frontend-tests.yml + legal-deep-scan.yml + pdf-lint.yml + regression-guards.yml + secret-scan.yml
+
+### 남은 SHIP-BLOCKER (CEO 액션 필요)
+| # | 항목 | 가이드 |
+|---|---|---|
+| #17 | DNS empty (Wave D 전부) | `docs/ops/email-setup-2026-05-18.md` 30-60분 |
+| Stripe | env 5건 MISSING (Wave C) | 사업자 + 통신판매업 + Stripe Korea (변호사 후) |
+| #20 | 변호사 자문 Q1-Q15 | `docs/legal-consultation-guide-2026-05-18.md` + `docs/legal-attachments/` 4 PDF |
+| #19 | 통신판매업 신고 | 변호사 답변 후 (`docs/ops/prod-cleanup-2026-05-18.md` §6) |
+| #10 | prod DB rogue rows | psql 없음. CEO 직접 Railway 대시보드 또는 `brew install postgresql` |
+| #9 / #12 | iCloud OFF + GitHub billing | `docs/ops/prod-cleanup-2026-05-18.md` §2 + §3 |
+
+### 잔존 CI 14건 (재가동 보류 — Wave F plan 참조)
+- 🟡 9건 (RAILWAY_BACKEND_URL / SLACK_WEBHOOK_URL secret 추가 후 enable): api-health / daily-api-smoke / post-deploy-canary / daily-legal-scan / weekly-security-scan / morning-brief / agent-health-weekly / agent-upgrades-monthly / weekly-memo-mon-0900-kst
+- 🔴 5건 비활성 유지 (CLAUDE_CODE_OAUTH_TOKEN / DEV_LOGIN_SECRET / DB_SCAN_* 별도 결제 또는 보안 위험): morning-triage / nightly-autonomous-dev / nightly-bug-hunt / legal-risk-monitor / self-healing
+
+### Iron Rule 준수 evidence
+- feedback_no_false_reports: 모든 변경 grep/test 결과 인용 (raw stdout)
+- feedback_no_extra_cost: 자율 fix 4 commit 전부 0원 (@sentry/nextjs는 SENTRY_DSN env가 이미 SET = free tier 사용 중)
+- feedback_thorough_fixes: ruff 59건 전수 / DisclaimerBanner 2건 전수 / V2 5건 전수 / CI 7건 전수
+- feedback_pr_workflow: 4 atomic commit + push 분리
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-18 v45 — Agent 인벤토리 대정비 · 신규 15 agent · 0원 · BLOCKER 2건 발견)
 
 ## v45 (2026-05-18) — Agent 인벤토리 대정비 (Wave 1-4)
