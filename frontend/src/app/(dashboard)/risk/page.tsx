@@ -15,6 +15,7 @@
 
 import dynamic from "next/dynamic";
 import V2 from "./_v2/page-v2";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 
 // V1 is lazy-loaded — V2 is the active default (NEXT_PUBLIC_RISK_V2=true).
 // Splits the dormant V1 risk terminal into its own chunk so the initial
@@ -23,5 +24,10 @@ const V1 = dynamic(() => import("./_v1/page-v1"));
 
 export default function RiskPage() {
   const v2Enabled = process.env.NEXT_PUBLIC_RISK_V2 === "true";
-  return v2Enabled ? <V2 /> : <V1 />;
+  return (
+    <>
+      <DisclaimerBanner type="ai-analysis" className="mb-6" />
+      {v2Enabled ? <V2 /> : <V1 />}
+    </>
+  );
 }

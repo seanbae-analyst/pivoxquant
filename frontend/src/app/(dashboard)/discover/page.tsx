@@ -33,6 +33,7 @@ import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type { DiscoverResult, Position } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import {
   Caption,
   Fleuron as PqFleuron,
@@ -289,6 +290,7 @@ export default function DiscoverPage() {
 
   return (
     <ErrorBoundary>
+      <DisclaimerBanner type="ai-analysis" className="mb-6" />
       {/* Editorial header — RuledKicker matches /home, /portfolio v2, /risk v2.
           Replaces the bare `pq-ink-kicker` span the old card-grid layout used. */}
       <header className="mb-8 flex items-center justify-between gap-4">
