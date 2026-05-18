@@ -6,6 +6,39 @@ Mount in app.py:
 
 Capital markets law (Iron Rule #7): no BUY/SELL/추천/조언 anywhere in UI.
 Labels are restricted to 승인/거절/상세/중지.
+
+⚠️ MOUNT-TIME SECURITY REQUIREMENTS (Wave G-4 P1-A audit, 2026-05-18):
+
+Before mounting this blueprint in ``routes/__init__.py``, you MUST add
+the three guards below. Currently this blueprint is UNMOUNTED — only
+``agent_worker.growth_routes`` is registered (behind try/except in
+``routes/__init__.py:54-64``). Mounting without these guards = critical
+authz/CSRF holes.
+
+  1) CSRF token enforcement on all POST form handlers
+     - ``/approve/<task_id>``, ``/reject/<task_id>``, ``/halt``
+     - Use ``flask_wtf`` CSRF or ``hmac.compare_digest`` on a
+       session-bound token
+     - The HTML forms (lines ~265-272, ~363-370) include NO csrf_token
+       hidden input — a malicious cross-origin POST while admin is
+       logged in can approve/reject any task.
+
+  2) Admin allowlist gate (NOT just ``login_required``)
+     - ``flask_login.login_required`` only checks "is a user logged in"
+     - Approve/reject paths must additionally verify
+       ``current_user.email in services.admin_emails.get_admin_emails()``
+     - Otherwise any logged-in Free user could POST to
+       ``/admin/agent/approve/<task_id>``.
+
+  3) Audit log row per approve/reject decision
+     - admin_email + task_id + decision + timestamp + remote_addr
+     - Compliance: regulator may ask "who approved which AI action when"
+
+Tracked external actions (메모리 carry-over):
+  - #G4-P1A (this file: CSRF + admin gate + audit log) — defer until
+    mount decision
+  - #14 PIVOX_BROKER_ENCRYPTION_KEY rotation script (PR #480 G-2 #1)
+  - #15 token cache AES-GCM ✅ resolved (PR #485)
 """
 from __future__ import annotations
 
