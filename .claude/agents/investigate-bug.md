@@ -72,6 +72,19 @@ tools:
 
 각 단계에서 Read / Grep.
 
+#### 9 bug 패턴 매칭 체크리스트 (`feedback_bug_fix_patterns.md`)
+
+증상 → 의심 패턴 매핑 (호출 체인 추적 중 매칭 패턴 발견 시 우선 검증):
+
+- **"데이터 비어있음" / "이전 값 그대로"** → stale fallback / divergence guard / SWR dedup 3계층 의심
+- **"한국 종목 NaN" / "특정 metric 깨짐"** → ticker normalization (`.KS`/`.KQ` 누락) / per-metric try-except (한 metric 실패 → 전체 page blank) 의심
+- **"500 + column does not exist"** → alembic migration 누락 → 즉시 `migration-guard` agent에 escalate
+- **"equity curve 비상식적 수치 (수만 %)"** → KRW raw 합산 (FX 미변환) 의심
+- **"OG 이미지 unfurl 안 됨"** → public endpoint에 `@api_auth` 잘못 적용 의심
+- **"webhook 503 / DoS"** → signature 검증 누락 (강제화 누락) 의심
+
+매칭된 패턴은 단계 5 검증 + 출력 "회귀 우려" 섹션에 의무 명시.
+
 ### 단계 3. 실제 호출 재현
 ```bash
 # dev-login 세션
@@ -87,12 +100,14 @@ curl -s -b "$COOKIE_JAR" "${RAILWAY_BACKEND_URL}/api/{endpoint}"
 
 ### 단계 4. 최근 커밋 diff 확인
 ```bash
-git log --oneline -20
+git log --oneline -50
+# base branch 대비 diff (PR scope 전체)
+git log --oneline origin/main..HEAD
 git show {hash} -- {file}
 ```
-이번 세션 fix가 어떻게 적용됐는지 / 뭘 놓쳤는지 확인.
+이번 세션 fix가 어떻게 적용됐는지 / 뭘 놓쳤는지 확인. `-20` 로 끊으면 v44.7+ 같은 거대 wave 세션에서 원인 commit 누락 위험.
 
-### 단계 5. 브라우저 DOM / Network (선택)
+### 단계 5. 브라우저 DOM / Network / SW 캐시 (선택)
 ```javascript
 // 버튼 onClick 실제 핸들러 확인
 const btn = document.querySelector('[data-testid="add-watchlist"]')
@@ -100,6 +115,21 @@ btn.onclick ? btn.onclick.toString() : "no onclick"
 
 // 이벤트 리스너 확인 (getEventListeners는 Chrome DevTools 한정)
 ```
+
+**PWA Service Worker 캐시 검증** (PivoxQuant PWA — `project_pwa.md`)
+
+```javascript
+// SW 상태
+navigator.serviceWorker.controller?.state  // 'activated' 정상
+// 등록된 모든 SW 버전
+(await navigator.serviceWorker.getRegistrations()).map(r => ({
+  scope: r.scope,
+  active: r.active?.scriptURL,
+  waiting: r.waiting?.scriptURL,  // 있으면 stale SW 대기 중
+}))
+```
+
+추가로 DevTools "Disable cache" ON vs OFF 차이 비교 — 차이가 있으면 SW cache poisoning 의심 (코드 변경이 user에게 미반영).
 
 ## 출력 형식
 
@@ -137,7 +167,9 @@ btn.onclick ? btn.onclick.toString() : "no onclick"
 ## 수정 방향 (fix agent에 전달)
 - 파일: `watchlist/page.tsx:123`
 - 변경: `onClick={() => {}}` → `onClick={handleAdd}`
-- 회귀 우려: `91a3b42`에서 제거한 이중 DELETE 문제 재발 없도록 `handleAdd` 본문에 `apiFetch` 한 번만 호출
+- 회귀 우려:
+  - **9 패턴 중 매칭**: (의무) 매칭된 패턴 명시 — 예 "패턴 #6 fail-fast vs fallback (write path에 silent fallback 도입 위험)". 매칭 0건이면 "신규 패턴 — 카탈로그 추가 권고"
+  - 구체 회귀: `91a3b42`에서 제거한 이중 DELETE 문제 재발 없도록 `handleAdd` 본문에 `apiFetch` 한 번만 호출
 
 ## 검증 계획 (fix 후 verify agent가 할 일)
 1. verify-ux: 실제 브라우저에서 "+" 클릭 → POST /api/watchlist 200 확인
@@ -152,7 +184,9 @@ btn.onclick ? btn.onclick.toString() : "no onclick"
 - **확정 불가**: 증거 부족. 어떤 추가 조사 필요한지 명시.
 
 ## 여러 버그 한꺼번에 조사
-1개 output에 여러 버그 조사 가능. 각 버그마다 위 형식 반복. 공통 원인 발견하면 묶어서 보고.
+1개 output에 여러 버그 조사 가능 — **공통 root cause 발견 시에만** (예: 동일 service의 동일 함수가 N개 surface에서 증상 발현). 무관한 N개 버그를 한 output에 섞으면 fix agent 작업 단위가 흐려져 partial fix 위험. 무관한 버그는 별도 output 또는 caller에게 분리 요청.
+
+공통 root cause 발견 시 묶어서 보고 + 각 surface별 영향 범위 명시.
 
 ## 중요
 fix agent는 너의 "수정 방향" 그대로 적용함. 틀리면 또 루프. 정확하게.

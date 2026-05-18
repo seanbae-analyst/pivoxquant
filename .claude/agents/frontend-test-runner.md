@@ -41,16 +41,45 @@ tools:
 - Google OAuth / Kakao OAuth (mock)
 - 회원탈퇴 (PIPA)
 
-**대시보드 (13 페이지)**:
+**대시보드 (12 페이지)** — `/autotrade` 제거 (2026-05-05 물리 삭제, 투자일임업 회피):
 - /home, /market (US/KR 탭), /signals, /discover, /watchlist
 - /detail/[ticker], /alerts, /ai-chat, /ai
-- /autotrade, /settings, /risk, /profile
+- /settings, /risk, /profile
 
 **Tier 1 신규 (구현 후)**:
 - /strategy (Quant Composer 40 모델 toggle)
 - /twin (AI Twin 비교)
 - /profile Section 06 (Behavioral Score), Section 07 (Persona Evolution)
 - Pre-Trade Friction 모달 카운트다운
+
+**v44.7 + v44.8 신규 surface** (32 PR 누적 카탈로그):
+- **admin surface** — `/admin/*` 권한 게이트 + 평소 redirect 동작 + role escalation guard
+- **broker** — 다중 broker (Alpaca / KIS / 향후 추가) switcher + 각 broker별 OAuth/key 흐름 + read-only mode 강제
+- **artifact** — Weekly Memo 생성/다운로드 / Brag Card OG 이미지 / Earnings Pre-Brief PDF 렌더링 + 만료
+- **portfolio history** — KRW raw 합산 금지, USD 정규화 후 FX 변환 검증 (equity curve)
+- **billing** — Stripe Live (월간 구독 / 결제 실패 / 환불 / 청구 메일 / 통신판매업 안내 미노출 guard)
+- **brag-card OG public endpoint** — `@api_auth` 없는 public endpoint (viral loop) 인증 분기 검증
+- **alert (autoplay)** — 알림 carousel autoplay + 사용자 visibility based pause
+- **realtime (WebSocket)** — SSE/WebSocket 끊김 감지 + 자동 재연결 + UI 표시
+- **ai-chat** — `AI Assistant` 어휘만 (AI Coach 금지) + DisclaimerBanner + 추천 어휘 차단
+
+### 4-A. 9 bug 패턴 회귀 vitest 카탈로그 (필수)
+
+각 패턴별 회귀 spec을 `frontend/src/__tests__/regression/` 하위에 보관:
+
+1. **stale fallback** (`stale-fallback.test.tsx`) — SWR mock으로 stale 데이터 → fresh fetch 전환을 검증. stale state에서 UI가 fresh data로 자동 갱신되는지 + stale 표시 명시 여부
+2. **divergence guard** (`divergence-guard.test.tsx`) — 두 source의 state가 어긋날 때 (예: cache vs server) divergence 경고 + reconcile 동작
+3. **ticker normalization** (`ticker-normalization.test.tsx`) — `005930`, `005930.KS`, `005930.KQ` 입력 → 동일 정규화 결과 + display는 종목명 우선
+4. **per-metric try-except** (`per-metric-try-except.test.tsx`) — 한 metric API 실패 시 나머지 metric은 정상 표시 (전체 page 500 금지)
+5. **SWR dedup 3계층** (`swr-dedup.test.tsx`) — 같은 key를 3개 컴포넌트가 동시 mount → fetch 1회만 발생 (mock fetcher call count = 1)
+6. **fail-fast vs fallback 결정 룰** (`fail-fast-vs-fallback.test.tsx`) — write 작업 = fail-fast / read 작업 = fallback 정책 일관성
+7. **equity curve FX 변환** (`equity-curve-fx.test.tsx`) — KRW raw 합산 금지, USD 정규화 후 FX 적용 — v44.8 G-5 회귀 케이스 재현
+8. **viral loop OG endpoint** (`viral-og-public.test.tsx`) — `/api/og/brag/:id` 인증 없이 200 응답 (소셜 크롤러 unfurl 검증)
+9. **webhook signature 강제** (`webhook-signature.test.tsx`) — Stripe webhook signature 검증 누락 시 503 회귀 방지 (정상 signature → 200 처리)
+
+### 4-B. naked ticker 회귀 게이트
+
+`naked-ticker.test.tsx` — 렌더링된 화면 텍스트에 `\.KS|\.KQ` suffix가 노출되면 fail. DOM 전수 textContent grep + matching site 0건 강제. `lib/format.ts` `tickerLabel()` helper로 모든 surface 통일.
 
 ### 5. 응답성 / 접근성
 - 모바일 / 태블릿 / 데스크톱 viewport
@@ -182,5 +211,7 @@ jobs:
 
 ## 참고
 - `frontend/src/` — 기존 컴포넌트
-- HANDOVER v9 §3-G — Persona V2 / Flip card live QA 미완료 항목
+- `HANDOVER.md` v44.7 (2026-05-17 자율 overnight + v44.8 / v44.9 Wave G/H 누적 40 PR) — Wave A-H 누적 작업 + 미완료 항목
 - `verify-ux` — prod 검증 전담 (이 agent 와 역할 분리)
+- `services/legal/forbidden_terms.py` — 컴플라이언스 어휘 단일 SoT (vitest 케이스도 이 파일 import 또는 동기화)
+- 9 bug 패턴 원본: `~/.claude/projects/-Users-seanbae-Desktop---/memory/feedback_bug_fix_patterns.md`

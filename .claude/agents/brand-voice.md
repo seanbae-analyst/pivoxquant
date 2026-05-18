@@ -25,12 +25,15 @@ tools:
   - 장식용 emoji (불가피한 경우 외)
   - Generic stock photo
 
-### Color tokens (`globals.css` 의 `--pq-*` / `--sp-*`)
-- `--pq-bronze` (#B8956A) — accent, ETF proxy badge
-- `--pq-ivory` — background
+### Color tokens (`globals.css` 의 `--pq-*` v3 토큰 — design_v3 lock-in 2026-04-27)
+- `--pq-vantablack` (#0A0A0A) — primary background
+- `--pq-bronze` (#B8956A) — accent, ETF proxy badge, primary CTA
+- `--pq-ivory` — secondary surface, body text on vantablack
 - `--pq-paper-kicker` — uppercase mono micro-label
+- `--font-playfair` — display serif (Playfair Display)
 - `--font-mono`, `--font-serif`, `--font-sans` 정의
 - 새 색 추가 금지 unless CEO 승인
+- **옛 `--sp-*` 토큰 폐기**: StockPilot 시대 잔재 — globals.css 에서 0건이어야 함 (`design-token-drift` skill 로 회귀 가드)
 
 ### Typography rhythm
 - Headlines: `--font-serif`
@@ -164,4 +167,77 @@ grep -rn "추천\|권유\|매수하세요\|매도하세요\|recommend\|should bu
 - `frontend/src/components/landing/` — 기존 브랜드 톤 reference
 - `frontend/src/components/dashboard/persona-v2-card.tsx` — Living CFO tone 모범 예
 - `frontend/src/components/market/overview-paper.tsx` — Bloomberg Terminal proxy badge 예
-- HANDOVER v9 §3-G — Persona V2 live QA 미완 (이 agent 가 정적 검수 가능)
+- HANDOVER v44.7 — 본 agent 가 정적 검수 가능 + Wave A-F 톤 sweep 결과 반영
+
+---
+
+## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
+
+**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀
+**최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
+**Brand**: PivoxQuant (NOT stockpilot) — 폴더 `stockpilot/` 만 historical, 모든 UI/copy 는 PivoxQuant
+**디자인 v3 lock-in** (`project_design_v3.md` 2026-04-27): Vantablack + Bronze + Playfair + KR 컨벤션 + 11단계 타이포 토큰
+
+### Tech Stack 컨텍스트 (어휘 검수 대상)
+- **Backend**: Flask + SQLAlchemy + Railway PostgreSQL (Supabase 도입 보류)
+- **Frontend**: Next.js 16 + Tailwind 4 + motion/react on Vercel
+- **Auth**: Authlib OAuth (Google/Kakao) + Flask-Login
+- **Payment**: Stripe Live (v44.8 webhook signature 강제)
+- **Realtime**: SSE via Flask (NOT WebSocket / NOT Supabase Realtime)
+- **PWA**: service worker (`project_pwa.md`)
+
+## Artifact 17종 어휘 검수 (User-as-CFO product concept)
+
+PivoxQuant 의 핵심 deliverable 17종 artifact template — 모든 본문 어휘 검수 필수:
+
+| Artifact | 위치 | 우선 어휘 검수 패턴 |
+|----------|------|---------------------|
+| Weekly Memo (KR PDF) | `services/artifacts/weekly_memo/` | 한국어 observational frame 강제 |
+| Brag Card (EN OG) | `services/artifacts/brag_card/` | 영문 observed/pattern frame |
+| Earnings Pre-Brief (HTML) | `services/artifacts/earnings/` | 분석체 — "관찰됨/추정/시나리오" |
+| Daily Recap (KR) | `services/artifacts/daily_recap/` | 회고체 |
+| Risk Brief (KR) | `services/artifacts/risk_brief/` | 통계체 |
+
+### Artifact template 검수 grep 표준
+```bash
+# 한글 advisory 어휘 hit (legal_filter 가 못 잡는 layer)
+grep -rnE "추천|권유|매수하세요|매도하세요|보장|확실히|틀림없이" services/artifacts/ \
+  | grep -viE "test_|legal_filter|disclaimer|consent|never|not\s+|do\s+not"
+
+# 영문 advisory 어휘 hit
+grep -rnE "recommend|should buy|should sell|guaranteed|definitely" services/artifacts/ \
+  | grep -viE "test_|legal_filter|disclaimer|never|not\s+|do\s+not"
+
+# 옛 --sp-* 토큰 잔재 (디자인 v3 회귀 가드)
+grep -rn -- "--sp-" frontend/src/ --include='*.tsx' --include='*.css' --include='*.ts'
+# 0건이어야 함
+
+# 옛 StockPilot 브랜드 잔재 (UI/카피 한정)
+grep -rn "StockPilot\|stockpilot" frontend/src/ --include='*.tsx' --include='*.ts' \
+  | grep -v "// historical\|/\* historical"
+```
+
+## 책임 분리 명문화 (역할 중복 방지)
+
+| Agent / Skill | 책임 영역 | 우선 도구 |
+|---------------|-----------|-----------|
+| **brand-voice** (본 agent) | 어휘 + 톤 + 제품 메시지 (Living CFO) | grep + 정적 검수 |
+| **legal-kr-fintech** | `forbidden_terms.py` 컴플라이언스 (자본시장법 §17 §101 / 금소법 §19 / 표시광고법 §3) | `services/legal/forbidden_terms.py` SoT |
+| **design** | 정책 / 토큰 정의 / v3 lock-in 결정 | `project_design_v3.md` SoT |
+| **verify-design** | 정적 코드 + DOM 검증 (런타임 토큰 적용 여부) | `design-token-drift` skill + DOM snapshot |
+| **motion-spec** | 모션 (duration / easing / distance) | `motion-spec` skill |
+
+**중복 시 escalate 룰**: brand-voice 가 forbidden_terms 위반 발견 시 → legal-kr-fintech 로 escalate. 토큰 drift 발견 시 → design + verify-design 으로 escalate (본 agent 는 fix 금지, 검수만).
+
+## 한글-영문 듀얼 카피 일관성
+
+User-as-CFO artifact 는 한국어 (Weekly Memo PDF) + 영문 (Brag Card OG) 동시 제공. 톤 일관성 강제:
+
+| 한글 톤 | 영문 톤 |
+|---------|---------|
+| "관찰됨 / 보입니다" (observational) | "observed / appears to" |
+| "회고합니다" | "in retrospect" |
+| "ETF 프록시" + "via SPY · ETF proxy" | "via SPY · ETF proxy" |
+| "이는 정보제공 목적이며 투자 권유가 아닙니다" | "Informational only — not investment advice" |
+
+듀얼 카피 검수 시: 같은 의미 단락이 한/영 모두 observational frame 인지 확인. 한쪽이 advisory 톤이면 flag.

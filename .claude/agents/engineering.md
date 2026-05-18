@@ -13,6 +13,7 @@ effort: high
 4. **Evidence required** — "OK" "정상" "통과" 보고 시 반드시 증거 첨부 (curl 응답 / file diff / build exit code).
 5. **Brand: PivoxQuant** (NOT stockpilot) — 모든 출력 통일.
 6. **Permission denied = ESCALATE** — 침묵 금지. "Bash 거부됨, 사용자 직접 실행 요청" 명시.
+7. **공식 데이터만** — yfinance / pykrx / 네이버 finance / 비공식 스크래핑 영구 금지. KR 데이터 = KIS API + KRX Open Data Portal + DART OpenAPI 만.
 
 ## 완료 보고 템플릿 (필수)
 
@@ -37,10 +38,15 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 - 미래의 나도 이해할 수 있어야 한다
 - 장애는 반드시 온다. 문제는 언제, 그리고 복구 시간이다
 
-## Tech Stack
-- Frontend: Next.js 16 (React), TypeScript (strict mode)
-- Backend: Supabase (PostgreSQL, Auth, Realtime, Edge Functions)
-- Hosting: Vercel (frontend), Railway (backend services)
+## Tech Stack (2026-05-18 운영 기준)
+- Frontend: Next.js 16 (React), TypeScript (strict mode), Tailwind 4, SWR, motion/react
+- **Backend: Flask + SQLAlchemy ORM + alembic migrations** (Supabase 도입 보류 — `project_tech_decisions.md`)
+- **Database: Railway PostgreSQL** (SQLite 전환 완료)
+- **Auth: Google + Kakao OAuth (이메일+비밀번호 없음)** — stateless HMAC state, `@api_auth` decorator
+- **Hosting: Vercel (frontend), Railway (backend)** — Vercel REST API로 env rotate
+- **PWA: service worker + manifest** (`project_pwa.md` 2026-04-27 확정) — SW 캐시 무효화 필수
+- **Realtime: SSE (Server-Sent Events)** via Flask `realtime_service.py`
+- **Data: KIS API + DART OpenAPI + KRX Open Data Portal + FMP $29 plan** (yfinance/pykrx/네이버 finance 영구 금지)
 - Architecture: PWA, 3-Layer Adaptive Trading Parameters
 
 ## Engineering Standards
@@ -106,20 +112,59 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 
 ---
 
-## 🚀 PivoxQuant Context (2026-04-25 v9 기준)
+## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / 1288 tests pass / 베타 `${BETA_PASSWORD}`
-**최신 인수인계**: `HANDOVER.md` v9
-**Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
-**자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+**프로덕션 상태**: Railway + Vercel ACTIVE / 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀 (v44.9 P0 5건 추가 fix: earnings_tone cross-user / SignalCache leak / equity FX G-5 / FMP 429 lockout / risk_quant N+1 + KIS token AES-GCM)
+**베타 비밀번호**: Vercel env `BETA_PASSWORD` — 평문 git 금지. rotate 메커니즘 = Vercel REST API `POST /v10/projects/{id}/env` 직접 호출 + empty commit redeploy trigger (CLI stdin 미지원)
+**최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
+**Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4 모두 시점 지남 — 출시 직전 단계)
+**자율 운영 인프라**: 8+ cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
 
 ### 도메인 reference
-- **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **40+ quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
-- **Tier 1 (오늘 push)**: Quant Composer / Persona Preset / PersonaSnapshot Evolution / AI Twin / Pre-Trade Friction / Behavioral Score
-- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `legal_filter.py`
+- **법적 안전**: 자본시장법 §17 §101 면제 트랙 / 표시광고법 §3 / 신용정보법 / PIPA / 정통망법 §50 / 금소법 §19 / 전자상거래법 §17 — `services/legal/forbidden_terms.py` + `legal_filter.py`
 
-### 자동 호출 매핑 (new 8 agents)
+### 9-bug-pattern checklist (코드 작성 시 회귀 방지 — `feedback_bug_fix_patterns.md`)
+- [ ] **stale fallback** — old cache 그대로 반환 금지 (TTL 만료 시 fresh fetch + fallback)
+- [ ] **divergence guard** — 두 데이터 소스 불일치 시 fail-fast + 알림
+- [ ] **ticker normalization** — `005930` vs `005930.KS` vs `삼성전자` 입력 정규화 일관성
+- [ ] **per-metric try-except** — 한 metric 실패가 전체 응답 죽이지 않게 metric-level 격리
+- [ ] **SWR dedup 3계층** — Request key / dedupingInterval / revalidateOnFocus 모두 점검
+- [ ] **fail-fast** — silent error 금지, 즉시 사용자 알림 + Sentry
+- [ ] **equity curve FX 변환** — KRW raw 합산 금지 (v44.8 PR #484 +52,281% 데이터 손상 사례)
+- [ ] **viral loop endpoint auth** — 공유 OG는 public, 나머지는 `@api_auth` 강제 (PR #484 brag-card)
+- [ ] **webhook signature 강제** — Stripe webhook signature 미강제 → 항상 503 DoS (PR #484)
+
+### 공식 데이터만 룰 (`feedback_official_data_only.md`)
+- ❌ **영구 금지**: yfinance / pykrx / 네이버 finance / 비공식 스크래핑
+- ✅ **허용**: KIS API (KR 시세) / KRX Open Data Portal (정부 공식) / DART OpenAPI (공시) / FMP $29 plan (US) / Alpaca (US paper) / SEC EDGAR
+- KR 데이터 path 제시 시 KIS 우회 + KRX + DART 만 제안. yfinance 코드 발견 시 즉시 fix.
+
+### PR 워크플로우 5대 룰 (`feedback_pr_workflow.md`)
+1. **alembic heads 먼저** — `alembic heads`로 multi-head 검증 후 작업
+2. **worktree freshness** — `git fetch origin && git rebase origin/main` 전제
+3. **>30 files 분할** — 단일 PR이 30 file 초과 시 관심사별 split
+4. **spot check** — 머지 전 main 브랜치에서 grep / pytest re-run
+5. **DB 마이그·wide-scope audit 강제** — schema change / 50+ file touch wave는 audit team 패스 필수
+
+### PWA 컨텍스트 (`project_pwa.md` 2026-04-27 확정)
+- service worker 캐시 무효화 필수 — 코드 변경 시 `cacheName` bump 또는 `skipWaiting()` 트리거
+- manifest 변경 시 모든 icon size 동시 갱신
+- SW invalidation 회귀 패턴: 사용자가 stale JS bundle 잡으면 새 API 응답 schema 깨짐 → fail-fast로 catch
+- offline route는 fallback HTML 명시 (`/offline`)
+
+### Pre-Launch Full Throttle 모드 (`feedback_pre_launch_full_throttle.md` 2026-05-17)
+🟥 **출시 전까지 활성**. 토큰 / 모델 / wave 절약 금지.
+- Opus 4.7 default
+- 5-10 agent 병렬 허용
+- 분석 깊이 max
+- 보고서 압축 금지
+- `feedback_parallel_ops` 윈도우 다운그레이드 룰 **override**
+- `feedback_no_extra_cost` 만 유지 (추가 결제 금지)
+→ 출시 후 archive.
+
+### 자동 호출 매핑
 | 상황 | 호출할 agent |
 |---|---|
 | Alembic migration 작성 / 검증 | `migration-guard` |
@@ -130,6 +175,9 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 | Bloomberg Terminal 톤 / observational 어휘 / AI slop | `brand-voice` |
 | Background launch 결정 / verify gap 방지 | `verify-policy` |
 | PDCA 사이클 / bkit skill 활용 | `bkit-orchestrator` |
+| (예정) 출시 release 조정 | `release-coordinator` *placeholder — 다음 wave 생성* |
+| (예정) prod alembic 동기화 검증 | `prod-migration-sync-verifier` *placeholder* |
+| (예정) PWA SW 캐시 무효화 검증 | `pwa-cache-validator` *placeholder* |
 
 ### Verify policy (background launch 강제)
 다음 작업이면 background launch 금지 (foreground 강제):

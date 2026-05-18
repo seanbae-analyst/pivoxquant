@@ -112,12 +112,50 @@ fetch('/api/auth/dev-login', {
 
 **컴플라이언스 (자본시장법)**
 - "추천" / "매수" / "매도" / "buy now" / "sell now" / "recommend" 발견 즉시 critical
-- 면책 배너 누락된 분석 페이지
+- **단일 SoT**: `services/legal/forbidden_terms.py` import / 동기화 — 이 파일과 다른 어휘 list 발견 시 즉시 BLOCKED 보고
+- 면책 배너 (`DisclaimerBanner`) 누락된 분석 / 시그널 페이지
+- "AI Coach" / "투자 코치" 발견 즉시 critical (→ "AI Assistant")
+- `BUY/SELL/HOLD` UI 라벨 (→ `POSITIVE/NEGATIVE/NEUTRAL`)
 
 **Edge case**
 - 빈 데이터 상태 (포지션 0, 알림 0)
 - 매우 긴 텍스트 / 작은 화면 (resize_window로 mobile)
 - 이중 클릭 / 빠른 연타
+
+**Bug 패턴 사냥 트리거** (`feedback_bug_fix_patterns.md` SoT 표준 9 + v44.x 세션 도메인 확장)
+
+각 패턴별로 grep / network / DOM check 자동 트리거:
+
+**표준 9 패턴 (SoT 직접 매핑 — `feedback_bug_fix_patterns.md` §1~§9)**
+
+1. **stale cache fallback** — `grep -rn "fallback" frontend/src` + UI에서 stale state 표시 누락 여부. SWR `keepPreviousData` 사용처에서 fresh 갱신 끊김 의심. 3단 fallback (fresh → in-memory → price_display) 누락 확인
+2. **divergence guard** — 동일 데이터의 두 source (live level vs history / cache vs server / FE store vs API) 30% (USD/KRW 10%) 이상 차이 시 둘 다 폐기 + `is_stale=true` 처리되는지. 하드코딩 [0.0, 0.0] grep 차단
+3. **ticker normalization** — `grep -rnE "\.KS|\.KQ" frontend/src` + KR 종목 detail 페이지에서 ticker suffix 그대로 노출되는지. class-share (BRK.B ↔ BRK-B) `_class_share_alt()` 단일 helper 사용 검증
+4. **per-metric try-except** — 한 metric API 4xx/5xx → 전체 page blank 되는지. `grep -rn "Promise.all" services/` (한 promise reject → 전체 reject 위험). Risk layer 살아있는 layer 유지 확인
+5. **deprecated endpoint 금지** — `grep -rE "api/v3\|api/v4" stockpilot/` 결과 0건 회귀 가드. FMP v3 2025-08-31 비지원, stable endpoint 만 사용
+6. **SWR dedup 3계층** — Network 탭에서 동일 URL 중복 호출 (>1회) 발견 시 의심. 전역 SWRConfig `dedupingInterval` + 공용 hook + 페이지 inline 금지 + raw `fetch()` grep 0건
+7. **SWR loading state** — `!data` 를 empty 로 오인 금지 — UI 에 loading/empty/error 3상태 구분 + sample/demo 배너 플리커 버그 회귀 (risk/page.tsx 사례)
+8. **DB migration (코드-데이터 lag)** — 코드 용어 변경 PR 에 Alembic migration 동봉 필수. down_revision 체인 / downgrade no-op / alembic heads 단일 검증
+9. **prod fail-fast (ephemeral fallback 금지)** — 필수 env (BETA_PASSWORD, ANTHROPIC_API_KEY, ENCRYPTION_KEY) 없으면 prod boot 단계 즉시 fail. 주문 / 결제 같은 write path 가 fallback (silent retry) 하면 critical. ephemeral key 재생성 silent data loss 회귀 차단
+
+**도메인 확장 패턴 (bug-hunter 특화 — v44.x 세션 신규 — SoT 외)**
+
+10. **equity curve FX 변환** — Portfolio history KRW + USD 종목 혼합 시 raw 합산 (FX 미적용) 의심. 수치가 비상식적으로 큼 (수만 %) 발견 즉시 critical (v44.8 G-5 회귀 사례)
+11. **viral loop OG endpoint** — `/api/og/brag/:id` 등 public endpoint가 `@api_auth` 데코레이터로 401 되는지 (크롤러 unfurl 차단 회귀)
+12. **webhook signature 강제** — Stripe / 외부 webhook이 signature 없이 503 반환 (DoS auto-opt-out) 회귀 여부
+
+**PWA SW 캐시 검증** (PivoxQuant는 PWA — `project_pwa.md`)
+
+- DevTools > Application > Service Workers 탭: 활성화된 SW가 최신 버전인지 (`waiting` state 남아있으면 cache stale 의심)
+- Console: `await navigator.serviceWorker.controller.state` → `activated` 여야 정상
+- `await self.clients.claim()` 호출 동작 — 코드 변경 후 SW 무효화가 user에게 반영되는지
+- DevTools "Disable cache" ON vs OFF 차이 비교 — 차이 있으면 SW cache poisoning 의심
+
+**naked ticker 회귀 게이트**
+
+- DOM 전수 textContent → `\.KS|\.KQ` suffix match 0건 강제
+- 발견 시 critical (사용자 반복 지시 — `feedback_ticker_display.md`)
+- `lib/format.ts` `tickerLabel()` 미사용 surface 즉시 보고
 
 ### 단계 3. 발견 즉시 root cause 추적
 버그 발견하면 그 자리에서:
@@ -167,11 +205,17 @@ fetch('/api/auth/dev-login', {
 ### 🟡 MEDIUM — Bug #3: ...
 ### ⚪ LOW — Bug #4: ...
 
+## 회귀 테스트 권고 (frontend-test-runner 에 전달)
+각 발견 bug마다 9 bug 패턴 매칭 + 회귀 spec 권고:
+- Bug #N → 패턴 X (예: stale fallback) → 권고 spec: `frontend/src/__tests__/regression/stale-fallback.test.tsx` 신규/확장
+- 패턴 매칭 0건이면 "신규 패턴" 명시 + 향후 카탈로그 추가 권고
+
 ## 발견 0건이면
 "버그 0건 — 시도한 액션 N건 모두 정상" + 시도한 액션 명시
 
 ## 의심 가는데 확정 못한 것
 - (낮은 확신도, 추가 조사 필요)
+- **확신도 ≤ 50%**: 즉시 `investigate-bug` agent에 escalate (root cause 확정 위임). bug-hunter 단독 finalize 금지.
 
 ## 전체 요약
 - 사냥 페이지 N개 / 발견 X건 (CRITICAL: a, HIGH: b, MEDIUM: c, LOW: d)
@@ -187,12 +231,13 @@ fetch('/api/auth/dev-login', {
 
 ---
 
-## 🚀 PivoxQuant Context (2026-04-25 v9 기준)
+## 🚀 PivoxQuant Context (2026-05-18 v44.8 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / 1288 tests pass / 베타 `${BETA_PASSWORD}`
-**최신 인수인계**: `HANDOVER.md` v9
+**프로덕션 상태**: Railway + Vercel ACTIVE / pytest 1600+ pass (누적 v44.9까지) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
+**최신 인수인계**: `HANDOVER.md` v44.7 자율 overnight (v44.8 / v44.9 Wave G/H 누적 40 PR squash-merged #454~#491)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
 **자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+**9 bug 패턴 원본**: `~/.claude/projects/-Users-seanbae-Desktop---/memory/feedback_bug_fix_patterns.md` (2026-04-24 확립)
 
 ### 도메인 reference
 - **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)

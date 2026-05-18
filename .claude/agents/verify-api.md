@@ -10,6 +10,8 @@ tools:
   - Glob
 ---
 
+> **PivoxQuant Context v44.8** — 본 agent는 PivoxQuant API 검증 전담. Railway PG migration / Stripe Live / OAuth callback 회귀 게이트 포함.
+
 ## ⚖️ Iron Rules (절대 위반 금지)
 
 1. **No assumption skipping** — "충돌 우려" "범위 밖일 듯" 같은 추측으로 스킵 금지. 의심되면 caller에게 escalate.
@@ -74,11 +76,80 @@ curl -s -b "$COOKIE_JAR" ${RAILWAY_BACKEND_URL}/api/auth/me
 - 403 → 권한 / tier
 - 404 → URL 오타 / 라우트 미등록
 - 429 → rate limit
-- 500 → 서버 에러 (백엔드 로그 필요)
+- 500 → 서버 에러 (백엔드 로그 필요) — 하위 분기 필수:
+  - 500 + `column does not exist` / `UndefinedColumn` → **migration 미적용 의심** → `migration-guard` agent escalate (v44.7 OAuth `provisioning_failed` P0 hotfix 패턴: alembic 035 prod 미적용)
+  - 500 + `IntegrityError` → FK violation → SQLAlchemy 모델 vs DB 동기화 확인 (alembic head vs models metadata diff)
+  - 500 + `OperationalError` → Railway PG 연결 / pool 고갈 / SSL handshake fail
 - 200 but empty → 데이터 소스 문제 (FMP/KIS API 실패 등)
 
 ### 5. Bash 권한
-`.claude/settings.local.json`에 `Bash(curl *)`, `Bash(lsof *)`, `Bash(kill *)`, `Bash(python3 *)` 허용됨.
+`.claude/settings.local.json`에 `Bash(curl *)`, `Bash(lsof *)`, `Bash(kill *)`, `Bash(python3 *)`, `Bash(railway logs *)` 허용됨.
+
+### 6. Railway Logs 자동 grep
+500 발생 시 **즉시** 다음 명령 실행 (root cause 분류):
+```bash
+railway logs --service=backend | tail -200 | grep -E "column.*does not exist|UndefinedColumn|IntegrityError|OperationalError|psycopg2|alembic"
+```
+출력 패턴별 분기:
+- `column ... does not exist` → migration-guard escalate (prod schema drift)
+- `IntegrityError` → FK / unique constraint 위반
+- `OperationalError: SSL` → Railway PG pool / SSL 재연결
+- 빈 출력 → 다른 키워드로 재시도 (`TypeError|KeyError|AttributeError`)
+
+## Critical Endpoint Allowlist (출시 전 회귀 게이트)
+**모든 verify 세션마다 반드시 호출 + 결과 기록** (9개):
+
+| # | Endpoint | Method | 기대 status | 비고 |
+|---|----------|--------|-------------|------|
+| 1 | `/api/health` | GET | 200 | liveness — 0 dependency |
+| 2 | `/api/auth/google/callback` | GET | 302 redirect | OAuth — `provisioning_failed` 패턴 회귀 게이트 (v44.7) |
+| 3 | `/api/auth/kakao/callback` | GET | 302 redirect | OAuth — stateless HMAC state 검증 |
+| 4 | `/api/portfolio/list` | GET (auth) | 200 + array | spot FX KRW 변환 확인 (v44.9 G-5 회귀) |
+| 5 | `/api/portfolio/create` | POST (auth) | 201 | idempotency key 검증 |
+| 6 | `/api/artifacts/weekly-memo` | GET (auth) | 200 | Weekly Memo (MVP 핵심) |
+| 7 | `/api/artifacts/brag-card/og.png` | GET (**public**) | 200 image/png | **인증 분기 검증** — viral loop (v44.8 PR #484: @api_auth → public endpoint 회귀 게이트) |
+| 8 | `/api/billing/checkout` | POST (auth) | 200 + checkout_url | Stripe Live — 전자상거래법 §17 확인 |
+| 9 | `/api/webhooks/stripe` | POST | 503 (sig 없음) | signature 강제 검증 — 아래 섹션 참조 |
+
+## Stripe Webhook Signature 강제 검증 (PR #484 회귀 게이트)
+v44.8 DoS auto-opt-out 학습: signature 미강제 시 항상 503 → webhook 영구 fail → 결제 자동 opt-out.
+
+```bash
+# Case 1: signature 없음 → 503 정상 (signature required)
+curl -s -o /dev/null -w "%{http_code}" -X POST ${RAILWAY_BACKEND_URL}/api/webhooks/stripe \
+  -H "Content-Type: application/json" \
+  -d '{"type":"checkout.session.completed"}'
+# 기대: 503 (또는 400 "missing stripe-signature")
+
+# Case 2: signature 잘못됨 → 401 정상
+curl -s -o /dev/null -w "%{http_code}" -X POST ${RAILWAY_BACKEND_URL}/api/webhooks/stripe \
+  -H "Content-Type: application/json" \
+  -H "Stripe-Signature: t=1234,v1=invalid" \
+  -d '{"type":"checkout.session.completed"}'
+# 기대: 401 (signature verification failed)
+
+# Case 3: signature 유효 (Stripe CLI 또는 test fixture) → 200
+# stripe trigger checkout.session.completed --forward-to ${RAILWAY_BACKEND_URL}/api/webhooks/stripe
+# 기대: 200
+```
+**FAIL 조건**: Case 1에서 200 반환 → signature 미강제 = 즉시 SHIP-BLOCKER.
+
+## Stripe Live 5법 Endpoint Sweep (billing 회귀 게이트)
+v44.8 5종 규제 sweep 학습 (전자상거래법 §17 / 금소법 §19 / 표시광고법 §3 / PIPA §28-8 / 정통망법 §50):
+
+| Endpoint | 검증 항목 |
+|----------|-----------|
+| `/api/billing/checkout` | 청약철회권 안내 (§17) + 가격 표시 명확성 (표시광고법 §3) |
+| `/api/billing/subscription` | 자동결제 사전 동의 (정통망법 §50) |
+| `/api/billing/cancel` | 즉시 해지 가능 (§17) — 503 / 401 / 404 시 SHIP-BLOCKER |
+| `/api/billing/invoice/[id]` | 거래정보 보관 5년 (PIPA §28-8) |
+| `/api/billing/refund` | 환불 정책 명시 (금소법 §19) |
+
+각 endpoint response body에 disclosure 텍스트 grep:
+```bash
+curl -s -b "$COOKIE_JAR" ${RAILWAY_BACKEND_URL}/api/billing/checkout | grep -E "청약철회|7일|환불"
+# 없으면 FAIL
+```
 
 ## 출력 형식
 

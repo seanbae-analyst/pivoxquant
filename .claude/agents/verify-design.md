@@ -43,11 +43,22 @@ PivoxQuant 디자인이 **Apple HIG + Bloomberg** 방향 유지하는지. 새 �
 
 ## 금지 패턴 (재발하면 FAIL)
 
-### 색상
+### 색상 (v3 디자인 토큰 — design.md:140 절대 준수)
 - ❌ `from-violet-*`, `to-pink-*`, `via-blue-*` 그라디언트
 - ❌ `#8b5cf6` (violet), `#ec4899` (pink)
-- ✅ `slate-*`, `zinc-*`, `stone-*` neutral
-- ✅ 단일 accent (예: `slate-900` CTA)
+- ❌ `bg-white` / `text-slate-*` / `slate-*` / `zinc-*` / `stone-*` (대쉬보드) — design.md:140 명시 금지
+- ❌ Tailwind raw neutral 토큰 직접 사용 (slate/zinc/stone/gray-*)
+- ✅ **Vantablack 표면**: `--pq-bg-0` (#0A0A0A), `--pq-bg-1`, `--pq-bg-2` (CSS var only)
+- ✅ **Bronze 단일 accent**: `--pq-bronze-1` (#8b6f47), `--pq-bronze-2`, `--pq-bronze-3` (CTA / 강조 1곳만)
+- ✅ **Ivory** (`--pq-ivory-0` #F5F0E8, `--pq-ivory-1`): PDF Report 전용. 대쉬보드 사용 금지
+- ✅ 한국 증시: 상승 `--pq-up` (빨강), 하락 `--pq-down` (파랑) — `lib/price-color.ts` 헬퍼만
+
+### v3 컴포넌트 사용 검증 (필수)
+- ✅ 카테고리 라벨 → `<Eyebrow>` 컴포넌트 (직접 `<span className="uppercase text-xs">` 금지)
+- ✅ 섹션 헤드라인 → `<EditorialHead>` (직접 `<h1 className="text-4xl">` 금지)
+- ✅ 숫자 표시 → `<NumDisplay>` (tabular-nums + Geist Mono 자동) — 직접 포맷팅 금지
+- ✅ 11단계 타이포 토큰 (`--pq-type-1` ~ `--pq-type-11`) 만 사용. 임의 font-size 금지
+- ✅ `lib/format.ts` helper (formatKRW / formatPercent / formatCompact) — 직접 `.toLocaleString()` 금지
 
 ### 폰트
 - ❌ Inter (layout.tsx에 import 있으면 FAIL)
@@ -128,12 +139,19 @@ Array.from(document.querySelectorAll('*'))
 
 ---
 
-## 🚀 PivoxQuant Context (2026-04-25 v9 기준)
+## 🚀 PivoxQuant Context (v44.9 — 2026-05-18)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / 1288 tests pass / 베타 `${BETA_PASSWORD}`
-**최신 인수인계**: `HANDOVER.md` v9
+- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀
+- Tech Stack: Flask + SQLAlchemy + alembic / Railway PostgreSQL / Next.js 16 / Vercel / Stripe Live / PWA (SW + manifest)
+- Auth: Google + Kakao OAuth (이메일+비밀번호 없음) — stateless HMAC state, @api_auth decorator
+- Data: KIS API + DART OpenAPI + KRX Open Data Portal + FMP (yfinance/pykrx/네이버 영구 금지)
+- HANDOVER.md v44.7 (2026-05-17 자율 overnight)
+- §101 면제 트랙 유지 (legal_decision_no_advisory)
+- Vercel BETA_PW rotate 메커니즘: REST API + empty commit redeploy (v44.7)
+- 메모리 룰: feedback_pre_launch_full_throttle / feedback_no_extra_cost / feedback_no_false_reports / feedback_thorough_fixes
+
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
-**자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+**자율 운영 인프라**: 6개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`) — v44.8 기준 축소
 
 ### 도메인 reference
 - **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
@@ -152,6 +170,15 @@ Array.from(document.querySelectorAll('*'))
 | Bloomberg Terminal 톤 / observational 어휘 / AI slop | `brand-voice` |
 | Background launch 결정 / verify gap 방지 | `verify-policy` |
 | PDCA 사이클 / bkit skill 활용 | `bkit-orchestrator` |
+
+### 자동 호출 매핑 (Wave 신설 agents — 디자인/모션/PWA)
+| 상황 | 호출할 agent |
+|---|---|
+| 차트 모션 / 페이지 트랜지션 / 마이크로인터랙션 회귀 | `motion-designer` |
+| SVG / 아이콘 / 일러스트 / OG 이미지 / 브랜드 자산 회귀 | `visual-designer` |
+| Service worker / manifest / precache / cache strategy 회귀 | `pwa-cache-validator` |
+| iOS Safari / safe-area / 터치 영역 44px / 375px viewport 회귀 | `mobile-pwa-optimizer` |
+| Empty-state / 첫 화면 / onboarding 비주얼 회귀 | `onboarding-designer` |
 
 ### Verify policy (background launch 강제)
 다음 작업이면 background launch 금지 (foreground 강제):

@@ -40,7 +40,7 @@ effort: high
 
 ### 대상 디렉토리
 ```
-/Users/seanbae/Desktop/취준/stockpilot/
+/Users/seanbae/Desktop/취준/pivoxquant/
   services/artifacts/templates/
     {17개 .html 템플릿}
     _report_css.html       ← 공통 CSS 488줄
@@ -156,11 +156,18 @@ TIER D — No charts (텍스트/표 only)
 2. 변경 전 현재 상태 기록 (파일 크기, 주요 섹션)
 3. 수정 (Edit / Write)
 4. services/artifacts/{template}_service.py 의 변수명과 일치 확인 (grep)
-5. scripts/render_artifact_samples.py 실행 (17개 전체 재렌더)
-6. samples/pdf/{template}.pdf 생성 확인 (크기·mtime)
-7. pypdf 로 본문 추출해서 금지어 grep
-8. cp samples/pdf/*.pdf "../Pivoxquant report/" (있는 경우)
-9. 완료 보고 (checklist + 증거)
+5. **PDF (.html) 수정 시 동일명 _email.html 동시 업데이트 의무**
+   - `{template}.html` 변경 시 `{template}_email.html` (있는 경우) 동일 변수/문구/disclaimer 반영
+   - 변수명 divergence 회귀 차단: `diff <(grep -oE '{{ *[a-z_]+' {template}.html) <(grep -oE '{{ *[a-z_]+' {template}_email.html)`
+   - email-only 변수 (subject_line, preview_text 등) 만 제외 허용
+6. scripts/render_artifact_samples.py 실행 (17개 전체 재렌더)
+7. samples/pdf/{template}.pdf 생성 확인 (크기·mtime)
+8. pypdf 로 본문 추출해서 금지어 grep
+9. cp samples/pdf/*.pdf "../Pivoxquant report/" (있는 경우)
+10. **artifact-qa agent 호출 의무** (수정 후 자체 검증으로 끝내지 말 것)
+    - artifact-qa 가 17개 전수 시각·법적·구조 QA 수행
+    - 결과 ✅ 받기 전까지 "완료" 보고 금지
+11. 완료 보고 (checklist + 증거 + artifact-qa 결과)
 ```
 
 ### Mode 2 — Claude Design 외부 output 통합
@@ -186,7 +193,7 @@ TIER D — No charts (텍스트/표 only)
 
 ### 재렌더 증거
 ```bash
-cd /Users/seanbae/Desktop/취준/stockpilot
+cd /Users/seanbae/Desktop/취준/pivoxquant
 python3 scripts/render_artifact_samples.py 2>&1 | tail -20
 stat -f "%Sm  %z  %N" samples/pdf/*.pdf
 ```

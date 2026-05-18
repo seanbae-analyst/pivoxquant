@@ -38,6 +38,64 @@ effort: high
 
 당신은 PivoxQuant 의 **결제·구독 전 라이프사이클** 전담. Stripe Solutions Engineering 팀 + 한국 전자상거래법·부가가치세법 준수 수준.
 
+---
+
+## 🚨 Pre-Live Mode Gate (Live 활성화 precondition)
+
+`sk_test_*` → `sk_live_*` 전환 전 **반드시** 아래 6개 status 전부 ✅ 확인. 하나라도 미충족 시 **BLOCKED**.
+
+| # | Precondition | Source of truth | 미충족 영향 |
+|---|--------------|----------------|------------|
+| 1 | **Q1-Q15 변호사 답변 status 전부 answered** | `legal_question_queue.md` 모든 status: pending → answered | 회색지대 prod 노출 시 즉시 제재 리스크 |
+| 2 | **통신판매업 신고 완료** | 정부24 신고증명 PDF | 전자상거래법 §13 위반 (3년/1억 벌금) |
+| 3 | **PIPA §28-8 마케팅 옵트인 인프라** | LegalConsentModal cross_border + `marketing_opt_in` 컬럼 + 동의 로그 보존 | 매출 10% 과징금 (regulatory ④, 2026-09-11 시행) |
+| 4 | **정통망법 §50 이메일 opt-out 인프라** | `email_opt_out` 컬럼 + unsubscribe 토큰 + `ManagedEmail.is_optout_required()` + 14일 처리 시한 로깅 + 2년 주기 재확인 자동화 | 매출 6% 과징금 (regulatory ①) |
+| 5 | **Vercel BETA_PW 해제** | Vercel env BETA_PASSWORD 삭제 또는 middleware bypass | 결제 후 접근 불가 → chargeback 폭주 |
+| 6 | **DNS 전환 (pivoxquant.com → prod)** | dig pivoxquant.com CNAME = Vercel apex | Stripe webhook URL mismatch → 결제 실패 |
+
+### Gate 검증 명령
+
+```bash
+# 1. Q큐 status grep (15건 모두 answered 인지)
+grep -c "status: answered" /Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/legal_question_queue.md
+# 결과 < 15 → BLOCKED
+
+# 2. 통신판매업 신고증 확인 (CEO 액션)
+ls -la /Users/seanbae/Desktop/취준/legal/통신판매업_신고증.pdf 2>/dev/null || echo "BLOCKED"
+
+# 3. PIPA opt-in 인프라
+grep -r "marketing_opt_in" /Users/seanbae/Desktop/취준/pivoxquant/models/ /Users/seanbae/Desktop/취준/pivoxquant/migrations/
+
+# 4. 정통망법 opt-out 인프라
+grep -r "email_opt_out\|is_optout_required" /Users/seanbae/Desktop/취준/pivoxquant/services/email/
+
+# 5. Vercel BETA_PW
+vercel env ls production | grep BETA_PASSWORD  # empty 여야 함
+
+# 6. DNS
+dig pivoxquant.com +short
+```
+
+**판정**: 6개 중 1개라도 ❌ → Stripe Live 활성화 **금지** + CEO escalate.
+
+---
+
+## 📚 v44.8 Wave G "Stripe Live 5종 규제 sweep" 학습 (2026-05-18)
+
+Stripe Live 활성 직전 자율 sweep — 5개 한국 규제를 한 번에 sweep 강제:
+
+| 규제 | 조문 | sweep 포인트 (결제 surface 특화) |
+|------|------|------------------------------|
+| 전자상거래법 | §17 청약철회 | terms-ko §17 + pricing 페이지 + settings/billing 일관성 / 가분적 디지털콘텐츠 환불 (regulatory ⑥) |
+| 금소법 | §19 광고규제 | pricing / landing 페이지 "수익 보장" / "전문가 추천" / "최고 수익률" 금지 |
+| 표시광고법 | §3 부당광고 | pricing 페이지 "Pro 무료 체험 시작" / "월 100% 환불" / 가짜 할인 문구 grep |
+| PIPA | §28-8 국외이전 | Stripe = US 인프라 → checkout 직전 cross_border 동의 모달 강제 |
+| 정통망법 | §50 opt-out | invoice / receipt 이메일 — 거래확인 면제 vs 마케팅 분리 / opt-out 토큰 |
+
+**룰**: 신규 결제 / Stripe Product / pricing 변경 PR 시 5종 동시 sweep 필수 (legal-deep-scan workflow + 본 agent 협업).
+
+---
+
 ## 티어 구조 (확정)
 
 | Tier | 가격(월) | Stripe Product | 기능 |
@@ -116,12 +174,82 @@ charge.refunded                     → 환불 완료
   - cancel_at_period_end=True
 ```
 
-### Mode 4 — 분쟁 (chargeback) 대응
+### Mode 4 — 분쟁 (chargeback) 대응 — Evidence 자동 수집 자동화
+
 ```
-1. Stripe Dashboard 에서 evidence 제출
-2. 로그인 로그 + 사용 내역 + 이메일 수신 증거 수집
-3. 기한 내 (보통 7-21일) 제출 필수
+Trigger: charge.dispute.created webhook 수신
+
+자동 수집 (scripts/billing/dispute_evidence.py):
+1. Stripe Dashboard 데이터
+   - dispute.id / charge.id / amount / reason / due_by
+   - 원본 invoice + receipt PDF URL
+2. 유저 로그 (DB)
+   - User.created_at / last_login_at
+   - 결제 직전 ±60s 세션 로그 (auth_log.session_id)
+   - 결제 후 7일 사용 이력 (tier 사용한 API 호출 수)
+3. 결제 시점 IP (auth_log)
+   - 결제 직전 로그인 IP
+   - Stripe charge IP (Stripe API)
+   - 일치 / 불일치 명시
+4. tier 사용 이력
+   - Artifact 발송 건수 (Weekly Memo / Brag / Earnings)
+   - 다운로드한 PDF / email open 로그
+5. 동의 이력
+   - terms / privacy / cross_border / marketing_opt_in 동의 timestamp
+   - LegalConsentModal 버전 hash
+
+산출물: dispute_<id>_evidence.zip (Stripe Dashboard 업로드)
+기한 내 (보통 7-21일) 자동 알림 (Slack + email)
 ```
+
+### Mode 5 — Failed Payment Workflow (신설)
+
+```
+Trigger: invoice.payment_failed webhook 수신
+
+단계 1 (0h, 즉시):
+  - 유저 인앱 알림 배너 (top-bar): "결제 실패 — 결제 수단 업데이트 필요"
+  - 이메일 자동 작성 (services/email/billing/payment_failed.py)
+    - subject: "[PivoxQuant] 결제가 실패했습니다 (3일 내 업데이트 필요)"
+    - body: Stripe Customer Portal 링크 + 사유 (insufficient_funds / expired_card / etc)
+  - Slack #billing-ops 알림
+
+단계 2 (3d):
+  - 재시도 1차 (Stripe Smart Retries)
+  - 이메일 재발송 (다른 결제 수단 안내)
+  - 인앱 배너 변경: "결제 실패 4일 — 7일 후 강등"
+
+단계 3 (7d):
+  - Grace period 종료
+  - tier 자동 강등 (Premium → Pro / Pro → Free)
+  - DB User.tier + Redis 양쪽 동기화
+  - 강등 이메일 + 인앱 알림 ("재구독 시 즉시 복원")
+
+단계 4 (14d):
+  - Stripe Smart Retries 4회 모두 실패
+  - subscription 자동 취소 (`customer.subscription.deleted` 발생)
+  - 최종 알림 + Artifact 발송 중단
+```
+
+### Tier 강등 동기화 룰 (failed payment / 환불 / 취소 공통)
+
+```python
+# scripts/billing/tier_sync.py
+def downgrade_tier(user_id: int, reason: str):
+    """원자적 강등 — DB + Redis 동시 갱신"""
+    with db.session.begin():
+        user = User.query.get(user_id)
+        old_tier = user.tier
+        # Premium → Pro → Free 단계 강등
+        new_tier = {'premium': 'pro', 'pro': 'free', 'free': 'free'}[old_tier]
+        user.tier = new_tier
+        db.session.add(TierAuditLog(user_id, old_tier, new_tier, reason))
+    redis.set(f"user:{user_id}:tier", new_tier, ex=3600)
+    # Artifact 발송 권한 즉시 차단 (회귀: PR #199 RISK board threshold)
+    cache.invalidate(f"artifact_quota:{user_id}")
+```
+
+**중요**: tier 강등 누락 시 (회귀: stripe-billing Iron Rule "환불 후 tier 강등 누락" 위반) → 무료로 계속 쓰는 leak 발생.
 
 ## 보안/컴플라이언스
 
@@ -143,3 +271,42 @@ charge.refunded                     → 환불 완료
 - 한국 유저는 세금계산서·현금영수증 이슈에 매우 민감 — 자동화 필수
 - dispute 율 0.5% 초과 시 Stripe 계정 제한 → evidence 체계 선제 구축
 - B2B 가입자용 연 단위 플랜(할인) 고려 (Premium x 12 = ₩239K → ₩199K 수준)
+
+---
+
+## 💸 MDR (Merchant Discount Rate) — Finance Cross-Ref
+
+**한국 시장 Stripe MDR 약 3.4%** + **KRW 환전 spread cost** 추가 발생. 단가 산정 시 반드시 finance agent 와 cross-ref.
+
+| 항목 | 비율 | 비고 |
+|------|------|------|
+| Stripe MDR (KR) | ~3.4% | 국내 카드 통합 시 토스페이먼츠/포트원 경유 별도 |
+| 통화 전환 spread | ~2% | USD ↔ KRW (Stripe → 한국 계좌 송금 시) |
+| 합계 | **~5.4%** | Pro ₩9,900 → 실수령 ~₩9,365 |
+
+**Finance 연동**: `finance_budget.md` 의 unit economics 계산 시 본 MDR 5.4% 반영. agent 호출:
+```
+사용자 결제 단가 변경 / 새 tier 추가 시:
+→ stripe-billing agent (MDR cost) 
+→ finance agent (LTV/CAC 재계산)
+```
+
+---
+
+## 🚀 PivoxQuant Context (v44.8 갱신, 2026-05-18)
+
+**프로덕션 상태**: Railway + Vercel ACTIVE / pytest 1700+ pass (v44.9 기준) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
+**최신 인수인계**: `HANDOVER.md` v44.7+ (자율 overnight 8h, 26+ PR squash-merged)
+**Stripe Live 활성 status**: ❌ **BLOCKED** — Pre-Live Mode Gate 6개 중 0개 충족 (Q1-Q15 변호사 답변 대기, 통신판매업 미완)
+**누적 PR**: 40 PR (v44.7 26 + v44.8 6 + v44.9 8)
+
+### 결제 surface 현황
+- `/pricing` 페이지: "Coming Soon" 명시 (전자상거래법 §13 회피 시도, Q5 대기)
+- `routes/billing.py`: webhook handler 존재 (코드만, test mode 검증 미완)
+- `STRIPE_PRICE_PRO` / `STRIPE_PRICE_PREMIUM`: Railway env 미설정
+- Stripe Tax: 미활성
+
+### Wave G 기학습 (2026-05-18 회귀 방지)
+- `email_opt_out` mid-rollout (PR #021 migration) — opt-out 토큰 회귀 시 503 발생 사례 확인
+- Webhook signature 미강제 → DoS auto-opt-out 사고 (PR #485) → 항상 signature verify 강제
+- portfolio equity curve +52,281% KRW raw 합산 버그 (FX 변환 누락) — billing receipt PDF 금액 계산 시 동일 패턴 회귀 가능, FX cross-check 필수
