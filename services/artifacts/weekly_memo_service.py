@@ -875,7 +875,8 @@ class WeeklyMemoService:
             risk_notes=risk,
             risk_kpi=risk_kpi,
             data_sources=data_sources,
-            disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다. / "
+                        "Information only, not investment advice. Decisions are your own."),
         )
         # Legal scrub at user-facing boundary — risk_notes free-text and any
         # AI-derived prose. scrub_signal handles known free-text fields;

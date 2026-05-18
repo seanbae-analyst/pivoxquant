@@ -123,19 +123,27 @@ def sendgrid_event():
 
     public_key = os.environ.get("SENDGRID_WEBHOOK_PUBLIC_KEY")
     if not public_key:
-        # In production, refuse to accept unsigned webhooks. SendGrid will
-        # retry on 5xx, so a missing key surfaces as a deploy-time alarm
-        # instead of silently allowing forged events into the DB.
-        if os.environ.get("FLASK_ENV") == "production":
-            logger.error(
-                "SENDGRID_WEBHOOK_PUBLIC_KEY missing in production — refusing webhook"
-            )
-            return jsonify({"error": "webhook key not configured"}), 503
-    else:
-        signature = request.headers.get("X-Twilio-Email-Event-Webhook-Signature")
-        timestamp = request.headers.get("X-Twilio-Email-Event-Webhook-Timestamp")
-        if not _verify_signature(public_key, signature, timestamp, raw_body):
-            return jsonify({"error": "invalid signature"}), 403
+        # Wave G-3 Bug #2 (2026-05-18) P0 SHIP-BLOCKER: previously this
+        # only 503'd when ``FLASK_ENV=production``, but ``railway.json``
+        # historically did not set ``FLASK_ENV`` — so production could
+        # run with the env var unset and silently accept *unsigned*
+        # forged webhooks. An attacker could POST a synthetic ``bounce``
+        # / ``spamreport`` event for any sg_message_id and force a
+        # victim user into ``email_opt_out=True`` (정통망법 §50 auto
+        # opt-out path). Hard fail with 503 regardless of FLASK_ENV.
+        # Dev environments can either set a throwaway public key or
+        # mock the route in tests.
+        logger.error(
+            "SENDGRID_WEBHOOK_PUBLIC_KEY not configured — refusing webhook"
+        )
+        return jsonify({
+            "error": "webhook signature verification not configured"
+        }), 503
+
+    signature = request.headers.get("X-Twilio-Email-Event-Webhook-Signature")
+    timestamp = request.headers.get("X-Twilio-Email-Event-Webhook-Timestamp")
+    if not _verify_signature(public_key, signature, timestamp, raw_body):
+        return jsonify({"error": "invalid signature"}), 403
 
     events = request.get_json(silent=True)
     if not isinstance(events, list):

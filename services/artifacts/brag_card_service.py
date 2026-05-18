@@ -410,7 +410,8 @@ class BragCardService:
             is_empty=is_empty,
             share_token=None,  # populated on first persist
             data_sources=data_sources,
-            disclaimer="정보 제공 목적이며 투자 권유가 아닙니다.",
+            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. / "
+                        "Information only, not investment advice."),
         )
         # Legal scrub at user-facing boundary — covers known free-text
         # fields (commentary/disclaimer/etc.) before the card renders.
