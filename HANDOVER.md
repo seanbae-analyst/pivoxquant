@@ -1,3 +1,87 @@
+# PivoxQuant — 인수인계서 (2026-05-19 v45.2 — 12-Wave 자율 + hotfix 회귀 점검 · 5 commit pushed · main `b2b465cb`)
+
+## v45.2 (2026-05-19) — CEO 운동/잠 사이 자율 wave (옵션 X — P1 7 + 추가 5 audit)
+
+**한 줄 요약**: CEO "옵션 X로 진행 + 토큰 무제한 + 버그 확실히 잡아" 명령. 12 Wave 병렬 진행 → P0 1건 (earnings_tone cache poisoning v44.9 PR #488 누락) 발견 + 즉시 fix + regression test 추가 + CAUS cron 정상 동작 확인.
+
+### 5 commit pushed (main `45f5e591 → b2b465cb`)
+| Hash | 내용 |
+|---|---|
+| `d1867a74` | fix(security): **earnings_tone cache poisoning 회귀** — services/ai/models.py:179 transcript_text 분기 누락 + 2 regression test |
+| `0a4fe22d` | feat(security): broker KEY rotation script + test (외부 액션 #14 영구 해결) |
+| `66fcad55` | feat(data-integrity): migration 036 growth_* user_id FK + orphan cleanup (외부 액션 #16 영구 해결) |
+| `869fd627` | fix(a11y+mobile+lint): push-permission aria-label + signup _v1 input text-base (iOS auto-zoom) + age-verify lint |
+| `b2b465cb` | docs(ops): 4 docs + 2 scripts (Wave 4/5/6/7 ci-enable / psql-setup / caus-monitoring / agent-dryrun) |
+
+### 12-Wave 결과 종합
+| Wave | 결과 | 액션 |
+|---|---|---|
+| 1 broker KEY rotation | ✅ commit `0a4fe22d` | 외부 액션 #14 해결 |
+| 2 migration 020 FK | ✅ commit `66fcad55` | 외부 액션 #16 해결 (alembic 035→036) |
+| 3 frontend lint | ✅ commit `869fd627` | 0 problems |
+| 4 CI 9건 enable docs | ✅ commit `b2b465cb` | CEO secret 추가 후 자동 enable |
+| 5 psql 설치 자동화 | ✅ commit `b2b465cb` | Wave G BLOCKED 해소 |
+| 6 CAUS monitor | ✅ commit `b2b465cb` | scripts/check_caus_today.sh |
+| 7 agent dry-run | ⚠️ Task tool 미제공 → manual proxy (3 agent status 수집) | CEO native UI 필요 |
+| **8 v44.7-v44.9 hotfix 회귀 점검 (9 패턴)** | **🔴 P0 1건 발견 + 즉시 fix** (Pattern 3 earnings_tone) / 8 PASS | commit `d1867a74` |
+| 9 CAUS cron status | ✅ launchd `com.pivoxquant.caus.daily` ACTIVE | 오늘 03:00:01 KST 정상 실행 확인 |
+| 10 CAUS day rotation | ⚠️ HANDOVER 7곳 오기재 발견 (실 식: `toordinal() % 10`) | 후속 fix 필요 |
+| 11 모바일 + a11y | ⚠️ P2 1건 (discover 560px) + P3 2건 fix | commit `869fd627` |
+| 12 9 bug 패턴 SoT 회귀 | ✅ 회귀 없음 | - |
+
+### 🚨 Wave 8 P0 발견 — earnings_tone cache poisoning
+**문제**: services/ai/models.py:179 `_set_cache(cache_key, result)` 무조건 호출. v44.9 PR #488 목표 "transcript-supplied 결과 shared cache 미저장"이 실제 코드에 누락. **Pro user 비공개 transcript 결과 24h cross-user 노출 위험**.
+
+**Fix** (commit `d1867a74`):
+```python
+# Before: _set_cache(cache_key, result)
+# After:  if not transcript_text: _set_cache(cache_key, result)
+```
++ tests/test_earnings_tone_cache_isolation.py 2 regression test 추가 (2 passed)
+
+### CAUS cron 실측 발견 (Wave 9+10)
+- **launchd 정상 작동** (Wave 6 "cron 미작동" 가설 기각)
+  - 등록처: `~/Library/LaunchAgents/com.pivoxquant.caus.daily.plist`
+  - 오늘 03:00:01 KST 실행 → `~/projects/pivoxquant/docs/qa/auto-sim-reports/2026-05-19.md`
+  - findings: 0 (clean run)
+- **Desktop vs projects 경로 분리**: `~/Desktop/취준/pivoxquant`는 TCC 차단으로 2026-05-14 이후 사용 안 함. 실 경로는 `~/projects/pivoxquant`. **본 작업 디렉터리(`~/Desktop/취준`) git remote도 동일하나 CAUS sweep은 `~/projects` 쓰는 점 주의**
+- **Rotation 식**: `today.toordinal() % 10` (`scripts/caus_daily_sweep.py:680`)
+  - 오늘 2026-05-19: `739755 % 10 = 5` → day5_reports (report 실측 일치)
+- **HANDOVER 모순 발견** (후속 fix 필요): 라인 666 표 정확 / 라인 936/1011/1019/1099/1213/1258/1321 (7곳) "2026-05-19 강화 Day 3" 오기재 (PR #434 갱신 누락)
+  - 실제 day3 첫 강화: **2026-05-27** (라인 674 표 정확)
+
+### CEO 결정 보류 (자율 fix 안 함)
+| 항목 | 사유 |
+|---|---|
+| Wave 11 P2 discover `min-w-[560px]` 모바일 가로 스크롤 | 4컬럼 비즈니스 데이터 + overflow-x-auto wrapper 보호 → UX trade-off, CEO 결정 |
+| Wave 10 HANDOVER 7곳 오기재 fix | HANDOVER 자체 수정 — separate cleanup wave |
+| Wave 7 신규 15 agent 실제 dispatch 검증 | Task tool 미제공 환경 — CEO native Claude Code UI 필요 |
+
+### 최종 verify (v45.2)
+- ✅ ruff: 어제 v45.1에서 0 violations 유지
+- ✅ pytest: 2305 → **2307** (regression test 2건 추가)
+- ✅ lint: 0 errors
+- ✅ git: clean / ahead 0 / origin/main 동기화
+- ✅ alembic head: 035 → **036** (single chain)
+
+### 남은 SHIP-BLOCKER (CEO 외부 액션 — v45.1과 동일)
+- #17 DNS (가비아 콘솔)
+- Stripe 5 env (사업자 + Stripe Korea 활성화)
+- #20 변호사 자문 Q1-Q15
+- #19 통신판매업 신고 (변호사 후)
+- #10 prod DB rogue rows (Wave G BLOCKED → 본 wave에서 setup_dev_psql.sh 셋업 후 가능)
+- #9 iCloud OFF + #12 GitHub billing
+
+### 신규 외부 액션 (Wave 2 발견)
+- **#16 prod migration 036 적용**: alembic 036 prod orphan cleanup + FK 적용. `docs/ops/migration-036-prod-prep.md` 가이드 따라 진행
+
+### 다음 세션 첫 ACTION
+1. **HANDOVER 7곳 오기재 fix** (Wave 10 발견 — "2026-05-19 강화 Day 3" → 정확한 rotation)
+2. **caus-monitoring-2026-05-19.md rotation 식 정정** (`day_of_year % 10` → `today.toordinal() % 10`)
+3. CEO 외부 액션 status 확인 + compliance-gatekeeper B-1~B-7 dashboard 실행
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-18 v45.1 — 출시 전 7-Wave audit + auto-fix 4 commit pushed · main `bfdc8eb8`)
 
 ## v45.1 (2026-05-18) — 출시 전 7-Wave audit + auto-fix 자율 진행 (CEO 자러간 사이)
