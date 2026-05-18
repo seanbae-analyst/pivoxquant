@@ -1,0 +1,60 @@
+name: Artifact QA Matrix
+
+# Mode 3 spec — runs the 17 artefact × 10 profile = 170 case render
+# matrix on every PR that touches an artefact service / template / the
+# QA fixtures, and on every push to main. Failed renders surface as a
+# downloadable PDF bundle via actions/upload-artifact.
+
+on:
+  pull_request:
+    paths:
+      - 'services/artifacts/**'
+      - 'tests/fixtures/virtual_users.py'
+      - 'tests/fixtures/sample_data_factory.py'
+      - 'tests/test_artifact_rendering.py'
+      - '.github/workflows/artifact-qa.yml'
+  push:
+    branches: [main]
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # WeasyPrint native deps. Without these the PDF branch silently
+      # skips and the matrix degrades to HTML-only.
+      - name: Install WeasyPrint system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpango-1.0-0 libpangoft2-1.0-0 \
+            libcairo2 libgdk-pixbuf-2.0-0 libffi-dev shared-mime-info
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-xdist pytest-snapshot pypdf
+
+      - name: Run artifact QA matrix
+        run: |
+          pytest tests/test_artifact_rendering.py \
+            -n auto \
+            --maxfail=5 \
+            -m artifact_qa \
+            --tb=short
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: failed-pdfs
+          path: tests/artifacts/output/
+          if-no-files-found: ignore
+          retention-days: 7
