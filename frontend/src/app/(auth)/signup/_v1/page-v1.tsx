@@ -317,7 +317,7 @@ export default function SignupPageV1() {
               aria-invalid={birthdate !== "" && !ageCheck.eligible}
               aria-describedby="agree_birthdate_msg"
               style={{ colorScheme: "light" }}
-              className={`rounded-md border bg-white px-2.5 py-1.5 text-xs text-slate-900 ${
+              className={`rounded-md border bg-white px-2.5 py-1.5 text-base text-slate-900 ${
                 birthdate && !ageCheck.eligible
                   ? "border-rose-400"
                   : "border-slate-300"

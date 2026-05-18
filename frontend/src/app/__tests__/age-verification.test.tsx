@@ -9,7 +9,6 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 import {
   computeAgeYears,
@@ -75,7 +74,6 @@ describe("age-verification helper", () => {
 
 describe("<SignupPageV2 /> — PIPA §22 ⑥ birthdate fail-fast", () => {
   it("age checkbox is disabled when birthdate makes user < 14", async () => {
-    const user = userEvent.setup();
     render(<SignupPageV2 />);
 
     // Compute a birthdate that is exactly 13 years before today.
@@ -110,7 +108,6 @@ describe("<SignupPageV2 /> — PIPA §22 ⑥ birthdate fail-fast", () => {
   });
 
   it("age checkbox unlocks when birthdate yields ≥14", async () => {
-    const user = userEvent.setup();
     render(<SignupPageV2 />);
 
     const input = screen.getByLabelText(/생년월일/) as HTMLInputElement;
@@ -127,7 +124,6 @@ describe("<SignupPageV2 /> — PIPA §22 ⑥ birthdate fail-fast", () => {
 
 describe("<LegalConsentModal /> — PIPA §22 ⑥ birthdate fail-fast", () => {
   it("submit button is disabled when birthdate makes user < 14", async () => {
-    const user = userEvent.setup();
     render(<LegalConsentModal onAgree={vi.fn()} />);
 
     // Pick a birthdate clearly under 14.

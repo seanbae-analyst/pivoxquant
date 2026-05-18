@@ -134,7 +134,12 @@ export function PushPermission() {
             <Bell className="h-3.5 w-3.5" />
             <span>{busy ? "Enabling…" : "Enable"}</span>
           </button>
-          <button type="button" onClick={dismiss} className="pq-ink-btn-ghost">
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Dismiss notification prompt — Later"
+            className="pq-ink-btn-ghost"
+          >
             Later
           </button>
         </div>
