@@ -1,0 +1,101 @@
+name: SSL Expiry Trip-Wire
+
+# Probes pivoxquant.com's TLS cert weekly and alerts Slack if it expires
+# within 30 days. Vercel auto-renews Let's Encrypt certs, but a silent
+# renewal failure (DNS misconfig, rate-limit) would otherwise only surface
+# when users hit a browser warning. Better to find out 30 days early.
+#
+# Cost: 1 run/week × ~1 min = ~4 min/month. Free tier 2000 min/month.
+# Slack: webhook is free tier (no per-message fee).
+#
+# Domain expiry (WHOIS, 가비아 19,800원/년) is NOT checked here — Gabia
+# sends auto-renewal reminders and the user is enrolled in auto-renew.
+
+on:
+  schedule:
+    # Monday 00:00 UTC = Monday 09:00 KST. Weekly is enough for a 30-day
+    # threshold (cert can't expire faster than the warning window).
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-ssl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch cert expiry
+        id: cert
+        run: |
+          set -euo pipefail
+          DOMAIN="pivoxquant.com"
+          # openssl s_client prints the cert; -enddate parses NotAfter.
+          # `</dev/null` closes stdin so s_client exits after handshake.
+          NOT_AFTER=$(echo \
+            | openssl s_client -servername "$DOMAIN" -connect "$DOMAIN:443" 2>/dev/null \
+            | openssl x509 -noout -enddate \
+            | sed 's/notAfter=//')
+          echo "not_after=$NOT_AFTER" >> "$GITHUB_OUTPUT"
+
+          # Convert to epoch and compute days remaining.
+          EXPIRY_EPOCH=$(date -d "$NOT_AFTER" +%s)
+          NOW_EPOCH=$(date +%s)
+          DAYS_LEFT=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
+          echo "days_left=$DAYS_LEFT" >> "$GITHUB_OUTPUT"
+          echo "Cert for $DOMAIN expires in $DAYS_LEFT days ($NOT_AFTER)"
+
+          if [ "$DAYS_LEFT" -lt 30 ]; then
+            echo "alert=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "alert=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notify Slack on imminent expiry
+        if: steps.cert.outputs.alert == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "SLACK_WEBHOOK_URL unset — skipping Slack notification"
+            exit 0
+          fi
+          payload=$(cat <<EOF
+          {
+            "text": ":warning: *PivoxQuant SSL cert expiring soon*\n*Domain:* pivoxquant.com\n*Days left:* ${{ steps.cert.outputs.days_left }}\n*NotAfter:* ${{ steps.cert.outputs.not_after }}\n\nVercel should auto-renew via Let's Encrypt. If <14 days, check Vercel dashboard → Domains → pivoxquant.com → SSL."
+          }
+          EOF
+          )
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            --data "$payload" || true
+
+      - name: Open incident issue on imminent expiry
+        if: steps.cert.outputs.alert == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="SSL: pivoxquant.com cert expires in ${{ steps.cert.outputs.days_left }} days"
+          body=$(cat <<EOF
+          ## SSL expiry trip-wire fired
+
+          - **Domain:** pivoxquant.com
+          - **Days left:** ${{ steps.cert.outputs.days_left }}
+          - **NotAfter:** ${{ steps.cert.outputs.not_after }}
+
+          Vercel auto-renews via Let's Encrypt. If this issue persists week-over-week,
+          investigate Vercel dashboard → Domains → SSL panel.
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --label autopilot,ssl --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$title" --body "$body" --label autopilot,ssl
+          fi

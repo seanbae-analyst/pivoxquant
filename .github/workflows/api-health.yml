@@ -2,10 +2,12 @@ name: API Health Monitor
 
 on:
   schedule:
-    # 2026-04-29 cost reduction: was 4x/hour (~2880 runs/mo), now 1x/hour
-    # to stay within GitHub Actions free tier. Daily API Smoke covers
-    # deeper authenticated checks once per day.
-    - cron: '7 * * * *'
+    # 2026-05-19 re-enable @ 6h cadence (4 runs/day × ~1 min = ~120 min/mo,
+    # well under 2000-min free tier). Sub-hour SLOs (5-min health probes)
+    # are routed to CC scheduled-tasks (Max plan, $0) per
+    # feedback_no_extra_cost. GitHub Actions covers the "long sleep"
+    # canary so an entire night of Railway death gets caught by morning.
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:

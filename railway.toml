@@ -1,0 +1,23 @@
+# Railway Infrastructure-as-Code (IaC)
+# https://docs.railway.com/reference/config-as-code
+#
+# Goal: keep Railway deployment behavior in version control so a future
+# operator can recreate the service without poking the dashboard. The
+# dashboard remains the source of truth for *secrets* (DATABASE_URL,
+# OAuth client IDs, etc.) — this file only covers deploy posture.
+
+[build]
+# Dockerfile is the SoT for the runtime image. Listing it here makes the
+# choice explicit (Railway auto-detects, but explicit > implicit).
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Health probe — backend exposes /api/health (routes/health.py:42).
+# 200 with {"status":"ok"} = healthy, 503 = degraded (still alive, DB issue).
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+
+# Restart on crash, but cap retries so a hard loop doesn't burn $5 credit.
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

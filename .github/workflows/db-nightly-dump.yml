@@ -1,0 +1,128 @@
+name: DB Nightly Dump (Encrypted)
+
+# Nightly Railway PostgreSQL dump → GPG-encrypted → GitHub release asset.
+# Railway already runs its own backups on the paid plan, but this gives us
+# a second copy under our own control (defense-in-depth) and a verifiable
+# off-platform restore path.
+#
+# Cost: ~5 min/run × 30 runs/mo = 150 min/mo. Free tier = 2000 min/mo.
+# Release storage: GitHub Releases free for public repos. Retention is
+# enforced by deleting releases older than 7 days at the end of each run.
+#
+# Required secrets (CEO to set in repo settings):
+#   - DATABASE_URL        Railway PostgreSQL connection string (read-only
+#                         role recommended; pg_dump needs SELECT on all
+#                         relations + USAGE on schema).
+#   - GPG_PASSPHRASE      Symmetric passphrase. Store the SAME passphrase
+#                         in 1Password under "PivoxQuant DB Backup GPG".
+#                         Without it the dumps are unreadable — keep safe.
+#
+# Restore:
+#   gh release download db-backup-YYYY-MM-DD -p '*.gz.gpg'
+#   gpg --decrypt dump.gz.gpg | gunzip | psql $TARGET_DATABASE_URL
+
+on:
+  schedule:
+    # 18:00 UTC = 03:00 KST. Off-peak in KR, before US market open.
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required to create releases + upload assets
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          # Pin to v16 — matches Railway's current PostgreSQL major version.
+          # If Railway upgrades, bump this. pg_dump is forward-compatible
+          # within a major; a newer client can dump an older server but not
+          # vice versa, so always prefer >= server version.
+          sudo apt-get install -y postgresql-client-16
+
+      - name: Verify secrets present
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::DATABASE_URL secret not set. Add it in repo Settings → Secrets."
+            exit 1
+          fi
+          if [ -z "${GPG_PASSPHRASE:-}" ]; then
+            echo "::error::GPG_PASSPHRASE secret not set. Add it in repo Settings → Secrets."
+            exit 1
+          fi
+
+      - name: Dump + compress + encrypt
+        id: dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y-%m-%d_%H%M%SZ)
+          DUMP_FILE="pivoxquant-db-${STAMP}.sql.gz.gpg"
+          echo "dump_file=$DUMP_FILE" >> "$GITHUB_OUTPUT"
+          echo "stamp=$STAMP" >> "$GITHUB_OUTPUT"
+
+          # --no-owner / --no-privileges: dump is restorable into any DB
+          # without needing the original Railway roles. -Fp = plain SQL for
+          # human-readable diff-ability (vs custom format).
+          pg_dump \
+            --no-owner --no-privileges --format=plain \
+            "$DATABASE_URL" \
+            | gzip -9 \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                  --passphrase "$GPG_PASSPHRASE" \
+                  --output "$DUMP_FILE"
+
+          SIZE=$(stat -c%s "$DUMP_FILE")
+          echo "Dump size: $SIZE bytes ($DUMP_FILE)"
+          if [ "$SIZE" -lt 1024 ]; then
+            echo "::error::Dump suspiciously small (<1KB) — likely a failure."
+            exit 1
+          fi
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: db-backup-${{ steps.dump.outputs.stamp }}
+          name: DB Backup ${{ steps.dump.outputs.stamp }}
+          body: |
+            Encrypted nightly PostgreSQL dump.
+
+            **Decrypt:**
+            ```
+            gpg --decrypt ${{ steps.dump.outputs.dump_file }} | gunzip > dump.sql
+            ```
+            Passphrase is in 1Password under "PivoxQuant DB Backup GPG".
+          files: ${{ steps.dump.outputs.dump_file }}
+          prerelease: true
+          make_latest: false
+
+      - name: Prune releases older than 7 days
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          CUTOFF_EPOCH=$(date -d '7 days ago' +%s)
+          # List db-backup-* releases (newest first).
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 \
+            --json tagName,createdAt,isPrerelease \
+            --jq '.[] | select(.tagName | startswith("db-backup-")) | "\(.tagName)\t\(.createdAt)"' \
+            | while IFS=$'\t' read -r tag created; do
+                created_epoch=$(date -d "$created" +%s)
+                if [ "$created_epoch" -lt "$CUTOFF_EPOCH" ]; then
+                  echo "Deleting old release: $tag (created $created)"
+                  gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+                fi
+              done

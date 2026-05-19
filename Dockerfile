@@ -81,4 +81,17 @@ ENV AGENT_ENABLED=0
 ENV ALPACA_ENABLED=0
 
 EXPOSE 5050
+
+# ── HEALTHCHECK (Railway + Docker probes) ───────────────────────────────────
+# Railway already pings railway.toml's healthcheckPath, but a Dockerfile-level
+# HEALTHCHECK lets `docker ps` / local compose / any non-Railway runtime see
+# container health too. start-period=60s covers the gunicorn boot + Pretendard
+# fc-cache rebuild + alembic runtime migrations (services/launch_prep.py).
+# Uses `python -c` instead of curl to avoid adding the curl apt package.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD python -c "import os,urllib.request,sys; \
+url='http://127.0.0.1:'+os.environ.get('PORT','5050')+'/api/health'; \
+r=urllib.request.urlopen(url,timeout=5); sys.exit(0 if r.status==200 else 1)" \
+  || exit 1
+
 CMD ["sh", "-c", "gunicorn app:app --worker-class gevent --workers 1 --bind 0.0.0.0:${PORT:-5050} --timeout 120 --keep-alive 5 --log-level info"]
