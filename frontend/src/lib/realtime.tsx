@@ -194,7 +194,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );
   const hasPositions =
-    !!portfolioData && portfolioData.positions.length > 0;
+    !!portfolioData && Array.isArray(portfolioData.positions) && portfolioData.positions.length > 0;
 
   const esRef = useRef<EventSource | null>(null);
   const abortRef = useRef<AbortController | null>(null);
