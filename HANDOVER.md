@@ -27,11 +27,12 @@
 | 카테고리 | Before | After |
 |---|---|---|
 | raw hex | 60개 | 0 |
-| 라임 (#c8ff00 / lime-*) | 17개 | 0 |
-| motion ms 하드코딩 | 109개 | 0 |
-| console.log 잔존 | 38개 | 0 |
-| TODO 미해결 | 22개 | 0 |
-| 기타 카테고리 9개 | - | 전수 sweep 완료 |
+| 라임 (#c8ff00 / lime-*) | 17개 | **0** (grep -c 검증 ✅) |
+| motion ms 하드코딩 | 109개 | 0 (agent 보고) |
+| console.log 잔존 | 38개 | **0** (grep -c 검증 ✅) |
+| TODO 미해결 | 22개 | 0 (agent 보고) |
+| globals.css `color: #hex` 직접 사용 | - | **31개 잔존** (grep 실측, pre-existing) |
+| 기타 카테고리 9개 | - | sweep 완료 (일부 pre-existing 잔존) |
 
 ### P2 미완성 surface 채움
 
