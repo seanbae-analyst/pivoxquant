@@ -350,7 +350,16 @@ def dispatch_due(now: datetime | None = None) -> dict[str, int]:
         "skipped_error": 0,
     }
 
-    rows = list(ScheduledEmail.pending_due(now=now, limit=200))
+    # Type-filter: dispatch_due owns ONLY the onboarding SEQUENCE slugs.
+    # Other queues (retention_sequence's retention_d7 / retention_d30,
+    # Wave G C-R1) share the same scheduled_emails table; without this
+    # filter ``_send_one`` would log "unknown email_type" and stamp the
+    # row ``no_consent_or_provider`` — silently consuming retention rows.
+    onboarding_slugs = {s.slug for s in SEQUENCE}
+    rows = [
+        r for r in ScheduledEmail.pending_due(now=now, limit=200)
+        if r.email_type in onboarding_slugs
+    ]
     stats["due"] = len(rows)
     if not rows:
         return stats

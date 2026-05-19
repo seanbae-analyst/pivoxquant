@@ -77,6 +77,9 @@ def _schedule_onboarding_safe(user) -> None:
     so the rows ride the caller's existing commit. If the caller
     already committed (signup happy path), we issue a separate commit
     here so the rows actually persist.
+
+    Also runs the Wave G C-R1 retention enqueue path (D+7 / D+30,
+    MARKETING) on the same fire-and-forget contract.
     """
     try:
         from extensions import db
@@ -96,6 +99,44 @@ def _schedule_onboarding_safe(user) -> None:
             pass
         logger.exception(
             "onboarding sequence enqueue failed (non-fatal) for user_id=%s",
+            getattr(user, "id", "?"),
+        )
+
+    # Wave G C-R1 — retention sequence is independent: own feature flag
+    # (PIVOX_RETENTION_ENABLED), own consent gate (marketing_consent_marketing),
+    # own queue rows. Run separately so an onboarding enqueue failure does
+    # not suppress retention (and vice-versa).
+    _schedule_retention_safe(user)
+
+
+def _schedule_retention_safe(user) -> None:
+    """Fire-and-forget D+7/D+30 retention enqueue (Wave G C-R1).
+
+    MARKETING category — schedules only when:
+      * ``PIVOX_RETENTION_ENABLED=true`` (default false), AND
+      * ``user.marketing_consent_marketing_at`` is set + not revoked.
+
+    Never raises. Both predicates live inside ``schedule_retention`` so
+    this wrapper is symmetric with the onboarding helper.
+    """
+    try:
+        from extensions import db
+        from services.email.retention_sequence import schedule_retention
+        stats = schedule_retention(user)
+        if stats.get("enqueued", 0) > 0:
+            db.session.commit()
+        logger.info(
+            "retention sequence enqueued for user_id=%s stats=%s",
+            getattr(user, "id", "?"), stats,
+        )
+    except Exception:
+        try:
+            from extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.exception(
+            "retention sequence enqueue failed (non-fatal) for user_id=%s",
             getattr(user, "id", "?"),
         )
 

@@ -79,18 +79,44 @@ def _post_slack(text: str) -> None:
 
 
 def _drain_once() -> dict[str, int]:
-    """Single dispatch pass. Returns stats dict.
+    """Single dispatch pass. Returns combined stats dict.
 
-    All per-row error handling lives inside
-    ``onboarding_sequence.dispatch_due`` so the cron's outer loop
-    stays trivial.
+    Drains TWO independent queues that share the ``scheduled_emails``
+    table:
+
+    * Onboarding D+0/D+3/D+7 (Wave G S5) —
+      ``services.email.onboarding_sequence.dispatch_due``.
+    * Retention D+7/D+30 (Wave G C-R1) —
+      ``services.email.retention_sequence.dispatch_retention``.
+      Adds the ``skipped_night`` counter (§61의2 21:00-08:00 KST gate).
+
+    All per-row error handling lives inside each module's ``dispatch_*``
+    so the cron's outer loop stays trivial. Stats are returned
+    namespaced (``onboarding.*`` / ``retention.*``) so Slack logging
+    can attribute volume per queue without ambiguity.
     """
     from app import create_app
     from services.email.onboarding_sequence import dispatch_due
+    from services.email.retention_sequence import dispatch_retention
 
     app = create_app()
     with app.app_context():
-        return dispatch_due()
+        onboarding_stats = dispatch_due()
+        retention_stats = dispatch_retention()
+
+    combined: dict[str, int] = {}
+    for k, v in onboarding_stats.items():
+        combined[f"onboarding.{k}"] = v
+    for k, v in retention_stats.items():
+        combined[f"retention.{k}"] = v
+    # Flat totals for the Slack notification predicate below.
+    combined["sent"] = (
+        onboarding_stats.get("sent", 0) + retention_stats.get("sent", 0)
+    )
+    combined["due"] = (
+        onboarding_stats.get("due", 0) + retention_stats.get("due", 0)
+    )
+    return combined
 
 
 def main() -> int:
