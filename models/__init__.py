@@ -47,6 +47,8 @@ from .checkout_expiration import (
 )
 # Wave G S5 — D+0/D+3/D+7 onboarding email sequence queue.
 from .scheduled_email import ScheduledEmail
+# Wave G C-AC2 — NPS 1-click feedback (transactional, §50 §101 exempt).
+from .nps_feedback import NpsFeedback
 
 __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlist",
            "InvestmentProfile", "BrokerConnection", "PushSubscription", "PortfolioShare",
@@ -69,4 +71,5 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "ProcessedStripeEvent",
            "STRIPE_EVENT_STATUS_SUCCESS", "STRIPE_EVENT_STATUS_ERROR",
            "CheckoutExpiration", "CHECKOUT_FOLLOWUP_DELAY",
-           "ScheduledEmail"]
+           "ScheduledEmail",
+           "NpsFeedback"]

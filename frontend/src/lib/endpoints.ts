@@ -319,3 +319,8 @@ export const PUBLIC_MARKET_SNAPSHOT = `${API_BASE}/api/public/market-snapshot`;
 // the (dashboard) layout. Polled every 5 min via SWR. See
 // routes/data_status.py for the locked response contract. Wave G C-CS3.
 export const DATA_STALE_STATUS = `${API_BASE}/api/data/stale-status`;
+
+// NPS 1-click feedback — backs <NpsWidget /> rendered after the first
+// Weekly Memo. Transactional (§50 서비스 개선); no consent required.
+// Body: { score: 1-10, weekly_memo_id?: string }. Wave G C-AC2.
+export const FEEDBACK_NPS = `${API_BASE}/api/feedback/nps`;
