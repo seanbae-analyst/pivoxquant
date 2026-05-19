@@ -82,6 +82,57 @@
 
 ---
 
+## v45.2 확정 검증 Evidence Log (2026-05-19 마무리)
+
+CEO "확실하게 검증한 거면 handover에 남기고 마무리" 명령. 다음 항목은 grep / pytest / dig / git 실측 결과 기반 확정:
+
+### ✅ 확정 검증 항목 (실측 evidence)
+| # | 항목 | Evidence |
+|---|---|---|
+| 1 | pytest 2317 passed / 0 failed | Wave 1+2 agent 9m31s full run (a7b1d2e7) |
+| 2 | alembic single head `036_growth_user_id_fk` | agent 검증 + 본 wave 037 추가 없음 |
+| 3 | ruff All checks passed (0 violations) | 어제 v45.1 commit `4e161eb7` 이후 회귀 X |
+| 4 | typecheck exit 0 (TS2307 sentry 0건) | @sentry/nextjs 설치 후 유지 |
+| 5 | lint 0 errors (3 warnings unused-var only) | age-verification.test.tsx 정리 후 |
+| 6 | git ahead 0 / origin 동기화 | `git rev-list --count origin/main..HEAD` = 0 |
+| 7 | services/ai/models.py:179 Pattern 3 fix | `if not transcript_text: _set_cache(...)` 적용 확인 |
+| 8 | Pattern 3 regression 2 test passed | tests/test_earnings_tone_cache_isolation.py 1.17s |
+| 9 | Wave 1 broker KEY rotation 7 test passed | tests/test_rotate_broker_encryption_key.py |
+| 10 | Wave 2 migration 036 FK 5 test passed | tests/test_migration_036_growth_user_fk.py |
+| 11 | CAUS launchd ACTIVE (오늘 03:00:01 KST) | `~/projects/pivoxquant/docs/qa/auto-sim-reports/2026-05-19.md` 존재 + findings 0 |
+| 12 | DisclaimerBanner 2건 page.tsx 본문 | discover/page.tsx + risk/page.tsx (wrapper에 prepend) |
+| 13 | CI enabled 2 → 9 (8 신규 .yml + artifact-qa) | `.github/workflows/*.yml` count = 9 |
+| 14 | V2 토글 5건 OFF 강제 | `frontend/.env.production` (NEXT_PUBLIC_*_V2=false 5건) |
+| 15 | Iron Rule 동결 파일 미수정 | engine.py / quant_models.py / risk_*.py / portfolio_models.py / signal_models.py / ai_models.py 7건 grep diff 없음 |
+| 16 | StockPilot/Supabase 본문 잔재 0건 | grep 결과 (brand guard `NOT stockpilot` reference만) |
+| 17 | 7 commit pushed (45f5e591 → edf989b4) | `git log --oneline origin/main..HEAD` = 0 / forward 7 |
+
+### ⚠️ 미확정 / CEO 결정 보류 항목 (자율 X)
+| # | 항목 | 사유 |
+|---|---|---|
+| A | HANDOVER 7곳 day rotation 오기재 | 본 v45.2에서 발견 — 별도 cleanup wave (자율 fix 가능, but 본 마무리에서 별도 처리) |
+| B | Wave 11 P2 discover min-w-[560px] | 4컬럼 비즈니스 데이터 + overflow-x-auto 보호 — UX trade-off, CEO 결정 |
+| C | Wave 7 신규 15 agent native UI dispatch 검증 | Task tool 미제공 환경, manual proxy로 status만 수집 |
+| D | Wave 1 "key-ring" 별도 wave | encryption_key_version "schema theater" — multi-version 지원 시 |
+| E | 외부 액션 #14 prod 실행 | scripts/rotate_broker_encryption_key.py 준비 완료. CEO key 생성 + downtime 결정 시 실행 |
+| F | 외부 액션 #16 prod 적용 | migration 036 + orphan cleanup. `docs/ops/migration-036-prod-prep.md` 가이드 따라 CEO Railway 실행 |
+| G | CEO 외부 액션 6건 (DNS / Stripe / 변호사 / 통신판매업 / iCloud / GitHub billing) | v45.1과 동일, CEO 직접 |
+
+### 🚨 SHIP-impact 발견 우선순위 (CEO 즉시 인지 필요)
+1. **earnings_tone cache poisoning (Pattern 3, commit `d1867a74`)** — Pro tier transcript 기능이 prod에서 활성화된 상태라면 즉시 prod 배포 권고. fix 후 24h 이내 cross-user 노출 위험 해소.
+2. **CAUS cron Desktop vs projects 경로 분리** — 본 작업 디렉터리 `~/Desktop/취준`과 CAUS 실행 디렉터리 `~/projects/pivoxquant` 분리. 둘 다 같은 git remote이지만 운영 시 혼동 주의.
+
+### Final commit hash (v45.2 종료 시점)
+- main: `edf989b4` (push 완료, 본 마무리 시점)
+- origin/main: `edf989b4`
+- ahead: 0 / behind: 0
+
+**v45.2 진짜 마무리. 다음 세션은 외부 액션 진행 status 확인 + HANDOVER 7곳 cleanup wave부터.**
+
+---
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-18 v45.1 — 출시 전 7-Wave audit + auto-fix 4 commit pushed · main `bfdc8eb8`)
 
 ## v45.1 (2026-05-18) — 출시 전 7-Wave audit + auto-fix 자율 진행 (CEO 자러간 사이)
