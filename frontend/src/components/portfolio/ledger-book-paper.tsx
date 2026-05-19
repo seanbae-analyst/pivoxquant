@@ -22,6 +22,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
 import type { Position, TradeAction } from "@/components/portfolio/types";
+import { fmtPct } from "@/lib/format";
 
 interface Totals {
   totalNav: number;
@@ -69,10 +70,11 @@ function fmtMoneyCell(v: number, cur: "USD" | "KRW"): string {
     })
   );
 }
-function fmtPctSigned(v: number): string {
-  if (!Number.isFinite(v)) return "—";
-  return (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
-}
+// fmtPctSigned migrated to lib/fmtPct (2026-05-19 Wave 2 sweep).
+// Behaviour byte-identical: same `v >= 0 ? "+"` sign rule, toFixed(2),
+// "—" sentinel on non-finite. lib accepts null/undefined too, which is
+// a superset of the old signature so all callers stay safe.
+const fmtPctSigned = fmtPct;
 
 function toneClass(v: number): string {
   if (v > 0.005) return "pq-paper-pos";

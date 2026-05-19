@@ -22,7 +22,14 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { API, WATCHLIST, WATCHLIST_ITEM } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
-import { fmtUsd, fmtKrw, fmtPct, pctColorClass, tickerToName } from "@/lib/format";
+import {
+  fmtUsd,
+  fmtKrw,
+  fmtPct,
+  pctColorClass,
+  tickerToName,
+  normalizeTicker,
+} from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
 import { Skeleton } from "@/components/ui/loading-skeleton";
@@ -353,15 +360,15 @@ function PillarCard({
   // KR convention (CEO directive 2026-04-26): POSITIVE → red (▲), NEGATIVE → blue (▼).
   const barColor =
     token === "POSITIVE"
-      ? "bg-[#D18888]"
+      ? "bg-[var(--up)]"
       : token === "NEGATIVE"
-        ? "bg-[#7AA0C8]"
+        ? "bg-[var(--down)]"
         : "bg-[var(--pq-bronze)]";
   const textColor =
     token === "POSITIVE"
-      ? "text-[#D18888]"
+      ? "text-[var(--up)]"
       : token === "NEGATIVE"
-        ? "text-[#7AA0C8]"
+        ? "text-[var(--down)]"
         : "text-[var(--pq-ivory-mid)]";
   return (
     <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px] pq-ink-card-interactive">
@@ -438,8 +445,9 @@ function AccessDeniedScreen({
         <span className="text-[var(--pq-bronze)]">
           {(() => {
             const nm = tickerToName(ticker);
-            // Wave G-5 G5-05 (2026-05-18): strip .KS/.KQ from user-facing label.
-            const display = ticker.replace(/\.(KS|KQ)$/i, "");
+            // Wave G-5 G5-05 (2026-05-18) + Wave 2 sweep (2026-05-19):
+            // strip .KS/.KQ via lib normalizeTicker (single source of truth).
+            const display = normalizeTicker(ticker);
             return nm ? `${nm} (${display})` : display;
           })()}
         </span>
@@ -482,10 +490,12 @@ export default function StockDetailPage() {
   const router = useRouter();
   const raw = (params.ticker ?? "").toUpperCase();
   const ticker = /^\d{6}$/.test(raw) ? `${raw}.KS` : raw;
-  // Wave G-5 P2 G5-05 (2026-05-18): KR ticker UI strip — feedback_ticker_display
-  // 룰. API call 은 raw ticker 유지, SYMBOL sub-label 등 사용자-노출 surface
-  // 만 ".KS"/".KQ" suffix 제거. "005930.KS" → "005930".
-  const displayTicker = ticker.replace(/\.(KS|KQ)$/i, "");
+  // Wave G-5 P2 G5-05 (2026-05-18) + Wave 2 sweep (2026-05-19):
+  // KR ticker UI strip — feedback_ticker_display 룰. API call 은 raw
+  // ticker 유지, SYMBOL sub-label 등 사용자-노출 surface 만 ".KS"/".KQ"
+  // suffix 제거. lib/format.ts normalizeTicker() 를 단일 source 로 사용.
+  // "005930.KS" → "005930".
+  const displayTicker = normalizeTicker(ticker);
   const [period, setPeriod] = useState<Period>("3M");
 
   const { data: signal, isLoading: loadingSignal } = useSWR<SignalDetail>(
@@ -1004,9 +1014,9 @@ export default function StockDetailPage() {
                     "pq-detail-stat-value mt-4",
                     // KR convention (CEO directive 2026-04-26): POSITIVE → red, NEGATIVE → blue.
                     signalTone === "pos"
-                      ? "text-[#D18888]"
+                      ? "text-[var(--up)]"
                       : signalTone === "neg"
-                        ? "text-[#7AA0C8]"
+                        ? "text-[var(--down)]"
                         : "text-[var(--pq-ivory)]",
                   )}
                 >

@@ -122,7 +122,7 @@ export function ProfileDropdown() {
         {open && (
           <div
             className="absolute right-0 top-full z-[100] mt-2 w-[260px] overflow-hidden rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
-            style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
+            style={{ background: "color-mix(in srgb, var(--pq-ivory) 4%, var(--pq-ink))", border: "0.5px solid rgba(245,240,232,0.12)" }}
             role="menu"
           >
             {/* Identity block */}
@@ -274,9 +274,10 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
 
   return (
     <ModalShell onClose={onClose} ariaLabel={t("profileMenu.shortcutsModalTitle")}>
+      {/* v3 modal-shell exception per project_design_v3.md — rounded-2xl is intentional on modal/dialog shells (CTAs inside remain rounded-sm). */}
       <div
         className="w-full max-w-md overflow-hidden rounded-2xl shadow-[0_24px_60px_-20px_rgba(10,10,10,0.35)]"
-        style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
+        style={{ background: "color-mix(in srgb, var(--pq-ivory) 4%, var(--pq-ink))", border: "0.5px solid rgba(245,240,232,0.12)" }}
       >
         <div
           className="px-5 py-4"

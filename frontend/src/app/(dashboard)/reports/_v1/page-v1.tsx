@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
   Caption,
+  EditorialHead,
   FootSignature,
   RuledKicker,
 } from "@/components/ui/editorial";
@@ -228,9 +229,10 @@ function ReportsPageInner() {
       {/* ── Header ── */}
       <header>
         <RuledKicker>PDF &middot; Observational archive</RuledKicker>
-        <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
+        {/* Wave 2 sweep (Task #8): inline Playfair text-2xl/3xl → EditorialHead. */}
+        <EditorialHead size={30} as="h1" className="mt-2">
           Reports
-        </h1>
+        </EditorialHead>
         <p className="mt-2 font-serif text-pq-lead text-[var(--pq-ivory)] max-w-2xl">
           Every artifact the desk can deliver &mdash; from the weekly memo to the year-end letter.
         </p>

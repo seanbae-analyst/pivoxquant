@@ -278,6 +278,13 @@ export default function RiskPage() {
   // transient and the user should see the "sign in" CTA without delay.
   const showSampleBanner = !hasData && (!anyLoading || isAuthError);
 
+  // Wave 2 dashboard sweep (2026-05-19): intentionally NOT migrated to
+  // lib/format.ts fmtPct(). Reason: the "neg" sign mode forces a leading
+  // minus on VaR/ES/MaxDD KPIs (loss readings render as "-2.41%" even
+  // when the backend payload is the absolute magnitude). Lib fmtPct uses
+  // `n > 0 ? "+" : ""` which would surface "+2.41%" for the same payload —
+  // a sign flip that would visually misrepresent loss metrics. Local
+  // helper retained per feedback_feature_preservation.
   const fmtPct = (v: number | undefined, sign: "neg" | "auto" = "auto") => {
     if (v == null || Number.isNaN(v)) return "—";
     const abs = Math.abs(v);

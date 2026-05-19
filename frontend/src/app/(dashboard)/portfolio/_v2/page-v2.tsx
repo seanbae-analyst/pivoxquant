@@ -42,12 +42,14 @@ import {
   usePortfolioPositions,
   usePortfolioSummary,
   useFxRate,
+  useBrokerConnections,
 } from "@/lib/hooks";
 import {
   PORTFOLIO_POSITIONS,
   PORTFOLIO_SUMMARY,
   PORTFOLIO_TRADES,
 } from "@/lib/endpoints";
+import { apiFetch, ApiError } from "@/lib/api";
 
 import { PortfolioHeroV2 } from "@/components/portfolio/v2/portfolio-hero-v2";
 import { EquityCurveBlock } from "@/components/portfolio/v2/equity-curve-block";
@@ -77,12 +79,26 @@ interface PositionsResponse {
   positions?: BackendPositionRow[];
 }
 
+interface ReconcileResponse {
+  ok: boolean;
+  broker?: "kis" | "alpaca";
+  added?: string[];
+  updated?: string[];
+  removed?: string[];
+  synced_at?: string;
+  available_cash?: number;
+  total_value?: number;
+  error?: string;
+  code?: string;
+}
+
 export default function PortfolioPageV2() {
   const [addOpen, setAddOpen] = React.useState(false);
   const [tradeAction, setTradeAction] = React.useState<TradeAction | null>(null);
   const [targetPosition, setTargetPosition] = React.useState<Position | null>(
     null,
   );
+  const [reconciling, setReconciling] = React.useState(false);
 
   const {
     data: posData,
@@ -94,6 +110,14 @@ export default function PortfolioPageV2() {
     isLoading: sumLoading,
     error: sumErr,
   } = usePortfolioSummary();
+
+  // Broker connections — drives Reconcile CTA enabled state. KIS is the
+  // only broker that actually writes positions; Alpaca paper still surfaces
+  // the button but the backend returns 501 ALPACA_RECONCILE_NOT_SUPPORTED.
+  const { data: brokerData } = useBrokerConnections();
+  const reconcileAvailable = Boolean(
+    brokerData?.kis_connected || brokerData?.alpaca_connected,
+  );
 
   // Skeleton flicker guard — same 1.2s window as v1.
   const [showSkeleton, setShowSkeleton] = React.useState(true);
@@ -205,6 +229,79 @@ export default function PortfolioPageV2() {
     );
   }
 
+  /**
+   * Reconcile from broker (KIS preferred, then Alpaca).
+   *
+   * Backend: POST /api/portfolio/reconcile (routes/portfolio.py:1761).
+   *   200  → {ok, broker, added, updated, removed, synced_at,
+   *           available_cash, total_value}
+   *   404  → NO_BROKER_CONNECTION  (no broker linked)
+   *   501  → ALPACA_RECONCILE_NOT_SUPPORTED
+   *   502  → SYNC_FAILED            (broker reachable but errored)
+   *
+   * CSRF is forwarded by `apiFetch` (X-CSRF-Token header from cookie).
+   * Trade rate limit is enforced server-side (@trade_rate_limit).
+   */
+  const handleReconcile = React.useCallback(async () => {
+    if (reconciling) return;
+    if (!reconcileAvailable) {
+      toast.error("KIS broker 연결 필요");
+      return;
+    }
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "KIS/Alpaca 계좌에서 보유 종목/평단/수량을 동기화합니다. 진행할까요?",
+      )
+    ) {
+      return;
+    }
+    setReconciling(true);
+    try {
+      const result = await apiFetch<ReconcileResponse>(
+        "/api/portfolio/reconcile",
+        { method: "POST" },
+      );
+      const added = result.added?.length ?? 0;
+      const updated = result.updated?.length ?? 0;
+      const removed = result.removed?.length ?? 0;
+      toast.success(
+        `${added}개 추가 · ${updated}개 업데이트 · ${removed}개 제거`,
+      );
+      refreshAll();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        // Map backend `code` to user-facing copy. The error message field
+        // from the response body is preserved as `err.message` by apiFetch.
+        const code = err.message || "";
+        if (
+          err.status === 501 ||
+          code.includes("ALPACA_RECONCILE_NOT_SUPPORTED")
+        ) {
+          toast.error(
+            "Alpaca 동기화 미지원 — KIS 계좌를 연결해 주세요.",
+          );
+        } else if (
+          err.status === 404 ||
+          code.includes("NO_BROKER_CONNECTION")
+        ) {
+          toast.error("연결된 브로커가 없습니다.");
+        } else if (err.status === 502 || code.includes("SYNC_FAILED")) {
+          toast.error("브로커 동기화에 실패했습니다. 잠시 후 재시도해 주세요.");
+        } else if (err.status === 429) {
+          // apiFetch already surfaced the 429 toast — skip duplicate.
+        } else {
+          toast.error(err.message || "동기화 중 오류가 발생했습니다.");
+        }
+      } else {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        toast.error(`Reconcile: ${msg}`);
+      }
+    } finally {
+      setReconciling(false);
+    }
+  }, [reconciling, reconcileAvailable]);
+
   // KPI deck values — preserved from v1 PortfolioPage (line 144-164).
   // Falls through to derived figures from positions when summary is silent.
   const kpis = React.useMemo(() => {
@@ -306,8 +403,9 @@ export default function PortfolioPageV2() {
         positionCount={positions.length}
         cashPct={cashPct}
         lastReconciledAt={lastReconciledAt}
-        reconcileAvailable={false}
+        reconcileAvailable={reconcileAvailable && !reconciling}
         onAddPosition={() => setAddOpen(true)}
+        onReconcile={handleReconcile}
         loading={isInitialLoad}
         todayPnl={kpis.todayPnl}
         todayPnlPct={kpis.todayPnlPct}

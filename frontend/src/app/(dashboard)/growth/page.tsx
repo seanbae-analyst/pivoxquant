@@ -332,8 +332,8 @@ export default function GrowthPage() {
           {todayData?.score ? (
             <>
               <div className="flex items-center gap-3 rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(34,197,94,0.12)]">
-                  <span className="text-lg font-bold text-[#7DD897]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--pq-live)_12%,transparent)]">
+                  <span className="text-lg font-bold text-[var(--pq-live)]">
                     {todayData.score.activity}
                   </span>
                 </div>
@@ -381,7 +381,7 @@ export default function GrowthPage() {
                   key={i}
                   className="flex items-start gap-2 text-sm text-[rgba(245,240,232,0.82)]"
                 >
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(34,197,94,0.12)] text-xs font-medium text-[#7DD897]">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--pq-live)_12%,transparent)] text-xs font-medium text-[var(--pq-live)]">
                     {i + 1}
                   </span>
                   {priority}
@@ -481,7 +481,7 @@ export default function GrowthPage() {
                     <h3 className="text-sm font-medium text-[rgba(245,240,232,0.82)]">
                       Week of {report.week_start}
                     </h3>
-                    <span className="rounded-full bg-[rgba(34,197,94,0.12)] px-2.5 py-0.5 text-xs font-medium text-[#7DD897]">
+                    <span className="rounded-full bg-[color-mix(in_srgb,var(--pq-live)_12%,transparent)] px-2.5 py-0.5 text-xs font-medium text-[var(--pq-live)]">
                       {report.week_score}/100
                     </span>
                   </div>

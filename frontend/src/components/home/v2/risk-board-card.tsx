@@ -108,7 +108,10 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
             display: "block",
             height: "100%",
             width: `${pct}%`,
-            background: "rgba(245, 240, 232, 0.6)",
+            // Bronze gradient — design v3 mockup intent (deep → light).
+            // Previous flat ivory tone diluted the editorial palette.
+            background:
+              "linear-gradient(90deg, var(--pq-bronze-deep) 0%, var(--pq-bronze) 100%)",
           }}
         />
       </div>

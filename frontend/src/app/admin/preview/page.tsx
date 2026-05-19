@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { motion } from "motion/react";
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_MICRO } from "@/lib/motion";
 import {
   Download,
   FileText,
@@ -247,7 +248,7 @@ function ArtifactCard({
     <motion.article
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.03, 0.24), duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ delay: Math.min(index * 0.03, 0.24), duration: PQ_DUR_BASE, ease: PQ_EASE }}
       className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
     >
       {/* Header: tier + cadence */}
@@ -344,6 +345,7 @@ function PreviewModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={{ duration: PQ_DUR_MICRO }}
       className="fixed inset-0 z-50 flex flex-col bg-slate-900/70 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();

@@ -123,12 +123,12 @@ export function PriceWithTimestamp({
         <span className="inline-flex items-center gap-1 font-mono text-pq-caption uppercase tracking-[0.16em]">
           {isStale ? (
             <span
-              className="h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-500/70"
+              className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--pq-stale)]"
               title="Stale — last observation is over 1 minute old"
             />
           ) : isLive ? (
             <span
-              className="h-1.5 w-1.5 rounded-full bg-[#7db487]"
+              className="h-1.5 w-1.5 rounded-full bg-[var(--pq-live)]"
               title="Live — just observed"
             />
           ) : (

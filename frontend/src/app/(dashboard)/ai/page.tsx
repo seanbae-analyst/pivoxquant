@@ -34,6 +34,7 @@ import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import {
   Caption,
+  EditorialHead,
   Fleuron,
   FootSignature,
   RuledKicker,
@@ -178,16 +179,20 @@ function AnalysisSectionCard({
       {state.expanded && (
         <div className="border-t border-[var(--pq-ivory-line)] px-5 py-5">
           {state.loading && !content && (
-            <div className="flex items-center justify-center gap-2 py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-[var(--pq-bronze)]" />
-              <span className="text-pq-caption text-[rgba(245,240,232,0.55)] uppercase tracking-[0.18em]">
-                Analyzing with AI…
-              </span>
+            <div className="py-2" aria-live="polite" aria-busy="true">
+              {/* Wave 2 sweep: spinner → skeleton (Task #5). LLM analysis is a
+                  long async card-load, not a brief submit feedback — readers
+                  benefit more from a content-shape preview than a spinner. */}
+              <div className="pq-skeleton-dark h-3 w-1/3 mb-3" aria-hidden />
+              <div className="pq-skeleton-dark h-3 w-full mb-2" aria-hidden />
+              <div className="pq-skeleton-dark h-3 w-5/6 mb-2" aria-hidden />
+              <div className="pq-skeleton-dark h-3 w-3/4" aria-hidden />
+              <span className="sr-only">Analyzing with AI…</span>
             </div>
           )}
           {state.error && (
             <div className="rounded-[2px] border border-red-500/30 bg-red-500/5 px-4 py-3">
-              <p className="text-pq-body text-red-400">{state.error}</p>
+              <p className="text-pq-body text-[var(--pq-error)]">{state.error}</p>
             </div>
           )}
           {content && (
@@ -412,9 +417,10 @@ export default function AiPage() {
           {/* ── Header ── */}
           <header>
             <RuledKicker>AI Assistant &middot; Observational analysis</RuledKicker>
-            <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
+            {/* Wave 2 sweep (Task #8): inline Playfair text-2xl/3xl → EditorialHead. */}
+            <EditorialHead size={30} as="h1" className="mt-2">
               AI Analysis Tools
-            </h1>
+            </EditorialHead>
             <p className="mt-2 font-serif text-pq-lead text-[var(--pq-ivory)] max-w-2xl">
               Claude-driven research notes, drawn over 58 quant signals.
             </p>
@@ -447,17 +453,19 @@ export default function AiPage() {
                 </Caption>
 
                 {coaching.loading && (
-                  <div className="mt-4 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-[var(--pq-bronze)]" />
-                    <span className="text-pq-caption uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)]">
-                      Generating insight…
-                    </span>
+                  <div className="mt-4" aria-live="polite" aria-busy="true">
+                    {/* Wave 2 sweep: spinner → skeleton (Task #5). 8-second
+                        LLM "insight" job — card load state, not micro-feedback. */}
+                    <div className="pq-skeleton-dark h-3 w-2/3 mb-2" aria-hidden />
+                    <div className="pq-skeleton-dark h-3 w-full mb-2" aria-hidden />
+                    <div className="pq-skeleton-dark h-3 w-4/5" aria-hidden />
+                    <span className="sr-only">Generating insight…</span>
                   </div>
                 )}
 
                 {coaching.error && (
                   <div className="mt-4 rounded-[2px] border border-red-500/30 bg-red-500/5 px-4 py-3">
-                    <p className="text-pq-body text-red-400">{coaching.error}</p>
+                    <p className="text-pq-body text-[var(--pq-error)]">{coaching.error}</p>
                   </div>
                 )}
 
@@ -522,9 +530,11 @@ export default function AiPage() {
               </Caption>
 
               {tickersLoading ? (
-                <div className="flex items-center gap-2 text-pq-caption text-[rgba(245,240,232,0.5)]">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--pq-bronze)]" />
-                  Loading your symbols…
+                <div aria-live="polite" aria-busy="true">
+                  {/* Wave 2 sweep: spinner → skeleton (Task #5). Symbol list
+                      fetch — section load state. */}
+                  <div className="pq-skeleton-dark h-9 w-full max-w-md" aria-hidden />
+                  <span className="sr-only">Loading your symbols…</span>
                 </div>
               ) : hasUserTickers ? (
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

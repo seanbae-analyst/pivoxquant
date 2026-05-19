@@ -11,6 +11,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useWatchlist } from "@/lib/hooks";
 import type { WatchlistResponse } from "@/lib/types";
+import { normalizeTicker } from "@/lib/format";
 
 interface WatchlistMiniProps {
   limit?: number;
@@ -140,7 +141,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                       marginTop: 2,
                     }}
                   >
-                    {w.ticker.replace(/\.(KS|KQ)$/i, "")}
+                    {normalizeTicker(w.ticker)}
                   </div>
                 </Link>
                 <span

@@ -35,6 +35,7 @@ import { AlpacaConnectModal } from "@/components/broker/alpaca-connect-modal";
 const ALPACA_ENABLED = process.env.NEXT_PUBLIC_ALPACA_ENABLED === "1";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { EditorialHead } from "@/components/ui/editorial";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { useLocale, useT } from "@/lib/locale";
 import {
@@ -87,9 +88,10 @@ function Section({
         <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           {kicker}
         </div>
-        <h2 className="mt-1 font-serif text-2xl text-[var(--pq-ivory)]">
+        {/* Wave 2 sweep (Task #8): inline Playfair text-2xl → EditorialHead. */}
+        <EditorialHead size={26} as="h2" className="mt-1">
           {title}
-        </h2>
+        </EditorialHead>
       </header>
       {children}
     </section>
@@ -336,9 +338,10 @@ function SubscriptionSection() {
                   <Crown className="h-3 w-3" />
                   {tier} plan
                 </div>
-                <div className="mt-2 font-serif text-2xl text-[var(--pq-ivory)] capitalize">
+                {/* Wave 2 sweep (Task #8): inline Playfair text-2xl → EditorialHead. */}
+                <EditorialHead size={26} as="div" className="mt-2 capitalize">
                   {tier}
-                </div>
+                </EditorialHead>
               </div>
               {subData?.current_period_end && isPaid && (
                 <div className="text-right">
@@ -827,9 +830,10 @@ export default function SettingsPageV1() {
           <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Account · Preferences
           </div>
-          <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
+          {/* Wave 2 sweep (Task #8): inline Playfair text-2xl/3xl → EditorialHead. */}
+          <EditorialHead size={30} as="h1" className="mt-2">
             Settings
-          </h1>
+          </EditorialHead>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">
             Subscription, brokers, and preferences. For identity and persona
             controls see{" "}

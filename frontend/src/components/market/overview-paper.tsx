@@ -15,8 +15,8 @@
  */
 
 import * as React from "react";
-import type { IndexQuote } from "@/components/market/index-card";
-import { proxyLabel } from "@/components/market/index-card";
+import type { IndexQuote } from "@/lib/market";
+import { proxyLabel } from "@/lib/market";
 import { fmtPct } from "@/lib/format";
 
 /**

@@ -16,6 +16,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { PQ_EASE, PQ_DUR_FAST, PQ_DUR_MICRO } from "@/lib/motion";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { usePulse, type PulseEntry } from "@/lib/cfo/hooks";
@@ -130,7 +131,7 @@ export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
+          transition={{ duration: PQ_DUR_MICRO }}
           style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
           onClick={handleDismiss}
           role="dialog"
@@ -144,7 +145,7 @@ export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 10, opacity: 0 }}
-            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: PQ_DUR_FAST, ease: PQ_EASE }}
             className="w-full max-w-lg bg-[var(--pq-ink)] border border-[rgba(245,240,232,0.12)] rounded-[2px] p-6"
           >
             <div className="flex items-start justify-between mb-4">
@@ -361,10 +362,12 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
     const d = values
       .map((v, i) => `${i === 0 ? "M" : "L"} ${pad + i * step},${y(v)}`)
       .join(" ");
+    // SVG presentation attrs don't resolve var() — use style prop instead so
+    // the v3 token (e.g. var(--pq-live)) actually renders.
     return (
       <path
         d={d}
-        stroke={color}
+        style={{ stroke: color }}
         strokeWidth={1.25}
         fill="none"
         strokeLinejoin="round"
@@ -390,7 +393,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
         aria-label="Emotion and confidence curves"
       >
         {path(moodValues, "#B8956A")}
-        {path(confValues, "#7db487")}
+        {path(confValues, "var(--pq-live)")}
       </svg>
       <div className="mt-2 flex gap-4 text-pq-caption">
         <span className="flex items-center gap-1.5" style={{ color: "rgba(245,240,232,0.7)" }}>
@@ -411,7 +414,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
             style={{
               width: 10,
               height: 2,
-              background: "#7db487",
+              background: "var(--pq-live)",
               display: "inline-block",
             }}
           />

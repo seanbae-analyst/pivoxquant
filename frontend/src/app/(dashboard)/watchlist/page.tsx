@@ -14,7 +14,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useWatchlist } from "@/lib/hooks";
-import { fmtPct, fmtRange52w, pctColorClass } from "@/lib/format";
+import { fmtPct, fmtRange52w, normalizeTicker, pctColorClass } from "@/lib/format";
 import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
@@ -103,7 +103,7 @@ export default function WatchlistPage() {
           <span
             className={`h-1.5 w-1.5 rounded-full ${
               marketOpen
-                ? "bg-[#7db487] animate-pulse"
+                ? "bg-[var(--pq-live)] animate-pulse"
                 : "bg-[var(--pq-bronze)] opacity-50"
             }`}
           />
@@ -226,7 +226,7 @@ export default function WatchlistPage() {
                             "short ticker" treatment to both regions.
                             US tickers pass through unchanged.
                           */}
-                          {item.ticker.replace(/\.(KS|KQ)$/i, "")}
+                          {normalizeTicker(item.ticker)}
                         </td>
                         <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[240px]">
                           {item.name || item.ticker}
@@ -326,7 +326,7 @@ export default function WatchlistPage() {
                           Routing still uses the full `item.ticker`
                           (line 303); only display is normalized.
                         */}
-                        {item.ticker.replace(/\.(KS|KQ)$/i, "")}
+                        {normalizeTicker(item.ticker)}
                       </span>
                       <span className="text-pq-caption text-[rgba(245,240,232,0.65)] truncate text-right">
                         {item.name || item.ticker}

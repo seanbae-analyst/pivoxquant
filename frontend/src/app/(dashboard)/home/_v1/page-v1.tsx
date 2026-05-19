@@ -49,7 +49,7 @@ import { SectorAllocationDonut } from "@/components/home/sector-allocation-donut
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
-import { pctColor, PRICE_COLOR_HEX } from "@/lib/format";
+import { pctColor, PRICE_COLOR_HEX, fmtUsd, fmtKrw, fmtPct } from "@/lib/format";
 import {
   usePortfolioSummary,
   usePortfolioPositions,
@@ -154,22 +154,12 @@ interface SignalRow {
 
 /* ── Utilities ── */
 
+// Wave 2 dashboard sweep (2026-05-19): local fmtMoney/fmtPct removed,
+// sourced from lib/format.ts (single source of truth — Task #4).
+// `fmtMoney(n, "USD"|"KRW")` is preserved as a thin shim because the
+// render callbacks already pass the resolved currency.
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  const abs = Math.abs(n);
-  const sign = n < 0 ? "-" : "";
-  const dec = currency === "KRW" ? 0 : 2;
-  const body = abs.toLocaleString(currency === "KRW" ? "ko-KR" : "en-US", {
-    minimumFractionDigits: dec,
-    maximumFractionDigits: dec,
-  });
-  return `${sign}${currency === "KRW" ? "\u20A9" : "$"}${body}`;
-}
-
-function fmtPct(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  const sign = n > 0 ? "+" : "";
-  return `${sign}${n.toFixed(2)}%`;
+  return currency === "KRW" ? fmtKrw(n) : fmtUsd(n);
 }
 
 /* ── Page ── */

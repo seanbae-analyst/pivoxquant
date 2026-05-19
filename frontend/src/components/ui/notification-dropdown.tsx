@@ -151,7 +151,7 @@ export function NotificationDropdown() {
       {open && (
         <div
           className="absolute right-0 top-full z-[100] mt-2 w-[calc(100vw-2rem)] max-w-[340px] overflow-hidden rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
-          style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
+          style={{ background: "color-mix(in srgb, var(--pq-ivory) 4%, var(--pq-ink))", border: "0.5px solid rgba(245,240,232,0.12)" }}
           role="menu"
         >
           {/* Header */}

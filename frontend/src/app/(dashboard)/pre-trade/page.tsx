@@ -621,7 +621,7 @@ function CooldownStep({
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-red-400"
+          className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-error)]"
         >
           <X className="h-3.5 w-3.5" />
           Cancel · 취소

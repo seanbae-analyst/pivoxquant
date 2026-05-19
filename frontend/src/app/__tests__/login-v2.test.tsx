@@ -74,13 +74,16 @@ describe("LoginPageV2", () => {
     expect(privacy).toHaveAttribute("href", "/privacy");
   });
 
-  it("shows the loading spinner state when auth is still loading", () => {
+  it("shows the loading skeleton state when auth is still loading", () => {
     authState.loading = true;
     const { container } = render(<LoginPageV2 />);
 
     // Loading state: no OAuth buttons rendered.
     expect(screen.queryByText(/Continue with Google/i)).not.toBeInTheDocument();
-    // Spinner div is the only visible content under the wrapper.
-    expect(container.querySelector(".animate-spin")).toBeTruthy();
+    // 2026-05-19 sweep: spinner → Vantablack skeleton. The container is the
+    // only visible content under the wrapper while auth resolves.
+    expect(container.querySelector(".pq-skeleton-dark")).toBeTruthy();
+    // role=status + aria-live="polite" + aria-label is the a11y contract.
+    expect(container.querySelector('[role="status"]')).toBeTruthy();
   });
 });

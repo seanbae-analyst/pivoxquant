@@ -17,6 +17,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
+import { PQ_EASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { Sparkles, ArrowUpRight } from "lucide-react";
 
 import { useAuth } from "@/lib/auth";
@@ -54,7 +55,7 @@ export function UpsellPlus() {
       aria-label="Premium Plus founding seats"
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
       className="pq-upsell-plus relative overflow-hidden rounded-[3px]"
       style={{
         background:
@@ -116,9 +117,9 @@ export function UpsellPlus() {
                 initial={reduceMotion ? { width: `${progressPct}%` } : { width: 0 }}
                 animate={{ width: `${progressPct}%` }}
                 transition={{
-                  duration: reduceMotion ? 0 : 1.2,
+                  duration: reduceMotion ? 0 : PQ_DUR_SLOW,
                   delay: reduceMotion ? 0 : 0.15,
-                  ease: [0.16, 1, 0.3, 1],
+                  ease: PQ_EASE,
                 }}
                 style={{
                   background:

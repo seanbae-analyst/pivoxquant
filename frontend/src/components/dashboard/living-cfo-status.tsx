@@ -23,6 +23,7 @@ import * as React from "react";
 import Link from "next/link";
 import { X, Check, Circle, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { PQ_EASE, PQ_DUR_FAST, PQ_DUR_MICRO } from "@/lib/motion";
 import { useInvestmentProfile, useArtifacts } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
 import { usePersona, usePulse, PERSONA_LABELS } from "@/lib/cfo/hooks";
@@ -227,7 +228,7 @@ function LayerDot({
 
   const color =
     layer.state === "ready"
-      ? "#7db487"
+      ? "var(--pq-live)"
       : layer.state === "learning"
         ? "var(--pq-bronze)"
         : layer.state === "locked"
@@ -299,7 +300,7 @@ function StatusModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
+      transition={{ duration: PQ_DUR_MICRO }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -313,7 +314,7 @@ function StatusModal({
         initial={{ y: 8, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 8, opacity: 0 }}
-        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: PQ_DUR_FAST, ease: PQ_EASE }}
         className="w-full max-w-lg bg-[var(--pq-ink)] border border-[rgba(245,240,232,0.12)] rounded-[2px] p-6"
       >
         <div className="flex items-start justify-between mb-4">
@@ -365,7 +366,7 @@ function StatusModal({
                   style={{
                     background:
                       l.state === "ready"
-                        ? "#7db487"
+                        ? "var(--pq-live)"
                         : l.state === "learning"
                           ? "var(--pq-bronze)"
                           : l.state === "locked"

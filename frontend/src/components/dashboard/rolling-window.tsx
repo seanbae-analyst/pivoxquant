@@ -16,6 +16,7 @@
 
 import * as React from "react";
 import { motion } from "motion/react";
+import { PQ_DUR_MICRO } from "@/lib/motion";
 import {
   useRollingWindow,
   PERSONA_LABELS,
@@ -129,7 +130,7 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
           key={win}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.18 }}
+          transition={{ duration: PQ_DUR_MICRO }}
           className="mt-3 font-serif text-pq-body-sm"
           style={{ color: paper ? "rgba(26,22,18,0.75)" : "var(--pq-ivory)" }}
         >
@@ -146,7 +147,7 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
                   ? paper
                     ? "#1a1612"
                     : "var(--pq-ivory)"
-                  : "#a35b3b",
+                  : "var(--pq-drift)",
             }}
           >
             {PERSONA_LABELS[contrast.observed_persona]} {contrast.observed_score}
