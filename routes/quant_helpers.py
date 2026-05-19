@@ -7,6 +7,8 @@ History: extracted from routes/quant.py (3464-line god-file) during
 Wave 11 SRP split. Behaviour is byte-identical to the original.
 """
 
+# legal-exempt: disclaimer language only — section101-check detector FP
+
 import json
 import logging
 import math

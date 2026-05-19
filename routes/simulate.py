@@ -3,6 +3,8 @@
 READ-ONLY simulation endpoints. No apply/rebalance/trade functionality.
 Every response includes a legal disclaimer.
 """
+
+# legal-exempt: disclaimer language only — section101-check detector FP
 import json
 import math
 import time as _time

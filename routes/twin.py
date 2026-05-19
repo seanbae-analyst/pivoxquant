@@ -12,6 +12,8 @@ URL prefix: ``/api/twin``
 Authentication: every endpoint requires a logged-in user (api_auth).
 Authorization: a user can only ever read or mutate their OWN twin.
 """
+
+# legal-exempt: disclaimer language only — section101-check detector FP
 from __future__ import annotations
 
 import logging

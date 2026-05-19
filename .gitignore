@@ -77,3 +77,6 @@ legal_monitor_artifacts/
 
 # Bug hunt session artifacts (transient — not meant for git)
 .bug-hunt/
+
+# APScheduler runtime state (Wave H) — not source-of-truth
+state/

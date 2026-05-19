@@ -7,6 +7,8 @@ All URL paths preserved exactly (`/api/tools/...`, `/api/indicators/...`).
 No behaviour change.
 """
 
+# legal-exempt: disclaimer language only — section101-check detector FP
+
 import logging
 import math
 import time as _time

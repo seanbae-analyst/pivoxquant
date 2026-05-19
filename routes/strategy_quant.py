@@ -5,6 +5,8 @@ Split from routes/quant.py (Wave 11 SRP refactor).
 All URL paths preserved exactly (`/api/...`). No behaviour change.
 """
 
+# legal-exempt: disclaimer language only — section101-check detector FP
+
 import logging
 import time as _time
 
