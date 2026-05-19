@@ -1,0 +1,124 @@
+# PivoxQuant — Frozen Files SoT
+# Owner: frozen-file-diff-guard agent
+# 변경 시 CEO 승인 필수 + 본 yaml 갱신 PR 동봉
+# 2026-05-19 v45.3 마무리 (SoT 신규 작성)
+
+version: 1
+last_updated: "2026-05-19"
+
+# Iron Rule 7건 동결 — CLAUDE.md "중요 원칙" 절 명시
+# 변경 절대 금지 (예외: §exceptions 조항)
+hard_frozen:
+  - path: services/quant/engine.py
+    owner: persona-quant-domain
+    reason: QuantEngine 1146줄 — 4-pillar scoring. 완성 상태.
+    legacy_path: engine.py  # 루트 폐기, services/quant/로 이동
+    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+
+  - path: services/quant/models.py
+    owner: persona-quant-domain
+    reason: 58 quant 모델 (StatArb, MeanReversion, TSMOM, ML 등)
+    legacy_path: quant_models.py
+    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+
+  - path: services/quant/risk_metrics.py
+    owner: persona-quant-domain
+    reason: Risk metrics (GKYZ, LedoitWolf, ComponentES, ConditionalDD, TailRatio, Sortino)
+    legacy_path: risk_models.py
+    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+
+  - path: services/quant/risk_defense.py
+    owner: persona-quant-domain
+    reason: 7-Layer Risk Defense (VaR, Correlation, VIX, Tail, Daily, Sector, Cash)
+    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+
+  - path: services/quant/portfolio.py
+    owner: persona-quant-domain
+    reason: HRP, TailRiskParity, MaxDiv, ERC, MinVariance
+    legacy_path: portfolio_models.py
+    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+    exceptions:
+      - "Pattern 7 FX consistency fix (precedent v44.9 PR #484 / v45.3 commit eea051e5) — fx-consistency-guard agent 승인 시 허용"
+
+  - path: services/quant/signals.py
+    owner: persona-quant-domain
+    reason: Behavioral signals (DispositionEffect, Herding, SentimentDivergence, OrderFlow, Anchoring)
+    legacy_path: signal_models.py
+    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+
+  - path: services/ai/models.py
+    owner: persona-quant-domain
+    reason: AI models (EarningsCallTone, SectorRotation, RiskSummary)
+    legacy_path: ai_models.py
+    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+    exceptions:
+      - "Pattern 6 cache poisoning fix (precedent v44.9 PR #488 / v45.3 commit 69b583af) — cache-poisoning-sentinel agent 승인 시 허용"
+      - "Pattern 10 prompt injection fix (precedent v45.3 commit 22bf5496) — legal-kr-fintech agent 승인 시 허용"
+
+# Soft frozen — CEO 결정 대기 (현재 권고만, BLOCK 안 함)
+# 회귀 사고 학습 기반 동결 후보. 본 yaml 갱신 PR + CEO 승인 시 hard_frozen으로 승격.
+soft_frozen_candidates:
+  - path: frontend/src/app/terms/page.tsx
+    reason: 자본시장법 §17 + 정통망법 §50 면책 + 통신판매업 §17 청약철회 문구 SoT
+    incident: "변경 시 법무 review 필수"
+    decision_owner: CEO + legal-kr-fintech
+
+  - path: frontend/src/app/privacy/page.tsx
+    reason: PIPA §28 + §17 처리방침 SoT
+    incident: "변경 시 PIPA 신고 검토 필요"
+    decision_owner: CEO + legal-kr-fintech
+
+  - path: routes/auth.py
+    reason: OAuth callback section — v44.7 provisioning_failed P0 사고
+    incident: "alembic 035 prod 미적용 hotfix (runtime ADD COLUMN). 재발 위험 영역"
+    section_anchor: "def oauth_callback / _do_migrations"
+    decision_owner: CEO + release-coordinator
+
+  - path: migrations/versions/035_user_onboarding_draft.py
+    reason: v44.7 OAuth 사고 원인 — prod alembic_version 동기화 영구 가드
+    incident: "변경 시 migration-guard + prod-migration-sync-verifier 강제"
+    decision_owner: CEO + migration-guard
+
+  - path: frontend/src/app/beta-gate/page.tsx
+    reason: BETA_PASSWORD 노출 회귀 영역 (C1 git filter-repo 사건)
+    incident: "평문 BETA_PASSWORD 누출 차단. 코드 reveal 금지"
+    decision_owner: CEO + secrets-rotator
+
+  - path: routes/health.py
+    reason: /api/health endpoint — release-coordinator 5분 window의 SoT
+    incident: "Railway health check 의존. status code 변경 = 배포 게이트 영향"
+    decision_owner: CEO + release-coordinator
+
+  - path: frontend/public/manifest.json
+    reason: PWA manifest — service worker 캐시 무효화 트리거
+    incident: "변경 시 pwa-cache-validator agent + version bump 필수"
+    decision_owner: CEO + pwa-cache-validator
+
+# Exceptions 글로벌 규칙
+exceptions:
+  - "P0 SHIP-BLOCKER (cache poisoning / FX / prompt injection / OAuth 사고 재발) fix는 해당 가드 agent 승인 시 허용"
+  - "Brand rename / mass codegen은 CEO 명시 승인 + 본 yaml 갱신 PR 동봉 시 허용"
+  - "법무/규제 변경 (자본시장법 / PIPA / 통신판매업 개정) 대응 fix는 legal-kr-fintech 승인 시 허용"
+
+# Verification commands
+verification:
+  pr_diff_check: |
+    git diff --name-only origin/main..HEAD | \
+      python3 -c "
+      import sys, yaml
+      with open('.claude/frozen_files.yaml') as f:
+          frozen = yaml.safe_load(f)
+      hard = {p['path'] for p in frozen['hard_frozen']}
+      changed = set(line.strip() for line in sys.stdin if line.strip())
+      blocked = changed & hard
+      if blocked:
+          print(f'BLOCKED: {blocked}')
+          sys.exit(1)
+      "
+
+  pre_commit_hook: |
+    # .git/hooks/pre-commit (권고)
+    git diff --cached --name-only | python3 scripts/check_frozen.py
+
+# 0원 (feedback_no_extra_cost 준수)
+cost: "0원 — git diff + python stdlib + yaml (이미 설치) 만"
