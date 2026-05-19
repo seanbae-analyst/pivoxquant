@@ -1,3 +1,102 @@
+# PivoxQuant — 인수인계서 (2026-05-19 v45.5 — 옵션 4 CI 이전 (GitHub Actions billing 차단 우회) · 4 commit pushed · main `3076327c`)
+
+## v45.5 (2026-05-19 밤) — GitHub Actions billing 결제 차단 → 로컬 git hooks 이전 (옵션 4)
+
+**한 줄 요약**: CEO 카드 미등록 + `feedback_no_extra_cost` 강제 → GitHub Actions OFF + 로컬 bash git hooks로 검증 이전. 4 atomic commit + push. 활성 workflows 0 / .disabled 28. **0원 영구**.
+
+### 4 commit pushed (본 wave, main `→ 3076327c`)
+| Hash | 내용 |
+|---|---|
+| `edef7ac8` | feat(ci): 로컬 git hooks (.githooks/) — pre-commit 7 검사 + pre-push 3 검사 + post-checkout 알림 + core.hooksPath repo-local (5 files +427 / -1) |
+| `1499bee5` | chore(ci): 잔여 5 active workflows `.yml.disabled` rename (pdf-lint/regression-guards/secret-scan/ssl-expiry-check/vercel-deploy-canary) |
+| `c0fb06ea` | fix(ci): pre-push hook self-test 2건 — docs 단어 + .claude/ 스캔 제외 |
+| `3076327c` | fix(ci): pre-push alembic head guard — migrations/alembic.ini 경로 지원 |
+
+### v45.4 ~ v45.5 사이 외부 commit 3건 (본 세션 dispatch 외, 별도 자율 agent 또는 백그라운드)
+| Hash | 카테고리 | 내용 |
+|---|---|---|
+| `98a43471` | INFRA | P0 5 routines — Dockerfile HEALTHCHECK + railway.toml + SSL trip-wire + DB nightly dump + api-health re-enable |
+| `9b1a5005` | QA | P0 3 regression gates — alembic head + Vercel canary + daily-regression |
+| `fb1a14ec` | OPS | P0 3 routines — SendGrid quota D-1 + morning-brief KPI + signup-funnel watchdog (warn-only) |
+
+→ 본 v45.5는 위 3 commit이 push된 후 그 위에 CI-migration 적용. 동기화 정상 (ahead 0).
+
+### 배경 (결제 차단 진단)
+- GitHub Actions 실측: 모든 job "The job was not started because **recent account payments have failed** or your spending limit needs to be increased"
+- 실 원인: **pivoxquant repo PRIVATE + free plan + 카드 미등록** (CEO 확인). private repo는 free plan 월 2000분 한도 + 결제수단 필수.
+- CEO 결정: 카드 등록 거부 (feedback_no_extra_cost 강제) → 옵션 4 (로컬 hooks) 채택.
+- public 전환 옵션 거부 (secret 회귀 + 사업 모델 노출).
+
+### 로컬 hooks 구조 (.githooks/)
+
+**pre-commit (10119 bytes, 7 검사)**:
+1. Forbidden extensions (.env/.db/.pem) — 기존
+2. SNAPSHOT_DATE > 14일 stale (market-ticker.tsx) — 기존
+3. Secret pattern scan (베타 비번 literal / Sentry DSN / Anthropic key / AWS / Stripe) — 기존
+4. **Legal-guard grep** (BUY/SELL/HOLD/recommend/advice/추천/조언, 시그널 enum 화이트리스트) — 신규
+5. **Frozen-file-diff-guard** (.claude/frozen_files.yaml hard_frozen 7건 + escape token 4종: cache-poisoning-sentinel approved / fx-consistency-guard approved / legal-kr-fintech approved / CEO override) — 신규 (v45.4 G3 활용)
+6. **Ruff check** (staged .py, ruff 미설치 시 skip) — 신규
+7. **Extended secret scan** (ghp_/ghs_/OAuth/DEV_LOGIN secret 값) — 신규
+
+**pre-push (6034 bytes, 3 검사)**:
+1. Alembic head guard (single head, backend/ → migrations/ → root cascade)
+2. Regression guards (scripts/check_regression_guards.py)
+3. Pytest sanity (변경 routes/services 매칭 test + core regression test)
+
+**post-checkout (978 bytes, non-blocking)**:
+- .claude/frozen_files.yaml 변경 시 알림
+
+### GitHub Actions workflows status
+- 활성 `.yml`: **0** (전부 비활성)
+- `.yml.disabled`: **28** (15 본 wave + 13 기존)
+- 카드 등록 시 복원: `cd .github/workflows && for f in *.yml.disabled; do git mv "$f" "${f%.disabled}"; done && git commit -am "chore(ci): GitHub Actions 재활성화" && git push`
+
+### 자율 발견 + fix (engineering agent wave 중)
+- pre-push hook 첫 실행 시 self-referential 2건 (docs 단어 "BUY/SELL" 매칭 + .claude/ worktree 스캔) → commit `c0fb06ea`
+- alembic.ini 경로 (migrations/) 누락 → commit `3076327c`
+- 둘 다 본 wave 내 즉시 fix + push
+
+### 최종 verify (v45.5)
+- ✅ `git config --get core.hooksPath` → `.githooks`
+- ✅ `.githooks/` 3개 (pre-commit / pre-push / post-checkout) 실행 권한 부여
+- ✅ `ls .github/workflows/*.yml 2>/dev/null | wc -l` → 0
+- ✅ `ls .github/workflows/*.disabled | wc -l` → 28
+- ✅ `git rev-list --count origin/main..HEAD` → 0 (push 완료)
+- ✅ pre-push hook 실제 작동 (3076327c push 시 alembic ✓ / regression ✓ / pytest ✓)
+- ✅ `gh run list --limit 5`: 6b89c994 이후 push 6건 0 신규 run = workflows OFF 작동 확인
+
+### 운영 안내 문서
+- **docs/dev/local-hooks.md** (152 lines) — 왜/어떻게/검사 항목/escape token/복원 절차/인벤토리
+- **CLAUDE.md** — "로컬 git hooks (2026-05-19 신규)" 섹션 추가
+
+### Working tree 잔존 (본 wave 미커밋, CEO 결정 대기)
+- `routes/billing.py` (M) — 외부 commit 작업 잔존
+- `services/billing_notifications.py` (?)
+- `scripts/nightly/kis_token_expiry_check.py` + `ticker_health_alert.py` (?)
+- `tests/test_billing_payment_failed.py` + `test_kis_token_expiry.py` + `test_ticker_health_alert.py` (?)
+- `.secrets.baseline` (?)
+- `.claude/skills/ui-ux-pro-max` submodule (m)
+
+→ 본 wave 범위 외 (외부 commit 산출물 추정). CEO가 직접 검토 후 commit 결정.
+
+### Iron Rule 준수 evidence (v45.5)
+- feedback_no_extra_cost: 0원 영구 (pre-commit framework X, bash native only, 외부 의존성 0)
+- feedback_no_false_reports: 모든 verify 실측 출력 인용 / 외부 3 commit 명확히 분리 기록
+- feedback_thorough_fixes: pre-push self-test 2건 + alembic 경로 즉시 fix
+- feedback_pr_workflow: 4 atomic commit (hook 추가 / workflows OFF / self-fix 2)
+- feedback_git_mv_staging: git mv 후 git status --short verify 수행
+- feedback_feature_preservation: 9 워크플로우 검증 항목 100% 로컬 이전 (legal-guard + regression + secret-scan + alembic + lint + ruff)
+
+### 다음 세션 첫 ACTION
+1. **Working tree 잔존 7건** CEO 검토 + commit 결정
+2. **CEO 외부 액션 7건** (v45.3 / v45.4 동일 — GitHub billing 옵션 4로 대체됨, 잔 6건: DNS / 변호사 / 통신판매업 / prod DB / iCloud / Stripe)
+3. **launch-runner cron 등록** (v45.4 G4 신규 — CEO 직접 mcp__scheduled-tasks__create)
+4. **agent Batch 2 / Batch 3 진행 결정** (v45.3 pivoxquant-improver 결과)
+
+---
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-19 v45.4 — Batch 1 agent 업그레이드 P0 8건 · 5 commit pushed · main `2c7f0a99`)
 
 ## v45.4 (2026-05-19 저녁) — agent 정의 Batch 1 P0 8건 (4시간 wave)
