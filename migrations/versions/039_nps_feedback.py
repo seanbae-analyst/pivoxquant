@@ -39,12 +39,11 @@ import sqlalchemy as sa
 
 
 revision = "039_nps_feedback"
-# Merge the three 038 heads so subsequent migrations have a single parent.
-down_revision = (
-    "038_checkout_expirations",
-    "038_inactive_nudge_sent_at",
-    "038_scheduled_emails",
-)
+# down_revision normalized 2026-05-19 — 038_inactive_nudge_sent_at already
+# merges (038_checkout_expirations, 038_scheduled_emails) so direct refs to
+# those two are redundant edges. Single edge to the merge node keeps the
+# alembic DAG canonical.
+down_revision = "038_inactive_nudge_sent_at"
 branch_labels = None
 depends_on = None
 

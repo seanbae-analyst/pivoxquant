@@ -175,12 +175,56 @@ else
 fi
 
 # ============================================================
+# Stage 4: frontend vitest + design-token drift (Wave G P2 fix 2026-05-19)
+# Replaces .github/workflows/{frontend-tests,design-safety-guards}.yml.disabled
+# ============================================================
+log "=== Stage 4: frontend vitest + design-token drift ==="
+STAGE4_FAIL=0
+
+# 4a: frontend vitest (only if node_modules exists)
+if [ -d "${REPO_DIR}/frontend/node_modules" ]; then
+  VITEST_OUT=$(cd "${REPO_DIR}/frontend" && npm run test --silent 2>&1 | tail -5)
+  VITEST_RC=$?
+  if [ "${VITEST_RC}" -eq 0 ]; then
+    log "  OK   frontend vitest passed"
+  else
+    warn "  FAIL frontend vitest exit=${VITEST_RC}"
+    echo "${VITEST_OUT}" | sed 's/^/    /'
+    STAGE4_FAIL=1
+  fi
+else
+  log "  SKIP frontend/node_modules missing (npm install first)"
+fi
+
+# 4b: design-token drift — raw hex in frontend/src/ outside globals.css
+HEX_VIOLATIONS=$(grep -rE "#[0-9a-fA-F]{6}\b" "${REPO_DIR}/frontend/src/" \
+  --include="*.tsx" --include="*.ts" \
+  --exclude-dir=node_modules 2>/dev/null \
+  | grep -v "// allow-hex" \
+  | head -10 || true)
+if [ -n "${HEX_VIOLATIONS}" ]; then
+  warn "  FAIL design-token drift (raw hex in frontend/src/):"
+  echo "${HEX_VIOLATIONS}" | sed 's/^/    /'
+  STAGE4_FAIL=1
+else
+  log "  OK   no raw hex in frontend/src/ (v3 token compliance)"
+fi
+
+if [ "${STAGE4_FAIL}" -eq 0 ]; then
+  log "Stage 4 PASSED"
+else
+  warn "Stage 4 FAILED"
+  STAGE_FAILURES=$((STAGE_FAILURES + 1))
+  FAIL_SUMMARY="${FAIL_SUMMARY} [frontend-design FAIL]"
+fi
+
+# ============================================================
 # Summary
 # ============================================================
-log "=== Summary: ${STAGE_FAILURES}/3 stages failed ==="
+log "=== Summary: ${STAGE_FAILURES}/4 stages failed ==="
 
 if [ "${STAGE_FAILURES}" -gt 0 ]; then
-  MSG="daily-regression ALERT (${STAGE_FAILURES}/3 stages failed)${FAIL_SUMMARY}"
+  MSG="daily-regression ALERT (${STAGE_FAILURES}/4 stages failed)${FAIL_SUMMARY}"
   warn "${MSG}"
   notify_slack "${MSG}"
   capture_sentry "${MSG}"
