@@ -49,6 +49,15 @@ from .checkout_expiration import (
 from .scheduled_email import ScheduledEmail
 # Wave G C-AC2 — NPS 1-click feedback (transactional, §50 §101 exempt).
 from .nps_feedback import NpsFeedback
+# Wave I C-1 — OAuth lifecycle event log (start/success/fail).
+from .auth_event import (
+    AuthEvent,
+    EVENT_TYPE_START as AUTH_EVENT_START,
+    EVENT_TYPE_SUCCESS as AUTH_EVENT_SUCCESS,
+    EVENT_TYPE_FAIL as AUTH_EVENT_FAIL,
+    PROVIDER_GOOGLE as AUTH_PROVIDER_GOOGLE,
+    PROVIDER_KAKAO as AUTH_PROVIDER_KAKAO,
+)
 
 __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlist",
            "InvestmentProfile", "BrokerConnection", "PushSubscription", "PortfolioShare",
@@ -72,4 +81,7 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "STRIPE_EVENT_STATUS_SUCCESS", "STRIPE_EVENT_STATUS_ERROR",
            "CheckoutExpiration", "CHECKOUT_FOLLOWUP_DELAY",
            "ScheduledEmail",
-           "NpsFeedback"]
+           "NpsFeedback",
+           "AuthEvent",
+           "AUTH_EVENT_START", "AUTH_EVENT_SUCCESS", "AUTH_EVENT_FAIL",
+           "AUTH_PROVIDER_GOOGLE", "AUTH_PROVIDER_KAKAO"]

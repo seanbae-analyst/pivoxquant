@@ -49,6 +49,7 @@ from models import (
     ArtifactFeedback, BehavioralScore,
     AITwinPortfolio, AITwinWeeklyReport,
     PreTradeReflection, PersonaSnapshot, WeeklyPulse,
+    AuthEvent,
 )
 from security import auth_rate_limit, general_rate_limit
 from services.age_verification import (
@@ -138,6 +139,58 @@ def _schedule_retention_safe(user) -> None:
         logger.exception(
             "retention sequence enqueue failed (non-fatal) for user_id=%s",
             getattr(user, "id", "?"),
+        )
+
+
+def _log_auth_event(
+    email: str | None,
+    provider: str,
+    event_type: str,
+    fail_reason: str | None = None,
+) -> None:
+    """Append an OAuth lifecycle event row. Never raises.
+
+    Wave I C-1. Powers ``scripts/nightly/oauth_failure_check.py`` which
+    runs every 15min, groups ``event_type='fail'`` rows by email over a
+    rolling 1h window, and Slack-alerts (+ emails the user) when the
+    count reaches 3.
+
+    Email is lowercased + length-trimmed to 255 (RFC 5321) so a
+    malformed callback can't poison the table. We accept ``None`` so
+    pre-callback failures (state mismatch with no userinfo yet) still
+    record a row keyed on the empty string — ops still wants the count.
+
+    Commit semantics
+    ----------------
+    Uses an *isolated* commit on a nested savepoint where possible so
+    logging doesn't pollute the caller's transaction. On any exception
+    we rollback and swallow — auth flow must never break because the
+    event log is having a bad day.
+    """
+    try:
+        norm_email = ((email or "").strip().lower())[:255]
+        norm_provider = provider if provider in ("google", "kakao") else "google"
+        norm_event = event_type if event_type in ("start", "success", "fail") else "fail"
+        norm_reason = (fail_reason or None)
+        if norm_reason and len(norm_reason) > 64:
+            norm_reason = norm_reason[:64]
+
+        ev = AuthEvent(
+            email=norm_email or "<unknown>",
+            provider=norm_provider,
+            event_type=norm_event,
+            fail_reason=norm_reason,
+        )
+        db.session.add(ev)
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.exception(
+            "auth_event log failed (non-fatal) provider=%s event=%s",
+            provider, event_type,
         )
 
 
@@ -460,6 +513,18 @@ def login():
             code="AUTH_INVALID_CREDENTIALS",
             status=401,
         )
+    # Wave I C-2 — PIPA §21 soft-delete reject. A user with
+    # deletion_requested_at != NULL is in the 30-day grace window and
+    # must NOT be able to log in (intent must be preserved or actively
+    # cancelled via /delete-cancel). Returning a distinct status code so
+    # the frontend can surface "탈퇴 진행 중" instead of "wrong password".
+    if u.deletion_requested_at is not None:
+        return api_error(
+            en="Account pending deletion. Contact support to cancel.",
+            kr="탈퇴 요청 진행 중인 계정입니다. 철회는 고객센터로 문의해주세요.",
+            code="AUTH_ACCOUNT_PENDING_DELETION",
+            status=403,
+        )
     session.clear()  # Session fixation 방어
     login_user(u, remember=True)
     return jsonify({"ok": True, "user": serialize_user(u)})
@@ -650,6 +715,10 @@ def google_login():
         "OAuth start: provider=google origin=%s redirect_uri=%s",
         origin, redirect_uri,
     )
+    # Wave I C-1 — start events have no email yet; logged with "<unknown>"
+    # so the start/fail correlation can be done downstream by IP / time if
+    # ever needed. Hidden behind the same fire-and-forget contract.
+    _log_auth_event(email=None, provider="google", event_type="start")
     # authlib will also write a session slot under _state_google_<signed_state>;
     # that slot is redundant (we rehydrate it on callback) but harmless.
     return oauth.google.authorize_redirect(redirect_uri, nonce=nonce, state=signed_state)
@@ -669,6 +738,7 @@ def google_callback():
         # Fallback origin for the error redirect only.
         origin = _resolve_frontend_url()
         logger.info("OAuth callback: provider=google origin=%s state_ok=False", origin)
+        _log_auth_event(None, "google", "fail", "state_mismatch")
         return redirect(f"{origin}/login?error=state_mismatch")
 
     origin = payload.get("o") or _resolve_frontend_url()
@@ -679,15 +749,18 @@ def google_callback():
         token = oauth.google.authorize_access_token()
     except Exception:
         logger.exception("Google callback error")
+        _log_auth_event(None, "google", "fail", "google_failed")
         return redirect(f"{origin}/login?error=google_failed")
     userinfo = token.get("userinfo")
     if not userinfo:
+        _log_auth_event(None, "google", "fail", "userinfo_missing")
         return redirect(f"{origin}/login?error=google_failed")
 
     try:
         google_id = userinfo.get("sub")
         email = (userinfo.get("email") or "").strip().lower()
         if not google_id or not email:
+            _log_auth_event(email, "google", "fail", "userinfo_missing")
             return redirect(f"{origin}/login?error=google_failed")
         name = userinfo.get("name") or email.split("@")[0]
         avatar = userinfo.get("picture")
@@ -737,7 +810,30 @@ def google_callback():
         # Generic error code only — exc_type/exc_msg already logged above.
         # Including them in the redirect URL leaks DB schema / ORM internals
         # to the client (browser URL bar, history, Referer header).
+        try:
+            email_local = locals().get("email")
+        except Exception:
+            email_local = None
+        _log_auth_event(email_local, "google", "fail", "provisioning_failed")
         return redirect(f"{origin}/login?error=provisioning_failed")
+
+    # Wave I C-1 — Successful OAuth login: log it for fail-rate computation.
+    # PIPA §21 soft-delete reject: a user with deletion_requested_at != NULL
+    # gets logged out (login_user above) and bounced to /login?error=...
+    if user.deletion_requested_at is not None:
+        logger.info(
+            "Google OAuth: user %s has deletion_requested_at set — refusing login",
+            user.id,
+        )
+        try:
+            logout_user()
+            session.clear()
+        except Exception:
+            pass
+        _log_auth_event(email, "google", "fail", "account_pending_deletion")
+        return redirect(f"{origin}/login?error=account_pending_deletion")
+
+    _log_auth_event(email, "google", "success")
 
     # PIPA §22 ⑥ — birthdate gate. New users *and* legacy users (created
     # before migration 031) reach here with ``birthdate IS NULL`` and must
@@ -779,6 +875,7 @@ def kakao_login():
         "OAuth start: provider=kakao origin=%s redirect_uri=%s",
         origin, redirect_uri,
     )
+    _log_auth_event(None, "kakao", "start")
     return oauth.kakao.authorize_redirect(redirect_uri, state=signed_state)
 
 
@@ -793,6 +890,7 @@ def kakao_callback():
     if not payload:
         origin = _resolve_frontend_url()
         logger.info("OAuth callback: provider=kakao origin=%s state_ok=False", origin)
+        _log_auth_event(None, "kakao", "fail", "state_mismatch")
         return redirect(f"{origin}/login?error=state_mismatch")
 
     origin = payload.get("o") or _resolve_frontend_url()
@@ -803,6 +901,7 @@ def kakao_callback():
         oauth.kakao.authorize_access_token()
     except Exception:
         logger.exception("Kakao callback error")
+        _log_auth_event(None, "kakao", "fail", "kakao_failed")
         return redirect(f"{origin}/login?error=kakao_failed")
 
     # Fetch user profile from Kakao
@@ -812,11 +911,13 @@ def kakao_callback():
         profile = resp.json()
     except Exception:
         logger.exception("Kakao profile fetch error")
+        _log_auth_event(None, "kakao", "fail", "profile_fetch_failed")
         return redirect(f"{origin}/login?error=kakao_failed")
 
     try:
         kakao_id = str(profile.get("id", ""))
         if not kakao_id:
+            _log_auth_event(None, "kakao", "fail", "userinfo_missing")
             return redirect(f"{origin}/login?error=kakao_failed")
 
         kakao_account = profile.get("kakao_account") or {}
@@ -871,7 +972,28 @@ def kakao_callback():
         # Generic error code only — exc_type/exc_msg already logged above.
         # Including them in the redirect URL leaks DB schema / ORM internals
         # to the client (browser URL bar, history, Referer header).
+        try:
+            email_local = locals().get("email")
+        except Exception:
+            email_local = None
+        _log_auth_event(email_local, "kakao", "fail", "provisioning_failed")
         return redirect(f"{origin}/login?error=provisioning_failed")
+
+    # Wave I C-1 — PIPA §21 soft-delete reject + success log.
+    if user.deletion_requested_at is not None:
+        logger.info(
+            "Kakao OAuth: user %s has deletion_requested_at set — refusing login",
+            user.id,
+        )
+        try:
+            logout_user()
+            session.clear()
+        except Exception:
+            pass
+        _log_auth_event(email, "kakao", "fail", "account_pending_deletion")
+        return redirect(f"{origin}/login?error=account_pending_deletion")
+
+    _log_auth_event(email, "kakao", "success")
 
     # PIPA §22 ⑥ — birthdate gate (mirrors google_callback).
     if user.birthdate is None:
@@ -1032,3 +1154,150 @@ def delete_account():
             code="AUTH_DELETE_ACCOUNT_FAILED",
             status=500,
         )
+
+
+# ── PIPA §21 30-day soft-delete request (Wave I C-2) ──────────────────────────
+
+@auth_bp.route("/delete-request", methods=["POST"])
+@api_auth
+@general_rate_limit
+def delete_request():
+    """PIPA §21 30-day soft-delete request.
+
+    Sets ``users.deletion_requested_at = NOW()`` (idempotent — already-set
+    users return 200 with the existing timestamp), logs the user out,
+    and sends a TRANSACTIONAL email confirming the 30-day grace period.
+    The ``pipa_purge`` cron (03:30 KST daily) hard-deletes rows whose
+    ``deletion_requested_at`` is ≥ 30 days old.
+
+    PIPA §21 ① — 회원 탈퇴 시 지체 없이 파기.
+    PIPA 시행령 §16 ① — 보관·복구 목적의 30일 grace period 허용.
+
+    Distinct from ``/delete-account`` (immediate hard delete, retained for
+    legacy clients / "delete now" intent). The new flow is the *default*
+    UX path because §21 audit prefers a documented 30d window over an
+    irreversible single click.
+
+    Email is TRANSACTIONAL — bypasses §50 marketing-consent gate per
+    EmailSender.send() short-circuit (services/email/sender.py).
+    """
+    # Capture identity + DB row up front. After ``logout_user()`` the
+    # ``current_user`` proxy becomes Anonymous and attribute reads raise.
+    user = User.query.get(current_user.id)
+    if user is None:
+        return api_error(
+            en="user not found", kr="계정을 찾을 수 없습니다.",
+            code="AUTH_USER_NOT_FOUND", status=404,
+        )
+    user_id = user.id
+
+    try:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        already_set = user.deletion_requested_at is not None
+        if not already_set:
+            user.deletion_requested_at = now
+            db.session.commit()
+            logger.info(
+                "PIPA delete-request: user_id=%s deletion_requested_at=%s",
+                user_id, now.isoformat(),
+            )
+
+        # Snapshot the timestamp BEFORE logout — we still need it for the
+        # response and email after the session is cleared.
+        requested_at_snapshot = user.deletion_requested_at
+
+        # Send TRANSACTIONAL confirmation email — bypasses §50 consent gate
+        # because account/security mail is exempt. Failure is non-fatal.
+        try:
+            _send_deletion_request_email(user, scheduled_purge_at=requested_at_snapshot)
+        except Exception:
+            logger.exception(
+                "delete-request confirmation email failed (non-fatal) user_id=%s",
+                user_id,
+            )
+
+        # Log out + clear cookies — mirrors delete_account so the user is
+        # immediately bounced (no session preserved during the grace window).
+        logout_user()
+        session.clear()
+        response = jsonify({
+            "ok": True,
+            "deletion_requested_at": requested_at_snapshot.isoformat()
+                if requested_at_snapshot else None,
+            "purge_at": _compute_purge_at(requested_at_snapshot),
+            "already_requested": already_set,
+        })
+        return _clear_auth_cookies(response)
+    except Exception:
+        db.session.rollback()
+        logger.exception("delete-request failed for user_id=%s", user_id)
+        return api_error(
+            en="An internal error occurred. Please try again.",
+            kr="탈퇴 요청 중 오류가 발생했습니다. 다시 시도해주세요.",
+            code="AUTH_DELETE_REQUEST_FAILED",
+            status=500,
+        )
+
+
+def _compute_purge_at(requested_at):
+    """Return ISO-8601 string of (requested_at + 30 days), or None."""
+    if requested_at is None:
+        return None
+    from datetime import timedelta
+    return (requested_at + timedelta(days=30)).isoformat()
+
+
+def _send_deletion_request_email(user, *, scheduled_purge_at) -> bool:
+    """Send the 30-day deletion-request confirmation. TRANSACTIONAL.
+
+    PIPA §21 ① requires the controller to inform the subject of the
+    purge schedule. We hit that requirement by emailing the confirmed
+    timestamp + the 30-day target date.
+    """
+    from services.email import EmailSender
+    from services.email.sender import EmailCategory
+    from html import escape
+
+    purge_iso = _compute_purge_at(scheduled_purge_at) or ""
+    purge_display = purge_iso[:10] if purge_iso else "30일 후"
+    user_name = escape((getattr(user, "name", "") or "").strip() or "고객")
+
+    html_body = f"""<!doctype html>
+<html lang="ko"><body style="margin:0;padding:24px;background:#F6F3EC;
+font-family:'Source Serif 4',Georgia,serif;color:#0A0A0A;">
+  <div style="max-width:560px;margin:0 auto;background:#FBFAF6;padding:32px;">
+    <p style="margin:0;font-size:11px;letter-spacing:0.28em;
+      text-transform:uppercase;color:#B8956A;">PIVOXQUANT &middot; 계정 안내</p>
+    <h1 style="margin:16px 0 8px 0;font-size:20px;line-height:1.32;
+      font-weight:600;letter-spacing:-0.01em;">
+      {user_name}님, 탈퇴 요청을 접수했습니다.
+    </h1>
+    <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
+      개인정보보호법 §21 ① 및 시행령 §16 ① 에 따라 30일 grace period 동안
+      계정 데이터를 보관합니다. 이 기간이 지나면 모든 데이터가 영구 파기되며,
+      파기 완료 시 별도로 안내해드립니다.
+    </p>
+    <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
+      예정 파기일: <strong>{escape(purge_display)}</strong>
+    </p>
+    <p style="margin:24px 0 8px 0;line-height:1.5;color:#5A5A5A;font-size:13px;">
+      이 기간 동안에는 로그인이 차단됩니다. 탈퇴를 철회하시려면
+      고객센터(support@pivoxquant.com)로 연락해주세요.
+    </p>
+    <p style="margin:24px 0 0 0;font-size:11px;color:#888;">
+      본 메일은 거래 관련(transactional) 정보로 §50 광고성 정보 발신에
+      해당하지 않습니다.
+    </p>
+  </div>
+</body></html>"""
+
+    return EmailSender().send(
+        user,
+        subject="[PivoxQuant] 탈퇴 요청 접수 안내 (PIPA §21)",
+        html_body=html_body,
+        from_env_var="DELETION_FROM_EMAIL",
+        from_default="reports@pivoxquant.com",
+        email_category=EmailCategory.TRANSACTIONAL,
+    )

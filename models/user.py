@@ -135,6 +135,16 @@ class User(UserMixin, db.Model):
     # answer arrives the column stays NULL for every row. Managed via
     # migration 038_inactive_nudge_sent_at.
     inactive_nudge_sent_at = db.Column(db.DateTime, nullable=True)
+    # Wave I C-2 (2026-05-19) — PIPA §21 30-day soft-delete grace period.
+    # ``deletion_requested_at`` 이 NOT NULL = "soft delete" 상태:
+    #   * 모든 로그인 거부 (auth_bp.login 401)
+    #   * 데이터 read API 401 (decorators.api_auth 일치)
+    #   * 30일 grace 동안 사용자가 ``POST /api/auth/delete-cancel`` 로 철회 가능
+    # ``deleted_at`` 은 ``pipa_purge`` cron 이 hard delete 직전 stamp + commit
+    # 하여 "30일 만에 실제 삭제" 증거를 audit log 와 함께 남긴다.
+    # Managed via migration 041_user_deletion_request.
+    deletion_requested_at = db.Column(db.DateTime, nullable=True)
+    deleted_at            = db.Column(db.DateTime, nullable=True)
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")
