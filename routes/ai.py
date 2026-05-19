@@ -30,7 +30,7 @@ _AI_DETAIL_IN_RESPONSE = (
 )
 from security import ai_rate_limit
 from services.container import ai, fetcher
-from services import cache_service
+from services import cache_service, fx_service
 from services.access_guard import is_user_allowed_ticker, access_denied_response
 from services.error_responses import api_error
 from services.legal_filter import scrub_response
@@ -619,16 +619,28 @@ def risk_summary():
         for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
     } if tickers else {}
 
+    # FX normalization (Pattern 7 fix — mirrors portfolio.py:260-272).
+    # KR tickers price in KRW, US tickers in USD. Naive `price * shares` sum
+    # mixed both numeraires, inflating total_value ~700x for KRW positions
+    # (e.g. ₩75,000 read as $75,000). The downstream Claude prompt uses
+    # `${value}` so we converge to USD: KR positions divided by spot USD/KRW.
+    fx_rate = fx_service.get_rate()  # USD/KRW spot; identical to portfolio.py
     total_value = 0.0
     max_position_value = 0.0
     for p in positions:
         cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
-        mv = price * p.shares
-        total_value += mv
-        if mv > max_position_value:
-            max_position_value = mv
+        is_kr = (
+            p.ticker.upper().endswith(".KS")
+            or p.ticker.upper().endswith(".KQ")
+            or sd.get("is_korean", False)
+        )
+        mv_native = price * p.shares
+        mv_usd = (mv_native / fx_rate) if (is_kr and fx_rate) else mv_native
+        total_value += mv_usd
+        if mv_usd > max_position_value:
+            max_position_value = mv_usd
 
     top_pct = (max_position_value / total_value * 100) if total_value > 0 else 0
 

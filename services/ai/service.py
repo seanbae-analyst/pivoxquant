@@ -190,14 +190,31 @@ class AIService:
         if positions:
             lines.append(f"\n### Positions ({len(positions)} total)")
             total_val = 0
+            # Pattern 7 (FX consistency) — mirrors portfolio.py:260-272.
+            # KR tickers price in KRW, US tickers in USD; naive sum was
+            # ~700x inflated for KR positions. Output is formatted as
+            # `${total_val}` so we converge on USD by dividing KR market
+            # value by the spot USD/KRW. Lazy import keeps this builder
+            # free of import-time side effects during conftest setup.
+            try:
+                from services import fx_service as _fx
+                fx_rate = _fx.get_rate()
+            except Exception:
+                fx_rate = 0
             for p in positions:
                 sig_data = {}
                 if signals_cache and p.ticker in signals_cache:
                     sig_data = signals_cache[p.ticker]
                 cur_price = sig_data.get("price", p.avg_cost)
                 pnl = (cur_price - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
-                mv = cur_price * p.shares
-                total_val += mv
+                is_kr = (
+                    p.ticker.upper().endswith(".KS")
+                    or p.ticker.upper().endswith(".KQ")
+                    or sig_data.get("is_korean", False)
+                )
+                mv_native = cur_price * p.shares
+                mv_usd = (mv_native / fx_rate) if (is_kr and fx_rate) else mv_native
+                total_val += mv_usd
                 signal = sig_data.get("signal", "?")
                 score = sig_data.get("score", 0)
                 name = sig_data.get("name", p.ticker)
