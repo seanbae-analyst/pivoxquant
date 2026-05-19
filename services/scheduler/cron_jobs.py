@@ -370,13 +370,34 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
             CronTrigger(day=1, hour=9, minute=0, timezone=KST),
             _wrap_python_main("scripts.nightly.commerce_registration_reminder"),
         ),
+        # ── Wave I C-1/C-2 (2026-05-19) ──────────────────────────────────────
+        # */15 * * * * — OAuth failure check (every 15 min)
+        # auth_events 에서 동일 email 1h 내 fail ≥ 3 회 → Slack + TRANSACTIONAL
+        # 도움 메일. dedup marker 로 24h cooldown.
+        (
+            "ops_oauth_failure_check",
+            CronTrigger(minute="*/15", timezone=KST),
+            _wrap_python_main("scripts.nightly.oauth_failure_check"),
+        ),
+        # 30 3 * * * — PIPA §21 30-day purge (daily 03:30 KST)
+        # deletion_requested_at >= 30d 인 user 의 모든 데이터 cascade hard-delete
+        # + auth_events anonymize (PIPA §29). 오프피크 시간대.
+        (
+            "ops_pipa_purge",
+            CronTrigger(hour=3, minute=30, timezone=KST),
+            _wrap_python_main("scripts.nightly.pipa_purge"),
+        ),
     ]
 
 
 # ── Public entrypoint ────────────────────────────────────────────────────────
 
 def register_cron_jobs(sched: BackgroundScheduler, app=None) -> list[str]:
-    """Register the 19 ops cron jobs onto an existing APScheduler.
+    """Register the ops cron jobs onto an existing APScheduler.
+
+    Job count grows as Wave I/J etc. add more — see ``_job_specs()`` and
+    ``tests/test_scheduler_cron_jobs.py:EXPECTED_JOB_COUNT`` for the
+    current source-of-truth count.
 
     Parameters
     ----------

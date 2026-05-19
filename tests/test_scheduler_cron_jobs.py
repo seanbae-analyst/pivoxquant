@@ -40,6 +40,7 @@ from services.scheduler.cron_jobs import _job_specs  # noqa: E402
 # ── Expected 19 jobs ────────────────────────────────────────────────────────
 
 EXPECTED_JOB_IDS = {
+    # Wave H — 19 macOS crontab → Railway APScheduler 이전
     "ops_api_health",
     "ops_db_backup",
     "ops_ssl_expiry",
@@ -59,7 +60,20 @@ EXPECTED_JOB_IDS = {
     "ops_inactive_nudge",
     "ops_caus_daily_sweep",
     "ops_finance_weekly_check",
+    # Wave I — 추가 4개 (FX staleness / Anthropic cost / Railway resource / Domain WHOIS)
+    "ops_fx_staleness_check",
+    "ops_anthropic_cost_estimate",
+    "ops_railway_resource",
+    "ops_domain_expiry",
+    # Wave I L-3 — 통신판매업 신고 D-day 월간 알림 (feature-flagged via
+    # PIVOX_COMMERCE_REGISTERED). 1st of month 09:00 KST.
+    "ops_commerce_registration",
+    # Wave I C-1/C-2 — OAuth failure detector + PIPA §21 30-day purge.
+    "ops_oauth_failure_check",
+    "ops_pipa_purge",
 }
+# 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) = 26
+EXPECTED_JOB_COUNT = 26
 
 
 @pytest.fixture
@@ -70,9 +84,11 @@ def fresh_sched():
     # Don't call shutdown() — never started.
 
 
-def test_register_returns_19_job_ids(fresh_sched):
+def test_register_returns_expected_job_ids(fresh_sched):
     ids = register_cron_jobs(fresh_sched)
-    assert len(ids) == 19, f"expected 19 ops jobs, got {len(ids)}: {ids}"
+    assert len(ids) == EXPECTED_JOB_COUNT, (
+        f"expected {EXPECTED_JOB_COUNT} ops jobs, got {len(ids)}: {ids}"
+    )
     assert set(ids) == EXPECTED_JOB_IDS
 
 
@@ -126,9 +142,9 @@ def test_register_is_idempotent(fresh_sched):
     ids1 = register_cron_jobs(fresh_sched)
     ids2 = register_cron_jobs(fresh_sched)
     assert ids1 == ids2
-    # Scheduler should still have exactly 19 jobs, not 38.
+    # Scheduler should still have exactly EXPECTED_JOB_COUNT jobs, not 2x.
     job_ids = {j.id for j in fresh_sched.get_jobs() if j.id.startswith("ops_")}
-    assert len(job_ids) == 19
+    assert len(job_ids) == EXPECTED_JOB_COUNT
 
 
 # ── Cron expression mapping ─────────────────────────────────────────────────
@@ -155,6 +171,16 @@ EXPECTED_TRIGGER_FIELDS = {
     "ops_inactive_nudge":     {"minute": "0"},
     "ops_caus_daily_sweep":   {"hour": "3", "minute": "0"},
     "ops_finance_weekly_check": {"day_of_week": "sun", "hour": "9", "minute": "0"},
+    # Wave I additions
+    "ops_fx_staleness_check":    {"minute": "0"},
+    "ops_anthropic_cost_estimate": {"hour": "22", "minute": "0"},
+    "ops_railway_resource":      {"minute": "*/2"},
+    "ops_domain_expiry":         {"day": "1", "hour": "9", "minute": "30"},
+    # Wave I L-3 — 1st of month 09:00 KST
+    "ops_commerce_registration": {"day": "1", "hour": "9", "minute": "0"},
+    # Wave I C-1/C-2 — OAuth failure detector + PIPA purge
+    "ops_oauth_failure_check":   {"minute": "*/15"},
+    "ops_pipa_purge":            {"hour": "3", "minute": "30"},
 }
 
 
@@ -184,7 +210,7 @@ def test_cron_expressions_match_macos_crontab(fresh_sched):
 
 def test_job_specs_table_length():
     specs = _job_specs()
-    assert len(specs) == 19
+    assert len(specs) == EXPECTED_JOB_COUNT
 
 
 def test_job_specs_unique_ids():

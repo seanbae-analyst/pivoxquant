@@ -228,6 +228,94 @@ def test_main_overdue_returns_nonzero(tmp_path, monkeypatch):
     assert rc == 2
 
 
+# ── FMP plan (absolute_expiry_env) — Wave I E-1 ──────────────────────────────
+
+def test_fmp_policy_present_in_catalog():
+    """Catalog must include fmp_plan with absolute_expiry_env=FMP_PLAN_EXPIRY."""
+    fmp = next((p for p in POLICIES if p.name == "fmp_plan"), None)
+    assert fmp is not None, "fmp_plan policy missing from POLICIES"
+    assert fmp.absolute_expiry_env == "FMP_PLAN_EXPIRY"
+    assert fmp.warn_days == 30  # D-30 alert window
+
+
+def test_fmp_days_until_uses_env(monkeypatch):
+    """FMP policy's days_until_expiry must read FMP_PLAN_EXPIRY env directly,
+    NOT compute from last_rotated + rotation_days."""
+    future = (datetime.now(timezone.utc) + timedelta(days=20)).strftime("%Y-%m-%d")
+    monkeypatch.setenv("FMP_PLAN_EXPIRY", future)
+    fmp = next(p for p in POLICIES if p.name == "fmp_plan")
+    days_left = days_until_expiry(fmp, state={})
+    assert days_left is not None
+    assert 19 <= days_left <= 20
+
+
+def test_fmp_days_until_env_missing_returns_none(monkeypatch):
+    monkeypatch.delenv("FMP_PLAN_EXPIRY", raising=False)
+    fmp = next(p for p in POLICIES if p.name == "fmp_plan")
+    assert days_until_expiry(fmp, state={}) is None
+
+
+def test_fmp_days_until_env_malformed_returns_none(monkeypatch):
+    monkeypatch.setenv("FMP_PLAN_EXPIRY", "not-a-date")
+    fmp = next(p for p in POLICIES if p.name == "fmp_plan")
+    assert days_until_expiry(fmp, state={}) is None
+
+
+def test_fmp_warn_window_uses_d30_not_d7(monkeypatch):
+    """FMP warn window = 30. days_left=25 must alert (would not under default
+    WARN_DAYS=7). Verifies the per-policy warn_days override works."""
+    fmp = next(p for p in POLICIES if p.name == "fmp_plan")
+    assert should_alert(fmp, state={}, days_left=25) is True
+    assert should_alert(fmp, state={}, days_left=31) is False
+
+
+def test_fmp_main_alerts_at_d20(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "scripts.nightly.credentials_expiry_check.STATE_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "scripts.nightly.credentials_expiry_check.STATE_PATH",
+        tmp_path / "s.json",
+    )
+    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
+
+    # FMP expires in 20d → < 30d warn window → should alert.
+    future = (datetime.now(timezone.utc) + timedelta(days=20)).strftime("%Y-%m-%d")
+    monkeypatch.setenv("FMP_PLAN_EXPIRY", future)
+    # Keep other policies fresh.
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    seed = {p.name: {"last_rotated": today} for p in POLICIES if p.name != "fmp_plan"}
+    save_state(seed)
+
+    rc = main()
+    assert rc == 0  # warn-only
+    after = load_state()
+    assert "last_alert_at" in after.get("fmp_plan", {})
+
+
+def test_fmp_main_no_alert_when_env_missing(tmp_path, monkeypatch):
+    """No FMP_PLAN_EXPIRY env → fmp_plan policy returns None days_left →
+    silent skip (no alert, no state mutation for fmp_plan)."""
+    monkeypatch.setattr(
+        "scripts.nightly.credentials_expiry_check.STATE_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "scripts.nightly.credentials_expiry_check.STATE_PATH",
+        tmp_path / "s.json",
+    )
+    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
+    monkeypatch.delenv("FMP_PLAN_EXPIRY", raising=False)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    seed = {p.name: {"last_rotated": today} for p in POLICIES if p.name != "fmp_plan"}
+    save_state(seed)
+
+    rc = main()
+    assert rc == 0
+    after = load_state()
+    # fmp_plan should NOT have been touched (env missing).
+    assert "last_alert_at" not in after.get("fmp_plan", {})
+
+
 def test_main_dedup_prevents_double_alert(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "scripts.nightly.credentials_expiry_check.STATE_DIR", tmp_path

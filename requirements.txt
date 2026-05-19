@@ -42,3 +42,12 @@ jinja2>=3.1.6
 # install: render_png() returns None and the Artifact row is still
 # persisted for later rasterization.
 playwright>=1.40
+# Wave I D-2: Railway OOM/CPU pressure detector
+# (scripts/nightly/railway_resource_check.py). psutil is already a
+# transitive dep via sentry-sdk on some platforms, but pin explicitly
+# so the resource probe never silently skips on a fresh container build.
+psutil>=5.9.0
+# Wave I E-2: WHOIS expiry monitor for pivoxquant.com
+# (scripts/nightly/domain_expiry_check.py). python-whois wraps the
+# raw WHOIS protocol (TCP 43) — no external API key, no $cost.
+python-whois>=0.9.0
