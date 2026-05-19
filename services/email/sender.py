@@ -68,11 +68,77 @@ import logging
 import os
 import smtplib
 from email.message import EmailMessage
+from enum import Enum
 from typing import Any, Sequence
 
 from services.email_token import build_unsubscribe_url, inject_unsubscribe_footer
 
 logger = logging.getLogger(__name__)
+
+
+class EmailCategory(str, Enum):
+    """정통망법 §50 ① 카테고리 (Wave D Sub-wave 1, C-S1).
+
+    분리 동의 카테고리. ``EmailSender.send(email_category=...)`` 에 전달되어
+    ``PIVOX_CS1_CONSENT_ENABLED=true`` 일 때 카테고리별 동의 컬럼을 검사한다.
+
+    * ``TRANSACTIONAL`` — 계정 / 보안 / 결제 영수증 / 비밀번호 재설정 등
+      서비스 제공의 핵심에 직결되는 발송. §50 ① 적용 제외 (광고성 아님).
+      동의 검사 skip.
+    * ``INFORMATION``   — 서비스 업데이트 / 기능 공지 / 정책 변경 안내 등
+      비광고성 정보 메일. 사용자가 정보성 동의를 분리 거부한 경우 차단.
+    * ``MARKETING``     — 할인 / 프로모션 / 추천 / 교차판매. §50 ① 명시적
+      사전 동의 필수. 광고성 동의 미수령 시 차단.
+
+    값을 문자열로도 사용 가능 (``str`` 상속) — 기존 호출부가 점진적으로
+    이전할 수 있도록 한다.
+    """
+    TRANSACTIONAL = "transactional"
+    INFORMATION   = "information"
+    MARKETING     = "marketing"
+
+
+def _cs1_consent_enabled() -> bool:
+    """Runtime feature flag for the split-consent enforcement path.
+
+    Default false — variable-flag guard so prod can deploy the schema +
+    routes without changing send behaviour until the lawyer's Q-S1
+    answer arrives. Read on every send so an env flip during a single
+    run is honoured (matches the EmailSender's stateless dispatch
+    contract).
+    """
+    val = os.environ.get("PIVOX_CS1_CONSENT_ENABLED", "false").strip().lower()
+    return val in ("true", "1", "yes", "on")
+
+
+def _has_category_consent(user: Any, category: EmailCategory) -> bool:
+    """Return True iff the user has effective opt-in for *category*.
+
+    Mirrors the ``consent_at IS NOT NULL AND (revoked_at IS NULL OR
+    revoked_at < consent_at)`` predicate used by ``routes/consents.py``
+    so the send-side gate and the consent-record source agree exactly.
+    """
+    if category is EmailCategory.TRANSACTIONAL:
+        return True  # §50 ① 적용 제외 — 동의 무관 발송
+
+    if category is EmailCategory.INFORMATION:
+        at_attr, rev_attr = (
+            "marketing_consent_information_at",
+            "marketing_consent_information_revoked_at",
+        )
+    elif category is EmailCategory.MARKETING:
+        at_attr, rev_attr = (
+            "marketing_consent_marketing_at",
+            "marketing_consent_marketing_revoked_at",
+        )
+    else:  # defensive — unknown enum member
+        return False
+
+    consent_at = getattr(user, at_attr, None)
+    if consent_at is None:
+        return False
+    revoked_at = getattr(user, rev_attr, None)
+    return revoked_at is None or revoked_at < consent_at
 
 
 # Default reply-to surfaces a real shared inbox so artefact emails can
@@ -110,6 +176,7 @@ class EmailSender:
         unsubscribe_kind: str = "all",
         reply_to: str = _DEFAULT_REPLY_TO,
         display_name: str = _DEFAULT_DISPLAY_NAME,
+        email_category: EmailCategory | None = None,
     ) -> bool:
         """Dispatch a single email. Returns ``True`` on success.
 
@@ -179,6 +246,24 @@ class EmailSender:
                 getattr(user, "id", "?"),
             )
             return False
+
+        # ── 1c. category-split consent gate (Wave D Sub-wave 1, C-S1) ──
+        # Feature-flagged behind ``PIVOX_CS1_CONSENT_ENABLED`` (default false)
+        # so the schema + routes can deploy ahead of the lawyer's Q-S1 answer.
+        # When the flag is off OR the caller omits ``email_category``, behaviour
+        # is identical to the pre-CS1 baseline (no extra gating). When the flag
+        # is on AND a category is supplied, INFORMATION / MARKETING sends are
+        # blocked unless the corresponding per-category consent timestamp is
+        # set and not revoked. TRANSACTIONAL always passes through.
+        if email_category is not None and _cs1_consent_enabled():
+            if not _has_category_consent(user, email_category):
+                logger.info(
+                    "skipping %s email for user %s — category consent missing "
+                    "(정통망법 §50 ① 분리 동의 미수령)",
+                    email_category.value, getattr(user, "id", "?"),
+                )
+                return False
+
         for attr in opt_out_attrs:
             if getattr(user, attr, False):
                 logger.info(

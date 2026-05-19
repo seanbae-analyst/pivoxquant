@@ -67,6 +67,25 @@ else
 fi
 
 # ----------------------------------------------------------------------
+# 1b) Stripe webhook signature regression guard (Wave D Sub-wave 1 D4).
+# Any commit that touches routes/billing.py MUST keep the signature
+# verification call (``stripe.Webhook.construct_event``) intact.
+# Removing it would silently accept forged webhook payloads.
+# ----------------------------------------------------------------------
+echo "[1b] stripe webhook signature guard"
+if [ -f "routes/billing.py" ]; then
+  if ! grep -q "construct_event" routes/billing.py; then
+    report "D4 FAIL: stripe.Webhook.construct_event missing in routes/billing.py"
+    echo "    Signature verification removed — push BLOCKED."
+    echo "    Restore the call inside the /webhook handler or revert the diff."
+  else
+    echo "  ✓ construct_event present"
+  fi
+else
+  echo "  (routes/billing.py not found — skip)"
+fi
+
+# ----------------------------------------------------------------------
 # 2) Regression guards — 9 bug pattern SoT.
 # Replaces .github/workflows/regression-guards.yml.
 # ----------------------------------------------------------------------

@@ -72,6 +72,20 @@ class User(UserMixin, db.Model):
     # Managed via migration 023_marketing_consent.
     marketing_consent_at         = db.Column(db.DateTime, nullable=True)
     marketing_consent_revoked_at = db.Column(db.DateTime, nullable=True)
+    # 정통망법 §50 ① 정보성 vs 광고성 분리 동의 (Wave D Sub-wave 1, C-S1).
+    # ``marketing_consent_at`` (위) 는 통합 1차 게이트로 유지하되, §50 시행령 및
+    # KISA 가이드라인이 권고하는 카테고리 분리 동의를 위해 컬럼 4개를 추가한다.
+    # application layer 의 ``PIVOX_CS1_CONSENT_ENABLED`` 환경 변수 (default
+    # false) 에 게이트되어 변호사 Q-S1 답변 전까지는 dormant. flag=true 로
+    # 전환되면 ``services.email.sender.EmailCategory.INFORMATION`` 발송은
+    # ``marketing_consent_information_at`` 을 검사하고, MARKETING 발송은
+    # ``marketing_consent_marketing_at`` 을 검사한다. TRANSACTIONAL 은 동의
+    # 무관 (계정 알림 / 보안 / 결제 영수증). Managed via migration
+    # 037_marketing_consent_split.
+    marketing_consent_information_at         = db.Column(db.DateTime, nullable=True)
+    marketing_consent_information_revoked_at = db.Column(db.DateTime, nullable=True)
+    marketing_consent_marketing_at           = db.Column(db.DateTime, nullable=True)
+    marketing_consent_marketing_revoked_at   = db.Column(db.DateTime, nullable=True)
     # PIPA §28-8 (개인정보보호법, 2024-09 시행) — 국외이전 별도 동의 타임스탬프.
     # Anthropic PBC (미국, Claude API), Stripe Inc. (미국), Vercel/Railway (미국)
     # 으로의 개인정보 국외이전에 대한 *명시적 별도* 동의가 §28-8 의무이며,

@@ -202,6 +202,118 @@ def revoke_cross_border_consent():
     return jsonify({"ok": True, **_cross_border_state(current_user)})
 
 
+# ── Split categories (Wave D Sub-wave 1, C-S1 §50) ─────────────────────
+#
+# 정통망법 §50 ① 시행령 및 KISA 가이드라인 — 정보성 / 광고성 메일 카테고리별
+# 분리 동의. 위의 ``/marketing`` 엔드포인트는 통합 게이트로 유지하고, 본
+# ``/categories`` 엔드포인트는 카테고리별 audit-trail 을 별도 컬럼에 기록한다.
+#
+# Feature flag (``PIVOX_CS1_CONSENT_ENABLED``) 는 *발송 측* 게이트이지 동의
+# *수집* 측 게이트가 아니므로, 본 GET/POST 는 flag 값과 무관하게 항상 동작한다.
+# 변호사 Q-S1 답변 전이라도 frontend 가 새 UI 를 prefetch 한 사용자의 동의
+# 기록을 손실 없이 보존할 수 있다. flag=true 로 전환되는 순간부터 비로소
+# ``services/email/sender.py`` 가 컬럼 값을 검사해 발송을 결정한다.
+
+
+def _categories_state(user) -> dict:
+    """Compute per-category (information / marketing) effective consent."""
+    def _eff(consent_at, revoked_at) -> bool:
+        return consent_at is not None and (
+            revoked_at is None or revoked_at < consent_at
+        )
+
+    info_at = getattr(user, "marketing_consent_information_at", None)
+    info_rev = getattr(user, "marketing_consent_information_revoked_at", None)
+    mkt_at = getattr(user, "marketing_consent_marketing_at", None)
+    mkt_rev = getattr(user, "marketing_consent_marketing_revoked_at", None)
+
+    return {
+        "information": {
+            "consent_at": info_at.isoformat() if info_at else None,
+            "revoked_at": info_rev.isoformat() if info_rev else None,
+            "opted_in": _eff(info_at, info_rev),
+        },
+        "marketing": {
+            "consent_at": mkt_at.isoformat() if mkt_at else None,
+            "revoked_at": mkt_rev.isoformat() if mkt_rev else None,
+            "opted_in": _eff(mkt_at, mkt_rev),
+        },
+    }
+
+
+@consents_bp.route("/categories", methods=["GET"])
+@api_auth
+def get_consent_categories():
+    """Return per-category (information / marketing) consent record.
+
+    Safe to call regardless of ``PIVOX_CS1_CONSENT_ENABLED`` — the response
+    shape is stable and frontend can render the toggles based on the
+    ``opted_in`` flags without depending on the runtime enforcement gate.
+    """
+    return jsonify({"ok": True, "categories": _categories_state(current_user)})
+
+
+@consents_bp.route("/categories", methods=["POST"])
+@api_auth
+def record_consent_categories():
+    """Persist per-category opt-in / opt-out decisions in a single call.
+
+    Request body
+    ------------
+    ``{"information": bool, "marketing": bool}``
+
+    Either key may be omitted to leave that category untouched. Passing
+    ``True`` records a fresh opt-in timestamp and clears the matching
+    revoked_at (re-opt-in supersedes prior revocation). Passing ``False``
+    stamps revoked_at (preserving consent_at for the audit trail).
+
+    Returns the post-write category state so the client can update its
+    UI without a follow-up GET.
+    """
+    from flask import request
+
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Request body must be a JSON object"}), 400
+
+    info = payload.get("information")
+    mkt = payload.get("marketing")
+
+    # Validate types up-front — silently ignore missing keys, reject
+    # wrong types (avoids "truthy string == opt-in" surprises).
+    for key, val in (("information", info), ("marketing", mkt)):
+        if val is not None and not isinstance(val, bool):
+            return jsonify({
+                "error": f"'{key}' must be a boolean (got {type(val).__name__})",
+            }), 400
+
+    now = _utcnow_naive()
+
+    if info is True:
+        current_user.marketing_consent_information_at = now
+        current_user.marketing_consent_information_revoked_at = None
+    elif info is False:
+        current_user.marketing_consent_information_revoked_at = now
+
+    if mkt is True:
+        current_user.marketing_consent_marketing_at = now
+        current_user.marketing_consent_marketing_revoked_at = None
+    elif mkt is False:
+        current_user.marketing_consent_marketing_revoked_at = now
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "consents.record_consent_categories commit failed (user_id=%s)",
+            getattr(current_user, "id", None),
+        )
+        return jsonify({"error": "Could not record consent"}), 500
+
+    return jsonify({"ok": True, "categories": _categories_state(current_user)})
+
+
 @consents_bp.route("/marketing", methods=["DELETE"])
 @api_auth
 def revoke_marketing_consent():
