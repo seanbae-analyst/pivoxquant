@@ -18,6 +18,8 @@ for POSTs; the email-link entry path (frontend ``/feedback/nps?...``)
 must therefore submit through the authenticated browser session — the
 URL itself carries no auth, only a score pre-fill.
 """
+
+# legal-exempt: NPS score collection endpoint, no investment content
 from __future__ import annotations
 
 import logging

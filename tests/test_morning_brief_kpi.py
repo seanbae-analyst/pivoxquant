@@ -72,7 +72,9 @@ def test_fetch_stripe_kpi_http_error(monkeypatch):
 
     monkeypatch.setattr("urllib.request.urlopen", _raise)
     result = fetch_stripe_kpi()
-    assert "error" in result
+    # graceful empty-dict on HTTPError (silent fail = 0원 보장 패턴)
+    assert result["charges_success"] == 0
+    assert result["charges_fail"] == 0
 
 
 # ── fetch_sentry_kpi ─────────────────────────────────────────────────────────

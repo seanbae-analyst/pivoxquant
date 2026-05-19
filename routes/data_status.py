@@ -51,6 +51,8 @@ Cost / scope
 - Public endpoint — banner needs to surface even on landing / pre-auth flows
   where the realtime stream is intentionally idle.
 """
+
+# legal-exempt: public feed-health status endpoint, no investment content
 from __future__ import annotations
 
 import logging
