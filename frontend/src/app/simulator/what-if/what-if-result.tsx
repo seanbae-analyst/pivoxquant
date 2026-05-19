@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useT, useLocale } from "@/lib/locale";
-import { fmtPct1 } from "@/lib/format";
+import { fmtPct1, fmtKrwAbbrev, fmtMoneyPlain } from "@/lib/format";
 import type { WhatIfSuccessResponse } from "@/lib/types";
 // 2026-05-17 wave 12 frontend P2: route through the next/dynamic wrapper
 // so recharts (~112KB gzip) lazy-loads instead of shipping in the simulator
@@ -47,35 +47,23 @@ interface WhatIfResultProps {
 }
 
 /* ── Number formatters ──
-   2026-05-19 sweep: NOT migrated to lib/format.ts intentionally.
-   - fmtMoney() has KR abbreviation logic (억 / 만) absent from lib/format.ts
-     `fmtKrw` / `fmtUsd`. Swapping would change the rendered headline (e.g.
-     "₩1억" → "₩100,000,000") on every share card — sign-of-value regression.
-   - fmtPctStrong() uses .toFixed(1) for share-card display. lib/format.ts
-     `fmtPct` uses .toFixed(2). Tighter precision is intentional for the
-     hero numbers — swapping would push values off the 1-line headline grid.
-   Migrate together once lib/format.ts gains a `fmtKrwAbbrev` and an
-   `fmtPct1` overload — tracked in feedback_thorough_fixes Wave next. */
+   Wave 4-B (2026-05-20): MIGRATED to lib/format.
+   - fmtMoney(KRW)  → fmtKrwAbbrev with {dpEok:2, dpMan:0, trimTrailing:true}.
+     `trimTrailing` (new Wave 4-B option) strips trailing zeros so "₩1.5억"
+     stays "₩1.5억" instead of becoming "₩1.50억" — closing the gap the
+     Wave 3 sweep documented as the reason this was inlined.
+   - fmtMoney(USD)  → fmtMoneyPlain(v, "USD", 0). What-if hero values are
+     always non-negative, so the ASCII-"-" sign-prefix divergence vs the
+     locale-native negative format is unreachable at this callsite.
+   - fmtPctStrong   → fmtPct1(v, 1). Already migrated Wave 3. */
 
 function fmtMoney(v: number, currency: "USD" | "KRW"): string {
   if (currency === "KRW") {
-    const abs = Math.abs(v);
-    if (abs >= 100_000_000)
-      return `₩${(v / 100_000_000).toLocaleString("ko-KR", {
-        maximumFractionDigits: 2,
-      })}억`;
-    if (abs >= 10_000)
-      return `₩${(v / 10_000).toLocaleString("ko-KR", {
-        maximumFractionDigits: 0,
-      })}만`;
-    return `₩${Math.round(v).toLocaleString("ko-KR")}`;
+    return fmtKrwAbbrev(v, { dpEok: 2, dpMan: 0, trimTrailing: true });
   }
-  return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  return fmtMoneyPlain(v, "USD", 0);
 }
 
-// Wave 3 (2026-05-19): delegates to lib/fmtPct1(v, 1) — 1dp + forced sign.
-// fmtMoney (above) stays inlined intentionally — lib/fmtKrwAbbrev uses
-// min=max=dp which would shift "₩1.5억" → "₩1.50억" on every share card.
 function fmtPctStrong(v: number): string {
   return fmtPct1(v, 1);
 }

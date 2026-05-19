@@ -79,9 +79,7 @@ export default function LoginPageV1() {
           : null;
 
   if (loading) {
-    // Page-load skeleton — matches the v1 slate light surface. Replaces the
-    // legacy animate-spin border indicator (var(--sp-accent) was a stale
-    // pre-bronze token; not defined in globals.css → rendered transparent).
+    // Page-load skeleton — matches the v1 slate light surface.
     return (
       <div
         className="flex flex-col items-center gap-3 py-16 w-full"

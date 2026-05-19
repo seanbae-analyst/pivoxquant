@@ -63,13 +63,15 @@ const SECTOR_PALETTE = [
 /** Fallback for sectors beyond the palette length. */
 const BRONZE_TAIL = "#6F5636";
 
-// Wave 2 sweep (2026-05-19): NOT migrated to lib/fmtMoneyCompact.
-// Precision diverges from the lib variant:
-//   KRW: local 억 = .toFixed(2), 만 = .toFixed(0); lib = .toFixed(1) for both
-//   USD: local M = .toFixed(2), K = .toFixed(1);  lib = .toFixed(1) for both
-// Donut tooltip's two-decimal "₩1.23억" pairing with the sector legend reads
-// more truthfully than a one-decimal version; migration would visibly shift
-// every tooltip value.
+// Wave 2 sweep (2026-05-19) / Wave 4-B (2026-05-20): NOT migrated.
+// Precision AND grouping diverge from lib variants:
+//   KRW 만: local omits the ko-KR thousand separator ("₩3457만"); lib
+//     fmtKrwAbbrev re-localises ("₩3,457만"). Donut legend was tuned without
+//     the comma to keep the chip width tight against the colour swatch.
+//   USD: local M=.toFixed(2), K=.toFixed(1); lib fmtMoneyCompact = .toFixed(1)
+//     for both. Two-decimal "$1.23M" was the deliberate design call so the
+//     tooltip pairing with the legend percentage reads truthfully.
+// Migration would visibly shift every tooltip value — kept inline.
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   if (!Number.isFinite(n)) return "—";
   if (currency === "KRW") {

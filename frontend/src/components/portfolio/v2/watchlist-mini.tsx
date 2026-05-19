@@ -11,12 +11,18 @@ import * as React from "react";
 import Link from "next/link";
 import { useWatchlist } from "@/lib/hooks";
 import type { WatchlistResponse } from "@/lib/types";
-import { normalizeTicker } from "@/lib/format";
+import { normalizeTicker, fmtPctSignedMinus } from "@/lib/format";
 
 interface WatchlistMiniProps {
   limit?: number;
 }
 
+// Wave 4-B (2026-05-20): fmtPctSigned migrated to lib/fmtPctSignedMinus.
+// fmtMoney KEPT inline — watchlist `last_price` is always non-negative,
+// so local toLocaleString-with-raw-n vs lib fmtMoneyPlain(abs + sign)
+// produce identical output in practice. Migrating would shift the
+// negative-value rendering (legacy "$-50.00" vs lib "-$50.00") which is
+// behaviour we don't currently exercise but want to preserve for safety.
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   if (!Number.isFinite(n)) return "—";
   const dec = currency === "KRW" ? 0 : 2;
@@ -28,9 +34,7 @@ function fmtMoney(n: number, currency: "USD" | "KRW"): string {
 }
 
 function fmtPctSigned(n: number): string {
-  if (!Number.isFinite(n)) return "—";
-  const sign = n > 0 ? "+" : n < 0 ? "−" : "";
-  return `${sign}${Math.abs(n).toFixed(2)}%`;
+  return fmtPctSignedMinus(n, 2);
 }
 
 function pctColor(n: number): string {

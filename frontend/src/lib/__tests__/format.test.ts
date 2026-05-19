@@ -10,6 +10,9 @@ import {
   fmtPctUnsigned,
   fmtKrwAbbrev,
   fmtUsdPlain,
+  fmtPctSignedMinus,
+  fmtMoneyPlain,
+  fmtMoneyPlainSigned,
 } from "@/lib/format";
 
 describe("format", () => {
@@ -186,5 +189,104 @@ describe("fmtUsdPlain", () => {
   it('returns "$—" for null / NaN', () => {
     expect(fmtUsdPlain(null)).toBe("$—");
     expect(fmtUsdPlain(NaN)).toBe("$—");
+  });
+});
+
+describe("fmtPctSignedMinus (Wave 4-B)", () => {
+  it("prefixes + for positive (default 2dp)", () => {
+    expect(fmtPctSignedMinus(12.3)).toBe("+12.30%");
+    expect(fmtPctSignedMinus(0.5)).toBe("+0.50%");
+  });
+  it("uses U+2212 MINUS (not ASCII hyphen) for negatives", () => {
+    expect(fmtPctSignedMinus(-5)).toBe("−5.00%");
+    // explicit byte comparison so a future ASCII regression breaks the test.
+    expect(fmtPctSignedMinus(-5)[0]).toBe("−");
+    expect(fmtPctSignedMinus(-5)[0]).not.toBe("-");
+  });
+  it("emits NO sign at exactly zero", () => {
+    expect(fmtPctSignedMinus(0)).toBe("0.00%");
+  });
+  it('returns "—" for null / NaN / Infinity', () => {
+    expect(fmtPctSignedMinus(null)).toBe("—");
+    expect(fmtPctSignedMinus(undefined)).toBe("—");
+    expect(fmtPctSignedMinus(NaN)).toBe("—");
+    expect(fmtPctSignedMinus(Infinity)).toBe("—");
+  });
+  it("respects custom precision", () => {
+    expect(fmtPctSignedMinus(12.345, 1)).toBe("+12.3%");
+    expect(fmtPctSignedMinus(-5.678, 0)).toBe("−6%");
+    expect(fmtPctSignedMinus(0, 3)).toBe("0.000%");
+  });
+});
+
+describe("fmtMoneyPlain (Wave 4-B)", () => {
+  it("formats USD with explicit precision (no n>=1000 switch)", () => {
+    expect(fmtMoneyPlain(1234.56, "USD", 2)).toBe("$1,234.56");
+    expect(fmtMoneyPlain(1234.56, "USD", 0)).toBe("$1,235");
+    expect(fmtMoneyPlain(12.34, "USD", 2)).toBe("$12.34");
+  });
+  it("formats KRW with whole-won rounding (dp ignored)", () => {
+    expect(fmtMoneyPlain(1234567, "KRW")).toBe("₩1,234,567");
+    expect(fmtMoneyPlain(1234567.89, "KRW", 2)).toBe("₩1,234,568");
+  });
+  it("prefixes ASCII - for negatives (matches local sites)", () => {
+    expect(fmtMoneyPlain(-1234, "USD", 2)).toBe("-$1,234.00");
+    expect(fmtMoneyPlain(-1234, "KRW")).toBe("-₩1,234");
+    expect(fmtMoneyPlain(-1234, "USD", 2)[0]).toBe("-");
+  });
+  it('returns single "—" for null / NaN (currency-agnostic)', () => {
+    expect(fmtMoneyPlain(null, "USD")).toBe("—");
+    expect(fmtMoneyPlain(NaN, "KRW")).toBe("—");
+    expect(fmtMoneyPlain(undefined, "USD", 2)).toBe("—");
+    expect(fmtMoneyPlain(Infinity, "KRW")).toBe("—");
+  });
+  it("treats zero as a regular value (not —)", () => {
+    expect(fmtMoneyPlain(0, "USD", 2)).toBe("$0.00");
+    expect(fmtMoneyPlain(0, "KRW")).toBe("₩0");
+  });
+});
+
+describe("fmtMoneyPlainSigned (Wave 4-B)", () => {
+  it("emits +/− for non-zero values", () => {
+    expect(fmtMoneyPlainSigned(1234, "USD", 2)).toBe("+$1,234.00");
+    expect(fmtMoneyPlainSigned(-1234, "USD", 2)).toBe("−$1,234.00");
+    expect(fmtMoneyPlainSigned(50000, "KRW")).toBe("+₩50,000");
+  });
+  it("uses U+2212 (not ASCII hyphen) for negatives", () => {
+    expect(fmtMoneyPlainSigned(-1234, "USD", 2)[0]).toBe("−");
+  });
+  it('returns "—" for zero / null / NaN', () => {
+    expect(fmtMoneyPlainSigned(0, "USD")).toBe("—");
+    expect(fmtMoneyPlainSigned(null, "USD")).toBe("—");
+    expect(fmtMoneyPlainSigned(NaN, "KRW")).toBe("—");
+  });
+});
+
+describe("fmtKrwAbbrev trimTrailing opt (Wave 4-B)", () => {
+  it("strips trailing zeros after the decimal when enabled", () => {
+    // 1.50억 → 1.5억
+    expect(fmtKrwAbbrev(150_000_000, { dpEok: 2, trimTrailing: true })).toBe(
+      "₩1.5억",
+    );
+    // 1.00억 → 1억 (frac becomes empty)
+    expect(fmtKrwAbbrev(100_000_000, { dpEok: 2, trimTrailing: true })).toBe(
+      "₩1억",
+    );
+    // 1.23억 untouched
+    expect(fmtKrwAbbrev(123_000_000, { dpEok: 2, trimTrailing: true })).toBe(
+      "₩1.23억",
+    );
+  });
+  it("default (no trimTrailing) preserves original 2dp behaviour", () => {
+    expect(fmtKrwAbbrev(150_000_000, { dpEok: 2 })).toBe("₩1.50억");
+    expect(fmtKrwAbbrev(100_000_000, { dpEok: 2 })).toBe("₩1.00억");
+  });
+  it("trimTrailing applies across bands (조 / 만)", () => {
+    expect(fmtKrwAbbrev(1_500_000_000_000, { dpJo: 2, trimTrailing: true })).toBe(
+      "₩1.5조",
+    );
+    expect(fmtKrwAbbrev(34_500_000, { dpMan: 1, trimTrailing: true })).toBe(
+      "₩3,450만",
+    );
   });
 });

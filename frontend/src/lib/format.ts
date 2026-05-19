@@ -472,6 +472,16 @@ export interface KrwAbbrevOpts {
   dpEok?: number;
   /** decimals when value lands in 만 (≥ 1e4).  default 0 */
   dpMan?: number;
+  /**
+   * Strip trailing zeros after the decimal point (Wave 4-B 2026-05-20).
+   *   fmtKrwAbbrev(150_000_000, {dpEok: 2})                  → "₩1.50억"
+   *   fmtKrwAbbrev(150_000_000, {dpEok: 2, trimTrailing:true})→ "₩1.5억"
+   *   fmtKrwAbbrev(100_000_000, {dpEok: 2, trimTrailing:true})→ "₩1억"
+   * Lets the what-if hero / share-card display compact magnitudes without
+   * "1.00억" noise while still allowing other callers (DD report, ledger)
+   * to lock a fixed precision.
+   */
+  trimTrailing?: boolean;
 }
 
 export function fmtKrwAbbrev(
@@ -479,7 +489,7 @@ export function fmtKrwAbbrev(
   opts: KrwAbbrevOpts = {},
 ): string {
   if (v == null || !Number.isFinite(v)) return "₩—";
-  const { dpJo = 1, dpEok = 1, dpMan = 0 } = opts;
+  const { dpJo = 1, dpEok = 1, dpMan = 0, trimTrailing = false } = opts;
   const abs = Math.abs(v);
   const sign = v < 0 ? "-" : "";
   // Each band: divide, fix to N dp, then re-localise so thousand-group
@@ -490,7 +500,13 @@ export function fmtKrwAbbrev(
     const d = Math.max(0, dp);
     // toFixed first to lock decimals, then split + localise the integer half.
     const fixed = scaled.toFixed(d);
-    const [intPart, fracPart] = fixed.split(".");
+    const [intPart, fracPartRaw] = fixed.split(".");
+    let fracPart = fracPartRaw;
+    if (trimTrailing && fracPart) {
+      // Drop trailing zeros: "50" → "5", "00" → "". Keeps intentional rounding
+      // (toFixed already happened) so "1.234" with dp=2 reads "1.23" still.
+      fracPart = fracPart.replace(/0+$/, "");
+    }
     const grouped = Number(intPart).toLocaleString("ko-KR");
     return `${sign}₩${fracPart ? `${grouped}.${fracPart}` : grouped}${suffix}`;
   };
@@ -559,4 +575,116 @@ export function displayTicker(
   if (seeded) return seeded;
   // 3. Bare ticker with KS/KQ/KRX/KR suffix stripped.
   return normalizeTicker(symbol) || symbol.trim();
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Wave 4-B additive helpers (2026-05-20 — Wave 3 follow-up).
+ *
+ * Closing the gaps that Wave 3 sweep documented as the reason positions /
+ * watchlist / ledger / recent-transactions kept their local fmt copies.
+ * Net-new functions only; existing fmt* signatures stay frozen.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Percent with FORCED sign using U+2212 MINUS (not ASCII hyphen) and
+ * magnitude via Math.abs(). Mirrors positions-table-v2 / watchlist-mini /
+ * ledger-book-paper local pattern so callers can migrate 1:1.
+ *
+ *   fmtPctSignedMinus(12.3)         →  "+12.30%"
+ *   fmtPctSignedMinus(-5)           →  "−5.00%"        (U+2212, not "-")
+ *   fmtPctSignedMinus(0)            →  "0.00%"         (no sign at zero)
+ *   fmtPctSignedMinus(null)         →  "—"
+ *   fmtPctSignedMinus(12.345, 1)    →  "+12.3%"
+ *
+ * Differs from `fmtPct`:
+ *   - U+2212 vs ASCII "-" for negatives (typographic minus matches
+ *     Pretendard/Playfair render across KR/Latin glyph runs).
+ *   - n === 0 emits NO sign ("0.00%") instead of "+0.00%".
+ *   - n == null / non-finite → "—" instead of "+0.00%".
+ *   - Configurable precision (default 2dp matches fmtPct).
+ *
+ * Differs from `fmtPct1`:
+ *   - Uses U+2212; fmtPct1 uses ASCII "-".
+ *   - n === 0 emits NO sign; fmtPct1 emits "+0.0%".
+ *
+ * Use for: positions P&L %, watchlist mover %, ledger row % columns.
+ */
+export function fmtPctSignedMinus(
+  v: number | null | undefined,
+  dp: number = 2,
+): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const sign = v > 0 ? "+" : v < 0 ? "−" : "";
+  return `${sign}${Math.abs(v).toFixed(dp)}%`;
+}
+
+/**
+ * Money with deterministic precision and NO automatic scale switching.
+ *   fmtMoneyPlain(1234.56, "USD")      →  "$1,234.56"  (default dp=0 -> "$1,235", caller passes 2 here)
+ *   fmtMoneyPlain(1234.56, "USD", 2)   →  "$1,234.56"
+ *   fmtMoneyPlain(1234.56, "USD", 0)   →  "$1,235"
+ *   fmtMoneyPlain(-1234, "USD", 2)     →  "-$1,234.00" (ASCII "-")
+ *   fmtMoneyPlain(1234567, "KRW")      →  "₩1,234,567"
+ *   fmtMoneyPlain(null, "USD")         →  "—"          (single em-dash, currency-agnostic)
+ *   fmtMoneyPlain(NaN, "KRW")          →  "—"
+ *
+ * Differs from fmtUsd / fmtKrw:
+ *   - Caller chooses precision; no n>=1000 switch.
+ *   - Non-finite returns "—" (not "$—" / "₩—") to match the
+ *     positions-table / watchlist / recent-transactions local pattern
+ *     where "—" sits in a typographic ivory cell with no leading glyph.
+ *   - ASCII "-" for negatives (matches all 4 local sites; fmtMoneySigned
+ *     uses U+2212 which would be a visible shift).
+ *
+ * KRW always rounds (whole-won is the only valid display).
+ *
+ * Use for: positions-table-v2 fmtMoney, watchlist-mini fmtMoney,
+ * recent-transactions-block fmtMoney/fmtSignedAmount, positions-top-card.
+ */
+export function fmtMoneyPlain(
+  v: number | null | undefined,
+  currency: "USD" | "KRW",
+  dp: number = 0,
+): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  const glyph = currency === "KRW" ? "₩" : "$";
+  if (currency === "KRW") {
+    return `${sign}${glyph}${Math.round(abs).toLocaleString("ko-KR")}`;
+  }
+  const body = abs.toLocaleString("en-US", {
+    minimumFractionDigits: dp,
+    maximumFractionDigits: dp,
+  });
+  return `${sign}${glyph}${body}`;
+}
+
+/**
+ * Like fmtMoneyPlain but with an EXPLICIT +/- sign for non-zero values.
+ *   fmtMoneyPlainSigned(1234, "USD", 2)  →  "+$1,234.00"
+ *   fmtMoneyPlainSigned(-1234, "USD", 2) →  "−$1,234.00" (U+2212)
+ *   fmtMoneyPlainSigned(0, "USD", 2)     →  "—"          (zero -> no row)
+ *   fmtMoneyPlainSigned(null, "USD")     →  "—"
+ *
+ * Matches the recent-transactions-block fmtSignedAmount contract:
+ * zero/null collapse to "—" so the column stays uncluttered on no-op rows.
+ */
+export function fmtMoneyPlainSigned(
+  v: number | null | undefined,
+  currency: "USD" | "KRW",
+  dp: number = 0,
+): string {
+  if (v == null || !Number.isFinite(v) || v === 0) return "—";
+  const sign = v > 0 ? "+" : "−";
+  const abs = Math.abs(v);
+  const glyph = currency === "KRW" ? "₩" : "$";
+  if (currency === "KRW") {
+    return `${sign}${glyph}${Math.round(abs).toLocaleString("ko-KR")}`;
+  }
+  const body = abs.toLocaleString("en-US", {
+    minimumFractionDigits: dp,
+    maximumFractionDigits: dp,
+  });
+  return `${sign}${glyph}${body}`;
 }
