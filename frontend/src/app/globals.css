@@ -207,6 +207,31 @@
   --pq-ivory-line-faint: rgba(245, 240, 232, 0.04); /* faintest border / surface bg */
   --pq-ivory-line-ghost: rgba(245, 240, 232, 0.02); /* ghost surface bg / inset shadow */
 
+  /* ── Wave 2 semantic surface aliases (2026-05-19 — Phase 1A infra) ──
+     Aliases over the ivory-line ladder so the sweep can read by intent
+     ("card veil", "card veil on hover") instead of by opacity step. These
+     do NOT introduce a new color — they re-expose existing tokens under a
+     name the upcoming color-sweep migration grep can target without
+     touching the underlying ladder. */
+  --pq-card-veil: var(--pq-ivory-line-faint);          /* charcoal card base wash (0.04) */
+  --pq-card-veil-strong: var(--pq-ivory-line-soft);    /* same wash, hover/active (0.06) */
+  --pq-onyx: #111111;                                  /* solid lifted-ink for shells (pricing tiers, drawer panels) — opaque alt to --pq-card-veil */
+
+  /* Live / stale / error status hues — extracted from inline literals so
+     the 17 lime + 4 yellow + 6 red sites can migrate via grep.
+     - --pq-live:  match the existing `bg-[#7db487]` callsites (market/* + indices)
+                   rather than introducing a 3rd green. A future bronze-only
+                   variant lives behind --pq-live-bronze for surfaces that
+                   forbid green entirely.
+     - --pq-stale: muted yellow-bronze — replaces text-yellow-500/60 in
+                   data-staleness banners. Hue lives in the bronze family
+                   so it doesn't fight the warm palette.
+     - --pq-error  is defined below (line ~347, kept for back-compat). */
+  --pq-live: #7db487;                /* muted lime — "data is fresh / streaming" */
+  --pq-live-bronze: var(--pq-bronze-light);  /* bronze-only variant for chrome that bans green */
+  --pq-stale: #a88f4a;               /* muted yellow-bronze — "data is delayed" */
+  --pq-drift: #a35b3b;               /* behavioural drift / persona alert — semantically distinct from --up carmine */
+
   /* Terminal chrome (Bloomberg-style dark panels).
      Locked-in palette used by components/terminal/* — kpi-card, data-table,
      candlestick-chart, top-ticker. Previously 28+ inline hex sites across

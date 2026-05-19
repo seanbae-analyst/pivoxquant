@@ -328,3 +328,235 @@ export function fmtMoneyForTicker(
 ): string {
   return isKrTicker(ticker) ? fmtKrw(value) : fmtUsd(value);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Wave 2 additive helpers (2026-05-19 — Phase 1A infra).
+ * Net-new functions only; existing signatures are frozen because 28+138
+ * use sites depend on them. Anything that needs a different shape MUST
+ * be a new name (e.g. fmtMoneySigned, not "fmtUsd with sign opt-in").
+ * ────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Money with an explicit sign prefix.
+ *   +₩123,456   (positive KRW)
+ *   −$1,234.56  (negative USD — U+2212 minus, NOT ASCII hyphen)
+ *   ±$0         (zero — bronze "flat")
+ * Used by P&L deltas, brag-card swing displays, weekly memo callouts where
+ * the reader has to clock direction at a glance. fmtUsd / fmtKrw stay
+ * sign-implicit so they remain safe inside formulas like "Total: ₩X".
+ */
+export function fmtMoneySigned(
+  v: number | null | undefined,
+  currency: "USD" | "KRW",
+): string {
+  const n = v ?? 0;
+  if (!Number.isFinite(n)) return currency === "KRW" ? "₩—" : "$—";
+  if (n === 0) {
+    return currency === "KRW" ? "₩0" : "$0.00";
+  }
+  // U+2212 MINUS for negatives (typographic; matches KR convention rendering
+  // in Pretendard/Playfair which would otherwise show a hyphen-minus).
+  const sign = n > 0 ? "+" : "−";
+  const abs = Math.abs(n);
+  if (currency === "KRW") {
+    return `${sign}₩${Math.round(abs).toLocaleString("ko-KR")}`;
+  }
+  return `${sign}${abs.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: abs >= 1000 ? 0 : 2,
+    maximumFractionDigits: abs >= 1000 ? 0 : 2,
+  })}`;
+}
+
+/**
+ * Compact money for tight surfaces (chart tooltips, KPI tiles, sparklines).
+ *   USD: $1.2M / $3.4B / $1,234 (under 1M stays full)
+ *   KRW: ₩1.2억 / ₩3,400만 / ₩12,345 (KR myriad system: 만 / 억 / 조)
+ * Returns the same "—" sentinels as fmtUsd/fmtKrw for non-finite inputs.
+ */
+export function fmtMoneyCompact(
+  v: number | null | undefined,
+  currency: "USD" | "KRW",
+): string {
+  const n = v ?? 0;
+  if (!Number.isFinite(n)) return currency === "KRW" ? "₩—" : "$—";
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  if (currency === "USD") {
+    if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(1)}T`;
+    if (abs >= 1e9)  return `${sign}$${(abs / 1e9 ).toFixed(1)}B`;
+    if (abs >= 1e6)  return `${sign}$${(abs / 1e6 ).toFixed(1)}M`;
+    if (abs >= 1e3)  return `${sign}$${(abs / 1e3 ).toFixed(1)}K`;
+    return fmtUsd(n);
+  }
+  // KRW myriad scale (한국 만/억/조 표기).
+  if (abs >= 1e12) return `${sign}₩${(abs / 1e12).toFixed(1)}조`;
+  if (abs >= 1e8)  return `${sign}₩${(abs / 1e8 ).toFixed(1)}억`;
+  if (abs >= 1e4)  return `${sign}₩${(abs / 1e4 ).toFixed(1)}만`;
+  return fmtKrw(n);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Wave 3 additive helpers (2026-05-19 — precision migration infra).
+ *
+ * Filling the gaps that Wave 2 sweep agents documented as the reason 17+
+ * files kept their local `fmtPct`/`fmtMoney`/`fmtKrw` redefinitions. Each
+ * helper here corresponds to a previously-inlined pattern with a precise,
+ * named contract so the call sites can finally drop their local copies.
+ *
+ * Net-new functions only; existing fmt* signatures stay frozen.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Percent with FORCED sign and configurable precision (default 1dp).
+ *   fmtPct1(12.3)   →  "+12.3%"
+ *   fmtPct1(-5)     →  "-5.0%"
+ *   fmtPct1(0)      →  "+0.0%"      (sign always present for non-NaN)
+ *   fmtPct1(null)   →  "—"          (lib/fmtPct uses "+0.00%" for null)
+ *
+ * Differs from fmtPct in TWO ways:
+ *   1. Default precision 1dp (was 2dp).  Hero/share-card headlines.
+ *   2. null/undefined → "—", NOT "+0.00%".  Matches what every local
+ *      fmtPct copy in components/* already does, so migrating away from
+ *      those copies is now a 1-line swap with no visible change.
+ *
+ * Use for: portfolio-hero, what-if-result share card, equity-curve %,
+ * positions-table P&L %, watchlist mover %.
+ */
+export function fmtPct1(
+  v: number | null | undefined,
+  dp: number = 1,
+): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const sign = v >= 0 ? "+" : "";
+  return `${sign}${v.toFixed(dp)}%`;
+}
+
+/**
+ * Percent without a sign prefix (magnitude only).
+ *   fmtPctUnsigned(23.4)        →  "23.4%"
+ *   fmtPctUnsigned(-5, 2)       →  "-5.00%"   (negative kept; only "+" is suppressed)
+ *   fmtPctUnsigned(0)           →  "0.0%"
+ *   fmtPctUnsigned(null)        →  "—"
+ *
+ * For columns where direction is conveyed by colour/arrow elsewhere
+ * (donut tooltips, weight breakdowns, allocation pies).
+ */
+export function fmtPctUnsigned(
+  v: number | null | undefined,
+  dp: number = 1,
+): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return `${v.toFixed(dp)}%`;
+}
+
+/**
+ * KR myriad (만 / 억 / 조) money with TUNABLE precision per scale band.
+ * Differs from fmtMoneyCompact's KRW branch by giving callers control over
+ * decimal density:
+ *   fmtKrwAbbrev(120_000_000)              →  "₩1.2억"     (default 1dp 억)
+ *   fmtKrwAbbrev(120_000_000, {dpEok: 2})  →  "₩1.20억"
+ *   fmtKrwAbbrev(34_000_000, {dpMan: 0})   →  "₩3,400만"   (default)
+ *   fmtKrwAbbrev(-120_000_000)             →  "-₩1.2억"
+ *   fmtKrwAbbrev(NaN)                      →  "₩—"
+ *
+ * This is the helper the Wave 2 sweep was waiting for — the donut tooltip
+ * wants `{dpEok: 2, dpMan: 0}`, the what-if hero wants `{dpEok: 2, dpMan: 0}`,
+ * the chart tick wants `{dpEok: 1, dpMan: 0}`. All previously inlined.
+ */
+export interface KrwAbbrevOpts {
+  /** decimals when value lands in 조 (≥ 1e12). default 1 */
+  dpJo?: number;
+  /** decimals when value lands in 억 (≥ 1e8).  default 1 */
+  dpEok?: number;
+  /** decimals when value lands in 만 (≥ 1e4).  default 0 */
+  dpMan?: number;
+}
+
+export function fmtKrwAbbrev(
+  v: number | null | undefined,
+  opts: KrwAbbrevOpts = {},
+): string {
+  if (v == null || !Number.isFinite(v)) return "₩—";
+  const { dpJo = 1, dpEok = 1, dpMan = 0 } = opts;
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  // Each band: divide, fix to N dp, then re-localise so thousand-group
+  // separators come back ("₩3,400만" not "₩3400만"). Negative dp is treated
+  // as 0. The toFixed() rounds half-away-from-zero; that matches both the
+  // donut tooltip and the what-if hero contract from Wave 2 sweep notes.
+  const fmtBand = (scaled: number, dp: number, suffix: string): string => {
+    const d = Math.max(0, dp);
+    // toFixed first to lock decimals, then split + localise the integer half.
+    const fixed = scaled.toFixed(d);
+    const [intPart, fracPart] = fixed.split(".");
+    const grouped = Number(intPart).toLocaleString("ko-KR");
+    return `${sign}₩${fracPart ? `${grouped}.${fracPart}` : grouped}${suffix}`;
+  };
+  if (abs >= 1e12) return fmtBand(abs / 1e12, dpJo, "조");
+  if (abs >= 1e8)  return fmtBand(abs / 1e8,  dpEok, "억");
+  if (abs >= 1e4)  return fmtBand(abs / 1e4,  dpMan, "만");
+  return `${sign}₩${Math.round(abs).toLocaleString("ko-KR")}`;
+}
+
+/**
+ * USD with NO automatic decimal-switching and NO sign prefix.
+ *   fmtUsdPlain(1234)         →  "$1,234"           (default dp = 0)
+ *   fmtUsdPlain(1234.56, 2)   →  "$1,234.56"
+ *   fmtUsdPlain(-1234)        →  "-$1,234"
+ *   fmtUsdPlain(NaN)          →  "$—"
+ *
+ * fmtUsd has an implicit precision switch at $1000 (2dp under, 0dp over).
+ * Hero numbers, transaction rows, and table cells often want a single
+ * deterministic precision — that's this helper.
+ */
+export function fmtUsdPlain(
+  v: number | null | undefined,
+  dp: number = 0,
+): string {
+  if (v == null || !Number.isFinite(v)) return "$—";
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  return `${sign}$${abs.toLocaleString("en-US", {
+    minimumFractionDigits: dp,
+    maximumFractionDigits: dp,
+  })}`;
+}
+
+/**
+ * Display-ready ticker label.
+ *   displayTicker("005930.KS", "삼성전자")  →  "삼성전자"
+ *   displayTicker("005930.KS")              →  "삼성전자"   (seed lookup)
+ *   displayTicker("999999.KS")              →  "999999"     (suffix stripped)
+ *   displayTicker("AAPL", "Apple Inc.")     →  "Apple Inc." (backend wins)
+ *   displayTicker("AAPL")                   →  "Apple"      (seed)
+ *   displayTicker(null)                     →  ""
+ *
+ * Differs from displayName() in that the suffix is ALWAYS stripped when the
+ * fallback is the raw ticker (we never want "005930.KS" surfacing). Use this
+ * for table cells, badges, anywhere the ticker is the visible label.
+ *
+ * CEO directive feedback_ticker_display: a naked 6-digit code is illegible —
+ * always prefer name, only fall back to the bare code when seed misses.
+ */
+export function displayTicker(
+  symbol: string | null | undefined,
+  name?: string | null,
+): string {
+  if (!symbol) return (name ?? "").trim();
+  // 1. Explicit backend name wins (when it's actually a name, not a ticker echo).
+  const trimmedName = (name ?? "").trim();
+  if (
+    trimmedName &&
+    normalizeTicker(trimmedName) !== normalizeTicker(symbol) &&
+    trimmedName.toUpperCase() !== symbol.trim().toUpperCase()
+  ) {
+    return trimmedName;
+  }
+  // 2. Static seed (covers KOSPI/KOSDAQ majors + US seed names).
+  const seeded = tickerToName(symbol);
+  if (seeded) return seeded;
+  // 3. Bare ticker with KS/KQ/KRX/KR suffix stripped.
+  return normalizeTicker(symbol) || symbol.trim();
+}

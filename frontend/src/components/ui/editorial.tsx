@@ -194,11 +194,12 @@ export function NumDisplay({
   size?: number;
 }) {
   // KR convention (CEO directive 2026-04-26): pos = red, neg = blue.
+  // v3 tokens: --up (#D18888 carmine) / --down (#7AA0C8 indigo).
   const color =
     tone === "pos"
-      ? "#d18888"
+      ? "var(--up)"
       : tone === "neg"
-      ? "#7aa0c8"
+      ? "var(--down)"
       : "var(--pq-ivory)";
   return (
     <span
@@ -281,11 +282,12 @@ export function StatRow({
   tone?: "pos" | "neg" | "neu";
 }) {
   // KR convention (CEO directive 2026-04-26): pos = red, neg = blue.
+  // v3 tokens: --up (#D18888 carmine) / --down (#7AA0C8 indigo).
   const color =
     tone === "pos"
-      ? "#d18888"
+      ? "var(--up)"
       : tone === "neg"
-      ? "#7aa0c8"
+      ? "var(--down)"
       : "var(--pq-ivory)";
   return (
     <div className="pq-detail-stat-row">
