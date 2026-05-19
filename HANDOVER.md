@@ -1,3 +1,141 @@
+# PivoxQuant — 인수인계서 (2026-05-19 v45.7 자율 마라톤 마무리 — Wave A→K / 26 APScheduler jobs / 자율 등급 A)
+
+## v45.7 2026-05-19 자율 마라톤 마무리 (CEO 외출 자율 모드)
+
+**Duration**: 약 7시간 / **누적 commits 본 세션**: ~28개 / **pytest**: 2734+ PASS / 0 회귀 / **자율 작동 등급: A**
+
+### Wave 전체 결과
+
+| Wave | 단계 | 결과 |
+|---|---|---|
+| A | 자동화 후보 발굴 | 61 후보 |
+| B | audit 통합 정리 | 45 실행 셋 (P0 15 / P1 24 / P2 6) |
+| C | P0 자동화 박기 | 8 commits + crontab 8 |
+| D | P1 Sub1+3+4 박기 | 5 commits |
+| E | audit 검수 | pytest 89 신규 (이전 보고 정정 — 실측 다름) |
+| F | HANDOVER v45.6 | 1 commit |
+| G | Sub-wave 2 feature-flagged | 6 commits |
+| 검증 P1 fix | legal-exempt + HTTPError | 1 commit |
+| 검증 P2 fix | alembic 039 + daily-regression Stage 4 + crontab Wave G | 1 commit |
+| H | Railway APScheduler 19 jobs | 1 commit |
+| I | 자율 운영 P0 8건 (operation 발굴 + strategy 전략) | 5 commits |
+| J | smoke test + 풀 검증 (audit + qa) | 등급 A 확정 |
+| K | section101 FP fix + .gitignore + HANDOVER | 1 commit + 본 wave |
+
+### 최종 commits (시간 역순 일부)
+
+- `21eb0609` [FIX] section101 5 route FP — legal-exempt 주석 + .gitignore state/
+- `4d3aaf98` docs(memory): project_autonomous_ops.md
+- `7f510e93` [LEGAL] Wave I — 통신판매업 D-day
+- `03c6d50d` [INFRA] Wave I — Railway OOM + FMP + 도메인
+- `17564a90` [CODE] Wave I — OAuth fail + PIPA 30일 (alembic 040+041)
+- `387c6b0c` [OPS] Wave I — FX staleness + Anthropic cost (alembic 042)
+- `6efb18ab` [INFRA] Wave H — Railway APScheduler 19 jobs
+- (이전 v45.6 prepend 참조)
+
+### 자율 운영 인프라 최종 상태
+
+**Railway APScheduler 26 jobs** (Wave H 19 + Wave I 7, EXPECTED_JOB_COUNT 일치)
+
+1. ops_api_health (6h)
+2. ops_db_backup (KST 02:00)
+3. ops_ssl_expiry (월 09:00)
+4. ops_vercel_canary (30m)
+5. ops_daily_regression (KST 06:00)
+6. ops_sendgrid_quota (KST 14:00)
+7. ops_morning_brief_kpi (KST 06:05)
+8. ops_signup_funnel (5m warn-only)
+9. ops_credentials_expiry (KST 10:00) — FMP D-30 포함
+10. ops_env_audit (월 11:00)
+11. ops_error_rate (5m baseline)
+12. ops_ticker_name_audit (KST 06:30)
+13. ops_email_compliance (월 12:00)
+14. ops_section101_check (KST 07:00)
+15. ops_checkout_followup (15m, flag OFF)
+16. ops_email_scheduler (15m, flag OFF)
+17. ops_inactive_nudge (1h, flag OFF)
+18. ops_caus_daily_sweep (KST 03:00)
+19. ops_finance_weekly_check (일 09:00)
+20. ops_fx_staleness_check (1h)
+21. ops_anthropic_cost_estimate (KST 22:00)
+22. ops_railway_resource (2m)
+23. ops_domain_expiry (매월 1일 09:30)
+24. ops_commerce_registration (매월 1일 09:00, flag OFF)
+25. ops_oauth_failure_check (15m)
+26. ops_pipa_purge (KST 03:30)
+
+**CC settings.json hooks 5**: H4 prettier (warn) / H5 rm-rf 차단 / H6 SessionStart HANDOVER prepend / H7 cron 편집 리마인더 / H9 alembic head guard
+
+**.githooks 강화**: pre-commit (detect-secrets + ruff + tsc + legal-guard + frozen-file) / pre-push (alembic head + D4 Stripe sig + regression-guards + pytest smoke + frontend changed)
+
+**alembic chain**: 035 → 036 → 037 → 038(×3 merge) → 039 → 040 → 041 → 042 단일 head `042_anthropic_usage_log`
+
+**feature flag 11개 default 안전**: 모두 false/warn/baseline
+
+### 메모리 갱신
+
+- `project_autonomous_ops.md` 신규 (Wave I — 자율 운영 전략)
+- `legal_question_queue.md` Q-S1 + Q-S2 + Q-S3 추가 → 누적 17건
+
+### 자율 작동 보장 등급: A
+
+증거 (실측, agent forward 0건):
+- 26/26 jobs 등록 + 단일 head + 5/5 hooks + 19 crontab parallel
+- pytest 2734 PASS / 0 회귀 (단 1 P1 FAIL fix 완료 — test_fx_staleness sys.modules 오염)
+- 0원 위반 0건 (Railway plan unchanged / Vercel cron X / GitHub Actions billing X)
+- section101-check 24 FP 중 20 (83%) FP 확정 — 5 route legal-exempt + .gitignore state/ commit 21eb0609
+
+### 잔여 CEO carry-over (8건)
+
+**1. `~/.pivoxquant-env` 비밀값 채우기** (chmod 600)
+- `SLACK_WEBHOOK_URL`: api.slack.com/apps → Incoming Webhooks
+- `DATABASE_URL`: Railway dashboard → Postgres → Variables → reveal
+- `GPG_PASSPHRASE`: `openssl rand -base64 32` + 1Password "PivoxQuant DB Backup GPG" 저장
+- `SENDGRID_API_KEY`: SendGrid Settings → API Keys → Stats Read
+- `SENTRY_AUTH_TOKEN` + `SENTRY_ORG_SLUG` + `SENTRY_PROJECT_SLUG`: sentry.io
+- `STRIPE_SECRET_KEY`: dashboard.stripe.com Live/Test mode
+- `FMP_PLAN_EXPIRY=YYYY-MM-DD`: FMP dashboard
+- `PIVOX_ANTHROPIC_DAILY_LIMIT_USD=5.0`: CEO 결정값
+
+**2. Railway dashboard → Variables 추가**
+- `RUN_SCHEDULER=1` (필수 — 없으면 26 jobs 안 도는 안전 게이트)
+- 위 `~/.pivoxquant-env` 변수들 다 Railway에도 등록 (production 동작)
+
+**3. macOS Keychain 등록 (H10 — CAUS secret 재부팅 생존)**
+```bash
+security add-generic-password -a seanbae -s pivoxquant-sim-onboard -w "<HMAC-secret>"
+```
+
+**4. 변호사 미팅 → 17 Q 일괄 답변 수령**
+- Q1-Q15 (출시 전 BLOCKER) + Q-S1 + Q-S2 + Q-S3
+- 답변 후 5개 flag ON: `PIVOX_CS1_CONSENT_ENABLED` + `PIVOX_ONBOARDING_SEQUENCE_ENABLED` + `PIVOX_INACTIVE_NUDGE_ENABLED` + `PIVOX_RETENTION_ENABLED` + `PIVOX_CHECKOUT_FOLLOWUP_ENABLED`
+
+**5. 통신판매업 신고 완료 후**
+- `PIVOX_COMMERCE_REGISTERED=true` env 설정 → 매월 1일 알림 자동 OFF
+
+**6. D+7 baseline 후 (출시 1주 후)**
+- `PIVOX_FUNNEL_ALERT_MODE=alert`
+- `PIVOX_ERROR_RATE_MODE=alert`
+- `PIVOX_H4_MODE=enforce` / `PIVOX_H9_MODE=enforce`
+
+**7. 1주 병행 운영 후 macOS crontab 비활성**
+- `crontab -e` → Wave C+D+G 17줄 앞에 `#` (Railway APScheduler 단독 운영)
+
+**8. python-whois Railway 재배포**
+- requirements.txt에 python-whois 추가됨 → Railway re-deploy 시 자동 설치 → ops_domain_expiry 실 작동
+
+### 다음 세션 P0 ACTION
+
+1. **section101 detector 개선** — negation context guard + 법령 인용 skip + comment-line skip (24 hits → 3)
+2. **legal_question_queue Q-S1 보강** — d7/d30 retention email + marketing-consent UI vs §101 ①번 충돌 여부
+3. **morning Slack alert 재실행** — false positive 24→0 확인
+4. **P1 13개 발굴 항목** 박을지 결정 (Wave I 결과)
+5. **다른 세션 frontend 48 파일** 작업 결과 review
+
+### Status: COMPLETE — 자율 시스템 24/7 가동 준비 완료 (CEO carry-over 8건 완료 후 100% 자율)
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-19 v45.7 자율 야간 세션 — 디자인 전수 sweep)
 
 ## v45.7 2026-05-19 자율 야간 세션 — 디자인 전수 sweep
