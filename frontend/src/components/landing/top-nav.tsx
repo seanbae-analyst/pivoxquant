@@ -23,7 +23,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
-import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST, PQ_DUR_MICRO } from "@/lib/motion";
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST } from "@/lib/motion";
 import {
   ArrowRight,
   BarChart3,

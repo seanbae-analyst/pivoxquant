@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW, PQ_DUR_FAST } from "@/lib/motion";
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
