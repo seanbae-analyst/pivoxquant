@@ -1,3 +1,22 @@
+# PivoxQuant — 인수인계서 (2026-05-19 Wave I — 자율 운영 전략 메모리 박음 · memory/project_autonomous_ops.md 신규)
+
+## Wave I 2026-05-19 — 자율 운영 전략 메모리 박음
+
+**작업**: strategy 부서 McKinsey 수준 8-Section 자율 운영 전략 → CEO 컨펌 → 메모리 박음
+
+### 변경 파일
+- `~/.claude/projects/-Users-seanbae-Desktop---/memory/project_autonomous_ops.md` — 신규 (139줄)
+- `~/.claude/projects/-Users-seanbae-Desktop---/memory/MEMORY.md` — Strategy 섹션 1줄 추가 (라인 36)
+
+### 핵심 내용
+- **North Star**: WAMR (Weekly Active Memo Recipients) — ≥60% 양호 / <40% 위험
+- **Phase 자율도 Ramp**: 출시~D+30 40% / D+30~D+90 60% / D+90~D+365 70%
+- **Kill Switch**: D+180 MRR ₩500만 미달 + 성장률 <10%/월 → shutdown 또는 passive 모드
+- **자동 리스크 대응**: 7건 (Sentry / DB / KIS 429 / §101 위반 / BETA_PW / SendGrid / 결제실패)
+- **1인 운영 참조**: Pieter Levels / Tony Dinh / Marc Lou / Justin Welsh
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-19 v45.6 — 0원 자동화 대규모 박음 (Wave A-D Sub1+3+4) · 8 commits pushed · main `← 3076327c 기반`)
 
 ## v45.6 2026-05-19 자율 마라톤 세션 — 0원 자동화 대규모 박음
