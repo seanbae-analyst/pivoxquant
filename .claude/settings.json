@@ -20,5 +20,47 @@
       "mcp__Claude_in_Chrome__read_page",
       "mcp__ccd_session__mark_chapter"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/seanbae/Desktop/취준/pivoxquant/.claude/hooks/h5-destructive-guard.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/seanbae/Desktop/취준/pivoxquant/.claude/hooks/h4-prettier-warn.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash /Users/seanbae/Desktop/취준/pivoxquant/.claude/hooks/h7-cron-script-check.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash /Users/seanbae/Desktop/취준/pivoxquant/.claude/hooks/h9-alembic-head-guard.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/seanbae/Desktop/취준/pivoxquant/.claude/hooks/h6-handover-prepend.sh"
+          }
+        ]
+      }
+    ]
   }
 }
