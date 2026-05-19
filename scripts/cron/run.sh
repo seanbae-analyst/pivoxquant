@@ -3,6 +3,8 @@
 # Usage: run.sh <job-name>
 # Jobs: api-health | db-backup | ssl-expiry | vercel-canary | daily-regression
 #       sendgrid-quota | morning-brief-kpi | signup-funnel
+#       credentials-expiry | env-audit | error-rate
+#       ticker-name-audit | email-compliance | section101-check
 set -uo pipefail
 
 JOB="${1:-}"
@@ -65,6 +67,27 @@ case "$JOB" in
   signup-funnel)
     PIVOX_FUNNEL_ALERT_MODE="${PIVOX_FUNNEL_ALERT_MODE:-warn}" \
       ./venv/bin/python scripts/nightly/signup_funnel_check.py; EC=$?
+    ;;
+  credentials-expiry)
+    ./venv/bin/python scripts/nightly/credentials_expiry_check.py; EC=$?
+    ;;
+  env-audit)
+    bash scripts/nightly/env_sync_audit.sh; EC=$?
+    ;;
+  error-rate)
+    # baseline mode default per audit rule #5; flip to alert after 1 week
+    # of samples by setting PIVOX_ERROR_RATE_MODE=alert in ~/.pivoxquant-env.
+    PIVOX_ERROR_RATE_MODE="${PIVOX_ERROR_RATE_MODE:-baseline}" \
+      ./venv/bin/python scripts/nightly/error_rate_check.py; EC=$?
+    ;;
+  ticker-name-audit)
+    ./venv/bin/python scripts/nightly/ticker_name_audit.py; EC=$?
+    ;;
+  email-compliance)
+    ./venv/bin/python scripts/nightly/email_compliance_check.py; EC=$?
+    ;;
+  section101-check)
+    ./venv/bin/python scripts/nightly/section101_compliance_check.py; EC=$?
     ;;
   *)
     echo "Unknown job: $JOB" >&2

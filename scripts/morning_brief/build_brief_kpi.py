@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Morning Brief KPI 확장 모듈 (S6 + O-M 통합).
+"""Morning Brief KPI 확장 모듈 (S6 + O-M + O-I 통합).
 
 목적
 ----
@@ -10,7 +10,7 @@
 ---------
 (a) DAU/WAU   — DB query: users 테이블 + artifacts.created_at 활동 기준
 (b) 신규 가입 24h — DB query: users.created_at
-(c) Stripe 결제 — Stripe API: charges.list / payment_intents.list (당일)
+(c) Stripe 매출 강화 (O-I) — 전일/MoM 매출, 환불, MRR 추정, top 5 customer
 (d) Sentry 이슈 수 — Sentry API: projects/{org}/{project}/issues/
 
 출력
@@ -21,7 +21,7 @@
 비용 검증 (0원)
 --------------
 - DB query: Railway PostgreSQL — 포함 요금
-- Stripe API: 무료 (추가 비용 없음)
+- Stripe API: 무료 (추가 비용 없음, BalanceTransaction + Subscription)
 - Sentry API: 무료 플랜 포함
 - Slack webhook: 무료
 
@@ -31,6 +31,7 @@
   미추적 (sessions 테이블 없음) — "추측: 방문자 아닌 활성 액션 기준"
 - Stripe API: STRIPE_SECRET_KEY 미설정 시 "N/A (미연결)" 표기
 - Sentry API: SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT 모두 필요
+- MRR: active subscription * unit_amount / 100 — 할인/trial 미반영 추정치
 
 환경변수
 --------
@@ -87,6 +88,31 @@ def _today_start_unix() -> int:
     """오늘 UTC 00:00:00 의 Unix timestamp."""
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     return int(today.timestamp())
+
+
+def _yesterday_start_unix() -> int:
+    """어제 UTC 00:00:00 의 Unix timestamp."""
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return int(yesterday.timestamp())
+
+
+def _month_start_unix() -> int:
+    """이번 달 1일 UTC 00:00:00 의 Unix timestamp."""
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return int(month_start.timestamp())
+
+
+def _prev_month_range_unix() -> tuple[int, int]:
+    """전월 시작/종료 UTC timestamp (시작 inclusive, 종료 exclusive)."""
+    now = datetime.now(timezone.utc)
+    this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # 전월 말일 = 이번 달 1일 - 1초
+    prev_month_end = this_month_start - timedelta(seconds=1)
+    prev_month_start = prev_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return int(prev_month_start.timestamp()), int(this_month_start.timestamp())
 
 
 # ── Slack ─────────────────────────────────────────────────────────────────────
@@ -210,10 +236,74 @@ def fetch_db_kpi() -> dict:
         return result
 
 
-# ── (c) Stripe KPI ────────────────────────────────────────────────────────────
+# ── (c) Stripe KPI (O-I 강화) ─────────────────────────────────────────────────
+
+def _stripe_get(api_key: str, path: str) -> dict | None:
+    """Stripe REST GET helper. None on error."""
+    url = f"https://api.stripe.com/v1/{path}"
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"Bearer {api_key}")
+    try:
+        with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        logger.error("Stripe GET %s HTTP %s", path, exc.code)
+        return None
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        logger.error("Stripe GET %s error: %s", path, exc)
+        return None
+
+
+def _stripe_balance_transactions(api_key: str, ts_gte: int, ts_lt: int | None = None) -> list:
+    """BalanceTransaction.list — 특정 기간 실수령 합산용."""
+    qs = f"created[gte]={ts_gte}&limit=100&type=charge"
+    if ts_lt:
+        qs += f"&created[lt]={ts_lt}"
+    data = _stripe_get(api_key, f"balance_transactions?{qs}")
+    return (data or {}).get("data", [])
+
+
+def _stripe_refunds(api_key: str, ts_gte: int) -> list:
+    """Refund.list — 전일 환불 건수/금액."""
+    data = _stripe_get(api_key, f"refunds?created[gte]={ts_gte}&limit=100")
+    return (data or {}).get("data", [])
+
+
+def _stripe_subscriptions(api_key: str) -> list:
+    """Subscription.list (active) — MRR 추정용."""
+    data = _stripe_get(api_key, "subscriptions?status=active&limit=100&expand[]=data.items")
+    return (data or {}).get("data", [])
+
+
+def _stripe_top_customers(api_key: str, ts_gte: int) -> list[dict]:
+    """이번 달 PaymentIntent 기준 top 5 customer (email + 누적 금액 USD)."""
+    data = _stripe_get(api_key, f"payment_intents?created[gte]={ts_gte}&limit=100")
+    intents = (data or {}).get("data", [])
+
+    customer_rev: dict[str, int] = {}
+    for pi in intents:
+        if pi.get("status") != "succeeded":
+            continue
+        cid = pi.get("customer") or pi.get("receipt_email") or "unknown"
+        amt = pi.get("amount_received", 0)
+        customer_rev[cid] = customer_rev.get(cid, 0) + amt
+
+    sorted_customers = sorted(customer_rev.items(), key=lambda x: x[1], reverse=True)[:5]
+    return [
+        {"customer": cid, "revenue_usd": f"${cents / 100:.2f}"}
+        for cid, cents in sorted_customers
+    ]
+
 
 def fetch_stripe_kpi() -> dict:
-    """Stripe API: 당일 결제 성공/실패 수.
+    """Stripe API: 매출 강화 섹션 (O-I).
+
+    - 전일 매출 (KRW + USD)
+    - MoM 매출 추세 (전월 대비)
+    - 환불 금액 + 건수
+    - MRR 추정 (active subscription 합산)
+    - top 5 customer (revenue, 이번달 기준)
+    - 결제 성공/실패 수 (기존 유지)
 
     Stripe API 무료 — 추가 비용 없음.
     """
@@ -221,6 +311,15 @@ def fetch_stripe_kpi() -> dict:
         "charges_success": "N/A",
         "charges_fail": "N/A",
         "revenue_today_usd": "N/A",
+        # O-I 신규
+        "revenue_yesterday_usd": "N/A",
+        "revenue_this_month_usd": "N/A",
+        "revenue_prev_month_usd": "N/A",
+        "mom_change_pct": "N/A",
+        "refund_count": "N/A",
+        "refund_amount_usd": "N/A",
+        "mrr_estimate_usd": "N/A",
+        "top_customers": [],
     }
 
     api_key = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -230,35 +329,85 @@ def fetch_stripe_kpi() -> dict:
         return result
 
     today_start = _today_start_unix()
-    url = f"https://api.stripe.com/v1/payment_intents?created[gte]={today_start}&limit=100"
-    req = urllib.request.Request(url)
-    req.add_header("Authorization", f"Bearer {api_key}")
+    yesterday_start = _yesterday_start_unix()
+    month_start = _month_start_unix()
+    prev_month_start, prev_month_end = _prev_month_range_unix()
 
-    try:
-        with urllib.request.urlopen(req, timeout=15, context=_SSL_CTX) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        logger.error("Stripe API HTTP %s: %s", exc.code, exc.reason)
-        result["error"] = f"HTTP {exc.code}"
-        return result
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        logger.error("Stripe API error: %s", exc)
-        result["error"] = str(exc)
-        return result
-
-    intents = data.get("data", [])
-    success = sum(1 for p in intents if p.get("status") == "succeeded")
-    fail = sum(1 for p in intents if p.get("status") in ("requires_payment_method", "canceled"))
-    revenue_cents = sum(
+    # 1. 오늘 PaymentIntent (기존 로직 유지)
+    pi_data = _stripe_get(
+        api_key,
+        f"payment_intents?created[gte]={today_start}&limit=100"
+    )
+    intents_today = (pi_data or {}).get("data", [])
+    success = sum(1 for p in intents_today if p.get("status") == "succeeded")
+    fail = sum(1 for p in intents_today if p.get("status") in ("requires_payment_method", "canceled"))
+    rev_today_cents = sum(
         p.get("amount_received", 0)
-        for p in intents
+        for p in intents_today
         if p.get("status") == "succeeded" and p.get("currency", "").lower() == "usd"
     )
+
+    # 2. 전일 BalanceTransaction
+    bt_yesterday = _stripe_balance_transactions(api_key, yesterday_start, today_start)
+    rev_yesterday_cents = sum(t.get("net", 0) for t in bt_yesterday)
+
+    # 3. 이번달 BalanceTransaction
+    bt_this_month = _stripe_balance_transactions(api_key, month_start)
+    rev_this_month_cents = sum(t.get("net", 0) for t in bt_this_month)
+
+    # 4. 전월 BalanceTransaction
+    bt_prev_month = _stripe_balance_transactions(api_key, prev_month_start, prev_month_end)
+    rev_prev_month_cents = sum(t.get("net", 0) for t in bt_prev_month)
+
+    # MoM 변화율
+    if rev_prev_month_cents > 0:
+        mom_pct = ((rev_this_month_cents - rev_prev_month_cents) / rev_prev_month_cents) * 100
+        mom_str = f"{mom_pct:+.1f}%"
+    elif rev_this_month_cents > 0:
+        mom_str = "+∞ (전월 0)"
+    else:
+        mom_str = "N/A"
+
+    # 5. 환불
+    refunds = _stripe_refunds(api_key, yesterday_start)
+    refund_count = len(refunds)
+    refund_cents = sum(r.get("amount", 0) for r in refunds)
+
+    # 6. MRR 추정
+    subs = _stripe_subscriptions(api_key)
+    mrr_cents = 0
+    for sub in subs:
+        for item in (sub.get("items") or {}).get("data", []):
+            price = item.get("price") or {}
+            recurring = price.get("recurring") or {}
+            amount = price.get("unit_amount") or 0
+            interval = recurring.get("interval", "")
+            qty = item.get("quantity", 1)
+            if interval == "month":
+                mrr_cents += amount * qty
+            elif interval == "year":
+                mrr_cents += (amount * qty) // 12
+
+    # 7. top 5 customer (이번달)
+    top_customers = _stripe_top_customers(api_key, month_start)
+
     result.update({
         "charges_success": success,
         "charges_fail": fail,
-        "revenue_today_usd": f"${revenue_cents / 100:.2f}",
+        "revenue_today_usd": f"${rev_today_cents / 100:.2f}",
+        "revenue_yesterday_usd": f"${rev_yesterday_cents / 100:.2f}",
+        "revenue_this_month_usd": f"${rev_this_month_cents / 100:.2f}",
+        "revenue_prev_month_usd": f"${rev_prev_month_cents / 100:.2f}",
+        "mom_change_pct": mom_str,
+        "refund_count": refund_count,
+        "refund_amount_usd": f"${refund_cents / 100:.2f}",
+        "mrr_estimate_usd": f"${mrr_cents / 100:.2f}",
+        "top_customers": top_customers,
     })
+    logger.info(
+        "Stripe KPI: today=$%.2f yesterday=$%.2f MRR=$%.2f MoM=%s",
+        rev_today_cents / 100, rev_yesterday_cents / 100, mrr_cents / 100, mom_str,
+    )
     return result
 
 
@@ -323,6 +472,21 @@ def render_kpi_brief(db: dict, stripe: dict, sentry: dict) -> str:
     stripe_err = f"\n  > 오류: `{stripe.get('error')}`" if stripe.get("error") else ""
     sentry_err = f"\n  > 오류: `{sentry.get('error')}`" if sentry.get("error") else ""
 
+    # top 5 customer 렌더링
+    top_customers = stripe.get("top_customers", [])
+    if top_customers:
+        top_lines = "\n".join(
+            f"| {i+1} | {c['customer']} | {c['revenue_usd']} |"
+            for i, c in enumerate(top_customers)
+        )
+        top_table = (
+            "\n\n**Top 5 Customer (이번달)**\n\n"
+            "| # | Customer | Revenue |\n|---|---|---|\n"
+            + top_lines
+        )
+    else:
+        top_table = ""
+
     return f"""## PivoxQuant Morning Brief KPI — {today}
 
 생성: {now_str}
@@ -340,13 +504,22 @@ def render_kpi_brief(db: dict, stripe: dict, sentry: dict) -> str:
 
 ---
 
-### (b) Stripe 결제 (오늘){stripe_caveat}{stripe_err}
+### (b) Stripe 매출 현황 (O-I 강화){stripe_caveat}{stripe_err}
 
 | 지표 | 값 |
 |---|---|
-| 결제 성공      | {stripe.get('charges_success', 'N/A')} |
-| 결제 실패      | {stripe.get('charges_fail', 'N/A')} |
-| 오늘 매출 USD  | {stripe.get('revenue_today_usd', 'N/A')} |
+| 결제 성공 (오늘)     | {stripe.get('charges_success', 'N/A')} |
+| 결제 실패 (오늘)     | {stripe.get('charges_fail', 'N/A')} |
+| 오늘 매출 USD        | {stripe.get('revenue_today_usd', 'N/A')} |
+| 전일 매출 USD        | {stripe.get('revenue_yesterday_usd', 'N/A')} |
+| 이번달 매출 USD      | {stripe.get('revenue_this_month_usd', 'N/A')} |
+| 전월 매출 USD        | {stripe.get('revenue_prev_month_usd', 'N/A')} |
+| MoM 변화율           | {stripe.get('mom_change_pct', 'N/A')} |
+| 환불 건수 (전일)     | {stripe.get('refund_count', 'N/A')} |
+| 환불 금액 USD (전일) | {stripe.get('refund_amount_usd', 'N/A')} |
+| MRR 추정 USD         | {stripe.get('mrr_estimate_usd', 'N/A')} |
+
+> _MRR = active subscription 합산 추정치 (할인/trial 미반영)_{top_table}
 
 ---
 
@@ -359,7 +532,7 @@ def render_kpi_brief(db: dict, stripe: dict, sentry: dict) -> str:
 
 ---
 
-_이 KPI brief는 매일 09:00 KST에 자동 생성됩니다 (build_brief_kpi.py)._
+_이 KPI brief는 매일 06:05 KST에 자동 생성됩니다 (build_brief_kpi.py)._
 """
 
 
@@ -391,10 +564,15 @@ def main(argv: list[str] | None = None) -> int:
         dau = db.get("dau", "N/A")
         new_u = db.get("new_users_24h", "N/A")
         s_ok = stripe.get("charges_success", "N/A")
+        rev_yday = stripe.get("revenue_yesterday_usd", "N/A")
+        mrr = stripe.get("mrr_estimate_usd", "N/A")
+        mom = stripe.get("mom_change_pct", "N/A")
         sentry_c = sentry.get("unresolved_critical", "N/A")
         summary = (
             f"[PivoxQuant KPI {_today_kst()}]\n"
-            f"DAU: {dau} | 신규 가입: {new_u} | 결제 성공: {s_ok} | Sentry critical: {sentry_c}\n"
+            f"DAU: {dau} | 신규 가입: {new_u}\n"
+            f"결제 성공: {s_ok} | 전일 매출: {rev_yday} | MRR: {mrr} | MoM: {mom}\n"
+            f"Sentry critical: {sentry_c}\n"
             f"상세: {out_path}"
         )
         post_slack(summary)
