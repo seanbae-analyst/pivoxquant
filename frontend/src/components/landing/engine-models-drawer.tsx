@@ -20,7 +20,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { X } from "lucide-react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { PQ_EASE, fadeUp, stagger } from "@/lib/motion";
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_MICRO, fadeUp, stagger } from "@/lib/motion";
 
 /* ── md (≥768px) viewport store — useSyncExternalStore source ─── */
 function subscribeMdViewport(listener: () => void): () => void {
@@ -970,7 +970,7 @@ export default function EngineModelsDrawer() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: PQ_EASE }}
+              transition={{ duration: PQ_DUR_MICRO, ease: PQ_EASE }}
               className="fixed inset-0 z-40 cursor-default"
               style={{ backgroundColor: "rgba(10,10,10,0.6)" }}
             />
@@ -986,10 +986,10 @@ export default function EngineModelsDrawer() {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ duration: 0.3, ease: PQ_EASE }}
+              transition={{ duration: PQ_DUR_BASE, ease: PQ_EASE }}
               className="hidden md:flex fixed top-0 right-0 bottom-0 z-50 w-[30rem] flex-col overflow-y-auto"
               style={{
-                backgroundColor: "#111111",
+                backgroundColor: "var(--pq-onyx)",
                 borderLeft: "1px solid rgba(184,149,106,0.4)",
                 color: "var(--pq-ivory)",
               }}
@@ -1012,11 +1012,11 @@ export default function EngineModelsDrawer() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ duration: 0.3, ease: PQ_EASE }}
+              transition={{ duration: PQ_DUR_BASE, ease: PQ_EASE }}
               className="md:hidden fixed left-0 right-0 bottom-0 z-50 flex flex-col overflow-y-auto rounded-t-2xl"
               style={{
                 maxHeight: "82vh",
-                backgroundColor: "#111111",
+                backgroundColor: "var(--pq-onyx)",
                 borderTop: "1px solid rgba(184,149,106,0.4)",
                 color: "var(--pq-ivory)",
               }}
@@ -1025,7 +1025,7 @@ export default function EngineModelsDrawer() {
               <div
                 aria-hidden
                 className="sticky top-0 flex justify-center py-3"
-                style={{ backgroundColor: "#111111" }}
+                style={{ backgroundColor: "var(--pq-onyx)" }}
               >
                 <span
                   className="block h-1 w-10 rounded-full"

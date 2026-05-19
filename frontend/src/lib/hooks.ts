@@ -793,6 +793,56 @@ export function useRiskCorrelation() {
   };
 }
 
+/* ── Earnings Pre-Brief (home v2 Card 3, 2026-05-19 P2 #11) ────────────
+ *
+ * GET /api/brief/earnings/upcoming?days=7 — 6h server-side cache + 1h
+ * SWR refresh. Backend ships next_event + 3-row queue inside the 7-day
+ * window. `implied_move` is labelled "30-day proxy" on the card surface
+ * (true implied move requires options-chain pricing — see
+ * routes/brief.py::_implied_move_pct).
+ */
+
+export interface EarningsBriefNextEvent {
+  ticker: string;
+  name: string;
+  when: string;                  // ISO 8601, e.g. "2026-05-22T13:30:00Z"
+  eps_est: number | null;
+  rev_est: number | null;        // millions
+  implied_move: number | null;   // percent (30d proxy)
+}
+
+export interface EarningsBriefQueueItem {
+  ticker: string;
+  name: string;
+  when: string;
+}
+
+export interface EarningsBriefResponse {
+  next_event: EarningsBriefNextEvent | null;
+  queue: EarningsBriefQueueItem[];
+}
+
+export function useEarningsBrief(days: number = 7) {
+  const key = `/api/brief/earnings/upcoming?days=${days}`;
+  const swr = useSWR<EarningsBriefResponse>(key, fetcher, {
+    // Backend cache is 6h; revalidate hourly so a freshly-cached payload
+    // surfaces on next mount without spamming FMP.
+    refreshInterval: 60 * 60 * 1000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 5 * 60 * 1000,
+    errorRetryCount: 2,
+    shouldRetryOnError: false,
+  });
+
+  return {
+    data: swr.data,
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
 /* ── Signals v2 (additive — does not modify any v1 hook) ──
  *
  * Wraps the existing `/api/signals` endpoint with SWR + filter query

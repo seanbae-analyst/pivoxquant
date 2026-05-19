@@ -8,7 +8,6 @@
  */
 
 import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
 import {
   Fingerprint,
   Activity,
@@ -17,19 +16,7 @@ import {
   FileText,
   MessageSquare,
 } from "lucide-react";
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
-};
+import { fadeUp, stagger } from "@/lib/motion";
 
 type Step = {
   n: number;
@@ -163,7 +150,7 @@ export function LivingCfoLoop() {
                 variants={fadeUp}
                 className="relative overflow-hidden rounded-sm p-6 md:p-7"
                 style={{
-                  backgroundColor: "#0D0D0D",
+                  backgroundColor: "var(--pq-card-veil)",
                   border: "0.5px solid rgba(139,111,71,0.28)",
                   minHeight: 180,
                 }}

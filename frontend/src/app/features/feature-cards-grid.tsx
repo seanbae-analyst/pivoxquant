@@ -39,7 +39,7 @@ import {
 } from "lucide-react";
 
 import { Eyebrow } from "@/components/landing/eyebrow";
-import { fadeUp } from "@/lib/motion";
+import { fadeUp, PQ_EASE, PQ_DUR_BASE } from "@/lib/motion";
 
 /**
  * iconKey → LucideIcon registry. Keys are stable strings the parent
@@ -109,9 +109,9 @@ export function FeatureCardsGrid({ cards }: { cards: readonly FeatureCard[] }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{
-                  duration: 0.42,
+                  duration: PQ_DUR_BASE,
                   delay: Math.min(i * 0.04, 0.24),
-                  ease: [0.16, 1, 0.3, 1],
+                  ease: PQ_EASE,
                 }}
               >
                 <Link
@@ -119,7 +119,7 @@ export function FeatureCardsGrid({ cards }: { cards: readonly FeatureCard[] }) {
                   data-testid={`feature-card-${card.href.replace("/features/", "")}`}
                   className="group relative flex h-full flex-col gap-3 overflow-hidden rounded-sm p-6 transition-all hover:-translate-y-0.5"
                   style={{
-                    backgroundColor: "#0D0D0D",
+                    backgroundColor: "var(--pq-card-veil)",
                     border: "0.5px solid rgba(184,149,106,0.22)",
                   }}
                 >

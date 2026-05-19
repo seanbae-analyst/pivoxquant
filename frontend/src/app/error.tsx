@@ -36,17 +36,17 @@ export default function Error({
   return (
     <div
       className="min-h-[100dvh] flex items-center justify-center px-6"
-      style={{ background: "#050505", color: "#F7F5EF" }}
+      style={{ background: "var(--pq-ink)", color: "var(--pq-ivory)" }}
     >
       <div className="w-full max-w-md text-center">
         <AlertTriangle
           className="mx-auto mb-6 h-8 w-8"
-          style={{ color: "#B8956A" }}
+          style={{ color: "var(--pq-bronze)" }}
         />
 
         <div
           className="text-pq-mono-sm tracking-[0.22em] uppercase mb-4"
-          style={{ color: "#B8956A" }}
+          style={{ color: "var(--pq-bronze)" }}
         >
           Something interrupted the observation
         </div>
@@ -60,7 +60,7 @@ export default function Error({
 
         <p
           className="text-sm leading-relaxed mb-6"
-          style={{ color: "rgba(247,245,239,0.65)" }}
+          style={{ color: "rgba(var(--pq-ivory-rgb),0.65)" }}
         >
           An unexpected issue stopped the page from loading. Your data is safe.
           Retry, or head back to the desk.
@@ -70,7 +70,7 @@ export default function Error({
           error.digest ? (
             <p
               className="text-pq-mono-sm font-mono mb-6"
-              style={{ color: "rgba(247,245,239,0.3)" }}
+              style={{ color: "rgba(var(--pq-ivory-rgb),0.3)" }}
             >
               ref: {error.digest}
             </p>
@@ -79,9 +79,9 @@ export default function Error({
           <pre
             className="text-left text-pq-mono-sm font-mono rounded p-3 mb-6 max-h-32 overflow-auto whitespace-pre-wrap break-words"
             style={{
-              color: "rgba(247,245,239,0.55)",
+              color: "rgba(var(--pq-ivory-rgb),0.55)",
               background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(247,245,239,0.08)",
+              border: "1px solid rgba(var(--pq-ivory-rgb),0.08)",
             }}
           >
             {error.message || "Unknown error"}
@@ -93,7 +93,7 @@ export default function Error({
             type="button"
             onClick={() => reset()}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm border text-sm font-medium tracking-wide transition-colors"
-            style={{ borderColor: "#B8956A", color: "#B8956A" }}
+            style={{ borderColor: "var(--pq-bronze)", color: "var(--pq-bronze)" }}
           >
             <RotateCw className="h-3.5 w-3.5" />
             Try again
@@ -102,8 +102,8 @@ export default function Error({
             href="/home"
             className="inline-flex items-center px-5 py-2.5 rounded-sm border text-sm font-medium tracking-wide"
             style={{
-              borderColor: "rgba(247,245,239,0.15)",
-              color: "rgba(247,245,239,0.6)",
+              borderColor: "rgba(var(--pq-ivory-rgb),0.15)",
+              color: "rgba(var(--pq-ivory-rgb),0.6)",
             }}
           >
             Back to desk
@@ -112,7 +112,7 @@ export default function Error({
 
         <p
           className="text-pq-mono-sm mt-8 leading-relaxed"
-          style={{ color: "rgba(247,245,239,0.3)" }}
+          style={{ color: "rgba(var(--pq-ivory-rgb),0.3)" }}
         >
           PivoxQuant does not lose data on errors. All positions and settings
           are saved on the server.

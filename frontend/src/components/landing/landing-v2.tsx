@@ -202,7 +202,7 @@ function PricingPreview() {
               variants={fadeUp}
               className="pq-tier-card-v2 group relative flex flex-col overflow-hidden rounded-sm p-7"
               style={{
-                backgroundColor: t.dark ? "#0D0D0D" : "#050505",
+                backgroundColor: t.dark ? "var(--pq-card-veil)" : "#050505",
                 border: t.recommended
                   ? "0.5px solid rgba(184,149,106,0.55)"
                   : "0.5px solid rgba(184,149,106,0.22)",

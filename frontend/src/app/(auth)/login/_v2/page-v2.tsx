@@ -69,18 +69,25 @@ export default function LoginPageV2() {
           : null;
 
   if (loading) {
+    // Page-load skeleton — Vantablack surface matching the editorial split
+    // login layout. Mirrors the marketing card stack so dimensions stay
+    // stable when the live form mounts.
     return (
       <div
-        className="flex min-h-[100dvh] items-center justify-center"
+        className="flex min-h-[100dvh] items-center justify-center px-6"
         style={{ background: "var(--pq-ink, #050505)" }}
+        role="status"
+        aria-live="polite"
+        aria-label="Loading login"
       >
-        <div
-          className="h-8 w-8 animate-spin rounded-full"
-          style={{
-            border: "2px solid rgba(245,240,232,0.10)",
-            borderTopColor: "var(--pq-bronze, #B8956A)",
-          }}
-        />
+        <div className="w-full max-w-sm flex flex-col gap-3">
+          <div className="pq-skeleton-dark h-10 w-10 rounded-sm" />
+          <div className="pq-skeleton-dark h-8 w-48 rounded" />
+          <div className="pq-skeleton-dark h-4 w-32 rounded" />
+          <div className="pq-skeleton-dark mt-6 h-12 w-full rounded-sm" />
+          <div className="pq-skeleton-dark h-12 w-full rounded-sm" />
+          <span className="sr-only">Loading…</span>
+        </div>
       </div>
     );
   }

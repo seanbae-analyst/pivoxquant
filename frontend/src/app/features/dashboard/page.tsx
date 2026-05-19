@@ -2,16 +2,10 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import FeaturePageShell from "@/components/landing/feature-page-shell";
 import { SectionCurtain } from "@/components/landing/section-curtain";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
-};
+import { fadeUp } from "@/lib/motion";
 
 const PANES = [
   { code: "01", title: "Equity curve", blurb: "Ten-year observational backtest, re-rendered nightly on your book." },
@@ -54,7 +48,7 @@ export default function DashboardPreviewPage() {
                 key={p.code}
                 className="group relative flex flex-col gap-3 overflow-hidden rounded-sm p-7 transition-all hover:-translate-y-0.5"
                 style={{
-                  backgroundColor: "#0C0C0C",
+                  backgroundColor: "var(--pq-card-veil)",
                   border: "0.5px solid rgba(184,149,106,0.24)",
                   minHeight: 200,
                 }}
@@ -113,7 +107,7 @@ export default function DashboardPreviewPage() {
             </p>
             <Link
               href="/signup"
-              className="inline-flex items-center gap-2 rounded-full px-5 py-3 font-serif transition-colors"
+              className="inline-flex items-center gap-2 rounded-sm px-5 py-3 font-serif transition-colors"
               style={{
                 border: "0.5pt solid rgba(184,149,106,0.5)",
                 color: "var(--pq-ivory)",

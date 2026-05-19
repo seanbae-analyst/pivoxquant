@@ -89,7 +89,7 @@ function Checkbox({
       onClick={() => onChange(!checked)}
       className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-200 ${
         checked
-          ? "border-[var(--sp-accent)] bg-[var(--sp-accent)]"
+          ? "border-[var(--pq-bronze)] bg-[var(--pq-bronze)]"
           : "border-slate-300 bg-white hover:border-slate-400"
       }`}
     >
@@ -180,9 +180,22 @@ export default function SignupPageV1() {
   }, [user, loading, router]);
 
   if (loading) {
+    // Page-load skeleton — matches the v1 slate light surface. Replaces the
+    // legacy animate-spin border indicator (var(--sp-accent) was a stale
+    // pre-bronze token; not defined in globals.css → rendered transparent).
     return (
-      <div className="flex flex-col items-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[var(--sp-accent)]" />
+      <div
+        className="flex flex-col items-center gap-3 py-16 w-full"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading signup"
+      >
+        <div className="skeleton h-12 w-12 rounded-xl" />
+        <div className="skeleton h-5 w-32 rounded" />
+        <div className="skeleton h-3 w-24 rounded" />
+        <div className="skeleton mt-4 h-11 w-full max-w-sm rounded-xl" />
+        <div className="skeleton h-11 w-full max-w-sm rounded-xl" />
+        <span className="sr-only">Loading…</span>
       </div>
     );
   }
@@ -377,7 +390,7 @@ export default function SignupPageV1() {
               href="/privacy#cross-border"
               target="_blank"
               rel="noopener"
-              className="text-[var(--sp-accent)] underline"
+              className="text-[var(--pq-bronze)] underline"
             >
               보기
             </a>
@@ -467,7 +480,7 @@ export default function SignupPageV1() {
         이미 계정이 있으신가요?{" "}
         <Link
           href="/login"
-          className="font-medium text-[var(--sp-accent)] hover:text-[var(--sp-accent-hover)] transition-colors"
+          className="font-medium text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light)] transition-colors"
         >
           로그인
         </Link>

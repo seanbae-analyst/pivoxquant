@@ -34,9 +34,9 @@ function ScoreBar() {
         <span>100</span>
       </div>
       <div className="flex justify-between mt-1 text-pq-eyebrow uppercase tracking-[0.18em]">
-        <span className="text-[#7AA0C8] font-medium">NEGATIVE</span>
+        <span className="text-[var(--down)] font-medium">NEGATIVE</span>
         <span className="text-[rgba(245,240,232,0.55)] font-medium">NEUTRAL</span>
-        <span className="text-[#D18888] font-medium">POSITIVE</span>
+        <span className="text-[var(--up)] font-medium">POSITIVE</span>
       </div>
     </div>
   );
@@ -153,7 +153,7 @@ export default function QuantScoringPage() {
             <ScoreBar />
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
               <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] px-4 py-3">
-                <p className="font-mono text-2xl font-medium text-[#7AA0C8] mb-1 tabular-nums">0 &ndash; 30</p>
+                <p className="font-mono text-2xl font-medium text-[var(--down)] mb-1 tabular-nums">0 &ndash; 30</p>
                 <p className="text-sm text-[rgba(245,240,232,0.62)]">Negative signals outweigh positive ones. Caution advised.</p>
               </div>
               <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] px-4 py-3">
@@ -161,7 +161,7 @@ export default function QuantScoringPage() {
                 <p className="text-sm text-[rgba(245,240,232,0.62)]">Mixed signals. The stock could go either way.</p>
               </div>
               <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] px-4 py-3">
-                <p className="font-mono text-2xl font-medium text-[#D18888] mb-1 tabular-nums">70 &ndash; 100</p>
+                <p className="font-mono text-2xl font-medium text-[var(--up)] mb-1 tabular-nums">70 &ndash; 100</p>
                 <p className="text-sm text-[rgba(245,240,232,0.62)]">Strong positive signals across most indicators.</p>
               </div>
             </div>

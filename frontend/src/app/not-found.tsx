@@ -5,12 +5,12 @@ export default function NotFound() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-6"
-      style={{ background: "#050505", color: "#F7F5EF" }}
+      style={{ background: "var(--pq-ink)", color: "var(--pq-ivory)" }}
     >
       <div className="max-w-xl text-center">
         <div
           className="text-pq-mono-sm tracking-[0.22em] uppercase mb-4"
-          style={{ color: "#B8956A" }}
+          style={{ color: "var(--pq-bronze)" }}
         >
           Error 404 · Page not found
         </div>
@@ -22,7 +22,7 @@ export default function NotFound() {
         </h1>
         <p
           className="text-sm leading-relaxed mb-8"
-          style={{ color: "rgba(247,245,239,0.65)" }}
+          style={{ color: "rgba(var(--pq-ivory-rgb),0.65)" }}
         >
           The page you requested does not exist, or has moved to a different
           location. Return to the desk and resume your observation.
@@ -38,7 +38,7 @@ export default function NotFound() {
         </div>
         <p
           className="mt-12 text-pq-mono-sm tracking-[0.14em]"
-          style={{ color: "rgba(247,245,239,0.3)" }}
+          style={{ color: "rgba(var(--pq-ivory-rgb),0.3)" }}
         >
           PivoxQuant · Observational research only
         </p>

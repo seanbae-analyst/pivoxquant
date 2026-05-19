@@ -126,7 +126,7 @@ export default function FeaturePageShell({
                 href={s.href}
                 className="group relative flex flex-col gap-2 overflow-hidden rounded-sm p-6 transition-all hover:-translate-y-0.5"
                 style={{
-                  backgroundColor: "#0D0D0D",
+                  backgroundColor: "var(--pq-card-veil)",
                   border: "0.5px solid rgba(184,149,106,0.22)",
                 }}
               >

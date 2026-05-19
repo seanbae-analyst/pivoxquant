@@ -16,6 +16,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
 import { motion } from "motion/react";
+import { PQ_EASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { Clock, ArrowUpRight, AlertCircle } from "lucide-react";
 import { API } from "@/lib/endpoints";
 import { useT } from "@/lib/locale";
@@ -282,7 +283,7 @@ export function WhatIfClient() {
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
           className="mb-6 sm:mb-8"
         >
           <div className="pq-ink-kicker mb-3 inline-flex items-center gap-1.5">

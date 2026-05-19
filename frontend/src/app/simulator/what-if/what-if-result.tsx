@@ -15,6 +15,7 @@
 
 import { useCallback, useRef } from "react";
 import { motion } from "motion/react";
+import { PQ_EASE, PQ_DUR_SLOW } from "@/lib/motion";
 import {
   Sparkles,
   MessageCircle,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useT, useLocale } from "@/lib/locale";
+import { fmtPct1 } from "@/lib/format";
 import type { WhatIfSuccessResponse } from "@/lib/types";
 // 2026-05-17 wave 12 frontend P2: route through the next/dynamic wrapper
 // so recharts (~112KB gzip) lazy-loads instead of shipping in the simulator
@@ -44,7 +46,16 @@ interface WhatIfResultProps {
   tickerName?: string;
 }
 
-/* ── Number formatters ── */
+/* ── Number formatters ──
+   2026-05-19 sweep: NOT migrated to lib/format.ts intentionally.
+   - fmtMoney() has KR abbreviation logic (억 / 만) absent from lib/format.ts
+     `fmtKrw` / `fmtUsd`. Swapping would change the rendered headline (e.g.
+     "₩1억" → "₩100,000,000") on every share card — sign-of-value regression.
+   - fmtPctStrong() uses .toFixed(1) for share-card display. lib/format.ts
+     `fmtPct` uses .toFixed(2). Tighter precision is intentional for the
+     hero numbers — swapping would push values off the 1-line headline grid.
+   Migrate together once lib/format.ts gains a `fmtKrwAbbrev` and an
+   `fmtPct1` overload — tracked in feedback_thorough_fixes Wave next. */
 
 function fmtMoney(v: number, currency: "USD" | "KRW"): string {
   if (currency === "KRW") {
@@ -62,9 +73,11 @@ function fmtMoney(v: number, currency: "USD" | "KRW"): string {
   return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
+// Wave 3 (2026-05-19): delegates to lib/fmtPct1(v, 1) — 1dp + forced sign.
+// fmtMoney (above) stays inlined intentionally — lib/fmtKrwAbbrev uses
+// min=max=dp which would shift "₩1.5억" → "₩1.50억" on every share card.
 function fmtPctStrong(v: number): string {
-  const s = v >= 0 ? "+" : "";
-  return `${s}${v.toFixed(1)}%`;
+  return fmtPct1(v, 1);
 }
 
 /* ── Dynamic headline based on return magnitude ── */
@@ -186,7 +199,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
     <motion.section
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
       className="mt-6"
     >
       {/* Share card — screenshot target. v3 Vantablack: ink surface,

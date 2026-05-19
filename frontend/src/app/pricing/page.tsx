@@ -685,7 +685,7 @@ export default function PricingPage() {
                   id={`tier-${p.key}`}
                   className="relative rounded-sm p-8 md:p-9 flex flex-col"
                   style={{
-                    backgroundColor: isDark ? "#111111" : "var(--pq-ivory)",
+                    backgroundColor: isDark ? "var(--pq-onyx)" : "var(--pq-ivory)",
                     border: p.recommended
                       ? "1px solid var(--pq-bronze)"
                       : isDark
@@ -893,7 +893,7 @@ export default function PricingPage() {
           <div
             className="rounded-sm"
             style={{
-              backgroundColor: "#111111",
+              backgroundColor: "var(--pq-onyx)",
               border: "0.5pt solid rgba(245,240,232,0.10)",
               padding: "0 24px",
             }}

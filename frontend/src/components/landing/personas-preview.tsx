@@ -15,21 +15,8 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
 import { ArrowRight } from "lucide-react";
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
-};
+import { fadeUp, stagger } from "@/lib/motion";
 
 type PreviewPersona = {
   code: string;
@@ -161,7 +148,7 @@ export default function PersonasPreview() {
               className="pq-persona-card-v2 group relative flex flex-col overflow-hidden rounded-sm p-6 md:p-7 transition-all duration-500 hover:-translate-y-1"
               style={{
                 minHeight: 240,
-                backgroundColor: "#0C0C0C",
+                backgroundColor: "var(--pq-card-veil)",
                 border: "0.5px solid rgba(184,149,106,0.24)",
               }}
             >
@@ -285,7 +272,7 @@ export default function PersonasPreview() {
           </p>
           <Link
             href="/features/personas"
-            className="group inline-flex items-center gap-2 rounded-full px-5 py-3 font-serif transition-colors"
+            className="group inline-flex items-center gap-2 rounded-sm px-5 py-3 font-serif transition-colors"
             style={{
               backgroundColor: "transparent",
               border: "0.5pt solid rgba(184,149,106,0.5)",

@@ -1,22 +1,12 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
 import FeaturePageShell from "@/components/landing/feature-page-shell";
 import { SectionCurtain } from "@/components/landing/section-curtain";
 import ReportFlipCard, {
   type FlipSample,
 } from "@/components/landing/report-flip-card";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
-};
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
-};
+import { fadeUp, stagger } from "@/lib/motion";
 
 const SAMPLES: readonly FlipSample[] = [
   {

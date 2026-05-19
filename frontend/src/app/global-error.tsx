@@ -29,7 +29,7 @@ export default function GlobalError({
           justifyContent: "center",
           padding: "24px",
           background: "#050505",
-          color: "#F7F5EF",
+          color: "#F5F0E8",
           fontFamily:
             '"Source Serif 4", Georgia, "Times New Roman", serif',
           WebkitFontSmoothing: "antialiased",
@@ -41,7 +41,7 @@ export default function GlobalError({
             maxWidth: "420px",
             padding: "40px 32px",
             background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(247,245,239,0.1)",
+            border: "1px solid rgba(245,240,232,0.1)",
             borderRadius: "2px",
             textAlign: "center",
           }}
@@ -75,7 +75,7 @@ export default function GlobalError({
               fontSize: "clamp(1.5rem, 4vw, 2rem)",
               fontWeight: 500,
               margin: "0 0 16px",
-              color: "#F7F5EF",
+              color: "#F5F0E8",
               lineHeight: 1.1,
             }}
           >
@@ -85,7 +85,7 @@ export default function GlobalError({
           <p
             style={{
               fontSize: "14px",
-              color: "rgba(247,245,239,0.55)",
+              color: "rgba(245,240,232,0.55)",
               margin: "0 0 24px",
               lineHeight: 1.6,
             }}
@@ -100,7 +100,7 @@ export default function GlobalError({
                 style={{
                   fontSize: "11px",
                   fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-                  color: "rgba(247,245,239,0.3)",
+                  color: "rgba(245,240,232,0.3)",
                   margin: "0 0 24px",
                 }}
               >
@@ -112,9 +112,9 @@ export default function GlobalError({
               style={{
                 fontSize: "11px",
                 fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-                color: "rgba(247,245,239,0.5)",
+                color: "rgba(245,240,232,0.5)",
                 background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(247,245,239,0.08)",
+                border: "1px solid rgba(245,240,232,0.08)",
                 borderRadius: "2px",
                 padding: "12px",
                 margin: "0 0 24px",
@@ -153,7 +153,7 @@ export default function GlobalError({
           <p
             style={{
               fontSize: "11px",
-              color: "rgba(247,245,239,0.25)",
+              color: "rgba(245,240,232,0.25)",
               marginTop: "24px",
               lineHeight: 1.5,
             }}
