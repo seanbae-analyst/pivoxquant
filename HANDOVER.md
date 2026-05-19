@@ -1,3 +1,63 @@
+# PivoxQuant — 인수인계서 (2026-05-20 v45.8 자율 야간 세션 — Wave 4-B/C format migration + V2 smoke + Vercel flag 실측)
+
+## v45.8 2026-05-20 자율 야간 세션
+
+**Duration**: 약 1시간 / **commits**: 3개 (Wave 4-A 포함 65d03c1d 기존 + 8cd7e8cb + 1d3d4492) / **PRs**: 2개 (#499, #500) / **pytest**: 944 PASS / 1 flaky (기존) / 0 회귀 / **vitest**: 376 PASS / 0 fail
+
+### 완료 항목
+
+| 항목 | 결과 |
+|---|---|
+| Wave 4-A (이미 65d03c1d) | motion-token import 2건 제거 |
+| Wave 4-B format migration | commit 8cd7e8cb — format.ts +132줄 + 9 component migration + ESLint fmt guard |
+| Wave 4-C V2 smoke | commit 1d3d4492 — MANIFEST.txt 2개 (72 PNG hashes, PNG itself gitignored) |
+| Vercel env vars 실측 | LOGIN_V2=true, SIGNUP_V2=true (production 이미 설정됨) |
+| .gitignore qa/v2-smoke/**.png | 추가 완료 |
+| PR #499 (Wave 4-B) | https://github.com/seanbae-analyst/pivoxquant/pull/499 |
+| PR #500 (Wave 4-C) | https://github.com/seanbae-analyst/pivoxquant/pull/500 |
+
+### 회귀 검증 실측 결과
+
+- **vitest**: 376 passed / 0 fail (Wave 4-B 신규 102줄 test 포함)
+- **pytest**: 944 passed / 1 flaky / 176 skipped — `test_fx_staleness` 단독 실행 PASS (타이밍 의존 기존 flaky)
+- **tsc**: clean (exit 0, 0 errors)
+
+### CRITICAL: Vercel V2 플래그 실측
+
+Wave 4-C QA verdict는 LOGIN/SIGNUP만 safe하다고 했으나, **production 실측 결과 모든 9개 V2 플래그가 이미 true**:
+
+| 플래그 | Production 값 | QA verdict |
+|--------|--------------|------------|
+| NEXT_PUBLIC_LOGIN_V2 | true | ✅ SAFE |
+| NEXT_PUBLIC_SIGNUP_V2 | true | ✅ SAFE |
+| NEXT_PUBLIC_HOME_V2 | true | ⚠️ P0 미해결 여부 CEO 확인 필요 |
+| NEXT_PUBLIC_PORTFOLIO_V2 | true | ⚠️ P0 미해결 여부 CEO 확인 필요 |
+| NEXT_PUBLIC_SIGNALS_V2 | true | ⚠️ P0 미해결 여부 CEO 확인 필요 |
+| NEXT_PUBLIC_REPORTS_V2 | true | ⚠️ P0 미해결 여부 CEO 확인 필요 |
+| NEXT_PUBLIC_RISK_V2 | true | ⚠️ P0 미해결 여부 CEO 확인 필요 |
+| NEXT_PUBLIC_SETTINGS_V2 | true | ⚠️ P0 미해결 여부 CEO 확인 필요 |
+| NEXT_PUBLIC_PROFILE_V2 | true | ⚠️ P0 미해결 여부 CEO 확인 필요 |
+
+> Wave 5 (5 P0 fix) 완료 전 다른 7개 플래그도 production true 상태. CEO 확인 요망.
+
+### Wave 5 상태
+
+Wave 5 agent (frontend-dev × 3) 작업물은 git status에서 `frontend/src/lib/hooks.ts` 수정 1건만 확인됨 (unstaged). `state/vercel_canary_failures.json`도 미 staged. 별도 PR 필요 — Wave 5 완료 시 commit.
+
+### 잔여 unstaged 파일
+
+- `frontend/src/lib/hooks.ts` (M unstaged — Wave 5 agent 작업 추정)
+- `state/vercel_canary_failures.json` (M unstaged — canary 자동 갱신)
+- `.claude/skills/ui-ux-pro-max` (m — skill 캐시, commit 불필요)
+
+### 다음 ACTION
+
+1. **Wave 5 fix agent 작업물 commit + PR C** (P0 5건: data shape guards + settings preservation + risk crashes)
+2. **PR #499, #500 admin merge** (vitest 376 pass + tsc clean 확인 후)
+3. **CEO 확인**: 7개 V2 플래그 production=true 상태 적절한지 + Wave 5 P0 내용
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-19 v45.7 자율 마라톤 마무리 — Wave A→K / 26 APScheduler jobs / 자율 등급 A)
 
 ## v45.7 2026-05-19 자율 마라톤 마무리 (CEO 외출 자율 모드)
