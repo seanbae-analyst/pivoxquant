@@ -1,3 +1,78 @@
+# PivoxQuant — 인수인계서 (2026-05-19 v45.7 자율 야간 세션 — 디자인 전수 sweep)
+
+## v45.7 2026-05-19 자율 야간 세션 — 디자인 전수 sweep
+
+**작업 분량**: 87+ files / 1259+(-415) lines / 신규 7 files
+**CEO**: 부재 자율 권한 / admin merge + 무한 wave 허용
+**기간**: Wave 1 audit + Wave 2 Phase 1A/1B/1C/1D + Wave 3
+
+### Wave 결과 요약
+
+| Wave | 단계 | 투입 | 결과 |
+|---|---|---|---|
+| Wave 1 | audit 4 agent | raw hex / 라임 / motion / surface 감사 | P0 3 + P1 14 카테고리 확정 |
+| Wave 2 | Phase 1A-1D (15+ agent) | infra 토큰 + backend P2 + frontend dashboard + frontend landing+auth | 87 files 패치 |
+| Wave 3 | 5 agent | QA artifacts + v2-smoke + state 정리 | 신규 7 files 생성 |
+
+### P0 SHIP-BLOCKER 3건 해결
+
+| ID | 항목 | 수정 |
+|---|---|---|
+| P0-1 | sparkline 렌더 불가 | lib/market.ts 신규 + signal-card.tsx Recharts LineChart 연결 |
+| P0-2 | brag PNG export broken | brag_card_service.py OG fallback path 수정 |
+| P0-3 | V2 toggle path 미연결 | portfolio/_v2, risk/_v1 등 FeatureFlag gate 경로 정상화 |
+
+### P1 systemic 14 카테고리 박힘
+
+| 카테고리 | Before | After |
+|---|---|---|
+| raw hex | 60개 | 0 |
+| 라임 (#c8ff00 / lime-*) | 17개 | 0 |
+| motion ms 하드코딩 | 109개 | 0 |
+| console.log 잔존 | 38개 | 0 |
+| TODO 미해결 | 22개 | 0 |
+| 기타 카테고리 9개 | - | 전수 sweep 완료 |
+
+### P2 미완성 surface 채움
+
+- 3개 신규 backend endpoint (`routes/brief.py` + risk timeline + portfolio reconcile)
+- Risk gauge 컴포넌트 (`risk/_v1/page-v1.tsx`)
+- Equity All-time 차트 (`portfolio/v2/equity-curve-block.tsx`)
+
+### 변경 파일 분류
+
+**신규 (7 files)**:
+- `frontend/e2e/v2-smoke.spec.ts`
+- `frontend/scripts/v2-smoke.sh`
+- `frontend/src/components/ui/eyebrow.tsx`
+- `frontend/src/components/ui/icon.tsx`
+- `frontend/src/lib/market.ts`
+- `routes/brief.py`
+- `tests/test_p2_backend_surfaces.py`
+- `state/` (디렉토리)
+- `qa/` (디렉토리)
+
+**수정 (87 files)**:
+- Frontend: 79 files (app/ 43 + components/ 24 + lib/ 5 + globals.css)
+- Backend: 5 files (routes/ 3 + services/ 2)
+
+### 회귀 검증 결과
+
+- **vitest**: 345 passed (26 test files) — exit 0 ✅
+- **tsc**: `--noEmit` exit 0 ✅
+- **ruff**: 신규 파일 `routes/brief.py` + `tests/test_p2_backend_surfaces.py` All checks passed ✅
+- **pytest**: 신규 파일 exit 0 ✅ (venv 경로 갱신 필요 — `/Library/Frameworks/Python.framework/Versions/3.12/bin/python3`)
+
+### 외부 액션 CARRY-OVER
+
+| # | 항목 | 담당 | 우선순위 |
+|---|---|---|---|
+| EXT-V1 | V2 toggle ON: smoke 캡처 → Vercel env vars 7개 → redeploy | CEO | P0 |
+| EXT-V2 | `implied_move` 라벨 렌더링 실제 검증 (브라우저) | CEO | P1 |
+| EXT-V3 | 잔존 polish wave (V3 토큰 신규 surface 도입) | Agent | P2 |
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-19 Wave I — 자율 운영 전략 메모리 박음 · memory/project_autonomous_ops.md 신규)
 
 ## Wave I 2026-05-19 — 자율 운영 전략 메모리 박음
