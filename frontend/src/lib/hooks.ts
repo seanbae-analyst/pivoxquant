@@ -544,7 +544,12 @@ function inferExchange(p: RawPosition): string {
 
 export function useConcentration(top = 5) {
   const swr = usePortfolioPositions<RawPositionsPayload>();
-  const positions = swr.data?.positions ?? [];
+  // Array.isArray guard mirrors the useRiskTimeline fix — a backend
+  // shape regression that delivers `{ positions: null }` or `{}` must
+  // not page-down the /risk v2 board.
+  const positions = Array.isArray(swr.data?.positions)
+    ? swr.data!.positions!
+    : [];
 
   const totalKrw = swr.data?.total_value_all_krw ?? 0;
   const totalUsd = swr.data?.total_value_usd ?? 0;
@@ -606,7 +611,11 @@ export function useSectorExposure(): SectorExposureResult {
   const positions = usePortfolioPositions<RawPositionsPayload>();
   const summary = usePortfolioSummary();
 
-  const raw = (positions.data?.positions ?? []) as RawPositionWithSector[];
+  const raw = (
+    Array.isArray(positions.data?.positions)
+      ? positions.data!.positions!
+      : []
+  ) as RawPositionWithSector[];
   const totalKrw = positions.data?.total_value_all_krw ?? 0;
   const totalUsd = positions.data?.total_value_usd ?? 0;
   const fx = positions.data?.fx_rate ?? 1300;
@@ -726,7 +735,14 @@ export function useRiskTimeline(days: 30 | 90 | 180 = 30): RiskTimelineResult {
     errorRetryCount: 2,
   });
 
-  const raw = swr.data ?? [];
+  // Defensive: backend always returns `jsonify([])` for rolling-var, but
+  // a stale ServiceWorker cache, an upstream proxy that wraps errors as
+  // `{}`, or a future shape change can deliver a non-array. Calling
+  // `.slice` on a non-array is a root-level crash for /risk v2 — guard
+  // with Array.isArray so partial degradation surfaces as an empty
+  // timeline rather than a page-down ErrorBoundary.
+  // (feedback_bug_fix_patterns: stale fallback + divergence guard)
+  const raw = Array.isArray(swr.data) ? swr.data : [];
   const sliced = raw.slice(-days);
   const series: RiskTimelinePoint[] = sliced.map((p) => ({
     t: p.date,

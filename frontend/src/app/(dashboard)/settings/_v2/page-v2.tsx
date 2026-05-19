@@ -54,6 +54,7 @@ import { SettingsHeroV2 } from "@/components/settings/v2/settings-hero-v2";
 import { AnchorRail } from "@/components/settings/v2/anchor-rail";
 import { SettingsIdentityCardV2 } from "@/components/settings/v2/identity-card-v2";
 import { SignInProvidersCard } from "@/components/settings/v2/signin-providers-card";
+import { CapitalCardV2 } from "@/components/settings/v2/capital-card-v2";
 import { BrokerCardV2 } from "@/components/settings/v2/broker-card-v2";
 import { NotificationsMatrix } from "@/components/settings/v2/notifications-matrix";
 import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
@@ -560,6 +561,14 @@ export default function SettingsPageV2() {
                 onConnect={handleProviderConnect}
                 onDisconnect={handleProviderDisconnect}
               />
+            </div>
+
+            {/* A3 · Seed capital (2026-05-20 Wave 5-B feature_preservation
+                restore). V1 had this section; V2 lost it during the editorial
+                redesign and breaks the contract that no v1 surface disappears.
+                Bound to PUT /api/profile/capital via useAuth().refresh(). */}
+            <div style={{ marginTop: 12 }}>
+              <CapitalCardV2 />
             </div>
           </section>
 
