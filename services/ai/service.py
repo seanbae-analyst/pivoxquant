@@ -141,6 +141,56 @@ REQUIRED WORDING (강제 포함):
 MODEL = "claude-haiku-4-5-20251001"
 
 
+def _log_usage(model: str, endpoint: str, usage, user_id=None) -> None:
+    """Persist Anthropic API token usage to anthropic_usage_log table.
+
+    Called after every non-streaming Claude API response. Swallowed
+    silently on any error (DB down, migration not applied, etc.) so
+    the AI feature still works even if logging fails.
+
+    ``usage`` is the Anthropic SDK ``Usage`` object with ``input_tokens``
+    and ``output_tokens`` attributes (both int).
+    """
+    if usage is None:
+        return
+    try:
+        from datetime import datetime, timezone as _tz
+
+        input_tok = getattr(usage, "input_tokens", 0) or 0
+        output_tok = getattr(usage, "output_tokens", 0) or 0
+        if input_tok == 0 and output_tok == 0:
+            return  # nothing to log
+
+        from extensions import db as _db
+        from sqlalchemy import text as _text
+
+        # Use raw SQL to avoid importing a model class at module load time
+        # and to keep this file importable even before alembic 042 runs.
+        try:
+            with _db.engine.connect() as conn:
+                conn.execute(
+                    _text(
+                        "INSERT INTO anthropic_usage_log "
+                        "(user_id, model, endpoint, input_tokens, output_tokens, created_at) "
+                        "VALUES (:uid, :model, :ep, :in_tok, :out_tok, :ts)"
+                    ),
+                    {
+                        "uid": user_id,
+                        "model": str(model)[:64],
+                        "ep": str(endpoint)[:64],
+                        "in_tok": int(input_tok),
+                        "out_tok": int(output_tok),
+                        "ts": datetime.now(_tz.utc).replace(tzinfo=None),
+                    },
+                )
+                conn.commit()
+        except Exception:
+            # Table may not exist yet (before migration 042). Graceful.
+            pass
+    except Exception as e:
+        logger.debug("_log_usage: ignored error: %s", e)
+
+
 class AIService:
 
     def __init__(self):
@@ -352,6 +402,7 @@ class AIService:
             messages.append({"role": "user", "content": message})
 
             accumulated = []
+            stream_usage = None
             with self.client.messages.stream(
                 model=MODEL,
                 max_tokens=4000,
@@ -361,6 +412,14 @@ class AIService:
                 for text in stream.text_stream:
                     accumulated.append(text)
                     yield text
+                # get_final_message() exposes usage after stream ends
+                try:
+                    final_msg = stream.get_final_message()
+                    stream_usage = getattr(final_msg, "usage", None)
+                except Exception:
+                    pass
+
+            _log_usage(MODEL, "chat_stream", stream_usage)
 
             full = "".join(accumulated)
             # Strip required disclaimer fragments before vocab check —
@@ -411,6 +470,7 @@ Use these EXACT markers:
 {context}"""
                 }],
             )
+            _log_usage(MODEL, "commentary", getattr(resp, "usage", None))
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
             return scrub_signal({
@@ -455,6 +515,7 @@ Top Headlines:
 {stories_text}"""
                 }],
             )
+            _log_usage(MODEL, "morning_summary", getattr(resp, "usage", None))
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
             return scrub_signal({
@@ -490,6 +551,7 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean. Do NOT cu
 {portfolio_context}"""
                 }],
             )
+            _log_usage(MODEL, "coaching", getattr(resp, "usage", None))
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
             return scrub_signal({
@@ -532,6 +594,7 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
 {context}"""
                 }],
             )
+            _log_usage(MODEL, "swot", getattr(resp, "usage", None))
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
             return scrub_signal({
@@ -582,6 +645,7 @@ Peers in same sector:
 {peers_text}"""
                 }],
             )
+            _log_usage(MODEL, "competitor", getattr(resp, "usage", None))
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
             return scrub_signal({
@@ -632,6 +696,7 @@ Stocks in {sector}:
 {stocks_text}"""
                 }],
             )
+            _log_usage(MODEL, "sector_trend", getattr(resp, "usage", None))
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
             return scrub_signal({

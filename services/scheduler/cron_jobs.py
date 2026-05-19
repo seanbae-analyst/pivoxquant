@@ -327,6 +327,49 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
             CronTrigger(day_of_week="sun", hour=9, minute=0, timezone=KST),
             _wrap_python_main("scripts.finance_weekly_check"),
         ),
+        # ── Wave I P0 (2026-05-19) ───────────────────────────────────────────
+        # 0 * * * * — FX staleness check (hourly)
+        # 24h+ stale KRW/USD → Slack + Sentry. portfolio +52,281% 재발 방지.
+        (
+            "ops_fx_staleness_check",
+            CronTrigger(minute=0, timezone=KST),
+            _wrap_python_main("scripts.nightly.fx_staleness_check", "check_fx_staleness"),
+        ),
+        # 0 22 * * * — Anthropic cost estimate (daily 22:00 KST)
+        # 오늘 사용량 + MTD 집계. 80%/100% 시 Slack 경고. SWOT 500 재발 방지.
+        (
+            "ops_anthropic_cost_estimate",
+            CronTrigger(hour=22, minute=0, timezone=KST),
+            _wrap_python_main("scripts.nightly.anthropic_cost_estimate", "run_cost_estimate"),
+        ),
+        # */2 * * * * — Railway resource pressure (Wave I D-2).
+        # RSS > 450MB (Hobby 512MB의 88%) OR CPU > 80% sustained 5min →
+        # Slack alert. 2-min cadence는 sustained-pressure 검출(≥ 3 sample)의 floor.
+        # cpu_percent(interval=1.0) blocking 1s × 30회/hr = 0.8% overhead.
+        (
+            "ops_railway_resource",
+            CronTrigger(minute="*/2", timezone=KST),
+            _wrap_python_main("scripts.nightly.railway_resource_check"),
+        ),
+        # 30 9 1 * * — pivoxquant.com WHOIS expiry (Wave I E-2, monthly).
+        # 매월 1일 09:30 KST. 도메인 만료는 분 단위로 안 바뀌므로 매월 1회
+        # 충분 + WHOIS rate limit(가비아 ~10 req/min/IP) 안전. 09:30 offset
+        # 으로 09:00 cluster (ssl-expiry/finance-weekly) 회피.
+        (
+            "ops_domain_expiry",
+            CronTrigger(day=1, hour=9, minute=30, timezone=KST),
+            _wrap_python_main("scripts.nightly.domain_expiry_check"),
+        ),
+        # 0 9 1 * * — commerce-registration (1st of month 09:00 KST) [Wave I L-3]
+        # 통신판매업 신고 미완 상태일 때 월 1회 Slack/stdout 알림. 전자상거래법 §12
+        # 의무 위반 → §44 ② 1호 (3년 이하 징역 OR 1억원 이하 벌금) 위험.
+        # feature flag ``PIVOX_COMMERCE_REGISTERED=true`` 면 스크립트 내부에서
+        # 즉시 exit 0 — 알림 자동 중단. 동월 dedup 으로 중복 발송 차단.
+        (
+            "ops_commerce_registration",
+            CronTrigger(day=1, hour=9, minute=0, timezone=KST),
+            _wrap_python_main("scripts.nightly.commerce_registration_reminder"),
+        ),
     ]
 
 
