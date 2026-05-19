@@ -61,6 +61,45 @@ from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
 
+
+def _schedule_onboarding_safe(user) -> None:
+    """Fire-and-forget D+0/D+3/D+7 onboarding sequence enqueue.
+
+    Wave G S5. Called at every signup completion point (password
+    ``/register`` final commit, OAuth-finalize birthdate commit, plus
+    the brand-new-OAuth-user inline branch). Never raises — a failure
+    to enqueue must never break signup. Feature flag
+    (``PIVOX_ONBOARDING_SEQUENCE_ENABLED``) short-circuit lives inside
+    ``schedule_onboarding`` so this wrapper is the same cost in both
+    modes.
+
+    Commit semantics: ``schedule_onboarding`` only ``add`` + ``flush``,
+    so the rows ride the caller's existing commit. If the caller
+    already committed (signup happy path), we issue a separate commit
+    here so the rows actually persist.
+    """
+    try:
+        from extensions import db
+        from services.email.onboarding_sequence import schedule_onboarding
+        stats = schedule_onboarding(user)
+        if stats.get("enqueued", 0) > 0:
+            db.session.commit()
+        logger.info(
+            "onboarding sequence enqueued for user_id=%s stats=%s",
+            getattr(user, "id", "?"), stats,
+        )
+    except Exception:
+        try:
+            from extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.exception(
+            "onboarding sequence enqueue failed (non-fatal) for user_id=%s",
+            getattr(user, "id", "?"),
+        )
+
+
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 # Root-level alias blueprint for `/api/logout`. Some clients (user-tester
@@ -362,6 +401,9 @@ def register():
         )
     session.clear()  # Session fixation 방어
     login_user(u, remember=True)
+    # Wave G S5 — enqueue D+0/D+3/D+7 onboarding sequence. Fire-and-forget;
+    # signup must not fail because of email scheduling.
+    _schedule_onboarding_safe(u)
     return jsonify({"ok": True, "user": serialize_user(u)})
 
 
@@ -865,6 +907,12 @@ def oauth_finalize():
             "OAuth finalize: birthdate set (user_id=%s provider=%s)",
             user.id, user.oauth_provider,
         )
+        # Wave G S5 — OAuth signups don't complete until birthdate
+        # lands here (PIPA §22 ⑥ gate). Enqueue D+0/D+3/D+7 sequence
+        # only when we actually transition from NULL → set; re-finalize
+        # attempts are 409'd above so this branch fires exactly once
+        # per OAuth user. Fire-and-forget — never blocks signup.
+        _schedule_onboarding_safe(user)
 
     return jsonify({"ok": True, "user": serialize_user(user)})
 

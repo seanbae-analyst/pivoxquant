@@ -45,6 +45,8 @@ from .checkout_expiration import (
     CheckoutExpiration,
     FOLLOWUP_DELAY as CHECKOUT_FOLLOWUP_DELAY,
 )
+# Wave G S5 — D+0/D+3/D+7 onboarding email sequence queue.
+from .scheduled_email import ScheduledEmail
 
 __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlist",
            "InvestmentProfile", "BrokerConnection", "PushSubscription", "PortfolioShare",
@@ -66,4 +68,5 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "AITwinWeeklyReport",
            "ProcessedStripeEvent",
            "STRIPE_EVENT_STATUS_SUCCESS", "STRIPE_EVENT_STATUS_ERROR",
-           "CheckoutExpiration", "CHECKOUT_FOLLOWUP_DELAY"]
+           "CheckoutExpiration", "CHECKOUT_FOLLOWUP_DELAY",
+           "ScheduledEmail"]

@@ -5,7 +5,7 @@
 #       sendgrid-quota | morning-brief-kpi | signup-funnel
 #       credentials-expiry | env-audit | error-rate
 #       ticker-name-audit | email-compliance | section101-check
-#       checkout-followup
+#       checkout-followup | email-scheduler
 set -uo pipefail
 
 JOB="${1:-}"
@@ -99,6 +99,17 @@ case "$JOB" in
     # cron exits 0 without emailing. Variance-flag flip drains pending
     # backlog automatically.
     ./venv/bin/python scripts/nightly/checkout_followup_dispatcher.py; EC=$?
+    ;;
+  email-scheduler)
+    # Wave G S5 — D+0/D+3/D+7 onboarding sequence dispatcher.
+    # Suggested cadence: ``*/15 * * * *`` (every 15 min). D+0 needs
+    # ±15min precision (immediate post-signup); D+3 / D+7 are calendar
+    # nudges where the cron lag is negligible. Dispatcher is gated by
+    # ``PIVOX_ONBOARDING_SEQUENCE_ENABLED`` env (default false) — when
+    # false the queue rows are stamped ``feature_flag_off`` and the
+    # cron exits 0 without emailing. Variance-flag flip after the
+    # lawyer's Q-S1 answer drains pending backlog automatically.
+    ./venv/bin/python scripts/nightly/email_scheduler_dispatcher.py; EC=$?
     ;;
   *)
     echo "Unknown job: $JOB" >&2
