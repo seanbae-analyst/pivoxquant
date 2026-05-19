@@ -8,6 +8,7 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { PushPermission } from "@/components/pwa/push-permission";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { RealtimeStatusBanner } from "@/components/ui/realtime-status-banner";
+import { DataStaleBanner } from "@/components/ui/data-stale-banner";
 import {
   clearStagedSnapshot,
   flushPendingCrossBorderConsent,
@@ -148,6 +149,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         slice via useRealtimeStatus() so price ticks don't re-render it.
       */}
       <RealtimeStatusBanner />
+      {/*
+        Upstream vendor-feed stale banner (Wave G C-CS3). Polls
+        /api/data/stale-status every 5 min, renders only when the nightly
+        ticker_health cron reports an above-threshold stale ratio. Dismiss
+        button stores a 1 h LocalStorage cap so the user isn't nagged
+        across page changes. Distinct from RealtimeStatusBanner — that one
+        is transport-layer (SSE), this one is upstream KIS / FMP feed.
+      */}
+      <DataStaleBanner />
       {children}
       {/*
         Single-source legal disclaimer footer — mounted once for every

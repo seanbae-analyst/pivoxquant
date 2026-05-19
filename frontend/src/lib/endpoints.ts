@@ -314,3 +314,8 @@ export const MARKET_INDICES     = `${API_BASE}/api/market/indices`;
 // MarketTicker. Rate-limited, cache-only, always HTTP 200. No session
 // cookie required. See routes/public.py::market_snapshot.
 export const PUBLIC_MARKET_SNAPSHOT = `${API_BASE}/api/public/market-snapshot`;
+
+// Public stale-data status — backs the in-app <DataStaleBanner /> mounted in
+// the (dashboard) layout. Polled every 5 min via SWR. See
+// routes/data_status.py for the locked response contract. Wave G C-CS3.
+export const DATA_STALE_STATUS = `${API_BASE}/api/data/stale-status`;
