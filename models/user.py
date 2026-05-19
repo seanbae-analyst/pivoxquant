@@ -126,6 +126,15 @@ class User(UserMixin, db.Model):
     # NULL means "no draft" (brand-new user or already completed). Managed
     # via migration 035_user_onboarding_draft.
     onboarding_draft_json = db.Column(db.Text, nullable=True)
+    # Wave G C-S2 (2026-05-19) — 24h inactive nudge idempotency timestamp.
+    # NULL = never nudged. Set by ``scripts/nightly/inactive_nudge_dispatcher``
+    # on a successful INFORMATION-class onboarding nudge so subsequent
+    # hourly cron runs (and any cron overlap) skip the user. Column is
+    # populated only when BOTH ``PIVOX_INACTIVE_NUDGE_ENABLED`` and
+    # ``PIVOX_CS1_CONSENT_ENABLED`` are true — until the lawyer's Q-S1
+    # answer arrives the column stays NULL for every row. Managed via
+    # migration 038_inactive_nudge_sent_at.
+    inactive_nudge_sent_at = db.Column(db.DateTime, nullable=True)
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")

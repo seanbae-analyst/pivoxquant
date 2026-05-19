@@ -40,6 +40,11 @@ from .ai_twin_portfolio import AITwinPortfolio, DEFAULT_STARTING_CASH
 from .ai_twin_position import AITwinPosition
 from .ai_twin_trade import AITwinTrade, VALID_SIDES as AI_TWIN_VALID_SIDES
 from .ai_twin_weekly_report import AITwinWeeklyReport
+# Wave G C-M1 — Stripe checkout.session.expired 1h follow-up queue.
+from .checkout_expiration import (
+    CheckoutExpiration,
+    FOLLOWUP_DELAY as CHECKOUT_FOLLOWUP_DELAY,
+)
 
 __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlist",
            "InvestmentProfile", "BrokerConnection", "PushSubscription", "PortfolioShare",
@@ -60,4 +65,5 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "AITwinTrade", "AI_TWIN_VALID_SIDES",
            "AITwinWeeklyReport",
            "ProcessedStripeEvent",
-           "STRIPE_EVENT_STATUS_SUCCESS", "STRIPE_EVENT_STATUS_ERROR"]
+           "STRIPE_EVENT_STATUS_SUCCESS", "STRIPE_EVENT_STATUS_ERROR",
+           "CheckoutExpiration", "CHECKOUT_FOLLOWUP_DELAY"]

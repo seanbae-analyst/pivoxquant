@@ -1005,7 +1005,27 @@ class BragCardService:
         else:
             start = target_month.replace(day=1)
 
-        return self._persist(user.id, data, png_bytes, html, sent, start)
+        artefact = self._persist(user.id, data, png_bytes, html, sent, start)
+
+        # Wave G C-AC1 — first-brag celebration (transactional, §50 적용 제외).
+        # Hooked here AFTER _persist commits so the COUNT(*) sees the new row
+        # and returns 1 on the very first card. Idempotent: a re-run on the
+        # same month UPSERTs the existing row so the count stays at 1 only on
+        # the genuine first creation. Failures inside the helper are
+        # swallowed (logged) — the brag-card pipeline is the source of truth
+        # and must not fail because of a celebration-email hiccup.
+        try:
+            from services.customer.brag_card_celebration import (
+                maybe_send_first_brag_celebration,
+            )
+            maybe_send_first_brag_celebration(user, artefact)
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.warning(
+                "first-brag celebration hook failed for user %s: %s",
+                user.id, exc,
+            )
+
+        return artefact
 
     def run_monthly(self, target_month: date | None = None) -> dict[str, Any]:
         """Cron target — 1st of each month 09:00 KST. Iterates over EVERY

@@ -5,6 +5,7 @@
 #       sendgrid-quota | morning-brief-kpi | signup-funnel
 #       credentials-expiry | env-audit | error-rate
 #       ticker-name-audit | email-compliance | section101-check
+#       checkout-followup
 set -uo pipefail
 
 JOB="${1:-}"
@@ -88,6 +89,16 @@ case "$JOB" in
     ;;
   section101-check)
     ./venv/bin/python scripts/nightly/section101_compliance_check.py; EC=$?
+    ;;
+  checkout-followup)
+    # Wave G C-M1 — Stripe checkout.session.expired 1h follow-up.
+    # Suggested cadence: ``*/15 * * * *`` (every 15 min). The +1h delay
+    # only needs ±15min precision. Dispatcher is gated by
+    # ``PIVOX_CHECKOUT_FOLLOWUP_ENABLED`` env (default false) — when
+    # false the queue rows are stamped ``feature_flag_off`` and the
+    # cron exits 0 without emailing. Variance-flag flip drains pending
+    # backlog automatically.
+    ./venv/bin/python scripts/nightly/checkout_followup_dispatcher.py; EC=$?
     ;;
   *)
     echo "Unknown job: $JOB" >&2

@@ -271,6 +271,8 @@ def stripe_webhook():
     try:
         if event_type == "checkout.session.completed":
             _handle_checkout_completed(data)
+        elif event_type == "checkout.session.expired":
+            _handle_checkout_expired(data)
         elif event_type == "customer.subscription.updated":
             _handle_subscription_updated(data)
         elif event_type == "customer.subscription.deleted":
@@ -359,6 +361,106 @@ def _handle_checkout_completed(session_data):
     user.subscription_status = "active"
     db.session.commit()
     logger.info("User %s subscribed to %s", user.id, plan)
+
+
+def _handle_checkout_expired(session_data):
+    """Enqueue a 1h transactional follow-up for an abandoned checkout.
+
+    Wave G C-M1 (2026-05-19).
+
+    Stripe fires ``checkout.session.expired`` when a Checkout Session
+    that the user opened was never completed before the session's
+    ``expires_at`` window (default 24h). This is the cleanest signal of
+    payment-intent abandonment we get from Stripe — strictly better than
+    polling because it's idempotent and arrives exactly once per session.
+
+    We enqueue a row in ``checkout_expirations`` with
+    ``scheduled_send_at = expired_at + 1h``. A cron-driven dispatcher
+    (``scripts/nightly/checkout_followup_dispatcher.py``) drains the
+    queue every 15 min and sends a *transactional* email (정통망법 §50
+    transactional carve-out — no marketing copy, no discount language).
+
+    Why enqueue regardless of feature flag
+    --------------------------------------
+    The dispatcher checks ``PIVOX_CHECKOUT_FOLLOWUP_ENABLED`` per tick.
+    Enqueueing unconditionally means a single env flip drains the
+    historical backlog into emails — no second migration / no replay
+    tooling needed. The dispatcher also bumps the ``skipped_reason``
+    field with ``"feature_flag_off"`` if the flag is OFF when the row
+    comes due, so we get a clean audit of the suppressed sends.
+
+    Resolution of the User row mirrors ``_handle_checkout_completed``:
+    customer id first, then metadata ``user_id`` as fallback. If neither
+    resolves we log + ACK — the abandoned-session ping is informational
+    and not worth blocking the webhook.
+    """
+    # Local import — avoids a top-level circular (routes → services →
+    # models → routes) on first app boot.
+    from models import CheckoutExpiration
+
+    customer_id = session_data.get("customer")
+    session_id = session_data.get("id")
+    if not session_id:
+        # Defensive — Stripe should always send id; skip silently.
+        logger.warning("checkout.session.expired with no session id")
+        return
+
+    metadata = session_data.get("metadata", {}) or {}
+
+    user = None
+    if customer_id:
+        user = User.query.filter_by(stripe_customer_id=customer_id).first()
+    if user is None:
+        user_id_meta = metadata.get("user_id")
+        if user_id_meta:
+            try:
+                user = db.session.get(User, int(user_id_meta))
+            except (ValueError, TypeError):
+                logger.error(
+                    "checkout.session.expired: invalid user_id metadata: %s",
+                    user_id_meta,
+                )
+    if user is None:
+        logger.info(
+            "checkout.session.expired: no user for customer=%s session=%s "
+            "— skip enqueue",
+            customer_id, session_id,
+        )
+        return
+
+    # ``expires_at`` is a Unix timestamp (seconds, int) on the Session
+    # object. Fall back to "now" if Stripe omitted it — that still gives
+    # us a reasonable +1h target.
+    expires_at_unix = session_data.get("expires_at")
+    if isinstance(expires_at_unix, (int, float)) and expires_at_unix > 0:
+        expired_at = datetime.fromtimestamp(
+            float(expires_at_unix), tz=timezone.utc,
+        ).replace(tzinfo=None)
+    else:
+        expired_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    row = CheckoutExpiration.enqueue(
+        user_id=user.id,
+        session_id=session_id,
+        expired_at=expired_at,
+    )
+    if row is None:
+        # Idempotent — already enqueued from a prior webhook delivery.
+        logger.info(
+            "checkout.session.expired: session=%s already enqueued — dedupe",
+            session_id,
+        )
+        return
+
+    # Commit so the row is durable before the surrounding handler ACKs.
+    # If this commit fails the outer try/except in stripe_webhook will
+    # roll back; the idempotency record then carries status=error and
+    # Stripe will retry the delivery (which the next attempt dedupes).
+    db.session.commit()
+    logger.info(
+        "checkout.session.expired enqueued: user=%s session=%s send_at=%s",
+        user.id, session_id, row.scheduled_send_at.isoformat(),
+    )
 
 
 def _handle_subscription_updated(subscription):
