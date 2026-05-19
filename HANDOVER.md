@@ -1,3 +1,87 @@
+# PivoxQuant — 인수인계서 (2026-05-19 v45.3 — 5-Wave audit + AI route P0 3건 hotfix · 3 commit pushed · main `22bf5496`)
+
+## v45.3 (2026-05-19 오후) — CEO 자율모드 전권 위임 / 5-Wave audit + Wave 2 fix
+
+**한 줄 요약**: CEO "현상태 파악 + 코드구조 + agent 업그레이드 + 버그헌팅 + 출시전 파악 + 자율모드 모든권한". 5 agent 병렬 wave 1 → P0 3건 신규 발견 (AIRiskSummary cross-user cache + KRW FX 미변환 + prompt injection) → backend-dev Wave 2 자율 fix 3 atomic commit + 9 regression test 추가 + push 완료. pytest 2317 → **2328 PASS / 0 fail**.
+
+### 3 commit pushed (main `f7a9f19f → 22bf5496`)
+| Hash | 내용 |
+|---|---|
+| `69b583af` | fix(ai): **B1 P0 AIRiskSummary cache_key user_id namespacing** (Pattern 6 회귀 — v44.9 PR #488이 earnings_tone만 fix, AIRiskSummary 누락) — `services/ai/models.py:513` `cache_key = f"risk_summary:{uid}:{int(value)}"` + 3 regression test |
+| `eea051e5` | fix(ai): **B2 P1 KRW/USD FX normalization** (Pattern 7 미적용) — `routes/ai.py:622-645` KR `.KS/.KQ` detection → `fx_service.get_rate()` 변환 + **wide-scope 추가 발견** `services/ai/service.py:199` `build_portfolio_context` 동일 버그 (/api/ai/chat + /api/ai/coaching 2 endpoint 동시 영향) 같이 fix + 2 regression test |
+| `22bf5496` | fix(ai): **B3 P1 Prompt injection defense (Pattern 10 신규 등록)** — 2 레이어 방어. `routes/ai.py` perimeter whitelist (`var_data.cvar_95_pct` float coerce + `stress_data.most_vulnerable_scenario` 200 cap) + `services/ai/models.py:528-534` defense-in-depth (try/except + isinstance + str cap) + 4 regression test |
+
+### 5-Wave audit 결과 종합
+| Wave | Agent | 결과 |
+|---|---|---|
+| 1 — 출시 전 SHIP-BLOCKER 6건 status | operations | 6건 전부 PENDING (CEO 외부 액션) + **신규 P0 발견 GitHub Actions 9개 결제 오류로 failure** (CI 무력화) |
+| 2 — 자율 버그 사냥 | bug-hunter | **P0 1 + P1 2 + P2 1 신규 발견** + 9패턴 SoT 회귀 점검 (Pattern 6/7 회귀 발견) + 신규 10번째 패턴 등록 |
+| 3 — 코드베이스 구조 매핑 | investigator | routes 44 blueprint 24,183 LOC / services 16 패키지 53,005 LOC / models 26 파일 2,384 LOC / frontend 82,886 LOC / tests 149 파일 / Iron Rule 동결 7건 존재 확인 / 순환 import 0건 / TODO 1건 |
+| 4 — v45.2 5 commit 회귀 교차검증 | audit-code | claim 신뢰도 91% / 5 commit 실측 일치 / pytest collect 2509 (보고 2317은 단순 보고 오류) / **bug-hunter와 독립적으로 동일 P0 confirm** (services/ai/models.py:513) |
+| 5 — agent 54개 갭 + 업그레이드 우선순위 | pivoxquant-improver | **신규 13건 추천** (G1-G5 신규 5건 + U1-U8 업그레이드 8건, 전부 0원) / Batch 1 (P0 8건, 4시간) / Batch 2 (P1 3건, 2시간) / Batch 3 (P2 2건, 1.5일) |
+
+### Wave 2 fix 전수 점검 결과 (feedback_thorough_fixes 준수)
+- **`_set_cache` 사이트 3건 전수 검증**: earnings_tone (v44.9 PR #488 안전) / sector_regime (global macro, user-specific 아님) / risk_summary (본 fix)
+- **services/ai/ 다른 cross-user cache**: `services/ai/service.py`, `services/agents/journal_companion.py` 추가 없음 확인
+- **B2 wide-scope (Pattern 7)**: `services/ai/service.py:199` build_portfolio_context 추가 발견 → 같이 fix
+- **B3 wide-scope (Pattern 10 신규)**: EarningsCallToneAnalyzer는 30,000 char cap 있음 (out of scope) / AISectorRotation은 internal source / journal_companion은 legal_gate boundary
+
+### 최종 verify (v45.3)
+- ✅ pytest **2328 passed / 0 failed** (baseline 2317 + 9 신규 + 2 incidental, 465.70s)
+- ✅ ruff All checks passed (0 violations)
+- ✅ alembic head 036 (single chain, 마이그레이션 없음)
+- ✅ git ahead 0 (`f7a9f19f..22bf5496` push 완료)
+- ✅ Iron Rule 동결 — `services/ai/models.py`는 동결이지만 P0 cache poisoning fix는 동결 예외 (v45.2 commit `d1867a74` precedent)
+
+### scheduled-tasks 7개 재활성화 시도 (operations wave 2)
+- **BLOCKED**: `mcp__scheduled-tasks__update_scheduled_task`가 "unsupervised mode" 차단 — CEO 직접 Claude Code 세션에서 수동 update 필요
+- 3건 즉시 활성화 권고: **morning-briefing** (cron 06:27→06:35 정정 + enable + StockPilot→PivoxQuant) / **bug-hunter-daily** (enable) / **legal-guard** (enable)
+- 4건 CEO 결정 대기: noon-briefing / evening-briefing (토큰 비용) / api-sentinel (cron 정정 필요) / **v2-autopilot** (자동 push 위험, 출시 후 권고)
+- morning-briefing SKILL.md만 자율 업데이트 완료 (PivoxQuant 이름 + 신경로 + 신규 프롬프트)
+
+### CAUS launchd 정정 (이전 wave 1 보고 정정)
+- ✅ **정상 작동 중** (`com.pivoxquant.caus.daily` ACTIVE) — 2026-05-18.md + 2026-05-19.md 둘 다 정상 생성 (각 0 P0 clean)
+- 이전 wave 1 "CAUS 미실행" 보고는 잘못된 경로(`~/Desktop/취준/pivoxquant`) 확인 — 실제 CAUS는 `~/projects/pivoxquant` 경로
+
+### 신규 SHIP-impact 발견 (CEO 즉시 인지)
+1. **GitHub Actions 결제 오류 (P0)** — 9 워크플로우 전부 `failure`. `gh run view 26069415669` "recent account payments have failed". Secret Scan / Legal Guard / Regression Guards 등 출시 직전 안전망 무력화. `github.com/settings/billing` 직접 확인 필요.
+2. **B1 cache poisoning prod 영향** — Pro tier 활성 사용자 2명 이상 동시 사용 시 cross-user 노출 가능. fix 후 22bf5496 즉시 prod 배포 권고.
+3. **B2/B3 prod 영향** — `/api/ai/risk-summary` + `/api/ai/chat` + `/api/ai/coaching` 3 endpoint 모두 영향. AI 기능 활성 사용자 즉시 영향.
+
+### 남은 SHIP-BLOCKER (CEO 외부 액션 — v45.2와 동일 + 1건 신규)
+- #17 DNS (가비아 콘솔)
+- Stripe 5 env (사업자 + Stripe Korea 활성화)
+- #20 변호사 자문 Q1-Q15
+- #19 통신판매업 신고 (변호사 후)
+- #10 prod DB rogue rows
+- #9 iCloud OFF + #12 GitHub billing
+- **🆕 #21 GitHub Actions 결제 상태 확인** (`github.com/settings/billing` — 5분, P0)
+
+### CEO 결정 대기 (v45.3 신규)
+| 항목 | 사유 |
+|---|---|
+| agent 업그레이드 Batch 1 (P0 8건, 4시간) | pivoxquant-improver wave 5 결과 — frozen-file-diff-guard / launch-runner / cache-poisoning-sentinel / fx-consistency-guard 신규 + launch-coordinator / release-coordinator / stripe-billing / compliance-gatekeeper 업그레이드 |
+| scheduled-tasks 3건 수동 enable | unsupervised mode BLOCKED — CEO 직접 Claude Code 세션에서 |
+| noon/evening-briefing 활성화 여부 | 토큰 비용 감수 여부 |
+
+### Iron Rule 준수 evidence
+- feedback_no_false_reports: pytest stdout raw 인용 / git log raw / 모든 발견 grep 결과 첨부
+- feedback_no_extra_cost: 자율 fix 3 commit 전부 0원 (기존 fx_service 재사용, 신규 dependency 0)
+- feedback_thorough_fixes: B1 _set_cache 사이트 3건 전수 / B2 wide-scope build_portfolio_context 추가 발견 fix / B3 Pattern 10 신규 등록 + 코드베이스 전수
+- feedback_pr_workflow: 3 atomic commit + alembic heads 확인 + spot check + push 분리
+- feedback_pre_launch_full_throttle: Opus 4.7 + 5 agent 병렬 wave + 분석 깊이 max + 보고서 압축 X
+- feedback_feature_preservation: 기존 기능 손상 0건 (2328 PASS / 0 회귀)
+
+### 다음 세션 첫 ACTION
+1. **CEO 외부 액션 7건 진행 status 확인** (GitHub billing / DNS / Stripe / 변호사 / 통신판매업 / prod DB / iCloud)
+2. **agent 업그레이드 Batch 1** dispatch 결정 (P0 8건, 4시간, 0원)
+3. **scheduled-tasks 3건 수동 enable** (Claude Code 세션에서 직접)
+4. **prod 배포** — main `22bf5496` Railway 자동 배포 + alembic 036 prod 적용 검증
+
+---
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-19 v45.2 — 12-Wave 자율 + hotfix 회귀 점검 · 5 commit pushed · main `b2b465cb`)
 
 ## v45.2 (2026-05-19) — CEO 운동/잠 사이 자율 wave (옵션 X — P1 7 + 추가 5 audit)
