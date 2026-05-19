@@ -421,7 +421,24 @@ def _handle_subscription_deleted(subscription):
 
 
 def _handle_invoice_payment_failed(invoice):
-    """Log failed invoice payment. Tier is kept — Stripe retries automatically."""
+    """Handle failed invoice payment.
+
+    Pre-2026-05-19: log-only. Tier intentionally kept active — Stripe
+    retries automatically on its smart-retry schedule (3-4 attempts over
+    ~10 days), so flipping tier on attempt #1 would churn paying users
+    over transient card holds.
+
+    2026-05-19 (S2 + C-CS1): two side-effects added —
+      (a) CEO Slack DM via ``services.billing_notifications`` so revenue
+          loss is visible immediately, not buried in Railway logs.
+      (b) Transactional email to the affected user (정통망법 §50 거래
+          정보성, marketing consent 면제) with a Customer Portal link to
+          update the card.
+
+    Both side-effects are fire-and-forget — failures are logged + Sentry-
+    captured but never raise, since the outer webhook handler must ACK
+    200 to stop Stripe's 3-day retry loop.
+    """
     customer_id = invoice.get("customer")
     invoice_id = invoice.get("id")
     attempt = invoice.get("attempt_count", 0)
@@ -431,6 +448,21 @@ def _handle_invoice_payment_failed(invoice):
         f"Invoice payment failed: invoice={invoice_id} "
         f"customer={customer_id} user={user_id} attempt={attempt}"
     )
+
+    # Side-effects — never raise (webhook handler must ACK 200).
+    try:
+        from services.billing_notifications import (
+            notify_payment_failed_slack,
+            notify_payment_failed_email,
+        )
+        notify_payment_failed_slack(user=user, invoice=invoice)
+        notify_payment_failed_email(user=user, invoice=invoice)
+    except Exception:
+        logger.exception(
+            "payment_failed notification dispatch failed "
+            "(invoice=%s user=%s) — handler continues",
+            invoice_id, user_id,
+        )
 
 
 def _handle_invoice_paid(invoice):
