@@ -1,7 +1,7 @@
 """Add ``users.inactive_nudge_sent_at`` for Wave G C-S2 24h onboarding nudge.
 
 Revision ID: 038_inactive_nudge_sent_at
-Revises: 037_marketing_consent_split
+Revises: 038_checkout_expirations, 038_scheduled_emails
 Create Date: 2026-05-19
 
 Wave G C-S2 — 24-hour onboarding nudge idempotency column
@@ -40,7 +40,17 @@ import sqlalchemy as sa
 
 
 revision = "038_inactive_nudge_sent_at"
-down_revision = "037_marketing_consent_split"
+# Wave G concurrency: three migrations forked off
+# ``037_marketing_consent_split`` in parallel (C-M1 checkout_expirations,
+# S5 scheduled_emails, C-S2 this one). To collapse the divergent heads
+# without an extra merge revision, we declare a tuple ``down_revision``
+# so this migration is the joining child of all three predecessors.
+# Alembic treats tuples as multi-parent merge points — see
+# https://alembic.sqlalchemy.org/en/latest/branches.html#working-with-multiple-bases
+down_revision = (
+    "038_checkout_expirations",
+    "038_scheduled_emails",
+)
 branch_labels = None
 depends_on = None
 

@@ -5,7 +5,7 @@
 #       sendgrid-quota | morning-brief-kpi | signup-funnel
 #       credentials-expiry | env-audit | error-rate
 #       ticker-name-audit | email-compliance | section101-check
-#       checkout-followup | email-scheduler
+#       checkout-followup | email-scheduler | inactive-nudge
 set -uo pipefail
 
 JOB="${1:-}"
@@ -110,6 +110,18 @@ case "$JOB" in
     # cron exits 0 without emailing. Variance-flag flip after the
     # lawyer's Q-S1 answer drains pending backlog automatically.
     ./venv/bin/python scripts/nightly/email_scheduler_dispatcher.py; EC=$?
+    ;;
+  inactive-nudge)
+    # Wave G C-S2 — 24h onboarding inactive nudge.
+    # Suggested cadence: ``0 * * * *`` (every hour, on the hour). The
+    # window is a rolling 1h slice (24h-25h ago), so the 1h cadence
+    # gives every signup exactly one shot. Dispatcher is gated by
+    # ``PIVOX_INACTIVE_NUDGE_ENABLED`` env (default false) AND
+    # ``PIVOX_CS1_CONSENT_ENABLED`` (default false) — when either is
+    # off the cron exits 0 without emailing. Both flips required;
+    # CS1 framework gates the per-user INFORMATION consent at the
+    # sender layer regardless of this script.
+    ./venv/bin/python scripts/nightly/inactive_nudge_dispatcher.py; EC=$?
     ;;
   *)
     echo "Unknown job: $JOB" >&2
