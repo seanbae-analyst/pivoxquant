@@ -20,6 +20,16 @@ FRONTEND_URL="${FRONTEND_URL:-https://pivoxquant.com}"
 RAILWAY_BACKEND_URL="${RAILWAY_BACKEND_URL:-https://web-production-7b484b.up.railway.app}"
 TIMEOUT="${CANARY_TIMEOUT:-10}"
 
+# D8 manual-rollback gate: consecutive-failure threshold. When the count
+# reaches this many runs in a row, Slack message includes a copy-pasteable
+# `vercel rollback` command for CEO. **Never auto-rollbacks** (audit rule #3).
+ROLLBACK_THRESHOLD="${PIVOX_CANARY_ROLLBACK_THRESHOLD:-5}"
+
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+STATE_DIR="${PIVOX_CANARY_STATE_DIR:-${ROOT_DIR}/state}"
+STATE_FILE="${STATE_DIR}/vercel_canary_failures.json"
+mkdir -p "${STATE_DIR}"
+
 FAIL_COUNT=0
 FAIL_REASONS=""
 
@@ -75,8 +85,40 @@ probe "api-health-railway" "${RAILWAY_BACKEND_URL}/api/health"   "200"
 
 log "Canary complete: ${FAIL_COUNT} failure(s)"
 
+# ── D8 consecutive-failure tracking ──────────────────────────────────────────
+# Read prior streak from state file (best-effort; missing file = 0).
+PRIOR_STREAK=0
+if [ -f "${STATE_FILE}" ]; then
+  PRIOR_STREAK=$(grep -oE '"consecutive_failures"[[:space:]]*:[[:space:]]*[0-9]+' "${STATE_FILE}" 2>/dev/null \
+    | grep -oE '[0-9]+$' || true)
+  [ -z "${PRIOR_STREAK}" ] && PRIOR_STREAK=0
+fi
+
 if [ "${FAIL_COUNT}" -gt 0 ]; then
-  MSG="vercel-canary ALERT (${FAIL_COUNT} failure(s)) ${FAIL_REASONS}"
+  NEW_STREAK=$((PRIOR_STREAK + 1))
+else
+  NEW_STREAK=0
+fi
+
+# Persist state (json-ish; tests only need to parse consecutive_failures).
+cat > "${STATE_FILE}" <<EOF
+{
+  "consecutive_failures": ${NEW_STREAK},
+  "last_run_at": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
+  "last_fail_count": ${FAIL_COUNT}
+}
+EOF
+
+if [ "${FAIL_COUNT}" -gt 0 ]; then
+  MSG="vercel-canary ALERT (${FAIL_COUNT} failure(s), streak=${NEW_STREAK}) ${FAIL_REASONS}"
+
+  # When we reach the manual-rollback threshold, append a copy-pasteable
+  # rollback command. We surface the previous deployment as the rollback
+  # target (vercel rollback w/o id rolls to the immediately-previous one).
+  if [ "${NEW_STREAK}" -ge "${ROLLBACK_THRESHOLD}" ]; then
+    MSG="${MSG} | CONSIDER MANUAL ROLLBACK — run: vercel rollback --previous --yes (auto-rollback disabled by policy)"
+  fi
+
   warn "${MSG}"
   notify_slack "${MSG}"
   exit 1

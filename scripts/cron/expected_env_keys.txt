@@ -1,0 +1,37 @@
+# PivoxQuant — expected env keys for Vercel/Railway drift audit (D5).
+# Lines starting with # ignored. Edit when you add/remove required env vars.
+# scripts/nightly/env_sync_audit.sh consumes this. Falls back to .env.example
+# if this file is empty.
+
+# Core
+DATABASE_URL
+SECRET_KEY
+
+# Auth / OAuth
+GOOGLE_OAUTH_CLIENT_ID
+GOOGLE_OAUTH_CLIENT_SECRET
+KAKAO_OAUTH_CLIENT_ID
+KAKAO_OAUTH_CLIENT_SECRET
+
+# Brokers / data
+FMP_API_KEY
+ALPACA_API_KEY
+ALPACA_API_SECRET
+KIS_APP_KEY
+KIS_APP_SECRET
+
+# AI
+ANTHROPIC_API_KEY
+
+# Frontend gating
+BETA_PASSWORD
+
+# Email
+SENDGRID_API_KEY
+
+# Observability
+SENTRY_DSN
+
+# Payments (Live activation pending CEO)
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
