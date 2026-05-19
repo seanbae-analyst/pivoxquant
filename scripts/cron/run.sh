@@ -6,6 +6,7 @@
 #       credentials-expiry | env-audit | error-rate
 #       ticker-name-audit | email-compliance | section101-check
 #       checkout-followup | email-scheduler | inactive-nudge
+#       commerce-registration
 set -uo pipefail
 
 JOB="${1:-}"
@@ -110,6 +111,14 @@ case "$JOB" in
     # cron exits 0 without emailing. Variance-flag flip after the
     # lawyer's Q-S1 answer drains pending backlog automatically.
     ./venv/bin/python scripts/nightly/email_scheduler_dispatcher.py; EC=$?
+    ;;
+  commerce-registration)
+    # Wave I L-3 — 통신판매업 신고 D-day 월간 알림 (전자상거래법 §12).
+    # Suggested cadence (APScheduler 가 primary): ``0 9 1 * *`` (매월 1일 09:00 KST).
+    # macOS crontab fallback 시 동일 cron expression 사용. feature flag
+    # ``PIVOX_COMMERCE_REGISTERED=true`` 설정 시 스크립트 내부에서 즉시 exit 0 —
+    # 신고 완료 후 ~/.pivoxquant-env 1줄 추가만으로 알림 자동 중단.
+    ./venv/bin/python scripts/nightly/commerce_registration_reminder.py; EC=$?
     ;;
   inactive-nudge)
     # Wave G C-S2 — 24h onboarding inactive nudge.
