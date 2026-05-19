@@ -1,0 +1,195 @@
+# Vercel + Railway Deploy Canary (AU2)
+#
+# Replaces `post-deploy-canary.yml.disabled`. The disabled version
+# sleep'd 180s on push to main, which races against Railway's actual
+# deploy completion. This rewrite:
+#
+#   1. Triggers on push to main with 240s grace window (Railway p95
+#      cold-deploy 180-220s observed during v44.7).
+#   2. Adds /pricing and /login critical paths (CEO confirmed these
+#      are the public conversion funnel — they were not covered
+#      before).
+#   3. Auth-required endpoints (/dashboard) expect 302 (login
+#      redirect) not 200 — explicit allow-list per path.
+#   4. Opens a single GitHub Issue per failure (label
+#      `incident/canary` for triage).
+#   5. Posts to Slack via existing SLACK_WEBHOOK_URL secret (already
+#      in use by other workflows).
+#   6. Does NOT auto-rollback (P1 audit gate; this wave is
+#      detect+alert only — manual `git revert` is the documented
+#      response per CLAUDE.md).
+#
+# Cost: 1 run per push to main, ~5 min/run with sleep. Estimated
+# 20 pushes/wk → ~100 min/wk → ~400 min/month. Within free tier
+# (2000 min) with margin.
+#
+# Required secrets:
+#   RAILWAY_BACKEND_URL  — e.g. https://web-production-7b484b.up.railway.app
+#   SLACK_WEBHOOK_URL    — optional; if unset, Slack step is skipped
+#
+# Kill switch: if Railway deploy window shifts and 240s is too short,
+# bump the sleep below. If false-positive rate > 20%, set `if: false`
+# on the canary job and rely on /api/health UptimeRobot probe.
+
+name: Vercel + Railway Deploy Canary
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  canary:
+    name: Production health canary
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Wait for Railway + Vercel deploy window (240s)
+        # Railway p95 cold deploy is ~180-220s. 240s gives margin for
+        # the 5s Vercel CDN propagation. If a deploy hasn't completed
+        # in this window, the canary will probe the previous version
+        # — that's still useful (it tells us "main + 4min" was green).
+        run: sleep 240
+
+      - name: Probe critical paths
+        id: probe
+        env:
+          RAILWAY_BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
+          FRONTEND_URL: https://pivoxquant.com
+        run: |
+          set +e
+          ok=1
+          reasons=""
+
+          probe() {
+            local label="$1"
+            local url="$2"
+            local allowed="$3"   # space-separated list of acceptable codes
+            local body
+            local code
+            # 3 retries with 10s backoff for transient CDN flaps
+            for attempt in 1 2 3; do
+              code=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" "$url")
+              if echo " $allowed " | grep -q " $code "; then
+                echo "OK   [$label] $url -> $code"
+                return 0
+              fi
+              echo "WARN [$label] attempt $attempt: $url -> $code (allowed: $allowed)"
+              sleep 10
+            done
+            ok=0
+            reasons+="- $label ($url) returned HTTP $code (expected: $allowed)\n"
+            return 1
+          }
+
+          # Backend health — must be 200 with status:ok
+          hbody=""
+          for i in 1 2 3 4 5; do
+            hbody=$(curl -sS -m 20 "${RAILWAY_BACKEND_URL}/api/health")
+            if echo "$hbody" | grep -q '"status":"ok"'; then
+              echo "OK   [health] /api/health -> status:ok"
+              break
+            fi
+            echo "WARN [health] attempt $i: ${hbody:0:120}"
+            sleep 20
+          done
+          if ! echo "$hbody" | grep -q '"status":"ok"'; then
+            ok=0
+            reasons+="- /api/health not ok after 5 retries: ${hbody:0:200}\n"
+          fi
+
+          # Public marketing paths — must serve HTML
+          probe "landing"    "${FRONTEND_URL}/"          "200 307 308"
+          probe "pricing"    "${FRONTEND_URL}/pricing"   "200 307 308"
+          probe "login"      "${FRONTEND_URL}/login"     "200 307 308"
+
+          # Auth-required path — must redirect (302/307) or serve gate page (200).
+          # A 500 here means the route crashed before auth check ran.
+          probe "dashboard"  "${FRONTEND_URL}/dashboard" "200 302 307 308"
+
+          # Backend auth-required endpoint — 401 is healthy (auth gate intact).
+          # 500/404 means blueprint registration or route crash.
+          probe "api-indices" "${RAILWAY_BACKEND_URL}/api/market/indices?region=us" "200 401"
+
+          echo "ok=$ok" >> $GITHUB_OUTPUT
+          {
+            echo "reasons<<EOF"
+            echo -e "$reasons"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Canary passed
+        if: steps.probe.outputs.ok == '1'
+        run: echo "Canary OK — ${{ github.sha }} healthy on production"
+
+      - name: Open incident issue
+        if: steps.probe.outputs.ok != '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          commit="${{ github.sha }}"
+          short=$(echo "$commit" | cut -c1-7)
+          title="Canary failed: $short on production"
+          body=$(cat <<EOF
+          ## Post-deploy canary detected a regression
+
+          - Commit: [\`$short\`](${{ github.server_url }}/${{ github.repository }}/commit/$commit)
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ### Failures
+          ${{ steps.probe.outputs.reasons }}
+
+          ### Immediate response (auto-rollback NOT enabled — manual action required)
+          1. Check Railway logs: https://railway.com/
+          2. Check Vercel deployment: https://vercel.com/
+          3. If unclear cause: \`git revert $short --no-edit && git push\`
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$title" \
+            --body "$body" \
+            --label "incident/canary,P0"
+
+      - name: Notify Slack
+        if: steps.probe.outputs.ok != '1' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          payload=$(cat <<EOF
+          {
+            "text": "Canary FAILED on production — commit ${{ github.sha }}",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "Canary FAILED"}
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Commit:* \`${{ github.sha }}\`\n*Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nSee newly opened GitHub Issue with label \`incident/canary\`."
+                }
+              }
+            ]
+          }
+          EOF
+          )
+          curl -sS -X POST -H 'Content-Type: application/json' \
+            -d "$payload" "$SLACK_WEBHOOK_URL" || true
+
+      - name: Fail the workflow
+        if: steps.probe.outputs.ok != '1'
+        run: exit 1

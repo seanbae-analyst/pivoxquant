@@ -1,0 +1,168 @@
+# Alembic Head Guard (AU1)
+#
+# P0 regression gate added 2026-05-19 in response to the v44.7
+# `provisioning_failed` OAuth incident: alembic revision 035 was
+# present in main but never applied to Railway production because no
+# CI check verified the migration chain on PR. The runtime
+# `_do_migrations` patch added a column on boot, but the underlying
+# safety property — "main always has exactly one alembic head" — had
+# no enforcement.
+#
+# What this guards against:
+#   1. PR introduces a second alembic head (forgot to merge into
+#      existing chain → branchy history → unpredictable upgrade).
+#   2. PR adds/edits a migration whose `down_revision` points at a
+#      revision id that no longer exists (orphan branch).
+#
+# Why not in `ci.yml`:
+#   ci.yml runs on every push to every branch (~hundreds of runs/wk).
+#   This guard only matters when migrations actually change, so we
+#   path-filter the trigger and save ~15 CI-minutes/week. Also keeps
+#   ci.yml a pure lint+build job (no Python install for migrations).
+#
+# Cost: ~30 s / run, runs only on migration touches. ~5 runs/month
+# estimated → < 3 CI-minutes/month.
+#
+# Local invocation:
+#   FLASK_APP=app DATABASE_URL=sqlite:///:memory: flask db heads
+#   # must print exactly one revision id
+#
+# Kill switch: if false positives on legitimate branchy work, set the
+# job `if: false` (do NOT delete — re-enable post-merge).
+
+name: Alembic Head Guard
+
+on:
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "migrations/**"
+      - "alembic/**"
+      - "extensions.py"
+      - "app.py"
+  push:
+    branches: [main]
+    paths:
+      - "migrations/**"
+      - "alembic/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  head-guard:
+    name: Verify single alembic head
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # `flask db heads` reads migration files only — no real DB
+      # connection. In-memory sqlite is enough to satisfy
+      # config.py's DATABASE_URL requirement (which is enforced in
+      # prod but tolerates sqlite in dev/CI).
+      DATABASE_URL: "sqlite:///:memory:"
+      FLASK_APP: "app"
+      # Suppress prod-only secrets. The Flask app factory tolerates
+      # missing OAuth keys when running CLI commands.
+      OAUTH_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Static filesystem head check (no DB required)
+        # First-line defense: parse migration files directly. Catches
+        # multi-head conditions without booting Flask. Runs in ~1s.
+        run: |
+          python3 << 'PY'
+          import re, glob, sys
+          revs = {}
+          for f in sorted(glob.glob("migrations/versions/*.py")):
+              text = open(f).read()
+              m = re.search(r"^revision\s*=\s*['\"]([^'\"]+)['\"]", text, re.M)
+              d = re.search(r"^down_revision\s*=\s*(?:['\"]([^'\"]+)['\"]|None)", text, re.M)
+              if not m:
+                  print(f"WARN: {f} has no revision id, skipping")
+                  continue
+              revs[m.group(1)] = d.group(1) if (d and d.group(1)) else None
+
+          # Detect orphans: down_revision pointing at non-existent rev
+          orphans = [(r, dr) for r, dr in revs.items() if dr and dr not in revs]
+          if orphans:
+              print("FAIL: orphan migrations (down_revision references missing rev):")
+              for r, dr in orphans:
+                  print(f"  {r} -> {dr} (missing)")
+              sys.exit(1)
+
+          # Detect multiple heads
+          parents = {dr for dr in revs.values() if dr}
+          heads = sorted(r for r in revs if r not in parents)
+          print(f"Total revisions: {len(revs)}")
+          print(f"Heads detected: {heads}")
+          if len(heads) != 1:
+              print(f"FAIL: expected exactly 1 alembic head, found {len(heads)}")
+              print("Likely cause: branchy merge. Run `flask db merge` or rebase.")
+              sys.exit(1)
+          print(f"OK: single head = {heads[0]}")
+          PY
+
+      - name: Flask-Migrate head check (canonical)
+        # Second-line defense: ask Flask-Migrate itself. This catches
+        # cases where env.py or alembic.ini wiring is broken — the
+        # static scan above can't see that. Matches what runs in prod
+        # `_do_migrations` boot path.
+        run: |
+          set -e
+          out=$(flask db heads 2>&1)
+          echo "flask db heads output:"
+          echo "$out"
+          # Each head prints one line like "036_growth_user_id_fk (head)"
+          count=$(echo "$out" | grep -c "(head)" || true)
+          if [ "$count" != "1" ]; then
+            echo "FAIL: flask db heads reported $count head(s), expected exactly 1"
+            exit 1
+          fi
+          echo "OK: flask db heads reports single head"
+
+      - name: Summarize on PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '### Alembic Head Guard failed',
+              '',
+              'This PR introduces a branchy migration history or an',
+              'orphan `down_revision`. Production deploy requires a',
+              'single linear chain (see v44.7 `provisioning_failed`',
+              'post-mortem).',
+              '',
+              '**Fix options:**',
+              '```bash',
+              '# Option A — merge the heads into a single chain',
+              'flask db merge -m "merge heads" head1 head2',
+              '',
+              '# Option B — rebase your migration onto current head',
+              '# Edit your migration file and set:',
+              '#   down_revision = "<current_main_head>"',
+              '```',
+              '',
+              'See the job log for the offending revision ids.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

@@ -1,0 +1,403 @@
+# Daily Regression Gate (S3)
+#
+# Runs every day at 06:00 KST (21:00 UTC previous day). Three parallel
+# verification jobs catch regressions that PR-time CI doesn't:
+#
+#   verify-api       — production API critical endpoints (HTTP +
+#                      response shape). Catches: backend deploy
+#                      degraded silently, DB index missing, OAuth
+#                      provider rate-limited.
+#   verify-data      — KIS API / FX rate / ticker→name freshness.
+#                      Catches: KIS token expired, FX rate stale > 24h,
+#                      ticker mapping diverged (per
+#                      feedback_ticker_display.md).
+#   verify-security  — secret regression scan + auth gate live probe.
+#                      Catches: BETA_PASSWORD plaintext in repo, OAuth
+#                      state HMAC verification broken, Stripe webhook
+#                      signature gate disabled.
+#
+# Why not in CI:
+#   These checks require LIVE production state (Railway + Vercel).
+#   PR-time CI runs against ephemeral test DB and can't observe the
+#   things that drift between deploys (cache poisoning, expired
+#   tokens, stale FX).
+#
+# Why not hourly:
+#   06:00 KST aligns with KR market open prep — if the gate fails,
+#   CEO has the trading day to respond before US market open. Hourly
+#   would burn ~24x more CI-minutes for no detection benefit (drifts
+#   are slow).
+#
+# Cost: 3 parallel jobs × ~3 min/job × 30 days = ~270 CI-min/month.
+# Within free-tier budget (2000 min) with 1730 min margin.
+#
+# Required secrets:
+#   RAILWAY_BACKEND_URL  — production backend base URL
+#   SLACK_WEBHOOK_URL    — optional; if unset, Slack step is skipped
+#   DEV_LOGIN_SECRET     — optional; enables authenticated API probes
+#                          (see scripts/nightly/ticker_health.py)
+#
+# Kill switch: if any job's false-positive rate > 30%, bump cron to
+# weekly (`0 21 * * 0`) and triage. If GitHub Actions usage exceeds
+# 80% of monthly free quota, comment out the cron trigger (keep
+# workflow_dispatch so on-demand runs still work).
+
+name: Daily Regression Gate
+
+on:
+  schedule:
+    # 21:00 UTC = 06:00 KST (next day). Use UTC explicitly because
+    # GitHub Actions cron is always UTC regardless of repo timezone.
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: 'Subset to run: all | api | data | security'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - api
+          - data
+          - security
+
+concurrency:
+  group: ${{ github.workflow }}
+  # Don't cancel in progress; daily run completes in < 10 min.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verify-api:
+    name: verify-api (production endpoints)
+    if: github.event_name == 'schedule' || github.event.inputs.jobs == 'all' || github.event.inputs.jobs == 'api'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      status: ${{ steps.probe.outputs.status }}
+      reasons: ${{ steps.probe.outputs.reasons }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Probe critical API endpoints
+        id: probe
+        env:
+          BACKEND: ${{ secrets.RAILWAY_BACKEND_URL }}
+        run: |
+          set +e
+          fails=""
+
+          check() {
+            local label="$1"
+            local url="$2"
+            local expected="$3"
+            local code
+            code=$(curl -sS -m 15 -o /dev/null -w "%{http_code}" "$url")
+            if echo " $expected " | grep -q " $code "; then
+              echo "OK   $label -> $code"
+            else
+              fails+="- $label: got $code, expected $expected\n"
+              echo "FAIL $label -> $code (expected: $expected)"
+            fi
+          }
+
+          # Healthcheck must be 200 with status:ok
+          hbody=$(curl -sS -m 15 "${BACKEND}/api/health")
+          if echo "$hbody" | grep -q '"status":"ok"'; then
+            echo "OK   /api/health (status:ok)"
+          else
+            fails+="- /api/health: not ok (body: ${hbody:0:120})\n"
+          fi
+
+          # Auth-required endpoints must 401 (gate intact). Real routes:
+          #   routes/portfolio.py:142  @portfolio_bp.route("")  url_prefix="/api/portfolio"
+          #   routes/watchlist.py:118  @watchlist_bp.route("")  url_prefix="/api/watchlist"
+          #   routes/signals.py:146    @signals_bp.route("/signals")  url_prefix="/api"
+          check "/api/portfolio"           "${BACKEND}/api/portfolio"           "401"
+          check "/api/watchlist"           "${BACKEND}/api/watchlist"           "401"
+          check "/api/signals"             "${BACKEND}/api/signals"             "401"
+          check "/api/market/indices?region=us" "${BACKEND}/api/market/indices?region=us" "200 401"
+          check "/api/market/indices?region=kr" "${BACKEND}/api/market/indices?region=kr" "200 401"
+
+          # FX endpoint — auth-gated per routes/market.py:257 @api_auth.
+          # 401 is the healthy "gate intact" response.
+          check "/api/market/fx"           "${BACKEND}/api/market/fx"           "401"
+
+          if [ -z "$fails" ]; then
+            echo "status=ok" >> $GITHUB_OUTPUT
+          else
+            echo "status=fail" >> $GITHUB_OUTPUT
+          fi
+          {
+            echo "reasons<<EOF"
+            echo -e "$fails"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+  verify-data:
+    name: verify-data (KIS / FX / ticker freshness)
+    if: github.event_name == 'schedule' || github.event.inputs.jobs == 'all' || github.event.inputs.jobs == 'data'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      status: ${{ steps.probe.outputs.status }}
+      reasons: ${{ steps.probe.outputs.reasons }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Probe data freshness signals
+        id: probe
+        env:
+          BACKEND: ${{ secrets.RAILWAY_BACKEND_URL }}
+          DEV_LOGIN_SECRET: ${{ secrets.DEV_LOGIN_SECRET }}
+        run: |
+          set +e
+          fails=""
+
+          # FX rate freshness — endpoint is auth-gated
+          # (@api_auth at routes/market.py:257). If DEV_LOGIN_SECRET is
+          # available, log in and verify age < 24h; otherwise the FX
+          # gate is only liveness-checked by verify-api (401 is healthy).
+          # The DEV_LOGIN_SECRET path mirrors scripts/nightly/ticker_health.py.
+          if [ -n "${DEV_LOGIN_SECRET:-}" ]; then
+            cookiejar=$(mktemp)
+            curl -sS -m 15 -c "$cookiejar" \
+              -X POST -H 'Content-Type: application/json' \
+              -d "{\"secret\":\"${DEV_LOGIN_SECRET}\"}" \
+              "${BACKEND}/api/auth/dev-login" > /dev/null
+            fxbody=$(curl -sS -m 15 -b "$cookiejar" "${BACKEND}/api/market/fx" 2>&1)
+            fxage=$(echo "$fxbody" | python3 -c "
+          import sys, json
+          try:
+              d = json.loads(sys.stdin.read())
+              # market.py returns age_seconds directly (see docstring)
+              age_s = d.get('age_seconds')
+              if age_s is None or age_s < 0:
+                  print('unknown')
+              else:
+                  print(f'{age_s/3600:.2f}')
+          except Exception as e:
+              print('unknown', file=sys.stderr)
+              print('unknown')
+          ")
+            echo "FX age (hours): $fxage"
+            case "$fxage" in
+              unknown)
+                echo "WARN  FX endpoint returned no age_seconds, skipping freshness check"
+                ;;
+              *)
+                if awk "BEGIN { exit (${fxage} > 24) ? 0 : 1 }"; then
+                  fails+="- FX rate stale: ${fxage}h old (threshold: 24h)\n"
+                fi
+                ;;
+            esac
+            rm -f "$cookiejar"
+          else
+            echo "SKIP  DEV_LOGIN_SECRET unset — FX freshness check requires auth (liveness still covered by verify-api)"
+          fi
+
+          # Ticker→name mapping spot-check: pick 3 known tickers and
+          # verify backend returns a non-empty name. Drift here means
+          # the KIS master file is stale (per
+          # feedback_ticker_display.md naked-ticker regression gate).
+          # Real endpoint: routes/market.py:173 @market_bp.route("/lookup/<ticker>")
+          # with url_prefix="/api" → /api/lookup/<TICKER>.
+          for t in "AAPL" "005930.KS" "TSLA"; do
+            url="${BACKEND}/api/lookup/${t}"
+            body=$(curl -sS -m 15 "$url" 2>&1)
+            code=$(curl -sS -m 15 -o /dev/null -w "%{http_code}" "$url")
+            if [ "$code" = "401" ]; then
+              echo "SKIP  ${t} (auth-gated; cannot verify name in unauth mode)"
+              continue
+            fi
+            if [ "$code" != "200" ]; then
+              fails+="- ticker lookup ${t}: HTTP ${code}\n"
+              continue
+            fi
+            if echo "$body" | python3 -c "
+          import sys, json
+          d = json.loads(sys.stdin.read())
+          n = d.get('name') or d.get('display_name') or d.get('symbol') or ''
+          sys.exit(0 if str(n).strip() else 1)
+          "; then
+              echo "OK    ${t} has name/symbol"
+            else
+              fails+="- ticker lookup ${t}: empty/missing name field\n"
+            fi
+          done
+
+          if [ -z "$fails" ]; then
+            echo "status=ok" >> $GITHUB_OUTPUT
+          else
+            echo "status=fail" >> $GITHUB_OUTPUT
+          fi
+          {
+            echo "reasons<<EOF"
+            echo -e "$fails"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+  verify-security:
+    name: verify-security (secret + auth gate)
+    if: github.event_name == 'schedule' || github.event.inputs.jobs == 'all' || github.event.inputs.jobs == 'security'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      status: ${{ steps.probe.outputs.status }}
+      reasons: ${{ steps.probe.outputs.reasons }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # full history for secret scan
+
+      - name: Probe security invariants
+        id: probe
+        env:
+          BACKEND: ${{ secrets.RAILWAY_BACKEND_URL }}
+        run: |
+          set +e
+          fails=""
+
+          # 1. BETA_PASSWORD plaintext regression in repo
+          #    (per C1 filter-repo + memory note — must never recur)
+          if git grep -nIE 'BETA_PASSWORD\s*=\s*["'\''][A-Za-z0-9!@#$%^&*_-]{8,}' -- '*.py' '*.ts' '*.tsx' '*.js' '*.env*' 2>/dev/null; then
+            fails+="- BETA_PASSWORD plaintext found in repo files\n"
+          fi
+
+          # 2. OAuth state HMAC verification — probe the callback with
+          #    an obviously-tampered state. Healthy backend responds
+          #    400/401/403 (not 500, not 302 to dashboard).
+          ocode=$(curl -sS -m 15 -o /dev/null -w "%{http_code}" \
+            "${BACKEND}/auth/google/callback?state=tampered&code=fake")
+          case "$ocode" in
+            400|401|403) echo "OK    OAuth callback rejects tampered state ($ocode)" ;;
+            302)         fails+="- OAuth callback redirected with tampered state (HMAC gate broken)\n" ;;
+            500)         fails+="- OAuth callback 500 on tampered state (should be 400/401/403)\n" ;;
+            *)           echo "WARN  OAuth callback unexpected $ocode (manual review)" ;;
+          esac
+
+          # 3. Stripe webhook signature gate — POST without signature
+          #    header. Healthy backend responds 400/401/403.
+          # Real endpoint: routes/billing.py:215 @billing_bp.route("/webhook")
+          # with url_prefix="/api/billing" → /api/billing/webhook.
+          scode=$(curl -sS -m 15 -o /dev/null -w "%{http_code}" \
+            -X POST -H 'Content-Type: application/json' \
+            -d '{"type":"checkout.session.completed"}' \
+            "${BACKEND}/api/billing/webhook")
+          case "$scode" in
+            400|401|403) echo "OK    Stripe webhook rejects unsigned POST ($scode)" ;;
+            200|201)     fails+="- Stripe webhook accepted unsigned POST ($scode) — signature gate disabled\n" ;;
+            *)           echo "WARN  Stripe webhook returned $scode (manual review)" ;;
+          esac
+
+          if [ -z "$fails" ]; then
+            echo "status=ok" >> $GITHUB_OUTPUT
+          else
+            echo "status=fail" >> $GITHUB_OUTPUT
+          fi
+          {
+            echo "reasons<<EOF"
+            echo -e "$fails"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+  aggregate:
+    name: Aggregate + alert
+    needs: [verify-api, verify-data, verify-security]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Collect failures
+        id: agg
+        env:
+          API_STATUS:    ${{ needs.verify-api.outputs.status }}
+          API_REASONS:   ${{ needs.verify-api.outputs.reasons }}
+          DATA_STATUS:   ${{ needs.verify-data.outputs.status }}
+          DATA_REASONS:  ${{ needs.verify-data.outputs.reasons }}
+          SEC_STATUS:    ${{ needs.verify-security.outputs.status }}
+          SEC_REASONS:   ${{ needs.verify-security.outputs.reasons }}
+        run: |
+          any_fail=0
+          summary=""
+          for j in API DATA SEC; do
+            s=$(eval echo \$${j}_STATUS)
+            r=$(eval echo \$${j}_REASONS)
+            if [ "$s" = "fail" ]; then
+              any_fail=1
+              summary+="### ${j}\n${r}\n"
+            fi
+          done
+          echo "any_fail=$any_fail" >> $GITHUB_OUTPUT
+          {
+            echo "summary<<EOF"
+            echo -e "$summary"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Open regression issue
+        if: steps.agg.outputs.any_fail == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          date=$(date -u +%Y-%m-%d)
+          title="Daily regression gate failed: $date"
+          body=$(cat <<EOF
+          ## Daily regression gate detected drift
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ${{ steps.agg.outputs.summary }}
+
+          ### Triage
+          1. Open the failing job log above for full curl traces.
+          2. If transient (network), re-run via workflow_dispatch.
+          3. If persistent, file P0/P1 fix tasks.
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$title" \
+            --body "$body" \
+            --label "regression/daily,P1"
+
+      - name: Notify Slack
+        if: steps.agg.outputs.any_fail == '1' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          payload=$(cat <<EOF
+          {
+            "text": "Daily regression gate FAILED — see GitHub Issue (label regression/daily)",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {"type": "plain_text", "text": "Daily Regression Gate FAILED"}
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              }
+            ]
+          }
+          EOF
+          )
+          curl -sS -X POST -H 'Content-Type: application/json' \
+            -d "$payload" "$SLACK_WEBHOOK_URL" || true
+
+      - name: Fail aggregate if any check failed
+        if: steps.agg.outputs.any_fail == '1'
+        run: exit 1
