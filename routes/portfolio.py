@@ -1738,3 +1738,142 @@ def portfolio_history():
                      exc_info=True)
 
     return jsonify({"data": data})
+
+
+# ── Reconcile (broker sync) ────────────────────────────────────────────────
+#
+# Symmetry note: `POST /api/broker/kis/sync` (routes/broker_oauth.py) already
+# triggers UserKISService.sync_to_db(). Frontend Portfolio Hero CTA reads
+# "Reconcile from broker" — the mockup names this endpoint `/portfolio/
+# reconcile` so we expose a thin wrapper at the portfolio surface that:
+#   1. checks each broker connection (KIS first, then Alpaca),
+#   2. invokes the existing sync_to_db() service,
+#   3. returns a unified {added, updated, removed, synced_at} response.
+#
+# Legal posture
+#   • READ-ONLY broker inquiry (KIS `inquire-balance`).
+#   • NO order placement, NO trade modification — §101 면제 트랙 유지.
+#   • Returns 404 if no broker connections exist (handled upstream by FE).
+#
+# 2026-05-19 (P2 #11): added per mockup spec
+# `frontend/src/app/(dashboard)/portfolio/_v2/page-v2.tsx:309`.
+
+@portfolio_bp.route("/reconcile", methods=["POST"])
+@api_auth
+@trade_rate_limit
+def reconcile_positions():
+    """Sync positions from any connected broker (KIS preferred, then Alpaca).
+
+    Response (200)::
+
+        {
+          "ok":         true,
+          "added":      [..tickers..],
+          "updated":    [..tickers..],
+          "removed":    [..tickers..],
+          "synced_at":  "2026-05-19T10:30:00Z",
+          "broker":     "kis" | "alpaca",
+          "available_cash":     float,
+          "total_value":        float
+        }
+
+    Errors
+      * 404 NO_BROKER_CONNECTION — no broker linked.
+      * 502 SYNC_FAILED         — broker reachable but errored.
+    """
+    from models import BrokerConnection
+    from services.broker.user_kis_service import (
+        UserKISError,
+        UserKISService,
+    )
+
+    user_id = current_user.id
+
+    # Inventory active connections, KIS first.
+    try:
+        connections = (
+            BrokerConnection.query
+            .filter_by(user_id=user_id, is_active=True)
+            .all()
+        )
+    except Exception as exc:
+        logger.error("reconcile: connection lookup failed user_id=%s: %s",
+                     user_id, exc)
+        return api_error(
+            "broker_lookup_failed",
+            "브로커 연결 정보를 조회할 수 없습니다.",
+            status=500,
+        )
+
+    if not connections:
+        return jsonify({
+            "ok":      False,
+            "error":   "연결된 브로커가 없습니다.",
+            "code":    "NO_BROKER_CONNECTION",
+        }), 404
+
+    # Snapshot existing tickers BEFORE the sync so we can report removed.
+    try:
+        before = {
+            p.ticker for p in
+            Position.query.filter_by(user_id=user_id).filter(Position.shares > 0).all()
+        }
+    except Exception:
+        before = set()
+
+    kis_conn = next((c for c in connections if c.broker == "kis"), None)
+
+    if kis_conn is not None:
+        try:
+            service = UserKISService(user_id, connection=kis_conn)
+        except UserKISError as exc:
+            return jsonify({
+                "ok":    False,
+                "error": exc.message,
+                "code":  exc.code,
+            }), exc.http_status
+
+        result = service.sync_to_db()
+        if not result.get("ok"):
+            return jsonify({
+                "ok":    False,
+                "error": result.get("error", "동기화에 실패했습니다."),
+                "code":  result.get("code", "SYNC_FAILED"),
+            }), 502
+
+        try:
+            after = {
+                p.ticker for p in
+                Position.query.filter_by(user_id=user_id).filter(Position.shares > 0).all()
+            }
+        except Exception:
+            after = set()
+        removed = sorted(before - after)
+
+        return jsonify({
+            "ok":             True,
+            "broker":         "kis",
+            "added":          result.get("added", []),
+            "updated":        result.get("updated", []),
+            "removed":        removed,
+            "synced_at":      datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "available_cash": result.get("available_cash", 0.0),
+            "total_value":    result.get("total_value", 0.0),
+        }), 200
+
+    # Alpaca fallback — UserAlpacaService.sync_account() does broker-side
+    # snapshot but does NOT yet write into Position; only equity/cash snapshot.
+    # We surface a 501 here rather than silently pretending positions synced.
+    alpaca_conn = next((c for c in connections if c.broker == "alpaca"), None)
+    if alpaca_conn is not None:
+        return jsonify({
+            "ok":    False,
+            "error": "Alpaca 계좌는 잔고만 동기화 가능합니다. KIS 계좌를 연결해 주세요.",
+            "code":  "ALPACA_RECONCILE_NOT_SUPPORTED",
+        }), 501
+
+    return jsonify({
+        "ok":    False,
+        "error": "지원되는 브로커가 연결되지 않았습니다.",
+        "code":  "NO_BROKER_CONNECTION",
+    }), 404
