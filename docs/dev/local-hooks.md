@@ -39,7 +39,7 @@ git config --get core.hooksPath
 |---|-----|-----|
 | 1 | Forbidden file extensions (.env, .db, .pem 등 staging) | `.gitignore` 보완 |
 | 2 | `market-ticker.tsx` SNAPSHOT_DATE > 14일 stale | 자체 |
-| 3 | Pattern scan: pivoxaudit / Sentry DSN / Anthropic / AWS / Stripe key | `secret-scan.yml` |
+| 3 | Pattern scan: beta-password regex / Sentry DSN / Anthropic / AWS / Stripe key | `secret-scan.yml` |
 | 4 | **Legal-guard**: BUY/SELL/HOLD/recommend/advice/추천/조언 (시그널 enum 화이트리스트) | `legal-guard.yml` |
 | 5 | **Frozen-file diff guard**: `.claude/frozen_files.yaml` `hard_frozen` 7건 변경 시 BLOCK + escape token 검사 | v45.4 G3 agent |
 | 6 | **Ruff check**: staged `.py` lint (ruff 미설치 시 skip) | `ci.yml` lint job |

@@ -82,6 +82,7 @@ def _walk(root: Path, suffixes: Tuple[str, ...], skip_dirs: Tuple[str, ...] = ()
         "backtest_results",
         ".venv",
         "venv",
+        ".claude",  # 2026-05-19: exclude agent worktrees + skill SoT (self-referential noise)
     }
     skip = default_skip | set(skip_dirs)
     out: List[Path] = []
