@@ -47,6 +47,7 @@ def register_blueprints(app):
     from .email_preferences import email_pref_bp  # 정통망법 §50 unsubscribe
     from .consents import consents_bp  # 정통망법 §50 ① marketing-consent record
     from .feedback import feedback_bp  # Wave G C-AC2 — NPS 1-click (transactional)
+    from .brief import brief_bp  # Earnings pre-brief queue (P2 #11 backend)
     from services.email.webhook import sendgrid_webhook_bp  # SendGrid Event Webhook
 
     # agent_worker is a sibling package and may be absent in some deploys
@@ -83,6 +84,7 @@ def register_blueprints(app):
         email_pref_bp,
         consents_bp,
         feedback_bp,
+        brief_bp,
         sendgrid_webhook_bp,
     ]
     if growth_bp is not None:

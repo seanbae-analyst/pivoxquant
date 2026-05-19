@@ -76,9 +76,9 @@ CARD_HEIGHT = 1920
 
 # Design system — Vantablack backdrop + Warm Gold hero + green/red deltas.
 COLOR_BG         = "#0B0D12"
-COLOR_FG         = "#F6F3EC"
+COLOR_FG         = "#F5F0E8"
 COLOR_FG_DIM     = "#8C8B87"
-COLOR_GOLD       = "#E2B96F"
+COLOR_BRONZE     = "#B8956A"
 COLOR_UP         = "#F04744"   # KR convention: red = up
 COLOR_DOWN       = "#3E8EDE"   # KR convention: blue = down
 COLOR_DIVIDER    = "#1B1E25"
@@ -440,12 +440,12 @@ class MonthlyBragService:
         if is_empty or return_pct is None:
             # New-user / no-trade variant — keeps bragging habit alive.
             hero_text = "Welcome"
-            hero_color = COLOR_GOLD
+            hero_color = COLOR_BRONZE
         else:
             sign = "+" if return_pct >= 0 else ""
             hero_text = f"{sign}{return_pct:.1f}%"
             hero_color = COLOR_UP if return_pct > 0 else (
-                COLOR_DOWN if return_pct < 0 else COLOR_GOLD
+                COLOR_DOWN if return_pct < 0 else COLOR_BRONZE
             )
 
         _draw_centered(hero_text, f_hero, 560, hero_color)
@@ -490,7 +490,7 @@ class MonthlyBragService:
         referral = data.get("referral_code") or ""
         if referral:
             link = f"{_SHARE_DOMAIN}/r/{referral}"
-            _draw_centered(link, f_water, 1800, COLOR_GOLD)
+            _draw_centered(link, f_water, 1800, COLOR_BRONZE)
 
         # ── Disclaimer (tiny) ─────────────────────────────────────────
         disclaimer = data.get("disclaimer") or ""
@@ -540,14 +540,14 @@ class MonthlyBragService:
             cta = (f'<p style="margin-top:24px;">'
                    f'<a href="{share_link}" '
                    f'style="display:inline-block;padding:12px 24px;'
-                   f'background:#E2B96F;color:#0B0D12;text-decoration:none;'
+                   f'background:#B8956A;color:#0B0D12;text-decoration:none;'
                    f'border-radius:8px;font-weight:600;">'
                    f'공유 링크 열기</a></p>')
 
         html = f"""<!doctype html><html><body style="font-family:-apple-system,sans-serif;
-background:#0B0D12;color:#F6F3EC;padding:32px;">
+background:#0B0D12;color:#F5F0E8;padding:32px;">
 <h1 style="margin:0 0 16px;">{name}님의 {month} 수익률</h1>
-<p style="font-size:48px;margin:0 0 24px;color:#E2B96F;"><strong>{ret_str}</strong></p>
+<p style="font-size:48px;margin:0 0 24px;color:#B8956A;"><strong>{ret_str}</strong></p>
 {img_tag}
 {cta}
 <p style="margin-top:32px;color:#8C8B87;font-size:12px;"><em>{disclaimer}</em></p>

@@ -17,7 +17,7 @@ from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 import numpy as np
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from models import Position
@@ -819,6 +819,155 @@ def rolling_var():
         logger.warning("risk.rolling_var failed: %s", e, exc_info=True)
         return jsonify([])
 
+
+
+@risk_bp.route("/timeline")
+@api_auth
+@legal_scrub_response
+def risk_timeline():
+    """Daily composite-risk series for the user's portfolio.
+
+    Query
+      days (int, default 90, range 30..180)
+
+    Response (200)
+      [
+        {date, composite, vix, var95, max_dd, sharpe},
+        ...
+      ]
+
+    All values are observational; status banding is NOT included (see
+    `/api/risk/layers` for status). When the portfolio is empty or the
+    returns matrix is too short, returns `[]` — the FE risk-timeline hook
+    treats this as "no data yet" and renders a placeholder.
+
+    Implementation notes
+      • Reuses `_portfolio_snapshot()` so the 5-minute cache covers this
+        endpoint too (no extra FMP cost).
+      • Composite = weighted blend of (VaR severity, max-DD severity,
+        VIX severity) on a 0-100 scale, lower = calmer. The exact weights
+        match the 7-Layer Risk Defense weighting (1/3, 1/3, 1/3 here is
+        a simplification — the live `/api/risk/summary` HHI/correlation
+        layers are not back-castable so they are omitted on the timeline).
+      • Rolling windows: 20-day for VaR, 90-day for max-DD, full window
+        for Sharpe. Sharpe annualised at √252.
+      • VIX is point-in-time (snapshot) not historical — surfaced as a
+        flat reference line so the FE can overlay regime banding.
+    """
+    try:
+        days_param = int(request.args.get("days", 90))
+    except (TypeError, ValueError):
+        days_param = 90
+    days_param = max(30, min(180, days_param))
+
+    try:
+        state, _, matrix, df_close = _portfolio_snapshot()
+    except Exception as exc:
+        logger.warning("risk.timeline snapshot failed: %s", exc, exc_info=True)
+        return jsonify([])
+
+    if state is None or matrix is None or matrix.shape[0] < 25 or df_close is None:
+        return jsonify([])
+
+    try:
+        import pandas as pd  # noqa: F401  (already a transitive dep)
+        n_pos = len(state["positions"])
+        weights = np.array(
+            [p["weight"] or (1.0 / max(n_pos, 1)) for p in state["positions"]],
+            dtype=float,
+        )
+        if weights.shape[0] != matrix.shape[1]:
+            weights = np.ones(matrix.shape[1], dtype=float) / matrix.shape[1]
+        s = weights.sum()
+        if s > 0:
+            weights = weights / s
+
+        # Daily portfolio returns
+        port_rets = matrix @ weights
+
+        window = 20
+        if len(port_rets) < window + 5:
+            return jsonify([])
+
+        # Align with the tail of df_close index for dates
+        try:
+            all_dates = list(df_close.index[-len(port_rets):])
+        except Exception:
+            all_dates = [
+                datetime.now(timezone.utc) - timedelta(days=i)
+                for i in range(len(port_rets) - 1, -1, -1)
+            ]
+
+        vix_snapshot = state.get("vix")
+
+        # Cumulative equity series for max-DD calc
+        cum = np.cumprod(1.0 + port_rets)
+
+        out: list[dict] = []
+        # Iterate from index `window` so the rolling VaR window has data.
+        for i in range(window, len(port_rets)):
+            w = port_rets[i - window:i]
+
+            # 95% historical VaR (1-day) as positive percent of NAV
+            var_pct = -float(np.percentile(w, 5)) * 100.0
+
+            # Max drawdown over the last 90 trading days ending at i
+            dd_lookback_start = max(0, i - 90)
+            seg = cum[dd_lookback_start:i + 1]
+            if len(seg) >= 2:
+                peak = np.maximum.accumulate(seg)
+                # Avoid division by zero
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    dd_series = (seg - peak) / peak
+                max_dd = float(np.nanmin(dd_series)) * 100.0  # negative %
+            else:
+                max_dd = 0.0
+
+            # Sharpe annualised over the rolling window
+            std = float(np.std(w, ddof=1)) if len(w) > 1 else 0.0
+            mean_r = float(np.mean(w))
+            if std > 0:
+                sharpe = (mean_r / std) * (252 ** 0.5)
+            else:
+                sharpe = 0.0
+
+            # Composite (0-100, higher = more stress).
+            # Heuristic mapping:
+            #   VaR  : 1% → 10pts, 5% → 50pts (linear, capped 100)
+            #   DD   : 5% → 25pts, 20% → 100pts (use abs(max_dd))
+            #   VIX  : 15 → 10pts, 30 → 70pts, 40+ → 100pts
+            var_score = max(0.0, min(100.0, var_pct * 10.0))
+            dd_score = max(0.0, min(100.0, abs(max_dd) * 5.0))
+            if vix_snapshot is None:
+                vix_score = 30.0  # neutral midpoint when VIX unavailable
+                vix_emit = None
+            else:
+                vix_score = max(0.0, min(100.0, (float(vix_snapshot) - 10.0) * 5.0))
+                vix_emit = round(float(vix_snapshot), 2)
+
+            composite = round((var_score + dd_score + vix_score) / 3.0, 1)
+
+            d = all_dates[i]
+            try:
+                date_str = d.strftime("%Y-%m-%d")
+            except Exception:
+                date_str = str(d)[:10]
+
+            out.append({
+                "date":      date_str,
+                "composite": composite,
+                "vix":       vix_emit,
+                "var95":     round(var_pct, 2),
+                "max_dd":    round(max_dd, 2),
+                "sharpe":    round(sharpe, 2),
+            })
+
+        # Trim to requested window (caller asks for `days_param` calendar
+        # days; this is trading-day-trimmed which is the FE-friendly shape).
+        return jsonify(out[-days_param:])
+    except Exception as exc:
+        logger.warning("risk.timeline compute failed: %s", exc, exc_info=True)
+        return jsonify([])
 
 
 @risk_bp.route("/concentration")

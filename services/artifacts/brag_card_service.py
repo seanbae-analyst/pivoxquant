@@ -77,9 +77,9 @@ CARD_HEIGHT = 1920
 # Task spec calls for #0a0a0a; we honor that exact value here and let
 # the frontend globals handle the slightly warmer #0a0e17 elsewhere.
 COLOR_BG      = "#0a0a0a"      # Vantablack backdrop
-COLOR_FG      = "#F6F3EC"      # primary text (warm off-white)
-COLOR_FG_DIM  = "rgba(246,243,236,0.70)"  # watermark
-COLOR_GOLD    = "#E2B96F"      # Warm Gold — gain months
+COLOR_FG      = "#F5F0E8"      # primary text (v3 ivory)
+COLOR_FG_DIM  = "rgba(245,240,232,0.70)"  # watermark
+COLOR_BRONZE  = "#B8956A"      # v3 bronze — gain months
 COLOR_NEUTRAL = "#8C8B87"      # Loss months / "Long View" tone
 
 
@@ -820,7 +820,7 @@ class BragCardService:
         else:
             sign = "+" if ret >= 0 else ""
             hero = f"{sign}{ret:.1f}%"
-            hero_color = COLOR_GOLD if ret >= 0 else COLOR_NEUTRAL
+            hero_color = COLOR_BRONZE if ret >= 0 else COLOR_NEUTRAL
 
         month = escape(data.get("month_label", "—"))
         return f"""<!doctype html>

@@ -65,18 +65,19 @@ class TestFxStale24h:
     """Alert when rate is > 24h stale."""
 
     def test_stale_returns_1_and_writes_state(self, tmp_path):
-        mod = _load_module(tmp_path)
-        # Patch module-level _STATE_DIR/_STATE_FILE to use tmp_path
-        (tmp_path / "state").mkdir(parents=True, exist_ok=True)
-        mod._STATE_DIR = tmp_path / "state"
-        mod._STATE_FILE = tmp_path / "state" / "fx_staleness_alerted.json"
-
         stale_ts = time.time() - (25 * 3600)
         fake_fx = types.ModuleType("services.fx_service")
         fake_fx.get_rate = lambda: 1380.0
         fake_fx.last_updated = lambda: stale_ts
 
+        # Load module inside patch.dict so exec_module sees the fake fx_service
         with patch.dict(sys.modules, {"services.fx_service": fake_fx}):
+            mod = _load_module(tmp_path)
+            # Patch module-level _STATE_DIR/_STATE_FILE to use tmp_path
+            (tmp_path / "state").mkdir(parents=True, exist_ok=True)
+            mod._STATE_DIR = tmp_path / "state"
+            mod._STATE_FILE = tmp_path / "state" / "fx_staleness_alerted.json"
+
             with patch.object(mod, "_post_slack", return_value=True) as mock_slack:
                 with patch.object(mod, "_capture_sentry"):
                     rc = mod.check_fx_staleness()
@@ -90,16 +91,17 @@ class TestFxStale24h:
 
     def test_never_fetched_returns_1(self, tmp_path):
         """last_updated() == 0.0 means never fetched — treated as stale."""
-        mod = _load_module(tmp_path)
-        (tmp_path / "state").mkdir(parents=True, exist_ok=True)
-        mod._STATE_DIR = tmp_path / "state"
-        mod._STATE_FILE = tmp_path / "state" / "fx_staleness_alerted.json"
-
         fake_fx = types.ModuleType("services.fx_service")
         fake_fx.get_rate = lambda: 1380.0
         fake_fx.last_updated = lambda: 0.0
 
+        # Load module inside patch.dict so exec_module sees the fake fx_service
         with patch.dict(sys.modules, {"services.fx_service": fake_fx}):
+            mod = _load_module(tmp_path)
+            (tmp_path / "state").mkdir(parents=True, exist_ok=True)
+            mod._STATE_DIR = tmp_path / "state"
+            mod._STATE_FILE = tmp_path / "state" / "fx_staleness_alerted.json"
+
             with patch.object(mod, "_post_slack", return_value=True):
                 with patch.object(mod, "_capture_sentry"):
                     rc = mod.check_fx_staleness()
