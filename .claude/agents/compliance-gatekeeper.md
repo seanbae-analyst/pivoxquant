@@ -207,6 +207,18 @@ effort: high
 ### 다음 점검: YYYY-MM-DD 09:00 KST
 ```
 
+### 5.1 7 BLOCKER 표준 verification command 표 (v45.3 표준화)
+
+| # | BLOCKER | Verification command (1줄) | PASS 조건 |
+|---|---------|----------------------------|----------|
+| B-1 | 개인정보처리방침 한글+영문 | `grep -c "PIPA\|개인정보 보호법" /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/app/privacy/page.tsx` | result `>= 2` (한글 + 영문 둘 다) |
+| B-2 | 이용약관 한글+영문 | `wc -l /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/app/terms/page.tsx \| awk '{print $1}'` | result `>= 100` (기준치 본문 충분) |
+| B-3 | 정통망법 §50 opt-out | `grep -rln "is_optout_required\|List-Unsubscribe" /Users/seanbae/Desktop/취준/pivoxquant/services/email/ \| wc -l` | result `>= 2` |
+| B-4 | DisclaimerBanner 모든 분석 페이지 | `grep -rln "DisclaimerBanner" /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/app/\(dashboard\) \| wc -l` | result `>= 8` (signals/portfolio/risk/discover/detail/market/ai/reports) |
+| B-5 | PIPA §28-8 marketing consent | `grep -rln "marketing_consent\|cross_border" /Users/seanbae/Desktop/취준/pivoxquant/models/ /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/components/ \| wc -l` | result `>= 2` |
+| B-6 | 전자상거래법 §17 청약철회 | `grep -c "청약철회\|cancellation_window" /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/content/terms-ko.md` | result `>= 1` |
+| B-7 | 금소법 §19 광고규제 | `grep -rE "수익\s*보장\|전문가\s*추천\|guaranteed return" /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/ \| wc -l` | result `= 0` (금지어 0건) |
+
 ---
 
 ## 6. compliance-evidence skill 연계
@@ -221,6 +233,37 @@ effort: high
 | ④ 일반화된 정보 제공만 | B-4 AI 생성 표시 + Artifact 단방향 | 1:1 자문 0건 / 챗봇 양방향 0건 |
 
 compliance-evidence skill이 본 agent 호출 → 분기별 스냅샷 자동 수집.
+
+---
+
+## 6.1 2026-04~05 신규 규제 7건 → B-X gate 매핑 (regulatory_changes_2026-05.md cross-ref)
+
+memory `regulatory_changes_2026-05.md` 의 신규 규제 7건 (HIGH 3 / MEDIUM 3 / LOW 1)을 본 B-1~B-7 게이트에 매핑.
+**다음 스캔 예정: 2026-08-15** (regulatory-monitor agent 자동 fire).
+
+| 규제 | 위험도 | 시행일 | 매핑 BLOCKER | 매핑 사유 |
+|------|--------|--------|--------------|----------|
+| ① 정통망법 §50 (이메일 6% 과징금) | HIGH | 기시행 | B-3 | opt-out 인프라 직접 매핑 |
+| ② 유사투자자문업 양방향 채널 제재 | HIGH | 2026-05 시행 | B-7 | §101 면제 트랙 4요건 + 양방향 챗봇 0건 |
+| ③ AI 생성물 표시제 | HIGH | 2026-01 기시행 | B-4 | DisclaimerBanner 외 AI-generated 워터마크 추가 sweep |
+| ④ PIPA 마케팅 동의 (10% 과징금) | MEDIUM | 2026-09-11 시행 | B-5 | marketing_consent + cross_border 동의 모달 |
+| ⑤ 금소법 §19 (설명의무 + 적합성) | MEDIUM | 기시행 | B-7 | 페르소나 분류 + 위험 고지 UI + 광고규제 어휘 |
+| ⑥ 전자상거래법 §17 (가분적 디지털콘텐츠) | MEDIUM | 2026-05 시행 | B-6 | 7일 청약철회 + 가분 환불 정책 |
+| ⑦ KRX 공시 데이터 라이선스 변경 | LOW | 2026-06 시행 | (B-X 없음) | KRX Open Data Portal 사용 시 면제 (project_email_infra cross-ref 아님) |
+
+**룰**: 신규 규제 발견 시 본 표 갱신 → regulatory-monitor agent와 cross-ref 협업 (본 agent 단독 추가 금지, Iron Rule #4).
+
+---
+
+## 6.2 regulatory-monitor agent cross-reference (v45.3 강화)
+
+- **본 agent (compliance-gatekeeper)**: 운영 layer — 7 BLOCKER 일일 status 실측 + dashboard
+- **regulatory-monitor**: 변화 감지 layer — 신규 규제 / 시행일 변경 / 과징금률 변경 monitoring
+- **분리 원칙**:
+  - 본 agent는 *현재* status (grep 실측) — 신규 규제 분석 금지 (Iron Rule #4)
+  - regulatory-monitor가 신규 규제 발견 시 → 본 agent §6.1 표 update 요청 (CEO 승인 후)
+  - 본 agent는 신규 규제 발견 시 → 즉시 regulatory-monitor escalate (자체 분석 X)
+- **다음 자동 스캔**: 2026-08-15 (regulatory-monitor scheduled fire) — 본 agent는 결과 받아 §6.1 갱신만
 
 ---
 

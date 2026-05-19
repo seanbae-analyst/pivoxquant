@@ -143,6 +143,29 @@ You are the launch operations chief for PivoxQuant. Your job is to remove contex
 | #18 | artifact-qa fixture 빌드 (신규) | qa | 🔴 PENDING |
 | #19 | Google Workspace 결제 결정 (신규) | infra | 🔴 PENDING (또는 SendGrid free tier) |
 | #20 | 통신판매업 신고 (신규 — #6과 통합 검토) | legal | — |
+| #21 | GitHub Actions 결제 오류 (9 워크플로우 fail) | infra | 🔴 SHIP-BLOCKER (v45.3 신규) |
+
+### 3.1 SHIP-BLOCKER 7건 실측 hook (v45.3 표준화 — expected PASS pattern 명시)
+
+| # | 항목 | 실측 명령 (1줄) | Expected PASS | 비고 |
+|---|------|----------------|---------------|------|
+| #6 | 통신판매업 신고 | 수동 (CEO 입력 — 신고증 PDF 존재 여부) | `ls /Users/seanbae/Desktop/취준/legal/통신판매업_신고증.pdf` exit 0 | CEO 직접 |
+| #9 | iCloud OFF | `tmutil exclusionlist \| grep -c "Desktop"` | result `>= 1` | Desktop 동기화 제외 |
+| #10 | prod DB rogue rows 정리 | `railway run psql -c "SELECT count(*) FROM users WHERE email LIKE '%example.com%'"` | result `= 0` | rogue 0건 |
+| #12 | GitHub Actions billing | `gh api /user/settings/billing/actions \| jq .total_minutes_used` | result `< included_minutes` | 한도 초과 X |
+| #17 | DNS SPF/DKIM/DMARC | `dig TXT pivoxquant.com +short \| grep -E '^"v=spf1'` | non-empty stdout | SPF 존재 |
+| #1  | 변호사 자문 Q1-Q15 | `grep -c "status: answered" memory/legal_question_queue.md` | result `>= 15` | 15건 모두 |
+| #21 | GitHub Actions 9 워크플로우 (🆕 v45.3) | `gh run list --limit 5 --json conclusion \| jq -r '.[].conclusion' \| grep -c success` | result `>= 3` | 최근 5건 중 3+ green |
+
+추가 Stripe Pre-Live precondition (stripe-billing agent §3 5룰 표 cross-ref):
+- Stripe Live 활성화 직전: `curl -sS -u $STRIPE_LIVE_KEY: https://api.stripe.com/v1/products \| jq '.data \| length'` PASS if `> 0`
+
+### 3.2 launch-runner agent (G4) cross-reference
+
+- **launch-coordinator (본 agent)**: 명세 SoT — D-day 게이트 정의 + dashboard 표 + CEO escalate 책임
+- **launch-runner (G4)**: 자동 cron runner — scheduled-tasks/GitHub Actions 무료 한도에서 본 agent 명세를 09:00 KST 매일 fire
+- 분리 원칙: SoT 변경은 본 agent에서만, runner는 본 agent 표 §3.1을 fetch 후 그대로 실행
+- 회귀 시점: launch-runner가 PASS 판정 잘못 forward 시 → `feedback_no_false_reports` 위반 → 본 agent가 grep 재실행하여 진위 판정
 
 ## 4. 워크플로우
 

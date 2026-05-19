@@ -59,6 +59,11 @@ effort: high
   - `git diff origin/main..HEAD -- alembic/versions/` 변경 감지
   - 감지 시 → migration-guard agent 협업 (prod `alembic_version` 테이블 비교)
   - prod 미적용 migration 존재 시 → v44.7 OAuth incident 재발 위험 → BLOCK + CEO escalate
+- **Evidence schema (필수 첨부)**:
+  - `alembic heads` exit code (0=ok)
+  - `alembic heads` stdout 전문 (예: `8a3f4b9c1d2e (head)`)
+  - head SHA 1개 quote
+  - prod 비교 시 prod `alembic_version` row + delta migration list
 
 ### 룰 2: worktree freshness
 - **검증 명령**:
@@ -67,6 +72,11 @@ effort: high
   ```
 - **PASS 조건**: 결과 = 0
 - **FAIL 조건**: > 0 → rebase 권고 + BLOCK
+- **Evidence schema (필수 첨부)**:
+  - `git fetch origin` exit code
+  - `git status -sb` stdout (예: `## main...origin/main` — ahead/behind 모두 0)
+  - `git rev-list --count HEAD..origin/main` 결과 (= 0)
+  - `git rev-list --count origin/main..HEAD` 결과 (PR 변경 size)
 
 ### 룰 3: >30 files 분할
 - **검증 명령**:
@@ -75,6 +85,10 @@ effort: high
   ```
 - **PASS 조건**: < 30
 - **FAIL 조건**: ≥ 30 → PR 분할 권고 + BLOCK (예외: codegen / mass-rename은 CEO 승인 시 허용)
+- **Evidence schema (필수 첨부)**:
+  - `git diff --shortstat origin/main..HEAD` stdout 전문 (예: `15 files changed, 234 insertions(+), 56 deletions(-)`)
+  - file count 명시
+  - ≥30 시 예외 사유 (codegen / mass-rename) + CEO 승인 commit SHA 인용
 
 ### 룰 4: spot check
 - **검증 절차**:
@@ -84,6 +98,12 @@ effort: high
 - **수행**: 임의 5 파일 manual review → audit agent 협업
 - **깊이 review 조건**: 큰 변화 (> 500 lines / 단일 파일) 시 audit wide-scope 호출
 - **FAIL 조건**: spot check 1건이라도 의심 패턴 발견 시 → BLOCK + investigate
+- **Evidence schema (5 항목 checklist 필수)**:
+  - [ ] pytest 일부 실행 결과 (변경된 모듈 한정 — 예: `pytest backend/tests/test_billing.py -q`)
+  - [ ] lint 결과 (`ruff check . --select=E,F,W` exit 0)
+  - [ ] typecheck 결과 (frontend `npx tsc --noEmit` exit 0)
+  - [ ] `git log --stat -1` stdout (최신 commit + 변경 파일 list)
+  - [ ] commit hash 1줄 quote (예: `commit 22bf5496 fix(billing): ...`)
 
 ### 룰 5: DB 마이그·wide-scope audit
 - **alembic migration 있으면**:
@@ -92,6 +112,23 @@ effort: high
 - **50+ files 변경 시**:
   - audit-code wide-scope 호출
 - **FAIL 조건**: 호출한 agent 1개라도 BLOCK 시 → 본 agent도 BLOCK
+- **Evidence schema (file glob list 필수)**:
+  - DB migration 추가 시: `services/quant/*` 전체 audit 결과 (grep result line count)
+  - `auth.py` 변경 시: `routes/auth.py + tests/test_auth*.py` 전체 sweep
+  - `services/billing/*` 변경 시: Stripe Live 5종 규제 sweep (stripe-billing agent §3 표 cross-ref)
+  - `services/email/*` 변경 시: 정통망법 §50 opt-out grep + compliance-gatekeeper B-3 재확인
+  - 50+ files 시: audit-code wide-scope 결과 첨부
+
+### 룰 6 (신설 — v45.3): 동결 파일 변경 시 BLOCK
+- **frozen-file-diff-guard (G3) cross-reference**:
+  - 본 agent는 5룰 hardcode, G3는 동결 파일 7건 (engine.py / quant_models.py / risk_defense.py / risk_models.py / portfolio_models.py / signal_models.py / ai_models.py) 변경 감지 시 BLOCK
+  - `git diff --name-only origin/main..HEAD | grep -E '(engine|quant_models|risk_defense|risk_models|portfolio_models|signal_models|ai_models)\.py$'`
+  - 결과 non-empty → BLOCK + CEO escalate (CLAUDE.md "기존 백엔드 서비스 파일 수정 금지" 위반)
+- **v45.3 evidence 패턴 인용 (atomic + regression test + push 분리)**:
+  - commit `69b583af` — Pattern 6 cache poisoning AIRiskSummary 회귀 fix (atomic)
+  - commit `eea051e5` — Pattern 7 FX consistency build_portfolio_context wide-scope (regression test 동반)
+  - commit `22bf5496` — separation of concerns (fix + test + push 분리)
+  - 3 commit 모두 룰 1~5 통과 + evidence 첨부 완료 — 표준 reference
 
 ---
 

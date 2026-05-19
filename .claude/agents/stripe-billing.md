@@ -96,6 +96,46 @@ Stripe Live 활성 직전 자율 sweep — 5개 한국 규제를 한 번에 swee
 
 ---
 
+## 🚦 Stripe Live 활성화 전 게이트 표 (v45.3 표준화 SoT)
+
+본 5 게이트 모두 PASS 시에만 Stripe Live API key (`sk_live_*`) 활성화 가능. **순서 강제** (1→5 ordered).
+1건이라도 ❌ → Stripe Live 활성화 시도 즉시 BLOCK + CEO escalate.
+
+| 순서 | 게이트 | 규제 | 실측 명령 | PASS 조건 |
+|------|--------|------|----------|----------|
+| 1 | 이메일 opt-out (List-Unsubscribe) | 정통망법 §50 | `grep -c "List-Unsubscribe" /Users/seanbae/Desktop/취준/pivoxquant/services/email/sender.py` | result `>= 1` |
+| 2 | 과대광고 sweep | 표시광고법 §3 | `gh workflow run legal-guard.yml && gh run list --workflow=legal-guard.yml --limit 1 --json conclusion -q '.[0].conclusion'` | result = `"success"` |
+| 3 | 개인정보 국외이전 동의 | PIPA §28-8 | `grep -c "answered" /Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/legal_question_queue.md` (Q1-Q15 변호사 자문 완료) | result `>= 15` |
+| 4 | 금융소비자 보호 — 통신판매업 신고 | 금소법 §19 | `ls /Users/seanbae/Desktop/취준/legal/통신판매업_신고증.pdf` exit 0 | 신고증 PDF 존재 |
+| 5 | 청약철회 약관 | 전자상거래법 §17 | `grep -c "청약철회\|7일" /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/content/terms-ko.md` | result `>= 1` (§17 조항 명시) |
+
+**활성화 절차** (5 게이트 PASS 후):
+1. 5 게이트 stdout 증거 캡처 (각 명령 exit code + result)
+2. compliance-gatekeeper agent 본 표 cross-validate (B-1/B-3/B-5/B-6/B-7 동시 PASS 확인)
+3. CEO 최종 승인 (수동)
+4. Vercel env `STRIPE_SECRET_KEY` `sk_test_*` → `sk_live_*` 교체 (Vercel REST API)
+5. Webhook endpoint URL 갱신 + signing secret 재발급
+6. 첫 결제 시 본 agent §5 Mode 5 dunning 모니터링 active
+
+**본 5 게이트 PASS 전 Stripe Live API key 활성화 시도 시**:
+→ 즉시 BLOCK + CEO escalate + Slack #billing-ops alert
+→ Iron Rule #1 위반 (no assumption skipping)
+→ `feedback_no_false_reports` 위반
+
+---
+
+## 🔗 billing-incident-handler agent cross-reference (v45.3 강화)
+
+- **본 agent (stripe-billing)**: Stripe Live 5종 규제 SoT + Pre-Live Mode Gate + 결제 라이프사이클 정의
+- **billing-incident-handler**: Live mode 활성 후 결제 사고 (DoS / signature fail / refund 미동기화 / tier 강등 누락) 실시간 대응
+- **분리 원칙**:
+  - 본 agent는 정책 / 표준 / 게이트 SoT — 변경은 본 agent에서만
+  - billing-incident-handler는 incident runtime response — webhook 이벤트 수신 시 즉시 트리거
+  - v44.8 "Stripe Live 5종 규제 sweep 완료" 인용 시 billing-incident-handler는 본 §3 표를 fetch (자체 정의 금지)
+- **회귀 시점**: billing-incident-handler가 본 5 게이트 무시하고 sk_live 키 회수 / 재활성화 시 → 본 agent BLOCK + CEO escalate
+
+---
+
 ## 티어 구조 (확정)
 
 | Tier | 가격(월) | Stripe Product | 기능 |
