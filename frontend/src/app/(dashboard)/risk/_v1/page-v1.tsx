@@ -233,24 +233,30 @@ export default function RiskPage() {
   // populated payload.
   const hasRealSummary = !!summary && !isEmptyPortfolio;
   const hasRealLayers = apiLayers != null;
-  const hasRealCorr = !!corrData?.matrix && corrData.matrix.length > 0;
-  const hasRealVar = !!rollingVar && rollingVar.length > 0;
+  const hasRealCorr =
+    Array.isArray(corrData?.matrix) && corrData!.matrix.length > 0;
+  const hasRealVar = Array.isArray(rollingVar) && rollingVar.length > 0;
   const hasData = hasRealSummary && (hasRealLayers || hasRealCorr || hasRealVar);
 
   // Demo fallback switches — per-slot so partial data still shows.
   const displaySummary: RiskSummary =
     summary && !isEmptyPortfolio ? summary : DEMO_SUMMARY;
   const displayLayers: RiskLayer[] = apiLayers ?? DEMO_LAYERS;
-  const displayCorrLabels: string[] =
-    corrData?.matrix && corrData.matrix.length > 0
-      ? corrData.labels
-      : DEMO_TICKERS;
-  const displayCorrMatrix: number[][] =
-    corrData?.matrix && corrData.matrix.length > 0
-      ? corrData.matrix
-      : DEMO_CORR_MATRIX;
+  // Defensive: backend should return labels[] + matrix[][] but a stale
+  // cache hit or partial degradation can deliver a non-array `matrix` or
+  // mismatched lengths. Guard with Array.isArray before reading length
+  // so the page can fall back to DEMO without a root crash.
+  const corrMatrixSafe = Array.isArray(corrData?.matrix) ? corrData!.matrix : [];
+  const corrLabelsSafe = Array.isArray(corrData?.labels) ? corrData!.labels : [];
+  const hasRealCorrPayload = corrMatrixSafe.length > 0;
+  const displayCorrLabels: string[] = hasRealCorrPayload
+    ? corrLabelsSafe
+    : DEMO_TICKERS;
+  const displayCorrMatrix: number[][] = hasRealCorrPayload
+    ? corrMatrixSafe
+    : DEMO_CORR_MATRIX;
   const displayVarPoints = useMemo(() => {
-    if (rollingVar && rollingVar.length > 0) {
+    if (Array.isArray(rollingVar) && rollingVar.length > 0) {
       // Backend `routes/risk.py::rolling_var` returns var_pct as a positive
       // magnitude (e.g. 2.5 for "2.5% 1-day VaR"). The Risk page convention
       // — applied uniformly by the four KPI cards via fmtPct(_, "neg") and
@@ -285,10 +291,20 @@ export default function RiskPage() {
   // `n > 0 ? "+" : ""` which would surface "+2.41%" for the same payload —
   // a sign flip that would visually misrepresent loss metrics. Local
   // helper retained per feedback_feature_preservation.
-  const fmtPct = (v: number | undefined, sign: "neg" | "auto" = "auto") => {
-    if (v == null || Number.isNaN(v)) return "—";
+  const fmtPct = (v: number | undefined | null, sign: "neg" | "auto" = "auto") => {
+    if (v == null || Number.isNaN(v) || !Number.isFinite(v)) return "—";
     const abs = Math.abs(v);
     return sign === "neg" ? `-${abs.toFixed(2)}%` : `${v.toFixed(2)}%`;
+  };
+
+  // Generic safe-number formatter for the bare-decimal KPI (corr index)
+  // and the correlation heatmap cells. Avoids the page-level crash when
+  // a backend regression delivers `null` / missing numeric leaves where
+  // the TypeScript shape said `number`.
+  // (feedback_bug_fix_patterns: per-metric try-except + stale fallback)
+  const fmtNum = (v: number | undefined | null, digits = 2): string => {
+    if (v == null || typeof v !== "number" || !Number.isFinite(v)) return "—";
+    return v.toFixed(digits);
   };
 
   return (
@@ -365,7 +381,7 @@ export default function RiskPage() {
         <KpiStat
           label="Correlation Index"
           sub="pairwise"
-          value={displaySummary.corr_risk_index.toFixed(2)}
+          value={fmtNum(displaySummary.corr_risk_index, 2)}
           caption="Blended pairwise + dispersion."
           tone="bronze"
         />
@@ -467,28 +483,39 @@ export default function RiskPage() {
             </thead>
             <tbody>
               {displayCorrMatrix.map((row, i) => (
-                <tr key={displayCorrLabels[i]}>
+                <tr key={displayCorrLabels[i] ?? `row-${i}`}>
                   <td className="h-10 w-12 pr-2 text-right font-mono text-pq-kicker uppercase tracking-[0.12em] text-[var(--pq-bronze)]">
                     {displayCorrLabels[i]}
                   </td>
-                  {row.map((v, j) => {
-                    const alpha = Math.min(1, Math.max(0.05, Math.abs(v)));
+                  {(Array.isArray(row) ? row : []).map((v, j) => {
+                    // Guard non-numeric leaves: a malformed backend matrix
+                    // (e.g. a `null` cell from a partial 90-day window)
+                    // would otherwise crash the whole page when .toFixed
+                    // is invoked. We render a neutral em-dash + transparent
+                    // background so the table degrades cell-by-cell.
+                    const isNum =
+                      typeof v === "number" && Number.isFinite(v);
+                    const alpha = isNum
+                      ? Math.min(1, Math.max(0.05, Math.abs(v)))
+                      : 0;
                     // Diverging gradient: positive → Bronze, negative → muted rose
-                    const bg =
-                      v >= 0
+                    const bg = !isNum
+                      ? "transparent"
+                      : v >= 0
                         ? `rgba(139, 111, 71, ${alpha * 0.55})`
                         : `rgba(209, 136, 136, ${alpha * 0.5})`;
+                    const cellText = isNum ? v.toFixed(2) : "—";
                     return (
                       <td
                         key={`${i}-${j}`}
-                        title={`${displayCorrLabels[i]} × ${displayCorrLabels[j]}: ${v.toFixed(2)}`}
+                        title={`${displayCorrLabels[i]} × ${displayCorrLabels[j]}: ${cellText}`}
                         className="h-10 w-12 cursor-default text-center font-mono text-pq-eyebrow tabular-nums text-[var(--pq-ivory)] transition-[outline] hover:outline hover:outline-1 hover:outline-[var(--pq-bronze)]"
                         style={{
                           backgroundColor: bg,
                           border: "0.5px solid var(--pq-ivory-line-soft)",
                         }}
                       >
-                        {v.toFixed(2)}
+                        {cellText}
                       </td>
                     );
                   })}
@@ -593,11 +620,15 @@ function RollingVarInk({
   series: number[];
   points: { date: string; value: number }[];
 }) {
-  if (!series || series.length < 2) {
+  if (!Array.isArray(series) || series.length < 2) {
     return <div className="pq-ink-empty">—</div>;
   }
-  const hi = Math.max(...series);
-  const lo = Math.min(...series);
+  // Filter non-finite leaves before reducing — guards against an
+  // upstream serializer that flips a numeric leaf to null and would
+  // otherwise produce NaN bounds that surface as "NaN%" in the legend.
+  const finite = series.filter((n): n is number => Number.isFinite(n));
+  const hi = finite.length > 0 ? Math.max(...finite) : 0;
+  const lo = finite.length > 0 ? Math.min(...finite) : 0;
 
   return (
     <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-4">

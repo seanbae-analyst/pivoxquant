@@ -65,7 +65,17 @@ export function LivingCFOStatusBar() {
 
   // Layer 2: need 3 pulse entries + observed persona + ≥1 feedback record
   // to graduate from "learning" → "ready".
-  const pulseCount = pulse?.history.length ?? 0;
+  //
+  // 2026-05-20 (Wave 5-B SHIP-BLOCKER fix): `pulse?.history.length` threw
+  // "Cannot read properties of undefined (reading 'length')" whenever a
+  // legacy/corrupted `pq_cfo_pulse_v1` localStorage snapshot was rehydrated
+  // by SWR `fallbackData`. The cache only checks for a truthy object, not
+  // for the `history` array, so a `{}` from an older schema was passed
+  // through verbatim. This propagated up the React tree, tripped the
+  // page-level ErrorBoundary, and blanked /home, /portfolio, /settings (v2)
+  // for any user with a stale cache. Array.isArray() guards the access
+  // so the cache shape change becomes a no-op instead of a regression.
+  const pulseCount = Array.isArray(pulse?.history) ? pulse.history.length : 0;
   const hasObservedPersona = Boolean(persona?.observed?.window_30d);
   const layer2State: Readiness =
     hasObservedPersona && pulseCount >= 3

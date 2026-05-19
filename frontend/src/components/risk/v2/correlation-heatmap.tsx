@@ -180,16 +180,26 @@ export function CorrelationHeatmap() {
                   >
                     {labels[i]}
                   </td>
-                  {row.map((v, j) => {
-                    const alpha = Math.min(1, Math.max(0.05, Math.abs(v)));
-                    const bg =
-                      v >= 0
+                  {(Array.isArray(row) ? row : []).map((v, j) => {
+                    // Guard non-numeric cells — a backend regression that
+                    // emits `null` in the matrix would otherwise crash the
+                    // whole Risk Board on .toFixed (feedback_bug_fix_patterns:
+                    // per-metric try-except).
+                    const isNum =
+                      typeof v === "number" && Number.isFinite(v);
+                    const alpha = isNum
+                      ? Math.min(1, Math.max(0.05, Math.abs(v)))
+                      : 0;
+                    const bg = !isNum
+                      ? "transparent"
+                      : v >= 0
                         ? `rgba(139, 111, 71, ${alpha * 0.55})`
                         : `rgba(209, 136, 136, ${alpha * 0.5})`;
+                    const cellText = isNum ? v.toFixed(2) : "—";
                     return (
                       <td
                         key={`${i}-${j}`}
-                        title={`${labels[i]} × ${labels[j]}: ${v.toFixed(2)}`}
+                        title={`${labels[i]} × ${labels[j]}: ${cellText}`}
                         className="font-mono tabular-nums"
                         style={{
                           height: 40,
@@ -211,7 +221,7 @@ export function CorrelationHeatmap() {
                             "none";
                         }}
                       >
-                        {v.toFixed(2)}
+                        {cellText}
                       </td>
                     );
                   })}
