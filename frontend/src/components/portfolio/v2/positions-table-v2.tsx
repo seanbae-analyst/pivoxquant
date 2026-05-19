@@ -16,6 +16,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { EditorialHead } from "@/components/ui/editorial";
+import { fmtMoneyPlain, fmtPctSignedMinus } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 
 type SortKey =
@@ -43,16 +44,13 @@ interface PositionsTableV2Props {
   onAddPosition?: () => void;
 }
 
+// Wave 4-B (2026-05-20): migrated to lib/fmtMoneyPlain + lib/fmtPctSignedMinus.
+// fmtMoney → fmtMoneyPlain(n, currency, currency==="KRW" ? 0 : 2): byte-identical
+//   ("—" sentinel, ASCII "-" for negatives, KRW round, USD 2dp).
+// fmtPctSigned → fmtPctSignedMinus(n, 2): byte-identical (U+2212, "—" on
+//   non-finite, no sign at zero, 2dp).
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
-  if (!Number.isFinite(n)) return "—";
-  const abs = Math.abs(n);
-  const sign = n < 0 ? "-" : "";
-  const dec = currency === "KRW" ? 0 : 2;
-  const body = abs.toLocaleString(currency === "KRW" ? "ko-KR" : "en-US", {
-    minimumFractionDigits: dec,
-    maximumFractionDigits: dec,
-  });
-  return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
+  return fmtMoneyPlain(n, currency, currency === "KRW" ? 0 : 2);
 }
 
 function fmtShares(n: number): string {
@@ -64,9 +62,7 @@ function fmtShares(n: number): string {
 }
 
 function fmtPctSigned(n: number): string {
-  if (!Number.isFinite(n)) return "—";
-  const sign = n > 0 ? "+" : n < 0 ? "−" : "";
-  return `${sign}${Math.abs(n).toFixed(2)}%`;
+  return fmtPctSignedMinus(n, 2);
 }
 
 function pctColor(n: number): string {

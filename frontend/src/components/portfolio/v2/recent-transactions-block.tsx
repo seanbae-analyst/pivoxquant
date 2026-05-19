@@ -10,6 +10,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { fmtMoneyPlain } from "@/lib/format";
 import { useTransactions, type TransactionRow } from "./hooks-v2";
 
 interface RecentTransactionsBlockProps {
@@ -31,18 +32,14 @@ function actionLabel(row: TransactionRow): {
   return { label: row.action ?? row.side ?? "Entry", signed: 0 };
 }
 
-// Wave 2 sweep (2026-05-19): NOT migrated to @/lib/format.
-// lib/fmtUsd switches to 0-decimal when n >= 1000; this helper keeps
-// 2 decimals at all USD magnitudes so a $1,234.56 trade row reads
-// truthfully. Migration would silently truncate cents on most rows.
+// Wave 4-B (2026-05-20): migrated to lib/fmtMoneyPlain.
+// fmtMoneyPlain(n, currency, currency==="KRW" ? 0 : 2) is byte-identical to
+// the old local helper for non-negative `n` (the only path exercised: the
+// caller always passes Math.abs(amount)). Migration locks USD 2-decimal
+// across all magnitudes — the original Wave 2 "keep 2dp" concern is now
+// preserved in lib via the explicit `dp=2` argument.
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
-  if (!Number.isFinite(n)) return "—";
-  const dec = currency === "KRW" ? 0 : 2;
-  const body = Math.abs(n).toLocaleString(currency === "KRW" ? "ko-KR" : "en-US", {
-    minimumFractionDigits: dec,
-    maximumFractionDigits: dec,
-  });
-  return `${currency === "KRW" ? "₩" : "$"}${body}`;
+  return fmtMoneyPlain(n, currency, currency === "KRW" ? 0 : 2);
 }
 
 function fmtSignedAmount(amount: number, signed: number, currency: "USD" | "KRW"): string {

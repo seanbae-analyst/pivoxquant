@@ -17,7 +17,7 @@ import * as React from "react";
 import { HomeCard } from "./home-card";
 import { usePortfolioSummary, usePortfolioPositions } from "@/lib/hooks";
 import { useEquityCurve, type EquityPoint } from "@/components/portfolio/v2/hooks-v2";
-import { pctColor, PRICE_COLOR_HEX, fmtPct } from "@/lib/format";
+import { pctColor, PRICE_COLOR_HEX, fmtPct, fmtMoneyPlain } from "@/lib/format";
 // FINDING-021: usePortfolioPositions() returns the BACKEND position shape,
 // not the camelCase `@/components/portfolio/types` Position.
 import type { Position } from "@/lib/types";
@@ -40,16 +40,10 @@ interface PositionsShape {
   positions?: Position[];
 }
 
+// Wave 4-B (2026-05-20): migrated to lib/fmtMoneyPlain — byte-identical
+// (abs + ASCII "-" sign + KRW round / USD 2dp + "—" sentinel).
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  const abs = Math.abs(n);
-  const sign = n < 0 ? "-" : "";
-  const dec = currency === "KRW" ? 0 : 2;
-  const body = abs.toLocaleString(currency === "KRW" ? "ko-KR" : "en-US", {
-    minimumFractionDigits: dec,
-    maximumFractionDigits: dec,
-  });
-  return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
+  return fmtMoneyPlain(n, currency, currency === "KRW" ? 0 : 2);
 }
 
 function fmtSignedMoney(n: number | undefined, currency: "USD" | "KRW"): string {

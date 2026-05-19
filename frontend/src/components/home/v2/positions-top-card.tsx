@@ -19,7 +19,7 @@
 import * as React from "react";
 import { HomeCard } from "./home-card";
 import { usePortfolioPositions } from "@/lib/hooks";
-import { pctColor, displayName, isKrTicker, fmtPct } from "@/lib/format";
+import { pctColor, displayName, isKrTicker, fmtPct, fmtMoneyPlain } from "@/lib/format";
 // FINDING-021: the SWR payload from /api/portfolio carries the BACKEND
 // position shape (snake_case: ticker / avg_cost / current_price), NOT the
 // camelCase `@/components/portfolio/types` Position. Importing the wrong
@@ -35,16 +35,11 @@ interface PositionsShape {
 // audit FINDING-021: a KOSPI holding (005930) was rendered with a "$" prefix
 // because position.currency leaked "USD" from seed data. The ticker shape is
 // the trustworthy signal: a 6-digit / .KS|.KQ symbol is always KRW-quoted.
+//
+// Wave 4-B (2026-05-20): migrated to lib/fmtMoneyPlain — byte-identical
+// (abs + ASCII "-" sign + KRW round / USD 2dp + "—" sentinel).
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  const abs = Math.abs(n);
-  const sign = n < 0 ? "-" : "";
-  const dec = currency === "KRW" ? 0 : 2;
-  const body = abs.toLocaleString(currency === "KRW" ? "ko-KR" : "en-US", {
-    minimumFractionDigits: dec,
-    maximumFractionDigits: dec,
-  });
-  return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
+  return fmtMoneyPlain(n, currency, currency === "KRW" ? 0 : 2);
 }
 
 // fmtPct migrated to @/lib/format (2026-05-19 Wave 2 sweep).

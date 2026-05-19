@@ -80,3 +80,8 @@ legal_monitor_artifacts/
 
 # APScheduler runtime state (Wave H) — not source-of-truth
 state/
+
+# V2 smoke QA screenshots — binary blobs, stored by hash in MANIFEST.txt only.
+# To reproduce: run scripts/v2-smoke.sh (or the worktree capture script).
+# MANIFEST.txt files in qa/ ARE committed (text, ~3KB each).
+qa/v2-smoke/**/*.png
