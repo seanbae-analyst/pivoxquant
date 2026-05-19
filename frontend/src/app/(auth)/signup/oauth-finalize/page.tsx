@@ -183,18 +183,27 @@ export default function OAuthFinalizePage() {
   };
 
   if (loading || !user) {
+    // Page-load skeleton — Vantablack surface matching the oauth finalize
+    // form layout (birthdate field + consent block + CTA). Replaces the
+    // legacy animate-spin border indicator so the perceived load is calmer
+    // and the layout shift is smaller when the live form mounts.
     return (
       <div
-        className="flex min-h-[100dvh] items-center justify-center"
+        className="flex min-h-[100dvh] items-center justify-center px-6"
         style={{ background: "var(--pq-ink, #050505)" }}
+        role="status"
+        aria-live="polite"
+        aria-label="Finalizing your account"
       >
-        <div
-          className="h-8 w-8 animate-spin rounded-full"
-          style={{
-            border: "2px solid rgba(245,240,232,0.10)",
-            borderTopColor: "var(--pq-bronze, #B8956A)",
-          }}
-        />
+        <div className="w-full max-w-sm flex flex-col gap-3">
+          <div className="pq-skeleton-dark h-8 w-48 rounded" />
+          <div className="pq-skeleton-dark h-4 w-64 rounded" />
+          <div className="pq-skeleton-dark mt-6 h-11 w-full rounded-sm" />
+          <div className="pq-skeleton-dark mt-2 h-4 w-full rounded" />
+          <div className="pq-skeleton-dark h-4 w-5/6 rounded" />
+          <div className="pq-skeleton-dark mt-4 h-12 w-full rounded-sm" />
+          <span className="sr-only">Finalizing your account…</span>
+        </div>
       </div>
     );
   }

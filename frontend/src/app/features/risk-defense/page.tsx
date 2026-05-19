@@ -177,18 +177,18 @@ export default function RiskDefensePage() {
             {/* Without */}
             <div className="rounded-sm p-6 bg-[rgba(122,160,200,0.06)] border border-[rgba(122,160,200,0.22)]">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-[#7AA0C8]" />
-                <h3 className="text-sm font-semibold text-[#7AA0C8] tracking-wide uppercase">Without Defense</h3>
+                <div className="w-2 h-2 rounded-full bg-[var(--down)]" />
+                <h3 className="text-sm font-semibold text-[var(--down)] tracking-wide uppercase">Without Defense</h3>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm text-[rgba(245,240,232,0.62)]">Max Drawdown</span>
-                  <span className="text-2xl font-mono font-medium text-[#7AA0C8] tabular-nums">-20%</span>
+                  <span className="text-2xl font-mono font-medium text-[var(--down)] tabular-nums">-20%</span>
                 </div>
                 <hr className="border-[rgba(122,160,200,0.18)]" />
                 <div className="flex justify-between items-baseline">
                   <span className="text-sm text-[rgba(245,240,232,0.62)]">Worst Month</span>
-                  <span className="text-2xl font-mono font-medium text-[#7AA0C8] tabular-nums">-10%</span>
+                  <span className="text-2xl font-mono font-medium text-[var(--down)] tabular-nums">-10%</span>
                 </div>
               </div>
             </div>

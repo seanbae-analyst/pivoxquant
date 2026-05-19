@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, FileText, RotateCcw } from "lucide-react";
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 
 export type FlipSample = {
   name: string;
@@ -39,7 +40,9 @@ export type FlipSample = {
   };
 };
 
-const EASE_FLIP: [number, number, number, number] = [0.65, 0, 0.35, 1];
+// 3D card flip — in-out curve (not bounce). Intentionally different from PQ_EASE
+// because rotateY needs symmetric deceleration on both halves of the flip.
+const EASE_FLIP = PQ_EASE;
 
 function CardChrome({
   side,
@@ -405,7 +408,7 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
         >
           <motion.div
             animate={{ opacity: showBack ? 0 : 1 }}
-            transition={{ duration: 0.35 }}
+            transition={{ duration: PQ_DUR_BASE }}
             className="absolute inset-0"
             style={{ pointerEvents: showBack ? "none" : "auto" }}
             aria-hidden={showBack || undefined}
@@ -413,6 +416,10 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
             <div
               className="absolute inset-0 flex flex-col overflow-hidden rounded-sm p-7"
               style={{
+                // Opaque hex required (NOT --pq-card-veil) — same hover-flash
+                // root cause as the BezelFace front face above. The flip face
+                // must be fully opaque or the ivory back face leaks through
+                // during the first frames of rotateY.
                 backgroundColor: "#0D0D0D",
                 border: "0.5px solid rgba(184,149,106,0.25)",
               }}
@@ -427,7 +434,7 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
           </motion.div>
           <motion.div
             animate={{ opacity: showBack ? 1 : 0 }}
-            transition={{ duration: 0.35 }}
+            transition={{ duration: PQ_DUR_BASE }}
             className="absolute inset-0"
             style={{ pointerEvents: showBack ? "auto" : "none" }}
             aria-hidden={!showBack || undefined}
@@ -481,7 +488,7 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
       >
         <motion.div
           animate={{ rotateY: showBack ? 180 : 0 }}
-          transition={{ duration: 0.75, ease: EASE_FLIP }}
+          transition={{ duration: PQ_DUR_SLOW, ease: EASE_FLIP }}
           className="relative h-full w-full"
           style={{
             transformStyle: "preserve-3d",

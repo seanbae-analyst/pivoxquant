@@ -40,8 +40,8 @@ import {
 // US symbols on PivoxQuant. Tones kept editorial — muted carmine/indigo
 // within the bronze family temperature, not pure RGB primaries.
 const DIR_COLOR = {
-  up: "#D18888",
-  down: "#7AA0C8",
+  up: "var(--up)",
+  down: "var(--down)",
   flat: "rgba(245, 240, 232, 0.55)",
 } as const;
 

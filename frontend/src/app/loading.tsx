@@ -27,7 +27,7 @@ export default function Loading() {
       {/* Wordmark */}
       <div
         className="font-serif italic text-lg tracking-tight mb-8"
-        style={{ color: "rgba(247,245,239,0.6)" }}
+        style={{ color: "rgba(245,240,232,0.6)" }}
       >
         PivoxQuant
       </div>
@@ -38,7 +38,7 @@ export default function Loading() {
         style={{
           width: "120px",
           height: "2px",
-          background: "rgba(247,245,239,0.08)",
+          background: "rgba(245,240,232,0.08)",
         }}
       >
         <div className="h-full pq-skeleton-dark" />

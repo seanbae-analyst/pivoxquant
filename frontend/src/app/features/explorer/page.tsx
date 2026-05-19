@@ -2,17 +2,10 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
 import { ArrowRight, FileText, Lock } from "lucide-react";
 import FeaturePageShell from "@/components/landing/feature-page-shell";
 import { SectionCurtain } from "@/components/landing/section-curtain";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
-};
-const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.04 } } };
+import { fadeUp, stagger } from "@/lib/motion";
 
 // Tier truth: backend `@require_tier` decorators in `routes/artifacts.py` +
 // per-service `_PAID_TIERS` constants. AI Suite removed 2026-05-07 — no
@@ -67,7 +60,7 @@ export default function ExplorerPage() {
                 variants={fadeUp}
                 className="group relative flex flex-col gap-3 overflow-hidden rounded-sm p-6 transition-all hover:-translate-y-0.5"
                 style={{
-                  backgroundColor: "#0D0D0D",
+                  backgroundColor: "var(--pq-card-veil)",
                   border: "0.5px solid rgba(184,149,106,0.22)",
                   minHeight: 180,
                 }}

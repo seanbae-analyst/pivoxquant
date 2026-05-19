@@ -31,17 +31,22 @@ _FAKE_FX.is_stale = lambda: False
 
 
 def _load_module(tmp_path):
-    """Import fx_staleness_check with patched _PROJECT_ROOT."""
+    """Import fx_staleness_check with patched _PROJECT_ROOT.
+
+    NOTE: exec_module() executes the module body, which resets the module-level
+    constants (_PROJECT_ROOT / _STATE_DIR / _STATE_FILE) using Path(__file__).
+    We therefore override them *after* exec_module() completes.
+    """
     spec = importlib.util.spec_from_file_location(
         "fx_staleness_check",
         _ROOT / "scripts/nightly/fx_staleness_check.py",
     )
     mod = importlib.util.module_from_spec(spec)
-    # Patch _PROJECT_ROOT before exec so state files land in tmp_path
-    mod.__dict__["_PROJECT_ROOT"] = tmp_path
-    mod.__dict__["_STATE_DIR"] = tmp_path / "state"
-    mod.__dict__["_STATE_FILE"] = tmp_path / "state" / "fx_staleness_alerted.json"
     spec.loader.exec_module(mod)
+    # Override *after* exec so the script body's Path() assignments are replaced
+    mod._PROJECT_ROOT = tmp_path
+    mod._STATE_DIR = tmp_path / "state"
+    mod._STATE_FILE = tmp_path / "state" / "fx_staleness_alerted.json"
     return mod
 
 
@@ -71,6 +76,7 @@ class TestFxStale24h:
         fake_fx.last_updated = lambda: stale_ts
 
         # Load module inside patch.dict so exec_module sees the fake fx_service
+        # (prevents sys.modules["services.fx_service"] contamination from other tests)
         with patch.dict(sys.modules, {"services.fx_service": fake_fx}):
             mod = _load_module(tmp_path)
             # Patch module-level _STATE_DIR/_STATE_FILE to use tmp_path

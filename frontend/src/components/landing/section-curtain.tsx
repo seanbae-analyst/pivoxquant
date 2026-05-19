@@ -106,7 +106,6 @@ export function SectionCurtain({
               width: dividerWidth,
               opacity: dividerOpacity,
               backgroundColor: "rgba(184, 149, 106, 0.7)",
-              boxShadow: "0 0 12px rgba(184, 149, 106, 0.35)",
             }}
           />
         </div>

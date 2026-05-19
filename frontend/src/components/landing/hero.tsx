@@ -115,7 +115,8 @@ export function Hero() {
           <p
             className="mb-10 max-w-2xl font-serif"
             style={{
-              fontSize: "clamp(15px, 1.35vw, 18px)",
+              // v3 token: --pq-text-deck = 17px (deck/body paragraph scale).
+              fontSize: "var(--pq-text-deck)",
               lineHeight: 1.6,
               letterSpacing: "0.005em",
               color: "rgba(245, 240, 232, 0.72)",

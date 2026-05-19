@@ -33,7 +33,13 @@ interface WhatIfChartProps {
   showInvestedLine?: boolean;
 }
 
-/* ── Formatters (scoped to avoid locale-dep) ── */
+/* ── Formatters (scoped to avoid locale-dep) ──
+   2026-05-19 sweep: NOT migrated to lib/format.ts. fmtShort uses axis-scale
+   abbreviations (M / k / 억 / 만) absent from lib helpers, and fmtFull uses
+   "no fractional digits" rounding tuned for chart tooltip readability. Both
+   are presentation-only and locale-aware; lib/format.ts equivalents would
+   change tick density and tooltip width. Migrate together with what-if-
+   result.tsx once lib gains `fmtCompact()` and a chart-axis preset. */
 
 function fmtShort(v: number, currency: "USD" | "KRW"): string {
   const symbol = currency === "KRW" ? "₩" : "$";
@@ -236,7 +242,13 @@ export function WhatIfChart({
             stroke="#B8956A"
             strokeWidth={2.5}
             fill="url(#whatIfFill)"
-            animationDuration={900}
+            // 2026-05-19 wave: motion-spec §3-F base (--motion-duration-base
+            // 300ms) — 400ms balances entrance polish with the simulator's
+            // interactive feel. Recharts' animationEasing prop only accepts
+            // named strings ("ease-out" maps to a cubic-bezier close enough
+            // to our PQ_EASE for chart entrance polish). Was 900ms which
+            // felt sluggish on resubmit.
+            animationDuration={400}
             animationEasing="ease-out"
             dot={false}
             activeDot={{ r: 4, fill: "#B8956A" }}
@@ -249,7 +261,7 @@ export function WhatIfChart({
               strokeWidth={1.5}
               strokeDasharray="4 4"
               dot={false}
-              animationDuration={900}
+              animationDuration={400}
             />
           ) : null}
           {showInvestedLine && isSparse

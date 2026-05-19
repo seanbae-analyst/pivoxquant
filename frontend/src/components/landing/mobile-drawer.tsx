@@ -18,19 +18,18 @@ import type { Variants } from "motion/react";
 import { ArrowRight, ChevronDown, X } from "lucide-react";
 import type { NavGroup } from "./top-nav";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST } from "@/lib/motion";
 
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.24, ease: EASE } },
-  exit: { opacity: 0, transition: { duration: 0.18, ease: EASE } },
+  visible: { opacity: 1, transition: { duration: PQ_DUR_BASE, ease: PQ_EASE } },
+  exit: { opacity: 0, transition: { duration: PQ_DUR_FAST, ease: PQ_EASE } },
 };
 
 const panelVariants: Variants = {
   hidden: { x: "100%" },
-  visible: { x: 0, transition: { duration: 0.4, ease: EASE } },
-  exit: { x: "100%", transition: { duration: 0.3, ease: EASE } },
+  visible: { x: 0, transition: { duration: PQ_DUR_BASE, ease: PQ_EASE } },
+  exit: { x: "100%", transition: { duration: PQ_DUR_BASE, ease: PQ_EASE } },
 };
 
 export default function MobileDrawer({
@@ -179,12 +178,12 @@ export default function MobileDrawer({
                           animate={{
                             height: "auto",
                             opacity: 1,
-                            transition: { duration: 0.3, ease: EASE },
+                            transition: { duration: PQ_DUR_BASE, ease: PQ_EASE },
                           }}
                           exit={{
                             height: 0,
                             opacity: 0,
-                            transition: { duration: 0.22, ease: EASE },
+                            transition: { duration: PQ_DUR_FAST, ease: PQ_EASE },
                           }}
                           className="overflow-hidden"
                         >

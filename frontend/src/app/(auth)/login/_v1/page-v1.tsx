@@ -79,9 +79,22 @@ export default function LoginPageV1() {
           : null;
 
   if (loading) {
+    // Page-load skeleton — matches the v1 slate light surface. Replaces the
+    // legacy animate-spin border indicator (var(--sp-accent) was a stale
+    // pre-bronze token; not defined in globals.css → rendered transparent).
     return (
-      <div className="flex flex-col items-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[var(--sp-accent)]" />
+      <div
+        className="flex flex-col items-center gap-3 py-16 w-full"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading login"
+      >
+        <div className="skeleton h-12 w-12 rounded-xl" />
+        <div className="skeleton h-5 w-32 rounded" />
+        <div className="skeleton h-3 w-24 rounded" />
+        <div className="skeleton mt-4 h-11 w-full max-w-sm rounded-xl" />
+        <div className="skeleton h-11 w-full max-w-sm rounded-xl" />
+        <span className="sr-only">Loading…</span>
       </div>
     );
   }
@@ -171,7 +184,7 @@ export default function LoginPageV1() {
         계정이 없으신가요?{" "}
         <Link
           href="/signup"
-          className="font-medium text-[var(--sp-accent)] hover:text-[var(--sp-accent-hover)] transition-colors"
+          className="font-medium text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light)] transition-colors"
         >
           회원가입
         </Link>

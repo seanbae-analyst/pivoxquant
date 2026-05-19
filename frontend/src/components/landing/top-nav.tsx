@@ -23,6 +23,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST, PQ_DUR_MICRO } from "@/lib/motion";
 import {
   ArrowRight,
   BarChart3,
@@ -226,21 +227,19 @@ export const NAV_GROUPS: readonly NavGroup[] = [
 
 /* ───────────────────────── motion ───────────────────────── */
 
-const EASE = [0.16, 1, 0.3, 1] as const;
-
 const panelVariants: Variants = {
   hidden: { opacity: 0, y: -6, scale: 0.985 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.28, ease: EASE },
+    transition: { duration: PQ_DUR_BASE, ease: PQ_EASE },
   },
   exit: {
     opacity: 0,
     y: -4,
     scale: 0.99,
-    transition: { duration: 0.18, ease: EASE },
+    transition: { duration: PQ_DUR_FAST, ease: PQ_EASE },
   },
 };
 
@@ -253,12 +252,15 @@ const contentVariants: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.18, ease: EASE },
+    transition: { duration: PQ_DUR_FAST, ease: PQ_EASE },
   },
   exit: {
     opacity: 0,
     y: -2,
-    transition: { duration: 0.08, ease: EASE },
+    // 0.08s intentionally sub-100ms — ghost-prevention guard (W7.1 #16-19).
+    // DO NOT raise to PQ_DUR_MICRO; test nav-dropdown-singleton.test.tsx
+    // asserts duration: 0.08 to prevent faded-trail regression.
+    transition: { duration: 0.08, ease: PQ_EASE },
   },
 };
 
@@ -267,7 +269,7 @@ const itemVariants: Variants = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.32, delay: 0.04 * i, ease: EASE },
+    transition: { duration: PQ_DUR_BASE, delay: 0.04 * i, ease: PQ_EASE },
   }),
 };
 
@@ -463,7 +465,7 @@ export default function TopNav() {
                             ? "translateY(1px) rotate(180deg)"
                             : "translateY(0) rotate(0)",
                           color: "var(--pq-bronze)",
-                          fontSize: "8px",
+                          fontSize: "var(--pq-text-mono-sm)",
                           lineHeight: 1,
                         }}
                       >
@@ -505,7 +507,7 @@ export default function TopNav() {
               </Link>
               <Link
                 href={user ? "/home" : "/signup"}
-                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-4 font-serif text-pq-body transition-transform duration-200 active:scale-[0.98]"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-sm px-4 font-serif text-pq-body transition-transform duration-200 active:scale-[0.98]"
                 style={{
                   // WCAG 2.5.5 AA — 44x44 minimum tap target. Was 36 (failed
                   // mobile guideline + Apple HIG). Padding/letter-spacing

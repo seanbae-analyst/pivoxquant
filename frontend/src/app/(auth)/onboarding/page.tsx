@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW, PQ_DUR_FAST } from "@/lib/motion";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
@@ -22,7 +23,8 @@ import type { OnboardingOption, OnboardingQuestion } from "@/data/onboarding-que
 
 const STORAGE_KEY = "pivoxquant_onboarding_answers";
 const TOTAL_STEPS = WIZARD_QUESTIONS.length + 1; // 19 wizard + 1 legal
-const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
+// SPRING replaced: spring easing causes overshoot in financial UI — use PQ_EASE instead.
+const SPRING = { duration: PQ_DUR_BASE, ease: PQ_EASE };
 
 // ── Icon mapping (Lucide-compatible simple shapes) ───────────────────────────
 
@@ -103,7 +105,7 @@ function ProgressBar({ current, total, category }: { current: number; total: num
           style={{ background: "linear-gradient(90deg, var(--pq-bronze-light), var(--pq-bronze))" }}
           initial={false}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         />
       </div>
     </div>
@@ -137,7 +139,7 @@ function OptionCard({
         }
       `}
       style={{
-        transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+        transitionTimingFunction: "var(--motion-easing-emphasized, cubic-bezier(0.16, 1, 0.3, 1))",
         borderRadius: "var(--pq-radius-card)",
       }}
     >
@@ -198,7 +200,7 @@ function MultiOptionCard({
         }
       `}
       style={{
-        transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+        transitionTimingFunction: "var(--motion-easing-emphasized, cubic-bezier(0.16, 1, 0.3, 1))",
         borderRadius: "var(--pq-radius-card)",
       }}
     >
@@ -377,7 +379,7 @@ function LegalStep({
               }
             `}
             style={{
-              transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+              transitionTimingFunction: "var(--motion-easing-emphasized, cubic-bezier(0.16, 1, 0.3, 1))",
               borderRadius: "var(--pq-radius-card)",
             }}
           >
@@ -430,7 +432,7 @@ function ResultScreen({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
       className="flex flex-col items-center px-4 py-8"
     >
       {/* Badge */}
@@ -453,7 +455,7 @@ function ResultScreen({
       <motion.p
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.3, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         className="text-sm font-semibold uppercase tracking-wider"
         style={{
           color: "var(--pq-bronze)",
@@ -466,7 +468,7 @@ function ResultScreen({
       <motion.h1
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.4, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         className="mt-2 text-center text-3xl font-bold tracking-tight font-display"
         style={{
           color: "var(--pq-ivory)",
@@ -480,7 +482,7 @@ function ResultScreen({
       <motion.p
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.5, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         className="mt-3 max-w-sm text-center text-pq-lead leading-relaxed"
         style={{ color: "rgba(var(--pq-ivory-rgb), 0.7)" }}
       >
@@ -491,7 +493,7 @@ function ResultScreen({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.5 }}
+        transition={{ delay: 0.6, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         className="mt-8 w-full max-w-sm space-y-3"
       >
         {highlights.features.map((feat, i) => (
@@ -499,7 +501,7 @@ function ResultScreen({
             key={i}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.7 + i * 0.1 }}
+            transition={{ delay: 0.7 + i * 0.1, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
             className="flex items-center gap-3 px-4 py-3"
             style={{
               backgroundColor: "rgba(184,149,106,0.06)",
@@ -527,12 +529,12 @@ function ResultScreen({
       <motion.button
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.0 }}
+        transition={{ delay: 1.0, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         onClick={onContinue}
         disabled={loading}
         className="mt-10 flex w-full max-w-sm items-center justify-center gap-2 px-8 py-4 text-base font-bold transition-all duration-300 hover:shadow-xl active:scale-[0.98] disabled:opacity-60"
         style={{
-          transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+          transitionTimingFunction: "var(--motion-easing-emphasized, cubic-bezier(0.16, 1, 0.3, 1))",
           backgroundColor: "var(--pq-bronze)",
           color: "var(--pq-ink)",
           borderRadius: "var(--pq-radius-cta)",
@@ -856,12 +858,27 @@ export default function OnboardingPage() {
   // ── Loading / auth guard ─────────────────────────────────────────────────
 
   if (authLoading) {
+    // Page-load skeleton — Vantablack ink surface matching the wizard
+    // chrome. Mirrors top progress + question card so layout shift on
+    // mount is minimal. Replaces the legacy Loader2 spinner.
     return (
       <div
-        className="flex min-h-[100dvh] items-center justify-center"
+        className="flex min-h-[100dvh] flex-col items-center px-6 pt-12"
         style={{ backgroundColor: "var(--pq-ink)" }}
+        role="status"
+        aria-live="polite"
+        aria-label="Loading onboarding"
       >
-        <Loader2 size={24} className="animate-spin text-[var(--pq-bronze-light)]" />
+        <div className="w-full max-w-md flex flex-col gap-4">
+          <div className="pq-skeleton-dark h-1.5 w-full rounded-full" />
+          <div className="pq-skeleton-dark mt-6 h-3 w-24 rounded" />
+          <div className="pq-skeleton-dark h-8 w-3/4 rounded" />
+          <div className="pq-skeleton-dark h-4 w-2/3 rounded" />
+          <div className="pq-skeleton-dark mt-6 h-14 w-full rounded-sm" />
+          <div className="pq-skeleton-dark h-14 w-full rounded-sm" />
+          <div className="pq-skeleton-dark h-14 w-full rounded-sm" />
+          <span className="sr-only">Loading onboarding…</span>
+        </div>
       </div>
     );
   }
@@ -959,7 +976,7 @@ export default function OnboardingPage() {
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: PQ_DUR_BASE, ease: PQ_EASE }}
             >
               {isLegalStep ? (
                 <LegalStep
@@ -1011,7 +1028,7 @@ export default function OnboardingPage() {
             disabled={!isStepValid}
             className="flex items-center gap-1 px-7 py-2.5 text-sm font-bold transition-all duration-300 active:scale-[0.97] disabled:cursor-not-allowed"
             style={{
-              transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+              transitionTimingFunction: "var(--motion-easing-emphasized, cubic-bezier(0.16, 1, 0.3, 1))",
               borderRadius: "var(--pq-radius-cta)",
               backgroundColor: isStepValid ? "var(--pq-bronze)" : "rgba(var(--pq-ivory-rgb), 0.06)",
               color: isStepValid ? "var(--pq-ink)" : "rgba(var(--pq-ivory-rgb), 0.35)",

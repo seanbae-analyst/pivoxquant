@@ -10,20 +10,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
-};
+import { fadeUp, stagger } from "@/lib/motion";
 
 type Persona = {
   key: string;
@@ -179,7 +166,7 @@ export function PersonaShowcase() {
               className="group relative flex flex-col justify-between overflow-hidden rounded-sm p-6 md:p-7 transition-transform duration-300 hover:-translate-y-1"
               style={{
                 minHeight: 230,
-                backgroundColor: "#0D0D0D",
+                backgroundColor: "var(--pq-card-veil)",
                 border: "0.5px solid rgba(139,111,71,0.28)",
                 boxShadow: "0 1px 0 0 var(--pq-ivory-line-ghost) inset",
               }}

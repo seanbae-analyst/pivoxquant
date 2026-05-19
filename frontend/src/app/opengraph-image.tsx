@@ -37,7 +37,6 @@ export default function OpengraphImage() {
               height: 28,
               borderRadius: 9999,
               background: "#B8956A",
-              boxShadow: "0 0 24px rgba(184,149,106,0.55)",
             }}
           />
           <span

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
@@ -97,9 +97,27 @@ export default function OnboardingBrokerPage() {
   }, [router]);
 
   if (authLoading) {
+    // Page-load skeleton — Vantablack ink surface matching the broker step
+    // header (eyebrow + headline + 2-card grid). Replaces the legacy
+    // Loader2 spinner so layout shift on mount is minimal.
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-[var(--pq-ink)]">
-        <Loader2 size={24} className="animate-spin text-[var(--pq-bronze)]" />
+      <div
+        className="flex min-h-[100dvh] flex-col px-6 pt-10"
+        style={{ backgroundColor: "var(--pq-ink)" }}
+        role="status"
+        aria-live="polite"
+        aria-label="Loading broker connection"
+      >
+        <div className="mx-auto w-full max-w-3xl flex flex-col gap-4">
+          <div className="pq-skeleton-dark h-3 w-32 rounded" />
+          <div className="pq-skeleton-dark h-9 w-3/4 rounded" />
+          <div className="pq-skeleton-dark h-4 w-2/3 rounded" />
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <div className="pq-skeleton-dark h-56 w-full rounded-sm" />
+            <div className="pq-skeleton-dark h-56 w-full rounded-sm" />
+          </div>
+          <span className="sr-only">Loading broker connection…</span>
+        </div>
       </div>
     );
   }
@@ -163,8 +181,17 @@ export default function OnboardingBrokerPage() {
           </div>
 
           {isLoading ? (
-            <div className="flex min-h-[240px] items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-[var(--pq-bronze)]" />
+            // Card-grid skeleton — mirrors the KisCard + ManualCard layout
+            // below so the page does not jump when the live data lands.
+            <div
+              className="grid gap-4 md:grid-cols-2"
+              role="status"
+              aria-live="polite"
+              aria-label="Loading broker connections"
+            >
+              <div className="pq-skeleton-dark h-56 w-full rounded-sm" />
+              <div className="pq-skeleton-dark h-56 w-full rounded-sm" />
+              <span className="sr-only">Loading broker connections…</span>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 items-start">

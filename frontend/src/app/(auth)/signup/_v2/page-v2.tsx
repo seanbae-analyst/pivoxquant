@@ -180,18 +180,27 @@ export default function SignupPageV2() {
   }, [user, loading, router]);
 
   if (loading) {
+    // Page-load skeleton — Vantablack surface matching the editorial split
+    // signup layout. Mirrors marketing card + consent stack so dimensions
+    // stay stable when the live form mounts.
     return (
       <div
-        className="flex min-h-[100dvh] items-center justify-center"
+        className="flex min-h-[100dvh] items-center justify-center px-6"
         style={{ background: "var(--pq-ink, #050505)" }}
+        role="status"
+        aria-live="polite"
+        aria-label="Loading signup"
       >
-        <div
-          className="h-8 w-8 animate-spin rounded-full"
-          style={{
-            border: "2px solid rgba(245,240,232,0.10)",
-            borderTopColor: "var(--pq-bronze, #B8956A)",
-          }}
-        />
+        <div className="w-full max-w-sm flex flex-col gap-3">
+          <div className="pq-skeleton-dark h-10 w-10 rounded-sm" />
+          <div className="pq-skeleton-dark h-8 w-56 rounded" />
+          <div className="pq-skeleton-dark h-4 w-40 rounded" />
+          <div className="pq-skeleton-dark mt-6 h-4 w-full rounded" />
+          <div className="pq-skeleton-dark h-4 w-full rounded" />
+          <div className="pq-skeleton-dark h-4 w-3/4 rounded" />
+          <div className="pq-skeleton-dark mt-4 h-12 w-full rounded-sm" />
+          <span className="sr-only">Loading…</span>
+        </div>
       </div>
     );
   }
