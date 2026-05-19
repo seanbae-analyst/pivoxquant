@@ -33,6 +33,8 @@ echo ""
 echo "[1/3] alembic head guard"
 if [ -d "backend" ] && [ -f "backend/alembic.ini" ]; then
   ALEMBIC_DIR="backend"
+elif [ -f "migrations/alembic.ini" ]; then
+  ALEMBIC_DIR="migrations"
 elif [ -f "alembic.ini" ]; then
   ALEMBIC_DIR="."
 else
