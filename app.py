@@ -1450,6 +1450,25 @@ def _init_scheduler(app):
         coalesce=True,
     )
 
+    # ── Wave H (2026-05-19) — macOS crontab → Railway ingestion ────────────
+    # 19 ops jobs (api-health / db-backup / signup-funnel / error-rate /
+    # checkout-followup / ...) previously lived in ``crontab -l`` on the CEO's
+    # MacBook — single point of failure (노트북 꺼지면 멈춤).  Now registered
+    # in-process so Railway's always-on web worker keeps them firing.
+    # Cost: $0 (no extra Railway process; gunicorn --workers 1 prevents dupe).
+    # See services/scheduler/cron_jobs.py for full job table + design notes.
+    try:
+        from services.scheduler import register_cron_jobs
+        ops_ids = register_cron_jobs(sched, app)
+        logger.info("Wave H — %d ops cron jobs registered: %s",
+                    len(ops_ids), ops_ids)
+    except Exception:
+        # Wave H registration must never block the artifact-cron scheduler
+        # boot.  If ops jobs fail to load (import error, missing script,
+        # etc.) we keep the existing weekly_memo / brag_card / fx_rate jobs
+        # alive — they're the user-facing scheduled work.
+        logger.exception("Wave H ops cron registration failed — continuing")
+
     # ── Diagnostic — 2026-04-28 ────────────────────────────────────────────
     # Logs worker PID + every registered job's `next_run_time` (already
     # converted to the job's own timezone by APScheduler) at scheduler-start
