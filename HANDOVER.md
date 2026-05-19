@@ -1,3 +1,77 @@
+# PivoxQuant — 인수인계서 (2026-05-19 v45.4 — Batch 1 agent 업그레이드 P0 8건 · 5 commit pushed · main `2c7f0a99`)
+
+## v45.4 (2026-05-19 저녁) — agent 정의 Batch 1 P0 8건 (4시간 wave)
+
+**한 줄 요약**: v45.3 종합 보고 후 CEO "Batch 1 agent 업그레이드 진행 (4시간)" 결정. 2 engineering agent 병렬 wave (신규 4 + 업그레이드 4) → 2 atomic commit + push. 신규 agent 5건 (4 .md + 1 SoT yaml) + 기존 4 agent .md additive +143 lines.
+
+### 2 commit pushed (main `22bf5496 → 2c7f0a99`)
+| Hash | 내용 |
+|---|---|
+| `fe81616c` | feat(agents): **Batch 1 P0 신규 4건 (G1-G4)** + frozen_files.yaml SoT (1021 insertions) |
+| `2c7f0a99` | feat(agents): **Batch 1 P0 업그레이드 4건 (U1-U4)** additive +143 lines |
+
+### G1~G4 신규 agent 5건 (전부 0원)
+| ID | 파일 | 크기 | 역할 |
+|---|---|---|---|
+| G1 | .claude/agents/cache-poisoning-sentinel.md | 7119B | Pattern 6 자동 회귀 게이트 (earnings_tone PR #488 + risk_summary 69b583af precedent SoT) |
+| G2 | .claude/agents/fx-consistency-guard.md | 6779B | Pattern 7 자동 회귀 게이트 (portfolio_history +52,281% + risk_summary 700배 precedent SoT) |
+| G3 | .claude/agents/frozen-file-diff-guard.md | 7761B | Iron Rule 동결 7건 자동 차단 |
+| G3 | .claude/frozen_files.yaml | 5436B | hard_frozen 7 + soft_frozen_candidates 7 + exceptions SoT |
+| G4 | .claude/agents/launch-runner.md | 9131B | D-day SHIP-BLOCKER 8건 실측 cron runner (haiku effort=low, 06:30 KST daily) |
+
+### U1~U4 업그레이드 4건 (additive only +143)
+| ID | 파일 | +line | 핵심 변경 |
+|---|---|---|---|
+| U1 | launch-coordinator.md | +22 | §3.1 SHIP-BLOCKER 7건 실측 hook 표 신설 (#21 GitHub Actions 결제 신규 row) + §3.2 launch-runner G4 cross-ref |
+| U2 | release-coordinator.md | +36 | 5룰 evidence schema 표준화 + 룰 6 신설 (frozen-file-diff-guard G3 cross-ref) + v45.3 precedent (69b583af/eea051e5/22bf5496) |
+| U3 | stripe-billing.md | +39 | Stripe Live 활성화 전 5종 규제 게이트 표 신설 (정통망법 §50 → 표시광고법 §3 → PIPA §28-8 → 금소법 §19 → 전자상거래법 §17 순서) + billing-incident-handler cross-ref |
+| U4 | compliance-gatekeeper.md | +42 | §5.1 B-1~B-7 verification 표 7 row 완성 (B-1/B-2/B-4 신규 row) + §6.1 신규 규제 7건 → B-X gate 매핑 |
+
+### Wave 3 cross-reference 무결성 검증
+- G3 frozen-file-diff-guard → release-coordinator §룰 6 (U2)
+- G4 launch-runner → launch-coordinator §3.2 (U1)
+- stripe-billing §cross-ref ← billing-incident-handler 강화
+- compliance-gatekeeper §6.2 → regulatory-monitor 강화
+- G1/G2 → bug-hunter 9 pattern catalog 인용 (read-only)
+
+### agent 인벤토리 변화 (v45 → v45.4)
+- v45 (2026-05-18): 54 agent
+- **v45.4 (2026-05-19): 58 agent** (54 + 4 신규) + 1 SoT yaml
+- 9 .md 변경 (5 신규 + 4 edit), additive only, frontmatter intact
+
+### 최종 verify (v45.4)
+- ✅ git ahead 0 (push 완료, main HEAD `2c7f0a99`)
+- ✅ frontmatter 무손실 (4 edit 전부 +line / -0 line)
+- ✅ 0원 (feedback_no_extra_cost — 신규 dependency / API / SaaS 0건)
+- ✅ detection/escalation only (G1-G4 fix 권한 없음 — Edit/Write tool 미선언, G4만 HANDOVER.md 갱신용 Edit 선언)
+- ✅ pytest 2328 PASS (코드 변경 없음, agent 정의만)
+
+### 잔여 Batch 2/3 (CEO 다음 세션 결정)
+- **Batch 2 (P1, 2시간)**: U5 legal-kr-fintech 신규 규제 7건 통합 / U6 bug-hunter 자동 트리거 / U7 audit HANDOVER re-measure
+- **Batch 3 (P2, 1.5일)**: U8 regulatory-monitor 8/15 cron / G5 caus-daily-sweep
+
+### 추가 운영 권고 (CEO 결정 대기 — v45.4)
+1. **launch-runner cron 등록** (`mcp__scheduled-tasks__create_scheduled_task` — CEO 직접, MCP unsupervised 차단)
+2. **pre-commit hook 활성화** (frozen-file-diff-guard SoT 사용) — `.git/hooks/pre-commit` 작성
+3. **release-coordinator 룰 6 운영 시작** — 다음 PR부터 강제
+
+### Iron Rule 준수 evidence (v45.4)
+- feedback_no_false_reports: 모든 변경 read/grep/git diff stat 인용
+- feedback_no_extra_cost: 9 파일 변경 0원
+- feedback_thorough_fixes: 5 신규 agent cross-reference 무결성 검증
+- feedback_pr_workflow: 2 atomic commit (신규 vs 업그레이드 분리) + push
+- feedback_feature_preservation: additive only +143 lines / 0 deletion
+
+### 다음 세션 첫 ACTION
+1. **CEO 외부 액션 7건** (v45.3와 동일 — GitHub billing / DNS / Stripe / 변호사 / 통신판매업 / prod DB / iCloud)
+2. **scheduled-tasks 3건 수동 enable** (morning-briefing cron 정정 + enable / bug-hunter-daily / legal-guard) + **launch-runner 신규 등록** (v45.4)
+3. **prod 배포 verify** — main `2c7f0a99` Railway 자동 배포 + alembic 036 prod 적용 검증
+4. **Batch 2/3 진행 결정**
+
+---
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-19 v45.3 — 5-Wave audit + AI route P0 3건 hotfix · 3 commit pushed · main `22bf5496`)
 
 ## v45.3 (2026-05-19 오후) — CEO 자율모드 전권 위임 / 5-Wave audit + Wave 2 fix
