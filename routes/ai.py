@@ -646,5 +646,11 @@ def risk_summary():
     var_data = d.get("var_data")
     stress_data = d.get("stress_data")
 
-    result, status_code = AIRiskSummary.generate(portfolio_data, var_data, stress_data)
+    # user_id is MANDATORY: AIRiskSummary caches by (user_id, value); omitting
+    # it would let two Pro users with the same portfolio value share a cache
+    # entry (cross-user PII leakage — Pattern 6, mirror of earnings_tone fix
+    # in v44.9 PR #488 + v45.2 d1867a74).
+    result, status_code = AIRiskSummary.generate(
+        portfolio_data, var_data, stress_data, user_id=current_user.id,
+    )
     return _scrub_and_jsonify(result, status_code)

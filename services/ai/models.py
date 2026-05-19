@@ -494,13 +494,22 @@ class AIRiskSummary:
     TTL = 6 * 3600  # 6 hours — portfolio risk profile changes slowly
 
     @classmethod
-    def generate(cls, portfolio_data, var_data=None, stress_data=None):
+    def generate(cls, portfolio_data, var_data=None, stress_data=None,
+                 user_id=None):
         """Generate a 3-sentence risk summary in plain language.
 
         Args:
             portfolio_data: dict with value, annual_vol, sharpe, max_dd, top_pct
             var_data:       optional VaR data dict
             stress_data:    optional stress test data dict
+            user_id:        REQUIRED for cache isolation. Two users with the
+                            same `portfolio_data['value']` would otherwise share
+                            a cache entry, causing cross-user PII leakage of
+                            the generated summary (Pattern 6 — cache poisoning
+                            via shared key). Mirrors v44.9 PR #488 fix for
+                            earnings_tone + v45.2 commit d1867a74 follow-up.
+                            Callers MUST pass `current_user.id`. None retained
+                            only for unit tests that bypass the user table.
 
         Returns:
             (result_dict, status_code) tuple.
@@ -508,9 +517,13 @@ class AIRiskSummary:
         if not portfolio_data:
             return {"error": "Portfolio data is required"}, 400
 
-        # Build cache key from portfolio value (rough proxy for state)
+        # Build cache key from (user_id, portfolio value). user_id is
+        # MANDATORY for isolation — see docstring. `None` is namespaced as
+        # 'anon' so tests can still exercise the cache path without leaking
+        # into a real user's slot.
         value = portfolio_data.get("value", 0)
-        cache_key = f"risk_summary:{int(value)}"
+        uid_part = int(user_id) if user_id is not None else "anon"
+        cache_key = f"risk_summary:{uid_part}:{int(value)}"
         cached = _get_cache(cache_key, cls.TTL)
         if cached:
             return cached, 200
