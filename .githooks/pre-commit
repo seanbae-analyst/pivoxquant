@@ -113,11 +113,108 @@ if echo "$SCAN" | grep -E '^\+.*sk_(live|test)_[A-Za-z0-9]{20,}' >/dev/null 2>&1
   report "Stripe secret key in staged diff"
 fi
 
+# ----------------------------------------------------------------------
+# 4) Legal-guard grep — 자본시장법 금지어 (BUY/SELL/HOLD/recommend/advice/추천/조언)
+# 단 시그널 enum 값(SignalType.POSITIVE 등 트레이드 액션 필드)은 화이트리스트.
+# Scope: 사용자 노출 표면만 (frontend/src/app, routes, services, templates).
+# Source: CLAUDE.md "중요 원칙" §시그널 라벨.
+# ----------------------------------------------------------------------
+LEGAL_SCAN_FILES=$(echo "$STAGED" | grep -E '^(frontend/src/app|routes|services|templates)/.*\.(py|ts|tsx|jsx|js|html)$' || true)
+if [ -n "$LEGAL_SCAN_FILES" ]; then
+  LEGAL_HITS=$(git diff --cached -U0 --diff-filter=ACMR -- $LEGAL_SCAN_FILES 2>/dev/null \
+    | grep -nE '^\+.*(\bBUY\b|\bSELL\b|\bHOLD\b|\brecommend|\badvice\b|추천|조언)' \
+    | grep -viE '(SignalType|trade\.action|action:|action =|"action"|TradeAction|# noqa: legal|// legal-ok|test_|\.test\.|spec\.|fixture)' \
+    || true)
+  if [ -n "$LEGAL_HITS" ]; then
+    report "legal-guard: 금지어 (BUY/SELL/HOLD/recommend/advice/추천/조언) detected in user-facing surface:"
+    echo "$LEGAL_HITS" | head -10 | sed 's/^/    /'
+    echo "    화이트리스트: SignalType enum / trade.action 필드 / test fixture (자동 제외됨)"
+    echo "    의도된 경우: # noqa: legal 또는 // legal-ok 주석 추가"
+  fi
+fi
+
+# ----------------------------------------------------------------------
+# 5) Frozen-file diff guard — hard_frozen 7건 (.claude/frozen_files.yaml SoT)
+# v45.4 G3 frozen-file-diff-guard agent SoT.
+# 변경 시 commit message에 escape token 필수:
+#   - "cache-poisoning-sentinel approved"  (services/ai/models.py)
+#   - "fx-consistency-guard approved"      (services/quant/portfolio.py)
+#   - "legal-kr-fintech approved"          (services/ai/models.py prompt injection)
+#   - "CEO override: <reason>"             (any hard_frozen)
+# ----------------------------------------------------------------------
+FROZEN_PATHS="services/quant/engine.py services/quant/models.py services/quant/risk_metrics.py services/quant/risk_defense.py services/quant/portfolio.py services/quant/signals.py services/ai/models.py"
+FROZEN_HITS=""
+for fp in $FROZEN_PATHS; do
+  if echo "$STAGED" | grep -qx "$fp"; then
+    FROZEN_HITS="${FROZEN_HITS}${fp}\n"
+  fi
+done
+if [ -n "$FROZEN_HITS" ]; then
+  # commit message는 아직 없음 (pre-commit 단계). COMMIT_EDITMSG 또는 -m 파라미터는
+  # 현재 hook에서 직접 접근 불가 → MERGE_MSG/COMMIT_EDITMSG 파일 확인.
+  CMSG_FILE=".git/COMMIT_EDITMSG"
+  ESCAPE_OK=0
+  if [ -f "$CMSG_FILE" ]; then
+    if grep -qiE '(cache-poisoning-sentinel approved|fx-consistency-guard approved|legal-kr-fintech approved|CEO override:)' "$CMSG_FILE"; then
+      ESCAPE_OK=1
+    fi
+  fi
+  if [ "$ESCAPE_OK" -ne 1 ]; then
+    report "frozen-file-diff-guard: hard_frozen file(s) staged without escape token:"
+    printf "    %b" "$FROZEN_HITS"
+    echo "    SoT: .claude/frozen_files.yaml"
+    echo "    필수 commit message escape token (택1):"
+    echo "      - 'cache-poisoning-sentinel approved'"
+    echo "      - 'fx-consistency-guard approved'"
+    echo "      - 'legal-kr-fintech approved'"
+    echo "      - 'CEO override: <reason>'"
+  fi
+fi
+
+# ----------------------------------------------------------------------
+# 6) Ruff check — backend python lint (선택, ruff 미설치 시 skip).
+# Staged .py 파일만 빠르게 검사 (전체 codebase는 느림).
+# ----------------------------------------------------------------------
+PY_STAGED=$(echo "$STAGED" | grep -E '\.py$' || true)
+if [ -n "$PY_STAGED" ]; then
+  if command -v ruff >/dev/null 2>&1; then
+    RUFF_OUT=$(ruff check $PY_STAGED 2>&1 || true)
+    if echo "$RUFF_OUT" | grep -qE '^[^ ].*:[0-9]+:[0-9]+:'; then
+      report "ruff check: lint violations in staged Python files:"
+      echo "$RUFF_OUT" | head -20 | sed 's/^/    /'
+    fi
+  elif [ -x "./venv/bin/ruff" ]; then
+    RUFF_OUT=$(./venv/bin/ruff check $PY_STAGED 2>&1 || true)
+    if echo "$RUFF_OUT" | grep -qE '^[^ ].*:[0-9]+:[0-9]+:'; then
+      report "ruff check: lint violations in staged Python files:"
+      echo "$RUFF_OUT" | head -20 | sed 's/^/    /'
+    fi
+  else
+    echo "  (ruff not installed — skip Python lint; pip install ruff to enable)"
+  fi
+fi
+
+# ----------------------------------------------------------------------
+# 7) Extended secret scan — GitHub PAT / OAuth / Dev login secrets.
+# ----------------------------------------------------------------------
+if [ -n "$SCAN" ]; then
+  if echo "$SCAN" | grep -E '^\+.*ghp_[A-Za-z0-9]{36}' >/dev/null 2>&1; then
+    report "GitHub personal access token (ghp_...) in staged diff"
+  fi
+  if echo "$SCAN" | grep -E '^\+.*ghs_[A-Za-z0-9]{36}' >/dev/null 2>&1; then
+    report "GitHub server token (ghs_...) in staged diff"
+  fi
+  if echo "$SCAN" | grep -wE "^\+.*(GOOGLE_OAUTH_CLIENT_SECRET|DEV_LOGIN_SECRET|KAKAO_CLIENT_SECRET)\s*=\s*['\"][A-Za-z0-9_-]{8,}" >/dev/null 2>&1; then
+    report "OAuth/dev secret literal value in staged diff — use env var reference"
+  fi
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo ""
   echo "Commit blocked. To override (only if you are certain):"
   echo "    git commit --no-verify"
-  echo "Server-side legal-guard.yml will re-check on push."
+  echo "Server-side legal-guard.yml (currently DISABLED — see docs/dev/local-hooks.md)"
+  echo "will re-check on push when GitHub Actions billing is re-enabled."
   exit 1
 fi
 exit 0

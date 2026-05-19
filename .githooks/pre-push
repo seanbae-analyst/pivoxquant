@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# PivoxQuant — pre-push guard
+# ----------------------------------------------------------------------
+# 2026-05-19 — GitHub Actions billing 결제 차단 우회용 로컬 마이그레이션.
+# alembic head guard + regression guards + 빠른 관련 pytest sanity.
+#
+# Activation (one-time, per clone):
+#     git config core.hooksPath .githooks
+#
+# Bypass (use sparingly):
+#     git push --no-verify
+# ----------------------------------------------------------------------
+# stdin: <local-ref> <local-sha> <remote-ref> <remote-sha> (per push ref)
+# We only care that *something* is being pushed; per-ref granularity not needed.
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+cd "$REPO_ROOT" || exit 0
+
+fail=0
+report() {
+  echo "✗ pre-push: $1"
+  fail=1
+}
+
+echo "→ pre-push: running local equivalents of GitHub Actions checks"
+echo "  (GitHub Actions disabled — see docs/dev/local-hooks.md)"
+echo ""
+
+# ----------------------------------------------------------------------
+# 1) Alembic head guard — single migration chain (no diverged heads).
+# Replaces .github/workflows/alembic-head-guard.yml.
+# ----------------------------------------------------------------------
+echo "[1/3] alembic head guard"
+if [ -d "backend" ] && [ -f "backend/alembic.ini" ]; then
+  ALEMBIC_DIR="backend"
+elif [ -f "alembic.ini" ]; then
+  ALEMBIC_DIR="."
+else
+  ALEMBIC_DIR=""
+fi
+
+if [ -n "$ALEMBIC_DIR" ]; then
+  # Prefer venv alembic if present (avoids PATH ambiguity).
+  ALEMBIC_BIN=""
+  if [ -x "./venv/bin/alembic" ]; then
+    ALEMBIC_BIN="./venv/bin/alembic"
+  elif command -v alembic >/dev/null 2>&1; then
+    ALEMBIC_BIN="alembic"
+  fi
+  if [ -n "$ALEMBIC_BIN" ]; then
+    HEADS_OUT=$(cd "$ALEMBIC_DIR" && "$ALEMBIC_BIN" heads 2>&1 || true)
+    HEAD_COUNT=$(echo "$HEADS_OUT" | grep -cE '^[a-f0-9]+ \(head' || true)
+    if [ "$HEAD_COUNT" -gt 1 ] 2>/dev/null; then
+      report "alembic has $HEAD_COUNT heads (must be 1). Diverged migrations:"
+      echo "$HEADS_OUT" | sed 's/^/    /'
+      echo "    Fix: alembic merge -m \"merge heads\" <head1> <head2>"
+    else
+      echo "  ✓ single head"
+    fi
+  else
+    echo "  (alembic not found — skip; pip install alembic to enable)"
+  fi
+else
+  echo "  (no alembic.ini found — skip)"
+fi
+
+# ----------------------------------------------------------------------
+# 2) Regression guards — 9 bug pattern SoT.
+# Replaces .github/workflows/regression-guards.yml.
+# ----------------------------------------------------------------------
+echo "[2/3] regression guards"
+if [ -f "scripts/check_regression_guards.py" ]; then
+  PY_BIN=""
+  if [ -x "./venv/bin/python" ]; then
+    PY_BIN="./venv/bin/python"
+  elif command -v python3 >/dev/null 2>&1; then
+    PY_BIN="python3"
+  fi
+  if [ -n "$PY_BIN" ]; then
+    GUARD_OUT=$("$PY_BIN" scripts/check_regression_guards.py 2>&1)
+    GUARD_EXIT=$?
+    if [ "$GUARD_EXIT" -ne 0 ]; then
+      report "regression guards FAIL (exit $GUARD_EXIT):"
+      echo "$GUARD_OUT" | head -30 | sed 's/^/    /'
+    else
+      echo "  ✓ regression guards pass"
+    fi
+  else
+    echo "  (python3 not found — skip)"
+  fi
+else
+  echo "  (scripts/check_regression_guards.py not found — skip)"
+fi
+
+# ----------------------------------------------------------------------
+# 3) Pytest fast sanity — only changed routes/services + regression tests.
+# Replaces (partially) .github/workflows/ci.yml. Full pytest is too slow
+# for pre-push — run nightly on developer machines or pre-launch.
+# ----------------------------------------------------------------------
+echo "[3/3] pytest sanity (changed routes/services + regression)"
+PY_BIN=""
+if [ -x "./venv/bin/python" ]; then
+  PY_BIN="./venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+  PY_BIN="python3"
+fi
+
+if [ -z "$PY_BIN" ] || ! "$PY_BIN" -c "import pytest" 2>/dev/null; then
+  echo "  (pytest not available — skip)"
+else
+  # Determine merge-base with origin/main for changed-file detection.
+  BASE_REF="origin/main"
+  if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+    BASE_REF=$(git rev-parse HEAD~1 2>/dev/null || echo "HEAD")
+  fi
+  CHANGED=$(git diff "$BASE_REF"..HEAD --name-only 2>/dev/null | grep -E '^(routes|services|models|engine|quant_models|risk_defense|risk_models|portfolio_models|signal_models|ai_models)/.*\.py$|\.py$' || true)
+
+  # Build pytest target list — regression tests + tests matching changed modules.
+  PYTEST_TARGETS=""
+  # Always include core regression tests if present.
+  for tname in tests/test_pivoxaudit_secret_leak.py tests/test_no_hardcoded_samples.py tests/test_regression_guards.py; do
+    [ -f "$tname" ] && PYTEST_TARGETS="$PYTEST_TARGETS $tname"
+  done
+
+  # Map changed routes/services → matching tests (best-effort).
+  for f in $CHANGED; do
+    base=$(basename "$f" .py)
+    # tests/test_<basename>.py pattern.
+    for cand in "tests/test_${base}.py" "tests/test_${base}_*.py"; do
+      for hit in $cand; do
+        [ -f "$hit" ] && PYTEST_TARGETS="$PYTEST_TARGETS $hit"
+      done
+    done
+  done
+
+  # Deduplicate.
+  PYTEST_TARGETS=$(echo "$PYTEST_TARGETS" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ' ')
+
+  if [ -z "$PYTEST_TARGETS" ]; then
+    echo "  (no relevant tests for changed files — skip)"
+  else
+    TARGET_COUNT=$(echo "$PYTEST_TARGETS" | wc -w | tr -d ' ')
+    echo "  running $TARGET_COUNT test file(s)..."
+    # -q quiet, -x stop on first failure, --no-header for compactness.
+    PYTEST_OUT=$("$PY_BIN" -m pytest -q -x --no-header $PYTEST_TARGETS 2>&1)
+    PYTEST_EXIT=$?
+    if [ "$PYTEST_EXIT" -ne 0 ]; then
+      report "pytest FAIL (exit $PYTEST_EXIT):"
+      echo "$PYTEST_OUT" | tail -40 | sed 's/^/    /'
+    else
+      echo "  ✓ pytest pass"
+    fi
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "Push blocked. To override (only if you are certain):"
+  echo "    git push --no-verify"
+  echo "Re-enable GitHub Actions after billing: see docs/dev/local-hooks.md"
+  exit 1
+fi
+exit 0

@@ -100,6 +100,16 @@ frontend/src/
 │   ├── push.ts                     # Web Push (미사용)
 ```
 
+## 로컬 git hooks (2026-05-19 신규)
+
+GitHub Actions billing 결제 차단으로 로컬 hooks 이전. clone 직후 1회 실행:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+상세: `docs/dev/local-hooks.md`
+
 ## 서버 기동
 ```bash
 # 2026-05-17 wave 13: 경로 갱신. iCloud Desktop sync 가 ~/Desktop/취준/ 의

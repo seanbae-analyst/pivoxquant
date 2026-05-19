@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# PivoxQuant — post-checkout informational hook (NON-BLOCKING)
+# ----------------------------------------------------------------------
+# 2026-05-19 — Heads-up when switching branches changes frozen file SoT.
+# Pure informational — never blocks.
+# ----------------------------------------------------------------------
+# git args: <prev-head> <new-head> <branch-checkout-flag>
+
+PREV_HEAD="$1"
+NEW_HEAD="$2"
+BRANCH_FLAG="$3"
+
+# Only run on branch checkout (flag=1), not file checkout (flag=0).
+[ "$BRANCH_FLAG" != "1" ] && exit 0
+# Skip if heads equal (no actual change).
+[ "$PREV_HEAD" = "$NEW_HEAD" ] && exit 0
+
+FROZEN_SOT=".claude/frozen_files.yaml"
+[ ! -f "$FROZEN_SOT" ] && exit 0
+
+if git diff --name-only "$PREV_HEAD" "$NEW_HEAD" 2>/dev/null | grep -qx "$FROZEN_SOT"; then
+  echo ""
+  echo "ℹ post-checkout: $FROZEN_SOT changed across this checkout."
+  echo "  Re-read SoT before touching hard_frozen paths in this branch."
+  echo ""
+fi
+
+exit 0
