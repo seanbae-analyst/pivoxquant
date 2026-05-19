@@ -21,6 +21,7 @@
 
 import * as React from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { PQ_EASE, PQ_DUR_CHART } from "@/lib/motion";
 import { AlertTriangle } from "lucide-react";
 
 import {
@@ -94,7 +95,7 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
           <span
             className="inline-flex items-center gap-1 font-mono uppercase text-pq-caption tracking-[0.22em] px-2 py-1 rounded-[2px]"
             style={{
-              color: "#a35b3b",
+              color: "var(--pq-drift)",
               background: bare ? "rgba(163,91,59,0.10)" : "rgba(163,91,59,0.12)",
               border: "0.5px solid rgba(163,91,59,0.35)",
             }}
@@ -144,7 +145,7 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
         <span className="inline-flex items-center gap-1.5">
           <AlertTriangle
             className="h-3 w-3"
-            style={{ color: "#a35b3b" }}
+            style={{ color: "var(--pq-drift)" }}
             aria-hidden
           />
           Drift-flagged week
@@ -280,8 +281,8 @@ function EvolutionChart({
           }
           animate={{ pathLength: 1, opacity: 1 }}
           transition={{
-            duration: reduceMotion ? 0 : 1.4,
-            ease: [0.16, 1, 0.3, 1],
+            duration: reduceMotion ? 0 : PQ_DUR_CHART,
+            ease: PQ_EASE,
           }}
         />
         {/* interaction dots */}
@@ -306,7 +307,7 @@ function EvolutionChart({
                 cx={cx}
                 cy={cy}
                 r={active ? 4.2 : i === points.length - 1 ? 3.2 : 2.2}
-                fill={isDrift ? "#a35b3b" : strokeColor}
+                fill={isDrift ? "var(--pq-drift)" : strokeColor}
                 stroke={bare ? "var(--pq-ink)" : "#F5F0E8"}
                 strokeWidth={1}
               />

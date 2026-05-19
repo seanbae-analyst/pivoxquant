@@ -20,6 +20,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { SignalEntry, SignalLabel } from "@/lib/types";
+import { fmtPct } from "@/lib/format";
 
 interface Props {
   entry: SignalEntry;
@@ -63,11 +64,9 @@ function fmtPrice(s: SignalEntry): string {
   })}`;
 }
 
-function fmtPct(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  const sign = n >= 0 ? "+" : "";
-  return `${sign}${n.toFixed(2)}%`;
-}
+// fmtPct migrated to @/lib/format (2026-05-19 Wave 2 sweep).
+// lib/format.ts `fmtPct` is byte-identical (same `n >= 0 ? "+"` sign rule
+// + 2-decimal toFixed + "—" sentinel).
 
 function fmtKstClock(iso: string | null | undefined): string {
   if (!iso) return "—";

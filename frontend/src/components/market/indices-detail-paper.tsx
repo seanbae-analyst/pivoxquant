@@ -12,12 +12,12 @@
  */
 
 import * as React from "react";
-import type { IndexQuote } from "@/components/market/index-card";
+import type { IndexQuote } from "@/lib/market";
 import {
   relativeTime,
   useNowTick,
   proxyLabel,
-} from "@/components/market/index-card";
+} from "@/lib/market";
 import { fmtPct } from "@/lib/format";
 import { isMarketOpen } from "@/lib/market-hours";
 

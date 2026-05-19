@@ -22,6 +22,7 @@ import { useInvestmentProfile } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { EditorialHead } from "@/components/ui/editorial";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/utils";
 import {
@@ -88,9 +89,10 @@ function Section({
         <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           {kicker}
         </div>
-        <h2 className="mt-1 font-serif text-2xl text-[var(--pq-ivory)]">
+        {/* Wave 2 sweep (Task #8): inline Playfair text-2xl → EditorialHead. */}
+        <EditorialHead size={26} as="h2" className="mt-1">
           {title}
-        </h2>
+        </EditorialHead>
       </header>
       {children}
     </section>
@@ -248,12 +250,13 @@ function LivingCFOControls() {
           Declared persona
         </div>
         <div className="mt-2 flex items-baseline justify-between gap-3 flex-wrap">
-          <div className="font-serif text-2xl text-[var(--pq-ivory)]">
+          {/* Wave 2 sweep (Task #8): inline Playfair text-2xl → EditorialHead. */}
+          <EditorialHead size={26} as="div">
             {declared
               ? PERSONA_LABELS[declared.persona as PersonaId] ??
                 declared.persona
               : "Not set"}
-          </div>
+          </EditorialHead>
           {declared && (
             <div className="font-mono tabular-nums text-sm text-[rgba(245,240,232,0.6)]">
               score {declared.score}
@@ -647,8 +650,18 @@ export default function ProfilePageV1() {
 
   if (authLoading || !user) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-[var(--pq-bronze)]" />
+      // Wave 2 sweep (Task #5): page-level auth load — skeleton scaffold.
+      <div className="mx-auto max-w-4xl px-5 md:px-7 py-10" aria-live="polite" aria-busy="true">
+        <div className="pq-skeleton-dark h-4 w-32 mb-4" aria-hidden />
+        <div className="pq-skeleton-dark h-10 w-2/3 mb-3" aria-hidden />
+        <div className="pq-skeleton-dark h-4 w-1/2 mb-10" aria-hidden />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="pq-skeleton-dark h-28" aria-hidden />
+          <div className="pq-skeleton-dark h-28" aria-hidden />
+          <div className="pq-skeleton-dark h-28" aria-hidden />
+          <div className="pq-skeleton-dark h-28" aria-hidden />
+        </div>
+        <span className="sr-only">Loading profile…</span>
       </div>
     );
   }
@@ -682,9 +695,10 @@ export default function ProfilePageV1() {
           <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Identity · Persona
           </div>
-          <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
+          {/* Wave 2 sweep (Task #8): inline Playfair text-2xl/3xl → EditorialHead. */}
+          <EditorialHead size={30} as="h1" className="mt-2">
             My Profile
-          </h1>
+          </EditorialHead>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">
             Who you are and how your CFO reads you. Operational controls live on{" "}
             <Link href="/settings" className="underline underline-offset-4 hover:text-[var(--pq-bronze)]">

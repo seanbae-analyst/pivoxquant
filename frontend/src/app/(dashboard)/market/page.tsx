@@ -41,8 +41,8 @@ import { cn } from "@/lib/utils";
 import { DossierDesk } from "@/components/home/dossier-desk";
 import { PaperDocument } from "@/components/home/paper-document";
 
-import type { IndexQuote } from "@/components/market/index-card";
-import { useNowTick } from "@/components/market/index-card";
+import type { IndexQuote } from "@/lib/market";
+import { useNowTick } from "@/lib/market";
 
 import { OverviewPaper } from "@/components/market/overview-paper";
 import { IndicesDetailPaper } from "@/components/market/indices-detail-paper";
@@ -325,8 +325,8 @@ export default function MarketPage() {
                 className={cn(
                   "inline-block h-2 w-2 rounded-full",
                   marketOpen
-                    ? "pq-live-dot bg-[#7db487]"
-                    : "bg-yellow-500/60",
+                    ? "pq-live-dot bg-[var(--pq-live)]"
+                    : "bg-[var(--pq-stale)]",
                 )}
               />
               <span

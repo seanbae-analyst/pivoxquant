@@ -54,6 +54,7 @@ export function TierGate({ tier, children, fallback, theme = "dark" }: TierGateP
         "p-8 text-center backdrop-blur-[6px]",
         isDark
           ? "rounded-[2px] border border-[rgba(245,240,232,0.12)] bg-[rgba(10,10,10,0.72)]"
+          // v3 modal-shell exception per project_design_v3.md — rounded-2xl is intentional on modal/dialog shells (CTAs inside remain rounded-sm).
           : "rounded-2xl border border-slate-200 bg-slate-50",
       )}
     >

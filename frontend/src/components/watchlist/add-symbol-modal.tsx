@@ -112,6 +112,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
 
   return (
     <ModalShell onClose={onClose} ariaLabel="Add symbol">
+      {/* v3 modal-shell exception per project_design_v3.md — rounded-2xl is intentional on modal/dialog shells (CTAs inside remain rounded-sm). */}
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-md overflow-hidden rounded-2xl shadow-[0_24px_60px_-20px_rgba(10,10,10,0.35)]"

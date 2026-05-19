@@ -31,6 +31,10 @@ function actionLabel(row: TransactionRow): {
   return { label: row.action ?? row.side ?? "Entry", signed: 0 };
 }
 
+// Wave 2 sweep (2026-05-19): NOT migrated to @/lib/format.
+// lib/fmtUsd switches to 0-decimal when n >= 1000; this helper keeps
+// 2 decimals at all USD magnitudes so a $1,234.56 trade row reads
+// truthfully. Migration would silently truncate cents on most rows.
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   if (!Number.isFinite(n)) return "—";
   const dec = currency === "KRW" ? 0 : 2;

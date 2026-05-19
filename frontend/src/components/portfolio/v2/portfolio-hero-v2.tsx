@@ -55,6 +55,12 @@ function weekdayOf(d: Date): string {
   return d.toLocaleDateString("en-US", { weekday: "long" });
 }
 
+// Wave 2 sweep (2026-05-19): NOT migrated to @/lib/format helpers.
+// Divergences from lib/format.ts that would cause user-visible regression:
+//   fmtMoney  — 0-decimal USD vs lib/fmtUsd 2-decimal under 1000
+//   fmtPct    — toFixed(1) vs lib/fmtPct toFixed(2), AND no "+" prefix
+//   fmtMoneySigned (below) — 0-decimal USD vs lib 2-decimal under 1000
+// Hero card intentionally suppresses cents/decimals for editorial weight.
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   if (n == null || !Number.isFinite(n)) return "—";
   const abs = Math.abs(n);
@@ -315,7 +321,7 @@ export function PortfolioHeroV2({
           title={
             reconcileAvailable
               ? "Reconcile from connected broker"
-              : "Connect a broker first (Settings)"
+              : "KIS broker 연결 필요 (Settings)"
           }
         >
           Reconcile from broker

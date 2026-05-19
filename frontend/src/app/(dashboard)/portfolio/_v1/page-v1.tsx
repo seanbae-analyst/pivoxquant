@@ -287,7 +287,7 @@ export default function PortfolioPage() {
           <span
             className={`h-1.5 w-1.5 rounded-full ${
               marketOpen
-                ? "bg-[#7db487] animate-pulse"
+                ? "bg-[var(--pq-live)] animate-pulse"
                 : "bg-[var(--pq-bronze)] opacity-50"
             }`}
           />

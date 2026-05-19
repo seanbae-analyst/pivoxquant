@@ -490,7 +490,7 @@ export default function AlertsPage() {
               className={cn(
                 "inline-flex items-center gap-1.5 px-5 py-2 text-xs tracking-[0.18em] uppercase transition-colors",
                 confirmClear
-                  ? "text-red-400"
+                  ? "text-[var(--pq-error)]"
                   : "text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)]",
                 "disabled:opacity-40",
               )}

@@ -14,6 +14,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { SignalEntry, SignalLabel } from "@/lib/types";
+import { fmtPct1 } from "@/lib/format";
 
 interface Props {
   entries: SignalEntry[];
@@ -59,12 +60,6 @@ function fmtPrice(s: SignalEntry): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-}
-
-function fmtPct(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  const sign = n >= 0 ? "+" : "";
-  return `${sign}${n.toFixed(2)}%`;
 }
 
 export function TopMoversStrip({ entries, resolveName }: Props) {
@@ -280,7 +275,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                       color: pctTone,
                     }}
                   >
-                    {fmtPct(pct)}
+                    {fmtPct1(pct, 2)}
                   </span>
                   <span
                     className="font-mono"

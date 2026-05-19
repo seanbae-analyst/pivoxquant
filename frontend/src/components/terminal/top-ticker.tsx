@@ -558,7 +558,6 @@ export function TopTicker() {
             height: 6,
             borderRadius: "50%",
             background: "var(--pq-bronze, #B8956A)",
-            boxShadow: "0 0 8px rgba(184,149,106,0.5)",
             display: "inline-block",
           }}
         />

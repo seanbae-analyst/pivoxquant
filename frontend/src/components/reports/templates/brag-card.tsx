@@ -29,6 +29,7 @@ import {
   PdfDisclaimerMini,
   PdfTicker,
 } from "../pdf-primitives";
+import { fmtPct } from "@/lib/format";
 
 export interface BragCardData {
   monthLabel: string;     // "April 2026"
@@ -110,12 +111,6 @@ const DEFAULT: BragCardData = {
   pullquote:
     "운이 아니라 <em>프로세스</em>였다. 다음 달도 같은 프로세스로.",
 };
-
-function fmtPct(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "—";
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
 
 function normalizeBragCardData(
   raw: BragCardData | BackendBragPayload | undefined | null,

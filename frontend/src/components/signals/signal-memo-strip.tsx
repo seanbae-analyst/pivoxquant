@@ -15,6 +15,7 @@
 
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
+import { fmtPct } from "@/lib/format";
 
 export interface MemoSignalItem {
   ticker: string;
@@ -60,12 +61,6 @@ function formatPrice(item: MemoSignalItem): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-}
-
-function fmtPct(n: number): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  const sign = n >= 0 ? "+" : "";
-  return `${sign}${n.toFixed(2)}%`;
 }
 
 function signalExplanation(sig: string) {

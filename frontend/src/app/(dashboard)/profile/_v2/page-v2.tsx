@@ -61,7 +61,8 @@ import { PeerBenchmarkBlockV2 } from "@/components/profile/v2/peer-benchmark-blo
 import { CompanionEntryV2 } from "@/components/profile/v2/companion-entry-v2";
 import { DangerZoneCardV2 } from "@/components/profile/v2/danger-zone-card-v2";
 
-import { Loader2 } from "lucide-react";
+// Wave 2 sweep (Task #5): Loader2 no longer used — page-level auth load
+// now renders a pq-skeleton-dark scaffold instead of a spinner block.
 
 /* ── Pulse posture renderer ── */
 
@@ -381,8 +382,19 @@ export default function ProfilePageV2() {
 
   if (authLoading || !user) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-[var(--pq-bronze)]" />
+      // Wave 2 sweep (Task #5): page-level auth load — skeleton scaffold
+      // gives readers a preview of layout shape rather than a spinner block.
+      <div className="mx-auto max-w-4xl px-5 md:px-7 py-10" aria-live="polite" aria-busy="true">
+        <div className="pq-skeleton-dark h-4 w-32 mb-4" aria-hidden />
+        <div className="pq-skeleton-dark h-10 w-2/3 mb-3" aria-hidden />
+        <div className="pq-skeleton-dark h-4 w-1/2 mb-10" aria-hidden />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="pq-skeleton-dark h-28" aria-hidden />
+          <div className="pq-skeleton-dark h-28" aria-hidden />
+          <div className="pq-skeleton-dark h-28" aria-hidden />
+          <div className="pq-skeleton-dark h-28" aria-hidden />
+        </div>
+        <span className="sr-only">Loading profile…</span>
       </div>
     );
   }

@@ -9,14 +9,15 @@
  * Reuses `usePortfolioSummary()` (line 192 of lib/hooks.ts, untouched) and
  * `usePortfolioPositions()` (line 205) for the cash-pct fallback.
  *
- * The bronze inline-SVG sparkline is decorative — there is no `useEquityCurve`
- * hook yet (SPEC GAP). It's a static sigil so the card composition lands.
+ * Sparkline is now driven by `useEquityCurve("1mo")` from portfolio v2 hooks
+ * (P0-2 fix 2026-05-19). Em-dash on empty/loading/error — no fabricated path.
  */
 
 import * as React from "react";
 import { HomeCard } from "./home-card";
 import { usePortfolioSummary, usePortfolioPositions } from "@/lib/hooks";
-import { pctColor, PRICE_COLOR_HEX } from "@/lib/format";
+import { useEquityCurve, type EquityPoint } from "@/components/portfolio/v2/hooks-v2";
+import { pctColor, PRICE_COLOR_HEX, fmtPct } from "@/lib/format";
 // FINDING-021: usePortfolioPositions() returns the BACKEND position shape,
 // not the camelCase `@/components/portfolio/types` Position.
 import type { Position } from "@/lib/types";
@@ -63,10 +64,47 @@ function fmtSignedMoney(n: number | undefined, currency: "USD" | "KRW"): string 
   return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
 }
 
-function fmtPct(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  const sign = n > 0 ? "+" : "";
-  return `${sign}${n.toFixed(2)}%`;
+// fmtPct migrated to @/lib/format (2026-05-19 Wave 2 sweep).
+// Local definition retired — lib/format.ts `fmtPct` is byte-identical
+// for finite inputs and uses "—" sentinel on null/non-finite, matching
+// the prior behaviour at every call site in this file.
+//
+// fmtMoney / fmtSignedMoney NOT migrated:
+//  - fmtMoney uses ASCII hyphen for negatives; lib/fmtUsd is sign-implicit.
+//  - fmtSignedMoney uses ASCII "-"; lib/fmtMoneySigned uses U+2212.
+//  Both behaviour deltas are user-visible — kept inline to avoid regression.
+
+/**
+ * Build polyline + fill `points` strings from real equity data.
+ * Width=200 / height=36 to match the existing viewBox so callers don't
+ * need to re-layout. Returns null when fewer than 2 finite points are
+ * available — the consumer should em-dash in that case rather than
+ * render a single dot or extrapolate.
+ */
+function buildSparkPoints(
+  series: EquityPoint[],
+  width: number,
+  height: number,
+): { line: string; fill: string } | null {
+  const navs = series
+    .map((p) => p.nav)
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (navs.length < 2) return null;
+
+  const min = Math.min(...navs);
+  const max = Math.max(...navs);
+  const span = max - min || 1;
+  // Inset 4px top/bottom so the stroke isn't clipped at the viewBox edge.
+  const padY = 4;
+  const drawH = height - padY * 2;
+  const xStep = width / (navs.length - 1);
+  const toY = (v: number) => padY + (1 - (v - min) / span) * drawH;
+
+  const line = navs
+    .map((v, i) => `${(i * xStep).toFixed(1)},${toY(v).toFixed(1)}`)
+    .join(" ");
+  const fill = `${line} ${width.toFixed(1)},${height} 0,${height}`;
+  return { line, fill };
 }
 
 export function PortfolioSnapshotCard() {
@@ -74,6 +112,21 @@ export function PortfolioSnapshotCard() {
     data: SummaryShape | undefined;
   };
   const { data: posData } = usePortfolioPositions<PositionsShape>();
+  // P0-2 fix 2026-05-19: wire the sparkline to the real equity history.
+  // 1-month window keeps the card responsive (small payload) and matches
+  // the "today snapshot" framing of the card. 60s dedupe in hooks-v2.
+  const { data: equity } = useEquityCurve("1mo");
+  const equitySeries: EquityPoint[] = React.useMemo(() => {
+    const raw = equity?.series ?? [];
+    return raw.filter(
+      (p): p is EquityPoint =>
+        p != null && typeof p.nav === "number" && Number.isFinite(p.nav),
+    );
+  }, [equity]);
+  const sparkGeom = React.useMemo(
+    () => buildSparkPoints(equitySeries, 200, 36),
+    [equitySeries],
+  );
 
   const positions = posData?.positions ?? [];
   const currency: "USD" | "KRW" =
@@ -130,25 +183,52 @@ export function PortfolioSnapshotCard() {
         <span style={{ opacity: 0.7 }}>{fmtPct(todayPct)} today</span>
       </div>
 
-      {/* Decorative bronze sparkline (no live equity-curve hook yet) */}
-      <svg
-        viewBox="0 0 200 36"
-        preserveAspectRatio="none"
-        style={{ width: "100%", height: 36, display: "block", marginBottom: 24 }}
-        aria-hidden
-      >
-        <polyline
-          fill="none"
-          stroke="rgba(245, 240, 232, 0.6)"
-          strokeWidth="1.4"
-          points="0,28 14,26 28,29 42,22 56,24 70,18 84,20 98,15 112,17 126,11 140,14 154,9 168,12 182,7 196,10"
-        />
-        <polyline
-          fill="rgba(184,149,106,0.06)"
-          stroke="none"
-          points="0,28 14,26 28,29 42,22 56,24 70,18 84,20 98,15 112,17 126,11 140,14 154,9 168,12 182,7 196,10 196,36 0,36"
-        />
-      </svg>
+      {/* Live equity sparkline — 1-month window. Em-dash row on empty
+          history so we never fabricate a path (P0-2 fix). */}
+      {sparkGeom ? (
+        <svg
+          viewBox="0 0 200 36"
+          preserveAspectRatio="none"
+          style={{ width: "100%", height: 36, display: "block", marginBottom: 24 }}
+          aria-label="Portfolio NAV — last 30 days"
+          role="img"
+        >
+          <defs>
+            <linearGradient id="pq-snap-bronze" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="rgba(184,149,106,0.22)" />
+              <stop offset="100%" stopColor="rgba(184,149,106,0)" />
+            </linearGradient>
+          </defs>
+          <polygon fill="url(#pq-snap-bronze)" stroke="none" points={sparkGeom.fill} />
+          <polyline
+            fill="none"
+            stroke="var(--pq-bronze)"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            points={sparkGeom.line}
+          />
+        </svg>
+      ) : (
+        <div
+          className="font-mono"
+          style={{
+            width: "100%",
+            height: 36,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "rgba(245, 240, 232, 0.4)",
+            fontSize: "var(--pq-text-eyebrow)",
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            marginBottom: 24,
+          }}
+          aria-label="Equity history unavailable"
+        >
+          —
+        </div>
+      )}
 
       {/* 3 mini KPIs */}
       <div

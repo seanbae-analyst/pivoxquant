@@ -226,7 +226,7 @@ function ArtifactRow({ row }: { row: QueueRow }) {
   const { label, title, meta, href, locked, Icon, state } = row;
   const stateColor =
     state?.kind === "done"
-      ? "#7db487"
+      ? "var(--pq-live)"
       : state?.kind === "ready"
         ? "var(--pq-bronze)"
         : state?.kind === "locked"

@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 import { fmtPct, pctColorClass, displayName } from "@/lib/format";
 import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type { DiscoverResult, Position } from "@/lib/types";
-import { relativeTime, useNowTick } from "@/components/market/index-card";
+import { relativeTime, useNowTick } from "@/lib/market";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import {
@@ -455,7 +455,7 @@ export default function DiscoverPage() {
                           <span
                             aria-label="Stale quote in this region"
                             title="One or more quotes have not refreshed recently"
-                            className="ml-2 inline-block h-1 w-1 align-middle rounded-full bg-yellow-500/70"
+                            className="ml-2 inline-block h-1 w-1 align-middle rounded-full bg-[var(--pq-stale)]"
                           />
                         )}
                       </p>

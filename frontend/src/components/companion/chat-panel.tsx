@@ -33,6 +33,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Send, AlertCircle, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST, PQ_DUR_MICRO, PQ_DUR_SLOW } from "@/lib/motion";
 import {
   sendMessage,
   useCompanionHistory,
@@ -357,7 +358,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: PQ_DUR_FAST, ease: PQ_EASE }}
         className="flex justify-end"
       >
         <div
@@ -396,7 +397,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: refused ? 0.5 : 0.32, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: refused ? PQ_DUR_SLOW : PQ_DUR_BASE, ease: PQ_EASE }}
       className="flex justify-start"
     >
       <div
@@ -555,6 +556,7 @@ function Composer({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: PQ_DUR_MICRO }}
               role="status"
               aria-live="assertive"
               className="mb-2 rounded-sm px-3 py-2"

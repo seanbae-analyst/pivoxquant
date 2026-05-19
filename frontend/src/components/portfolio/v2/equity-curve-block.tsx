@@ -20,14 +20,27 @@ interface EquityCurveBlockProps {
 }
 
 // Backend whitelist: "5d" | "1mo" | "3mo" | "6mo" | "1y" — Bug #8 fix.
-// "1yr" / "all" silently fell back to 5-day window on the API; both removed.
-const RANGES: { key: EquityRange; label: string }[] = [
-  { key: "1mo", label: "1M" },
-  { key: "3mo", label: "3M" },
-  { key: "6mo", label: "6M" },
-  { key: "1y", label: "1Y" },
+// "1yr" / "all" silently fell back to 5-day window on the API.
+// "All" is re-introduced (P0 2026-05-19) and mapped explicitly to "1y"
+// — the maximum the backend supports today — so the request remains
+// inside the whitelist and the user sees the longest available window
+// instead of the silent 5-day fallback. The `id` is the tab's React key
+// (and aria handle); `key` is the backend period actually requested.
+// When the backend grows a "max" period, swap the period for the All
+// tab here without changing the UI label.
+const RANGES: { id: string; key: EquityRange; label: string }[] = [
+  { id: "1mo", key: "1mo", label: "1M" },
+  { id: "3mo", key: "3mo", label: "3M" },
+  { id: "6mo", key: "6mo", label: "6M" },
+  { id: "1y", key: "1y", label: "1Y" },
+  { id: "all", key: "1y", label: "All" },
 ];
 
+// Wave 2 sweep (2026-05-19): NOT migrated to @/lib/format.
+//   fmtMoney — 0-decimal USD vs lib/fmtUsd 2-decimal under 1000.
+//   fmtPct   — `n > 0 ? "+"` (zero shows no sign) vs lib's `n >= 0 ? "+"`
+//              (zero shows "+0.00%"). Equity curve renders 0% on flat days
+//              and we keep the sign-suppressed look here intentionally.
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   if (n == null || !Number.isFinite(n)) return "—";
   const abs = Math.abs(n);
@@ -56,6 +69,8 @@ interface PolylineGeom {
   ptsNav: string;
   ptsBench: string;
   fillNav: string;
+  /** Closed polygon points for the benchmark fill area (ivory dim). */
+  fillBench: string;
 }
 
 function computePolylines(
@@ -94,15 +109,33 @@ function computePolylines(
       `M0,${lastNavY.toFixed(1)} L0,`,
     );
 
-  return { ptsNav, ptsBench, fillNav };
+  // Closed polygon along the benchmark line back to the baseline.
+  // Only built when we have a contiguous benchmark series for every
+  // sample — partial coverage would visually distort the area.
+  let fillBench = "";
+  const benchContiguous =
+    series.every(
+      (p) => typeof p.benchmark === "number" && Number.isFinite(p.benchmark),
+    ) && ptsBench.length > 0;
+  if (benchContiguous) {
+    fillBench = `0,${height.toFixed(1)} ${ptsBench} ${width.toFixed(1)},${height.toFixed(1)}`;
+  }
+
+  return { ptsNav, ptsBench, fillNav, fillBench };
 }
 
 export function EquityCurveBlock({
   currency = "USD",
   currentNav,
 }: EquityCurveBlockProps) {
-  const [range, setRange] = React.useState<EquityRange>("6mo");
-  const { data, isLoading, error } = useEquityCurve(range);
+  // `activeId` is the tab the user clicked (id="1mo"|"3mo"|"6mo"|"1y"|"all").
+  // The backend period is resolved through the RANGES table so the "All"
+  // tab can map to "1y" without duplicating React keys or aria handles.
+  const [activeId, setActiveId] = React.useState<string>("6mo");
+  const activeRange =
+    RANGES.find((r) => r.id === activeId)?.key ??
+    ("6mo" as EquityRange);
+  const { data, isLoading, error } = useEquityCurve(activeRange);
 
   const series: EquityPoint[] = React.useMemo(() => {
     // hooks-v2 normalizes backend `{ data: [{ date, value }] }` to
@@ -170,14 +203,14 @@ export function EquityCurveBlock({
         {/* Timeframe pills */}
         <div role="tablist" aria-label="Timeframe" style={{ display: "flex", gap: 4 }}>
           {RANGES.map((r) => {
-            const active = r.key === range;
+            const active = r.id === activeId;
             return (
               <button
-                key={r.key}
+                key={r.id}
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => setRange(r.key)}
+                onClick={() => setActiveId(r.id)}
                 className="font-mono uppercase"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
@@ -231,7 +264,9 @@ export function EquityCurveBlock({
             valueColor="var(--pq-ivory)"
           />
           <KpiCell
-            label={`Range · ${range.toUpperCase()}`}
+            label={`Range · ${(
+              RANGES.find((r) => r.id === activeId)?.label ?? activeRange
+            ).toUpperCase()}`}
             value={fmtPct(rangeReturn)}
             valueColor={pctColor(rangeReturn)}
           />
@@ -241,6 +276,58 @@ export function EquityCurveBlock({
             valueColor={pctColor(benchmarkReturn)}
           />
         </div>
+
+        {/* Spread KPI strip (portfolio - benchmark). Restored 2026-05-19
+            after design-review flagged the footer as missing the lead
+            "alpha" datum. Lives BETWEEN the KPI strip and the chart so the
+            existing 3-up grid stays untouched. Em-dash when either return
+            is unavailable. */}
+        {(() => {
+          const haveBoth =
+            typeof rangeReturn === "number" &&
+            Number.isFinite(rangeReturn) &&
+            typeof benchmarkReturn === "number" &&
+            Number.isFinite(benchmarkReturn);
+          const spread = haveBoth
+            ? (rangeReturn as number) - (benchmarkReturn as number)
+            : undefined;
+          const spreadLabel =
+            spread == null
+              ? "—"
+              : `${spread > 0 ? "+" : ""}${spread.toFixed(2)}pp`;
+          return (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                alignItems: "baseline",
+                gap: 8,
+                marginTop: -8,
+                marginBottom: 12,
+              }}
+            >
+              <span
+                className="font-mono uppercase"
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  letterSpacing: "0.22em",
+                  color: "rgba(245,240,232,0.55)",
+                }}
+              >
+                Spread
+              </span>
+              <span
+                className="font-mono tabular-nums"
+                style={{
+                  fontSize: "var(--pq-text-body)",
+                  color: pctColor(spread),
+                }}
+              >
+                {spreadLabel}
+              </span>
+            </div>
+          );
+        })()}
 
         {/* Chart */}
         <figure style={{ margin: 0 }}>
@@ -320,6 +407,17 @@ export function EquityCurveBlock({
                   strokeWidth={1}
                 />
               ))}
+
+              {/* Benchmark fill — ivory dim polygon, rendered first so the
+                  bronze portfolio fill stacks on top visually. Only drawn
+                  when the benchmark series is contiguous across the range. */}
+              {geom.fillBench && (
+                <polygon
+                  points={geom.fillBench}
+                  fill="rgba(245,240,232,0.05)"
+                  stroke="none"
+                />
+              )}
 
               {/* Portfolio fill */}
               <polygon
