@@ -209,6 +209,73 @@ if [ -n "$SCAN" ]; then
   fi
 fi
 
+# ----------------------------------------------------------------------
+# 8) detect-secrets — entropy + pattern baseline scan.
+# 2026-05-19 P0 H1: complements the hand-written regex guards above with
+# Yelp detect-secrets (open source, PyPI, 0 cost).
+#
+# Requires: pip install detect-secrets  (added to requirements-dev.txt)
+# Baseline:  .secrets.baseline (committed — audited 4 known FP entries)
+#   - models/user_referral.py:24  Base64HighEntropy  → _REFERRAL_ALPHABET constant (not a secret)
+#   - services/email/brevo_provider.py:82-83  SecretKeyword → env-var key names (not values)
+#   - services/email/sendgrid_provider.py:61  SecretKeyword → env-var key name (not value)
+#
+# detect-secrets-hook only checks staged files (delta-only, fast).
+# Skips if detect-secrets not installed (graceful degradation).
+# Regenerate baseline: detect-secrets scan routes/ services/ models/ .githooks/ scripts/ > .secrets.baseline
+# ----------------------------------------------------------------------
+if [ -n "$STAGED" ]; then
+  if command -v detect-secrets-hook >/dev/null 2>&1; then
+    BASELINE_FILE=".secrets.baseline"
+    if [ ! -f "$BASELINE_FILE" ]; then
+      echo "  (detect-secrets: .secrets.baseline not found — run: detect-secrets scan > .secrets.baseline)"
+    else
+      # Convert newline-separated file list to arguments.
+      DS_STAGED=$(echo "$STAGED" | tr '\n' ' ')
+      # shellcheck disable=SC2086
+      DS_OUT=$(detect-secrets-hook --baseline "$BASELINE_FILE" $DS_STAGED 2>&1 || true)
+      DS_EXIT=$?
+      if [ "$DS_EXIT" -ne 0 ] && echo "$DS_OUT" | grep -q 'Potential'; then
+        report "detect-secrets: new secret(s) detected in staged files (not in .secrets.baseline):"
+        echo "$DS_OUT" | head -20 | sed 's/^/    /'
+        echo "    If this is a false positive: detect-secrets scan > .secrets.baseline && git add .secrets.baseline"
+        echo "    If this is a real secret: remove it, rotate credentials, then re-commit"
+      fi
+    fi
+  else
+    echo "  (detect-secrets not installed — skip entropy scan; pip install detect-secrets to enable)"
+  fi
+fi
+
+# ----------------------------------------------------------------------
+# 9) TypeScript type-check — tsc --noEmit on staged TS/TSX files.
+# 2026-05-19 P0 H2: complements ruff (§6) for the frontend layer.
+# Requires: npx (bundled with Node.js — already required for Next.js dev)
+# Skip if no TS/TSX files staged, or if frontend/tsconfig.json missing.
+# ----------------------------------------------------------------------
+TS_STAGED=$(echo "$STAGED" | grep -E '\.(ts|tsx)$' || true)
+if [ -n "$TS_STAGED" ]; then
+  TSCONFIG="frontend/tsconfig.json"
+  if [ ! -f "$TSCONFIG" ]; then
+    echo "  (tsc: $TSCONFIG not found — skip TypeScript check)"
+  elif ! command -v npx >/dev/null 2>&1; then
+    echo "  (tsc: npx not found — skip TypeScript check; install Node.js to enable)"
+  else
+    echo "  tsc --noEmit ($(echo "$TS_STAGED" | wc -l | tr -d ' ') TS/TSX files staged)..."
+    TSC_OUT=$(cd frontend && npx tsc --noEmit -p tsconfig.json 2>&1 || true)
+    TSC_EXIT=$?
+    if [ "$TSC_EXIT" -ne 0 ]; then
+      # Filter to only errors (not warnings) to reduce noise.
+      TSC_ERRORS=$(echo "$TSC_OUT" | grep -E 'error TS[0-9]+' || true)
+      if [ -n "$TSC_ERRORS" ]; then
+        report "tsc: TypeScript errors in staged files:"
+        echo "$TSC_ERRORS" | head -20 | sed 's/^/    /'
+        echo "    Fix type errors or suppress with // @ts-ignore (with comment explaining why)"
+      fi
+    fi
+  fi
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo ""
   echo "Commit blocked. To override (only if you are certain):"

@@ -1,0 +1,17 @@
+# PivoxQuant — development-only dependencies
+# Install: pip install -r requirements-dev.txt
+# These are NOT included in the production Railway deployment.
+
+# Secret entropy scan — used by .githooks/pre-commit (H1 detect-secrets guard)
+# Open source (Yelp), PyPI, 0 cost.
+# https://github.com/Yelp/detect-secrets
+detect-secrets>=1.5.0
+
+# Python linter — used by .githooks/pre-commit (H2 ruff guard)
+# Also runnable standalone: ruff check .
+ruff>=0.4.0
+
+# Test runner — used by .githooks/pre-push (H3 smoke guard)
+# Already transitive via production tests but pinned here for explicitness.
+pytest>=8.0.0
+pytest-timeout>=2.3.1
