@@ -655,8 +655,28 @@ def risk_summary():
         "top_pct": top_pct,
     }
 
-    var_data = d.get("var_data")
-    stress_data = d.get("stress_data")
+    # Pattern 10 (prompt injection defense) — request body is fully
+    # user-controlled. AIRiskSummary embeds these fields into the Claude
+    # prompt, so we whitelist the exact subset we render and coerce types
+    # before pass-through. Any extra keys an attacker tacks on are dropped
+    # on the floor. AIRiskSummary applies a second sanitization layer (cap
+    # + type check) as defense in depth.
+    raw_var = d.get("var_data") if isinstance(d.get("var_data"), dict) else None
+    raw_stress = (
+        d.get("stress_data") if isinstance(d.get("stress_data"), dict) else None
+    )
+    var_data = None
+    if raw_var is not None:
+        try:
+            cvar_clean = float(raw_var.get("cvar_95_pct", 0) or 0)
+        except (TypeError, ValueError):
+            cvar_clean = 0.0
+        var_data = {"cvar_95_pct": cvar_clean}
+    stress_data = None
+    if raw_stress is not None:
+        worst_raw = raw_stress.get("most_vulnerable_scenario")
+        worst_clean = worst_raw[:200] if isinstance(worst_raw, str) else None
+        stress_data = {"most_vulnerable_scenario": worst_clean}
 
     # user_id is MANDATORY: AIRiskSummary caches by (user_id, value); omitting
     # it would let two Pro users with the same portfolio value share a cache
