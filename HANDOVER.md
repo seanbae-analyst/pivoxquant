@@ -1,4 +1,28 @@
-# PivoxQuant — 인수인계서 (2026-05-20 v46.1 — 🟢 PDF 발송 BLOCKER 0개 확정 + P0-2 test-closed)
+# PivoxQuant — 인수인계서 (2026-05-20 v46.2 — 🟢 PDF 이메일 END-TO-END 발송 검증 완료 + prod 스키마 인시던트 치유)
+
+## v46.2 2026-05-20 — PDF 이메일 end-to-end 실발송 검증 + 🔴→🟢 prod 스키마 버그 발견·치유 (CEO "싹다 제대로 검증")
+
+> **🟢 결론: PDF 이메일 발송 end-to-end 실측 검증 완료. 실제 1통 발송 성공(SendGrid 2xx).** 검증 중 **숨어있던 SHIP-BLOCKER 발견·치유**: prod가 Railway 장애로 옛 커밋 `17564a90`에 멈춰 마이그레이션 037 컬럼(`marketing_consent_information_at` 등) 누락 → **User ORM 쿼리 전반 + `_scheduled_refresh` 잡이 3분마다 크래시**하던 상태였음. PR 머지가 트리거한 fresh 재배포가 `_do_migrations` self-heal(커밋 `c19f36c5`)을 실행 → 컬럼 자동 추가 → 치유 완료(UndefinedColumn 0건, 스케줄러 정상).
+
+### ✅ END-TO-END 발송 검증 (prod 실측, admin diag + 실발송)
+| 단계 | 결과 |
+|---|---|
+| WeasyPrint 런타임 (`GET /api/artifacts/_diag/weasyprint`) | ✅ v68.1 import + KO폰트 30개(Pretendard+NotoCJK) + 템플릿 PDF 83,165 bytes 렌더 |
+| 🔴→🟢 스키마 버그 | prod stale 커밋(Railway 장애) → 037 컬럼 누락 → User 쿼리/스케줄러 크래시. 재배포 self-heal로 치유 |
+| generate→render (`/_diag/weekly-memo-pipeline?user_id=1`, 11포지션) | ✅ generate 19키 + **render_pdf 89,123 bytes, PDF magic 정상** (이메일 미발송 진단) |
+| 실발송 (`POST /weekly-memo/trigger`) | ✅ `run_weekly`: attempted 2 / **success 1** (opt-in paid 유저=sanghyun0115@naver.com, SendGrid 2xx) / skipped 1(0포지션) / failed 0 |
+| 치유 안정성 | ✅ UndefinedColumn 0건 / `_scheduled_refresh` "executed successfully" / health ok |
+
+- **검증 도구**: admin diag 엔드포인트(`X-Admin-Secret`=`ARTIFACT_TRIGGER_SECRET`, railway run으로 시크릿 비노출 주입) + `railway logs`로 root cause traceback 확보.
+- **paid 유저 현황**: id=1 sanghyun0115@naver.com(premium, 11포지션, opt-in) / id=2 test@pivoxquant.dev(premium, 0포지션) / id=3 seanbae1521@gmail.com(free, 4포지션). `run_weekly`는 `_PAID_TIERS={pro,premium,elite}` + consent opt-in만 발송.
+- **🟡 CEO 최종 확인 1건**: sanghyun0115@naver.com 받은편지함에서 Weekly Memo PDF 실도착 눈 확인(SendGrid 2xx + 도메인 verified라 도착 거의 확실).
+
+### 📌 교훈 / 회귀 포인트
+- prod 버전 엔드포인트가 `v37+`로 표시됨 (재배포 후). 17564a90 → 최신 main 으로 deploy 갱신됨.
+- **스키마 drift 회귀 가드**: 모델에 컬럼 추가 시 alembic 마이그레이션 + `app.py:_do_migrations()` self-heal **양쪽** 갱신 필수 (SQLite 테스트는 create_all로 통과하지만 prod Postgres는 마이그레이션 누락 시 깨짐). `scripts/verify_prod_schema.py` 존재.
+- Railway 장애 후 재배포가 안 되면 prod가 stale 커밋에 묶여 최신 self-heal/fix가 미적용됨 → 장애 복구 시 fresh deploy 강제 트리거 필요(empty commit 또는 PR 머지).
+
+---
 
 ## v46.1 2026-05-20 — PDF 발송 BLOCKER 전수 재검증 (Railway CLI 실측) + P0-2 test-closed (CEO "확실하게 진행" → "직접 진행")
 
