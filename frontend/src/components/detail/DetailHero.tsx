@@ -75,7 +75,7 @@ function PillarMini({
       </span>
       <span className="h-px flex-1 bg-[var(--pq-ivory-line)] min-w-2" />
       <span
-        className={cn("font-mono tabular-nums text-pq-body-sm shrink-0", color)}
+        className={cn("font-mono tabular-nums text-pq-mono-md shrink-0", color)}
       >
         {safe == null ? "—" : safe.toFixed(0)}
       </span>
@@ -291,9 +291,12 @@ export function DetailHero(props: DetailHeroProps) {
                   <span className="text-[var(--pq-ivory-line)]" aria-hidden>
                     ·
                   </span>
-                  <span className="uppercase tracking-[0.12em]">
-                    시총 <span className="tabular-nums">{num}</span>
-                    {suffix}
+                  <span className="uppercase tracking-[0.12em] inline-flex items-baseline gap-1">
+                    시총{" "}
+                    <span className="font-mono tabular-nums text-pq-mono-md normal-case text-[var(--pq-ivory-soft)]">
+                      {num}
+                      {suffix}
+                    </span>
                   </span>
                 </>
               );
@@ -322,7 +325,10 @@ export function DetailHero(props: DetailHeroProps) {
                     <div
                       className="font-mono tabular-nums text-[var(--pq-ivory)] leading-none"
                       style={{
-                        fontSize: "clamp(2.75rem, 7vw, 4.25rem)",
+                        /* Tier 1 — hero numeric. Floor = h3 (32px),
+                           cap = hero-num (48px). Was 44–68px (overwhelming). */
+                        fontSize:
+                          "clamp(var(--pq-text-h3), 6vw, var(--pq-text-hero-num))",
                         letterSpacing: "-0.025em",
                         fontFeatureSettings: '"tnum" 1, "lnum" 1',
                       }}
@@ -338,7 +344,7 @@ export function DetailHero(props: DetailHeroProps) {
                   ) : (
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1.5 tabular-nums font-mono text-pq-lead",
+                        "inline-flex items-center gap-1.5 tabular-nums font-mono text-pq-mono-md",
                         pctColorClass(signal?.change_pct),
                       )}
                     >
@@ -369,12 +375,16 @@ export function DetailHero(props: DetailHeroProps) {
                 {/* 52W rail */}
                 {hasRange && (
                   <div className="mt-6 max-w-md">
-                    <div className="flex items-center justify-between text-pq-mono-xs font-mono tabular-nums text-[var(--pq-ivory-dim)]">
-                      <span>{fmtPrice(week52Low, krw)}</span>
+                    <div className="flex items-baseline justify-between font-mono tabular-nums text-[var(--pq-ivory-dim)]">
+                      <span className="text-pq-mono-md">
+                        {fmtPrice(week52Low, krw)}
+                      </span>
                       <span className="text-pq-mono-tiny tracking-[0.12em] uppercase text-[var(--pq-bronze)]">
                         52W Range
                       </span>
-                      <span>{fmtPrice(week52High, krw)}</span>
+                      <span className="text-pq-mono-md">
+                        {fmtPrice(week52High, krw)}
+                      </span>
                     </div>
                     <div className="mt-2 h-[2px] bg-[var(--pq-ivory-line)] relative">
                       {rangePos != null && (
@@ -406,14 +416,16 @@ export function DetailHero(props: DetailHeroProps) {
                     <FieldLabel tone="muted">Composite</FieldLabel>
                     <div
                       className={cn(
-                        "font-mono tabular-nums leading-none mt-1",
+                        /* Tier 2 — composite is a key supporting number,
+                           below the Tier-1 hero price. Unified to callout
+                           (22px) token; was 28–36px inline clamp. */
+                        "font-mono tabular-nums leading-none mt-1 text-pq-callout",
                         signalTone === "pos"
                           ? "text-[var(--up)]"
                           : signalTone === "neg"
                             ? "text-[var(--down)]"
                             : "text-[var(--pq-ivory)]",
                       )}
-                      style={{ fontSize: "clamp(1.75rem, 3vw, 2.25rem)" }}
                     >
                       {signal?.score != null && Number.isFinite(signal.score)
                         ? signal.score

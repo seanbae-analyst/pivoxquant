@@ -52,7 +52,9 @@ function PillarCard({
       </div>
       <div className={cn("pq-ink-num mt-3 leading-none", textColor)}>
         {safe.toFixed(0)}
-        <span className="text-xs text-[var(--pq-ivory-faint)] ml-1.5">/ 100</span>
+        <span className="text-pq-caption text-[var(--pq-ivory-faint)] ml-1.5">
+          / 100
+        </span>
       </div>
       <div className="mt-3 h-[2px] bg-[var(--pq-ivory-line)] overflow-hidden">
         <div
