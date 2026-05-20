@@ -11,7 +11,8 @@ set -uo pipefail
 SUBJECT="${1:-PivoxQuant alert}"
 BODY="${2:-(no body)}"
 TO="${ALERT_EMAIL:-seanbae1521@gmail.com}"
-FROM="${SENDGRID_FROM_EMAIL:-${BRAG_CARD_FROM_EMAIL:-seanbae1521@gmail.com}}"
+# pivoxquant.com SendGrid 도메인 인증 완료 (2026-05-20) → @pivoxquant.com 발신 + 받은편지함 직행
+FROM="${SENDGRID_FROM_EMAIL:-noreply@pivoxquant.com}"
 REPO="/Users/seanbae/Desktop/취준/pivoxquant"
 
 KEY="${SENDGRID_API_KEY:-}"
