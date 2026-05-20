@@ -460,6 +460,16 @@ def _do_migrations():
     # which is the safest default for the §50 default-deny posture.
     _add_column_if_missing("users", "marketing_consent_at", "TIMESTAMP")
     _add_column_if_missing("users", "marketing_consent_revoked_at", "TIMESTAMP")
+    # 정통망법 §50 ① 정보성/광고성 분리 동의 (Wave D Sub-wave 1, C-S1).
+    # Alembic migration 037_marketing_consent_split. application layer 는
+    # PIVOX_CS1_CONSENT_ENABLED 플래그 (default false) 에 게이트되어 dormant 이지만,
+    # User SELECT 는 ORM 매핑상 항상 이 4개 컬럼을 조회하므로 컬럼 자체가 누락되면
+    # 모든 인증/프로비저닝 SELECT 가 ProgrammingError 로 500 (= provisioning_failed).
+    # alembic 미실행 박스(Railway prod, 레거시 SQLite)를 위한 boot-time self-heal.
+    _add_column_if_missing("users", "marketing_consent_information_at", "TIMESTAMP")
+    _add_column_if_missing("users", "marketing_consent_information_revoked_at", "TIMESTAMP")
+    _add_column_if_missing("users", "marketing_consent_marketing_at", "TIMESTAMP")
+    _add_column_if_missing("users", "marketing_consent_marketing_revoked_at", "TIMESTAMP")
     # PIPA §28-8 (2024-09 시행) 국외이전 별도 동의 타임스탬프. Anthropic
     # PBC / Stripe / Vercel / Railway (미국) 으로의 이전·위탁에 대한 명시적
     # 별도 동의가 §28-8 의무이며, 본 컬럼이 NULL 이면 동의 미수령으로
@@ -487,6 +497,19 @@ def _do_migrations():
     # 에러 (psycopg2.errors.UndefinedColumn: users.onboarding_draft_json) hotfix.
     # 2026-05-17 Railway prod logs 직접 cite.
     _add_column_if_missing("users", "onboarding_draft_json", "TEXT")
+    # Wave G C-S2 (2026-05-19) — 24h inactive nudge idempotency timestamp.
+    # Alembic migration 038_inactive_nudge_sent_at. nullable DateTime (NULL =
+    # never nudged). 본 컬럼이 ORM 매핑에 존재하므로 누락 시 User SELECT
+    # ProgrammingError → OAuth provisioning_failed. alembic 미실행 박스 self-heal.
+    _add_column_if_missing("users", "inactive_nudge_sent_at", "TIMESTAMP")
+    # Wave I C-2 (2026-05-19) — PIPA §21 30-day soft-delete grace period.
+    # Alembic migration 041_user_deletion_request. 두 컬럼 모두 nullable DateTime.
+    # google_callback / kakao_callback 이 로그인 직후 user.deletion_requested_at
+    # 을 직접 읽으므로(2026-05-19 soft-delete reject), 컬럼 누락 시 provisioning
+    # SELECT 가 아니라 로그인 직후 attribute access 에서 터지거나 SELECT 자체가
+    # ProgrammingError 로 실패한다. alembic 미실행 박스 self-heal.
+    _add_column_if_missing("users", "deletion_requested_at", "TIMESTAMP")
+    _add_column_if_missing("users", "deleted_at", "TIMESTAMP")
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but

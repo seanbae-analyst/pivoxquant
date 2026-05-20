@@ -11,7 +11,7 @@ from authlib.integrations.flask_client import OAuth
 from flask import Blueprint, request, jsonify, redirect, session, current_app
 from flask_login import login_user, logout_user, current_user
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError, DBAPIError
 
 
 def _safe_next(next_url):
@@ -192,6 +192,109 @@ def _log_auth_event(
             "auth_event log failed (non-fatal) provider=%s event=%s",
             provider, event_type,
         )
+
+
+# Backoff schedule (seconds) for transient-DB retries during OAuth
+# user-provisioning. Length defines the number of *extra* attempts after the
+# first try (here: 2 retries → 3 total attempts). Kept short so a worker is
+# never tied up longer than ~0.7s on a flapping connection.
+_PROVISION_RETRY_BACKOFFS = (0.2, 0.5)
+
+
+def _is_transient_db_error(exc: Exception) -> bool:
+    """True iff ``exc`` is a connection-level fault worth retrying.
+
+    Railway PG flaps at the *connection* layer (refused / dropped sockets),
+    surfacing as ``OperationalError`` or, for some psycopg2 disconnect
+    classes, a ``DBAPIError`` whose ``connection_invalidated`` flag is set.
+    Deterministic failures (``IntegrityError`` — duplicate email/oauth_id,
+    ``ProgrammingError`` — missing column) are *not* transient: retrying
+    them just burns time and re-raises the same error, so they fall through
+    to the caller's existing provisioning_failed path immediately.
+    """
+    if isinstance(exc, OperationalError):
+        return True
+    # SQLAlchemy sets connection_invalidated=True when the DBAPI reported a
+    # disconnect (pool will hand out a fresh connection on the next checkout,
+    # which pool_pre_ping then validates). IntegrityError/ProgrammingError are
+    # DBAPIError subclasses too, hence the explicit flag check rather than a
+    # bare isinstance(exc, DBAPIError).
+    if isinstance(exc, DBAPIError) and getattr(exc, "connection_invalidated", False):
+        return True
+    return False
+
+
+def _provision_oauth_user(provider: str, build_user_fn):
+    """Run an OAuth find-or-create + commit with transient-DB retries.
+
+    ``build_user_fn`` is a zero-arg callable that performs the provider's
+    find-or-create logic (the SELECTs + INSERT/attribute mutation, *without*
+    committing) and returns the resolved ``User`` instance. This function
+    wraps it so Google and Kakao share one retry policy (철저한 수정 —
+    한쪽만 고치지 말 것).
+
+    Retry policy
+    ------------
+    * Up to ``len(_PROVISION_RETRY_BACKOFFS) + 1`` total attempts.
+    * Only ``_is_transient_db_error`` faults are retried. Before each retry we
+      ``db.session.rollback()`` to discard the poisoned session — combined
+      with ``pool_pre_ping=True`` this means the next attempt checks out a
+      freshly validated connection, which clears a momentary flap.
+    * Non-transient exceptions (IntegrityError etc.) and exhausted retries
+      re-raise to the caller, preserving the existing rollback +
+      provisioning_failed redirect behaviour.
+
+    Logs attempt counts and final outcome but never the exception detail in a
+    form that could reach the redirect URL (caller policy: generic error code
+    only — exc detail is logged server-side, never leaked to the client).
+    """
+    last_exc: Exception | None = None
+    total_attempts = len(_PROVISION_RETRY_BACKOFFS) + 1
+    for attempt in range(total_attempts):
+        try:
+            user = build_user_fn()
+            db.session.commit()
+            if attempt > 0:
+                logger.info(
+                    "OAuth provisioning recovered after retry "
+                    "(provider=%s attempt=%d/%d)",
+                    provider, attempt + 1, total_attempts,
+                )
+            return user
+        except Exception as exc:  # noqa: BLE001 — classified below
+            last_exc = exc
+            # Always clear the (possibly poisoned) session before deciding.
+            try:
+                db.session.rollback()
+            except Exception:
+                logger.debug(
+                    "silent-fallback: provision rollback (%s)", provider,
+                    exc_info=True,
+                )
+            transient = _is_transient_db_error(exc)
+            is_last = attempt >= total_attempts - 1
+            if not transient or is_last:
+                if transient and is_last:
+                    logger.warning(
+                        "OAuth provisioning exhausted retries on transient DB "
+                        "error (provider=%s attempts=%d type=%s)",
+                        provider, total_attempts, type(exc).__name__,
+                    )
+                # Re-raise so the caller's existing except-block runs its
+                # rollback + provisioning_failed redirect unchanged.
+                raise
+            backoff = _PROVISION_RETRY_BACKOFFS[attempt]
+            logger.warning(
+                "OAuth provisioning transient DB error — retrying "
+                "(provider=%s attempt=%d/%d backoff=%.2fs type=%s)",
+                provider, attempt + 1, total_attempts, backoff,
+                type(exc).__name__,
+            )
+            time.sleep(backoff)
+    # Unreachable (loop either returns or raises) — defensive re-raise.
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("provisioning loop exited without result")  # pragma: no cover
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -765,9 +868,16 @@ def google_callback():
         name = userinfo.get("name") or email.split("@")[0]
         avatar = userinfo.get("picture")
 
-        # Find existing user by google_id or email
-        user = User.query.filter_by(google_id=google_id).first()
-        if not user:
+        # Find existing user by google_id or email. The find-or-create body
+        # is wrapped in _provision_oauth_user so a transient Railway PG flap
+        # (OperationalError / disconnect) during the SELECT×2 + INSERT + COMMIT
+        # is retried with short backoff + pool_pre_ping reconnect instead of
+        # failing the login outright. Returns the existing user untouched when
+        # found by google_id (no write needed).
+        def _provision_google():
+            user = User.query.filter_by(google_id=google_id).first()
+            if user:
+                return user
             user = User.query.filter_by(email=email).first()
             if user:
                 # Link existing email account with Google
@@ -790,7 +900,9 @@ def google_callback():
                     avatar_url=avatar,
                 )
                 db.session.add(user)
-            db.session.commit()
+            return user
+
+        user = _provision_oauth_user("google", _provision_google)
 
         session.clear()  # Session fixation 방어
         login_user(user, remember=True)
@@ -931,9 +1043,13 @@ def kakao_callback():
         if not email:
             email = f"kakao_{kakao_id}@kakao.local"
 
-        # Find existing user by kakao_id or email
-        user = User.query.filter_by(kakao_id=kakao_id).first()
-        if not user:
+        # Find existing user by kakao_id or email. Wrapped in the shared
+        # _provision_oauth_user helper so a transient Railway PG flap during
+        # the SELECT×2 + INSERT + COMMIT is retried (mirrors google_callback).
+        def _provision_kakao():
+            user = User.query.filter_by(kakao_id=kakao_id).first()
+            if user:
+                return user
             user = User.query.filter_by(email=email).first()
             if user:
                 # Link existing account with Kakao
@@ -952,7 +1068,9 @@ def kakao_callback():
                     avatar_url=avatar,
                 )
                 db.session.add(user)
-            db.session.commit()
+            return user
+
+        user = _provision_oauth_user("kakao", _provision_kakao)
 
         session.clear()  # Session fixation 방어
         login_user(user, remember=True)
