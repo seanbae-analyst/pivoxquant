@@ -18,6 +18,7 @@
  */
 
 import * as React from "react";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 
 interface EventRow {
   id: string;
@@ -29,7 +30,7 @@ interface EventRow {
 const EVENTS: EventRow[] = [
   {
     id: "weekly_memo",
-    name: "Weekly memo · Mon 07:00 KST",
+    name: `Weekly memo · ${WEEKLY_MEMO_WHEN_SHORT}`,
     help: "Drafted weekly editorial brief.",
     defaults: { email: true, push: true, inapp: true },
   },

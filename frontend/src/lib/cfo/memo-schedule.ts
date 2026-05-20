@@ -29,3 +29,25 @@ export const WEEKLY_MEMO_EMPTY_LINE =
 
 /** Korean equivalent for KR-locale surfaces if needed later. */
 export const WEEKLY_MEMO_WHEN_SHORT_KO = "매주 일요일 08:00 KST";
+
+/**
+ * Next weekly-memo delivery instant as an absolute Date, relative to `ref`.
+ *
+ * The scheduler fires Sunday 08:00 KST. KST = UTC+9, so 08:00 KST ≡ 23:00 UTC
+ * the PREVIOUS day (Saturday). We compute the next Saturday 23:00 UTC strictly
+ * after `ref`. Date math lives here, beside the copy constants, so the
+ * countdown can never drift from the scheduler either.
+ */
+export function nextWeeklyMemoKst(ref: Date = new Date()): Date {
+  const d = new Date(ref.getTime());
+  const dayUtc = d.getUTCDay(); // 0=Sun..6=Sat
+  // Saturday = 6. Days until the next Saturday (0 if today is Saturday).
+  const deltaDays = (6 - dayUtc + 7) % 7;
+  const target = new Date(d.getTime());
+  target.setUTCDate(d.getUTCDate() + deltaDays);
+  target.setUTCHours(23, 0, 0, 0);
+  if (target.getTime() <= ref.getTime()) {
+    target.setUTCDate(target.getUTCDate() + 7);
+  }
+  return target;
+}

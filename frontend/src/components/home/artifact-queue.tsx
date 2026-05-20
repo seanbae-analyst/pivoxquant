@@ -27,29 +27,18 @@ import {
   hasCompanionEntitlement,
   useCompanionHistory,
 } from "@/lib/cfo/useCompanion";
+import {
+  WEEKLY_MEMO_WHEN_SHORT,
+  nextWeeklyMemoKst,
+} from "@/lib/cfo/memo-schedule";
 
 // BriefToday shape removed 2026-04-29 — Morning Brief backend deprecated.
 
 const fetcher = <T,>(url: string) => apiFetch<T>(url);
 
 /* ── Countdown helpers ── */
-
-function nextMondayKst(ref: Date): Date {
-  // 07:00 KST on the next Monday, returned as an absolute Date.
-  // 07:00 KST ≡ 22:00 UTC the day before.
-  const d = new Date(ref.getTime());
-  d.setUTCSeconds(0, 0);
-  const dayUtc = d.getUTCDay(); // 0=Sun..6=Sat
-  // target weekday in UTC that corresponds to Monday 07:00 KST is Sunday 22:00 UTC.
-  const deltaDays = (7 + 0 - dayUtc) % 7; // 0 = Sunday
-  const nextSundayUtc = new Date(d.getTime());
-  nextSundayUtc.setUTCDate(d.getUTCDate() + deltaDays);
-  nextSundayUtc.setUTCHours(22, 0, 0, 0);
-  if (nextSundayUtc.getTime() <= ref.getTime()) {
-    nextSundayUtc.setUTCDate(nextSundayUtc.getUTCDate() + 7);
-  }
-  return nextSundayUtc;
-}
+// The next weekly-memo instant comes from `nextWeeklyMemoKst` in
+// lib/cfo/memo-schedule.ts (single source of truth: Sunday 08:00 KST).
 
 function relativeFuture(to: Date, from: Date): string {
   const ms = to.getTime() - from.getTime();
@@ -131,7 +120,7 @@ export function ArtifactQueue() {
     title: lastArtifact?.title || "No entry yet",
     meta: lastArtifact
       ? `Last entry ${relativePast(lastArtifact.sent_at ?? lastArtifact.created_at ?? null, now)}`
-      : "Your first journal will appear after Monday's memo.",
+      : "Your first journal will appear after Sunday's memo.",
     href: "/reports",
     Icon: FileText,
     state: lastArtifact
@@ -140,16 +129,12 @@ export function ArtifactQueue() {
   };
 
   /* ── Row 3: Next Weekly Memo countdown ── */
-  const nextMonday = nextMondayKst(now);
-  const memoDay = nextMonday.toLocaleDateString("en-US", {
-    weekday: "long",
-    timeZone: "Asia/Seoul",
-  });
+  const nextMemo = nextWeeklyMemoKst(now);
   const memoRow: QueueRow = {
     id: "memo",
     label: "Next Weekly Memo",
-    title: `${memoDay} · 07:00 KST`,
-    meta: `In ${relativeFuture(nextMonday, now)}`,
+    title: WEEKLY_MEMO_WHEN_SHORT,
+    meta: `In ${relativeFuture(nextMemo, now)}`,
     href: "/reports",
     Icon: Clock,
     state: { kind: "waiting", text: "Queued" },

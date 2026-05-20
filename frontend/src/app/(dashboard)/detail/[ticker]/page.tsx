@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/editorial";
 import { useWatchlist, usePortfolioPositions, useArtifacts } from "@/lib/hooks";
 import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
+import { WEEKLY_MEMO_EMPTY_LINE } from "@/lib/cfo/memo-schedule";
 import type { Position } from "@/lib/types";
 import {
   TrendingUp,
@@ -1613,7 +1614,7 @@ export default function StockDetailPage() {
           {artifactsSwr.artifacts.length === 0 ? (
             <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-[2px] p-6 text-center">
               <p className="pq-detail-caption">
-                No artefacts yet — your first weekly memo lands Monday 07:00 KST.
+                No artefacts yet — {WEEKLY_MEMO_EMPTY_LINE}
               </p>
               <Link
                 href="/reports"

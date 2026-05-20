@@ -6,13 +6,14 @@ import { ArrowRight, FileText, Lock } from "lucide-react";
 import FeaturePageShell from "@/components/landing/feature-page-shell";
 import { SectionCurtain } from "@/components/landing/section-curtain";
 import { fadeUp, stagger } from "@/lib/motion";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 
 // Tier truth: backend `@require_tier` decorators in `routes/artifacts.py` +
 // per-service `_PAID_TIERS` constants. AI Suite removed 2026-05-07 — no
 // backend service, was a phantom marketing entry. KPI Dashboard added —
 // backend has @require_tier("pro") on kpi_dashboard_preview.
 const ARTIFACTS = [
-  { name: "Weekly Memo", tier: "PRO", tagline: "Monday briefing", format: "5-page PDF · Monday 07:00 KST", sampleUrl: "/sample-reports/weekly-memo" },
+  { name: "Weekly Memo", tier: "PRO", tagline: "Weekly briefing", format: `5-page PDF · ${WEEKLY_MEMO_WHEN_SHORT}`, sampleUrl: "/sample-reports/weekly-memo" },
   { name: "Earnings Pre-Brief", tier: "PRO", tagline: "Day-before setup", format: "6-page PDF · day before earnings", sampleUrl: "/sample-reports/earnings-prebrief" },
   { name: "Morning Brief Plus", tier: "PRO", tagline: "Pre-market priorities", format: "1-page PDF · daily 07:00 KST", sampleUrl: "/sample-reports/morning-brief-plus" },
   { name: "DD Checklist", tier: "PRO", tagline: "10-K / 10-Q reading aid", format: "Interactive · PDF export", sampleUrl: null },

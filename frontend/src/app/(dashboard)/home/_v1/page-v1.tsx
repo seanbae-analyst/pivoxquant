@@ -49,6 +49,7 @@ import { SectorAllocationDonut } from "@/components/home/sector-allocation-donut
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 import { pctColor, PRICE_COLOR_HEX, fmtUsd, fmtKrw, fmtPct } from "@/lib/format";
 import {
   usePortfolioSummary,
@@ -632,7 +633,7 @@ export default function HomePageV1() {
           >
             {briefText
               ? briefText
-              : "No brief observed for this session. The weekly memo lands every Monday 07:00 KST and will archive here."}
+              : `No brief observed for this session. The weekly memo lands every ${WEEKLY_MEMO_WHEN_SHORT} and will archive here.`}
           </p>
         </div>
 

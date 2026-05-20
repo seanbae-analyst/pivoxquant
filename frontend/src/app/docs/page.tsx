@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Book, HelpCircle, MessageSquare, FileText, Shield } from "lucide-react";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 
 export const metadata = {
   title: "Docs",
@@ -32,7 +33,7 @@ const SECTIONS = [
     items: [
       {
         q: "How often are reports generated?",
-        a: "Weekly Memo arrives Monday 07:00 KST. Morning Brief daily. Monthly/Quarterly reports on calendar.",
+        a: `Weekly Memo arrives ${WEEKLY_MEMO_WHEN_SHORT}. Morning Brief daily. Monthly/Quarterly reports on calendar.`,
       },
       {
         q: "What tier gets which reports?",

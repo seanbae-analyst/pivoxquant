@@ -29,6 +29,7 @@ import {
   PdfDisclaimerMini,
   PdfSectionTitle,
 } from "../pdf-primitives";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 
 export interface WeeklyMemoData {
   asOf: string;            // "2026-04-26"
@@ -112,7 +113,7 @@ export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
     <PdfPage>
       <PdfHeader tier="free" title="WEEKLY MEMO" meta={`${data.asOf} · ${data.weekTag}`} />
 
-      <PdfEyebrow>Weekly Memo · Every Monday (KST)</PdfEyebrow>
+      <PdfEyebrow>{`Weekly Memo · ${WEEKLY_MEMO_WHEN_SHORT}`}</PdfEyebrow>
       <PdfCoverTitle size={42}>
         This week, <em>one page</em>—<br />
         be the <em>CFO</em> of your portfolio.

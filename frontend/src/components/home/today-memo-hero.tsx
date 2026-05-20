@@ -18,6 +18,7 @@
  */
 
 import Link from "next/link";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 
 interface TodayMemoHeroProps {
   /** Headline / first sentence (brief.insight or brief.summary). null → empty state. */
@@ -237,7 +238,7 @@ export function TodayMemoHero({
           >
             Daily brief lands at <span style={{ color: "var(--pq-bronze)" }}>09:00 KST</span>.
             <br />
-            Weekly memo every Monday <span style={{ color: "var(--pq-bronze)" }}>07:00 KST</span>.
+            Weekly memo every <span style={{ color: "var(--pq-bronze)" }}>{WEEKLY_MEMO_WHEN_SHORT}</span>.
           </div>
         </div>
 

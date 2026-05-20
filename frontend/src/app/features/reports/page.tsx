@@ -7,20 +7,21 @@ import ReportFlipCard, {
   type FlipSample,
 } from "@/components/landing/report-flip-card";
 import { fadeUp, stagger } from "@/lib/motion";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 
 const SAMPLES: readonly FlipSample[] = [
   {
     name: "Weekly Memo",
-    subtitle: "Monday briefing · 5 pages",
+    subtitle: "Weekend briefing · 5 pages",
     pageCount: "5 pages",
-    cadence: "Delivered Mondays",
+    cadence: `Delivered ${WEEKLY_MEMO_WHEN_SHORT}`,
     excerpt:
       "Realized P&L from the last seven days, position drift, earnings events on your names, dividend calendar. Observation summary — never a recommendation.",
     href: "/sample-reports/weekly-memo",
     preview: {
       kicker: "Week 16 · Investor Memo",
       heading: "Seven days on the page.",
-      lede: "A Monday reading of the Example Portfolio: what compounded, what drifted, and the calendar that matters this week.",
+      lede: "A weekend reading of the Example Portfolio: what compounded, what drifted, and the calendar that matters this week.",
       bullets: [
         "Realized P&L across the week, decomposed by position cohort.",
         "Drift log: holdings that moved outside their entry thesis band.",
