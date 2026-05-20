@@ -346,6 +346,15 @@
   --pq-text-hero-num: 48px;      /* hero stat numeric (settings/risk/year-end-letter) */
   --pq-text-pdf-micro: 6px;      /* PDF micro footnote (pdf-primitives print only) */
 
+  /* Dashboard hero clamps (2026-05-20 W21 — formalize the two recurring
+     dashboard-hero fluid scales that were copy-pasted inline across page
+     heroes, sitting between --pq-text-h2 (max 44) and --pq-text-h1 (max 72).
+     Pure tokenization: exact same clamp values as the prior inline literals,
+     so render is pixel-identical. Distinct from --pq-text-h1/h2 because the
+     dashboard hero rhythm intentionally caps tighter than the landing H1. */
+  --pq-text-h1-dash: clamp(34px, 4.6vw, 52px);  /* discover/watchlist/alerts/pre-trade hero */
+  --pq-text-h2-dash: clamp(32px, 4.2vw, 48px);  /* growth/auth/portfolio/profile hero */
+
   /* PWA safe-area insets — base definition so consumers can reference
      var(--pq-safe-*) on every surface, not just standalone mode. In a
      normal browser env(safe-area-inset-*) resolves to 0px (harmless);

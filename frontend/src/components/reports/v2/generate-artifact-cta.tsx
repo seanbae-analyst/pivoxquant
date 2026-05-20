@@ -18,8 +18,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { Lock } from "lucide-react";
+import { toast } from "sonner";
 import {
   generateArtifact,
+  useArtifacts,
   type GenerateArtifactBody,
 } from "@/lib/hooks";
 import type { ArtifactType } from "@/lib/types";
@@ -86,13 +88,84 @@ interface Props {
 }
 
 interface TileState {
-  status: "idle" | "queueing" | "queued" | "error";
+  status: "idle" | "queueing" | "queued" | "done" | "error";
   message?: string;
 }
 
 export function GenerateArtifactCta({ tier }: Props) {
   const [states, setStates] = React.useState<Record<string, TileState>>({});
   const [inputs, setInputs] = React.useState<Record<string, string>>({});
+
+  // P0-3 (2026-05-20 ux-flow fix): the old flow ended at "Queued · ETA ~Ns"
+  // and never closed the loop — no completion feedback, no scroll to the
+  // result. We now (a) revalidate the shared artifacts cache after queueing,
+  // (b) watch the artifact count, and (c) when a new artifact lands, toast +
+  // scroll the just-out card into view so the "aha" moment completes.
+  //
+  // Same cache key the page passes (type:"all" / since:"all" / limit:999) so
+  // mutate() refreshes the very list the user is looking at — no new request
+  // shape, no SWR key drift.
+  const { total, mutate: mutateArtifacts } = useArtifacts({
+    type: "all",
+    since: "all",
+    limit: 999,
+  });
+
+  // Tiles currently waiting on a backend job → which artifact-count baseline
+  // they were queued against. When `total` exceeds the baseline we treat the
+  // matching pending tile as completed.
+  const pendingRef = React.useRef<
+    Record<string, { baseline: number; label: string }>
+  >({});
+  const totalRef = React.useRef(total);
+
+  // Poll the artifacts list a few times after a queue so the async job result
+  // surfaces without waiting for the next 30s SWR dedupe window.
+  const pollTimers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+  React.useEffect(() => {
+    const timers = pollTimers.current;
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
+  const scrollToLatest = React.useCallback(() => {
+    if (typeof document === "undefined") return;
+    const el = document.getElementById("latest-heading");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
+  // Completion detection: when total rises while tiles are pending, resolve
+  // the oldest pending tile, toast, and scroll to the new artifact.
+  React.useEffect(() => {
+    const prev = totalRef.current;
+    totalRef.current = total;
+    if (total <= prev) return;
+    const pendingKeys = Object.keys(pendingRef.current);
+    if (pendingKeys.length === 0) return;
+
+    // Resolve every tile whose baseline is now below the live total.
+    let resolvedLabel: string | null = null;
+    for (const key of pendingKeys) {
+      const entry = pendingRef.current[key];
+      if (total > entry.baseline) {
+        resolvedLabel = entry.label;
+        delete pendingRef.current[key];
+        setStates((s) => ({
+          ...s,
+          [key]: { status: "done", message: "Ready · in your archive ↑" },
+        }));
+      }
+    }
+    if (resolvedLabel) {
+      toast.success(`${resolvedLabel} is ready`, {
+        description: "Drafted by AI · review it in the archive above.",
+      });
+      scrollToLatest();
+    }
+  }, [total, scrollToLatest]);
 
   const handleGenerate = React.useCallback(
     async (tile: RequestTile) => {
@@ -133,9 +206,27 @@ export function GenerateArtifactCta({ tier }: Props) {
           ...s,
           [tile.type]: {
             status: "queued",
-            message: `Queued · ETA ~${r.eta_seconds}s`,
+            message: `Drafting · ETA ~${r.eta_seconds}s`,
           },
         }));
+        // Register this tile as awaiting completion against the current count.
+        pendingRef.current[tile.type] = {
+          baseline: totalRef.current,
+          label: tile.displayName,
+        };
+        toast(`${tile.displayName} queued`, {
+          description: `The desk is drafting it — ETA ~${r.eta_seconds}s. It'll appear in the archive above.`,
+        });
+        // Revalidate the shared artifacts list a few times so the async job's
+        // output surfaces promptly; the count-watch effect closes the loop.
+        const etaMs = Math.max(2_000, (r.eta_seconds || 8) * 1_000);
+        [etaMs, etaMs + 4_000, etaMs + 12_000].forEach((delay) => {
+          pollTimers.current.push(
+            setTimeout(() => {
+              void mutateArtifacts();
+            }, delay),
+          );
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Backend offline";
         setStates((s) => ({
@@ -149,7 +240,7 @@ export function GenerateArtifactCta({ tier }: Props) {
         }));
       }
     },
-    [inputs],
+    [inputs, mutateArtifacts],
   );
 
   return (
@@ -313,7 +404,13 @@ export function GenerateArtifactCta({ tier }: Props) {
                       state.status === "queueing" ? "wait" : "pointer",
                   }}
                 >
-                  {state.status === "queueing" ? "Queueing…" : tile.ctaLabel}
+                  {state.status === "queueing"
+                    ? "Queueing…"
+                    : state.status === "queued"
+                      ? "Drafting…"
+                      : state.status === "done"
+                        ? "Generate again ›"
+                        : tile.ctaLabel}
                 </button>
               )}
 
@@ -327,7 +424,9 @@ export function GenerateArtifactCta({ tier }: Props) {
                     color:
                       state.status === "error"
                         ? "var(--pq-negative, #d18888)"
-                        : "rgba(245,240,232,0.55)",
+                        : state.status === "done"
+                          ? "var(--pq-positive)"
+                          : "rgba(245,240,232,0.55)",
                     marginTop: 12,
                   }}
                 >

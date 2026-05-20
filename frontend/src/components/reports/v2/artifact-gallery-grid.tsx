@@ -27,6 +27,7 @@ import {
   type Tier,
 } from "./artifact-kind-card";
 import type { Artifact, ArtifactType } from "@/lib/types";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 
 const TIER_RANK: Record<Tier, number> = { free: 0, pro: 1, premium: 2 };
 function hasAccess(userTier: Tier, required: Tier): boolean {
@@ -38,7 +39,10 @@ const KIND_ENTRIES: Array<Omit<ArtifactKindEntry, "lastPublished" | "nextDue">> 
   {
     displayName: "Weekly Pulse",
     cadenceLabel: "Weekly",
-    schedule: "Auto · Sun 07:00 KST",
+    // P1-4 thorough-fix (2026-05-20): was "Auto · Sun 07:00 KST" — the actual
+    // APScheduler job (app.py weekly_memo_sunday) fires Sun 08:00 KST. Read the
+    // single source of truth so this card can never drift from the scheduler.
+    schedule: `Auto · ${WEEKLY_MEMO_WHEN_SHORT}`,
     description:
       "Five-question reflection on the week's trades, a peer-context chart, and one decision flagged for review.",
     type: "weekly_memo",

@@ -139,7 +139,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
           <path
             d={activityPath}
             fill="none"
-            stroke="#7DD897"
+            style={{ stroke: "var(--pq-live)" }}
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -164,7 +164,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
           const y =
             PADDING_Y + PLOT_HEIGHT - (w.activity / 100) * PLOT_HEIGHT;
           return (
-            <circle key={`a-${w.week}`} cx={x} cy={y} r={3} fill="#7DD897" />
+            <circle key={`a-${w.week}`} cx={x} cy={y} r={3} style={{ fill: "var(--pq-live)" }} />
           );
         })}
 
@@ -204,7 +204,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: "#7DD897" }}
+            style={{ backgroundColor: "var(--pq-live)" }}
           />
           Activity
         </span>

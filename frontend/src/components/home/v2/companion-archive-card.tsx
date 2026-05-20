@@ -12,6 +12,7 @@
 import * as React from "react";
 import { HomeCard } from "./home-card";
 import { useArtifacts } from "@/lib/hooks";
+import { WEEKLY_MEMO_EMPTY_LINE } from "@/lib/cfo/memo-schedule";
 
 interface ArtifactRow {
   id?: number | string;
@@ -125,7 +126,7 @@ export function CompanionArchiveCard() {
             fontStyle: "italic",
           }}
         >
-          The archive is empty. Your first weekly memo lands Monday 07:00 KST.
+          The archive is empty. {WEEKLY_MEMO_EMPTY_LINE}
         </p>
       )}
 

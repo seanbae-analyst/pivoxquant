@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
 import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import type { Artifact, ArtifactType } from "@/lib/types";
+import { WEEKLY_MEMO_EMPTY_LINE } from "@/lib/cfo/memo-schedule";
 
 const TYPE_LABEL: Record<ArtifactType, string> = {
   weekly_memo: "Weekly Pulse",
@@ -126,8 +127,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             margin: 0,
           }}
         >
-          The shelf is empty for now. Your first morning memo arrives at 06:00 KST
-          on the next trading day.
+          The shelf is empty for now. {WEEKLY_MEMO_EMPTY_LINE}
         </p>
       </div>
     );

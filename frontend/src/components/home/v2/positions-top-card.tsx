@@ -108,16 +108,40 @@ export function PositionsTopCard() {
   return (
     <HomeCard href="/portfolio" eyebrow="Positions · Top weight" cornerCta="Open Book ›">
       {ranked.length === 0 ? (
-        <div
-          className="font-serif"
-          style={{
-            fontSize: "var(--pq-text-body)",
-            lineHeight: 1.6,
-            color: "rgba(245,240,232,0.55)",
-            fontStyle: "italic",
-          }}
-        >
-          No positions on file. Add your first holding from the Book.
+        /* P1-5 (2026-05-20 ux-flow fix): old copy ("Add your first holding
+           from the Book") leaned on the internal "Book" metaphor and offered
+           no visible action. The whole card is already a <Link href="/portfolio">
+           (see HomeCard), so we render a button-styled affordance span — it
+           inherits the card's navigation, no nested anchor (invalid HTML),
+           with a direct, metaphor-free label. */
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <p
+            className="font-serif"
+            style={{
+              fontSize: "var(--pq-text-body)",
+              lineHeight: 1.6,
+              color: "rgba(245,240,232,0.55)",
+              margin: 0,
+            }}
+          >
+            No positions yet. Add your first holding to start tracking value,
+            P/L, and risk.
+          </p>
+          <span
+            className="font-mono uppercase"
+            style={{
+              alignSelf: "flex-start",
+              display: "inline-flex",
+              padding: "10px 18px",
+              background: "var(--pq-bronze)",
+              color: "var(--pq-ink, #050505)",
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.2em",
+              borderRadius: "var(--pq-radius-cta, 2px)",
+            }}
+          >
+            Add your first position →
+          </span>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>

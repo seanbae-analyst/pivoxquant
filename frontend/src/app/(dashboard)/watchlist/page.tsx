@@ -132,7 +132,7 @@ export default function WatchlistPage() {
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: "clamp(34px, 4.6vw, 52px)",
+              fontSize: "var(--pq-text-h1-dash)",
               lineHeight: 1.06,
               letterSpacing: "-0.022em",
               color: "var(--pq-ivory)",

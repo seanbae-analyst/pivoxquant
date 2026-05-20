@@ -67,7 +67,7 @@ export function ProfileHeroV2({
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: "clamp(32px, 4.2vw, 48px)",
+          fontSize: "var(--pq-text-h2-dash)",
           lineHeight: 1.05,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",

@@ -942,14 +942,24 @@ export default function OnboardingPage() {
             >
               PivoxQuant
             </span>
+            {/* P1-6 (2026-05-20 ux-flow fix): Skip was opacity-0.5 plain text
+                — easy to miss, hurting first-run completion for users who
+                want to explore before answering 20 questions. Bumped to a
+                higher-contrast hairline-bordered affordance so it reads as a
+                real, tappable escape hatch (44px touch target retained). */}
             <button
               type="button"
               onClick={handleSkip}
               disabled={skipping}
-              className="text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ color: "rgba(var(--pq-ivory-rgb), 0.5)" }}
+              className="text-xs font-semibold transition-colors disabled:opacity-50"
+              style={{
+                color: "rgba(var(--pq-ivory-rgb), 0.85)",
+                border: "1px solid var(--pq-border)",
+                borderRadius: "var(--pq-radius-cta, 2px)",
+                padding: "8px 14px",
+              }}
             >
-              {skipping ? "Skipping…" : "Skip for now"}
+              {skipping ? "Skipping…" : "Skip for now →"}
             </button>
           </div>
           <ProgressBar current={displayStep} total={TOTAL_STEPS} category={category} />

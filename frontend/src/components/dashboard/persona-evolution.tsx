@@ -394,7 +394,7 @@ function HoverCard({
         Persona score <span className="tabular-nums">{score}</span>
         {drifted && (
           <span
-            style={{ marginLeft: 8, color: "#d68965" }}
+            style={{ marginLeft: 8, color: "var(--pq-drift)" }}
             className="text-pq-mono-sm"
           >
             · drift flagged

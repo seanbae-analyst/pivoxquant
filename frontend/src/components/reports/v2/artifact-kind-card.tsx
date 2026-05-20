@@ -24,7 +24,7 @@ export interface ArtifactKindEntry {
   displayName: string;
   /** Cadence pill text (e.g. "Daily"). */
   cadenceLabel: string;
-  /** Mono dim sub-line (e.g. "Auto · 06:00 KST · Mon–Fri"). */
+  /** Mono dim sub-line (e.g. "Auto · Sundays 08:00 KST"). */
   schedule: string;
   /** 2-line description (Source Serif 4 13.5). */
   description: string;

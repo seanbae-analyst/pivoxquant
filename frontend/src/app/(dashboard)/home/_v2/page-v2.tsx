@@ -44,6 +44,8 @@ import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 import { UpsellPlus } from "@/components/dashboard/upsell-plus";
 
 import { useAuth } from "@/lib/auth";
+import { usePortfolioPositions } from "@/lib/hooks";
+import type { PortfolioResponse } from "@/lib/types";
 // Morning Brief deprecated 2026-04-29 — useMorningBrief removed.
 
 import { TodayMemoHeroV2 } from "@/components/home/v2/today-memo-hero-v2";
@@ -66,6 +68,13 @@ export default function HomePageV2() {
   const briefLoading = false;
 
   const displayName = user?.name?.split(" ")[0] || "Observer";
+
+  // P0-2: first-run activation. Shares the /api/portfolio/positions SWR cache
+  // key with PositionsTopCard / PortfolioSnapshotCard, so this adds no extra
+  // request. hasPositions drives the hero's "Add your first position" CTA.
+  const positionsSwr = usePortfolioPositions<PortfolioResponse>();
+  const positionsLoading = positionsSwr.isLoading;
+  const hasPositions = (positionsSwr.data?.positions?.length ?? 0) > 0;
 
   return (
     <ErrorBoundary>
@@ -109,6 +118,10 @@ export default function HomePageV2() {
         audioDuration={audioDuration}
         displayName={displayName}
         loading={briefLoading && heroHeadline == null}
+        /* Treat "still loading positions" as hasPositions=true so the
+           first-run CTA doesn't flash for returning users mid-fetch; it
+           only appears once we confirm an empty book. */
+        hasPositions={positionsLoading || hasPositions}
       />
 
       {/* ═══════════ GALLERY — 6 cards, 3 × 2 ═══════════ */}

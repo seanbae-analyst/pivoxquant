@@ -23,6 +23,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { renderEditorialHeadline } from "@/lib/editorial-html";
+import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 
 interface TodayMemoHeroV2Props {
   /** H1 line. May contain <span class="br">…</span> markup, rendered as-is. */
@@ -35,6 +36,13 @@ interface TodayMemoHeroV2Props {
   displayName?: string;
   /** SWR loading flag. */
   loading?: boolean;
+  /**
+   * P0-2: when the user has zero positions, the hero shows a first-run
+   * activation CTA ("Add your first position") instead of the "Read full
+   * memo" link, which would dead-end in an empty archive. The page passes
+   * this once positions SWR resolves.
+   */
+  hasPositions?: boolean;
 }
 
 function weekIndexOf(d: Date): number {
@@ -53,20 +61,43 @@ export function TodayMemoHeroV2({
   body,
   audioDuration,
   loading,
+  hasPositions = true,
 }: TodayMemoHeroV2Props) {
   const now = new Date();
-  const eyebrow = `Memo · ${weekIndexOf(now)} of 52 · ${weekdayOf(now)}`;
 
-  // Default fallback copy, matches mockup intent. Bronze italic accents via "br".
-  const fallbackHeadline =
-    'You held through <span class="br">noise</span>.<br/>Cash buffer is doing the work — <span class="br">don\'t tax it.</span>';
-  const fallbackBody =
-    "Today's memo is being assembled. The weekly editorial drops every Monday 07:00 KST and archives below.";
+  // P0-1 (2026-05-20 ux-flow fix): the previous build hard-coded a fake CFO
+  // insight ("You held through noise. Cash buffer is doing the work…") as the
+  // fallback headline AND always rendered the "Drafted by AI · Reviewed by
+  // you" seal — so EVERY user (incl. brand-new accounts with zero data) saw a
+  // fabricated personal memo signed as if a real analysis ran. Trust killer.
+  //
+  // Now three explicit states:
+  //   - loading      → neutral "drafting" placeholder, no seal
+  //   - empty        → honest "first memo is on its way" copy, no seal,
+  //                    no insight sentence
+  //   - real memo    → caller-fed headline/body + the AI/reviewed seal
+  const hasRealMemo = !loading && headline != null;
+
+  const eyebrow = hasRealMemo
+    ? `Memo · ${weekIndexOf(now)} of 52 · ${weekdayOf(now)}`
+    : "Memo · Coming soon";
+
+  // Empty-state copy: NO fabricated insight, NO predictive language. Plain
+  // ivory text (no bronze "br" accent — that styling is reserved for a real
+  // editorial line).
+  const emptyHeadline = "Your first weekly memo is on its way.";
+  const emptyBody = `Once you have a position on the book, your CFO drafts a weekly editorial — what moved, what held, and where the risk sits. It lands ${WEEKLY_MEMO_WHEN_SHORT} and archives below.`;
 
   const headlineHtml = loading
     ? "Drafting today's memo…"
-    : headline ?? fallbackHeadline;
-  const bodyText = loading ? null : body ?? fallbackBody;
+    : hasRealMemo
+      ? (headline as string)
+      : emptyHeadline;
+  const bodyText = loading
+    ? null
+    : hasRealMemo
+      ? body ?? null
+      : emptyBody;
 
   return (
     <section
@@ -128,28 +159,72 @@ export function TodayMemoHeroV2({
         className="flex items-center"
         style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}
       >
-        <Link
-          href="/reports"
-          className="pq-cta-bronze font-mono"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 22px",
-            background: "var(--pq-bronze)" /* SOLE Accent Gold per design-principles-cfo.md §2 — do not duplicate */,
-            color: "var(--pq-ink, #050505)",
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            borderRadius: 2,
-            textDecoration: "none",
-            transition: "background-color 200ms",
-          }}
-        >
-          Read full memo →
-        </Link>
+        {/* P0-2: first-run activation. Zero positions → the only sensible
+            next step is adding one, so the primary bronze CTA points to the
+            Book instead of an empty memo archive. */}
+        {!loading && !hasPositions ? (
+          <Link
+            href="/portfolio"
+            className="pq-cta-bronze font-mono"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "12px 22px",
+              background: "var(--pq-bronze)" /* SOLE Accent Gold per design-principles-cfo.md §2 — do not duplicate */,
+              color: "var(--pq-ink, #050505)",
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              borderRadius: 2,
+              textDecoration: "none",
+              transition: "background-color 200ms",
+            }}
+          >
+            Add your first position →
+          </Link>
+        ) : hasRealMemo ? (
+          <Link
+            href="/reports"
+            className="pq-cta-bronze font-mono"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "12px 22px",
+              background: "var(--pq-bronze)" /* SOLE Accent Gold per design-principles-cfo.md §2 — do not duplicate */,
+              color: "var(--pq-ink, #050505)",
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              borderRadius: 2,
+              textDecoration: "none",
+              transition: "background-color 200ms",
+            }}
+          >
+            Read full memo →
+          </Link>
+        ) : (
+          /* Has positions but no memo yet → quiet link to the (real) archive
+             rather than a primary CTA that implies a memo is ready. */
+          <Link
+            href="/reports"
+            className="font-mono uppercase"
+            style={{
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "rgba(245, 240, 232, 0.6)",
+              borderBottom: "1px solid rgba(184,149,106,0.35)",
+              paddingBottom: 2,
+              textDecoration: "none",
+            }}
+          >
+            Browse the archive →
+          </Link>
+        )}
 
-        {audioDuration ? (
+        {hasRealMemo && audioDuration ? (
           <Link
             href="/reports"
             className="font-mono uppercase"
@@ -167,18 +242,23 @@ export function TodayMemoHeroV2({
           </Link>
         ) : null}
 
-        <span
-          className="font-mono uppercase"
-          style={{
-            marginLeft: 16,
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.55)",
-            textTransform: "uppercase",
-          }}
-        >
-          Drafted by AI · Reviewed by you
-        </span>
+        {/* P0-1: the "Drafted by AI · Reviewed by you" seal only appears on a
+            REAL memo. Showing it over empty/placeholder copy was the original
+            trust bug (it signed a memo that never ran). */}
+        {hasRealMemo ? (
+          <span
+            className="font-mono uppercase"
+            style={{
+              marginLeft: 16,
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.22em",
+              color: "rgba(245,240,232,0.55)",
+              textTransform: "uppercase",
+            }}
+          >
+            Drafted by AI · Reviewed by you
+          </span>
+        ) : null}
       </div>
     </section>
   );
