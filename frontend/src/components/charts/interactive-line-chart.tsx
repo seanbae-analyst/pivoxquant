@@ -56,9 +56,14 @@ export interface InteractiveLineChartProps {
   markers?: ChartMarker[];
 }
 
+// KR convention (CEO directive 2026-04-26): rise = carmine (▲), fall = indigo
+// (▼). The former `positive: --pq-positive (#B8956A bronze)` collided with the
+// rest of the app where POSITIVE renders carmine — fixed 2026-05-20 to the
+// price-direction tokens so a positive observation marker matches the carmine
+// used by sentiment chips / pillar bars / 1D delta. Single source: --up/--down.
 const MARKER_TONE: Record<ChartMarker["tone"], string> = {
-  positive: "var(--pq-positive, #B8956A)",
-  negative: "var(--pq-negative, #D18888)",
+  positive: "var(--up, #D18888)",
+  negative: "var(--down, #7AA0C8)",
   neutral: "rgba(245,240,232,0.5)",
 };
 

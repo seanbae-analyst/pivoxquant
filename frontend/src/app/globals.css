@@ -2424,10 +2424,11 @@ i.italic,
   border-color: rgba(245, 240, 232, 0.18);
 }
 
-/* News group date header — editorial drop-letter style */
+/* News group date header — editorial drop-letter style.
+   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings). */
 .pq-news-date-header {
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   color: rgba(245, 240, 232, 0.55);
   letter-spacing: 0.02em;
@@ -2436,10 +2437,11 @@ i.italic,
   border-bottom: 0.5px solid rgba(245, 240, 232, 0.06);
 }
 
-/* Editorial note fallback for missing data */
+/* Editorial note fallback for missing data.
+   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings). */
 .pq-detail-empty-note {
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 14px;
   line-height: 1.5;
   color: rgba(245, 240, 232, 0.5);

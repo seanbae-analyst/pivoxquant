@@ -41,6 +41,11 @@ const BADGE_IMPORT_PATTERN = /AiContentBadge/;
 // Allowlist (relative to FRONTEND_SRC)
 const ALLOWLIST = new Set<string>([
   "lib/types.ts", // 타입 정의만, 렌더 surface 아님
+  // detail 리디자인 (2026-05-20) — /detail/[ticker] page.tsx 분리 시 추출한
+  // 타입/헬퍼 전용 파일. SwotResponse.swot_kr 필드를 *선언*만 하고 렌더하지
+  // 않는다 (실제 렌더 surface 는 components/detail/SwotPanel.tsx 이며 거기서
+  // AiContentBadge 를 import 한다). lib/types.ts 와 동일 카테고리.
+  "components/detail/types.ts",
   "components/ui/ai-content-badge.tsx", // badge 자체
   // /sample-reports/page.tsx — 18-tile navigator. Renders titles/tiers only,
   // no AI content surface. Detail route ([slug]/page.tsx) is gated below.
