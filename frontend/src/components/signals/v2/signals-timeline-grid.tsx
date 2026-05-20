@@ -105,6 +105,9 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             color: "rgba(245,240,232,0.55)",
             padding: "48px 0",
             textAlign: "center",
+            // CEO 2026-05-20: KR prose breaks at word boundaries.
+            wordBreak: "keep-all",
+            overflowWrap: "anywhere",
           }}
         >
           관측을 읽고 있습니다…
@@ -143,6 +146,9 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
               lineHeight: 1.3,
               color: "var(--pq-ivory, #F5F0E8)",
               marginBottom: 8,
+              // CEO 2026-05-20: KR prose breaks at word boundaries.
+              wordBreak: "keep-all",
+              overflowWrap: "anywhere",
             }}
           >
             조건에 맞는 관측이 없습니다.
@@ -153,6 +159,9 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.55)",
+              // CEO 2026-05-20: KR prose breaks at word boundaries.
+              wordBreak: "keep-all",
+              overflowWrap: "anywhere",
             }}
           >
             강도 범위를 넓히거나 기간을 늘려 다시 확인해 보세요.

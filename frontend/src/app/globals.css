@@ -2280,10 +2280,16 @@ i.italic,
   line-height: 1.2;
 }
 
-/* Editorial H1 ticker display — Playfair Display italic, oversized (v3 lock-in) */
+/* Editorial H1 ticker display — Playfair Display, oversized.
+ * CEO directive 2026-05-20: "개별종목 폰트 꼬라지가 뭐냐 italic 쓰지마".
+ * Individual stock-name heading was italic per the original v3 lock-in,
+ * but the CEO explicitly reversed this for security/ticker display —
+ * KR stock names (e.g. "삼성전자") fall through to a system serif and
+ * the synthesised italic slant looked off. Upright only here; other
+ * editorial italic accents on unrelated pages are untouched. */
 .pq-detail-ticker-display {
   font-family: var(--font-display), "Playfair Display", "EB Garamond", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 500;
   font-size: clamp(2.25rem, 5vw, 3.5rem);
   line-height: 1;

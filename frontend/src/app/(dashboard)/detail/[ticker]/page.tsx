@@ -37,7 +37,10 @@ import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
+import {
+  InteractiveLineChart,
+  type ChartMarker,
+} from "@/components/charts/interactive-line-chart";
 import {
   FieldLabel,
   StatRow,
@@ -45,7 +48,12 @@ import {
   RuledKicker,
   EditorialHead,
 } from "@/components/ui/editorial";
-import { useWatchlist, usePortfolioPositions, useArtifacts } from "@/lib/hooks";
+import {
+  useWatchlist,
+  usePortfolioPositions,
+  useArtifacts,
+  useSignals,
+} from "@/lib/hooks";
 import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import { WEEKLY_MEMO_EMPTY_LINE } from "@/lib/cfo/memo-schedule";
 import type { Position } from "@/lib/types";
@@ -310,9 +318,11 @@ const PERIOD_MAP: Record<Period, string> = {
 function SparkChart({
   data,
   currency = "USD",
+  markers,
 }: {
   data: ChartPoint[];
   currency?: "USD" | "KRW";
+  markers?: ChartMarker[];
 }) {
   if (!data || data.length < 2) {
     return (
@@ -327,6 +337,7 @@ function SparkChart({
     <InteractiveLineChart
       points={series}
       height={260}
+      markers={markers}
       valueFormatter={(v) => priceFmt(v)}
       dateFormatter={(d) => {
         const parsed = new Date(d);
@@ -532,6 +543,66 @@ export default function StockDetailPage() {
       shouldRetryOnError: false,
     },
   );
+  // Observation history for THIS ticker, overlaid on the price chart as
+  // tone-coloured markers. CEO 2026-05-20 "chart에 왜 없어 기록들이" — the
+  // chart previously rendered the price line only and had no notion of
+  // signal markers. We reuse the existing `/api/signals` feed (no new
+  // endpoint, no SWR-key change) scoped to this symbol with the "all"
+  // window so older observations within the chart range still surface.
+  const { data: signalsRes } = useSignals(
+    ticker ? { symbol: ticker, window: "all" } : {},
+  );
+  const chartMarkers = useMemo<ChartMarker[]>(() => {
+    const all = signalsRes?.signals ?? [];
+    const norm = normalizeTicker(ticker);
+    return all
+      .filter((s) => {
+        if (!s.observed_at) return false;
+        // Server may already scope by `symbol`, but defend client-side in
+        // case the backend ignores the param (hooks.ts documents this).
+        return (
+          normalizeTicker(s.ticker) === norm ||
+          (s.ticker ?? "").toUpperCase() === (ticker ?? "").toUpperCase()
+        );
+      })
+      .map((s) => {
+        const raw = (s.label ?? s.signal ?? "").toString().toUpperCase();
+        const tone: ChartMarker["tone"] =
+          raw === "POSITIVE"
+            ? "positive"
+            : raw === "NEGATIVE"
+              ? "negative"
+              : "neutral";
+        const display =
+          tone === "positive" ? "긍정" : tone === "negative" ? "부정" : "중립";
+        const strength =
+          typeof s.strength === "number"
+            ? s.strength
+            : typeof s.score === "number"
+              ? s.score / 100
+              : null;
+        const clock = s.observed_at
+          ? new Date(s.observed_at).toLocaleString("ko-KR", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "";
+        const parts = [
+          `관측 · ${display}`,
+          strength != null ? `강도 ${strength.toFixed(2)}` : null,
+          clock || null,
+        ].filter(Boolean);
+        return {
+          date: s.observed_at as string,
+          tone,
+          strength: strength ?? undefined,
+          label: parts.join(" · "),
+        };
+      });
+  }, [signalsRes, ticker]);
+
   const { data: newsRes, isLoading: loadingNews } = useSWR<NewsResponse>(
     ticker ? API.market.news(ticker) : null,
     fetcher,
@@ -1084,9 +1155,53 @@ export default function StockDetailPage() {
               <SparkChart
                 data={chartRes?.data ?? []}
                 currency={isKrw(signal, ticker) ? "KRW" : (signal?.currency ?? "USD")}
+                markers={chartMarkers}
               />
             )}
           </div>
+          {/* Marker legend — only when this ticker has observation history
+              within the visible window. Legal: observation framing only. */}
+          {!loadingChart && chartMarkers.length > 0 && (
+            <div className="mt-3 flex items-center gap-4 flex-wrap font-mono text-pq-eyebrow-sm uppercase tracking-[0.16em] text-[var(--pq-ivory-faint)]">
+              <span>관측 기록 {chartMarkers.length}건</span>
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: 999,
+                    background: "var(--pq-positive, #B8956A)",
+                  }}
+                />
+                긍정
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: 999,
+                    background: "var(--pq-negative, #D18888)",
+                  }}
+                />
+                부정
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: 999,
+                    background: "rgba(245,240,232,0.5)",
+                  }}
+                />
+                중립
+              </span>
+            </div>
+          )}
         </section>
 
         {/* ══════════════════════════════════════════════════

@@ -21,6 +21,21 @@ export interface InteractivePoint {
   value: number;
 }
 
+/**
+ * A signal/observation marker plotted on the price line. The chart maps
+ * `date` to the nearest price point's x-position and draws a small tick
+ * above the curve, coloured by `tone`. Legal: tone vocabulary is the
+ * observation set (positive / negative / neutral) — never trade-action.
+ */
+export interface ChartMarker {
+  date: string;
+  tone: "positive" | "negative" | "neutral";
+  /** Human-readable observation label for hover/aria (e.g. "긍정 · 강도 0.91"). */
+  label?: string;
+  /** 0..1 — reserved for future intensity sizing; not required. */
+  strength?: number;
+}
+
 export interface InteractiveLineChartProps {
   points: InteractivePoint[];
   height?: number;
@@ -33,7 +48,19 @@ export interface InteractiveLineChartProps {
   compact?: boolean;
   /** Downsample cap — if points exceed this, evenly sample to this length. */
   maxPoints?: number;
+  /**
+   * Observation markers overlaid on the price line. Each is snapped to
+   * the nearest charted date and drawn as a tone-coloured tick. Hidden
+   * in compact mode (sparklines have no room).
+   */
+  markers?: ChartMarker[];
 }
+
+const MARKER_TONE: Record<ChartMarker["tone"], string> = {
+  positive: "var(--pq-positive, #B8956A)",
+  negative: "var(--pq-negative, #D18888)",
+  neutral: "rgba(245,240,232,0.5)",
+};
 
 /**
  * Downsample an array to at most `max` points by index sampling.
@@ -59,6 +86,7 @@ export function InteractiveLineChart({
   ariaLabel = "Observation curve",
   compact = false,
   maxPoints = 300,
+  markers,
 }: InteractiveLineChartProps) {
   const ref = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ idx: number; x: number; y: number } | null>(null);
@@ -94,6 +122,51 @@ export function InteractiveLineChart({
       ` L${xs[xs.length - 1].toFixed(1)},${(padding.top + innerH).toFixed(1)} L${xs[0].toFixed(1)},${(padding.top + innerH).toFixed(1)} Z`;
     return { min, max, path, area, xs, ys };
   }, [sampled, innerH, innerW, padding.left, padding.top]);
+
+  // Snap each marker's calendar date to the nearest charted point so the
+  // tick lands on the curve. Day-granularity matching tolerates the
+  // chart's "YYYY-MM-DD" dates vs. a signal's full ISO `observed_at`.
+  const markerGeom = useMemo(() => {
+    if (compact || !markers || markers.length === 0 || sampled.length < 2) {
+      return [] as Array<{
+        x: number;
+        y: number;
+        color: string;
+        label: string;
+      }>;
+    }
+    const dayMs = 86_400_000;
+    const times = sampled.map((p) => {
+      const t = new Date(p.date).getTime();
+      return isNaN(t) ? null : t;
+    });
+    const out: Array<{ x: number; y: number; color: string; label: string }> = [];
+    for (const m of markers) {
+      const mt = new Date(m.date).getTime();
+      if (isNaN(mt)) continue;
+      let bestIdx = -1;
+      let bestDist = Infinity;
+      for (let i = 0; i < times.length; i++) {
+        const ti = times[i];
+        if (ti == null) continue;
+        const d = Math.abs(ti - mt);
+        if (d < bestDist) {
+          bestDist = d;
+          bestIdx = i;
+        }
+      }
+      // Drop markers that fall outside the visible window by more than a
+      // few days (e.g. a 1M chart with a 1Y-old observation).
+      if (bestIdx < 0 || bestDist > 5 * dayMs) continue;
+      out.push({
+        x: geom.xs[bestIdx],
+        y: geom.ys[bestIdx],
+        color: MARKER_TONE[m.tone],
+        label: m.label ?? m.tone,
+      });
+    }
+    return out;
+  }, [compact, markers, sampled, geom.xs, geom.ys]);
 
   const resolveHover = useCallback(
     (clientX: number) => {
@@ -210,6 +283,36 @@ export function InteractiveLineChart({
           strokeLinejoin="round"
           strokeLinecap="round"
         />
+
+        {/* Observation markers — tone-coloured ticks snapped to the curve.
+            Legal: tone is the observation set, never a trade action. */}
+        {markerGeom.length > 0 && (
+          <g aria-label={`관측 마커 ${markerGeom.length}건`}>
+            {markerGeom.map((m, i) => (
+              <g key={i} role="img" aria-label={m.label}>
+                <title>{m.label}</title>
+                {/* connector stem from the curve up to the tick */}
+                <line
+                  x1={m.x}
+                  x2={m.x}
+                  y1={m.y}
+                  y2={Math.max(padding.top, m.y - 14)}
+                  stroke={m.color}
+                  strokeWidth="1"
+                  strokeOpacity="0.55"
+                />
+                <circle
+                  cx={m.x}
+                  cy={Math.max(padding.top, m.y - 14)}
+                  r={3.5}
+                  fill={m.color}
+                  stroke="var(--pq-ink, #050505)"
+                  strokeWidth="1.25"
+                />
+              </g>
+            ))}
+          </g>
+        )}
 
         {/* Hover crosshair + dot */}
         {hover && (

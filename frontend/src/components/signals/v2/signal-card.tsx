@@ -203,6 +203,12 @@ export function SignalCard({ entry, resolveName }: Props) {
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.78)",
                 margin: "10px 0 0 0",
+                // CEO 2026-05-20 "한 문장이 부분 줄바꿈": KR prose must
+                // break at word (어절) boundaries, not mid-word. keep-all
+                // honours KR spacing; anywhere is the escape hatch for a
+                // single token longer than the column.
+                wordBreak: "keep-all",
+                overflowWrap: "anywhere",
               }}
             >
               {entry.rationale}

@@ -60,6 +60,10 @@ export function SignalsHeroV2({ eyebrow = "시그널 · 실시간", counts, load
           color: "var(--pq-ivory, #F5F0E8)",
           margin: 0,
           maxWidth: 880,
+          // CEO 2026-05-20 "한 문장이 부분 줄바꿈": KR headline must
+          // break at 어절 boundaries, not mid-word.
+          wordBreak: "keep-all",
+          overflowWrap: "anywhere",
         }}
       >
         스트림은{" "}
@@ -93,6 +97,9 @@ export function SignalsHeroV2({ eyebrow = "시그널 · 실시간", counts, load
           color: "rgba(245,240,232,0.82)",
           maxWidth: 720,
           marginTop: 22,
+          // CEO 2026-05-20: KR prose breaks at 어절 boundaries.
+          wordBreak: "keep-all",
+          overflowWrap: "anywhere",
         }}
       >
         {loading ? (
