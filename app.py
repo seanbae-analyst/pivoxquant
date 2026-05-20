@@ -693,10 +693,97 @@ def _populate_cache(app):
             logger.error(f"[cache-warmup] error: {e}")
 
 
+# ── CONN-001: scheduler advisory-lock state ────────────────────────────────
+# Holds the dedicated psycopg2 connection that owns the PG session advisory
+# lock for the lifetime of this process. MUST stay referenced at module scope
+# — if it were garbage-collected the connection would close and PostgreSQL
+# would release the lock, letting a second process also start the scheduler.
+_SCHEDULER_LOCK_CONN = None
+# Arbitrary but stable 64-bit key shared across all PivoxQuant processes.
+_SCHEDULER_LOCK_KEY = 0x50_49_56_4F_58  # "PIVOX" hex — any constant works.
+
+
+def _try_acquire_scheduler_lock() -> bool:
+    """Return True if THIS process should own the scheduler.
+
+    On PostgreSQL: opens a dedicated connection and calls
+    ``pg_try_advisory_lock`` (non-blocking). The lock is held for the process
+    lifetime via ``_SCHEDULER_LOCK_CONN`` and auto-released by PG on
+    disconnect (i.e. when the old container dies during a deploy).
+
+    On SQLite / any error: returns True (fail-safe — never lose crons).
+    """
+    global _SCHEDULER_LOCK_CONN
+    try:
+        from config import IS_POSTGRES
+    except Exception:
+        return True
+    if not IS_POSTGRES:
+        # Local dev (SQLite) has no advisory locks and no deploy overlap.
+        return True
+    try:
+        # A raw psycopg2 connection — deliberately OUTSIDE the SQLAlchemy pool
+        # so it is never recycled/returned (which would drop the lock).
+        import psycopg2
+        import time as _time
+        from config import _db_url  # already postgres://→postgresql:// normalised
+        # CONN-001 P2: connect_timeout + keepalives so a half-dead socket from a
+        # SIGKILLed container doesn't hang the boot, and PG reaps the dead lock
+        # holder promptly. Retry once after a short backoff to cover the narrow
+        # deploy-overlap window where the previous container's advisory lock has
+        # not yet been released by PG when the new container boots.
+        for _attempt in range(2):
+            conn = psycopg2.connect(
+                _db_url,
+                connect_timeout=5,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=3,
+            )
+            conn.autocommit = True
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_try_advisory_lock(%s)", (_SCHEDULER_LOCK_KEY,))
+                got = bool(cur.fetchone()[0])
+            if got:
+                # Keep the connection (and therefore the lock) alive for the
+                # process lifetime.
+                _SCHEDULER_LOCK_CONN = conn
+                return True
+            # Lost the race — release this short-lived connection immediately,
+            # then retry once (the old container may still be releasing).
+            conn.close()
+            if _attempt == 0:
+                _time.sleep(0.5)
+        return False
+    except Exception:
+        logger.exception(
+            "scheduler advisory-lock acquire failed — falling back to "
+            "starting the scheduler (fail-safe)"
+        )
+        return True
+
+
 def _init_scheduler(app):
     def _scheduled_refresh():
         from models import Position, User
         with app.app_context():
+            # CONN-001 (2026-05-20): release the DB connection BEFORE the slow
+            # external-API analyse loop. Previously this held one pooled
+            # connection checked out for the ENTIRE loop body — each
+            # ``svc.engine.analyze()`` call hits FMP/Alpaca (multiple seconds)
+            # while still pinning the connection. With pool max 5 and an
+            # in-process scheduler (26 jobs) plus a deploy-overlap second
+            # scheduler instance, that pinned connection was a primary driver
+            # of ``FATAL: sorry, too many clients already`` → cold 500 burst.
+            #
+            # Strategy: read everything we need into plain Python objects, then
+            # ``db.session.remove()`` so the connection returns to the pool
+            # while the (connection-free) external API calls run. The per-
+            # ticker write path (save_signal / maybe_generate) lazily
+            # re-acquires a SHORT connection from the pool and we release it
+            # again at the end of each iteration so no connection is ever held
+            # across an ``analyze()`` call.
             positions = Position.query.all()
             # Continuous User Simulation Phase 1 — exclude ``is_simulated=True``
             # from the alert-generation refresh. Sim users would otherwise
@@ -707,22 +794,36 @@ def _init_scheduler(app):
             # fall through with available_capital=10_000 default (no user
             # row found) and produce a signal only when a *real* user also
             # holds the same ticker — which is the intended behaviour.
-            users = {u.id: u for u in
-                     User.query.filter_by(is_simulated=False).all()}
+            cap_by_uid = {u.id: u.available_capital for u in
+                          User.query.filter_by(is_simulated=False).all()}
             tku: dict[str, list[int]] = {}
             for p in positions:
                 tku.setdefault(p.ticker, []).append(p.user_id)
-            for ticker, uids in tku.items():
-                cap = users[uids[0]].available_capital if uids[0] in users else 10_000
+            # Materialise to plain tuples so nothing below touches a detached
+            # ORM instance after the session is removed.
+            work = list(tku.items())
+            # Release the connection before any external API work.
+            db.session.remove()
+
+            for ticker, uids in work:
+                cap = cap_by_uid.get(uids[0], 10_000)
                 try:
+                    # No DB connection held here — analyze() may take seconds.
                     r = svc.engine.analyze(ticker, cap)
                     if r:
+                        # Quick writes only; these lazily re-acquire a
+                        # connection from the pool.
                         cache_service.save_signal(ticker, r)
                         for uid in uids:
                             alert_service.maybe_generate(uid, r)
                 except Exception as e:
                     logger.error(f"Scheduler failed {ticker}: {e}")
-            logger.info(f"Scheduled refresh done — {len(tku)} tickers")
+                finally:
+                    # Return the (re-acquired) connection to the pool before the
+                    # next iteration's analyze() call so it is never pinned
+                    # across slow external I/O.
+                    db.session.remove()
+            logger.info(f"Scheduled refresh done — {len(work)} tickers")
 
     def _scheduled_indices_cache_warm():
         """Keep the headline-index cache warm for the public landing ticker.
@@ -1050,13 +1151,24 @@ def _init_scheduler(app):
         from services.twin import run_twin_decisions
         with app.app_context():
             try:
-                rows = AITwinPortfolio.query.filter_by(is_active=True).all()
-                for tw in rows:
+                # CONN-001: materialise the active user-ids then release the
+                # connection before the per-twin analyse loop. Each
+                # run_twin_decisions() call hits FMP/KIS (engine.analyze) for
+                # seconds and manages its own short session internally — we
+                # must not pin the list-query connection across that loop.
+                uids = [int(uid) for (uid,) in
+                        AITwinPortfolio.query
+                        .filter_by(is_active=True)
+                        .with_entities(AITwinPortfolio.user_id).all()]
+                db.session.remove()
+                for uid in uids:
                     try:
-                        run_twin_decisions(int(tw.user_id))
+                        run_twin_decisions(uid)
                     except Exception as e:
-                        logger.error(f"Twin KR decisions failed user={tw.user_id}: {e}")
-                logger.info(f"Twin KR daily run: {len(rows)} twins scanned")
+                        logger.error(f"Twin KR decisions failed user={uid}: {e}")
+                    finally:
+                        db.session.remove()
+                logger.info(f"Twin KR daily run: {len(uids)} twins scanned")
             except Exception as e:
                 logger.error(f"Twin KR scheduler failed: {e}")
 
@@ -1066,13 +1178,21 @@ def _init_scheduler(app):
         from services.twin import run_twin_decisions
         with app.app_context():
             try:
-                rows = AITwinPortfolio.query.filter_by(is_active=True).all()
-                for tw in rows:
+                # CONN-001: see _scheduled_twin_decisions_kr — release the
+                # connection before the slow per-twin analyse loop.
+                uids = [int(uid) for (uid,) in
+                        AITwinPortfolio.query
+                        .filter_by(is_active=True)
+                        .with_entities(AITwinPortfolio.user_id).all()]
+                db.session.remove()
+                for uid in uids:
                     try:
-                        run_twin_decisions(int(tw.user_id))
+                        run_twin_decisions(uid)
                     except Exception as e:
-                        logger.error(f"Twin US decisions failed user={tw.user_id}: {e}")
-                logger.info(f"Twin US daily run: {len(rows)} twins scanned")
+                        logger.error(f"Twin US decisions failed user={uid}: {e}")
+                    finally:
+                        db.session.remove()
+                logger.info(f"Twin US daily run: {len(uids)} twins scanned")
             except Exception as e:
                 logger.error(f"Twin US scheduler failed: {e}")
 
@@ -1082,13 +1202,21 @@ def _init_scheduler(app):
         from services.twin import generate_weekly_report
         with app.app_context():
             try:
-                rows = AITwinPortfolio.query.filter_by(is_active=True).all()
-                for tw in rows:
+                # CONN-001: release the connection before the per-twin report
+                # loop; generate_weekly_report manages its own session.
+                uids = [int(uid) for (uid,) in
+                        AITwinPortfolio.query
+                        .filter_by(is_active=True)
+                        .with_entities(AITwinPortfolio.user_id).all()]
+                db.session.remove()
+                for uid in uids:
                     try:
-                        generate_weekly_report(int(tw.user_id))
+                        generate_weekly_report(uid)
                     except Exception as e:
-                        logger.error(f"Twin weekly report failed user={tw.user_id}: {e}")
-                logger.info(f"Twin weekly run: {len(rows)} twins reported")
+                        logger.error(f"Twin weekly report failed user={uid}: {e}")
+                    finally:
+                        db.session.remove()
+                logger.info(f"Twin weekly run: {len(uids)} twins reported")
             except Exception as e:
                 logger.error(f"Twin weekly scheduler failed: {e}")
 
@@ -1154,7 +1282,27 @@ def _init_scheduler(app):
             except Exception as e:
                 logger.error(f"Persona snapshot weekly failed: {e}")
 
-    sched = BackgroundScheduler(timezone="UTC")
+    # PERF-001 / CONN-001: apply pile-up guards as scheduler-wide job defaults
+    # so EVERY job — the artifact crons below AND the Wave H ops jobs
+    # registered via register_cron_jobs — inherits them consistently:
+    #   • coalesce=True       → collapse a backlog of missed runs into ONE.
+    #   • max_instances=1     → never run two copies of the same job at once.
+    #   • misfire_grace_time  → 60s window to still fire a delayed run; beyond
+    #     that the run is dropped (with coalesce, a whole minute of dropped
+    #     per-minute ticks collapses to a single catch-up fire instead of a
+    #     30-deep pile-up on the threadpool when the scheduler thread is
+    #     briefly blocked by a slow job or GC pause).
+    # Per-job kwargs below still pass coalesce/max_instances explicitly for
+    # readability; these defaults are the safety net (and supply the missing
+    # misfire_grace_time the per-job calls never set).
+    sched = BackgroundScheduler(
+        timezone="UTC",
+        job_defaults={
+            "coalesce": True,
+            "max_instances": 1,
+            "misfire_grace_time": 60,
+        },
+    )
     # PERF-001: cap concurrent runs and coalesce missed runs so a slow refresh
     # cannot stack up identical jobs on the scheduler thread pool.
     sched.add_job(
@@ -1512,7 +1660,32 @@ def _init_scheduler(app):
     except Exception:
         logger.exception("scheduler.start diagnostic logging failed")
 
-    sched.start()
+    # ── CONN-001 (2026-05-20): deploy-overlap single-scheduler guard ─────────
+    # During a Railway deploy the OLD and NEW containers run simultaneously
+    # for a few minutes. Both have RUN_SCHEDULER=1, so BOTH spin up this
+    # scheduler → every per-minute job (indices_cache_warm, fx_rate_refresh)
+    # fires twice, and the symptom in the logs was the same job appearing
+    # ~30x within a single minute during a rolling restart. coalesce /
+    # max_instances cannot help here — they are per-process. A PG session
+    # advisory lock is the right primitive: only the process that wins the
+    # lock starts its jobs; the loser registers nothing. The lock is held on
+    # a DEDICATED long-lived connection (NOT a pooled one — a pooled
+    # connection would return to the pool and release the lock) and is auto-
+    # released by PostgreSQL the instant that process disconnects, so when the
+    # old container is torn down the new one's NEXT boot wins cleanly.
+    #
+    # Fail-SAFE: any error (SQLite local dev, lock helper failure) falls back
+    # to starting the scheduler unconditionally — losing crons entirely is far
+    # worse than a few minutes of deploy-overlap duplication.
+    if _try_acquire_scheduler_lock():
+        sched.start()
+        logger.info("scheduler started (advisory lock held) pid=%s", os.getpid())
+    else:
+        logger.warning(
+            "scheduler NOT started pid=%s — another process holds the "
+            "scheduler advisory lock (deploy overlap). Jobs registered but "
+            "idle in this process.", os.getpid(),
+        )
 
 
 # ── Create app instance ───────────────────────────────────────────────────────

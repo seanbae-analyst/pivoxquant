@@ -84,6 +84,21 @@ class Config:
         # 실패(워커가 커넥션 못 얻음). 1-worker(gevent) + in-process 스케줄러(26잡)
         # 환경에서 풀을 대폭 축소해 footprint를 줄임 (구 15 → 5). 배포 시 old/new
         # 인스턴스 동시 실행 overlap에서도 PG max_connections 내에 들어오게 함.
+        #
+        # 2026-05-20 (CONN-001) — pool 상향(5→10) 검토 후 보류 결정.
+        #   라이브 실측: monorail.proxy.rlwy.net:44311 으로 단일 read 커넥션
+        #   조차 5회 연속 ``FATAL: sorry, too many clients already`` 거절 —
+        #   즉 PG max_connections 가 *현재* 완전히 소진된 상태라 SHOW
+        #   max_connections / pg_stat_activity 조차 못 읽음. Railway Hobby PG
+        #   default 는 25 로 알려져 있고(메모리 추정과 일치) 확인 불가.
+        #   이 상황에서 per-process 풀 ceiling 을 5→10 으로 올리면 deploy
+        #   overlap(2 process × 10 = 20) + advisory-lock conn + 누수분으로
+        #   소진을 *악화*시킨다. 병목은 풀 ceiling 이 아니라 (a) 스케줄러가
+        #   느린 외부 API 호출 동안 커넥션을 점유하던 것(app.py CONN-001 에서
+        #   loop 전 db.session.remove() 로 해소) + (b) deploy overlap 시 이중
+        #   스케줄러(app.py CONN-001 PG advisory lock 으로 단일화)였다.
+        #   따라서 풀은 그대로 5 로 유지하고 holding/overlap 을 코드로 줄였다.
+        #   추후 max_connections 헤드룸 실측이 가능해지면 재검토.
         SQLALCHEMY_ENGINE_OPTIONS = {
             "pool_size": 3,
             "max_overflow": 2,

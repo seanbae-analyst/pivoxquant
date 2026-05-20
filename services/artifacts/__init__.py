@@ -113,6 +113,22 @@ def iter_users_chunked(
         # request — and the Python overhead is negligible compared with
         # the WeasyPrint renders we just finished.
         gc.collect()
+        # CONN-001 (2026-05-20): also return the pooled DB connection at the
+        # chunk boundary. Each per-user render does FMP/Alpaca fetches that
+        # can run for seconds while still pinning the connection acquired by
+        # the earlier ``.query`` calls. With pool max 5 + in-process scheduler
+        # + deploy-overlap second scheduler, a pinned connection across a slow
+        # render loop contributed to ``FATAL: sorry, too many clients
+        # already`` cold 500 bursts. By the chunk boundary every yielded user
+        # is already committed (run_for_user commits its Artifact row), so
+        # removing the scoped session here is safe — the next chunk's first
+        # ``.query`` lazily re-acquires a fresh connection from the pool.
+        try:
+            from extensions import db as _db
+            _db.session.remove()
+        except Exception:  # noqa: BLE001 — connection release must never break cron
+            _logger.debug("pdf_chunk %s — session.remove() failed", label,
+                          exc_info=True)
         if on_chunk_done is not None:
             try:
                 on_chunk_done(ci + 1, total_chunks, len(chunk))
