@@ -1,6 +1,8 @@
-# PivoxQuant — 인수인계서 (2026-05-20 v46.1 — P0-2 동의 flush leg 테스트로 확정 + 발송 BLOCKER 재검증)
+# PivoxQuant — 인수인계서 (2026-05-20 v46.1 — 🟢 PDF 발송 BLOCKER 0개 확정 + P0-2 test-closed)
 
-## v46.1 2026-05-20 — PDF 발송 BLOCKER 전수 재검증 + P0-2 test-closed (CEO "확실하게 진행")
+## v46.1 2026-05-20 — PDF 발송 BLOCKER 전수 재검증 (Railway CLI 실측) + P0-2 test-closed (CEO "확실하게 진행" → "직접 진행")
+
+> **🟢 결론: 제품 이메일+PDF 발송을 막는 BLOCKER는 0개.** Railway CLI(`railway variables`)로 production env 전수 실측 → `SENDGRID_API_KEY` **이미 설정됨**. 누락된 유일한 권장 env는 `SENDGRID_WEBHOOK_PUBLIC_KEY`(이벤트 추적용, 발송과 무관). 발송 경로(SENDGRID_API_KEY + 도메인 verified + WeasyPrint 이미지 포함 + 동의 3-leg 배선)는 전부 충족. 남은 건 운영 항목(consent opt-in 유저 확보 + 선택: 웹훅 키)뿐.
 
 ### ✅ 완료
 - **[P0-2 RESOLVED — test-closed]** 가입→백엔드 동의 승격 leg(`flushPendingMarketingConsent`/`flushPendingCrossBorderConsent`)에 직접 단위테스트 신규 추가: `frontend/src/lib/__tests__/consents.test.ts` (10 tests). 이전엔 코드 정독만이었던 유일한 미테스트 leg. 이제 동의 체인 3-leg 전부 테스트 커버 — ① 가입 staging([signup/_v2/page-v2.tsx:224](frontend/src/app/(auth)/signup/_v2/page-v2.tsx) localStorage 저장, OAuth 리다이렉트 직전) ② **flush 승격([dashboard/layout.tsx:107](frontend/src/app/(dashboard)/layout.tsx) 첫 인증 마운트 → POST /api/consents/marketing, 신규 테스트)** ③ 설정 토글([marketing-consent-card.tsx:213](frontend/src/components/settings/v2/marketing-consent-card.tsx)).
@@ -9,8 +11,14 @@
 ### 🔁 BLOCKER 3개 재검증 결과 (실측 기반 — 이전 v46 우려 정정)
 - **[P0-2]** 동의 경로는 원래 코드 완비. "프론트가 endpoint 호출하는지 검증 필요"는 사실 아니었음 (위 3-leg 모두 배선됨). 코드 작업 불필요 → test-closed.
 - **[P1] WeasyPrint/Playwright = 실배포 충족 확정.** 배포 커밋 `17564a90`의 Dockerfile에 libpango/libcairo/playwright install 실제 포함 (`git show 17564a90:Dockerfile`로 확인). railway.toml/json `builder=DOCKERFILE`. render 실패 시 graceful None([weekly_memo_service.py:73-87](services/artifacts/weekly_memo_service.py)). ⚠️ playwright만 non-fatal(`|| echo WARNING`) → Brag Card PNG silent skip 가능, WeasyPrint PDF는 hard-install이라 안전.
-- **[P0-1] = 유일하게 남은 발송 BLOCKER (CEO/Railway).** prod `/api/health` → `"missing_recommended":1, "missing_required":0` → 권장 env **딱 1개 누락**. `SENDGRID_API_KEY`가 권장 목록([launch_prep.py:102](services/launch_prep.py))에 있음. **정확한 누락 변수명은 Railway Deploy Logs의 `LAUNCH_PREP: 1 RECOMMENDED env var(s) missing` + 바로 아래 per-var WARNING 라인**([launch_prep.py:218](services/launch_prep.py))에서 확인. 그게 SENDGRID_API_KEY면 [docs/ops/email-setup-2026-05-18.md](docs/ops/email-setup-2026-05-18.md) §4대로 등록 + `SENDGRID_FROM_EMAIL=noreply@pivoxquant.com`(도메인 verified).
+- **[P0-1] = 발송 BLOCKER 아님 (실측으로 반증).** `railway variables` 전수 → production env 이름 대조: 권장 9개 중 `SECRET_KEY`/`DATABASE_URL`/**`SENDGRID_API_KEY`**/`FMP_API_KEY`/`ANTHROPIC_API_KEY`/`KIS_APP_KEY`/`KIS_APP_SECRET`/`BETA_PASSWORD` **전부 present**. **`SENDGRID_API_KEY`는 이미 설정돼 있음** → 발송 차단 아님. `/api/health`의 `missing_recommended:1`은 **`SENDGRID_WEBHOOK_PUBLIC_KEY` 단 하나** 누락을 의미.
+  - **`SENDGRID_WEBHOOK_PUBLIC_KEY`(누락)** = SendGrid Event Webhook 서명 검증 키. 부재 시 `/api/webhooks/sendgrid`가 **503 fail-closed**([services/email/webhook.py:134-150](services/email/webhook.py)) — 위조 bounce/spamreport 이벤트 차단(안전). 영향: SendGrid 오픈/바운스/수신거부 **이벤트 추적만 OFF**, 발송·List-Unsubscribe 원클릭(별도 경로)은 정상. **선택 항목** — 추적 원하면 SendGrid → Settings → Mail Settings → Event Webhook 활성화(URL `https://web-production-7b484b.up.railway.app/api/webhooks/sendgrid`) + Verification Key(PEM) 복사 → Railway `SENDGRID_WEBHOOK_PUBLIC_KEY`에 등록. (값은 SendGrid 대시보드에만 있어 CEO만 가능.)
 - **[P2]** render None → PDF 없는 HTML 메일 발송([weekly_memo_service.py:1620](services/artifacts/weekly_memo_service.py), skip 없음, html_body는 있음). "빈 메일" 아님 — 선택·비버그.
+
+### 🟢 발송 ON을 위해 실제로 남은 것 (운영, BLOCKER 아님)
+1. **consent opt-in 유저 확보** — 배선 이전 가입자는 `marketing_consent_at` NULL(§50 default-deny). 신규 가입자는 동의 시 자동 기록(flush leg, test-closed). 발송 대상 = opt-in 유저.
+2. **(선택) SENDGRID_WEBHOOK_PUBLIC_KEY** — 이벤트 추적 원할 때만.
+3. 코드/인프라 측 발송 BLOCKER **0개**.
 
 ---
 
