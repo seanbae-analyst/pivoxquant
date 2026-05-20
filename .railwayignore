@@ -1,0 +1,24 @@
+# Backend(Flask) 배포 업로드 제외 — 대용량 & 런타임 불필요.
+# ⚠️ 디렉토리는 반드시 leading-slash(root-anchor). unanchored `artifacts/`는
+#    services/artifacts/ 까지 매칭해 ModuleNotFoundError 유발(이미 1회 발생).
+# services/, models/, routes/, migrations/, app.py 등 백엔드 코드는 전부 포함.
+/frontend/
+/venv/
+/.venv/
+/node_modules/
+/.git/
+/.claude/
+/samples/
+/artifacts/
+/self_healing_artifacts/
+/legal_monitor_artifacts/
+/test-results/
+/docs/
+/state/
+/instance/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.log
+*.pdf
+*.png

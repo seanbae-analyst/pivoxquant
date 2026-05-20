@@ -80,10 +80,14 @@ class Config:
 
     # Connection pool settings (only effective for PostgreSQL; SQLite ignores them)
     if IS_POSTGRES:
+        # 2026-05-20: Railway PG "too many clients already"로 모든 배포가 부팅
+        # 실패(워커가 커넥션 못 얻음). 1-worker(gevent) + in-process 스케줄러(26잡)
+        # 환경에서 풀을 대폭 축소해 footprint를 줄임 (구 15 → 5). 배포 시 old/new
+        # 인스턴스 동시 실행 overlap에서도 PG max_connections 내에 들어오게 함.
         SQLALCHEMY_ENGINE_OPTIONS = {
-            "pool_size": 5,
-            "max_overflow": 10,
-            "pool_timeout": 30,
-            "pool_recycle": 1800,      # recycle connections every 30 min
+            "pool_size": 3,
+            "max_overflow": 2,
+            "pool_timeout": 20,
+            "pool_recycle": 300,       # 5분마다 recycle — 유휴 커넥션 빨리 반환
             "pool_pre_ping": True,     # verify connections before use
         }
