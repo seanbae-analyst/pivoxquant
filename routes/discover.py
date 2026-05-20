@@ -86,7 +86,13 @@ def discover():
 
     order = {"POSITIVE": 0, "NEUTRAL": 1, "NEGATIVE": 2}
     results.sort(key=lambda x: (order.get(x.get("signal", ""), 9), -x.get("priority", 0)))
-    cache_service.discover_cache[uid] = {"data": results, "ts": now}
+    # Guard the write with the lock defined alongside the cache
+    # (services/cache_service.py:_discover_cache_lock). Under gevent a
+    # concurrent reader could otherwise observe a half-built entry. The lock
+    # was defined for this purpose but never applied at the write site.
+    # 2026-05-20 bug-hunter (P2).
+    with cache_service._discover_cache_lock:
+        cache_service.discover_cache[uid] = {"data": results, "ts": now}
     return jsonify({"results": results, "cached": False})
 
 

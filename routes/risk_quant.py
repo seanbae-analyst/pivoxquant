@@ -1096,7 +1096,18 @@ def risk_sortino_by_position():
                 "error": "insufficient history",
             })
             continue
-        rets = hist["Close"].astype(float).pct_change().dropna().tolist()
+        # Drop non-finite returns (Inf/NaN). 0-filled prices from missing FMP
+        # columns (services/data/fmp.py) produce Inf via pct_change against a
+        # zero base; an Inf in this raw list propagates through np.mean() into
+        # SortinoByPosition's `annualized_return`, yielding `Infinity` in the
+        # JSON body — invalid JSON that crashes the browser's JSON.parse and
+        # blanks the Risk Sortino tab. The dict-building risk paths (663/1178)
+        # and LedoitWolf/ComponentES already filter; this raw .tolist() path
+        # was the lone gap. 2026-05-20 bug-hunter (P1).
+        rets = [
+            r for r in hist["Close"].astype(float).pct_change().dropna().tolist()
+            if math.isfinite(r)
+        ]
         if len(rets) < 20:
             positions_out.append({
                 "ticker": it["ticker"],

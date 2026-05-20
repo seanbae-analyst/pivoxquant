@@ -60,6 +60,7 @@ export function TodayMemoHeroV2({
   headline,
   body,
   audioDuration,
+  displayName,
   loading,
   hasPositions = true,
 }: TodayMemoHeroV2Props) {
@@ -78,9 +79,13 @@ export function TodayMemoHeroV2({
   //   - real memo    → caller-fed headline/body + the AI/reviewed seal
   const hasRealMemo = !loading && headline != null;
 
+  // Fix 5 (2026-05-20): `displayName` was declared as a prop and passed by
+  // page-v2.tsx but never destructured here, so the v1 personalised eyebrow
+  // ("… · Sean") silently died. Restore the name suffix when present.
+  const nameSuffix = displayName ? ` · ${displayName}` : "";
   const eyebrow = hasRealMemo
-    ? `Memo · ${weekIndexOf(now)} of 52 · ${weekdayOf(now)}`
-    : "Memo · Coming soon";
+    ? `Memo · ${weekIndexOf(now)} of 52 · ${weekdayOf(now)}${nameSuffix}`
+    : `Memo · Coming soon${nameSuffix}`;
 
   // Empty-state copy: NO fabricated insight, NO predictive language. Plain
   // ivory text (no bronze "br" accent — that styling is reserved for a real

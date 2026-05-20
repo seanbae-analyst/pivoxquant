@@ -161,12 +161,19 @@ class TestCreateCheckout:
 
 
 class TestWebhook:
-    def test_webhook_without_secret_configured_returns_500(self, raw_client):
-        """Webhook endpoint is CSRF-exempt but still requires STRIPE_WEBHOOK_SECRET."""
+    def test_webhook_without_secret_configured_returns_503(self, raw_client):
+        """Webhook endpoint is CSRF-exempt but still requires STRIPE_WEBHOOK_SECRET.
+
+        A missing secret returns 503 (not 500): a transient mis-/un-configuration
+        rather than a request-level server crash. 500 would make Stripe retry the
+        same delivery for up to 3 days; 503 signals "temporarily unavailable".
+        2026-05-20 bug-hunter (P1).
+        """
         with patch("routes.billing.STRIPE_WEBHOOK_SECRET", ""):
             r = raw_client.post("/api/billing/webhook", data=b"{}",
                                  headers={"Stripe-Signature": "t=1,v1=xxx"})
-        assert r.status_code == 500
+        assert r.status_code == 503
+        assert r.get_json()["code"] == "STRIPE_WEBHOOK_SECRET_MISSING"
 
     def test_webhook_invalid_signature_returns_400(self, raw_client):
         with patch("routes.billing.STRIPE_WEBHOOK_SECRET", "whsec_test"), \

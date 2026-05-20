@@ -19,11 +19,13 @@ import * as React from "react";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
 import {
   generateArtifact,
   useArtifacts,
   type GenerateArtifactBody,
 } from "@/lib/hooks";
+import { API } from "@/lib/endpoints";
 import type { ArtifactType } from "@/lib/types";
 import type { Tier } from "./artifact-kind-card";
 
@@ -95,29 +97,61 @@ interface TileState {
 export function GenerateArtifactCta({ tier }: Props) {
   const [states, setStates] = React.useState<Record<string, TileState>>({});
   const [inputs, setInputs] = React.useState<Record<string, string>>({});
+  const { mutate: globalMutate } = useSWRConfig();
 
   // P0-3 (2026-05-20 ux-flow fix): the old flow ended at "Queued · ETA ~Ns"
   // and never closed the loop — no completion feedback, no scroll to the
   // result. We now (a) revalidate the shared artifacts cache after queueing,
-  // (b) watch the artifact count, and (c) when a new artifact lands, toast +
-  // scroll the just-out card into view so the "aha" moment completes.
+  // (b) watch for a NEW artifact of the queued tile's type to appear, and
+  // (c) when it lands, toast + scroll the just-out card into view so the
+  // "aha" moment completes.
   //
-  // Same cache key the page passes (type:"all" / since:"all" / limit:999) so
-  // mutate() refreshes the very list the user is looking at — no new request
-  // shape, no SWR key drift.
-  const { total, mutate: mutateArtifacts } = useArtifacts({
+  // BUG (2026-05-20 frontend bug-hunt) fixes:
+  //   Fix 1 — key drift: this tile read `limit:999` (key
+  //     `/api/artifacts/list?limit=999`) but <LivingCFOStatusBar/> +
+  //     <ArtifactQueue/> read `/api/artifacts/list` (no limit). mutating only
+  //     our key left the badge/queue stale. We now mutate ALL keys that start
+  //     with `/api/artifacts/list` via the SWR global mutate key-matcher so
+  //     every consumer of the artifact archive revalidates together.
+  //   Fix 2 — premature "done": completion was a raw count delta keyed off a
+  //     baseline captured at click time, which was 0 before SWR resolved →
+  //     the very first SWR resolve (0→N) tripped a false success toast before
+  //     any job ran. We now snapshot the set of existing artifact ids at
+  //     queue time and only resolve a tile when a NEW id of its matching type
+  //     appears.
+  //   Fix 3 — fan-out false completion: a single +1 used to resolve EVERY
+  //     pending tile. Identity matching by artifact `type` resolves only the
+  //     tile whose artifact actually landed.
+  //
+  // We keep the page's `limit:999` read shape for the full archive snapshot
+  // (so identity matching sees every row), but invalidation is key-prefix
+  // wide so no consumer is left stale.
+  const { artifacts } = useArtifacts({
     type: "all",
     since: "all",
     limit: 999,
   });
 
-  // Tiles currently waiting on a backend job → which artifact-count baseline
-  // they were queued against. When `total` exceeds the baseline we treat the
-  // matching pending tile as completed.
+  // Revalidate every SWR cache entry whose key targets the artifacts list,
+  // regardless of query-string (limit / type / since). Closes the
+  // key-drift staleness between this CTA, the status bar, and the queue.
+  const revalidateAllArtifacts = React.useCallback(() => {
+    void globalMutate(
+      (key) => typeof key === "string" && key.startsWith(API.artifacts.list),
+      undefined,
+      { revalidate: true },
+    );
+  }, [globalMutate]);
+
+  // Tiles currently waiting on a backend job. For each we record the artifact
+  // type it produces and the set of artifact ids that already existed when it
+  // was queued — a NEW id of that type means this specific tile completed.
   const pendingRef = React.useRef<
-    Record<string, { baseline: number; label: string }>
+    Record<
+      string,
+      { type: ArtifactType; label: string; knownIds: Set<number> }
+    >
   >({});
-  const totalRef = React.useRef(total);
 
   // Poll the artifacts list a few times after a queue so the async job result
   // surfaces without waiting for the next 30s SWR dedupe window.
@@ -137,20 +171,21 @@ export function GenerateArtifactCta({ tier }: Props) {
     }
   }, []);
 
-  // Completion detection: when total rises while tiles are pending, resolve
-  // the oldest pending tile, toast, and scroll to the new artifact.
+  // Completion detection by artifact identity: when a NEW artifact whose
+  // `type` matches a pending tile appears in the archive, resolve only that
+  // tile. No count-delta heuristic → no premature toast (Fix 2) and no
+  // cross-tile fan-out (Fix 3).
   React.useEffect(() => {
-    const prev = totalRef.current;
-    totalRef.current = total;
-    if (total <= prev) return;
     const pendingKeys = Object.keys(pendingRef.current);
     if (pendingKeys.length === 0) return;
 
-    // Resolve every tile whose baseline is now below the live total.
     let resolvedLabel: string | null = null;
     for (const key of pendingKeys) {
       const entry = pendingRef.current[key];
-      if (total > entry.baseline) {
+      const fresh = artifacts.find(
+        (a) => a.type === entry.type && !entry.knownIds.has(a.id),
+      );
+      if (fresh) {
         resolvedLabel = entry.label;
         delete pendingRef.current[key];
         setStates((s) => ({
@@ -165,7 +200,7 @@ export function GenerateArtifactCta({ tier }: Props) {
       });
       scrollToLatest();
     }
-  }, [total, scrollToLatest]);
+  }, [artifacts, scrollToLatest]);
 
   const handleGenerate = React.useCallback(
     async (tile: RequestTile) => {
@@ -209,21 +244,25 @@ export function GenerateArtifactCta({ tier }: Props) {
             message: `Drafting · ETA ~${r.eta_seconds}s`,
           },
         }));
-        // Register this tile as awaiting completion against the current count.
+        // Register this tile as awaiting completion. Snapshot the artifact
+        // ids that exist right now so a NEW id of this tile's type is what
+        // resolves it (identity match, not count delta).
         pendingRef.current[tile.type] = {
-          baseline: totalRef.current,
+          type: tile.type,
           label: tile.displayName,
+          knownIds: new Set(artifacts.map((a) => a.id)),
         };
         toast(`${tile.displayName} queued`, {
           description: `The desk is drafting it — ETA ~${r.eta_seconds}s. It'll appear in the archive above.`,
         });
-        // Revalidate the shared artifacts list a few times so the async job's
-        // output surfaces promptly; the count-watch effect closes the loop.
+        // Revalidate every artifacts-list cache key a few times so the async
+        // job's output surfaces promptly across this CTA, the status bar, and
+        // the queue; the identity-watch effect closes the loop.
         const etaMs = Math.max(2_000, (r.eta_seconds || 8) * 1_000);
         [etaMs, etaMs + 4_000, etaMs + 12_000].forEach((delay) => {
           pollTimers.current.push(
             setTimeout(() => {
-              void mutateArtifacts();
+              revalidateAllArtifacts();
             }, delay),
           );
         });
@@ -240,7 +279,7 @@ export function GenerateArtifactCta({ tier }: Props) {
         }));
       }
     },
-    [inputs, mutateArtifacts],
+    [inputs, artifacts, revalidateAllArtifacts],
   );
 
   return (
@@ -272,13 +311,19 @@ export function GenerateArtifactCta({ tier }: Props) {
         ever leaves the archive.
       </p>
 
+      {/* BUG Fix 4 (2026-05-20): the previous `md:!grid-cols-1` was inverted —
+          Tailwind `md:` is min-width 768px (mobile-first), so it forced ONE
+          column on desktop while the inline `repeat(3, …)` stayed 3-up on
+          mobile (<768px) → 375px overflow. Switched to the proven max-width
+          `<style jsx>` collapse used by home/_v2/page-v2.tsx: 3-up desktop,
+          1-up mobile. */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
           gap: 12,
         }}
-        className="md:!grid-cols-1"
+        className="pq-artifact-cta-grid"
       >
         {TILES.map((tile) => {
           const locked = !hasAccess(tier, tile.minTier);
@@ -437,6 +482,16 @@ export function GenerateArtifactCta({ tier }: Props) {
           );
         })}
       </div>
+
+      {/* Mobile collapse: 3-up desktop → 1-up under 768px (mobile-first
+          375px no longer overflows). Mirrors home/_v2/page-v2.tsx. */}
+      <style jsx>{`
+        @media (max-width: 767px) {
+          .pq-artifact-cta-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

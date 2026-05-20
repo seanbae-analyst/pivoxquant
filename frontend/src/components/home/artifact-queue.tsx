@@ -3,11 +3,11 @@
 /**
  * <ArtifactQueue /> — "Today's Artifacts" card.
  *
- * Four rows, one per artifact category, each with its own micro-status:
- *   1. Today's Morning Brief     — delivered time + read-state
- *   2. Current Portfolio Journal — last entry date
- *   3. Next Weekly Memo          — day-of-week + countdown
- *   4. Journal Companion         — last conversation or Closed-Beta lock
+ * Three rows, one per artifact category, each with its own micro-status
+ * (Morning Brief removed 2026-04-29 — backend deprecated):
+ *   1. Current Portfolio Journal — last entry date
+ *   2. Next Weekly Memo          — day-of-week + countdown
+ *   3. Journal Companion         — last conversation or Closed-Beta lock
  *
  * Ivory-on-ink dossier styling. Each row hover lifts a bronze glow and
  * reveals an "open →" affordance. Rendered inside the Dossier Desk.
@@ -108,9 +108,9 @@ export function ArtifactQueue() {
   );
 
   /* ── Row 1 (Morning Brief) — REMOVED 2026-04-29.
-   * Morning Brief artifact stream deprecated. The first row now leads with
-   * Portfolio Journal so this surface continues to render four rows when
-   * the companion is included; otherwise three. ── */
+   * Morning Brief artifact stream deprecated. The list now leads with
+   * Portfolio Journal and renders three rows: Journal, Weekly Memo,
+   * Companion. ── */
 
   /* ── Row 2: Portfolio Journal (= last artifact overall) ── */
   const lastArtifact = artifacts[0];
@@ -193,7 +193,7 @@ export function ArtifactQueue() {
             className="mt-1 font-serif text-pq-deck"
             style={{ color: "var(--pq-ivory)" }}
           >
-            The four things your CFO is producing
+            The three things your CFO is producing
           </h3>
         </div>
       </header>

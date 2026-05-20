@@ -15,12 +15,15 @@ dead" (TCP refused) from "DB dead" (200/503 with `db != ok`).
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify
 from sqlalchemy import text
 
 from extensions import db
+
+logger = logging.getLogger(__name__)
 
 health_bp = Blueprint("health", __name__)
 
@@ -63,11 +66,30 @@ def health():
 
     # Best-effort DB ping. SQLAlchemy 2.x requires an explicit `text()`
     # around raw SQL, so we wrap the trivial SELECT here.
+    #
+    # 2026-05-20 bug-hunter (P0): run the probe on a *short-lived raw
+    # connection* checked out from the engine pool rather than the shared
+    # scoped `db.session`. On a Railway PG connection blip / pool blip the
+    # OperationalError used to leave the request-scoped session in a failed
+    # state; the next request on the same gevent worker then entered with a
+    # poisoned session and 500/503'd too (observed ~30% 503 windows). A
+    # standalone connection (a) isolates the failure from the request session
+    # and (b) is auto-returned/closed by the `with` block. We still defensively
+    # `rollback()` the scoped session in the except path in case any prior
+    # work on this request left it dirty.
     try:
-        db.session.execute(text("SELECT 1"))
+        with db.engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
         payload["db"] = "ok"
         return jsonify(payload), 200
     except Exception as exc:  # pragma: no cover — only fires on infra fault
+        # Clean up the request-scoped session so a subsequent request on this
+        # worker doesn't inherit a failed transaction. rollback() is a no-op if
+        # the session is already clean, so this is always safe.
+        try:
+            db.session.rollback()
+        except Exception:
+            logger.debug("health: session rollback after DB ping failure also failed", exc_info=True)
         payload["status"] = "degraded"
         payload["db"] = f"error: {exc.__class__.__name__}"
         return jsonify(payload), 503

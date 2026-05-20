@@ -219,11 +219,17 @@ def stripe_webhook():
     sig_header = request.headers.get("Stripe-Signature")
 
     if not STRIPE_WEBHOOK_SECRET:
+        # 503 (not 500): a missing secret is a transient mis-/un-configuration,
+        # not a request-level server fault. Returning 500 makes Stripe treat it
+        # as a server crash and retry the same delivery for up to 3 days, while
+        # 503 (Service Unavailable) signals "temporarily not accepting webhooks"
+        # and avoids advertising our internal configuration state.
+        # 2026-05-20 bug-hunter (P1).
         logger.error("STRIPE_WEBHOOK_SECRET not configured")
         return api_error(
             en="Webhook secret not configured",
             kr="Stripe 웹훅 설정이 누락되었습니다.",
-            code="STRIPE_WEBHOOK_SECRET_MISSING", status=500,
+            code="STRIPE_WEBHOOK_SECRET_MISSING", status=503,
         )
 
     try:
