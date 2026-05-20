@@ -18,12 +18,16 @@ import type { SwotResponse } from "./types";
 
 export function SwotPanel({
   ticker,
+  displayName,
   swot,
   loading,
   error,
   onGenerate,
 }: {
   ticker: string;
+  /** Human-readable name (e.g. "삼성전자") for user-facing copy. ticker is
+   * reserved for the API gate / POST body — never shown raw (feedback_ticker_display). */
+  displayName?: string;
   swot: SwotResponse | null;
   loading: boolean;
   error: string | null;
@@ -73,7 +77,7 @@ export function SwotPanel({
           <div className="flex flex-col items-start gap-3">
             <p className="pq-detail-caption">
               AI analysis is being prepared. Trigger an observation summary for{" "}
-              {ticker || "this ticker"} below.
+              {displayName || "this stock"} below.
             </p>
             <button
               type="button"

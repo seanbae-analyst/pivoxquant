@@ -14,10 +14,12 @@ import { SectionHeading } from "./shared";
 import type { EarningsItem } from "./types";
 
 export function EarningsPanel({
-  ticker,
+  displayName,
   items,
 }: {
-  ticker: string;
+  /** Human-readable name for the empty-state copy (parent already filters the
+   * rows by ticker) — never render a naked KR code (feedback_ticker_display). */
+  displayName?: string;
   items: EarningsItem[];
 }) {
   return (
@@ -76,8 +78,8 @@ export function EarningsPanel({
           </div>
         ) : (
           <p className="pq-detail-caption">
-            Next earnings date not available for {ticker || "this ticker"} in the
-            forward 30-day window.
+            Next earnings date not available for {displayName || "this stock"} in
+            the forward 30-day window.
           </p>
         )}
       </div>

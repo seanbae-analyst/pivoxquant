@@ -10,7 +10,15 @@ import Link from "next/link";
 import { MessageSquare, ExternalLink } from "lucide-react";
 import { FieldLabel, EditorialHead } from "@/components/ui/editorial";
 
-export function CompanionCta({ ticker }: { ticker: string }) {
+export function CompanionCta({
+  ticker,
+  displayName,
+}: {
+  ticker: string;
+  /** Human-readable name for the heading; ticker stays in the href only
+   * (feedback_ticker_display — never render a naked KR code). */
+  displayName?: string;
+}) {
   return (
     <section>
       <Link
@@ -30,7 +38,7 @@ export function CompanionCta({ ticker }: { ticker: string }) {
               as="div"
               className="mt-1.5 group-hover:text-[var(--pq-bronze-light)] transition-colors"
             >
-              Ask Companion about {ticker || "this ticker"}
+              Ask Companion about {displayName || "this stock"}
             </EditorialHead>
             <p className="mt-2 pq-detail-caption">
               Open a Companion thread pre-seeded with the current snapshot —

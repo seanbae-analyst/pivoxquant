@@ -446,15 +446,16 @@ export default function StockDetailPage() {
 
           <SwotPanel
             ticker={ticker}
+            displayName={displayName}
             swot={swot}
             loading={swotLoading}
             error={swotError}
             onGenerate={handleGenerateSwot}
           />
 
-          <EarningsPanel ticker={ticker} items={earningsForTicker} />
+          <EarningsPanel displayName={displayName} items={earningsForTicker} />
 
-          <CompanionCta ticker={ticker} />
+          <CompanionCta ticker={ticker} displayName={displayName} />
 
           <RelatedArtefacts artifacts={artifactsSwr.artifacts} />
 
