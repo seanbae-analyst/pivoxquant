@@ -1,3 +1,30 @@
+# PivoxQuant — 인수인계서 (2026-05-20 v46 — Railway 복구 + gmail 알림 + 회사이메일 @pivoxquant.com 발신 구축)
+
+## v46 2026-05-20 — 인프라/이메일 실작업 세션 (브라우저 직접 조작)
+
+### ✅ 완료
+1. **Railway 백엔드 복구 확인** — 2026-05-19~20 Railway 글로벌 장애(Google Cloud가 Railway 계정 차단, status.railway.com Major Outage)로 `web-production-7b484b.up.railway.app` 404 "Application not found"였음. 11:47/13:20 KST `/api/health` 200 `{"db":"ok","version":"17564a90"}` 복구 확인. **`RUN_SCHEDULER=1` Railway Variables 확인** → 26 APScheduler jobs 자동 가동. 코드측 죽은 hardcoded URL 제거 (commit `3db0e532`, env-only + graceful skip).
+2. **gmail 장애 알림** (Slack 워크스페이스 없음 → SendGrid 이메일 대체) — `scripts/nightly/notify_email.sh` (SendGrid v3) + `scripts/nightly/production_watch.sh` (api/health UP/DOWN 전환 감지, crontab `*/15`). commit `2d25d4cd`. 받은편지함 도착 확인.
+3. **회사 이메일 @pivoxquant.com 발신 구축 완료** (commit `ab6aeada`):
+   - 가비아 DNS 7 레코드: SPF(`@`) + DMARC(`_dmarc`) + DKIM CNAME 3개(`em867`/`s1._domainkey`/`s2._domainkey` → `*.u91995806.wl057.sendgrid.net.`, **CNAME 값 끝 점(.) 필수**)
+   - SendGrid Domain Authentication **verified** ("It worked! pivoxquant.com")
+   - `notify_email.sh` FROM → `noreply@pivoxquant.com`, 받은편지함 직행 확인 (스팸 탈출)
+   - 상세: 메모리 `project_email_infra.md` 상단
+
+### 🟥 다음 세션 — 제품 이메일+PDF 발송 BLOCKER 3개 (general-purpose audit 실측 결과)
+**현 상태: 코드 100% 준비 (pytest 93 PASS — email_sender/weekly_memo/brag_card/opt_out/webhook) / 실제 발송은 운영 셋업 미완.** sender.py cascade(SendGrid→Brevo→SMTP) + PDF 첨부(WeasyPrint PDF / Playwright PNG base64) + opt-out + 정통망법 §50 게이트 모두 구현됨.
+
+- **[P0-1] Railway env `SENDGRID_API_KEY` 등록 확인** — SendGrid 도메인 인증 verified 됐으니 API key만 Railway Variables에 박으면 됨. (45개 변수 중 이미 있을 가능성 — 미확인). `SENDGRID_FROM_EMAIL=noreply@pivoxquant.com` 권장.
+- **[P0-2] 🟥 `marketing_consent_at` 동의 수집 경로** = 진짜 발송 BLOCKER. sender.py:242 `marketing_consent_at` NULL이면 **모든 발송 default-deny** (정통망법 §50 준수). 가입(routes/auth.py)은 이 값 set 안 함 → `routes/consents.py` POST에서만 set. **프론트(설정/온보딩)에서 이 endpoint를 실제 호출하는지 검증 필요** — 안 받으면 동의 유저 0명 → 발송 0건.
+- **[P1] Railway WeasyPrint 시스템 라이브러리 + Playwright chromium 설치 검증** — 안 깔리면 PDF/PNG render가 None 반환 → **첨부 없이 빈 본문 메일 발송됨** (silent degrade, `DIAG render_pdf returned None` 로그). Railway 빌드에 실설치됐는지 확인.
+- **[P2] (선택)** render 실패 시 발송 자체 skip 정책 결정 (현재는 빈 메일이라도 보냄).
+
+### 잔여 (선택)
+- 이메일 **수신**(@pivoxquant.com 받기) = ImprovMX MX + alias 미설정 (발신만 완료)
+- Brevo fallback (SendGrid 100/day 초과 대비, 1000명+) 미설정
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-20 v45.8 자율 야간 세션 — Wave 4-B/C format migration + V2 smoke + Vercel flag 실측)
 
 ## v45.8 2026-05-20 자율 야간 세션
