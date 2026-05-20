@@ -17,7 +17,10 @@ log()  { echo "${LOG_PREFIX} $*"; }
 warn() { echo "${LOG_PREFIX} WARN: $*" >&2; }
 
 FRONTEND_URL="${FRONTEND_URL:-https://pivoxquant.com}"
-RAILWAY_BACKEND_URL="${RAILWAY_BACKEND_URL:-https://web-production-7b484b.up.railway.app}"
+# No hardcoded default — legacy web-production-7b484b URL is dead (Railway
+# "Application not found"). Set RAILWAY_BACKEND_URL in ~/.pivoxquant-env after
+# confirming the live URL in the Railway dashboard. Empty = skip direct probe.
+RAILWAY_BACKEND_URL="${RAILWAY_BACKEND_URL:-}"
 TIMEOUT="${CANARY_TIMEOUT:-10}"
 
 # D8 manual-rollback gate: consecutive-failure threshold. When the count
@@ -81,7 +84,11 @@ probe "pricing"   "${FRONTEND_URL}/pricing"    "200"
 
 # Backend health (Vercel rewrites /api/* → Railway; also probe Railway directly)
 probe "api-health-vercel"  "${FRONTEND_URL}/api/health"          "200"
-probe "api-health-railway" "${RAILWAY_BACKEND_URL}/api/health"   "200"
+if [ -n "${RAILWAY_BACKEND_URL}" ]; then
+  probe "api-health-railway" "${RAILWAY_BACKEND_URL}/api/health"   "200"
+else
+  warn "RAILWAY_BACKEND_URL not set — skipping direct Railway probe (set after dashboard confirm)"
+fi
 
 log "Canary complete: ${FAIL_COUNT} failure(s)"
 

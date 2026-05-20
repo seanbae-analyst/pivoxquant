@@ -10,7 +10,7 @@
 #   3. verify-security — BETA_PASSWORD not in git / auth gate live probe
 #
 # Optional env vars:
-#   RAILWAY_BACKEND_URL — Backend base URL (default: https://web-production-7b484b.up.railway.app)
+#   RAILWAY_BACKEND_URL — Backend base URL (no default — set in ~/.pivoxquant-env; empty = skip backend probes)
 #   SLACK_WEBHOOK_URL   — Slack alert on any failure
 #   SENTRY_DSN          — Sentry capture on critical failures
 #   FRONTEND_URL        — Frontend base URL (default: https://pivoxquant.com)
@@ -21,7 +21,10 @@ log()  { echo "${LOG_PREFIX} $*"; }
 warn() { echo "${LOG_PREFIX} WARN: $*" >&2; }
 
 FRONTEND_URL="${FRONTEND_URL:-https://pivoxquant.com}"
-RAILWAY_BACKEND_URL="${RAILWAY_BACKEND_URL:-https://web-production-7b484b.up.railway.app}"
+# No hardcoded default — legacy web-production-7b484b URL is dead (Railway
+# "Application not found"). Set RAILWAY_BACKEND_URL in ~/.pivoxquant-env after
+# confirming the live URL in the Railway dashboard. Empty = skip backend probes.
+RAILWAY_BACKEND_URL="${RAILWAY_BACKEND_URL:-}"
 TIMEOUT=10
 
 STAGE_FAILURES=0
@@ -79,7 +82,11 @@ probe_http() {
 log "=== Stage 1: verify-api ==="
 STAGE1_FAIL=0
 
-probe_http "api/health"             "${RAILWAY_BACKEND_URL}/api/health"           "200" || STAGE1_FAIL=1
+if [ -n "${RAILWAY_BACKEND_URL}" ]; then
+  probe_http "api/health"           "${RAILWAY_BACKEND_URL}/api/health"           "200" || STAGE1_FAIL=1
+else
+  warn "  SKIP api/health — RAILWAY_BACKEND_URL not set (confirm live URL in Railway dashboard)"
+fi
 probe_http "frontend /"             "${FRONTEND_URL}/"                             "200" || STAGE1_FAIL=1
 probe_http "frontend /pricing"      "${FRONTEND_URL}/pricing"                      "200" || STAGE1_FAIL=1
 
@@ -98,14 +105,18 @@ log "=== Stage 2: verify-data ==="
 STAGE2_FAIL=0
 
 # Check FX rate endpoint freshness (returns JSON with timestamp)
-FX_RESPONSE=$(curl -fsS --max-time "${TIMEOUT}" \
-  "${RAILWAY_BACKEND_URL}/api/market/fx" 2>/dev/null) || FX_RESPONSE=""
-
-if [ -z "${FX_RESPONSE}" ]; then
-  warn "  FAIL FX rate endpoint unreachable"
-  STAGE2_FAIL=1
+if [ -z "${RAILWAY_BACKEND_URL}" ]; then
+  warn "  SKIP FX rate — RAILWAY_BACKEND_URL not set"
 else
-  log "  OK   FX rate endpoint reachable ($(echo "${FX_RESPONSE}" | wc -c | tr -d ' ') bytes)"
+  FX_RESPONSE=$(curl -fsS --max-time "${TIMEOUT}" \
+    "${RAILWAY_BACKEND_URL}/api/market/fx" 2>/dev/null) || FX_RESPONSE=""
+
+  if [ -z "${FX_RESPONSE}" ]; then
+    warn "  FAIL FX rate endpoint unreachable"
+    STAGE2_FAIL=1
+  else
+    log "  OK   FX rate endpoint reachable ($(echo "${FX_RESPONSE}" | wc -c | tr -d ' ') bytes)"
+  fi
 fi
 
 # Check KIS token expiry script exists and is runnable
