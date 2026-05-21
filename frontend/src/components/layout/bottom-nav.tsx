@@ -35,6 +35,7 @@ import {
   Shield,
   MessageSquare,
   BookHeart,
+  NotebookPen,
   FileText,
   Bell,
   Settings as SettingsIcon,
@@ -122,10 +123,10 @@ const DRAWER_GROUPS: DrawerGroup[] = [
       // Journal Companion — Closed Beta, Premium Plus / Founding
       // Lifetime only. Entitlement enforcement lives on the page.
       { href: "/companion", label: "Companion", icon: BookHeart, premiumPlus: true },
-      // 2026-05-21: "Journal" (→/growth) hidden from user nav for launch —
-      // founder-only Growth OS, agent_worker backend not deployed (준비 중
-      // dead-end). Route preserved; restore when user-facing.
-      // { href: "/growth", label: "Journal", icon: TrendingUp },
+      // 2026-05-21: "Journal" restored — /journal is the user's own pre-trade
+      // decision-reflection feed (read-only). Distinct from the founder-only
+      // /growth Growth OS, which stays hidden (backend not deployed).
+      { href: "/journal", label: "Journal", icon: NotebookPen },
       { href: "/profile", label: "Profile · Persona", icon: UserCircle },
       { href: "/settings", label: "Settings", icon: SettingsIcon },
     ],

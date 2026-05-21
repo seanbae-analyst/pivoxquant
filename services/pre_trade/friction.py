@@ -115,6 +115,39 @@ def start_cooldown(
     return row.to_dict(now=now)
 
 
+# Pagination guard for the Journal feed — keeps a single read bounded
+# regardless of what the client sends in ?limit=.
+DEFAULT_LIST_LIMIT = 50
+MAX_LIST_LIMIT = 200
+
+
+def list_reflections(user_id: int, *, limit: int = DEFAULT_LIST_LIMIT) -> list[dict]:
+    """Return the user's own reflections, newest first, as ``to_dict()`` rows.
+
+    User isolation: every row is filtered on ``user_id == user_id`` at the
+    SQL level — a foreign user can never appear in the feed. ``limit`` is
+    clamped to ``[1, MAX_LIST_LIMIT]`` so a hostile / malformed query can't
+    pull an unbounded result set.
+    """
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        limit = DEFAULT_LIST_LIMIT
+    if limit < 1:
+        limit = DEFAULT_LIST_LIMIT
+    limit = min(limit, MAX_LIST_LIMIT)
+
+    now = _utc_now()
+    rows = (
+        PreTradeReflection.query
+        .filter(PreTradeReflection.user_id == int(user_id))
+        .order_by(PreTradeReflection.created_at.desc(), PreTradeReflection.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [r.to_dict(now=now) for r in rows]
+
+
 def check_status(reflection_id: int, user_id: int) -> dict:
     """Return ``to_dict()`` with current ``status`` + ``seconds_remaining``.
 

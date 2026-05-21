@@ -394,6 +394,48 @@ export interface GrowthWeeklyReport {
   week_score: number;
 }
 
+/* ── Pre-Trade Journal (decision-reflection feed) ── */
+
+/**
+ * One pre-trade reflection row from `GET /api/pre-trade/list`.
+ *
+ * Additive only — mirrors routes/pre_trade.py serialization. The
+ * `intended_side` wire field still carries the legacy BUY/SELL tokens; the
+ * UI MUST translate it through `@/lib/pre-trade` (sideLabel / sideFromWire)
+ * before display — bare BUY/SELL labels are banned under KCMA §17. The
+ * frontend renders "진입(ENTRY) / 정리(EXIT)".
+ *
+ * `status` is the row lifecycle: pending → ready → proceeded | cancelled.
+ * `proceeded_at` / `cancelled_at` are terminal stamps ("user finished
+ * thinking"); the backend never executes an order.
+ */
+export interface PreTradeReflection {
+  id: number;
+  intended_ticker: string;
+  /** Legacy wire token (BUY/SELL/null). NEVER render raw — see @/lib/pre-trade. */
+  intended_side: string | null;
+  intended_shares: number | null;
+  rationale: string;
+  /** Snapshot of the 7-question devil's-advocate reflection (free text). */
+  devil_advocate_seen: string | null;
+  market_volatility_at_request: string | null;
+  cooldown_started_at: string | null;
+  cooldown_ends_at: string | null;
+  /** ISO timestamp the user chose to proceed, else null. */
+  proceeded_at: string | null;
+  /** ISO timestamp the user chose to cancel, else null. */
+  cancelled_at: string | null;
+  auto_extended_reason: string | null;
+  seconds_remaining: number;
+  status: "pending" | "ready" | "proceeded" | "cancelled";
+}
+
+export interface PreTradeJournalResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  reflections: PreTradeReflection[];
+}
+
 /* ── Artifact / Reports Archive ── */
 
 export type ArtifactType =

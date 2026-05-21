@@ -27,6 +27,7 @@ import type {
   SignalFilters,
   SignalLabel,
   Position,
+  PreTradeJournalResponse,
 } from "./types";
 
 const fetcher = async (url: string) => {
@@ -232,6 +233,35 @@ export function useGrowthWeekly() {
       fallbackData: [],
     },
   );
+}
+
+/* ── Pre-Trade Journal (decision-reflection feed) ── */
+
+/**
+ * Fetches the user's pre-trade reflection feed (newest first).
+ *
+ * Read-only mirror of the rows created by the Pre-Trade Friction flow
+ * (Feature 6) — each is a "user finished thinking" record, never an executed
+ * order. The /journal page renders this as a reverse-chronological feed so
+ * the user can review their own past decision rationale ("User as CFO").
+ *
+ * Defaults `limit=50` (matches backend cap). `fallbackData` keeps the feed
+ * mapper NPE-safe during initial render. SWR key is path+query so it caches
+ * independently of every other surface.
+ */
+export function usePreTradeJournal(limit = 50) {
+  const key = `${API.preTrade.list}?limit=${limit}`;
+  const swr = useSWR<PreTradeJournalResponse>(key, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return {
+    reflections: swr.data?.reflections ?? [],
+    disclaimer: swr.data?.disclaimer ?? null,
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
 }
 
 /* ── Artifacts (My Reports library) ── */

@@ -38,6 +38,7 @@ import {
   Settings as SettingsIcon,
   Sparkles,
   BookHeart,
+  NotebookPen,
   UserCircle,
   Gavel,
 } from "lucide-react";
@@ -59,6 +60,7 @@ export type TerminalSidebarKey =
   | "alerts"
   | "companion"
   | "pre-trade"
+  | "journal"
   | "growth"
   | "profile"
   | "settings";
@@ -116,11 +118,11 @@ const SYSTEM: Item[] = [
   // it. Now wired.
   { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
   { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
-  // 2026-05-21: "Journal" (→/growth) hidden from user nav for launch. /growth
-  // is the founder-only "Growth OS" (streak/morning-briefing/reflection) whose
-  // agent_worker backend is not deployed → renders a "준비 중" dead-end. Route +
-  // code preserved; restore this entry once Growth OS is user-facing.
-  // { key: "growth", label: "Journal", href: "/growth", icon: TrendingUp },
+  // 2026-05-21: "Journal" restored as a real user surface — /journal renders
+  // the user's own pre-trade decision-reflection feed (read-only, "User as
+  // CFO"). Distinct from /growth, the founder-only Growth OS, which stays
+  // hidden (agent_worker backend not deployed → "준비 중" dead-end).
+  { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
   { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
 ];

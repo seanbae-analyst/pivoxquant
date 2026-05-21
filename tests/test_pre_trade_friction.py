@@ -21,6 +21,7 @@ from models import (
 from services.pre_trade.friction import (
     cancel,
     check_status,
+    list_reflections,
     proceed,
     start_cooldown,
 )
@@ -210,6 +211,98 @@ def test_other_user_cannot_proceed(app, make_user):
             proceed(out["id"], intruder["id"])
         with pytest.raises(LookupError):
             check_status(out["id"], intruder["id"])
+
+
+# ─────────────────────────────────────────────────────────────────────
+# List / Journal feed
+# ─────────────────────────────────────────────────────────────────────
+
+def test_list_newest_first_and_user_isolation(app, make_user):
+    """Journal feed: newest-first ordering + zero cross-user leakage."""
+    owner = _make_user(make_user, email="list-owner@test.com")
+    other = _make_user(make_user, email="list-other@test.com")
+    with app.app_context():
+        # Owner creates two reflections; rewrite created_at so ordering
+        # is deterministic regardless of insert clock resolution.
+        first = start_cooldown(
+            user_id=owner["id"], ticker="AAPL", side="BUY", shares=1,
+            rationale=LONG_RATIONALE,
+        )
+        second = start_cooldown(
+            user_id=owner["id"], ticker="MSFT", side="SELL", shares=2,
+            rationale=LONG_RATIONALE,
+        )
+        base = _utc_now()
+        db.session.get(PreTradeReflection, first["id"]).created_at = base - timedelta(minutes=5)
+        db.session.get(PreTradeReflection, second["id"]).created_at = base
+        db.session.commit()
+
+        # A foreign user's reflection that must NEVER appear.
+        start_cooldown(
+            user_id=other["id"], ticker="TSLA", side="BUY", shares=3,
+            rationale=LONG_RATIONALE,
+        )
+
+        rows = list_reflections(owner["id"])
+        # Only the owner's two rows.
+        assert len(rows) == 2
+        assert all(r["intended_ticker"] in ("AAPL", "MSFT") for r in rows)
+        assert "TSLA" not in [r["intended_ticker"] for r in rows]
+        # Newest (MSFT, created_at=base) first.
+        assert rows[0]["intended_ticker"] == "MSFT"
+        assert rows[1]["intended_ticker"] == "AAPL"
+        # Every owned row belongs to the owner (status field present).
+        assert all(r["status"] in ("pending", "ready", "proceeded", "cancelled") for r in rows)
+
+
+def test_list_limit_clamped(app, make_user):
+    """?limit is clamped to MAX_LIST_LIMIT and malformed values fall back."""
+    from services.pre_trade.friction import MAX_LIST_LIMIT
+
+    user = _make_user(make_user, email="list-limit@test.com")
+    with app.app_context():
+        for i in range(3):
+            start_cooldown(
+                user_id=user["id"], ticker="AAPL", side="BUY", shares=1,
+                rationale=LONG_RATIONALE,
+            )
+        # Over-large request is clamped (no error) and bounded.
+        rows = list_reflections(user["id"], limit=99999)
+        assert len(rows) == 3  # only 3 exist; clamp <= MAX_LIST_LIMIT
+        assert MAX_LIST_LIMIT == 200
+        # Malformed limit falls back to default, still returns rows.
+        rows2 = list_reflections(user["id"], limit="not-a-number")
+        assert len(rows2) == 3
+
+
+def test_route_list_returns_feed(client, auth_user):
+    """GET /api/pre-trade/list returns the envelope with a reflections array."""
+    client.post("/api/pre-trade/start", json={
+        "ticker": "AAPL", "side": "BUY", "shares": 1, "rationale": LONG_RATIONALE,
+    })
+    resp = client.get("/api/pre-trade/list")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["ok"] is True
+    assert "disclaimer" in body
+    assert isinstance(body["reflections"], list)
+    assert len(body["reflections"]) >= 1
+    assert body["reflections"][0]["intended_ticker"] == "AAPL"
+    assert "status" in body["reflections"][0]
+
+
+def test_route_list_excludes_other_users(client, app, make_user, auth_user):
+    """The logged-in user's feed never contains a foreign user's row."""
+    other = _make_user(make_user, email="feed-intruder@test.com")
+    with app.app_context():
+        start_cooldown(
+            user_id=other["id"], ticker="NVDA", side="BUY", shares=1,
+            rationale=LONG_RATIONALE,
+        )
+    resp = client.get("/api/pre-trade/list")
+    assert resp.status_code == 200
+    tickers = [r["intended_ticker"] for r in resp.get_json()["reflections"]]
+    assert "NVDA" not in tickers
 
 
 # ─────────────────────────────────────────────────────────────────────

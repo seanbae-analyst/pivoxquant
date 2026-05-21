@@ -271,6 +271,10 @@ export const API = {
     status: (id: number) => `/api/pre-trade/${id}`,
     proceed: (id: number) => `/api/pre-trade/${id}/proceed`,
     cancel: (id: number) => `/api/pre-trade/${id}/cancel`,
+    // 2026-05-21: Journal feed — the user's own pre-trade reflections in
+    // reverse-chronological order (newest first). Read-only, @api_auth.
+    // Each row is "user finished thinking" — never an executed order.
+    list: "/api/pre-trade/list",
   },
   // Marketing-consent record (정통망법 §50 ① — sender bears the burden of
   // proving prior opt-in). Backend lives in routes/consents.py (PR #73).

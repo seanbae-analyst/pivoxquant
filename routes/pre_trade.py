@@ -3,6 +3,7 @@
 Endpoints (all under ``/api/pre-trade``):
 
     POST /start           — open a fresh reflection, returns id + cooldown_ends_at
+    GET  /list            — the caller's own reflections, newest first (Journal feed)
     GET  /<id>            — current status + seconds_remaining
     POST /<id>/proceed    — stamp proceeded_at (cooldown must have elapsed)
     POST /<id>/cancel     — abort the reflection
@@ -27,6 +28,7 @@ from services.error_responses import api_error
 from services.pre_trade import (
     cancel as cancel_reflection,
     check_status,
+    list_reflections,
     proceed as proceed_reflection,
     start_cooldown,
 )
@@ -84,6 +86,22 @@ def start():
             status=400,
         )
     return _envelope({"reflection": result})
+
+
+# ── /list ───────────────────────────────────────────────────────────
+
+@pre_trade_bp.route("/list", methods=["GET"])
+@api_auth
+def list_own():
+    """Journal feed: the caller's own reflections, newest (created_at) first.
+
+    Query: ``?limit=`` (default 50, clamped to 200). User isolation is
+    enforced in the service layer — only ``current_user.id`` rows are
+    ever returned.
+    """
+    raw_limit = request.args.get("limit", default=None)
+    rows = list_reflections(current_user.id, limit=raw_limit if raw_limit is not None else 50)
+    return _envelope({"reflections": rows})
 
 
 # ── /<id> ───────────────────────────────────────────────────────────

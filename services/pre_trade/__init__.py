@@ -8,6 +8,7 @@ service module:
 from .friction import (
     start_cooldown,
     check_status,
+    list_reflections,
     proceed,
     cancel,
 )
@@ -15,6 +16,7 @@ from .friction import (
 __all__ = [
     "start_cooldown",
     "check_status",
+    "list_reflections",
     "proceed",
     "cancel",
 ]
