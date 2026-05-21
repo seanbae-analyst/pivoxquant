@@ -48,6 +48,18 @@ function formatHeroPrice(
   return "$" + n.toFixed(2);
 }
 
+/* Hero price split into a demoted currency symbol + full-size digits, so the
+   ₩/$ glyph does not balloon at the giant Tier-1 size (CEO: "₩ 기호 존나 큼"). */
+function splitHeroPrice(
+  price: number | null | undefined,
+  krw: boolean,
+): { symbol: string; digits: string } {
+  const s = formatHeroPrice(price, krw);
+  if (s === "—") return { symbol: "", digits: "—" };
+  const m = s.match(/^([₩$])(.*)$/);
+  return m ? { symbol: m[1], digits: m[2] } : { symbol: "", digits: s };
+}
+
 /** Pillar mini-summary — "why this signal" in one bronze-labelled row. */
 function PillarMini({
   label,
@@ -75,7 +87,7 @@ function PillarMini({
       </span>
       <span className="h-px flex-1 bg-[var(--pq-ivory-line)] min-w-2" />
       <span
-        className={cn("font-mono tabular-nums text-pq-mono-md shrink-0", color)}
+        className={cn("font-mono tabular-nums text-pq-h4 shrink-0", color)}
       >
         {safe == null ? "—" : safe.toFixed(0)}
       </span>
@@ -170,6 +182,7 @@ export function DetailHero(props: DetailHeroProps) {
     signal?.quant_score != null;
 
   const heroPrice = formatHeroPrice(signal?.price, krw);
+  const heroSplit = splitHeroPrice(signal?.price, krw);
   const obsRel = signal?.observed_at
     ? relativeTime(signal.observed_at, Date.now())
     : null;
@@ -293,7 +306,7 @@ export function DetailHero(props: DetailHeroProps) {
                   </span>
                   <span className="uppercase tracking-[0.12em] inline-flex items-baseline gap-1">
                     시총{" "}
-                    <span className="font-mono tabular-nums text-pq-mono-md normal-case text-[var(--pq-ivory-soft)]">
+                    <span className="font-mono tabular-nums text-pq-h4 normal-case text-[var(--pq-ivory-soft)]">
                       {num}
                       {suffix}
                     </span>
@@ -325,15 +338,20 @@ export function DetailHero(props: DetailHeroProps) {
                     <div
                       className="font-mono tabular-nums text-[var(--pq-ivory)] leading-none"
                       style={{
-                        /* Tier 1 — hero numeric. Floor = h3 (32px),
-                           cap = hero-num (48px). Was 44–68px (overwhelming). */
-                        fontSize:
-                          "clamp(var(--pq-text-h3), 6vw, var(--pq-text-hero-num))",
+                        /* Tier 1 — hero numeric. 40–56px (CEO: "좀 더 키워").
+                           Currency glyph below is demoted to 0.5em so the
+                           ₩/$ does not balloon at this size. */
+                        fontSize: "clamp(2.5rem, 6.5vw, 3.5rem)",
                         letterSpacing: "-0.025em",
                         fontFeatureSettings: '"tnum" 1, "lnum" 1',
                       }}
                     >
-                      {heroPrice}
+                      {heroSplit.symbol && (
+                        <span className="text-[0.5em] text-[var(--pq-ivory-mid)] align-baseline mr-0.5">
+                          {heroSplit.symbol}
+                        </span>
+                      )}
+                      {heroSplit.digits}
                     </div>
                   )}
                 </div>
@@ -344,7 +362,7 @@ export function DetailHero(props: DetailHeroProps) {
                   ) : (
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1.5 tabular-nums font-mono text-pq-mono-md",
+                        "inline-flex items-center gap-1.5 tabular-nums font-mono text-pq-h4",
                         pctColorClass(signal?.change_pct),
                       )}
                     >
@@ -376,13 +394,13 @@ export function DetailHero(props: DetailHeroProps) {
                 {hasRange && (
                   <div className="mt-6 max-w-md">
                     <div className="flex items-baseline justify-between font-mono tabular-nums text-[var(--pq-ivory-dim)]">
-                      <span className="text-pq-mono-md">
+                      <span className="text-pq-h4">
                         {fmtPrice(week52Low, krw)}
                       </span>
                       <span className="text-pq-mono-tiny tracking-[0.12em] uppercase text-[var(--pq-bronze)]">
                         52W Range
                       </span>
-                      <span className="text-pq-mono-md">
+                      <span className="text-pq-h4">
                         {fmtPrice(week52High, krw)}
                       </span>
                     </div>
