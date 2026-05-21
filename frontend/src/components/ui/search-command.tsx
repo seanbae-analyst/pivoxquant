@@ -20,6 +20,7 @@ import { Search, X, TrendingUp, LayoutGrid, Clock, CornerDownLeft, Loader2 } fro
 import { ModalShell } from "@/components/ui/modal-shell";
 import { SEARCH } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
+import { displayName, normalizeTicker } from "@/lib/format";
 import { useT } from "@/lib/locale";
 
 type StockItem = { kind: "stock"; ticker: string; name: string; market: string };
@@ -173,7 +174,7 @@ export function SearchCommandMenu() {
         const list = (body.results ?? []).map<StockItem>((r) => ({
           kind: "stock",
           ticker: r.ticker,
-          name: r.name || r.ticker,
+          name: displayName(r.ticker, r.name),
           market: r.exchange || (r.is_korean ? "KRX" : "—"),
         }));
         setStocks(list);
@@ -348,7 +349,7 @@ export function SearchCommandMenu() {
                     onClick={() => runItem(s)}
                   >
                     <span className="w-24 font-mono text-xs font-semibold" style={{ color: "var(--pq-bronze)" }}>
-                      {s.ticker}
+                      {normalizeTicker(s.ticker)}
                     </span>
                     <span className="flex-1 truncate text-sm" style={{ color: "var(--pq-ivory)" }}>
                       {s.name}

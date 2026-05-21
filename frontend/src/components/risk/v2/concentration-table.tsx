@@ -11,6 +11,7 @@
 
 import * as React from "react";
 import type { ConcentrationEntry } from "@/lib/hooks";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 
 interface Props {
   entries: ConcentrationEntry[];
@@ -129,7 +130,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                       letterSpacing: "-0.005em",
                     }}
                   >
-                    {entry.name}
+                    {displayTicker(entry.ticker, entry.name)}
                   </div>
                   <div
                     className="font-mono"
@@ -140,7 +141,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                       marginTop: 4,
                     }}
                   >
-                    {entry.ticker} · {entry.exchange}
+                    {normalizeTicker(entry.ticker)} · {entry.exchange}
                   </div>
                 </div>
 

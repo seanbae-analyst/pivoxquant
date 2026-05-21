@@ -21,6 +21,7 @@
 
 import { Fragment } from "react";
 import type { ReactNode } from "react";
+import { normalizeTicker } from "@/lib/format";
 import {
   composeDisclaimer,
   DEFAULT_GOVERNANCE,
@@ -240,7 +241,14 @@ export function PdfTable({ children }: { children: ReactNode }) {
 }
 
 export function PdfTicker({ children }: { children: ReactNode }) {
-  return <span className="pq-pdf-ticker">{children}</span>;
+  // CEO directive [feedback_ticker_display]: never surface an exchange
+  // suffix (".KS"/".KQ"/...) in a user-facing artifact. When the child is a
+  // plain ticker string, strip the suffix at this single render boundary so
+  // every PDF template (brag-card / DD / insider / earnings / ...) is covered
+  // without per-template churn. Non-string children pass through untouched.
+  const content =
+    typeof children === "string" ? normalizeTicker(children) : children;
+  return <span className="pq-pdf-ticker">{content}</span>;
 }
 
 /* ────────────────────────────────────────────────────────────

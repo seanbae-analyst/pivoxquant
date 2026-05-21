@@ -22,7 +22,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
 import type { Position, TradeAction } from "@/components/portfolio/types";
-import { fmtPct } from "@/lib/format";
+import { fmtPct, displayTicker, normalizeTicker } from "@/lib/format";
 
 interface Totals {
   totalNav: number;
@@ -372,7 +372,7 @@ export function LedgerBookPaper({
                             maxWidth: 260,
                           }}
                         className="font-serif" >
-                          {p.name}
+                          {displayTicker(p.symbol, p.name)}
                         </div>
                         <div
                           style={{
@@ -382,7 +382,7 @@ export function LedgerBookPaper({
                             marginTop: 2,
                           }}
                         className="font-mono" >
-                          {p.symbol} · {cur} · {p.sector || "—"}
+                          {normalizeTicker(p.symbol)} · {cur} · {p.sector || "—"}
                         </div>
                       </td>
                       <td

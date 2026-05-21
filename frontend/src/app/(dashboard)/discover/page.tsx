@@ -28,7 +28,7 @@ import {
 } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { fmtPct, pctColorClass, displayName } from "@/lib/format";
+import { fmtPct, pctColorClass, displayName, normalizeTicker } from "@/lib/format";
 import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type { DiscoverResult, Position } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/lib/market";
@@ -641,7 +641,7 @@ export default function DiscoverPage() {
                           </div>
                           {item.name && (
                             <div className="font-mono text-pq-eyebrow tracking-[0.06em] text-[rgba(245,240,232,0.45)] truncate">
-                              {item.ticker}
+                              {normalizeTicker(item.ticker)}
                             </div>
                           )}
                         </td>
@@ -802,7 +802,7 @@ function MoversBlock({
                 <tr key={r.ticker}>
                   <td className="text-[rgba(245,240,232,0.85)] truncate max-w-[200px]">{name}</td>
                   <td className="font-mono text-pq-eyebrow text-[var(--pq-bronze)] tabular-nums w-20">
-                    {r.ticker}
+                    {normalizeTicker(r.ticker)}
                   </td>
                   <td className="num">{r.price}</td>
                   <td className={"num " + deltaCls(r.changePct)}>{fmtPct(r.changePct)}</td>
@@ -865,7 +865,7 @@ function ThematicBlockInk({
             <li key={x.ticker} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-2 py-2.5">
               <span className="truncate text-pq-mono-sm text-[rgba(245,240,232,0.85)]">{name}</span>
               <span className="font-mono text-pq-caption text-[var(--pq-bronze)] tabular-nums">
-                {x.ticker}
+                {normalizeTicker(x.ticker)}
               </span>
               <span className="font-mono text-pq-mono-sm tabular-nums text-[var(--pq-ivory)]">
                 {x.metricValue}

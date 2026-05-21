@@ -20,7 +20,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { SignalEntry, SignalLabel } from "@/lib/types";
-import { fmtPct } from "@/lib/format";
+import { fmtPct, normalizeTicker } from "@/lib/format";
 
 interface Props {
   entry: SignalEntry;
@@ -192,7 +192,7 @@ export function SignalCard({ entry, resolveName }: Props) {
               whiteSpace: "nowrap",
             }}
           >
-            {entry.ticker}
+            {normalizeTicker(entry.ticker)}
             {entry.exchange ? ` · ${entry.exchange}` : ""}
           </div>
           {entry.rationale && (

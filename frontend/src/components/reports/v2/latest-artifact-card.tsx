@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
 import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import type { Artifact, ArtifactType } from "@/lib/types";
+import { normalizeTicker } from "@/lib/format";
 import { WEEKLY_MEMO_EMPTY_LINE } from "@/lib/cfo/memo-schedule";
 
 const TYPE_LABEL: Record<ArtifactType, string> = {
@@ -355,7 +356,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
                     ? m.name
                     : resolveName
                       ? resolveName(m.ticker)
-                      : m.ticker;
+                      : normalizeTicker(m.ticker);
                 const pct = m.changePct;
                 const isUp = typeof pct === "number" && pct > 0;
                 const isDown = typeof pct === "number" && pct < 0;
@@ -396,7 +397,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
                           marginTop: 2,
                         }}
                       >
-                        {m.ticker}
+                        {normalizeTicker(m.ticker)}
                         {m.exchange ? ` · ${m.exchange}` : ""}
                       </div>
                     </div>

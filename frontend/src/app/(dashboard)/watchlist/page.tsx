@@ -14,7 +14,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useWatchlist } from "@/lib/hooks";
-import { fmtPct, fmtRange52w, normalizeTicker, pctColorClass } from "@/lib/format";
+import { displayTicker, fmtPct, fmtRange52w, normalizeTicker, pctColorClass } from "@/lib/format";
 import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
@@ -83,10 +83,10 @@ export default function WatchlistPage() {
       setRemovingId(item.id);
       try {
         await apiFetch(API.watchlist.remove(item.id), { method: "DELETE" });
-        toast.success(`${item.ticker} removed`);
+        toast.success(`${displayTicker(item.ticker, item.name)} removed`);
         await mutate();
       } catch {
-        toast.error(`Could not remove ${item.ticker}`);
+        toast.error(`Could not remove ${displayTicker(item.ticker, item.name)}`);
       } finally {
         setRemovingId(null);
       }
@@ -229,7 +229,7 @@ export default function WatchlistPage() {
                           {normalizeTicker(item.ticker)}
                         </td>
                         <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[240px]">
-                          {item.name || item.ticker}
+                          {displayTicker(item.ticker, item.name)}
                         </td>
                         <td className="num">
                           <PriceWithTimestamp

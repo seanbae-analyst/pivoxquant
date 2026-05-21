@@ -36,6 +36,7 @@ import {
   PdfDisclaimerMini,
   PdfTicker,
 } from "../pdf-primitives";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 import { DEFAULT_GOVERNANCE } from "@/lib/reports/disclaimer";
 
 export type SignalLabel = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
@@ -152,7 +153,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         <PdfHeader
           tier="pro"
           title="EARNINGS PRE-BRIEF"
-          meta={`${data.companyName || data.ticker} · ${data.ticker} · EP-2026-04 · 01/02`}
+          meta={`${displayTicker(data.ticker, data.companyName)} · ${normalizeTicker(data.ticker)} · EP-2026-04 · 01/02`}
         />
         <PdfGoldRule />
 
@@ -328,7 +329,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         <PdfHeader
           tier="pro"
           title="EARNINGS PRE-BRIEF"
-          meta={`${data.companyName || data.ticker} · ${data.ticker} · EP-2026-04 · 02/02`}
+          meta={`${displayTicker(data.ticker, data.companyName)} · ${normalizeTicker(data.ticker)} · EP-2026-04 · 02/02`}
         />
 
         <PdfEyebrow>02 — Scenario Playbook</PdfEyebrow>

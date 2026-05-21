@@ -16,7 +16,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { EditorialHead } from "@/components/ui/editorial";
-import { fmtMoneyPlain, fmtPctSignedMinus } from "@/lib/format";
+import { fmtMoneyPlain, fmtPctSignedMinus, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 
 type SortKey =
@@ -480,7 +480,7 @@ function PositionRow({
           as="div"
           style={{ lineHeight: 1.2, letterSpacing: "-0.005em" }}
         >
-          {p.name}
+          {displayTicker(p.symbol, p.name)}
         </EditorialHead>
         <div
           className="font-mono uppercase"
@@ -491,7 +491,7 @@ function PositionRow({
             marginTop: 3,
           }}
         >
-          {p.symbol}
+          {normalizeTicker(p.symbol)}
         </div>
         {/* Hover-revealed actions */}
         {onAction && (

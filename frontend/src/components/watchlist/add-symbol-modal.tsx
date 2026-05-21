@@ -21,6 +21,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { API, SEARCH } from "@/lib/endpoints";
 import { openSearchCommand } from "@/components/ui/search-command";
 import { useT } from "@/lib/locale";
+import { displayName, normalizeTicker } from "@/lib/format";
 
 interface Props {
   onClose: () => void;
@@ -220,13 +221,13 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
                       className="w-24 truncate font-mono text-xs font-semibold"
                       style={{ color: "var(--pq-bronze)" }}
                     >
-                      {s.ticker}
+                      {normalizeTicker(s.ticker)}
                     </span>
                     <span
                       className="flex-1 truncate text-sm"
                       style={{ color: "var(--pq-ink)" }}
                     >
-                      {s.name}
+                      {displayName(s.ticker, s.name)}
                     </span>
                     {s.exchange && (
                       <span

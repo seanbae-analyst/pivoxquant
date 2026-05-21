@@ -15,7 +15,7 @@
 
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
-import { fmtPct } from "@/lib/format";
+import { fmtPct, displayTicker, normalizeTicker } from "@/lib/format";
 
 export interface MemoSignalItem {
   ticker: string;
@@ -111,7 +111,7 @@ export function SignalMemoStrip({
                   }}
                 className="truncate font-serif"
               >
-                {item.name || item.ticker}
+                {displayTicker(item.ticker, item.name)}
               </span>
               <span
                 style={{
@@ -141,7 +141,7 @@ export function SignalMemoStrip({
                 marginTop: 3,
               }}
             className="font-mono" >
-              {item.ticker}
+              {normalizeTicker(item.ticker)}
               {item.sector ? ` · ${item.sector}` : ""}
             </div>
           </div>

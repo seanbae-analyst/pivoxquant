@@ -13,6 +13,7 @@
  */
 
 import * as React from "react";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 
 interface EarningsEvent {
   ticker: string;
@@ -226,7 +227,7 @@ export function CalendarNewsPaper({
                     whiteSpace: "nowrap",
                   }}
                 className="font-serif" >
-                  {e.name || e.ticker}
+                  {displayTicker(e.ticker, e.name)}
                 </span>
                 <span
                   style={{
@@ -236,7 +237,7 @@ export function CalendarNewsPaper({
                     color: "rgba(20,20,20,0.55)",
                   }}
                 className="font-mono" >
-                  {e.ticker}
+                  {normalizeTicker(e.ticker)}
                 </span>
               </button>
             ))}

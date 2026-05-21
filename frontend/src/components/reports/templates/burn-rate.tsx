@@ -34,6 +34,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 
 type BurnStatus = "PROFITABLE" | "SAFE" | "WATCH" | "CRITICAL";
 
@@ -212,7 +213,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
               <PdfFlexBetween style={{ marginBottom: 8 }}>
                 <div>
                   <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
-                    {c.name && c.name !== c.ticker ? `${c.name} · ${c.ticker}` : c.ticker}
+                    {c.name && c.name !== c.ticker ? `${c.name} · ${normalizeTicker(c.ticker)}` : displayTicker(c.ticker, c.name)}
                   </div>
                   <h3 style={{ fontSize: "var(--pq-text-quote)", margin: 0, fontWeight: 500 }} className="font-serif" >
                     Runway:{" "}
@@ -263,8 +264,8 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
             <div>
               <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                 {data.watch.name && data.watch.name !== data.watch.ticker
-                  ? `${data.watch.name} · ${data.watch.ticker}`
-                  : data.watch.ticker}
+                  ? `${data.watch.name} · ${normalizeTicker(data.watch.ticker)}`
+                  : displayTicker(data.watch.ticker, data.watch.name)}
               </div>
               <strong>{data.watch.runway}</strong>
             </div>

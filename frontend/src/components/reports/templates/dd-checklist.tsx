@@ -33,6 +33,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { displayTicker } from "@/lib/format";
 
 type Tone = "pos" | "neg" | "warn";
 
@@ -300,7 +301,7 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
         <PdfEyebrow>Due Diligence · Pre-Entry</PdfEyebrow>
         {/* PR #212 follow-up — company name first, ticker only as fallback. */}
         <PdfCoverTitle size={42}>
-          {data.company || data.ticker}—<em>before you enter</em>
+          {displayTicker(data.ticker, data.company)}—<em>before you enter</em>
           <br />
           25 questions. No answer, no entry.
         </PdfCoverTitle>

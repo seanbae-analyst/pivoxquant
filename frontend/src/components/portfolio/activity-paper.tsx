@@ -15,6 +15,7 @@
 
 import * as React from "react";
 import type { Trade } from "@/components/portfolio/types";
+import { displayTicker } from "@/lib/format";
 
 interface Props {
   trades: Trade[];
@@ -171,7 +172,7 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
                           letterSpacing: "0.04em",
                         }}
                       >
-                        {t.symbol}
+                        {displayTicker(t.symbol)}
                       </span>
                       <span style={{ color: "rgba(20,20,20,0.58)" }}>
                         {t.qty.toLocaleString("en-US")} sh

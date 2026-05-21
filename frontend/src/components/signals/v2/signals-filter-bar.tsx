@@ -17,6 +17,7 @@
 import * as React from "react";
 import { RefreshCw } from "lucide-react";
 import type { SignalLabel } from "@/lib/types";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 
 interface FilterValue {
   labels: Set<SignalLabel>;
@@ -271,7 +272,7 @@ export function SignalsFilterBar({
                 // filter compares uppercase ticker equality; `label` is what the
                 // browser surfaces in the autocomplete UI.
                 const display =
-                  h.name && h.name !== h.ticker ? `${h.name} (${h.ticker})` : h.ticker;
+                  h.name && h.name !== h.ticker ? `${h.name} (${normalizeTicker(h.ticker)})` : displayTicker(h.ticker, h.name);
                 return <option key={h.ticker} value={h.ticker} label={display} />;
               })}
             </datalist>

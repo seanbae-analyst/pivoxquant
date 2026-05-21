@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 import { useAlerts } from "@/lib/hooks";
 import type { AlertItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -367,7 +368,7 @@ export default function AlertsPage() {
                                 !a.is_read && "font-semibold",
                               )}
                             >
-                              {a.name || a.ticker || kindLabel(a.kind)}
+                              {a.ticker ? displayTicker(a.ticker, a.name) : a.name || kindLabel(a.kind)}
                             </div>
                             {/* PR #212 follow-up: drop the redundant Ticker
                                 column (was duplicated next to a.name).
@@ -376,7 +377,7 @@ export default function AlertsPage() {
                                 without the extra column. */}
                             {a.name && a.ticker && (
                               <div className="mt-0.5 text-pq-eyebrow tracking-[0.06em] font-mono text-[rgba(245,240,232,0.45)] truncate">
-                                {a.ticker}
+                                {normalizeTicker(a.ticker)}
                               </div>
                             )}
                             <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] truncate">
@@ -449,11 +450,11 @@ export default function AlertsPage() {
                         !a.is_read && "font-semibold",
                       )}
                     >
-                      {a.name || a.ticker || kindLabel(a.kind)}
+                      {a.ticker ? displayTicker(a.ticker, a.name) : a.name || kindLabel(a.kind)}
                     </div>
                     {a.name && a.ticker && (
                       <div className="mt-0.5 text-pq-eyebrow tracking-[0.06em] font-mono text-[rgba(245,240,232,0.45)]">
-                        {a.ticker}
+                        {normalizeTicker(a.ticker)}
                       </div>
                     )}
                     {(a.title || a.message) && (

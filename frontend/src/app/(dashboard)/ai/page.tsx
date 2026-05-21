@@ -42,6 +42,7 @@ import {
 import { API } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 import { usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type {
   AiCoachingResponse,
@@ -555,7 +556,7 @@ export default function AiPage() {
                       <option value="">내 보유 종목에서 선택</option>
                       {userTickers.map((u) => (
                         <option key={u.ticker} value={u.ticker}>
-                          {u.name && u.name !== u.ticker ? `${u.name} (${u.ticker})` : u.ticker}
+                          {u.name && u.name !== u.ticker ? `${u.name} (${normalizeTicker(u.ticker)})` : displayTicker(u.ticker, u.name)}
                         </option>
                       ))}
                     </select>

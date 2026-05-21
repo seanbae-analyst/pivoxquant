@@ -10,7 +10,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { fmtMoneyPlain } from "@/lib/format";
+import { fmtMoneyPlain, displayTicker } from "@/lib/format";
 import { useTransactions, type TransactionRow } from "./hooks-v2";
 
 interface RecentTransactionsBlockProps {
@@ -165,7 +165,7 @@ export function RecentTransactionsBlock({
                       lineHeight: 1.2,
                     }}
                   >
-                    {t.name ?? t.symbol ?? "—"}
+                    {t.symbol ? displayTicker(t.symbol, t.name) : (t.name ?? "—")}
                   </div>
                   <div
                     className="font-serif"

@@ -29,6 +29,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { PORTFOLIO_POSITIONS, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
@@ -305,7 +306,7 @@ export function TradeModalV2({
             }}
           >
             <span style={{ color: "var(--pq-ivory)", fontWeight: 500 }}>
-              {position.name}
+              {displayTicker(position.symbol, position.name)}
             </span>{" "}
             <span
               className="font-mono"
@@ -315,7 +316,7 @@ export function TradeModalV2({
                 letterSpacing: "0.16em",
               }}
             >
-              {position.symbol}
+              {normalizeTicker(position.symbol)}
             </span>{" "}
             · {copy.helper}
           </p>

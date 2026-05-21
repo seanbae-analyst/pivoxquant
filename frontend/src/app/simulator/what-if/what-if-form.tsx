@@ -19,6 +19,7 @@ import { useT } from "@/lib/locale";
 import { API } from "@/lib/endpoints";
 import type { LookupResult, RecurringMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 
 export interface WhatIfFormState {
   ticker: string;
@@ -290,13 +291,13 @@ export function WhatIfForm({
                         className="truncate text-sm font-bold"
                         style={{ color: "var(--pq-ivory)" }}
                       >
-                        {r.name || r.ticker}
+                        {displayTicker(r.ticker, r.name)}
                       </div>
                       <div
                         className="truncate font-mono text-xs"
                         style={{ color: "rgba(245, 240, 232, 0.55)" }}
                       >
-                        {r.ticker}
+                        {normalizeTicker(r.ticker)}
                       </div>
                     </div>
                     <span

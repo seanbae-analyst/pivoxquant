@@ -14,7 +14,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { SignalEntry, SignalLabel } from "@/lib/types";
-import { fmtPct1 } from "@/lib/format";
+import { fmtPct1, normalizeTicker } from "@/lib/format";
 
 interface Props {
   entries: SignalEntry[];
@@ -195,7 +195,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {s.ticker}
+                  {normalizeTicker(s.ticker)}
                   {s.exchange ? ` · ${s.exchange}` : ""}
                 </div>
 

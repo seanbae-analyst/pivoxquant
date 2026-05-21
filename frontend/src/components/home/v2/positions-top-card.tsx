@@ -19,7 +19,7 @@
 import * as React from "react";
 import { HomeCard } from "./home-card";
 import { usePortfolioPositions } from "@/lib/hooks";
-import { pctColor, displayName, isKrTicker, fmtPct, fmtMoneyPlain } from "@/lib/format";
+import { pctColor, displayName, normalizeTicker, isKrTicker, fmtPct, fmtMoneyPlain } from "@/lib/format";
 // FINDING-021: the SWR payload from /api/portfolio carries the BACKEND
 // position shape (snake_case: ticker / avg_cost / current_price), NOT the
 // camelCase `@/components/portfolio/types` Position. Importing the wrong
@@ -177,7 +177,7 @@ export function PositionsTopCard() {
                     letterSpacing: "0.12em",
                   }}
                 >
-                  {r.ticker}
+                  {normalizeTicker(r.ticker)}
                 </small>
               </span>
               <span
