@@ -213,6 +213,16 @@ export const API = {
     unsubscribe: "/api/push/unsubscribe",
     status: "/api/push/status",
   },
+  // Per-event-type × per-channel notification matrix (settings v2 §C).
+  // Backend (2026-05-21) persists the 7-event × 3-channel toggle grid that
+  // the <NotificationsMatrix /> previously kept only in a localStorage shadow
+  // (GAP-E). Locked contract:
+  //   GET  → { prefs: { "<event_id>": { email, push, inapp }, ... } }  (server
+  //          always returns all 7 events with defaults merged)
+  //   PUT  body { prefs: {...} } → 200 { prefs: {...} } | 400 (validation)
+  notifications: {
+    preferences: "/api/notifications/preferences",
+  },
   broker: {
     connections: "/api/broker/connections",
     // KIS (한국투자증권) — read-only Korean brokerage.

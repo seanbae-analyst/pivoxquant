@@ -1547,6 +1547,7 @@ class WeeklyMemoService:
             from_default="reports@pivoxquant.com",
             pdf_bytes=pdf_bytes,
             pdf_filename=f"weekly_memo_{user.id}.pdf",
+            event_id="weekly_memo",
         )
 
     # ── persist + orchestrate ───────────────────────────────────────────────

@@ -1100,3 +1100,64 @@ export async function generateArtifact(
     body: JSON.stringify(body),
   });
 }
+
+/* ── Notification preferences (settings v2 §C matrix) ──────────────────────
+ *
+ * Replaces the localStorage shadow-state (GAP-E) for the 7-event × 3-channel
+ * <NotificationsMatrix />. Server is the source of truth — it always returns
+ * all 7 events with defaults merged (locked contract, see endpoints.ts).
+ *
+ * Additive: new SWR key + types + a mutation helper. No existing hook,
+ * SWR key, or type field is modified.
+ *
+ * Legal: channel toggles only — no signal vocabulary round-trips here.
+ */
+
+export type NotificationChannel = "email" | "push" | "inapp";
+
+export type NotificationChannelPrefs = Record<NotificationChannel, boolean>;
+
+export type NotificationPrefsMap = Record<string, NotificationChannelPrefs>;
+
+export interface NotificationPreferencesResponse {
+  prefs: NotificationPrefsMap;
+}
+
+/**
+ * Fetches the authenticated user's notification matrix. The backend always
+ * returns all 7 events with defaults merged, so consumers can read
+ * `data.prefs[event_id][channel]` without merging client-side. SWR key is
+ * the bare endpoint path (no query params) so the cache is shared with the
+ * PUT mutation's revalidation.
+ */
+export function useNotificationPreferences() {
+  return useSWR<NotificationPreferencesResponse>(
+    API.notifications.preferences,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      // Settings rarely changes from another device mid-session; a long
+      // dedupe window avoids re-fetching when the user re-opens /settings.
+      dedupingInterval: 60_000,
+      errorRetryCount: 2,
+    },
+  );
+}
+
+/**
+ * PUT the full preferences map. Returns the server-committed map (defaults
+ * merged). Routed through `apiFetch` so CSRF + credentials + timeout match
+ * the rest of the SPA. Throws `ApiError` on 400 (validation) / network so
+ * the caller can roll back optimistic UI.
+ */
+export async function saveNotificationPreferences(
+  prefs: NotificationPrefsMap,
+): Promise<NotificationPreferencesResponse> {
+  return apiFetch<NotificationPreferencesResponse>(
+    API.notifications.preferences,
+    {
+      method: "PUT",
+      body: JSON.stringify({ prefs }),
+    },
+  );
+}

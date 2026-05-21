@@ -510,6 +510,12 @@ def _do_migrations():
     # ProgrammingError 로 실패한다. alembic 미실행 박스 self-heal.
     _add_column_if_missing("users", "deletion_requested_at", "TIMESTAMP")
     _add_column_if_missing("users", "deleted_at", "TIMESTAMP")
+    # Settings v2 notification matrix persistence (2026-05-21). Alembic
+    # migration 043_notification_prefs. nullable JSON (NULL = use code-level
+    # NOTIFICATION_PREF_DEFAULTS). 본 컬럼이 ORM 매핑에 존재하므로 누락 시
+    # 모든 User SELECT 가 ProgrammingError → OAuth provisioning_failed.
+    # alembic 미실행 박스(Railway prod, 레거시 SQLite) self-heal.
+    _add_column_if_missing("users", "notification_prefs", "JSON")
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but

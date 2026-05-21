@@ -6,6 +6,35 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
 
 
+# ── Notification preference matrix (settings v2) ─────────────────────────────
+# Frontend SoT: ``frontend/src/components/settings/v2/notifications-matrix.tsx``
+# (the ``EVENTS`` array). These three constants MUST stay byte-for-byte aligned
+# with the frontend EVENTS ids + per-channel defaults — the GET/PUT
+# ``/api/notifications/preferences`` contract merges stored values over these
+# defaults and always returns all seven events.
+NOTIFICATION_CHANNELS: tuple[str, ...] = ("email", "push", "inapp")
+
+NOTIFICATION_EVENT_IDS: tuple[str, ...] = (
+    "weekly_memo",
+    "earnings_pre_brief",
+    "signal_state",
+    "risk_breach",
+    "pulse_prompt",
+    "brag_card",
+    "broker_sync_error",
+)
+
+NOTIFICATION_PREF_DEFAULTS: dict[str, dict[str, bool]] = {
+    "weekly_memo":        {"email": True,  "push": True,  "inapp": True},
+    "earnings_pre_brief": {"email": True,  "push": True,  "inapp": True},
+    "signal_state":       {"email": False, "push": True,  "inapp": True},
+    "risk_breach":        {"email": True,  "push": True,  "inapp": True},
+    "pulse_prompt":       {"email": True,  "push": False, "inapp": True},
+    "brag_card":          {"email": True,  "push": False, "inapp": True},
+    "broker_sync_error":  {"email": True,  "push": True,  "inapp": True},
+}
+
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     id               = db.Column(db.Integer,     primary_key=True)
@@ -145,6 +174,13 @@ class User(UserMixin, db.Model):
     # Managed via migration 041_user_deletion_request.
     deletion_requested_at = db.Column(db.DateTime, nullable=True)
     deleted_at            = db.Column(db.DateTime, nullable=True)
+    # Settings v2 per-event × per-channel notification preferences. NULL means
+    # "never customised" → fall back to ``NOTIFICATION_PREF_DEFAULTS``. Stored
+    # as a partial dict ({event_id: {channel: bool}}); the GET/PUT
+    # ``/api/notifications/preferences`` route merges it over the defaults so
+    # the client always sees all seven events. Managed via Alembic migration
+    # 043_notification_prefs (+ app.py ``_do_migrations`` self-heal guard).
+    notification_prefs    = db.Column(db.JSON, nullable=True)
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")
@@ -164,6 +200,34 @@ class User(UserMixin, db.Model):
         if not self.password_hash:
             return False
         return check_password_hash(self.password_hash, pw)
+
+    def notification_channel_enabled(self, event_id: str, channel: str) -> bool:
+        """Whether *channel* is enabled for *event_id* for this user.
+
+        Resolution order:
+          1. Stored ``notification_prefs[event_id][channel]`` if present
+             (and a real bool).
+          2. ``NOTIFICATION_PREF_DEFAULTS[event_id][channel]`` otherwise.
+          3. For an **unknown** ``event_id`` (not in the canonical seven) we
+             return ``True`` — fail-open. The enforcement gate must never
+             silently swallow a notification just because the caller passed a
+             label we don't recognise; that would be a worse failure mode than
+             an over-send. Unknown *channel* on a known event likewise → True.
+        """
+        defaults = NOTIFICATION_PREF_DEFAULTS.get(event_id)
+        if defaults is None:
+            # Unknown event id — fail-open (never silently mute).
+            return True
+
+        stored = self.notification_prefs or {}
+        event_stored = stored.get(event_id) if isinstance(stored, dict) else None
+        if isinstance(event_stored, dict) and channel in event_stored:
+            val = event_stored[channel]
+            if isinstance(val, bool):
+                return val
+
+        # Fall back to the per-event default; unknown channel → fail-open.
+        return defaults.get(channel, True)
 
     @property
     def effective_tier(self) -> str:

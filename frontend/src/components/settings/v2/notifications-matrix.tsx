@@ -6,19 +6,25 @@
  * Section C of /settings v2 — 7-event × 3-channel matrix.
  * Mirror of settings-v2 mockup §693 ("C · Notifications · Channels × Events").
  *
- * GAP-E: backend per-event-type matrix endpoint absent. UI surfaces all 7×3
- *        toggles; only push (global) is wired live via the C1 sub-card. The
- *        matrix toggles read+write a `localStorage` shadow-state until the
- *        backend `notification_pref` table lands. See settings-v2/MIGRATION §2.
- *
- * Pure presentational. Host wires push toggle (subscribeToPush /
- * unsubscribeFromPush from `lib/push`) and email-toggle localStorage flag.
+ * 2026-05-21 (GAP-E resolved): the backend per-event-type matrix endpoint
+ * (`/api/notifications/preferences`) is live. The matrix now loads from the
+ * server on mount (SWR), renders the local defaults first to avoid a flash,
+ * then swaps in the server map. Toggles update optimistically and persist via
+ * a debounced PUT; success/failure surface as a toast and a failed save rolls
+ * the row back. The old `localStorage` shadow-state is gone — server is the
+ * single source of truth.
  *
  * Legal: persona vocabulary only. POSITIVE / NEGATIVE / NEUTRAL — never BUY/SELL.
  */
 
 import * as React from "react";
+import { toast } from "sonner";
 import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
+import {
+  useNotificationPreferences,
+  saveNotificationPreferences,
+  type NotificationPrefsMap,
+} from "@/lib/hooks";
 
 interface EventRow {
   id: string;
@@ -72,31 +78,11 @@ const EVENTS: EventRow[] = [
   },
 ];
 
-const LS_KEY = "pq_notif_matrix_v1";
-
 type Channel = "email" | "push" | "inapp";
-type MatrixState = Record<string, Record<Channel, boolean>>;
+type MatrixState = NotificationPrefsMap;
 
-function readMatrix(): MatrixState | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(LS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as MatrixState;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeMatrix(state: MatrixState) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(LS_KEY, JSON.stringify(state));
-  } catch {
-    /* quota/disabled — silently degrade */
-  }
-}
+/** Debounce window before a toggle batch is flushed to the server. */
+const SAVE_DEBOUNCE_MS = 600;
 
 function defaultMatrix(): MatrixState {
   const out: MatrixState = {};
@@ -153,49 +139,100 @@ function MatrixToggle({
 }
 
 interface Props {
-  /** Optional initial state override (e.g. for SSR / testing). */
+  /** Optional initial state override (e.g. for SSR / testing). When set,
+   *  server hydration is skipped — used by tests and any controlled host. */
   initial?: MatrixState;
   onChange?: (state: MatrixState) => void;
 }
 
 export function NotificationsMatrix({ initial, onChange }: Props) {
+  // Render the defaults first (no flash); the server map swaps in on load.
   const [state, setState] = React.useState<MatrixState>(
     () => initial ?? defaultMatrix(),
   );
 
-  // Hydrate from localStorage once mounted (GAP-E shadow state).
+  // Server is the source of truth. Skip when an explicit `initial` is given.
+  const { data, mutate } = useNotificationPreferences();
+
+  // Hydrate from the server map once it arrives. Merge over the local
+  // defaults so a newly-added event still renders if the server hasn't been
+  // taught about it yet (defensive — backend contract returns all 7).
   React.useEffect(() => {
     if (initial) return;
-    const saved = readMatrix();
-    if (saved) {
-      // Merge to make sure new events get defaults if added later.
-      setState((prev) => {
-        const merged: MatrixState = { ...prev };
-        for (const e of EVENTS) {
-          merged[e.id] = saved[e.id] ?? prev[e.id] ?? { ...e.defaults };
+    const serverPrefs = data?.prefs;
+    if (!serverPrefs) return;
+    setState((prev) => {
+      const merged: MatrixState = { ...prev };
+      for (const e of EVENTS) {
+        merged[e.id] = serverPrefs[e.id] ?? prev[e.id] ?? { ...e.defaults };
+      }
+      return merged;
+    });
+  }, [data, initial]);
+
+  // Debounced save: collect rapid toggles into one PUT (~600ms). The pending
+  // snapshot + the pre-edit snapshot (for rollback) live in refs so the
+  // timer closure always flushes the latest state.
+  const pendingRef = React.useRef<MatrixState | null>(null);
+  const rollbackRef = React.useRef<MatrixState | null>(null);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flush = React.useCallback(() => {
+    const next = pendingRef.current;
+    const rollback = rollbackRef.current;
+    pendingRef.current = null;
+    rollbackRef.current = null;
+    if (!next) return;
+    saveNotificationPreferences(next)
+      .then((res) => {
+        // Adopt the server-committed map (defaults merged) without a refetch.
+        if (res?.prefs) {
+          mutate(res, { revalidate: false });
         }
-        return merged;
+        toast.success("알림 설정 저장됨");
+      })
+      .catch((err) => {
+        // Roll back to the pre-edit snapshot and surface the failure.
+        if (rollback) setState(rollback);
+        toast.error(
+          err instanceof Error ? err.message : "알림 설정 저장에 실패했습니다.",
+        );
       });
-    }
-  }, [initial]);
+  }, [mutate]);
+
+  // Flush any pending save on unmount so a quick navigation doesn't drop it.
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        flush();
+      }
+    };
+  }, [flush]);
 
   const toggle = React.useCallback(
     (eventId: string, channel: Channel, next: boolean) => {
       setState((prev) => {
-        const eventRow = prev[eventId] ?? { email: false, push: false, inapp: false };
+        // Capture the snapshot to roll back to only at the start of a batch.
+        if (rollbackRef.current === null) rollbackRef.current = prev;
+        const eventRow =
+          prev[eventId] ?? { email: false, push: false, inapp: false };
         const updated: MatrixState = {
           ...prev,
-          [eventId]: {
-            ...eventRow,
-            [channel]: next,
-          },
+          [eventId]: { ...eventRow, [channel]: next },
         };
-        writeMatrix(updated);
+        pendingRef.current = updated;
         onChange?.(updated);
         return updated;
       });
+      // (Re)arm the debounce timer.
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        flush();
+      }, SAVE_DEBOUNCE_MS);
     },
-    [onChange],
+    [onChange, flush],
   );
 
   return (

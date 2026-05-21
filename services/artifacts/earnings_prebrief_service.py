@@ -1276,6 +1276,7 @@ class EarningsPreBriefService:
             # for per-channel opt-out, but flipping that here changes
             # the existing user-facing default. Out of scope for Phase 7.
             unsubscribe_kind="all",
+            event_id="earnings_pre_brief",
         )
 
     # ── persist ────────────────────────────────────────────────────────────
@@ -1627,6 +1628,7 @@ class EarningsPreBriefService:
             from_default=fallback,
             opt_out_attrs=("email_opt_out", "email_opt_out_earnings"),
             unsubscribe_kind="all",
+            event_id="earnings_pre_brief",
         )
 
     def run_scan_digest(self, *, send: bool = True) -> dict[str, Any]:

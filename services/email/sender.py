@@ -177,6 +177,7 @@ class EmailSender:
         reply_to: str = _DEFAULT_REPLY_TO,
         display_name: str = _DEFAULT_DISPLAY_NAME,
         email_category: EmailCategory | None = None,
+        event_id: str | None = None,
     ) -> bool:
         """Dispatch a single email. Returns ``True`` on success.
 
@@ -215,6 +216,16 @@ class EmailSender:
         reply_to, display_name
             Header overrides; sensible defaults for every artefact
             type.
+        event_id
+            Optional settings-v2 notification event id (one of the seven
+            canonical ids in ``models.user.NOTIFICATION_EVENT_IDS`` —
+            e.g. ``"weekly_memo"``, ``"earnings_pre_brief"``,
+            ``"brag_card"``, ``"risk_breach"``). When supplied, the send
+            is skipped (``return False``) if the user has disabled the
+            *email* channel for that event in their notification matrix.
+            Checked AFTER consent/opt-out so it only ever subtracts. An
+            unknown id fail-opens (never silently mutes). ``None`` (the
+            default) preserves the pre-existing behaviour exactly.
         """
         # ── 1a. simulated-user guard (Continuous User Simulation Phase 1) ──
         # ``User.is_simulated`` (migration 032) tags synthetic test users the
@@ -269,6 +280,24 @@ class EmailSender:
                 logger.info(
                     "user %s opted out (%s); skipping send",
                     getattr(user, "id", "?"), attr,
+                )
+                return False
+
+        # ── 1d. settings v2 per-event email-channel gate ───────────────
+        # Settings v2 notification matrix (notifications-matrix.tsx) lets a
+        # user disable the *email* channel of an individual artefact event
+        # while leaving push/in-app on. This runs AFTER the legacy
+        # consent/opt-out gates so it never relaxes them — it can only
+        # subtract. Only fires when the caller supplies an ``event_id``
+        # mapping to one of the canonical seven events; an unknown id
+        # fail-opens inside ``notification_channel_enabled`` so we never
+        # silently mute an unrecognised label.
+        if event_id is not None:
+            checker = getattr(user, "notification_channel_enabled", None)
+            if callable(checker) and not checker(event_id, "email"):
+                logger.info(
+                    "user %s disabled email channel for event '%s'; skipping send",
+                    getattr(user, "id", "?"), event_id,
                 )
                 return False
 

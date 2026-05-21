@@ -1201,6 +1201,7 @@ class RiskBoardService:
             from_default="reports@pivoxquant.com",
             pdf_bytes=pdf_bytes,
             pdf_filename=f"risk_board_{user.id}.pdf",
+            event_id="risk_breach",
         )
 
     # ── persist + orchestrate ───────────────────────────────────────────────

@@ -750,6 +750,7 @@ class BragCardService:
             pdf_bytes=png_bytes,
             pdf_filename=f"pivoxquant_brag_{user.id}.png",
             attachment_mime="image/png",
+            event_id="brag_card",
         )
 
     # ── share ────────────────────────────────────────────────────────────────

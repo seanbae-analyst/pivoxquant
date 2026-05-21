@@ -154,7 +154,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
       {/* Header: name + ticker sub + status */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <EditorialHead as="h3" size={24} style={{ wordBreak: "keep-all" }}>
+          <EditorialHead as="h3" size={26} style={{ wordBreak: "keep-all" }}>
             {name}
           </EditorialHead>
           {showTickerSub && (
