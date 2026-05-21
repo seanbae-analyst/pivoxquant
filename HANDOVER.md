@@ -1,4 +1,37 @@
-# PivoxQuant — 인수인계서 (2026-05-21 v46.3 — 🟢 detail 전면 재설계 + Journal(의사결정 일지) 신규 + pre-trade 인라인화 + UI 폰트/IA 정리)
+# PivoxQuant — 인수인계서 (2026-05-21 v46.4 — 🟢 handover P2 잔여 5건 정리 + 알림 매트릭스 서버화 + BE 배포)
+
+## v46.4 2026-05-21 — handover 잔여 P2 일괄 처리 (CEO "하나씩 너가 잡아 / 배포하고 계속", 자율모드)
+
+> **🟢 결론: v46.3 handover의 actionable 잔여 P2를 전부 처리·검증·배포.** 알림 매트릭스 7×3 토글이 처음으로 서버에 영속화되고 email 발송이 매트릭스를 따른다(이전엔 localStorage만). billing portal Free 503 dead-end 차단. v46 detail 재설계의 무커버리지 로직(차트 마커/journal 헬퍼/naked ticker) 회귀 게이트 신설. Fundamentals em-dash는 조사 결과 KR 라이선스 구조적 부재로 확정 → 정직한 안내 배선. RSC prefetch 503은 조사 결과 코드 버그 아님(Vercel transient)으로 종결. **BE `railway up` SUCCESS** + FE Vercel 자동배포.
+
+### ✅ 이번 세션 변경 (commits cd694303 → 9534ba01, 전부 origin/main 푸시됨)
+| # | 영역 | 내용 | commit | 배포 |
+|---|---|---|---|---|
+| 1 | **알림 매트릭스 서버화** | `User.notification_prefs` JSON 컬럼 + `NOTIFICATION_PREF_DEFAULTS`/`notification_channel_enabled()`(fail-open) + **alembic 043** + `app.py _do_migrations` self-heal + `GET/PUT /api/notifications/preferences`(검증·defaults merge) + **`EmailSender.send(event_id=)` email 채널 게이트**(§50 consent 게이트 *후* 실행 → subtract만, relax 불가). 4개 artifact 발송 경로 event_id 전달(weekly_memo/earnings_pre_brief/risk_breach/brag_card). FE: SWR 로드 + 디바운스 PUT + 성공/실패 토스트·롤백, localStorage 그림자 제거. BE↔FE defaults 동일 검증 | `cd694303` | **BE+FE 배포됨** |
+| 2 | billing portal Free 503 | Free tier일 때 "Billing portal" 버튼 숨김(Pro/Premium만) — POST 시 400(no account)/503(require_business_registration) dead-end 차단. 업그레이드는 pricing CTA로 | `f145d0df` | FE |
+| 3 | 회귀 게이트/단위테스트 | 차트 마커 date-snap 로직을 inline useMemo → 순수 `computeMarkerGeom`(동작보존)+11테스트 / journal `entryTimestamp·absoluteDate·statusKind` export+7테스트(naive ts→UTC KST 처리) / naked-ticker DOM 게이트(SwotPanel·CompanionCta·EarningsPanel visible text에 `.KS` 누출 0, href는 허용) | `61cf1cde` | FE |
+| 4 | Fundamentals 3지표 em-dash | **조사: 라이브 FMP 호출 → US(AAPL/MSFT)는 3개 다 반환, KR(005930.KS)은 3개 None(KIS 라이선스 부재).** 매핑 버그 아님. 백엔드는 이미 `fundamentals_limited` 플래그 생성+engine이 snapshot 그대로 전달하나 **FE 미소비(half-finished)** → Snapshot 타입 + FundamentalsPanel에 KO/EN 정직한 안내("오류 아님, KIS 라이선스 밖") 배선. engine.py 무수정 | `9534ba01` | FE |
+| 5 | RSC prefetch 간헐 503 | **조사 종결 — 코드 버그 아님.** prefetch되는 dashboard 라우트 전부 client 컴포넌트(SWR은 mount 후), detail layout `generateMetadata`는 정적 seed만 사용 → RSC prefetch는 `/api`(Railway)를 안 침. 503은 Vercel 엣지 transient. handover의 "Railway 커넥션" 귀속은 부정확. 무수정(no-busywork) | — | — |
+
+### 🚀 배포 검증 (BE railway up 실측)
+- `railway up --service web --ci` build SUCCESS(WeasyPrint libpango/libcairo + Pretendard fc-cache + playwright). image push + Deploy complete.
+- `/api/health` → `db:ok status:ok version v37+`. 신규 `/api/notifications/preferences` → 401(존재, 404아님). 스케줄러 26 ops jobs 기동(users 쿼리 정상 = 043 self-heal 작동, UndefinedColumn 0).
+- ⚠️ `railway up`은 git sha 없어 health version `v37+`로 표기(정상). `--service web`(이름)으로 호출 — service id `8687c9ac`는 "Service not found" 남.
+- ⚠️ `railway run`은 **로컬 실행**이라 prod 내부 DB(`postgres.railway.internal`) 도달 불가 — 스키마 확인은 health/스케줄러 기동으로 간접 검증.
+
+### 검증 실측
+- pytest: 신규 12(notification_prefs model+routes) + email/artifact 258 PASS / 0 fail.
+- vitest: 33 files / **418 PASS** / 0 fail (신규 22: notif-matrix 4 + subscription-card 3 + chart-marker 11... + journal 7 + naked-ticker 4 + fundamentals 4). tsc exit 0.
+- 부수: journal `EditorialHead size={24}`→`26` (24는 허용 union 아님 — v46.3에서 들어온 main의 기존 tsc 에러였음, #1 커밋에 포함).
+
+### ⚠️ 잔여 / 회귀 포인트
+- enforcement는 **email 채널만** 적용(push=`lib/push.ts` 미사용, in-app=alerts 피드로 이벤트와 1:1 아님). push/in-app은 저장만 — email이 유일 라이브 채널이라 UI 정직.
+- pre-push 훅: `@pytest.mark.smoke` 마커 미존재(warn-only). 3-5 smoke(health/auth/portfolio) 추가 권장.
+- v46.3 잔여(PWA 캐시 purge / 알림 토글은 본 세션 #1으로 해소 / RSC 503은 #5로 종결)는 위에서 정리됨.
+
+---
+
+# (이전) PivoxQuant — 인수인계서 (2026-05-21 v46.3 — 🟢 detail 전면 재설계 + Journal(의사결정 일지) 신규 + pre-trade 인라인화 + UI 폰트/IA 정리)
 
 ## v46.3 2026-05-21 — detail 재설계 + Journal 신규 + pre-trade 인라인 + UI 폴리시 (CEO 라이브 피드백 루프, 자율모드)
 
