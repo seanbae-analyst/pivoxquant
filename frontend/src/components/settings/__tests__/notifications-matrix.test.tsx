@@ -146,6 +146,55 @@ describe("NotificationsMatrix — server wiring", () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 
+  it("does NOT PUT when toggled while the server map is still loading (data undefined)", async () => {
+    // FIX 3: pre-hydration the matrix shows hardcoded defaults. A toggle now
+    // would PUT those defaults and the backend's full-replace would wipe the
+    // user's saved custom prefs. Toggles must be disabled until hydration.
+    mockedUseHook.mockReturnValue(hookReturn(undefined)); // isLoading, data undefined
+    mockedSave.mockResolvedValue({ prefs: FULL_SERVER_PREFS });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<NotificationsMatrix />);
+
+    const signalEmail = screen.getByRole("switch", {
+      name: /Signal state change · email/i,
+    });
+    // Toggle is disabled while loading.
+    expect(signalEmail).toBeDisabled();
+    expect(signalEmail).toHaveAttribute("aria-disabled", "true");
+
+    // Clicking a disabled toggle is a no-op (userEvent respects pointer-events;
+    // assert no PUT regardless).
+    await user.click(signalEmail).catch(() => {});
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(mockedSave).not.toHaveBeenCalled();
+  });
+
+  it("enables toggles and PUTs normally once the server map has loaded", async () => {
+    // After hydration the same toggle is enabled and persists as before.
+    mockedUseHook.mockReturnValue(hookReturn(FULL_SERVER_PREFS));
+    mockedSave.mockResolvedValue({ prefs: FULL_SERVER_PREFS });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<NotificationsMatrix />);
+
+    const signalEmail = await screen.findByRole("switch", {
+      name: /Signal state change · email/i,
+    });
+    await waitFor(() => expect(signalEmail).not.toBeDisabled());
+
+    await user.click(signalEmail);
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+
+    await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
+  });
+
   it("batches rapid toggles into a single PUT", async () => {
     mockedUseHook.mockReturnValue(hookReturn(FULL_SERVER_PREFS));
     mockedSave.mockResolvedValue({ prefs: FULL_SERVER_PREFS });

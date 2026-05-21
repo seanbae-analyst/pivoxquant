@@ -242,46 +242,60 @@ class EmailSender:
             )
             return False
 
-        # ── 1b. opt-out gate ───────────────────────────────────────────
-        # Wave G-1 Bug #8 (2026-05-18): consents.py spec —
-        #   effective consent = marketing_consent_at IS NOT NULL
-        #                       AND (revoked_at IS NULL OR revoked_at < consent_at)
-        # email_opt_out flag 만 보고 보냈더니, marketing_consent_at 이 한 번도
-        # set 된 적 없는 (회원가입 직후 settings 미방문) 유저에게도 마케팅성
-        # 이메일이 발송될 수 있었다. 정통망법 §50 ① default-deny 원칙으로
-        # marketing_consent_at NULL = 발송 차단.
-        if not getattr(user, "marketing_consent_at", None):
-            logger.debug(
-                "skipping email for user %s — marketing_consent_at NULL "
-                "(정통망법 §50 default-deny)",
-                getattr(user, "id", "?"),
-            )
-            return False
+        # ── TRANSACTIONAL bypass (정통망법 §50 ① 적용 제외 / PIPA §21) ──
+        # 거래성(transactional) 이메일 — 회원탈퇴 확인, 결제 영수증, 보안 알림
+        # 등 — 은 광고성 정보가 아니므로 §50 ① 의 사전 동의 의무 대상이 아니다.
+        # marketing_consent_at NULL (회원가입 직후) 이거나 마케팅 opt-out 한
+        # 유저에게도 반드시 도달해야 한다 (탈퇴 확인 미발송 = PIPA §21 위반).
+        # 따라서 transactional 발송은 아래 1b(marketing-consent) / opt-out /
+        # 1c(category) 게이트를 전부 우회한다. ``_has_category_consent`` 가
+        # TRANSACTIONAL 에 대해 항상 True 를 반환하는 것과 의미가 일치한다.
+        # 단, 위 simulated-user 가드는 transactional 이라도 유지된다(sink 주소).
+        # 1d per-event channel 게이트(아래)는 transactional 이 event_id 없이
+        # 호출되므로 자연히 영향받지 않으며 그대로 둔다.
+        is_transactional = email_category is EmailCategory.TRANSACTIONAL
 
-        # ── 1c. category-split consent gate (Wave D Sub-wave 1, C-S1) ──
-        # Feature-flagged behind ``PIVOX_CS1_CONSENT_ENABLED`` (default false)
-        # so the schema + routes can deploy ahead of the lawyer's Q-S1 answer.
-        # When the flag is off OR the caller omits ``email_category``, behaviour
-        # is identical to the pre-CS1 baseline (no extra gating). When the flag
-        # is on AND a category is supplied, INFORMATION / MARKETING sends are
-        # blocked unless the corresponding per-category consent timestamp is
-        # set and not revoked. TRANSACTIONAL always passes through.
-        if email_category is not None and _cs1_consent_enabled():
-            if not _has_category_consent(user, email_category):
-                logger.info(
-                    "skipping %s email for user %s — category consent missing "
-                    "(정통망법 §50 ① 분리 동의 미수령)",
-                    email_category.value, getattr(user, "id", "?"),
+        if not is_transactional:
+            # ── 1b. opt-out gate ───────────────────────────────────────────
+            # Wave G-1 Bug #8 (2026-05-18): consents.py spec —
+            #   effective consent = marketing_consent_at IS NOT NULL
+            #                       AND (revoked_at IS NULL OR revoked_at < consent_at)
+            # email_opt_out flag 만 보고 보냈더니, marketing_consent_at 이 한 번도
+            # set 된 적 없는 (회원가입 직후 settings 미방문) 유저에게도 마케팅성
+            # 이메일이 발송될 수 있었다. 정통망법 §50 ① default-deny 원칙으로
+            # marketing_consent_at NULL = 발송 차단.
+            if not getattr(user, "marketing_consent_at", None):
+                logger.debug(
+                    "skipping email for user %s — marketing_consent_at NULL "
+                    "(정통망법 §50 default-deny)",
+                    getattr(user, "id", "?"),
                 )
                 return False
 
-        for attr in opt_out_attrs:
-            if getattr(user, attr, False):
-                logger.info(
-                    "user %s opted out (%s); skipping send",
-                    getattr(user, "id", "?"), attr,
-                )
-                return False
+            # ── 1c. category-split consent gate (Wave D Sub-wave 1, C-S1) ──
+            # Feature-flagged behind ``PIVOX_CS1_CONSENT_ENABLED`` (default false)
+            # so the schema + routes can deploy ahead of the lawyer's Q-S1 answer.
+            # When the flag is off OR the caller omits ``email_category``, behaviour
+            # is identical to the pre-CS1 baseline (no extra gating). When the flag
+            # is on AND a category is supplied, INFORMATION / MARKETING sends are
+            # blocked unless the corresponding per-category consent timestamp is
+            # set and not revoked. TRANSACTIONAL already bypassed above.
+            if email_category is not None and _cs1_consent_enabled():
+                if not _has_category_consent(user, email_category):
+                    logger.info(
+                        "skipping %s email for user %s — category consent missing "
+                        "(정통망법 §50 ① 분리 동의 미수령)",
+                        email_category.value, getattr(user, "id", "?"),
+                    )
+                    return False
+
+            for attr in opt_out_attrs:
+                if getattr(user, attr, False):
+                    logger.info(
+                        "user %s opted out (%s); skipping send",
+                        getattr(user, "id", "?"), attr,
+                    )
+                    return False
 
         # ── 1d. settings v2 per-event email-channel gate ───────────────
         # Settings v2 notification matrix (notifications-matrix.tsx) lets a

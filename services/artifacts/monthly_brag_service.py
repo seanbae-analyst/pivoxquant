@@ -587,6 +587,10 @@ background:#0B0D12;color:#F5F0E8;padding:32px;">
             pdf_bytes=png_bytes,
             pdf_filename=f"pivoxquant_brag_{user.id}.png",
             attachment_mime="image/png",
+            # Per-event channel gate: without event_id the sender skips the
+            # notification_prefs check and ships even when the user disabled
+            # the "Brag card" email channel. Mirrors brag_card_service.
+            event_id="brag_card",
         )
 
     # ── persist + orchestrate ────────────────────────────────────────────────

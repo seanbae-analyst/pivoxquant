@@ -96,10 +96,15 @@ function MatrixToggle({
   on,
   onChange,
   ariaLabel,
+  disabled = false,
 }: {
   on: boolean;
   onChange: (next: boolean) => void;
   ariaLabel: string;
+  /** While the server map is still loading, toggles are blocked so a
+   *  pre-hydration click can't PUT the hardcoded defaults and wipe the
+   *  user's saved custom prefs (backend does a full replace, not a merge). */
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -107,7 +112,12 @@ function MatrixToggle({
       role="switch"
       aria-checked={on}
       aria-label={ariaLabel}
-      onClick={() => onChange(!on)}
+      aria-disabled={disabled}
+      disabled={disabled}
+      onClick={() => {
+        if (disabled) return;
+        onChange(!on);
+      }}
       style={{
         position: "relative",
         display: "inline-block",
@@ -115,10 +125,11 @@ function MatrixToggle({
         height: 20,
         background: on ? "var(--pq-bronze)" : "rgba(245,240,232,0.10)",
         borderRadius: 999,
-        transition: "background 200ms",
+        transition: "background 200ms, opacity 200ms",
         flexShrink: 0,
         border: "none",
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
       }}
     >
       <span
@@ -152,7 +163,13 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
   );
 
   // Server is the source of truth. Skip when an explicit `initial` is given.
-  const { data, mutate } = useNotificationPreferences();
+  const { data, isLoading, mutate } = useNotificationPreferences();
+
+  // Whether we've reflected real server state yet. Until then the rendered
+  // matrix is just the hardcoded defaults — a toggle now would PUT those
+  // defaults and the backend's full-replace would wipe saved custom prefs.
+  // An explicit `initial` (tests / controlled host) counts as hydrated.
+  const [hydrated, setHydrated] = React.useState<boolean>(() => !!initial);
 
   // Hydrate from the server map once it arrives. Merge over the local
   // defaults so a newly-added event still renders if the server hasn't been
@@ -168,7 +185,13 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
       }
       return merged;
     });
+    setHydrated(true);
   }, [data, initial]);
+
+  // Block toggles until the server map has been applied. `isLoading && !hydrated`
+  // covers the initial fetch; `!data && !hydrated` covers the case where SWR
+  // resolves to undefined without a loading flag.
+  const togglesDisabled = !hydrated && (isLoading || !data);
 
   // Debounced save: collect rapid toggles into one PUT (~600ms). The pending
   // snapshot + the pre-edit snapshot (for rollback) live in refs so the
@@ -338,6 +361,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                       on={row[ch]}
                       onChange={(next) => toggle(e.id, ch, next)}
                       ariaLabel={`${e.name} · ${ch}`}
+                      disabled={togglesDisabled}
                     />
                   </td>
                 ))}

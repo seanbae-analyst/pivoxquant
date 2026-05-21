@@ -48,6 +48,11 @@ export interface EquityPoint {
 interface BackendEquityPoint {
   date: string;
   value: number;
+  /** KOSPI200 / SPY comparison value the backend adds per point
+   *  (routes/portfolio.py `point["benchmark"]`). Was dropped by the mapper
+   *  before — equity-curve-block.tsx's benchmark polyline + "vs benchmark"
+   *  KPI then read undefined and always rendered "—". */
+  benchmark?: number;
 }
 
 interface BackendEquityResponse {
@@ -107,7 +112,14 @@ export function useEquityCurve(range: EquityRange) {
             typeof p.value === "number" &&
             Number.isFinite(p.value),
         )
-        .map((p) => ({ t: p.date, nav: p.value }));
+        .map((p) => ({
+          t: p.date,
+          nav: p.value,
+          // Preserve the per-point benchmark when the backend supplies it.
+          ...(typeof p.benchmark === "number" && Number.isFinite(p.benchmark)
+            ? { benchmark: p.benchmark }
+            : {}),
+        }));
       return { series, benchmark: raw.benchmark };
     }
 

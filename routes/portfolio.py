@@ -523,7 +523,12 @@ def buy_more(pid):
     # safe defaults below instead of rendering stale name/currency values.
     cached = cache_service.get_signal(p.ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
-    is_kr = sd.get("is_korean", False)
+    # When the SignalCache row is stale (TTL expired → sd == {}), a plain
+    # ``.get("is_korean", False)`` mis-classifies .KS/.KQ tickers as USD and
+    # routes their capital into the wrong bucket. Fall back to the ticker
+    # suffix so KR positions stay KR even with no cache (matches
+    # create_trade_alias' pattern).
+    is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
     name = canonical_display_name(sd.get("name"), p.ticker)
     currency = sd.get("currency", "USD")
 
@@ -736,6 +741,11 @@ def buy_new_position():
             ))
             db.session.commit()
             p = ex
+            # Race-recovery applied the deduction to ``relocked`` (the
+            # original ``locked_user`` was detached on rollback). Point the
+            # response at the row that actually holds the post-deduction
+            # balance.
+            locked_user = relocked
         except Exception:
             db.session.rollback()
             logger.exception("buy_new_position race recovery failed")
@@ -747,8 +757,8 @@ def buy_new_position():
         "ok": True,
         "new_shares": round(p.shares, 4),
         "new_avg_cost": round(p.avg_cost, 2),
-        "new_capital_usd": current_user.available_capital,
-        "new_capital_krw": getattr(current_user, "available_capital_krw", 0) or 0,
+        "new_capital_usd": locked_user.available_capital,
+        "new_capital_krw": getattr(locked_user, "available_capital_krw", 0) or 0,
     })
 
 
@@ -803,7 +813,10 @@ def sell_position(pid):
     pnl_pct = pnl / cost_basis * 100 if cost_basis > 0 else 0
     name = canonical_display_name(sd.get("name"), p.ticker)
     currency = sd.get("currency", "USD")
-    is_kr = sd.get("is_korean", False)
+    # Stale-cache safety: a False fallback would credit .KS/.KQ sell proceeds
+    # to the USD bucket once the SignalCache TTL expires. Use the ticker
+    # suffix as the authoritative fallback (matches create_trade_alias).
+    is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
 
     if actual_sell >= p.shares - 0.0001:
         db.session.delete(p)

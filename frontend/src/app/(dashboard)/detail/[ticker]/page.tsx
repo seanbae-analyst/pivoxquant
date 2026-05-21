@@ -87,11 +87,42 @@ import { RelatedArtefacts } from "@/components/detail/RelatedArtefacts";
  * result was seconds away. 18s = 15s backend budget + network/serialize margin,
  * so the first load now resolves to real data instead of a retry button. */
 const SIGNAL_FETCH_TIMEOUT_MS = 18_000;
+
+/* A 403 from /api/signals/<ticker> is NOT a timeout/server failure: the
+ * backend returns `{"error":"ticker_not_in_user_scope","cta":"add_to_watchlist"}`
+ * when the ticker is outside the user's held/watchlist scope (§101 limit).
+ * We tag that case with a distinct flag so the hero can show an honest
+ * "add to watchlist" CTA instead of the misleading "timeout 8s" note. */
+class SignalScopeError extends Error {
+  scopeDenied = true as const;
+  constructor() {
+    super("ticker_not_in_user_scope");
+    this.name = "SignalScopeError";
+  }
+}
+
+function isScopeError(e: unknown): e is SignalScopeError {
+  return e instanceof SignalScopeError ||
+    (typeof e === "object" && e !== null && "scopeDenied" in e &&
+      (e as { scopeDenied?: unknown }).scopeDenied === true);
+}
+
 const signalFetcher = async (url: string) => {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), SIGNAL_FETCH_TIMEOUT_MS);
   try {
     const r = await fetch(url, { credentials: "include", signal: ctrl.signal });
+    if (r.status === 403) {
+      // Parse the body to distinguish a scope denial from a generic 403.
+      const body = await r.json().catch(() => ({}));
+      if (
+        body?.error === "ticker_not_in_user_scope" ||
+        body?.code === "ticker_not_in_user_scope" ||
+        body?.cta === "add_to_watchlist"
+      ) {
+        throw new SignalScopeError();
+      }
+    }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   } finally {
@@ -123,8 +154,12 @@ export default function StockDetailPage() {
     dedupingInterval: 5_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
+    // A scope denial (403) is deterministic — retrying never helps.
+    shouldRetryOnError: (err) => !isScopeError(err),
   });
-  const signalErrorState = !!signalErr && !signal;
+  const signalScopeDenied = isScopeError(signalErr);
+  // A scope denial is a known state with its own CTA, not a load failure.
+  const signalErrorState = !!signalErr && !signal && !signalScopeDenied;
 
   /* ── Zone1: chart (independent) ── */
   const {
@@ -418,6 +453,7 @@ export default function StockDetailPage() {
             signal={signal}
             loadingSignal={loadingSignal}
             signalError={signalErrorState}
+            signalScopeDenied={signalScopeDenied}
             onRetrySignal={() => retrySignal()}
             signalRetrying={signalValidating}
             inWatchlist={inWatchlist}

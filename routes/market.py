@@ -901,12 +901,30 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         # framing the data doesn't support.
         if level is not None and sparkline:
             spark_max = max(sparkline)
+            spark_min = min(sparkline)
             if spark_max > 0 and level > spark_max * 1.15:
                 logger.info(
                     "market.indices %s: live level %.2f exceeds sparkline "
                     "max %.2f by >15%% — KIS daily-history window lags the "
                     "live quote; tagging is_stale + suppressing range_52w",
                     ticker, level, spark_max,
+                )
+                is_stale = True
+                range_52w = None
+            # 2026-05-21: symmetric DOWNWARD guard. The upward check above
+            # only caught a level ABOVE the sparkline. A lagging KIS history
+            # window can also leave the live level BELOW the historical
+            # range_52w floor (e.g. KOSDAQ 150 "2203": level 1,875.52 vs
+            # range_52w [2,041.65, 2,483.80] → level outside its own stated
+            # range, is_stale silently false). 0.85 mirrors the 1.15 upper
+            # band. Same remediation: tag is_stale + suppress the
+            # contradictory range_52w so the frontend renders "N/A".
+            elif spark_min > 0 and level < spark_min * 0.85:
+                logger.info(
+                    "market.indices %s: live level %.2f sits below sparkline "
+                    "min %.2f by >15%% — KIS daily-history window lags the "
+                    "live quote; tagging is_stale + suppressing range_52w",
+                    ticker, level, spark_min,
                 )
                 is_stale = True
                 range_52w = None

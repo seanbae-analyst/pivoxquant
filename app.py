@@ -194,7 +194,24 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(uid):
-        return db.session.get(User, int(uid))
+        # Wave I C-2 — PIPA §21 soft-delete session invalidation.
+        # routes/auth.py login() + google/kakao callbacks reject users with
+        # deletion_requested_at != NULL at authentication time, but a
+        # remember_token cookie issued *before* the delete-request would
+        # otherwise silently re-authenticate the same user on every request
+        # (load_user runs per request) — bypassing the login-time block and
+        # granting full 200 access to /api/auth/me and every data API.
+        # Returning None here invalidates the session so the soft-delete is
+        # enforced consistently across all entry points. Cancellation is a
+        # manual "contact support" flow (no self-service /delete-cancel), so
+        # logging the user out everywhere is the correct, consistent behaviour.
+        try:
+            user = db.session.get(User, int(uid))
+        except (TypeError, ValueError):
+            return None
+        if user is not None and user.deletion_requested_at is not None:
+            return None
+        return user
 
     # ── Global exception handler ──────────────────────────────────────────
     # Catches every unhandled exception bubbling out of a view/before-request
@@ -646,6 +663,47 @@ def _do_migrations():
         _add_column_if_missing("position_dd_checks", "valuation_checked",  "BOOLEAN", default="0")
         _add_column_if_missing("position_dd_checks", "risks_checked",      "BOOLEAN", default="0")
         _add_column_if_missing("position_dd_checks", "note",               "VARCHAR(500)")
+
+    # anthropic_usage_log (Wave I G-3) — Anthropic API 비용 추적 테이블.
+    # 이 테이블은 ORM 모델이 아니라 services/ai/service.py 가 raw SQL INSERT
+    # 로 직접 기록하므로 db.create_all() 범위 밖이다. 생성은 alembic
+    # migration 042_anthropic_usage_log 에만 존재한다. prod 는 alembic 미실행
+    # (db.create_all() + _do_migrations() self-heal 패턴) 으로 운영되므로
+    # 이 가드가 없으면 테이블 부재 → _log_usage() 의 INSERT 가 silent 실패
+    # (except: pass) → nightly anthropic_cost_estimate 집계가 무력화된다.
+    # 스키마는 migration 042 와 정확히 일치 (컬럼명/타입). Postgres/SQLite 양쪽
+    # 호환을 위해 created_at 은 TIMESTAMP, PK 는 단순 INTEGER PRIMARY KEY 로
+    # 둔다 (SQLite 는 INTEGER PRIMARY KEY 가 자동 rowid autoincrement, PG 는
+    # 본 fallback 경로에서 명시 INSERT 만 들어오므로 SERIAL 불필요).
+    if "anthropic_usage_log" not in existing_tables:
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS anthropic_usage_log ("
+                    "id INTEGER PRIMARY KEY, "
+                    "user_id INTEGER, "
+                    "model VARCHAR(64) NOT NULL, "
+                    "endpoint VARCHAR(64) NOT NULL, "
+                    "input_tokens INTEGER NOT NULL DEFAULT 0, "
+                    "output_tokens INTEGER NOT NULL DEFAULT 0, "
+                    "created_at TIMESTAMP NOT NULL"
+                    ")"
+                ))
+                # Indexes mirror migration 042 (user_id/model/endpoint/created_at
+                # are all index=True). IF NOT EXISTS keeps it idempotent on both
+                # engines.
+                for col in ("user_id", "model", "endpoint", "created_at"):
+                    conn.execute(text(
+                        f"CREATE INDEX IF NOT EXISTS "
+                        f"ix_anthropic_usage_log_{col} "
+                        f"ON anthropic_usage_log ({col})"
+                    ))
+            logger.info("Migration: created table anthropic_usage_log")
+        except Exception as exc:
+            # Never block boot — nightly cost aggregation degrades gracefully.
+            logger.warning(
+                "Migration: could not create anthropic_usage_log: %s", exc
+            )
 
     # Portfolio shares / push subscriptions / signal_cache / watchlist —
     # all their current columns are in the initial create_all snapshot.

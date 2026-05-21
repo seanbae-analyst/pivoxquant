@@ -321,3 +321,90 @@ class TestCapital:
     def test_negative_capital_rejected(self, client, auth_user):
         r = client.put("/api/portfolio/capital", json={"capital_usd": -100})
         assert r.status_code == 400
+
+
+# ── stale-cache KR suffix fallback (2026-05-21 fix) ─────────────────────────
+#
+# When the SignalCache row is stale (TTL expired → get_signal() returns None →
+# sd == {}), buy_more / sell_position used to read ``sd.get("is_korean", False)``
+# and mis-route .KS/.KQ capital into the USD bucket. The fix falls back to the
+# ticker suffix. These tests seed NO SignalCache row to reproduce the stale
+# state, then assert the KRW bucket moves while USD stays frozen.
+
+class TestStaleCacheKrFallback:
+    def test_buy_more_kr_no_cache_hits_krw_bucket(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import User
+
+        pid = add_position(auth_user["id"], "005930.KS", 10, 70000.0)
+        # Deliberately seed NO SignalCache → stale → sd == {}.
+        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
+            "shares": 2, "price": 71000.0,  # cost = 142,000 KRW
+        })
+        assert r.status_code == 200, r.get_json()
+        d = r.get_json()
+        assert d["ok"] is True
+        # KRW bucket debited (1,000,000 - 142,000 = 858,000), USD untouched.
+        assert d["new_capital_krw"] == 858000.0
+        assert d["new_capital_usd"] == 10000.0
+        with app.app_context():
+            u = db.session.get(User, auth_user["id"])
+            assert u.available_capital_krw == 858000.0
+            assert u.available_capital == 10000.0
+
+    def test_sell_kr_no_cache_credits_krw_bucket(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import User
+
+        pid = add_position(auth_user["id"], "035720.KQ", 10, 50000.0)
+        # No SignalCache → stale path.
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": 3, "price": 55000.0,  # proceeds = 165,000 KRW
+        })
+        assert r.status_code == 200, r.get_json()
+        d = r.get_json()
+        assert d["ok"] is True
+        # KRW bucket credited (1,000,000 + 165,000 = 1,165,000), USD untouched.
+        assert d["new_capital_krw"] == 1165000.0
+        assert d["new_capital_usd"] == 10000.0
+        with app.app_context():
+            u = db.session.get(User, auth_user["id"])
+            assert u.available_capital_krw == 1165000.0
+            assert u.available_capital == 10000.0
+
+
+# ── buy_new_position response reflects post-deduction balance ───────────────
+#
+# Regression for the 2026-05-21 fix: the response now reads
+# ``locked_user.available_capital`` (the row that actually holds the
+# deduction) instead of ``current_user``. Assert new_capital_usd/krw equal the
+# debited balance.
+
+class TestBuyNewCapitalResponse:
+    def test_buy_new_usd_response_matches_debited_balance(
+        self, client, auth_user, mock_fetcher,
+    ):
+        r = client.post("/api/portfolio/position/buy-new", json={
+            "ticker": "AAPL", "shares": 5, "price": 160.0,  # cost = 800 USD
+        })
+        assert r.status_code == 200, r.get_json()
+        d = r.get_json()
+        assert d["ok"] is True
+        assert d["new_capital_usd"] == 9200.0  # 10000 - 800
+        assert d["new_capital_krw"] == 1000000.0  # untouched
+
+    def test_buy_new_kr_response_matches_debited_balance(
+        self, client, auth_user, mock_fetcher,
+    ):
+        r = client.post("/api/portfolio/position/buy-new", json={
+            "ticker": "005930.KS", "shares": 2, "price": 70000.0,  # 140,000 KRW
+        })
+        assert r.status_code == 200, r.get_json()
+        d = r.get_json()
+        assert d["ok"] is True
+        assert d["new_capital_krw"] == 860000.0  # 1,000,000 - 140,000
+        assert d["new_capital_usd"] == 10000.0  # untouched

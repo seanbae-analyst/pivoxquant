@@ -107,6 +107,10 @@ export interface DetailHeroProps {
   loadingSignal: boolean;
   /** P0 resilience: signals source failed / timed out. */
   signalError: boolean;
+  /** 403 ticker_not_in_user_scope — the ticker is outside the user's
+   *  held/watchlist scope (§101). Distinct from a timeout/server error:
+   *  surfaces a "add to watchlist" CTA rather than a retry. */
+  signalScopeDenied?: boolean;
   onRetrySignal: () => void;
   signalRetrying: boolean;
   inWatchlist: boolean;
@@ -125,6 +129,7 @@ export function DetailHero(props: DetailHeroProps) {
     signal,
     loadingSignal,
     signalError,
+    signalScopeDenied,
     onRetrySignal,
     signalRetrying,
     inWatchlist,
@@ -317,11 +322,32 @@ export function DetailHero(props: DetailHeroProps) {
           </div>
 
           {/* ── Price + Signal terminal row ── */}
-          {signalError ? (
+          {signalScopeDenied ? (
+            // 403 ticker_not_in_user_scope — honest watchlist CTA, NOT a
+            // timeout. §101: analysis is limited to held / watchlisted names.
+            <div className="mt-6">
+              <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-6 rounded-sm text-center">
+                <p className="font-serif text-pq-body text-[var(--pq-ivory-mid)]">
+                  이 종목을 관심 목록에 추가하면 분석을 볼 수 있습니다.
+                </p>
+                <p className="mt-1.5 text-pq-mono-xs font-mono text-[var(--pq-ivory-faint)]">
+                  Add this ticker to your watchlist to see analysis.
+                </p>
+                <button
+                  type="button"
+                  onClick={onWatchlistToggle}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-pq-mono-xs uppercase tracking-[0.18em] border border-[var(--pq-bronze)] text-[var(--pq-bronze)] hover:bg-[rgba(184,149,106,0.08)] hover:text-[var(--pq-bronze-light)] transition-colors rounded-sm"
+                >
+                  <Plus size={13} aria-hidden />
+                  관심 목록에 추가 · Add to watchlist
+                </button>
+              </div>
+            </div>
+          ) : signalError ? (
             <div className="mt-6">
               <LoadFailure
                 label="시그널·가격 데이터를 불러오지 못했습니다."
-                note="signals 응답 지연 또는 오류 (timeout 8s)"
+                note="signals 응답 지연 또는 오류 (timeout)"
                 onRetry={onRetrySignal}
                 retrying={signalRetrying}
               />

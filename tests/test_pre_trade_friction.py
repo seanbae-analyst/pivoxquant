@@ -363,3 +363,51 @@ def test_route_proceed_blocks_other_user(client, app, make_user, auth_user):
 def test_rationale_min_chars_constant_holds():
     """Pin the rationale floor — any change must come with explicit migration."""
     assert MIN_RATIONALE_CHARS == 50
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Ticker normalization (2026-05-21 fix)
+# ─────────────────────────────────────────────────────────────────────
+#
+# ``start_cooldown`` now runs ``normalize_ticker()`` before persisting so a
+# bare KR code lands as the registry-canonical form (e.g. "035760.KQ")
+# instead of a naked number the Journal would render without a company name.
+
+def test_start_normalizes_bare_kr_code(app, make_user):
+    """A bare "035760" is stored as its normalized "035760.KQ" form."""
+    from services.ticker_normalizer import normalize_ticker
+
+    expected = normalize_ticker("035760")
+    # Guard: the fixture input must actually be transformable, else the test
+    # would pass vacuously.
+    assert expected != "035760", "normalize_ticker should canonicalize the bare code"
+    assert expected.endswith(".KQ") or expected.endswith(".KS")
+
+    user = _make_user(make_user, email="pt-normalize@test.com")
+    with app.app_context():
+        out = start_cooldown(
+            user_id=user["id"],
+            ticker="035760",
+            side="BUY",
+            shares=1,
+            rationale=LONG_RATIONALE,
+        )
+        assert out["intended_ticker"] == expected
+        row = db.session.get(PreTradeReflection, out["id"])
+        assert row.intended_ticker == expected
+        # Pin: the naked code must not survive into storage.
+        assert row.intended_ticker != "035760"
+
+
+def test_start_us_ticker_uppercased_unchanged(app, make_user):
+    """A US ticker normalizes to upper-case and is otherwise unchanged."""
+    user = _make_user(make_user, email="pt-us-norm@test.com")
+    with app.app_context():
+        out = start_cooldown(
+            user_id=user["id"],
+            ticker="aapl",
+            side="BUY",
+            shares=1,
+            rationale=LONG_RATIONALE,
+        )
+        assert out["intended_ticker"] == "AAPL"

@@ -43,6 +43,7 @@ from models import (
     DEFAULT_COOLDOWN_SECONDS,
     EXTENDED_COOLDOWN_SECONDS,
 )
+from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,12 @@ def start_cooldown(
     """
     if not ticker or not str(ticker).strip():
         raise ValueError("ticker is required")
+    # Canonicalise before any storage / lookup so a bare "035760" lands as
+    # "035760.KQ" (registry-guided) instead of a naked code that the Journal
+    # would later render without a company name. Mirrors the portfolio routes.
+    ticker = normalize_ticker(str(ticker))
+    if not ticker:
+        raise ValueError("ticker is required")
     if not rationale or len(rationale.strip()) < MIN_RATIONALE_CHARS:
         raise ValueError(
             f"rationale must be at least {MIN_RATIONALE_CHARS} characters"
@@ -100,7 +107,7 @@ def start_cooldown(
 
     row = PreTradeReflection(
         user_id=user_id,
-        intended_ticker=str(ticker).strip().upper(),
+        intended_ticker=ticker,
         intended_side=side_label,
         intended_shares=shares_dec,
         rationale=rationale.strip(),

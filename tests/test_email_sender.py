@@ -559,3 +559,182 @@ def test_unsubscribe_footer_injected_into_html(app, make_user, monkeypatch):
     assert "unsubscribe" in html_payload.lower(), (
         "unsubscribe footer must be auto-injected"
     )
+
+
+# ── TRANSACTIONAL bypass (정통망법 §50 ① 적용 제외 / PIPA §21) ────────────
+#
+# Regression for the 2026-05-21 fix: transactional email (탈퇴 확인, 영수증,
+# 보안 알림) must bypass the marketing-consent NULL gate + opt-out + the
+# category gate so it always reaches the user — but the simulated-user guard
+# stays in force (sink address). These tests use real DB ``User`` rows so a
+# future reorder of the gates fails loudly.
+
+
+def _fake_smtp_capture(captured: dict):
+    class FakeSMTP:
+        def __init__(self, *a, **kw): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def starttls(self): pass
+        def login(self, *a): pass
+        def send_message(self, msg):
+            captured["msg"] = msg
+            captured["sent"] = True
+    return FakeSMTP
+
+
+def test_transactional_bypasses_marketing_consent_null(app, make_user, monkeypatch):
+    """marketing_consent_at NULL + TRANSACTIONAL → provider IS invoked.
+
+    Pre-fix the default-deny §50 gate would block this and the user would
+    never receive their account-deletion / receipt email (PIPA §21 위반).
+    """
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+    from services.email.sender import EmailCategory
+
+    user = make_user(email="txn-null-consent@test.com")
+    monkeypatch.delenv("SENDGRID_API_KEY", raising=False)
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+
+    captured: dict = {}
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        # Brand-new user — never visited settings, so consent is NULL.
+        assert getattr(u, "marketing_consent_at", None) is None
+        with patch("smtplib.SMTP", _fake_smtp_capture(captured)):
+            sent = EmailSender().send(
+                u,
+                subject="회원탈퇴가 완료되었습니다",
+                html_body="<p>bye</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+                email_category=EmailCategory.TRANSACTIONAL,
+            )
+    assert sent is True, "transactional send must NOT be blocked by NULL consent"
+    assert captured.get("sent") is True, "transport must have been invoked"
+
+
+def test_transactional_bypasses_opt_out_flag(app, make_user, monkeypatch):
+    """email_opt_out=True + TRANSACTIONAL → still sends (opt-out is for ads)."""
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+    from services.email.sender import EmailCategory
+
+    user = make_user(email="txn-optout@test.com")
+    monkeypatch.delenv("SENDGRID_API_KEY", raising=False)
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+
+    captured: dict = {}
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.email_opt_out = True
+        db.session.commit()
+        with patch("smtplib.SMTP", _fake_smtp_capture(captured)):
+            sent = EmailSender().send(
+                u,
+                subject="결제 영수증",
+                html_body="<p>receipt</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+                email_category=EmailCategory.TRANSACTIONAL,
+            )
+    assert sent is True
+    assert captured.get("sent") is True
+
+
+def test_non_transactional_still_blocked_by_null_consent(app, make_user, monkeypatch):
+    """email_category=None (legacy) + NULL consent → blocked (no transport).
+
+    Pins that the bypass is *narrow* — only TRANSACTIONAL slips the gate.
+    A marketing/None send to a no-consent user must still be dropped.
+    """
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+
+    user = make_user(email="none-cat-null-consent@test.com")
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        assert getattr(u, "marketing_consent_at", None) is None
+        monkeypatch.setenv("SENDGRID_API_KEY", "sg-xxx")
+        monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+        sg = MagicMock(side_effect=AssertionError("must not send (category=None)"))
+        smtp = MagicMock(side_effect=AssertionError("must not send (category=None)"))
+        with patch("sendgrid.SendGridAPIClient", sg), patch("smtplib.SMTP", smtp):
+            sent = EmailSender().send(
+                u,
+                subject="x",
+                html_body="<p>body</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+                email_category=None,
+            )
+        assert sent is False
+        sg.assert_not_called()
+        smtp.assert_not_called()
+
+
+def test_marketing_category_blocked_by_null_consent(app, make_user, monkeypatch):
+    """email_category=MARKETING + NULL consent → blocked (not bypassed)."""
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+    from services.email.sender import EmailCategory
+
+    user = make_user(email="marketing-null-consent@test.com")
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        assert getattr(u, "marketing_consent_at", None) is None
+        monkeypatch.setenv("SENDGRID_API_KEY", "sg-xxx")
+        sg = MagicMock(side_effect=AssertionError("marketing must not bypass"))
+        with patch("sendgrid.SendGridAPIClient", sg):
+            sent = EmailSender().send(
+                u,
+                subject="x",
+                html_body="<p>body</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+                email_category=EmailCategory.MARKETING,
+            )
+        assert sent is False
+        sg.assert_not_called()
+
+
+def test_simulated_user_blocked_even_for_transactional(app, make_user, monkeypatch):
+    """is_simulated=True + TRANSACTIONAL → still blocked (sink-address guard).
+
+    The simulated-user guard sits ABOVE the transactional bypass and must
+    never be relaxed — synthetic users have non-deliverable sink addresses.
+    """
+    from datetime import datetime
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+    from services.email.sender import EmailCategory
+
+    user = make_user(email="sim-txn@test.com")
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        # Give full consent too, to prove the block is purely the sim guard.
+        u.is_simulated = True
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
+        monkeypatch.setenv("SENDGRID_API_KEY", "sg-xxx")
+        monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+        sg = MagicMock(side_effect=AssertionError("simulated user leaked"))
+        smtp = MagicMock(side_effect=AssertionError("simulated user leaked"))
+        with patch("sendgrid.SendGridAPIClient", sg), patch("smtplib.SMTP", smtp):
+            sent = EmailSender().send(
+                u,
+                subject="x",
+                html_body="<p>body</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+                email_category=EmailCategory.TRANSACTIONAL,
+            )
+        assert sent is False
+        sg.assert_not_called()
+        smtp.assert_not_called()

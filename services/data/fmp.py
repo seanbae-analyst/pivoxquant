@@ -1622,15 +1622,16 @@ def prefetch_fundamentals(tickers):
                     "revenueGrowth": None,
                     "revenuePerShare": rev_per_share,
                 })
-            # Mirror get_info()'s null-cache guard so the prefetch path
-            # doesn't pre-seed partial (all-null) records into cache.
             is_etf = bool(info.get("isEtf"))
-            has_critical = (
-                bool(info.get("trailingPE"))
-                or bool(info.get("trailingEps"))
-                or bool(info.get("marketCap"))
-            )
-            if is_etf or has_critical:
+            # Only seed the info cache when we actually have the fundamental ratios.
+            # Prefetch skips ratios/metrics to save budget, so a non-ETF info built
+            # from profile alone lacks PE/EPS/margin/growth. The old guard let
+            # marketCap alone pass → get_info() early-returned that partial record
+            # for the full 24h TTL → every DISCOVER_POOL ticker rendered "—" for
+            # fundamentals. Skip the seed unless ratios+metrics are present so
+            # get_info() performs its on-demand fetch (correct data) on first open.
+            # ETFs legitimately lack these ratios → still seed from profile.
+            if is_etf or (ratios is not None and metrics is not None):
                 _set_cache(cache_key, info)
 
     cached_count = sum(1 for t in us_tickers if _get_cache(f"info:{t}", TTL_FUNDAMENTAL))
