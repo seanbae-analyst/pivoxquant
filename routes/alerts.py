@@ -229,6 +229,7 @@ def clear():
 
 @alerts_bp.route("/price-check")
 @api_auth
+@general_rate_limit
 @legal_scrub_response
 def price_check():
     positions = Position.query.filter_by(user_id=current_user.id).all()

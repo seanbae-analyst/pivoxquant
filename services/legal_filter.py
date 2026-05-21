@@ -215,11 +215,28 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bcut\s+(?:the\s+)?loss(?:es)?\b", re.IGNORECASE), "indicator threshold breached"),
     (re.compile(r"\block\s+in\s+(?:the\s+)?profits?\b", re.IGNORECASE), "indicator ceiling reached"),
 
+    # ── Group 11e: take profit / stop loss 매매 지시어 (2026-05-22) ────────
+    # public AI chat 이 쓰는 공용 legal_filter 에 "take profit" / "stop loss"
+    # 직접 매매 지시어가 부재했음 (legal_gate.py ADVICE_PATTERNS 만 잡음).
+    # 영문: "take profit" / "take quick profits" / "stop loss" / "stoploss".
+    # 좁은 매치 — "take" 가 선행해야 profit 매치, "loss" 가 후행해야 stop 매치.
+    # 따라서 "profit from growth" / "non-stop service" 는 오치환되지 않음.
+    (re.compile(r"\btake\s+(quick\s+)?profits?\b", re.IGNORECASE), "TP 레벨 관찰"),
+    (re.compile(r"\bstop[\s\-]?loss(es)?\b", re.IGNORECASE), "SL 레벨 관찰"),
+
     # ── Group 11d: KR/EN 잔존 가드 (Wave E P2-03/P2-05 2026-05-17) ────────
     # services/quant/engine.py:525,704 소스 직접 수정 primary + 회귀 가드.
     (re.compile(r"스마트머니\s*매도\s*중"), "스마트머니 유출 중"),
     (re.compile(r"\bstrong\s+bounce\s+expected\b", re.IGNORECASE), "oversold indicator region"),
     (re.compile(r"강한\s*반등\s*(기대|예상)"), "지표 저점 구간 관찰"),
+
+    # ── Group 11f: 단독 익절 / 손절 매매 지시어 (2026-05-22) ───────────────
+    # Group 1 line 44 (부분 익절/손절 고려) + Group 2 line 49/50 (손절/익절 권고)
+    # 은 복합형만 잡음. 단독 명사/동사형 ("익절하세요" / "손절 타이밍") 보강.
+    # 순서 중요: 복합형이 먼저 매칭되도록 _REPLACEMENTS 최후미에 배치.
+    # 방어 부정 문맥("익절하지 않" 등) 은 lookahead 로 제외.
+    (re.compile(r"익절(?!하지\s*않)"), "TP 레벨 관찰"),
+    (re.compile(r"손절(?!하지\s*않)"), "SL 레벨 관찰"),
 ]
 
 # ── Prohibited patterns (log only, 설계 오류 조기 발견용) ─────────────────
@@ -490,6 +507,11 @@ _COMPLIANCE_FORBIDDEN_PATTERNS = [
     r"사세요", r"파세요", r"사라", r"팔아",
     r"오를\s*것", r"내릴\s*것", r"오른다", r"내린다",
     r"\b(?:buy|sell|recommend|advice|advise)\b",
+    # 2026-05-22: take profit / stop loss / 익절 / 손절 매매 지시어.
+    # 좁은 매치 — "take" 선행 / "loss" 후행 강제 → "profit from growth" 와
+    # "non-stop service" 는 false-positive 로 잡지 않음.
+    r"\btake\s+(?:quick\s+)?profits?\b", r"\bstop[\s\-]?loss(?:es)?\b",
+    r"익절", r"손절",
 ]
 _COMPLIANCE_FORBIDDEN_RE = re.compile(
     "|".join(_COMPLIANCE_FORBIDDEN_PATTERNS), re.IGNORECASE

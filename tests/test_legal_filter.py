@@ -490,3 +490,92 @@ class TestWaveELegalFilterD3Findings:
         assert "strong bounce expected" not in text
         assert "강한 반등 기대" not in text
         assert "강한 반등 예상" not in text  # variant at line 1138
+
+
+class TestTakeProfitStopLossGap:
+    """2026-05-22: take profit / stop loss / 익절 / 손절 매매 지시어 갭.
+
+    public AI chat 이 쓰는 공용 legal_filter 가 이 4개 매매 지시어를
+    scrub 도 detect 도 못 하던 갭을 메움 (legal_gate.py ADVICE_PATTERNS 만 잡았음).
+    Group 11e (EN) + Group 11f (KR) + _COMPLIANCE_FORBIDDEN_PATTERNS 추가.
+    """
+
+    # ── scrub: 4개 입력이 이제 surgical 치환됨 ────────────────────────────
+    def test_take_profit_scrubbed(self):
+        out = scrub_text("Take profit here at 300")
+        assert "Take profit" not in out
+        assert "TP 레벨 관찰" in out
+
+    def test_take_quick_profits_scrubbed(self):
+        out = scrub_text("take quick profits now")
+        assert "take quick profits" not in out
+        assert "TP 레벨 관찰" in out
+
+    def test_stop_loss_scrubbed(self):
+        out = scrub_text("Stop loss at 250")
+        assert "Stop loss" not in out
+        assert "SL 레벨 관찰" in out
+
+    def test_stoploss_no_space_scrubbed(self):
+        assert "SL 레벨 관찰" in scrub_text("set a stoploss")
+
+    def test_ikjeol_scrubbed(self):
+        out = scrub_text("익절하세요")
+        assert "익절" not in out
+        assert "TP 레벨 관찰" in out
+
+    def test_sonjeol_scrubbed(self):
+        out = scrub_text("손절 타이밍")
+        assert "손절" not in out
+        assert "SL 레벨 관찰" in out
+
+    # ── is_compliant: 4개 입력이 이제 hard-drop 대상 ───────────────────────
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Take profit here at 300",
+            "Stop loss at 250",
+            "익절하세요",
+            "손절 타이밍",
+        ],
+    )
+    def test_advisory_now_blocked(self, text):
+        from services.legal_filter import is_compliant
+        assert not is_compliant(text), f"{text!r} is advisory — must be blocked"
+
+    # ── 음성(false-positive) 케이스: 오치환 / 오탐 없어야 함 ───────────────
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "the company will profit from growth",
+            "non-stop service",
+            "the stop is non-negotiable",
+            "profits rose sharply this quarter",
+        ],
+    )
+    def test_negative_cases_not_scrubbed(self, text):
+        # take/loss 가 없으므로 치환 대상 표현이 새로 들어가면 안 됨
+        out = scrub_text(text)
+        assert "TP 레벨 관찰" not in out
+        assert "SL 레벨 관찰" not in out
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "the company will profit from growth",
+            "non-stop service",
+        ],
+    )
+    def test_negative_cases_stay_compliant(self, text):
+        from services.legal_filter import is_compliant
+        assert is_compliant(text), f"{text!r} is a legit phrase — should not trigger hard-drop"
+
+    # ── 기존 복합 패턴 우선순위 보존 (단독형이 침범하지 않음) ──────────────
+    def test_compound_ikjeol_sonjeol_priority_preserved(self):
+        # Group 1 line 44 (부분 익절/손절 고려) 가 단독 Group 11f 보다 먼저 매칭
+        assert scrub_text("부분 익절 / 손절 고려") == "TP/SL 레벨 관찰"
+
+    def test_compound_recommendation_priority_preserved(self):
+        # Group 2 line 49/50 (손절/익절 권고) 가 단독형보다 먼저 매칭
+        assert "정보 고지" in scrub_text("손절 권고")
+        assert "정보 고지" in scrub_text("익절 권고")

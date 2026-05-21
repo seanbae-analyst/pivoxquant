@@ -239,7 +239,11 @@ def movers():
     if region not in ("us", "kr"):
         region = "us"
 
-    cache_key = f"movers:{region}"
+    # 2026-05-22: per-user 캐시 키 — movers payload 의 소스가 per-user
+    # discover_cache.get(uid) (보유 + 워치리스트, §101 격리) 이므로 글로벌
+    # 키 (movers:{region}) 로 저장하면 유저 A 의 비공개 워치리스트 종목/가격이
+    # 유저 B 에게 노출된다 (cross-user 누수, privacy + §101 격리 위반).
+    cache_key = f"movers:{region}:{current_user.id}"
     entry, klass = _section_get_classified(cache_key)
     if klass == "fresh":
         return jsonify(_fresh_envelope(entry["data"]))
