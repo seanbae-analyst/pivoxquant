@@ -38,6 +38,13 @@
 - **🟡 신규 관찰**: KR 종목 `/detail`의 `/api/signals/<ticker>` **첫 로드 8s timeout** 빈번(engine.analyze KR cold). v46.3 P0 복원력(재시도 버튼)으로 복구되나, 첫인상 저하. 캐시 워밍 또는 timeout 상향 검토 여지(버그 아님, 레이턴시).
 - ⚠️ 라이브 검증 전제: 확장의 `www.pivoxquant.com` 호스트 권한 + OAuth 기존 계정 로그인(비번 미입력, 계정 chooser 선택만).
 
+### 🔴→🟢 KR 지수 freshness 근본 수정 (CEO "kospi 2625 맞냐?" → 직감 적중)
+- **증상**: 홈 리본 KOSPI가 간헐적으로 **2,625**(틀림) 표시 + 항상 STALE 칩. 실제값 ~7,815(+8.42%, 뉴스/삼성전자 ₩299,500과 일치).
+- **근본원인 (diag 엔드포인트로 확정)**: `services/kis/service.py get_index_history`가 KIS 일별지수 TR(FHPUP02120000)에 **period-START 날짜(today−365d)를 `FID_INPUT_DATE_1`로 전송**. 이 TR은 DATE_1을 **최근 앵커**로 보고 ~100행을 거슬러 반환(DATE_2 무시) → history가 **정확히 1년 stale**(KOSPI tail 2025-05-21 / 2,625.58, live는 2026-05-21 / 7,815.59). 이 ~3배 괴리가 (a) is_stale 교차검증 오발동(KR 지수 항상 STALE), (b) 일부 TTL 새로고침 때 1년 묵은 level이 리본에 누출.
+- **수정**: `FID_INPUT_DATE_1 = today`. `railway run`으로 prod KIS 직접 호출해 **배포 전** 검증(tail 2026-05-21/7,815.59) → 배포 후 라이브 재검증: 4개 KR 지수 전부 `is_stale=False`, 리본 KOSPI 7,815.59 STALE 칩 없음. commit `89326d60`.
+- **신규 인프라**: `GET /api/market/_diag/kr-indices` (admin-gated `X-Admin-Secret`, 읽기전용) — KR 지수 코드별 KIS get_index_price + history tail + sanity bound + 최종 snapshot 노출. 향후 KR 데이터 디버깅용. commit `5d0d21cc`. 호출: `railway run --service web bash -c 'curl -s -H "X-Admin-Secret: $ARTIFACT_TRIGGER_SECRET" .../api/market/_diag/kr-indices'`.
+- 회귀 가드: `test_get_index_history_anchors_on_today_not_period_start` (FID_INPUT_DATE_1==today 단언).
+
 ### ⚠️ 잔여 / 회귀 포인트
 - enforcement는 **email 채널만** 적용(push=`lib/push.ts` 미사용, in-app=alerts 피드로 이벤트와 1:1 아님). push/in-app은 저장만 — email이 유일 라이브 채널이라 UI 정직.
 - RSC prefetch 503 = 코드 버그 아님(#5 조사 — prefetch 라우트 전부 client 컴포넌트, Vercel transient). 무수정.
