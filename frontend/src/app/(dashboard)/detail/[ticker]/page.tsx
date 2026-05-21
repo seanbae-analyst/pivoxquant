@@ -12,8 +12,9 @@
  *   Zone3 DOSSIER   — news / insider / SWOT / earnings / companion / artefacts.
  *
  * P0 RESILIENCE (CEO directive): every data source has its OWN loading /
- * error boundary. The signals fetch additionally has a hard 8s timeout and an
- * explicit "다시 시도" retry — a slow /api/signals can no longer blank the
+ * error boundary. The signals fetch additionally has a hard 18s timeout (must
+ * exceed the backend's 15s analyze budget) and an explicit "다시 시도" retry —
+ * a slow /api/signals can no longer blank the
  * price, score, fundamentals AND pillars at once. One section failing renders
  * the rest from their own data (progressive disclosure).
  *
@@ -72,13 +73,23 @@ import { EarningsPanel } from "@/components/detail/EarningsPanel";
 import { CompanionCta } from "@/components/detail/CompanionCta";
 import { RelatedArtefacts } from "@/components/detail/RelatedArtefacts";
 
-/* P0 resilience: an 8s hard-timeout fetcher for the signals source. SWR's
+/* P0 resilience: a hard-timeout fetcher for the signals source. SWR's
  * errorRetry doesn't bound a single slow request, so a hung /api/signals
  * would keep the hero in skeleton forever. AbortController gives a definite
- * "timed out" → error so the hero can surface a retry instead. */
+ * "timed out" → error so the hero can surface a retry instead.
+ *
+ * Timeout MUST exceed the backend's own analyze budget. routes/signals.py
+ * runs engine.analyze in a worker with SIGNAL_DETAIL_TIMEOUT_S (default 15s),
+ * then ALWAYS responds within that budget (fresh result, stale cache, or a
+ * 504). A KR cold analyze (KIS calls, no cache) routinely takes 8–14s — the
+ * previous 8s client abort fired BEFORE the backend replied, so the very first
+ * load of any KR ticker always failed into the retry state even though a fresh
+ * result was seconds away. 18s = 15s backend budget + network/serialize margin,
+ * so the first load now resolves to real data instead of a retry button. */
+const SIGNAL_FETCH_TIMEOUT_MS = 18_000;
 const signalFetcher = async (url: string) => {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 8_000);
+  const t = setTimeout(() => ctrl.abort(), SIGNAL_FETCH_TIMEOUT_MS);
   try {
     const r = await fetch(url, { credentials: "include", signal: ctrl.signal });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -98,7 +109,7 @@ export default function StockDetailPage() {
   const [period, setPeriod] = useState<Period>("3M");
 
   /* ── Zone1: signals (price / score / pillars / snapshot) ──
-   * INDEPENDENT boundary with 8s timeout + retry. */
+   * INDEPENDENT boundary with 18s timeout (> backend 15s budget) + retry. */
   const {
     data: signal,
     isLoading: loadingSignal,
