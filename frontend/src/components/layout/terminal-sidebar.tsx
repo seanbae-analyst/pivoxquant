@@ -40,7 +40,6 @@ import {
   BookHeart,
   NotebookPen,
   UserCircle,
-  Gavel,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -112,12 +111,11 @@ const RESEARCH: Item[] = [
 // ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
 const SYSTEM: Item[] = [
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
-  // 2026-05-21: Pre-Trade hidden from nav. The 7-question + cooldown
-  // reflection is now INLINE — it triggers right when the user adds
-  // (ENTRY) or exits (EXIT) a position in the portfolio, so a standalone
-  // nav destination is redundant. Route + key kept (hidden:true) so the
-  // /pre-trade direct link still resolves and lights active state.
-  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel, hidden: true },
+  // 2026-05-21: "Pre-Trade" nav item REMOVED entirely (per CEO). The
+  // 7-question + cooldown reflection is now INLINE at position add (ENTRY) /
+  // exit (EXIT), so a standalone nav destination is redundant. The /pre-trade
+  // route still resolves for direct/deep links; the past reflections are
+  // reviewed in Journal (/journal).
   { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
   // 2026-05-21: "Journal" restored as a real user surface — /journal renders
   // the user's own pre-trade decision-reflection feed (read-only, "User as
