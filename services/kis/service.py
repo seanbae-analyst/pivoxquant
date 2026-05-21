@@ -10,7 +10,7 @@ import re
 import requests
 import time
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -283,17 +283,11 @@ class KISService:
         if not token:
             return None
 
-        # Period → number of calendar days to request. KIS returns up to
-        # ~100 rows per call so "1y" maps to ~252 trading days but the
-        # endpoint will only return what it has.
-        period_map = {
-            "1mo": 30, "3mo": 90, "6mo": 180,
-            "1y": 365, "2y": 730, "5y": 1825,
-            "5d": 10, "1d": 5,
-        }
-        days = period_map.get(period, 365)
+        # This KIS TR (FHPUP02120000) anchors on the most-recent date and
+        # returns up to ~100 daily rows back from it, regardless of the
+        # requested window — `period` is accepted for API compatibility but
+        # does not widen the range here. `end` (today) is the anchor.
         end = datetime.now()
-        start = end - timedelta(days=days)
 
         try:
             headers = {
@@ -303,11 +297,22 @@ class KISService:
                 "appsecret": self.app_secret,
                 "tr_id": "FHPUP02120000",
             }
+            # KIS inquire-index-daily-price anchors on FID_INPUT_DATE_1 as the
+            # MOST-RECENT date and returns ~100 rows going BACK from it (newest
+            # first); FID_INPUT_DATE_2 is ignored for this TR. Passing `start`
+            # (period days ago) as DATE_1 therefore returned data ending one
+            # period in the past — for "1y" that was exactly 365 days stale, so
+            # KOSPI history tailed 2025-05-21 (close 2,625.58) while the live
+            # quote was 2026-05-21 (7,815.59). That ~3x divergence (a) falsely
+            # tripped the is_stale cross-check and (b) leaked the year-old level
+            # into the ribbon on some refreshes. DATE_1 MUST be the recent
+            # anchor. Verified live: DATE_1=today → tail 2026-05-21 / 7,815.59.
+            anchor = end.strftime("%Y%m%d")
             params = {
                 "FID_COND_MRKT_DIV_CODE": "U",
                 "FID_INPUT_ISCD": index_code,
-                "FID_INPUT_DATE_1": start.strftime("%Y%m%d"),
-                "FID_INPUT_DATE_2": end.strftime("%Y%m%d"),
+                "FID_INPUT_DATE_1": anchor,
+                "FID_INPUT_DATE_2": anchor,
                 "FID_PERIOD_DIV_CODE": "D",  # D=day, W=week, M=month
             }
             for base in ("https://openapi.koreainvestment.com:9443", self.base_url):

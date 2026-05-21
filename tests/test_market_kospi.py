@@ -257,3 +257,47 @@ class TestKISEndpointContract:
         assert "FHPUP02120000" in src, (
             "tr_id FHPUP02120000 is required for the daily-price endpoint."
         )
+
+    def test_get_index_history_anchors_on_today_not_period_start(self):
+        """Regression (2026-05-21): the KIS daily-index TR anchors on
+        FID_INPUT_DATE_1 as the MOST-RECENT date and returns ~100 rows back
+        from it. Passing the period-START date returned exactly-one-year-stale
+        data (KOSPI tailed 2025-05-21 / 2,625.58 while the live quote was
+        2026-05-21 / 7,815.59), which falsely tripped the is_stale cross-check
+        and leaked the year-old level into the home ribbon. DATE_1 must be
+        today. Verified live before this guard landed."""
+        from datetime import datetime
+        from unittest.mock import patch, MagicMock
+        from services.kis import service as kis_service
+
+        captured: dict = {}
+
+        def _fake_get(url, headers=None, params=None, timeout=None):
+            captured.update(params or {})
+            resp = MagicMock()
+            resp.ok = True
+            resp.json.return_value = {
+                "rt_cd": "0",
+                "output2": [
+                    {"stck_bsop_date": "20260521", "bstp_nmix_prpr": "7815.59"},
+                ],
+            }
+            return resp
+
+        svc = kis_service.KISService.__new__(kis_service.KISService)
+        svc.available = True
+        svc.app_key = "k"
+        svc.app_secret = "s"
+        svc.base_url = "https://example.invalid"
+
+        with patch.object(kis_service.KISService, "_get_token", return_value="tok"), \
+             patch.object(kis_service.requests, "get", side_effect=_fake_get):
+            rows = svc.get_index_history("0001")
+
+        today = datetime.now().strftime("%Y%m%d")
+        assert captured.get("FID_INPUT_DATE_1") == today, (
+            f"FID_INPUT_DATE_1 must anchor on today ({today}); got "
+            f"{captured.get('FID_INPUT_DATE_1')} — a period-start value returns "
+            "year-stale index history (the KOSPI 2,625 flap)."
+        )
+        assert rows and rows[-1]["date"] == "20260521"
