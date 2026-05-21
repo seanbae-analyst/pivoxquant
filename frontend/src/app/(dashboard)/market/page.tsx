@@ -174,6 +174,31 @@ export default function MarketPage() {
     errorRetryInterval: 10_000,
   });
 
+  // Which region does the current (possibly keepPreviousData) payload belong
+  // to? Used both to drop wrong-region data mid-flip and to tell the board it
+  // is transitioning (loading) rather than genuinely empty.
+  const dataRegion: "US" | "KR" | null = useMemo(() => {
+    const probe = Array.isArray(data) ? data[0] : null;
+    if (!probe) return null;
+    const US_TICKERS = new Set([
+      "^GSPC", "^IXIC", "^DJI", "^RUT", "^VIX",
+      "SPY", "QQQ", "DIA", "IWM", "VIXY",
+    ]);
+    const KR_TICKERS = new Set(["^KS11", "^KQ11", "KOSPI", "KOSDAQ"]);
+    const t = probe.ticker;
+    const proxy = probe.proxy_ticker;
+    if (US_TICKERS.has(t) || (proxy && US_TICKERS.has(proxy))) return "US";
+    if (KR_TICKERS.has(t) || probe.name === "KOSPI" || probe.name === "KOSDAQ")
+      return "KR";
+    return null;
+  }, [data]);
+
+  // True while the selected region's data is still arriving — either the very
+  // first fetch, or keepPreviousData handing us the PRIOR region's payload
+  // during a tab flip. Lets the board render a loading state instead of the
+  // misleading "No observation available for this region" empty copy.
+  const indexLoading = !data || (dataRegion !== null && dataRegion !== tab);
+
   const quotes: IndexQuote[] = useMemo(() => {
     // No mock fallback (2026-04-28). Static US_INDICES / KR_INDICES carried
     // 2024-vintage levels. Render an empty board and let the editorial empty
@@ -194,30 +219,7 @@ export default function MarketPage() {
     // Guard at the display boundary: if the payload looks like the wrong
     // region (US tickers under KR, or vice versa), render an empty board so
     // the editorial empty state surfaces instead of the wrong region's data.
-    const US_TICKERS = new Set([
-      "^GSPC",
-      "^IXIC",
-      "^DJI",
-      "^RUT",
-      "^VIX",
-      "SPY",
-      "QQQ",
-      "DIA",
-      "IWM",
-      "VIXY",
-    ]);
-    const KR_TICKERS = new Set(["^KS11", "^KQ11", "KOSPI", "KOSDAQ"]);
-    const looksLikeRegion = (() => {
-      const probe = data[0];
-      if (!probe) return null;
-      const t = probe.ticker;
-      const proxy = probe.proxy_ticker;
-      if (US_TICKERS.has(t) || (proxy && US_TICKERS.has(proxy))) return "US";
-      if (KR_TICKERS.has(t) || probe.name === "KOSPI" || probe.name === "KOSDAQ")
-        return "KR";
-      return null;
-    })();
-    if (looksLikeRegion && looksLikeRegion !== tab) return [];
+    if (dataRegion && dataRegion !== tab) return [];
     // KR sanity guard (2026-04-28 KIS scaling glitch defense). Backend now
     // drops out-of-range readings, but a second guard at the display
     // boundary protects against any cached payload or alt path.
@@ -232,7 +234,7 @@ export default function MarketPage() {
         return true;
       })
       .map((b) => toQuote(b, tab));
-  }, [data, tab]);
+  }, [data, tab, dataRegion]);
 
   const upcomingEarnings = (earningsData?.earnings ?? []).slice(0, 6);
 
@@ -480,6 +482,7 @@ export default function MarketPage() {
                 marketOpen={marketOpen}
                 liveLabel={liveLabel}
                 weekTag={weekTag()}
+                loading={indexLoading}
               />
             </PaperDocument>
           </div>
@@ -519,6 +522,7 @@ export default function MarketPage() {
               marketOpen={marketOpen}
               liveLabel={liveLabel}
               weekTag={weekTag()}
+              loading={indexLoading}
             />
           </PaperDocument>
 

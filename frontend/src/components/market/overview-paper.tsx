@@ -74,6 +74,11 @@ interface Props {
   marketOpen: boolean;
   liveLabel: string;
   weekTag: string;
+  /** True while the selected region's payload is still loading (initial fetch
+   * or a region-tab flip handing us the prior region via keepPreviousData).
+   * Distinguishes "still loading" from "genuinely no data" so we don't flash a
+   * misleading "No observation available" empty state on every tab switch. */
+  loading?: boolean;
 }
 
 function fmtLevel(
@@ -216,16 +221,20 @@ export function OverviewPaper({
   marketOpen,
   liveLabel,
   weekTag,
+  loading = false,
 }: Props) {
   const hero = quotes[0];
   const rest = quotes.slice(0, 5);
 
   if (!hero) {
+    const regionLabel = region === "US" ? "United States" : "Korea";
     return (
       <div style={{ padding: "clamp(24px, 3vw, 40px)", minHeight: 320 }}>
         <div className="pq-paper-kicker">Morning Papers</div>
-        <p className="pq-paper-body" style={{ marginTop: 16, }}>
-          No observation available for this region.
+        <p className="pq-paper-body" style={{ marginTop: 16 }}>
+          {loading
+            ? `Loading ${regionLabel} observations…`
+            : "No observation available for this region."}
         </p>
       </div>
     );
