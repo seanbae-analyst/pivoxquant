@@ -24,10 +24,15 @@
 - vitest: 33 files / **418 PASS** / 0 fail (신규 22: notif-matrix 4 + subscription-card 3 + chart-marker 11... + journal 7 + naked-ticker 4 + fundamentals 4). tsc exit 0.
 - 부수: journal `EditorialHead size={24}`→`26` (24는 허용 union 아님 — v46.3에서 들어온 main의 기존 tsc 에러였음, #1 커밋에 포함).
 
+### 🔧 후속 (스윕 + 인프라)
+- **naked ticker 전 surface 스윕**(`b378e29c`, 25 파일): #3은 detail 3패널만 커버 → discover/alerts/ai/what-if/signals/portfolio/risk/reports 위젯 + PDF 템플릿(`PdfTicker` 단일 경계 13 usage)까지 `displayTicker`/`normalizeTicker` 통일. 회귀 게이트 `risk/v2/__tests__/naked-ticker.test.tsx`. vitest 420 pass. (지수 심볼/통화 글리프/_v1/href는 의도적 제외)
+- **smoke 테스트 신설**(`1b83b1f2`): `tests/test_smoke.py`(health/auth-gate/login→portfolio) + pytest.ini `smoke` 마커. pre-push [4/4]가 자동 enforce.
+- **🐛 pre-push 훅 버그 fix**(`5d2f822b`): smoke가 `./venv/bin/pytest` 직접 호출 → stockpilot→pivoxquant 리네임으로 console-script shebang이 `…/stockpilot/venv/…/python3.12`(bad interpreter) → smoke 미실행(warn-only로 가려짐). `python -m pytest`로 전환 + `--timeout=60` 제거(pytest-timeout 미설치). **로컬 venv/bin 5개 스크립트 shebang도 복구**(pytest/py.test/distro/httpx/pygmentize, venv는 gitignore라 로컬만). 푸시 시 "[4/4] smoke PASSED" 확인.
+
 ### ⚠️ 잔여 / 회귀 포인트
 - enforcement는 **email 채널만** 적용(push=`lib/push.ts` 미사용, in-app=alerts 피드로 이벤트와 1:1 아님). push/in-app은 저장만 — email이 유일 라이브 채널이라 UI 정직.
-- pre-push 훅: `@pytest.mark.smoke` 마커 미존재(warn-only). 3-5 smoke(health/auth/portfolio) 추가 권장.
-- v46.3 잔여(PWA 캐시 purge / 알림 토글은 본 세션 #1으로 해소 / RSC 503은 #5로 종결)는 위에서 정리됨.
+- RSC prefetch 503 = 코드 버그 아님(#5 조사 — prefetch 라우트 전부 client 컴포넌트, Vercel transient). 무수정.
+- Fundamentals KR 3지표는 KIS 라이선스 구조적 부재(데이터 못 채움) — 정직한 안내로 대응(#4). US는 정상.
 
 ---
 
