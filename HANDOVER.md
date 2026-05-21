@@ -1,4 +1,36 @@
-# PivoxQuant — 인수인계서 (2026-05-20 v46.2 — 🟢 PDF 이메일 END-TO-END 발송 검증 완료 + prod 스키마 인시던트 치유)
+# PivoxQuant — 인수인계서 (2026-05-21 v46.3 — 🟢 detail 전면 재설계 + Journal(의사결정 일지) 신규 + pre-trade 인라인화 + UI 폰트/IA 정리)
+
+## v46.3 2026-05-21 — detail 재설계 + Journal 신규 + pre-trade 인라인 + UI 폴리시 (CEO 라이브 피드백 루프, 자율모드)
+
+> **🟢 결론: 개별종목 detail 페이지 전면 재설계 + "Journal=투자 의사결정 일지" 신규 + pre-trade reflection을 종목 추가/삭제 모달에 인라인화 완료.** 전부 audit + tsc/vitest/build 검증 후 배포. FE는 Vercel 자동배포, BE(`/api/pre-trade/list` 신규)는 `railway up`으로 배포(SUCCESS). 라이브 다종목(US/KR/저데이터) E2E + settings 기능 검증 통과. CEO 라이브 피드백을 그 자리에서 반영하는 루프로 진행.
+
+### ✅ 이번 세션 변경 (commits 9627e68c → acd61941, 전부 origin/main 푸시됨)
+| 영역 | 내용 | commit |
+|---|---|---|
+| **detail 재설계** | 1792줄 모놀리식 page.tsx → **466줄 orchestration + `components/detail/` 13개 컴포넌트**. "Terminal Above, Editorial Below" 3-Zone(터미널 가격/차트 → 애널리틱스 → 도시에). italic 전수 제거 + 색 KR 통일(▲carmine/▼indigo, 차트마커 bronze 충돌 수정). **P0 복원력**: signals SWR 8s AbortController 타임아웃 + 독립 로딩경계 + LoadFailure 재시도(이전엔 /api/signals 지연 시 가격·score·펀더·4pillar 동시 전멸). 회사 1줄 설명(profile.summary) 신규 | 59222f8f |
+| signals/detail UI | KR 멘트 word-break:keep-all + 개별종목 italic 제거(.pq-detail-ticker-display) + detail 차트 시그널 관측 마커 신규(InteractiveLineChart markers) | 9627e68c |
+| KR naked ticker | SwotPanel/CompanionCta/EarningsPanel raw 심볼→종목명(feedback_ticker_display) | 4b156e1b |
+| 숫자 폰트 균등화 | detail 가격 40~56px + **₩/$ 기호 0.5em 강등** + 보조숫자(시총/52W) 9.5~13→20px(h4) | e9274899, 40422638 |
+| **pre-trade 인라인화** | 7문항+쿨다운 reflection을 종목 **추가(ENTRY)/정리(EXIT) 모달에 인라인** 트리거(`components/pre-trade/pre-trade-friction-core+modal`). Proceed 시에만 실제 POST, Cancel 미기록. /pre-trade 라우트는 코어 재사용(791→290줄). 자산 동기화 넛지(수동추가 primary + KIS/Alpaca secondary) | b83669fd |
+| **Journal = 의사결정 일지** | founder Growth OS(/growth) 대신 유저용 Journal 신규. **BE `GET /api/pre-trade/list`**(유저격리 SQL, 최신순, ?limit) + **FE `/journal`** 페이지(reflection 피드: 종목명·진입/정리·근거·7문항·진행/취소). BUY/SELL UI 노출 0(sideLabel "진입/정리"). nav "Journal"→/journal 복원 | 2708d04d |
+| nav 정리 | "Journal"(→/growth, founder Growth OS·미배포·"준비중") 유저 nav 숨김 → /journal로 복원. **"Pre-Trade" nav 완전 삭제**(인라인화로 redundant, 라우트만 유지) | a872d910, 2d27f273, 8009fa4a |
+| Journal 폰트 | 메타 9.5→12px / 근거 14→17px / 7문항 13→15px / 종목명 22→24px (CEO "안 보여") | acd61941 |
+
+### 🧭 IA 정리 (확정)
+- **pre-trade reflection** = 종목 추가/정리 시 **인라인 모달**(별도 nav 없음)
+- **Journal** (nav) = 그 reflection 회고 피드 (/journal)
+- **Growth OS** (/growth) = 창업자 개인 도구(스트릭/모닝브리핑), agent_worker 백엔드 미배포 → 유저 nav 미노출(라우트·코드 보존, 복원 시 nav 1줄)
+
+### ⚠️ 잔여 / 회귀 포인트
+- **PWA 캐시 주의**: SW(skipWaiting+clients.claim, navigation network-first)는 정상이나 기존 세션은 **전체 새로고침/시크릿창/clear-site-data** 해야 새 셸 반영(CEO가 Pre-Trade 사라진 거 캐시로 못 본 사례). 라이브 검증 시 캐시 purge 필수.
+- settings 라이브 검증 SHIP. 단 P2: **알림 매트릭스(7×3) 토글 서버 미저장**(localStorage만, 토스트 없음) / billing portal Free 유저 503(숨김 권고).
+- detail P2: Fundamentals 8지표 중 3개(Profit margin/Rev growth/D-E) 상시 em-dash(백엔드 데이터 결손) / RSC prefetch 간헐 503(Railway 커넥션) / 차트 마커·journal 좌표 로직 단위테스트 없음.
+- 차트 시그널 마커: 활성 시그널 0개 종목은 미표시(정상). 마커 색 라이브 검증은 활성 시그널 종목 필요(미검증).
+- **BE 배포 = `railway up --service 8687c9ac`** (railway login 토큰 만료 시 CEO 재로그인. git push는 Railway 자동배포 트리거하나 과거 실패 이력). `.railwayignore` 디렉토리는 leading-slash 필수.
+
+---
+
+# (이전) PivoxQuant — 인수인계서 (2026-05-20 v46.2 — 🟢 PDF 이메일 END-TO-END 발송 검증 완료 + prod 스키마 인시던트 치유)
 
 ## v46.2 2026-05-20 — PDF 이메일 end-to-end 실발송 검증 + 🔴→🟢 prod 스키마 버그 발견·치유 (CEO "싹다 제대로 검증")
 
