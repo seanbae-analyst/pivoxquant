@@ -112,11 +112,12 @@ const RESEARCH: Item[] = [
 // ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
 const SYSTEM: Item[] = [
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
-  // 2026-05-02: Pre-Trade Checklist surfaced in nav. Backend Feature 6
-  // shipped 2026-04-30 but the dashboard page was missing — landing
-  // promised "Seven questions before every trade" with nothing behind
-  // it. Now wired.
-  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
+  // 2026-05-21: Pre-Trade hidden from nav. The 7-question + cooldown
+  // reflection is now INLINE — it triggers right when the user adds
+  // (ENTRY) or exits (EXIT) a position in the portfolio, so a standalone
+  // nav destination is redundant. Route + key kept (hidden:true) so the
+  // /pre-trade direct link still resolves and lights active state.
+  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel, hidden: true },
   { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
   // 2026-05-21: "Journal" restored as a real user surface — /journal renders
   // the user's own pre-trade decision-reflection feed (read-only, "User as
