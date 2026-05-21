@@ -214,19 +214,24 @@ else
     echo "  This hook will start enforcing them automatically once markers are present."
     echo ""
   else
-    # Locate pytest binary.
-    PYTEST_BIN=""
-    if [ -x "$REPO_ROOT/venv/bin/pytest" ]; then
-      PYTEST_BIN="$REPO_ROOT/venv/bin/pytest"
-    elif command -v pytest >/dev/null 2>&1; then
-      PYTEST_BIN="pytest"
+    # Invoke via `python -m pytest` rather than the bare ./venv/bin/pytest
+    # console script: after the stockpilot→pivoxquant project rename the
+    # script's shebang carried a stale interpreter path ("bad interpreter:
+    # .../stockpilot/venv/.../python3.12"), so a direct call failed before
+    # any test ran. `python -m pytest` is immune to that. Also dropped
+    # --timeout=60 (pytest-timeout is not installed; smoke is fast anyway).
+    SMOKE_PY=""
+    if [ -x "$REPO_ROOT/venv/bin/python" ]; then
+      SMOKE_PY="$REPO_ROOT/venv/bin/python"
+    elif command -v python3 >/dev/null 2>&1; then
+      SMOKE_PY="python3"
     fi
 
-    if [ -z "$PYTEST_BIN" ]; then
-      echo "  (pytest not found — skip; pip install pytest to enable)"
+    if [ -z "$SMOKE_PY" ] || ! "$SMOKE_PY" -c "import pytest" 2>/dev/null; then
+      echo "  (pytest not available — skip; pip install pytest to enable)"
     else
-      echo "  running $SMOKE_COUNT smoke marker(s) (timeout 60 s)..."
-      SMOKE_OUT=$("$PYTEST_BIN" "$TESTS_DIR" -m smoke -x --timeout=60 --tb=short -q 2>&1)
+      echo "  running $SMOKE_COUNT smoke marker(s)..."
+      SMOKE_OUT=$("$SMOKE_PY" -m pytest "$TESTS_DIR" -m smoke -x --tb=short -q 2>&1)
       SMOKE_EXIT=$?
 
       if [ "$SMOKE_EXIT" -ne 0 ]; then
