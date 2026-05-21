@@ -45,12 +45,12 @@ import type { PreTradeReflection } from "@/lib/types";
  * ────────────────────────────────────────────────────────────────────── */
 
 /** When the entry was created — proceeded/cancelled stamp else cooldown start. */
-function entryTimestamp(r: PreTradeReflection): string | null {
+export function entryTimestamp(r: PreTradeReflection): string | null {
   return r.proceeded_at ?? r.cancelled_at ?? r.cooldown_started_at ?? null;
 }
 
 /** Absolute KST-rendered date for the inline metadata row. */
-function absoluteDate(iso: string | null): string {
+export function absoluteDate(iso: string | null): string {
   if (!iso) return "";
   const needsUtc = !iso.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(iso);
   const d = new Date(needsUtc ? iso + "Z" : iso);
@@ -62,9 +62,9 @@ function absoluteDate(iso: string | null): string {
   });
 }
 
-type StatusKind = "proceeded" | "cancelled" | "pending";
+export type StatusKind = "proceeded" | "cancelled" | "pending";
 
-function statusKind(r: PreTradeReflection): StatusKind {
+export function statusKind(r: PreTradeReflection): StatusKind {
   if (r.status === "proceeded") return "proceeded";
   if (r.status === "cancelled") return "cancelled";
   return "pending"; // pending | ready

@@ -81,6 +81,71 @@ function downsample<T>(arr: T[], max: number): T[] {
   return out;
 }
 
+export interface PlottedMarker {
+  x: number;
+  y: number;
+  color: string;
+  label: string;
+}
+
+/**
+ * Snap each observation marker to the nearest charted point and resolve its
+ * pixel coordinates + tone colour. Extracted as a pure function so the
+ * day-granularity nearest-point matching and out-of-window dropping are
+ * unit-testable (regression guard — this logic had no coverage).
+ *
+ * Rules (behaviour-preserving from the prior inline useMemo):
+ *  - Returns [] in compact mode, with no markers, or fewer than 2 points.
+ *  - Markers with an unparseable date are skipped.
+ *  - The nearest sampled point (by absolute time distance) wins.
+ *  - A marker further than `windowDays` from its nearest point is dropped
+ *    (e.g. a 1Y-old observation on a 1M chart).
+ *
+ * `xs`/`ys` are the per-index pixel coordinates of `sampled` (from `geom`).
+ */
+export function computeMarkerGeom(
+  markers: ChartMarker[] | undefined,
+  sampled: InteractivePoint[],
+  xs: number[],
+  ys: number[],
+  opts: { compact?: boolean; windowDays?: number } = {},
+): PlottedMarker[] {
+  const compact = opts.compact ?? false;
+  const windowDays = opts.windowDays ?? 5;
+  if (compact || !markers || markers.length === 0 || sampled.length < 2) {
+    return [];
+  }
+  const dayMs = 86_400_000;
+  const times = sampled.map((p) => {
+    const t = new Date(p.date).getTime();
+    return isNaN(t) ? null : t;
+  });
+  const out: PlottedMarker[] = [];
+  for (const m of markers) {
+    const mt = new Date(m.date).getTime();
+    if (isNaN(mt)) continue;
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < times.length; i++) {
+      const ti = times[i];
+      if (ti == null) continue;
+      const d = Math.abs(ti - mt);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx < 0 || bestDist > windowDays * dayMs) continue;
+    out.push({
+      x: xs[bestIdx],
+      y: ys[bestIdx],
+      color: MARKER_TONE[m.tone],
+      label: m.label ?? m.tone,
+    });
+  }
+  return out;
+}
+
 export function InteractiveLineChart({
   points,
   height = 220,
@@ -131,47 +196,11 @@ export function InteractiveLineChart({
   // Snap each marker's calendar date to the nearest charted point so the
   // tick lands on the curve. Day-granularity matching tolerates the
   // chart's "YYYY-MM-DD" dates vs. a signal's full ISO `observed_at`.
-  const markerGeom = useMemo(() => {
-    if (compact || !markers || markers.length === 0 || sampled.length < 2) {
-      return [] as Array<{
-        x: number;
-        y: number;
-        color: string;
-        label: string;
-      }>;
-    }
-    const dayMs = 86_400_000;
-    const times = sampled.map((p) => {
-      const t = new Date(p.date).getTime();
-      return isNaN(t) ? null : t;
-    });
-    const out: Array<{ x: number; y: number; color: string; label: string }> = [];
-    for (const m of markers) {
-      const mt = new Date(m.date).getTime();
-      if (isNaN(mt)) continue;
-      let bestIdx = -1;
-      let bestDist = Infinity;
-      for (let i = 0; i < times.length; i++) {
-        const ti = times[i];
-        if (ti == null) continue;
-        const d = Math.abs(ti - mt);
-        if (d < bestDist) {
-          bestDist = d;
-          bestIdx = i;
-        }
-      }
-      // Drop markers that fall outside the visible window by more than a
-      // few days (e.g. a 1M chart with a 1Y-old observation).
-      if (bestIdx < 0 || bestDist > 5 * dayMs) continue;
-      out.push({
-        x: geom.xs[bestIdx],
-        y: geom.ys[bestIdx],
-        color: MARKER_TONE[m.tone],
-        label: m.label ?? m.tone,
-      });
-    }
-    return out;
-  }, [compact, markers, sampled, geom.xs, geom.ys]);
+  // Logic lives in the pure `computeMarkerGeom` (unit-tested).
+  const markerGeom = useMemo(
+    () => computeMarkerGeom(markers, sampled, geom.xs, geom.ys, { compact }),
+    [compact, markers, sampled, geom.xs, geom.ys],
+  );
 
   const resolveHover = useCallback(
     (clientX: number) => {
