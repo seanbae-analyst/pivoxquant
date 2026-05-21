@@ -146,24 +146,30 @@ export function SubscriptionCardV2({
             </span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onManageBilling}
-          className="font-mono uppercase"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
-            color: "var(--pq-bronze)",
-            borderBottom: "1px solid rgba(184,149,106,0.15)",
-            paddingBottom: 2,
-            background: "transparent",
-            border: "none",
-            borderBottomStyle: "solid",
-            cursor: "pointer",
-          }}
-        >
-          Billing portal ›
-        </button>
+        {/* Free tier has no Stripe subscription to manage — the portal POST
+            would 400 (no billing account) or 503 (billing not yet enabled
+            pre-launch). Hide the entry point entirely; Free users upgrade via
+            the pricing CTAs below instead. */}
+        {currentTier !== "free" && (
+          <button
+            type="button"
+            onClick={onManageBilling}
+            className="font-mono uppercase"
+            style={{
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.18em",
+              color: "var(--pq-bronze)",
+              borderBottom: "1px solid rgba(184,149,106,0.15)",
+              paddingBottom: 2,
+              background: "transparent",
+              border: "none",
+              borderBottomStyle: "solid",
+              cursor: "pointer",
+            }}
+          >
+            Billing portal ›
+          </button>
+        )}
       </div>
 
       <div
