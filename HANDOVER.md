@@ -29,10 +29,20 @@
 - **smoke 테스트 신설**(`1b83b1f2`): `tests/test_smoke.py`(health/auth-gate/login→portfolio) + pytest.ini `smoke` 마커. pre-push [4/4]가 자동 enforce.
 - **🐛 pre-push 훅 버그 fix**(`5d2f822b`): smoke가 `./venv/bin/pytest` 직접 호출 → stockpilot→pivoxquant 리네임으로 console-script shebang이 `…/stockpilot/venv/…/python3.12`(bad interpreter) → smoke 미실행(warn-only로 가려짐). `python -m pytest`로 전환 + `--timeout=60` 제거(pytest-timeout 미설치). **로컬 venv/bin 5개 스크립트 shebang도 복구**(pytest/py.test/distro/httpx/pygmentize, venv는 gitignore라 로컬만). 푸시 시 "[4/4] smoke PASSED" 확인.
 
+### 🔬 라이브 E2E 검증 (2026-05-21, prod 로그인 seanbae1521@gmail.com free 티어, Claude-in-Chrome)
+- **#5 naked ticker ✅** — `/detail/005930.KS` Hero "삼성전자" + 서브라인 "005930"(`.KS` 제거), news feed 종목명 정상.
+- **#4 Fundamentals 안내 ✅** — KR 종목 Fundamentals에 "수익성·매출 성장·부채비율은…KIS 라이선스 범위 밖…오류가 아닙니다 / …not an error" 렌더 확인.
+- **#1 알림 토글 서버 영속 ✅✅** — "Signal state change·email"(기본 OFF) 토글 ON → 토스트 "알림 설정 저장됨" → **전체 새로고침 후 ON 유지**(서버 재조회) = localStorage 아닌 서버 저장 확정. 검증 후 원복.
+- **#2 billing portal Free 가드 🔴→🟢** — **라이브가 #2 불완전 fix를 잡음**: 첫 fix는 "Billing portal ›"만 숨겼고 **"Manage billing"(현재 티어 카드) + "Open in Stripe ›"(영수증 strip) 2개 진입점이 Free에 잔존**(클릭 시 400/503). 즉시 추가 수정(`bcbba5f5`): 3개 전부 가드 + Free는 "현재 플랜 · Current plan" 라벨 + receipt strip 숨김. **재배포 후 라이브 재검증 통과**(Manage billing/Open in Stripe 사라짐).
+- **#9 KOSPI/KOSDAQ ✅** — 홈 리본 KOSPI 2,625.58/KOSDAQ 1,105.97 라이브.
+- **🟡 신규 관찰**: KR 종목 `/detail`의 `/api/signals/<ticker>` **첫 로드 8s timeout** 빈번(engine.analyze KR cold). v46.3 P0 복원력(재시도 버튼)으로 복구되나, 첫인상 저하. 캐시 워밍 또는 timeout 상향 검토 여지(버그 아님, 레이턴시).
+- ⚠️ 라이브 검증 전제: 확장의 `www.pivoxquant.com` 호스트 권한 + OAuth 기존 계정 로그인(비번 미입력, 계정 chooser 선택만).
+
 ### ⚠️ 잔여 / 회귀 포인트
 - enforcement는 **email 채널만** 적용(push=`lib/push.ts` 미사용, in-app=alerts 피드로 이벤트와 1:1 아님). push/in-app은 저장만 — email이 유일 라이브 채널이라 UI 정직.
 - RSC prefetch 503 = 코드 버그 아님(#5 조사 — prefetch 라우트 전부 client 컴포넌트, Vercel transient). 무수정.
 - Fundamentals KR 3지표는 KIS 라이선스 구조적 부재(데이터 못 채움) — 정직한 안내로 대응(#4). US는 정상.
+- **CLAUDE.md TODO 19개 중 14 구현됨**(투자 대조). 진짜 미구현 = #13 Stripe 키 매핑(CEO·Railway env) + #14 이메일 DNS(CEO·가비아). #16 FMP 402=plan 한계+KIS 우회로 버그 아님, #17 모바일=구체적 깨짐 미발견.
 
 ---
 
