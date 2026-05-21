@@ -1,4 +1,6 @@
-# PivoxQuant — 인수인계서 (2026-05-21 v46.4 — 🟢 handover P2 잔여 5건 정리 + 알림 매트릭스 서버화 + BE 배포)
+# PivoxQuant — 인수인계서 (2026-05-21 v46.4 — 🟢 handover P2 5건 + 알림 매트릭스 서버화 + 🔴→🟢 KOSPI 1년-stale 근본 수정 + KR 데이터 스윕)
+
+> **세션 최종 검증 (전부 origin/main 푸시, main↔origin 0/0)**: FE tsc exit 0 / vitest **35 files 423 PASS** / pytest 관련 전수(kis·index·market·billing·notification·smoke·email·sender) **468 PASS / 12 skip / 0 fail** / 0 회귀 / pre-push smoke PASSED / 비용 0원. BE `railway up` 배포 + FE Vercel 자동배포 완료. 12 commit (`cd694303`→`0c2d0dbb`). 핵심: 알림 매트릭스 서버 영속화+email enforcement / billing Free 3진입점 가드 / naked ticker 전 surface / **KOSPI 2,625→7,815 KIS index-history 1년-stale 근본 수정** / KR 데이터 정확성 스윕(결함 0) / region 전환 Loading 폴리시. 라이브 E2E 전부 검증.
 
 ## v46.4 2026-05-21 — handover 잔여 P2 일괄 처리 (CEO "하나씩 너가 잡아 / 배포하고 계속", 자율모드)
 
@@ -21,7 +23,7 @@
 
 ### 검증 실측
 - pytest: 신규 12(notification_prefs model+routes) + email/artifact 258 PASS / 0 fail.
-- vitest: 33 files / **418 PASS** / 0 fail (신규 22: notif-matrix 4 + subscription-card 3 + chart-marker 11... + journal 7 + naked-ticker 4 + fundamentals 4). tsc exit 0.
+- vitest: 세션 최종 **35 files / 423 PASS** / 0 fail (신규: notif-matrix 4 + subscription-card 3 + chart-marker 11 + journal 7 + naked-ticker(detail) 4 + fundamentals 4 + naked-ticker(risk) 2 + overview-paper 3). tsc exit 0.
 - 부수: journal `EditorialHead size={24}`→`26` (24는 허용 union 아님 — v46.3에서 들어온 main의 기존 tsc 에러였음, #1 커밋에 포함).
 
 ### 🔧 후속 (스윕 + 인프라)
@@ -44,6 +46,15 @@
 - **수정**: `FID_INPUT_DATE_1 = today`. `railway run`으로 prod KIS 직접 호출해 **배포 전** 검증(tail 2026-05-21/7,815.59) → 배포 후 라이브 재검증: 4개 KR 지수 전부 `is_stale=False`, 리본 KOSPI 7,815.59 STALE 칩 없음. commit `89326d60`.
 - **신규 인프라**: `GET /api/market/_diag/kr-indices` (admin-gated `X-Admin-Secret`, 읽기전용) — KR 지수 코드별 KIS get_index_price + history tail + sanity bound + 최종 snapshot 노출. 향후 KR 데이터 디버깅용. commit `5d0d21cc`. 호출: `railway run --service web bash -c 'curl -s -H "X-Admin-Secret: $ARTIFACT_TRIGGER_SECRET" .../api/market/_diag/kr-indices'`.
 - 회귀 가드: `test_get_index_history_anchors_on_today_not_period_start` (FID_INPUT_DATE_1==today 단언).
+
+### ✅ KR 데이터 정확성 전수 스윕 (KOSPI fix 후, 라이브)
+- 분석 가능 KR(§101 allowlist): 005930.KS 삼성전자 / 010170.KQ 대한광통신 / 124500.KQ 아이티센글로벌. 내부정합성 교차검증(가격 vs 52주, live quote vs history tail, stale, 종목명) → **전부 정합, 추가 결함 0**. 종목명 한글 정확, 가격이 차트 tail(2026-05-21)과 일치, 시그널 NEUTRAL, 52주 범위가 현재가 포함. 종목 차트 history는 **2026 최신**(지수 history 1년-stale 버그가 종목엔 미전이 — 별도 경로).
+- USD/KRW ~1,502 일관. 지수 4종 fix 후 전부 `is_stale=False`.
+
+### ✨ /market region 전환 "Loading" 폴리시 (`0c2d0dbb`)
+- **증상**: US↔KR 탭 전환 시 SWR `keepPreviousData`가 이전 지역 payload를 들고 있어 wrong-region을 []로 거르고 → 빈 보드가 **"No observation available for this region"**(데이터 없음처럼)을 ~3–4초 깜빡임.
+- **수정**: `dataRegion` 메모 추출(인라인 looksLikeRegion 중복 제거) + `indexLoading` 도출 → `OverviewPaper`에 `loading` prop. 전환/로딩 중엔 "Loading <region> observations…", 진짜 빈 경우만 "No observation…" 유지. 데이터 경로 불변(필터/sanity 동일). vitest 3 신규.
+- **라이브 검증**: Korea 탭 클릭 후 시간별 샘플 → 120ms~3000ms "Loading Korea observations"(noObs=false 전구간), 4500ms KOSPI 7,815 렌더. 깜빡임 해소 확정.
 
 ### ⚠️ 잔여 / 회귀 포인트
 - enforcement는 **email 채널만** 적용(push=`lib/push.ts` 미사용, in-app=alerts 피드로 이벤트와 1:1 아님). push/in-app은 저장만 — email이 유일 라이브 채널이라 UI 정직.
