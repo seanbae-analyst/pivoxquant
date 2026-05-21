@@ -279,6 +279,23 @@ export function SubscriptionCardV2({
               </ul>
 
               {isCurrent ? (
+                currentTier === "free" ? (
+                  // Free has no Stripe subscription to manage — a portal CTA
+                  // would 400 (no billing account) / 503 (billing disabled).
+                  // Show a static "current plan" label instead.
+                  <div style={{ marginTop: 20 }}>
+                    <span
+                      className="font-mono uppercase"
+                      style={{
+                        fontSize: "var(--pq-text-eyebrow)",
+                        letterSpacing: "0.2em",
+                        color: "rgba(245,240,232,0.45)",
+                      }}
+                    >
+                      현재 플랜 · Current plan
+                    </span>
+                  </div>
+                ) : (
                 <div
                   style={{
                     marginTop: 20,
@@ -328,6 +345,7 @@ export function SubscriptionCardV2({
                     </button>
                   ) : null}
                 </div>
+                )
               ) : isUpgrade ? (
                 <div style={{ marginTop: 20 }}>
                   <Link
@@ -355,7 +373,9 @@ export function SubscriptionCardV2({
         })}
       </div>
 
-      {/* D1 · Receipt strip */}
+      {/* D1 · Receipt strip — paid tiers only. A Free user has no invoices
+          and the "Open in Stripe" link would hit the portal → 400/503. */}
+      {currentTier !== "free" && (
       <div
         style={{
           background: "rgba(255,255,255,0.02)",
@@ -448,6 +468,7 @@ export function SubscriptionCardV2({
           </div>
         </div>
       </div>
+      )}
 
       <style jsx>{`
         @media (max-width: 1023px) {
