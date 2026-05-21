@@ -1,8 +1,10 @@
 """Market data routes: overview, macro, sectors, news, prices, chart, etc."""
 from __future__ import annotations
 
+import hmac
 import json
 import logging
+import os
 import time as _time
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify
@@ -1239,6 +1241,122 @@ def market_indices():
     warm_indices_cache(region, force=True)
     entry = _indices_cache.get(cache_key)
     return jsonify(entry["data"] if entry else [])
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Admin diagnostic: KR index data path (no DB writes, admin-gated).
+#
+# Why: the home ribbon intermittently shows a WRONG KOSPI (~2,625, a ~mid-April
+# value) while /api/market/indices?region=kr serves ~7,815 (correct, stale-
+# flagged) seconds later — i.e. the KR index level is non-deterministic across
+# TTL refreshes. The parsed price returned by get_index_price() swallows the
+# raw KIS payload, so we can't tell from logs WHICH code candidate / history
+# fallback produces the bad value. This endpoint surfaces, per KR index:
+#   - get_index_price() for every code candidate (incl. alternates)
+#   - get_index_history() tail (the daily-price fallback feeding the stale tag)
+#   - the per-ticker sanity bound
+#   - the FINAL _compute_indices_snapshot('kr') the live endpoint serves NOW
+# so the 2,625-vs-7,815 origin can be pinpointed before touching the (heavily
+# patched, fragile) compute path. Read-only; mirrors /_diag/weasyprint gating.
+# ─────────────────────────────────────────────────────────────────────
+def _check_market_admin_secret():
+    """Same gate as cron triggers: X-Admin-Secret == ARTIFACT_TRIGGER_SECRET
+    (falls back to DEV_LOGIN_SECRET in dev/staging). Returns an error tuple on
+    failure, or None when authorised. Constant-time compare (timing-safe)."""
+    expected = os.environ.get("ARTIFACT_TRIGGER_SECRET") or os.environ.get("DEV_LOGIN_SECRET")
+    if not expected:
+        return api_error(en="Not found", kr="찾을 수 없습니다.", code="NOT_FOUND", status=404)
+    provided = request.headers.get("X-Admin-Secret", "")
+    if not hmac.compare_digest(provided, expected):
+        return api_error(en="Forbidden", kr="권한이 없습니다.", code="FORBIDDEN", status=403)
+    return None
+
+
+@market_bp.route("/market/_diag/kr-indices", methods=["GET"])
+@general_rate_limit
+def diag_kr_indices():
+    """Surface the raw KR-index data path for root-causing the KOSPI flap.
+
+    Admin-gated (X-Admin-Secret). Read-only — performs live KIS reads but
+    mutates no state and does not touch the _indices_cache.
+    """
+    err = _check_market_admin_secret()
+    if err:
+        return err
+
+    # Same alternate-code map as _kis_index_snapshot.
+    _code_alts = {
+        "2001": ["2001", "0201"],
+        "2203": ["2203", "1150"],
+    }
+    _bounds = {
+        "^KS11":  (1_500.0, 50_000.0),
+        "^KQ11":  (500.0,   50_000.0),
+        "^KS200": (300.0,   10_000.0),
+        "^KQ150": (500.0,   10_000.0),
+    }
+
+    out: dict = {
+        "now": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "kis_available": None,
+        "per_index": [],
+        "final_snapshot": [],
+        "error": None,
+    }
+
+    try:
+        from services.kis.service import KISService
+        svc = KISService()
+        out["kis_available"] = bool(getattr(svc, "available", False))
+
+        for ticker, display, kis_code, _macro in _KR_INDEX_SPEC:
+            row: dict = {
+                "ticker": ticker,
+                "display": display,
+                "primary_code": kis_code,
+                "sanity_bound": _bounds.get(ticker),
+                "price_by_code": {},
+                "history_tail": None,
+                "history_len": None,
+            }
+            for code in _code_alts.get(kis_code, [kis_code]):
+                try:
+                    q = svc.get_index_price(code)
+                    row["price_by_code"][code] = (
+                        {"price": q.get("price"), "change_pct": q.get("change_pct")}
+                        if q else None
+                    )
+                except Exception as exc:  # pragma: no cover - diagnostic
+                    row["price_by_code"][code] = {"error": f"{type(exc).__name__}: {exc}"}
+            # Daily-price history tail (feeds the is_stale cross-check).
+            try:
+                hist = svc.get_index_history(kis_code)
+                if isinstance(hist, list) and hist:
+                    row["history_len"] = len(hist)
+                    row["history_tail"] = hist[-1]
+            except Exception as exc:  # pragma: no cover - diagnostic
+                row["history_tail"] = {"error": f"{type(exc).__name__}: {exc}"}
+            out["per_index"].append(row)
+    except Exception as exc:  # pragma: no cover - diagnostic
+        out["error"] = f"{type(exc).__name__}: {exc}"
+
+    # What the live endpoint resolves RIGHT NOW (fresh compute, not cached).
+    try:
+        snap = _compute_indices_snapshot("kr")
+        out["final_snapshot"] = [
+            {
+                "ticker": s.get("ticker"),
+                "name": s.get("name"),
+                "level": s.get("level"),
+                "change_1d_pct": s.get("change_1d_pct"),
+                "is_stale": s.get("is_stale"),
+            }
+            for s in (snap or [])
+        ]
+    except Exception as exc:  # pragma: no cover - diagnostic
+        out["final_snapshot"] = {"error": f"{type(exc).__name__}: {exc}"}
+
+    return jsonify(out)
 
 
 # ─────────────────────────────────────────────────────────────────────
