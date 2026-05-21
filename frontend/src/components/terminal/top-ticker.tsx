@@ -377,7 +377,7 @@ export function TopTicker() {
   const macroMap = useMemo(() => {
     const m = new Map<string, IndexBlock>();
     const find = (arr: IndexBlock[] | undefined, ticker: string) =>
-      (arr ?? []).find((b) => b.ticker === ticker);
+      (Array.isArray(arr) ? arr : []).find((b) => b.ticker === ticker);
     const spy = find(usIdx, "^GSPC");
     if (spy) m.set("SPX", spy);
     const ixic = find(usIdx, "^IXIC");
