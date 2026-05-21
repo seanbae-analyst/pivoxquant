@@ -62,6 +62,13 @@
 - Fundamentals KR 3지표는 KIS 라이선스 구조적 부재(데이터 못 채움) — 정직한 안내로 대응(#4). US는 정상.
 - **CLAUDE.md TODO 19개 중 14 구현됨**(투자 대조). 진짜 미구현 = #13 Stripe 키 매핑(CEO·Railway env) + #14 이메일 DNS(CEO·가비아). #16 FMP 402=plan 한계+KIS 우회로 버그 아님, #17 모바일=구체적 깨짐 미발견.
 
+### 🎯 다음 세션 / CEO 직접 액션 (코드·데이터 측 미해결 0)
+1. **[CEO] Stripe 활성화** — Stripe 대시보드의 `STRIPE_SECRET_KEY` + Price ID를 Railway env에 등록(`SUBSCRIPTION_PRICE_ID` 등). 코드/UI는 완비, 결제 BLOCKER는 키 매핑뿐. (자격증명 없어 agent 불가)
+2. **[CEO] 이메일 DNS** — 가비아 콘솔에서 MX/SPF/DKIM/DMARC (project_email_infra.md). 코드(SendGrid cascade)·도메인 verified는 완료, 신규 가입자 동의 시 발송 가능.
+3. **[운영 참고] BE 배포 = `railway up --service web`** (id `8687c9ac`는 "Service not found", **이름 `web`** 사용). railway login 토큰 만료 시 CEO 1회 재로그인(브라우저 OAuth, agent 불가). `.railwayignore` 디렉토리는 leading-slash 필수.
+4. **[운영 참고] KR-index diag** = `GET /api/market/_diag/kr-indices` (admin-gated). KR 지수 이상 시 `railway run --service web bash -c 'curl -s -H "X-Admin-Secret: $ARTIFACT_TRIGGER_SECRET" .../api/market/_diag/kr-indices'`로 KIS 원시 응답 확인.
+5. **[선택] KR signals 첫 로드 레이턴시** — engine.analyze KR cold 8~14s. detail FE timeout은 18s로 상향(`3223be75`)했으나, 워치리스트 KR 종목 SignalCache 사전 워밍(스케줄러 잡) 검토 여지(버그 아님).
+
 ---
 
 # (이전) PivoxQuant — 인수인계서 (2026-05-21 v46.3 — 🟢 detail 전면 재설계 + Journal(의사결정 일지) 신규 + pre-trade 인라인화 + UI 폰트/IA 정리)
