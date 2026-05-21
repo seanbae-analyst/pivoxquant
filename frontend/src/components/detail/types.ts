@@ -25,6 +25,11 @@ export interface Snapshot {
   profit_margin?: number | null;
   revenue_growth?: number | null;
   debt_equity?: number | null;
+  /** Backend (fetcher.get_stock_snapshot) sets this true for KR tickers whose
+   * KIS data license publishes PER/EPS/PBR/시총 but NOT profit margin / revenue
+   * growth / debt-to-equity. Lets the UI render an honest "license-bounded, not
+   * an error" note instead of three bare em-dashes that look broken. */
+  fundamentals_limited?: boolean;
 }
 
 export interface SignalDetail {

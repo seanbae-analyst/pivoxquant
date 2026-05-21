@@ -31,6 +31,10 @@ export function FundamentalsPanel({
   krw: boolean;
 }) {
   const s = signal?.snapshot;
+  // KR tickers: KIS license serves PER/EPS/PBR/시총 but not margin / rev
+  // growth / D-E. The backend flags this so we can explain the three "—"
+  // rows below as license-bounded (not a transient error / not broken).
+  const limited = !!s?.fundamentals_limited;
   // If the snapshot is entirely empty (e.g. KR low-data ticker) collapse the
   // section to a single restrained note rather than a wall of em-dashes.
   const anyData =
@@ -57,6 +61,7 @@ export function FundamentalsPanel({
             publish.
           </EmptyNote>
         ) : (
+          <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10">
             {/* Column 1 — Valuation · Earnings */}
             <div>
@@ -120,6 +125,20 @@ export function FundamentalsPanel({
               />
             </div>
           </div>
+          {limited && (
+            <p
+              className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-pq-caption"
+              style={{ color: "rgba(245,240,232,0.5)", lineHeight: 1.5 }}
+            >
+              수익성·매출 성장·부채비율은 데이터 제공사(KIS) 라이선스 범위 밖이라
+              표시되지 않습니다 — 오류가 아닙니다.
+              <span className="block" style={{ opacity: 0.7, marginTop: 2 }}>
+                Profit margin, revenue growth &amp; debt-to-equity fall outside the
+                KIS data license — not an error.
+              </span>
+            </p>
+          )}
+          </>
         )}
       </div>
     </section>
