@@ -1,4 +1,58 @@
-# PivoxQuant — 인수인계서 (2026-05-21 v46.4 — 🟢 handover P2 5건 + 알림 매트릭스 서버화 + 🔴→🟢 KOSPI 1년-stale 근본 수정 + KR 데이터 스윕)
+# PivoxQuant — 인수인계서 (2026-05-22 v47 — 🟢 능동 버그헌팅 2 wave + 구조점검 + E2E 검증 (13 fix / 2 commit / 법규·보안·데이터))
+
+> **세션 최종 검증**: backend pytest **2788 passed** (사전존재 flaky `test_fx_staleness` 2건 외 0 fail) / FE tsc exit 0 / vitest **37 files 430 passed** / audit-code 8/8 PASS / 라이브 curl E2E (soft-delete 로그아웃·AAPL fundamentals 복구·KR 지수 freshness·legal_filter repro) / 0 회귀 / 비용 0원. 2 commit (`06cbc88b` wave-1 + `2d6cc750` wave-2) origin/main 푸시 완료. **FE Vercel 자동배포 + BE `railway up` 배포 진행**.
+
+## v47 2026-05-22 — 능동 버그헌팅 마라톤 (CEO "handover 보고 버그헌팅+구조잡기 자유모드, 토큰 아끼지말고 E2E로 확실히 검증", 자율 야간)
+
+> **🟢 결론: bug-hunter 7 + investigator 2 에이전트로 전 도메인 능동 발굴 → 실질 버그 13건 fix (법규 3 / 보안·privacy 2 / 데이터 정확성 5 / UX·일관성 3) + 회귀테스트 24+ 케이스 동반.** no-busywork 원칙 적용 — cosmetic/점진마이그레이션/dead-code/not-broken은 fix 안 하고 NOTE. 모호·중대 건은 직접 코드추적으로 root cause 확정 후 위임(false fix 방지). 에이전트 결과는 grep/curl/테스트 실측으로만 검증(거짓보고 금지).
+
+### ✅ Wave 1 — email/auth/데이터 정확성 (commit `06cbc88b`, 22 files)
+| # | 영역 | 버그 → fix | 심각도 | 라이브검증 |
+|---|---|---|---|---|
+| 1 | **email §50/PIPA §21** | `sender.py` TRANSACTIONAL(탈퇴확인·brag축하)이 `marketing_consent_at NULL` 게이트(253)에 막힘 — 게이트가 category 체크(269)보다 먼저 실행. `is_transactional` 플래그로 1b/1c/opt-out 우회(simulated 가드 유지) | P0 법규 | ✅ |
+| 2 | **auth 보안** | `app.py:197 load_user`가 deletion 체크 없어 soft-delete 유저가 탈퇴 전 remember_token으로 데이터 API 전면 접근(login()의 차단 무력화). load_user에서 `deletion_requested_at`이면 None 반환. OAuth 콜백은 이미 차단(검증만) | P0 보안 | ✅ dev-login 세션이 SESSION_EXPIRED로 차단됨 실측 |
+| 3 | **fundamentals 데이터** | `fmp.py:1627 prefetch`가 ratios/metrics 없이 `marketCap`만으로 `info:` 캐시(24h) seed → `get_info` early-return으로 pe/eps/margin/growth가 DISCOVER_POOL 50+종목·prod 전부 null 고착. seed 조건을 `is_etf or (ratios and metrics)`로 | P0 데이터 | ✅ AAPL pe 36.48·eps 8.33·margin 0.27·growth 0.064 복구 |
+| 4 | portfolio 통화 | `portfolio.py:526/806` is_kr `False` fallback → stale 캐시 시 .KS/.KQ 자본 USD 버킷 오기록. ticker suffix fallback(create_trade_alias와 통일). buy_new는 locked_user(race-recovery relocked) | High 데이터 | 단위테스트 |
+| 5 | market freshness | `market.py:902` KR 지수 stale 가드 상향만 → 하향(`level<spark_min*0.85`) 대칭 추가. 8% 같은 완만한 하락은 진짜 신저가 가능성으로 미flag(보수적) | Med | ✅ KR 지수 happy-path 무손상 |
+| 6 | naked ticker | `pre_trade/friction.py` ticker 미정규화 → Journal naked code. normalize_ticker 적용 | Low | 단위테스트 |
+| 7 | 알림 opt-out | `monthly_brag_service.py:587` event_id 누락 → brag email opt-out 무시. `event_id="brag_card"` | Med | 단위테스트 |
+| 8 | 마이그레이션 drift | `anthropic_usage_log`(raw SQL, ORM 아님) 가 alembic-only → prod self-heal 부재. `app.py _do_migrations`에 CREATE TABLE IF NOT EXISTS 가드(042 스키마 일치) | P1 | 단위테스트 |
+| 9 | FE portfolio | `hooks-v2.ts` equity curve mapper가 백엔드 `benchmark` 드롭 → 벤치마크 라인·KPI 항상 "—". type+mapper 보존 | High | vitest |
+| 10 | FE detail | 403 `ticker_not_in_user_scope`를 "timeout 8s"로 오표시. SignalScopeError 분기 → watchlist CTA(KO/EN) | Med UX | vitest |
+| 11 | FE settings | 알림 매트릭스가 SWR 하이드레이션 전 토글 시 저장된 prefs를 기본값으로 덮어씀. `hydrated` 전까지 토글 disabled | High | vitest |
+
+### ✅ Wave 2 — 법규 갭 + cross-user 누수 (commit `2d6cc750`, 5 files)
+| # | 영역 | 버그 → fix | 심각도 |
+|---|---|---|---|
+| 12 | **자본시장법** | `legal_filter.py` "take profit"/"stop loss"/"익절"/"손절"(+"take quick profits")이 `safe_scrub`·`is_compliant` 두 레이어 모두 미탐 — public AI chat 노출. surgical 패턴 추가(over-scrub 회피: "profit from"·"non-stop" 미치환). naked BUY/SELL case-sensitivity는 의도적이라 미변경 | High 법규 |
+| 13 | **privacy/§101** | `discover.py:242` movers가 유저 본인 워치리스트(§101 격리)로 계산되는데 글로벌 `movers:{region}` 키로 캐시 → 유저 A 종목이 B에게 누수. per-user 키(`:{uid}`) | P1 보안 |
+| — | 일관성 | `alerts.py` price-check `@general_rate_limit` 추가(형제 핸들러 통일) | Low |
+
+### 🔬 라이브 E2E 검증 (로컬 신코드 재기동 + dev-login)
+- **#2 soft-delete ✅** — 아까 버그헌트가 user id=1에 delete-request 남긴 상태에서 dev-login 후 `/api/watchlist` → SESSION_EXPIRED (load_user fix가 세션 무효화). DB에서 flag 클리어 후 정상 복구.
+- **#3 fundamentals ✅** — `/api/signals/AAPL` 1차 cold timeout 후 2·3차에서 pe 36.48 / eps 8.33 / margin 0.27 / growth 0.064 (이전 전부 null).
+- **#5 KR 지수 ✅** — `/api/market/indices?region=KR` KOSPI 7815.59 / KOSDAQ150 1875.52(range 내, stale=False), false-positive 0.
+- **#12 legal_filter ✅** — repro 6건: 4지시어 scrub+차단, "profit from growth"·"non-stop service" 미오치환.
+- ⚠️ FE 3건(#9/#10/#11)은 vitest 6 신규 케이스로 로직 검증. **prod 브라우저 시각검증은 Vercel 배포 후 가능**(데이터매핑/조건렌더라 로직테스트로 충분하나, CEO 세션으로 최종 눈확인 권장).
+
+### 📋 NOTE / 의도적 미수정 (no-busywork — not-broken/dead/ops/CEO)
+- **naked 소문자 buy/sell scrub**: `legal_filter.py:103-104` case-sensitive는 산문 오치환 방지 **의도적 설계**(주석 명시) + 후단 is_compliant가 disclaimer로 잡음 + 광범위 IGNORECASE는 over-scrub 위험 → 미변경. 단 스트리밍 compliance가 post-stream(장식적)이라 소문자 명령형은 잔존 위험 — 구조개선은 별도 과제.
+- **VAPID/push 미설정**: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` 프론트 env 부재 → 브라우저 push 구독 불능. 단 push는 라이브 채널 아님(email만 enforce, v46.4) → **[CEO] Vercel env 추가**(값: 백엔드 `.env` VAPID_PUBLIC_KEY) 시 활성. push-permission 실패 토스트 부재도 동반.
+- **settings _v1 email 토글 localStorage-only**: V1은 dead(V2 prod=true, dynamic import 미로드). V2는 v46.4에서 서버영속화 완료 → 미수정.
+- **risk.py 빈 포트폴리오 list vs dict shape**: 프론트가 Array.isArray 가드 + V2 미소비 → 무영향. NOTE.
+- **regime_desc "hold until trend breaks"**: 프론트 미렌더(types.ts만) → 잠재. "take quick profits"는 #12로 커버됨.
+- **구조(investigator)**: error_responses 미적용 26 routes / ticker_normalizer 우회 130 / silent except 51 / _v1 dead chunk(롤백보험) / format.ts 마이그레이션 132 / 디자인토큰 drift — 전부 점진/cosmetic, 출시 후 정리. nps_feedback·auth_events partial index도 저위험.
+
+### 🎯 다음 세션 / CEO 직접 액션
+1. **[BE 배포 확인]** `railway up --service web` 실행됨 — Deploy SUCCESS + `/api/health` 확인. (토큰 만료 시 `railway login` 재실행 후 재배포)
+2. **[CEO] Stripe 활성화** (v46.4 carry-over) — `STRIPE_SECRET_KEY` + Price ID Railway env.
+3. **[CEO] 이메일 DNS** (carry-over) — 가비아 MX/SPF/DKIM/DMARC.
+4. **[CEO·선택] VAPID** — Vercel env `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (push 활성화 원할 시).
+5. **[선택] 프론트 3 fix 시각 E2E** — Vercel 배포 후 /portfolio(벤치마크 라인) /detail/<비보유종목>(watchlist CTA) /settings(알림 토글) 눈확인.
+
+---
+
+# (이전) PivoxQuant — 인수인계서 (2026-05-21 v46.4 — 🟢 handover P2 5건 + 알림 매트릭스 서버화 + 🔴→🟢 KOSPI 1년-stale 근본 수정 + KR 데이터 스윕)
 
 > **세션 최종 검증 (전부 origin/main 푸시, main↔origin 0/0)**: FE tsc exit 0 / vitest **35 files 423 PASS** / pytest 관련 전수(kis·index·market·billing·notification·smoke·email·sender) **468 PASS / 12 skip / 0 fail** / 0 회귀 / pre-push smoke PASSED / 비용 0원. BE `railway up` 배포 + FE Vercel 자동배포 완료. 12 commit (`cd694303`→`0c2d0dbb`). 핵심: 알림 매트릭스 서버 영속화+email enforcement / billing Free 3진입점 가드 / naked ticker 전 surface / **KOSPI 2,625→7,815 KIS index-history 1년-stale 근본 수정** / KR 데이터 정확성 스윕(결함 0) / region 전환 Loading 폴리시. 라이브 E2E 전부 검증.
 
