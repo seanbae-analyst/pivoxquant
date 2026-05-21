@@ -425,6 +425,8 @@ export default function PortfolioPageV2() {
         loading={posLoading}
         onAction={openAction}
         onAddPosition={() => setAddOpen(true)}
+        onReconcile={handleReconcile}
+        reconcileAvailable={reconcileAvailable && !reconciling}
       />
 
       {/* ═══════════ 3-COL GRID — Sector / Watchlist / Recent ═══════════ */}

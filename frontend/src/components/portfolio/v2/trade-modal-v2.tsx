@@ -10,6 +10,14 @@
  *   sell  → "Trim position"  (and "Close" if qty == position.shares)
  *   edit  → "Adjust observation"
  *
+ * Pre-Trade Friction (Feature 6) — INLINE at the moment of action
+ * (2026-05-21): `buy` (ENTRY) and `sell` (EXIT) hand the recorded entry to
+ * <PreTradeFrictionModal /> — the 7-question reflection + cooldown — before
+ * the journal write fires. `edit` (avg-cost/memo adjustment) is NOT a buy/sell
+ * event, so it commits directly without friction. The real POST fires only on
+ * the reflection's onProceed; Cancel writes nothing. Friction must live where
+ * the action happens. Note (thesis) is REQUIRED at ≥50 chars for buy/sell.
+ *
  * Backend contract (verified 2026-04-27):
  *   - Add/Trim: POST PORTFOLIO_TRADES = `/api/portfolio/trades` with
  *     {position_id, action: "buy"|"sell", quantity, price, date, note}
@@ -23,6 +31,8 @@ import { PORTFOLIO_POSITIONS, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import type { Position, TradeAction } from "@/components/portfolio/types";
+import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
+import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
 
 interface TradeModalV2Props {
   open: boolean;
@@ -87,10 +97,22 @@ export function TradeModalV2({
   const [avgCost, setAvgCost] = React.useState("");
   const [note, setNote] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+  // Inline Pre-Trade Friction — only for buy (ENTRY) / sell (EXIT). Edit
+  // commits directly (not a buy/sell event).
+  const [frictionOpen, setFrictionOpen] = React.useState(false);
+
+  // buy/sell require a ≥50-char thesis (prefills the reflection); edit does not.
+  const requiresThesis = action !== "edit";
+  const noteOk = !requiresThesis || note.trim().length >= MIN_RATIONALE_CHARS;
+  const noteRemaining = Math.max(0, MIN_RATIONALE_CHARS - note.trim().length);
 
   // Reset form whenever position/action changes or close
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setFrictionOpen(false);
+      return;
+    }
+    setFrictionOpen(false);
     if (action === "edit") {
       setShares("");
       setPrice("");
@@ -105,70 +127,95 @@ export function TradeModalV2({
     setDate(new Date().toISOString().slice(0, 10));
   }, [open, action, position]);
 
-  // Escape closes
+  // Escape closes — only when the friction modal is NOT open.
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !frictionOpen) onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, frictionOpen]);
 
   if (!open || !position) return null;
 
+  // Validate the form. For edit → commit immediately. For buy/sell → open
+  // the reflection (real write happens on its onProceed).
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!position || submitting) return;
-    setSubmitting(true);
-    try {
-      if (action === "edit") {
-        const parsedCost = Number(avgCost);
-        if (!Number.isFinite(parsedCost) || parsedCost <= 0) {
-          toast.error("Average cost must be positive.");
-          setSubmitting(false);
-          return;
-        }
+    if (!position || submitting || frictionOpen) return;
+
+    if (action === "edit") {
+      const parsedCost = Number(avgCost);
+      if (!Number.isFinite(parsedCost) || parsedCost <= 0) {
+        toast.error("Average cost must be positive.");
+        return;
+      }
+      setSubmitting(true);
+      try {
         await apiFetch(`${PORTFOLIO_POSITIONS}/${position.id}`, {
           method: "PATCH",
-          body: JSON.stringify({
-            avg_cost: parsedCost,
-            note: note.trim(),
-          }),
+          body: JSON.stringify({ avg_cost: parsedCost, note: note.trim() }),
         });
-      } else {
-        const parsedQty = Number(shares);
-        const parsedPrice = Number(price);
-        if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
-          toast.error("Shares must be a positive number.");
-          setSubmitting(false);
+        toast.success(copy.toast);
+        onSuccess?.();
+        onClose();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          if (typeof window !== "undefined") window.location.href = "/login";
           return;
         }
-        if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-          toast.error("Price must be positive.");
-          setSubmitting(false);
-          return;
-        }
-        if (action === "sell" && parsedQty > position.shares) {
-          toast.error(`Cannot trim more than ${position.shares} shares held.`);
-          setSubmitting(false);
-          return;
-        }
-        await apiFetch(PORTFOLIO_TRADES, {
-          method: "POST",
-          body: JSON.stringify({
-            position_id: position.id,
-            action,
-            quantity: parsedQty,
-            price: parsedPrice,
-            date,
-            note: note.trim(),
-          }),
-        });
+        const message =
+          err instanceof Error ? err.message : "Failed to record entry.";
+        toast.error(message);
+      } finally {
+        setSubmitting(false);
       }
+      return;
+    }
+
+    // buy / sell — validate then hand to the reflection.
+    const parsedQty = Number(shares);
+    const parsedPrice = Number(price);
+    if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
+      toast.error("Shares must be a positive number.");
+      return;
+    }
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      toast.error("Price must be positive.");
+      return;
+    }
+    if (action === "sell" && parsedQty > position.shares) {
+      toast.error(`Cannot trim more than ${position.shares} shares held.`);
+      return;
+    }
+    if (!noteOk) {
+      toast.error(`Thesis는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${note.trim().length}자).`);
+      return;
+    }
+    setFrictionOpen(true);
+  }
+
+  // Commit the real buy/sell trade — invoked by the friction modal's onProceed.
+  async function commitTrade() {
+    if (!position) return;
+    const parsedQty = Number(shares);
+    const parsedPrice = Number(price);
+    setSubmitting(true);
+    try {
+      await apiFetch(PORTFOLIO_TRADES, {
+        method: "POST",
+        body: JSON.stringify({
+          position_id: position.id,
+          action,
+          quantity: parsedQty,
+          price: parsedPrice,
+          date,
+          note: note.trim(),
+        }),
+      });
       toast.success(copy.toast);
       onSuccess?.();
-      onClose();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         if (typeof window !== "undefined") window.location.href = "/login";
@@ -176,7 +223,8 @@ export function TradeModalV2({
       }
       const message =
         err instanceof Error ? err.message : "Failed to record entry.";
-      toast.error(message);
+      // Re-throw so the friction modal surfaces it (reflection already stamped).
+      throw new Error(message);
     } finally {
       setSubmitting(false);
     }
@@ -243,7 +291,7 @@ export function TradeModalV2({
             }}
           >
             {copy.headline}{" "}
-            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               {copy.accentWord}
             </span>
           </h2>
@@ -351,14 +399,28 @@ export function TradeModalV2({
                   style={{ ...fieldInputStyle, colorScheme: "dark" }}
                 />
               </FormField>
-              <FormField label="Memo (optional)">
+              <FormField label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
                 <textarea
+                  required
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  rows={2}
-                  placeholder="Why now?"
-                  style={{ ...fieldInputStyle, resize: "vertical", minHeight: 36 }}
+                  rows={3}
+                  placeholder="왜 지금 이 결정을 하는가? 한 문단으로 정직하게."
+                  style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
                 />
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: "var(--pq-text-eyebrow)",
+                    letterSpacing: "0.06em",
+                    color: noteOk ? "var(--pq-bronze)" : "rgba(245,240,232,0.45)",
+                    marginTop: 2,
+                  }}
+                >
+                  {noteOk
+                    ? `✓ ${note.trim().length} chars`
+                    : `${noteRemaining} chars more (${note.trim().length}/${MIN_RATIONALE_CHARS})`}
+                </span>
               </FormField>
             </>
           )}
@@ -424,12 +486,34 @@ export function TradeModalV2({
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting ? "Saving…" : copy.cta}
+                {submitting
+                  ? "Saving…"
+                  : requiresThesis
+                    ? "Continue · 7 questions →"
+                    : copy.cta}
               </button>
             </div>
           </div>
         </form>
       </div>
+
+      {/* Inline Pre-Trade Friction — buy=ENTRY, sell=EXIT. Real POST on
+          onProceed; Cancel writes nothing. (edit never opens this.) */}
+      <PreTradeFrictionModal
+        open={frictionOpen}
+        side={action === "buy" ? "ENTRY" : "EXIT"}
+        ticker={position.symbol}
+        tickerName={position.name}
+        shares={shares}
+        rationale={note}
+        onProceed={async () => {
+          await commitTrade();
+          setFrictionOpen(false);
+          onClose();
+        }}
+        onCancel={() => setFrictionOpen(false)}
+        onClose={() => setFrictionOpen(false)}
+      />
     </div>
   );
 }

@@ -42,6 +42,10 @@ interface PositionsTableV2Props {
   loading?: boolean;
   onAction?: (action: TradeAction, position: Position) => void;
   onAddPosition?: () => void;
+  /** Empty-state secondary path: broker sync (KIS/Alpaca). Optional. */
+  onReconcile?: () => void;
+  /** Whether a broker is linked — drives the secondary CTA enabled state. */
+  reconcileAvailable?: boolean;
 }
 
 // Wave 4-B (2026-05-20): migrated to lib/fmtMoneyPlain + lib/fmtPctSignedMinus.
@@ -148,6 +152,8 @@ export function PositionsTableV2({
   loading,
   onAction,
   onAddPosition,
+  onReconcile,
+  reconcileAvailable = false,
 }: PositionsTableV2Props) {
   const router = useRouter();
   const [sortKey, setSortKey] = React.useState<SortKey>("weight");
@@ -251,29 +257,90 @@ export function PositionsTableV2({
               color: "rgba(245,240,232,0.55)",
             }}
           className="font-serif" >
-            <p style={{ fontSize: "var(--pq-text-h6)", lineHeight: 1.5, margin: "0 0 20px 0" }}>
-              No positions observed yet.
+            <p
+              className="font-display"
+              style={{
+                fontSize: "var(--pq-text-h5)",
+                lineHeight: 1.3,
+                color: "var(--pq-ivory)",
+                margin: "0 0 10px 0",
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              아직 기록된 보유 종목이 없습니다.
             </p>
-            {onAddPosition && (
-              <button
-                type="button"
-                onClick={onAddPosition}
-                className="font-mono uppercase"
-                style={{
-                  display: "inline-flex",
-                  padding: "10px 20px",
-                  background: "var(--pq-bronze)",
-                  color: "var(--pq-ink, #050505)",
-                  fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.2em",
-                  border: "none",
-                  borderRadius: "var(--pq-radius-cta, 2px)",
-                  cursor: "pointer",
-                }}
-              >
-                Add your first position →
-              </button>
-            )}
+            <p
+              style={{
+                fontSize: "var(--pq-text-body)",
+                lineHeight: 1.55,
+                margin: "0 auto 24px",
+                maxWidth: 420,
+              }}
+            >
+              보유 종목을 직접 입력해 책(book)을 시작하세요. 자산
+              동기화하셨다면 KIS·Alpaca 연동으로 한 번에 불러올 수도 있습니다.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 14,
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              {/* Primary path — manual add (한투 유저 적음 → 수동이 주 경로) */}
+              {onAddPosition && (
+                <button
+                  type="button"
+                  onClick={onAddPosition}
+                  className="font-mono uppercase"
+                  style={{
+                    display: "inline-flex",
+                    padding: "11px 22px",
+                    background: "var(--pq-bronze)",
+                    color: "var(--pq-ink, #050505)",
+                    fontSize: "var(--pq-text-eyebrow)",
+                    letterSpacing: "0.2em",
+                    border: "none",
+                    borderRadius: "var(--pq-radius-cta, 2px)",
+                    cursor: "pointer",
+                  }}
+                >
+                  보유종목 직접 추가 →
+                </button>
+              )}
+              {/* Secondary path — broker sync */}
+              {onReconcile && (
+                <button
+                  type="button"
+                  onClick={onReconcile}
+                  disabled={!reconcileAvailable}
+                  className="font-mono uppercase"
+                  title={
+                    reconcileAvailable
+                      ? "KIS·Alpaca 계좌에서 동기화"
+                      : "KIS broker 연결 필요 (Settings)"
+                  }
+                  aria-disabled={!reconcileAvailable}
+                  style={{
+                    display: "inline-flex",
+                    padding: "11px 22px",
+                    background: "transparent",
+                    color: reconcileAvailable
+                      ? "var(--pq-bronze)"
+                      : "rgba(245,240,232,0.45)",
+                    fontSize: "var(--pq-text-eyebrow)",
+                    letterSpacing: "0.2em",
+                    border: `1px solid ${reconcileAvailable ? "var(--pq-bronze)" : "rgba(245,240,232,0.20)"}`,
+                    borderRadius: "var(--pq-radius-cta, 2px)",
+                    cursor: reconcileAvailable ? "pointer" : "not-allowed",
+                  }}
+                >
+                  KIS·Alpaca 동기화
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           /* Mobile fix (2026-05-05): wrap the 8-col table in overflow-x-auto

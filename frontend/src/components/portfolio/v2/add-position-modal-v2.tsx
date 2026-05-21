@@ -8,6 +8,15 @@
  *   - Form fields with mono labels + hairline-bottom inputs
  *   - "Save observation" CTA (legal-safe vocabulary)
  *
+ * Pre-Trade Friction (Feature 6) — INLINE at the moment of action
+ * (2026-05-21): submitting this form no longer writes the position
+ * directly. It hands the entry to <PreTradeFrictionModal /> (ENTRY) — the
+ * 7-question reflection + cooldown. The real `POST /api/portfolio/positions`
+ * fires only on `onProceed`. Cancel → nothing is recorded. The friction is
+ * the point; it must live where the action happens, not on a page no one
+ * visits. The thesis (memo) is therefore REQUIRED at ≥50 chars (matches the
+ * reflection's MIN_RATIONALE_CHARS) and prefills the reflection.
+ *
  * Backend contract (re-verified 2026-05-01 against routes/portfolio.py
  * ::create_position_alias):
  *   POST PORTFOLIO_POSITIONS = `/api/portfolio/positions`
@@ -25,6 +34,8 @@ import { toast } from "sonner";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
+import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
 
 interface AddPositionModalV2Props {
   open: boolean;
@@ -49,6 +60,12 @@ export function AddPositionModalV2({
   const [avgCost, setAvgCost] = React.useState("");
   const [memo, setMemo] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+  // Inline Pre-Trade Friction (ENTRY) — opened after the form validates;
+  // the real POST fires only on its onProceed.
+  const [frictionOpen, setFrictionOpen] = React.useState(false);
+
+  const memoOk = memo.trim().length >= MIN_RATIONALE_CHARS;
+  const memoRemaining = Math.max(0, MIN_RATIONALE_CHARS - memo.trim().length);
 
   // Reset on close
   React.useEffect(() => {
@@ -58,28 +75,31 @@ export function AddPositionModalV2({
       setAvgCost("");
       setMemo("");
       setSubmitting(false);
+      setFrictionOpen(false);
     }
   }, [open]);
 
-  // Escape closes
+  // Escape closes — only when the friction modal is NOT open (it owns Escape
+  // during its own lifecycle).
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !frictionOpen) onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, frictionOpen]);
 
   if (!open) return null;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (submitting) return;
+  const sym = symbol.trim().toUpperCase();
+  const sharesN = Number(shares);
+  const costN = Number(avgCost);
 
-    const sym = symbol.trim().toUpperCase();
-    const sharesN = Number(shares);
-    const costN = Number(avgCost);
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (submitting || frictionOpen) return;
+
     if (!sym) {
       toast.error("Symbol is required.");
       return;
@@ -92,14 +112,23 @@ export function AddPositionModalV2({
       toast.error("Average cost must be positive.");
       return;
     }
+    if (!memoOk) {
+      toast.error(`Thesis는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${memo.trim().length}자).`);
+      return;
+    }
 
+    // Hand off to the 7-question reflection + cooldown. Nothing is written
+    // until the user clears the friction and the modal calls onProceed.
+    setFrictionOpen(true);
+  }
+
+  // Commit the real position — invoked by the friction modal's onProceed.
+  // Backend `routes/portfolio.py::create_position_alias` reads only
+  // {symbol, quantity, price, note}. side / purchase_date / sector /
+  // currency have no Position-model column (mirrors V1 trim commit 1ee4786).
+  async function commitPosition() {
     setSubmitting(true);
     try {
-      // Backend `routes/portfolio.py::create_position_alias` reads only
-      // {symbol, quantity, price, note}. side / purchase_date / sector /
-      // currency have no Position-model column, so previously-collected
-      // values were silently dropped — UX was lying. Trim payload to
-      // match reality (mirrors V1 modal commit 1ee4786, 2026-05-01).
       await apiFetch(PORTFOLIO_POSITIONS, {
         method: "POST",
         body: JSON.stringify({
@@ -111,7 +140,6 @@ export function AddPositionModalV2({
       });
       toast.success("Position recorded · informational only, not advice.");
       onSuccess?.();
-      onClose();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         if (typeof window !== "undefined") window.location.href = "/login";
@@ -119,7 +147,9 @@ export function AddPositionModalV2({
       }
       const message =
         err instanceof Error ? err.message : "Failed to record position.";
-      toast.error(message);
+      // Re-throw so the friction modal surfaces it (the reflection is
+      // already stamped; the journal write is what failed).
+      throw new Error(message);
     } finally {
       setSubmitting(false);
     }
@@ -186,7 +216,7 @@ export function AddPositionModalV2({
             }}
           >
             Record a{" "}
-            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               new position.
             </span>
           </h2>
@@ -199,7 +229,8 @@ export function AddPositionModalV2({
               margin: 0,
             }}
           >
-            Saved to your book · not sent to broker. Journaling only.
+            Saved to your book · not sent to broker. Journaling only — 7개
+            질문을 거친 뒤 기록됩니다.
           </p>
         </div>
 
@@ -246,15 +277,29 @@ export function AddPositionModalV2({
             </FormField>
           </div>
 
-          {/* Memo */}
-          <FormField label="Memo (optional)">
+          {/* Thesis — required ≥50 chars; prefills the reflection. */}
+          <FormField label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
             <textarea
+              required
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
-              rows={2}
-              placeholder="Why now?"
-              style={{ ...fieldInputStyle, resize: "vertical", minHeight: 36 }}
+              rows={3}
+              placeholder="왜 지금 이 종목에 들어가는가? 한 문단으로 정직하게."
+              style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
             />
+            <span
+              className="font-mono"
+              style={{
+                fontSize: "var(--pq-text-eyebrow)",
+                letterSpacing: "0.06em",
+                color: memoOk ? "var(--pq-bronze)" : "rgba(245,240,232,0.45)",
+                marginTop: 2,
+              }}
+            >
+              {memoOk
+                ? `✓ ${memo.trim().length} chars`
+                : `${memoRemaining} chars more (${memo.trim().length}/${MIN_RATIONALE_CHARS})`}
+            </span>
           </FormField>
 
           {/* Footer */}
@@ -318,12 +363,30 @@ export function AddPositionModalV2({
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting ? "Saving…" : "Save observation →"}
+                {submitting ? "Saving…" : "Continue · 7 questions →"}
               </button>
             </div>
           </div>
         </form>
       </div>
+
+      {/* Inline Pre-Trade Friction (ENTRY). The real POST fires on onProceed.
+          On cancel, nothing is written and we return to this form. */}
+      <PreTradeFrictionModal
+        open={frictionOpen}
+        side="ENTRY"
+        ticker={sym}
+        shares={shares}
+        rationale={memo}
+        onProceed={async () => {
+          await commitPosition();
+          // Position committed — close both modals.
+          setFrictionOpen(false);
+          onClose();
+        }}
+        onCancel={() => setFrictionOpen(false)}
+        onClose={() => setFrictionOpen(false)}
+      />
     </div>
   );
 }
