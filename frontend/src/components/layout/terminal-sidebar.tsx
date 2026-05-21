@@ -38,7 +38,6 @@ import {
   Settings as SettingsIcon,
   Sparkles,
   BookHeart,
-  TrendingUp,
   UserCircle,
   Gavel,
 } from "lucide-react";
@@ -117,7 +116,11 @@ const SYSTEM: Item[] = [
   // it. Now wired.
   { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
   { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
-  { key: "growth", label: "Journal", href: "/growth", icon: TrendingUp },
+  // 2026-05-21: "Journal" (→/growth) hidden from user nav for launch. /growth
+  // is the founder-only "Growth OS" (streak/morning-briefing/reflection) whose
+  // agent_worker backend is not deployed → renders a "준비 중" dead-end. Route +
+  // code preserved; restore this entry once Growth OS is user-facing.
+  // { key: "growth", label: "Journal", href: "/growth", icon: TrendingUp },
   { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
 ];

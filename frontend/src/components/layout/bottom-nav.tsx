@@ -40,7 +40,6 @@ import {
   Settings as SettingsIcon,
   LogOut,
   Sparkles,
-  TrendingUp,
   UserCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -123,7 +122,10 @@ const DRAWER_GROUPS: DrawerGroup[] = [
       // Journal Companion — Closed Beta, Premium Plus / Founding
       // Lifetime only. Entitlement enforcement lives on the page.
       { href: "/companion", label: "Companion", icon: BookHeart, premiumPlus: true },
-      { href: "/growth", label: "Journal", icon: TrendingUp },
+      // 2026-05-21: "Journal" (→/growth) hidden from user nav for launch —
+      // founder-only Growth OS, agent_worker backend not deployed (준비 중
+      // dead-end). Route preserved; restore when user-facing.
+      // { href: "/growth", label: "Journal", icon: TrendingUp },
       { href: "/profile", label: "Profile · Persona", icon: UserCircle },
       { href: "/settings", label: "Settings", icon: SettingsIcon },
     ],
