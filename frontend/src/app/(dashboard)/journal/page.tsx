@@ -84,7 +84,7 @@ function StatusChip({ kind }: { kind: StatusKind }) {
   const dimmed = kind === "cancelled";
   return (
     <span
-      className="font-mono text-pq-mono-tiny uppercase"
+      className="font-mono text-pq-caption uppercase"
       style={{
         display: "inline-flex",
         alignItems: "center",
@@ -154,11 +154,11 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
       {/* Header: name + ticker sub + status */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <EditorialHead as="h3" size={22} style={{ wordBreak: "keep-all" }}>
+          <EditorialHead as="h3" size={24} style={{ wordBreak: "keep-all" }}>
             {name}
           </EditorialHead>
           {showTickerSub && (
-            <span className="font-mono text-pq-mono-tiny uppercase tracking-[0.14em] text-[rgba(245,240,232,0.45)]">
+            <span className="font-mono text-pq-caption uppercase tracking-[0.14em] text-[rgba(245,240,232,0.45)]">
               {bareTicker}
             </span>
           )}
@@ -169,18 +169,18 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
       {/* Meta row: intent + shares + time */}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         {sideText && (
-          <span className="font-mono text-pq-mono-tiny uppercase tracking-[0.14em] text-[var(--pq-bronze-light)]">
+          <span className="font-mono text-pq-caption uppercase tracking-[0.14em] text-[var(--pq-bronze-light)]">
             {sideText}
           </span>
         )}
         {typeof r.intended_shares === "number" && r.intended_shares > 0 && (
-          <span className="font-mono text-pq-mono-tiny text-[rgba(245,240,232,0.55)]">
+          <span className="font-mono text-pq-caption text-[rgba(245,240,232,0.55)]">
             {r.intended_shares.toLocaleString()}
             <span className="ml-1 opacity-60">주</span>
           </span>
         )}
         {ts && (
-          <span className="font-mono text-pq-mono-tiny text-[rgba(245,240,232,0.45)]">
+          <span className="font-mono text-pq-caption text-[rgba(245,240,232,0.45)]">
             {relativeTime(ts, locale, { verbose: true })}
             <span className="mx-1.5 opacity-40">·</span>
             <span className="opacity-70">{absoluteDate(ts)}</span>
@@ -191,7 +191,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
       {/* Rationale */}
       {r.rationale.trim().length > 0 && (
         <p
-          className="mt-3 font-serif text-pq-body"
+          className="mt-3 font-serif text-pq-deck"
           style={{
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.82)",
@@ -204,7 +204,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
 
       {/* Auto-extended cooldown note (volatility context) */}
       {r.auto_extended_reason && (
-        <p className="mt-2 font-mono text-pq-mono-tiny text-[rgba(245,240,232,0.45)]">
+        <p className="mt-2 font-mono text-pq-caption text-[rgba(245,240,232,0.45)]">
           {r.auto_extended_reason}
         </p>
       )}
@@ -218,7 +218,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
             className="flex w-full items-center gap-2 text-left"
             aria-expanded={open}
           >
-            <span className="font-mono text-pq-mono-tiny uppercase tracking-[0.18em] text-[var(--pq-bronze-light)]">
+            <span className="font-mono text-pq-caption uppercase tracking-[0.18em] text-[var(--pq-bronze-light)]">
               7문항 자기검증
             </span>
             <ChevronDown
@@ -228,7 +228,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
           </button>
           {open && (
             <p
-              className="mt-2 font-serif text-pq-body-sm"
+              className="mt-2 font-serif text-pq-lead"
               style={{
                 lineHeight: 1.6,
                 whiteSpace: "pre-wrap",
@@ -281,7 +281,7 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 rounded-[2px] border px-4 py-2 font-mono text-pq-mono-tiny uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="mt-3 rounded-[2px] border px-4 py-2 font-mono text-pq-caption uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         다시 시도
@@ -318,7 +318,7 @@ function EmptyState() {
       </Caption>
       <Link
         href="/portfolio"
-        className="mt-6 inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-mono-tiny uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="mt-6 inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
