@@ -157,9 +157,18 @@ export function EquityCurveBlock({
 
   const benchmarkReturn = React.useMemo(() => {
     if (series.length < 2) return undefined;
-    const first = series[0].benchmark;
-    const last = series[series.length - 1].benchmark;
-    if (typeof first !== "number" || typeof last !== "number" || !first) {
+    // The benchmark series often starts mid-window (the dashed line begins
+    // partway through the chart), so `series[0].benchmark` / `series[last]`
+    // are commonly undefined → both BENCHMARK + SPREAD showed "—". Anchor on
+    // the FIRST and LAST *valid* benchmark points instead. The resulting
+    // window may be slightly shorter than the full portfolio window, but a
+    // real number beats an em-dash. (2026-05-22 FIX 4.)
+    const isValidBench = (v: number | undefined): v is number =>
+      typeof v === "number" && Number.isFinite(v) && v !== 0;
+    const first = series.find((p) => isValidBench(p.benchmark))?.benchmark;
+    const last = [...series].reverse().find((p) => isValidBench(p.benchmark))
+      ?.benchmark;
+    if (!isValidBench(first) || !isValidBench(last)) {
       return undefined;
     }
     return ((last - first) / first) * 100;

@@ -33,8 +33,15 @@ MIN_RATIONALE_CHARS = 50
 
 # Default cooldown duration. The service layer extends this when the
 # market environment trips one of the auto-extend triggers.
-DEFAULT_COOLDOWN_SECONDS = 120  # 2 min
-EXTENDED_COOLDOWN_SECONDS = 300  # 5 min — for FOMC / VIX / big-move windows
+#
+# 2026-05-22 (CEO directive "2분 없애"): the forced wait after answering the
+# 7-question reflection was causing users to abandon mid-flow → lost
+# "add asset" saves. Both windows are now 0 → the reflection is
+# immediately "ready" (cooldown_ends_at == cooldown_started_at →
+# seconds_remaining 0 → proceed() permitted right away). The 7-question
+# self-reflection itself is preserved; only the enforced timer is removed.
+DEFAULT_COOLDOWN_SECONDS = 0  # was 120 (2 min) — removed per CEO
+EXTENDED_COOLDOWN_SECONDS = 0  # was 300 (5 min) — removed per CEO
 
 # Allowed `auto_extended_reason` values — kept here so service + tests
 # share the source of truth without a service-layer import cycle.

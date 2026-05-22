@@ -18,7 +18,14 @@ literal ``BUY`` / ``SELL`` for storage. Non-allowed values become
 
 Auto-extend triggers
 --------------------
-The default cooldown is 2 minutes. We extend to 5 minutes when:
+2026-05-22 (CEO directive "2분 없애"): the enforced cooldown is now 0 —
+both DEFAULT_ and EXTENDED_COOLDOWN_SECONDS are 0, so the reflection is
+immediately "ready" after the 7 questions (no timed wait). The 7-question
+self-reflection itself is preserved; only the timer is removed. The
+auto-extend trigger detection below still runs (and stamps
+``auto_extended_reason`` for the audit row) but, with both windows at 0,
+it no longer changes the wait. Historically the default was 2 minutes,
+extended to 5 minutes when:
 
 * FOMC meeting fires within ±30 minutes (services.market_status hook,
   optional — when the helper is missing this trigger is a no-op).

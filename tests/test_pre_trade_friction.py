@@ -61,8 +61,10 @@ def test_start_creates_reflection(app, make_user):
         )
         assert out["intended_ticker"] == "AAPL"
         assert out["intended_side"] == "BUY"
-        assert out["status"] == "pending"
-        assert out["seconds_remaining"] > 0
+        # 2026-05-22: cooldown removed (CEO "2분 없애") → reflection is
+        # immediately ready (seconds_remaining 0, proceed permitted).
+        assert out["status"] == "ready"
+        assert out["seconds_remaining"] == 0
         # Row persisted.
         row = db.session.get(PreTradeReflection, out["id"])
         assert row is not None
@@ -82,8 +84,8 @@ def test_rationale_too_short_rejects(app, make_user):
             )
 
 
-def test_cooldown_2min_default(app, make_user):
-    """Default cooldown is exactly 120 seconds when no extend trigger fires."""
+def test_cooldown_default_is_zero(app, make_user):
+    """2026-05-22: cooldown removed → default duration is 0s (immediately ready)."""
     user = _make_user(make_user, email="pt-2min@test.com")
     with app.app_context(), patch(
         "services.pre_trade.friction._should_extend_cooldown",
@@ -96,8 +98,9 @@ def test_cooldown_2min_default(app, make_user):
             shares=1,
             rationale=LONG_RATIONALE,
         )
-        # Allow ±5s tolerance for test-runner clock drift.
-        assert abs(out["seconds_remaining"] - DEFAULT_COOLDOWN_SECONDS) <= 5
+        assert DEFAULT_COOLDOWN_SECONDS == 0
+        assert out["seconds_remaining"] == 0
+        assert out["status"] == "ready"
         assert out["auto_extended_reason"] is None
 
 
@@ -118,8 +121,11 @@ def test_fomc_extension_to_5min(app, make_user):
             shares=1,
             rationale=LONG_RATIONALE,
         )
+        # Reason is still stamped for the journal, but the duration is 0
+        # (cooldown removed 2026-05-22) so the user is not made to wait.
         assert out["auto_extended_reason"] == "fomc_30min"
-        assert abs(out["seconds_remaining"] - EXTENDED_COOLDOWN_SECONDS) <= 5
+        assert EXTENDED_COOLDOWN_SECONDS == 0
+        assert out["seconds_remaining"] == 0
 
 
 def test_high_vix_extension(app, make_user):
@@ -139,10 +145,13 @@ def test_high_vix_extension(app, make_user):
             market_volatility=35.0,
         )
         assert out["auto_extended_reason"] == "high_vix"
-        assert abs(out["seconds_remaining"] - EXTENDED_COOLDOWN_SECONDS) <= 5
+        assert out["seconds_remaining"] == 0
 
 
-def test_proceed_before_cooldown_rejects(app, make_user):
+def test_proceed_immediately_succeeds(app, make_user):
+    """2026-05-22: cooldown removed → proceed is permitted right after start
+    (no enforced wait). Previously this raised "cooldown has not elapsed".
+    """
     user = _make_user(make_user, email="pt-prep@test.com")
     with app.app_context():
         out = start_cooldown(
@@ -152,8 +161,10 @@ def test_proceed_before_cooldown_rejects(app, make_user):
             shares=1,
             rationale=LONG_RATIONALE,
         )
-        with pytest.raises(ValueError, match="cooldown"):
-            proceed(out["id"], user["id"])
+        assert out["seconds_remaining"] == 0
+        result = proceed(out["id"], user["id"])
+        assert result["status"] == "proceeded"
+        assert result["proceeded_at"] is not None
 
 
 def test_proceed_after_cooldown_succeeds(app, make_user):
@@ -321,7 +332,8 @@ def test_route_start_returns_disclaimer(client, auth_user):
     assert body["ok"] is True
     assert "disclaimer" in body
     assert "권유가 아닙니다" in body["disclaimer"]
-    assert body["reflection"]["status"] == "pending"
+    # 2026-05-22: cooldown removed → reflection is immediately ready.
+    assert body["reflection"]["status"] == "ready"
 
 
 def test_route_csrf_required(raw_client, make_user):

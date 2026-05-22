@@ -89,6 +89,105 @@ class TestAddPosition:
         assert r.get_json()["code"] == "TIER_LIMIT"
 
 
+# ── POST /api/portfolio/positions — purchase_date (open date) ───────────────
+#
+# FIX (2026-05-22): the production alias endpoint now reads an optional
+# "purchase_date" ("YYYY-MM-DD") and stores it as Position.added_at
+# (serialised as opened_at). Frontend contract: POST body may include
+# purchase_date. Invalid / missing / future → default server clock.
+
+class TestPurchaseDate:
+    def _load_added_at(self, app, pid):
+        from models import Position
+        with app.app_context():
+            return Position.query.get(int(pid)).added_at
+
+    def test_valid_purchase_date_sets_added_at(self, client, app, auth_user):
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "AAPL", "quantity": 10, "price": 150.0,
+                "purchase_date": "2025-01-15",
+            })
+        assert r.status_code == 200, r.data
+        pid = r.get_json()["id"]
+        added = self._load_added_at(app, pid)
+        assert added is not None
+        assert added.year == 2025 and added.month == 1 and added.day == 15
+
+    def test_missing_purchase_date_falls_back_to_now(self, client, app, auth_user):
+        from datetime import datetime, timezone
+        before = datetime.now(timezone.utc).replace(tzinfo=None)
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "MSFT", "quantity": 5, "price": 300.0,
+            })
+        assert r.status_code == 200, r.data
+        added = self._load_added_at(app, r.get_json()["id"])
+        assert added is not None
+        # Defaulted to ~now (within a generous window).
+        assert added >= before.replace(microsecond=0).replace(second=0, minute=0, hour=0)
+        assert added.year == before.year
+
+    def test_invalid_format_falls_back_to_now(self, client, app, auth_user):
+        from datetime import datetime, timezone
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "GOOG", "quantity": 1, "price": 100.0,
+                "purchase_date": "not-a-date",
+            })
+        # UX: malformed value must not 400 — falls back silently.
+        assert r.status_code == 200, r.data
+        added = self._load_added_at(app, r.get_json()["id"])
+        assert added is not None
+        assert added.year == datetime.now(timezone.utc).year
+
+    def test_future_date_rejected_falls_back_to_now(self, client, app, auth_user):
+        from datetime import datetime, timezone, timedelta
+        future = (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d")
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "NVDA", "quantity": 2, "price": 500.0,
+                "purchase_date": future,
+            })
+        assert r.status_code == 200, r.data
+        added = self._load_added_at(app, r.get_json()["id"])
+        # Cannot open a position in the future → defaulted to now (this year).
+        assert added is not None
+        assert added.year == datetime.now(timezone.utc).year
+        assert added.date() <= datetime.now(timezone.utc).date()
+
+    def test_ancient_date_rejected_falls_back_to_now(self, client, app, auth_user):
+        from datetime import datetime, timezone
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "TSLA", "quantity": 1, "price": 200.0,
+                "purchase_date": "1850-06-01",
+            })
+        assert r.status_code == 200, r.data
+        added = self._load_added_at(app, r.get_json()["id"])
+        assert added is not None
+        assert added.year == datetime.now(timezone.utc).year
+
+    def test_merge_preserves_original_added_at(self, client, app, auth_user):
+        # First buy with an explicit early open date.
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r1 = client.post("/api/portfolio/positions", json={
+                "symbol": "AAPL", "quantity": 10, "price": 150.0,
+                "purchase_date": "2024-03-01",
+            })
+        assert r1.status_code == 200, r1.data
+        pid = r1.get_json()["id"]
+        # Second buy (same ticker) merges; must NOT overwrite added_at.
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r2 = client.post("/api/portfolio/positions", json={
+                "symbol": "AAPL", "quantity": 5, "price": 160.0,
+                "purchase_date": "2025-09-09",
+            })
+        assert r2.status_code == 200, r2.data
+        added = self._load_added_at(app, pid)
+        assert added.year == 2024 and added.month == 3 and added.day == 1
+
+
 # ── PUT /api/portfolio/position/<id> (edit) ─────────────────────────────────
 
 class TestEditPosition:

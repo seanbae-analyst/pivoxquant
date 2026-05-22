@@ -328,6 +328,9 @@ def add_position():
             kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
             code="AVG_COST_IMPLAUSIBLE", status=400,
         )
+    # Optional user-supplied open date ("YYYY-MM-DD"). Parity with the
+    # production alias endpoint. None → default now().
+    opened_dt = _parse_purchase_date(d.get("purchase_date"))
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
     # NEW-D (2026-05-09): two-phase race-safe upsert.
@@ -356,13 +359,16 @@ def add_position():
         if ex:
             _merge_into(ex)
         else:
-            db.session.add(Position(
+            new_pos = Position(
                 user_id=current_user.id, ticker=ticker,
                 shares=shares, avg_cost=cost, buy_fx_rate=fx_rate,
                 thesis=thesis,
                 thesis_created_at=datetime.now(timezone.utc).replace(tzinfo=None) if thesis else None,
                 thesis_status="pending" if thesis else "pending",
-            ))
+            )
+            if opened_dt is not None:
+                new_pos.added_at = opened_dt
+            db.session.add(new_pos)
         db.session.commit()
     except IntegrityError:
         # Concurrent insert collided on uq_positions_user_ticker — recover
@@ -1204,12 +1210,53 @@ def list_trades_alias():
         )
 
 
+def _parse_purchase_date(raw):
+    """Parse a user-supplied "YYYY-MM-DD" purchase (open) date.
+
+    Returns a naive-UTC ``datetime`` (midnight) on success, or ``None`` to
+    signal "fall back to default now()". Validation is lenient on purpose —
+    a malformed value must never 400 / break the add-asset flow (UX), it
+    just falls through to the server clock.
+
+    Guards:
+      * empty / non-string / unparseable  → None (default now)
+      * future date (after today)         → None (default now); a user
+        cannot have opened a position in the future
+      * implausibly old (before 1900)     → None (default now)
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    s = raw.strip()
+    if not s:
+        return None
+    try:
+        parsed = datetime.strptime(s, "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+    parsed = parsed.replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Future date: reject → default now (cannot open a position in the future).
+    if parsed.date() > now.date():
+        return None
+    # Implausibly old: guard against typos / sentinel dates.
+    if parsed.year < 1900:
+        return None
+    return parsed
+
+
 @portfolio_bp.route("/positions", methods=["POST"])
 @api_auth
 @trade_rate_limit
 def create_position_alias():
     """Accepts the new frontend shape {symbol, side, quantity, price,
     purchase_date, note} and funnels into the existing add_position flow.
+
+    ``purchase_date`` (optional, "YYYY-MM-DD") is the date the user opened
+    the position. When valid it is stored as ``Position.added_at`` (the
+    position open date, serialised as ``opened_at``). Invalid / missing /
+    future values fall back to the default server clock — see
+    :func:`_parse_purchase_date`. On a merge into an existing position the
+    original ``added_at`` is preserved (earliest open date wins).
     """
     d = request.get_json() or {}
     raw_symbol = (d.get("symbol") or d.get("ticker") or "").strip().upper()
@@ -1258,6 +1305,8 @@ def create_position_alias():
             }), 403
 
     note = (d.get("note") or d.get("notes") or d.get("thesis") or "").strip()[:500] or None
+    # Optional user-supplied open date ("YYYY-MM-DD"). None → default now().
+    opened_dt = _parse_purchase_date(d.get("purchase_date"))
     is_kr = symbol.endswith(".KS") or symbol.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
 
@@ -1290,6 +1339,12 @@ def create_position_alias():
                 thesis_created_at=datetime.now(timezone.utc).replace(tzinfo=None) if note else None,
                 thesis_status="pending",
             )
+            # When the user supplied a valid open date, override the model
+            # default (now()). Invalid/missing → leave default. Merge path
+            # never reaches here, so an existing position keeps its earliest
+            # added_at.
+            if opened_dt is not None:
+                new_pos.added_at = opened_dt
             db.session.add(new_pos)
         db.session.commit()
     except IntegrityError:

@@ -123,6 +123,36 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
   const [reflection, setReflection] = useState<Reflection | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  /* ── Proceed against a *specific* reflection ──
+   * Shared by the user-driven `proceed()` and the auto-proceed path in
+   * `startCooldown`. Takes the reflection explicitly so the auto path can act
+   * on the freshly-returned row without waiting for the `reflection` state to
+   * commit (closure would still hold the previous value). */
+  const proceedWith = useCallback(
+    async (target: Reflection) => {
+      try {
+        const r = await apiFetch<StartResponse>(API.preTrade.proceed(target.id), {
+          method: "POST",
+        });
+        setReflection(r.reflection);
+        setPhase("terminal");
+        // Commit the host's real journal record AFTER the reflection is
+        // stamped. A failure here is surfaced but the reflection stands.
+        try {
+          await onProceeded?.();
+        } catch (commitErr) {
+          const cmsg =
+            commitErr instanceof Error ? commitErr.message : "Failed to record entry.";
+          toast.error(cmsg);
+        }
+      } catch (err) {
+        const msg = err instanceof ApiError ? err.message : "Could not proceed";
+        toast.error(msg || "Could not proceed");
+      }
+    },
+    [onProceeded],
+  );
+
   /* ── POST /start ── */
   const startCooldown = useCallback(async () => {
     if (submitting) return;
@@ -153,13 +183,26 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
         method: "POST",
         body: JSON.stringify(body),
       });
-      setReflection(res.reflection);
-      setPhase(
-        res.reflection.status === "proceeded" ||
-          res.reflection.status === "cancelled"
-          ? "terminal"
-          : "cooldown",
-      );
+      const ref = res.reflection;
+      setReflection(ref);
+
+      if (ref.status === "proceeded" || ref.status === "cancelled") {
+        // Server already resolved it — show the terminal recap.
+        setPhase("terminal");
+        return;
+      }
+
+      // Cooldown is 0 on the backend (2026-05-22), so a fresh reflection comes
+      // back already `ready` (seconds_remaining <= 0). Skip the 00:00 counter
+      // screen entirely and auto-proceed — 7 questions → recorded, no extra
+      // click. The legacy cooldown > 0 path still falls through to the
+      // countdown UI. (FIX 3.)
+      if (ref.status === "ready" || ref.seconds_remaining <= 0) {
+        await proceedWith(ref);
+        return;
+      }
+
+      setPhase("cooldown");
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -169,7 +212,7 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, ticker, side, sharesText, rationale, answers]);
+  }, [submitting, ticker, side, sharesText, rationale, answers, proceedWith]);
 
   /* ── Cooldown polling — local clock + 5s server sync ── */
   const reflectionId = reflection?.id;
@@ -202,34 +245,18 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
     };
   }, [phase, reflectionId]);
 
-  /* ── Proceed ── */
+  /* ── Proceed (user-driven, from the cooldown CTA) ── */
   const proceed = useCallback(async () => {
     if (submitting) return;
     if (!reflection) return;
     if (reflection.status !== "ready") return;
     setSubmitting(true);
     try {
-      const r = await apiFetch<StartResponse>(API.preTrade.proceed(reflection.id), {
-        method: "POST",
-      });
-      setReflection(r.reflection);
-      setPhase("terminal");
-      // Commit the host's real journal record AFTER the reflection is
-      // stamped. A failure here is surfaced but the reflection stands.
-      try {
-        await onProceeded?.();
-      } catch (commitErr) {
-        const cmsg =
-          commitErr instanceof Error ? commitErr.message : "Failed to record entry.";
-        toast.error(cmsg);
-      }
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Could not proceed";
-      toast.error(msg || "Could not proceed");
+      await proceedWith(reflection);
     } finally {
       setSubmitting(false);
     }
-  }, [reflection, onProceeded, submitting]);
+  }, [reflection, proceedWith, submitting]);
 
   /* ── Cancel ── */
   const cancel = useCallback(async () => {

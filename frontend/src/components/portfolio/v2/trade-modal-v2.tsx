@@ -10,13 +10,19 @@
  *   sell  → "Trim position"  (and "Close" if qty == position.shares)
  *   edit  → "Adjust observation"
  *
- * Pre-Trade Friction (Feature 6) — INLINE at the moment of action
- * (2026-05-21): `buy` (ENTRY) and `sell` (EXIT) hand the recorded entry to
- * <PreTradeFrictionModal /> — the 7-question reflection + cooldown — before
- * the journal write fires. `edit` (avg-cost/memo adjustment) is NOT a buy/sell
- * event, so it commits directly without friction. The real POST fires only on
- * the reflection's onProceed; Cancel writes nothing. Friction must live where
- * the action happens. Note (thesis) is REQUIRED at ≥50 chars for buy/sell.
+ * Two modes for buy/sell (2026-05-22, CEO decision) — mirrors
+ * <AddPositionModalV2 />'s holding/new split. A toggle at the top of the form:
+ *   - "이미 체결됨 · 기록만" (RECORD, default): the trade already happened —
+ *     the user is journaling a past fill (like an asset sync). The 7-question
+ *     reflection is inappropriate (the decision is done), so this mode SKIPS
+ *     the friction and calls commitTrade() directly on submit. Thesis (note)
+ *     is OPTIONAL — empty is allowed.
+ *   - "신규 검토 · 7문항" (REVIEW): the original flow — "should I buy/sell
+ *     right now?". Submitting hands off to <PreTradeFrictionModal /> (buy=ENTRY
+ *     / sell=EXIT) — the 7-question reflection. The real POST fires only on its
+ *     onProceed; Cancel writes nothing. Thesis REQUIRED at ≥50 chars.
+ * `edit` (avg-cost/memo adjustment) is NOT a buy/sell event and has NO mode —
+ * it commits directly via PATCH without friction (unchanged).
  *
  * Backend contract (verified 2026-04-27):
  *   - Add/Trim: POST PORTFOLIO_TRADES = `/api/portfolio/trades` with
@@ -42,6 +48,10 @@ interface TradeModalV2Props {
   position: Position | null;
   onSuccess?: () => void;
 }
+
+/** Trade mode (buy/sell only) — recording an already-filled trade vs.
+ *  reflecting on a fresh decision. Mirrors AddPositionModalV2's EntryMode. */
+type TradeMode = "record" | "review";
 
 interface CopyEntry {
   eyebrow: string;
@@ -79,6 +89,37 @@ const COPY: Record<TradeAction, CopyEntry> = {
   },
 };
 
+/** Mode-specific copy for buy/sell. RECORD reads as journaling a done trade;
+ *  REVIEW reads as the original "reflect before deciding" flow. `edit` ignores
+ *  this and uses COPY.edit directly. */
+function modeCopy(action: TradeAction, mode: TradeMode): CopyEntry {
+  const base = COPY[action];
+  const isBuy = action === "buy";
+  if (mode === "record") {
+    return {
+      ...base,
+      eyebrow: isBuy ? "Record · Add" : "Record · Trim",
+      headline: isBuy ? "Log an" : "Log a",
+      accentWord: isBuy ? "executed buy." : "executed sell.",
+      cta: "Record · 기록",
+      helper: isBuy
+        ? "이미 체결한 추가 매수를 책에 기록합니다. 질문 없이 바로 저장."
+        : "이미 체결한 매도를 책에 기록합니다. 질문 없이 바로 저장.",
+    };
+  }
+  // review
+  return {
+    ...base,
+    eyebrow: isBuy ? "Observation · Add" : "Observation · Trim",
+    headline: isBuy ? "Add to" : "Trim",
+    accentWord: "this position.",
+    cta: "Continue · 7 questions →",
+    helper: isBuy
+      ? "지금 추가 매수할지 검토합니다. 7개 질문을 거친 뒤 기록됩니다."
+      : "지금 매도할지 검토합니다. 7개 질문을 거친 뒤 기록됩니다.",
+  };
+}
+
 export function TradeModalV2({
   open,
   onClose,
@@ -88,7 +129,9 @@ export function TradeModalV2({
 }: TradeModalV2Props) {
   const headlineId = "trade-v2-headline";
   const trapRef = useFocusTrap<HTMLDivElement>(open);
-  const copy = COPY[action];
+
+  // buy/sell carry a mode (record/review); edit has none. RECORD is default.
+  const [mode, setMode] = React.useState<TradeMode>("record");
 
   const [shares, setShares] = React.useState("");
   const [price, setPrice] = React.useState("");
@@ -98,21 +141,28 @@ export function TradeModalV2({
   const [avgCost, setAvgCost] = React.useState("");
   const [note, setNote] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
-  // Inline Pre-Trade Friction — only for buy (ENTRY) / sell (EXIT). Edit
-  // commits directly (not a buy/sell event).
+  // Inline Pre-Trade Friction — only for buy (ENTRY) / sell (EXIT) in REVIEW
+  // mode. Edit commits directly; RECORD mode skips friction.
   const [frictionOpen, setFrictionOpen] = React.useState(false);
 
-  // buy/sell require a ≥50-char thesis (prefills the reflection); edit does not.
-  const requiresThesis = action !== "edit";
+  // Mode-aware copy for buy/sell; edit always uses its static entry.
+  const copy = action === "edit" ? COPY.edit : modeCopy(action, mode);
+
+  // Thesis is required only for buy/sell in REVIEW mode (the reflection needs
+  // ≥50 chars). edit and RECORD mode treat the note as an optional memo.
+  const requiresThesis = action !== "edit" && mode === "review";
   const noteOk = !requiresThesis || note.trim().length >= MIN_RATIONALE_CHARS;
   const noteRemaining = Math.max(0, MIN_RATIONALE_CHARS - note.trim().length);
 
   // Reset form whenever position/action changes or close
   React.useEffect(() => {
     if (!open) {
+      setMode("record");
       setFrictionOpen(false);
       return;
     }
+    // Mode resets to default whenever the modal opens or action changes.
+    setMode("record");
     setFrictionOpen(false);
     if (action === "edit") {
       setShares("");
@@ -175,7 +225,8 @@ export function TradeModalV2({
       return;
     }
 
-    // buy / sell — validate then hand to the reflection.
+    // buy / sell — validate then either record directly (RECORD) or hand to
+    // the reflection (REVIEW). Quantity/price/over-trim guards apply to BOTH.
     const parsedQty = Number(shares);
     const parsedPrice = Number(price);
     if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
@@ -190,14 +241,25 @@ export function TradeModalV2({
       toast.error(`Cannot trim more than ${position.shares} shares held.`);
       return;
     }
-    if (!noteOk) {
-      toast.error(`Thesis는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${note.trim().length}자).`);
+
+    if (mode === "review") {
+      // REVIEW: thesis required ≥50 chars; hand off to the 7-question
+      // reflection. Nothing is written until the modal calls onProceed.
+      if (!noteOk) {
+        toast.error(`Thesis는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${note.trim().length}자).`);
+        return;
+      }
+      setFrictionOpen(true);
       return;
     }
-    setFrictionOpen(true);
+
+    // RECORD: the trade already happened — skip the reflection and write it.
+    void commitTrade();
   }
 
-  // Commit the real buy/sell trade — invoked by the friction modal's onProceed.
+  // Commit the real buy/sell trade. Two callers:
+  //   - RECORD mode: directly from handleSubmit (no friction).
+  //   - REVIEW mode: from the friction modal's onProceed.
   async function commitTrade() {
     if (!position) return;
     const parsedQty = Number(shares);
@@ -217,6 +279,10 @@ export function TradeModalV2({
       });
       toast.success(copy.toast);
       onSuccess?.();
+      // RECORD mode owns its own close (no friction modal to do it).
+      if (mode === "record") {
+        onClose();
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         if (typeof window !== "undefined") window.location.href = "/login";
@@ -224,7 +290,13 @@ export function TradeModalV2({
       }
       const message =
         err instanceof Error ? err.message : "Failed to record entry.";
-      // Re-throw so the friction modal surfaces it (reflection already stamped).
+      if (mode === "record") {
+        // No friction modal to surface the error — toast here.
+        toast.error(message);
+        return;
+      }
+      // REVIEW: re-throw so the friction modal surfaces it (reflection already
+      // stamped; the journal write is what failed).
       throw new Error(message);
     } finally {
       setSubmitting(false);
@@ -322,6 +394,26 @@ export function TradeModalV2({
           </p>
         </div>
 
+        {/* Mode toggle — buy/sell only. edit has no mode concept. */}
+        {action !== "edit" && (
+          <div
+            role="radiogroup"
+            aria-label="기록 방식"
+            style={{ display: "flex", gap: 8, marginBottom: 28 }}
+          >
+            <ModeToggleButton
+              active={mode === "record"}
+              label="이미 체결됨 · 기록만"
+              onClick={() => setMode("record")}
+            />
+            <ModeToggleButton
+              active={mode === "review"}
+              label="신규 검토 · 7문항"
+              onClick={() => setMode("review")}
+            />
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: 20 }}
@@ -400,29 +492,41 @@ export function TradeModalV2({
                   style={{ ...fieldInputStyle, colorScheme: "dark" }}
                 />
               </FormField>
-              <FormField label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
-                <textarea
-                  required
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  rows={3}
-                  placeholder="왜 지금 이 결정을 하는가? 한 문단으로 정직하게."
-                  style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
-                />
-                <span
-                  className="font-mono"
-                  style={{
-                    fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.06em",
-                    color: noteOk ? "var(--pq-bronze)" : "rgba(245,240,232,0.45)",
-                    marginTop: 2,
-                  }}
-                >
-                  {noteOk
-                    ? `✓ ${note.trim().length} chars`
-                    : `${noteRemaining} chars more (${note.trim().length}/${MIN_RATIONALE_CHARS})`}
-                </span>
-              </FormField>
+              {mode === "review" ? (
+                <FormField label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
+                  <textarea
+                    required
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={3}
+                    placeholder="왜 지금 이 결정을 하는가? 한 문단으로 정직하게."
+                    style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
+                  />
+                  <span
+                    className="font-mono"
+                    style={{
+                      fontSize: "var(--pq-text-eyebrow)",
+                      letterSpacing: "0.06em",
+                      color: noteOk ? "var(--pq-bronze)" : "rgba(245,240,232,0.45)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {noteOk
+                      ? `✓ ${note.trim().length} chars`
+                      : `${noteRemaining} chars more (${note.trim().length}/${MIN_RATIONALE_CHARS})`}
+                  </span>
+                </FormField>
+              ) : (
+                <FormField label="메모 · 언제·왜 거래했나 (선택)">
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={3}
+                    placeholder="언제, 왜 체결했는지 한 줄로 — 비워도 됩니다."
+                    style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
+                  />
+                </FormField>
+              )}
             </>
           )}
 
@@ -487,11 +591,7 @@ export function TradeModalV2({
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting
-                  ? "Saving…"
-                  : requiresThesis
-                    ? "Continue · 7 questions →"
-                    : copy.cta}
+                {submitting ? "Saving…" : copy.cta}
               </button>
             </div>
           </div>
@@ -530,6 +630,40 @@ const fieldInputStyle: React.CSSProperties = {
   fontSize: "var(--pq-text-body)",
   letterSpacing: "0.01em",
 };
+
+function ModeToggleButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      onClick={onClick}
+      className="font-mono uppercase"
+      style={{
+        flex: 1,
+        padding: "9px 12px",
+        background: active ? "rgba(184,149,106,0.12)" : "transparent",
+        color: active ? "var(--pq-bronze)" : "rgba(245,240,232,0.55)",
+        border: `1px solid ${active ? "var(--pq-bronze)" : "rgba(245,240,232,0.12)"}`,
+        borderRadius: "var(--pq-radius-cta, 2px)",
+        fontSize: "var(--pq-text-eyebrow)",
+        letterSpacing: "0.14em",
+        cursor: "pointer",
+        transition: "all 160ms",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 function FormField({
   label,

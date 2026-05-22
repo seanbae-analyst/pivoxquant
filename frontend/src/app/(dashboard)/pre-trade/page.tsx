@@ -18,7 +18,8 @@
  * Flow (route):
  *   1. Setup — ticker / side / shares / rationale (≥50 chars)
  *   2. Devil's Advocate — 7 reflective questions (shared)
- *   3. Cooldown — 2 min default, 5 min when FOMC ±30m / VIX>30 / >5%/h move (shared)
+ *   3. Cooldown — REMOVED 2026-05-22 (CEO "2분 없애"): backend cooldown is 0,
+ *      so the cycle goes straight from the 7 questions to Ready/Proceed (shared)
  *   4. Ready  — Proceed (open) | Cancel (abort) (shared)
  *   5. Terminal — Proceeded or Cancelled (shared)
  *
