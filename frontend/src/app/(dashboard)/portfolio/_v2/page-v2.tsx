@@ -43,6 +43,7 @@ import {
   usePortfolioSummary,
   useFxRate,
   useBrokerConnections,
+  fetcher,
 } from "@/lib/hooks";
 import {
   PORTFOLIO_POSITIONS,
@@ -219,9 +220,27 @@ export default function PortfolioPageV2() {
     setTargetPosition(null);
   }
 
-  function refreshAll() {
-    mutate(PORTFOLIO_POSITIONS);
-    mutate(PORTFOLIO_SUMMARY);
+  async function refreshAll() {
+    // An add/edit/sell just changed the book. A bare mutate(key) can be
+    // swallowed by the 10s dedupingInterval (PORTFOLIO_DEDUPE_MS) when a
+    // background refreshInterval fetch fired moments earlier — leaving the
+    // holdings table and hero count showing pre-mutation data until the next
+    // poll (the "I added it but it's not there" wart). Fetch fresh data
+    // ourselves and write it straight into the cache (revalidate:false) so the
+    // update bypasses dedupe and lands immediately. On a network blip we fall
+    // back to a plain revalidate (and the periodic refreshInterval is the
+    // ultimate backstop) — never overwrite the cache with undefined.
+    try {
+      const [pos, sum] = await Promise.all([
+        fetcher(PORTFOLIO_POSITIONS),
+        fetcher(PORTFOLIO_SUMMARY),
+      ]);
+      mutate(PORTFOLIO_POSITIONS, pos, { revalidate: false });
+      mutate(PORTFOLIO_SUMMARY, sum, { revalidate: false });
+    } catch {
+      mutate(PORTFOLIO_POSITIONS);
+      mutate(PORTFOLIO_SUMMARY);
+    }
     mutate(
       (key) => typeof key === "string" && key.startsWith(PORTFOLIO_TRADES),
       undefined,

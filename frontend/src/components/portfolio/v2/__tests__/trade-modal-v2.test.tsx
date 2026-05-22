@@ -35,6 +35,9 @@ const POSITION: Position = {
   avgCost: 120,
   current: 150,
   notes: "",
+  side: "Long",
+  sector: "Technology",
+  purchaseDate: "2024-01-01",
 };
 
 const LONG_THESIS =

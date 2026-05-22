@@ -30,7 +30,11 @@ import type {
   PreTradeJournalResponse,
 } from "./types";
 
-const fetcher = async (url: string) => {
+// Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
+// fresh fetch promise straight into the SWR cache — bypassing the 10s
+// dedupingInterval that would otherwise serve pre-mutation data after an
+// add/edit/sell.
+export const fetcher = async (url: string) => {
   const r = await fetch(url, { credentials: "include" });
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));
