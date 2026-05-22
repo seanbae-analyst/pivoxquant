@@ -468,6 +468,35 @@ def _layer_table(defense_result: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+# Risk-board-specific supplemental scrub terms NOT owned by
+# services.legal_filter.safe_scrub. safe_scrub deliberately leaves bare
+# 매수/매도 nouns and these prose words alone to avoid over-scrubbing
+# English/quant prose elsewhere; the Risk Board narrative prompt explicitly
+# bans them (line ~541), so we neutralize them here AFTER the authoritative
+# scrub. Each carries the same `(?<!과)` guard as `_COMPLIANCE_FORBIDDEN_RE`
+# so 과매수/과매도 are preserved — fixing the original over-scrub defect
+# (home-rolled IGNORECASE list mangled 과매수 → 과진입 관찰) rather than copying it.
+_BOARD_BANNED: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"비중\s*축소"), "비중 모니터링"),
+    (re.compile(r"추천"), "관찰"),
+    (re.compile(r"조언"), "정보 고지"),
+    (re.compile(r"(?<!과)매수(?!세|량|자|인)"), "진입 관찰"),
+    (re.compile(r"(?<!과)매도(?!세|량|자|인)"), "청산 관찰"),
+    (re.compile(r"\breduce\b", re.IGNORECASE), "monitor"),
+]
+
+
+def _board_supplemental_scrub(text: str) -> str:
+    """Apply Risk-Board-specific banned-term replacements (post safe_scrub).
+
+    Lookbehind-guarded so legitimate quant terms (과매수/과매도/매수세/매도량)
+    survive intact.
+    """
+    for pat, repl in _BOARD_BANNED:
+        text = pat.sub(repl, text)
+    return text
+
+
 def _top_risks_narrative(defense_result: dict[str, Any],
                          ces: list[dict[str, Any]],
                          vix: Optional[float],
@@ -552,25 +581,17 @@ def _top_risks_narrative(defense_result: dict[str, Any],
             getattr(b, "text", "") for b in (resp.content or [])
             if getattr(b, "type", "") == "text"
         ).strip()
-        # Defensive banned-word substitution.
-        banned = [
-            (r"비중\s*축소", "비중 모니터링"),
-            (r"추천", "관찰"),
-            (r"조언", "정보 고지"),
-            (r"매수", "진입 관찰"),
-            (r"매도", "청산 관찰"),
-            (r"손절", "SL 레벨 관찰"),
-            (r"익절", "TP 레벨 관찰"),
-            (r"\breduce\b", "monitor"),
-            (r"\brecommend(ation|ed)?\b", "observation"),
-            (r"\badvice\b", "information"),
-        ]
-        for pat, repl in banned:
-            text = re.sub(pat, repl, text, flags=re.IGNORECASE)
+        # Authoritative scrub first — services.legal_filter.safe_scrub owns the
+        # lookbehind-guarded replacements (89 patterns) and does NOT corrupt
+        # quant terms like 과매수/과매도/매수세 (the previous home-rolled
+        # IGNORECASE banned-list mangled 과매수 → 과진입 관찰). It covers
+        # 매수신호/매도신호/손절/익절/take profit/stop loss/recommend/advice/
+        # 조언 드립니다 etc.
+        text = safe_scrub(text, context="risk_board.ai") or ""
+        text = _board_supplemental_scrub(text)
         if not text:
             return safe_scrub(fallback, context="risk_board.empty") or fallback
-        scrubbed = safe_scrub(text, context="risk_board.ai") or text
-        return scrubbed[:600]
+        return text[:600]
     except Exception as exc:
         logger.debug("risk board narrative AI failed: %s", exc)
         return safe_scrub(fallback, context="risk_board.err") or fallback

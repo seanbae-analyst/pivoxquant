@@ -927,7 +927,10 @@ def risk_timeline():
             std = float(np.std(w, ddof=1)) if len(w) > 1 else 0.0
             mean_r = float(np.mean(w))
             if std > 0:
-                sharpe = (mean_r / std) * (252 ** 0.5)
+                # Subtract risk-free (rf=0.045 annual) for consistency with the
+                # benchmark/analytics endpoint and risk_metrics.
+                rf_daily = 0.045 / 252
+                sharpe = ((mean_r - rf_daily) / std) * (252 ** 0.5)
             else:
                 sharpe = 0.0
 

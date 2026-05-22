@@ -19,7 +19,7 @@ from models import (
 )
 from flask_login import current_user
 from services.error_responses import api_error
-from .decorators import api_auth
+from .decorators import _TIER_RANK, api_auth
 from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
@@ -593,13 +593,33 @@ def _handle_invoice_paid(invoice):
 def get_subscription():
     """Return current user's subscription info."""
     u = current_user
+    # Resolve entitlement off the canonical tier rank (routes/decorators._TIER_RANK)
+    # via effective_tier so dev/owner overrides (DEV_FOUNDING_EMAILS etc.) and the
+    # Companion-tier rollout (premium_plus rank 3, founding_lifetime rank 4) are all
+    # honored — the old `subscription_tier in ("pro","premium")` literal silently
+    # excluded the highest-paying cohorts.
+    #
+    # founding_lifetime / premium_plus are lifetime / Companion grants with NO active
+    # Stripe subscription, so their stored subscription_status is typically "inactive".
+    # Gating has_active_subscription on `status == "active"` would wrongly report them
+    # as lapsed (→ frontend shows upgrade CTAs, hides manage-subscription). Treat any
+    # tier above "premium" (rank > 2) as entitled regardless of Stripe status, and the
+    # billed tiers (pro/premium) as active only when Stripe says so.
+    eff_tier = (
+        getattr(u, "effective_tier", None)
+        or getattr(u, "subscription_tier", "free")
+        or "free"
+    )
+    eff_rank = _TIER_RANK.get(eff_tier, 0)
+    sub_status = getattr(u, "subscription_status", "inactive") or "inactive"
+    has_active = (
+        eff_rank > _TIER_RANK["premium"]              # premium_plus / founding_lifetime — always entitled
+        or (eff_rank > _TIER_RANK["free"] and sub_status == "active")  # pro / premium — needs active Stripe sub
+    )
     result = {
         "subscription_tier": u.subscription_tier,
-        "subscription_status": getattr(u, "subscription_status", "inactive") or "inactive",
-        "has_active_subscription": (
-            getattr(u, "subscription_status", "inactive") == "active"
-            and u.subscription_tier in ("pro", "premium")
-        ),
+        "subscription_status": sub_status,
+        "has_active_subscription": has_active,
     }
 
     # Fetch latest info from Stripe if they have a subscription

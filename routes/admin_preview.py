@@ -28,8 +28,9 @@ import logging
 from typing import Any, Callable
 
 from flask import Blueprint, Response, abort, jsonify, request
-from flask_login import current_user, login_required
+from flask_login import current_user
 
+from routes.decorators import api_auth
 from services.artifacts import sample_data
 from services.artifacts.sample_data import CATALOG
 
@@ -224,7 +225,9 @@ _RENDER: dict[str, Callable[[str], tuple[bytes | str, str]]] = {
 
 
 @admin_preview_bp.route("/list", methods=["GET"])
-@login_required
+@api_auth  # 2026-05-22: JSON 401 for unauth /api/* callers (was 302 HTML
+           # redirect). Authenticated non-admins still get 404 via
+           # _require_admin_or_404() below (deliberate path-hiding).
 def list_catalog():
     """Return the artifact catalog for the admin preview UI.
 
@@ -238,7 +241,9 @@ def list_catalog():
 
 
 @admin_preview_bp.route("/preview/<artifact_type>", methods=["GET"])
-@login_required
+@api_auth  # 2026-05-22: JSON 401 for unauth /api/* callers (was 302 HTML
+           # redirect). Authenticated non-admins still get 404 via
+           # _require_admin_or_404() below (deliberate path-hiding).
 def preview(artifact_type: str):
     """Render a single artifact with fictional sample data.
 

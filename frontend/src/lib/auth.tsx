@@ -177,6 +177,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Force the SWR cache to drop the authenticated payload so any
       // subsequent revalidation reflects the logged-out state.
       await mutate({ authenticated: false }, { revalidate: false });
+      // PIPA P1 (2026-05-22): tell the service worker to drop the API_CACHE.
+      // The SW caches per-user SWR endpoints (/api/profile, /api/earnings,
+      // /api/discover) by URL only with multi-minute windows — on a shared
+      // device, the next user's first render would otherwise be served this
+      // user's cached payload. Best-effort: never block logout if the SW is
+      // unavailable or messaging throws.
+      try {
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.serviceWorker?.controller
+        ) {
+          navigator.serviceWorker.controller.postMessage({
+            type: "CLEAR_API_CACHE",
+          });
+        }
+      } catch {
+        // SW not controlling this page yet / messaging unsupported — ignore.
+      }
     }
   }, [mutate]);
 

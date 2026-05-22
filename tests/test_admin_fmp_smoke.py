@@ -1,8 +1,9 @@
 """Smoke tests for routes/admin_fmp.py — admin-gated FMP usage probe.
 
 Auth chain:
-    @login_required → unauthenticated callers get 401 (Flask-Login default,
-                       no login_view set in test app).
+    @api_auth → unauthenticated callers get JSON 401 {"code":"SESSION_EXPIRED"}
+                 (project standard for /api/*; replaces flask-login
+                 @login_required which 302-redirects HTML for API callers).
     _deny_non_admin() → authenticated non-admins get 403.
     Authenticated admin → 200 + fmp_service.get_api_usage() payload.
 """
@@ -13,9 +14,13 @@ from unittest.mock import patch
 
 
 class TestAdminFmpSmoke:
-    def test_unauthenticated_returns_401(self, client):
+    def test_unauthenticated_returns_json_401(self, client):
+        # @api_auth: JSON 401 with SESSION_EXPIRED code — NOT a 302 HTML
+        # redirect (the bug this fix closes for /api/* consistency).
         r = client.get("/api/admin/fmp-usage")
         assert r.status_code == 401
+        assert r.is_json
+        assert r.get_json().get("code") == "SESSION_EXPIRED"
 
     def test_authenticated_non_admin_returns_403(self, client, auth_user):
         # auth_user has email user@test.com, not in ADMIN_EMAILS.

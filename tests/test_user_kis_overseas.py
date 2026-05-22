@@ -579,6 +579,114 @@ def test_sync_to_db_preserves_us_positions_on_overseas_failure(
         assert nvda.shares == 2
 
 
+def test_sync_to_db_preserves_us_positions_on_PARTIAL_overseas_failure(
+    app, kis_user, add_position
+):
+    """P1 data-loss regression (2026-05-22).
+
+    A transient failure on ONE overseas exchange (e.g. NYSE timeout) while
+    others succeed must NOT zero out holdings on the failed exchange.
+
+    Previously `_inquire_all_overseas_balances` returned ok=True on partial
+    success (`successes >= 1`), so `overseas_partial_failure` was False and the
+    destructive US zero-out loop ran — permanently zeroing the user's NYSE
+    holdings (e.g. MSFT) because they were absent from `overseas_synced`.
+
+    Invariant enforced: the US zero-out runs ONLY when the FULL overseas
+    balance was retrieved (every exchange succeeded). Any exchange failure →
+    overseas_partial_failure=True → existing US rows untouched.
+    """
+    from models.position import Position
+    from services.broker.user_kis_service import UserKISService
+
+    with app.app_context():
+        # Existing holding on the exchange that will FAIL (NYSE) — must be kept.
+        add_position(
+            kis_user["user_id"], ticker="MSFT", shares=7, avg_cost=300.0, buy_fx=1350.0
+        )
+
+    err_resp = MagicMock()
+    err_resp.ok = False
+    err_resp.status_code = 500
+    err_resp.text = "nyse timeout"
+
+    responses = {
+        # NASD succeeds with an unrelated holding.
+        "NASD": _mock_overseas_balance(
+            positions=[_overseas_item("AAPL", "APPLE", 10, 150, 170, "NASD")]
+        ),
+        # NYSE fails — MSFT lives here and is therefore absent from the sync.
+        "NYSE": err_resp,
+        "AMEX": _mock_overseas_balance(positions=[]),
+    }
+    with app.app_context(), patch(
+        "services.broker.user_kis_service.requests.post",
+        return_value=_mock_token_response(),
+    ), patch(
+        "services.broker.user_kis_service.requests.get",
+        side_effect=_make_exchange_router(responses, _mock_domestic_balance()),
+    ), patch("services.fx_service.get_rate", return_value=1400.0):
+        svc = UserKISService(kis_user["user_id"])
+        result = svc.sync_to_db()
+
+    assert result["ok"] is True
+    # Partial failure must be flagged so the zero-out is suppressed.
+    assert result["overseas_partial_failure"] is True
+    with app.app_context():
+        msft = Position.query.filter_by(
+            user_id=kis_user["user_id"], ticker="MSFT"
+        ).first()
+        assert msft is not None
+        # CRITICAL: MSFT lived on the FAILED exchange — must be preserved,
+        # NOT zeroed by the destructive sync loop.
+        assert msft.shares == 7
+
+
+def test_sync_to_db_zeros_disappeared_us_positions_on_FULL_success(
+    app, kis_user, add_position
+):
+    """Companion to the partial-failure regression: when EVERY overseas
+    exchange succeeds, a genuinely-absent (sold) US position must still be
+    zeroed. Guards against an over-broad fix that disables the zero-out.
+    """
+    from models.position import Position
+    from services.broker.user_kis_service import UserKISService
+
+    with app.app_context():
+        # Held TSLA that the broker no longer reports (genuinely sold).
+        add_position(
+            kis_user["user_id"], ticker="TSLA", shares=3, avg_cost=200.0, buy_fx=1350.0
+        )
+
+    responses = {
+        # All three exchanges succeed; TSLA appears on none of them.
+        "NASD": _mock_overseas_balance(
+            positions=[_overseas_item("AAPL", "APPLE", 10, 150, 170, "NASD")]
+        ),
+        "NYSE": _mock_overseas_balance(positions=[]),
+        "AMEX": _mock_overseas_balance(positions=[]),
+    }
+    with app.app_context(), patch(
+        "services.broker.user_kis_service.requests.post",
+        return_value=_mock_token_response(),
+    ), patch(
+        "services.broker.user_kis_service.requests.get",
+        side_effect=_make_exchange_router(responses, _mock_domestic_balance()),
+    ), patch("services.fx_service.get_rate", return_value=1400.0):
+        svc = UserKISService(kis_user["user_id"])
+        result = svc.sync_to_db()
+
+    assert result["ok"] is True
+    assert result["overseas_partial_failure"] is False
+    with app.app_context():
+        tsla = Position.query.filter_by(
+            user_id=kis_user["user_id"], ticker="TSLA"
+        ).first()
+        assert tsla is not None
+        # Full success → genuinely-absent position correctly zeroed.
+        assert tsla.shares == 0
+
+
 def test_sync_to_db_mixed_kr_and_us(app, kis_user):
     """KR `.KS` + US no-suffix 티커가 섞여서 저장됨."""
     from models.position import Position

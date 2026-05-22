@@ -482,7 +482,10 @@ def portfolio_stress_test():
                 "name": pos.get("name") or pos["ticker"],
                 "current_value": round(pos["market_value"], 2),
                 "estimated_loss_pct": pct,
-                "estimated_loss_usd": loss_usd,
+                # Currency-neutral key: value is KRW-normalized (market_value
+                # from _load_positions_with_prices is KRW for ALL positions),
+                # so the old `_usd` suffix lied to KR users.
+                "estimated_loss": loss_usd,
             })
 
             if est_return >= 0:
@@ -504,7 +507,8 @@ def portfolio_stress_test():
             "period": scenario["period"],
             "spx_return_pct": round(scenario["spx_return"] * 100, 1),
             "portfolio_impact_pct": round(portfolio_impact_pct, 2),
-            "portfolio_impact_usd": round(portfolio_loss_usd, 2),
+            # Currency-neutral: value is KRW-normalized (see note above).
+            "portfolio_impact": round(portfolio_loss_usd, 2),
             "positions": positions_out,
             "survivors": survivors,
             "worst_hit": worst_hit_ticker,
@@ -791,13 +795,20 @@ def risk_defense_status():
     } if tickers else {}
 
     # Build position list with weights, values, sectors
+    # Currency normalization (CRITICAL): KR positions (.KS/.KQ) are already in
+    # KRW; US positions are in USD and must be FX-converted before aggregation,
+    # otherwise mixed US+KR portfolios get wrong defense-layer weights.
+    from services import fx_service
+    fx_rate = fx_service.get_rate()  # USD → KRW, computed once
     pos_list = []
     total_value = 0
     for p in positions:
         cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
-        mv = price * p.shares
+        is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
+        mv_native = price * p.shares
+        mv = mv_native if is_kr else mv_native * fx_rate
         sector = sd.get("sector", "Unknown")
         total_value += mv
         pos_list.append({
@@ -1085,9 +1096,25 @@ def risk_sortino_by_position():
     from services.container import fetcher
     from services.quant.risk_metrics import SortinoByPosition
 
+    # Parallel price-history fetch (mirrors Wave H-4 pattern at risk_component_es
+    # / defense_status). Eliminates N+1 serial latency (~8s) for the per-position
+    # processing below, which still runs serially over the prefetched map.
+    import concurrent.futures as _cf
+    _tks = [it["ticker"] for it in items]
+    def _fetch_hist(t):
+        try:
+            return t, fetcher.get_price_history(t, period=period)
+        except Exception:
+            logger.debug("silent-fallback: sortino_by_position", exc_info=True)
+            return t, None
+    _hist_map = {}
+    with _cf.ThreadPoolExecutor(max_workers=min(8, max(1, len(_tks)))) as _ex:
+        for t, hist in _ex.map(_fetch_hist, _tks):
+            _hist_map[t] = hist
+
     positions_out = []
     for it in items:
-        hist = fetcher.get_price_history(it["ticker"], period=period)
+        hist = _hist_map.get(it["ticker"])
         if hist is None or hist.empty or len(hist) < 21:
             positions_out.append({
                 "ticker": it["ticker"],
@@ -1181,9 +1208,24 @@ def risk_ledoit_wolf_shrinkage():
     # Build aligned returns matrix (only dates where ALL tickers have data)
     from services.container import fetcher
 
+    # Parallel price-history fetch (mirrors Wave H-4 pattern). Per-item finite
+    # filtering and insufficient-history handling below are preserved.
+    import concurrent.futures as _cf
+    _tks = [it["ticker"] for it in items]
+    def _fetch_hist(t):
+        try:
+            return t, fetcher.get_price_history(t, period=period)
+        except Exception:
+            logger.debug("silent-fallback: ledoit_wolf_shrinkage", exc_info=True)
+            return t, None
+    _hist_map = {}
+    with _cf.ThreadPoolExecutor(max_workers=min(8, max(1, len(_tks)))) as _ex:
+        for t, hist in _ex.map(_fetch_hist, _tks):
+            _hist_map[t] = hist
+
     ticker_returns: dict[str, dict[str, float]] = {}
     for it in items:
-        hist = fetcher.get_price_history(it["ticker"], period=period)
+        hist = _hist_map.get(it["ticker"])
         if hist is None or hist.empty or len(hist) < 2:
             continue
         pct = hist["Close"].astype(float).pct_change().dropna()

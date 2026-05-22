@@ -366,14 +366,19 @@ class SortinoByPosition:
         rf_daily = risk_free_annual / 252
         excess = r - rf_daily
 
-        downside = excess[excess < 0]
-        if len(downside) == 0:
+        neg = excess[excess < 0]
+        if len(neg) == 0:
             return {
                 "sortino": 999.0,
                 "annualized_return": round(float(np.mean(r) * 252 * 100), 2),
             }
 
-        downside_dev = float(np.std(downside, ddof=1)) * np.sqrt(252)
+        # Target Downside Deviation anchored at the MAR. `excess` is already
+        # r - rf_daily, so the MAR sits at 0 on the excess series; periods with
+        # positive excess contribute 0 (not their own dispersion). Using
+        # np.std(neg) instead understated downside risk and inflated Sortino.
+        downside = np.minimum(excess, 0.0)
+        downside_dev = float(np.sqrt(np.mean(downside ** 2))) * np.sqrt(252)
         mean_annual = float(np.mean(excess)) * 252
 
         sortino = mean_annual / downside_dev if downside_dev > 0 else 0

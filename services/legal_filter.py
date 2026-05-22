@@ -177,14 +177,20 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"개인\s*매도\s*압력"), "개인 유출 강도"),
     (re.compile(r"강한\s*매수세"), "강한 유입 강도"),
     (re.compile(r"강한\s*매도세"), "강한 유출 강도"),
-    (re.compile(r"매수\s*신호"), "POSITIVE 지표"),
-    (re.compile(r"매도\s*신호"), "NEGATIVE 지표"),
-    (re.compile(r"매수\s*기회"), "지표 저점 영역"),
-    (re.compile(r"매수\s*유리"), "지표 유리 영역"),
-    (re.compile(r"매도\s*유리"), "지표 유리 영역"),
+    # over-scrub guard (2026-05-22): `(?<!과)` 로 과매수(overbought) /
+    # 과매도(oversold) 기술 용어 보존. 이 가드가 없으면 `safe_scrub("과매수 신호")`
+    # 가 `과POSITIVE 지표` 로, `과매도 신호` 가 `과NEGATIVE 지표` 로 손상됨.
+    # 탐지 정규식 `_COMPLIANCE_FORBIDDEN_RE` 가 이미 동일 사유로 `(?<!과)` 를
+    # 쓰는데(line 520-521) 치환 규칙엔 누락돼 있었음. bare "매수 신호" /
+    # "매도 신호" / "매수 기회/유리/압력" / "매도 유리" 는 여전히 치환됨.
+    (re.compile(r"(?<!과)매수\s*신호"), "POSITIVE 지표"),
+    (re.compile(r"(?<!과)매도\s*신호"), "NEGATIVE 지표"),
+    (re.compile(r"(?<!과)매수\s*기회"), "지표 저점 영역"),
+    (re.compile(r"(?<!과)매수\s*유리"), "지표 유리 영역"),
+    (re.compile(r"(?<!과)매도\s*유리"), "지표 유리 영역"),
     (re.compile(r"분할\s*진입\s*권장"), "분할 패턴 영역"),
     (re.compile(r"분할\s*진입\s*권고"), "분할 패턴 영역"),
-    (re.compile(r"매수\s*압력"), "유입 강도"),
+    (re.compile(r"(?<!과)매수\s*압력"), "유입 강도"),
     # Wave 4 (2026-05-17) — engine.py msg_kr 잔존 4종.
     # services/quant/engine.py:639,644,1220,1350 sites 의 한국어 메시지.
     (re.compile(r"기관\s*매수\s*추정"), "기관 유입 관찰"),

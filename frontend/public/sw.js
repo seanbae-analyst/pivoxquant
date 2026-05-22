@@ -22,7 +22,7 @@
 //   - v5 → v6: bug-fix wave (auth.tsx 8s timeout, reports routing,
 //     companion premium gate, etc.) needed cache flush.
 // Going forward, the build script does this work — no manual bump.
-const CACHE_VERSION = "pq-build-2d0699bf";
+const CACHE_VERSION = "pq-build-8009fa4a";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
@@ -100,6 +100,19 @@ self.addEventListener("activate", (event) => {
       )
       .then(() => self.clients.claim()),
   );
+});
+
+// ── Message ────────────────────────────────────────────────────
+// PIPA P1 (2026-05-22): on a shared device, the API_CACHE retains per-user
+// SWR responses (/api/profile 60min, /api/earnings 15min, /api/discover 30min)
+// keyed by URL only. After User A logs out and User B logs in within the
+// window, B's first render would be served A's cached payload. The logout
+// flow (lib/auth.tsx) posts CLEAR_API_CACHE so we drop+recreate the API cache
+// on demand. STATIC_CACHE (HTML/JS/CSS/fonts) is untouched.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CLEAR_API_CACHE") {
+    event.waitUntil(caches.delete(API_CACHE).then(() => caches.open(API_CACHE)));
+  }
 });
 
 // ── Fetch ──────────────────────────────────────────────────────

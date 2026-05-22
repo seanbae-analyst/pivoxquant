@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Bell, X } from "lucide-react";
+import { isPushConfigured, PUSH_NOT_CONFIGURED } from "@/lib/push";
 
 const DISMISS_KEY = "pq-push-dismissed";
 // Re-prompt after two weeks if the user said "later" — alerts are less
@@ -17,6 +18,14 @@ export function PushPermission() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (typeof Notification === "undefined") return;
+    // F3 (2026-05-22): if no VAPID key is configured (currently prod), do NOT
+    // surface the prompt at all. Showing it is a dead-end: the user grants the
+    // browser permission, subscribe() throws "not configured", and no backend
+    // subscription is ever created — meanwhile permission flips to "granted"
+    // so the prompt can never legitimately reappear. Gating here also means
+    // that once the key IS added, the prompt becomes eligible again (no stale
+    // dismiss key was ever written for a config failure — see enable()).
+    if (!isPushConfigured()) return;
     // If the user already granted/denied, we don't show the prompt.
     // "granted" is a no-op; "denied" means the permission UI is gone anyway.
     if (Notification.permission !== "default") return;
@@ -34,6 +43,13 @@ export function PushPermission() {
   const enable = async () => {
     if (busy) return;
     setBusy(true);
+    // F3 (2026-05-22): only persist the 14-day dismiss for genuine user
+    // actions (permission denied / "later"), NOT for a config/transient
+    // failure. Previously the `finally` block always wrote the dismiss key —
+    // so a missing VAPID key locked the user out of the re-prompt for 14 days
+    // even though push never actually worked. Track whether we hit a config
+    // dead-end and skip the dismiss in that case.
+    let configFailure = false;
     try {
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
@@ -48,12 +64,23 @@ export function PushPermission() {
           // raise a toast here because the prompt UI itself is dismissing;
           // Settings page surfaces the actionable retry path.
           console.error("[pq-push] subscribe failed after permission grant:", err);
+          // A "not configured" failure (or any failure while the key is
+          // absent) is not the user's fault — don't burn the 14-day dismiss,
+          // so the prompt can reappear once the key is added server-side.
+          if (
+            !isPushConfigured() ||
+            (err instanceof Error && err.message === PUSH_NOT_CONFIGURED)
+          ) {
+            configFailure = true;
+          }
         }
       }
     } finally {
       setBusy(false);
       setVisible(false);
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
+      if (!configFailure) {
+        localStorage.setItem(DISMISS_KEY, String(Date.now()));
+      }
     }
   };
 

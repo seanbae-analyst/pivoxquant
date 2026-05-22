@@ -1,7 +1,9 @@
 """Smoke tests for routes/admin_preview.py — artifact preview console.
 
-Spec: '일반 유저는 404'. Non-admins get **404**, not 403, so the route
-appears nonexistent. Unauthenticated callers hit @login_required → 401.
+Spec: '일반 유저는 404'. Authenticated non-admins get **404**, not 403, so the
+route appears nonexistent. Unauthenticated callers hit @api_auth → JSON 401
+{"code":"SESSION_EXPIRED"} (project standard for /api/*; replaces flask-login
+@login_required which 302-redirected HTML for API callers).
 """
 from __future__ import annotations
 
@@ -10,9 +12,11 @@ from unittest.mock import patch
 
 
 class TestAdminPreviewListSmoke:
-    def test_unauthenticated_list_returns_401(self, client):
+    def test_unauthenticated_list_returns_json_401(self, client):
         r = client.get("/api/admin/artifacts/list")
         assert r.status_code == 401
+        assert r.is_json
+        assert r.get_json().get("code") == "SESSION_EXPIRED"
 
     def test_non_admin_list_returns_404(self, client, auth_user):
         # ADMIN_EMAILS unset → fails closed → 404 (silent).
@@ -33,9 +37,11 @@ class TestAdminPreviewListSmoke:
 
 
 class TestAdminPreviewArtifactSmoke:
-    def test_unauthenticated_preview_returns_401(self, client):
+    def test_unauthenticated_preview_returns_json_401(self, client):
         r = client.get("/api/admin/artifacts/preview/weekly_memo")
         assert r.status_code == 401
+        assert r.is_json
+        assert r.get_json().get("code") == "SESSION_EXPIRED"
 
     def test_non_admin_preview_returns_404(self, client, auth_user):
         os.environ.pop("ADMIN_EMAILS", None)

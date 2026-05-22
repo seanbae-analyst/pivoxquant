@@ -117,3 +117,67 @@ class TestGateDoesNotBlockReadOnly:
         r = client.get("/api/billing/subscription")
         # 인증된 사용자면 200, 아니면 401 — 503은 절대 아님.
         assert r.status_code != 503
+
+
+# ── has_active_subscription tier-consistency (FIX 1, 2026-05-22) ───────────────
+# Regression: the old literal `subscription_tier in ("pro","premium")` excluded
+# premium_plus (rank 3) and founding_lifetime (rank 4) — the highest-paying
+# cohorts incl. the owner — reporting them as having NO active subscription.
+class TestHasActiveSubscriptionTierConsistency:
+    def _login_as(self, client, app, make_user, *, tier, status):
+        from extensions import db
+        from models import User
+        u = make_user(email=f"{tier}-{status}@test.com", tier=tier)
+        with app.app_context():
+            row = db.session.get(User, u["id"])
+            row.subscription_status = status
+            db.session.commit()
+        resp = client.post("/api/auth/login", json={
+            "email": u["email"], "password": u["password"],
+        })
+        assert resp.status_code == 200, resp.data
+        return u
+
+    def test_premium_plus_active_reports_has_active_true(self, client, app, make_user):
+        """premium_plus with an active Stripe sub → has_active_subscription True."""
+        self._login_as(client, app, make_user, tier="premium_plus", status="active")
+        r = client.get("/api/billing/subscription")
+        assert r.status_code == 200, r.data
+        assert r.get_json()["has_active_subscription"] is True
+
+    def test_premium_plus_inactive_status_still_active(self, client, app, make_user):
+        """Companion tier may carry status != 'active' (no billed Stripe sub);
+        the AND-clause used to drop them. Rank > premium → entitled regardless."""
+        self._login_as(client, app, make_user, tier="premium_plus", status="inactive")
+        r = client.get("/api/billing/subscription")
+        assert r.status_code == 200, r.data
+        assert r.get_json()["has_active_subscription"] is True
+
+    def test_founding_lifetime_inactive_status_still_active(self, client, app, make_user):
+        """founding_lifetime is a lifetime grant with NO active Stripe sub —
+        subscription_status is typically 'inactive'. Must still report active."""
+        self._login_as(client, app, make_user, tier="founding_lifetime", status="inactive")
+        r = client.get("/api/billing/subscription")
+        assert r.status_code == 200, r.data
+        assert r.get_json()["has_active_subscription"] is True
+
+    def test_premium_active_still_active(self, client, app, make_user):
+        """Sanity: billed premium tier with active Stripe sub unchanged."""
+        self._login_as(client, app, make_user, tier="premium", status="active")
+        r = client.get("/api/billing/subscription")
+        assert r.status_code == 200, r.data
+        assert r.get_json()["has_active_subscription"] is True
+
+    def test_pro_inactive_status_not_active(self, client, app, make_user):
+        """Billed tier (pro) with a lapsed Stripe sub → NOT active."""
+        self._login_as(client, app, make_user, tier="pro", status="canceled")
+        r = client.get("/api/billing/subscription")
+        assert r.status_code == 200, r.data
+        assert r.get_json()["has_active_subscription"] is False
+
+    def test_free_user_not_active(self, client, app, make_user):
+        """Free tier is never an active subscription regardless of status."""
+        self._login_as(client, app, make_user, tier="free", status="active")
+        r = client.get("/api/billing/subscription")
+        assert r.status_code == 200, r.data
+        assert r.get_json()["has_active_subscription"] is False

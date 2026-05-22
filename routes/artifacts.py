@@ -2012,9 +2012,16 @@ def risk_board_trigger():
             # the persistent VIX state. Useful for QA; protected by admin
             # secret above.
             from models import User as _User
+            # Use the canonical shared set (services/artifacts/_tiers.py) — the
+            # same one RiskBoardService.run_monthly() filters on. The old literal
+            # ["premium", "elite"] had two bugs: "elite" is not a real tier so it
+            # matched nobody, and premium_plus / founding_lifetime (the highest-
+            # paying cohorts) were excluded — exactly the drift _tiers.py exists
+            # to prevent.
+            from services.artifacts._tiers import PAID_TIERS_PREMIUM_AND_UP
             paid = (
                 _User.query
-                .filter(_User.subscription_tier.in_(["premium", "elite"]))
+                .filter(_User.subscription_tier.in_(list(PAID_TIERS_PREMIUM_AND_UP)))
                 .all()
             )
             notified = 0

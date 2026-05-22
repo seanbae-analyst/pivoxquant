@@ -281,9 +281,11 @@ def _pattern_summary(scored: list[dict[str, Any]],
     additionally filtered through `is_compliant` and clipped to 500
     chars to guarantee the email stays short."""
     try:
-        from services.legal_filter import is_compliant
+        from services.legal_filter import is_compliant, safe_scrub
     except Exception:
         def is_compliant(_: str) -> bool: return True  # pragma: no cover
+        def safe_scrub(t: str | None, context: str = "") -> str | None:  # pragma: no cover
+            return t
 
     # Fallback prose (always safe)
     if not scored:
@@ -336,10 +338,10 @@ def _pattern_summary(scored: list[dict[str, Any]],
             getattr(b, "text", "") for b in (resp.content or [])
             if getattr(b, "type", "") == "text"
         ).strip()
-        # Strip any residual forbidden words defensively.
-        banned = ["추천", "매수", "매도", "조언", "buy", "sell", "recommend"]
-        for w in banned:
-            text = re.sub(w, "관찰", text, flags=re.IGNORECASE)
+        # Defensive scrub via the authoritative legal filter (surgical
+        # lookbehind-guarded replacements; does NOT corrupt quant terms like
+        # 과매수/매수세, and covers 익절/손절/take profit/stop loss + 89 patterns).
+        text = safe_scrub(text, context="self_audit") or ""
         if not text or not is_compliant(text):
             return fallback
         return text[:500]

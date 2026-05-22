@@ -516,6 +516,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
+      // P2 (2026-05-22): prevPricesRef survives logout/no-positions teardown,
+      // so on next login the first tick compares the new user's prices against
+      // the previous user's stale prices and flashes a wrong up/down direction.
+      // Reset it alongside the state so direction tracking starts clean. (It is
+      // also the empty-payload guard's "have we seen prices?" signal, so a
+      // clean teardown correctly treats the next session as fresh.)
+      prevPricesRef.current = {};
       // Banner reads streamActive to know we're no longer trying — clears
       // the persistent yellow "재연결 중" for users with no positions / hidden tab.
       setState((s) =>

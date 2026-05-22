@@ -487,9 +487,19 @@ Use these EXACT markers:
         if not self.available:
             return None
         try:
+            # Defense-in-depth: story titles/sentiments are user-supplied
+            # (sourced from external news payloads) and spliced into the LLM
+            # prompt — sanitize to bound prompt size and strip newline/control
+            # chars + obvious injection markers before pass-through. Cap the
+            # number of stories to bound total prompt length.
+            def _clean(s, n=200):
+                cleaned = re.sub(r"[\x00-\x1f\x7f]", " ", str(s or ""))
+                cleaned = re.sub(r"\s+", " ", cleaned).strip()
+                return cleaned[:n]
+
             stories_text = "\n".join(
-                f"- [{s.get('sentiment', '')}] {s.get('title', '')}"
-                for s in (brief_data.get("stories") or [])[:10]
+                f"- [{_clean(s.get('sentiment', ''), 40)}] {_clean(s.get('title', ''))}"
+                for s in (brief_data.get("stories") or [])[:20]
             )
             mood = brief_data.get("market_mood", "Mixed")
             gs = brief_data.get("gs_view", {})
@@ -681,7 +691,7 @@ Peers in same sector:
 Cover (observation only, no forecasts, no recommendations):
 1. Top 3 observed trends in this sector right now (based on the provided scores).
 2. One risk indicator worth noting from the data.
-3. Which stock currently shows the highest quant score in this sector (pure indicator observation, NOT a recommendation).
+3. Sector-level aggregate observations of the quant scores (e.g. overall momentum/breadth, how concentrated or dispersed the scores are across the sector). Do NOT single out, name, or rank any individual stock as the highest/best/strongest — describe the sector in aggregate only.
 4. Summary of the current observation window (past + present indicators ONLY; do NOT predict or forecast future months).
 
 Use descriptive, past/present tense. Do NOT use words like "predict", "forecast", "will", "expected to", "전망", "예측", "예상", "오를 것", "내릴 것".

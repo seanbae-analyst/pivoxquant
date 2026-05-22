@@ -510,6 +510,13 @@ class UserKISService:
             "positions": merged,
             "total_purchase_usd": total_purchase_usd,
             "total_pnl_usd": total_pnl_usd,
+            # 2026-05-22 (P1 data-loss fix): expose whether ANY exchange call
+            # failed. `ok=True` only means ≥1 succeeded — a partial failure
+            # (e.g. transient NYSE timeout) still returns ok=True but with an
+            # incomplete `positions` list. Downstream sync_to_db MUST NOT run
+            # its destructive US zero-out loop in that case, or it would
+            # permanently zero holdings on the failed exchange.
+            "partial_failure": failures > 0,
         }
 
     def get_balance(self) -> dict:
@@ -565,7 +572,16 @@ class UserKISService:
                 "KRW": domestic["total_value"],
                 "USD": overseas_value_usd,
             },
-            "overseas_partial_failure": not overseas.get("ok"),
+            # 2026-05-22 (P1 data-loss fix): TRUE whenever the FULL overseas
+            # balance was NOT retrieved — i.e. all exchanges failed (ok=False)
+            # OR any single exchange failed (partial_failure). The destructive
+            # US zero-out in sync_to_db only runs when this is False, so a
+            # transient failure on one exchange can no longer zero out the
+            # user's holdings on that exchange.
+            "overseas_partial_failure": (
+                not overseas.get("ok")
+                or bool(overseas.get("partial_failure", False))
+            ),
         }
 
     def get_positions(self) -> list[dict]:

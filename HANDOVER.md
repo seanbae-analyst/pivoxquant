@@ -1,4 +1,61 @@
-# PivoxQuant — 인수인계서 (2026-05-22 v48.2 — 🟢 버그헌팅 wave 2: 티어캡 우회·티어 일관성·§101 canslim·SSE 가드·search/legal (6 fix, prod 배포))
+# PivoxQuant — 인수인계서 (2026-05-22 v49 — 🟢 능동 버그헌팅 6도메인 + 구조점검: 퀀트수식·법규scrub·티어·PWA·브로커 (17 fix, 회귀 0, 배포))
+
+## v49 2026-05-22 — 능동 버그헌팅 마라톤 (CEO "상태보고+버그헌팅+구조잡기, 안되는것 제대로, 자율모드 3h")
+
+> **🟢 결론: bug-hunter 6 도메인(money/billing · quant engine · realtime/push/PWA · AI/artifacts+legal · broker/KIS/admin · 구조) 능동 발굴 → 실질 버그 17건 fix.** 모든 fix는 lead(메인)가 직접 코드/수식 추적으로 root cause 확정 후 위임(false-fix 방지). no-busywork 적용 — cosmetic/test-gap/product결정/feature는 fix 안 하고 DEFERRED. 거짓보고 금지 — grep/diff/단독 pytest 실측만 인용.
+>
+> **검증(회귀 0 확정)**: 백엔드 **2941 passed** / 3 failed(전부 단독 실행 시 PASS = 기존 풀스위트 환경 flake: daytrade rate-limit 1 + fx_staleness state-file 2, 변경 파일과 무관) / 189 skipped. 프론트 **vitest 451 passed** + **tsc exit 0**. 신규 회귀테스트 ~33개 동반.
+
+### ⚠️ 경로 정정 (중요)
+- **canonical 트리 = `/Users/seanbae/Desktop/취준/pivoxquant`** (HEAD=prod=origin/main, 0/0 동기화, 파일 mtime 5/22). `~/projects/pivoxquant`는 v44.6(`2d0699bf`, 5/17)에 멈춘 **버려진 relocation** 사본. **CLAUDE.md의 "~/projects가 canonical, Desktop 사용금지" 경고는 STALE** — CEO가 v44.6 이후 Desktop으로 복귀. (현 sw.js 캐시버전이 옛 projects HEAD 해시였던 게 방증.) → CLAUDE.md 경로 안내 갱신 필요.
+
+### ✅ Quant 정확성 (5 fix — 사용자에게 틀린 숫자 노출)
+| # | 영역 | 버그 → fix | 검증 |
+|---|---|---|---|
+| 1 | 🔴 **Sortino 수식** | `risk_metrics.py:376` + `backtester.py:474` 가 `np.std(downside, ddof=1)`(음수의 자기평균 기준 분산) 사용 → 다운사이드 위험 ~56% 과소·Sortino ~2배 과대. MAR(0) 기준 target semi-deviation `sqrt(mean(min(excess,0)²))×√252`로 교정 | 신규 6 test |
+| 2 | 🔴 **defense-status FX** | `/api/risk/defense-status`(`risk_quant.py:795`)가 `mv=price×shares`로 USD+KRW 무변환 합산 → 7-layer 방어 가중치 오류(혼합 포폴). 형제 `_load_positions_with_prices`처럼 KRW 정규화(.KS/.KQ 아니면 ×fx) | test |
+| 3 | 🟠 **timeline Sharpe** | `/api/risk/timeline`(`risk.py:930`)가 rf 미차감 → benchmark 엔드포인트(rf=4.5%)와 불일치·~21% 과대. `(mean−rf_daily)/std×√252` | test |
+| 4 | 🟡 stress-test 오표기 | `estimated_loss_usd`/`portfolio_impact_usd` 값이 실은 KRW정규화(KR유저에 "$1.38M"=실제 ₩) → 통화중립 키 `estimated_loss`/`portfolio_impact`로 rename. **FE 소비처 0건 grep 확인** 후 안전 rename | grep |
+| 5 | 🟠 N+1 직렬 | `sortino_by_position`(1090)+`ledoit_wolf`(1185)가 직렬 `get_price_history`(~8s). Wave H-4가 component_es/defense_status만 병렬화했던 누락분 → 동일 ThreadPoolExecutor 패턴 적용 | — |
+
+### ✅ 법규/AI (5 fix — §101 면제 트랙)
+| # | 영역 | 버그 → fix | 검증 |
+|---|---|---|---|
+| 6 | 🟠 **scrub 손상+미흡** | `self_audit_service.py:340` home-rolled `re.sub(banned, "관찰", IGNORECASE)` → "과매수"→"과관찰" 손상 + 89패턴 권위필터 대비 미흡. `safe_scrub(context=)`로 교체 | 신규 2 test |
+| 7 | 🟠 **scrub 중복(전수)** | `risk_board_service.py:556` 동일 home-rolled scrub 잔존 → safe_scrub + (?<!과)가드 supplement(risk-board 전용 prose항만). 손절→"SL 레벨 관찰"/익절→"TP 레벨 관찰" 워딩은 safe_scrub가 동일 산출(무손실) | 신규 12 test |
+| 8 | 🟠 **legal_filter over-scrub(권위필터)** | `_REPLACEMENTS`의 `매수\s*신호`등 6규칙에 `(?<!과)` 가드 누락 → **모든 safe_scrub 호출자**에서 "과매수 신호"→"과POSITIVE 지표" 손상(과매도도 동일). 6규칙 전수 가드(naked BUY/SELL case-sensitivity 불변, IGNORECASE 미추가) | 신규 13 test |
+| 9 | 🟠 prompt injection | `morning_summary`가 유저공급 `stories[].title` 무필터로 LLM 프롬프트 삽입. `_clean`(200자 cap+제어문자 제거)+스토리 20개 cap(downstream scrub 보존) | 신규 2 test |
+| 10 | 🟠 §101 borderline | `sector_trend` 프롬프트가 "최고 점수 종목 지목" 요청(글로벌 캐시, 미보유 종목명 노출 회색). 섹터 집계관찰만·개별종목 지목 금지로 프롬프트 보수화(기능 유지) | — |
+
+### ✅ 티어 일관성 (2 fix)
+| # | 버그 → fix |
+|---|---|
+| 11 | `billing.py:601` `has_active_subscription`가 `in_("pro","premium")`로 **premium_plus/founding_lifetime(최고가 코호트·오너) 누락** → FE에 잘못된 upgrade CTA. `effective_tier`+`_TIER_RANK`로 교정(rank>premium=Stripe상태 무관 entitled, lifetime grant 반영) |
+| 12 | `artifacts.py:2017` VIX force-fire가 `in_(["premium","elite"])` — **"elite"는 유령티어(매칭 0)** + premium_plus/founding 누락. 공유상수 `PAID_TIERS_PREMIUM_AND_UP`로(정상 경로와 일치) |
+
+### ✅ PWA/실시간/푸시 (3 fix)
+| # | 버그 → fix |
+|---|---|
+| 13 | 🟠 **PIPA cross-user 캐시** | `sw.js` staleWhileRevalidate가 per-user `/api/profile`(60m)·`/api/earnings`(15m)·`/api/discover`(30m)를 URL키로 캐시 + logout이 SW캐시 미무효화 → 공유기기에서 A→B 로그인 시 A 데이터 노출. `CLEAR_API_CACHE` SW message 핸들러 + auth.tsx logout postMessage |
+| 14 | `realtime.tsx` `prevPricesRef` logout 미초기화 → 재로그인 첫 SSE 가격방향 flash 오작동. teardown에서 `={}` 초기화(empty-payload 가드도 재무장) |
+| 15 | 🟠 push 무음실패+락아웃 | VAPID 키 미설정 시 유저가 "Enable"→권한허용→subscribe throw→14일 dismiss 기록=영구 락아웃(브라우저 권한은 granted인데 구독 0). `isPushConfigured()` 게이트로 프롬프트 미표시 + config 실패 시 dismiss 미기록(키 추가되면 재노출) |
+
+### ✅ 브로커/admin (2 fix)
+| # | 버그 → fix |
+|---|---|
+| 16 | 🔴 **데이터 손실** | `user_kis_service.py` 부분 거래소 실패(NASD 성공·NYSE 타임아웃) 시 `ok=True`(≥1성공)라 `overseas_partial_failure=False` → sync_to_db의 US zero-out이 실패 거래소 보유분(예 MSFT) `shares=0` 영구 손실. `partial_failure=failures>0` 전파 → zero-out은 전 거래소 성공 시에만. (v48 무음저장실패와 동일 클래스) | 신규 2 test(부분실패=보존 / 전체성공=정상 zero) |
+| 17 | `admin_fmp.py`/`admin_preview.py` 3라우트가 `@login_required`(302 HTML 리다이렉트) → 프로젝트표준 `@api_auth`(JSON 401 SESSION_EXPIRED). authz(_deny_non_admin) 불변 |
+
+### ⏸️ DEFERRED — CEO/법무 결정 필요 (버그 아님, fix 안 함)
+- **billing past_due**: Stripe smart-retry 중 `subscription_status=past_due`일 때 `subscription_tier` 미강등 → 카드 거절 후 재시도창(~10일) 동안 paid 유지. **명시적 grace 로직 부재(우발적)**. 즉시강등 vs 유예는 **제품 결정** — Stripe Live 실유저 본격화 전이라 즉단 위험 낮음. → **CEO 결정**.
+- **refund/chargeback 핸들러 부재**: `charge.refunded`/`charge.dispute.created` 웹훅 미처리 → 환불해도 tier 유지. **전자상거래법 §17 청약철회**(첫결제 14일 내 의무) 발생 시 P0화. 전액/부분 환불 비즈룰 필요 → **CEO + 법무큐**.
+- **VAPID `NEXT_PUBLIC_VAPID_PUBLIC_KEY` Vercel env 미설정**: push 전달 no-op(코드는 이제 graceful 게이트·락아웃 없음). 값=백엔드 `.env` `VAPID_PUBLIC_KEY`. → **CEO Vercel env**.
+- **SSE 테스트 인프라**: `realtime.tsx` 거의 무커버리지(realtime.test.tsx가 jsdom OOM로 제거됨). reconnect/cleanup/slot 미검증. → fake-timer 기반 인프라 필요.
+- **`.claude/worktrees/*` ~20개 잔여 agent 워크트리** + CLAUDE.md 경로안내 stale → 정리 대상(버그 아님).
+- onboarding "Skip"이 면책4항목 확인 없이 완료(자본시장법 §6 회색, v48.2 이월) → 법무큐.
+
+---
+
 
 ## v48.2 2026-05-22 — 버그헌팅 wave 2 (SSE/PWA + onboarding/tier + AI/search)
 

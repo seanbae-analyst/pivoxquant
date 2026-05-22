@@ -469,11 +469,20 @@ class Backtester:
                     std_annual = np.std(daily_rets, ddof=1) * np.sqrt(252)
                     sharpe = round((mean_annual - 0.045) / std_annual, 2)
 
-                    # Sortino: penalize downside volatility only
-                    downside = daily_rets[daily_rets < 0]
-                    if len(downside) > 1 and np.std(downside, ddof=1) > 0:
-                        down_std_annual = np.std(downside, ddof=1) * np.sqrt(252)
-                        sortino = round((mean_annual - 0.045) / down_std_annual, 2)
+                    # Sortino: Target Downside Deviation anchored at the MAR
+                    # (rf=0.045 annual). Previously used std-of-negatives which
+                    # measured dispersion around the negatives' own mean and
+                    # inflated Sortino ~2x.
+                    rf_daily = 0.045 / 252
+                    excess = daily_rets - rf_daily
+                    neg = excess[excess < 0]
+                    if len(neg) > 0:
+                        downside = np.minimum(excess, 0.0)
+                        down_std_annual = float(
+                            np.sqrt(np.mean(downside ** 2))
+                        ) * np.sqrt(252)
+                        if down_std_annual > 0:
+                            sortino = round((mean_annual - 0.045) / down_std_annual, 2)
 
                     # Calmar: annualized return / |max drawdown|
                     # Bug NEW-B fix: annualize total_return_net before dividing

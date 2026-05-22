@@ -656,3 +656,49 @@ class TestImperativeBuySellStreamGap:
         # 명령 부사가 없으므로 새 중립표현이 주입되면 안 됨
         out = scrub_text(text)
         assert "관찰 시점" not in out, f"prose {text!r} was over-scrubbed → {out!r}"
+
+
+class TestOverboughtOversoldGuard:
+    """2026-05-22 — `매수\\s*신호` / `매도\\s*신호` replacement rules lacked the
+    `(?<!과)` lookbehind that the detection regex already had, so safe_scrub
+    corrupted the technical-analysis terms 과매수(overbought) / 과매도(oversold):
+        safe_scrub("과매수 신호") → "과POSITIVE 지표"  (BUG)
+        safe_scrub("과매도 신호") → "과NEGATIVE 지표"  (BUG)
+    The replacement rules now carry the same guard. Bare advisory forms must
+    still be scrubbed.
+    """
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "과매수 신호",
+            "과매도 신호",
+            "RSI 과매수 신호 포착",
+            "과매수 기회",
+            "과매수 유리",
+            "과매도 유리",
+            "과매수 압력",
+        ],
+    )
+    def test_overbought_oversold_preserved(self, text):
+        out = safe_scrub(text)
+        assert out == text, f"quant term {text!r} was over-scrubbed → {out!r}"
+        # No neutral replacement tokens injected.
+        for token in ("POSITIVE", "NEGATIVE", "지표 저점 영역", "지표 유리 영역", "유입 강도"):
+            assert token not in out, f"{text!r} corrupted with {token!r} → {out!r}"
+
+    @pytest.mark.parametrize(
+        "text,expected_token",
+        [
+            ("매수 신호", "POSITIVE 지표"),
+            ("매도 신호", "NEGATIVE 지표"),
+            ("매수 기회", "지표 저점 영역"),
+            ("매수 유리", "지표 유리 영역"),
+            ("매도 유리", "지표 유리 영역"),
+            ("매수 압력", "유입 강도"),
+        ],
+    )
+    def test_bare_advisory_still_scrubbed(self, text, expected_token):
+        out = safe_scrub(text)
+        assert expected_token in out, f"bare {text!r} should still scrub → {out!r}"
+        assert out != text

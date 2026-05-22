@@ -3,6 +3,20 @@ import { apiFetch } from "./api";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
 
+/** Sentinel message thrown by subscribeToPush() when the VAPID key is unset.
+ *  Callers match on this to distinguish a config dead-end from a genuine
+ *  user action (permission denied) so they don't persist a dismiss. */
+export const PUSH_NOT_CONFIGURED =
+  "Push notifications not configured (NEXT_PUBLIC_VAPID_PUBLIC_KEY missing).";
+
+/** True only when a VAPID public key is configured. When false, the push
+ *  prompt must not be shown at all — clicking Enable would grant the browser
+ *  permission, then throw on subscribe with zero backend subscription, and
+ *  (without this gate) lock the user out of the re-prompt for 14 days. */
+export function isPushConfigured(): boolean {
+  return !!VAPID_PUBLIC_KEY;
+}
+
 export function isPushSupported(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -33,9 +47,7 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
     // "subscription not needed" — UI dismissed the prompt as if push
     // had been enabled, but 0 actual subscriptions were ever created.
     // Throw so callers can surface a real error toast.
-    throw new Error(
-      "Push notifications not configured (NEXT_PUBLIC_VAPID_PUBLIC_KEY missing).",
-    );
+    throw new Error(PUSH_NOT_CONFIGURED);
   }
 
   const subscription = await registration.pushManager.subscribe({

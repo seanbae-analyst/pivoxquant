@@ -29,8 +29,9 @@ from __future__ import annotations
 import logging
 
 from flask import Blueprint, jsonify
-from flask_login import current_user, login_required
+from flask_login import current_user
 
+from routes.decorators import api_auth
 from services.data import fmp as fmp_service
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,9 @@ def _deny_non_admin():
 
 
 @admin_fmp_bp.route("/fmp-usage", methods=["GET"])
-@login_required
+@api_auth  # 2026-05-22: JSON 401 {"code":"SESSION_EXPIRED"} for /api/* callers
+           # instead of flask-login's 302 HTML redirect. Admin authz still
+           # enforced below via _deny_non_admin().
 def fmp_usage():
     """Return the current FMP budget / 402 cooldown snapshot.
 
