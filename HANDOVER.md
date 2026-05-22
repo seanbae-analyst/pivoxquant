@@ -1,4 +1,26 @@
-# PivoxQuant — 인수인계서 (2026-05-22 v48 — 🟢 포지션 플로우 전면 개편: Add/Sell/Edit 모드 분기 + 2분 쿨다운 제거 + 매수일 + 티커 자동완성 + 벤치마크 KPI + 즉시갱신 (prod 라이브 전수 검증))
+# PivoxQuant — 인수인계서 (2026-05-22 v48.1 — 🟢 버그헌팅 wave: 거래날짜·KR currency/FX·리스크 breach 히어로·OG캐시 (6 fix, prod 배포+라이브))
+
+## v48.1 2026-05-22 — 버그헌팅 wave (포지션 플로우 회귀 + 인접영역)
+
+> **🟢 결론: bug-hunter 3 (포지션회귀 / 거래정확성 / 인접영역) → 실질 버그 6 fix. v48 포지션 개편의 인접 누락 + 회귀 발굴.** commit `536a1af0` origin/main 푸시 + BE railway 배포 + FE Vercel. 검증: tsc 0 / vitest **451 passed**(신규 risk-hero 7) / backend targeted(portfolio/no-cache/pre-trade) exit 0 / pre-push pytest sanity(6파일) 통과 / **전체 backend suite 회귀 확인(진행/완료)**.
+
+| # | 영역 | 버그 → fix | 검증 |
+|---|---|---|---|
+| 1 | **거래 날짜** | `create_trade_alias`가 `d.get("date")` 무시 → record-mode 과거 매도/매수가 항상 traded_at=now. purchase_date와 동일 클래스. `_parse_purchase_date(date)`→`TradeHistory.traded_at` | prod 매도 실행(5→4) + 단위테스트 |
+| 2 | **KR currency** | legacy buy_more/sell_position이 stale 캐시 시 `currency="USD"` fallback → KR 거래 USD 버킷 오기록(realizedYtd 수천배 부풀림). KRW-if-.KS/.KQ로 통일(create_trade_alias와 일치) + sell shares=0 전량매도 가드 | 단위테스트 |
+| 3 | **buy_fx_rate** | 추가 USD 매수(trade modal=UI 경로)가 buy_fx 미혼합 → KRW 원가 첫 체결 FX 고정 → KRW 손익% 오류. cost-weighted 혼합(add_position._merge_into 미러) | 단위테스트 |
+| 4 | **리스크 breach 히어로** | `/api/risk/summary`에 `layers_breached` 없어 v2 히어로가 VaR/Cash RED여도 "none breached" 표시(리스크 오인). layers payload(RED=NEGATIVE)에서 breached/strained 카운트 파생 | ✅ prod: 실제 VaR+Cash RED 2개 → 히어로 "2 layers breached. Posture: breached" |
+| 5 | **OG 캐시** | 전역 no_cache after_request가 공유이미지 Cache-Control 덮어씀 → 소셜 크롤러 캐싱 불가. brag/OG 3경로 anchored allowlist(public 있을 때만) exempt, 나머지는 no-store 유지 | 단위테스트 7 |
+| 6 | stale 주석 | "≥50 chars" thesis 주석 → 10 | — |
+
+### 🔬 라이브 검증 (prod, founding 계정)
+- **#4 리스크 히어로 ✅** — `/api/risk/layers` 실측 VaR=RED·Cash Buffer=RED(2) + Tail·Sector=YELLOW(2). 히어로 "2 layers breached. Posture: breached" 정확 표시(이전 항상 "none breached"). (초기 로드 중엔 layers 도착 전 "none breached" 잠깐 — 로드 후 정정.)
+- **#1 거래날짜** — KO 5주 추가→1주 과거날짜(2025-06-10) 매도 실행(5→4 확인). traded_at readback은 `/api/portfolio/trades` prod 지연으로 미확인이나 단위테스트 커버. 테스트 포지션 전부 삭제 원복(12).
+- **⚠️ 관찰(미확정)**: 일부 시점 `/api/portfolio/trades` + `/risk` 페이지가 document_idle 미도달(45s 타임아웃, JS/scroll 막힘). 단 `/api/health` 0.93s + `/api/risk/layers` 직접 fetch <1s + 새 탭에선 정상 → 탭 렌더러 wedge(누적 타임아웃) 가능성 큼, 백엔드 perf 회귀로 확정 못 함. 재현 시 trades 엔드포인트 enrichment 지연 조사 여지.
+
+---
+
+# (이전) PivoxQuant — 인수인계서 (2026-05-22 v48 — 🟢 포지션 플로우 전면 개편: Add/Sell/Edit 모드 분기 + 2분 쿨다운 제거 + 매수일 + 티커 자동완성 + 벤치마크 KPI + 즉시갱신 (prod 라이브 전수 검증))
 
 > **세션 최종 검증**: backend pytest **2816 passed**(기존 flaky fx_staleness 2 외 0) + targeted 283 passed / FE tsc exit 0 / vitest **444 passed** (worker 환경 크래시로 1회 16-file 부분실행 떴으나 재실행 41 files/444 green 확인) / 0 회귀 / 0원. 3 commit (`98a031f4` + `e6007d41` + handover). main `18675aba → e6007d41`. **BE railway 배포 SUCCESS(health ok) + FE Vercel 자동배포.** prod 브라우저로 Add/Sell/Edit/자동완성/매수일/벤치마크KPI/즉시갱신 **전수 라이브 검증 통과.**
 
