@@ -48,7 +48,8 @@
 
 ### ⏸️ DEFERRED — CEO/법무 결정 필요 (버그 아님, fix 안 함)
 - **billing past_due**: Stripe smart-retry 중 `subscription_status=past_due`일 때 `subscription_tier` 미강등 → 카드 거절 후 재시도창(~10일) 동안 paid 유지. **명시적 grace 로직 부재(우발적)**. 즉시강등 vs 유예는 **제품 결정** — Stripe Live 실유저 본격화 전이라 즉단 위험 낮음. → **CEO 결정**.
-- **refund/chargeback 티어 정책**: ✅ **v49.1 후속 — 관측 핸들러 추가**(`charge.refunded`/`dispute.created`/`dispute.funds_withdrawn` → WARNING 로그 + 기존 `SLACK_WEBHOOK_URL` ops 알림, **티어 변경 X**, never-raise, 8 test). 더 이상 조용히 안 버려짐. **단 자동 강등/환불 정책은 여전히 보류** — 전자상거래법 §17 전액 vs 가분적 부분환불 + dispute 승패 미확정 → **CEO + 법무 결정** 후 tier 로직 구현(현재는 알림 받고 수동 처리).
+- **refund/chargeback 티어 정책**: ✅ **v49.2 구현 완료**(CEO "구현 다 해" 승인): full refund(`amount_refunded>=amount` or `refunded:true`)→free+canceled / **partial→유지** / dispute.created→유지(승소 가능) / dispute.funds_withdrawn(패소)→free. 모호(amount 결손) 시 **안전하게 유지**(부당 강등 회피), ops Slack 알림은 항상. 26 test. ⚠️ **법무 가정**: full refund=§17 청약철회→접근 회수; 가분적 디지털콘텐츠 부분환불 룰 다르면 변호사 확인 후 조정(법무큐 유지).
+- ✅ **v49.2: VAPID env 수정** — Vercel `NEXT_PUBLIC_VAPID_PUBLIC_KEY`가 **빈 값(len 0)+type sensitive**(과거 CLI 빈값저장 버그)였음이 근본 원인. 백엔드 공개키로 재생성(production/preview/development, encrypted) via Vercel REST API. push redeploy로 빌드 반영. (PRIVATE 키는 백엔드 .env에 이미 존재.)
 - ✅ **v49.1: CLAUDE.md 경로 경고 교정** — "~/projects canonical, Desktop 사용금지" stale 안내를 "Desktop=canonical(HEAD=prod)"로 정정. `git worktree prune`로 죽은 /tmp ref 10개 제거(55→45). `.claude/worktrees` locked 20개는 수동 대상.
 - **VAPID `NEXT_PUBLIC_VAPID_PUBLIC_KEY` Vercel env 미설정**: push 전달 no-op(코드는 이제 graceful 게이트·락아웃 없음). 값=백엔드 `.env` `VAPID_PUBLIC_KEY`. → **CEO Vercel env**.
 - **SSE 테스트 인프라**: `realtime.tsx` 거의 무커버리지(realtime.test.tsx가 jsdom OOM로 제거됨). reconnect/cleanup/slot 미검증. → fake-timer 기반 인프라 필요.

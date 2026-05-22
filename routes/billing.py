@@ -594,33 +594,54 @@ def _handle_invoice_paid(invoice):
 
 # ── Refund / Chargeback (Dispute) handlers ───────────────────────────────────
 #
-# ⚠️ DEFERRED POLICY DECISION — DO NOT add tier logic here. ⚠️
+# TIER-DOWNGRADE POLICY — IMPLEMENTED (CEO-authorized 2026-05-22).
 #
-# When Stripe sends ``charge.refunded`` / ``charge.dispute.created`` /
-# ``charge.dispute.funds_withdrawn``, the *business + legal* question of
-# "should the customer be downgraded, and by how much" is intentionally
-# UNRESOLVED:
-#   - 전자상거래법 §17 distinguishes 전부환불 (full refund) vs 가분적
-#     디지털콘텐츠 부분환불 (partial refund of divisible digital content) —
-#     the correct tier action differs per case and per how much access was
-#     already consumed. That is a CEO + legal counsel decision (see legal
-#     question queue), NOT something a webhook handler should hardcode.
-#   - A dispute (chargeback) may later be WON or LOST; auto-downgrading on
-#     ``dispute.created`` would wrongly punish a customer whose dispute we
-#     win.
+# Stripe sends ``charge.refunded`` / ``charge.dispute.created`` /
+# ``charge.dispute.funds_withdrawn``. The tier action per event:
 #
-# Therefore these handlers are **observability-only**:
+#   • charge.refunded — FULL refund (amount_refunded >= amount, or
+#     refunded == true) → downgrade user to ``subscription_tier = "free"``
+#     + ``subscription_status = "canceled"`` (mirrors the cancel path) +
+#     commit. Rationale: 전자상거래법 §17 청약철회 / full withdrawal
+#     rescinds the contract → revoke paid access.
+#   • charge.refunded — PARTIAL refund (0 < amount_refunded < amount) →
+#     KEEP tier (a partial refund of a divisible period shouldn't cut
+#     access). Observability only.
+#   • charge.dispute.created → KEEP tier (the dispute may be WON; a
+#     downgrade now would wrongly punish a customer). Observability only.
+#   • charge.dispute.funds_withdrawn (dispute lost / funds pulled) →
+#     downgrade user to ``subscription_tier = "free"`` +
+#     ``subscription_status = "canceled"`` + commit. Rationale: dispute
+#     lost = chargeback final = revoke access.
+#
+# ⚠️ LEGAL ASSUMPTION (CEO-authorized 2026-05-22, pending lawyer
+#     confirmation): full refund treated as §17 청약철회 → access revoked;
+#     partial refund preserves access. Confirm with counsel; adjust if
+#     가분적 디지털콘텐츠 partial-period rules differ.
+#
+# SAFER-INTERPRETATION DEFAULT: when FULL-vs-PARTIAL cannot be determined
+# from the charge object (e.g. ``amount`` missing/zero), treat as PARTIAL
+# (keep access) — a wrongful downgrade of a paying customer is worse than a
+# delayed manual one, and ops still receives the Slack alert.
+#
+# Mechanics (all handlers):
 #   • resolve the local User (best-effort, by stripe_customer_id — same
 #     lookup the other handlers use; metadata fallback is not available on
 #     charge/dispute objects),
-#   • emit a WARNING log flagging MANUAL ACTION REQUIRED,
+#   • emit a WARNING log,
 #   • fire the SAME Slack ops alert mechanism billing already uses
-#     (SLACK_WEBHOOK_URL — see services/billing_notifications.py).
-# They perform NO db tier mutation, NO subscription writes, and NEVER raise
-# (the outer webhook wrapper must ACK 200 so Stripe stops its 3-day retry).
+#     (SLACK_WEBHOOK_URL — see services/billing_notifications.py) on EVERY
+#     event so ops sees both downgrade and keep-access cases,
+#   • on downgrade, commit (mirrors _handle_subscription_updated /
+#     _handle_subscription_deleted),
+#   • NEVER raise (the outer webhook wrapper must ACK 200 so Stripe stops
+#     its 3-day retry — any error is logged and re-raised only to the outer
+#     try/except, which rolls back + ACKs).
 
 
-def _notify_refund_dispute_slack(*, kind: str, summary: str) -> bool:
+def _notify_refund_dispute_slack(
+    *, kind: str, summary: str, action: str | None = None,
+) -> bool:
     """Post an ops Slack alert for a refund/dispute event.
 
     Reuses the SAME ``SLACK_WEBHOOK_URL`` incoming-webhook mechanism that
@@ -629,6 +650,10 @@ def _notify_refund_dispute_slack(*, kind: str, summary: str) -> bool:
     on a successful POST; never raises (Sentry captures any error so the
     webhook ACK is never blocked). Skips silently when the webhook URL is
     unset (dev / CI).
+
+    ``action`` is the policy-action footer line (e.g. what happened to the
+    tier). Defaults to the keep-access wording so callers that don't pass it
+    still produce accurate text. Always references 전자상거래법 §17.
     """
     webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
     if not webhook_url:
@@ -640,10 +665,14 @@ def _notify_refund_dispute_slack(*, kind: str, summary: str) -> bool:
         logger.warning("%s Slack skipped: requests not installed", kind)
         return False
 
+    footer = action or (
+        "• tier 유지 (access 보존) — MANUAL ACTION REQUIRED 검토 "
+        "(전자상거래법 §17)"
+    )
     text = (
-        f":rotating_light: *Stripe {kind} — MANUAL ACTION REQUIRED*\n"
+        f":rotating_light: *Stripe {kind}*\n"
         f"{summary}\n"
-        f"• tier 자동 변경 안 됨 (정책 보류: CEO + legal, 전자상거래법 §17)"
+        f"{footer}"
     )
     try:
         resp = requests.post(webhook_url, json={"text": text}, timeout=10)
@@ -676,28 +705,77 @@ def _resolve_user_by_customer(customer_id):
         return None
 
 
-def _handle_charge_refunded(charge):
-    """Observe a ``charge.refunded`` event — NO tier mutation (policy deferred).
+def _downgrade_user_to_free(user, *, reason: str) -> None:
+    """Revoke paid access: set tier=free + status=canceled + commit.
 
-    See the policy comment block above: deciding whether/how to downgrade on
-    a refund is a deferred CEO + legal (전자상거래법 §17) decision. This
-    handler only logs + alerts ops so a refund is never silently dropped.
+    Mirrors the cancel paths in ``_handle_subscription_updated`` (status in
+    ("canceled","unpaid") → tier "free") and ``_handle_subscription_deleted``
+    (tier "free" + status + ``db.session.commit()``). ``subscription_status``
+    is set to ``"canceled"`` to mirror the cancel intent. Raises on a db
+    error — the outer webhook try/except rolls back + ACKs 200.
+    """
+    user.subscription_tier = "free"
+    user.subscription_status = "canceled"
+    db.session.commit()
+    logger.warning(
+        "Subscription tier downgraded to free (reason=%s, user_id=%s)",
+        reason, user.id,
+    )
+
+
+def _handle_charge_refunded(charge):
+    """Handle a ``charge.refunded`` event — downgrade on FULL refund only.
+
+    FULL refund (amount_refunded >= amount, or refunded == true) →
+    downgrade to free (전자상거래법 §17 청약철회 rescinds the contract).
+    PARTIAL refund (0 < amount_refunded < amount) → keep access. When
+    FULL-vs-PARTIAL can't be determined (amount missing/zero) the SAFER
+    default is PARTIAL/keep-access. Always logs + alerts ops.
     """
     charge_id = charge.get("id")
     payment_intent = charge.get("payment_intent")
     customer_id = charge.get("customer")
-    amount = charge.get("amount_refunded") or charge.get("amount") or 0
+    amount = charge.get("amount") or 0
+    amount_refunded = charge.get("amount_refunded") or 0
+    refunded_flag = bool(charge.get("refunded"))
     currency = charge.get("currency")
     user = _resolve_user_by_customer(customer_id)
     user_id = getattr(user, "id", "unknown") if user else "unknown"
     user_email = getattr(user, "email", "unknown") if user else "unknown"
 
+    # FULL vs PARTIAL. The ``refunded`` boolean (Stripe sets it when the
+    # whole charge is refunded) is authoritative; otherwise compare amounts.
+    # Safer default: only call it FULL when we can prove it — a known
+    # positive ``amount`` with ``amount_refunded >= amount``, or the flag.
+    if refunded_flag:
+        is_full = True
+    elif amount > 0 and amount_refunded >= amount:
+        is_full = True
+    else:
+        # PARTIAL, or amount unknown/zero (can't prove full) → keep access.
+        is_full = False
+
+    if is_full and user is not None:
+        try:
+            _downgrade_user_to_free(user, reason="charge.refunded (full)")
+            action = "• tier → free (전부환불/청약철회 §17 → access 회수)"
+        except Exception:
+            logger.exception(
+                "REFUND downgrade commit failed (charge=%s user=%s)",
+                charge_id, user_id,
+            )
+            raise
+    elif is_full:
+        # Full refund but no local user → can't downgrade an unknown user.
+        action = "• tier 변경 불가 (전부환불이나 user 미해결) — MANUAL"
+    else:
+        action = "• tier 유지 (부분환불/가분 콘텐츠 → access 보존, §17)"
+
     logger.warning(
-        "REFUND received — MANUAL ACTION REQUIRED: tier not auto-changed "
-        "(policy deferred 전자상거래법 §17). charge=%s payment_intent=%s "
-        "customer=%s amount=%s %s user=%s (%s)",
-        charge_id, payment_intent, customer_id, amount,
-        (currency or "?").upper(), user_id, user_email,
+        "REFUND received (full=%s): charge=%s payment_intent=%s customer=%s "
+        "amount=%s amount_refunded=%s %s user=%s (%s)",
+        is_full, charge_id, payment_intent, customer_id, amount,
+        amount_refunded, (currency or "?").upper(), user_id, user_email,
     )
     _notify_refund_dispute_slack(
         kind="REFUND",
@@ -705,20 +783,21 @@ def _handle_charge_refunded(charge):
             f"• charge: `{charge_id}`\n"
             f"• payment_intent: `{payment_intent}`\n"
             f"• customer: `{customer_id}`\n"
-            f"• 환불액: {amount} {(currency or '?').upper()}\n"
+            f"• 환불액: {amount_refunded} / {amount} {(currency or '?').upper()}\n"
             f"• user: `{user_id}` ({user_email})"
         ),
+        action=action,
     )
 
 
 def _handle_charge_dispute(dispute, *, phase: str):
-    """Observe a chargeback/dispute event — NO tier mutation (policy deferred).
+    """Handle a chargeback/dispute event — downgrade only on funds_withdrawn.
 
-    Handles both ``charge.dispute.created`` and
-    ``charge.dispute.funds_withdrawn`` (``phase`` distinguishes them in the
-    log/alert). A dispute may later be won, so auto-downgrading here would
-    wrongly punish a customer — the tier action is a deferred CEO + legal
-    decision. Observability-only.
+    ``charge.dispute.created`` → KEEP tier (the dispute may be WON; a
+    downgrade now would wrongly punish a customer). Observability only.
+    ``charge.dispute.funds_withdrawn`` (dispute lost / funds pulled) →
+    downgrade to free (전자상거래법 §17 — chargeback final = revoke access).
+    Always logs + alerts ops; never raises beyond the outer webhook wrapper.
     """
     dispute_id = dispute.get("id")
     charge_id = dispute.get("charge")
@@ -734,11 +813,27 @@ def _handle_charge_dispute(dispute, *, phase: str):
     user_id = getattr(user, "id", "unknown") if user else "unknown"
     user_email = getattr(user, "email", "unknown") if user else "unknown"
 
+    if phase == "funds_withdrawn" and user is not None:
+        try:
+            _downgrade_user_to_free(
+                user, reason="charge.dispute.funds_withdrawn (lost)",
+            )
+            action = "• tier → free (분쟁 패소/chargeback 확정 → access 회수, §17)"
+        except Exception:
+            logger.exception(
+                "DISPUTE downgrade commit failed (dispute=%s user=%s)",
+                dispute_id, user_id,
+            )
+            raise
+    elif phase == "funds_withdrawn":
+        action = "• tier 변경 불가 (분쟁 패소이나 user 미해결) — MANUAL"
+    else:
+        # created → keep access (dispute may be won).
+        action = "• tier 유지 (분쟁 진행중, 승소 가능 → access 보존, §17)"
+
     logger.warning(
-        "DISPUTE (%s) received — MANUAL ACTION REQUIRED: tier not auto-changed "
-        "(policy deferred 전자상거래법 §17). dispute=%s charge=%s "
-        "payment_intent=%s customer=%s amount=%s %s reason=%s status=%s "
-        "user=%s (%s)",
+        "DISPUTE (%s) received: dispute=%s charge=%s payment_intent=%s "
+        "customer=%s amount=%s %s reason=%s status=%s user=%s (%s)",
         phase, dispute_id, charge_id, payment_intent, customer_id, amount,
         (currency or "?").upper(), reason, status, user_id, user_email,
     )
@@ -752,6 +847,7 @@ def _handle_charge_dispute(dispute, *, phase: str):
             f"• customer: `{customer_id}`\n"
             f"• user: `{user_id}` ({user_email})"
         ),
+        action=action,
     )
 
 

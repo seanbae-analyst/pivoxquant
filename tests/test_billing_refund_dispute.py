@@ -6,11 +6,16 @@ Covers the silent-drop gap closed in routes/billing.py: Stripe
 branch and were recorded as "processed" with zero signal — a refunded /
 disputed customer kept paid access and nobody was notified.
 
-These handlers are **observability-only** (tier change is a DEFERRED CEO +
-legal / 전자상거래법 §17 decision). The contract pinned here:
+Tier-downgrade policy (CEO-authorized 2026-05-22) now IMPLEMENTED:
+  • charge.refunded FULL (amount_refunded >= amount, or refunded==true) →
+    downgrade tier=free + status=canceled.
+  • charge.refunded PARTIAL (or amount unknown → safer default keep) →
+    tier unchanged.
+  • charge.dispute.created → tier unchanged (may be won).
+  • charge.dispute.funds_withdrawn (lost) → downgrade tier=free.
+The contract pinned here in all cases:
   (a) handler ACKs 200 (never 500),
-  (b) a WARNING is logged (caplog) AND the ops Slack alert is fired,
-  (c) NO subscription_tier / subscription_status change on the user.
+  (b) a WARNING is logged (caplog) AND the ops Slack alert is fired.
 
 Test strategy mirrors test_billing_payment_failed.py: mock
 ``stripe.Webhook.construct_event`` to feed synthetic events, and patch the
@@ -73,8 +78,18 @@ def _assert_tier_unchanged(app, user_id, *, tier, status):
         assert u.subscription_status == status
 
 
+def _assert_downgraded(app, user_id):
+    from extensions import db
+    from models import User
+    with app.app_context():
+        u = db.session.get(User, user_id)
+        assert u.subscription_tier == "free"
+        assert u.subscription_status == "canceled"
+
+
 class TestChargeRefunded:
-    def test_refund_acks_200_warns_and_alerts(self, raw_client, app, caplog):
+    def test_full_refund_downgrades_to_free(self, raw_client, app, caplog):
+        """FULL refund (amount_refunded == amount) → tier becomes free."""
         user_id = _make_user(app, tier="premium", status="active")
         event = {
             "id": "evt_rf_1",
@@ -83,6 +98,7 @@ class TestChargeRefunded:
                 "id": "ch_rf_1",
                 "payment_intent": "pi_rf_1",
                 "customer": "cus_rf_test",
+                "amount": 19_900,
                 "amount_refunded": 19_900,
                 "currency": "krw",
             }},
@@ -97,22 +113,82 @@ class TestChargeRefunded:
         assert r.get_json().get("ok") is True
         # (b) WARNING logged + ops alert fired
         assert any(
-            "REFUND received" in rec.message and "MANUAL ACTION REQUIRED" in rec.message
+            "REFUND received (full=True)" in rec.message
             for rec in caplog.records
         )
         assert mock_alert.call_count == 1
         assert mock_alert.call_args.kwargs["kind"] == "REFUND"
-        # (c) tier untouched
+        # (c) FULL refund → downgraded to free
+        _assert_downgraded(app, user_id)
+
+    def test_full_refund_via_refunded_flag_downgrades(self, raw_client, app):
+        """`refunded: true` is authoritative → FULL → downgrade."""
+        user_id = _make_user(app, tier="pro", status="active")
+        event = {
+            "id": "evt_rf_flag",
+            "type": "charge.refunded",
+            "data": {"object": {
+                "id": "ch_rf_flag", "payment_intent": "pi_flag",
+                "customer": "cus_rf_test", "refunded": True,
+                "amount": 9_900, "amount_refunded": 9_900, "currency": "krw",
+            }},
+        }
+        with patch("routes.billing._notify_refund_dispute_slack", return_value=True):
+            r = _post_event(raw_client, event)
+        assert r.status_code == 200
+        _assert_downgraded(app, user_id)
+
+    def test_partial_refund_keeps_tier(self, raw_client, app, caplog):
+        """PARTIAL refund (amount_refunded < amount) → tier unchanged, alert fired."""
+        user_id = _make_user(app, tier="premium", status="active")
+        event = {
+            "id": "evt_rf_partial",
+            "type": "charge.refunded",
+            "data": {"object": {
+                "id": "ch_rf_p", "payment_intent": "pi_p",
+                "customer": "cus_rf_test",
+                "amount": 19_900, "amount_refunded": 5_000, "currency": "krw",
+            }},
+        }
+        with patch(
+            "routes.billing._notify_refund_dispute_slack", return_value=True,
+        ) as mock_alert, caplog.at_level(logging.WARNING, logger="routes.billing"):
+            r = _post_event(raw_client, event)
+        assert r.status_code == 200
+        assert any(
+            "REFUND received (full=False)" in rec.message
+            for rec in caplog.records
+        )
+        assert mock_alert.call_count == 1  # alert still fired
+        # tier preserved
         _assert_tier_unchanged(app, user_id, tier="premium", status="active")
 
-    def test_refund_unknown_customer_still_acks(self, raw_client, app, caplog):
-        """No user row → still log + alert, never raise."""
+    def test_amount_missing_defaults_to_keep_access(self, raw_client, app):
+        """No `amount` → can't prove FULL → SAFER default = keep access."""
+        user_id = _make_user(app, tier="premium", status="active")
+        event = {
+            "id": "evt_rf_noamt",
+            "type": "charge.refunded",
+            "data": {"object": {
+                "id": "ch_rf_na", "payment_intent": "pi_na",
+                "customer": "cus_rf_test",
+                "amount_refunded": 19_900, "currency": "krw",
+            }},
+        }
+        with patch("routes.billing._notify_refund_dispute_slack", return_value=True):
+            r = _post_event(raw_client, event)
+        assert r.status_code == 200
+        _assert_tier_unchanged(app, user_id, tier="premium", status="active")
+
+    def test_refund_unknown_customer_full_still_acks(self, raw_client, app, caplog):
+        """FULL refund but no user row → still log + alert, never raise/crash."""
         event = {
             "id": "evt_rf_unknown",
             "type": "charge.refunded",
             "data": {"object": {
                 "id": "ch_rf_x", "payment_intent": "pi_x",
-                "customer": "cus_no_match", "amount_refunded": 9_900,
+                "customer": "cus_no_match",
+                "amount": 9_900, "amount_refunded": 9_900,
                 "currency": "krw",
             }},
         }
@@ -170,15 +246,15 @@ class TestChargeDispute:
 
         assert r.status_code == 200
         assert any(
-            "DISPUTE (created)" in rec.message and "MANUAL ACTION REQUIRED" in rec.message
-            for rec in caplog.records
+            "DISPUTE (created)" in rec.message for rec in caplog.records
         )
         assert mock_alert.call_count == 1
         assert mock_alert.call_args.kwargs["kind"] == "DISPUTE (created)"
         # tier untouched — dispute may later be won
         _assert_tier_unchanged(app, user_id, tier="pro", status="active")
 
-    def test_dispute_funds_withdrawn_routes_to_handler(self, raw_client, app, caplog):
+    def test_dispute_funds_withdrawn_downgrades_to_free(self, raw_client, app, caplog):
+        """Dispute lost / funds pulled → downgrade tier to free."""
         user_id = _make_user(app, tier="premium", status="active")
         event = {
             "id": "evt_dp_fw",
@@ -186,7 +262,7 @@ class TestChargeDispute:
             "data": {"object": {
                 "id": "dp_fw", "charge": "ch_fw", "payment_intent": "pi_fw",
                 "customer": "cus_rf_test", "amount": 19_900, "currency": "krw",
-                "reason": "product_not_received", "status": "under_review",
+                "reason": "product_not_received", "status": "lost",
             }},
         }
         with patch(
@@ -199,7 +275,7 @@ class TestChargeDispute:
         assert any(
             "DISPUTE (funds_withdrawn)" in rec.message for rec in caplog.records
         )
-        _assert_tier_unchanged(app, user_id, tier="premium", status="active")
+        _assert_downgraded(app, user_id)
 
 
 class TestRefundDisputeSlackNotifierUnit:
