@@ -311,6 +311,20 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         const details: Record<string, RealtimePriceDetail & { observed_at?: string }> =
           data.details ?? {};
 
+        // Transient all-provider failure (FMP 402 + Alpaca/KIS down) sends an empty
+        // price payload. Skip it ONLY when we previously had prices — keep the
+        // last-known values on screen (they age into "stale" via lastUpdate) instead
+        // of blanking the portfolio. A genuinely empty book (0 positions) has an
+        // empty prevPricesRef too, so this guard never blocks the legitimate empty
+        // state.
+        if (
+          Object.keys(prices).length === 0 &&
+          Object.keys(details).length === 0 &&
+          Object.keys(prevPricesRef.current).length > 0
+        ) {
+          return;
+        }
+
         // Determine direction per ticker
         const directionMap = new Map<string, PriceDirection>();
         const prev = prevPricesRef.current;

@@ -579,3 +579,80 @@ class TestTakeProfitStopLossGap:
         # Group 2 line 49/50 (손절/익절 권고) 가 단독형보다 먼저 매칭
         assert "정보 고지" in scrub_text("손절 권고")
         assert "정보 고지" in scrub_text("익절 권고")
+
+
+class TestImperativeBuySellStreamGap:
+    """2026-05-22: 소문자 명령형 buy/sell 갭 (Group 11g).
+
+    naked 대문자 \\bBUY\\b/\\bSELL\\b 는 의도적 case-sensitive 라 스트리밍
+    AI chat 이 흘리는 소문자 명령형("you should buy now")이 per-chunk
+    safe_scrub 를 통과했음. 명령 부사/어미와 결합된 좁은 형태만 보강.
+    절대 광범위 \\bbuy\\b IGNORECASE 가 아니므로 산문은 보존되어야 함.
+    """
+
+    # ── 명령형: Group 11g 가 직접 잡는 케이스 (선행 그룹 미간섭) ──────────
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "sell immediately",
+            "buy today",
+            "sell asap",
+            "buy right now",
+            "sell now",
+            "Buy Now",
+        ],
+    )
+    def test_en_imperative_scrubbed(self, text):
+        out = scrub_text(text)
+        assert "관찰 시점" in out, f"{text!r} → {out!r}"
+        # 명령형 buy/sell 동사가 부사와 함께 사라져야 함
+        assert "buy now" not in out.lower()
+        assert "sell now" not in out.lower()
+        assert "buy today" not in out.lower()
+        assert "sell immediately" not in out.lower()
+
+    def test_should_buy_now_neutralized_upstream(self):
+        # "you should buy now": Group 8 의 \bShould\s+buy\b 가 먼저 "note" 로
+        # 치환 → "you note now". 위험 동사 buy 제거됨. is_compliant 는 원문에
+        # buy 가 있어 차단. (Group 11g 가 직접 잡진 않으나 누출은 막힘.)
+        out = scrub_text("you should buy now")
+        assert "buy" not in out.lower()
+        from services.legal_filter import is_compliant
+        assert not is_compliant("you should buy now")
+
+    @pytest.mark.parametrize(
+        "text",
+        ["지금 매수하세요", "지금 매도", "매수하세요", "매도하라", "매수해라"],
+    )
+    def test_kr_imperative_scrubbed(self, text):
+        out = scrub_text(text)
+        assert "관찰 시점" in out or "관찰 중" in out
+        assert "매수하세요" not in out
+        assert "매도하라" not in out
+        assert "지금 매수" not in out
+
+    # ── 명령형: is_compliant hard-drop 대상 ───────────────────────────────
+    @pytest.mark.parametrize(
+        "text",
+        ["you should buy now", "sell immediately", "지금 매수하세요"],
+    )
+    def test_imperative_blocked_by_is_compliant(self, text):
+        from services.legal_filter import is_compliant
+        assert not is_compliant(text), f"{text!r} is an imperative directive — must be blocked"
+
+    # ── 음성(산문) 케이스: over-scrub 금지 ────────────────────────────────
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "a good buy opportunity",
+            "buying pressure rose",
+            "best-seller list",
+            "the company will sell products",
+            "buyout rumors today",
+            "sellers outnumbered buyers",
+        ],
+    )
+    def test_prose_not_over_scrubbed(self, text):
+        # 명령 부사가 없으므로 새 중립표현이 주입되면 안 됨
+        out = scrub_text(text)
+        assert "관찰 시점" not in out, f"prose {text!r} was over-scrubbed → {out!r}"

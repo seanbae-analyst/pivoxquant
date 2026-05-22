@@ -47,6 +47,13 @@ def search_stocks():
     """Fuzzy stock search — supports company names, partial tickers, Korean names.
     Uses FMP search API for US + local KOREAN_NAMES registry for KR stocks."""
     query = (request.args.get("q") or "").strip()
+    # Cap query length before it touches any path (KR registry, 6-digit
+    # passthrough, FMP HTTP). A caller (or a hostile client) could otherwise
+    # send a multi-KB string straight to FMP's API. 50 chars covers any real
+    # company name or ticker; longer input is truncated, not rejected, so the
+    # search box stays forgiving.
+    if len(query) > 50:
+        query = query[:50]
     # Client-supplied limit (Cmd+K palette asks for 10). Clamp so a malformed
     # or hostile value can't blow the response size.
     try:
@@ -99,11 +106,15 @@ def search_stocks():
     if fmp_key:
         try:
             import requests as _req
-            url = (
-                "https://financialmodelingprep.com/stable/search-symbol"
-                f"?query={query}&limit=10&apikey={fmp_key}"
+            # Pass query/key as params so requests URL-encodes them. A raw
+            # f-string let a query containing '&' / '=' / '#' inject or
+            # clobber FMP parameters (e.g. q="x&apikey=...") — params={} is
+            # the safe boundary. The apikey is never echoed in our response.
+            resp = _req.get(
+                "https://financialmodelingprep.com/stable/search-symbol",
+                params={"query": query, "limit": 10, "apikey": fmp_key},
+                timeout=5,
             )
-            resp = _req.get(url, timeout=5)
             if resp.status_code == 200:
                 try:
                     parsed = resp.json()

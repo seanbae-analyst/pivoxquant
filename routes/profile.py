@@ -515,7 +515,9 @@ def update_capital():
 @general_rate_limit
 def update_profile():
     """Update profile (re-take questionnaire). Free users: 3 changes max."""
-    if current_user.subscription_tier == "free" and current_user.profile_changes_left <= 0:
+    # Use effective_tier so DEV_PREMIUM_EMAILS / founding accounts bypass the
+    # free-plan change cap (mirror routes/portfolio.py:add_position).
+    if getattr(current_user, "effective_tier", None) in (None, "free") and current_user.profile_changes_left <= 0:
         return api_error(
             en="Profile change limit reached. Upgrade to Pro for unlimited changes.",
             kr="투자 성향 변경 횟수 한도에 도달했습니다. Pro 로 업그레이드하면 무제한 변경할 수 있습니다.",
@@ -630,7 +632,7 @@ def update_profile():
     profile.apply_preset()
 
     current_user.risk_profile = profile_type
-    if current_user.subscription_tier == "free":
+    if getattr(current_user, "effective_tier", None) in (None, "free"):
         current_user.profile_changes_left -= 1
 
     try:

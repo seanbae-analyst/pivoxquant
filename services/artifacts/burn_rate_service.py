@@ -45,7 +45,8 @@ logger = logging.getLogger(__name__)
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "burn_rate"
-_PAID_TIERS = frozenset({"pro", "premium", "elite"})
+# Shared set so premium_plus / founding_lifetime are never silently dropped.
+from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 
 # Rate constants (as of 2026; tweak centrally without touching calculations).
 _KR_COMMISSION = 0.00015       # 0.015% per side (브로커 수수료)

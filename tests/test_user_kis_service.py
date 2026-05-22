@@ -247,6 +247,139 @@ def test_sync_to_db_inserts_and_updates(app, kis_user, add_position):
             assert rows["000660.KS"].avg_cost == 210000
 
 
+def _kr_pos(code, name, qty, avg):
+    return {
+        "pdno": code,
+        "prdt_name": name,
+        "hldg_qty": str(qty),
+        "pchs_avg_pric": str(avg),
+        "prpr": str(avg),
+        "evlu_pfls_amt": "0",
+        "evlu_pfls_rt": "0",
+    }
+
+
+# ── Tier cap on sync_to_db (free 3-position cap, bug fix 2026-05-22) ──────
+
+
+def test_sync_to_db_caps_new_inserts_for_free_tier(app, kis_user):
+    """Free tier: broker has 4 new positions but max_new_positions=3 → only
+    3 inserted, 4th reported as `capped`. Closes the reconcile cap-bypass."""
+    from models.position import Position
+    from services.broker.user_kis_service import UserKISService
+
+    four = [
+        _kr_pos("005930", "삼성전자", 10, 72000),
+        _kr_pos("000660", "SK하이닉스", 3, 210000),
+        _kr_pos("035720", "카카오", 5, 50000),
+        _kr_pos("005380", "현대차", 2, 240000),
+    ]
+
+    with app.app_context(), patch(
+        "services.broker.user_kis_service.requests.post",
+        return_value=_mock_token_response(),
+    ), patch(
+        "services.broker.user_kis_service.requests.get",
+        return_value=_mock_balance_response(positions=four),
+    ):
+        svc = UserKISService(kis_user["user_id"])
+        result = svc.sync_to_db(max_new_positions=3)
+        assert result["ok"] is True
+        assert len(result["added"]) == 3
+        assert len(result["capped"]) == 1
+
+        with app.app_context():
+            rows = Position.query.filter_by(
+                user_id=kis_user["user_id"]
+            ).filter(Position.shares > 0).count()
+            assert rows == 3  # cap held — 4th NOT inserted
+
+
+def test_sync_to_db_caps_with_existing_held_positions(app, kis_user, add_position):
+    """Free user already holding 3 positions → reconcile importing a brand-new
+    4th must insert 0 new rows (budget = 3 - 3 = 0). Existing rows still upsert."""
+    from models.position import Position
+    from services.broker.user_kis_service import UserKISService
+
+    with app.app_context():
+        # All 3 held positions also appear from the broker (will upsert),
+        # broker additionally sends a brand-new 4th that must be capped.
+        add_position(kis_user["user_id"], ticker="005930.KS", shares=5, avg_cost=70000)
+        add_position(kis_user["user_id"], ticker="000660.KS", shares=3, avg_cost=200000)
+        add_position(kis_user["user_id"], ticker="035720.KS", shares=1, avg_cost=48000)
+
+    broker = [
+        _kr_pos("005930", "삼성전자", 10, 72000),   # existing → upsert
+        _kr_pos("000660", "SK하이닉스", 4, 210000),  # existing → upsert
+        _kr_pos("035720", "카카오", 1, 48000),        # existing → kept/synced
+        _kr_pos("005380", "현대차", 2, 240000),       # NEW → must be capped
+    ]
+
+    # held=3 → budget = max(3-3, 0) = 0
+    with app.app_context():
+        held = Position.query.filter_by(
+            user_id=kis_user["user_id"]
+        ).filter(Position.shares > 0).count()
+        budget = max(3 - held, 0)
+    assert budget == 0
+
+    with app.app_context(), patch(
+        "services.broker.user_kis_service.requests.post",
+        return_value=_mock_token_response(),
+    ), patch(
+        "services.broker.user_kis_service.requests.get",
+        return_value=_mock_balance_response(positions=broker),
+    ):
+        svc = UserKISService(kis_user["user_id"])
+        result = svc.sync_to_db(max_new_positions=budget)
+        assert result["ok"] is True
+        assert result["added"] == []          # no new inserts
+        assert "005380.KS" in result["capped"]
+        # Existing positions still upserted (cap never blocks updates).
+        assert "005930.KS" in result["updated"]
+
+        with app.app_context():
+            rows = {p.ticker: p for p in Position.query.filter_by(
+                user_id=kis_user["user_id"]
+            ).all()}
+            assert rows["005930.KS"].shares == 10   # upsert applied
+            assert rows["000660.KS"].shares == 4     # upsert applied
+            assert rows["035720.KS"].shares == 1     # kept (still in broker)
+            assert "005380.KS" not in rows           # new insert blocked
+
+
+def test_sync_to_db_unlimited_for_paid_tier(app, kis_user):
+    """max_new_positions=None (paid) → all broker positions imported."""
+    from models.position import Position
+    from services.broker.user_kis_service import UserKISService
+
+    five = [
+        _kr_pos("005930", "삼성전자", 10, 72000),
+        _kr_pos("000660", "SK하이닉스", 3, 210000),
+        _kr_pos("035720", "카카오", 5, 50000),
+        _kr_pos("005380", "현대차", 2, 240000),
+        _kr_pos("051910", "LG화학", 1, 600000),
+    ]
+    with app.app_context(), patch(
+        "services.broker.user_kis_service.requests.post",
+        return_value=_mock_token_response(),
+    ), patch(
+        "services.broker.user_kis_service.requests.get",
+        return_value=_mock_balance_response(positions=five),
+    ):
+        svc = UserKISService(kis_user["user_id"])
+        result = svc.sync_to_db(max_new_positions=None)
+        assert result["ok"] is True
+        assert len(result["added"]) == 5
+        assert result["capped"] == []
+
+        with app.app_context():
+            rows = Position.query.filter_by(
+                user_id=kis_user["user_id"]
+            ).filter(Position.shares > 0).count()
+            assert rows == 5
+
+
 def test_sync_to_db_zeros_disappeared_positions(app, kis_user, add_position):
     from models.position import Position
     from services.broker.user_kis_service import UserKISService

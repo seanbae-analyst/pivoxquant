@@ -230,6 +230,21 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bstrong\s+bounce\s+expected\b", re.IGNORECASE), "oversold indicator region"),
     (re.compile(r"강한\s*반등\s*(기대|예상)"), "지표 저점 구간 관찰"),
 
+    # ── Group 11g: 소문자 명령형 buy/sell (스트리밍 AI chat 갭, 2026-05-22) ──
+    # naked 대문자 \bBUY\b/\bSELL\b (line 103-104) 는 의도적 case-sensitive
+    # ([[feedback_legal_filter_design]]) — 산문 "buy"/"sell" over-scrub 방지.
+    # 그 결과 스트리밍 AI chat 이 소문자 명령형("you should buy now")을 청크로
+    # 흘리면 per-chunk safe_scrub 가 통과시켜 사용자에게 도달했음 (post-stream
+    # is_compliant 는 사후 disclaimer 만 부착). 여기서는 명령 부사(now/today/
+    # immediately/asap/right now)와 결합된 좁은 형태만 IGNORECASE 로 잡는다.
+    # 광범위 \bbuy\b IGNORECASE 는 절대 추가 금지 — "a good buy"/"buying
+    # pressure"/"best-seller"/"will sell products" 는 부사 부재로 미매치.
+    (re.compile(r"\b(?:buy|sell)\s+(?:now|today|immediately|asap|right\s+now)\b", re.IGNORECASE), "관찰 시점"),
+    # 한글 명령형: "지금 매수/매도" + "매수/매도하세요/하라/해라". Group 11b
+    # (매수+하세요/하라 등) 와 일부 겹치나 "해라" / "지금 매수" 는 미커버였음.
+    (re.compile(r"지금\s*(?:매수|매도)"), "관찰 시점"),
+    (re.compile(r"(?:매수|매도)\s*(?:하세요|하라|해라)"), "관찰 시점"),
+
     # ── Group 11f: 단독 익절 / 손절 매매 지시어 (2026-05-22) ───────────────
     # Group 1 line 44 (부분 익절/손절 고려) + Group 2 line 49/50 (손절/익절 권고)
     # 은 복합형만 잡음. 단독 명사/동사형 ("익절하세요" / "손절 타이밍") 보강.

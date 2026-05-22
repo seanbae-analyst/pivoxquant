@@ -257,7 +257,9 @@ class TestMarketSearchStableEndpoint:
                      "exchange": "NYSE", "currency": "USD"},
                 ]
 
-        def fake_get(url, timeout=5):
+        def fake_get(url, timeout=5, params=None):
+            # search route now passes query/key via params= (URL-encoded),
+            # so the stable endpoint base URL is the bare `url` arg.
             captured_urls.append(url)
             return _FakeResp()
 

@@ -54,7 +54,8 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _DEFAULT_STORAGE_DIR = (
     Path(__file__).resolve().parents[2] / "artifacts" / "capital_allocation"
 )
-_PAID_TIERS = frozenset({"premium", "elite"})
+# Shared set so premium_plus / founding_lifetime are never silently dropped.
+from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 
 # Known dividend / income ETFs — whitelist the user can pick from.
 # Suffixes `.KS` for KOSPI, plain for US.

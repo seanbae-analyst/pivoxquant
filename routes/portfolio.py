@@ -1970,7 +1970,20 @@ def reconcile_positions():
                 "code":  exc.code,
             }), exc.http_status
 
-        result = service.sync_to_db()
+        # Tier cap (2026-05-22): Free 티어(또는 tier 미설정)는 총 3 포지션까지만
+        # 보유 가능. reconcile/broker sync가 add_position(L282-291) 등과 동일한
+        # cap을 우회하지 못하도록 신규 insert를 cap까지만 허용한다. 기존 포지션
+        # upsert(shares/avg_cost 갱신)는 cap과 무관하게 항상 허용.
+        # effective_tier 사용 — DEV_PREMIUM_EMAILS bypass와 일관.
+        max_new_positions = None
+        if getattr(current_user, "effective_tier", None) in (None, "free"):
+            FREE_POSITION_CAP = 3
+            held = Position.query.filter_by(user_id=user_id).filter(
+                Position.shares > 0
+            ).count()
+            max_new_positions = max(FREE_POSITION_CAP - held, 0)
+
+        result = service.sync_to_db(max_new_positions=max_new_positions)
         if not result.get("ok"):
             return jsonify({
                 "ok":    False,
@@ -1987,7 +2000,8 @@ def reconcile_positions():
             after = set()
         removed = sorted(before - after)
 
-        return jsonify({
+        capped = result.get("capped", []) or []
+        payload = {
             "ok":             True,
             "broker":         "kis",
             "added":          result.get("added", []),
@@ -1996,7 +2010,16 @@ def reconcile_positions():
             "synced_at":      datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "available_cash": result.get("available_cash", 0.0),
             "total_value":    result.get("total_value", 0.0),
-        }), 200
+        }
+        if capped:
+            # Partial import — free 티어 cap에 걸려 일부 신규 포지션을 건너뜀.
+            payload["capped"] = capped
+            payload["capped_count"] = len(capped)
+            payload["code"] = "TIER_LIMIT_PARTIAL"
+            payload["message"] = (
+                "Free plan limited to 3 positions. Upgrade for broker sync/unlimited."
+            )
+        return jsonify(payload), 200
 
     # Alpaca fallback — UserAlpacaService.sync_account() does broker-side
     # snapshot but does NOT yet write into Position; only equity/cash snapshot.

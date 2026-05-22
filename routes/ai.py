@@ -404,7 +404,11 @@ def _earnings_tone_tier_ok(user) -> bool:
         or getattr(user, "subscription_tier", "free")
         or "free"
     ).lower()
-    return tier in ("pro", "premium")
+    # Include the Companion / owner tiers (premium_plus rank 3, founding_lifetime
+    # rank 4 in routes/decorators._TIER_RANK) so top-tier accounts are never
+    # blocked from a Pro+ feature. effective_tier returns founding_lifetime for
+    # DEV_FOUNDING_EMAILS; subscription_tier may carry premium_plus directly.
+    return tier in ("pro", "premium", "premium_plus", "founding_lifetime")
 
 
 @ai_bp.route("/earnings-tone", methods=["POST"])

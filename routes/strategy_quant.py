@@ -13,6 +13,7 @@ import time as _time
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
+from services.access_guard import is_user_allowed_ticker, access_denied_response
 from .decorators import api_auth, legal_scrub_response
 from .quant_helpers import _bounded_set, add_disclaimer
 
@@ -111,6 +112,13 @@ def canslim_screener(ticker):
     from services.data import fmp as fmp_svc
 
     ticker = ticker.strip().upper()
+
+    # §101 회피 — CAN SLIM 은 종목 단위 스코어링이므로 보유/관심 외 ticker 거부.
+    # discover(owned|watched)·swot(is_user_allowed_ticker) 와 동일한 격리 적용.
+    # 임의 universe 분석을 허용하면 미등록 투자자문업 회색지대에 들어간다.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
 
     fetcher = DataFetcher()
     hist = fetcher.get_price_history(ticker, period="1y")

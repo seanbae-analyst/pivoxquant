@@ -575,7 +575,7 @@ class UserKISService:
 
     # ── Public: sync to DB ────────────────────────────────────────────────
 
-    def sync_to_db(self) -> dict:
+    def sync_to_db(self, max_new_positions: Optional[int] = None) -> dict:
         """Fetch balance (국내 + 해외) and upsert into `positions` table.
 
         Normalization rules:
@@ -585,6 +585,13 @@ class UserKISService:
         KIS를 소스 of truth로 간주 — shares/avg_cost는 매 sync마다 덮어씀.
         매입 환율(`buy_fx_rate`)은 KIS가 제공하지 않으므로, 신규 생성 시만 현재 환율을 저장하고
         기존 포지션은 그대로 유지한다.
+
+        Tier cap (2026-05-22): `max_new_positions` limits how many *brand-new*
+        rows may be inserted (free 티어 3-position cap). Existing positions are
+        always upserted (shares/avg_cost refresh) regardless of the cap — the
+        cap only governs NEW inserts so a free user cannot bypass the 3-position
+        limit via broker reconcile. `None` means unlimited (paid tiers). The
+        number of new inserts skipped is reported as `capped`.
         """
         balance = self.get_balance()
         if not balance.get("ok"):
@@ -594,6 +601,10 @@ class UserKISService:
 
         existing = Position.query.filter_by(user_id=self.user_id).all()
         existing_map = {p.ticker: p for p in existing}
+
+        # Remaining budget for NEW inserts. `None` → unlimited.
+        new_budget = max_new_positions
+        capped_tickers: list[str] = []
 
         added, updated, synced = [], [], []
         overseas_synced = set()
@@ -607,14 +618,14 @@ class UserKISService:
             if is_overseas:
                 # US 티커는 suffix 없이 그대로 (AAPL, SPY, JPM, ...)
                 ticker = raw.upper()
-                overseas_synced.add(ticker)
             else:
                 ticker = (
                     raw if raw.endswith(".KS") or raw.endswith(".KQ") else f"{raw}.KS"
                 )
-            synced.append(ticker)
 
             if ticker in existing_map:
+                # Existing position → always upsert (tier cap never blocks an
+                # update; it only governs brand-new inserts).
                 db_pos = existing_map[ticker]
                 if db_pos.shares != pos["shares"] or db_pos.avg_cost != pos["avg_cost"]:
                     db_pos.shares = pos["shares"]
@@ -625,7 +636,16 @@ class UserKISService:
                     ):
                         db_pos.buy_fx_rate = fx_rate
                     updated.append(ticker)
+                synced.append(ticker)
+                if is_overseas:
+                    overseas_synced.add(ticker)
             else:
+                # Brand-new position. Enforce the tier cap on inserts only.
+                if new_budget is not None and new_budget <= 0:
+                    capped_tickers.append(ticker)
+                    # Skip insert; do NOT mark as synced so zero-out logic and
+                    # the response treat it as not-imported.
+                    continue
                 new_pos = Position(
                     user_id=self.user_id,
                     ticker=ticker,
@@ -635,6 +655,11 @@ class UserKISService:
                 )
                 db.session.add(new_pos)
                 added.append(ticker)
+                synced.append(ticker)
+                if is_overseas:
+                    overseas_synced.add(ticker)
+                if new_budget is not None:
+                    new_budget -= 1
 
         # Zero-out Korean positions that disappeared from the broker side.
         synced_set = set(synced)
@@ -670,6 +695,7 @@ class UserKISService:
             "added": added,
             "updated": updated,
             "synced": synced,
+            "capped": capped_tickers,
             "available_cash": balance["available_cash"],
             "total_value": balance["total_value"],
             "fx_rate": fx_rate,

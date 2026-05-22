@@ -60,7 +60,8 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "earnings_prebrief"
 
 # Tiers eligible for the pre-brief — Pro+ only.
-_PAID_TIERS = frozenset({"pro", "premium", "elite"})
+# Shared set so premium_plus / founding_lifetime are never silently dropped.
+from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 
 # ± window (minutes) around the 30-min-before target. Must exceed cron cadence
 # to avoid gaps. Default 10-min cron + ±6min window → every earnings is matched

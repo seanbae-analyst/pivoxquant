@@ -43,7 +43,8 @@ logger = logging.getLogger(__name__)
 
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
-_PAID_TIERS = frozenset({"pro", "premium", "elite"})
+# Shared set so premium_plus / founding_lifetime are never silently dropped.
+from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 # Pending window: `added_at` in [now - (N+1)d, now - Nd)
 _PENDING_LAG_DAYS = 3
 

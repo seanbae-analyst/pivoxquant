@@ -176,6 +176,134 @@ def test_reconcile_kis_success_returns_unified_shape(
         assert "code" in body
 
 
+def _make_kis_conn(app, user_id):
+    from models import BrokerConnection
+    from extensions import db
+
+    ctx = app.app_context()
+    ctx.push()
+    try:
+        conn = BrokerConnection(
+            user_id=user_id,
+            broker="kis",
+            is_active=True,
+            is_paper=True,
+            display_name="Test KIS",
+            encrypted_app_key="FAKE",
+            encrypted_app_secret="FAKE",
+            encrypted_account_no="FAKE",
+        )
+        db.session.add(conn)
+        db.session.commit()
+        db.session.close()
+    finally:
+        ctx.pop()
+
+
+def test_reconcile_free_tier_passes_cap_budget(client, auth_user, app, add_position):
+    """Free user already holding 3 positions → route computes
+    max_new_positions=0 and passes it to sync_to_db (cap-bypass fix)."""
+    _make_kis_conn(app, auth_user["id"])
+    add_position(auth_user["id"], ticker="005930.KS", shares=5, avg_cost=70000)
+    add_position(auth_user["id"], ticker="000660.KS", shares=3, avg_cost=200000)
+    add_position(auth_user["id"], ticker="AAPL", shares=2, avg_cost=150.0)
+
+    captured = {}
+
+    def fake_sync(self, max_new_positions=None):
+        captured["budget"] = max_new_positions
+        return {
+            "ok": True, "added": [], "updated": ["005930.KS"],
+            "synced": ["005930.KS"], "capped": ["005380.KS"],
+            "available_cash": 0.0, "total_value": 0.0, "fx_rate": 1380.0,
+        }
+
+    with patch(
+        "services.broker.user_kis_service.UserKISService.sync_to_db",
+        new=fake_sync,
+    ):
+        r = client.post("/api/portfolio/reconcile")
+
+    if r.status_code == 200:
+        body = r.get_json()
+        # held=3, cap=3 → budget 0
+        assert captured.get("budget") == 0
+        assert body["capped"] == ["005380.KS"]
+        assert body["capped_count"] == 1
+        assert body["code"] == "TIER_LIMIT_PARTIAL"
+        assert "3 positions" in body["message"]
+    else:
+        assert "code" in r.get_json()
+
+
+def test_reconcile_free_tier_partial_budget(client, auth_user, app, add_position):
+    """Free user holding 1 position → budget 2 (3-1)."""
+    _make_kis_conn(app, auth_user["id"])
+    add_position(auth_user["id"], ticker="005930.KS", shares=5, avg_cost=70000)
+
+    captured = {}
+
+    def fake_sync(self, max_new_positions=None):
+        captured["budget"] = max_new_positions
+        return {
+            "ok": True, "added": ["000660.KS", "035720.KS"], "updated": [],
+            "synced": ["000660.KS", "035720.KS"], "capped": [],
+            "available_cash": 0.0, "total_value": 0.0, "fx_rate": 1380.0,
+        }
+
+    with patch(
+        "services.broker.user_kis_service.UserKISService.sync_to_db",
+        new=fake_sync,
+    ):
+        r = client.post("/api/portfolio/reconcile")
+
+    if r.status_code == 200:
+        assert captured.get("budget") == 2
+        body = r.get_json()
+        assert "capped" not in body  # nothing skipped → no partial banner
+    else:
+        assert "code" in r.get_json()
+
+
+def test_reconcile_premium_tier_unlimited(client, make_user, app, add_position):
+    """Premium user → route passes max_new_positions=None (unlimited)."""
+    from extensions import db
+    from models import User
+
+    user = make_user(email="premium@test.com", tier="premium")
+    resp = client.post("/api/auth/login", json={
+        "email": user["email"], "password": user["password"],
+    })
+    assert resp.status_code == 200
+
+    _make_kis_conn(app, user["id"])
+    # Even with positions held, premium has no cap.
+    add_position(user["id"], ticker="005930.KS", shares=5, avg_cost=70000)
+
+    captured = {}
+
+    def fake_sync(self, max_new_positions=None):
+        captured["budget"] = max_new_positions
+        return {
+            "ok": True, "added": ["A", "B", "C", "D"], "updated": [],
+            "synced": ["A", "B", "C", "D"], "capped": [],
+            "available_cash": 0.0, "total_value": 0.0, "fx_rate": 1380.0,
+        }
+
+    with patch(
+        "services.broker.user_kis_service.UserKISService.sync_to_db",
+        new=fake_sync,
+    ):
+        r = client.post("/api/portfolio/reconcile")
+
+    if r.status_code == 200:
+        assert captured.get("budget") is None  # unlimited
+        body = r.get_json()
+        assert "capped" not in body
+    else:
+        assert "code" in r.get_json()
+
+
 # ─── /api/risk/timeline ───────────────────────────────────────────────────
 
 

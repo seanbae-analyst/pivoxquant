@@ -55,7 +55,8 @@ logger = logging.getLogger(__name__)
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "risk_board"
-_PAID_TIERS = frozenset({"premium", "elite"})
+# Shared set so premium_plus / founding_lifetime are never silently dropped.
+from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 
 
 def _storage_dir() -> Path:
