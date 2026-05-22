@@ -26,6 +26,9 @@
 - **v47 FE 3건**: 403 CTA(NFLX→"관심종목 추가") / 벤치마크 라인 / 알림 매트릭스 — 전부 ✅.
 - 검증용 테스트 포지션(KO id23, MCD id24, PEP) 생성→전부 삭제, 포트폴리오 원복(12).
 
+### 🔧 후속 (commit `aaa4047c`)
+- **thesis 최소 50자 → 10자** (CEO "50자 너무 많아 10자"). `MIN_RATIONALE_CHARS` FE(pre-trade-friction-core.tsx)+BE(models/pre_trade_reflection.py) 동시 변경(BE가 짧으면 reject하므로 lock-step) + 테스트 단언 갱신. "기록만" mode는 여전히 memo 선택. BE railway 재배포.
+
 ### ⚠️ 잔여 / 참고
 - 매수일은 `Position.added_at`(=opened_at)에 매핑 — 별도 purchase_date 컬럼 없음(의미 정합: opened_at=개시일). 신규 mode는 기본 today.
 - 신규 mode 7문항은 보존(제품 차별점 "Deposition"). 쿨다운만 0. 신규모드 라이브 클릭은 미검증(쿨다운 0 자동proceed는 vitest friction-cooldown-skip로 커버).
