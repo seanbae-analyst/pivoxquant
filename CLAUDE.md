@@ -112,15 +112,18 @@ git config core.hooksPath .githooks
 
 ## 서버 기동
 ```bash
-# 2026-05-17 wave 13: 경로 갱신. iCloud Desktop sync 가 ~/Desktop/취준/ 의
-# .git 을 무한히 손상시켜 PR #376 에서 ~/projects/pivoxquant 로 relocation
-# 완료. Desktop 사본은 사용 금지.
+# 🟥 경로 정정 (2026-05-22 v49): canonical 트리 = ~/Desktop/취준/pivoxquant.
+#   - 이 트리의 HEAD = origin/main = prod 배포 커밋 (실측 0/0 동기화).
+#   - 2026-05-17 의 ~/projects/pivoxquant relocation 은 v44.6(2d0699bf, 5/17)에
+#     멈춘 버려진 사본 — CEO 가 그 후 Desktop 으로 복귀해 작업/배포 중.
+#   - 따라서 아래 "Desktop 사용금지" 옛 안내는 STALE. Desktop 에서 작업/커밋/푸시.
+#   - iCloud .git 손상은 과거 이슈 — 재발 시 git fsck 후 대응(상시 손상 아님).
 
 # 백엔드 (port 5050)
-cd ~/projects/pivoxquant && ./venv/bin/python run.py
+cd ~/Desktop/취준/pivoxquant && ./venv/bin/python run.py
 
 # 프론트엔드 (port 3000)
-cd ~/projects/pivoxquant/frontend && npm run dev
+cd ~/Desktop/취준/pivoxquant/frontend && npm run dev
 ```
 
 ## 테스트 계정

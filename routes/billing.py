@@ -287,6 +287,12 @@ def stripe_webhook():
             _handle_invoice_payment_failed(data)
         elif event_type == "invoice.paid":
             _handle_invoice_paid(data)
+        elif event_type == "charge.refunded":
+            _handle_charge_refunded(data)
+        elif event_type == "charge.dispute.created":
+            _handle_charge_dispute(data, phase="created")
+        elif event_type == "charge.dispute.funds_withdrawn":
+            _handle_charge_dispute(data, phase="funds_withdrawn")
     except Exception as exc:
         try:
             db.session.rollback()
@@ -583,6 +589,169 @@ def _handle_invoice_paid(invoice):
     logger.info(
         f"Invoice paid: invoice={invoice_id} "
         f"customer={customer_id} user={user_id} amount={amount}"
+    )
+
+
+# ── Refund / Chargeback (Dispute) handlers ───────────────────────────────────
+#
+# ⚠️ DEFERRED POLICY DECISION — DO NOT add tier logic here. ⚠️
+#
+# When Stripe sends ``charge.refunded`` / ``charge.dispute.created`` /
+# ``charge.dispute.funds_withdrawn``, the *business + legal* question of
+# "should the customer be downgraded, and by how much" is intentionally
+# UNRESOLVED:
+#   - 전자상거래법 §17 distinguishes 전부환불 (full refund) vs 가분적
+#     디지털콘텐츠 부분환불 (partial refund of divisible digital content) —
+#     the correct tier action differs per case and per how much access was
+#     already consumed. That is a CEO + legal counsel decision (see legal
+#     question queue), NOT something a webhook handler should hardcode.
+#   - A dispute (chargeback) may later be WON or LOST; auto-downgrading on
+#     ``dispute.created`` would wrongly punish a customer whose dispute we
+#     win.
+#
+# Therefore these handlers are **observability-only**:
+#   • resolve the local User (best-effort, by stripe_customer_id — same
+#     lookup the other handlers use; metadata fallback is not available on
+#     charge/dispute objects),
+#   • emit a WARNING log flagging MANUAL ACTION REQUIRED,
+#   • fire the SAME Slack ops alert mechanism billing already uses
+#     (SLACK_WEBHOOK_URL — see services/billing_notifications.py).
+# They perform NO db tier mutation, NO subscription writes, and NEVER raise
+# (the outer webhook wrapper must ACK 200 so Stripe stops its 3-day retry).
+
+
+def _notify_refund_dispute_slack(*, kind: str, summary: str) -> bool:
+    """Post an ops Slack alert for a refund/dispute event.
+
+    Reuses the SAME ``SLACK_WEBHOOK_URL`` incoming-webhook mechanism that
+    ``services.billing_notifications.notify_payment_failed_slack`` already
+    uses — no new env var, no new dependency, no new cost. Returns ``True``
+    on a successful POST; never raises (Sentry captures any error so the
+    webhook ACK is never blocked). Skips silently when the webhook URL is
+    unset (dev / CI).
+    """
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+    if not webhook_url:
+        logger.debug("%s Slack skipped: SLACK_WEBHOOK_URL unset", kind)
+        return False
+    try:
+        import requests  # local import — keeps cold-start fast
+    except Exception:
+        logger.warning("%s Slack skipped: requests not installed", kind)
+        return False
+
+    text = (
+        f":rotating_light: *Stripe {kind} — MANUAL ACTION REQUIRED*\n"
+        f"{summary}\n"
+        f"• tier 자동 변경 안 됨 (정책 보류: CEO + legal, 전자상거래법 §17)"
+    )
+    try:
+        resp = requests.post(webhook_url, json={"text": text}, timeout=10)
+        resp.raise_for_status()
+        logger.info("%s Slack ops alert sent", kind)
+        return True
+    except Exception as exc:
+        logger.exception("%s Slack post failed: %s", kind, exc)
+        try:
+            import sentry_sdk
+            sentry_sdk.capture_exception(exc)
+        except Exception:
+            pass
+        return False
+
+
+def _resolve_user_by_customer(customer_id):
+    """Best-effort local-User lookup by Stripe customer id.
+
+    Mirrors the lookup in ``_handle_subscription_updated`` /
+    ``_handle_invoice_payment_failed``. Returns ``None`` (never raises) when
+    the customer id is empty or no row matches.
+    """
+    if not customer_id:
+        return None
+    try:
+        return User.query.filter_by(stripe_customer_id=customer_id).first()
+    except Exception:
+        logger.debug("user lookup by customer_id failed", exc_info=True)
+        return None
+
+
+def _handle_charge_refunded(charge):
+    """Observe a ``charge.refunded`` event — NO tier mutation (policy deferred).
+
+    See the policy comment block above: deciding whether/how to downgrade on
+    a refund is a deferred CEO + legal (전자상거래법 §17) decision. This
+    handler only logs + alerts ops so a refund is never silently dropped.
+    """
+    charge_id = charge.get("id")
+    payment_intent = charge.get("payment_intent")
+    customer_id = charge.get("customer")
+    amount = charge.get("amount_refunded") or charge.get("amount") or 0
+    currency = charge.get("currency")
+    user = _resolve_user_by_customer(customer_id)
+    user_id = getattr(user, "id", "unknown") if user else "unknown"
+    user_email = getattr(user, "email", "unknown") if user else "unknown"
+
+    logger.warning(
+        "REFUND received — MANUAL ACTION REQUIRED: tier not auto-changed "
+        "(policy deferred 전자상거래법 §17). charge=%s payment_intent=%s "
+        "customer=%s amount=%s %s user=%s (%s)",
+        charge_id, payment_intent, customer_id, amount,
+        (currency or "?").upper(), user_id, user_email,
+    )
+    _notify_refund_dispute_slack(
+        kind="REFUND",
+        summary=(
+            f"• charge: `{charge_id}`\n"
+            f"• payment_intent: `{payment_intent}`\n"
+            f"• customer: `{customer_id}`\n"
+            f"• 환불액: {amount} {(currency or '?').upper()}\n"
+            f"• user: `{user_id}` ({user_email})"
+        ),
+    )
+
+
+def _handle_charge_dispute(dispute, *, phase: str):
+    """Observe a chargeback/dispute event — NO tier mutation (policy deferred).
+
+    Handles both ``charge.dispute.created`` and
+    ``charge.dispute.funds_withdrawn`` (``phase`` distinguishes them in the
+    log/alert). A dispute may later be won, so auto-downgrading here would
+    wrongly punish a customer — the tier action is a deferred CEO + legal
+    decision. Observability-only.
+    """
+    dispute_id = dispute.get("id")
+    charge_id = dispute.get("charge")
+    payment_intent = dispute.get("payment_intent")
+    amount = dispute.get("amount") or 0
+    currency = dispute.get("currency")
+    reason = dispute.get("reason") or "unknown"
+    status = dispute.get("status") or "unknown"
+    # Dispute objects don't carry ``customer`` directly; it may appear on
+    # newer API versions. Best-effort — None is fine, we still log + alert.
+    customer_id = dispute.get("customer")
+    user = _resolve_user_by_customer(customer_id)
+    user_id = getattr(user, "id", "unknown") if user else "unknown"
+    user_email = getattr(user, "email", "unknown") if user else "unknown"
+
+    logger.warning(
+        "DISPUTE (%s) received — MANUAL ACTION REQUIRED: tier not auto-changed "
+        "(policy deferred 전자상거래법 §17). dispute=%s charge=%s "
+        "payment_intent=%s customer=%s amount=%s %s reason=%s status=%s "
+        "user=%s (%s)",
+        phase, dispute_id, charge_id, payment_intent, customer_id, amount,
+        (currency or "?").upper(), reason, status, user_id, user_email,
+    )
+    _notify_refund_dispute_slack(
+        kind=f"DISPUTE ({phase})",
+        summary=(
+            f"• dispute: `{dispute_id}` (status={status}, reason={reason})\n"
+            f"• charge: `{charge_id}`\n"
+            f"• payment_intent: `{payment_intent}`\n"
+            f"• 금액: {amount} {(currency or '?').upper()}\n"
+            f"• customer: `{customer_id}`\n"
+            f"• user: `{user_id}` ({user_email})"
+        ),
     )
 
 

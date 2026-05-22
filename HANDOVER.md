@@ -48,7 +48,8 @@
 
 ### ⏸️ DEFERRED — CEO/법무 결정 필요 (버그 아님, fix 안 함)
 - **billing past_due**: Stripe smart-retry 중 `subscription_status=past_due`일 때 `subscription_tier` 미강등 → 카드 거절 후 재시도창(~10일) 동안 paid 유지. **명시적 grace 로직 부재(우발적)**. 즉시강등 vs 유예는 **제품 결정** — Stripe Live 실유저 본격화 전이라 즉단 위험 낮음. → **CEO 결정**.
-- **refund/chargeback 핸들러 부재**: `charge.refunded`/`charge.dispute.created` 웹훅 미처리 → 환불해도 tier 유지. **전자상거래법 §17 청약철회**(첫결제 14일 내 의무) 발생 시 P0화. 전액/부분 환불 비즈룰 필요 → **CEO + 법무큐**.
+- **refund/chargeback 티어 정책**: ✅ **v49.1 후속 — 관측 핸들러 추가**(`charge.refunded`/`dispute.created`/`dispute.funds_withdrawn` → WARNING 로그 + 기존 `SLACK_WEBHOOK_URL` ops 알림, **티어 변경 X**, never-raise, 8 test). 더 이상 조용히 안 버려짐. **단 자동 강등/환불 정책은 여전히 보류** — 전자상거래법 §17 전액 vs 가분적 부분환불 + dispute 승패 미확정 → **CEO + 법무 결정** 후 tier 로직 구현(현재는 알림 받고 수동 처리).
+- ✅ **v49.1: CLAUDE.md 경로 경고 교정** — "~/projects canonical, Desktop 사용금지" stale 안내를 "Desktop=canonical(HEAD=prod)"로 정정. `git worktree prune`로 죽은 /tmp ref 10개 제거(55→45). `.claude/worktrees` locked 20개는 수동 대상.
 - **VAPID `NEXT_PUBLIC_VAPID_PUBLIC_KEY` Vercel env 미설정**: push 전달 no-op(코드는 이제 graceful 게이트·락아웃 없음). 값=백엔드 `.env` `VAPID_PUBLIC_KEY`. → **CEO Vercel env**.
 - **SSE 테스트 인프라**: `realtime.tsx` 거의 무커버리지(realtime.test.tsx가 jsdom OOM로 제거됨). reconnect/cleanup/slot 미검증. → fake-timer 기반 인프라 필요.
 - **`.claude/worktrees/*` ~20개 잔여 agent 워크트리** + CLAUDE.md 경로안내 stale → 정리 대상(버그 아님).
