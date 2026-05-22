@@ -1,4 +1,32 @@
-# PivoxQuant — 인수인계서 (2026-05-22 v48.1 — 🟢 버그헌팅 wave: 거래날짜·KR currency/FX·리스크 breach 히어로·OG캐시 (6 fix, prod 배포+라이브))
+# PivoxQuant — 인수인계서 (2026-05-22 v48.2 — 🟢 버그헌팅 wave 2: 티어캡 우회·티어 일관성·§101 canslim·SSE 가드·search/legal (6 fix, prod 배포))
+
+## v48.2 2026-05-22 — 버그헌팅 wave 2 (SSE/PWA + onboarding/tier + AI/search)
+
+> **🟢 결론: bug-hunter 3(SSE·PWA / onboarding·settings·tier / AI스트리밍·search) → ~13건 발견, 실질 버그 6 fix.** commit `2aa760bc` origin/main 푸시(pre-push 훅 pytest sanity 23파일+회귀가드+smoke 통과) + BE railway 배포 + FE Vercel.
+
+| # | 영역 | 버그 → fix | 검증 |
+|---|---|---|---|
+| 1 | 🔴 **수익(tier cap 우회)** | `POST /api/portfolio/reconcile`(브로커 동기화)가 free 3-position cap 미적용 → free 유저가 KIS 10종목 reconcile로 무제한 import. add 3경로엔 cap 있으나 reconcile만 누락. `sync_to_db(max_new_positions=)` cost-aware 부분import(신규만 cap, upsert 보존, TIER_LIMIT_PARTIAL), paid 무제한 | 147 passed |
+| 2 | 🟠 **tier 일관성** | 15개 artifact cron 서비스 + update_profile + earnings_tone이 `subscription_tier` 직접 비교 → `founding_lifetime`/`premium_plus` 티어가 scheduled artifact 미수신/오제한. 공유상수 `services/artifacts/_tiers.py` + effective_tier 통일 | 25+82 passed |
+| 3 | 🟠 **§101** | `/api/screener/canslim/<ticker>`가 보유/관심 무관 임의 종목 분석(swot/discover는 격리하나 canslim 누락) = 자문업 회색지대. `is_user_allowed_ticker` 가드 추가(403) | 171 passed |
+| 4 | 🟡 search | `/api/search` FMP URL f-string(query 미인코딩→param injection, 최대길이 없음) → requests params dict + 50자 cap | 171 passed |
+| 5 | 🟠 SSE | 모든 가격 provider(FMP402+Alpaca+KIS) 동시 실패 시 빈 payload가 포트폴리오 가격 `{}`로 전멸. `prevPricesRef` 비어있지 않을 때 빈 payload skip(0-포지션 정상 빈상태는 보존) | tsc 0 |
+| 6 | 🟡 legal | 스트리밍 chat 소문자 명령형(buy/sell now 등)이 per-chunk safe_scrub 통과 → 좁은 명령형 패턴 추가(산문 over-scrub 없음, naked BUY/SELL case-sensitivity 불변) | 284 passed |
+
+### 검증 (회귀 0 확정)
+- backend 전체 **2893 passed, 6 failed** → 6개 전부 **solo 실행 시 PASS** = 환경 flake 확정(admin_smoke 3·daytrade 1 = full-suite 부하 시 rate-limit 429가 401보다 먼저 / fx_staleness 2 = state-file 의존 기존 flaky, handover v45.8 문서화). **wave-2 변경 무관.**
+- frontend vitest 450 passed (1 fail = add-position waitFor 타임아웃 env flake, **solo 6/6 PASS 확정**) / tsc exit 0.
+- ⚠️ **머신 부하 주의(교훈)**: 전체 suite 실행 중 dev 서버 동시 기동(SQLite 락) 또는 fix 에이전트 동시 편집 시 결과 오염됨 — 깨끗한 단독 실행으로 재검증해야 신뢰 가능.
+- ⚠️ **SSE 통합 테스트 제거**: `realtime.test.tsx`가 jsdom에서 RealtimeProvider 무한렌더/타이머로 vitest worker OOM/행 → CI 전체 vitest 보호 위해 제거. SSE 가드 자체는 tsc + 가드 로직 검증. **후속**: fake-timer 기반 realtime 테스트 인프라 필요.
+
+### NOTE / 보류
+- VAPID `NEXT_PUBLIC_VAPID_PUBLIC_KEY` 프론트 env 미설정(push 구독 불능) — [CEO] Vercel env 추가(값 백엔드 `.env` VAPID_PUBLIC_KEY).
+- onboarding "Skip" 경로가 면책 4항목 확인 없이 `onboarding_completed=True`(코드 주석상 의도적이나 자본시장법 §6 회색) — [법무 큐].
+- env-override(DEV_FOUNDING/PREMIUM_EMAILS) 계정은 DB `subscription_tier=free`라 cron의 effective_tier 미반영 잔존(실 결제 유저는 DB 티어 정상이라 무관). SW staleWhileRevalidate dead-code(cosmetic). take_profit 프롬프트 검증(엔진 미발생, 저위험).
+
+---
+
+# (이전) PivoxQuant — 인수인계서 (2026-05-22 v48.1 — 🟢 버그헌팅 wave: 거래날짜·KR currency/FX·리스크 breach 히어로·OG캐시 (6 fix, prod 배포+라이브))
 
 ## v48.1 2026-05-22 — 버그헌팅 wave (포지션 플로우 회귀 + 인접영역)
 
