@@ -31,7 +31,10 @@ import { API } from "@/lib/endpoints";
 import { Caption } from "@/components/ui/editorial";
 import { type Side, sideLabel, sideToWire } from "@/lib/pre-trade";
 
-export const MIN_RATIONALE_CHARS = 50;
+// 2026-05-22 (CEO "50자 너무 많아 10자"): lowered 50 → 10. Keep in lock-step
+// with models/pre_trade_reflection.py MIN_RATIONALE_CHARS — the backend
+// rejects a shorter rationale, so both constants must match.
+export const MIN_RATIONALE_CHARS = 10;
 
 // 7 reflective questions — verbatim parity with the landing DepositionTeaser.
 // Listed once here so future copy edits stay in lock-step.

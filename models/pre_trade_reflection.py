@@ -29,7 +29,9 @@ from extensions import db
 # Minimum length we require for a self-reflection. Below this the user
 # is almost certainly typing "buy" or punching keys to skip the prompt
 # — see ``services.pre_trade.friction.start_cooldown``.
-MIN_RATIONALE_CHARS = 50
+# 2026-05-22 (CEO "50자 너무 많아 10자"): lowered 50 → 10. Must match the
+# frontend MIN_RATIONALE_CHARS (pre-trade-friction-core.tsx).
+MIN_RATIONALE_CHARS = 10
 
 # Default cooldown duration. The service layer extends this when the
 # market environment trips one of the auto-extend triggers.

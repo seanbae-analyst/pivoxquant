@@ -373,8 +373,12 @@ def test_route_proceed_blocks_other_user(client, app, make_user, auth_user):
 
 
 def test_rationale_min_chars_constant_holds():
-    """Pin the rationale floor — any change must come with explicit migration."""
-    assert MIN_RATIONALE_CHARS == 50
+    """Pin the rationale floor — any change must come with explicit migration.
+
+    2026-05-22: lowered 50 → 10 per CEO ("50자 너무 많아 10자"). Frontend
+    pre-trade-friction-core.tsx MIN_RATIONALE_CHARS must match.
+    """
+    assert MIN_RATIONALE_CHARS == 10
 
 
 # ─────────────────────────────────────────────────────────────────────
