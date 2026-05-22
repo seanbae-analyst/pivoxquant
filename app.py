@@ -289,8 +289,39 @@ def create_app():
     def _sentry_user_type_tag():
         _set_sentry_user_type_tag()
 
+    # Public OG / social-share images intentionally set a long, cacheable
+    # ``Cache-Control: public, max-age=...`` (routes/artifacts.py) so that
+    # Kakao / Twitter / Instagram crawlers and CDNs can cache the unfurled
+    # preview image — caching these is what makes the viral share loop fast.
+    # The blanket ``no_cache`` hook below would otherwise clobber that header
+    # and force a re-fetch on every crawl.
+    #
+    # SECURITY: this is a *narrow allowlist* of explicitly-public share-image
+    # / share-HTML paths only — NOT a blanket "preserve any public response".
+    # Every other endpoint (all authenticated / sensitive APIs) keeps the
+    # strict no-store policy. The matched routes serve content that is public
+    # by virtue of the share action and echo no owner identity.
+    import re as _re
+
+    _SHARE_CACHE_EXEMPT = _re.compile(
+        r"^/api/artifacts/(?:"
+        r"monthly-brag/og-image/\d+"           # OG image (keyed on brag_id)
+        r"|brag-card/share/[^/]+/image"        # brag card share PNG (token)
+        r"|brag-card/share/[^/]+"              # brag card share HTML (token)
+        r")/?$"
+    )
+
     @app.after_request
     def no_cache(r):
+        path = request.path or ""
+        if _SHARE_CACHE_EXEMPT.match(path):
+            # Preserve the route's own ``public, max-age=...`` header. Only
+            # exempt when the route actually opted into public caching — a
+            # defensive guard so an error response on these paths (e.g. 404
+            # without a public header) still gets no-store.
+            cc = r.headers.get("Cache-Control", "")
+            if "public" in cc:
+                return r
         r.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         r.headers["Pragma"] = "no-cache"
         return r

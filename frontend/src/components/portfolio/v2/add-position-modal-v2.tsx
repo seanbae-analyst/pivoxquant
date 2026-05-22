@@ -16,8 +16,9 @@
  *     is OPTIONAL — empty is allowed.
  *   - "신규 진입 검토 · 7문항" (NEW_ENTRY): the original flow. Submitting hands
  *     off to <PreTradeFrictionModal /> (ENTRY) — 7-question reflection. The
- *     real POST fires only on its onProceed. Thesis REQUIRED at ≥50 chars
- *     (matches the reflection's MIN_RATIONALE_CHARS) and prefills it. The
+ *     real POST fires only on its onProceed. Thesis REQUIRED at
+ *     ≥MIN_RATIONALE_CHARS (matches the reflection's constant) and prefills
+ *     it. The
  *     backend cooldown is now 0, so the friction core auto-proceeds after the
  *     7 questions (no 2-minute countdown).
  *
@@ -102,7 +103,8 @@ export function AddPositionModalV2({
   const abortRef = React.useRef<AbortController | null>(null);
 
   const today = todayStr();
-  // Thesis is required only in NEW_ENTRY mode (the reflection needs ≥50 chars).
+  // Thesis is required only in NEW_ENTRY mode (the reflection needs
+  // ≥MIN_RATIONALE_CHARS).
   // In HOLDING mode it's an optional memo — empty allowed.
   const memoOk = memo.trim().length >= MIN_RATIONALE_CHARS;
   const memoRemaining = Math.max(0, MIN_RATIONALE_CHARS - memo.trim().length);
@@ -206,7 +208,7 @@ export function AddPositionModalV2({
     }
 
     if (mode === "new") {
-      // NEW_ENTRY: thesis required ≥50 chars; hand off to the 7-question
+      // NEW_ENTRY: thesis required ≥MIN_RATIONALE_CHARS; hand off to the 7-question
       // reflection. Nothing is written until the modal calls onProceed.
       if (!memoOk) {
         toast.error(`Thesis는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${memo.trim().length}자).`);
@@ -554,7 +556,7 @@ export function AddPositionModalV2({
             />
           </FormField>
 
-          {/* Thesis — required ≥50 chars in NEW_ENTRY (prefills the
+          {/* Thesis — required ≥MIN_RATIONALE_CHARS in NEW_ENTRY (prefills the
               reflection); optional memo in HOLDING mode. */}
           {mode === "new" ? (
             <FormField label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>

@@ -536,7 +536,12 @@ def buy_more(pid):
     # create_trade_alias' pattern).
     is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
     name = canonical_display_name(sd.get("name"), p.ticker)
-    currency = sd.get("currency", "USD")
+    # Data-integrity fix (2026-05-22): a flat "USD" fallback mis-stamps .KS/.KQ
+    # trades as USD whenever the SignalCache row is stale (sd == {}), poisoning
+    # TradeHistory.currency so realizedYtd sums KRW pnl into the USD bucket
+    # (thousands-fold inflation). Use the ticker-suffix-aware is_kr as the
+    # default currency — parity with create_trade_alias (:1520).
+    currency = sd.get("currency", "KRW" if is_kr else "USD")
 
     # 2026-05-17 wave 14 P1 (PR #449): capital double-spend race fix.
     # Pre-fix two concurrent buy_more (gevent greenlets, same user) both
@@ -577,6 +582,19 @@ def buy_more(pid):
         locked_user.available_capital = avail - cost
 
     total_cost = p.shares * p.avg_cost + buy_shares * buy_price
+    # Trade-accuracy fix (2026-05-22): cost-weight buy_fx_rate on add-buy
+    # (USD only) so KRW cost-basis / P&L% reflect blended purchase FX rather
+    # than the first lot's rate. Mirrors add_position._merge_into (:345-349).
+    # KR positions keep buy_fx_rate 0. Must use pre-update p.shares/avg_cost.
+    if not is_kr:
+        new_fx = fx_service.get_rate() or 0
+        if p.buy_fx_rate and new_fx and total_cost:
+            p.buy_fx_rate = (
+                p.buy_fx_rate * p.shares * p.avg_cost
+                + new_fx * buy_shares * buy_price
+            ) / total_cost
+        elif not p.buy_fx_rate and new_fx:
+            p.buy_fx_rate = new_fx
     p.shares += buy_shares
     p.avg_cost = total_cost / p.shares
 
@@ -673,9 +691,23 @@ def buy_new_position():
             code="INSUFFICIENT_CAPITAL", status=400,
         )
 
+    # Trade-accuracy fix (2026-05-22): capture buy FX once for both the new-row
+    # and merge paths. KR positions keep buy_fx_rate 0 (matches add_position).
+    new_fx = fx_service.get_rate() if not is_kr else 0.0
+
     # NEW-D (2026-05-09): race-safe upsert against uq_positions_user_ticker.
     def _merge_buy_new(ex_row):
         total = ex_row.shares * ex_row.avg_cost + shares * price
+        # Cost-weight buy_fx_rate on add-buy (USD only) so KRW cost-basis /
+        # P&L% reflect blended purchase FX. Mirrors add_position._merge_into.
+        if not is_kr and new_fx:
+            if ex_row.buy_fx_rate and total:
+                ex_row.buy_fx_rate = (
+                    ex_row.buy_fx_rate * ex_row.shares * ex_row.avg_cost
+                    + new_fx * shares * price
+                ) / total
+            elif not ex_row.buy_fx_rate:
+                ex_row.buy_fx_rate = new_fx
         ex_row.shares += shares
         ex_row.avg_cost = total / ex_row.shares
 
@@ -683,7 +715,8 @@ def buy_new_position():
     if p:
         _merge_buy_new(p)
     else:
-        p = Position(user_id=current_user.id, ticker=ticker, shares=shares, avg_cost=price)
+        p = Position(user_id=current_user.id, ticker=ticker, shares=shares,
+                     avg_cost=price, buy_fx_rate=new_fx)
         db.session.add(p)
 
     if is_kr:
@@ -780,8 +813,14 @@ def sell_position(pid):
             code="POSITION_NOT_FOUND", status=404,
         )
     d = request.get_json() or {}
+    # Trade-accuracy fix (2026-05-22): `float(d.get("shares") or p.shares)`
+    # treats an explicit shares=0 as falsy and silently falls back to the full
+    # position → an unintended full-close. Preserve the documented "shares
+    # omitted → sell entire position" behavior (raw is None) but reject an
+    # explicit 0 / negative via the <=0 guard below.
+    raw_shares = d.get("shares")
     try:
-        sell_shares = float(d.get("shares") or p.shares)
+        sell_shares = float(raw_shares) if raw_shares is not None else float(p.shares)
         sell_price = float(d.get("price") or 0)
     except (TypeError, ValueError):
         return api_error(
@@ -789,9 +828,9 @@ def sell_position(pid):
             code="TRADE_NUMERIC_REQUIRED", status=400,
         )
 
-    # SEC-001: reject non-positive share counts. `float(d.get("shares") or p.shares)`
-    # passes negative numbers through (negative is truthy), which would invert the
-    # sign of proceeds/PnL and could be abused to credit the user.
+    # SEC-001: reject non-positive share counts. An explicit shares=0 (or a
+    # negative) now reaches this guard instead of full-closing the position;
+    # negatives are truthy and would otherwise invert proceeds/PnL.
     if sell_shares <= 0:
         return api_error(
             en="Shares must be positive", kr="주식 수는 양수여야 합니다.",
@@ -818,11 +857,14 @@ def sell_position(pid):
     pnl = proceeds - cost_basis
     pnl_pct = pnl / cost_basis * 100 if cost_basis > 0 else 0
     name = canonical_display_name(sd.get("name"), p.ticker)
-    currency = sd.get("currency", "USD")
     # Stale-cache safety: a False fallback would credit .KS/.KQ sell proceeds
     # to the USD bucket once the SignalCache TTL expires. Use the ticker
     # suffix as the authoritative fallback (matches create_trade_alias).
     is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
+    # Data-integrity fix (2026-05-22): same stale-cache currency poisoning as
+    # buy_more — a flat "USD" fallback stamps KR sells as USD, corrupting
+    # TradeHistory.currency / realizedYtd. Default off is_kr (computed above).
+    currency = sd.get("currency", "KRW" if is_kr else "USD")
 
     if actual_sell >= p.shares - 0.0001:
         db.session.delete(p)
@@ -1519,6 +1561,14 @@ def create_trade_alias():
     name = canonical_display_name(sd.get("name"), p.ticker)
     currency = sd.get("currency", "KRW" if is_kr else "USD")
 
+    # Trade-accuracy fix (2026-05-22): the TradeModalV2 record-mode sends an
+    # explicit trade date ("YYYY-MM-DD") for already-executed past trades, but
+    # this handler ignored it — TradeHistory.traded_at fell to default now(),
+    # so a 2020 trade was stamped today. Parse the optional date and stamp
+    # traded_at when valid; None (missing / malformed / future / pre-1900)
+    # falls back to the server clock via the column default.
+    traded_at_dt = _parse_purchase_date(d.get("date"))
+
     # Wave G-5 P1 G5-02 (2026-05-18): SELECT FOR UPDATE on User row to
     # serialize capital read-modify-write across concurrent gevent greenlets.
     # Without this, two simultaneous TradeModalV2 entries (same user) can
@@ -1553,13 +1603,29 @@ def create_trade_alias():
                 }), 400
             locked_user.available_capital = avail - cost
         total_cost = p.shares * p.avg_cost + quantity * price
+        # Trade-accuracy fix (2026-05-22): cost-weight buy_fx_rate on add-buy
+        # (USD only) so the KRW cost-basis / KRW P&L% reflect the blended
+        # purchase FX, not just the first lot's rate. Mirrors
+        # add_position._merge_into (:345-349). KR positions keep buy_fx_rate 0.
+        if not is_kr:
+            new_fx = fx_service.get_rate() or 0
+            if p.buy_fx_rate and new_fx and total_cost:
+                p.buy_fx_rate = (
+                    p.buy_fx_rate * p.shares * p.avg_cost
+                    + new_fx * quantity * price
+                ) / total_cost
+            elif not p.buy_fx_rate and new_fx:
+                p.buy_fx_rate = new_fx
         p.shares += quantity
         p.avg_cost = total_cost / p.shares
-        db.session.add(TradeHistory(
+        _buy_th = TradeHistory(
             user_id=current_user.id, ticker=p.ticker, name=name,
             action="BUY", shares=quantity, price_per_share=round(price, 4),
             total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
-        ))
+        )
+        if traded_at_dt is not None:
+            _buy_th.traded_at = traded_at_dt
+        db.session.add(_buy_th)
         try:
             db.session.commit()
         except Exception:
@@ -1599,12 +1665,15 @@ def create_trade_alias():
         locked_user.available_capital = (
             locked_user.available_capital or 0
         ) + proceeds
-    db.session.add(TradeHistory(
+    _sell_th = TradeHistory(
         user_id=current_user.id, ticker=p.ticker, name=name,
         action="SELL", shares=quantity, price_per_share=round(price, 4),
         total_value=round(proceeds, 2), pnl=round(pnl, 2),
         pnl_pct=round(pnl_pct, 2), currency=currency,
-    ))
+    )
+    if traded_at_dt is not None:
+        _sell_th.traded_at = traded_at_dt
+    db.session.add(_sell_th)
     try:
         db.session.commit()
     except Exception:

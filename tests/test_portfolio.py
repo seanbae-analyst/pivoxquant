@@ -366,15 +366,58 @@ class TestSellPosition:
     def test_sell_position_rejects_zero_shares(
         self, client, auth_user, add_position,
     ):
-        """SEC-001: zero must also be rejected (distinct from `or p.shares`
-        fallback, which only fires when the key is missing entirely)."""
+        """FIX 3 (2026-05-22): an explicit shares=0 must be rejected with 400
+        and must NOT fall back to a full-position close.
+
+        Previously ``float(d.get("shares") or p.shares)`` treated 0 as falsy
+        and silently sold the entire position. The handler now distinguishes
+        "key omitted" (None → full-position fallback) from "explicit 0" (→ 400)."""
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        # Explicit 0 is falsy → falls through to p.shares default (10), so to
-        # exercise the guard we send a small negative fraction instead.
         r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": -0.5, "price": 200.0,
+            "shares": 0, "price": 200.0,
+        })
+        assert r.status_code == 400, r.get_json()
+        assert r.get_json()["error"] == "Shares must be positive"
+
+    def test_sell_position_zero_shares_does_not_full_close(
+        self, client, auth_user, add_position, app,
+    ):
+        """FIX 3 (2026-05-22): the rejected 0-share sell must leave the
+        position untouched (no accidental full-close, no trade recorded)."""
+        from extensions import db
+        from models import Position, TradeHistory
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": 0, "price": 200.0,
         })
         assert r.status_code == 400
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            assert p is not None  # not full-closed
+            assert p.shares == 10
+            assert TradeHistory.query.filter_by(user_id=auth_user["id"]).count() == 0
+
+    def test_sell_position_omitted_shares_full_closes(
+        self, client, auth_user, add_position, app,
+    ):
+        """FIX 3 (2026-05-22): omitting `shares` entirely preserves the
+        documented "sell entire position" fallback (None → p.shares)."""
+        from extensions import db
+        from models import Position, SignalCache
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        with app.app_context():
+            db.session.add(SignalCache(
+                ticker="AAPL",
+                data_json=json.dumps({"is_korean": False, "currency": "USD",
+                                      "price": 170.0}),
+            ))
+            db.session.commit()
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "price": 170.0,  # no "shares" key → full close
+        })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            assert db.session.get(Position, pid) is None
 
 
 # ── GET /api/portfolio/analytics ────────────────────────────────────────────
@@ -507,3 +550,247 @@ class TestBuyNewCapitalResponse:
         assert d["ok"] is True
         assert d["new_capital_krw"] == 860000.0  # 1,000,000 - 140,000
         assert d["new_capital_usd"] == 10000.0  # untouched
+
+
+# ── FIX 1 (2026-05-22): create_trade_alias honours user-supplied trade date ──
+#
+# TradeModalV2 record-mode sends body["date"] ("YYYY-MM-DD") for already-
+# executed past trades. The handler used to ignore it → TradeHistory.traded_at
+# fell to default now(), so a 2023 trade was stamped today. Now a valid date is
+# applied to traded_at; missing / malformed / future → server-clock fallback.
+
+class TestCreateTradeAliasDate:
+    def _seed_cache(self, app, ticker="AAPL", is_kr=False):
+        from extensions import db
+        from models import SignalCache
+        with app.app_context():
+            db.session.add(SignalCache(
+                ticker=ticker,
+                data_json=json.dumps({
+                    "name": "Apple", "is_korean": is_kr,
+                    "currency": "KRW" if is_kr else "USD", "price": 170.0,
+                }),
+            ))
+            db.session.commit()
+
+    def _latest_trade(self, app, user_id):
+        from extensions import db
+        from models import TradeHistory
+        with app.app_context():
+            return (TradeHistory.query.filter_by(user_id=user_id)
+                    .order_by(TradeHistory.id.desc()).first())
+
+    def test_buy_with_valid_date_sets_traded_at(
+        self, client, auth_user, add_position, app,
+    ):
+        self._seed_cache(app)
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy",
+            "quantity": 2, "price": 160.0, "date": "2023-06-15",
+        })
+        assert r.status_code == 200, r.get_json()
+        t = self._latest_trade(app, auth_user["id"])
+        assert t.action == "BUY"
+        assert t.traded_at.year == 2023
+        assert t.traded_at.month == 6
+        assert t.traded_at.day == 15
+
+    def test_sell_with_valid_date_sets_traded_at(
+        self, client, auth_user, add_position, app,
+    ):
+        self._seed_cache(app)
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell",
+            "quantity": 3, "price": 170.0, "date": "2022-01-04",
+        })
+        assert r.status_code == 200, r.get_json()
+        t = self._latest_trade(app, auth_user["id"])
+        assert t.action == "SELL"
+        assert t.traded_at.year == 2022
+        assert t.traded_at.month == 1
+        assert t.traded_at.day == 4
+
+    def test_missing_date_falls_back_to_now(
+        self, client, auth_user, add_position, app,
+    ):
+        from datetime import datetime, timezone
+        self._seed_cache(app)
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        before = datetime.now(timezone.utc).replace(tzinfo=None)
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 1, "price": 160.0,
+        })
+        assert r.status_code == 200, r.get_json()
+        t = self._latest_trade(app, auth_user["id"])
+        # Within a small window of server "now" (not 1970/epoch, not a past date).
+        assert t.traded_at >= before
+        assert (t.traded_at - before).total_seconds() < 60
+
+    def test_future_or_malformed_date_falls_back_to_now(
+        self, client, auth_user, add_position, app,
+    ):
+        from datetime import datetime, timezone
+        self._seed_cache(app)
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        before = datetime.now(timezone.utc).replace(tzinfo=None)
+        # Malformed string → None → server clock.
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 1, "price": 160.0,
+            "date": "not-a-date",
+        })
+        assert r.status_code == 200, r.get_json()
+        t = self._latest_trade(app, auth_user["id"])
+        assert t.traded_at >= before
+        # Future date → None → server clock (cannot trade in the future).
+        r2 = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 1, "price": 160.0,
+            "date": "2099-12-31",
+        })
+        assert r2.status_code == 200, r2.get_json()
+        t2 = self._latest_trade(app, auth_user["id"])
+        assert t2.traded_at.year != 2099
+        assert t2.traded_at >= before
+
+
+# ── FIX 2 (2026-05-22): legacy buy_more/sell currency uses KR-aware default ──
+#
+# When SignalCache is stale (sd == {}), buy_more (:539) and sell_position
+# (:821) used `sd.get("currency", "USD")`, stamping .KS/.KQ TradeHistory rows
+# as "USD" → realizedYtd sums KRW pnl into the USD bucket (huge inflation).
+# Fix: default to "KRW" when the ticker suffix marks it KR.
+
+class TestStaleCacheCurrencyFallback:
+    def _latest_trade(self, app, user_id):
+        from extensions import db
+        from models import TradeHistory
+        with app.app_context():
+            return (TradeHistory.query.filter_by(user_id=user_id)
+                    .order_by(TradeHistory.id.desc()).first())
+
+    def test_buy_more_kr_no_cache_records_krw_currency(
+        self, client, auth_user, add_position, app,
+    ):
+        pid = add_position(auth_user["id"], "005930.KS", 10, 70000.0)
+        # No SignalCache → stale → sd == {}.
+        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
+            "shares": 2, "price": 71000.0,
+        })
+        assert r.status_code == 200, r.get_json()
+        t = self._latest_trade(app, auth_user["id"])
+        assert t.currency == "KRW"
+
+    def test_sell_kr_no_cache_records_krw_currency(
+        self, client, auth_user, add_position, app,
+    ):
+        pid = add_position(auth_user["id"], "035720.KQ", 10, 50000.0)
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": 3, "price": 55000.0,
+        })
+        assert r.status_code == 200, r.get_json()
+        t = self._latest_trade(app, auth_user["id"])
+        assert t.currency == "KRW"
+
+    def test_buy_more_us_no_cache_still_usd(
+        self, client, auth_user, add_position, app,
+    ):
+        """Non-KR ticker keeps USD fallback (no regression)."""
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
+            "shares": 2, "price": 160.0,
+        })
+        assert r.status_code == 200, r.get_json()
+        t = self._latest_trade(app, auth_user["id"])
+        assert t.currency == "USD"
+
+
+# ── FIX 4 (2026-05-22): add-buy cost-weights buy_fx_rate (USD positions) ─────
+#
+# avg_cost was gradient-averaged on add-buy but buy_fx_rate stayed pinned to
+# the first lot's rate → KRW cost-basis / KRW P&L% drifted. Now buy_fx_rate is
+# cost-weighted (mirrors add_position._merge_into). KR keeps buy_fx_rate 0.
+
+class TestAddBuyFxRate:
+    def test_buy_more_updates_buy_fx_rate_weighted(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import Position, SignalCache
+        # Existing lot: 10 sh @ 150, buy_fx_rate 1000 (from add_position default).
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0, buy_fx=1000.0)
+        with app.app_context():
+            db.session.add(SignalCache(
+                ticker="AAPL",
+                data_json=json.dumps({"is_korean": False, "currency": "USD",
+                                      "price": 160.0}),
+            ))
+            db.session.commit()
+        with patch("routes.portfolio.fx_service.get_rate", return_value=1400.0):
+            r = client.post(f"/api/portfolio/position/{pid}/buy", json={
+                "shares": 5, "price": 160.0,  # cost-basis 800 @ fx 1400
+            })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            # Weighted: (1000*1500 + 1400*800) / (1500+800) = 2,620,000/2300
+            expected = (1000.0 * 1500 + 1400.0 * 800) / (1500 + 800)
+            assert round(p.buy_fx_rate, 4) == round(expected, 4)
+            assert p.buy_fx_rate != 1000.0  # actually moved
+
+    def test_buy_more_kr_keeps_zero_buy_fx_rate(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import Position
+        # KR position seeded with buy_fx_rate 0 (KR convention).
+        pid = add_position(auth_user["id"], "005930.KS", 10, 70000.0, buy_fx=0.0)
+        with patch("routes.portfolio.fx_service.get_rate", return_value=1400.0):
+            r = client.post(f"/api/portfolio/position/{pid}/buy", json={
+                "shares": 2, "price": 71000.0,
+            })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            assert p.buy_fx_rate == 0.0  # KR stays 0
+
+    def test_create_trade_alias_buy_updates_buy_fx_rate(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import Position, SignalCache
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0, buy_fx=1000.0)
+        with app.app_context():
+            db.session.add(SignalCache(
+                ticker="AAPL",
+                data_json=json.dumps({"is_korean": False, "currency": "USD",
+                                      "price": 160.0}),
+            ))
+            db.session.commit()
+        with patch("routes.portfolio.fx_service.get_rate", return_value=1400.0):
+            r = client.post("/api/portfolio/trades", json={
+                "position_id": pid, "action": "buy",
+                "quantity": 5, "price": 160.0,
+            })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            expected = (1000.0 * 1500 + 1400.0 * 800) / (1500 + 800)
+            assert round(p.buy_fx_rate, 4) == round(expected, 4)
+
+    def test_buy_new_position_merge_updates_buy_fx_rate(
+        self, client, auth_user, add_position, app, mock_fetcher,
+    ):
+        from extensions import db
+        from models import Position
+        # buy-new merges into existing AAPL row when one exists.
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0, buy_fx=1000.0)
+        with patch("routes.portfolio.fx_service.get_rate", return_value=1400.0):
+            r = client.post("/api/portfolio/position/buy-new", json={
+                "ticker": "AAPL", "shares": 5, "price": 160.0,
+            })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            expected = (1000.0 * 1500 + 1400.0 * 800) / (1500 + 800)
+            assert round(p.buy_fx_rate, 4) == round(expected, 4)

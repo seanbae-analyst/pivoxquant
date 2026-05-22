@@ -493,7 +493,7 @@ interface RiskLayersV2Response {
   overall_status?: string;
 }
 
-function mapLayerStatus(
+export function mapLayerStatus(
   s: BackendRiskLayer["status"],
 ): RiskLayerStatus {
   if (s === "POSITIVE" || s === "GREEN") return "POSITIVE";
@@ -529,8 +529,24 @@ export function useRiskLayers() {
     };
   });
 
+  // Breach / strain counts derived directly from layer status.
+  //
+  // The backend /api/risk/summary payload exposes the 5 raw metrics
+  // (var/es/hhi/corr/dd) but NOT a `layers_breached` field, so the v2 hero
+  // previously fell back to `?? 0` and always rendered "none breached" even
+  // when a layer was RED — a dangerous risk-misread for a finance surface.
+  //
+  // Mapping (see risk_defense.py — layer status is GREEN/YELLOW/RED only):
+  //   RED    → NEGATIVE → breached
+  //   YELLOW → NEUTRAL  → strained
+  //   GREEN  → POSITIVE → within band
+  const breachedCount = layers.filter((l) => l.status === "NEGATIVE").length;
+  const strainedCount = layers.filter((l) => l.status === "NEUTRAL").length;
+
   return {
     layers,
+    breachedCount,
+    strainedCount,
     isLoading: swr.isLoading,
     error: swr.error as Error | undefined,
     mutate: swr.mutate,

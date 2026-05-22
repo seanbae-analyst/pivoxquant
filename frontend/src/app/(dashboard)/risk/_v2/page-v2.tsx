@@ -49,11 +49,13 @@ import { CorrelationHeatmap } from "@/components/risk/v2/correlation-heatmap";
 
 function derivePosture(
   layersCount: number,
-  negatives: number,
+  breached: number,
+  strained: number,
 ): "composed" | "attentive" | "strained" | "breached" {
   if (layersCount === 0) return "composed";
-  if (negatives >= 3) return "strained";
-  if (negatives >= 1) return "attentive";
+  if (breached >= 1) return "breached";
+  if (strained >= 3) return "strained";
+  if (strained >= 1) return "attentive";
   return "composed";
 }
 
@@ -66,10 +68,16 @@ export default function RiskPageV2() {
   const timeline = useRiskTimeline(30);
 
   const layers = layersHook.layers;
-  const negatives = layers.filter((l) => l.status === "NEGATIVE").length;
+  // Breach / strain counts come from the layers payload, not summary —
+  // /api/risk/summary has no `layers_breached` field, so the prior
+  // `summary?.layers_breached ?? 0` always rendered 0 ("none breached")
+  // even when a layer was RED. Summary value (if a future backend release
+  // publishes one) still takes precedence.
+  const breachedCount = summary?.layers_breached ?? layersHook.breachedCount;
+  const strainedCount = layersHook.strainedCount;
   const posture =
-    summary?.posture ?? derivePosture(layers.length, negatives);
-  const breachedCount = summary?.layers_breached ?? 0;
+    summary?.posture ??
+    derivePosture(layers.length, breachedCount, strainedCount);
 
   // Build "loudest signal" sentence — concentration is the canonical loud
   // signal per SPEC §1; falls back to a generic clause if missing.
@@ -115,7 +123,7 @@ export default function RiskPageV2() {
         eyebrow={`Risk · 7-Layer Defense · ${new Date().toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", { weekday: "long" })}`}
         posture={posture}
         breachedCount={breachedCount}
-        strainedCount={negatives}
+        strainedCount={strainedCount}
         loudestSignal={loudestSignal}
         observedAtKst={observedAt}
       />

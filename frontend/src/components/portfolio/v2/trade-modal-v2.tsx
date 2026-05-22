@@ -20,7 +20,7 @@
  *   - "신규 검토 · 7문항" (REVIEW): the original flow — "should I buy/sell
  *     right now?". Submitting hands off to <PreTradeFrictionModal /> (buy=ENTRY
  *     / sell=EXIT) — the 7-question reflection. The real POST fires only on its
- *     onProceed; Cancel writes nothing. Thesis REQUIRED at ≥50 chars.
+ *     onProceed; Cancel writes nothing. Thesis REQUIRED at ≥MIN_RATIONALE_CHARS.
  * `edit` (avg-cost/memo adjustment) is NOT a buy/sell event and has NO mode —
  * it commits directly via PATCH without friction (unchanged).
  *
@@ -149,7 +149,7 @@ export function TradeModalV2({
   const copy = action === "edit" ? COPY.edit : modeCopy(action, mode);
 
   // Thesis is required only for buy/sell in REVIEW mode (the reflection needs
-  // ≥50 chars). edit and RECORD mode treat the note as an optional memo.
+  // ≥MIN_RATIONALE_CHARS). edit and RECORD mode treat the note as an optional memo.
   const requiresThesis = action !== "edit" && mode === "review";
   const noteOk = !requiresThesis || note.trim().length >= MIN_RATIONALE_CHARS;
   const noteRemaining = Math.max(0, MIN_RATIONALE_CHARS - note.trim().length);
@@ -243,7 +243,7 @@ export function TradeModalV2({
     }
 
     if (mode === "review") {
-      // REVIEW: thesis required ≥50 chars; hand off to the 7-question
+      // REVIEW: thesis required ≥MIN_RATIONALE_CHARS; hand off to the 7-question
       // reflection. Nothing is written until the modal calls onProceed.
       if (!noteOk) {
         toast.error(`Thesis는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${note.trim().length}자).`);
