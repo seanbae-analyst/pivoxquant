@@ -10,6 +10,7 @@
 
 import * as React from "react";
 import { EditorialHead } from "@/components/ui/editorial";
+import { pctColor } from "@/lib/format";
 import { useEquityCurve, type EquityRange, type EquityPoint } from "./hooks-v2";
 
 interface EquityCurveBlockProps {
@@ -58,12 +59,9 @@ function fmtPct(n: number | undefined): string {
   return `${sign}${n.toFixed(2)}%`;
 }
 
-function pctColor(n: number | undefined): string {
-  if (n == null || !Number.isFinite(n)) return "rgba(245,240,232,0.55)";
-  if (n > 0) return "var(--pq-positive, #b8956a)"; // KR convention
-  if (n < 0) return "var(--pq-negative, #d18888)";
-  return "rgba(245,240,232,0.55)";
-}
+// Return %, benchmark %, and spread coloring now use the site-canonical KR
+// convention helper (lib/format.pctColor): gain → carmine #D18888, loss →
+// indigo #7AA0C8, flat → muted ivory. The old local helper inverted this.
 
 interface PolylineGeom {
   ptsNav: string;

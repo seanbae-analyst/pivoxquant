@@ -46,11 +46,53 @@ Design notes
 """
 from __future__ import annotations
 
-from functools import lru_cache
+import threading
 from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# ── Positive-only result cache ─────────────────────────────────────
+# We previously used ``functools.lru_cache`` here, but lru_cache also
+# memoises ``None`` returns. A transient KIS outage on the FIRST lookup
+# of a ticker (e.g. "005930.KS") would then cache ``None`` for the whole
+# process lifetime — there is no expiry and no cache_clear anywhere — so
+# the UI would show the raw ticker instead of "삼성전자" indefinitely.
+# That breaks the project's ticker-name-display contract.
+#
+# Fix: only cache TRUTHY (resolved) names. A None/empty resolution is NOT
+# stored, so the next call retries the underlying source and can succeed
+# once KIS recovers. A plain dict guarded by a lock is sufficient for the
+# single-process Railway deployment; a size bound prevents unbounded
+# growth from adversarial/long-tail inputs.
+_NAME_CACHE_MAX = 4096
+_name_cache: dict[str, str] = {}
+_kis_name_cache: dict[str, str] = {}
+_name_cache_lock = threading.Lock()
+
+
+def _cache_get(cache: dict, key: str) -> Optional[str]:
+    return cache.get(key)
+
+
+def _cache_put(cache: dict, key: str, value: Optional[str]) -> None:
+    """Store only truthy values; FIFO-trim when over the size bound."""
+    if not value:
+        return
+    with _name_cache_lock:
+        cache[key] = value
+        if len(cache) > _NAME_CACHE_MAX:
+            # Drop ~10% oldest entries (insertion-ordered dict).
+            for k in list(cache.keys())[: _NAME_CACHE_MAX // 10]:
+                cache.pop(k, None)
+
+
+def clear_name_cache() -> None:
+    """Drop all memoised names. Mainly for tests; safe at runtime."""
+    with _name_cache_lock:
+        _name_cache.clear()
+        _kis_name_cache.clear()
 
 
 def _is_korean(ticker: str) -> bool:
@@ -58,21 +100,27 @@ def _is_korean(ticker: str) -> bool:
     return t.endswith(".KS") or t.endswith(".KQ")
 
 
-@lru_cache(maxsize=4096)
 def _kis_name(ticker: str) -> Optional[str]:
     """Resolve any KRX ticker via the KIS public API. Covers the long tail
-    that isn't in the curated kr_stock_registry. LRU-cached so repeat
-    hits stay free after the first call.
+    that isn't in the curated kr_stock_registry.
+
+    Positive-only cache: a successful (non-empty) name is cached so repeat
+    hits stay free, but a None/empty result is NOT cached so a transient
+    KIS failure is retried on the next call.
     """
+    hit = _cache_get(_kis_name_cache, ticker)
+    if hit:
+        return hit
     try:
         from services.data import kis_market_adapter as kma
-        return kma.get_name(ticker)
+        name = kma.get_name(ticker)
     except Exception:
         logger.debug("silent-fallback: _kis_name", exc_info=True)
         return None
+    _cache_put(_kis_name_cache, ticker, name)
+    return name
 
 
-@lru_cache(maxsize=4096)
 def resolve_stock_name(ticker: str) -> Optional[str]:
     """Return the display name for ``ticker``, or ``None`` if unresolvable.
 
@@ -82,7 +130,25 @@ def resolve_stock_name(ticker: str) -> Optional[str]:
 
     Never raises — a bad input just returns None. Caller is expected to
     fall back to the ticker itself.
+
+    Positive-only cache: only resolved (non-empty) names are memoised, so
+    a transient source failure is retried on the next call instead of
+    being pinned to ``None`` for the process lifetime.
     """
+    if not ticker:
+        return None
+    _cache_key = ticker.strip()
+    if _cache_key:
+        _hit = _cache_get(_name_cache, _cache_key)
+        if _hit:
+            return _hit
+    _resolved = _resolve_stock_name_uncached(ticker)
+    if _resolved and _cache_key:
+        _cache_put(_name_cache, _cache_key, _resolved)
+    return _resolved
+
+
+def _resolve_stock_name_uncached(ticker: str) -> Optional[str]:
     if not ticker:
         return None
     t = ticker.strip()

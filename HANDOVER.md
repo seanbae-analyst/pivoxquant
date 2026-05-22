@@ -1,3 +1,50 @@
+# PivoxQuant — 인수인계서 (2026-05-22 v50 — 🟢 오버나잇 자율 버그헌팅 wave 2: auth·data·notif·market·frontend (15 fix, 회귀 0, 배포))
+
+## v50 2026-05-22 — 오버나잇 자율 버그헌팅 wave 2 (CEO "나 잘건데 자율모드로 계속 잡아")
+
+> **🟢 결론: bug-hunter 4도메인(auth/security · data pipeline · market/alerts · frontend) 능동 발굴 → 실질 버그 15 fix.** 모든 fix는 lead가 직접 root cause 확정 후 위임(false-fix 방지), 5개 fix 배치 파일-disjoint 병렬. no-busywork·거짓보고 금지·철저한수정 유지.
+>
+> **검증(회귀 0)**: 백엔드 **2996 passed** / 3 failed(전부 단독 PASS = 기존 풀스위트 flake: daytrade rate-limit 1 + fx_staleness 2, 변경무관) / 189 skipped. 프론트 **vitest 451 + tsc 0**. 신규 회귀테스트 ~55개.
+
+### ✅ Auth/Security (3 fix — routes/auth.py·security.py·routes/share.py)
+| # | 버그 → fix | 검증 |
+|---|---|---|
+| 1 | 🔴 **OAuth 무동의 계정연결**(P1, 로그인경로): OAuth 이메일이 기존계정과 충돌 시 무검증 link+login → 크로스공급자 계정탈취 벡터. **decision (a)**: email-collision-new-provider 분기에만 가드 — `email_verified` 명시 False면 거부(OAuthLinkRefused→clean /login?error=, 500아님)+password_hash 계정 merge 거부+성공 link 시 owner 보안알림. missing flag→verified(fail-open, 정상로그인 불변). ⚠️ **로그인 경로 변경** — 신규유저/매칭ID E2E 통과했으나 owner 깨면 Google/Kakao 로그인 1회 점검 권장 | 15 test + 정상로그인 E2E |
+| 2 | 비활성 타임아웃이 non-API 경로에서 remember_token 쿠키 미삭제 → 다음 /api 요청서 재인증(타임아웃 무력화). 모든 경로 쿠키삭제+redirect | 2 test |
+| 3 | public share GET rate-limit 부재 → `@general_rate_limit` 추가 | 5 test |
+
+### ✅ Data pipeline (5 fix — name_resolver·fmp·market_status·fx_service)
+| # | 버그 → fix |
+|---|---|
+| 4 | 🔴 `name_resolver` `@lru_cache`가 None 영구캐시 → KIS 일시장애 시 종목명 영구 누락("005930.KS" 고착). positive-only dict 캐시(truthy만 저장)+clear_name_cache |
+| 5 | `get_info()`가 KR 티커에 FMP ratios/metrics/growth 3콜 낭비(FMP는 KRX 미지원) → 상단 KR 가드(get_history 패턴 미러), KIS 경로 보존 |
+| 6 | `market_status`에 US 공휴일 캘린더 부재 → NYSE 휴장 평일에 tradable=True 오표기 + cache_ttl이 5s로 FMP 난타. `US_HOLIDAYS`(2026·2027) + 휴장 처리(KR 미러) |
+| 7 | news 캐시 TTL 6h인데 docstring "30min" → 1h로 하향+docstring 일치(콜러 전수 단일티어, 예산 안전 확인) |
+| 8 | fx `_hist_miss_ts` 무바운드 dict → HIST_MISS_MAX FIFO 트림 |
+
+### ✅ Market/Alerts (3 fix — discover·market·alert·alert_service·push_service)
+| # | 버그 → fix |
+|---|---|
+| 9 | 🔴 **가짜 데이터**: discover sector `d5=d1×2.5`/`m1=d1×5.0` 조작값 → `null`(실제 다기간 소스 미연결, FE는 "—" 표시). d1만 실값 |
+| 10 | 🟠 **죽은 기능**: 알림 설정 매트릭스(7event×3channel)가 저장/노출/토글되나 delivery 미참조. `signal_state`를 inapp+push 게이트 wiring(`notification_channel_enabled`). **나머지 6 event(weekly_memo/earnings/risk_breach/brag/pulse/broker_sync)는 각 서비스 emit 경로 → 미wiring(후속)**. unmapped alert(52w/concentration 등)는 fail-open |
+| 11 | `check_52w_highs_lows`가 KR 티커에 FMP 호출(KRX 미지원) → 무알림/스퓨리어스 위험. KR 스킵(KIS range는 후속) |
+| 12 | `/api/news/<ticker>` `@legal_scrub_response` 누락 → 뉴스제목 추천/매수 등 미scrub. 데코레이터 추가(형제 일치) |
+| 13 | 🟠 **데이터 정확성**: 디테일 earnings가 portfolio-only `/api/earnings`라 워치리스트 전용 종목에 "없음" 오표기. `/api/earnings/<ticker>`(§101 `is_user_allowed_ticker` 게이트=보유 or 워치리스트, 외부 403) 신설 + FE가 호출 |
+
+### ✅ Frontend (4 fix — portfolio v2·watchlist·discover·detail)
+| # | 버그 → fix |
+|---|---|
+| 14 | 🟠 **KR 컨벤션 반전**: portfolio v2 5개 컴포넌트가 손익색 bronze(이익)/carmine(손실) — canonical(이익=carmine #D18888 / 손실=indigo #7AA0C8)과 반대. format.ts helper로 통일(브랜드 bronze 액센트는 보존) |
+| 15 | watchlist null Δ "+0.00%"→"—" / sector d5·m1 null "—" 렌더 / 디테일 earnings per-ticker 호출 전환(방어적 파싱) |
+
+### ⏸️ DEFERRED / 후속 (이번 미수행)
+- **알림 매트릭스 잔여 6 event wiring**: weekly_memo/earnings_pre_brief/risk_breach/brag_card/pulse_prompt/broker_sync_error는 각자 서비스(artifacts/*, risk_board, broker)에서 emit → `notification_channel_enabled(event, channel)` 호출 추가 필요(email/push). 이번엔 signal_state만. 다수 서비스 동시수정 over-reach 회피로 후속. (email은 email_opt_out 기존 게이트 있음.)
+- **KR 52w high/low 알림**: KIS 기반 52주 range 소스 필요(현재 KR 스킵).
+- **sector d5/m1 실데이터 소스**: 현재 null. 실제 다기간 sector 피드 연결 시 복원.
+- (v49 이월) past_due 강등 정책 / SSE 테스트 인프라 / .claude/worktrees 20 locked 정리.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-22 v49 — 🟢 능동 버그헌팅 6도메인 + 구조점검: 퀀트수식·법규scrub·티어·PWA·브로커 (17 fix, 회귀 0, 배포))
 
 ## v49 2026-05-22 — 능동 버그헌팅 마라톤 (CEO "상태보고+버그헌팅+구조잡기, 안되는것 제대로, 자율모드 3h")

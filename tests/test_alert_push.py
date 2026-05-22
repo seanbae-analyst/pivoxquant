@@ -223,6 +223,48 @@ class TestSendPushOptOutGate:
                 assert not opt_out_calls, \
                     "transactional push must bypass the opt-out gate"
 
+    # ── FIX 1: per-event notification_prefs fail-open for bell alerts ──────
+
+    def test_bell_alert_with_no_matching_event_id_is_delivered_regardless_of_prefs(
+        self, app, make_user,
+    ):
+        """A bell kind that maps to NO event_id (52w / concentration / macro)
+        must be delivered even when the user has muted everything — there is
+        no pref to consult, so FAIL-OPEN governs."""
+        from extensions import db
+        from models import Alert, User
+        from services.alert import create_alert, _BELL_KIND_TO_EVENT_ID
+
+        user = make_user(email="failopen1@test.com")
+        with app.app_context():
+            # Mute every channel for every known event. None of these touch
+            # the unmapped bell kinds, so the alert must still ship.
+            from models.user import NOTIFICATION_EVENT_IDS
+            u = User.query.get(user["id"])
+            u.notification_prefs = {
+                ev: {"email": False, "push": False, "inapp": False}
+                for ev in NOTIFICATION_EVENT_IDS
+            }
+            db.session.commit()
+
+            # Sanity: concentration_alert is unmapped (fail-open).
+            assert _BELL_KIND_TO_EVENT_ID.get("concentration_alert") is None
+
+            with patch("services.push_service.notify_bell_alert") as mock_notify:
+                a = create_alert(
+                    user_id=user["id"],
+                    kind="concentration_alert",
+                    title="Portfolio concentration — Tech 42.0%",
+                    body="Observation",
+                    link="/risk",
+                )
+            assert a is not None, "unmapped bell alert must be delivered (fail-open)"
+            row = Alert.query.filter_by(user_id=user["id"],
+                                        kind="concentration_alert").first()
+            assert row is not None
+            assert mock_notify.called, "push fan-out must run for unmapped kind"
+            db.session.rollback()
+
     def test_marketing_push_consults_opt_out_when_not_opted_out(self, app, make_user):
         """Non-transactional pushes must read User.email_opt_out before
         proceeding (defence-in-depth: the gate runs every time).

@@ -62,8 +62,15 @@ def create_share():
 
 
 @share_bp.route("/<string:token>", methods=["GET"])
+@general_rate_limit
 def get_shared_portfolio(token):
-    """Return a shared portfolio by token. No authentication required."""
+    """Return a shared portfolio by token. No authentication required.
+
+    Fix 3 (2026-05-22): public, unauth, DB-on-every-call endpoint. The 128-bit
+    token makes brute force infeasible, but it carries the same
+    ``@general_rate_limit`` as the create/POST side so a single client can't
+    hammer the DB with token guesses / scraping.
+    """
     if not token or len(token) > 64:
         return api_error(
             en="Invalid token",

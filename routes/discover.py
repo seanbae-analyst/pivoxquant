@@ -355,7 +355,11 @@ def sectors():
     try:
         live = fetcher.get_sector_performance() or []
         # fetcher returns {sector, changesPercentage:"1.23%"} — only 1D there.
-        # Emit d1 from that; d5/m1 placeholder until a richer source is wired.
+        # Emit d1 from that. d5/m1 are NULL until a real multi-period sector
+        # source is wired: the fetcher provides only 1-day sector performance,
+        # so any 5D/1M value would be fabricated (a scaled multiple of d1 is NOT
+        # real multi-day data and would mislabel synthetic numbers as market
+        # returns). Emit None and let the frontend render "—". Do not invent.
         for r in live:
             sector = r.get("sector")
             if not sector:
@@ -368,8 +372,8 @@ def sectors():
             rows.append({
                 "sector": sector,
                 "d1":     round(d1, 2),
-                "d5":     round(d1 * 2.5, 2),   # coarse scaled placeholder
-                "m1":     round(d1 * 5.0, 2),
+                "d5":     None,   # no real 5-day sector source wired yet
+                "m1":     None,   # no real 1-month sector source wired yet
             })
     except Exception as e:
         logger.warning("discover.sectors upstream failed: %s", e)

@@ -17,7 +17,7 @@ import logging
 from datetime import timedelta
 from functools import wraps
 
-from flask import current_app, request, jsonify, session
+from flask import current_app, request, jsonify, session, redirect
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -332,20 +332,30 @@ def init_security(app):
                             logger.debug(
                                 "SECURITY: logout_user() failed during session expiry — %s", e
                             )
+                        # 2026-05-17 thorough cookie cleanup (PR #409 follow-up)
+                        # + 2026-05-22 Fix 2: the cookie cleanup previously ran
+                        # ONLY on /api/ paths. For a NON-/api/ (rendered HTML)
+                        # path the server-side session was cleared but the
+                        # browser kept the remember_token cookie — so the very
+                        # next /api/ request re-authenticated via that cookie,
+                        # silently defeating the inactivity timeout. Now we
+                        # clear the auth cookies for BOTH path classes. Lazy
+                        # import avoids the routes.auth ↔ security circular at
+                        # module load time.
+                        from routes.auth import _clear_auth_cookies
                         if request.path.startswith("/api/"):
-                            # 2026-05-17 thorough cookie cleanup (PR #409 follow-up):
-                            # inactivity timeout cleared server-side session but left
-                            # browser cookies in jar. Mirror /logout cookie cleanup so
-                            # next request from the user isn't quietly re-authenticated
-                            # by a lingering Set-Cookie. Lazy import avoids the
-                            # routes.auth ↔ security circular at module load time.
-                            from routes.auth import _clear_auth_cookies
                             response = jsonify({
                                 "error": "Session expired due to inactivity.",
                                 "error_kr": "비활성으로 인해 세션이 만료되었습니다.",
                                 "code": "SESSION_EXPIRED",
                             })
                             return _clear_auth_cookies(response), 401
+                        # Non-API HTML path: bounce to the login page so the
+                        # rendered-page flow continues client-side, and clear
+                        # the auth cookies on that redirect response so the
+                        # lingering remember_token can't re-authenticate.
+                        response = redirect("/login?error=session_expired")
+                        return _clear_auth_cookies(response)
                     return
             except (ValueError, TypeError):
                 logger.debug("silent-fallback: _enforce_session", exc_info=True)

@@ -63,6 +63,10 @@ export const API = {
     prices: "/api/prices",
     chart: (ticker: string) => `/api/chart/${ticker}`,
     earnings: "/api/earnings",
+    // Per-ticker earnings (gated to user holdings+watchlist, §101-safe).
+    // Returns the SAME item shape as the /api/earnings list items.
+    earningsByTicker: (ticker: string) =>
+      `/api/earnings/${encodeURIComponent(ticker)}`,
     peers: (ticker: string) => `/api/peers/${ticker}`,
     profile: (ticker: string) => `/api/market/profile/${ticker}`,
     dividend: (ticker: string) => `/api/dividend/${ticker}`,

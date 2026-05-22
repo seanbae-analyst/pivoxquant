@@ -89,6 +89,49 @@ KR_HOLIDAYS = {
 }
 
 
+# US (NYSE) full-closure holidays.
+# Source: NYSE official holiday calendar (nyse.com/markets/hours-calendars).
+# Coverage: 2026 + 2027. Dates are the OBSERVED dates the exchange is fully
+# closed (when a fixed holiday falls on Sat → observed Fri; on Sun → observed
+# Mon). Good Friday is included (NYSE closes) though it is not a federal
+# holiday. Early-close half-days (e.g. day after Thanksgiving, Christmas Eve)
+# are NOT listed here — the market is still open/tradable on those.
+# 갱신: 매년 NYSE 발표 후 다음 연도 추가.
+# Format: (year, month, day) -> reason.
+US_HOLIDAYS = {
+    # 2026
+    (2026, 1, 1): "New Year's Day",
+    (2026, 1, 19): "Martin Luther King Jr. Day",
+    (2026, 2, 16): "Washington's Birthday (Presidents' Day)",
+    (2026, 4, 3): "Good Friday",
+    (2026, 5, 25): "Memorial Day",
+    (2026, 6, 19): "Juneteenth National Independence Day",
+    (2026, 7, 3): "Independence Day (observed, Jul 4 = Sat)",
+    (2026, 9, 7): "Labor Day",
+    (2026, 11, 26): "Thanksgiving Day",
+    (2026, 12, 25): "Christmas Day",
+    # 2027
+    (2027, 1, 1): "New Year's Day",
+    (2027, 1, 18): "Martin Luther King Jr. Day",
+    (2027, 2, 15): "Washington's Birthday (Presidents' Day)",
+    (2027, 3, 26): "Good Friday",
+    (2027, 5, 31): "Memorial Day",
+    (2027, 6, 18): "Juneteenth (observed, Jun 19 = Sat)",
+    (2027, 7, 5): "Independence Day (observed, Jul 4 = Sun)",
+    (2027, 9, 6): "Labor Day",
+    (2027, 11, 25): "Thanksgiving Day",
+    (2027, 12, 24): "Christmas Day (observed, Dec 25 = Sat)",
+}
+
+
+def is_us_holiday(dt: datetime) -> tuple[bool, str]:
+    """Return (is_holiday, reason). dt는 ET(America/New_York) 기준이어야 함."""
+    key = (dt.year, dt.month, dt.day)
+    if key in US_HOLIDAYS:
+        return True, US_HOLIDAYS[key]
+    return False, ""
+
+
 def is_kr_holiday(dt: datetime) -> tuple[bool, str]:
     """Return (is_holiday, reason). dt는 KST 기준이어야 함."""
     key = (dt.year, dt.month, dt.day)
@@ -108,6 +151,17 @@ def _next_kr_trading_day(dt: datetime) -> datetime:
     return candidate
 
 
+def _next_us_trading_day(dt: datetime) -> datetime:
+    """Return the next US trading day (skip weekends + holidays). dt는 ET."""
+    candidate = dt + timedelta(days=1)
+    # Cap to 14 days lookahead to avoid infinite loops on bad data.
+    for _ in range(14):
+        if candidate.weekday() < 5 and not is_us_holiday(candidate)[0]:
+            return candidate
+        candidate += timedelta(days=1)
+    return candidate
+
+
 def _to_kst_str(dt: datetime) -> str:
     return dt.astimezone(KST).strftime("%H:%M")
 
@@ -117,6 +171,20 @@ def _us_status_now() -> dict:
     weekday = now_et.weekday()  # 0=Mon, 6=Sun
     t = now_et.time()
     today_et = now_et.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Holiday check (highest priority — overrides time-of-day status).
+    # Mirrors the KR holiday handling in _kr_status_now.
+    is_hol, hol_reason = is_us_holiday(now_et)
+    if is_hol:
+        next_trading = _next_us_trading_day(today_et)
+        next_open_et = next_trading.replace(hour=US_PRE_OPEN.hour, minute=US_PRE_OPEN.minute)
+        return {
+            "status": S_CLOSED,
+            "label": f"휴장 ({hol_reason})",
+            "next_event": "Pre-market 시작",
+            "next_event_kst": _to_kst_str(next_open_et),
+            "tradable": False,
+        }
 
     if weekday >= 5:  # weekend
         # next Monday pre-open

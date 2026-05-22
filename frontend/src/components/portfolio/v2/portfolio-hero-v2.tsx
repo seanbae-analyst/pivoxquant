@@ -17,6 +17,7 @@
  */
 
 import * as React from "react";
+import { PRICE_COLOR_HEX } from "@/lib/format";
 
 interface PortfolioHeroV2Props {
   /** Total NAV in display currency (USD or KRW). May be undefined. */
@@ -345,12 +346,15 @@ function HeroKpi({
   tone: "positive" | "negative" | "neutral";
 }) {
   // Color: bronze for neutral, semantic for positive/negative — paired
-  // with text labels in the parent prose for accessibility.
+  // with text labels in the parent prose for accessibility. KR convention
+  // (site-canonical PRICE_COLOR_HEX): gain → carmine #D18888, loss → indigo
+  // #7AA0C8. The old local mapping inverted gain to bronze, diverging from
+  // detail/watchlist; bronze stays the brand accent for the neutral case.
   const valueColor =
     tone === "positive"
-      ? "var(--pq-positive, #b8956a)"
+      ? PRICE_COLOR_HEX.up
       : tone === "negative"
-        ? "var(--pq-negative, #d18888)"
+        ? PRICE_COLOR_HEX.down
         : "var(--pq-bronze)";
 
   return (

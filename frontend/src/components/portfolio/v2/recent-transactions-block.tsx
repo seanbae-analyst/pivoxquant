@@ -10,7 +10,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { fmtMoneyPlain, displayTicker } from "@/lib/format";
+import { fmtMoneyPlain, pctColor, displayTicker } from "@/lib/format";
 import { useTransactions, type TransactionRow } from "./hooks-v2";
 
 interface RecentTransactionsBlockProps {
@@ -55,10 +55,12 @@ function shortDate(iso?: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// Cash-flow direction color via the site-canonical KR convention helper
+// (lib/format.pctColor): inflow (+) → carmine #D18888, outflow (−) → indigo
+// #7AA0C8, neutral → muted ivory. The old local helper inverted this
+// (inflow → bronze), diverging from detail/watchlist.
 function amountColor(signed: number): string {
-  if (signed > 0) return "var(--pq-positive, #b8956a)"; // KR convention
-  if (signed < 0) return "var(--pq-negative, #d18888)";
-  return "rgba(245,240,232,0.55)";
+  return pctColor(signed);
 }
 
 export function RecentTransactionsBlock({

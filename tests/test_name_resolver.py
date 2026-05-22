@@ -16,12 +16,11 @@ from services import name_resolver
 
 @pytest.fixture(autouse=True)
 def _clear_lru():
-    """resolve_stock_name + _kis_name are LRU-cached; clear between tests."""
-    name_resolver.resolve_stock_name.cache_clear()
-    name_resolver._kis_name.cache_clear()
+    """resolve_stock_name + _kis_name use a positive-only result cache;
+    clear it between tests so transient-failure scenarios are isolated."""
+    name_resolver.clear_name_cache()
     yield
-    name_resolver.resolve_stock_name.cache_clear()
-    name_resolver._kis_name.cache_clear()
+    name_resolver.clear_name_cache()
 
 
 class TestPureResolver:
@@ -118,6 +117,51 @@ class TestDbResolverFallbackChain:
             assert name_resolver.resolve_stock_name_with_db("005930.KS") is None
 
 
+class TestPositiveOnlyCache:
+    """FIX 1 (2026-05-22): a transient None resolution must NOT be cached.
+
+    The old ``functools.lru_cache`` memoised None, so a brief KIS outage on
+    the FIRST lookup of a ticker pinned the raw ticker for the whole process
+    life. Only resolved (truthy) names should be cached.
+    """
+
+    def test_transient_none_is_not_cached_then_succeeds(self):
+        # 999777.KS is unmapped in the curated registry → falls to KIS rung.
+        with patch("services.data.kis_market_adapter.get_name") as kis_m:
+            # First call: KIS transiently down → None (must NOT be cached).
+            kis_m.return_value = None
+            first = name_resolver.resolve_stock_name("999777.KS")
+            assert first is None
+
+            # Second call: KIS recovered → name resolves (proves no None cache
+            # short-circuited the retry).
+            kis_m.return_value = "삼성전자"
+            second = name_resolver.resolve_stock_name("999777.KS")
+            assert second == "삼성전자"
+            # KIS was hit on BOTH calls (None wasn't cached).
+            assert kis_m.call_count == 2
+
+    def test_good_result_is_cached(self):
+        with patch("services.data.kis_market_adapter.get_name") as kis_m:
+            kis_m.return_value = "삼성전자"
+            assert name_resolver.resolve_stock_name("999666.KS") == "삼성전자"
+            assert name_resolver.resolve_stock_name("999666.KS") == "삼성전자"
+            # Resolved name cached → KIS called only once.
+            assert kis_m.call_count == 1
+
+    def test_kis_name_positive_only_cache(self):
+        """_kis_name itself must not cache None."""
+        with patch("services.data.kis_market_adapter.get_name") as kis_m:
+            kis_m.return_value = None
+            assert name_resolver._kis_name("123123.KS") is None
+            kis_m.return_value = "롯데렌탈"
+            assert name_resolver._kis_name("123123.KS") == "롯데렌탈"
+            assert kis_m.call_count == 2
+            # Now the good result IS cached.
+            assert name_resolver._kis_name("123123.KS") == "롯데렌탈"
+            assert kis_m.call_count == 2
+
+
 class TestNameOrTicker:
     def test_falls_back_to_ticker(self):
         with patch.object(name_resolver, "resolve_stock_name", return_value=None):
@@ -177,5 +221,5 @@ class TestKrSuffixToggleFallback:
         ``resolve_stock_name_with_db('124500.KS')`` and must now return
         the human name, not None."""
         # Pure resolver — no DB rung.
-        name_resolver.resolve_stock_name.cache_clear()
+        name_resolver.clear_name_cache()
         assert name_resolver.resolve_stock_name("124500.KS") == "아이티센글로벌"

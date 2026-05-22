@@ -95,19 +95,49 @@ def maybe_generate(user_id: int, r: dict):
     # before the message is persisted or pushed to the user.
     msg = safe_scrub(msg, context="alert.message") or msg
 
+    # FIX 1 (2026-05-22) — per-event notification_prefs gate. A POSITIVE /
+    # NEGATIVE signal alert maps to the canonical event_id "signal_state"
+    # (one of the 7 NOTIFICATION_EVENT_IDS in models/user.py). Consult the
+    # User accessor (notification_channel_enabled) for the in-app (bell) and
+    # push channels so the Settings → Notifications matrix is actually
+    # honoured. FAIL-OPEN: the accessor returns True for unknown events /
+    # channels and on a missing pref, and any DB hiccup here must not
+    # silently mute a real alert — so we resolve each gate defensively and
+    # default to SEND on error.
+    EVENT_ID = "signal_state"
+    inapp_ok = True
+    push_ok = True
+    try:
+        from models import User
+        u = User.query.get(user_id)
+        if u is not None:
+            inapp_ok = bool(u.notification_channel_enabled(EVENT_ID, "inapp"))
+            push_ok = bool(u.notification_channel_enabled(EVENT_ID, "push"))
+    except Exception:
+        # Never fail-closed: an unrelated lookup failure must not suppress
+        # a legitimate signal alert.
+        logger.debug("silent-fallback: notification_prefs gate in maybe_generate",
+                     exc_info=True)
+        inapp_ok = True
+        push_ok = True
+
     # Bug #1 fix (2026-05-09 deep bug hunt): kind=None made every signal
     # alert render as "INFO" in the /alerts page (kindLabel(null) → "INFO").
     # Set the canonical kind so the frontend pill shows "SIGNAL" with proper
     # POSITIVE/NEGATIVE tone. Bypasses ALLOWED_KINDS (raw constructor) so no
     # whitelist edit is needed; the column accepts any string.
-    db.session.add(Alert(
-        user_id=user_id, ticker=ticker, message=msg,
-        signal=sig, score=score,
-        kind=("signal_negative" if sig == "NEGATIVE" else "signal_positive"),
-    ))
-    db.session.commit()
+    if inapp_ok:
+        db.session.add(Alert(
+            user_id=user_id, ticker=ticker, message=msg,
+            signal=sig, score=score,
+            kind=("signal_negative" if sig == "NEGATIVE" else "signal_positive"),
+        ))
+        db.session.commit()
 
-    # Send push notification (no-ops if not configured)
+    # Send push notification (no-ops if not configured). Gated by the
+    # "signal_state" push pref above — skip the fan-out entirely when off.
+    if not push_ok:
+        return
     try:
         from services.push_service import notify_alert
         # 2026-05-13 (Wave H): pass the already-resolved `name` so the

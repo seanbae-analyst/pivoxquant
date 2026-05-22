@@ -112,3 +112,43 @@ class TestShareValidToken:
         assert "buy_fx_rate" not in pos, (
             "buy_fx_rate leaked to public share response — privacy regression"
         )
+
+
+class TestShareGetRateLimited:
+    """Fix 3 (2026-05-22): the public GET endpoint must carry a per-endpoint
+    rate limit consistent with the create/POST side (@general_rate_limit)."""
+
+    def test_get_endpoint_has_rate_limit_decorator(self, app):
+        """The view function must be wrapped by @general_rate_limit, exactly
+        like its create/POST sibling. ``general_rate_limit`` (in security.py)
+        uses ``@wraps`` so the name is preserved, but it adds a ``__wrapped__``
+        attribute and the wrapper is defined in the ``security`` module.
+        We assert the GET endpoint matches the known-decorated POST endpoint's
+        wrapper shape."""
+        get_view = app.view_functions["share.get_shared_portfolio"]
+        post_view = app.view_functions["share.create_share"]  # known-decorated
+        # Both must be wrapped (undecorated views have no __wrapped__).
+        assert hasattr(post_view, "__wrapped__"), "test premise broken"
+        assert hasattr(get_view, "__wrapped__"), (
+            "share GET has no decorator wrapper — Fix 3 missing"
+        )
+        # The wrapper must actually wrap a DIFFERENT inner function (proving a
+        # real decorator ran, not just a stray attribute), matching the POST.
+        assert get_view.__wrapped__ is not get_view
+        assert get_view.__wrapped__.__name__ == "get_shared_portfolio"
+
+    def test_get_endpoint_429_when_limit_exceeded(
+        self, raw_client, app, make_user, enable_rate_limit
+    ):
+        """With enforcement on, hammering the GET past 60/min returns 429 —
+        proving the limit is live, not just decorative."""
+        user = make_user(email="sharelimit@test.com")
+        token = _make_share(app, user["id"], expired=False)
+        saw_429 = False
+        # general_rate_limit = 60/min; 70 calls must trip it.
+        for _ in range(70):
+            r = raw_client.get(f"/api/portfolio/share/{token}")
+            if r.status_code == 429:
+                saw_429 = True
+                break
+        assert saw_429, "share GET never returned 429 — rate limit not enforced"

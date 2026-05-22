@@ -32,7 +32,10 @@ _FMP_BUDGET_HARD_STOP_PCT = float(os.environ.get("FMP_BUDGET_HARD_STOP_PCT", "0.
 TTL_QUOTE      = 30          # off-hours fallback — helper returns 5s intraday
 TTL_INTRADAY   = 60          # off-hours fallback — helper returns 10s intraday
 TTL_PRICE_HIST = 3600        # 1 hour — historical bars (unchanged)
-TTL_NEWS       = 6 * 3600    # 6 hours — news is low-weight (3%), no need for frequent refresh
+TTL_NEWS       = 3600        # 1 hour — fresher headlines during market hours.
+                             # News is fetched per-ticker on detail-page view +
+                             # earnings prebriefs (one ticker at a time, cached),
+                             # not in bulk loops, so 1h vs 6h is a modest FMP delta.
 TTL_FUNDAMENTAL = 24 * 3600  # 24 hours — ratios, metrics, earnings
 TTL_PROFILE    = 7 * 24 * 3600  # 7 days — company profile rarely changes
 TTL_SECTOR     = 30 * 60     # 30 minutes
@@ -871,9 +874,20 @@ def get_info(ticker):
         if stale:
             return stale
 
-    profile = get_profile(ticker)
-    ratios = get_ratios_ttm(ticker)
-    metrics = get_key_metrics_ttm(ticker)
+    # Early KR dispatch (mirrors get_history's guard at ~708). FMP Starter
+    # has no KRX coverage, so for `.KS` / `.KQ` tickers the profile + the
+    # ratios-ttm + key-metrics-ttm + income-statement-growth calls below
+    # ALWAYS return {} yet each still burns an FMP API call. Skip them
+    # entirely and go straight to the licensed KIS fundamentals path.
+    _is_kr = isinstance(ticker, str) and (ticker.endswith(".KS") or ticker.endswith(".KQ"))
+    if _is_kr:
+        profile = {}
+        ratios = {}
+        metrics = {}
+    else:
+        profile = get_profile(ticker)
+        ratios = get_ratios_ttm(ticker)
+        metrics = get_key_metrics_ttm(ticker)
 
     info = {}
     if profile:
@@ -950,7 +964,7 @@ def get_info(ticker):
     # US tickers like AAPL/TSLA/NVDA/MSFT while BRK-B works). When that
     # happens, fall back to the /quote payload's `pe` + `eps` fields which
     # derive from the same underlying TTM series.
-    if not info.get("trailingPE") or not info.get("trailingEps"):
+    if not _is_kr and (not info.get("trailingPE") or not info.get("trailingEps")):
         try:
             q = _fmp_get("/quote", {"symbol": ticker})
             if q and isinstance(q, list) and len(q) > 0:
@@ -1642,7 +1656,7 @@ def prefetch_fundamentals(tickers):
 # ── News ────────────────────────────────────────────────────────
 
 def get_news(ticker, limit=15):
-    """Per-ticker news. Cache 30min. Stale-while-revalidate when budget low."""
+    """Per-ticker news. Cache 1h (TTL_NEWS). Stale-while-revalidate when budget low."""
     cache_key = f"news:{ticker}"
     cached = _get_cache(cache_key, TTL_NEWS)
     if cached:
@@ -1671,7 +1685,7 @@ def get_general_news(limit=15):
 
     Returns list of dicts with keys: title, text/summary, publishedDate,
     url/link, site/source, image. Empty list on failure.
-    Cache TTL_NEWS (6h). Stale-while-revalidate when budget low.
+    Cache TTL_NEWS (1h). Stale-while-revalidate when budget low.
     """
     cache_key = "news:general"
     cached = _get_cache(cache_key, TTL_NEWS)

@@ -110,6 +110,77 @@ class TestSessionAuth:
             )
 
 
+# ── Inactivity timeout cookie cleanup (Fix 2, 2026-05-22) ───────────────────
+
+class TestInactivityCookieCleanup:
+    """Fix 2: inactivity logout on a NON-/api/ path must clear auth cookies.
+
+    Previously the remember_token cookie was only cleared inside the
+    ``if request.path.startswith('/api/')`` branch, so for a rendered HTML
+    path the server-side session was cleared but the browser kept the
+    remember_token — and the next /api/ request silently re-authenticated,
+    defeating the inactivity timeout. We now clear cookies for BOTH path
+    classes.
+    """
+
+    @staticmethod
+    def _remember_token_cleared(response) -> bool:
+        """True iff the response carries a Set-Cookie expiring remember_token."""
+        for header, value in response.headers:
+            if header.lower() != "set-cookie":
+                continue
+            if value.startswith("remember_token=") and (
+                "Max-Age=0" in value
+                or "max-age=0" in value
+                or "Expires=Thu, 01 Jan 1970" in value
+                or "01-Jan-1970" in value
+            ):
+                return True
+        return False
+
+    def _login_then_expire(self, raw_client, make_user):
+        u = make_user(email="inactive@test.com", password="goodpass1")
+        login = raw_client.post("/api/auth/login", json={
+            "email": u["email"], "password": u["password"],
+        })
+        assert login.status_code == 200, login.data
+        # Force the session's last-active timestamp far enough into the past
+        # to exceed _INACTIVITY_TIMEOUT (2h) on the next request.
+        from datetime import datetime, timezone, timedelta
+        with raw_client.session_transaction() as sess:
+            sess["_last_active"] = (
+                datetime.now(timezone.utc) - timedelta(hours=5)
+            ).isoformat()
+        return u
+
+    def test_non_api_path_inactivity_clears_remember_cookie(
+        self, raw_client, make_user
+    ):
+        """A non-/api/ GET after the inactivity window must clear the cookie
+        AND redirect (rendered-page flow continues client-side)."""
+        self._login_then_expire(raw_client, make_user)
+        # follow_redirects=False so we inspect the redirect + Set-Cookie itself.
+        r = raw_client.get("/some-html-page", follow_redirects=False)
+        assert r.status_code in (301, 302), (
+            f"expected redirect on inactivity logout, got {r.status_code}"
+        )
+        assert "session_expired" in r.headers.get("Location", "")
+        assert self._remember_token_cleared(r), (
+            "remember_token cookie was NOT cleared on non-API inactivity logout "
+            "(Fix 2 regression — cookie would re-authenticate next /api/ call)"
+        )
+
+    def test_api_path_inactivity_still_returns_401_json(
+        self, raw_client, make_user
+    ):
+        """The /api/ branch must keep its JSON-401 behaviour (unchanged)."""
+        self._login_then_expire(raw_client, make_user)
+        r = raw_client.get("/api/portfolio", follow_redirects=False)
+        assert r.status_code == 401
+        assert r.get_json().get("code") == "SESSION_EXPIRED"
+        assert self._remember_token_cleared(r)
+
+
 # ── Injection / Input validation ────────────────────────────────────────────
 
 class TestInjectionGuards:

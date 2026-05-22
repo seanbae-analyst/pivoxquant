@@ -11,7 +11,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useWatchlist } from "@/lib/hooks";
 import type { WatchlistResponse } from "@/lib/types";
-import { normalizeTicker, fmtPctSignedMinus } from "@/lib/format";
+import { normalizeTicker, fmtPctSignedMinus, pctColor } from "@/lib/format";
 
 interface WatchlistMiniProps {
   limit?: number;
@@ -37,12 +37,10 @@ function fmtPctSigned(n: number): string {
   return fmtPctSignedMinus(n, 2);
 }
 
-function pctColor(n: number): string {
-  if (!Number.isFinite(n)) return "rgba(245,240,232,0.55)";
-  if (n > 0) return "var(--pq-positive, #b8956a)";
-  if (n < 0) return "var(--pq-negative, #d18888)";
-  return "rgba(245,240,232,0.55)";
-}
+// Change % color now uses the site-canonical KR convention helper
+// (lib/format.pctColor): gain → carmine #D18888, loss → indigo #7AA0C8,
+// flat → muted ivory. The old local helper inverted this (gain → bronze),
+// diverging from detail/watchlist — same pattern fixed across portfolio v2.
 
 export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
   const { data } = useWatchlist() as { data: WatchlistResponse | undefined };

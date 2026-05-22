@@ -44,6 +44,7 @@ _hist_lock = threading.Lock()
 # we figured out the nearest-trading-day fallback resolved).
 _hist_miss_ts: dict[str, float] = {}
 HIST_MISS_TTL = 3600  # 1h between retries for a missing date
+HIST_MISS_MAX = 8000  # FIFO bound — mirror _hist_cache's HIST_MAX trim
 
 
 def get_rate() -> float:
@@ -268,6 +269,12 @@ def get_rate_at(d) -> float:
     # 4. Last-resort: spot rate, mark a miss so we don't hammer
     with _hist_lock:
         _hist_miss_ts[key] = time.time()
+        # FIFO trim — mirror the _hist_cache bound so the negative cache
+        # can't grow without limit on a long-lived worker.
+        if len(_hist_miss_ts) > HIST_MISS_MAX:
+            drop_n = HIST_MISS_MAX // 10
+            for k in list(_hist_miss_ts.keys())[:drop_n]:
+                _hist_miss_ts.pop(k, None)
     logger.debug("FX historical miss for %s; falling back to spot %s", key, get_rate())
     return get_rate()
 

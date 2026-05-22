@@ -33,6 +33,51 @@ ALLOWED_KINDS = {
 }
 
 
+# FIX 1 (2026-05-22) — bell-alert kind → notification_prefs event_id map.
+#
+# models/user.py defines exactly 7 NOTIFICATION_EVENT_IDS:
+#   weekly_memo · earnings_pre_brief · signal_state · risk_breach ·
+#   pulse_prompt · brag_card · broker_sync_error
+#
+# The per-event × per-channel matrix (User.notification_prefs, served by
+# /api/notifications/preferences, toggled in Settings) only governs those 7.
+# When a bell-alert ``kind`` maps to one of them we gate the in-app (and the
+# email channel, if/when an alert ever sends email) by the user's stored
+# pref. When it does NOT map (the common case below) we DELIVER AS BEFORE —
+# there is no pref to consult, and FAIL-OPEN (sending an un-gated alert) is
+# strictly safer than wrongly suppressing a real one.
+#
+# Call-site → event_id mapping for the kinds this module emits:
+#   price_52w_high      → None  (52w high — no matching event_id; KIS-based
+#                                KR range is a deferred feature, see FIX 2)
+#   price_52w_low       → None  (52w low — no matching event_id)
+#   concentration_alert → None  (portfolio concentration — no event_id;
+#                                NOT "risk_breach", which is the 7-Layer Risk
+#                                Defense breach surface, a different signal)
+#   macro_event         → None  (macro calendar — no event_id)
+#   artifact_ready      → None  (generic artifact-ready; the artifact-type
+#                                events weekly_memo / earnings_pre_brief /
+#                                brag_card are emitted by their own services,
+#                                not via this generic bell kind)
+#   account_sync        → None  (broker sync SUCCESS — distinct from the
+#                                "broker_sync_error" event_id, which is the
+#                                FAILURE notification only)
+#   watchlist_event     → None  (watchlist move — no event_id)
+#
+# Every entry is None today → every bell kind ships unconditionally, exactly
+# as before this fix. The map exists so a future kind that DOES correspond to
+# one of the 7 events can be gated by adding a single line here.
+_BELL_KIND_TO_EVENT_ID: dict[str, Optional[str]] = {
+    "price_52w_high":      None,
+    "price_52w_low":       None,
+    "concentration_alert": None,
+    "macro_event":         None,
+    "artifact_ready":      None,
+    "account_sync":        None,
+    "watchlist_event":     None,
+}
+
+
 def create_alert(
     user_id: int,
     kind: str,
@@ -66,6 +111,27 @@ def create_alert(
             body = safe_scrub(body, context="alert.body") or body
     except Exception:
         logger.debug("safe_scrub import/call failed in create_alert", exc_info=True)
+
+    # FIX 1 (2026-05-22) — in-app (bell) notification_prefs gate. Only gate
+    # when this kind maps to one of the 7 NOTIFICATION_EVENT_IDS; an unmapped
+    # kind (every current one — see _BELL_KIND_TO_EVENT_ID) ships as before.
+    # FAIL-OPEN: any lookup failure leaves the alert un-suppressed, because
+    # wrongly muting a real alert is worse than an over-send.
+    event_id = _BELL_KIND_TO_EVENT_ID.get(kind)
+    if event_id is not None:
+        try:
+            from models import User
+            u = User.query.get(user_id)
+            if u is not None and not u.notification_channel_enabled(event_id, "inapp"):
+                logger.info(
+                    "alert.create_alert suppressed by inapp pref user_id=%s "
+                    "kind=%s event_id=%s", user_id, kind, event_id,
+                )
+                return None
+        except Exception:
+            # Never fail-closed on a pref lookup hiccup.
+            logger.debug("inapp pref gate lookup failed in create_alert",
+                         exc_info=True)
 
     if dedup_window_hours and dedup_window_hours > 0:
         cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
@@ -266,6 +332,16 @@ def check_52w_highs_lows() -> dict:
         # Pull 52W range from FMP quote (yearHigh / yearLow). Missing fields
         # skip silently — we'd rather miss an alert than emit a false one.
         for ticker in tickers:
+            # FIX 2 (2026-05-22) — skip KR tickers. ``_lookup_52w_range`` is
+            # FMP-backed and FMP's yearHigh/yearLow coverage is unreliable
+            # for KRX (see its docstring), so calling it for a .KS/.KQ ticker
+            # either wastes an FMP request (silent miss) or fires a spurious
+            # alert off stale data. A KIS-based KR 52-week range source is a
+            # deferred feature (not implemented) — until then KR positions
+            # get no 52w-range alert here. US behaviour is unchanged.
+            tk = (ticker or "").upper()
+            if tk.endswith(".KS") or tk.endswith(".KQ"):
+                continue
             px = prices.get(ticker)
             if not px:
                 continue

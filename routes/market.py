@@ -19,6 +19,7 @@ from services.error_responses import api_error
 from services.market_status import get_market_status
 from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.ticker_normalizer import normalize_ticker
+from services.access_guard import is_user_allowed_ticker, access_denied_response
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -339,7 +340,11 @@ def get_sectors():
 
 @market_bp.route("/news/<ticker>")
 @api_auth
+@legal_scrub_response
 def get_news(ticker):
+    # News titles/summaries from Naver/FMP can contain advisory language
+    # (추천/매수/strong buy …). @legal_scrub_response deep-scrubs the JSON
+    # body before it leaves the server (mirrors market_indices / signal_detail).
     return jsonify({"news": fetcher.get_news(ticker.upper())})
 
 
@@ -463,10 +468,49 @@ def chart_data(ticker):
     })
 
 
+_EARNINGS_ETF_TICKERS = ('TSLL', 'ETHU', 'SPY', 'QQQ', 'TLT', 'GLD', 'USO', 'UUP')
+
+
+def _earnings_item_for_ticker(ticker, cache=None):
+    """Build the next-earnings item for a single ticker, or None.
+
+    Returns the SAME item shape used by /api/earnings list entries
+    (ticker / name / date / signal / score) so the frontend renders both
+    with the identical component. ETFs and tickers with no upcoming
+    earnings return None. Errors are swallowed (fail-soft → None).
+
+    `cache` is an optional pre-loaded SignalCache row for this ticker; when
+    omitted the row is looked up here (single-query, no N+1 for one ticker).
+    """
+    from services.data import fmp as fmp
+    try:
+        is_etf = ticker in _EARNINGS_ETF_TICKERS or 'ETF' in (ticker or '')
+        if is_etf:
+            return None
+        cal = fmp.get_earnings_calendar(ticker=ticker, days_ahead=90)
+        if not cal:
+            return None
+        for entry in cal[:1]:  # Take the nearest earnings date
+            ds = entry.get("date", "")[:10]
+            if not ds:
+                continue
+            c = cache if cache is not None else db.session.get(SignalCache, ticker)
+            sd = json.loads(c.data_json) if c and c.data_json else {}
+            return {
+                "ticker": ticker,
+                "name": canonical_display_name(sd.get("name"), ticker),
+                "date": ds,
+                "signal": sd.get("signal", "—"),
+                "score": sd.get("score", 0),
+            }
+    except Exception:
+        logger.debug("silent-fallback: _earnings_item_for_ticker %s", ticker, exc_info=True)
+    return None
+
+
 @market_bp.route("/earnings")
 @api_auth
 def earnings_calendar():
-    from services.data import fmp as fmp
     positions = Position.query.filter_by(user_id=current_user.id).all()
     earnings = []
 
@@ -478,28 +522,37 @@ def earnings_calendar():
     } if tickers else {}
 
     for p in positions:
-        try:
-            is_etf = p.ticker in ('TSLL', 'ETHU', 'SPY', 'QQQ', 'TLT', 'GLD', 'USO', 'UUP') or 'ETF' in (p.ticker or '')
-            if is_etf:
-                continue
-            cal = fmp.get_earnings_calendar(ticker=p.ticker, days_ahead=90)
-            if cal:
-                for entry in cal[:1]:  # Take the nearest earnings date
-                    ds = entry.get("date", "")[:10]
-                    if ds:
-                        c = cache_map.get(p.ticker)
-                        sd = json.loads(c.data_json) if c and c.data_json else {}
-                        earnings.append({
-                            "ticker": p.ticker,
-                            "name": canonical_display_name(sd.get("name"), p.ticker),
-                            "date": ds, "signal": sd.get("signal", "—"),
-                            "score": sd.get("score", 0),
-                        })
-        except Exception:
-            logger.debug("silent-fallback: earnings_calendar", exc_info=True)
-            pass
+        item = _earnings_item_for_ticker(p.ticker, cache=cache_map.get(p.ticker))
+        if item:
+            earnings.append(item)
     earnings.sort(key=lambda x: x.get("date", "9999"))
     return jsonify({"earnings": earnings})
+
+
+@market_bp.route("/earnings/<ticker>")
+@api_auth
+def earnings_for_ticker(ticker):
+    """Next-earnings info for a SINGLE ticker (detail page).
+
+    §101 isolation: the ticker must be in the user's holdings OR watchlist —
+    same access_guard gate used by canslim/swot/signal_detail. Arbitrary
+    un-held / un-watched tickers are refused (403) so this is not an
+    open advisory lookup.
+
+    Response shape mirrors /api/earnings list items:
+        {"earnings": <item|null>}
+    where <item> = {ticker, name, date, signal, score} (or null when the
+    ticker reports no upcoming earnings / is an ETF). The frontend renders
+    it with the same component used for the portfolio earnings list.
+    """
+    ticker = normalize_ticker(ticker)
+    # §101 회피 — 보유/watchlist 종목만 분석 허용 (fail-closed).
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
+
+    item = _earnings_item_for_ticker(ticker)
+    return jsonify({"earnings": item})
 
 
 @market_bp.route("/peers/<ticker>")

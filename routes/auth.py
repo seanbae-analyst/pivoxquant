@@ -297,6 +297,132 @@ def _provision_oauth_user(provider: str, build_user_fn):
     raise RuntimeError("provisioning loop exited without result")  # pragma: no cover
 
 
+class OAuthLinkRefused(Exception):
+    """Raised when an OAuth callback is asked to link a *new* provider id onto
+    an *existing* account by email collision, but the link is unsafe.
+
+    This guards the account-takeover vector: a provider asserting an email it
+    did not verify (or an email that belongs to a password account) must not be
+    silently merged into the existing account and logged in. The callback
+    catches this and bounces the user to /login?error=oauth_link_refused
+    instead of completing the login.
+
+    The two dominant *safe* paths are unaffected:
+      1. brand-new user (no existing account)               → create + login
+      2. returning user whose google_id/kakao_id matches     → login
+    Only the EMAIL-MATCH-but-NEW-provider-id linking branch consults this.
+    """
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
+def _email_is_provider_verified(provider: str, raw: dict) -> bool:
+    """Return whether ``raw`` (provider userinfo / kakao_account) asserts the
+    email as *verified*.
+
+    Decision (a): both providers reliably expose a verified flag, so we honour
+    it for the linking guard:
+      * Google OIDC userinfo includes ``email_verified`` (boolean). Some legacy
+        shapes use ``verified_email``.
+      * Kakao ``kakao_account`` includes ``is_email_verified`` (boolean).
+
+    Conservative default: treat the email as verified UNLESS the flag is
+    explicitly ``False``. An explicit ``False`` is the only reliable signal of
+    a spoofable / unverified email and is the documented takeover vector. A
+    *missing* key (should not happen for these scopes) defaults to verified so
+    a legitimate login is never broken by an unexpected response shape — see
+    the module REPORT for rationale.
+    """
+    if provider == "google":
+        flag = raw.get("email_verified")
+        if flag is None:
+            flag = raw.get("verified_email")
+    elif provider == "kakao":
+        flag = raw.get("is_email_verified")
+    else:  # pragma: no cover — defensive
+        flag = None
+    # Only an explicit boolean False (or the string "false") blocks linking.
+    if flag is False:
+        return False
+    if isinstance(flag, str) and flag.strip().lower() == "false":
+        return False
+    return True
+
+
+def _guard_oauth_email_link(provider: str, existing_user, verified_email: bool):
+    """Decide whether linking a NEW provider id onto ``existing_user`` (matched
+    by email) is allowed. Raises :class:`OAuthLinkRefused` if not.
+
+    Two refusal conditions (defense-in-depth — Fix 1, decision (a)):
+      * the incoming email is NOT provider-verified (``verified_email`` False)
+        → a provider is asserting an email it did not verify; refusing closes
+          the cross-provider takeover vector.
+      * the existing account has a non-null ``password_hash`` → never merge a
+        social identity onto a credentialed account. Harmless today (OAuth-only
+        app, password_hash ~always NULL) but closes the vector if a password
+        login is ever added.
+
+    Returns nothing on success (caller proceeds to link + login).
+    """
+    if getattr(existing_user, "password_hash", None) is not None:
+        raise OAuthLinkRefused("password_account")
+    if not verified_email:
+        raise OAuthLinkRefused("email_unverified")
+
+
+def _send_oauth_link_alert(user, *, provider: str) -> bool:
+    """Fire a TRANSACTIONAL security-notification email to ``user`` telling the
+    real owner that a new login provider (``provider``) was just linked to
+    their account. Best-effort: failure is swallowed by the caller.
+
+    PIPA / 정통망법 §50 — security/account mail is transactional and bypasses
+    the marketing-consent gate (mirrors ``_send_deletion_request_email``).
+    """
+    from services.email import EmailSender
+    from services.email.sender import EmailCategory
+    from html import escape
+
+    provider_label = {"google": "Google", "kakao": "Kakao"}.get(provider, provider)
+    user_name = escape((getattr(user, "name", "") or "").strip() or "고객")
+    safe_provider = escape(provider_label)
+
+    html_body = f"""<!doctype html>
+<html lang="ko"><body style="margin:0;padding:24px;background:#F6F3EC;
+font-family:'Source Serif 4',Georgia,serif;color:#0A0A0A;">
+  <div style="max-width:560px;margin:0 auto;background:#FBFAF6;padding:32px;">
+    <p style="margin:0;font-size:11px;letter-spacing:0.28em;
+      text-transform:uppercase;color:#B8956A;">PIVOXQUANT &middot; 보안 안내</p>
+    <h1 style="margin:16px 0 8px 0;font-size:20px;line-height:1.32;
+      font-weight:600;letter-spacing:-0.01em;">
+      {user_name}님, 새 로그인 수단이 연결되었습니다.
+    </h1>
+    <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
+      회원님의 계정에 <strong>{safe_provider}</strong> 로그인이 연결되었습니다.
+      직접 진행하신 것이라면 별도 조치가 필요하지 않습니다.
+    </p>
+    <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
+      본인이 하지 않은 경우 즉시 고객센터(support@pivoxquant.com)로
+      연락해주세요.
+    </p>
+    <p style="margin:24px 0 0 0;font-size:11px;color:#888;">
+      본 메일은 보안/계정 관련(transactional) 정보로 §50 광고성 정보 발신에
+      해당하지 않습니다.
+    </p>
+  </div>
+</body></html>"""
+
+    return EmailSender().send(
+        user,
+        subject="[PivoxQuant] 새 로그인 수단 연결 안내",
+        html_body=html_body,
+        from_env_var="SECURITY_FROM_EMAIL",
+        from_default="reports@pivoxquant.com",
+        email_category=EmailCategory.TRANSACTIONAL,
+    )
+
+
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 # Root-level alias blueprint for `/api/logout`. Some clients (user-tester
@@ -867,6 +993,10 @@ def google_callback():
             return redirect(f"{origin}/login?error=google_failed")
         name = userinfo.get("name") or email.split("@")[0]
         avatar = userinfo.get("picture")
+        email_verified = _email_is_provider_verified("google", userinfo)
+        # Fix 1: track when we LINK a new provider id onto an existing account
+        # so the owner gets a security email after a successful commit.
+        link_alert = {"user": None}
 
         # Find existing user by google_id or email. The find-or-create body
         # is wrapped in _provision_oauth_user so a transient Railway PG flap
@@ -880,12 +1010,19 @@ def google_callback():
                 return user
             user = User.query.filter_by(email=email).first()
             if user:
+                # Fix 1 — EMAIL-MATCH-but-new-provider-id linking branch.
+                # Refuse to silently merge an unverified email or merge onto a
+                # credentialed (password) account. Raises OAuthLinkRefused,
+                # which the callback maps to a clean /login error (NOT a
+                # provisioning_failed DB-retry path).
+                _guard_oauth_email_link("google", user, email_verified)
                 # Link existing email account with Google
                 user.google_id = google_id
                 if not user.oauth_provider:
                     user.oauth_provider = "google"
                 if avatar and not user.avatar_url:
                     user.avatar_url = avatar
+                link_alert["user"] = user
             else:
                 # Create new Google user. ``birthdate`` is left NULL — the
                 # frontend interstitial (``/signup/oauth-finalize``) will
@@ -906,6 +1043,19 @@ def google_callback():
 
         session.clear()  # Session fixation 방어
         login_user(user, remember=True)
+    except OAuthLinkRefused as refused:
+        # Fix 1 — refused cross-provider/email-collision link. NOT a server
+        # error: bounce the user to /login with a clear error code. Session is
+        # untouched (login_user never ran); the existing account is unchanged.
+        try:
+            db.session.rollback()
+        except Exception:
+            logger.debug("silent-fallback: google link refused rollback", exc_info=True)
+        logger.warning(
+            "Google OAuth link refused (reason=%s) — not linking/login", refused.reason,
+        )
+        _log_auth_event(email, "google", "fail", f"link_refused_{refused.reason}")
+        return redirect(f"{origin}/login?error=oauth_link_refused")
     except Exception as exc:
         exc_type = type(exc).__name__
         exc_msg = str(exc)[:200]
@@ -946,6 +1096,17 @@ def google_callback():
         return redirect(f"{origin}/login?error=account_pending_deletion")
 
     _log_auth_event(email, "google", "success")
+
+    # Fix 1 — a new provider id was linked onto an existing account this
+    # request. Alert the real owner (best-effort, non-fatal).
+    if link_alert.get("user") is not None:
+        try:
+            _send_oauth_link_alert(link_alert["user"], provider="google")
+        except Exception:
+            logger.exception(
+                "google link-alert email failed (non-fatal) user_id=%s",
+                getattr(link_alert.get("user"), "id", None),
+            )
 
     # PIPA §22 ⑥ — birthdate gate. New users *and* legacy users (created
     # before migration 031) reach here with ``birthdate IS NULL`` and must
@@ -1039,9 +1200,19 @@ def kakao_callback():
         name = kakao_profile.get("nickname") or ""
         avatar = kakao_profile.get("profile_image_url")
 
-        # If Kakao didn't provide an email, generate a placeholder
+        # Kakao exposes the verified signal inside kakao_account
+        # (is_email_verified). Compute BEFORE the placeholder fallback so a
+        # real Kakao-asserted email is judged on its own flag.
+        email_verified = _email_is_provider_verified("kakao", kakao_account)
+
+        # If Kakao didn't provide an email, generate a placeholder. A
+        # placeholder is unique per kakao_id and cannot collide with a real
+        # account's email, so it never reaches the link-guard refusal path.
         if not email:
             email = f"kakao_{kakao_id}@kakao.local"
+
+        # Fix 1: track when we LINK a new provider id onto an existing account.
+        link_alert = {"user": None}
 
         # Find existing user by kakao_id or email. Wrapped in the shared
         # _provision_oauth_user helper so a transient Railway PG flap during
@@ -1052,12 +1223,17 @@ def kakao_callback():
                 return user
             user = User.query.filter_by(email=email).first()
             if user:
+                # Fix 1 — EMAIL-MATCH-but-new-provider-id linking branch.
+                # Same guard as Google: refuse unverified-email or
+                # password-account merges. Raises OAuthLinkRefused.
+                _guard_oauth_email_link("kakao", user, email_verified)
                 # Link existing account with Kakao
                 user.kakao_id = kakao_id
                 if not user.oauth_provider:
                     user.oauth_provider = "kakao"
                 if avatar and not user.avatar_url:
                     user.avatar_url = avatar
+                link_alert["user"] = user
             else:
                 # Create new Kakao user
                 user = User(
@@ -1074,6 +1250,17 @@ def kakao_callback():
 
         session.clear()  # Session fixation 방어
         login_user(user, remember=True)
+    except OAuthLinkRefused as refused:
+        # Fix 1 — refused cross-provider/email-collision link (mirrors Google).
+        try:
+            db.session.rollback()
+        except Exception:
+            logger.debug("silent-fallback: kakao link refused rollback", exc_info=True)
+        logger.warning(
+            "Kakao OAuth link refused (reason=%s) — not linking/login", refused.reason,
+        )
+        _log_auth_event(email, "kakao", "fail", f"link_refused_{refused.reason}")
+        return redirect(f"{origin}/login?error=oauth_link_refused")
     except Exception as exc:
         exc_type = type(exc).__name__
         exc_msg = str(exc)[:200]
@@ -1112,6 +1299,16 @@ def kakao_callback():
         return redirect(f"{origin}/login?error=account_pending_deletion")
 
     _log_auth_event(email, "kakao", "success")
+
+    # Fix 1 — new provider id linked onto an existing account (best-effort).
+    if link_alert.get("user") is not None:
+        try:
+            _send_oauth_link_alert(link_alert["user"], provider="kakao")
+        except Exception:
+            logger.exception(
+                "kakao link-alert email failed (non-fatal) user_id=%s",
+                getattr(link_alert.get("user"), "id", None),
+            )
 
     # PIPA §22 ⑥ — birthdate gate (mirrors google_callback).
     if user.birthdate is None:

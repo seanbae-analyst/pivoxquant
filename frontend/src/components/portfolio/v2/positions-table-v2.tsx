@@ -16,7 +16,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { EditorialHead } from "@/components/ui/editorial";
-import { fmtMoneyPlain, fmtPctSignedMinus, displayTicker, normalizeTicker } from "@/lib/format";
+import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 
 type SortKey =
@@ -69,12 +69,10 @@ function fmtPctSigned(n: number): string {
   return fmtPctSignedMinus(n, 2);
 }
 
-function pctColor(n: number): string {
-  if (!Number.isFinite(n)) return "rgba(245,240,232,0.55)";
-  if (n > 0) return "var(--pq-positive, #b8956a)";
-  if (n < 0) return "var(--pq-negative, #d18888)";
-  return "rgba(245,240,232,0.55)";
-}
+// P&L gain/loss color now uses the site-canonical KR convention helper
+// (lib/format.pctColor): gain → carmine #D18888, loss → indigo #7AA0C8,
+// flat → muted ivory. The old local helper inverted this (gain → bronze),
+// diverging from detail/watchlist. Bronze stays a brand accent elsewhere.
 
 interface DerivedPosition {
   raw: Position;

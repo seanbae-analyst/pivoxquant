@@ -283,9 +283,19 @@ export default function StockDetailPage() {
     ? (insiderRes!.data as InsiderFiling[])
     : [];
 
-  /* ── Zone3: earnings (independent) ── */
-  const { data: earningsRes } = useSWR<EarningsResponse>(
-    ticker ? API.market.earnings : null,
+  /* ── Zone3: earnings (independent, per-ticker) ──
+     Fetch the NEW per-ticker endpoint /api/earnings/<ticker> (gated to the
+     user's holdings+watchlist, §101-safe) instead of the portfolio-only
+     /api/earnings list + client-side filter — the old approach made
+     watchlist-only tickers wrongly show "earnings not available".
+
+     Response is parsed defensively: the backend may return a single item,
+     a bare array, or a { earnings | data: [...] } wrapper. A 403 (ticker
+     out of the user's scope), 404, or empty all collapse to [] → the
+     EarningsPanel renders its genuine empty state. shouldRetryOnError keeps
+     a 403 from looping. */
+  const { data: earningsRes } = useSWR<EarningsResponse | EarningsItem[] | EarningsItem>(
+    ticker ? API.market.earningsByTicker(ticker) : null,
     fetcher,
     {
       refreshInterval: 600_000,
@@ -296,11 +306,24 @@ export default function StockDetailPage() {
     },
   );
   const earningsForTicker: EarningsItem[] = useMemo(() => {
-    const list = earningsRes?.earnings ?? earningsRes?.data ?? [];
-    if (!ticker) return [];
+    if (!ticker || earningsRes == null) return [];
+    let list: EarningsItem[];
+    if (Array.isArray(earningsRes)) {
+      list = earningsRes;
+    } else if ("earnings" in earningsRes || "data" in earningsRes) {
+      list = earningsRes.earnings ?? earningsRes.data ?? [];
+    } else {
+      // Single bare item (the per-ticker endpoint may return one object).
+      list = [earningsRes as EarningsItem];
+    }
+    // Endpoint is already ticker-scoped; keep a light guard for the
+    // wrapper/list shape but do NOT drop the single-item case.
     const upper = ticker.toUpperCase();
     return list
-      .filter((e) => (e.ticker || e.symbol || "").toUpperCase() === upper)
+      .filter((e) => {
+        const t = (e.ticker || e.symbol || "").toUpperCase();
+        return t === "" || t === upper;
+      })
       .slice(0, 4);
   }, [earningsRes, ticker]);
 

@@ -51,7 +51,10 @@ const jsonFetcher = <T,>(url: string) => apiFetch<T>(url);
 interface BackendOverviewItem { name: string; symbol: string; level: number; change_pct: number; observed_at?: string; is_stale?: boolean; }
 interface BackendMover { ticker: string; name: string; price: number; change_pct: number; }
 interface BackendMoversResponse { region: string; gainers: BackendMover[]; losers: BackendMover[]; }
-interface BackendSectorRow { sector: string; d1: number; d5: number; m1: number; }
+// d5 / m1 are now `number | null`: the backend no longer fabricates them
+// from d1×2.5 / d1×5.0 — when the multi-day window is unavailable it sends
+// null, and we render "—" rather than a misleading derived figure.
+interface BackendSectorRow { sector: string; d1: number; d5: number | null; m1: number | null; }
 interface BackendScreenerItem { ticker: string; name: string; metric: string; metric_value: string; }
 interface BackendScreeners {
   oversold_rsi: BackendScreenerItem[];
@@ -67,8 +70,9 @@ function weekTag(): string {
   return `${d.getFullYear()} · W${String(w).padStart(2, "0")}`;
 }
 
-function deltaCls(v: number) {
+function deltaCls(v: number | null | undefined) {
   // KR convention (CEO directive 2026-04-26): ▲ rising = red, ▼ falling = blue.
+  if (v == null) return "text-[rgba(245,240,232,0.55)]";
   if (v > 0) return "text-[#d18888]";
   if (v < 0) return "text-[#7aa0c8]";
   return "text-[rgba(245,240,232,0.55)]";
@@ -518,8 +522,10 @@ export default function DiscoverPage() {
                     <tr key={s.sector}>
                       <td className="text-[rgba(245,240,232,0.85)]">{s.sector}</td>
                       <td className={"num " + deltaCls(s.d1)}>{fmtPct(s.d1)}</td>
-                      <td className={"num " + deltaCls(s.d5)}>{fmtPct(s.d5)}</td>
-                      <td className={"num " + deltaCls(s.m1)}>{fmtPct(s.m1)}</td>
+                      {/* d5 / m1 may be null (backend stopped fabricating them
+                          from d1) — render "—", never a coerced "0.00%". */}
+                      <td className={"num " + deltaCls(s.d5)}>{s.d5 == null ? "—" : fmtPct(s.d5)}</td>
+                      <td className={"num " + deltaCls(s.m1)}>{s.m1 == null ? "—" : fmtPct(s.m1)}</td>
                     </tr>
                   ))}
                 </tbody>

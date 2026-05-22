@@ -249,6 +249,33 @@ def notify_bell_alert(user_id: int, kind: str, title: str,
     when they qualify.
     """
     # send_push_to_user lives in this module now (PR #437).
+    #
+    # FIX 1 (2026-05-22) — per-event push pref gate. When this bell ``kind``
+    # maps to one of the 7 NOTIFICATION_EVENT_IDS, consult the user's stored
+    # push pref before delivering (the Settings → Notifications matrix must
+    # actually silence pushes for events the user toggled off). The
+    # kind→event_id map is owned by services.alert._BELL_KIND_TO_EVENT_ID; an
+    # unmapped kind (every current one) is delivered as before. FAIL-OPEN:
+    # any lookup failure leaves the push un-gated.
+    try:
+        from services.alert import _BELL_KIND_TO_EVENT_ID
+        event_id = _BELL_KIND_TO_EVENT_ID.get(kind)
+    except Exception:
+        event_id = None
+    if event_id is not None:
+        try:
+            from models import User
+            u = User.query.get(user_id)
+            if u is not None and not u.notification_channel_enabled(event_id, "push"):
+                logger.info(
+                    "notify_bell_alert suppressed by push pref user_id=%s "
+                    "kind=%s event_id=%s", user_id, kind, event_id,
+                )
+                return
+        except Exception:
+            logger.debug("push pref gate lookup failed in notify_bell_alert",
+                         exc_info=True)
+
     transactional = kind in TRANSACTIONAL_BELL_KINDS
     full_title = f"PivoxQuant — {title}" if title else "PivoxQuant"
 

@@ -245,7 +245,11 @@ export default function WatchlistPage() {
                             "num " + pctColorClass(item.change_pct)
                           }
                         >
-                          {fmtPct(item.change_pct ?? 0)}
+                          {/* Data honesty: null change_pct (stale / no fresh
+                              price) renders "—", not a fabricated "+0.00%". */}
+                          {item.change_pct == null
+                            ? "—"
+                            : fmtPct(item.change_pct)}
                         </td>
                         <td className="font-mono text-pq-mono-sm text-[rgba(245,240,232,0.55)]">
                           {fmtRange52w(item.range_52w, item.currency)}
@@ -347,7 +351,11 @@ export default function WatchlistPage() {
                           pctColorClass(item.change_pct)
                         }
                       >
-                        {fmtPct(item.change_pct ?? 0)}
+                        {/* Data honesty: null change_pct (stale / no fresh
+                            price) renders "—", not a fabricated "+0.00%". */}
+                        {item.change_pct == null
+                          ? "—"
+                          : fmtPct(item.change_pct)}
                       </span>
                     </div>
 
