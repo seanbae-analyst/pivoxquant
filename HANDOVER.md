@@ -1,4 +1,40 @@
-# PivoxQuant — 인수인계서 (2026-05-22 v47 — 🟢 능동 버그헌팅 2 wave + 구조점검 + E2E 검증 (13 fix / 2 commit / 법규·보안·데이터))
+# PivoxQuant — 인수인계서 (2026-05-22 v48 — 🟢 포지션 플로우 전면 개편: Add/Sell/Edit 모드 분기 + 2분 쿨다운 제거 + 매수일 + 티커 자동완성 + 벤치마크 KPI + 즉시갱신 (prod 라이브 전수 검증))
+
+> **세션 최종 검증**: backend pytest **2816 passed**(기존 flaky fx_staleness 2 외 0) + targeted 283 passed / FE tsc exit 0 / vitest **444 passed** (worker 환경 크래시로 1회 16-file 부분실행 떴으나 재실행 41 files/444 green 확인) / 0 회귀 / 0원. 3 commit (`98a031f4` + `e6007d41` + handover). main `18675aba → e6007d41`. **BE railway 배포 SUCCESS(health ok) + FE Vercel 자동배포.** prod 브라우저로 Add/Sell/Edit/자동완성/매수일/벤치마크KPI/즉시갱신 **전수 라이브 검증 통과.**
+
+## v48 2026-05-22 — 포지션 플로우 개편 (CEO 라이브 도그푸딩 피드백 루프)
+
+> **🟢 결론: CEO가 prod에서 직접 써보며 "자산 추가했는데 포트폴리오에 안 들어간다 / 2분 뭐냐 / 자산 동기화인데 매수 질문 뜬다 / 날짜 물어봐야지 / 티커 치면 종목명 떠야지"를 연달아 제기 → 전부 근본 추적 후 수정·prod 배포·라이브 증명.** 근본원인은 **add/sell이 무조건 7문항+2분 쿨다운 friction을 거쳐야만 저장**되는 구조 — 대부분 유저는 "이미 보유/체결한 걸 기록"하려는 건데 "지금 살까/팔까 고민" friction을 강요당해, 끝까지 안 하면 **조용히 저장 실패**(폼 제출=친구 모달만 열림, 실제 POST는 onProceed에서만).
+
+### ✅ 변경 (commits `98a031f4`, `e6007d41` — origin/main 푸시)
+| # | 영역 | 내용 | 검증 |
+|---|---|---|---|
+| 1 | **Add/Buy/Sell 모드 분기** | add-position-modal-v2 + trade-modal-v2에 **"이미 보유/체결 · 기록만"(기본, 친구 없이 즉시 POST, thesis 선택)** vs **"신규 검토 · 7문항"** 토글. Edit은 무변경(원래 friction 없이 즉시 PATCH) | ✅ prod: 보유모드 RECORD→POST 200 즉시저장, 7문항 안 뜸 |
+| 2 | **2분 쿨다운 제거** | `models/pre_trade_reflection.py` DEFAULT/EXTENDED_COOLDOWN_SECONDS=0 + friction-core 자동 proceed(ready 시 카운트다운 화면 스킵). 7문항 self-reflection은 보존, 시간 강제만 제거. friction.py/page 주석 정리. **전수 grep으로 다른 하드코딩 120/2분 타이머 0건 확인** | ✅ prod: Add/Sell 어디서도 2분 안 나옴 |
+| 3 | **매수일(purchase date) 필드** | add 모달에 `<input type=date>`(기본 today, max=today). `create_position_alias`+`add_position`이 `purchase_date`("YYYY-MM-DD") 파싱→`Position.added_at`(=opened_at 직렬화). 미래/1900이전 거부→now 폴백, merge 시 최초 개시일 보존 | ✅ prod: 2025-03-15 입력→API `purchaseDate:"2025-03-15"` 저장 |
+| 4 | **Symbol 티커 자동완성** | add 모달 Symbol에 debounced `/api/search?q=&limit=6` 드롭다운(종목명+티커+거래소), 클릭 시 canonical 티커. watchlist add-symbol-modal 패턴 미러링 + allow-raw-fetch 가드 주석 | ✅ prod: "MCD"→McDonald's / "PEP"→PepsiCo / "KO"→KR명 매칭 |
+| 5 | **벤치마크 KPI "—" 수정** | equity-curve-block `benchmarkReturn`이 `series[0]/[last].benchmark` 사용→벤치마크 시리즈가 첫구간 없어 undefined→"—". **첫/끝 유효 benchmark 포인트 기준**으로 변경(라인은 이미 복구됨) | ✅ prod: BENCHMARK +109.81% / SPREAD -47.20pp |
+| 6 | **add/edit/sell 후 즉시갱신** | `refreshAll`이 `mutate(key)`만 하면 10s dedupingInterval(PORTFOLIO_DEDUPE_MS)에 걸려 직전 백그라운드 poll과 겹칠 때 refetch 억제→"추가했는데 리스트 그대로" 현상. **fresh fetch promise를 캐시에 직접 주입(revalidate:false)으로 dedup 우회**, 실패 시 plain revalidate 폴백. fetcher export | ✅ prod: Record 후 reload 없이 hero 12→13 즉시 |
+| — | tsc 픽스 | trade-modal-v2 테스트 fixture가 Position 필수필드(side/sector/purchaseDate) 누락 → 추가, tsc exit 0 | ✅ |
+
+### 🔬 prod 라이브 E2E (sanghyun0115@naver.com founding_lifetime, Claude-in-Chrome)
+- **근본원인 실증**: 직접 `POST /api/portfolio/positions` → 200 정상저장(백엔드·티어캡 무관) → "안 들어간다"는 100% 프론트 friction 게이트 미완료 때문임을 확정.
+- **Add 보유모드**: 자동완성(MCD→McDonald's) → 매수일 2025-03-15 → RECORD → POST 200 + 토스트 "Position recorded" + **7문항·2분 없음** + API `purchaseDate` 저장 확인.
+- **Edit**: PATCH 200, avg_cost 250→255 저장 확인(API).
+- **Sell 기록모드**: RECORD → "Trade recorded" + 7문항·2분 없음 + shares 3→2.
+- **즉시갱신**: Record 후 reload 없이 hero 12→13 즉시.
+- **v47 FE 3건**: 403 CTA(NFLX→"관심종목 추가") / 벤치마크 라인 / 알림 매트릭스 — 전부 ✅.
+- 검증용 테스트 포지션(KO id23, MCD id24, PEP) 생성→전부 삭제, 포트폴리오 원복(12).
+
+### ⚠️ 잔여 / 참고
+- 매수일은 `Position.added_at`(=opened_at)에 매핑 — 별도 purchase_date 컬럼 없음(의미 정합: opened_at=개시일). 신규 mode는 기본 today.
+- 신규 mode 7문항은 보존(제품 차별점 "Deposition"). 쿨다운만 0. 신규모드 라이브 클릭은 미검증(쿨다운 0 자동proceed는 vitest friction-cooldown-skip로 커버).
+- KR 종목 자동완성은 종목명 우선 매칭("KO"→고려아연 등) — 정상.
+- 벤치마크 KPI 윈도우는 포트폴리오 전구간과 약간 다를 수 있음(벤치마크 가용 구간 기준, 코드 주석 명시) — "—"보다 나음.
+
+---
+
+# (이전) PivoxQuant — 인수인계서 (2026-05-22 v47 — 🟢 능동 버그헌팅 2 wave + 구조점검 + E2E 검증 (13 fix / 2 commit / 법규·보안·데이터))
 
 > **세션 최종 검증**: backend pytest **2788 passed** (사전존재 flaky `test_fx_staleness` 2건 외 0 fail) / FE tsc exit 0 / vitest **37 files 430 passed** / audit-code 8/8 PASS / 라이브 curl E2E (soft-delete 로그아웃·AAPL fundamentals 복구·KR 지수 freshness·legal_filter repro) / 0 회귀 / 비용 0원. 2 commit (`06cbc88b` wave-1 + `2d6cc750` wave-2) origin/main 푸시 완료. **FE Vercel 자동배포 + BE `railway up` 배포 진행**.
 
