@@ -131,7 +131,10 @@ def test_submit_onboarding_clears_draft(app, client, auth_user):
     )
     assert r1.status_code == 200
 
-    # Submit full onboarding.
+    # Submit full onboarding. A non-empty submission must carry the
+    # legal_confirmations block (v51 §6 gate — direct-API bypass via
+    # legacy v1 keys is now rejected 400; the real frontend always sends
+    # this block on a non-empty submit).
     r2 = client.post(
         "/api/profile/onboarding",
         json={"answers": {
@@ -143,6 +146,10 @@ def test_submit_onboarding_clears_draft(app, client, auth_user):
             "preferred_sectors": [],
             "auto_trade_preference": "manual",
             "daily_time": "moderate",
+            "legal_confirmations": [
+                "age_18", "experience_acknowledged", "risk_acknowledged",
+                "past_performance", "ai_advisory",
+            ],
         }},
     )
     assert r2.status_code == 200, r2.get_data(as_text=True)

@@ -333,9 +333,16 @@ def main() -> int:
 
     try:
         from app import create_app
+        from extensions import db
     except Exception as exc:
         logger.error("create_app import failed: %s", exc)
         return 1
+
+    # Transient app: ALSO registered into the in-process APScheduler
+    # (services/scheduler/cron_jobs.py:_wrap_python_main). Suppress the
+    # redundant FMP-hitting cache warmup — the main web app already warmed it.
+    # create_app reads this env at call time (app.py:355).
+    os.environ["POPULATE_CACHE_ON_BOOT"] = "0"
 
     try:
         app = create_app()
@@ -343,12 +350,20 @@ def main() -> int:
         logger.error("create_app() failed: %s", exc)
         return 1
 
-    with app.app_context():
+    try:
+        with app.app_context():
+            try:
+                summary = run_once()
+            except Exception:
+                logger.exception("oauth_failure_check crashed")
+                return 1
+    finally:
+        # Release the transient QueuePool now rather than letting it linger
+        # ~300s toward Railway PG's 25-conn ceiling. Harmless standalone.
         try:
-            summary = run_once()
+            db.engine.dispose()
         except Exception:
-            logger.exception("oauth_failure_check crashed")
-            return 1
+            logger.debug("engine dispose failed (non-fatal)", exc_info=True)
 
     print(f"oauth_failure_check summary: {summary}")
     return 0

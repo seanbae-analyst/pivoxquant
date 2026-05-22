@@ -101,65 +101,83 @@ def _drain_once() -> dict[str, int]:
         "skipped_no_email": 0,
     }
 
+    # Transient app: this dispatcher is ALSO registered into the in-process
+    # APScheduler (services/scheduler/cron_jobs.py:_wrap_python_main), so each
+    # 15-min tick calls create_app() from a scheduler thread. The main web app
+    # already warmed the cache — a second warmup thread here would just burn
+    # FMP quota. Suppress it. (create_app reads this env at call time, app.py:355.)
+    os.environ["POPULATE_CACHE_ON_BOOT"] = "0"
+
     app = create_app()
-    with app.app_context():
-        rows = list(CheckoutExpiration.pending_due(limit=100))
-        stats["due"] = len(rows)
-        if not rows:
-            logger.info("no due rows — clean exit")
-            return stats
+    try:
+        with app.app_context():
+            rows = list(CheckoutExpiration.pending_due(limit=100))
+            stats["due"] = len(rows)
+            if not rows:
+                logger.info("no due rows — clean exit")
+                return stats
 
-        flag_on = followup_enabled()
-        if not flag_on:
-            logger.info(
-                "PIVOX_CHECKOUT_FOLLOWUP_ENABLED is off — marking %d "
-                "due rows as feature_flag_off",
-                len(rows),
-            )
-
-        for row in rows:
-            # Each row processed in its own try/commit so a bad row
-            # doesn't poison the rest. Match the per-row resilience
-            # used in the artifacts nightly aggregator.
-            try:
-                if not flag_on:
-                    row.mark_skipped("feature_flag_off")
-                    db.session.commit()
-                    stats["skipped_flag_off"] += 1
-                    continue
-
-                user = db.session.get(User, row.user_id)
-                if user is None or not getattr(user, "email", None):
-                    row.mark_skipped("no_user_or_email")
-                    db.session.commit()
-                    stats["skipped_no_email"] += 1
-                    continue
-
-                # User completed checkout between expired and now —
-                # don't pester them.
-                if getattr(user, "subscription_status", None) == "active":
-                    row.mark_skipped("already_subscribed")
-                    db.session.commit()
-                    stats["skipped_already_active"] += 1
-                    continue
-
-                ok = send_checkout_followup(user=user)
-                if ok:
-                    row.mark_sent()
-                    stats["sent"] += 1
-                else:
-                    row.mark_skipped("provider_failed")
-                    stats["skipped_provider_failed"] += 1
-                db.session.commit()
-            except Exception as exc:  # noqa: BLE001
-                # Roll back this row's mutation only — others already
-                # committed. Log + continue (cron will retry next tick
-                # but the row is unchanged, so no double-send risk).
-                db.session.rollback()
-                logger.exception(
-                    "checkout_followup row failed (id=%s session=%s): %s",
-                    row.id, row.session_id, exc,
+            flag_on = followup_enabled()
+            if not flag_on:
+                logger.info(
+                    "PIVOX_CHECKOUT_FOLLOWUP_ENABLED is off — marking %d "
+                    "due rows as feature_flag_off",
+                    len(rows),
                 )
+
+            for row in rows:
+                # Each row processed in its own try/commit so a bad row
+                # doesn't poison the rest. Match the per-row resilience
+                # used in the artifacts nightly aggregator.
+                try:
+                    if not flag_on:
+                        row.mark_skipped("feature_flag_off")
+                        db.session.commit()
+                        stats["skipped_flag_off"] += 1
+                        continue
+
+                    user = db.session.get(User, row.user_id)
+                    if user is None or not getattr(user, "email", None):
+                        row.mark_skipped("no_user_or_email")
+                        db.session.commit()
+                        stats["skipped_no_email"] += 1
+                        continue
+
+                    # User completed checkout between expired and now —
+                    # don't pester them.
+                    if getattr(user, "subscription_status", None) == "active":
+                        row.mark_skipped("already_subscribed")
+                        db.session.commit()
+                        stats["skipped_already_active"] += 1
+                        continue
+
+                    ok = send_checkout_followup(user=user)
+                    if ok:
+                        row.mark_sent()
+                        stats["sent"] += 1
+                    else:
+                        row.mark_skipped("provider_failed")
+                        stats["skipped_provider_failed"] += 1
+                    db.session.commit()
+                except Exception as exc:  # noqa: BLE001
+                    # Roll back this row's mutation only — others already
+                    # committed. Log + continue (cron will retry next tick
+                    # but the row is unchanged, so no double-send risk).
+                    db.session.rollback()
+                    logger.exception(
+                        "checkout_followup row failed (id=%s session=%s): %s",
+                        row.id, row.session_id, exc,
+                    )
+    finally:
+        # Release the transient QueuePool immediately. Under the in-process
+        # scheduler each tick spins a new pool (size 3 + overflow 2 = 5 conns)
+        # that would otherwise linger ~300s (pool_recycle) toward Railway PG's
+        # 25-conn ceiling. Dispose closes it now. Harmless under standalone
+        # crontab (short-lived process exits anyway).
+        try:
+            db.engine.dispose()
+        except Exception:  # noqa: BLE001
+            logger.debug("engine dispose failed (non-fatal)", exc_info=True)
 
     return stats
 

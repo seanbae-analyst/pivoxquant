@@ -1,3 +1,48 @@
+# PivoxQuant — 인수인계서 (2026-05-23 v51 — 🟢 오버나잇 자율 버그헌팅 wave 3: backtest·PIPA·artifacts·automation (13 fix, 회귀 0, 배포))
+
+## v51 2026-05-23 — 오버나잇 자율 버그헌팅 wave 3 (CEO "계속 잡아" 연속)
+
+> **🟢 결론: bug-hunter 4도메인(backtest/quant 심층 · onboarding/consents/PIPA · artifacts 렌더링 · scheduler/automation) → 실질 버그 13 fix.** 모든 fix는 lead가 root cause 확정 후 위임(false-fix 방지). wave-3는 방법론/제품/설계 판단형이 증가 — **clear+안전만 fix, 방법론/제품/설계는 defer+문서화**(오버나잇 자율로 금융 방법론·제품기능 변경 위험 회피).
+>
+> **검증(회귀 0)**: 백엔드 전체 스위트 (wave-3 신규 회귀테스트 ~50개 포함) / 3 known env-flake 단독 PASS / FE wave-3에서 불변(전부 백엔드).
+
+### ✅ Artifacts 렌더링 (6 fix — services/artifacts/* + templates)
+| # | 버그 → fix |
+|---|---|
+| 1 | 🔴 **P0 가짜 P&L**: brag card 이메일 템플릿이 `best_pnl_usd|default(1240)`/`win_rate|default(67.0)`/`hold_days|default(8)` — 서비스가 이 필드들을 안 채움(% 데이터만 있음) → **모든 실유저에 "+$1,240·67%·8일" 가짜 실현손익 표시**. 가짜 필드 제거+실제 best_return_pct %로 대체(is-not-none 가드, 빈 경우 중립 문구). **CI 가드(test_no_hardcoded_samples) 강화** — `default(N)` bare-numeric 탐지 추가(기존 가드는 quoted `$`/티커만) → 2번째 위반(earnings digest `default(30)`)도 잡아 수정 |
+| 2 | earnings prebrief PDF가 KR 포지션 평가액에 `$`(실은 KRW, ~1300x 오인) → `currency_prefix(ticker)` ₩/$ |
+| 3 | `earnings_datetime` raw UTC 표시(KR 타깃인데 KST 미변환) → `_format_earnings_kst` ZoneInfo Asia/Seoul, "… KST (… UTC)" |
+| 4 | brag `run_monthly`가 target_month 시 `end` 미할당(`start.replace` 반환 폐기) latent NameError → `end =` 할당 |
+| 5 | 본문 styled unsubscribe 링크 dead(`unsubscribe_url` 렌더 ctx 누락) → brag/weekly/earnings 3서비스 ctx 주입(sender injection idempotent no-op, 라이브 검증). §50은 List-Unsub 헤더로 이미 충족 |
+| 6 | earnings AI 예산 parse 실패 시 이중차감 → 1회 소비로 |
+
+### ✅ PIPA/온보딩 (3 fix — routes/auth.py·profile.py)
+| # | 버그 → fix |
+|---|---|
+| 7 | 🟠 **PIPA §21**: 즉시 탈퇴(`delete_account`)가 `NpsFeedback`+`ScheduledEmail` 미삭제(soft-delete cron `pipa_purge`와 diverge) → 고아 PII. 2개 추가(pipa_purge 순서). 라인대조로 **누락은 정확히 2개**만 확인(auth_events는 의도적 anonymize 차이) |
+| 8 | 🟠 **PIPA §35**: self-service export가 BehavioralScore/WeeklyPulse/PersonaSnapshot/NpsFeedback PII 누락(WeeklyPulse 자유서술 worry/learn 포함) → 4 섹션+counts 추가(기존 to_dict 사용) |
+| 9 | 🟠 **자본시장법 §6**: 레거시 v1 answer 키로 면책 게이트 우회(직접 API, onboarding_completed=True) → v1-키+내용이면 400 거부(submit+update 양쪽). 프론트는 empty{}/V2만 전송 확인 → 정상흐름 보존 |
+
+### ✅ Automation/scheduler (3 fix — scripts/nightly·app.py·risk_board_service)
+| # | 버그 → fix |
+|---|---|
+| 10 | 🟠 **커넥션 압박(이전 PG고갈 P0와 동일 클래스)**: 5개 dispatcher가 스케줄러 잡 내에서 `create_app()` → 고아 QueuePool(~15-20/25)+불필요 cache-warmup. `POPULATE_CACHE_ON_BOOT=0`(call-time 읽음 검증)+`try/finally db.engine.dispose()`. 스케줄러/풀크기/advisory-lock 불변, crontab 단독사용 영향 없음 |
+| 11 | 🟠 **가짜 대량메일**: VIX 스파이크 상태파일이 ephemeral+`.railwayignore` 제외 → 배포마다 prev=None이 "below"로 간주돼 VIX≥25면 전 프리미엄에 스파이크 PDF. `has_prior` 가드(prev None이면 seed만, 미발화). 진짜 below→above 전이는 정상 발화 |
+| 12 | 분기 잡 2개 동시(10:00 KST) FMP 버스트 → `portfolio_segment_quarterly` minute=30 stagger (P2) |
+
+### ✅ Backtest (1 fix — services/quant/backtester.py)
+| # | 버그 → fix |
+|---|---|
+| 13 | bare 6자리 KR 티커가 `is_korean`(suffix-only)=False라 US 임계값/자본인데 `_kr`(6자리 포함)=True라 KR 비용 → 비정합. `is_korean`을 공유 `_is_korean_ticker`로 통일(.KS/.KQ·US 불변, bare 6자리만 교정) |
+
+### ⏸️ DEFERRED — 방법론/제품/설계 (오버나잇 자율로 미수행, owner 판단)
+- **backtest DCA 연환산**(B#1): CAGR-on-total-invested(IRR 아님) → DCA에서 수익률 오표기. **XIRR 방법론** 필요 → owner. (lump-sum은 정확.)
+- **backtester 진입-종가 lookahead**(B#3): 시그널과 진입이 같은 바 종가 → alpha 과대(매도도 동일해 부분상쇄). 진입을 다음 바 open으로 = **방법론 변경** → owner 검토.
+- **Quant Composer paper backtest**(B#2): 해시기반 synthetic 지표(weights 무효과). 코드상 **의도적 illustrative + disclaimer wrapper** → 진짜 백테스트 구축/제거는 **제품 결정** → owner. (단 weights UI가 효과없음을 disclaimer가 충분히 알리는지 확인 권장.)
+- **국외이전 동의 §28-8 런타임 enforcement**(O#3): 철회해도 Anthropic/Stripe 호출 계속(자인된 "별도 PR" 갭). AI 호출 차단=AI기능 비활성이라 **설계+제품영향** → owner+법무.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-22 v50 — 🟢 오버나잇 자율 버그헌팅 wave 2: auth·data·notif·market·frontend (15 fix, 회귀 0, 배포))
 
 ## v50 2026-05-22 — 오버나잇 자율 버그헌팅 wave 2 (CEO "나 잘건데 자율모드로 계속 잡아")

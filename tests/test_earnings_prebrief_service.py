@@ -267,6 +267,125 @@ def test_render_pdf_html_contains_required_sections(svc):
         assert word not in html
 
 
+# ─── 4b. FIX 2 — KR position MV renders ₩, not $ ────────────────────────────
+
+def _kr_prebrief_data():
+    return {
+        "user_id":           7,
+        "user_name":         "Tester",
+        "ticker":            "005930.KS",
+        "company_name":      "삼성전자",
+        "earnings_datetime": "2026-04-22T20:30:00Z",
+        "fiscal_period":     "Q1 2026",
+        "generated_at":      "2026-04-22T20:00:00Z",
+        "consensus_eps":     None,
+        "consensus_eps_low": None,
+        "consensus_eps_high": None,
+        "consensus_revenue": None,
+        "current_price":     78000.0,
+        "surprise_history":  [],
+        "expected_questions": [],
+        "position_shares":   100.0,
+        "position_avg_cost": 70000.0,
+        "position_mv":       7800000.0,
+        "sensitivity_beat":  None,
+        "sensitivity_miss":  None,
+        "risk_notes":        [],
+        "disclaimer":        "정보 제공 목적이며 투자 권유가 아닙니다.",
+    }
+
+
+def test_kr_position_mv_renders_won_not_dollar(svc):
+    """REGRESSION (P1, 표시광고법 §3): the PDF v3 position line hardcoded
+    '$' for the market value, so a 005930.KS (KRW) position rendered
+    '₩-denominated value · $7,800,000 mv'. KR positions must show ₩."""
+    html = svc.render_pdf_html(_kr_prebrief_data())
+    assert "₩7,800,000 mv" in html
+    # The dollar-prefixed MV must be gone.
+    assert "$7,800,000" not in html
+
+
+def test_us_position_mv_still_renders_dollar(svc):
+    """US ticker keeps the $ prefix (no over-correction)."""
+    data = _kr_prebrief_data()
+    data.update({"ticker": "AAPL", "company_name": "Apple Inc.",
+                 "position_mv": 17050.0})
+    html = svc.render_pdf_html(data)
+    assert "$17,050 mv" in html
+
+
+# ─── 4c. FIX 3 — earnings_datetime shown in KST, not bare UTC ────────────────
+
+def test_earnings_datetime_renders_kst(svc):
+    """REGRESSION (P1): the email/PDF showed raw UTC ('… 20:30 UTC') even
+    though the product is KR-targeted and the data-contract claimed KST
+    conversion. 2026-04-22T20:30:00Z == 2026-04-23 05:30 KST."""
+    # PDF path (reporting_date via _to_v3_shape → _format_reporting_date).
+    pdf_html = svc.render_pdf_html(_kr_prebrief_data())
+    assert "2026-04-23 05:30 KST" in pdf_html
+    assert "(20:30 UTC)" in pdf_html
+
+    # Email path (uses pre-formatted earnings_datetime_kst when present).
+    email_data = _kr_prebrief_data()
+    email_data["earnings_datetime_kst"] = "2026-04-23 05:30 KST (20:30 UTC)"
+    email_html = svc.render_email_html(email_data)
+    assert "2026-04-23 05:30 KST" in email_html
+    # The bare "{{ earnings_datetime }} UTC" form must NOT be the displayed line.
+    assert "2026-04-22T20:30:00Z UTC" not in email_html
+
+
+def test_format_earnings_kst_helper_handles_naive_and_aware():
+    """Direct unit test of the KST formatter — naive (UTC) and aware in."""
+    from services.artifacts.earnings_prebrief_service import _format_earnings_kst
+
+    # ISO with Z → UTC.
+    assert _format_earnings_kst("2026-04-22T20:30:00Z") == \
+        "2026-04-23 05:30 KST (20:30 UTC)"
+    # Naive datetime treated as UTC.
+    dt_naive = datetime(2026, 4, 22, 20, 30, 0)
+    assert _format_earnings_kst(dt_naive) == \
+        "2026-04-23 05:30 KST (20:30 UTC)"
+    # None / garbage → None (caller falls back).
+    assert _format_earnings_kst(None) is None
+    assert _format_earnings_kst("not-a-date") is None
+
+
+# ─── 4d. FIX 6 — AI budget consumed once per generation, not per attempt ─────
+
+def test_ai_budget_consumed_once_on_parse_failure(app, monkeypatch):
+    """REGRESSION (P2): _ai_budget_consume() was inside _one_shot(), so a
+    truncated/unparseable first response (triggering the retry) burned the
+    budget twice for a single logical generation."""
+    import services.artifacts.earnings_prebrief_service as eps
+
+    calls = {"consume": 0}
+    monkeypatch.setattr(eps, "_ai_budget_consume",
+                        lambda: calls.__setitem__("consume", calls["consume"] + 1))
+
+    # Fake AIService whose client always returns an unparseable (<5 items)
+    # response → forces the single retry path.
+    fake_resp = MagicMock()
+    fake_block = MagicMock()
+    fake_block.type = "text"
+    fake_block.text = "응답 형식 불일치"  # parses to 0 questions → retry
+    fake_resp.content = [fake_block]
+
+    fake_client = MagicMock()
+    fake_client.messages.create.return_value = fake_resp
+
+    fake_svc = MagicMock()
+    fake_svc.available = True
+    fake_svc.client = fake_client
+
+    with patch("services.ai.service.AIService", return_value=fake_svc):
+        with app.app_context():
+            eps._call_claude_for_questions("AAPL", "Q1 2026", [])
+
+    # Two HTTP attempts (first + retry) but exactly ONE budget consumption.
+    assert fake_client.messages.create.call_count == 2
+    assert calls["consume"] == 1
+
+
 # ─── 5. run_scan — dedup on repeated (user, ticker, earnings_dt) ────────────
 
 def test_run_scan_skips_already_sent(

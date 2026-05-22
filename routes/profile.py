@@ -26,7 +26,10 @@ from extensions import db
 from models import (
     Alert,
     ArtifactFeedback,
+    BehavioralScore,
     InvestmentProfile,
+    NpsFeedback,
+    PersonaSnapshot,
     Position,
     TradeHistory,
     VALID_CADENCES,
@@ -261,6 +264,40 @@ def submit_onboarding():
     # 자본시장법 §6 / 정통망법 §50 compliance hole. The frontend's "Skip" path
     # (page.tsx ~770) submits ``{}`` and is still allowed; we only reject
     # submissions that include partial answers but omit the legal block.
+    # 2026-05-22 — server-side gate hardening (자본시장법 §6 bypass close).
+    # Pre-fix, the legal gate only fired for V2-shaped submissions
+    # (``is_v2_submission``). A direct API caller could POST v1-style keys
+    # (e.g. {"answers": {"experience_level": "beginner",
+    # "investment_goal": "growth"}}) → is_v2_submission=False → SKIP the
+    # legal gate → onboarding_completed=True without confirming the
+    # disclaimer wall. The frontend only ever sends either ``{}`` (skip,
+    # page.tsx ~781) or a full V2 payload that ALWAYS carries
+    # ``legal_confirmations`` (the wizard's legal step, page.tsx ~668), so
+    # any NON-EMPTY submission that lacks ``legal_confirmations`` cannot be
+    # a legitimate client request — it's a direct-API gate-bypass. Reject
+    # it (400) rather than silently completing onboarding. The empty
+    # ``{}`` skip path and proper V2 path are both untouched.
+    legal_block = answers.get("legal_confirmations")
+    has_legal_block = bool(legal_block) and (
+        not isinstance(legal_block, (list, dict)) or len(legal_block) > 0
+    )
+    if bool(answers) and not has_legal_block:
+        return api_error(
+            en=(
+                "Required legal confirmations missing: age 14+, risk acknowledgment, "
+                "past performance disclaimer, and AI-analysis (not licensed advice) "
+                "acknowledgment must all be checked to proceed. (Empty submission to "
+                "skip onboarding is allowed; a non-empty submission must include the "
+                "legal confirmations block.)"
+            ),
+            kr=(
+                "법적 확인 항목이 누락되었습니다. 만 14세 이상, 투자 위험 인지, "
+                "과거 수익률 면책, AI 분석(공인 투자자문 아님) 확인을 모두 체크해 "
+                "주셔야 진행할 수 있습니다."
+            ),
+            code="ONBOARDING_LEGAL_REQUIRED", status=400,
+        )
+
     from services.profile.questionnaire import calculate_profile_v2
     profile_v2_result = calculate_profile_v2(answers)
     is_v2_submission = bool(answers) and any(
@@ -531,6 +568,32 @@ def update_profile():
             en="'answers' must be an object.",
             kr="answers 객체가 필요합니다.",
             code="PROFILE_INVALID_PAYLOAD", status=400,
+        )
+
+    # 2026-05-22 — server-side gate hardening (자본시장법 §6 bypass close).
+    # Mirror submit_onboarding: any NON-EMPTY ``answers`` that omits the
+    # ``legal_confirmations`` block is a direct-API gate-bypass (the
+    # frontend always sends either ``{}`` or a full V2 payload carrying the
+    # legal block). Reject (400) rather than silently re-classifying.
+    legal_block = answers.get("legal_confirmations")
+    has_legal_block = bool(legal_block) and (
+        not isinstance(legal_block, (list, dict)) or len(legal_block) > 0
+    )
+    if bool(answers) and not has_legal_block:
+        return api_error(
+            en=(
+                "Required legal confirmations missing: age 14+, risk acknowledgment, "
+                "past performance disclaimer, and AI-analysis (not licensed advice) "
+                "acknowledgment must all be checked to proceed. (Empty submission is "
+                "allowed; a non-empty submission must include the legal confirmations "
+                "block.)"
+            ),
+            kr=(
+                "법적 확인 항목이 누락되었습니다. 만 14세 이상, 투자 위험 인지, "
+                "과거 수익률 면책, AI 분석(공인 투자자문 아님) 확인을 모두 체크해 "
+                "주셔야 진행할 수 있습니다."
+            ),
+            code="PROFILE_LEGAL_REQUIRED", status=400,
         )
 
     # 2026-05-17 wave D-1 — mirror the V2 path from ``submit_onboarding`` so
@@ -1449,6 +1512,12 @@ def patch_email_preferences():
 # (사용자가 본인 정보를 "전부" 받을 수 있도록 충분히 크게).
 _EXPORT_TRADE_LIMIT = 5000   # >5000 trades 면 파일 분할이 필요한 사용자
 _EXPORT_ALERT_LIMIT = 1000   # 1년치 알림 충분
+# Behavioural/pulse PII sections (PIPA §35) — weekly cadence so even
+# multi-year accounts stay well under these caps; bounded for safety.
+_EXPORT_BEHAVIORAL_LIMIT = 520   # ~10 years of weekly scores
+_EXPORT_PULSE_LIMIT = 520        # ~10 years of weekly pulses
+_EXPORT_PERSONA_LIMIT = 520      # ~10 years of weekly persona snapshots
+_EXPORT_NPS_LIMIT = 1000         # 1-click NPS submissions
 
 
 def _iso_or_none(value):
@@ -1612,6 +1681,37 @@ def export_profile():
         investment_profile = (
             InvestmentProfile.query.filter_by(user_id=user_id).first()
         )
+        # PIPA §35 — behavioural / pulse / persona / NPS rows are the
+        # user's own personal data (all purged on deletion, confirming
+        # they're personal data; WeeklyPulse holds free-text worry/learn).
+        behavioral_scores = (
+            BehavioralScore.query
+            .filter_by(user_id=user_id)
+            .order_by(BehavioralScore.week_ending.desc())
+            .limit(_EXPORT_BEHAVIORAL_LIMIT)
+            .all()
+        )
+        weekly_pulse = (
+            WeeklyPulse.query
+            .filter_by(user_id=user_id)
+            .order_by(WeeklyPulse.submitted_at.desc())
+            .limit(_EXPORT_PULSE_LIMIT)
+            .all()
+        )
+        persona_snapshots = (
+            PersonaSnapshot.query
+            .filter_by(user_id=user_id)
+            .order_by(PersonaSnapshot.computed_at.desc())
+            .limit(_EXPORT_PERSONA_LIMIT)
+            .all()
+        )
+        nps_feedback = (
+            NpsFeedback.query
+            .filter_by(user_id=user_id)
+            .order_by(NpsFeedback.created_at.desc())
+            .limit(_EXPORT_NPS_LIMIT)
+            .all()
+        )
     except Exception:
         logger.exception(
             "profile.export_profile query failed (user_id=%s)", user_id,
@@ -1635,11 +1735,19 @@ def export_profile():
         "investment_profile": (
             investment_profile.to_dict() if investment_profile else None
         ),
+        "behavioral_scores": [b.to_dict() for b in behavioral_scores],
+        "weekly_pulse": [p.to_dict() for p in weekly_pulse],
+        "persona_snapshots": [s.to_dict() for s in persona_snapshots],
+        "nps_feedback": [n.to_dict() for n in nps_feedback],
         "counts": {
             "positions": len(positions),
             "watchlist": len(watchlist),
             "trade_history": len(trades),
             "alerts": len(alerts),
+            "behavioral_scores": len(behavioral_scores),
+            "weekly_pulse": len(weekly_pulse),
+            "persona_snapshots": len(persona_snapshots),
+            "nps_feedback": len(nps_feedback),
         },
         "notes": {
             "excluded_fields": [

@@ -1590,13 +1590,16 @@ def _init_scheduler(app):
         max_instances=1,
         coalesce=True,
     )
-    # 분기 +7일 (1/7, 4/7, 7/7, 10/7) 10:00 KST — Portfolio Segment Report (Premium).
+    # 분기 +7일 (1/7, 4/7, 7/7, 10/7) 10:30 KST — Portfolio Segment Report (Premium).
+    # minute=30 (not 0): staggered 30min after quarterly_self_report (same
+    # month/day/hour=10) so the two quarterly FMP-heavy jobs don't fire
+    # simultaneously and burst the FMP rate budget.
     sched.add_job(
         _scheduled_portfolio_segment,
         trigger="cron",
         month="1,4,7,10",
         day=7,
-        hour=10, minute=0,
+        hour=10, minute=30,
         timezone="Asia/Seoul",
         id="portfolio_segment_quarterly",
         max_instances=1,

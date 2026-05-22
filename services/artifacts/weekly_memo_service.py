@@ -69,6 +69,23 @@ def _storage_dir() -> Path:
     return d
 
 
+def _build_unsubscribe_url(user_id: Any) -> str:
+    """Best-effort HMAC unsubscribe URL for the styled in-body footer.
+
+    Returns "" when user_id is missing or the token layer is unavailable —
+    rendering must never break on this. Reuses the canonical
+    services.email_token builder so the token shape matches the sender's.
+    """
+    if not user_id:
+        return ""
+    try:
+        from services.email_token import build_unsubscribe_url
+        return build_unsubscribe_url(int(user_id), kind="all")
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.debug("unsubscribe url build failed for user %s: %s", user_id, exc)
+        return ""
+
+
 # ── lazy optional deps ───────────────────────────────────────────────────────
 
 def _try_import_weasyprint():
@@ -925,7 +942,13 @@ class WeeklyMemoService:
             return self._fallback_html(data, email=True)
         try:
             tpl = env.get_template("weekly_memo_email.html")
-            return tpl.render(**self._with_persona(data))
+            ctx = self._with_persona(data)
+            # FIX 5 — pass the HMAC unsubscribe URL so the in-body styled
+            # `{% if unsubscribe_url %}` footer renders. Without it the block
+            # was always falsy and only the sender's generic injected footer
+            # appeared. Idempotent with the sender's inject_unsubscribe_footer.
+            ctx["unsubscribe_url"] = _build_unsubscribe_url(data.get("user_id"))
+            return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("email template render failed: %s", exc)
             return self._fallback_html(data, email=True)

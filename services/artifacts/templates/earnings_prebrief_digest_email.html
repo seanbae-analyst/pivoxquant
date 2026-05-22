@@ -68,7 +68,11 @@
             </td>
             <td align="center" style="width:50%;padding:14px 0;">
               <div style="font-family:'Geist',sans-serif;font-size:7.5pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">발표 시점</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:14pt;font-weight:500;margin-top:8px;color:#0a0a0a;">~{{ lead_minutes | default(30) }}분 후</div>
+              {# lead_minutes is always populated by the service from _lead_minutes()
+                 config; the prior `default(30)` was a redundant numeric fallback
+                 (tripped the bare-numeric sample guard). Guard against the rare
+                 None case inline without a hardcoded sample. #}
+              <div style="font-family:'JetBrains Mono',monospace;font-size:14pt;font-weight:500;margin-top:8px;color:#0a0a0a;">{% if lead_minutes is not none %}~{{ lead_minutes }}분 후{% else %}곧{% endif %}</div>
             </td>
           </tr>
         </table>

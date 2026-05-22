@@ -5,8 +5,12 @@
    Variables:
      - user_name, month_label, month_label_long
      - return_pct, best_ticker, best_return_pct, trade_count
-     - best_pnl_usd, win_rate_pct, hold_days, entry_date, exit_date
      - share_url, png_url
+     NOTE: best_pnl_usd / win_rate_pct / hold_days / entry_date / exit_date
+       were REMOVED 2026-05-22 — the service layer (BragCardContext) never
+       populated them, so the prior `default(N)` fallbacks rendered a FAKE
+       "+$1,240 · 67% Win Rate · 8-day hold" to every real user. The card
+       now derives the hero from the real % return only (currency-agnostic).
      - disclaimer
    ══════════════════════════════════════════════════════════════════════════
 
@@ -32,15 +36,18 @@
 </head>
 <body style="margin:0;padding:0;font-family:'Source Serif 4',Georgia,serif;color:#0A0A0A;">
 
-{% set _best_usd = best_pnl_usd | default(1240) %}
-{% set _best_ret = best_return_pct if best_return_pct is not none else (return_pct if return_pct is not none else 0) %}
-{% set _win_rate = win_rate_pct | default(67.0) %}
+{# Hero figure = the user's REAL best-lot % return (or, absent that, the
+   month's overall realized return %). Both come straight from
+   BragCardContext — never a sample number. `_best_ret` is None only when
+   the user closed no lots this month, in which case the hero shows a
+   neutral note instead of a fabricated figure. #}
+{% set _best_ret = best_return_pct if best_return_pct is not none else return_pct %}
 
 <!-- Preview text -->
 <div style="display:none;max-height:0;overflow:hidden;color:transparent;">
   A quiet note to self — {{ month_label_long | default(month_label) }}.
-  {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}{% if best_ticker %}
-  observed on {{ best_ticker }}.{% endif %}
+  {% if _best_ret is not none %}{{ '%+.2f'|format(_best_ret) }}%{% if best_ticker %}
+  observed on {{ best_ticker }}.{% endif %}{% endif %}
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:0;">
@@ -89,12 +96,18 @@
               <div style="font-family:'Source Serif 4',Georgia,serif;font-size:10px;letter-spacing:0.42em;text-transform:uppercase;color:#B8956A;margin-bottom:14px;">
                 —— The Moment Worth Noting ——
               </div>
-              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:44px;font-weight:500;color:{% if _best_usd >= 0 %}#1B5E20{% else %}#A84C4C{% endif %};letter-spacing:-0.025em;line-height:1.0;padding-bottom:8px;border-bottom:1px solid #B8956A;display:inline-block;">
-                {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
+              {% if _best_ret is not none %}
+              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:44px;font-weight:500;color:{% if _best_ret >= 0 %}#1B5E20{% else %}#A84C4C{% endif %};letter-spacing:-0.025em;line-height:1.0;padding-bottom:8px;border-bottom:1px solid #B8956A;display:inline-block;">
+                {{ '%+.2f'|format(_best_ret) }}%
               </div>
               <div style="margin-top:14px;font-family:'Geist',-apple-system,sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#6B6B6B;font-weight:600;">
-                {% if best_ticker %}{{ best_ticker }} &nbsp;·&nbsp; {% endif %}<span style="color:#0A0A0A;">{{ '%+.2f'|format(_best_ret) }}%</span> &nbsp;·&nbsp; {{ hold_days | default(8) }}-day hold
+                {% if best_ticker %}{{ best_ticker }}{% else %}Best closed lot{% endif %}
               </div>
+              {% else %}
+              <div style="font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:15px;line-height:1.5;color:#6B6B6B;padding:6px 0;">
+                No closed lots this month — a quiet ledger is its own kind of discipline.
+              </div>
+              {% endif %}
             </td>
           </tr>
         </table>
@@ -117,24 +130,24 @@
         </p>
       </td></tr>
 
-      {# ─── Three small observations (tabular-num side strip) ───────── #}
+      {# ─── Small observations (tabular-num side strip) ──────────────── #}
+      {# Only REAL fields from BragCardContext: best/overall return % and the
+         actual trade count. "Best Lot P&L ($)" + "Win Rate" were removed —
+         the service never computes them, so any value here would be a
+         fabricated sample (자본시장법 §178 허위표시). #}
       <tr><td style="padding:24px 40px 0 40px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
                style="border-top:0.5pt solid #0A0A0A;border-bottom:0.5pt solid #0A0A0A;">
           <tr>
-            <td style="padding:14px 0 14px 0;width:33%;vertical-align:top;border-right:0.25pt solid #c9c4b8;">
-              <div style="font-family:'Geist',-apple-system,sans-serif;font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:#B8956A;font-weight:600;margin-bottom:4px;">Best Lot P&amp;L</div>
+            <td style="padding:14px 0 14px 0;width:50%;vertical-align:top;border-right:0.25pt solid #c9c4b8;">
+              <div style="font-family:'Geist',-apple-system,sans-serif;font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:#B8956A;font-weight:600;margin-bottom:4px;">Best Lot Return</div>
               <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:18px;color:#0A0A0A;letter-spacing:-0.015em;">
-                {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
+                {% if best_return_pct is not none %}{{ '%+.2f'|format(best_return_pct) }}%{% else %}—{% endif %}
               </div>
             </td>
-            <td style="padding:14px 0 14px 14px;width:33%;vertical-align:top;border-right:0.25pt solid #c9c4b8;">
-              <div style="font-family:'Geist',-apple-system,sans-serif;font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:#B8956A;font-weight:600;margin-bottom:4px;">Win Rate</div>
-              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:18px;color:#0A0A0A;letter-spacing:-0.015em;">{{ '%.0f'|format(_win_rate) }}%</div>
-            </td>
-            <td style="padding:14px 0 14px 14px;width:33%;vertical-align:top;">
+            <td style="padding:14px 0 14px 14px;width:50%;vertical-align:top;">
               <div style="font-family:'Geist',-apple-system,sans-serif;font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:#B8956A;font-weight:600;margin-bottom:4px;">Trades Closed</div>
-              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:18px;color:#0A0A0A;letter-spacing:-0.015em;">{{ trade_count | default(8) }}</div>
+              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:18px;color:#0A0A0A;letter-spacing:-0.015em;">{% if trade_count is not none %}{{ trade_count }}{% else %}—{% endif %}</div>
             </td>
           </tr>
         </table>

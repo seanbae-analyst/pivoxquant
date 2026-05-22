@@ -45,6 +45,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time as _time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
+from zoneinfo import ZoneInfo
 
 from extensions import db
 from services.email.format_helpers import currency_prefix
@@ -92,6 +93,57 @@ def _lead_minutes() -> int:
         return int(os.environ.get("EARNINGS_PREBRIEF_LEAD_MINUTES", "30"))
     except ValueError:
         return 30
+
+
+def _build_unsubscribe_url(user_id: Any, kind: str = "all") -> str:
+    """Best-effort HMAC unsubscribe URL for the styled in-body footer.
+
+    Returns "" when user_id is missing or the token layer is unavailable —
+    rendering must never break on this. Reuses the canonical
+    services.email_token builder so the token shape matches the sender's.
+    """
+    if not user_id:
+        return ""
+    try:
+        from services.email_token import build_unsubscribe_url
+        return build_unsubscribe_url(int(user_id), kind=kind)
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.debug("unsubscribe url build failed for user %s: %s", user_id, exc)
+        return ""
+
+
+_KST = ZoneInfo("Asia/Seoul")
+
+
+def _format_earnings_kst(raw: Any) -> Optional[str]:
+    """Convert an earnings datetime (aware, or naive=UTC) to a KST display
+    string like ``2026-05-22 06:00 KST (21:00 UTC)``.
+
+    The pipeline stores ``earnings_datetime`` as UTC (naive or aware). The
+    data-contract comment claimed the template converts to KST but it never
+    did — KR users saw a bare UTC timestamp. We pre-format once here so both
+    the email template and the PDF reuse the same string. Returns ``None``
+    when ``raw`` is missing/unparseable so callers can fall back cleanly.
+    """
+    if raw is None:
+        return None
+    try:
+        if isinstance(raw, datetime):
+            dt = raw
+        else:
+            s = str(raw).strip()
+            # Accept a trailing "Z" (UTC) — fromisoformat (py<3.11) chokes on it.
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            dt = datetime.fromisoformat(s)
+    except Exception:
+        return None
+    # Naive → treat as UTC (matches PreBriefContext.to_dict serialization).
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    kst = dt.astimezone(_KST)
+    utc = dt.astimezone(timezone.utc)
+    return f"{kst.strftime('%Y-%m-%d %H:%M')} KST ({utc.strftime('%H:%M')} UTC)"
 
 
 def _storage_dir() -> Path:
@@ -189,6 +241,10 @@ class PreBriefContext:
             "ticker":             self.ticker,
             "company_name":       self.company_name,
             "earnings_datetime":  self.earnings_datetime.isoformat() + ("Z" if self.earnings_datetime.tzinfo is None else ""),
+            # Pre-formatted KST display string (KR-targeted). Both the email
+            # template and the PDF reporting-date line consume this so the
+            # tz conversion lives in one place, not in Jinja.
+            "earnings_datetime_kst": _format_earnings_kst(self.earnings_datetime),
             "fiscal_period":      self.fiscal_period,
             "generated_at":       self.generated_at.isoformat() + "Z",
             "consensus_eps":      self.consensus_eps,
@@ -454,7 +510,6 @@ def _call_claude_for_questions(ticker: str, fiscal_period: str,
     )
 
     def _one_shot() -> list[str]:
-        _ai_budget_consume()
         try:
             resp = svc.client.messages.create(
                 model="claude-haiku-4-5",
@@ -470,6 +525,12 @@ def _call_claude_for_questions(ticker: str, fiscal_period: str,
             logger.warning("Claude call failed for %s: %s", ticker, exc)
             return []
 
+    # FIX 6 — consume the AI budget once per logical generation (not once
+    # per HTTP attempt). The retry below is the same generation re-attempted
+    # after a truncated/unparseable first response; it must not double-count
+    # against the budget. Previously _ai_budget_consume() was inside
+    # _one_shot(), so a parse failure burned the budget twice.
+    _ai_budget_consume()
     parsed = _one_shot()
     if len(parsed) < 5:
         # Single retry — model sometimes truncates on the first shot.
@@ -801,13 +862,24 @@ class EarningsPreBriefService:
             ("OBSERVE" meta tag, never advisory verbs).
         """
         # ── Hero meta — reporting date / position ───────────────────────────
-        earnings_dt_raw = data.get("earnings_datetime")
-        reporting_date = self._format_reporting_date(earnings_dt_raw)
+        # Prefer the service-prebuilt KST string; fall back to formatting the
+        # raw datetime (also KST) for callers that didn't go through to_dict.
+        kst_pre = data.get("earnings_datetime_kst")
+        if kst_pre:
+            reporting_date = f"{kst_pre} · Per IR calendar"
+        else:
+            reporting_date = self._format_reporting_date(
+                data.get("earnings_datetime"))
 
         shares = data.get("position_shares") or 0
         mv = data.get("position_mv") or 0
         if shares and mv:
-            position_str = f"{shares:g} sh · ${mv:,.0f} mv"
+            # E3 mirror — currency must match the ticker (₩ for .KS/.KQ,
+            # $ for US). The email path already does this (~line 1148);
+            # the PDF path was hardcoding "$" → KR positions showed
+            # "₩-denominated" MV with a "$" sign (표시광고법 §3 기만표시).
+            cur = currency_prefix(data.get("ticker"))
+            position_str = f"{shares:g} sh · {cur}{mv:,.0f} mv"
         elif shares:
             position_str = f"{shares:g} sh"
         else:
@@ -873,15 +945,11 @@ class EarningsPreBriefService:
         """
         if raw is None:
             return "Earnings Date · After Market Close"
-        try:
-            if isinstance(raw, datetime):
-                dt = raw
-            else:
-                s = str(raw).rstrip("Z")
-                dt = datetime.fromisoformat(s)
-            return f"{dt.strftime('%Y-%m-%d %H:%M UTC')} · Per IR calendar"
-        except Exception:
-            return "Earnings Date · After Market Close"
+        # KR-targeted — display KST (with UTC in parens), not bare UTC.
+        kst = _format_earnings_kst(raw)
+        if kst:
+            return f"{kst} · Per IR calendar"
+        return "Earnings Date · After Market Close"
 
     @staticmethod
     def _build_consensus_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1146,6 +1214,13 @@ class EarningsPreBriefService:
             ctx = dict(data)
             ctx.setdefault("currency_symbol",
                            currency_prefix(data.get("ticker")))
+            # FIX 5 — pass the HMAC unsubscribe URL (earnings kind, matching
+            # the sender's unsubscribe_kind) so the in-body styled
+            # `{% if unsubscribe_url %}` footer renders. Idempotent with the
+            # sender's inject_unsubscribe_footer.
+            ctx.setdefault("unsubscribe_url",
+                           _build_unsubscribe_url(data.get("user_id"),
+                                                  kind="earnings"))
             return tpl.render(pdf_url=pdf_url, **ctx)
         except Exception as exc:
             logger.warning("email template render failed: %s", exc)

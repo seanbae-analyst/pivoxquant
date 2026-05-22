@@ -53,7 +53,12 @@ class Backtester:
         with 3-Layer adaptive exit parameters.
         """
         try:
-            is_korean = ticker.upper().endswith('.KS') or ticker.upper().endswith('.KQ')
+            # Use the shared detector (also catches bare 6-digit KR tickers,
+            # e.g. "005930") so KR thresholds/capital stay coherent with the
+            # KR cost rates derived from `_is_korean_ticker` below. Previously
+            # suffix-only, so a bare 6-digit ticker got US thresholds + US
+            # capital but KR costs (incoherent backtest parameters).
+            is_korean = Backtester._is_korean_ticker(ticker)
             is_etf = ticker.upper() in ('TSLL','ETHU','SPY','QQQ','TLT','GLD','USO')
 
             # Korean stocks are priced in KRW — scale capital accordingly

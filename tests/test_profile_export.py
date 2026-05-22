@@ -160,11 +160,19 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
         "watchlist": 0,
         "trade_history": 0,
         "alerts": 0,
+        "behavioral_scores": 0,
+        "weekly_pulse": 0,
+        "persona_snapshots": 0,
+        "nps_feedback": 0,
     }
     assert body["positions"] == []
     assert body["watchlist"] == []
     assert body["trade_history"] == []
     assert body["alerts"] == []
+    assert body["behavioral_scores"] == []
+    assert body["weekly_pulse"] == []
+    assert body["persona_snapshots"] == []
+    assert body["nps_feedback"] == []
     assert body["investment_profile"] is None
     assert body["user"]["email"] == auth_user["email"]
 
@@ -201,6 +209,119 @@ def test_export_reflects_email_opt_out_state(app, client, auth_user):
     body = json.loads(resp.data)
     assert body["user"]["email_opt_out"] is True
     assert body["user"]["email_opt_out_earnings"] is True
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 2026-05-22 — PIPA §35 behavioural/pulse PII sections
+# ─────────────────────────────────────────────────────────────────────
+#
+# Pre-fix the export omitted BehavioralScore / WeeklyPulse /
+# PersonaSnapshot / NpsFeedback — all user PII (they're purged on
+# deletion, confirming they're personal data; WeeklyPulse holds free-text
+# worry/learn). §35 열람권 requires the user be able to see all recorded
+# personal data, so these must be in the export.
+
+def test_export_includes_behavioral_pulse_sections_with_data(
+    app, client, auth_user,
+):
+    """Seed one row in each of the four new PII tables and confirm they
+    surface in the export with their meaningful (incl. free-text) fields."""
+    import json as _json
+    from datetime import date, datetime, timezone
+
+    from extensions import db
+    from models import (
+        BehavioralScore, WeeklyPulse, PersonaSnapshot, NpsFeedback,
+    )
+
+    uid = auth_user["id"]
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        db.session.add(BehavioralScore(
+            user_id=uid,
+            week_ending=date(2026, 5, 17),
+            overall_score=72.5,
+            sub_scores=_json.dumps({"loss_cut": 80, "fomo_resistance": 65}),
+            notes="held through the dip well this week",
+            trade_count=4,
+        ))
+        db.session.add(WeeklyPulse(
+            user_id=uid,
+            mood=4,
+            confidence=3,
+            worry="worried about a tech selloff next week",
+            topics=_json.dumps(["tech", "rates"]),
+            learn="learned to size positions smaller",
+            cadence="weekly",
+            submitted_at=now,
+        ))
+        db.session.add(PersonaSnapshot(
+            user_id=uid,
+            computed_at=now,
+            persona="growth",
+            confidence=80,
+            features=_json.dumps({"turnover": 0.3}),
+            present_mask=_json.dumps({"turnover": True}),
+            ranking=_json.dumps(["growth", "value"]),
+        ))
+        db.session.add(NpsFeedback(
+            user_id=uid, score=9, weekly_memo_id="memo-2026-05-17",
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200, resp.data
+    body = json.loads(resp.data)
+
+    # Sections present and populated.
+    assert body["counts"]["behavioral_scores"] == 1
+    assert body["counts"]["weekly_pulse"] == 1
+    assert body["counts"]["persona_snapshots"] == 1
+    assert body["counts"]["nps_feedback"] == 1
+
+    assert len(body["behavioral_scores"]) == 1
+    assert body["behavioral_scores"][0]["overall_score"] == 72.5
+    assert body["behavioral_scores"][0]["notes"] == "held through the dip well this week"
+
+    # Free-text PII must round-trip (the whole point of §35 access).
+    assert len(body["weekly_pulse"]) == 1
+    assert body["weekly_pulse"][0]["worry"] == "worried about a tech selloff next week"
+    assert body["weekly_pulse"][0]["learn"] == "learned to size positions smaller"
+
+    assert len(body["persona_snapshots"]) == 1
+    assert body["persona_snapshots"][0]["persona"] == "growth"
+
+    assert len(body["nps_feedback"]) == 1
+    assert body["nps_feedback"][0]["score"] == 9
+
+
+def test_export_behavioral_sections_scoped_to_caller(
+    app, client, make_user, auth_user,
+):
+    """The new sections must never leak another user's behavioural PII."""
+    from datetime import datetime, timezone
+
+    from extensions import db
+    from models import WeeklyPulse
+
+    other = make_user(email="otherpulse@test.com", password="otherpw123")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        db.session.add(WeeklyPulse(
+            user_id=other["id"], mood=2, confidence=2,
+            worry="OTHER-USER-SECRET-WORRY", topics="[]", learn="",
+            cadence="weekly", submitted_at=now,
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    body = json.loads(resp.data)
+    assert body["counts"]["weekly_pulse"] == 0
+    raw = json.dumps(body)
+    assert "OTHER-USER-SECRET-WORRY" not in raw, (
+        "another user's WeeklyPulse free-text leaked into export"
+    )
 
 
 def test_export_excludes_password_and_payment_secrets_strictly(

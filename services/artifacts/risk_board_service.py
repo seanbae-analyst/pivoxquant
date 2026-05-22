@@ -1365,11 +1365,25 @@ class RiskBoardService:
             return result
 
         prev_vix = prev.get("last_vix")
+        # A spike email may ONLY fire on an OBSERVED below→above transition:
+        # a real prior reading strictly below threshold, then current >=.
+        #
+        # NO-PRIOR-STATE GUARD (the mass-email fix): when there is no prior
+        # observed value (first ever run, OR — critically — the state file
+        # was wiped by an ephemeral-FS deploy since `/artifacts/` is gitignored
+        # AND not persisted), prev_vix is None. We must NOT treat None as
+        # "was below threshold" — doing so fired a spike-edition Risk Board
+        # PDF to EVERY premium user on every single deploy whenever VIX
+        # happened to be >= 25. Instead we SEED the current observation and
+        # return without firing; subsequent ticks then have a real baseline.
+        has_prior = prev_vix is not None
         crossed = (
-            (prev_vix is None or float(prev_vix) < threshold)
+            has_prior
+            and float(prev_vix) < threshold
             and vix >= threshold
         )
-        # Always persist the latest observation.
+        # Always persist the latest observation (this also performs the seed
+        # on the no-prior-state path so the next tick has a baseline).
         try:
             state_path.write_text(json.dumps({
                 "last_vix":         vix,
@@ -1378,6 +1392,15 @@ class RiskBoardService:
             }))
         except Exception as exc:
             logger.debug("vix state write failed: %s", exc)
+
+        if not has_prior:
+            # First observation (or post-deploy state loss): seed only, never
+            # fire. result["triggered"] stays False, notified stays 0.
+            logger.info(
+                "risk_board vix_spike: no prior state — seeded vix=%s, "
+                "not firing (mass-email guard)", vix,
+            )
+            return result
 
         if not crossed:
             return result

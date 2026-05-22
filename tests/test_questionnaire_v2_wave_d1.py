@@ -223,6 +223,81 @@ class TestLegalGate:
 
 
 # ═════════════════════════════════════════════════════════════════════════
+# 2026-05-22 — v1-keys legal-gate bypass (자본시장법 §6)
+# ═════════════════════════════════════════════════════════════════════════
+#
+# Pre-fix the legal gate only fired for V2-shaped submissions
+# (``is_v2_submission`` — required experience_years/portfolio_size/
+# scenario_portfolio_drop/legal_confirmations). A direct API caller
+# posting legacy v1-style keys (e.g. {"experience_level": "beginner",
+# "investment_goal": "growth"}) had is_v2_submission=False → SKIPPED the
+# gate → onboarding_completed=True with no disclaimer ack. The frontend
+# only ever sends ``{}`` (skip) or a full V2 payload carrying the legal
+# block, so any non-empty submission without legal_confirmations is a
+# direct-API bypass. We reject it (400).
+
+class TestV1KeysLegalBypass:
+    def test_v1_only_keys_with_content_rejected_400(self, app, client, auth_user):
+        """The exact bypass payload from the audit: v1 keys, no v2 markers,
+        no legal_confirmations → must 400, must NOT complete onboarding."""
+        resp = client.post("/api/profile/onboarding", json={
+            "answers": {
+                "experience_level": "beginner",
+                "investment_goal": "growth",
+            },
+        })
+        assert resp.status_code == 400, resp.data
+        body = resp.get_json() or {}
+        assert "LEGAL" in (body.get("code") or "").upper()
+
+        # Side-effect check: onboarding must NOT have been marked complete.
+        from extensions import db
+        from models import User
+        with app.app_context():
+            u = db.session.get(User, auth_user["id"])
+            assert not bool(getattr(u, "onboarding_completed", False)), (
+                "v1-keys bypass must not silently complete onboarding"
+            )
+
+    def test_v1_single_key_rejected_400(self, client, auth_user):
+        """Even a single non-legal answer key triggers the gate."""
+        resp = client.post("/api/profile/onboarding", json={
+            "answers": {"risk_tolerance": 5},
+        })
+        assert resp.status_code == 400, resp.data
+
+    def test_empty_dict_still_completes(self, app, client, auth_user):
+        """Regression: the skip path ({}) must still complete onboarding."""
+        resp = client.post("/api/profile/onboarding", json={"answers": {}})
+        assert resp.status_code == 200, resp.data
+        from extensions import db
+        from models import User
+        with app.app_context():
+            u = db.session.get(User, auth_user["id"])
+            assert bool(getattr(u, "onboarding_completed", False)), (
+                "empty {} skip path must still complete onboarding"
+            )
+
+    def test_proper_v2_still_completes(self, app, client, auth_user):
+        """Regression: a full V2 payload with legal_confirmations still works."""
+        gate = TestLegalGate()
+        resp = client.post("/api/profile/onboarding", json={
+            "answers": gate._v2_payload(with_legal=True),
+        })
+        assert resp.status_code == 200, resp.data
+
+    def test_put_v1_keys_with_content_rejected_400(self, app, client, auth_user):
+        """PUT /api/profile must enforce the same v1-keys gate as POST."""
+        # Seed a profile first via the legitimate skip path.
+        resp = client.post("/api/profile/onboarding", json={"answers": {}})
+        assert resp.status_code == 200
+        resp = client.put("/api/profile", json={
+            "answers": {"experience_level": "beginner", "investment_goal": "growth"},
+        })
+        assert resp.status_code == 400, resp.data
+
+
+# ═════════════════════════════════════════════════════════════════════════
 # Q3 — V2 answers persist to ORM columns
 # ═════════════════════════════════════════════════════════════════════════
 

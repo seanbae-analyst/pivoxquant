@@ -410,3 +410,72 @@ class TestCSRFCookie:
         assert "." in token_1
         parts = token_1.split(".")
         assert len(parts) == 2 and all(parts), "CSRF token is not properly signed"
+
+
+# ── Account deletion cascade (PIPA §21 immediate hard-delete) ────────────────
+
+class TestDeleteAccountCascade:
+    """2026-05-22 — delete_account()'s explicit per-model delete list had
+    diverged from scripts/nightly/pipa_purge._delete_user_cascade: the
+    immediate "delete my account now" path MISSED NpsFeedback and
+    ScheduledEmail (both user_id-FK PII), leaving orphan rows. The 30-day
+    cron deleted them. This test pins the two paths back in sync.
+    """
+
+    def _login(self, raw_client, make_user):
+        u = make_user(email="delcascade@test.com", password="pass1234")
+        login = raw_client.post(
+            "/api/auth/login",
+            json={"email": u["email"], "password": u["password"]},
+        )
+        assert login.status_code == 200, login.data
+        csrf_value = None
+        for h in login.headers.getlist("Set-Cookie"):
+            if h.startswith("csrf_token="):
+                csrf_value = h.split(";", 1)[0].split("=", 1)[1]
+                break
+        assert csrf_value, "login should have issued a csrf_token cookie"
+        return u, csrf_value
+
+    def test_delete_account_purges_nps_and_scheduled_email(
+        self, raw_client, make_user, app,
+    ):
+        from datetime import datetime, timezone
+
+        from extensions import db
+        from models import NpsFeedback, ScheduledEmail
+
+        u, csrf_value = self._login(raw_client, make_user)
+        uid = u["id"]
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        with app.app_context():
+            db.session.add(NpsFeedback(
+                user_id=uid, score=8, weekly_memo_id="memo-del-1",
+            ))
+            db.session.add(ScheduledEmail(
+                user_id=uid,
+                email_type="welcome",
+                email_category="transactional",
+                scheduled_send_at=now,
+                idempotency_key=f"u{uid}:welcome",
+            ))
+            db.session.commit()
+            assert NpsFeedback.query.filter_by(user_id=uid).count() == 1
+            assert ScheduledEmail.query.filter_by(user_id=uid).count() == 1
+
+        r = raw_client.delete(
+            "/api/auth/delete-account",
+            headers={"X-CSRF-Token": csrf_value},
+        )
+        assert r.status_code == 200, r.get_data(as_text=True)
+
+        with app.app_context():
+            assert NpsFeedback.query.filter_by(user_id=uid).count() == 0, (
+                "NpsFeedback rows survived immediate delete_account — "
+                "diverged from pipa_purge cascade"
+            )
+            assert ScheduledEmail.query.filter_by(user_id=uid).count() == 0, (
+                "ScheduledEmail rows survived immediate delete_account — "
+                "diverged from pipa_purge cascade"
+            )

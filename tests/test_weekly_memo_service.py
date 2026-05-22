@@ -132,6 +132,28 @@ def test_render_html_returns_string_with_key_fields(memo_svc):
     assert "16" in html
 
 
+def test_render_html_includes_styled_unsubscribe_link(app, memo_svc):
+    """FIX 5: the in-body `{% if unsubscribe_url %}` footer never rendered
+    because the render ctx lacked `unsubscribe_url`. It must now carry the
+    HMAC link so the styled in-body unsubscribe shows (정통망법 §50
+    belt-and-braces alongside the List-Unsubscribe header)."""
+    data = {
+        "user_id": 1, "user_name": "Tester", "week_number": 16,
+        "period_start": "2026-04-11", "period_end": "2026-04-18",
+        "generated_at": "2026-04-18T00:00:00Z",
+        "weekly_return_pct": 1.23, "benchmark_pct": 0.5, "alpha_pct": 0.73,
+        "sector_alloc": {"Tech": 100.0}, "sector_changes": [],
+        "top_movers_up": [{"ticker": "AAPL", "weekly_return_pct": 3.4}],
+        "top_movers_down": [],
+        "earnings_calendar": [], "macro_checklist": [], "risk_notes": [],
+        "disclaimer": "정보 제공 목적.",
+    }
+    with app.app_context():
+        html = memo_svc.render_html(data)
+    assert "/api/email/unsubscribe?token=" in html
+    assert "Unsubscribe" in html
+
+
 def test_render_pdf_returns_none_when_weasyprint_missing(memo_svc):
     """If WeasyPrint can't be imported we return None, not raise."""
     with patch("services.artifacts.weekly_memo_service._try_import_weasyprint",

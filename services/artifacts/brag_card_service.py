@@ -222,6 +222,24 @@ def _generate_share_token() -> str:
     return secrets.token_urlsafe(24)[:32]
 
 
+def _build_unsubscribe_url(user_id: Any) -> str:
+    """Best-effort HMAC unsubscribe URL for the styled in-body footer.
+
+    Returns "" when user_id is missing or the token layer is unavailable —
+    rendering must never break on this, and the sender still injects its own
+    footer (List-Unsubscribe header is separate). Reuses the canonical
+    services.email_token builder so the token shape matches the sender's.
+    """
+    if not user_id:
+        return ""
+    try:
+        from services.email_token import build_unsubscribe_url
+        return build_unsubscribe_url(int(user_id), kind="all")
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.debug("unsubscribe url build failed for user %s: %s", user_id, exc)
+        return ""
+
+
 def _compute_monthly_stats(
     user_id: int, start: date, end: date,
 ) -> dict[str, Any]:
@@ -681,6 +699,12 @@ class BragCardService:
         share_url = self._share_url_for(data.get("share_token"),
                                         data.get("referral_code"))
         ctx = {**data, "share_url": share_url, "png_url": png_url or ""}
+        # FIX 5 — the in-body styled `{% if unsubscribe_url %}` footer never
+        # rendered because the URL was never in the render ctx (only the
+        # sender's inject_unsubscribe_footer fired). Build the same HMAC URL
+        # at render time so the styled link renders; the sender's injection
+        # then no-ops idempotently (it skips when the URL is already present).
+        ctx["unsubscribe_url"] = _build_unsubscribe_url(data.get("user_id"))
         if env is None:
             return self._fallback_email_html(ctx)
         try:
@@ -1036,7 +1060,10 @@ class BragCardService:
             start, end = _previous_month_bounds(date.today())
         else:
             start = target_month.replace(day=1)
-            start.replace(day=monthrange(start.year, start.month)[1])
+            # NOTE: the prior line discarded its return (`start.replace(...)`)
+            # and never assigned `end` → latent NameError if `end` were ever
+            # used downstream. Mirror generate_for_user (~line 358).
+            end = start.replace(day=monthrange(start.year, start.month)[1])
 
         from services.artifacts import iter_users_chunked
 

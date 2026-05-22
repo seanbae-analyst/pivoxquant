@@ -65,6 +65,19 @@ TICKER_DEFAULT_RE = re.compile(
 # Jinja: `{{ field | default('$127,450') }}` — any absolute dollar figure.
 MONEY_DEFAULT_RE = re.compile(r"""default\(\s*['"]\$[0-9]""")
 
+# Jinja: `{{ field | default(1240) }}` / `default(67.0)` — a BARE numeric
+# fallback. 2026-05-22: the brag_card_email hero used `default(1240)`
+# (sample P&L), `default(67.0)` (sample win rate), `default(8)` (sample
+# hold days) — none quoted, so neither MONEY_DEFAULT_RE nor
+# TICKER_DEFAULT_RE caught them, and every real user whose field was
+# unpopulated saw a stranger's "+$1,240 · 67% Win Rate · 8-day hold".
+# A numeric default that isn't a structural zero/neutral is a fabricated
+# user-facing figure (자본시장법 §178 허위표시). The ONLY permitted bare
+# numeric defaults are the neutral identities: 0, 0.0, and an empty
+# string is handled elsewhere.
+NUMERIC_DEFAULT_RE = re.compile(r"""default\(\s*(-?\d+(?:\.\d+)?)\s*\)""")
+_PERMITTED_NUMERIC_DEFAULTS: frozenset[str] = frozenset({"0", "0.0", "-0", "-0.0"})
+
 
 def _iter_template_files() -> list[Path]:
     assert TEMPLATES_DIR.is_dir(), (
@@ -116,6 +129,43 @@ class TestNoHardcodedMoneyInDefaults:
             "would render for any real user whose field resolution fell "
             "through. Replace with default(none) and gate the surrounding "
             "block on the real value.\n\n"
+            + "\n".join(offenders)
+        )
+
+
+class TestNoBareNumericSampleInDefaults:
+    """`default(1240)` / `default(67.0)` bleeds a fabricated figure into a
+    real user's artifact whenever the service fails to populate the field.
+
+    2026-05-22 regression: the brag-card email hero shipped a hardcoded
+    "+$1,240 · 67% Win Rate · 8-day hold" to every recipient because the
+    BragCardContext never populated `best_pnl_usd` / `win_rate_pct` /
+    `hold_days` and the template `default(N)` fell through. Bare numeric
+    defaults slipped past the quoted-string guards. Only the neutral
+    identities (0 / 0.0) are permitted as a structural fallback.
+    """
+
+    def test_no_bare_numeric_sample_in_template_defaults(self) -> None:
+        offenders: list[str] = []
+        for path in _iter_template_files():
+            # Strip Jinja comments first so an audit note that *documents* a
+            # removed `default(30)` doesn't retrigger the guard (mirrors the
+            # broker-name guard's _strip_jinja_comments handling).
+            text = _strip_jinja_comments(path.read_text(encoding="utf-8"))
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                for m in NUMERIC_DEFAULT_RE.finditer(line):
+                    value = m.group(1)
+                    if value in _PERMITTED_NUMERIC_DEFAULTS:
+                        continue
+                    rel = path.relative_to(REPO_ROOT)
+                    offenders.append(f"{rel}:{lineno}: default({value})")
+        assert not offenders, (
+            "Bare numeric sample in template default() — a fabricated figure "
+            "would render for any real user whose service layer left the "
+            "field unpopulated (자본시장법 §178 허위표시). Permitted bare "
+            "defaults are only the neutral identities default(0)/default(0.0). "
+            "Otherwise replace with default(none) and gate the surrounding "
+            "block on `{% if field is not none %}`.\n\n"
             + "\n".join(offenders)
         )
 

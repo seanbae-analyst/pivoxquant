@@ -185,6 +185,62 @@ def test_render_html_contains_required_elements(brag_svc):
     assert "정보 제공 목적" in html
 
 
+# ─── 3b. FIX 1 — no fabricated sample P&L for users without best-trade data ──
+
+def _empty_brag_data(user_id=1):
+    """A real user who closed NO lots this month: best/worst tickers None,
+    best/overall return None. The email MUST NOT show a fabricated sample.
+    """
+    return {
+        "user_id": user_id, "user_name": "Tester",
+        "referral_code": "ABCD2345",
+        "month_label": "Mar 2026", "month_label_long": "March 2026",
+        "month_start": "2026-03-01", "month_end": "2026-03-31",
+        "generated_at": "2026-04-01T00:00:00Z",
+        "return_pct": None, "trade_count": 0,
+        "best_ticker": None, "best_return_pct": None,
+        "worst_ticker": None, "worst_return_pct": None,
+        "anonymous": False, "is_empty": True,
+        "share_token": None,
+        "disclaimer": "정보 제공 목적이며 투자 권유가 아닙니다.",
+    }
+
+
+def test_brag_email_no_fabricated_sample_when_no_real_data(brag_svc):
+    """REGRESSION (P0, 자본시장법 §178): the email hero used
+    `default(1240)` / `default(67.0)` / `default(8)` so a real user with no
+    closed lots saw a stranger's "+$1,240 · 67% Win Rate · 8-day hold".
+    The fabricated sample numbers must be ABSENT from the rendered email.
+    """
+    html = brag_svc.render_email_html(_empty_brag_data())
+    assert isinstance(html, str)
+    # The three fabricated sample figures must never render.
+    assert "1,240" not in html
+    assert "1240" not in html
+    assert "67%" not in html
+    assert "67.0" not in html
+    assert "8-day hold" not in html
+    # The hero shows the neutral "no closed lots" note instead.
+    assert "No closed lots this month" in html
+    # And no naked "$" sign smuggled in via the removed dollar hero.
+    assert "+$" not in html
+
+
+def test_brag_email_renders_real_return_pct_when_present(brag_svc):
+    """When real best-lot data exists, the hero shows the real % return —
+    never a sample dollar amount."""
+    data = _empty_brag_data()
+    data.update({
+        "return_pct": 9.4, "trade_count": 3,
+        "best_ticker": "AAPL", "best_return_pct": 14.2, "is_empty": False,
+    })
+    html = brag_svc.render_email_html(data)
+    assert "+14.20%" in html       # real best-lot return
+    assert "AAPL" in html
+    assert "1,240" not in html     # no fabricated dollar sample
+    assert "67%" not in html       # no fabricated win-rate sample
+
+
 # ─── 4. run_monthly covers Free tier ─────────────────────────────────────────
 
 def test_run_monthly_includes_free_users(app, make_user, seed_trades,
@@ -215,6 +271,25 @@ def test_run_monthly_includes_free_users(app, make_user, seed_trades,
     # skipped if seed_trades didn't write due to fixture scoping. At
     # minimum, at least one success and no failures.
     assert summary["success"] >= 1
+    assert summary["failed"] == 0
+
+
+# ─── 4b. FIX 4 — run_monthly target_month branch assigns `end` (no NameError) ─
+
+def test_run_monthly_target_month_branch_no_nameerror(app, make_user,
+                                                       seed_trades,
+                                                       target_month, brag_svc):
+    """REGRESSION: the target_month branch discarded its `end` computation
+    (`start.replace(...)` return dropped) so `end` was never bound. Even
+    though `end` isn't read downstream today, the line was dead/incorrect.
+    This exercises the branch and asserts it completes cleanly."""
+    u = make_user(email="endbound@test.com", tier="free")
+    seed_trades(u["id"], ticker="EEE", buy_cost=500, pnl=25)
+    with patch.object(brag_svc, "send_email", return_value=True), \
+         patch.object(brag_svc, "render_png", return_value=None):
+        with app.app_context():
+            summary = brag_svc.run_monthly(target_month=target_month)
+    assert summary["month"] == target_month.replace(day=1).isoformat()
     assert summary["failed"] == 0
 
 

@@ -49,6 +49,7 @@ from models import (
     ArtifactFeedback, BehavioralScore,
     AITwinPortfolio, AITwinWeeklyReport,
     PreTradeReflection, PersonaSnapshot, WeeklyPulse,
+    ScheduledEmail, NpsFeedback,
     AuthEvent,
 )
 from security import auth_rate_limit, general_rate_limit
@@ -1442,6 +1443,14 @@ def delete_account():
         PreTradeReflection.query.filter_by(user_id=user_id).delete()
         PersonaSnapshot.query.filter_by(user_id=user_id).delete()
         WeeklyPulse.query.filter_by(user_id=user_id).delete()
+        # 2026-05-22 — sync gap fix: ScheduledEmail + NpsFeedback are
+        # user-scoped PII (user_id FK) purged by the 30-day cron
+        # (scripts/nightly/pipa_purge._delete_user_cascade) but were
+        # missing from the immediate hard-delete path. Same relative
+        # order as pipa_purge (after WeeklyPulse). Both lists MUST stay
+        # in sync — adding a user-owned model requires updating BOTH.
+        ScheduledEmail.query.filter_by(user_id=user_id).delete()
+        NpsFeedback.query.filter_by(user_id=user_id).delete()
 
         # Delete user record
         db.session.delete(current_user)

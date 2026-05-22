@@ -96,13 +96,28 @@ def _drain_once() -> dict[str, int]:
     can attribute volume per queue without ambiguity.
     """
     from app import create_app
+    from extensions import db
     from services.email.onboarding_sequence import dispatch_due
     from services.email.retention_sequence import dispatch_retention
 
+    # Transient app: ALSO registered into the in-process APScheduler
+    # (services/scheduler/cron_jobs.py:_wrap_python_main). The main web app
+    # already warmed the cache; suppress the redundant FMP-hitting warmup
+    # thread here. create_app reads this env at call time (app.py:355).
+    os.environ["POPULATE_CACHE_ON_BOOT"] = "0"
+
     app = create_app()
-    with app.app_context():
-        onboarding_stats = dispatch_due()
-        retention_stats = dispatch_retention()
+    try:
+        with app.app_context():
+            onboarding_stats = dispatch_due()
+            retention_stats = dispatch_retention()
+    finally:
+        # Release the transient QueuePool now rather than letting it linger
+        # ~300s toward Railway PG's 25-conn ceiling. Harmless standalone.
+        try:
+            db.engine.dispose()
+        except Exception:  # noqa: BLE001
+            logger.debug("engine dispose failed (non-fatal)", exc_info=True)
 
     combined: dict[str, int] = {}
     for k, v in onboarding_stats.items():
