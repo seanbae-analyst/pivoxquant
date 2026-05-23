@@ -22,12 +22,33 @@ if str(_ROOT) not in sys.path:
 # We import the module directly to avoid relying on services that need Flask.
 import importlib
 import types
+from contextlib import contextmanager
+
+import services as _services_pkg
 
 # Build a minimal fake fx_service so check_fx_staleness() doesn't need Flask
 _FAKE_FX = types.ModuleType("services.fx_service")
 _FAKE_FX.get_rate = lambda: 1380.0
 _FAKE_FX.last_updated = lambda: time.time()  # fresh by default
 _FAKE_FX.is_stale = lambda: False
+
+
+@contextmanager
+def _use_fake_fx(fake_fx):
+    """Force ``from services import fx_service`` to resolve to ``fake_fx``.
+
+    check_fx_staleness() does ``from services import fx_service`` at call
+    time, which is ``getattr(services, "fx_service")`` FIRST and only falls
+    back to ``sys.modules`` on AttributeError. So if any earlier test in the
+    suite did ``from services.fx_service import ...`` (e.g. test_market.py),
+    the real module is bound as an attribute on the ``services`` package and
+    a bare ``sys.modules`` patch is silently ignored — the source of the
+    full-suite-only flakiness. Patch BOTH so isolation holds regardless of
+    suite ordering.
+    """
+    with patch.dict(sys.modules, {"services.fx_service": fake_fx}):
+        with patch.object(_services_pkg, "fx_service", fake_fx, create=True):
+            yield
 
 
 def _load_module(tmp_path):
@@ -51,13 +72,11 @@ class TestFxFresh:
     """No alert when rate is fresh."""
 
     def test_fresh_rate_returns_0(self, tmp_path):
-        mod = _load_module(tmp_path)
-        # fx_service.last_updated() returns now — fresh
-        with patch.dict(sys.modules, {"services": MagicMock(), "services.fx_service": _FAKE_FX}):
-            with patch.object(mod, "_fetch_fx_service", create=True, return_value=_FAKE_FX):
-                # Directly mock the import path inside the module
-                with patch.dict(sys.modules, {"services.fx_service": _FAKE_FX}):
-                    rc = mod.check_fx_staleness()
+        # fx_service.last_updated() returns now — fresh. _use_fake_fx pins
+        # the fake on both sys.modules and the services package attribute.
+        with _use_fake_fx(_FAKE_FX):
+            mod = _load_module(tmp_path)
+            rc = mod.check_fx_staleness()
         assert rc == 0, f"Expected 0 (fresh), got {rc}"
 
 
@@ -70,8 +89,9 @@ class TestFxStale24h:
         fake_fx.get_rate = lambda: 1380.0
         fake_fx.last_updated = lambda: stale_ts
 
-        # Load module inside patch.dict so exec_module sees the fake fx_service
-        with patch.dict(sys.modules, {"services.fx_service": fake_fx}):
+        # Load module + call inside the fake-fx context so both exec_module
+        # and the call-time ``from services import fx_service`` see the fake.
+        with _use_fake_fx(fake_fx):
             mod = _load_module(tmp_path)
             # Patch module-level _STATE_DIR/_STATE_FILE to use tmp_path
             (tmp_path / "state").mkdir(parents=True, exist_ok=True)
@@ -95,8 +115,8 @@ class TestFxStale24h:
         fake_fx.get_rate = lambda: 1380.0
         fake_fx.last_updated = lambda: 0.0
 
-        # Load module inside patch.dict so exec_module sees the fake fx_service
-        with patch.dict(sys.modules, {"services.fx_service": fake_fx}):
+        # Load module + call inside the fake-fx context (see _use_fake_fx).
+        with _use_fake_fx(fake_fx):
             mod = _load_module(tmp_path)
             (tmp_path / "state").mkdir(parents=True, exist_ok=True)
             mod._STATE_DIR = tmp_path / "state"
@@ -129,7 +149,11 @@ class TestFxDedup:
         fake_fx.get_rate = lambda: 1380.0
         fake_fx.last_updated = lambda: stale_ts
 
-        with patch.dict(sys.modules, {"services.fx_service": fake_fx}):
+        # _use_fake_fx so the rate is genuinely stale (not accidentally
+        # "fresh" via a real fx_service leaked in from a prior test) — this
+        # test must exercise dedup-suppresses-a-stale-alert, not pass by
+        # coincidence on a fresh rate.
+        with _use_fake_fx(fake_fx):
             with patch.object(mod, "_post_slack", return_value=True) as mock_slack:
                 rc = mod.check_fx_staleness()
 

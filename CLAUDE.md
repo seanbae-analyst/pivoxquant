@@ -1,44 +1,47 @@
-# PivoxQuant — Session Handoff (2026-04-14 Updated)
+# PivoxQuant — Session Handoff (2026-05-23 Updated)
+
+> ⚠️ 이 파일은 2026-04-14 작성 후 오래 STALE 상태였다 (백엔드 85% / 미배포 /
+> 결제 미연결 등). 2026-05-23 에 실측 기준으로 현행화. 옛 "당장 고쳐야 할
+> CRITICAL/HIGH 버그 목록" (Add Position 불가, Search 안 됨 등) 은 **전부 해결**
+> 되어 삭제했다. 상세 진행 이력은 메모리 MEMORY.md 의 세션 로그 참조.
 
 ## 프로젝트 개요
 AI + Quant 기반 개인 투자 어드바이저 플랫폼.
-미국 + 한국 주식 지원. 실제 출시 목표 (SaaS 3티어: Free/Pro ₩9,900/Premium ₩19,900).
-1인 창업자(배상현) 운영. 취준 겸 사이드프로젝트.
+미국 + 한국 주식 지원. SaaS 3티어 (Free / Pro ₩9,900 / Premium ₩19,900).
+1인 창업자(배상현) 운영. **현재 클로즈드 베타 + 출시 직전.**
 
-## 현재 상태 요약 ⚠️
-**백엔드: 85% 완성** — 퀀트 엔진, 58개 모델, 85+ API 엔드포인트, 보안 미들웨어 완료
-**프론트엔드: 50% 완성** — 27개 페이지 존재하나 핵심 기능 다수 미동작 (아래 버그 목록 참조)
-**인프라: 미배포** — 로컬 개발만 완료, Vercel/Railway 배포 안 됨
-**결제: 미연결** — Stripe 코드 있으나 API Key/Product ID 미매핑
+## 현재 상태 요약 (2026-05-23 실측)
+**백엔드: prod 라이브** — Railway `web-production-7b484b.up.railway.app`, PostgreSQL,
+  200+ 엔드포인트, pytest 3000+ 통과. health version = git sha.
+**프론트엔드: prod 라이브** — Vercel `pivoxquant.com` (베타 게이트 307), Next.js 16,
+  vitest 450+ 통과. V2 디자인 플래그 9개 모두 prod true.
+**인프라: 배포 완료** — Railway(BE, GitHub auto-deploy 정상화 v46) + Vercel(FE).
+  배포 메커니즘 상세는 메모리 MEMORY.md DevOps 섹션 참조.
+**결제: Stripe 통합 완료, 게이트로 비활성** — 코드 완성. `BUSINESS_REGISTRATION`
+  미완 + 변호사 Q1-Q15 자문 대기로 prod 는 503 `BUSINESS_REGISTRATION_PENDING`
+  반환. 사업자등록 459-01-03808 발급됨, 통신판매업 신고 + 유료결제 활성화는
+  변호사 의견서 후.
 
-## 🚨 CEO 직접 테스트 결과 — 당장 고쳐야 할 것들
-
-### CRITICAL (서비스 자체가 안 됨)
-1. **Add Position 불가** — `/portfolio` 페이지 없음(404). 매수/매도 모달도 없음. → 페이지 + 모달 신규 생성 필요
-2. **Search Stock 안 눌림** — 상단 검색바 클릭/입력 불가
-3. **Watchlist 추가 불가** — 종목 추가 UI 동작 안 함
-4. **Risk 페이지 안 뜸** — 빈 페이지, 7-Layer Risk Defense 프론트 미연동
-5. **Discover 데이터 안 나옴** — FMP 402 에러 연관 가능
-
-### HIGH (핵심 UX 깨짐)
-6. **알림 벨 안 눌림** — 우측 상단 아이콘 클릭 불가
-7. **프로필 아이콘 안 눌림** — 드롭다운 메뉴 없음
-8. **Connect Alpaca 안 눌림** — Settings 연결 버튼 동작 안 함
-9. **코스피/코스닥 없음** — Market 페이지에 한국 시장 데이터 없음
-10. **Contact 이메일 가짜** — 4곳에 각각 다른 가짜 도메인 (.app/.io/.me)
-11. ~~**Google/Kakao OAuth 미설정**~~ — **RESOLVED 2026-04-19** (commit `d153340` stateless HMAC state) + 콘솔 redirect URI 등록 완료 (CEO 2026-05-08 confirm). 라이브 동작 정상.
-
-### 상세 버그 목록: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md` 참조
+## 알려진 잔여 이슈 (2026-05-23 기준, 외부 액션 / 법무 의존)
+- **이메일 수신(MX) 미설정**: 발신(SendGrid SPF/DKIM/DMARC)은 됐으나 MX 없어
+  support@/reports@ 수신 불가. 가이드: `docs/ops/email-setup.md` (ImprovMX 경로).
+- **Pro 아티팩트 이메일 동의 게이트**: `marketing_consent_at` NULL 유저는
+  아티팩트 메일 미수신. 정통망법 §50 분리동의(변호사 Q-S1) 의존 — 코드는
+  `PIVOX_CS1_CONSENT_ENABLED` 플래그 뒤 준비.
+- **env 미설정 1건**: prod `missing_recommended:1` (SENDGRID_API_KEY 또는
+  SENDGRID_WEBHOOK_PUBLIC_KEY — Railway Variables/Deploy Logs 에서 확인).
+- 상세 버그 이력: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md`
 
 ## 기술 스택
-- **Backend**: Flask + SQLAlchemy + SQLite (→ PostgreSQL 전환 예정)
+- **Backend**: Flask + SQLAlchemy + **PostgreSQL (Railway, prod)** / SQLite (local test)
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
-- **AI**: Claude API (Anthropic) — SWOT, Chat, Sector, Coaching
+- **AI**: Claude API (Anthropic) — SWOT, Chat, Sector, Coaching, Earnings Tone, Artifacts
 - **Broker**: Alpaca (US, paper=True) + KIS 한국투자증권 (read-only)
-- **Data**: FMP v4 Stable ($29 Premium — 750 req/min, soft daily cap 10k) + Alpaca + SEC EDGAR
-- **Auth**: Google + Kakao OAuth (email+password 없음)
-- **Payment**: Stripe (코드만 있음, 미연결)
-- **Design**: Nexora template 기반 — purple/blue/pink gradient, clean white
+- **Data**: FMP Stable + Alpaca + KIS + SEC EDGAR (공식 라이선스 데이터만)
+- **Auth**: Google + Kakao OAuth (email+password 없음). 라이브 동작 정상.
+- **Payment**: Stripe 통합 완료 (BUSINESS_REGISTRATION 게이트로 비활성)
+- **Design**: v3 락-인 — Vantablack + Bronze + Playfair + KR 컨벤션 (옛 Nexora
+  purple/blue gradient 는 폐기). 상세 메모리 `project_design_v3.md`.
 
 ## 백엔드 구조
 ```
@@ -178,47 +181,25 @@ brew install grep
 
 CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in template defaults`) 이 green 이어야 머지 가능. CI 는 ubuntu-latest (GNU grep) 에서 실행되므로 `-Pzo` 가 정상 작동한다.
 
-## 다음 세션 TODO (우선순위 순)
+## 출시까지 남은 것 (2026-05-23 기준)
 
-### 🔴 P0 — CEO가 직접 해야 하는 것
-1. ~~Google Cloud Console / Kakao Developers OAuth redirect URI~~ — **RESOLVED 2026-04-19 + 콘솔 등록 완료 2026-05-08**
+옛 P0/P1 기능 미동작 목록(Portfolio/Search/Watchlist/Risk/Discover/알림벨/
+프로필/Alpaca/코스피·코스닥/OAuth)은 **전부 구현·배포 완료**. 남은 것은:
 
-### 🔴 P0 — 서비스 자체가 안 되는 것
-3. Portfolio 페이지 + Add Position + 매수/매도/수정 모달 구현
-4. Search Stock 검색바 동작
-5. Watchlist 종목 추가 기능
-6. Risk 페이지 데이터 표시 + Risk Defense 연동
-7. Discover 종목 스캔 데이터 로딩
+### 🔴 출시 BLOCKER (외부 / 법무 의존 — CEO 액션)
+- **변호사 의견서 Q1-Q15 + Q-S1** — 유료결제 활성화 BLOCKER. `legal_question_queue.md`.
+- **통신판매업 신고** — 사업자등록(459-01-03808)은 발급됨, 통신판매업 별도.
+- **이메일 수신(MX)** — `docs/ops/email-setup.md` (가비아 콘솔 ImprovMX).
+- **SENDGRID_API_KEY 확인** — Railway Variables (발신 실제 작동 확정).
 
-### 🟠 P1 — 핵심 UX
-8. 알림 벨 드롭다운
-9. 프로필 드롭다운 메뉴
-10. Connect Alpaca 버튼 동작
-11. 코스피/코스닥 지수 Market 페이지에 추가
-12. 로그인→온보딩→홈 전체 플로우 검증
-
-### 🟡 P2 — 런칭 전 필수
-13. Stripe 결제 연결 (API Key + Product ID + test mode 검증)
-14. Contact 이메일 도메인 통일 + 메일서버
-15. 이용약관/개인정보처리방침 한국어 버전
-16. FMP 402 에러 근본 해결
-17. 모바일 반응형 전체 점검
-18. 에러 페이지 (404, 500)
-19. 배포 (Vercel + Railway)
-
-### 🟢 P3 — 런칭 후
-20. Detail 페이지 7개 섹션 완성
-21. 브라우저 푸시 알림
-22. Intraday 스캐너 인터랙션
+### 🟠 코드 측 (내부 — 자율 진행 가능)
+- 이메일 동의 silent-drop 비-silent화 + signup 동의 캡처 (flag-gated, Q-S1 의존부 분리).
+- 백엔드 flaky 테스트 격리 (test_daytrade_smoke / test_fx_staleness — full suite 시 fail, 단독 PASS).
+- 잔여 deferred (owner): 부분환불 §17 / 국외이전 §28-8 / DCA XIRR / lookahead / Composer synthetic / KR 52w.
 
 ## 유저 플로우 자동 테스트 방안
-OAuth 설정 완료 후 → Claude in Chrome MCP + user-tester agent로 6개 플로우 자동 테스트 가능.
+Claude in Chrome MCP + user-tester agent 로 6개 플로우 자동 테스트 가능 (Chrome 연결 필요 — CEO 세션).
 상세: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md` 하단 참조.
-
-## 코드 정리 완료 (2026-04-14)
-- `framer-motion`, `lightweight-charts` npm 패키지 제거
-- `risk_models.py` 하단 80줄 self-test 코드 제거
-- 미사용 shadcn 컴포넌트 9개, 미사용 hooks 8개, 미사용 types 13개 → 다음 세션에서 파일 삭제 가능 (현재는 참조만 기록)
 
 ## 메모리 파일 위치
 모든 프로젝트 지식은 `~/.claude/projects/-Users-seanbae-Desktop---/memory/` 에 저장:

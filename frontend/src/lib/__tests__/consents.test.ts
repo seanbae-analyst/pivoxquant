@@ -59,12 +59,16 @@ describe("flushPendingMarketingConsent — the signup→backend promotion leg", 
     expect(mockedFetch).not.toHaveBeenCalled();
   });
 
-  it("swallows backend failures (best-effort; never blocks post-signup UX)", async () => {
+  it("returns false on backend failure (never throws, so the caller retries)", async () => {
+    // Contract (2026-05-23): a failed flush must NOT throw (post-signup UX
+    // is never blocked) but must resolve to FALSE so the dashboard layout
+    // keeps the staged snapshot and retries on the next mount instead of
+    // silently dropping the opt-in the user gave at signup.
     mockedFetch.mockRejectedValue(new ApiError(401, "unauthorized"));
 
     await expect(
       flushPendingMarketingConsent({ marketing: true }),
-    ).resolves.toBe(true);
+    ).resolves.toBe(false);
     expect(mockedFetch).toHaveBeenCalledTimes(1);
   });
 
@@ -94,6 +98,13 @@ describe("flushPendingCrossBorderConsent — PIPA §28-8 promotion leg", () => {
     expect(mockedFetch).toHaveBeenCalledWith(API.consents.crossBorder, {
       method: "POST",
     });
+  });
+
+  it("returns false on backend failure (caller keeps snapshot to retry)", async () => {
+    mockedFetch.mockRejectedValue(new ApiError(401, "unauthorized"));
+    await expect(
+      flushPendingCrossBorderConsent({ cross_border: true }),
+    ).resolves.toBe(false);
   });
 
   it("does NOT POST when cross-border consent absent", async () => {

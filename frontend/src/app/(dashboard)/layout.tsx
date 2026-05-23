@@ -115,11 +115,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       void (async () => {
         const snapshot = readStagedSnapshot();
         if (!snapshot) return;
-        await Promise.allSettled([
+        // Clear the staged snapshot ONLY when both flushes reached their
+        // desired end-state (true = sent or nothing-to-send). If either
+        // failed (false — e.g. 401 before auth settles, cold backend), keep
+        // the snapshot so this effect retries on the next mount instead of
+        // silently dropping a consent the user gave at signup.
+        const [mkt, xb] = await Promise.allSettled([
           flushPendingMarketingConsent(snapshot),
           flushPendingCrossBorderConsent(snapshot),
         ]);
-        clearStagedSnapshot();
+        const ok = (r: PromiseSettledResult<boolean>) =>
+          r.status === "fulfilled" && r.value === true;
+        if (ok(mkt) && ok(xb)) {
+          clearStagedSnapshot();
+        }
       })();
     }
   }, [loading, user]);

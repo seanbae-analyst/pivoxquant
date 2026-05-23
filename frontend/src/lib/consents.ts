@@ -113,13 +113,16 @@ export async function flushPendingMarketingConsent(
       { method: "POST" },
     );
   } catch (err) {
-    // Best-effort flush — if the user is unauthenticated (401), the
-    // endpoint is not yet deployed (404), or the network is flaky,
-    // we swallow it. The /settings toggle is the recovery surface.
-    if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
-      // Helpful breadcrumb for local dev; never reaches users.
-      console.warn("[consents] flush failed (non-fatal):", err);
+    // Flush failed — 401 (auth not settled mid-OAuth), 404, or flaky
+    // network. Do NOT silently drop a consent the user actively gave at
+    // signup: return false so the caller keeps the staged snapshot and
+    // retries on the next dashboard mount. (Prior code swallowed this and
+    // returned true → the snapshot was cleared and the opt-in was lost,
+    // leaving the user with marketing_consent_at NULL → no artifact mail.)
+    if (typeof window !== "undefined") {
+      console.error("[consents] marketing flush failed — will retry:", err);
     }
+    return false;
   }
   return true;
 }
@@ -206,9 +209,12 @@ export async function flushPendingCrossBorderConsent(
       { method: "POST" },
     );
   } catch (err) {
-    if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
-      console.warn("[consents] cross-border flush failed (non-fatal):", err);
+    // Same retry-preserving contract as flushPendingMarketingConsent:
+    // a failed flush returns false so the caller keeps the snapshot.
+    if (typeof window !== "undefined") {
+      console.error("[consents] cross-border flush failed — will retry:", err);
     }
+    return false;
   }
   return true;
 }

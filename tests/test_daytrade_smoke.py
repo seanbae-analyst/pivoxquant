@@ -27,11 +27,16 @@ class TestDaytradeScanSmoke:
         assert r.status_code == 401
 
     def test_scan_returns_503_when_unconfigured(self, client, auth_user):
-        # daytrade.available is False in tests (no Alpaca key) — explicit
-        # 503 with "not configured" message rather than empty 200, because
-        # KIS may also be unavailable. Contract: results-or-degraded, never 500.
-        with patch("routes.daytrade.daytrade") as mock_dt:
+        # Contract: when BOTH the US (Alpaca/daytrade) and KR (KIS) scanners
+        # are unavailable, /scan returns an explicit 503 rather than an empty
+        # 200. Must mock KIS too: the route falls through to a KIS scan when
+        # daytrade is down, so if a prior test in the full suite left the KIS
+        # singleton "available", the scan returns KR results + 200 and this
+        # assertion fails (the original full-suite-only flake).
+        with patch("routes.daytrade.daytrade") as mock_dt, \
+                patch("services.kis.service.KISService") as MockKIS:
             mock_dt.available = False
+            MockKIS.return_value.available = False
             r = client.get("/api/daytrade/scan")
         assert r.status_code == 503
         assert "error" in r.get_json()
