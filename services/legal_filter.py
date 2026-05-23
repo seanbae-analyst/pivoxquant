@@ -246,6 +246,14 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     # 광범위 \bbuy\b IGNORECASE 는 절대 추가 금지 — "a good buy"/"buying
     # pressure"/"best-seller"/"will sell products" 는 부사 부재로 미매치.
     (re.compile(r"\b(?:buy|sell)\s+(?:now|today|immediately|asap|right\s+now)\b", re.IGNORECASE), "관찰 시점"),
+    # 티커가 명령과 부사 사이에 끼는 형태 ("buy AAPL right now" / "sell $TSLA
+    # today") 는 위 248 패턴이 인접 부사만 보므로 미커버였다 (2026-05-23 갭).
+    # 좁게만 보강: 동사(buy/Buy/sell/Sell)는 case-insensitive 이되 가운데
+    # 토큰은 **대문자 티커**($옵션 + 1-5 대문자) 로 case-sensitive 고정하고
+    # (no IGNORECASE flag), 부사만 (?i:) 로 대소문자 무시한다. 이렇게 하면
+    # 소문자 산문("buy apple today" / "people buy stocks now")은 가운데가
+    # 소문자라 미매치 → over-scrub 방지 ([[feedback_legal_filter_design]]).
+    (re.compile(r"\b(?:[Bb]uy|[Ss]ell)\s+\$?[A-Z]{1,5}\b\s+(?i:now|today|immediately|asap|right\s+now)\b"), "관찰 시점"),
     # 한글 명령형: "지금 매수/매도" + "매수/매도하세요/하라/해라". Group 11b
     # (매수+하세요/하라 등) 와 일부 겹치나 "해라" / "지금 매수" 는 미커버였음.
     (re.compile(r"지금\s*(?:매수|매도)"), "관찰 시점"),

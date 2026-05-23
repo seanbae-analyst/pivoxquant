@@ -300,6 +300,26 @@ class TestWave4LegalFilterShipBlocker:
         for forbidden in ("사세요", "파세요", "팔아요", "사라", "팔아", "사면", "사야"):
             assert forbidden not in result, f"'{forbidden}' bypassed scrub of '{directive}' → '{result}'"
 
+    # ── F2b: ticker-interjected directive ("buy AAPL right now") ──────────
+    @pytest.mark.parametrize(
+        "directive",
+        ["buy AAPL right now", "sell TSLA now", "Buy NVDA today",
+         "sell $MSFT immediately", "buy GOOG asap"],
+    )
+    def test_f2b_ticker_interjected_directive_scrubbed(self, directive):
+        result = scrub_text(directive)
+        assert result == "관찰 시점", f"{directive!r} not scrubbed → {result!r}"
+
+    @pytest.mark.parametrize(
+        "prose",
+        ["a good buy", "best-seller", "will sell products today",
+         "people who buy apple pie today", "buy stocks now"],
+    )
+    def test_f2b_lowercase_prose_not_over_scrubbed(self, prose):
+        # The ticker-interjected pattern requires an UPPERCASE ticker, so
+        # lowercase prose must pass through untouched (no over-scrub).
+        assert scrub_text(prose) == prose, f"over-scrubbed: {prose!r}"
+
     # ── F3: naked BUY/SELL (Group 6 보강) ─────────────────────────────────
     def test_f3_naked_buy(self):
         assert "ENTRY" == scrub_text("BUY")

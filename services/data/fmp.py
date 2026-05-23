@@ -538,6 +538,29 @@ def _quote_price_sane(quote: dict) -> bool:
     return True
 
 
+def _parse_52w_range(profile: dict) -> tuple[float | None, float | None]:
+    """Parse FMP /profile ``range`` ("low-high", e.g. "91.97-230.76").
+
+    Returns ``(low, high)`` as floats, or ``(None, None)`` when the field
+    is absent or unparseable. Prior code returned the raw split strings
+    (and an int ``0`` fallback) under "52WeekLow"/"52WeekHigh", a mixed
+    str|int type that forced every caller to coerce. ``None`` signals
+    "unavailable" honestly instead of a misleading 0.
+    """
+    raw = (profile.get("range") or "").strip()
+    if not raw:
+        return (None, None)
+    parts = raw.split("-")
+    if len(parts) < 2:
+        return (None, None)
+    try:
+        low = float(parts[0].strip())
+        high = float(parts[-1].strip())
+    except (TypeError, ValueError):
+        return (None, None)
+    return (low, high)
+
+
 def get_quote(ticker):
     """Get current quote. Cache 30s. Stale-while-revalidate when budget low.
 
@@ -912,8 +935,8 @@ def get_info(ticker):
             "currency": profile.get("currency", "USD"),
             "ipoDate": profile.get("ipoDate", ""),
             "image": profile.get("image", ""),
-            "52WeekHigh": profile.get("range", "").split("-")[-1].strip() if profile.get("range") else 0,
-            "52WeekLow": profile.get("range", "").split("-")[0].strip() if profile.get("range") else 0,
+            "52WeekHigh": _parse_52w_range(profile)[1],
+            "52WeekLow": _parse_52w_range(profile)[0],
             "dividendYield": last_div / price if price else 0,
             "isEtf": profile.get("isEtf", False),
             "floatShares": profile.get("floatShares") or profile.get("sharesFloat"),
@@ -1605,8 +1628,8 @@ def prefetch_fundamentals(tickers):
                 "currency": profile.get("currency", "USD"),
                 "ipoDate": profile.get("ipoDate", ""),
                 "image": profile.get("image", ""),
-                "52WeekHigh": profile.get("range", "").split("-")[-1].strip() if profile.get("range") else 0,
-                "52WeekLow": profile.get("range", "").split("-")[0].strip() if profile.get("range") else 0,
+                "52WeekHigh": _parse_52w_range(profile)[1],
+                "52WeekLow": _parse_52w_range(profile)[0],
                 "dividendYield": last_div / price if price else 0,
                 "isEtf": profile.get("isEtf", False),
                 "floatShares": profile.get("floatShares") or profile.get("sharesFloat"),

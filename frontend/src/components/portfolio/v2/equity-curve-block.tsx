@@ -100,12 +100,13 @@ function computePolylines(
     .filter((v): v is string => v !== null)
     .join(" ");
 
-  const lastNavY = toY(series[series.length - 1].nav);
+  // Area fill under the NAV line: start at the bottom-left baseline,
+  // trace the line (first point is already at x=0), drop to the
+  // bottom-right baseline, close. The prior `.replace(/M0,/, ...)` injected
+  // a spurious (0,lastNavY)→(0,height) vertical segment that distorted the
+  // left edge of every fill.
   const fillNav =
-    `M0,${height} L${ptsNav.replace(/ /g, " L")} L${(width).toFixed(1)},${height} Z`.replace(
-      /M0,/,
-      `M0,${lastNavY.toFixed(1)} L0,`,
-    );
+    `M0,${height.toFixed(1)} L${ptsNav.replace(/ /g, " L")} L${width.toFixed(1)},${height.toFixed(1)} Z`;
 
   // Closed polygon along the benchmark line back to the baseline.
   // Only built when we have a contiguous benchmark series for every

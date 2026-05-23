@@ -141,7 +141,12 @@ def create_checkout():
             code="BILLING_INVALID_PLAN", status=400,
         )
 
-    price_id = PLAN_PRICES[plan]
+    # Read the price ID at request time, not from the module-level
+    # PLAN_PRICES snapshot. Wave G-1 Bug #4 fixed the webhook handler
+    # (line 499) the same way: if STRIPE_PRICE_* is rotated (test→live)
+    # without a redeploy, the cached snapshot would send a stale price ID
+    # to Stripe. The dict above is still used for the plan-name allowlist.
+    price_id = os.environ.get(f"STRIPE_PRICE_{plan.upper()}", "") or PLAN_PRICES[plan]
     if not price_id:
         return api_error(
             en=f"Price ID not configured for {plan} plan.",
@@ -881,7 +886,11 @@ def get_subscription():
     sub_status = getattr(u, "subscription_status", "inactive") or "inactive"
     has_active = (
         eff_rank > _TIER_RANK["premium"]              # premium_plus / founding_lifetime — always entitled
-        or (eff_rank > _TIER_RANK["free"] and sub_status == "active")  # pro / premium — needs active Stripe sub
+        # pro / premium — active OR past_due. past_due = Stripe is retrying
+        # a failed charge; @require_tier still grants access during the
+        # retry window, so has_active must agree or the frontend shows a
+        # bogus upgrade CTA while the backend still serves paid content.
+        or (eff_rank > _TIER_RANK["free"] and sub_status in ("active", "past_due"))
     )
     result = {
         "subscription_tier": u.subscription_tier,
