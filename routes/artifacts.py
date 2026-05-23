@@ -611,14 +611,23 @@ def monthly_brag_og_image(brag_id: int):
     broken unfurl. Routing crawlers here instead.
 
     monthly_brag rows do not carry a ``share_token`` (only ``brag_card``
-    does), so this endpoint keys on ``brag_id``. Enumeration risk is
-    bounded: the share-link route already publishes ``brag_id`` in its
-    OG meta, and the PNG itself is intentionally public once shared.
-    Owner identity is never echoed back.
+    does), so this endpoint requires an HMAC-signed ``?sig=`` token bound
+    to the requested ``brag_id`` (minted by the owner-authed share-link
+    route). This closes integer-ID enumeration — the PNG embeds the
+    user's real name + monthly return (PIPA §29), so a bare ``brag_id``
+    must not be enough to fetch it. Crawlers receive the signed URL from
+    the share landing page, so unfurls still work.
 
+    * 403 — missing or invalid signature (enumeration attempt).
     * 404 — row doesn't exist or isn't monthly_brag.
     * 410 — row exists but no PNG rendered (Pillow unavailable).
     """
+    from services.brag_og_token import verify_og_token
+    if not verify_og_token(request.args.get("sig", ""), brag_id):
+        return api_error(en="Invalid or missing share signature",
+                         kr="잘못되었거나 누락된 공유 서명입니다.",
+                         code="BRAG_SIG_INVALID", status=403)
+
     artefact = db.session.get(Artifact, brag_id)
     if not artefact or artefact.type != "monthly_brag":
         return api_error(en="Brag card not found",
@@ -657,6 +666,8 @@ def monthly_brag_share_link(brag_id: int):
             or artefact.user_id != current_user.id):
         return api_error(en="Brag card not found", kr="자랑 카드를 찾을 수 없습니다.", code="BRAG_NOT_FOUND", status=404)
 
+    from services.brag_og_token import make_og_token
+
     data = artefact.data_json or {}
     referral = data.get("referral_code") or ""
     if not referral:
@@ -691,7 +702,9 @@ def monthly_brag_share_link(brag_id: int):
         # Wave G-3 Bug #4 (2026-05-18): https:// prefix + route to the
         # PUBLIC og-image endpoint (above) — /download/<id> is @api_auth
         # and crawlers were 401'ing → broken card unfurl.
-        "og:image":        f"https://{share_domain}/api/artifacts/monthly-brag/og-image/{artefact.id}",
+        # The ``?sig=`` HMAC token (minted here by the owner) is what the
+        # public og-image route verifies to block ID enumeration.
+        "og:image":        f"https://{share_domain}/api/artifacts/monthly-brag/og-image/{artefact.id}?sig={make_og_token(artefact.id)}",
         "og:url":          share_url,
         "twitter:card":    "summary_large_image",
     }

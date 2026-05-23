@@ -302,21 +302,30 @@ def _sharpe(rets: list[float]) -> Optional[float]:
     std = math.sqrt(var)
     if std <= 0:
         return None
-    return round((mean / std) * math.sqrt(252), 2)
+    # Excess return over the risk-free rate (rf=4.5% annual), matching
+    # the canonical formula in services/quant/backtester.py:475. The prior
+    # ``mean/std`` form omitted rf and overstated Sharpe by ~rf/vol.
+    mean_annual = mean * 252
+    std_annual = std * math.sqrt(252)
+    return round((mean_annual - 0.045) / std_annual, 2)
 
 
 def _sortino(rets: list[float]) -> Optional[float]:
     if len(rets) < 10:
         return None
     mean = sum(rets) / len(rets)
-    downs = [r for r in rets if r < 0]
-    if not downs:
+    # Target Downside Deviation anchored at the MAR (rf=4.5% annual),
+    # matching backtester.py:481-490. The prior ``std-of-negatives``
+    # measured dispersion around the negatives' own mean (anchored at 0,
+    # no rf) and inflated Sortino ~2x.
+    rf_daily = 0.045 / 252
+    downside_sq = [min(r - rf_daily, 0.0) ** 2 for r in rets]
+    if not any(d > 0 for d in downside_sq):
         return None
-    dd_var = sum(r * r for r in downs) / len(downs)
-    dd_std = math.sqrt(dd_var)
-    if dd_std <= 0:
+    down_std_annual = math.sqrt(sum(downside_sq) / len(downside_sq)) * math.sqrt(252)
+    if down_std_annual <= 0:
         return None
-    return round((mean / dd_std) * math.sqrt(252), 2)
+    return round((mean * 252 - 0.045) / down_std_annual, 2)
 
 
 def _max_dd(rets: list[float]) -> Optional[float]:
@@ -339,8 +348,16 @@ def _max_dd(rets: list[float]) -> Optional[float]:
 def _calmar(rets: list[float], mdd_pct: Optional[float]) -> Optional[float]:
     if mdd_pct is None or mdd_pct >= 0 or len(rets) < 10:
         return None
-    ann_ret = (sum(rets) / len(rets)) * 252 * 100
-    return round(ann_ret / abs(mdd_pct), 2)
+    # Geometric (compound) annualized return / |max drawdown|, matching
+    # backtester.py:499-502. Arithmetic annualization made Calmar
+    # period-dependent (a 10y window looked 10x better than 1y).
+    cum = 1.0
+    for r in rets:
+        cum *= (1.0 + r)
+    if cum <= 0:
+        return None
+    annualized_return = (cum ** (252 / len(rets)) - 1) * 100
+    return round(annualized_return / abs(mdd_pct), 2)
 
 
 def _tail_ratio(rets: list[float]) -> Optional[float]:

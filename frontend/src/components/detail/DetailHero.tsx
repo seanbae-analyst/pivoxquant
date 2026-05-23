@@ -97,6 +97,9 @@ function PillarMini({
 
 export interface DetailHeroProps {
   displayTicker: string;
+  /** Raw ticker WITH exchange suffix (".KS"/".KQ") — displayTicker has it
+   *  stripped, so KOSPI/KOSDAQ disambiguation must read this. */
+  rawTicker: string;
   displayName: string;
   summary?: string | null;
   sectorLine: string;
@@ -120,6 +123,7 @@ export interface DetailHeroProps {
 export function DetailHero(props: DetailHeroProps) {
   const {
     displayTicker,
+    rawTicker,
     displayName,
     summary,
     sectorLine,
@@ -299,7 +303,11 @@ export function DetailHero(props: DetailHeroProps) {
               ·
             </span>
             <span className="uppercase tracking-[0.12em]">
-              {krw ? "KRW · KOSPI" : "USD · US Listed"}
+              {krw
+                ? rawTicker.toUpperCase().endsWith(".KQ")
+                  ? "KRW · KOSDAQ"
+                  : "KRW · KOSPI"
+                : "USD · US Listed"}
             </span>
             {(() => {
               const { num, suffix } = splitMcap(fmtMcap(mcap, krw));

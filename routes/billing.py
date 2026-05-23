@@ -152,7 +152,9 @@ def create_checkout():
     # Wave G-1 Bug #3 (2026-05-18): block double-subscribe.
     # 이중 구독 시 Stripe customer 가 두 개의 active subscription 을 보유하게 되어
     # 사용자가 매월 2배 청구를 받게 됨. 변경은 Customer Portal 로 유도.
-    if getattr(current_user, "subscription_status", None) == "active":
+    # ``past_due`` 도 차단 — Stripe 가 결제 재시도 중인 구독이 살아 있으므로
+    # 새 checkout 을 열면 두 번째 구독이 생겨 동일하게 이중청구된다.
+    if getattr(current_user, "subscription_status", None) in ("active", "past_due"):
         return api_error(
             en="Already subscribed. Use the customer portal to change plans.",
             kr="이미 구독 중입니다. 결제 포털에서 플랜을 변경하세요.",

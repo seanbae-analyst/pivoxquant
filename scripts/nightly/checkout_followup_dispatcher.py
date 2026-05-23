@@ -144,8 +144,10 @@ def _drain_once() -> dict[str, int]:
                         continue
 
                     # User completed checkout between expired and now —
-                    # don't pester them.
-                    if getattr(user, "subscription_status", None) == "active":
+                    # don't pester them. ``past_due`` also has a live
+                    # subscription (Stripe retrying), so a "finish your
+                    # subscription" nudge would be wrong there too.
+                    if getattr(user, "subscription_status", None) in ("active", "past_due"):
                         row.mark_skipped("already_subscribed")
                         db.session.commit()
                         stats["skipped_already_active"] += 1

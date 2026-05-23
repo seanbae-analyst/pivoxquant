@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
   PortfolioModal,
@@ -69,9 +69,16 @@ export function TradeModal({
   );
   const [submitting, setSubmitting] = useState(false);
 
-  if (position && action === "edit" && avgCost === "" && position.avgCost) {
-    setAvgCost(String(position.avgCost));
-  }
+  // Sync avgCost from the selected position when the modal opens for an
+  // edit. Done in an effect — not the render body — because a setState
+  // during render violates React's rules (the v1 modal is reused across
+  // opens without a remounting key, so useState's lazy init alone goes
+  // stale when a different position is selected).
+  useEffect(() => {
+    if (open && position && action === "edit") {
+      setAvgCost(position.avgCost ? String(position.avgCost) : "");
+    }
+  }, [open, position, action]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

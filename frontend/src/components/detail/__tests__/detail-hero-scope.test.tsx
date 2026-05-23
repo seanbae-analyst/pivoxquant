@@ -11,6 +11,7 @@ import { DetailHero, type DetailHeroProps } from "@/components/detail/DetailHero
 function baseProps(over: Partial<DetailHeroProps> = {}): DetailHeroProps {
   return {
     displayTicker: "AAPL",
+    rawTicker: "AAPL",
     displayName: "Apple Inc.",
     summary: null,
     sectorLine: "Technology",
@@ -74,5 +75,34 @@ describe("DetailHero — scope-denied vs timeout", () => {
     expect(
       screen.queryByText(/Add this ticker to your watchlist/i),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("DetailHero — KOSPI vs KOSDAQ exchange line", () => {
+  it("shows KOSDAQ for a .KQ ticker (rawTicker, not the suffix-stripped displayTicker)", () => {
+    render(
+      <DetailHero
+        {...baseProps({
+          krw: true,
+          displayTicker: "247540",
+          rawTicker: "247540.KQ",
+        })}
+      />,
+    );
+    expect(screen.getByText("KRW · KOSDAQ")).toBeInTheDocument();
+    expect(screen.queryByText("KRW · KOSPI")).not.toBeInTheDocument();
+  });
+
+  it("shows KOSPI for a .KS ticker", () => {
+    render(
+      <DetailHero
+        {...baseProps({
+          krw: true,
+          displayTicker: "005930",
+          rawTicker: "005930.KS",
+        })}
+      />,
+    );
+    expect(screen.getByText("KRW · KOSPI")).toBeInTheDocument();
   });
 });

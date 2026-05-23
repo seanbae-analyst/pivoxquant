@@ -467,6 +467,7 @@ export default function StockDetailPage() {
         <div className="mt-4 space-y-6">
           <DetailHero
             displayTicker={displayTicker}
+            rawTicker={ticker}
             displayName={displayName}
             summary={profile?.summary}
             sectorLine={sectorLine}

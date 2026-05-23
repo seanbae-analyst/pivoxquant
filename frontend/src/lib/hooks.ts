@@ -587,8 +587,13 @@ interface RawPositionsPayload {
 function inferExchange(p: RawPosition): string {
   if (p.exchange) return p.exchange;
   if (p.market) return p.market;
-  if (p.is_korean || (p.ticker ?? "").endsWith(".KS")) return "KOSPI";
-  if (p.is_korean || (p.ticker ?? "").endsWith(".KQ")) return "KOSDAQ";
+  // Check the suffix before is_korean: a .KQ ticker also has
+  // is_korean=true, so an is_korean-first test would swallow every
+  // KOSDAQ name into KOSPI.
+  const t = (p.ticker ?? "").toUpperCase();
+  if (t.endsWith(".KQ")) return "KOSDAQ";
+  if (t.endsWith(".KS")) return "KOSPI";
+  if (p.is_korean) return "KOSPI"; // korean, suffix unknown → default KOSPI
   return "NASDAQ";
 }
 
