@@ -1,155 +1,118 @@
 # Email 인프라 셋업 가이드 — pivoxquant.com
 
-> **출시 BLOCKER 클래스.** 추가 비용 0원 (Cloudflare 무료 + SendGrid free 100/day + 가비아 도메인 기존).
-> **작업 시간**: CEO 10–15분.
-> **마지막 갱신**: 2026-05-15 v43 autonomous wave (PR #397에서 `support@pivoxquant.com` 메시지 추가됐는데 inbox 없으면 빈말 되므로 즉시 setup 필요).
+> **상태 갱신: 2026-05-23 v51** — DNS 실측 후 전면 정정.
+> 발신(SendGrid)은 **이미 설정 완료**, 남은 건 **수신(MX) 1건 + 발신 키 검증 1건**.
+> 추가 비용 0원 (ImprovMX 무료 + SendGrid free 100/day + 가비아 도메인 기존).
+> **작업 시간**: CEO 약 10분.
 
 ---
 
-## 왜 필요한가 (1줄씩)
+## 0. 실측된 현재 상태 (2026-05-23 `dig` 기준)
 
-1. **들어오는 방향**: 사용자가 PDF 이메일 받고 `reports@`에 reply → 현재 MX 없어서 **bounce**. weekly_memo cron은 매주 일요일 08:00 KST에 발송 시작 예정 → 그때부터 매주 reply 손실.
-2. **법규 표시 의무**: 이용약관 / 개인정보처리방침 / 결제 페이지에 `support@pivoxquant.com` 표시 (총 14곳, terms-ko.md / privacy-ko.md / settings / login / pricing 등). inbox 없으면 PIPA / 전자상거래법 §13 표시의무 위반 risk.
-3. **사용자 신뢰**: PR #397 결제 503 메시지 "support@pivoxquant.com 으로 문의해 주세요" — inbox 없으면 빈말.
-4. **나가는 방향 (SendGrid)**: 도메인 인증(SPF + DKIM) 안 하면 사용자 inbox로 **스팸 처리** 또는 거부됨. Cloudflare DNS 위임 후 SendGrid 콘솔에서 TXT 레코드 추가 1회.
+| 항목 | 레코드 | 상태 |
+|------|--------|------|
+| NS (DNS 호스트) | `ns1.gabia.co.kr` 등 | **가비아** (Cloudflare 이전 안 함) |
+| A / CNAME | Vercel (216.198.79.1 / vercel-dns) | ✅ 라우팅 정상 |
+| SPF (발신) | `v=spf1 include:sendgrid.net ~all` | ✅ 설정됨 |
+| DKIM (발신) | `s1/s2._domainkey` → SendGrid (u91995806) | ✅ 설정됨 |
+| DMARC | `v=DMARC1; p=none; rua=mailto:dmarc@pivoxquant.com` | ✅ 설정됨 (모니터링) |
+| **MX (수신)** | 없음 | ❌ **미설정 — 이게 남은 갭** |
 
----
+→ **나가는 메일**(`reports@`/`noreply@` 발송)은 DNS 인증이 다 돼서 스팸 안 걸리고 전달 가능.
+→ **들어오는 메일**(`support@`·`reports@`·`dmarc@` reply/문의)은 MX가 없어 **전부 bounce**.
 
-## Step-by-Step (Cloudflare 처음 사용 가정)
-
-### 0. 사전 준비
-- 가비아 (pivoxquant.com 도메인 등록처) 로그인 가능해야 함
-- 개인 Gmail: `seanbae1521@gmail.com` (포워딩 대상)
-- 작업 중 도메인 다운타임: **없음** (NS 변경은 propagation 후 cutover, MX는 점진 등록)
-
-### 1. Cloudflare 무료 계정 가입 + 도메인 추가 (3분)
-
-1. https://dash.cloudflare.com/sign-up 접속 → 이메일로 가입 (`seanbae1521@gmail.com` 권장)
-2. 대시보드 → **+ Add a site** → `pivoxquant.com` 입력
-3. **Free** plan 선택 ($0/월)
-4. Cloudflare가 현재 가비아 DNS 레코드를 자동 스캔 → 기존 A/CNAME/TXT 그대로 import (Vercel/Railway 라우팅 끊기지 않음)
-5. Cloudflare가 보여주는 두 개의 **Nameserver** 메모 (예: `xxx.ns.cloudflare.com`, `yyy.ns.cloudflare.com`)
-
-### 2. 가비아 → Cloudflare NS 변경 (5분, propagation 1-24h)
-
-1. 가비아 My가비아 → 도메인 통합 관리 툴 → **pivoxquant.com** 선택 → **네임서버 설정**
-2. **기타 네임서버 입력** 라디오 선택
-3. 1차 / 2차 네임서버에 Step 1에서 메모한 Cloudflare NS 입력 → 저장
-4. **propagation 대기**: 보통 1–6시간, 최대 24시간 (Cloudflare 대시보드가 활성화되면 완료)
-5. ⚠️ 이 단계에서 **www.pivoxquant.com (Vercel) + web-production-7b484b.up.railway.app (Railway)** 라우팅이 끊기면 안 됨 — Cloudflare가 import한 A/CNAME이 동일한 IP 가리키는지 확인 (자동 import 보통 정확)
-
-### 3. Cloudflare Email Routing 활성화 (2분)
-
-1. Cloudflare 대시보드 → **pivoxquant.com** 선택 → **Email** 탭
-2. **Get started** → **Enable Email Routing** 클릭
-3. Cloudflare가 자동으로 다음 DNS 레코드 추가:
-   - MX × 3개 (Cloudflare 메일 서버)
-   - SPF TXT (`v=spf1 include:_spf.mx.cloudflare.net ~all`)
-4. **Routing rules** 탭 → **Create address** ×3:
-   - `support@pivoxquant.com` → `seanbae1521@gmail.com`
-   - `reports@pivoxquant.com` → `seanbae1521@gmail.com`
-   - `hello@pivoxquant.com` → `seanbae1521@gmail.com`
-5. (선택) **Catch-all address** → `seanbae1521@gmail.com` 도 활성 (오타 들어와도 잡힘)
-6. Gmail 받은편지함 가서 Cloudflare 인증 메일 클릭 (`seanbae1521@gmail.com` 소유권 확인)
-
-### 4. 테스트 (2분)
-
-다른 Gmail 또는 휴대폰 메일 앱에서:
-```
-받는사람: support@pivoxquant.com
-제목: test
-본문: 테스트
-```
-→ `seanbae1521@gmail.com` 으로 1분 안에 도착하면 성공.
-
-`reports@` 와 `hello@` 도 동일 테스트.
-
-### 5. SendGrid 도메인 인증 (나가는 방향, 5분)
-
-> 전제: Railway env에 `SENDGRID_API_KEY` 가 이미 있다고 가정 (없으면 SendGrid 무료 계정 가입 후 키 발급 → Railway Variables tab에 추가).
-
-1. SendGrid 콘솔 → **Settings → Sender Authentication → Authenticate Your Domain**
-2. DNS host: **Cloudflare** 선택
-3. 도메인: `pivoxquant.com`
-4. **Next** → SendGrid가 3개의 CNAME 레코드 제공 (예: `em1234.pivoxquant.com → u123.wl456.sendgrid.net`, DKIM `s1._domainkey.pivoxquant.com → ...`, `s2._domainkey.pivoxquant.com → ...`)
-5. Cloudflare 대시보드 → **pivoxquant.com → DNS** 탭 → **Add record** ×3로 추가 (Type: CNAME, Proxy status: **DNS only** ⚠️ 회색 구름 아이콘, orange 구름 X)
-6. SendGrid 콘솔로 돌아가서 **Verify** 클릭 → 즉시 ~5분 안에 ✅ 활성화
-7. SendGrid 콘솔 → **Settings → Sender Authentication → Single Sender Verification** 비활성화 (도메인 인증으로 대체)
-
-### 6. End-to-end 검증 (2분)
-
-CEO 본인 명의로 weekly_memo 한 번 수동 trigger 또는 다음 일요일 08:00 KST cron 대기.
-- Gmail 받은편지함에 `reports@pivoxquant.com` 발신 → 스팸함 X → 메인 inbox 도착
-- 그 메일에 reply → Cloudflare Routing → `seanbae1521@gmail.com` 도착
+> ⚠️ 기존(v43) 가이드의 "Cloudflare Email Routing" 경로는 **폐기**. NS가 가비아에 그대로 있고
+> SendGrid 인증도 가비아 콘솔에 박혀 있으므로, NS를 Cloudflare로 옮기면 오히려 기존 SendGrid 레코드까지
+> 재설정해야 함. 가비아 DNS를 유지하면서 수신만 붙이는 **ImprovMX**가 최소 변경 경로.
 
 ---
 
-## DNS 레코드 최종 상태 (Cloudflare 자동 + 수동 합쳐서)
+## A. 수신(MX) 설정 — ImprovMX, 가비아 DNS 유지 (5분)
+
+ImprovMX = 무료 이메일 포워딩. 들어온 메일을 개인 Gmail로 전달. NS 이전 불필요, MX 2개만 추가.
+
+### A-1. ImprovMX 가입 + 도메인/별칭 등록 (2분)
+1. https://improvmx.com → 무료 가입 (`seanbae1521@gmail.com`)
+2. 도메인 입력: `pivoxquant.com`
+3. Alias 추가 (각각 → `seanbae1521@gmail.com`):
+   - `support@pivoxquant.com`
+   - `reports@pivoxquant.com`
+   - `hello@pivoxquant.com`
+   - `dmarc@pivoxquant.com`  ← DMARC 리포트 수신용 (현재 rua가 이 주소)
+   - (권장) catch-all `*@pivoxquant.com` → 오타도 잡음
+
+### A-2. 가비아 DNS 콘솔에서 MX 2개 추가 (2분)
+My가비아 → 도메인 통합 관리 → pivoxquant.com → **DNS 정보 → DNS 관리 → 레코드 추가**:
 
 ```
-# 기본 A/CNAME (Vercel + Railway 라우팅, 가비아에서 import됨)
-A     pivoxquant.com        76.x.x.x       (Vercel IP)
-CNAME www.pivoxquant.com    cname.vercel-dns.com.
-
-# Cloudflare Email Routing (Step 3 자동)
-MX    pivoxquant.com        route1.mx.cloudflare.net   (priority 1)
-MX    pivoxquant.com        route2.mx.cloudflare.net   (priority 2)
-MX    pivoxquant.com        route3.mx.cloudflare.net   (priority 3)
-TXT   pivoxquant.com        "v=spf1 include:_spf.mx.cloudflare.net ~all"
-
-# SendGrid 도메인 인증 (Step 5 수동)
-CNAME em1234.pivoxquant.com         u123.wl456.sendgrid.net
-CNAME s1._domainkey.pivoxquant.com  s1.domainkey.uXXX.wl.sendgrid.net
-CNAME s2._domainkey.pivoxquant.com  s2.domainkey.uXXX.wl.sendgrid.net
+타입  호스트  값/위치                 우선순위  TTL
+MX    @       mx1.improvmx.com         10       3600
+MX    @       mx2.improvmx.com         20       3600
 ```
 
-⚠️ **Cloudflare SPF + SendGrid 충돌 주의**: SendGrid가 SPF 추가하라고 안내해도 무시 (Cloudflare가 자동 추가한 `include:_spf.mx.cloudflare.net` 안에 SendGrid include 불가). 대신 SendGrid는 **DKIM만**으로 인증 성공. Cloudflare가 SPF의 `~all` (soft fail) 정책으로 SendGrid도 통과시킴.
+### A-3. SPF 병합 (1분) — ⚠️ 기존 레코드 수정, 추가 아님
+현재 SPF: `v=spf1 include:sendgrid.net ~all`
+→ ImprovMX include 를 **앞에 끼워** 같은 TXT 레코드를 **교체**:
 
-만약 메일이 스팸함 가면 → SPF를 수동 갱신:
 ```
-TXT   pivoxquant.com   "v=spf1 include:_spf.mx.cloudflare.net include:sendgrid.net ~all"
+타입  호스트  값
+TXT   @       "v=spf1 include:spf.improvmx.com include:sendgrid.net ~all"
+```
+(SPF는 도메인당 1개만 유효 — 새로 추가하지 말고 기존 값을 위 문자열로 바꿀 것)
+
+### A-4. 검증 (1분, propagation 후 ~10분~1h)
+ImprovMX 대시보드가 MX/SPF 초록불이 되면 OK. 그 후:
+```
+다른 메일에서 → support@pivoxquant.com 으로 "test" 발송
+→ seanbae1521@gmail.com 에 도착하면 수신 성공
+```
+또는 터미널:
+```bash
+dig +short MX pivoxquant.com   # mx1/mx2.improvmx.com 두 줄 나오면 성공
 ```
 
 ---
 
-## 롤백 방법 (혹시 라우팅 깨지면)
+## B. 발신 실제 작동 검증 — SENDGRID_API_KEY (CEO 액션, 3분)
 
-### NS 롤백 (가비아 원복)
-1. 가비아 → 도메인 통합 관리 → **네임서버 설정**
-2. **가비아 네임서버 사용** 라디오 선택 → 저장
-3. 1–6시간 후 가비아 DNS 다시 활성
-4. 기존 A/CNAME (Vercel + Railway) 그대로 작동
+발신 DNS(SPF/DKIM/DMARC)는 됐지만, **Railway에 `SENDGRID_API_KEY`가 실제로 들어있어야** 발송됨.
+전송 우선순위(`services/email/sender.py`): **SendGrid → Brevo → SMTP → (없으면 log 후 silent drop)**.
 
-### 비용 가비아 → Cloudflare 전환 후 발생 비용 0원
-- Cloudflare Free plan: 무제한 도메인, 무제한 DNS query, 무제한 Email Routing 포워딩
-- 도메인 등록비는 여전히 가비아 (Cloudflare는 DNS만 위임)
+`/api/health` 는 `missing_recommended: 1` 만 알려주고 어느 키인지는 가리지 않음(보안). 후보는
+`SENDGRID_API_KEY` 또는 `SENDGRID_WEBHOOK_PUBLIC_KEY` 둘 중 하나 (나머지 7개 recommended는
+동작 증거로 SET 확정). 둘의 차이가 결정적:
+- **SENDGRID_API_KEY 가 빠진 거면 → 17개 아티팩트 메일 전부 silent drop (발신 불능)**
+- SENDGRID_WEBHOOK_PUBLIC_KEY 만 빠진 거면 → 발신 정상, open/click/unsubscribe 웹훅만 깨짐
+
+### B-1. 어느 키가 빠졌는지 확정 (택1)
+
+**방법 1 — Railway Deploy Logs (가장 빠름)**
+Railway 대시보드 → web 서비스 → Deployments → 최신 → **Deploy Logs** →
+부팅 로그에서 `LAUNCH_PREP env-missing [RECOMMENDED]` 줄 검색.
+거기 적힌 키 이름이 빠진 것. `SENDGRID_API_KEY` 가 거기 있으면 발신 불능 확정.
+
+**방법 2 — Railway Variables 탭에서 직접 확인**
+web 서비스 → **Variables** → `SENDGRID_API_KEY` 존재 + 값 있는지 눈으로 확인.
+
+### B-2. 없으면 추가
+1. SendGrid 콘솔 → Settings → API Keys → **Create API Key** (Full Access 또는 Mail Send) → 키 복사
+2. Railway → web 서비스 → Variables → **New Variable**: `SENDGRID_API_KEY` = (붙여넣기) → 저장(자동 재배포)
+
+### B-3. End-to-end 발신 검증
+Railway env 반영 후, 본인 명의 weekly_memo 1통 수동 trigger(또는 일요일 08:00 KST cron 대기):
+- Gmail 받은편지함에 `reports@pivoxquant.com` 발신 도착 + 스팸함 X
+- SendGrid 콘솔 → **Activity Feed** 에 Delivered 이벤트 확인
 
 ---
 
 ## 메모리 룰 검증
+- ✅ `feedback_no_extra_cost`: ImprovMX Free + SendGrid Free 100/day → 추가 비용 0원
+- ✅ `feedback_official_data_only`: 이메일 라우팅 (데이터 sourcing 아님)
+- ✅ `legal_compliance`: PIPA + 전자상거래법 §13 표시의무 (support@ inbox 실존), 정통망법 §50 (List-Unsubscribe 헤더는 sender.py 이미 처리)
 
-- ✅ `feedback_no_extra_cost`: Max + 도메인 + Railway 외 신규 비용 0원. Cloudflare Free + SendGrid 무료 100/day → 0원 추가
-- ✅ `feedback_official_data_only`: 본 작업은 데이터 sourcing 아님 (이메일 라우팅)
-- ✅ `legal_compliance`: PIPA + 전자상거래법 §13 표시의무 충족 (실제 inbox 존재)
-
----
-
-## 다음 액션 (CEO 복귀 후)
-
-1. **Step 1-4** (Cloudflare + Email Routing): 10분
-2. **테스트 발송 1통**: 1분
-3. **Step 5-6** (SendGrid DKIM): 5분
-4. **첫 주 일요일 weekly_memo cron 결과 모니터링**: Sentry / Slack 확인
-5. (선택) `qa_bug_log.md` BUG-001 entry → "RESOLVED 2026-05-XX (Cloudflare Email Routing)" 마킹
-
-총 작업 시간: 15–20분. 도메인 propagation 1–6시간 (기다리는 시간).
-
----
-
-## 본 가이드 작성 근거 (감사 traceability)
-
-- 코드 `services/email/sender.py:33-50` — SendGrid → SMTP cascade + Reply-To `support@pivoxquant.com` 명시
-- `services/email/sender.py:75` — `reports@pivoxquant.com` from 디폴트
-- `frontend/src/content/terms-ko.md:259` + `privacy-ko.md:292` — 법규 표시 의무
-- `feedback_no_extra_cost` memory: Cloudflare Free + SendGrid Free
-- `session_2026-04-29.md:9`: 원래 "100명+ 후" 지연 결정 — 본 가이드는 **출시 전 필요로 우선순위 재조정** (PDF cron 발송 시작 + 결제 503 메시지 inbox 의존 명시)
+## 작성 근거 (traceability, 2026-05-23 실측)
+- `dig MX/TXT/CNAME/NS pivoxquant.com` — 위 표의 모든 레코드 실측값
+- `services/email/sender.py:327-342` — SendGrid→Brevo→SMTP 캐스케이드
+- `services/launch_prep.py:89-158` — recommended env 인벤토리 9개
+- `services/email/brevo_provider.py:95-97` — from `noreply@`, support `support@`
+- memory `project_email_infra.md` (ImprovMX 0원 path) — Cloudflare 대신 채택 근거
