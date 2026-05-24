@@ -340,6 +340,10 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       { value: "options_greeks", label: "Options greeks", label_kr: "Options greeks", score: 3 },
       { value: "beta_alpha", label: "Beta / Alpha", label_kr: "Beta / Alpha", score: 2 },
       { value: "kelly_criterion", label: "Kelly criterion", label_kr: "Kelly criterion", score: 3 },
+      // A beginner who knows none of these MUST be able to advance — without
+      // this escape option the wizard dead-ends at step 17 (CEO launch-blocker
+      // 2026-05-24). handleMultiToggle clears other picks when "none" is chosen.
+      { value: "none", label: "None of these", label_kr: "해당 없음", score: 0 },
     ],
   },
   {

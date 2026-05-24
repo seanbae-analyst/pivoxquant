@@ -7,6 +7,37 @@ const MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 // values invalidates every previously-issued cookie on the next request.
 const BETA_TOKEN_VERSION = "v2";
 
+// In-memory IP rate limit — the beta gate has no other throttle, so without
+// this the password is brute-forceable (launch hardening 2026-05-24). Per
+// serverless instance; not perfect across instances but raises the bar at
+// zero cost. A legit user submits once; 10/min/IP is far above human use.
+const RL_WINDOW_MS = 60_000;
+const RL_MAX = 10;
+const _attempts = new Map<string, { count: number; resetAt: number }>();
+
+function clientIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  // Opportunistic prune so the map can't grow unbounded on a long-lived instance.
+  if (_attempts.size > 5000) {
+    for (const [k, v] of _attempts) if (now > v.resetAt) _attempts.delete(k);
+  }
+  const rec = _attempts.get(ip);
+  if (!rec || now > rec.resetAt) {
+    _attempts.set(ip, { count: 1, resetAt: now + RL_WINDOW_MS });
+    return false;
+  }
+  rec.count += 1;
+  return rec.count > RL_MAX;
+}
+
 function signedBetaToken(secret: string): string {
   const hex = createHmac("sha256", secret)
     .update(`${BETA_TOKEN_VERSION}:beta-verified`)
@@ -25,6 +56,13 @@ function clearBetaCookie(response: NextResponse): void {
 }
 
 export async function POST(req: NextRequest) {
+  if (isRateLimited(clientIp(req))) {
+    return NextResponse.json(
+      { error: "Too many attempts. Try again in a minute." },
+      { status: 429 },
+    );
+  }
+
   const correct = process.env.BETA_PASSWORD;
   const signingSecret =
     process.env.BETA_SIGNING_SECRET ?? process.env.SECRET_KEY ?? "";

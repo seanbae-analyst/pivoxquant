@@ -85,7 +85,10 @@ def search_stocks():
         if candidate and candidate not in seen:
             results.append({
                 "ticker":    candidate,
-                "name":      candidate,
+                # Resolve the company name (삼성전자) for 6-digit codes outside
+                # the curated registry too — previously echoed the bare ticker
+                # as the name → naked code in search results (2026-05-24).
+                "name":      resolve_stock_name(candidate) or candidate,
                 "exchange":  "KOSDAQ" if candidate.endswith(".KQ") else "KOSPI",
                 "currency":  "KRW",
                 "is_korean": True,

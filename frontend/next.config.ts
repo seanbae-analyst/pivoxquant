@@ -125,11 +125,18 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
-              "style-src 'self' 'unsafe-inline'",
+              // jsdelivr MUST be allowed for the Pretendard Korean webfont
+              // (layout.tsx <link>). Both this CSP and middleware.ts emit a
+              // CSP header → the browser enforces the INTERSECTION, so a
+              // missing jsdelivr here silently blocked Pretendard and dropped
+              // Korean text to the system font (launch hardening 2026-05-24).
+              "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.kakaocdn.net https://k.kakaocdn.net https://t1.kakaocdn.net",
-              "font-src 'self' data:",
+              "font-src 'self' data: https://cdn.jsdelivr.net",
               "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
-              "frame-src 'self'",
+              // Stripe checkout iframe (billing currently gated, but keep the
+              // static CSP from blocking it once activated — mirrors middleware).
+              "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
               "frame-ancestors 'none'",
               "object-src 'none'",
               "base-uri 'self'",
