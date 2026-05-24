@@ -9,6 +9,36 @@ from __future__ import annotations
 import pytest
 
 
+@pytest.fixture
+def paid_auth_user(client, make_user):
+    """Logged-in top-tier user. Paid-artifact generation tests use this so the
+    unified /generate tier gate (mirrors each artifact's @require_tier) is
+    satisfied and the dispatch/empty/ready logic under test actually runs."""
+    user = make_user(email="paid_artifact@test.com", tier="founding_lifetime")
+    resp = client.post("/api/auth/login", json={
+        "email": user["email"], "password": user["password"],
+    })
+    assert resp.status_code == 200
+    return user
+
+
+def test_generate_blocks_free_user_for_paid_artifact(client, make_user):
+    """Free user posting a paid artifact type → 403 UPGRADE_REQUIRED.
+
+    Regression guard for the tier-bypass: the unified /generate endpoint must
+    enforce the same minimum tier as each artifact's individual route."""
+    user = make_user(email="free_artifact@test.com")  # tier defaults to free
+    login = client.post("/api/auth/login", json={
+        "email": user["email"], "password": user["password"],
+    })
+    assert login.status_code == 200
+    resp = client.post("/api/artifacts/generate", json={"type": "weekly_memo"})
+    assert resp.status_code == 403
+    body = resp.get_json() or {}
+    assert body.get("code") == "UPGRADE_REQUIRED"
+    assert body.get("required_tier") == "pro"
+
+
 # ── input validation ────────────────────────────────────────────────────────
 
 def test_generate_rejects_missing_type(client, auth_user):
@@ -78,7 +108,7 @@ def test_generate_interactive_types_return_redirect(
 
 # ── empty-state handling for new users ──────────────────────────────────────
 
-def test_generate_weekly_memo_empty_for_new_user(client, auth_user):
+def test_generate_weekly_memo_empty_for_new_user(client, paid_auth_user):
     """A user with no positions gets status='empty', not a hollow PDF."""
     resp = client.post("/api/artifacts/generate", json={"type": "weekly_memo"})
     assert resp.status_code == 200
@@ -89,7 +119,7 @@ def test_generate_weekly_memo_empty_for_new_user(client, auth_user):
     assert body["artifact_id"] is None
 
 
-def test_generate_self_audit_empty_without_trades(client, auth_user):
+def test_generate_self_audit_empty_without_trades(client, paid_auth_user):
     """Self-audit needs trade history; new user → empty."""
     resp = client.post("/api/artifacts/generate", json={"type": "self_audit"})
     assert resp.status_code == 200
@@ -101,13 +131,13 @@ def test_generate_self_audit_empty_without_trades(client, auth_user):
 # ── happy path — weekly memo for a user with a position ─────────────────────
 
 def test_generate_weekly_memo_with_position_returns_ready(
-    client, auth_user, app, mock_fetcher, add_position,
+    client, paid_auth_user, app, mock_fetcher, add_position,
 ):
     """User with 1+ positions → status='ready' + persisted artifact row."""
     from extensions import db
     from models import Artifact
 
-    add_position(auth_user["id"], ticker="AAPL", shares=10)
+    add_position(paid_auth_user["id"], ticker="AAPL", shares=10)
 
     resp = client.post("/api/artifacts/generate", json={"type": "weekly_memo"})
     assert resp.status_code == 200
@@ -121,7 +151,7 @@ def test_generate_weekly_memo_with_position_returns_ready(
         with app.app_context():
             row = db.session.get(Artifact, body["artifact_id"])
             assert row is not None
-            assert row.user_id == auth_user["id"]
+            assert row.user_id == paid_auth_user["id"]
             assert row.type == "weekly_memo"
 
 

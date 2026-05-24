@@ -476,7 +476,7 @@ def earnings_tone():
                 "error_kr": "오늘의 실적 톤 분석 한도를 모두 사용했습니다. 내일 다시 시도해 주세요.",
                 "budget_exceeded": True,
             }), 429
-        result, status_code = EarningsCallToneAnalyzer.analyze(ticker, transcript=transcript)
+        result, status_code = EarningsCallToneAnalyzer.analyze(ticker, transcript_text=transcript)
         # NOTE: intentionally NOT calling earnings_tone_cache_set() here.
         return _scrub_and_jsonify(result, status_code)
 
@@ -494,7 +494,7 @@ def earnings_tone():
         }), 429
 
     # 3) Run analyzer (also writes to ai_models internal 24h cache).
-    result, status_code = EarningsCallToneAnalyzer.analyze(ticker, transcript=None)
+    result, status_code = EarningsCallToneAnalyzer.analyze(ticker, transcript_text=None)
 
     # 4) Persist to 90-day cache on success so engine.analyze() can surface it.
     if status_code == 200 and isinstance(result, dict) and "error" not in result:

@@ -314,7 +314,9 @@ def check_52w_highs_lows() -> dict:
 
     for uid in user_ids:
         user = User.query.get(uid)
-        if user is None:
+        # Skip soft-deleted users (30-day grace) — generating alerts/push for
+        # an account pending deletion violates PIPA §21. Mirrors app.load_user.
+        if user is None or user.deletion_requested_at is not None:
             continue
         metrics["users_scanned"] += 1
         positions = Position.query.filter_by(user_id=uid).all()
@@ -381,7 +383,9 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
     metrics = {"users_scanned": 0, "alerts_created": 0, "errors": 0}
 
     for uid in user_ids:
-        if User.query.get(uid) is None:
+        user = User.query.get(uid)
+        # Skip soft-deleted users (PIPA §21) — see check_52w_highs_lows.
+        if user is None or user.deletion_requested_at is not None:
             continue
         metrics["users_scanned"] += 1
         positions = Position.query.filter_by(user_id=uid).all()

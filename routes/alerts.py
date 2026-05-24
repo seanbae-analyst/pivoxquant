@@ -94,6 +94,7 @@ def get_alerts():
 
 @alerts_bp.route("/unread-count")
 @api_auth
+@general_rate_limit
 def unread_count():
     try:
         count = Alert.query.filter_by(

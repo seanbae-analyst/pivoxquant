@@ -301,7 +301,9 @@ def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: flo
     title = "PivoxQuant — Trade Executed"
     body = f"{action.upper()} {shares} shares of {label} @ ${price:,.2f}"
 
-    send_push_to_user(user_id=user_id, title=title, body=body, url="/trades")
+    # Trade confirmation is a transactional/portfolio event — must reach
+    # opted-out users too (bypasses the 정통망법 §50 marketing gate).
+    send_push_to_user(user_id=user_id, title=title, body=body, url="/trades", transactional=True)
 
 
 def notify_insight(user_id: int, title_text: str, body_text: str):

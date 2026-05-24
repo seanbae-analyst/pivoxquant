@@ -1301,11 +1301,15 @@ class EarningsPreBriefService:
                 # services/push_service.py (same layer as this file)
                 # so the cross-layer routes.push import is gone.
                 from services.push_service import send_push_to_user
+                # Artifact delivery is transactional (same class as the
+                # 'artifact_ready' bell kind) — must reach opted-out paying
+                # users, else the prebrief push is silently dropped for them.
                 send_push_to_user(
                     user_id=user.id,
                     title=f"PivoxQuant — {title_text}",
                     body=body_text,
                     url=f"/reports?highlight={data.get('_artifact_id','')}".rstrip("="),
+                    transactional=True,
                 )
             except Exception:
                 notify_insight(user.id, title_text, body_text)

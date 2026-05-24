@@ -147,6 +147,10 @@ class TestRaceRecovery:
                         return None
                     def count(self_inner):
                         return q.count()
+                    def filter(self_inner, *a, **k):
+                        # free-tier cap check chains .filter(shares>0).count();
+                        # return self so the chained .count() still resolves.
+                        return self_inner
                 return _Empty()
             return q
 

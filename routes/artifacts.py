@@ -67,7 +67,7 @@ from services.artifacts.weekly_memo_service import WeeklyMemoService
 from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name
 
-from .decorators import api_auth, require_tier
+from .decorators import api_auth, require_tier, _TIER_RANK
 from security import artifact_rate_limit, general_rate_limit
 import logging
 
@@ -2770,6 +2770,30 @@ _ARTIFACT_DISPATCH: dict[str, tuple] = {
     "sp500_backtest":        (SP500BacktestService,        "generate_for_user", "sp500_backtest"),
 }
 
+# Minimum tier per artifact type — MUST mirror the @require_tier on each
+# artifact's individual Flask route. The unified /generate endpoint dispatches
+# straight into generate_for_user() (which does NOT self-gate), so without this
+# map a free user could POST {"type":"weekly_memo"} and receive a paid artifact
+# (tier bypass / revenue leak). Types absent here are intentionally free
+# (brag_card / monthly_brag = viral; sp500_backtest = universal observation).
+_ARTIFACT_MIN_TIER: dict[str, str] = {
+    "weekly_memo": "pro",
+    "earnings_prebrief": "pro",
+    "kpi_dashboard": "pro",
+    "burn_rate": "pro",
+    "credit_rating": "pro",
+    "dd_checklist": "pro",
+    "self_audit": "premium",
+    "risk_board": "premium",
+    "year_end_letter": "premium",
+    "quarterly_self_report": "premium",
+    "dividend_income": "premium",
+    "monthly_finance": "premium",
+    "capital_allocation": "premium",
+    "insider_mirror": "premium",
+    "portfolio_segment": "premium",
+}
+
 # Interactive types — frontend redirects to a dedicated UI instead of
 # generating from the unified button. Map → redirect path so the response
 # can hint the frontend without hard-coding URLs there.
@@ -3001,6 +3025,25 @@ def artifacts_generate():
                 code="EARNINGS_TICKER_REQUIRED", status=400,
             )
         positional.append(ticker)
+
+    # ── Tier gate — mirror the @require_tier on each artifact's own route ──
+    # generate_for_user() does not self-gate, so without this a free user could
+    # POST {"type":"weekly_memo"} and receive a paid artifact (tier bypass).
+    # Placed after param validation + the interactive short-circuit (so 400s
+    # and redirect hints behave for everyone) but before any generation work.
+    required_tier = _ARTIFACT_MIN_TIER.get(artifact_type)
+    if required_tier:
+        user_tier = (
+            getattr(current_user, "effective_tier", None)
+            or getattr(current_user, "subscription_tier", "free")
+            or "free"
+        )
+        if _TIER_RANK.get(user_tier, 0) < _TIER_RANK.get(required_tier, 0):
+            return jsonify({
+                "error": "Upgrade required",
+                "required_tier": required_tier,
+                "code": "UPGRADE_REQUIRED",
+            }), 403
 
     # ── Cheap pre-flight empty check — avoids spinning up the heavy
     #    pipeline for a brand-new user. The service is still called

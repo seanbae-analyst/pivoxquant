@@ -31,6 +31,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
+from sqlalchemy.exc import IntegrityError
 
 from extensions import db
 from models.broker_connection import BrokerConnection
@@ -703,7 +704,16 @@ class UserKISService:
                 if is_us and ticker not in overseas_synced and db_pos.shares > 0:
                     db_pos.shares = 0
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            # Concurrent reconcile for the same user can race to insert the
+            # same (user_id, ticker) row (uq_positions_user_ticker). Roll back
+            # and signal RETRY instead of bubbling an unhandled 500. Matches
+            # the race recovery in add_position / buy_new_position.
+            db.session.rollback()
+            logger.info("sync_to_db race collision (user=%s) — retry", self.user_id)
+            return {"ok": False, "code": "RACE", "error": "Sync collision; please retry."}
         self._record_success()
 
         return {

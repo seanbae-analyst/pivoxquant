@@ -281,7 +281,9 @@ def add_position():
     # Tier check: Free users limited to 3 positions
     # Use effective_tier so DEV_PREMIUM_EMAILS can bypass the free-plan cap.
     if getattr(current_user, "effective_tier", None) in (None, "free"):
-        position_count = Position.query.filter_by(user_id=current_user.id).count()
+        position_count = Position.query.filter_by(user_id=current_user.id).filter(
+            Position.shares > 0
+        ).count()
         if position_count >= 3:
             return jsonify({
                 "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
@@ -347,6 +349,10 @@ def add_position():
                 ex_row.buy_fx_rate * ex_row.shares * ex_row.avg_cost
                 + fx_rate * shares * cost
             ) / total
+        elif not is_kr and not ex_row.buy_fx_rate and fx_rate:
+            # Existing USD row had null/zero rate (e.g. KIS overseas sync
+            # without FX). Initialize it so KRW P&L isn't permanently blank.
+            ex_row.buy_fx_rate = fx_rate
         ex_row.shares += shares
         ex_row.avg_cost = total / ex_row.shares
         if thesis and not ex_row.thesis:
@@ -630,7 +636,9 @@ def buy_new_position():
     # POST /position/buy-new bypasses the tier limit and lets free users
     # accumulate unlimited positions (revenue/tier-enforcement bypass).
     if getattr(current_user, "effective_tier", None) in (None, "free"):
-        position_count = Position.query.filter_by(user_id=current_user.id).count()
+        position_count = Position.query.filter_by(user_id=current_user.id).filter(
+            Position.shares > 0
+        ).count()
         if position_count >= 3:
             return jsonify({
                 "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
@@ -1339,7 +1347,9 @@ def create_position_alias():
     # Proxy to legacy add_position logic by rewriting request body.
     # Reuse free-plan cap check.
     if getattr(current_user, "effective_tier", None) in (None, "free"):
-        pos_count = Position.query.filter_by(user_id=current_user.id).count()
+        pos_count = Position.query.filter_by(user_id=current_user.id).filter(
+            Position.shares > 0
+        ).count()
         if pos_count >= 3:
             return jsonify({
                 "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
@@ -1361,6 +1371,9 @@ def create_position_alias():
                 ex_row.buy_fx_rate * ex_row.shares * ex_row.avg_cost
                 + fx_rate * quantity * price
             ) / total
+        elif not is_kr and not ex_row.buy_fx_rate and fx_rate:
+            # Initialize FX on a null/zero existing USD row (see _merge_into).
+            ex_row.buy_fx_rate = fx_rate
         ex_row.shares += quantity
         ex_row.avg_cost = total / ex_row.shares
         if note and not ex_row.thesis:
@@ -1937,8 +1950,8 @@ def reconcile_positions():
         logger.error("reconcile: connection lookup failed user_id=%s: %s",
                      user_id, exc)
         return api_error(
-            "broker_lookup_failed",
-            "브로커 연결 정보를 조회할 수 없습니다.",
+            en="broker_lookup_failed",
+            kr="브로커 연결 정보를 조회할 수 없습니다.",
             status=500,
         )
 

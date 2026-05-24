@@ -160,6 +160,12 @@ def portfolio_stream():
                                     user_id, len(local_tickers), len(new_tickers),
                                 )
                                 local_tickers = new_tickers
+                            # All positions sold/deleted → end the stream
+                            # immediately so the generator's finally fires and
+                            # the connection slot is released, rather than
+                            # spinning on empty batches until the client closes.
+                            if not local_tickers:
+                                break
                         except Exception:
                             logger.exception("SSE portfolio ticker refresh failed user=%s", user_id)
                         finally:
