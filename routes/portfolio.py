@@ -1124,6 +1124,10 @@ def portfolio_summary_alias():
         total_nav_usd = 0.0
         unrealized_usd = 0.0
         today_pnl_usd = 0.0
+        # Native-currency subtotals so /home can show US holdings in USD and
+        # KR holdings in KRW separately (CEO: don't unify everything to USD).
+        nav_us_usd = 0.0   # US positions, native USD market value
+        nav_kr_krw = 0.0   # KR positions, native KRW market value
 
         for p in positions:
             cached = cache_map.get(p.ticker)
@@ -1144,6 +1148,10 @@ def portfolio_summary_alias():
 
             total_nav_usd += mv_usd
             unrealized_usd += mv_usd - cost_usd
+            if is_kr:
+                nav_kr_krw += mv      # native KRW
+            else:
+                nav_us_usd += mv      # native USD
 
             # Today's P&L: prefer fresh overlay change_pct, fall back to cache blob.
             chg_pct = (
@@ -1198,6 +1206,10 @@ def portfolio_summary_alias():
 
         return jsonify({
             "totalNav": round(total_nav_usd, 2),
+            # Native-currency stock subtotals (no FX unification). /home shows
+            # US holdings in USD and KR holdings in KRW separately.
+            "navUsd": round(nav_us_usd, 2),
+            "navKrw": round(nav_kr_krw, 0),
             "todayPnl": round(today_pnl_usd, 2),
             "todayPnlPct": round(today_pnl_pct, 2),
             "unrealized": round(unrealized_usd, 2),

@@ -412,6 +412,8 @@ export interface GrowthWeeklyReport {
 export interface PreTradeReflection {
   id: number;
   intended_ticker: string;
+  /** Server-resolved company name (삼성전자) — lead with this, ticker as sub. */
+  intended_name?: string | null;
   /** Legacy wire token (BUY/SELL/null). NEVER render raw — see @/lib/pre-trade. */
   intended_side: string | null;
   intended_shares: number | null;

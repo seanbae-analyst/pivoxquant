@@ -128,7 +128,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
   const [open, setOpen] = useState(false);
 
   const ts = entryTimestamp(r);
-  const name = displayName(r.intended_ticker);
+  const name = displayName(r.intended_ticker, r.intended_name);
   const bareTicker = normalizeTicker(r.intended_ticker);
   // Only show the ticker sub when the resolved name is NOT just the bare code.
   const showTickerSub =

@@ -122,9 +122,21 @@ class PreTradeReflection(db.Model):
                 return float(v)
             return v
 
+        # Resolve the company name server-side so the journal can lead with
+        # the 종목명 (삼성전자) instead of the bare ticker (005930.KS) for
+        # every holding — including KR codes the frontend name map lacks.
+        # Lazy import avoids a model→service import cycle. Best-effort.
+        intended_name = self.intended_ticker
+        try:
+            from services.name_resolver import resolve_stock_name
+            intended_name = resolve_stock_name(self.intended_ticker) or self.intended_ticker
+        except Exception:
+            pass
+
         return {
             "id": int(self.id) if self.id is not None else None,
             "intended_ticker": self.intended_ticker,
+            "intended_name": intended_name,
             "intended_side": self.intended_side,
             "intended_shares": _f(self.intended_shares),
             "rationale": self.rationale,

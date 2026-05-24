@@ -24,6 +24,10 @@ import type { Position } from "@/lib/types";
 
 interface SummaryShape {
   totalNav?: number;
+  // Native-currency stock subtotals (backend portfolio_summary_alias). Shown
+  // separately on /home so a mixed KR+US portfolio isn't unified into USD.
+  navUsd?: number;
+  navKrw?: number;
   todayPnl?: number;
   todayPnlPct?: number;
   positionCount?: number;
@@ -137,6 +141,23 @@ export function PortfolioSnapshotCard() {
       ? summary.cashPct
       : null;
 
+  // Native-currency stock subtotals — show US ($) and KR (₩) separately
+  // instead of one unified USD NAV (CEO 2026-05-24).
+  const navUsd = summary?.navUsd;
+  const navKrw = summary?.navKrw;
+  const hasUs = typeof navUsd === "number" && navUsd > 0;
+  const hasKr = typeof navKrw === "number" && navKrw > 0;
+  const hasSplitNav = hasUs && hasKr;
+  const hasUsOnly = hasUs && !hasKr;
+  const hasKrOnly = hasKr && !hasUs;
+  const navTagStyle: React.CSSProperties = {
+    fontSize: "var(--pq-text-eyebrow)",
+    letterSpacing: "0.18em",
+    color: "rgba(245, 240, 232, 0.45)",
+    marginLeft: 8,
+    textTransform: "uppercase",
+  };
+
   const positionCount = summary?.positionCount ?? positions.length;
   const todayPnl = summary?.todayPnl;
   const todayPct = summary?.todayPnlPct;
@@ -148,20 +169,60 @@ export function PortfolioSnapshotCard() {
       eyebrow="Portfolio · NAV"
       cornerCta="Open Book ›"
     >
-      {/* NAV value */}
-      <div
-        className="font-mono"
-        style={{
-          fontVariantNumeric: "tabular-nums",
-          fontSize: "var(--pq-text-avatar)",
-          letterSpacing: "-0.02em",
-          color: "var(--pq-ivory)",
-          fontWeight: 500,
-          marginBottom: 4,
-        }}
-      >
-        {fmtMoney(summary?.totalNav, currency)}
-      </div>
+      {/* NAV value — show US holdings ($) and KR holdings (₩) separately
+          rather than unifying into one USD figure (CEO 2026-05-24). Falls
+          back to the single unified NAV when only one market is held (or on
+          an older backend that doesn't emit the native subtotals yet). */}
+      {hasSplitNav ? (
+        <div style={{ marginBottom: 4 }}>
+          <div
+            className="font-mono"
+            style={{
+              fontVariantNumeric: "tabular-nums",
+              fontSize: "var(--pq-text-h3)",
+              letterSpacing: "-0.02em",
+              color: "var(--pq-ivory)",
+              fontWeight: 500,
+              lineHeight: 1.2,
+            }}
+          >
+            {fmtMoney(navUsd, "USD")}
+            <span style={navTagStyle}>US</span>
+          </div>
+          <div
+            className="font-mono"
+            style={{
+              fontVariantNumeric: "tabular-nums",
+              fontSize: "var(--pq-text-h3)",
+              letterSpacing: "-0.02em",
+              color: "var(--pq-ivory)",
+              fontWeight: 500,
+              lineHeight: 1.2,
+            }}
+          >
+            {fmtMoney(navKrw, "KRW")}
+            <span style={navTagStyle}>KR</span>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="font-mono"
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            fontSize: "var(--pq-text-avatar)",
+            letterSpacing: "-0.02em",
+            color: "var(--pq-ivory)",
+            fontWeight: 500,
+            marginBottom: 4,
+          }}
+        >
+          {hasKrOnly
+            ? fmtMoney(navKrw, "KRW")
+            : hasUsOnly
+              ? fmtMoney(navUsd, "USD")
+              : fmtMoney(summary?.totalNav, currency)}
+        </div>
+      )}
 
       {/* Delta */}
       <div

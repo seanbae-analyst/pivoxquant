@@ -335,6 +335,11 @@ export function useBrokerConnections() {
 
 export interface PortfolioSummary {
   totalNav?: number;
+  // Native-currency stock subtotals (no FX unification). navUsd = US holdings
+  // in USD, navKrw = KR holdings in KRW. /home shows them separately so a
+  // mixed portfolio isn't collapsed into a single USD figure.
+  navUsd?: number;
+  navKrw?: number;
   todayPnl?: number;
   todayPnlPct?: number;
   unrealized?: number;
