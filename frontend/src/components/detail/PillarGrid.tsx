@@ -70,16 +70,27 @@ function PillarCard({
 export function PillarGrid({
   signal,
   hasPillars,
+  loading = false,
 }: {
   signal: SignalDetail | undefined;
   hasPillars: boolean;
+  loading?: boolean;
 }) {
   return (
     <section>
       <div className="mb-5">
         <SectionHeading eyebrow="Quant breakdown" title="Four-pillar composite" />
       </div>
-      {hasPillars ? (
+      {loading && !hasPillars ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-sm h-[120px] animate-pulse"
+            />
+          ))}
+        </div>
+      ) : hasPillars ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <PillarCard
             label="Technical"

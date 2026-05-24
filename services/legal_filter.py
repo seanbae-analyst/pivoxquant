@@ -142,8 +142,14 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     # 방어 부정 (Should not, Must not) 은 lookahead 로 제외.
     (re.compile(r"\bShould\b(?!\s+not)", re.IGNORECASE), "is observed to"),
     (re.compile(r"\bMust\b(?!\s+not)", re.IGNORECASE), "is recorded as"),
-    # 단독 "권유" / "가이드" / "자문" — 방어 부정 문맥 제외
-    (re.compile(r"권유(?!하지|가\s*아닙니다|를\s*제공하지)"), "안내"),
+    # 단독 "권유" / "가이드" / "자문" — 방어 부정 문맥 제외.
+    # 면책 고지의 부정 표현(권유·추천 / 권유가 아니며 / 권유 없음 / 권유를
+    # 포함하지 / 권유 또는 / 권유 아닌·아님)은 모두 보존해야 한다 — 이 표현들이
+    # "안내"로 치환되면 자본시장법 §6 trigger 동사가 약화돼 면책이 무효화된다.
+    (re.compile(
+        r"권유(?!·|하지|가\s*아(?:닙니다|니며|닌)|를\s*(?:제공|포함)하지"
+        r"|\s*없|\s*또는|\s*아[닌님])"
+    ), "안내"),
     (re.compile(r"(?<![명\s])가이드(?!하지|를\s*제공하지|라인)"), "참고 정보"),
     # 자문: "자문을 제공하지 않습니다" / "자문업 등록" 문맥 제외.
     (re.compile(r"(?<![투자])자문(?!을?\s*제공하지|업\s*등록|업체|하지)"), "정보 제공"),

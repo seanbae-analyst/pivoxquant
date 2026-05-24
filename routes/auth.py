@@ -855,7 +855,10 @@ def _clear_auth_cookies(response):
     # Mirror the SET attributes from security.py:280-287:
     is_secure = bool(current_app.config.get("SESSION_COOKIE_SECURE", False))
     samesite = current_app.config.get("SESSION_COOKIE_SAMESITE") or "Lax"
-    # HttpOnly is True for all three auth cookies we manage.
+    # Mirror each cookie's original HttpOnly: session/remember_token are
+    # HttpOnly, but csrf_token is set HttpOnly=False (security.py:495 — the SPA
+    # reads it via JS). Strict cookie jars match deletion on attributes, so a
+    # mismatch could leave csrf_token uncleared on logout in some clients.
     for name in (session_cookie_name, "remember_token", "csrf_token"):
         response.set_cookie(
             name,
@@ -865,7 +868,7 @@ def _clear_auth_cookies(response):
             path="/",
             domain=cookie_domain,
             secure=is_secure,
-            httponly=True,
+            httponly=(name != "csrf_token"),
             samesite=samesite,
         )
     return response

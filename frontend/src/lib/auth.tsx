@@ -13,6 +13,26 @@ import { apiFetch } from "./api";
 import { API } from "./endpoints";
 import { clearHadSession, markHadSession } from "./had-session";
 
+// PIPA: drop the service-worker API_CACHE so per-user SWR endpoints
+// (/api/profile, /api/earnings, /api/discover — cached by URL only with
+// multi-minute windows) cannot leak one user's payload to the next on a
+// shared device. Must run on login/signup too, not just logout: a session
+// can expire without an explicit logout, after which a different user signs
+// in and would otherwise see the previous user's cached first render.
+// Best-effort — never throw if the SW is unavailable.
+function clearSwApiCache(): void {
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.serviceWorker?.controller
+    ) {
+      navigator.serviceWorker.controller.postMessage({ type: "CLEAR_API_CACHE" });
+    }
+  } catch {
+    // SW not controlling this page yet / messaging unsupported — ignore.
+  }
+}
+
 export interface User {
   id: number;
   email: string;
@@ -133,6 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
+      clearSwApiCache();
       setLogoutPending(false);
       await mutate();
     },
@@ -145,6 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         body: JSON.stringify({ email, password, name }),
       });
+      clearSwApiCache();
       setLogoutPending(false);
       await mutate();
     },
@@ -177,24 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Force the SWR cache to drop the authenticated payload so any
       // subsequent revalidation reflects the logged-out state.
       await mutate({ authenticated: false }, { revalidate: false });
-      // PIPA P1 (2026-05-22): tell the service worker to drop the API_CACHE.
-      // The SW caches per-user SWR endpoints (/api/profile, /api/earnings,
-      // /api/discover) by URL only with multi-minute windows — on a shared
-      // device, the next user's first render would otherwise be served this
-      // user's cached payload. Best-effort: never block logout if the SW is
-      // unavailable or messaging throws.
-      try {
-        if (
-          typeof navigator !== "undefined" &&
-          navigator.serviceWorker?.controller
-        ) {
-          navigator.serviceWorker.controller.postMessage({
-            type: "CLEAR_API_CACHE",
-          });
-        }
-      } catch {
-        // SW not controlling this page yet / messaging unsupported — ignore.
-      }
+      clearSwApiCache();
     }
   }, [mutate]);
 

@@ -158,10 +158,22 @@ def put_preferences():
                 )
             clean.setdefault(event_id, {})[channel] = value
 
+    # Partial PUT: merge incoming events/channels over the stored matrix so a
+    # UI that only submits a subset of toggles cannot wipe the user's other
+    # customizations. Merge at the channel level (per-event dict.update).
+    stored = current_user.notification_prefs
+    merged_store: dict[str, dict[str, bool]] = (
+        {k: dict(v) for k, v in stored.items() if isinstance(v, dict)}
+        if isinstance(stored, dict)
+        else {}
+    )
+    for event_id, channels in clean.items():
+        merged_store.setdefault(event_id, {}).update(channels)
+
     try:
         # JSON column mutation: reassign a brand-new dict so SQLAlchemy's
         # default (non-mutable) JSON tracking marks the attribute dirty.
-        current_user.notification_prefs = dict(clean)
+        current_user.notification_prefs = merged_store
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -173,7 +185,7 @@ def put_preferences():
             status=500,
         )
 
-    return jsonify({"prefs": _merged_prefs(clean)})
+    return jsonify({"prefs": _merged_prefs(merged_store)})
 
 
 # ── Alias routes ────────────────────────────────────────────────────────────

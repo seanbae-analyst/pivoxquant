@@ -78,9 +78,30 @@ function computePolylines(
 ): PolylineGeom | null {
   if (!series || series.length < 2) return null;
   const navs = series.map((p) => p.nav);
-  const benches = series
-    .map((p) => p.benchmark)
-    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  // Backend emits raw index closes for the benchmark (KOSPI ~2,600 / SPY
+  // ~$450) and its comment claims the frontend rebases — but it never did,
+  // so the benchmark line was crushed against the portfolio's currency value
+  // on a shared y-axis (severe for KR, ~20x for US). Rebase the benchmark to
+  // the portfolio's starting value ("same starting capital invested in the
+  // index"): it then shares the nav scale and is the standard comparison.
+  const firstBenchIdx = series.findIndex(
+    (p) => typeof p.benchmark === "number" && Number.isFinite(p.benchmark),
+  );
+  const rebasedBench: (number | null)[] = series.map(() => null);
+  if (firstBenchIdx >= 0) {
+    const benchBase = series[firstBenchIdx].benchmark as number;
+    const navBase = series[firstBenchIdx].nav;
+    if (benchBase > 0 && Number.isFinite(navBase)) {
+      series.forEach((p, i) => {
+        if (typeof p.benchmark === "number" && Number.isFinite(p.benchmark)) {
+          rebasedBench[i] = navBase * (p.benchmark / benchBase);
+        }
+      });
+    }
+  }
+  const benches = rebasedBench.filter(
+    (v): v is number => typeof v === "number" && Number.isFinite(v),
+  );
   const allVals = [...navs, ...benches];
   const min = Math.min(...allVals);
   const max = Math.max(...allVals);
@@ -91,11 +112,9 @@ function computePolylines(
   const ptsNav = series
     .map((p, i) => `${(i * xStep).toFixed(1)},${toY(p.nav).toFixed(1)}`)
     .join(" ");
-  const ptsBench = series
-    .map((p, i) =>
-      typeof p.benchmark === "number" && Number.isFinite(p.benchmark)
-        ? `${(i * xStep).toFixed(1)},${toY(p.benchmark).toFixed(1)}`
-        : null,
+  const ptsBench = rebasedBench
+    .map((v, i) =>
+      v != null ? `${(i * xStep).toFixed(1)},${toY(v).toFixed(1)}` : null,
     )
     .filter((v): v is string => v !== null)
     .join(" ");
@@ -113,9 +132,7 @@ function computePolylines(
   // sample — partial coverage would visually distort the area.
   let fillBench = "";
   const benchContiguous =
-    series.every(
-      (p) => typeof p.benchmark === "number" && Number.isFinite(p.benchmark),
-    ) && ptsBench.length > 0;
+    rebasedBench.every((v) => v != null) && ptsBench.length > 0;
   if (benchContiguous) {
     fillBench = `0,${height.toFixed(1)} ${ptsBench} ${width.toFixed(1)},${height.toFixed(1)}`;
   }

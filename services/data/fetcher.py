@@ -16,6 +16,21 @@ from services.data import fmp
 
 logger = logging.getLogger(__name__)
 
+# Class-level caches below are shared across all DataFetcher instances and had
+# no eviction — under sustained load with diverse tickers they grew until
+# Railway's memory cap triggered an OOM restart. FIFO-cap them (oldest 25%
+# dropped over the cap) the same way services/cache_service.py does.
+_FETCHER_CACHE_CAP = 1000
+
+
+def _capped_insert(cache: dict, key, value, *, cap: int = _FETCHER_CACHE_CAP) -> None:
+    cache.pop(key, None)
+    if len(cache) >= cap:
+        for old_key in list(cache.keys())[: cap // 4]:
+            cache.pop(old_key, None)
+    cache[key] = value
+
+
 # ── Alpaca Historical Data Client (US stocks — no call limit) ─────────────────
 # Kill-switched via ALPACA_ENABLED (config.py / Dockerfile). Default OFF —
 # Alpaca is disabled to remove the legal risk tied to its "My Data" license.
@@ -452,7 +467,7 @@ class DataFetcher:
         # Try Claude AI sentiment first, fallback to keyword-based
         ai_result = self._score_news_with_ai(ticker, news[:8])
         result = ai_result if ai_result else self._score_news_keywords(ticker, news)
-        self._news_score_cache[cache_key] = (_time.time(), result)
+        _capped_insert(self._news_score_cache, cache_key, (_time.time(), result))
         return result
 
     def _score_news_with_ai(self, ticker: str, news: list) -> "tuple[float, list[dict]] | None":
@@ -679,14 +694,16 @@ Reply ONLY in this exact JSON format, nothing else:
             def _fetch_pair(pair):
                 q = fmp.get_quote(pair)
                 if q and q.get("price"):
-                    return (pair, q["price"])
-                # Fallback: try get_fx_rate (works for USDKRW where rate > 100)
+                    chg = q.get("changesPercentage", q.get("changePercentage", 0)) or 0
+                    return (pair, (q["price"], chg))
+                # Fallback: get_fx_rate (works for USDKRW where rate > 100); it
+                # carries no change_pct, so report 0 for the delta in that case.
                 rate = fmp.get_fx_rate(pair)
-                return (pair, rate)
+                return (pair, (rate, 0) if rate else (None, 0))
             with _TPE(max_workers=3) as pool:
-                for pair, rate in pool.map(_fetch_pair, fx_pairs):
-                    if rate:
-                        result[pair] = rate
+                for pair, val in pool.map(_fetch_pair, fx_pairs):
+                    if val and val[0]:
+                        result[pair] = val
             return result
 
         def _get_btc_quote():
@@ -894,7 +911,12 @@ Reply ONLY in this exact JSON format, nothing else:
                                  ("EURUSD","eurusd","EUR/USD"),
                                  ("USDJPY","usdjpy","USD/JPY")]:
             if pair in fx_data:
-                macro[key] = {"price": round(fx_data[pair], 4), "change_pct": 0, "name": name}
+                fx_price, fx_chg = fx_data[pair]
+                macro[key] = {
+                    "price": round(fx_price, 4),
+                    "change_pct": self._safe(fx_chg),
+                    "name": name,
+                }
 
         # DXY via UUP (Dollar Index ETF proxy)
         if "UUP" in stk_data:
@@ -1040,7 +1062,7 @@ Reply ONLY in this exact JSON format, nothing else:
             return cached[1]
         result = self._fetch_snapshot(ticker)
         if result:
-            self._snapshot_cache[cache_key] = (_time.time(), result)
+            _capped_insert(self._snapshot_cache, cache_key, (_time.time(), result))
         return result
 
     def _fetch_snapshot(self, ticker: str) -> "dict | None":
@@ -1190,7 +1212,7 @@ Reply ONLY in this exact JSON format, nothing else:
                 result = self._get_history_fmp(ticker, period)
 
         if result is not None:
-            self._history_cache[cache_key] = (_time.time(), result)
+            _capped_insert(self._history_cache, cache_key, (_time.time(), result))
         return result
 
     @staticmethod

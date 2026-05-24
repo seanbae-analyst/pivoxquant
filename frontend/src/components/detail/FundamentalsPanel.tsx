@@ -25,10 +25,12 @@ export function FundamentalsPanel({
   signal,
   mcap,
   krw,
+  loading = false,
 }: {
   signal: SignalDetail | undefined;
   mcap: number | null;
   krw: boolean;
+  loading?: boolean;
 }) {
   const s = signal?.snapshot;
   // KR tickers: KIS license serves PER/EPS/PBR/시총 but not margin / rev
@@ -55,7 +57,13 @@ export function FundamentalsPanel({
       </div>
 
       <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 md:p-6 rounded-sm">
-        {!anyData ? (
+        {loading && !anyData ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-5 rounded-sm animate-pulse bg-[rgba(255,255,255,0.04)]" />
+            ))}
+          </div>
+        ) : !anyData ? (
           <EmptyNote>
             Financials pending next filing — snapshot refreshes after EDGAR/DART
             publish.

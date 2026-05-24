@@ -151,8 +151,19 @@ def _get_cache_stale(key):
     return None
 
 
+_CACHE_MAX_ENTRIES = 4000  # cap to prevent unbounded growth → Railway OOM
+
+
 def _set_cache(key, data):
     with _cache_lock:
+        # FIFO eviction: dict preserves insertion order, so drop the oldest
+        # 25% once over the cap. Mirrors risk_snapshot_cache_set() in
+        # services/cache_service.py. Re-inserting an existing key refreshes
+        # its position only if removed first — cheap pop+set keeps it recent.
+        _cache.pop(key, None)
+        if len(_cache) >= _CACHE_MAX_ENTRIES:
+            for old_key in list(_cache.keys())[: _CACHE_MAX_ENTRIES // 4]:
+                _cache.pop(old_key, None)
         _cache[key] = {"data": data, "ts": time.time()}
 
 
@@ -695,10 +706,10 @@ def _get_history_kr(ticker, period="3mo"):
     cached = _get_cache(cache_key, TTL_PRICE_HIST)
     if cached is not None:
         return cached
-    if _is_budget_stale():
-        stale = _get_cache_stale(cache_key)
-        if stale is not None:
-            return stale
+    # NOTE: no FMP budget-stale gate here. This path is KIS-only (KRX tickers
+    # are not on FMP), so FMP's daily budget is irrelevant. A previous gate
+    # returned an empty stale cache entry whenever the FMP budget was exhausted,
+    # silently blocking healthy KIS calls and producing blank KR charts.
 
     try:
         from services.data import kis_market_adapter as kma

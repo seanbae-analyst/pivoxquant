@@ -124,8 +124,8 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
             pct == null
               ? "rgba(245,240,232,0.55)"
               : pct >= 0
-                ? "var(--pq-positive, #b8956a)"
-                : "var(--pq-negative, #d18888)";
+                ? "var(--up, #D18888)"
+                : "var(--down, #7AA0C8)";
 
           // B-10 fix (2026-05-10): only the title is a <Link>. Carousel
           // scroll gestures on the card body no longer trigger navigation.

@@ -55,11 +55,17 @@ def _make_user(app, *, tier="premium", status="active"):
         return u.id
 
 
-def _post_event(raw_client, event):
+def _post_event(raw_client, event, *, charge_customer=None):
     with patch("routes.billing.STRIPE_WEBHOOK_SECRET", "whsec_test"), \
          patch("routes.billing.stripe") as mock_stripe:
         mock_stripe.SignatureVerificationError = type(
             "SigErr", (Exception,), {}
+        )
+        mock_stripe.StripeError = type("StripeErr", (Exception,), {})
+        # Real Stripe dispute objects carry no top-level `customer`; the
+        # handler recovers it via stripe.Charge.retrieve(charge).customer.
+        mock_stripe.Charge.retrieve.return_value = (
+            {"customer": charge_customer} if charge_customer else {}
         )
         mock_stripe.Webhook.construct_event.return_value = event
         return raw_client.post(
@@ -232,7 +238,6 @@ class TestChargeDispute:
                 "id": "dp_1",
                 "charge": "ch_dp_1",
                 "payment_intent": "pi_dp_1",
-                "customer": "cus_rf_test",
                 "amount": 9_900,
                 "currency": "krw",
                 "reason": "fraudulent",
@@ -242,7 +247,7 @@ class TestChargeDispute:
         with patch(
             "routes.billing._notify_refund_dispute_slack", return_value=True,
         ) as mock_alert, caplog.at_level(logging.WARNING, logger="routes.billing"):
-            r = _post_event(raw_client, event)
+            r = _post_event(raw_client, event, charge_customer="cus_rf_test")
 
         assert r.status_code == 200
         assert any(
@@ -261,14 +266,14 @@ class TestChargeDispute:
             "type": "charge.dispute.funds_withdrawn",
             "data": {"object": {
                 "id": "dp_fw", "charge": "ch_fw", "payment_intent": "pi_fw",
-                "customer": "cus_rf_test", "amount": 19_900, "currency": "krw",
+                "amount": 19_900, "currency": "krw",
                 "reason": "product_not_received", "status": "lost",
             }},
         }
         with patch(
             "routes.billing._notify_refund_dispute_slack", return_value=True,
         ) as mock_alert, caplog.at_level(logging.WARNING, logger="routes.billing"):
-            r = _post_event(raw_client, event)
+            r = _post_event(raw_client, event, charge_customer="cus_rf_test")
 
         assert r.status_code == 200
         assert mock_alert.call_args.kwargs["kind"] == "DISPUTE (funds_withdrawn)"

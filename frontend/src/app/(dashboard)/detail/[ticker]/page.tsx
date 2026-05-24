@@ -499,8 +499,8 @@ export default function StockDetailPage() {
 
         {/* ════ Zone2 ANALYTICS — big breath above (mt-16), tight inside ════ */}
         <div className="mt-16 space-y-10">
-          <PillarGrid signal={signal} hasPillars={hasPillars} />
-          <FundamentalsPanel signal={signal} mcap={mcap} krw={krw} />
+          <PillarGrid signal={signal} hasPillars={hasPillars} loading={loadingSignal} />
+          <FundamentalsPanel signal={signal} mcap={mcap} krw={krw} loading={loadingSignal} />
         </div>
 
         {/* ════ Zone3 DOSSIER — editorial (mt-16 + space-y-12) ════ */}

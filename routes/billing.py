@@ -813,9 +813,20 @@ def _handle_charge_dispute(dispute, *, phase: str):
     currency = dispute.get("currency")
     reason = dispute.get("reason") or "unknown"
     status = dispute.get("status") or "unknown"
-    # Dispute objects don't carry ``customer`` directly; it may appear on
-    # newer API versions. Best-effort — None is fine, we still log + alert.
+    # Stripe dispute objects do NOT carry ``customer`` at the top level — it
+    # lives on the underlying Charge. Without resolving it the funds_withdrawn
+    # branch falls through to MANUAL on every real event and never revokes
+    # paid access. Retrieve the charge to recover the customer id.
     customer_id = dispute.get("customer")
+    if not customer_id and charge_id:
+        try:
+            charge = stripe.Charge.retrieve(charge_id)
+            customer_id = charge.get("customer")
+        except stripe.StripeError:
+            logger.warning(
+                "DISPUTE charge retrieve failed (dispute=%s charge=%s)",
+                dispute_id, charge_id, exc_info=True,
+            )
     user = _resolve_user_by_customer(customer_id)
     user_id = getattr(user, "id", "unknown") if user else "unknown"
     user_email = getattr(user, "email", "unknown") if user else "unknown"
