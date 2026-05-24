@@ -39,6 +39,26 @@ class TestGetPortfolio:
         assert p["avg_cost"] == 150.0
         assert p["market_value"] == 10 * 150.0  # no signal cache -> fallback to avg_cost
 
+    def test_positions_alias_emits_market_value_and_totals(
+        self, client, auth_user, add_position,
+    ):
+        """GET /api/portfolio/positions MUST emit per-position market_value AND
+        portfolio totals. Without them the /risk weight aggregators divide by
+        0 and every concentration/sector weight renders 0% (CEO 2026-05-24)."""
+        add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=150.0)
+        r = client.get("/api/portfolio/positions")
+        assert r.status_code == 200
+        d = r.get_json()
+        assert len(d["positions"]) == 1
+        # per-position native market value present + non-zero
+        assert d["positions"][0]["market_value"] == 10 * 150.0
+        # portfolio totals present so denom != 0 in the weight calc
+        assert "total_value_all_krw" in d
+        assert "total_value_usd" in d
+        assert "fx_rate" in d
+        assert d["total_value_usd"] == 1500.0
+        assert d["total_value_all_krw"] > 0
+
 
 # ── POST /api/portfolio/position (add) ──────────────────────────────────────
 

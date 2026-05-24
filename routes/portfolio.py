@@ -1075,6 +1075,10 @@ def _build_positions_list():
             "change_pct": round(change_pct, 4),
             "observed_at": observed_at,
             "price_source": price_source,
+            # Native-currency market value — required by the /risk weight
+            # aggregators (useConcentration / useSectorExposure). Its absence
+            # made every concentration weight render 0% (CEO 2026-05-24).
+            "market_value": round(cur_px * p.shares, 2),
             "sector": _sector_for(sd),
             "purchaseDate": opened_at[:10] if opened_at else "",
             "notes": p.thesis or "",
@@ -1095,7 +1099,26 @@ def _build_positions_list():
 def list_positions_alias():
     """Simpler positions list tailored to the new frontend shape."""
     try:
-        return jsonify({"positions": _build_positions_list()})
+        positions = _build_positions_list()
+        # Portfolio totals — the /risk weight aggregators divide each holding's
+        # market value by these. Omitting them made `denom = 0` → every
+        # concentration/sector weight rendered 0% (CEO 2026-05-24). Mirrors the
+        # totals block in get_portfolio().
+        rate = fx_service.get_rate() or 0
+        total_usd = sum(
+            p["market_value"] for p in positions if p.get("currency") == "USD"
+        )
+        total_krw = sum(
+            p["market_value"] for p in positions if p.get("currency") == "KRW"
+        )
+        total_all_krw = round(total_usd * rate + total_krw)
+        return jsonify({
+            "positions": positions,
+            "total_value_usd": round(total_usd, 2),
+            "total_value_krw": round(total_krw, 0),
+            "total_value_all_krw": total_all_krw,
+            "fx_rate": rate,
+        })
     except Exception:
         logger.exception("list_positions_alias failed")
         return api_error(
