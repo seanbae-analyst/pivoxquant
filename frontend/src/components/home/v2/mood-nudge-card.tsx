@@ -1,0 +1,226 @@
+"use client";
+
+/**
+ * <MoodNudgeCard /> — /home top nudge (CEO 2026-05-24, Mood 알림 quick-win v1).
+ *
+ * A persona-toned, dismissible check-in that asks "지금 기분 어때요?" and, on
+ * mood select, returns a single §101-safe behavioural-reflection line. The
+ * line is OBSERVATION / SELF-CHECK only — never a buy/sell/target instruction
+ * (자본시장법 §101 면제 트랙). No backend: mood is not logged in v1; the
+ * persona tone reads `user.risk_profile` from the existing session.
+ *
+ * Frequency: once per calendar day, gated via localStorage so it "pops" on the
+ * first /home load of the day, then stays out of the way until dismissed/chosen.
+ */
+
+import * as React from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { PQ_EASE, PQ_DUR_SLOW } from "@/lib/motion";
+import { useAuth } from "@/lib/auth";
+
+type Mood = "calm" | "excited" | "anxious";
+
+const MOODS: { id: Mood; label: string }[] = [
+  { id: "calm", label: "차분" },
+  { id: "excited", label: "들뜸" },
+  { id: "anxious", label: "불안" },
+];
+
+// §101-safe reflective coaching — observation / self-check tone only. No
+// buy/sell/hold/target language. Reviewed against the legal_filter intent.
+const COACHING: Record<Mood, string> = {
+  calm: "좋아요. 차분할 때 세운 원칙이 변동성 큰 날을 버티게 해줘요. 오늘 본 데이터는 기록만 남겨둬도 충분해요.",
+  excited:
+    "기분 좋은 날일수록 한 박자 쉬어가요. 들뜸은 판단을 서두르게 만들 수 있어요 — 오늘 본 건 내일 다시 봐도 늦지 않아요.",
+  anxious:
+    "불안한 날엔 화면을 잠깐 닫는 것도 방법이에요. 시장은 내일도 열려요. 지금은 관찰만, 판단은 차분해진 뒤에 해도 돼요.",
+};
+
+// Light persona tint for the eyebrow only (tone, not advice). Falls back to a
+// neutral label for unknown/again-undeclared personas.
+const PERSONA_LABEL: Record<string, string> = {
+  risk_managed_growth: "리스크 관리형",
+  swing_trader: "스윙형",
+  momentum_rider: "모멘텀형",
+  macro_rotator: "매크로 로테이터",
+  aggressive_scalper: "적극 단타형",
+  conservative: "신중형",
+  moderate: "균형형",
+  aggressive: "적극형",
+};
+
+const STORAGE_KEY = "pq_mood_nudge_seen_on";
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+export function MoodNudgeCard() {
+  const { user } = useAuth();
+  const reduce = useReducedMotion();
+  // Start hidden; reveal only after the client confirms it hasn't been seen
+  // today (avoids SSR/hydration flash + respects the once-a-day gate).
+  const [visible, setVisible] = React.useState(false);
+  const [picked, setPicked] = React.useState<Mood | null>(null);
+
+  React.useEffect(() => {
+    try {
+      if (localStorage.getItem(STORAGE_KEY) !== todayKey()) {
+        setVisible(true);
+      }
+    } catch {
+      // localStorage unavailable (private mode) — show once for this mount.
+      setVisible(true);
+    }
+  }, []);
+
+  const markSeen = React.useCallback(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, todayKey());
+    } catch {
+      // ignore — best effort
+    }
+  }, []);
+
+  const dismiss = React.useCallback(() => {
+    markSeen();
+    setVisible(false);
+  }, [markSeen]);
+
+  const choose = React.useCallback(
+    (m: Mood) => {
+      setPicked(m);
+      markSeen(); // chosen today → don't pop again until tomorrow
+    },
+    [markSeen],
+  );
+
+  if (!visible) return null;
+
+  const personaLabel =
+    (user?.risk_profile && PERSONA_LABEL[user.risk_profile]) || "오늘의 컨디션";
+
+  return (
+    <motion.section
+      aria-label="기분 체크"
+      initial={reduce ? false : { opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
+      style={{
+        marginBottom: 20,
+        border: "1px solid var(--pq-ivory-line)",
+        background:
+          "linear-gradient(180deg, rgba(184,149,106,0.06), rgba(255,255,255,0.02))",
+        borderRadius: 4,
+        padding: "18px 22px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 16,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.22em",
+              color: "var(--pq-bronze)",
+              marginBottom: 6,
+            }}
+          >
+            Mood check · {personaLabel}
+          </div>
+          {picked == null ? (
+            <h2
+              className="font-display"
+              style={{
+                fontWeight: 500,
+                fontSize: "var(--pq-text-h4)",
+                letterSpacing: "-0.01em",
+                color: "var(--pq-ivory)",
+                margin: 0,
+              }}
+            >
+              지금 기분, 어때요?
+            </h2>
+          ) : (
+            <p
+              className="font-serif"
+              style={{
+                fontSize: "var(--pq-text-body)",
+                lineHeight: 1.6,
+                color: "rgba(245,240,232,0.86)",
+                margin: 0,
+                maxWidth: 560,
+                wordBreak: "keep-all",
+              }}
+            >
+              {COACHING[picked]}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="기분 체크 닫기"
+          className="font-mono"
+          style={{
+            flexShrink: 0,
+            background: "none",
+            border: "none",
+            color: "rgba(245,240,232,0.45)",
+            cursor: "pointer",
+            fontSize: "var(--pq-text-body)",
+            lineHeight: 1,
+            padding: 4,
+          }}
+        >
+          ✕
+        </button>
+      </div>
+
+      {picked == null && (
+        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+          {MOODS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => choose(m.id)}
+              className="font-mono uppercase"
+              style={{
+                padding: "8px 18px",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid var(--pq-ivory-line)",
+                borderRadius: 999,
+                color: "var(--pq-ivory)",
+                cursor: "pointer",
+                fontSize: "var(--pq-text-eyebrow)",
+                letterSpacing: "0.14em",
+                transition: "border-color 120ms, background 120ms",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--pq-bronze)";
+                e.currentTarget.style.background = "rgba(184,149,106,0.10)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--pq-ivory-line)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </motion.section>
+  );
+}
+
+export default MoodNudgeCard;

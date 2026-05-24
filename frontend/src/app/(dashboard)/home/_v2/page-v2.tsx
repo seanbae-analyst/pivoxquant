@@ -52,6 +52,7 @@ import { TodayMemoHeroV2 } from "@/components/home/v2/today-memo-hero-v2";
 import { HomeCardStyles } from "@/components/home/v2/home-card";
 import { PortfolioSnapshotCard } from "@/components/home/v2/portfolio-snapshot-card";
 import { RiskBoardCard } from "@/components/home/v2/risk-board-card";
+import { MoodNudgeCard } from "@/components/home/v2/mood-nudge-card";
 import { EarningsPreBriefCard } from "@/components/home/v2/earnings-pre-brief-card";
 import { PositionsTopCard } from "@/components/home/v2/positions-top-card";
 import { SignalsCard } from "@/components/home/v2/signals-card";
@@ -110,6 +111,9 @@ export default function HomePageV2() {
       >
         <LivingCFOStatusBar />
       </div>
+
+      {/* ═══════════ Mood check nudge — once/day, persona-toned ═══════════ */}
+      <MoodNudgeCard />
 
       {/* ═══════════ HERO — Today's Memo (editorial) ═══════════ */}
       <TodayMemoHeroV2
