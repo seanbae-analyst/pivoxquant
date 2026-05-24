@@ -1,67 +1,37 @@
 # PivoxQuant Frontend — Session Handoff
 
-## 현재 상태 (2026-04-12) — FRONTEND RESET
+> ⚠️ 2026-05-24 현행화. 이 파일은 오랫동안 "2026-04-12 FRONTEND RESET — 모든
+> 페이지 삭제, 처음부터 재구축 중" 상태로 STALE 했다. 실제로는 71개 page.tsx +
+> 197개 컴포넌트가 완성·배포되어 prod 라이브 중이다. 옛 "TODO: 랜딩/로그인/
+> 대시보드 만들기" 목록은 전부 완료되어 삭제했다.
 
-### 상태: 프론트엔드 전체 리셋 완료
-모든 UI 페이지/컴포넌트 삭제됨. 백엔드 인프라(lib/)와 shadcn/ui 기본 컴포넌트만 남음.
-새 디자인으로 처음부터 다시 만드는 중.
+## 현재 상태 (2026-05-24 실측)
+- **prod 라이브** — Vercel `pivoxquant.com` (베타 게이트 307), Next.js 16.
+- **71개 page.tsx / 197개 컴포넌트 / vitest 454 통과 / tsc clean.**
+- V2 디자인 플래그 9개(login/signup/home/portfolio/signals/reports/risk/settings/
+  profile) 모두 prod true. 각 페이지의 `_v1/` 는 dynamic-import 롤백 보험 — 함부로
+  삭제 금지(Vercel env 9개 모두 true 확인 후에만 제거 가능).
 
-### 아키텍처
-- **Next.js 16** App Router + TypeScript + Tailwind 4
-- **SWR** for data fetching (hooks in `src/lib/hooks.ts`)
-- **API endpoints** centralized in `src/lib/endpoints.ts`
-- **Auth** via `src/lib/auth.tsx` (AuthContext + Flask session cookies)
+## 아키텍처
+- **Next.js 16** App Router + TypeScript + Tailwind 4 + SWR + motion/react
+- **SWR** 데이터 페칭 (`src/lib/hooks.ts`, 24개 훅)
+- **API endpoints** `src/lib/endpoints.ts` 에 중앙화 (백엔드 1:1 매핑)
+- **Auth** `src/lib/auth.tsx` (AuthContext + Flask 세션 쿠키)
+- **프록시**: `next.config.ts` → `/api/*` → `http://localhost:5050/api/*`
 
-### 현재 파일 구조 (29개)
-```
-src/
-├── app/
-│   ├── layout.tsx       # 루트 레이아웃 (Geist + IBM Plex Mono + Pretendard)
-│   ├── page.tsx         # 플레이스홀더 ("Rebuilding something beautiful.")
-│   ├── globals.css      # Supanova Vantablack Luxe 테마 토큰
-│   ├── manifest.ts      # PWA manifest
-│   └── favicon.ico
-├── components/ui/       # shadcn/ui 15개 (button, card, dialog, input 등)
-└── lib/                 # 백엔드 연동 인프라 (건드리지 말 것)
-    ├── api.ts           # apiFetch (CSRF, credentials)
-    ├── auth.tsx         # AuthProvider, useAuth
-    ├── endpoints.ts     # API URL 상수 (백엔드 1:1 매핑)
-    ├── hooks.ts         # SWR 데이터 페칭 훅 17개
-    ├── types.ts         # TypeScript 타입 (백엔드 응답 매핑)
-    ├── format.ts        # 포맷터 (fmtUsd, fmtPct 등)
-    ├── utils.ts         # cn() 유틸
-    ├── realtime.tsx     # SSE RealtimeProvider
-    └── push.ts          # PWA 푸시 구독
-```
+## 디자인 시스템 — v3 락-인 (Vantablack + Bronze + Playfair + KR 컨벤션)
+> 상세: 메모리 `project_design_v3.md`. 옛 Supanova "Warm Gold #E2B96F" 는 폐기.
+- **Base**: Vantablack (#050505) + Bronze accent (`--pq-bronze` 184,149,106)
+- **Heading**: Playfair Display (editorial) / **Body**: Pretendard / **Numbers**: IBM Plex Mono
+- **가격 방향 (KR 컨벤션)**: 상승 = carmine `--up #D18888` / 하락 = indigo `--down #7AA0C8`.
+  `lib/format.ts` 의 `pctColor()` / `PRICE_COLOR_HEX` 가 SoT. 평가 토큰
+  `--pq-positive`(bronze) / `--pq-negative`(carmine) 은 **시그널 평가 라벨 전용**이며
+  가격 방향에 쓰면 안 됨(2026-05-24 반전 버그 fix). 토큰 drift 는 `design-token-drift` skill 가드.
+- **BANNED**: Inter, violet/purple AI gradient, neon glow, italic(전수 제거됨), raw hex(토큰만)
 
-### 디자인 시스템 (Supanova Design Skill 기반)
-- **Vibe**: Vantablack Luxe (#050505 base)
-- **Accent**: Warm Gold (#E2B96F)
-- **Cards**: Double-Bezel (ld-bezel + ld-bezel-inner)
-- **CTA**: Pill button (rounded-full, no neon glow)
-- **Easing**: cubic-bezier(0.16, 1, 0.3, 1) 전체 적용
-- **Fonts**: Geist (heading) + Pretendard (body) + IBM Plex Mono (numbers)
-- **BANNED**: Inter, violet/purple, neon glow, 3-equal-column, centered Hero
-
-### 백엔드 연동
-- 프록시: `next.config.ts` → `/api/*` → `http://localhost:5050/api/*`
-- 백엔드 62개 엔드포인트 전부 살아있음
-- `lib/hooks.ts`의 17개 SWR 훅으로 연결하면 됨
-
-### 중요 원칙
-- **백엔드 코드 건들지 말 것**
-- **endpoints.ts URL 변경 금지** — 백엔드 라우트 1:1 매핑
-- **hooks.ts SWR 키 변경 금지**
+## 중요 원칙
+- **백엔드 코드 / endpoints.ts URL / hooks.ts SWR 키 변경 금지** (백엔드 1:1 매핑)
 - **types.ts 추가만 가능** — 기존 필드 삭제/이름변경 금지
-- **새 페이지는 src/app/ 아래에 생성**
-- **Supanova Design Skill 규칙 준수** — THE LILA BAN (no purple/blue AI gradients)
-
-### TODO (새 디자인)
-1. [ ] 랜딩 페이지 — Supanova Split Hero + Bento Features
-2. [ ] 로그인/회원가입 페이지
-3. [ ] 대시보드 메인 — 포트폴리오 overview
-4. [ ] 종목 상세 페이지
-5. [ ] AI 기능 페이지 (chat, review, ideas)
-6. [ ] 설정/프로필 페이지
+- 기존 기능 100% 보존 (메모리 `feedback_feature_preservation`) — 리디자인 시 빠지는 기능 없게
 
 @AGENTS.md

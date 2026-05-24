@@ -44,6 +44,9 @@ AI + Quant 기반 개인 투자 어드바이저 플랫폼.
   purple/blue gradient 는 폐기). 상세 메모리 `project_design_v3.md`.
 
 ## 백엔드 구조
+> ⚠️ 2026-05-24 현행화. 옛 트리는 engine.py / quant_models.py / risk_defense.py /
+> data_fetcher.py / fmp_service.py / ai_service.py 등을 루트에 표기했으나, 전부
+> `services/` 하위 패키지로 재편되었다(루트에 해당 .py 없음). 실측 반영:
 ```
 pivoxquant/               # 2026-05-17 wave 13: 'stockpilot/' 명칭은 폐기
 ├── app.py              # create_app() factory
@@ -53,24 +56,26 @@ pivoxquant/               # 2026-05-17 wave 13: 'stockpilot/' 명칭은 폐기
 ├── security.py         # CORS/RateLimit/CSRF/세션만료
 ├── models/             # SQLAlchemy 모델 (10개+)
 ├── routes/             # Flask Blueprint (40+ 파일, 200+ endpoints)
-├── services/           # 비즈니스 로직 (container, serializers, fx, cache, alert, push, error_responses)
-├── engine.py           # QuantEngine (1146줄) — 4-pillar scoring
-├── quant_models.py     # 58 퀀트 모델 (StatArb, MeanReversion, TSMOM, ML 등)
-├── risk_defense.py     # 7-Layer Risk Defense (VaR, Correlation, VIX, Tail, Daily, Sector, Cash)
-├── risk_models.py      # GKYZ, LedoitWolf, ComponentES, ConditionalDD, TailRatio, Sortino
-├── portfolio_models.py # HRP, TailRiskParity, MaxDiv, ERC, MinVariance
-├── signal_models.py    # DispositionEffect, Herding, SentimentDivergence, OrderFlow, Anchoring
-├── ai_models.py        # EarningsCallTone, SectorRotation, RiskSummary
-├── backtester.py       # 백테스트 (transaction costs, Sharpe/Sortino/Calmar)
-├── data_fetcher.py     # Alpaca→FMP 폴백, KIS KR데이터
-├── fmp_service.py      # FMP v4 stable API, TTL cache, budget enforcement
-├── kis_service.py      # KIS read-only (주문 disabled)
-├── ai_service.py       # Claude API
-├── realtime_service.py # SSE 실시간 가격
-├── investor_profiles.py # 8 투자자 유형
-├── questionnaire.py    # 20문항 온보딩
-├── canslim.py          # CAN SLIM 7-factor screener
-├── indicators.py       # 10 tech + 8 fundamental indicators
+├── migrations/         # Alembic
+└── services/           # 비즈니스 로직 (전부 여기로 통합)
+    ├── quant/          # engine.py(4-pillar) · models.py(퀀트모델) · risk_defense.py
+    │                   #   (7-Layer) · risk_metrics.py(GKYZ/LedoitWolf/Sortino) ·
+    │                   #   portfolio.py(HRP/ERC/MaxDiv) · signals.py · backtester.py ·
+    │                   #   canslim.py · indicators.py · composer.py · model_catalog.py
+    ├── data/           # fetcher.py(가격) · fmp.py(FMP stable+budget) ·
+    │                   #   kis_market_adapter.py · kr_fundamentals.py · edgar.py ·
+    │                   #   sec_edgar_service.py · dart_* · fred_service.py · realtime.py
+    │                   #   (pykrx_service.py 는 ToS 위반으로 비활성 stub)
+    ├── ai/             # Claude API (SWOT/Chat/Sector/Coaching/EarningsTone/Artifacts)
+    ├── kis/            # KIS read-only (주문 disabled) + token_manager(AES-GCM)
+    ├── broker/         # Alpaca(paper) + 브로커 연동
+    ├── artifacts/      # 17 artifact service (PDF/이메일 — User as CFO)
+    ├── legal/          # legal_filter scrub · §101 detector · forbidden_terms
+    ├── email/          # EmailSender + sendgrid/brevo provider cascade
+    ├── profile/        # questionnaire(20문항) · investor profiles
+    ├── behavior/ · pre_trade/ · trading/ · twin/ · scheduler/ · customer/ · agents/
+    └── (루트 모듈) container · serializers · fx_service · cache_service ·
+                      alert · alert_service · error_responses · push 등
 ```
 
 ## 프론트엔드 구조
@@ -135,7 +140,9 @@ cd ~/Desktop/취준/pivoxquant/frontend && npm run dev
 - Alpaca: paper trading 계정 (.env에 키 있음)
 
 ## 중요 원칙
-- **기존 백엔드 서비스 파일 수정 금지** — engine.py, quant_models.py, risk_defense.py 등은 완성 상태. autotrade 기능은 2026-04-27 비활성화 → 2026-05-05 물리 삭제 (투자일임업 회피, rollback 은 git tag `legal-pre-autotrader-removal` 만)
+- **핵심 퀀트 엔진 신중 수정** — `services/quant/`(engine/risk_defense/risk_metrics/
+  portfolio/backtester 등)는 검증된 완성 코드. 버그 fix 시 수식 단위/회귀 테스트 필수.
+  autotrade 기능은 2026-04-27 비활성화 → 2026-05-05 물리 삭제 (투자일임업 회피, rollback 은 git tag `legal-pre-autotrader-removal` 만)
 - **routes/, models/, services/ 구조 유지**
 - **API endpoints URL 변경 금지** — `endpoints.ts`와 1:1 매핑
 - **시그널 라벨: POSITIVE/NEGATIVE/NEUTRAL** — BUY/SELL/HOLD 절대 사용 금지 (자본시장법)
