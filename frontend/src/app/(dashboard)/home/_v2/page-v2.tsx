@@ -48,7 +48,7 @@ import { usePortfolioPositions } from "@/lib/hooks";
 import type { PortfolioResponse } from "@/lib/types";
 // Morning Brief deprecated 2026-04-29 — useMorningBrief removed.
 
-import { TodayMemoHeroV2 } from "@/components/home/v2/today-memo-hero-v2";
+import { DeskCheckinHero } from "@/components/home/v2/desk-checkin-hero";
 import { HomeCardStyles } from "@/components/home/v2/home-card";
 import { PortfolioSnapshotCard } from "@/components/home/v2/portfolio-snapshot-card";
 import { RiskBoardCard } from "@/components/home/v2/risk-board-card";
@@ -62,12 +62,7 @@ import { CompanionArchiveCard } from "@/components/home/v2/companion-archive-car
 
 export default function HomePageV2() {
   const { user } = useAuth();
-  // Morning Brief hook removed — hero now in empty/coming-soon state.
-  const heroHeadline: string | null = null;
-  const heroBody: string | null = null;
-  const audioDuration: string | null = null;
-  const briefLoading = false;
-
+  // 2026-05-24: editorial "weekly memo" hero retired → DeskCheckinHero.
   const displayName = user?.name?.split(" ")[0] || "Observer";
 
   // P0-2: first-run activation. Shares the /api/portfolio/positions SWR cache
@@ -115,16 +110,17 @@ export default function HomePageV2() {
       {/* ═══════════ Mood check nudge — once/day, persona-toned ═══════════ */}
       <MoodNudgeCard />
 
-      {/* ═══════════ HERO — Today's Memo (editorial) ═══════════ */}
-      <TodayMemoHeroV2
-        headline={heroHeadline}
-        body={heroBody}
-        audioDuration={audioDuration}
+      {/* ═══════════ HERO — Desk check-in (companion, not editorial) ═══════════
+       * 2026-05-24: replaced the "weekly memo / morning paper" editorial hero
+       * (permanently empty placeholder) with a warm desk check-in — greeting +
+       * one honest line about the user's own book. CEO disliked the paper
+       * framing. */}
+      <DeskCheckinHero
         displayName={displayName}
-        loading={briefLoading && heroHeadline == null}
+        positions={positionsSwr.data?.positions ?? []}
+        loading={positionsLoading && !hasPositions}
         /* Treat "still loading positions" as hasPositions=true so the
-           first-run CTA doesn't flash for returning users mid-fetch; it
-           only appears once we confirm an empty book. */
+           first-run CTA doesn't flash for returning users mid-fetch. */
         hasPositions={positionsLoading || hasPositions}
       />
 
