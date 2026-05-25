@@ -169,21 +169,24 @@ export function fmtMcap(value: number | null | undefined, krw: boolean): string 
     if (value >= 1e8) return `${(value / 1e8).toFixed(0)}억`;
     return `${value.toLocaleString()}`;
   }
-  if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
-  return `$${value.toLocaleString()}`;
+  if (value >= 1e12) return `USD ${(value / 1e12).toFixed(2)}T`;
+  if (value >= 1e9) return `USD ${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `USD ${(value / 1e6).toFixed(0)}M`;
+  return `USD ${value.toLocaleString()}`;
 }
 
 /**
  * Split a formatted market cap into { number, suffix } so the unit modifier
  * (조 / 억 / T / B / M) can render visually subordinate to the digits
  * (audit FINDING-035). The suffix is the trailing run of non-digit, non-dot,
- * non-comma characters; "$" prefixes stay with the number.
+ * non-comma characters; an ISO currency-code prefix ("USD ", "KRW ") stays
+ * with the number.
  */
 export function splitMcap(formatted: string): { num: string; suffix: string } {
   if (formatted === "—") return { num: "—", suffix: "" };
-  const m = formatted.match(/^([$]?[\d.,]+)([^\d.,]*)$/);
+  // Optional currency prefix ($ legacy, or "USD "/"KRW " ISO code) + digits,
+  // then a trailing non-numeric suffix (조 / 억 / T / B / M).
+  const m = formatted.match(/^((?:[$]|[A-Z]{3}\s)?[\d.,]+)([^\d.,]*)$/);
   if (!m) return { num: formatted, suffix: "" };
   return { num: m[1], suffix: m[2] };
 }

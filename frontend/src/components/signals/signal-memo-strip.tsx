@@ -55,9 +55,9 @@ function chipColor(sig: string) {
 function formatPrice(item: MemoSignalItem): string {
   if (item?.price == null) return "—";
   if (item.currency === "KRW") {
-    return `₩${Math.round(item.price).toLocaleString("ko-KR")}`;
+    return `KRW ${Math.round(item.price).toLocaleString("ko-KR")}`;
   }
-  return `$${item.price.toLocaleString("en-US", {
+  return `USD ${item.price.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

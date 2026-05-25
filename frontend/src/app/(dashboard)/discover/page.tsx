@@ -191,8 +191,8 @@ export default function DiscoverPage() {
 
   const fmtMoverPrice = (price: number, isKr: boolean) =>
     isKr
-      ? `₩${Math.round(price).toLocaleString("ko-KR")}`
-      : `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      ? `KRW ${Math.round(price).toLocaleString("ko-KR")}`
+      : `USD ${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // All `?? MOCK_*` fallbacks removed 2026-04-28 — backend 503 / FMP 402
   // must not be papered over with hardcoded 2024 prices (legal risk).
@@ -623,8 +623,8 @@ export default function DiscoverPage() {
                         : item?.price == null
                           ? "—"
                           : item.currency === "KRW"
-                            ? `₩${Math.round(item.price).toLocaleString("ko-KR")}`
-                            : `$${item.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                            ? `KRW ${Math.round(item.price).toLocaleString("ko-KR")}`
+                            : `USD ${item.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                     const pillCls =
                       item.signal === "POSITIVE"
                         ? "pq-ink-pill--pos"

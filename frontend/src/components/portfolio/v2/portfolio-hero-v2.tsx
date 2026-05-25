@@ -24,7 +24,7 @@ interface PortfolioHeroV2Props {
   nav?: number;
   navCurrency?: "USD" | "KRW";
   /** Native-currency stock subtotals — US holdings in USD, KR holdings in KRW.
-   *  When both are present the NAV is shown split ("$X · ₩Y") instead of a
+   *  When both are present the NAV is shown split ("USD X · KRW Y") instead of a
    *  single FX-unified USD figure (CEO 2026-05-24). */
   navUsd?: number;
   navKrw?: number;
@@ -76,7 +76,7 @@ function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
     minimumFractionDigits: dec,
     maximumFractionDigits: dec,
   });
-  return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
+  return `${sign}${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
 function fmtPct(n: number | undefined): string {
@@ -99,7 +99,7 @@ function fmtMoneySigned(
     minimumFractionDigits: dec,
     maximumFractionDigits: dec,
   });
-  return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
+  return `${sign}${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
 function relativeTime(iso: string | null | undefined): string {
@@ -137,7 +137,7 @@ export function PortfolioHeroV2({
   const eyebrow = `Book · Volume ${weekIndexOf(now)} · ${weekdayOf(now)}`;
 
   // Show native-currency subtotals separately rather than one FX-unified USD
-  // figure (CEO 2026-05-24): KR holdings in ₩, US holdings in $. Falls back to
+  // figure (CEO 2026-05-24): KR holdings in KRW, US holdings in USD. Falls back to
   // the single display-currency nav when only one market is held (or the
   // backend hasn't supplied the split).
   const hasUs = typeof navUsd === "number" && navUsd > 0;

@@ -46,11 +46,11 @@ function formatPrice(
   const n = typeof price === "number" ? price : Number(price);
   if (!Number.isFinite(n)) return "—";
   if (currency === "KRW") {
-    return "₩" + Math.round(n).toLocaleString();
+    return "KRW " + Math.round(n).toLocaleString();
   }
-  // Sub-dollar equities need more decimals so "0.0125" doesn't render as "$0.01".
-  if (Math.abs(n) < 1) return "$" + n.toFixed(4);
-  return "$" + n.toFixed(2);
+  // Sub-dollar equities need more decimals so "0.0125" doesn't render as "USD 0.01".
+  if (Math.abs(n) < 1) return "USD " + n.toFixed(4);
+  return "USD " + n.toFixed(2);
 }
 
 function relativeTime(

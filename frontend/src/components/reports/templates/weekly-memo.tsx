@@ -36,8 +36,8 @@ export interface WeeklyMemoData {
   weekTag: string;         // "WK-2026-23"
   portfolioReturn: string; // "+2.4%"
   benchmarkReturn: string; // "vs S&P +1.1%"
-  portfolioValue: string;  // "$1,242,150"
-  portfolioDelta: string;  // "▲ $29,310"
+  portfolioValue: string;  // "USD 1,242,150"
+  portfolioDelta: string;  // "▲ USD 29,310"
   ytdReturn: string;       // "+14.2%"
   ytdDetail: string;       // "Sharpe 0.87"
   threeChecks: { body: string; meta: string; checked: boolean }[];
@@ -52,8 +52,8 @@ const DEFAULT_DATA: WeeklyMemoData = {
   weekTag: "WK-2026-17",
   portfolioReturn: "+2.4%",
   benchmarkReturn: "vs S&P +1.1%",
-  portfolioValue: "$1,242,150",
-  portfolioDelta: "▲ $29,310",
+  portfolioValue: "USD 1,242,150",
+  portfolioDelta: "▲ USD 29,310",
   ytdReturn: "+14.2%",
   ytdDetail: "Sharpe 0.87",
   threeChecks: [

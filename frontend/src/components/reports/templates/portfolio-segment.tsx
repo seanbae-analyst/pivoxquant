@@ -77,7 +77,7 @@ export interface PortfolioSegmentData {
 
 const DEFAULT: PortfolioSegmentData = {
   asOf: "April 2026 · PS-2026-04",
-  nav: { value: "$1,242k", delta: "MTD +4.2%" },
+  nav: { value: "USD 1,242k", delta: "MTD +4.2%" },
   holdings: { value: "28", delta: "target 25-30" },
   avgPos: { value: "3.4%", delta: "max 11.5%" },
   activeShare: { value: "82%", delta: "vs S&P 500" },

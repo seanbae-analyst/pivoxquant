@@ -58,32 +58,32 @@ export interface DividendIncomeData {
 
 const DEFAULT: DividendIncomeData = {
   asOf: "April 2026",
-  thisMonth: { value: "$1,842", delta: "+$214 vs last" },
-  ytdIncome: { value: "$18,420", delta: "+12.8% YoY" },
+  thisMonth: { value: "USD 1,842", delta: "+USD 214 vs last" },
+  ytdIncome: { value: "USD 18,420", delta: "+12.8% YoY" },
   yieldOnCost: { value: "4.18%", delta: "portfolio avg" },
-  runRate: { value: "$22,104", delta: "$1,842/mo" },
+  runRate: { value: "USD 22,104", delta: "USD 1,842/mo" },
   payments: [
-    { date: "Jun 03", ticker: "JEPI", name: "JPM Equity Premium", shares: "120", perShare: "$0.42", received: "$50.40", yield: "7.8%" },
-    { date: "Jun 07", ticker: "SCHD", name: "Schwab Dividend", shares: "80", perShare: "$0.78", received: "$62.40", yield: "3.6%" },
-    { date: "Jun 12", ticker: "KO", name: "Coca-Cola", shares: "200", perShare: "$0.485", received: "$97.00", yield: "3.0%" },
-    { date: "Jun 14", ticker: "PG", name: "Procter & Gamble", shares: "60", perShare: "$1.0065", received: "$60.39", yield: "2.4%" },
-    { date: "Jun 18", ticker: "JNJ", name: "Johnson & Johnson", shares: "75", perShare: "$1.24", received: "$93.00", yield: "3.1%" },
-    { date: "Jun 22", ticker: "MSFT", name: "Microsoft", shares: "40", perShare: "$0.83", received: "$33.20", yield: "0.7%" },
-    { date: "Jun 25", ticker: "VZ", name: "Verizon", shares: "300", perShare: "$0.665", received: "$199.50", yield: "6.4%" },
-    { date: "Jun 28", ticker: "O", name: "Realty Income", shares: "450", perShare: "$0.2625", received: "$118.13", yield: "5.6%" },
+    { date: "Jun 03", ticker: "JEPI", name: "JPM Equity Premium", shares: "120", perShare: "USD 0.42", received: "USD 50.40", yield: "7.8%" },
+    { date: "Jun 07", ticker: "SCHD", name: "Schwab Dividend", shares: "80", perShare: "USD 0.78", received: "USD 62.40", yield: "3.6%" },
+    { date: "Jun 12", ticker: "KO", name: "Coca-Cola", shares: "200", perShare: "USD 0.485", received: "USD 97.00", yield: "3.0%" },
+    { date: "Jun 14", ticker: "PG", name: "Procter & Gamble", shares: "60", perShare: "USD 1.0065", received: "USD 60.39", yield: "2.4%" },
+    { date: "Jun 18", ticker: "JNJ", name: "Johnson & Johnson", shares: "75", perShare: "USD 1.24", received: "USD 93.00", yield: "3.1%" },
+    { date: "Jun 22", ticker: "MSFT", name: "Microsoft", shares: "40", perShare: "USD 0.83", received: "USD 33.20", yield: "0.7%" },
+    { date: "Jun 25", ticker: "VZ", name: "Verizon", shares: "300", perShare: "USD 0.665", received: "USD 199.50", yield: "6.4%" },
+    { date: "Jun 28", ticker: "O", name: "Realty Income", shares: "450", perShare: "USD 0.2625", received: "USD 118.13", yield: "5.6%" },
   ],
-  totalReceived: "$1,842.02",
+  totalReceived: "USD 1,842.02",
   avgYield: "avg 4.1%",
   topContributors: [
-    { ticker: "VZ", name: "Verizon", pct: 100, amount: "$199" },
-    { ticker: "O", name: "Realty Income", pct: 60, amount: "$118" },
-    { ticker: "KO", name: "Coca-Cola", pct: 48, amount: "$97" },
-    { ticker: "JNJ", name: "Johnson & Johnson", pct: 46, amount: "$93" },
-    { ticker: "SCHD", name: "Schwab US Dividend ETF", pct: 32, amount: "$62", flat: true },
-    { ticker: "PG", name: "Procter & Gamble", pct: 30, amount: "$60", flat: true },
+    { ticker: "VZ", name: "Verizon", pct: 100, amount: "USD 199" },
+    { ticker: "O", name: "Realty Income", pct: 60, amount: "USD 118" },
+    { ticker: "KO", name: "Coca-Cola", pct: 48, amount: "USD 97" },
+    { ticker: "JNJ", name: "Johnson & Johnson", pct: 46, amount: "USD 93" },
+    { ticker: "SCHD", name: "Schwab US Dividend ETF", pct: 32, amount: "USD 62", flat: true },
+    { ticker: "PG", name: "Procter & Gamble", pct: 30, amount: "USD 60", flat: true },
   ],
   reinvestmentNote:
-    "받은 $1,842, 어디에 다시 심을 것인가. SCHD (Schwab US Dividend ETF) 12주 추가 매입 검토. 또는 현금 보유 후 다음 달 합산.",
+    "받은 USD 1,842, 어디에 다시 심을 것인가. SCHD (Schwab US Dividend ETF) 12주 추가 매입 검토. 또는 현금 보유 후 다음 달 합산.",
 };
 
 // 2026-05-06 (v24): Strategy B Option 2 — disclaim split into own PdfPage.
@@ -176,7 +176,7 @@ export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }
                 <text x="566" y="156" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">JUN</text>
               </svg>
               <div style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)", marginTop: 8 }}>
-                12개월 평균 $1,535 / 이번 달 $1,842 ▲
+                12개월 평균 USD 1,535 / 이번 달 USD 1,842 ▲
               </div>
             </PdfCard>
           </div>

@@ -54,13 +54,13 @@ interface EquityCurveChartProps {
 function fmtAxisMoney(n: number, currency: "USD" | "KRW"): string {
   if (!Number.isFinite(n)) return "—";
   if (currency === "KRW") {
-    if (Math.abs(n) >= 1e8) return `₩${(n / 1e8).toFixed(1)}억`;
-    if (Math.abs(n) >= 1e4) return `₩${(n / 1e4).toFixed(0)}만`;
-    return `₩${Math.round(n).toLocaleString("ko-KR")}`;
+    if (Math.abs(n) >= 1e8) return `KRW ${(n / 1e8).toFixed(1)}억`;
+    if (Math.abs(n) >= 1e4) return `KRW ${(n / 1e4).toFixed(0)}만`;
+    return `KRW ${Math.round(n).toLocaleString("ko-KR")}`;
   }
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
-  return `$${n.toFixed(0)}`;
+  if (Math.abs(n) >= 1_000_000) return `USD ${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `USD ${(n / 1_000).toFixed(1)}K`;
+  return `USD ${n.toFixed(0)}`;
 }
 
 function fmtTooltipMoney(n: number, currency: "USD" | "KRW"): string {
@@ -70,7 +70,7 @@ function fmtTooltipMoney(n: number, currency: "USD" | "KRW"): string {
     minimumFractionDigits: dec,
     maximumFractionDigits: dec,
   });
-  return `${currency === "KRW" ? "₩" : "$"}${body}`;
+  return `${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
 function fmtAxisDate(ts: number): string {

@@ -42,7 +42,7 @@ interface WhatIfChartProps {
    result.tsx once lib gains `fmtCompact()` and a chart-axis preset. */
 
 function fmtShort(v: number, currency: "USD" | "KRW"): string {
-  const symbol = currency === "KRW" ? "₩" : "$";
+  const symbol = currency === "KRW" ? "KRW " : "USD ";
   const abs = Math.abs(v);
   if (currency === "KRW") {
     if (abs >= 100_000_000) return `${symbol}${(v / 100_000_000).toFixed(1)}억`;
@@ -55,7 +55,7 @@ function fmtShort(v: number, currency: "USD" | "KRW"): string {
 }
 
 function fmtFull(v: number, currency: "USD" | "KRW"): string {
-  const symbol = currency === "KRW" ? "₩" : "$";
+  const symbol = currency === "KRW" ? "KRW " : "USD ";
   if (currency === "KRW") {
     return `${symbol}${Math.round(v).toLocaleString("ko-KR")}`;
   }

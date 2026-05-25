@@ -42,21 +42,22 @@ function formatHeroPrice(
   if (price == null) return "—";
   const n = typeof price === "number" ? price : Number(price);
   if (!Number.isFinite(n)) return "—";
-  if (krw) return "₩" + Math.round(n).toLocaleString("ko-KR");
-  if (Math.abs(n) < 1) return "$" + n.toFixed(4);
-  return "$" + n.toFixed(2);
+  if (krw) return "KRW " + Math.round(n).toLocaleString("ko-KR");
+  if (Math.abs(n) < 1) return "USD " + n.toFixed(4);
+  return "USD " + n.toFixed(2);
 }
 
-/* Hero price split into a demoted currency symbol + full-size digits, so the
-   ₩/$ glyph does not balloon at the giant Tier-1 size (CEO: "₩ 기호 존나 큼"). */
+/* Hero price split into a demoted currency code + full-size digits, so the
+   KRW/USD code does not balloon at the giant Tier-1 size (CEO: "기호 존나 큼"). */
 function splitHeroPrice(
   price: number | null | undefined,
   krw: boolean,
 ): { symbol: string; digits: string } {
   const s = formatHeroPrice(price, krw);
   if (s === "—") return { symbol: "", digits: "—" };
-  const m = s.match(/^([₩$])(.*)$/);
-  return m ? { symbol: m[1], digits: m[2] } : { symbol: "", digits: s };
+  // ISO currency-code prefix ("KRW "/"USD ") demoted; digits stay full-size.
+  const m = s.match(/^([A-Z]{3}\s)(.*)$/);
+  return m ? { symbol: m[1].trim(), digits: m[2] } : { symbol: "", digits: s };
 }
 
 /** Pillar mini-summary — "why this signal" in one bronze-labelled row. */
@@ -372,8 +373,8 @@ export function DetailHero(props: DetailHeroProps) {
                       className="font-mono tabular-nums text-[var(--pq-ivory)] leading-none"
                       style={{
                         /* Tier 1 — hero numeric. 40–56px (CEO: "좀 더 키워").
-                           Currency glyph below is demoted to 0.5em so the
-                           ₩/$ does not balloon at this size. */
+                           Currency code below is demoted to 0.5em so the
+                           KRW/USD prefix does not balloon at this size. */
                         fontSize: "clamp(2.5rem, 6.5vw, 3.5rem)",
                         letterSpacing: "-0.025em",
                         fontFeatureSettings: '"tnum" 1, "lnum" 1',

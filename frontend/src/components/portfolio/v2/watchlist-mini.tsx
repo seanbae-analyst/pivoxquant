@@ -30,7 +30,7 @@ function fmtMoney(n: number, currency: "USD" | "KRW"): string {
     minimumFractionDigits: dec,
     maximumFractionDigits: dec,
   });
-  return `${currency === "KRW" ? "₩" : "$"}${body}`;
+  return `${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
 function fmtPctSigned(n: number): string {

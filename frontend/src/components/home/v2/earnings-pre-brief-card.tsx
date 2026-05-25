@@ -55,8 +55,8 @@ function fmtEps(v: number | null | undefined): string {
 function fmtRevenue(millions: number | null | undefined): string {
   if (millions == null || !Number.isFinite(millions)) return "—";
   const abs = Math.abs(millions);
-  if (abs >= 1000) return `$${(millions / 1000).toFixed(2)}B`;
-  return `$${millions.toFixed(0)}M`;
+  if (abs >= 1000) return `USD ${(millions / 1000).toFixed(2)}B`;
+  return `USD ${millions.toFixed(0)}M`;
 }
 
 function fmtMovePct(v: number | null | undefined): string {

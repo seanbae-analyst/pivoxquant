@@ -32,7 +32,7 @@ interface PositionsShape {
 }
 
 // Currency is derived from the TICKER, not the position.currency field —
-// audit FINDING-021: a KOSPI holding (005930) was rendered with a "$" prefix
+// audit FINDING-021: a KOSPI holding (005930) was rendered with a "USD " prefix
 // because position.currency leaked "USD" from seed data. The ticker shape is
 // the trustworthy signal: a 6-digit / .KS|.KQ symbol is always KRW-quoted.
 //
@@ -68,7 +68,7 @@ export function PositionsTopCard() {
   // backend was snake_case — true of the legacy /api/portfolio endpoint
   // (line 227), false of the new /positions alias the frontend now
   // hits. Reading current_price / avg_cost only yielded undefined →
-  // cur=0, avg=0, pnl=0 → every row rendered ₩0/$0/0.00% in prod.
+  // cur=0, avg=0, pnl=0 → every row rendered KRW 0/USD 0/0.00% in prod.
   // verify-ux 2026-05-15 confirmed PR #383 fixed /portfolio but this
   // home card was the unaddressed sibling. Read camelCase first,
   // snake_case fallback for legacy compat — same defensive pattern as

@@ -7,7 +7,7 @@
  * positions alias (line 826 _build_positions_list) emits camelCase
  * (`avgCost / current / purchaseDate / isKorean`). Consumers reading
  * `p.current_price` against the new payload silently produced
- * undefined → cur=0 → ₩0/$0 rendering across /portfolio, /home v1/v2,
+ * undefined → cur=0 → KRW 0/USD 0 rendering across /portfolio, /home v1/v2,
  * and the sector-allocation donut (bug-hunter P0/P2 findings).
  *
  * Both shapes are now declared so the next consumer doesn't repeat

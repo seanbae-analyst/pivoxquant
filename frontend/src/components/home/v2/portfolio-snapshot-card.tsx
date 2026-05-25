@@ -59,7 +59,7 @@ function fmtSignedMoney(n: number | undefined, currency: "USD" | "KRW"): string 
     minimumFractionDigits: dec,
     maximumFractionDigits: dec,
   });
-  return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
+  return `${sign}${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
 // fmtPct migrated to @/lib/format (2026-05-19 Wave 2 sweep).
@@ -141,7 +141,7 @@ export function PortfolioSnapshotCard() {
       ? summary.cashPct
       : null;
 
-  // Native-currency stock subtotals — show US ($) and KR (₩) separately
+  // Native-currency stock subtotals — show US (USD) and KR (KRW) separately
   // instead of one unified USD NAV (CEO 2026-05-24).
   const navUsd = summary?.navUsd;
   const navKrw = summary?.navKrw;
@@ -169,7 +169,7 @@ export function PortfolioSnapshotCard() {
       eyebrow="Portfolio · NAV"
       cornerCta="Open Book ›"
     >
-      {/* NAV value — show US holdings ($) and KR holdings (₩) separately
+      {/* NAV value — show US holdings (USD) and KR holdings (KRW) separately
           rather than unifying into one USD figure (CEO 2026-05-24). Falls
           back to the single unified NAV when only one market is held (or on
           an older backend that doesn't emit the native subtotals yet). */}

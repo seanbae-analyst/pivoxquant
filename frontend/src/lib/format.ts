@@ -1,18 +1,25 @@
 export function fmtUsd(v: number | null | undefined): string {
   const n = v ?? 0;
-  if (!isFinite(n)) return "$\u2014";
-  return n.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: n >= 1000 ? 0 : 2,
-    maximumFractionDigits: n >= 1000 ? 0 : 2,
-  });
+  if (!isFinite(n)) return "USD \u2014";
+  // currencyDisplay:"code" emits the ISO code ("USD") but separates it from the
+  // amount with a non-breaking / narrow-NBSP space \u2014 normalise to a plain space
+  // so output is byte-consistent with the manual "KRW " / "USD " prefixes used
+  // by the other formatters and asserted by tests.
+  return n
+    .toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      currencyDisplay: "code",
+      minimumFractionDigits: n >= 1000 ? 0 : 2,
+      maximumFractionDigits: n >= 1000 ? 0 : 2,
+    })
+    .replace(/[\u00a0\u202f]/g, " ");
 }
 
 export function fmtKrw(v: number | null | undefined): string {
   const n = v ?? 0;
-  if (!isFinite(n)) return "₩\u2014";
-  return "₩" + Math.round(n).toLocaleString("ko-KR");
+  if (!isFinite(n)) return "KRW \u2014";
+  return "KRW " + Math.round(n).toLocaleString("ko-KR");
 }
 
 /**
@@ -23,8 +30,8 @@ export function fmtKrw(v: number | null | undefined): string {
  * - USD: `[low_2dp, high_2dp]`
  * - `null` when either bound is missing (NEVER fabricate "0 ~ 0")
  *
- * KR rows use "₩{lo} ~ ₩{hi}" with comma thousands.
- * US rows use "${lo} – {hi}" with en-dash.
+ * KR rows use "KRW {lo} ~ KRW {hi}" with comma thousands.
+ * US rows use "USD {lo} – {hi}" with en-dash.
  * Missing / malformed → "—".
  */
 export function fmtRange52w(
@@ -41,9 +48,9 @@ export function fmtRange52w(
     return "—";
   }
   if (currency === "KRW") {
-    return `₩${Math.round(lo).toLocaleString("ko-KR")} ~ ₩${Math.round(hi).toLocaleString("ko-KR")}`;
+    return `KRW ${Math.round(lo).toLocaleString("ko-KR")} ~ KRW ${Math.round(hi).toLocaleString("ko-KR")}`;
   }
-  return `$${lo.toFixed(2)} – $${hi.toFixed(2)}`;
+  return `USD ${lo.toFixed(2)} – USD ${hi.toFixed(2)}`;
 }
 
 export function fmtPct(v: number | null | undefined): string {
@@ -338,41 +345,44 @@ export function fmtMoneyForTicker(
 
 /**
  * Money with an explicit sign prefix.
- *   +₩123,456   (positive KRW)
- *   −$1,234.56  (negative USD — U+2212 minus, NOT ASCII hyphen)
- *   ±$0         (zero — bronze "flat")
+ *   +KRW 123,456   (positive KRW)
+ *   −USD 1,234.56  (negative USD — U+2212 minus, NOT ASCII hyphen)
+ *   ±USD 0         (zero — bronze "flat")
  * Used by P&L deltas, brag-card swing displays, weekly memo callouts where
  * the reader has to clock direction at a glance. fmtUsd / fmtKrw stay
- * sign-implicit so they remain safe inside formulas like "Total: ₩X".
+ * sign-implicit so they remain safe inside formulas like "Total: KRW X".
  */
 export function fmtMoneySigned(
   v: number | null | undefined,
   currency: "USD" | "KRW",
 ): string {
   const n = v ?? 0;
-  if (!Number.isFinite(n)) return currency === "KRW" ? "₩—" : "$—";
+  if (!Number.isFinite(n)) return currency === "KRW" ? "KRW —" : "USD —";
   if (n === 0) {
-    return currency === "KRW" ? "₩0" : "$0.00";
+    return currency === "KRW" ? "KRW 0" : "USD 0.00";
   }
   // U+2212 MINUS for negatives (typographic; matches KR convention rendering
   // in Pretendard/Playfair which would otherwise show a hyphen-minus).
   const sign = n > 0 ? "+" : "−";
   const abs = Math.abs(n);
   if (currency === "KRW") {
-    return `${sign}₩${Math.round(abs).toLocaleString("ko-KR")}`;
+    return `${sign}KRW ${Math.round(abs).toLocaleString("ko-KR")}`;
   }
-  return `${sign}${abs.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: abs >= 1000 ? 0 : 2,
-    maximumFractionDigits: abs >= 1000 ? 0 : 2,
-  })}`;
+  return `${sign}${abs
+    .toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      currencyDisplay: "code",
+      minimumFractionDigits: abs >= 1000 ? 0 : 2,
+      maximumFractionDigits: abs >= 1000 ? 0 : 2,
+    })
+    .replace(/[  ]/g, " ")}`;
 }
 
 /**
  * Compact money for tight surfaces (chart tooltips, KPI tiles, sparklines).
- *   USD: $1.2M / $3.4B / $1,234 (under 1M stays full)
- *   KRW: ₩1.2억 / ₩3,400만 / ₩12,345 (KR myriad system: 만 / 억 / 조)
+ *   USD: USD 1.2M / USD 3.4B / USD 1,234 (under 1M stays full)
+ *   KRW: KRW 1.2억 / KRW 3,400만 / KRW 12,345 (KR myriad system: 만 / 억 / 조)
  * Returns the same "—" sentinels as fmtUsd/fmtKrw for non-finite inputs.
  */
 export function fmtMoneyCompact(
@@ -380,20 +390,20 @@ export function fmtMoneyCompact(
   currency: "USD" | "KRW",
 ): string {
   const n = v ?? 0;
-  if (!Number.isFinite(n)) return currency === "KRW" ? "₩—" : "$—";
+  if (!Number.isFinite(n)) return currency === "KRW" ? "KRW —" : "USD —";
   const abs = Math.abs(n);
   const sign = n < 0 ? "-" : "";
   if (currency === "USD") {
-    if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(1)}T`;
-    if (abs >= 1e9)  return `${sign}$${(abs / 1e9 ).toFixed(1)}B`;
-    if (abs >= 1e6)  return `${sign}$${(abs / 1e6 ).toFixed(1)}M`;
-    if (abs >= 1e3)  return `${sign}$${(abs / 1e3 ).toFixed(1)}K`;
+    if (abs >= 1e12) return `${sign}USD ${(abs / 1e12).toFixed(1)}T`;
+    if (abs >= 1e9)  return `${sign}USD ${(abs / 1e9 ).toFixed(1)}B`;
+    if (abs >= 1e6)  return `${sign}USD ${(abs / 1e6 ).toFixed(1)}M`;
+    if (abs >= 1e3)  return `${sign}USD ${(abs / 1e3 ).toFixed(1)}K`;
     return fmtUsd(n);
   }
   // KRW myriad scale (한국 만/억/조 표기).
-  if (abs >= 1e12) return `${sign}₩${(abs / 1e12).toFixed(1)}조`;
-  if (abs >= 1e8)  return `${sign}₩${(abs / 1e8 ).toFixed(1)}억`;
-  if (abs >= 1e4)  return `${sign}₩${(abs / 1e4 ).toFixed(1)}만`;
+  if (abs >= 1e12) return `${sign}KRW ${(abs / 1e12).toFixed(1)}조`;
+  if (abs >= 1e8)  return `${sign}KRW ${(abs / 1e8 ).toFixed(1)}억`;
+  if (abs >= 1e4)  return `${sign}KRW ${(abs / 1e4 ).toFixed(1)}만`;
   return fmtKrw(n);
 }
 
@@ -455,11 +465,11 @@ export function fmtPctUnsigned(
  * KR myriad (만 / 억 / 조) money with TUNABLE precision per scale band.
  * Differs from fmtMoneyCompact's KRW branch by giving callers control over
  * decimal density:
- *   fmtKrwAbbrev(120_000_000)              →  "₩1.2억"     (default 1dp 억)
- *   fmtKrwAbbrev(120_000_000, {dpEok: 2})  →  "₩1.20억"
- *   fmtKrwAbbrev(34_000_000, {dpMan: 0})   →  "₩3,400만"   (default)
- *   fmtKrwAbbrev(-120_000_000)             →  "-₩1.2억"
- *   fmtKrwAbbrev(NaN)                      →  "₩—"
+ *   fmtKrwAbbrev(120_000_000)              →  "KRW 1.2억"     (default 1dp 억)
+ *   fmtKrwAbbrev(120_000_000, {dpEok: 2})  →  "KRW 1.20억"
+ *   fmtKrwAbbrev(34_000_000, {dpMan: 0})   →  "KRW 3,400만"   (default)
+ *   fmtKrwAbbrev(-120_000_000)             →  "-KRW 1.2억"
+ *   fmtKrwAbbrev(NaN)                      →  "KRW —"
  *
  * This is the helper the Wave 2 sweep was waiting for — the donut tooltip
  * wants `{dpEok: 2, dpMan: 0}`, the what-if hero wants `{dpEok: 2, dpMan: 0}`,
@@ -474,9 +484,9 @@ export interface KrwAbbrevOpts {
   dpMan?: number;
   /**
    * Strip trailing zeros after the decimal point (Wave 4-B 2026-05-20).
-   *   fmtKrwAbbrev(150_000_000, {dpEok: 2})                  → "₩1.50억"
-   *   fmtKrwAbbrev(150_000_000, {dpEok: 2, trimTrailing:true})→ "₩1.5억"
-   *   fmtKrwAbbrev(100_000_000, {dpEok: 2, trimTrailing:true})→ "₩1억"
+   *   fmtKrwAbbrev(150_000_000, {dpEok: 2})                  → "KRW 1.50억"
+   *   fmtKrwAbbrev(150_000_000, {dpEok: 2, trimTrailing:true})→ "KRW 1.5억"
+   *   fmtKrwAbbrev(100_000_000, {dpEok: 2, trimTrailing:true})→ "KRW 1억"
    * Lets the what-if hero / share-card display compact magnitudes without
    * "1.00억" noise while still allowing other callers (DD report, ledger)
    * to lock a fixed precision.
@@ -488,12 +498,12 @@ export function fmtKrwAbbrev(
   v: number | null | undefined,
   opts: KrwAbbrevOpts = {},
 ): string {
-  if (v == null || !Number.isFinite(v)) return "₩—";
+  if (v == null || !Number.isFinite(v)) return "KRW —";
   const { dpJo = 1, dpEok = 1, dpMan = 0, trimTrailing = false } = opts;
   const abs = Math.abs(v);
   const sign = v < 0 ? "-" : "";
   // Each band: divide, fix to N dp, then re-localise so thousand-group
-  // separators come back ("₩3,400만" not "₩3400만"). Negative dp is treated
+  // separators come back ("KRW 3,400만" not "KRW 3400만"). Negative dp is treated
   // as 0. The toFixed() rounds half-away-from-zero; that matches both the
   // donut tooltip and the what-if hero contract from Wave 2 sweep notes.
   const fmtBand = (scaled: number, dp: number, suffix: string): string => {
@@ -508,22 +518,22 @@ export function fmtKrwAbbrev(
       fracPart = fracPart.replace(/0+$/, "");
     }
     const grouped = Number(intPart).toLocaleString("ko-KR");
-    return `${sign}₩${fracPart ? `${grouped}.${fracPart}` : grouped}${suffix}`;
+    return `${sign}KRW ${fracPart ? `${grouped}.${fracPart}` : grouped}${suffix}`;
   };
   if (abs >= 1e12) return fmtBand(abs / 1e12, dpJo, "조");
   if (abs >= 1e8)  return fmtBand(abs / 1e8,  dpEok, "억");
   if (abs >= 1e4)  return fmtBand(abs / 1e4,  dpMan, "만");
-  return `${sign}₩${Math.round(abs).toLocaleString("ko-KR")}`;
+  return `${sign}KRW ${Math.round(abs).toLocaleString("ko-KR")}`;
 }
 
 /**
  * USD with NO automatic decimal-switching and NO sign prefix.
- *   fmtUsdPlain(1234)         →  "$1,234"           (default dp = 0)
- *   fmtUsdPlain(1234.56, 2)   →  "$1,234.56"
- *   fmtUsdPlain(-1234)        →  "-$1,234"
- *   fmtUsdPlain(NaN)          →  "$—"
+ *   fmtUsdPlain(1234)         →  "USD 1,234"           (default dp = 0)
+ *   fmtUsdPlain(1234.56, 2)   →  "USD 1,234.56"
+ *   fmtUsdPlain(-1234)        →  "-USD 1,234"
+ *   fmtUsdPlain(NaN)          →  "USD —"
  *
- * fmtUsd has an implicit precision switch at $1000 (2dp under, 0dp over).
+ * fmtUsd has an implicit precision switch at 1000 (2dp under, 0dp over).
  * Hero numbers, transaction rows, and table cells often want a single
  * deterministic precision — that's this helper.
  */
@@ -531,10 +541,10 @@ export function fmtUsdPlain(
   v: number | null | undefined,
   dp: number = 0,
 ): string {
-  if (v == null || !Number.isFinite(v)) return "$—";
+  if (v == null || !Number.isFinite(v)) return "USD —";
   const abs = Math.abs(v);
   const sign = v < 0 ? "-" : "";
-  return `${sign}$${abs.toLocaleString("en-US", {
+  return `${sign}USD ${abs.toLocaleString("en-US", {
     minimumFractionDigits: dp,
     maximumFractionDigits: dp,
   })}`;
@@ -620,17 +630,17 @@ export function fmtPctSignedMinus(
 
 /**
  * Money with deterministic precision and NO automatic scale switching.
- *   fmtMoneyPlain(1234.56, "USD")      →  "$1,234.56"  (default dp=0 -> "$1,235", caller passes 2 here)
- *   fmtMoneyPlain(1234.56, "USD", 2)   →  "$1,234.56"
- *   fmtMoneyPlain(1234.56, "USD", 0)   →  "$1,235"
- *   fmtMoneyPlain(-1234, "USD", 2)     →  "-$1,234.00" (ASCII "-")
- *   fmtMoneyPlain(1234567, "KRW")      →  "₩1,234,567"
+ *   fmtMoneyPlain(1234.56, "USD")      →  "USD 1,234.56"  (default dp=0 -> "USD 1,235", caller passes 2 here)
+ *   fmtMoneyPlain(1234.56, "USD", 2)   →  "USD 1,234.56"
+ *   fmtMoneyPlain(1234.56, "USD", 0)   →  "USD 1,235"
+ *   fmtMoneyPlain(-1234, "USD", 2)     →  "-USD 1,234.00" (ASCII "-")
+ *   fmtMoneyPlain(1234567, "KRW")      →  "KRW 1,234,567"
  *   fmtMoneyPlain(null, "USD")         →  "—"          (single em-dash, currency-agnostic)
  *   fmtMoneyPlain(NaN, "KRW")          →  "—"
  *
  * Differs from fmtUsd / fmtKrw:
  *   - Caller chooses precision; no n>=1000 switch.
- *   - Non-finite returns "—" (not "$—" / "₩—") to match the
+ *   - Non-finite returns "—" (not "USD —" / "KRW —") to match the
  *     positions-table / watchlist / recent-transactions local pattern
  *     where "—" sits in a typographic ivory cell with no leading glyph.
  *   - ASCII "-" for negatives (matches all 4 local sites; fmtMoneySigned
@@ -649,7 +659,7 @@ export function fmtMoneyPlain(
   if (v == null || !Number.isFinite(v)) return "—";
   const abs = Math.abs(v);
   const sign = v < 0 ? "-" : "";
-  const glyph = currency === "KRW" ? "₩" : "$";
+  const glyph = currency === "KRW" ? "KRW " : "USD ";
   if (currency === "KRW") {
     return `${sign}${glyph}${Math.round(abs).toLocaleString("ko-KR")}`;
   }
@@ -662,8 +672,8 @@ export function fmtMoneyPlain(
 
 /**
  * Like fmtMoneyPlain but with an EXPLICIT +/- sign for non-zero values.
- *   fmtMoneyPlainSigned(1234, "USD", 2)  →  "+$1,234.00"
- *   fmtMoneyPlainSigned(-1234, "USD", 2) →  "−$1,234.00" (U+2212)
+ *   fmtMoneyPlainSigned(1234, "USD", 2)  →  "+USD 1,234.00"
+ *   fmtMoneyPlainSigned(-1234, "USD", 2) →  "−USD 1,234.00" (U+2212)
  *   fmtMoneyPlainSigned(0, "USD", 2)     →  "—"          (zero -> no row)
  *   fmtMoneyPlainSigned(null, "USD")     →  "—"
  *
@@ -678,7 +688,7 @@ export function fmtMoneyPlainSigned(
   if (v == null || !Number.isFinite(v) || v === 0) return "—";
   const sign = v > 0 ? "+" : "−";
   const abs = Math.abs(v);
-  const glyph = currency === "KRW" ? "₩" : "$";
+  const glyph = currency === "KRW" ? "KRW " : "USD ";
   if (currency === "KRW") {
     return `${sign}${glyph}${Math.round(abs).toLocaleString("ko-KR")}`;
   }

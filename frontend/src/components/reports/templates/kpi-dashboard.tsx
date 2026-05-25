@@ -81,8 +81,8 @@ export interface KpiDashboardData {
 
 const DEFAULT: KpiDashboardData = {
   doc: "Apr 2026 · KPI-2026-04 · 01/04",
-  navEom: "$1,242k",
-  navEomDelta: "+$50.7k MTD",
+  navEom: "USD 1,242k",
+  navEomDelta: "+USD 50.7k MTD",
   ytdReturn: "+14.2%",
   ytdDelta: "vs S&P +9.4% · α +4.8%p",
   sharpe: "1.42",
@@ -113,7 +113,7 @@ const DEFAULT: KpiDashboardData = {
   ],
   decisionCards: [
     { priority: "P1 · By May 5", title: "Tech 섹터 −7%p", body: "한도 35% 복귀. NVDA (NVIDIA) 12% → 8%, AVGO (Broadcom) 9% → 7%. 자본은 헬스케어 + Cash 보강.", badge: { tone: "severe", label: "BREACH 해소" } },
-    { priority: "P2 · By May 10", title: "FX 헤지 USD 25%", body: "USD 단일 노출 88% → 65% 효과. 헤지 비용 연 ~0.4% 감수. 원달러 −5% 시 NAV 보호 +$28k.", badge: { tone: "moderate", label: "OVER 해소" } },
+    { priority: "P2 · By May 10", title: "FX 헤지 USD 25%", body: "USD 단일 노출 88% → 65% 효과. 헤지 비용 연 ~0.4% 감수. 원달러 −5% 시 NAV 보호 +USD 28k.", badge: { tone: "moderate", label: "OVER 해소" } },
     { priority: "P3 · By May 31", title: "DD 메모 100% 룰화", body: "신규 진입 전 가설 메모 의무화. 4월 75%에서 100%로. 메모 없는 매입 자동 알림.", badge: { tone: "info", label: "PROCESS" } },
   ],
 };
@@ -158,7 +158,7 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
           stamp="As of Apr 30, 2026 · 23:59 UTC"
           rows={[
             { term: "Period Return", body: <><strong>+4.2% MTD · +14.2% YTD</strong> — vs S&amp;P 500 +3.1% / +9.4%. <strong>Alpha +1.1%p / +4.8%p YTD.</strong></> },
-            { term: "Risk Status", body: <><PdfBadge tone="moderate">⚠ AMBER</PdfBadge> VaR(95%) <strong>−$18.2k</strong> (−1.46% NAV). MaxDD YTD −9.8% (limit −12%, OK). Beta 1.18 (band 0.9–1.1, over). Sector Tech 42% (cap 35%, breach).</> },
+            { term: "Risk Status", body: <><PdfBadge tone="moderate">⚠ AMBER</PdfBadge> VaR(95%) <strong>−USD 18.2k</strong> (−1.46% NAV). MaxDD YTD −9.8% (limit −12%, OK). Beta 1.18 (band 0.9–1.1, over). Sector Tech 42% (cap 35%, breach).</> },
             { term: "Operations", body: "Turnover 42% (cap 60%) · Trading cost −0.09% NAV YTD · Tax drag −1.19% NAV YTD · Process integrity 96/100." },
             { term: "Decision Quality", body: "신규 진입 4건 중 3건 가설 메모 완료 (목표 100%). 평균 보유 기간 168일 (목표 ≥ 90일, OK). 룰 위반 0건." },
             { term: "Committee Decision", body: <><strong>이번 달 단 하나의 결정 — 다음 리밸런스에 Tech 섹터 −7%p, FX 헤지 USD 25% 추가.</strong> P1 by May 5, P2 by May 10.</> },

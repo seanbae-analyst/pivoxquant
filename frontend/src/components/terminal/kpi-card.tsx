@@ -60,7 +60,7 @@ function fmtValue(
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });
-    const prefix = currency === "KRW" ? "\u20A9" : "$";
+    const prefix = currency === "KRW" ? "KRW " : "USD ";
     return `${sign}${prefix}${body}`;
   }
   return v.toLocaleString("en-US");

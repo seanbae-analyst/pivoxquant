@@ -57,7 +57,7 @@ export interface RiskBoardData {
 const DEFAULT: RiskBoardData = {
   weekTag: "Week of Apr 26, 2026 · RB-2026-W17",
   asOfStamp: "As of Apr 26, 2026 · 18:00 KST",
-  var95: { value: "−$18.2k", nav: "−1.46% NAV", tone: "amber" },
+  var95: { value: "−USD 18.2k", nav: "−1.46% NAV", tone: "amber" },
   beta: { value: "1.18", band: "target 0.9–1.1", tone: "amber" },
   maxDD: { value: "−9.8%", limit: "limit −12%", tone: "green" },
   sharpe: { value: "1.42", vsPrior: "+0.08 vs prior", tone: "green" },
@@ -105,7 +105,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
               term: "Stress Worst",
               body: (
                 <>
-                  <strong>2008 Replay 시 −$498k (−40% NAV).</strong> 5개 시나리오 중 1개
+                  <strong>2008 Replay 시 −USD 498k (−40% NAV).</strong> 5개 시나리오 중 1개
                   SEVERE, 1개 HIGH, 3개 MODERATE.
                 </>
               ),
@@ -114,7 +114,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
               term: "This Week",
               body: (
                 <>
-                  VaR(95%) <strong>−$18.2k</strong> (−1.46% NAV) · Beta vs S&amp;P{" "}
+                  VaR(95%) <strong>−USD 18.2k</strong> (−1.46% NAV) · Beta vs S&amp;P{" "}
                   <strong>1.18</strong> (band 0.9–1.1 초과) · MaxDD YTD <strong>−9.8%</strong>{" "}
                   (limit −12%).
                 </>
@@ -443,7 +443,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 leftPct: 0,
                 widthPct: 90,
                 axisPct: 90,
-                value: "−$498k",
+                value: "−USD 498k",
                 valueTone: "neg",
               },
               {
@@ -452,7 +452,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 leftPct: 32,
                 widthPct: 58,
                 axisPct: 90,
-                value: "−$324k",
+                value: "−USD 324k",
                 valueTone: "neg",
               },
               {
@@ -461,7 +461,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 leftPct: 55,
                 widthPct: 35,
                 axisPct: 90,
-                value: "−$186k",
+                value: "−USD 186k",
                 valueTone: "neg",
               },
               {
@@ -470,7 +470,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 leftPct: 70,
                 widthPct: 20,
                 axisPct: 90,
-                value: "−$108k",
+                value: "−USD 108k",
                 valueTone: "neg",
               },
               {
@@ -479,7 +479,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 leftPct: 77,
                 widthPct: 13,
                 axisPct: 90,
-                value: "−$72k",
+                value: "−USD 72k",
                 valueTone: "neg",
               },
             ]}
@@ -501,41 +501,41 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
             <tbody>
               <tr>
                 <td><strong>2008 Replay</strong></td>
-                <td className="right neg">−$498k</td>
+                <td className="right neg">−USD 498k</td>
                 <td className="right neg">−40.1%</td>
-                <td className="right">$744k</td>
+                <td className="right">USD 744k</td>
                 <td className="right">~36 mo</td>
                 <td className="right"><PdfBadge tone="severe">SEVERE</PdfBadge></td>
               </tr>
               <tr>
                 <td><strong>2022 Tech Crash</strong></td>
-                <td className="right neg">−$324k</td>
+                <td className="right neg">−USD 324k</td>
                 <td className="right neg">−26.1%</td>
-                <td className="right">$918k</td>
+                <td className="right">USD 918k</td>
                 <td className="right">~18 mo</td>
                 <td className="right"><PdfBadge tone="high">HIGH</PdfBadge></td>
               </tr>
               <tr>
                 <td><strong>Geopolitical</strong></td>
-                <td className="right neg">−$186k</td>
+                <td className="right neg">−USD 186k</td>
                 <td className="right neg">−15.0%</td>
-                <td className="right">$1,056k</td>
+                <td className="right">USD 1,056k</td>
                 <td className="right">~9 mo</td>
                 <td className="right"><PdfBadge tone="moderate">MODERATE</PdfBadge></td>
               </tr>
               <tr>
                 <td><strong>USD −10%</strong></td>
-                <td className="right neg">−$108k</td>
+                <td className="right neg">−USD 108k</td>
                 <td className="right neg">−8.7%</td>
-                <td className="right">$1,134k</td>
+                <td className="right">USD 1,134k</td>
                 <td className="right">~6 mo</td>
                 <td className="right"><PdfBadge tone="moderate">MODERATE</PdfBadge></td>
               </tr>
               <tr>
                 <td><strong>Rates +100bp</strong></td>
-                <td className="right neg">−$72k</td>
+                <td className="right neg">−USD 72k</td>
                 <td className="right neg">−5.8%</td>
-                <td className="right">$1,170k</td>
+                <td className="right">USD 1,170k</td>
                 <td className="right">~4 mo</td>
                 <td className="right"><PdfBadge tone="moderate">MODERATE</PdfBadge></td>
               </tr>

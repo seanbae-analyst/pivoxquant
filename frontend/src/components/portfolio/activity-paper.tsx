@@ -25,9 +25,9 @@ interface Props {
 }
 
 function fmtPrice(v: number, cur: "USD" | "KRW"): string {
-  if (cur === "KRW") return "\u20A9" + Math.round(v).toLocaleString();
+  if (cur === "KRW") return "KRW " + Math.round(v).toLocaleString();
   return (
-    "$" +
+    "USD " +
     v.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

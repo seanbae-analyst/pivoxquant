@@ -51,9 +51,9 @@ interface Props {
 
 function fmtMoneyBig(v: number | null | undefined, cur: "USD" | "KRW"): string {
   if (v == null || Number.isNaN(v)) return "—";
-  if (cur === "KRW") return "\u20A9" + Math.round(v).toLocaleString();
+  if (cur === "KRW") return "KRW " + Math.round(v).toLocaleString();
   return (
-    "$" +
+    "USD " +
     v.toLocaleString(undefined, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
@@ -61,9 +61,9 @@ function fmtMoneyBig(v: number | null | undefined, cur: "USD" | "KRW"): string {
   );
 }
 function fmtMoneyCell(v: number, cur: "USD" | "KRW"): string {
-  if (cur === "KRW") return "\u20A9" + Math.round(v).toLocaleString();
+  if (cur === "KRW") return "KRW " + Math.round(v).toLocaleString();
   return (
-    "$" +
+    "USD " +
     v.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -102,7 +102,7 @@ export function LedgerBookPaper({
       value: fmtMoneyBig(totals.totalNav, bookCurrency),
       sub:
         bookCurrency === "USD" && totals.fxRate && totals.fxRate > 0
-          ? "\u20A9" + Math.round(totals.totalNav * totals.fxRate).toLocaleString()
+          ? "KRW " + Math.round(totals.totalNav * totals.fxRate).toLocaleString()
           : undefined,
     },
     {
@@ -295,7 +295,7 @@ export function LedgerBookPaper({
             >
               <colgroup>
                 {/* Widened market-value + unrealized cols so 7-digit KRW
-                    values (₩1,389,100 etc.) don't truncate to "₩1,". */}
+                    values (KRW 1,389,100 etc.) don't truncate to "KRW 1,". */}
                 <col style={{ width: "22%" }} />
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "11%" }} />

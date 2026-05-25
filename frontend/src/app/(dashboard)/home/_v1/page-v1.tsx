@@ -258,7 +258,7 @@ export default function HomePageV1() {
       // /api/portfolio/positions alias the frontend now hits emits
       // camelCase (avgCost / current — routes/portfolio.py:826
       // _build_positions_list). Reading only snake_case yields
-      // undefined → 0 → every position renders ₩0/$0 across home v1.
+      // undefined → 0 → every position renders KRW 0/USD 0 across home v1.
       // Same defensive pattern as toPosition() / home v2 fix
       // (PR #383 + PR #388).
       const _p = p as typeof p & { current?: number; avgCost?: number };

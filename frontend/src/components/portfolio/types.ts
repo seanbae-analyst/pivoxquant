@@ -53,7 +53,7 @@ export interface BackendPositionRow {
   //
   // The mismatch produced `undefined` for every numeric field; the
   // `?? 0` fallback then silently zeroed avgCost + current, which
-  // cascaded into ₩0/$0 for every Holdings row, NAV → 0, weights →
+  // cascaded into KRW 0/USD 0 for every Holdings row, NAV → 0, weights →
   // 0%, and Sectors → "No allocation yet". All 4 positions on every
   // user's portfolio rendered as zero in prod 2026-05-15. Holding
   // both shapes here keeps both endpoints working.

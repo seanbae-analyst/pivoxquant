@@ -125,7 +125,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What happens after I subscribe?",
-    a: "Pro 티어 풀액세스. 첫 weekly memo · earnings pre-brief · Risk Board가 24시간 내 당신의 실제 보유에서 렌더됩니다. 전자상거래법상 첫 결제 14일 이내 미사용 시 전액 환불 대상. 이후 월 ₩9,900.",
+    a: "Pro 티어 풀액세스. 첫 weekly memo · earnings pre-brief · Risk Board가 24시간 내 당신의 실제 보유에서 렌더됩니다. 전자상거래법상 첫 결제 14일 이내 미사용 시 전액 환불 대상. 이후 월 KRW 9,900.",
   },
   {
     q: "Do you have access to my brokerage account?",
@@ -247,7 +247,7 @@ function PricingPreview() {
                     letterSpacing: "-0.02em",
                   }}
                 >
-                  ₩{t.price}
+                  KRW {t.price}
                 </span>
                 <span
                   className="font-serif"

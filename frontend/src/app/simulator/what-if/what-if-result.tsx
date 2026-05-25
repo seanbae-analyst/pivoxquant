@@ -49,8 +49,8 @@ interface WhatIfResultProps {
 /* ── Number formatters ──
    Wave 4-B (2026-05-20): MIGRATED to lib/format.
    - fmtMoney(KRW)  → fmtKrwAbbrev with {dpEok:2, dpMan:0, trimTrailing:true}.
-     `trimTrailing` (new Wave 4-B option) strips trailing zeros so "₩1.5억"
-     stays "₩1.5억" instead of becoming "₩1.50억" — closing the gap the
+     `trimTrailing` (new Wave 4-B option) strips trailing zeros so "KRW 1.5억"
+     stays "KRW 1.5억" instead of becoming "KRW 1.50억" — closing the gap the
      Wave 3 sweep documented as the reason this was inlined.
    - fmtMoney(USD)  → fmtMoneyPlain(v, "USD", 0). What-if hero values are
      always non-negative, so the ASCII-"-" sign-prefix divergence vs the

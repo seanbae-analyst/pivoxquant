@@ -78,10 +78,10 @@ interface ScenarioRow {
 }
 
 const DEFAULT: EarningsPrebriefData = {
-  // Sample-only fixture. Numbers (Revenue $32.5B, EPS $5.12, Data Center
-  // Rev $26.1B) match NVDA (NVIDIA)-class disclosures, so the ticker /
+  // Sample-only fixture. Numbers (Revenue USD 32.5B, EPS USD 5.12, Data Center
+  // Rev USD 26.1B) match NVDA (NVIDIA)-class disclosures, so the ticker /
   // company are aligned with NVDA (NVIDIA) — the prior PLTR (Palantir)
-  // labeling created a $32B revenue mismatch (PLTR sub-$3B). Treat as
+  // labeling created a USD 32B revenue mismatch (PLTR sub-USD 3B). Treat as
   // illustrative; not a forecast.
   ticker: "NVDA",
   companyName: "NVIDIA Corporation",
@@ -89,11 +89,11 @@ const DEFAULT: EarningsPrebriefData = {
   reportingDate: "Earnings Date · After Market Close",
   position: "120 sh · 9.95% weight",
   consensus: [
-    { metric: "Revenue", consensus: "$32.5B", whisper: "$33.8B", lastQ: "+18%", lastQTone: "pos", surprise: "+4.2% (8/8)", surpriseTone: "pos" },
-    { metric: "EPS (GAAP)", consensus: "$5.12", whisper: "$5.40", lastQ: "+24%", lastQTone: "pos", surprise: "+6.1% (8/8)", surpriseTone: "pos" },
+    { metric: "Revenue", consensus: "USD 32.5B", whisper: "USD 33.8B", lastQ: "+18%", lastQTone: "pos", surprise: "+4.2% (8/8)", surpriseTone: "pos" },
+    { metric: "EPS (GAAP)", consensus: "USD 5.12", whisper: "USD 5.40", lastQ: "+24%", lastQTone: "pos", surprise: "+6.1% (8/8)", surpriseTone: "pos" },
     { metric: "Gross Margin", consensus: "74.8%", whisper: "75.5%", lastQ: "+220bps", lastQTone: "pos", surprise: "Beat 7/8", surpriseTone: "pos" },
-    { metric: "Data Center Rev", consensus: "$26.1B", whisper: "$27.4B", lastQ: "+38%", lastQTone: "pos", surprise: "Beat 8/8", surpriseTone: "pos" },
-    { metric: "FCF", consensus: "$14.2B", whisper: "$15.0B", lastQ: "+42%", lastQTone: "pos", surprise: "—" },
+    { metric: "Data Center Rev", consensus: "USD 26.1B", whisper: "USD 27.4B", lastQ: "+38%", lastQTone: "pos", surprise: "Beat 8/8", surpriseTone: "pos" },
+    { metric: "FCF", consensus: "USD 14.2B", whisper: "USD 15.0B", lastQ: "+42%", lastQTone: "pos", surprise: "—" },
   ],
   impliedMovePct: "±7.8%",
   impliedMoveDetail: "8주 IV: 52% · 평균 EPS Day 변동: 6.4%",
@@ -104,28 +104,28 @@ const DEFAULT: EarningsPrebriefData = {
     {
       case: "Bull Case",
       caseDetail: "EPS & DC beat >5%",
-      trigger: "EPS > $5.40 AND DC > $27.4B",
+      trigger: "EPS > USD 5.40 AND DC > USD 27.4B",
       action: "Hold · trim 0.5% on +10% spike",
       posDelta: "−0.5%",
       posDeltaTone: "pos",
-      stop: "$1,180",
+      stop: "USD 1,180",
     },
     {
       case: "Base Case",
       caseDetail: "In-line",
-      trigger: "EPS $5.10–5.40, guide ≥ cons",
+      trigger: "EPS USD 5.10–5.40, guide ≥ cons",
       action: "Hold · re-evaluate after CC",
       posDelta: "0.0%",
-      stop: "$1,080",
+      stop: "USD 1,080",
     },
     {
       case: "Bear Case",
       caseDetail: "Miss or weak guide",
-      trigger: "EPS < $5.10 OR guide < cons",
+      trigger: "EPS < USD 5.10 OR guide < cons",
       action: "Trim 1.5% · review hypothesis",
       posDelta: "−1.5%",
       posDeltaTone: "neg",
-      stop: "$960",
+      stop: "USD 960",
     },
   ],
   watchChecklist: [

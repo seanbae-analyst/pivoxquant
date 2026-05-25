@@ -16,18 +16,18 @@ import {
 } from "@/lib/format";
 
 describe("format", () => {
-  it("fmtUsd renders $ + value (rounded above 1000)", () => {
-    expect(fmtUsd(1234.56)).toBe("$1,235");
-    expect(fmtUsd(12.34)).toBe("$12.34");
+  it("fmtUsd renders USD + value (rounded above 1000)", () => {
+    expect(fmtUsd(1234.56)).toBe("USD 1,235");
+    expect(fmtUsd(12.34)).toBe("USD 12.34");
   });
 
   it("fmtUsd handles null/NaN", () => {
-    expect(fmtUsd(null)).toBe("$0.00");
-    expect(fmtUsd(NaN)).toBe("$—");
+    expect(fmtUsd(null)).toBe("USD 0.00");
+    expect(fmtUsd(NaN)).toBe("USD —");
   });
 
   it("fmtKrw rounds + KR locale", () => {
-    expect(fmtKrw(1234567)).toBe("₩1,234,567");
+    expect(fmtKrw(1234567)).toBe("KRW 1,234,567");
   });
 
   it("fmtPct prefixes sign + 2 decimals (n is already a percentage)", () => {
@@ -39,53 +39,53 @@ describe("format", () => {
 
 describe("fmtMoneySigned", () => {
   it("prefixes + for positives (USD)", () => {
-    expect(fmtMoneySigned(1234.56, "USD")).toBe("+$1,235");
-    expect(fmtMoneySigned(12.34, "USD")).toBe("+$12.34");
+    expect(fmtMoneySigned(1234.56, "USD")).toBe("+USD 1,235");
+    expect(fmtMoneySigned(12.34, "USD")).toBe("+USD 12.34");
   });
   it("prefixes U+2212 minus for negatives (USD)", () => {
-    expect(fmtMoneySigned(-1234, "USD")).toBe("−$1,234");
-    expect(fmtMoneySigned(-12.34, "USD")).toBe("−$12.34");
+    expect(fmtMoneySigned(-1234, "USD")).toBe("−USD 1,234");
+    expect(fmtMoneySigned(-12.34, "USD")).toBe("−USD 12.34");
   });
   it("prefixes + / − for KRW (rounded, KR locale)", () => {
-    expect(fmtMoneySigned(123456, "KRW")).toBe("+₩123,456");
-    expect(fmtMoneySigned(-123456, "KRW")).toBe("−₩123,456");
+    expect(fmtMoneySigned(123456, "KRW")).toBe("+KRW 123,456");
+    expect(fmtMoneySigned(-123456, "KRW")).toBe("−KRW 123,456");
   });
   it("renders zero without sign", () => {
-    expect(fmtMoneySigned(0, "USD")).toBe("$0.00");
-    expect(fmtMoneySigned(0, "KRW")).toBe("₩0");
+    expect(fmtMoneySigned(0, "USD")).toBe("USD 0.00");
+    expect(fmtMoneySigned(0, "KRW")).toBe("KRW 0");
   });
   it("handles null and NaN", () => {
-    expect(fmtMoneySigned(null, "USD")).toBe("$0.00");
-    expect(fmtMoneySigned(NaN, "USD")).toBe("$—");
-    expect(fmtMoneySigned(NaN, "KRW")).toBe("₩—");
+    expect(fmtMoneySigned(null, "USD")).toBe("USD 0.00");
+    expect(fmtMoneySigned(NaN, "USD")).toBe("USD —");
+    expect(fmtMoneySigned(NaN, "KRW")).toBe("KRW —");
   });
 });
 
 describe("fmtMoneyCompact", () => {
   it("USD: K/M/B/T scaling", () => {
-    expect(fmtMoneyCompact(1234, "USD")).toBe("$1.2K");
-    expect(fmtMoneyCompact(1_234_567, "USD")).toBe("$1.2M");
-    expect(fmtMoneyCompact(2_300_000_000, "USD")).toBe("$2.3B");
-    expect(fmtMoneyCompact(4_500_000_000_000, "USD")).toBe("$4.5T");
+    expect(fmtMoneyCompact(1234, "USD")).toBe("USD 1.2K");
+    expect(fmtMoneyCompact(1_234_567, "USD")).toBe("USD 1.2M");
+    expect(fmtMoneyCompact(2_300_000_000, "USD")).toBe("USD 2.3B");
+    expect(fmtMoneyCompact(4_500_000_000_000, "USD")).toBe("USD 4.5T");
   });
   it("USD: under 1K falls back to fmtUsd", () => {
-    expect(fmtMoneyCompact(12.34, "USD")).toBe("$12.34");
+    expect(fmtMoneyCompact(12.34, "USD")).toBe("USD 12.34");
   });
   it("KRW: 만 / 억 / 조 myriad scaling", () => {
-    expect(fmtMoneyCompact(12_345, "KRW")).toBe("₩1.2만");
-    expect(fmtMoneyCompact(120_000_000, "KRW")).toBe("₩1.2억");
-    expect(fmtMoneyCompact(4_500_000_000_000, "KRW")).toBe("₩4.5조");
+    expect(fmtMoneyCompact(12_345, "KRW")).toBe("KRW 1.2만");
+    expect(fmtMoneyCompact(120_000_000, "KRW")).toBe("KRW 1.2억");
+    expect(fmtMoneyCompact(4_500_000_000_000, "KRW")).toBe("KRW 4.5조");
   });
   it("KRW: under 1만 falls back to fmtKrw", () => {
-    expect(fmtMoneyCompact(1234, "KRW")).toBe("₩1,234");
+    expect(fmtMoneyCompact(1234, "KRW")).toBe("KRW 1,234");
   });
   it("preserves sign for negatives", () => {
-    expect(fmtMoneyCompact(-1_234_567, "USD")).toBe("-$1.2M");
-    expect(fmtMoneyCompact(-120_000_000, "KRW")).toBe("-₩1.2억");
+    expect(fmtMoneyCompact(-1_234_567, "USD")).toBe("-USD 1.2M");
+    expect(fmtMoneyCompact(-120_000_000, "KRW")).toBe("-KRW 1.2억");
   });
   it("handles null / NaN", () => {
-    expect(fmtMoneyCompact(null, "USD")).toBe("$0.00");
-    expect(fmtMoneyCompact(NaN, "KRW")).toBe("₩—");
+    expect(fmtMoneyCompact(null, "USD")).toBe("USD 0.00");
+    expect(fmtMoneyCompact(NaN, "KRW")).toBe("KRW —");
   });
 });
 
@@ -152,43 +152,43 @@ describe("fmtPctUnsigned", () => {
 
 describe("fmtKrwAbbrev", () => {
   it("scales to 조 / 억 / 만 with default precision (1/1/0)", () => {
-    expect(fmtKrwAbbrev(4_500_000_000_000)).toBe("₩4.5조");
-    expect(fmtKrwAbbrev(120_000_000)).toBe("₩1.2억");
-    expect(fmtKrwAbbrev(34_000_000)).toBe("₩3,400만");
-    expect(fmtKrwAbbrev(1234)).toBe("₩1,234");
+    expect(fmtKrwAbbrev(4_500_000_000_000)).toBe("KRW 4.5조");
+    expect(fmtKrwAbbrev(120_000_000)).toBe("KRW 1.2억");
+    expect(fmtKrwAbbrev(34_000_000)).toBe("KRW 3,400만");
+    expect(fmtKrwAbbrev(1234)).toBe("KRW 1,234");
   });
   it("honours per-scale dp overrides", () => {
-    expect(fmtKrwAbbrev(123_000_000, { dpEok: 2 })).toBe("₩1.23억");
-    expect(fmtKrwAbbrev(34_500_000, { dpMan: 1 })).toBe("₩3,450.0만");
-    expect(fmtKrwAbbrev(4_567_000_000_000, { dpJo: 2 })).toBe("₩4.57조");
+    expect(fmtKrwAbbrev(123_000_000, { dpEok: 2 })).toBe("KRW 1.23억");
+    expect(fmtKrwAbbrev(34_500_000, { dpMan: 1 })).toBe("KRW 3,450.0만");
+    expect(fmtKrwAbbrev(4_567_000_000_000, { dpJo: 2 })).toBe("KRW 4.57조");
   });
   it("prefixes - for negatives, no + for positives", () => {
-    expect(fmtKrwAbbrev(-120_000_000)).toBe("-₩1.2억");
-    expect(fmtKrwAbbrev(120_000_000)).toBe("₩1.2억");
+    expect(fmtKrwAbbrev(-120_000_000)).toBe("-KRW 1.2억");
+    expect(fmtKrwAbbrev(120_000_000)).toBe("KRW 1.2억");
   });
-  it('returns "₩—" for null / NaN', () => {
-    expect(fmtKrwAbbrev(null)).toBe("₩—");
-    expect(fmtKrwAbbrev(NaN)).toBe("₩—");
+  it('returns "KRW —" for null / NaN', () => {
+    expect(fmtKrwAbbrev(null)).toBe("KRW —");
+    expect(fmtKrwAbbrev(NaN)).toBe("KRW —");
   });
 });
 
 describe("fmtUsdPlain", () => {
-  it("renders $ + value with deterministic precision (default 0dp)", () => {
-    expect(fmtUsdPlain(1234)).toBe("$1,234");
-    expect(fmtUsdPlain(12.34)).toBe("$12");
-    expect(fmtUsdPlain(12.34, 2)).toBe("$12.34");
+  it("renders USD + value with deterministic precision (default 0dp)", () => {
+    expect(fmtUsdPlain(1234)).toBe("USD 1,234");
+    expect(fmtUsdPlain(12.34)).toBe("USD 12");
+    expect(fmtUsdPlain(12.34, 2)).toBe("USD 12.34");
   });
   it("does NOT auto-flip precision at 1000 (unlike fmtUsd)", () => {
-    expect(fmtUsdPlain(12, 2)).toBe("$12.00");
-    expect(fmtUsdPlain(1234, 2)).toBe("$1,234.00");
+    expect(fmtUsdPlain(12, 2)).toBe("USD 12.00");
+    expect(fmtUsdPlain(1234, 2)).toBe("USD 1,234.00");
   });
   it("prefixes - for negatives", () => {
-    expect(fmtUsdPlain(-1234)).toBe("-$1,234");
-    expect(fmtUsdPlain(-12.34, 2)).toBe("-$12.34");
+    expect(fmtUsdPlain(-1234)).toBe("-USD 1,234");
+    expect(fmtUsdPlain(-12.34, 2)).toBe("-USD 12.34");
   });
-  it('returns "$—" for null / NaN', () => {
-    expect(fmtUsdPlain(null)).toBe("$—");
-    expect(fmtUsdPlain(NaN)).toBe("$—");
+  it('returns "USD —" for null / NaN', () => {
+    expect(fmtUsdPlain(null)).toBe("USD —");
+    expect(fmtUsdPlain(NaN)).toBe("USD —");
   });
 });
 
@@ -221,17 +221,17 @@ describe("fmtPctSignedMinus (Wave 4-B)", () => {
 
 describe("fmtMoneyPlain (Wave 4-B)", () => {
   it("formats USD with explicit precision (no n>=1000 switch)", () => {
-    expect(fmtMoneyPlain(1234.56, "USD", 2)).toBe("$1,234.56");
-    expect(fmtMoneyPlain(1234.56, "USD", 0)).toBe("$1,235");
-    expect(fmtMoneyPlain(12.34, "USD", 2)).toBe("$12.34");
+    expect(fmtMoneyPlain(1234.56, "USD", 2)).toBe("USD 1,234.56");
+    expect(fmtMoneyPlain(1234.56, "USD", 0)).toBe("USD 1,235");
+    expect(fmtMoneyPlain(12.34, "USD", 2)).toBe("USD 12.34");
   });
   it("formats KRW with whole-won rounding (dp ignored)", () => {
-    expect(fmtMoneyPlain(1234567, "KRW")).toBe("₩1,234,567");
-    expect(fmtMoneyPlain(1234567.89, "KRW", 2)).toBe("₩1,234,568");
+    expect(fmtMoneyPlain(1234567, "KRW")).toBe("KRW 1,234,567");
+    expect(fmtMoneyPlain(1234567.89, "KRW", 2)).toBe("KRW 1,234,568");
   });
   it("prefixes ASCII - for negatives (matches local sites)", () => {
-    expect(fmtMoneyPlain(-1234, "USD", 2)).toBe("-$1,234.00");
-    expect(fmtMoneyPlain(-1234, "KRW")).toBe("-₩1,234");
+    expect(fmtMoneyPlain(-1234, "USD", 2)).toBe("-USD 1,234.00");
+    expect(fmtMoneyPlain(-1234, "KRW")).toBe("-KRW 1,234");
     expect(fmtMoneyPlain(-1234, "USD", 2)[0]).toBe("-");
   });
   it('returns single "—" for null / NaN (currency-agnostic)', () => {
@@ -241,16 +241,16 @@ describe("fmtMoneyPlain (Wave 4-B)", () => {
     expect(fmtMoneyPlain(Infinity, "KRW")).toBe("—");
   });
   it("treats zero as a regular value (not —)", () => {
-    expect(fmtMoneyPlain(0, "USD", 2)).toBe("$0.00");
-    expect(fmtMoneyPlain(0, "KRW")).toBe("₩0");
+    expect(fmtMoneyPlain(0, "USD", 2)).toBe("USD 0.00");
+    expect(fmtMoneyPlain(0, "KRW")).toBe("KRW 0");
   });
 });
 
 describe("fmtMoneyPlainSigned (Wave 4-B)", () => {
   it("emits +/− for non-zero values", () => {
-    expect(fmtMoneyPlainSigned(1234, "USD", 2)).toBe("+$1,234.00");
-    expect(fmtMoneyPlainSigned(-1234, "USD", 2)).toBe("−$1,234.00");
-    expect(fmtMoneyPlainSigned(50000, "KRW")).toBe("+₩50,000");
+    expect(fmtMoneyPlainSigned(1234, "USD", 2)).toBe("+USD 1,234.00");
+    expect(fmtMoneyPlainSigned(-1234, "USD", 2)).toBe("−USD 1,234.00");
+    expect(fmtMoneyPlainSigned(50000, "KRW")).toBe("+KRW 50,000");
   });
   it("uses U+2212 (not ASCII hyphen) for negatives", () => {
     expect(fmtMoneyPlainSigned(-1234, "USD", 2)[0]).toBe("−");
@@ -266,27 +266,27 @@ describe("fmtKrwAbbrev trimTrailing opt (Wave 4-B)", () => {
   it("strips trailing zeros after the decimal when enabled", () => {
     // 1.50억 → 1.5억
     expect(fmtKrwAbbrev(150_000_000, { dpEok: 2, trimTrailing: true })).toBe(
-      "₩1.5억",
+      "KRW 1.5억",
     );
     // 1.00억 → 1억 (frac becomes empty)
     expect(fmtKrwAbbrev(100_000_000, { dpEok: 2, trimTrailing: true })).toBe(
-      "₩1억",
+      "KRW 1억",
     );
     // 1.23억 untouched
     expect(fmtKrwAbbrev(123_000_000, { dpEok: 2, trimTrailing: true })).toBe(
-      "₩1.23억",
+      "KRW 1.23억",
     );
   });
   it("default (no trimTrailing) preserves original 2dp behaviour", () => {
-    expect(fmtKrwAbbrev(150_000_000, { dpEok: 2 })).toBe("₩1.50억");
-    expect(fmtKrwAbbrev(100_000_000, { dpEok: 2 })).toBe("₩1.00억");
+    expect(fmtKrwAbbrev(150_000_000, { dpEok: 2 })).toBe("KRW 1.50억");
+    expect(fmtKrwAbbrev(100_000_000, { dpEok: 2 })).toBe("KRW 1.00억");
   });
   it("trimTrailing applies across bands (조 / 만)", () => {
     expect(fmtKrwAbbrev(1_500_000_000_000, { dpJo: 2, trimTrailing: true })).toBe(
-      "₩1.5조",
+      "KRW 1.5조",
     );
     expect(fmtKrwAbbrev(34_500_000, { dpMan: 1, trimTrailing: true })).toBe(
-      "₩3,450만",
+      "KRW 3,450만",
     );
   });
 });

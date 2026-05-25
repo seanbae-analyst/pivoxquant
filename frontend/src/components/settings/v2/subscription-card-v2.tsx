@@ -35,7 +35,7 @@ const TIERS: Tier[] = [
     id: "free",
     eyebrow: "Tier 1",
     name: "Free",
-    price: "₩0 / month",
+    price: "KRW 0 / month",
     bullets: [
       "Watchlist · 5 symbols",
       "Weekly memo · read-only",
@@ -46,7 +46,7 @@ const TIERS: Tier[] = [
     id: "pro",
     eyebrow: "Tier 2",
     name: "Pro",
-    price: "₩9,900 / month",
+    price: "KRW 9,900 / month",
     bullets: [
       "Unlimited watchlist + alerts",
       "Earnings pre-brief · all holdings",
@@ -59,7 +59,7 @@ const TIERS: Tier[] = [
     id: "premium",
     eyebrow: "Tier 3",
     name: "Premium",
-    price: "₩19,900 / month",
+    price: "KRW 19,900 / month",
     bullets: [
       "Everything in Pro",
       "Companion · reflective journal agent",

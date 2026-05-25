@@ -88,7 +88,7 @@ const DEFAULT: YearEndLetterData = {
   fyReturn: { value: "+18.4%", delta: "vs S&P +11.2%" },
   alpha: { value: "+7.2%", delta: "Sharpe 1.04" },
   maxDd: { value: "−9.8%", delta: "Aug 12 – Sep 04" },
-  aumGrowth: { value: "$1.24M", delta: "+$192k" },
+  aumGrowth: { value: "USD 1.24M", delta: "+USD 192k" },
   decisions: [
     { when: "Feb '26", decision: "NVDA · NVIDIA +5%", thesis: "DC capex 사이클 베팅", outcome: "+22.4%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
     { when: "Apr '26", decision: "BND · Vanguard Total Bond 비중 +8%", thesis: "금리 피크아웃 대비", outcome: "+1.0%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },

@@ -54,9 +54,9 @@ function isKr(s: SignalEntry): boolean {
 function fmtPrice(s: SignalEntry): string {
   if (s.price == null) return "—";
   if (s.currency === "KRW" || s.is_korean) {
-    return `₩${Math.round(s.price).toLocaleString("ko-KR")}`;
+    return `KRW ${Math.round(s.price).toLocaleString("ko-KR")}`;
   }
-  return `$${s.price.toLocaleString("en-US", {
+  return `USD ${s.price.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

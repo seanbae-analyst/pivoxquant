@@ -71,24 +71,24 @@ const TONE_STYLE: Record<Tone, string | undefined> = {
 
 const DEFAULT: DdChecklistData = {
   // Sample fixture; price re-anchored 2026-04 to a plausible 2026 close
-  // (~$118) — the prior $28.40 figure was a 2024-era stale value that
+  // (~USD 118) — the prior USD 28.40 figure was a 2024-era stale value that
   // undermined the credibility of the rest of the checklist on inspection.
   asOf: "Apr 26, 2026 · DD-2026-04",
   ticker: "PLTR",
   company: "Palantir Technologies",
-  price: { value: "$118.40", delta: "+1.2% · MTD +18%" },
-  targetSize: { value: "3.5%", detail: "$43,500 / $1.24M NAV" },
+  price: { value: "USD 118.40", delta: "+1.2% · MTD +18%" },
+  targetSize: { value: "3.5%", detail: "USD 43,500 / USD 1.24M NAV" },
   ddScore: { value: "21/25", verdict: "PROCEED" },
   sectionA: [
     { num: "A1", text: "Moat 정의", detail: "데이터 락인 + 정부/방산 레퍼런스 + 유틸리티", status: "YES", tone: "pos", checked: true },
-    { num: "A2", text: "Unit Economics", detail: "고객당 ACV $4.2M, 갱신률 121%", status: "YES", tone: "pos", checked: true },
+    { num: "A2", text: "Unit Economics", detail: "고객당 ACV USD 4.2M, 갱신률 121%", status: "YES", tone: "pos", checked: true },
     { num: "A3", text: "TAM 성장 가시성", detail: "AIP 도입 가속, 5y CAGR > 25%", status: "YES", tone: "pos", checked: true },
     { num: "A4", text: "경영진 캐피털 알로케이션", detail: "자사주 매입 이력 짧음, 재투자 위주", status: "PARTIAL", tone: "warn" },
     { num: "A5", text: "경쟁 vs Snowflake/Databricks", detail: "다른 레이어. 직접 충돌 적음", status: "YES", tone: "pos", checked: true },
   ],
   sectionB: [
     { num: "B1", text: "FCF 양수, 4Q 연속", status: "YES", tone: "pos", checked: true },
-    { num: "B2", text: "Net Cash > 0", detail: "$4.2B", status: "YES", tone: "pos", checked: true },
+    { num: "B2", text: "Net Cash > 0", detail: "USD 4.2B", status: "YES", tone: "pos", checked: true },
     { num: "B3", text: "Gross Margin > 70%", status: "YES · 81%", tone: "pos", checked: true },
     { num: "B4", text: "SBC %매출 < 15%", status: "NO · 24%", tone: "neg" },
     { num: "B5", text: "Rule of 40", detail: "성장 30% + 마진 21% = 51", status: "YES", tone: "pos", checked: true },
@@ -103,7 +103,7 @@ const DEFAULT: DdChecklistData = {
   sectionD: [
     { num: "D1", text: "Single customer < 20%", status: "YES · 12%", tone: "pos", checked: true },
     { num: "D2", text: "정치/규제 리스크", detail: "정부 의존도 45%", status: "FLAG", tone: "warn" },
-    { num: "D3", text: "Liquidity", detail: "ADV $800M, 슬리피지 무시", status: "YES", tone: "pos", checked: true },
+    { num: "D3", text: "Liquidity", detail: "ADV USD 800M, 슬리피지 무시", status: "YES", tone: "pos", checked: true },
     { num: "D4", text: "30d Volatility < 60%", detail: "48%", status: "YES", tone: "pos", checked: true },
     { num: "D5", text: "Short interest < 15%", detail: "6.2%", status: "YES", tone: "pos", checked: true },
   ],
@@ -173,8 +173,8 @@ function isBackendShape(data: unknown): data is BackendDdChecklistData {
 
 function fmtMoney(n: number, korean: boolean): string {
   if (!isFinite(n)) return "—";
-  if (korean) return `₩${Math.round(n).toLocaleString()}`;
-  return `$${n.toFixed(2)}`;
+  if (korean) return `KRW ${Math.round(n).toLocaleString()}`;
+  return `USD ${n.toFixed(2)}`;
 }
 
 /** Render the real backend payload — the user's actual pending positions. */

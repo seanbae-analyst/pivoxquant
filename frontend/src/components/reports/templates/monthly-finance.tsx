@@ -80,45 +80,45 @@ export interface MonthlyFinanceData {
 const DEFAULT: MonthlyFinanceData = {
   doc: "Apr 2026 · MF-2026-04 · 01/05",
   asOf: "Apr 30, 2026",
-  navEom: "$1,242,150",
+  navEom: "USD 1,242,150",
   monthReturn: "+4.0%",
   ytdReturn: "+14.2%",
   issued: "May 1, 2026",
-  navEomKpi: { value: "$1,242k", delta: "+$53k MTD" },
-  netPnlMtd: { value: "+$48k", delta: "+3.86% NAV" },
+  navEomKpi: { value: "USD 1,242k", delta: "+USD 53k MTD" },
+  netPnlMtd: { value: "+USD 48k", delta: "+3.86% NAV" },
   alphaVsBench: { value: "+1.1%p", delta: "YTD +4.8%p" },
   sharpe: { value: "1.42", delta: "+0.08 vs prior" },
   income: [
-    { label: "Realized Gains", mtd: "+$18,420", mtdTone: "pos", ytd: "+$72,840", ytdTone: "pos", pctNav: "+5.86%" },
-    { label: "Unrealized Gains", mtd: "+$32,180", mtdTone: "pos", ytd: "+$98,420", ytdTone: "pos", pctNav: "+7.92%" },
-    { label: "Dividends Received", mtd: "+$2,140", mtdTone: "pos", ytd: "+$8,720", ytdTone: "pos", pctNav: "+0.70%" },
-    { label: "Interest Income", mtd: "+$320", mtdTone: "pos", ytd: "+$1,280", ytdTone: "pos", pctNav: "+0.10%" },
-    { label: "Trading Costs", mtd: "−$280", mtdTone: "neg", ytd: "−$1,140", ytdTone: "neg", pctNav: "−0.09%" },
-    { label: "FX Loss", mtd: "−$420", mtdTone: "neg", ytd: "−$2,180", ytdTone: "neg", pctNav: "−0.18%" },
-    { label: "Tax Provision", mtd: "−$3,840", mtdTone: "neg", ytd: "−$14,820", ytdTone: "neg", pctNav: "−1.19%" },
+    { label: "Realized Gains", mtd: "+USD 18,420", mtdTone: "pos", ytd: "+USD 72,840", ytdTone: "pos", pctNav: "+5.86%" },
+    { label: "Unrealized Gains", mtd: "+USD 32,180", mtdTone: "pos", ytd: "+USD 98,420", ytdTone: "pos", pctNav: "+7.92%" },
+    { label: "Dividends Received", mtd: "+USD 2,140", mtdTone: "pos", ytd: "+USD 8,720", ytdTone: "pos", pctNav: "+0.70%" },
+    { label: "Interest Income", mtd: "+USD 320", mtdTone: "pos", ytd: "+USD 1,280", ytdTone: "pos", pctNav: "+0.10%" },
+    { label: "Trading Costs", mtd: "−USD 280", mtdTone: "neg", ytd: "−USD 1,140", ytdTone: "neg", pctNav: "−0.09%" },
+    { label: "FX Loss", mtd: "−USD 420", mtdTone: "neg", ytd: "−USD 2,180", ytdTone: "neg", pctNav: "−0.18%" },
+    { label: "Tax Provision", mtd: "−USD 3,840", mtdTone: "neg", ytd: "−USD 14,820", ytdTone: "neg", pctNav: "−1.19%" },
   ],
-  totalNetPnl: { label: "Net P&L", mtd: "+$48,520", mtdTone: "pos", ytd: "+$163,120", ytdTone: "pos", pctNav: "+13.13%", pctNavTone: "pos" },
+  totalNetPnl: { label: "Net P&L", mtd: "+USD 48,520", mtdTone: "pos", ytd: "+USD 163,120", ytdTone: "pos", pctNav: "+13.13%", pctNavTone: "pos" },
   bsAssets: [
-    { name: "US Equities", pct: 72, color: "#0e0e0e", pctDisplay: "$894k · 72%" },
-    { name: "KR Equities", pct: 12, color: "#3a3a3a", pctDisplay: "$149k · 12%" },
-    { name: "EU Equities", pct: 8, color: "#7a6c4a", pctDisplay: "$99k · 8%" },
-    { name: "Bonds", pct: 2, color: "#c9963f", pctDisplay: "$25k · 2%" },
-    { name: "Cash · USD/KRW", pct: 6, color: "#dcd5c2", pctDisplay: "$75k · 6%" },
+    { name: "US Equities", pct: 72, color: "#0e0e0e", pctDisplay: "USD 894k · 72%" },
+    { name: "KR Equities", pct: 12, color: "#3a3a3a", pctDisplay: "USD 149k · 12%" },
+    { name: "EU Equities", pct: 8, color: "#7a6c4a", pctDisplay: "USD 99k · 8%" },
+    { name: "Bonds", pct: 2, color: "#c9963f", pctDisplay: "USD 25k · 2%" },
+    { name: "Cash · USD/KRW", pct: 6, color: "#dcd5c2", pctDisplay: "USD 75k · 6%" },
   ],
   liabilities: [
-    { label: "Margin Debt", value: "$0" },
-    { label: "Tax Accrual", value: "$0" },
-    { label: "Other Liabilities", value: "$0" },
-    { label: "Owner's Equity (NAV)", value: "$1,242k", bold: true },
+    { label: "Margin Debt", value: "USD 0" },
+    { label: "Tax Accrual", value: "USD 0" },
+    { label: "Other Liabilities", value: "USD 0" },
+    { label: "Owner's Equity (NAV)", value: "USD 1,242k", bold: true },
   ],
-  totalLiab: "$1,242k",
+  totalLiab: "USD 1,242k",
   cashFlow: [
-    { label: "Operating · 배당 + 이자", mtd: "+$2,460", mtdTone: "pos", ytd: "+$10,000", ytdTone: "pos" },
-    { label: "Investing · 매입 − 매각", mtd: "−$28,400", mtdTone: "neg", ytd: "−$84,200", ytdTone: "neg" },
-    { label: "Financing · 입출금", mtd: "+$5,000", mtdTone: "pos", ytd: "+$20,000", ytdTone: "pos" },
-    { label: "Tax Paid", mtd: "−$3,840", mtdTone: "neg", ytd: "−$14,820", ytdTone: "neg" },
+    { label: "Operating · 배당 + 이자", mtd: "+USD 2,460", mtdTone: "pos", ytd: "+USD 10,000", ytdTone: "pos" },
+    { label: "Investing · 매입 − 매각", mtd: "−USD 28,400", mtdTone: "neg", ytd: "−USD 84,200", ytdTone: "neg" },
+    { label: "Financing · 입출금", mtd: "+USD 5,000", mtdTone: "pos", ytd: "+USD 20,000", ytdTone: "pos" },
+    { label: "Tax Paid", mtd: "−USD 3,840", mtdTone: "neg", ytd: "−USD 14,820", ytdTone: "neg" },
   ],
-  netCashChange: { mtd: "−$24,780", mtdTone: "neg", ytd: "−$69,020", ytdTone: "neg" },
+  netCashChange: { mtd: "−USD 24,780", mtdTone: "neg", ytd: "−USD 69,020", ytdTone: "neg" },
   ratios: {
     equityRatio: "98.8%",
     yieldOnCost: "2.1%",
@@ -126,10 +126,10 @@ const DEFAULT: MonthlyFinanceData = {
     taxDrag: "−1.19%",
   },
   liquidityTiers: [
-    { tier: "T1", desc: "현금 + MMF", amount: "$75k", pctNav: "6.0%", dtc: "0d" },
-    { tier: "T2", desc: "대형주 + 유동 ETF", amount: "$988k", pctNav: "79.5%", dtc: "1–2d" },
-    { tier: "T3", desc: "중소형주", amount: "$154k", pctNav: "12.4%", dtc: "3–5d" },
-    { tier: "T4", desc: "채권 · 비유동", amount: "$25k", pctNav: "2.0%", dtc: "7–14d" },
+    { tier: "T1", desc: "현금 + MMF", amount: "USD 75k", pctNav: "6.0%", dtc: "0d" },
+    { tier: "T2", desc: "대형주 + 유동 ETF", amount: "USD 988k", pctNav: "79.5%", dtc: "1–2d" },
+    { tier: "T3", desc: "중소형주", amount: "USD 154k", pctNav: "12.4%", dtc: "3–5d" },
+    { tier: "T4", desc: "채권 · 비유동", amount: "USD 25k", pctNav: "2.0%", dtc: "7–14d" },
   ],
 };
 
@@ -174,8 +174,8 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
           stamp={`As of ${data.asOf}`}
           rows={[
             { term: "Period Return", body: <><strong>+4.0% MTD · +14.2% YTD</strong> — vs benchmark (S&amp;P 500) +3.0% / +9.4%. <strong>Alpha +1.0%p / +4.8%p.</strong></> },
-            { term: "NAV", body: <>$1,189k → <strong>$1,242k</strong> · 자본 유입 +$5k · 운용 손익 +$48k.</> },
-            { term: "P&L Drivers", body: "반도체 +$22k · 소프트웨어 +$11k · 헬스케어 −$4k · FX 손실 −$0.4k." },
+            { term: "NAV", body: <>USD 1,189k → <strong>USD 1,242k</strong> · 자본 유입 +USD 5k · 운용 손익 +USD 48k.</> },
+            { term: "P&L Drivers", body: "반도체 +USD 22k · 소프트웨어 +USD 11k · 헬스케어 −USD 4k · FX 손실 −USD 0.4k." },
             { term: "Balance Sheet", body: "Equity 92% · Bonds 2% · Cash 6%. Margin debt 0. No outstanding liabilities." },
             { term: "Watch", body: <><PdfBadge tone="moderate">⚠</PdfBadge> USD 노출 88% — FX 헤지 검토. Tech 비중 42% — 한도 35% 초과.</> },
           ]}
@@ -302,7 +302,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
                 color: a.color,
                 pctDisplay: a.pctDisplay,
               }))}
-              centerLabel="$1.24M"
+              centerLabel="USD 1.24M"
             />
           </PdfCard>
 
@@ -320,7 +320,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
                     ))}
                     <tr className="total">
                       <td><strong>Total</strong></td>
-                      <td className="right font-mono"><strong>$1,242k</strong></td>
+                      <td className="right font-mono"><strong>USD 1,242k</strong></td>
                     </tr>
                   </tbody>
                 </PdfTable>
