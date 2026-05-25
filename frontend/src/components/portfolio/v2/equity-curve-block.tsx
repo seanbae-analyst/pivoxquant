@@ -18,6 +18,10 @@ interface EquityCurveBlockProps {
   currency?: "USD" | "KRW";
   /** Current NAV for the KPI strip (already converted to display currency). */
   currentNav?: number;
+  /** Native-currency subtotals — when both present the NAV KPI shows the split
+   *  (USD X · KRW Y) instead of one FX-unified USD figure (CEO 2026-05-24). */
+  navUsd?: number;
+  navKrw?: number;
 }
 
 // Backend whitelist: "5d" | "1mo" | "3mo" | "6mo" | "1y" — Bug #8 fix.
@@ -143,6 +147,8 @@ function computePolylines(
 export function EquityCurveBlock({
   currency = "USD",
   currentNav,
+  navUsd,
+  navKrw,
 }: EquityCurveBlockProps) {
   // `activeId` is the tab the user clicked (id="1mo"|"3mo"|"6mo"|"1y"|"all").
   // The backend period is resolved through the RANGES table so the "All"
@@ -285,7 +291,12 @@ export function EquityCurveBlock({
         >
           <KpiCell
             label="NAV"
-            value={fmtMoney(currentNav, currency)}
+            value={
+              typeof navUsd === "number" && navUsd > 0 &&
+              typeof navKrw === "number" && navKrw > 0
+                ? `${fmtMoney(navUsd, "USD")} · ${fmtMoney(navKrw, "KRW")}`
+                : fmtMoney(currentNav, currency)
+            }
             valueColor="var(--pq-ivory)"
           />
           <KpiCell

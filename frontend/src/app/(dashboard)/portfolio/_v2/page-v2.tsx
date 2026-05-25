@@ -462,7 +462,12 @@ export default function PortfolioPageV2() {
       />
 
       {/* ═══════════ EQUITY CURVE ═══════════ */}
-      <EquityCurveBlock currency={displayCurrency} currentNav={totalNav} />
+      <EquityCurveBlock
+        currency={displayCurrency}
+        currentNav={totalNav}
+        navUsd={navUsdFinal}
+        navKrw={navKrwFinal}
+      />
 
       {/* ═══════════ POSITIONS TABLE ═══════════ */}
       <PositionsTableV2
