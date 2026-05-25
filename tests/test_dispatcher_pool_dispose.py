@@ -32,6 +32,7 @@ def _patch_create_app(test_app, captured_env):
 
     def _fake_create_app(*a, **kw):
         captured_env["populate"] = os.environ.get("POPULATE_CACHE_ON_BOOT")
+        captured_env["run_scheduler"] = os.environ.get("RUN_SCHEDULER")
         return test_app
 
     return _fake_create_app
@@ -70,6 +71,8 @@ class TestCheckoutFollowupDispose:
         assert rc == 0
         assert dispose_spy["n"] >= 1, "engine.dispose must be called"
         assert captured["populate"] == "0", "warmup must be suppressed"
+        assert captured["run_scheduler"] == "0", \
+            "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
 
 class TestEmailSchedulerDispose:
@@ -87,6 +90,8 @@ class TestEmailSchedulerDispose:
         assert rc == 0
         assert dispose_spy["n"] >= 1
         assert captured["populate"] == "0"
+        assert captured["run_scheduler"] == "0", \
+            "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
 
 class TestOauthFailureCheckDispose:
@@ -101,6 +106,8 @@ class TestOauthFailureCheckDispose:
         assert rc == 0
         assert dispose_spy["n"] >= 1
         assert captured["populate"] == "0"
+        assert captured["run_scheduler"] == "0", \
+            "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
 
 class TestInactiveNudgeDispose:
@@ -115,6 +122,8 @@ class TestInactiveNudgeDispose:
         assert rc == 0
         assert dispose_spy["n"] >= 1
         assert captured["populate"] == "0"
+        assert captured["run_scheduler"] == "0", \
+            "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
 
 class TestPipaPurgeDispose:
@@ -129,6 +138,8 @@ class TestPipaPurgeDispose:
         assert rc == 0
         assert dispose_spy["n"] >= 1
         assert captured["populate"] == "0"
+        assert captured["run_scheduler"] == "0", \
+            "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
     def test_dispose_runs_even_on_error(self, app, dispose_spy):
         """finally must release the pool even when run_once raises."""

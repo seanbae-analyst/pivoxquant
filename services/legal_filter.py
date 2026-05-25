@@ -92,7 +92,10 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     # "이기다/이기고/이기며…"(beat market) 동사 어간만 — lookahead 로 동사 어미를
     # 강제해 "이기적/이기주의/이기심" 같은 명사를 보존 (over-scrub fix #5, 2026-05-25).
     # 어미 부재 시 미매치 → "이기적인 행동" 등 정상 산문 파괴 방지.
-    (re.compile(r"이기(?=다|고|며|어|었|겠|는|면|니까|지)"), "benchmark 대비 기록하"),
+    # 2026-05-26 gap #4: 명사형 "이기기 위해/위한"(시장 이기기 = beat market) 보강.
+    # `기(?=\s*위[해한])` 추가 — "이기기 위한/위해" 만 잡고 "이기기 싫다"(기 뒤가
+    # 위[해한] 아님) / "이기적"·"이기주의"·"이기심"(기 미출현) 은 여전히 보존.
+    (re.compile(r"이기(?=다|고|며|어|었|겠|는|면|니까|지|기(?=\s*위[해한]))"), "benchmark 대비 기록하"),
 
     # ── Group 6: 영문 — 동사형 / 명령형 ──────────────────────────────────
     # 순서 주의: "BUY signal" / "SELL signal" 복합구문이 단독 \bBUY\b / \bSELL\b
@@ -146,8 +149,17 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     # 대체어 "재배분" — 기존 "포트폴리오 재점검" 은 "포트폴리오 리밸런싱"을
     # "포트폴리오 포트폴리오 재점검" 으로 중복 출력 (over-scrub fix #4, 2026-05-25).
     (re.compile(r"리밸런싱(?!하지\s*않|하지\s*맙)"), "재배분"),
-    # 금융 문맥의 "최적화" 만 치환 — "성능/SEO/프로세스 최적화" 는 scope 밖 (선행 negative lookbehind).
-    (re.compile(r"(?<![최저성능SEO프로세스UX])최적화(?!하지\s*않)"), "재구성"),
+    # 금융 문맥의 "최적화" 만 치환 — tech 어휘("성능/SEO/프로세스/UX 최적화")는 scope 밖.
+    # 2026-05-26 gap #5: 기존 단일문자 char-class lookbehind `(?<![최저성능SEO프로세스UX])`
+    # 는 "성능 최적화"(최 앞에 공백)를 보호 못 했음 — char-class 는 직전 1글자만 검사하므로
+    # "능"·"O"·"스"·"X" 가 매치돼 보호되는 것처럼 보였으나 공백 포함구문("성능 최적화")은
+    # 직전 문자가 공백이라 미보호. Python re 는 가변길이 lookbehind 미지원 → 각 tech prefix
+    # 를 고정길이 negative lookbehind 로 나열. 공백 1개 포함 변형도 함께 차단.
+    # "포트폴리오 최적화"(금융 권유)는 어떤 prefix 와도 불일치 → 기존대로 "재구성" 치환.
+    (re.compile(
+        r"(?<!성능)(?<!성능\s)(?<!SEO)(?<!SEO\s)(?<!프로세스)(?<!프로세스\s)"
+        r"(?<!UX)(?<!UX\s)(?<!최)(?<!저)최적화(?!하지\s*않)"
+    ), "재구성"),
     (re.compile(r"Target\s*Weight", re.IGNORECASE), "Reference Weight"),
     # Optimize — 단독 동사/명사 형태. 케이스 보존 위해 suffix capture.
     # (Suggest 규칙은 over-scrub fix #1 로 Group 6 으로 이동·세분화됨 — 여기서

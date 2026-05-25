@@ -372,6 +372,37 @@ def test_route_proceed_blocks_other_user(client, app, make_user, auth_user):
     assert resp.status_code == 404
 
 
+def test_route_error_message_truncated_to_200(client, app, make_user, auth_user):
+    """OPS#9: api_error ``en`` from a service ValueError is capped at 200 chars.
+
+    The route emits ``str(exc)[:200]`` so an unexpectedly long exception
+    message can never balloon the error envelope. We force a >200-char
+    ValueError out of the service layer and assert the route truncates it.
+    """
+    # Create a reflection owned by the logged-in user.
+    with app.app_context():
+        row = start_cooldown(
+            user_id=auth_user["id"],
+            ticker="AAPL",
+            side="BUY",
+            shares=1,
+            rationale=LONG_RATIONALE,
+        )
+    long_msg = "X" * 500
+    with patch(
+        "routes.pre_trade.proceed_reflection",
+        side_effect=ValueError(long_msg),
+    ):
+        resp = client.post(f"/api/pre-trade/{row['id']}/proceed")
+    assert resp.status_code == 409
+    body = resp.get_json()
+    # en value lands in the "error" key (services.error_responses.api_error).
+    assert len(body["error"]) == 200, (
+        "error message must be truncated to 200 chars, got %d" % len(body["error"])
+    )
+    assert body["error"] == "X" * 200
+
+
 def test_rationale_min_chars_constant_holds():
     """Pin the rationale floor — any change must come with explicit migration.
 

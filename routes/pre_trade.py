@@ -80,7 +80,7 @@ def start():
         )
     except ValueError as exc:
         return api_error(
-            en=str(exc),
+            en=str(exc)[:200],
             kr="입력값이 올바르지 않습니다.",
             code="PRE_TRADE_BAD_INPUT",
             status=400,
@@ -140,7 +140,7 @@ def proceed(reflection_id: int):
         # 409 Conflict — the resource exists but the requested transition
         # is invalid (cooldown not elapsed, or already terminal).
         return api_error(
-            en=str(exc),
+            en=str(exc)[:200],
             kr="현재 상태에서 처리할 수 없습니다.",
             code="PRE_TRADE_INVALID_STATE",
             status=409,
@@ -165,7 +165,7 @@ def cancel(reflection_id: int):
         )
     except ValueError as exc:
         return api_error(
-            en=str(exc),
+            en=str(exc)[:200],
             kr="현재 상태에서 처리할 수 없습니다.",
             code="PRE_TRADE_INVALID_STATE",
             status=409,

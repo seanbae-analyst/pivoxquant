@@ -814,3 +814,98 @@ class TestOverScrubFixes2026_05_25:
     def test_forbidden_still_scrubbed(self, original, banned):
         out = scrub_text(original)
         assert banned not in out, f"보호 약화 — {banned!r} survived → {out!r}"
+
+
+class TestOverScrubFixes2026_05_26:
+    """Regression guard for 2 over-scrub gaps fixed 2026-05-26.
+
+    Follow-on to the 2026-05-25 wave:
+      #4 (MEDIUM): 명사형 "이기기 위한/위해"(beat market) 가 §101 필터를 통과해
+          버렸음 (동사 어미 lookahead 에 명사화 "이기**기**" 미포함).
+      #5 (LOW): "성능 최적화" / "SEO 최적화" 같은 공백 포함 tech 어휘가
+          over-scrub 되어 "성능 재구성" 으로 손상됐음 (단일문자 char-class
+          lookbehind 가 공백 앞 prefix 를 못 봄).
+
+    각 fix 는 (a) 잡아야 할 변형은 잡고 (b) 정상 산문은 보존하며 (c) 기존
+    advisory 보호를 약화시키지 않아야 한다.
+    """
+
+    # ── Gap #4: "이기기 위한/위해" beat-market 명사형 잡힘 ──
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "시장을 이기기 위한 전략",
+            "S&P 500을 이기기 위해 집중투자하세요",
+            "시장을 이기기 위한",
+            "지수를 이기기 위해",
+        ],
+    )
+    def test_igi_gi_wihae_scrubbed(self, text):
+        out = scrub_text(text)
+        assert "이기기 위" not in out, f"beat-market 명사형 미치환 → {out!r}"
+        assert "benchmark 대비 기록" in out, f"치환 누락 → {out!r}"
+
+    # ── Gap #4: 비금융 "이기기 ..." 및 명사는 여전히 보존 ──
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "이기기 싫다",
+            "이기기가 어렵다",
+            "이기적인 행동",
+            "이기주의",
+            "이기심",
+        ],
+    )
+    def test_igi_gi_nonfinancial_preserved(self, text):
+        out = scrub_text(text)
+        assert out == text, f"비금융 산문 파괴 → {out!r}"
+        assert "benchmark" not in out
+
+    # ── Gap #4: 기존 동사 어간 치환은 그대로 유지 ──
+    @pytest.mark.parametrize(
+        "text",
+        ["이기다", "이기고 있다", "시장을 이기는"],
+    )
+    def test_igi_verb_stem_still_scrubbed(self, text):
+        out = scrub_text(text)
+        assert "benchmark 대비 기록" in out, f"기존 동사 치환 회귀 → {out!r}"
+
+    # ── Gap #5: tech 어휘 "X 최적화" 공백 포함구문 보존 ──
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "성능 최적화 가이드",
+            "SEO 최적화",
+            "프로세스 최적화",
+            "UX 최적화",
+        ],
+    )
+    def test_tech_optimize_preserved(self, text):
+        out = scrub_text(text)
+        assert "재구성" not in out, f"tech 어휘 over-scrub → {out!r}"
+        assert out == text, f"산문 변형 → {out!r}"
+
+    # ── Gap #5: 금융 권유 맥락 "최적화" 는 여전히 치환 ──
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("포트폴리오 최적화", "포트폴리오 재구성"),
+            ("자산 최적화", "자산 재구성"),
+            ("최적화", "재구성"),
+        ],
+    )
+    def test_financial_optimize_still_scrubbed(self, text, expected):
+        assert scrub_text(text) == expected
+
+    # ── 보호-약화 sanity: 진짜 금지어는 여전히 scrub ──
+    @pytest.mark.parametrize(
+        "original,banned",
+        [
+            ("지금 매수하세요", "매수"),
+            ("매도 권고", "권고"),
+            ("You should BUY now", "BUY"),
+        ],
+    )
+    def test_protection_not_weakened(self, original, banned):
+        out = scrub_text(original)
+        assert banned not in out, f"보호 약화 — {banned!r} survived → {out!r}"

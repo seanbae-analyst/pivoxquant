@@ -432,6 +432,12 @@ class AdditionalFundamentals:
             >= 1.0  -> "주의"  (cautious -- can cover liabilities but little buffer)
             <  1.0  -> "위험"  (at risk of short-term solvency issues)
         """
+        # KR guard: FMP Starter has no KRX balance-sheet coverage, so .KS/.KQ
+        # tickers always return {} yet still burn an FMP API call. KIS does not
+        # expose balance sheets either, so report DATA_UNAVAILABLE up front.
+        if isinstance(ticker, str) and ticker.endswith((".KS", ".KQ")):
+            return {"value": None, "status": "DATA_UNAVAILABLE",
+                    "reason": "KIS does not expose balance-sheet/income-statement"}
         try:
             from services.data.fmp import get_balance_sheet
         except Exception:
@@ -505,6 +511,12 @@ class AdditionalFundamentals:
         undefined) rather than infinitely safe -- callers should display
         "무차입" separately if desired.
         """
+        # KR guard: FMP Starter has no KRX income-statement coverage; .KS/.KQ
+        # tickers always return {} but still cost one FMP call. KIS does not
+        # expose income statements either, so report DATA_UNAVAILABLE up front.
+        if isinstance(ticker, str) and ticker.endswith((".KS", ".KQ")):
+            return {"value": None, "status": "DATA_UNAVAILABLE",
+                    "reason": "KIS does not expose balance-sheet/income-statement"}
         try:
             from services.data.fmp import get_income_statement
         except Exception:

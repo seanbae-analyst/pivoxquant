@@ -1024,10 +1024,14 @@ def risk_concentration():
 
         def _resolve_sector(t: str) -> str:
             try:
-                kr = _kr_sector(t) if t.endswith(".KS") or t.endswith(".KQ") else None
+                is_kr = t.endswith(".KS") or t.endswith(".KQ")
+                kr = _kr_sector(t) if is_kr else None
                 if kr:
                     return kr
-                if _fmp is not None:
+                # KR guard: FMP has no KRX coverage, so get_profile() returns {}
+                # for .KS/.KQ while still burning an FMP call. Only hit FMP for
+                # non-KR tickers; KR with no curated sector → Unclassified.
+                if not is_kr and _fmp is not None:
                     prof = _fmp.get_profile(t) or {}
                     sec = prof.get("sector")
                     if isinstance(sec, str) and sec.strip():

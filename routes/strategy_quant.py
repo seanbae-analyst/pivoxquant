@@ -137,17 +137,21 @@ def canslim_screener(ticker):
         logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
-    # Float shares + sector from FMP profile
+    # Float shares + sector from FMP profile.
+    # KR guard: FMP has no KRX coverage, so .KS/.KQ profile calls return {}
+    # while still burning an FMP API call. Skip and leave float/sector None
+    # (downstream already tolerates None).
     float_shares = None
     sector = None
-    try:
-        profile = fmp_svc.get_profile(ticker)
-        if profile:
-            float_shares = profile.get("floatShares") or profile.get("sharesFloat")
-            sector = profile.get("sector") or None  # e.g. "Technology"
-    except Exception:
-        logger.debug("silent-fallback: canslim_screener", exc_info=True)
-        pass
+    if not (isinstance(ticker, str) and ticker.endswith((".KS", ".KQ"))):
+        try:
+            profile = fmp_svc.get_profile(ticker)
+            if profile:
+                float_shares = profile.get("floatShares") or profile.get("sharesFloat")
+                sector = profile.get("sector") or None  # e.g. "Technology"
+        except Exception:
+            logger.debug("silent-fallback: canslim_screener", exc_info=True)
+            pass
 
     # Market regime from RegimeSwitching.
     # 2026-05-17 P1-01: regime MUST be derived from a market *index*, not from

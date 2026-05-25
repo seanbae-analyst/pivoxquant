@@ -264,14 +264,17 @@ def extended_indicators(ticker):
     fundamental = AdditionalFundamentals.calculate_all(ticker, current_price)
 
     # ── Float shares from FMP profile ────────────────────────────────────────
+    # KR guard: FMP has no KRX coverage, so .KS/.KQ profile calls return {}
+    # while still burning an FMP API call. Skip and leave float_shares None.
     float_shares = None
-    try:
-        profile = fmp_svc.get_profile(ticker)
-        if profile:
-            float_shares = profile.get("floatShares") or profile.get("sharesFloat")
-    except Exception:
-        logger.debug("silent-fallback: extended_indicators", exc_info=True)
-        pass
+    if not (isinstance(ticker, str) and ticker.endswith((".KS", ".KQ"))):
+        try:
+            profile = fmp_svc.get_profile(ticker)
+            if profile:
+                float_shares = profile.get("floatShares") or profile.get("sharesFloat")
+        except Exception:
+            logger.debug("silent-fallback: extended_indicators", exc_info=True)
+            pass
 
     payload = {
         "ok": True,

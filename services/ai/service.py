@@ -314,8 +314,10 @@ class AIService:
                 f"(Example position size for reference only — "
                 f"not investment advice or a solicitation.)"
             )
-        if data.get("take_profit"):
-            lines.append(f"Take Profit: {data['take_profit']}, Stop Loss: {data.get('stop_loss', '?')}")
+        # §101 — 사용자공급 take_profit/stop_loss 를 LLM 프롬프트에 advisory 로
+        # 주입하지 않는다. engine 이 이미 take_profit 을 삭제하고 프론트도
+        # 미전송하나, API 직접호출 시 목표가/손절가가 LLM 컨텍스트를 오염시켜
+        # 매매조언 어휘를 유발할 수 있어 블록 자체를 제거한다 (dead/위험).
         return "\n".join(lines)
 
     # ── Bilingual Parser ────────────────────────────────────────

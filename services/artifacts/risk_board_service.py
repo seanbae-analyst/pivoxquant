@@ -221,11 +221,21 @@ def _fetch_position_returns(positions: list[Position],
     pos_records: list[dict[str, Any]] = []
     rets_lists: list[list[float]] = []
 
+    # Currency normalization (CRITICAL): _safe_price is native (KRW for
+    # .KS/.KQ, USD otherwise). Position weights drive every downstream metric
+    # (portfolio returns, VaR, Sharpe, Sortino, component ES). Summing raw
+    # native values over-weights KRW holdings ~1000x vs USD ones in a mixed
+    # portfolio. Convert US positions to KRW via the live FX rate so weights
+    # reflect true relative exposure.
+    from services import fx_service
+    fx_rate = fx_service.get_rate()  # USD → KRW
     total_mv = 0.0
     raw: list[tuple[Position, float, float]] = []  # (position, price, mv)
     for p in positions[:25]:
         px = _safe_price(p.ticker) or float(p.avg_cost or 0)
         mv = px * float(p.shares or 0)
+        if not p.ticker.upper().endswith((".KS", ".KQ")):
+            mv *= fx_rate  # USD → KRW normalization
         raw.append((p, px, mv))
         total_mv += mv
 
@@ -463,7 +473,7 @@ _LAYER_LABELS = [
     ("L4_TAIL_RISK",          "Layer 4 · Tail Risk"),
     ("L5_DAILY_LOSS",         "Layer 5 · Daily Loss"),
     ("L6_SECTOR_CONCENTRATION", "Layer 6 · Sector Concentration"),
-    ("L7_REGIME",             "Layer 7 · Cash Management"),
+    ("L7_CASH_MGMT",          "Layer 7 · Cash Management"),
 ]
 
 
@@ -632,13 +642,34 @@ class RiskBoardService:
         positions = Position.query.filter_by(user_id=user_id).all()
 
         # Portfolio snapshot
-        total_mv = 0.0
-        ccy = "USD"
-        if positions and all(p.ticker.endswith((".KS", ".KQ")) for p in positions):
+        # Currency normalization (CRITICAL): _safe_price returns native price
+        # (KRW for .KS/.KQ, USD otherwise). Summing raw values across markets
+        # mixes KRW + USD into a nonsense total, corrupting every
+        # VaR/Sharpe/Sortino/component-ES figure downstream. Mirror the
+        # routes/quant_helpers.py:_load_positions_with_prices pattern: convert
+        # US positions to KRW via the live FX rate so the aggregate is coherent.
+        from services import fx_service
+        fx_rate = fx_service.get_rate()  # USD → KRW
+        all_kr = bool(positions) and all(
+            p.ticker.upper().endswith((".KS", ".KQ")) for p in positions
+        )
+        any_kr = any(
+            p.ticker.upper().endswith((".KS", ".KQ")) for p in positions
+        )
+        # All-KR → KRW; otherwise (pure-US or mixed) we normalize everything to
+        # KRW when any KR holding is present, else keep USD for pure-US books.
+        if all_kr or any_kr:
             ccy = "KRW"
+        else:
+            ccy = "USD"
+        total_mv = 0.0
         for p in positions:
             px = _safe_price(p.ticker) or float(p.avg_cost or 0)
-            total_mv += px * float(p.shares or 0)
+            mv_native = px * float(p.shares or 0)
+            is_kr = p.ticker.upper().endswith((".KS", ".KQ"))
+            if ccy == "KRW" and not is_kr:
+                mv_native *= fx_rate  # USD → KRW
+            total_mv += mv_native
 
         tickers, pos_records, matrix = _fetch_position_returns(positions)
         port_rets = _portfolio_daily_returns(pos_records, matrix)
@@ -813,6 +844,11 @@ class RiskBoardService:
         # ── 1. as_of / week_tag ─────────────────────────────────────────────
         as_of = data.get("period_label") or "—"
         period_token = re.sub(r"[^A-Za-z0-9]+", "", str(as_of))[:12] or "current"
+        # Currency symbol for monetary labels. portfolio_value/VaR-derived
+        # losses are now KRW-normalized whenever any KR holding exists
+        # (see generate_for_user), so hardcoding "$" mislabels them. Derive
+        # the symbol from the resolved portfolio currency.
+        cur = "₩" if data.get("portfolio_ccy") == "KRW" else "$"
         trigger_token = "S" if data.get("trigger") == "vix_spike" else "M"
         week_tag = f"RB-{trigger_token}-{period_token}"
 
@@ -854,7 +890,7 @@ class RiskBoardService:
         if var99 is not None and port_value:
             est_loss = float(var99) / 100.0 * float(port_value)
             stress_worst = (
-                f"<strong>99% 신뢰구간 1일 VaR — 약 ${abs(est_loss):,.0f} "
+                f"<strong>99% 신뢰구간 1일 VaR — 약 {cur}{abs(est_loss):,.0f} "
                 f"({-abs(float(var99)):.1f}% NAV).</strong> "
                 f"5개 시나리오 관찰."
             )
@@ -1003,10 +1039,12 @@ class RiskBoardService:
             t = float(tail)
             cap_show = 1.0
             fill_pct = min(100.0, (t / cap_show) * 70.0) if cap_show > 0 else 0
-            if t < 0.7:
-                fill_state, status_t, status_x = "warn", "moderate", "OVER"
-            elif t < 0.5:
+            # Check the stricter threshold first; otherwise t < 0.5 is dead
+            # code (t < 0.7 always catches it) and BREACH never displays.
+            if t < 0.5:
                 fill_state, status_t, status_x = "breach", "severe", "BREACH"
+            elif t < 0.7:
+                fill_state, status_t, status_x = "warn", "moderate", "OVER"
             else:
                 fill_state, status_t, status_x = "", "low", "OK"
             limits.append({
@@ -1100,13 +1138,13 @@ class RiskBoardService:
                 "width_pct": round(mult * 90.0, 1),
                 "axis_pct": 90.0,
                 "value": (
-                    f"-${dollar_loss:,.0f}" if dollar_loss is not None
+                    f"-{cur}{dollar_loss:,.0f}" if dollar_loss is not None
                     else f"-{pct_loss:.1f}%"
                 ),
                 "value_tone": "neg",
                 "pnl_pct": f"-{pct_loss:.1f}%",
                 "nav_after": (
-                    f"${nav_after:,.0f}" if nav_after is not None else "—"
+                    f"{cur}{nav_after:,.0f}" if nav_after is not None else "—"
                 ),
                 "recovery": recovery,
                 "verdict_tone": v_tone,

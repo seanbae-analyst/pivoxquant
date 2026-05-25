@@ -13,6 +13,7 @@
  */
 
 import { StatRow } from "@/components/ui/editorial";
+import { fmtKrw, fmtUsd } from "@/lib/format";
 import { SectionHeading, EmptyNote } from "./shared";
 import type { SignalDetail } from "./types";
 import { fmtMcap } from "./types";
@@ -79,7 +80,13 @@ export function FundamentalsPanel({
               />
               <StatRow
                 label="EPS (ttm)"
-                value={num(s?.eps) ? Number(s!.eps).toFixed(2) : "—"}
+                value={
+                  num(s?.eps)
+                    ? krw
+                      ? fmtKrw(s!.eps as number)
+                      : fmtUsd(s!.eps as number)
+                    : "—"
+                }
               />
               <StatRow label="Market cap" value={fmtMcap(mcap, krw)} />
               <StatRow

@@ -862,23 +862,43 @@ def risk_defense_status():
             daily_return = float(returns_matrix[-1] @ weights) * 100
 
     # Get VIX if available
+    # NOTE: VIXStrategy.analyze() returns the level under the "vix" key
+    # (services/quant/models.py), NOT "current_vix". Using the wrong key
+    # left vix=None permanently, so Layer 3 (VIX) never fired.
     vix = None
     try:
         from services.quant.models import VIXStrategy
         vix_data = VIXStrategy.analyze()
-        if vix_data and "current_vix" in vix_data:
-            vix = vix_data["current_vix"]
+        if vix_data and "vix" in vix_data:
+            vix = vix_data["vix"]
     except Exception:
         logger.debug("silent-fallback: risk_defense_status", exc_info=True)
         pass
 
-    # Get current regime
+    # Get current market regime.
+    # NOTE: there is no VolatilityRegime.detect() — only
+    # RegimeSwitching.analyze(closes) / VolatilityRegime.analyze(closes).
+    # The old code called a non-existent .detect(), so every call raised
+    # AttributeError and regime stayed pinned to "TRANSITION".
+    # We derive the bull/bear regime from a representative market index
+    # (KOSPI for KR-weighted portfolios, S&P 500 ETF otherwise) so Layer 7
+    # cash management receives a real regime. On any data failure we keep
+    # the graceful "TRANSITION" fallback.
     regime = "TRANSITION"
     try:
-        from services.quant.models import VolatilityRegime
-        regime_data = VolatilityRegime.detect()
-        if regime_data and "regime" in regime_data:
-            regime = regime_data["regime"]
+        from services.quant.models import RegimeSwitching
+        # Choose index by where the portfolio is concentrated.
+        kr_weight = sum(
+            pos["weight"] for pos in pos_list
+            if pos["ticker"].upper().endswith((".KS", ".KQ"))
+        )
+        index_ticker = "069500.KS" if kr_weight >= 0.5 else "SPY"
+        idx_hist = fetcher.get_price_history(index_ticker, period="6mo")
+        if idx_hist is not None and not idx_hist.empty and len(idx_hist) >= 80:
+            idx_closes = idx_hist["Close"].values
+            regime_data = RegimeSwitching.analyze(idx_closes)
+            if regime_data and regime_data.get("regime"):
+                regime = regime_data["regime"]
     except Exception:
         logger.debug("silent-fallback: risk_defense_status", exc_info=True)
         pass

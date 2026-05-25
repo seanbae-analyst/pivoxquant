@@ -8,6 +8,8 @@ from flask_login import current_user
 from models import Position
 from services.container import daytrade
 from services.name_resolver import resolve_stock_name
+from services.ticker_normalizer import normalize_ticker
+from services.access_guard import is_user_allowed_ticker, access_denied_response
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,14 @@ def scan():
 @api_auth
 @legal_scrub_response
 def analyze(ticker):
+    # §101 회피 — 보유/watchlist 종목만 분석 허용 (fail-closed). access_guard
+    # 는 정규화된 저장형(005930.KS)으로 조회하므로 gate 용 normalized 만 따로
+    # 만들고, 아래 KR 분기(bare 6-digit 의존)·US 분기는 원본 ticker 를 보존한다.
+    normalized = normalize_ticker(ticker)
+    if not is_user_allowed_ticker(current_user.id, normalized):
+        body, status = access_denied_response()
+        return jsonify(body), status
+
     if ticker.isdigit() and len(ticker) == 6:
         try:
             from services.kis.service import KISService

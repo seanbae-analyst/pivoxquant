@@ -918,7 +918,12 @@ def get_info(ticker):
         profile = {}
         ratios = {}
         metrics = {}
+        # KR tickers skip the FMP profile (no KRX coverage), so the "currency"
+        # field never gets populated below. Set it explicitly to KRW so
+        # consumers using info.get("currency", "USD") don't mis-default to USD.
+        info_currency_default = "KRW"
     else:
+        info_currency_default = None
         profile = get_profile(ticker)
         ratios = get_ratios_ttm(ticker)
         metrics = get_key_metrics_ttm(ticker)
@@ -1043,6 +1048,11 @@ def get_info(ticker):
                         info[k] = v
         except Exception as e:
             logger.debug("KR fundamentals routing failed for %s: %s", ticker, e)
+        # KR profile was skipped above, so `info` never received a "currency"
+        # field. Fill it with KRW (fill-only) so consumers that default to
+        # "USD" don't misread KR amounts as dollars.
+        if not info.get("currency"):
+            info["currency"] = info_currency_default or "KRW"
 
     # ── Alpha Vantage fallback (US equities only) ─────────────────
     # FMP Starter omits P/E + EPS on NVDA/MSFT/TSLA/etc. AV free tier

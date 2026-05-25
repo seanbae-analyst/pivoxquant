@@ -187,6 +187,10 @@ class EarningsCallToneAnalyzer:
     @classmethod
     def _fetch_transcript(cls, ticker):
         """Try to fetch latest earnings call transcript from FMP API."""
+        # KR guard: FMP has no KRX earnings-call-transcript coverage, so .KS/.KQ
+        # tickers always return [] while still burning an FMP API call. Skip.
+        if isinstance(ticker, str) and ticker.endswith((".KS", ".KQ")):
+            return None
         try:
             from services.data import fmp as fmp
             # FMP stable endpoint for earnings call transcript

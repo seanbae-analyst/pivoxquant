@@ -486,6 +486,11 @@ def _earnings_item_for_ticker(ticker, cache=None):
     omitted the row is looked up here (single-query, no N+1 for one ticker).
     """
     from services.data import fmp as fmp
+    # KR guard: FMP has no KRX earnings-calendar coverage, so .KS/.KQ tickers
+    # always return [] yet each /api/earnings call burns one FMP request per
+    # KR position. KR earnings belong on a future KIS/DART path — skip for now.
+    if isinstance(ticker, str) and ticker.endswith((".KS", ".KQ")):
+        return None
     try:
         is_etf = ticker in _EARNINGS_ETF_TICKERS or 'ETF' in (ticker or '')
         if is_etf:
@@ -560,8 +565,14 @@ def earnings_for_ticker(ticker):
 
 @market_bp.route("/peers/<ticker>")
 @api_auth
+@legal_scrub_response
 def peer_comparison(ticker):
     ticker = normalize_ticker(ticker)
+    # §101 회피 — 보유/watchlist 종목만 분석 허용 (fail-closed). 임의 ticker 로
+    # 섹터 내 비보유 종목 score/signal 노출 차단 (형제 endpoint 일치).
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
     c = db.session.get(SignalCache, ticker)
     if not c or not c.data_json:
         return api_error(
@@ -1657,6 +1668,11 @@ def public_market_snapshot():
 @api_auth
 def dividend_data(ticker):
     ticker = normalize_ticker(ticker)
+    # KR guard: FMP has no KRX dividend coverage and KIS dividend data is not
+    # integrated yet, so .KS/.KQ tickers only waste FMP budget on empty calls.
+    if ticker.endswith((".KS", ".KQ")):
+        return jsonify({"has_dividend": False, "ticker": ticker,
+                        "note": "KIS dividend data not integrated"})
     try:
         from services.data import fmp as fmp
         info = fmp.get_info(ticker)
