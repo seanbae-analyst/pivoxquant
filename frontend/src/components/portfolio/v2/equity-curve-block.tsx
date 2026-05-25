@@ -293,9 +293,16 @@ export function EquityCurveBlock({
             label="NAV"
             value={
               typeof navUsd === "number" && navUsd > 0 &&
-              typeof navKrw === "number" && navKrw > 0
-                ? `${fmtMoney(navUsd, "USD")} · ${fmtMoney(navKrw, "KRW")}`
-                : fmtMoney(currentNav, currency)
+              typeof navKrw === "number" && navKrw > 0 ? (
+                // KR + US held → stack the native subtotals on separate lines
+                // (CEO 2026-05-24: KRW must drop below USD, not sit inline).
+                <>
+                  <div>{fmtMoney(navUsd, "USD")}</div>
+                  <div>{fmtMoney(navKrw, "KRW")}</div>
+                </>
+              ) : (
+                fmtMoney(currentNav, currency)
+              )
             }
             valueColor="var(--pq-ivory)"
           />
@@ -519,7 +526,7 @@ function KpiCell({
   valueColor,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   valueColor: string;
 }) {
   return (
