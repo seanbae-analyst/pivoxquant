@@ -23,6 +23,11 @@ interface PortfolioHeroV2Props {
   /** Total NAV in display currency (USD or KRW). May be undefined. */
   nav?: number;
   navCurrency?: "USD" | "KRW";
+  /** Native-currency stock subtotals — US holdings in USD, KR holdings in KRW.
+   *  When both are present the NAV is shown split ("$X · ₩Y") instead of a
+   *  single FX-unified USD figure (CEO 2026-05-24). */
+  navUsd?: number;
+  navKrw?: number;
   /** Number of recorded positions. Optional — em-dash when missing. */
   positionCount?: number;
   /** Cash bucket as percent of NAV (0..100). Optional — em-dash when missing. */
@@ -114,6 +119,8 @@ function relativeTime(iso: string | null | undefined): string {
 export function PortfolioHeroV2({
   nav,
   navCurrency = "USD",
+  navUsd,
+  navKrw,
   positionCount,
   cashPct,
   lastReconciledAt,
@@ -129,7 +136,21 @@ export function PortfolioHeroV2({
   const now = new Date();
   const eyebrow = `Book · Volume ${weekIndexOf(now)} · ${weekdayOf(now)}`;
 
-  const navText = loading ? "—" : fmtMoney(nav, navCurrency);
+  // Show native-currency subtotals separately rather than one FX-unified USD
+  // figure (CEO 2026-05-24): KR holdings in ₩, US holdings in $. Falls back to
+  // the single display-currency nav when only one market is held (or the
+  // backend hasn't supplied the split).
+  const hasUs = typeof navUsd === "number" && navUsd > 0;
+  const hasKr = typeof navKrw === "number" && navKrw > 0;
+  const navText = loading
+    ? "—"
+    : hasUs && hasKr
+      ? `${fmtMoney(navUsd, "USD")} · ${fmtMoney(navKrw, "KRW")}`
+      : hasKr
+        ? fmtMoney(navKrw, "KRW")
+        : hasUs
+          ? fmtMoney(navUsd, "USD")
+          : fmtMoney(nav, navCurrency);
   const positionsText = loading
     ? "—"
     : positionCount != null

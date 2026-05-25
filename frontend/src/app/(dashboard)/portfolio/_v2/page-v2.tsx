@@ -419,6 +419,8 @@ export default function PortfolioPageV2() {
       <PortfolioHeroV2
         nav={totalNav}
         navCurrency={displayCurrency}
+        navUsd={sumData?.navUsd}
+        navKrw={sumData?.navKrw}
         positionCount={positions.length}
         cashPct={cashPct}
         lastReconciledAt={lastReconciledAt}
