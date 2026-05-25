@@ -2,7 +2,30 @@
 
 ## v52 2026-05-24 — 마라톤 세션 (버그헌팅 3R → CEO 라이브 피드백 → 통화/UI 개편), 전부 push+배포
 
-> **결론**: main `c87c8a46 →` 다수 commit. 자율 버그헌팅 3라운드(~33 fix) + CEO prod 라이브 도그푸딩 피드백 연속 대응 + ₩/$ 통화표기 전면 개편 + PWA stale-cache 근본 fix. 검증: 백엔드 풀스위트 PASS·회귀 0 / vitest 454 / tsc clean. **라이브 검증 = browser MCP로 CEO 계정 직접 확인**(extension host-permission 필요, 본탭 종종 blocked → 새 탭으로 우회).
+> **결론**: main `c87c8a46 → 8090ce82` (**19 commit**). 자율 버그헌팅 3라운드(~33 fix) + CEO prod 라이브 도그푸딩 피드백 연속 대응 + ₩/$ 통화표기 전면 개편 + PWA stale-cache 근본 fix. 검증: 백엔드 풀스위트 PASS·회귀 0 / vitest 454 / tsc clean. **라이브 검증 = browser MCP로 CEO 계정 직접 확인**(extension host-permission 필요, 본탭 종종 blocked → 새 탭으로 우회).
+
+### 정확한 커밋 목록 (c87c8a46..8090ce82, 최신→과거)
+```
+8090ce82 docs: HANDOVER v52
+fb37b4b5 fix: 손익 KPI(Today/Unrealized/Realized) 통화별 분리 (routes/portfolio.py + portfolio-hero-v2 + hooks.ts + page-v2)
+4d94a603 fix: equity NAV 셀 USD/KRW 2줄 스택
+685fb4e1 fix: equity curve NAV ₩/$ 분리
+a59687ca fix: PWA controllerchange 자동 reload (install-prompt.tsx)
+ec350340 fix: equity curve added_at clamp (가짜 1년 history 제거) + conftest added_at + benchmark 테스트
+b81faec7 fix: 포트폴리오/홈 NAV positions 기반 client-derive fallback
+6acbd636 fix: ₩/$ → KRW/USD ISO 코드 앱 전체 48파일
+8de4ac8d fix: 포트폴리오 hero NAV 시장별 분리
+207a9ff0 fix: 면책 배너 전 페이지 단일화 (journal/discover/ai/DetailHero)
+189a067a fix: risk 페이지 면책 배너 중복 제거
+75ecaf99 fix: 출시 하드닝 (온보딩 none옵션/CSP jsdelivr/검색 KR명/vercel X-XSS/beta rate-limit)
+1912e708 feat: DeskCheckinHero (morning paper 폐기)
+b0533033 fix: risk weight 0% (/positions alias market_value+totals)
+da197204 feat: Mood 넛지 (mood-nudge-card.tsx)
+587522d5 feat: home 통화 분리 navUsd/navKrw + journal 종목명 intended_name
+62851d86 fix: Round2 버그헌팅 11 (artifacts tier bypass P0 / earnings-tone crash P0 / 외)
+8f9863be docs: CLAUDE.md 구조 현행화
+67c9f37f fix: Round1 버그헌팅 11 (법무 P0 권유 lookahead / 외)
+```
 
 ### 🔴 출시 블로커급 (자율 버그헌팅 R1~R3)
 | 버그 | fix |
