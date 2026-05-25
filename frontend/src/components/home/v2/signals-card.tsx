@@ -17,7 +17,7 @@ import useSWR from "swr";
 import { HomeCard } from "./home-card";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { PRICE_COLOR_HEX, displayName, isNakedTicker } from "@/lib/format";
+import { displayName, isNakedTicker } from "@/lib/format";
 
 interface SignalItem {
   id?: number | string;
@@ -48,9 +48,14 @@ interface SignalsResponse {
 
 const fetcher = <T,>(url: string) => apiFetch<T>(url);
 
-function colorForLabel(label: string): string {
-  if (label === "POSITIVE") return PRICE_COLOR_HEX.up;
-  if (label === "NEGATIVE") return PRICE_COLOR_HEX.down;
+// Exported for unit testing the evaluation-token color mapping.
+export function colorForLabel(label: string): string {
+  // Signal *evaluation* labels use the dedicated evaluation tokens
+  // (--pq-positive bronze / --pq-negative carmine), NOT price-direction tokens.
+  // Using PRICE_COLOR_HEX.up/down here mislabeled signal sentiment as price
+  // movement (2026-05-24 reversal bug; sibling signal-card.tsx is correct).
+  if (label === "POSITIVE") return "var(--pq-positive, #b8956a)";
+  if (label === "NEGATIVE") return "var(--pq-negative, #d18888)";
   return "rgba(245,240,232,0.55)";
 }
 

@@ -29,6 +29,11 @@ interface SummaryShape {
   navUsd?: number;
   navKrw?: number;
   todayPnl?: number;
+  // Native-currency Today P/L subtotals (backend portfolio_summary_alias). Used
+  // so a KR-only book shows ₩ P/L instead of the USD-unified figure under a KRW
+  // label (~1380× wrong, v52 FX-split regression).
+  todayPnlUsd?: number;
+  todayPnlKrw?: number;
   todayPnlPct?: number;
   positionCount?: number;
   /**
@@ -185,9 +190,27 @@ export function PortfolioSnapshotCard() {
   };
 
   const positionCount = summary?.positionCount ?? positions.length;
-  const todayPnl = summary?.todayPnl;
   const todayPct = summary?.todayPnlPct;
-  const deltaColor = pctColor(todayPct ?? null);
+
+  // Today P/L — show the NATIVE figure for a single-market book. `summary.todayPnl`
+  // is USD-unified; rendering it under a KRW label for a KR-only holder printed a
+  // ~1380× wrong number (v52 FX-split regression). Mixed (US+KR) books keep the
+  // existing unified-USD behavior since there's only one P/L line here.
+  const todayPnlNative: number | undefined = hasKrOnly
+    ? summary?.todayPnlKrw
+    : hasUsOnly
+      ? (summary?.todayPnlUsd ?? summary?.todayPnl)
+      : summary?.todayPnl;
+  // Sign color from the native figure for single-market books (so a KRW loss is
+  // colored by the ₩ sign, not the unified-USD one); fall back to the pct color.
+  const deltaColor =
+    hasKrOnly || hasUsOnly
+      ? pctColor(
+          todayPnlNative != null && Number.isFinite(todayPnlNative)
+            ? todayPnlNative
+            : (todayPct ?? null),
+        )
+      : pctColor(todayPct ?? null);
 
   return (
     <HomeCard
@@ -260,7 +283,7 @@ export function PortfolioSnapshotCard() {
           marginBottom: 28,
         }}
       >
-        {fmtSignedMoney(todayPnl, currency)}{" "}
+        {fmtSignedMoney(todayPnlNative, currency)}{" "}
         <span style={{ opacity: 0.7 }}>{fmtPct(todayPct)} today</span>
       </div>
 
@@ -341,7 +364,7 @@ export function PortfolioSnapshotCard() {
               marginTop: 2,
             }}
           >
-            {fmtSignedMoney(todayPnl, currency)}
+            {fmtSignedMoney(todayPnlNative, currency)}
           </div>
         </div>
         <div>

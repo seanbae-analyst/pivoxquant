@@ -645,6 +645,33 @@ def register():
             "code": "ALREADY_AUTHENTICATED",
         }), 409
 
+    # 2026-05-25 (security-agent): cross-origin account-precreation / CSRF guard.
+    #
+    # The CSRF double-submit check in security.py:_csrf_protect() SKIPS
+    # unauthenticated callers (`if not current_user.is_authenticated: return`),
+    # so a logged-out POST /register has NO CSRF or Origin verification. A
+    # hostile page (or off-platform attacker) could pre-create an account with
+    # a victim's email + an attacker-chosen password. Because the app is
+    # OAuth-only (Google/Kakao; CLAUDE.md "email+password 없음" — the frontend
+    # `signup()`/`login()` helpers in lib/auth.tsx are dead, never invoked), the
+    # victim's later OAuth login hits _guard_oauth_email_link(), sees a non-null
+    # password_hash, raises OAuthLinkRefused("password_account") → the legitimate
+    # owner is locked out permanently. Reproduced on prod (2026-05-25): POST
+    # /register with `Origin: https://evil.example.com` returned 200.
+    #
+    # Fix: reuse the existing logout Origin allowlist (`_logout_origin_ok`).
+    # A real browser ALWAYS sends Origin/Referer on a cross-origin POST and
+    # cannot forge an allowlisted value; the absent-header case (curl, tests,
+    # native clients) stays permitted exactly like /logout. This blocks the
+    # browser-driven attack without breaking any same-origin flow.
+    if not _logout_origin_ok():
+        return api_error(
+            en="Cross-origin registration is not allowed.",
+            kr="허용되지 않은 출처에서의 가입 요청입니다.",
+            code="AUTH_ORIGIN_NOT_ALLOWED",
+            status=403,
+        )
+
     d = request.get_json() or {}
     email = (d.get("email") or "").strip().lower()
     pw = d.get("password") or ""
@@ -734,6 +761,20 @@ def register():
 @auth_bp.route("/login", methods=["POST"])
 @auth_rate_limit
 def login():
+    # 2026-05-25 (security-agent): same cross-origin / CSRF guard as /register.
+    # Unauthenticated POSTs skip security.py:_csrf_protect(), so without this an
+    # attacker page could drive credential-stuffing against /login from a
+    # victim's browser. Reuses the logout Origin allowlist (browser cross-origin
+    # POSTs always carry Origin/Referer and can't forge an allowlisted value;
+    # header-absent curl/tests stay permitted).
+    if not _logout_origin_ok():
+        return api_error(
+            en="Cross-origin login is not allowed.",
+            kr="허용되지 않은 출처에서의 로그인 요청입니다.",
+            code="AUTH_ORIGIN_NOT_ALLOWED",
+            status=403,
+        )
+
     d = request.get_json() or {}
     u = User.query.filter_by(email=(d.get("email") or "").strip().lower()).first()
     if not u or not u.chk_pw(d.get("password") or ""):

@@ -192,6 +192,11 @@ def _us_status_now() -> dict:
         if weekday == 5:
             days_until_mon = 2
         next_open_et = today_et + timedelta(days=days_until_mon)
+        # Skip holidays after the weekend (mirrors _kr_status_now). e.g. when
+        # the next Monday is itself an NYSE holiday (Memorial Day, MLK Day…),
+        # roll forward to the next real trading day.
+        while next_open_et.weekday() >= 5 or is_us_holiday(next_open_et)[0]:
+            next_open_et += timedelta(days=1)
         next_open_et = next_open_et.replace(hour=US_PRE_OPEN.hour, minute=US_PRE_OPEN.minute)
         return {
             "status": S_CLOSED,
@@ -218,9 +223,9 @@ def _us_status_now() -> dict:
         if t < US_PRE_OPEN:
             next_et = today_et.replace(hour=US_PRE_OPEN.hour, minute=US_PRE_OPEN.minute)
         else:
-            # tomorrow (skip weekend)
+            # tomorrow (skip weekends + holidays, mirrors _kr_status_now)
             next_day = today_et + timedelta(days=1)
-            while next_day.weekday() >= 5:
+            while next_day.weekday() >= 5 or is_us_holiday(next_day)[0]:
                 next_day += timedelta(days=1)
             next_et = next_day.replace(hour=US_PRE_OPEN.hour, minute=US_PRE_OPEN.minute)
         return {"status": S_CLOSED, "label": LABELS_US[S_CLOSED], "next_event": "Pre-market 시작",

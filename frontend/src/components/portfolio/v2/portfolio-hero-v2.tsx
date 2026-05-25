@@ -190,6 +190,15 @@ export function PortfolioHeroV2({
         </>
       );
     }
+    // Single-market books: show the NATIVE figure with its own label/color.
+    // The `unified` fallbacks are USD-unified — labeling them with navCurrency
+    // (KRW for a KR-only book) printed a ~1380× wrong number (v52 regression).
+    if (!hasUs && hasKr) {
+      return <div style={{ color: signColor(krw) }}>{fmtMoneySigned(krw, "KRW")}</div>;
+    }
+    if (hasUs && !hasKr) {
+      return <div style={{ color: signColor(usd) }}>{fmtMoneySigned(usd, "USD")}</div>;
+    }
     return fmtMoneySigned(unified, navCurrency, loading);
   };
   const positionsText = loading

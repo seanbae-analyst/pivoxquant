@@ -92,6 +92,64 @@ class TestRegister:
         # Korean error message also present (user-facing).
         assert "이미 로그인" in body.get("error_kr", "")
 
+    def test_register_rejects_cross_origin_browser_post(self, client):
+        """2026-05-25 security-agent regression guard: cross-origin
+        account-precreation / CSRF.
+
+        Unauthenticated POSTs skip security.py:_csrf_protect(), so before
+        the fix a hostile page could pre-create an account with a victim's
+        email + attacker-chosen password from any Origin. Because the app is
+        OAuth-only, the victim's later OAuth login then hits
+        _guard_oauth_email_link() → OAuthLinkRefused("password_account") →
+        permanent lockout. Reproduced on prod (Origin: evil.example.com → 200).
+
+        A real browser always carries Origin on a cross-origin POST and can't
+        forge an allowlisted value, so a non-allowlisted Origin must 403 and
+        NO user row may be created."""
+        from models import User
+
+        r = client.post(
+            "/api/auth/register",
+            json={
+                "email": "victim-precreate@test.com",
+                "password": "attackerchosenpw",
+                "birthdate": _ADULT_BIRTHDATE,
+            },
+            headers={"Origin": "https://evil.example.com"},
+        )
+        assert r.status_code == 403
+        assert r.get_json()["code"] == "AUTH_ORIGIN_NOT_ALLOWED"
+        # The attack must not have created the account.
+        assert User.query.filter_by(email="victim-precreate@test.com").first() is None
+
+    def test_register_allows_same_origin_browser_post(self, client):
+        """The Origin guard must NOT break the legitimate first-party flow:
+        an allowlisted frontend Origin still registers successfully."""
+        r = client.post(
+            "/api/auth/register",
+            json={
+                "email": "legit-origin@test.com",
+                "password": "goodpassword",
+                "birthdate": _ADULT_BIRTHDATE,
+            },
+            headers={"Origin": "https://pivoxquant.com"},
+        )
+        assert r.status_code == 200
+        assert r.get_json()["ok"] is True
+
+    def test_login_rejects_cross_origin_browser_post(self, client, make_user):
+        """Companion guard on /login — a hostile Origin can't drive
+        credential stuffing from a victim's browser. 403 before the
+        credentials are even checked."""
+        make_user(email="login-origin@test.com", password="rightpassword")
+        r = client.post(
+            "/api/auth/login",
+            json={"email": "login-origin@test.com", "password": "rightpassword"},
+            headers={"Origin": "https://evil.example.com"},
+        )
+        assert r.status_code == 403
+        assert r.get_json()["code"] == "AUTH_ORIGIN_NOT_ALLOWED"
+
 
 # ── Register race condition (wave 12 P0) ────────────────────────────────────
 # 2026-05-17: TOCTOU race fix — the pre-fix code did `User.query.first()` then

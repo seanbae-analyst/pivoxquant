@@ -11,7 +11,9 @@ import time as _time
 
 import numpy as np
 from flask import Blueprint, jsonify, request
+from flask_login import current_user
 
+from services.access_guard import access_denied_response, is_user_allowed_ticker
 from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth, legal_scrub_response
@@ -211,6 +213,11 @@ def short_interest_signal(ticker):
             status=400,
         )
 
+    # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정 (임의 종목 분석 노출 차단).
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
+
     # per-ticker cache
     now = _time.time()
     cache_entry = _si_cache.get(ticker)
@@ -388,6 +395,11 @@ def insider_signal(ticker):
             status=400,
         )
 
+    # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
+
     # Korean tickers not supported for insider data (SEC/FMP only)
     if ticker.endswith(".KS") or ticker.endswith(".KQ"):
         return api_error(
@@ -462,6 +474,11 @@ def signal_disposition(ticker):
     if err:
         return err
 
+    # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
+
     now = _time.time()
     cache_key = f"disposition:{ticker}"
     cached = _signal_cache.get(cache_key)
@@ -518,6 +535,11 @@ def signal_ofi(ticker):
     if err:
         return err
 
+    # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
+
     now = _time.time()
     cache_key = f"ofi:{ticker}"
     cached = _signal_cache.get(cache_key)
@@ -573,6 +595,11 @@ def signal_sentiment_divergence(ticker):
     ticker, err = _ticker_validate(ticker)
     if err:
         return err
+
+    # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
 
     now = _time.time()
     cache_key = f"sentdiv:{ticker}"
@@ -644,6 +671,11 @@ def signal_anchoring(ticker):
     ticker, err = _ticker_validate(ticker)
     if err:
         return err
+
+    # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
 
     now = _time.time()
     cache_key = f"anchoring:{ticker}"

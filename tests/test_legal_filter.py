@@ -722,3 +722,95 @@ class TestOverboughtOversoldGuard:
         out = safe_scrub(text)
         assert expected_token in out, f"bare {text!r} should still scrub → {out!r}"
         assert out != text
+
+
+class TestOverScrubFixes2026_05_25:
+    """Regression guard for 5 over-scrub corruptions fixed 2026-05-25.
+
+    The scrub rules previously mangled legitimate prose / disclaimer text:
+      1. "suggests" → "observe" (suffix dropped, broke grammar)
+      2. "정보 제안을" → "정보 정보 제공을" (duplicated "정보")
+      3. "자문 서비스가 아닙니다" → "정보 제공 서비스가 아닙니다" (면책 의미 역전)
+      4. "포트폴리오 리밸런싱" → "포트폴리오 포트폴리오 재점검" (duplicated)
+      5. "이기적/이기주의" → "benchmark 대비 기록하…" (한국어 명사 파괴)
+
+    Each fix must (a) preserve the original prose AND (b) leave genuine
+    advisory vocabulary still scrubbed (protection not weakened).
+    """
+
+    # ── Fix #1: suggest inflections keep grammatical "observe" forms ──
+    @pytest.mark.parametrize(
+        "original,expected",
+        [
+            ("This suggests strong momentum", "This observes strong momentum"),
+            ("The data suggested a trend", "The data observed a trend"),
+            ("It is suggesting caution", "It is observing caution"),
+            ("a helpful suggestion", "a helpful observation"),
+            ("several suggestions", "several observations"),
+        ],
+    )
+    def test_suggest_grammar_preserved(self, original, expected):
+        assert scrub_text(original) == expected
+
+    # ── Fix #2: "제안" no longer duplicates a preceding "정보" ──
+    def test_jean_no_double_jeongbo(self):
+        out = scrub_text("정보 제안을 드립니다")
+        assert "정보 정보" not in out, f"duplicated 정보 → {out!r}"
+        assert "제안" not in out, f"제안 should still scrub → {out!r}"
+
+    # ── Fix #3 (CRITICAL): 자문 disclaimer meaning preserved ──
+    @pytest.mark.parametrize(
+        "original",
+        [
+            "본 서비스는 투자 자문 서비스가 아닙니다",
+            "이것은 자문 서비스가 아님을 고지합니다",
+            "전문가의 자문을 받으시기 바랍니다",
+            "본 정보는 자문을 구성하지 않습니다",
+            "자문 없이 제공되는 정보입니다",
+        ],
+    )
+    def test_jamun_disclaimer_preserved(self, original):
+        out = scrub_text(original)
+        assert "자문" in out, f"면책 자문 표현이 손상됨 → {out!r}"
+        assert out == original, f"면책 의미 역전 → {out!r}"
+
+    # ── Fix #4: 리밸런싱 no longer duplicates 포트폴리오 ──
+    def test_rebalancing_no_double_portfolio(self):
+        out = scrub_text("포트폴리오 리밸런싱")
+        assert "포트폴리오 포트폴리오" not in out, f"duplicated → {out!r}"
+        assert "리밸런싱" not in out, f"리밸런싱 should still scrub → {out!r}"
+        assert out == "포트폴리오 재배분"
+
+    # ── Fix #5: 이기 verb-stem only; nouns preserved ──
+    @pytest.mark.parametrize(
+        "noun",
+        ["이기적인 행동", "이기주의", "이기심", "이기적 동기"],
+    )
+    def test_igi_noun_preserved(self, noun):
+        out = scrub_text(noun)
+        assert out == noun, f"한국어 명사 파괴 → {out!r}"
+        assert "benchmark" not in out
+
+    @pytest.mark.parametrize(
+        "verb",
+        ["시장을 이기다", "벤치마크를 이기고", "지수를 이기는"],
+    )
+    def test_igi_verb_still_scrubbed(self, verb):
+        out = scrub_text(verb)
+        assert "이기" not in out or "benchmark 대비 기록" in out
+        assert "benchmark 대비 기록" in out, f"동사 어간 미치환 → {out!r}"
+
+    # ── Protection-not-weakened sanity: real advisory verbs still scrub ──
+    @pytest.mark.parametrize(
+        "original,banned",
+        [
+            ("지금 매수하세요", "매수"),
+            ("삼성전자 매도 권고", "권고"),
+            ("You should BUY now", "BUY"),
+            ("SELL signal detected", "SELL"),
+            ("take profit here", "profit"),
+        ],
+    )
+    def test_forbidden_still_scrubbed(self, original, banned):
+        out = scrub_text(original)
+        assert banned not in out, f"보호 약화 — {banned!r} survived → {out!r}"

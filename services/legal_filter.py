@@ -89,7 +89,10 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"공격적\s*(투자|포지션|접근)"), "변동성 높은 \\1"),
     (re.compile(r"보수적\s*(투자|포지션|접근)"), "변동성 낮은 \\1"),
     (re.compile(r"베스트\s*종목"), "상위 지표 종목"),
-    (re.compile(r"이기"), "benchmark 대비 기록하"),  # "이기다", "이겼다", "이겼습니다"의 어간
+    # "이기다/이기고/이기며…"(beat market) 동사 어간만 — lookahead 로 동사 어미를
+    # 강제해 "이기적/이기주의/이기심" 같은 명사를 보존 (over-scrub fix #5, 2026-05-25).
+    # 어미 부재 시 미매치 → "이기적인 행동" 등 정상 산문 파괴 방지.
+    (re.compile(r"이기(?=다|고|며|어|었|겠|는|면|니까|지)"), "benchmark 대비 기록하"),
 
     # ── Group 6: 영문 — 동사형 / 명령형 ──────────────────────────────────
     # 순서 주의: "BUY signal" / "SELL signal" 복합구문이 단독 \bBUY\b / \bSELL\b
@@ -105,7 +108,18 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\brecommend(ation|ed|ing|s)?\b", re.IGNORECASE), "note"),
     (re.compile(r"\badvise(d|s|ing)?\b", re.IGNORECASE), "provide information"),
     (re.compile(r"\badvice\b", re.IGNORECASE), "information"),
-    (re.compile(r"\bsuggest(ed|ing|s)?\b", re.IGNORECASE), "observe"),
+    # Suffix-explicit so grammar survives (2026-05-25 over-scrub fix #1).
+    # Previous `(\bsuggest(ed|ing|s)?\b → "observe")` dropped the suffix
+    # ("suggests"→"observe strong momentum"). Map each inflection to its
+    # grammatical "observe" counterpart. Ordered longest-suffix-first.
+    # Duplicate line-138 \bsuggest(s|ed|ion|ions)?\b rule below is now
+    # subsumed by these; kept removed to avoid the double-fire.
+    (re.compile(r"\bsuggesting\b", re.IGNORECASE), "observing"),
+    (re.compile(r"\bsuggestions\b", re.IGNORECASE), "observations"),
+    (re.compile(r"\bsuggestion\b", re.IGNORECASE), "observation"),
+    (re.compile(r"\bsuggested\b", re.IGNORECASE), "observed"),
+    (re.compile(r"\bsuggests\b", re.IGNORECASE), "observes"),
+    (re.compile(r"\bsuggest\b", re.IGNORECASE), "observe"),
     (re.compile(r"\btarget\s*price\b", re.IGNORECASE), "reference price"),
     (re.compile(r"\bfair\s*value\b", re.IGNORECASE), "reference value"),
     (re.compile(r"\bprice\s*target\b", re.IGNORECASE), "reference price"),
@@ -129,13 +143,15 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     # 순서 주의: 복합 구문(Should buy, Must sell 등) 이 단독 \bShould\b 보다 앞에 와야 함.
     (re.compile(r"\bShould\s+(buy|sell|hold|consider|avoid)\b", re.IGNORECASE), "note"),
     (re.compile(r"\bMust\s+(buy|sell|hold|consider|avoid)\b", re.IGNORECASE), "note"),
-    (re.compile(r"리밸런싱(?!하지\s*않|하지\s*맙)"), "포트폴리오 재점검"),
+    # 대체어 "재배분" — 기존 "포트폴리오 재점검" 은 "포트폴리오 리밸런싱"을
+    # "포트폴리오 포트폴리오 재점검" 으로 중복 출력 (over-scrub fix #4, 2026-05-25).
+    (re.compile(r"리밸런싱(?!하지\s*않|하지\s*맙)"), "재배분"),
     # 금융 문맥의 "최적화" 만 치환 — "성능/SEO/프로세스 최적화" 는 scope 밖 (선행 negative lookbehind).
     (re.compile(r"(?<![최저성능SEO프로세스UX])최적화(?!하지\s*않)"), "재구성"),
     (re.compile(r"Target\s*Weight", re.IGNORECASE), "Reference Weight"),
-    # Suggest / Optimize — 단독 동사/명사 형태. 케이스 보존 위해 suffix capture.
-    (re.compile(r"\bSuggest(s|ed|ion|ions)?\b"), r"Observe\1"),
-    (re.compile(r"\bsuggest(s|ed|ion|ions)?\b"), r"observe\1"),
+    # Optimize — 단독 동사/명사 형태. 케이스 보존 위해 suffix capture.
+    # (Suggest 규칙은 over-scrub fix #1 로 Group 6 으로 이동·세분화됨 — 여기서
+    #  중복 발화하던 backref-없는 buggy 버전 2개 제거. 2026-05-25.)
     (re.compile(r"\bOptimize(s|d)?\b"), r"Reconfigure\1"),
     (re.compile(r"\boptimize(s|d)?\b"), r"reconfigure\1"),
     # 단독 \bShould\b / \bMust\b — 복합 구문 이후에 잔존하는 케이스만 매치.
@@ -151,10 +167,19 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
         r"|\s*없|\s*또는|\s*아[닌님])"
     ), "안내"),
     (re.compile(r"(?<![명\s])가이드(?!하지|를\s*제공하지|라인)"), "참고 정보"),
-    # 자문: "자문을 제공하지 않습니다" / "자문업 등록" 문맥 제외.
-    (re.compile(r"(?<![투자])자문(?!을?\s*제공하지|업\s*등록|업체|하지)"), "정보 제공"),
-    # 단독 "제안" — 방어 부정 제외
-    (re.compile(r"제안(?!드리지\s*않|하지\s*않)"), "정보 제공"),
+    # 자문: 면책·부정 문맥 보존 (over-scrub fix #3, 가장 위험, 2026-05-25).
+    # "자문 서비스가 아닙니다" 같은 면책고지가 "정보 제공 서비스가 아닙니다"로
+    # 치환되면 의미가 역전(서비스 자체를 부정)돼 자본시장법 §6 면책이 무효화됨.
+    # lookahead 에 면책 맥락 추가: "자문 서비스가 아님/아닙", "자문 없이",
+    # "자문을 받으(시기)", "자문을 구성하지 않습니다".
+    (re.compile(
+        r"(?<![투자])자문(?!을?\s*제공하지|업\s*등록|업체|하지"
+        r"|\s*서비스\s*가?\s*아(?:님|닙)|\s*없이|을?\s*받으|을?\s*구성하지)"
+    ), "정보 제공"),
+    # 단독 "제안" — 방어 부정 제외. 대체어 "안내" 사용 (over-scrub fix #2,
+    # 2026-05-25): 기존 "정보 제공" 은 "정보 제안을" → "정보 정보 제공을" 으로
+    # "정보" 가 중복 출력됨. "안내" 는 어떤 선행어와도 자연스럽게 결합.
+    (re.compile(r"제안(?!드리지\s*않|하지\s*않)"), "안내"),
 
     # ── Group 9: Wave 2 — EN advisory verbs from engine.py _reason() / alerts ──
     # 순서 주의: 복합 구문(Consider reducing N% of position)이 단독 \bConsider\b 보다 앞에 와야 함.

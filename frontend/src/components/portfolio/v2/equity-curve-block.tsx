@@ -291,19 +291,26 @@ export function EquityCurveBlock({
         >
           <KpiCell
             label="NAV"
-            value={
-              typeof navUsd === "number" && navUsd > 0 &&
-              typeof navKrw === "number" && navKrw > 0 ? (
+            value={(() => {
+              const hasUs = typeof navUsd === "number" && navUsd > 0;
+              const hasKr = typeof navKrw === "number" && navKrw > 0;
+              if (hasUs && hasKr) {
                 // KR + US held → stack the native subtotals on separate lines
                 // (CEO 2026-05-24: KRW must drop below USD, not sit inline).
-                <>
-                  <div>{fmtMoney(navUsd, "USD")}</div>
-                  <div>{fmtMoney(navKrw, "KRW")}</div>
-                </>
-              ) : (
-                fmtMoney(currentNav, currency)
-              )
-            }
+                return (
+                  <>
+                    <div>{fmtMoney(navUsd, "USD")}</div>
+                    <div>{fmtMoney(navKrw, "KRW")}</div>
+                  </>
+                );
+              }
+              // Single-market book: show the native subtotal with its own label.
+              // `currentNav` is USD-unified; labeling it with `currency` (KRW for
+              // a KR-only book) printed a ~1380× wrong number (v52 regression).
+              if (hasKr) return fmtMoney(navKrw, "KRW");
+              if (hasUs) return fmtMoney(navUsd, "USD");
+              return fmtMoney(currentNav, currency);
+            })()}
             valueColor="var(--pq-ivory)"
           />
           <KpiCell

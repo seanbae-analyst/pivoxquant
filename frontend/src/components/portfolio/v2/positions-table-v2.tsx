@@ -83,14 +83,21 @@ interface DerivedPosition {
   weight: number; // 0..100
 }
 
-function derive(
+// Exported for unit testing the FX-aware weight math (KR-only/US-only/mixed).
+export function derive(
   positions: Position[],
   totalNav: number,
   fxRate: number | null,
   displayCurrency: "USD" | "KRW",
 ): DerivedPosition[] {
-  const safeTotal = totalNav > 0 ? totalNav : 1;
   const safeFx = fxRate && fxRate > 0 ? fxRate : null;
+  // `totalNav` is always USD-unified (backend portfolio summary alias). When the
+  // display currency is KRW the per-position `mvNormalized` below is computed in
+  // KRW, so the weight denominator must be KRW too — otherwise a KR-only book
+  // divides KRW by USD and reports ~138,000% weights (v52 FX-split regression).
+  const totalNavInDisplay =
+    displayCurrency === "KRW" && safeFx ? totalNav * safeFx : totalNav;
+  const safeTotal = totalNavInDisplay > 0 ? totalNavInDisplay : 1;
   return positions.map((p) => {
     const mv = p.shares * p.current;
     const cost = p.shares * p.avgCost;
