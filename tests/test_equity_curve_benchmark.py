@@ -21,10 +21,16 @@ External APIs are mocked — no network calls (per conftest policy).
 """
 from __future__ import annotations
 
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+
+# Positions must be opened BEFORE the mocked history window — the equity-curve
+# endpoint clamps each position to dates >= added_at (honesty: no fabricated
+# pre-ownership history). A far-past open date keeps every mocked date in range.
+_OPENED = datetime(2000, 1, 1)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -71,7 +77,7 @@ class TestUsPortfolioBenchmark:
     def test_spy_benchmark_attached_to_each_point(
         self, client, auth_user, add_position
     ):
-        add_position(auth_user["id"], ticker="AAPL", shares=10.0, avg_cost=150.0)
+        add_position(auth_user["id"], ticker="AAPL", shares=10.0, avg_cost=150.0, added_at=_OPENED)
 
         dates = ["2026-05-05", "2026-05-06", "2026-05-07"]
         position_hist = _portfolio_history_df(dates, [150.0, 151.0, 152.0])
@@ -100,7 +106,7 @@ class TestUsPortfolioBenchmark:
     def test_spy_fetch_failure_omits_benchmark_field(
         self, client, auth_user, add_position
     ):
-        add_position(auth_user["id"], ticker="MSFT", shares=5.0, avg_cost=300.0)
+        add_position(auth_user["id"], ticker="MSFT", shares=5.0, avg_cost=300.0, added_at=_OPENED)
 
         dates = ["2026-05-05", "2026-05-06"]
         position_hist = _portfolio_history_df(dates, [300.0, 301.0])
@@ -134,7 +140,7 @@ class TestKrPortfolioBenchmark:
     ):
         # .KS suffix → KR branch
         add_position(auth_user["id"], ticker="005930.KS", shares=10.0,
-                     avg_cost=70000.0)
+                     avg_cost=70000.0, added_at=_OPENED)
 
         dates_iso = ["2026-05-05", "2026-05-06", "2026-05-07"]
         dates_kis = ["20260505", "20260506", "20260507"]
@@ -164,7 +170,7 @@ class TestKrPortfolioBenchmark:
         self, client, auth_user, add_position
     ):
         add_position(auth_user["id"], ticker="000660.KS", shares=2.0,
-                     avg_cost=100000.0)
+                     avg_cost=100000.0, added_at=_OPENED)
 
         dates_iso = ["2026-05-05", "2026-05-06"]
         dates_kis = ["20260505", "20260506"]
@@ -196,7 +202,7 @@ class TestKrPortfolioBenchmark:
         self, client, auth_user, add_position
     ):
         add_position(auth_user["id"], ticker="005930.KS", shares=10.0,
-                     avg_cost=70000.0)
+                     avg_cost=70000.0, added_at=_OPENED)
 
         dates_iso = ["2026-05-05", "2026-05-06"]
         position_hist = _portfolio_history_df(dates_iso, [71000.0, 72000.0])
@@ -223,9 +229,9 @@ class TestKrPortfolioBenchmark:
         # without additional FX work; KOSPI is the safer single-bench
         # for any KR exposure).
         add_position(auth_user["id"], ticker="AAPL",      shares=5.0,
-                     avg_cost=150.0)
+                     avg_cost=150.0, added_at=_OPENED)
         add_position(auth_user["id"], ticker="005930.KS", shares=10.0,
-                     avg_cost=70000.0)
+                     avg_cost=70000.0, added_at=_OPENED)
 
         dates_iso = ["2026-05-05", "2026-05-06"]
         dates_kis = ["20260505", "20260506"]
@@ -253,7 +259,7 @@ class TestBenchmarkDateAlignment:
     def test_partial_overlap_only_matched_points_get_benchmark(
         self, client, auth_user, add_position
     ):
-        add_position(auth_user["id"], ticker="NVDA", shares=2.0, avg_cost=900.0)
+        add_position(auth_user["id"], ticker="NVDA", shares=2.0, avg_cost=900.0, added_at=_OPENED)
 
         port_dates = ["2026-05-05", "2026-05-06", "2026-05-07"]
         # Benchmark only covers 2 of 3 portfolio days (e.g. KIS holiday).

@@ -1786,8 +1786,26 @@ def portfolio_history():
             if h is None or h.empty:
                 continue
             is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
+            # Honesty clamp (CEO 2026-05-24: "내 1년 데이터 갖고 있어?"): only
+            # count a position from the date it was actually opened (added_at).
+            # Without this the curve applies the CURRENT share count to the full
+            # FMP window, fabricating portfolio value for dates BEFORE the user
+            # held anything — a brand-new account would show a full 1y curve.
+            # Clamping makes "How the book moves" start when the book really did.
+            opened_date = None
+            _added = getattr(p, "added_at", None)
+            if _added is not None:
+                try:
+                    opened_date = _added.date()
+                except Exception:
+                    opened_date = None
             try:
                 for date_idx, row in h.iterrows():
+                    try:
+                        if opened_date is not None and date_idx.date() < opened_date:
+                            continue  # position not yet held on this date
+                    except Exception:
+                        pass
                     ds = date_idx.strftime("%Y-%m-%d")
                     if ds not in all_values:
                         all_values[ds] = 0

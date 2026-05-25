@@ -301,10 +301,17 @@ def add_position(app):
     from extensions import db
     from models import Position
 
-    def _add(user_id, ticker="AAPL", shares=10.0, avg_cost=150.0, buy_fx=1000.0):
+    def _add(user_id, ticker="AAPL", shares=10.0, avg_cost=150.0, buy_fx=1000.0,
+             added_at=None):
         with app.app_context():
             p = Position(user_id=user_id, ticker=ticker, shares=shares,
                          avg_cost=avg_cost, buy_fx_rate=buy_fx)
+            # Optional opened-date override. The equity-curve endpoint clamps
+            # each position's contribution to dates >= added_at (honesty: no
+            # fabricated pre-ownership history), so tests exercising a
+            # multi-month historical curve must open the position in the past.
+            if added_at is not None:
+                p.added_at = added_at
             db.session.add(p)
             db.session.commit()
             return p.id
