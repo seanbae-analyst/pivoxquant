@@ -28,6 +28,7 @@ import re
 from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user
 
+from models import Position
 from models.broker_connection import BrokerConnection
 from security import trade_rate_limit
 from services.broker.user_alpaca_service import (
@@ -60,6 +61,37 @@ broker_oauth_bp = Blueprint("broker_oauth", __name__, url_prefix="/api/broker")
 _ACCOUNT_RE = re.compile(r"^\d{8}$")
 _PROD_RE = re.compile(r"^\d{2}$")
 
+# 2026-05-25 Bug #3: BrokerConnection.display_name is db.String(100). A payload
+# with a >100-char display_name reaches PostgreSQL and raises
+# `DataError: value too long for type character varying(100)` → 500. Reject at
+# the boundary with an explicit 400 so the caller gets a clear message rather
+# than an opaque server error. SQLite (local test) silently truncates instead
+# of raising, masking the bug locally — hence the explicit guard.
+_DISPLAY_NAME_MAX = 100
+
+# Free-tier position cap (mirror of routes/portfolio.py:2072). Free users (or
+# users with no tier set) may hold at most 3 positions total; broker sync must
+# not bypass this via brand-new inserts.
+FREE_POSITION_CAP = 3
+
+
+def _free_tier_position_budget(user_id: int) -> int | None:
+    """Compute `max_new_positions` for a KIS sync given the user's tier.
+
+    Returns the remaining NEW-insert budget for free-tier users (so a free user
+    cannot exceed FREE_POSITION_CAP via broker sync), or None for paid tiers
+    (unlimited). Mirrors the reconcile implementation in
+    routes/portfolio.py:2070-2076 exactly — `held` counts current shares>0
+    positions; budget = max(cap - held, 0). Existing positions are always
+    upserted regardless of the cap (handled in sync_to_db).
+    """
+    if getattr(current_user, "effective_tier", None) not in (None, "free"):
+        return None
+    held = Position.query.filter_by(user_id=user_id).filter(
+        Position.shares > 0
+    ).count()
+    return max(FREE_POSITION_CAP - held, 0)
+
 
 def _validate_connect_payload(body: dict) -> tuple[dict | None, dict | None]:
     """Returns (cleaned_dict, error_dict). Only one is non-None."""
@@ -72,6 +104,11 @@ def _validate_connect_payload(body: dict) -> tuple[dict | None, dict | None]:
     account_prod = (body.get("account_prod") or "01").strip()
     display_name = (body.get("display_name") or "").strip() or None
 
+    if display_name is not None and len(display_name) > _DISPLAY_NAME_MAX:
+        return None, {
+            "error": f"표시 이름은 {_DISPLAY_NAME_MAX}자 이하여야 합니다.",
+            "code": "INVALID_DISPLAY_NAME",
+        }
     if not app_key or len(app_key) < 16:
         return None, {"error": "APP KEY가 올바르지 않습니다.", "code": "INVALID_APP_KEY"}
     if not app_secret or len(app_secret) < 16:
@@ -142,7 +179,12 @@ def kis_connect():
         }), 400
 
     # Kick off an initial sync (best-effort; sync errors surface as warnings).
-    sync_result = service.sync_to_db()
+    # 2026-05-25 Bug #1: apply the free-tier 3-position cap here too — the
+    # initial sync was inserting positions with no cap, letting a free user
+    # bypass the limit (revenue leak). Mirror reconcile (portfolio.py:2070-2078).
+    sync_result = service.sync_to_db(
+        max_new_positions=_free_tier_position_budget(current_user.id)
+    )
     initial_sync = {
         "ok": bool(sync_result.get("ok")),
         "added": sync_result.get("added", []),
@@ -171,7 +213,12 @@ def kis_sync():
     except UserKISError as exc:
         return jsonify({"error": exc.message, "code": exc.code}), exc.http_status
 
-    result = service.sync_to_db()
+    # 2026-05-25 Bug #1: manual sync must enforce the free-tier 3-position cap
+    # too. Was calling sync_to_db() with no cap → free user could exceed the
+    # limit by syncing a KIS account holding >3 symbols (revenue leak).
+    result = service.sync_to_db(
+        max_new_positions=_free_tier_position_budget(current_user.id)
+    )
     if not result.get("ok"):
         return jsonify({
             "error": result.get("error", "KIS 동기화에 실패했습니다."),

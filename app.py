@@ -127,6 +127,59 @@ def _set_sentry_user_type_tag() -> str:
         return "anon"
 
 
+# ── PIPA §22 ⑥ — age-verification gate (defense-in-depth) ───────────────────
+#
+# An OAuth signup is only *provisioned* (``login_user``) so the frontend can
+# POST the birthdate via ``/api/auth/oauth-finalize``. Until that column is
+# set we must NOT let the authenticated session reach any data / feature
+# endpoint — otherwise a direct API caller (curl) bypasses the browser
+# interstitial and uses the product (and can flip ``onboarding_completed``)
+# without ever confirming they are 14+.
+#
+# We gate only ``/api/*`` (rendered HTML / OAuth redirect HTML is not a data
+# surface). A tight whitelist keeps the very routes that LET a user reach a
+# set birthdate (or escape the half-provisioned state) open — dropping any
+# of these would lock every fresh OAuth user out entirely:
+#   - oauth-finalize: the ONLY route that writes birthdate.
+#   - me: how the frontend learns ``birthdate_required=True`` → redirect to
+#         the ``/signup/oauth-finalize`` interstitial.
+#   - logout / logout alias: must be able to abandon the session.
+#   - google|kakao callbacks: complete the OAuth handshake itself.
+#   - delete-account / delete-request: PIPA §36 (삭제권) cannot be blocked by
+#         a missing birthdate.
+#   - health: liveness probe, no user data.
+# CSRF tokens ride on every response cookie (security._set_security_headers)
+# so no separate csrf-token endpoint exists to whitelist.
+BIRTHDATE_GATE_WHITELIST = frozenset({
+    "/api/auth/oauth-finalize",
+    "/api/auth/me",
+    "/api/auth/logout",
+    "/api/logout",
+    "/api/auth/google/callback",
+    "/api/auth/kakao/callback",
+    "/api/auth/delete-account",
+    "/api/auth/delete-request",
+    "/api/health",
+})
+
+
+def birthdate_gate_blocks(path, is_authenticated, birthdate):
+    """Return True iff this request must be 403'd for a missing birthdate.
+
+    Pure predicate (no Flask globals) so it is directly unit-testable. The
+    ``before_request`` hook in :func:`create_app` is a thin wrapper around it.
+    """
+    normalized = (path or "").rstrip("/") or "/"
+    if not normalized.startswith("/api/"):
+        return False
+    if normalized in BIRTHDATE_GATE_WHITELIST:
+        return False
+    if not is_authenticated:
+        # api_auth / public endpoints handle the unauthenticated case.
+        return False
+    return birthdate is None
+
+
 # ── App factory ───────────────────────────────────────────────────────────────
 
 def create_app():
@@ -288,6 +341,20 @@ def create_app():
     @app.before_request
     def _sentry_user_type_tag():
         _set_sentry_user_type_tag()
+
+    @app.before_request
+    def _require_birthdate():
+        from flask_login import current_user
+        if birthdate_gate_blocks(
+            request.path,
+            bool(getattr(current_user, "is_authenticated", False)),
+            getattr(current_user, "birthdate", None),
+        ):
+            return jsonify({
+                "error":    "Birthdate confirmation required.",
+                "error_kr": "생년월일 확인이 필요합니다.",
+                "code":     "BIRTHDATE_REQUIRED",
+            }), 403
 
     # Public OG / social-share images intentionally set a long, cacheable
     # ``Cache-Control: public, max-age=...`` (routes/artifacts.py) so that

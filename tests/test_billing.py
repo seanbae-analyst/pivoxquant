@@ -159,6 +159,138 @@ class TestCreateCheckout:
         )
         assert r.get_json()["code"] == "BILLING_ALREADY_SUBSCRIBED"
 
+    # ── Bug #1: highest-tier (env grant) blocked from checkout ──────────
+    def test_founding_lifetime_user_returns_409_already_entitled(
+        self, app, client, make_user, monkeypatch
+    ):
+        """founding_lifetime (DEV_FOUNDING_EMAILS grant, status='inactive')
+        must NOT be able to start a paid checkout. The old status-only guard
+        let them through → checkout.session.completed would overwrite their
+        lifetime tier with pro/premium + active and start monthly billing.
+        """
+        from extensions import db
+        from models import User
+        email = "founder@test.com"
+        user = make_user(email=email, password="pw12345678")
+        # founding_lifetime grant via env (status stays inactive).
+        monkeypatch.setenv("DEV_FOUNDING_EMAILS", email)
+        with app.app_context():
+            db.session.execute(
+                User.__table__.update()
+                .where(User.id == user["id"])
+                .values(subscription_status="inactive", subscription_tier="free")
+            )
+            db.session.commit()
+        resp = client.post("/api/auth/login", json={
+            "email": user["email"],
+            "password": user["password"],
+        })
+        assert resp.status_code == 200, resp.get_data(as_text=True)
+
+        with patch("routes.billing.PLAN_PRICES", {"pro": "price_123"}), \
+             patch("routes.billing.stripe") as mock_stripe:
+            mock_stripe.Customer.create.return_value = MagicMock(id="cus_x")
+            mock_stripe.checkout.Session.create.return_value = MagicMock(
+                url="https://checkout.stripe.com/pay/x"
+            )
+            mock_stripe.StripeError = Exception
+            r = client.post(
+                "/api/billing/create-checkout",
+                json={"plan": "pro", "consent": _CONSENT},
+            )
+        assert r.status_code == 409, (
+            f"expected 409 BILLING_ALREADY_ENTITLED, got "
+            f"{r.status_code} {r.get_json()!r}"
+        )
+        assert r.get_json()["code"] == "BILLING_ALREADY_ENTITLED"
+        # Stripe must never have been touched.
+        mock_stripe.checkout.Session.create.assert_not_called()
+
+    def test_plain_free_user_can_still_checkout(self, client, auth_user):
+        """Regression guard: the new entitlement gate must NOT block ordinary
+        free users — they reach the Stripe checkout flow as before.
+        """
+        with patch("routes.billing.PLAN_PRICES", {"pro": "price_123"}), \
+             patch("routes.billing.stripe") as mock_stripe:
+            mock_stripe.Customer.create.return_value = MagicMock(id="cus_free")
+            mock_stripe.checkout.Session.create.return_value = MagicMock(
+                url="https://checkout.stripe.com/pay/free"
+            )
+            mock_stripe.StripeError = Exception
+            r = client.post(
+                "/api/billing/create-checkout",
+                json={"plan": "pro", "consent": _CONSENT},
+            )
+        assert r.status_code == 200, r.get_data(as_text=True)
+        assert r.get_json()["url"].startswith("https://checkout.stripe.com/")
+
+
+class TestDowngradeToFree:
+    """Bug #3: full refund downgrade must clear stripe_subscription_id."""
+
+    def test_downgrade_clears_stripe_subscription_id(self, app, make_user):
+        from extensions import db
+        from models import User
+        from routes.billing import _downgrade_user_to_free
+        user = make_user(email="refunded@test.com", password="pw12345678")
+        with app.app_context():
+            db.session.execute(
+                User.__table__.update()
+                .where(User.id == user["id"])
+                .values(
+                    subscription_tier="pro",
+                    subscription_status="active",
+                    stripe_subscription_id="sub_live_123",
+                )
+            )
+            db.session.commit()
+            u = db.session.get(User, user["id"])
+            _downgrade_user_to_free(u, reason="full_refund")
+            refreshed = db.session.get(User, user["id"])
+            assert refreshed.subscription_tier == "free"
+            assert refreshed.subscription_status == "canceled"
+            # The fix: stripe_subscription_id must be cleared so
+            # get_subscription does not surface a future period_end.
+            assert refreshed.stripe_subscription_id is None
+
+    def test_get_subscription_no_period_end_after_refund(
+        self, app, client, make_user
+    ):
+        """After a full-refund downgrade, get_subscription must NOT call
+        Stripe.Subscription.retrieve nor expose current_period_end.
+        """
+        from extensions import db
+        from models import User
+        from routes.billing import _downgrade_user_to_free
+        user = make_user(email="refunded2@test.com", password="pw12345678")
+        with app.app_context():
+            db.session.execute(
+                User.__table__.update()
+                .where(User.id == user["id"])
+                .values(
+                    subscription_tier="pro",
+                    subscription_status="active",
+                    stripe_subscription_id="sub_live_456",
+                )
+            )
+            db.session.commit()
+            u = db.session.get(User, user["id"])
+            _downgrade_user_to_free(u, reason="full_refund")
+
+        resp = client.post("/api/auth/login", json={
+            "email": user["email"],
+            "password": user["password"],
+        })
+        assert resp.status_code == 200, resp.get_data(as_text=True)
+
+        with patch("routes.billing.stripe") as mock_stripe:
+            mock_stripe.StripeError = Exception
+            r = client.get("/api/billing/subscription")
+        assert r.status_code == 200, r.get_data(as_text=True)
+        body = r.get_json()
+        assert "current_period_end" not in body
+        mock_stripe.Subscription.retrieve.assert_not_called()
+
 
 class TestWebhook:
     def test_webhook_without_secret_configured_returns_503(self, raw_client):

@@ -31,6 +31,7 @@ from models import (
     NpsFeedback,
     PersonaSnapshot,
     Position,
+    PreTradeReflection,
     TradeHistory,
     VALID_CADENCES,
     VOTE_CHOICES,
@@ -246,6 +247,19 @@ def save_onboarding_draft():
 @general_rate_limit
 def submit_onboarding():
     """Submit onboarding answers → calculate profile → save → return result."""
+    # PIPA §22 ⑥ fail-fast ( double defense behind app._require_birthdate).
+    # onboarding_completed must never flip to True for a session whose age
+    # was never confirmed — a half-provisioned OAuth user (birthdate NULL)
+    # calling this directly would otherwise mark themselves onboarded. The
+    # global gate already 403s here, but this in-route guard keeps the
+    # invariant local and survives any future whitelist edit.
+    if getattr(current_user, "birthdate", None) is None:
+        return api_error(
+            en="Birthdate confirmation required before onboarding.",
+            kr="온보딩 전에 생년월일 확인이 필요합니다.",
+            code="BIRTHDATE_REQUIRED", status=403,
+        )
+
     data = request.get_json() or {}
     answers = data.get("answers", {})
     if not isinstance(answers, dict):
@@ -1532,6 +1546,12 @@ _EXPORT_BEHAVIORAL_LIMIT = 520   # ~10 years of weekly scores
 _EXPORT_PULSE_LIMIT = 520        # ~10 years of weekly pulses
 _EXPORT_PERSONA_LIMIT = 520      # ~10 years of weekly persona snapshots
 _EXPORT_NPS_LIMIT = 1000         # 1-click NPS submissions
+# PIPA §35 — pre-trade reflections hold user free-text (rationale) and the
+# devil's-advocate-seen flag, both purged on account deletion
+# (routes/auth.py:delete_account → PreTradeReflection.delete), which confirms
+# they are personal data and must therefore be reachable via the §35 열람권
+# export. Cap bounds a pathological journaller; well above realistic usage.
+_EXPORT_REFLECTION_LIMIT = 5000  # pre-trade reflection journal entries
 
 
 def _iso_or_none(value):
@@ -1726,6 +1746,16 @@ def export_profile():
             .limit(_EXPORT_NPS_LIMIT)
             .all()
         )
+        # PIPA §35 — pre-trade reflections carry user free-text rationale +
+        # devil's-advocate-seen flag (PII; purged on deletion). Scoped to the
+        # current user only, exactly like every other section above.
+        pre_trade_reflections = (
+            PreTradeReflection.query
+            .filter_by(user_id=user_id)
+            .order_by(PreTradeReflection.id.desc())
+            .limit(_EXPORT_REFLECTION_LIMIT)
+            .all()
+        )
     except Exception:
         logger.exception(
             "profile.export_profile query failed (user_id=%s)", user_id,
@@ -1753,6 +1783,7 @@ def export_profile():
         "weekly_pulse": [p.to_dict() for p in weekly_pulse],
         "persona_snapshots": [s.to_dict() for s in persona_snapshots],
         "nps_feedback": [n.to_dict() for n in nps_feedback],
+        "pre_trade_reflections": [r.to_dict() for r in pre_trade_reflections],
         "counts": {
             "positions": len(positions),
             "watchlist": len(watchlist),
@@ -1762,6 +1793,7 @@ def export_profile():
             "weekly_pulse": len(weekly_pulse),
             "persona_snapshots": len(persona_snapshots),
             "nps_feedback": len(nps_feedback),
+            "pre_trade_reflections": len(pre_trade_reflections),
         },
         "notes": {
             "excluded_fields": [

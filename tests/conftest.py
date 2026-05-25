@@ -60,7 +60,7 @@ os.environ["RATELIMIT_STORAGE_URI"] = "memory://"
 # Prevent flask-limiter from enforcing limits by default (per-test opt-in).
 os.environ["RATELIMIT_ENABLED"] = "False"
 # Kill any real external API keys that might be in .env.
-for _k in (
+_KILL_KEYS = (
     "ANTHROPIC_API_KEY", "ALPACA_API_KEY", "ALPACA_SECRET_KEY",
     "KIS_APP_KEY", "KIS_APP_SECRET", "FMP_API_KEY",
     "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
@@ -68,7 +68,14 @@ for _k in (
     "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
     "KAKAO_CLIENT_ID", "KAKAO_CLIENT_SECRET",
     "SENTRY_DSN",
-):
+    # Dev/QA bypass secrets — a developer's .env commonly sets these, but
+    # they conditionally register the dev-login / sim-onboard blueprints
+    # (routes/__init__.py). Tests must run in the prod-default state where
+    # those routes do NOT exist (test_dev_auth_smoke / test_sim_onboard
+    # opt in explicitly via monkeypatch + their own app).
+    "DEV_LOGIN_SECRET", "SIM_ONBOARD_SECRET",
+)
+for _k in _KILL_KEYS:
     os.environ.pop(_k, None)
 
 # Force ALPACA_ENABLED off for tests. The production default is "0" (see
@@ -77,6 +84,33 @@ for _k in (
 os.environ["ALPACA_ENABLED"] = "0"
 
 # Prevent the app factory (if ever imported) from spinning up a scheduler.
+os.environ["DISABLE_SCHEDULER"] = "1"
+
+# Eagerly import the app module NOW. ``app.py`` runs
+# ``load_dotenv(..., override=True)`` at module import, which RE-injects every
+# .env value (incl. DEV_LOGIN_SECRET / SIM_ONBOARD_SECRET). The test app uses
+# the pure ``app.birthdate_gate_blocks`` predicate for the PIPA §22 ⑥ age gate,
+# so this import is unavoidable. Triggering it here — then stripping the dev
+# bypass secrets one more time — guarantees that by the time any test app is
+# built (and its blueprints conditionally registered), the dev-login /
+# sim-onboard routes are absent (prod-default), which test_dev_auth_smoke /
+# test_sim_onboard depend on. (Their own apps opt back in explicitly.)
+# Neutralise ``load_dotenv`` BEFORE importing app.py. app.py does
+# ``from dotenv import load_dotenv; load_dotenv(..., override=True)`` at module
+# top, which would RE-INJECT every real .env value (FMP_API_KEY etc.) — and
+# config/service modules capture those into module-level constants AT IMPORT
+# TIME, so popping os.environ afterwards is too late (the constant is already
+# bound, the price fetcher goes live, and offline-fallback assertions like
+# portfolio market_value==shares*avg_cost break). Patching the dotenv attribute
+# here means app.py's ``from dotenv import load_dotenv`` binds this no-op, so the
+# test env set up above survives intact. (Prod is unaffected — run.py path.)
+import dotenv as _dotenv  # noqa: E402
+_dotenv.load_dotenv = lambda *a, **k: None  # type: ignore[assignment]
+import app as _app_module  # noqa: E402  (predicate source for birthdate gate)
+# Belt-and-suspenders: re-apply isolation in case any import already ran.
+for _k in _KILL_KEYS:
+    os.environ.pop(_k, None)
+os.environ["ALPACA_ENABLED"] = "0"
 os.environ["DISABLE_SCHEDULER"] = "1"
 
 
@@ -121,6 +155,26 @@ def _build_test_app():
     @app.route("/")
     def index():
         return redirect("/home")
+
+    # PIPA §22 ⑥ age gate — registered exactly as create_app() wires it, so
+    # the half-provisioned-OAuth-user (birthdate NULL) bypass is covered by
+    # the integration tests rather than only in prod.
+    from flask import request, jsonify as _jsonify
+    from flask_login import current_user as _current_user
+    birthdate_gate_blocks = _app_module.birthdate_gate_blocks
+
+    @app.before_request
+    def _require_birthdate_test():
+        if birthdate_gate_blocks(
+            request.path,
+            bool(getattr(_current_user, "is_authenticated", False)),
+            getattr(_current_user, "birthdate", None),
+        ):
+            return _jsonify({
+                "error":    "Birthdate confirmation required.",
+                "error_kr": "생년월일 확인이 필요합니다.",
+                "code":     "BIRTHDATE_REQUIRED",
+            }), 403
 
     # Register all blueprints exactly as prod does.
     register_blueprints(app)
@@ -266,12 +320,25 @@ def make_user(app):
     created = []
 
     def _make(email="user@test.com", password="password123", name="Tester",
-              capital_usd=10000.0, capital_krw=1_000_000.0, tier="free"):
+              capital_usd=10000.0, capital_krw=1_000_000.0, tier="free",
+              birthdate="_default"):
+        # Real provisioned users ALWAYS carry a birthdate — it is captured at
+        # /register or /api/auth/oauth-finalize before any feature endpoint is
+        # reachable (PIPA §22 ⑥ age gate, enforced by app._require_birthdate).
+        # Default the factory to an adult so the common "logged-in user" case
+        # mirrors production. Pass ``birthdate=None`` to model the transient
+        # half-provisioned OAuth state (birthdate not yet supplied) that the
+        # age gate is designed to block.
+        from datetime import date
         with app.app_context():
             u = User(email=email, name=name,
                      available_capital=capital_usd,
                      available_capital_krw=capital_krw,
                      subscription_tier=tier)
+            if birthdate == "_default":
+                u.birthdate = date(1990, 1, 1)
+            elif birthdate is not None:
+                u.birthdate = birthdate
             u.set_pw(password)
             db.session.add(u)
             db.session.commit()

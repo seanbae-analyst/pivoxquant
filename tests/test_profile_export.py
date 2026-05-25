@@ -164,6 +164,7 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
         "weekly_pulse": 0,
         "persona_snapshots": 0,
         "nps_feedback": 0,
+        "pre_trade_reflections": 0,
     }
     assert body["positions"] == []
     assert body["watchlist"] == []
@@ -173,6 +174,7 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
     assert body["weekly_pulse"] == []
     assert body["persona_snapshots"] == []
     assert body["nps_feedback"] == []
+    assert body["pre_trade_reflections"] == []
     assert body["investment_profile"] is None
     assert body["user"]["email"] == auth_user["email"]
 
@@ -321,6 +323,57 @@ def test_export_behavioral_sections_scoped_to_caller(
     raw = json.dumps(body)
     assert "OTHER-USER-SECRET-WORRY" not in raw, (
         "another user's WeeklyPulse free-text leaked into export"
+    )
+
+
+def test_export_includes_pre_trade_reflections_scoped_to_caller(
+    app, client, make_user, auth_user,
+):
+    """PIPA §35 — PreTradeReflection (free-text rationale + devil's-advocate
+    flag = PII purged on deletion) must be in the export, and only the
+    caller's own rows."""
+    from datetime import datetime, timedelta, timezone
+
+    from extensions import db
+    from models import PreTradeReflection
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        # Caller's own reflection — must appear.
+        db.session.add(PreTradeReflection(
+            user_id=auth_user["id"],
+            intended_ticker="AAPL",
+            intended_side="BUY",
+            rationale="MY-OWN-RATIONALE",
+            devil_advocate_seen="saw the counter-argument",
+            cooldown_started_at=now,
+            cooldown_ends_at=now + timedelta(minutes=2),
+        ))
+        # Another user's reflection — must NOT leak.
+        other = make_user(email="otherrefl@test.com", password="otherpw123")
+        db.session.add(PreTradeReflection(
+            user_id=other["id"],
+            intended_ticker="TSLA",
+            intended_side="SELL",
+            rationale="OTHER-USER-SECRET-RATIONALE",
+            cooldown_started_at=now,
+            cooldown_ends_at=now + timedelta(minutes=2),
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    body = json.loads(resp.data)
+
+    assert body["counts"]["pre_trade_reflections"] == 1
+    reflections = body["pre_trade_reflections"]
+    assert len(reflections) == 1
+    assert reflections[0]["rationale"] == "MY-OWN-RATIONALE"
+    assert reflections[0]["devil_advocate_seen"] == "saw the counter-argument"
+
+    raw = json.dumps(body)
+    assert "OTHER-USER-SECRET-RATIONALE" not in raw, (
+        "another user's PreTradeReflection free-text leaked into export"
     )
 
 

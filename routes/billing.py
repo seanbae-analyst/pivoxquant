@@ -154,6 +154,24 @@ def create_checkout():
             code="BILLING_PRICE_ID_MISSING", status=500,
         )
 
+    # Block users who already hold the highest entitlement via a non-Stripe
+    # grant (DEV_FOUNDING_EMAILS → founding_lifetime / premium_plus). These
+    # cohorts have ``subscription_status == "inactive"``, so the Stripe-status
+    # guard below would let them through → checkout.session.completed would
+    # overwrite their lifetime tier with pro/premium + active and start
+    # billing them monthly for access they already enjoy for free. Gate on the
+    # canonical effective_tier rank, mirroring get_subscription's
+    # ``eff_rank > _TIER_RANK["premium"]`` entitlement check.
+    eff_rank = _TIER_RANK.get(
+        getattr(current_user, "effective_tier", None), 0
+    )
+    if eff_rank > _TIER_RANK["premium"]:
+        return api_error(
+            en="You already hold the highest tier — no subscription needed.",
+            kr="이미 최상위 권한을 보유하고 있어 별도 구독이 필요하지 않습니다.",
+            code="BILLING_ALREADY_ENTITLED", status=409,
+        )
+
     # Wave G-1 Bug #3 (2026-05-18): block double-subscribe.
     # 이중 구독 시 Stripe customer 가 두 개의 active subscription 을 보유하게 되어
     # 사용자가 매월 2배 청구를 받게 됨. 변경은 Customer Portal 로 유도.
@@ -723,6 +741,11 @@ def _downgrade_user_to_free(user, *, reason: str) -> None:
     """
     user.subscription_tier = "free"
     user.subscription_status = "canceled"
+    # Clear the Stripe subscription id, mirroring _handle_subscription_deleted
+    # (line 539). Without this, get_subscription's ``if u.stripe_subscription_id``
+    # branch would still retrieve() the cancelled sub and surface a future
+    # current_period_end to a now-free user.
+    user.stripe_subscription_id = None
     db.session.commit()
     logger.warning(
         "Subscription tier downgraded to free (reason=%s, user_id=%s)",
