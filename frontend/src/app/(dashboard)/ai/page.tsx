@@ -30,7 +30,6 @@ import {
 import { Eyebrow } from "@/components/landing/eyebrow";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import {
   Caption,
@@ -431,7 +430,8 @@ export default function AiPage() {
           </header>
 
           <AiContentBadge variant="framed" />
-          <DisclaimerBanner type="coaching" />
+          {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
+              (CEO 2026-05-24: disclaimer only at the bottom, every page). */}
 
           {/* ── Portfolio Insights ── */}
           <section className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">

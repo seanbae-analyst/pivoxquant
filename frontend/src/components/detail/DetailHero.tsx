@@ -29,7 +29,6 @@ import {
 import { FieldLabel } from "@/components/ui/editorial";
 import { Eyebrow } from "@/components/landing/eyebrow";
 import { Skeleton } from "@/components/ui/loading-skeleton";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { relativeTime } from "@/components/ui/price-with-timestamp";
 import { LoadFailure } from "./shared";
 import type { SignalDetail } from "./types";
@@ -507,10 +506,9 @@ export function DetailHero(props: DetailHeroProps) {
           )}
         </div>
 
-        {/* Disclaimer docked at hero base — legal */}
-        <div className="px-6 md:px-8 pb-6 md:pb-7">
-          <DisclaimerBanner type="signal" />
-        </div>
+        {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
+            — hero-base banner removed (CEO 2026-05-24: disclaimer only at the
+            bottom, every page). */}
       </section>
     </>
   );

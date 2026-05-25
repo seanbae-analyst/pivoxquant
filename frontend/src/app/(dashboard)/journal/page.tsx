@@ -31,7 +31,6 @@ import { displayName, normalizeTicker } from "@/lib/format";
 import { sideLabel } from "@/lib/pre-trade";
 import { relativeTime } from "@/lib/relative-time";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import {
   RuledKicker,
   Caption,
@@ -352,8 +351,9 @@ function JournalContent() {
         </Caption>
       </header>
 
-      {/* Legal disclaimer — informational, not advice */}
-      <DisclaimerBanner type="signal" className="mb-6" />
+      {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
+          — no page-level banner here (CEO 2026-05-24: disclaimer only at the
+          bottom, every page). */}
 
       {/* Feed */}
       {isLoading ? (
