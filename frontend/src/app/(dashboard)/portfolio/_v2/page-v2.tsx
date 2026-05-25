@@ -204,6 +204,33 @@ export default function PortfolioPageV2() {
     return nav;
   }, [sumData, positions, displayCurrency, fxRate]);
 
+  // Native-currency stock subtotals for the hero split (USD X · KRW Y).
+  // Prefer the backend summary fields, but DERIVE from positions when the
+  // backend hasn't supplied a positive value — so a KR holder always sees the
+  // ₩ subtotal even if the summary's KR detection (ticker-suffix) misses a
+  // position or the summary response is stale (CEO 2026-05-24: portfolio still
+  // showed USD only). Grouped by the position `currency` field, the same key
+  // get_portfolio uses for its totals.
+  const { navUsdDerived, navKrwDerived } = React.useMemo(() => {
+    let u = 0;
+    let k = 0;
+    for (const p of positions) {
+      const mv = p.shares * p.current;
+      if (!Number.isFinite(mv)) continue;
+      if (p.currency === "KRW") k += mv;
+      else u += mv;
+    }
+    return { navUsdDerived: u, navKrwDerived: k };
+  }, [positions]);
+  const navUsdFinal =
+    typeof sumData?.navUsd === "number" && sumData.navUsd > 0
+      ? sumData.navUsd
+      : navUsdDerived;
+  const navKrwFinal =
+    typeof sumData?.navKrw === "number" && sumData.navKrw > 0
+      ? sumData.navKrw
+      : navKrwDerived;
+
   // Cash percent — backend P1 batch emits `cashPct` from
   // routes/portfolio.py::portfolio_summary_alias. Falls through to undefined
   // (em-dash) when the backend deploy predates the P1 batch.
@@ -419,8 +446,8 @@ export default function PortfolioPageV2() {
       <PortfolioHeroV2
         nav={totalNav}
         navCurrency={displayCurrency}
-        navUsd={sumData?.navUsd}
-        navKrw={sumData?.navKrw}
+        navUsd={navUsdFinal}
+        navKrw={navKrwFinal}
         positionCount={positions.length}
         cashPct={cashPct}
         lastReconciledAt={lastReconciledAt}

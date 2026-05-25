@@ -142,9 +142,35 @@ export function PortfolioSnapshotCard() {
       : null;
 
   // Native-currency stock subtotals — show US (USD) and KR (KRW) separately
-  // instead of one unified USD NAV (CEO 2026-05-24).
-  const navUsd = summary?.navUsd;
-  const navKrw = summary?.navKrw;
+  // instead of one unified USD NAV (CEO 2026-05-24). Prefer backend fields,
+  // but DERIVE from positions when the backend value is missing/0 so a KR
+  // holder always sees the ₩ subtotal even if the summary's KR detection
+  // misses a position or the response is stale.
+  const { navUsdDerived, navKrwDerived } = React.useMemo(() => {
+    let u = 0;
+    let k = 0;
+    for (const p of positions) {
+      const pp = p as Position & {
+        market_value?: number;
+        current?: number;
+        shares?: number;
+        currency?: string;
+      };
+      const mv = pp.market_value ?? (pp.current ?? 0) * (pp.shares ?? 0);
+      if (!Number.isFinite(mv)) continue;
+      if (pp.currency === "KRW") k += mv;
+      else u += mv;
+    }
+    return { navUsdDerived: u, navKrwDerived: k };
+  }, [positions]);
+  const navUsd =
+    typeof summary?.navUsd === "number" && summary.navUsd > 0
+      ? summary.navUsd
+      : navUsdDerived;
+  const navKrw =
+    typeof summary?.navKrw === "number" && summary.navKrw > 0
+      ? summary.navKrw
+      : navKrwDerived;
   const hasUs = typeof navUsd === "number" && navUsd > 0;
   const hasKr = typeof navKrw === "number" && navKrw > 0;
   const hasSplitNav = hasUs && hasKr;
