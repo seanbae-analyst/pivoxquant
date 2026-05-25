@@ -1,4 +1,47 @@
-# PivoxQuant — 인수인계서 (2026-05-23 v51 — 🟢 오버나잇 자율 버그헌팅 wave 3: backtest·PIPA·artifacts·automation (13 fix, 회귀 0, 배포))
+# PivoxQuant — 인수인계서 (2026-05-24 v52 — 버그헌팅 3R + CEO 라이브 도그푸딩 + 통화표기 전면 개편 + 출시 하드닝)
+
+## v52 2026-05-24 — 마라톤 세션 (버그헌팅 3R → CEO 라이브 피드백 → 통화/UI 개편), 전부 push+배포
+
+> **결론**: main `c87c8a46 →` 다수 commit. 자율 버그헌팅 3라운드(~33 fix) + CEO prod 라이브 도그푸딩 피드백 연속 대응 + ₩/$ 통화표기 전면 개편 + PWA stale-cache 근본 fix. 검증: 백엔드 풀스위트 PASS·회귀 0 / vitest 454 / tsc clean. **라이브 검증 = browser MCP로 CEO 계정 직접 확인**(extension host-permission 필요, 본탭 종종 blocked → 새 탭으로 우회).
+
+### 🔴 출시 블로커급 (자율 버그헌팅 R1~R3)
+| 버그 | fix |
+|---|---|
+| **법무 P0**: safe_scrub `권유` lookahead가 26개 면책 템플릿 부정표현(권유·추천/권유가 아니며/권유 없음/권유를 포함하지)을 "안내"로 변조 → §6 면책 무효화 | lookahead 근본 확장, 12개 표현 보존 전수 테스트 (legal_filter.py) |
+| **artifacts tier bypass P0**: 통합 `/api/artifacts/generate`가 @require_tier 없이 dispatch → free가 Pro/Premium 생성(매출 누수) | _ARTIFACT_MIN_TIER 게이트 + 회귀 테스트 |
+| **AI crash P0**: earnings-tone analyze kwarg 불일치 매 호출 TypeError | ai.py 시그니처 일치 |
+| **온보딩 dead-end P0**: questionnaire 17/20(knowledge_concepts)에 "해당 없음" 없어 초보 진행 불가 | value:"none" 추가 |
+| **risk weight 0%**: `/api/portfolio/positions` alias가 market_value+total_value_* 누락 → useConcentration denom=0 → 전 종목 0% | alias에 market_value + totals 추가 + 회귀 가드 |
+| **한글폰트 CSP**: next.config.ts + middleware 이중 CSP 교집합, next.config에 jsdelivr 누락 → Pretendard 차단 | next.config style/font-src에 jsdelivr + Stripe frame-src |
+
+### 통화 표기 전면 개편 (CEO 라이브 "달러만 뜬다" 연속 대응)
+- **₩/$ → ISO 코드** (`KRW 12,345` / `USD 1,234.56`) 앱 전체 48파일(lib/format Intl currencyDisplay:"code" + NBSP→space + 인라인/리포트템플릿/온보딩/메시지).
+- **NAV 시장별 분리**: 백엔드 summary `navUsd`/`navKrw`(native) + 홈카드·포트폴리오 hero·equity NAV 전부 US($)/KR(₩). positions 기반 client-derive fallback(백엔드 navKrw=0/stale 대비).
+- **손익 KPI 분리**: summary `todayPnlUsd/Krw·unrealizedUsd/Krw·realizedUsd/Krw`(native, realized는 거래통화) + hero KPI 2줄 스택, 줄별 부호색.
+- equity NAV 인라인 · → 2줄 스택(CEO 지시).
+
+### 그 외
+- 홈 hero: "morning paper"(신문/메모) 컨셉 폐기 → **DeskCheckinHero**(동반자 체크인, 데이터 기반, §101 안전).
+- **Mood 넛지**(홈 상단, 하루1회, 3무드→§101 코칭, 프론트 전용).
+- journal 종목명(PreTradeReflection `intended_name`=resolve_stock_name), 검색 KR 6자리 종목명.
+- **equity curve 정직성**: portfolio_history가 현재 주식수×과거가격 가짜 1년곡선 → added_at부터만 clamp.
+- 면책 배너 전 페이지 하단 1개 단일화(risk/journal/discover/ai/DetailHero 중복 제거).
+- billing dispute customer 해결 / notifications 부분 PUT merge / KR history budget gate 제거 / signals·reports 색상 반전 / SW login 캐시 클리어(PIPA) / FX change_pct / cache OOM cap / csrf.
+
+### 🟢 PWA stale-cache 근본 fix (반복 짜증의 진짜 원인)
+- 증상: 배포해도 열린 탭은 옛 JS 실행("여전히 USD"의 진짜 원인). SW skipWaiting+claim은 했으나 reload 전까지 옛 번들.
+- fix: install-prompt.tsx에 `controllerchange` → 새 SW 제어권 잡으면 1회 자동 reload(첫설치 제외, loop 가드). 앞으로 자동 최신.
+- **운영 메모**: SW 코드 바꾼 직후 1회 전환기는 수동 갱신(F12→Application→SW→Unregister→reload, 또는 새 탭) 필요. 이후 자동.
+
+### DEFERRED / 외부액션 (owner)
+- **reports 권한**: Railway env `DEV_FOUNDING_EMAILS`에 CEO 이메일(seanbae1521@gmail.com) 추가 → effective_tier=founding_lifetime 전기능 해제(DB 무변경). CEO 직접.
+- equity curve 추가매수 시점 미반영(평균단가만, trade 단위 재구성 = 더 큰 작업).
+- autocomplete add-position-modal-v2 flaky(full-suite만 fail, 단독 PASS) — spawn 등록됨.
+- regime Sharpe rf / subscription_tier VARCHAR(10) latent / email_category flag off — 미파손, 검토만.
+- 외부: 변호사 Q1-15+Q-S1 / 통신판매업 / 이메일 MX·SENDGRID키 / Stripe·유료결제 활성.
+- **베타 비번**(prod): Vercel env `BETA_PASSWORD` reveal(평문 금지 — 코드/문서에 절대 박지 말 것, secret-leak 가드 있음). 로컬 `.env` 값은 옛 dev값이라 prod와 불일치.
+
+---
 
 ## v51 2026-05-23 — 오버나잇 자율 버그헌팅 wave 3 (CEO "계속 잡아" 연속)
 
