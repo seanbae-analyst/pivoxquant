@@ -55,6 +55,23 @@ export function InstallPrompt() {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .catch((err) => console.warn("[PWA] SW register failed:", err));
+
+      // Auto-reload once when a NEW service worker takes control, so a fresh
+      // deploy's JS bundle loads without a manual hard-refresh. The SW already
+      // calls skipWaiting() + clients.claim(), but an already-open page keeps
+      // running the OLD bundle until it reloads — which is why shipped fixes
+      // appeared "not deployed" until a manual Cmd+Shift+R (CEO 2026-05-24).
+      // Only attach when a controller already exists (returning visitor) so a
+      // first-ever install doesn't trigger a spurious reload; `refreshing`
+      // guards against reload loops.
+      if (navigator.serviceWorker.controller) {
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+      }
     }
 
     if (typeof window === "undefined") return;
