@@ -1151,6 +1151,13 @@ def portfolio_summary_alias():
         # KR holdings in KRW separately (CEO: don't unify everything to USD).
         nav_us_usd = 0.0   # US positions, native USD market value
         nav_kr_krw = 0.0   # KR positions, native KRW market value
+        # Per-currency P&L (native) so the hero KPIs (Today / Unrealized /
+        # Realized) show KR figures in KRW, not only a USD-unified number
+        # (CEO 2026-05-24: "today 부분은 여전히 usd만").
+        today_pnl_us_usd = 0.0
+        today_pnl_kr_krw = 0.0
+        unrealized_us_usd = 0.0
+        unrealized_kr_krw = 0.0
 
         for p in positions:
             cached = cache_map.get(p.ticker)
@@ -1173,8 +1180,10 @@ def portfolio_summary_alias():
             unrealized_usd += mv_usd - cost_usd
             if is_kr:
                 nav_kr_krw += mv      # native KRW
+                unrealized_kr_krw += (mv - cost)
             else:
                 nav_us_usd += mv      # native USD
+                unrealized_us_usd += (mv - cost)
 
             # Today's P&L: prefer fresh overlay change_pct, fall back to cache blob.
             chg_pct = (
@@ -1183,7 +1192,12 @@ def portfolio_summary_alias():
                 else (sd.get("change_pct") or sd.get("changePct") or 0)
             )
             try:
-                today_pnl_usd += mv_usd * (float(chg_pct) / 100.0)
+                _pct = float(chg_pct) / 100.0
+                today_pnl_usd += mv_usd * _pct
+                if is_kr:
+                    today_pnl_kr_krw += mv * _pct
+                else:
+                    today_pnl_us_usd += mv * _pct
             except (TypeError, ValueError):
                 logger.debug("silent-fallback: portfolio_summary_alias", exc_info=True)
                 pass
@@ -1199,11 +1213,16 @@ def portfolio_summary_alias():
                          TradeHistory.traded_at >= ytd_start)
                  .all())
         realized_ytd_usd = 0.0
+        realized_us_usd = 0.0
+        realized_kr_krw = 0.0
         for t in sells:
-            pnl = t.pnl or 0
-            if t.currency == "KRW" and rate:
-                pnl = pnl / rate
-            realized_ytd_usd += pnl
+            raw = t.pnl or 0
+            if t.currency == "KRW":
+                realized_kr_krw += raw
+                realized_ytd_usd += (raw / rate) if rate else 0
+            else:
+                realized_us_usd += raw
+                realized_ytd_usd += raw
 
         # 2026-05-08 (observed_at sweep): the v2 portfolio page
         # (frontend/src/app/(dashboard)/portfolio/_v2/page-v2.tsx:158)
@@ -1237,6 +1256,13 @@ def portfolio_summary_alias():
             "todayPnlPct": round(today_pnl_pct, 2),
             "unrealized": round(unrealized_usd, 2),
             "realizedYtd": round(realized_ytd_usd, 2),
+            # Per-currency P&L (native) — hero KPIs show KR figures in KRW.
+            "todayPnlUsd": round(today_pnl_us_usd, 2),
+            "todayPnlKrw": round(today_pnl_kr_krw, 0),
+            "unrealizedUsd": round(unrealized_us_usd, 2),
+            "unrealizedKrw": round(unrealized_kr_krw, 0),
+            "realizedUsd": round(realized_us_usd, 2),
+            "realizedKrw": round(realized_kr_krw, 0),
             "currency": "USD",
             "fxRate": rate,
             "positionCount": len(positions),

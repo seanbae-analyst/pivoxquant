@@ -459,6 +459,12 @@ export default function PortfolioPageV2() {
         todayPnlPct={kpis.todayPnlPct}
         unrealized={kpis.unrealized}
         realizedYtd={kpis.realizedYtd}
+        todayPnlUsd={sumData?.todayPnlUsd}
+        todayPnlKrw={sumData?.todayPnlKrw}
+        unrealizedUsd={sumData?.unrealizedUsd}
+        unrealizedKrw={sumData?.unrealizedKrw}
+        realizedUsd={sumData?.realizedUsd}
+        realizedKrw={sumData?.realizedKrw}
       />
 
       {/* ═══════════ EQUITY CURVE ═══════════ */}

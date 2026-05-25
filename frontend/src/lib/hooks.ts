@@ -344,6 +344,13 @@ export interface PortfolioSummary {
   todayPnlPct?: number;
   unrealized?: number;
   realizedYtd?: number;
+  // Per-currency P&L (native) — hero KPIs split US (USD) / KR (KRW).
+  todayPnlUsd?: number;
+  todayPnlKrw?: number;
+  unrealizedUsd?: number;
+  unrealizedKrw?: number;
+  realizedUsd?: number;
+  realizedKrw?: number;
   fxRate?: number;
   observed_at?: string;
   // Backend P1 batch (routes/portfolio.py::portfolio_summary_alias) emits

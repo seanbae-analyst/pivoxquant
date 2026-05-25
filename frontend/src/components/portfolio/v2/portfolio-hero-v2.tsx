@@ -49,6 +49,20 @@ interface PortfolioHeroV2Props {
   unrealized?: number;
   /** Realized YTD P&L in display currency. v1 KPI parity (additive). */
   realizedYtd?: number;
+  /** Per-currency P&L (native) — when navUsd & navKrw both present, each KPI
+   *  shows US (USD) and KR (KRW) figures stacked (CEO 2026-05-24). */
+  todayPnlUsd?: number;
+  todayPnlKrw?: number;
+  unrealizedUsd?: number;
+  unrealizedKrw?: number;
+  realizedUsd?: number;
+  realizedKrw?: number;
+}
+
+/** Per-figure sign color (KR convention): gain carmine, loss indigo, flat bronze. */
+function signColor(n: number | undefined): string {
+  if (n == null || !Number.isFinite(n) || n === 0) return "var(--pq-bronze)";
+  return n > 0 ? PRICE_COLOR_HEX.up : PRICE_COLOR_HEX.down;
 }
 
 function weekIndexOf(d: Date): number {
@@ -132,6 +146,12 @@ export function PortfolioHeroV2({
   todayPnlPct,
   unrealized,
   realizedYtd,
+  todayPnlUsd,
+  todayPnlKrw,
+  unrealizedUsd,
+  unrealizedKrw,
+  realizedUsd,
+  realizedKrw,
 }: PortfolioHeroV2Props) {
   const now = new Date();
   const eyebrow = `Book · Volume ${weekIndexOf(now)} · ${weekdayOf(now)}`;
@@ -151,6 +171,27 @@ export function PortfolioHeroV2({
         : hasUs
           ? fmtMoney(navUsd, "USD")
           : fmtMoney(nav, navCurrency);
+
+  // P&L KPIs: when both markets are held, stack the US (USD) and KR (KRW)
+  // figures, each colored by its own sign — instead of one USD-unified number
+  // (CEO 2026-05-24: "today 부분은 여전히 usd만"). Otherwise the single
+  // display-currency value (existing behavior).
+  const splitPnl = (
+    usd: number | undefined,
+    krw: number | undefined,
+    unified: number | undefined,
+  ): React.ReactNode => {
+    if (loading) return "—";
+    if (hasUs && hasKr) {
+      return (
+        <>
+          <div style={{ color: signColor(usd) }}>{fmtMoneySigned(usd, "USD")}</div>
+          <div style={{ color: signColor(krw) }}>{fmtMoneySigned(krw, "KRW")}</div>
+        </>
+      );
+    }
+    return fmtMoneySigned(unified, navCurrency, loading);
+  };
   const positionsText = loading
     ? "—"
     : positionCount != null
@@ -246,40 +287,46 @@ export function PortfolioHeroV2({
         >
           <HeroKpi
             label="Today"
-            value={fmtMoneySigned(todayPnl, navCurrency, loading)}
+            value={splitPnl(todayPnlUsd, todayPnlKrw, todayPnl)}
             sub={
               todayPnlPct != null && Number.isFinite(todayPnlPct)
                 ? `${todayPnlPct >= 0 ? "+" : ""}${todayPnlPct.toFixed(2)}%`
                 : undefined
             }
             tone={
-              todayPnl == null || todayPnl === 0
+              hasUs && hasKr
                 ? "neutral"
-                : todayPnl > 0
-                  ? "positive"
-                  : "negative"
+                : todayPnl == null || todayPnl === 0
+                  ? "neutral"
+                  : todayPnl > 0
+                    ? "positive"
+                    : "negative"
             }
           />
           <HeroKpi
             label="Unrealized"
-            value={fmtMoneySigned(unrealized, navCurrency, loading)}
+            value={splitPnl(unrealizedUsd, unrealizedKrw, unrealized)}
             tone={
-              unrealized == null || unrealized === 0
+              hasUs && hasKr
                 ? "neutral"
-                : unrealized > 0
-                  ? "positive"
-                  : "negative"
+                : unrealized == null || unrealized === 0
+                  ? "neutral"
+                  : unrealized > 0
+                    ? "positive"
+                    : "negative"
             }
           />
           <HeroKpi
             label="Realized YTD"
-            value={fmtMoneySigned(realizedYtd, navCurrency, loading)}
+            value={splitPnl(realizedUsd, realizedKrw, realizedYtd)}
             tone={
-              realizedYtd == null || realizedYtd === 0
+              hasUs && hasKr
                 ? "neutral"
-                : realizedYtd > 0
-                  ? "positive"
-                  : "negative"
+                : realizedYtd == null || realizedYtd === 0
+                  ? "neutral"
+                  : realizedYtd > 0
+                    ? "positive"
+                    : "negative"
             }
           />
         </div>
@@ -362,7 +409,7 @@ function HeroKpi({
   tone,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   sub?: string;
   tone: "positive" | "negative" | "neutral";
 }) {
