@@ -326,9 +326,19 @@ function WhyThisPersona({
 
 interface Props {
   className?: string;
+  /**
+   * Render the inner <PeerBenchmarkBlock> (default true).
+   * /profile V2 (page-v2) sets this false because it owns a dedicated
+   * "05 · Peer benchmark" block (PeerBenchmarkBlockV2) — avoids the
+   * double-render. /profile V1 leaves it true to preserve legacy layout.
+   */
+  showPeerBenchmark?: boolean;
 }
 
-export function PersonaV2Card({ className = "" }: Props) {
+export function PersonaV2Card({
+  className = "",
+  showPeerBenchmark = true,
+}: Props) {
   const { data, isLoading, error } = usePersonaDetail(90);
 
   if (isLoading) {
@@ -367,13 +377,15 @@ export function PersonaV2Card({ className = "" }: Props) {
         breakdown={data.breakdown}
       />
       <WhyThisPersona breakdown={data.breakdown} label={data.label} />
-      <PeerBenchmarkBlock
-        personaLabel={data.label}
-        ownCagr={null}
-        ownSharpe={null}
-        ownHolding={null}
-        windowDays={90}
-      />
+      {showPeerBenchmark && (
+        <PeerBenchmarkBlock
+          personaLabel={data.label}
+          ownCagr={null}
+          ownSharpe={null}
+          ownHolding={null}
+          windowDays={90}
+        />
+      )}
     </div>
   );
 }

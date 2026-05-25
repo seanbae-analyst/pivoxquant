@@ -350,9 +350,22 @@ class TestPersonaBenchmarkAPI:
         assert d["window_days"] == 90
         assert "stats" in d
         stats = d["stats"]
-        # 20 peers via _make_users + current auth_user (also set to balanced) = 21.
-        assert stats["n_users"] == 21
-        assert stats["suppressed"] is False
+        # Frontend ``BenchmarkStats`` contract: metric fields live at the
+        # TOP level of ``stats`` (flattened), NOT nested under ``metrics``.
+        # Regression guard for the route-level flatten of the nested
+        # ``to_dict()`` model shape (page-v2 + peer-benchmark-block crash
+        # otherwise: ``undefined.toFixed()`` / silent ``fmt(undefined)``).
+        assert "avg_cagr" in stats
+        assert "avg_sharpe" in stats
+        assert "win_rate" in stats
+        assert "comparison_to_all" in stats
+        # The metric dict carries persona + window_days per the contract.
+        assert stats["persona"] == "balanced"
+        assert stats["window_days"] == 90
+        # The nested model shape MUST NOT leak through the API.
+        assert stats.get("metrics") is None
+        assert "n_users" not in stats
+        assert "suppressed" not in stats
         # Sanity: no ticker leaked
         import json as _json
         blob = _json.dumps(d, ensure_ascii=False)
@@ -384,6 +397,41 @@ class TestPersonaBenchmarkAllAPI:
     def test_invalid_window_returns_400(self, client, auth_user):
         r = client.get("/api/profile/persona-benchmark-all?window=45")
         assert r.status_code == 400
+
+    def test_published_persona_stats_are_flattened(
+        self, app, client, auth_user, make_user
+    ):
+        """An available persona exposes flattened ``BenchmarkStats`` shape.
+
+        Regression guard: metric fields must sit at the top level of the
+        per-persona ``stats`` object (matching the frontend contract),
+        never nested under ``metrics``.
+        """
+        from services.profile import compute_persona_stats
+
+        user_ids = _make_users(app, make_user, n=20, profile_type="growth")
+        for uid in user_ids:
+            _add_round_trip(app, uid, ticker="AAPL", pnl_pct=4.0)
+
+        with app.app_context():
+            compute_persona_stats("growth", 90)
+
+        r = client.get("/api/profile/persona-benchmark-all?window=90")
+        assert r.status_code == 200
+        d = r.get_json()
+        growth = d["personas"]["growth"]
+        assert growth["available"] is True
+        stats = growth["stats"]
+        # Flattened metric fields at top level.
+        assert "avg_cagr" in stats
+        assert "win_rate" in stats
+        assert "comparison_to_all" in stats
+        assert stats["persona"] == "growth"
+        assert stats["window_days"] == 90
+        # Nested model shape must not leak.
+        assert stats.get("metrics") is None
+        assert "n_users" not in stats
+        assert "suppressed" not in stats
 
 
 # ═════════════════════════════════════════════════════════════════════

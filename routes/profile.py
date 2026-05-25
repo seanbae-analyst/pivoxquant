@@ -1152,12 +1152,22 @@ def get_persona_benchmark():
             "window_days": window,
         })
 
+    # ``get_persona_stats`` returns the nested model shape
+    # (``{persona, window_days, n_users, suppressed, metrics:{...}}``).
+    # The frontend ``BenchmarkStats`` contract (and both consumers:
+    # page-v2 ``peerMetrics`` + ``peer-benchmark-block``) expect the
+    # metric fields at the TOP level of ``stats``. The ``metrics`` dict
+    # already carries ``persona`` + ``window_days``, so exposing it
+    # directly matches the contract 1:1. We flatten at the route layer
+    # only — ``to_dict()`` keeps its nested shape for internal consumers
+    # (e.g. ``services.behavior.scorer._persona_avg_with_floor``).
+    flat_stats = stats.get("metrics") or {}
     return jsonify({
         "available": True,
         "persona": persona,
         "persona_label": PERSONA_LABELS.get(persona, persona),
         "window_days": window,
-        "stats": stats,
+        "stats": flat_stats,
     })
 
 
@@ -1218,10 +1228,14 @@ def get_persona_benchmark_all():
         stats = published.get(persona)
         label = PERSONA_LABELS.get(persona, persona)
         if stats is not None:
+            # Flatten to the frontend ``BenchmarkStats`` contract — see
+            # ``get_persona_benchmark`` above. Metric fields live at the
+            # top level of ``stats``; the nested model shape stays
+            # internal-only via ``to_dict()``.
             out[persona] = {
                 "available": True,
                 "label": label,
-                "stats": stats,
+                "stats": stats.get("metrics") or {},
             }
             continue
         reason = (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Mock the network layer + toast. apiFetch is shared by the Add modal
@@ -126,6 +126,7 @@ describe("AddPositionModalV2 — mode split (FIX 1/2)", () => {
 
 describe("AddPositionModalV2 — Symbol autocomplete dropdown", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
+  let user: ReturnType<typeof userEvent.setup>;
 
   function jsonResponse(results: unknown[]) {
     return {
@@ -135,7 +136,22 @@ describe("AddPositionModalV2 — Symbol autocomplete dropdown", () => {
     } as unknown as Response;
   }
 
+  // The Symbol field debounces /api/search by 300ms (real setTimeout in the
+  // component). Driving that on the wall clock under parallel-suite worker
+  // contention made these cases flake on testing-library's 1000ms waitFor
+  // timeout. We pin time with fake timers and advance the debounce + fetch
+  // microtasks explicitly, then assert with synchronous queries — fully
+  // deterministic and independent of CPU load. (We deliberately avoid
+  // waitFor/findBy here: vitest fake timers also fake the poller's interval,
+  // and testing-library only auto-advances *jest* fake timers, so waitFor
+  // would hang. Explicit advanceTimersByTimeAsync is the correct tool.)
   beforeEach(() => {
+    // shouldAdvanceTime auto-ticks the fake clock by real elapsed time, which
+    // keeps userEvent's internal scheduling from hanging (plain
+    // vi.useFakeTimers() — with or without an advanceTimers callback — deadlocks
+    // user.type under vitest 4). We still drive the component's 300ms debounce
+    // deterministically with advanceTimersByTimeAsync() in flushSearch().
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockedFetch.mockReset();
     vi.mocked(toast.error).mockReset();
     vi.mocked(toast.success).mockReset();
@@ -146,60 +162,72 @@ describe("AddPositionModalV2 — Symbol autocomplete dropdown", () => {
       ]),
     );
     vi.stubGlobal("fetch", fetchMock);
+    user = userEvent.setup();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
+  // Flush the 300ms debounce timeout AND the chained fetch()/res.json()
+  // microtasks that populate `suggestions`, then let React commit the render.
+  async function flushSearch() {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+  }
+
   it("debounced-searches on input and renders suggestion names + tickers", async () => {
-    const user = userEvent.setup();
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     await user.type(screen.getByLabelText("Symbol"), "005");
+    await flushSearch();
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(fetchMock).toHaveBeenCalled();
     const calledUrl = fetchMock.mock.calls[0][0] as string;
     expect(calledUrl).toContain("/api/search?q=");
     expect(calledUrl).toContain("limit=6");
 
     // Suggestion list renders the company name (bold) + ticker.
-    await waitFor(() => expect(screen.getByText("삼성전자")).toBeTruthy());
+    expect(screen.getByText("삼성전자")).toBeTruthy();
     expect(screen.getByText("Apple Inc.")).toBeTruthy();
     expect(screen.getByRole("listbox", { name: "종목 검색 결과" })).toBeTruthy();
   });
 
   it("clicking a suggestion fills the canonical ticker and closes the popover", async () => {
-    const user = userEvent.setup();
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     const input = screen.getByLabelText("Symbol") as HTMLInputElement;
     await user.type(input, "005");
-    const option = await screen.findByRole("option", { name: /삼성전자/ });
+    await flushSearch();
 
+    const option = screen.getByRole("option", { name: /삼성전자/ });
     await user.click(option);
 
     // Canonical ticker is written into the input; popover is gone.
-    await waitFor(() => expect(input.value).toBe("005930.KS"));
+    expect(input.value).toBe("005930.KS");
     expect(screen.queryByRole("listbox", { name: "종목 검색 결과" })).toBeNull();
     // Resolved name confirmation is shown.
-    await waitFor(() => expect(screen.getByText("삼성전자")).toBeTruthy());
+    expect(screen.getByText("삼성전자")).toBeTruthy();
   });
 
   it("does not re-search after a pick (picked suppresses the popover)", async () => {
-    const user = userEvent.setup();
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     await user.type(screen.getByLabelText("Symbol"), "005");
-    const option = await screen.findByRole("option", { name: /삼성전자/ });
+    await flushSearch();
+
+    const option = screen.getByRole("option", { name: /삼성전자/ });
     await user.click(option);
-    await waitFor(() =>
-      expect(screen.queryByRole("listbox", { name: "종목 검색 결과" })).toBeNull(),
-    );
+    expect(screen.queryByRole("listbox", { name: "종목 검색 결과" })).toBeNull();
 
     const callsAfterPick = fetchMock.mock.calls.length;
-    // The setSymbol from the pick must NOT trigger another search.
-    await new Promise((r) => setTimeout(r, 400));
+    // Advance well past the debounce — the setSymbol from the pick must NOT
+    // trigger another search (picked=true short-circuits the effect).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
     expect(fetchMock.mock.calls.length).toBe(callsAfterPick);
     expect(screen.queryByRole("listbox", { name: "종목 검색 결과" })).toBeNull();
   });

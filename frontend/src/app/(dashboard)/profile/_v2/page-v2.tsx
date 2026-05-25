@@ -531,7 +531,10 @@ export default function ProfilePageV2() {
             />
           </div>
           <div style={{ gridColumn: "span 8" }} className="pq-profile-col-8">
-            <PersonaV2Card />
+            {/* showPeerBenchmark=false: BLOCK 5 (PeerBenchmarkBlockV2) below is
+                the canonical SPEC §1 "05 · Peer benchmark" surface. Suppress the
+                card's inner peer block to avoid the double-render. V1 keeps it. */}
+            <PersonaV2Card showPeerBenchmark={false} />
           </div>
         </section>
 
