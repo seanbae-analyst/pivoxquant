@@ -1,0 +1,45 @@
+{
+  "cookies": [
+    {
+      "name": "sp_locale",
+      "value": "en",
+      "domain": "www.pivoxquant.com",
+      "path": "/",
+      "expires": 1810908830.085472,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "csrf_token",
+      "value": "a811acecc97386f1919dbe32293f9114d6db6ddb4cba4536699a5c91ad63115f.5d04f61835b73eecff9cfc2444b2a0648dd0d17c8825ac6cf9eb2951440f9d5c",
+      "domain": ".pivoxquant.com",
+      "path": "/",
+      "expires": 1779459268.87702,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "pivox_beta_access",
+      "value": "v2.0449084cb0c629a79af5592602ac88d155c6b594123227c9349940b7f82bd9d1",
+      "domain": "www.pivoxquant.com",
+      "path": "/",
+      "expires": 1781964866.096259,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "session",
+      "value": "eyJfZnJlc2giOmZhbHNlLCJfcGVybWFuZW50Ijp0cnVlfQ.ag8TRA.saqqrn9ZZtYrKK1wvceL54_Jvho",
+      "domain": ".pivoxquant.com",
+      "path": "/",
+      "expires": 1779459268.877345,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

@@ -1,0 +1,17 @@
+# Wave 5 P0 verification manifest (realistic mock regime) — 2026-05-21 KST
+# Local backend-equivalent run, HEAD 03cf8a75, V2 flags all true.
+# columns: bytes  sha256  path
+388917  fcb24eee72616c536bbe236054e6d7b437f8fa7941dd10d15b54f09ac0fd7e8e  qa/v2-smoke/2026-05-21/realistic/home-eq-real-desktop.png
+563764  78219f894e4459e37957e8c6d0a2b9bd837ed025a64d013e4da476031232deac  qa/v2-smoke/2026-05-21/realistic/risk-eq-empty-mobile.png
+759605  3c25f9f641abad17986faa9e00f98e961cc67b30861b01affde18280ac32ae09  qa/v2-smoke/2026-05-21/realistic/settings-eq-empty-desktop.png
+218508  bcaa59988183b0d2dcf4e93a89a6828d4348956d1dae96c47bfcff89c08cd212  qa/v2-smoke/2026-05-21/realistic/signals-eq-empty-mobile.png
+632279  a18138744a7a5fdca73f2b5db37929f67b70d7aedbca320abb7d84d5b2d1220c  qa/v2-smoke/2026-05-21/realistic/settings-eq-empty-mobile.png
+619038  3173102a77891de685832a6406f88a217ea653b4798da0f62cc0d07b803d1816  qa/v2-smoke/2026-05-21/realistic/risk-eq-empty-desktop.png
+287971  af0212dc231bc9274a413fc7c2052ad53f6aee5615674f8182825d0ed4e4aafa  qa/v2-smoke/2026-05-21/realistic/home-eq-real-mobile.png
+320912  b41d564336e0924665516b82c97b7fe7af75fe74ab9c5d93d9ed657857c44878  qa/v2-smoke/2026-05-21/realistic/signals-eq-empty-desktop.png
+218396  7c61a3bc72bdbf670f5dbf14fa1ce031df1ef1653aa20a8e6451e67bd328173a  qa/v2-smoke/2026-05-21/realistic/portfolio-eq-empty-mobile.png
+531392  aaf0ee943c0717552c058770cfe9e3ce77b351adf356ceb94434a4f90c731f00  qa/v2-smoke/2026-05-21/realistic/reports-eq-empty-desktop.png
+410895  3b02ac4c7e853ab35fa00e75a04665932989d04c9ff658261cb127bd2cd81e02  qa/v2-smoke/2026-05-21/realistic/reports-eq-empty-mobile.png
+386326  307e0c98058809026de11f0c46730ba7e5f5a22911527b20854751d24a7c96ac  qa/v2-smoke/2026-05-21/realistic/home-eq-empty-desktop.png
+285454  ce272effcde394671d54bf1879af5c3992098673b2376d693e1e7081ad1c6d0a  qa/v2-smoke/2026-05-21/realistic/home-eq-empty-mobile.png
+306530  1f116027db0dd82d36875ac93d15aceb444173e344f3232dfc96774341bb6957  qa/v2-smoke/2026-05-21/realistic/portfolio-eq-empty-desktop.png
