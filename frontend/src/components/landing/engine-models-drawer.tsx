@@ -51,6 +51,7 @@ type ModelDef = {
   measures: string;
   feeds: string;
   reference?: string;
+  inactive?: boolean;
 };
 
 /* ════════════════════════════════════════════════════════════════════
@@ -86,7 +87,7 @@ const MODEL_DEFS: readonly ModelDef[] = [
       "Z = (P − MA₂₀) / σ₂₀. Z < −2 marks a statistically stretched position to the downside; Z > 2 to the upside. Produces a 0–100 score with ±20 pt composite influence.",
     feeds:
       "Weekly Memo annotates which holdings sit stretched versus their rolling mean.",
-    reference: "Ornstein–Uhlenbeck stochastic differential equation.",
+    reference: "Bollinger/RSI z-score mean reversion; Ornstein–Uhlenbeck process as conceptual motivation, not a fitted model.",
   },
   {
     id: "momentum-breakout",
@@ -268,7 +269,8 @@ const MODEL_DEFS: readonly ModelDef[] = [
     source: "signal_models.py:210",
     measures:
       "Rate-of-change comparison between price and the rule-based news score. divergence_score = −sign_agree · magnitude.",
-    feeds: "Returned inside /api/quant/analyze as spd_result. Feeds the Observations band in Weekly Memo.",
+    feeds: "Currently inactive — pending a historical daily news-score time-series. Not contributing to scores.",
+    inactive: true,
   },
   {
     id: "ofi",
@@ -821,7 +823,7 @@ export default function EngineModelsDrawer() {
                 color: "var(--pq-bronze)",
               }}
             >
-              The inventory · 40 models
+              The inventory · 40 models · 39 active
             </span>
           </div>
           <h2
@@ -913,7 +915,10 @@ export default function EngineModelsDrawer() {
                   }}
                 >
                   {models.map((m) => (
-                    <li key={m.id}>
+                    <li
+                      key={m.id}
+                      style={m.inactive ? { opacity: 0.6 } : undefined}
+                    >
                       <button
                         type="button"
                         onClick={() => setSelectedId(m.id)}
@@ -922,6 +927,20 @@ export default function EngineModelsDrawer() {
                         className="pq-model-item text-left"
                       >
                         {m.name}
+                        {m.inactive && (
+                          <span
+                            className="font-serif uppercase"
+                            style={{
+                              marginLeft: "0.5em",
+                              fontSize: "var(--pq-text-eyebrow)",
+                              letterSpacing: "0.18em",
+                              color: "var(--pq-bronze)",
+                              opacity: 0.85,
+                            }}
+                          >
+                            · Inactive
+                          </span>
+                        )}
                       </button>
                     </li>
                   ))}

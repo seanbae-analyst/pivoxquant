@@ -264,6 +264,18 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bcut\s+(?:the\s+)?loss(?:es)?\b", re.IGNORECASE), "indicator threshold breached"),
     (re.compile(r"\block\s+in\s+(?:the\s+)?profits?\b", re.IGNORECASE), "indicator ceiling reached"),
 
+    # ── Group 11h: rec_timing / disq advisory backstop (2026-05-26) ───────
+    # services/quant/engine.py _size() rec_timing + disq_reasons 소스 직접
+    # 중립화가 primary; 본 정규식은 stale SignalCache 페이로드 등 구 문자열이
+    # scrub 경로로 흘러올 때의 defense-in-depth. 모두 다단어 명확 지시어라
+    # IGNORECASE 가 산문을 over-scrub 하지 않음 ([[feedback_legal_filter_design]]).
+    (re.compile(r"\baggressive\s+accumulation\b", re.IGNORECASE), "elevated band observed"),
+    (re.compile(r"\bstrong\s+accumulation\b", re.IGNORECASE), "high band observed"),
+    (re.compile(r"\bbuild\s+position\s+on\s+dips\b", re.IGNORECASE), "entry-level indicator region"),
+    (re.compile(r"\bnot\s+investable\b", re.IGNORECASE), "fails screening filter"),
+    (re.compile(r"\bnot\s+suitable\s+for\s+holding\b", re.IGNORECASE), "excluded by screening filter"),
+    (re.compile(r"\breassess\s+(?:your\s+)?position\b", re.IGNORECASE), "thesis deterioration observed"),
+
     # ── Group 11e: take profit / stop loss 매매 지시어 (2026-05-22) ────────
     # public AI chat 이 쓰는 공용 legal_filter 에 "take profit" / "stop loss"
     # 직접 매매 지시어가 부재했음 (legal_gate.py ADVICE_PATTERNS 만 잡음).

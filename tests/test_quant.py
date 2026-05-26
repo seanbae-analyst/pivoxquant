@@ -370,7 +370,7 @@ class TestVolatilityRegime:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class TestRegimeSwitching:
-    """RegimeSwitching: HMM-style bull/bear/transition detection."""
+    """RegimeSwitching: rolling-Sharpe-threshold bull/bear/transition detection."""
 
     def test_returns_valid_structure(self, steady_uptrend):
         closes, _, _, _ = steady_uptrend

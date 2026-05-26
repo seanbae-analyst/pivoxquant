@@ -32,7 +32,7 @@ from services.quant.composer import (
     apply_persona_preset,
     validate_composition,
 )
-from services.quant.model_catalog import CATEGORIES, MODEL_BY_NAME, MODEL_CATALOG
+from services.quant.model_catalog import ACTIVE_MODEL_COUNT, CATEGORIES, MODEL_BY_NAME, MODEL_CATALOG
 
 from .decorators import api_auth, legal_scrub_response
 from security import general_rate_limit
@@ -138,6 +138,7 @@ def list_models():
         "categories": list(CATEGORIES),
         "category_counts": counts,
         "total": len(MODEL_CATALOG),
+        "active": ACTIVE_MODEL_COUNT,
         "models": [
             {
                 "name": m["name"],
@@ -149,6 +150,7 @@ def list_models():
                 "default_weight": m["default_weight"],
                 "personas_recommended": list(m["personas_recommended"]),
                 "data_sparse_compatible": bool(m["data_sparse_compatible"]),
+                "enabled": bool(m.get("enabled", True)),
             }
             for m in MODEL_CATALOG
         ],

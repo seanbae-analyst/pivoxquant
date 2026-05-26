@@ -80,6 +80,20 @@ export function PillarGrid({
     <section>
       <div className="mb-5">
         <SectionHeading eyebrow="Quant breakdown" title="Four-pillar composite" />
+        {/* Honest low-data caveat (CEO integrity audit): when fewer than 40% of
+            base inputs were present the pillars converge to a neutral ~50 that
+            should NOT read as a confident call. Bronze, subtle, optional. */}
+        {signal?.data_coverage?.low_data === true ? (
+          <div className="mt-3 inline-flex items-center gap-2 px-2.5 py-1 rounded-sm border border-[var(--pq-bronze)] bg-[rgba(var(--pq-bronze-rgb),0.08)]">
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-[var(--pq-bronze)] shrink-0"
+              aria-hidden
+            />
+            <span className="font-mono text-pq-mono-tiny tracking-[0.04em] text-[var(--pq-bronze-light)]">
+              데이터 부족 — 일부 지표 결손으로 점수 신뢰도 낮음
+            </span>
+          </div>
+        ) : null}
       </div>
       {loading && !hasPillars ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

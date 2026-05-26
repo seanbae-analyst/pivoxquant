@@ -50,6 +50,21 @@ export interface SignalDetail {
   quant_score?: number;
   snapshot?: Snapshot;
   observed_at?: string | null;
+  /** Honesty/coverage metadata (CEO integrity audit). Backend engine.analyze()
+   * now reports how much real input data backed each pillar so the UI can
+   * disclose data gaps instead of letting a data-starved score look like a
+   * "confident neutral". All fields optional — absent on older cached
+   * responses, so every consumer must guard. */
+  data_coverage?: {
+    fundamental_present?: number; // 0..6 — real fundamental metrics present
+    fundamental_total?: number; // 6
+    fundamental_pct?: number; // 0..1
+    news_present?: boolean;
+    history_bars?: number;
+    technical_ok?: boolean;
+    quant_full?: boolean; // ≥252 bars → full momentum models active
+    low_data?: boolean; // <40% base data → low-confidence warning
+  };
 }
 
 export interface ChartPoint {

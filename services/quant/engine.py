@@ -218,9 +218,14 @@ class QuantEngine:
             quant_score * w_quant, 1
         )
 
-        # ── 52-Week High Momentum Boost + Anchoring Bias Boost (applied to final composite) ──
-        anchor_boost = anchor_result.get("boost", 1.0) if anchor_result else 1.0
-        composite = composite * high52_result.get("boost", 1.0) * anchor_boost
+        # ── 52-Week High Momentum + Anchoring Bias (combined, applied to composite) ──
+        # FiftyTwoWeekHigh and AnchoringBias (George & Hwang 2004) both measure
+        # nearness to the 52-week high. Applying both boosts multiplicatively
+        # double-counts the same factor (~6% compounding). Combine via geometric
+        # mean so the shared signal is counted once while preserving direction.
+        b_high = high52_result.get("boost", 1.0)
+        b_anchor = anchor_result.get("boost", 1.0) if anchor_result else 1.0
+        composite = composite * (b_high * b_anchor) ** 0.5
         composite = max(0, min(100, round(composite, 1)))
 
         # ── Macro Environment Adjustment ──
@@ -273,13 +278,13 @@ class QuantEngine:
         rev_g = snapshot.get("revenue_growth")
         if margin is not None and margin < 0 and (rev_g is None or rev_g < 0.10):
             disqualified = True
-            disq_reasons.append("Unprofitable with weak revenue — not investable")
+            disq_reasons.append("Unprofitable with weak revenue — fails screening filter")
 
         # 2) Leveraged / inverse ETFs = no long-term hold
         name_upper = (snapshot.get("name") or "").upper()
         if any(x in name_upper for x in ["2X", "3X", "LEVERAGED", "INVERSE", "ULTRA"]):
             disqualified = True
-            disq_reasons.append("Leveraged/inverse product — not suitable for holding")
+            disq_reasons.append("Leveraged/inverse product — excluded by screening filter")
 
         # 3) Downtrend: price below 200MA = don't catch falling knives
         close = hist["Close"].astype(float)
@@ -328,7 +333,7 @@ class QuantEngine:
             elif current_pnl_pct < -15 and fund_score < 35:
                 # Moderate loss + terrible fundamentals
                 sell_override = True
-                sell_reason = f"Down {current_pnl_pct:.0f}% + poor fundamentals — reassess position"
+                sell_reason = f"Down {current_pnl_pct:.0f}% + poor fundamentals — thesis deterioration observed"
             elif current_pnl_pct > 40 and composite < 55:
                 # Big gain + deteriorating outlook = take profit
                 sell_override = True
@@ -415,6 +420,32 @@ class QuantEngine:
         safe_beta = max(float(beta) if beta else 1.0, 0.5)
         priority  = round(composite * 0.6 + (composite / safe_beta) * 0.3 + (news_score / 100) * 10, 1)
 
+        # ── Data coverage (honesty) ──
+        # Pillars silently fall back to a neutral ~50 when their inputs are
+        # missing, so a data-starved score can look like a confident neutral
+        # read. Surface how much real data actually backs this score.
+        _fund_checks = (
+            snapshot.get("pe_ratio") is not None or snapshot.get("forward_pe") is not None,
+            snapshot.get("revenue_growth") is not None,
+            snapshot.get("profit_margin") is not None,
+            snapshot.get("debt_equity") is not None,
+            snapshot.get("eps") is not None,
+            snapshot.get("beta") is not None,
+        )
+        _fund_present = sum(1 for c in _fund_checks if c)
+        _fund_total = len(_fund_checks)
+        _hist_bars = int(len(hist))
+        data_coverage = {
+            "fundamental_present": _fund_present,
+            "fundamental_total": _fund_total,
+            "fundamental_pct": round(_fund_present / _fund_total, 2),
+            "news_present": bool(news_sigs),
+            "history_bars": _hist_bars,
+            "technical_ok": _hist_bars >= 20,
+            "quant_full": _hist_bars >= 252,
+            "low_data": _fund_present / _fund_total < 0.4,
+        }
+
         dp = 0 if is_korean else 2
 
         return {
@@ -433,6 +464,7 @@ class QuantEngine:
             "fund_score":      round(fund_score, 1),
             "news_score":      round(news_score, 1),
             "quant_score":     round(quant_score, 1),
+            "data_coverage":   data_coverage,
             # REMOVED: Legal compliance — 자본시장법 제7조
             # "rec_investment":  round(rec_inv, 2),
             # "rec_shares":      rec_sh,
@@ -952,14 +984,16 @@ class QuantEngine:
         # Max affordable shares as upper bound
         max_affordable = int(capital / price)
 
+        # Observation-only conviction bands (자본시장법 §17 / §101 면제 트랙):
+        # describe which score band was observed; no accumulation/entry directives.
         if score >= 85:
-            alloc, timing = 0.45, "Full conviction — aggressive accumulation"
+            alloc, timing = 0.45, "Highest conviction band observed (score ≥ 85)"
         elif score >= 80:
-            alloc, timing = 0.35, "High conviction — strong accumulation"
+            alloc, timing = 0.35, "High conviction band observed (score ≥ 80)"
         elif score >= 75:
-            alloc, timing = 0.25, "Scale in aggressively over the week"
+            alloc, timing = 0.25, "Elevated conviction band observed (score ≥ 75)"
         else:
-            alloc, timing = 0.15, "Pilot entry — build position on dips"
+            alloc, timing = 0.15, "Entry-level conviction band observed"
 
         invest = min(capital * alloc, capital * self.MAX_ALLOC)
         shares = int(invest / price)
@@ -967,7 +1001,7 @@ class QuantEngine:
         # Always recommend at least 1 share if affordable
         if shares < 1:
             shares = 1
-            timing = "Minimum entry — 1 share"
+            timing = "Minimum sizing band (1 share)"
 
         # Never exceed what user can actually afford
         shares = min(shares, max_affordable)
@@ -1401,6 +1435,8 @@ class QuantEngine:
             pass
 
         # 12c. Dual Momentum — Antonacci (absolute + relative vs SPY benchmark)
+        #   NOTE: absolute 12M momentum already scored by TSMOM above; this
+        #   contributes the relative-vs-benchmark increment only (±5, not ±10).
         dual_mom_result = {"signal": "NEUTRAL", "absolute_momentum": None, "relative_momentum": None}
         try:
             if len(close) >= 252:
@@ -1410,12 +1446,12 @@ class QuantEngine:
                     bench_closes = bench_hist["Close"].astype(float).values
                     dual_mom_result = DualMomentum.calculate(list(close), list(bench_closes))
                     if dual_mom_result["signal"] == "POSITIVE":
-                        score += 10
+                        score += 5
                         sigs.append({"type": "bullish",
                                      "msg": f"Dual Momentum: Asset +{dual_mom_result['asset_return_12m']:.1f}% beats SPY +{dual_mom_result['benchmark_return_12m']:.1f}%",
                                      "msg_kr": f"듀얼 모멘텀: 자산 +{dual_mom_result['asset_return_12m']:.1f}% > SPY +{dual_mom_result['benchmark_return_12m']:.1f}%"})
                     elif dual_mom_result["signal"] == "NEGATIVE":
-                        score -= 10
+                        score -= 5
                         sigs.append({"type": "bearish",
                                      "msg": f"Dual Momentum: Asset {dual_mom_result['asset_return_12m']:.1f}% (absolute momentum fails)",
                                      "msg_kr": f"듀얼 모멘텀: 자산 {dual_mom_result['asset_return_12m']:.1f}% (절대 모멘텀 실패)"})

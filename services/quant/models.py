@@ -407,10 +407,11 @@ class VolatilityRegime:
 
 class RegimeSwitching:
     """
-    Hidden Markov Model (HMM) Regime Switching
-    Classifies market into Bull/Bear/Transition regimes
-    using return patterns and volatility clustering.
-    Simplified version without hmmlearn dependency.
+    Regime classifier (rolling Sharpe thresholds).
+    Classifies market into Bull/Bear/Transition regimes from rolling
+    return/volatility statistics. Conceptually inspired by Markov
+    regime-switching (Hamilton 1989) but NOT a fitted HMM — no hidden
+    states are estimated; regimes are threshold rules on rolling Sharpe.
     """
 
     @staticmethod

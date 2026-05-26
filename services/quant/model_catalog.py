@@ -1,9 +1,9 @@
 """Static catalog of the 40 quant / risk / portfolio / behavioral / AI / system
-models that the user can compose via Feature 1 (Quant Composer).
+model entries (39 active) that the user can compose via Feature 1 (Quant Composer).
 
 Source of truth
 ---------------
-The 40-model inventory mirrors the drawer in
+The 40-entry (39 active) inventory mirrors the drawer in
 ``frontend/src/components/landing/engine-models-drawer.tsx`` (the public
 landing-page disclosure) and the audit at
 ``reports/audit/MODEL_INVENTORY_2026-04-23.md``. Names here MUST stay
@@ -87,7 +87,7 @@ MODEL_CATALOG: Final[list[dict]] = [
         "module": "quant_models",
         "description_kr": "20일 Z-score 기반 평균회귀 관찰 지표. 통계적으로 stretched 된 가격 영역을 0–100 점수로 표시.",
         "description_en": "20-day Z-score against the rolling mean; produces a 0–100 stretch metric on each position.",
-        "academic_source": "Ornstein–Uhlenbeck stochastic differential equation",
+        "academic_source": "Bollinger Bands + RSI z-score mean reversion (textbook); Ornstein–Uhlenbeck process is the conceptual motivation, not a fitted model",
         "default_weight": 1.0,
         "personas_recommended": ["beginner", "value", "balanced", "quant"],
         "data_sparse_compatible": True,
@@ -120,7 +120,7 @@ MODEL_CATALOG: Final[list[dict]] = [
         "module": "quant_models",
         "description_kr": "Rolling Sharpe state 5단계 (BULL / MILD_BULL / TRANSITION / MILD_BEAR / BEAR) 관찰.",
         "description_en": "Rolling Sharpe-state classifier with five regimes from Bull through Bear.",
-        "academic_source": "Hamilton (1989), Regime-switching Markov models",
+        "academic_source": "Rolling Sharpe (return/vol) threshold regime classifier; conceptually inspired by Hamilton (1989) Markov regime-switching, but NOT a fitted HMM (no hidden states estimated)",
         "default_weight": 1.0,
         "personas_recommended": ["balanced", "growth", "quant"],
         "data_sparse_compatible": False,
@@ -131,7 +131,7 @@ MODEL_CATALOG: Final[list[dict]] = [
         "module": "quant_models",
         "description_kr": "SPY / TLT / GLD / USO / UUP 1개월 수익률로 RISK_ON / RISK_OFF 매크로 관찰.",
         "description_en": "Macro RISK_ON / RISK_OFF observation from a SPY / TLT / GLD / USO / UUP basket.",
-        "academic_source": "Asness, Moskowitz & Pedersen (2013), Value and Momentum Everywhere",
+        "academic_source": "Asness, Moskowitz & Pedersen (2013), Value and Momentum Everywhere (simplified SPY/TLT/GLD risk-on/off proxy, not the full cross-sectional model)",
         "default_weight": 1.0,
         "personas_recommended": ["balanced", "growth", "quant"],
         "data_sparse_compatible": True,
@@ -280,6 +280,8 @@ MODEL_CATALOG: Final[list[dict]] = [
         "default_weight": 1.0,
         "personas_recommended": ["quant", "growth"],
         "data_sparse_compatible": False,
+        "enabled": False,
+        "disabled_reason": "Skipped at runtime: no historical sentiment time-series available (engine.py _quant_models). Listed for transparency.",
     },
     {
         "name": "OrderFlowImbalance",
@@ -287,7 +289,7 @@ MODEL_CATALOG: Final[list[dict]] = [
         "module": "signal_models",
         "description_kr": "Cont et al. signed-volume proxy. OFI_norm 20일 합. high_positive / high_negative 관찰.",
         "description_en": "Cont et al. (2014). OFI_daily = sign(close − open) · volume; OFI_norm summed over 20 days.",
-        "academic_source": "Cont, Kukanov & Stoikov (2014)",
+        "academic_source": "Cont, Kukanov & Stoikov (2014) (daily OHLCV signed-volume proxy, not L2 order-book OFI)",
         "default_weight": 1.0,
         "personas_recommended": ["daytrader", "quant", "speculator"],
         "data_sparse_compatible": False,
@@ -533,5 +535,7 @@ assert len(MODEL_CATALOG) == 40, (
 )
 assert len(MODEL_BY_NAME) == 40, "Duplicate model names detected in MODEL_CATALOG"
 
+ACTIVE_MODEL_COUNT: Final[int] = sum(1 for m in MODEL_CATALOG if m.get("enabled", True))
 
-__all__ = ["MODEL_CATALOG", "MODEL_BY_NAME", "CATEGORIES"]
+
+__all__ = ["MODEL_CATALOG", "MODEL_BY_NAME", "CATEGORIES", "ACTIVE_MODEL_COUNT"]

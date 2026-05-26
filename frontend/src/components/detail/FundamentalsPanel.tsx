@@ -49,6 +49,13 @@ export function FundamentalsPanel({
   loading?: boolean;
 }) {
   const s = signal?.snapshot;
+  // Honest data-coverage caption (CEO integrity audit): how many of the 6
+  // fundamental metrics actually came back. Explains why rows go em-dash —
+  // it's a data gap, not a broken field. Absent on older cached responses → hidden.
+  const cov = signal?.data_coverage;
+  const fundPresent = cov?.fundamental_present;
+  const fundTotal = cov?.fundamental_total ?? 6;
+  const showCoverage = cov != null && typeof fundPresent === "number";
   // KR tickers: KIS license serves PER/EPS/PBR/시총 but not margin / rev
   // growth / D-E. The backend flags this so we can explain the three "—"
   // rows below as license-bounded (not a transient error / not broken).
@@ -70,6 +77,15 @@ export function FundamentalsPanel({
     <section>
       <div className="mb-5">
         <SectionHeading eyebrow="Fundamentals" title="Key ratios & valuation" />
+        {showCoverage ? (
+          <p
+            className="mt-2 font-mono text-pq-mono-tiny uppercase tracking-[0.14em] text-[var(--pq-ivory-faint)]"
+            title="실제 수신된 기본 지표 수 — 결손 지표는 em-dash로 표시"
+          >
+            기본 데이터 {fundPresent}/{fundTotal} 반영 · {fundPresent} of{" "}
+            {fundTotal} fundamentals available
+          </p>
+        ) : null}
       </div>
 
       <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 md:p-6 rounded-sm">

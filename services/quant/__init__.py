@@ -2,7 +2,7 @@
 
 Public surface
 --------------
-- :mod:`services.quant.model_catalog` — the 40-model metadata catalog.
+- :mod:`services.quant.model_catalog` — the 40-entry (39 active) metadata catalog.
 - :mod:`services.quant.composer`      — user-composition apply/validate
   helpers used by ``services.quant.engine`` and ``routes/quant_composer.py``.
 - :mod:`services.quant.engine`        — QuantEngine (4-pillar scoring, discover pool)
