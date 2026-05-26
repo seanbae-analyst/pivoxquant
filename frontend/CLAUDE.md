@@ -27,7 +27,10 @@
   `lib/format.ts` 의 `pctColor()` / `PRICE_COLOR_HEX` 가 SoT. 평가 토큰
   `--pq-positive`(bronze) / `--pq-negative`(carmine) 은 **시그널 평가 라벨 전용**이며
   가격 방향에 쓰면 안 됨(2026-05-24 반전 버그 fix). 토큰 drift 는 `design-token-drift` skill 가드.
-- **BANNED**: Inter, violet/purple AI gradient, neon glow, italic(전수 제거됨), raw hex(토큰만)
+- **BANNED**: Inter, violet/purple AI gradient, neon glow, raw hex(토큰만)
+- **italic**: 전역 금지 아님 (실측 92파일 의도적 사용 — 랜딩/마케팅/v2 컴포넌트 Playfair 강조).
+  v3 락-인 = "no synthetic italic on Playfair" → detail/journal/support 헤딩만 upright 전환됨.
+  전역 italic sweep 금지(브랜드 변경, CEO 결정 사항). 상세 메모리 `project_design_v3.md`.
 
 ## 중요 원칙
 - **백엔드 코드 / endpoints.ts URL / hooks.ts SWR 키 변경 금지** (백엔드 1:1 매핑)
