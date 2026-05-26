@@ -196,6 +196,35 @@ export function DetailHero(props: DetailHeroProps) {
     ? relativeTime(signal.observed_at, Date.now())
     : null;
 
+  /* ── Quote-density stats — all DERIVED from existing data (no new fetch) ── */
+  // 1D absolute change: prev = price / (1 + pct/100); guard pct === -100 (div-by-zero).
+  const changeAbs =
+    signal?.price != null &&
+    signal?.change_pct != null &&
+    Number.isFinite(signal.price) &&
+    Number.isFinite(signal.change_pct) &&
+    signal.change_pct !== -100
+      ? signal.price - signal.price / (1 + signal.change_pct / 100)
+      : null;
+  // % distance from the 52-week extremes — terminal-grade price context.
+  const pctFromHigh =
+    hasRange && signal?.price != null && week52High
+      ? ((signal.price - (week52High as number)) / (week52High as number)) * 100
+      : null;
+  const pctFromLow =
+    hasRange && signal?.price != null && week52Low
+      ? ((signal.price - (week52Low as number)) / (week52Low as number)) * 100
+      : null;
+  // Avg volume (3mo), compact — full value still lives in the Fundamentals panel.
+  const avgVolStr = (() => {
+    const v = signal?.snapshot?.avg_volume;
+    if (v == null || !Number.isFinite(v)) return null;
+    return new Intl.NumberFormat(krw ? "ko-KR" : "en-US", {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(v);
+  })();
+
   return (
     <>
       {/* ── sticky compact header (mobile keeps price visible) ── */}
@@ -421,9 +450,16 @@ export function DetailHero(props: DetailHeroProps) {
                           {priceGlyph(signal.change_pct)}
                         </span>
                       )}
-                      {fmtPct(signal?.change_pct)}
+                      {changeAbs != null
+                        ? fmtPrice(Math.abs(changeAbs), krw)
+                        : fmtPct(signal?.change_pct)}
+                      {changeAbs != null && (
+                        <span className="text-[0.82em] opacity-80">
+                          ({fmtPct(signal?.change_pct)})
+                        </span>
+                      )}
                       <span className="ml-1 text-pq-eyebrow-sm tracking-[0.12em] uppercase text-[var(--pq-ivory-faint)] font-sans">
-                        · 1D Δ
+                        · 1D
                       </span>
                     </span>
                   )}
@@ -437,6 +473,37 @@ export function DetailHero(props: DetailHeroProps) {
                     </span>
                   ) : null}
                 </div>
+
+                {/* Quote stats — derived (52W distance + avg volume), fills the
+                    formerly empty right half of the price column. */}
+                {(pctFromLow != null || pctFromHigh != null || avgVolStr) && (
+                  <div className="mt-4 flex items-center gap-x-5 gap-y-1.5 flex-wrap font-mono text-pq-mono-xs uppercase tracking-[0.1em] text-[var(--pq-ivory-faint)]">
+                    {pctFromLow != null && (
+                      <span>
+                        52주 저점대비{" "}
+                        <span className={cn("normal-case tabular-nums", pctColorClass(pctFromLow))}>
+                          {fmtPct(pctFromLow)}
+                        </span>
+                      </span>
+                    )}
+                    {pctFromHigh != null && (
+                      <span>
+                        고점대비{" "}
+                        <span className={cn("normal-case tabular-nums", pctColorClass(pctFromHigh))}>
+                          {fmtPct(pctFromHigh)}
+                        </span>
+                      </span>
+                    )}
+                    {avgVolStr && (
+                      <span>
+                        평균 거래량{" "}
+                        <span className="normal-case tabular-nums text-[var(--pq-ivory-soft)]">
+                          {avgVolStr}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* 52W rail */}
                 {hasRange && (
