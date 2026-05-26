@@ -641,6 +641,28 @@ export interface SupportChatResponse {
   inquiry_id: number | null;
 }
 
+/**
+ * Admin view of an inquiry (GET /api/support/admin/inquiries). Extends the
+ * detail record with operator-only fields. Reuses SupportInquiryDetail so the
+ * shared fields stay in lock-step with the user-facing detail contract.
+ */
+export interface SupportAdminInquiry extends SupportInquiryDetail {
+  /** Owning user's id (operator-only). */
+  user_id: number;
+  /** Owning user's email at submit time (operator-only). */
+  email_snapshot: string;
+}
+
+/** GET /api/support/admin/inquiries → list envelope. */
+export interface SupportAdminInquiriesResponse {
+  inquiries: SupportAdminInquiry[];
+}
+
+/** POST /api/support/admin/inquiries/:id/reply body. */
+export interface SupportAdminReplyBody {
+  reply: string;
+}
+
 // ── Viral loop (backend commit 7a57a9da) ──────────────────────────────────
 
 /** Whitelisted funnel events accepted by POST /api/track. */

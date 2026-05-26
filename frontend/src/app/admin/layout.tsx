@@ -81,13 +81,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div className="flex items-baseline gap-2">
-            <span className="text-pq-mono-sm font-bold uppercase tracking-widest text-slate-900">
-              Admin
-            </span>
-            <span className="text-pq-mono-sm text-slate-400">·</span>
-            <span className="text-xs text-slate-500">Artifact Preview</span>
-          </div>
+          <span className="text-pq-mono-sm font-bold uppercase tracking-widest text-slate-900">
+            Admin
+          </span>
+          <nav className="flex items-center gap-1">
+            <Link
+              href="/admin/preview"
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              Artifact Preview
+            </Link>
+            <Link
+              href="/admin/support"
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              고객문의
+            </Link>
+          </nav>
         </div>
         <div className="flex items-center gap-3 text-xs text-slate-500">
           <span className="hidden truncate sm:inline">{user?.email}</span>

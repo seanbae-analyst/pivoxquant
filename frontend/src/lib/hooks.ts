@@ -1218,6 +1218,10 @@ import type {
   SupportChatMessage,
   SupportChatRequest,
   SupportChatResponse,
+  SupportAdminInquiriesResponse,
+  SupportAdminInquiry,
+  SupportAdminReplyBody,
+  SupportStatus,
 } from "./types";
 
 /**
@@ -1286,5 +1290,41 @@ export async function sendSupportChat(
   return apiFetch<SupportChatResponse>(API.support.chat, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Admin: all inquiries (operator console). Optional `status` filter maps to
+ * the `?status=` query param the backend honours (open|answered|closed).
+ * Non-admin callers get a 404 from the backend → SWR surfaces `error`, which
+ * the operator page renders as a "권한 없음" notice. The SWR key includes the
+ * status so each filter is cached independently and `mutate` is precise.
+ */
+export function useAdminInquiries(status?: SupportStatus) {
+  const key = status
+    ? `${API.support.adminInquiries}?status=${status}`
+    : API.support.adminInquiries;
+  return useSWR<SupportAdminInquiriesResponse>(key, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 15_000,
+    errorRetryCount: 1,
+  });
+}
+
+/**
+ * Admin: send an operator reply to an inquiry. Returns the updated detail
+ * record (status="answered", answered_at set). Throws `ApiError` on 400
+ * (INVALID_REPLY) / 404 (non-admin or missing ticket). Callers should
+ * `mutate` the relevant `useAdminInquiries` key on success.
+ */
+export async function replyToInquiry(
+  id: string | number,
+  reply: string,
+): Promise<SupportAdminInquiry> {
+  const body: SupportAdminReplyBody = { reply };
+  return apiFetch<SupportAdminInquiry>(API.support.adminReply(id), {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
