@@ -41,6 +41,11 @@ import { SectionCurtain } from "./section-curtain";
 import { Eyebrow } from "./eyebrow";
 import { MainLandingViewTracker } from "@/components/growth/main-landing-view-tracker";
 import { fadeUp, stagger } from "@/lib/motion";
+import {
+  businessInfoRaw,
+  ftcBizInfoUrl,
+  SUPPORT_EMAIL_DEFAULT,
+} from "@/lib/business-info";
 
 /* ───────────────────────── pricing data ───────────────────────── */
 
@@ -641,12 +646,12 @@ function SiteFooter() {
           ))}
         </div>
 
-        {/* 전자상거래법 §13 사업자 정보 표시 (2026-04-27 추가, 2026-04-29 ENV gate,
-            2026-05-09 사업자등록 발급 후 BUSINESS_NAME/REPRESENTATIVE/TYPE/SUBTYPE
-            env 추가). 모든 값은 NEXT_PUBLIC_BUSINESS_* / NEXT_PUBLIC_TELESELLER_*
-            ENV 가 설정되어 있을 때만 노출. 미설정이면 elide — placeholder
+        {/* 전자상거래법 §13 사업자 정보 표시. 모든 값은 lib/business-info.ts SoT
+            (businessInfoRaw) 를 거쳐 읽는다 — SoT 가 landing/business-info 두 벌
+            env 키를 fallback OR 체인으로 흡수하므로 CEO 가 어느 키를 설정하든 동시에
+            켜진다(2026-05-26 배선 통일). 미설정 항목은 elide — placeholder
             "(등록 후 표시)" 노출은 첫 인상 신뢰 깎고 표시광고법 위반 의심.
-            통신판매업 신고번호는 미신고 상태이므로 환경변수 미설정 → 미노출. */}
+            통신판매업 신고번호는 미신고 상태이므로 env 미설정 → 미노출. */}
         <div
           className="pt-6 pb-4"
           style={{ borderTop: "0.5pt solid var(--pq-ivory-line)" }}
@@ -661,47 +666,77 @@ function SiteFooter() {
             }}
           >
             <strong style={{ color: "rgba(245,240,232,0.65)" }}>
-              {process.env.NEXT_PUBLIC_BUSINESS_NAME || "PivoxQuant"}
+              {businessInfoRaw.name || "PivoxQuant"}
             </strong>
-            {process.env.NEXT_PUBLIC_BUSINESS_REPRESENTATIVE && (
+            {businessInfoRaw.representative && (
               <>
-                &nbsp;·&nbsp; 대표 {process.env.NEXT_PUBLIC_BUSINESS_REPRESENTATIVE}
+                &nbsp;·&nbsp; 대표 {businessInfoRaw.representative}
               </>
             )}
-            {process.env.NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER && (
+            {businessInfoRaw.privacyOfficer && (
               <>
-                &nbsp;·&nbsp; 사업자등록번호 {process.env.NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER}
+                &nbsp;·&nbsp; 개인정보보호책임자 {businessInfoRaw.privacyOfficer}
               </>
             )}
-            {process.env.NEXT_PUBLIC_TELESELLER_REGISTRATION_NUMBER && (
+            {businessInfoRaw.registrationNumber && (
               <>
-                &nbsp;·&nbsp; 통신판매업 신고번호 {process.env.NEXT_PUBLIC_TELESELLER_REGISTRATION_NUMBER}
+                &nbsp;·&nbsp; 사업자등록번호 {businessInfoRaw.registrationNumber}
               </>
             )}
-            {(process.env.NEXT_PUBLIC_BUSINESS_TYPE ||
-              process.env.NEXT_PUBLIC_BUSINESS_SUBTYPE) && (
+            {businessInfoRaw.telesellerNumber && (
+              <>
+                &nbsp;·&nbsp; 통신판매업 신고번호 {businessInfoRaw.telesellerNumber}
+              </>
+            )}
+            {businessInfoRaw.telesellerNumber && ftcBizInfoUrl() && (
+              <>
+                &nbsp;·&nbsp;
+                {" "}
+                <a
+                  href={ftcBizInfoUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "inherit", textDecoration: "underline" }}
+                >
+                  사업자정보확인
+                </a>
+              </>
+            )}
+            {(businessInfoRaw.businessType ||
+              businessInfoRaw.businessSubtype) && (
               <>
                 <br />
-                {process.env.NEXT_PUBLIC_BUSINESS_TYPE && (
-                  <>업태 {process.env.NEXT_PUBLIC_BUSINESS_TYPE}</>
+                {businessInfoRaw.businessType && (
+                  <>업태 {businessInfoRaw.businessType}</>
                 )}
-                {process.env.NEXT_PUBLIC_BUSINESS_TYPE &&
-                  process.env.NEXT_PUBLIC_BUSINESS_SUBTYPE && (
+                {businessInfoRaw.businessType &&
+                  businessInfoRaw.businessSubtype && (
                     <>&nbsp;·&nbsp;</>
                   )}
-                {process.env.NEXT_PUBLIC_BUSINESS_SUBTYPE && (
-                  <>종목 {process.env.NEXT_PUBLIC_BUSINESS_SUBTYPE}</>
+                {businessInfoRaw.businessSubtype && (
+                  <>종목 {businessInfoRaw.businessSubtype}</>
                 )}
               </>
             )}
-            {process.env.NEXT_PUBLIC_BUSINESS_ADDRESS && (
+            {businessInfoRaw.address && (
               <>
                 <br />
-                주소 {process.env.NEXT_PUBLIC_BUSINESS_ADDRESS}
+                주소 {businessInfoRaw.address}
+              </>
+            )}
+            {businessInfoRaw.phone && (
+              <>
+                &nbsp;·&nbsp; 연락처 {businessInfoRaw.phone}
               </>
             )}
             <br />
-            이메일 <a href="mailto:support@pivoxquant.com" style={{ color: "inherit", textDecoration: "underline" }}>support@pivoxquant.com</a>
+            이메일{" "}
+            <a
+              href={`mailto:${businessInfoRaw.supportEmail || SUPPORT_EMAIL_DEFAULT}`}
+              style={{ color: "inherit", textDecoration: "underline" }}
+            >
+              {businessInfoRaw.supportEmail || SUPPORT_EMAIL_DEFAULT}
+            </a>
             &nbsp;·&nbsp; 호스팅 Vercel · Railway
           </p>
         </div>

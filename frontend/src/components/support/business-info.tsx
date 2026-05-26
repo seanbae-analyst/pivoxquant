@@ -15,21 +15,24 @@
 
 import * as React from "react";
 
-const BUSINESS_NAME =
-  process.env.NEXT_PUBLIC_BUSINESS_NAME?.trim() || "피복스퀀트 (PivoxQuant)";
-const BUSINESS_OWNER =
-  process.env.NEXT_PUBLIC_BUSINESS_OWNER?.trim() || "배상현";
-const BUSINESS_REG_NO =
-  process.env.NEXT_PUBLIC_BUSINESS_REG_NO?.trim() || "459-01-03808";
-const BUSINESS_ADDRESS =
-  process.env.NEXT_PUBLIC_BUSINESS_ADDRESS?.trim() || "대한민국 (사업장 주소는 문의 시 안내)";
-const BUSINESS_PHONE =
-  process.env.NEXT_PUBLIC_BUSINESS_PHONE?.trim() || "이메일 문의 우선";
-const BUSINESS_MAILORDER_NO =
-  process.env.NEXT_PUBLIC_BUSINESS_MAILORDER_NO?.trim() || "신고 진행 중";
+import {
+  businessInfoRaw,
+  businessInfoWithDefaults,
+  ftcBizInfoUrl,
+  SUPPORT_EMAIL_DEFAULT,
+} from "@/lib/business-info";
 
-export const SUPPORT_EMAIL =
-  process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "support@pivoxquant.com";
+// 단일 SoT 모듈에서 default-적용 값을 읽는다. env 변수명 분기는 SoT 가 흡수한다.
+const INFO = businessInfoWithDefaults();
+const BUSINESS_NAME = INFO.name;
+const BUSINESS_OWNER = INFO.representative;
+const BUSINESS_REG_NO = INFO.registrationNumber;
+const BUSINESS_ADDRESS = INFO.address;
+const BUSINESS_PHONE = INFO.phone;
+const BUSINESS_MAILORDER_NO = INFO.telesellerNumber;
+const PRIVACY_OFFICER = INFO.privacyOfficer;
+
+export const SUPPORT_EMAIL = INFO.supportEmail || SUPPORT_EMAIL_DEFAULT;
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -82,8 +85,30 @@ export function BusinessInfo() {
       <div className="mt-3">
         <InfoRow label="상호" value={BUSINESS_NAME} />
         <InfoRow label="대표자" value={BUSINESS_OWNER} />
+        <InfoRow label="개인정보보호책임자" value={PRIVACY_OFFICER} />
         <InfoRow label="사업자등록번호" value={BUSINESS_REG_NO} />
         <InfoRow label="통신판매업 신고" value={BUSINESS_MAILORDER_NO} />
+        {/* 공정위 통신판매사업자 조회 링크 — 신고번호 env 가 실제 설정된
+            경우에만 노출(default '신고 진행 중' 상태에서는 조회 불가). */}
+        {businessInfoRaw.telesellerNumber && ftcBizInfoUrl() && (
+          <InfoRow
+            label="사업자정보확인"
+            value={
+              <a
+                href={ftcBizInfoUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "var(--pq-bronze-light)",
+                  textDecoration: "underline",
+                  textUnderlineOffset: "2px",
+                }}
+              >
+                공정거래위원회 조회
+              </a>
+            }
+          />
+        )}
         <InfoRow label="주소" value={BUSINESS_ADDRESS} />
         <InfoRow label="연락처" value={BUSINESS_PHONE} />
         <InfoRow
