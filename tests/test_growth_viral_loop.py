@@ -202,6 +202,69 @@ def test_visibility_toggle_validates_bool(client, app, auth_user):
     assert resp.get_json()["code"] == "IS_PUBLIC_BOOL_REQUIRED"
 
 
+# ── legacy share routes honor the is_public gate ───────────────────────────
+# routes/artifacts.py:/brag-card/share/<token>(/image) are the OG-unfurl
+# backend paths. They predate the visibility toggle and used to serve any card
+# with a valid share_token, ignoring is_public — so a user who toggled "private"
+# was still exposed via these legacy URLs. They now apply the SAME gate as
+# GET /api/card/<token>: default-private cards are 404 CARD_NOT_FOUND.
+
+def test_legacy_share_html_hidden_when_private(client, app, make_user):
+    """Legacy HTML share route 404s a private card (was: served regardless)."""
+    u = make_user(email="legacyhtml1@test.com")
+    token = "lgcyhtml" + "a" * 24
+    _make_brag_artifact(app, u["id"], token=token, is_public=False)
+    resp = client.get(f"/api/artifacts/brag-card/share/{token}")
+    assert resp.status_code == 404, resp.data
+    assert resp.get_json()["code"] == "CARD_NOT_FOUND"
+
+
+def test_legacy_share_html_served_when_public(client, app, make_user):
+    """A public card still renders through the legacy HTML route (no regression)."""
+    u = make_user(email="legacyhtml2@test.com")
+    token = "lgpubhtm" + "b" * 24
+    _make_brag_artifact(app, u["id"], token=token, is_public=True)
+    resp = client.get(f"/api/artifacts/brag-card/share/{token}")
+    assert resp.status_code == 200, resp.data
+    assert b"<" in resp.data  # rendered HTML, not an error JSON
+
+
+def test_legacy_share_image_hidden_when_private(client, app, make_user):
+    """Legacy OG image route 404s a private card BEFORE the has_file check."""
+    u = make_user(email="legacyimg1@test.com")
+    token = "lgcyimg0" + "c" * 24
+    _make_brag_artifact(app, u["id"], token=token, is_public=False)
+    resp = client.get(f"/api/artifacts/brag-card/share/{token}/image")
+    assert resp.status_code == 404, resp.data
+    assert resp.get_json()["code"] == "CARD_NOT_FOUND"
+
+
+def test_legacy_share_image_passes_gate_when_public(client, app, make_user):
+    """A public card gets PAST the is_public gate on the legacy image route.
+
+    The test artifact carries no PNG on disk, so it lands on 410
+    PNG_NOT_RENDERED — proving the gate accepts public cards (the 404 gate is
+    not what blocked it) rather than 404 CARD_NOT_FOUND.
+    """
+    u = make_user(email="legacyimg2@test.com")
+    token = "lgpubimg" + "d" * 24
+    _make_brag_artifact(app, u["id"], token=token, is_public=True)
+    resp = client.get(f"/api/artifacts/brag-card/share/{token}/image")
+    assert resp.status_code == 410, resp.data
+    assert resp.get_json()["code"] == "PNG_NOT_RENDERED"
+
+
+def test_legacy_share_routes_404_unknown_token(client):
+    """An unknown share_token is 404 CARD_NOT_FOUND on both legacy routes."""
+    token = "nosuchtoken" + "z" * 21
+    html = client.get(f"/api/artifacts/brag-card/share/{token}")
+    img = client.get(f"/api/artifacts/brag-card/share/{token}/image")
+    assert html.status_code == 404
+    assert html.get_json()["code"] == "CARD_NOT_FOUND"
+    assert img.status_code == 404
+    assert img.get_json()["code"] == "CARD_NOT_FOUND"
+
+
 # ── attribute_referral ─────────────────────────────────────────────────────
 
 def test_attribute_referral_records_and_counts(app, make_user):

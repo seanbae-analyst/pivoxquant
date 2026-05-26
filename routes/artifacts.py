@@ -897,7 +897,12 @@ def brag_card_share_image(share_token: str):
         .filter_by(type="brag_card", share_token=share_token)
         .first()
     )
-    if not artefact:
+    # Public-visibility gate (matches GET /api/card/<token> in routes/growth).
+    # Every brag card defaults to private (is_public=False, migration 045);
+    # the owner must explicitly opt in via POST /api/card/<token>/visibility.
+    # Same 404 for "not found" and "not public" so a leaked / internally-minted
+    # share_token can never expose a card the user toggled private (PIPA §29).
+    if not artefact or not bool(getattr(artefact, "is_public", False)):
         return api_error(en="Card not found",
                          kr="카드를 찾을 수 없습니다.",
                          code="CARD_NOT_FOUND", status=404)
@@ -942,7 +947,11 @@ def brag_card_share(share_token: str):
         .filter_by(type="brag_card", share_token=share_token)
         .first()
     )
-    if not artefact:
+    # Public-visibility gate (matches GET /api/card/<token> in routes/growth).
+    # Default-private (migration 045); owner must opt in via the visibility
+    # toggle. Same 404 for "not found" and "not public" — never leak the
+    # existence of a card the user kept private (PIPA §29).
+    if not artefact or not bool(getattr(artefact, "is_public", False)):
         return api_error(en="Card not found", kr="카드를 찾을 수 없습니다.", code="CARD_NOT_FOUND", status=404)
 
     data = dict(artefact.data_json or {})

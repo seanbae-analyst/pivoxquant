@@ -608,3 +608,72 @@ class TestIdempotentEnqueue:
         assert stats2["enqueued"] == 0
         assert stats2["existed"] == 2
         assert _row_count(app, u["id"]) == 2
+
+
+# ── 13. Bug C#4 — retention drain SKIP LOCKED ────────────────────────────────
+
+
+class TestPendingRetentionRowsSkipLocked:
+    """_pending_retention_rows bypasses pending_due() with its own inline
+    query, so it must carry its own ``FOR UPDATE SKIP LOCKED`` — otherwise
+    two overlapping retention cron ticks claim the same row and double-send.
+    """
+
+    def _compiled_pg(self, query):
+        from sqlalchemy.dialects import postgresql
+        return str(
+            query.statement.compile(
+                dialect=postgresql.dialect(),
+                compile_kwargs={"literal_binds": False},
+            )
+        )
+
+    def test_retention_query_has_for_update_skip_locked(self, app):
+        from models import ScheduledEmail
+        from services.email.retention_sequence import RETENTION_SLUGS
+        with app.app_context():
+            q = (
+                ScheduledEmail.query
+                .filter(ScheduledEmail.email_type.in_(RETENTION_SLUGS))
+                .filter(ScheduledEmail.sent_at.is_(None))
+                .filter(ScheduledEmail.skipped_reason.is_(None))
+                .with_for_update(skip_locked=True)
+            )
+            sql = self._compiled_pg(q).upper()
+            assert "FOR UPDATE" in sql
+            assert "SKIP LOCKED" in sql
+
+    def test_source_uses_skip_locked(self):
+        import inspect
+        from services.email.retention_sequence import _pending_retention_rows
+        src = inspect.getsource(_pending_retention_rows)
+        assert "with_for_update(skip_locked=True)" in src
+
+    def test_returns_only_due_retention_rows_on_sqlite(self, app, make_user):
+        """SKIP LOCKED is a no-op on SQLite — the drain must still return
+        exactly the due ``retention_*`` rows and exclude future/non-retention.
+        """
+        from extensions import db
+        from models import ScheduledEmail
+        from services.email.retention_sequence import _pending_retention_rows
+        uid = make_user(email="ret_skiplocked@test.com")["id"]
+        now = datetime(2026, 1, 1, 12, 0, 0)
+        with app.app_context():
+            ScheduledEmail.enqueue(
+                user_id=uid, email_type="retention_d7",
+                email_category="marketing",
+                scheduled_send_at=now - timedelta(minutes=5),  # due
+            )
+            ScheduledEmail.enqueue(
+                user_id=uid, email_type="retention_d30",
+                email_category="marketing",
+                scheduled_send_at=now + timedelta(days=1),  # not yet due
+            )
+            ScheduledEmail.enqueue(
+                user_id=uid, email_type="welcome",
+                email_category="transactional",
+                scheduled_send_at=now - timedelta(minutes=5),  # due but not retention
+            )
+            db.session.commit()
+            rows = _pending_retention_rows(now=now)
+            assert {r.email_type for r in rows} == {"retention_d7"}
