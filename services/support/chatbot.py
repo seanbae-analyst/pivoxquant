@@ -23,11 +23,27 @@ Three defense layers, in order:
    already-clean string.
 
 Cost: existing ANTHROPIC_API_KEY, existing Haiku model. No new spend.
+
+Zero-cost FAQ (``_faq_match``)
+==============================
+Common questions are answered from a curated, compliant FAQ table with NO
+model call, so the bot stays useful even when the Anthropic balance is empty
+(every model call would otherwise fail → escalate). The model is only a
+fallback for questions the FAQ table can't match. Individual-handling topics
+(환불 처리 / 청구 오류 / 계정 삭제 처리) are intentionally absent from the table
+so they fall through to human escalation.
+
+The Claude fallback is gated behind ``SUPPORT_CHAT_LLM_ENABLED`` (default OFF,
+because the Anthropic balance is unfunded). With it off the bot is fully
+deterministic — FAQ match → answer, otherwise → human escalation, zero API
+calls. Flip the env var to ``1`` once credits are funded to enable the model
+fallback for FAQ-missed questions; no code change required.
 """
 from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 
 from services.ai.service import MODEL
@@ -102,6 +118,22 @@ SUPPORT_SYSTEM_PROMPT = (
 
 
 MAX_TOKENS = 600
+
+
+def _llm_enabled() -> bool:
+    """Whether the Claude fallback is allowed to run.
+
+    Default OFF. The Anthropic balance is not funded, so attempting a model
+    call would only 400 ("credit balance too low") after wasting a round-trip
+    and spamming error logs. With the flag off the bot is fully deterministic:
+    FAQ match → answer, otherwise → human escalation, ZERO API calls.
+
+    When credits are funded, set ``SUPPORT_CHAT_LLM_ENABLED=1`` to turn the
+    Claude fallback on for FAQ-missed questions. No code change needed.
+    """
+    return os.environ.get("SUPPORT_CHAT_LLM_ENABLED", "0").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
 
 
 # ── Layer 1: pre-filter (no model call) ─────────────────────────────────────
@@ -219,6 +251,103 @@ def _is_investment_question(msg: str) -> bool:
     return False
 
 
+# ── Layer 0: zero-cost FAQ retrieval (no model call) ───────────────────────
+# Curated, COMPLIANT answers for common questions. Matched deterministically by
+# keyword overlap so the bot answers even with an empty Anthropic balance.
+# Answers must stay free of 매수/매도/추천/권유/사라/팔아/전망/목표가 tokens
+# (they are surfaced verbatim to users and re-checked by the post-filter).
+# Individual-handling topics (환불 처리/청구 오류/계정 삭제 처리) are absent on
+# purpose → those questions match nothing → human escalation.
+_FAQ_ENTRIES: tuple[dict, ...] = (
+    {
+        "keywords": ("요금", "요금제", "구독료", "플랜", "pro", "프로", "premium",
+                     "프리미엄", "유료", "월 9", "9,900", "19,900"),
+        "answer": (
+            "요금제는 Free(무료), Pro(월 ₩9,900), Premium(월 ₩19,900) 세 가지예요. "
+            "Pro는 확장 분석과 정기 리포트, Premium은 Pro 기능 전체에 고급 분석이 "
+            "더해집니다. 요금제 변경·해지는 설정 > 구독에서 하실 수 있어요."
+        ),
+    },
+    {
+        "keywords": ("구독 변경", "구독 해지", "구독 취소", "해지", "플랜 변경",
+                     "플랜 바꾸", "구독 바꾸", "구독 끊"),
+        "answer": "구독 변경과 해지는 설정 > 구독 메뉴에서 직접 하실 수 있어요.",
+    },
+    {
+        "keywords": ("로그인", "로그아웃", "접속이 안", "구글", "카카오", "google",
+                     "kakao", "비밀번호", "계정 연결", "로그인이 안"),
+        "answer": (
+            "로그인은 Google 또는 Kakao 계정으로 진행돼요. 별도 이메일/비밀번호 가입은 "
+            "없습니다. 로그인이 안 되면 브라우저 캐시를 삭제하고 다시 시도해 주세요. "
+            "그래도 안 되면 문의를 남겨 주시면 확인해 드릴게요."
+        ),
+    },
+    {
+        "keywords": ("탈퇴", "회원탈퇴", "계정 삭제", "데이터 삭제", "개인정보 삭제",
+                     "그만 쓰", "그만 사용"),
+        "answer": (
+            "회원 탈퇴는 설정 > 계정에서 신청하실 수 있어요. 신청 후 30일의 유예 기간이 "
+            "있고, 그 안에 다시 로그인하면 탈퇴가 취소됩니다. 유예 기간이 지나면 "
+            "개인정보가 파기돼요."
+        ),
+    },
+    {
+        "keywords": ("데이터 출처", "데이터 어디", "출처", "어디서 가져", "어떤 데이터",
+                     "데이터 신뢰", "데이터는 정확"),
+        "answer": (
+            "가격·재무·공시 데이터는 공식 라이선스를 받은 제공처에서만 가져와요. "
+            "비공식 스크래핑 데이터는 사용하지 않습니다."
+        ),
+    },
+    {
+        "keywords": ("설치", "pwa", "홈 화면", "홈화면", "앱 설치", "앱으로",
+                     "바탕화면", "아이콘", "앱처럼"),
+        "answer": (
+            "PivoxQuant는 PWA라서 앱처럼 설치할 수 있어요. 모바일/데스크톱 브라우저의 "
+            "\"홈 화면에 추가\" 또는 \"앱 설치\"를 사용하시면 됩니다."
+        ),
+    },
+    {
+        "keywords": ("시그널", "라벨", "positive", "negative", "neutral",
+                     "신호 의미", "신호가 무슨", "표시가 무슨", "무슨 뜻"),
+        "answer": (
+            "시그널은 POSITIVE / NEGATIVE / NEUTRAL 세 가지 정보성 라벨이에요. "
+            "지표의 방향을 중립적으로 설명하는 표시일 뿐, 특정 매매 행동을 지시하거나 "
+            "권하는 신호는 아닙니다."
+        ),
+    },
+    {
+        "keywords": ("문의", "고객센터", "고객지원", "어디로 연락", "어떻게 연락",
+                     "상담", "물어보려면"),
+        "answer": (
+            "앱 내 고객지원 > 문의하기에서 문의를 남기시면 담당자가 확인 후 회신드려요. "
+            "결제·계정·기술 문제 모두 이곳에서 접수됩니다."
+        ),
+    },
+)
+
+
+def _faq_match(message: str) -> str | None:
+    """Return a curated FAQ answer for *message*, or None when there is no
+    confident single match. Pure python — no model call (works at zero API
+    balance). Conservative: ambiguous ties return None → escalation."""
+    if not message or not isinstance(message, str):
+        return None
+    m = message.lower()
+    best_score = 0
+    best_answer: str | None = None
+    tie = False
+    for entry in _FAQ_ENTRIES:
+        score = sum(1 for kw in entry["keywords"] if kw.lower() in m)
+        if score > best_score:
+            best_score, best_answer, tie = score, entry["answer"], False
+        elif score == best_score and score > 0:
+            tie = True
+    if best_score >= 1 and not tie:
+        return best_answer
+    return None
+
+
 # ── History sanitisation ────────────────────────────────────────────────────
 def _sanitize_history(history) -> list[dict]:
     if not isinstance(history, list):
@@ -293,7 +422,29 @@ def answer_support_question(message, history=None) -> dict:
 
     if not message or not isinstance(message, str) or not message.strip():
         return deny
-    if not ai.available or ai.client is None:
+
+    # Defense-in-depth: never answer an investment question even if the route
+    # guard was bypassed (the route normally deflects these before calling us).
+    if _is_investment_question(message):
+        return deny
+
+    # Layer 0: zero-cost FAQ retrieval — answers common questions with NO model
+    # call, so the bot stays useful when the Anthropic balance is empty. The
+    # curated answer is still run through the post-filter as insurance.
+    faq = _faq_match(message)
+    if (
+        faq is not None
+        and is_compliant(faq)
+        and contains_forbidden_term(faq) is None
+        and not _has_advice_vocab(faq)
+    ):
+        return {"answer": faq, "can_answer": True}
+
+    # Model fallback (only for questions the FAQ table can't match).
+    # Gated behind SUPPORT_CHAT_LLM_ENABLED — default OFF because the Anthropic
+    # balance is unfunded (a call would 400 then escalate anyway). Off ⇒ FAQ
+    # miss escalates immediately with zero API calls (deterministic).
+    if not _llm_enabled() or not ai.available or ai.client is None:
         return deny
 
     messages = _sanitize_history(history)
