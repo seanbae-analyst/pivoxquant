@@ -219,6 +219,10 @@ export default function StockDetailPage() {
               day: "numeric",
               hour: "2-digit",
               minute: "2-digit",
+              // Signal observation time is KST-anchored; pin the zone so the
+              // chart marker tooltip doesn't drift for non-KST viewers
+              // (2026-05-26 sweep, same class as F#1/#2/#4).
+              timeZone: "Asia/Seoul",
             })
           : "";
         const parts = [

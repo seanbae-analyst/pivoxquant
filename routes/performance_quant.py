@@ -42,6 +42,24 @@ _bench_cache: dict = {}  # {user_id: {"data": ..., "ts": ..., "key": ...}}
 _BENCH_CACHE_TTL = 300  # 5 minutes
 
 
+def _finite_floats(obj):
+    """Recursively coerce any non-finite float (nan/inf/-inf) to 0.0.
+
+    Defense-in-depth: json.dumps emits literal `NaN`/`Infinity` for these,
+    which is invalid JSON and crashes JSON.parse on the frontend. Any quant
+    payload built from numpy stats can produce them (zero-variance corrcoef,
+    0/0 ratios). Run the final payload through this before jsonify so a
+    single missed guard can never ship a non-parseable response.
+    """
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else 0.0
+    if isinstance(obj, dict):
+        return {k: _finite_floats(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_finite_floats(v) for v in obj]
+    return obj
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Regime-Conditional Performance Report
 # ─────────────────────────────────────────────────────────────────────────────
@@ -395,6 +413,13 @@ def benchmark_analytics():
 
     # Active share: approximate from return correlation (no benchmark constituents)
     correlation = float(np.corrcoef(p_ret, b_ret)[0, 1]) if n_days > 1 else 1.0
+    # np.corrcoef returns nan when either series has zero variance (identical or
+    # flat returns). nan serializes to literal `NaN` via json.dumps which is
+    # invalid JSON — JSON.parse on the frontend throws and crashes the page.
+    # Coerce to 0.0 (no measurable divergence), mirroring the vol>1e-9 guard
+    # used for the Sharpe denominators above.
+    if not math.isfinite(correlation):
+        correlation = 0.0
     active_share_est = round((1 - abs(correlation)) * 100, 1)
 
     # ── Rolling alpha (monthly windows) ──
@@ -482,6 +507,7 @@ def benchmark_analytics():
     }
 
     add_disclaimer(payload, "analysis")
+    payload = _finite_floats(payload)
     _bounded_set(_bench_cache, uid, {"data": payload, "ts": now, "key": cache_key})
     return jsonify(payload)
 

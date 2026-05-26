@@ -297,13 +297,30 @@ def _get_portfolio_returns(items, total_value, period="1y"):
 # Signal helpers (used by signals_quant for behavioral models)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _ticker_validate(ticker):
-    """Validate and normalize a ticker symbol. Returns (ticker, error_response)."""
+def _is_kr_ticker(ticker):
+    """True when ``ticker`` is a Korean listing (6-digit code, optional .KS/.KQ)."""
     import re as _re
-    from flask import jsonify
+    return bool(_re.match(r"^[0-9]{6}(\.[A-Z]{1,2})?$", (ticker or "").upper().strip()))
+
+
+def _ticker_validate(ticker):
+    """Validate and normalize a ticker symbol. Returns (ticker, error_response).
+
+    Accepts US (1-5 alpha, optional .XX suffix) and KR (6-digit, optional
+    .KS/.KQ suffix) formats. KR tickers pass validation here; endpoints that
+    only have US data sources must reject them separately with a clean
+    "한국 종목 미지원" message rather than a 400 "Invalid ticker format".
+    """
+    import re as _re
+    from services.error_responses import api_error
     ticker = (ticker or "").upper().strip()
-    if not ticker or not _re.match(r"^[A-Z]{1,5}(\.[A-Z]{1,2})?$", ticker):
-        return None, (jsonify({"error": "Invalid ticker format"}), 400)
+    if not ticker or not _re.match(r"^([A-Z]{1,5}|[0-9]{6})(\.[A-Z]{1,2})?$", ticker):
+        return None, api_error(
+            en="Invalid ticker format",
+            kr="유효하지 않은 종목 코드 형식입니다.",
+            code="INVALID_TICKER_FORMAT",
+            status=400,
+        )
     return ticker, None
 
 

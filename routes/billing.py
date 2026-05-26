@@ -88,17 +88,75 @@ def _get_or_create_customer(user):
 
     Raises stripe.StripeError on API failure — the caller must handle it
     (all call sites already wrap in `except stripe.StripeError`).
+
+    Bug C#3 fix — race-safe customer creation
+    -----------------------------------------
+    The previous fast-path (``if user.stripe_customer_id: return``) was an
+    unlocked check-then-create. Under the multi-worker PG deployment two
+    concurrent ``create-checkout`` requests for the *same* user could both
+    observe ``stripe_customer_id IS NULL`` and each call
+    ``stripe.Customer.create`` — only one row update wins, orphaning the
+    other Stripe customer (whose webhooks would then be lost).
+
+    Defense in depth:
+      1. Re-read the User row under ``SELECT ... FOR UPDATE`` so a second
+         concurrent caller blocks until we commit, then sees the persisted
+         id and reuses it (no second Customer.create).
+      2. The DB-level ``uq_users_stripe_customer`` partial unique index
+         (app._do_migrations) is the backstop: if a race still slips
+         through (e.g. SQLite, or lock contention timeout), the commit
+         raises IntegrityError, we roll back + delete the orphan + re-read
+         the winner's id.
+
+    On SQLite ``with_for_update`` is a no-op (single-threaded test path),
+    which is harmless.
     """
-    if user.stripe_customer_id:
-        return user.stripe_customer_id
+    # Lock the user row. ``current_user`` is a proxy that may be attached to
+    # the request session; re-query by primary key to obtain a row-locked,
+    # session-bound instance and re-check the id while holding the lock.
+    locked_user = (
+        User.query
+        .filter(User.id == user.id)
+        .with_for_update()
+        .first()
+    )
+    target = locked_user or user
+    if target.stripe_customer_id:
+        # Another concurrent request created + persisted it while we waited
+        # on the lock (or it already existed). Reuse — never duplicate.
+        db.session.commit()  # release the row lock
+        return target.stripe_customer_id
+
     customer = stripe.Customer.create(
-        email=user.email,
-        name=user.name,
-        metadata={"user_id": str(user.id)},
+        email=target.email,
+        name=target.name,
+        metadata={"user_id": str(target.id)},
     )
     try:
-        user.stripe_customer_id = customer.id
+        target.stripe_customer_id = customer.id
         db.session.commit()
+    except IntegrityError as e:
+        # The partial unique index rejected the write — a racing request
+        # persisted a customer id for this user first. Roll back, delete the
+        # orphan we just created, and reuse the winner's id.
+        db.session.rollback()
+        logger.warning(
+            "stripe_customer_id race for user_id=%s — reusing winner: %s",
+            target.id, e,
+        )
+        try:
+            stripe.Customer.delete(customer.id)
+            logger.info("Deleted duplicate Stripe customer %s after race", customer.id)
+        except stripe.StripeError as del_err:
+            logger.error(
+                "Failed to delete duplicate Stripe customer %s: %s",
+                customer.id, del_err,
+            )
+        winner = db.session.get(User, target.id)
+        if winner is not None and winner.stripe_customer_id:
+            return winner.stripe_customer_id
+        # No persisted winner found (shouldn't happen) — surface failure.
+        raise
     except Exception as e:
         # Bug NEW-G fix: previous code logged + swallowed and returned the
         # customer id, leaving an orphan Stripe customer that we'd never
@@ -109,7 +167,7 @@ def _get_or_create_customer(user):
         db.session.rollback()
         logger.error(
             "Failed to persist stripe_customer_id=%s for user_id=%s: %s",
-            customer.id, user.id, e,
+            customer.id, target.id, e,
         )
         try:
             stripe.Customer.delete(customer.id)

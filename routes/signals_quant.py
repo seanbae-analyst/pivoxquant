@@ -21,6 +21,7 @@ from .quant_helpers import (
     DISCLAIMERS,
     _bounded_set,
     _get_ohlcv,
+    _is_kr_ticker,
     _ticker_validate,
     add_disclaimer,
 )
@@ -28,6 +29,24 @@ from .quant_helpers import (
 logger = logging.getLogger(__name__)
 
 signals_quant_bp = Blueprint("signals_quant", __name__, url_prefix="/api")
+
+
+def _kr_unsupported(ticker):
+    """Clean "Korean stocks not supported" response for US-only data models.
+
+    The behavioral / microstructure models (disposition, OFI, anchoring,
+    sentiment-divergence) source from FMP/Alpaca which only cover US
+    listings. A KR ticker (e.g. 005930.KS) passes _ticker_validate now,
+    so reject it here with a 422 rather than letting it fall through to a
+    confusing "insufficient price history" 404. Mirrors the KR-aware
+    messaging pattern used elsewhere.
+    """
+    return api_error(
+        en="Korean stocks are not supported by this signal.",
+        kr="이 시그널은 한국 종목을 지원하지 않습니다 (미국 상장 종목만 가능).",
+        code="SIGNAL_QUANT_KR_UNSUPPORTED",
+        status=422,
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Short Interest Signal
@@ -473,6 +492,8 @@ def signal_disposition(ticker):
     ticker, err = _ticker_validate(ticker)
     if err:
         return err
+    if _is_kr_ticker(ticker):
+        return _kr_unsupported(ticker)
 
     # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
     if not is_user_allowed_ticker(current_user.id, ticker):
@@ -534,6 +555,8 @@ def signal_ofi(ticker):
     ticker, err = _ticker_validate(ticker)
     if err:
         return err
+    if _is_kr_ticker(ticker):
+        return _kr_unsupported(ticker)
 
     # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
     if not is_user_allowed_ticker(current_user.id, ticker):
@@ -595,6 +618,8 @@ def signal_sentiment_divergence(ticker):
     ticker, err = _ticker_validate(ticker)
     if err:
         return err
+    if _is_kr_ticker(ticker):
+        return _kr_unsupported(ticker)
 
     # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
     if not is_user_allowed_ticker(current_user.id, ticker):
@@ -671,6 +696,8 @@ def signal_anchoring(ticker):
     ticker, err = _ticker_validate(ticker)
     if err:
         return err
+    if _is_kr_ticker(ticker):
+        return _kr_unsupported(ticker)
 
     # §101 회피 — per-ticker 분석은 보유/관심 종목으로 한정.
     if not is_user_allowed_ticker(current_user.id, ticker):

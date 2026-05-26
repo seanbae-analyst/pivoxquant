@@ -24,10 +24,11 @@ function dayKey(iso: string | null | undefined): string {
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "unknown";
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+    // Bucket by the KST calendar day so grouping matches the ko-KR heading
+    // below — getFullYear/Month/Date used the browser-local day, which split
+    // signals across the wrong buckets for non-KST viewers (2026-05-26 sweep).
+    // en-CA yields a stable "YYYY-MM-DD" ordering.
+    return d.toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
   } catch {
     return "unknown";
   }
@@ -39,10 +40,14 @@ function dayHeading(iso: string | null | undefined): { weekday: string; meta: st
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return { weekday: "이전", meta: "날짜 정보 없음" };
-    const weekday = d.toLocaleDateString("ko-KR", { weekday: "long" }); // "월요일"
+    const weekday = d.toLocaleDateString("ko-KR", {
+      weekday: "long",
+      timeZone: "Asia/Seoul",
+    }); // "월요일"
     const meta = d.toLocaleDateString("ko-KR", {
       month: "long",
       day: "numeric",
+      timeZone: "Asia/Seoul",
     }); // "5월 13일"
     return { weekday, meta };
   } catch {

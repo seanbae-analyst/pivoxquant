@@ -375,6 +375,10 @@ def _pending_retention_rows(now: datetime | None, limit: int = 200) -> list[Any]
         .filter(ScheduledEmail.skipped_reason.is_(None))
         .order_by(ScheduledEmail.scheduled_send_at.asc())
         .limit(limit)
+        # SKIP LOCKED so concurrent retention cron workers can't claim the
+        # same rows and double-send (this inline query bypassed pending_due's
+        # locking). PG-only; SQLite ignores it (no-op) which is fine for tests.
+        .with_for_update(skip_locked=True)
         .all()
     )
 

@@ -29,6 +29,7 @@ from flask_login import current_user
 
 from extensions import db
 from routes.decorators import api_auth
+from security import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ _MEMO_ID_MAX_LEN = 64
 
 @feedback_bp.route("/nps", methods=["POST"])
 @api_auth
+@limiter.limit("5 per hour")
 def submit_nps():
     """Record a 1-click NPS score.
 

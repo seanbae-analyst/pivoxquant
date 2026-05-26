@@ -120,7 +120,7 @@ export default function RiskPageV2() {
 
       {/* HERO */}
       <RiskHeroV2
-        eyebrow={`Risk · 7-Layer Defense · ${new Date().toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", { weekday: "long" })}`}
+        eyebrow={`Risk · 7-Layer Defense · ${new Date().toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", { weekday: "long", timeZone: "Asia/Seoul" })}`}
         posture={posture}
         breachedCount={breachedCount}
         strainedCount={strainedCount}

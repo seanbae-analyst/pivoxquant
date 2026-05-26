@@ -25,6 +25,7 @@ from datetime import date, datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 
+from security import limiter
 from services.fx_service import get_rate as _fx_get_rate
 from services.fx_service import get_rate_at as _fx_get_rate_at
 from services.name_resolver import resolve_stock_name
@@ -507,6 +508,7 @@ def _simulate_benchmark(
 # ── Endpoint ────────────────────────────────────────────────────────────────
 
 @counterfactual_bp.route("/counterfactual")
+@limiter.limit("20 per minute")
 def counterfactual():
     """GET /api/simulate/counterfactual
 

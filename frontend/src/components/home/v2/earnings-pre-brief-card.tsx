@@ -32,17 +32,20 @@ import { HomeCard } from "./home-card";
 import { useEarningsBrief } from "@/lib/hooks";
 import { displayTicker, normalizeTicker } from "@/lib/format";
 
-function fmtWhen(iso: string): string {
+export function fmtWhen(iso: string): string {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return "—";
   const d = new Date(t);
-  // KST friendly short label: "5월 22일 22:30"
+  // KST friendly short label: "5월 22일 22:30". Pin to Asia/Seoul so the
+  // appended " KST" label (line ~118) is truthful for non-KST viewers
+  // (2026-05-26 F#2 fix — was rendering browser-local wall clock).
   return d.toLocaleString("ko-KR", {
     month: "long",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Asia/Seoul",
   });
 }
 

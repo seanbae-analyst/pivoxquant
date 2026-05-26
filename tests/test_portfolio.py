@@ -814,3 +814,285 @@ class TestAddBuyFxRate:
             p = db.session.get(Position, pid)
             expected = (1000.0 * 1500 + 1400.0 * 800) / (1500 + 800)
             assert round(p.buy_fx_rate, 4) == round(expected, 4)
+
+
+# ── Bug API#5: non-finite / out-of-range amount rejection ───────────────────
+# A crafted shares/price like 1e308 (or inf / nan) previously flowed into
+# ``shares * price`` → Infinity → json.dumps(Infinity) → frontend JSON.parse
+# crash. Every add/buy/sell entry point now rejects with code=INVALID_AMOUNT
+# (400) immediately after float() conversion. Normal small values still pass.
+
+class TestInfiniteAmountGuard:
+    def _signal(self, app, ticker="AAPL"):
+        from extensions import db
+        from models import SignalCache
+        with app.app_context():
+            db.session.add(SignalCache(
+                ticker=ticker,
+                data_json=json.dumps({
+                    "is_korean": False, "currency": "USD", "price": 100.0,
+                    "name": "Apple",
+                }),
+            ))
+            db.session.commit()
+
+    def test_add_position_rejects_huge_shares(self, client, auth_user):
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/position", json={
+                "ticker": "AAPL", "shares": 1e308, "avg_cost": 100.0,
+            })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_add_position_rejects_huge_cost(self, client, auth_user):
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/position", json={
+                "ticker": "AAPL", "shares": 5, "avg_cost": 1e308,
+            })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_add_position_rejects_inf(self, client, auth_user):
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post(
+                "/api/portfolio/position",
+                data='{"ticker":"AAPL","shares":Infinity,"avg_cost":100.0}',
+                content_type="application/json",
+            )
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_add_position_rejects_nan(self, client, auth_user):
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post(
+                "/api/portfolio/position",
+                data='{"ticker":"AAPL","shares":NaN,"avg_cost":100.0}',
+                content_type="application/json",
+            )
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_buy_more_rejects_huge_price(self, client, auth_user, add_position, app):
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        self._signal(app)
+        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
+            "shares": 1, "price": 1e308,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_buy_new_rejects_huge_shares(self, client, auth_user, mock_fetcher):
+        r = client.post("/api/portfolio/position/buy-new", json={
+            "ticker": "AAPL", "shares": 1e308, "price": 100.0,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_sell_rejects_huge_shares(self, client, auth_user, add_position, app):
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        self._signal(app)
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": 1e308, "price": 100.0,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_sell_rejects_huge_price(self, client, auth_user, add_position, app):
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        self._signal(app)
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": 1, "price": 1e308,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_create_position_alias_rejects_huge_quantity(self, client, auth_user):
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "AAPL", "quantity": 1e308, "price": 100.0,
+            })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_create_trade_alias_rejects_huge_quantity(
+        self, client, auth_user, add_position, app,
+    ):
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        self._signal(app)
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 1e308, "price": 100.0,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_AMOUNT"
+
+    def test_normal_amounts_still_accepted(self, client, auth_user, app, mock_fetcher):
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/position", json={
+                "ticker": "MSFT", "shares": 5, "avg_cost": 300.0,
+            })
+        assert r.status_code == 200, r.get_json()
+        assert r.get_json()["ok"] is True
+
+    def test_max_amount_boundary_accepted_just_above_rejected(
+        self, client, auth_user,
+    ):
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            ok = client.post("/api/portfolio/position", json={
+                "ticker": "BND", "shares": 1e9, "avg_cost": 1.0,
+            })
+        assert ok.status_code == 200, ok.get_json()
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            bad = client.post("/api/portfolio/position", json={
+                "ticker": "BNX", "shares": 2e9, "avg_cost": 1.0,
+            })
+        assert bad.status_code == 400
+        assert bad.get_json()["code"] == "INVALID_AMOUNT"
+
+
+# ── Bug C#2: free-tier 3-position cap is enforced under a User-row lock ──────
+# The cap COUNT now runs while holding SELECT FOR UPDATE on the User row, which
+# serializes per-user adds and closes the TOCTOU window. True greenlet
+# concurrency isn't reproducible under SQLite's single-writer test harness, so
+# these assert the locked code path still enforces the cap across all three add
+# entry points and never deadlocks.
+
+class TestFreeTierCapUnderLock:
+    def test_add_position_cap_enforced(self, client, auth_user, add_position):
+        add_position(auth_user["id"], "AAPL", 1, 100)
+        add_position(auth_user["id"], "MSFT", 1, 100)
+        add_position(auth_user["id"], "GOOG", 1, 100)
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/position", json={
+                "ticker": "AMZN", "shares": 1, "avg_cost": 100,
+            })
+        assert r.status_code == 403
+        assert r.get_json()["code"] == "TIER_LIMIT"
+
+    def test_buy_new_cap_enforced(self, client, auth_user, add_position, mock_fetcher):
+        add_position(auth_user["id"], "AAPL", 1, 100)
+        add_position(auth_user["id"], "MSFT", 1, 100)
+        add_position(auth_user["id"], "GOOG", 1, 100)
+        r = client.post("/api/portfolio/position/buy-new", json={
+            "ticker": "TSLA", "shares": 1, "price": 100,
+        })
+        assert r.status_code == 403
+        assert r.get_json()["code"] == "TIER_LIMIT"
+
+    def test_create_position_alias_cap_enforced(self, client, auth_user, add_position):
+        add_position(auth_user["id"], "AAPL", 1, 100)
+        add_position(auth_user["id"], "MSFT", 1, 100)
+        add_position(auth_user["id"], "GOOG", 1, 100)
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "AMZN", "quantity": 1, "price": 100,
+            })
+        assert r.status_code == 403
+        assert r.get_json()["code"] == "TIER_LIMIT"
+
+    def test_under_cap_add_still_succeeds(self, client, auth_user, add_position):
+        add_position(auth_user["id"], "AAPL", 1, 100)
+        add_position(auth_user["id"], "MSFT", 1, 100)
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/position", json={
+                "ticker": "GOOG", "shares": 1, "avg_cost": 100,
+            })
+        assert r.status_code == 200, r.get_json()
+
+
+# ── Bug C#1: position lost-update — locked re-load preserves correctness ────
+# buy_more / sell_position / create_trade_alias now re-load the Position under
+# SELECT FOR UPDATE *after* locking the User row (lock order User→Position on
+# every path → deadlock-free). SQLite no-ops row locks, so we can't reproduce a
+# true interleave; these assert the locked-reload path leaves shares /
+# avg_cost / capital consistent and that the reorder didn't break the 404 /
+# full-close / partial paths.
+
+class TestPositionLockedReload:
+    def _signal(self, app, ticker="AAPL"):
+        from extensions import db
+        from models import SignalCache
+        with app.app_context():
+            db.session.add(SignalCache(
+                ticker=ticker,
+                data_json=json.dumps({
+                    "is_korean": False, "currency": "USD", "price": 170.0,
+                    "name": "Apple",
+                }),
+            ))
+            db.session.commit()
+
+    def test_buy_more_locked_reload_updates_shares_and_capital(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import Position, User
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        self._signal(app)
+        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
+            "shares": 5, "price": 160.0,
+        })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            assert p.shares == 15
+            assert round(p.avg_cost, 2) == 153.33
+            u = db.session.get(User, auth_user["id"])
+            assert u.available_capital == 10000.0 - 5 * 160.0  # 9200
+
+    def test_buy_more_locked_reload_404_when_missing(self, client, auth_user):
+        r = client.post("/api/portfolio/position/99999/buy", json={
+            "shares": 1, "price": 100.0,
+        })
+        assert r.status_code == 404
+
+    def test_sell_locked_reload_full_close_deletes_row(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import Position, User
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        self._signal(app)
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": 10, "price": 170.0,
+        })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            assert db.session.get(Position, pid) is None
+            u = db.session.get(User, auth_user["id"])
+            assert u.available_capital == 10000.0 + 10 * 170.0
+
+    def test_sell_locked_reload_partial_decrements(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import Position
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        self._signal(app)
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": 3, "price": 170.0,
+        })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            assert p.shares == 7
+
+    def test_create_trade_alias_buy_locked_reload(
+        self, client, auth_user, add_position, app,
+    ):
+        from extensions import db
+        from models import Position
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        self._signal(app)
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 5, "price": 160.0,
+        })
+        assert r.status_code == 200, r.get_json()
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            assert p.shares == 15
+
+    def test_create_trade_alias_404_when_missing(self, client, auth_user):
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": 99999, "action": "buy", "quantity": 1, "price": 100.0,
+        })
+        assert r.status_code == 404

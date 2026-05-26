@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 daytrade_bp = Blueprint("daytrade", __name__, url_prefix="/api/daytrade")
 
+# Alpaca-supported intraday timeframes accepted by /chart.
+VALID_TF = {"1Min", "5Min", "15Min", "30Min", "1Hour"}
+
 
 @daytrade_bp.route("/status")
 @api_auth
@@ -194,8 +197,17 @@ def chart(ticker):
         return jsonify({"ticker": ticker, "timeframe": "1Min", "bars": [], "note": "Korean stocks use KIS"})
     if not daytrade.available:
         return jsonify({"error": "Day trade not configured"}), 503
+    # Validate/clamp query params (mirror portfolio.py:1291 pattern):
+    # `?limit=abc` previously raised ValueError -> uncaught 500; an
+    # unbounded limit or arbitrary tf both hit the upstream Alpaca API.
     tf = request.args.get("tf", "5Min")
-    limit = int(request.args.get("limit", "100"))
+    if tf not in VALID_TF:
+        tf = "5Min"
+    try:
+        limit = int(request.args.get("limit", "100"))
+    except (ValueError, TypeError):
+        limit = 100
+    limit = max(1, min(limit, 500))
     bars = daytrade.get_intraday_bars(ticker, tf, limit)
     return jsonify({"ticker": ticker.upper(), "timeframe": tf, "bars": bars})
 

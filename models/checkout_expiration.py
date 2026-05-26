@@ -157,6 +157,13 @@ class CheckoutExpiration(db.Model):
         Caller pattern: iterate, send, mutate. The ``limit`` is a soft
         cap so a backlog doesn't OOM the dispatcher — successive cron
         ticks drain remaining rows.
+
+        Bug C#4 fix: ``.with_for_update(skip_locked=True)`` row-locks the
+        returned rows for the fetching transaction and SKIPs rows already
+        locked by a concurrent dispatcher tick, so two overlapping cron
+        runs pick disjoint row sets and the same abandoned-checkout
+        follow-up email can never be sent twice. ``with_for_update`` is a
+        documented no-op on SQLite (single-threaded local/test path).
         """
         if now is None:
             now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -170,6 +177,7 @@ class CheckoutExpiration(db.Model):
             .filter(cls.skipped_reason.is_(None))
             .order_by(cls.scheduled_send_at.asc())
             .limit(limit)
+            .with_for_update(skip_locked=True)
             .all()
         )
 

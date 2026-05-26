@@ -58,6 +58,35 @@ const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
 // REMOVED 2026-04-27 per CEO + legal: previously forced /autotrade banner expanded.
 const ALWAYS_EXPANDED_PREFIXES: ReadonlyArray<string> = [];
 
+/* ──────────────────────────────────────────────────────────────────
+   Auth-guard redirect resolver (F#3, 2026-05-26)
+
+   Pure decision function so the priority order is unit-testable. The
+   (dashboard) layout sits OUTSIDE the OAuth-finalize route, so sending an
+   unfinalized user to /signup/oauth-finalize cannot loop. Priority:
+     1. no user                       → /login
+     2. birthdate_required === true   → /signup/oauth-finalize  (PIPA §22)
+     3. onboarding_completed === false → /onboarding/broker
+   Returns null when the user may stay on the current dashboard route.
+   ────────────────────────────────────────────────────────────────── */
+type GuardUser = {
+  birthdate_required?: boolean;
+  onboarding_completed?: boolean;
+};
+
+export function nextAuthRedirect(
+  user: GuardUser | null | undefined,
+): string | null {
+  if (!user) return "/login";
+  // PIPA §22 minor-protection gate: OAuth provisioned the account but the
+  // age/birthdate step is still outstanding. The backend already returns 403
+  // on data endpoints; this completes the front-end UX so the user lands on
+  // the finalize step instead of a broken-looking dashboard.
+  if (user.birthdate_required === true) return "/signup/oauth-finalize";
+  if (user.onboarding_completed === false) return "/onboarding/broker";
+  return null;
+}
+
 function resolveDisclaimerType(pathname: string | null): DisclaimerKind {
   if (!pathname) return "signal";
   for (const [prefix, kind] of PATH_TO_TYPE) {
@@ -85,14 +114,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useKeyboardNav();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-    // Redirect to onboarding if the user hasn't completed it.
-    // Step 0 is the broker-connect screen, which then routes into the 20-question wizard.
-    if (!loading && user && user.onboarding_completed === false) {
-      router.replace("/onboarding/broker");
-    }
+    if (loading) return;
+    // Single prioritized guard: login → birthdate finalize (PIPA §22) →
+    // onboarding broker. Step 0 of onboarding is the broker-connect screen,
+    // which then routes into the 20-question wizard.
+    const dest = nextAuthRedirect(user);
+    if (dest) router.replace(dest);
   }, [user, loading, router]);
 
   // 정통망법 §50 ① — flush the staged signup-time consent snapshot to the

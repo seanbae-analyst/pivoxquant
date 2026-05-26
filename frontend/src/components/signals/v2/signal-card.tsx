@@ -68,14 +68,21 @@ function fmtPrice(s: SignalEntry): string {
 // lib/format.ts `fmtPct` is byte-identical (same `n >= 0 ? "+"` sign rule
 // + 2-decimal toFixed + "—" sentinel).
 
-function fmtKstClock(iso: string | null | undefined): string {
+export function fmtKstClock(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "—";
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
-    return `${hh}:${mm} KST`;
+    // Render the KST wall clock regardless of the viewer's locale/timezone.
+    // Previously getHours()/getMinutes() used the browser-local zone, so the
+    // " KST" label was a lie for any non-KST viewer (2026-05-26 F#1 fix).
+    const hh = d.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Seoul",
+      hour12: false,
+    });
+    return `${hh} KST`;
   } catch {
     return "—";
   }

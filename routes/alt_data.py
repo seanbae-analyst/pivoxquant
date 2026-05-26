@@ -297,7 +297,7 @@ def macro_series(series_id: str):
 
     Query params:
         start — ISO date (YYYY-MM-DD) for observation_start (optional)
-        limit — max points, 1..10000 (default 365)
+        limit — max points, 1..1000 (default 365)
     """
     svc = get_fred_service()
     if not svc.available:
@@ -317,6 +317,13 @@ def macro_series(series_id: str):
         }), 404
 
     start = request.args.get("start")
+    # Validate `start` as YYYY-MM-DD; ignore a malformed value rather than
+    # passing junk through to the FRED query.
+    if start is not None:
+        import re as _re
+        start = start.strip()
+        if not _re.match(r"^\d{4}-\d{2}-\d{2}$", start):
+            start = None
     limit_raw = request.args.get("limit", "365")
     try:
         limit = int(limit_raw)
@@ -324,15 +331,18 @@ def macro_series(series_id: str):
             raise ValueError
     except (TypeError, ValueError):
         return jsonify({"ok": False, "error": "limit must be a positive integer"}), 400
-    limit = min(limit, 10_000)
+    # Cap at 1000 points — 10k was excessive for a charting payload.
+    limit = min(limit, 1000)
 
     data = svc.get_series(sid, start=start, limit=limit)
     if not data:
+        # No observations for a *valid* curated series is "not found", not a
+        # bad upstream gateway (502). Return 404 so clients can branch on it.
         return jsonify({
             "ok": False,
             "error": "No data returned from FRED",
             "series_id": sid,
-        }), 502
+        }), 404
 
     return jsonify({"ok": True, **data}), 200
 

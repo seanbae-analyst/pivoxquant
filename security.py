@@ -129,10 +129,15 @@ _CSRF_EXEMPT_PREFIXES = (
 
 def _get_session_bind_id():
     """Return a stable session-bound identifier for CSRF binding.
-    Falls back to empty string for unauthenticated requests so that
-    token generation/validation still works before login.
+
+    Uses flask-login's ``session["_user_id"]`` — the actual key set on login
+    and cleared on logout. (The previous ``session["_id"]`` key is never set
+    anywhere, so every token bound to "" and the per-session binding was a
+    no-op — a defence-in-depth gap behind the double-submit cookie=header
+    check.) Anonymous requests still fall back to "" so token
+    generation/validation keeps working before login (unchanged behaviour).
     """
-    return session.get("_id", "") or ""
+    return session.get("_user_id", "") or ""
 
 
 def _generate_csrf_token():

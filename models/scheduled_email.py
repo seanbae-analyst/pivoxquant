@@ -148,6 +148,16 @@ class ScheduledEmail(db.Model):
     ) -> Iterable["ScheduledEmail"]:
         """Yield rows whose ``scheduled_send_at <= now`` AND ``sent_at IS
         NULL`` AND ``skipped_reason IS NULL``. Oldest-first.
+
+        Bug C#4 fix: ``.with_for_update(skip_locked=True)`` row-locks the
+        returned rows for the duration of the fetching transaction and
+        SKIPs rows already locked by a concurrent dispatcher tick. Two
+        overlapping cron runs therefore pick up *disjoint* row sets — the
+        same queue row can never be drained (and its email sent) twice.
+
+        On SQLite ``with_for_update`` is a documented no-op (no row-level
+        locking), so the query degrades to the plain SELECT used before —
+        which is fine because the local/test path is single-threaded.
         """
         if now is None:
             now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -161,6 +171,7 @@ class ScheduledEmail(db.Model):
             .filter(cls.skipped_reason.is_(None))
             .order_by(cls.scheduled_send_at.asc())
             .limit(limit)
+            .with_for_update(skip_locked=True)
             .all()
         )
 

@@ -1,6 +1,7 @@
 """Portfolio routes: positions CRUD, buy/sell, capital, analytics."""
 import json
 import logging
+import math
 import threading
 from datetime import datetime, timezone
 from functools import wraps
@@ -22,6 +23,24 @@ from .decorators import api_auth, legal_scrub_response
 logger = logging.getLogger(__name__)
 
 portfolio_bp = Blueprint("portfolio", __name__, url_prefix="/api/portfolio")
+
+# Bug API#5 (2026-05-26): upper bound for any user-supplied shares/price/quantity
+# amount. Without a finite + bounded guard, a value like 1e308 (or inf/nan from a
+# crafted payload) flows into ``shares * price`` → Infinity → JSON Infinity →
+# frontend JSON.parse crash. 1e9 is well above any plausible real trade
+# (₩1B shares or $1B price per unit) while keeping every product of two amounts
+# safely below float64's ~1.8e308 ceiling.
+_MAX_AMOUNT = 1e9
+
+
+def _validate_amount(v):
+    """Return True iff ``v`` is a finite, positive, in-range trade amount.
+
+    Used for shares/price/quantity after float() conversion. Rejects nan, inf,
+    -inf, <= 0, and anything above _MAX_AMOUNT (which would risk Infinity
+    products downstream).
+    """
+    return math.isfinite(v) and 0 < v <= _MAX_AMOUNT
 
 
 # ── Deprecation marker for legacy singular `/position` endpoints ─────────────
@@ -278,20 +297,8 @@ def get_portfolio():
 @trade_rate_limit
 @_deprecated_singular("/api/portfolio/positions")
 def add_position():
-    # Tier check: Free users limited to 3 positions
-    # Use effective_tier so DEV_PREMIUM_EMAILS can bypass the free-plan cap.
-    if getattr(current_user, "effective_tier", None) in (None, "free"):
-        position_count = Position.query.filter_by(user_id=current_user.id).filter(
-            Position.shares > 0
-        ).count()
-        if position_count >= 3:
-            return jsonify({
-                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
-                "code": "TIER_LIMIT",
-                "current_count": position_count,
-                "limit": 3,
-            }), 403
-
+    # Tier check (Free users limited to 3 positions) is performed below under
+    # a User-row lock — see Bug C#2 TOCTOU note before the upsert.
     d = request.get_json() or {}
     raw_ticker = (d.get("ticker") or "").strip().upper()
     # Bug #1 fix (2026-05-13): route through normalize_ticker so bare
@@ -321,6 +328,14 @@ def add_position():
         return api_error(
             en="Shares and average cost required", kr="주식 수와 평균가가 필요합니다.",
             code="POSITION_FIELDS_REQUIRED", status=400,
+        )
+    # Bug API#5 (2026-05-26): reject non-finite / out-of-range amounts so a
+    # value like 1e308 can't produce shares*price=Infinity → JSON Infinity →
+    # frontend crash. Applied after the >0 guard for both shares and cost.
+    if not _validate_amount(shares) or not _validate_amount(cost):
+        return api_error(
+            en="Shares and average cost out of range", kr="주식 수 또는 평균가가 허용 범위를 벗어났습니다.",
+            code="INVALID_AMOUNT", status=400,
         )
     # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
     _implausible = _avg_cost_implausible(ticker, cost)
@@ -359,6 +374,32 @@ def add_position():
             ex_row.thesis = thesis
             ex_row.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
             ex_row.thesis_status = "pending"
+
+    # Bug C#2 (2026-05-26): free-tier 3-position cap had a TOCTOU window — two
+    # concurrent adds of *different* tickers both COUNT 2 (< 3), both insert,
+    # and the user ends with 4. Lock the User row FIRST (lock order User→
+    # Position is enforced across every buy/sell/add path to avoid deadlock),
+    # then COUNT under that lock so per-user adds serialize. effective_tier
+    # gate logic + the response message are unchanged. SQLite no-ops the lock.
+    from models import User as _U
+    locked_user = (
+        db.session.query(_U)
+        .filter(_U.id == current_user.id)
+        .with_for_update()
+        .one()
+    )
+    if getattr(current_user, "effective_tier", None) in (None, "free"):
+        position_count = Position.query.filter_by(user_id=current_user.id).filter(
+            Position.shares > 0
+        ).count()
+        if position_count >= 3:
+            db.session.rollback()
+            return jsonify({
+                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
+                "code": "TIER_LIMIT",
+                "current_count": position_count,
+                "limit": 3,
+            }), 403
 
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=ticker).first()
@@ -528,6 +569,13 @@ def buy_more(pid):
             en="Shares and price required", kr="주식 수와 가격이 필요합니다.",
             code="TRADE_FIELDS_REQUIRED", status=400,
         )
+    # Bug API#5 (2026-05-26): reject non-finite / out-of-range amounts so
+    # buy_shares*buy_price can't overflow to Infinity → JSON crash downstream.
+    if not _validate_amount(buy_shares) or not _validate_amount(buy_price):
+        return api_error(
+            en="Shares and price out of range", kr="주식 수 또는 가격이 허용 범위를 벗어났습니다.",
+            code="INVALID_AMOUNT", status=400,
+        )
 
     cost = buy_shares * buy_price
     # Use TTL-aware cache accessor for consistency with the rest of the codebase.
@@ -565,6 +613,25 @@ def buy_more(pid):
         .with_for_update()
         .one()
     )
+    # Bug C#1 (2026-05-26): the initial ``p`` was loaded WITHOUT a row lock, so
+    # two concurrent buy/sell on the same position interleaved their
+    # read-modify-write on p.shares/p.avg_cost (last writer wins → data loss).
+    # Re-load the Position under SELECT FOR UPDATE *after* the User lock — lock
+    # order is always User→Position across every buy/sell/add path so no two
+    # greenlets can acquire them in opposite order (deadlock-free). The pre-lock
+    # first() above still serves the 404 fast-path. SQLite no-ops the lock.
+    p = (
+        db.session.query(Position)
+        .filter_by(id=pid, user_id=current_user.id)
+        .with_for_update()
+        .one_or_none()
+    )
+    if p is None:
+        db.session.rollback()
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
 
     if is_kr:
         avail = getattr(locked_user, "available_capital_krw", 0) or 0
@@ -632,21 +699,9 @@ def buy_more(pid):
 @trade_rate_limit
 @_deprecated_singular("/api/portfolio/trades")
 def buy_new_position():
-    # Free-tier cap: same 3-position guard as add_position. Without this,
-    # POST /position/buy-new bypasses the tier limit and lets free users
-    # accumulate unlimited positions (revenue/tier-enforcement bypass).
-    if getattr(current_user, "effective_tier", None) in (None, "free"):
-        position_count = Position.query.filter_by(user_id=current_user.id).filter(
-            Position.shares > 0
-        ).count()
-        if position_count >= 3:
-            return jsonify({
-                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
-                "code": "TIER_LIMIT",
-                "current_count": position_count,
-                "limit": 3,
-            }), 403
-
+    # Free-tier cap is enforced below under a User-row lock — see Bug C#2 note
+    # before the upsert. Without the lock the 3-position cap had a TOCTOU race
+    # (two concurrent /buy-new of different tickers both COUNT < 3 → cap bypass).
     d = request.get_json() or {}
     raw_ticker = (d.get("ticker") or "").strip().upper()
     # Bug #1 fix (2026-05-13): normalize before any downstream usage so
@@ -672,6 +727,12 @@ def buy_new_position():
             en="Ticker, shares, and price required", kr="종목, 주식 수, 가격이 필요합니다.",
             code="TRADE_FIELDS_REQUIRED", status=400,
         )
+    # Bug API#5 (2026-05-26): reject non-finite / out-of-range amounts.
+    if not _validate_amount(shares) or not _validate_amount(price):
+        return api_error(
+            en="Shares and price out of range", kr="주식 수 또는 가격이 허용 범위를 벗어났습니다.",
+            code="INVALID_AMOUNT", status=400,
+        )
 
     cost = shares * price
     currency = fetcher.currency(ticker)
@@ -689,6 +750,22 @@ def buy_new_position():
         .with_for_update()
         .one()
     )
+    # Bug C#2 (2026-05-26): free-tier cap COUNT now runs under the User lock so
+    # concurrent /buy-new of distinct tickers can't both pass the cap and
+    # bypass the limit. Lock order User→Position preserved (User locked here,
+    # any Position merge below). Gate logic / message unchanged.
+    if getattr(current_user, "effective_tier", None) in (None, "free"):
+        position_count = Position.query.filter_by(user_id=current_user.id).filter(
+            Position.shares > 0
+        ).count()
+        if position_count >= 3:
+            db.session.rollback()
+            return jsonify({
+                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
+                "code": "TIER_LIMIT",
+                "current_count": position_count,
+                "limit": 3,
+            }), 403
     cap = (getattr(locked_user, "available_capital_krw", 0) or 0) if is_kr else (locked_user.available_capital or 0)
     if cap < cost:
         db.session.rollback()
@@ -821,6 +898,36 @@ def sell_position(pid):
             code="POSITION_NOT_FOUND", status=404,
         )
     d = request.get_json() or {}
+
+    # Bug C#1 (2026-05-26): acquire the User row lock FIRST, then re-load the
+    # Position under SELECT FOR UPDATE — lock order User→Position across every
+    # buy/sell/add path (deadlock-free). All subsequent reads of p.shares (the
+    # "sell entire position" default + oversell clamp) and the delete/decrement
+    # mutation now run on the locked instance, so concurrent buy/sell on the
+    # same position can no longer interleave their read-modify-write. The
+    # pre-lock first() above still serves the 404 fast-path. SQLite no-ops the
+    # lock. (The User row was previously locked far below, after the mutation —
+    # too late to protect p; that ordering is corrected here.)
+    from models import User as _U
+    locked_user = (
+        db.session.query(_U)
+        .filter(_U.id == current_user.id)
+        .with_for_update()
+        .one()
+    )
+    p = (
+        db.session.query(Position)
+        .filter_by(id=pid, user_id=current_user.id)
+        .with_for_update()
+        .one_or_none()
+    )
+    if p is None:
+        db.session.rollback()
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
+
     # Trade-accuracy fix (2026-05-22): `float(d.get("shares") or p.shares)`
     # treats an explicit shares=0 as falsy and silently falls back to the full
     # position → an unintended full-close. Preserve the documented "shares
@@ -831,6 +938,7 @@ def sell_position(pid):
         sell_shares = float(raw_shares) if raw_shares is not None else float(p.shares)
         sell_price = float(d.get("price") or 0)
     except (TypeError, ValueError):
+        db.session.rollback()
         return api_error(
             en="Shares and price must be numbers", kr="주식 수와 가격은 숫자여야 합니다.",
             code="TRADE_NUMERIC_REQUIRED", status=400,
@@ -840,9 +948,26 @@ def sell_position(pid):
     # negative) now reaches this guard instead of full-closing the position;
     # negatives are truthy and would otherwise invert proceeds/PnL.
     if sell_shares <= 0:
+        db.session.rollback()
         return api_error(
             en="Shares must be positive", kr="주식 수는 양수여야 합니다.",
             code="TRADE_SHARES_POSITIVE", status=400,
+        )
+    # Bug API#5 (2026-05-26): reject non-finite / out-of-range sell amounts so
+    # actual_sell*sell_price can't overflow to Infinity. sell_price may legitly
+    # default from cache below when omitted (<=0), so validate it there; here we
+    # bound the explicit shares (and any explicit price already parsed).
+    if not _validate_amount(sell_shares):
+        db.session.rollback()
+        return api_error(
+            en="Shares out of range", kr="주식 수가 허용 범위를 벗어났습니다.",
+            code="INVALID_AMOUNT", status=400,
+        )
+    if sell_price > 0 and not _validate_amount(sell_price):
+        db.session.rollback()
+        return api_error(
+            en="Price out of range", kr="가격이 허용 범위를 벗어났습니다.",
+            code="INVALID_AMOUNT", status=400,
         )
 
     cached = cache_service.get_signal(p.ticker)
@@ -879,21 +1004,10 @@ def sell_position(pid):
     else:
         p.shares = round(p.shares - actual_sell, 6)
 
-    # 2026-05-17 wave 14 P1 (PR #449): mirror the buy_more capital-race
-    # fix. Sell-side proceeds credit had the same TOCTOU window as the
-    # buy-side debit — two concurrent sells of the same position both
-    # read the pre-credit balance, both add proceeds, last writer wins
-    # and one proceeds amount silently disappears (user under-credited
-    # rather than over-credited, but still wrong). SELECT FOR UPDATE
-    # serializes the user-row writes.
-    from models import User as _U
-    locked_user = (
-        db.session.query(_U)
-        .filter(_U.id == current_user.id)
-        .with_for_update()
-        .one()
-    )
-
+    # 2026-05-17 wave 14 P1 (PR #449): the sell-side proceeds credit shares the
+    # same TOCTOU window as the buy-side debit. The User row was already locked
+    # at the top of this handler (Bug C#1 reorder, 2026-05-26) so the
+    # read-modify-write below is serialized — no separate lock acquisition here.
     if is_kr:
         locked_user.available_capital_krw = (
             getattr(locked_user, "available_capital_krw", 0) or 0
@@ -1390,6 +1504,14 @@ def create_position_alias():
             en="Symbol, quantity, and price required", kr="종목, 수량, 가격이 필요합니다.",
             code="TRADE_FIELDS_REQUIRED", status=400,
         )
+    # Bug API#5 (2026-05-26): reject non-finite / out-of-range amounts so
+    # quantity*price can't overflow to Infinity → JSON crash. This is the
+    # production add endpoint hit by the frontend (POST /api/portfolio/positions).
+    if not _validate_amount(quantity) or not _validate_amount(price):
+        return api_error(
+            en="Quantity and price out of range", kr="수량 또는 가격이 허용 범위를 벗어났습니다.",
+            code="INVALID_AMOUNT", status=400,
+        )
     # SEC-004 parity with add_position: Position.ticker is db.String(20).
     if len(symbol) > 20:
         return api_error(
@@ -1406,12 +1528,24 @@ def create_position_alias():
         )
 
     # Proxy to legacy add_position logic by rewriting request body.
-    # Reuse free-plan cap check.
+    # Bug C#2 (2026-05-26): lock the User row FIRST (lock order User→Position,
+    # consistent with every buy/sell/add path → deadlock-free), then run the
+    # free-plan cap COUNT under that lock so concurrent adds of distinct tickers
+    # can't both pass the cap and bypass the limit. Gate logic / message
+    # unchanged. SQLite no-ops the lock.
+    from models import User as _U
+    locked_user = (
+        db.session.query(_U)
+        .filter(_U.id == current_user.id)
+        .with_for_update()
+        .one()
+    )
     if getattr(current_user, "effective_tier", None) in (None, "free"):
         pos_count = Position.query.filter_by(user_id=current_user.id).filter(
             Position.shares > 0
         ).count()
         if pos_count >= 3:
+            db.session.rollback()
             return jsonify({
                 "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
                 "code": "TIER_LIMIT",
@@ -1621,6 +1755,13 @@ def create_trade_alias():
             en="position_id, quantity, and price required", kr="position_id, quantity, price 가 필요합니다.",
             code="TRADE_FIELDS_REQUIRED", status=400,
         )
+    # Bug API#5 (2026-05-26): reject non-finite / out-of-range amounts so
+    # quantity*price can't overflow to Infinity → JSON crash.
+    if not _validate_amount(quantity) or not _validate_amount(price):
+        return api_error(
+            en="Quantity and price out of range", kr="수량 또는 가격이 허용 범위를 벗어났습니다.",
+            code="INVALID_AMOUNT", status=400,
+        )
 
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
@@ -1657,6 +1798,24 @@ def create_trade_alias():
         .with_for_update()
         .one()
     )
+    # Bug C#1 (2026-05-26): the initial ``p`` (first() above) was unlocked, so
+    # concurrent buy/sell on the same position interleaved their
+    # read-modify-write on p.shares/p.avg_cost. Re-load under SELECT FOR UPDATE
+    # *after* the User lock — lock order User→Position across all paths
+    # (deadlock-free). The pre-lock first() still serves the 404 + the
+    # display-name lookup above. SQLite no-ops the lock.
+    p = (
+        db.session.query(Position)
+        .filter_by(id=pid, user_id=current_user.id)
+        .with_for_update()
+        .one_or_none()
+    )
+    if p is None:
+        db.session.rollback()
+        return api_error(
+            en="Position not found", kr="포지션을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
 
     if action == "buy":
         cost = quantity * price

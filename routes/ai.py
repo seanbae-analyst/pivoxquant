@@ -253,6 +253,16 @@ def chat():
             code="AI_MESSAGE_REQUIRED",
             status=400,
         )
+    # Bound the prompt cost: `message` flows straight into the Anthropic
+    # messages API uncapped (history content is already [:1000]-clamped).
+    # A 100k-char message would be billed verbatim — cap at 4000 chars.
+    if len(message) > 4000:
+        return api_error(
+            en="Message too long (max 4000 chars)",
+            kr="메시지가 너무 깁니다(최대 4000자).",
+            code="MESSAGE_TOO_LONG",
+            status=400,
+        )
 
     positions = Position.query.filter_by(user_id=current_user.id).all()
     # Batch-load SignalCache for all user positions in a single query (avoid N+1).

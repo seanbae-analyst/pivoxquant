@@ -265,3 +265,142 @@ class TestSecurityHeaders:
         assert "cdn.tailwindcss.com" not in csp, (
             f"script-src must not whitelist cdn.tailwindcss.com; got: {csp!r}"
         )
+
+
+# ── S#2: CSRF token session binding (2026-05-26 security-agent) ──────────────
+#
+# Regression target: security._get_session_bind_id() used to read
+# session["_id"] — a key never set anywhere — so every CSRF token bound to
+# "" and the per-session binding was a silent no-op. The fix reads
+# flask-login's session["_user_id"] (set on login, cleared on logout).
+
+class TestCSRFSessionBinding:
+    def test_bind_id_uses_flask_login_user_id(self, app):
+        """Authenticated requests bind CSRF tokens to session['_user_id']."""
+        from security import _get_session_bind_id
+        with app.test_request_context("/"):
+            from flask import session
+            # Anonymous → "" (unchanged safe behaviour).
+            assert _get_session_bind_id() == ""
+            # flask-login sets _user_id on login_user(); simulate it.
+            session["_user_id"] = "42"
+            assert _get_session_bind_id() == "42"
+
+    def test_bind_id_ignores_legacy_underscore_id_key(self, app):
+        """The old (never-set) session['_id'] key must NOT be honoured —
+        otherwise the binding silently regresses to its broken no-op state."""
+        from security import _get_session_bind_id
+        with app.test_request_context("/"):
+            from flask import session
+            session["_id"] = "legacy-should-be-ignored"
+            # No _user_id → still anonymous "".
+            assert _get_session_bind_id() == ""
+
+    def test_token_generate_validate_roundtrip_authenticated(self, app):
+        """A token minted while a _user_id is present validates in the same
+        bound context and FAILS once the binding changes (real session tie)."""
+        from security import _generate_csrf_token, _validate_csrf_token
+        with app.test_request_context("/"):
+            from flask import session
+            session["_user_id"] = "user-A"
+            tok = _generate_csrf_token()
+            assert _validate_csrf_token(tok) is True
+            # Token bound to user-A must not validate for a different user.
+            session["_user_id"] = "user-B"
+            assert _validate_csrf_token(tok) is False
+
+    def test_anonymous_token_roundtrip_still_works(self, app):
+        """Unauthenticated token gen/validate keeps working (pre-login flow)."""
+        from security import _generate_csrf_token, _validate_csrf_token
+        with app.test_request_context("/"):
+            tok = _generate_csrf_token()
+            assert _validate_csrf_token(tok) is True
+
+    def test_login_then_mutation_with_csrf_succeeds(self, client, make_user):
+        """End-to-end regression: after login the SPA reads the (regenerated)
+        CSRF cookie and a state-changing request with matching header passes —
+        the after_request self-heal rebinds the cookie to _user_id at the
+        login boundary, so the double-submit pair stays valid."""
+        u = make_user(email="csrfbind@test.com", password="goodpass1")
+        login = client.post("/api/auth/login", json={
+            "email": u["email"], "password": u["password"],
+        })
+        assert login.status_code == 200, login.data
+        # CSRFTestClient auto-attaches the current csrf_token cookie as header.
+        r = client.put("/api/portfolio/capital", json={"capital_usd": 750})
+        assert r.status_code != 403, (
+            f"Authenticated mutation with valid CSRF wrongly blocked: {r.data!r}"
+        )
+
+    def test_login_then_mutation_without_csrf_still_blocked(
+        self, raw_client, make_user
+    ):
+        """Negative control: the binding fix must NOT weaken enforcement —
+        an authenticated mutation without the header is still 403."""
+        u = make_user(email="csrfbind2@test.com", password="goodpass1")
+        login = raw_client.post("/api/auth/login", json={
+            "email": u["email"], "password": u["password"],
+        })
+        assert login.status_code == 200, login.data
+        r = raw_client.put("/api/portfolio/capital", json={"capital_usd": 750})
+        assert r.status_code == 403
+        assert r.get_json().get("code") in ("CSRF_MISSING", "CSRF_MISMATCH")
+
+
+# ── S#1 / S#3 / S#5: new rate-limit coverage (2026-05-26 security-agent) ─────
+
+class TestNewRateLimits:
+    def test_counterfactual_is_public_and_rate_limited(
+        self, raw_client, enable_rate_limit
+    ):
+        """S#1: /api/simulate/counterfactual stays PUBLIC (no auth redirect /
+        401) but is throttled at 20/min to protect the FMP quota. The 21st
+        unauthenticated request in a window must 429."""
+        params = "?ticker=AAPL&start_date=2020-01-01&amount=1000"
+        # First call must NOT be an auth wall (public viral what-if).
+        first = raw_client.get("/api/simulate/counterfactual" + params)
+        assert first.status_code not in (401, 302), (
+            f"counterfactual must stay public, got {first.status_code}: {first.data!r}"
+        )
+        last = first
+        for _ in range(25):
+            last = raw_client.get("/api/simulate/counterfactual" + params)
+            if last.status_code == 429:
+                break
+        assert last.status_code == 429, (
+            "counterfactual did not throttle within 26 requests "
+            f"(last status {last.status_code}) — 20/min limit not applied"
+        )
+
+    # NOTE: test_google/kakao_oauth_start_rate_limited (S#3) removed from this
+    # commit — the auth.py @auth_rate_limit change is parked with the parallel
+    # viral/referral feature work (interleaved in routes/auth.py). Re-add when
+    # that auth.py change lands.
+
+    def test_nps_submission_rate_limited(
+        self, raw_client, make_user, enable_rate_limit
+    ):
+        """S#5: /api/feedback/nps now carries a 5/hour limiter so duplicate
+        NPS submissions can't pollute the DB. The 6th submission → 429."""
+        u = make_user(email="nps@test.com", password="goodpass1")
+        login = raw_client.post("/api/auth/login", json={
+            "email": u["email"], "password": u["password"],
+        })
+        assert login.status_code == 200, login.data
+        # raw_client doesn't auto-attach CSRF; NPS is a POST so we must pass the
+        # double-submit pair. Read the csrf cookie the login response set.
+        csrf = None
+        for c in raw_client._cookies.values():
+            if c.key == "csrf_token":
+                csrf = c.value
+                break
+        assert csrf, "expected csrf_token cookie after login"
+        headers = {"X-CSRF-Token": csrf}
+        last = None
+        for _ in range(6):
+            last = raw_client.post(
+                "/api/feedback/nps", json={"score": 9}, headers=headers,
+            )
+        assert last.status_code == 429, (
+            f"nps 6th submission not throttled (got {last.status_code})"
+        )

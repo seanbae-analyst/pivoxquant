@@ -58,6 +58,10 @@ export function absoluteDate(iso: string | null): string {
     year: "numeric",
     month: "long",
     day: "numeric",
+    // Pin to KST so the date doesn't roll back/forward a day for viewers in
+    // other timezones (2026-05-26 F#4 fix). The UTC-guard above ensures naive
+    // backend timestamps are treated as UTC before zone conversion.
+    timeZone: "Asia/Seoul",
   });
 }
 
