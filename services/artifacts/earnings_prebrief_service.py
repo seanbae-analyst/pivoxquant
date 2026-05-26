@@ -1342,7 +1342,8 @@ class EarningsPreBriefService:
         fallback = os.environ.get(
             "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
-        return EmailSender().send(
+        sender = EmailSender()
+        ok = sender.send(
             user,
             subject=f"[Pre-Brief] {label} — Earnings in {_lead_minutes()} min",
             html_body=html_body,
@@ -1358,6 +1359,10 @@ class EarningsPreBriefService:
             unsubscribe_kind="all",
             event_id="earnings_pre_brief",
         )
+        # Stash the SendGrid X-Message-Id so _persist can write it onto the
+        # per-ticker Artifact row (webhook bounce/open mapping — 정통망법 §50).
+        self._last_message_id = getattr(sender, "last_message_id", None)
+        return ok
 
     # ── persist ────────────────────────────────────────────────────────────
 
@@ -1419,6 +1424,13 @@ class EarningsPreBriefService:
                 sent_at=datetime.now(timezone.utc).replace(tzinfo=None) if sent else None,
             )
             db.session.add(artefact)
+        # Persist the SendGrid X-Message-Id captured during _send_email so the
+        # event webhook can map bounce/open/spam back to this row. The digest
+        # path calls _persist with sent=False (no per-ticker email), so the
+        # ``if sent`` guard correctly leaves those rows untracked.
+        _msg_id = getattr(self, "_last_message_id", None)
+        if sent and _msg_id:
+            artefact.sg_message_id = _msg_id
         db.session.commit()
         return artefact
 
@@ -1513,6 +1525,12 @@ class EarningsPreBriefService:
                 sent_at=now_naive,
             )
             db.session.add(artefact)
+        # Persist the SendGrid X-Message-Id captured during _send_digest_email
+        # so the event webhook can map bounce/open/spam back to this digest
+        # marker row (정통망법 §50 auto-opt-out).
+        _msg_id = getattr(self, "_last_digest_message_id", None)
+        if _msg_id:
+            artefact.sg_message_id = _msg_id
         db.session.commit()
         return artefact
 
@@ -1700,7 +1718,8 @@ class EarningsPreBriefService:
         fallback = os.environ.get(
             "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
-        return EmailSender().send(
+        sender = EmailSender()
+        ok = sender.send(
             user,
             subject=subject,
             html_body=html_body,
@@ -1710,6 +1729,10 @@ class EarningsPreBriefService:
             unsubscribe_kind="all",
             event_id="earnings_pre_brief",
         )
+        # Stash the SendGrid X-Message-Id so _persist_digest_marker can write
+        # it onto the digest marker row (webhook bounce/open mapping — §50).
+        self._last_digest_message_id = getattr(sender, "last_message_id", None)
+        return ok
 
     def run_scan_digest(self, *, send: bool = True) -> dict[str, Any]:
         """User-grouped variant of `run_scan` — one digest email per user.

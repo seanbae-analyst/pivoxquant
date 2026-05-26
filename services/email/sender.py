@@ -141,6 +141,18 @@ def _has_category_consent(user: Any, category: EmailCategory) -> bool:
     return revoked_at is None or revoked_at < consent_at
 
 
+# SendGrid / Brevo reject messages whose total size exceeds 30 MB, and
+# base64 attachment encoding inflates the payload by ~33%. A PDF larger
+# than this threshold would push the encoded message past the provider
+# cap → the whole send fails (no body, no attachment) and the artefact
+# silently never arrives. Guard the attachment at 25 MB of *raw* bytes
+# (≈33 MB encoded, leaving headroom for HTML body + headers): oversized
+# attachments are dropped with a warning and the email body still ships
+# so the recipient at least gets the link/summary. 25 MB raw is a
+# deliberately conservative ceiling under the 30 MB hard limit.
+_MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+
+
 # Default reply-to surfaces a real shared inbox so artefact emails can
 # round-trip to a human. Overridable per-call for cases where the
 # product wants a dedicated reply route (e.g. earnings desk).
@@ -157,6 +169,18 @@ class EmailSender:
     Stateless because the only thing it would cache (env vars) is
     cheap to read each time, and any future test that wants to mutate
     the env mid-run needs the lookup to be live.
+
+    One per-instance attribute is the exception: :attr:`last_message_id`
+    holds the SendGrid ``X-Message-Id`` of the most recent successful
+    SendGrid dispatch (``None`` for opt-out / failure / Brevo / SMTP).
+    Artefact services read it immediately after :meth:`send` and persist
+    it into ``Artifact.sg_message_id`` so the SendGrid event webhook
+    (``services/email/webhook.py``) can map bounce / spam / open events
+    back to the row. Without it the webhook's
+    ``filter_by(sg_message_id=...)`` always missed → silent loss of
+    bounce-driven auto-opt-out (정통망법 §50). SendGrid only: Brevo's v3
+    ``messageId`` is a different shape the webhook does not parse, so we
+    leave it ``None`` there (Brevo tracking is a later phase).
     """
 
     # ── public ─────────────────────────────────────────────────────────
@@ -227,6 +251,11 @@ class EmailSender:
             unknown id fail-opens (never silently mutes). ``None`` (the
             default) preserves the pre-existing behaviour exactly.
         """
+        # Reset the captured SendGrid message id at the top of every send so
+        # a reused EmailSender instance never reports a stale id from a prior
+        # call. Set only when a SendGrid 2xx returns an X-Message-Id.
+        self.last_message_id: str | None = None
+
         # ── 1a. simulated-user guard (Continuous User Simulation Phase 1) ──
         # ``User.is_simulated`` (migration 032) tags synthetic test users the
         # Sunday 04:30 KST simulation cron generates. Their email column is
@@ -324,6 +353,24 @@ class EmailSender:
         # alongside the List-Unsubscribe header).
         html_body = inject_unsubscribe_footer(html_body, unsubscribe_url)
 
+        # ── 2b. attachment size guard ──────────────────────────────────
+        # Drop an oversized attachment *before* any transport encodes it.
+        # Done here (transport-agnostic) so SendGrid / Brevo / SMTP all
+        # behave identically: the body still ships, only the attachment is
+        # skipped. Without this an oversized PDF (>30 MB encoded) fails the
+        # entire provider request and the artefact email silently never
+        # arrives. See ``_MAX_ATTACHMENT_BYTES``.
+        if pdf_bytes is not None and len(pdf_bytes) > _MAX_ATTACHMENT_BYTES:
+            logger.warning(
+                "attachment %s (%d bytes) exceeds %d-byte cap for user %s; "
+                "sending body without attachment",
+                pdf_filename or "report.pdf",
+                len(pdf_bytes),
+                _MAX_ATTACHMENT_BYTES,
+                getattr(user, "id", "?"),
+            )
+            pdf_bytes = None
+
         # ── 3. provider cascade: SendGrid → Brevo → SMTP ───────────────
         # Operational override: ``BREVO_PROVIDER_PRIMARY=true`` flips
         # the first two tiers (Brevo first, SendGrid fallback). SMTP
@@ -342,7 +389,12 @@ class EmailSender:
         # ``SENDGRID_API_KEY`` is unset). Each callable raises on
         # non-2xx; ``True`` short-circuits the cascade.
         def _try_sendgrid() -> bool:
-            return self._send_via_sendgrid(
+            # Returns the raw SendGrid X-Message-Id (truthy str) on success
+            # so the cascade can stash it on ``self.last_message_id``. A
+            # provider that accepts but returns no header still yields a
+            # truthy sentinel ("" would read as failure), so we fall back to
+            # ``True`` inside the helper.
+            msg_id = self._send_via_sendgrid(
                 sg_key=sg_key or "",
                 from_email=from_email,
                 display_name=display_name,
@@ -355,6 +407,12 @@ class EmailSender:
                 unsubscribe_url=unsubscribe_url,
                 reply_to=reply_to,
             )
+            # ``_send_via_sendgrid`` returns the X-Message-Id (str) or, when
+            # the header is absent, ``True``. Persist the id only when it's a
+            # real string so the webhook can match on it.
+            if isinstance(msg_id, str) and msg_id:
+                self.last_message_id = msg_id
+            return bool(msg_id)
 
         def _try_brevo() -> bool:
             return self._send_via_brevo(
@@ -473,8 +531,17 @@ class EmailSender:
         attachment_mime: str,
         unsubscribe_url: str,
         reply_to: str,
-    ) -> bool:
-        """SendGrid path. Returns ``True`` on accepted dispatch.
+    ) -> str | bool:
+        """SendGrid path. Returns the ``X-Message-Id`` on accepted dispatch.
+
+        On a 2xx we read SendGrid's ``X-Message-Id`` response header and
+        return it (a non-empty ``str``) so the caller can persist it into
+        ``Artifact.sg_message_id``. The header equals the part before the
+        first dot of the ``sg_message_id`` field SendGrid later posts on its
+        event webhook, so ``webhook._extract_message_id`` matches it without
+        transformation. When the SDK accepts the send but exposes no header
+        (older stubs / some mocks) we return ``True`` to preserve the legacy
+        truthy success contract.
 
         Imports SendGrid lazily — keeps the dependency optional in
         local dev (where ``pip install sendgrid`` may be skipped) and
@@ -533,7 +600,27 @@ class EmailSender:
             sg_client.client.timeout = 10
         except Exception:
             logger.debug("SendGrid timeout set failed", exc_info=True)
-        sg_client.send(mail)
+        response = sg_client.send(mail)
+
+        # Capture the X-Message-Id response header so the SendGrid event
+        # webhook can later map bounce/spam/open events back to the
+        # Artifact row. ``response.headers`` may be a dict or a
+        # case-insensitive mapping depending on SDK version; guard for
+        # both and for the header being absent (return True → still a
+        # success, just untrackable).
+        try:
+            headers = getattr(response, "headers", None)
+            msg_id = None
+            if headers is not None:
+                getter = getattr(headers, "get", None)
+                if callable(getter):
+                    msg_id = headers.get("X-Message-Id") or headers.get(
+                        "x-message-id"
+                    )
+            if msg_id:
+                return str(msg_id)
+        except Exception:
+            logger.debug("SendGrid X-Message-Id capture failed", exc_info=True)
         return True
 
     def _send_via_brevo(

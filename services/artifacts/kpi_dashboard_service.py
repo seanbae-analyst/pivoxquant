@@ -547,13 +547,18 @@ class KPIDashboardService:
         """Phase 7 — delegate to :class:`EmailSender`. HTML-only."""
         from services.email import EmailSender
 
-        return EmailSender().send(
+        sender = EmailSender()
+        ok = sender.send(
             user,
             subject=f"PivoxQuant KPIs — {date.today().isoformat()}",
             html_body=html_body,
             from_env_var="WEEKLY_MEMO_FROM_EMAIL",
             from_default="reports@pivoxquant.com",
         )
+        # Stash the SendGrid X-Message-Id so _persist can write it onto the
+        # Artifact row (webhook bounce/open mapping — 정통망법 §50).
+        self._last_message_id = getattr(sender, "last_message_id", None)
+        return ok
 
     # ── persist + orchestrate ───────────────────────────────────────────────
 
@@ -577,6 +582,11 @@ class KPIDashboardService:
                 sent_at=datetime.now(timezone.utc).replace(tzinfo=None) if sent else None,
             )
             db.session.add(artefact)
+        # Persist the SendGrid X-Message-Id captured during send_email so the
+        # event webhook can map bounce/open/spam back to this row.
+        _msg_id = getattr(self, "_last_message_id", None)
+        if sent and _msg_id:
+            artefact.sg_message_id = _msg_id
         db.session.commit()
         return artefact
 

@@ -703,6 +703,232 @@ def test_marketing_category_blocked_by_null_consent(app, make_user, monkeypatch)
         sg.assert_not_called()
 
 
+# ── FIX 1: SendGrid X-Message-Id capture (webhook bounce/open mapping) ────
+#
+# Regression for the SHIP-BLOCKER where ``Artifact.sg_message_id`` was never
+# populated → the SendGrid event webhook's ``filter_by(sg_message_id=...)``
+# always missed → bounce/spam/open events were silently dropped → no
+# auto-opt-out (정통망법 §50). EmailSender.send must capture the response
+# ``X-Message-Id`` header into ``self.last_message_id`` on a SendGrid 2xx.
+
+
+def test_sendgrid_message_id_captured_on_send(app, make_user, monkeypatch):
+    """A SendGrid 2xx with an X-Message-Id header → last_message_id set."""
+    from datetime import datetime
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+
+    user = make_user(email="msgid-capture@test.com")
+    monkeypatch.setenv("SENDGRID_API_KEY", "SG.testkey")
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
+
+        sg_instance = MagicMock()
+        # SendGrid response exposes ``.headers`` (a dict-like). The raw
+        # X-Message-Id (no ``.filterserver`` suffix) is what the webhook's
+        # _extract_message_id() matches against.
+        resp = MagicMock(status_code=202,
+                         headers={"X-Message-Id": "abcDEF123"})
+        sg_instance.send.return_value = resp
+        sg_class = MagicMock(return_value=sg_instance)
+
+        with patch("sendgrid.SendGridAPIClient", sg_class):
+            sender = EmailSender()
+            sent = sender.send(
+                u,
+                subject="hi",
+                html_body="<p>body</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+            )
+            assert sent is True
+            assert sender.last_message_id == "abcDEF123", (
+                "X-Message-Id must be captured for webhook mapping"
+            )
+
+
+def test_sendgrid_message_id_none_when_header_absent(app, make_user, monkeypatch):
+    """SendGrid accepts but returns no X-Message-Id → send still succeeds,
+    last_message_id stays None (untrackable, but not a failure)."""
+    from datetime import datetime
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+
+    user = make_user(email="msgid-absent@test.com")
+    monkeypatch.setenv("SENDGRID_API_KEY", "SG.testkey")
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
+
+        sg_instance = MagicMock()
+        sg_instance.send.return_value = MagicMock(status_code=202, headers={})
+        sg_class = MagicMock(return_value=sg_instance)
+
+        with patch("sendgrid.SendGridAPIClient", sg_class):
+            sender = EmailSender()
+            sent = sender.send(
+                u,
+                subject="hi",
+                html_body="<p>body</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+            )
+            assert sent is True
+            assert sender.last_message_id is None
+
+
+def test_weekly_memo_persists_sg_message_id(app, make_user, monkeypatch):
+    """End-to-end: an artefact service's send → persist writes the captured
+    X-Message-Id onto the Artifact row so the webhook can map events back.
+
+    Uses weekly_memo as the representative path (all 16 services share the
+    same stash → persist pattern).
+    """
+    from datetime import datetime
+    from extensions import db
+    from models import User, Artifact
+    from services.artifacts.weekly_memo_service import WeeklyMemoService
+
+    user = make_user(email="memo-msgid@test.com")
+    monkeypatch.setenv("SENDGRID_API_KEY", "SG.testkey")
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
+
+        sg_instance = MagicMock()
+        sg_instance.send.return_value = MagicMock(
+            status_code=202, headers={"X-Message-Id": "memoMSGID42"})
+        sg_class = MagicMock(return_value=sg_instance)
+
+        svc = WeeklyMemoService()
+        data = {
+            "week_number": 21,
+            "period_end": "2026-05-24",
+            "user_name": "T",
+            "weekly_return_pct": 1.0,
+            "top_movers_up": [],
+            "top_movers_down": [],
+            "disclaimer": "x",
+        }
+        with patch("sendgrid.SendGridAPIClient", sg_class):
+            sent = svc.send_email(u, None, "<p>memo</p>")
+            assert sent is True
+            artefact = svc._persist(u.id, data, None, sent)
+
+        refreshed = db.session.get(Artifact, artefact.id)
+        assert refreshed.sg_message_id == "memoMSGID42", (
+            "weekly_memo _persist must write the captured X-Message-Id"
+        )
+
+
+# ── FIX 5: oversized PDF attachment guard ─────────────────────────────────
+#
+# SendGrid/Brevo reject >30 MB messages; base64 inflates ~33%. An oversized
+# PDF must be dropped (body still ships) rather than failing the whole send.
+
+
+def test_oversized_attachment_dropped_body_still_sends(app, make_user, monkeypatch):
+    """A >25 MB raw attachment is stripped; the SMTP message carries the
+    body but no PDF part, and the send still returns True."""
+    from datetime import datetime
+    from email.message import EmailMessage
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+
+    user = make_user(email="oversized@test.com")
+    monkeypatch.delenv("SENDGRID_API_KEY", raising=False)
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+
+    captured: dict[str, EmailMessage] = {}
+
+    class FakeSMTP:
+        def __init__(self, *a, **kw): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def starttls(self): pass
+        def login(self, *a): pass
+        def send_message(self, msg):
+            captured["msg"] = msg
+
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
+        big_pdf = b"%PDF-1.4" + b"\x00" * (26 * 1024 * 1024)  # 26 MB > 25 MB cap
+        with patch("smtplib.SMTP", FakeSMTP):
+            sent = EmailSender().send(
+                u,
+                subject="x",
+                html_body="<p>body</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+                pdf_bytes=big_pdf,
+                pdf_filename="huge.pdf",
+            )
+            assert sent is True, "body must still ship when attachment dropped"
+
+    msg = captured["msg"]
+    pdf_parts = [p for p in msg.walk() if p.get_content_type() == "application/pdf"]
+    assert len(pdf_parts) == 0, "oversized attachment must be dropped"
+
+
+def test_under_limit_attachment_kept(app, make_user, monkeypatch):
+    """A small PDF (under the cap) is attached normally — guard only fires
+    on oversized payloads."""
+    from datetime import datetime
+    from email.message import EmailMessage
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+
+    user = make_user(email="undersized@test.com")
+    monkeypatch.delenv("SENDGRID_API_KEY", raising=False)
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+
+    captured: dict[str, EmailMessage] = {}
+
+    class FakeSMTP:
+        def __init__(self, *a, **kw): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def starttls(self): pass
+        def login(self, *a): pass
+        def send_message(self, msg):
+            captured["msg"] = msg
+
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
+        with patch("smtplib.SMTP", FakeSMTP):
+            EmailSender().send(
+                u,
+                subject="x",
+                html_body="<p>body</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",
+                pdf_bytes=b"%PDF-1.4 small",
+                pdf_filename="small.pdf",
+            )
+
+    msg = captured["msg"]
+    pdf_parts = [p for p in msg.walk() if p.get_content_type() == "application/pdf"]
+    assert len(pdf_parts) == 1, "under-limit attachment must be kept"
+
+
 def test_simulated_user_blocked_even_for_transactional(app, make_user, monkeypatch):
     """is_simulated=True + TRANSACTIONAL → still blocked (sink-address guard).
 

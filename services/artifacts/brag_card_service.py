@@ -836,7 +836,8 @@ class BragCardService:
         """
         from services.email import EmailSender
 
-        return EmailSender().send(
+        sender = EmailSender()
+        ok = sender.send(
             user,
             subject="당신의 월간 브래그 카드가 도착했어요",
             html_body=html_body,
@@ -847,6 +848,10 @@ class BragCardService:
             attachment_mime="image/png",
             event_id="brag_card",
         )
+        # Stash the SendGrid X-Message-Id so _persist can write it onto the
+        # Artifact row (webhook bounce/open mapping — 정통망법 §50).
+        self._last_message_id = getattr(sender, "last_message_id", None)
+        return ok
 
     # ── share ────────────────────────────────────────────────────────────────
 
@@ -1043,6 +1048,12 @@ class BragCardService:
                 pass
             db.session.add(artefact)
 
+        # Persist the SendGrid X-Message-Id captured during send_email so the
+        # event webhook can map bounce/open/spam back to this row.
+        _msg_id = getattr(self, "_last_message_id", None)
+        if sent and _msg_id:
+            artefact.sg_message_id = _msg_id
+
         try:
             db.session.commit()
         except Exception as exc:
@@ -1064,6 +1075,8 @@ class BragCardService:
             except Exception:
                 logger.debug("silent-fallback: _persist", exc_info=True)
                 pass
+            if sent and _msg_id:
+                artefact.sg_message_id = _msg_id
             db.session.add(artefact)
             db.session.commit()
 
