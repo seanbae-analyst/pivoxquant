@@ -182,7 +182,7 @@ def render_d2_slide1():
               font=f_head, fill=BRONZE, anchor="mm")
 
     draw.text((W // 2, 655), "모닝 브리핑",
-              font=f_mono, fill=IVORY_D, anchor="mm")
+              font=_f(_KR_SANS, 38), fill=IVORY_D, anchor="mm")
     draw.text((W // 2, 710),
               "어젯밤 미국장 · 관련 뉴스 · 실적 일정",
               font=f_sub, fill=IVORY_MID, anchor="mm")
@@ -236,7 +236,7 @@ def render_d2_slide2_placeholder():
     # AI 생성 라벨 (Bronze 좌상단)
     draw.rectangle([120, 200, 310, 248], fill=BRONZE + (200,))
     draw.text((215, 224), "AI 생성",
-              font=f_tag, fill=INK + (255,), anchor="mm")
+              font=_f(_KR_SANS, 24), fill=INK + (255,), anchor="mm")
 
     draw_brand_mark(draw, W, H)
     out = OUT_DIR / "d2_slide2_placeholder.png"
@@ -318,16 +318,18 @@ def render_d3():
     draw.rectangle([80, 260, MID - 15, 730],
                    outline=(245, 240, 232, 40), width=1)
 
-    draw.text((LEFT_X, 315), "대화형 AI",
+    # 좌 패널 제목
+    draw.text((LEFT_X, 303), "대화형 AI",
               font=f_head, fill=IVORY_MID, anchor="mm")
-    draw.rectangle([100, 348, MID - 25, 350], fill=HAIRLINE)
+    draw.rectangle([100, 330, MID - 25, 332], fill=HAIRLINE)
 
     items_left = [
         "물어야 답한다",
         "종목 리스트 매번 입력",
         "그때그때 자유 질문",
     ]
-    y = 385
+    # 좌우 불릿 세로 시작 위치 통일: y=370
+    y = 370
     for item in items_left:
         draw.text((LEFT_X, y), f"· {item}",
                   font=f_body, fill=IVORY_MID, anchor="mm")
@@ -345,15 +347,18 @@ def render_d3():
     draw.rectangle([MID + 15, 260, W - 80, 730],
                    outline=BRONZE + (60,), width=1)
 
-    draw.text((RIGHT_X, 315), "PivoxQuant",
-              font=f_pq, fill=BRONZE, anchor="mm")
+    # 우 패널 제목 — 좌 패널과 동일 y 위치(303), bronze wash 위라 Ivory로 대비 확보
+    draw.text((RIGHT_X, 303), "PivoxQuant",
+              font=f_pq, fill=IVORY, anchor="mm")
+    draw.rectangle([MID + 25, 330, W - 90, 332], fill=DIVIDER)
 
     items_right = [
         "자는 동안 정리된다",
         "포트폴리오 등록 1회",
         "정해진 시각에 자동 전달",
     ]
-    y = 385
+    # 좌우 불릿 세로 시작 위치 통일: y=370
+    y = 370
     for item in items_right:
         draw.text((RIGHT_X, y), f"· {item}",
                   font=f_body, fill=IVORY, anchor="mm")
@@ -452,7 +457,7 @@ def render_d4_slide2_weekly():
     # PDF 헤더 라인
     draw.rectangle([120, 190, W - 120, 240], fill=BRONZE + (40,))
     draw.text((W // 2, 215), "WEEKLY MEMO",
-              font=f_tag, fill=BRONZE, anchor="mm")
+              font=f_tag, fill=IVORY, anchor="mm")
 
     draw.text((W // 2, 320), "일요일, 5페이지 PDF",
               font=f_head, fill=IVORY, anchor="mm")
@@ -480,7 +485,7 @@ def render_d4_slide2_weekly():
                    fill=(5, 5, 5, 220))
     draw.text((W // 2, 755),
               "더미 데이터 · 실제 수치 미포함",
-              font=f_tag, fill=BRONZE + (160,), anchor="mm")
+              font=_f(_KR_SANS, 20), fill=BRONZE + (160,), anchor="mm")
 
     draw.text((W // 2, 850),
               "AI 생성 · 정보 제공 도구 · 투자자문 아님",
@@ -528,7 +533,7 @@ def render_d4_slide3_earnings():
     cols = ["종목", "발표 예정", "EPS 컨센서스", "전기 대비"]
     col_x = [180, 380, 620, 860]
     for cx, col in zip(col_x, cols):
-        draw.text((cx, 442), col, font=f_tag, fill=BRONZE, anchor="lm")
+        draw.text((cx, 442), col, font=_f(_KR_SANS, 20), fill=IVORY_MID, anchor="lm")
 
     # 더미 행 (비식별)
     rows_dummy = [
@@ -539,14 +544,17 @@ def render_d4_slide3_earnings():
     y = 490
     for row in rows_dummy:
         for cx, cell in zip(col_x, row):
-            draw.text((cx, y), cell, font=f_mono,
+            # 한글 포함 셀은 KR_SANS, 영문/숫자/em-dash는 f_mono
+            has_kr = any('가' <= c <= '힣' for c in cell)
+            cell_font = _f(_KR_SANS, 26) if has_kr else f_mono
+            draw.text((cx, y), cell, font=cell_font,
                       fill=IVORY_MID, anchor="lm")
         y += 68
         draw.rectangle([140, y - 20, W - 140, y - 19], fill=HAIRLINE)
 
     draw.text((W // 2, 810),
               "종목명 미표기 · 더미 데이터",
-              font=f_tag, fill=BRONZE + (140,), anchor="mm")
+              font=_f(_KR_SANS, 20), fill=BRONZE + (140,), anchor="mm")
 
     draw.text((W // 2, 876),
               "AI 생성 · 정보 제공 도구 · 투자자문 아님",
@@ -607,6 +615,8 @@ def render_d4_slide4():
 # D5 · 릴스 커버 1080×1920 (9:16)
 # ═══════════════════════════════════════════════════════════════════════════════
 def render_d5_reels_cover():
+    """D5 릴스 커버 — 9:16. 커버답게 단순화: 훅+서브+포인트박스+AI라벨만.
+    박스/텍스트 overflow 방지: y커서 누적 방식으로 배치."""
     W, H = 1080, 1920
     img, draw = make_canvas(W, H)
     draw_top_bar(draw, W)
@@ -614,76 +624,90 @@ def render_d5_reels_cover():
 
     f_eye  = _f(_JETBRAINS_B, 26)
     f_head = _f(_KR_SANS, 86)   # 한글 → KR
-    f_sub  = _f(_KR_SANS, 40)
-    f_body = _f(_KR_SANS, 34)
+    f_sub  = _f(_KR_SANS, 42)
+    f_body = _f(_KR_SANS, 36)
     f_tag  = _f(_JETBRAINS_B, 28)
 
+    # ── eyebrow ──
     draw.text((90, 140), "D5 · REELS COVER", font=f_eye, fill=BRONZE + (180,), anchor="lm")
 
-    # AI 생성 태그 (좌상단)
-    draw.rectangle([80, 190, 310, 240], fill=BRONZE + (200,))
-    draw.text((195, 215), "AI 생성 콘텐츠",
-              font=_f(_KR_SANS, 24), fill=INK + (255,), anchor="mm")
+    # ── AI 생성 태그 (좌상단) ──
+    draw.rectangle([80, 190, 330, 244], fill=BRONZE + (200,))
+    draw.text((205, 217), "AI 생성 콘텐츠",
+              font=_f(_KR_SANS, 26), fill=INK + (255,), anchor="mm")
 
-    # 메인 훅
-    draw.text((W // 2, 470), "내 주식",
+    # ── 메인 훅 (y 커서 누적) ──
+    y_cursor = 420
+    head_lh = 110
+    draw.text((W // 2, y_cursor), "내 주식",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 575), "오늘 왜",
+    y_cursor += head_lh
+    draw.text((W // 2, y_cursor), "오늘 왜",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 680), "올랐지?",
+    y_cursor += head_lh
+    draw.text((W // 2, y_cursor), "올랐지?",
               font=f_head, fill=BRONZE, anchor="mm")
+    y_cursor += 130   # 훅 → 서브 여백
 
-    draw.text((W // 2, 855),
+    # ── 서브 카피 ──
+    draw.text((W // 2, y_cursor),
               "검색하다 하루 다 갑니다.",
               font=f_sub, fill=IVORY_D, anchor="mm")
+    y_cursor += 90
 
-    # 포인트 박스
-    draw.rectangle([120, 930, W - 120, 1100],
+    # ── 포인트 박스 (y커서 기반, 텍스트 3줄 높이 계산 후 박스) ──
+    BOX_PAD_TOP = 28
+    BOX_LINE_H  = 66
+    BOX_PAD_BOT = 28
+    box_top = y_cursor + 20
+    box_lines = [
+        ("내가 가진 것들 기준으로",             IVORY_D),
+        ("뉴스 흐름 · 데이터 관찰 포인트",       IVORY_D),
+        ("정리된 자료부터 보고 판단은 내가.",     IVORY),   # bronze wash 위라 Ivory 사용
+    ]
+    box_h = BOX_PAD_TOP + BOX_LINE_H * len(box_lines) + BOX_PAD_BOT
+    box_bot = box_top + box_h
+    draw.rectangle([120, box_top, W - 120, box_bot],
                    fill=(184, 149, 106, 10))
-    draw.rectangle([120, 930, W - 120, 1100],
+    draw.rectangle([120, box_top, W - 120, box_bot],
                    outline=BRONZE + (60,), width=2)
-    draw.text((W // 2, 990),
-              "내가 가진 것들 기준으로",
-              font=f_body, fill=IVORY_D, anchor="mm")
-    draw.text((W // 2, 1040),
-              "뉴스 흐름 · 데이터 관찰 포인트",
-              font=f_body, fill=IVORY_D, anchor="mm")
-    draw.text((W // 2, 1090),
-              "정리된 자료부터 보고 판단은 내가.",
-              font=f_body, fill=BRONZE, anchor="mm")
+    ty = box_top + BOX_PAD_TOP + BOX_LINE_H // 2
+    for line_text, line_fill in box_lines:
+        draw.text((W // 2, ty), line_text, font=f_body, fill=line_fill, anchor="mm")
+        ty += BOX_LINE_H
+    y_cursor = box_bot + 60
 
-    # 릴스 스펙 안내 (영상 없음 — 커버만)
-    draw.text((W // 2, 1210),
-              "릴스 15~25초 커버 이미지",
-              font=_f(_KR_SANS, 28), fill=BRONZE + (160,), anchor="mm")
-    draw.text((W // 2, 1260),
-              "영상 촬영: CEO 직접",
-              font=_f(_KR_SANS, 30), fill=IVORY_FAINT, anchor="mm")
-
-    # 자막 스펙 안내 박스
-    draw.rectangle([120, 1310, W - 120, 1700],
-                   fill=(18, 18, 18, 255))   # 어두운 charcoal
-    draw.rectangle([120, 1310, W - 120, 1700],
-                   outline=(184, 149, 106, 60), width=1)
-    draw.text((W // 2, 1348), "자막 스펙",
-              font=_f(_KR_SANS, 28), fill=BRONZE, anchor="mm")
-
+    # ── 자막 스펙 박스 (과밀 방지: 필수 정보만 5줄) ──
+    cap_box_top = y_cursor
     captions = [
         ("0~3s",  '"내 주식 오늘 왜 올랐지?"'),
-        ("3~12s", "뉴스 열 개 읽어도 포트폴리오 기준"),
-        ("     ", "정리된 건 없습니다."),
-        ("12s~",  "관찰 포인트 정리됨. 판단은 내가."),
+        ("3~12s", "뉴스 기반 관찰 포인트 정리 중"),
+        ("12s~",  "정리됨. 판단은 내가."),
         ("끝",    "프로필 링크"),
     ]
     f_cap_t = _f(_JETBRAINS, 26)
     f_cap_c = _f(_KR_SANS, 27)
-    y = 1396
+    CAP_LH  = 60
+    cap_box_h = 52 + CAP_LH * len(captions) + 30
+    cap_box_bot = cap_box_top + cap_box_h
+    draw.rectangle([120, cap_box_top, W - 120, cap_box_bot],
+                   fill=(18, 18, 18, 255))
+    draw.rectangle([120, cap_box_top, W - 120, cap_box_bot],
+                   outline=(184, 149, 106, 60), width=1)
+    draw.text((W // 2, cap_box_top + 28), "자막 스펙",
+              font=_f(_KR_SANS, 28), fill=BRONZE, anchor="mm")
+    ty = cap_box_top + 62
     for ts, cap in captions:
-        draw.text((155, y), ts, font=f_cap_t, fill=BRONZE + (255,), anchor="lm")
-        draw.text((325, y), cap, font=f_cap_c, fill=IVORY + (255,), anchor="lm")
-        y += 60
+        # 타임스탬프에 한글이 있으면 KR_SANS, 아니면 JetBrains
+        ts_has_kr = any('가' <= c <= '힣' for c in ts)
+        ts_font = _f(_KR_SANS, 26) if ts_has_kr else f_cap_t
+        draw.text((155, ty), ts, font=ts_font, fill=BRONZE + (255,), anchor="lm")
+        draw.text((325, ty), cap, font=f_cap_c, fill=IVORY + (255,), anchor="lm")
+        ty += CAP_LH
+    y_cursor = cap_box_bot + 50
 
-    draw.text((W // 2, 1760),
+    # ── 면책 ──
+    draw.text((W // 2, min(y_cursor, H - 120)),
               "정보 제공 도구 · 투자자문 아님",
               font=_f(_KR_SANS, 28), fill=IVORY_FAINT, anchor="mm")
     draw_brand_mark(draw, W, H)
@@ -708,7 +732,7 @@ def render_d6():
     f_sub  = _f(_KR_SANS, 32)
     f_body = _f(_KR_SANS, 28)
 
-    # Eyebrow
+    # Eyebrow (y=120, 텍스트 높이 ~22px → 하단 약 y=131)
     draw.text((90, 120), "D6 · BUILDING IN PUBLIC", font=f_eye,
               fill=BRONZE + (180,), anchor="lm")
 
@@ -717,7 +741,8 @@ def render_d6():
               font=f_tag, fill=BRONZE, anchor="mm")
 
     # 중앙 인용 — 한글 → KR
-    draw.rectangle([80, 258, 86, 600], fill=BRONZE)  # 왼쪽 Bronze 바
+    # 세로 Bronze 바: eyebrow 아래(y=155 이상) + 태그 위쪽과 충분한 간격 → y=280 시작
+    draw.rectangle([80, 280, 86, 600], fill=BRONZE)  # 왼쪽 Bronze 바 — eyebrow 겹침 방지
     draw.text((W // 2, 315), "회사엔 CFO 보고서가",
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 385), "올라온다.",

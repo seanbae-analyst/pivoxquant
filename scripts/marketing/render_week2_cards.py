@@ -174,25 +174,25 @@ def render_d8():
 
     # ① 측정 기간
     draw.text((120, 855), "①",
-              font=_f(_JETBRAINS_B, 22), fill=BRONZE, anchor="lm")
+              font=_f(_KR_SANS, 22), fill=BRONZE, anchor="lm")
     draw.text((160, 855), "측정 기간: 2026-05-01 ~ 2026-05-31",
               font=f_disc, fill=IVORY_D, anchor="lm")
 
     # ② 면책
     draw.text((120, 905), "②",
-              font=_f(_JETBRAINS_B, 22), fill=BRONZE, anchor="lm")
+              font=_f(_KR_SANS, 22), fill=BRONZE, anchor="lm")
     draw.text((160, 905), "과거 성과는 미래 수익을 보장하지 않습니다.",
               font=f_disc, fill=IVORY_D, anchor="lm")
 
     # ③ 개별 사례
     draw.text((120, 955), "③",
-              font=_f(_JETBRAINS_B, 22), fill=BRONZE, anchor="lm")
+              font=_f(_KR_SANS, 22), fill=BRONZE, anchor="lm")
     draw.text((160, 955), "개별 이용자 사례이며 전체를 대표하지 않습니다.",
               font=f_disc, fill=IVORY_D, anchor="lm")
 
     # ④ AI 생성 라벨
     draw.text((120, 1005), "④",
-              font=_f(_JETBRAINS_B, 22), fill=BRONZE, anchor="lm")
+              font=_f(_KR_SANS, 22), fill=BRONZE, anchor="lm")
     draw.text((160, 1005), "AI 생성 · 정보 제공 도구 · 투자자문 아님",
               font=f_disc, fill=IVORY_D, anchor="lm")
 
@@ -232,7 +232,7 @@ def render_d9_slide1():
 
     # 서브
     draw.text((W // 2, 510), "구성 요소 4가지",
-              font=f_mono, fill=IVORY_D, anchor="mm")
+              font=_f(_KR_SANS, 30), fill=IVORY_D, anchor="mm")
 
     # 4요소 리스트
     f_item = _f(_KR_SANS, 32)
@@ -245,7 +245,7 @@ def render_d9_slide1():
     ]
     y = 570
     for num, title, desc in items:
-        draw.text((130, y), num, font=_f(_JETBRAINS_B, 28), fill=BRONZE, anchor="lm")
+        draw.text((130, y), num, font=_f(_KR_SANS, 28), fill=BRONZE, anchor="lm")
         draw.text((185, y), title, font=f_item, fill=IVORY, anchor="lm")
         draw.text((185, y + 36), desc, font=f_desc, fill=IVORY_FAINT, anchor="lm")
         y += 90
@@ -292,7 +292,7 @@ def render_d9_slide2_placeholder():
     # AI 생성 라벨
     draw.rectangle([120, 200, 310, 248], fill=BRONZE + (200,))
     draw.text((215, 224), "AI 생성",
-              font=f_tag, fill=INK + (255,), anchor="mm")
+              font=_f(_KR_SANS, 24), fill=INK + (255,), anchor="mm")
 
     draw_brand_mark(draw, W, H)
     out = OUT_DIR / "d9_slide2_placeholder.png"
@@ -350,12 +350,12 @@ def render_d9_slide3():
     ]
     y = 665
     for ticker, when in dummy_sched:
-        draw.text((120, y), ticker, font=f_mono, fill=IVORY, anchor="lm")
+        draw.text((120, y), ticker, font=_f(_KR_SANS, 26), fill=IVORY, anchor="lm")
         draw.text((500, y), when,   font=f_mono, fill=BRONZE, anchor="lm")
         y += 54
 
     draw.text((120, 760), "더미 데이터 · 종목명 비식별",
-              font=_f(_JETBRAINS_B, 18), fill=IVORY_FAINT, anchor="lm")
+              font=_f(_KR_SANS, 18), fill=IVORY_FAINT, anchor="lm")
 
     draw.text((W // 2, 870),
               "AI 생성 · 정보 제공 도구 · 투자자문 아님",
@@ -452,34 +452,47 @@ def render_d10():
               "먼저 정리해 두는 도구",
               font=f_sub, fill=IVORY_D, anchor="mm")
 
-    # 대화형 vs PivoxQuant 비교 (간결)
-    # 왼쪽 — 대화형
-    draw.rectangle([80, 625, W // 2 - 20, 820],
+    # ── 대화형 vs PivoxQuant 비교 (좌우 정렬 통일) ──
+    # 공통 패널 상단 y
+    PANEL_TOP  = 625
+    PANEL_BOT  = 830
+    MID        = W // 2
+    LEFT_CX    = (80 + MID - 20) // 2         # 좌 패널 중앙 x
+    RIGHT_CX   = MID + 20 + (W - 80 - MID - 20) // 2  # 우 패널 중앙 x
+
+    # 좌 패널 — 대화형 AI
+    draw.rectangle([80, PANEL_TOP, MID - 20, PANEL_BOT],
                    fill=(20, 20, 20, 255))
-    draw.rectangle([80, 625, W // 2 - 20, 820],
+    draw.rectangle([80, PANEL_TOP, MID - 20, PANEL_BOT],
                    outline=(245, 240, 232, 30), width=1)
-    draw.text((W // 4, 670), "대화형 AI",
+    # 좌 제목 (패널 상단 + 40px)
+    TITLE_Y    = PANEL_TOP + 46
+    BULLET_Y1  = TITLE_Y + 60
+    BULLET_Y2  = BULLET_Y1 + 42
+    draw.text((LEFT_CX, TITLE_Y), "대화형 AI",
               font=_f(_KR_SANS, 30), fill=IVORY_MID, anchor="mm")
-    draw.text((W // 4, 730), "내가 매번 물어야",
+    draw.text((LEFT_CX, BULLET_Y1), "내가 매번 물어야",
               font=_f(_KR_SANS, 26), fill=IVORY_MID, anchor="mm")
-    draw.text((W // 4, 770), "답이 나온다",
+    draw.text((LEFT_CX, BULLET_Y2), "답이 나온다",
               font=_f(_KR_SANS, 26), fill=IVORY_MID, anchor="mm")
 
-    # 오른쪽 — PivoxQuant
-    draw.rectangle([W // 2 + 20, 625, W - 80, 820],
+    # 우 패널 — PivoxQuant (동일 y 기준)
+    draw.rectangle([MID + 20, PANEL_TOP, W - 80, PANEL_BOT],
                    fill=(184, 149, 106, 18))
-    draw.rectangle([W // 2 + 20, 625, W - 80, 820],
+    draw.rectangle([MID + 20, PANEL_TOP, W - 80, PANEL_BOT],
                    outline=BRONZE + (60,), width=1)
-    draw.text((W // 2 + (W // 2 - 80) // 2 + 20, 670), "PivoxQuant",
+    # 우 제목 (TITLE_Y와 동일)
+    draw.text((RIGHT_CX, TITLE_Y), "PivoxQuant",
               font=_f(_JETBRAINS_B, 26), fill=BRONZE, anchor="mm")
-    draw.text((W // 2 + (W // 2 - 80) // 2 + 20, 730), "정해진 시각에",
+    # 우 불릿 (BULLET_Y1/Y2와 동일)
+    draw.text((RIGHT_CX, BULLET_Y1), "정해진 시각에",
               font=_f(_KR_SANS, 26), fill=IVORY, anchor="mm")
-    draw.text((W // 2 + (W // 2 - 80) // 2 + 20, 770), "먼저 도착",
+    draw.text((RIGHT_CX, BULLET_Y2), "먼저 도착",
               font=_f(_KR_SANS, 26), fill=IVORY, anchor="mm")
 
-    # 아이콘 대신 텍스트 기호 (시계/메일 Bronze 라인 대체)
-    draw.text((W // 2, 910), "⌚ 06:00  →  메일함 도착",
-              font=_f(_KR_SANS, 32), fill=BRONZE, anchor="mm")
+    # 시각 강조 — 이모지 없이 텍스트만 (KR_SANS: 한글 포함, 숫자/→ 도 렌더 가능)
+    draw.text((W // 2, 910), "06:00  →  메일함 도착",
+              font=_f(_KR_SANS, 34), fill=BRONZE, anchor="mm")
     draw.text((W // 2, 960),
               "질문하기 전에, 이미 정리가 끝나 있습니다.",
               font=f_body, fill=IVORY_D, anchor="mm")
@@ -583,7 +596,7 @@ def render_d11_slide2_placeholder():
     col_w = (W - 80 - 80) // 5
     for i, day in enumerate(days):
         cx = 80 + col_w * i + col_w // 2
-        draw.text((cx, 290), day, font=f_tag, fill=BRONZE, anchor="mm")
+        draw.text((cx, 290), day, font=_f(_KR_SANS, 22), fill=BRONZE, anchor="mm")
         draw.rectangle([80 + col_w * i, 305, 80 + col_w * (i + 1) - 4, 306],
                        fill=HAIRLINE)
 
@@ -652,7 +665,7 @@ def render_d11_slide3():
     cols = ["분기", "구분 A", "구분 B", "컨센서스"]
     col_x = [130, 340, 570, 790]
     for cx, col in zip(col_x, cols):
-        draw.text((cx, 364), col, font=f_tag, fill=BRONZE, anchor="lm")
+        draw.text((cx, 364), col, font=_f(_KR_SANS, 20), fill=BRONZE, anchor="lm")
 
     rows_dummy = [
         ("Q1", "—", "—", "—"),
@@ -667,7 +680,7 @@ def render_d11_slide3():
         draw.rectangle([100, y - 18, W - 100, y - 17], fill=HAIRLINE)
 
     draw.text((W // 2, 604), "더미 데이터 · 종목명 비식별 · 수익률 미표기",
-              font=f_tag, fill=BRONZE + (130,), anchor="mm")
+              font=_f(_KR_SANS, 20), fill=BRONZE + (130,), anchor="mm")
 
     # 안내 메시지
     draw.text((W // 2, 700),
@@ -822,7 +835,9 @@ def render_d12_reels_cover():
     f_cap_c = _f(_KR_SANS, 27)
     y = 1386
     for ts, cap in captions:
-        draw.text((155, y), ts, font=f_cap_t, fill=BRONZE + (255,), anchor="lm")
+        ts_has_kr = any('가' <= c <= '힣' for c in ts)
+        ts_font = _f(_KR_SANS, 26) if ts_has_kr else f_cap_t
+        draw.text((155, y), ts, font=ts_font, fill=BRONZE + (255,), anchor="lm")
         draw.text((345, y), cap, font=f_cap_c, fill=IVORY + (255,), anchor="lm")
         y += 58
 
@@ -868,24 +883,30 @@ def render_d13():
               "고르는 도구가 아니라, 모아주는 도구",
               font=f_sub, fill=IVORY_D, anchor="mm")
 
-    # 2가지 약속 박스
-    draw.rectangle([80, 575, W - 80, 840],
+    # 2가지 약속 박스 — 텍스트에 맞게 높이 조정 (빈 공간 제거)
+    # 구성: 상단패딩(24) + 제목줄(36) + 간격(20) + 첫번째항목(40) + 간격(16) + 두번째항목(40) + 하단패딩(24)
+    # = 24 + 36 + 20 + 40 + 16 + 40 + 24 = 200px
+    BOX2_TOP = 560
+    BOX2_BOT = BOX2_TOP + 200
+    draw.rectangle([80, BOX2_TOP, W - 80, BOX2_BOT],
                    fill=(184, 149, 106, 8))
-    draw.rectangle([80, 575, W - 80, 840],
+    draw.rectangle([80, BOX2_TOP, W - 80, BOX2_BOT],
                    outline=BRONZE + (50,), width=1)
 
-    draw.text((130, 620), "PivoxQuant의 두 가지 약속",
+    draw.text((130, BOX2_TOP + 24 + 18), "PivoxQuant의 두 가지 약속",
               font=_f(_KR_SANS, 28), fill=BRONZE, anchor="lm")
 
-    draw.text((130, 690), "하나.",
+    ROW1_Y = BOX2_TOP + 24 + 36 + 20 + 20  # 텍스트 중심 y
+    draw.text((130, ROW1_Y), "하나.",
               font=_f(_JETBRAINS_B, 28), fill=BRONZE, anchor="lm")
-    draw.text((230, 690),
+    draw.text((230, ROW1_Y),
               "데이터는 공식 출처에서만.",
               font=f_body, fill=IVORY, anchor="lm")
 
-    draw.text((130, 776), "둘.",
+    ROW2_Y = ROW1_Y + 56
+    draw.text((130, ROW2_Y), "둘.",
               font=_f(_JETBRAINS_B, 28), fill=BRONZE, anchor="lm")
-    draw.text((230, 776),
+    draw.text((230, ROW2_Y),
               "무엇을 하라고 말하지 않습니다.",
               font=f_body, fill=IVORY, anchor="lm")
 
@@ -932,7 +953,7 @@ def render_d14_slide1():
     draw.text((W // 2, 290), "2주, 한 번에 정리합니다.",
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 375), "기능 총정리",
-              font=_f(_JETBRAINS_B, 36), fill=BRONZE, anchor="mm")
+              font=_f(_KR_SANS, 36), fill=BRONZE, anchor="mm")
 
     # D8~D14 타임라인
     f_d = _f(_JETBRAINS_B, 24)
