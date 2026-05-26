@@ -368,14 +368,17 @@
   /* Shell layout offsets — single source of truth so sticky sub-headers
      and bottom-nav clearance stay in sync with the chrome heights and the
      notch insets on installed PWAs.
-       • TopBar height = 56px (h-14). The dashboard shell pads its top edge
-         by max(8px, safe-area-top), so a sticky sub-header that wants to pin
-         directly beneath the TopBar must add the same inset or it overlaps
-         the bar on notch devices.
+       • TopBar wrapper ([data-pq-dash-topbar]) is `position: sticky; top: 0`
+         and pins to the VIEWPORT scrollport top (the shell is min-h-screen, so
+         the body is the scroller). The shell's `padding-top: safe-area-top`
+         scrolls away with the content and does NOT shift the sticky offset, so
+         a sub-header that wants to pin flush under the TopBar uses the bare
+         TopBar height — adding the notch inset would leave an empty band the
+         height of the notch between the two bars on standalone PWAs.
        • BottomNav height = 64px (h-16) + safe-area-bottom (home indicator). */
   --pq-topbar-height: 56px;
   --pq-bottomnav-height: 64px;
-  --pq-aux-sticky-top: calc(var(--pq-topbar-height) + env(safe-area-inset-top, 0px));
+  --pq-aux-sticky-top: var(--pq-topbar-height);
   --pq-bottomnav-clearance: calc(
     var(--pq-bottomnav-height) + env(safe-area-inset-bottom, 0px) + 16px
   );
