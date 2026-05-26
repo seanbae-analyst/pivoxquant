@@ -365,6 +365,21 @@
   --pq-safe-left: env(safe-area-inset-left, 0px);
   --pq-safe-right: env(safe-area-inset-right, 0px);
 
+  /* Shell layout offsets — single source of truth so sticky sub-headers
+     and bottom-nav clearance stay in sync with the chrome heights and the
+     notch insets on installed PWAs.
+       • TopBar height = 56px (h-14). The dashboard shell pads its top edge
+         by max(8px, safe-area-top), so a sticky sub-header that wants to pin
+         directly beneath the TopBar must add the same inset or it overlaps
+         the bar on notch devices.
+       • BottomNav height = 64px (h-16) + safe-area-bottom (home indicator). */
+  --pq-topbar-height: 56px;
+  --pq-bottomnav-height: 64px;
+  --pq-aux-sticky-top: calc(var(--pq-topbar-height) + env(safe-area-inset-top, 0px));
+  --pq-bottomnav-clearance: calc(
+    var(--pq-bottomnav-height) + env(safe-area-inset-bottom, 0px) + 16px
+  );
+
   /* Tracking */
   --pq-track-eyebrow: 0.22em;
   --pq-track-wordmark: 0.16em;

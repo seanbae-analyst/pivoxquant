@@ -66,7 +66,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div data-pq-dash-topbar className="pq-dash-topbar">
           <TopBar />
         </div>
-        <main {...(!isDesktop ? { id: "main-content" } : {})} className="flex-1 px-4 py-6 pb-24">{children}</main>
+        {/* pb = bottom-nav (h-16 64px) + safe-area-bottom + 16px gutter so the
+            last block clears the fixed nav (z-50) on notch devices. The static
+            pb-24 (96px) was < 64px + ~34px notch and clipped ~2px. */}
+        <main
+          {...(!isDesktop ? { id: "main-content" } : {})}
+          className="flex-1 px-4 py-6 pb-[var(--pq-bottomnav-clearance)]"
+        >
+          {children}
+        </main>
         <BottomNav />
       </div>
 

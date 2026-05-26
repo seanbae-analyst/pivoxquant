@@ -290,7 +290,7 @@ export function BottomNav() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="flex w-full items-center gap-3 rounded-sm font-serif uppercase transition-colors hover:bg-[rgba(184,149,106,0.08)]"
+                className="flex min-h-[44px] w-full items-center gap-3 rounded-sm font-serif uppercase transition-colors hover:bg-[rgba(184,149,106,0.08)]"
                 style={{
                   padding: "13px 14px",
                   fontSize: "var(--pq-text-body)",
@@ -356,7 +356,7 @@ function DrawerGroupSection({
                 href={item.href}
                 onClick={onNavigate}
                 aria-current={active ? "page" : undefined}
-                className="flex items-center gap-3 rounded-sm font-serif uppercase transition-colors"
+                className="flex min-h-[44px] items-center gap-3 rounded-sm font-serif uppercase transition-colors"
                 style={{
                   padding: "13px 14px",
                   fontSize: "var(--pq-text-body)",

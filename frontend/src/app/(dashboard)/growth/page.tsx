@@ -15,6 +15,7 @@
 import { useState, useCallback } from "react";
 import { useGrowthData, useGrowthToday, useGrowthWeekly } from "@/lib/hooks";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { GrowthGraph } from "@/components/growth/growth-graph";
 import { WeeklyTrendChart } from "@/components/growth/weekly-trend-chart";
 import { ReflectionForm } from "@/components/growth/reflection-form";
@@ -35,9 +36,10 @@ function DayDetail({ date, onClose }: DayDetailProps) {
   const isToday = date === new Date().toISOString().split("T")[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <ModalShell onClose={onClose} ariaLabel={`Growth detail · ${date}`}>
       <div
-        className="mx-4 w-full max-w-md rounded-[2px] border border-[rgba(245,240,232,0.1)] bg-[var(--pq-ink)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        className="mb-[var(--pq-bottomnav-clearance)] w-full max-w-md rounded-[2px] border border-[rgba(245,240,232,0.1)] bg-[var(--pq-ink)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5)] sm:mb-0"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h3 className="font-serif text-lg font-semibold text-[var(--pq-ivory)]">
@@ -45,8 +47,8 @@ function DayDetail({ date, onClose }: DayDetailProps) {
           </h3>
           <button
             onClick={onClose}
-            className="text-[rgba(245,240,232,0.45)] hover:text-[var(--pq-bronze)]"
-            aria-label="Close"
+            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-[rgba(245,240,232,0.45)] hover:text-[var(--pq-bronze)]"
+            aria-label="닫기"
           >
             <svg width={20} height={20} viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -142,7 +144,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
           </p>
         )}
       </div>
-    </div>
+    </ModalShell>
   );
 }
 

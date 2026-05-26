@@ -450,7 +450,10 @@ export default function SettingsPageV2() {
       <div
         className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
-          top: 56,
+          // Pin beneath the TopBar (56px). On notch PWAs the shell adds
+          // safe-area-top padding, so the offset must include it or the bar
+          // overlaps the TopBar. Token: --pq-aux-sticky-top (globals.css).
+          top: "var(--pq-aux-sticky-top)",
           // FINDING-022: solid ink — semi-transparent bar bled scrolled content.
           background: "var(--pq-ink)",
         }}

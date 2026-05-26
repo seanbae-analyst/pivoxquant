@@ -160,7 +160,7 @@ export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)]"
+                className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)]"
                 aria-label="Dismiss pulse"
               >
                 <X className="h-4 w-4" />

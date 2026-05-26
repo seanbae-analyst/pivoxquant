@@ -563,7 +563,9 @@ export default function HomePageV1() {
       <div
         className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-4"
         style={{
-          top: 56,
+          // Pin beneath the TopBar (56px) incl. notch safe-area on PWAs.
+          // Token: --pq-aux-sticky-top (globals.css).
+          top: "var(--pq-aux-sticky-top)",
           background: "rgba(10,10,10,0.78)",
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",

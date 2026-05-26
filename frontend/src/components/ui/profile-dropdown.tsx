@@ -193,7 +193,7 @@ export function ProfileDropdown() {
                 type="button"
                 role="menuitem"
                 onClick={handleSignOut}
-                className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+                className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
                 style={{ color: "var(--pq-bronze)" }}
               >
                 <LogOut className="h-4 w-4" />
@@ -228,7 +228,7 @@ function MenuLink({
       onClick={onNavigate}
       role="menuitem"
       className={cn(
-        "flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]",
+        "flex min-h-[44px] items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]",
       )}
       style={{ color: "var(--pq-ivory)" }}
     >
@@ -252,7 +252,7 @@ function MenuButton({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+      className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
       style={{ color: "var(--pq-ivory)" }}
     >
       <span style={{ color: "var(--pq-muted)" }}>{icon}</span>

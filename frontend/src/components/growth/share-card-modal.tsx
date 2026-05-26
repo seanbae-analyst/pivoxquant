@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { PQ_EASE, PQ_DUR_BASE } from "@/lib/motion";
 import { track } from "@/lib/track";
 import { isKakaoAvailable, shareToKakao } from "@/lib/kakao-share";
+import { ModalShell } from "@/components/ui/modal-shell";
 
 /** §101-safe default caption — factual + generic, no recommendation. */
 const DEFAULT_CAPTION = "나의 이번 달 투자 기록 📈 by PivoxQuant";
@@ -155,20 +156,17 @@ export function ShareCardModal({
   }, [fullCaption]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      style={{ background: "rgba(5,5,5,0.72)" }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="카드 공유"
-      onClick={onClose}
-    >
+    <ModalShell onClose={onClose} ariaLabel="카드 공유">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: PQ_DUR_BASE, ease: PQ_EASE }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md overflow-hidden"
+        // Lift the bottom sheet clear of the mobile BottomNav (md:hidden, z-50,
+        // h-16 + safe-area) so the share / save actions never sit behind it.
+        // --pq-bottomnav-clearance is the single source of truth (globals.css).
+        // Cleared at sm+ where the dialog is centered and the nav hides.
+        className="mb-[var(--pq-bottomnav-clearance)] w-full max-w-md overflow-hidden sm:mb-0"
         style={{
           background: "var(--pq-ink)",
           border: "1px solid var(--pq-border)",
@@ -194,7 +192,7 @@ export function ShareCardModal({
             type="button"
             onClick={onClose}
             aria-label="닫기"
-            className="flex h-8 w-8 items-center justify-center rounded-md transition-colors"
+            className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.6)" }}
           >
             <X className="h-4 w-4" />
@@ -240,7 +238,7 @@ export function ShareCardModal({
           </p>
         </div>
       </motion.div>
-    </div>
+    </ModalShell>
   );
 }
 
