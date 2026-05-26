@@ -50,6 +50,8 @@ from .scheduled_email import ScheduledEmail
 # Wave G C-AC2 — NPS 1-click feedback (transactional, §50 §101 exempt).
 from .nps_feedback import NpsFeedback
 # Wave I C-1 — OAuth lifecycle event log (start/success/fail).
+# Viral loop — 0원 자체 퍼널 추적 (POST /api/track).
+from .funnel_event import FunnelEvent, ALLOWED_EVENTS as FUNNEL_ALLOWED_EVENTS
 from .auth_event import (
     AuthEvent,
     EVENT_TYPE_START as AUTH_EVENT_START,
@@ -84,4 +86,5 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "NpsFeedback",
            "AuthEvent",
            "AUTH_EVENT_START", "AUTH_EVENT_SUCCESS", "AUTH_EVENT_FAIL",
-           "AUTH_PROVIDER_GOOGLE", "AUTH_PROVIDER_KAKAO"]
+           "AUTH_PROVIDER_GOOGLE", "AUTH_PROVIDER_KAKAO",
+           "FunnelEvent", "FUNNEL_ALLOWED_EVENTS"]

@@ -64,6 +64,13 @@ class User(UserMixin, db.Model):
     # until every row is backfilled. `unique=True` is expressed via a
     # unique index in the migration (SQLite can't add UNIQUE inline).
     referral_code         = db.Column(db.String(16), nullable=True)
+    # Viral loop — attribution. The referral code of the inviter, captured
+    # once at signup from the ``?ref=`` query param (carried through OAuth
+    # via the signed state token). Stores the *code string* only — never a
+    # raw integer user id (PIPA §29 enumeration guard). Nullable + immutable
+    # after first set (attribution must not be rewritable). Managed via
+    # migration 045_funnel_events.
+    referred_by           = db.Column(db.String(16), nullable=True, index=True)
     # Earnings Pre-Brief (MVP #3) per-channel email opt-out. Distinct from
     # the global `email_opt_out` so users can mute time-sensitive earnings
     # alerts without silencing every artefact email. Default False so

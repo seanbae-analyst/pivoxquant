@@ -524,13 +524,50 @@ def _state_serializer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(secret, salt=_OAUTH_STATE_SALT)
 
 
-def _build_signed_state(provider: str, origin: str, redirect_uri: str) -> str:
+def _record_signup_funnel(user, ref_code: str | None) -> None:
+    """Viral loop — log a ``signup`` funnel event + attribute referral.
+
+    Best-effort and fully contained: any failure here must NEVER break the
+    OAuth login (the user is already logged in by the time we reach this).
+    Attribution itself (``attribute_referral``) is idempotent + immutable and
+    logs its own ``referral_signup`` event when a valid inviter is found.
+    """
+    try:
+        from models import FunnelEvent
+        from datetime import datetime as _dt, timezone as _tz
+        db.session.add(FunnelEvent(
+            user_id=int(user.id),
+            event="signup",
+            channel=getattr(user, "oauth_provider", None),
+            ref_code=(str(ref_code).strip()[:16] if ref_code else None),
+            created_at=_dt.now(_tz.utc),
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning("signup funnel event failed (user_id=%s)",
+                       getattr(user, "id", None), exc_info=True)
+    try:
+        from routes.growth import attribute_referral
+        attribute_referral(user, ref_code)
+    except Exception:
+        logger.warning("referral attribution failed (user_id=%s)",
+                       getattr(user, "id", None), exc_info=True)
+
+
+def _build_signed_state(provider: str, origin: str, redirect_uri: str,
+                        ref_code: str | None = None) -> str:
     """Build a self-contained HMAC-signed state token.
 
     The full signed string is passed to the OAuth provider as `state=`.
     On the callback the provider echoes it back verbatim; we verify the
     signature, decode the payload, and rehydrate authlib's session slot
     using the signed token itself as the lookup key.
+
+    ``ref_code`` (viral loop) is the inviter's referral code, captured from
+    the ``?ref=`` query param at login-start. It rides inside the SIGNED
+    state so it can't be tampered with mid-flight, and is consumed once on
+    the callback for a brand-new user (``attribute_referral``).
     """
     nonce = secrets.token_urlsafe(16)
     payload = {
@@ -540,6 +577,9 @@ def _build_signed_state(provider: str, origin: str, redirect_uri: str) -> str:
         "r": redirect_uri,        # exact redirect_uri used in the request
         "k": secrets.token_urlsafe(8),  # anti-replay nonce for the payload
     }
+    if ref_code:
+        # Defensive cap — referral codes are 8-char; never carry more than 16.
+        payload["ref"] = str(ref_code).strip()[:16]
     return _state_serializer().dumps(payload)
 
 
@@ -981,7 +1021,10 @@ def google_login():
     """
     origin = _resolve_frontend_url()
     redirect_uri = f"{origin}/api/auth/google/callback"
-    signed_state = _build_signed_state("google", origin, redirect_uri)
+    # Viral loop — capture inviter's referral code from ?ref=, carry it in
+    # the signed state so the callback can attribute a brand-new signup.
+    ref_code = (request.args.get("ref") or "").strip()[:16] or None
+    signed_state = _build_signed_state("google", origin, redirect_uri, ref_code)
     # Extract the nonce from the signed payload so we pass the exact same
     # value to Google that our callback will later verify against.
     nonce = _state_serializer().loads(signed_state, max_age=_OAUTH_STATE_MAX_AGE)["n"]
@@ -1042,6 +1085,11 @@ def google_callback():
         # Fix 1: track when we LINK a new provider id onto an existing account
         # so the owner gets a security email after a successful commit.
         link_alert = {"user": None}
+        # Viral loop — flag a brand-new signup so we can attribute referral
+        # + log a funnel signup event after the commit succeeds.
+        signup_flag = {"new": False}
+        # Inviter code rides inside the signed state (verified, untamperable).
+        ref_code = payload.get("ref") if isinstance(payload, dict) else None
 
         # Find existing user by google_id or email. The find-or-create body
         # is wrapped in _provision_oauth_user so a transient Railway PG flap
@@ -1081,7 +1129,16 @@ def google_callback():
                     oauth_provider="google",
                     avatar_url=avatar,
                 )
+                # Viral loop — mint this user's own referral code at signup
+                # (mirrored onto users.referral_code; UserReferral side-table
+                # is the authoritative store and is allocated lazily later).
+                try:
+                    from models import generate_referral_code
+                    user.referral_code = generate_referral_code()
+                except Exception:
+                    logger.debug("referral_code mint skipped (google)", exc_info=True)
                 db.session.add(user)
+                signup_flag["new"] = True
             return user
 
         user = _provision_oauth_user("google", _provision_google)
@@ -1142,6 +1199,11 @@ def google_callback():
 
     _log_auth_event(email, "google", "success")
 
+    # Viral loop — brand-new signup: log a signup funnel event + attribute
+    # the inviter's referral code (if any). Best-effort, never blocks login.
+    if signup_flag.get("new"):
+        _record_signup_funnel(user, ref_code)
+
     # Fix 1 — a new provider id was linked onto an existing account this
     # request. Alert the real owner (best-effort, non-fatal).
     if link_alert.get("user") is not None:
@@ -1188,7 +1250,8 @@ def kakao_login():
     if not os.environ.get("KAKAO_CLIENT_ID"):
         return redirect(f"{origin}/login?error=kakao_not_configured")
     redirect_uri = f"{origin}/api/auth/kakao/callback"
-    signed_state = _build_signed_state("kakao", origin, redirect_uri)
+    ref_code = (request.args.get("ref") or "").strip()[:16] or None
+    signed_state = _build_signed_state("kakao", origin, redirect_uri, ref_code)
     logger.info(
         "OAuth start: provider=kakao origin=%s redirect_uri=%s",
         origin, redirect_uri,
@@ -1258,6 +1321,9 @@ def kakao_callback():
 
         # Fix 1: track when we LINK a new provider id onto an existing account.
         link_alert = {"user": None}
+        # Viral loop — flag brand-new signup + carry verified inviter code.
+        signup_flag = {"new": False}
+        ref_code = payload.get("ref") if isinstance(payload, dict) else None
 
         # Find existing user by kakao_id or email. Wrapped in the shared
         # _provision_oauth_user helper so a transient Railway PG flap during
@@ -1288,7 +1354,13 @@ def kakao_callback():
                     oauth_provider="kakao",
                     avatar_url=avatar,
                 )
+                try:
+                    from models import generate_referral_code
+                    user.referral_code = generate_referral_code()
+                except Exception:
+                    logger.debug("referral_code mint skipped (kakao)", exc_info=True)
                 db.session.add(user)
+                signup_flag["new"] = True
             return user
 
         user = _provision_oauth_user("kakao", _provision_kakao)
@@ -1344,6 +1416,10 @@ def kakao_callback():
         return redirect(f"{origin}/login?error=account_pending_deletion")
 
     _log_auth_event(email, "kakao", "success")
+
+    # Viral loop — brand-new signup: funnel signup event + referral attribution.
+    if signup_flag.get("new"):
+        _record_signup_funnel(user, ref_code)
 
     # Fix 1 — new provider id linked onto an existing account (best-effort).
     if link_alert.get("user") is not None:

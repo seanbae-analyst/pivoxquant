@@ -86,6 +86,17 @@ class Artifact(db.Model):
     # nullable because legacy rows don't have one; UNIQUE enforced via
     # the migration's explicit index.
     share_token = db.Column(db.String(32), nullable=True, index=True)
+    # Viral loop — explicit public-visibility toggle. Default False so a
+    # card is PRIVATE until the owner explicitly opts in (POST
+    # /api/card/<token>/visibility). The public JSON endpoint
+    # (GET /api/card/<token>) refuses any card with is_public=False, so a
+    # leaked / internally-minted share_token cannot expose a card the user
+    # never chose to publish (PIPA §29 — defense beyond token entropy).
+    # NOTE: the legacy HTML share route (/api/artifacts/brag-card/share/<token>)
+    # predates this gate and is intentionally unchanged (frontend depends on
+    # it). This flag gates the NEW clean JSON contract only.
+    is_public  = db.Column(db.Boolean,   nullable=False, default=False,
+                           server_default="0")
     created_at = db.Column(db.DateTime,   default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
@@ -156,6 +167,7 @@ class Artifact(db.Model):
             # so Railway ephemeral filesystem doesn't produce false
             # has_file=True after a redeploy (Bug C fix).
             "has_file":   self.has_file,
+            "is_public":  bool(self.is_public),
             "data":       self.data_json or {},
             "sent_at":    self.sent_at.isoformat() + "Z" if self.sent_at else None,
             "opened_at":  self.opened_at.isoformat() + "Z" if self.opened_at else None,

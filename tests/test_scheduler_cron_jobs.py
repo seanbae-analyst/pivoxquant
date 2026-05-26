@@ -71,9 +71,11 @@ EXPECTED_JOB_IDS = {
     # Wave I C-1/C-2 — OAuth failure detector + PIPA §21 30-day purge.
     "ops_oauth_failure_check",
     "ops_pipa_purge",
+    # Viral loop (2026-05-26) — 주간 퍼널 스냅샷 (K-factor/WAMR → Slack).
+    "ops_weekly_funnel_snapshot",
 }
-# 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) = 26
-EXPECTED_JOB_COUNT = 26
+# 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) + 1 (viral) = 27
+EXPECTED_JOB_COUNT = 27
 
 
 @pytest.fixture

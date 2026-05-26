@@ -557,6 +557,10 @@ def _do_migrations():
     _add_column_if_missing("users", "privacy_mode", "BOOLEAN", default="0")
     # Viral-loop referral code mirror. Nullable + unique.
     _add_column_if_missing("users", "referral_code", "VARCHAR(16)", unique=True)
+    # Viral-loop attribution — inviter's code captured at signup. Nullable.
+    # Migration 045_funnel_events; runtime guard covers boxes that boot
+    # without Alembic (prod self-heal pattern).
+    _add_column_if_missing("users", "referred_by", "VARCHAR(16)")
     # MVP #3 Earnings Pre-Brief — per-channel email opt-out. Added via
     # migration 009_earnings_prebrief; this runtime hook covers existing
     # local dev DBs that boot without running Alembic.
@@ -675,6 +679,9 @@ def _do_migrations():
     _add_column_if_missing("artifacts", "bounced_at", "TIMESTAMP")
     _add_column_if_missing("artifacts", "unsubscribed_at", "TIMESTAMP")
     _add_column_if_missing("artifacts", "sg_message_id", "VARCHAR(128)")
+    # Viral loop (migration 045) — public-visibility toggle for shared cards.
+    # Default false so cards stay private until the owner opts in.
+    _add_column_if_missing("artifacts", "is_public", "BOOLEAN", default="0")
 
     # Broker connections — Week 1 (2026-04-18) added AES-256-GCM encrypted
     # credential columns. HIGH RISK of ProgrammingError on legacy DBs.
@@ -802,6 +809,18 @@ def _do_migrations():
             logger.warning(
                 "Migration: could not create anthropic_usage_log: %s", exc
             )
+
+    # funnel_events (viral loop, migration 045) — 0원 자체 퍼널 추적. ORM 모델
+    # (models/funnel_event.py) 이라 db.create_all() 범위 안이지만, prod 는
+    # alembic 미적용 self-heal 패턴이라 boot-time 가드를 둔다. ``POST /api/track``
+    # 의 INSERT 가 테이블 부재로 silent 실패하면 K-factor/WAMR 집계가 무력화된다.
+    if "funnel_events" not in existing_tables:
+        try:
+            from models.funnel_event import FunnelEvent  # noqa: F401
+            db.metadata.tables["funnel_events"].create(bind=db.engine)
+            logger.info("Migration: created table funnel_events")
+        except Exception as exc:
+            logger.warning("Migration: could not create funnel_events: %s", exc)
 
     # Portfolio shares / push subscriptions / signal_cache / watchlist —
     # all their current columns are in the initial create_all snapshot.

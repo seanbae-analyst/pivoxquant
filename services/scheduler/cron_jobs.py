@@ -387,6 +387,16 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
             CronTrigger(hour=3, minute=30, timezone=KST),
             _wrap_python_main("scripts.nightly.pipa_purge"),
         ),
+        # ── Viral loop (2026-05-26) ──────────────────────────────────────────
+        # 30 9 * * 1 — 주간 퍼널 스냅샷 (월 09:30 KST).
+        # funnel_events 7일 집계 + K-factor + WAMR → Slack. 09:00 cluster
+        # (ssl-expiry/env-audit) 회피 위해 09:30 offset. 자체 DB query only +
+        # Slack webhook → 0원.
+        (
+            "ops_weekly_funnel_snapshot",
+            CronTrigger(day_of_week="mon", hour=9, minute=30, timezone=KST),
+            _wrap_python_main("scripts.nightly.weekly_funnel_snapshot"),
+        ),
     ]
 
 

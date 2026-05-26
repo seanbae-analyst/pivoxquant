@@ -58,7 +58,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from extensions import db
-from models import Artifact, Position, TradeHistory, User, UserReferral
+from models import Artifact, Position, TradeHistory, User, UserReferral, Watchlist
 from services.legal_filter import scrub_signal
 
 logger = logging.getLogger(__name__)
@@ -158,6 +158,13 @@ class BragCardContext:
     share_token:        Optional[str]
     data_sources:       list[str]
     disclaimer:         str
+    # Activation — card "mode": "trades" (realised PnL narrative) or
+    # "snapshot" (holdings/watchlist, for users with 0 closed trades so the
+    # empty-portfolio Activation gap is filled). "empty_reason" explains why
+    # we fell back (consumed by the frontend `emptyReason` branch).
+    mode:               str = "trades"
+    empty_reason:       Optional[str] = None
+    snapshot_tickers:   Optional[list[str]] = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -180,6 +187,9 @@ class BragCardContext:
             "share_token":      self.share_token,
             "data_sources":     self.data_sources,
             "disclaimer":       self.disclaimer,
+            "mode":             self.mode,
+            "empty_reason":     self.empty_reason,
+            "snapshot_tickers": self.snapshot_tickers or [],
         }
 
 
@@ -344,6 +354,37 @@ def _mask_ticker(ticker: Optional[str], anonymous: bool) -> Optional[str]:
     return ticker
 
 
+def _list_holding_tickers(user_id: int) -> list[str]:
+    """Current holding tickers (for the snapshot-mode card). Best-effort."""
+    try:
+        rows = (
+            Position.query
+            .filter_by(user_id=user_id)
+            .order_by(Position.shares.desc())
+            .limit(10)
+            .all()
+        )
+        return [(p.ticker or "").upper() for p in rows if p.ticker]
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.debug("holding tickers fetch failed for user %s: %s", user_id, exc)
+        return []
+
+
+def _list_watchlist_tickers(user_id: int) -> list[str]:
+    """Watchlist tickers (snapshot-mode fallback when no holdings). Best-effort."""
+    try:
+        rows = (
+            Watchlist.query
+            .filter_by(user_id=user_id)
+            .limit(10)
+            .all()
+        )
+        return [(w.ticker or "").upper() for w in rows if w.ticker]
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.debug("watchlist tickers fetch failed for user %s: %s", user_id, exc)
+        return []
+
+
 # ── The service ──────────────────────────────────────────────────────────────
 
 class BragCardService:
@@ -379,6 +420,31 @@ class BragCardService:
 
         has_positions = Position.query.filter_by(user_id=user_id).count() > 0
         is_empty = (stats["trade_count"] == 0) and not has_positions
+
+        # ── Activation: snapshot mode for users with no closed trades ──────────
+        # The realised-PnL narrative needs SELL trades. New users who only hold
+        # (or only watch) have trade_count==0 → an empty card → no viral share.
+        # Build a "snapshot" card from current holdings, then watchlist, so the
+        # empty-portfolio Activation gap is filled. `mode`/`empty_reason` drive
+        # the frontend `emptyReason` branch + template framing. Strictly
+        # descriptive: holdings/watchlist tickers only, no buy/sell/추천 verbs.
+        mode = "trades"
+        empty_reason: Optional[str] = None
+        snapshot_tickers: list[str] = []
+        if stats["trade_count"] == 0:
+            holding_tickers = _list_holding_tickers(user_id)
+            if holding_tickers:
+                mode = "snapshot"
+                empty_reason = "no_closed_trades_holdings"
+                snapshot_tickers = holding_tickers
+            else:
+                watch_tickers = _list_watchlist_tickers(user_id)
+                if watch_tickers:
+                    mode = "snapshot"
+                    empty_reason = "no_closed_trades_watchlist"
+                    snapshot_tickers = watch_tickers
+                else:
+                    empty_reason = "no_activity"
 
         # Anonymous — explicit arg beats user attribute beats default False.
         if anonymous is None:
@@ -430,6 +496,11 @@ class BragCardService:
             data_sources=data_sources,
             disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. / "
                         "Information only, not investment advice."),
+            mode=mode,
+            empty_reason=empty_reason,
+            snapshot_tickers=[
+                _mask_ticker(t, anonymous) or t for t in snapshot_tickers[:5]
+            ] if snapshot_tickers else [],
         )
         # Legal scrub at user-facing boundary — covers known free-text
         # fields (commentary/disclaimer/etc.) before the card renders.
@@ -1008,8 +1079,12 @@ class BragCardService:
         """
         positions = Position.query.filter_by(user_id=user.id).count()
         trades = TradeHistory.query.filter_by(user_id=user.id).count()
-        if positions == 0 and trades == 0:
-            logger.info("skipping user %s — empty portfolio", user.id)
+        watch = Watchlist.query.filter_by(user_id=user.id).count()
+        # Activation: snapshot mode lets holdings- OR watchlist-only users get
+        # a card too. Only skip when there's genuinely nothing to narrate
+        # (no positions, no trades, no watchlist).
+        if positions == 0 and trades == 0 and watch == 0:
+            logger.info("skipping user %s — no holdings/trades/watchlist", user.id)
             return None
 
         data = self.generate_for_user(user.id, month=target_month)
