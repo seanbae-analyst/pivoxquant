@@ -39,6 +39,7 @@ import ReportsGallery from "./reports-gallery";
 import { FilmGrain } from "./film-grain";
 import { SectionCurtain } from "./section-curtain";
 import { Eyebrow } from "./eyebrow";
+import { MainLandingViewTracker } from "@/components/growth/main-landing-view-tracker";
 import { fadeUp, stagger } from "@/lib/motion";
 
 /* ───────────────────────── pricing data ───────────────────────── */
@@ -771,6 +772,7 @@ export default function LandingV2() {
       className="min-h-screen overflow-x-hidden"
       style={{ backgroundColor: "var(--pq-ink)", color: "var(--pq-ivory)" }}
     >
+      <MainLandingViewTracker />
       <TopNav />
       <SplashPage />
       <Hero />

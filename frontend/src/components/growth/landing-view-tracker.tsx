@@ -15,9 +15,13 @@ import { track } from "@/lib/track";
 export function LandingViewTracker({
   refCode,
   channel,
+  surface = "public_card",
 }: {
   refCode?: string | null;
   channel?: string;
+  /** Funnel surface label attached to meta — distinguishes the OG card
+   *  landing ("public_card") from the main marketing landing ("landing"). */
+  surface?: string;
 }) {
   const fired = useRef(false);
   useEffect(() => {
@@ -26,8 +30,8 @@ export function LandingViewTracker({
     void track("landing_view", {
       refCode: refCode ?? undefined,
       channel,
-      meta: { surface: "public_card" },
+      meta: { surface },
     });
-  }, [refCode, channel]);
+  }, [refCode, channel, surface]);
   return null;
 }
