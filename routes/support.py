@@ -321,7 +321,13 @@ def admin_reply_inquiry(iid: int):
             ctx="reply",
         )
 
-    return jsonify(inquiry.to_dict(detail=True))
+    # Mirror admin_list_inquiries shape (detail + user_id + email_snapshot) so
+    # the frontend SupportAdminInquiry contract holds — the operator console
+    # consumes the same row shape from both list and reply responses.
+    d = inquiry.to_dict(detail=True)
+    d["user_id"] = inquiry.user_id
+    d["email_snapshot"] = inquiry.email_snapshot
+    return jsonify(d)
 
 
 # ── chatbot endpoint ───────────────────────────────────────────────────────────
