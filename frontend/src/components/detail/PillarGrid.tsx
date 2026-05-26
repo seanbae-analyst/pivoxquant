@@ -56,9 +56,9 @@ function PillarCard({
           / 100
         </span>
       </div>
-      <div className="mt-3 h-[2px] bg-[var(--pq-ivory-line)] overflow-hidden">
+      <div className="mt-3 h-1.5 bg-[var(--pq-ivory-line)] overflow-hidden rounded-[1px]">
         <div
-          className={cn("h-full transition-all", barColor)}
+          className={cn("h-full transition-all rounded-[1px]", barColor)}
           style={{ width: `${safe}%` }}
         />
       </div>
@@ -95,22 +95,22 @@ export function PillarGrid({
           <PillarCard
             label="Technical"
             score={signal?.tech_score ?? 0}
-            observation="Price action, momentum, moving averages"
+            observation="가격 흐름·모멘텀·이동평균"
           />
           <PillarCard
             label="Fundamental"
             score={signal?.fund_score ?? 0}
-            observation="Earnings, margins, debt, growth"
+            observation="실적·마진·부채·성장성"
           />
           <PillarCard
             label="Sentiment"
             score={signal?.news_score ?? 0}
-            observation="News tone and media coverage"
+            observation="뉴스 논조·미디어 커버리지"
           />
           <PillarCard
             label="Quant"
             score={signal?.quant_score ?? 0}
-            observation="Variance ratio, momentum, 52W position"
+            observation="분산비율·모멘텀·52주 위치"
           />
         </div>
       ) : (

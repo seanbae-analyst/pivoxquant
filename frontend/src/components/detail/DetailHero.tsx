@@ -234,7 +234,9 @@ export function DetailHero(props: DetailHeroProps) {
         </div>
       </div>
 
-      <section className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-sm">
+      {/* Zone1 TERMINAL — elevated surface: slightly stronger base + bronze top accent.
+          The top border is the "cover" moment that anchors the page visually. */}
+      <section className="bg-[rgba(255,255,255,0.03)] border border-[var(--pq-ivory-line)] rounded-sm" style={{ borderTopColor: "var(--pq-bronze)", borderTopWidth: "1px" }}>
         {/* sentinel — top of hero, observed for sticky toggle */}
         <div ref={sentinelRef} aria-hidden className="h-px" />
 
@@ -290,7 +292,9 @@ export function DetailHero(props: DetailHeroProps) {
           <div className="mt-4 flex items-center gap-x-3 gap-y-1.5 flex-wrap text-pq-mono-xs font-sans text-[var(--pq-ivory-faint)]">
             {(() => {
               const sec = sectorLine && sectorLine !== "—" ? sectorLine : "";
-              const ind = (industry || "").trim();
+              // Treat "UNKNOWN" (any case) as empty — same guard as sectorLine above.
+              const indRaw = (industry || "").trim();
+              const ind = indRaw.toUpperCase() === "UNKNOWN" ? "" : indRaw;
               const taxon =
                 sec && ind && ind.toUpperCase() !== sec.toUpperCase()
                   ? `${sec} › ${ind}`
@@ -299,9 +303,19 @@ export function DetailHero(props: DetailHeroProps) {
                 <span className="uppercase tracking-[0.12em]">{taxon}</span>
               ) : null;
             })()}
-            <span className="text-[var(--pq-ivory-line)]" aria-hidden>
-              ·
-            </span>
+            {/* Only render the separator when there IS a taxon before it */}
+            {(() => {
+              const sec = sectorLine && sectorLine !== "—" ? sectorLine : "";
+              const indRaw = (industry || "").trim();
+              const ind = indRaw.toUpperCase() === "UNKNOWN" ? "" : indRaw;
+              const taxon =
+                sec && ind && ind.toUpperCase() !== sec.toUpperCase()
+                  ? `${sec} › ${ind}`
+                  : sec || ind;
+              return taxon ? (
+                <span className="text-[var(--pq-ivory-line)]" aria-hidden>·</span>
+              ) : null;
+            })()}
             <span className="uppercase tracking-[0.12em]">
               {krw
                 ? rawTicker.toUpperCase().endsWith(".KQ")
@@ -438,10 +452,10 @@ export function DetailHero(props: DetailHeroProps) {
                         {fmtPrice(week52High, krw)}
                       </span>
                     </div>
-                    <div className="mt-2 h-[2px] bg-[var(--pq-ivory-line)] relative">
+                    <div className="mt-2 h-1 bg-[var(--pq-ivory-line)] relative rounded-[1px]">
                       {rangePos != null && (
                         <div
-                          className="absolute top-1/2 h-2 w-2 rounded-full bg-[var(--pq-bronze)] shadow-[0_0_8px_rgba(139,111,71,0.5)]"
+                          className="absolute top-1/2 h-2.5 w-2.5 rounded-full bg-[var(--pq-bronze)] shadow-[0_0_8px_rgba(139,111,71,0.5)]"
                           style={{
                             left: `${rangePos}%`,
                             transform: "translate(-50%, -50%)",

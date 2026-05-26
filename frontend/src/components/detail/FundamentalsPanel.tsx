@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 /**
  * Zone2 ANALYTICS — Fundamentals.
  *
@@ -20,6 +22,19 @@ import { fmtMcap } from "./types";
 
 function num(v: number | null | undefined): boolean {
   return v != null && Number.isFinite(v);
+}
+
+/** Render a value; if it's the em-dash placeholder, dim it so it reads as
+ *  "intentionally absent" rather than a broken field. Feature preserved. */
+function statVal(v: string): React.ReactNode {
+  if (v === "—") {
+    return (
+      <span style={{ opacity: 0.35, fontVariantNumeric: "normal", letterSpacing: 0 }}>
+        —
+      </span>
+    );
+  }
+  return v;
 }
 
 export function FundamentalsPanel({
@@ -76,41 +91,41 @@ export function FundamentalsPanel({
             <div>
               <StatRow
                 label="P/E ratio"
-                value={num(s?.pe_ratio) ? Number(s!.pe_ratio).toFixed(1) : "—"}
+                value={statVal(num(s?.pe_ratio) ? Number(s!.pe_ratio).toFixed(1) : "—")}
               />
               <StatRow
                 label="EPS (ttm)"
-                value={
+                value={statVal(
                   num(s?.eps)
                     ? krw
                       ? fmtKrw(s!.eps as number)
                       : fmtUsd(s!.eps as number)
-                    : "—"
-                }
+                    : "—",
+                )}
               />
-              <StatRow label="Market cap" value={fmtMcap(mcap, krw)} />
+              <StatRow label="Market cap" value={statVal(fmtMcap(mcap, krw))} />
               <StatRow
                 label="Beta (vs S&P 500)"
-                value={num(s?.beta) ? Number(s!.beta).toFixed(2) : "—"}
+                value={statVal(num(s?.beta) ? Number(s!.beta).toFixed(2) : "—")}
               />
             </div>
             {/* Column 2 — Liquidity · Quality */}
             <div>
               <StatRow
                 label="Avg volume (3mo)"
-                value={
+                value={statVal(
                   num(s?.avg_volume)
                     ? (s!.avg_volume as number).toLocaleString()
-                    : "—"
-                }
+                    : "—",
+                )}
               />
               <StatRow
                 label="Profit margin"
-                value={
+                value={statVal(
                   num(s?.profit_margin)
                     ? `${(Number(s!.profit_margin) * 100).toFixed(1)}%`
-                    : "—"
-                }
+                    : "—",
+                )}
                 tone={
                   num(s?.profit_margin)
                     ? (s!.profit_margin as number) > 0
@@ -121,11 +136,11 @@ export function FundamentalsPanel({
               />
               <StatRow
                 label="Revenue growth (YoY)"
-                value={
+                value={statVal(
                   num(s?.revenue_growth)
                     ? `${(Number(s!.revenue_growth) * 100).toFixed(1)}%`
-                    : "—"
-                }
+                    : "—",
+                )}
                 tone={
                   num(s?.revenue_growth)
                     ? (s!.revenue_growth as number) > 0
@@ -136,7 +151,7 @@ export function FundamentalsPanel({
               />
               <StatRow
                 label="Debt / Equity"
-                value={num(s?.debt_equity) ? Number(s!.debt_equity).toFixed(2) : "—"}
+                value={statVal(num(s?.debt_equity) ? Number(s!.debt_equity).toFixed(2) : "—")}
               />
             </div>
           </div>

@@ -301,7 +301,7 @@ export function StatRow({
 
 /**
  * Footer signature — placed at the base of each dashboard page, just
- * above the DisclaimerBanner. Fleuron + italic caption.
+ * above the DisclaimerBanner. Fleuron + upright caption (v3 lock-in: no italic).
  */
 // FINDING-038: this default used to repeat "Observational research only \u00b7
 // Not investment advice" \u2014 the SAME legal text the page-level
@@ -330,7 +330,7 @@ export function FootSignature({
       <p
         className="pq-caption font-serif"
         style={{
-          fontStyle: "italic",
+          fontStyle: "normal",
           fontSize: "var(--pq-text-eyebrow)",
           lineHeight: 1.45,
           color: "rgba(245,240,232,0.45)",

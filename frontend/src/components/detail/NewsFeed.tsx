@@ -9,7 +9,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { SectionHeading, EmptyNote, LoadFailure } from "./shared";
-import { classifyNewsSentiment, bucketNewsByDay } from "./types";
+import { classifyNewsSentiment, bucketNewsByDay, fmtNewsTime } from "./types";
 import type { NewsItem } from "./types";
 
 export function NewsFeed({
@@ -42,7 +42,7 @@ export function NewsFeed({
           ))}
         </div>
       ) : !groups.length ? (
-        <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-8 rounded-sm text-center">
+        <div className="p-8 text-center">
           <EmptyNote>
             No headlines observed in the last 14 days — re-checking every 2
             minutes.
@@ -53,45 +53,49 @@ export function NewsFeed({
           {groups.map((group) => (
             <div key={group.label}>
               <div className="pq-news-date-header">{group.label}</div>
-              <ul className="space-y-2">
+              {/* Zone3 DOSSIER: list rows with dividers instead of heavy card boxes */}
+              <ul className="divide-y divide-[var(--pq-ivory-line)]">
                 {group.items.map((n, i) => {
                   const sent = classifyNewsSentiment(n.title);
                   const chipClass =
                     sent === "pos"
                       ? "pq-sent-chip pq-sent-chip--pos"
-                      : sent === "neg"
-                        ? "pq-sent-chip pq-sent-chip--neg"
-                        : "pq-sent-chip pq-sent-chip--neu";
-                  const chipLabel =
-                    sent === "pos" ? "Positive" : sent === "neg" ? "Negative" : "Neutral";
+                      : "pq-sent-chip pq-sent-chip--neg";
+                  const chipLabel = sent === "pos" ? "Positive" : "Negative";
+                  const timeStr = fmtNewsTime(n.published);
                   return (
                     <li key={`${group.label}-${i}`}>
                       <a
                         href={n.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group block bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-4 rounded-sm hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all"
+                        className="group flex items-start justify-between gap-4 py-3 hover:bg-[rgba(139,111,71,0.03)] transition-colors px-1 -mx-1"
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-serif text-pq-lead leading-snug text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors line-clamp-2">
-                              {n.title}
-                            </p>
-                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-serif text-pq-lead leading-snug text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors line-clamp-2">
+                            {n.title}
+                          </p>
+                          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                            {/* Only render chip for pos/neg — omit neutral chip (visual noise) */}
+                            {sent !== "neu" && (
                               <span className={chipClass}>{chipLabel}</span>
-                              <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)] font-sans tracking-tight">
-                                {n.source}
-                              </span>
-                              <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)]">
-                                ·
-                              </span>
-                              <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)] font-sans tabular-nums tracking-tight">
-                                {n.published}
-                              </span>
-                            </div>
+                            )}
+                            <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)] font-sans tracking-tight">
+                              {n.source}
+                            </span>
+                            {timeStr && (
+                              <>
+                                <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)]" aria-hidden>
+                                  ·
+                                </span>
+                                <span className="text-pq-mono-xs text-[var(--pq-ivory-faint)] font-mono tabular-nums">
+                                  {timeStr}
+                                </span>
+                              </>
+                            )}
                           </div>
-                          <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1 text-[var(--pq-ivory-faint)] group-hover:text-[var(--pq-bronze)]" />
                         </div>
+                        <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-0.5 text-[var(--pq-ivory-faint)] group-hover:text-[var(--pq-bronze)]" />
                       </a>
                     </li>
                   );

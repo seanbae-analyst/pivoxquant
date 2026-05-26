@@ -273,3 +273,24 @@ export function bucketNewsByDay(
 export function priceFormatter(currency: "USD" | "KRW") {
   return currency === "KRW" ? fmtKrw : fmtUsd;
 }
+
+/**
+ * Format news timestamp to time-only string, KST-anchored.
+ * The day is already shown in the group header (bucketNewsByDay), so we
+ * render only "오후 5:04" / "17:04" — not the full ISO string.
+ * Falls back to raw string on parse failure.
+ */
+export function fmtNewsTime(published: string): string {
+  if (!published) return "";
+  const dt = new Date(published);
+  if (isNaN(dt.getTime())) return published;
+  try {
+    return dt.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Seoul",
+    });
+  } catch {
+    return published;
+  }
+}
