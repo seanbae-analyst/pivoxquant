@@ -397,6 +397,19 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
             CronTrigger(day_of_week="mon", hour=9, minute=30, timezone=KST),
             _wrap_python_main("scripts.nightly.weekly_funnel_snapshot"),
         ),
+        # ── Marketing autopost (2026-05-26) ──────────────────────────────────
+        # 0 8 * * * — 마케팅 일일 디스패치 (매일 08:00 KST).
+        # content-bank.json 에서 오늘 항목 읽어 §101 게이트 통과 후 Slack
+        # 인스타 리마인더 + (토큰시) Threads/Bluesky 자동 발행. cron 에서 LLM
+        # 호출 0건 (캡션은 미리 작성된 파일) → 추가 비용 0원. 08:00 슬롯은
+        # 06:xx/07:00 (regression/brief/section101) 및 09:xx (ssl/funnel)
+        # cluster 회피. 기본 OFF — PIVOX_MARKETING_AUTOPOST_ENABLED 미설정 시
+        # main() 이 즉시 exit 0 (기존 prod 잡에 영향 0).
+        (
+            "ops_marketing_daily_dispatch",
+            CronTrigger(hour=8, minute=0, timezone=KST),
+            _wrap_python_main("scripts.nightly.marketing_daily_dispatch"),
+        ),
     ]
 
 

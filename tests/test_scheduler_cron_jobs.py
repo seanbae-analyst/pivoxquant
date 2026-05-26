@@ -73,9 +73,11 @@ EXPECTED_JOB_IDS = {
     "ops_pipa_purge",
     # Viral loop (2026-05-26) — 주간 퍼널 스냅샷 (K-factor/WAMR → Slack).
     "ops_weekly_funnel_snapshot",
+    # Marketing autopost (2026-05-26) — content-bank → §101 → Slack/Threads/Bluesky.
+    "ops_marketing_daily_dispatch",
 }
-# 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) + 1 (viral) = 27
-EXPECTED_JOB_COUNT = 27
+# 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) + 1 (viral) + 1 (marketing) = 28
+EXPECTED_JOB_COUNT = 28
 
 
 @pytest.fixture
@@ -183,6 +185,8 @@ EXPECTED_TRIGGER_FIELDS = {
     # Wave I C-1/C-2 — OAuth failure detector + PIPA purge
     "ops_oauth_failure_check":   {"minute": "*/15"},
     "ops_pipa_purge":            {"hour": "3", "minute": "30"},
+    # Marketing autopost — daily 08:00 KST
+    "ops_marketing_daily_dispatch": {"hour": "8", "minute": "0"},
 }
 
 

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "example-d8-weekly-memo",
+    "scheduled_date": "2099-01-01",
+    "channel": ["instagram", "threads", "bluesky"],
+    "caption": "이번 주 내 포트폴리오는 어떻게 움직였을까? PivoxQuant가 매주 일요일, CFO 보고서처럼 정리해 드려요. 숫자는 도구가 읽고, 결정은 당신이 합니다.",
+    "hashtags": ["#PivoxQuant", "#투자", "#퀀트", "#포트폴리오"],
+    "image_path": "docs/marketing/week1-cards/d4_slide2_weekly_mock.png",
+    "status": "pending",
+    "ai_label": true
+  },
+  {
+    "id": "example-d9-earnings-brief",
+    "scheduled_date": "2099-01-02",
+    "channel": ["instagram"],
+    "caption": "실적 발표 전, 시장의 기대치를 한눈에. Earnings Pre-Brief는 어닝 시즌을 차분하게 준비하도록 돕는 정보 제공 도구입니다. 투자자문이 아닙니다.",
+    "hashtags": ["#PivoxQuant", "#실적발표", "#어닝시즌"],
+    "image_path": "docs/marketing/week1-cards/d4_slide3_earnings_mock.png",
+    "status": "pending",
+    "ai_label": true
+  }
+]
