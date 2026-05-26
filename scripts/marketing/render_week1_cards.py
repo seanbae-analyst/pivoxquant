@@ -589,7 +589,7 @@ def render_d4_slide4():
               font=f_head, fill=BRONZE, anchor="mm")
 
     draw.text((W // 2, 540),
-              "\"이 종목 사라\"가 아니라",
+              "\"이거 해라\"가 아니라",
               font=f_sub, fill=IVORY_D, anchor="mm")
     draw.text((W // 2, 590),
               "\"이 데이터들 보고 판단은 네가 해\"",
@@ -859,7 +859,7 @@ def render_d7_slide3():
     # 인용구 스타일 (왼쪽 Bronze 바)
     draw.rectangle([80, 260, 88, 640], fill=BRONZE)
 
-    draw.text((W // 2, 308), "사라/팔라가 아니라,",
+    draw.text((W // 2, 308), "무엇을 하라고 정해주는 게 아니라,",
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 390), "정리된 자료.",
               font=f_head, fill=BRONZE, anchor="mm")
