@@ -76,6 +76,35 @@ def _hash_email(email: str) -> str:
     return hashlib.sha256(salt + (email or "").encode("utf-8")).hexdigest()
 
 
+def _cancel_stripe_subscription(user) -> None:
+    """Cancel the user's live Stripe subscription, if any. Never raises.
+
+    Backstop for the request-time cancel in ``routes/auth.py:delete_request``:
+    if that call failed (Stripe outage at request time) the subscription would
+    keep billing through the 30-day grace window. We re-attempt here right
+    before the row is hard-deleted so Stripe can never bill a purged user
+    (전자상거래법 §17 / PIPA §21). Idempotent — an already-cancelled / unknown
+    subscription raises ``StripeError`` which we log + swallow.
+    """
+    sub_id = getattr(user, "stripe_subscription_id", None)
+    if not sub_id:
+        return
+    try:
+        import stripe
+        if not getattr(stripe, "api_key", None):
+            stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+        stripe.Subscription.cancel(sub_id)
+        logger.info(
+            "pipa_purge: stripe subscription cancelled user_id=%s sub=%s",
+            getattr(user, "id", "?"), sub_id,
+        )
+    except Exception:
+        logger.exception(
+            "pipa_purge: stripe cancel failed (non-fatal) user_id=%s sub=%s",
+            getattr(user, "id", "?"), sub_id,
+        )
+
+
 def _slack_alert(text: str) -> None:
     webhook = os.environ.get("SLACK_WEBHOOK_URL")
     if not webhook:
@@ -188,6 +217,11 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
             "(cascade counts=%s)",
             user_id, now.isoformat(), counts,
         )
+
+    # ── cancel any live Stripe subscription before the row vanishes ──────────
+    # Backstop for the request-time cancel; idempotent on already-cancelled.
+    if user is not None:
+        _cancel_stripe_subscription(user)
 
     # ── send TRANSACTIONAL "purge complete" email BEFORE deleting row ────────
     if user is not None:

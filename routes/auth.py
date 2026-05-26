@@ -1572,6 +1572,12 @@ def delete_account():
         ScheduledEmail.query.filter_by(user_id=user_id).delete()
         NpsFeedback.query.filter_by(user_id=user_id).delete()
 
+        # SHIP-BLOCKER: cancel any live Stripe subscription BEFORE dropping the
+        # user row, otherwise Stripe keeps billing the card and the webhook can
+        # no longer map the charge back to a user (전자상거래법 §17 / PIPA §21).
+        # Non-fatal — a Stripe outage must not block the user's erasure right.
+        _cancel_stripe_subscription(current_user)
+
         # Delete user record
         db.session.delete(current_user)
         db.session.commit()
@@ -1647,6 +1653,12 @@ def delete_request():
                 "PIPA delete-request: user_id=%s deletion_requested_at=%s",
                 user_id, now.isoformat(),
             )
+            # SHIP-BLOCKER: cancel the Stripe subscription at the REQUEST moment
+            # (not at purge) so no invoice fires during the 30-day grace window
+            # — otherwise the user is double-charged after asking to leave
+            # (전자상거래법 §17 / PIPA §21). Only on the NULL→set transition so a
+            # repeated request doesn't re-hit Stripe. Non-fatal.
+            _cancel_stripe_subscription(user)
 
         # Snapshot the timestamp BEFORE logout — we still need it for the
         # response and email after the session is cleared.
@@ -1691,6 +1703,45 @@ def _compute_purge_at(requested_at):
         return None
     from datetime import timedelta
     return (requested_at + timedelta(days=30)).isoformat()
+
+
+def _cancel_stripe_subscription(user) -> None:
+    """Cancel the user's live Stripe subscription, if any. Never raises.
+
+    SHIP-BLOCKER (전자상거래법 §17 청약철회 / PIPA §21 파기): account
+    deletion / 30-day deletion-request previously dropped the ``users`` row
+    (or anonymised it) without telling Stripe, so the subscription kept
+    billing the card forever. Worse, Stripe's webhook then could not map the
+    incoming ``invoice.*`` events back to a user, so the charge was silent
+    and unrefundable from our side.
+
+    We cancel at the *request* moment (delete-request) and at hard-delete so
+    no invoice fires during the 30-day grace window or after purge. Stripe
+    failures are logged and swallowed — a Stripe outage must never block the
+    user's right to erasure (PIPA §21 takes precedence; we re-reconcile via
+    the billing dashboard if a cancel call fails).
+    """
+    sub_id = getattr(user, "stripe_subscription_id", None)
+    if not sub_id:
+        return
+    try:
+        import stripe  # lazy — keeps stripe optional for tests that mock it
+        stripe.Subscription.cancel(sub_id)
+        logger.info(
+            "stripe subscription cancelled on account deletion: user_id=%s sub=%s",
+            getattr(user, "id", "?"), sub_id,
+        )
+    except stripe.StripeError:
+        # Includes "no such subscription" (already cancelled) — non-fatal.
+        logger.exception(
+            "stripe subscription cancel failed (non-fatal) user_id=%s sub=%s",
+            getattr(user, "id", "?"), sub_id,
+        )
+    except Exception:
+        logger.exception(
+            "unexpected error cancelling stripe subscription user_id=%s sub=%s",
+            getattr(user, "id", "?"), sub_id,
+        )
 
 
 def _send_deletion_request_email(user, *, scheduled_purge_at) -> bool:
