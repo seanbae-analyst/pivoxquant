@@ -201,13 +201,22 @@ def _check_stripe_monthly() -> list[str]:
 # ── (3) 최근 24h artifact 특정성 샘플링 ──────────────────────────────────────
 
 def _check_artifact_solicitation(db_url: str) -> list[str]:
-    """artifacts 테이블 최근 24h content 샘플링 — 매수/매도 권유 패턴."""
+    """artifacts 테이블 최근 24h title+data_json 샘플링 — 매수/매도 권유 패턴.
+
+    artifacts 테이블엔 plain text ``content`` 컬럼이 없다. 본문은 ``title`` +
+    ``data_json`` (JSON) 에 들어 있으므로 둘을 합쳐 스캔한다.
+    """
+    import json
     hits: list[str] = []
 
     def _scan_rows(rows: list) -> None:
         for row in rows:
-            artifact_id, content = row[0], row[1] or ""
-            matches = _SOLICITATION_PATTERNS.findall(content)
+            artifact_id, title, data_json = row[0], row[1] or "", row[2]
+            try:
+                blob = f"{title}\n{json.dumps(data_json, ensure_ascii=False, default=str)}"
+            except (TypeError, ValueError):
+                blob = f"{title}\n{data_json or ''}"
+            matches = _SOLICITATION_PATTERNS.findall(blob)
             if matches:
                 hits.append(f"artifact_id={artifact_id} patterns={matches[:3]}")
 
@@ -217,7 +226,7 @@ def _check_artifact_solicitation(db_url: str) -> list[str]:
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT id, content
+            SELECT id, title, data_json
             FROM artifacts
             WHERE created_at >= NOW() - INTERVAL '24 hours'
             LIMIT 200
@@ -238,7 +247,7 @@ def _check_artifact_solicitation(db_url: str) -> list[str]:
         engine = create_engine(db_url, pool_pre_ping=True, connect_args={"connect_timeout": 10})
         with engine.connect() as conn:
             rows = conn.execute(
-                text("SELECT id, content FROM artifacts WHERE created_at >= NOW() - INTERVAL '24 hours' LIMIT 200")
+                text("SELECT id, title, data_json FROM artifacts WHERE created_at >= NOW() - INTERVAL '24 hours' LIMIT 200")
             ).fetchall()
         _scan_rows(rows)
     except Exception as exc:
