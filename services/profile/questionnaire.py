@@ -737,12 +737,18 @@ def calculate_profile_v2(answers: dict) -> dict:
     # B4: Concentration preference -> risk signal
     conc_map = {"ultra_focused": 10, "focused": 7, "moderate": 5, "diversified": 3, "broad": 1}
     conc_score = conc_map.get(answers.get("concentration_preference", ""), 5)
-    risk_raw += conc_score * 0.5  # concentrated = riskier
+    # NOTE (2026-05-26 double-count fix): conc_score / leverage_score are NOT
+    # folded into risk_raw. They enter the composite risk_score below as their
+    # own explicit 10% terms. Adding them here too (the old behaviour) counted
+    # concentration and leverage TWICE — once inside the normalised psychology
+    # component (×40%) and again as the explicit ×10% terms — so two users with
+    # identical risk psychology but different leverage/concentration diverged by
+    # up to ~18 score points and landed in different investor_types. risk_raw is
+    # now pure risk *psychology* (the C-block scenarios), matching its label.
 
-    # B5: Leverage appetite -> strong risk signal
+    # B5: Leverage appetite -> strong risk signal (composite term only; see note)
     lev_map = {"never": 0, "etf_only": 2, "light": 5, "moderate": 8, "full": 10}
     leverage_score = lev_map.get(answers.get("leverage_appetite", ""), 0)
-    risk_raw += leverage_score
 
     # ---- C: Risk Psychology ----
 
@@ -823,8 +829,10 @@ def calculate_profile_v2(answers: dict) -> dict:
     # -----------------------------------------------------------------
     # Normalize dimension scores
     # -----------------------------------------------------------------
-    # risk_raw has up to 6 contributions: conc*0.5(max5) + lev(10) + drop(10) + crash(10) + relative(10) + coin(10) = max ~55
-    risk_normalized = min(risk_raw / 5.5, 10)
+    # risk_raw is pure C-block risk psychology: drop(10) + crash(10) +
+    # relative(10) + coin(10) = max 40 (conc/leverage removed 2026-05-26 — see
+    # note above; they weight the composite directly as explicit 10% terms).
+    risk_normalized = min(risk_raw / 4.0, 10)
     # activity_raw: 3 questions max 10 each = 30
     activity_normalized = min(activity_raw / 3.0, 10)
     # experience_raw: 2 questions max 10 each = 20
