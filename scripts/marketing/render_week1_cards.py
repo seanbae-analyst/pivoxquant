@@ -56,22 +56,22 @@ def make_canvas(w: int = 1080, h: int = 1080) -> tuple[Image.Image, ImageDraw.Dr
 
 # ── 공통 헬퍼 ─────────────────────────────────────────────────────────────────
 def draw_brand_mark(draw: ImageDraw.Draw, w: int, y_bottom: int):
-    """하단 브랜드마크 + 면책 한 줄"""
-    font_brand = _f(_JETBRAINS_B, 20)
-    font_disc  = _f(_KR_SANS,     18)
-    draw.text((w // 2, y_bottom - 50), "PIVOXQUANT",
-              font=font_brand, fill=BRONZE + (180,), anchor="mm")
-    draw.text((w // 2, y_bottom - 24),
+    """하단 브랜드마크 + 면책 한 줄 — 줄 없이 텍스트만"""
+    font_brand = _f(_JETBRAINS_B, 18)
+    font_disc  = _f(_KR_SANS,     16)
+    draw.text((w // 2, y_bottom - 48), "PIVOXQUANT",
+              font=font_brand, fill=BRONZE + (160,), anchor="mm")
+    draw.text((w // 2, y_bottom - 26),
               "정보 제공 도구 · 투자자문 아님",
               font=font_disc, fill=IVORY_FAINT, anchor="mm")
 
 def draw_top_bar(draw: ImageDraw.Draw, w: int):
-    """상단 Bronze hairline 라인"""
-    draw.rectangle([60, 56, w - 60, 58], fill=BRONZE + (100,))
+    """상단 bar — 제거됨 (CEO 지적: 붕 떠보임). no-op 유지."""
+    pass
 
 def draw_bottom_bar(draw: ImageDraw.Draw, w: int, h: int):
-    """하단 Bronze hairline 라인"""
-    draw.rectangle([60, h - 58, w - 60, h - 56], fill=BRONZE + (100,))
+    """하단 bar — 제거됨 (CEO 지적: 푸터 과도한 줄). no-op 유지."""
+    pass
 
 def draw_slide_num(draw: ImageDraw.Draw, w: int, num: str):
     """우상단 슬라이드 번호"""
@@ -143,9 +143,6 @@ def render_d1():
     draw.text((W // 2, 625), "입니다.",
               font=f_head_kr, fill=IVORY, anchor="mm")
 
-    # 수평 Divider
-    draw.rectangle([120, 690, W - 120, 692], fill=DIVIDER)
-
     # 서브 카피
     f_sub = _f(_KR_SANS, 34)
     draw.text((W // 2, 740),
@@ -183,8 +180,6 @@ def render_d2_slide1():
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 490), "도착합니다.",
               font=f_head, fill=BRONZE, anchor="mm")
-
-    draw.rectangle([120, 600, W - 120, 602], fill=DIVIDER)
 
     draw.text((W // 2, 655), "모닝 브리핑",
               font=f_mono, fill=IVORY_D, anchor="mm")
@@ -272,8 +267,6 @@ def render_d2_slide3():
     draw.text((W // 2, 400), "정리해 둘게요.",
               font=f_head, fill=BRONZE, anchor="mm")
 
-    draw.rectangle([120, 480, W - 120, 482], fill=DIVIDER)
-
     draw.text((W // 2, 540),
               "차트 앱 다섯 개 켜고 손으로 모으던 걸,",
               font=f_sub, fill=IVORY_D, anchor="mm")
@@ -315,7 +308,6 @@ def render_d3():
     # 헤드라인 중앙
     draw.text((W // 2, 205), "구조의 차이",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.rectangle([120, 240, W - 120, 242], fill=DIVIDER)
 
     MID = W // 2
 
@@ -355,7 +347,6 @@ def render_d3():
 
     draw.text((RIGHT_X, 315), "PivoxQuant",
               font=f_pq, fill=BRONZE, anchor="mm")
-    draw.rectangle([MID + 25, 348, W - 90, 350], fill=DIVIDER)
 
     items_right = [
         "자는 동안 정리된다",
@@ -369,7 +360,6 @@ def render_d3():
         y += 54
 
     # 하단 공통 메시지
-    draw.rectangle([120, 760, W - 120, 762], fill=DIVIDER)
     draw.text((W // 2, 810),
               "\"질문하면 답하는 방식\" vs \"묻기 전에 먼저 정리\"",
               font=f_sub, fill=IVORY_D, anchor="mm")
@@ -405,8 +395,6 @@ def render_d4_slide1():
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 480), "일합니다.",
               font=f_head, fill=BRONZE, anchor="mm")
-
-    draw.rectangle([120, 570, W - 120, 572], fill=DIVIDER)
 
     draw.text((W // 2, 630),
               "두 가지 정리 자료",
@@ -473,7 +461,6 @@ def render_d4_slide2_weekly():
               font=f_sub, fill=IVORY_D, anchor="mm")
 
     # 더미 섹션 목록
-    draw.rectangle([160, 450, W - 160, 452], fill=HAIRLINE)
     sections = [
         "포트폴리오 개요",
         "주간 시장 동향",
@@ -495,7 +482,6 @@ def render_d4_slide2_weekly():
               "더미 데이터 · 실제 수치 미포함",
               font=f_tag, fill=BRONZE + (160,), anchor="mm")
 
-    draw.rectangle([120, 810, W - 120, 812], fill=DIVIDER)
     draw.text((W // 2, 850),
               "AI 생성 · 정보 제공 도구 · 투자자문 아님",
               font=_f(_KR_SANS, 26), fill=IVORY_FAINT, anchor="mm")
@@ -531,8 +517,6 @@ def render_d4_slide3_earnings():
     draw.text((W // 2, 348), "데이터 먼저.",
               font=f_head, fill=BRONZE, anchor="mm")
 
-    draw.rectangle([120, 400, W - 120, 402], fill=DIVIDER)
-
     # 더미 실적 테이블 (종목명 미표기)
     draw.rectangle([120, 420, W - 120, 780],
                    fill=(184, 149, 106, 8))
@@ -564,7 +548,6 @@ def render_d4_slide3_earnings():
               "종목명 미표기 · 더미 데이터",
               font=f_tag, fill=BRONZE + (140,), anchor="mm")
 
-    draw.rectangle([120, 840, W - 120, 842], fill=DIVIDER)
     draw.text((W // 2, 876),
               "AI 생성 · 정보 제공 도구 · 투자자문 아님",
               font=_f(_KR_SANS, 26), fill=IVORY_FAINT, anchor="mm")
@@ -596,8 +579,6 @@ def render_d4_slide4():
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 396), "정리는 저희가.",
               font=f_head, fill=BRONZE, anchor="mm")
-
-    draw.rectangle([120, 475, W - 120, 477], fill=DIVIDER)
 
     draw.text((W // 2, 540),
               "\"이 종목 사라\"가 아니라",
@@ -652,9 +633,6 @@ def render_d5_reels_cover():
     draw.text((W // 2, 680), "올랐지?",
               font=f_head, fill=BRONZE, anchor="mm")
 
-    # 수평 구분선
-    draw.rectangle([120, 780, W - 120, 782], fill=DIVIDER)
-
     draw.text((W // 2, 855),
               "검색하다 하루 다 갑니다.",
               font=f_sub, fill=IVORY_D, anchor="mm")
@@ -674,8 +652,6 @@ def render_d5_reels_cover():
               "정리된 자료부터 보고 판단은 내가.",
               font=f_body, fill=BRONZE, anchor="mm")
 
-    draw.rectangle([120, 1150, W - 120, 1152], fill=DIVIDER)
-
     # 릴스 스펙 안내 (영상 없음 — 커버만)
     draw.text((W // 2, 1210),
               "릴스 15~25초 커버 이미지",
@@ -691,7 +667,6 @@ def render_d5_reels_cover():
                    outline=(184, 149, 106, 60), width=1)
     draw.text((W // 2, 1348), "자막 스펙",
               font=_f(_KR_SANS, 28), fill=BRONZE, anchor="mm")
-    draw.rectangle([160, 1370, W - 160, 1372], fill=HAIRLINE)
 
     captions = [
         ("0~3s",  '"내 주식 오늘 왜 올랐지?"'),
@@ -752,14 +727,11 @@ def render_d6():
     draw.text((W // 2, 545), "안 올린다.",
               font=f_head, fill=IVORY, anchor="mm")
 
-    draw.rectangle([120, 615, W - 120, 617], fill=DIVIDER)
-
     # Bronze 강조 한 줄
     draw.text((W // 2, 672), "그래서 직접 만들었습니다.",
               font=_f(_KR_SANS, 44), fill=BRONZE, anchor="mm")
 
     # 서브 카피
-    draw.rectangle([120, 750, W - 120, 752], fill=HAIRLINE)
     lines_body = [
         "챗봇 아닙니다.",
         "내가 등록한 포트폴리오 기준으로",
@@ -770,8 +742,6 @@ def render_d6():
     for line in lines_body:
         draw.text((W // 2, y), line, font=f_body, fill=IVORY_D, anchor="mm")
         y += 52
-
-    draw.rectangle([120, 1020, W - 120, 1022], fill=DIVIDER)
 
     # 1인 개발자
     draw.text((W // 2, 1075), "1인 개발자",
@@ -814,8 +784,6 @@ def render_d7_slide1():
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 385), "회고합니다.",
               font=f_head, fill=BRONZE, anchor="mm")
-
-    draw.rectangle([120, 475, W - 120, 477], fill=DIVIDER)
 
     # D1→D7 타임라인 점
     timeline = [
@@ -871,8 +839,6 @@ def render_d7_slide3():
     draw.text((W // 2, 390), "정리된 자료.",
               font=f_head, fill=BRONZE, anchor="mm")
 
-    draw.rectangle([120, 450, W - 120, 452], fill=DIVIDER)
-
     draw.text((W // 2, 508), "판단은 당신이.",
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 600),
@@ -881,8 +847,6 @@ def render_d7_slide3():
     draw.text((W // 2, 648),
               "자료를 정리해주는 정보 제공 도구",
               font=f_sub, fill=IVORY_D, anchor="mm")
-
-    draw.rectangle([120, 720, W - 120, 722], fill=DIVIDER)
 
     draw.text((W // 2, 780),
               "정보 제공 도구 · 투자자문 아님",
@@ -923,8 +887,6 @@ def render_d7_slide4():
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 380), "정리된 한 장.",
               font=f_head, fill=BRONZE, anchor="mm")
-
-    draw.rectangle([120, 455, W - 120, 457], fill=DIVIDER)
 
     draw.text((W // 2, 520),
               "지금 베타로 열어두고 있어요.",
