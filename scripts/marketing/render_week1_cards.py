@@ -127,27 +127,28 @@ def render_d1():
     f_eye = _f(_JETBRAINS_B, 22)
     draw.text((90, 130), "D1 · CONCEPT", font=f_eye, fill=BRONZE + (180,), anchor="lm")
 
-    # 메인 헤드라인 (Playfair)
-    f_head1 = _f(_PLAYFAIR, 72)
-    draw.text((W // 2, 310), "당신은 당신",
-              font=f_head1, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 400), "포트폴리오의",
-              font=f_head1, fill=IVORY, anchor="mm")
+    # 메인 헤드라인 — 한글은 KR_SANS로
+    f_head_kr = _f(_KR_SANS, 66)
+    draw.text((W // 2, 300), "당신은 당신",
+              font=f_head_kr, fill=IVORY, anchor="mm")
+    draw.text((W // 2, 385), "포트폴리오의",
+              font=f_head_kr, fill=IVORY, anchor="mm")
 
-    # 강조 "CFO" — Bronze + 더 큰 사이즈
-    f_cfo = _f(_PLAYFAIR, 130)
+    # 강조 "CFO" — Playfair (영문) + 더 큰 사이즈
+    f_cfo = _f(_PLAYFAIR, 150)
     draw.text((W // 2, 530), "CFO",
               font=f_cfo, fill=BRONZE, anchor="mm")
-    # 입니다. — 보통 크기
-    draw.text((W // 2, 620), "입니다.",
-              font=f_head1, fill=IVORY, anchor="mm")
+
+    # 입니다. — KR
+    draw.text((W // 2, 625), "입니다.",
+              font=f_head_kr, fill=IVORY, anchor="mm")
 
     # 수평 Divider
-    draw.rectangle([120, 680, W - 120, 682], fill=DIVIDER)
+    draw.rectangle([120, 690, W - 120, 692], fill=DIVIDER)
 
     # 서브 카피
     f_sub = _f(_KR_SANS, 34)
-    draw.text((W // 2, 730),
+    draw.text((W // 2, 740),
               "판단은 당신이.  자료 정리는 저희가.",
               font=f_sub, fill=IVORY_D, anchor="mm")
 
@@ -170,7 +171,7 @@ def render_d2_slide1():
     draw_slide_num(draw, W, "1 / 3")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 78)
+    f_head = _f(_KR_SANS, 72)   # 한글 헤드라인 → KR
     f_sub  = _f(_KR_SANS, 36)
     f_mono = _f(_JETBRAINS_B, 38)
 
@@ -178,9 +179,9 @@ def render_d2_slide1():
 
     draw.text((W // 2, 310), "매일 아침 6시,",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 410), "메일함에",
+    draw.text((W // 2, 400), "메일함에",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 510), "도착합니다.",
+    draw.text((W // 2, 490), "도착합니다.",
               font=f_head, fill=BRONZE, anchor="mm")
 
     draw.rectangle([120, 600, W - 120, 602], fill=DIVIDER)
@@ -195,7 +196,7 @@ def render_d2_slide1():
               font=f_sub, fill=IVORY_MID, anchor="mm")
 
     # 스와이프 힌트
-    f_hint = _f(_JETBRAINS, 26)
+    f_hint = _f(_KR_SANS, 26)
     draw.text((W // 2, 870), "스와이프 →",
               font=f_hint, fill=BRONZE + (140,), anchor="mm")
 
@@ -259,7 +260,7 @@ def render_d2_slide3():
     draw_slide_num(draw, W, "3 / 3")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 74)
+    f_head = _f(_KR_SANS, 72)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 32)
     f_cta  = _f(_KR_SANS, 34)
     f_tag  = _f(_JETBRAINS_B, 26)
@@ -304,10 +305,10 @@ def render_d3():
     draw_bottom_bar(draw, W, H)
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 52)
+    f_head = _f(_KR_SANS, 48)   # 한글 헤드라인 → KR
+    f_pq   = _f(_JETBRAINS_B, 42)  # "PivoxQuant" 영문 → JetBrains
     f_sub  = _f(_KR_SANS, 30)
-    f_body = _f(_KR_SANS, 28)
-    f_tag  = _f(_JETBRAINS_B, 24)
+    f_body = _f(_KR_SANS, 27)
 
     draw.text((90, 130), "D3 · STRUCTURE", font=f_eye, fill=BRONZE + (180,), anchor="lm")
 
@@ -316,66 +317,63 @@ def render_d3():
               font=f_head, fill=IVORY, anchor="mm")
     draw.rectangle([120, 240, W - 120, 242], fill=DIVIDER)
 
-    # ── 좌 패널 (대화형 AI) ──
-    LEFT_X = 270   # 좌 패널 중앙
-    # 패널 배경 (미세 구분)
-    draw.rectangle([80, 270, W // 2 - 20, H - 120],
-                   fill=(245, 240, 232, 6))
-    draw.rectangle([80, 270, W // 2 - 20, H - 120],
-                   outline=HAIRLINE, width=1)
+    MID = W // 2
 
-    draw.text((LEFT_X, 325), "대화형 AI",
-              font=f_head, fill=IVORY_D, anchor="mm")
-    draw.rectangle([120, 360, W // 2 - 30, 362], fill=HAIRLINE)
+    # ── 좌 패널 (대화형 AI) — 아주 어두운 charcoal ──
+    LEFT_X = 270
+    draw.rectangle([80, 260, MID - 15, 730],
+                   fill=(20, 20, 20, 255))    # 거의 검정에 가까운 charcoal
+    draw.rectangle([80, 260, MID - 15, 730],
+                   outline=(245, 240, 232, 40), width=1)
+
+    draw.text((LEFT_X, 315), "대화형 AI",
+              font=f_head, fill=IVORY_MID, anchor="mm")
+    draw.rectangle([100, 348, MID - 25, 350], fill=HAIRLINE)
 
     items_left = [
         "물어야 답한다",
         "종목 리스트 매번 입력",
         "그때그때 자유 질문",
     ]
-    y = 400
+    y = 385
     for item in items_left:
         draw.text((LEFT_X, y), f"· {item}",
                   font=f_body, fill=IVORY_MID, anchor="mm")
-        y += 56
+        y += 54
 
-    # ── 중앙 수직 구분선 ──
-    MID = W // 2
-    for y_seg in range(270, H - 120, 16):
+    # ── 중앙 수직 점선 구분 ──
+    for y_seg in range(260, 730, 16):
         draw.rectangle([MID - 1, y_seg, MID + 1, y_seg + 8],
-                       fill=BRONZE + (80,))
+                       fill=BRONZE + (100,))
 
-    # ── 우 패널 (PivoxQuant) ──
-    RIGHT_X = MID + (MID - 80 - 80) // 2 + 90
-    draw.rectangle([MID + 20, 270, W - 80, H - 120],
-                   fill=(184, 149, 106, 8))
-    draw.rectangle([MID + 20, 270, W - 80, H - 120],
-                   outline=BRONZE + (40,), width=1)
+    # ── 우 패널 (PivoxQuant) — Bronze wash ──
+    RIGHT_X = MID + (W - MID - 80) // 2 + 10
+    draw.rectangle([MID + 15, 260, W - 80, 730],
+                   fill=(184, 149, 106, 22))
+    draw.rectangle([MID + 15, 260, W - 80, 730],
+                   outline=BRONZE + (60,), width=1)
 
-    draw.text((RIGHT_X, 325), "PivoxQuant",
-              font=f_head, fill=BRONZE, anchor="mm")
-    draw.rectangle([MID + 30, 360, W - 90, 362], fill=DIVIDER)
+    draw.text((RIGHT_X, 315), "PivoxQuant",
+              font=f_pq, fill=BRONZE, anchor="mm")
+    draw.rectangle([MID + 25, 348, W - 90, 350], fill=DIVIDER)
 
     items_right = [
         "자는 동안 정리된다",
         "포트폴리오 등록 1회",
         "정해진 시각에 자동 전달",
     ]
-    y = 400
+    y = 385
     for item in items_right:
         draw.text((RIGHT_X, y), f"· {item}",
                   font=f_body, fill=IVORY, anchor="mm")
-        y += 56
+        y += 54
 
     # 하단 공통 메시지
-    draw.rectangle([120, 720, W - 120, 722], fill=DIVIDER)
-    draw.text((W // 2, 765),
-              "\"질문하면 답하는 방식\" vs",
-              font=f_sub, fill=IVORY_D, anchor="mm")
+    draw.rectangle([120, 760, W - 120, 762], fill=DIVIDER)
     draw.text((W // 2, 810),
-              "\"묻기 전에 먼저 정리해 두는 방식\"",
+              "\"질문하면 답하는 방식\" vs \"묻기 전에 먼저 정리\"",
               font=f_sub, fill=IVORY_D, anchor="mm")
-    draw.text((W // 2, 855),
+    draw.text((W // 2, 858),
               "구조가 다른 것 · 어느 쪽이 낫다는 얘기 아님",
               font=_f(_KR_SANS, 24), fill=IVORY_FAINT, anchor="mm")
 
@@ -396,16 +394,16 @@ def render_d4_slide1():
     draw_slide_num(draw, W, "1 / 4")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 72)
+    f_head = _f(_KR_SANS, 70)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 34)
 
     draw.text((90, 130), "D4 · ARTIFACTS", font=f_eye, fill=BRONZE + (180,), anchor="lm")
 
     draw.text((W // 2, 310), "주말에도",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 400), "리포트는",
+    draw.text((W // 2, 395), "리포트는",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 490), "일합니다.",
+    draw.text((W // 2, 480), "일합니다.",
               font=f_head, fill=BRONZE, anchor="mm")
 
     draw.rectangle([120, 570, W - 120, 572], fill=DIVIDER)
@@ -429,7 +427,7 @@ def render_d4_slide1():
                   font=_f(_KR_SANS, 26), fill=IVORY_D, anchor="lm")
         y += 110
 
-    f_hint = _f(_JETBRAINS, 26)
+    f_hint = _f(_KR_SANS, 26)
     draw.text((W // 2, 970), "스와이프 →",
               font=f_hint, fill=BRONZE + (140,), anchor="mm")
 
@@ -450,7 +448,7 @@ def render_d4_slide2_weekly():
     draw_slide_num(draw, W, "2 / 4")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 60)
+    f_head = _f(_KR_SANS, 54)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 28)
     f_mono = _f(_JETBRAINS, 26)
     f_tag  = _f(_JETBRAINS_B, 20)
@@ -519,7 +517,7 @@ def render_d4_slide3_earnings():
     draw_slide_num(draw, W, "3 / 4")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 54)
+    f_head = _f(_KR_SANS, 54)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 28)
     f_mono = _f(_JETBRAINS, 26)
     f_tag  = _f(_JETBRAINS_B, 20)
@@ -530,7 +528,7 @@ def render_d4_slide3_earnings():
     # 제목
     draw.text((W // 2, 280), "실적 발표 전,",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 350), "데이터 먼저.",
+    draw.text((W // 2, 348), "데이터 먼저.",
               font=f_head, fill=BRONZE, anchor="mm")
 
     draw.rectangle([120, 400, W - 120, 402], fill=DIVIDER)
@@ -588,7 +586,7 @@ def render_d4_slide4():
     draw_slide_num(draw, W, "4 / 4")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 68)
+    f_head = _f(_KR_SANS, 66)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 32)
     f_cta  = _f(_KR_SANS, 34)
 
@@ -596,7 +594,7 @@ def render_d4_slide4():
 
     draw.text((W // 2, 310), "판단은 당신이.",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 400), "정리는 저희가.",
+    draw.text((W // 2, 396), "정리는 저희가.",
               font=f_head, fill=BRONZE, anchor="mm")
 
     draw.rectangle([120, 475, W - 120, 477], fill=DIVIDER)
@@ -634,8 +632,7 @@ def render_d5_reels_cover():
     draw_bottom_bar(draw, W, H)
 
     f_eye  = _f(_JETBRAINS_B, 26)
-    f_head = _f(_PLAYFAIR, 88)
-    f_head2= _f(_PLAYFAIR, 70)
+    f_head = _f(_KR_SANS, 86)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 40)
     f_body = _f(_KR_SANS, 34)
     f_tag  = _f(_JETBRAINS_B, 28)
@@ -643,16 +640,16 @@ def render_d5_reels_cover():
     draw.text((90, 140), "D5 · REELS COVER", font=f_eye, fill=BRONZE + (180,), anchor="lm")
 
     # AI 생성 태그 (좌상단)
-    draw.rectangle([80, 190, 280, 238], fill=BRONZE + (200,))
-    draw.text((180, 214), "AI 생성 콘텐츠",
-              font=_f(_JETBRAINS_B, 22), fill=INK + (255,), anchor="mm")
+    draw.rectangle([80, 190, 310, 240], fill=BRONZE + (200,))
+    draw.text((195, 215), "AI 생성 콘텐츠",
+              font=_f(_KR_SANS, 24), fill=INK + (255,), anchor="mm")
 
     # 메인 훅
-    draw.text((W // 2, 480), "내 주식",
+    draw.text((W // 2, 470), "내 주식",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 590), "오늘 왜",
+    draw.text((W // 2, 575), "오늘 왜",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 700), "올랐지?",
+    draw.text((W // 2, 680), "올랐지?",
               font=f_head, fill=BRONZE, anchor="mm")
 
     # 수평 구분선
@@ -682,36 +679,36 @@ def render_d5_reels_cover():
     # 릴스 스펙 안내 (영상 없음 — 커버만)
     draw.text((W // 2, 1210),
               "릴스 15~25초 커버 이미지",
-              font=f_tag, fill=BRONZE + (160,), anchor="mm")
+              font=_f(_KR_SANS, 28), fill=BRONZE + (160,), anchor="mm")
     draw.text((W // 2, 1260),
               "영상 촬영: CEO 직접",
               font=_f(_KR_SANS, 30), fill=IVORY_FAINT, anchor="mm")
 
     # 자막 스펙 안내 박스
-    draw.rectangle([120, 1320, W - 120, 1660],
-                   fill=(245, 240, 232, 6))
-    draw.rectangle([120, 1320, W - 120, 1660],
-                   outline=HAIRLINE, width=1)
-    draw.text((W // 2, 1360), "자막 스펙",
-              font=f_tag, fill=BRONZE, anchor="mm")
-    draw.rectangle([160, 1385, W - 160, 1387], fill=HAIRLINE)
+    draw.rectangle([120, 1310, W - 120, 1700],
+                   fill=(18, 18, 18, 255))   # 어두운 charcoal
+    draw.rectangle([120, 1310, W - 120, 1700],
+                   outline=(184, 149, 106, 60), width=1)
+    draw.text((W // 2, 1348), "자막 스펙",
+              font=_f(_KR_SANS, 28), fill=BRONZE, anchor="mm")
+    draw.rectangle([160, 1370, W - 160, 1372], fill=HAIRLINE)
 
     captions = [
-        ("0~3s",  "\"내 주식 오늘 왜 올랐지?\""),
-        ("3~12s", "뉴스 열 개 읽어도 내 포트폴리오 기준"),
+        ("0~3s",  '"내 주식 오늘 왜 올랐지?"'),
+        ("3~12s", "뉴스 열 개 읽어도 포트폴리오 기준"),
         ("     ", "정리된 건 없습니다."),
         ("12s~",  "관찰 포인트 정리됨. 판단은 내가."),
-        ("끝",   "프로필 링크"),
+        ("끝",    "프로필 링크"),
     ]
     f_cap_t = _f(_JETBRAINS, 26)
-    f_cap_c = _f(_KR_SANS, 28)
-    y = 1410
+    f_cap_c = _f(_KR_SANS, 27)
+    y = 1396
     for ts, cap in captions:
-        draw.text((155, y), ts, font=f_cap_t, fill=BRONZE, anchor="lm")
-        draw.text((330, y), cap, font=f_cap_c, fill=IVORY_MID, anchor="lm")
-        y += 50
+        draw.text((155, y), ts, font=f_cap_t, fill=BRONZE + (255,), anchor="lm")
+        draw.text((325, y), cap, font=f_cap_c, fill=IVORY + (255,), anchor="lm")
+        y += 60
 
-    draw.text((W // 2, 1730),
+    draw.text((W // 2, 1760),
               "정보 제공 도구 · 투자자문 아님",
               font=_f(_KR_SANS, 28), fill=IVORY_FAINT, anchor="mm")
     draw_brand_mark(draw, W, H)
@@ -732,7 +729,7 @@ def render_d6():
 
     f_eye  = _f(_JETBRAINS_B, 22)
     f_tag  = _f(_JETBRAINS_B, 30)
-    f_head = _f(_PLAYFAIR, 58)
+    f_head = _f(_KR_SANS, 54)   # 한글 인용 → KR
     f_sub  = _f(_KR_SANS, 32)
     f_body = _f(_KR_SANS, 28)
 
@@ -740,26 +737,26 @@ def render_d6():
     draw.text((90, 120), "D6 · BUILDING IN PUBLIC", font=f_eye,
               fill=BRONZE + (180,), anchor="lm")
 
-    # 상단 태그
+    # 상단 태그 — 영문은 JetBrains OK
     draw.text((W // 2, 210), "Building in Public",
               font=f_tag, fill=BRONZE, anchor="mm")
 
-    # 중앙 Playfair 인용
-    draw.rectangle([80, 265, 86, 500], fill=BRONZE)  # 왼쪽 Bronze 바
-    draw.text((W // 2, 330), "회사엔 CFO 보고서가",
+    # 중앙 인용 — 한글 → KR
+    draw.rectangle([80, 258, 86, 600], fill=BRONZE)  # 왼쪽 Bronze 바
+    draw.text((W // 2, 315), "회사엔 CFO 보고서가",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 410), "올라온다.",
+    draw.text((W // 2, 385), "올라온다.",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 500), "내 돈한텐 아무도",
+    draw.text((W // 2, 475), "내 돈한텐 아무도",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 580), "안 올린다.",
+    draw.text((W // 2, 545), "안 올린다.",
               font=f_head, fill=IVORY, anchor="mm")
 
-    draw.rectangle([120, 640, W - 120, 642], fill=DIVIDER)
+    draw.rectangle([120, 615, W - 120, 617], fill=DIVIDER)
 
     # Bronze 강조 한 줄
-    draw.text((W // 2, 700), "그래서 직접 만들었습니다.",
-              font=_f(_PLAYFAIR, 48), fill=BRONZE, anchor="mm")
+    draw.text((W // 2, 672), "그래서 직접 만들었습니다.",
+              font=_f(_KR_SANS, 44), fill=BRONZE, anchor="mm")
 
     # 서브 카피
     draw.rectangle([120, 750, W - 120, 752], fill=HAIRLINE)
@@ -806,16 +803,16 @@ def render_d7_slide1():
     draw_slide_num(draw, W, "1 / 4")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 74)
+    f_head = _f(_KR_SANS, 70)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 32)
     f_mono = _f(_JETBRAINS, 28)
 
     draw.text((90, 130), "D7 · WEEKLY RETROSPECTIVE", font=f_eye,
               fill=BRONZE + (180,), anchor="lm")
 
-    draw.text((W // 2, 310), "출시 첫 주,",
+    draw.text((W // 2, 300), "출시 첫 주,",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 400), "회고합니다.",
+    draw.text((W // 2, 385), "회고합니다.",
               font=f_head, fill=BRONZE, anchor="mm")
 
     draw.rectangle([120, 475, W - 120, 477], fill=DIVIDER)
@@ -860,23 +857,23 @@ def render_d7_slide3():
     draw_slide_num(draw, W, "3 / 4")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 64)
+    f_head = _f(_KR_SANS, 62)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 32)
     f_disc = _f(_KR_SANS, 24)
 
     draw.text((90, 130), "D7 · SUMMARY", font=f_eye, fill=BRONZE + (180,), anchor="lm")
 
     # 인용구 스타일 (왼쪽 Bronze 바)
-    draw.rectangle([80, 260, 88, 660], fill=BRONZE)
+    draw.rectangle([80, 260, 88, 640], fill=BRONZE)
 
-    draw.text((W // 2, 310), "사라/팔라가 아니라,",
+    draw.text((W // 2, 308), "사라/팔라가 아니라,",
               font=f_head, fill=IVORY, anchor="mm")
-    draw.text((W // 2, 400), "정리된 자료.",
+    draw.text((W // 2, 390), "정리된 자료.",
               font=f_head, fill=BRONZE, anchor="mm")
 
-    draw.rectangle([120, 460, W - 120, 462], fill=DIVIDER)
+    draw.rectangle([120, 450, W - 120, 452], fill=DIVIDER)
 
-    draw.text((W // 2, 520), "판단은 당신이.",
+    draw.text((W // 2, 508), "판단은 당신이.",
               font=f_head, fill=IVORY, anchor="mm")
     draw.text((W // 2, 600),
               "내가 등록한 포트폴리오 기준으로",
@@ -914,7 +911,7 @@ def render_d7_slide4():
     draw_slide_num(draw, W, "4 / 4")
 
     f_eye  = _f(_JETBRAINS_B, 22)
-    f_head = _f(_PLAYFAIR, 74)
+    f_head = _f(_KR_SANS, 70)   # 한글 → KR
     f_sub  = _f(_KR_SANS, 32)
     f_cta  = _f(_KR_SANS, 34)
     f_tag  = _f(_JETBRAINS_B, 24)
