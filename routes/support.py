@@ -34,7 +34,7 @@ from flask_login import current_user
 
 from extensions import db
 from models.inquiry import Inquiry, VALID_CATEGORIES
-from routes.decorators import api_auth
+from routes.decorators import api_auth, legal_scrub_response
 from services.admin_emails import get_admin_emails as _admin_emails
 from services.error_responses import api_error
 from services.email.sender import EmailSender, EmailCategory
@@ -390,6 +390,7 @@ def _history_summary(history) -> str:
 
 @support_bp.route("/chat", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def support_chat():
     data = request.get_json(silent=True) or {}
     message = data.get("message")
