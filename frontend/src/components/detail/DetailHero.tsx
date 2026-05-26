@@ -477,7 +477,7 @@ export function DetailHero(props: DetailHeroProps) {
                 {/* Quote stats — derived (52W distance + avg volume), fills the
                     formerly empty right half of the price column. */}
                 {(pctFromLow != null || pctFromHigh != null || avgVolStr) && (
-                  <div className="mt-4 flex items-center gap-x-5 gap-y-1.5 flex-wrap font-mono text-pq-mono-xs uppercase tracking-[0.1em] text-[var(--pq-ivory-faint)]">
+                  <div className="mt-4 flex items-center gap-x-6 gap-y-2 flex-wrap font-mono text-pq-body-sm tracking-[0.04em] text-[var(--pq-ivory-mid)]">
                     {pctFromLow != null && (
                       <span>
                         52주 저점대비{" "}
