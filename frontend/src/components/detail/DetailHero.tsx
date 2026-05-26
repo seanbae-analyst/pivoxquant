@@ -477,11 +477,11 @@ export function DetailHero(props: DetailHeroProps) {
                 {/* Quote stats — derived (52W distance + avg volume), fills the
                     formerly empty right half of the price column. */}
                 {(pctFromLow != null || pctFromHigh != null || avgVolStr) && (
-                  <div className="mt-4 flex items-center gap-x-6 gap-y-2 flex-wrap font-mono text-pq-body-sm tracking-[0.04em] text-[var(--pq-ivory-mid)]">
+                  <div className="mt-4 flex items-center gap-x-6 gap-y-2 flex-wrap font-mono text-pq-body tracking-[0.02em] text-[var(--pq-ivory-mid)]">
                     {pctFromLow != null && (
                       <span>
                         52주 저점대비{" "}
-                        <span className={cn("normal-case tabular-nums", pctColorClass(pctFromLow))}>
+                        <span className={cn("text-pq-lead font-medium tabular-nums", pctColorClass(pctFromLow))}>
                           {fmtPct(pctFromLow)}
                         </span>
                       </span>
@@ -489,7 +489,7 @@ export function DetailHero(props: DetailHeroProps) {
                     {pctFromHigh != null && (
                       <span>
                         고점대비{" "}
-                        <span className={cn("normal-case tabular-nums", pctColorClass(pctFromHigh))}>
+                        <span className={cn("text-pq-lead font-medium tabular-nums", pctColorClass(pctFromHigh))}>
                           {fmtPct(pctFromHigh)}
                         </span>
                       </span>
@@ -497,7 +497,7 @@ export function DetailHero(props: DetailHeroProps) {
                     {avgVolStr && (
                       <span>
                         평균 거래량{" "}
-                        <span className="normal-case tabular-nums text-[var(--pq-ivory-soft)]">
+                        <span className="text-pq-lead font-medium tabular-nums text-[var(--pq-ivory-soft)]">
                           {avgVolStr}
                         </span>
                       </span>
