@@ -51,8 +51,14 @@ const BETA_BYPASS_PREFIXES = [
   "/offline.html",
   "/robots.txt",
   "/sitemap.xml",
-  // Public viral page — accessible without beta password (acquisition funnel)
+  // Public viral pages — accessible without beta password (acquisition funnel)
   "/simulator",
+  // Viral loop OG landings (backend commit 7a57a9da). A shared brag card or
+  // referral link must open for a logged-out, non-beta recipient — that's the
+  // entire point of the K-factor `c` lever. Crawlers already bypass above; this
+  // lets human recipients through the beta gate too.
+  "/card",
+  "/r",
 ];
 
 // Social/search crawler User-Agents that should see the rendered OG metadata

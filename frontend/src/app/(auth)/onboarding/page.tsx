@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
+import { OnboardingBragCard } from "@/components/growth/onboarding-brag-card";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
@@ -566,6 +567,9 @@ export default function OnboardingPage() {
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
   const [submitting, setSubmitting] = useState(false);
   const [investorType, setInvestorType] = useState<string>("steady_accumulator");
+  // Activation: after profile save, show the instant Brag Card screen before
+  // landing on the dashboard (viral loop — onboarding-brag-card.tsx).
+  const [showBragCard, setShowBragCard] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -575,10 +579,18 @@ export default function OnboardingPage() {
       router.replace("/login");
       return;
     }
-    if (!authLoading && user && user.onboarding_completed === true) {
+    // Don't bounce away while the post-onboarding Brag Card surface is up —
+    // `refresh()` flips onboarding_completed=true but we intentionally hold
+    // the user on the Activation screen until they tap "대시보드로 이동".
+    if (
+      !authLoading &&
+      user &&
+      user.onboarding_completed === true &&
+      !showBragCard
+    ) {
       router.replace("/home");
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, showBragCard]);
 
   // Restore saved step from answers — server draft wins if present so
   // a user who answered N questions on mobile picks up at N on desktop.
@@ -818,7 +830,10 @@ export default function OnboardingPage() {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem("pivoxquant_onboarding_full_answers");
 
-      router.replace("/home");
+      // Activation: show the instant Brag Card surface (viral loop) before
+      // routing to the dashboard. The OnboardingBragCard's "대시보드로 이동"
+      // button calls back into `goToDashboard`.
+      setShowBragCard(true);
     } catch {
       // 2026-05-17 wave 12 UX P2: native `alert()` was a 20-question
       // dead-end — user had to re-tap "Go to Dashboard" with no clear
@@ -833,6 +848,11 @@ export default function OnboardingPage() {
       setSubmitting(false);
     }
   }, [answers, refresh, router]);
+
+  // Brag Card "대시보드로 이동" → finally route to /home.
+  const goToDashboard = useCallback(() => {
+    router.replace("/home");
+  }, [router]);
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
 
@@ -884,6 +904,22 @@ export default function OnboardingPage() {
   }
 
   if (!user) return null;
+
+  // ── Activation: instant Brag Card (viral loop) ─────────────────────────────
+  // Shown after a successful profile submit, before routing to /home. Takes
+  // precedence over the onboarding-completed redirect guard below.
+  if (showBragCard) {
+    return (
+      <div
+        className="min-h-[100dvh]"
+        style={{ backgroundColor: "var(--pq-ink)", color: "var(--pq-ivory)" }}
+      >
+        <div className="mx-auto max-w-lg px-4 sm:px-6">
+          <OnboardingBragCard onDone={goToDashboard} />
+        </div>
+      </div>
+    );
+  }
 
   // Already onboarded — don't flash the wizard while redirect runs
   if (user.onboarding_completed === true) return null;

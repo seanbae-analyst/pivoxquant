@@ -261,6 +261,11 @@ export const API = {
     stats: "/api/artifacts/stats",
     byMonth: "/api/artifacts/by-month",
     generate: "/api/artifacts/generate",
+    // Brag Card — instant on-demand preview (snapshot mode supports empty
+    // portfolios). Returns { ok, data, png_base64, html }. The `data` payload
+    // carries share_token / referral_code / mode / empty_reason /
+    // snapshot_tickers used by the onboarding viral surface.
+    bragCardPreview: "/api/artifacts/brag-card/preview",
   },
   admin: {
     artifactsList: "/api/admin/artifacts/list",
@@ -310,6 +315,23 @@ export const API = {
   //            → 200 {reply,escalated,inquiry_id} | 400 INVALID_MESSAGE/401/429
   // Admin slots are declared for parity with routes/support.py admin handlers
   // (no frontend consumer yet — the user-facing pages never call them).
+  // Viral loop — funnel telemetry + public OG card landing (backend commit
+  // 7a57a9da, routes/growth.py). Contract (locked):
+  //   POST /api/track                      (PUBLIC, no auth) → {ok}
+  //     body {event, channel?, ref_code?, anon_id?, meta?}
+  //     event ∈ landing_view|signup|onboarding_done|artifact_opened|
+  //            share_clicked|referral_signup
+  //   GET  /api/card/<share_token>         (PUBLIC, OG landing)
+  //     200 {ok, owner_display_name, card_image_url, summary_safe,
+  //          month_label, referral_code}
+  //     404 {code: CARD_NOT_FOUND|INVALID_SHARE_TOKEN} (private/missing same)
+  //   POST /api/card/<share_token>/visibility (auth, owner) {is_public}
+  viral: {
+    track: "/api/track",
+    card: (shareToken: string) => `/api/card/${encodeURIComponent(shareToken)}`,
+    cardVisibility: (shareToken: string) =>
+      `/api/card/${encodeURIComponent(shareToken)}/visibility`,
+  },
   support: {
     inquiries: "/api/support/inquiries",
     inquiry: (id: string | number) => `/api/support/inquiries/${id}`,

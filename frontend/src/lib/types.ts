@@ -640,3 +640,73 @@ export interface SupportChatResponse {
   escalated: boolean;
   inquiry_id: number | null;
 }
+
+// ── Viral loop (backend commit 7a57a9da) ──────────────────────────────────
+
+/** Whitelisted funnel events accepted by POST /api/track. */
+export type FunnelEvent =
+  | "landing_view"
+  | "signup"
+  | "onboarding_done"
+  | "artifact_opened"
+  | "share_clicked"
+  | "referral_signup";
+
+/** POST /api/track body. All fields except `event` optional + bounded. */
+export interface TrackEventBody {
+  event: FunnelEvent;
+  channel?: string; // ≤40
+  ref_code?: string; // ≤16
+  anon_id?: string; // ≤64
+  meta?: Record<string, string | number | boolean>; // keys ≤12 / vals ≤200
+}
+
+/**
+ * `data` payload inside the brag-card preview response
+ * (POST /api/artifacts/brag-card/preview → { ok, data, png_base64, html }).
+ * Mirrors `BragCardContext.to_dict()` on the Python side. Snapshot fields
+ * (`mode` / `empty_reason` / `snapshot_tickers`) drive the empty-portfolio
+ * Activation surface in onboarding.
+ */
+export interface BragCardPreviewData {
+  user_name: string;
+  referral_code: string;
+  month_label: string;
+  month_label_long: string;
+  return_pct: number | null;
+  trade_count: number;
+  best_ticker: string | null;
+  best_return_pct: number | null;
+  anonymous: boolean;
+  is_empty: boolean;
+  share_token: string | null;
+  mode: "trades" | "snapshot";
+  empty_reason:
+    | "no_closed_trades_holdings"
+    | "no_closed_trades_watchlist"
+    | "no_activity"
+    | null;
+  snapshot_tickers: string[];
+}
+
+/** Full envelope from POST /api/artifacts/brag-card/preview. */
+export interface BragCardPreviewResponse {
+  ok: boolean;
+  data: BragCardPreviewData;
+  png_base64: string | null;
+  html: string;
+}
+
+/**
+ * GET /api/card/<share_token> — public OG landing payload.
+ * 404 (private/missing) surfaces as a thrown ApiError, never this shape.
+ * `summary_safe` is server-generated §101-safe copy (factual + generic).
+ */
+export interface PublicCardResponse {
+  ok: boolean;
+  owner_display_name: string;
+  card_image_url: string | null;
+  summary_safe: string;
+  month_label: string | null;
+  referral_code: string | null;
+}
