@@ -249,7 +249,16 @@ def twin_comparison():
         )
         .all()
     )
-    user_invested = sum(float(t.total_value or 0) for t in user_trades) or 0.0
+    # Denominator = capital deployed (BUY legs only). A SELL's ``total_value``
+    # is the proceeds, NOT additional invested capital — including it inflated
+    # the denominator and silently understated ``user_lifetime_pct`` (e.g. a
+    # $1000 buy → $1100 sell read as 4.76% instead of the true 10%). Roundtrips
+    # are now measured against the cost basis actually put to work.
+    user_invested = sum(
+        float(t.total_value or 0)
+        for t in user_trades
+        if (t.action or "").upper() == "BUY"
+    ) or 0.0
     user_pnl = sum(float(t.pnl or 0) for t in user_trades) or 0.0
     user_lifetime_pct = (user_pnl / user_invested * 100.0) if user_invested > 0 else None
 

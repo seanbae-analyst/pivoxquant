@@ -447,6 +447,47 @@ def test_other_user_cannot_view_twin(app, client, make_user):
     assert body["data"].get("initialized") is False
 
 
+def test_comparison_denominator_excludes_sell_proceeds(client, auth_user, app):
+    """user_lifetime_pct denominator = BUY legs only (regression).
+
+    A SELL's ``total_value`` is proceeds, not invested capital. Summing BOTH
+    inflated the denominator and understated the return: a $1000 buy → $1100
+    sell ($100 pnl) used to read 100 / (1000 + 1100) = 4.76% instead of the
+    true 100 / 1000 = 10%.
+    """
+    from models import AITwinPortfolio, TradeHistory
+
+    client.post("/api/twin/initialize")
+    with app.app_context():
+        twin = AITwinPortfolio.query.filter_by(user_id=auth_user["id"]).first()
+        # All trades AFTER inception so the comparison window includes them.
+        after = twin.initialized_at + timedelta(hours=1)
+        # $1000 buy, then a sell returning $1100 proceeds → $100 realized P&L.
+        db.session.add_all([
+            TradeHistory(
+                user_id=auth_user["id"], ticker="AAA", action="BUY",
+                shares=10, price_per_share=100, total_value=1000.0,
+                pnl=0.0, traded_at=after,
+            ),
+            TradeHistory(
+                user_id=auth_user["id"], ticker="AAA", action="SELL",
+                shares=10, price_per_share=110, total_value=1100.0,
+                pnl=100.0, traded_at=after,
+            ),
+        ])
+        db.session.commit()
+
+    with patch("routes.twin.svc.fetcher.get_prices_batch", return_value={}):
+        resp = client.get("/api/twin/comparison")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    pct = body["data"]["user_lifetime_pct"]
+    # 100 pnl / 1000 invested (BUY only) = 10.0%. The old SELL-inclusive
+    # denominator (2100) would have produced ~4.76%.
+    assert pct == pytest.approx(10.0, abs=1e-6)
+    assert pct != pytest.approx(4.7619, abs=1e-3)
+
+
 # ─────────────────────────────────────────────────────────────────────
 # F. Cron + initialization gate
 # ─────────────────────────────────────────────────────────────────────

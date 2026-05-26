@@ -1444,6 +1444,43 @@ def _init_scheduler(app):
             except Exception as e:
                 logger.error(f"Persona snapshot weekly failed: {e}")
 
+    def _scheduled_price_alerts():
+        """Weekday post-US-close sweep — 52-week high/low + sector concentration.
+
+        Both ``check_52w_highs_lows`` and ``check_concentration_alerts`` exist
+        in ``services.alert`` but were never wired to a cron, so the in-app
+        BELL alerts a user configured (52w touches, concentration) only ever
+        fired via the admin ``POST /api/alerts/admin/check`` — i.e. never in
+        practice. This wrapper drives both once per US trading day.
+
+        Cadence is deliberately conservative: 06:35 KST (= 21:35 EST, just
+        after the NYSE 16:00 ET close, mirroring ``twin_us_daily`` at 06:30).
+        A single daily fire keeps FMP budget + PG pressure low — these checks
+        fan out across every holder's tickers and call FMP's quote endpoint.
+        KR (.KS/.KQ) tickers are skipped inside ``check_52w_highs_lows`` (FMP
+        coverage is unreliable for KRX); ``create_alert`` already dedups via a
+        24h/7d window so a daily cadence cannot spam. Bell prefs routing is
+        unchanged from every other bell alert (fail-open) — not wired here.
+
+        Per-check failures are isolated; a bad 52w sweep must not block the
+        concentration sweep, and neither must raise out of the scheduler.
+        """
+        from services.alert import (
+            check_52w_highs_lows,
+            check_concentration_alerts,
+        )
+        with app.app_context():
+            try:
+                m = check_52w_highs_lows()
+                logger.info(f"52w high/low sweep: {m}")
+            except Exception as e:
+                logger.error(f"52w high/low sweep failed: {e}")
+            try:
+                m = check_concentration_alerts()
+                logger.info(f"Concentration sweep: {m}")
+            except Exception as e:
+                logger.error(f"Concentration sweep failed: {e}")
+
     # PERF-001 / CONN-001: apply pile-up guards as scheduler-wide job defaults
     # so EVERY job — the artifact crons below AND the Wave H ops jobs
     # registered via register_cron_jobs — inherits them consistently:
@@ -1782,6 +1819,22 @@ def _init_scheduler(app):
         day_of_week="sun", hour=23, minute=0,
         timezone="Asia/Seoul",
         id="persona_snapshot_weekly",
+        max_instances=1,
+        coalesce=True,
+    )
+
+    # 평일 06:35 KST (= 21:35 EST, NYSE 마감 직후) — 52주 고/저 + 섹터 집중도
+    # 벨 알림 스윕. 두 check 함수는 services.alert 에 존재했으나 cron 미등록이라
+    # 사용자가 설정한 52w 알림이 자동 발화되지 않았다(어드민 수동 POST 외 0회).
+    # 하루 1회 보수적 cadence — FMP budget + PG 압박 회피. KR 티커는 check 내부
+    # FMP-guard 로 skip, create_alert 24h/7d dedup 로 스팸 방지.
+    sched.add_job(
+        _scheduled_price_alerts,
+        trigger="cron",
+        day_of_week="mon-fri",
+        hour=6, minute=35,
+        timezone="Asia/Seoul",
+        id="price_alerts_daily",
         max_instances=1,
         coalesce=True,
     )
