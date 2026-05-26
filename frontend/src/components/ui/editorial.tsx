@@ -243,10 +243,14 @@ export function FieldLabel({
   children,
   className = "",
   tone = "bronze",
+  size = "var(--pq-text-eyebrow)",
 }: {
   children: React.ReactNode;
   className?: string;
   tone?: "bronze" | "muted";
+  /** Optional font-size override (CSS length / var). Defaults to the eyebrow
+   *  token so existing call sites are unchanged. */
+  size?: string;
 }) {
   const color =
     tone === "muted" ? "rgba(245,240,232,0.55)" : "var(--pq-bronze)";
@@ -255,7 +259,7 @@ export function FieldLabel({
       className={`pq-field-label font-sans ${className}`}
       style={{
         display: "inline-block",
-        fontSize: "var(--pq-text-eyebrow)",
+        fontSize: size,
         letterSpacing: "0.12em",
         textTransform: "uppercase",
         color,

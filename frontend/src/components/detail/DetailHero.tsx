@@ -79,15 +79,15 @@ function PillarMini({
       ? "text-[var(--up)]"
       : tone === "neg"
         ? "text-[var(--down)]"
-        : "text-[var(--pq-ivory-mid)]";
+        : "text-[var(--pq-ivory)]";
   return (
     <div className="flex items-center gap-2 min-w-0">
-      <span className="text-pq-mono-xs uppercase tracking-[0.12em] text-[var(--pq-ivory-faint)] font-sans shrink-0">
+      <span className="text-pq-h5 uppercase tracking-[0.04em] text-[var(--pq-ivory-soft)] font-sans font-medium shrink-0">
         {label}
       </span>
       <span className="h-px flex-1 bg-[var(--pq-ivory-line)] min-w-2" />
       <span
-        className={cn("font-mono tabular-nums text-pq-h4 shrink-0", color)}
+        className={cn("font-mono tabular-nums text-pq-h5 shrink-0", color)}
       >
         {safe == null ? "—" : safe.toFixed(0)}
       </span>
@@ -305,7 +305,7 @@ export function DetailHero(props: DetailHeroProps) {
         <div className="px-6 md:px-8 pt-6 pb-6 md:pb-7">
           {/* Identity — name is the headline, ticker the sub-label */}
           <h1 className="pq-detail-ticker-display">{displayName}</h1>
-          <p className="mt-2 font-mono tabular-nums text-pq-body-sm text-[var(--pq-ivory-mid)] leading-snug">
+          <p className="mt-2 font-mono tabular-nums text-pq-h5 font-medium text-[var(--pq-ivory-soft)] leading-snug">
             {displayTicker}
           </p>
 
@@ -318,7 +318,7 @@ export function DetailHero(props: DetailHeroProps) {
           ) : null}
 
           {/* Supporting line — sector › industry · listing · market cap */}
-          <div className="mt-4 flex items-center gap-x-3 gap-y-1.5 flex-wrap text-pq-mono-xs font-sans text-[var(--pq-ivory-faint)]">
+          <div className="mt-4 flex items-center gap-x-3 gap-y-1.5 flex-wrap text-pq-h5 font-sans font-medium text-[var(--pq-ivory-soft)]">
             {(() => {
               const sec = sectorLine && sectorLine !== "—" ? sectorLine : "";
               // Treat "UNKNOWN" (any case) as empty — same guard as sectorLine above.
@@ -362,7 +362,7 @@ export function DetailHero(props: DetailHeroProps) {
                   </span>
                   <span className="uppercase tracking-[0.12em] inline-flex items-baseline gap-1">
                     시총{" "}
-                    <span className="font-mono tabular-nums text-pq-h4 normal-case text-[var(--pq-ivory-soft)]">
+                    <span className="font-mono tabular-nums text-pq-h5 normal-case text-[var(--pq-ivory-soft)]">
                       {num}
                       {suffix}
                     </span>
@@ -407,7 +407,7 @@ export function DetailHero(props: DetailHeroProps) {
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
               {/* Giant price — the protagonist */}
               <div className="lg:col-span-6">
-                <FieldLabel>Current price</FieldLabel>
+                <FieldLabel size="var(--pq-text-h5)">Current price</FieldLabel>
                 <div className="mt-1.5">
                   {loadingSignal && !signal ? (
                     <Skeleton className="h-14 w-56" />
@@ -424,7 +424,7 @@ export function DetailHero(props: DetailHeroProps) {
                       }}
                     >
                       {heroSplit.symbol && (
-                        <span className="text-[0.5em] text-[var(--pq-ivory-mid)] align-baseline mr-0.5">
+                        <span className="text-[0.5em] text-[var(--pq-ivory-mid)] align-baseline mr-2.5">
                           {heroSplit.symbol}
                         </span>
                       )}
@@ -439,7 +439,7 @@ export function DetailHero(props: DetailHeroProps) {
                   ) : (
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1.5 tabular-nums font-mono text-pq-h4",
+                        "inline-flex items-center gap-1.5 tabular-nums font-mono text-pq-h5",
                         pctColorClass(signal?.change_pct),
                       )}
                     >
@@ -477,11 +477,11 @@ export function DetailHero(props: DetailHeroProps) {
                 {/* Quote stats — derived (52W distance + avg volume), fills the
                     formerly empty right half of the price column. */}
                 {(pctFromLow != null || pctFromHigh != null || avgVolStr) && (
-                  <div className="mt-4 flex items-center gap-x-6 gap-y-2 flex-wrap font-mono text-pq-body tracking-[0.02em] text-[var(--pq-ivory-mid)]">
+                  <div className="mt-4 flex items-center gap-x-6 gap-y-2 flex-wrap font-mono text-pq-h5 font-medium tracking-[0.01em] text-[var(--pq-ivory-soft)]">
                     {pctFromLow != null && (
                       <span>
                         52주 저점대비{" "}
-                        <span className={cn("text-pq-lead font-medium tabular-nums", pctColorClass(pctFromLow))}>
+                        <span className={cn("font-medium tabular-nums", pctColorClass(pctFromLow))}>
                           {fmtPct(pctFromLow)}
                         </span>
                       </span>
@@ -489,7 +489,7 @@ export function DetailHero(props: DetailHeroProps) {
                     {pctFromHigh != null && (
                       <span>
                         고점대비{" "}
-                        <span className={cn("text-pq-lead font-medium tabular-nums", pctColorClass(pctFromHigh))}>
+                        <span className={cn("font-medium tabular-nums", pctColorClass(pctFromHigh))}>
                           {fmtPct(pctFromHigh)}
                         </span>
                       </span>
@@ -497,7 +497,7 @@ export function DetailHero(props: DetailHeroProps) {
                     {avgVolStr && (
                       <span>
                         평균 거래량{" "}
-                        <span className="text-pq-lead font-medium tabular-nums text-[var(--pq-ivory-soft)]">
+                        <span className="font-medium tabular-nums text-[var(--pq-ivory-soft)]">
                           {avgVolStr}
                         </span>
                       </span>
@@ -508,14 +508,14 @@ export function DetailHero(props: DetailHeroProps) {
                 {/* 52W rail */}
                 {hasRange && (
                   <div className="mt-6 max-w-md">
-                    <div className="flex items-baseline justify-between font-mono tabular-nums text-[var(--pq-ivory-dim)]">
-                      <span className="text-pq-h4">
+                    <div className="flex items-baseline justify-between font-mono tabular-nums font-medium text-[var(--pq-ivory-soft)]">
+                      <span className="text-pq-h5">
                         {fmtPrice(week52Low, krw)}
                       </span>
-                      <span className="text-pq-mono-tiny tracking-[0.12em] uppercase text-[var(--pq-bronze)]">
+                      <span className="text-pq-mono-xs tracking-[0.12em] uppercase text-[var(--pq-bronze)]">
                         52W Range
                       </span>
-                      <span className="text-pq-h4">
+                      <span className="text-pq-h5">
                         {fmtPrice(week52High, krw)}
                       </span>
                     </div>
@@ -538,7 +538,7 @@ export function DetailHero(props: DetailHeroProps) {
               <div className="lg:col-span-6 lg:border-l lg:border-[var(--pq-ivory-line)] lg:pl-8">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <FieldLabel>Signal</FieldLabel>
+                    <FieldLabel size="var(--pq-text-h5)">Signal</FieldLabel>
                     <div className="mt-1.5">
                       <span className={signalChipClass}>
                         {pillarToken(signalToken)}
@@ -546,13 +546,12 @@ export function DetailHero(props: DetailHeroProps) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <FieldLabel tone="muted">Composite</FieldLabel>
+                    <FieldLabel tone="muted" size="var(--pq-text-h5)">Composite</FieldLabel>
                     <div
                       className={cn(
-                        /* Tier 2 — composite is a key supporting number,
-                           below the Tier-1 hero price. Unified to callout
-                           (22px) token; was 28–36px inline clamp. */
-                        "font-mono tabular-nums leading-none mt-1 text-pq-callout",
+                        /* Unified to text-pq-h5 (18px) with the rest of the hero
+                           secondary content (CEO 2026-05-26: "다 같은 사이즈로"). */
+                        "font-mono tabular-nums leading-none mt-1 text-pq-h5",
                         signalTone === "pos"
                           ? "text-[var(--up)]"
                           : signalTone === "neg"
