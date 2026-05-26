@@ -542,7 +542,7 @@ def _do_migrations():
     _add_column_if_missing("users", "available_capital_krw", "FLOAT", default="0.0")
     _add_column_if_missing("users", "risk_profile", "VARCHAR(20)", default="'balanced'")
     _add_column_if_missing("users", "profile_changes_left", "INTEGER", default="3")
-    _add_column_if_missing("users", "subscription_tier", "VARCHAR(10)", default="'free'")
+    _add_column_if_missing("users", "subscription_tier", "VARCHAR(32)", default="'free'")
     _add_column_if_missing("users", "onboarding_completed", "BOOLEAN", default="0")
     _add_column_if_missing("users", "google_id", "VARCHAR(100)", unique=True)
     _add_column_if_missing("users", "avatar_url", "VARCHAR(500)")
@@ -807,6 +807,54 @@ def _do_migrations():
     # all their current columns are in the initial create_all snapshot.
     # No post-creation additions observed. Declared here as a no-op safety
     # net so future model additions auto-get a migration hook.
+
+    # Widen subscription_tier (legacy VARCHAR(10) boxes) + backfill env-override
+    # tiers (2026-05-26). Cron artifact fan-out queries `subscription_tier` at
+    # the DB layer; `effective_tier` (DEV_FOUNDING_EMAILS / DEV_PREMIUM_EMAILS)
+    # is a runtime property never materialised to the column, so owner/tester
+    # override accounts (DB tier 'free') were silently excluded from every
+    # scheduled artifact. Widen so 'founding_lifetime' (17 chars) fits, then
+    # upgrade matching emails in the DB (upgrade-only — never downgrades a real
+    # Stripe-paid tier; mirrors effective_tier's "highest wins" rule).
+    try:
+        if is_postgres:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    "ALTER TABLE users ALTER COLUMN subscription_tier TYPE VARCHAR(32)"
+                ))
+        from models import User as _User
+
+        def _env_emails(var):
+            raw = os.environ.get(var, "") or ""
+            return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+        _TIER_RANK = {
+            "free": 0, "pro": 1, "premium": 2, "premium_plus": 3, "founding_lifetime": 4,
+        }
+        _grants = [
+            (_env_emails("DEV_FOUNDING_EMAILS"), "founding_lifetime"),
+            (_env_emails("DEV_PREMIUM_EMAILS"), "premium"),
+        ]
+        _changed = 0
+        for _emails, _tier in _grants:
+            if not _emails:
+                continue
+            rows = _User.query.filter(
+                db.func.lower(_User.email).in_(_emails)
+            ).all()
+            for _u in rows:
+                if _TIER_RANK.get(_u.subscription_tier or "free", 0) < _TIER_RANK[_tier]:
+                    _u.subscription_tier = _tier
+                    _changed += 1
+        if _changed:
+            db.session.commit()
+            logger.info("Backfilled subscription_tier for %d env-override users", _changed)
+    except Exception:
+        logger.debug("silent-fallback: env-tier backfill", exc_info=True)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
 
     # Backfill FX rates
     from models import Position

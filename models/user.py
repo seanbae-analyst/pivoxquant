@@ -49,7 +49,7 @@ class User(UserMixin, db.Model):
     available_capital_krw = db.Column(db.Float, default=0.0)
     risk_profile          = db.Column(db.String(20), default="balanced")
     profile_changes_left  = db.Column(db.Integer, default=3)
-    subscription_tier     = db.Column(db.String(10), default="free")
+    subscription_tier     = db.Column(db.String(32), default="free")  # fits 'founding_lifetime' (17)
     stripe_customer_id    = db.Column(db.String(100), nullable=True)
     stripe_subscription_id = db.Column(db.String(100), nullable=True)
     subscription_status   = db.Column(db.String(20), default="inactive")
