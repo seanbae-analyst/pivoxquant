@@ -481,9 +481,9 @@ def render_d10():
                    fill=(184, 149, 106, 18))
     draw.rectangle([MID + 20, PANEL_TOP, W - 80, PANEL_BOT],
                    outline=BRONZE + (60,), width=1)
-    # 우 제목 (TITLE_Y와 동일)
+    # 우 제목 (TITLE_Y와 동일) — bronze 배경 위라 Vantablack으로 가독성 확보
     draw.text((RIGHT_CX, TITLE_Y), "PivoxQuant",
-              font=_f(_JETBRAINS_B, 26), fill=BRONZE, anchor="mm")
+              font=_f(_JETBRAINS_B, 26), fill=INK + (255,), anchor="mm")
     # 우 불릿 (BULLET_Y1/Y2와 동일)
     draw.text((RIGHT_CX, BULLET_Y1), "정해진 시각에",
               font=_f(_KR_SANS, 26), fill=IVORY, anchor="mm")
