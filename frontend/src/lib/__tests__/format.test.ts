@@ -34,6 +34,18 @@ describe("format", () => {
     expect(fmtPct(12.3)).toBe("+12.30%");
     expect(fmtPct(-5)).toBe("-5.00%");
     expect(fmtPct(0)).toBe("+0.00%");
+    expect(fmtPct(-1.5)).toBe("-1.50%");
+  });
+
+  it("fmtPct: missing data is NOT fabricated as +0.00% (자본시장법 §101)", () => {
+    // null/undefined → "—" (no data), NOT "+0.00%" (a real "no change").
+    expect(fmtPct(null)).toBe("—");
+    expect(fmtPct(undefined)).toBe("—");
+    // A genuine numeric zero IS a valid 0% reading → keep "+0.00%".
+    expect(fmtPct(0)).toBe("+0.00%");
+    // Non-finite stays "—".
+    expect(fmtPct(NaN)).toBe("—");
+    expect(fmtPct(Infinity)).toBe("—");
   });
 });
 

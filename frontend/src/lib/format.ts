@@ -54,7 +54,11 @@ export function fmtRange52w(
 }
 
 export function fmtPct(v: number | null | undefined): string {
-  const n = v ?? 0;
+  // Data-honesty guard (\uc790\ubcf8\uc2dc\uc7a5\ubc95 \u00a7101): a missing value must NEVER be
+  // fabricated as "+0.00%" (which reads as a real "no change" datapoint).
+  // null/undefined \u2192 "\u2014". A genuine numeric 0 stays "+0.00%" (valid 0% move).
+  if (v == null) return "\u2014";
+  const n = v;
   if (!isFinite(n)) return "\u2014";
   const s = n >= 0 ? "+" : "";
   return `${s}${n.toFixed(2)}%`;

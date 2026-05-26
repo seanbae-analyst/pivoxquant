@@ -653,7 +653,7 @@ export default function DiscoverPage() {
                         </td>
                         <td className="num">{priceDisplay}</td>
                         <td className={"num " + pctColorClass(item.change_pct)}>
-                          {fmtPct(item.change_pct ?? 0)}
+                          {fmtPct(item.change_pct)}
                         </td>
                         <td>
                           <span className={"pq-ink-pill " + pillCls}>

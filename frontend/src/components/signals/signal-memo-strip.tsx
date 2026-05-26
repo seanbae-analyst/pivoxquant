@@ -15,7 +15,7 @@
 
 import * as React from "react";
 import { ChevronDown } from "lucide-react";
-import { fmtPct, displayTicker, normalizeTicker } from "@/lib/format";
+import { fmtPct, displayTicker, normalizeTicker, priceDir } from "@/lib/format";
 
 export interface MemoSignalItem {
   ticker: string;
@@ -77,7 +77,14 @@ export function SignalMemoStrip({
   onToggle,
   onOpenDetail,
 }: Props) {
-  const isPositive = (item?.change_pct ?? 0) >= 0;
+  // KR convention: ▲ rising = carmine, ▼ falling = indigo, flat/null = neutral.
+  // null change_pct must NOT default to the "up" color (would imply a real gain).
+  const pctTone =
+    priceDir(item?.change_pct) === "up"
+      ? "#a54545"
+      : priceDir(item?.change_pct) === "down"
+        ? "#3a5a8a"
+        : "rgba(20,20,20,0.48)";
   const tone = chipColor(item.signal);
   const subScores: { label: string; value: number | undefined }[] = [
     { label: "Trend", value: item.tech_score },
@@ -161,11 +168,11 @@ export function SignalMemoStrip({
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 fontVariantNumeric: "tabular-nums",
-                color: isPositive ? "#4a7a52" : "#a54545",
+                color: pctTone,
                 marginTop: 1,
               }}
             className="font-mono" >
-              {fmtPct(item?.change_pct ?? 0)}
+              {fmtPct(item?.change_pct)}
             </div>
           </div>
 
