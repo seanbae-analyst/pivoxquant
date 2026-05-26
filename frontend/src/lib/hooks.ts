@@ -1198,3 +1198,93 @@ export async function saveNotificationPreferences(
     },
   );
 }
+
+/* ── Customer support — 고객문의센터 + AI 고객지원 (2026-05-26) ─────────────
+ *
+ * Additive. SWR reads for the inquiry list/detail + mutation helpers for
+ * creating an inquiry and sending an AI-support chat turn. Mutations route
+ * through `apiFetch` so CSRF + credentials + 30s timeout + 401/429 handling
+ * match the rest of the SPA (apiFetch throws `ApiError` with `.status`).
+ *
+ * Legal: this is a CUSTOMER-SUPPORT assistant (billing/account/usage) — not
+ * an investment coach. No signal/advice vocabulary round-trips here.
+ */
+
+import type {
+  SupportInquiriesResponse,
+  SupportInquiryDetail,
+  SupportInquiryCreateBody,
+  SupportInquiryCreateResponse,
+  SupportChatMessage,
+  SupportChatRequest,
+  SupportChatResponse,
+} from "./types";
+
+/**
+ * The user's own inquiry list (내 문의함). Newest-first ordering is the
+ * backend's responsibility. `fallbackData` keeps the list mapper NPE-safe
+ * during the initial undefined frame. SWR key is the bare endpoint so the
+ * cache is shared with `createSupportInquiry`'s post-submit `mutate`.
+ */
+export function useSupportInquiries() {
+  return useSWR<SupportInquiriesResponse>(API.support.inquiries, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 15_000,
+    errorRetryCount: 2,
+    fallbackData: { inquiries: [] },
+  });
+}
+
+/**
+ * A single inquiry's full record (원문 + admin_reply). `id` is passed
+ * through verbatim (string from `useParams`) — the backend route parses
+ * `<int:iid>`. Pass `null`/`undefined` to disable the fetch (SWR null key).
+ */
+export function useSupportInquiry(id: string | number | null | undefined) {
+  return useSWR<SupportInquiryDetail>(
+    id != null && id !== "" ? API.support.inquiry(id) : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 15_000,
+      errorRetryCount: 2,
+    },
+  );
+}
+
+/**
+ * Submit a 1:1 inquiry. Returns the created envelope ({id,status,created_at}).
+ * Throws `ApiError` on 400 (validation) / 401 / 429 (RATE_LIMITED) so the
+ * caller can branch the inline error message. The caller is responsible for
+ * `mutate(API.support.inquiries)` after success to refresh the inbox.
+ */
+export async function createSupportInquiry(
+  body: SupportInquiryCreateBody,
+): Promise<SupportInquiryCreateResponse> {
+  return apiFetch<SupportInquiryCreateResponse>(API.support.inquiries, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Send one AI-support chat turn. `history` should carry only normal
+ * conversation turns (≤10) — error/guidance bubbles are excluded by the
+ * caller. Throws `ApiError` on 400 (INVALID_MESSAGE) / 401 / 429.
+ */
+export async function sendSupportChat(
+  message: string,
+  history?: SupportChatMessage[],
+): Promise<SupportChatResponse> {
+  const payload: SupportChatRequest = { message };
+  if (history && history.length > 0) {
+    // Defensive cap — the backend also enforces ≤10 turns.
+    payload.history = history.slice(-10);
+  }
+  return apiFetch<SupportChatResponse>(API.support.chat, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

@@ -822,6 +822,19 @@ def _do_migrations():
         except Exception as exc:
             logger.warning("Migration: could not create funnel_events: %s", exc)
 
+    # inquiries (고객문의센터, migration 044) — support tickets (contact form +
+    # chatbot auto-escalation). ORM 모델(models/inquiry.py)이라 db.create_all()
+    # 범위 안이지만, prod 는 alembic 미적용 self-heal 패턴이라 boot-time 가드를
+    # 둔다. 테이블 부재 시 POST /api/support/inquiries / /chat 의 INSERT 가
+    # ProgrammingError 로 500 → 문의 접수 전면 불가. 멱등 (테이블 존재 시 skip).
+    if "inquiries" not in existing_tables:
+        try:
+            from models.inquiry import Inquiry  # noqa: F401
+            db.metadata.tables["inquiries"].create(bind=db.engine)
+            logger.info("Migration: created table inquiries")
+        except Exception as exc:
+            logger.warning("Migration: could not create inquiries: %s", exc)
+
     # Portfolio shares / push subscriptions / signal_cache / watchlist —
     # all their current columns are in the initial create_all snapshot.
     # No post-creation additions observed. Declared here as a no-op safety

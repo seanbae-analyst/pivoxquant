@@ -197,6 +197,11 @@ class User(UserMixin, db.Model):
                                          uselist=False, lazy=True)
     broker_connections = db.relationship("BrokerConnection", backref="user",
                                          lazy=True)
+    # Support tickets (고객문의센터). delete-orphan so a HARD account delete
+    # (PIPA §21 after the 30-day grace) removes the tickets too; soft-delete
+    # (deletion_requested_at set, row retained) leaves them intact.
+    inquiries = db.relationship("Inquiry", backref="user", lazy=True,
+                                cascade="all, delete-orphan")
 
     def set_pw(self, pw):
         self.password_hash = generate_password_hash(

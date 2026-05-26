@@ -52,6 +52,12 @@ from .nps_feedback import NpsFeedback
 # Wave I C-1 — OAuth lifecycle event log (start/success/fail).
 # Viral loop — 0원 자체 퍼널 추적 (POST /api/track).
 from .funnel_event import FunnelEvent, ALLOWED_EVENTS as FUNNEL_ALLOWED_EVENTS
+# Customer support center — support tickets (form + chatbot auto-escalation).
+from .inquiry import (
+    Inquiry,
+    VALID_STATUSES as INQUIRY_VALID_STATUSES,
+    VALID_CATEGORIES as INQUIRY_VALID_CATEGORIES,
+)
 from .auth_event import (
     AuthEvent,
     EVENT_TYPE_START as AUTH_EVENT_START,
@@ -87,4 +93,5 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "AuthEvent",
            "AUTH_EVENT_START", "AUTH_EVENT_SUCCESS", "AUTH_EVENT_FAIL",
            "AUTH_PROVIDER_GOOGLE", "AUTH_PROVIDER_KAKAO",
-           "FunnelEvent", "FUNNEL_ALLOWED_EVENTS"]
+           "FunnelEvent", "FUNNEL_ALLOWED_EVENTS",
+           "Inquiry", "INQUIRY_VALID_STATUSES", "INQUIRY_VALID_CATEGORIES"]

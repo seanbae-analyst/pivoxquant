@@ -299,6 +299,24 @@ export const API = {
     marketing: "/api/consents/marketing",
     crossBorder: "/api/consents/cross-border",
   },
+  // Customer support — 고객문의센터 + AI 고객지원 챗봇 (2026-05-26).
+  // Backend contract (locked, see routes/support.py):
+  //   POST   /api/support/inquiries      {category,subject,body}
+  //            → 201 {id,status,created_at} | 400/401/429 RATE_LIMITED
+  //   GET    /api/support/inquiries      → {inquiries:[...]}
+  //   GET    /api/support/inquiries/:id  → {id,category,subject,body,status,
+  //            admin_reply,created_at,answered_at,has_reply}
+  //   POST   /api/support/chat           {message(1..2000),history?:[...]}
+  //            → 200 {reply,escalated,inquiry_id} | 400 INVALID_MESSAGE/401/429
+  // Admin slots are declared for parity with routes/support.py admin handlers
+  // (no frontend consumer yet — the user-facing pages never call them).
+  support: {
+    inquiries: "/api/support/inquiries",
+    inquiry: (id: string | number) => `/api/support/inquiries/${id}`,
+    chat: "/api/support/chat",
+    adminInquiries: "/api/admin/support/inquiries",
+    adminReply: (id: string | number) => `/api/admin/support/inquiries/${id}/reply`,
+  },
 } as const;
 
 // Portfolio (added 2026-04-22) — frontend-shape aliases for the new /portfolio page.

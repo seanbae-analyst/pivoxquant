@@ -559,3 +559,84 @@ export interface SignalFilters {
   // DEFAULT_FILTERS comment.
   window: "today" | "7d" | "30d" | "all";
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Customer support — 고객문의센터 + AI 고객지원 (2026-05-26).
+ *
+ * Additive only. Backend contract locked in routes/support.py + endpoints.ts
+ * `API.support`. The AI chat surface is "AI 고객지원" (customer-support
+ * assistant) — never an investment coach (자본시장법). No BUY/SELL/HOLD or
+ * 추천/조언 vocabulary round-trips through these shapes.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/** Inquiry category — billing(결제/환불) / account(계정) / technical(기술) / other(기타). */
+export type SupportCategory = "billing" | "account" | "technical" | "other";
+
+/** Inquiry status — open(접수) / answered(답변완료) / closed. */
+export type SupportStatus = "open" | "answered" | "closed";
+
+/** Row shape returned by GET /api/support/inquiries (list). */
+export interface SupportInquiryListItem {
+  id: number;
+  category: SupportCategory;
+  subject: string;
+  status: SupportStatus;
+  created_at: string;
+  answered_at: string | null;
+  has_reply: boolean;
+}
+
+/** Full record returned by GET /api/support/inquiries/:id (detail). */
+export interface SupportInquiryDetail {
+  id: number;
+  category: SupportCategory;
+  subject: string;
+  body: string;
+  status: SupportStatus;
+  admin_reply: string | null;
+  created_at: string;
+  answered_at: string | null;
+  has_reply: boolean;
+}
+
+/** GET /api/support/inquiries → list envelope. */
+export interface SupportInquiriesResponse {
+  inquiries: SupportInquiryListItem[];
+}
+
+/** POST /api/support/inquiries body. */
+export interface SupportInquiryCreateBody {
+  category: SupportCategory;
+  subject: string;
+  body: string;
+}
+
+/** POST /api/support/inquiries → 201 created envelope. */
+export interface SupportInquiryCreateResponse {
+  id: number;
+  status: SupportStatus;
+  created_at: string;
+}
+
+/** One conversation turn passed back to POST /api/support/chat (history). */
+export interface SupportChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** POST /api/support/chat body. history is capped at 10 turns server-side. */
+export interface SupportChatRequest {
+  message: string;
+  history?: SupportChatMessage[];
+}
+
+/**
+ * POST /api/support/chat → reply envelope. When `escalated` is true and
+ * `inquiry_id` is a positive number, the bot opened a 1:1 inquiry on the
+ * user's behalf (surface a "내 문의함에서 보기" link).
+ */
+export interface SupportChatResponse {
+  reply: string;
+  escalated: boolean;
+  inquiry_id: number | null;
+}

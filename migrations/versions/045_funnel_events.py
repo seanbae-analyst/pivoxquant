@@ -1,7 +1,7 @@
 """funnel_events table + viral-loop attribution columns.
 
 Revision ID: 045_funnel_events
-Revises: 043_notification_prefs
+Revises: 044_inquiries
 Create Date: 2026-05-26
 
 Viral loop backend (Wave B input)
@@ -34,7 +34,9 @@ from sqlalchemy.dialects import postgresql
 
 
 revision = "045_funnel_events"
-down_revision = "043_notification_prefs"
+# 2026-05-26: repointed from 043_notification_prefs → 044_inquiries so the
+# support-tickets migration (044) wedges in cleanly and the head stays single.
+down_revision = "044_inquiries"
 branch_labels = None
 depends_on = None
 

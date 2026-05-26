@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Settings, CreditCard, Keyboard, HelpCircle, LogOut } from "lucide-react";
+import { User, Settings, CreditCard, Keyboard, HelpCircle, LifeBuoy, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/utils";
@@ -179,6 +179,9 @@ export function ProfileDropdown() {
               >
                 {t("profileMenu.keyboardShortcuts")}
               </MenuButton>
+              <MenuLink href="/support" icon={<LifeBuoy className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
+                고객지원
+              </MenuLink>
               <MenuLink href="/docs" icon={<HelpCircle className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
                 {t("profileMenu.helpDocs")}
               </MenuLink>
