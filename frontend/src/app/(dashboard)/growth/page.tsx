@@ -154,6 +154,7 @@ export default function GrowthPage() {
   const {
     data: graphData,
     error: graphError,
+    mutate: refreshGraph,
   } = useGrowthData("365d");
   const {
     data: todayData,
@@ -161,7 +162,7 @@ export default function GrowthPage() {
     error: todayError,
     mutate: refreshToday,
   } = useGrowthToday();
-  const { data: weeklyData, error: weeklyError } = useGrowthWeekly();
+  const { data: weeklyData, error: weeklyError, mutate: refreshWeekly } = useGrowthWeekly();
 
   // 2026-05-08 (NEW-E): agent_worker.growth_routes is registered as an
   // optional blueprint in routes/__init__.py. When the agent_worker package
@@ -193,6 +194,16 @@ export default function GrowthPage() {
   const handleReflectionSubmitted = useCallback(() => {
     refreshToday();
   }, [refreshToday]);
+
+  // Growth OS is live in prod (all /api/growth/* endpoints are registered).
+  // When all three feeds error it's a transient/load failure, not a
+  // not-yet-built feature — re-fetch all three instead of telling the user
+  // "coming soon".
+  const handleGrowthRetry = useCallback(() => {
+    refreshGraph();
+    refreshToday();
+    refreshWeekly();
+  }, [refreshGraph, refreshToday, refreshWeekly]);
 
   const currentStreak = todayData?.score?.streak ?? 0;
 
@@ -237,7 +248,7 @@ export default function GrowthPage() {
               }}
             >
               <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
-                {growthUnavailable ? "준비 중" : "불러오는 중"}
+                {growthUnavailable ? "잠시 불러오지 못했어요" : "불러오는 중"}
               </span>
             </h1>
             <p
@@ -251,15 +262,35 @@ export default function GrowthPage() {
               }}
             >
               {growthUnavailable
-                ? "Growth OS 서비스는 현재 준비 중입니다. 곧 다시 만나요."
+                ? "Growth OS 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
                 : "Growth OS를 불러오는 중입니다…"}
               <br />
               <span style={{ color: "rgba(245,240,232,0.55)" }}>
                 {growthUnavailable
-                  ? "Growth OS is being prepared. We'll be back shortly."
+                  ? "Couldn't load Growth OS just now. Please try again."
                   : "Loading your Growth OS…"}
               </span>
             </p>
+            {growthUnavailable && (
+              <button
+                type="button"
+                onClick={handleGrowthRetry}
+                className="font-mono uppercase"
+                style={{
+                  marginTop: 32,
+                  padding: "12px 28px",
+                  fontSize: "var(--pq-text-button)",
+                  letterSpacing: "0.12em",
+                  color: "var(--pq-ink)",
+                  background: "var(--pq-bronze)",
+                  border: "none",
+                  borderRadius: "var(--pq-radius-card)",
+                  cursor: "pointer",
+                }}
+              >
+                다시 시도
+              </button>
+            )}
           </section>
         </div>
       </ErrorBoundary>
