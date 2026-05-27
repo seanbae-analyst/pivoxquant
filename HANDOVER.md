@@ -1,4 +1,42 @@
-# PivoxQuant — 인수인계서 (2026-05-24 v52 — 버그헌팅 3R + CEO 라이브 도그푸딩 + 통화표기 전면 개편 + 출시 하드닝)
+# PivoxQuant — 인수인계서 (2026-05-27 v53 — PWA 검증 + 전체 버그헌팅 + PDF 이메일 중점 + main 리컨실 + repo 정리)
+
+## v53 2026-05-27 — PWA 검증 + 버그헌팅(6 agent) + PDF 이메일 + main push + 브랜치 정리
+
+> **결론**: `origin/main` 에 fix **6커밋 push 완료** (`9d46e6a7 → 7398c95e`), local main 완전 동기(0/0). 자율 full-throttle("모든 권한+push"). agent 6개 병렬 헌팅 → 실버그 6건 직접 검증 후 fix. 검증: 풀 pytest **3454 passed**(유일 fail = fx_staleness 기존 flaky, 단독 PASS) / vitest 493 / tsc 0 / build 0 / pre-push 가드(alembic·stripe·regression·sanity·smoke) 전통과. **0원.**
+
+### main 커밋 (f1032480..7398c95e)
+```
+7398c95e fix(format): fmtPct(null) "+0.00%" 날조 차단 §101 (4 surface) + signal-memo-strip 색상 KR컨벤션 정정
+15227cfb fix(billing): 계정 삭제 시 Stripe 구독 취소 §17/§21 (delete_account/delete_request/pipa_purge 3경로, non-fatal·멱등)
+ec98697e fix(email/artifacts): sg_message_id 추적 복구 §50 (sender X-Message-Id 캡처 + 17경로 getattr persist) + PDF size guard + AI badge 2종 + credit_rating "None" default(,true)
+bc5c4d4b fix(pwa/mobile): sticky 보조헤더 노치 더블카운트 회귀 (--pq-aux-sticky-top = bare 56px)
+66171369 fix(design): offline.html bronze #E2B96F → 브랜드 #B8956A
+f1032480 fix(pwa/mobile): 모바일 모달 z-order(ModalShell)·safe-area·44px 터치 + offline 한글화
+```
+
+### 리컨실 방법 (중요 — 크로스머신 divergence)
+- 로컬 ~/dev가 origin/main보다 27커밋 뒤처져 있었음. 미커밋 3파일(artifacts.py + 테스트 2) = **origin/main과 100% 동일**(이미 원격, push할 새것 아님). support 4커밋도 origin에 다른 해시로 이미 존재.
+- **진짜 새것 = 내 fix 6개** → `origin/main`에서 새 브랜치 → cherry-pick(충돌 0) → `git push origin reconcile-main:main` fast-forward. baseline chore는 origin이 이미 G3=13 갱신해 redundant skip.
+
+### CEO 인계 — 미수정 FLAG (충돌/가설/dormant/정책)
+- **email per-row commit이 FOR UPDATE SKIP LOCKED 락 해제 → double-send** (retention/onboarding_sequence): latent(1워커+APScheduler max_instances=1이라 현재 무해). 멀티워커 전 fix 필요.
+- billing unknown price_id tier 불일치(연간플랜 도입 전 fix) / artifacts `/download` tier gate 누락(다운그레이드 정책 결정) / portfolio_analytics() 혼합 FX 미정규화(소비처 0 dormant) / SW CLEAR_API_CACHE controller-null(SWR완화) / 298 Jinja default() 회귀게이트 / PDF bronze #c9963f vs #B8956A·KR색상 PDF↔web 불일치(P2 브랜드) / Q14 변호사 AI-badge form 확정.
+
+### PWA 검증 (작동 확인)
+모바일 디자인/설치(manifest·SW·iOS A2HS)/오프라인 3종 라이브 OK(375px). dashboard authed 화면은 백엔드+로그인 필요라 정적검증만.
+
+### Railway (HOBBY, 실측)
+web CPU~0%/Mem 5% · Postgres CPU 0%/Mem 1% · 5xx 0%. 여유. ⚠️ 워크스페이스 2번째 프로젝트 `merry-abundance` 정체불명(미사용시 과금방지 삭제검토). billing 잔액은 웹 대시보드.
+
+### repo 정리
+로컬 브랜치 **232→54** 안전 삭제(178: 검증35 + 일회용22 + dated PR 121, reflog 90일 복구망). 죽은 worktree참조 10 prune. redundant 원격 백업브랜치 삭제. **남은 54 = 의도적 보존**(미푸시 고유커밋 ~29: bug_sweep 24·structure_refactor 7·fix-quant 8·v45 findings — origin에 없음 / worktree연결 8 / main). **worktree 35 · stash 53(stash@{0}=CEO미커밋 drop 복구불가) 미접촉.** 정리하려면 archive push 후 삭제(각 push 훅 느림) 또는 CEO 직접 검토.
+
+### 다음 ACTION
+1. FLAG 중 §50 email double-send은 멀티워커 전환 시 必 fix.
+2. 미푸시 보존 브랜치 29개 — 버려도 되는지 CEO 확인 후 정리.
+3. Railway `merry-abundance` 정체 확인 + billing 대시보드 점검.
+
+---
 
 ## v52 2026-05-24 — 마라톤 세션 (버그헌팅 3R → CEO 라이브 피드백 → 통화/UI 개편), 전부 push+배포
 
