@@ -9,9 +9,10 @@
  *   RESEARCH   · 조사·분석 (Market / Discover / AI Chat / AI Analysis)
  *   SYSTEM     · 도구·계정 (Alerts / Companion / Journal / Profile · Persona / Settings)
  *
- * Note: "Journal" label maps to /growth route. Display label avoids
- * "Growth" to prevent confusion with capital-market asset-growth
- * language under KR financial advisory law.
+ * Note: /growth (Growth OS — a habit/reflection routine tracker) is
+ * surfaced as "Routine". The label avoids the word "Growth" to prevent
+ * confusion with capital-market asset-growth/return language under KR
+ * financial advisory law (§101).
  *
  * Profile · Persona surfaces the account + investor-persona page directly
  * in the rail (it was previously only reachable via the top-bar avatar).
@@ -40,6 +41,7 @@ import {
   BookHeart,
   NotebookPen,
   UserCircle,
+  Sprout,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -119,9 +121,14 @@ const SYSTEM: Item[] = [
   { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
   // 2026-05-21: "Journal" restored as a real user surface — /journal renders
   // the user's own pre-trade decision-reflection feed (read-only, "User as
-  // CFO"). Distinct from /growth, the founder-only Growth OS, which stays
-  // hidden (agent_worker backend not deployed → "준비 중" dead-end).
+  // CFO").
   { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
+  // 2026-05-28: Growth OS (/growth) surfaced in the rail per CEO. Earlier
+  // comment claimed "agent_worker backend not deployed → 준비 중" — STALE:
+  // verified live in prod (/api/growth/{today,data,weekly}=401-behind-auth,
+  // /reflect=405). It is a habit/reflection routine tracker; label "Routine"
+  // avoids the asset-growth/return implication of "Growth" under §101.
+  { key: "growth", label: "Routine", href: "/growth", icon: Sprout },
   { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
 ];

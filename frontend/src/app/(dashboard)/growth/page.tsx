@@ -237,7 +237,7 @@ export default function GrowthPage() {
               }}
             >
               <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
-                준비 중
+                {growthUnavailable ? "준비 중" : "불러오는 중"}
               </span>
             </h1>
             <p
@@ -250,10 +250,14 @@ export default function GrowthPage() {
                 margin: 0,
               }}
             >
-              Growth OS 서비스는 현재 준비 중입니다. 곧 다시 만나요.
+              {growthUnavailable
+                ? "Growth OS 서비스는 현재 준비 중입니다. 곧 다시 만나요."
+                : "Growth OS를 불러오는 중입니다…"}
               <br />
               <span style={{ color: "rgba(245,240,232,0.55)" }}>
-                Growth OS is being prepared. We&apos;ll be back shortly.
+                {growthUnavailable
+                  ? "Growth OS is being prepared. We'll be back shortly."
+                  : "Loading your Growth OS…"}
               </span>
             </p>
           </section>
