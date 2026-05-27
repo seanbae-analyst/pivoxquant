@@ -58,8 +58,14 @@ interface MiniRow {
 }
 
 export function PositionsTopCard() {
-  const { data: posData } = usePortfolioPositions<PositionsShape>();
+  const { data: posData, isLoading: posLoading } = usePortfolioPositions<PositionsShape>();
   const positions = posData?.positions ?? [];
+  // Empty-state flash guard (parity with portfolio/_v2 B-11 fix): SWR may
+  // surface `data === undefined` / `isLoading` before the first response
+  // resolves, so an actual holder briefly sees the "Add your first holding"
+  // empty state. Treat the absence of a response as still-loading regardless
+  // of the SWR flag.
+  const isInitialLoad = posData === undefined || (posLoading && !posData);
 
   // 2026-05-15 (bug-hunter P0 + verify-ux fail on PR #383 follow-up):
   // /api/portfolio/positions emits **camelCase** (avgCost / current /
@@ -107,7 +113,50 @@ export function PositionsTopCard() {
 
   return (
     <HomeCard href="/portfolio" eyebrow="Positions · Top weight" cornerCta="Open Book ›">
-      {ranked.length === 0 ? (
+      {isInitialLoad ? (
+        /* Skeleton while the first positions response is in flight — avoids
+           flashing the empty state to a user who actually holds positions. */
+        <div style={{ display: "flex", flexDirection: "column" }} aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto auto",
+                gap: 10,
+                padding: "9px 0",
+                borderBottom: "1px solid var(--pq-hairline-ink)",
+                alignItems: "baseline",
+              }}
+            >
+              <span
+                style={{
+                  height: 12,
+                  width: "55%",
+                  background: "rgba(245,240,232,0.08)",
+                  borderRadius: 2,
+                }}
+              />
+              <span
+                style={{
+                  height: 12,
+                  width: 56,
+                  background: "rgba(245,240,232,0.08)",
+                  borderRadius: 2,
+                }}
+              />
+              <span
+                style={{
+                  height: 12,
+                  width: 40,
+                  background: "rgba(245,240,232,0.08)",
+                  borderRadius: 2,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      ) : ranked.length === 0 ? (
         /* P1-5 (2026-05-20 ux-flow fix): old copy ("Add your first holding
            from the Book") leaned on the internal "Book" metaphor and offered
            no visible action. The whole card is already a <Link href="/portfolio">

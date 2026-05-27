@@ -35,7 +35,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { PORTFOLIO_POSITIONS, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
-import { displayTicker, normalizeTicker } from "@/lib/format";
+import { displayTicker, isKrTicker, normalizeTicker } from "@/lib/format";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
@@ -470,7 +470,13 @@ export function TradeModalV2({
                     style={fieldInputStyle}
                   />
                 </FormField>
-                <FormField label="Price (per share)">
+                <FormField
+                  label={`Price (per share) ${
+                    (position.currency ?? (isKrTicker(position.symbol) ? "KRW" : "USD")) === "KRW"
+                      ? "(KRW)"
+                      : "(USD)"
+                  }`}
+                >
                   <input
                     required
                     type="number"

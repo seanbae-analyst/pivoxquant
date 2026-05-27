@@ -66,6 +66,27 @@ def is_user_allowed_ticker(user_id: int, ticker: str) -> bool:
         logger.warning("access_guard: Watchlist lookup failed for uid=%s ticker=%s: %s",
                        user_id, ticker_upper, e)
 
+    # KR suffix-tolerant fallback. A bare 6-digit URL ("/detail/035760") or a
+    # mis-suffixed code ("035760.KS" for a KOSDAQ stock stored as "035760.KQ")
+    # must still resolve to a holding the user actually owns — KOSPI/KOSDAQ
+    # cannot be inferred client-side, so we compare bare KRX codes here.
+    try:
+        from services.ticker_normalizer import strip_kr_suffix
+        bare = strip_kr_suffix(ticker_upper)
+        if bare:
+            from models.position import Position
+            from models.watchlist import Watchlist
+            for symbol in (bare, f"{bare}.KS", f"{bare}.KQ"):
+                if symbol == ticker_upper:
+                    continue  # already checked above
+                if Position.query.filter_by(user_id=user_id, ticker=symbol).first():
+                    return True
+                if Watchlist.query.filter_by(user_id=user_id, ticker=symbol).first():
+                    return True
+    except Exception as e:  # noqa: BLE001 — defensive
+        logger.warning("access_guard: KR-tolerant lookup failed for uid=%s ticker=%s: %s",
+                       user_id, ticker_upper, e)
+
     return False
 
 

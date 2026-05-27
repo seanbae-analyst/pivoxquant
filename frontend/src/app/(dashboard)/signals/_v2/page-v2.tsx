@@ -48,6 +48,7 @@ import {
 import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
+import { normalizeTicker } from "@/lib/format";
 import type {
   SignalEntry,
   SignalLabel,
@@ -153,13 +154,21 @@ export default function SignalsPageV2() {
       const str = strengthOf(s);
       if (str < filters.strengthMin || str > filters.strengthMax) return false;
       if (filters.symbol) {
+        // The autocomplete now fills the input with the human name
+        // ("삼성전자") rather than a naked ticker (feedback_ticker_display),
+        // so match tolerantly against ticker, normalized ticker, and name.
         const want = filters.symbol.trim().toUpperCase();
-        if (want && s.ticker.toUpperCase() !== want) return false;
+        if (want) {
+          const tkr = s.ticker.toUpperCase();
+          const norm = normalizeTicker(s.ticker).toUpperCase();
+          const nm = resolveTickerName(s.ticker, positions, watchlist).toUpperCase();
+          if (tkr !== want && norm !== want && nm !== want) return false;
+        }
       }
       if (!isWithinWindow(s, filters.window)) return false;
       return true;
     });
-  }, [allSignals, filters]);
+  }, [allSignals, filters, positions, watchlist]);
 
   const counts = React.useMemo(() => {
     let positive = 0;

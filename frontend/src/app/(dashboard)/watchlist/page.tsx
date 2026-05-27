@@ -333,7 +333,7 @@ export default function WatchlistPage() {
                         {normalizeTicker(item.ticker)}
                       </span>
                       <span className="text-pq-caption text-[rgba(245,240,232,0.65)] truncate text-right">
-                        {item.name || item.ticker}
+                        {displayTicker(item.ticker, item.name)}
                       </span>
                     </div>
 

@@ -28,7 +28,7 @@ import {
 } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { fmtPct, pctColorClass, displayName, normalizeTicker } from "@/lib/format";
+import { fmtPct, pctColorClass, displayName, displayTicker, normalizeTicker } from "@/lib/format";
 import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type { DiscoverResult, Position } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/lib/market";
@@ -668,7 +668,7 @@ export default function DiscoverPage() {
                       >
                         <td className="max-w-[260px]">
                           <div className="truncate text-[var(--pq-ivory)]">
-                            {item.name || item.ticker}
+                            {displayTicker(item.ticker, item.name)}
                           </div>
                           {item.name && (
                             <div className="font-mono text-pq-eyebrow tracking-[0.06em] text-[rgba(245,240,232,0.45)] truncate">

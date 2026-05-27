@@ -267,13 +267,15 @@ export function SignalsFilterBar({
           {symbolHints && symbolHints.length > 0 && (
             <datalist id={dataListId}>
               {symbolHints.map((h) => {
-                // CEO rule [feedback_ticker_display]: name first, ticker only as
-                // disambiguation. `value` is the raw ticker because the upstream
-                // filter compares uppercase ticker equality; `label` is what the
-                // browser surfaces in the autocomplete UI.
-                const display =
+                // CEO rule [feedback_ticker_display]: name first, never surface a
+                // naked ".KS"/".KQ" code. On selection the browser fills the input
+                // with `value`, so `value` is the human label (the upstream filter
+                // now matches name OR ticker tolerantly). `label` is the rich text
+                // shown in the autocomplete dropdown.
+                const label =
                   h.name && h.name !== h.ticker ? `${h.name} (${normalizeTicker(h.ticker)})` : displayTicker(h.ticker, h.name);
-                return <option key={h.ticker} value={h.ticker} label={display} />;
+                const value = displayTicker(h.ticker, h.name);
+                return <option key={h.ticker} value={value} label={label} />;
               })}
             </datalist>
           )}

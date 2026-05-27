@@ -39,7 +39,7 @@ import { toast } from "sonner";
 import { PORTFOLIO_POSITIONS, SEARCH } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { displayName, normalizeTicker } from "@/lib/format";
+import { displayName, isKrTicker, normalizeTicker } from "@/lib/format";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
 import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
 
@@ -529,7 +529,7 @@ export function AddPositionModalV2({
                 style={fieldInputStyle}
               />
             </FormField>
-            <FormField label="Avg cost">
+            <FormField label={`Avg cost${sym ? (isKrTicker(sym) ? " (KRW)" : " (USD)") : ""}`}>
               <input
                 required
                 type="number"

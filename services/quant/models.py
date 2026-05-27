@@ -93,18 +93,18 @@ class StatArb:
 
         if z_score > 2.0:
             signal = "SHORT_SPREAD"
-            action = "Spread is too wide — sell A, buy B"
-            action_kr = "스프레드 과대 — A 매도, B 매수"
+            action = "Spread is unusually wide (A/B divergence elevated)"
+            action_kr = "스프레드 과대 관찰 (A/B 괴리 확대)"
             confidence = min(abs(z_score) / 3.0 * 100, 100)
         elif z_score < -2.0:
             signal = "LONG_SPREAD"
-            action = "Spread is too narrow — buy A, sell B"
-            action_kr = "스프레드 과소 — A 매수, B 매도"
+            action = "Spread is unusually narrow (A/B divergence compressed)"
+            action_kr = "스프레드 과소 관찰 (A/B 괴리 축소)"
             confidence = min(abs(z_score) / 3.0 * 100, 100)
         elif abs(z_score) < 0.5:
             signal = "CLOSE"
-            action = "Spread reverted to mean — close position"
-            action_kr = "스프레드 평균 회귀 — 포지션 청산"
+            action = "Spread reverted to its historical mean"
+            action_kr = "스프레드 평균 회귀 관찰"
             confidence = 80
         else:
             signal = "NEUTRAL"
