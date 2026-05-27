@@ -37,7 +37,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, User
-from services.legal_filter import is_compliant, safe_scrub
+from services.legal_filter import detect_prohibited, safe_scrub
 
 logger = logging.getLogger(__name__)
 
@@ -595,8 +595,9 @@ class PortfolioSegmentService:
                 logger.warning("portfolio_segment v3 render failed: %s", exc)
                 html = self._fallback_html(data)
         scrubbed = safe_scrub(html, context="portfolio_segment") or html
-        if not is_compliant(scrubbed):
-            logger.warning("legal_filter fail: portfolio_segment")
+        _prohibited = detect_prohibited(scrubbed)
+        if _prohibited:
+            logger.warning("legal_filter fail: portfolio_segment (%s)", _prohibited)
         return scrubbed
 
     def render_html(self, data: dict[str, Any]) -> str:

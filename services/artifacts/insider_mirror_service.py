@@ -39,7 +39,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, User
-from services.legal_filter import is_compliant, safe_scrub
+from services.legal_filter import detect_prohibited, safe_scrub
 
 logger = logging.getLogger(__name__)
 
@@ -534,8 +534,9 @@ class InsiderMirrorService:
                 logger.warning("insider_mirror v3 render failed: %s", exc)
                 html = self._fallback_html(data)
         scrubbed = safe_scrub(html, context="insider_mirror") or html
-        if not is_compliant(scrubbed):
-            logger.warning("legal_filter fail: insider_mirror")
+        _prohibited = detect_prohibited(scrubbed)
+        if _prohibited:
+            logger.warning("legal_filter fail: insider_mirror (%s)", _prohibited)
         return scrubbed
 
     def render_html(self, data: dict[str, Any]) -> str:

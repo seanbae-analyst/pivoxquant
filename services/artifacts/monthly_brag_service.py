@@ -60,7 +60,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, TradeHistory, User, UserReferral
-from services.legal_filter import is_compliant, safe_scrub
+from services.legal_filter import detect_prohibited, safe_scrub
 
 logger = logging.getLogger(__name__)
 
@@ -554,8 +554,9 @@ background:#0B0D12;color:#F5F0E8;padding:32px;">
 </body></html>"""
         # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
         scrubbed = safe_scrub(html, context="monthly_brag") or html
-        if not is_compliant(scrubbed):
-            logger.warning("legal_filter fail: monthly_brag")
+        _prohibited = detect_prohibited(scrubbed)
+        if _prohibited:
+            logger.warning("legal_filter fail: monthly_brag (%s)", _prohibited)
         return scrubbed
 
     # ── send ─────────────────────────────────────────────────────────────────

@@ -32,7 +32,7 @@ import logging
 from pathlib import Path
 from typing import Any, Optional
 
-from services.legal_filter import is_compliant, safe_scrub
+from services.legal_filter import detect_prohibited, safe_scrub
 
 logger = logging.getLogger(__name__)
 
@@ -215,8 +215,9 @@ class SP500BacktestService:
                 logger.warning("sp500_backtest render failed: %s", exc)
                 html = self._fallback_html(data)
         scrubbed = safe_scrub(html, context="sp500_backtest") or html
-        if not is_compliant(scrubbed):
-            logger.warning("legal_filter fail: sp500_backtest")
+        _prohibited = detect_prohibited(scrubbed)
+        if _prohibited:
+            logger.warning("legal_filter fail: sp500_backtest (%s)", _prohibited)
         return scrubbed
 
     def render_html(self, data: dict[str, Any]) -> str:
