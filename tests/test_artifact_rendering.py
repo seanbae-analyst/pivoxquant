@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import importlib
 import os
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -72,7 +73,7 @@ ARTIFACT_MATRIX: tuple[tuple[str, str, str], ...] = (
     ("quarterly_self_report", "services.artifacts.quarterly_self_report_service", "QuarterlySelfReportService"),
     ("risk_board",            "services.artifacts.risk_board_service",            "RiskBoardService"),
     ("self_audit",            "services.artifacts.self_audit_service",            "SelfAuditService"),
-    ("sp500_backtest",        "services.artifacts.sp500_backtest_service",        "Sp500BacktestService"),
+    ("sp500_backtest",        "services.artifacts.sp500_backtest_service",        "SP500BacktestService"),
     ("weekly_memo",           "services.artifacts.weekly_memo_service",           "WeeklyMemoService"),
     ("year_end_letter",       "services.artifacts.year_end_letter_service",       "YearEndLetterService"),
 )
@@ -94,6 +95,51 @@ SAMPLE_DATA_BUILDERS: dict[str, str] = {
 
 _OUTPUT_ROOT = Path(__file__).parent / "artifacts" / "output"
 _DISCLAIMER_MARKERS = ("정보 제공 목적", "투자 권유", "투자 판단", "Disclaimer", "면책")
+
+# Naked Korean ticker = 6 digits + ".KS"/".KQ" exposed to the user surface.
+# Per feedback_ticker_display.md the hangul display name must be shown
+# instead, so a naked ticker in rendered HTML is a display defect.
+_NAKED_KR_TICKER = re.compile(r"\d{6}\.(?:KS|KQ)")
+
+# Empty-state copy that an artefact emits when a user has no positions
+# (profile #8). Any one of these graceful-fallback phrasings counts.
+#
+# NOTE: this list was calibrated against the *actual* rendered HTML of the
+# 0-position render (not guessed) — services use varied phrasings such as
+# "관찰 사항 없음", "기록을 기다립니다", "누적 후 표시", "거래가 없".  The
+# disclaimer's "매수·매도·보유" string is deliberately NOT a marker (it would
+# match every artefact and hide the real gap).
+_EMPTY_STATE_MARKERS = (
+    "데이터 부족", "표시할", "아직", "없습니다", "없었습니다",
+    "기록을 기다립니다", "관찰 사항 없음", "누적 후 표시",
+    "거래가 없", "기록이 없", "보유 종목이 없", "비어 있",
+    "no positions", "no data", "no trades", "empty", "0개",
+)
+
+
+def _assert_no_naked_kr_ticker(html: str, slug: str, label: str) -> None:
+    """KR-only (#2) / international (#10) must not leak naked KR tickers.
+
+    We assert against the full rendered HTML and treat any naked ticker as
+    a display regression. This is deliberately strict so display bugs
+    surface for CEO triage.
+    """
+    hits = sorted(set(m.group(0) for m in _NAKED_KR_TICKER.finditer(html)))
+    if hits:
+        pytest.fail(
+            f"Naked KR ticker leaked to rendered HTML for {slug} × {label}: "
+            f"{hits[:5]} (expected hangul display name per feedback_ticker_display)"
+        )
+
+
+def _assert_empty_state_copy(html: str, slug: str, label: str) -> None:
+    """new_signup (#8) artefacts that still render HTML must show fallback copy."""
+    low = html.lower()
+    if not any(m.lower() in low for m in _EMPTY_STATE_MARKERS):
+        pytest.fail(
+            f"new_signup empty-state copy missing for {slug} × {label} "
+            f"(expected one of {_EMPTY_STATE_MARKERS[:4]}…)"
+        )
 
 
 # ── Optional deps — handled gracefully so unit run doesn't require them ──────
@@ -204,17 +250,40 @@ def test_render_matrix(app, artifact, profile):
         pytest.skip(f"Payload unavailable for {slug} × {profile.label} (source={source})")
 
     # ── HTML render ─────────────────────────────────────────────────────────
-    if not hasattr(service, "render_html"):
-        pytest.skip(f"{class_name} has no render_html()")
-    html = service.render_html(payload)
+    # Most services expose ``render_html``.  ``earnings_prebrief`` only
+    # exposes ``render_pdf_html`` (PDF-page HTML) — accept either rather
+    # than silently skipping a real render path.  A service missing *both*
+    # is a genuine defect and must surface, not skip.
+    html_renderer = (
+        getattr(service, "render_html", None)
+        or getattr(service, "render_pdf_html", None)
+    )
+    assert html_renderer is not None, (
+        f"{class_name} exposes neither render_html() nor render_pdf_html()"
+    )
+    html = html_renderer(payload)
     assert isinstance(html, str) and len(html) > 1_000, (
         f"render_html() too small: {len(html) if isinstance(html, str) else 'non-str'}"
     )
     _assert_disclaimer(html)
 
+    # ── Persona-specific content assertions (0원 규칙) ───────────────────────
+    # #2 kr_only / #10 international: naked KR ticker must not leak (display
+    # bug per feedback_ticker_display — hangul name expected instead).
+    if "krw_only" in profile.flags or "multi_currency" in profile.flags:
+        _assert_no_naked_kr_ticker(html, slug, profile.label)
+    # #8 new_signup: when an artefact renders HTML for a 0-position user it
+    # must surface graceful empty-state copy, not a blank/half-broken page.
+    if "empty_state" in profile.flags or profile.portfolio_size == 0:
+        _assert_empty_state_copy(html, slug, profile.label)
+
     # ── PDF render (WeasyPrint optional) ────────────────────────────────────
+    # When WeasyPrint native deps (libgobject/pango/cairo) are absent the
+    # PDF branch cannot run.  This is an *environment* gap, not a passing
+    # test — surface it as xfail(strict=False) so it reads distinctly from
+    # logic skips and so CI (which installs the deps) actually exercises it.
     if not _weasyprint_available():
-        pytest.skip("weasyprint not installed; HTML branch already passed")
+        pytest.xfail("weasyprint native deps unavailable — PDF branch not exercised (HTML branch asserted above)")
     if not hasattr(service, "render_pdf"):
         # brag_card uses Playwright PNG, not PDF — exempt.
         return
