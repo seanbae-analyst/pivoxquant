@@ -14,7 +14,7 @@
  * Neutral observation language only.
  */
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
@@ -126,11 +126,24 @@ export default function DiscoverPage() {
     errorRetryCount: 2,
     errorRetryInterval: 10_000,
   } as const;
-  const { data: overviewLive } = useSWR<BackendOverviewItem[]>(DISCOVER_OVERVIEW, jsonFetcher, { ...discoverOpts, fallbackData: [] });
-  const { data: usMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=us`, jsonFetcher, discoverOpts);
-  const { data: krMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=kr`, jsonFetcher, discoverOpts);
-  const { data: sectorsLive } = useSWR<BackendSectorRow[]>(DISCOVER_SECTORS, jsonFetcher, discoverOpts);
-  const { data: screenersLive } = useSWR<BackendScreeners>(DISCOVER_SCREENERS, jsonFetcher, discoverOpts);
+  const { data: overviewLive, mutate: mutateOverview } = useSWR<BackendOverviewItem[]>(DISCOVER_OVERVIEW, jsonFetcher, { ...discoverOpts, fallbackData: [] });
+  const { data: usMovers, mutate: mutateUsMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=us`, jsonFetcher, discoverOpts);
+  const { data: krMovers, mutate: mutateKrMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=kr`, jsonFetcher, discoverOpts);
+  const { data: sectorsLive, mutate: mutateSectors } = useSWR<BackendSectorRow[]>(DISCOVER_SECTORS, jsonFetcher, discoverOpts);
+  const { data: screenersLive, mutate: mutateScreeners } = useSWR<BackendScreeners>(DISCOVER_SCREENERS, jsonFetcher, discoverOpts);
+
+  // BUG A fix (movers cold-load race): /api/discover/movers reads the
+  // per-user `discover_cache` that the base scan (useDiscover → /api/discover)
+  // populates. On mount both fire in parallel, so movers reads the cache
+  // before the (slower) base scan finishes and 503s / renders empty, only
+  // recovering after the 5-min refreshInterval. Re-validate the movers SWRs
+  // once the base scan resolves so Top Movers recovers immediately.
+  useEffect(() => {
+    if (!isLoading) {
+      void mutateUsMovers();
+      void mutateKrMovers();
+    }
+  }, [isLoading, data, mutateUsMovers, mutateKrMovers]);
 
   // §101 회피 (2026-04-29): Engine Scan 결과를 사용자 보유/관심 종목 화이트리스트로
   // 한정. 백엔드도 동일 가드를 추가하나, 프론트에서도 백업 가드를 유지해
@@ -267,6 +280,18 @@ export default function DiscoverPage() {
     try {
       await apiFetch(`${API.discover}?force=1`);
       await mutate();
+      // BUG B fix: the base mutate() above only revalidates useDiscover (the
+      // live engine-scan card). The section SWRs (movers/overview/sectors/
+      // screeners) have separate keys, so without this they keep showing the
+      // pre-scan (often empty) cache until the 5-min refreshInterval. movers
+      // in particular reads the discover_cache the force-scan just rebuilt.
+      await Promise.allSettled([
+        mutateUsMovers(),
+        mutateKrMovers(),
+        mutateOverview(),
+        mutateSectors(),
+        mutateScreeners(),
+      ]);
     } catch (err) {
       // Bug NEW-A fix (2026-05-08): the previous `catch { /* noop */ }`
       // silently swallowed 401/429/500 — users saw the spinner stop with
@@ -289,7 +314,7 @@ export default function DiscoverPage() {
     } finally {
       setScanning(false);
     }
-  }, [mutate]);
+  }, [mutate, mutateUsMovers, mutateKrMovers, mutateOverview, mutateSectors, mutateScreeners]);
 
   return (
     <ErrorBoundary>
