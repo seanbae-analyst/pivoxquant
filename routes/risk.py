@@ -72,24 +72,42 @@ def _build_returns_matrix(tickers: list[str], days: int = 90):
 
     series: dict[str, "pd.Series"] = {}
     dropped: list[str] = []
-    for t in tickers:
+
+    # Parallelise the external price-history fetch — fetcher.get_price_history
+    # hits FMP/KIS only (no DB), so this mirrors portfolio_history's proven
+    # ThreadPoolExecutor(5) pattern without touching the DB pool. Cuts a cold
+    # 20-ticker risk load from the serial sum (~4–16s) to ~the slowest single
+    # fetch. ex.map preserves input order, and all result processing below
+    # stays single-threaded, so `series`/`dropped` see no races and the
+    # err/empty/short-history drop semantics are unchanged.
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _fetch_one(t):
         try:
-            h = fetcher.get_price_history(t, period="3mo")
-            if h is None or h.empty or "Close" not in h.columns:
-                dropped.append(f"{t}(empty)")
-                continue
-            s = h["Close"].astype(float).dropna()
-            # Lowered floor from 20 → 10. The per-layer checks already
-            # guard on matrix.shape[0] >= 20 at the aggregated level, so
-            # individual short tickers are still excluded when the final
-            # intersect would be unreliable.
-            if len(s) < 10:
-                dropped.append(f"{t}(n={len(s)})")
-                continue
-            series[t] = s
-        except Exception as e:
-            logger.debug("risk: price history skip %s: %s", t, e)
+            return t, fetcher.get_price_history(t, period="3mo"), None
+        except Exception as e:  # noqa: BLE001
+            return t, None, e
+
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        results = list(ex.map(_fetch_one, tickers))
+
+    for t, h, err in results:
+        if err is not None:
+            logger.debug("risk: price history skip %s: %s", t, err)
             dropped.append(f"{t}(err)")
+            continue
+        if h is None or h.empty or "Close" not in h.columns:
+            dropped.append(f"{t}(empty)")
+            continue
+        s = h["Close"].astype(float).dropna()
+        # Lowered floor from 20 → 10. The per-layer checks already
+        # guard on matrix.shape[0] >= 20 at the aggregated level, so
+        # individual short tickers are still excluded when the final
+        # intersect would be unreliable.
+        if len(s) < 10:
+            dropped.append(f"{t}(n={len(s)})")
+            continue
+        series[t] = s
 
     if dropped:
         logger.info("risk._build_returns_matrix dropped tickers: %s", dropped)
