@@ -514,12 +514,38 @@ function CtaFooter() {
               letterSpacing: "0.02em",
             }}
           >
-            Notify me at launch
+            회원가입
             <ArrowRight
               className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
               strokeWidth={1.75}
               aria-hidden
             />
+          </Link>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-colors"
+            style={{
+              border: "0.75pt solid var(--pq-bronze)",
+              color: "var(--pq-bronze)",
+              fontSize: "var(--pq-text-body)",
+              letterSpacing: "0.02em",
+              backgroundColor: "transparent",
+            }}
+          >
+            로그인
+          </Link>
+          <Link
+            href="/simulator/what-if"
+            className="inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-colors"
+            style={{
+              border: "0.75pt solid var(--pq-bronze)",
+              color: "var(--pq-bronze)",
+              fontSize: "var(--pq-text-body)",
+              letterSpacing: "0.02em",
+              backgroundColor: "transparent",
+            }}
+          >
+            What-If 시뮬레이터 체험
           </Link>
           <Link
             href="/features/reports"
