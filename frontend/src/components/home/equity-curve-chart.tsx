@@ -218,7 +218,10 @@ export function EquityCurveChart({
   }, [rows]);
 
   const totalChangePct = rows.length >= 2 ? rows[rows.length - 1].changePct : 0;
-  const lineColor = totalChangePct >= 0 ? "#B8956A" : "#A3845C";
+  // KR convention: rise = carmine (--up), fall = indigo (--down) — consistent
+  // with detail charts / pctColor() across the app (was bronze/bronze-light,
+  // which gave no visible up/down signal despite the direction-aware ternary).
+  const lineColor = totalChangePct >= 0 ? "var(--up)" : "var(--down)";
 
   /* ── Empty / loading / error states ── */
 
