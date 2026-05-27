@@ -104,6 +104,22 @@ FORBIDDEN_DIRECTIVE_TERMS: Final[frozenset[str]] = frozenset({
     "목표가",
     "따라갈 만한",
     "주의가 필요한",
+    # ── 2026-05-27 expansion (SoT↔legal_filter parity, B#1) ───────────────
+    # legal_filter._COMPLIANCE_FORBIDDEN_PATTERNS already blocks take-profit /
+    # stop-loss directives via regex, but the substring SoT (used by the
+    # support chatbot intent-guard + behaviour-note belt-and-suspenders +
+    # artifact mirrors) was missing them. Add ONLY the unambiguous directive
+    # forms: English compounds + the polite-imperative Korean ("...하세요",
+    # mirroring "보유하세요"). Bare nouns "익절"/"손절" are NOT added on
+    # purpose — they would over-scrub the observational behaviour-metric
+    # label "손절 속도" (scorer.py) and the negation "익절하지 않". The regex
+    # filter handles those colloquial cases with a lookahead the frozenset
+    # substring matcher cannot replicate.
+    "take profit",
+    "stop loss",
+    "stoploss",
+    "익절하세요",
+    "손절하세요",
 })
 
 
