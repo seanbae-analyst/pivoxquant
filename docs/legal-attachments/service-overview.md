@@ -97,7 +97,7 @@
 | 한국 주식 시세 | **KIS API** (한국투자증권 공식) |
 | 한국 기업 공시 | **DART OpenAPI** (금감원 공식) |
 | KOSPI 지수 등 | **KRX Open Data Portal** (정부 공식) |
-| 미국 주식 | Alpaca (BYO 키, read-only) |
+| 미국 주식 | **FMP** (Financial Modeling Prep, 공식 라이선스) · **SEC EDGAR** (공시) |
 
 ---
 

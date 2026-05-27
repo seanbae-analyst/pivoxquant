@@ -234,12 +234,6 @@ export const API = {
     kisSync: "/api/broker/kis/sync",
     kisDisconnect: "/api/broker/kis/disconnect",
     kisStatus: "/api/broker/kis/status",
-    // Alpaca (US equity, paper-only; re-added 2026-04-22).
-    // Live trading is disabled; backend rejects env="live".
-    alpacaConnect: "/api/broker/alpaca/connect",
-    alpacaSync: "/api/broker/alpaca/sync",
-    alpacaDisconnect: "/api/broker/alpaca/disconnect",
-    alpacaStatus: "/api/broker/alpaca/status",
   },
   share: {
     create: "/api/portfolio/share",

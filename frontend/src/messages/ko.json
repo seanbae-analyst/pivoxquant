@@ -179,7 +179,6 @@
       "notifications": "알림 설정",
       "security": "보안",
       "plan": "구독 플랜",
-      "connectAlpaca": "Alpaca 연결",
       "connectKIS": "KIS 연결",
       "deleteAccount": "계정 삭제"
     }
@@ -319,21 +318,16 @@
     },
     "connections": {
       "title": "브로커 연동",
-      "alpacaDesc": "Alpaca 페이퍼 트레이딩 계정을 연결해 미국 주식 포지션을 자동으로 가져옵니다.",
       "kisName": "한국투자증권",
       "kisDesc": "KIS API로 한국 주식 잔고를 자동 불러옵니다 (조회 전용)",
       "connected": "연결됨",
       "notConnected": "미연결",
-      "connectAlpaca": "Alpaca 연결",
       "comingSoon": "출시 예정",
       "connecting": "연결 중...",
       "connect": "연결",
       "cancel": "취소",
       "apiKey": "API Key",
       "apiSecret": "API Secret",
-      "alpacaConnectSuccess": "Alpaca가 연결되었습니다",
-      "alpacaConnectError": "Alpaca 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-      "alpacaCredentialsRequired": "API 키와 시크릿을 모두 입력해 주세요",
       "brokerNote": "브로커 연동 시 포트폴리오 조회가 자동 동기화됩니다 (read-only)."
     },
     "language": {
@@ -415,24 +409,6 @@
       "disconnectConfirm": "KIS 연결을 해제하시겠어요? 저장된 API 키는 영구 삭제됩니다.",
       "disconnectSuccess": "KIS 연결이 해제됐습니다.",
       "disconnectError": "연결 해제에 실패했습니다."
-    },
-    "alpaca": {
-      "eyebrow": "Alpaca Markets · 미국",
-      "modalTitle": "Alpaca 연결",
-      "modalSubtitle": "Alpaca 페이퍼 트레이딩 API 키를 입력하세요. 키는 암호화되어 저장되며, 페이퍼 계좌 관찰 용도로만 사용됩니다. 본 릴리스에서는 라이브 거래가 비활성화되어 있습니다.",
-      "byoNote": "Bring Your Own Key (BYO): 시세 데이터는 사용자 본인의 Alpaca 계정 라이선스로 조회됩니다. PivoxQuant는 Alpaca 시세를 재배포하지 않습니다 — 사용자 키, 사용자 라이선스.",
-      "envLabel": "환경",
-      "envPaper": "페이퍼",
-      "envLiveDisabled": "라이브 · 비활성",
-      "envLiveDisabledTitle": "본 릴리스에서는 라이브 거래가 비활성화되어 있습니다.",
-      "envNote": "라이브 브로커리지 라우팅은 꺼져 있습니다. 본 릴리스는 페이퍼 계좌만 관찰합니다.",
-      "keyId": "API Key ID",
-      "secretKey": "API Secret Key",
-      "connectBtn": "페이퍼 연결",
-      "connecting": "연결 중…",
-      "connectSuccess": "Alpaca 페이퍼 계좌가 연결됐습니다.",
-      "connectError": "Alpaca 연결에 실패했습니다. 키를 확인하고 다시 시도해 주세요.",
-      "disclaimer": "Alpaca 연동은 페이퍼 전용입니다. 라이브 주문은 발생하지 않습니다. 투자 자문이 아닙니다."
     },
     "manual": {
       "title": "직접 입력",
@@ -652,10 +628,6 @@
       "kisSyncFailed": "동기화에 실패했습니다",
       "kisDisconnected": "KIS 연결이 해제됐습니다",
       "kisDisconnectFailed": "연결 해제에 실패했습니다",
-      "alpacaSynced": "Alpaca를 동기화했습니다",
-      "alpacaSyncFailed": "동기화에 실패했습니다",
-      "alpacaDisconnected": "Alpaca 연결이 해제됐습니다",
-      "alpacaDisconnectFailed": "연결 해제에 실패했습니다",
       "emailSaved": "이메일 설정이 저장됐습니다",
       "emailSaveFailed": "이메일 설정 저장에 실패했습니다",
       "pushNotSupported": "이 브라우저에서는 푸시 알림을 지원하지 않습니다",
@@ -668,8 +640,7 @@
       "languageUpdated": "언어가 변경됐습니다"
     },
     "confirm": {
-      "kisDisconnect": "KIS 연결을 해제하시겠어요?",
-      "alpacaDisconnect": "Alpaca 연결을 해제하시겠어요?"
+      "kisDisconnect": "KIS 연결을 해제하시겠어요?"
     }
   },
   "portfolioModal": {

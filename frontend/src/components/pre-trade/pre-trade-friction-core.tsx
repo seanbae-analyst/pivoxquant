@@ -537,7 +537,7 @@ export function TerminalStep({
         </div>
         <p className="font-serif text-pq-body leading-relaxed text-[rgba(245,240,232,0.65)]">
           {proceeded
-            ? "We stamped your reflection and recorded the entry to your book. PivoxQuant does not place trades — open your broker (Alpaca, KIS, etc.) and submit the order yourself."
+            ? "We stamped your reflection and recorded the entry to your book. PivoxQuant does not place trades — open your broker (KIS, etc.) and submit the order yourself."
             : "취소되었습니다. 기록되지 않았습니다. 다음 결정 때 다시 7개 질문을 거치세요."}
         </p>
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[rgba(245,240,232,0.55)]">

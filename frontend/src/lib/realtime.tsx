@@ -49,7 +49,7 @@ export interface RealtimePriceDetail {
   stale?: boolean;
   /** ISO/epoch timestamp when the cached value was last observed live. */
   stale_at?: string | number | null;
-  /** Provider key: "alpaca" | "kis" | "kis_ws" | "fmp" | "fmp_stale". */
+  /** Provider key: "kis" | "kis_ws" | "fmp" | "fmp_stale". */
   source?: string;
   /** ISO timestamp of the most recent observation forwarded by the backend. */
   observed_at?: string | null;
@@ -311,7 +311,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         const details: Record<string, RealtimePriceDetail & { observed_at?: string }> =
           data.details ?? {};
 
-        // Transient all-provider failure (FMP 402 + Alpaca/KIS down) sends an empty
+        // Transient all-provider failure (FMP 402 + KIS down) sends an empty
         // price payload. Skip it ONLY when we previously had prices — keep the
         // last-known values on screen (they age into "stale" via lastUpdate) instead
         // of blanking the portfolio. A genuinely empty book (0 positions) has an

@@ -9,9 +9,8 @@
  * Renders:
  *   - Section header (eyebrow + Playfair H2 + "2 of 2 supported" pill)
  *   - BYOK editorial deck — "PivoxQuant operates brokers on a Bring-Your-Own-Key model"
- *   - Two broker cards as a slot pair (children) — host wires Alpaca + KIS v1
- *     components verbatim (AlpacaCard, KisCard) per CEO 2026-04-28 (current
- *     prod model: BYOK + read-only).
+ *   - Broker card slot (children) — host wires the KIS v1 component verbatim
+ *     (KisCard) per CEO 2026-04-28 (current prod model: BYOK + read-only).
  *
  * Pure presentational shell. Host renders the live broker cards inside.
  *
@@ -21,8 +20,6 @@
 import * as React from "react";
 
 interface Props {
-  /** Slot for the live Alpaca card. */
-  alpacaSlot?: React.ReactNode;
   /** Slot for the live KIS card. */
   kisSlot?: React.ReactNode;
   /** Optional override for the supported-count pill in the header. */
@@ -30,9 +27,8 @@ interface Props {
 }
 
 export function BrokerCardV2({
-  alpacaSlot,
   kisSlot,
-  supportedLabel = "2 of 2 supported",
+  supportedLabel = "1 of 1 supported",
 }: Props) {
   return (
     <section
@@ -114,7 +110,7 @@ export function BrokerCardV2({
           gap: 12,
         }}
       >
-        {/* B1 · Alpaca */}
+        {/* B1 · KIS */}
         <div
           style={{
             background: "rgba(255,255,255,0.02)",
@@ -135,64 +131,7 @@ export function BrokerCardV2({
               color: "rgba(245,240,232,0.55)",
             }}
           >
-            B1 · Alpaca · BYOK
-          </span>
-          {alpacaSlot ?? (
-            <p
-              className="font-serif"
-              style={{
-                fontSize: "var(--pq-text-body)",
-                color: "rgba(245,240,232,0.55)",
-              }}
-            >
-              Alpaca surface unavailable in this environment.
-            </p>
-          )}
-
-          <p
-            className="font-serif"
-            style={{
-              fontSize: "var(--pq-text-body)",
-              color: "rgba(245,240,232,0.55)",
-              marginTop: 16,
-            }}
-          >
-            Alpaca live trading is hard-disabled at the backend. We reject any
-            request with{" "}
-            <span
-              className="font-mono"
-              style={{
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              env=&quot;live&quot;
-            </span>
-            .
-          </p>
-        </div>
-
-        {/* B2 · KIS */}
-        <div
-          style={{
-            background: "rgba(255,255,255,0.02)",
-            border: "1px solid var(--pq-ivory-line)",
-            borderRadius: 4,
-            padding: 24,
-            position: "relative",
-          }}
-        >
-          <span
-            className="font-mono uppercase"
-            style={{
-              position: "absolute",
-              top: 14,
-              right: 14,
-              fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.55)",
-            }}
-          >
-            B2 · KIS · BYOK
+            B1 · KIS · BYOK
           </span>
           {kisSlot ?? (
             <p

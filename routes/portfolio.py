@@ -2272,17 +2272,6 @@ def reconcile_positions():
             )
         return jsonify(payload), 200
 
-    # Alpaca fallback — UserAlpacaService.sync_account() does broker-side
-    # snapshot but does NOT yet write into Position; only equity/cash snapshot.
-    # We surface a 501 here rather than silently pretending positions synced.
-    alpaca_conn = next((c for c in connections if c.broker == "alpaca"), None)
-    if alpaca_conn is not None:
-        return jsonify({
-            "ok":    False,
-            "error": "Alpaca 계좌는 잔고만 동기화 가능합니다. KIS 계좌를 연결해 주세요.",
-            "code":  "ALPACA_RECONCILE_NOT_SUPPORTED",
-        }), 501
-
     return jsonify({
         "ok":    False,
         "error": "지원되는 브로커가 연결되지 않았습니다.",

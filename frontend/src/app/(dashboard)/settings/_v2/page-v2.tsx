@@ -8,13 +8,13 @@
  *
  * 5 sections (sticky anchor rail):
  *   A · Identity & security      (SettingsIdentityCardV2 + SignInProvidersCard)
- *   B · Brokers · BYOK · RO      (BrokerCardV2 — wraps AlpacaCard + KisCard v1)
+ *   B · Brokers · BYOK · RO      (BrokerCardV2 — wraps KisCard v1)
  *   C · Notifications matrix     (NotificationsMatrix + Push/Email sub-cards)
  *   D · Subscription · Stripe    (SubscriptionCardV2)
  *   E · Privacy · PIPA · GDPR    (PrivacyCardV2 — Cookie/Export/Danger zone)
  *
  * Reused (zero-modification imports):
- *   AlpacaCard · AlpacaConnectModal · KisCard · KisConnectModal
+ *   KisCard · KisConnectModal
  *   ModalShell · TopTicker · LivingCFOStatusBar · FootSignature · ErrorBoundary
  *
  * 11 CEO settings features mapped per MIGRATION §1; 6 GAPs surfaced as UI
@@ -45,8 +45,6 @@ import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 
-import { AlpacaCard } from "@/components/broker/alpaca-card";
-import { AlpacaConnectModal } from "@/components/broker/alpaca-connect-modal";
 import { KisCard } from "@/components/broker/kis-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
 
@@ -86,14 +84,6 @@ const fetcher = async (url: string): Promise<SubscriptionResponse> => {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 };
-
-/**
- * 2026-04-27 (per CEO + legal): Alpaca operates on a Bring-Your-Own-Key
- * (BYOK) model. Each user connects their own Alpaca paper account; we
- * forward read-only requests under the user's own license. Surface gated
- * by NEXT_PUBLIC_ALPACA_ENABLED so the BYO flow can be enabled per-env.
- */
-const ALPACA_ENABLED = process.env.NEXT_PUBLIC_ALPACA_ENABLED === "1";
 
 export default function SettingsPageV2() {
   const router = useRouter();
@@ -142,9 +132,6 @@ export default function SettingsPageV2() {
   const [kisModalOpen, setKisModalOpen] = React.useState(false);
   const [kisSyncing, setKisSyncing] = React.useState(false);
   const [kisDisconnecting, setKisDisconnecting] = React.useState(false);
-  const [alpacaModalOpen, setAlpacaModalOpen] = React.useState(false);
-  const [alpacaSyncing, setAlpacaSyncing] = React.useState(false);
-  const [alpacaDisconnecting, setAlpacaDisconnecting] = React.useState(false);
 
   const handleKisSync = React.useCallback(async () => {
     setKisSyncing(true);
@@ -172,35 +159,6 @@ export default function SettingsPageV2() {
       toast.error(err instanceof Error ? err.message : "Disconnect failed.");
     } finally {
       setKisDisconnecting(false);
-    }
-  }, [refreshBrokers]);
-
-  const handleAlpacaSync = React.useCallback(async () => {
-    setAlpacaSyncing(true);
-    try {
-      await apiFetch(API.broker.alpacaSync, { method: "POST" });
-      await refreshBrokers();
-      toast.success("Alpaca synchronized.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sync failed.");
-    } finally {
-      setAlpacaSyncing(false);
-    }
-  }, [refreshBrokers]);
-
-  const handleAlpacaDisconnect = React.useCallback(async () => {
-    if (typeof window !== "undefined" && !window.confirm("Disconnect Alpaca?")) {
-      return;
-    }
-    setAlpacaDisconnecting(true);
-    try {
-      await apiFetch(API.broker.alpacaDisconnect, { method: "DELETE" });
-      await refreshBrokers();
-      toast.success("Alpaca disconnected.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Disconnect failed.");
-    } finally {
-      setAlpacaDisconnecting(false);
     }
   }, [refreshBrokers]);
 
@@ -584,30 +542,6 @@ export default function SettingsPageV2() {
             aria-label="Brokers"
           >
             <BrokerCardV2
-              alpacaSlot={
-                ALPACA_ENABLED ? (
-                  <AlpacaCard
-                    connected={Boolean(brokerData?.alpaca_connected)}
-                    mode={brokerData?.alpaca_mode ?? "paper"}
-                    lastSync={brokerData?.alpaca_last_sync ?? null}
-                    onConnect={() => setAlpacaModalOpen(true)}
-                    onSync={handleAlpacaSync}
-                    onDisconnect={handleAlpacaDisconnect}
-                    syncing={alpacaSyncing}
-                    disconnecting={alpacaDisconnecting}
-                  />
-                ) : (
-                  <p
-                    className="font-serif"
-                    style={{
-                      fontSize: "var(--pq-text-body)",
-                      color: "rgba(245,240,232,0.55)",
-                    }}
-                  >
-                    Alpaca BYOK is not enabled in this environment.
-                  </p>
-                )
-              }
               kisSlot={
                 <KisCard
                   connected={Boolean(brokerData?.kis_connected)}
@@ -966,16 +900,10 @@ export default function SettingsPageV2() {
         </div>
       </main>
 
-      {/* Broker connect modals */}
+      {/* Broker connect modal */}
       {kisModalOpen && (
         <KisConnectModal
           onClose={() => setKisModalOpen(false)}
-          onSuccess={() => refreshBrokers()}
-        />
-      )}
-      {ALPACA_ENABLED && alpacaModalOpen && (
-        <AlpacaConnectModal
-          onClose={() => setAlpacaModalOpen(false)}
           onSuccess={() => refreshBrokers()}
         />
       )}

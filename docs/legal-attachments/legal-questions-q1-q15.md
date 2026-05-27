@@ -155,11 +155,11 @@
 
 ### Q1-Q4 — 마이데이터 / 신용정보법 §32 회색지대
 
-**질문**: KIS read-only 단일 broker (Alpaca BYO + KIS) 모델이 마이데이터 §22의9 신고 의무 회피 가능한지.
+**질문**: KIS read-only 단일 broker 모델이 마이데이터 §22의9 신고 의무 회피 가능한지.
 
 **PivoxQuant 컨텍스트**:
-- KIS API: read-only (시세 + 본인 계좌 조회만)
-- Alpaca: BYO 키 (사용자 본인 키 입력 — 서비스 보관 없음)
+- KIS API: read-only (시세 + 본인 계좌 조회만) — 유일한 broker 연동
+- (참고) 미국 broker 연동(Alpaca)은 2026-05-27 제거됨. 미국 시세는 FMP 라이선스 데이터만 사용
 - 신용정보법 §22의9 마이데이터 사업자 등록 X
 - **상세**: legal_full_audit_final.md §A-2
 

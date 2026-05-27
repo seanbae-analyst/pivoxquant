@@ -14,8 +14,7 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400, // 24 h
     remotePatterns: [
-      // Alpaca logo CDN, FMP press release images, etc.
-      { protocol: "https", hostname: "**.alpaca.markets" },
+      // FMP press release images, etc.
       { protocol: "https", hostname: "financialmodelingprep.com" },
       { protocol: "https", hostname: "**.financialmodelingprep.com" },
     ],

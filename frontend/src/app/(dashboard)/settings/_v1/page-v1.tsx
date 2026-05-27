@@ -21,18 +21,6 @@ import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { KisCard } from "@/components/broker/kis-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
-import { AlpacaCard } from "@/components/broker/alpaca-card";
-import { AlpacaConnectModal } from "@/components/broker/alpaca-connect-modal";
-
-/**
- * 2026-04-27 (per CEO + legal): PivoxQuant operates Alpaca on a BYO
- * (Bring Your Own Key) model. Each user connects their OWN Alpaca paper
- * account; we forward read-only requests under the user's own license.
- * We do NOT redistribute Alpaca market data — no commercial-data-license
- * obligation on us. Surface gated by NEXT_PUBLIC_ALPACA_ENABLED so the
- * BYO flow can be enabled per-environment without code changes.
- */
-const ALPACA_ENABLED = process.env.NEXT_PUBLIC_ALPACA_ENABLED === "1";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead } from "@/components/ui/editorial";
@@ -395,9 +383,6 @@ function BrokersSection() {
   const [kisModalOpen, setKisModalOpen] = useState(false);
   const [kisSyncing, setKisSyncing] = useState(false);
   const [kisDisconnecting, setKisDisconnecting] = useState(false);
-  const [alpacaModalOpen, setAlpacaModalOpen] = useState(false);
-  const [alpacaSyncing, setAlpacaSyncing] = useState(false);
-  const [alpacaDisconnecting, setAlpacaDisconnecting] = useState(false);
 
   const handleKisSync = useCallback(async () => {
     setKisSyncing(true);
@@ -426,33 +411,6 @@ function BrokersSection() {
     }
   }, [refreshBrokers, t]);
 
-  const handleAlpacaSync = useCallback(async () => {
-    setAlpacaSyncing(true);
-    try {
-      await apiFetch(API.broker.alpacaSync, { method: "POST" });
-      await refreshBrokers();
-      toast.success(t("settingsV1.toast.alpacaSynced"));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("settingsV1.toast.alpacaSyncFailed"));
-    } finally {
-      setAlpacaSyncing(false);
-    }
-  }, [refreshBrokers, t]);
-
-  const handleAlpacaDisconnect = useCallback(async () => {
-    if (!confirm(t("settingsV1.confirm.alpacaDisconnect"))) return;
-    setAlpacaDisconnecting(true);
-    try {
-      await apiFetch(API.broker.alpacaDisconnect, { method: "DELETE" });
-      await refreshBrokers();
-      toast.success(t("settingsV1.toast.alpacaDisconnected"));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("settingsV1.toast.alpacaDisconnectFailed"));
-    } finally {
-      setAlpacaDisconnecting(false);
-    }
-  }, [refreshBrokers, t]);
-
   return (
     <Section kicker="03 · Brokers" title="Connections">
       <KisCard
@@ -465,19 +423,6 @@ function BrokersSection() {
         disconnecting={kisDisconnecting}
       />
 
-      {ALPACA_ENABLED && (
-        <AlpacaCard
-          connected={Boolean(brokerData?.alpaca_connected)}
-          mode={brokerData?.alpaca_mode ?? "paper"}
-          lastSync={brokerData?.alpaca_last_sync ?? null}
-          onConnect={() => setAlpacaModalOpen(true)}
-          onSync={handleAlpacaSync}
-          onDisconnect={handleAlpacaDisconnect}
-          syncing={alpacaSyncing}
-          disconnecting={alpacaDisconnecting}
-        />
-      )}
-
       <p className="text-xs text-[rgba(245,240,232,0.4)] text-center">
         KIS is read-only. Live order routing is disabled.
       </p>
@@ -485,12 +430,6 @@ function BrokersSection() {
       {kisModalOpen && (
         <KisConnectModal
           onClose={() => setKisModalOpen(false)}
-          onSuccess={() => refreshBrokers()}
-        />
-      )}
-      {ALPACA_ENABLED && alpacaModalOpen && (
-        <AlpacaConnectModal
-          onClose={() => setAlpacaModalOpen(false)}
           onSuccess={() => refreshBrokers()}
         />
       )}

@@ -82,7 +82,7 @@ interface PositionsResponse {
 
 interface ReconcileResponse {
   ok: boolean;
-  broker?: "kis" | "alpaca";
+  broker?: "kis";
   added?: string[];
   updated?: string[];
   removed?: string[];
@@ -113,12 +113,9 @@ export default function PortfolioPageV2() {
   } = usePortfolioSummary();
 
   // Broker connections — drives Reconcile CTA enabled state. KIS is the
-  // only broker that actually writes positions; Alpaca paper still surfaces
-  // the button but the backend returns 501 ALPACA_RECONCILE_NOT_SUPPORTED.
+  // only broker that writes positions.
   const { data: brokerData } = useBrokerConnections();
-  const reconcileAvailable = Boolean(
-    brokerData?.kis_connected || brokerData?.alpaca_connected,
-  );
+  const reconcileAvailable = Boolean(brokerData?.kis_connected);
 
   // Skeleton flicker guard — same 1.2s window as v1.
   const [showSkeleton, setShowSkeleton] = React.useState(true);
@@ -276,13 +273,12 @@ export default function PortfolioPageV2() {
   }
 
   /**
-   * Reconcile from broker (KIS preferred, then Alpaca).
+   * Reconcile from broker (KIS).
    *
    * Backend: POST /api/portfolio/reconcile (routes/portfolio.py:1761).
    *   200  → {ok, broker, added, updated, removed, synced_at,
    *           available_cash, total_value}
    *   404  → NO_BROKER_CONNECTION  (no broker linked)
-   *   501  → ALPACA_RECONCILE_NOT_SUPPORTED
    *   502  → SYNC_FAILED            (broker reachable but errored)
    *
    * CSRF is forwarded by `apiFetch` (X-CSRF-Token header from cookie).
@@ -297,7 +293,7 @@ export default function PortfolioPageV2() {
     if (
       typeof window !== "undefined" &&
       !window.confirm(
-        "KIS/Alpaca 계좌에서 보유 종목/평단/수량을 동기화합니다. 진행할까요?",
+        "KIS 계좌에서 보유 종목/평단/수량을 동기화합니다. 진행할까요?",
       )
     ) {
       return;
@@ -320,13 +316,8 @@ export default function PortfolioPageV2() {
         // Map backend `code` to user-facing copy. The error message field
         // from the response body is preserved as `err.message` by apiFetch.
         const code = err.message || "";
-        if (
-          err.status === 501 ||
-          code.includes("ALPACA_RECONCILE_NOT_SUPPORTED")
-        ) {
-          toast.error(
-            "Alpaca 동기화 미지원 — KIS 계좌를 연결해 주세요.",
-          );
+        if (err.status === 501) {
+          toast.error("동기화가 지원되지 않습니다 — KIS 계좌를 연결해 주세요.");
         } else if (
           err.status === 404 ||
           code.includes("NO_BROKER_CONNECTION")

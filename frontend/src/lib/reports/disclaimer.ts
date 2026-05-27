@@ -184,6 +184,6 @@ export const DEFAULT_GOVERNANCE: GovernanceMeta = {
     "Public market data, user-declared holdings, and quantitative factor models. " +
     "Signal labels are restricted to POSITIVE / NEGATIVE / NEUTRAL.",
   sources:
-    "FMP v4 (price/fundamentals) · Alpaca (US execution) · KIS read-only (KR holdings) · " +
+    "FMP v4 (price/fundamentals) · KIS read-only (KR holdings) · " +
     "SEC EDGAR · Anthropic Claude (text generation)",
 };

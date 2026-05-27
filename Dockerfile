@@ -71,13 +71,13 @@ COPY . .
 # Production override requires CEO approval + logged kill-switch audit.
 ENV AGENT_ENABLED=0
 
-# ── Alpaca kill switch ──────────────────────────────────────────────────────
-# Alpaca broker integration is disabled by default to remove the legal risk
-# tied to Alpaca's "My Data" license (US broker-dealer regulation). KIS
-# (한국투자증권) is the supported broker. Do NOT flip this to 1 in production
-# without legal sign-off. Consumed by:
-#   - routes/broker_oauth.py (/api/broker/alpaca/* endpoints → 503)
-#   - autotrader.py, data_fetcher.py, realtime_service.py, daytrade_service.py
+# ── Alpaca data-fallback kill switch ─────────────────────────────────────────
+# The user-facing Alpaca broker integration was fully removed 2026-05-27. This
+# flag now only gates an internal US-price FALLBACK adapter
+# (services/data/alpaca_market_adapter.py); disabled by default so US prices
+# come from FMP exclusively. KIS (한국투자증권) is the supported broker. Do NOT
+# flip this to 1 in production without legal sign-off (would require an Alpaca
+# commercial data license).
 ENV ALPACA_ENABLED=0
 
 EXPOSE 5050

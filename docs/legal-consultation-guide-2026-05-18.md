@@ -34,7 +34,7 @@
 
 - **포지셔닝**: 한국 핀테크 PWA (Progressive Web App). "User as CFO" 컨셉 — AI가 사용자에게 Artifact (이메일 / PDF / 음성)를 단방향 푸시. **챗봇 아님**.
 - **핵심 기능**: Weekly Memo, Brag Card, Earnings Pre-Brief (모두 AI 생성 Artifact)
-- **데이터 출처**: KIS API (한국투자증권 read-only), Alpaca BYOK (미국 broker, read-only). 공식 라이선스 데이터만.
+- **데이터 출처**: KIS API (한국투자증권 read-only, 유일한 broker 연동), FMP (미국 시세, 공식 라이선스), DART/KRX (공시·지수). 공식 라이선스 데이터만. (미국 broker Alpaca 연동은 2026-05-27 제거.)
 - **결제**: Stripe Live 3-tier — Free / Pro ₩9,900/월 / Premium ₩19,900/월
 - **인프라**: Vercel (frontend) + Railway (Flask backend + PostgreSQL). Anthropic Claude API (LLM).
 - **도메인**: pivoxquant.com
@@ -121,18 +121,18 @@ Pro / Premium 월 구독이 "가분적 디지털콘텐츠"로 해석되어 월 �
 ### 2.3 P1 — 마이데이터 회색지대 (출시 후 검토 가능, 신용정보법 §22의9)
 
 #### Q1 — BYOK + read-only "개인용 도구" 모델
-BYOK (Bring Your Own Key) + read-only 단일 broker (KIS) 모델이 마이데이터 §22의9 신고 의무 회피 가능한지.
+read-only 단일 broker (KIS) 모델이 마이데이터 §22의9 신고 의무 회피 가능한지.
 
-#### Q2 — 다중 broker 통합 (Alpaca + KIS)
-다중 broker (Alpaca + KIS) 통합 시 마이데이터 적용 범위.
+#### Q2 — 해외 시세 데이터 적용
+해외(미국) 시세를 FMP 공식 라이선스로만 제공 시 마이데이터 적용 범위. (미국 broker 연동은 제거됨.)
 
-#### Q3 — 해외 broker 데이터 적용
-해외 broker (Alpaca) 데이터 한국 마이데이터 법 적용 여부.
+#### Q3 — 해외 데이터 한국법 적용
+해외 라이선스 시세 데이터의 한국 마이데이터 법 적용 여부.
 
 #### Q4 — 면허 불필요 운영 모델
 면허 불필요한 운영 가능 모델 (사업자등록 외 추가 요건).
 
-> 출처: `legal_full_audit_final.md §A-2`. 출시 시점에는 Alpaca BYOK + KIS BYOK + read-only 운영 — 일반적으로 면허 불필요 해석되나 단정 불가.
+> 출처: `legal_full_audit_final.md §A-2`. 출시 시점에는 KIS read-only 단일 broker + FMP 라이선스 시세 운영 — 일반적으로 면허 불필요 해석되나 단정 불가. (미국 broker Alpaca 연동은 2026-05-27 제거.)
 
 ---
 
@@ -220,7 +220,7 @@ PivoxQuant(피복스퀀트) 대표 배상현입니다.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - 포지셔닝: "User as CFO" — AI가 사용자에게 Artifact (이메일 / PDF / 음성) 단방향 푸시
 - 핵심 기능: Weekly Memo, Brag Card, Earnings Pre-Brief (모두 AI 생성)
-- 데이터: KIS API (한투 read-only) + Alpaca BYOK (read-only)
+- 데이터: KIS API (한투 read-only, 유일한 broker 연동) + FMP (미국 시세, 공식 라이선스) + DART/KRX (공시·지수)
 - 결제: Stripe Live 3-tier (Free / Pro ₩9,900 / Premium ₩19,900)
 - 인프라: Vercel + Railway + Anthropic Claude API
 - 도메인: https://pivoxquant.com (현재 베타)

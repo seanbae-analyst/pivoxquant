@@ -103,8 +103,8 @@ def test_layer7_no_broker_zero_cash_returns_red(client, auth_user, add_position)
     return GREEN regardless of cash buffer.
     """
     add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=100)
-    # No broker mock — UserAlpacaService / UserKISService both raise on
-    # construction (no BrokerConnection in test DB), so cash defaults to 0.
+    # No broker mock — UserKISService raises on construction (no
+    # BrokerConnection in test DB), so cash defaults to 0.
     r = client.get("/api/risk/layers")
     assert r.status_code == 200
     layer7 = _layer7(r.get_json())
@@ -145,7 +145,7 @@ def test_layer7_observation_no_advice_language(client, auth_user, add_position):
 def test_layer7_broker_fetch_failure_falls_back_to_red(
     client, auth_user, add_position
 ):
-    """If both Alpaca and KIS raise, source='none' and status is RED — never GREEN.
+    """If KIS raises, source='none' and status is RED — never GREEN.
 
     Pre-fix B-05 would have returned GREEN here because the status was
     literally hardcoded. Post-fix the absence of broker data is treated as
@@ -157,9 +157,6 @@ def test_layer7_broker_fetch_failure_falls_back_to_red(
         raise RuntimeError("broker offline")
 
     with patch(
-        "services.broker.user_alpaca_service.UserAlpacaService",
-        side_effect=_raise,
-    ), patch(
         "services.broker.user_kis_service.UserKISService",
         side_effect=_raise,
     ):

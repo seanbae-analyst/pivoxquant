@@ -164,11 +164,19 @@ def _portfolio_snapshot():
     except Exception:
         prices = {}
 
+    # Currency normalization (CRITICAL): KR positions (.KS/.KQ) are already in
+    # KRW; US positions are in USD and must be FX-converted before aggregation,
+    # otherwise mixed US+KR portfolios get wrong weight/VaR/HHI.
+    from services import fx_service
+    fx_rate = fx_service.get_rate()  # USD → KRW, computed once
+
     pos_list: list[dict] = []
     total_value = 0.0
     for p in positions:
         price = (prices.get(p.ticker) or {}).get("price") or p.avg_cost or 0.0
-        value = float(price) * float(p.shares or 0)
+        is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
+        value_native = float(price) * float(p.shares or 0)
+        value = value_native if is_kr else value_native * fx_rate
         total_value += value
         pos_list.append({
             "ticker": p.ticker,
@@ -237,31 +245,8 @@ def _compute_cash_weight_pct(portfolio_value: float) -> tuple[float, str]:
     cash_native = 0.0
     source = "none"
 
-    # Try Alpaca first (US users). UserAlpacaService raises on no connection
-    # so wrap construction; verify() returns ok/error without raising.
-    try:
-        from services.broker.user_alpaca_service import (
-            UserAlpacaService,
-            UserAlpacaError,
-        )
-        try:
-            svc = UserAlpacaService(getattr(current_user, "id", None))
-        except UserAlpacaError:
-            svc = None
-        except Exception:
-            svc = None
-        if svc is not None:
-            res = svc.verify()
-            if res.get("ok"):
-                acct = res.get("account") or {}
-                cash_val = acct.get("cash")
-                if cash_val is not None:
-                    cash_native = float(cash_val)
-                    source = "alpaca"
-    except Exception as exc:
-        logger.debug("L7 cash: alpaca lookup skipped (%s)", exc)
-
-    # Try KIS if Alpaca didn't yield (KR users — KRW-denominated).
+    # KIS cash buffer (KR users — KRW-denominated). KIS is the only supported
+    # broker integration (Alpaca removed 2026-05-27).
     if source == "none":
         try:
             from services.broker.user_kis_service import (

@@ -10,6 +10,7 @@ import {
   RISK_CORRELATION,
   PUBLIC_MARKET_SNAPSHOT,
 } from "./endpoints";
+import { displayTicker } from "./format";
 import { liveRefresh } from "./market-hours";
 import type {
   DiscoverResponse,
@@ -306,14 +307,11 @@ export function useArtifacts(options: UseArtifactsOptions = {}) {
   };
 }
 
-/* ── Broker connections (KIS + Alpaca paper, 2026-04-22) ── */
+/* ── Broker connections (KIS read-only) ── */
 
 export interface BrokerConnectionsResponse {
   kis_connected?: boolean;
   kis_last_sync?: string | null;
-  alpaca_connected?: boolean;
-  alpaca_last_sync?: string | null;
-  alpaca_mode?: "paper" | "live";
 }
 
 export function useBrokerConnections() {
@@ -993,7 +991,9 @@ export function resolveTickerName(
       if ((w?.ticker ?? "").toUpperCase() === t && w?.name) return w.name;
     }
   }
-  return ticker;
+  // No name found in positions/watchlist — never surface a naked ".KS"/".KQ"
+  // code (feedback_ticker_display); fall back to the seed-resolved label.
+  return displayTicker(ticker);
 }
 
 // Re-export for downstream import convenience without a second import line.

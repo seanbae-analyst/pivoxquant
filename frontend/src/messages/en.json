@@ -241,7 +241,6 @@
       "notifications": "Notifications",
       "security": "Security",
       "plan": "Subscription Plan",
-      "connectAlpaca": "Connect Alpaca",
       "connectKIS": "Connect KIS",
       "deleteAccount": "Delete Account"
     }
@@ -319,21 +318,16 @@
     },
     "connections": {
       "title": "Broker Integrations",
-      "alpacaDesc": "Connect your Alpaca paper trading account to automatically import US stock positions.",
       "kisName": "Korea Investment & Securities",
       "kisDesc": "Read-only Korean equity sync via KIS API",
       "connected": "Connected",
       "notConnected": "Not connected",
-      "connectAlpaca": "Connect Alpaca",
       "comingSoon": "Coming Soon",
       "connecting": "Connecting...",
       "connect": "Connect",
       "cancel": "Cancel",
       "apiKey": "API Key",
       "apiSecret": "API Secret",
-      "alpacaConnectSuccess": "Alpaca connected",
-      "alpacaConnectError": "Failed to connect Alpaca. Please try again.",
-      "alpacaCredentialsRequired": "API key and secret are both required",
       "brokerNote": "Broker integrations enable read-only portfolio synchronization."
     },
     "language": {
@@ -415,24 +409,6 @@
       "disconnectConfirm": "Disconnect KIS? Your stored API keys will be permanently removed.",
       "disconnectSuccess": "KIS disconnected.",
       "disconnectError": "Failed to disconnect."
-    },
-    "alpaca": {
-      "eyebrow": "Alpaca Markets · US",
-      "modalTitle": "Connect Alpaca",
-      "modalSubtitle": "Enter your Alpaca paper trading keys. We store them encrypted and only use them to observe your paper account. Live trading is disabled in this release.",
-      "byoNote": "Bring Your Own Key (BYO): market data is fetched under your own Alpaca account license. PivoxQuant does not redistribute Alpaca market data — your keys, your license.",
-      "envLabel": "Environment",
-      "envPaper": "Paper",
-      "envLiveDisabled": "Live · disabled",
-      "envLiveDisabledTitle": "Live trading is disabled in this release.",
-      "envNote": "Live brokerage routing is off. This release observes your paper account only.",
-      "keyId": "API Key ID",
-      "secretKey": "API Secret Key",
-      "connectBtn": "Connect paper",
-      "connecting": "Connecting…",
-      "connectSuccess": "Alpaca paper account connected.",
-      "connectError": "Could not connect Alpaca. Check the keys and try again.",
-      "disclaimer": "Alpaca integration is paper-only. No live orders will be placed. This is not investment advice."
     },
     "manual": {
       "title": "Manual",
@@ -652,10 +628,6 @@
       "kisSyncFailed": "Sync failed.",
       "kisDisconnected": "KIS disconnected.",
       "kisDisconnectFailed": "Disconnect failed.",
-      "alpacaSynced": "Alpaca synchronized.",
-      "alpacaSyncFailed": "Sync failed.",
-      "alpacaDisconnected": "Alpaca disconnected.",
-      "alpacaDisconnectFailed": "Disconnect failed.",
       "emailSaved": "Email preferences saved.",
       "emailSaveFailed": "Failed to save email preferences.",
       "pushNotSupported": "Push notifications not supported here.",
@@ -668,8 +640,7 @@
       "languageUpdated": "Language updated."
     },
     "confirm": {
-      "kisDisconnect": "Disconnect KIS?",
-      "alpacaDisconnect": "Disconnect Alpaca?"
+      "kisDisconnect": "Disconnect KIS?"
     }
   },
   "portfolioModal": {

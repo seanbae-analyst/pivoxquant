@@ -51,7 +51,7 @@ const TIERS: Tier[] = [
       "Unlimited watchlist + alerts",
       "Earnings pre-brief · all holdings",
       "Brag card · monthly · email + PDF",
-      "Broker sync · Alpaca paper + KIS read-only",
+      "Broker sync · KIS read-only",
       "Persona v3 classifier · 90D window",
     ],
   },

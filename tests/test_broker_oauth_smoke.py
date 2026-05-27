@@ -1,7 +1,6 @@
-"""Smoke tests for routes/broker_oauth.py — KIS + Alpaca connection mgmt.
+"""Smoke tests for routes/broker_oauth.py — KIS connection mgmt.
 
-External APIs (KIS token mint, Alpaca paper-account ping) are mocked.
-No real broker network calls.
+External APIs (KIS token mint) are mocked. No real broker network calls.
 """
 from __future__ import annotations
 
@@ -58,21 +57,8 @@ class TestBrokerConnectionsSummarySmoke:
         d = r.get_json()
         # Stable schema — UI relies on keys being present even when nothing connected.
         assert "kis_connected" in d
-        assert "alpaca_connected" in d
-
-
-class TestAlpacaSurfaceSmoke:
-    def test_unauthenticated_alpaca_status_returns_401(self, client):
-        r = client.get("/api/broker/alpaca/status")
-        assert r.status_code == 401
-
-    def test_unauthenticated_alpaca_connect_returns_401(self, client):
-        r = client.post("/api/broker/alpaca/connect", json={})
-        assert r.status_code == 401
-
-    def test_unauthenticated_alpaca_disconnect_returns_401(self, client):
-        r = client.delete("/api/broker/alpaca/disconnect")
-        assert r.status_code == 401
+        # Alpaca was fully removed 2026-05-27; the schema must no longer leak it.
+        assert "alpaca_connected" not in d
 
 
 # ── Wave 10 (QA gap fill) — KIS account_no boundary rejection ──────────────

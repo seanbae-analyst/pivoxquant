@@ -42,7 +42,7 @@ interface PositionsTableV2Props {
   loading?: boolean;
   onAction?: (action: TradeAction, position: Position) => void;
   onAddPosition?: () => void;
-  /** Empty-state secondary path: broker sync (KIS/Alpaca). Optional. */
+  /** Empty-state secondary path: broker sync (KIS). Optional. */
   onReconcile?: () => void;
   /** Whether a broker is linked — drives the secondary CTA enabled state. */
   reconcileAvailable?: boolean;
@@ -284,7 +284,7 @@ export function PositionsTableV2({
               }}
             >
               보유 종목을 직접 입력해 책(book)을 시작하세요. 자산
-              동기화하셨다면 KIS·Alpaca 연동으로 한 번에 불러올 수도 있습니다.
+              동기화하셨다면 KIS 연동으로 한 번에 불러올 수도 있습니다.
             </p>
             <div
               style={{
@@ -324,7 +324,7 @@ export function PositionsTableV2({
                   className="font-mono uppercase"
                   title={
                     reconcileAvailable
-                      ? "KIS·Alpaca 계좌에서 동기화"
+                      ? "KIS 계좌에서 동기화"
                       : "KIS broker 연결 필요 (Settings)"
                   }
                   aria-disabled={!reconcileAvailable}
@@ -342,7 +342,7 @@ export function PositionsTableV2({
                     cursor: reconcileAvailable ? "pointer" : "not-allowed",
                   }}
                 >
-                  KIS·Alpaca 동기화
+                  KIS 동기화
                 </button>
               )}
             </div>

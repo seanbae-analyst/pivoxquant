@@ -42,29 +42,25 @@ if not _secret:
 
 
 # ── Feature flags ─────────────────────────────────────────────────────────────
-# ALPACA_ENABLED — kill switch for SYSTEM-WIDE Alpaca usage (server-owned keys).
+# ALPACA_ENABLED — kill switch for the Alpaca market-data FALLBACK adapter
+# (server-owned keys). The user-facing Alpaca broker integration (connect/sync
+# UI, per-user credentials, /api/broker/alpaca/* routes) was fully removed on
+# 2026-05-27 — it had been kill-switched and unused, and listing an unused
+# broker in the Terms/Privacy created a 표시광고법 §3 mismatch risk.
 #
-# Default: "0" (disabled). 2026-04-27 (per CEO + legal):
-# PivoxQuant operates on a BYO (Bring Your Own Key) Alpaca model. Each user
-# connects THEIR OWN Alpaca paper account; we only forward read-only requests
-# under the user's own Alpaca license. We DO NOT redistribute Alpaca market
-# data — there is no commercial-data-license obligation on us.
-#
-# This server-side ALPACA_ENABLED flag therefore stays OFF in production.
-# Per-user Alpaca runs through `services/broker/user_alpaca_service.py`
-# (encrypted credentials, paper-only) and is independent of this flag.
-#
-# Autotrade reference removed 2026-04-27 alongside the autotrade feature
-# (투자일임업 등록 회피).
+# What remains gated by this flag is purely an internal US-price FALLBACK in the
+# data pipeline (services/data/alpaca_market_adapter.py). Default "0" (disabled)
+# in production → US prices come from FMP exclusively. There is no user surface.
 #
 # Consumed by:
-#   - routes/broker_oauth.py  (/api/broker/alpaca/* endpoints → 503 when off)
-#   - data_fetcher.py         (Alpaca disabled as US price source when off)
-#   - realtime_service.py     (Alpaca disabled as realtime source when off)
-#   - daytrade_service.py     (Alpaca disabled as US scanner when off)
+#   - services/data/alpaca_market_adapter.py  (client short-circuits to None)
+#   - services/data/fetcher.py                (US price fallback gated off)
+#   - services/data/realtime.py               (realtime fallback gated off)
+#   - services/trading/daytrade.py            (US scanner fallback gated off)
+#   - services/artifacts/data_source_resolver.py (provenance claim gated off)
 #
-# IMPORTANT: Flipping this to 1 re-enables the server-key path which would
-# require us to hold an Alpaca commercial data license. Do NOT enable in
+# IMPORTANT: Flipping this to 1 re-enables the server-key fallback which would
+# require holding an Alpaca commercial data license. Do NOT enable in
 # production without legal sign-off.
 ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in ("1", "true", "True", "TRUE", "yes")
 
