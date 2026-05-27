@@ -14,6 +14,7 @@ import { FieldLabel } from "@/components/ui/editorial";
 import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { SectionHeading } from "./shared";
+import { useT } from "@/lib/locale";
 import type { SwotResponse } from "./types";
 
 export function SwotPanel({
@@ -33,14 +34,15 @@ export function SwotPanel({
   error: string | null;
   onGenerate: () => void;
 }) {
+  const t = useT();
   const hasContent = swot && (swot.swot_kr || swot.swot);
 
   return (
     <section>
       <div className="mb-5">
         <SectionHeading
-          eyebrow="AI assistant · observation"
-          title="AI analysis"
+          eyebrow={t("swot.eyebrow")}
+          title={t("swot.title")}
           icon={
             <Sparkles className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
           }
@@ -76,8 +78,9 @@ export function SwotPanel({
         ) : (
           <div className="flex flex-col items-start gap-3">
             <p className="pq-detail-caption">
-              AI analysis is being prepared. Trigger an observation summary for{" "}
-              {displayName || "this stock"} below.
+              {t("swot.preparingBodyPrefix")}{" "}
+              <span>{displayName || "this stock"}</span>
+              {t("swot.preparingBodySuffix")}
             </p>
             <button
               type="button"
@@ -86,11 +89,11 @@ export function SwotPanel({
               className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-xs uppercase tracking-[0.18em] border border-[var(--pq-bronze)] text-[var(--pq-bronze)] hover:bg-[rgba(184,149,106,0.08)] hover:text-[var(--pq-bronze-light)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors rounded-sm"
             >
               <Sparkles className="h-3 w-3" strokeWidth={1.6} />
-              {loading ? "Generating…" : "Generate AI summary"}
+              {loading ? t("swot.generating") : t("swot.generateBtn")}
             </button>
             {error ? (
               <p className="text-pq-mono-xs text-[var(--pq-ivory-dim)]">
-                Unable to generate right now ({error}). Try again later.
+                {t("swot.errorMsg", { error: error ?? "" })}
               </p>
             ) : null}
           </div>

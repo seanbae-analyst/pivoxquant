@@ -663,5 +663,39 @@
   },
   "disclaimerLabel": {
     "kicker": "Disclaimer"
+  },
+  "detail": {
+    "currentPrice": "Current price",
+    "signal": "Signal",
+    "composite": "Composite",
+    "compositeTooltip": "Composite score — 4-pillar observational blend.",
+    "pillar": {
+      "technical": "Technical",
+      "fundamental": "Fundamental",
+      "sentiment": "Sentiment",
+      "quant": "Quant"
+    }
+  },
+  "swot": {
+    "eyebrow": "AI assistant · observation",
+    "title": "AI analysis",
+    "preparingBodyPrefix": "AI analysis is being prepared. Trigger an observation summary for",
+    "preparingBodySuffix": "below.",
+    "generating": "Generating…",
+    "generateBtn": "Generate AI summary",
+    "errorMsg": "Unable to generate right now ({error}). Try again later."
+  },
+  "preTrade": {
+    "thesis": "Your thesis"
+  },
+  "growth": {
+    "legendLess": "Less",
+    "legendMore": "More"
+  },
+  "persona": {
+    "classifierKicker": "Persona classifier"
+  },
+  "support": {
+    "contactKicker": "Contact"
   }
 }

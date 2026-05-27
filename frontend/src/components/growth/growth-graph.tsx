@@ -11,6 +11,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import type { GrowthScoreEntry } from "@/lib/types";
+import { useT } from "@/lib/locale";
 
 /* ── Constants ── */
 
@@ -42,6 +43,7 @@ interface GrowthGraphProps {
 }
 
 export function GrowthGraph({ data, onDayClick }: GrowthGraphProps) {
+  const t = useT();
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
@@ -231,7 +233,7 @@ export function GrowthGraph({ data, onDayClick }: GrowthGraphProps) {
 
       {/* Legend */}
       <div className="mt-2 flex items-center justify-end gap-1 font-mono text-pq-mono-sm uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
-        <span>Less</span>
+        <span>{t("growth.legendLess")}</span>
         {[0, 20, 40, 60, 80].map((level) => (
           <div
             key={level}
@@ -239,7 +241,7 @@ export function GrowthGraph({ data, onDayClick }: GrowthGraphProps) {
             style={{ backgroundColor: scoreToColor(level || 0) }}
           />
         ))}
-        <span>More</span>
+        <span>{t("growth.legendMore")}</span>
       </div>
     </div>
   );

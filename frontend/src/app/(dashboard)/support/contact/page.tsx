@@ -29,6 +29,7 @@ import {
   FootSignature,
 } from "@/components/ui/editorial";
 import type { SupportCategory } from "@/lib/types";
+import { useT } from "@/lib/locale";
 
 const SUBJECT_MAX = 200;
 const BODY_MAX = 5000;
@@ -49,6 +50,7 @@ function errorMessageFor(err: unknown): string {
 }
 
 function ContactForm() {
+  const t = useT();
   const { mutate } = useSWRConfig();
   const [category, setCategory] = useState<SupportCategory>("billing");
   const [subject, setSubject] = useState("");
@@ -91,7 +93,7 @@ function ContactForm() {
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
       {/* Header */}
       <header className="mb-6">
-        <RuledKicker>Contact</RuledKicker>
+        <RuledKicker>{t("support.contactKicker")}</RuledKicker>
         <EditorialHead as="h1" size={32} className="mt-3">
           1:1 문의하기
         </EditorialHead>

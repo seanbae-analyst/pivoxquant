@@ -31,6 +31,7 @@ import {
   type PersonaId,
 } from "@/lib/cfo/hooks";
 import { PeerBenchmarkBlock } from "@/components/shared/peer-benchmark-block";
+import { useT } from "@/lib/locale";
 
 /* ── Shared styling ── */
 
@@ -339,6 +340,7 @@ export function PersonaV2Card({
   className = "",
   showPeerBenchmark = true,
 }: Props) {
+  const t = useT();
   const { data, isLoading, error } = usePersonaDetail(90);
 
   if (isLoading) {
@@ -347,7 +349,7 @@ export function PersonaV2Card({
         className={className + " p-5 rounded-[2px]"}
         style={{ background: PAPER_BG, border: `1px solid ${PAPER_BORDER}` }}
       >
-        <Kicker>Persona classifier</Kicker>
+        <Kicker>{t("persona.classifierKicker")}</Kicker>
         <p className="mt-3 text-xs text-[rgba(245,240,232,0.4)]">
           Analysing your 9-dimension behavioural vector…
         </p>

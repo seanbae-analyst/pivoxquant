@@ -30,6 +30,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { Caption } from "@/components/ui/editorial";
 import { type Side, sideLabel, sideToWire } from "@/lib/pre-trade";
+import { useT } from "@/lib/locale";
 
 // 2026-05-22 (CEO "50자 너무 많아 10자"): lowered 50 → 10. Keep in lock-step
 // with models/pre_trade_reflection.py MIN_RATIONALE_CHARS — the backend
@@ -402,6 +403,7 @@ export function CooldownStep({
   onCancel: () => void;
   bare?: boolean;
 }) {
+  const t = useT();
   const isReady = reflection.status === "ready" || reflection.seconds_remaining === 0;
   const totalSec = useMemo(() => {
     if (!reflection.cooldown_started_at || !reflection.cooldown_ends_at) return 120;
@@ -475,7 +477,7 @@ export function CooldownStep({
 
         {/* Rationale recap */}
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-4">
-          <Caption>Your thesis</Caption>
+          <Caption>{t("preTrade.thesis")}</Caption>
           <p className="mt-2 font-serif text-pq-body leading-relaxed italic text-[rgba(245,240,232,0.78)]">
             &ldquo;{reflection.rationale}&rdquo;
           </p>

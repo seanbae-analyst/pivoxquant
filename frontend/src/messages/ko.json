@@ -663,5 +663,39 @@
   },
   "disclaimerLabel": {
     "kicker": "면책"
+  },
+  "detail": {
+    "currentPrice": "현재가",
+    "signal": "Signal",
+    "composite": "종합",
+    "compositeTooltip": "종합 점수 — 4개 관찰 지표의 복합 평가입니다.",
+    "pillar": {
+      "technical": "기술적",
+      "fundamental": "기본적",
+      "sentiment": "심리",
+      "quant": "Quant"
+    }
+  },
+  "swot": {
+    "eyebrow": "AI 관찰 보조",
+    "title": "AI 분석",
+    "preparingBodyPrefix": "AI 분석이 준비 중입니다. 아래에서",
+    "preparingBodySuffix": "의 관찰 요약을 생성해 주세요.",
+    "generating": "생성 중…",
+    "generateBtn": "AI 요약 생성",
+    "errorMsg": "지금은 생성할 수 없습니다 ({error}). 잠시 후 다시 시도해 주세요."
+  },
+  "preTrade": {
+    "thesis": "나의 투자 논거"
+  },
+  "growth": {
+    "legendLess": "낮음",
+    "legendMore": "높음"
+  },
+  "persona": {
+    "classifierKicker": "투자자 유형 분류"
+  },
+  "support": {
+    "contactKicker": "문의하기"
   }
 }

@@ -20,6 +20,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/locale";
 import {
   fmtPct,
   pctColorClass,
@@ -139,6 +140,8 @@ export function DetailHero(props: DetailHeroProps) {
     inWatchlist,
     onWatchlistToggle,
   } = props;
+
+  const t = useT();
 
   /* sticky compact header — shows once the hero scrolls out of view. */
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -407,7 +410,7 @@ export function DetailHero(props: DetailHeroProps) {
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
               {/* Giant price — the protagonist */}
               <div className="lg:col-span-6">
-                <FieldLabel size="var(--pq-text-h5)">Current price</FieldLabel>
+                <FieldLabel size="var(--pq-text-h5)">{t("detail.currentPrice")}</FieldLabel>
                 <div className="mt-1.5">
                   {loadingSignal && !signal ? (
                     <Skeleton className="h-14 w-56" />
@@ -538,7 +541,7 @@ export function DetailHero(props: DetailHeroProps) {
               <div className="lg:col-span-6 lg:border-l lg:border-[var(--pq-ivory-line)] lg:pl-8">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <FieldLabel size="var(--pq-text-h5)">Signal</FieldLabel>
+                    <FieldLabel size="var(--pq-text-h5)">{t("detail.signal")}</FieldLabel>
                     <div className="mt-1.5">
                       <span className={signalChipClass}>
                         {pillarToken(signalToken)}
@@ -546,7 +549,7 @@ export function DetailHero(props: DetailHeroProps) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <FieldLabel tone="muted" size="var(--pq-text-h5)">Composite</FieldLabel>
+                    <FieldLabel tone="muted" size="var(--pq-text-h5)">{t("detail.composite")}</FieldLabel>
                     <div
                       className={cn(
                         /* Unified to text-pq-h5 (18px) with the rest of the hero
@@ -572,14 +575,14 @@ export function DetailHero(props: DetailHeroProps) {
                 {/* 4-pillar mini summary — answers "왜 이 시그널인가" up top */}
                 {hasPillars ? (
                   <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2.5">
-                    <PillarMini label="Technical" score={signal?.tech_score} />
-                    <PillarMini label="Fundamental" score={signal?.fund_score} />
-                    <PillarMini label="Sentiment" score={signal?.news_score} />
-                    <PillarMini label="Quant" score={signal?.quant_score} />
+                    <PillarMini label={t("detail.pillar.technical")} score={signal?.tech_score} />
+                    <PillarMini label={t("detail.pillar.fundamental")} score={signal?.fund_score} />
+                    <PillarMini label={t("detail.pillar.sentiment")} score={signal?.news_score} />
+                    <PillarMini label={t("detail.pillar.quant")} score={signal?.quant_score} />
                   </div>
                 ) : (
                   <p className="mt-5 font-serif text-pq-body-sm text-[var(--pq-ivory-dim)]">
-                    Composite score — 4-pillar observational blend.
+                    {t("detail.compositeTooltip")}
                   </p>
                 )}
               </div>

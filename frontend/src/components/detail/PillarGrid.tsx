@@ -10,6 +10,7 @@
 import { cn } from "@/lib/utils";
 import { FieldLabel } from "@/components/ui/editorial";
 import { SectionHeading, EmptyNote } from "./shared";
+import { useT } from "@/lib/locale";
 import type { SignalDetail } from "./types";
 
 function PillarCard({
@@ -76,6 +77,7 @@ export function PillarGrid({
   hasPillars: boolean;
   loading?: boolean;
 }) {
+  const t = useT();
   return (
     <section>
       <div className="mb-5">
@@ -107,22 +109,22 @@ export function PillarGrid({
       ) : hasPillars ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <PillarCard
-            label="Technical"
+            label={t("detail.pillar.technical")}
             score={signal?.tech_score ?? 0}
             observation="가격 흐름·모멘텀·이동평균"
           />
           <PillarCard
-            label="Fundamental"
+            label={t("detail.pillar.fundamental")}
             score={signal?.fund_score ?? 0}
             observation="실적·마진·부채·성장성"
           />
           <PillarCard
-            label="Sentiment"
+            label={t("detail.pillar.sentiment")}
             score={signal?.news_score ?? 0}
             observation="뉴스 논조·미디어 커버리지"
           />
           <PillarCard
-            label="Quant"
+            label={t("detail.pillar.quant")}
             score={signal?.quant_score ?? 0}
             observation="분산비율·모멘텀·52주 위치"
           />
