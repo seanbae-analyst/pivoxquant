@@ -294,6 +294,10 @@ def _pattern_summary(scored: list[dict[str, Any]],
     for s in scored:
         top_sectors[s["ticker"]] = top_sectors.get(s["ticker"], 0) + 1
     most_traded = max(top_sectors.items(), key=lambda x: x[1])[0] if top_sectors else ""
+    # feedback_ticker_display: KR ticker → hangul name in prose (US stays as ticker).
+    if most_traded:
+        from services.name_resolver import kr_display_name
+        most_traded = kr_display_name(most_traded)
 
     wr_str = f"{win_rate:.0f}%" if win_rate is not None else "—"
     ar_str = f"{avg_ret:+.1f}%" if avg_ret is not None else "—"

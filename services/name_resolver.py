@@ -148,6 +148,25 @@ def resolve_stock_name(ticker: str) -> Optional[str]:
     return _resolved
 
 
+def kr_display_name(ticker: str) -> str:
+    """Prose/label display string with KR-only name resolution.
+
+    Per feedback_ticker_display.md the numeric KRX code (``005930.KS``) is
+    meaningless to users and must be replaced by the hangul company name
+    (``삼성전자``).  US symbols, by contrast, ARE the recognisable brand —
+    ``AAPL`` reads better than ``Apple Inc. Common Stock`` — so they are
+    returned unchanged.  Scope is intentionally limited to the ``.KS``/``.KQ``
+    suffix, exactly matching the naked-KR-ticker QA gate.  Unresolvable KR
+    tickers fall back to the ticker itself.
+    """
+    if not ticker:
+        return ticker
+    t = ticker.strip()
+    if t.endswith((".KS", ".KQ")):
+        return resolve_stock_name(t) or ticker
+    return ticker
+
+
 def _resolve_stock_name_uncached(ticker: str) -> Optional[str]:
     if not ticker:
         return None

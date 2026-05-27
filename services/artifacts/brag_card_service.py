@@ -346,12 +346,19 @@ def _compute_monthly_stats(
 
 
 def _mask_ticker(ticker: Optional[str], anonymous: bool) -> Optional[str]:
-    """Anonymous mode → generic label; otherwise passthrough."""
+    """Anonymous mode → generic label; otherwise KR-name / US-ticker display.
+
+    Per feedback_ticker_display.md a KR ticker (``005930.KS``) is shown as the
+    hangul company name (``삼성전자``); US symbols (``AAPL``) stay as-is since
+    the ticker is the recognisable brand.  Falls back to the ticker itself
+    when a KR name is unresolvable.
+    """
     if not ticker:
         return ticker
     if anonymous:
         return "A 종목"
-    return ticker
+    from services.name_resolver import kr_display_name
+    return kr_display_name(ticker)
 
 
 def _list_holding_tickers(user_id: int) -> list[str]:

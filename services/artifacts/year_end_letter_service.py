@@ -380,8 +380,10 @@ def _shareholder_letter(ctx_partial: dict[str, Any]) -> str:
     worst = ctx_partial.get("worst_decisions") or []
     year = ctx_partial.get("year")
 
-    best_s = best[0]["ticker"] if best else None
-    worst_s = worst[0]["ticker"] if worst else None
+    # feedback_ticker_display: KR ticker → hangul name in prose (US stays as ticker).
+    from services.name_resolver import kr_display_name
+    best_s = kr_display_name(best[0]["ticker"]) if best else None
+    worst_s = kr_display_name(worst[0]["ticker"]) if worst else None
 
     def _fmt_pct(v): return f"{v:+.2f}%" if isinstance(v, (int, float)) else "—"
 

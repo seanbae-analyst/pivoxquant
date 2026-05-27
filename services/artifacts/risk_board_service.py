@@ -555,8 +555,11 @@ def _top_risks_narrative(defense_result: dict[str, Any],
             f"집중도 체크리스트 항목"
         )
     if ces_top:
+        # feedback_ticker_display: KR ticker → hangul name in prose (US stays as ticker).
+        from services.name_resolver import kr_display_name
+        _ces_name = kr_display_name(ces_top["ticker"])
         parts.append(
-            f"{ces_top['ticker']} 종목의 꼬리 손실 기여도 상위 관찰"
+            f"{_ces_name} 종목의 꼬리 손실 기여도 상위 관찰"
         )
     if warnings_:
         parts.append(str(warnings_[0]))

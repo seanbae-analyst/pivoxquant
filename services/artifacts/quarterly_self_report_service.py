@@ -303,10 +303,13 @@ def _risk_factors(user_id: int, positions: list[Position]
         top = enriched[0]
         w = top["mv"] / total_mv
         if w >= 0.20:
+            # feedback_ticker_display: KR ticker → hangul name (US stays as ticker).
+            from services.name_resolver import kr_display_name
+            _top_name = kr_display_name(top["ticker"])
             rows.append({
                 "factor": "단일 포지션",
                 "note":   _safe_scrub(
-                    f"{top['ticker']} 포지션이 전체 MV의 {w*100:.0f}%를 차지 (관찰)"
+                    f"{_top_name} 포지션이 전체 MV의 {w*100:.0f}%를 차지 (관찰)"
                 ) or "",
             })
     if len(enriched) < 5:
