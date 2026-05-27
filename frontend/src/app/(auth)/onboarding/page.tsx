@@ -738,6 +738,28 @@ export default function OnboardingPage() {
     [],
   );
 
+  // Slider steps never wrote their value to `answers`, so isStepValid
+  // (ans !== undefined) stayed false and "Next" was dead until the user
+  // dragged the handle — a silent onboarding dead-end at knowledge_self_rating
+  // (every new user hit it). Seed the range midpoint on entry: for the only
+  // slider (min 1 / max 5) that is 3, which matches the backend's missing-value
+  // default (questionnaire.py: answers.get("knowledge_self_rating", 3)), so a
+  // user who never touches the handle is classified at the same neutral score
+  // as before — not the lowest (min). The functional updater + prev-guard keeps
+  // it idempotent and lets us drop `answers` from deps (no render burst).
+  useEffect(() => {
+    if (currentQuestion && currentQuestion.type === "slider") {
+      const mid = Math.round(
+        ((currentQuestion.min ?? 1) + (currentQuestion.max ?? 5)) / 2,
+      );
+      setAnswers((prev) =>
+        prev[currentQuestion.id] === undefined
+          ? { ...prev, [currentQuestion.id]: mid }
+          : prev,
+      );
+    }
+  }, [currentQuestion]);
+
   const handleLegalToggle = useCallback((value: string) => {
     setAnswers((prev) => {
       const existing = (prev.legal_confirmations ?? []) as string[];
@@ -1178,7 +1200,11 @@ function QuestionScreen({
       {question.type === "slider" && (
         <SliderInput
           question={question}
-          value={typeof answer === "number" ? answer : (question.min ?? 1)}
+          value={
+            typeof answer === "number"
+              ? answer
+              : Math.round(((question.min ?? 1) + (question.max ?? 5)) / 2)
+          }
           onChange={(v) => onSliderChange(question.id, v)}
         />
       )}
