@@ -42,6 +42,7 @@ import {
   NotebookPen,
   UserCircle,
   Sprout,
+  History,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -58,6 +59,7 @@ export type TerminalSidebarKey =
   | "discover"
   | "ai-chat"
   | "ai"
+  | "simulator"
   | "alerts"
   | "companion"
   | "pre-trade"
@@ -108,6 +110,13 @@ const RESEARCH: Item[] = [
   { key: "discover", label: "Discover", href: "/discover", icon: Compass, hidden: true },
   { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare, hidden: true },
   { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
+  // 2026-05-28: What-If (counterfactual/"regret") simulator surfaced per CEO.
+  // Public, no-login viral tool at /simulator/what-if (lives OUTSIDE the
+  // dashboard shell — clicking navigates away from the rail). Backend
+  // /api/simulate/counterfactual verified live in prod. §101: the page
+  // already strips BUY/SELL and ships a disclaimer; "What-If" label carries
+  // no return promise.
+  { key: "simulator", label: "What-If", href: "/simulator/what-if", icon: History },
 ];
 
 // ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
