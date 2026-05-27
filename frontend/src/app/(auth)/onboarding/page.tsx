@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
+import { useLocale } from "@/lib/locale";
 import { OnboardingBragCard } from "@/components/growth/onboarding-brag-card";
 import {
   WIZARD_QUESTIONS,
@@ -75,6 +76,7 @@ function saveAnswers(answers: Record<string, string | string[] | number>) {
 function ProgressBar({ current, total, category }: { current: number; total: number; category: string }) {
   const pct = Math.round((current / total) * 100);
   const catMeta = CATEGORIES[category];
+  const { locale } = useLocale();
 
   return (
     <div className="w-full">
@@ -85,7 +87,7 @@ function ProgressBar({ current, total, category }: { current: number; total: num
             className="text-xs font-semibold uppercase tracking-wider"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
           >
-            {catMeta?.label ?? category}
+            {locale === "ko" ? (catMeta?.label_kr || catMeta?.label || category) : (catMeta?.label ?? category)}
           </span>
         </div>
         <span
@@ -124,6 +126,8 @@ function OptionCard({
   onSelect: () => void;
 }) {
   const icon = getIcon(option.icon);
+  const { locale } = useLocale();
+  const displayLabel = locale === "ko" ? (option.label_kr || option.label) : option.label;
 
   return (
     <motion.button
@@ -170,7 +174,7 @@ function OptionCard({
             : "rgba(var(--pq-ivory-rgb), 0.7)",
         }}
       >
-        {option.label}
+        {displayLabel}
       </span>
     </motion.button>
   );
@@ -186,6 +190,8 @@ function MultiOptionCard({
   selected: boolean;
   onToggle: () => void;
 }) {
+  const { locale } = useLocale();
+  const displayLabel = locale === "ko" ? (option.label_kr || option.label) : option.label;
   return (
     <motion.button
       type="button"
@@ -228,7 +234,7 @@ function MultiOptionCard({
             : "rgba(var(--pq-ivory-rgb), 0.7)",
         }}
       >
-        {option.label}
+        {displayLabel}
       </span>
     </motion.button>
   );
@@ -247,6 +253,10 @@ function SliderInput({
   const min = question.min ?? 1;
   const max = question.max ?? 5;
   const currentOption = question.options.find((o) => o.value === value);
+  const { locale } = useLocale();
+  const displayOptionLabel = locale === "ko" ? (currentOption?.label_kr || currentOption?.label || "") : (currentOption?.label ?? "");
+  const displayMinLabel = locale === "ko" ? (question.min_label_kr || question.min_label) : question.min_label;
+  const displayMaxLabel = locale === "ko" ? (question.max_label_kr || question.max_label) : question.max_label;
 
   return (
     <div className="flex flex-col gap-6">
@@ -264,7 +274,7 @@ function SliderInput({
           className="text-sm font-medium"
           style={{ color: "rgba(var(--pq-ivory-rgb), 0.75)" }}
         >
-          {currentOption?.label ?? ""}
+          {displayOptionLabel}
         </div>
       </div>
 
@@ -277,11 +287,11 @@ function SliderInput({
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          aria-label={question.question}
+          aria-label={locale === "ko" ? (question.question_kr || question.question) : question.question}
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={value}
-          aria-valuetext={currentOption?.label}
+          aria-valuetext={displayOptionLabel}
           className="slider-input w-full"
         />
 
@@ -291,13 +301,13 @@ function SliderInput({
             className="max-w-[120px] text-xs leading-tight"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.5)" }}
           >
-            {question.min_label}
+            {displayMinLabel}
           </span>
           <span
             className="max-w-[120px] text-right text-xs leading-tight"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.5)" }}
           >
-            {question.max_label}
+            {displayMaxLabel}
           </span>
         </div>
       </div>
@@ -334,6 +344,7 @@ function LegalStep({
   answers: string[];
   onToggle: (val: string) => void;
 }) {
+  const { locale } = useLocale();
   return (
     <div className="flex flex-col gap-4">
       <div className="mb-2">
@@ -353,18 +364,19 @@ function LegalStep({
             letterSpacing: "var(--pq-track-tight)",
           }}
         >
-          {LEGAL_QUESTION.question}
+          {locale === "ko" ? (LEGAL_QUESTION.question_kr || LEGAL_QUESTION.question) : LEGAL_QUESTION.question}
         </h2>
         <p
           className="mt-1 text-sm"
           style={{ color: "rgba(var(--pq-ivory-rgb), 0.6)" }}
         >
-          All confirmations are required to proceed.
+          {locale === "ko" ? "모든 항목을 확인해야 계속 진행할 수 있습니다." : "All confirmations are required to proceed."}
         </p>
       </div>
 
       {LEGAL_QUESTION.options.map((opt) => {
         const checked = answers.includes(String(opt.value));
+        const optLabel = locale === "ko" ? (opt.label_kr || opt.label) : opt.label;
         return (
           <motion.button
             key={String(opt.value)}
@@ -405,7 +417,7 @@ function LegalStep({
                 fontWeight: checked ? 500 : 400,
               }}
             >
-              {opt.label}
+              {optLabel}
             </span>
           </motion.button>
         );
@@ -426,6 +438,7 @@ function ResultScreen({
 }) {
   const typeData = INVESTOR_TYPES[investorType];
   const highlights = PROFILE_HIGHLIGHTS[investorType];
+  const { locale } = useLocale();
 
   if (!typeData || !highlights) return null;
 
@@ -476,7 +489,7 @@ function ResultScreen({
           letterSpacing: "var(--pq-track-tight)",
         }}
       >
-        <span style={{ color: "var(--pq-bronze)" }}>{typeData.label}</span>
+        <span style={{ color: "var(--pq-bronze)" }}>{locale === "ko" ? (typeData.label_kr || typeData.label) : typeData.label}</span>
       </motion.h1>
 
       {/* Tagline */}
@@ -487,7 +500,7 @@ function ResultScreen({
         className="mt-3 max-w-sm text-center text-pq-lead leading-relaxed"
         style={{ color: "rgba(var(--pq-ivory-rgb), 0.7)" }}
       >
-        {highlights.tagline}
+        {locale === "ko" ? (highlights.tagline_kr || highlights.tagline) : highlights.tagline}
       </motion.p>
 
       {/* Features */}
@@ -497,7 +510,7 @@ function ResultScreen({
         transition={{ delay: 0.6, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         className="mt-8 w-full max-w-sm space-y-3"
       >
-        {highlights.features.map((feat, i) => (
+        {(locale === "ko" ? (highlights.features_kr || highlights.features) : highlights.features).map((feat, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, x: -20 }}
@@ -1129,6 +1142,9 @@ function QuestionScreen({
   onSliderChange: (qid: string, value: number) => void;
 }) {
   const catMeta = CATEGORIES[question.category];
+  const { locale } = useLocale();
+  const displayQuestion = locale === "ko" ? (question.question_kr || question.question) : question.question;
+  const displayCatLabel = locale === "ko" ? (catMeta?.label_kr || catMeta?.label) : catMeta?.label;
 
   return (
     <div className="flex flex-col gap-5">
@@ -1147,7 +1163,7 @@ function QuestionScreen({
                 letterSpacing: "var(--pq-track-eyebrow)",
               }}
             >
-              {catMeta.label}
+              {displayCatLabel}
             </span>
           </div>
         )}
@@ -1158,14 +1174,14 @@ function QuestionScreen({
             letterSpacing: "var(--pq-track-tight)",
           }}
         >
-          {question.question}
+          {displayQuestion}
         </h2>
         {question.type === "multi" && (
           <p
             className="mt-1.5 text-sm"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.6)" }}
           >
-            Select all that apply
+            {locale === "ko" ? "해당하는 것을 모두 선택해 주세요." : "Select all that apply"}
           </p>
         )}
       </div>
