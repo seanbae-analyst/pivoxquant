@@ -1,3 +1,47 @@
+# PivoxQuant — 인수인계서 (2026-05-27 v54 — 변호사 PDF 재구성 + Alpaca 제거 + 출시 버그fix + Growth/What-If nav 노출)
+
+## v54 2026-05-27 — 변호사 PDF 재구성 + Alpaca 제거 + 버그fix + nav 노출 + main push
+
+> **결론**: `origin/main` 에 **5커밋 push 완료**, local 완전 동기(0/0). CEO 전권 위임 자율모드. 검증: 풀 pytest **3442 passed** / vitest **493** / tsc **0** / pre-push smoke **PASSED**. **0원.**
+
+### main 커밋 (99799b94 → 4a7b2fa9, 전부 push됨)
+```
+4a7b2fa9 feat(nav): surface What-If simulator in sidebar (RESEARCH → "What-If")
+4fa32f20 feat(nav): surface Growth OS in sidebar as "Routine" + fix loading copy
+46aea7b2 fix: §101 StatArb 지시어·KR scope 게이트·naked ticker·UX (출시 전 버그헌팅)
+c3801359 chore(broker): delete orphaned Alpaca component files
+6bea95f8 chore(broker): remove Alpaca integration entirely
+```
+
+### 변호사 상담 자료 (PDF)
+- `~/Desktop/취준/변호사상담_PivoxQuant/PivoxQuant_변호사상담_작동설명.pdf` **53p 전면 재구성**(화면 36 + 아티팩트 18종 + 코드실측 회색지대 부록 5p).
+- **재생성 소스 보존**(같은 폴더): `생성기_build_lawyer_pdf.py`(Chrome headless --print-to-pdf) + `부록본문_appendix_body.html`. 원본 백업 `_원본백업_48p.pdf`.
+- IP 추상화(퀀트 가중치/임계값·내부 모듈명·Alpaca 제거) → **audit "발송가능 PASS"**(전략/재무/로드맵/내부식별자 누출 0).
+
+### Alpaca 제거
+- UI·약관·처리방침·변호사문서·i18n **전면 제거**. 단 데이터 fetch fallback 경로(`services/data/alpaca_market_adapter.py`, fetcher/fmp/realtime/daytrade ALPACA_ENABLED 게이트, data_source_resolver)는 회귀위험으로 **비활성 보존** → **spawn-task chip 분리**(완전제거 별도).
+
+### 버그 fix (46aea7b2)
+- [CRITICAL §101] StatArb `action/action_kr` "A 매도, B 매수" → 관찰어(소스 문자열만, legal_filter 정책 미접촉).
+- [HIGH] `access_guard.is_user_allowed_ticker` KR suffix-tolerant(.KS↔.KQ exact-match로 본인종목 denied) + cross-user 누수 테스트 3건.
+- [MED] naked ticker 전수(watchlist 모바일·discover·signals datalist) / 홈 PositionsTopCard 로딩 플리커 / 모달 통화 라벨.
+- ※ risk.py FX정규화·hooks.ts displayTicker fallback은 **이미 HEAD에 존재**(타 세션). bug-hunter는 stale 상태 봄.
+- **보류(의도적)**: legal_filter IGNORECASE(hold/소문자 buy·sell) — feedback_legal_filter_design 경고(over-scrub), legal-kr-fintech 검토 후 결정.
+
+### nav 노출 (4fa32f20 + 4a7b2fa9)
+- **Growth OS → 사이드바 "Routine"**(SYSTEM 그룹). 백엔드 `/api/growth/{today,data,weekly}` prod live(401 확인)인데 메뉴 누락이라 노출. "준비 중" 깜빡임 → "불러오는 중"(백엔드 살아있음). stale 주석("미배포 dead-end") 정정.
+- **What-If → 사이드바 "What-If"**(RESEARCH 그룹). `/simulator/what-if` 공개 페이지 + `/api/simulate/counterfactual` 계산 정상(AAPL→연30.76%+SPY벤치 확인). 단 dashboard 밖이라 클릭 시 앱셸 이탈.
+- 라벨 "Growth" 회피("Routine") = §101 자산수익 오인 방지(코드 주석 근거).
+
+### ⚠️ 미해결 / 다음 세션 ACTION
+1. **사이드바 시각확인 BLOCKED** — OAuth(Google/Kakao) 로그인 대행 불가. CEO 로그인 후 `/home` 사이드바에 **Routine·What-If 떴는지** 확인 필요.
+2. **/simulator/what-if 가 브라우저에서 `/login?expired=1`로 튕김** — 이 Chrome 만료쿠키 탓 추정(curl은 200). **신규 비로그인 방문자도 튕기면 바이럴 funnel 무용** → 깨끗한 세션으로 investigate-bug 점검 권장.
+3. **Vercel 토큰 만료**(`invalidToken`) → API 배포확인 불가. `vercel login` CLI 재로그인 필요.
+4. Alpaca 데이터경로 완전제거(chip) / 변호사 PDF What-if "공개 유입 페이지" 라벨 미세조정(선택).
+5. **미커밋 노이즈(의도적 비커밋)**: `.env.example`·`frontend/.env.example`(Alpaca placeholder, pre-commit env-guard 차단)·`state/*.json`(cron)·`.claude/skills`.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-27 v53 — PWA 검증 + 전체 버그헌팅 + PDF 이메일 중점 + main 리컨실 + repo 정리)
 
 ## v53 2026-05-27 — PWA 검증 + 버그헌팅(6 agent) + PDF 이메일 + main push + 브랜치 정리
