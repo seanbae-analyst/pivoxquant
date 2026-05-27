@@ -530,7 +530,11 @@ export default function SignupPageV2() {
                     }`,
                     borderRadius: 2,
                     padding: "8px 10px",
-                    fontSize: "var(--pq-text-button)",
+                    /* --pq-text-h6 = 16px (was --pq-text-button 13px): < 16px
+                       makes iOS Safari auto-zoom on focus — bad on the signup
+                       screen for a 90%-mobile audience. Use the token (not a
+                       raw "16px") to satisfy the typography-token-coverage gate. */
+                    fontSize: "var(--pq-text-h6)",
                     colorScheme: "dark",
                   }}
                 />

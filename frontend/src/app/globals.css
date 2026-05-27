@@ -1739,6 +1739,15 @@ button:hover > .pq-ink-pill,
   .pq-ink-input {
     font-size: 16px;
   }
+  /* Systemic guard for inputs that size via text-pq-* utilities or element
+     defaults instead of .pq-ink-input (e.g. global search, pre-trade ticker).
+     `input:not(.pq-ink-input)` (0,1,1) outranks the .text-pq-* utilities so
+     they can no longer drop below 16px and trigger the iOS zoom-on-focus.
+     Desktop is untouched. Inline `style={{fontSize}}` still wins — those are
+     fixed at the call site. */
+  input:not(.pq-ink-input) {
+    font-size: 16px;
+  }
 }
 
 /* Empty state block on ink */
