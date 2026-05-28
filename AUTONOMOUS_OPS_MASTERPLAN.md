@@ -268,7 +268,7 @@
 
 ### K7. 보안 침해 의심
 - **감지**: BETA_PW git scan (이미 박힘), cso skill 일일 daily mode — **부분 박힘** (cso skill 존재, 일일 cron 미박힘)
-- **동작**: 1시간 freeze (PR auto-merge OFF), 변호사 패킷 자동 추가, BETA_PW rotate (옛 정책)는 폐기됐으므로 pivoxaudit2 유지
+- **동작**: 1시간 freeze (PR auto-merge OFF), 변호사 패킷 자동 추가, BETA_PW rotate (옛 정책)는 폐기됐으므로 현 고정값 유지 (Vercel/Railway env SoT)
 - **회복**: cso 검증 통과 후 자동 해제
 - **추가 박을 것**: cso daily mode cron 1개 (06:00)
 
