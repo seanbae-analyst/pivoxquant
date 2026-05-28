@@ -29,6 +29,10 @@ report() {
 while IFS= read -r f; do
   [ -z "$f" ] && continue
   case "$f" in
+    # Template files (.env.example, frontend/.env.example, .env.sample, etc.)
+    # contain only `<YOUR_X_KEY>` placeholders and ship in-repo by design.
+    # Whitelisted ahead of the .env.* catch-all below.
+    *.example|*.sample|*.template)  : ;;
     .env|.env.*|*.env)              report "secret file staged: $f (move to Vercel/Railway env)";;
     *.db|*.sqlite|*.sqlite3)        report "binary DB staged: $f (add to .gitignore)";;
     *.pem|*.key|*.p12|*.pfx)        report "key material staged: $f";;
