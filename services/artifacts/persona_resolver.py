@@ -51,15 +51,21 @@ _LEGACY_PROFILE_MAP: Final[dict[str, str]] = {
 # string is one of these tokens. This lets `resolve_persona` take the
 # direct path without going through the V1 legacy aggregation.
 # Source of truth: PERSONA_SPEC_2026-04-23.md §2.
+# Aligned 1:1 with services.profile.persona_analytics.DECLARED_TO_PERSONA
+# (the SoT used by the AI companion + peer-benchmark cohorts). Previously
+# passive_index_hugger / steady_accumulator base-mapped to "balanced" here but
+# to "income" / "beginner" in analytics, so the same user saw one persona in
+# their PDF and another in peer benchmarks. The investment_goal / dividend_tilt
+# / experience_level hints below still apply on top for any type.
 _V2_PROFILE_MAP: Final[dict[str, str]] = {
     "momentum_rider":       "growth",
     "value_hunter":         "value",
     "risk_managed_growth":  "balanced",
-    "passive_index_hugger": "balanced",   # promoted to ``income`` when dividend_tilt is set
+    "passive_index_hugger": "income",     # passive index = income-tilt (SoT: DECLARED_TO_PERSONA)
     "macro_rotator":        "quant",
     "swing_trader":         "speculator",
     "aggressive_scalper":   "daytrader",
-    "steady_accumulator":   "balanced",   # promoted to ``beginner`` when experience_level == 'novice'
+    "steady_accumulator":   "beginner",   # systematic accumulator = educational track (SoT)
 }
 
 

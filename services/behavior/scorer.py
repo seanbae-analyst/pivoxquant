@@ -494,8 +494,14 @@ def _resolve_persona(user_id: int) -> str:
     prof = InvestmentProfile.query.filter_by(user_id=user_id).first()
     if not prof:
         return "balanced"
-    val = (prof.profile_type or "balanced").strip().lower()
-    return val if val in PERSONA_HOLDING_DAYS else "balanced"
+    # Resolve through the shared SoT resolver so V2 questionnaire tokens
+    # (passive_index_hugger, steady_accumulator, …) map to a canonical persona
+    # instead of silently falling back to "balanced" — those tokens are not
+    # PERSONA_HOLDING_DAYS keys themselves. Keeps behaviour scoring on the same
+    # persona as the PDF/peer-benchmark surfaces. (local import: no cycle)
+    from services.artifacts.persona_resolver import resolve_persona
+    persona = resolve_persona(prof)
+    return persona if persona in PERSONA_HOLDING_DAYS else "balanced"
 
 
 def _last_sunday(today: date) -> date:
