@@ -25,12 +25,13 @@
    Compliance: T+3 self-review prompt only. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>DD Checklist — {{ as_of | default('—') }} — {{ user_name | default('Reader') }}</title>
+  <title>{% if locale == 'en' %}DD Checklist — {{ as_of | default('—') }} — {{ user_name | default('Reader') }}{% else %}DD 체크리스트 — {{ as_of | default('—') }} — {{ user_name | default('Reader') }}{% endif %}</title>
   <style>{% include '_dd_checklist_v3_css.html' %}</style>
 </head>
 <body>
@@ -45,63 +46,62 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip pro">PRO</span>DD CHECKLIST</strong>
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}DD CHECKLIST{% else %}DD 체크리스트{% endif %}</strong>
         <span>{{ v3.doc | default(as_of | default('—')) }} &middot; 01/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">DD Checklist &middot; T+3 Self-Review &middot; {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}DD Checklist &middot; T+3 Self-Review{% else %}DD 체크리스트 &middot; T+3 자기 점검{% endif %} &middot; {{ pm.persona_label(persona) }}</div>
 
     {# ───────── 1. 실용 헤더 ───────── #}
     <h1 style="font-family:var(--font-serif);font-size:28px;font-weight:500;line-height:1.2;margin:8px 0 4px;letter-spacing:-0.01em;">
       {%- if v3.positions and v3.positions | length > 0 -%}
-        오늘 점검할 <strong style="color:var(--r-warn)">{{ v3.positions | length }}개</strong> 종목.
+        {% if locale == 'en' %}<strong style="color:var(--r-warn)">{{ v3.positions | length }}</strong> tickers to review today.{% else %}오늘 점검할 <strong style="color:var(--r-warn)">{{ v3.positions | length }}개</strong> 종목.{% endif %}
       {%- else -%}
-        오늘 점검 대상 없음.
+        {% if locale == 'en' %}No tickers to review today.{% else %}오늘 점검 대상 없음.{% endif %}
       {%- endif -%}
     </h1>
     <p style="font-size:12px;line-height:1.55;color:var(--r-ink-3);margin:0 0 14px;">
-      매수 후 사흘이 지난 보유 종목입니다. 매수 직후의 흥분이 가라앉은 시점 — 본인의 thesis를
-      다시 읽고 5개 자기 점검 질문에 답하세요. <strong>답은 본인이 적습니다.</strong>
+      {% if locale == 'en' %}Holdings acquired three days ago. The post-acquisition euphoria has settled — re-read your thesis and answer the five self-review questions. <strong>You write the answers.</strong>{% else %}매수 후 사흘이 지난 보유 종목입니다. 매수 직후의 흥분이 가라앉은 시점 — 본인의 thesis를 다시 읽고 5개 자기 점검 질문에 답하세요. <strong>답은 본인이 적습니다.</strong>{% endif %}
     </p>
 
     {# ───────── 2. KPI 4-up ───────── #}
     <div class="pq-pdf-kpi-row cols-4" style="margin-bottom:16px;">
       <div class="pq-pdf-kpi">
-        <div class="pq-pdf-kpi-lbl">Pending</div>
+        <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Pending{% else %}대기{% endif %}</div>
         <div class="pq-pdf-kpi-val">{{ v3.kpi_pending | default('—') }}</div>
-        <div class="pq-pdf-kpi-delta">점검 대상 종목 수</div>
+        <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Tickers to review{% else %}점검 대상 종목 수{% endif %}</div>
       </div>
       <div class="pq-pdf-kpi">
-        <div class="pq-pdf-kpi-lbl">Oldest</div>
+        <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Oldest{% else %}최장 경과{% endif %}</div>
         <div class="pq-pdf-kpi-val">{{ v3.kpi_oldest | default('—') }}</div>
-        <div class="pq-pdf-kpi-delta">최장 경과</div>
+        <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Longest elapsed{% else %}최장 경과{% endif %}</div>
       </div>
       <div class="pq-pdf-kpi">
-        <div class="pq-pdf-kpi-lbl">Avg Age</div>
+        <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Avg Age{% else %}평균 경과{% endif %}</div>
         <div class="pq-pdf-kpi-val">{{ v3.kpi_avg_age | default('—') }}</div>
-        <div class="pq-pdf-kpi-delta">평균 보유</div>
+        <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Average hold{% else %}평균 보유{% endif %}</div>
       </div>
       <div class="pq-pdf-kpi">
-        <div class="pq-pdf-kpi-lbl">Questions</div>
+        <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Questions{% else %}질문{% endif %}</div>
         <div class="pq-pdf-kpi-val">{{ v3.kpi_questions | default('5') }}</div>
-        <div class="pq-pdf-kpi-delta">자기 점검 항목</div>
+        <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Self-review items{% else %}자기 점검 항목{% endif %}</div>
       </div>
     </div>
 
     {# ───────── 3. Positions Table ───────── #}
     {% if v3.positions and v3.positions | length > 0 %}
-    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">점검 대상 포지션</h2>
+    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">{% if locale == 'en' %}Positions to Review{% else %}점검 대상 포지션{% endif %}</h2>
     <table class="pq-pdf-table" style="margin-bottom:16px;">
       <thead>
         <tr>
-          <th>종목</th>
-          <th class="right">보유</th>
-          <th class="right">평단</th>
-          <th class="right">총 매수금</th>
-          <th class="right">매수일</th>
+          <th>{% if locale == 'en' %}Ticker{% else %}종목{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Shares{% else %}보유{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Avg Cost{% else %}평단{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Total Cost{% else %}총 매수금{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Acq Date{% else %}매수일{% endif %}</th>
           <th class="right">D+</th>
         </tr>
       </thead>
@@ -123,18 +123,17 @@
     </table>
     {% else %}
     <div style="background:var(--r-bg-soft);border-radius:6px;padding:24px;text-align:center;color:var(--r-ink-3);font-size:13px;margin-bottom:16px;">
-      매수 후 사흘이 지난 보유 종목이 없습니다.
+      {% if locale == 'en' %}No holdings acquired three days ago.{% else %}매수 후 사흘이 지난 보유 종목이 없습니다.{% endif %}
       <br/><span style="font-size:11px;color:var(--r-ink-4);margin-top:6px;display:inline-block;">
-      신규 매수 시 자동으로 다음 발송에 포함됩니다.
+      {% if locale == 'en' %}New acquisitions are auto-included in the next send.{% else %}신규 매수 시 자동으로 다음 발송에 포함됩니다.{% endif %}
     </span>
     </div>
     {% endif %}
 
     {# ───────── 4. 5 Questions Inline (compact list) ───────── #}
-    <h2 class="pq-pdf-section-title sm" style="margin-top:8px;">5가지 자기 점검</h2>
+    <h2 class="pq-pdf-section-title sm" style="margin-top:8px;">{% if locale == 'en' %}Five Self-Reviews{% else %}5가지 자기 점검{% endif %}</h2>
     <p style="font-size:10px;color:var(--r-ink-3);margin:0 0 10px;">
-      각 항목에 본인이 직접 Y / N. 'No'가 많을수록 thesis가 약해진 신호.
-      앱에서 응답을 기록하면 다음 발송에 반영됩니다.
+      {% if locale == 'en' %}Mark Y/N for each item yourself. More 'No' answers signal a weakening thesis. Responses logged in the app are reflected in the next send.{% else %}각 항목에 본인이 직접 Y / N. 'No'가 많을수록 thesis가 약해진 신호. 앱에서 응답을 기록하면 다음 발송에 반영됩니다.{% endif %}
     </p>
 
     <ol style="margin:0;padding:0;list-style:none;counter-reset:dd-q;">
@@ -169,7 +168,7 @@
     {% endif %}
 
     <div class="pq-pdf-page-footer">
-      <span>DD Checklist &middot; Pro &middot; T+3 Self-Review</span>
+      <span>{% if locale == 'en' %}DD Checklist &middot; Pro &middot; T+3 Self-Review{% else %}DD 체크리스트 &middot; Pro &middot; T+3 자기 점검{% endif %}</span>
       <span>Page 01</span>
     </div>
 
@@ -183,7 +182,7 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip pro">PRO</span>DD CHECKLIST</strong>
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}DD CHECKLIST{% else %}DD 체크리스트{% endif %}</strong>
         <span>{{ v3.doc_short | default(v3.doc) | default('—') }} &middot; 02/02</span>
       </div>
     </div>
@@ -191,23 +190,22 @@
     <div class="pq-pdf-gold-rule"></div>
 
     {# ───────── 5. Persona Action Points ───────── #}
-    <h2 class="pq-pdf-section-title sm">관찰 체크리스트 &middot; {{ pm.persona_label(persona) }}</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Observation Checklist{% else %}관찰 체크리스트{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:10px;">
-      페르소나별로 thesis 점검 시 같이 확인하면 좋은 데이터 포인트입니다.
-      매수·매도 권유가 아닙니다.
+      {% if locale == 'en' %}Data points worth checking alongside your thesis review, per persona. Not a solicitation to buy or sell.{% else %}페르소나별로 thesis 점검 시 같이 확인하면 좋은 데이터 포인트입니다. 거래 권유가 아닙니다.{% endif %}
     </p>
     {{ pm.persona_action_points(persona, v3.positions | default([])) }}
 
     {# ───────── 6. AI Reflection ───────── #}
     {% if v3.reflection %}
-    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">Reflection</h2>
+    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">{% if locale == 'en' %}Reflection{% else %}회고{% endif %}</h2>
     <div class="pq-pdf-callout">
       <p style="font-size:12px;line-height:1.6;color:var(--r-ink-2);margin:0;">{{ v3.reflection }}</p>
     </div>
     {% endif %}
 
     {# ───────── 7. Disclosure ───────── #}
-    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">What This Checklist Does Not Claim</h2>
+    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">{% if locale == 'en' %}What This Checklist Does Not Claim{% else %}본 체크리스트가 주장하지 않는 것{% endif %}</h2>
     <ul style="font-size:11px;line-height:1.7;color:var(--r-ink-2);padding-left:16pt;margin-top:6pt;">
       {% for n in v3.not_claimed | default([]) %}
       <li>{{ n }}</li>
@@ -215,20 +213,20 @@
     </ul>
 
     <div class="pq-pdf-govblock">
-      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Pro</div></div>
-      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Daily &middot; T+3</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div><div class="val">Pro</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div><div class="val">{% if locale == 'en' %}Daily &middot; T+3{% else %}일간 &middot; T+3{% endif %}</div></div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}본인 매수 기록 + 5-question 자기 점검{% endif %}</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}{% if locale == 'en' %}Own acquisition records + 5-question self-review{% else %}본인 매수 기록 + 5-question 자기 점검{% endif %}{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}Position &middot; PositionDDCheck{% endif %}</div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>DD Checklist &middot; Pro &middot; Self-review prompt only</span>
+      <span>{% if locale == 'en' %}DD Checklist &middot; Pro &middot; Self-review prompt only{% else %}DD 체크리스트 &middot; Pro &middot; 자기 점검 프롬프트 전용{% endif %}</span>
       <span>Page 02</span>
     </div>
 

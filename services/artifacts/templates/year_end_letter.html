@@ -25,12 +25,13 @@
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
 {%- set persona = persona | default('balanced') -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Year-End Letter — {{ v3.cover_year | default(year) }} — {{ user_name | default('Reader') }}</title>
+  <title>{% if locale == 'en' %}Year-End Letter — {{ v3.cover_year | default(year) }} — {{ user_name | default('Reader') }}{% else %}연간 투자 리뷰 — {{ v3.cover_year | default(year) }} — {{ user_name | default('Reader') }}{% endif %}</title>
   <style>{% include '_year_end_letter_v3_css.html' %}</style>
 </head>
 <body>
@@ -45,25 +46,25 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>YEAR-END LETTER</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}YEAR-END LETTER{% else %}연간 투자 리뷰{% endif %}</strong>
         <span>{{ v3.doc | default('—') }}</span>
       </div>
     </div>
 
     <div style="margin-top: 28mm;">
-      <div class="pq-pdf-cover-eyebrow">Annual Investor Letter &middot; Year-End</div>
+      <div class="pq-pdf-cover-eyebrow">{% if locale == 'en' %}Annual Investor Letter &middot; Year-End{% else %}연간 투자자 레터 &middot; Year-End{% endif %}</div>
       <h1 style="font-family:var(--font-serif);font-size:34px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
-        {{ v3.cover_year | default(year | default('—')) }}년
+        {{ v3.cover_year | default(year | default('—')) }}{% if locale == 'en' %} {% else %}년{% endif %}
         {%- if v3.kpi_pnl_value and v3.kpi_pnl_value != '—' %}
           <strong style="color:{% if '-' in (v3.kpi_pnl_value or '') %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.kpi_pnl_value }}</strong>.
         {%- else %}
-          한 해 기록.
+          {% if locale == 'en' %}year record.{% else %}한 해 기록.{% endif %}
         {%- endif %}
       </h1>
       <p style="font-size:14px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-        12개월 본인 거래 회고 — 권유가 아닌 기록.
-        {% if v3.kpi_winrate_value and v3.kpi_winrate_value != '—' %} 승률 <strong>{{ v3.kpi_winrate_value }}</strong>{% endif %}
-        {% if v3.kpi_alpha_value and v3.kpi_alpha_value != '—' %} · 알파 <strong>{{ v3.kpi_alpha_value }}</strong>{% endif %}
+        {% if locale == 'en' %}A 12-month own-trade retrospective — a record, not a recommendation.{% else %}12개월 본인 거래 회고 — 권유가 아닌 기록.{% endif %}
+        {% if v3.kpi_winrate_value and v3.kpi_winrate_value != '—' %} {% if locale == 'en' %}Hit rate <strong>{{ v3.kpi_winrate_value }}</strong>{% else %}승률 <strong>{{ v3.kpi_winrate_value }}</strong>{% endif %}{% endif %}
+        {% if v3.kpi_alpha_value and v3.kpi_alpha_value != '—' %} · {% if locale == 'en' %}Alpha <strong>{{ v3.kpi_alpha_value }}</strong>{% else %}알파 <strong>{{ v3.kpi_alpha_value }}</strong>{% endif %}{% endif %}
       </p>
     </div>
 
@@ -100,15 +101,15 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>YEAR-END LETTER</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}YEAR-END LETTER{% else %}연간 투자 리뷰{% endif %}</strong>
         <span>{{ v3.doc_short | default(v3.doc) | default('—') }} &middot; 02/04</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Shareholder Letter &middot; {{ pm.persona_label(persona) }} &middot; 본인 회고</div>
-    <h2 class="pq-pdf-section-title">{{ v3.cover_year | default(year) }}년 한 해의 기록</h2>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}Shareholder Letter &middot; {{ pm.persona_label(persona) }} &middot; personal retrospective{% else %}Shareholder Letter &middot; {{ pm.persona_label(persona) }} &middot; 본인 회고{% endif %}</div>
+    <h2 class="pq-pdf-section-title">{% if locale == 'en' %}{{ v3.cover_year | default(year) }} year in review{% else %}{{ v3.cover_year | default(year) }}년 한 해의 기록{% endif %}</h2>
 
     {# Persona-toned year opener — sets the lens before the Buffett letter prose. #}
     <div class="pq-pdf-prose">
@@ -124,13 +125,13 @@
       <p>{{ p }}</p>
       {% else %}
       <p style="color:var(--r-ink-3);font-style:italic;">
-        본인 거래 기록 누적 후 표시. 매수 1건 이상 발생한 다음 연도부터 회고가 작성됩니다.
+        {% if locale == 'en' %}Appears once own-trade records accrue. The retrospective is composed starting the year after at least one acquisition is recorded.{% else %}본인 거래 기록 누적 후 표시. 매수 1건 이상 발생한 다음 연도부터 회고가 작성됩니다.{% endif %}
       </p>
       {% endfor %}
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>Year-End Letter &middot; Premium</span>
+      <span>{% if locale == 'en' %}Year-End Letter &middot; Premium{% else %}연간 투자 리뷰 &middot; Premium{% endif %}</span>
       <span>Page 02</span>
     </div>
 
@@ -144,20 +145,20 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>YEAR-END LETTER</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}YEAR-END LETTER{% else %}연간 투자 리뷰{% endif %}</strong>
         <span>{{ v3.doc_short | default(v3.doc) | default('—') }} &middot; 03/04</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <h2 class="pq-pdf-section-title sm">Sector Contribution &middot; 섹터별 평균 수익</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Sector Contribution &middot; avg return per sector{% else %}Sector Contribution &middot; 섹터별 평균 수익{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Sector</th>
-          <th class="right">Trades</th>
-          <th class="right">Avg Return</th>
+          <th>{% if locale == 'en' %}Sector{% else %}섹터{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Trades{% else %}거래{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Avg Return{% else %}평균 수익률{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -168,20 +169,20 @@
           <td class="right {{ s.tone | default('neutral') }}">{{ s.avg_return | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="3" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">실현 거래 기록 누적 후 표시</td></tr>
+        <tr><td colspan="3" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}Appears after realised trades accrue{% else %}실현 거래 기록 누적 후 표시{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">Best 3 Decisions &middot; 가장 큰 수익 거래</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Top 3 Decisions &middot; largest gains{% else %}Best 3 Decisions &middot; 가장 큰 수익 거래{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Ticker</th>
-          <th>Name</th>
-          <th class="right">Acquisition Date</th>
-          <th class="right">Outcome</th>
-          <th class="right">Return</th>
+          <th>{% if locale == 'en' %}Ticker{% else %}종목{% endif %}</th>
+          <th>{% if locale == 'en' %}Name{% else %}종목명{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Acquisition Date{% else %}취득 일자{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Outcome{% else %}결과{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Return{% else %}수익률{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -194,20 +195,20 @@
           <td class="right {{ d.tone | default('neutral') }}">{{ d.return | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:14px 0;">매수 기록 누적 후 표시</td></tr>
+        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:14px 0;">{% if locale == 'en' %}Appears after acquisition records accrue{% else %}매수 기록 누적 후 표시{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">Worst 3 Decisions &middot; 가장 큰 손실 거래</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Bottom 3 Decisions &middot; largest losses{% else %}Worst 3 Decisions &middot; 가장 큰 손실 거래{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Ticker</th>
-          <th>Name</th>
-          <th class="right">Acquisition Date</th>
-          <th class="right">Outcome</th>
-          <th class="right">Return</th>
+          <th>{% if locale == 'en' %}Ticker{% else %}종목{% endif %}</th>
+          <th>{% if locale == 'en' %}Name{% else %}종목명{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Acquisition Date{% else %}취득 일자{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Outcome{% else %}결과{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Return{% else %}수익률{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -220,14 +221,14 @@
           <td class="right {{ d.tone | default('neutral') }}">{{ d.return | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:14px 0;">매수 기록 누적 후 표시</td></tr>
+        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:14px 0;">{% if locale == 'en' %}Appears after acquisition records accrue{% else %}매수 기록 누적 후 표시{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
     {% if v3.consistency_notes %}
     <div class="pq-pdf-callout">
-      <div class="pq-pdf-callout-label">Consistency &middot; 온보딩 vs 실거래</div>
+      <div class="pq-pdf-callout-label">{% if locale == 'en' %}Consistency &middot; onboarding vs actual{% else %}Consistency &middot; 온보딩 vs 실거래{% endif %}</div>
       <p>{{ v3.consistency_notes }}</p>
       <p style="margin-top:6px;font-size:10px;color:var(--r-ink-3);">
         Onboarding: <strong>{{ v3.risk_profile | default('—') }}</strong>
@@ -238,7 +239,7 @@
     {% endif %}
 
     <div class="pq-pdf-page-footer">
-      <span>Year-End Letter &middot; Premium</span>
+      <span>{% if locale == 'en' %}Year-End Letter &middot; Premium{% else %}연간 투자 리뷰 &middot; Premium{% endif %}</span>
       <span>Page 03</span>
     </div>
 
@@ -252,28 +253,28 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>YEAR-END LETTER</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}YEAR-END LETTER{% else %}연간 투자 리뷰{% endif %}</strong>
         <span>{{ v3.doc_short | default(v3.doc) | default('—') }} &middot; 04/04</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <h2 class="pq-pdf-section-title sm">Action Points &middot; {{ pm.persona_label(persona) }} 관찰 체크리스트</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Action Points &middot; {{ pm.persona_label(persona) }} observation checklist{% else %}Action Points &middot; {{ pm.persona_label(persona) }} 관찰 체크리스트{% endif %}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
-      페르소나별 정보 관찰 항목입니다. 매수·매도 권유가 아니며 다음 해에 본인이 직접 점검할 데이터 포인트.
+      {% if locale == 'en' %}A per-persona information observation list. Not a solicitation to buy or sell — data points for personal review next year.{% else %}페르소나별 정보 관찰 항목입니다. 거래 권유가 아니며 다음 해에 본인이 직접 점검할 데이터 포인트.{% endif %}
     </p>
     {{ pm.persona_action_points(persona, v3.watch_items | default([])) }}
 
-    <h2 class="pq-pdf-section-title sm">Watch Ahead &middot; 다음 해 관찰 일정</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Watch Ahead &middot; next year's calendar{% else %}Watch Ahead &middot; 다음 해 관찰 일정{% endif %}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:10px;">
-      아래는 공개된 거시 일정입니다. 권유 또는 매매 의도 없음 &mdash; 본인 일정관리에만 사용.
+      {% if locale == 'en' %}Below is a published macro calendar. No solicitation or trade intent &mdash; for personal scheduling only.{% else %}아래는 공개된 거시 일정입니다. 권유 또는 매매 의도 없음 &mdash; 본인 일정관리에만 사용.{% endif %}
     </p>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th style="width: 28%;">Date</th>
-          <th>Event</th>
+          <th style="width: 28%;">{% if locale == 'en' %}Date{% else %}일자{% endif %}</th>
+          <th>{% if locale == 'en' %}Event{% else %}이벤트{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -288,7 +289,7 @@
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">What This Letter Does Not Claim</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}What This Letter Does Not Claim{% else %}본 레터가 주장하지 않는 것{% endif %}</h2>
     <ul style="font-size:11px;line-height:1.7;color:var(--r-ink-2);padding-left:16pt;margin-top:6pt;">
       {% for n in v3.not_claimed | default([]) %}
       <li>{{ n }}</li>
@@ -296,20 +297,20 @@
     </ul>
 
     <div class="pq-pdf-govblock">
-      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Premium</div></div>
-      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Annual &middot; 12/31</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div><div class="val">Premium</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div><div class="val">{% if locale == 'en' %}Annual &middot; 12/31{% else %}연간 &middot; 12/31{% endif %}</div></div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}본인 거래 기록 회고 &middot; SPY 벤치마크 비교{% endif %}</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}{% if locale == 'en' %}Own-trade retrospective &middot; SPY benchmark comparison{% else %}본인 거래 기록 회고 &middot; SPY 벤치마크 비교{% endif %}{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}TradeHistory &middot; FMP &middot; SignalCache{% endif %}</div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>Year-End Letter &middot; Premium &middot; Owner-only download</span>
+      <span>{% if locale == 'en' %}Year-End Letter &middot; Premium &middot; Owner-only download{% else %}연간 투자 리뷰 &middot; Premium &middot; 본인 다운로드 전용{% endif %}</span>
       <span>Page 04</span>
     </div>
 

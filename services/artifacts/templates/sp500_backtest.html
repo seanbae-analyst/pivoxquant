@@ -21,12 +21,13 @@
    Compliance — observational only. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>SP500 Backtest — {{ v3.doc_short | default('—') }}</title>
+  <title>{% if locale == 'en' %}SP500 Backtest — {{ v3.doc_short | default('—') }}{% else %}SP500 백테스트 — {{ v3.doc_short | default('—') }}{% endif %}</title>
   <style>{% include '_sp500_backtest_v3_css.html' %}</style>
 </head>
 <body>
@@ -41,27 +42,25 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>SP500 BACKTEST</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}SP500 BACKTEST{% else %}SP500 백테스트{% endif %}</strong>
         <span>{{ v3.doc | default('—') }} &middot; 01/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Strategy C Observation &middot; TSMOM + MeanReversion &middot; {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}Strategy C Observation &middot; TSMOM + MeanReversion{% else %}Strategy C 관찰 &middot; TSMOM + MeanReversion{% endif %} &middot; {{ pm.persona_label(persona) }}</div>
     <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
       Strategy C
       {%- if v3.kpi_cagr and v3.kpi_cagr != '—' %}
         — CAGR <strong style="color:{% if v3.kpi_cagr_tone == 'neg' %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.kpi_cagr }}</strong>.
       {%- else %}
-        백테스트.
+        {% if locale == 'en' %}backtest.{% else %}백테스트.{% endif %}
       {%- endif %}
     </h1>
 
     <p class="pq-pdf-cover-sub">
-      {{ v3.period_start | default('—') }} ~ {{ v3.period_end | default('—') }} 관찰 구간의
-      백테스트 시뮬레이션 기록입니다. 본 페이지는 어떠한 매매 전략도 권유하지 않으며,
-      시장은 같은 강을 두 번 흐르지 않습니다.
+      {% if locale == 'en' %}A backtest simulation record for the observation window {{ v3.period_start | default('—') }} ~ {{ v3.period_end | default('—') }}. This page does not recommend any trading strategy, and the market never flows down the same river twice.{% else %}{{ v3.period_start | default('—') }} ~ {{ v3.period_end | default('—') }} 관찰 구간의 백테스트 시뮬레이션 기록입니다. 본 페이지는 어떠한 매매 전략도 권유하지 않으며, 시장은 같은 강을 두 번 흐르지 않습니다.{% endif %}
     </p>
 
     <div style="margin-top: 14px;">
@@ -69,32 +68,32 @@
         <div class="pq-pdf-kpi">
           <div class="pq-pdf-kpi-lbl">CAGR</div>
           <div class="pq-pdf-kpi-val {{ v3.kpi_cagr_tone | default('neutral') }}">{{ v3.kpi_cagr | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">관찰 구간 연환산</div>
+          <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Annualised over window{% else %}관찰 구간 연환산{% endif %}</div>
         </div>
         <div class="pq-pdf-kpi">
           <div class="pq-pdf-kpi-lbl">Sharpe</div>
           <div class="pq-pdf-kpi-val">{{ v3.kpi_sharpe | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">위험 조정 비율</div>
+          <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Risk-adjusted ratio{% else %}위험 조정 비율{% endif %}</div>
         </div>
         <div class="pq-pdf-kpi">
           <div class="pq-pdf-kpi-lbl">Alpha vs SPY</div>
           <div class="pq-pdf-kpi-val {{ v3.kpi_alpha_tone | default('neutral') }}">{{ v3.kpi_alpha | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">초과 관찰</div>
+          <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Excess observation{% else %}초과 관찰{% endif %}</div>
         </div>
         <div class="pq-pdf-kpi">
           <div class="pq-pdf-kpi-lbl">2022 Spread</div>
           <div class="pq-pdf-kpi-val {{ v3.kpi_2022_tone | default('neutral') }}">{{ v3.kpi_2022 | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">베어 구간 격차</div>
+          <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Bear-window spread{% else %}베어 구간 격차{% endif %}</div>
         </div>
       </div>
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Annual Ladder &middot; 연도별 관찰</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Annual Ladder &middot; by year{% else %}Annual Ladder &middot; 연도별 관찰{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Year</th>
-          <th class="right">Strategy</th>
+          <th>{% if locale == 'en' %}Year{% else %}연도{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Strategy{% else %}전략{% endif %}</th>
           <th class="right">SPY</th>
           <th class="right">Alpha</th>
           <th class="right">Max DD</th>
@@ -112,7 +111,7 @@
           <td class="right">{{ r.sharpe }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">관찰 구간 데이터 없음</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}No data in observation window{% else %}관찰 구간 데이터 없음{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -122,7 +121,7 @@
     {% endif %}
 
     <div class="pq-pdf-page-footer">
-      <span>SP500 Backtest &middot; Premium &middot; Observation only</span>
+      <span>{% if locale == 'en' %}SP500 Backtest &middot; Premium &middot; Observation only{% else %}SP500 백테스트 &middot; Premium &middot; 관찰 전용{% endif %}</span>
       <span>Page 01</span>
     </div>
 
@@ -136,14 +135,14 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>SP500 BACKTEST</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}SP500 BACKTEST{% else %}SP500 백테스트{% endif %}</strong>
         <span>{{ v3.doc_short | default('—') }} &middot; 02/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <h2 class="pq-pdf-section-title sm">What This Report Does Not Claim</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}What This Report Does Not Claim{% else %}본 리포트가 주장하지 않는 것{% endif %}</h2>
     <ul style="font-size:11px;line-height:1.7;color:var(--r-ink-2);padding-left:16pt;margin-top:6pt;">
       {% for n in v3.not_claimed | default([]) %}
       <li>{{ n }}</li>
@@ -151,28 +150,25 @@
     </ul>
 
     <div class="pq-pdf-callout">
-      <div class="pq-pdf-callout-label">Backtest Methodology</div>
-      <p>Strategy C 는 두 모형 (TSMOM, MeanReversion) 의 단순 평균 가중 결합입니다.
-        백테스트는 transaction cost (10 bps), slippage (5 bps), Sharpe / Sortino /
-        Calmar 비율을 모두 계산에 포함합니다. 결과는 과거 관찰 구간의 시뮬레이션
-        기록이며, 같은 결과가 미래 시점에 재현되지 않을 수 있습니다.</p>
+      <div class="pq-pdf-callout-label">{% if locale == 'en' %}Backtest Methodology{% else %}백테스트 방법론{% endif %}</div>
+      <p>{% if locale == 'en' %}Strategy C is a simple equal-weight combination of two models (TSMOM, MeanReversion). The backtest includes transaction cost (10 bps), slippage (5 bps), and Sharpe / Sortino / Calmar ratios. Results are a simulation record over the historical observation window, and may not reproduce in the future.{% else %}Strategy C 는 두 모형 (TSMOM, MeanReversion) 의 단순 평균 가중 결합입니다. 백테스트는 transaction cost (10 bps), slippage (5 bps), Sharpe / Sortino / Calmar 비율을 모두 계산에 포함합니다. 결과는 과거 관찰 구간의 시뮬레이션 기록이며, 같은 결과가 미래 시점에 재현되지 않을 수 있습니다.{% endif %}</p>
     </div>
 
     <div class="pq-pdf-govblock">
-      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Premium</div></div>
-      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Admin-debug</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div><div class="val">Premium</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div><div class="val">{% if locale == 'en' %}Admin-debug{% else %}관리자-debug{% endif %}</div></div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
         <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}TSMOM + MeanReversion &middot; 50/50 weight{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}docs/BACKTEST_RESULTS.md &middot; FMP price history{% endif %}</div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>SP500 Backtest &middot; Premium &middot; Past observation only</span>
+      <span>{% if locale == 'en' %}SP500 Backtest &middot; Premium &middot; Past observation only{% else %}SP500 백테스트 &middot; Premium &middot; 과거 관찰 전용{% endif %}</span>
       <span>Page 02</span>
     </div>
 
