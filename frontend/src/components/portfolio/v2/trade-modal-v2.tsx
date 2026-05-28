@@ -625,6 +625,11 @@ export function TradeModalV2({
   );
 }
 
+// font-size intentionally NOT set inline — every consumer pairs this style
+// with `className="pq-input-noom"` so desktop renders 14px (the class
+// default) and mobile is pinned to 16px. The previous inline 14px defeated
+// the global mobile guard and caused iOS Safari to zoom on focus for every
+// trade-modal field (shares / cost / date / memo).
 const fieldInputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 0",
@@ -633,7 +638,6 @@ const fieldInputStyle: React.CSSProperties = {
   borderBottom: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.16))",
   outline: "none",
   color: "var(--pq-ivory)",
-  fontSize: "var(--pq-text-body)",
   letterSpacing: "0.01em",
 };
 
