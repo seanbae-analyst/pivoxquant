@@ -37,6 +37,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight, FileText } from "lucide-react";
+import { useT } from "@/lib/locale";
 
 const MarketTicker = dynamic(
   () => import("./market-ticker").then((m) => m.MarketTicker),
@@ -56,6 +57,7 @@ const MarketTicker = dynamic(
 );
 
 export function Hero() {
+  const t = useT();
   return (
     <section
       aria-labelledby="pq-hero-heading"
@@ -90,7 +92,7 @@ export function Hero() {
                 color: "var(--pq-bronze)",
               }}
             >
-              PivoxQuant · Living CFO
+              {t("landing.hero.eyebrow")}
             </span>
           </div>
 
@@ -101,14 +103,13 @@ export function Hero() {
             id="pq-hero-heading"
             className="pq-hero-h1 mb-9 font-serif font-normal"
           >
-            Your CFO{" "}
+            {t("landing.hero.h1Part1")}{" "}
             <em
               className="pq-cfo-word"
               style={{ fontStyle: "italic" }}
             >
-              learns
-            </em>{" "}
-            you.
+              {t("landing.hero.h1Italic")}
+            </em>
           </h1>
 
           {/* Description — same width cap + tone as /features pages. */}
@@ -122,10 +123,7 @@ export function Hero() {
               color: "rgba(245, 240, 232, 0.72)",
             }}
           >
-            매일 아침 두 번. 진입 전 일곱 관문. 일요일마다 한 페이지.
-            온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류하면, 모든
-            artifact가 그 페르소나의 어휘로 다시 쓰입니다. 관측 자료이며 매수·
-            매도 권유가 아닙니다.
+            {t("landing.hero.description")}
           </p>
 
           {/* CTAs — plain bronze pill + ghost outline.
@@ -139,7 +137,7 @@ export function Hero() {
                 color: "var(--pq-ink)",
               }}
             >
-              Meet your CFO
+              {t("landing.hero.ctaPrimary")}
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
             </Link>
             <Link
@@ -153,7 +151,7 @@ export function Hero() {
               }}
             >
               <FileText className="h-4 w-4" />
-              See a sample
+              {t("landing.hero.ctaSecondary")}
             </Link>
           </div>
 
@@ -167,8 +165,7 @@ export function Hero() {
             }}
           >
             <span style={{ color: "rgba(139, 111, 71, 0.9)" }}>— </span>
-            Not investment advice. Informational research only. Past
-            performance does not guarantee future results.
+            {t("landing.hero.disclaimer")}
           </p>
         </div>
       </div>

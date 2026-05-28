@@ -226,7 +226,56 @@
       "title": "데이터로 투자하세요",
       "subtitle": "58개 퀀트 모델, 7-레이어 리스크 방어, AI 포트폴리오 분석. 미국·한국 주식 통합 관리.",
       "cta": "무료로 시작하기",
-      "learnMore": "자세히 보기"
+      "learnMore": "자세히 보기",
+      "eyebrow": "PivoxQuant · Living CFO",
+      "h1Part1": "당신의 CFO가",
+      "h1Italic": "당신을 배웁니다.",
+      "description": "매일 아침 두 번. 진입 전 일곱 관문. 일요일마다 한 페이지. 온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류하면, 모든 artifact가 그 페르소나의 어휘로 다시 쓰입니다. 관측 자료이며 매수·매도 권유가 아닙니다.",
+      "ctaPrimary": "CFO 만나기",
+      "ctaSecondary": "샘플 보기",
+      "disclaimer": "투자 권유 아님. 정보 제공 전용 리서치. 과거 실적은 미래 수익을 보장하지 않습니다."
+    },
+    "splash": {
+      "ariaLabel": "PivoxQuant — 타이틀 페이지",
+      "scrollHint": "스크롤 또는 Space"
+    },
+    "personas": {
+      "eyebrow": "8가지 투자자 유형 · 4가지 표시",
+      "heading": "당신의 투자자 언어로\n말하는 CFO.",
+      "description": "온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류합니다. Drift가 감지되면 페르소나는 자동으로 재조정됩니다.",
+      "sampleReport": "샘플 리포트",
+      "alsoAvailable": "Income, Quant, Speculator, Daytrader도 있습니다. 데스크는 당신이 선택한 페르소나에 맞게 모든 artifact를 재구성합니다.",
+      "viewAll": "8가지 CFO 유형 전체 보기"
+    },
+    "topNav": {
+      "brandTagline": "· Living CFO",
+      "loginLink": "로그인",
+      "goToDesk": "데스크로",
+      "meetCfo": "CFO 만나기",
+      "openDesk": "데스크 열기",
+      "openMenu": "메뉴 열기",
+      "groups": {
+        "livingCfo": {
+          "label": "Living CFO",
+          "footnote": "나만의 리서치 데스크 구조."
+        },
+        "personas": {
+          "label": "Personas",
+          "footnote": "8가지 투자자 유형. 하나의 데스크가 모두를 지원합니다."
+        },
+        "signature": {
+          "label": "Signature",
+          "footnote": "데스크를 정의하는 4가지 시그니처 워크플로우."
+        },
+        "pricing": {
+          "label": "요금제",
+          "footnote": "4단계 요금제. 거래 수익과 무관하게 운영됩니다."
+        },
+        "docs": {
+          "label": "문서",
+          "footnote": "이용약관, 개인정보처리방침, 비투자권유 경계."
+        }
+      }
     },
     "stats": {
       "quantModels": "퀀트 모델",
@@ -733,7 +782,116 @@
   },
   "growth": {
     "legendLess": "낮음",
-    "legendMore": "높음"
+    "legendMore": "높음",
+    "page": {
+      "eyebrow": "Growth OS · Solo Founder",
+      "heroTitle1": "당신의",
+      "heroItalic": "꾸준한",
+      "heroTitle2": "스트릭.",
+      "heroDesc": "스트릭 · 아침 우선순위 · 저녁 회고 · 365일 그래프 · 주간 트렌드 · 아카이브 리포트 — 함께 작성하는 하나의 에디토리얼 보드.",
+      "headerTitle": "Growth OS",
+      "headerDesc": "개인 성장 추적 및 회고",
+      "activityLabel": "활동",
+      "activityDesc": "오늘의 활동 점수",
+      "reflectionLabel": "회고",
+      "reflectionDesc": "오늘의 회고 점수",
+      "noScoreYet": "아직 오늘의 점수가 없습니다.",
+      "todayPriorities": "오늘의 우선순위",
+      "eveningReflection": "저녁 회고",
+      "growthGraph": "성장 그래프",
+      "growthGraphDesc": "최근 365일. 날짜를 클릭하면 상세 정보가 표시됩니다.",
+      "weeklyTrend": "주간 트렌드",
+      "weeklyTrendDesc": "최근 4주 활동 vs 회고.",
+      "weeklyReports": "주간 리포트",
+      "weekOf": "주: {date}",
+      "patterns": "패턴",
+      "nextWeek": "다음 주",
+      "unavailableTitle": "잠시 불러오지 못했어요",
+      "loadingTitle": "불러오는 중",
+      "unavailableDesc": "Growth OS 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      "loadingDesc": "Growth OS를 불러오는 중입니다…",
+      "unavailableSubDesc": "방금 Growth OS를 불러오지 못했습니다. 다시 시도해 주세요.",
+      "loadingSubDesc": "Growth OS를 불러오는 중…",
+      "retry": "다시 시도",
+      "dayDetailTitle": "성장 상세 · {date}",
+      "priorities": "우선순위",
+      "reflection": "회고",
+      "scoreTotal": "합계",
+      "noDetailOtherDate": "상세 데이터는 오늘 날짜에서만 확인할 수 있습니다.",
+      "closeAriaLabel": "닫기",
+      "notAnswered": "아직 답변하지 않았습니다."
+    }
+  },
+  "journal": {
+    "page": {
+      "kicker": "Decision Journal",
+      "heading": "기록",
+      "headingDesc": "종목을 더하거나 줄이기 전, 당신이 스스로 남긴 근거와 자기검증입니다. 지난 결정을 돌아보세요.",
+      "sharesUnit": "주",
+      "devilsAdvocateToggle": "7문항 자기검증",
+      "loadFailure": "기록을 불러오지 못했습니다.",
+      "retry": "다시 시도",
+      "emptyTitle": "아직 기록된 의사결정이 없습니다.",
+      "emptyDesc": "종목을 추가하거나 정리할 때 작성한 reflection이 여기 시간순으로 쌓입니다.",
+      "gotoPortfolio": "포트폴리오로 이동",
+      "statusProceeded": "진행함",
+      "statusProceededEn": "Proceeded",
+      "statusCancelled": "취소함",
+      "statusCancelledEn": "Cancelled",
+      "statusPending": "검토 중",
+      "statusPendingEn": "In review"
+    }
+  },
+  "companion": {
+    "page": {
+      "loadingLabel": "불러오는 중",
+      "upgradeBadge": "Premium Plus · Closed Beta",
+      "upgradeHeading": "준비가 되면, 다음 단계로.",
+      "upgradeDesc": "당신이 쓴 내용을 기억하는 성찰 동행자 — 투자 조언자가 아닙니다. Closed Beta 기간 동안 Premium Plus 및 Founding Lifetime 멤버 전용입니다.",
+      "upgradeSubDesc": "준비가 되면, 한 단계 위로. Premium Plus · Founding Lifetime 멤버를 위한 동행.",
+      "upgradeCta": "Premium Plus로 업그레이드",
+      "upgradeBack": "홈으로",
+      "comingSoonBadgeInternal": "Internal · Staff",
+      "comingSoonBadge": "Coming Soon · Closed Beta",
+      "comingSoonHeading": "당신의 일지, 기억됩니다.",
+      "comingSoonDesc": "Personal Journal Companion이 Closed Beta 운영 중입니다. 이메일을 남겨주세요 — 소규모로 순차 초대하며, 응답은 느리고 신중하게, 성찰의 범위 안에서 이루어집니다.",
+      "comingSoonSubDesc": "Closed Beta 운영 중입니다. 소규모로 순차 초대합니다.",
+      "emailPlaceholder": "you@domain.com",
+      "joinWaitlist": "대기자 등록",
+      "submitting": "등록 중…",
+      "waitlistSuccess": "대기자 명단에 등록됐습니다. 자리가 열리면 이메일로 알려드립니다.",
+      "emailLabel": "이메일"
+    }
+  },
+  "riskBoard": {
+    "methodologyEyebrow": "방법론 · 관측 방식",
+    "methodologyHeading": "노트.",
+    "notes": {
+      "var": {
+        "title": "VaR (1일, 95%)",
+        "body": "90일 수익 구간의 역사적 백분위, 포지션 크기 가중."
+      },
+      "es": {
+        "title": "Component Expected Shortfall",
+        "body": "VaR 임계값 이하 수익 평균 — 5% 좌측 꼬리 관측."
+      },
+      "hhi": {
+        "title": "집중도 HHI",
+        "body": "섹터 비중의 Herfindahl-Hirschman 지수. < 0.25는 분산된 것으로 간주."
+      },
+      "correlation": {
+        "title": "상관관계",
+        "body": "쌍별 90일 수익, Ledoit-Wolf 수축 공분산. 클러스터 최대값이 > 0.65이면 플래그."
+      },
+      "sevenLayer": {
+        "title": "7-Layer Defense",
+        "body": "VaR, 상관관계, VIX, 테일, 일일 낙폭, 섹터 집중도, 현금 버퍼에 걸친 독립적 관측."
+      },
+      "timeline": {
+        "title": "복합 타임라인",
+        "body": "롤링 VaR에서 도출된 0-100 점수; 높을수록 압박이 큼. 향후 릴리스에서 백엔드가 1등급 복합 점수를 게시할 수 있습니다."
+      }
+    }
   },
   "persona": {
     "classifierKicker": "투자자 유형 분류",

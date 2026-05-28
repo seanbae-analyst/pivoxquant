@@ -23,13 +23,15 @@
  */
 
 import { ChevronDown } from "lucide-react";
+import { useT } from "@/lib/locale";
 
 export default function SplashPage() {
+  const t = useT();
   return (
     <div
       className="pq-splash"
       role="region"
-      aria-label="PivoxQuant — title page"
+      aria-label={t("landing.splash.ariaLabel")}
       style={{
         position: "relative",
         width: "100%",
@@ -118,7 +120,7 @@ export default function SplashPage() {
             fontStyle: "italic",
           }}
         >
-          Scroll or press Space
+          {t("landing.splash.scrollHint")}
         </span>
       </div>
     </div>

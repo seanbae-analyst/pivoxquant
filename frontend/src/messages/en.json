@@ -85,7 +85,56 @@
       "title": "Invest with Data",
       "subtitle": "58 quant models, 7-layer risk defense, AI portfolio analysis. Unified US & Korean equity management.",
       "cta": "Start for Free",
-      "learnMore": "Learn More"
+      "learnMore": "Learn More",
+      "eyebrow": "PivoxQuant · Living CFO",
+      "h1Part1": "Your CFO",
+      "h1Italic": "learns you.",
+      "description": "Twice each morning. Seven gates before entry. One page every Sunday. Twenty onboarding questions place you in one of eight investor archetypes — every artifact is then rewritten in that persona's vocabulary. Observational data only, not a directive to act.",
+      "ctaPrimary": "Meet your CFO",
+      "ctaSecondary": "See a sample",
+      "disclaimer": "Not investment advice. Informational research only. Past performance does not guarantee future results."
+    },
+    "splash": {
+      "ariaLabel": "PivoxQuant — title page",
+      "scrollHint": "Scroll or press Space"
+    },
+    "personas": {
+      "eyebrow": "Eight Investor Personas · Four shown",
+      "heading": "A CFO that speaks\nyour investor language.",
+      "description": "Twenty onboarding questions classify you into one of eight investor archetypes. When drift is detected, the persona recalibrates automatically.",
+      "sampleReport": "Sample report",
+      "alsoAvailable": "Also available: Income, Quant, Speculator, Daytrader. The desk reshapes every artifact around the persona you test into.",
+      "viewAll": "View all 8 CFO Personas"
+    },
+    "topNav": {
+      "brandTagline": "· Living CFO",
+      "loginLink": "Log in",
+      "goToDesk": "Go to desk",
+      "meetCfo": "Meet your CFO",
+      "openDesk": "Open desk",
+      "openMenu": "Open menu",
+      "groups": {
+        "livingCfo": {
+          "label": "Living CFO",
+          "footnote": "The architecture of your personal research desk."
+        },
+        "personas": {
+          "label": "Personas",
+          "footnote": "Eight investor identities. One desk that speaks them all."
+        },
+        "signature": {
+          "label": "Signature",
+          "footnote": "The four signature workflows that define the desk."
+        },
+        "pricing": {
+          "label": "Pricing",
+          "footnote": "Four tiers. We are never paid when you trade."
+        },
+        "docs": {
+          "label": "Docs",
+          "footnote": "Terms, privacy, and the non-advisory boundary."
+        }
+      }
     },
     "stats": {
       "quantModels": "Quant Models",
@@ -733,7 +782,116 @@
   },
   "growth": {
     "legendLess": "Less",
-    "legendMore": "More"
+    "legendMore": "More",
+    "page": {
+      "eyebrow": "Growth OS · Solo Founder",
+      "heroTitle1": "Your",
+      "heroItalic": "steady",
+      "heroTitle2": "streak.",
+      "heroDesc": "Streak · morning priorities · evening reflection · 365-day graph · weekly trend · archived reports — one editorial board, drafted with you.",
+      "headerTitle": "Growth OS",
+      "headerDesc": "Personal growth tracking and reflection",
+      "activityLabel": "Activity",
+      "activityDesc": "Today's activity score",
+      "reflectionLabel": "Reflection",
+      "reflectionDesc": "Today's reflection score",
+      "noScoreYet": "No score for today yet.",
+      "todayPriorities": "Today's Priorities",
+      "eveningReflection": "Evening Reflection",
+      "growthGraph": "Growth Graph",
+      "growthGraphDesc": "Past 365 days. Click a day for details.",
+      "weeklyTrend": "Weekly Trend",
+      "weeklyTrendDesc": "Activity vs reflection over the last 4 weeks.",
+      "weeklyReports": "Weekly Reports",
+      "weekOf": "Week of {date}",
+      "patterns": "Patterns",
+      "nextWeek": "Next Week",
+      "unavailableTitle": "Couldn't load just now",
+      "loadingTitle": "Loading",
+      "unavailableDesc": "Could not load Growth OS data. Please try again shortly.",
+      "loadingDesc": "Loading your Growth OS…",
+      "unavailableSubDesc": "Couldn't load Growth OS just now. Please try again.",
+      "loadingSubDesc": "Loading your Growth OS…",
+      "retry": "Try again",
+      "dayDetailTitle": "Growth detail · {date}",
+      "priorities": "Priorities",
+      "reflection": "Reflection",
+      "scoreTotal": "Total",
+      "noDetailOtherDate": "Detailed data is only available for today.",
+      "closeAriaLabel": "Close",
+      "notAnswered": "Not answered yet."
+    }
+  },
+  "journal": {
+    "page": {
+      "kicker": "Decision Journal",
+      "heading": "Log",
+      "headingDesc": "The rationale and self-examination you recorded before adding or trimming a position. Look back at how you decided.",
+      "sharesUnit": "shares",
+      "devilsAdvocateToggle": "7-question self-audit",
+      "loadFailure": "Could not load records.",
+      "retry": "Try again",
+      "emptyTitle": "No decisions recorded yet.",
+      "emptyDesc": "Reflections you write when adding or trimming positions will accumulate here in chronological order.",
+      "gotoPortfolio": "Go to Portfolio",
+      "statusProceeded": "Proceeded",
+      "statusProceededEn": "Proceeded",
+      "statusCancelled": "Cancelled",
+      "statusCancelledEn": "Cancelled",
+      "statusPending": "In review",
+      "statusPendingEn": "In review"
+    }
+  },
+  "companion": {
+    "page": {
+      "loadingLabel": "Loading",
+      "upgradeBadge": "Premium Plus · Closed Beta",
+      "upgradeHeading": "When you're ready, ascend.",
+      "upgradeDesc": "A reflective companion that remembers what you wrote — not an advisor. Reserved for Premium Plus and Founding Lifetime members during Closed Beta.",
+      "upgradeSubDesc": "Ready to ascend? A companion for Premium Plus · Founding Lifetime members.",
+      "upgradeCta": "Upgrade to Premium Plus",
+      "upgradeBack": "Back to Home",
+      "comingSoonBadgeInternal": "Internal · Staff",
+      "comingSoonBadge": "Coming Soon · Closed Beta",
+      "comingSoonHeading": "Your journal, remembered.",
+      "comingSoonDesc": "The Personal Journal Companion is in Closed Beta. Leave your email — we open seats in small batches so responses stay slow, careful, and within reflective bounds.",
+      "comingSoonSubDesc": "Closed Beta in progress. Invited in small batches.",
+      "emailPlaceholder": "you@domain.com",
+      "joinWaitlist": "Join Waitlist",
+      "submitting": "Submitting…",
+      "waitlistSuccess": "You're on the waitlist. We'll email when your seat opens.",
+      "emailLabel": "Email"
+    }
+  },
+  "riskBoard": {
+    "methodologyEyebrow": "Methodology · How these are observed",
+    "methodologyHeading": "Notes.",
+    "notes": {
+      "var": {
+        "title": "VaR (1-day, 95%)",
+        "body": "Historical percentile on the 90-day return window, weighted by position size."
+      },
+      "es": {
+        "title": "Component Expected Shortfall",
+        "body": "Mean of returns below the VaR cutoff — the 5% left-tail observation."
+      },
+      "hhi": {
+        "title": "Concentration HHI",
+        "body": "Herfindahl–Hirschman index on sector weights. < 0.25 considered diffuse."
+      },
+      "correlation": {
+        "title": "Correlation",
+        "body": "Pairwise 90-day returns, Ledoit–Wolf shrunk covariance. Cluster max flagged when > 0.65."
+      },
+      "sevenLayer": {
+        "title": "7-Layer Defense",
+        "body": "Independent observations across VaR, correlation, VIX, tail, daily drawdown, sector concentration, and cash buffer."
+      },
+      "timeline": {
+        "title": "Composite timeline",
+        "body": "0–100 score derived from rolling VaR; higher = more strain. Backend may publish a first-class composite score in a future release."
+      }
+    }
   },
   "persona": {
     "classifierKicker": "Persona classifier",
