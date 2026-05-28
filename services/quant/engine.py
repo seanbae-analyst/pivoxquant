@@ -1216,7 +1216,7 @@ class QuantEngine:
                 if regime == "LOW_VOL":
                     score += 8
                     sigs.append({"type": "bullish",
-                                 "msg": f"Volatility: Low ({vr['current_vol']:.0f}%) — favorable for entries",
+                                 "msg": f"Volatility: Low ({vr['current_vol']:.0f}%) — favorable conditions observed",
                                  "msg_kr": f"변동성: 저 ({vr['current_vol']:.0f}%) — 진입에 유리"})
                 elif regime == "HIGH_VOL":
                     score -= 10
@@ -1240,7 +1240,7 @@ class QuantEngine:
                 if regime in ("BULL",):
                     score += 15
                     sigs.append({"type": "bullish",
-                                 "msg": f"Regime: {rs['label']} (Sharpe {rs['sharpe_20d']:.1f}) — momentum favors longs",
+                                 "msg": f"Regime: {rs['label']} (Sharpe {rs['sharpe_20d']:.1f}) — trend-supportive conditions",
                                  "msg_kr": f"시장체제: {rs['label_kr']} (샤프 {rs['sharpe_20d']:.1f}) — 지표 유리 영역"})
                 elif regime == "MILD_BULL":
                     score += 8
@@ -1250,7 +1250,7 @@ class QuantEngine:
                 elif regime in ("BEAR",):
                     score -= 15
                     sigs.append({"type": "bearish",
-                                 "msg": f"Regime: {rs['label']} (Sharpe {rs['sharpe_20d']:.1f}) — avoid new longs",
+                                 "msg": f"Regime: {rs['label']} (Sharpe {rs['sharpe_20d']:.1f}) — trend-fatigued conditions",
                                  "msg_kr": f"시장체제: {rs['label_kr']} (샤프 {rs['sharpe_20d']:.1f}) — 신규 매수 회피"})
                 elif regime == "MILD_BEAR":
                     score -= 8
@@ -1294,7 +1294,7 @@ class QuantEngine:
             if vr_result["use_momentum"]:
                 score += 10
                 sigs.append({"type": "bullish",
-                             "msg": f"Variance Ratio: Trending regime (VR={vr_result['vr']:.2f}) — momentum strategies favored",
+                             "msg": f"Variance Ratio: Trending regime (VR={vr_result['vr']:.2f}) — trend-aligned environment",
                              "msg_kr": f"분산비: 추세 레짐 (VR={vr_result['vr']:.2f}) — 모멘텀 전략 유리"})
             elif vr_result["regime"] == "mean_reverting":
                 sigs.append({"type": "neutral",
@@ -1347,11 +1347,10 @@ class QuantEngine:
                 if len(closes_list) >= DispositionEffect.MIN_WINDOW:
                     disp_result = DispositionEffect.calculate(closes_list, vols_list)
                     cgo = disp_result.get("cgo", 0) or 0
-                    # High CGO (>0.15) = selling pressure from retail → contrarian buy signal
                     if cgo > 0.15:
                         score += 8
                         sigs.append({"type": "bullish",
-                                     "msg": f"Disposition Effect: High CGO ({cgo:.3f}) — retail selling pressure, contrarian buy",
+                                     "msg": f"Disposition Effect: High CGO ({cgo:.3f}) — retail selling pressure, contrarian pattern observed",
                                      "msg_kr": f"처분효과: 높은 CGO ({cgo:.3f}) — 개인 유출 강도, 역추세 패턴 관찰"})
                     elif cgo < -0.15:
                         score -= 5
