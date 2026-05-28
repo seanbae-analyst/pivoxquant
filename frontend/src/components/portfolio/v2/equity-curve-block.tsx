@@ -158,6 +158,8 @@ export function EquityCurveBlock({
     RANGES.find((r) => r.id === activeId)?.key ??
     ("6mo" as EquityRange);
   const { data, isLoading, error } = useEquityCurve(activeRange);
+  const benchmarkLabel: string =
+    (data?.benchmark?.name?.trim() || "") || "Benchmark";
 
   const series: EquityPoint[] = React.useMemo(() => {
     // hooks-v2 normalizes backend `{ data: [{ date, value }] }` to
@@ -518,7 +520,7 @@ export function EquityCurveBlock({
           />
           <LegendSwatch
             color="rgba(245,240,232,0.55)"
-            label="Benchmark · KOSPI200"
+            label={`Benchmark · ${benchmarkLabel}`}
             dashed
           />
         </div>

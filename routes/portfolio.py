@@ -2068,6 +2068,9 @@ def portfolio_history():
             for p in positions
         )
         bench_map: dict[str, float] = {}
+        benchmark_label: str | None = (
+            "KOSPI 200" if is_kr_portfolio else "S&P 500"
+        )
 
         if is_kr_portfolio:
             # KIS index daily history (FHPUP02120000). 2001 = KOSPI 200,
@@ -2124,8 +2127,16 @@ def portfolio_history():
         # primary equity-curve response. 메모리 룰 [기능 100% 보존].
         logger.debug("silent-fallback: portfolio_history bench wrap",
                      exc_info=True)
+        benchmark_label = None
 
-    return jsonify({"data": data})
+    payload: dict = {"data": data}
+    if benchmark_label is not None and any("benchmark" in pt for pt in data):
+        # Frontend `hooks-v2.ts` BackendEquityResponse already expects
+        # `benchmark?: { name?: string }` — emit the label there so the
+        # equity-curve legend can render "KOSPI 200" / "S&P 500" dynamically
+        # instead of the prior hardcoded "Benchmark · KOSPI200".
+        payload["benchmark"] = {"name": benchmark_label}
+    return jsonify(payload)
 
 
 # ── Reconcile (broker sync) ────────────────────────────────────────────────

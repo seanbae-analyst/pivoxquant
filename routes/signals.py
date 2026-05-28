@@ -255,6 +255,12 @@ def get_signals():
 @api_auth
 @legal_scrub_response
 def signal_detail(ticker):
+    # Bug #2 (bug-hunter 2026-05-28): bare 6-digit KR codes (e.g. 247540
+    # for KOSDAQ Ecopro BM) arrive un-suffixed from /detail/<ticker> URL
+    # entry. Without normalization, KQ holders hit 403 ticker_not_in_user_scope.
+    # Route every input through services.ticker_normalizer so .KQ resolves.
+    from services.ticker_normalizer import normalize_ticker as _norm_t
+    ticker = _norm_t(ticker)
     t_up = ticker.upper()
     # §101 회피 — 보유/watchlist 종목만 분석 허용.
     if not is_user_allowed_ticker(current_user.id, t_up):

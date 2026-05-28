@@ -133,7 +133,14 @@ const signalFetcher = async (url: string) => {
 export default function StockDetailPage() {
   const params = useParams<{ ticker: string }>();
   const raw = (params.ticker ?? "").toUpperCase();
-  const ticker = /^\d{6}$/.test(raw) ? `${raw}.KS` : raw;
+  // Bug #2 (bug-hunter 2026-05-28): previously forced `.KS` onto bare
+  // 6-digit codes, which broke KOSDAQ entries (e.g. 247540 → 247540.KS
+  // instead of 247540.KQ) and hit `ticker_not_in_user_scope` 403 for
+  // KQ holders who URL-typed the bare code. Pass bare 6-digit codes
+  // through unchanged — backend `routes/signals.py` / `routes/market.py`
+  // funnel through `services.ticker_normalizer.normalize_ticker` which
+  // looks up the curated KS/KQ registry for the correct suffix.
+  const ticker = raw;
   // KR ticker UI strip (feedback_ticker_display): API uses raw ticker; only
   // user-facing surfaces drop the .KS/.KQ suffix. "005930.KS" → "005930".
   const displayTicker = normalizeTicker(ticker);

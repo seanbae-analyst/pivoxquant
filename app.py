@@ -545,7 +545,15 @@ def _do_migrations():
     # 컬럼을 보지만 DB는 없어 UndefinedColumn → provisioning_failed 100%.
     # 메모리 [project_prod_schema_selfheal] 패턴 — alembic 런타임 미실행
     # prod에서 self-heal 가드 필수.
-    _add_column_if_missing("users", "locale", "VARCHAR(2)", default="'ko'")
+    # Bug #3 (bug-hunter 2026-05-28 + audit 2026-05-28): NOT NULL 의도는
+    # line ~648에 있었지만 이 호출이 먼저 실행되어 NOT NULL 없이 컬럼이
+    # 생성되고, 두 번째 호출은 _add_column_if_missing 의 "exists short-circuit"
+    # 으로 스킵됨 (app.py:503-508 if column in existing: return). 결과 prod
+    # locale 컬럼이 NOT NULL 없이 생성. 첫 호출부터 not_null=True 박아서
+    # 의도 일치. 두 번째 호출은 idempotent (이미 존재 시 skip).
+    _add_column_if_missing(
+        "users", "locale", "VARCHAR(2)", default="'ko'", not_null=True,
+    )
     _add_column_if_missing("users", "risk_profile", "VARCHAR(20)", default="'balanced'")
     _add_column_if_missing("users", "profile_changes_left", "INTEGER", default="3")
     _add_column_if_missing("users", "subscription_tier", "VARCHAR(32)", default="'free'")
