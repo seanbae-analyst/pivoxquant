@@ -48,6 +48,7 @@ import {
 import { FilmGrain } from "./film-grain";
 import MobileDrawer from "./mobile-drawer";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/locale";
 
 /* ───────────────────────── types ───────────────────────── */
 
@@ -276,6 +277,7 @@ const itemVariants: Variants = {
 /* ───────────────────────── component ───────────────────────── */
 
 export default function TopNav() {
+  const t = useT();
   const { user } = useAuth();
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -503,7 +505,7 @@ export default function TopNav() {
                   padding: "8px 12px",
                 }}
               >
-                {user ? (user.name?.trim() ? user.name : "Go to desk") : "Log in"}
+                {user ? (user.name?.trim() ? user.name : t("landing.topNav.goToDesk")) : t("landing.topNav.loginLink")}
               </Link>
               <Link
                 href={user ? "/home" : "/signup"}
@@ -521,7 +523,7 @@ export default function TopNav() {
                     "0 1px 0 rgba(255,240,220,0.22) inset, 0 0 0 0.5pt rgba(184,149,106,0.65)",
                 }}
               >
-                <span className="relative z-10">{user ? "Open desk" : "Meet your CFO"}</span>
+                <span className="relative z-10">{user ? t("landing.topNav.openDesk") : t("landing.topNav.meetCfo")}</span>
                 <ArrowRight
                   className="relative z-10 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
                   aria-hidden
@@ -543,7 +545,7 @@ export default function TopNav() {
                   target. Bumped to h-11 w-11 (44px). */}
               <button
                 type="button"
-                aria-label="Open menu"
+                aria-label={t("landing.topNav.openMenu")}
                 aria-expanded={drawerOpen}
                 onClick={() => setDrawerOpen(true)}
                 className="ml-1 inline-flex h-11 w-11 items-center justify-center rounded-sm lg:hidden"

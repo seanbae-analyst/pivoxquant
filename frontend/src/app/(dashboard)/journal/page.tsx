@@ -25,7 +25,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Briefcase, NotebookPen, ChevronDown } from "lucide-react";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 import { usePreTradeJournal } from "@/lib/hooks";
 import { displayName, normalizeTicker } from "@/lib/format";
 import { sideLabel } from "@/lib/pre-trade";
@@ -73,18 +73,27 @@ export function statusKind(r: PreTradeReflection): StatusKind {
   return "pending"; // pending | ready
 }
 
-const STATUS_COPY: Record<StatusKind, { ko: string; en: string }> = {
-  proceeded: { ko: "진행함", en: "Proceeded" },
-  cancelled: { ko: "취소함", en: "Cancelled" },
-  pending: { ko: "검토 중", en: "In review" },
-};
+// STATUS_COPY is now resolved via useT inside StatusChip
 
 /* ────────────────────────────────────────────────────────────────────────
  * Status chip — neutral tone (no carmine), cancelled dimmed.
  * ────────────────────────────────────────────────────────────────────── */
 
 function StatusChip({ kind }: { kind: StatusKind }) {
+  const t = useT();
   const dimmed = kind === "cancelled";
+  const koLabel =
+    kind === "proceeded"
+      ? t("journal.page.statusProceeded")
+      : kind === "cancelled"
+      ? t("journal.page.statusCancelled")
+      : t("journal.page.statusPending");
+  const enLabel =
+    kind === "proceeded"
+      ? t("journal.page.statusProceededEn")
+      : kind === "cancelled"
+      ? t("journal.page.statusCancelledEn")
+      : t("journal.page.statusPendingEn");
   return (
     <span
       className="font-mono text-pq-caption uppercase"
@@ -116,8 +125,8 @@ function StatusChip({ kind }: { kind: StatusKind }) {
               : "rgba(245,240,232,0.55)",
         }}
       />
-      {STATUS_COPY[kind].ko}
-      <span style={{ opacity: 0.5 }}>· {STATUS_COPY[kind].en}</span>
+      {koLabel}
+      <span style={{ opacity: 0.5 }}>· {enLabel}</span>
     </span>
   );
 }
@@ -128,6 +137,7 @@ function StatusChip({ kind }: { kind: StatusKind }) {
 
 function JournalEntry({ r }: { r: PreTradeReflection }) {
   const { locale } = useLocale();
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   const ts = entryTimestamp(r);
@@ -179,7 +189,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
         {typeof r.intended_shares === "number" && r.intended_shares > 0 && (
           <span className="font-mono text-pq-caption text-[rgba(245,240,232,0.55)]">
             {r.intended_shares.toLocaleString()}
-            <span className="ml-1 opacity-60">주</span>
+            <span className="ml-1 opacity-60">{t("journal.page.sharesUnit")}</span>
           </span>
         )}
         {ts && (
@@ -222,7 +232,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
             aria-expanded={open}
           >
             <span className="font-mono text-pq-caption uppercase tracking-[0.18em] text-[var(--pq-bronze-light)]">
-              7문항 자기검증
+              {t("journal.page.devilsAdvocateToggle")}
             </span>
             <ChevronDown
               className="h-3.5 w-3.5 shrink-0 text-[rgba(245,240,232,0.5)] transition-transform duration-200"
@@ -270,6 +280,7 @@ function LoadingState() {
 }
 
 function LoadFailure({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
   return (
     <div
       className="rounded-[2px] border p-6 text-center"
@@ -279,7 +290,7 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
       }}
     >
       <p className="font-serif text-pq-mono-sm text-[rgba(245,240,232,0.7)]">
-        기록을 불러오지 못했습니다.
+        {t("journal.page.loadFailure")}
       </p>
       <button
         type="button"
@@ -287,13 +298,14 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
         className="mt-3 rounded-[2px] border px-4 py-2 font-mono text-pq-caption uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
-        다시 시도
+        {t("journal.page.retry")}
       </button>
     </div>
   );
 }
 
 function EmptyState() {
+  const t = useT();
   return (
     <div
       className="rounded-[2px] border px-6 py-12 text-center"
@@ -314,10 +326,10 @@ function EmptyState() {
           wordBreak: "keep-all",
         }}
       >
-        아직 기록된 의사결정이 없습니다.
+        {t("journal.page.emptyTitle")}
       </p>
       <Caption className="mx-auto mt-2 max-w-md">
-        종목을 추가하거나 정리할 때 작성한 reflection이 여기 시간순으로 쌓입니다.
+        {t("journal.page.emptyDesc")}
       </Caption>
       <Link
         href="/portfolio"
@@ -325,7 +337,7 @@ function EmptyState() {
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
-        포트폴리오로 이동
+        {t("journal.page.gotoPortfolio")}
       </Link>
     </div>
   );
@@ -336,6 +348,7 @@ function EmptyState() {
  * ────────────────────────────────────────────────────────────────────── */
 
 function JournalContent() {
+  const t = useT();
   const { reflections, isLoading, error, mutate } = usePreTradeJournal();
   const retry = useCallback(() => {
     void mutate();
@@ -345,13 +358,12 @@ function JournalContent() {
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
       {/* Header */}
       <header className="mb-6">
-        <RuledKicker>Decision Journal</RuledKicker>
+        <RuledKicker>{t("journal.page.kicker")}</RuledKicker>
         <EditorialHead as="h1" size={32} className="mt-3">
-          기록
+          {t("journal.page.heading")}
         </EditorialHead>
         <Caption className="mt-2 max-w-lg">
-          종목을 더하거나 줄이기 전, 당신이 스스로 남긴 근거와 자기검증입니다.
-          지난 결정을 돌아보세요.
+          {t("journal.page.headingDesc")}
         </Caption>
       </header>
 

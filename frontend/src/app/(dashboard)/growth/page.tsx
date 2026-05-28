@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { useT } from "@/lib/locale";
 import { useGrowthData, useGrowthToday, useGrowthWeekly } from "@/lib/hooks";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -29,6 +30,7 @@ interface DayDetailProps {
 }
 
 function DayDetail({ date, onClose }: DayDetailProps) {
+  const t = useT();
   const { data: today } = useGrowthToday();
 
   // For non-today dates we only show score from the graph data
@@ -36,7 +38,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
   const isToday = date === new Date().toISOString().split("T")[0];
 
   return (
-    <ModalShell onClose={onClose} ariaLabel={`Growth detail · ${date}`}>
+    <ModalShell onClose={onClose} ariaLabel={t("growth.page.dayDetailTitle").replace("{date}", date)}>
       <div
         className="mb-[var(--pq-bottomnav-clearance)] w-full max-w-md rounded-[2px] border border-[rgba(245,240,232,0.1)] bg-[var(--pq-ink)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5)] sm:mb-0"
         onClick={(e) => e.stopPropagation()}
@@ -48,7 +50,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
           <button
             onClick={onClose}
             className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-[rgba(245,240,232,0.45)] hover:text-[var(--pq-bronze)]"
-            aria-label="닫기"
+            aria-label={t("growth.page.closeAriaLabel")}
           >
             <svg width={20} height={20} viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -63,7 +65,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
         {isToday && today?.briefing && (
           <div className="mt-4">
             <h4 className="font-mono text-pq-caption uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-              Priorities
+              {t("growth.page.priorities")}
             </h4>
             <ul className="mt-2 space-y-1">
               {today.briefing.priorities.map((p, i) => (
@@ -86,7 +88,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
         {isToday && today?.reflection && (
           <div className="mt-4">
             <h4 className="font-mono text-pq-caption uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-              Reflection
+              {t("growth.page.reflection")}
             </h4>
             {today.reflection.answers ? (
               <ul className="mt-2 space-y-2">
@@ -103,7 +105,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
               </ul>
             ) : (
               <p className="mt-2 text-sm text-[rgba(245,240,232,0.45)]">
-                아직 답변하지 않았습니다.
+                {t("growth.page.notAnswered")}
               </p>
             )}
           </div>
@@ -116,7 +118,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
                 {today.score.total}
               </p>
               <p className="mt-0.5 font-mono text-pq-caption uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
-                Total
+                {t("growth.page.scoreTotal")}
               </p>
             </div>
             <div className="flex-1">
@@ -124,7 +126,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
                 {today.score.activity}
               </p>
               <p className="mt-0.5 font-mono text-pq-caption uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
-                Activity
+                {t("growth.page.activityLabel")}
               </p>
             </div>
             <div className="flex-1">
@@ -132,7 +134,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
                 {today.score.reflection}
               </p>
               <p className="mt-0.5 font-mono text-pq-caption uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
-                Reflection
+                {t("growth.page.reflectionLabel")}
               </p>
             </div>
           </div>
@@ -140,7 +142,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
 
         {!isToday && (
           <p className="mt-4 text-sm text-[rgba(245,240,232,0.45)]">
-            상세 데이터는 오늘 날짜에서만 확인할 수 있습니다.
+            {t("growth.page.noDetailOtherDate")}
           </p>
         )}
       </div>
@@ -151,6 +153,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
 /* ── Main Page ── */
 
 export default function GrowthPage() {
+  const t = useT();
   const {
     data: graphData,
     error: graphError,
@@ -248,7 +251,7 @@ export default function GrowthPage() {
               }}
             >
               <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
-                {growthUnavailable ? "잠시 불러오지 못했어요" : "불러오는 중"}
+                {growthUnavailable ? t("growth.page.unavailableTitle") : t("growth.page.loadingTitle")}
               </span>
             </h1>
             <p
@@ -262,13 +265,13 @@ export default function GrowthPage() {
               }}
             >
               {growthUnavailable
-                ? "Growth OS 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."
-                : "Growth OS를 불러오는 중입니다…"}
+                ? t("growth.page.unavailableDesc")
+                : t("growth.page.loadingDesc")}
               <br />
               <span style={{ color: "rgba(245,240,232,0.55)" }}>
                 {growthUnavailable
-                  ? "Couldn't load Growth OS just now. Please try again."
-                  : "Loading your Growth OS…"}
+                  ? t("growth.page.unavailableSubDesc")
+                  : t("growth.page.loadingSubDesc")}
               </span>
             </p>
             {growthUnavailable && (
@@ -288,7 +291,7 @@ export default function GrowthPage() {
                   cursor: "pointer",
                 }}
               >
-                다시 시도
+                {t("growth.page.retry")}
               </button>
             )}
           </section>
@@ -320,7 +323,7 @@ export default function GrowthPage() {
               marginBottom: 28,
             }}
           >
-            Growth OS · Solo Founder
+            {t("growth.page.eyebrow")}
           </div>
 
           <h1
@@ -335,8 +338,9 @@ export default function GrowthPage() {
               margin: "0 0 24px 0",
             }}
           >
-            Your <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>steady</span>{" "}
-            streak.
+            {t("growth.page.heroTitle1")}{" "}
+            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>{t("growth.page.heroItalic")}</span>{" "}
+            {t("growth.page.heroTitle2")}
           </h1>
 
           <p
@@ -349,16 +353,15 @@ export default function GrowthPage() {
               margin: 0,
             }}
           >
-            Streak · morning priorities · evening reflection · 365-day graph · weekly trend ·
-            archived reports — one editorial board, drafted with you.
+            {t("growth.page.heroDesc")}
           </p>
         </section>
 
         {/* Header */}
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-[var(--pq-ivory)]">Growth OS</h1>
+          <h1 className="text-2xl font-bold text-[var(--pq-ivory)]">{t("growth.page.headerTitle")}</h1>
           <p className="text-sm text-[rgba(245,240,232,0.55)]">
-            Personal growth tracking and reflection
+            {t("growth.page.headerDesc")}
           </p>
         </div>
 
@@ -375,8 +378,8 @@ export default function GrowthPage() {
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[var(--pq-ivory)]">Activity</p>
-                  <p className="text-xs text-[rgba(245,240,232,0.55)]">Today&apos;s activity score</p>
+                  <p className="text-sm font-medium text-[var(--pq-ivory)]">{t("growth.page.activityLabel")}</p>
+                  <p className="text-xs text-[rgba(245,240,232,0.55)]">{t("growth.page.activityDesc")}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
@@ -387,10 +390,10 @@ export default function GrowthPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[var(--pq-ivory)]">
-                    Reflection
+                    {t("growth.page.reflectionLabel")}
                   </p>
                   <p className="text-xs text-[rgba(245,240,232,0.55)]">
-                    Today&apos;s reflection score
+                    {t("growth.page.reflectionDesc")}
                   </p>
                 </div>
               </div>
@@ -399,8 +402,8 @@ export default function GrowthPage() {
             <div className="col-span-2 flex items-center justify-center rounded-sm border border-dashed border-[rgba(245,240,232,0.12)] px-4 py-3">
               <p className="text-sm text-[rgba(245,240,232,0.55)]">
                 {todayLoading
-                  ? "Loading..."
-                  : "아직 오늘의 점수가 없습니다."}
+                  ? t("common.loading")
+                  : t("growth.page.noScoreYet")}
               </p>
             </div>
           )}
@@ -410,7 +413,7 @@ export default function GrowthPage() {
         {todayData?.briefing && (
           <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
             <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
-              Today&apos;s Priorities
+              {t("growth.page.todayPriorities")}
             </h2>
             <ul className="mt-3 space-y-2">
               {todayData.briefing.priorities.map((priority, i) => (
@@ -437,7 +440,7 @@ export default function GrowthPage() {
         {todayData?.reflection && (
           <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
             <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
-              Evening Reflection
+              {t("growth.page.eveningReflection")}
             </h2>
             <div className="mt-3">
               <ReflectionForm
@@ -451,10 +454,10 @@ export default function GrowthPage() {
         {/* Growth Graph */}
         <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
           <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
-            Growth Graph
+            {t("growth.page.growthGraph")}
           </h2>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
-            Past 365 days. Click a day for details.
+            {t("growth.page.growthGraphDesc")}
           </p>
           <div className="mt-4">
             {/* Bug #8 (2026-05-14): useGrowthData carries fallbackData: [] so
@@ -468,7 +471,7 @@ export default function GrowthPage() {
                 the empty heatmap, so a new account sees the grid, not a spin. */}
             {graphData === undefined ? (
               <div className="flex h-32 items-center justify-center">
-                <p className="text-sm text-[rgba(245,240,232,0.55)]">Loading...</p>
+                <p className="text-sm text-[rgba(245,240,232,0.55)]">{t("common.loading")}</p>
               </div>
             ) : (
               <GrowthGraph
@@ -482,10 +485,10 @@ export default function GrowthPage() {
         {/* Weekly Trend */}
         <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
           <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
-            Weekly Trend
+            {t("growth.page.weeklyTrend")}
           </h2>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
-            Activity vs reflection over the last 4 weeks.
+            {t("growth.page.weeklyTrendDesc")}
           </p>
           <div className="mt-4">
             {/* Bug #8 (2026-05-14): same fix as Growth Graph above — gate on
@@ -494,7 +497,7 @@ export default function GrowthPage() {
                 empty array renders the chart's own empty state. */}
             {graphData === undefined ? (
               <div className="flex h-40 items-center justify-center">
-                <p className="text-sm text-[rgba(245,240,232,0.55)]">Loading...</p>
+                <p className="text-sm text-[rgba(245,240,232,0.55)]">{t("common.loading")}</p>
               </div>
             ) : (
               <WeeklyTrendChart data={graphData} />
@@ -506,7 +509,7 @@ export default function GrowthPage() {
         {weeklyData && weeklyData.length > 0 && (
           <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
             <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
-              Weekly Reports
+              {t("growth.page.weeklyReports")}
             </h2>
             <div className="mt-3 space-y-4">
               {weeklyData.map((report) => (
@@ -516,7 +519,7 @@ export default function GrowthPage() {
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-[rgba(245,240,232,0.82)]">
-                      Week of {report.week_start}
+                      {t("growth.page.weekOf").replace("{date}", report.week_start)}
                     </h3>
                     <span className="rounded-full bg-[color-mix(in_srgb,var(--pq-live)_12%,transparent)] px-2.5 py-0.5 text-xs font-medium text-[var(--pq-live)]">
                       {report.week_score}/100
@@ -528,7 +531,7 @@ export default function GrowthPage() {
                   {report.patterns.length > 0 && (
                     <div className="mt-2">
                       <p className="text-xs font-medium text-[rgba(245,240,232,0.55)]">
-                        Patterns
+                        {t("growth.page.patterns")}
                       </p>
                       <ul className="mt-1 space-y-0.5">
                         {report.patterns.map((p, i) => (
@@ -545,7 +548,7 @@ export default function GrowthPage() {
                   {report.next_week_suggestions.length > 0 && (
                     <div className="mt-2">
                       <p className="text-xs font-medium text-[rgba(245,240,232,0.55)]">
-                        Next Week
+                        {t("growth.page.nextWeek")}
                       </p>
                       <ul className="mt-1 space-y-0.5">
                         {report.next_week_suggestions.map((s, i) => (

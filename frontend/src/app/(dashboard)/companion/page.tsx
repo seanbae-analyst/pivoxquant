@@ -16,6 +16,7 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { useT } from "@/lib/locale";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Lock, MailCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
@@ -75,6 +76,7 @@ export default function CompanionPage() {
 /* ─── Skeleton ────────────────────────────────────────────────────── */
 
 function LoadingShell() {
+  const t = useT();
   return (
     <div
       className="flex min-h-[100dvh] w-full items-center justify-center"
@@ -88,7 +90,7 @@ function LoadingShell() {
           color: "rgba(184, 149, 106, 0.7)",
         }}
       >
-        Loading · 불러오는 중
+        {t("companion.page.loadingLabel")}
       </div>
     </div>
   );
@@ -97,6 +99,7 @@ function LoadingShell() {
 /* ─── Upgrade prompt (entitlement wall) ───────────────────────────── */
 
 function UpgradePrompt() {
+  const t = useT();
   return (
     <div
       className="flex min-h-[100dvh] w-full items-center justify-center px-5 py-16"
@@ -117,7 +120,7 @@ function UpgradePrompt() {
               color: "var(--pq-bronze, #B8956A)",
             }}
           >
-            Premium Plus · Closed Beta
+            {t("companion.page.upgradeBadge")}
           </span>
         </div>
         <h1
@@ -131,7 +134,7 @@ function UpgradePrompt() {
             margin: 0,
           }}
         >
-          When you&rsquo;re ready, <em style={{ color: "var(--pq-bronze, #B8956A)" }}>ascend.</em>
+          {t("companion.page.upgradeHeading")}
         </h1>
         <p
           className="mt-4 font-serif"
@@ -141,9 +144,7 @@ function UpgradePrompt() {
             color: "rgba(245, 240, 232, 0.72)",
           }}
         >
-          A reflective companion that remembers what you wrote — not an advisor.
-          Reserved for <strong style={{ color: "var(--pq-bronze, #B8956A)" }}>Premium Plus</strong> and
-          Founding Lifetime members during Closed Beta.
+          {t("companion.page.upgradeDesc")}
         </p>
         <p
           className="mt-2 font-serif italic"
@@ -153,7 +154,7 @@ function UpgradePrompt() {
             color: "rgba(184, 149, 106, 0.85)",
           }}
         >
-          준비가 되면, 한 단계 위로. Premium Plus · Founding Lifetime 멤버를 위한 동행.
+          {t("companion.page.upgradeSubDesc")}
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -168,7 +169,7 @@ function UpgradePrompt() {
             }}
           >
             <Lock className="h-3 w-3" strokeWidth={2} aria-hidden />
-            Upgrade to Premium Plus
+            {t("companion.page.upgradeCta")}
             <ArrowRight className="h-3 w-3" strokeWidth={2} aria-hidden />
           </Link>
           <Link
@@ -181,7 +182,7 @@ function UpgradePrompt() {
               letterSpacing: "0.22em",
             }}
           >
-            Back to Home
+            {t("companion.page.upgradeBack")}
           </Link>
         </div>
       </div>
@@ -192,6 +193,7 @@ function UpgradePrompt() {
 /* ─── Coming soon (kill switch / closed-beta queue) ───────────────── */
 
 function ComingSoon({ phase }: { phase: string }) {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -244,7 +246,7 @@ function ComingSoon({ phase }: { phase: string }) {
               color: "var(--pq-bronze, #B8956A)",
             }}
           >
-            {phase === "internal" ? "Internal · Staff" : "Coming Soon · Closed Beta"}
+            {phase === "internal" ? t("companion.page.comingSoonBadgeInternal") : t("companion.page.comingSoonBadge")}
           </span>
         </div>
         <h1
@@ -258,7 +260,7 @@ function ComingSoon({ phase }: { phase: string }) {
             margin: 0,
           }}
         >
-          Your journal, remembered.
+          {t("companion.page.comingSoonHeading")}
         </h1>
         <p
           className="mt-4 font-serif"
@@ -268,9 +270,7 @@ function ComingSoon({ phase }: { phase: string }) {
             color: "rgba(245, 240, 232, 0.72)",
           }}
         >
-          The Personal Journal Companion is in Closed Beta. Leave your email —
-          we open seats in small batches so responses stay slow, careful, and
-          within reflective bounds.
+          {t("companion.page.comingSoonDesc")}
         </p>
         <p
           className="mt-2 font-serif italic"
@@ -280,7 +280,7 @@ function ComingSoon({ phase }: { phase: string }) {
             color: "rgba(184, 149, 106, 0.85)",
           }}
         >
-          Closed Beta 운영 중입니다. 소규모로 순차 초대합니다.
+          {t("companion.page.comingSoonSubDesc")}
         </p>
 
         {submitted ? (
@@ -306,13 +306,13 @@ function ComingSoon({ phase }: { phase: string }) {
                 margin: 0,
               }}
             >
-              You&apos;re on the waitlist. We&apos;ll email when your seat opens.
+              {t("companion.page.waitlistSuccess")}
             </p>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-3 sm:flex-row">
             <label htmlFor="waitlist-email" className="sr-only">
-              Email
+              {t("companion.page.emailLabel")}
             </label>
             <input
               id="waitlist-email"
@@ -320,7 +320,7 @@ function ComingSoon({ phase }: { phase: string }) {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@domain.com"
+              placeholder={t("companion.page.emailPlaceholder")}
               className="flex-1 rounded-sm bg-transparent px-4 py-3 font-serif outline-none pq-input-noom"
               style={{
                 border: "0.5px solid rgba(245, 240, 232, 0.14)",
@@ -339,7 +339,7 @@ function ComingSoon({ phase }: { phase: string }) {
                 letterSpacing: "0.22em",
               }}
             >
-              {submitting ? "Submitting…" : "Join Waitlist"}
+              {submitting ? t("companion.page.submitting") : t("companion.page.joinWaitlist")}
             </button>
           </form>
         )}

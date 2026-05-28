@@ -17,6 +17,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { fadeUp, stagger } from "@/lib/motion";
+import { useT } from "@/lib/locale";
 
 type PreviewPersona = {
   code: string;
@@ -63,6 +64,7 @@ const FOUR: readonly PreviewPersona[] = [
 ] as const;
 
 export default function PersonasPreview() {
+  const t = useT();
   const reduce = useReducedMotion();
 
   return (
@@ -93,7 +95,7 @@ export default function PersonasPreview() {
               letterSpacing: "0.22em",
             }}
           >
-            Eight Investor Personas · Four shown
+            {t("landing.personas.eyebrow")}
           </span>
         </motion.div>
 
@@ -111,9 +113,9 @@ export default function PersonasPreview() {
             marginBottom: 18,
           }}
         >
-          A CFO that speaks
+          {t("landing.personas.heading").split("\n")[0]}
           <br />
-          your investor language.
+          {t("landing.personas.heading").split("\n")[1]}
         </motion.h2>
 
         <motion.p
@@ -129,8 +131,7 @@ export default function PersonasPreview() {
             marginBottom: 56,
           }}
         >
-          온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류합니다. Drift가
-          감지되면 페르소나는 자동으로 재조정됩니다.
+          {t("landing.personas.description")}
         </motion.p>
 
         {/* Grid */}
@@ -243,7 +244,7 @@ export default function PersonasPreview() {
                     paddingBottom: 2,
                   }}
                 >
-                  Sample report
+                  {t("landing.personas.sampleReport")}
                   <ArrowRight className="h-3 w-3" aria-hidden />
                 </Link>
               </div>
@@ -267,8 +268,7 @@ export default function PersonasPreview() {
               maxWidth: 480,
             }}
           >
-            Also available: Income, Quant, Speculator, Daytrader. The desk
-            reshapes every artifact around the persona you test into.
+            {t("landing.personas.alsoAvailable")}
           </p>
           <Link
             href="/features/personas"
@@ -281,7 +281,7 @@ export default function PersonasPreview() {
               letterSpacing: "0.02em",
             }}
           >
-            View all 8 CFO Personas
+            {t("landing.personas.viewAll")}
             <ArrowRight
               className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5"
               style={{ color: "var(--pq-bronze)" }}
