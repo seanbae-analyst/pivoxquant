@@ -1047,23 +1047,42 @@ def _init_scheduler(app):
             # Release the connection before any external API work.
             db.session.remove()
 
-            for ticker, uids in work:
-                cap = cap_by_uid.get(uids[0], 10_000)
+            # Phase 1 — parallel external analyze(). engine.analyze() is
+            # DB-free (no db.session/query anywhere in services/quant/engine.py),
+            # so a bounded ThreadPoolExecutor cuts the cycle wall time from the
+            # serial sum of upstream RTTs to ~the slowest single call WITHOUT
+            # ever holding a pool connection across analyze() — preserving the
+            # "no connection across the slow call" invariant that fixed the past
+            # ``FATAL: too many clients`` outage. max_workers=4 also caps the
+            # FMP/KIS request burst (avoids the 429 cooldown). No thread touches
+            # the DB here, so the pool is untouched during Phase 1.
+            from concurrent.futures import ThreadPoolExecutor  # noqa: PLC0415
+
+            def _analyze_one(item):
+                tk, us = item
+                cap = cap_by_uid.get(us[0], 10_000)
                 try:
-                    # No DB connection held here — analyze() may take seconds.
-                    r = svc.engine.analyze(ticker, cap)
-                    if r:
-                        # Quick writes only; these lazily re-acquire a
-                        # connection from the pool.
-                        cache_service.save_signal(ticker, r)
-                        for uid in uids:
-                            alert_service.maybe_generate(uid, r)
+                    return tk, us, svc.engine.analyze(tk, cap)
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Scheduler analyze failed {tk}: {e}")
+                    return tk, us, None
+
+            with ThreadPoolExecutor(max_workers=4) as ex:
+                analyzed = list(ex.map(_analyze_one, work))
+
+            # Phase 2 — serial DB writes only. Single-threaded, so the number of
+            # concurrent pool connections never exceeds one; each iteration
+            # releases it before the next so nothing is pinned.
+            for ticker, uids, r in analyzed:
+                if not r:
+                    continue
+                try:
+                    cache_service.save_signal(ticker, r)
+                    for uid in uids:
+                        alert_service.maybe_generate(uid, r)
                 except Exception as e:
-                    logger.error(f"Scheduler failed {ticker}: {e}")
+                    logger.error(f"Scheduler write failed {ticker}: {e}")
                 finally:
-                    # Return the (re-acquired) connection to the pool before the
-                    # next iteration's analyze() call so it is never pinned
-                    # across slow external I/O.
                     db.session.remove()
             logger.info(f"Scheduled refresh done — {len(work)} tickers")
 
