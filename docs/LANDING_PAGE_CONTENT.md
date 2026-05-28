@@ -398,7 +398,7 @@ PDF 5페이지 Carousel 또는 flipbook:
 **하단 Copyright**
 ```
 © 2026 PivoxQuant · 대표: 배상현 · 사업자등록번호: XXX-XX-XXXXX
-· 통신판매업신고: XXX · 이메일: seanbae1521@gmail.com
+· 통신판매업신고: XXX · 이메일: support@pivoxquant.com
 ```
 
 **법적 면책 (footer 최하단, 작게)**
