@@ -2,7 +2,7 @@
 
 **SoT**: 자율 운영 시스템 외부 액션 + 변호사 큐 + 메모리 carry-over 통합 매트릭스.
 **갱신 정책**: 매일 06:27 morning-briefing이 prepend 형태로 노출. 항목 변경 시 PR로 갱신.
-**최근 갱신**: 2026-05-28 14:57 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 6건 / SHIP-AT-RISK 11건 / POST-LAUNCH 15건 / 변호사 큐 18건)
+**최근 갱신**: 2026-05-28 18:49 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 6건 / SHIP-AT-RISK 11건 / POST-LAUNCH 15건 / 변호사 큐 18건)
 
 상태 코드: BLOCKED(외부 대기) / IN_PROGRESS / PENDING(미착수) / RESOLVED
 

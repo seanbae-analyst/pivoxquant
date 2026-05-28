@@ -50,6 +50,7 @@ def register_blueprints(app):
     from .brief import brief_bp  # Earnings pre-brief queue (P2 #11 backend)
     from .growth import growth_funnel_bp  # Viral loop — /api/track + /api/card
     from .support import support_bp  # 고객문의센터 + 지원 챗봇
+    from .inbox import inbox_bp  # v57 CEO Inbox single-pane (admin only)
     from services.email.webhook import sendgrid_webhook_bp  # SendGrid Event Webhook
 
     # agent_worker is a sibling package and may be absent in some deploys
@@ -89,6 +90,7 @@ def register_blueprints(app):
         brief_bp,
         growth_funnel_bp,
         support_bp,
+        inbox_bp,
         sendgrid_webhook_bp,
     ]
     if growth_bp is not None:
