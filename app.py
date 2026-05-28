@@ -835,6 +835,121 @@ def _do_migrations():
         except Exception as exc:
             logger.warning("Migration: could not create inquiries: %s", exc)
 
+    # ── Growth OS tables (growth_*) ─────────────────────────────────────────
+    # SHIP-BLOCKER (2026-05-28): Growth OS 4개 테이블은 ORM 모델 클래스가 없고
+    # (agent_worker/growth_routes.py 가 raw SQL 로 직접 조회), 오직 alembic
+    # migration 005/020/036 의 raw DDL 로만 정의돼 있다. prod 는 alembic 미실행
+    # (db.create_all() + _do_migrations() self-heal 패턴) 으로 운영되므로 이 4개
+    # 테이블이 prod DB 에 물리적으로 존재한 적이 없다 (to_regclass = NULL 실측,
+    # Railway Postgres). 그 결과 /api/growth/{data,today,weekly} 가 없는 테이블을
+    # 쳐서 동시 500 → Growth OS 페이지 "데이터 못 불러왔다" 패널.
+    #
+    # 스키마는 migration 005(기본) + 020(user_id + unique) + 036(FK CASCADE) 병합
+    # 결과와 정확히 일치한다. Postgres / SQLite 양쪽에서 valid 하도록 dialect 분기:
+    #   - JSONB(PG) vs JSON(SQLite)
+    #   - growth_scores.total_score 는 GENERATED ... STORED 컬럼. 양쪽 모두 STORED
+    #     문법을 지원하나 PG 는 LEAST(), SQLite 는 MIN() 을 쓴다.
+    #   - user_id FK 는 CREATE TABLE 내 인라인 정의 (양쪽 호환).
+    # 테스트는 SQLite 에서 alembic 이 먼저 테이블을 만들므로 IF NOT EXISTS no-op
+    # 이 되지만, SQLite 가 statement 전체를 파싱하므로 SQLite DDL 도 완전 valid 해야
+    # 한다. 멱등 (테이블 존재 시 CREATE 는 no-op, ADD COLUMN/INDEX 도 IF NOT EXISTS).
+    if any(
+        t not in existing_tables
+        for t in (
+            "growth_daily_logs",
+            "growth_reflections",
+            "growth_scores",
+            "growth_weekly_reports",
+        )
+    ):
+        json_type = "JSONB" if is_postgres else "JSON"
+        # GENERATED expression: PG=LEAST, SQLite=MIN (LEAST is not a SQLite fn).
+        least_fn = "LEAST" if is_postgres else "MIN"
+        total_score_expr = (
+            f"CAST(activity_score * 0.4 + reflection_score * 0.4 "
+            f"+ {least_fn}(streak_days, 30) * 0.67 AS INTEGER)"
+        )
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS growth_daily_logs ("
+                    "id INTEGER PRIMARY KEY, "
+                    "date DATE NOT NULL UNIQUE, "
+                    "type VARCHAR(20) NOT NULL, "
+                    f"priorities {json_type}, "
+                    "motivation TEXT, "
+                    f"actual_done {json_type}, "
+                    "raw_response TEXT, "
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"
+                ))
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS growth_reflections ("
+                    "id INTEGER PRIMARY KEY, "
+                    "date DATE NOT NULL, "
+                    f"questions {json_type} NOT NULL, "
+                    f"answers {json_type}, "
+                    "mood INTEGER, "
+                    "answered_at TIMESTAMP, "
+                    "raw_response TEXT, "
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "user_id INTEGER NOT NULL, "
+                    "CONSTRAINT ck_growth_reflections_mood_range "
+                    "CHECK (mood IS NULL OR mood BETWEEN 1 AND 5), "
+                    "CONSTRAINT fk_growth_reflections_user_id_users "
+                    "FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE"
+                    ")"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_growth_reflections_date "
+                    "ON growth_reflections (date)"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_growth_reflections_user_id "
+                    "ON growth_reflections (user_id)"
+                ))
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS growth_scores ("
+                    "date DATE NOT NULL, "
+                    "activity_score INTEGER NOT NULL DEFAULT 0, "
+                    "reflection_score INTEGER NOT NULL DEFAULT 0, "
+                    "streak_days INTEGER NOT NULL DEFAULT 0, "
+                    f"total_score INTEGER GENERATED ALWAYS AS ({total_score_expr}) STORED, "
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "user_id INTEGER NOT NULL, "
+                    "PRIMARY KEY (date), "
+                    "CONSTRAINT uq_growth_scores_user_date UNIQUE (user_id, date), "
+                    "CONSTRAINT fk_growth_scores_user_id_users "
+                    "FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE"
+                    ")"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_growth_scores_range "
+                    "ON growth_scores (date)"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_growth_scores_user_id "
+                    "ON growth_scores (user_id)"
+                ))
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS growth_weekly_reports ("
+                    "id INTEGER PRIMARY KEY, "
+                    "week_start DATE NOT NULL UNIQUE, "
+                    "summary TEXT NOT NULL, "
+                    f"patterns {json_type}, "
+                    f"growth_areas {json_type}, "
+                    f"next_week_suggestions {json_type}, "
+                    "week_score INTEGER, "
+                    "raw_response TEXT, "
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                    ")"
+                ))
+            logger.info("Migration: ensured Growth OS tables (growth_*)")
+        except Exception as exc:
+            # Never block boot — Growth OS degrades to the empty-data panel
+            # rather than taking the whole app down.
+            logger.warning("Migration: could not create growth_* tables: %s", exc)
+
     # Portfolio shares / push subscriptions / signal_cache / watchlist —
     # all their current columns are in the initial create_all snapshot.
     # No post-creation additions observed. Declared here as a no-op safety
