@@ -1230,6 +1230,28 @@ def _try_acquire_scheduler_lock() -> bool:
 
 
 def _init_scheduler(app):
+    def _alert_sched(job_id: str, exc: BaseException) -> None:
+        """T8 mechanical wrapper — emit_failure for ``_scheduled_*`` jobs.
+
+        Defence-in-depth: the alerts module already swallows everything
+        internally, but we wrap one more time so a missing module import
+        (e.g. observability not yet deployed in a hotfix branch) still
+        cannot kill the scheduler thread.
+        """
+        try:
+            from services.observability.alerts import emit_failure
+            emit_failure(job_id, exc)
+        except Exception:
+            logger.exception("[sched] emit_failure swallowed for %s", job_id)
+
+    def _record_sched_success(job_id: str) -> None:
+        """T8 — reset 3-strike counter on successful run."""
+        try:
+            from services.observability.alerts import record_success
+            record_success(job_id)
+        except Exception:
+            pass
+
     def _scheduled_refresh():
         from models import Position, User
         with app.app_context():
@@ -1308,6 +1330,7 @@ def _init_scheduler(app):
                 finally:
                     db.session.remove()
             logger.info(f"Scheduled refresh done — {len(work)} tickers")
+            _record_sched_success("sched_refresh")
 
     def _scheduled_indices_cache_warm():
         """Keep the headline-index cache warm for the public landing ticker.
@@ -1338,8 +1361,10 @@ def _init_scheduler(app):
                 logger.info(
                     "Indices cache-warm done — us=%s kr=%s rows", us_n, kr_n
                 )
+                _record_sched_success("sched_indices_cache_warm")
             except Exception as e:
                 logger.error(f"Indices cache-warm scheduler failed: {e}")
+                _alert_sched("sched_indices_cache_warm", e)
 
     def _scheduled_weekly_memo():
         """Generate + email the weekly investor memo to Pro+ users.
@@ -1353,8 +1378,10 @@ def _init_scheduler(app):
             try:
                 summary = WeeklyMemoService().run_weekly()
                 logger.info(f"Weekly memo scheduler run: {summary}")
+                _record_sched_success("sched_weekly_memo")
             except Exception as e:
                 logger.error(f"Weekly memo scheduler failed: {e}")
+                _alert_sched("sched_weekly_memo", e)
 
     def _scheduled_monthly_brag():
         """Generate + email the monthly brag card to every user.
@@ -1369,8 +1396,10 @@ def _init_scheduler(app):
             try:
                 summary = MonthlyBragService().run_monthly()
                 logger.info(f"Monthly brag scheduler run: {summary}")
+                _record_sched_success("sched_monthly_brag")
             except Exception as e:
                 logger.error(f"Monthly brag scheduler failed: {e}")
+                _alert_sched("sched_monthly_brag", e)
 
     def _scheduled_brag_card():
         """Generate + email the Playwright-rendered brag card (MVP #2).
@@ -1386,8 +1415,10 @@ def _init_scheduler(app):
             try:
                 summary = BragCardService().run_monthly()
                 logger.info(f"Brag card scheduler run: {summary}")
+                _record_sched_success("sched_brag_card")
             except Exception as e:
                 logger.error(f"Brag card scheduler failed: {e}")
+                _alert_sched("sched_brag_card", e)
 
     def _scheduled_kpi_dashboard():
         """Daily 08:00 KST — 5-metric KPI email (Pro+).
@@ -1400,8 +1431,10 @@ def _init_scheduler(app):
             try:
                 summary = KPIDashboardService().run_daily()
                 logger.info(f"KPI dashboard scheduler run: {summary}")
+                _record_sched_success("sched_kpi_dashboard")
             except Exception as e:
                 logger.error(f"KPI dashboard scheduler failed: {e}")
+                _alert_sched("sched_kpi_dashboard", e)
 
     def _scheduled_self_audit():
         """DEPRECATED (2026-04-19) — absorbed into Quarterly Self Report.
@@ -1416,11 +1449,22 @@ def _init_scheduler(app):
 
         This function is kept as a no-op; the sched.add_job registration
         below is commented out to disable the duplicate cron.
+
+        Wrapped in try/except + emit_failure for parity with the other
+        25 Group A jobs — even no-ops can raise on a future logger config
+        change, and we want zero silent scheduler-thread kills.
         """
-        logger.info(
-            "self_audit standalone job is deprecated — "
-            "see quarterly_self_report"
-        )
+        try:
+            logger.info(
+                "self_audit standalone job is deprecated — "
+                "see quarterly_self_report"
+            )
+        except Exception as exc:  # noqa: BLE001
+            try:
+                from services.observability.alerts import emit_failure
+                emit_failure("sched_scheduled_self_audit", exc)
+            except Exception:
+                logger.exception("self_audit alert emit failed")
 
     def _scheduled_quarterly_self_report():
         """Quarterly (1/7, 4/7, 7/7, 10/7) 10:00 KST — Premium 15-page
@@ -1437,8 +1481,10 @@ def _init_scheduler(app):
             try:
                 summary = QuarterlySelfReportService().run_quarterly()
                 logger.info(f"Quarterly self report scheduler run: {summary}")
+                _record_sched_success("sched_quarterly_self_report")
             except Exception as e:
                 logger.error(f"Quarterly self report scheduler failed: {e}")
+                _alert_sched("sched_quarterly_self_report", e)
 
     def _scheduled_year_end_letter():
         """Annual (12/31) 10:00 KST — Premium 6-page Year-End Investor
@@ -1454,8 +1500,10 @@ def _init_scheduler(app):
             try:
                 summary = YearEndLetterService().run_annual()
                 logger.info(f"Year-end letter scheduler run: {summary}")
+                _record_sched_success("sched_year_end_letter")
             except Exception as e:
                 logger.error(f"Year-end letter scheduler failed: {e}")
+                _alert_sched("sched_year_end_letter", e)
 
     def _scheduled_dd_checklist():
         """Daily 08:00 KST — T+3 post-entry DD checklist email (Pro+).
@@ -1469,8 +1517,10 @@ def _init_scheduler(app):
             try:
                 summary = DDChecklistService().run_daily()
                 logger.info(f"DD checklist scheduler run: {summary}")
+                _record_sched_success("sched_dd_checklist")
             except Exception as e:
                 logger.error(f"DD checklist scheduler failed: {e}")
+                _alert_sched("sched_dd_checklist", e)
 
     def _scheduled_burn_rate():
         """Monthly (day=1) 09:00 KST — Burn Rate Report PDF (Pro+).
@@ -1484,8 +1534,10 @@ def _init_scheduler(app):
             try:
                 summary = BurnRateService().run_monthly()
                 logger.info(f"Burn rate scheduler run: {summary}")
+                _record_sched_success("sched_burn_rate")
             except Exception as e:
                 logger.error(f"Burn rate scheduler failed: {e}")
+                _alert_sched("sched_burn_rate", e)
 
     def _scheduled_credit_rating():
         """Monthly (day=15) 09:00 KST — Credit Rating email (Pro+).
@@ -1498,8 +1550,10 @@ def _init_scheduler(app):
             try:
                 summary = CreditRatingService().run_monthly()
                 logger.info(f"Credit rating scheduler run: {summary}")
+                _record_sched_success("sched_credit_rating")
             except Exception as e:
                 logger.error(f"Credit rating scheduler failed: {e}")
+                _alert_sched("sched_credit_rating", e)
 
     def _scheduled_dividend_income():
         """Monthly (day=1) 10:00 KST — Dividend Income Statement PDF (Premium).
@@ -1514,8 +1568,10 @@ def _init_scheduler(app):
             try:
                 summary = DividendIncomeService().run_monthly()
                 logger.info(f"Dividend income scheduler run: {summary}")
+                _record_sched_success("sched_dividend_income")
             except Exception as e:
                 logger.error(f"Dividend income scheduler failed: {e}")
+                _alert_sched("sched_dividend_income", e)
 
     def _scheduled_monthly_finance():
         """Monthly (day=1) 11:00 KST — Monthly Finance Report PDF (Premium).
@@ -1531,8 +1587,10 @@ def _init_scheduler(app):
             try:
                 summary = MonthlyFinanceService().run_monthly()
                 logger.info(f"Monthly finance scheduler run: {summary}")
+                _record_sched_success("sched_monthly_finance")
             except Exception as e:
                 logger.error(f"Monthly finance scheduler failed: {e}")
+                _alert_sched("sched_monthly_finance", e)
 
     def _scheduled_risk_board_monthly():
         """Monthly (day=15) 09:30 KST — Risk Board Meeting Deck (Premium).
@@ -1547,8 +1605,10 @@ def _init_scheduler(app):
             try:
                 summary = RiskBoardService().run_monthly()
                 logger.info(f"Risk board monthly scheduler run: {summary}")
+                _record_sched_success("sched_risk_board_monthly")
             except Exception as e:
                 logger.error(f"Risk board monthly scheduler failed: {e}")
+                _alert_sched("sched_risk_board_monthly", e)
 
     def _scheduled_vix_spike_monitor():
         """Hourly (minute=30) — fire the Risk Board deck when VIX first
@@ -1564,8 +1624,10 @@ def _init_scheduler(app):
             try:
                 result = RiskBoardService().run_vix_spike_check()
                 logger.info(f"Risk board VIX spike monitor: {result}")
+                _record_sched_success("sched_vix_spike_monitor")
             except Exception as e:
                 logger.error(f"Risk board VIX spike monitor failed: {e}")
+                _alert_sched("sched_vix_spike_monitor", e)
 
     def _scheduled_portfolio_segment():
         """Quarterly (month=1,4,7,10 day=7) 10:00 KST — Portfolio Segment
@@ -1582,8 +1644,10 @@ def _init_scheduler(app):
             try:
                 summary = PortfolioSegmentService().run_quarterly()
                 logger.info(f"Portfolio segment scheduler run: {summary}")
+                _record_sched_success("sched_portfolio_segment")
             except Exception as e:
                 logger.error(f"Portfolio segment scheduler failed: {e}")
+                _alert_sched("sched_portfolio_segment", e)
 
     def _scheduled_capital_allocation_reminder():
         """Quarterly +14 days (1/14, 4/14, 7/14, 10/14) 09:00 KST.
@@ -1600,8 +1664,10 @@ def _init_scheduler(app):
             try:
                 summary = CapitalAllocationService().send_quarterly_reminder()
                 logger.info(f"Capital allocation reminder run: {summary}")
+                _record_sched_success("sched_capital_allocation_reminder")
             except Exception as e:
                 logger.error(f"Capital allocation reminder failed: {e}")
+                _alert_sched("sched_capital_allocation_reminder", e)
 
     def _scheduled_insider_mirror_weekly():
         """Weekly (Mon) 09:00 KST — Insider Transaction Mirror PDF (Premium).
@@ -1618,8 +1684,10 @@ def _init_scheduler(app):
             try:
                 summary = InsiderMirrorService().run_weekly()
                 logger.info(f"Insider mirror weekly run: {summary}")
+                _record_sched_success("sched_insider_mirror_weekly")
             except Exception as e:
                 logger.error(f"Insider mirror weekly failed: {e}")
+                _alert_sched("sched_insider_mirror_weekly", e)
 
     # ── Feature 5 — AI Trader Twin (paper-only) ─────────────────────────
     # Twin runs daily decision passes and a Sunday weekly comparison.
@@ -1653,8 +1721,10 @@ def _init_scheduler(app):
                     finally:
                         db.session.remove()
                 logger.info(f"Twin KR daily run: {len(uids)} twins scanned")
+                _record_sched_success("sched_twin_decisions_kr")
             except Exception as e:
                 logger.error(f"Twin KR scheduler failed: {e}")
+                _alert_sched("sched_twin_decisions_kr", e)
 
     def _scheduled_twin_decisions_us():
         """Run Twin decisions after the NYSE close (06:30 KST = 21:30 EST)."""
@@ -1677,8 +1747,10 @@ def _init_scheduler(app):
                     finally:
                         db.session.remove()
                 logger.info(f"Twin US daily run: {len(uids)} twins scanned")
+                _record_sched_success("sched_twin_decisions_us")
             except Exception as e:
                 logger.error(f"Twin US scheduler failed: {e}")
+                _alert_sched("sched_twin_decisions_us", e)
 
     def _scheduled_twin_weekly():
         """Sunday 21:00 KST — user-vs-twin weekly comparison row."""
@@ -1701,8 +1773,10 @@ def _init_scheduler(app):
                     finally:
                         db.session.remove()
                 logger.info(f"Twin weekly run: {len(uids)} twins reported")
+                _record_sched_success("sched_twin_weekly")
             except Exception as e:
                 logger.error(f"Twin weekly scheduler failed: {e}")
+                _alert_sched("sched_twin_weekly", e)
 
     def _scheduled_earnings_prebrief():
         """Scan every 15 min for positions whose earnings fire in ~30 min.
@@ -1722,8 +1796,10 @@ def _init_scheduler(app):
             try:
                 summary = EarningsPrebriefService().run_scan_digest()
                 logger.info(f"Earnings pre-brief digest scan: {summary}")
+                _record_sched_success("sched_earnings_prebrief")
             except Exception as e:
                 logger.error(f"Earnings pre-brief scan failed: {e}")
+                _alert_sched("sched_earnings_prebrief", e)
 
     def _scheduled_behavioral_scores():
         """Weekly Sunday 22:00 KST — BehavioralScore for every active user.
@@ -1740,8 +1816,10 @@ def _init_scheduler(app):
             try:
                 summary = run_weekly_for_all_users()
                 logger.info(f"Behavioural score weekly run: {summary}")
+                _record_sched_success("sched_behavioral_scores")
             except Exception as e:
                 logger.error(f"Behavioural score weekly failed: {e}")
+                _alert_sched("sched_behavioral_scores", e)
 
     def _scheduled_persona_snapshots():
         """Weekly Sunday 23:00 KST — PersonaSnapshot for every active user.
@@ -1763,8 +1841,10 @@ def _init_scheduler(app):
             try:
                 summary = run_weekly_snapshots()
                 logger.info(f"Persona snapshot weekly run: {summary}")
+                _record_sched_success("sched_persona_snapshots")
             except Exception as e:
                 logger.error(f"Persona snapshot weekly failed: {e}")
+                _alert_sched("sched_persona_snapshots", e)
 
     def _scheduled_price_alerts():
         """Weekday post-US-close sweep — 52-week high/low + sector concentration.
@@ -1792,16 +1872,24 @@ def _init_scheduler(app):
             check_concentration_alerts,
         )
         with app.app_context():
+            ok = True
             try:
                 m = check_52w_highs_lows()
                 logger.info(f"52w high/low sweep: {m}")
             except Exception as e:
+                ok = False
                 logger.error(f"52w high/low sweep failed: {e}")
+                _alert_sched("sched_price_alerts_52w", e)
             try:
                 m = check_concentration_alerts()
                 logger.info(f"Concentration sweep: {m}")
             except Exception as e:
+                ok = False
                 logger.error(f"Concentration sweep failed: {e}")
+                _alert_sched("sched_price_alerts_concentration", e)
+            if ok:
+                _record_sched_success("sched_price_alerts_52w")
+                _record_sched_success("sched_price_alerts_concentration")
 
     # PERF-001 / CONN-001: apply pile-up guards as scheduler-wide job defaults
     # so EVERY job — the artifact crons below AND the Wave H ops jobs
@@ -2060,8 +2148,16 @@ def _init_scheduler(app):
     # exchangerate-api.com (backup). 1440 upstream calls/day is well within
     # FMP Starter plan per-minute limits and free tier of exchangerate-api.
     # Logs a WARNING when stale > 10min.
+    def _scheduled_fx_rate_refresh():
+        try:
+            fx_service._refresh_fx_rate(app)
+            _record_sched_success("sched_fx_rate_refresh")
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"FX rate refresh scheduler failed: {e}")
+            _alert_sched("sched_fx_rate_refresh", e)
+
     sched.add_job(
-        func=lambda: fx_service._refresh_fx_rate(app),
+        func=_scheduled_fx_rate_refresh,
         trigger="interval",
         minutes=1,
         id="fx_rate_refresh",

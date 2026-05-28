@@ -19,7 +19,8 @@
       "mcp__Claude_in_Chrome__find",
       "mcp__Claude_in_Chrome__read_page",
       "mcp__ccd_session__mark_chapter"
-    ]
+    ],
+    "defaultMode": "bypassPermissions"
   },
   "hooks": {
     "PreToolUse": [
@@ -58,6 +59,20 @@
           {
             "type": "command",
             "command": "bash /Users/seanbae/Desktop/취준/pivoxquant/.claude/hooks/h6-handover-prepend.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash /Users/seanbae/dev/pivoxquant/.claude/hooks/h11-agent-inventory.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/seanbae/dev/pivoxquant/.claude/hooks/h12-autopilot-log-tick.sh"
           }
         ]
       }

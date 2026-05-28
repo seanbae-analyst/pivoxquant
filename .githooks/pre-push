@@ -139,7 +139,7 @@ else
   # Build pytest target list — regression tests + tests matching changed modules.
   PYTEST_TARGETS=""
   # Always include core regression tests if present.
-  for tname in tests/test_pivoxaudit_secret_leak.py tests/test_no_hardcoded_samples.py tests/test_regression_guards.py; do
+  for tname in tests/test_pivoxaudit_secret_leak.py tests/test_no_hardcoded_samples.py tests/test_regression_guards.py tests/test_data_integrity_gates.py; do
     [ -f "$tname" ] && PYTEST_TARGETS="$PYTEST_TARGETS $tname"
   done
 

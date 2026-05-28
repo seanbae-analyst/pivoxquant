@@ -78,7 +78,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # ── Wrappers (Python 직접 호출) ──────────────────────────────────────────────
 
-def _wrap_python_main(module_path: str, func_name: str = "main") -> Callable[[], None]:
+def _wrap_python_main(
+    module_path: str,
+    func_name: str = "main",
+    job_id: str | None = None,
+) -> Callable[[], None]:
     """Wrap a ``scripts/.../foo.py:main()`` for APScheduler call-once dispatch.
 
     Why a closure: APScheduler stores the function reference; importing at
@@ -86,6 +90,11 @@ def _wrap_python_main(module_path: str, func_name: str = "main") -> Callable[[],
     ``RUN_SCHEDULER=0``. Deferring the import to first run keeps cold start
     minimal and lets ``main()`` raise on env-missing without breaking the
     scheduler thread.
+
+    ``job_id``: when provided, failures route through
+    ``services.observability.alerts.emit_failure`` so they surface on
+    Slack / Sentry + trigger 3-strike auto-pause. Without it we fall back
+    to logger.exception-only (legacy behaviour, no on-call signal).
     """
 
     def _runner():
@@ -98,8 +107,25 @@ def _wrap_python_main(module_path: str, func_name: str = "main") -> Callable[[],
                     "[cron] %s.%s exit=%s (non-zero)",
                     module_path, func_name, rc,
                 )
+                if job_id:
+                    # Non-zero exit IS a failure — alert + bump counter.
+                    try:
+                        from services.observability.alerts import emit_failure
+                        emit_failure(
+                            job_id,
+                            RuntimeError(f"exit code {rc}"),
+                            context={"module": module_path, "func": func_name},
+                        )
+                    except Exception:  # alert path must not raise
+                        logger.exception("[cron] emit_failure swallowed")
             else:
                 logger.info("[cron] %s.%s OK", module_path, func_name)
+                if job_id:
+                    try:
+                        from services.observability.alerts import record_success
+                        record_success(job_id)
+                    except Exception:
+                        pass
         except SystemExit as e:
             # ``main()`` may sys.exit(); treat 0 as success, else warn.
             code = getattr(e, "code", 0) or 0
@@ -107,11 +133,36 @@ def _wrap_python_main(module_path: str, func_name: str = "main") -> Callable[[],
                 logger.warning(
                     "[cron] %s.%s SystemExit=%s", module_path, func_name, code,
                 )
-        except Exception:
+                if job_id:
+                    try:
+                        from services.observability.alerts import emit_failure
+                        emit_failure(
+                            job_id,
+                            SystemExit(code),
+                            context={"module": module_path, "exit": str(code)},
+                        )
+                    except Exception:
+                        logger.exception("[cron] emit_failure swallowed")
+            elif job_id:
+                try:
+                    from services.observability.alerts import record_success
+                    record_success(job_id)
+                except Exception:
+                    pass
+        except Exception as exc:
             # Never let one job's failure kill the scheduler thread.
             logger.exception(
                 "[cron] %s.%s raised — swallowed", module_path, func_name,
             )
+            if job_id:
+                try:
+                    from services.observability.alerts import emit_failure
+                    emit_failure(
+                        job_id, exc,
+                        context={"module": module_path, "func": func_name},
+                    )
+                except Exception:
+                    logger.exception("[cron] emit_failure swallowed")
 
     _runner.__name__ = f"cron_{module_path.replace('.', '_')}"
     return _runner
@@ -119,13 +170,23 @@ def _wrap_python_main(module_path: str, func_name: str = "main") -> Callable[[],
 
 # ── Wrappers (shell script subprocess) ──────────────────────────────────────
 
-def _wrap_shell_script(script_rel: str, label: str) -> Callable[[], None]:
+def _wrap_shell_script(
+    script_rel: str,
+    label: str,
+    job_id: str | None = None,
+) -> Callable[[], None]:
     """Wrap a ``scripts/nightly/foo.sh`` via subprocess.
 
     Why subprocess (not bash → Python port): the 4 shell scripts wrap
     standard ops tooling (pg_dump, openssl s_client, curl) where rewriting
     in Python would duplicate platform-tested logic.  Subprocess overhead
     (~50ms) is negligible at cron cadence (minutes).
+
+    ``job_id``: when provided, failures (non-zero exit / timeout / exception)
+    route through ``services.observability.alerts.emit_failure`` so they
+    surface on Slack / Sentry + trigger 3-strike auto-pause. Success path
+    resets the failure counter via ``record_success``. Without ``job_id``
+    we fall back to logger.warning-only (legacy behaviour, no on-call signal).
     """
     script_path = REPO_ROOT / script_rel
 
@@ -146,12 +207,50 @@ def _wrap_shell_script(script_rel: str, label: str) -> Callable[[], None]:
                     "[cron] %s exit=%s stderr=%s",
                     label, res.returncode, (res.stderr or "")[:500],
                 )
+                if job_id:
+                    try:
+                        from services.observability.alerts import emit_failure
+                        emit_failure(
+                            job_id,
+                            RuntimeError(f"shell exit {res.returncode}"),
+                            context={
+                                "label": label,
+                                "script": script_rel,
+                                "stderr": (res.stderr or "")[:200],
+                            },
+                        )
+                    except Exception:
+                        logger.exception("[cron] emit_failure swallowed")
             else:
                 logger.info("[cron] %s OK", label)
-        except subprocess.TimeoutExpired:
+                if job_id:
+                    try:
+                        from services.observability.alerts import record_success
+                        record_success(job_id)
+                    except Exception:
+                        pass
+        except subprocess.TimeoutExpired as exc:
             logger.warning("[cron] %s TIMEOUT after 600s", label)
-        except Exception:
+            if job_id:
+                try:
+                    from services.observability.alerts import emit_failure
+                    emit_failure(
+                        job_id, exc,
+                        context={"label": label, "script": script_rel, "timeout": "600s"},
+                    )
+                except Exception:
+                    logger.exception("[cron] emit_failure swallowed")
+        except Exception as exc:
             logger.exception("[cron] %s raised — swallowed", label)
+            if job_id:
+                try:
+                    from services.observability.alerts import emit_failure
+                    emit_failure(
+                        job_id, exc,
+                        context={"label": label, "script": script_rel},
+                    )
+                except Exception:
+                    logger.exception("[cron] emit_failure swallowed")
 
     _runner.__name__ = f"cron_shell_{label.replace('-', '_')}"
     return _runner
@@ -165,7 +264,13 @@ def _api_health_probe() -> None:
     Railway already auto-restarts on /api/health failure (healthcheckPath +
     restartPolicyType=ON_FAILURE), so this job's job is the *Slack alert*
     side — surface degraded state to ops before Railway's restart kicks in.
+
+    Routes failures through ``services.observability.alerts.emit_failure`` so
+    a sustained 3-strike outage auto-pauses the noisy alerter (the underlying
+    Railway restart loop is the real recovery — this cron should not page
+    every 6h forever once we know the site is down).
     """
+    job_id = "ops_api_health"
     try:
         import requests  # local import — keeps boot path light
     except ImportError:
@@ -177,12 +282,30 @@ def _api_health_probe() -> None:
         r = requests.get(url, timeout=15, allow_redirects=True)
         if 200 <= r.status_code < 300:
             logger.info("[cron] api-health %s OK", r.status_code)
+            try:
+                from services.observability.alerts import record_success
+                record_success(job_id)
+            except Exception:
+                pass
             return
         logger.warning("[cron] api-health %s FAIL", r.status_code)
-        _slack_alert(f"PivoxQuant api-health FAIL: status={r.status_code}")
-    except Exception as e:
-        logger.warning("[cron] api-health exception=%s", e)
-        _slack_alert(f"PivoxQuant api-health EXCEPTION: {e}")
+        try:
+            from services.observability.alerts import emit_failure
+            emit_failure(
+                job_id,
+                RuntimeError(f"health probe HTTP {r.status_code}"),
+                context={"url": url, "status": str(r.status_code)},
+            )
+        except Exception:
+            # Fall back to legacy Slack-only path if observability import fails.
+            _slack_alert(f"PivoxQuant api-health FAIL: status={r.status_code}")
+    except Exception as exc:
+        logger.warning("[cron] api-health exception=%s", exc)
+        try:
+            from services.observability.alerts import emit_failure
+            emit_failure(job_id, exc, context={"url": url})
+        except Exception:
+            _slack_alert(f"PivoxQuant api-health EXCEPTION: {exc}")
 
 
 def _slack_alert(text: str) -> None:
@@ -219,19 +342,28 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_db_backup",
             CronTrigger(hour=2, minute=0, timezone=KST),
-            _wrap_shell_script("scripts/nightly/db_backup.sh", "db-backup"),
+            _wrap_shell_script(
+                "scripts/nightly/db_backup.sh", "db-backup",
+                job_id="ops_db_backup",
+            ),
         ),
         # 0 9 * * 1 — ssl-expiry (Mon 09:00)
         (
             "ops_ssl_expiry",
             CronTrigger(day_of_week="mon", hour=9, minute=0, timezone=KST),
-            _wrap_shell_script("scripts/nightly/ssl_expiry_check.sh", "ssl-expiry"),
+            _wrap_shell_script(
+                "scripts/nightly/ssl_expiry_check.sh", "ssl-expiry",
+                job_id="ops_ssl_expiry",
+            ),
         ),
         # */30 * * * * — vercel-canary (every 30 min)
         (
             "ops_vercel_canary",
             CronTrigger(minute="*/30", timezone=KST),
-            _wrap_shell_script("scripts/nightly/vercel_canary.sh", "vercel-canary"),
+            _wrap_shell_script(
+                "scripts/nightly/vercel_canary.sh", "vercel-canary",
+                job_id="ops_vercel_canary",
+            ),
         ),
         # 0 6 * * * — daily-regression (daily 06:00)
         (
@@ -239,93 +371,136 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
             CronTrigger(hour=6, minute=0, timezone=KST),
             _wrap_shell_script(
                 "scripts/nightly/daily_regression.sh", "daily-regression",
+                job_id="ops_daily_regression",
             ),
         ),
         # 0 14 * * * — sendgrid-quota (daily 14:00 KST)
         (
             "ops_sendgrid_quota",
             CronTrigger(hour=14, minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.sendgrid_quota_check"),
+            _wrap_python_main(
+                "scripts.nightly.sendgrid_quota_check",
+                job_id="ops_sendgrid_quota",
+            ),
         ),
         # 5 6 * * * — morning-brief-kpi (daily 06:05)
         (
             "ops_morning_brief_kpi",
             CronTrigger(hour=6, minute=5, timezone=KST),
-            _wrap_python_main("scripts.morning_brief.build_brief_kpi"),
+            _wrap_python_main(
+                "scripts.morning_brief.build_brief_kpi",
+                job_id="ops_morning_brief_kpi",
+            ),
         ),
         # */5 * * * * — signup-funnel (every 5 min)
         (
             "ops_signup_funnel",
             CronTrigger(minute="*/5", timezone=KST),
-            _wrap_python_main("scripts.nightly.signup_funnel_check"),
+            _wrap_python_main(
+                "scripts.nightly.signup_funnel_check",
+                job_id="ops_signup_funnel",
+            ),
         ),
         # 0 10 * * * — credentials-expiry (daily 10:00)
         (
             "ops_credentials_expiry",
             CronTrigger(hour=10, minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.credentials_expiry_check"),
+            _wrap_python_main(
+                "scripts.nightly.credentials_expiry_check",
+                job_id="ops_credentials_expiry",
+            ),
         ),
         # 0 11 * * 1 — env-audit (Mon 11:00)
         (
             "ops_env_audit",
             CronTrigger(day_of_week="mon", hour=11, minute=0, timezone=KST),
-            _wrap_shell_script("scripts/nightly/env_sync_audit.sh", "env-audit"),
+            _wrap_shell_script(
+                "scripts/nightly/env_sync_audit.sh", "env-audit",
+                job_id="ops_env_audit",
+            ),
         ),
         # */5 * * * * — error-rate (every 5 min)
         (
             "ops_error_rate",
             CronTrigger(minute="*/5", timezone=KST),
-            _wrap_python_main("scripts.nightly.error_rate_check"),
+            _wrap_python_main(
+                "scripts.nightly.error_rate_check",
+                job_id="ops_error_rate",
+            ),
         ),
         # 30 6 * * * — ticker-name-audit (daily 06:30)
         (
             "ops_ticker_name_audit",
             CronTrigger(hour=6, minute=30, timezone=KST),
-            _wrap_python_main("scripts.nightly.ticker_name_audit"),
+            _wrap_python_main(
+                "scripts.nightly.ticker_name_audit",
+                job_id="ops_ticker_name_audit",
+            ),
         ),
         # 0 12 * * 1 — email-compliance (Mon 12:00)
         (
             "ops_email_compliance",
             CronTrigger(day_of_week="mon", hour=12, minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.email_compliance_check"),
+            _wrap_python_main(
+                "scripts.nightly.email_compliance_check",
+                job_id="ops_email_compliance",
+            ),
         ),
         # 0 7 * * * — section101-check (daily 07:00)
         (
             "ops_section101_check",
             CronTrigger(hour=7, minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.section101_compliance_check"),
+            _wrap_python_main(
+                "scripts.nightly.section101_compliance_check",
+                job_id="ops_section101_check",
+            ),
         ),
         # */15 * * * * — checkout-followup (every 15 min)
         (
             "ops_checkout_followup",
             CronTrigger(minute="*/15", timezone=KST),
-            _wrap_python_main("scripts.nightly.checkout_followup_dispatcher"),
+            _wrap_python_main(
+                "scripts.nightly.checkout_followup_dispatcher",
+                job_id="ops_checkout_followup",
+            ),
         ),
         # */15 * * * * — email-scheduler (every 15 min, offset +1 to avoid
         # exact same tick as checkout-followup — both touch EmailQueue)
         (
             "ops_email_scheduler",
             CronTrigger(minute="1-59/15", timezone=KST),
-            _wrap_python_main("scripts.nightly.email_scheduler_dispatcher"),
+            _wrap_python_main(
+                "scripts.nightly.email_scheduler_dispatcher",
+                job_id="ops_email_scheduler",
+            ),
         ),
         # 0 * * * * — inactive-nudge (hourly)
         (
             "ops_inactive_nudge",
             CronTrigger(minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.inactive_nudge_dispatcher"),
+            _wrap_python_main(
+                "scripts.nightly.inactive_nudge_dispatcher",
+                job_id="ops_inactive_nudge",
+            ),
         ),
         # 0 3 * * * — caus-daily-sweep (daily 03:00 — separate from run.sh
         # but present in macOS crontab; bring it under the same umbrella)
         (
             "ops_caus_daily_sweep",
             CronTrigger(hour=3, minute=0, timezone=KST),
-            _wrap_python_main("scripts.caus_daily_sweep"),
+            _wrap_python_main(
+                "scripts.caus_daily_sweep",
+                job_id="ops_caus_daily_sweep",
+            ),
         ),
         # 0 9 * * 0 — finance-weekly-check (Sun 09:00)
         (
             "ops_finance_weekly_check",
             CronTrigger(day_of_week="sun", hour=9, minute=0, timezone=KST),
-            _wrap_python_main("scripts.finance_weekly_check"),
+            _wrap_python_main(
+                "scripts.finance_weekly_check",
+                job_id="ops_finance_weekly_check",
+            ),
         ),
         # ── Wave I P0 (2026-05-19) ───────────────────────────────────────────
         # 0 * * * * — FX staleness check (hourly)
@@ -333,14 +508,20 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_fx_staleness_check",
             CronTrigger(minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.fx_staleness_check", "check_fx_staleness"),
+            _wrap_python_main(
+                "scripts.nightly.fx_staleness_check", "check_fx_staleness",
+                job_id="ops_fx_staleness_check",
+            ),
         ),
         # 0 22 * * * — Anthropic cost estimate (daily 22:00 KST)
         # 오늘 사용량 + MTD 집계. 80%/100% 시 Slack 경고. SWOT 500 재발 방지.
         (
             "ops_anthropic_cost_estimate",
             CronTrigger(hour=22, minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.anthropic_cost_estimate", "run_cost_estimate"),
+            _wrap_python_main(
+                "scripts.nightly.anthropic_cost_estimate", "run_cost_estimate",
+                job_id="ops_anthropic_cost_estimate",
+            ),
         ),
         # */2 * * * * — Railway resource pressure (Wave I D-2).
         # RSS > 450MB (Hobby 512MB의 88%) OR CPU > 80% sustained 5min →
@@ -349,7 +530,10 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_railway_resource",
             CronTrigger(minute="*/2", timezone=KST),
-            _wrap_python_main("scripts.nightly.railway_resource_check"),
+            _wrap_python_main(
+                "scripts.nightly.railway_resource_check",
+                job_id="ops_railway_resource",
+            ),
         ),
         # 30 9 1 * * — pivoxquant.com WHOIS expiry (Wave I E-2, monthly).
         # 매월 1일 09:30 KST. 도메인 만료는 분 단위로 안 바뀌므로 매월 1회
@@ -358,7 +542,10 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_domain_expiry",
             CronTrigger(day=1, hour=9, minute=30, timezone=KST),
-            _wrap_python_main("scripts.nightly.domain_expiry_check"),
+            _wrap_python_main(
+                "scripts.nightly.domain_expiry_check",
+                job_id="ops_domain_expiry",
+            ),
         ),
         # 0 9 1 * * — commerce-registration (1st of month 09:00 KST) [Wave I L-3]
         # 통신판매업 신고 미완 상태일 때 월 1회 Slack/stdout 알림. 전자상거래법 §12
@@ -368,7 +555,10 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_commerce_registration",
             CronTrigger(day=1, hour=9, minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.commerce_registration_reminder"),
+            _wrap_python_main(
+                "scripts.nightly.commerce_registration_reminder",
+                job_id="ops_commerce_registration",
+            ),
         ),
         # ── Wave I C-1/C-2 (2026-05-19) ──────────────────────────────────────
         # */15 * * * * — OAuth failure check (every 15 min)
@@ -377,7 +567,10 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_oauth_failure_check",
             CronTrigger(minute="*/15", timezone=KST),
-            _wrap_python_main("scripts.nightly.oauth_failure_check"),
+            _wrap_python_main(
+                "scripts.nightly.oauth_failure_check",
+                job_id="ops_oauth_failure_check",
+            ),
         ),
         # 30 3 * * * — PIPA §21 30-day purge (daily 03:30 KST)
         # deletion_requested_at >= 30d 인 user 의 모든 데이터 cascade hard-delete
@@ -385,7 +578,10 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_pipa_purge",
             CronTrigger(hour=3, minute=30, timezone=KST),
-            _wrap_python_main("scripts.nightly.pipa_purge"),
+            _wrap_python_main(
+                "scripts.nightly.pipa_purge",
+                job_id="ops_pipa_purge",
+            ),
         ),
         # ── Viral loop (2026-05-26) ──────────────────────────────────────────
         # 30 9 * * 1 — 주간 퍼널 스냅샷 (월 09:30 KST).
@@ -395,7 +591,10 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_weekly_funnel_snapshot",
             CronTrigger(day_of_week="mon", hour=9, minute=30, timezone=KST),
-            _wrap_python_main("scripts.nightly.weekly_funnel_snapshot"),
+            _wrap_python_main(
+                "scripts.nightly.weekly_funnel_snapshot",
+                job_id="ops_weekly_funnel_snapshot",
+            ),
         ),
         # ── Marketing autopost (2026-05-26) ──────────────────────────────────
         # 0 8 * * * — 마케팅 일일 디스패치 (매일 08:00 KST).
@@ -408,7 +607,51 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         (
             "ops_marketing_daily_dispatch",
             CronTrigger(hour=8, minute=0, timezone=KST),
-            _wrap_python_main("scripts.nightly.marketing_daily_dispatch"),
+            _wrap_python_main(
+                "scripts.nightly.marketing_daily_dispatch",
+                job_id="ops_marketing_daily_dispatch",
+            ),
+        ),
+        # ── Launch coordinator audit (T9, 2026-05-28) ────────────────────────
+        # 0 6 * * * — SHIP_BLOCKERS.md 일일 audit (06:00 KST, morning-briefing
+        # 06:27 prepend 직전). 변호사 큐 카운트 + ship-blocker 카테고리별
+        # 카운트 + env 기반 carry-over status 측정. /tmp/ship_blockers_status.json
+        # 갱신 + SHIP_BLOCKERS.md 헤더 "최근 갱신" 1줄만 patch (본문 무손상).
+        # 외부 API 호출 0건 — local file/env grep 만. 추가 비용 0원.
+        (
+            "ops_ship_blockers_daily",
+            CronTrigger(hour=6, minute=0, timezone=KST),
+            _wrap_python_main(
+                "scripts.nightly.ship_blockers_audit",
+                job_id="ops_ship_blockers_daily",
+            ),
+        ),
+        # ── Data integrity sweep (T10, 2026-05-28) ───────────────────────────
+        # 0 4 * * * — 3축 invariant 일일 sanity (04:00 KST, bug-hunter 03:37
+        # 직후 슬롯). fx_service / cache_ttl / price_overlay / risk_snapshot_cache
+        # cross-user isolation 검증. 회귀 발견 시 Slack alert (cron 자체는 항상 0 exit).
+        # 외부 API 호출 0건 — in-process import + 1 round-trip cache write/read.
+        # fx-consistency-guard / data-freshness-monitor / cache-poisoning-sentinel
+        # 3 agent 의 자동 회귀 게이트. wave-data-integrity workflow 보조.
+        (
+            "ops_data_integrity_sweep",
+            CronTrigger(hour=4, minute=0, timezone=KST),
+            _wrap_python_main(
+                "scripts.nightly.data_integrity_sweep",
+                job_id="ops_data_integrity_sweep",
+            ),
+        ),
+        # ── Lawyer packet weekly (T11, 2026-05-28) ───────────────────────────
+        # sun 21:00 KST — legal_question_queue.md (21건) + git log 1주 + SHIP_BLOCKERS
+        # RELEASE-BLOCKER 인용 → ~/Desktop/취준/변호사상담_PivoxQuant/weekly_packet_<date>.md
+        # 외부 API 0건. file I/O + subprocess git log only. 추가 비용 0원.
+        (
+            "ops_lawyer_packet_weekly",
+            CronTrigger(day_of_week="sun", hour=21, minute=0, timezone=KST),
+            _wrap_python_main(
+                "scripts.legal.lawyer_packet_build",
+                job_id="ops_lawyer_packet_weekly",
+            ),
         ),
     ]
 
@@ -442,6 +685,14 @@ def register_cron_jobs(sched: BackgroundScheduler, app=None) -> list[str]:
     by ``app.py:_init_scheduler``'s ``if os.environ.get("RUN_SCHEDULER")==1``
     guard.  Tests bypass the gate to exercise registration directly.
     """
+    # Wire the scheduler into observability so emit_failure can pause jobs
+    # at the 3-strike threshold. Best-effort — never raise from boot.
+    try:
+        from services.observability.alerts import register_scheduler
+        register_scheduler(sched)
+    except Exception:
+        logger.exception("[cron] observability.register_scheduler failed (continuing)")
+
     registered: list[str] = []
     for job_id, trigger, runner in _job_specs():
         sched.add_job(

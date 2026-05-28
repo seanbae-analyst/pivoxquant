@@ -75,9 +75,21 @@ EXPECTED_JOB_IDS = {
     "ops_weekly_funnel_snapshot",
     # Marketing autopost (2026-05-26) — content-bank → §101 → Slack/Threads/Bluesky.
     "ops_marketing_daily_dispatch",
+    # Launch coordinator audit (T9, 2026-05-28) — SHIP_BLOCKERS.md 일일 audit
+    # (06:00 KST, morning-briefing 06:27 prepend 직전).
+    "ops_ship_blockers_daily",
+    # Data integrity sweep (T10, 2026-05-28) — 3축 invariant 일일 sanity
+    # (04:00 KST, bug-hunter 03:37 직후 슬롯). fx_service / cache_ttl /
+    # price_overlay / risk_snapshot_cache cross-user isolation 검증.
+    "ops_data_integrity_sweep",
+    # Lawyer packet weekly (T11, 2026-05-28) — legal_question_queue.md 21건
+    # + git log 1주 + SHIP_BLOCKERS RELEASE-BLOCKER 인용 → weekly_packet_<date>.md
+    # (일요일 21:00 KST).
+    "ops_lawyer_packet_weekly",
 }
-# 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) + 1 (viral) + 1 (marketing) = 28
-EXPECTED_JOB_COUNT = 28
+# 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) + 1 (viral) + 1 (marketing)
+# + 1 (T9 launch audit) + 1 (T10 data integrity) + 1 (T11 lawyer packet) = 31
+EXPECTED_JOB_COUNT = 31
 
 
 @pytest.fixture
@@ -187,6 +199,12 @@ EXPECTED_TRIGGER_FIELDS = {
     "ops_pipa_purge":            {"hour": "3", "minute": "30"},
     # Marketing autopost — daily 08:00 KST
     "ops_marketing_daily_dispatch": {"hour": "8", "minute": "0"},
+    # T9 — SHIP_BLOCKERS.md 일일 audit, daily 06:00 KST
+    "ops_ship_blockers_daily": {"hour": "6", "minute": "0"},
+    # T10 — Data integrity sweep, daily 04:00 KST
+    "ops_data_integrity_sweep": {"hour": "4", "minute": "0"},
+    # Lawyer packet weekly — 일요일 21:00 KST
+    "ops_lawyer_packet_weekly": {"day_of_week": "sun", "hour": "21", "minute": "0"},
 }
 
 
@@ -263,3 +281,135 @@ def test_python_wrapper_swallows_exceptions(monkeypatch, caplog):
         runner()
     finally:
         del sys.modules["scripts.__fake_test_mod__"]
+
+
+# ── T8: emit_failure routing across all 28 ops jobs ─────────────────────────
+
+def test_python_wrapper_routes_failure_through_alerts():
+    """T1+T8 contract: when ``job_id`` is provided to ``_wrap_python_main``,
+    a failing main() must bump the per-job counter in
+    ``services.observability.alerts`` so 3 consecutive failures auto-pause.
+
+    Without this routing, the wrapper would log-only and the 3-strike
+    circuit breaker would never fire (silent infinite outage).
+    """
+    from services.scheduler.cron_jobs import _wrap_python_main
+    from services.observability import alerts
+    alerts._reset_all_for_test()
+
+    import types
+    fake_mod = types.ModuleType("scripts.__fake_routed_mod__")
+    def _boom():
+        raise RuntimeError("routed failure")
+    fake_mod.main = _boom
+    sys.modules["scripts.__fake_routed_mod__"] = fake_mod
+    try:
+        runner = _wrap_python_main(
+            "scripts.__fake_routed_mod__",
+            job_id="ops_unit_test_routed",
+        )
+        runner()  # MUST not raise
+        assert alerts.get_failure_count("ops_unit_test_routed") == 1
+    finally:
+        del sys.modules["scripts.__fake_routed_mod__"]
+        alerts._reset_all_for_test()
+
+
+def test_python_wrapper_routes_success_through_record_success():
+    """Success path must call ``record_success`` so transient failures
+    don't accumulate forever and trip the 3-strike auto-pause on the
+    next real failure 6 months later.
+    """
+    from services.scheduler.cron_jobs import _wrap_python_main
+    from services.observability import alerts
+    alerts._reset_all_for_test()
+
+    import types
+    fake_mod = types.ModuleType("scripts.__fake_ok_mod__")
+    def _ok():
+        return 0
+    fake_mod.main = _ok
+    sys.modules["scripts.__fake_ok_mod__"] = fake_mod
+    try:
+        # Pre-bump the counter to simulate a prior transient failure.
+        alerts.emit_failure("ops_unit_test_ok", RuntimeError("old blip"))
+        assert alerts.get_failure_count("ops_unit_test_ok") == 1
+
+        runner = _wrap_python_main(
+            "scripts.__fake_ok_mod__",
+            job_id="ops_unit_test_ok",
+        )
+        runner()
+        # record_success must have reset the counter to 0.
+        assert alerts.get_failure_count("ops_unit_test_ok") == 0
+    finally:
+        del sys.modules["scripts.__fake_ok_mod__"]
+        alerts._reset_all_for_test()
+
+
+def test_shell_wrapper_routes_failure_through_alerts(monkeypatch):
+    """Mechanical T8 — _wrap_shell_script with job_id must route non-zero
+    exit through emit_failure.
+    """
+    from services.scheduler.cron_jobs import _wrap_shell_script
+    from services.observability import alerts
+    import services.scheduler.cron_jobs as cron_mod
+    alerts._reset_all_for_test()
+
+    class _FakeResult:
+        returncode = 7
+        stderr = "fake failure"
+
+    def _fake_run(*_a, **_kw):
+        return _FakeResult()
+
+    # Use this very test file path as the "script" so the existence guard
+    # passes; monkeypatch subprocess.run to simulate exit=7.
+    real_existing = Path(__file__)
+    rel = real_existing.relative_to(PROJECT_ROOT)
+    monkeypatch.setattr(cron_mod.subprocess, "run", _fake_run)
+    try:
+        runner = _wrap_shell_script(
+            str(rel), "unit-test-shell",
+            job_id="ops_unit_test_shell",
+        )
+        runner()  # must not raise
+        assert alerts.get_failure_count("ops_unit_test_shell") == 1
+    finally:
+        alerts._reset_all_for_test()
+
+
+def test_all_specs_pass_job_id_to_wrapper():
+    """Defensive: every ``_job_specs()`` entry (except the in-process
+    api-health probe) must have its job_id wired through to the wrapper
+    closure so emit_failure / record_success routing is consistent across
+    the whole 28-job table. Regression guard against a new cron being
+    added without job_id (which would silently disable the 3-strike
+    auto-pause for that one job).
+    """
+    specs = _job_specs()
+    # api-health is the only in-process job — it handles emit_failure
+    # internally (not via _wrap_python_main / _wrap_shell_script).
+    in_process_whitelist = {"ops_api_health"}
+    missing: list[str] = []
+    mismatched: list[str] = []
+    for spec_id, _trigger, runner in specs:
+        if spec_id in in_process_whitelist:
+            continue
+        closure_vars = dict(zip(
+            (runner.__code__.co_freevars or ()),
+            (c.cell_contents for c in (runner.__closure__ or ())),
+        ))
+        if "job_id" not in closure_vars:
+            missing.append(spec_id)
+            continue
+        if closure_vars["job_id"] != spec_id:
+            mismatched.append(
+                f"{spec_id} (got {closure_vars['job_id']!r})"
+            )
+    assert not missing, (
+        f"specs missing job_id in wrapper closure: {missing}"
+    )
+    assert not mismatched, (
+        f"specs with job_id != spec id: {mismatched}"
+    )
