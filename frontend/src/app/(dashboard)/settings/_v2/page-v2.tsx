@@ -138,29 +138,29 @@ export default function SettingsPageV2() {
     try {
       await apiFetch(API.broker.kisSync, { method: "POST" });
       await refreshBrokers();
-      toast.success("KIS synchronized.");
+      toast.success(t("settingsV2.toast.kisSynced"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sync failed.");
+      toast.error(err instanceof Error ? err.message : t("settingsV2.toast.kisSyncFailed"));
     } finally {
       setKisSyncing(false);
     }
-  }, [refreshBrokers]);
+  }, [refreshBrokers, t]);
 
   const handleKisDisconnect = React.useCallback(async () => {
-    if (typeof window !== "undefined" && !window.confirm("Disconnect KIS?")) {
+    if (typeof window !== "undefined" && !window.confirm(t("settingsV2.toast.kisDisconnectConfirm"))) {
       return;
     }
     setKisDisconnecting(true);
     try {
       await apiFetch(API.broker.kisDisconnect, { method: "DELETE" });
       await refreshBrokers();
-      toast.success("KIS disconnected.");
+      toast.success(t("settingsV2.toast.kisDisconnected"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Disconnect failed.");
+      toast.error(err instanceof Error ? err.message : t("settingsV2.toast.kisDisconnectFailed"));
     } finally {
       setKisDisconnecting(false);
     }
-  }, [refreshBrokers]);
+  }, [refreshBrokers, t]);
 
   /* ── Push (C1) ── */
   const [pushEnabled, setPushEnabled] = React.useState(false);
@@ -208,7 +208,7 @@ export default function SettingsPageV2() {
   const handlePushToggle = React.useCallback(
     async (next: boolean) => {
       if (!pushSupported) {
-        toast.error("Push notifications not supported here.");
+        toast.error(t("settingsV2.toast.pushNotSupported"));
         return;
       }
       setPushLoading(true);
@@ -216,24 +216,24 @@ export default function SettingsPageV2() {
         if (next) {
           const sub = await subscribeToPush();
           if (!sub) {
-            toast.error("Permission denied.");
+            toast.error(t("settingsV2.toast.pushPermDenied"));
             setPushEnabled(false);
             return;
           }
           setPushEnabled(true);
-          toast.success("Push enabled.");
+          toast.success(t("settingsV2.toast.pushEnabled"));
         } else {
           await unsubscribeFromPush();
           setPushEnabled(false);
-          toast.success("Push disabled.");
+          toast.success(t("settingsV2.toast.pushDisabled"));
         }
       } catch {
-        toast.error("Could not update push.");
+        toast.error(t("settingsV2.toast.pushError"));
       } finally {
         setPushLoading(false);
       }
     },
-    [pushSupported],
+    [pushSupported, t],
   );
 
   const handleEmailToggle = React.useCallback(async (next: boolean) => {
@@ -258,7 +258,7 @@ export default function SettingsPageV2() {
         method: "PATCH",
         body: JSON.stringify({ email_opt_out: !next }),
       });
-      toast.success(next ? "Email enabled." : "Email disabled.");
+      toast.success(next ? t("settingsV2.toast.emailEnabled") : t("settingsV2.toast.emailDisabled"));
     } catch (err) {
       setEmailEnabled(prev);
       if (typeof window !== "undefined") {
@@ -267,12 +267,12 @@ export default function SettingsPageV2() {
       toast.error(
         err instanceof Error
           ? err.message
-          : "Could not save email preference.",
+          : t("settingsV2.toast.emailSaveFail"),
       );
     } finally {
       setEmailSaving(false);
     }
-  }, [emailEnabled]);
+  }, [emailEnabled, t]);
 
   /* ── Subscription actions ── */
   const handleManageBilling = React.useCallback(async () => {
@@ -284,23 +284,21 @@ export default function SettingsPageV2() {
         window.location.href = r.url;
       }
     } catch {
-      toast.error("Could not open billing portal.");
+      toast.error(t("settingsV2.toast.billingError"));
     }
-  }, []);
+  }, [t]);
 
   // Wave G-1 Bug #7 (2026-05-18): 전자상거래법 §17 (청약철회 행사 방법 명시
   // 의무) — 구독 취소 경로가 UI 에 노출되어야 한다. Stripe Customer Portal
   // 내부에 cancel section 이 있으므로 그쪽으로 redirect. 사용자 confirm 필수.
   const handleCancelPlan = React.useCallback(async () => {
     if (typeof window === "undefined") return;
-    const ok = window.confirm(
-      "구독을 취소하시겠어요? Stripe 결제 포털로 이동합니다. 현재 결제 주기 종료 시까지 서비스가 유지됩니다.",
-    );
+    const ok = window.confirm(t("settingsV2.toast.cancelConfirm"));
     if (!ok) return;
     // Portal 내부 cancel flow 로 redirect — 별도 cancel endpoint 추가는
     // migration + 환불 처리 책임 분리 필요 (별 PR). 현재는 portal 경유.
     await handleManageBilling();
-  }, [handleManageBilling]);
+  }, [handleManageBilling, t]);
 
   /* ── Sign in providers (GAP-D) ── */
   const handleProviderConnect = React.useCallback(
@@ -317,10 +315,8 @@ export default function SettingsPageV2() {
     // GAP-D: backend disconnect endpoint not present.
     // Surface a graceful TBD toast pointing the user to support; queued for
     // resolution per settings-v2/MIGRATION §2.
-    toast.error(
-      "Disconnecting an OAuth provider is not yet supported. Email support to remove a provider.",
-    );
-  }, []);
+    toast.error(t("settingsV2.toast.providerDisconnectUnsupported"));
+  }, [t]);
 
   /* ── Sign out (E3) ── */
   const [signingOut, setSigningOut] = React.useState(false);
@@ -359,13 +355,11 @@ export default function SettingsPageV2() {
         .slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Export ready.");
+      toast.success(t("settingsV2.toast.exportReady"));
     } catch {
-      toast.error(
-        "Export endpoint coming soon. Email support for a manual archive.",
-      );
+      toast.error(t("settingsV2.toast.exportFail"));
     }
-  }, []);
+  }, [t]);
 
   /* ── Auth gate ── */
   React.useEffect(() => {
@@ -477,10 +471,10 @@ export default function SettingsPageV2() {
                     marginBottom: 8,
                   }}
                 >
-                  A · Identity &amp; security
+                  {t("settingsV2.sectionA.eyebrow")}
                 </div>
                 <EditorialHead size={30} as="div">
-                  Who is signed in.
+                  {t("settingsV2.sectionA.heading")}
                 </EditorialHead>
               </div>
               <a
@@ -495,7 +489,7 @@ export default function SettingsPageV2() {
                   textDecoration: "none",
                 }}
               >
-                Profile detail ›
+                {t("settingsV2.sectionA.profileLink")}
               </a>
             </div>
 
@@ -513,7 +507,7 @@ export default function SettingsPageV2() {
                 locale={locale}
                 onLocaleChange={(next) => {
                   setLocale(next);
-                  toast.success("Language updated.");
+                  toast.success(t("settingsV2.toast.langUpdated"));
                 }}
               />
               <SignInProvidersCard
@@ -582,17 +576,17 @@ export default function SettingsPageV2() {
                     marginBottom: 8,
                   }}
                 >
-                  C · Notifications · Channels × Events
+                  {t("settingsV2.sectionC.eyebrow")}
                 </div>
                 <EditorialHead size={30} as="div">
-                  When the CFO{" "}
+                  {t("settingsV2.sectionC.heading")}{" "}
                   <span
                     style={{
                       color: "var(--pq-bronze)",
                       fontStyle: "italic",
                     }}
                   >
-                    should reach you.
+                    {t("settingsV2.sectionC.headingItalic")}
                   </span>
                 </EditorialHead>
               </div>
@@ -630,7 +624,7 @@ export default function SettingsPageV2() {
                     color: "rgba(245,240,232,0.55)",
                   }}
                 >
-                  C1 · Push
+                  {t("settingsV2.push.sectionLabel")}
                 </span>
                 <div
                   className="font-mono uppercase"
@@ -641,7 +635,7 @@ export default function SettingsPageV2() {
                     marginBottom: 12,
                   }}
                 >
-                  Push channel · device permission
+                  {t("settingsV2.push.channelLabel")}
                 </div>
                 <div
                   style={{
@@ -659,7 +653,7 @@ export default function SettingsPageV2() {
                         color: "var(--pq-ivory)",
                       }}
                     >
-                      Browser push
+                      {t("settingsV2.push.deviceLabel")}
                     </div>
                     <div
                       className="font-serif"
@@ -671,16 +665,16 @@ export default function SettingsPageV2() {
                     >
                       {pushSupported
                         ? pushEnabled
-                          ? "Granted on this device."
-                          : "Tap to grant device permission."
-                        : "Not supported on this device."}
+                          ? t("settingsV2.push.granted")
+                          : t("settingsV2.push.tap")
+                        : t("settingsV2.push.notSupported")}
                     </div>
                   </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={pushEnabled}
-                    aria-label="Browser push"
+                    aria-label={t("settingsV2.push.deviceLabel")}
                     onClick={() => handlePushToggle(!pushEnabled)}
                     disabled={pushLoading || !pushSupported}
                     style={{
@@ -742,7 +736,7 @@ export default function SettingsPageV2() {
                     color: "rgba(245,240,232,0.55)",
                   }}
                 >
-                  C2 · Email
+                  {t("settingsV2.emailDelivery.sectionLabel")}
                 </span>
                 <div
                   className="font-mono uppercase"
@@ -753,7 +747,7 @@ export default function SettingsPageV2() {
                     marginBottom: 12,
                   }}
                 >
-                  Email delivery
+                  {t("settingsV2.emailDelivery.channelLabel")}
                 </div>
                 <div
                   style={{
@@ -771,7 +765,7 @@ export default function SettingsPageV2() {
                         color: "var(--pq-ivory)",
                       }}
                     >
-                      Send to {user.email ?? "your email"}
+                      {t("settingsV2.emailDelivery.sendToLabel")} {user.email ?? ""}
                     </div>
                     <div
                       className="font-serif"
@@ -781,14 +775,14 @@ export default function SettingsPageV2() {
                         marginTop: 2,
                       }}
                     >
-                      All artifacts arrive in your inbox as PDF + HTML.
+                      {t("settingsV2.emailDelivery.allArtifacts")}
                     </div>
                   </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={emailEnabled}
-                    aria-label="Email delivery"
+                    aria-label={t("settingsV2.emailDelivery.channelLabel")}
                     aria-busy={emailSaving || undefined}
                     disabled={emailSaving}
                     onClick={() => handleEmailToggle(!emailEnabled)}
@@ -883,14 +877,9 @@ export default function SettingsPageV2() {
                 fontStyle: "italic",
               }}
             className="font-serif" >
-              Notice / 면책 고지.
+              {t("settingsV2.notice.title")}
             </strong>{" "}
-            PivoxQuant produces editorial memos and analytical artifacts for
-            the user&rsquo;s own record-keeping. Brokerage connections are
-            read-only — no order routing, no investment advice, no
-            recommendation to buy or sell. 본 서비스는 자본시장과 금융투자업에
-            관한 법률상의 투자자문업·투자일임업이 아니며, 모든 의사결정과
-            책임은 이용자 본인에게 있습니다.
+            {t("settingsV2.notice.body")}
           </div>
 
           {/* FOOT */}

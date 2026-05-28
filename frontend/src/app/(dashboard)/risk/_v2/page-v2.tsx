@@ -23,7 +23,7 @@
  */
 
 import * as React from "react";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
@@ -61,6 +61,7 @@ function derivePosture(
 
 export default function RiskPageV2() {
   const { locale } = useLocale();
+  const t = useT();
   const { data: summary } = useRiskSummary();
   const layersHook = useRiskLayers();
   const concentration = useConcentration(5);
@@ -173,10 +174,10 @@ export default function RiskPageV2() {
               marginBottom: 8,
             }}
           >
-            Methodology · How these are observed
+            {t("riskBoard.methodologyEyebrow")}
           </div>
           <EditorialHead size={32} as="h2" style={{ margin: "0 0 22px 0" }}>
-            Notes.
+            {t("riskBoard.methodologyHeading")}
           </EditorialHead>
           <ul
             style={{
@@ -189,33 +190,33 @@ export default function RiskPageV2() {
             {[
               {
                 k: "01",
-                title: "VaR (1-day, 95%)",
-                body: "Historical percentile on the 90-day return window, weighted by position size.",
+                title: t("riskBoard.notes.var.title"),
+                body: t("riskBoard.notes.var.body"),
               },
               {
                 k: "02",
-                title: "Component Expected Shortfall",
-                body: "Mean of returns below the VaR cutoff — the 5% left-tail observation.",
+                title: t("riskBoard.notes.es.title"),
+                body: t("riskBoard.notes.es.body"),
               },
               {
                 k: "03",
-                title: "Concentration HHI",
-                body: "Herfindahl–Hirschman index on sector weights. < 0.25 considered diffuse.",
+                title: t("riskBoard.notes.hhi.title"),
+                body: t("riskBoard.notes.hhi.body"),
               },
               {
                 k: "04",
-                title: "Correlation",
-                body: "Pairwise 90-day returns, Ledoit–Wolf shrunk covariance. Cluster max flagged when > 0.65.",
+                title: t("riskBoard.notes.correlation.title"),
+                body: t("riskBoard.notes.correlation.body"),
               },
               {
                 k: "05",
-                title: "7-Layer Defense",
-                body: "Independent observations across VaR, correlation, VIX, tail, daily drawdown, sector concentration, and cash buffer.",
+                title: t("riskBoard.notes.sevenLayer.title"),
+                body: t("riskBoard.notes.sevenLayer.body"),
               },
               {
                 k: "06",
-                title: "Composite timeline",
-                body: "0–100 score derived from rolling VaR; higher = more strain. Backend may publish a first-class composite score in a future release.",
+                title: t("riskBoard.notes.timeline.title"),
+                body: t("riskBoard.notes.timeline.body"),
               },
             ].map((note, i, arr) => (
               <li

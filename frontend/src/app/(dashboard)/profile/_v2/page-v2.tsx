@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/locale";
 import { useInvestmentProfile } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
 import {
@@ -162,6 +163,7 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
 export default function ProfilePageV2() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const t = useT();
 
   const { data: profileData } = useInvestmentProfile();
   const investorType = profileData?.profile?.profile_type ?? null;
@@ -215,7 +217,7 @@ export default function ProfilePageV2() {
         .slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Export ready.");
+      toast.success(t("profileV2.toast.exportReady"));
     } catch {
       // GAP-X fallback: dump local snapshot when backend export endpoint unavailable.
       try {
@@ -241,9 +243,9 @@ export default function ProfilePageV2() {
           .slice(0, 10)}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.success("Local memory exported.");
+        toast.success(t("profileV2.toast.localExportReady"));
       } catch {
-        toast.error("Export failed.");
+        toast.error(t("profileV2.toast.exportFailed"));
       }
     } finally {
       setExporting(false);
@@ -254,9 +256,7 @@ export default function ProfilePageV2() {
   const handleDelete = React.useCallback(async () => {
     if (
       typeof window !== "undefined" &&
-      !window.confirm(
-        "Delete all agent memory? Persona, pulse, feedback, and Companion history will be wiped. This cannot be undone.",
-      )
+      !window.confirm(t("profileV2.toast.deleteConfirm"))
     ) {
       return;
     }
@@ -284,8 +284,8 @@ export default function ProfilePageV2() {
       });
     }
     setDeleting(false);
-    toast.success("Agent memory cleared.");
-  }, []);
+    toast.success(t("profileV2.toast.memoryCleared"));
+  }, [t]);
 
   /* ── Companion waitlist ── */
   const handleWaitlist = React.useCallback(async (email: string) => {
@@ -296,11 +296,11 @@ export default function ProfilePageV2() {
         body: JSON.stringify({ email }),
       });
       setWaitlistDone(true);
-      toast.success("You're on the waitlist.");
+      toast.success(t("profileV2.toast.waitlistDone"));
     } catch {
       // graceful fallback — UI still acknowledges
       setWaitlistDone(true);
-      toast.success("Saved — we'll reach out.");
+      toast.success(t("profileV2.toast.waitlistSaved"));
     } finally {
       setWaitlistSubmitting(false);
     }
@@ -472,12 +472,12 @@ export default function ProfilePageV2() {
           className="mb-6 border border-[var(--pq-bronze)]/40 bg-[rgba(184,149,106,0.06)] px-4 py-3 rounded-[2px] flex items-start gap-3"
         >
           <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mt-0.5 shrink-0">
-            Sample
+            {t("profileV2.sampleBanner.label")}
           </div>
           <p className="text-xs leading-relaxed text-[rgba(245,240,232,0.72)]">
-            샘플 데이터 — 거래 후 실데이터로 전환됩니다.{" "}
+            {t("profileV2.sampleBanner.body")}{" "}
             <span className="text-[rgba(245,240,232,0.5)]">
-              Persona figures below are illustrative until your first trade is observed.
+              {t("profileV2.sampleBanner.note")}
             </span>
           </p>
         </div>

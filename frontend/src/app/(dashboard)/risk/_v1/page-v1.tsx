@@ -23,6 +23,7 @@ import useSWR from "swr";
 import { useMemo } from "react";
 import { Info } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useT } from "@/lib/locale";
 import {
   RISK_SUMMARY,
   RISK_LAYERS,
@@ -168,6 +169,7 @@ function is401(err: unknown): boolean {
 }
 
 export default function RiskPage() {
+  const t = useT();
   const {
     data: summary,
     error: summaryErr,
@@ -544,27 +546,27 @@ export default function RiskPage() {
 
       {/* Methodology rail */}
       <section className="mb-12">
-        <h2 className="pq-ink-h2 mb-4">Methodology Notes</h2>
+        <h2 className="pq-ink-h2 mb-4">{t("riskBoard.v1.methodologyHeading")}</h2>
         <ul className="space-y-2 border-t border-[rgba(245,240,232,0.12)] pt-4 text-pq-caption text-[rgba(245,240,232,0.7)]">
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">01</span>
-            <span><em className="font-serif not- text-[var(--pq-ivory)]">VaR (1-day, 95%)</em> — historical percentile on the 90-day return window, weighted by position size.</span>
+            <span>{t("riskBoard.v1.notes.var")}</span>
           </li>
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">02</span>
-            <span><em className="font-serif not- text-[var(--pq-ivory)]">Expected Shortfall</em> — mean of returns below the VaR cutoff (5% left tail).</span>
+            <span>{t("riskBoard.v1.notes.es")}</span>
           </li>
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">03</span>
-            <span><em className="font-serif not- text-[var(--pq-ivory)]">Max Drawdown (90D)</em> — peak-to-trough of the portfolio equity curve over the trailing window.</span>
+            <span>{t("riskBoard.v1.notes.maxdd")}</span>
           </li>
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">04</span>
-            <span><em className="font-serif not- text-[var(--pq-ivory)]">Correlation Index</em> — average pairwise correlation across holdings on the last 20 sessions.</span>
+            <span>{t("riskBoard.v1.notes.corr")}</span>
           </li>
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">05</span>
-            <span><em className="font-serif not- text-[var(--pq-ivory)]">Seven-Layer Ladder</em> — soft-limit observations across VaR, correlation, VIX, tail, daily loss, concentration, and cash buffer.</span>
+            <span>{t("riskBoard.v1.notes.sevenLayer")}</span>
           </li>
         </ul>
       </section>

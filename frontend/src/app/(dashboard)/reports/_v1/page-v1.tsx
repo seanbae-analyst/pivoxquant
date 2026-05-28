@@ -35,6 +35,7 @@ import { PeerBenchmarkBlock } from "@/components/shared/peer-benchmark-block";
 import { usePersona, PERSONA_LABELS, type PersonaId } from "@/lib/cfo/hooks";
 import type { Artifact } from "@/lib/types";
 import Link from "next/link";
+import { useT } from "@/lib/locale";
 
 /* ── Catalog — 18 types + tier gating + sample PDFs ── */
 
@@ -90,6 +91,7 @@ function ArtifactCard({
   locked: boolean;
   declaredPersona: PersonaId | null;
 }) {
+  const t = useT();
   const personaMatch =
     declaredPersona !== null &&
     !entry.personas.includes("all") &&
@@ -115,7 +117,7 @@ function ArtifactCard({
           day: "numeric",
           year: "numeric",
         })
-      : "Sample available";
+      : t("reports.v1.sampleAvailable");
 
   return (
     <article
@@ -140,11 +142,11 @@ function ArtifactCard({
       </h3>
       {personaMatch && declaredPersona && (
         <p className="mt-1 text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-          Optimised for {PERSONA_LABELS[declaredPersona]}
+          {t("reports.v1.optimisedFor")} {PERSONA_LABELS[declaredPersona]}
         </p>
       )}
       <p className="mt-2 font-serif text-pq-caption text-[rgba(245,240,232,0.55)]">
-        Last generated &mdash; <span className="tabular-nums font-mono">{lastGenerated}</span>
+        {t("reports.v1.lastGenerated")} <span className="tabular-nums font-mono">{lastGenerated}</span>
       </p>
 
       {/* Actions */}
@@ -154,7 +156,7 @@ function ArtifactCard({
             href="/pricing"
             className="pq-ink-btn-bronze inline-flex items-center gap-1.5"
           >
-            Upgrade to {entry.minTier}
+            {t("reports.v1.actions.upgradeTo")} {entry.minTier}
           </Link>
         ) : (
           <>
@@ -165,7 +167,7 @@ function ArtifactCard({
               className="pq-ink-btn-ghost inline-flex items-center gap-1.5"
             >
               <Eye className="h-3.5 w-3.5" />
-              Open
+              {t("reports.v1.actions.open")}
             </a>
             <a
               href={downloadHref}
@@ -173,7 +175,7 @@ function ArtifactCard({
               className="pq-ink-btn-ghost inline-flex items-center gap-1.5"
             >
               <Download className="h-3.5 w-3.5" />
-              PDF
+              {t("reports.v1.actions.pdf")}
             </a>
           </>
         )}
@@ -196,6 +198,7 @@ function ArtifactCard({
 /* ── Page ── */
 
 function ReportsPageInner() {
+  const t = useT();
   const { user } = useAuth();
   const tier = ((user?.subscription_tier as Tier) || "free") as Tier;
   const { artifacts, isLoading } = useArtifacts({ type: "all", since: "all" });
@@ -228,16 +231,16 @@ function ReportsPageInner() {
     <div className="space-y-8">
       {/* ── Header ── */}
       <header>
-        <RuledKicker>PDF &middot; Observational archive</RuledKicker>
+        <RuledKicker>{t("reports.v1.kicker")}</RuledKicker>
         {/* Wave 2 sweep (Task #8): inline Playfair text-2xl/3xl → EditorialHead. */}
         <EditorialHead size={30} as="h1" className="mt-2">
-          Reports
+          {t("reports.v1.heading")}
         </EditorialHead>
         <p className="mt-2 font-serif text-pq-lead text-[var(--pq-ivory)] max-w-2xl">
-          Every artifact the desk can deliver &mdash; from the weekly memo to the year-end letter.
+          {t("reports.v1.subtitle")}
         </p>
         <Caption className="mt-1 max-w-2xl">
-          Free-tier samples are public; Pro and Premium items are generated against your portfolio.
+          {t("reports.v1.caption")}
         </Caption>
       </header>
 
@@ -269,7 +272,7 @@ function ReportsPageInner() {
             data-active={filter === k}
             className="pq-ink-tab capitalize"
           >
-            {k === "all" ? "All tiers" : k}
+            {k === "all" ? t("reports.v1.tierAll") : k}
           </button>
         ))}
       </div>
@@ -277,7 +280,7 @@ function ReportsPageInner() {
       {/* ── Persona filter — Layer 1 targeting ── */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)] mr-1">
-          Persona
+          {t("reports.v1.personaLabel")}
         </span>
         {(
           [
@@ -291,7 +294,7 @@ function ReportsPageInner() {
           ] as const
         ).map((p) => {
           const active = personaFilter === p;
-          const label = p === "all" ? "All personas" : PERSONA_LABELS[p];
+          const label = p === "all" ? t("reports.v1.allPersonas") : PERSONA_LABELS[p];
           return (
             <button
               key={p}
@@ -342,11 +345,11 @@ function ReportsPageInner() {
       {/* ── Footer note ── */}
       <div className="pt-6 border-t border-[var(--pq-ivory-line)] flex items-center gap-2 text-xs text-[rgba(245,240,232,0.4)]">
         <FileText className="h-3.5 w-3.5" />
-        {visible.length} artifacts &middot; tier: <span className="text-[var(--pq-bronze)] uppercase tracking-wider">{tier}</span>
+        {visible.length} {t("reports.v1.footer.artifacts")} &middot; {t("reports.v1.footer.tier")}: <span className="text-[var(--pq-bronze)] uppercase tracking-wider">{tier}</span>
       </div>
 
       {/* Editorial signature */}
-      <FootSignature note="PivoxQuant &middot; Observational archive &middot; Not investment advice" />
+      <FootSignature note={t("reports.v1.footer.note")} />
     </div>
   );
 }

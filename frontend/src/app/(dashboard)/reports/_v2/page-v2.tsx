@@ -54,6 +54,7 @@ import {
 } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
 import type { Artifact, Position, PortfolioResponse } from "@/lib/types";
+import { useT } from "@/lib/locale";
 
 import { ReportsHeroV2 } from "@/components/reports/v2/reports-hero-v2";
 import { LatestArtifactCard } from "@/components/reports/v2/latest-artifact-card";
@@ -76,6 +77,7 @@ function pickLatest(artifacts: Artifact[]): Artifact | null {
 }
 
 export default function ReportsPageV2() {
+  const t = useT();
   const { user } = useAuth();
   const tier = ((user?.subscription_tier as Tier) || "free") as Tier;
 
@@ -140,7 +142,7 @@ export default function ReportsPageV2() {
 
       {/* HERO */}
       <ReportsHeroV2
-        eyebrow="Archive · CFO"
+        eyebrow={t("reports.v2.eyebrow")}
         counts={{
           memos: stats.countMemos,
           briefs: stats.countBriefs,
@@ -164,7 +166,7 @@ export default function ReportsPageV2() {
               margin: "0 0 24px",
             }}
           >
-            Just out.
+            {t("reports.v2.latestHeading")}
           </h2>
           <LatestArtifactCard
             artifact={latest}
@@ -191,7 +193,7 @@ export default function ReportsPageV2() {
       <WeeklyPulseCard />
 
       {/* Foot signature — DisclaimerBanner mounted by (dashboard)/layout.tsx */}
-      <FootSignature note="PivoxQuant · Archive · Volume IV · Not investment advice" />
+      <FootSignature note={t("reports.v2.footNote")} />
     </ErrorBoundary>
   );
 }

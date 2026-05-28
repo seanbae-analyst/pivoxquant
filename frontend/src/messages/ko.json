@@ -621,6 +621,33 @@
       "quarterlyReview": "분기 리뷰",
       "riskReport": "리스크 리포트",
       "custom": "리포트"
+    },
+    "v1": {
+      "kicker": "PDF · 관측 아카이브",
+      "heading": "리포트",
+      "subtitle": "데스크가 제공할 수 있는 모든 리포트 — 주간 메모부터 연말 레터까지.",
+      "caption": "무료 티어 샘플은 공개; Pro·Premium 항목은 포트폴리오 기반으로 생성됩니다.",
+      "tierAll": "전체 티어",
+      "personaLabel": "페르소나",
+      "allPersonas": "전체 페르소나",
+      "sampleAvailable": "샘플 제공 중",
+      "lastGenerated": "마지막 생성 —",
+      "optimisedFor": "에 최적화됨",
+      "actions": {
+        "open": "열기",
+        "pdf": "PDF",
+        "upgradeTo": "업그레이드 →"
+      },
+      "footer": {
+        "artifacts": "개 리포트",
+        "tier": "티어",
+        "note": "PivoxQuant · 관측 아카이브 · 투자 조언 아님"
+      }
+    },
+    "v2": {
+      "eyebrow": "아카이브 · CFO",
+      "latestHeading": "방금 도착.",
+      "footNote": "PivoxQuant · 아카이브 · Volume IV · 투자 조언 아님"
     }
   },
   "profileMenu": {
@@ -891,6 +918,16 @@
         "title": "복합 타임라인",
         "body": "롤링 VaR에서 도출된 0-100 점수; 높을수록 압박이 큼. 향후 릴리스에서 백엔드가 1등급 복합 점수를 게시할 수 있습니다."
       }
+    },
+    "v1": {
+      "methodologyHeading": "방법론 노트",
+      "notes": {
+        "var": "VaR (1일, 95%) — 90일 수익 구간의 역사적 백분위, 포지션 크기 가중.",
+        "es": "Expected Shortfall — VaR 임계값 이하 수익 평균 (5% 좌측 꼬리).",
+        "maxdd": "최대 낙폭 (90D) — 추적 구간 포트폴리오 자산 곡선의 고점-저점.",
+        "corr": "상관관계 지수 — 최근 20세션 보유 종목 간 쌍별 평균 상관관계.",
+        "sevenLayer": "7단계 사다리 — VaR, 상관관계, VIX, 테일, 일일 손실, 집중도, 현금 버퍼에 걸친 소프트 한도 관측."
+      }
     }
   },
   "persona": {
@@ -995,6 +1032,83 @@
     "filterRefresh": "새로고침",
     "filterRefreshAriaLabel": "시그널 새로고침",
     "filterMinStrengthAriaLabel": "최소 강도",
-    "filterMaxStrengthAriaLabel": "최대 강도"
+    "filterMaxStrengthAriaLabel": "최대 강도",
+    "clipBoard1": "클립보드 · I",
+    "clipBoard2": "클립보드 · II",
+    "clipBoard3": "클립보드 · III",
+    "topPositive": "긍정 상위",
+    "neutralZone": "중립 구간",
+    "topNegative": "부정 상위",
+    "clickToExpand": "클립보드를 클릭하면 앞으로 펼쳐집니다.",
+    "toastRefreshTimeout": "새로고침이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.",
+    "toastRefreshServerError": "새로고침 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+    "toastRefreshFailed": "새로고침 실패"
+  },
+  "settingsV2": {
+    "sectionA": {
+      "eyebrow": "A · 신원 및 보안",
+      "heading": "로그인된 계정.",
+      "profileLink": "프로필 상세 보기 ›"
+    },
+    "sectionC": {
+      "eyebrow": "C · 알림 · 채널 × 이벤트",
+      "heading": "CFO가",
+      "headingItalic": "연락할 시점."
+    },
+    "push": {
+      "sectionLabel": "C1 · Push",
+      "channelLabel": "Push 채널 · 기기 권한",
+      "deviceLabel": "브라우저 푸시",
+      "granted": "이 기기에서 허용됨.",
+      "tap": "권한을 허용하려면 탭하세요.",
+      "notSupported": "이 기기에서 지원되지 않습니다."
+    },
+    "emailDelivery": {
+      "sectionLabel": "C2 · Email",
+      "channelLabel": "이메일 수신",
+      "sendToLabel": "수신 이메일",
+      "allArtifacts": "모든 리포트가 PDF + HTML로 이메일로 발송됩니다."
+    },
+    "notice": {
+      "title": "공지 / 면책 고지.",
+      "body": "PivoxQuant는 사용자 자신의 기록 보관을 위한 편집 메모와 분석 자료를 제공합니다. 브로커 연동은 조회 전용으로 — 주문 라우팅, 투자 조언, 매수·매도 권유가 없습니다. 본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며, 모든 의사결정과 책임은 이용자 본인에게 있습니다."
+    },
+    "toast": {
+      "kisSynced": "KIS 동기화됨.",
+      "kisSyncFailed": "동기화 실패.",
+      "kisDisconnectConfirm": "KIS 연결을 해제하시겠어요?",
+      "kisDisconnected": "KIS 연결 해제됨.",
+      "kisDisconnectFailed": "연결 해제 실패.",
+      "langUpdated": "언어가 변경됐습니다.",
+      "pushEnabled": "푸시 알림이 활성화됐습니다.",
+      "pushDisabled": "푸시 알림이 해제됐습니다.",
+      "pushNotSupported": "이 기기에서 푸시 알림이 지원되지 않습니다.",
+      "pushPermDenied": "권한이 거부됐습니다.",
+      "pushError": "푸시 설정을 업데이트할 수 없습니다.",
+      "emailEnabled": "이메일 수신이 활성화됐습니다.",
+      "emailDisabled": "이메일 수신이 해제됐습니다.",
+      "emailSaveFail": "이메일 설정을 저장할 수 없습니다.",
+      "billingError": "결제 포털을 열 수 없습니다.",
+      "cancelConfirm": "구독을 취소하시겠어요? Stripe 결제 포털로 이동합니다. 현재 결제 주기 종료 시까지 서비스가 유지됩니다.",
+      "exportReady": "내보내기 완료.",
+      "exportFail": "내보내기 엔드포인트 준비 중. 수동 아카이브는 고객지원에 문의하세요.",
+      "providerDisconnectUnsupported": "OAuth 공급자 연결 해제는 아직 지원되지 않습니다. 지원팀에 이메일로 문의해 주세요."
+    }
+  },
+  "profileV2": {
+    "sampleBanner": {
+      "label": "샘플",
+      "body": "샘플 데이터 — 거래 후 실데이터로 전환됩니다.",
+      "note": "아래 페르소나 수치는 첫 거래 관측 전까지 예시입니다."
+    },
+    "toast": {
+      "exportReady": "내보내기 완료.",
+      "localExportReady": "로컬 메모리 내보내기 완료.",
+      "exportFailed": "내보내기 실패.",
+      "deleteConfirm": "에이전트 메모리를 모두 삭제하시겠어요? 페르소나, 펄스, 피드백, Companion 기록이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+      "memoryCleared": "에이전트 메모리가 삭제됐습니다.",
+      "waitlistDone": "대기 목록에 추가됐습니다.",
+      "waitlistSaved": "저장됨 — 연락드리겠습니다."
+    }
   }
 }

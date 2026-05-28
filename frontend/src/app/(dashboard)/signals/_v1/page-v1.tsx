@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
+import { useT } from "@/lib/locale";
 import { apiFetch, ApiError } from "@/lib/api";
 import { PRICE_COLOR_HEX } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
@@ -77,6 +78,7 @@ function weekTag(): string {
 /* ── Page ── */
 
 export default function SignalsPageV1() {
+  const t = useT();
   const router = useRouter();
   const [filter, setFilter] = useState<FilterValue>("All");
   const [refreshing, setRefreshing] = useState(false);
@@ -129,14 +131,14 @@ export default function SignalsPageV1() {
       // (redirect) and 429 (its own toast); only surface the rest here.
       if (err instanceof ApiError) {
         if (err.status === 408) {
-          toast.error("새로고침이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.");
+          toast.error(t("signals.toastRefreshTimeout"));
         } else if (err.status >= 500) {
-          toast.error("새로고침 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+          toast.error(t("signals.toastRefreshServerError"));
         } else if (err.status !== 401 && err.status !== 429) {
-          toast.error(err.message || "새로고침 실패");
+          toast.error(err.message || t("signals.toastRefreshFailed"));
         }
       } else {
-        toast.error(err instanceof Error ? err.message : "새로고침 실패");
+        toast.error(err instanceof Error ? err.message : t("signals.toastRefreshFailed"));
       }
     } finally {
       // Bug W6-4 (2026-05-09): mutate() must run on both success AND
@@ -314,8 +316,8 @@ export default function SignalsPageV1() {
                   ariaLabel="Top negative signals clipboard"
                 >
                   <ClipboardPaper
-                    kicker="Clip Board · III"
-                    title="Top Negative"
+                    kicker={t("signals.clipBoard3")}
+                    title={t("signals.topNegative")}
                     tone="neg"
                     items={negative}
                     expandedId={expandedId}
@@ -346,8 +348,8 @@ export default function SignalsPageV1() {
                   ariaLabel="Neutral zone signals clipboard"
                 >
                   <ClipboardPaper
-                    kicker="Clip Board · II"
-                    title="Neutral Zone"
+                    kicker={t("signals.clipBoard2")}
+                    title={t("signals.neutralZone")}
                     tone="neu"
                     items={neutral}
                     expandedId={expandedId}
@@ -377,8 +379,8 @@ export default function SignalsPageV1() {
                   ariaLabel="Top positive signals clipboard"
                 >
                   <ClipboardPaper
-                    kicker="Clip Board · I"
-                    title="Top Positive"
+                    kicker={t("signals.clipBoard1")}
+                    title={t("signals.topPositive")}
                     tone="pos"
                     items={positive}
                     expandedId={expandedId}
@@ -402,8 +404,8 @@ export default function SignalsPageV1() {
               }}
             className="font-serif" >
               {active
-                ? "Click the surfaced clipboard again to return it to the stack."
-                : "Click any clipboard to draw it forward."}
+                ? t("signals.clickToExpand")
+                : t("signals.clickToExpand")}
             </p>
           </div>
 
@@ -420,8 +422,8 @@ export default function SignalsPageV1() {
                 ariaLabel="Top positive signals clipboard"
               >
                 <ClipboardPaper
-                  kicker="Clip Board · I"
-                  title="Top Positive"
+                  kicker={t("signals.clipBoard1")}
+                  title={t("signals.topPositive")}
                   tone="pos"
                   items={positive}
                   expandedId={expandedId}
@@ -438,8 +440,8 @@ export default function SignalsPageV1() {
                 ariaLabel="Neutral zone signals clipboard"
               >
                 <ClipboardPaper
-                  kicker="Clip Board · II"
-                  title="Neutral Zone"
+                  kicker={t("signals.clipBoard2")}
+                  title={t("signals.neutralZone")}
                   tone="neu"
                   items={neutral}
                   expandedId={expandedId}
@@ -456,8 +458,8 @@ export default function SignalsPageV1() {
                 ariaLabel="Top negative signals clipboard"
               >
                 <ClipboardPaper
-                  kicker="Clip Board · III"
-                  title="Top Negative"
+                  kicker={t("signals.clipBoard3")}
+                  title={t("signals.topNegative")}
                   tone="neg"
                   items={negative}
                   expandedId={expandedId}

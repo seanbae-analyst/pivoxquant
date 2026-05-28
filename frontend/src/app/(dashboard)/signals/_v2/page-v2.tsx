@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { normalizeTicker } from "@/lib/format";
+import { useT } from "@/lib/locale";
 import type {
   SignalEntry,
   SignalLabel,
@@ -120,6 +121,7 @@ function isWithinWindow(s: SignalEntry, window: FilterState["window"]): boolean 
 }
 
 export default function SignalsPageV2() {
+  const t = useT();
   const [filters, setFilters] = React.useState<FilterState>(DEFAULT_FILTERS);
   const [refreshing, setRefreshing] = React.useState(false);
 

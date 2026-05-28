@@ -621,6 +621,33 @@
       "quarterlyReview": "Quarterly Review",
       "riskReport": "Risk Report",
       "custom": "Report"
+    },
+    "v1": {
+      "kicker": "PDF · Observational archive",
+      "heading": "Reports",
+      "subtitle": "Every artifact the desk can deliver — from the weekly memo to the year-end letter.",
+      "caption": "Free-tier samples are public; Pro and Premium items are generated against your portfolio.",
+      "tierAll": "All tiers",
+      "personaLabel": "Persona",
+      "allPersonas": "All personas",
+      "sampleAvailable": "Sample available",
+      "lastGenerated": "Last generated —",
+      "optimisedFor": "Optimised for",
+      "actions": {
+        "open": "Open",
+        "pdf": "PDF",
+        "upgradeTo": "Upgrade to"
+      },
+      "footer": {
+        "artifacts": "artifacts",
+        "tier": "tier",
+        "note": "PivoxQuant · Observational archive · Not investment advice"
+      }
+    },
+    "v2": {
+      "eyebrow": "Archive · CFO",
+      "latestHeading": "Just out.",
+      "footNote": "PivoxQuant · Archive · Volume IV · Not investment advice"
     }
   },
   "profileMenu": {
@@ -891,6 +918,16 @@
         "title": "Composite timeline",
         "body": "0–100 score derived from rolling VaR; higher = more strain. Backend may publish a first-class composite score in a future release."
       }
+    },
+    "v1": {
+      "methodologyHeading": "Methodology Notes",
+      "notes": {
+        "var": "VaR (1-day, 95%) — historical percentile on the 90-day return window, weighted by position size.",
+        "es": "Expected Shortfall — mean of returns below the VaR cutoff (5% left tail).",
+        "maxdd": "Max Drawdown (90D) — peak-to-trough of the portfolio equity curve over the trailing window.",
+        "corr": "Correlation Index — average pairwise correlation across holdings on the last 20 sessions.",
+        "sevenLayer": "Seven-Layer Ladder — soft-limit observations across VaR, correlation, VIX, tail, daily loss, concentration, and cash buffer."
+      }
     }
   },
   "persona": {
@@ -995,6 +1032,83 @@
     "filterRefresh": "Refresh",
     "filterRefreshAriaLabel": "Refresh signals",
     "filterMinStrengthAriaLabel": "Minimum strength",
-    "filterMaxStrengthAriaLabel": "Maximum strength"
+    "filterMaxStrengthAriaLabel": "Maximum strength",
+    "clipBoard1": "Clip Board · I",
+    "clipBoard2": "Clip Board · II",
+    "clipBoard3": "Clip Board · III",
+    "topPositive": "Top Positive",
+    "neutralZone": "Neutral Zone",
+    "topNegative": "Top Negative",
+    "clickToExpand": "Click any clipboard to draw it forward.",
+    "toastRefreshTimeout": "Refresh timed out. Please try again in a moment.",
+    "toastRefreshServerError": "Server error during refresh. Please try again in a moment.",
+    "toastRefreshFailed": "Refresh failed"
+  },
+  "settingsV2": {
+    "sectionA": {
+      "eyebrow": "A · Identity & security",
+      "heading": "Who is signed in.",
+      "profileLink": "Profile detail ›"
+    },
+    "sectionC": {
+      "eyebrow": "C · Notifications · Channels × Events",
+      "heading": "When the CFO",
+      "headingItalic": "should reach you."
+    },
+    "push": {
+      "sectionLabel": "C1 · Push",
+      "channelLabel": "Push channel · device permission",
+      "deviceLabel": "Browser push",
+      "granted": "Granted on this device.",
+      "tap": "Tap to grant device permission.",
+      "notSupported": "Not supported on this device."
+    },
+    "emailDelivery": {
+      "sectionLabel": "C2 · Email",
+      "channelLabel": "Email delivery",
+      "sendToLabel": "Send to",
+      "allArtifacts": "All artifacts arrive in your inbox as PDF + HTML."
+    },
+    "notice": {
+      "title": "Notice / 면책 고지.",
+      "body": "PivoxQuant produces editorial memos and analytical artifacts for the user's own record-keeping. Brokerage connections are read-only — no order routing, no investment advice, no recommendation to buy or sell. 본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며, 모든 의사결정과 책임은 이용자 본인에게 있습니다."
+    },
+    "toast": {
+      "kisSynced": "KIS synchronized.",
+      "kisSyncFailed": "Sync failed.",
+      "kisDisconnectConfirm": "Disconnect KIS?",
+      "kisDisconnected": "KIS disconnected.",
+      "kisDisconnectFailed": "Disconnect failed.",
+      "langUpdated": "Language updated.",
+      "pushEnabled": "Push enabled.",
+      "pushDisabled": "Push disabled.",
+      "pushNotSupported": "Push notifications not supported here.",
+      "pushPermDenied": "Permission denied.",
+      "pushError": "Could not update push.",
+      "emailEnabled": "Email enabled.",
+      "emailDisabled": "Email disabled.",
+      "emailSaveFail": "Could not save email preference.",
+      "billingError": "Could not open billing portal.",
+      "cancelConfirm": "Cancel your subscription? You will be taken to the Stripe portal. Service continues until the end of the current billing period.",
+      "exportReady": "Export ready.",
+      "exportFail": "Export endpoint coming soon. Email support for a manual archive.",
+      "providerDisconnectUnsupported": "Disconnecting an OAuth provider is not yet supported. Email support to remove a provider."
+    }
+  },
+  "profileV2": {
+    "sampleBanner": {
+      "label": "Sample",
+      "body": "Sample data — switches to live data after your first trade.",
+      "note": "Persona figures below are illustrative until your first trade is observed."
+    },
+    "toast": {
+      "exportReady": "Export ready.",
+      "localExportReady": "Local memory exported.",
+      "exportFailed": "Export failed.",
+      "deleteConfirm": "Delete all agent memory? Persona, pulse, feedback, and Companion history will be wiped. This cannot be undone.",
+      "memoryCleared": "Agent memory cleared.",
+      "waitlistDone": "You're on the waitlist.",
+      "waitlistSaved": "Saved — we'll reach out."
+    }
   }
 }
