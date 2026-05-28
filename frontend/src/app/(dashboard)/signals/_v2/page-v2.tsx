@@ -234,20 +234,20 @@ export default function SignalsPageV2() {
       // (redirect) and 429 (its own toast); only surface the rest here.
       if (err instanceof ApiError) {
         if (err.status === 408) {
-          toast.error("새로고침이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.");
+          toast.error(t("signals.toastRefreshTimeout"));
         } else if (err.status >= 500) {
-          toast.error("새로고침 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+          toast.error(t("signals.toastRefreshServerError"));
         } else if (err.status !== 401 && err.status !== 429) {
-          toast.error(err.message || "새로고침 실패");
+          toast.error(err.message || t("signals.toastRefreshFailed"));
         }
       } else {
-        toast.error(err instanceof Error ? err.message : "새로고침 실패");
+        toast.error(err instanceof Error ? err.message : t("signals.toastRefreshFailed"));
       }
     } finally {
       await swr.mutate();
       setRefreshing(false);
     }
-  }, [swr]);
+  }, [swr, t]);
 
   return (
     <ErrorBoundary>
@@ -290,7 +290,7 @@ export default function SignalsPageV2() {
 
       {/* HERO */}
       <SignalsHeroV2
-        eyebrow="시그널 · 실시간"
+        eyebrow={t("signals.eyebrow")}
         counts={counts}
         loading={swr.isLoading && allSignals.length === 0}
       />
