@@ -63,6 +63,7 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "earn
 # Tiers eligible for the pre-brief — Pro+ only.
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
+from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 
 # ± window (minutes) around the 30-min-before target. Must exceed cron cadence
 # to avoid gaps. Default 10-min cron + ±6min window → every earnings is matched
@@ -820,6 +821,7 @@ class EarningsPreBriefService:
             from services.artifacts._name_enrich import enrich_v3_names
             ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
             ctx["persona"] = self._resolve_persona(data)
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("pdf template render failed: %s", exc)
@@ -1221,6 +1223,7 @@ class EarningsPreBriefService:
             ctx.setdefault("unsubscribe_url",
                            _build_unsubscribe_url(data.get("user_id"),
                                                   kind="earnings"))
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(pdf_url=pdf_url, **ctx)
         except Exception as exc:
             logger.warning("email template render failed: %s", exc)
@@ -1665,12 +1668,16 @@ class EarningsPreBriefService:
             return self._fallback_digest_html(user, entries)
         try:
             tpl = env.get_template("earnings_prebrief_digest_email.html")
-            return tpl.render(
-                user_name=getattr(user, "name", "") or getattr(user, "email", ""),
-                entries=entries,
-                lead_minutes=lead_minutes,
-                as_of_label=as_of_label or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            _digest_ctx = localize_ctx(
+                {
+                    "user_name": getattr(user, "name", "") or getattr(user, "email", ""),
+                    "entries": entries,
+                    "lead_minutes": lead_minutes,
+                    "as_of_label": as_of_label or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                },
+                resolve_locale(user=user),
             )
+            return tpl.render(**_digest_ctx)
         except Exception as exc:
             logger.warning("digest email render failed: %s", exc)
             return self._fallback_digest_html(user, entries)

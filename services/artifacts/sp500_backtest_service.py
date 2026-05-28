@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from services.legal_filter import detect_prohibited, safe_scrub
+from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +211,7 @@ class SP500BacktestService:
                 ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
                 ctx["persona"] = self._resolve_persona(data)
                 tpl = env.get_template("sp500_backtest.html")
+                ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
                 html = tpl.render(**ctx)
             except Exception as exc:
                 logger.warning("sp500_backtest render failed: %s", exc)

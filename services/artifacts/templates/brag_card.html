@@ -30,12 +30,13 @@
    Compliance — every label uses neutral framing. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Brag Card — {{ v3.month_label | default(month_label) }} — {{ user_name }}</title>
+  <title>{% if locale == 'en' %}Monthly Highlight{% else %}월간 하이라이트{% endif %} — {{ v3.month_label | default(month_label) }} — {{ user_name }}</title>
   <style>{% include '_brag_card_v3_css.html' %}</style>
 </head>
 <body>
@@ -52,31 +53,31 @@
       </div>
       <div class="pq-pdf-meta">
         <strong>
-          <span class="pq-pdf-tier-chip free">FREE</span>BRAG CARD
+          <span class="pq-pdf-tier-chip free">FREE</span>{% if locale == 'en' %}MONTHLY HIGHLIGHT{% else %}월간 하이라이트{% endif %}
         </strong>
         <span>{{ v3.month_label | default(month_label_long | default(month_label)) }} · {{ v3.report_tag | default('BC-' ~ (month_label | default('—'))) }}</span>
       </div>
     </div>
 
     {# ───────── 2. Eyebrow (with persona label) ───────── #}
-    <div class="pq-pdf-eyebrow">Brag Card · Monthly · {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}Monthly Highlight · Monthly{% else %}월간 하이라이트 · 매월{% endif %} · {{ pm.persona_label(persona) }}</div>
 
     {# ───────── 3. Cover title — data-driven (CEO 평 redesign 2026-05-01) ───────── #}
     <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
       {%- if v3.month_return %}
-        이번 달 <strong style="color:{% if v3.month_return_tone == 'neg' %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.month_return }}</strong>.
+        {% if locale == 'en' %}This month{% else %}이번 달{% endif %} <strong style="color:{% if v3.month_return_tone == 'neg' %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.month_return }}</strong>.
       {%- elif v3.best_decision_pct %}
-        이번 달 최고: <strong style="color:var(--r-pos);">{{ v3.best_decision_pct }}</strong>.
+        {% if locale == 'en' %}Best this month: {% else %}이번 달 최고: {% endif %}<strong style="color:var(--r-pos);">{{ v3.best_decision_pct }}</strong>.
       {%- else %}
-        이번 달 한 페이지 요약.
+        {% if locale == 'en' %}This month, on one page.{% else %}이번 달 한 페이지 요약.{% endif %}
       {%- endif %}
     </h1>
     <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-      한 달의 결정 한 건 — 운이 아닌 기록.
+      {% if locale == 'en' %}One decision this month — recorded, not lucky.{% else %}한 달의 결정 한 건 — 운이 아닌 기록.{% endif %}
       {% if v3.hero and v3.hero.ticker %}
-        {% if v3.hero.title %}<strong>{{ v3.hero.title }}</strong>가 {% endif %}
+        {% if v3.hero.title %}<strong>{{ v3.hero.title }}</strong>{% if locale != 'en' %}가{% endif %} {% endif %}
       {% endif %}
-      {% if v3.hit_rate %}본인 결정 일치 비율 (과거 기록) <strong>{{ v3.hit_rate }}</strong>{% endif %}
+      {% if v3.hit_rate %}{% if locale == 'en' %}Decision consistency (historical) {% else %}본인 결정 일치 비율 (과거 기록) {% endif %}<strong>{{ v3.hit_rate }}</strong>{% endif %}
     </p>
 
     {# ───────── 3b. Persona Highlight Metric ───────── #}
@@ -88,7 +89,7 @@
     <div style="margin-top: 24px;">
       <div class="pq-pdf-kpi-row cols-3">
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Best Decision</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Best Observed{% else %}최고 관찰{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.best_decision_pct | default('—') }}</div>
           {% if v3.contribution %}
           <div class="pq-pdf-kpi-delta {{ v3.best_tone | default('pos') }}">
@@ -97,14 +98,14 @@
           {% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Hit Rate · MTD</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Hit Rate · MTD{% else %}적중률 · 월누적{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.hit_rate | default('—') }}</div>
           {% if v3.hit_rate_detail %}
           <div class="pq-pdf-kpi-delta">{{ v3.hit_rate_detail }}</div>
           {% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Month Return</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Month Return{% else %}월간 수익률{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.month_return | default('—') }}</div>
           {% if v3.benchmark %}
           <div class="pq-pdf-kpi-delta {{ v3.month_return_tone | default('pos') }}">
@@ -119,7 +120,7 @@
     <div style="margin-top: 18px;">
       <div class="pq-pdf-card">
         <div class="bc-hero-head">
-          <div class="bc-hero-eyebrow">★ The One · 이 달의 결정</div>
+          <div class="bc-hero-eyebrow">{% if locale == 'en' %}★ The One · This Month's Observation{% else %}★ The One · 이 달의 관찰{% endif %}</div>
           {% if v3.hero and v3.hero.ticker %}
           {# PR #212 follow-up — name first, ticker as fallback. Pattern matches L104/132 in insider_mirror. #}
           <span class="pq-pdf-ticker">{{ v3.hero.name | default(v3.hero.ticker, true) }}</span>
@@ -153,7 +154,7 @@
 
       {# Left: Why It Worked · 운이 아닌 이유 #}
       <div>
-        <div class="pq-pdf-col-title">Why It Worked · 운이 아닌 이유</div>
+        <div class="pq-pdf-col-title">{% if locale == 'en' %}Why It Worked · Not Luck{% else %}운이 아닌 이유{% endif %}</div>
         <div>
           {% for c in v3.why_it_worked | default([]) %}
           <div class="pq-pdf-check-row">
@@ -167,7 +168,7 @@
 
       {# Right: Lesson for Next Month · 다음 달까지 유지 #}
       <div>
-        <div class="pq-pdf-col-title">Lesson for Next Month · 다음 달까지 유지</div>
+        <div class="pq-pdf-col-title">{% if locale == 'en' %}Lesson for Next Month · Carry Forward{% else %}다음 달까지 유지할 점{% endif %}</div>
         <div>
           {% for c in v3.lesson_for_next | default([]) %}
           <div class="pq-pdf-check-row">
@@ -184,14 +185,14 @@
     {# ───────── 7. Pullquote ───────── #}
     <div style="margin-top: 18px;">
       <div class="pq-pdf-pullquote">
-        {{ v3.pullquote | default('운이 아니라 <em>프로세스</em>였다. 다음 달도 같은 프로세스로.') | safe }}
+        {{ v3.pullquote | default(('It was the <em>process</em>, not luck. Same process next month.' if locale == 'en' else '운이 아니라 <em>프로세스</em>였다. 다음 달도 같은 프로세스로.')) | safe }}
       </div>
     </div>
 
     {# ───────── 8. Page footer ───────── #}
     <div class="pq-pdf-page-footer">
-      <span>For information only · pivoxquant.com</span>
-      <span>PIVOXQUANT &middot; Brag Card &middot; {{ v3.report_tag | default('BC-' ~ (month_label | default('—'))) }}</span>
+      <span>{% if locale == 'en' %}For information only{% else %}정보 제공 목적{% endif %} · pivoxquant.com</span>
+      <span>PIVOXQUANT &middot; {% if locale == 'en' %}Monthly Highlight{% else %}월간 하이라이트{% endif %} &middot; {{ v3.report_tag | default('BC-' ~ (month_label | default('—'))) }}</span>
     </div>
 
     {# ───────── 9. Disclaimer (legal partial) ───────── #}

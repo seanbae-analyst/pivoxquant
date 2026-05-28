@@ -72,6 +72,7 @@ _DEFAULT_STORAGE_DIR = (
 )
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
+from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 
 
 def _storage_dir() -> Path:
@@ -857,6 +858,7 @@ class QuarterlySelfReportService:
             from services.artifacts._name_enrich import enrich_v3_names
             ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
             tpl = env.get_template("quarterly_self_report.html")
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("quarterly_self_report render failed: %s", exc)

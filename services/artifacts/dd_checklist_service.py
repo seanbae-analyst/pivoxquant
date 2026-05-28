@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
+from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 # Pending window: `added_at` in [now - (N+1)d, now - Nd)
 _PENDING_LAG_DAYS = 3
 
@@ -315,6 +316,7 @@ class DDChecklistService:
                 ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
                 ctx["persona"] = self._resolve_persona(data)
                 tpl = env.get_template("dd_checklist.html")
+                ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
                 html = tpl.render(**ctx)
             except Exception as exc:
                 logger.warning("dd_checklist template render failed: %s", exc)
@@ -351,6 +353,7 @@ class DDChecklistService:
         if env is not None:
             try:
                 tpl = env.get_template("dd_checklist_email.html")
+                ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
                 html = tpl.render(**ctx)
                 return safe_scrub(html, context="dd_checklist_email") or html
             except Exception as exc:

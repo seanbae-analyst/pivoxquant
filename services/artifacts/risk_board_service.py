@@ -57,6 +57,7 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "risk_board"
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
+from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 
 
 def _storage_dir() -> Path:
@@ -759,6 +760,7 @@ class RiskBoardService:
                 ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
             if "persona" not in ctx:
                 ctx["persona"] = self._resolve_persona(data)
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("risk_board render failed: %s", exc)
@@ -796,6 +798,7 @@ class RiskBoardService:
             ctx = dict(data)
             ctx["v3"] = self._to_v3_shape(data)
             ctx["persona"] = self._resolve_persona(data)
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("risk_board pdf template render failed: %s", exc)

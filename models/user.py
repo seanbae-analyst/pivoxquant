@@ -188,6 +188,12 @@ class User(UserMixin, db.Model):
     # the client always sees all seven events. Managed via Alembic migration
     # 043_notification_prefs (+ app.py ``_do_migrations`` self-heal guard).
     notification_prefs    = db.Column(db.JSON, nullable=True)
+    # Wave F (2026-05-28) — UI/PDF/email locale preference. "ko" (default) | "en".
+    # Server-side source of truth for artifact rendering + scheduled email
+    # subject/body language. Frontend cookie ``sp_locale`` syncs into this
+    # column via ``PUT /api/profile/locale`` (lib/locale.tsx ↔ routes/profile.py).
+    # Managed via migration 046_user_locale + ``_do_migrations`` self-heal.
+    locale           = db.Column(db.String(2), nullable=False, server_default="ko", default="ko")
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")

@@ -43,14 +43,15 @@
      v3.governance ({prepared_by, reviewed_by, methodology, sources})
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 {%- set _ticker = v3.ticker | default(ticker) | default('') -%}
 {%- set _fiscal = v3.fiscal_label | default(fiscal_period) | default('') -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Earnings Pre-Brief{% if _ticker %} — {{ _ticker }}{% endif %}{% if _fiscal %} {{ _fiscal }}{% endif %} — {{ user_name | default('Reader') }}</title>
+  <title>{% if locale == 'en' %}Earnings Pre-Brief{% else %}실적 사전 브리핑{% endif %}{% if _ticker %} — {{ _ticker }}{% endif %}{% if _fiscal %} {{ _fiscal }}{% endif %} — {{ user_name | default('Reader') }}</title>
   <style>{% include '_earnings_prebrief_v3_css.html' %}</style>
 </head>
 <body>
@@ -69,7 +70,7 @@
       </div>
       <div class="pq-pdf-meta">
         <strong>
-          <span class="pq-pdf-tier-chip pro">PRO</span>EARNINGS PRE-BRIEF
+          <span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}EARNINGS PRE-BRIEF{% else %}실적 사전 브리핑{% endif %}
         </strong>
         <span>PIVOXQUANT{% if _ticker %} · {{ _ticker }}{% endif %} · 01 / 02</span>
       </div>
@@ -79,7 +80,7 @@
     <div class="pq-pdf-gold-rule"></div>
 
     {# ───────── 3. Eyebrow ───────── #}
-    <div class="pq-pdf-eyebrow">Pre-Earnings Brief · For Growth / Quant Personas</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}Pre-Earnings Brief · For Growth / Quant Personas{% else %}실적 사전 브리핑 · Growth / Quant 페르소나 대상{% endif %}</div>
 
     {# ───────── 4. Cover title ───────── #}
     <h1 class="pq-pdf-cover-title">
@@ -90,14 +91,14 @@
     {# ───────── 5. Hero badges (Reporting / Position) ───────── #}
     <div class="pq-pdf-hero-badges">
       <div class="pq-pdf-hero-badge">
-        <div class="pq-pdf-kpi-lbl">Reporting</div>
+        <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Reporting{% else %}발표일{% endif %}</div>
         <div class="pq-pdf-hero-badge-val">
-          {{ v3.reporting_date | default('Earnings Date · After Market Close') }}
+          {{ v3.reporting_date | default(('Earnings Date · After Market Close' if locale == 'en' else '실적 발표일 · 장 마감 후')) }}
         </div>
       </div>
       <div class="pq-pdf-hero-divider"></div>
       <div class="pq-pdf-hero-badge">
-        <div class="pq-pdf-kpi-lbl">Position</div>
+        <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Position{% else %}보유 상태{% endif %}</div>
         <div class="pq-pdf-hero-badge-val">
           {{ v3.position | default('—') }}
         </div>
@@ -106,16 +107,16 @@
 
     {# ───────── 6. Consensus vs Whisper ───────── #}
     <h2 class="pq-pdf-section-title sm" style="margin-top: 24px;">
-      Consensus vs Whisper · 시장이 기대하는 수치
+      {% if locale == 'en' %}Consensus vs Whisper · Market Expectations{% else %}컨센서스 vs Whisper · 시장이 기대하는 수치{% endif %}
     </h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Metric</th>
-          <th class="right">Consensus</th>
+          <th>{% if locale == 'en' %}Metric{% else %}지표{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Consensus{% else %}컨센서스{% endif %}</th>
           <th class="right">Whisper</th>
-          <th class="right">Last Q (YoY)</th>
-          <th class="right">Surprise History</th>
+          <th class="right">{% if locale == 'en' %}Last Q (YoY){% else %}전분기 (YoY){% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Surprise History{% else %}서프라이즈 이력{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -204,7 +205,7 @@
       </div>
       <div class="pq-pdf-meta">
         <strong>
-          <span class="pq-pdf-tier-chip pro">PRO</span>EARNINGS PRE-BRIEF
+          <span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}EARNINGS PRE-BRIEF{% else %}실적 사전 브리핑{% endif %}
         </strong>
         <span>PIVOXQUANT{% if _ticker %} · {{ _ticker }}{% endif %} · 02 / 02</span>
       </div>

@@ -109,6 +109,25 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     writeLocaleCookie(next);
+    // Wave F (2026-05-28) — fire-and-forget backend sync so logged-in users
+    // get the same locale on subsequent scheduled emails / PDF generation.
+    // Anonymous users get a 401 which is silently ignored (cookie is still
+    // the source of truth for them). Never await — never block the UI on
+    // this. credentials:"include" carries the session cookie.
+    if (typeof window !== "undefined") {
+      try {
+        void fetch("/api/profile/locale", {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locale: next }),
+        }).catch(() => {
+          /* silent — cookie is the immediate source of truth */
+        });
+      } catch {
+        /* never throw from setLocale */
+      }
+    }
   }, []);
 
   const t = useCallback(

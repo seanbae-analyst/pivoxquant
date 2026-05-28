@@ -484,7 +484,59 @@ def get_profile():
         "subscription_tier": current_user.subscription_tier,
         "email_opt_out": email_opt_out,
         "email_opt_out_earnings": email_opt_out_earnings,
+        "locale": getattr(current_user, "locale", "ko") or "ko",
     })
+
+
+# ── Locale (UI/PDF/email language preference) ─────────────────────────────
+# Wave F (2026-05-28). Frontend ``sp_locale`` cookie sync target. Artifact
+# services + EmailSender read ``user.locale`` to branch ko/en at render time.
+SUPPORTED_LOCALES = frozenset({"ko", "en"})
+
+
+@profile_bp.route("/locale", methods=["GET"])
+@api_auth
+def get_locale():
+    """Return the user's stored locale preference (defaults to 'ko')."""
+    return jsonify({
+        "locale": getattr(current_user, "locale", "ko") or "ko",
+        "supported": sorted(SUPPORTED_LOCALES),
+    })
+
+
+@profile_bp.route("/locale", methods=["PUT"])
+@api_auth
+@general_rate_limit
+def update_locale():
+    """Persist a new locale preference.
+
+    Body: {"locale": "ko" | "en"}
+
+    The cookie ``sp_locale`` on the frontend stays the immediate-feedback
+    source of truth for unauthenticated pages; once logged in this column
+    becomes the authoritative value (cron jobs, scheduled emails, PDF
+    generation all read from the row, not the cookie).
+    """
+    data = request.get_json(silent=True) or {}
+    requested = (data.get("locale") or "").strip().lower()
+    if requested not in SUPPORTED_LOCALES:
+        return api_error(
+            en="Unsupported locale. Allowed: ko, en.",
+            kr="지원하지 않는 언어입니다. ko 또는 en 만 가능합니다.",
+            code="LOCALE_INVALID", status=400,
+        )
+    try:
+        current_user.locale = requested
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.warning("locale update failed user=%s: %s", current_user.id, exc)
+        return api_error(
+            en="Failed to update locale.",
+            kr="언어 설정을 저장하지 못했습니다.",
+            code="LOCALE_UPDATE_FAILED", status=500,
+        )
+    return jsonify({"locale": current_user.locale, "ok": True})
 
 
 # ── Seed Capital (분석용 시드머니) ────────────────────────────────────────

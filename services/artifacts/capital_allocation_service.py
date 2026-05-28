@@ -56,6 +56,7 @@ _DEFAULT_STORAGE_DIR = (
 )
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
+from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 
 # Known dividend / income ETFs — whitelist the user can pick from.
 # Suffixes `.KS` for KOSPI, plain for US.
@@ -581,6 +582,7 @@ class CapitalAllocationService:
                 ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
                 ctx["persona"] = self._resolve_persona(data)
                 tpl = env.get_template("capital_allocation.html")
+                ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
                 html = tpl.render(**ctx)
             except Exception as exc:
                 logger.warning("capital_allocation render failed: %s", exc)

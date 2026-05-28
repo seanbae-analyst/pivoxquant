@@ -60,6 +60,7 @@ from typing import Any, Optional
 from extensions import db
 from models import Artifact, Position, TradeHistory, User, UserReferral, Watchlist
 from services.legal_filter import scrub_signal
+from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 
 logger = logging.getLogger(__name__)
 
@@ -537,6 +538,7 @@ class BragCardService:
             from services.artifacts._name_enrich import enrich_v3_names
             ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
             ctx["persona"] = self._resolve_persona(data)
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("brag card template render failed: %s", exc)
@@ -579,6 +581,7 @@ class BragCardService:
             ctx = dict(data)
             ctx["v3"] = self._to_v3_shape(data)
             ctx["persona"] = self._resolve_persona(data)
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("brag card pdf template render failed: %s", exc)
@@ -787,6 +790,7 @@ class BragCardService:
             return self._fallback_email_html(ctx)
         try:
             tpl = env.get_template("brag_card_email.html")
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("brag card email template render failed: %s", exc)

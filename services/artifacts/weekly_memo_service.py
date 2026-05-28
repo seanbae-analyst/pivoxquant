@@ -60,6 +60,7 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "week
 # Users on these tiers get the Sunday memo. "free" is excluded.
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
+from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 
 
 def _storage_dir() -> Path:
@@ -948,6 +949,7 @@ class WeeklyMemoService:
             # was always falsy and only the sender's generic injected footer
             # appeared. Idempotent with the sender's inject_unsubscribe_footer.
             ctx["unsubscribe_url"] = _build_unsubscribe_url(data.get("user_id"))
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("email template render failed: %s", exc)
@@ -963,6 +965,7 @@ class WeeklyMemoService:
             ctx = self._with_persona(data)
             from services.artifacts._name_enrich import enrich_v3_names
             ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
+            ctx = localize_ctx(ctx, resolve_locale(user_id=ctx.get('user_id'), data=data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("pdf template render failed: %s", exc)
