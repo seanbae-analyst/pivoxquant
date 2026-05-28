@@ -398,7 +398,9 @@ def weekly_memo_preview():
 
 @artifacts_bp.route("/weekly-memo/download/<int:memo_id>", methods=["GET"])
 @api_auth
-@require_tier("pro")
+# Download is owner-scoped, not tier-gated: a user who paid to GENERATE this
+# artifact keeps download access after a downgrade (CEO policy 2026-05-28).
+# Generation stays Pro-gated upstream; the owner check below is the only gate.
 def weekly_memo_download(memo_id: int):
     """Stream the PDF for one memo. Only the owning user may download.
 
@@ -1163,7 +1165,8 @@ def earnings_prebrief_preview(ticker: str):
 
 @artifacts_bp.route("/earnings-prebrief/download/<int:brief_id>", methods=["GET"])
 @api_auth
-@require_tier("pro")
+# Owner-scoped download (not tier-gated) — keeps access after a downgrade.
+# Generation stays Pro-gated; the owner check below is the gate. (CEO 2026-05-28)
 def earnings_prebrief_download(brief_id: int):
     """Stream the 2-page PDF for a persisted prebrief. Owner-only.
 
@@ -1336,7 +1339,9 @@ def self_audit_preview():
 
 @artifacts_bp.route("/self-audit/download", methods=["GET"])
 @api_auth
-@require_tier("premium")
+# Owner-scoped download (not tier-gated) — a downgraded Premium user keeps
+# access to audits they generated while paying. Generation stays Premium-gated;
+# the user_id filter below is the gate. (CEO policy 2026-05-28)
 def self_audit_download_latest():
     """Stream the most recent Self Audit PDF for the caller.
 

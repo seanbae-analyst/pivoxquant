@@ -341,3 +341,17 @@ def test_download_route_404_for_missing_memo(client, auth_pro_user):
     """Unknown id returns 404 (same code as "not yours")."""
     resp = client.get("/api/artifacts/weekly-memo/download/99999")
     assert resp.status_code == 404
+
+
+def test_download_not_tier_gated_for_free_owner(client, auth_user):
+    """Download is owner-scoped, NOT tier-gated (CEO policy 2026-05-28).
+
+    A free (or downgraded) user must reach the owner-check 404 path, not a 403
+    tier wall — otherwise a former-Pro user who downgraded would lose access to
+    artifacts they paid to generate. ``auth_user`` is tier="free".
+    """
+    resp = client.get("/api/artifacts/weekly-memo/download/99999")
+    assert resp.status_code == 404, (
+        f"free owner hit a tier wall instead of owner-check: {resp.status_code}"
+    )
+    assert resp.status_code != 403
