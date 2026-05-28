@@ -702,3 +702,67 @@ export function fmtMoneyPlainSigned(
   });
   return `${sign}${glyph}${body}`;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Wave B i18n — locale-aware compact number helper (2026-05-28).
+ *
+ * fmtCompactLocale(n, locale) renders abbreviated large numbers:
+ *   ko: 만/억/조 scale  (1_200_000 → "120만",  150_000_000 → "1.5억")
+ *   en: K/M/B/T scale   (1_200_000 → "1.2M",   150_000_000 → "150M")
+ *
+ * Pure function — no React dependency. Callers in client components should
+ * obtain locale from useLocale() and pass it here.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export type FormatLocale = "ko" | "en";
+
+/**
+ * Compact large number abbreviation, locale-aware.
+ *   ko: Korean myriad (만/억/조)
+ *   en: SI prefix (K/M/B/T)
+ * Returns raw number string (no currency prefix) — wrap with currency symbol
+ * at the call site if needed.
+ */
+export function fmtCompactLocale(
+  v: number | null | undefined,
+  locale: FormatLocale = "ko",
+): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+
+  if (locale === "ko") {
+    if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(1)}조`;
+    if (abs >= 1e8)  return `${sign}${(abs / 1e8).toFixed(1)}억`;
+    if (abs >= 1e4)  return `${sign}${(abs / 1e4).toFixed(0)}만`;
+    return `${sign}${Math.round(abs).toLocaleString("ko-KR")}`;
+  }
+  // en: SI prefix
+  if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(1)}T`;
+  if (abs >= 1e9)  return `${sign}${(abs / 1e9).toFixed(1)}B`;
+  if (abs >= 1e6)  return `${sign}${(abs / 1e6).toFixed(1)}M`;
+  if (abs >= 1e3)  return `${sign}${(abs / 1e3).toFixed(1)}K`;
+  return `${sign}${Math.round(abs).toLocaleString("en-US")}`;
+}
+
+/**
+ * Locale-aware compact KRW/USD money string.
+ *   ko + KRW → "KRW 1.5억" (myriad)
+ *   en + KRW → "KRW 150M"  (SI prefix, KRW still labeled for clarity)
+ *   any + USD → "USD 1.5M" (SI prefix always for USD)
+ */
+export function fmtMoneyCompactLocale(
+  v: number | null | undefined,
+  currency: "USD" | "KRW",
+  locale: FormatLocale = "ko",
+): string {
+  if (v == null || !Number.isFinite(v))
+    return currency === "KRW" ? "KRW —" : "USD —";
+  const prefix = currency === "KRW" ? "KRW " : "USD ";
+  if (currency === "KRW" && locale === "ko") {
+    // Use native Korean myriad scale.
+    return `${prefix}${fmtCompactLocale(v, "ko")}`;
+  }
+  // USD or en+KRW: use SI prefix.
+  return `${prefix}${fmtCompactLocale(v, "en")}`;
+}

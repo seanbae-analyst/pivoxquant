@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
-import { useLocale } from "@/lib/locale";
+import { useLocale, useT } from "@/lib/locale";
 import { OnboardingBragCard } from "@/components/growth/onboarding-brag-card";
 import {
   WIZARD_QUESTIONS,
@@ -439,6 +439,7 @@ function ResultScreen({
   const typeData = INVESTOR_TYPES[investorType];
   const highlights = PROFILE_HIGHLIGHTS[investorType];
   const { locale } = useLocale();
+  const t = useT();
 
   if (!typeData || !highlights) return null;
 
@@ -489,7 +490,7 @@ function ResultScreen({
           letterSpacing: "var(--pq-track-tight)",
         }}
       >
-        <span style={{ color: "var(--pq-bronze)" }}>{locale === "ko" ? (typeData.label_kr || typeData.label) : typeData.label}</span>
+        <span style={{ color: "var(--pq-bronze)" }}>{t(`persona.names.${investorType}`) || (locale === "ko" ? (typeData.label_kr || typeData.label) : typeData.label)}</span>
       </motion.h1>
 
       {/* Tagline */}

@@ -101,10 +101,10 @@ describe("<SignupPageV2 /> — PIPA §22 ⑥ birthdate fail-fast", () => {
     expect(label).toHaveStyle({ pointerEvents: "none" });
 
     // OAuth controls remain in their disabled <button> form (not <a>).
-    const googleBtn = screen
-      .getByText(/Continue with Google/i)
-      .closest("button");
-    expect(googleBtn).toHaveAttribute("aria-disabled", "true");
+    // i18n-safe: check by aria-disabled attribute.
+    const disabledBtns = screen.getAllByRole("button", { hidden: false })
+      .filter((b) => b.getAttribute("aria-disabled") === "true");
+    expect(disabledBtns.length).toBeGreaterThanOrEqual(1);
   });
 
   it("age checkbox unlocks when birthdate yields ≥14", async () => {

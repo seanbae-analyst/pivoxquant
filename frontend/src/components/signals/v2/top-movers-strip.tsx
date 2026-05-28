@@ -15,6 +15,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { SignalEntry, SignalLabel } from "@/lib/types";
 import { fmtPct1, normalizeTicker } from "@/lib/format";
+import { useT } from "@/lib/locale";
 
 interface Props {
   entries: SignalEntry[];
@@ -34,13 +35,12 @@ function labelOf(s: SignalEntry): SignalLabel {
   return "NEUTRAL";
 }
 
-function labelTone(label: SignalLabel) {
-  // CEO directive 2026-05-13: 전체 한국어화. 동일 패턴 → signal-card.tsx.
+function labelToneColors(label: SignalLabel) {
   if (label === "POSITIVE")
-    return { fg: "var(--pq-positive, #b8956a)", bg: "rgba(184,149,106,0.08)", display: "긍정" };
+    return { fg: "var(--pq-positive, #b8956a)", bg: "rgba(184,149,106,0.08)" };
   if (label === "NEGATIVE")
-    return { fg: "var(--pq-negative, #d18888)", bg: "rgba(209,136,136,0.08)", display: "부정" };
-  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)", display: "중립" };
+    return { fg: "var(--pq-negative, #d18888)", bg: "rgba(209,136,136,0.08)" };
+  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)" };
 }
 
 // CEO directive 2026-05-13: 한국 종목 우선 표시.
@@ -63,6 +63,7 @@ function fmtPrice(s: SignalEntry): string {
 }
 
 export function TopMoversStrip({ entries, resolveName }: Props) {
+  const t = useT();
   const top5 = React.useMemo(() => {
     // CEO 2026-05-13: 1차 정렬 한국 종목 우선, 2차 정렬 강도 내림차순.
     const sorted = [...entries].sort((a, b) => {
@@ -77,7 +78,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
   if (top5.length === 0) return null;
 
   return (
-    <section style={{ marginBottom: 56 }} aria-label="강도 상위 5개 관측">
+    <section style={{ marginBottom: 56 }} aria-label={t("signals.moversAriaLabel")}>
       <div
         className="font-mono uppercase"
         style={{
@@ -87,7 +88,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
           marginBottom: 8,
         }}
       >
-        강도 상위 · 한국 종목 우선
+        {t("signals.moversEyebrow")}
       </div>
       <h2
         className="font-display"
@@ -96,14 +97,11 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
           fontSize: "clamp(26px, 3vw, 40px)",
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory, #F5F0E8)",
-          // CEO bug "폰트가 겹친다": Playfair 26-40px 헤딩이 1.0
-          // 라인-height (브라우저 기본)였음. KR 글리프 descender
-          // 확보를 위해 1.2로 명시.
           lineHeight: 1.2,
           margin: "0 0 22px 0",
         }}
       >
-        오늘의 큰 관측 다섯.
+        {t("signals.moversTitle")}
       </h2>
 
       <div
@@ -116,7 +114,14 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
       >
         {top5.map((s) => {
           const label = labelOf(s);
-          const tone = labelTone(label);
+          const toneColors = labelToneColors(label);
+          const labelDisplay =
+            label === "POSITIVE"
+              ? t("signals.labelPositive")
+              : label === "NEGATIVE"
+                ? t("signals.labelNegative")
+                : t("signals.labelNeutral");
+          const tone = { ...toneColors, display: labelDisplay };
           const strength = strengthOf(s);
           const name = s.name || resolveName(s.ticker);
           const pct = s.change_pct ?? null;
@@ -149,7 +154,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                 <Link
                   href={`/detail/${s.ticker}`}
                   prefetch={false}
-                  aria-label={`${name} · ${tone.display} · 강도 ${strength.toFixed(2)}`}
+                  aria-label={`${name} · ${tone.display} · ${t("signals.strength")} ${strength.toFixed(2)}`}
                   // Bug #11: at mid-viewport widths (1024–1279px) the 5-col
                   // grid squeezed each card to ~190px, clipping "Apple Inc."
                   // to "App…". `title` exposes the full name on hover/focus

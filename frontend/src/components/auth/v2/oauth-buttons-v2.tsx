@@ -23,6 +23,7 @@
 
 import * as React from "react";
 import { API } from "@/lib/endpoints";
+import { useT } from "@/lib/locale";
 
 function GoogleIcon() {
   return (
@@ -98,6 +99,7 @@ export function OAuthButtonsV2({
   hint,
   hintEmphasized = false,
 }: OAuthButtonsV2Props) {
+  const t = useT();
   const enabledShell: React.CSSProperties = {
     ...buttonShellBase,
     border: "1px solid rgba(184,149,106,0.30)",
@@ -125,7 +127,7 @@ export function OAuthButtonsV2({
           style={disabledShell}
         >
           <GoogleIcon />
-          Continue with Google
+          {t("auth.login.continueWithGoogle")}
         </button>
       ) : (
         <a
@@ -135,7 +137,7 @@ export function OAuthButtonsV2({
           style={enabledShell}
         >
           <GoogleIcon />
-          Continue with Google
+          {t("auth.login.continueWithGoogle")}
         </a>
       )}
 
@@ -148,7 +150,7 @@ export function OAuthButtonsV2({
           style={disabledShell}
         >
           <KakaoIcon />
-          Continue with Kakao
+          {t("auth.login.continueWithKakao")}
         </button>
       ) : (
         <a
@@ -158,7 +160,7 @@ export function OAuthButtonsV2({
           style={enabledShell}
         >
           <KakaoIcon />
-          Continue with Kakao
+          {t("auth.login.continueWithKakao")}
         </a>
       )}
 

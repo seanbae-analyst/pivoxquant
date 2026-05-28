@@ -62,15 +62,10 @@ describe("SignupPageV2", () => {
     render(<SignupPageV2 />);
 
     // Unchecked → OAuth buttons are <button aria-disabled="true">, not anchors.
-    const googleBtn = screen
-      .getByText(/Continue with Google/i)
-      .closest("button");
-    expect(googleBtn).toHaveAttribute("aria-disabled", "true");
-
-    const kakaoBtn = screen
-      .getByText(/Continue with Kakao/i)
-      .closest("button");
-    expect(kakaoBtn).toHaveAttribute("aria-disabled", "true");
+    // Match by aria-disabled attribute rather than text content (i18n-safe).
+    const disabledBtns = screen.getAllByRole("button", { hidden: false })
+      .filter((b) => b.getAttribute("aria-disabled") === "true");
+    expect(disabledBtns.length).toBeGreaterThanOrEqual(2); // Google + Kakao
   });
 
   it("enables OAuth anchors after all 4 required consents are checked", async () => {
@@ -97,10 +92,12 @@ describe("SignupPageV2", () => {
     );
 
     // Now both OAuth controls collapse from <button> → <a>.
-    const google = screen.getByText(/Continue with Google/i).closest("a");
-    const kakao = screen.getByText(/Continue with Kakao/i).closest("a");
-    expect(google).toBeInTheDocument();
-    expect(kakao).toBeInTheDocument();
+    // i18n-safe: find anchors with google/kakao OAuth hrefs.
+    const links = screen.getAllByRole("link");
+    const googleLink = links.find((l) => l.getAttribute("href")?.includes("google"));
+    const kakaoLink = links.find((l) => l.getAttribute("href")?.includes("kakao"));
+    expect(googleLink).toBeInTheDocument();
+    expect(kakaoLink).toBeInTheDocument();
   });
 
   it("renders terms + privacy links inside the consent block", () => {

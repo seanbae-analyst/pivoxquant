@@ -18,6 +18,7 @@ import * as React from "react";
 import { RefreshCw } from "lucide-react";
 import type { SignalLabel } from "@/lib/types";
 import { displayTicker, normalizeTicker } from "@/lib/format";
+import { useT } from "@/lib/locale";
 
 interface FilterValue {
   labels: Set<SignalLabel>;
@@ -48,19 +49,11 @@ interface Props {
   refreshing?: boolean;
 }
 
-// CEO directive 2026-05-13: 전체 한국어 UI.
-const LABELS: Array<{ key: SignalLabel; display: string; tone: string }> = [
-  { key: "POSITIVE", display: "긍정", tone: "var(--pq-positive, #b8956a)" },
-  { key: "NEGATIVE", display: "부정", tone: "var(--pq-negative, #d18888)" },
-  { key: "NEUTRAL", display: "중립", tone: "rgba(245,240,232,0.55)" },
-];
-
-const WINDOWS: Array<{ key: FilterValue["window"]; display: string }> = [
-  { key: "all", display: "전체" },
-  { key: "today", display: "오늘" },
-  { key: "7d", display: "7일" },
-  { key: "30d", display: "30일" },
-];
+const LABEL_TONES: Record<SignalLabel, string> = {
+  POSITIVE: "var(--pq-positive, #b8956a)",
+  NEGATIVE: "var(--pq-negative, #d18888)",
+  NEUTRAL: "rgba(245,240,232,0.55)",
+};
 
 function chipBaseStyle(active: boolean): React.CSSProperties {
   return {
@@ -88,6 +81,21 @@ export function SignalsFilterBar({
   onRefresh,
   refreshing = false,
 }: Props) {
+  const t = useT();
+
+  const LABELS: Array<{ key: SignalLabel; display: string; tone: string }> = [
+    { key: "POSITIVE", display: t("signals.labelPositive"), tone: LABEL_TONES.POSITIVE },
+    { key: "NEGATIVE", display: t("signals.labelNegative"), tone: LABEL_TONES.NEGATIVE },
+    { key: "NEUTRAL", display: t("signals.labelNeutral"), tone: LABEL_TONES.NEUTRAL },
+  ];
+
+  const WINDOWS: Array<{ key: FilterValue["window"]; display: string }> = [
+    { key: "all", display: t("signals.filterWindowAll") },
+    { key: "today", display: t("signals.filterWindowToday") },
+    { key: "7d", display: t("signals.filterWindow7d") },
+    { key: "30d", display: t("signals.filterWindow30d") },
+  ];
+
   const toggleLabel = (label: SignalLabel) => {
     const next = new Set(value.labels);
     if (next.has(label)) next.delete(label);
@@ -195,7 +203,7 @@ export function SignalsFilterBar({
               marginBottom: 6,
             }}
           >
-            강도{" "}
+            {t("signals.filterStrength")}{" "}
             <span style={{ color: "var(--pq-ivory, #F5F0E8)", fontVariantNumeric: "tabular-nums" }}>
               {value.strengthMin.toFixed(2)} – {value.strengthMax.toFixed(2)}
             </span>
@@ -208,7 +216,7 @@ export function SignalsFilterBar({
               step={0.05}
               value={value.strengthMin}
               onChange={(e) => setStrengthMin(parseFloat(e.target.value))}
-              aria-label="최소 강도"
+              aria-label={t("signals.filterMinStrengthAriaLabel")}
               aria-valuemin={0}
               aria-valuemax={1}
               aria-valuenow={value.strengthMin}
@@ -221,7 +229,7 @@ export function SignalsFilterBar({
               step={0.05}
               value={value.strengthMax}
               onChange={(e) => setStrengthMax(parseFloat(e.target.value))}
-              aria-label="최대 강도"
+              aria-label={t("signals.filterMaxStrengthAriaLabel")}
               aria-valuemin={0}
               aria-valuemax={1}
               aria-valuenow={value.strengthMax}
@@ -243,14 +251,14 @@ export function SignalsFilterBar({
               marginBottom: 6,
             }}
           >
-            종목
+            {t("signals.filterSymbol")}
           </label>
           <input
             id={symbolInputId}
             list={dataListId}
             value={value.symbol ?? ""}
             onChange={(e) => onChange({ ...value, symbol: e.target.value || null })}
-            placeholder="삼성전자 · 카카오 · Apple …"
+            placeholder={t("signals.filterSymbolPlaceholder")}
             style={{
               width: "100%",
               background: "transparent",
@@ -303,7 +311,7 @@ export function SignalsFilterBar({
               type="button"
               onClick={onRefresh}
               disabled={refreshing}
-              aria-label="시그널 새로고침"
+              aria-label={t("signals.filterRefreshAriaLabel")}
               style={{
                 appearance: "none",
                 background: "transparent",
@@ -326,7 +334,7 @@ export function SignalsFilterBar({
                 strokeWidth={1.6}
                 className={refreshing ? "animate-spin" : ""}
               />
-              새로고침
+              {t("signals.filterRefresh")}
             </button>
           )}
         </div>

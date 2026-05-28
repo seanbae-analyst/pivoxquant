@@ -45,19 +45,8 @@ import {
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 import { PersonaEvolution } from "@/components/dashboard/persona-evolution";
 import { PersonaV2Card } from "@/components/dashboard/persona-v2-card";
+import { useT, useLocale } from "@/lib/locale";
 
-/* ── Investor labels ── */
-
-const INVESTOR_TYPE_LABELS: Record<string, string> = {
-  passive_index_hugger: "Passive index",
-  steady_accumulator: "Steady accumulator",
-  value_hunter: "Value hunter",
-  risk_managed_growth: "Risk-managed growth",
-  swing_trader: "Swing trader",
-  momentum_rider: "Momentum rider",
-  macro_rotator: "Macro rotator",
-  aggressive_scalper: "Aggressive scalper",
-};
 
 function initials(name?: string | null, email?: string | null): string {
   if (name) {
@@ -593,6 +582,8 @@ function AgentDataSubsection() {
 
 export default function ProfilePageV1() {
   const router = useRouter();
+  const t = useT();
+  const { locale } = useLocale();
   const { user, loading: authLoading, refresh } = useAuth();
   const { data: profileData, isLoading: profileLoading } = useInvestmentProfile();
   const investorType = profileData?.profile?.profile_type ?? null;
@@ -801,9 +792,9 @@ export default function ProfilePageV1() {
                 {profileLoading ? (
                   <span className="text-[rgba(245,240,232,0.3)]">Loading…</span>
                 ) : investorType ? (
-                  INVESTOR_TYPE_LABELS[investorType] ?? investorType
+                  t(`persona.names.${investorType}`)
                 ) : (
-                  <span className="text-[rgba(245,240,232,0.3)]">Not set</span>
+                  <span className="text-[rgba(245,240,232,0.3)]">{locale === "ko" ? "미설정" : "Not set"}</span>
                 )}
               </span>
             </div>

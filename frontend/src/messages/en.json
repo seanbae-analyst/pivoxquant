@@ -693,9 +693,107 @@
     "legendMore": "More"
   },
   "persona": {
-    "classifierKicker": "Persona classifier"
+    "classifierKicker": "Persona classifier",
+    "names": {
+      "passive_index_hugger": "The Passive Index Hugger",
+      "steady_accumulator": "The Steady Accumulator",
+      "value_hunter": "The Value Hunter",
+      "risk_managed_growth": "The Risk-Managed Grower",
+      "swing_trader": "The Swing Trader",
+      "momentum_rider": "The Momentum Rider",
+      "macro_rotator": "The Macro Rotator",
+      "aggressive_scalper": "The Aggressive Scalper"
+    }
   },
   "support": {
-    "contactKicker": "Contact"
+    "contactKicker": "Contact",
+    "faqHeading": "Frequently Asked Questions",
+    "categories": {
+      "service": "Service",
+      "billing": "Billing & Refunds",
+      "account": "Account & Login",
+      "tech": "Technical & Usage"
+    },
+    "faq": {
+      "whatIsService": {
+        "q": "What is PivoxQuant?",
+        "a": "PivoxQuant is an informational service providing generalized data, quant-model analysis, and AI-assisted observations for US and Korean equities. It is not investment advice and does not recommend specific securities or provide advice tailored to any individual. All information on the platform is for reference only. Investment decisions and their outcomes are entirely the responsibility of the user."
+      },
+      "signalLabels": {
+        "q": "What do signal labels (POSITIVE / NEGATIVE / NEUTRAL) mean?",
+        "a": "Signal labels are generalized summaries of observed data indicators — not directives to take any specific trading action (buy, sell, or hold). POSITIVE / NEGATIVE / NEUTRAL simply describe the direction in which the indicators were observed, presented neutrally without any recommendation."
+      },
+      "dataSource": {
+        "q": "Where does the data come from?",
+        "a": "Price, financial, and disclosure data are sourced exclusively from officially licensed providers (FMP, Korea Investment & Securities API, SEC EDGAR, KRX/DART official public data, etc.). Unofficial scraping is not used. Data may be delayed or temporarily unavailable depending on source conditions."
+      },
+      "pricing": {
+        "q": "How are the plans structured?",
+        "a": "Three plans are available: Free, Pro (₩9,900/mo), and Premium (₩19,900/mo). Features available under each plan can be reviewed on the pricing page."
+      },
+      "refund": {
+        "q": "How are billing and refunds handled?",
+        "a": "For billing or refund inquiries, please sign in and submit a request under the Billing & Refunds category in the 1:1 inquiry form. Processing timelines follow the Terms of Service and applicable law (including the E-commerce Act). Including your payment receipt with your inquiry speeds up resolution."
+      },
+      "howToLogin": {
+        "q": "How do I sign in?",
+        "a": "You can sign in with your Google or Kakao account. Separate email/password registration is not offered. If sign-in fails, try updating your browser to the latest version or disable private/incognito mode, then try again."
+      },
+      "deleteAccount": {
+        "q": "How do I delete my account?",
+        "a": "You can initiate account deletion from the Settings screen. Upon deletion, personal data is handled in accordance with the Privacy Policy and applicable law (including PIPA). If you encounter any issues, please contact us via the 1:1 inquiry form."
+      },
+      "pwa": {
+        "q": "Can I install PivoxQuant as an app? (PWA)",
+        "a": "PivoxQuant is a Progressive Web App (PWA). On mobile or desktop browsers, use the 'Add to Home Screen' or 'Install' option to install it like a native app. Once installed, it runs full-screen for a faster experience."
+      },
+      "staleData": {
+        "q": "The data or screen looks outdated.",
+        "a": "A data delay notice may appear at the top of the screen. Refreshing your browser will reload the latest data. If you have the PWA installed, try fully closing and reopening the app."
+      },
+      "contact": {
+        "q": "How can I get support?",
+        "a": "After signing in, you can ask quick questions about billing, your account, or how to use the platform via 'Ask AI Support', or submit a direct inquiry through the 1:1 inquiry form. Your submitted inquiries and responses are available in 'My Inquiries'."
+      }
+    }
+  },
+  "signals": {
+    "eyebrow": "Signals · Live",
+    "heroTitle": "The stream is <bronze>observed</bronze>,<br/>not advised — filtered to your <bronze>holdings</bronze>.",
+    "heroLoadingBody": "Aggregating today's observations — reading signals across your holdings.",
+    "heroCounts": "{positive} positive, {negative} negative, {neutral} neutral across {symbols} symbols. Not a trading directive.",
+    "heroCountsPrefix": "Today the system surfaced",
+    "streamLoadingEyebrow": "Stream · Loading",
+    "streamLoadingBody": "Reading observations…",
+    "streamEmptyEyebrow": "Stream · Empty",
+    "streamEmptyTitle": "No observations match these filters.",
+    "streamEmptyBody": "Try widening the strength range or extending the time window.",
+    "streamEyebrow": "Stream · {count} observations",
+    "streamTitle": "Today's observations.",
+    "dayObsCount": "· {count} observations",
+    "moversAriaLabel": "Top 5 observations by strength",
+    "moversEyebrow": "Top Strength · KR Priority",
+    "moversTitle": "Five notable observations today.",
+    "labelPositive": "Positive",
+    "labelNegative": "Negative",
+    "labelNeutral": "Neutral",
+    "strength": "Strength",
+    "staleTitle": "Cached observation past freshness TTL",
+    "staleLabel": "Stale",
+    "justNow": "Just now",
+    "minutesAgo": "{n}m ago",
+    "hoursAgo": "{n}h ago",
+    "daysAgo": "{n}d ago",
+    "filterStrength": "Strength",
+    "filterSymbol": "Symbol",
+    "filterSymbolPlaceholder": "Samsung · Kakao · Apple …",
+    "filterWindowAll": "All",
+    "filterWindowToday": "Today",
+    "filterWindow7d": "7d",
+    "filterWindow30d": "30d",
+    "filterRefresh": "Refresh",
+    "filterRefreshAriaLabel": "Refresh signals",
+    "filterMinStrengthAriaLabel": "Minimum strength",
+    "filterMaxStrengthAriaLabel": "Maximum strength"
   }
 }

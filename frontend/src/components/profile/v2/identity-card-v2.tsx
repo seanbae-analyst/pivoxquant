@@ -16,17 +16,7 @@
  */
 
 import * as React from "react";
-
-const INVESTOR_TYPE_LABELS: Record<string, string> = {
-  passive_index_hugger: "Passive index",
-  steady_accumulator: "Steady accumulator",
-  value_hunter: "Value hunter",
-  risk_managed_growth: "Risk-managed Growth",
-  swing_trader: "Swing trader",
-  momentum_rider: "Momentum rider",
-  macro_rotator: "Macro rotator",
-  aggressive_scalper: "Aggressive scalper",
-};
+import { useT, useLocale } from "@/lib/locale";
 
 function initials(name?: string | null, email?: string | null): string {
   if (name) {
@@ -59,12 +49,14 @@ export function IdentityCardV2({
   investorType,
   calibratedAt,
 }: IdentityCardV2Props) {
+  const t = useT();
+  const { locale } = useLocale();
   const init = initials(name, email);
   const investorLabel = investorType
-    ? INVESTOR_TYPE_LABELS[investorType] ?? investorType
-    : "Not set";
+    ? t(`persona.names.${investorType}`)
+    : locale === "ko" ? "미설정" : "Not set";
   const calibratedDisplay = calibratedAt
-    ? new Date(calibratedAt).toLocaleDateString("en-US", {
+    ? new Date(calibratedAt).toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", {
         day: "2-digit",
         month: "short",
         year: "numeric",

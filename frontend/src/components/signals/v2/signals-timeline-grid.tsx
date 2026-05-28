@@ -12,6 +12,7 @@
 import * as React from "react";
 import type { SignalEntry } from "@/lib/types";
 import { SignalCard } from "./signal-card";
+import { useT, useLocale } from "@/lib/locale";
 
 interface Props {
   entries: SignalEntry[];
@@ -34,24 +35,31 @@ function dayKey(iso: string | null | undefined): string {
   }
 }
 
-function dayHeading(iso: string | null | undefined): { weekday: string; meta: string } {
-  // CEO directive 2026-05-13: 한국어 요일/날짜 표기.
-  if (!iso) return { weekday: "이전", meta: "날짜 정보 없음" };
+/**
+ * dayHeading returns locale-aware weekday/meta strings for the day rule.
+ * locale param drives which Intl locale to use.
+ */
+function dayHeading(iso: string | null | undefined, locale: "ko" | "en"): { weekday: string; meta: string } {
+  const intlLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const fallback = locale === "ko"
+    ? { weekday: "이전", meta: "날짜 정보 없음" }
+    : { weekday: "Prior", meta: "Date unknown" };
+  if (!iso) return fallback;
   try {
     const d = new Date(iso);
-    if (isNaN(d.getTime())) return { weekday: "이전", meta: "날짜 정보 없음" };
-    const weekday = d.toLocaleDateString("ko-KR", {
+    if (isNaN(d.getTime())) return fallback;
+    const weekday = d.toLocaleDateString(intlLocale, {
       weekday: "long",
       timeZone: "Asia/Seoul",
-    }); // "월요일"
-    const meta = d.toLocaleDateString("ko-KR", {
+    });
+    const meta = d.toLocaleDateString(intlLocale, {
       month: "long",
       day: "numeric",
       timeZone: "Asia/Seoul",
-    }); // "5월 13일"
+    });
     return { weekday, meta };
   } catch {
-    return { weekday: "이전", meta: "날짜 정보 없음" };
+    return fallback;
   }
 }
 
@@ -64,6 +72,8 @@ function isKr(s: SignalEntry): boolean {
 }
 
 export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) {
+  const t = useT();
+  const { locale } = useLocale();
   const grouped = React.useMemo(() => {
     // CEO 2026-05-13: 동일 day-bucket 내에서 KR 종목 우선. 일 단위
     // 그룹핑은 시간 desc로 유지 (chronological stream 보존).
@@ -81,13 +91,13 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
     for (const s of sorted) {
       const k = dayKey(s.observed_at);
       if (k !== last) {
-        out.push({ key: k, heading: dayHeading(s.observed_at), rows: [] });
+        out.push({ key: k, heading: dayHeading(s.observed_at, locale), rows: [] });
         last = k;
       }
       out[out.length - 1].rows.push(s);
     }
     return out;
-  }, [entries]);
+  }, [entries, locale]);
 
   if (isLoading && entries.length === 0) {
     return (
@@ -101,7 +111,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             marginBottom: 8,
           }}
         >
-          스트림 · 불러오는 중
+          {t("signals.streamLoadingEyebrow")}
         </div>
         <div
           className="font-serif"
@@ -110,12 +120,11 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             color: "rgba(245,240,232,0.55)",
             padding: "48px 0",
             textAlign: "center",
-            // CEO 2026-05-20: KR prose breaks at word boundaries.
             wordBreak: "keep-all",
             overflowWrap: "anywhere",
           }}
         >
-          관측을 읽고 있습니다…
+          {t("signals.streamLoadingBody")}
         </div>
       </section>
     );
@@ -133,7 +142,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             marginBottom: 8,
           }}
         >
-          스트림 · 비어 있음
+          {t("signals.streamEmptyEyebrow")}
         </div>
         <div
           style={{
@@ -147,16 +156,14 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             className="font-display"
             style={{
               fontSize: "var(--pq-text-quote)",
-              // CEO bug "폰트 겹친다" — heading 1.05 → 1.3 for KR descenders.
               lineHeight: 1.3,
               color: "var(--pq-ivory, #F5F0E8)",
               marginBottom: 8,
-              // CEO 2026-05-20: KR prose breaks at word boundaries.
               wordBreak: "keep-all",
               overflowWrap: "anywhere",
             }}
           >
-            조건에 맞는 관측이 없습니다.
+            {t("signals.streamEmptyTitle")}
           </div>
           <div
             className="font-serif"
@@ -164,12 +171,11 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.55)",
-              // CEO 2026-05-20: KR prose breaks at word boundaries.
               wordBreak: "keep-all",
               overflowWrap: "anywhere",
             }}
           >
-            강도 범위를 넓히거나 기간을 늘려 다시 확인해 보세요.
+            {t("signals.streamEmptyBody")}
           </div>
         </div>
       </section>
@@ -187,22 +193,20 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           marginBottom: 8,
         }}
       >
-        스트림 · 관측 {entries.length}건
+        {t("signals.streamEyebrow", { count: String(entries.length) })}
       </div>
       <h2
         className="font-display"
         style={{
           fontWeight: 500,
           fontSize: "clamp(26px, 3vw, 40px)",
-          // CEO bug "폰트 겹친다": Playfair heading + KR mixed glyph
-          // 줄간격 확보.
           lineHeight: 1.2,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory, #F5F0E8)",
           margin: "0 0 22px 0",
         }}
       >
-        오늘의 관측.
+        {t("signals.streamTitle")}
       </h2>
 
       {grouped.map((group) => (
@@ -242,7 +246,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
                 color: "rgba(245,240,232,0.55)",
               }}
             >
-              {group.heading.meta} · 관측 {group.rows.length}건
+              {group.heading.meta} {t("signals.dayObsCount", { count: String(group.rows.length) })}
             </span>
             <span aria-hidden style={{ display: "block", height: 1 }} />
           </div>

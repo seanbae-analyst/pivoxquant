@@ -21,6 +21,7 @@ import * as React from "react";
 import Link from "next/link";
 import type { SignalEntry, SignalLabel } from "@/lib/types";
 import { fmtPct, normalizeTicker } from "@/lib/format";
+import { useT } from "@/lib/locale";
 
 interface Props {
   entry: SignalEntry;
@@ -40,17 +41,12 @@ function labelOf(s: SignalEntry): SignalLabel {
   return "NEUTRAL";
 }
 
-function labelTone(label: SignalLabel) {
-  // CEO directive 2026-05-13: signal 페이지 전체 한국어화. Display
-  // labels in Korean ("긍정/부정/중립") instead of English. Legal
-  // vocabulary (POSITIVE/NEGATIVE/NEUTRAL) is preserved internally;
-  // only the user-facing text is localised. Bilingual aria-label
-  // below carries both forms for screen readers + audit.
+function labelToneColors(label: SignalLabel) {
   if (label === "POSITIVE")
-    return { fg: "var(--pq-positive, #b8956a)", bg: "rgba(184,149,106,0.08)", display: "긍정" };
+    return { fg: "var(--pq-positive, #b8956a)", bg: "rgba(184,149,106,0.08)" };
   if (label === "NEGATIVE")
-    return { fg: "var(--pq-negative, #d18888)", bg: "rgba(209,136,136,0.08)", display: "부정" };
-  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)", display: "중립" };
+    return { fg: "var(--pq-negative, #d18888)", bg: "rgba(209,136,136,0.08)" };
+  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)" };
 }
 
 function fmtPrice(s: SignalEntry): string {
@@ -88,30 +84,41 @@ export function fmtKstClock(iso: string | null | undefined): string {
   }
 }
 
-// CEO directive 2026-05-13: 시간 표시도 한국어 ("3시간 전" / "방금").
-function fmtAgo(iso: string | null | undefined): string {
+/**
+ * fmtAgo returns locale-aware relative time strings using i18n keys.
+ * Caller must pass t() from useT() hook.
+ */
+function fmtAgoLocale(iso: string | null | undefined, t: (k: string, p?: Record<string,string>) => string): string {
   if (!iso) return "";
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return "";
     const diff = Date.now() - d.getTime();
-    if (diff < 0) return "방금";
+    if (diff < 0) return t("signals.justNow");
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "방금";
-    if (mins < 60) return `${mins}분 전`;
+    if (mins < 1) return t("signals.justNow");
+    if (mins < 60) return t("signals.minutesAgo", { n: String(mins) });
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}시간 전`;
+    if (hrs < 24) return t("signals.hoursAgo", { n: String(hrs) });
     const days = Math.floor(hrs / 24);
-    return `${days}일 전`;
+    return t("signals.daysAgo", { n: String(days) });
   } catch {
     return "";
   }
 }
 
 export function SignalCard({ entry, resolveName }: Props) {
+  const t = useT();
   const name = entry.name || resolveName(entry.ticker);
   const label = labelOf(entry);
-  const tone = labelTone(label);
+  const toneColors = labelToneColors(label);
+  const labelDisplay =
+    label === "POSITIVE"
+      ? t("signals.labelPositive")
+      : label === "NEGATIVE"
+        ? t("signals.labelNegative")
+        : t("signals.labelNeutral");
+  const tone = { ...toneColors, display: labelDisplay };
   const strength = strengthOf(entry);
   const pct = entry.change_pct ?? null;
   const pctTone =
@@ -152,7 +159,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <Link
             href={detailHref}
             prefetch={false}
-            aria-label={`${name} · ${entry.ticker} · ${tone.display} · 강도 ${strength.toFixed(2)} · ${fmtKstClock(observed)}`}
+            aria-label={`${name} · ${entry.ticker} · ${tone.display} · ${t("signals.strength")} ${strength.toFixed(2)} · ${fmtKstClock(observed)}`}
             // Bug #11 sweep: same hover-tooltip exposure as the mover
             // card. Single-line ellipsis is preserved (the rationale
             // sits below and any wrap would push it into the next
@@ -249,12 +256,12 @@ export function SignalCard({ entry, resolveName }: Props) {
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              강도 {strength.toFixed(2)}
+              {t("signals.strength")} {strength.toFixed(2)}
             </span>
             {entry.is_stale && (
               <span
                 className="font-mono uppercase"
-                title="신선도 TTL 경과된 캐시 관측"
+                title={t("signals.staleTitle")}
                 style={{
                   fontSize: "var(--pq-text-eyebrow-sm)",
                   letterSpacing: "0.18em",
@@ -265,7 +272,7 @@ export function SignalCard({ entry, resolveName }: Props) {
                   background: "var(--pq-ivory-line-faint)",
                 }}
               >
-                오래됨
+                {t("signals.staleLabel")}
               </span>
             )}
           </div>
@@ -324,7 +331,7 @@ export function SignalCard({ entry, resolveName }: Props) {
               marginTop: 4,
             }}
           >
-            {fmtAgo(observed)}
+            {fmtAgoLocale(observed, t)}
           </div>
         </div>
       <style jsx>{`

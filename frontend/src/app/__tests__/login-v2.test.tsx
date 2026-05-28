@@ -38,6 +38,12 @@ vi.mock("@/lib/auth", () => ({
 
 // Import AFTER mocks are registered.
 import LoginPageV2 from "@/app/(auth)/login/_v2/page-v2";
+import { LocaleProvider } from "@/lib/locale";
+
+function renderWithLocale(ui: React.ReactElement) {
+  // ko default — locale cookie not set in test env.
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
 
 describe("LoginPageV2", () => {
   beforeEach(() => {
@@ -47,28 +53,29 @@ describe("LoginPageV2", () => {
   });
 
   it("renders Continue with Google + Continue with Kakao buttons (default unauth state)", () => {
-    render(<LoginPageV2 />);
+    renderWithLocale(<LoginPageV2 />);
 
-    expect(screen.getByText(/Continue with Google/i)).toBeInTheDocument();
-    expect(screen.getByText(/Continue with Kakao/i)).toBeInTheDocument();
+    // i18n: ko default → "Google로 계속" / "Kakao로 계속"; match by provider name only.
+    expect(screen.getByText(/Google/)).toBeInTheDocument();
+    expect(screen.getByText(/Kakao/)).toBeInTheDocument();
   });
 
   it("renders the editorial hero eyebrow + signup link", () => {
-    render(<LoginPageV2 />);
+    renderWithLocale(<LoginPageV2 />);
 
     // Eyebrow is rendered by AuthHeroV2.
     expect(screen.getByText(/PivoxQuant/i)).toBeInTheDocument();
 
-    // Bottom switch link to /signup.
-    const signupLink = screen.getByRole("link", { name: /회원가입/ });
+    // Bottom switch link to /signup — i18n key "auth.login.createAccount" → "계정 만들기".
+    const signupLink = screen.getByRole("link", { name: /계정 만들기|Create account|회원가입/i });
     expect(signupLink).toHaveAttribute("href", "/signup");
   });
 
   it("renders terms + privacy footer links", () => {
-    render(<LoginPageV2 />);
+    renderWithLocale(<LoginPageV2 />);
 
-    const terms = screen.getByRole("link", { name: /이용약관/ });
-    const privacy = screen.getByRole("link", { name: /개인정보처리방침/ });
+    const terms = screen.getByRole("link", { name: /이용약관|Terms/i });
+    const privacy = screen.getByRole("link", { name: /개인정보처리방침|Privacy/i });
 
     expect(terms).toHaveAttribute("href", "/terms");
     expect(privacy).toHaveAttribute("href", "/privacy");
@@ -76,14 +83,13 @@ describe("LoginPageV2", () => {
 
   it("shows the loading skeleton state when auth is still loading", () => {
     authState.loading = true;
-    const { container } = render(<LoginPageV2 />);
+    const { container } = renderWithLocale(<LoginPageV2 />);
 
     // Loading state: no OAuth buttons rendered.
-    expect(screen.queryByText(/Continue with Google/i)).not.toBeInTheDocument();
-    // 2026-05-19 sweep: spinner → Vantablack skeleton. The container is the
-    // only visible content under the wrapper while auth resolves.
+    expect(screen.queryByText(/Google/)).not.toBeInTheDocument();
+    // 2026-05-19 sweep: spinner → Vantablack skeleton.
     expect(container.querySelector(".pq-skeleton-dark")).toBeTruthy();
-    // role=status + aria-live="polite" + aria-label is the a11y contract.
+    // role=status + aria-live="polite" is the a11y contract.
     expect(container.querySelector('[role="status"]')).toBeTruthy();
   });
 });

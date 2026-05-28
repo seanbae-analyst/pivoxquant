@@ -24,34 +24,42 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { useAuth } from "@/lib/auth";
+import { useT, useLocale } from "@/lib/locale";
 
 import { AuthHeroV2 } from "@/components/auth/v2/auth-hero-v2";
 import { OAuthButtonsV2 } from "@/components/auth/v2/oauth-buttons-v2";
 import { AuthLinkV2 } from "@/components/auth/v2/auth-link-v2";
 import { Fleuron } from "@/components/ui/editorial";
 
-// M1 fix (2026-05-09 release-prep audit): backend OAuth callback failure
-// redirects to /login?error=<reason>; SESSION_EXPIRED redirects to
-// /login?expired=1. Previously v2 silently rendered an empty form so the
-// user had no idea why they were bounced back. Same copy as v1.
-const ERROR_COPY: Record<string, string> = {
-  google_failed: "Google 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-  kakao_failed: "Kakao 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-  provisioning_failed:
-    "계정 프로비저닝 중 오류가 발생했습니다. 새로고침 후 다시 시도해 주세요.",
-  server_error:
-    "예상치 못한 서버 오류가 발생했습니다. 문제가 계속되면 support@pivoxquant.com 으로 문의 주세요.",
-  oauth_state_mismatch:
-    "보안 검증 실패: 로그인 세션이 만료되었거나 변경되었습니다. 다시 시도해 주세요.",
-};
+// Error copy is locale-aware via errorsFor() computed inside the component.
 
 export default function LoginPageV2() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const t = useT();
+  const { locale } = useLocale();
   const searchParams = useSearchParams();
   const errorParam = searchParams?.get("error") ?? null;
   const expiredParam = searchParams?.get("expired") ?? null;
   const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Locale-aware error copy.
+  const ERROR_COPY: Record<string, string> =
+    locale === "ko"
+      ? {
+          google_failed: "Google 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+          kakao_failed: "Kakao 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+          provisioning_failed: "계정 프로비저닝 중 오류가 발생했습니다. 새로고침 후 다시 시도해 주세요.",
+          server_error: "예상치 못한 서버 오류가 발생했습니다. 문제가 계속되면 support@pivoxquant.com 으로 문의 주세요.",
+          oauth_state_mismatch: "보안 검증 실패: 로그인 세션이 만료되었거나 변경되었습니다. 다시 시도해 주세요.",
+        }
+      : {
+          google_failed: "Google sign-in failed. Please try again.",
+          kakao_failed: "Kakao sign-in failed. Please try again.",
+          provisioning_failed: "Account provisioning error. Please refresh and try again.",
+          server_error: "Unexpected server error. If this continues, contact support@pivoxquant.com.",
+          oauth_state_mismatch: "Security check failed: your session may have expired. Please try again.",
+        };
 
   useEffect(() => {
     if (!loading && user) {
@@ -59,13 +67,22 @@ export default function LoginPageV2() {
     }
   }, [user, loading, router]);
 
+  const sessionExpiredMsg =
+    locale === "ko"
+      ? "세션이 만료되어 자동 로그아웃 되었습니다. 다시 로그인해 주세요."
+      : "Your session has expired. Please sign in again.";
+  const genericErrorMsg =
+    locale === "ko"
+      ? "로그인 중 오류가 발생했습니다. 다시 시도해 주세요."
+      : "An error occurred during sign-in. Please try again.";
+
   const bannerMessage =
     !bannerDismissed && expiredParam === "1"
-      ? "세션이 만료되어 자동 로그아웃 되었습니다. 다시 로그인해 주세요."
+      ? sessionExpiredMsg
       : !bannerDismissed && errorParam && errorParam in ERROR_COPY
         ? ERROR_COPY[errorParam]
         : !bannerDismissed && errorParam
-          ? "로그인 중 오류가 발생했습니다. 다시 시도해 주세요."
+          ? genericErrorMsg
           : null;
 
   if (loading) {
@@ -126,10 +143,16 @@ export default function LoginPageV2() {
         <AuthHeroV2
           eyebrow={"PivoxQuant · Entry"}
           headlineHtml={
-            'Welcome <span class="br">back</span>.<br/>The desk is <span class="br">already lit.</span>'
+            locale === "ko"
+              ? '다시 오신 것을 <span class="br">환영합니다</span>.<br/>데스크는 이미 <span class="br">준비됐습니다.</span>'
+              : 'Welcome <span class="br">back</span>.<br/>The desk is <span class="br">already lit.</span>'
           }
-          deck="Sign in to continue your weekly memo, your earnings pre-briefs, and the artifacts your CFO has been holding for you."
-          signature="Drafted by AI · Reviewed by you"
+          deck={
+            locale === "ko"
+              ? "로그인하여 주간 메모, 실적 프리브리프, AI가 준비한 아티팩트를 확인하세요."
+              : "Sign in to continue your weekly memo, your earnings pre-briefs, and the artifacts your CFO has been holding for you."
+          }
+          signature={locale === "ko" ? "AI 초안 · 당신의 검토" : "Drafted by AI · Reviewed by you"}
         />
       </div>
 
@@ -164,7 +187,7 @@ export default function LoginPageV2() {
                 textTransform: "uppercase",
               }}
             >
-              Sign in
+              {t("auth.login.title")}
             </span>
             <h2
               className="font-display"
@@ -177,7 +200,7 @@ export default function LoginPageV2() {
                 margin: 0,
               }}
             >
-              Continue with your provider
+              {locale === "ko" ? "소셜 계정으로 계속하기" : "Continue with your provider"}
             </h2>
           </div>
 
@@ -213,7 +236,7 @@ export default function LoginPageV2() {
               <button
                 type="button"
                 onClick={() => setBannerDismissed(true)}
-                aria-label="알림 닫기"
+                aria-label={locale === "ko" ? "알림 닫기" : "Dismiss"}
                 style={{
                   background: "transparent",
                   border: "none",
@@ -258,8 +281,8 @@ export default function LoginPageV2() {
           </div>
 
           <AuthLinkV2
-            prompt="계정이 없으신가요?"
-            action="회원가입"
+            prompt={t("auth.login.noAccount")}
+            action={t("auth.login.createAccount")}
             href="/signup"
           />
 
@@ -273,29 +296,30 @@ export default function LoginPageV2() {
               textAlign: "center",
             }}
           >
-            계속하면{" "}
-            <Link
-              href="/terms"
-              style={{
-                color: "rgba(245,240,232,0.65)",
-                textDecoration: "underline",
-                textUnderlineOffset: 2,
-              }}
-            >
-              이용약관
-            </Link>{" "}
-            및{" "}
-            <Link
-              href="/privacy"
-              style={{
-                color: "rgba(245,240,232,0.65)",
-                textDecoration: "underline",
-                textUnderlineOffset: 2,
-              }}
-            >
-              개인정보처리방침
-            </Link>
-            에 동의하게 됩니다.
+            {locale === "ko" ? (
+              <>
+                계속하면{" "}
+                <Link href="/terms" style={{ color: "rgba(245,240,232,0.65)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                  이용약관
+                </Link>{" "}
+                및{" "}
+                <Link href="/privacy" style={{ color: "rgba(245,240,232,0.65)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                  개인정보처리방침
+                </Link>
+                에 동의하게 됩니다.
+              </>
+            ) : (
+              <>
+                By continuing, you agree to our{" "}
+                <Link href="/terms" style={{ color: "rgba(245,240,232,0.65)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" style={{ color: "rgba(245,240,232,0.65)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                  Privacy Policy
+                </Link>.
+              </>
+            )}
           </p>
         </div>
       </div>
