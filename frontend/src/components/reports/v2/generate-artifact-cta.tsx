@@ -283,7 +283,10 @@ export function GenerateArtifactCta({ tier }: Props) {
   );
 
   return (
-    <section aria-labelledby="ask-heading" style={{ marginTop: 80 }}>
+    <section
+      aria-labelledby="ask-heading"
+      style={{ marginTop: "clamp(48px, 8vw, 80px)" }}
+    >
       <h2
         id="ask-heading"
         className="font-display"

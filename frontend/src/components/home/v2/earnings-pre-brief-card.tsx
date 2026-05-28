@@ -130,7 +130,6 @@ export function EarningsPreBriefCard() {
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.55)",
             margin: "0 0 16px 0",
-            fontStyle: "italic",
           }}
         >
           {error
@@ -227,7 +226,6 @@ export function EarningsPreBriefCard() {
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
             margin: "8px 0 0 0",
-            fontStyle: "italic",
           }}
         >
           {hasNext ? t("dashboard.earningsCard.noMoreQueued") : "—"}

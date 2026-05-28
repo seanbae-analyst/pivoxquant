@@ -44,7 +44,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
   return (
     <section
       aria-labelledby="year-heading"
-      style={{ marginTop: 80, paddingBottom: 24 }}
+      style={{ marginTop: "clamp(48px, 8vw, 80px)", paddingBottom: 24 }}
     >
       <h2
         id="year-heading"
@@ -104,7 +104,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                 <Link
                   href={`/reports?month=${m.month}`}
                   aria-label={`${monthAbbrev} ${year} — ${m.count} artifacts`}
-                  className="hover:bg-[rgba(184,149,106,0.04)]"
+                  className="hover:bg-[rgba(184,149,106,0.04)] pq-year-timeline-row"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "80px 60px 1fr 90px",
@@ -115,6 +115,15 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                     transition: "background-color 200ms ease",
                   }}
                 >
+                  <style jsx>{`
+                    @media (max-width: 640px) {
+                      :global(.pq-year-timeline-row) {
+                        grid-template-columns: 56px 48px 1fr 64px !important;
+                        gap: 10px !important;
+                        padding: 14px 16px !important;
+                      }
+                    }
+                  `}</style>
                   {/* 종목명 main pattern: month name + year */}
                   <div
                     className="font-display"

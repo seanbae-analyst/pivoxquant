@@ -88,7 +88,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         style={{
           border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
           borderRadius: 4,
-          padding: "52px 56px",
+          padding: "clamp(28px, 5vw, 52px) clamp(20px, 5vw, 56px)",
           background: "rgba(255,255,255,0.02)",
           height: 280,
         }}
@@ -104,7 +104,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         style={{
           border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
           borderRadius: 4,
-          padding: "52px 56px",
+          padding: "clamp(28px, 5vw, 52px) clamp(20px, 5vw, 56px)",
           background: "rgba(255,255,255,0.02)",
         }}
       >
@@ -161,13 +161,21 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
       className="hover:border-[var(--pq-bronze)]"
     >
       <div
+        className="pq-latest-artifact-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 280px",
           gap: 56,
         }}
-        className="lg:grid-cols-[1fr_280px] md:!grid-cols-1 md:gap-8"
       >
+        <style jsx>{`
+          @media (max-width: 767px) {
+            .pq-latest-artifact-grid {
+              grid-template-columns: 1fr !important;
+              gap: 28px !important;
+            }
+          }
+        `}</style>
         {/* LEFT */}
         <div>
           <span
@@ -310,12 +318,22 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
 
         {/* RIGHT — Mentioned */}
         <div
+          className="pq-latest-artifact-mentioned"
           style={{
             borderLeft: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
             paddingLeft: 36,
           }}
-          className="md:!border-l-0 md:!border-t md:!pl-0 md:!pt-8"
         >
+          <style jsx>{`
+            @media (max-width: 767px) {
+              .pq-latest-artifact-mentioned {
+                border-left: 0 !important;
+                border-top: 1px solid var(--pq-hairline, var(--pq-ivory-line)) !important;
+                padding-left: 0 !important;
+                padding-top: 24px !important;
+              }
+            }
+          `}</style>
           <div
             className="font-mono uppercase"
             style={{

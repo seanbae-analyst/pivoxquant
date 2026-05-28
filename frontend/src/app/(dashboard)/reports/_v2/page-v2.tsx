@@ -151,8 +151,8 @@ export default function ReportsPageV2() {
         loading={isLoading && artifacts.length === 0}
       />
 
-      {/* MAIN */}
-      <main style={{ paddingTop: 56 }}>
+      {/* MAIN — CEO 2026-05-28: 모바일에서 56px 고정 패딩 → clamp 으로 28~56px */}
+      <main style={{ paddingTop: "clamp(28px, 6vw, 56px)" }}>
         {/* BLOCK 1 — Latest artifact */}
         <section aria-labelledby="latest-heading">
           <h2

@@ -123,7 +123,6 @@ export function CompanionArchiveCard() {
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
             margin: "0 0 24px 0",
-            fontStyle: "italic",
           }}
         >
           The archive is empty. {WEEKLY_MEMO_EMPTY_LINE}

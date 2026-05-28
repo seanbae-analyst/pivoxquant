@@ -83,7 +83,6 @@ export function SignalsCard() {
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
-            fontStyle: "italic",
           }}
         >
           No signals observed in this session.

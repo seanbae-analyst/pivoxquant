@@ -49,7 +49,15 @@ export function DisclaimerBanner({
   theme = "dark",
   className,
 }: DisclaimerBannerProps) {
-  const [expanded, setExpanded] = useState(true);
+  // CEO 2026-05-28: "면책 시각적 별로" — hierarchy uplift.
+  //   • Collapsed by default (was expanded) → stately, calmer baseline
+  //   • Top hairline accent in bronze-light (dark) / slate (light)
+  //   • Playfair "Disclaimer" kicker (was 9px mono kicker, hard to read)
+  //   • Primary summary at --pq-text-body-sm (14px) instead of 11px mono
+  //   • 18px / 20px row padding (was 8px tight) — breathing room
+  //   • Expand body in serif lead with KR/EN explicit subheads
+  // Behavior preserved: alwaysExpanded prop, toggle, aria, content keys.
+  const [expanded, setExpanded] = useState(false);
   const content = DISCLAIMER_CONTENT[type];
 
   const isExpanded = alwaysExpanded || expanded;
@@ -58,10 +66,10 @@ export function DisclaimerBanner({
   return (
     <div
       className={cn(
-        "rounded-[2px] transition-all duration-300",
+        "rounded-[3px] transition-colors duration-300",
         isDark
-          ? "border border-[rgba(245,240,232,0.12)] bg-[rgba(255,255,255,0.02)]"
-          : "rounded-xl border border-slate-200 bg-slate-50",
+          ? "border border-[rgba(245,240,232,0.12)] border-t-[var(--pq-bronze-light)] border-t-[1.5px] bg-[rgba(255,255,255,0.02)]"
+          : "rounded-xl border border-slate-200 border-t-slate-400 border-t-[1.5px] bg-slate-50",
         className,
       )}
     >
@@ -69,7 +77,7 @@ export function DisclaimerBanner({
         type="button"
         onClick={() => !alwaysExpanded && setExpanded((prev) => !prev)}
         className={cn(
-          "flex w-full items-center gap-2 px-3 py-2 text-left",
+          "flex w-full items-start gap-3 px-5 py-4 text-left md:px-6 md:py-5",
           !alwaysExpanded && "cursor-pointer",
           alwaysExpanded && "cursor-default",
         )}
@@ -78,30 +86,50 @@ export function DisclaimerBanner({
       >
         <ShieldAlert
           className={cn(
-            "h-3.5 w-3.5 shrink-0",
+            "h-4 w-4 shrink-0 mt-0.5",
             isDark ? "text-[var(--pq-bronze-light)]" : "text-slate-500",
           )}
+          aria-hidden="true"
         />
-        {isDark && (
-          <span className="text-pq-kicker tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mr-1">
-            Disclaimer
-          </span>
-        )}
-        <span
-          className={cn(
-            "flex-1 text-pq-mono-sm font-semibold",
-            isDark ? "text-[rgba(245,240,232,0.85)]" : "text-slate-700",
+        <div className="flex-1 min-w-0">
+          {isDark && (
+            <div
+              className="font-display"
+              style={{
+                fontWeight: 500,
+                fontSize: "var(--pq-text-h5)",
+                lineHeight: 1.2,
+                letterSpacing: "0.01em",
+                color: "var(--pq-bronze-light)",
+                marginBottom: 6,
+              }}
+            >
+              Disclaimer
+            </div>
           )}
-        >
-          {COMMON_DISCLAIMER.ko}
-        </span>
+          <p
+            className={cn(
+              "leading-relaxed",
+              isDark
+                ? "text-[rgba(245,240,232,0.88)]"
+                : "text-slate-700 font-medium",
+            )}
+            style={{
+              fontSize: "var(--pq-text-body-sm)",
+              margin: 0,
+            }}
+          >
+            {COMMON_DISCLAIMER.ko}
+          </p>
+        </div>
         {!alwaysExpanded && (
           <ChevronDown
             className={cn(
-              "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+              "h-4 w-4 shrink-0 mt-1 transition-transform duration-200",
               isDark ? "text-[rgba(245,240,232,0.55)]" : "text-slate-500",
               isExpanded && "rotate-180",
             )}
+            aria-hidden="true"
           />
         )}
       </button>
@@ -111,33 +139,72 @@ export function DisclaimerBanner({
           id="disclaimer-panel"
           role="region"
           className={cn(
-            "px-3 pb-3 pt-2 border-t",
+            "px-5 pb-5 pt-3 border-t md:px-6 md:pb-6",
             isDark
               ? "border-[var(--pq-ivory-line)]"
               : "border-slate-200",
           )}
         >
+          {/* KR detail */}
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.22em",
+              color: isDark
+                ? "var(--pq-bronze-light)"
+                : "rgb(100,116,139)",
+              marginBottom: 8,
+            }}
+          >
+            한국어 안내
+          </div>
           <p
-            className={cn(
-              "text-pq-mono-sm leading-relaxed",
-              isDark ? "text-[rgba(245,240,232,0.75)]" : "text-slate-600",
-            )}
+            className="font-serif"
+            style={{
+              fontSize: "var(--pq-text-body-sm)",
+              lineHeight: 1.65,
+              color: isDark ? "rgba(245,240,232,0.78)" : "rgb(71,85,105)",
+              margin: 0,
+            }}
           >
             {content.ko}
           </p>
+
+          {/* EN detail */}
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontSize: "var(--pq-text-eyebrow)",
+              letterSpacing: "0.22em",
+              color: isDark
+                ? "rgba(245,240,232,0.45)"
+                : "rgb(100,116,139)",
+              marginTop: 18,
+              marginBottom: 8,
+            }}
+          >
+            English notice
+          </div>
           <p
-            className={cn(
-              "mt-1.5 text-pq-eyebrow leading-relaxed",
-              isDark ? "text-[rgba(245,240,232,0.55)]" : "text-slate-500",
-            )}
+            className="font-serif"
+            style={{
+              fontSize: "var(--pq-text-body-sm)",
+              lineHeight: 1.6,
+              color: isDark ? "rgba(245,240,232,0.62)" : "rgb(100,116,139)",
+              margin: 0,
+            }}
           >
             {content.en}
           </p>
           <p
-            className={cn(
-              "mt-1.5 text-pq-eyebrow leading-relaxed",
-              isDark ? "text-[rgba(245,240,232,0.45)]" : "text-slate-500",
-            )}
+            className="font-serif"
+            style={{
+              fontSize: "var(--pq-text-body-sm)",
+              lineHeight: 1.6,
+              color: isDark ? "rgba(245,240,232,0.55)" : "rgb(100,116,139)",
+              margin: "8px 0 0",
+            }}
           >
             {COMMON_DISCLAIMER.en}
           </p>

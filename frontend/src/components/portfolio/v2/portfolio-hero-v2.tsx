@@ -215,9 +215,10 @@ export function PortfolioHeroV2({
     <section
       className="pq-portfolio-hero-v2"
       style={{
-        padding: "80px 0 64px",
+        // CEO 2026-05-28 직격 #5: 모바일 hero padding clamp
+        padding: "clamp(40px, 8vw, 80px) 0 clamp(28px, 6vw, 64px)",
         borderBottom: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
-        marginBottom: 40,
+        marginBottom: "clamp(24px, 5vw, 40px)",
       }}
     >
       <div
@@ -245,14 +246,7 @@ export function PortfolioHeroV2({
         }}
       >
         Your{" "}
-        <span
-          style={{
-            fontStyle: "italic",
-            color: "var(--pq-bronze)",
-          }}
-        >
-          book.
-        </span>
+        <span style={{ color: "var(--pq-bronze)" }}>book.</span>
       </h1>
 
       <p
@@ -266,16 +260,12 @@ export function PortfolioHeroV2({
         }}
       >
         {positionsText} positions{" "}
-        <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
-          observed
-        </span>
+        <span style={{ color: "var(--pq-bronze)" }}>observed</span>
         {" · "}
         {navText} of capital
         {" · "}
         last{" "}
-        <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
-          reconciled
-        </span>{" "}
+        <span style={{ color: "var(--pq-bronze)" }}>reconciled</span>{" "}
         {reconcileText}. Cash buffer at {cashText}.
       </p>
 

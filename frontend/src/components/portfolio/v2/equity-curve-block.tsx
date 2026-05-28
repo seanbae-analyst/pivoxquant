@@ -207,12 +207,15 @@ export function EquityCurveBlock({
       aria-label="Equity curve"
       style={{ marginBottom: 40 }}
     >
-      {/* Section header + timeframe toggle */}
+      {/* Section header + timeframe toggle
+          CEO 2026-05-28 mobile fix: row 가 좁아지면 wrap 후 pills 가 별도 라인 */}
       <div
         style={{
           display: "flex",
           alignItems: "flex-end",
           justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
           marginBottom: 20,
         }}
       >
@@ -269,14 +272,15 @@ export function EquityCurveBlock({
         </div>
       </div>
 
-      {/* Card with KPI strip + SVG */}
+      {/* Card with KPI strip + SVG
+          CEO 2026-05-28 mobile: 24px → clamp 14~24px (좁은 화면에서 카드 padding 절약) */}
       <div
         className="pq-card"
         style={{
           background: "var(--pq-card-bg-ink, rgba(255,255,255,0.02))",
           border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           borderRadius: "var(--pq-radius-card, 4px)",
-          padding: 24,
+          padding: "clamp(14px, 3vw, 24px)",
         }}
       >
         {/* KPI strip — 3 up */}
@@ -392,6 +396,7 @@ export function EquityCurveBlock({
             <div
               role="status"
               aria-live="polite"
+              className="pq-skeleton-dark"
               style={{
                 height: SVG_H,
                 display: "flex",
@@ -399,9 +404,10 @@ export function EquityCurveBlock({
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
                 fontSize: "var(--pq-text-body)",
+                borderRadius: 4,
               }}
-            className="font-serif" >
-              Loading equity history…
+            >
+              <span className="font-serif">기록을 불러오는 중…</span>
             </div>
           ) : error ? (
             <div
@@ -409,26 +415,80 @@ export function EquityCurveBlock({
               style={{
                 height: SVG_H,
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "rgba(245,240,232,0.55)",
-                fontSize: "var(--pq-text-body)",
+                gap: 8,
+                color: "rgba(245,240,232,0.62)",
+                fontSize: "var(--pq-text-body-sm)",
+                padding: 24,
+                textAlign: "center",
               }}
-            className="font-serif" >
-              Unable to load equity history.
+              className="font-serif"
+            >
+              <span style={{ color: "var(--pq-bronze-light)" }}>
+                기록을 불러오지 못했습니다
+              </span>
+              <span style={{ opacity: 0.7 }}>
+                Unable to load equity history. Try refreshing in a moment.
+              </span>
             </div>
           ) : !geom ? (
+            // CEO 2026-05-28 직격 #2: "포트폴리오 데이터 1년치도 없는데 가짜 데이터 나와있고"
+            // — 기록이 아직 쌓이지 않은 신규 / 1y 미만 유저에게 빈 캔버스 + stately
+            // 안내. 가짜 시리즈 합성 금지 (legal: 표시광고법 §3 ① 4호).
             <div
+              role="status"
               style={{
                 height: SVG_H,
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "rgba(245,240,232,0.55)",
-                fontSize: "var(--pq-text-body)",
+                gap: 10,
+                padding: "32px 24px",
+                textAlign: "center",
+                border: "1px dashed var(--pq-ivory-line)",
+                borderRadius: 4,
               }}
-            className="font-serif" >
-              Not enough history yet.
+            >
+              <span
+                className="font-mono uppercase"
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  letterSpacing: "0.22em",
+                  color: "var(--pq-bronze-light)",
+                }}
+              >
+                Building the curve
+              </span>
+              <span
+                className="font-display"
+                style={{
+                  fontWeight: 500,
+                  fontSize: "var(--pq-text-h4)",
+                  lineHeight: 1.25,
+                  color: "var(--pq-ivory)",
+                  maxWidth: 460,
+                }}
+              >
+                기록이 쌓이는 중입니다.
+              </span>
+              <span
+                className="font-serif"
+                style={{
+                  fontSize: "var(--pq-text-body-sm)",
+                  lineHeight: 1.55,
+                  color: "rgba(245,240,232,0.62)",
+                  maxWidth: 520,
+                }}
+              >
+                포지션을 추가하면 매일 종가 기준으로 곡선이 그려집니다. 하루치
+                데이터로는 곡선을 그리지 않습니다 — 가짜 시리즈는 만들지 않습니다.
+                <br />
+                Add a position; the curve draws itself once we have two real
+                closes. We never synthesise a fake series.
+              </span>
             </div>
           ) : (
             <svg
