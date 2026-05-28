@@ -238,7 +238,7 @@ class QuantEngine:
                 buy_thresh += 5
                 composite -= 5
                 tech_sigs.append({"type": "bearish",
-                    "msg": f"VIX {vix:.0f} — extreme fear, raising buy bar",
+                    "msg": f"VIX {vix:.0f} — extreme fear, elevated entry threshold",
                     "msg_kr": f"VIX {vix:.0f} — 극도 공포, 변동성 격화 국면"})
             elif vix > 25:
                 buy_thresh += 3
@@ -1221,7 +1221,7 @@ class QuantEngine:
                 elif regime == "HIGH_VOL":
                     score -= 10
                     sigs.append({"type": "bearish",
-                                 "msg": f"Volatility: High ({vr['current_vol']:.0f}%) — reduce exposure",
+                                 "msg": f"Volatility: High ({vr['current_vol']:.0f}%) — elevated risk environment",
                                  "msg_kr": f"변동성: 고 ({vr['current_vol']:.0f}%) — 노출 축소 권고"})
                 elif regime == "CRISIS":
                     score -= 20
