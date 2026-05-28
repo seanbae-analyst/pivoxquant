@@ -174,6 +174,12 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
               grid-template-columns: 1fr !important;
               gap: 28px !important;
             }
+            .pq-latest-artifact-mentioned {
+              border-left: 0 !important;
+              border-top: 1px solid var(--pq-hairline, var(--pq-ivory-line)) !important;
+              padding-left: 0 !important;
+              padding-top: 24px !important;
+            }
           }
         `}</style>
         {/* LEFT */}
@@ -324,16 +330,6 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             paddingLeft: 36,
           }}
         >
-          <style jsx>{`
-            @media (max-width: 767px) {
-              .pq-latest-artifact-mentioned {
-                border-left: 0 !important;
-                border-top: 1px solid var(--pq-hairline, var(--pq-ivory-line)) !important;
-                padding-left: 0 !important;
-                padding-top: 24px !important;
-              }
-            }
-          `}</style>
           <div
             className="font-mono uppercase"
             style={{
