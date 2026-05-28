@@ -142,6 +142,65 @@ def test_growth_scores_unique_user_date_supports_upsert(app, make_user):
         assert rows[0][1] == 3
 
 
+def test_growth_scores_two_users_same_date_no_pk_collision(app, make_user):
+    """Two different users submitting on the SAME date must each get their own
+    row — no PRIMARY KEY collision.
+
+    Regression for the v1 self-heal DDL bug: ``growth_scores`` used a sole
+    ``PRIMARY KEY (date)`` (copied from migration 005). In multi-user prod, the
+    second user's ``submit_reflection`` on a shared date hit
+    ``UNIQUE constraint failed: growth_scores.date`` → 500. Row identity must be
+    the composite ``(user_id, date)``.
+    """
+    from extensions import db
+    import app as app_module
+
+    with app.app_context():
+        _drop_growth_tables(db)
+        app_module._do_migrations()
+
+        uid_a = make_user(email="growth-multiuser-a@test.com")["id"]
+        uid_b = make_user(email="growth-multiuser-b@test.com")["id"]
+        day = _dt.date(2026, 5, 28)
+
+        with db.engine.begin() as conn:
+            # User A submits first — same upsert shape as submit_reflection.
+            conn.execute(
+                text(
+                    "INSERT INTO growth_scores (user_id, date, reflection_score, streak_days) "
+                    "VALUES (:uid, :d, :s, :k) "
+                    "ON CONFLICT (user_id, date) DO UPDATE "
+                    "SET reflection_score = :s, streak_days = :k"
+                ),
+                {"uid": uid_a, "d": day, "s": 40, "k": 1},
+            )
+            # User B submits on the SAME date — must NOT raise a PK collision.
+            conn.execute(
+                text(
+                    "INSERT INTO growth_scores (user_id, date, reflection_score, streak_days) "
+                    "VALUES (:uid, :d, :s, :k) "
+                    "ON CONFLICT (user_id, date) DO UPDATE "
+                    "SET reflection_score = :s, streak_days = :k"
+                ),
+                {"uid": uid_b, "d": day, "s": 70, "k": 5},
+            )
+
+        with db.engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT user_id, reflection_score FROM growth_scores "
+                    "ORDER BY user_id"
+                )
+            ).fetchall()
+
+        scores = {r[0]: r[1] for r in rows}
+        assert len(rows) == 2, (
+            f"both users must keep their own row, got {rows!r}"
+        )
+        assert scores[uid_a] == 40
+        assert scores[uid_b] == 70
+
+
 def test_growth_scores_total_score_is_generated(app, make_user):
     """total_score is a GENERATED STORED column auto-computed from the inputs."""
     from extensions import db

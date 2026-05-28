@@ -917,8 +917,14 @@ def _do_migrations():
                     f"total_score INTEGER GENERATED ALWAYS AS ({total_score_expr}) STORED, "
                     "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
                     "user_id INTEGER NOT NULL, "
-                    "PRIMARY KEY (date), "
-                    "CONSTRAINT uq_growth_scores_user_date UNIQUE (user_id, date), "
+                    # Row identity is (user_id, date): every user keeps one
+                    # score row per day. A sole ``date`` PK would collide the
+                    # moment a second user submits a reflection on the same
+                    # day (UNIQUE constraint failed: growth_scores.date → 500).
+                    # The composite PK also backs ``ON CONFLICT (user_id, date)``
+                    # upserts in agent_worker/growth_routes.py, so the separate
+                    # uq_growth_scores_user_date UNIQUE is redundant and dropped.
+                    "PRIMARY KEY (user_id, date), "
                     "CONSTRAINT fk_growth_scores_user_id_users "
                     "FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE"
                     ")"
