@@ -956,6 +956,108 @@ def _do_migrations():
             # rather than taking the whole app down.
             logger.warning("Migration: could not create growth_* tables: %s", exc)
 
+    # agent_worker tables (agent_tasks / agent_decisions / agent_budget) —
+    # 자율 백그라운드 워커(agent_worker/worker.py, budget.py, escalation.py,
+    # admin_routes.py, scenarios/daily_healthcheck.py)의 백킹 스토어. 이 3개는
+    # ORM 모델 클래스가 없고(워커가 SQLAlchemy Core / raw SQL 로 직접 쿼리),
+    # 오직 alembic migration 004_add_agent_tables.py 의 raw DDL 로만 정의돼 있다.
+    # prod 는 alembic 미실행(db.create_all() + _do_migrations() self-heal 패턴)
+    # 으로 운영되므로 이 3개 테이블이 prod DB 에 물리적으로 존재한 적이 없다
+    # (to_regclass / inspector exists=False 실측, Railway Postgres). 그 결과 워커가
+    # 테이블을 칠 때마다 실패한다.
+    #
+    # 스키마는 migration 004 와 정확히 일치한다. Postgres / SQLite 양쪽에서 valid
+    # 하도록 dialect 분기:
+    #   - JSONB(PG) vs JSON(SQLite)  (payload / result)
+    #   - 생성 순서가 중요: agent_tasks 가 자기참조 FK(parent_task_id) 를 가지므로
+    #     먼저, 그 다음 agent_decisions(task_id FK ON DELETE CASCADE), agent_budget.
+    #   - Numeric(10,6)/Numeric(10,2), Boolean default false, CheckConstraint
+    #     (risk_score 0~100, confidence NULL or 0~100) 보존.
+    # 부분 인덱스(idx_agent_tasks_pending ... WHERE status='pending')는 PG/SQLite
+    # 양쪽 모두 WHERE 절을 지원한다. 멱등 (CREATE TABLE/INDEX IF NOT EXISTS).
+    if any(
+        t not in existing_tables
+        for t in ("agent_tasks", "agent_decisions", "agent_budget")
+    ):
+        json_type = "JSONB" if is_postgres else "JSON"
+        # PG: BOOLEAN literal `false`; SQLite accepts `false` too (= 0).
+        try:
+            with db.engine.begin() as conn:
+                # agent_tasks first — self-referential parent_task_id FK is
+                # defined inline within this same CREATE statement.
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS agent_tasks ("
+                    "id INTEGER PRIMARY KEY, "
+                    "type VARCHAR(50) NOT NULL, "
+                    "status VARCHAR(20) NOT NULL DEFAULT 'pending', "
+                    "assigned_to VARCHAR(50), "
+                    f"payload {json_type}, "
+                    f"result {json_type}, "
+                    "description TEXT, "
+                    "parent_task_id INTEGER, "
+                    "chain_depth INTEGER NOT NULL DEFAULT 0, "
+                    "risk_score INTEGER NOT NULL DEFAULT 0, "
+                    "escalated_at TIMESTAMP, "
+                    "approved_by VARCHAR(100), "
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "completed_at TIMESTAMP, "
+                    "retry_count INTEGER NOT NULL DEFAULT 0, "
+                    "max_retries INTEGER NOT NULL DEFAULT 3, "
+                    "CONSTRAINT ck_agent_tasks_risk_range "
+                    "CHECK (risk_score BETWEEN 0 AND 100), "
+                    "CONSTRAINT fk_agent_tasks_parent_task_id "
+                    "FOREIGN KEY (parent_task_id) REFERENCES agent_tasks (id)"
+                    ")"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_agent_tasks_pending "
+                    "ON agent_tasks (status, assigned_to) "
+                    "WHERE status = 'pending'"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_agent_tasks_chain "
+                    "ON agent_tasks (parent_task_id)"
+                ))
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS agent_decisions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "task_id INTEGER, "
+                    "agent VARCHAR(50) NOT NULL, "
+                    "decision_type VARCHAR(50) NOT NULL, "
+                    "reasoning TEXT, "
+                    "prompt_snapshot TEXT, "
+                    "response_snapshot TEXT, "
+                    "input_tokens INTEGER, "
+                    "output_tokens INTEGER, "
+                    "cost_usd NUMERIC(10, 6), "
+                    "confidence INTEGER, "
+                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                    "CONSTRAINT ck_agent_decisions_confidence_range "
+                    "CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 100), "
+                    "CONSTRAINT fk_agent_decisions_task_id "
+                    "FOREIGN KEY (task_id) REFERENCES agent_tasks (id) "
+                    "ON DELETE CASCADE"
+                    ")"
+                ))
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS idx_agent_decisions_task "
+                    "ON agent_decisions (task_id)"
+                ))
+                conn.execute(text(
+                    "CREATE TABLE IF NOT EXISTS agent_budget ("
+                    "date DATE PRIMARY KEY, "
+                    "tokens_used INTEGER NOT NULL DEFAULT 0, "
+                    "cost_usd NUMERIC(10, 6) NOT NULL DEFAULT 0, "
+                    "daily_cap_usd NUMERIC(10, 2) NOT NULL DEFAULT 5.00, "
+                    "halted BOOLEAN NOT NULL DEFAULT false"
+                    ")"
+                ))
+            logger.info("Migration: ensured agent_worker tables (agent_*)")
+        except Exception as exc:
+            # Never block boot — the background agent worker degrades rather
+            # than taking the whole app down.
+            logger.warning("Migration: could not create agent_* tables: %s", exc)
+
     # Portfolio shares / push subscriptions / signal_cache / watchlist —
     # all their current columns are in the initial create_all snapshot.
     # No post-creation additions observed. Declared here as a no-op safety
