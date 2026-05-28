@@ -255,10 +255,15 @@ function LayerDot({
       aria-label={`Layer ${layer.id} ${layer.name} — ${layer.state}`}
     >
       <span aria-hidden>{icon}</span>
-      <span className="hidden sm:inline">
+      {/* Verbose label expands at lg: (≥1024), not sm: (≥640). The dashboard
+          sidebar appears at md: (≥768) and eats 240px, so between 768–1023 the
+          content column is too narrow for four "L# · NAME" chips — the old
+          sm: breakpoint let "L4 · COMPANION" overflow the page on iPad. Below
+          lg: the compact "L#" form is shown (fits mobile full-width + iPad). */}
+      <span className="hidden lg:inline">
         L{layer.id} · {layer.name}
       </span>
-      <span className="sm:hidden">L{layer.id}</span>
+      <span className="lg:hidden">L{layer.id}</span>
     </button>
   );
 }

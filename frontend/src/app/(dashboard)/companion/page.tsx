@@ -321,11 +321,10 @@ function ComingSoon({ phase }: { phase: string }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@domain.com"
-              className="flex-1 rounded-sm bg-transparent px-4 py-3 font-serif outline-none"
+              className="flex-1 rounded-sm bg-transparent px-4 py-3 font-serif outline-none pq-input-noom"
               style={{
                 border: "0.5px solid rgba(245, 240, 232, 0.14)",
                 color: "var(--pq-ivory, #F5F0E8)",
-                fontSize: "var(--pq-text-body)",
                 caretColor: "var(--pq-bronze, #B8956A)",
               }}
             />

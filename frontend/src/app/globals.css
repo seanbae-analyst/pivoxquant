@@ -1739,13 +1739,36 @@ button:hover > .pq-ink-pill,
   .pq-ink-input {
     font-size: 16px;
   }
-  /* Systemic guard for inputs that size via text-pq-* utilities or element
-     defaults instead of .pq-ink-input (e.g. global search, pre-trade ticker).
-     `input:not(.pq-ink-input)` (0,1,1) outranks the .text-pq-* utilities so
-     they can no longer drop below 16px and trigger the iOS zoom-on-focus.
-     Desktop is untouched. Inline `style={{fontSize}}` still wins — those are
-     fixed at the call site. */
-  input:not(.pq-ink-input) {
+  /* Systemic guard for form controls that size via text-pq-* utilities or
+     element defaults instead of .pq-ink-input (e.g. global search, pre-trade
+     ticker, support-form select + textarea). `<el>:not(.pq-ink-input)` (0,1,1)
+     outranks the .text-pq-* utilities so they can no longer drop below 16px and
+     trigger the iOS zoom-on-focus. textarea + select are covered too — the
+     guard previously only matched <input>, leaving the support contact form's
+     15px select/textarea to zoom on focus. Desktop is untouched. Inline
+     `style={{fontSize}}` still wins — those are fixed at the call site. */
+  input:not(.pq-ink-input),
+  textarea:not(.pq-ink-input),
+  select:not(.pq-ink-input) {
+    font-size: 16px;
+  }
+}
+
+/* Call-site form inputs that set a compact desktop type scale via an INLINE
+   `style={{fontSize}}`. Inline font-size wins over the `input:not(.pq-ink-input)`
+   guard above, so those inputs would drop below 16px on mobile and trigger iOS
+   Safari/Chrome zoom-on-focus (the page jumps + content appears clipped).
+   Opt into one of these classes instead of an inline fontSize: the desktop
+   scale is preserved, mobile is pinned to 16px. */
+.pq-input-noom {
+  font-size: var(--pq-text-body);
+} /* 14px desktop */
+.pq-input-noom-xs {
+  font-size: var(--pq-text-eyebrow);
+} /* 10.5px desktop */
+@media (max-width: 767px) {
+  .pq-input-noom,
+  .pq-input-noom-xs {
     font-size: 16px;
   }
 }

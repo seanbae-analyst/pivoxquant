@@ -286,6 +286,7 @@ export function DataTable<R extends { id: string | number }>({
                         {isEditing ? (
                           <input
                             autoFocus
+                            className="pq-input-noom-xs"
                             aria-label={`Edit ${c.header}`}
                             defaultValue={cellRaw == null ? "" : String(cellRaw)}
                             onBlur={(e) => {
@@ -310,7 +311,6 @@ export function DataTable<R extends { id: string | number }>({
                               border: "1px solid var(--pq-bronze, #B8956A)",
                               color: "rgba(245,240,232,0.98)",
                               fontFamily: "inherit",
-                              fontSize: "var(--pq-text-eyebrow)",
                               padding: "3px 6px",
                               outline: "none",
                             }}

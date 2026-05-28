@@ -280,6 +280,7 @@ export default function OAuthFinalizePage() {
             id="oauth_finalize_birthdate"
             type="date"
             required
+            className="pq-input-noom"
             value={birthdate}
             max={new Date().toISOString().slice(0, 10)}
             onChange={(e) => {
@@ -298,7 +299,6 @@ export default function OAuthFinalizePage() {
               }`,
               borderRadius: 2,
               padding: "10px 12px",
-              fontSize: "var(--pq-text-body)",
               colorScheme: "dark",
             }}
           />

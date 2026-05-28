@@ -256,10 +256,9 @@ export function CompanionEntryV2({
                   borderRadius: 2,
                   padding: "10px 12px",
                   color: "var(--pq-ivory)",
-                  fontSize: "var(--pq-text-body)",
                   letterSpacing: "-0.01em",
                 }}
-              className="font-mono" />
+              className="font-mono pq-input-noom" />
               <button
                 type="submit"
                 disabled={submitting}

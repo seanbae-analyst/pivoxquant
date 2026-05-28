@@ -323,7 +323,11 @@ export default function StockDetailPage() {
     // Endpoint is already ticker-scoped; keep a light guard for the
     // wrapper/list shape but do NOT drop the single-item case.
     const upper = ticker.toUpperCase();
-    return list
+    // Defensive: the wrapper branch above can yield a non-array when the
+    // upstream earnings endpoint returns an error-shaped `{data|earnings: {...}}`
+    // (observed as ECONNRESET → object payload). Without this guard `.filter`
+    // throws and the whole dossier crashes to the error boundary.
+    return (Array.isArray(list) ? list : [])
       .filter((e) => {
         const t = (e.ticker || e.symbol || "").toUpperCase();
         return t === "" || t === upper;

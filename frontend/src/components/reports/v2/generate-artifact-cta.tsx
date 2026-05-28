@@ -405,7 +405,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                       ? `Ticker symbol for ${tile.displayName}`
                       : `Topic for ${tile.displayName}`
                   }
-                  className="font-mono"
+                  className="font-mono pq-input-noom-xs"
                   style={{
                     width: "100%",
                     background: "rgba(0,0,0,0.3)",
@@ -413,7 +413,6 @@ export function GenerateArtifactCta({ tier }: Props) {
                       "1px solid var(--pq-hairline, var(--pq-ivory-line))",
                     borderRadius: 2,
                     color: "var(--pq-ivory, #F5F0E8)",
-                    fontSize: "var(--pq-text-eyebrow)",
                     padding: "8px 10px",
                     marginBottom: 12,
                     letterSpacing: tile.needsTicker ? "0.14em" : "normal",

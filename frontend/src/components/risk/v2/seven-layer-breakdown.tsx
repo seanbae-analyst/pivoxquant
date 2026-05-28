@@ -120,6 +120,16 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
         ) : null}
       </div>
 
+      {/* Dense 6-column terminal grid (≈640px min). On phones the fixed
+          metric columns can't fit 375–390px, so the table scrolls
+          horizontally INSIDE this wrapper instead of pushing the whole page
+          wide (was a 651px page-level horizontal scroll on iPhone). The card
+          keeps a min-width so the column rhythm never collapses; desktop is
+          wider than the min-width so no scrollbar appears. Wrapper is outside
+          the role="table" card so the table→row ARIA relationship is intact. */}
+      <div
+        style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
+      >
       <div
         className="pq-card"
         style={{
@@ -127,6 +137,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
           border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
           borderRadius: 4,
           padding: "8px 28px",
+          minWidth: 820,
         }}
         role="table"
         aria-label="Seven-layer risk defense breakdown"
@@ -231,6 +242,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             </span>
           </div>
         ))}
+      </div>
       </div>
     </section>
   );
