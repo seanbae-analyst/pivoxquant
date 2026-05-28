@@ -79,7 +79,6 @@ export function ProfileHeroV2({
         <span
           style={{
             color: "var(--pq-bronze)",
-            fontStyle: "italic",
           }}
         >
           tape moves.
@@ -89,7 +88,6 @@ export function ProfileHeroV2({
         <span
           style={{
             color: "var(--pq-bronze)",
-            fontStyle: "italic",
           }}
         >
           · {personaVersion}.

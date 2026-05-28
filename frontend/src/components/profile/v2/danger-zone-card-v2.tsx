@@ -82,7 +82,7 @@ export function DangerZoneCardV2({
           }}
         >
           Your CFO&rsquo;s memory is{" "}
-          <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+          <span style={{ color: "var(--pq-bronze)" }}>
             yours.
           </span>
         </div>

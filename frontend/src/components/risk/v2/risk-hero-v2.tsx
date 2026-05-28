@@ -83,7 +83,6 @@ export function RiskHeroV2({
         <span
           style={{
             color: "var(--pq-bronze)",
-            fontStyle: "italic",
           }}
         >
           board.
@@ -113,7 +112,6 @@ export function RiskHeroV2({
                     key={`obs-${i}`}
                     style={{
                       color: "var(--pq-bronze)",
-                      fontStyle: "italic",
                     }}
                   >
                     observed
@@ -126,7 +124,6 @@ export function RiskHeroV2({
         <span
           style={{
             color: "var(--pq-bronze)",
-            fontStyle: "italic",
           }}
         >
           {POSTURE_KR[posture]}.

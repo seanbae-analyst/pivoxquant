@@ -134,7 +134,7 @@ export function PeerBenchmarkBlockV2({
             }}
           >
             How you read against{" "}
-            <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               your tribe.
             </span>
           </div>

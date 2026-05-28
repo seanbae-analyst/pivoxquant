@@ -141,7 +141,7 @@ export function SubscriptionCardV2({
             }}
           >
             The plan you&rsquo;re{" "}
-            <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               on.
             </span>
           </div>

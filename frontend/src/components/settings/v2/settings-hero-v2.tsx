@@ -50,12 +50,12 @@ export function SettingsHeroV2({
         }}
       >
         The dials that run{" "}
-        <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+        <span style={{ color: "var(--pq-bronze)" }}>
           your CFO room.
         </span>
         <br />
         Adjusted by you,{" "}
-        <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+        <span style={{ color: "var(--pq-bronze)" }}>
           remembered by us.
         </span>
       </h1>
@@ -88,7 +88,7 @@ export function SettingsHeroV2({
         . Settings is for the operational levers — how you sign in, which
         brokers stream, which artifacts arrive in your inbox, and how you
         exercise your{" "}
-        <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+        <span style={{ color: "var(--pq-bronze)" }}>
           data rights.
         </span>
       </p>

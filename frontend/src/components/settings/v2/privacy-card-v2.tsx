@@ -329,7 +329,7 @@ export function PrivacyCardV2({
             }}
           >
             Your data is{" "}
-            <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               yours.
             </span>
           </div>

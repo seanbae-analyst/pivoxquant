@@ -68,7 +68,7 @@ export function BrokerCardV2({
             }}
           >
             Where your{" "}
-            <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               book lives.
             </span>
           </div>
@@ -96,7 +96,7 @@ export function BrokerCardV2({
         }}
       >
         PivoxQuant operates brokers on a{" "}
-        <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+        <span style={{ color: "var(--pq-bronze)" }}>
           Bring-Your-Own-Key
         </span>{" "}
         model. We forward read-only requests under your own license — we never

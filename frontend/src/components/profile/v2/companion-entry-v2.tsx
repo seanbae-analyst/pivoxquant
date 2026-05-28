@@ -98,7 +98,7 @@ export function CompanionEntryV2({
         }}
       >
         A CFO that{" "}
-        <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+        <span style={{ color: "var(--pq-bronze)" }}>
           remembers.
         </span>
       </div>
