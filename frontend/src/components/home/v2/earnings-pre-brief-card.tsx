@@ -31,6 +31,7 @@ import * as React from "react";
 import { HomeCard } from "./home-card";
 import { useEarningsBrief } from "@/lib/hooks";
 import { displayTicker, normalizeTicker } from "@/lib/format";
+import { useT } from "@/lib/locale";
 
 export function fmtWhen(iso: string): string {
   const t = Date.parse(iso);
@@ -78,6 +79,7 @@ function issuerLabel(ticker: string, name: string | null | undefined): string {
 
 export function EarningsPreBriefCard() {
   const { data, isLoading, error } = useEarningsBrief(7);
+  const t = useT();
 
   const hasNext = Boolean(data?.next_event);
   const next = data?.next_event ?? null;
@@ -135,7 +137,7 @@ export function EarningsPreBriefCard() {
             ? "Pre-brief queue is currently unavailable."
             : isLoading
               ? "Loading pre-brief queue…"
-              : "다음 7일 내 예정된 실적 발표 없음."}
+              : t("dashboard.earningsCard.noEarningsNext7d")}
         </p>
       )}
 
@@ -228,7 +230,7 @@ export function EarningsPreBriefCard() {
             fontStyle: "italic",
           }}
         >
-          {hasNext ? "추가 예정 항목 없음." : "—"}
+          {hasNext ? t("dashboard.earningsCard.noMoreQueued") : "—"}
         </div>
       )}
     </HomeCard>

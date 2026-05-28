@@ -51,6 +51,7 @@ import {
   PORTFOLIO_TRADES,
 } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
+import { useT } from "@/lib/locale";
 
 import { PortfolioHeroV2 } from "@/components/portfolio/v2/portfolio-hero-v2";
 import { EquityCurveBlock } from "@/components/portfolio/v2/equity-curve-block";
@@ -94,6 +95,7 @@ interface ReconcileResponse {
 }
 
 export default function PortfolioPageV2() {
+  const tl = useT(); // "tl" to avoid shadowing setTimeout's `t` variable (line ~124)
   const [addOpen, setAddOpen] = React.useState(false);
   const [tradeAction, setTradeAction] = React.useState<TradeAction | null>(null);
   const [targetPosition, setTargetPosition] = React.useState<Position | null>(
@@ -287,14 +289,12 @@ export default function PortfolioPageV2() {
   const handleReconcile = React.useCallback(async () => {
     if (reconciling) return;
     if (!reconcileAvailable) {
-      toast.error("KIS broker 연결 필요");
+      toast.error(tl("dashboard.portfolio.kisConnectRequired"));
       return;
     }
     if (
       typeof window !== "undefined" &&
-      !window.confirm(
-        "KIS 계좌에서 보유 종목/평단/수량을 동기화합니다. 진행할까요?",
-      )
+      !window.confirm(tl("dashboard.portfolio.kisSyncConfirm"))
     ) {
       return;
     }
@@ -308,7 +308,11 @@ export default function PortfolioPageV2() {
       const updated = result.updated?.length ?? 0;
       const removed = result.removed?.length ?? 0;
       toast.success(
-        `${added}개 추가 · ${updated}개 업데이트 · ${removed}개 제거`,
+        tl("dashboard.portfolio.kisSyncResult", {
+          added: String(added),
+          updated: String(updated),
+          removed: String(removed),
+        }),
       );
       refreshAll();
     } catch (err) {
@@ -317,18 +321,18 @@ export default function PortfolioPageV2() {
         // from the response body is preserved as `err.message` by apiFetch.
         const code = err.message || "";
         if (err.status === 501) {
-          toast.error("동기화가 지원되지 않습니다 — KIS 계좌를 연결해 주세요.");
+          toast.error(tl("dashboard.portfolio.kisSyncNotSupported"));
         } else if (
           err.status === 404 ||
           code.includes("NO_BROKER_CONNECTION")
         ) {
-          toast.error("연결된 브로커가 없습니다.");
+          toast.error(tl("dashboard.portfolio.kisNoBroker"));
         } else if (err.status === 502 || code.includes("SYNC_FAILED")) {
-          toast.error("브로커 동기화에 실패했습니다. 잠시 후 재시도해 주세요.");
+          toast.error(tl("dashboard.portfolio.kisSyncFailed"));
         } else if (err.status === 429) {
           // apiFetch already surfaced the 429 toast — skip duplicate.
         } else {
-          toast.error(err.message || "동기화 중 오류가 발생했습니다.");
+          toast.error(err.message || tl("dashboard.portfolio.kisSyncError"));
         }
       } else {
         const msg = err instanceof Error ? err.message : "Unknown error";

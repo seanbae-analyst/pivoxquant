@@ -17,6 +17,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { displayTicker, pctColor, fmtPct } from "@/lib/format";
+import { useT } from "@/lib/locale";
 
 interface HeroPosition {
   name?: string | null;
@@ -30,12 +31,6 @@ interface Props {
   positions?: HeroPosition[];
   loading?: boolean;
   hasPositions?: boolean;
-}
-
-function greeting(hour: number): string {
-  if (hour >= 5 && hour < 12) return "좋은 아침이에요";
-  if (hour >= 12 && hour < 18) return "좋은 오후예요";
-  return "편안한 저녁이에요";
 }
 
 function topMover(positions: HeroPosition[]): HeroPosition | null {
@@ -57,8 +52,19 @@ export function DeskCheckinHero({
   loading = false,
   hasPositions = true,
 }: Props) {
+  const t = useT();
   const now = new Date();
-  const who = displayName && displayName !== "Observer" ? `${displayName}님` : "";
+
+  function greeting(hour: number): string {
+    if (hour >= 5 && hour < 12) return t("dashboard.deskCheckin.greetingMorning");
+    if (hour >= 12 && hour < 18) return t("dashboard.deskCheckin.greetingAfternoon");
+    return t("dashboard.deskCheckin.greetingEvening");
+  }
+
+  const honorific = t("dashboard.deskCheckin.honorific");
+  const who = displayName && displayName !== "Observer"
+    ? honorific ? `${displayName}${honorific}` : displayName
+    : "";
   const headline = `${greeting(now.getHours())}${who ? `, ${who}` : ""}.`;
 
   const count = positions.length;
@@ -82,7 +88,7 @@ export function DeskCheckinHero({
           marginBottom: 20,
         }}
       >
-        Your desk
+        {t("dashboard.deskCheckin.yourDesk")}
       </div>
 
       <h1
@@ -114,7 +120,7 @@ export function DeskCheckinHero({
             wordBreak: "keep-all",
           }}
         >
-          첫 종목을 장부에 올리면, 데스크가 당신의 포트폴리오를 지켜보기 시작해요.
+          {t("dashboard.deskCheckin.noPositions")}
         </p>
       ) : (
         <p
@@ -128,10 +134,10 @@ export function DeskCheckinHero({
             wordBreak: "keep-all",
           }}
         >
-          {count}개 종목을 지켜보고 있어요.
+          {t("dashboard.deskCheckin.watchingCount", { count: String(count) })}
           {mover && moverName ? (
             <>
-              {" "}오늘 가장 큰 움직임은{" "}
+              {" "}{t("dashboard.deskCheckin.topMoverPrefix")}{" "}
               <span style={{ color: "var(--pq-ivory)" }}>{moverName}</span>
               {", "}
               <span
@@ -140,7 +146,7 @@ export function DeskCheckinHero({
               >
                 {fmtPct(mover.change_pct ?? null)}
               </span>
-              {" 였어요."}
+              {t("dashboard.deskCheckin.topMoverSuffix")}
             </>
           ) : null}
         </p>
@@ -165,7 +171,7 @@ export function DeskCheckinHero({
               textDecoration: "none",
             }}
           >
-            첫 종목 추가 →
+            {t("dashboard.deskCheckin.addFirst")}
           </Link>
         ) : (
           <Link
@@ -181,7 +187,7 @@ export function DeskCheckinHero({
               textDecoration: "none",
             }}
           >
-            리스크 · 집중도 보기 →
+            {t("dashboard.deskCheckin.viewRisk")}
           </Link>
         )}
       </div>

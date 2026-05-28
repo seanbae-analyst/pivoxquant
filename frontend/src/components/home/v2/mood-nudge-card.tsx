@@ -17,37 +17,9 @@ import * as React from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { PQ_EASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/locale";
 
 type Mood = "calm" | "excited" | "anxious";
-
-const MOODS: { id: Mood; label: string }[] = [
-  { id: "calm", label: "차분" },
-  { id: "excited", label: "들뜸" },
-  { id: "anxious", label: "불안" },
-];
-
-// §101-safe reflective coaching — observation / self-check tone only. No
-// buy/sell/hold/target language. Reviewed against the legal_filter intent.
-const COACHING: Record<Mood, string> = {
-  calm: "좋아요. 차분할 때 세운 원칙이 변동성 큰 날을 버티게 해줘요. 오늘 본 데이터는 기록만 남겨둬도 충분해요.",
-  excited:
-    "기분 좋은 날일수록 한 박자 쉬어가요. 들뜸은 판단을 서두르게 만들 수 있어요 — 오늘 본 건 내일 다시 봐도 늦지 않아요.",
-  anxious:
-    "불안한 날엔 화면을 잠깐 닫는 것도 방법이에요. 시장은 내일도 열려요. 지금은 관찰만, 판단은 차분해진 뒤에 해도 돼요.",
-};
-
-// Light persona tint for the eyebrow only (tone, not advice). Falls back to a
-// neutral label for unknown/again-undeclared personas.
-const PERSONA_LABEL: Record<string, string> = {
-  risk_managed_growth: "리스크 관리형",
-  swing_trader: "스윙형",
-  momentum_rider: "모멘텀형",
-  macro_rotator: "매크로 로테이터",
-  aggressive_scalper: "적극 단타형",
-  conservative: "신중형",
-  moderate: "균형형",
-  aggressive: "적극형",
-};
 
 const STORAGE_KEY = "pq_mood_nudge_seen_on";
 
@@ -59,6 +31,33 @@ function todayKey(): string {
 export function MoodNudgeCard() {
   const { user } = useAuth();
   const reduce = useReducedMotion();
+  const t = useT();
+
+  // Mood labels resolved from i18n — keeps component logic locale-agnostic.
+  const MOODS: { id: Mood; label: string }[] = [
+    { id: "calm", label: t("dashboard.moodNudge.calm") },
+    { id: "excited", label: t("dashboard.moodNudge.excited") },
+    { id: "anxious", label: t("dashboard.moodNudge.anxious") },
+  ];
+
+  // §101-safe reflective coaching — observation / self-check tone only.
+  const COACHING: Record<Mood, string> = {
+    calm: t("dashboard.moodNudge.coachingCalm"),
+    excited: t("dashboard.moodNudge.coachingExcited"),
+    anxious: t("dashboard.moodNudge.coachingAnxious"),
+  };
+
+  // Light persona tint for the eyebrow only (tone, not advice).
+  const PERSONA_LABEL: Record<string, string> = {
+    risk_managed_growth: t("persona.names.risk_managed_growth"),
+    swing_trader: t("persona.names.swing_trader"),
+    momentum_rider: t("persona.names.momentum_rider"),
+    macro_rotator: t("persona.names.macro_rotator"),
+    aggressive_scalper: t("persona.names.aggressive_scalper"),
+    conservative: t("persona.names.passive_index_hugger"),
+    moderate: t("persona.names.steady_accumulator"),
+    aggressive: t("persona.names.value_hunter"),
+  };
   // Start hidden; reveal only after the client confirms it hasn't been seen
   // today (avoids SSR/hydration flash + respects the once-a-day gate).
   const [visible, setVisible] = React.useState(false);
@@ -99,11 +98,11 @@ export function MoodNudgeCard() {
   if (!visible) return null;
 
   const personaLabel =
-    (user?.risk_profile && PERSONA_LABEL[user.risk_profile]) || "오늘의 컨디션";
+    (user?.risk_profile && PERSONA_LABEL[user.risk_profile]) || t("dashboard.moodNudge.personaFallback");
 
   return (
     <motion.section
-      aria-label="기분 체크"
+      aria-label={t("dashboard.moodNudge.ariaLabel")}
       initial={reduce ? false : { opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
@@ -147,7 +146,7 @@ export function MoodNudgeCard() {
                 margin: 0,
               }}
             >
-              지금 기분, 어때요?
+              {t("dashboard.moodNudge.question")}
             </h2>
           ) : (
             <p
@@ -169,7 +168,7 @@ export function MoodNudgeCard() {
         <button
           type="button"
           onClick={dismiss}
-          aria-label="기분 체크 닫기"
+          aria-label={t("dashboard.moodNudge.dismissAriaLabel")}
           className="font-mono"
           style={{
             flexShrink: 0,

@@ -45,6 +45,7 @@ import { UpsellPlus } from "@/components/dashboard/upsell-plus";
 
 import { useAuth } from "@/lib/auth";
 import { usePortfolioPositions } from "@/lib/hooks";
+import { useT } from "@/lib/locale";
 import type { PortfolioResponse } from "@/lib/types";
 // Morning Brief deprecated 2026-04-29 — useMorningBrief removed.
 
@@ -62,6 +63,7 @@ import { CompanionArchiveCard } from "@/components/home/v2/companion-archive-car
 
 export default function HomePageV2() {
   const { user } = useAuth();
+  const t = useT();
   // 2026-05-24: editorial "weekly memo" hero retired → DeskCheckinHero.
   const displayName = user?.name?.split(" ")[0] || "Observer";
 
@@ -77,7 +79,7 @@ export default function HomePageV2() {
       <HomeCardStyles />
 
       {/* Visually hidden page heading for AT / heading-order. */}
-      <h1 className="sr-only">홈 — 포트폴리오 대시보드</h1>
+      <h1 className="sr-only">{t("dashboard.home.srTitle")}</h1>
 
       {/* ═══════════ TOP TICKER — live strip (full bleed) ═══════════ */}
       <div

@@ -108,6 +108,12 @@
       "startPro": "Start Pro",
       "startPremium": "Start Premium",
       "startElite": "Start Elite"
+    },
+    "cta": {
+      "signUp": "Sign up",
+      "logIn": "Log in",
+      "tryWhatIf": "Try the What-If simulator",
+      "readSampleReports": "Read sample reports"
     }
   },
   "errors": {
@@ -179,7 +185,37 @@
       "portfolioValue": "Portfolio Value",
       "totalReturn": "Total Return",
       "todayPnl": "Today's P&L",
-      "positions": "Positions"
+      "positions": "Positions",
+      "srTitle": "Home — Portfolio dashboard"
+    },
+    "deskCheckin": {
+      "yourDesk": "Your desk",
+      "greetingMorning": "Good morning",
+      "greetingAfternoon": "Good afternoon",
+      "greetingEvening": "Good evening",
+      "honorific": "",
+      "noPositions": "Add your first position to the ledger and the desk will start watching your portfolio.",
+      "watchingCount": "Watching {count} positions.",
+      "topMoverPrefix": "Today's biggest mover is",
+      "topMoverSuffix": ".",
+      "addFirst": "Add first position →",
+      "viewRisk": "Risk · Concentration →"
+    },
+    "moodNudge": {
+      "ariaLabel": "Mood check",
+      "question": "How are you feeling?",
+      "dismissAriaLabel": "Dismiss mood check",
+      "personaFallback": "Today's check-in",
+      "calm": "Calm",
+      "excited": "Energised",
+      "anxious": "Anxious",
+      "coachingCalm": "Good. Principles set in a calm state carry you through volatile days. Logging what you observed today is enough.",
+      "coachingExcited": "On good days, slow down a beat. Excitement can rush judgment — what you see today will still be there tomorrow.",
+      "coachingAnxious": "On anxious days, closing the screen is a valid move. Markets open tomorrow. Observe only for now; decide when you're calm."
+    },
+    "earningsCard": {
+      "noEarningsNext7d": "No earnings scheduled in the next 7 days.",
+      "noMoreQueued": "No more queued."
     },
     "portfolio": {
       "title": "Portfolio",
@@ -189,7 +225,14 @@
       "totalValue": "Total Value",
       "unrealizedPnl": "Unrealized P&L",
       "realizedPnl": "Realized P&L",
-      "allocation": "Allocation"
+      "allocation": "Allocation",
+      "kisConnectRequired": "KIS broker connection required",
+      "kisSyncConfirm": "Sync holdings, average cost, and quantity from your KIS account. Proceed?",
+      "kisSyncResult": "{added} added · {updated} updated · {removed} removed",
+      "kisSyncNotSupported": "Sync not supported — please connect your KIS account.",
+      "kisNoBroker": "No broker connected.",
+      "kisSyncFailed": "Broker sync failed. Please try again later.",
+      "kisSyncError": "An error occurred during sync."
     },
     "market": {
       "title": "Market",

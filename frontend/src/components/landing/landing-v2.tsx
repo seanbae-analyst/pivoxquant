@@ -46,6 +46,7 @@ import {
   ftcBizInfoUrl,
   SUPPORT_EMAIL_DEFAULT,
 } from "@/lib/business-info";
+import { useT } from "@/lib/locale";
 
 /* ───────────────────────── pricing data ───────────────────────── */
 
@@ -429,6 +430,7 @@ function Faq() {
 
 function CtaFooter() {
   const reduce = useReducedMotion();
+  const t = useT();
   return (
     <section
       className="relative overflow-hidden py-32 md:py-44 lg:py-52"
@@ -514,7 +516,7 @@ function CtaFooter() {
               letterSpacing: "0.02em",
             }}
           >
-            회원가입
+            {t("landing.cta.signUp")}
             <ArrowRight
               className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
               strokeWidth={1.75}
@@ -532,7 +534,7 @@ function CtaFooter() {
               backgroundColor: "transparent",
             }}
           >
-            로그인
+            {t("landing.cta.logIn")}
           </Link>
           <Link
             href="/simulator/what-if"
@@ -545,7 +547,7 @@ function CtaFooter() {
               backgroundColor: "transparent",
             }}
           >
-            What-If 시뮬레이터 체험
+            {t("landing.cta.tryWhatIf")}
           </Link>
           <Link
             href="/features/reports"
@@ -558,7 +560,7 @@ function CtaFooter() {
               backgroundColor: "transparent",
             }}
           >
-            Read sample reports
+            {t("landing.cta.readSampleReports")}
           </Link>
         </motion.div>
       </div>
