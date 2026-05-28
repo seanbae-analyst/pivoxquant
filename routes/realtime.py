@@ -4,7 +4,7 @@ import logging
 import time
 import threading
 from collections import defaultdict
-from flask import Blueprint, jsonify, Response, stream_with_context
+from flask import Blueprint, current_app, jsonify, Response, stream_with_context
 from flask_login import current_user
 
 from models import Position
@@ -144,6 +144,17 @@ def portfolio_stream():
     # SSE-1: same as /stream above.
     _TICKER_REFRESH_EVERY_PORTFOLIO = 60
 
+    # Capture the real application object NOW, while we are still inside the
+    # request context. The generator below runs AFTER the request context has
+    # been torn down (Flask streams the response lazily), so any SQLAlchemy
+    # access inside it — ``Position.query`` / ``db.session`` — would otherwise
+    # raise ``RuntimeError: Working outside of application context``. We push a
+    # fresh app context around just the DB-touching refresh block (prod log:
+    # the 60s refresh raised RuntimeError on every tick → swallowed by the
+    # except → refresh silently never ran, so positions added/sold mid-stream
+    # were never reflected + the log was spammed).
+    app_obj = current_app._get_current_object()
+
     def generate():
         local_tickers = list(tickers)
         last_refresh = time.monotonic()
@@ -152,14 +163,35 @@ def portfolio_stream():
                 try:
                     if time.monotonic() - last_refresh >= _TICKER_REFRESH_EVERY_PORTFOLIO:
                         try:
-                            fresh = Position.query.filter_by(user_id=user_id).all()
-                            new_tickers = [p.ticker for p in fresh]
-                            if new_tickers != local_tickers:
-                                logger.info(
-                                    "SSE portfolio stream ticker delta user=%s old=%d new=%d",
-                                    user_id, len(local_tickers), len(new_tickers),
-                                )
-                                local_tickers = new_tickers
+                            # DB access in the generator must run under an app
+                            # context (the request context is already gone).
+                            with app_obj.app_context():
+                                try:
+                                    fresh = Position.query.filter_by(user_id=user_id).all()
+                                    new_tickers = [p.ticker for p in fresh]
+                                    if new_tickers != local_tickers:
+                                        logger.info(
+                                            "SSE portfolio stream ticker delta user=%s old=%d new=%d",
+                                            user_id, len(local_tickers), len(new_tickers),
+                                        )
+                                        local_tickers = new_tickers
+                                finally:
+                                    # Wave F-2 Bug #4: release the DB session
+                                    # after every refresh so a long-lived SSE
+                                    # generator does not pin a checked-out PG
+                                    # connection across the 60s sleep window.
+                                    # With 3 SSE/user × N users, holding
+                                    # sessions across sleeps would exhaust the
+                                    # default pool. Done inside the same app
+                                    # context that opened the session.
+                                    if db is not None:
+                                        try:
+                                            db.session.remove()
+                                        except Exception:
+                                            logger.debug(
+                                                "SSE portfolio db.session.remove (refresh) failed",
+                                                exc_info=True,
+                                            )
                             # All positions sold/deleted → end the stream
                             # immediately so the generator's finally fires and
                             # the connection slot is released, rather than
@@ -168,21 +200,6 @@ def portfolio_stream():
                                 break
                         except Exception:
                             logger.exception("SSE portfolio ticker refresh failed user=%s", user_id)
-                        finally:
-                            # Wave F-2 Bug #4: release the DB session after
-                            # every refresh so a long-lived SSE generator
-                            # does not pin a checked-out PG connection
-                            # across the 60s sleep window. With 3 SSE/user
-                            # × N users, holding sessions across sleeps
-                            # would exhaust the default pool.
-                            if db is not None:
-                                try:
-                                    db.session.remove()
-                                except Exception:
-                                    logger.debug(
-                                        "SSE portfolio db.session.remove (refresh) failed",
-                                        exc_info=True,
-                                    )
                         last_refresh = time.monotonic()
 
                     batch = realtime.get_prices_batch(local_tickers) if local_tickers else {}
