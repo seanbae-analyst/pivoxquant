@@ -16,6 +16,38 @@ function getCsrfToken(): string | undefined {
   return match ? decodeURIComponent(match.split("=")[1]) : undefined;
 }
 
+/**
+ * Read the active locale from the sp_locale cookie. Falls back to "ko".
+ * Mirrors the LocaleProvider in lib/locale.tsx — kept in sync so backend
+ * error_kr / error responses can be surfaced in the user's chosen language.
+ */
+function getLocale(): "ko" | "en" {
+  if (typeof document === "undefined") return "ko";
+  const match = document.cookie
+    .split("; ")
+    .find((c) => c.startsWith("sp_locale="));
+  const value = match ? decodeURIComponent(match.split("=")[1]) : "ko";
+  return value === "en" ? "en" : "ko";
+}
+
+/**
+ * Backend `api_error(en=..., kr=...)` returns both `error` (en) and
+ * `error_kr` (ko). Pick the locale-appropriate one with safe fallbacks.
+ */
+function pickErrorMessage(
+  body: Record<string, unknown> | undefined,
+  fallback: string,
+): string {
+  if (!body) return fallback;
+  const locale = getLocale();
+  if (locale === "ko" && typeof body.error_kr === "string" && body.error_kr) {
+    return body.error_kr;
+  }
+  if (typeof body.error === "string" && body.error) return body.error;
+  if (typeof body.error_kr === "string" && body.error_kr) return body.error_kr;
+  return fallback;
+}
+
 export interface ApiFetchOptions extends RequestInit {
   /** Override the default 30s timeout. Pass 0 to disable. */
   timeoutMs?: number;
@@ -91,23 +123,26 @@ export async function apiFetch<T = unknown>(
     if (body.code === "SESSION_EXPIRED" && typeof window !== "undefined") {
       const target = hadSession() ? "/login?expired=1" : "/login";
       window.location.href = target;
-      throw new ApiError(401, body.error ?? "Session expired");
+      throw new ApiError(401, pickErrorMessage(body, "Session expired"));
     }
-    throw new ApiError(401, body.error ?? res.statusText);
+    throw new ApiError(401, pickErrorMessage(body, res.statusText));
   }
 
-  // Handle rate limiting — surface to user via toast
+  // Handle rate limiting — surface to user via toast (locale-aware).
   if (res.status === 429) {
     const retryAfter = res.headers.get("Retry-After") || "60";
     if (typeof window !== "undefined") {
-      toast.error(`너무 많은 요청. ${retryAfter}초 후 다시 시도해주세요.`);
+      const msg = getLocale() === "ko"
+        ? `너무 많은 요청. ${retryAfter}초 후 다시 시도해주세요.`
+        : `Too many requests. Please try again in ${retryAfter}s.`;
+      toast.error(msg);
     }
     throw new ApiError(429, "Rate limit exceeded");
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, body.error ?? res.statusText);
+    throw new ApiError(res.status, pickErrorMessage(body, res.statusText));
   }
   return res.json();
 }

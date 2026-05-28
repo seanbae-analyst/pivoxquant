@@ -151,5 +151,5 @@
 ## 문의
 
 - 서비스 운영자: PivoxQuant
-- 문의 이메일: seanbae1521@gmail.com
-- 개인정보 보호책임자: 배상현 (seanbae1521@gmail.com)
+- 문의 이메일: support@pivoxquant.com
+- 개인정보 보호책임자: 배상현 (support@pivoxquant.com)

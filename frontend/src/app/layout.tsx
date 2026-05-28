@@ -5,7 +5,7 @@ import {
   Source_Serif_4,
   Playfair_Display,
 } from "next/font/google";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -198,9 +198,20 @@ export default async function RootLayout({
   } catch {
     nonce = undefined;
   }
+  // SSR locale — read sp_locale cookie so <html lang> matches the user's
+  // active language (SEO + screen-reader correctness). LocaleProvider on
+  // the client honours the same cookie, so SSR and CSR stay in lockstep.
+  let htmlLang: "ko" | "en" = "ko";
+  try {
+    const cookieStore = await cookies();
+    const value = cookieStore.get("sp_locale")?.value;
+    if (value === "en") htmlLang = "en";
+  } catch {
+    htmlLang = "ko";
+  }
   return (
     <html
-      lang="ko"
+      lang={htmlLang}
       className={`${geist.variable} ${mono.variable} ${serif.variable} ${display.variable} h-full antialiased`}
     >
       <head>
