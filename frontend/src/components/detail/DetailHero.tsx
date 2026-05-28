@@ -572,9 +572,14 @@ export function DetailHero(props: DetailHeroProps) {
                   </div>
                 </div>
 
-                {/* 4-pillar mini summary — answers "왜 이 시그널인가" up top */}
+                {/* 4-pillar mini summary — answers "왜 이 시그널인가" up top.
+                    Each row has shrink-0 label + shrink-0 score, so on narrow
+                    viewports (≤360 Galaxy S) min-content exceeds half the
+                    container and pushed the whole page ~12px wide. Stack
+                    to a single column under 380px; resume 2-col from
+                    iPhone 14/15 (390) and up. */}
                 {hasPillars ? (
-                  <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2.5">
+                  <div className="mt-5 grid grid-cols-1 min-[380px]:grid-cols-2 gap-x-6 gap-y-2.5">
                     <PillarMini label={t("detail.pillar.technical")} score={signal?.tech_score} />
                     <PillarMini label={t("detail.pillar.fundamental")} score={signal?.fund_score} />
                     <PillarMini label={t("detail.pillar.sentiment")} score={signal?.news_score} />
