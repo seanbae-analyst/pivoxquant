@@ -19,12 +19,13 @@
      v3.not_claimed (list[str])
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Capital Allocation — {{ v3.doc_short | default('—') }} — {{ user_name | default('Reader') }}</title>
+  <title>{% if locale == 'en' %}Capital Allocation — {{ v3.doc_short | default('—') }} — {{ user_name | default('Reader') }}{% else %}자본 배분 — {{ v3.doc_short | default('—') }} — {{ user_name | default('Reader') }}{% endif %}</title>
   <style>{% include '_capital_allocation_v3_css.html' %}</style>
 </head>
 <body>
@@ -39,24 +40,23 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>CAPITAL ALLOCATION</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}CAPITAL ALLOCATION{% else %}자본 배분{% endif %}</strong>
         <span>{{ v3.doc | default('—') }} &middot; 01/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">What-If Calculator &middot; On-demand &middot; {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}What-If Calculator &middot; On-demand{% else %}What-If 계산기 &middot; 요청 기반{% endif %} &middot; {{ pm.persona_label(persona) }}</div>
     <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
-      자본 배분 What-If
+      {% if locale == 'en' %}Capital Allocation What-If{% else %}자본 배분 What-If{% endif %}
       {%- if v3.kpi_cash and v3.kpi_cash != '—' %}
-        — 입력 현금 <strong>{{ v3.kpi_cash }}</strong>.
+        — {% if locale == 'en' %}Input cash <strong>{{ v3.kpi_cash }}</strong>.{% else %}입력 현금 <strong>{{ v3.kpi_cash }}</strong>.{% endif %}
       {%- else %}.
       {%- endif %}
     </h1>
     <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-      본인 입력 시나리오의 과거 5년 통계 요약.
-      어떠한 배분도 권유·추천·평가하지 않으며 우열을 표시하지 않습니다.
+      {% if locale == 'en' %}A descriptive 5-year statistical summary of user-input scenarios. No allocation is recommended, ranked, or evaluated, and no superiority is implied.{% else %}본인 입력 시나리오의 과거 5년 통계 요약. 어떠한 배분도 권유·추천·평가하지 않으며 우열을 표시하지 않습니다.{% endif %}
     </p>
 
     <div style="margin-top: 14px;">
@@ -69,22 +69,22 @@
         <div class="pq-pdf-kpi">
           <div class="pq-pdf-kpi-lbl">Currency</div>
           <div class="pq-pdf-kpi-val">{{ v3.kpi_ccy | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">기준 통화</div>
+          <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Base currency{% else %}기준 통화{% endif %}</div>
         </div>
         <div class="pq-pdf-kpi">
           <div class="pq-pdf-kpi-lbl">Scenarios</div>
           <div class="pq-pdf-kpi-val">{{ v3.kpi_scenarios | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">사용자 입력</div>
+          <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}User input{% else %}사용자 입력{% endif %}</div>
         </div>
         <div class="pq-pdf-kpi">
           <div class="pq-pdf-kpi-lbl">Window</div>
-          <div class="pq-pdf-kpi-val">{{ v3.kpi_window | default('5년') }}</div>
-          <div class="pq-pdf-kpi-delta">과거 데이터 구간</div>
+          <div class="pq-pdf-kpi-val">{{ v3.kpi_window | default(('5y' if locale == 'en' else '5년')) }}</div>
+          <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Historical window{% else %}과거 데이터 구간{% endif %}</div>
         </div>
       </div>
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Scenarios &middot; 사용자 입력 시나리오</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Scenarios &middot; user input{% else %}Scenarios &middot; 사용자 입력 시나리오{% endif %}</h2>
     <div class="pq-pdf-three-col">
       {% for s in v3.scenarios | default([]) %}
       <div class="pq-pdf-card">
@@ -111,7 +111,7 @@
       </div>
       {% else %}
       <div class="pq-pdf-card" style="grid-column: 1 / -1;text-align:center;color:var(--r-ink-3);padding:20px;">
-        시나리오를 입력한 후 계산기를 실행하면 결과가 표시됩니다.
+        {% if locale == 'en' %}Results appear after you enter scenarios and run the calculator.{% else %}시나리오를 입력한 후 계산기를 실행하면 결과가 표시됩니다.{% endif %}
       </div>
       {% endfor %}
     </div>
@@ -121,7 +121,7 @@
     {% endif %}
 
     <div class="pq-pdf-page-footer">
-      <span>Capital Allocation &middot; Premium &middot; What-If only</span>
+      <span>{% if locale == 'en' %}Capital Allocation &middot; Premium &middot; What-If only{% else %}자본 배분 &middot; Premium &middot; What-If 전용{% endif %}</span>
       <span>Page 01</span>
     </div>
 
@@ -135,21 +135,21 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>CAPITAL ALLOCATION</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}CAPITAL ALLOCATION{% else %}자본 배분{% endif %}</strong>
         <span>{{ v3.doc_short | default('—') }} &middot; 02/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <h2 class="pq-pdf-section-title sm">Scenario Detail &middot; 과거 5년 통계 (descriptive)</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Scenario Detail &middot; 5y descriptive stats{% else %}Scenario Detail &middot; 과거 5년 통계 (descriptive){% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Scenario</th>
-          <th>Type</th>
+          <th>{% if locale == 'en' %}Scenario{% else %}시나리오{% endif %}</th>
+          <th>{% if locale == 'en' %}Type{% else %}유형{% endif %}</th>
           <th class="right">CAGR</th>
-          <th class="right">Volatility</th>
+          <th class="right">{% if locale == 'en' %}Volatility{% else %}변동성{% endif %}</th>
           <th class="right">Max DD</th>
           <th class="right">Sharpe</th>
         </tr>
@@ -165,18 +165,18 @@
           <td class="right">{{ s.sharpe }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">시나리오 입력 후 표시</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}Appears after scenarios are entered{% else %}시나리오 입력 후 표시{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">Action Points &middot; {{ pm.persona_label(persona) }}</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Action Points{% else %}Action Points{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
-      페르소나별 자본 배분 관찰 항목입니다. 정보 제공 목적이며 매수·매도 권유가 아닙니다.
+      {% if locale == 'en' %}A per-persona allocation observation list. Informational only — not a solicitation to buy or sell.{% else %}페르소나별 자본 배분 관찰 항목입니다. 정보 제공 목적이며 거래 권유가 아닙니다.{% endif %}
     </p>
     {{ pm.persona_action_points(persona, []) }}
 
-    <h2 class="pq-pdf-section-title sm">What This Calculator Does Not Claim</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}What This Calculator Does Not Claim{% else %}본 계산기가 주장하지 않는 것{% endif %}</h2>
     <ul style="font-size:11px;line-height:1.7;color:var(--r-ink-2);padding-left:16pt;margin-top:6pt;">
       {% for n in v3.not_claimed | default([]) %}
       <li>{{ n }}</li>
@@ -184,20 +184,20 @@
     </ul>
 
     <div class="pq-pdf-govblock">
-      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Premium</div></div>
-      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">On-demand</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div><div class="val">Premium</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div><div class="val">{% if locale == 'en' %}On-demand{% else %}요청 기반{% endif %}</div></div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}5y CAGR/Vol/MaxDD/Sharpe &middot; 사용자 시나리오 한정{% endif %}</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}{% if locale == 'en' %}5y CAGR/Vol/MaxDD/Sharpe &middot; user scenarios only{% else %}5y CAGR/Vol/MaxDD/Sharpe &middot; 사용자 시나리오 한정{% endif %}{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}FMP price history (5y){% endif %}</div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>Capital Allocation &middot; Premium &middot; Descriptive only</span>
+      <span>{% if locale == 'en' %}Capital Allocation &middot; Premium &middot; Descriptive only{% else %}자본 배분 &middot; Premium &middot; 설명용 데이터{% endif %}</span>
       <span>Page 02</span>
     </div>
 

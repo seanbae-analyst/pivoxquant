@@ -31,12 +31,13 @@
    Compliance — observation only. No buy/sell/추천/조언 directive vocab.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Dividend Income — {{ v3.as_of_label | default(month_label) }} — {{ user_name }}</title>
+  <title>{% if locale == 'en' %}Dividend Income — {{ v3.as_of_label | default(month_label) }} — {{ user_name }}{% else %}배당 수익 — {{ v3.as_of_label | default(month_label) }} — {{ user_name }}{% endif %}</title>
   <style>{% include '_dividend_income_v3_css.html' %}</style>
 </head>
 <body>
@@ -53,7 +54,7 @@
       </div>
       <div class="pq-pdf-meta">
         <strong>
-          <span class="pq-pdf-tier-chip pro">PRO</span>DIVIDEND INCOME
+          <span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}DIVIDEND INCOME{% else %}배당 수익{% endif %}
         </strong>
         <span>{{ v3.as_of_label | default(month_label | default('—')) }}</span>
       </div>
@@ -63,49 +64,49 @@
     <div class="pq-pdf-gold-rule"></div>
 
     {# ───────── 3. Eyebrow ───────── #}
-    <div class="pq-pdf-eyebrow">Dividend Income · Monthly · {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}Dividend Income · Monthly{% else %}배당 수익 · 월간{% endif %} · {{ pm.persona_label(persona) }}</div>
 
     {# ───────── 4. Cover title — data-driven (CEO 평 redesign 2026-05-01) ───────── #}
     <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
-      이번 달 배당
+      {% if locale == 'en' %}This month's dividend{% else %}이번 달 배당{% endif %}
       {%- if v3.this_month and v3.this_month.value %}
         <strong style="color:var(--r-pos);">{{ v3.this_month.value }}</strong>.
       {%- else %}
-        입금 내역.
+        {% if locale == 'en' %}receipts.{% else %}입금 내역.{% endif %}
       {%- endif %}
     </h1>
     <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-      {% if v3.payments_count %}{{ v3.payments_count }}개 종목에서 입금 · {% endif %}
+      {% if v3.payments_count %}{% if locale == 'en' %}Receipts from {{ v3.payments_count }} holdings · {% else %}{{ v3.payments_count }}개 종목에서 입금 · {% endif %}{% endif %}
       {% if v3.ytd_income and v3.ytd_income.value %}YTD <strong>{{ v3.ytd_income.value }}</strong> · {% endif %}
-      {% if v3.run_rate and v3.run_rate.value %}연 환산 <strong>{{ v3.run_rate.value }}</strong>{% endif %}
+      {% if v3.run_rate and v3.run_rate.value %}{% if locale == 'en' %}Annualised <strong>{{ v3.run_rate.value }}</strong>{% else %}연 환산 <strong>{{ v3.run_rate.value }}</strong>{% endif %}{% endif %}
     </p>
 
     {# ───────── 5. KPI row (4-up) ───────── #}
     <div style="margin-top: 24px;">
       <div class="pq-pdf-kpi-row cols-4">
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Received this Month</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Received this Month{% else %}이번 달 수령{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.this_month.value | default('—') }}</div>
           {% if v3.this_month.delta %}
           <div class="pq-pdf-kpi-delta pos">{{ v3.this_month.delta }}</div>
           {% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">YTD Income</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}YTD Income{% else %}YTD 수령{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.ytd_income.value | default('—') }}</div>
           {% if v3.ytd_income.delta %}
           <div class="pq-pdf-kpi-delta pos">{{ v3.ytd_income.delta }}</div>
           {% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Yield on Cost</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Yield on Cost{% else %}원가 대비 수익률{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.yield_on_cost.value | default('—') }}</div>
           {% if v3.yield_on_cost.delta %}
           <div class="pq-pdf-kpi-delta">{{ v3.yield_on_cost.delta }}</div>
           {% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Run Rate (12m)</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Run Rate (12m){% else %}연 환산 (12m){% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.run_rate.value | default('—') }}</div>
           {% if v3.run_rate.delta %}
           <div class="pq-pdf-kpi-delta pos">{{ v3.run_rate.delta }}</div>
@@ -115,23 +116,23 @@
     </div>
 
     {# ───────── 5b. Persona Data Focus (income lens) ───────── #}
-    <h2 class="pq-pdf-section-title sm">Data Focus &middot; {{ pm.persona_label(persona) }}</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Data Focus{% else %}데이터 포커스{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
-      페르소나별 배당 데이터 관찰 톤입니다. 정보 제공 목적이며 매수·매도 권유가 아닙니다.
+      {% if locale == 'en' %}A per-persona dividend observation lens. Informational only — not a solicitation to buy or sell.{% else %}페르소나별 배당 데이터 관찰 톤입니다. 정보 제공 목적이며 거래 권유가 아닙니다.{% endif %}
     </p>
     {{ pm.persona_data_focus(persona, v3.data_focus_metrics | default({})) }}
 
     {# ───────── 6. Payments table ───────── #}
-    <h2 class="pq-pdf-section-title sm">This Month&rsquo;s Payments &middot; 입금 내역</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}This Month&rsquo;s Payments &middot; receipts{% else %}이번 달 입금 &middot; 입금 내역{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Holding</th>
-          <th class="right">Shares</th>
-          <th class="right">Per Share</th>
-          <th class="right">Received</th>
-          <th class="right">Yield</th>
+          <th>{% if locale == 'en' %}Date{% else %}일자{% endif %}</th>
+          <th>{% if locale == 'en' %}Holding{% else %}보유 종목{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Shares{% else %}수량{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Per Share{% else %}주당{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Received{% else %}수령액{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Yield{% else %}수익률{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -148,11 +149,11 @@
           <td class="right">{{ p.yield_pct | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">이번 달 수령 내역 없음</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}No receipts this month{% else %}이번 달 수령 내역 없음{% endif %}</td></tr>
         {% endfor %}
         {% if v3.payments and v3.payments | length > 0 %}
         <tr class="total">
-          <td colspan="4">Total &middot; {{ v3.payments_count | default(v3.payments | length) }} holdings</td>
+          <td colspan="4">{% if locale == 'en' %}Total &middot; {{ v3.payments_count | default(v3.payments | length) }} holdings{% else %}합계 &middot; {{ v3.payments_count | default(v3.payments | length) }}개 종목{% endif %}</td>
           <td class="right pos">{{ v3.total_received | default('—') }}</td>
           <td class="right">{{ v3.avg_yield | default('—') }}</td>
         </tr>
@@ -164,7 +165,7 @@
     <div style="margin-top: 24px;">
       <div class="pq-pdf-two-col">
         <div>
-          <div class="pq-pdf-col-title">12-Month Income Trail</div>
+          <div class="pq-pdf-col-title">{% if locale == 'en' %}12-Month Income Trail{% else %}12개월 수령 추이{% endif %}</div>
           <div class="pq-pdf-card">
             <svg viewBox="0 0 600 160" preserveAspectRatio="none" style="width:100%;height:160px;">
               <line x1="0" y1="40" x2="600" y2="40" stroke="#ececec" stroke-width="1"/>
@@ -186,7 +187,7 @@
           </div>
         </div>
         <div>
-          <div class="pq-pdf-col-title">Top Contributors &middot; 누가 벌어다 줬나</div>
+          <div class="pq-pdf-col-title">{% if locale == 'en' %}Top Contributors &middot; who delivered{% else %}Top Contributors &middot; 누가 벌어다 줬나{% endif %}</div>
           <div class="pq-pdf-alloc-list">
             {% for c in v3.top_contributors | default([]) %}
             <div class="pq-pdf-alloc-row{% if c.flat %} flat{% endif %}">
@@ -207,34 +208,34 @@
     {# ───────── 8. Reinvestment callout ───────── #}
     <div style="margin-top: 18px;">
       <div class="pq-pdf-callout">
-        <div class="pq-pdf-callout-label">Reinvestment &middot; 다음 후보</div>
-        <p>{{ v3.reinvestment_note | default('이번 달 수령액 재배치 후보를 별도 검토. 동일 종목 추가 수량 또는 현금 보유 후 합산 가능.', true) }}</p>
+        <div class="pq-pdf-callout-label">{% if locale == 'en' %}Reinvestment &middot; next candidates{% else %}재투자 &middot; 다음 후보{% endif %}</div>
+        <p>{{ v3.reinvestment_note | default(('Review reallocation candidates for this month''s receipts separately. Options include adding shares of the same ticker or holding the cash and combining later.' if locale == 'en' else '이번 달 수령액 재배치 후보를 별도 검토. 동일 종목 추가 수량 또는 현금 보유 후 합산 가능.'), true) }}</p>
       </div>
     </div>
 
     {# ───────── 9. Governance ───────── #}
     <div class="pq-pdf-govblock">
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Tier</div>
+        <div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div>
         <div class="val">Pro</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Cadence</div>
-        <div class="val">Monthly &middot; 매월 1회</div>
+        <div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div>
+        <div class="val">{% if locale == 'en' %}Monthly &middot; once per month{% else %}월간 &middot; 매월 1회{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}Position-level dividend ledger &middot; 자기 보유 데이터 한정{% endif %}</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}{% if locale == 'en' %}Position-level dividend ledger &middot; own-holdings data only{% else %}Position-level dividend ledger &middot; 자기 보유 데이터 한정{% endif %}{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
       </div>
     </div>
 
     {# ───────── 10. Page footer ───────── #}
     <div class="pq-pdf-page-footer">
-      <span>Dividend Income &middot; Pro &middot; pivoxquant.com</span>
+      <span>{% if locale == 'en' %}Dividend Income &middot; Pro &middot; pivoxquant.com{% else %}배당 수익 &middot; Pro &middot; pivoxquant.com{% endif %}</span>
       <span>{{ v3.as_of_label | default(month_label | default('—')) }}</span>
     </div>
 

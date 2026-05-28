@@ -18,12 +18,13 @@
    Compliance — decomposition only. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Portfolio Segment — {{ v3.as_of_label | default(quarter_label) }} — {{ user_name }}</title>
+  <title>{% if locale == 'en' %}Portfolio Segment — {{ v3.as_of_label | default(quarter_label) }} — {{ user_name }}{% else %}포트폴리오 세그먼트 — {{ v3.as_of_label | default(quarter_label) }} — {{ user_name }}{% endif %}</title>
   <style>{% include '_portfolio_segment_v3_css.html' %}</style>
 </head>
 <body>
@@ -38,23 +39,23 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip pro">PRO</span>PORTFOLIO SEGMENT</strong>
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}PORTFOLIO SEGMENT{% else %}포트폴리오 세그먼트{% endif %}</strong>
         <span>{{ v3.as_of_label | default(quarter_label | default('—')) }} &middot; 01/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Portfolio Segment &middot; Monthly &middot; {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}Portfolio Segment &middot; Monthly{% else %}포트폴리오 세그먼트 &middot; 월간{% endif %} &middot; {{ pm.persona_label(persona) }}</div>
     <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
-      포트폴리오 분해
+      {% if locale == 'en' %}Portfolio decomposition{% else %}포트폴리오 분해{% endif %}
       {%- if v3.holdings and v3.holdings.value %}
-        — <strong>{{ v3.holdings.value }}</strong>개 종목.
+        — {% if locale == 'en' %}<strong>{{ v3.holdings.value }}</strong> holdings.{% else %}<strong>{{ v3.holdings.value }}</strong>개 종목.{% endif %}
       {%- else %}.
       {%- endif %}
     </h1>
     <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-      섹터 · 팩터 · 지역 분해.
+      {% if locale == 'en' %}Sector · factor · geography decomposition.{% else %}섹터 · 팩터 · 지역 분해.{% endif %}
       {% if v3.nav and v3.nav.value %} NAV <strong>{{ v3.nav.value }}</strong>{% endif %}
       {% if v3.active_share and v3.active_share.value %} · Active Share <strong>{{ v3.active_share.value }}</strong>{% endif %}
     </p>
@@ -67,12 +68,12 @@
           {% if v3.nav.delta %}<div class="pq-pdf-kpi-delta pos">{{ v3.nav.delta }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Holdings</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Holdings{% else %}보유 종목{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.holdings.value | default('—') }}</div>
           {% if v3.holdings.delta %}<div class="pq-pdf-kpi-delta">{{ v3.holdings.delta }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Avg Position</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Avg Position{% else %}평균 포지션{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.avg_pos.value | default('—') }}</div>
           {% if v3.avg_pos.delta %}<div class="pq-pdf-kpi-delta">{{ v3.avg_pos.delta }}</div>{% endif %}
         </div>
@@ -84,7 +85,7 @@
       </div>
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Sector &middot; 섹터 분해</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Sector &middot; breakdown{% else %}Sector &middot; 섹터 분해{% endif %}</h2>
     <div class="pq-pdf-alloc-list">
       {% for s in v3.sectors | default([]) %}
       <div class="pq-pdf-alloc-row{% if s.flat %} flat{% endif %}">
@@ -97,7 +98,7 @@
       {% endfor %}
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Geography &middot; 지역</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Geography &middot; region{% else %}Geography &middot; 지역{% endif %}</h2>
     <div class="pq-pdf-two-col">
       <div>
         <div class="pq-pdf-alloc-list">
@@ -113,7 +114,7 @@
         </div>
       </div>
       <div>
-        <div class="pq-pdf-col-title">FX Exposure</div>
+        <div class="pq-pdf-col-title">{% if locale == 'en' %}FX Exposure{% else %}환노출{% endif %}</div>
         <div class="pq-pdf-card">
           {% for f in v3.fx | default([]) %}
           <div class="pq-pdf-flex-between"{% if not loop.last %} style="margin-bottom: 12px;"{% endif %}>
@@ -122,13 +123,13 @@
           </div>
           {% endfor %}
           <hr class="pq-pdf-divider"/>
-          <div style="font-size: 10px; color: var(--r-ink-3);">{{ v3.fx_note | default('환노출 분포만 관찰. 헤지 의사결정은 별도 검토 항목.') }}</div>
+          <div style="font-size: 10px; color: var(--r-ink-3);">{{ v3.fx_note | default(('FX exposure distribution observation only. Hedge decisions are a separate review.' if locale == 'en' else '환노출 분포만 관찰. 헤지 의사결정은 별도 검토 항목.')) }}</div>
         </div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>Portfolio Segment &middot; Pro</span>
+      <span>{% if locale == 'en' %}Portfolio Segment &middot; Pro{% else %}포트폴리오 세그먼트 &middot; Pro{% endif %}</span>
       <span>Page 01</span>
     </div>
 
@@ -142,22 +143,22 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip pro">PRO</span>PORTFOLIO SEGMENT</strong>
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}PORTFOLIO SEGMENT{% else %}포트폴리오 세그먼트{% endif %}</strong>
         <span>{{ v3.as_of_label | default(quarter_label | default('—')) }} &middot; 02/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <h2 class="pq-pdf-section-title sm">Factor &middot; 팩터 노출</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Factor &middot; exposure{% else %}Factor &middot; 팩터 노출{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Factor</th>
-          <th class="right">Exposure</th>
+          <th>{% if locale == 'en' %}Factor{% else %}팩터{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Exposure{% else %}노출{% endif %}</th>
           <th class="right">vs S&amp;P</th>
-          <th class="right">MTD Contrib</th>
-          <th class="right">YTD Contrib</th>
+          <th class="right">{% if locale == 'en' %}MTD Contrib{% else %}MTD 기여{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}YTD Contrib{% else %}YTD 기여{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -170,21 +171,21 @@
           <td class="right {{ f.ytd_tone | default('neutral') }}">{{ f.ytd | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">팩터 데이터 부족</td></tr>
+        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}Insufficient factor data{% else %}팩터 데이터 부족{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">Top 5 + Bottom 3 Holdings</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Top 5 + Bottom 3 Holdings{% else %}Top 5 + Bottom 3 보유{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Ticker</th>
-          <th>Name</th>
-          <th class="right">Weight</th>
+          <th>{% if locale == 'en' %}Ticker{% else %}종목{% endif %}</th>
+          <th>{% if locale == 'en' %}Name{% else %}종목명{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Weight{% else %}비중{% endif %}</th>
           <th class="right">MTD</th>
           <th class="right">YTD</th>
-          <th class="right">Contrib MTD</th>
+          <th class="right">{% if locale == 'en' %}Contrib MTD{% else %}MTD 기여{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -198,39 +199,39 @@
           <td class="right {{ h.contrib_tone | default('neutral') }}">{{ h.contrib | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">보유 종목 없음</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}No holdings{% else %}보유 종목 없음{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">Data Focus &middot; {{ pm.persona_label(persona) }}</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Data Focus{% else %}데이터 포커스{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
-      페르소나별 섹터·팩터 관찰 톤입니다. 정보 제공 목적이며 매수·매도 권유가 아닙니다.
+      {% if locale == 'en' %}A per-persona sector/factor observation tone. Informational only — not a solicitation to buy or sell.{% else %}페르소나별 섹터·팩터 관찰 톤입니다. 정보 제공 목적이며 거래 권유가 아닙니다.{% endif %}
     </p>
     {{ pm.persona_data_focus(persona, v3.data_focus_metrics | default({})) }}
 
     <div style="margin-top: 18px;">
       <div class="pq-pdf-callout flat">
-        <div class="pq-pdf-callout-label">CFO&rsquo;s Note</div>
-        <p>{{ v3.cfo_note | default('포트폴리오 분해 결과를 별도 검토. 섹터 한도, 팩터 노출, 환노출 항목 점검.') }}</p>
+        <div class="pq-pdf-callout-label">{% if locale == 'en' %}CFO&rsquo;s Note{% else %}CFO 메모{% endif %}</div>
+        <p>{{ v3.cfo_note | default(('Review portfolio decomposition separately. Check sector limits, factor exposure, and FX exposure.' if locale == 'en' else '포트폴리오 분해 결과를 별도 검토. 섹터 한도, 팩터 노출, 환노출 항목 점검.')) }}</p>
       </div>
     </div>
 
     <div class="pq-pdf-govblock">
-      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Pro</div></div>
-      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Monthly</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div><div class="val">Pro</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div><div class="val">{% if locale == 'en' %}Monthly{% else %}월간{% endif %}</div></div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}Position-level decomposition &middot; 자기 보유 데이터 한정{% endif %}</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}{% if locale == 'en' %}Position-level decomposition &middot; own-holdings only{% else %}Position-level decomposition &middot; 자기 보유 데이터 한정{% endif %}{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>Portfolio Segment &middot; Pro &middot; pivoxquant.com</span>
+      <span>{% if locale == 'en' %}Portfolio Segment &middot; Pro &middot; pivoxquant.com{% else %}포트폴리오 세그먼트 &middot; Pro &middot; pivoxquant.com{% endif %}</span>
       <span>Page 02</span>
     </div>
 

@@ -10,12 +10,13 @@
    classifications.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Credit Rating — {{ v3.doc | default('—') }} — {{ user_name }}</title>
+  <title>{% if locale == 'en' %}Credit Rating — {{ v3.doc | default('—') }} — {{ user_name }}{% else %}신용 등급 — {{ v3.doc | default('—') }} — {{ user_name }}{% endif %}</title>
   <style>{% include '_credit_rating_v3_css.html' %}</style>
 </head>
 <body>
@@ -30,24 +31,24 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>CREDIT RATING</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}CREDIT RATING{% else %}신용 등급{% endif %}</strong>
         <span>{{ v3.doc | default('—') }}</span>
       </div>
     </div>
 
     <div style="margin-top: 30mm;">
-      <div class="pq-pdf-cover-eyebrow">Credit Rating Review &middot; Quarterly</div>
+      <div class="pq-pdf-cover-eyebrow">{% if locale == 'en' %}Credit Rating Review &middot; Quarterly{% else %}신용 등급 리뷰 &middot; 분기{% endif %}</div>
       <h1 style="font-family:var(--font-serif);font-size:34px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
-        분기 신용 점검
+        {% if locale == 'en' %}Quarterly credit review{% else %}분기 신용 점검{% endif %}
         {%- if v3.on_watch and v3.on_watch != '—' and v3.on_watch != '0' %}
-          — Watch <strong style="color:var(--r-warn);">{{ v3.on_watch }}</strong>건.
+          — {% if locale == 'en' %}Watch <strong style="color:var(--r-warn);">{{ v3.on_watch }}</strong>.{% else %}Watch <strong style="color:var(--r-warn);">{{ v3.on_watch }}</strong>건.{% endif %}
         {%- elif v3.reviewed and v3.reviewed != '—' %}
-          — <strong>{{ v3.reviewed }}</strong>개 종목 검토.
+          — {% if locale == 'en' %}<strong>{{ v3.reviewed }}</strong> tickers reviewed.{% else %}<strong>{{ v3.reviewed }}</strong>개 종목 검토.{% endif %}
         {%- else %}.
         {%- endif %}
       </h1>
       <p style="font-size:14px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-        보유 종목 공시 등급 + CDS 스프레드 관찰.
+        {% if locale == 'en' %}Holding-ticker agency ratings + CDS spread observations.{% else %}보유 종목 공시 등급 + CDS 스프레드 관찰.{% endif %}
         {% if v3.upgrades and v3.upgrades != '—' %} Upgrade <strong>{{ v3.upgrades }}</strong>{% endif %}
         {% if v3.downgrades and v3.downgrades != '—' %} · Downgrade <strong>{{ v3.downgrades }}</strong>{% endif %}
       </p>
@@ -55,7 +56,7 @@
 
     <div style="margin-top: auto; padding-top: 30mm;">
       <div class="pq-pdf-cover-meta-grid">
-        <div class="cell"><div class="lbl">종목 점검</div><div class="val">{{ v3.reviewed | default('—') }}</div></div>
+        <div class="cell"><div class="lbl">{% if locale == 'en' %}Reviewed{% else %}종목 점검{% endif %}</div><div class="val">{{ v3.reviewed | default('—') }}</div></div>
         <div class="cell"><div class="lbl">Upgrades</div><div class="val">{{ v3.upgrades | default('—') }}</div></div>
         <div class="cell"><div class="lbl">Downgrades</div><div class="val">{{ v3.downgrades | default('—') }}</div></div>
         <div class="cell"><div class="lbl">On Watch</div><div class="val">{{ v3.on_watch | default('—') }}</div></div>
@@ -74,7 +75,7 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>CREDIT RATING</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}CREDIT RATING{% else %}신용 등급{% endif %}</strong>
         <span>{{ v3.doc_short | default('— · 02/03') }}</span>
       </div>
     </div>
@@ -85,7 +86,7 @@
     <blockquote class="pq-pdf-pullquote">{{ v3.pullquote }}</blockquote>
     {% endif %}
 
-    <h2 class="pq-pdf-section-title sm">Rating Distribution &middot; 등급 분포 (NAV 기준)</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Rating Distribution &middot; by NAV{% else %}등급 분포 &middot; NAV 기준{% endif %}</h2>
     <div class="pq-pdf-alloc-list">
       {% for d in v3.distribution | default([]) %}
       <div class="pq-pdf-alloc-row{% if d.flat %} flat{% endif %}">
@@ -96,20 +97,20 @@
         <span class="pq-pdf-alloc-pct{% if d.warn %} neg{% endif %}">{{ d.pct_display | default(d.pct ~ '%') }}</span>
       </div>
       {% else %}
-      <div style="color:var(--r-ink-3);padding:18px 0;text-align:center">등급 분포 데이터 누적 후 표시</div>
+      <div style="color:var(--r-ink-3);padding:18px 0;text-align:center">{% if locale == 'en' %}Distribution appears once data accrues{% else %}등급 분포 데이터 누적 후 표시{% endif %}</div>
       {% endfor %}
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Quarter Changes &middot; 분기 등급 변경</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Quarter Changes &middot; rating changes{% else %}분기 변경 &middot; 분기 등급 변경{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Ticker</th>
-          <th>Agency</th>
-          <th class="right">Prev</th>
-          <th class="right">Now</th>
-          <th class="right">Outlook</th>
-          <th class="right">Action</th>
+          <th>{% if locale == 'en' %}Ticker{% else %}종목{% endif %}</th>
+          <th>{% if locale == 'en' %}Agency{% else %}평가사{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Prev{% else %}이전{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Now{% else %}현재{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Outlook{% else %}전망{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Action{% else %}조치{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -123,7 +124,7 @@
           <td class="right {{ c.action_tone | default('neutral') }}">{{ c.action | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">이번 분기 등급 변경 없음 또는 데이터 누적 후 표시</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}No rating changes this quarter, or appears after data accrues{% else %}이번 분기 등급 변경 없음 또는 데이터 누적 후 표시{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -143,14 +144,14 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>CREDIT RATING</strong>
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>{% if locale == 'en' %}CREDIT RATING{% else %}신용 등급{% endif %}</strong>
         <span>{{ v3.doc_short | default('— · 03/03') }}</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <h2 class="pq-pdf-section-title sm">Watch List &middot; 신용 관찰 대상</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Watch List &middot; credit observation list{% else %}Watch List &middot; 신용 관찰 대상{% endif %}</h2>
 
     {% if v3.watch_primary and v3.watch_primary.ticker %}
     <div class="pq-pdf-card">
@@ -162,7 +163,7 @@
       <p style="font-size:13px;line-height:1.65;color:var(--r-ink-2);margin-top:8px">{{ v3.watch_primary.body | default('—') }}</p>
     </div>
     {% else %}
-    <div class="pq-pdf-card" style="text-align:center;color:var(--r-ink-3);padding:30px 0">분기 Watch List 없음</div>
+    <div class="pq-pdf-card" style="text-align:center;color:var(--r-ink-3);padding:30px 0">{% if locale == 'en' %}No quarter Watch List{% else %}분기 Watch List 없음{% endif %}</div>
     {% endif %}
 
     {% for w in v3.watch_secondary | default([]) %}
@@ -172,15 +173,15 @@
     </div>
     {% endfor %}
 
-    <h2 class="pq-pdf-section-title sm">CDS Spread Watch &middot; 채권 시장 선행 신호</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}CDS Spread Watch &middot; bond-market leading signals{% else %}CDS 스프레드 관찰 &middot; 채권 시장 선행 신호{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Ticker</th>
+          <th>{% if locale == 'en' %}Ticker{% else %}종목{% endif %}</th>
           <th class="right">5Y CDS</th>
           <th class="right">Δ 6m</th>
           <th class="right">vs Implied</th>
-          <th class="right">Signal</th>
+          <th class="right">{% if locale == 'en' %}Signal{% else %}신호{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -193,39 +194,39 @@
           <td class="right {{ c.signal_tone | default('neutral') }}">{{ c.signal | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">CDS 데이터 미연동 &middot; 별도 sprint</td></tr>
+        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}CDS data not yet wired &middot; separate sprint{% else %}CDS 데이터 미연동 &middot; 별도 sprint{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">Risk Lens &middot; {{ pm.persona_label(persona) }}</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Risk Lens{% else %}Risk Lens{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
-      페르소나별 신용 리스크 관찰 톤입니다. 매수·매도 권유가 아니며 정보 제공 목적.
+      {% if locale == 'en' %}A per-persona credit risk observation tone. Informational only — not a solicitation to buy or sell.{% else %}페르소나별 신용 리스크 관찰 톤입니다. 거래 권유가 아니며 정보 제공 목적.{% endif %}
     </p>
     {{ pm.persona_risk_block(persona, v3.risk_kpi | default({})) }}
 
     <div style="margin-top: 18px;">
       <div class="pq-pdf-callout">
-        <div class="pq-pdf-callout-label">CFO&rsquo;s Note</div>
-        <p>{{ v3.cfo_note | default('분기 신용 관찰 결과를 별도 검토. 등급 변동 + CDS 신호는 채권 시장의 선행 지표.', true) }}</p>
+        <div class="pq-pdf-callout-label">{% if locale == 'en' %}CFO&rsquo;s Note{% else %}CFO 메모{% endif %}</div>
+        <p>{{ v3.cfo_note | default(('Review the quarter credit observation separately. Rating changes + CDS signals are leading indicators from the bond market.' if locale == 'en' else '분기 신용 관찰 결과를 별도 검토. 등급 변동 + CDS 신호는 채권 시장의 선행 지표.'), true) }}</p>
       </div>
     </div>
 
     <div class="pq-pdf-govblock">
-      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Premium</div></div>
-      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Quarterly</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div><div class="val">Premium</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div><div class="val">{% if locale == 'en' %}Quarterly{% else %}분기{% endif %}</div></div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}Self-rating composite &middot; FMP 재무 + 공시 등급{% endif %}</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}{% if locale == 'en' %}Self-rating composite &middot; FMP fundamentals + agency disclosures{% else %}Self-rating composite &middot; FMP 재무 + 공시 등급{% endif %}{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>Credit Rating &middot; Premium &middot; Self-rating not agency rating</span>
+      <span>{% if locale == 'en' %}Credit Rating &middot; Premium &middot; Self-rating, not an agency rating{% else %}신용 등급 &middot; Premium &middot; 자체 평가, 평가사 등급 아님{% endif %}</span>
       <span>Page 03</span>
     </div>
 

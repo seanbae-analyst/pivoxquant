@@ -26,12 +26,13 @@
    Compliance — descriptive cost reporting. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Burn Rate — {{ v3.month_label | default(period_label) }} — {{ user_name }}</title>
+  <title>{% if locale == 'en' %}Burn Rate — {{ v3.month_label | default(period_label) }} — {{ user_name }}{% else %}거래 비용 — {{ v3.month_label | default(period_label) }} — {{ user_name }}{% endif %}</title>
   <style>{% include '_burn_rate_v3_css.html' %}</style>
 </head>
 <body>
@@ -44,48 +45,48 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip pro">PRO</span>BURN RATE</strong>
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}BURN RATE{% else %}거래 비용{% endif %}</strong>
         <span>{{ v3.month_label | default(period_label | default('—')) }}</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Burn Rate &middot; Monthly Cost Audit &middot; {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}Burn Rate &middot; Monthly Cost Audit{% else %}거래 비용 &middot; 월간 비용 감사{% endif %} &middot; {{ pm.persona_label(persona) }}</div>
     <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
-      이번 달 비용
+      {% if locale == 'en' %}This month's cost{% else %}이번 달 비용{% endif %}
       {%- if v3.this_month and v3.this_month.value %}
         <strong style="color:var(--r-neg);">{{ v3.this_month.value }}</strong>.
       {%- else %}
-        합계.
+        {% if locale == 'en' %}total.{% else %}합계.{% endif %}
       {%- endif %}
     </h1>
     <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-      수수료 · 세금 · 환전료 · 슬리피지 합계.
-      {% if v3.trades and v3.trades.value %} 거래 <strong>{{ v3.trades.value }}</strong>건{% endif %}
-      {% if v3.burn_pct and v3.burn_pct.value %} · NAV 대비 <strong>{{ v3.burn_pct.value }}</strong>{% endif %}
+      {% if locale == 'en' %}Commission · taxes · FX spread · slippage combined.{% else %}수수료 · 세금 · 환전료 · 슬리피지 합계.{% endif %}
+      {% if v3.trades and v3.trades.value %} {% if locale == 'en' %}<strong>{{ v3.trades.value }}</strong> trades{% else %}거래 <strong>{{ v3.trades.value }}</strong>건{% endif %}{% endif %}
+      {% if v3.burn_pct and v3.burn_pct.value %} · {% if locale == 'en' %}<strong>{{ v3.burn_pct.value }}</strong> of NAV{% else %}NAV 대비 <strong>{{ v3.burn_pct.value }}</strong>{% endif %}{% endif %}
     </p>
 
     {# ───────── KPI 4-up ───────── #}
     <div style="margin-top: 24px;">
       <div class="pq-pdf-kpi-row cols-4">
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">이번 달 Burn</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}This Month Burn{% else %}이번 달 Burn{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.this_month.value | default('—') }}</div>
           {% if v3.this_month.detail %}<div class="pq-pdf-kpi-delta neg">{{ v3.this_month.detail }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">거래 횟수</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Trade Count{% else %}거래 횟수{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.trades.value | default('—') }}</div>
           {% if v3.trades.detail %}<div class="pq-pdf-kpi-delta">{{ v3.trades.detail }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">종합 Burn % NAV</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Aggregate Burn % NAV{% else %}종합 Burn % NAV{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.burn_pct.value | default('—') }}</div>
           {% if v3.burn_pct.detail %}<div class="pq-pdf-kpi-delta">{{ v3.burn_pct.detail }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">거래당 평균</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Avg / Trade{% else %}거래당 평균{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.avg_cost.value | default('—') }}</div>
           {% if v3.avg_cost.detail %}<div class="pq-pdf-kpi-delta">{{ v3.avg_cost.detail }}</div>{% endif %}
         </div>
@@ -93,14 +94,14 @@
     </div>
 
     {# ───────── Cost Breakdown table ───────── #}
-    <h2 class="pq-pdf-section-title sm">Cost Breakdown &middot; 항목별 비용</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Cost Breakdown &middot; per category{% else %}비용 분해 &middot; 항목별 비용{% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Category</th>
-          <th class="right">Amount</th>
-          <th class="right">% of Burn</th>
-          <th>Note</th>
+          <th>{% if locale == 'en' %}Category{% else %}항목{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Amount{% else %}금액{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}% of Burn{% else %}Burn 비중{% endif %}</th>
+          <th>{% if locale == 'en' %}Note{% else %}비고{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -112,14 +113,14 @@
           <td style="color:var(--r-ink-3)">{{ r.detail | default('') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="4" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">이번 달 거래 비용 없음</td></tr>
+        <tr><td colspan="4" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}No trading costs this month{% else %}이번 달 거래 비용 없음{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
     {# ───────── By-market alloc ───────── #}
     {% if v3.by_market %}
-    <h2 class="pq-pdf-section-title sm">By Market &middot; 시장별 분포</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}By Market &middot; allocation{% else %}시장별 &middot; 시장별 분포{% endif %}</h2>
     <div class="pq-pdf-alloc-list">
       {% for m in v3.by_market %}
       <div class="pq-pdf-alloc-row{% if m.flat %} flat{% endif %}">
@@ -134,36 +135,36 @@
     {% endif %}
 
     {# ───────── Persona Action Points ───────── #}
-    <h2 class="pq-pdf-section-title sm">Action Points &middot; {{ pm.persona_label(persona) }}</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Action Points{% else %}Action Points{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
-      페르소나별 비용 관찰 항목입니다. 정보 제공 목적이며 매수·매도 권유가 아닙니다.
+      {% if locale == 'en' %}A per-persona cost observation list. Informational only — not a solicitation to buy or sell.{% else %}페르소나별 비용 관찰 항목입니다. 정보 제공 목적이며 거래 권유가 아닙니다.{% endif %}
     </p>
     {{ pm.persona_action_points(persona, []) }}
 
     {# ───────── CFO Note callout ───────── #}
     <div style="margin-top: 18px;">
       <div class="pq-pdf-callout">
-        <div class="pq-pdf-callout-label">CFO&rsquo;s Note</div>
-        <p>{{ v3.cfo_note | default('Cost is silent. 매월 점검 — 거래 빈도와 슬리피지가 종합 burn의 절반을 차지하면 빈도 조정 검토.', true) }}</p>
+        <div class="pq-pdf-callout-label">{% if locale == 'en' %}CFO&rsquo;s Note{% else %}CFO 메모{% endif %}</div>
+        <p>{{ v3.cfo_note | default(('Cost is silent. Review monthly — if trade frequency and slippage account for half of total burn, consider adjusting frequency.' if locale == 'en' else 'Cost is silent. 매월 점검 — 거래 빈도와 슬리피지가 종합 burn의 절반을 차지하면 빈도 조정 검토.'), true) }}</p>
       </div>
     </div>
 
     {# ───────── Governance ───────── #}
     <div class="pq-pdf-govblock">
-      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Pro</div></div>
-      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Monthly</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div><div class="val">Pro</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div><div class="val">{% if locale == 'en' %}Monthly{% else %}월간{% endif %}</div></div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}Trade-level cost ledger &middot; 자기 거래 데이터 한정{% endif %}</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}{% if locale == 'en' %}Trade-level cost ledger &middot; own-trades only{% else %}Trade-level cost ledger &middot; 자기 거래 데이터 한정{% endif %}{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>Burn Rate &middot; Pro &middot; pivoxquant.com</span>
+      <span>{% if locale == 'en' %}Burn Rate &middot; Pro &middot; pivoxquant.com{% else %}거래 비용 &middot; Pro &middot; pivoxquant.com{% endif %}</span>
       <span>{{ v3.month_label | default(period_label | default('—')) }}</span>
     </div>
 

@@ -20,12 +20,13 @@
    Compliance — descriptive only. No buy/sell/hold/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set locale = locale | default('ko') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
-<html lang="ko">
+<html lang="{{ locale }}">
 <head>
   <meta charset="utf-8"/>
-  <title>Insider Mirror — {{ v3.as_of_label | default(period_label) }} — {{ user_name }}</title>
+  <title>{% if locale == 'en' %}Insider Mirror — {{ v3.as_of_label | default(period_label) }} — {{ user_name }}{% else %}내부자 미러 — {{ v3.as_of_label | default(period_label) }} — {{ user_name }}{% endif %}</title>
   <style>{% include '_insider_mirror_v3_css.html' %}</style>
 </head>
 <body>
@@ -40,62 +41,62 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip pro">PRO</span>INSIDER MIRROR</strong>
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}INSIDER MIRROR{% else %}내부자 미러{% endif %}</strong>
         <span>{{ v3.as_of_label | default(period_label | default('—')) }}</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Insider Mirror &middot; Weekly &middot; {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-eyebrow">{% if locale == 'en' %}Insider Mirror &middot; Weekly{% else %}내부자 미러 &middot; 주간{% endif %} &middot; {{ pm.persona_label(persona) }}</div>
     <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
-      이번 주 SEC Form 4 인사이더 매수
+      {% if locale == 'en' %}This week's SEC Form 4 insider acquisitions{% else %}이번 주 SEC Form 4 인사이더 매수{% endif %}
       {%- if v3.cluster_buys and v3.cluster_buys.value %}
-        <strong style="color:var(--r-pos);">{{ v3.cluster_buys.value }}</strong>건 (관찰됨).
+        {% if locale == 'en' %}<strong style="color:var(--r-pos);">{{ v3.cluster_buys.value }}</strong> (observed).{% else %}<strong style="color:var(--r-pos);">{{ v3.cluster_buys.value }}</strong>건 (관찰됨).{% endif %}
       {%- else %}
-        공시 관찰.
+        {% if locale == 'en' %}filings observed.{% else %}공시 관찰.{% endif %}
       {%- endif %}
     </h1>
     <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-      Form 4 공시 정제 — Cluster · CEO+CFO 동반 · 10b5-1 제외.
-      {% if v3.hit_rate and v3.hit_rate.value %} 12개월 과거 시그널 추적 결과 <strong>{{ v3.hit_rate.value }}</strong> (참고용 backtest, 미래 수익 보장 아님){% endif %}
+      {% if locale == 'en' %}Form 4 filings refined — Cluster · CEO+CFO pair · 10b5-1 excluded.{% else %}Form 4 공시 정제 — Cluster · CEO+CFO 동반 · 10b5-1 제외.{% endif %}
+      {% if v3.hit_rate and v3.hit_rate.value %} {% if locale == 'en' %}12-month historical signal tracking: <strong>{{ v3.hit_rate.value }}</strong> (reference backtest, not a guarantee of future returns){% else %}12개월 과거 시그널 추적 결과 <strong>{{ v3.hit_rate.value }}</strong> (참고용 backtest, 미래 수익 보장 아님){% endif %}{% endif %}
     </p>
 
     <div style="margin-top: 24px;">
       <div class="pq-pdf-kpi-row cols-4">
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Cluster Buys</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Cluster Acquisitions{% else %}Cluster Buys{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.cluster_buys.value | default('—') }}</div>
           {% if v3.cluster_buys.detail %}<div class="pq-pdf-kpi-delta pos">{{ v3.cluster_buys.detail }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">CEO+CFO 동반</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}CEO+CFO Pair{% else %}CEO+CFO 동반{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.ceo_cfo_pair.value | default('—') }}</div>
           {% if v3.ceo_cfo_pair.detail %}<div class="pq-pdf-kpi-delta pos">{{ v3.ceo_cfo_pair.detail }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">10b5-1 제외 매도</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Non-Plan Dispositions{% else %}10b5-1 제외 매도{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.non_plan_sells.value | default('—') }}</div>
           {% if v3.non_plan_sells.detail %}<div class="pq-pdf-kpi-delta neg">{{ v3.non_plan_sells.detail }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Mirror Backtest · 12m</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Mirror Backtest · 12m{% else %}Mirror Backtest · 12m{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.hit_rate.value | default('—') }}</div>
           {% if v3.hit_rate.detail %}<div class="pq-pdf-kpi-delta">{{ v3.hit_rate.detail }}</div>{% endif %}
         </div>
       </div>
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Top Acquisitions &middot; 최근 인사이더 매수 공시 (Form 4)</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Top Acquisitions &middot; recent insider Form 4 filings{% else %}Top Acquisitions &middot; 최근 인사이더 공시 (Form 4){% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Ticker</th>
-          <th>Insider</th>
-          <th>Role</th>
+          <th>{% if locale == 'en' %}Ticker{% else %}종목{% endif %}</th>
+          <th>{% if locale == 'en' %}Insider{% else %}내부자{% endif %}</th>
+          <th>{% if locale == 'en' %}Role{% else %}직위{% endif %}</th>
           <th class="right">$ Amount</th>
-          <th class="right">Date</th>
-          <th class="right">Signal</th>
+          <th class="right">{% if locale == 'en' %}Date{% else %}일자{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Signal{% else %}신호{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -109,21 +110,21 @@
           <td class="right {{ b.signal_tone | default('neutral') }}">{{ b.signal | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">이번 주 내부자 거래 기록 없음</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}No insider activity this week{% else %}이번 주 내부자 거래 기록 없음{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">Dispositions &middot; 최근 인사이더 매도 공시 (10b5-1 제외)</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Dispositions &middot; recent insider sells (10b5-1 excluded){% else %}Dispositions &middot; 최근 인사이더 매도 공시 (10b5-1 제외){% endif %}</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
-          <th>Ticker</th>
-          <th>Insider</th>
-          <th>Role</th>
+          <th>{% if locale == 'en' %}Ticker{% else %}종목{% endif %}</th>
+          <th>{% if locale == 'en' %}Insider{% else %}내부자{% endif %}</th>
+          <th>{% if locale == 'en' %}Role{% else %}직위{% endif %}</th>
           <th class="right">$ Amount</th>
-          <th class="right">Plan</th>
-          <th class="right">Flag</th>
+          <th class="right">{% if locale == 'en' %}Plan{% else %}계획{% endif %}</th>
+          <th class="right">{% if locale == 'en' %}Flag{% else %}플래그{% endif %}</th>
         </tr>
       </thead>
       <tbody>
@@ -137,13 +138,13 @@
           <td class="right {{ s.flag_tone | default('neutral') }}">{{ s.flag | default('—') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">이번 주 주의 매도 없음</td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">{% if locale == 'en' %}No flagged sells this week{% else %}이번 주 주의 매도 없음{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
 
     <div class="pq-pdf-page-footer">
-      <span>Insider Mirror &middot; Pro</span>
+      <span>{% if locale == 'en' %}Insider Mirror &middot; Pro{% else %}내부자 미러 &middot; Pro{% endif %}</span>
       <span>Page 01</span>
     </div>
 
@@ -157,14 +158,14 @@
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
-        <strong><span class="pq-pdf-tier-chip pro">PRO</span>INSIDER MIRROR</strong>
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>{% if locale == 'en' %}INSIDER MIRROR{% else %}내부자 미러{% endif %}</strong>
         <span>{{ v3.as_of_label | default(period_label | default('—')) }} &middot; 02/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <h2 class="pq-pdf-section-title sm">Featured Signal &middot; 이번 주 단일 베스트</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Featured Signal &middot; single observation of the week{% else %}Featured Signal &middot; 이번 주 단일 관찰{% endif %}</h2>
 
     {% if v3.featured and v3.featured.ticker %}
     <div class="pq-pdf-card">
@@ -182,31 +183,31 @@
       <div style="margin-top:12px">
         <div class="pq-pdf-three-col">
           <div>
-            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4);margin-bottom:6px">Avg Price</div>
+            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4);margin-bottom:6px">{% if locale == 'en' %}Avg Price{% else %}평균가{% endif %}</div>
             <div style="font-family:var(--font-mono);font-size:11px">{{ v3.featured.avg_price | default('—') }}</div>
           </div>
           <div>
-            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4);margin-bottom:6px">Last Insider Buy</div>
+            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4);margin-bottom:6px">{% if locale == 'en' %}Last Insider Acquisition{% else %}최근 내부자 매수{% endif %}</div>
             <div style="font-family:var(--font-mono);font-size:11px">{{ v3.featured.last_buy | default('—') }}</div>
           </div>
           <div>
-            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4);margin-bottom:6px">12m Backtest</div>
+            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4);margin-bottom:6px">{% if locale == 'en' %}12m Backtest{% else %}12m 백테스트{% endif %}</div>
             <div style="font-family:var(--font-mono);font-size:11px;color:var(--r-pos)">{{ v3.featured.hit_rate | default('—') }}</div>
           </div>
         </div>
       </div>
     </div>
     {% else %}
-    <div class="pq-pdf-card" style="text-align:center;color:var(--r-ink-3);padding:40px 0">이번 주 Featured Signal 없음</div>
+    <div class="pq-pdf-card" style="text-align:center;color:var(--r-ink-3);padding:40px 0">{% if locale == 'en' %}No Featured Signal this week{% else %}이번 주 Featured Signal 없음{% endif %}</div>
     {% endif %}
 
-    <h2 class="pq-pdf-section-title sm">Mirror Backtest &middot; 과거 시그널 추적</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Mirror Backtest &middot; historical signal tracking{% else %}Mirror Backtest &middot; 과거 시그널 추적{% endif %}</h2>
     {% if v3.has_backtest %}
     <div class="pq-pdf-card">
       <div class="pq-pdf-flex-between">
-        <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4)">Mirror vs S&amp;P 500 &middot; Last 24m</div>
+        <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4)">{% if locale == 'en' %}Mirror vs S&amp;P 500 &middot; Last 24m{% else %}미러 vs S&amp;P 500 &middot; 최근 24m{% endif %}</div>
         <div style="display:flex;gap:14px;font-size:10px;color:var(--r-ink-3);font-family:var(--font-mono)">
-          <span><span style="display:inline-block;width:8px;height:8px;margin-right:5px;background:#0e0e0e"></span>Mirror Portfolio</span>
+          <span><span style="display:inline-block;width:8px;height:8px;margin-right:5px;background:#0e0e0e"></span>{% if locale == 'en' %}Mirror Portfolio{% else %}미러 포트폴리오{% endif %}</span>
           <span><span style="display:inline-block;width:8px;height:8px;margin-right:5px;background:#c0c0c0"></span>S&amp;P 500</span>
         </div>
       </div>
@@ -230,7 +231,7 @@
       </svg>
     </div>
     {% else %}
-    <div class="pq-pdf-card" style="text-align:center;color:var(--r-ink-3);padding:40px 0">백테스트 데이터 부족 &middot; 충분한 history 누적 후 표시</div>
+    <div class="pq-pdf-card" style="text-align:center;color:var(--r-ink-3);padding:40px 0">{% if locale == 'en' %}Insufficient backtest history &middot; appears after sufficient history accrues{% else %}백테스트 데이터 부족 &middot; 충분한 history 누적 후 표시{% endif %}</div>
     {% endif %}
 
     <div style="margin-top:12px">
@@ -241,46 +242,46 @@
           {% if v3.mirror_24m.delta %}<div class="pq-pdf-kpi-delta pos">{{ v3.mirror_24m.delta }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Win Rate</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Hit Rate{% else %}적중률{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.win_rate.value | default('—') }}</div>
           {% if v3.win_rate.detail %}<div class="pq-pdf-kpi-delta">{{ v3.win_rate.detail }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Avg Hold</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Avg Hold{% else %}평균 보유 기간{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.avg_hold.value | default('—') }}</div>
           {% if v3.avg_hold.detail %}<div class="pq-pdf-kpi-delta">{{ v3.avg_hold.detail }}</div>{% endif %}
         </div>
       </div>
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Data Focus &middot; {{ pm.persona_label(persona) }}</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Data Focus{% else %}데이터 포커스{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
-      페르소나별 내부자 거래 관찰 톤입니다. 정보 제공 목적이며 매수·매도 권유가 아닙니다.
+      {% if locale == 'en' %}A per-persona insider observation tone. Informational only — not a solicitation to buy or sell.{% else %}페르소나별 내부자 거래 관찰 톤입니다. 정보 제공 목적이며 거래 권유가 아닙니다.{% endif %}
     </p>
     {{ pm.persona_data_focus(persona, v3.data_focus_metrics | default({})) }}
 
     <div style="margin-top:18px">
       <div class="pq-pdf-callout">
-        <div class="pq-pdf-callout-label">How to Use</div>
-        <p>{{ v3.how_to_use | default('관찰은 관찰일 뿐. 90일 후 본인 가설을 자가 점검하고, 본인 룰에 따라 재평가. 미러는 정보 관찰의 출발점이며 매수·매도 권유가 아닙니다.') }}</p>
+        <div class="pq-pdf-callout-label">{% if locale == 'en' %}How to Use{% else %}활용 안내{% endif %}</div>
+        <p>{{ v3.how_to_use | default(('Observation is observation. Revisit your hypothesis after 90 days and re-evaluate per your own rules. The mirror is a starting point for information observation — not a solicitation to buy or sell.' if locale == 'en' else '관찰은 관찰일 뿐. 90일 후 본인 가설을 자가 점검하고, 본인 룰에 따라 재평가. 미러는 정보 관찰의 출발점이며 거래 권유가 아닙니다.')) }}</p>
       </div>
     </div>
 
     <div class="pq-pdf-govblock">
-      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Pro</div></div>
-      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Weekly</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Tier{% else %}등급{% endif %}</div><div class="val">Pro</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">{% if locale == 'en' %}Cadence{% else %}주기{% endif %}</div><div class="val">{% if locale == 'en' %}Weekly{% else %}주간{% endif %}</div></div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}SEC Form 4 + DART 공시 &middot; 자기 보유 종목 한정{% endif %}</div>
+        <div class="lbl">{% if locale == 'en' %}Methodology{% else %}산출 방법{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}{% if locale == 'en' %}SEC Form 4 + DART filings &middot; own-holdings tickers only{% else %}SEC Form 4 + DART 공시 &middot; 자기 보유 종목 한정{% endif %}{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
-        <div class="lbl">Sources</div>
+        <div class="lbl">{% if locale == 'en' %}Sources{% else %}데이터 출처{% endif %}</div>
         <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
       </div>
     </div>
 
     <div class="pq-pdf-page-footer">
-      <span>Insider Mirror &middot; Pro &middot; Past activity ≠ future returns</span>
+      <span>{% if locale == 'en' %}Insider Mirror &middot; Pro &middot; Past activity ≠ future returns{% else %}내부자 미러 &middot; Pro &middot; 과거 활동 ≠ 미래 수익{% endif %}</span>
       <span>Page 02</span>
     </div>
 
