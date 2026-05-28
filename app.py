@@ -540,6 +540,12 @@ def _do_migrations():
     # boot without ProgrammingError / OperationalError on SELECT.
     _add_column_if_missing("users", "available_capital", "FLOAT", default="0.0")
     _add_column_if_missing("users", "available_capital_krw", "FLOAT", default="0.0")
+    # Wave F (2026-05-28) — i18n locale preference. Alembic 046_user_locale.
+    # ⚠️ BLOCKER FIX: prod self-heal 미적용 시 OAuth callback에서 ORM은 새
+    # 컬럼을 보지만 DB는 없어 UndefinedColumn → provisioning_failed 100%.
+    # 메모리 [project_prod_schema_selfheal] 패턴 — alembic 런타임 미실행
+    # prod에서 self-heal 가드 필수.
+    _add_column_if_missing("users", "locale", "VARCHAR(2)", default="'ko'")
     _add_column_if_missing("users", "risk_profile", "VARCHAR(20)", default="'balanced'")
     _add_column_if_missing("users", "profile_changes_left", "INTEGER", default="3")
     _add_column_if_missing("users", "subscription_tier", "VARCHAR(32)", default="'free'")
@@ -635,6 +641,13 @@ def _do_migrations():
     # 모든 User SELECT 가 ProgrammingError → OAuth provisioning_failed.
     # alembic 미실행 박스(Railway prod, 레거시 SQLite) self-heal.
     _add_column_if_missing("users", "notification_prefs", "JSON")
+    # Wave F (2026-05-28) — i18n locale preference column (ko default).
+    # Alembic migration 046_user_locale. ORM 매핑에 존재하므로 누락 시 모든
+    # User SELECT 가 ProgrammingError → OAuth provisioning_failed.
+    # NOT NULL DEFAULT 'ko' — 기존 모든 row 한국어로 backfill.
+    _add_column_if_missing(
+        "users", "locale", "VARCHAR(2)", default="'ko'", not_null=True,
+    )
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but
