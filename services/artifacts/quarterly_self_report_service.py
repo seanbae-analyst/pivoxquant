@@ -122,6 +122,32 @@ def _safe_price(ticker: str) -> Optional[float]:
         return None
 
 
+def _fx_rate() -> float:
+    """Spot USD/KRW with a safe fallback (mirrors dividend_income)."""
+    try:
+        from services import fx_service
+        rate = float(fx_service.get_rate() or 0)
+        if rate >= 900:
+            return rate
+    except Exception as exc:
+        logger.debug("fx lookup failed: %s", exc)
+    return 1380.0
+
+
+def _mv_usd(price: float, shares: float, ticker: str, fx: float) -> float:
+    """Position market value normalised to USD.
+
+    The report formats every figure with `$`, so KR (.KS/.KQ) native KRW
+    values must be divided by the USD→KRW rate before they are summed with
+    US positions. Without this, KR holdings over-weight US ones ~1000x in
+    concentration weights, position ranking, and closing/opening value.
+    """
+    native = price * shares
+    if ticker.upper().endswith((".KS", ".KQ")):
+        return native / fx
+    return native
+
+
 def _sector_for_ticker(ticker: str) -> str:
     try:
         from models import SignalCache
@@ -273,6 +299,7 @@ def _risk_factors(user_id: int, positions: list[Position]
     if not positions:
         return []
 
+    fx = _fx_rate()  # USD → KRW
     total_mv = 0.0
     enriched: list[dict[str, Any]] = []
     for p in positions:
@@ -280,7 +307,7 @@ def _risk_factors(user_id: int, positions: list[Position]
         if shares <= 0:
             continue
         price = _safe_price(p.ticker) or float(p.avg_cost or 0)
-        mv = shares * price
+        mv = _mv_usd(price, shares, p.ticker, fx)
         total_mv += mv
         enriched.append({"ticker": p.ticker, "mv": mv,
                          "sector": _sector_for_ticker(p.ticker)})
@@ -393,12 +420,17 @@ def _legal_matters(user_id: int, start: date, end: date) -> list[dict[str, Any]]
 
 
 def _principal_positions(positions: list[Position]) -> list[dict[str, Any]]:
+    fx = _fx_rate()  # USD → KRW
     rows: list[dict[str, Any]] = []
     for p in positions:
         shares = float(p.shares or 0)
         if shares <= 0:
             continue
         price = _safe_price(p.ticker) or float(p.avg_cost or 0)
+        # Per-row mv is shown alongside native `last`/`avg_cost`, so it stays
+        # in the position's native currency for internal row consistency.
+        # `_mv_usd` is the cross-currency-comparable value used only to rank
+        # so KR holdings don't always sort first regardless of true size.
         mv = shares * price
         rows.append({
             "ticker":   p.ticker,
@@ -406,10 +438,13 @@ def _principal_positions(positions: list[Position]) -> list[dict[str, Any]]:
             "avg_cost": round(float(p.avg_cost or 0), 2),
             "last":     round(price, 2),
             "mv":       round(mv, 2),
+            "_mv_usd":  _mv_usd(price, shares, p.ticker, fx),
             "sector":   _sector_for_ticker(p.ticker),
             "thesis":   p.thesis or "",
         })
-    rows.sort(key=lambda r: -r["mv"])
+    rows.sort(key=lambda r: -r["_mv_usd"])
+    for r in rows:
+        r.pop("_mv_usd", None)
     return rows[:20]
 
 
@@ -588,14 +623,15 @@ class QuarterlySelfReportService:
 
         buys, sells, net = _quarter_cash_flow(user_id, start, end)
 
-        # Closing value (live)
+        # Closing value (live) — normalised to USD ($), the report numeraire.
+        fx = _fx_rate()  # USD → KRW
         closing = 0.0
         for p in positions:
             shares = float(p.shares or 0)
             if shares <= 0:
                 continue
             px = _safe_price(p.ticker) or float(p.avg_cost or 0)
-            closing += shares * px
+            closing += _mv_usd(px, shares, p.ticker, fx)
         closing_val = round(closing, 2) if closing > 0 else None
 
         # Opening value approx = closing - net_cash_flow (within quarter

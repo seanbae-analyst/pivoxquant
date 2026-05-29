@@ -271,13 +271,23 @@ def _sector_for_ticker(ticker: str) -> str:
 def _sector_allocation(positions: list[Position]) -> dict[str, float]:
     """Percent of portfolio market-value per GICS sector.
 
-    Uses avg_cost × shares as a proxy when live price is unavailable.
+    Uses avg_cost × shares as a proxy. KR (.KS/.KQ) avg_cost is native KRW and
+    US is native USD; summing them raw over-weights KR ~1000x and corrupts the
+    sector percentages, so KR values are converted to USD via the live FX rate
+    before aggregation.
     Returns empty dict if total_mv == 0.
     """
+    try:
+        from services import fx_service
+        krw_per_usd = fx_service.get_rate() or 1300.0
+    except Exception:
+        krw_per_usd = 1300.0
     alloc: dict[str, float] = {}
     total = 0.0
     for p in positions:
         mv = float(p.shares or 0) * float(p.avg_cost or 0)
+        if _is_kr_ticker(p.ticker) and krw_per_usd > 0:
+            mv = mv / krw_per_usd  # KRW → USD
         total += mv
         sector = _sector_for_ticker(p.ticker)
         alloc[sector] = alloc.get(sector, 0.0) + mv
@@ -625,6 +635,15 @@ def _build_returns_matrix(positions: list["Position"],
     closes_map: dict[str, list[float]] = {}
     ohlc_map: dict[str, dict[str, list[float]]] = {}
 
+    # Weights drive the portfolio-return / drawdown curve below. avg_cost is
+    # native (KRW for .KS/.KQ, USD otherwise); summing raw over-weights KR
+    # ~1000x. Convert KR cost basis to USD so weights reflect true exposure.
+    try:
+        from services import fx_service
+        krw_per_usd = fx_service.get_rate() or 1300.0
+    except Exception:
+        krw_per_usd = 1300.0
+
     for p in positions:
         hist = _position_price_history(p.ticker, "6mo")
         if hist is None:
@@ -650,7 +669,10 @@ def _build_returns_matrix(positions: list["Position"],
                     "close": closes_list,
                 }
             tickers.append(p.ticker)
-            weights_raw.append(float(p.shares or 0) * float(p.avg_cost or 0))
+            w = float(p.shares or 0) * float(p.avg_cost or 0)
+            if _is_kr_ticker(p.ticker) and krw_per_usd > 0:
+                w = w / krw_per_usd  # KRW → USD
+            weights_raw.append(w)
         except Exception as exc:
             logger.debug("price-history parse failed for %s: %s", p.ticker, exc)
             continue

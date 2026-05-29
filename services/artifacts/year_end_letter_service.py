@@ -488,7 +488,14 @@ class YearEndLetterService:
         if ytd is not None and bench is not None:
             alpha = round(ytd - bench, 2)
 
-        # Current book MV — shown only to the owner in the PDF.
+        # Current book MV — shown only to the owner in the PDF. KR (.KS/.KQ)
+        # prices are native KRW; normalise to USD ($) before summing so a
+        # mixed book is not over-weighted ~1000x toward KR holdings.
+        try:
+            from services import fx_service
+            krw_per_usd = fx_service.get_rate() or 1300.0
+        except Exception:
+            krw_per_usd = 1300.0
         positions = Position.query.filter_by(user_id=user_id).all()
         closing_value = 0.0
         for p in positions:
@@ -496,7 +503,10 @@ class YearEndLetterService:
             if shares <= 0:
                 continue
             px = _safe_price(p.ticker) or float(p.avg_cost or 0)
-            closing_value += shares * px
+            mv = shares * px
+            if p.ticker.upper().endswith((".KS", ".KQ")) and krw_per_usd > 0:
+                mv = mv / krw_per_usd  # KRW → USD
+            closing_value += mv
         closing_value = round(closing_value, 2) if closing_value > 0 else None
 
         # Opening value — approximate from first Position.added_at or from
