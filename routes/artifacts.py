@@ -76,6 +76,26 @@ logger = logging.getLogger(__name__)
 artifacts_bp = Blueprint("artifacts", __name__, url_prefix="/api/artifacts")
 
 
+_WEASYPRINT_OK: bool | None = None
+
+
+def _weasyprint_importable() -> bool:
+    """True when WeasyPrint imports in this process (cached per-process).
+
+    Lets the generate route tell apart `render_pdf -> None because the native
+    dep is missing` (expected on some envs) from `render failed despite the
+    dep being present` (a genuine error to surface, not swallow).
+    """
+    global _WEASYPRINT_OK
+    if _WEASYPRINT_OK is None:
+        try:
+            from weasyprint import HTML  # type: ignore  # noqa: F401
+            _WEASYPRINT_OK = True
+        except Exception:
+            _WEASYPRINT_OK = False
+    return _WEASYPRINT_OK
+
+
 def _check_cron_admin_secret() -> tuple[Response, int] | None:
     """Cron trigger 인증 — production-safe.
 
@@ -3115,16 +3135,50 @@ def artifacts_generate():
             "redirect":    None,
         })
 
-    # ── Render PDF where supported (best-effort; absence is not fatal) ─
+    # ── Render PDF where supported ──────────────────────────────────────
+    # H2: render_pdf returning None must NOT be silently reported as a clean
+    # "ready". We distinguish three outcomes so the caller never shows a
+    # "complete" with a missing attachment without knowing why:
+    #   - "ok"          → bytes produced, attachment present
+    #   - "unavailable" → WeasyPrint native dep missing (data still valid,
+    #                     viewable on-screen; expected on some envs)
+    #   - "render_failed" → dep present but rendering raised/returned None
+    #                       (a genuine failure — surfaced, not swallowed)
+    #   - "not_applicable" → artefact does not produce a PDF (e.g. brag_card)
     pdf_bytes: bytes | None = None
     render_pdf = getattr(svc, "render_pdf", None)
-    if callable(render_pdf):
+    if not callable(render_pdf):
+        pdf_status = "not_applicable"
+        pdf_error: str | None = None
+    else:
+        weasy_ok = _weasyprint_importable()
         try:
             pdf_bytes = render_pdf(data)
         except Exception as exc:
+            # render_pdf is expected to swallow internally; this catches the
+            # rare case it does not.
+            pdf_bytes = None
             current_app.logger.warning(
-                "render_pdf failed (user=%s type=%s): %s",
+                "render_pdf raised (user=%s type=%s): %s",
                 current_user.id, artifact_type, exc,
+            )
+        if pdf_bytes:
+            pdf_status = "ok"
+            pdf_error = None
+        elif not weasy_ok:
+            pdf_status = "unavailable"
+            pdf_error = None
+            current_app.logger.info(
+                "render_pdf produced no bytes — WeasyPrint unavailable "
+                "(user=%s type=%s)", current_user.id, artifact_type,
+            )
+        else:
+            # Dep is present but no bytes came back → genuine render failure.
+            pdf_status = "render_failed"
+            pdf_error = "PDF rendering failed — attachment unavailable."
+            current_app.logger.error(
+                "render_pdf returned no bytes despite WeasyPrint present "
+                "(user=%s type=%s)", current_user.id, artifact_type,
             )
 
     # ── Persist ─────────────────────────────────────────────────────────
@@ -3140,13 +3194,15 @@ def artifacts_generate():
         artifact_id = None
 
     return jsonify({
-        "status":      "ready",
-        "type":        artifact_type,
-        "artifact_id": artifact_id,
-        "data":        data,
-        "reason":      None,
-        "message":     None,
-        "redirect":    None,
+        "status":        "ready",
+        "type":          artifact_type,
+        "artifact_id":   artifact_id,
+        "data":          data,
+        "pdf_available": pdf_bytes is not None,
+        "pdf_status":    pdf_status,
+        "reason":        None,
+        "message":       pdf_error,
+        "redirect":      None,
     })
 
 
