@@ -142,16 +142,42 @@ class KPIContext:
 
 # ── metric computation ───────────────────────────────────────────────────────
 
+def _fx_rate() -> float:
+    """Spot USD/KRW with a safe fallback (mirrors dividend_income)."""
+    try:
+        from services import fx_service
+        rate = float(fx_service.get_rate() or 0)
+        if rate >= 900:
+            return rate
+    except Exception as exc:
+        logger.debug("fx lookup failed: %s", exc)
+    return 1380.0
+
+
 def _portfolio_value(positions: list[Position]) -> tuple[Optional[float], str]:
-    """Market value using latest close × shares. Falls back to cost basis."""
+    """Market value using latest close × shares, normalised to one numeraire.
+
+    KR (.KS/.KQ) prices are native KRW, US prices native USD. Summing them
+    raw over-weights KR ~1000x and corrupts every consumer (turnover ratio,
+    cash %, displayed NAV). All-KR books report KRW; otherwise everything is
+    converted to USD via the live FX rate. Falls back to cost basis per
+    position when live price is unavailable.
+    """
     if not positions:
         return 0.0, "USD"
+    all_krw = all(p.ticker.endswith((".KS", ".KQ")) for p in positions)
+    ccy = "KRW" if all_krw else "USD"
+    fx = _fx_rate()  # USD → KRW
     total = 0.0
-    any_krw = all(p.ticker.endswith((".KS", ".KQ")) for p in positions)
-    ccy = "KRW" if any_krw else "USD"
     for p in positions:
         price = _safe_price(p.ticker) or float(p.avg_cost or 0)
-        total += price * float(p.shares or 0)
+        native_mv = price * float(p.shares or 0)
+        is_kr = p.ticker.endswith((".KS", ".KQ"))
+        if ccy == "USD" and is_kr:
+            native_mv /= fx  # KRW → USD
+        elif ccy == "KRW" and not is_kr:
+            native_mv *= fx  # USD → KRW
+        total += native_mv
     return (round(total, 2) if total > 0 else None, ccy)
 
 

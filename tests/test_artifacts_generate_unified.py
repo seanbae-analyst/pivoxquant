@@ -155,6 +155,54 @@ def test_generate_weekly_memo_with_position_returns_ready(
             assert row.type == "weekly_memo"
 
 
+# ── H2: PDF render outcome must be non-silent ──────────────────────────────
+
+def test_generate_reports_pdf_status_when_weasyprint_unavailable(
+    client, paid_auth_user, app, mock_fetcher, add_position,
+):
+    """No WeasyPrint in the test env → render_pdf returns None. The response
+    must stay `ready` (data is valid/viewable) but explicitly say the PDF is
+    unavailable, never silently claim a clean completion with no attachment."""
+    import routes.artifacts as ra
+
+    add_position(paid_auth_user["id"], ticker="AAPL", shares=10)
+    # Force the "dep missing" branch deterministically.
+    ra._WEASYPRINT_OK = False
+    try:
+        resp = client.post("/api/artifacts/generate", json={"type": "weekly_memo"})
+    finally:
+        ra._WEASYPRINT_OK = None
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["status"] == "ready"
+    assert body["pdf_available"] is False
+    assert body["pdf_status"] == "unavailable"
+
+
+def test_generate_flags_render_failed_when_dep_present_but_no_bytes(
+    client, paid_auth_user, app, mock_fetcher, add_position, monkeypatch,
+):
+    """Dep present but render produces no bytes → genuine failure. Must surface
+    pdf_status='render_failed' + a message, not a hollow silent 'ready'."""
+    import routes.artifacts as ra
+    from services.artifacts.weekly_memo_service import WeeklyMemoService
+
+    add_position(paid_auth_user["id"], ticker="AAPL", shares=10)
+    ra._WEASYPRINT_OK = True  # pretend WeasyPrint is installed
+    monkeypatch.setattr(WeeklyMemoService, "render_pdf",
+                        lambda self, data: None)
+    try:
+        resp = client.post("/api/artifacts/generate", json={"type": "weekly_memo"})
+    finally:
+        ra._WEASYPRINT_OK = None
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["status"] == "ready"
+    assert body["pdf_available"] is False
+    assert body["pdf_status"] == "render_failed"
+    assert body["message"]  # non-empty error message present
+
+
 # ── earnings_prebrief — positional ticker required ─────────────────────────
 
 def test_generate_earnings_prebrief_requires_ticker(client, auth_user):

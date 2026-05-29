@@ -144,6 +144,38 @@ def _try_import_jinja():
         return None, None, None
 
 
+def _fx_rate() -> float:
+    """Spot USD/KRW with a safe fallback when the service is unavailable.
+
+    Mirrors `dividend_income_service._fx_rate` so multi-currency books are
+    normalised identically across artefacts.
+    """
+    try:
+        from services import fx_service
+        rate = float(fx_service.get_rate() or 0)
+        if rate >= 900:
+            return rate
+    except Exception as exc:
+        logger.debug("fx lookup failed: %s", exc)
+    return 1380.0
+
+
+def _normalize_mv(native_mv: float, ticker: str, report_ccy: str,
+                  fx: float) -> float:
+    """Convert a position's native market value into the report currency.
+
+    Native MV is KRW for `.KS/.KQ` tickers and USD otherwise. `fx` is
+    USD→KRW (>= 900). Without this, summing raw native values over-weights
+    KRW holdings ~1000x in a mixed book — distorting weights, weighted
+    returns, and best/worst-segment ranking.
+    """
+    is_kr = ticker.upper().endswith((".KS", ".KQ"))
+    if report_ccy == "USD":
+        return native_mv / fx if is_kr else native_mv
+    # report_ccy == "KRW"
+    return native_mv if is_kr else native_mv * fx
+
+
 def _storage_dir() -> Path:
     override = os.environ.get("PORTFOLIO_SEGMENT_STORAGE_DIR")
     d = Path(override) if override else _DEFAULT_STORAGE_DIR
@@ -364,6 +396,13 @@ class PortfolioSegmentService:
         if positions and all(p.ticker.endswith((".KS", ".KQ")) for p in positions):
             ccy = "KRW"
 
+        # Multi-currency normalization (CRITICAL). _safe_price_at returns
+        # native prices (KRW for .KS/.KQ, USD otherwise). Every downstream
+        # figure — weight_pct, weighted return, summed PnL, best/worst
+        # ranking, portfolio_value — is driven by `mv`. Summing raw native
+        # values over-weights KRW holdings ~1000x in a mixed book. Convert
+        # each position into the report currency before aggregating.
+        fx = _fx_rate()  # USD → KRW
         entries: list[dict[str, Any]] = []
         total_mv = 0.0
         for p in positions[:40]:  # cap to protect data budget
@@ -373,13 +412,15 @@ class PortfolioSegmentService:
             region = _region_from_ticker(p.ticker)
             style = _style_from_signal_or_sector(p.ticker, sector)
             shares = float(p.shares or 0)
-            end_mv = (end_px or float(p.avg_cost or 0)) * shares
+            native_mv = (end_px or float(p.avg_cost or 0)) * shares
+            end_mv = _normalize_mv(native_mv, p.ticker, ccy, fx)
             total_mv += end_mv
             ret_pct: Optional[float] = None
             pnl: Optional[float] = None
             if start_px and end_px and start_px > 0 and shares > 0:
                 ret_pct = (end_px / start_px - 1.0) * 100.0
-                pnl = (end_px - start_px) * shares
+                native_pnl = (end_px - start_px) * shares
+                pnl = _normalize_mv(native_pnl, p.ticker, ccy, fx)
             entries.append({
                 "ticker":     p.ticker,
                 "sector":     sector,

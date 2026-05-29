@@ -52,6 +52,24 @@ from models import Artifact, InvestmentProfile, Position, TradeHistory, User
 logger = logging.getLogger(__name__)
 
 
+def _fx_rate() -> float:
+    """Spot USD/KRW with a safe fallback when the service is unavailable.
+
+    Mirrors `dividend_income_service._fx_rate` so multi-currency books are
+    normalised identically across artefacts. The >= 900 sanity guard rejects
+    stale/abnormal small rates (e.g. 7.x) that would otherwise corrupt the
+    KR→USD aggregation.
+    """
+    try:
+        from services import fx_service
+        rate = float(fx_service.get_rate() or 0)
+        if rate >= 900:
+            return rate
+    except Exception as exc:
+        logger.debug("fx lookup failed: %s", exc)
+    return 1380.0
+
+
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _DEFAULT_STORAGE_DIR = (
     Path(__file__).resolve().parents[2] / "artifacts" / "year_end_letter"
@@ -488,7 +506,10 @@ class YearEndLetterService:
         if ytd is not None and bench is not None:
             alpha = round(ytd - bench, 2)
 
-        # Current book MV — shown only to the owner in the PDF.
+        # Current book MV — shown only to the owner in the PDF. KR (.KS/.KQ)
+        # prices are native KRW; normalise to USD ($) before summing so a
+        # mixed book is not over-weighted ~1000x toward KR holdings.
+        krw_per_usd = _fx_rate()
         positions = Position.query.filter_by(user_id=user_id).all()
         closing_value = 0.0
         for p in positions:
@@ -496,7 +517,10 @@ class YearEndLetterService:
             if shares <= 0:
                 continue
             px = _safe_price(p.ticker) or float(p.avg_cost or 0)
-            closing_value += shares * px
+            mv = shares * px
+            if p.ticker.upper().endswith((".KS", ".KQ")) and krw_per_usd > 0:
+                mv = mv / krw_per_usd  # KRW → USD
+            closing_value += mv
         closing_value = round(closing_value, 2) if closing_value > 0 else None
 
         # Opening value — approximate from first Position.added_at or from
