@@ -52,6 +52,24 @@ from services.legal_filter import safe_scrub, scrub_signal
 logger = logging.getLogger(__name__)
 
 
+def _fx_rate() -> float:
+    """Spot USD/KRW with a safe fallback when the service is unavailable.
+
+    Mirrors `dividend_income_service._fx_rate` so multi-currency books are
+    normalised identically across artefacts. The >= 900 sanity guard rejects
+    stale/abnormal small rates (e.g. 7.x) that would otherwise corrupt the
+    KR→USD aggregation.
+    """
+    try:
+        from services import fx_service
+        rate = float(fx_service.get_rate() or 0)
+        if rate >= 900:
+            return rate
+    except Exception as exc:
+        logger.debug("fx lookup failed: %s", exc)
+    return 1380.0
+
+
 # ── paths / config ───────────────────────────────────────────────────────────
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
@@ -277,11 +295,7 @@ def _sector_allocation(positions: list[Position]) -> dict[str, float]:
     before aggregation.
     Returns empty dict if total_mv == 0.
     """
-    try:
-        from services import fx_service
-        krw_per_usd = fx_service.get_rate() or 1300.0
-    except Exception:
-        krw_per_usd = 1300.0
+    krw_per_usd = _fx_rate()
     alloc: dict[str, float] = {}
     total = 0.0
     for p in positions:
@@ -457,11 +471,7 @@ def _portfolio_value_usd(positions: list[Position]) -> Optional[float]:
     """
     if not positions:
         return None
-    try:
-        from services import fx_service
-        krw_per_usd = fx_service.get_rate() or 1300.0
-    except Exception:
-        krw_per_usd = 1300.0
+    krw_per_usd = _fx_rate()
     total_usd = 0.0
     for p in positions:
         try:
@@ -638,11 +648,7 @@ def _build_returns_matrix(positions: list["Position"],
     # Weights drive the portfolio-return / drawdown curve below. avg_cost is
     # native (KRW for .KS/.KQ, USD otherwise); summing raw over-weights KR
     # ~1000x. Convert KR cost basis to USD so weights reflect true exposure.
-    try:
-        from services import fx_service
-        krw_per_usd = fx_service.get_rate() or 1300.0
-    except Exception:
-        krw_per_usd = 1300.0
+    krw_per_usd = _fx_rate()
 
     for p in positions:
         hist = _position_price_history(p.ticker, "6mo")
