@@ -74,7 +74,10 @@ class TestChatMessageLengthCap:
                     json={"email": u["email"], "password": u["password"]})
         return u
 
-    def test_message_over_4000_chars_returns_400(self, client, make_user):
+    def test_message_over_4000_chars_returns_400(self, client, make_user, monkeypatch):
+        # §101③ 격리: /api/ai/chat 는 AI_CHAT_ENABLED OFF(기본)면 403 으로 먼저
+        # 닫힌다. 길이 캡(400) 동작을 확인하려면 채널을 켜고 길이 게이트에 도달해야 함.
+        monkeypatch.setenv("AI_CHAT_ENABLED", "1")
         self._login_pro(client, make_user, "chatlen@test.com")
         with patch("routes.ai.ai") as mock_ai:
             mock_ai.available = True
@@ -82,8 +85,9 @@ class TestChatMessageLengthCap:
         assert r.status_code == 400
         assert r.get_json().get("code") == "MESSAGE_TOO_LONG"
 
-    def test_message_at_4000_chars_not_length_rejected(self, client, make_user):
+    def test_message_at_4000_chars_not_length_rejected(self, client, make_user, monkeypatch):
         """Exactly 4000 must pass the length gate (boundary)."""
+        monkeypatch.setenv("AI_CHAT_ENABLED", "1")
         self._login_pro(client, make_user, "chatlen2@test.com")
         with patch("routes.ai.ai") as mock_ai:
             mock_ai.available = True

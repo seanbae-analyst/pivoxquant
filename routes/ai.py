@@ -53,6 +53,21 @@ def _scrub_and_jsonify(payload, status: int = 200):
     return jsonify(scrub_response(payload)), status
 
 
+def _ai_chat_enabled() -> bool:
+    """§101③ 격리 게이트 (DECISIONS.md ✅확정 2026-05-30).
+
+    양방향(쌍방향) 자유텍스트 채팅 = 자본시장법 §101③ 유사투자자문업 면제
+    트랙의 표적 채널. 출시 무료 Stage 0 에서는 이 채널을 닫는다. 엔드포인트
+    코드와 ``ai.chat_stream`` 로직은 보존(코드 보존 요건)하고, 환경변수로만
+    개폐한다 — companion 의 ``AGENT_ENABLED`` 패턴과 동일.
+
+    OFF(기본 "0")일 때 ``/api/ai/chat`` 는 403 ``ai_chat_disabled`` 를
+    반환하고 LLM 을 호출하지 않는다. 단방향 분석 엔드포인트(/swot /competitor
+    /sector-trend /commentary /coaching 등)는 이 플래그와 무관하게 동작한다.
+    """
+    return os.environ.get("AI_CHAT_ENABLED", "0") in ("1", "true", "TRUE")
+
+
 def _extract_ticker_from_payload(d: dict) -> str:
     """Pull ticker out of an AI request body, checking nested ``snapshot``
     too — engine.analyze() output is typically the analysis_data and stores
@@ -219,6 +234,11 @@ def sector_trend():
 @require_tier("pro")
 @ai_rate_limit
 def chat():
+    # §101③ 격리 — 양방향 자유텍스트 채팅 채널은 AI_CHAT_ENABLED 플래그로
+    # 닫혀 있다(기본 OFF). OFF 면 LLM 호출 전에 403 으로 차단한다. 코드는
+    # 보존되어 플래그만 켜면 즉시 복원된다.
+    if not _ai_chat_enabled():
+        return jsonify({"error": "ai_chat_disabled"}), 403
     if not ai.available:
         return jsonify({
             "error": "AI not configured",

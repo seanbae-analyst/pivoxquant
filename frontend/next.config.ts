@@ -47,6 +47,13 @@ const nextConfig: NextConfig = {
     return [
       { source: "/dashboard", destination: "/home", permanent: true },
       { source: "/dashboard/:path*", destination: "/:path*", permanent: true },
+      // §101③ 격리 (DECISIONS.md ✅확정 2026-05-30): 양방향 자유텍스트 채팅
+      // (`/ai-chat`) = 유사투자자문업 면제 트랙의 표적 채널. 코드는 보존하되
+      // URL 직접접근을 차단해 단방향 분석(`/ai`: SWOT/경쟁사/섹터/코칭)으로
+      // 보낸다. nav 항목은 이미 hidden:true. page.tsx 는 의도적으로 삭제하지
+      // 않음(코드 보존 요건) — redirect 가 도달 자체를 막는다.
+      { source: "/ai-chat", destination: "/ai", permanent: true },
+      { source: "/ai-chat/:path*", destination: "/ai", permanent: true },
     ];
   },
   async headers() {
