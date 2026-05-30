@@ -893,6 +893,21 @@
       "framing": "보유 구성을 그대로 비춰 보여드립니다. 평가나 권유는 담지 않습니다.",
       "emptyTitle": "보유 종목이 없습니다",
       "emptyDesc": "종목을 추가하면, 가장 큰 보유 종목이 차지하는 비중을 평균매입가 기준으로 보여드립니다."
+    },
+    "profitLossMirror": {
+      "kicker": "관찰됨 · OBSERVED",
+      "heading": "이익 실현 vs 손실 실현, 당신의 매도",
+      "daysUnit": "일",
+      "avgHold": "평균 보유",
+      "avgReturn": "평균 실현 손익률",
+      "takeProfitLabel": "이익 실현 매도",
+      "stopLossLabel": "손실 실현 매도",
+      "countsLabel": "이 기간 매도",
+      "countsValue": "{total}건 · 이익 실현 {profit} / 손실 실현 {loss}",
+      "framing": "거래 기록을 그대로 비춰 보여드립니다. 평가나 권유는 담지 않습니다.",
+      "insufficient": "아직 매도 기록이 적어 평균을 안정적으로 비추기 어렵습니다. 기록이 쌓이면 자동으로 나타납니다.",
+      "emptyTitle": "아직 비출 기록이 없습니다",
+      "emptyDesc": "매도가 기록되면, 이익을 실현한 매도와 손실을 실현한 매도의 평균 보유 기간과 실현 손익률을 나란히 보여드립니다."
     }
   },
   "companion": {

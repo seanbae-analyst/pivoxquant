@@ -522,6 +522,62 @@ export interface ConcentrationMirrorResponse {
   cost_basis_note: string;
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+ * Profit/Loss-Mirror — factual hold-day + return "mirror".
+ *
+ * GET /api/behavior/profit-loss-mirror splits the user's OWN closed FIFO
+ * round trips by the sign of the realised return on the SELL leg, and reports
+ * how long each side was held and by what percent it closed. It is purely
+ * observational — raw numbers, never a verdict on any individual trade. No
+ * score, grade, index, ratio, or "처분효과 / 편향 / 과속 / 지연 / 개선" label is
+ * ever surfaced (자본시장법 / PIPA §23 / DECISIONS.md AI 점수화 폐기). The user
+ * reads the fact and draws their own conclusion (research_cbt_bias_model.md —
+ * 사실만 비추고 재구성은 사용자).
+ *
+ * Backend contract is locked 1:1 with this shape (routes/behavior.py
+ * /profit-loss-mirror + services/behavior/profit_loss_mirror.py) — do NOT
+ * rename keys.
+ *   - `sufficient_data` false → too few classified (non-break-even) pairs;
+ *                               both sides are null.
+ *   - `one_sided` true        → all classified pairs realised a profit OR a
+ *                               loss only; the empty side is null (renders an
+ *                               em-dash sentinel, never a fabricated 0).
+ *   - stop_loss return %      → keeps its NEGATIVE sign (raw fact, never abs).
+ *   - No `examples` array — the disposition (holding) mirror already exposes
+ *                               examples on the same page.
+ * ────────────────────────────────────────────────────────────────────── */
+export interface ProfitLossMirrorTakeProfitSide {
+  count: number;
+  median_hold_days: number | null;
+  mean_hold_days: number | null;
+  /** Median realised gain on profit-taking sells (positive). */
+  median_gain_pct: number | null;
+  mean_gain_pct: number | null;
+}
+
+export interface ProfitLossMirrorStopLossSide {
+  count: number;
+  median_hold_days: number | null;
+  mean_hold_days: number | null;
+  /** Median realised loss on loss-realising sells (NEGATIVE — raw fact). */
+  median_loss_pct: number | null;
+  mean_loss_pct: number | null;
+}
+
+export interface ProfitLossMirrorResponse {
+  ok: boolean;
+  disclaimer?: string;
+  /** Trailing window label echoed by the route ("all" / "30d"). */
+  period?: string;
+  sufficient_data: boolean;
+  one_sided: boolean;
+  total_closed_pairs: number;
+  /** Null when no profit-realising pair, or when sufficient_data is false. */
+  take_profit: ProfitLossMirrorTakeProfitSide | null;
+  /** Null when no loss-realising pair, or when sufficient_data is false. */
+  stop_loss: ProfitLossMirrorStopLossSide | null;
+}
+
 /* ── Artifact / Reports Archive ── */
 
 export type ArtifactType =

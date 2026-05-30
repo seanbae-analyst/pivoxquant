@@ -289,6 +289,12 @@ export const API = {
     // mirror on /journal; NEVER a score, grade, or "과집중/위험" label
     // (자본시장법 / PIPA §23). Response = ConcentrationMirrorResponse, 1:1.
     concentrationMirror: "/api/behavior/concentration-mirror",
+    // Profit/Loss Mirror — factual hold-day + return statistics split by
+    // whether the user's own closed pairs realised a profit or a loss.
+    // Read-only, @api_auth. Renders as a neutral 2-up beneath the other
+    // mirrors on /journal; NEVER a score, grade, or "처분효과/편향" label
+    // (자본시장법 / PIPA §23). Response = ProfitLossMirrorResponse, 1:1.
+    profitLossMirror: "/api/behavior/profit-loss-mirror",
   },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished

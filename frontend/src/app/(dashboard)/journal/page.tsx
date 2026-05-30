@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/editorial";
 import { HoldingMirror } from "@/components/journal/holding-mirror";
 import { ConcentrationMirror } from "@/components/journal/concentration-mirror";
+import { ProfitLossMirror } from "@/components/journal/profit-loss-mirror";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import type { PreTradeReflection } from "@/lib/types";
 
@@ -387,8 +388,12 @@ function JournalContent() {
           <HoldingMirror />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-8">
           <ConcentrationMirror />
+        </div>
+
+        <div className="mb-6">
+          <ProfitLossMirror />
         </div>
 
         <DisclaimerBanner type="behavior-mirror" />

@@ -893,6 +893,21 @@
       "framing": "We reflect your holdings composition as it is. No grade, no recommendation.",
       "emptyTitle": "No holdings yet",
       "emptyDesc": "Once you add a position, we show what share your largest holding takes, measured at average cost."
+    },
+    "profitLossMirror": {
+      "kicker": "OBSERVED",
+      "heading": "Sold at a profit vs at a loss",
+      "daysUnit": "d",
+      "avgHold": "Average hold",
+      "avgReturn": "Average realised return",
+      "takeProfitLabel": "Sold at a profit",
+      "stopLossLabel": "Sold at a loss",
+      "countsLabel": "Sells this period",
+      "countsValue": "{total} · {profit} at a profit / {loss} at a loss",
+      "framing": "We reflect your trade records as they are. No grade, no recommendation.",
+      "insufficient": "There are still too few sell records to mirror a stable average. It will appear automatically as records accumulate.",
+      "emptyTitle": "Nothing to mirror yet",
+      "emptyDesc": "Once a sell is recorded, we show the average holding period and realised return of positions sold at a profit and at a loss, side by side."
     }
   },
   "companion": {

@@ -31,6 +31,7 @@ import type {
   PreTradeJournalResponse,
   HoldingMirrorResponse,
   ConcentrationMirrorResponse,
+  ProfitLossMirrorResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -331,6 +332,52 @@ export function useConcentrationMirror() {
   const swr = useSWR<ConcentrationMirrorResponse | null>(
     API.behavior.concentrationMirror,
     async (url: string): Promise<ConcentrationMirrorResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Profit/Loss-Mirror — factual hold-day + return statistics from the user's
+ * own closed trade pairs, split by whether each pair realised a profit or a
+ * loss. Renders as a neutral 2-up comparison on /journal.
+ *
+ * Mirrors useHoldingMirror's posture exactly: a 404 (backend not yet wired /
+ * genuinely empty) is normalised to `data === null` (soft-empty), and a hard
+ * 5xx / network failure surfaces through `error` so the panel can render
+ * nothing rather than a broken card — a mirror failure must NEVER take down
+ * the journal feed beneath it.
+ *
+ * Never returns a score / grade — only counts, average hold days, and the
+ * raw realised return percentages (loss side keeps its negative sign).
+ */
+export function useProfitLossMirror() {
+  const swr = useSWR<ProfitLossMirrorResponse | null>(
+    API.behavior.profitLossMirror,
+    async (url: string): Promise<ProfitLossMirrorResponse | null> => {
       const res = await fetch(url, { credentials: "include" });
       // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
       if (res.status === 404) return null;
