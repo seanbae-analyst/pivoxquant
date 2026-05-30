@@ -1,3 +1,6 @@
+# DEPRECATED 2026-05-30: AI 점수화 폐기(DECISIONS). 크론·API 비활성. 물리 컬럼
+# drop 은 prod self-heal 함정 때문에 careful 마이그레이션으로 후속. 거울/export/
+# persona benchmark 호환 위해 모델 보존.
 """Weekly behavioural-score computation — Feature 7.
 
 Five sub-scores (each 0-100), weighted into one ``overall_score`` per

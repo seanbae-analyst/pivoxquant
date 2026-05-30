@@ -1,12 +1,16 @@
-"""Tests for Feature 7 — Weekly Behavioural Score.
+"""Tests for the (dormant) Weekly Behavioural Score kernels.
 
 Covers the 5 sub-score kernels, the weighted overall, persona-avg
-floor, observational note's legal cleanliness, the cron handler, and
-the route surface (CSRF + breakdown shape).
+floor, observational note's legal cleanliness, and the cron handler —
+all still exercised so the dormant scorer (kept for export/persona
+benchmark/mirror compatibility) stays correct.
+
+The score-consuming HTTP endpoints were removed 2026-05-30 per the "AI
+점수화 폐기" decision (DECISIONS.md); ``test_score_endpoints_removed``
+is the regression gate.
 """
 from __future__ import annotations
 
-import json
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
@@ -272,63 +276,27 @@ def test_cron_handler_idempotent(app, make_user):
 # Route surface
 # ─────────────────────────────────────────────────────────────────────
 
-def test_endpoint_breakdown_returns_5_subs(app, client, auth_user):
-    """`/api/behavior/breakdown` echoes all 5 sub-score keys."""
-    week_end = _last_sunday(date.today())
-    with app.app_context():
-        sub = {k: 70.0 for k in SUB_SCORE_KEYS}
-        row = BehavioralScore(
-            user_id=auth_user["id"],
-            week_ending=week_end,
-            overall_score=70.0,
-            sub_scores=json.dumps(sub),
-            trade_count=3,
-        )
-        db.session.add(row)
-        db.session.commit()
-    resp = client.get("/api/behavior/breakdown")
-    assert resp.status_code == 200
-    body = resp.get_json()
-    assert body["ok"] is True
-    assert "disclaimer" in body
-    assert set(body["sub_scores"].keys()) == set(SUB_SCORE_KEYS)
+def test_score_endpoints_removed(client, auth_user):
+    """AI 점수화 폐기 (DECISIONS, 2026-05-30): the score-consuming
+    endpoints are gone. Regression gate so they can't be re-added.
 
-
-def test_endpoint_score_returns_null_when_empty(client, auth_user):
-    """No score rows ⇒ score is null but the envelope is still 200 OK."""
-    resp = client.get("/api/behavior/score")
-    assert resp.status_code == 200
-    body = resp.get_json()
-    assert body["ok"] is True
-    assert body["score"] is None
-
-
-def test_endpoint_persona_comparison_no_aggregate(client, auth_user, app):
-    """`/api/behavior/persona-comparison` works when persona_avg is missing."""
-    week_end = _last_sunday(date.today())
-    with app.app_context():
-        sub = {k: 60.0 for k in SUB_SCORE_KEYS}
-        row = BehavioralScore(
-            user_id=auth_user["id"],
-            week_ending=week_end,
-            overall_score=60.0,
-            sub_scores=json.dumps(sub),
-        )
-        db.session.add(row)
-        db.session.commit()
-    resp = client.get("/api/behavior/persona-comparison")
-    assert resp.status_code == 200
-    body = resp.get_json()
-    assert body["ok"] is True
-    # persona_avg is null when the underlying group hasn't been computed.
-    assert body["persona_avg"] is None
-
-
-def test_route_csrf_required_on_no_writes_is_no_op(client, auth_user):
-    """All behavior routes are GET-only; a CSRF header isn't required.
-
-    Pinning this so a future ``POST /api/behavior/recompute`` review
-    surfaces here first.
+    The scorer/model are dormant (still importable for export/persona
+    benchmark/mirror compatibility) but no score surface is reachable.
     """
-    resp = client.get("/api/behavior/score?weeks=4")
+    for path in (
+        "/api/behavior/score",
+        "/api/behavior/score?weeks=4",
+        "/api/behavior/breakdown",
+        "/api/behavior/persona-comparison",
+    ):
+        resp = client.get(path)
+        assert resp.status_code == 404, f"{path} should be removed, got {resp.status_code}"
+
+
+def test_mirror_routes_csrf_required_on_no_writes_is_no_op(client, auth_user):
+    """Surviving behavior mirror routes are GET-only; no CSRF header needed.
+
+    Pinning this so a future write route (e.g. ``POST``) surfaces here first.
+    """
+    resp = client.get("/api/behavior/holding-mirror")
     assert resp.status_code == 200

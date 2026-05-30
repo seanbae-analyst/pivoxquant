@@ -1822,25 +1822,10 @@ def _init_scheduler(app):
                 logger.error(f"Earnings pre-brief scan failed: {e}")
                 _alert_sched("sched_earnings_prebrief", e)
 
-    def _scheduled_behavioral_scores():
-        """Weekly Sunday 22:00 KST — BehavioralScore for every active user.
-
-        Backs Feature 7 (Weekly Behavioural Score). Scheduled 1h before
-        the 23:00 PersonaSnapshot cron so the score's persona-comparison
-        block reads against the *previous* snapshot — purely
-        observational, no directive language. Per-user failures never
-        block the rest; the scorer's UNIQUE(user_id, week_ending)
-        constraint keeps a manual re-trigger idempotent.
-        """
-        from services.behavior import run_weekly_for_all_users
-        with app.app_context():
-            try:
-                summary = run_weekly_for_all_users()
-                logger.info(f"Behavioural score weekly run: {summary}")
-                _record_sched_success("sched_behavioral_scores")
-            except Exception as e:
-                logger.error(f"Behavioural score weekly failed: {e}")
-                _alert_sched("sched_behavioral_scores", e)
+    # NOTE: _scheduled_behavioral_scores (weekly BehavioralScore cron) was
+    # removed 2026-05-30 per the "AI 점수화 폐기" decision (DECISIONS.md).
+    # Scores are no longer computed; the scorer/model are dormant. See
+    # services/behavior/scorer.py for the deprecation note.
 
     def _scheduled_persona_snapshots():
         """Weekly Sunday 23:00 KST — PersonaSnapshot for every active user.
@@ -2202,19 +2187,9 @@ def _init_scheduler(app):
         max_instances=1,
         coalesce=True,
     )
-    # 매주 일요일 22:00 KST — BehavioralScore 주간 점수 (Feature 7).
-    # PersonaSnapshot 23:00 보다 1시간 먼저 실행해 점수의 persona-comparison
-    # 블록이 *직전* 스냅샷을 읽도록 한다. 회고적 관찰 점수만 기록하며
-    # 권유 언어는 forbidden_terms 필터로 차단한다.
-    sched.add_job(
-        _scheduled_behavioral_scores,
-        trigger="cron",
-        day_of_week="sun", hour=22, minute=0,
-        timezone="Asia/Seoul",
-        id="behavioral_score_weekly",
-        max_instances=1,
-        coalesce=True,
-    )
+    # behavioral_score_weekly 잡은 2026-05-30 "AI 점수화 폐기" 결정
+    # (DECISIONS.md)에 따라 제거했다. 점수는 더 이상 계산되지 않으며
+    # BehavioralScore 모델/스코어러는 dormant 보존한다.
     # ── Feature 5 — AI Trader Twin (paper-only) ─────────────────────────
     # 매일 16:30 KST — KOSPI/KOSDAQ 마감 직후 Twin paper 의사결정.
     sched.add_job(

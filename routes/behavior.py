@@ -1,20 +1,22 @@
-"""Weekly Behavioural Score routes — Feature 7.
+"""Retrospective behaviour-mirror routes.
 
 Endpoints (all under ``/api/behavior``):
 
-    GET /score                — most recent week's score
-    GET /score?weeks=N        — last N weeks (capped 1..52)
-    GET /breakdown            — sub-score detail for the most recent week
-    GET /persona-comparison   — same week vs. anonymised persona-group avg
-    GET /holding-mirror       — retrospective winner/loser holding-period
-                                mirror (?period=30d|all)
+    GET /holding-mirror         — retrospective winner/loser holding-period
+                                  mirror (?period=30d|all)
+    GET /concentration-mirror   — cost-basis concentration of open positions
+    GET /profit-loss-mirror     — profit/loss hold-day + return mirror
+                                  (?period=30d|all)
+
+The former AI behavioural-scoring endpoints (``/score``, ``/breakdown``,
+``/persona-comparison``) were removed 2026-05-30 per the "AI 점수화 폐기"
+decision (DECISIONS.md). See the deprecation note further down.
 
 Legal posture
 -------------
-Strictly retrospective ("지난주"). All language is observational; we
-never emit "should" / "consider" / "recommend" framing. Persona
-comparison surfaces only when the underlying group aggregate clears
-``MIN_GROUP_SIZE = 20`` — otherwise the comparison block is null.
+Strictly retrospective ("지난 거래"). All language is observational; we
+surface only factual statistics — never a score, grade, or directive
+("should" / "consider" / "recommend") framing.
 """
 from __future__ import annotations
 
@@ -23,7 +25,7 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from models import BehavioralScore, TradeHistory
+from models import TradeHistory
 from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
 from services.profile.holding_mirror import compute_holding_mirror
@@ -35,95 +37,14 @@ logger = logging.getLogger(__name__)
 behavior_bp = Blueprint("behavior", __name__, url_prefix="/api/behavior")
 
 
-_DISCLAIMER = (
-    "본 점수는 지난 주의 회고적 관찰 지표이며 미래 예측이나 거래 권유가 "
-    "아닙니다."
-)
-
-
-def _envelope(payload: dict, *, status: int = 200):
-    body = {"ok": True, "disclaimer": _DISCLAIMER}
-    body.update(payload)
-    return jsonify(body), status
-
-
-# ── /score ──────────────────────────────────────────────────────────
-
-@behavior_bp.route("/score", methods=["GET"])
-@api_auth
-def score():
-    """Most recent score, or a series when ``?weeks=N`` is supplied."""
-    weeks_raw = request.args.get("weeks")
-    if weeks_raw is None:
-        latest = (
-            BehavioralScore.query
-            .filter_by(user_id=current_user.id)
-            .order_by(BehavioralScore.week_ending.desc())
-            .first()
-        )
-        if latest is None:
-            return _envelope({"score": None})
-        return _envelope({"score": latest.to_dict()})
-
-    try:
-        weeks = int(weeks_raw)
-    except (TypeError, ValueError):
-        return jsonify({"error": "weeks must be an integer", "code": "BAD_INPUT"}), 400
-    weeks = max(1, min(52, weeks))
-
-    rows = (
-        BehavioralScore.query
-        .filter_by(user_id=current_user.id)
-        .order_by(BehavioralScore.week_ending.desc())
-        .limit(weeks)
-        .all()
-    )
-    # Oldest first so the chart draws left-to-right.
-    series = [r.to_dict() for r in reversed(rows)]
-    return _envelope({"series": series, "weeks": weeks})
-
-
-# ── /breakdown ──────────────────────────────────────────────────────
-
-@behavior_bp.route("/breakdown", methods=["GET"])
-@api_auth
-def breakdown():
-    latest = (
-        BehavioralScore.query
-        .filter_by(user_id=current_user.id)
-        .order_by(BehavioralScore.week_ending.desc())
-        .first()
-    )
-    if latest is None:
-        return _envelope({"breakdown": None})
-    payload = latest.to_dict()
-    return _envelope({
-        "week_ending": payload.get("week_ending"),
-        "overall_score": payload.get("overall_score"),
-        "sub_scores": payload.get("sub_scores", {}),
-        "trade_count": payload.get("trade_count", 0),
-    })
-
-
-# ── /persona-comparison ────────────────────────────────────────────
-
-@behavior_bp.route("/persona-comparison", methods=["GET"])
-@api_auth
-def persona_comparison():
-    latest = (
-        BehavioralScore.query
-        .filter_by(user_id=current_user.id)
-        .order_by(BehavioralScore.week_ending.desc())
-        .first()
-    )
-    if latest is None:
-        return _envelope({"comparison": None})
-    payload = latest.to_dict()
-    return _envelope({
-        "week_ending": payload.get("week_ending"),
-        "user": payload.get("sub_scores", {}),
-        "persona_avg": payload.get("persona_avg"),
-    })
+# ── AI 점수화 폐기 (DECISIONS, 2026-05-30) ──────────────────────────
+# 무료 출시 Stage 0 BLOCKER #1: "평가 안 함" 포지션 달성을 위해 점수
+# 소비 엔드포인트(GET /score, /breakdown, /persona-comparison)를 제거했다.
+# 점수는 이제 (a) 크론 비활성으로 계산되지 않고 (b) API 로 접근 불가하며
+# (c) 프론트 소비자가 0건이다. BehavioralScore 모델/스코어러는 거울·export·
+# persona benchmark 호환을 위해 dormant 보존한다(물리 컬럼 drop 은 prod
+# self-heal 함정 때문에 careful 마이그레이션으로 후속). 아래 거울
+# 엔드포인트(holding/concentration/profit-loss)는 사실 관찰 surface 로 유지.
 
 
 # ── /holding-mirror ─────────────────────────────────────────────────
