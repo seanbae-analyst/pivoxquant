@@ -54,6 +54,17 @@ const nextConfig: NextConfig = {
       // 않음(코드 보존 요건) — redirect 가 도달 자체를 막는다.
       { source: "/ai-chat", destination: "/ai", permanent: true },
       { source: "/ai-chat/:path*", destination: "/ai", permanent: true },
+      // 무료 출시 (DECISIONS.md ✅확정 2026-05-30: Stage 0 무료, 월구독
+      // ⬛superseded). `/pricing` 결제/플랜 비교 페이지는 코드를 보존하되
+      // URL 직접접근을 `/home` 으로 차단한다. 진입점 링크(nav/footer/dropdown/
+      // upsell)는 별도로 hidden 처리. 백엔드 routes/billing.py 는 이미
+      // require_business_registration 503 게이트로 보존됨.
+      //
+      // ⚠️ permanent:false (307) — ai-chat 격리(§101 법적 영구차단)와 달리
+      // pricing 은 Stage 1 유료화 부활 가능성이 있어 브라우저 영구캐시(308)를
+      // 피한다. 부활 = 이 두 줄 + sitemap/진입점 hidden 을 되돌리면 된다.
+      { source: "/pricing", destination: "/home", permanent: false },
+      { source: "/pricing/:path*", destination: "/home", permanent: false },
     ];
   },
   async headers() {

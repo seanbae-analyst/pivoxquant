@@ -284,21 +284,10 @@ export function CompanionEntryV2({
             </form>
           </div>
 
+          {/* "See Premium Plus →" (→ /pricing?plan=plus) 제거 — 무료 출시
+              (DECISIONS.md ✅확정 2026-05-30). /pricing 은 next.config.ts 307
+              redirect → /home. Sample memo 링크는 유지. Stage 1 부활 시 복원. */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-            <Link
-              href="/pricing?plan=plus"
-              className="font-mono uppercase"
-              style={{
-                fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.18em",
-                color: "var(--pq-bronze)",
-                borderBottom: "1px solid rgba(184,149,106,0.35)",
-                paddingBottom: 2,
-                textDecoration: "none",
-              }}
-            >
-              See Premium Plus →
-            </Link>
             <Link
               href="/companion#sample"
               className="font-mono uppercase"

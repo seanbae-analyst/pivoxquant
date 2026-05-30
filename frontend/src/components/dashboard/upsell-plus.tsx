@@ -31,6 +31,12 @@ const FOUNDING_TOTAL = 200;
 const FOUNDING_CLAIMED = 17; // 183 remaining
 const FOUNDING_REMAINING = FOUNDING_TOTAL - FOUNDING_CLAIMED;
 
+// 무료 출시 (DECISIONS.md ✅확정 2026-05-30: Stage 0 무료, 월구독 ⬛superseded).
+// 이 strip 은 `/pricing?plan=plus` 결제 업셀이 유일 목적이라 무료 출시 동안
+// 전체 숨김. /pricing 은 next.config.ts 307 redirect → /home 이므로 노출돼도
+// 깨진 링크가 됨. Stage 1 유료화 부활 시 이 플래그만 true 로.
+const SHOW_FOUNDING_UPSELL = false;
+
 export function UpsellPlus() {
   const { user } = useAuth();
   const { data: status } = useCompanionStatus();
@@ -41,7 +47,9 @@ export function UpsellPlus() {
     status?.entitlement_plans,
   );
 
-  // Already on Plus+, or the feature is fully disabled → render nothing.
+  // Already on Plus+, the feature is fully disabled, or we're in free-launch
+  // mode (SHOW_FOUNDING_UPSELL=false) → render nothing.
+  if (!SHOW_FOUNDING_UPSELL) return null;
   if (entitled) return null;
   if (status && status.enabled === false && status.phase !== "closed_beta") {
     // still show during closed_beta — waitlist has value then.

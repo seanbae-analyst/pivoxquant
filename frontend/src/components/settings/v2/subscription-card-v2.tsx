@@ -22,6 +22,13 @@
 import * as React from "react";
 import Link from "next/link";
 
+// 무료 출시 (DECISIONS.md ✅확정 2026-05-30: Stage 0 무료, 월구독 ⬛superseded).
+// 티어 비교 카드는 보존하되 `/pricing?plan=…` 으로 가는 "Upgrade to …" 업셀
+// CTA 는 숨긴다 (/pricing 은 next.config.ts 307 redirect → /home 이라 깨진 링크가
+// 됨). 빌링 포털 CTA(Manage billing / Open in Stripe)는 유료 티어 전용으로
+// 그대로 두어 Stage 1 부활 시 즉시 동작. Stage 1 = 이 플래그를 true 로.
+const SHOW_UPGRADE_CTA = false;
+
 interface Tier {
   id: "free" | "pro" | "premium";
   eyebrow: string;
@@ -346,7 +353,7 @@ export function SubscriptionCardV2({
                   ) : null}
                 </div>
                 )
-              ) : isUpgrade ? (
+              ) : isUpgrade && SHOW_UPGRADE_CTA ? (
                 <div style={{ marginTop: 20 }}>
                   <Link
                     href={`${pricingHref}?plan=${t.id}`}

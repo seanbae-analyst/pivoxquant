@@ -634,8 +634,9 @@ function SiteFooter() {
             },
             {
               title: "Company",
+              // Pricing 링크 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0).
+              // /pricing 은 next.config.ts 307 redirect → /home. Stage 1 부활 시 복원.
               links: [
-                { label: "Pricing", href: "/pricing" },
                 { label: "Terms", href: "/terms" },
                 { label: "Privacy", href: "/privacy" },
                 { label: "Contact", href: "mailto:hello@pivoxquant.com" },

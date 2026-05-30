@@ -5,7 +5,8 @@
  * ---------------------------------------------------------------
  * Polish target: Apple HIG + Linear.app + Vercel.com.
  *  • Sticky; shrinks 20% + backdrop blur intensifies after 20px scroll.
- *  • 5 menus: Living CFO / Personas / Signature / Pricing / Docs.
+ *  • 4 menus: Living CFO / Personas / Signature / Docs.
+ *    (Pricing menu removed 2026-05-30 — free Stage 0 launch.)
  *  • Mega dropdown: 3-col grid, icon + title + one-line description.
  *  • Vantablack bg, bronze hairline, gradient bronze underline on hover.
  *  • motion/react stagger 0.04s, cubic-bezier(0.16, 1, 0.3, 1).
@@ -26,10 +27,8 @@ import type { Variants } from "motion/react";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST } from "@/lib/motion";
 import {
   ArrowRight,
-  BarChart3,
   Bookmark,
   Brain,
-  Briefcase,
   CircuitBoard,
   Compass,
   FileText,
@@ -38,9 +37,7 @@ import {
   Layers,
   LineChart,
   Menu,
-  Receipt,
   Shield,
-  Sparkles,
   Target,
   Users,
   type LucideIcon,
@@ -162,37 +159,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       },
     ],
   },
-  {
-    key: "pricing",
-    label: "Pricing",
-    footnote: "Four tiers. We are never paid when you trade.",
-    items: [
-      {
-        label: "Four Tiers",
-        href: "/#pricing",
-        description: "Free, Pro, Premium — priced in KRW.",
-        icon: Receipt,
-      },
-      {
-        label: "Founding Lifetime",
-        href: "/#pricing",
-        description: "200 seats. Locked for the life of the product.",
-        icon: Sparkles,
-      },
-      {
-        label: "Compare Plans",
-        href: "/pricing",
-        description: "Full side-by-side of every artifact and module.",
-        icon: BarChart3,
-      },
-      {
-        label: "For Teams",
-        href: "/pricing#teams",
-        description: "Research desks, family offices, private trusts.",
-        icon: Briefcase,
-      },
-    ],
-  },
+  // Pricing 메가메뉴 제거 (DECISIONS.md ✅확정 2026-05-30: Stage 0 무료 출시).
+  // `/pricing` + `/#pricing` 진입점은 무료 출시라 노출하지 않는다. /pricing 은
+  // next.config.ts 에서 /home 으로 307 redirect 되며, 페이지·백엔드는 보존.
+  // Stage 1 유료화 부활 시 이 그룹을 복원하면 된다.
   {
     key: "docs",
     label: "Docs",

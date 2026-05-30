@@ -156,7 +156,11 @@ export function ArtifactQueue() {
       : companionEntitled
         ? "Reflect on this week's moves."
         : "Premium Plus — join the waitlist.",
-    href: companionEntitled ? "/companion" : "/pricing?plan=plus",
+    // 무료 출시 (DECISIONS.md ✅확정 2026-05-30): locked 상태도 결제 업셀
+    // (`/pricing?plan=plus`) 대신 /companion 으로 보낸다 — /pricing 은
+    // next.config.ts 307 redirect → /home 이라 깨진 링크가 됨. /companion
+    // 페이지가 자체 closed-beta 게이트/waitlist 를 처리한다.
+    href: "/companion",
     Icon: BookHeart,
     locked: !companionEntitled,
     state: companionEntitled

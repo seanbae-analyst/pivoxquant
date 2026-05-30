@@ -142,9 +142,13 @@ export function LivingCFOStatusBar() {
           : companionTurns === 0
             ? "Open a reflection to begin."
             : `${companionTurns} conversation${companionTurns === 1 ? "" : "s"} with your CFO.`,
+      // 무료 출시 (DECISIONS.md ✅확정 2026-05-30): locked 상태의 "Unlock"
+      // CTA 는 `/pricing?plan=plus` 결제 업셀이라 숨긴다(/pricing 은 307
+      // redirect → /home). Closed Beta 안내 문구(summary)만 남긴다. Stage 1
+      // 부활 시 locked → Unlock CTA 복원.
       cta:
         layer4State === "locked"
-          ? { label: "Unlock", href: "/pricing?plan=plus" }
+          ? undefined
           : { label: "Open Companion", href: "/companion" },
     },
   ];

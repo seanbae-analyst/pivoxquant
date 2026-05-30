@@ -25,12 +25,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 1,
     },
-    {
-      url: `${BASE_URL}/pricing`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
+    // /pricing 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0). /pricing 은
+    // next.config.ts 에서 /home 으로 307 redirect 되므로 sitemap 에 노출하면
+    // Googlebot 이 redirect 체인을 크롤하게 된다. Stage 1 유료화 부활 시 복원.
 
     // ── Public funnel pages (release-prep audit 2026-05-09: previously
     // missing — viral acquisition surfaces and unauthenticated demos) ──

@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Settings, CreditCard, Keyboard, HelpCircle, LifeBuoy, LogOut } from "lucide-react";
+import { User, Settings, Keyboard, HelpCircle, LifeBuoy, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/utils";
@@ -167,9 +167,9 @@ export function ProfileDropdown() {
               <MenuLink href="/settings" icon={<Settings className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
                 {t("profileMenu.settings")}
               </MenuLink>
-              <MenuLink href="/pricing" icon={<CreditCard className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                {t("profileMenu.billing")}
-              </MenuLink>
+              {/* Billing 진입점 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0).
+                  /pricing 은 next.config.ts 307 redirect → /home. i18n 키
+                  (profileMenu.billing) 는 보존 — Stage 1 부활 시 이 링크만 복원. */}
               <MenuButton
                 icon={<Keyboard className="h-4 w-4" />}
                 onClick={() => {
