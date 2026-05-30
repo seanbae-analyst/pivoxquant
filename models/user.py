@@ -260,7 +260,37 @@ class User(UserMixin, db.Model):
         This is a dev/admin backdoor for owner accounts and invited testers.
         Stripe billing state remains the source of truth — these only flip
         runtime entitlement, not the stored column.
+
+        ── Free-launch flag (LAUNCH_FREE_ALL_TIERS) ─────────────────────────
+        2026-05-30: DECISIONS.md ✅ confirms the launch is FREE (Stage 0); the
+        3-tier monthly subscription model is ⬛superseded. Per CEO ("PDF
+        기능들 싹다 오픈"), every paid Artifact (18 types) + one-way AI is opened
+        to all authenticated users by returning "premium" here. Because every
+        backend gate (`@require_tier` in routes/decorators.py, the unified
+        artifact generate gate in routes/artifacts.py, and serialize_user in
+        services/serializers.py → frontend TierGate) reads THIS single
+        property, flipping it here opens both backend and frontend in one move.
+
+        Intentional carve-out — Companion stays CLOSED. The Companion gate
+        (routes/agent.py `_ENTITLED_PLANS = {premium_plus, founding_lifetime}`)
+        requires a strictly-higher tier than "premium" (ranks 3/4 > 2), so
+        returning "premium" does NOT unlock the two-way AI chat (§101③ 양방향
+        AI 격리). ai-chat is separately isolated behind its own AI_CHAT_ENABLED
+        flag and is likewise unaffected.
+
+        Flag is ON by default for the free launch. When Stage 1 paywall lands,
+        set LAUNCH_FREE_ALL_TIERS=0 (or "false") to restore the prior logic
+        (env override + subscription_tier column) with no code change — the
+        original code path below is preserved verbatim.
         """
+        # Unset OR empty → default ON. Only an explicit falsy string turns the
+        # free launch OFF (Stage 1 paywall). Empty string is treated as unset.
+        free_all_raw = os.environ.get("LAUNCH_FREE_ALL_TIERS", "1").strip().lower()
+        if free_all_raw == "":
+            free_all_raw = "1"
+        if free_all_raw not in ("0", "false", "no", "off"):
+            return "premium"
+
         email = (self.email or "").lower()
         if email:
             founding_raw = os.environ.get("DEV_FOUNDING_EMAILS", "") or ""

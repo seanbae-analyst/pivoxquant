@@ -86,6 +86,13 @@ os.environ["ALPACA_ENABLED"] = "0"
 # Prevent the app factory (if ever imported) from spinning up a scheduler.
 os.environ["DISABLE_SCHEDULER"] = "1"
 
+# Free-launch flag (models/user.py effective_tier) defaults ON in production so
+# the launch opens every paid Artifact + one-way AI to all users. In TESTS we
+# pin it OFF so the tier-gating suite keeps exercising the real gating logic
+# (which must remain functional for the Stage-1 paywall). The dedicated
+# tests/test_free_launch_tiers.py opts the flag back ON per-test via monkeypatch.
+os.environ["LAUNCH_FREE_ALL_TIERS"] = "0"
+
 # Eagerly import the app module NOW. ``app.py`` runs
 # ``load_dotenv(..., override=True)`` at module import, which RE-injects every
 # .env value (incl. DEV_LOGIN_SECRET / SIM_ONBOARD_SECRET). The test app uses
