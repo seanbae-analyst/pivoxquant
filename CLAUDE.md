@@ -140,6 +140,7 @@ cd ~/Desktop/취준/pivoxquant/frontend && npm run dev
 - Alpaca: paper trading 계정 (.env에 키 있음)
 
 ## 중요 원칙
+- 🔴 **최신 정보 파악 (모든 agent 필수)** — CEO 반복 지시 (2026-05-30 "자꾸 옛날 데이터 가져온다"). **코드/수치** = grep·Read 실측 (메모리·기억 인용 금지) / **시장·경쟁·규제** = WebSearch + 출처 날짜 확인 (훈련데이터 금지, 예: 키움 자동일지 = 검색으로 확인) / **결정**(가격·법·수익모델) = `~/.claude/projects/-Users-seanbae-Desktop---/memory/DECISIONS.md` (SoT) / **동적수치**(HEAD·cron·test) = SessionStart hook LIVE 값. 오늘 날짜 기준. 모르면 "확인 불가". "최근/요즘" 막연 표현 금지 → 출처+날짜.
 - **핵심 퀀트 엔진 신중 수정** — `services/quant/`(engine/risk_defense/risk_metrics/
   portfolio/backtester 등)는 검증된 완성 코드. 버그 fix 시 수식 단위/회귀 테스트 필수.
   autotrade 기능은 2026-04-27 비활성화 → 2026-05-05 물리 삭제 (투자일임업 회피, rollback 은 git tag `legal-pre-autotrader-removal` 만)
