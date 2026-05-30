@@ -881,6 +881,18 @@
       "insufficient": "There are still too few sell records to mirror a stable average. It will appear automatically as records accumulate.",
       "emptyTitle": "Nothing to mirror yet",
       "emptyDesc": "Once a sell is recorded, we show the average holding period of positions sold while up and while down, side by side."
+    },
+    "concentrationMirror": {
+      "kicker": "Holdings composition",
+      "heading": "Your holdings right now",
+      "factCountLabel": "Open holdings",
+      "factCountUnit": "",
+      "factLead": "Of those,",
+      "factWeightLabel": "Share at average cost",
+      "costBasisNote": "At average cost (not market price)",
+      "framing": "We reflect your holdings composition as it is. No grade, no recommendation.",
+      "emptyTitle": "No holdings yet",
+      "emptyDesc": "Once you add a position, we show what share your largest holding takes, measured at average cost."
     }
   },
   "companion": {

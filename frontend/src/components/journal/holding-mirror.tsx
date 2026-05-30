@@ -18,8 +18,10 @@
  *     here would nudge trading = 권유 risk).
  *
  * Legal posture: 자본시장법 (no 추천/조언) + PIPA §23 (no profiling/score).
- * The <DisclaimerBanner type="behavior-mirror" /> at the foot states, in
- * legal-confirmed wording, that this is not a medical/psychological service.
+ * The behavior-mirror disclaimer (not a medical/psychological service, not a
+ * recommendation) is mounted ONCE at the foot of the mirror SECTION in
+ * journal/page.tsx — shared across all mirrors — not inline here, so a screen
+ * with N mirrors shows a single legal banner (2026-05-30).
  *
  * Tone: v3 — Vantablack + Bronze + Playfair UPRIGHT. Mobile-first; the 2-up
  * stays side-by-side at 375px so the comparison is instant (never stacks).
@@ -36,9 +38,7 @@ import {
   FieldLabel,
   Caption,
   StatRow,
-  HairlineSoft,
 } from "@/components/ui/editorial";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import type { HoldingMirrorResponse } from "@/lib/types";
 
 /** Em-dash sentinel — mirrors lib/format.ts missing-value convention. */
@@ -218,12 +218,6 @@ function EmptyState({ t }: { t: (k: string) => string }) {
       <Caption className="mt-2 max-w-md">
         {t("journal.holdingMirror.emptyDesc")}
       </Caption>
-      <div className="mt-5">
-        <HairlineSoft />
-      </div>
-      <div className="mt-4">
-        <DisclaimerBanner type="behavior-mirror" alwaysExpanded={false} />
-      </div>
     </MirrorShell>
   );
 }
@@ -283,13 +277,6 @@ function LoadedMirror({
       <Caption className="mt-4 max-w-lg">
         {t("journal.holdingMirror.framing")}
       </Caption>
-
-      <div className="mt-5">
-        <HairlineSoft />
-      </div>
-      <div className="mt-4">
-        <DisclaimerBanner type="behavior-mirror" alwaysExpanded={false} />
-      </div>
     </MirrorShell>
   );
 }

@@ -24,6 +24,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from models import BehavioralScore, TradeHistory
+from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.profile.holding_mirror import compute_holding_mirror
 
 from .decorators import api_auth
@@ -168,5 +169,28 @@ def holding_mirror():
     result = compute_holding_mirror(trades, period_days=period_days)
 
     body = {"ok": True, "disclaimer": _HOLDING_MIRROR_DISCLAIMER, "period": period}
+    body.update(result)
+    return jsonify(body), 200
+
+
+# ── /concentration-mirror ───────────────────────────────────────────
+
+_CONCENTRATION_MIRROR_DISCLAIMER = (
+    "본 정보는 현재 보유 종목의 사실 관찰이며 미래 예측이나 거래 권유가 "
+    "아닙니다."
+)
+
+
+@behavior_bp.route("/concentration-mirror", methods=["GET"])
+@api_auth
+def concentration_mirror():
+    """Cost-basis concentration mirror for the user's open positions.
+
+    Returns the single largest holding's share of the portfolio at cost
+    basis (평균매입가 기준), the position count, and the largest holding's
+    display name — never a score/grade/ratio. No external price call.
+    """
+    result = compute_concentration_mirror(current_user.id)
+    body = {"ok": True, "disclaimer": _CONCENTRATION_MIRROR_DISCLAIMER}
     body.update(result)
     return jsonify(body), 200

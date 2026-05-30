@@ -283,6 +283,12 @@ export const API = {
   // HoldingMirrorResponse in lib/types.ts — backend contract locked 1:1.
   behavior: {
     holdingMirror: "/api/behavior/holding-mirror",
+    // Concentration Mirror — factual cost-basis composition of the user's own
+    // open positions (largest holding's share of the portfolio). Read-only,
+    // @api_auth. Renders as a neutral fact sentence beneath the disposition
+    // mirror on /journal; NEVER a score, grade, or "과집중/위험" label
+    // (자본시장법 / PIPA §23). Response = ConcentrationMirrorResponse, 1:1.
+    concentrationMirror: "/api/behavior/concentration-mirror",
   },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished

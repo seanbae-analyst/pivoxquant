@@ -38,6 +38,8 @@ import {
   FootSignature,
 } from "@/components/ui/editorial";
 import { HoldingMirror } from "@/components/journal/holding-mirror";
+import { ConcentrationMirror } from "@/components/journal/concentration-mirror";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import type { PreTradeReflection } from "@/lib/types";
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -372,12 +374,25 @@ function JournalContent() {
           — no page-level banner here (CEO 2026-05-24: disclaimer only at the
           bottom, every page). */}
 
-      {/* Holding-Mirror — pinned panel above the feed. Own SWR + boundary so a
-          mirror failure can never take down the journal feed below it. Carries
-          its own behavior-mirror disclaimer inline (legal-confirmed). */}
-      <div className="mb-8">
-        <HoldingMirror />
-      </div>
+      {/* Behavior-mirror section — the disposition + concentration mirrors,
+          each with its OWN SWR + loading/error boundary so any single mirror
+          failure can never take down the journal feed (or its siblings) below.
+          A SINGLE shared behavior-mirror disclaimer is mounted once at the
+          section foot (legal-confirmed wording), so a screen with N mirrors
+          shows one legal banner — not one per mirror. The disclaimer renders
+          unconditionally, independent of each mirror's data/empty/error state,
+          and covers any future mirror added to this section (e.g. FOMO). */}
+      <section className="mb-8" aria-label={t("journal.page.kicker")}>
+        <div className="mb-8">
+          <HoldingMirror />
+        </div>
+
+        <div className="mb-6">
+          <ConcentrationMirror />
+        </div>
+
+        <DisclaimerBanner type="behavior-mirror" />
+      </section>
 
       {/* Feed */}
       {isLoading ? (

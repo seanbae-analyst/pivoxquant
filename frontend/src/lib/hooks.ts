@@ -30,6 +30,7 @@ import type {
   Position,
   PreTradeJournalResponse,
   HoldingMirrorResponse,
+  ConcentrationMirrorResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -285,6 +286,51 @@ export function useHoldingMirror() {
   const swr = useSWR<HoldingMirrorResponse | null>(
     API.behavior.holdingMirror,
     async (url: string): Promise<HoldingMirrorResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Concentration-Mirror — factual cost-basis composition of the user's own
+ * open positions (the largest holding's share of the portfolio).
+ *
+ * Mirrors useHoldingMirror's posture exactly: a 404 (backend not yet wired /
+ * genuinely empty) is normalised to `data === null` (soft-empty), and a hard
+ * 5xx / network failure surfaces through `error` so the panel can render
+ * nothing rather than a broken card — a mirror failure must NEVER take down
+ * the journal feed beneath it.
+ *
+ * Never returns a score / grade / ratio — only a count + the largest holding's
+ * weight + display name.
+ */
+export function useConcentrationMirror() {
+  const swr = useSWR<ConcentrationMirrorResponse | null>(
+    API.behavior.concentrationMirror,
+    async (url: string): Promise<ConcentrationMirrorResponse | null> => {
       const res = await fetch(url, { credentials: "include" });
       // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
       if (res.status === 404) return null;

@@ -486,6 +486,42 @@ export interface HoldingMirrorResponse {
   losers: HoldingMirrorSide | null;
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+ * Concentration-Mirror — factual cost-basis composition "mirror".
+ *
+ * GET /api/behavior/concentration-mirror returns how much of the user's OWN
+ * open portfolio (at 평균매입가 / average cost, NOT market price) sits in their
+ * single largest holding. It is purely observational — a description of the
+ * current composition stated as a fact: "보유 N개 중 X가 67.3%". No score,
+ * grade, index, ratio, or "집중 위험 / 과집중 / 분산 필요" label is ever
+ * surfaced (자본시장법 / PIPA §23 / DECISIONS.md AI 점수화 폐기). The user reads
+ * the fact and draws their own conclusion (research_cbt_bias_model.md —
+ * 사실만 비추고 재구성은 사용자).
+ *
+ * Backend contract is locked 1:1 with this shape (routes/behavior.py
+ * /concentration-mirror + services/behavior/concentration_mirror.py) — do NOT
+ * rename keys.
+ *   - `sufficient_data` false  → no open position with a positive cost basis;
+ *                                `max_weight_pct` / `largest_ticker` are null
+ *                                and `ticker_count` is 0. Renders the calm
+ *                                empty state (no call-to-action).
+ *   - `cost_basis_note`        → the "평균매입가 기준 (시장가 아님)" clarifier the
+ *                                backend supplies verbatim (oversight guard).
+ * ────────────────────────────────────────────────────────────────────── */
+export interface ConcentrationMirrorResponse {
+  ok: boolean;
+  disclaimer?: string;
+  sufficient_data: boolean;
+  /** Number of open positions counted (positive shares × positive avg cost). */
+  ticker_count: number;
+  /** Largest holding's share of the portfolio at cost basis, rounded to 0.1%. */
+  max_weight_pct: number | null;
+  /** Display NAME of the largest holding ("삼성전자"), never a naked code. */
+  largest_ticker: string | null;
+  /** Backend-supplied clarifier, e.g. "평균매입가 기준 (시장가 아님)". */
+  cost_basis_note: string;
+}
+
 /* ── Artifact / Reports Archive ── */
 
 export type ArtifactType =
