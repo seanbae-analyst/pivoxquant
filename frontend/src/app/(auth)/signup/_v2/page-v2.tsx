@@ -593,7 +593,7 @@ export default function SignupPageV2() {
               />
               <span className="font-serif" style={consentLabelStyle}>
                 <span className="font-mono" style={requiredTagStyle}>[필수]</span>
-                개인정보의 국외 이전에 동의합니다. (PIPA §28-8 — Anthropic / Stripe / Vercel / Railway / Google, 미국 소재 위탁처)
+                개인정보의 국외 이전에 동의합니다. (PIPA §28-8 — Anthropic / Vercel / Railway / Google / SendGrid 외 미국·프랑스 소재 8개 위탁처, 상세 목록은 개인정보처리방침 참조)
                 {" "}
                 <a
                   href="/privacy#cross-border"

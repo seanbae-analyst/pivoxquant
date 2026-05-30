@@ -74,7 +74,9 @@ describe("SignupPageV2", () => {
 
     // Click the four required checkboxes.
     // 2026-05-04 (commit 7084f60 / c9c6827): cross_border added per
-    // PIPA §28-8 (Anthropic / Stripe / Vercel / Railway / Google in US).
+    // PIPA §28-8. Processors: 7 in US (Anthropic / Vercel / Railway /
+    // Google / SendGrid / Sentry / Stripe) + 1 in France (Brevo) = 8 total;
+    // privacy-ko.md §6 (#cross-border) is the authoritative list.
     // 2026-05-10 (Wave 1 Task 4): birthdate ≥14 required before age
     // checkbox is enabled per PIPA §22 ⑥ (만 14세 미만 fail-fast).
     // 2026-05-11 SHIP-BLOCKER fix: agree_age auto-derived from valid DOB ≥14,
