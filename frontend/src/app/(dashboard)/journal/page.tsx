@@ -37,6 +37,7 @@ import {
   EditorialHead,
   FootSignature,
 } from "@/components/ui/editorial";
+import { HoldingMirror } from "@/components/journal/holding-mirror";
 import type { PreTradeReflection } from "@/lib/types";
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -370,6 +371,13 @@ function JournalContent() {
       {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
           — no page-level banner here (CEO 2026-05-24: disclaimer only at the
           bottom, every page). */}
+
+      {/* Holding-Mirror — pinned panel above the feed. Own SWR + boundary so a
+          mirror failure can never take down the journal feed below it. Carries
+          its own behavior-mirror disclaimer inline (legal-confirmed). */}
+      <div className="mb-8">
+        <HoldingMirror />
+      </div>
 
       {/* Feed */}
       {isLoading ? (

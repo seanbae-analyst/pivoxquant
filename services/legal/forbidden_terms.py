@@ -120,6 +120,28 @@ FORBIDDEN_DIRECTIVE_TERMS: Final[frozenset[str]] = frozenset({
     "stoploss",
     "익절하세요",
     "손절하세요",
+    # ── 2026-05-30 expansion (Holding Mirror — 처분효과 거울) ──────────────
+    # The retrospective holding-period mirror surfaces raw facts only. To
+    # keep its copy (and any AI-generated companion text around it) from
+    # drifting into behavioural-judgement / clinical framing, block:
+    #   * the behavioural-finance jargon itself — naming the bias to the
+    #     user reads as a diagnosis, not an observation;
+    #   * directive imperatives telling the user to fix/correct themselves;
+    #   * clinical/therapeutic words (we are not a counselling service);
+    #   * the judgemental second-person "you tend to ..." generaliser.
+    # All are unambiguous directive/diagnostic forms — none appear in our
+    # legitimate observational copy, so over-scrub risk is nil (cf.
+    # feedback_legal_filter_design: add only clear directives).
+    "처분효과",
+    "disposition effect",
+    "손실회피",
+    "loss aversion",
+    "개선하세요",
+    "고치세요",
+    "교정하세요",
+    "therapy",
+    "counseling",
+    "you tend to",
 })
 
 

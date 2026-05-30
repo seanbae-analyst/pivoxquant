@@ -867,6 +867,20 @@
       "statusCancelledEn": "Cancelled",
       "statusPending": "검토 중",
       "statusPendingEn": "In review"
+    },
+    "holdingMirror": {
+      "kicker": "관찰됨 · OBSERVED",
+      "heading": "최근 90일, 당신의 보유 기간",
+      "daysUnit": "일",
+      "avgHold": "평균 보유",
+      "winnersLabel": "오른 채 판 종목",
+      "losersLabel": "내린 채 판 종목",
+      "countsLabel": "이 기간 매도",
+      "countsValue": "{total}건 · 상승 마감 {winners} / 하락 마감 {losers}",
+      "framing": "거래 기록을 그대로 비춰 보여드립니다. 평가나 권유는 담지 않습니다.",
+      "insufficient": "아직 매도 기록이 적어 평균을 안정적으로 비추기 어렵습니다. 기록이 쌓이면 자동으로 나타납니다.",
+      "emptyTitle": "아직 비출 기록이 없습니다",
+      "emptyDesc": "매도가 기록되면, 오른 채 판 종목과 내린 채 판 종목의 평균 보유 기간을 나란히 보여드립니다."
     }
   },
   "companion": {

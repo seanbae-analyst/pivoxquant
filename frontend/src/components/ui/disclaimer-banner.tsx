@@ -23,6 +23,13 @@ const DISCLAIMER_CONTENT = {
     ko: "백테스트 결과는 과거 데이터를 기반으로 시뮬레이션한 것으로, 과거의 성과가 미래의 수익을 보장하지 않습니다. 실제 거래에서는 슬리피지, 수수료, 시장 충격 등으로 인해 결과가 상이할 수 있습니다.",
     en: "Backtest results are simulations based on historical data. Past performance does not guarantee future returns. Actual trading results may differ due to slippage, commissions, and market impact.",
   },
+  // Holding-Mirror — factual holding-period statistics from the user's own
+  // trade records. Explicitly NOT a medical/psychological/mental-health
+  // service and NOT a recommendation (legal-confirmed wording 2026-05-30).
+  "behavior-mirror": {
+    ko: "본 화면은 귀하의 실거래 내역에서 산출된 보유기간 통계를 사실 그대로 표시합니다. 의료기기·심리상담·정신건강 서비스가 아니며, 특정 종목의 매수·매도를 권유하지 않습니다. 투자 판단의 책임은 이용자 본인에게 있습니다.",
+    en: "This screen displays factual holding-period statistics computed from your own trade records. It is not a medical device, psychological service, or mental health service, and does not constitute a recommendation to buy or sell any financial instrument. All investment decisions are your sole responsibility.",
+  },
   // REMOVED 2026-05-10 per legal: "auto-trade" kind retired (autotrader.py 2026-05-05 물리 삭제, 표시광고법 §3 ① 4호 기만광고 회피)
 } as const;
 

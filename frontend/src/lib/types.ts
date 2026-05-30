@@ -438,6 +438,54 @@ export interface PreTradeJournalResponse {
   reflections: PreTradeReflection[];
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+ * Holding-Mirror — disposition-effect "mirror" (NOT a score / diagnosis).
+ *
+ * GET /api/behavior/holding-mirror returns factual holding-period statistics
+ * computed from the user's OWN closed trade pairs over a trailing window.
+ * The frontend renders it as a neutral 2-up comparison: average holding
+ * period of positions sold while up vs. sold while down. No judgement, no
+ * grade, no "bias" label is ever surfaced (자본시장법 / PIPA §23 posture).
+ *
+ * Backend contract is locked 1:1 with this shape — do NOT rename keys.
+ *   - `sufficient_data` false  → too few closed pairs to show an average.
+ *   - `one_sided` true         → all closed pairs fell on one side (winners
+ *                                or losers only); the empty side renders an
+ *                                em-dash sentinel rather than a fabricated 0.
+ * ────────────────────────────────────────────────────────────────────── */
+export interface HoldingMirrorExample {
+  display_name: string;
+  ticker: string;
+  pnl_pct: number | null;
+  hold_days: number;
+  sell_at: string | null;
+}
+
+export interface HoldingMirrorSide {
+  count: number;
+  median_hold_days: number | null;
+  mean_hold_days: number | null;
+  examples: HoldingMirrorExample[];
+}
+
+export interface HoldingMirrorResponse {
+  ok: boolean;
+  disclaimer?: string;
+  /** Trailing window label, e.g. "최근 90일" / "Last 90 days". */
+  period?: string;
+  sufficient_data: boolean;
+  one_sided: boolean;
+  total_closed_pairs: number;
+  /**
+   * A side is `null` when the backend has no qualifying pairs for it — both
+   * sides are `null` when `sufficient_data` is false, and exactly one is
+   * `null` when `one_sided` is true (services/profile/holding_mirror.py).
+   * The renderer treats a null side as an em-dash sentinel, never a 0.
+   */
+  winners: HoldingMirrorSide | null;
+  losers: HoldingMirrorSide | null;
+}
+
 /* ── Artifact / Reports Archive ── */
 
 export type ArtifactType =

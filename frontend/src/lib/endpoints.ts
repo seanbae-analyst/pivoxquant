@@ -276,6 +276,14 @@ export const API = {
     status: "/api/agent/status",
     waitlist: "/api/agent/waitlist",
   },
+  // Behaviour Mirror — factual holding-period statistics from the user's own
+  // closed trade pairs (disposition-effect "mirror"). Read-only, @api_auth.
+  // Renders as a neutral 2-up comparison on the /journal page; NEVER a score,
+  // grade, or "bias" label (자본시장법 / PIPA §23 posture). Response shape is
+  // HoldingMirrorResponse in lib/types.ts — backend contract locked 1:1.
+  behavior: {
+    holdingMirror: "/api/behavior/holding-mirror",
+  },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished
   // thinking". See routes/pre_trade.py and services/pre_trade/friction.py.

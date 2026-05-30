@@ -29,6 +29,7 @@ import type {
   SignalLabel,
   Position,
   PreTradeJournalResponse,
+  HoldingMirrorResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -264,6 +265,49 @@ export function usePreTradeJournal(limit = 50) {
     reflections: swr.data?.reflections ?? [],
     disclaimer: swr.data?.disclaimer ?? null,
     isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Holding-Mirror — factual holding-period statistics from the user's own
+ * closed trade pairs. Renders as a neutral 2-up comparison on /journal.
+ *
+ * Resilience: a 404 (backend not yet wired) is treated as "no data" rather
+ * than an error, so the surrounding Decision Journal feed never breaks while
+ * the cross-team backend contract lands. Real 5xx / network failures still
+ * surface through `error` so the panel can show its retry affordance.
+ *
+ * Never returns a score / grade — only counts and average hold days.
+ */
+export function useHoldingMirror() {
+  const swr = useSWR<HoldingMirrorResponse | null>(
+    API.behavior.holdingMirror,
+    async (url: string): Promise<HoldingMirrorResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
     error: swr.error as Error | undefined,
     mutate: swr.mutate,
   };

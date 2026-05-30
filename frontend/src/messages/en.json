@@ -867,6 +867,20 @@
       "statusCancelledEn": "Cancelled",
       "statusPending": "In review",
       "statusPendingEn": "In review"
+    },
+    "holdingMirror": {
+      "kicker": "OBSERVED",
+      "heading": "Last 90 days, your holding periods",
+      "daysUnit": "d",
+      "avgHold": "Average hold",
+      "winnersLabel": "Sold while up",
+      "losersLabel": "Sold while down",
+      "countsLabel": "Sells this period",
+      "countsValue": "{total} · {winners} closed up / {losers} closed down",
+      "framing": "We reflect your trade records as they are. No grade, no recommendation.",
+      "insufficient": "There are still too few sell records to mirror a stable average. It will appear automatically as records accumulate.",
+      "emptyTitle": "Nothing to mirror yet",
+      "emptyDesc": "Once a sell is recorded, we show the average holding period of positions sold while up and while down, side by side."
     }
   },
   "companion": {

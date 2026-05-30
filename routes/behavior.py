@@ -6,6 +6,8 @@ Endpoints (all under ``/api/behavior``):
     GET /score?weeks=N        — last N weeks (capped 1..52)
     GET /breakdown            — sub-score detail for the most recent week
     GET /persona-comparison   — same week vs. anonymised persona-group avg
+    GET /holding-mirror       — retrospective winner/loser holding-period
+                                mirror (?period=30d|all)
 
 Legal posture
 -------------
@@ -21,7 +23,8 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from models import BehavioralScore
+from models import BehavioralScore, TradeHistory
+from services.profile.holding_mirror import compute_holding_mirror
 
 from .decorators import api_auth
 
@@ -119,3 +122,51 @@ def persona_comparison():
         "user": payload.get("sub_scores", {}),
         "persona_avg": payload.get("persona_avg"),
     })
+
+
+# ── /holding-mirror ─────────────────────────────────────────────────
+
+_HOLDING_MIRROR_DISCLAIMER = (
+    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 "
+    "아닙니다."
+)
+
+# Accepted ``?period`` values → window in days. ``all`` (default) = no
+# window. Keep the set tiny and explicit so we never echo an arbitrary
+# user-supplied integer back into a window.
+_HOLDING_MIRROR_PERIODS: dict[str, int | None] = {
+    "all": None,
+    "30d": 30,
+}
+
+
+@behavior_bp.route("/holding-mirror", methods=["GET"])
+@api_auth
+def holding_mirror():
+    """Retrospective winner/loser holding-period mirror for the user.
+
+    ``?period=30d|all`` (default ``all``). Returns observational
+    holding-day statistics — never a score/grade/ratio — over the
+    user's own closed FIFO round trips.
+    """
+    period = request.args.get("period", "all")
+    if period not in _HOLDING_MIRROR_PERIODS:
+        return jsonify({
+            "error": (
+                "period must be one of: "
+                + ", ".join(sorted(_HOLDING_MIRROR_PERIODS))
+            ),
+            "code": "BAD_INPUT",
+        }), 400
+    period_days = _HOLDING_MIRROR_PERIODS[period]
+
+    trades = (
+        TradeHistory.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    result = compute_holding_mirror(trades, period_days=period_days)
+
+    body = {"ok": True, "disclaimer": _HOLDING_MIRROR_DISCLAIMER, "period": period}
+    body.update(result)
+    return jsonify(body), 200
