@@ -155,6 +155,8 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
     assert resp.status_code == 200
 
     body = json.loads(resp.data)
+    # Every count is zero for a brand-new user (exact set, not subset — so a
+    # newly-added section that fails to default-empty is caught here too).
     assert body["counts"] == {
         "positions": 0,
         "watchlist": 0,
@@ -165,16 +167,27 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
         "persona_snapshots": 0,
         "nps_feedback": 0,
         "pre_trade_reflections": 0,
+        "artifacts": 0,
+        "artifact_feedback": 0,
+        "broker_connections": 0,
+        "user_referrals": 0,
+        "position_dd_checks": 0,
+        "inquiries": 0,
+        "companion_waitlist": 0,
+        "portfolio_shares": 0,
+        "push_subscriptions": 0,
+        "scheduled_emails": 0,
+        "checkout_expirations": 0,
+        "ai_twin_portfolios": 0,
+        "ai_twin_positions": 0,
+        "ai_twin_trades": 0,
+        "ai_twin_weekly_reports": 0,
+        "auth_events": 0,
+        "funnel_events": 0,
     }
-    assert body["positions"] == []
-    assert body["watchlist"] == []
-    assert body["trade_history"] == []
-    assert body["alerts"] == []
-    assert body["behavioral_scores"] == []
-    assert body["weekly_pulse"] == []
-    assert body["persona_snapshots"] == []
-    assert body["nps_feedback"] == []
-    assert body["pre_trade_reflections"] == []
+    # Each list-valued section is an empty list (never null / missing).
+    for section in body["counts"]:
+        assert body[section] == [], f"{section} should be [] for empty user"
     assert body["investment_profile"] is None
     assert body["user"]["email"] == auth_user["email"]
 
@@ -417,3 +430,285 @@ def test_export_excludes_password_and_payment_secrets_strictly(
     }
     leaked = forbidden & user_keys
     assert not leaked, f"Secret keys leaked into user block: {leaked}"
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 2026-05-30 — PIPA §35 §2: remaining user-owned tables (15 + 2 P1)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The export covered only 11 of 26 user-owned tables. These tests assert
+# the newly-added sections (a) exist in the payload, (b) carry the caller's
+# own data, and (c) never expose credential / token / endpoint secrets.
+
+# The full registry of list-valued export sections, kept here as the test's
+# source of truth so a section dropped from the route's `counts` is caught.
+_EXPECTED_SECTIONS = {
+    "positions", "watchlist", "trade_history", "alerts",
+    "behavioral_scores", "weekly_pulse", "persona_snapshots", "nps_feedback",
+    "pre_trade_reflections", "artifacts", "artifact_feedback",
+    "broker_connections", "user_referrals", "position_dd_checks", "inquiries",
+    "companion_waitlist", "portfolio_shares", "push_subscriptions",
+    "scheduled_emails", "checkout_expirations", "ai_twin_portfolios",
+    "ai_twin_positions", "ai_twin_trades", "ai_twin_weekly_reports",
+    "auth_events", "funnel_events",
+}
+
+
+def test_export_covers_all_expected_sections(client, auth_user):
+    """Every expected user-owned section is present as a key + in counts.
+
+    Coverage gate: 26 sections (was 11/26 before this change). If a new
+    user-owned model is added without wiring it into the export, update
+    this set (and the route + both delete paths) — the failure is the cue.
+    """
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    body = json.loads(resp.data)
+
+    missing_keys = _EXPECTED_SECTIONS - set(body.keys())
+    assert not missing_keys, f"Export missing section keys: {missing_keys}"
+
+    missing_counts = _EXPECTED_SECTIONS - set(body["counts"].keys())
+    assert not missing_counts, f"counts missing sections: {missing_counts}"
+
+
+def test_export_includes_new_user_owned_sections_with_data(
+    app, client, auth_user,
+):
+    """Seed one row in each newly-added table and confirm it surfaces."""
+    from datetime import date, datetime, timedelta, timezone
+
+    from extensions import db
+    from models import (
+        Artifact, ArtifactFeedback, BrokerConnection, UserReferral,
+        PositionDDCheck, Inquiry, CompanionWaitlist, PortfolioShare,
+        PushSubscription, ScheduledEmail, CheckoutExpiration,
+        AITwinPortfolio, AITwinPosition, AITwinTrade, AITwinWeeklyReport,
+        Position,
+    )
+
+    uid = auth_user["id"]
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        pos = Position(user_id=uid, ticker="AAPL", shares=1.0, avg_cost=100.0)
+        db.session.add(pos)
+        db.session.flush()
+
+        db.session.add(Artifact(
+            user_id=uid, type="weekly_memo", title="My Weekly Memo",
+            data_json={"summary": "MY-ARTIFACT-DATA"},
+        ))
+        db.session.add(ArtifactFeedback(
+            user_id=uid, artifact_id="memo-1", section="summary", vote="up",
+        ))
+        db.session.add(UserReferral(
+            user_id=uid, referral_code="MYCODE01",
+        ))
+        db.session.add(PositionDDCheck(
+            user_id=uid, position_id=pos.id, financials_checked=True,
+            note="MY-DD-NOTE",
+        ))
+        db.session.add(Inquiry(
+            user_id=uid, category="other", subject="MY-INQUIRY-SUBJECT",
+            body="MY-INQUIRY-BODY",
+        ))
+        db.session.add(CompanionWaitlist(
+            email_hash=CompanionWaitlist.hash_email(auth_user["email"]),
+            email_plaintext=auth_user["email"], email_consent_at=now,
+            user_id=uid, source="pricing-page",
+        ))
+        db.session.add(PortfolioShare(
+            user_id=uid, token="share-secret-token",
+            expires_at=now + timedelta(days=7),
+        ))
+        db.session.add(PushSubscription(
+            user_id=uid, endpoint="https://push.example/SECRET-ENDPOINT",
+            p256dh="SECRET-P256DH", auth="SECRET-PUSH-AUTH",
+        ))
+        db.session.add(ScheduledEmail.enqueue(
+            user_id=uid, email_type="welcome",
+            email_category="transactional", scheduled_send_at=now,
+        ))
+        db.session.add(CheckoutExpiration(
+            user_id=uid, session_id="cs_test_SECRET_SESSION",
+            expired_at=now, scheduled_send_at=now + timedelta(hours=1),
+        ))
+
+        # BrokerConnection with populated secret columns.
+        db.session.add(BrokerConnection(
+            user_id=uid, broker="kis", display_name="My KIS",
+            encrypted_app_key="ENC-APP-KEY-SECRET",
+            encrypted_app_secret="ENC-APP-SECRET-SECRET",
+            encrypted_access_token="ENC-ACCESS-TOKEN-SECRET",
+            access_token="LEGACY-ACCESS-TOKEN-SECRET",
+            refresh_token="LEGACY-REFRESH-TOKEN-SECRET",
+        ))
+
+        # AI Twin chain (portfolio → positions/trades via twin_id).
+        twin = AITwinPortfolio(user_id=uid, persona_at_init="growth")
+        db.session.add(twin)
+        db.session.flush()
+        db.session.add(AITwinPosition(
+            twin_id=twin.id, ticker="MSFT", shares=2.0, avg_cost=300.0,
+        ))
+        db.session.add(AITwinTrade(
+            twin_id=twin.id, ticker="MSFT", side="BUY", shares=2.0,
+            price=300.0, rationale="MY-TWIN-RATIONALE",
+        ))
+        db.session.add(AITwinWeeklyReport(
+            user_id=uid, week_ending=date(2026, 5, 24),
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200, resp.data
+    body = json.loads(resp.data)
+    c = body["counts"]
+
+    assert c["artifacts"] == 1
+    assert c["artifact_feedback"] == 1
+    assert c["broker_connections"] == 1
+    assert c["user_referrals"] == 1
+    assert c["position_dd_checks"] == 1
+    assert c["inquiries"] == 1
+    assert c["companion_waitlist"] == 1
+    assert c["portfolio_shares"] == 1
+    assert c["push_subscriptions"] == 1
+    assert c["scheduled_emails"] == 1
+    assert c["checkout_expirations"] == 1
+    assert c["ai_twin_portfolios"] == 1
+    assert c["ai_twin_positions"] == 1
+    assert c["ai_twin_trades"] == 1
+    assert c["ai_twin_weekly_reports"] == 1
+
+    # The user's own free-text PII round-trips (the point of §35 access).
+    assert body["artifacts"][0]["data"]["summary"] == "MY-ARTIFACT-DATA"
+    assert body["inquiries"][0]["subject"] == "MY-INQUIRY-SUBJECT"
+    assert body["inquiries"][0]["body"] == "MY-INQUIRY-BODY"
+    assert body["position_dd_checks"][0]["note"] == "MY-DD-NOTE"
+    assert body["ai_twin_trades"][0]["rationale"] == "MY-TWIN-RATIONALE"
+    assert body["user_referrals"][0]["referral_code"] == "MYCODE01"
+
+
+def test_export_never_leaks_credential_or_push_secrets(app, client, auth_user):
+    """PIPA §35 §2 — the user may read their data but NOT self-exfiltrate
+    their own credentials / tokens / push keys / Stripe session ids.
+
+    Every secret column value seeded below must be absent from the raw
+    response body (not as a value, not as a key)."""
+    from datetime import datetime, timedelta, timezone
+
+    from extensions import db
+    from models import (
+        BrokerConnection, PushSubscription, PortfolioShare, CheckoutExpiration,
+    )
+
+    uid = auth_user["id"]
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    secrets_seeded = [
+        "ENC-APP-KEY-SECRET", "ENC-APP-SECRET-SECRET",
+        "ENC-ACCESS-TOKEN-SECRET", "LEGACY-ACCESS-TOKEN-SECRET",
+        "LEGACY-REFRESH-TOKEN-SECRET", "https://push.example/SECRET-ENDPOINT",
+        "SECRET-P256DH", "SECRET-PUSH-AUTH", "share-secret-token",
+        "cs_test_SECRET_SESSION",
+    ]
+    with app.app_context():
+        db.session.add(BrokerConnection(
+            user_id=uid, broker="kis",
+            encrypted_app_key="ENC-APP-KEY-SECRET",
+            encrypted_app_secret="ENC-APP-SECRET-SECRET",
+            encrypted_access_token="ENC-ACCESS-TOKEN-SECRET",
+            access_token="LEGACY-ACCESS-TOKEN-SECRET",
+            refresh_token="LEGACY-REFRESH-TOKEN-SECRET",
+        ))
+        db.session.add(PushSubscription(
+            user_id=uid, endpoint="https://push.example/SECRET-ENDPOINT",
+            p256dh="SECRET-P256DH", auth="SECRET-PUSH-AUTH",
+        ))
+        db.session.add(PortfolioShare(
+            user_id=uid, token="share-secret-token",
+            expires_at=now + timedelta(days=7),
+        ))
+        db.session.add(CheckoutExpiration(
+            user_id=uid, session_id="cs_test_SECRET_SESSION",
+            expired_at=now, scheduled_send_at=now + timedelta(hours=1),
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    raw = resp.get_data(as_text=True)
+
+    for secret in secrets_seeded:
+        assert secret not in raw, f"Secret leaked into export: {secret!r}"
+
+    # The rows themselves DID export (existence flags), just not the secrets.
+    body = json.loads(resp.data)
+    assert body["counts"]["broker_connections"] == 1
+    assert body["broker_connections"][0]["has_credentials"] is True
+    assert body["counts"]["push_subscriptions"] == 1
+    assert body["push_subscriptions"][0]["has_endpoint"] is True
+    assert body["counts"]["portfolio_shares"] == 1
+    assert body["portfolio_shares"][0]["has_token"] is True
+    assert body["counts"]["checkout_expirations"] == 1
+
+
+def test_export_ai_twin_chain_scoped_to_caller(
+    app, client, make_user, auth_user,
+):
+    """AI-twin positions/trades are reached via twin_id (parent FK). Confirm
+    another user's twin rows never leak through the .in_() filter."""
+    from extensions import db
+    from models import AITwinPortfolio, AITwinTrade
+
+    other = make_user(email="othertwin@test.com", password="otherpw123")
+    with app.app_context():
+        other_twin = AITwinPortfolio(
+            user_id=other["id"], persona_at_init="value",
+        )
+        db.session.add(other_twin)
+        db.session.flush()
+        db.session.add(AITwinTrade(
+            twin_id=other_twin.id, ticker="TSLA", side="SELL", shares=1.0,
+            price=999.0, rationale="OTHER-TWIN-SECRET-RATIONALE",
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    body = json.loads(resp.data)
+    assert body["counts"]["ai_twin_portfolios"] == 0
+    assert body["counts"]["ai_twin_trades"] == 0
+    raw = json.dumps(body)
+    assert "OTHER-TWIN-SECRET-RATIONALE" not in raw
+    assert "TSLA" not in raw
+
+
+def test_export_auth_events_scoped_by_email(app, client, make_user, auth_user):
+    """auth_events keys on email (no user_id FK). Export must filter to the
+    caller's own email and never surface another principal's login log."""
+    from datetime import datetime, timezone
+
+    from extensions import db
+    from models import AuthEvent
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        db.session.add(AuthEvent(
+            email=auth_user["email"], provider="google",
+            event_type="success", created_at=now,
+        ))
+        db.session.add(AuthEvent(
+            email="otherauth@test.com", provider="kakao",
+            event_type="fail", fail_reason="OTHER-AUTH-SECRET", created_at=now,
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    body = json.loads(resp.data)
+    assert body["counts"]["auth_events"] == 1
+    assert body["auth_events"][0]["email"] == auth_user["email"]
+    raw = json.dumps(body)
+    assert "OTHER-AUTH-SECRET" not in raw
+    assert "otherauth@test.com" not in raw

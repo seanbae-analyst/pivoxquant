@@ -205,14 +205,19 @@ export default function ProfilePageV2() {
   const handleExport = React.useCallback(async () => {
     setExporting(true);
     try {
-      const data: unknown = await apiFetch("/api/agent/export");
+      // 2026-05-30 (PIPA §35 §2): call the FULL personal-data export
+      // (routes/profile.py:export_profile — all user-owned tables) instead
+      // of the agent-memory-only /api/agent/export subset, matching
+      // settings/_v2 handleRequestExport. The localStorage fallback below
+      // still covers the offline/degraded case.
+      const data: unknown = await apiFetch("/api/profile/export");
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `pivoxquant-agent-memory-${new Date()
+      a.download = `pivoxquant-export-${new Date()
         .toISOString()
         .slice(0, 10)}.json`;
       a.click();

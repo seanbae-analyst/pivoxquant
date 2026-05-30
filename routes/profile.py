@@ -24,15 +24,31 @@ from flask_login import current_user
 
 from extensions import db
 from models import (
+    AITwinPortfolio,
+    AITwinPosition,
+    AITwinTrade,
+    AITwinWeeklyReport,
     Alert,
+    Artifact,
     ArtifactFeedback,
+    AuthEvent,
     BehavioralScore,
+    BrokerConnection,
+    CheckoutExpiration,
+    CompanionWaitlist,
+    FunnelEvent,
+    Inquiry,
     InvestmentProfile,
     NpsFeedback,
     PersonaSnapshot,
+    PortfolioShare,
     Position,
+    PositionDDCheck,
     PreTradeReflection,
+    PushSubscription,
+    ScheduledEmail,
     TradeHistory,
+    UserReferral,
     VALID_CADENCES,
     VOTE_CHOICES,
     Watchlist,
@@ -1604,6 +1620,28 @@ _EXPORT_NPS_LIMIT = 1000         # 1-click NPS submissions
 # they are personal data and must therefore be reachable via the §35 열람권
 # export. Cap bounds a pathological journaller; well above realistic usage.
 _EXPORT_REFLECTION_LIMIT = 5000  # pre-trade reflection journal entries
+# PIPA §35 §2 (2026-05-30) — remaining user-owned sections added to close
+# the §35 열람권 coverage gap (was 11/26 tables; see export_profile docstring
+# for the full registry). All are the user's *own* personal data, all purged
+# on account deletion (routes/auth.py:delete_account +
+# scripts/nightly/pipa_purge.py), confirming they are personal data and must
+# be reachable here. Caps bound pathological accounts; well above realistic use.
+_EXPORT_ARTIFACT_LIMIT = 2000          # generated CFO artefacts (memo/brag/brief)
+_EXPORT_ARTIFACT_FEEDBACK_LIMIT = 2000  # 👍/👎 on artefacts
+_EXPORT_REFERRAL_LIMIT = 50            # one row per user normally (UNIQUE user_id)
+_EXPORT_DD_CHECK_LIMIT = 5000          # one per position
+_EXPORT_INQUIRY_LIMIT = 1000           # support inquiries (subject/body free-text)
+_EXPORT_TWIN_REPORT_LIMIT = 520        # ~10y weekly paper-twin reports
+_EXPORT_TWIN_POSITION_LIMIT = 5000     # paper twin open positions
+_EXPORT_TWIN_TRADE_LIMIT = 5000        # paper twin trade ledger
+_EXPORT_WAITLIST_LIMIT = 50            # companion waitlist enrolments
+_EXPORT_PORTFOLIO_SHARE_LIMIT = 1000   # share links the user created
+_EXPORT_PUSH_SUB_LIMIT = 100           # browser push registrations
+_EXPORT_SCHEDULED_EMAIL_LIMIT = 1000   # onboarding email queue rows
+_EXPORT_CHECKOUT_EXPIRATION_LIMIT = 1000  # abandoned-checkout follow-up queue
+# P1 sections — login/funnel history (the user's own activity records).
+_EXPORT_AUTH_EVENT_LIMIT = 2000        # OAuth start/success/fail log (keyed by email)
+_EXPORT_FUNNEL_EVENT_LIMIT = 5000      # acquisition/activation funnel events
 
 
 def _iso_or_none(value):
@@ -1703,6 +1741,77 @@ def _serialize_alert(a) -> dict:
     }
 
 
+# ── Serializers for models without a built-in to_dict (PIPA §35 §2) ──────────
+# Each one deliberately omits credential / endpoint-key material. The four
+# tables below have no model-level ``to_dict`` (push/scheduled/checkout/share
+# are queue/secret-bearing rows), so the exclusion lives here at the boundary.
+
+def _serialize_portfolio_share(s) -> dict:
+    """Share-link metadata. ``token`` is the unguessable secret that grants
+    read access to the shared portfolio — exclude it (a leaked export must
+    not hand out a live share URL). Expose only existence + lifecycle."""
+    return {
+        "id": s.id,
+        "created_at": _iso_or_none(getattr(s, "created_at", None)),
+        "expires_at": _iso_or_none(getattr(s, "expires_at", None)),
+        "has_token": bool(getattr(s, "token", None)),
+    }
+
+
+def _serialize_push_subscription(p) -> dict:
+    """Web-Push registration. ``endpoint`` / ``p256dh`` / ``auth`` are the
+    push *secret* keys (anyone with them can push to the device) — exclude
+    all three. Expose only existence + when it was registered."""
+    return {
+        "id": p.id,
+        "created_at": _iso_or_none(getattr(p, "created_at", None)),
+        "has_endpoint": bool(getattr(p, "endpoint", None)),
+    }
+
+
+def _serialize_scheduled_email(e) -> dict:
+    return {
+        "id": e.id,
+        "email_type": getattr(e, "email_type", None),
+        "email_category": getattr(e, "email_category", None),
+        "scheduled_send_at": _iso_or_none(getattr(e, "scheduled_send_at", None)),
+        "sent_at": _iso_or_none(getattr(e, "sent_at", None)),
+        "skipped_reason": getattr(e, "skipped_reason", None),
+        "created_at": _iso_or_none(getattr(e, "created_at", None)),
+    }
+
+
+def _serialize_checkout_expiration(c) -> dict:
+    """Abandoned-checkout follow-up queue row. ``session_id`` is a Stripe
+    checkout-session identifier — a payment-processor token, excluded under
+    the same minimization rule as ``stripe_customer_id`` in _serialize_user."""
+    return {
+        "id": c.id,
+        "expired_at": _iso_or_none(getattr(c, "expired_at", None)),
+        "scheduled_send_at": _iso_or_none(getattr(c, "scheduled_send_at", None)),
+        "sent_at": _iso_or_none(getattr(c, "sent_at", None)),
+        "skipped_reason": getattr(c, "skipped_reason", None),
+        "created_at": _iso_or_none(getattr(c, "created_at", None)),
+    }
+
+
+def _serialize_companion_waitlist(w) -> dict:
+    """Journal Companion waitlist enrolment (CompanionWaitlist has no
+    to_dict). ``email_hash`` is a SHA256 of the email — not reversible, but
+    omitted as it carries no value to the data subject; ``email_plaintext``
+    IS the user's own email so it is included (it's their data)."""
+    return {
+        "id": w.id,
+        "email_plaintext": getattr(w, "email_plaintext", None),
+        "email_consent_at": _iso_or_none(getattr(w, "email_consent_at", None)),
+        "source": getattr(w, "source", None),
+        "persona_interest": getattr(w, "persona_interest", None),
+        "invited_at": _iso_or_none(getattr(w, "invited_at", None)),
+        "activated_at": _iso_or_none(getattr(w, "activated_at", None)),
+        "created_at": _iso_or_none(getattr(w, "created_at", None)),
+    }
+
+
 @profile_bp.route("/export", methods=["GET"])
 @api_auth
 @general_rate_limit
@@ -1718,10 +1827,22 @@ def export_profile():
     filtered by the current user's id. The endpoint never accepts a
     user-id parameter — there is no admin-impersonation path.
 
-    Excluded (PII minimization):
+    Coverage (PIPA §35 §2, 2026-05-30): every user-owned table is reachable
+    here. Scope is the user's own rows only — tables reached via a parent FK
+    (ai_twin_positions / ai_twin_trades → ai_twin_portfolios.id) resolve the
+    user's parent ids first, then filter. Global / non-user tables
+    (signal_cache, persona_group_stats, processed_stripe_events,
+    agent_kill_switch) are out of scope. Keep in sync with the two deletion
+    paths (auth.py:delete_account + pipa_purge.py:_delete_user_cascade).
+
+    Excluded (PII minimization — the user may not self-exfiltrate secrets):
         - password_hash
-        - stripe_customer_id
+        - stripe_customer_id / checkout session_id
         - oauth_id / oauth refresh_token
+        - broker credentials + tokens (encrypted_* / access_token /
+          refresh_token) — see _serialize via BrokerConnection.to_dict
+        - push subscription endpoint + p256dh + auth keys
+        - portfolio_share token
         - other users' rows (never queried)
 
     Response headers:
@@ -1808,6 +1929,147 @@ def export_profile():
             .limit(_EXPORT_REFLECTION_LIMIT)
             .all()
         )
+
+        # ── PIPA §35 §2 — remaining user-owned sections ──────────────────
+        # All scoped to user_id (or, where the table is reached via a parent
+        # FK, to the user's own parent rows). Credential / token / endpoint
+        # secrets are excluded by the dedicated serializers above.
+        artifacts = (
+            Artifact.query
+            .filter_by(user_id=user_id)
+            .order_by(Artifact.created_at.desc())
+            .limit(_EXPORT_ARTIFACT_LIMIT)
+            .all()
+        )
+        artifact_feedback = (
+            ArtifactFeedback.query
+            .filter_by(user_id=user_id)
+            .order_by(ArtifactFeedback.id.desc())
+            .limit(_EXPORT_ARTIFACT_FEEDBACK_LIMIT)
+            .all()
+        )
+        # broker_connections.to_dict() already omits every encrypted_*
+        # column + access/refresh tokens (see models/broker_connection.py);
+        # it exposes only broker, status and a has_credentials boolean.
+        broker_connections = (
+            BrokerConnection.query
+            .filter_by(user_id=user_id)
+            .order_by(BrokerConnection.id.asc())
+            .all()
+        )
+        user_referrals = (
+            UserReferral.query
+            .filter_by(user_id=user_id)
+            .order_by(UserReferral.id.asc())
+            .limit(_EXPORT_REFERRAL_LIMIT)
+            .all()
+        )
+        position_dd_checks = (
+            PositionDDCheck.query
+            .filter_by(user_id=user_id)
+            .order_by(PositionDDCheck.id.desc())
+            .limit(_EXPORT_DD_CHECK_LIMIT)
+            .all()
+        )
+        inquiries = (
+            Inquiry.query
+            .filter_by(user_id=user_id)
+            .order_by(Inquiry.created_at.desc())
+            .limit(_EXPORT_INQUIRY_LIMIT)
+            .all()
+        )
+        companion_waitlist = (
+            CompanionWaitlist.query
+            .filter_by(user_id=user_id)
+            .order_by(CompanionWaitlist.id.desc())
+            .limit(_EXPORT_WAITLIST_LIMIT)
+            .all()
+        )
+        portfolio_shares = (
+            PortfolioShare.query
+            .filter_by(user_id=user_id)
+            .order_by(PortfolioShare.id.desc())
+            .limit(_EXPORT_PORTFOLIO_SHARE_LIMIT)
+            .all()
+        )
+        push_subscriptions = (
+            PushSubscription.query
+            .filter_by(user_id=user_id)
+            .order_by(PushSubscription.id.desc())
+            .limit(_EXPORT_PUSH_SUB_LIMIT)
+            .all()
+        )
+        scheduled_emails = (
+            ScheduledEmail.query
+            .filter_by(user_id=user_id)
+            .order_by(ScheduledEmail.scheduled_send_at.desc())
+            .limit(_EXPORT_SCHEDULED_EMAIL_LIMIT)
+            .all()
+        )
+        checkout_expirations = (
+            CheckoutExpiration.query
+            .filter_by(user_id=user_id)
+            .order_by(CheckoutExpiration.created_at.desc())
+            .limit(_EXPORT_CHECKOUT_EXPIRATION_LIMIT)
+            .all()
+        )
+
+        # AI Twin (paper-only) — portfolio is keyed by user_id; its positions
+        # and trades are keyed by twin_id (the portfolio's PK), so resolve the
+        # user's twin ids first, then ``.in_()`` filter. No cross-user leak:
+        # the id set is derived solely from this user's portfolios.
+        ai_twin_portfolios = (
+            AITwinPortfolio.query
+            .filter_by(user_id=user_id)
+            .order_by(AITwinPortfolio.id.asc())
+            .all()
+        )
+        twin_ids = [p.id for p in ai_twin_portfolios]
+        if twin_ids:
+            ai_twin_positions = (
+                AITwinPosition.query
+                .filter(AITwinPosition.twin_id.in_(twin_ids))
+                .order_by(AITwinPosition.id.desc())
+                .limit(_EXPORT_TWIN_POSITION_LIMIT)
+                .all()
+            )
+            ai_twin_trades = (
+                AITwinTrade.query
+                .filter(AITwinTrade.twin_id.in_(twin_ids))
+                .order_by(AITwinTrade.executed_at.desc())
+                .limit(_EXPORT_TWIN_TRADE_LIMIT)
+                .all()
+            )
+        else:
+            ai_twin_positions = []
+            ai_twin_trades = []
+        ai_twin_weekly_reports = (
+            AITwinWeeklyReport.query
+            .filter_by(user_id=user_id)
+            .order_by(AITwinWeeklyReport.week_ending.desc())
+            .limit(_EXPORT_TWIN_REPORT_LIMIT)
+            .all()
+        )
+
+        # ── P1 — login / funnel activity history ─────────────────────────
+        # auth_events is keyed by email (not user_id) because a fail can
+        # fire before the user row exists; filter by the current user's
+        # live email. funnel_events is keyed by a user_id integer snapshot
+        # (no FK) — the user's own acquisition/activation event trail.
+        auth_events = (
+            AuthEvent.query
+            .filter(AuthEvent.email == user.email)
+            .order_by(AuthEvent.created_at.desc())
+            .limit(_EXPORT_AUTH_EVENT_LIMIT)
+            .all()
+        )
+        funnel_events = (
+            FunnelEvent.query
+            .filter_by(user_id=user_id)
+            .order_by(FunnelEvent.created_at.desc())
+            .limit(_EXPORT_FUNNEL_EVENT_LIMIT)
+            .all()
+        )
     except Exception:
         logger.exception(
             "profile.export_profile query failed (user_id=%s)", user_id,
@@ -1836,6 +2098,35 @@ def export_profile():
         "persona_snapshots": [s.to_dict() for s in persona_snapshots],
         "nps_feedback": [n.to_dict() for n in nps_feedback],
         "pre_trade_reflections": [r.to_dict() for r in pre_trade_reflections],
+        "artifacts": [a.to_dict() for a in artifacts],
+        "artifact_feedback": [f.to_dict() for f in artifact_feedback],
+        "broker_connections": [b.to_dict() for b in broker_connections],
+        "user_referrals": [r.to_dict() for r in user_referrals],
+        "position_dd_checks": [d.to_dict() for d in position_dd_checks],
+        # Inquiry.to_dict(detail=True) — include the user's own subject/body
+        # and any admin reply; this is their personal data under §35.
+        "inquiries": [i.to_dict(detail=True) for i in inquiries],
+        "companion_waitlist": [
+            _serialize_companion_waitlist(w) for w in companion_waitlist
+        ],
+        "portfolio_shares": [
+            _serialize_portfolio_share(s) for s in portfolio_shares
+        ],
+        "push_subscriptions": [
+            _serialize_push_subscription(p) for p in push_subscriptions
+        ],
+        "scheduled_emails": [
+            _serialize_scheduled_email(e) for e in scheduled_emails
+        ],
+        "checkout_expirations": [
+            _serialize_checkout_expiration(c) for c in checkout_expirations
+        ],
+        "ai_twin_portfolios": [p.to_dict() for p in ai_twin_portfolios],
+        "ai_twin_positions": [p.to_dict() for p in ai_twin_positions],
+        "ai_twin_trades": [t.to_dict() for t in ai_twin_trades],
+        "ai_twin_weekly_reports": [r.to_dict() for r in ai_twin_weekly_reports],
+        "auth_events": [e.to_dict() for e in auth_events],
+        "funnel_events": [e.to_dict() for e in funnel_events],
         "counts": {
             "positions": len(positions),
             "watchlist": len(watchlist),
@@ -1846,6 +2137,23 @@ def export_profile():
             "persona_snapshots": len(persona_snapshots),
             "nps_feedback": len(nps_feedback),
             "pre_trade_reflections": len(pre_trade_reflections),
+            "artifacts": len(artifacts),
+            "artifact_feedback": len(artifact_feedback),
+            "broker_connections": len(broker_connections),
+            "user_referrals": len(user_referrals),
+            "position_dd_checks": len(position_dd_checks),
+            "inquiries": len(inquiries),
+            "companion_waitlist": len(companion_waitlist),
+            "portfolio_shares": len(portfolio_shares),
+            "push_subscriptions": len(push_subscriptions),
+            "scheduled_emails": len(scheduled_emails),
+            "checkout_expirations": len(checkout_expirations),
+            "ai_twin_portfolios": len(ai_twin_portfolios),
+            "ai_twin_positions": len(ai_twin_positions),
+            "ai_twin_trades": len(ai_twin_trades),
+            "ai_twin_weekly_reports": len(ai_twin_weekly_reports),
+            "auth_events": len(auth_events),
+            "funnel_events": len(funnel_events),
         },
         "notes": {
             "excluded_fields": [
@@ -1853,9 +2161,28 @@ def export_profile():
                 "stripe_customer_id",
                 "oauth_id",
                 "oauth_refresh_token",
+                # PIPA §35 §2 — own-secret material withheld from the export:
+                # the user cannot self-exfiltrate their own credentials/keys.
+                "broker_connection.encrypted_app_key",
+                "broker_connection.encrypted_app_secret",
+                "broker_connection.encrypted_account_no",
+                "broker_connection.encrypted_access_token",
+                "broker_connection.access_token",
+                "broker_connection.refresh_token",
+                "push_subscription.endpoint",
+                "push_subscription.p256dh",
+                "push_subscription.auth",
+                "portfolio_share.token",
+                "checkout_expiration.session_id",
+                "companion_waitlist.email_hash",
             ],
             "trade_limit": _EXPORT_TRADE_LIMIT,
             "alert_limit": _EXPORT_ALERT_LIMIT,
+            # Synchronization note (feedback_thorough_fixes): the set of
+            # user-owned tables enumerated here MUST stay in sync with the two
+            # deletion paths — routes/auth.py:delete_account and
+            # scripts/nightly/pipa_purge.py:_delete_user_cascade. Adding a new
+            # user-owned model requires updating all THREE locations.
             "contact": (
                 "If you need older records or additional data not included "
                 "here, contact privacy@pivoxquant.com per PIPA §35."
