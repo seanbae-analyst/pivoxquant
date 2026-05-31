@@ -43,6 +43,23 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"위험자산\s*비중\s*축소"), "위험자산 비중 모니터링"),
     (re.compile(r"부분\s*익절\s*/\s*손절\s*고려"), "TP/SL 레벨 관찰"),
 
+    # ── Group 1b: 단기성향 페르소나 라벨 (§101 표면 노출 차단) ──────────
+    # DECISIONS.md ✅확정: 표면 라벨은 3개(성장형/균형형/수익형 CFO)만.
+    # 매크로 chokepoint(_persona_macros.html persona_label)가 1차 collapse,
+    # 본 그룹은 이중 방어 — 매크로 우회/하드코딩/AI 생성문에서 단기성향
+    # 라벨이 새어나오면 surface 라벨(성장형 CFO)로 surgical replace.
+    # ⚠️ over-scrub 방지: "투기"/"단타"/"Speculator" 단독이 아닌 정확한
+    # 라벨 구문(... CFO)만 매칭. naked "투기"(산문) 등은 건드리지 않음.
+    (re.compile(r"투기\s*CFO"), "성장형 CFO"),
+    (re.compile(r"단타\s*CFO"), "성장형 CFO"),
+    (re.compile(r"스캘퍼\s*CFO"), "성장형 CFO"),
+    (re.compile(r"스윙\s*트레이더\s*CFO"), "성장형 CFO"),
+    (re.compile(r"Speculator\s+CFO", re.IGNORECASE), "Growth CFO"),
+    (re.compile(r"Daytrader\s+CFO", re.IGNORECASE), "Growth CFO"),
+    (re.compile(r"Day\s*Trader\s+CFO", re.IGNORECASE), "Growth CFO"),
+    (re.compile(r"Scalper\s+CFO", re.IGNORECASE), "Growth CFO"),
+    (re.compile(r"Swing\s+Trader\s+CFO", re.IGNORECASE), "Growth CFO"),
+
     # ── Group 2: 권고 / 권장 / 추천 (단일 동사) ─────────────────────────
     (re.compile(r"매수\s*(권고|권장|추천)"), "정보 고지 (사전 설정 레벨 도달)"),
     (re.compile(r"매도\s*(권고|권장|추천)"), "정보 고지 (사전 설정 레벨 도달)"),

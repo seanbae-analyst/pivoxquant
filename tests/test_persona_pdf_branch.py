@@ -319,3 +319,88 @@ def test_missing_persona_macro_fallback(jinja_env) -> None:
     html = tpl.render(**ctx)
     # `{% set persona = persona | default('balanced') %}` → balanced branch.
     assert PERSONA_OPENER_PHRASES["balanced"] in html
+
+
+# ── G. §101 surface-label guard — banned short-horizon labels NEVER print ───
+#
+# DECISIONS.md ✅확정: the user-facing surface may only ever name the 3
+# disclosed buckets (성장형 / 균형형 / 수익형 CFO). The 8-code engine personas
+# (speculator / daytrader / scalper / swing) drive opener *tone* internally but
+# their NAME must never reach a rendered PDF surface. This guard renders every
+# persona (incl. the high-risk ones) and asserts the banned label phrases
+# appear 0 times. It is the inverse of the old behaviour: previously a
+# speculator render printed "Speculator CFO · 투기 CFO" — that is now a FAILURE.
+
+# Exact banned LABEL phrases only (not bare "투기"/"단타" prose tokens — the
+# opener prose legitimately discusses short-horizon *concepts*; only the
+# persona LABEL strings are forbidden on surface).
+_BANNED_SURFACE_LABELS = [
+    "투기 CFO", "투기CFO",
+    "단타 CFO", "단타CFO",
+    "가치 CFO", "밸런스 CFO", "인컴 CFO", "퀀트 CFO", "초보 CFO",
+    "스캘퍼 CFO", "스윙 트레이더 CFO",
+]
+_BANNED_SURFACE_LABELS_EN = re.compile(
+    r"\b(Speculator|Daytrader|Day\s*Trader|Scalper|Swing\s*Trader|"
+    r"Value|Quant|Beginner)\s+CFO\b",
+    re.IGNORECASE,
+)
+
+
+@pytest.mark.parametrize("persona", PERSONAS)
+def test_no_banned_persona_label_on_surface(jinja_env, persona: str) -> None:
+    """Every persona render must show only a 3-bucket disclosed CFO label.
+
+    Previously this assertion was inverted (speculator/daytrader openers were
+    expected to print '투기 CFO' / '단타 CFO'). The §101 fix collapses every
+    surfaced label to 성장형 / 균형형 / 수익형 CFO via the persona_label macro
+    chokepoint — so any banned label is now a hard failure.
+    """
+    tpl = jinja_env.get_template("quarterly_self_report.html")
+    html = tpl.render(**_quarterly_context(persona))
+
+    for banned in _BANNED_SURFACE_LABELS:
+        assert banned not in html, (
+            f"persona='{persona}' rendered banned surface label '{banned}'"
+        )
+    en_hit = _BANNED_SURFACE_LABELS_EN.search(html)
+    assert en_hit is None, (
+        f"persona='{persona}' rendered banned English label "
+        f"'{en_hit.group(0) if en_hit else ''}'"
+    )
+
+    # And the correct disclosed bucket label IS present.
+    from services.profile.persona_analytics import surface_label
+    assert surface_label(persona) in html, (
+        f"persona='{persona}' missing expected surface label "
+        f"'{surface_label(persona)}'"
+    )
+
+
+def test_persona_label_macro_matches_python_ssot() -> None:
+    """Drift guard: the Jinja persona_label macro must collapse the 8 codes to
+    the same 3 buckets as the canonical Python SSOT
+    (services.profile.persona_analytics.PERSONA_TO_SURFACE / surface_label).
+    Renders the macro in isolation for each code and checks the printed bucket.
+    """
+    from jinja2 import Environment, FileSystemLoader
+    from services.profile.persona_analytics import surface_label
+
+    env = Environment(
+        loader=FileSystemLoader(str(TEMPLATE_DIR)),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    tpl = env.from_string(
+        "{% import 'partials/_persona_macros.html' as pm %}"
+        "{{ pm.persona_label(persona) | trim }}"
+    )
+    for code in PERSONAS + ["totally_unknown_xyz"]:
+        rendered = tpl.render(persona=code)
+        expected_bucket = (
+            surface_label(code) if code in PERSONAS else "균형형"
+        )
+        assert expected_bucket in rendered, (
+            f"macro persona_label('{code}') = '{rendered}' does not contain "
+            f"expected bucket label '{expected_bucket}'"
+        )

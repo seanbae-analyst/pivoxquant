@@ -24,17 +24,27 @@
   ═══════════════════════════════════════════════════════════════════════════
 #}
 
-{# ── Label helper (persona → 한글 라벨) ───────────────────────────────── #}
+{# ── Surface label helper (persona → 3-bucket disclosed label) ──────────
+   §101 compliance (DECISIONS.md ✅확정): the user-facing surface must NEVER
+   name a short-horizon persona. The 8 engine codes collapse to exactly 3
+   disclosed labels (성장형 / 균형형 / 수익형) — identical mapping to the
+   canonical Python SSOT ``services.profile.persona_analytics`` (PERSONA_TO_
+   SURFACE / SURFACE_LABELS). The 8-code ``persona`` variable is still passed
+   to every content macro (opener / data_focus / risk_block) for tone routing;
+   only the *printed label* is collapsed here. This macro is the single
+   chokepoint — all 18 templates render their eyebrow via ``persona_label``.
+
+   Mapping (CEO-approved 2026-05-31, mirrors PERSONA_TO_SURFACE):
+     성장형 (Growth)  ← growth · value · speculator · daytrader
+     균형형 (Balanced)← balanced · quant · beginner   (+ unknown fallback)
+     수익형 (Income)  ← income
+   A drift guard (test_persona_pdf_branch.py) asserts this stays in lock-step
+   with the Python SSOT.
+#}
 {% macro persona_label(persona) -%}
-  {%- if persona == 'growth' %}Growth CFO · 성장 CFO
-  {%- elif persona == 'value' %}Value CFO · 가치 CFO
-  {%- elif persona == 'balanced' %}Balanced CFO · 밸런스 CFO
-  {%- elif persona == 'income' %}Income CFO · 인컴 CFO
-  {%- elif persona == 'quant' %}Quant CFO · 퀀트 CFO
-  {%- elif persona == 'speculator' %}Speculator CFO · 투기 CFO
-  {%- elif persona == 'daytrader' %}Daytrader CFO · 단타 CFO
-  {%- elif persona == 'beginner' %}Beginner CFO · 초보 CFO
-  {%- else %}Balanced CFO · 밸런스 CFO
+  {%- if persona in ['growth', 'value', 'speculator', 'daytrader'] %}Growth CFO · 성장형 CFO
+  {%- elif persona == 'income' %}Income CFO · 수익형 CFO
+  {%- else %}Balanced CFO · 균형형 CFO
   {%- endif %}
 {%- endmacro %}
 
