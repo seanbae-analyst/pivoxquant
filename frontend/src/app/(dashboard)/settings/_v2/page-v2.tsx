@@ -343,7 +343,7 @@ export default function SettingsPageV2() {
       // /api/agent/export returned a SUBSET of the data, which would
       // fail the PIPA §35 ① "complete personal data record" gate if
       // anyone ever audited a user's export.
-      const data: unknown = await apiFetch("/api/profile/export");
+      const data: unknown = await apiFetch(API.profile.export);
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });
@@ -360,6 +360,41 @@ export default function SettingsPageV2() {
       toast.error(t("settingsV2.toast.exportFail"));
     }
   }, [t]);
+
+  const handleExportCsv = React.useCallback(
+    async (dataset: "trades" | "positions" | "watchlist") => {
+      try {
+        // CSV is a binary attachment, not JSON — bypass apiFetch (which
+        // assumes a JSON body) and stream the blob straight to a download.
+        // Same-origin relative path is proxied to the backend by next.config,
+        // and credentials:"include" carries the session cookie.
+        const res = await fetch(API.profile.exportCsv(dataset), {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          throw new Error(`CSV export failed: ${res.status}`);
+        }
+        // Honour the server-supplied filename
+        // (pivoxquant-<dataset>-<date>.csv) when present.
+        const disposition = res.headers.get("Content-Disposition") ?? "";
+        const match = disposition.match(/filename="([^"]+)"/);
+        const filename = match?.[1]
+          ?? `pivoxquant-${dataset}-${new Date().toISOString().slice(0, 10)}.csv`;
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(t("settingsV2.toast.exportReady"));
+      } catch {
+        toast.error(t("settingsV2.toast.exportFail"));
+      }
+    },
+    [t],
+  );
 
   /* ── Auth gate ── */
   React.useEffect(() => {
@@ -855,6 +890,7 @@ export default function SettingsPageV2() {
           >
             <PrivacyCardV2
               onRequestExport={handleRequestExport}
+              onExportCsv={handleExportCsv}
               onSignOut={handleSignOut}
               signingOut={signingOut}
             />

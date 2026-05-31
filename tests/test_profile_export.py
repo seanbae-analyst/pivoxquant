@@ -712,3 +712,222 @@ def test_export_auth_events_scoped_by_email(app, client, make_user, auth_user):
     raw = json.dumps(body)
     assert "OTHER-AUTH-SECRET" not in raw
     assert "otherauth@test.com" not in raw
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 2026-05-31 — CSV export (tabular raw-fact slice)
+# ─────────────────────────────────────────────────────────────────────
+#
+# GET /api/profile/export?format=csv&dataset=trades|positions|watchlist
+# returns a spreadsheet-friendly CSV of RAW stored fields only — no live
+# price, no computed metric, no FX conversion, no advice. Same self-only
+# scope and auth gate as the JSON export.
+
+import csv as _csv
+import io as _io
+
+
+def _parse_csv(resp):
+    """Decode a CSV download Response into (header, rows), stripping the
+    UTF-8 BOM that Excel needs for Hangul. Asserts the CSV content-type."""
+    ctype = resp.headers.get("Content-Type", "")
+    assert "text/csv" in ctype, f"Expected text/csv, got {ctype!r}"
+    text = resp.data.decode("utf-8-sig")  # utf-8-sig strips the BOM
+    reader = list(_csv.reader(_io.StringIO(text)))
+    assert reader, "CSV had no rows at all (not even a header)"
+    return reader[0], reader[1:]
+
+
+def test_csv_export_requires_auth(client):
+    """Unauthenticated CSV request must 401 — never leak a default user."""
+    resp = client.get("/api/profile/export?format=csv&dataset=trades")
+    assert resp.status_code == 401, (
+        f"Unauthenticated CSV export must 401, got {resp.status_code}"
+    )
+
+
+def test_csv_export_bad_dataset_rejected(client, auth_user):
+    """An unknown / missing dataset is a 400, not a silent empty file."""
+    resp = client.get("/api/profile/export?format=csv&dataset=bogus")
+    assert resp.status_code == 400, (
+        f"Bad dataset must 400, got {resp.status_code}: {resp.data!r}"
+    )
+    resp2 = client.get("/api/profile/export?format=csv")
+    assert resp2.status_code == 400, "Missing dataset must 400"
+
+
+def test_csv_export_trades_headers_rows_and_attachment(
+    app, client, auth_user,
+):
+    """trades CSV: correct headers, attachment filename, one data row per
+    stored trade, with the stored ``name`` surfaced (ticker preserved)."""
+    from extensions import db
+    from models import TradeHistory
+    uid = auth_user["id"]
+    with app.app_context():
+        db.session.add(TradeHistory(
+            user_id=uid, ticker="AAPL", name="Apple", action="BUY",
+            shares=10.0, price_per_share=150.0, total_value=1500.0,
+            currency="USD", pnl=0.0,
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export?format=csv&dataset=trades")
+    assert resp.status_code == 200, resp.data
+
+    # Attachment + correct filename.
+    cd = resp.headers.get("Content-Disposition", "")
+    assert "attachment" in cd.lower(), cd
+    assert "pivoxquant-trades-" in cd, cd
+    assert cd.endswith('.csv"'), cd
+    # PII must not be cached by intermediaries.
+    assert "no-store" in resp.headers.get("Cache-Control", "")
+
+    header, rows = _parse_csv(resp)
+    assert header == [
+        "traded_at", "ticker", "name", "action", "shares",
+        "price_per_share", "total_value", "currency", "pnl",
+    ]
+    assert len(rows) == 1
+    row = dict(zip(header, rows[0]))
+    assert row["ticker"] == "AAPL"
+    assert row["name"] == "Apple"
+    assert row["action"] == "BUY"
+    assert row["shares"] == "10.0"
+    assert row["price_per_share"] == "150.0"
+    assert row["currency"] == "USD"
+
+
+def test_csv_export_positions_and_watchlist(app, client, auth_user, add_position):
+    """positions + watchlist CSVs render their raw columns."""
+    from extensions import db
+    from models import Watchlist
+    uid = auth_user["id"]
+    add_position(uid, ticker="MSFT", shares=5.0, avg_cost=300.0)
+    with app.app_context():
+        db.session.add(Watchlist(user_id=uid, ticker="NVDA", note="watching"))
+        db.session.commit()
+
+    # Positions
+    resp = client.get("/api/profile/export?format=csv&dataset=positions")
+    assert resp.status_code == 200
+    header, rows = _parse_csv(resp)
+    assert header == ["ticker", "name", "shares", "avg_cost", "currency", "added_at"]
+    assert len(rows) == 1
+    prow = dict(zip(header, rows[0]))
+    assert prow["ticker"] == "MSFT"
+    assert prow["shares"] == "5.0"
+    assert prow["avg_cost"] == "300.0"
+    assert prow["currency"] == "USD"
+
+    # Watchlist
+    resp2 = client.get("/api/profile/export?format=csv&dataset=watchlist")
+    assert resp2.status_code == 200
+    header2, rows2 = _parse_csv(resp2)
+    assert header2 == ["ticker", "name", "note", "added_at"]
+    assert len(rows2) == 1
+    wrow = dict(zip(header2, rows2[0]))
+    assert wrow["ticker"] == "NVDA"
+    assert wrow["note"] == "watching"
+
+
+def test_csv_export_empty_emits_header_only(client, auth_user):
+    """A user with no rows still gets a valid CSV — header, zero data rows.
+    Honest: an empty CSV, never fabricated data."""
+    for dataset, expected_cols in (
+        ("trades", 9), ("positions", 6), ("watchlist", 4),
+    ):
+        resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
+        assert resp.status_code == 200, (dataset, resp.data)
+        header, rows = _parse_csv(resp)
+        assert len(header) == expected_cols, (dataset, header)
+        assert rows == [], f"{dataset} should have zero data rows for empty user"
+
+
+def test_csv_export_scopes_strictly_to_caller(
+    app, client, make_user, auth_user, add_position,
+):
+    """CRITICAL: CSV export must contain ONLY the caller's rows. Seed another
+    user's trade/position/watchlist and confirm none leak into the CSV."""
+    from extensions import db
+    from models import TradeHistory, Watchlist
+    uid = auth_user["id"]
+    add_position(uid, ticker="AAPL", shares=1.0, avg_cost=100.0)
+
+    other = make_user(email="csvother@test.com", password="otherpw123")
+    with app.app_context():
+        add_position  # noqa — other position added via direct insert below
+        from models import Position
+        db.session.add(Position(
+            user_id=other["id"], ticker="TSLA", shares=99.0, avg_cost=999.0,
+        ))
+        db.session.add(TradeHistory(
+            user_id=other["id"], ticker="TSLA", name="OTHER-SECRET-NAME",
+            action="BUY", shares=10.0, price_per_share=999.0,
+            total_value=9990.0, currency="USD",
+        ))
+        db.session.add(Watchlist(
+            user_id=other["id"], ticker="NVDA", note="OTHER-SECRET-NOTE",
+        ))
+        db.session.commit()
+
+    for dataset in ("trades", "positions", "watchlist"):
+        resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
+        assert resp.status_code == 200
+        raw = resp.data.decode("utf-8-sig")
+        assert "TSLA" not in raw, f"Other user's ticker leaked in {dataset} CSV"
+        assert "NVDA" not in raw, f"Other user's watchlist leaked in {dataset} CSV"
+        assert "OTHER-SECRET-NAME" not in raw, f"Other user's trade name leaked in {dataset}"
+        assert "OTHER-SECRET-NOTE" not in raw, f"Other user's note leaked in {dataset}"
+
+
+def test_csv_export_neutralises_formula_injection(app, client, auth_user):
+    """CSV/formula injection (CWE-1236): a watchlist note that leads with a
+    spreadsheet formula char (=, +, -, @) must be quoted with a leading '
+    so it cannot execute when the file is opened in Excel / Sheets."""
+    from extensions import db
+    from models import Watchlist
+    uid = auth_user["id"]
+    with app.app_context():
+        db.session.add(Watchlist(
+            user_id=uid, ticker="AAPL", note="=cmd|'/c calc'!A1",
+        ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export?format=csv&dataset=watchlist")
+    assert resp.status_code == 200
+    raw = resp.data.decode("utf-8-sig")
+    # The leader is neutralised with a prepended single quote …
+    assert "'=cmd" in raw, "formula-injection note was not neutralised"
+    # … and a BARE formula never starts a cell (no ',=cmd' at a delimiter).
+    assert ",=cmd" not in raw, "bare formula reached a cell boundary"
+
+
+def test_csv_export_has_utf8_bom_for_excel(client, auth_user, app):
+    """The CSV body must start with the UTF-8 BOM so Excel renders Hangul
+    company names (삼성전자) instead of mojibake."""
+    from extensions import db
+    from models import Watchlist
+    with app.app_context():
+        db.session.add(Watchlist(
+            user_id=auth_user["id"], ticker="005930.KS", note="한글메모",
+        ))
+        db.session.commit()
+    resp = client.get("/api/profile/export?format=csv&dataset=watchlist")
+    assert resp.status_code == 200
+    # Raw bytes begin with the UTF-8 BOM.
+    assert resp.data.startswith(b"\xef\xbb\xbf"), "Missing UTF-8 BOM"
+    # Hangul note round-trips intact.
+    text = resp.data.decode("utf-8-sig")
+    assert "한글메모" in text
+
+
+def test_json_export_still_default_when_no_format(client, auth_user):
+    """Regression guard: with no ?format the endpoint still returns the full
+    §35 JSON export unchanged (CSV branch must not hijack the default)."""
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    assert "application/json" in resp.headers.get("Content-Type", "")
+    body = json.loads(resp.data)
+    assert body["format_version"] == "1.0"
+    assert body["scope"] == "self_only"

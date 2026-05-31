@@ -202,14 +202,22 @@ def _resolve_stock_name_uncached(ticker: str) -> Optional[str]:
         return None
 
 
-def resolve_stock_name_with_db(ticker: str) -> Optional[str]:
+def resolve_stock_name_with_db(
+    ticker: str, *, allow_live: bool = True
+) -> Optional[str]:
     """Full-fallback resolver — adds the SignalCache DB rung.
 
     Use this from request handlers that already hold an app context.
     Order:
       1. Static registry (curated + full master)
       2. SignalCache blob (broker-populated names, covers ETFs / new IPOs)
-      3. KIS API for KRX (live)
+      3. KIS API for KRX (live) — SKIPPED when ``allow_live=False``
+
+    ``allow_live=False`` keeps this a pure local lookup (registry + DB cache
+    only, no network). Pass it from bulk paths that must stay deterministic
+    and must not fan out one KIS request per row (e.g. the CSV data export):
+    a 200-row export of long-tail KRX tickers would otherwise fire 200 live
+    KIS calls. A miss simply falls through to ``None`` (caller shows ticker).
 
     Returns ``None`` when every rung misses.
     """
@@ -234,9 +242,10 @@ def resolve_stock_name_with_db(ticker: str) -> Optional[str]:
                     t, name,
                 )
                 return name
-            name = _kis_name(t)
-            if name:
-                return name
+            if allow_live:
+                name = _kis_name(t)
+                if name:
+                    return name
             logger.debug("name_resolver miss (KR, all rungs): ticker=%s", t)
             return None
         # US ticker

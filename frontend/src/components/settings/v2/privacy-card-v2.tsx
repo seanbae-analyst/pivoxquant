@@ -10,7 +10,7 @@
  *   - E1 Cookie consent (4 categories — Strictly necessary always-on, Analytics,
  *     Performance, Marketing). Persisted to localStorage (GAP-C — backend
  *     `consent_log` table not yet present).
- *   - E2 Data export (last export timestamp + "Request new export →" CTA).
+ *   - E2 Data export (full JSON download + per-dataset CSV downloads).
  *     2026-05-15: GAP-X resolved — backend `/api/profile/export` IS
  *     declared (routes/profile.py:1172) and covers positions + watchlist
  *     + trades + alerts + consent state per PIPA §35 ① "complete personal
@@ -255,10 +255,15 @@ function DeleteAccountModal({
   );
 }
 
+/** CSV datasets a user can download (raw stored fields only). */
+export type CsvDataset = "trades" | "positions" | "watchlist";
+
 interface Props {
   /** Last export metadata, for the E2 row. */
   lastExport?: { at: string; size?: string };
   onRequestExport?: () => void;
+  /** Download a single dataset as CSV (raw stored fields, instant). */
+  onExportCsv?: (dataset: CsvDataset) => void;
   onSignOut?: () => void;
   signingOut?: boolean;
   /** Mailto for account deletion — defaults to PivoxQuant support address. */
@@ -268,6 +273,7 @@ interface Props {
 export function PrivacyCardV2({
   lastExport,
   onRequestExport,
+  onExportCsv,
   onSignOut,
   signingOut,
   deleteAccountMailto = "mailto:support@pivoxquant.com?subject=Account%20Deletion%20Request",
@@ -563,7 +569,7 @@ export function PrivacyCardV2({
               marginTop: 12,
             }}
           >
-            Request new export →
+            Download full export (JSON) →
           </button>
           <p
             className="font-serif"
@@ -573,17 +579,76 @@ export function PrivacyCardV2({
               marginTop: 12,
             }}
           >
-            Email delivery within{" "}
-            <span
-              className="font-mono"
+            Instant download. No email, no wait — the file is generated and
+            saved to your device immediately.
+          </p>
+
+          {/* E2b — CSV (spreadsheet) downloads: raw stored fields only. */}
+          <div
+            style={{
+              marginTop: 24,
+              paddingTop: 20,
+              borderTop: "1px solid var(--pq-ivory-line)",
+            }}
+          >
+            <div
+              className="font-mono uppercase"
               style={{
-                fontVariantNumeric: "tabular-nums",
+                fontSize: "var(--pq-text-eyebrow)",
+                letterSpacing: "0.22em",
+                color: "rgba(245,240,232,0.55)",
+                marginBottom: 12,
               }}
             >
-              24 h
-            </span>
-            . Includes Companion archive on Premium.
-          </p>
+              CSV · Spreadsheet
+            </div>
+            <p
+              className="font-serif"
+              style={{
+                fontSize: "var(--pq-text-caption)",
+                color: "rgba(245,240,232,0.55)",
+                marginBottom: 14,
+              }}
+            >
+              Download a single table as CSV — opens cleanly in Excel or Google
+              Sheets. Your raw records only, exactly as stored.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+              }}
+            >
+              {([
+                ["trades", "거래내역 · Trades"],
+                ["positions", "보유종목 · Positions"],
+                ["watchlist", "관심종목 · Watchlist"],
+              ] as const).map(([dataset, label]) => (
+                <button
+                  key={dataset}
+                  type="button"
+                  onClick={() => onExportCsv?.(dataset)}
+                  className="font-mono uppercase"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 18px",
+                    background: "transparent",
+                    color: "var(--pq-ivory, #f5f0e8)",
+                    fontSize: "var(--pq-text-eyebrow)",
+                    letterSpacing: "0.18em",
+                    borderRadius: 2,
+                    border: "1px solid var(--pq-bronze)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {label} ↓
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

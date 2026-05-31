@@ -15,11 +15,13 @@ on that contract for first-load UX.
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
 import logging
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, Response
 from flask_login import current_user
 
 from extensions import db
@@ -1812,6 +1814,190 @@ def _serialize_companion_waitlist(w) -> dict:
     }
 
 
+# ── CSV export (tabular raw-fact download) ───────────────────────────────────
+# A focused, spreadsheet-friendly slice of the §35 JSON export. Strictly raw
+# stored fields — NO live price, NO computed metric, NO FX conversion, NO
+# advice/recommendation. Deterministic: the same DB row always yields the same
+# CSV cell. This keeps the surface legally inert (it is "your own data", not a
+# performance brag) and free of brittle live-data coupling.
+#
+# Datasets are restricted to the three the user most often wants in a sheet:
+#   trades     — TradeHistory ledger (what you did, when, at what stored price)
+#   positions  — current Position rows (ticker / shares / avg cost)
+#   watchlist  — Watchlist rows (ticker / note / when added)
+#
+# Name resolution: per feedback_ticker_display the numeric KR code is replaced
+# by the company name. ``resolve_stock_name_with_db`` is a name LOOKUP only
+# (curated registry + SignalCache rung) — it performs no live price fetch and
+# no calculation, so it stays within the raw-fact boundary. We always emit BOTH
+# ``name`` and ``ticker`` columns so the raw identifier is never lost.
+
+_CSV_DATASETS = ("trades", "positions", "watchlist")
+
+
+def _csv_resolve_name(ticker):
+    """Best-effort display name for a ticker, falling back to the ticker.
+
+    Pure LOCAL lookup (curated registry + SignalCache DB rung) — ``allow_live
+    =False`` deliberately skips the KIS live rung so a bulk export never fans
+    out one network call per row (a 200-row KRX export would otherwise fire
+    200 KIS requests) and stays deterministic. No price fetch, no computation.
+    Never raises; a miss returns the ticker unchanged so the column is never
+    blank.
+    """
+    if not ticker:
+        return ""
+    try:
+        from services.name_resolver import resolve_stock_name_with_db
+        return resolve_stock_name_with_db(ticker, allow_live=False) or ticker
+    except Exception:
+        # Name resolution is a convenience, never a hard dependency: a miss
+        # must not break the user's own-data download.
+        logger.debug("csv name resolve miss: ticker=%s", ticker, exc_info=True)
+        return ticker
+
+
+def _csv_currency_for(ticker):
+    """Stored-fact currency inference from the ticker suffix only.
+
+    KR-listed tickers (``.KS`` / ``.KQ``) settle in KRW; everything else in
+    USD. This is a deterministic property of the symbol itself, not a live
+    FX rate or a computed value — it stays inside the raw-fact boundary.
+    """
+    if ticker and str(ticker).upper().endswith((".KS", ".KQ")):
+        return "KRW"
+    return "USD"
+
+
+# Column order is fixed and documented so the CSV is stable across releases.
+# Each tuple is (header, row->value). Only RAW stored fields are read.
+_CSV_SPECS = {
+    "trades": (
+        ["traded_at", "ticker", "name", "action", "shares",
+         "price_per_share", "total_value", "currency", "pnl"],
+        lambda t: [
+            _iso_or_none(getattr(t, "traded_at", None)) or "",
+            t.ticker or "",
+            # TradeHistory stores its own ``name`` at trade time; prefer that
+            # stored fact, fall back to the registry lookup only if absent.
+            getattr(t, "name", None) or _csv_resolve_name(t.ticker),
+            getattr(t, "action", None) or "",
+            t.shares if t.shares is not None else "",
+            t.price_per_share if t.price_per_share is not None else "",
+            t.total_value if t.total_value is not None else "",
+            getattr(t, "currency", None) or _csv_currency_for(t.ticker),
+            getattr(t, "pnl", None) if getattr(t, "pnl", None) is not None else "",
+        ],
+    ),
+    "positions": (
+        ["ticker", "name", "shares", "avg_cost", "currency", "added_at"],
+        lambda p: [
+            p.ticker or "",
+            _csv_resolve_name(p.ticker),
+            p.shares if p.shares is not None else "",
+            p.avg_cost if p.avg_cost is not None else "",
+            _csv_currency_for(p.ticker),
+            _iso_or_none(getattr(p, "added_at", None)) or "",
+        ],
+    ),
+    "watchlist": (
+        ["ticker", "name", "note", "added_at"],
+        lambda w: [
+            w.ticker or "",
+            _csv_resolve_name(w.ticker),
+            getattr(w, "note", None) or "",
+            _iso_or_none(getattr(w, "added_at", None)) or "",
+        ],
+    ),
+}
+
+
+# CSV/formula-injection guard (CWE-1236): a cell that *starts* with one of
+# these breaks out into a spreadsheet formula when the file is opened in
+# Excel / Google Sheets / LibreOffice. Free-text fields (Watchlist.note, a
+# resolved company name) are user-influenced, so we neutralise them by
+# prefixing a single quote. Applied to STRING cells only — numeric cells
+# (shares / price / pnl, incl. legitimately negative pnl like ``-5.0``) are
+# never strings here, so a negative number is preserved verbatim.
+_CSV_INJECT_LEADERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _safe_cell(value):
+    """Neutralise spreadsheet formula injection on a single CSV cell.
+
+    Only string values that lead with a dangerous character are quoted;
+    everything else (numbers, blanks) passes through unchanged.
+    """
+    if isinstance(value, str) and value and value[0] in _CSV_INJECT_LEADERS:
+        return "'" + value
+    return value
+
+
+def _build_csv(dataset, rows):
+    """Render ``rows`` of ``dataset`` to a UTF-8 (BOM-prefixed) CSV string.
+
+    The UTF-8 BOM (``\\ufeff``) makes Excel on Windows/macOS auto-detect UTF-8
+    so Hangul company names (삼성전자) render instead of mojibake. ``csv`` is
+    the Python standard library — no new dependency.
+
+    Every data cell passes through :func:`_safe_cell` so a user-supplied note
+    or name can never smuggle a spreadsheet formula into the download.
+
+    An empty dataset still emits the header row (honest: an empty CSV with
+    columns, never fabricated data).
+    """
+    header, row_fn = _CSV_SPECS[dataset]
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(header)
+    for row in rows:
+        writer.writerow([_safe_cell(c) for c in row_fn(row)])
+    return "﻿" + buf.getvalue()
+
+
+def _csv_export_response(user_id, dataset, now):
+    """Query the user's own ``dataset`` rows and return a CSV download Response.
+
+    Scope is STRICTLY ``user_id == current_user.id`` — identical isolation
+    rule to the JSON export. No user-id parameter is ever accepted.
+    """
+    if dataset == "trades":
+        rows = (
+            TradeHistory.query
+            .filter_by(user_id=user_id)
+            .order_by(TradeHistory.traded_at.desc())
+            .limit(_EXPORT_TRADE_LIMIT)
+            .all()
+        )
+    elif dataset == "positions":
+        rows = (
+            Position.query
+            .filter_by(user_id=user_id)
+            .order_by(Position.added_at.desc())
+            .all()
+        )
+    else:  # watchlist (validated by caller against _CSV_DATASETS)
+        rows = (
+            Watchlist.query
+            .filter_by(user_id=user_id)
+            .order_by(Watchlist.added_at.desc())
+            .all()
+        )
+
+    body = _build_csv(dataset, rows)
+    filename = f"pivoxquant-{dataset}-{now.strftime('%Y%m%d')}.csv"
+    response = Response(body, mimetype="text/csv; charset=utf-8")
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+    # Personal data — never let an intermediate cache retain it.
+    response.headers["Cache-Control"] = (
+        "no-store, no-cache, must-revalidate, private"
+    )
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
 @profile_bp.route("/export", methods=["GET"])
 @api_auth
 @general_rate_limit
@@ -1850,7 +2036,44 @@ def export_profile():
         Content-Disposition: attachment; filename="pivoxquant_export_<id>_<date>.json"
 
     Frontend hook: settings page "내 데이터 다운로드" button (TBD, separate PR).
+
+    Optional CSV mode (spreadsheet-friendly raw-fact slice):
+        ?format=csv&dataset=trades|positions|watchlist
+    returns a single tabular dataset as ``text/csv`` instead of the full JSON
+    record. CSV columns are RAW stored fields only — no live price, no computed
+    metric, no FX conversion, no advice. Same self-only scope, same auth gate.
+    The default (no ``format``) remains the complete §35 JSON export, unchanged.
     """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # ── CSV branch — focused tabular download ────────────────────────────
+    # Handled before the heavy JSON compilation so a CSV request never pays
+    # for the 26-table JSON gather. Still self-only scoped.
+    export_format = (request.args.get("format") or "").strip().lower()
+    if export_format == "csv":
+        dataset = (request.args.get("dataset") or "").strip().lower()
+        if dataset not in _CSV_DATASETS:
+            return api_error(
+                en=(
+                    "Invalid CSV dataset. Use one of: "
+                    + ", ".join(_CSV_DATASETS)
+                ),
+                kr="잘못된 CSV 데이터셋입니다. trades / positions / watchlist 중 하나를 선택하세요.",
+                code="PROFILE_EXPORT_BAD_DATASET", status=400,
+            )
+        try:
+            return _csv_export_response(current_user.id, dataset, now)
+        except Exception:
+            logger.exception(
+                "profile.export_profile CSV failed (user_id=%s dataset=%s)",
+                current_user.id, dataset,
+            )
+            return api_error(
+                en="Failed to compile CSV export. Please try again.",
+                kr="CSV 내보내기 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+                code="PROFILE_EXPORT_FAILED", status=500,
+            )
+
     # PIPA §35 ④ requires the export to reflect the *live* consent state,
     # not whatever Flask-Login cached for this request. Marketing opt-out
     # state can change via the one-click unsubscribe email link mid-session
@@ -1866,7 +2089,6 @@ def export_profile():
         # an explicit fresh fetch — same effect, slightly slower path.
         db.session.expire(current_user._get_current_object())
     user = current_user
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     try:
         positions = Position.query.filter_by(user_id=user_id).all()
