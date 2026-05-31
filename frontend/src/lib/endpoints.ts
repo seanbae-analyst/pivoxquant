@@ -279,6 +279,16 @@ export const API = {
     // carries share_token / referral_code / mode / empty_reason /
     // snapshot_tickers used by the onboarding viral surface.
     bragCardPreview: "/api/artifacts/brag-card/preview",
+    // Living Mirror — persona capstone PDF (선언 radar → 행동 overlay → drift
+    // trajectory). On-demand: POST generate → { ok, id, data }; then
+    // download(id) streams the PDF (410 when Railway's ephemeral disk has no
+    // rendered file) and preview(id) returns { ok, id, data, html }.
+    // Backend: routes/artifacts.py living_mirror_* (LAUNCH_FREE_ALL_TIERS).
+    livingMirrorGenerate: "/api/artifacts/living-mirror/generate",
+    livingMirrorPreview: (id: number) =>
+      `/api/artifacts/living-mirror/preview/${id}`,
+    livingMirrorDownload: (id: number) =>
+      `/api/artifacts/living-mirror/download/${id}`,
   },
   admin: {
     artifactsList: "/api/admin/artifacts/list",

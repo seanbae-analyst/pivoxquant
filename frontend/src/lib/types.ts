@@ -696,7 +696,8 @@ export type ArtifactType =
   | "insider_mirror"
   | "portfolio_segment"
   | "pre_trade_checklist"
-  | "sp500_backtest";
+  | "sp500_backtest"
+  | "living_mirror";
 
 export interface Artifact {
   id: number;
@@ -962,4 +963,30 @@ export interface PublicCardResponse {
   summary_safe: string;
   month_label: string | null;
   referral_code: string | null;
+}
+
+/**
+ * POST /api/artifacts/living-mirror/generate — persists the caller's persona
+ * capstone PDF and returns its id + the render context payload.
+ *
+ * `data` is the LivingMirrorService context (JSON-serialisable). We only type
+ * the fields the UI surfaces; the full shape carries radar/gap/trajectory the
+ * PDF renders. Stage drives the post-generate copy:
+ *   new        — declared radar only (행동/궤적 빈칸)
+ *   observed   — declared vs observed overlay + gap rows
+ *   trajectory — overlay + drift narrative + sparkline
+ * No score / grade / percentile / rank ever appears here (점수화 폐기).
+ */
+export interface LivingMirrorData {
+  stage?: "new" | "observed" | "trajectory";
+  declared_label?: string;
+  observed_label?: string | null;
+  period_label?: string;
+  has_observed?: boolean;
+}
+
+export interface LivingMirrorGenerateResponse {
+  ok: boolean;
+  id: number;
+  data: LivingMirrorData;
 }

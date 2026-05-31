@@ -210,6 +210,29 @@ html, body {
   line-height: 1.55;
 }
 
+/* ───────── AI-generated content badge (AI기본법 §31 visible label) ─────────
+   High-contrast pill on the cover so the AI-origin is legible at a glance,
+   not buried in the footer disclaimer. */
+.pq-lm-ai-badge {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 6px 12px;
+  border: 1px solid var(--r-gold);
+  border-radius: 2px;
+  background: var(--r-bg-soft);
+  color: var(--r-gold-deep);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+.pq-lm-ai-badge-dot {
+  color: var(--r-gold);
+  font-size: 9px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
 /* ───────── Persona declaration card ───────── */
 .pq-lm-declare {
   margin: 18px 0 12px;

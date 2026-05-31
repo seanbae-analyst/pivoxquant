@@ -63,6 +63,7 @@ import { SixDimensionsGrid } from "@/components/profile/v2/six-dimensions-grid";
 import { PeerBenchmarkBlockV2 } from "@/components/profile/v2/peer-benchmark-block-v2";
 import { CompanionEntryV2 } from "@/components/profile/v2/companion-entry-v2";
 import { DangerZoneCardV2 } from "@/components/profile/v2/danger-zone-card-v2";
+import { LivingMirrorCta } from "@/components/profile/v2/living-mirror-cta";
 
 // Wave 2 sweep (Task #5): Loader2 no longer used — page-level auth load
 // now renders a pq-skeleton-dark scaffold instead of a spinner block.
@@ -608,6 +609,13 @@ export default function ProfilePageV2() {
           dimensions={dimensions}
           loading={personaDetailLoading}
         />
+
+        {/* BLOCK 4.5 — Living Mirror capstone PDF
+            Persona-deep artifact: declared radar → observed overlay → drift
+            trajectory, on one editorial page. Generate (POST) → download.
+            Opens to all tiers via LAUNCH_FREE_ALL_TIERS (no TierGate).
+            Legal: AI label + negation microcopy + 410-graceful download. */}
+        <LivingMirrorCta />
 
         {/* BLOCK 5 — Peer benchmark
             Wired to `/api/profile/persona-benchmark` — surfaces CAGR /

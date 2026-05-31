@@ -44,6 +44,7 @@ const TYPE_LABEL: Record<ArtifactType, string> = {
   portfolio_segment: "Portfolio Segment",
   pre_trade_checklist: "Pre-Trade Checklist",
   sp500_backtest: "S&P 500 Backtest",
+  living_mirror: "Living Mirror",
 };
 
 interface MentionRow {
