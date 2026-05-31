@@ -1010,6 +1010,11 @@
       "momentum_rider": "모멘텀 추종형",
       "macro_rotator": "매크로 로테이션형",
       "aggressive_scalper": "공격형 스캘퍼"
+    },
+    "surfaceNames": {
+      "growth": "성장형",
+      "balanced": "균형형",
+      "income": "수익형"
     }
   },
   "support": {

@@ -99,10 +99,27 @@ class TestGetPersona:
         _set_profile(app, auth_user["id"], profile_type="growth", risk_tolerance=8)
         r = client.get("/api/profile/persona")
         d = r.get_json()
+        # Engine keeps the 8-code internally …
         assert d["declared"]["persona"] == "growth"
-        assert d["declared"]["label"] == "Growth CFO"
+        # … but the disclosed surface label collapses to one of the 3
+        # §101 buckets (성장형 / 균형형 / 수익형) — never a CFO-style 8-label.
+        assert d["declared"]["label"] == "성장형"
         assert d["declared"]["tagline"]  # non-empty
         assert 35 <= d["declared"]["score"] <= 95
+
+    def test_short_horizon_persona_collapses_to_surface_bucket(
+        self, app, client, auth_user
+    ):
+        """§101: speculator / daytrader declared types must never surface
+        their own name — both fold into the 성장형 bucket."""
+        for ptype in ("speculator", "daytrader"):
+            _set_profile(app, auth_user["id"], profile_type=ptype, risk_tolerance=9)
+            d = client.get("/api/profile/persona").get_json()
+            # Engine code preserved for grouping …
+            assert d["declared"]["persona"] == ptype
+            # … surface label is the 3-bucket disclosed label only.
+            assert d["declared"]["label"] in {"성장형", "균형형", "수익형"}
+            assert d["declared"]["label"] == "성장형"
 
     def test_observed_persona_populated_with_trades(self, app, client, auth_user):
         _set_profile(app, auth_user["id"], profile_type="growth", risk_tolerance=6)

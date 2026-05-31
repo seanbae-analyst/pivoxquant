@@ -114,7 +114,7 @@ function BenchmarkCompareRow({
 /* ── Main ── */
 
 export interface PeerBenchmarkBlockProps {
-  /** Display label for the current persona (e.g. "Growth CFO"). */
+  /** Disclosed 3-bucket surface label for the cohort (e.g. "성장형"). */
   personaLabel: string;
   /** User's own CAGR %, if known. `null` hides the delta pill. */
   ownCagr?: number | null;

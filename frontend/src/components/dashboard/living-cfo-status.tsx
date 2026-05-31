@@ -26,7 +26,12 @@ import { motion, AnimatePresence } from "motion/react";
 import { PQ_EASE, PQ_DUR_FAST, PQ_DUR_MICRO } from "@/lib/motion";
 import { useInvestmentProfile, useArtifacts } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
-import { usePersona, usePulse, PERSONA_LABELS } from "@/lib/cfo/hooks";
+import {
+  usePersona,
+  usePulse,
+  PERSONA_LABELS,
+  declaredSurfaceLabel,
+} from "@/lib/cfo/hooks";
 import {
   hasCompanionEntitlement,
   useCompanionStatus,
@@ -107,7 +112,9 @@ export function LivingCFOStatusBar() {
       state: layer1State,
       summary:
         layer1State === "ready"
-          ? `Declared persona · ${profile?.profile?.profile_type ?? "set"}.`
+          ? `Declared persona · ${
+              declaredSurfaceLabel(profile?.profile?.profile_type) ?? "set"
+            }.`
           : "20-question assessment not yet taken.",
       cta:
         layer1State === "ready"

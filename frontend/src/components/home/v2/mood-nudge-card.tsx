@@ -48,15 +48,18 @@ export function MoodNudgeCard() {
   };
 
   // Light persona tint for the eyebrow only (tone, not advice).
+  // §101: collapse every declared risk_profile → one of the 3 disclosed
+  // surface buckets (성장형 / 균형형 / 수익형). Never name a short-horizon
+  // persona ("스윙 트레이더" / "공격형 스캘퍼") on the surface.
   const PERSONA_LABEL: Record<string, string> = {
-    risk_managed_growth: t("persona.names.risk_managed_growth"),
-    swing_trader: t("persona.names.swing_trader"),
-    momentum_rider: t("persona.names.momentum_rider"),
-    macro_rotator: t("persona.names.macro_rotator"),
-    aggressive_scalper: t("persona.names.aggressive_scalper"),
-    conservative: t("persona.names.passive_index_hugger"),
-    moderate: t("persona.names.steady_accumulator"),
-    aggressive: t("persona.names.value_hunter"),
+    risk_managed_growth: t("persona.surfaceNames.balanced"),
+    swing_trader: t("persona.surfaceNames.growth"),
+    momentum_rider: t("persona.surfaceNames.growth"),
+    macro_rotator: t("persona.surfaceNames.balanced"),
+    aggressive_scalper: t("persona.surfaceNames.growth"),
+    conservative: t("persona.surfaceNames.income"),
+    moderate: t("persona.surfaceNames.balanced"),
+    aggressive: t("persona.surfaceNames.growth"),
   };
   // Start hidden; reveal only after the client confirms it hasn't been seen
   // today (avoids SSR/hydration flash + respects the once-a-day gate).

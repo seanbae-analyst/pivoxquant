@@ -26,6 +26,7 @@ import {
   usePersonaDetail,
   PERSONA_LABELS,
   PERSONA_TAGLINES,
+  surfaceLabel,
   type PersonaFeatureKey,
   type PersonaBreakdownRow,
   type PersonaId,
@@ -363,6 +364,10 @@ export function PersonaV2Card({
     return null;
   }
 
+  // §101: render the 3-bucket disclosed label from the persona CODE —
+  // never the raw 8-code label string the backend emits.
+  const disclosedLabel = surfaceLabel(data.persona);
+
   return (
     <div className={className + " space-y-4"}>
       <PersonaHeader
@@ -378,10 +383,10 @@ export function PersonaV2Card({
         present={data.present}
         breakdown={data.breakdown}
       />
-      <WhyThisPersona breakdown={data.breakdown} label={data.label} />
+      <WhyThisPersona breakdown={data.breakdown} label={disclosedLabel} />
       {showPeerBenchmark && (
         <PeerBenchmarkBlock
-          personaLabel={data.label}
+          personaLabel={disclosedLabel}
           ownCagr={null}
           ownSharpe={null}
           ownHolding={null}

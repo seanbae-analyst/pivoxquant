@@ -74,6 +74,63 @@ PERSONA_TAGLINES = {
     "beginner":   "이해하지 못한 것에 돈을 걸지 않는다.",
 }
 
+# ─────────────────────────────────────────────────────────────────────
+# SURFACE labels — the ONLY persona naming the user ever sees.
+#
+# §101 compliance (DECISIONS.md ✅확정): the engine keeps all 8 persona
+# codes for internal grouping / peer-benchmark cohorts, but the user-
+# facing surface must never name a short-horizon persona (speculator /
+# daytrader). We collapse 8 engine codes → 3 disclosed labels so no
+# short-term trading style is ever called out by name.
+#
+#   성장형 (Growth)  ← growth · value · speculator · daytrader
+#   균형형 (Balanced)← balanced · quant · beginner
+#   수익형 (Income)  ← income
+#
+# CEO-approved mapping (2026-05-31): high risk-tolerance codes
+# (speculator / daytrader) fold into 성장형 so the disclosed set stays a
+# literal 3. Taglines drop any future-return implication ("큰 변동성에서만
+# 큰 수익" etc.) — each bucket carries one neutral, observational line.
+#
+# PERSONA_LABELS / PERSONA_TAGLINES above are retained UNCHANGED for any
+# internal / non-surface consumer; SURFACE_* is additive.
+# ─────────────────────────────────────────────────────────────────────
+
+PERSONA_TO_SURFACE: dict[str, str] = {
+    "growth":     "growth",
+    "value":      "growth",
+    "speculator": "growth",
+    "daytrader":  "growth",
+    "balanced":   "balanced",
+    "quant":      "balanced",
+    "beginner":   "balanced",
+    "income":     "income",
+}
+
+SURFACE_LABELS = {
+    "growth":   "성장형",
+    "balanced": "균형형",
+    "income":   "수익형",
+}
+
+SURFACE_TAGLINES = {
+    "growth":   "변동을 감수하며 자산 성장을 지향하는 흐름.",
+    "balanced": "한쪽으로 치우치지 않는 일관된 흐름.",
+    "income":   "꾸준한 현금흐름을 중심에 두는 흐름.",
+}
+
+
+def surface_label(persona_code: str) -> str:
+    """Map any 8-code persona → its 3-bucket disclosed Korean label."""
+    bucket = PERSONA_TO_SURFACE.get(persona_code, "balanced")
+    return SURFACE_LABELS[bucket]
+
+
+def surface_tagline(persona_code: str) -> str:
+    """Map any 8-code persona → its 3-bucket disclosed tagline."""
+    bucket = PERSONA_TO_SURFACE.get(persona_code, "balanced")
+    return SURFACE_TAGLINES[bucket]
+
 # ``profile_type`` column values currently observed in the wild
 # (InvestmentProfile stores both the legacy 4-tier values and the
 # questionnaire V2 persona codes).
@@ -162,9 +219,12 @@ def compute_persona_response(user_id: int, now: datetime | None = None) -> dict:
 
     return {
         "declared": {
+            # `persona` stays the 8-code for engine grouping; the user-
+            # facing label/tagline collapse to the 3 disclosed buckets
+            # (§101 — never name a short-horizon persona).
             "persona": declared_code,
-            "label": PERSONA_LABELS[declared_code],
-            "tagline": PERSONA_TAGLINES[declared_code],
+            "label": surface_label(declared_code),
+            "tagline": surface_tagline(declared_code),
             "score": int(declared_score),
         },
         "observed": observed,
@@ -418,6 +478,11 @@ __all__ = [
     "PERSONA_CODES",
     "PERSONA_LABELS",
     "PERSONA_TAGLINES",
+    "PERSONA_TO_SURFACE",
+    "SURFACE_LABELS",
+    "SURFACE_TAGLINES",
+    "surface_label",
+    "surface_tagline",
     "DECLARED_TO_PERSONA",
     "PERSONA_CENTROIDS",
 ]

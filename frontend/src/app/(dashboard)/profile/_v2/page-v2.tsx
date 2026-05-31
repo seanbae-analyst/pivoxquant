@@ -38,6 +38,8 @@ import {
   usePersonaBenchmark,
   usePersonaDetail,
   usePulse,
+  surfaceLabel,
+  surfaceTagline,
 } from "@/lib/cfo/hooks";
 import type { PersonaBreakdownRow } from "@/lib/cfo/hooks";
 import type { DimensionEntry } from "@/components/profile/v2/six-dimensions-grid";
@@ -380,8 +382,10 @@ export default function ProfilePageV2() {
     ];
   }, [benchmark]);
 
+  // §101: collapse the cohort name to the 3-bucket disclosed label from
+  // the persona CODE — never the raw 8-code `persona_label` string.
   const peerCohortName: string | null =
-    benchmark && benchmark.available ? benchmark.persona_label : null;
+    benchmark && benchmark.available ? surfaceLabel(benchmark.persona) : null;
   const peerEmptyReason: "insufficient_group_size" | "not_computed" | "no_data" =
     benchmark && !benchmark.available ? benchmark.reason : "no_data";
 
@@ -410,9 +414,12 @@ export default function ProfilePageV2() {
    * real persona label from `persona.observed.window_30d.persona` so the
    * hero reflects the user's own data instead of a placeholder.
    */
+  // §101: surface the 3-bucket disclosed label from the persona CODE,
+  // not the backend's raw 8-code `label` string.
   const observedPersonaName =
-    personaDetail?.label ??
-    persona?.observed?.window_30d?.persona ??
+    (personaDetail?.persona && surfaceLabel(personaDetail.persona)) ??
+    (persona?.observed?.window_30d?.persona &&
+      surfaceLabel(persona.observed.window_30d.persona)) ??
     "Observed persona";
 
   /* heroBody was previously a hardcoded fictional summary ("held through
@@ -422,7 +429,7 @@ export default function ProfilePageV2() {
    * observational line — never invent activity that didn't happen.
    * Bug-hunter 2026-05-05 MEDIUM. */
   const heroBody =
-    personaDetail?.tagline ??
+    (personaDetail?.persona && surfaceTagline(personaDetail.persona)) ??
     "Your declared persona and your observed activity are recorded here. The desk surfaces what you actually did — no advice, no projection.";
 
   /* ── Pulse history (graceful fallback) ──

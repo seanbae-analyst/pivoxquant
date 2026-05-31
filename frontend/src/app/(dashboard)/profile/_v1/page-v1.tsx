@@ -36,6 +36,7 @@ import {
   usePersona,
   usePulse,
   PERSONA_LABELS,
+  declaredSurfaceLabel,
   type PersonaId,
 } from "@/lib/cfo/hooks";
 import {
@@ -796,8 +797,8 @@ export default function ProfilePageV1() {
               <span className="text-sm text-[var(--pq-ivory)]">
                 {profileLoading ? (
                   <span className="text-[rgba(245,240,232,0.3)]">Loading…</span>
-                ) : investorType ? (
-                  t(`persona.names.${investorType}`)
+                ) : declaredSurfaceLabel(investorType) ? (
+                  declaredSurfaceLabel(investorType)
                 ) : (
                   <span className="text-[rgba(245,240,232,0.3)]">{locale === "ko" ? "미설정" : "Not set"}</span>
                 )}

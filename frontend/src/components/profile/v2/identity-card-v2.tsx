@@ -16,7 +16,8 @@
  */
 
 import * as React from "react";
-import { useT, useLocale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale";
+import { declaredSurfaceLabel } from "@/lib/cfo/hooks";
 
 function initials(name?: string | null, email?: string | null): string {
   if (name) {
@@ -49,12 +50,14 @@ export function IdentityCardV2({
   investorType,
   calibratedAt,
 }: IdentityCardV2Props) {
-  const t = useT();
   const { locale } = useLocale();
   const init = initials(name, email);
-  const investorLabel = investorType
-    ? t(`persona.names.${investorType}`)
-    : locale === "ko" ? "미설정" : "Not set";
+  // §101: collapse the declared profile_type to one of the 3 disclosed
+  // surface buckets (성장형 / 균형형 / 수익형) — never name a short-horizon
+  // persona ("스윙 트레이더" / "공격형 스캘퍼") on the surface.
+  const investorLabel =
+    declaredSurfaceLabel(investorType) ??
+    (locale === "ko" ? "미설정" : "Not set");
   const calibratedDisplay = calibratedAt
     ? new Date(calibratedAt).toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", {
         day: "2-digit",

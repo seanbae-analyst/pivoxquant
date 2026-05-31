@@ -1010,6 +1010,11 @@
       "momentum_rider": "The Momentum Rider",
       "macro_rotator": "The Macro Rotator",
       "aggressive_scalper": "The Aggressive Scalper"
+    },
+    "surfaceNames": {
+      "growth": "Growth",
+      "balanced": "Balanced",
+      "income": "Income"
     }
   },
   "support": {

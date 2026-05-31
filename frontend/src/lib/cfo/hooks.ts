@@ -177,9 +177,11 @@ function safeWrite<T>(key: string, value: T): void {
 function mockPersona(): PersonaResponse {
   return {
     declared: {
+      // §101: even the offline mock must carry only a 3-bucket disclosed
+      // surface label — never a CFO-style 8-label string.
       persona: "growth",
-      label: "Growth CFO",
-      tagline: "Hunts compounding revenue; tolerates drawdown for multi-year upside.",
+      label: surfaceLabel("growth"),
+      tagline: surfaceTagline("growth"),
       score: 72,
     },
     observed: {
@@ -373,28 +375,123 @@ function bumpNextDueAt(cadence: PulseResponse["cadence"]): string {
   return d.toISOString();
 }
 
-/* ═════════════ Persona label helpers ═════════════ */
+/* ═════════════ Persona surface label helpers ═════════════
+ *
+ * §101 compliance (DECISIONS.md ✅확정): the engine keeps all 8 persona
+ * codes (growth/value/balanced/income/quant/speculator/daytrader/beginner)
+ * for internal grouping + peer-benchmark cohorts, but the user-facing
+ * SURFACE must never name a short-horizon persona. Every disclosed label
+ * collapses 8 codes → 3 buckets — mirrors backend
+ * `services/profile/persona_analytics.PERSONA_TO_SURFACE`:
+ *
+ *   성장형 (Growth)   ← growth · value · speculator · daytrader
+ *   균형형 (Balanced) ← balanced · quant · beginner
+ *   수익형 (Income)   ← income
+ *
+ * `PERSONA_LABELS` / `PERSONA_TAGLINES` therefore map ALL 8 ids onto the
+ * 3 disclosed strings — any code rendered through them surfaces one of
+ * exactly three labels, so no caller can leak "Speculator"/"Daytrader".
+ */
+
+/** Bucket any 8-code persona id → one of 3 disclosed surface buckets. */
+const PERSONA_TO_SURFACE: Record<PersonaId, "growth" | "balanced" | "income"> = {
+  growth: "growth",
+  value: "growth",
+  speculator: "growth",
+  daytrader: "growth",
+  balanced: "balanced",
+  quant: "balanced",
+  beginner: "balanced",
+  income: "income",
+};
+
+const SURFACE_LABELS: Record<"growth" | "balanced" | "income", string> = {
+  growth: "성장형",
+  balanced: "균형형",
+  income: "수익형",
+};
+
+const SURFACE_TAGLINES: Record<"growth" | "balanced" | "income", string> = {
+  growth: "변동을 감수하며 자산 성장을 지향하는 흐름.",
+  balanced: "한쪽으로 치우치지 않는 일관된 흐름.",
+  income: "꾸준한 현금흐름을 중심에 두는 흐름.",
+};
+
+/** Map any 8-code persona id → its 3-bucket disclosed Korean label. */
+export function surfaceLabel(persona: PersonaId): string {
+  return SURFACE_LABELS[PERSONA_TO_SURFACE[persona] ?? "balanced"];
+}
+
+/** Map any 8-code persona id → its 3-bucket disclosed tagline. */
+export function surfaceTagline(persona: PersonaId): string {
+  return SURFACE_TAGLINES[PERSONA_TO_SURFACE[persona] ?? "balanced"];
+}
+
+/**
+ * Map a raw declared `profile_type` column value → 8-code persona id.
+ * Mirrors backend `persona_analytics.DECLARED_TO_PERSONA` so any surface
+ * that only has the raw onboarding string can still collapse to 3 labels
+ * instead of leaking a code like "swing_trader" / "aggressive_scalper".
+ */
+const DECLARED_TO_PERSONA: Record<string, PersonaId> = {
+  // Legacy 4-tier
+  conservative: "income",
+  balanced: "balanced",
+  growth: "growth",
+  aggressive: "speculator",
+  moderate: "beginner",
+  // Questionnaire V2
+  momentum_rider: "growth",
+  value_hunter: "value",
+  risk_managed_growth: "balanced",
+  passive_index_hugger: "income",
+  macro_rotator: "quant",
+  swing_trader: "speculator",
+  aggressive_scalper: "daytrader",
+  steady_accumulator: "beginner",
+  // Canonical persona codes (identity)
+  value: "value",
+  income: "income",
+  quant: "quant",
+  speculator: "speculator",
+  daytrader: "daytrader",
+  beginner: "beginner",
+};
+
+/**
+ * Map a raw declared `profile_type` string → 3-bucket disclosed label.
+ * Returns `null` for an unknown / empty profile_type so callers can keep
+ * their own "not set" copy.
+ */
+export function declaredSurfaceLabel(
+  profileType: string | null | undefined,
+): string | null {
+  if (!profileType) return null;
+  const code = DECLARED_TO_PERSONA[profileType.toLowerCase()];
+  if (!code) return null;
+  return surfaceLabel(code);
+}
 
 export const PERSONA_LABELS: Record<PersonaId, string> = {
-  growth: "Growth CFO",
-  value: "Value CFO",
-  balanced: "Balanced CFO",
-  income: "Income CFO",
-  quant: "Quant CFO",
-  speculator: "Speculator CFO",
-  daytrader: "Daytrader CFO",
-  beginner: "Beginner CFO",
+  growth: SURFACE_LABELS.growth,
+  value: SURFACE_LABELS.growth,
+  balanced: SURFACE_LABELS.balanced,
+  income: SURFACE_LABELS.income,
+  quant: SURFACE_LABELS.balanced,
+  speculator: SURFACE_LABELS.growth,
+  daytrader: SURFACE_LABELS.growth,
+  beginner: SURFACE_LABELS.balanced,
 };
 
 export const PERSONA_TAGLINES: Record<PersonaId, string> = {
-  growth: "내일의 승자를 오늘 담는다.",
-  value: "시장이 틀렸다는 확신에 돈을 건다.",
-  balanced: "극단이 아닌 일관성.",
-  income: "월세처럼 들어오는 배당.",
-  quant: "감이 아닌 검증된 엣지.",
-  speculator: "큰 변동성에서만 큰 수익.",
-  daytrader: "오늘 안에 답을 낸다.",
-  beginner: "이해하지 못한 것에 돈을 걸지 않는다.",
+  growth: SURFACE_TAGLINES.growth,
+  value: SURFACE_TAGLINES.growth,
+  balanced: SURFACE_TAGLINES.balanced,
+  income: SURFACE_TAGLINES.income,
+  quant: SURFACE_TAGLINES.balanced,
+  speculator: SURFACE_TAGLINES.growth,
+  daytrader: SURFACE_TAGLINES.growth,
+  beginner: SURFACE_TAGLINES.balanced,
 };
 
 /* ═════════════ Persona v2 (9-dim classifier) ═════════════
