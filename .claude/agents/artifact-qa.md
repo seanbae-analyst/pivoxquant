@@ -48,39 +48,23 @@ effort: high
 
 ---
 
-## 🔴 Fixture 실재 검증 결과 (2026-05-18 실측)
+## Fixture 실재 상태 (2026-05-29 빌드 완료 — 실행 전 `ls`/`test -e` 로 재확인)
 
-```bash
-$ ls -la /Users/seanbae/Desktop/취준/pivoxquant/tests/fixtures/
-ls: /Users/seanbae/Desktop/취준/pivoxquant/tests/fixtures/: No such file or directory
-
-$ find /Users/seanbae/Desktop/취준/pivoxquant/tests -name "virtual_users*"
-# (no output — 파일 없음)
-
-$ find /Users/seanbae/Desktop/취준/pivoxquant -name "virtual_users*"
-# (no output — 프로젝트 전체에 없음)
-```
-
-### 상태
+2026-05-18 시점엔 fixture 가 미존재했으나(옛 BLOCKER), 2026-05-29 에 전부 생성됨.
 
 | 항목 | 상태 | 비고 |
 |------|------|------|
-| `tests/fixtures/` 디렉터리 | ❌ 미존재 | mkdir 필요 |
-| `tests/fixtures/virtual_users.py` | ❌ 미존재 | line 0 |
-| 10 유저 프로파일 정의 | ❌ 미존재 | 표 7 데이트레이더 / 8 신규(빈) / 10 국제분산 포함 |
-| 17 Artifact × 10 profile = 170 케이스 fixture 매트릭스 | ❌ 미존재 | parametrize 미정의 |
-| `tests/conftest.py` | ✅ 존재 (`/Users/seanbae/Desktop/취준/pivoxquant/tests/conftest.py`) | 공통 fixture host |
+| `tests/fixtures/__init__.py` | ✅ 존재 | |
+| `tests/fixtures/virtual_users.py` | ✅ 존재 | 유저 프로파일 정의 |
+| `tests/fixtures/sample_data_factory.py` | ✅ 존재 | Faker + seed 기반 재현 |
+| `tests/test_artifact_rendering.py` | ✅ 존재 | parametrize 매트릭스 |
+| `tests/conftest.py` | ✅ 존재 | 공통 fixture host |
+| `.github/workflows/artifact-qa.yml` | ❌ 미존재 | CI 통합 미완 (GitHub Actions billing 차단 — 로컬 hooks 대안) |
 
-### 🚨 BLOCKER
-
-**fixture 미존재 — 즉시 빌드 작업 spawn 필요.**
-
-본 wave 에서는 read-only 검증만 수행. 다음 wave 에서 별도 task 로:
-1. `tests/fixtures/__init__.py` 생성
-2. `tests/fixtures/virtual_users.py` 생성 (아래 10 프로파일 표 그대로 구현)
-3. `tests/fixtures/sample_data_factory.py` — Faker + seed 기반 재현 가능 시드
-4. `tests/test_artifact_rendering.py` — 17 × 10 parametrize 매트릭스 생성
-5. CI 통합 (`.github/workflows/artifact-qa.yml`)
+### 남은 작업
+- CI 통합(`.github/workflows/artifact-qa.yml`)만 미완 — GitHub Actions 결제 차단 상태라 로컬 hooks/수동 실행으로 대체 중.
+- fixture 자체는 완성 → 본 agent 는 `pytest tests/test_artifact_rendering.py` 를 **직접 실행/검증 가능**.
+- ⚠️ 프로파일 표(아래)와 실제 `virtual_users.py` 내용이 일치하는지는 실행 전 Read 로 대조할 것.
 
 ---
 
@@ -126,7 +110,7 @@ $ find /Users/seanbae/Desktop/취준/pivoxquant -name "virtual_users*"
 
 ### Mode 1 — 전수 렌더 매트릭스
 ```
-1. tests/fixtures/virtual_users.py 생성 (10 프로파일) — 현재 BLOCKER (미존재)
+1. tests/fixtures/virtual_users.py (10 프로파일) — ✅ 존재 (2026-05-29). 실행 전 Read 로 프로파일 내용 대조
    - User + Position + Transaction + Dividend 모델 시드
    - 랜덤이되 재현 가능한 seed 값 (pytest fixture)
 2. 각 유저 × 17 Artifact 렌더 호출
@@ -183,7 +167,7 @@ jobs:
 
 **pytest-xdist 병렬 실행 검증 결과**:
 - 명령: `pytest tests/test_artifact_rendering.py -n auto`
-- 동작 검증: ❌ UNVERIFIED — `tests/test_artifact_rendering.py` 와 fixture 미존재로 실행 불가
+- 동작 검증: `tests/test_artifact_rendering.py` + fixture 존재(2026-05-29) → 실행 가능. 매 사용 시 `pytest` 실측으로 PASS/FAIL 확인 (결과 추측 금지)
 - 빌드 후 재검증 필요 (목표: 170 케이스 / 10분 / 8 worker)
 
 ### Mode 4 — 성능 벤치마크

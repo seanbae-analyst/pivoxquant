@@ -39,14 +39,14 @@ You are the Site Reliability Engineering lead operating at Netflix scale princip
 
 ## Infrastructure Map
 ```
-[User] → [Vercel CDN] → [Next.js App]
-                              ↓
-                    [Supabase] ← [Railway]
-                    ├── PostgreSQL (DB)
-                    ├── Auth (인증)
-                    ├── Realtime (WebSocket)
-                    └── Edge Functions
+[User] → [Vercel CDN] → [Next.js 16 App]
+                              ↓ (REST/SSE)
+                    [Railway — Flask 백엔드]
+                    ├── PostgreSQL (Railway 관리형 DB)
+                    ├── OAuth (Google + Kakao, Authlib — 자체 구현)
+                    └── SSE realtime (services/data/realtime.py)
 ```
+※ Supabase 는 검토만 하고 도입 보류 — DB/Auth/Realtime 전부 Railway+자체구현. config.py 의 `postgres://` 주석은 호환 처리용일 뿐.
 
 ## SRE Standards
 
@@ -80,16 +80,15 @@ You are the Site Reliability Engineering lead operating at Netflix scale princip
 
 ### 4. Database Operations
 - 마이그레이션: 반드시 롤백 스크립트 포함
-- 백업: Supabase 자동 백업 확인 (Point-in-Time Recovery)
+- 백업: Railway PostgreSQL 백업 확인 (관리형 백업 / 필요 시 pg_dump cron)
 - 인덱스: 느린 쿼리 모니터링 → 인덱스 추가
-- Connection pooling: Supabase pgbouncer 활용
+- Connection pooling: SQLAlchemy pool + Railway PostgreSQL (pgbouncer 도입 시 별도 검토)
 
 ### 5. Cost Management (100만원 Budget)
 | 서비스 | Free Tier 한도 | 현재 사용량 | 상태 |
 |--------|----------------|-------------|------|
 | Vercel | 100GB BW/월 | - | 추적 필요 |
-| Supabase | 500MB DB, 2GB BW | - | 추적 필요 |
-| Railway | $5 credit/월 | - | 추적 필요 |
+| Railway (Flask + PostgreSQL) | $5 credit/월 | - | 추적 필요 |
 
 ## Incident Response Template
 ```

@@ -42,21 +42,23 @@ effort: high
 ```
 /Users/seanbae/Desktop/취준/pivoxquant/
   services/artifacts/templates/
-    {17개 .html 템플릿}
-    _report_css.html       ← 공통 CSS 488줄
-    _report_masthead.html  ← 공통 헤더
-    _disclaimer.html       ← 법적 면책 (절대 수정/삭제 금지)
+    {18개 .html 템플릿 — 실측 `ls templates/*.html | grep -v /_ | grep -vi email`}
+    _<artifact>_v3_css.html ← 아티팩트별 CSS (옛 공통 _report_css.html 488줄은 폐기, per-artifact 분리)
+    _brand_mark.html        ← 공통 브랜드 마크 (옛 _report_masthead.html 대체)
+    _chart_macros.html      ← 차트 SVG 매크로
+    _disclaimer.html / _disclaimer_runner.html ← 법적 면책 (절대 수정/삭제 금지)
     _email_css.html        ← 이메일 전용 CSS
   scripts/render_artifact_samples.py   ← Chrome headless 폴백 포함
   samples/pdf/              ← 렌더 출력 (git 관리 아님)
 /Users/seanbae/Desktop/취준/Pivoxquant report/  ← CEO 최종 전달용 폴더
 ```
 
-### 17개 템플릿 (변경 시 반드시 17개 전체 고려)
+### 18개 템플릿 (변경 시 반드시 전체 고려 — 실측 SoT=`services/artifacts/templates/*.html`)
+
+> ⚠️ CLAUDE.md 는 "17 artifact" 라 적었으나 실제 템플릿은 18개 (living_mirror·sp500_backtest 포함). 출시 전 CLAUDE.md SoT 와 정합 필요 — 작업 시 `ls` 실측 우선.
 
 | 티어 | 템플릿 | 주요 섹션 | 가변 데이터 |
 |------|--------|----------|-------------|
-| Pro | morning_brief_plus | 전일 P&L / 이벤트 / Pre-market / 공시 | 종목 N |
 | Pro | weekly_memo | 주간 P&L / 포지션 변동 / 관찰 / 이벤트 | 종목 N + 이벤트 M |
 | Pro | earnings_prebrief | Consensus / Beat-Miss / IV / Peer | 분기 1-8, Peer 3-10 |
 | Pro | kpi_dashboard | AI Suite 8 모델 | 모델 8 고정, 종목 가변 |
@@ -73,6 +75,8 @@ effort: high
 | Premium | dividend_income | 배당 이력 / Yield / Ex-Date | 배당 0-50 |
 | Premium | self_audit | 거래 감사 / 승률·손익비 | 거래 0-200 |
 | Premium | brag_card | 1페이지 월간 하이라이트 | 월 1 |
+| Premium | living_mirror | 인지행동 거울 (보유/처분 관찰) | 거래 0-200 |
+| Premium | sp500_backtest | S&P500 벤치마크 백테스트 비교 | 기간 N |
 
 ## 디자인 시스템 (확정)
 
@@ -109,7 +113,7 @@ TIER A — Full SVG (axes + gridlines)
 TIER B — Sparkline / Small-multiples (축 없음)
   weekly_memo (7일 가격 spark per 종목)
   kpi_dashboard (8 모델 trend spark)
-  morning_brief_plus (전일 mini-chart)
+  living_mirror (보유기간 분포 spark)
   dividend_income (월별 수령 bar strip)
 
 TIER C — Clean CSS/SVG horizontal bar (Tufte)
@@ -128,7 +132,7 @@ TIER D — No charts (텍스트/표 only)
 ### Jinja2 구조 보존 (절대 훼손 금지)
 - `{% for %}`, `{% if %}`, `{% include %}` 블록 구조 유지
 - `{{ var_name }}` 치환 변수명 백엔드 service 와 1:1 매칭 — 변경 시 `services/artifacts/{template}_service.py` grep 필수
-- `_disclaimer.html` / `_report_masthead.html` include 지점 유지
+- `_disclaimer.html` / `_disclaimer_runner.html` / `_brand_mark.html` include 지점 유지
 - 조건 분기 (`{% if data %}...{% else %}데이터 부족{% endif %}`) 모든 테이블/차트에 필수
 
 ### 가변 데이터
@@ -206,7 +210,7 @@ grep -nE '\bBUY\b|\bSELL\b|\bHOLD\b|매수(?!\s*단가|\s*원가)|매도(?!\s*�
 
 ### Jinja2 구조 검증
 ```bash
-grep -c "_disclaimer.html\|_report_masthead" *.html   # 각 17개 템플릿 1 이상
+grep -c "_disclaimer.html\|_disclaimer_runner.html" *.html   # 각 18개 템플릿 1 이상
 ```
 
 ### PDF 본문 검증 (pypdf)
