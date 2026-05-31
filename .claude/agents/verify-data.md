@@ -116,7 +116,7 @@ grep -rE "\b\w+\.symbol\b|\{ticker\}" frontend/src/components/ \
 ### 소스 코드 grep
 ```bash
 grep -rniE "yfinance|pykrx|naver.*finance|finance\.naver|daum.*finance|crawl.*finance" \
-  /Users/seanbae/Desktop/취준/pivoxquant/stockpilot/ \
+  /Users/seanbae/Desktop/취준/pivoxquant/ \
   --include="*.py" --include="*.ts" --include="*.tsx"
 # 출력 0줄 → PASS (단 legacy comment / removed import 화이트리스트 별도)
 ```

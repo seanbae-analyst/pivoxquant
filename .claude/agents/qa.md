@@ -155,7 +155,7 @@ You are the QA Director at a financial trading platform where a single bug can c
 | 2 | **divergence guard** | 같은 source 의 두 path (live level vs history) 가 30% (USD/KRW 10%) 이상 차이 시 둘 다 폐기 + `is_stale=true` — fixture 로 강제 divergence 주입 후 검증 |
 | 3 | **ticker normalization** | class-share (BRK.B ↔ BRK-B) 양방향 retry 동작 — `fmp_service._class_share_alt()` 단일 helper 사용처 grep + parametrize 동치성 |
 | 4 | **per-metric try-except** | 한 metric 계산 실패가 전체 응답 깨지지 않음 — RSI fixture 에 NaN 주입 후 다른 indicator 정상 반환, Risk `_risk_layers_impl` 살아있는 layer 유지 확인 |
-| 5 | **deprecated endpoint 금지** | FMP v3/v4 비-stable endpoint grep 차단 — `grep -rE "api/v3\|api/v4" stockpilot/` 결과 0건 회귀 가드 |
+| 5 | **deprecated endpoint 금지** | FMP v3/v4 비-stable endpoint grep 차단 — `grep -rE "api/v3\|api/v4" services/` 결과 0건 회귀 가드 |
 | 6 | **SWR dedup 3계층** | 전역 SWRConfig (`dedupingInterval`) + 공용 hook + 페이지 inline 금지 — 동일 key 3회 동시 호출 시 fetch 1회만 발생 (mock `fetch` call count) + raw `fetch()` grep 0건 |
 | 7 | **SWR loading state** | `!data` 를 empty 로 오인 금지 — `!isLoading && !hasData` 분기 + sample/demo 배너 loading/empty/error 3상태 구분 검증 |
 | 8 | **DB migration (코드-데이터 lag)** | 코드 용어 변경 PR 에 Alembic migration 동봉 필수 — down_revision 체인 / downgrade no-op 명시 / alembic heads 단일 검증 |
@@ -183,7 +183,7 @@ You are the QA Director at a financial trading platform where a single bug can c
 grep -rEn '\.K[SQ](["\s<])' frontend/src/components frontend/src/app | grep -v '\.tsx?:' | grep -v 'test\|spec'
 
 # 백엔드 serializer 에서 ticker 그대로 노출
-grep -rEn "['\"]\d{6}\.K[SQ]['\"]" stockpilot/services/serializers.py
+grep -rEn "['\"]\d{6}\.K[SQ]['\"]" services/serializers.py
 ```
 
 ### 게이트

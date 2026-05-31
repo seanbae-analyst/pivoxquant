@@ -89,7 +89,7 @@ auto-close 로직 + 알림 누적 끊음:
 
 ```bash
 # 매주 grep (본 agent weekly run)
-grep -rn "from anthropic\|anthropic\.Anthropic(" stockpilot/ scripts/ | grep -v test_ | grep -v scheduled_task
+grep -rn "from anthropic\|anthropic\.Anthropic(" services/ scripts/ | grep -v test_ | grep -v scheduled_task
 # 결과 N > 0 → escalate (api credit 소비 시점)
 ```
 

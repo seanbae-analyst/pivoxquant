@@ -132,7 +132,7 @@ fetch('/api/auth/dev-login', {
 2. **divergence guard** — 동일 데이터의 두 source (live level vs history / cache vs server / FE store vs API) 30% (USD/KRW 10%) 이상 차이 시 둘 다 폐기 + `is_stale=true` 처리되는지. 하드코딩 [0.0, 0.0] grep 차단
 3. **ticker normalization** — `grep -rnE "\.KS|\.KQ" frontend/src` + KR 종목 detail 페이지에서 ticker suffix 그대로 노출되는지. class-share (BRK.B ↔ BRK-B) `_class_share_alt()` 단일 helper 사용 검증
 4. **per-metric try-except** — 한 metric API 4xx/5xx → 전체 page blank 되는지. `grep -rn "Promise.all" services/` (한 promise reject → 전체 reject 위험). Risk layer 살아있는 layer 유지 확인
-5. **deprecated endpoint 금지** — `grep -rE "api/v3\|api/v4" stockpilot/` 결과 0건 회귀 가드. FMP v3 2025-08-31 비지원, stable endpoint 만 사용
+5. **deprecated endpoint 금지** — `grep -rE "api/v3\|api/v4" services/` 결과 0건 회귀 가드. FMP v3 2025-08-31 비지원, stable endpoint 만 사용
 6. **SWR dedup 3계층** — Network 탭에서 동일 URL 중복 호출 (>1회) 발견 시 의심. 전역 SWRConfig `dedupingInterval` + 공용 hook + 페이지 inline 금지 + raw `fetch()` grep 0건
 7. **SWR loading state** — `!data` 를 empty 로 오인 금지 — UI 에 loading/empty/error 3상태 구분 + sample/demo 배너 플리커 버그 회귀 (risk/page.tsx 사례)
 8. **DB migration (코드-데이터 lag)** — 코드 용어 변경 PR 에 Alembic migration 동봉 필수. down_revision 체인 / downgrade no-op / alembic heads 단일 검증
