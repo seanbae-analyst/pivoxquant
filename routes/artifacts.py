@@ -3980,3 +3980,114 @@ def artifacts_by_month():
         "artifacts": [r.to_dict() for r in rows],
         "count":     len(rows),
     })
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Living Mirror — persona capstone (선언 → 행동 → 궤적), on-demand only.
+#
+# On-demand only: no APScheduler hook is registered for this artefact. The
+# CEO framing precedes any auto-send, so generation always requires an
+# explicit authenticated user action. ``@require_tier("premium")`` opens to
+# all authenticated users during the free launch (LAUNCH_FREE_ALL_TIERS →
+# effective_tier="premium"; see models/user.py), and re-gates automatically
+# when the Stage-1 paywall flag flips — no code change here.
+# ════════════════════════════════════════════════════════════════════════════
+from services.artifacts.living_mirror_service import (  # noqa: E402
+    LivingMirrorService,
+)
+
+
+@artifacts_bp.route("/living-mirror/generate", methods=["POST"])
+@api_auth
+@require_tier("premium")
+@artifact_rate_limit
+def living_mirror_generate():
+    """Build + persist the caller's Living Mirror. Returns { ok, id, data }."""
+    svc = LivingMirrorService()
+    try:
+        data = svc.generate_for_user(current_user.id)
+    except ValueError:
+        return api_error(en="Bad request", kr="잘못된 요청입니다.",
+                         code="BAD_REQUEST_400", status=400)
+    except Exception as exc:
+        current_app.logger.error("living_mirror generate failed: %s", exc)
+        return api_error(en="Generation failed (internal error)",
+                         kr="생성에 실패했습니다.",
+                         code="GENERATION_INTERNAL_ERROR", status=500)
+
+    try:
+        pdf_bytes = svc.render_pdf(data)
+        artefact = svc.persist(current_user.id, data, pdf_bytes)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("living_mirror persist failed: %s", exc)
+        return api_error(en="Persist failed (internal error)",
+                         kr="저장에 실패했습니다.",
+                         code="PERSIST_INTERNAL_ERROR", status=500)
+
+    return jsonify({"ok": True, "id": artefact.id, "data": artefact.data_json or {}})
+
+
+@artifacts_bp.route("/living-mirror/preview/<int:artifact_id>", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def living_mirror_preview(artifact_id: int):
+    """Return the persisted payload + rendered HTML. Owner-only."""
+    artefact = db.session.get(Artifact, artifact_id)
+    if (artefact is None or artefact.user_id != current_user.id
+            or artefact.type != "living_mirror"):
+        return api_error(en="Mirror not found", kr="리포트를 찾을 수 없습니다.",
+                         code="MIRROR_NOT_FOUND", status=404)
+
+    svc = LivingMirrorService()
+    try:
+        html = svc.render_html(artefact.data_json or {})
+    except Exception as exc:
+        current_app.logger.error("living_mirror preview render failed: %s", exc)
+        return api_error(en="Render failed (internal error)",
+                         kr="렌더링에 실패했습니다.",
+                         code="RENDER_INTERNAL_ERROR", status=500)
+
+    return jsonify({
+        "ok":   True,
+        "id":   artefact.id,
+        "data": artefact.data_json or {},
+        "html": html,
+    })
+
+
+@artifacts_bp.route("/living-mirror/download/<int:artifact_id>", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def living_mirror_download(artifact_id: int):
+    """Stream the persisted Living Mirror PDF. Owner-only."""
+    artefact = db.session.get(Artifact, artifact_id)
+    if (artefact is None or artefact.user_id != current_user.id
+            or artefact.type != "living_mirror"):
+        return api_error(en="Mirror not found", kr="리포트를 찾을 수 없습니다.",
+                         code="MIRROR_NOT_FOUND", status=404)
+
+    if not artefact.pdf_path:
+        return api_error(en="PDF unavailable for this report",
+                         kr="이 리포트의 PDF가 아직 준비되지 않았습니다.",
+                         code="PDF_NOT_RENDERED", status=410)
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return api_error(en="PDF file missing on disk",
+                         kr="PDF 파일이 서버에 존재하지 않습니다.",
+                         code="PDF_FILE_MISSING", status=410)
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"living_mirror_{artefact.id}.pdf",
+    )

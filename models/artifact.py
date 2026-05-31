@@ -58,6 +58,9 @@ ARTIFACT_TYPES = {
     # no share surface per explicit legal decision)
     "year_end_letter",        # Annual 6-page Buffett-tone letter (Premium)
     "quarterly_self_report",  # Quarterly 15-page Self 10-K + Thesis check (Premium)
+    # 2026-05-31 — Persona capstone (선언 → 행동 → 궤적). On-demand only,
+    # no scheduler. 3-bucket disclosed labels, no score/rank, observational.
+    "living_mirror",          # On-demand persona-depth mirror PDF (free launch)
 }
 
 

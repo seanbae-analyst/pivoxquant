@@ -1,0 +1,176 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Living Mirror — Persona capstone (선언 → 행동 → 궤적) · on-demand PDF
+
+   Concept: "User as CFO → AI가 Artifact(PDF) 생성" 의 페르소나 캡스톤.
+   Context builder: services/artifacts/living_mirror_service.py LivingMirrorService
+
+   Stages (ctx.stage):
+     new        — declared radar + intentional blank (행동/궤적 자리)
+     observed   — declared(선언) vs observed(관찰) radar overlay + gap rows
+     trajectory — overlay + 중립 시간축 서술 + sparkline shape
+
+   🔴 Legal (DECISIONS.md ✅확정 / §101 / 점수화 폐기):
+     • 3-라벨만 (성장형/균형형/수익형) — surface_label() 경유 컨텍스트.
+       speculator/daytrader/8-granular 라벨 절대 미출력.
+     • 점수·등급·퍼센타일·순위 0 — 레이더는 상대 형태(SVG)로만.
+     • 비치료·비진단·비자문·비점수 — 관찰 어휘만. 추천/조언/BUY/SELL 0.
+     • 가짜 데이터 0 — 없으면 정직한 빈칸.
+   ══════════════════════════════════════════════════════════════════════════ #}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Living Mirror — {{ declared_label }} — {{ user_name }}</title>
+  <style>{% include '_living_mirror_v3_css.html' %}</style>
+</head>
+<body>
+<div class="pq-report">
+  <section class="pq-pdf-page">
+
+    {# ───────── Header ───────── #}
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip">MIRROR</span>리빙 미러</strong>
+        <span>{{ period_label }}</span>
+      </div>
+    </div>
+
+    <div class="pq-pdf-gold-rule"></div>
+
+    {# ───────── Cover ───────── #}
+    <div class="pq-pdf-eyebrow">페르소나 미러 &middot; 선언과 행동을 비추다</div>
+    <h1 class="pq-pdf-cover-title">
+      {{ user_name }} 님의 <em>형태</em>
+    </h1>
+    <p class="pq-pdf-cover-sub">
+      설문에서 <strong>선언한 성향</strong>과 실제 체결에서 <strong>관찰된 행동</strong>의
+      형태를 같은 축 위에 나란히 비춥니다. 점수도 등급도 매기지 않습니다 —
+      해석은 온전히 당신의 몫입니다.
+    </p>
+
+    {# ───────── 선언 (declared) ───────── #}
+    <div class="pq-lm-declare">
+      <div class="pq-lm-declare-lbl">선언한 성향 · Declared</div>
+      <div class="pq-lm-declare-name">{{ declared_label }}</div>
+      <div class="pq-lm-declare-tag">{{ declared_tagline }}</div>
+    </div>
+
+    {# ───────── 레이더 (9-dim shape) ───────── #}
+    <div class="pq-pdf-section-title">9개 축으로 본 형태 · The Shape</div>
+    <div class="pq-lm-radar-wrap">
+      {% set R = radar %}
+      <svg class="pq-lm-radar-svg" viewBox="0 0 {{ R.size }} {{ R.size }}"
+           xmlns="http://www.w3.org/2000/svg">
+        {# reference rings #}
+        {% for ring in R.rings %}
+        <polygon class="ring" points="{{ ring.points }}"></polygon>
+        {% endfor %}
+        {# spokes + axis labels #}
+        {% for ax in R.axes %}
+        <line class="spoke" x1="{{ R.center }}" y1="{{ R.center }}"
+              x2="{{ ax.ex }}" y2="{{ ax.ey }}"></line>
+        <text class="axis-label" x="{{ ax.lx }}" y="{{ ax.ly }}"
+              text-anchor="{{ ax.anchor }}" dominant-baseline="middle">{{ ax.label }}</text>
+        {% endfor %}
+        {# observed polygon (drawn first, under declared) #}
+        {% if R.observed_points %}
+        <polygon class="poly-observed" points="{{ R.observed_points }}"></polygon>
+        {% endif %}
+        {# declared polygon #}
+        <polygon class="poly-declared" points="{{ R.declared_points }}"></polygon>
+      </svg>
+
+      <div class="pq-lm-legend">
+        <div class="pq-lm-legend-row">
+          <span class="pq-lm-legend-swatch"></span>
+          <span>선언한 형태 — {{ declared_label }}</span>
+        </div>
+        {% if has_observed %}
+        <div class="pq-lm-legend-row">
+          <span class="pq-lm-legend-swatch observed"></span>
+          <span>관찰된 형태 — {{ observed_label }} (최근 30일)</span>
+        </div>
+        {% endif %}
+        <div class="pq-lm-legend-note">
+          각 축은 행동의 한 측면입니다. 바깥쪽일수록 그 측면이 두드러진 형태이며,
+          좋고 나쁨을 뜻하지 않습니다. 어떤 축도 점수로 환산하지 않습니다.
+        </div>
+      </div>
+    </div>
+
+    {# ───────── Stage 분기 ───────── #}
+    {% if stage == 'new' %}
+      {# ── 신규: 행동 데이터 대기 빈칸 ── #}
+      <div class="pq-pdf-section-title">관찰된 행동 · Observed</div>
+      <div class="pq-lm-blank">
+        <div class="pq-lm-blank-icon">· · ·</div>
+        <div class="pq-lm-blank-text">{{ blank_prompt }}</div>
+      </div>
+
+      <div class="pq-pdf-section-title">시간에 따른 변화 · Trajectory</div>
+      <div class="pq-lm-blank">
+        <div class="pq-lm-blank-icon">· · ·</div>
+        <div class="pq-lm-blank-text">{{ trajectory_blank_prompt }}</div>
+      </div>
+
+    {% else %}
+      {# ── 관찰: 선언 vs 행동 갭 (사실, 판정 없음) ── #}
+      <div class="pq-pdf-section-title">선언과 행동의 차이 · The Gap</div>
+      {% if gap_dimensions %}
+      <div class="pq-lm-gap">
+        {% for g in gap_dimensions %}
+        <div class="pq-lm-gap-row">
+          <div class="pq-lm-gap-label">{{ g.label }}</div>
+          <div class="pq-lm-gap-dir">{{ g.direction }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <p class="pq-lm-legend-note">
+        선언한 형태와 관찰된 형태가 가장 크게 갈라지는 세 축입니다.
+        차이는 사실일 뿐 옳고 그름이 아니며, 그 의미는 당신이 판단합니다.
+      </p>
+      {% else %}
+      <div class="pq-lm-blank">
+        <div class="pq-lm-blank-text">선언과 관찰이 대체로 같은 형태입니다.</div>
+      </div>
+      {% endif %}
+
+      {# ── 궤적 (trajectory 단계에서만) ── #}
+      {% if stage == 'trajectory' and trajectory %}
+      <div class="pq-pdf-section-title">시간에 따른 변화 · Trajectory</div>
+      <div class="pq-lm-traj">
+        <div class="pq-lm-traj-line">{{ trajectory.narrative }}</div>
+        <div class="pq-lm-traj-meta">
+          관찰 스냅샷 {{ trajectory.n_snapshots }}개 기준 · 중립 서술
+        </div>
+        {% if sparkline_path %}
+        <svg class="pq-lm-spark-svg" viewBox="0 0 320 56"
+             xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <polyline class="spark-line" points="{{ sparkline_path }}"></polyline>
+        </svg>
+        {% endif %}
+      </div>
+      <p class="pq-lm-legend-note">
+        선은 형태가 시간에 따라 어떻게 움직였는지를 보여줍니다. 높낮이는
+        상대적 변화일 뿐 점수가 아니며, 어떤 시점도 순위로 매기지 않습니다.
+      </p>
+      {% endif %}
+    {% endif %}
+
+    {# ───────── 관찰 노트 (짧은 본문 고지) ───────── #}
+    <p class="pq-lm-note">{{ disclaimer_note }}</p>
+
+    {# ───────── Page footer ───────── #}
+    <div class="pq-pdf-page-footer">
+      <span>PivoxQuant · Living Mirror</span>
+      <span>{{ period_label }}</span>
+    </div>
+
+    {# ───────── 전체 법적 고지 (공유 파셜) ───────── #}
+    {% include '_disclaimer.html' %}
+
+  </section>
+</div>
+</body>
+</html>
