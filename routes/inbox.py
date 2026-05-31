@@ -15,6 +15,10 @@ from flask_login import current_user, login_required
 
 from services.inbox import build_inbox_payload
 
+# legal-exempt: admin-only internal CEO ops inbox (autonomous-ops status,
+# ship blockers, lawyer queue, cron status). Non-admins get 403 (see
+# get_inbox L53); no user-facing financial/advisory/analysis content is
+# ever returned, so legal_scrub_response is not applicable.
 inbox_bp = Blueprint("inbox", __name__, url_prefix="/api/inbox")
 
 

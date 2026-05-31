@@ -102,6 +102,32 @@ function listTemplateFiles(): string[] {
     .map((f) => join(TEMPLATES_DIR, f));
 }
 
+// Remove comment regions before scanning. Comments never render, so a
+// ticker letter-sequence inside one (e.g. the literal "COST" inside a
+// `PAGE 2 — CASH KPIs + COST / TAX LEDGER` JSX note) is not a naked-ticker
+// exposure and must not be flagged.
+//
+// Each comment is replaced with spaces of equal length so character offsets
+// stay aligned with the original source (the `idx` in the offender snippet
+// still points at the right place in rendered text).
+//
+// Strips three comment forms used in TSX:
+//   - JSX expression comments  {(slash-star) ... (star-slash)}  (multiline)
+//   - block comments           (slash-star) ... (star-slash)    (multiline)
+//   - leading line comments    (slash-slash) ...                (whole-line
+//     only, so `https://` and other inline `//` inside string literals are
+//     left untouched).
+function stripComments(src: string): string {
+  const blank = (m: string) => m.replace(/[^\n]/g, " ");
+  // JSX expression comments.
+  let out = src.replace(/\{\/\*[\s\S]*?\*\/\}/g, blank);
+  // Plain block comments.
+  out = out.replace(/\/\*[\s\S]*?\*\//g, blank);
+  // Line comments that occupy the start of a line (after indentation only).
+  out = out.replace(/^[ \t]*\/\/[^\n]*/gm, blank);
+  return out;
+}
+
 describe("sample-report templates: no naked US ticker", () => {
   const files = listTemplateFiles();
 
@@ -117,7 +143,10 @@ describe("sample-report templates: no naked US ticker", () => {
 
   for (const file of files) {
     const filename = file.split("/").pop() ?? file;
-    const src = readFileSync(file, "utf-8");
+    // Strip comments so non-rendered ticker-like tokens (e.g. "COST" in a
+    // `{/* ... COST / TAX LEDGER */}` note) are not mistaken for a naked
+    // ticker. Offsets are preserved (comments → equal-length spaces).
+    const src = stripComments(readFileSync(file, "utf-8"));
 
     for (const [ticker, names] of Object.entries(TICKER_NAMES)) {
       // Look for the ticker as a standalone word. Use the explicit
