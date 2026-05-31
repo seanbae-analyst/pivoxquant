@@ -33,6 +33,7 @@ import type {
   ConcentrationMirrorResponse,
   ProfitLossMirrorResponse,
   TurnoverMirrorResponse,
+  AveragingDownMirrorResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -424,6 +425,49 @@ export function useTurnoverMirror() {
   const swr = useSWR<TurnoverMirrorResponse | null>(
     API.behavior.turnoverMirror,
     async (url: string): Promise<TurnoverMirrorResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Averaging-Down Mirror — neutral counts of follow-on buys (adds to an
+ * already-held position) that landed below / above / at the position's
+ * running average cost. 1:1 with `useTurnoverMirror`: a 404 (backend not yet
+ * wired, or genuinely empty) normalises to `data === null` so the panel shows
+ * its calm empty state rather than an error. A 5xx / network failure surfaces
+ * through `error` so the panel can render nothing rather than a broken card —
+ * a mirror failure must NEVER take down the journal feed beneath it.
+ *
+ * Never returns a score / grade / ratio — only integer counts.
+ */
+export function useAveragingDownMirror() {
+  const swr = useSWR<AveragingDownMirrorResponse | null>(
+    API.behavior.averagingDownMirror,
+    async (url: string): Promise<AveragingDownMirrorResponse | null> => {
       const res = await fetch(url, { credentials: "include" });
       // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
       if (res.status === 404) return null;

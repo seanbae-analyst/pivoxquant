@@ -9,6 +9,9 @@ Endpoints (all under ``/api/behavior``):
                                   (?period=30d|all)
     GET /turnover-mirror        — trade-activity mirror: fill counts +
                                   per-currency gross value (?period=30d|all)
+    GET /averaging-down-mirror  — follow-on-add mirror: counts of adds to an
+                                  already-held position below / above / at the
+                                  running average cost (?period=30d|all)
 
 The former AI behavioural-scoring endpoints (``/score``, ``/breakdown``,
 ``/persona-comparison``) were removed 2026-05-30 per the "AI 점수화 폐기"
@@ -28,6 +31,9 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from models import TradeHistory
+from services.behavior.averaging_down_mirror import (
+    compute_averaging_down_mirror,
+)
 from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
 from services.behavior.turnover_mirror import compute_turnover_mirror
@@ -225,6 +231,62 @@ def turnover_mirror():
     body = {
         "ok": True,
         "disclaimer": _TURNOVER_MIRROR_DISCLAIMER,
+        "period": period,
+    }
+    body.update(result)
+    return jsonify(body), 200
+
+
+# ── /averaging-down-mirror ──────────────────────────────────────────
+
+# Wording kept byte-identical to the other retrospective trade-history
+# mirror disclaimers so all behaviour mirrors read with one legal voice.
+_AVERAGING_DOWN_MIRROR_DISCLAIMER = (
+    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 "
+    "아닙니다."
+)
+
+# Accepted ``?period`` values → window in days. ``all`` (default) = no
+# window. Kept tiny and explicit so we never echo an arbitrary
+# user-supplied integer back into a window.
+_AVERAGING_DOWN_MIRROR_PERIODS: dict[str, int | None] = {
+    "all": None,
+    "30d": 30,
+}
+
+
+@behavior_bp.route("/averaging-down-mirror", methods=["GET"])
+@api_auth
+def averaging_down_mirror():
+    """Retrospective follow-on-add mirror for the user.
+
+    ``?period=30d|all`` (default ``all``). For each BUY that added to an
+    already-held position, returns observational counts of whether the add
+    landed below / above / at the position's running average cost at that
+    instant — never a score, grade, ratio, or "물타기" judgement. Same-ticker
+    price comparison only, so no live price / FX call.
+    """
+    period = request.args.get("period", "all")
+    if period not in _AVERAGING_DOWN_MIRROR_PERIODS:
+        return jsonify({
+            "error": (
+                "period must be one of: "
+                + ", ".join(sorted(_AVERAGING_DOWN_MIRROR_PERIODS))
+            ),
+            "code": "BAD_INPUT",
+        }), 400
+    period_days = _AVERAGING_DOWN_MIRROR_PERIODS[period]
+
+    trades = (
+        TradeHistory.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    result = compute_averaging_down_mirror(trades, period_days=period_days)
+
+    body = {
+        "ok": True,
+        "disclaimer": _AVERAGING_DOWN_MIRROR_DISCLAIMER,
         "period": period,
     }
     body.update(result)

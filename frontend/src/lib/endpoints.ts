@@ -302,6 +302,14 @@ export const API = {
     // mirrors on /journal; NEVER a score, grade, or "회전율/과잉거래" label
     // (자본시장법 / PIPA §23). Response = TurnoverMirrorResponse, 1:1.
     turnoverMirror: "/api/behavior/turnover-mirror",
+    // Averaging-Down Mirror — factual counts of follow-on buys (adds to an
+    // already-held position) that landed below / above / at the position's
+    // running average cost. NO ratio/score — integer counts only; same-ticker
+    // price comparison so no live price/FX. Read-only, @api_auth. Renders as a
+    // neutral panel beneath the other mirrors on /journal; NEVER a score,
+    // grade, or "물타기" judgement (자본시장법 / PIPA §23).
+    // Response = AveragingDownMirrorResponse, 1:1.
+    averagingDownMirror: "/api/behavior/averaging-down-mirror",
   },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished

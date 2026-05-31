@@ -628,6 +628,47 @@ export interface TurnoverMirrorResponse {
   mean_hold_days: number | null;
 }
 
+/* ── Averaging-Down Mirror (GET /api/behavior/averaging-down-mirror) ──
+ *   A neutral, retrospective COUNT of follow-on buys (adds to an
+ *   already-held position) and how many landed below / above / at the
+ *   position's running average cost at the instant of that add.
+ *
+ *   Invariants:
+ *   - INTEGER COUNTS ONLY — never a ratio / percentage / score / grade /
+ *     label. No "물타기" / judgement vocabulary anywhere.
+ *   - Counts are `null` when `sufficient_data` is false (too few follow-on
+ *     adds to mirror stably); `by_ticker` is `[]`.
+ *   - Same-ticker price comparison only → no FX conversion involved.
+ * ──────────────────────────────────────────────────────────────────── */
+export interface AveragingDownMirrorTickerRow {
+  ticker: string;
+  /** Display name when known; null falls back to the ticker at render. */
+  name: string | null;
+  follow_on: number;
+  below_avg: number;
+  above_avg: number;
+}
+
+export interface AveragingDownMirrorResponse {
+  ok: boolean;
+  disclaimer?: string;
+  /** Trailing window label echoed by the route ("all" / "30d"). */
+  period?: string;
+  /** Window length in days the backend applied (null = all history). */
+  period_days: number | null;
+  sufficient_data: boolean;
+  /** Total follow-on adds in the window; null when sufficient_data is false. */
+  follow_on_count: number | null;
+  /** Adds priced below the running average; null when insufficient. */
+  below_avg_count: number | null;
+  /** Adds priced above the running average; null when insufficient. */
+  above_avg_count: number | null;
+  /** Adds priced at the running average (±epsilon); null when insufficient. */
+  flat_count: number | null;
+  /** Neutral per-ticker breakdown; [] when sufficient_data is false. */
+  by_ticker: AveragingDownMirrorTickerRow[];
+}
+
 /* ── Artifact / Reports Archive ── */
 
 export type ArtifactType =

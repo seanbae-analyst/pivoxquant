@@ -923,6 +923,19 @@
       "insufficient": "There are still too few trade records to mirror stably. It will appear automatically as records accumulate.",
       "emptyTitle": "Nothing to mirror yet",
       "emptyDesc": "Once trades are recorded, we show the buy and sell counts and the traded value by currency, as they are."
+    },
+    "averagingDownMirror": {
+      "kicker": "OBSERVED",
+      "heading": "Adds vs. average cost",
+      "followOnLabel": "Added",
+      "belowLabel": "Below average",
+      "aboveLabel": "Above average",
+      "byTickerLabel": "Adds by name",
+      "tickerRow": "{followOn} added · {below} below average",
+      "framing": "We reflect your adds to positions you already held, measured against the average cost at that moment, as they are. No grade, no recommendation.",
+      "insufficient": "There are still too few follow-on buys to mirror stably. It will appear automatically as records accumulate.",
+      "emptyTitle": "Nothing to mirror yet",
+      "emptyDesc": "When you buy more of a name you already hold, we show whether that price was below or above your average at the time, as a plain count."
     }
   },
   "companion": {
