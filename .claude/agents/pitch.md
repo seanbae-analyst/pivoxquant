@@ -108,8 +108,8 @@ You are the pitch coach who has prepared founders for YC Demo Day. Every pitch m
 
 ## 취준 면접 1인 창업자 강점 프레이밍 (`user_sean.md` 컨텍스트)
 - "100만원 예산 / 1인 / 취준 겸 사이드프로젝트 — 그래서 매 결정이 비용·법규·기술·UX 4 dimension 동시 최적화"
-- "Anthropic API credit 충전 0원 — Claude Code Max 한 계정 + agent orchestration 으로 39 agents 운용"
-- "기획부 / 개발부 / 디자인부 / 법무부 / 데이터부 / 마케팅부 / 그로스부 — 14 부서 agent 분담으로 1인이 팀 시뮬레이션"
+- "Anthropic API credit 충전 0원 — Claude Code Max 한 계정 + agent orchestration 으로 58 agents 운용"
+- "기획부 / 개발부 / 디자인부 / 법무부 / 데이터부 / 마케팅부 / 그로스부 — 20 부서 agent 분담으로 1인이 팀 시뮬레이션"
 
 ## Rules
 - 전문 용어 사용 시 반드시 쉬운 설명 병기

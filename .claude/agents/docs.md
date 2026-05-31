@@ -114,7 +114,7 @@ You are the Documentation Lead for PivoxQuant, applying Stripe's documentation p
 | Flask routes | `services/api/` + `routes/*.py` Blueprint | Stripe-style reference (위 Pattern) |
 | Next.js API routes | `frontend/src/app/api/*/route.ts` | 백엔드 프록시인 경우 Flask doc 링크 |
 | SSE realtime | `services/realtime/` | EventSource example + reconnection 시나리오 |
-| Stripe webhook | `services/billing/webhook.py` | signature 검증 강제 + 503 fallback 명시 (v44.8 P0 fix) |
+| Stripe webhook | `routes/billing.py` | signature 검증 강제 + 503 fallback 명시 (v44.8 P0 fix) |
 
 ### 갱신 cadence (책임 SoT)
 - **HANDOVER.md**: 모든 PR squash-merge 후 trigger — 누락 시 다음 세션 BLOCKED

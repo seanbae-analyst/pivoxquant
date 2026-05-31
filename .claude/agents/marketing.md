@@ -114,7 +114,7 @@ grep -nE "확실한 수익|원금 보장|AI 추천|매수|매도|지금 가입|�
 | 발송 시간 | 21:00 ~ 08:00 KST 광고 발송 금지 | 과징금 |
 | 발신자 정보 | 사업자명 / 주소 / 연락처 명시 | 과징금 |
 
-EmailSender 통합(`/services/email_sender.py`)이 자동 부착하더라도 marketing agent는 카피 작성 시 opt-out 문구 슬롯을 명시적으로 표시.
+EmailSender 통합(`services/email/sender.py`)이 자동 부착하더라도 marketing agent는 카피 작성 시 opt-out 문구 슬롯을 명시적으로 표시.
 
 ---
 

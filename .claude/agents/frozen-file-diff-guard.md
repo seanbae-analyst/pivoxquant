@@ -62,7 +62,7 @@ CEO가 매번 "engine.py 만지지 마" / "ai_models.py 동결" 수동 지시하
 | Path | Owner | Reason |
 |---|---|---|
 | services/quant/engine.py | persona-quant-domain | QuantEngine 1146줄 4-pillar scoring |
-| services/quant/models.py | persona-quant-domain | 58 quant 모델 |
+| services/quant/models.py | persona-quant-domain | 40 quant 모델 (MODEL_CATALOG) |
 | services/quant/risk_metrics.py | persona-quant-domain | Risk metrics (GKYZ, LedoitWolf 등) |
 | services/quant/risk_defense.py | persona-quant-domain | 7-Layer Risk Defense |
 | services/quant/portfolio.py | persona-quant-domain | HRP, TailRiskParity 등 |

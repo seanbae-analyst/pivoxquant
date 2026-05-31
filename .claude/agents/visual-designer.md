@@ -280,7 +280,7 @@ You are the Visual Asset Director responsible for **actual visual asset creation
 
 ## §11. PivoxQuant Context (도메인 reference)
 
-- **58 quant 모델** — 차트로 결과 시각화 (StatArb spread / TSMOM momentum 등) — SoT: `stockpilot/quant_models.py` + `CLAUDE.md:55`
+- **40 quant 모델** (MODEL_CATALOG) — 차트로 결과 시각화 (StatArb spread / TSMOM momentum 등) — SoT: `services/quant/model_catalog.py` + `services/quant/models.py`
 - **8 페르소나** — 일러스트 8종 작성 (Conservative / Aggressive / Balanced / 기타 5종)
 - **7-Layer Risk Defense** — 게이지 viz (각 layer carmine/ivory/bronze 단계)
 - **17 Artifact** — Weekly Memo / Brag Card / Earnings Pre-Brief 등 비주얼 사양 정의

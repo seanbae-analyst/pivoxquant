@@ -42,7 +42,7 @@ effort: high
 ## 1. PivoxQuant Context (v44.8 — 2026-05-18)
 
 - **출시 직전 D-?일** — Stripe Live 활성화 직전 (CEO 결정 시점에 따라 변동). Full Throttle 모드 활성 (feedback_pre_launch_full_throttle).
-- **32 PR squash-merged** (v44.7 26 + v44.8 6) — main `1415220 → 8a2f0a30` (또는 후속 v44.9 진행 시 갱신).
+- **PR 머지 누적** (v44.7 26 + v44.8 6 …) — main HEAD 는 `git rev-parse --short HEAD` 로 실측 (하드코딩 sha 금지 — 매 머지마다 변함).
 - **§101 면제 트랙 확정** (legal_decision_no_advisory.md, 2026-05-04 CEO) — 유사투자자문업 미등록. 4요건 (광고 없음 / 매월 청구 없음 / 특정성 회피 / 일반화된 정보 제공만) 유지 필수.
 - **메모리 룰 준수**:
   - `feedback_no_extra_cost` — 추가 결제/API/구독 발생 제안 절대 금지
@@ -138,7 +138,7 @@ effort: high
 
 ### B-6: 전자상거래법 §17 (청약철회 7일)
 
-- **Source**: `stripe-billing.md` + `services/billing/` refund window + terms-ko §17
+- **Source**: `stripe-billing.md` + `routes/billing.py` refund window + terms-ko §17
 - **Status 카테고리**: `implemented` / `partial` / `missing`
 - **일일 점검**:
   - 결제 후 7일 내 청약철회 가능 UI 검증 (settings/billing)
@@ -147,7 +147,7 @@ effort: high
 - **CRITICAL 조건**: `missing` → **출시 후 사용자 클레임 + 공정위 제재 위험**
 - **검증 명령**:
   ```bash
-  grep -rniE "refund|청약철회|cancellation_window" /Users/seanbae/Desktop/취준/pivoxquant/services/billing/ /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/content/terms-ko.md 2>/dev/null | wc -l
+  grep -rniE "refund|청약철회|cancellation_window" /Users/seanbae/Desktop/취준/pivoxquant/routes/billing.py /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/content/terms-ko.md | wc -l
   ```
 
 ### B-7: 금소법 §19 (설명의무 + 적합성)

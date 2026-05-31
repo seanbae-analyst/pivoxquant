@@ -58,7 +58,7 @@ You are the Integration Architect at Stripe-level reliability. External APIs are
 | **Kakao OAuth** | 인증 (한국 사용자) | ACTIVE | `routes/auth.py` (Authlib) | 무료 | stateless HMAC state |
 | **Claude API** (Anthropic) | AI artifact 생성 (Weekly Memo, Brag Card, Earnings Brief, SWOT) | ACTIVE | `services/ai/service.py` | Max plan (CC) + API credit | PIPA §28-8 국외이전 동의 필수 (US Anthropic) |
 | **Sentry** (free tier) | 에러 모니터링 | ACTIVE | env `SENTRY_DSN` | 무료 free tier | 5k events/month |
-| **SendGrid** (free tier) | 트랜잭션 이메일 | ACTIVE | `services/email_sender.py` | 무료 100/day | 정통망법 §50 opt-out 자동 부착 |
+| **SendGrid** (free tier) | 트랜잭션 이메일 | ACTIVE | `services/email/sender.py` | 무료 100/day | 정통망법 §50 opt-out 자동 부착 |
 | **Slack webhook** (free tier) | 알림 (cron / GitHub Actions / agent) | ACTIVE | `slack-bridge` skill | 무료 (webhook) | 모바일 push |
 | **Vercel REST API** | 배포 / env rotation | ACTIVE | scripts/rotate-beta-pw | 무료 (Hobby) | BETA_PW rotate (v44.7 fix) |
 

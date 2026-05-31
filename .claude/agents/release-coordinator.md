@@ -15,7 +15,7 @@ effort: high
 ## 1. PivoxQuant Context (v44.8 기준 / 2026-05-18)
 
 - 누적 32 PR squash-merged (v44.7 26 + v44.8 6)
-- main HEAD: `8a2f0a30` (PR #484 머지 후)
+- main HEAD: `git rev-parse --short HEAD` 로 실측 (하드코딩 금지 — sha 는 매 머지마다 변함)
 - pytest 1700+ PASS / vitest 313/313 / 0 회귀 / 0원
 - v44.7 가장 큰 incident: **OAuth provisioning_failed P0 hotfix** — alembic 035가 prod에 미적용 → `_do_migrations` runtime `ADD COLUMN`으로 응급 복구
 - v44.8 위험 패턴 학습:
@@ -115,7 +115,7 @@ effort: high
 - **Evidence schema (file glob list 필수)**:
   - DB migration 추가 시: `services/quant/*` 전체 audit 결과 (grep result line count)
   - `auth.py` 변경 시: `routes/auth.py + tests/test_auth*.py` 전체 sweep
-  - `services/billing/*` 변경 시: Stripe Live 5종 규제 sweep (stripe-billing agent §3 표 cross-ref)
+  - `routes/billing.py` / `services/billing_followup.py` / `services/billing_notifications.py` 변경 시: Stripe Live 5종 규제 sweep (stripe-billing agent §3 표 cross-ref)
   - `services/email/*` 변경 시: 정통망법 §50 opt-out grep + compliance-gatekeeper B-3 재확인
   - 50+ files 시: audit-code wide-scope 결과 첨부
 

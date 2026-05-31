@@ -63,7 +63,7 @@ tools:
 
 | # | 규제 | 영향도 | PivoxQuant 적용 surface | 현재 status | 액션 |
 |---|------|--------|------------------------|------------|------|
-| 1 | **정통망법 §50** (이메일 마케팅 opt-out, 6% 과징금) | HIGH | EmailSender (`services/email_sender.py`) / 모든 마케팅 이메일 | PASS (v44.7 EmailSender 통합 + opt-out 자동 부착) | weekly grep `tests/test_email_optout.py` 회귀 가드 |
+| 1 | **정통망법 §50** (이메일 마케팅 opt-out, 6% 과징금) | HIGH | EmailSender (`services/email/sender.py`) / 모든 마케팅 이메일 | PASS (v44.7 EmailSender 통합 + opt-out 자동 부착) | weekly grep `tests/test_email_optout.py` 회귀 가드 |
 | 2 | **유사투자자문업 양방향 채널** (HIGH) | HIGH | AI Chat / Comment / Q&A 등 양방향 surface | PENDING (AI Chat 1:1 자문 회피 검증 필요) | legal_question_queue Q1 + Q16 추가 / 변호사 자문 |
 | 3 | **AI 생성물 표시제** (MEDIUM) | MEDIUM | Weekly Memo / Brag Card / SWOT / Earnings Brief (AI 생성 모든 artifact) | PARTIAL (artifact 푸터 표시 일부 적용, 전수 sweep 필요) | Wave 신규: AI 생성 표기 전수 점검 |
 | 4 | **PIPA §28-8** (마케팅 옵트인 10% 과징금) | HIGH | 회원가입 / 결제 / 마케팅 동의 체크박스 | PASS (Cookie Consent + 별도 체크박스 v44.7) | quarterly 회귀 가드 |
