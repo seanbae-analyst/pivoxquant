@@ -38,7 +38,7 @@ import {
 } from "../pdf-primitives";
 import { displayTicker, normalizeTicker } from "@/lib/format";
 import { DEFAULT_GOVERNANCE } from "@/lib/reports/disclaimer";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 export type SignalLabel = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
 
@@ -46,6 +46,9 @@ export interface EarningsPrebriefData {
   ticker: string;
   companyName: string;
   fiscalLabel: string;     // "Q1 2026 · FY 2026"
+  /** Report id shown in the page header (an EP-prefixed tag). Optional —
+   *  omitted rather than hardcoded when the backend does not supply it. */
+  reportTag?: string;
   reportingDate: string;   // "Earnings Date · After Market Close"
   position: string;        // "120 sh · 9.95% weight"
   consensus: ConsensusRow[];
@@ -78,65 +81,6 @@ interface ScenarioRow {
   stop: string;
 }
 
-const DEFAULT: EarningsPrebriefData = {
-  // Sample-only fixture. Numbers (Revenue USD 32.5B, EPS USD 5.12, Data Center
-  // Rev USD 26.1B) match NVDA (NVIDIA)-class disclosures, so the ticker /
-  // company are aligned with NVDA (NVIDIA) — the prior PLTR (Palantir)
-  // labeling created a USD 32B revenue mismatch (PLTR sub-USD 3B). Treat as
-  // illustrative; not a forecast.
-  ticker: "NVDA",
-  companyName: "NVIDIA Corporation",
-  fiscalLabel: "Q1 FY 2026 Earnings",
-  reportingDate: "Earnings Date · After Market Close",
-  position: "120 sh · 9.95% weight",
-  consensus: [
-    { metric: "Revenue", consensus: "USD 32.5B", whisper: "USD 33.8B", lastQ: "+18%", lastQTone: "pos", surprise: "+4.2% (8/8)", surpriseTone: "pos" },
-    { metric: "EPS (GAAP)", consensus: "USD 5.12", whisper: "USD 5.40", lastQ: "+24%", lastQTone: "pos", surprise: "+6.1% (8/8)", surpriseTone: "pos" },
-    { metric: "Gross Margin", consensus: "74.8%", whisper: "75.5%", lastQ: "+220bps", lastQTone: "pos", surprise: "Beat 7/8", surpriseTone: "pos" },
-    { metric: "Data Center Rev", consensus: "USD 26.1B", whisper: "USD 27.4B", lastQ: "+38%", lastQTone: "pos", surprise: "Beat 8/8", surpriseTone: "pos" },
-    { metric: "FCF", consensus: "USD 14.2B", whisper: "USD 15.0B", lastQ: "+42%", lastQTone: "pos", surprise: "—" },
-  ],
-  impliedMovePct: "±7.8%",
-  impliedMoveDetail: "8주 IV: 52% · 평균 EPS Day 변동: 6.4%",
-  quantScore: 0.82,
-  quantLabel: "POSITIVE",
-  factorBreakdown: "Momentum 0.91 · Quality 0.88 · Value 0.42 · Sentiment 0.79",
-  scenarios: [
-    {
-      case: "Bull Case",
-      caseDetail: "EPS & DC beat >5%",
-      trigger: "EPS > USD 5.40 AND DC > USD 27.4B",
-      action: "Hold · trim 0.5% on +10% spike",
-      posDelta: "−0.5%",
-      posDeltaTone: "pos",
-      stop: "USD 1,180",
-    },
-    {
-      case: "Base Case",
-      caseDetail: "In-line",
-      trigger: "EPS USD 5.10–5.40, guide ≥ cons",
-      action: "Hold · re-evaluate after CC",
-      posDelta: "0.0%",
-      stop: "USD 1,080",
-    },
-    {
-      case: "Bear Case",
-      caseDetail: "Miss or weak guide",
-      trigger: "EPS < USD 5.10 OR guide < cons",
-      action: "Trim 1.5% · review hypothesis",
-      posDelta: "−1.5%",
-      posDeltaTone: "neg",
-      stop: "USD 960",
-    },
-  ],
-  watchChecklist: [
-    "DC growth rate (sustain >35% YoY)",
-    "Gross margin trajectory (compression risk)",
-    "FY guide vs street consensus",
-    "AI infrastructure capex commentary",
-    "Customer concentration update",
-  ],
-};
 
 const SIGNAL_TONE: Record<SignalLabel, string> = {
   POSITIVE: "var(--r-pos)",
@@ -144,9 +88,12 @@ const SIGNAL_TONE: Record<SignalLabel, string> = {
   NEUTRAL: "var(--r-ink-3)",
 };
 
-export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function EarningsPrebrief({ data }: { data?: EarningsPrebriefData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="earnings_prebrief" reason="not_in_portfolio" />;
+  }
   return (
     <>
       {/* ───── PAGE 1 — BRIEF ───── */}
@@ -156,15 +103,9 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         <PdfHeader
           tier="pro"
           title="EARNINGS PRE-BRIEF"
-          meta={`${displayTicker(data.ticker, data.companyName)} · ${normalizeTicker(data.ticker)} · EP-2026-04 · 01/02`}
+          meta={`${displayTicker(data.ticker, data.companyName)} · ${normalizeTicker(data.ticker)}${data.reportTag ? ` · ${data.reportTag}` : ""} · 01/02`}
         />
         <PdfGoldRule />
-
-        {/* SAMPLE banner — never let the static NVDA (NVIDIA) mockup be
-            mistaken for the user's own holdings. Only renders in sample mode
-            (DEFAULT fixture); hidden for real member reports. Shared component
-            so all 18 templates label themselves consistently. */}
-        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Pre-Earnings Brief · For Growth / Quant Personas</PdfEyebrow>
         <PdfCoverTitle size={48}>
@@ -318,7 +259,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         <PdfHeader
           tier="pro"
           title="EARNINGS PRE-BRIEF"
-          meta={`${displayTicker(data.ticker, data.companyName)} · ${normalizeTicker(data.ticker)} · EP-2026-04 · 02/02`}
+          meta={`${displayTicker(data.ticker, data.companyName)} · ${normalizeTicker(data.ticker)}${data.reportTag ? ` · ${data.reportTag}` : ""} · 02/02`}
         />
 
         <PdfEyebrow>02 — Scenario Playbook</PdfEyebrow>

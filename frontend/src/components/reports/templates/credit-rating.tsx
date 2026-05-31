@@ -36,7 +36,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 interface RatingChange {
   ticker: string;
@@ -64,6 +64,9 @@ interface CdsRow {
 
 export interface CreditRatingData {
   doc: string;
+  /** Period label for the cover headline (a quarter name). Optional —
+   *  omitted rather than hardcoded when the backend does not supply it. */
+  coverPeriod?: string;
   reviewed: string;
   upgrades: string;
   downgrades: string;
@@ -77,66 +80,24 @@ export interface CreditRatingData {
   cfoNote: string;
 }
 
-const DEFAULT: CreditRatingData = {
-  doc: "Q1 2026 · CR-2026-04",
-  reviewed: "28",
-  upgrades: "4",
-  downgrades: "2",
-  onWatch: "3",
-  pullquote: "\"주식이 환상을 팔 때, 채권은 진실을 말한다.\" — 분기 신용 점검의 한 줄.",
-  distribution: [
-    { name: "AAA / AA", pct: 38, pctDisplay: "22% NAV" },
-    { name: "A", pct: 62, pctDisplay: "38% NAV" },
-    { name: "BBB", pct: 48, pctDisplay: "28% NAV" },
-    { name: "BB · High Yield", pct: 14, pctDisplay: "8% NAV", warn: true, flat: true },
-    { name: "NR · Not Rated", pct: 8, pctDisplay: "4% NAV", flat: true },
-  ],
-  changes: [
-    { ticker: "NVDA", name: "NVIDIA", agency: "S&P", prev: "A+", now: "AA−", nowTone: "pos", outlook: "Stable", outlookTone: "pos", action: "▲ UPGRADE", actionTone: "pos" },
-    { ticker: "MSFT", name: "Microsoft", agency: "Moody's", prev: "Aaa", now: "Aaa", nowTone: "neutral", outlook: "Stable", outlookTone: "pos", action: "UNCHANGED", actionTone: "neutral" },
-    { ticker: "META", name: "Meta Platforms", agency: "S&P", prev: "AA−", now: "AA", nowTone: "pos", outlook: "Positive", outlookTone: "pos", action: "▲ UPGRADE", actionTone: "pos" },
-    { ticker: "DIS", name: "Walt Disney", agency: "Moody's", prev: "A2", now: "A3", nowTone: "neg", outlook: "Negative", outlookTone: "warn", action: "▼ DOWNGRADE", actionTone: "neg" },
-    { ticker: "UNH", name: "UnitedHealth", agency: "Fitch", prev: "A+", now: "A+", nowTone: "neutral", outlook: "Negative", outlookTone: "neg", action: "⚠ ON WATCH", actionTone: "warn" },
-    { ticker: "DKNG", name: "DraftKings", agency: "S&P", prev: "B+", now: "B", nowTone: "neg", outlook: "Negative", outlookTone: "neg", action: "▼ DOWNGRADE", actionTone: "neg" },
-    { ticker: "PLTR", name: "Palantir Technologies", agency: "S&P", prev: "BB+", now: "BBB−", nowTone: "pos", outlook: "Stable", outlookTone: "pos", action: "▲ UPGRADE · IG", actionTone: "pos" },
-  ],
-  watchPrimary: {
-    lbl: "⚠ NEGATIVE OUTLOOK",
-    title: "UNH · UnitedHealth · A+ → ?",
-    ticker: "UNH",
-    name: "UnitedHealth",
-    body: "Fitch 12개월 내 한 단계 강등 가능성. MLR 상승, DOJ 조사, MA 가입자 이탈. CDS 스프레드 6m +35bp. 주가 −18%이지만 채권 시장은 한 분기 먼저 신호. 비중 2.4% → 1.2% 검토.",
-  },
-  watchSecondary: [
-    { lbl: "DKNG · DraftKings · Downgrade B+ → B", body: "High yield 영역 진입. 이자비용 +85bp, 차환 부담 가중. 주식 비중 1.8% 유지 가능하나 채권 노출 0%." },
-    { lbl: "DIS · Walt Disney · A2 → A3", body: "Streaming 비용 + 콘텐츠 부진. 두 분기 연속 강등은 펀더멘털 신호. 주가 사이드는 회복 중이나 채권 사이드는 비관적." },
-  ],
-  cds: [
-    { ticker: "UNH", name: "UnitedHealth", cds: "82bp", delta: "+35bp", deltaTone: "neg", vsImplied: "+22bp wide", vsImpliedTone: "neg", signal: "⚠ DOWNGRADE BIAS", signalTone: "neg" },
-    { ticker: "DIS", name: "Walt Disney", cds: "68bp", delta: "+18bp", deltaTone: "neg", vsImplied: "+8bp", vsImpliedTone: "neutral", signal: "WATCH", signalTone: "warn" },
-    { ticker: "DKNG", name: "DraftKings", cds: "282bp", delta: "+62bp", deltaTone: "neg", vsImplied: "+48bp", vsImpliedTone: "neg", signal: "⚠ STRESS", signalTone: "neg" },
-    { ticker: "META", name: "Meta Platforms", cds: "28bp", delta: "−8bp", deltaTone: "pos", vsImplied: "−12bp tight", vsImpliedTone: "pos", signal: "▲ UPGRADE BIAS", signalTone: "pos" },
-  ],
-  cfoNote:
-    "채권 시장은 두 분기 먼저 본다. UNH (UnitedHealth) · DKNG (DraftKings) 두 종목 비중 합산 4.2% → 다음 리밸런스에 2% 이하 검토. PLTR (Palantir) IG 진입은 무빙오프, 비중 +1%p 검토.",
-};
 
-export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function CreditRating({ data }: { data?: CreditRatingData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="credit_rating" reason="no_positions" />;
+  }
   return (
     <>
       {/* PAGE 1 — COVER */}
       <PdfPage>
         <PdfHeader tier="premium" title="CREDIT RATING" meta={data.doc} />
 
-        {/* SAMPLE banner — sample mode only. */}
-        {isSample && <SampleDataBadge />}
 
         <div style={{ marginTop: "30mm" }}>
           <PdfCoverEyebrow>Credit Rating Review · Quarterly</PdfCoverEyebrow>
           <PdfCoverTitle>
-            Q1 2026<br />
+            {data.coverPeriod ? <>{data.coverPeriod}<br /></> : null}
             <em>Credit Watch.</em>
           </PdfCoverTitle>
           <PdfCoverSub>
@@ -160,7 +121,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
 
       {/* PAGE 2 */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 02/04" />
+        <PdfHeader tier="premium" title="CREDIT RATING" meta={`${data.doc} · 02/04`} />
         <PdfGoldRule />
 
         <PdfPullquote>{data.pullquote}</PdfPullquote>
@@ -216,7 +177,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
       {/* PAGE 3 — 2026-05-06 Strategy B Option 2: explicit disclaim-only PdfPage so
           chromium print engine never pushes the disclaimer onto a ghost sheet. */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 03/04" />
+        <PdfHeader tier="premium" title="CREDIT RATING" meta={`${data.doc} · 03/04`} />
         <PdfGoldRule />
 
         <PdfSectionTitle>Watchlist · 끊어질 위험</PdfSectionTitle>
@@ -285,7 +246,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
           <PdfCallout flat label="CFO's Note">{data.cfoNote}</PdfCallout>
         </div>
 
-        <PdfSignRow left="분석자 · 홍길동" right="검토 일자 · Apr 26, 2026" />
+        <PdfSignRow left="분석자 · _____________" right={`검토 일자 · ${data.reviewed}`} />
 
         <PdfGovBlock />
         <PdfPageFooter left="Credit Rating · Premium · Not investment advice" right="Page 03" />
@@ -294,7 +255,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
 
       {/* PAGE 4 — DISCLAIMER (atomic disclaim-only sheet) */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 04/04" />
+        <PdfHeader tier="premium" title="CREDIT RATING" meta={`${data.doc} · 04/04`} />
         <PdfGoldRule />
         <PdfDisclaimer cadence="quarterly" />
       </PdfPage>

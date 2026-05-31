@@ -23,12 +23,9 @@ import {
   PdfCoverSub,
   PdfCoverMetaGrid,
   PdfCoverFoot,
-  PdfExecSum,
-  PdfBadge,
   PdfKpiRow,
   PdfSectionTitle,
   PdfCard,
-  PdfFlexBetween,
   PdfTable,
   PdfDonut,
   PdfTwoCol,
@@ -39,7 +36,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 interface IncomeRow {
   label: string;
@@ -53,6 +50,9 @@ interface IncomeRow {
 
 export interface MonthlyFinanceData {
   doc: string;
+  /** Period label for the cover headline (a month name). Optional —
+   *  omitted rather than hardcoded when the backend does not supply it. */
+  coverMonth?: string;
   asOf: string;
   navEom: string;
   monthReturn: string;
@@ -78,79 +78,24 @@ export interface MonthlyFinanceData {
   liquidityTiers: { tier: string; desc: string; amount: string; pctNav: string; dtc: string }[];
 }
 
-const DEFAULT: MonthlyFinanceData = {
-  doc: "Apr 2026 · MF-2026-04 · 01/05",
-  asOf: "Apr 30, 2026",
-  navEom: "USD 1,242,150",
-  monthReturn: "+4.0%",
-  ytdReturn: "+14.2%",
-  issued: "May 1, 2026",
-  navEomKpi: { value: "USD 1,242k", delta: "+USD 53k MTD" },
-  netPnlMtd: { value: "+USD 48k", delta: "+3.86% NAV" },
-  alphaVsBench: { value: "+1.1%p", delta: "YTD +4.8%p" },
-  sharpe: { value: "1.42", delta: "+0.08 vs prior" },
-  income: [
-    { label: "Realized Gains", mtd: "+USD 18,420", mtdTone: "pos", ytd: "+USD 72,840", ytdTone: "pos", pctNav: "+5.86%" },
-    { label: "Unrealized Gains", mtd: "+USD 32,180", mtdTone: "pos", ytd: "+USD 98,420", ytdTone: "pos", pctNav: "+7.92%" },
-    { label: "Dividends Received", mtd: "+USD 2,140", mtdTone: "pos", ytd: "+USD 8,720", ytdTone: "pos", pctNav: "+0.70%" },
-    { label: "Interest Income", mtd: "+USD 320", mtdTone: "pos", ytd: "+USD 1,280", ytdTone: "pos", pctNav: "+0.10%" },
-    { label: "Trading Costs", mtd: "−USD 280", mtdTone: "neg", ytd: "−USD 1,140", ytdTone: "neg", pctNav: "−0.09%" },
-    { label: "FX Loss", mtd: "−USD 420", mtdTone: "neg", ytd: "−USD 2,180", ytdTone: "neg", pctNav: "−0.18%" },
-    { label: "Tax Provision", mtd: "−USD 3,840", mtdTone: "neg", ytd: "−USD 14,820", ytdTone: "neg", pctNav: "−1.19%" },
-  ],
-  totalNetPnl: { label: "Net P&L", mtd: "+USD 48,520", mtdTone: "pos", ytd: "+USD 163,120", ytdTone: "pos", pctNav: "+13.13%", pctNavTone: "pos" },
-  bsAssets: [
-    { name: "US Equities", pct: 72, color: "#0e0e0e", pctDisplay: "USD 894k · 72%" },
-    { name: "KR Equities", pct: 12, color: "#3a3a3a", pctDisplay: "USD 149k · 12%" },
-    { name: "EU Equities", pct: 8, color: "#7a6c4a", pctDisplay: "USD 99k · 8%" },
-    { name: "Bonds", pct: 2, color: "#c9963f", pctDisplay: "USD 25k · 2%" },
-    { name: "Cash · USD/KRW", pct: 6, color: "#dcd5c2", pctDisplay: "USD 75k · 6%" },
-  ],
-  liabilities: [
-    { label: "Margin Debt", value: "USD 0" },
-    { label: "Tax Accrual", value: "USD 0" },
-    { label: "Other Liabilities", value: "USD 0" },
-    { label: "Owner's Equity (NAV)", value: "USD 1,242k", bold: true },
-  ],
-  totalLiab: "USD 1,242k",
-  cashFlow: [
-    { label: "Operating · 배당 + 이자", mtd: "+USD 2,460", mtdTone: "pos", ytd: "+USD 10,000", ytdTone: "pos" },
-    { label: "Investing · 매입 − 매각", mtd: "−USD 28,400", mtdTone: "neg", ytd: "−USD 84,200", ytdTone: "neg" },
-    { label: "Financing · 입출금", mtd: "+USD 5,000", mtdTone: "pos", ytd: "+USD 20,000", ytdTone: "pos" },
-    { label: "Tax Paid", mtd: "−USD 3,840", mtdTone: "neg", ytd: "−USD 14,820", ytdTone: "neg" },
-  ],
-  netCashChange: { mtd: "−USD 24,780", mtdTone: "neg", ytd: "−USD 69,020", ytdTone: "neg" },
-  ratios: {
-    equityRatio: "98.8%",
-    yieldOnCost: "2.1%",
-    turnover: "42%",
-    taxDrag: "−1.19%",
-  },
-  liquidityTiers: [
-    { tier: "T1", desc: "현금 + MMF", amount: "USD 75k", pctNav: "6.0%", dtc: "0d" },
-    { tier: "T2", desc: "대형주 + 유동 ETF", amount: "USD 988k", pctNav: "79.5%", dtc: "1–2d" },
-    { tier: "T3", desc: "중소형주", amount: "USD 154k", pctNav: "12.4%", dtc: "3–5d" },
-    { tier: "T4", desc: "채권 · 비유동", amount: "USD 25k", pctNav: "2.0%", dtc: "7–14d" },
-  ],
-};
 
-export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function MonthlyFinance({ data }: { data?: MonthlyFinanceData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="monthly_finance" reason="no_trades" />;
+  }
   return (
     <>
       {/* PAGE 1 — COVER */}
       <PdfPage>
         <PdfHeader tier="premium" title="MONTHLY FINANCE" meta={data.doc} />
 
-        {/* SAMPLE banner — sample mode only. */}
-        {isSample && <SampleDataBadge />}
 
         <div style={{ marginTop: "26mm" }}>
           <PdfCoverEyebrow>Monthly Financial Report · Personal Portfolio</PdfCoverEyebrow>
           <PdfCoverTitle size={56}>
-            April 2026
-            <br />
+            {data.coverMonth ? <>{data.coverMonth}<br /></> : null}
             <span style={{ color: "var(--r-ink-3)", fontWeight: 400 }}>Monthly Finance Pack.</span>
           </PdfCoverTitle>
           <PdfCoverSub>
@@ -174,18 +119,11 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
 
       {/* PAGE 2 — EXECUTIVE SUMMARY + NAV TREND */}
       <PdfPage>
-        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 02/05" />
+        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta={`${data.doc} · 02/05`} />
 
-        <PdfExecSum
-          stamp={`As of ${data.asOf}`}
-          rows={[
-            { term: "Period Return", body: <><strong>+4.0% MTD · +14.2% YTD</strong> — vs benchmark (S&amp;P 500) +3.0% / +9.4%. <strong>Alpha +1.0%p / +4.8%p.</strong></> },
-            { term: "NAV", body: <>USD 1,189k → <strong>USD 1,242k</strong> · 자본 유입 +USD 5k · 운용 손익 +USD 48k.</> },
-            { term: "P&L Drivers", body: "반도체 +USD 22k · 소프트웨어 +USD 11k · 헬스케어 −USD 4k · FX 손실 −USD 0.4k." },
-            { term: "Balance Sheet", body: "Equity 92% · Bonds 2% · Cash 6%. Margin debt 0. No outstanding liabilities." },
-            { term: "Watch", body: <><PdfBadge tone="moderate">⚠</PdfBadge> USD 노출 88% — FX 헤지 검토. Tech 비중 42% — 한도 35% 초과.</> },
-          ]}
-        />
+        {/* Executive Summary narrative is not computed by the backend for this
+            report — omit rather than render a fabricated narrative (CEO
+            2026-05-31 "있는 데이터로만"). Carry-over: backend exec-summary wire. */}
 
         <PdfKpiRow
           kpis={[
@@ -196,57 +134,10 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
           ]}
         />
 
-        <PdfSectionTitle variant="dry">NAV &amp; Benchmark · 12M trend (indexed to 100)</PdfSectionTitle>
-        <PdfCard>
-          <PdfFlexBetween>
-            <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
-              NAV vs S&amp;P 500 · last 12 months
-            </div>
-            <div style={{ display: "flex", gap: 14, fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)", }} className="font-mono" >
-              <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Portfolio NAV</span>
-              <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500</span>
-            </div>
-          </PdfFlexBetween>
-          <svg viewBox="0 0 600 160" preserveAspectRatio="none" style={{ width: "100%", height: 160, marginTop: 12 }}>
-            <defs>
-              <linearGradient id="mf-fade" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#0e0e0e" stopOpacity=".18" />
-                <stop offset="100%" stopColor="#0e0e0e" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <line x1="0" y1="40" x2="600" y2="40" stroke="#ececec" strokeWidth="1" />
-            <line x1="0" y1="80" x2="600" y2="80" stroke="#ececec" strokeWidth="1" />
-            <line x1="0" y1="120" x2="600" y2="120" stroke="#ececec" strokeWidth="1" />
-            <path d="M0,100 L50,96 L100,90 L150,98 L200,86 L250,80 L300,84 L350,72 L400,66 L450,60 L500,58 L550,54 L600,48" stroke="#c0c0c0" strokeWidth="1.4" fill="none" strokeDasharray="3 3" />
-            <path d="M0,108 L50,98 L100,88 L150,100 L200,82 L250,72 L300,80 L350,62 L400,52 L450,44 L500,40 L550,32 L600,24 L600,160 L0,160 Z" fill="url(#mf-fade)" />
-            <path d="M0,108 L50,98 L100,88 L150,100 L200,82 L250,72 L300,80 L350,62 L400,52 L450,44 L500,40 L550,32 L600,24" stroke="#0e0e0e" strokeWidth="2" fill="none" />
-            <circle cx="600" cy="24" r="3" fill="#0e0e0e" />
-            <circle cx="600" cy="48" r="3" fill="#c0c0c0" />
-          </svg>
-        </PdfCard>
-
-        <PdfSectionTitle variant="dry">Monthly Net P&amp;L · last 12 months ($k)</PdfSectionTitle>
-        <PdfCard>
-          <svg viewBox="0 0 600 120" preserveAspectRatio="none" style={{ width: "100%", height: 120 }}>
-            <line x1="0" y1="60" x2="600" y2="60" stroke="#ececec" strokeWidth="1" />
-            {[
-              [6, 32, 28, "#0e0e0e"],
-              [54, 60, 18, "#b1331f"],
-              [102, 42, 18, "#0e0e0e"],
-              [150, 22, 38, "#0e0e0e"],
-              [198, 38, 22, "#0e0e0e"],
-              [246, 60, 14, "#b1331f"],
-              [294, 48, 12, "#0e0e0e"],
-              [342, 28, 32, "#0e0e0e"],
-              [390, 16, 44, "#0e0e0e"],
-              [438, 34, 26, "#0e0e0e"],
-              [486, 42, 18, "#0e0e0e"],
-              [534, 20, 40, "#0e0e0e"],
-            ].map(([x, y, h, f], i) => (
-              <rect key={i} x={x} y={y} width={42} height={h} fill={f as string} opacity={(f as string) === "#b1331f" ? 0.85 : 1} />
-            ))}
-          </svg>
-        </PdfCard>
+        {/* 12-month NAV-vs-benchmark trend and Monthly Net P&L bar charts
+            omitted: no per-month series data is wired into MonthlyFinanceData.
+            Fixed SVG coordinates would be a fabricated trend (CEO 2026-05-31).
+            Carry-over: wire backend monthly NAV/benchmark + P&L series. */}
 
         <PdfPageFooter left="Monthly Finance · Premium" right="Page 02" />
         <PdfDisclaimerMini />
@@ -257,7 +148,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
           본문이 페이지 footer/disclaimer 와 visual overlap. "겹칠 것 같으면
           넘기라고." 지시대로 IS 와 BS 분리. */}
       <PdfPage>
-        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 03/05" />
+        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta={`${data.doc} · 03/05`} />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="dry">Income Statement · 손익계산서 (MTD &amp; YTD)</PdfSectionTitle>
@@ -295,11 +186,11 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
       {/* PAGE 4 — BALANCE SHEET (donut + 2-col Assets/Liab) — separated
           from IS so neither overlaps the page footer. */}
       <PdfPage>
-        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 04/05" />
+        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta={`${data.doc} · 04/05`} />
         <PdfGoldRule />
 
         <div className="pq-pdf-section">
-          <PdfSectionTitle variant="dry">Balance Sheet · 재무상태표 (as of Apr 30)</PdfSectionTitle>
+          <PdfSectionTitle variant="dry">Balance Sheet · 재무상태표{data.asOf ? ` (as of ${data.asOf})` : ""}</PdfSectionTitle>
           <PdfCard>
             <PdfDonut
               segments={data.bsAssets.map((a) => ({
@@ -308,7 +199,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
                 color: a.color,
                 pctDisplay: a.pctDisplay,
               }))}
-              centerLabel="USD 1.24M"
+              centerLabel={data.navEom}
             />
           </PdfCard>
 
@@ -326,7 +217,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
                     ))}
                     <tr className="total">
                       <td><strong>Total</strong></td>
-                      <td className="right font-mono"><strong>USD 1,242k</strong></td>
+                      <td className="right font-mono"><strong>{data.navEom}</strong></td>
                     </tr>
                   </tbody>
                 </PdfTable>
@@ -361,7 +252,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
           Flow + Key Ratios + Liquidity Tiers + Gov + bilingual Disclaimer
           on a single sheet. */}
       <PdfPage compact>
-        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 05/05" />
+        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta={`${data.doc} · 05/05`} />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="dry">Cash Flow · 현금흐름표</PdfSectionTitle>

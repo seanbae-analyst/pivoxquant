@@ -105,7 +105,15 @@ function listTemplateFiles(): string[] {
 describe("sample-report templates: no naked US ticker", () => {
   const files = listTemplateFiles();
 
-  expect(files.length, "expected to find template files").toBeGreaterThan(0);
+  // Sentinel — guarantees the suite always has at least one test even when
+  // the templates contain zero tickers (after the 2026-05-31 fabricated-data
+  // removal, the templates no longer hardcode any sample tickers, so the
+  // dynamic per-ticker `it()` blocks below may generate nothing; an empty
+  // suite is treated as a failure by vitest). This also asserts the scan
+  // actually found template files to read.
+  it("scans the template directory", () => {
+    expect(files.length).toBeGreaterThan(0);
+  });
 
   for (const file of files) {
     const filename = file.split("/").pop() ?? file;

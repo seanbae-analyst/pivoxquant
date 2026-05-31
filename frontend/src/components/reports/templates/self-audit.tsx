@@ -35,7 +35,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 export interface SelfAuditData {
   asOf: string; // "Apr 26, 2026 · SA-2026-04"
@@ -61,75 +61,6 @@ export interface SelfAuditData {
   auditorNote: string;
 }
 
-const DEFAULT: SelfAuditData = {
-  asOf: "Apr 26, 2026 · SA-2026-04",
-  intro:
-    "Every decision of the last 30 days, reviewed as an outside auditor would. Where rules broke, and why.",
-  kpis: {
-    score: { value: "B+", prev: "prev A−" },
-    rulesFollowed: { value: "14/17", pct: "82%" },
-    decisionsLogged: { value: "12/12", pct: "100%" },
-    biasFlags: { value: "3", target: "target ≤ 2" },
-  },
-  rules: [
-    { num: "R1", text: "모든 신규 진입 전 가설 메모 작성", status: "PASS", statusTone: "pos" },
-    { num: "R2", text: "단일 종목 12% 한도", status: "PASS", statusTone: "pos" },
-    { num: "R3", text: "단일 섹터 35% 한도 — Tech 42% 위반 (08/14 ~ 현재)", status: "FAIL · 12d", statusTone: "neg" },
-    { num: "R4", text: "−15% 자동 손절 트리거", status: "PASS", statusTone: "pos" },
-    { num: "R5", text: "어닝 직전 24h 신규 진입 금지 — 어닝 6h 전 추가", status: "FAIL · 1×", statusTone: "neg" },
-    { num: "R6", text: "주간 리밸런스 화/금에만", status: "PASS", statusTone: "pos" },
-    { num: "R7", text: "모든 매각 전 사후 메모 — 2건 누락", status: "FAIL · 2×", statusTone: "neg" },
-    { num: "R8", text: "현금 비중 5–15% 유지", status: "PASS · 8.2%", statusTone: "pos" },
-  ],
-  consistency: [
-    { said: '"Tech 비중 줄인다" (8/01 메모)', did: "Tech 42% → 44% (+2%p)", match: "✗" },
-    { said: '"FX 헤지 25% 추가" (8/15 메모)', did: "미실행", match: "✗" },
-    { said: '"평단 +3% 추가" (9/12 메모)', did: "9/18 +3.5%p 실행", match: "✓" },
-    { said: '"수익률 추격 안 함" (지속 룰)', did: "단기 모멘텀 매수 발생", match: "✗" },
-  ],
-  biasHeat: [
-    { name: "Confirmation", pct: 32, pctDisplay: "3/12", tone: "neutral" },
-    { name: "Recency", pct: 58, pctDisplay: "7/12", tone: "neg" },
-    { name: "Anchoring", pct: 42, pctDisplay: "5/12", tone: "neutral" },
-    { name: "Loss Aversion", pct: 16, pctDisplay: "2/12", tone: "pos", flat: true },
-    { name: "Overconfidence", pct: 38, pctDisplay: "4/12", tone: "neutral" },
-    { name: "Herd", pct: 24, pctDisplay: "3/12", tone: "neutral", flat: true },
-  ],
-  topFlag: {
-    tag: "RECENCY · 7건",
-    title: "최근 1주 사건에 과반응",
-    body: "30일 중 7건의 결정이 직전 7일 내 사건 트리거. 평균 보유 기간 18일 → 9일로 단축. 거래 비용·세금 누적 −0.42%p.",
-    counterRule:
-      'Counter-rule 제안: 신규 진입 전 "이 결정이 6개월 전에도 유효했나?" 자문.',
-  },
-  findings: [
-    {
-      code: "F1",
-      severity: "MAJOR",
-      due: "due in 7 days",
-      dueTone: "neg",
-      title: "Tech 섹터 42% → 35% 복귀",
-      body: "R3 위반 12일째. 한도 복귀 일정과 매도 종목 명시. 다음 리밸런스에 −7%p.",
-    },
-    {
-      code: "F2",
-      severity: "MINOR",
-      due: "due in 14 days",
-      title: "매도 사후 메모 누락 2건 보충",
-      body: "R7. 사후 메모 양식대로 작성, 재발 방지 룰 검토.",
-    },
-    {
-      code: "F3",
-      severity: "OBSERVATION",
-      due: "advisory",
-      dueTone: "neutral",
-      title: "Recency 편향 패턴화",
-      body: "4분기 연속 Top 1 편향. 룰 추가 제안: 신규 진입 24h 쿨오프, 직전 7일 내 사건 의존도 메모 명시.",
-    },
-  ],
-  auditorNote:
-    '룰 위반 자체보다 "위반을 어떻게 알아챘나"가 더 중요. 이번 분기는 자가 신고율 100%. 시스템은 작동 중.',
-};
 
 const TONE_STYLE: Record<"pos" | "neg" | "warn" | "neutral", string | undefined> = {
   pos: "var(--r-pos)",
@@ -138,9 +69,12 @@ const TONE_STYLE: Record<"pos" | "neg" | "warn" | "neutral", string | undefined>
   neutral: undefined,
 };
 
-export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function SelfAudit({ data }: { data?: SelfAuditData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="self_audit" reason="no_trades" />;
+  }
   return (
     <>
       {/* ═══════ PAGE 1 ═══════ */}
@@ -148,8 +82,6 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
         <PdfHeader tier="pro" title="SELF AUDIT" meta={data.asOf} />
         <PdfGoldRule />
 
-        {/* SAMPLE banner — sample mode only. */}
-        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Self Audit · On Demand</PdfEyebrow>
         <PdfCoverTitle size={42}>

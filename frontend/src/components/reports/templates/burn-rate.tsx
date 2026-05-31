@@ -35,7 +35,7 @@ import {
   PdfDisclaimerMini,
 } from "../pdf-primitives";
 import { displayTicker, normalizeTicker } from "@/lib/format";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 type BurnStatus = "PROFITABLE" | "SAFE" | "WATCH" | "CRITICAL";
 
@@ -53,6 +53,9 @@ interface BurnRow {
 
 export interface BurnRateData {
   asOf: string;
+  /** Report id shown in the page header (a BR-prefixed tag). Optional —
+   *  omitted rather than hardcoded when the backend does not supply it. */
+  reportTag?: string;
   tracked: { value: string; detail: string };
   avgRunway: { value: string; detail: string };
   combinedCash: { value: string; detail: string };
@@ -84,66 +87,20 @@ const STATUS_TONE: Record<BurnStatus, string | undefined> = {
   CRITICAL: "var(--r-neg)",
 };
 
-const DEFAULT: BurnRateData = {
-  asOf: "April 2026",
-  tracked: { value: "8", detail: "unprofitable growth" },
-  avgRunway: { value: "22 mo", detail: "2 below 12mo" },
-  combinedCash: { value: "USD 48.2B", detail: "+USD 2.1B QoQ" },
-  rows: [
-    { ticker: "SHOP", name: "Shopify", cash: "USD 5.2B", qBurn: "+USD 180M", qBurnTone: "pos", runway: "∞", runwayTone: "pos", status: "PROFITABLE", position: "3.2%" },
-    { ticker: "CRWD", name: "CrowdStrike", cash: "USD 3.8B", qBurn: "+USD 220M", qBurnTone: "pos", runway: "∞", runwayTone: "pos", status: "PROFITABLE", position: "2.1%" },
-    { ticker: "PLTR", name: "Palantir", cash: "USD 4.0B", qBurn: "+USD 140M", qBurnTone: "pos", runway: "∞", runwayTone: "pos", status: "PROFITABLE", position: "1.8%" },
-    { ticker: "U", name: "Unity", cash: "USD 1.6B", qBurn: "−USD 54M", qBurnTone: "neg", runway: "29 mo", status: "SAFE", position: "1.4%" },
-    { ticker: "PATH", name: "UiPath", cash: "USD 1.8B", qBurn: "−USD 42M", qBurnTone: "neg", runway: "43 mo", status: "SAFE", position: "0.9%" },
-    { ticker: "RBLX", name: "Roblox", cash: "USD 3.1B", qBurn: "−USD 210M", qBurnTone: "neg", runway: "15 mo", status: "WATCH", position: "0.7%" },
-    { ticker: "RIVN", name: "Rivian", cash: "USD 7.9B", qBurn: "−USD 1.2B", qBurnTone: "neg", runway: "7 mo", runwayTone: "warn", status: "CRITICAL", position: "0.4%" },
-    { ticker: "LCID", name: "Lucid", cash: "USD 3.2B", qBurn: "−USD 680M", qBurnTone: "neg", runway: "5 mo", runwayTone: "neg", status: "CRITICAL", position: "0.2%" },
-  ],
-  critical: [
-    {
-      ticker: "RIVN",
-      name: "Rivian Automotive",
-      runwayMonths: 7,
-      runwayLabel: "7 months",
-      runwayLabelTone: "warn",
-      cashBurnLine: "cash USD 7.9B · burn USD 1.2B/q",
-      note: "다음 분기 추가 자금 조달 (전환사채 or 증자) 가능성 높음. 희석 위험 관찰. 본인 보유 0.4% 기준 사이징 한도 재확인 권장. 다음 실적 발표(Q3) 가이던스 관찰 포인트.",
-      action: "자금 조달 발표 시 본인 룰 기준 재평가 권장",
-    },
-    {
-      ticker: "LCID",
-      name: "Lucid Group",
-      runwayMonths: 5,
-      runwayLabel: "5 months",
-      runwayLabelTone: "neg",
-      cashBurnLine: "cash USD 3.2B · burn USD 680M/q",
-      note: "Saudi PIF 추가 출자 확률 높지만 시점 불확실. 5개월은 임계치. 현재 0.2% 비중도 sentimental. 정리 검토.",
-      action: "다음 30일 내 청산",
-    },
-  ],
-  watch: {
-    ticker: "RBLX",
-    name: "Roblox",
-    runway: "15 months runway",
-    cashBurnLine: "USD 3.1B / −USD 210M per quarter",
-    note: "User growth 회복 중. 현금흐름 turn 신호 보일 때까지 비중 동결. 다음 분기 burn 둔화 확인 필수.",
-  },
-  cfoNote:
-    "Cash is oxygen. 그로스 스토리에 빠지면 산소를 잊는다. 매월 점검 — 한 종목이라도 12개월 밑으로 떨어지면 자동 경고.",
-};
 
-export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function BurnRate({ data }: { data?: BurnRateData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="burn_rate" reason="insufficient_history" />;
+  }
   return (
     <>
       {/* PAGE 1 */}
       <PdfPage>
-        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 01/03`} />
+        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf}${data.reportTag ? ` · ${data.reportTag}` : ""} · 01/03`} />
         <PdfGoldRule />
 
-        {/* SAMPLE banner — sample mode only. */}
-        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Burn Rate · For Growth Holdings</PdfEyebrow>
         <PdfCoverTitle size={42}>
@@ -206,7 +163,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
       {/* PAGE 2 — 2026-05-06 Strategy B Option 2: explicit disclaim-only PdfPage so
           chromium print engine never pushes the disclaimer onto a ghost sheet. */}
       <PdfPage>
-        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 02/03`} />
+        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf}${data.reportTag ? ` · ${data.reportTag}` : ""} · 02/03`} />
         <PdfGoldRule />
 
         <PdfEyebrow>02 — Critical Watch</PdfEyebrow>
@@ -291,7 +248,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
 
       {/* PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) */}
       <PdfPage>
-        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 03/03`} />
+        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf}${data.reportTag ? ` · ${data.reportTag}` : ""} · 03/03`} />
         <PdfGoldRule />
         <PdfDisclaimer cadence="monthly" />
       </PdfPage>

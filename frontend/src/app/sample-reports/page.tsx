@@ -69,10 +69,11 @@ export default function SampleReportsIndexPage() {
           a preview to save as A4 PDF.
         </p>
 
-        {/* Prominent sample-data notice — every report below renders
-            illustrative, fictional data (not real holdings or performance).
-            Keeps the public design preview from being mistaken for product
-            performance (CEO 2026-05-31). */}
+        {/* Honest preview notice — these public previews show the report
+            FORMAT only; they carry no holdings or performance data. The
+            template fills in with the member's own data once connected, and
+            shows an empty state until then. No fabricated sample data (CEO
+            2026-05-31 직격: remove fake data, show empty when none). */}
         <div
           role="note"
           style={{
@@ -89,9 +90,9 @@ export default function SampleReportsIndexPage() {
           }}
           className="font-mono"
         >
-          ▍ 모든 리포트는 가상 예시 데이터입니다 — 실제 보유·실적이 아닙니다.{" "}
-          All reports below show illustrative sample data, not real holdings or
-          performance.
+          ▍ 아래는 리포트 양식 미리보기입니다 — 실적·보유 데이터가 없으면 빈 상태로 표시됩니다.{" "}
+          These are report format previews — they show an empty state until
+          your own data is connected. No sample holdings or performance.
         </div>
 
         <div

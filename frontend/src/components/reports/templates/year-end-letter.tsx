@@ -42,7 +42,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 interface DecisionRow {
   when: string;
@@ -79,67 +79,24 @@ export interface YearEndLetterData {
   letterBody: string;
 }
 
-const DEFAULT: YearEndLetterData = {
-  doc: "FY 2026 · DOC PQ-YE-00214",
-  author: "홍길동",
-  account: "PQ-A-00214",
-  year: "FY 2026",
-  issued: "Dec 31, 2026",
-  pullquote: "\"운으로 번 돈은 운으로 잃는다. 실력으로 번 돈만 남긴다.\" — If this year were one sentence.",
-  fyReturn: { value: "+18.4%", delta: "vs S&P +11.2%" },
-  alpha: { value: "+7.2%", delta: "Sharpe 1.04" },
-  maxDd: { value: "−9.8%", delta: "Aug 12 – Sep 04" },
-  aumGrowth: { value: "USD 1.24M", delta: "+USD 192k" },
-  decisions: [
-    { when: "Feb '26", decision: "NVDA · NVIDIA +5%", thesis: "DC capex 사이클 베팅", outcome: "+22.4%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
-    { when: "Apr '26", decision: "BND · Vanguard Total Bond 비중 +8%", thesis: "금리 피크아웃 대비", outcome: "+1.0%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
-    { when: "Jun '26", decision: "META · Meta Platforms 신규", thesis: "광고 회복 + AI 모멘텀", outcome: "−4.2%", outcomeTone: "neg", verdict: "EARLY", verdictTone: "neg" },
-    { when: "Aug '26", decision: "PYPL · PayPal 청산", thesis: "competitive moat 약화", outcome: "+6.8% (회피)", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
-    { when: "Oct '26", decision: "GLD · SPDR Gold Trust +3%", thesis: "매크로 헤지", outcome: "+7.5%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
-    { when: "Nov '26", decision: "TSLA · Tesla 보류", thesis: "밸류에이션 부담", outcome: "+18% (놓침)", outcomeTone: "neg", verdict: "WRONG", verdictTone: "warn" },
-  ],
-  hitRate: "68%",
-  hitRateNote: "17 of 25 decisions ended up right.",
-  decisionEv: "+1.42%",
-  decisionEvNote: "avg alpha per decision (vs do-nothing)",
-  lessons: [
-    { num: "Lesson 01", title: "시간이 옳다", body: "시장이 옳은 게 아니라 시간이 옳다. 좋은 thesis도 6개월 일찍 진입하면 18%씩 깎인다." },
-    { num: "Lesson 02", title: "메모 없는 매입은 도박", body: "가설 없이 들어간 자리는 빠질 때 변호할 근거도 없다. 25건 중 7건이 무메모, 그 7건의 평균 결과 −3.2%." },
-    { num: "Lesson 03", title: "현금은 포지션이다", body: "현금 0%로 가득 채운 분기에 −9.8% MaxDD 발생. 다음 해는 5% 이하로 떨어지지 않는 룰." },
-  ],
-  costliestMistake: "TSLA (Tesla) 보류 — 가설은 옳았지만 사이즈가 제로였다. +18% 못 잡은 게 올해 가장 비싼 한 줄.",
-  promises: [
-    { title: "Promise 1", body: "신규 진입 전 가설 메모 100%. 메모 없으면 매입 자동 차단", tag: "Rule 01" },
-    { title: "Promise 2", body: "현금 비중 5% 이하 진입 금지. dry powder 룰", tag: "Rule 02" },
-    { title: "Promise 3", body: "단일 섹터 35% 한도 strict — 위반 시 다음 영업일 정상화", tag: "Rule 03" },
-    { title: "Promise 4", body: "월간 의사결정 ≤ 5건. 분기 ≤ 12건. 양보다 질", tag: "Rule 04" },
-    { title: "Promise 5", body: "FX 단일 노출 75% 이하 — USD 88% 상태 즉시 헤지", tag: "Rule 05" },
-  ],
-  returnTarget: { value: "+12%", delta: "benchmark + 4%" },
-  ddLimit: { value: "−12%", delta: "hard stop" },
-  decisionsCap: { value: "≤ 30", delta: "quality > quantity" },
-  letterBody:
-    "내년의 나에게 — 올해 +18.4%는 운과 실력이 반반. NVDA (NVIDIA)가 상상을 넘어선 게 컸다. 그런데 진짜 배운 건 TSLA (Tesla) 보류 한 줄이다. 가설이 옳아도 사이즈가 0이면 결과는 0. 내년엔 thesis만으로 부족하다, 사이즈도 같이 결정하자.",
-};
 
-export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function YearEndLetter({ data }: { data?: YearEndLetterData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="year_end_letter" reason="insufficient_history" />;
+  }
   return (
     <>
       {/* PAGE 1 — COVER */}
       <PdfPage>
         <PdfHeader tier="premium" title="YEAR-END LETTER" meta={data.doc} />
 
-        {/* SAMPLE banner — public sample renders DEFAULT fixture; label it so
-            visitors don't mistake illustrative numbers for real performance. */}
-        {isSample && <SampleDataBadge />}
 
         <div style={{ marginTop: "30mm" }}>
           <PdfCoverEyebrow>Annual Letter · To the CFO of My Portfolio</PdfCoverEyebrow>
           <PdfCoverTitle>
-            FY 2026
-            <br />
+            {data.year ? <>{data.year}<br /></> : null}
             <em>Year-End Letter.</em>
           </PdfCoverTitle>
           <PdfCoverSub>
@@ -163,7 +120,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 2 — PULLQUOTE + YEAR AT A GLANCE */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 02/06" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta={`${data.doc} · 02/06`} />
         <PdfGoldRule />
 
         <PdfEyebrow>Opening</PdfEyebrow>
@@ -179,34 +136,9 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
           ]}
         />
 
-        <div style={{ marginTop: 12 }}>
-          <PdfColTitle>12-Month NAV</PdfColTitle>
-          <PdfCard>
-            <svg viewBox="0 0 600 160" preserveAspectRatio="none" style={{ width: "100%", height: 160 }}>
-              <defs>
-                <linearGradient id="ye-fade" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0e0e0e" stopOpacity=".18" />
-                  <stop offset="100%" stopColor="#0e0e0e" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <line x1="0" y1="40" x2="600" y2="40" stroke="#ececec" strokeWidth="1" />
-              <line x1="0" y1="80" x2="600" y2="80" stroke="#ececec" strokeWidth="1" />
-              <line x1="0" y1="120" x2="600" y2="120" stroke="#ececec" strokeWidth="1" />
-              <path d="M0,130 L50,120 L100,124 L150,110 L200,98 L250,108 L300,84 L350,90 L400,72 L450,62 L500,50 L550,42 L600,30 L600,160 L0,160 Z" fill="url(#ye-fade)" />
-              <path d="M0,130 L50,120 L100,124 L150,110 L200,98 L250,108 L300,84 L350,90 L400,72 L450,62 L500,50 L550,42 L600,30" stroke="#0e0e0e" strokeWidth="2" fill="none" />
-              <path d="M0,132 L50,128 L100,124 L150,118 L200,114 L250,118 L300,108 L350,110 L400,98 L450,90 L500,82 L550,74 L600,66" stroke="#c0c0c0" strokeWidth="1.4" fill="none" strokeDasharray="3 3" />
-              <text x="0" y="158" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">JAN</text>
-              <text x="150" y="158" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">APR</text>
-              <text x="300" y="158" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">JUL</text>
-              <text x="450" y="158" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">OCT</text>
-              <text x="580" y="158" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">DEC</text>
-            </svg>
-            <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)", }} className="font-mono" >
-              <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Portfolio</span>
-              <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500</span>
-            </div>
-          </PdfCard>
-        </div>
+        {/* 12-Month NAV chart omitted: no per-month NAV series is wired into
+            YearEndLetterData. Fixed SVG coordinates would be a fabricated
+            trend (CEO 2026-05-31). Carry-over: wire backend annual NAV series. */}
 
         <PdfPageFooter left="Year-End Letter · Premium" right="Page 02" />
         <PdfDisclaimerMini />
@@ -214,7 +146,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 3 — DECISIONS REVIEW */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 03/06" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta={`${data.doc} · 03/06`} />
 
         <PdfEyebrow>01 — Decisions, Reviewed</PdfEyebrow>
         <PdfSectionTitle>Decisions · 올해 내린 결정들</PdfSectionTitle>
@@ -269,7 +201,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 4 — LESSONS */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 04/06" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta={`${data.doc} · 04/06`} />
 
         <PdfEyebrow>02 — Lessons Learned</PdfEyebrow>
         <PdfSectionTitle>3 Lessons · 값비싼 교훈 세 가지</PdfSectionTitle>
@@ -296,7 +228,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 5 — NEXT YEAR + SIGN */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 05/06" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta={`${data.doc} · 05/06`} />
 
         <PdfEyebrow>03 — Promises for Next Year</PdfEyebrow>
         <PdfSectionTitle>To Next Year&apos;s Me · 내년의 나에게</PdfSectionTitle>
@@ -331,7 +263,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 6 — DISCLAIMER (atomic disclaim-only sheet) */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 06/06" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta={`${data.doc} · 06/06`} />
         <PdfGoldRule />
         <PdfDisclaimer cadence="annual" withBacktest />
       </PdfPage>

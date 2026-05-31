@@ -22,9 +22,7 @@ import {
   PdfSectionTitle,
   PdfTable,
   PdfTicker,
-  PdfTwoCol,
   PdfColTitle,
-  PdfCard,
   PdfAllocList,
   PdfCallout,
   PdfGovBlock,
@@ -32,7 +30,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 interface Payment {
   date: string;
@@ -46,6 +44,9 @@ interface Payment {
 
 export interface DividendIncomeData {
   asOf: string;
+  /** Report id shown in the page header (a DI-prefixed tag). Optional —
+   *  omitted rather than hardcoded when the backend does not supply it. */
+  reportTag?: string;
   thisMonth: { value: string; delta: string };
   ytdIncome: { value: string; delta: string };
   yieldOnCost: { value: string; delta: string };
@@ -57,50 +58,22 @@ export interface DividendIncomeData {
   reinvestmentNote: string;
 }
 
-const DEFAULT: DividendIncomeData = {
-  asOf: "April 2026",
-  thisMonth: { value: "USD 1,842", delta: "+USD 214 vs last" },
-  ytdIncome: { value: "USD 18,420", delta: "+12.8% YoY" },
-  yieldOnCost: { value: "4.18%", delta: "portfolio avg" },
-  runRate: { value: "USD 22,104", delta: "USD 1,842/mo" },
-  payments: [
-    { date: "Jun 03", ticker: "JEPI", name: "JPM Equity Premium", shares: "120", perShare: "USD 0.42", received: "USD 50.40", yield: "7.8%" },
-    { date: "Jun 07", ticker: "SCHD", name: "Schwab Dividend", shares: "80", perShare: "USD 0.78", received: "USD 62.40", yield: "3.6%" },
-    { date: "Jun 12", ticker: "KO", name: "Coca-Cola", shares: "200", perShare: "USD 0.485", received: "USD 97.00", yield: "3.0%" },
-    { date: "Jun 14", ticker: "PG", name: "Procter & Gamble", shares: "60", perShare: "USD 1.0065", received: "USD 60.39", yield: "2.4%" },
-    { date: "Jun 18", ticker: "JNJ", name: "Johnson & Johnson", shares: "75", perShare: "USD 1.24", received: "USD 93.00", yield: "3.1%" },
-    { date: "Jun 22", ticker: "MSFT", name: "Microsoft", shares: "40", perShare: "USD 0.83", received: "USD 33.20", yield: "0.7%" },
-    { date: "Jun 25", ticker: "VZ", name: "Verizon", shares: "300", perShare: "USD 0.665", received: "USD 199.50", yield: "6.4%" },
-    { date: "Jun 28", ticker: "O", name: "Realty Income", shares: "450", perShare: "USD 0.2625", received: "USD 118.13", yield: "5.6%" },
-  ],
-  totalReceived: "USD 1,842.02",
-  avgYield: "avg 4.1%",
-  topContributors: [
-    { ticker: "VZ", name: "Verizon", pct: 100, amount: "USD 199" },
-    { ticker: "O", name: "Realty Income", pct: 60, amount: "USD 118" },
-    { ticker: "KO", name: "Coca-Cola", pct: 48, amount: "USD 97" },
-    { ticker: "JNJ", name: "Johnson & Johnson", pct: 46, amount: "USD 93" },
-    { ticker: "SCHD", name: "Schwab US Dividend ETF", pct: 32, amount: "USD 62", flat: true },
-    { ticker: "PG", name: "Procter & Gamble", pct: 30, amount: "USD 60", flat: true },
-  ],
-  reinvestmentNote:
-    "받은 USD 1,842, 어디에 다시 심을 것인가. SCHD (Schwab US Dividend ETF) 12주 추가 매입 검토. 또는 현금 보유 후 다음 달 합산.",
-};
 
 // 2026-05-06 (v24): Strategy B Option 2 — disclaim split into own PdfPage.
 // Body PdfPage no longer crowds gov+disclaim onto one sheet; chromium
 // no longer pushes a ghost disclosure-only page.
-export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function DividendIncome({ data }: { data?: DividendIncomeData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="dividend_income" reason="no_positions" />;
+  }
   return (
     <>
     <PdfPage>
-      <PdfHeader tier="pro" title="DIVIDEND INCOME" meta={`${data.asOf} · DI-2026-04 · 01/02`} />
+      <PdfHeader tier="pro" title="DIVIDEND INCOME" meta={`${data.asOf}${data.reportTag ? ` · ${data.reportTag}` : ""} · 01/02`} />
       <PdfGoldRule />
 
-      {/* SAMPLE banner — sample mode only. */}
-      {isSample && <SampleDataBadge />}
 
       <PdfEyebrow>Dividend Income · Monthly</PdfEyebrow>
       <PdfCoverTitle size={42}>
@@ -154,54 +127,25 @@ export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }
         </tbody>
       </PdfTable>
 
+      {/* 12-Month Income Trail bar chart omitted: no per-month income series
+          is wired into DividendIncomeData. Fixed SVG bar heights + the
+          "평균 / 이번 달" line would be fabricated figures (CEO 2026-05-31).
+          Carry-over: wire backend monthly income series → render real bars.
+          Top Contributors (real data.topContributors) is retained. */}
       <div style={{ marginTop: 24 }}>
-        <PdfTwoCol>
-          <div>
-            <PdfColTitle>12-Month Income Trail</PdfColTitle>
-            <PdfCard>
-              <svg
-                viewBox="0 0 600 160"
-                preserveAspectRatio="none"
-                style={{ width: "100%", height: 160 }}
-              >
-                <line x1="0" y1="40" x2="600" y2="40" stroke="#ececec" strokeWidth="1" />
-                <line x1="0" y1="80" x2="600" y2="80" stroke="#ececec" strokeWidth="1" />
-                <line x1="0" y1="120" x2="600" y2="120" stroke="#ececec" strokeWidth="1" />
-                {[
-                  [10, 92, 50], [60, 78, 64], [110, 86, 56], [160, 62, 80],
-                  [210, 74, 68], [260, 50, 92], [310, 80, 62], [360, 68, 74],
-                  [410, 42, 100], [460, 58, 84], [510, 48, 94],
-                ].map(([x, y, h], i) => (
-                  <rect key={i} x={x} y={y} width="36" height={h} fill="#0e0e0e" />
-                ))}
-                <rect x="560" y="32" width="36" height="110" fill="#c9963f" />
-                <text x="14" y="156" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">JUL</text>
-                <text x="164" y="156" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">OCT</text>
-                <text x="314" y="156" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">JAN</text>
-                <text x="464" y="156" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">APR</text>
-                <text x="566" y="156" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">JUN</text>
-              </svg>
-              <div style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)", marginTop: 8 }}>
-                12개월 평균 USD 1,535 / 이번 달 USD 1,842 ▲
-              </div>
-            </PdfCard>
-          </div>
-          <div>
-            <PdfColTitle>Top Contributors · 누가 벌어다 줬나</PdfColTitle>
-            <PdfAllocList
-              items={data.topContributors.map((c) => ({
-                name: (
-                  <>
-                    <PdfTicker>{c.ticker}</PdfTicker>{" "}
-                    <span style={{ color: "var(--r-ink-3)" }}>{c.name}</span>
-                  </>
-                ),
-                pct: c.pct,
-                pctDisplay: c.amount,
-              }))}
-            />
-          </div>
-        </PdfTwoCol>
+        <PdfColTitle>Top Contributors · 누가 벌어다 줬나</PdfColTitle>
+        <PdfAllocList
+          items={data.topContributors.map((c) => ({
+            name: (
+              <>
+                <PdfTicker>{c.ticker}</PdfTicker>{" "}
+                <span style={{ color: "var(--r-ink-3)" }}>{c.name}</span>
+              </>
+            ),
+            pct: c.pct,
+            pctDisplay: c.amount,
+          }))}
+        />
       </div>
 
       <div style={{ marginTop: 18 }}>
@@ -214,7 +158,7 @@ export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }
     </PdfPage>
 
     <PdfPage>
-      <PdfHeader tier="pro" title="DIVIDEND INCOME" meta={`${data.asOf} · DI-2026-04 · 02/02`} />
+      <PdfHeader tier="pro" title="DIVIDEND INCOME" meta={`${data.asOf}${data.reportTag ? ` · ${data.reportTag}` : ""} · 02/02`} />
       <PdfGoldRule />
       <PdfDisclaimer cadence="monthly" />
     </PdfPage>

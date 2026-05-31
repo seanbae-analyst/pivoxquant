@@ -118,7 +118,7 @@ export default function ReportsPage() {
     <FeaturePageShell
       eyebrow="Research · Sample Reports"
       title="Open a published PDF from the desk."
-      deck="예시·가상 포트폴리오로 렌더된 양식 샘플입니다 (실제 성과 아님). 회원은 본인 보유 종목 기준으로 동일 양식을 받습니다. — Public samples rendered from illustrative, fictional portfolios (not real performance). Members receive the same format on their own holdings."
+      deck="리포트 양식을 미리 볼 수 있는 페이지입니다. 본인 거래 내역을 연결하면 같은 양식이 본인 데이터로 채워집니다 — 연결 전에는 빈 상태로 보입니다. — A preview of the report formats. Connect your own trading history and the same format fills in with your data; until then it shows an empty state."
       seeAlso={[
         {
           eyebrow: "Catalogue",

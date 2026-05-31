@@ -30,7 +30,7 @@ import {
   PdfSectionTitle,
 } from "../pdf-primitives";
 import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 export interface WeeklyMemoData {
   asOf: string;            // "2026-04-26"
@@ -47,44 +47,6 @@ export interface WeeklyMemoData {
   decision: string;
   memoToSelf: string;
 }
-
-const DEFAULT_DATA: WeeklyMemoData = {
-  asOf: "2026-04-26",
-  weekTag: "WK-2026-17",
-  portfolioReturn: "+2.4%",
-  benchmarkReturn: "vs S&P +1.1%",
-  portfolioValue: "USD 1,242,150",
-  portfolioDelta: "▲ USD 29,310",
-  ytdReturn: "+14.2%",
-  ytdDetail: "Sharpe 0.87",
-  threeChecks: [
-    {
-      body: "반도체 비중 조정 — NVDA (NVIDIA) 일부 익절, AVGO (Broadcom) 비중 유지",
-      meta: "+1.84%",
-      checked: true,
-    },
-    {
-      body: "헬스케어 신규 진입 — UNH (UnitedHealth) 신규 진입, 첫 비중 1.5%",
-      meta: "+0.62%",
-      checked: true,
-    },
-    {
-      body: "FX 노출 점검 — USD 단일 노출 88%, 헤지 검토",
-      meta: "−0.21%",
-      checked: false,
-    },
-  ],
-  trajectory: {
-    portfolio: [0, 0.3, 0.8, 1.5, 2.4],
-    benchmark: [0, 0.1, 0.4, 0.7, 1.1],
-  },
-  decision:
-    "이번 주 단 하나의 결정: 반도체 비중 −0.95%p, 헬스케어 +1.5%p로 조정. " +
-    "변동성 구간에서 단일 섹터 노출을 누그러뜨리는 의도.",
-  memoToSelf:
-    "다음 주 점검: (1) UNH (UnitedHealth) 진입 후 reaction 모니터, (2) FX 헤지 비중 결정, " +
-    "(3) 다음 분기 실적 시즌 진입 전 cash buffer 점검.",
-};
 
 /** Build an SVG path "M0,80 L150,70 …" from a series of percentage returns.
  *  Returns are rebased to a 120px-tall band — top = best of both series, bottom = worst. */
@@ -104,9 +66,12 @@ function pathFromReturns(values: number[], all: number[], width = 600, height = 
     .join(" ");
 }
 
-export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
-  // Sample mode = template fell back to its DEFAULT_DATA fixture (no real data).
-  const isSample = data === DEFAULT_DATA;
+export function WeeklyMemo({ data }: { data?: WeeklyMemoData }) {
+  // No fabricated fixture — when there is no real artifact data, render the
+  // honest empty state instead of a fake sample portfolio.
+  if (!data) {
+    return <EmptyState type="weekly_memo" reason="no_artifact" />;
+  }
   const allReturns = [...data.trajectory.portfolio, ...data.trajectory.benchmark];
   const portPath = pathFromReturns(data.trajectory.portfolio, allReturns);
   const benchPath = pathFromReturns(data.trajectory.benchmark, allReturns);
@@ -115,9 +80,6 @@ export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
   return (
     <PdfPage>
       <PdfHeader tier="free" title="WEEKLY MEMO" meta={`${data.asOf} · ${data.weekTag}`} />
-
-      {/* SAMPLE banner — sample mode only. */}
-      {isSample && <SampleDataBadge />}
 
       <PdfEyebrow>{`Weekly Memo · ${WEEKLY_MEMO_WHEN_SHORT}`}</PdfEyebrow>
       <PdfCoverTitle size={42}>

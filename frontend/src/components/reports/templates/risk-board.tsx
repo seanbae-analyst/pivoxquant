@@ -25,23 +25,12 @@ import {
   PdfHeader,
   PdfGoldRule,
   PdfKpiRow,
-  PdfSectionTitle,
   PdfHeat,
-  PdfBadge,
-  PdfLimitList,
-  PdfWaterfall,
-  PdfTable,
-  PdfTwoCol,
-  PdfCard,
-  PdfCheckList,
-  PdfGauge,
-  PdfExecSum,
-  PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 export interface RiskBoardData {
   weekTag: string; // "Week of Apr 26, 2026 · RB-2026-W17"
@@ -55,23 +44,13 @@ export interface RiskBoardData {
   pairwiseCorr: { value: string; gauge: number; verdict: string };
 }
 
-const DEFAULT: RiskBoardData = {
-  weekTag: "Week of Apr 26, 2026 · RB-2026-W17",
-  asOfStamp: "As of Apr 26, 2026 · 18:00 KST",
-  var95: { value: "−USD 18.2k", nav: "−1.46% NAV", tone: "amber" },
-  beta: { value: "1.18", band: "target 0.9–1.1", tone: "amber" },
-  maxDD: { value: "−9.8%", limit: "limit −12%", tone: "green" },
-  sharpe: { value: "1.42", vsPrior: "+0.08 vs prior", tone: "green" },
-  pairwiseCorr: {
-    value: "0.62",
-    gauge: 62,
-    verdict: "Tech 비중 과다로 분산 효과 약화. 스트레스 시 단일 섹터처럼 움직임. 비테크 자산 5%p 추가 또는 헤지 검토.",
-  },
-};
 
-export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function RiskBoard({ data }: { data?: RiskBoardData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="risk_board" reason="no_positions" />;
+  }
   return (
     <>
       {/* ═══════ PAGE 1 — EXECUTIVE SUMMARY + LIMITS ═══════ */}
@@ -79,59 +58,28 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 01/04`}
+          meta={`${data.weekTag} · 01/02`}
         />
 
-        {/* SAMPLE banner — sample mode only. */}
-        {isSample && <SampleDataBadge />}
-
-        <PdfExecSum
-          stamp={data.asOfStamp}
-          rows={[
-            {
-              term: "Status",
-              body: (
-                <>
-                  <PdfBadge tone="moderate">⚠ AMBER</PdfBadge>{" "}
-                  &nbsp;2개 한도 초과 (FX exposure, Single sector).{" "}
-                  <strong>즉시 조치 1건</strong>, 다음 리밸런스 조정 1건.
-                </>
-              ),
-            },
-            {
-              term: "Headline Risk",
-              body: (
-                <>
-                  <strong>섹터 집중</strong> — Tech 단일 섹터 NAV의 42% (한도 35%).
-                  반도체 묶음이 전체 VaR의 38% 기여.
-                </>
-              ),
-            },
-            {
-              term: "Stress Worst",
-              body: (
-                <>
-                  <strong>2008 Replay 시 −USD 498k (−40% NAV).</strong> 5개 시나리오 중 1개
-                  SEVERE, 1개 HIGH, 3개 MODERATE.
-                </>
-              ),
-            },
-            {
-              term: "This Week",
-              body: (
-                <>
-                  VaR(95%) <strong>−USD 18.2k</strong> (−1.46% NAV) · Beta vs S&amp;P{" "}
-                  <strong>1.18</strong> (band 0.9–1.1 초과) · MaxDD YTD <strong>−9.8%</strong>{" "}
-                  (limit −12%).
-                </>
-              ),
-            },
-            {
-              term: "Action P1",
-              body: "다음 리밸런스 시 Tech 섹터 −7%p 축소 → 한도 복귀. 단일 종목 12% → 8% 단계적 축소.",
-            },
-          ]}
-        />
+        {/* Executive Summary narrative omitted: the backend does not supply a
+            risk-board narrative shape into RiskBoardData (the snake/camel
+            adapter is unbuilt). Per CEO 2026-05-31 "있는 데이터로만, 없으면
+            없대 해" — render only the real VaR/Beta/MaxDD/Sharpe KPI row and the
+            real pairwise-correlation card below. Carry-over: build a backend →
+            RiskBoardData adapter for ExecSum, Risk Limits, the 7-Layer matrix,
+            and stress scenarios, then restore those surfaces with real data. */}
+        <p
+          className="font-mono"
+          style={{
+            fontSize: "var(--pq-text-eyebrow)",
+            color: "var(--r-ink-4)",
+            letterSpacing: 1.2,
+            textTransform: "uppercase",
+            marginBottom: 6,
+          }}
+        >
+          {data.asOfStamp}
+        </p>
 
         <PdfKpiRow
           kpis={[
@@ -178,56 +126,9 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
           ]}
         />
 
-        <PdfSectionTitle variant="dry">
-          Risk Limits <small>한도 점검 · vs cap</small>
-        </PdfSectionTitle>
-
-        <PdfLimitList
-          items={[
-            {
-              name: "Sector concentration",
-              detail: "Tech",
-              fillPct: 84,
-              capPct: 70,
-              valueLabel: "42% / 35%",
-              fillState: "breach",
-              status: <PdfBadge tone="severe">BREACH</PdfBadge>,
-            },
-            {
-              name: "FX exposure",
-              detail: "USD single",
-              fillPct: 88,
-              capPct: 75,
-              valueLabel: "88% / 75%",
-              fillState: "warn",
-              status: <PdfBadge tone="moderate">OVER</PdfBadge>,
-            },
-            {
-              name: "Top 3 concentration",
-              detail: "Top 3 names",
-              fillPct: 62,
-              capPct: 70,
-              valueLabel: "62% / 70%",
-              status: <PdfBadge tone="low">OK</PdfBadge>,
-            },
-            {
-              name: "Leverage",
-              detail: "gross / NAV",
-              fillPct: 50,
-              capPct: 60,
-              valueLabel: "1.00× / 1.20×",
-              status: <PdfBadge tone="low">OK</PdfBadge>,
-            },
-            {
-              name: "Crypto exposure",
-              detail: "direct + ETF",
-              fillPct: 3,
-              capPct: 10,
-              valueLabel: "3% / 10%",
-              status: <PdfBadge tone="low">OK</PdfBadge>,
-            },
-          ]}
-        />
+        {/* Risk Limits gauge list omitted: the cap/fill/observed values were
+            hardcoded, not wired from RiskBoardData. Carry-over: wire backend
+            risk-limit observations. */}
 
         <PdfPageFooter
           left="Risk Board · Pro · Internal use only"
@@ -236,407 +137,21 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* ═══════ PAGE 2 — 7-LAYER RISK DEFENSE ═══════
-         W7.2 — PivoxQuant 차별점 surface (E2E P1 #14).
-         Maps backend `risk_defense.py` layers L1-L7 1:1.
-         Threshold / Observed / Status columns mirror the live
-         `/risk` dashboard PR #199 schema (hhi + 7-layer threshold
-         + observed_at_kst). */}
+      {/* ═══════ PAGE 2 — DISCLAIMER (atomic disclaim-only sheet) ═══════
+         The former 7-Layer Risk Defense matrix, stress-test waterfall, stress
+         scenario table, and rebalance notes were entirely hardcoded — the
+         backend computes these values but no snake→camel adapter wires them
+         into RiskBoardData, so they could not be rendered with real data.
+         Per CEO 2026-05-31 they are omitted rather than shown as fabricated
+         figures. The real VaR/Beta/MaxDD/Sharpe KPI row and the pairwise
+         correlation card remain on page 1. Carry-over: build the backend →
+         RiskBoardData adapter (7-layer thresholds/observed, stress scenarios,
+         risk limits, rebalance notes) and restore those surfaces. */}
       <PdfPage>
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 02/04`}
-        />
-        <PdfGoldRule />
-
-        <PdfSectionTitle variant="dry">
-          7-Layer Risk Defense{" "}
-          <small>PivoxQuant 차별점 · backend risk_defense.py 1:1</small>
-        </PdfSectionTitle>
-
-        <PdfCard>
-          <p
-            style={{
-              fontSize: "var(--pq-text-eyebrow)",
-              color: "var(--r-ink-3)",
-              lineHeight: 1.55,
-              marginBottom: 14,
-            }}
-          >
-            7-Layer Risk Defense는 매 bar마다 7개 독립 레이어를 평가, 한
-            개라도 한도를 초과하면 즉시 관측 신호를 발생시킵니다. 본
-            시스템은{" "}
-            <strong>관측·경보 시스템이며 자동 매매·자문이 아닙니다.</strong>{" "}
-            All seven layers run independently — any single breach surfaces
-            an observation badge (BREACH / OVER / OK).
-          </p>
-
-          <PdfTable>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Layer · 레이어</th>
-                <th>Threshold · 한도</th>
-                <th className="right">Observed · 관측</th>
-                <th className="right">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <strong>L1</strong>
-                </td>
-                <td>
-                  <strong>VaR (95% 1d)</strong>
-                  <br />
-                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
-                    Value at Risk · 95% 일일 손실
-                  </span>
-                </td>
-                <td>−3.0% NAV</td>
-                <td className="right neg">−1.46%</td>
-                <td className="right">
-                  <PdfBadge tone="low">OK</PdfBadge>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>L2</strong>
-                </td>
-                <td>
-                  <strong>Correlation Spike</strong>
-                  <br />
-                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
-                    평균 페어와이즈 상관계수
-                  </span>
-                </td>
-                <td>0.70</td>
-                <td className="right">0.62</td>
-                <td className="right">
-                  <PdfBadge tone="moderate">OVER</PdfBadge>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>L3</strong>
-                </td>
-                <td>
-                  <strong>VIX Regime</strong>
-                  <br />
-                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
-                    공포 지수 caution / panic 트리거
-                  </span>
-                </td>
-                <td>25 caution / 35 panic</td>
-                <td className="right">18.5</td>
-                <td className="right">
-                  <PdfBadge tone="low">OK</PdfBadge>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>L4</strong>
-                </td>
-                <td>
-                  <strong>Tail Risk Parity</strong>
-                  <br />
-                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
-                    개별 종목 테일 기여도 불균형
-                  </span>
-                </td>
-                <td>2.0× 평균</td>
-                <td className="right">1.5×</td>
-                <td className="right">
-                  <PdfBadge tone="low">OK</PdfBadge>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>L5</strong>
-                </td>
-                <td>
-                  <strong>Daily Loss Limit</strong>
-                  <br />
-                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
-                    일일 손실 서킷 브레이커
-                  </span>
-                </td>
-                <td>−2.0%</td>
-                <td className="right neg">−0.4%</td>
-                <td className="right">
-                  <PdfBadge tone="low">OK</PdfBadge>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>L6</strong>
-                </td>
-                <td>
-                  <strong>Sector Concentration</strong>
-                  <br />
-                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
-                    단일 섹터 NAV 비중
-                  </span>
-                </td>
-                <td>35%</td>
-                <td className="right neg">42%</td>
-                <td className="right">
-                  <PdfBadge tone="severe">BREACH</PdfBadge>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>L7</strong>
-                </td>
-                <td>
-                  <strong>Cash Buffer</strong>
-                  <br />
-                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
-                    레짐 기반 동적 현금 (PR #225)
-                  </span>
-                </td>
-                <td>≥ 10%</td>
-                <td className="right">18%</td>
-                <td className="right">
-                  <PdfBadge tone="low">OK</PdfBadge>
-                </td>
-              </tr>
-            </tbody>
-          </PdfTable>
-
-          <p
-            style={{
-              fontSize: "var(--pq-text-micro)",
-              color: "var(--r-ink-3)",
-              lineHeight: 1.5,
-              marginTop: 14,
-            }}
-          >
-            <strong>Observed at · 관측 시각:</strong> {data.asOfStamp}.{" "}
-            <strong>Triggered this run:</strong> L6 Sector Concentration
-            (Tech 42% / 한도 35%). 즉시 조치 권고는 본 보고서 03 페이지
-            Rebalance Notes를 참조하십시오.
-          </p>
-        </PdfCard>
-
-        <PdfPageFooter
-          left="Risk Board · 7-Layer Defense · Pro · Internal use only"
-          right="Page 02"
-        />
-        <PdfDisclaimerMini />
-      </PdfPage>
-
-      {/* ═══════ PAGE 3 — STRESS TESTS + ACTIONS ═══════ */}
-      <PdfPage>
-        <PdfHeader
-          tier="pro"
-          title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 03/04`}
-        />
-        <PdfGoldRule />
-
-        <PdfSectionTitle variant="dry">
-          Stress Test Impact <small>P&amp;L 충격 · 5 scenarios</small>
-        </PdfSectionTitle>
-
-        <PdfCard>
-          <PdfWaterfall
-            items={[
-              {
-                label: "2008 Replay",
-                detail: "−40% equity, +200bp credit",
-                leftPct: 0,
-                widthPct: 90,
-                axisPct: 90,
-                value: "−USD 498k",
-                valueTone: "neg",
-              },
-              {
-                label: "2022 Tech Crash",
-                detail: "QQQ −33% / 12mo",
-                leftPct: 32,
-                widthPct: 58,
-                axisPct: 90,
-                value: "−USD 324k",
-                valueTone: "neg",
-              },
-              {
-                label: "Geopolitical Shock",
-                detail: "Oil +50%, VIX > 40",
-                leftPct: 55,
-                widthPct: 35,
-                axisPct: 90,
-                value: "−USD 186k",
-                valueTone: "neg",
-              },
-              {
-                label: "USD −10%",
-                detail: "DXY 104 → 94",
-                leftPct: 70,
-                widthPct: 20,
-                axisPct: 90,
-                value: "−USD 108k",
-                valueTone: "neg",
-              },
-              {
-                label: "Rates +100bp",
-                detail: "10Y 4.2 → 5.2",
-                leftPct: 77,
-                widthPct: 13,
-                axisPct: 90,
-                value: "−USD 72k",
-                valueTone: "neg",
-              },
-            ]}
-          />
-        </PdfCard>
-
-        <div style={{ marginTop: 12 }}>
-          <PdfTable>
-            <thead>
-              <tr>
-                <th>Scenario</th>
-                <th className="right">P&amp;L</th>
-                <th className="right">% NAV</th>
-                <th className="right">NAV After</th>
-                <th className="right">Recovery</th>
-                <th className="right">Verdict</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>2008 Replay</strong></td>
-                <td className="right neg">−USD 498k</td>
-                <td className="right neg">−40.1%</td>
-                <td className="right">USD 744k</td>
-                <td className="right">~36 mo</td>
-                <td className="right"><PdfBadge tone="severe">SEVERE</PdfBadge></td>
-              </tr>
-              <tr>
-                <td><strong>2022 Tech Crash</strong></td>
-                <td className="right neg">−USD 324k</td>
-                <td className="right neg">−26.1%</td>
-                <td className="right">USD 918k</td>
-                <td className="right">~18 mo</td>
-                <td className="right"><PdfBadge tone="high">HIGH</PdfBadge></td>
-              </tr>
-              <tr>
-                <td><strong>Geopolitical</strong></td>
-                <td className="right neg">−USD 186k</td>
-                <td className="right neg">−15.0%</td>
-                <td className="right">USD 1,056k</td>
-                <td className="right">~9 mo</td>
-                <td className="right"><PdfBadge tone="moderate">MODERATE</PdfBadge></td>
-              </tr>
-              <tr>
-                <td><strong>USD −10%</strong></td>
-                <td className="right neg">−USD 108k</td>
-                <td className="right neg">−8.7%</td>
-                <td className="right">USD 1,134k</td>
-                <td className="right">~6 mo</td>
-                <td className="right"><PdfBadge tone="moderate">MODERATE</PdfBadge></td>
-              </tr>
-              <tr>
-                <td><strong>Rates +100bp</strong></td>
-                <td className="right neg">−USD 72k</td>
-                <td className="right neg">−5.8%</td>
-                <td className="right">USD 1,170k</td>
-                <td className="right">~4 mo</td>
-                <td className="right"><PdfBadge tone="moderate">MODERATE</PdfBadge></td>
-              </tr>
-            </tbody>
-          </PdfTable>
-        </div>
-
-        <div style={{ marginTop: 18 }}>
-          <PdfTwoCol>
-            <PdfCard>
-              <div
-                className="pq-pdf-kpi-lbl"
-                style={{ marginBottom: 8 }}
-              >
-                AVG PAIRWISE CORR
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  gap: 10,
-                  margin: "8px 0",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: "var(--pq-text-pdf-hero)",
-                    fontWeight: 500,
-                    lineHeight: 1,
-                  }}
-                className="font-serif" >
-                  {data.pairwiseCorr.value}
-                </div>
-                <PdfBadge tone="moderate">CONCENTRATED</PdfBadge>
-              </div>
-              <PdfGauge
-                fillPct={data.pairwiseCorr.gauge}
-                scaleLeft="0.0 diversified"
-                scaleRight="1.0 concentrated"
-              />
-              <p
-                style={{
-                  fontSize: "var(--pq-text-eyebrow)",
-                  color: "var(--r-ink-3)",
-                  lineHeight: 1.5,
-                  marginTop: 10,
-                }}
-              >
-                {data.pairwiseCorr.verdict}
-              </p>
-            </PdfCard>
-
-            <PdfCard>
-              <div className="pq-pdf-kpi-lbl" style={{ marginBottom: 8 }}>
-                REBALANCE NOTES · OBSERVED
-              </div>
-              <PdfCheckList
-                items={[
-                  {
-                    body: <><strong>P1</strong> · Tech 섹터 −7%p · 한도 복귀</>,
-                    meta: "By May 5",
-                  },
-                  {
-                    body: <><strong>P2</strong> · FX 헤지 USD 25% 추가</>,
-                    meta: "By May 10",
-                  },
-                  {
-                    body: <><strong>P2</strong> · 금/장기채 +3%p · 테일 헤지</>,
-                    meta: "By May 10",
-                  },
-                  {
-                    body: <><strong>P3</strong> · 단일 종목 12% → 8% 단계 익절</>,
-                    meta: "By May 31",
-                  },
-                ]}
-              />
-            </PdfCard>
-          </PdfTwoCol>
-        </div>
-
-        <PdfGovBlock />
-
-        <PdfPageFooter
-          left="Risk Board · Pro · Internal"
-          right="Page 03"
-        />
-        <PdfDisclaimerMini />
-      </PdfPage>
-
-      {/* ═══════ PAGE 4 — DISCLAIMER (atomic disclaim-only sheet) ═══════ */}
-      <PdfPage>
-        <PdfHeader
-          tier="pro"
-          title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 04/04`}
+          meta={`${data.weekTag} · 02/02`}
         />
         <PdfGoldRule />
         <PdfDisclaimer cadence="weekly" />

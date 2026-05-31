@@ -42,7 +42,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 export interface CapitalAllocationData {
   doc: string;
@@ -66,62 +66,19 @@ export interface CapitalAllocationData {
   cfoMemo: string;
 }
 
-const DEFAULT: CapitalAllocationData = {
-  doc: "FY2026 Q2 · DOC PQ-CA-00214",
-  period: "2026 Q2",
-  totalCapital: "USD 1,242,150",
-  inflows: "+USD 48,200",
-  netDeployed: "USD 32,800",
-  sources: [
-    { label: "월급 저축", pct: 62, amount: "USD 24,000" },
-    { label: "배당 수입", pct: 38, amount: "USD 5,520" },
-    { label: "매각 차익 (PYPL · PayPal)", pct: 74, amount: "USD 18,680", flat: true },
-    { label: "기타 (보너스)", pct: 14, amount: "USD 0", flat: true },
-  ],
-  totalSources: "USD 48,200",
-  uses: [
-    { label: "신규 매입 (NVDA · NVIDIA, META · Meta Platforms)", pct: 78, amount: "USD 22,400" },
-    { label: "기존 종목 추가", pct: 42, amount: "USD 10,400" },
-    { label: "현금 적립", pct: 58, amount: "USD 15,400", flat: true },
-    { label: "세금 / 수수료", pct: 0, amount: "USD 0", flat: true },
-  ],
-  totalUses: "USD 48,200",
-  deployRatio: "68%",
-  cashBuild: "USD 15.4k",
-  avgLag: "11 days",
-  decisions: [
-    { name: "NVDA · NVIDIA +5%", when: "Apr 12", deployed: "USD 12,400", current: "USD 15,180", ret: "+22.4%", retTone: "pos", irr: "+118%", irrTone: "pos" },
-    { name: "META · Meta Platforms 신규", when: "May 02", deployed: "USD 10,000", current: "USD 9,580", ret: "−4.2%", retTone: "neg", irr: "−18%", irrTone: "neg" },
-    { name: "SCHD · Schwab US Dividend ETF 적립", when: "매월", deployed: "USD 6,000", current: "USD 6,260", ret: "+4.3%", retTone: "pos", irr: "+22%", irrTone: "pos" },
-    { name: "BND · Vanguard Total Bond 비중 +8%", when: "Apr 28", deployed: "USD 4,400", current: "USD 4,444", ret: "+1.0%", retTone: "pos", irr: "+5.5%", irrTone: "pos" },
-    { name: "현금 적립", when: "—", deployed: "USD 15,400", current: "USD 15,478", ret: "+0.5%", retTone: "neutral", irr: "+5.0% (MM)", irrTone: "warn" },
-  ],
-  totals: { deployed: "USD 48,200", current: "USD 50,942", ret: "+5.7%", irr: "+24%" },
-  bestDollar: { name: "NVDA · NVIDIA · +22.4%", body: "USD 12,400 → USD 15,180. 분기 deployed 자본의 26%가 알파의 64%를 만들었다. Concentration의 양면." },
-  worstDollar: { name: "META · Meta Platforms · −4.2%", body: "타이밍 문제. Thesis는 유효, 6개월 더 기다릴 가치 있음. 추가 매입 보류." },
-  pullquote:
-    "Capital allocation is the CEO's most important job. 그리고 당신이 그 CEO다.",
-  plans: [
-    { title: "Plan 1", body: "월급 저축 30% 자동 매입 (SCHD · Schwab US Dividend ETF + VOO · Vanguard S&P 500 ETF)", priority: "P1" },
-    { title: "Plan 2", body: "현금 USD 15k 중 USD 10k는 Q3 내 deploy, USD 5k는 dry powder 유지", priority: "P1" },
-    { title: "Plan 3", body: "Tech 비중 단계적 −5%p (Q3 말까지)", priority: "P2" },
-    { title: "Plan 4", body: "신규 매입 후보: HD (Home Depot), ASML (ASML Holding), COST (Costco) 중 1개", priority: "P2" },
-    { title: "Plan 5", body: "Deploy lag 7일 이내로 단축 (자동화 룰)", priority: "P3" },
-  ],
-  cfoMemo: "이번 분기 자본 배분에 대한 자유 서술…",
-};
 
-export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocationData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function CapitalAllocation({ data }: { data?: CapitalAllocationData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="capital_allocation" reason="no_positions" />;
+  }
   return (
     <>
       {/* PAGE 1 — COVER */}
       <PdfPage>
         <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta={data.doc} />
 
-        {/* SAMPLE banner — sample mode only. */}
-        {isSample && <SampleDataBadge />}
 
         <div style={{ marginTop: "30mm" }}>
           <PdfCoverEyebrow>Quarterly Review · The CFO&apos;s Question</PdfCoverEyebrow>
@@ -150,7 +107,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
 
       {/* PAGE 2 — SOURCES & USES */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 02/05" />
+        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta={`${data.doc} · 02/05`} />
         <PdfGoldRule />
 
         <PdfEyebrow>01 — Sources &amp; Uses</PdfEyebrow>
@@ -218,7 +175,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
             cols={3}
             kpis={[
               { label: "Deploy Ratio", value: data.deployRatio, delta: "deployed / sources" },
-              { label: "Cash Build", value: data.cashBuild, delta: "32% kept dry" },
+              { label: "Cash Build", value: data.cashBuild, delta: "kept dry" },
               { label: "Avg Deploy Lag", value: data.avgLag, delta: "target ≤ 7d", deltaTone: "warn" },
             ]}
           />
@@ -230,7 +187,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
 
       {/* PAGE 3 — DEPLOYMENT QUALITY */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 03/05" />
+        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta={`${data.doc} · 03/05`} />
         <PdfGoldRule />
 
         <PdfEyebrow>02 — Deployment Quality</PdfEyebrow>
@@ -301,7 +258,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
           2026-05-06 Strategy B Option 2: explicit disclaim-only PdfPage so
           chromium print engine never pushes the disclaimer onto a ghost sheet. */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 04/05" />
+        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta={`${data.doc} · 04/05`} />
         <PdfGoldRule />
 
         <PdfPullquote>{data.pullquote}</PdfPullquote>
@@ -329,7 +286,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
 
       {/* PAGE 5 — DISCLAIMER (atomic disclaim-only sheet) */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 05/05" />
+        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta={`${data.doc} · 05/05`} />
         <PdfGoldRule />
         <PdfDisclaimer cadence="quarterly" withBacktest />
       </PdfPage>

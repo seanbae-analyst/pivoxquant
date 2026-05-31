@@ -30,7 +30,7 @@ import {
   PdfTicker,
 } from "../pdf-primitives";
 import { fmtPct } from "@/lib/format";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 export interface BragCardData {
   monthLabel: string;     // "April 2026"
@@ -66,8 +66,8 @@ export interface BragCardData {
  * 2026-05-13 root-cause fix: accept either shape. The flat backend
  * payload is mapped to the `BragCardData` shape here (mirror of
  * `BragCardService._to_v3_shape` on the Python side). When `data` is
- * undefined or genuinely empty, we hand back `DEFAULT` so the marketing
- * preview surface still renders.
+ * undefined or genuinely empty, `normalizeBragCardData` returns `null` and
+ * the component renders the honest empty state — never a fabricated sample.
  */
 type BackendBragPayload = {
   month_label?: string;
@@ -79,44 +79,19 @@ type BackendBragPayload = {
   best_return_pct?: number | null;
 };
 
-const DEFAULT: BragCardData = {
-  monthLabel: "April 2026",
-  reportTag: "BC-2026-04",
-  bestDecisionPct: "+12.8%",
-  contribution: "contributed +1.84%p to NAV",
-  hitRate: "7 / 9",
-  hitRateDetail: "78% · best month YTD",
-  monthReturn: "+4.2%",
-  benchmark: "vs S&P +1.6%",
-  hero: {
-    ticker: "PLTR",
-    name: "Palantir Technologies",
-    title: "낙폭 과대 구간에서 비중 +3.5%p 추가",
-    body:
-      "어닝 미스 직후 −22% 빠진 자리에서 비중을 추가했다. 가이던스가 무너졌다고 보지 않았다. " +
-      "FCF, 고객 수, 계약 잔고는 모두 견고. 시장은 단기 EPS만 보고 있었다. 한 달 후 +35% 회복.",
-    entry: "USD 22.40 · 9/18",
-    mark: "USD 30.25 · 10/24",
-    pnl: "+USD 14,820 (+35.0%)",
-  },
-  whyItWorked: [
-    { body: "**사전에 적은 가설** — 9/12 메모에 \"어닝 변동성 노이즈, 비중 추가 시점\"", meta: "EVIDENCE" },
-    { body: "**리스크 한도 내** — 단일 종목 12% 한도 → 8% → 11.5%", meta: "DISCIPLINE" },
-    { body: "**3차 시나리오 모두 +** — 베이스/베어/불 모두 IRR > 12%", meta: "PROCESS" },
-  ],
-  lessonForNext: [
-    { body: "**가설 시점 박제** — 행동 전 메모를 남기는 습관, 다음달도 유지.", meta: "KEEP" },
-    { body: "**감정 ≠ 신호** — 시장의 단기 반응은 진입의 기회이지 회피의 이유가 아니다.", meta: "REINFORCE" },
-    { body: "**한도 점검** — 추가 매입 시 단일 종목 한도 명확히 재확인.", meta: "GUARD" },
-  ],
-  pullquote:
-    "운이 아니라 <em>프로세스</em>였다. 다음 달도 같은 프로세스로.",
-};
-
+/**
+ * Reshape either the `BragCardData` template shape OR the flat backend
+ * `data_json` payload into `BragCardData`. Returns `null` when there is no
+ * real artifact data — the component then renders the honest empty state.
+ *
+ * No fabricated fixture: narrative sections (`whyItWorked` / `lessonForNext`
+ * / `pullquote`) are sourced ONLY from real data. For the numeric-only
+ * backend payload they stay empty rather than borrowing a fabricated story.
+ */
 function normalizeBragCardData(
   raw: BragCardData | BackendBragPayload | undefined | null,
-): BragCardData {
-  if (!raw || typeof raw !== "object") return DEFAULT;
+): BragCardData | null {
+  if (!raw || typeof raw !== "object") return null;
   // Already in the template shape — trust it but still defend `hero`.
   const candidate = raw as Partial<BragCardData>;
   if (
@@ -125,10 +100,27 @@ function normalizeBragCardData(
     typeof candidate.hero.ticker === "string"
   ) {
     return {
-      ...DEFAULT,
-      ...candidate,
-      hero: { ...DEFAULT.hero, ...candidate.hero },
-    } as BragCardData;
+      monthLabel: candidate.monthLabel ?? "",
+      reportTag: candidate.reportTag ?? "",
+      bestDecisionPct: candidate.bestDecisionPct ?? "—",
+      contribution: candidate.contribution ?? "",
+      hitRate: candidate.hitRate ?? "—",
+      hitRateDetail: candidate.hitRateDetail ?? "",
+      monthReturn: candidate.monthReturn ?? "—",
+      benchmark: candidate.benchmark ?? "",
+      hero: {
+        ticker: candidate.hero.ticker,
+        name: candidate.hero.name ?? "",
+        title: candidate.hero.title ?? "",
+        body: candidate.hero.body ?? "",
+        entry: candidate.hero.entry ?? "—",
+        mark: candidate.hero.mark ?? "—",
+        pnl: candidate.hero.pnl ?? "—",
+      },
+      whyItWorked: candidate.whyItWorked ?? [],
+      lessonForNext: candidate.lessonForNext ?? [],
+      pullquote: candidate.pullquote ?? "",
+    };
   }
 
   // Backend flat snake_case payload — map onto BragCardData.
@@ -138,11 +130,11 @@ function normalizeBragCardData(
     "return_pct" in flat ||
     "month_label" in flat ||
     "month_label_long" in flat;
-  if (!hasAnyBackendField) return DEFAULT;
+  if (!hasAnyBackendField) return null;
 
-  const monthLabel = flat.month_label_long || flat.month_label || DEFAULT.monthLabel;
+  const monthLabel = flat.month_label_long || flat.month_label || "";
   const monthStart = (flat.month_start || "").slice(0, 7);
-  const reportTag = monthStart ? `BC-${monthStart}` : DEFAULT.reportTag;
+  const reportTag = monthStart ? `BC-${monthStart}` : "";
 
   const bestRet = flat.best_return_pct;
   const bestDecisionPct = bestRet == null ? "—" : fmtPct(bestRet);
@@ -177,9 +169,10 @@ function normalizeBragCardData(
       mark: "—",
       pnl: bestDecisionPct,
     },
-    whyItWorked: DEFAULT.whyItWorked,
-    lessonForNext: DEFAULT.lessonForNext,
-    pullquote: DEFAULT.pullquote,
+    // No fabricated narrative — the numeric backend payload carries none.
+    whyItWorked: [],
+    lessonForNext: [],
+    pullquote: "",
   };
 }
 
@@ -225,17 +218,15 @@ export function BragCard({
   data?: BragCardData | BackendBragPayload;
 }) {
   const data = normalizeBragCardData(rawData ?? null);
-  // Sample mode = normalizer fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+  // No fabricated fixture — render the honest empty state when there is no
+  // real artifact data instead of a fabricated sample.
+  if (!data) {
+    return <EmptyState type="brag_card" reason="no_trades" />;
+  }
   return (
     <>
     <PdfPage>
       <PdfHeader tier="free" title="BRAG CARD" meta={`${data.monthLabel} · ${data.reportTag} · 01/02`} />
-
-      {/* SAMPLE banner — never let the static PLTR (Palantir) mockup be
-          mistaken for the user's own holdings. Only renders in sample mode
-          (DEFAULT fixture); hidden for real member reports. */}
-      {isSample && <SampleDataBadge />}
 
       <PdfEyebrow>Brag Card · Monthly</PdfEyebrow>
       <PdfCoverTitle size={42}>
@@ -390,36 +381,40 @@ export function BragCard({
         </PdfCard>
       </div>
 
-      <div style={{ marginTop: 18 }}>
-        <PdfTwoCol>
-          <div>
-            <PdfColTitle>Why It Worked · 운이 아닌 이유</PdfColTitle>
-            <PdfCheckList
-              items={data.whyItWorked.map((i) => ({
-                checked: true,
-                body: renderInline(i.body),
-                meta: i.meta,
-              }))}
-            />
-          </div>
-          <div>
-            <PdfColTitle>Lesson for Next Month · 다음 달까지 유지</PdfColTitle>
-            <PdfCheckList
-              items={data.lessonForNext.map((i) => ({
-                checked: false,
-                body: renderInline(i.body),
-                meta: i.meta,
-              }))}
-            />
-          </div>
-        </PdfTwoCol>
-      </div>
+      {(data.whyItWorked.length > 0 || data.lessonForNext.length > 0) && (
+        <div style={{ marginTop: 18 }}>
+          <PdfTwoCol>
+            <div>
+              <PdfColTitle>Why It Worked · 운이 아닌 이유</PdfColTitle>
+              <PdfCheckList
+                items={data.whyItWorked.map((i) => ({
+                  checked: true,
+                  body: renderInline(i.body),
+                  meta: i.meta,
+                }))}
+              />
+            </div>
+            <div>
+              <PdfColTitle>Lesson for Next Month · 다음 달까지 유지</PdfColTitle>
+              <PdfCheckList
+                items={data.lessonForNext.map((i) => ({
+                  checked: false,
+                  body: renderInline(i.body),
+                  meta: i.meta,
+                }))}
+              />
+            </div>
+          </PdfTwoCol>
+        </div>
+      )}
 
-      <div style={{ marginTop: 18 }}>
-        <PdfPullquote>
-          <span>{renderPullquote(data.pullquote)}</span>
-        </PdfPullquote>
-      </div>
+      {data.pullquote ? (
+        <div style={{ marginTop: 18 }}>
+          <PdfPullquote>
+            <span>{renderPullquote(data.pullquote)}</span>
+          </PdfPullquote>
+        </div>
+      ) : null}
 
       <PdfPageFooter
         left="For information only · pivoxquant.com"

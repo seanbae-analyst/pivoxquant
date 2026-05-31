@@ -34,7 +34,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
-import { SampleDataBadge } from "../sample-data-badge";
+import { EmptyState } from "../empty-state";
 
 export interface QuarterlySelfReportData {
   quarter: string; // "Q1 2026 · QSR-2026-04"
@@ -70,64 +70,6 @@ export interface QuarterlySelfReportData {
   promise: string;
 }
 
-const DEFAULT: QuarterlySelfReportData = {
-  quarter: "Q1 2026 · QSR-2026-04",
-  intro:
-    "A quarterly cut that separates luck from skill — and asks whether next quarter can repeat it.",
-  kpis: {
-    quarterReturn: { value: "+5.8%", bench: "vs S&P +3.2%" },
-    alpha: { value: "+2.6%", sharpe: "Sharpe 0.94" },
-    hitRate: { value: "62%", target: "target ≥ 55%" },
-    process: { value: "7.2 / 10", prev: "prev 6.8" },
-  },
-  decisions: [
-    { ticker: "PLTR", name: "Palantir Technologies", action: "비중 +3.5%p", date: "9/18", thesis: "✓ 9/12 메모", outcome: "+35.0%", outcomeTone: "pos", process: "A", verdict: "SKILL", verdictTone: "pos" },
-    { ticker: "NVDA", name: "NVIDIA", action: "일부 익절", date: "8/04", thesis: "✓ 한도 초과", outcome: "−8.4% (기회)", outcomeTone: "neg", process: "A", verdict: "DISCIPLINE", verdictTone: "warn" },
-    { ticker: "TSLA", name: "Tesla", action: "단기 모멘텀 매수", date: "7/22", thesis: "✗ 사전 기록 없음", outcome: "+9.2%", outcomeTone: "pos", process: "D", verdict: "LUCK", verdictTone: "neg" },
-    { ticker: "META", name: "Meta Platforms", action: "비중 −2%p", date: "8/19", thesis: "△ 부분", outcome: "−4.1%", outcomeTone: "neg", process: "B", verdict: "PROCESS+", verdictTone: "warn" },
-    { ticker: "SMH", name: "VanEck Semiconductor ETF", action: "신규 진입", date: "9/30", thesis: "✓ DD 체크리스트", outcome: "+6.8%", outcomeTone: "pos", process: "A", verdict: "SKILL", verdictTone: "pos" },
-  ],
-  totalsRow: {
-    decisionsCount: "Q3 총 18개 의사결정",
-    thesisCount: "사전 기록 11/18 · 61%",
-    pnl: "+5.8%",
-    avgGrade: "평균 B+",
-    breakdown: "SKILL 7 · LUCK 4 · 기타 7",
-  },
-  attribution: [
-    { name: "Stock Selection", pct: 78, pctDisplay: "+1.94%p", tone: "pos" },
-    { name: "Sector Tilt", pct: 42, pctDisplay: "+0.62%p", tone: "pos" },
-    { name: "Timing", pct: 18, pctDisplay: "−0.18%p", tone: "neg", flat: true },
-    { name: "Cash Drag", pct: 8, pctDisplay: "−0.12%p", tone: "neg", flat: true },
-    { name: "FX", pct: 14, pctDisplay: "+0.34%p", tone: "neutral", flat: true },
-  ],
-  biasAudit: [
-    { name: "Confirmation", question: "반대 의견 적극 탐색했는가", score: "7/9", checked: true },
-    { name: "Anchoring", question: "진입가에 매여 있지 않았는가", score: "6/9", checked: true },
-    { name: "Recency", question: "최근 사건에 과반응하지 않았는가", score: "4/9", checked: false },
-    { name: "Loss Aversion", question: "손절 룰 지켰는가", score: "8/9", checked: true },
-    { name: "Overconfidence", question: "베이스 시나리오 확률 보정", score: "5/9", checked: false },
-  ],
-  mistakes: [
-    {
-      num: "01",
-      tag: "Recency Bias",
-      body: "단기 모멘텀 추종 매수, 가설 메모 없음. 결과 +9.2%지만 운에 가까움. 7월 단일 종목 매수는 순전히 단기 모멘텀 추종. 기록 없음, 가설 없음.",
-    },
-    {
-      num: "02",
-      tag: "Anchoring",
-      body: "평단 집착으로 청산 시점 +2주 지연. 기회비용 −4.1%.",
-    },
-    {
-      num: "03",
-      tag: "Position Size",
-      body: "신규 진입 평균 사이즈 1.8%로 다소 보수적. 다음 분기 2.5%로 확대 검토.",
-    },
-  ],
-  promise:
-    "다음 분기 단 하나의 약속 — 모든 신규 진입 전 가설 메모 작성, 예외 없음.",
-};
 
 const TONE_STYLE: Record<"pos" | "neg" | "warn" | "neutral", string | undefined> = {
   pos: "var(--r-pos)",
@@ -136,9 +78,12 @@ const TONE_STYLE: Record<"pos" | "neg" | "warn" | "neutral", string | undefined>
   neutral: undefined,
 };
 
-export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfReportData }) {
-  // Sample mode = template fell back to its DEFAULT fixture (no real data).
-  const isSample = data === DEFAULT;
+export function QuarterlySelfReport({ data }: { data?: QuarterlySelfReportData }) {
+  // No fabricated fixture -- render the honest empty state when there is no
+  // real artifact data instead of a fake sample.
+  if (!data) {
+    return <EmptyState type="quarterly_self_report" reason="insufficient_history" />;
+  }
   return (
     <>
       {/* ═══════ PAGE 1 ═══════ */}
@@ -150,8 +95,6 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
         />
         <PdfGoldRule />
 
-        {/* SAMPLE banner — sample mode only. */}
-        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Quarterly Self Report</PdfEyebrow>
         <PdfCoverTitle size={42}>
