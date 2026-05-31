@@ -53,12 +53,15 @@ Public API
 from __future__ import annotations
 
 import statistics
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Iterable
 
 from models import TradeHistory
 from services.name_resolver import kr_display_name
-from services.profile.fifo_util import MatchedPair, fifo_match_closed_trades
+from services.profile.fifo_util import (
+    MatchedPair,
+    fifo_match_closed_trades_with_pnl,
+)
 
 
 # ── tunables ─────────────────────────────────────────────────────────
@@ -78,93 +81,81 @@ _DEFAULT_MAX_EXAMPLES: int = 3
 
 def _classify_pairs(
     trades: list[TradeHistory],
-) -> tuple[list[MatchedPair], list[MatchedPair], int]:
+) -> tuple[
+    list[tuple[MatchedPair, float]],
+    list[tuple[MatchedPair, float]],
+    int,
+]:
     """Split closed FIFO pairs into (winners, losers, total_closed).
 
-    A pair is attributed to a winner/loser bucket by the ``pnl_pct`` of
-    the SELL row that closed it, matched on ``(ticker, sell_time)`` —
-    the exact attribution ``group_benchmark._user_mistakes`` uses so the
-    two never diverge.
+    Each bucket entry is ``(pair, pnl_pct)`` where ``pnl_pct`` is the
+    realised return of **the exact SELL row that closed that pair**,
+    attributed inside :func:`fifo_match_closed_trades_with_pnl`. This
+    avoids the old ``{(ticker, traded_at): pnl_pct}`` dict that *collided*
+    when two same-ticker SELLs landed on the same date-grain
+    ``traded_at`` — the last SELL's sign then overwrote the earlier one,
+    flipping a take-profit pair into the loss bucket (and vice-versa).
 
     Break-even pairs (``pnl_pct == 0``) are returned in neither bucket
-    but DO count toward ``total_closed``. Pairs whose SELL row cannot be
-    resolved (missing ``traded_at``/``ticker``) are skipped from the
-    win/loss split via the guard below.
+    but DO count toward ``total_closed``.
     """
-    pairs = fifo_match_closed_trades(trades)
-    total_closed = len(pairs)
+    attributed = fifo_match_closed_trades_with_pnl(trades)
+    total_closed = len(attributed)
 
-    # Map each SELL (ticker, traded_at) → its stored pnl_pct so we can
-    # attribute every matched pair to the right sign bucket.
-    pnl_by_sell: dict[tuple[str, datetime], float] = {}
-    for sell in trades:
-        if (sell.action or "").upper() != "SELL":
-            continue
-        if not sell.traded_at or not sell.ticker:
-            continue
-        try:
-            pnl_by_sell[(sell.ticker.upper(), sell.traded_at)] = float(
-                sell.pnl_pct or 0.0
-            )
-        except (TypeError, ValueError):
-            pnl_by_sell[(sell.ticker.upper(), sell.traded_at)] = 0.0
-
-    winners: list[MatchedPair] = []
-    losers: list[MatchedPair] = []
-    for pair in pairs:
-        pct = pnl_by_sell.get((pair.ticker, pair.sell_time))
-        if pct is None:
-            # SELL row not resolvable — skip from the classified split
-            # but it still counted in ``total_closed`` above.
-            continue
+    winners: list[tuple[MatchedPair, float]] = []
+    losers: list[tuple[MatchedPair, float]] = []
+    for pair, pct in attributed:
         if pct > 0:
-            winners.append(pair)
+            winners.append((pair, pct))
         elif pct < 0:
-            losers.append(pair)
+            losers.append((pair, pct))
         # pct == 0 → break-even, excluded from both buckets on purpose.
     return winners, losers, total_closed
 
 
 def _example_from_pair(
     pair: MatchedPair,
-    trades_by_sell: dict[tuple[str, datetime], TradeHistory],
+    pnl_pct: float,
+    names_by_ticker: dict[str, str],
 ) -> dict:
     """Build a single example dict for one extreme round trip.
+
+    ``pnl_pct`` is the realised return of the **exact SELL** that closed
+    this pair (already attributed in :func:`_classify_pairs`), so an
+    example never shows the wrong sign even when two same-ticker SELLs
+    share a ``traded_at``.
 
     ``display_name`` follows feedback_ticker_display.md priority:
     the stored ``trade.name`` first, then KR hangul resolution, then the
     raw ticker as a last resort — never a naked ``.KS`` code when a name
-    is resolvable.
+    is resolvable. Name is resolved per-ticker (collision-free: every
+    SELL of one ticker carries the same name).
     """
-    sell = trades_by_sell.get((pair.ticker, pair.sell_time))
-    stored_name = (getattr(sell, "name", None) or "").strip() if sell else ""
+    stored_name = names_by_ticker.get(pair.ticker, "")
     display_name = stored_name or kr_display_name(pair.ticker) or pair.ticker
-
-    try:
-        pnl_pct = round(float(sell.pnl_pct or 0.0), 2) if sell else None
-    except (TypeError, ValueError):
-        pnl_pct = None
 
     return {
         "display_name": display_name,
         "ticker": pair.ticker,
-        "pnl_pct": pnl_pct,
+        "pnl_pct": round(float(pnl_pct), 2),
         "hold_days": round(float(pair.hold_days), 1),
         "sell_at": pair.sell_time.isoformat() if pair.sell_time else None,
     }
 
 
 def _side_summary(
-    pairs: list[MatchedPair],
+    pairs: list[tuple[MatchedPair, float]],
     *,
     longest_first: bool,
     max_examples: int,
-    trades_by_sell: dict[tuple[str, datetime], TradeHistory],
+    names_by_ticker: dict[str, str],
 ) -> dict | None:
     """Summarise one side (winners or losers).
 
-    Returns ``None`` when the side has zero pairs (the caller uses that
-    to set ``one_sided`` and null out the empty side). Otherwise returns
+    ``pairs`` is a list of ``(pair, pnl_pct)`` tuples already attributed
+    to the closing SELL. Returns ``None`` when the side has zero pairs
+    (the caller uses that to set ``one_sided`` and null out the empty
+    side). Otherwise returns
     ``{count, median_hold_days, mean_hold_days, examples}``.
 
     ``longest_first=True`` (losers) surfaces the trips held *longest*;
@@ -173,14 +164,16 @@ def _side_summary(
     if not pairs:
         return None
 
-    holds = [float(p.hold_days) for p in pairs]
+    holds = [float(p.hold_days) for p, _ in pairs]
     median_hold = round(statistics.median(holds), 1)
     mean_hold = round(statistics.fmean(holds), 1)
 
-    ordered = sorted(pairs, key=lambda p: p.hold_days, reverse=longest_first)
+    ordered = sorted(
+        pairs, key=lambda pp: pp[0].hold_days, reverse=longest_first
+    )
     examples = [
-        _example_from_pair(p, trades_by_sell)
-        for p in ordered[: max(0, max_examples)]
+        _example_from_pair(p, pct, names_by_ticker)
+        for p, pct in ordered[: max(0, max_examples)]
     ]
 
     return {
@@ -252,24 +245,27 @@ def compute_holding_mirror(
             "losers": None,
         }
 
-    # Index SELL rows so example builders can pull stored name + pnl_pct
-    # without re-scanning the trade list per pair.
-    trades_by_sell: dict[tuple[str, datetime], TradeHistory] = {}
+    # Index stored display names per ticker for the example builder.
+    # Name is a per-ticker property, so a plain ticker→name map is
+    # collision-free (unlike the old (ticker, traded_at) pnl_pct dict).
+    names_by_ticker: dict[str, str] = {}
     for t in materialised:
-        if (t.action or "").upper() == "SELL" and t.traded_at and t.ticker:
-            trades_by_sell[(t.ticker.upper(), t.traded_at)] = t
+        if (t.action or "").upper() == "SELL" and t.ticker:
+            name = (getattr(t, "name", None) or "").strip()
+            if name:
+                names_by_ticker.setdefault(t.ticker.upper(), name)
 
     winners_summary = _side_summary(
         winners,
         longest_first=False,  # winners: surface the quickest sells
         max_examples=max_examples,
-        trades_by_sell=trades_by_sell,
+        names_by_ticker=names_by_ticker,
     )
     losers_summary = _side_summary(
         losers,
         longest_first=True,  # losers: surface the longest holds
         max_examples=max_examples,
-        trades_by_sell=trades_by_sell,
+        names_by_ticker=names_by_ticker,
     )
 
     one_sided = (winners_summary is None) or (losers_summary is None)

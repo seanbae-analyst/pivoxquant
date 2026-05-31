@@ -161,6 +161,88 @@ def fifo_match_closed_trades(
     return pairs
 
 
+def fifo_match_closed_trades_with_pnl(
+    trades: Iterable[TradeHistory],
+) -> list[tuple[MatchedPair, float]]:
+    """Like :func:`fifo_match_closed_trades`, but attribute each matched
+    pair to **the exact SELL row that closed it**, returning
+    ``(pair, sell_pnl_pct)`` tuples.
+
+    Why this exists
+    ---------------
+    Callers that split pairs into win/loss buckets used to re-derive the
+    SELL's ``pnl_pct`` by looking it up in a
+    ``{(ticker, traded_at): pnl_pct}`` dict keyed on the pair's
+    ``sell_time``. That mapping **collides** when a user closes the same
+    ticker with two or more SELLs on the same ``traded_at`` (date-grain
+    parsing makes intraday SELLs share a timestamp): the last SELL's
+    ``pnl_pct`` overwrites the earlier one, so every pair on that key —
+    including pairs closed by an *earlier, oppositely-signed* SELL — gets
+    bucketed by the wrong sign (a +30% take-profit shown as a loss, and
+    vice-versa).
+
+    Attributing the pnl_pct **inside** the matcher, where the SELL row's
+    identity is unambiguous, removes the collision entirely: each pair
+    carries the pnl_pct of precisely the SELL that produced it, even when
+    several same-key SELLs interleave. A single SELL that closes multiple
+    BUYs yields multiple pairs that all share that SELL's pnl_pct — the
+    intended grouping.
+
+    The order/contract is identical to :func:`fifo_match_closed_trades`
+    (chronological SELL order, open positions excluded); only the per-pair
+    pnl_pct attribution is added. ``pnl_pct`` defaults to ``0.0`` when the
+    SELL row's stored value is missing or unparseable.
+    """
+    ordered = sorted(
+        (t for t in trades if t.traded_at and t.ticker),
+        key=lambda t: t.traded_at,
+    )
+
+    opens: dict[str, list[tuple[datetime, float, float]]] = {}
+    attributed: list[tuple[MatchedPair, float]] = []
+
+    for t in ordered:
+        action = (t.action or "").upper()
+        key = t.ticker.upper()
+        shares = float(t.shares or 0.0)
+        if shares <= 0:
+            continue
+        price = float(t.price_per_share or 0.0)
+        if action == "BUY":
+            opens.setdefault(key, []).append((t.traded_at, shares, price))
+            continue
+        if action != "SELL":
+            continue
+        try:
+            sell_pnl_pct = float(t.pnl_pct or 0.0)
+        except (TypeError, ValueError):
+            sell_pnl_pct = 0.0
+        remaining = shares
+        sell_pnl = float(t.pnl or 0.0)
+        queue = opens.get(key, [])
+        while remaining > _SHARE_EPSILON and queue:
+            buy_time, buy_sh, buy_px = queue[0]
+            take = min(buy_sh, remaining)
+            attributed.append((
+                MatchedPair(
+                    ticker=key,
+                    quantity=take,
+                    buy_time=buy_time,
+                    sell_time=t.traded_at,
+                    buy_price=buy_px,
+                    sell_price=price,
+                    sell_pnl=sell_pnl,
+                ),
+                sell_pnl_pct,
+            ))
+            remaining -= take
+            if take >= buy_sh - _SHARE_EPSILON:
+                queue.pop(0)
+            else:
+                queue[0] = (buy_time, buy_sh - take, buy_px)
+    return attributed
+
+
 def fifo_open_position_ages(
     trades: Iterable[TradeHistory],
     *,
@@ -235,5 +317,6 @@ def fifo_open_position_ages(
 __all__ = [
     "MatchedPair",
     "fifo_match_closed_trades",
+    "fifo_match_closed_trades_with_pnl",
     "fifo_open_position_ages",
 ]

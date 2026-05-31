@@ -64,11 +64,14 @@ Public API
 from __future__ import annotations
 
 import statistics
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Iterable
 
 from models import TradeHistory
-from services.profile.fifo_util import MatchedPair, fifo_match_closed_trades
+from services.profile.fifo_util import (
+    MatchedPair,
+    fifo_match_closed_trades_with_pnl,
+)
 
 
 # ── tunables ─────────────────────────────────────────────────────────
@@ -91,40 +94,25 @@ def _classify_pairs(
 
     Each returned entry is ``(pair, pnl_pct)`` so the caller can compute
     both the hold-day and the return statistics without re-scanning. A
-    pair is attributed by the ``pnl_pct`` of the SELL row that closed it,
-    matched on ``(ticker, sell_time)`` — the identical attribution the
-    holding mirror uses, so the two never diverge.
+    pair is attributed to the ``pnl_pct`` of **the exact SELL row that
+    closed it**, computed inside
+    :func:`fifo_match_closed_trades_with_pnl`. This replaces the old
+    ``{(ticker, traded_at): pnl_pct}`` dict that *collided* when a user
+    closed the same ticker with two SELLs on the same date-grain
+    ``traded_at`` — the last SELL's sign then overwrote the earlier one
+    and flipped a take-profit pair into the stop-loss bucket (and
+    vice-versa). The holding mirror uses the identical helper, so the two
+    never diverge.
 
     Break-even pairs (``pnl_pct == 0``) land in neither bucket but DO
-    count toward ``total_closed``. Pairs whose SELL row cannot be resolved
-    are skipped from the win/loss split (still counted in ``total_closed``).
+    count toward ``total_closed``.
     """
-    pairs = fifo_match_closed_trades(trades)
-    total_closed = len(pairs)
-
-    # Map each SELL (ticker, traded_at) → its stored pnl_pct so we can
-    # attribute every matched pair to the right sign bucket.
-    pnl_by_sell: dict[tuple[str, datetime], float] = {}
-    for sell in trades:
-        if (sell.action or "").upper() != "SELL":
-            continue
-        if not sell.traded_at or not sell.ticker:
-            continue
-        try:
-            pnl_by_sell[(sell.ticker.upper(), sell.traded_at)] = float(
-                sell.pnl_pct or 0.0
-            )
-        except (TypeError, ValueError):
-            pnl_by_sell[(sell.ticker.upper(), sell.traded_at)] = 0.0
+    attributed = fifo_match_closed_trades_with_pnl(trades)
+    total_closed = len(attributed)
 
     take_profit: list[tuple[MatchedPair, float]] = []
     stop_loss: list[tuple[MatchedPair, float]] = []
-    for pair in pairs:
-        pct = pnl_by_sell.get((pair.ticker, pair.sell_time))
-        if pct is None:
-            # SELL row not resolvable — skip from the classified split
-            # but it still counted in ``total_closed`` above.
-            continue
+    for pair, pct in attributed:
         if pct > 0:
             take_profit.append((pair, pct))
         elif pct < 0:

@@ -457,3 +457,87 @@ class TestApi:
         resp = client.get("/api/behavior/holding-mirror?period=30d")
         assert resp.status_code == 200
         assert resp.get_json()["period"] == "30d"
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Regression — same-day multiple SELLs on one ticker must not collide
+#
+# Bug (2026-05-31): pnl_pct was looked up via a plain
+# {(ticker, traded_at): pnl_pct} dict. When two SELLs of the same ticker
+# closed on the same date-grain traded_at, the LAST SELL's pnl_pct
+# overwrote the earlier one, so a +30% take-profit pair was bucketed as a
+# loss (sign reversal). Fixed by attributing pnl_pct per-pair inside
+# fifo_match_closed_trades_with_pnl.
+# ═════════════════════════════════════════════════════════════════════
+
+class TestSameDaySellNoCollision:
+    """Two same-ticker SELLs on identical traded_at → correct buckets."""
+
+    @staticmethod
+    def _scenario() -> list[TradeHistory]:
+        """5 winner round trips (+8%) + AAPL: 2 BUYs each closed by a
+        same-day SELL — one +30% (win), one -30% (loss).
+
+        Expected classification: winners=5, losers=1.
+        """
+        trades: list[TradeHistory] = []
+        # W0..W4 — five clean +8% winners, distinct days
+        for i in range(5):
+            trades += _round_trip(
+                ticker=f"W{i}", pnl_pct=8.0, hold_days=3.0,
+                sell_days_ago=10.0 + i, name=f"위너{i}",
+            )
+
+        # AAPL: two BUYs on distinct earlier days, two SELLs that BOTH
+        # land on the SAME date-grain traded_at (midnight) — the
+        # collision trigger. FIFO closes BUY#1 with SELL#1 (+30%) and
+        # BUY#2 with SELL#2 (-30%).
+        # Hold AAPL only ~1-2 days so its +30% winner ranks among the
+        # top-3 *shortest* winner examples (the W winners are held 3d),
+        # exercising the example builder's sign attribution too.
+        base = datetime(2026, 5, 20, 0, 0, 0)  # date-grain midnight
+        buy1 = datetime(2026, 5, 19, 0, 0, 0)   # held 1 day
+        buy2 = datetime(2026, 5, 18, 0, 0, 0)   # held 2 days
+        trades += [
+            _trade(ticker="AAPL", action="BUY", traded_at=buy1,
+                   shares=10.0, price_per_share=100.0, name="애플"),
+            _trade(ticker="AAPL", action="BUY", traded_at=buy2,
+                   shares=10.0, price_per_share=100.0, name="애플"),
+            # SELL#1 closes BUY#1 at +30% (win)
+            _trade(ticker="AAPL", action="SELL", traded_at=base,
+                   shares=10.0, price_per_share=130.0, pnl_pct=30.0,
+                   name="애플"),
+            # SELL#2 closes BUY#2 at -30% (loss), SAME traded_at as SELL#1
+            _trade(ticker="AAPL", action="SELL", traded_at=base,
+                   shares=10.0, price_per_share=70.0, pnl_pct=-30.0,
+                   name="애플"),
+        ]
+        return trades
+
+    def test_buckets_not_sign_reversed(self):
+        result = compute_holding_mirror(
+            self._scenario(), period_days=None, min_pairs=5,
+        )
+        assert result["sufficient_data"] is True
+        # 6 classified pairs: 5 winners (+8%) + AAPL +30% = 6 wins,
+        # AAPL -30% = 1 loss. Pre-fix this came out 4/2 (sign reversal).
+        assert result["winners"]["count"] == 6, result["winners"]
+        assert result["losers"]["count"] == 1, result["losers"]
+        assert result["total_closed_pairs"] == 7
+        _assert_no_scoring(result)
+
+    def test_example_preserves_take_profit_sign(self):
+        """The AAPL +30% take-profit must appear as a WINNER example with
+        a positive pnl_pct — never surfaced as a -30% loss example."""
+        result = compute_holding_mirror(
+            self._scenario(), period_days=None, min_pairs=5,
+        )
+        winner_examples = result["winners"]["examples"]
+        aapl_wins = [e for e in winner_examples if e["ticker"] == "AAPL"]
+        assert aapl_wins, "AAPL take-profit missing from winner examples"
+        assert all(e["pnl_pct"] == 30.0 for e in aapl_wins), aapl_wins
+
+        loser_examples = result["losers"]["examples"]
+        aapl_losses = [e for e in loser_examples if e["ticker"] == "AAPL"]
+        # The loss side must hold ONLY the -30% AAPL pair, never the +30%.
+        assert all(e["pnl_pct"] == -30.0 for e in aapl_losses), aapl_losses

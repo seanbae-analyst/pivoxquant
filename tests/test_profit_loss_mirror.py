@@ -376,3 +376,64 @@ class TestApi:
         resp = client.get("/api/behavior/profit-loss-mirror?period=30d")
         assert resp.status_code == 200
         assert resp.get_json()["period"] == "30d"
+
+
+# ═════════════════════════════════════════════════════════════════════
+# Regression — same-day multiple SELLs on one ticker must not collide
+#
+# Bug (2026-05-31): pnl_pct was looked up via a plain
+# {(ticker, traded_at): pnl_pct} dict. Two SELLs of the same ticker on
+# the same date-grain traded_at collided — the last SELL's pnl_pct
+# overwrote the earlier one, flipping a +30% take-profit into the
+# stop-loss bucket. Fixed via fifo_match_closed_trades_with_pnl.
+# ═════════════════════════════════════════════════════════════════════
+
+class TestSameDaySellNoCollision:
+    """Two same-ticker SELLs on identical traded_at → correct buckets."""
+
+    @staticmethod
+    def _scenario() -> list[TradeHistory]:
+        """5 take-profit round trips (+8%) + AAPL: 2 BUYs each closed by a
+        same-day SELL — one +30% (tp), one -30% (sl).
+
+        Expected: take_profit=6, stop_loss=1.
+        """
+        trades: list[TradeHistory] = []
+        for i in range(5):
+            trades += _round_trip(
+                ticker=f"W{i}", pnl_pct=8.0, hold_days=3.0,
+                sell_days_ago=10.0 + i, name=f"위너{i}",
+            )
+
+        base = datetime(2026, 5, 20, 0, 0, 0)  # date-grain midnight
+        buy1 = datetime(2026, 5, 1, 0, 0, 0)
+        buy2 = datetime(2026, 5, 5, 0, 0, 0)
+        trades += [
+            _trade(ticker="AAPL", action="BUY", traded_at=buy1,
+                   shares=10.0, price_per_share=100.0, name="애플"),
+            _trade(ticker="AAPL", action="BUY", traded_at=buy2,
+                   shares=10.0, price_per_share=100.0, name="애플"),
+            _trade(ticker="AAPL", action="SELL", traded_at=base,
+                   shares=10.0, price_per_share=130.0, pnl_pct=30.0,
+                   name="애플"),
+            _trade(ticker="AAPL", action="SELL", traded_at=base,
+                   shares=10.0, price_per_share=70.0, pnl_pct=-30.0,
+                   name="애플"),
+        ]
+        return trades
+
+    def test_buckets_not_sign_reversed(self):
+        result = compute_profit_loss_mirror(
+            self._scenario(), period_days=None, min_pairs=5,
+        )
+        assert result["sufficient_data"] is True
+        # 5 (+8%) + AAPL +30% = 6 take-profit, AAPL -30% = 1 stop-loss.
+        # Pre-fix this came out 4/2 (sign reversal).
+        assert result["take_profit"]["count"] == 6, result["take_profit"]
+        assert result["stop_loss"]["count"] == 1, result["stop_loss"]
+        assert result["total_closed_pairs"] == 7
+        # The single -30% loss must keep its negative sign on its own side.
+        assert result["stop_loss"]["median_loss_pct"] == -30.0
+        # +30% take-profit must not contaminate the loss median.
+        assert result["take_profit"]["median_gain_pct"] > 0
+        _assert_no_scoring(result)
