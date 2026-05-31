@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * PersonasPreview — 4-of-8 persona cards on the slim landing.
+ * PersonasPreview — selected persona cards on the slim landing.
  * ----------------------------------------------------------------
- * The full 8-persona showcase lives at /features/personas. This preview
+ * The full persona showcase lives at /features/personas. This preview
  * surfaces only Growth / Value / Balanced / Beginner — the four the
  * onboarding quiz resolves to most often in the first cohort — and ends
- * with "View all 8 CFO Personas →".
+ * with "View all CFO Personas →".
  *
  * Palette-safe (Vantablack + Ivory + Bronze). 1-col mobile / 2-col tablet
  * / 4-col desktop. 21st.dev polish: gradient bronze border on hover,
@@ -173,7 +173,7 @@ export default function PersonasPreview() {
                     letterSpacing: "0.22em",
                   }}
                 >
-                  {String(i + 1).padStart(2, "0")} / 08
+                  {String(i + 1).padStart(2, "0")}
                 </span>
                 <span
                   className="font-serif italic"

@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * PersonaShowcase — 8 investor personas (Identity Layer).
+ * PersonaShowcase — investor personas (Identity Layer).
  * -----------------------------------------------------------------------
- * Grid of 8 cards. Each: persona name (EN + KR), one-line identity,
+ * Grid of persona cards. Each: persona name (EN + KR), one-line identity,
  * sample report CTA. Palette-safe (Vantablack + Ivory + Bronze).
  * Mobile: 1 col. Tablet: 2 col. Desktop: 4 col.
  */
@@ -63,22 +63,6 @@ const PERSONAS: readonly Persona[] = [
     hue: "ivory",
   },
   {
-    key: "speculator",
-    en: "Speculator",
-    kr: "투기형",
-    identity: "High conviction. Concentrated bets.",
-    ko: "크게 걸고 크게 간다.",
-    hue: "bronze",
-  },
-  {
-    key: "daytrader",
-    en: "Daytrader",
-    kr: "단타형",
-    identity: "Intraday. Tape-reader.",
-    ko: "하루 안에 매듭.",
-    hue: "ivory",
-  },
-  {
     key: "beginner",
     en: "Beginner CFO",
     kr: "입문 CFO",
@@ -114,7 +98,7 @@ export function PersonaShowcase() {
             className="font-serif text-pq-mono-sm uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
-            Eight Investor Personas
+            Investor Personas
           </span>
         </motion.div>
 
@@ -148,7 +132,7 @@ export function PersonaShowcase() {
             color: "rgba(245, 240, 232, 0.65)",
           }}
         >
-          온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류합니다.
+          온보딩 20문항이 당신을 투자자 유형 중 하나로 분류합니다.
           Drift가 감지되면 페르소나는 자동으로 재조정됩니다.
         </motion.p>
 

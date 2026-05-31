@@ -230,7 +230,7 @@
       "eyebrow": "PivoxQuant · Living CFO",
       "h1Part1": "당신의 CFO가",
       "h1Italic": "당신을 배웁니다.",
-      "description": "매일 아침 두 번. 진입 전 일곱 관문. 일요일마다 한 페이지. 온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류하면, 모든 artifact가 그 페르소나의 어휘로 다시 쓰입니다. 관측 자료이며 매수·매도 권유가 아닙니다.",
+      "description": "매일 아침 두 번. 진입 전 일곱 관문. 일요일마다 한 페이지. 온보딩 20문항이 당신을 투자자 유형 중 하나로 분류하면, 모든 artifact가 그 페르소나의 어휘로 다시 쓰입니다. 관측 자료이며 매수·매도 권유가 아닙니다.",
       "ctaPrimary": "CFO 만나기",
       "ctaSecondary": "샘플 보기",
       "disclaimer": "투자 권유 아님. 정보 제공 전용 리서치. 과거 실적은 미래 수익을 보장하지 않습니다."
@@ -240,12 +240,12 @@
       "scrollHint": "스크롤 또는 Space"
     },
     "personas": {
-      "eyebrow": "8가지 투자자 유형 · 4가지 표시",
+      "eyebrow": "투자자 유형 · 일부 표시",
       "heading": "당신의 투자자 언어로\n말하는 CFO.",
-      "description": "온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류합니다. Drift가 감지되면 페르소나는 자동으로 재조정됩니다.",
+      "description": "온보딩 20문항이 당신을 투자자 유형 중 하나로 분류합니다. Drift가 감지되면 페르소나는 자동으로 재조정됩니다.",
       "sampleReport": "샘플 리포트",
-      "alsoAvailable": "Income, Quant, Speculator, Daytrader도 있습니다. 데스크는 당신이 선택한 페르소나에 맞게 모든 artifact를 재구성합니다.",
-      "viewAll": "8가지 CFO 유형 전체 보기"
+      "alsoAvailable": "Income, Quant 유형도 포함됩니다. 데스크는 당신이 선택한 유형에 맞게 모든 artifact를 재구성합니다.",
+      "viewAll": "CFO 유형 전체 보기"
     },
     "topNav": {
       "brandTagline": "· Living CFO",
@@ -261,7 +261,7 @@
         },
         "personas": {
           "label": "Personas",
-          "footnote": "8가지 투자자 유형. 하나의 데스크가 모두를 지원합니다."
+          "footnote": "투자자 유형. 하나의 데스크가 모두를 지원합니다."
         },
         "signature": {
           "label": "Signature",

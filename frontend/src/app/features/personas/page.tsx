@@ -7,9 +7,9 @@ import { PersonaShowcase } from "@/components/landing/persona-showcase";
 export default function PersonasPage() {
   return (
     <FeaturePageShell
-      eyebrow="Identity Layer · Eight Personas"
+      eyebrow="Identity Layer · Investor Personas"
       title="A desk that speaks your investor language."
-      deck="Twenty onboarding questions resolve you into one of eight personas. Every artifact — from the Weekly Memo to the Year-End Letter — is re-voiced around the persona you tested into. When you drift, the desk proposes a reclassification; you accept or decline."
+      deck="Twenty onboarding questions resolve you into one of several personas. Every artifact — from the Weekly Memo to the Year-End Letter — is re-voiced around the persona you tested into. When you drift, the desk proposes a reclassification; you accept or decline."
       seeAlso={[
         {
           eyebrow: "Quiz",
@@ -20,7 +20,7 @@ export default function PersonasPage() {
         {
           eyebrow: "Research",
           title: "Sample Reports",
-          description: "Read a report rendered in each of the eight voices.",
+          description: "Read a report rendered in each persona voice.",
           href: "/features/reports",
         },
         {

@@ -89,7 +89,7 @@
       "eyebrow": "PivoxQuant · Living CFO",
       "h1Part1": "Your CFO",
       "h1Italic": "learns you.",
-      "description": "Twice each morning. Seven gates before entry. One page every Sunday. Twenty onboarding questions place you in one of eight investor archetypes — every artifact is then rewritten in that persona's vocabulary. Observational data only, not a directive to act.",
+      "description": "Twice each morning. Seven gates before entry. One page every Sunday. Twenty onboarding questions place you in one of several investor archetypes — every artifact is then rewritten in that persona's vocabulary. Observational data only, not a directive to act.",
       "ctaPrimary": "Meet your CFO",
       "ctaSecondary": "See a sample",
       "disclaimer": "Not investment advice. Informational research only. Past performance does not guarantee future results."
@@ -99,12 +99,12 @@
       "scrollHint": "Scroll or press Space"
     },
     "personas": {
-      "eyebrow": "Eight Investor Personas · Four shown",
+      "eyebrow": "Investor Personas · Selected shown",
       "heading": "A CFO that speaks\nyour investor language.",
-      "description": "Twenty onboarding questions classify you into one of eight investor archetypes. When drift is detected, the persona recalibrates automatically.",
+      "description": "Twenty onboarding questions classify you into one of several investor archetypes. When drift is detected, the persona recalibrates automatically.",
       "sampleReport": "Sample report",
-      "alsoAvailable": "Also available: Income, Quant, Speculator, Daytrader. The desk reshapes every artifact around the persona you test into.",
-      "viewAll": "View all 8 CFO Personas"
+      "alsoAvailable": "Also available: Income and more. The desk reshapes every artifact around the persona you test into.",
+      "viewAll": "View all CFO Personas"
     },
     "topNav": {
       "brandTagline": "· Living CFO",
@@ -120,7 +120,7 @@
         },
         "personas": {
           "label": "Personas",
-          "footnote": "Eight investor identities. One desk that speaks them all."
+          "footnote": "Investor identities. One desk that speaks them all."
         },
         "signature": {
           "label": "Signature",

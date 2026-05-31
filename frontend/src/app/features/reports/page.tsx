@@ -128,8 +128,8 @@ export default function ReportsPage() {
         },
         {
           eyebrow: "Identity",
-          title: "8 CFO Personas",
-          description: "Read the same artifact in each of eight voices.",
+          title: "CFO Personas",
+          description: "Read the same artifact in each persona voice.",
           href: "/features/personas",
         },
         {

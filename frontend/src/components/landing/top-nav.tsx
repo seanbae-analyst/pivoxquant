@@ -100,10 +100,10 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     key: "personas",
     label: "Personas",
-    footnote: "Eight investor identities. One desk that speaks them all.",
+    footnote: "Investor identities. One desk that speaks them all.",
     items: [
       {
-        label: "8 CFO Personas",
+        label: "CFO Personas",
         href: "/features/personas",
         description: "Growth, Value, Balanced, Income, Quant, and more.",
         icon: Users,

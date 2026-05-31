@@ -3,7 +3,7 @@
 /**
  * ThreeLayers — Living CFO 3-Layer stack visualization.
  * -----------------------------------------------------------------------
- * Layer 3: Artifact    (15 reports × 8 personas — PDF/email/voice)
+ * Layer 3: Artifact    (15 reports × personas — PDF/email/voice)
  * Layer 2: Learning    (Drift · Pulse · Feedback — rolling window)
  * Layer 1: Identity    (InvestmentProfile — onboarding 20Q)
  *
@@ -40,7 +40,7 @@ const LAYERS: readonly LayerDef[] = [
     title: "Artifact",
     korean: "산출물",
     blurb:
-      "15 research reports × 8 personas. Delivered as PDF, email, or voice brief.",
+      "15 research reports × personas. Delivered as PDF, email, or voice brief.",
     icon: Layers,
     offset: 0,
   },

@@ -35,7 +35,7 @@ import {
 export const metadata: Metadata = {
   title: "기능 · Features",
   description:
-    "PivoxQuant의 13개 기능 surface를 한눈에. 40-Model Engine, 8 CFO Personas, 7-Layer Risk Defense 등 리서치 데스크 전체 카탈로그.",
+    "PivoxQuant의 13개 기능 surface를 한눈에. 40-Model Engine, CFO Personas, 7-Layer Risk Defense 등 리서치 데스크 전체 카탈로그.",
   alternates: { canonical: "/features" },
 };
 
@@ -55,9 +55,9 @@ const FEATURE_CARDS: readonly FeatureCard[] = [
   {
     href: "/features/personas",
     eyebrow: "Identity",
-    title: "8 CFO Personas",
+    title: "CFO Personas",
     description:
-      "Growth, Value, Balanced, Income, Quant, and more — eight investor archetypes.",
+      "Growth, Value, Balanced, Income, Quant, and more — investor archetypes.",
     iconKey: "Users",
   },
   {
@@ -166,9 +166,9 @@ export default function FeaturesIndexPage() {
         },
         {
           eyebrow: "Identity",
-          title: "8 CFO Personas",
+          title: "CFO Personas",
           description:
-            "Eight investor identities. One desk that speaks them all.",
+            "Investor identities. One desk that speaks them all.",
           href: "/features/personas",
         },
         {

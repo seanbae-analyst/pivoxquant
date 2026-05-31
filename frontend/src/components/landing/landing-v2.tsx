@@ -619,7 +619,7 @@ function SiteFooter() {
             {
               title: "Personas",
               links: [
-                { label: "8 CFO Personas", href: "/features/personas" },
+                { label: "CFO Personas", href: "/features/personas" },
                 { label: "Sample Reports", href: "/features/reports" },
                 { label: "Dashboard Preview", href: "/features/dashboard" },
               ],
