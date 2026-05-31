@@ -1,3 +1,8 @@
+[STAGE-1 ONLY — 유료 플랜 부활 시. 무료 출시(Stage 0)에서는 발송되지 않음.
+ active_sequence() 가 PIVOX_PAID_PLANS_ENABLED=true 일 때만 포함. billing 코드
+ 보존 패턴과 동일하게 보존 — 삭제 금지. 이 줄은 렌더 전 _render 가 사용하는
+ placeholder 가 아니며 실제 메일에는 노출되지 않게 부활 시 제거할 것.]
+
 PivoxQuant — 플랜 안내
 
 {{ name }}님, 가입 7일차입니다.

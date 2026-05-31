@@ -47,6 +47,16 @@ def _disable_flag(monkeypatch):
     monkeypatch.setenv("PIVOX_ONBOARDING_SEQUENCE_ENABLED", "false")
 
 
+def _enable_paid_plans(monkeypatch):
+    # Stage-1 revival: brings d7_pro_nudge back into the active sequence.
+    monkeypatch.setenv("PIVOX_PAID_PLANS_ENABLED", "true")
+
+
+def _disable_paid_plans(monkeypatch):
+    # Stage-0 free launch (default): d7_pro_nudge excluded.
+    monkeypatch.setenv("PIVOX_PAID_PLANS_ENABLED", "false")
+
+
 def _row_count(app, user_id: int) -> int:
     from models import ScheduledEmail
     with app.app_context():
@@ -57,13 +67,64 @@ def _row_count(app, user_id: int) -> int:
 
 
 class TestScheduleOnboarding:
-    def test_flag_on_enqueues_three_rows(self, app, make_user, monkeypatch):
+    def test_stage0_enqueues_two_rows(self, app, make_user, monkeypatch):
+        # Free launch (Stage 0, default): welcome + d3_guide only — the
+        # d7_pro_nudge paid-plan step is excluded (PIVOX_PAID_PLANS_ENABLED
+        # off). This is the LIVE free-launch contract.
         _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)
         u = make_user(email="seq1@test.com")
 
         from extensions import db
         from models import User, ScheduledEmail
-        from services.email.onboarding_sequence import schedule_onboarding, SEQUENCE
+        from services.email.onboarding_sequence import (
+            schedule_onboarding, active_sequence,
+        )
+
+        with app.app_context():
+            user = db.session.get(User, u["id"])
+            now = datetime(2026, 5, 19, 12, 0, 0)
+            stats = schedule_onboarding(user, now=now)
+            db.session.commit()
+
+        assert stats == {"enqueued": 2, "existed": 0, "flag_off": 0}
+
+        with app.app_context():
+            rows = (
+                ScheduledEmail.query
+                .filter_by(user_id=u["id"])
+                .order_by(ScheduledEmail.scheduled_send_at.asc())
+                .all()
+            )
+            assert [r.email_type for r in rows] == ["welcome", "d3_guide"]
+            assert [r.email_type for r in rows] == [
+                s.slug for s in active_sequence()
+            ]
+            # d7_pro_nudge (paid-plan nudge) must NOT be queued at Stage 0.
+            assert "d7_pro_nudge" not in [r.email_type for r in rows]
+            assert [r.email_category for r in rows] == [
+                "transactional", "information",
+            ]
+            expected_offsets = [
+                timedelta(days=0),
+                timedelta(days=3),
+            ]
+            for row, off in zip(rows, expected_offsets):
+                assert row.scheduled_send_at == datetime(2026, 5, 19, 12, 0, 0) + off
+                assert row.sent_at is None
+                assert row.skipped_reason is None
+                assert row.idempotency_key == f"u{u['id']}:{row.email_type}"
+
+    def test_stage1_enqueues_three_rows(self, app, make_user, monkeypatch):
+        # Stage-1 revival (PIVOX_PAID_PLANS_ENABLED on): d7_pro_nudge comes
+        # back at +7d. Guards the code-preservation/revival path.
+        _enable_flag(monkeypatch)
+        _enable_paid_plans(monkeypatch)
+        u = make_user(email="seq1_stage1@test.com")
+
+        from extensions import db
+        from models import User, ScheduledEmail
+        from services.email.onboarding_sequence import schedule_onboarding
 
         with app.app_context():
             user = db.session.get(User, u["id"])
@@ -81,21 +142,13 @@ class TestScheduleOnboarding:
                 .all()
             )
             assert [r.email_type for r in rows] == [
-                s.slug for s in SEQUENCE
+                "welcome", "d3_guide", "d7_pro_nudge",
             ]
             assert [r.email_category for r in rows] == [
                 "transactional", "information", "information",
             ]
-            expected_offsets = [
-                timedelta(days=0),
-                timedelta(days=3),
-                timedelta(days=7),
-            ]
-            for row, off in zip(rows, expected_offsets):
-                assert row.scheduled_send_at == datetime(2026, 5, 19, 12, 0, 0) + off
-                assert row.sent_at is None
-                assert row.skipped_reason is None
-                assert row.idempotency_key == f"u{u['id']}:{row.email_type}"
+            d7 = rows[-1]
+            assert d7.scheduled_send_at == datetime(2026, 5, 19, 12, 0, 0) + timedelta(days=7)
 
     def test_flag_off_enqueues_nothing(self, app, make_user, monkeypatch):
         _disable_flag(monkeypatch)
@@ -116,6 +169,7 @@ class TestScheduleOnboarding:
 
     def test_double_call_is_idempotent(self, app, make_user, monkeypatch):
         _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)  # Stage-0: 2-step sequence.
         u = make_user(email="seq_dup@test.com")
 
         from extensions import db
@@ -129,10 +183,10 @@ class TestScheduleOnboarding:
             stats2 = schedule_onboarding(user)
             db.session.commit()
 
-        assert stats1["enqueued"] == 3
+        assert stats1["enqueued"] == 2
         assert stats2["enqueued"] == 0
-        assert stats2["existed"] == 3
-        assert _row_count(app, u["id"]) == 3
+        assert stats2["existed"] == 2
+        assert _row_count(app, u["id"]) == 2
 
 
 # ── 2. pending_due query correctness ───────────────────────────────────────
@@ -141,6 +195,7 @@ class TestScheduleOnboarding:
 class TestPendingDue:
     def test_only_due_rows_returned(self, app, make_user, monkeypatch):
         _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)  # Stage-0: welcome + d3_guide only.
         u = make_user(email="due@test.com")
 
         from extensions import db
@@ -161,14 +216,13 @@ class TestPendingDue:
             due4 = list(ScheduledEmail.pending_due(now=base + timedelta(days=4)))
             assert [r.email_type for r in due4] == ["welcome", "d3_guide"]
 
-            # 10d after base: all three due.
+            # 10d after base: both Stage-0 rows due, no d7_pro_nudge.
             due10 = list(ScheduledEmail.pending_due(now=base + timedelta(days=10)))
-            assert [r.email_type for r in due10] == [
-                "welcome", "d3_guide", "d7_pro_nudge",
-            ]
+            assert [r.email_type for r in due10] == ["welcome", "d3_guide"]
 
     def test_sent_rows_filtered_out(self, app, make_user, monkeypatch):
         _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)  # Stage-0: welcome + d3_guide only.
         u = make_user(email="sentfilter@test.com")
 
         from extensions import db
@@ -190,7 +244,7 @@ class TestPendingDue:
             due = list(ScheduledEmail.pending_due(now=base + timedelta(days=10)))
             slugs = [r.email_type for r in due]
             assert "welcome" not in slugs
-            assert set(slugs) == {"d3_guide", "d7_pro_nudge"}
+            assert set(slugs) == {"d3_guide"}
 
     def test_skipped_rows_filtered_out(self, app, make_user, monkeypatch):
         _enable_flag(monkeypatch)
@@ -224,6 +278,7 @@ class TestDispatchDue:
     def test_flag_off_marks_skipped_no_send(self, app, make_user, monkeypatch):
         # Enqueue while flag is ON, then dispatch while flag is OFF.
         _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)  # Stage-0: 2-step sequence.
         u = make_user(email="dispatch_off@test.com")
 
         from extensions import db
@@ -245,8 +300,8 @@ class TestDispatchDue:
             stats = dispatch_due(now=base + timedelta(days=10))
             send.assert_not_called()
 
-        assert stats["due"] == 3
-        assert stats["skipped_flag_off"] == 3
+        assert stats["due"] == 2
+        assert stats["skipped_flag_off"] == 2
         assert stats["sent"] == 0
 
         with app.app_context():
@@ -256,6 +311,7 @@ class TestDispatchDue:
 
     def test_flag_on_sends_due_rows(self, app, make_user, monkeypatch):
         _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)  # Stage-0: 2-step sequence.
         u = make_user(email="dispatch_on@test.com")
 
         from extensions import db
@@ -276,10 +332,10 @@ class TestDispatchDue:
                  return_value=True,
              ) as send:
             stats = dispatch_due(now=base + timedelta(days=10))
-            assert send.call_count == 3
+            assert send.call_count == 2
 
-        assert stats["due"] == 3
-        assert stats["sent"] == 3
+        assert stats["due"] == 2
+        assert stats["sent"] == 2
         assert stats["skipped_flag_off"] == 0
 
         with app.app_context():
@@ -289,6 +345,7 @@ class TestDispatchDue:
 
     def test_double_dispatch_does_not_resend(self, app, make_user, monkeypatch):
         _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)  # Stage-0: 2-step sequence.
         u = make_user(email="dispatch_twice@test.com")
 
         from extensions import db
@@ -314,14 +371,15 @@ class TestDispatchDue:
             stats2 = dispatch_due(now=base + timedelta(days=10))
             assert stats2["due"] == 0
             assert stats2["sent"] == 0
-            # send was called 3x for the first pass, 0x for the second.
-            assert send.call_count == 3
+            # send was called 2x for the first pass, 0x for the second.
+            assert send.call_count == 2
 
     def test_information_blocked_by_consent_marks_skipped(
         self, app, make_user, monkeypatch,
     ):
         """When EmailSender refuses (no consent), row is closed."""
         _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)  # Stage-0: 2-step sequence.
         u = make_user(email="noconsent@test.com")
 
         from extensions import db
@@ -345,9 +403,9 @@ class TestDispatchDue:
              ):
             stats = dispatch_due(now=base + timedelta(days=10))
 
-        assert stats["due"] == 3
+        assert stats["due"] == 2
         assert stats["sent"] == 0
-        assert stats["skipped_no_consent"] == 3
+        assert stats["skipped_no_consent"] == 2
 
         with app.app_context():
             rows = ScheduledEmail.query.filter_by(user_id=u["id"]).all()

@@ -91,6 +91,37 @@ def onboarding_enabled() -> bool:
     return val in ("true", "1", "yes", "on")
 
 
+# ── Stage-1 (paid plans) flag ────────────────────────────────────────────────
+
+# The D+7 ``d7_pro_nudge`` step describes the Free / Pro / Premium paid
+# subscription tiers + Stripe billing. Those tiers are ⬛Superseded in
+# DECISIONS.md for the free launch (Stage 0): ``/pricing`` 307-redirects
+# to ``/home``, billing entry points are removed, every feature is free
+# behind ``LAUNCH_FREE_ALL_TIERS``. Sending the d7 nudge at Stage 0 would
+# advertise non-existent paid plans (표시광고 risk) and link to a broken
+# redirect. So d7 is gated behind this Stage-1 flag and is EXCLUDED from
+# the active SEQUENCE while it is off (default off = current free launch).
+#
+# This mirrors the "Stage 1 deferral + code preservation" pattern used
+# for the billing code: the _Step definition (``_D7_STEP``) and both
+# template files (d7_pro_nudge.html/.txt) are preserved verbatim so the
+# paid-plan revival is a single env flip + no code change once the paid
+# tiers come back.
+_STAGE1_FLAG_ENV = "PIVOX_PAID_PLANS_ENABLED"
+
+
+def paid_plans_enabled() -> bool:
+    """Return True iff the Stage-1 paid-plan steps (d7 nudge) are active.
+
+    Default false — the free launch (Stage 0) ships without paid tiers.
+    Flip to true only when Free/Pro/Premium + Stripe billing are revived
+    (Stage 1). Read on every call so the flip needs no redeploy, matching
+    ``onboarding_enabled``.
+    """
+    val = os.environ.get(_STAGE1_FLAG_ENV, "false").strip().lower()
+    return val in ("true", "1", "yes", "on")
+
+
 # ── sequence definition ─────────────────────────────────────────────────────
 
 
@@ -103,10 +134,11 @@ class _Step:
     template_basename: str  # e.g. "welcome" → onboarding/welcome.{html,txt}
 
 
-# Canonical sequence. Adding a step here is sufficient — the model
-# accepts any slug; the dispatcher iterates whatever's queued. No
-# migration needed for a D+14 / D+30 follow-on in a future wave.
-SEQUENCE: tuple[_Step, ...] = (
+# Stage-0 (free launch) base sequence. Adding a step here is sufficient
+# — the model accepts any slug; the dispatcher iterates whatever's
+# queued. No migration needed for a D+14 / D+30 follow-on in a future
+# wave.
+_BASE_SEQUENCE: tuple[_Step, ...] = (
     _Step(
         slug="welcome",
         offset=timedelta(days=0),
@@ -121,14 +153,42 @@ SEQUENCE: tuple[_Step, ...] = (
         subject="PivoxQuant 3일차 — 사용 가이드",
         template_basename="d3_guide",
     ),
-    _Step(
-        slug="d7_pro_nudge",
-        offset=timedelta(days=7),
-        category="information",
-        subject="PivoxQuant 플랜 안내",
-        template_basename="d7_pro_nudge",
-    ),
 )
+
+# Stage-1 (paid plans) only. PRESERVED for revival — do NOT delete.
+# Appended to SEQUENCE only when ``paid_plans_enabled()`` is true. The
+# template files services/email/templates/onboarding/d7_pro_nudge.{html,txt}
+# are likewise preserved verbatim. See ``paid_plans_enabled`` above for the
+# Stage-0/표시광고 rationale.
+_D7_STEP: _Step = _Step(
+    slug="d7_pro_nudge",
+    offset=timedelta(days=7),
+    category="information",
+    subject="PivoxQuant 플랜 안내",
+    template_basename="d7_pro_nudge",
+)
+
+
+def active_sequence() -> tuple[_Step, ...]:
+    """Return the steps that should actually be scheduled/dispatched now.
+
+    Stage 0 (free launch, default): welcome + d3_guide only.
+    Stage 1 (``PIVOX_PAID_PLANS_ENABLED`` on): + d7_pro_nudge.
+
+    Read through ``paid_plans_enabled()`` on every call so a runtime flip
+    is honoured without a redeploy.
+    """
+    if paid_plans_enabled():
+        return _BASE_SEQUENCE + (_D7_STEP,)
+    return _BASE_SEQUENCE
+
+
+# Backwards-compatible module-level snapshot. Reflects the flag at import
+# time; the canonical runtime source is ``active_sequence()`` (used by
+# ``schedule_onboarding`` / ``dispatch_due`` so a runtime flip applies
+# without redeploy). Tests assert against this to catch accidental copy
+# edits.
+SEQUENCE: tuple[_Step, ...] = active_sequence()
 
 
 # ── marketing-copy ban-list (enforced by tests for INFORMATION steps) ───────
@@ -235,7 +295,7 @@ def schedule_onboarding(
         logger.warning("schedule_onboarding called with user.id missing — skip")
         return stats
 
-    for step in SEQUENCE:
+    for step in active_sequence():
         row = ScheduledEmail.enqueue(
             user_id=user_id,
             email_type=step.slug,
@@ -265,7 +325,11 @@ def schedule_onboarding(
 
 
 def _step_for(slug: str) -> _Step | None:
-    for s in SEQUENCE:
+    # Resolve against the full known set (base + Stage-1) so a row queued
+    # while paid plans were on still renders correctly if the flag later
+    # flips off — the dispatcher's active-slug filter (below) decides what
+    # to *send*, this only resolves template/subject metadata.
+    for s in _BASE_SEQUENCE + (_D7_STEP,):
         if s.slug == slug:
             return s
     return None
@@ -355,7 +419,7 @@ def dispatch_due(now: datetime | None = None) -> dict[str, int]:
     # Wave G C-R1) share the same scheduled_emails table; without this
     # filter ``_send_one`` would log "unknown email_type" and stamp the
     # row ``no_consent_or_provider`` — silently consuming retention rows.
-    onboarding_slugs = {s.slug for s in SEQUENCE}
+    onboarding_slugs = {s.slug for s in active_sequence()}
     rows = [
         r for r in ScheduledEmail.pending_due(now=now, limit=200)
         if r.email_type in onboarding_slugs
@@ -406,8 +470,10 @@ def dispatch_due(now: datetime | None = None) -> dict[str, int]:
 
 __all__ = [
     "SEQUENCE",
+    "active_sequence",
     "BANNED_MARKETING_PHRASES",
     "onboarding_enabled",
+    "paid_plans_enabled",
     "schedule_onboarding",
     "dispatch_due",
 ]
