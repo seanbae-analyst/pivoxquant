@@ -1968,12 +1968,13 @@ _CSV_SPECS = {
     # ── Capital-gains yearly summary (연간 요약: 손익통산/공제/예상세액) ────
     # Rows are CapitalGainYear NamedTuples.
     "capital_gains_summary": (
-        ["귀속연도", "거래수", "환율결손제외수", "합산실현손익KRW",
-         "기본공제KRW", "과세표준KRW", "예상세액KRW(22%)"],
+        ["귀속연도", "거래수", "환율결손제외수", "취득가결손제외수",
+         "합산실현손익KRW", "기본공제KRW", "과세표준KRW", "예상세액KRW(22%)"],
         lambda y: [
             y.attribution_year or "",
             y.trade_count,
             y.fx_missing_count,
+            y.price_missing_count,
             _csv_num(y.total_realized_pnl_krw, 0),
             _csv_num(y.basic_deduction_krw, 0),
             _csv_num(y.taxable_base_krw, 0),

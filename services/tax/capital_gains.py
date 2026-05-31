@@ -76,13 +76,18 @@ class CapitalGainYear(NamedTuple):
     """Per-attribution-year aggregate over taxable (US) lots only.
 
     ``trade_count`` counts taxable lots whose realised KRW P&L could be
-    computed (FX present on both legs); ``fx_missing_count`` records taxable
-    lots excluded from the aggregate because an FX rate was unavailable, so
-    the summary is honest about partial coverage.
+    computed (FX present on both legs AND a genuine non-zero trade price on
+    both legs). ``fx_missing_count`` records taxable lots excluded because an
+    FX rate was unavailable; ``price_missing_count`` records taxable lots
+    excluded because the acquisition or disposal price was missing (None→0 or
+    a non-positive value) — never trusted as a real ₩0 cost basis. Both
+    exclusion counts are surfaced so the summary is honest about partial
+    coverage (표시광고법: no silent fabrication of cost/proceeds).
     """
     attribution_year: int
     trade_count: int
     fx_missing_count: int
+    price_missing_count: int
     total_realized_pnl_krw: float
     basic_deduction_krw: float
     taxable_base_krw: float
@@ -94,6 +99,11 @@ class CapitalGainYear(NamedTuple):
 _NOTE_KR_EXEMPT = "한국 일반주식 비과세(대주주 제외)"
 _NOTE_FX_MISSING = "환율 확인 불가(주말·공휴일·데이터 결손) — KRW 환산 제외"
 _NOTE_FX_MISSING_PARTIAL = "환율 일부 확인 불가 — KRW 환산 제외"
+# Acquisition/disposal price missing (None→0 coercion in fifo_util, legacy or
+# imported rows). A ₩0 cost basis would fabricate full proceeds as realised
+# gain and overstate the 22% tax — the SAME 정직성 risk as a fabricated FX
+# rate, so it gets the SAME treatment: blank KRW + excluded from the aggregate.
+_NOTE_PRICE_MISSING = "취득가·양도가 결손 — KRW 환산 제외"
 
 # Confirmed disclaimer wording — legal-kr-fintech 2026-05-31 (§5-B). Vetted
 # against 세무사법 §2/§20③ (삼쩜삼 선례 = pure-calculator, 면허 불요) +
@@ -199,7 +209,34 @@ def compute_capital_gain_lots(
             ))
             continue
 
-        # US (overseas) equity → taxable. Resolve trade-date FX strictly.
+        # US (overseas) equity → taxable. Before any FX work, guard the more
+        # fundamental fact: a missing acquisition/disposal price. fifo_util
+        # coerces a NULL ``price_per_share`` to 0.0, and a non-positive price
+        # is never a genuine cost basis. Trusting ``buy_price=0`` would book
+        # the entire proceeds as realised gain and inflate the 22% estimate —
+        # the SAME fabrication risk as a fabricated FX rate. So we give it the
+        # SAME treatment: blank KRW, excluded from the aggregate, explicit note.
+        if buy_price <= 0 or sell_price <= 0:
+            lots.append(CapitalGainLot(
+                attribution_year=year,
+                ticker=ticker,
+                name=name,
+                quantity=quantity,
+                buy_date=buy_date,
+                sell_date=sell_date,
+                buy_price_usd=buy_price,
+                sell_price_usd=sell_price,
+                buy_fx=None,
+                sell_fx=None,
+                buy_cost_krw=None,
+                sell_proceeds_krw=None,
+                realized_pnl_krw=None,
+                taxable=True,
+                note=_NOTE_PRICE_MISSING,
+            ))
+            continue
+
+        # Resolve trade-date FX strictly.
         buy_fx = _resolve_fx(fx_resolver, buy_time)
         sell_fx = _resolve_fx(fx_resolver, sell_time)
 
@@ -275,8 +312,11 @@ def summarize_by_year(lots: Iterable[CapitalGainLot]) -> list[CapitalGainYear]:
     """Aggregate taxable (US) lots per attribution year — 손익통산 + 공제 + 세액.
 
     Only lots with ``taxable=True`` and a computed ``realized_pnl_krw`` enter
-    the 손익통산 sum (FX-missing taxable lots are counted separately so the
-    summary discloses partial coverage). KR 비과세 lots never affect tax.
+    the 손익통산 sum. Taxable lots with no computed KRW P&L are excluded and
+    counted in one of two disclosure buckets, differentiated by the lot note:
+    price-missing (``_NOTE_PRICE_MISSING``) vs FX-missing (everything else),
+    so the summary discloses *why* coverage is partial without fabricating a
+    ₩0 cost basis. KR 비과세 lots never affect tax.
 
     Returns one row per year with a positive *or* negative aggregate (a
     net-loss year shows taxable_base 0 / tax 0 but is still listed so the
@@ -289,10 +329,15 @@ def summarize_by_year(lots: Iterable[CapitalGainLot]) -> list[CapitalGainYear]:
             continue
         year = lot.attribution_year
         bucket = by_year.setdefault(
-            year, {"sum": 0.0, "count": 0, "fx_missing": 0}
+            year, {"sum": 0.0, "count": 0, "fx_missing": 0, "price_missing": 0}
         )
         if lot.realized_pnl_krw is None:
-            bucket["fx_missing"] += 1
+            # Excluded from the aggregate. Differentiate the reason via the
+            # lot note so the disclosure counts stay accurate (표시광고법).
+            if lot.note == _NOTE_PRICE_MISSING:
+                bucket["price_missing"] += 1
+            else:
+                bucket["fx_missing"] += 1
             continue
         bucket["sum"] += float(lot.realized_pnl_krw)
         bucket["count"] += 1
@@ -308,6 +353,7 @@ def summarize_by_year(lots: Iterable[CapitalGainLot]) -> list[CapitalGainYear]:
             attribution_year=year,
             trade_count=bucket["count"],
             fx_missing_count=bucket["fx_missing"],
+            price_missing_count=bucket["price_missing"],
             total_realized_pnl_krw=total,
             basic_deduction_krw=ANNUAL_BASIC_DEDUCTION_KRW,
             taxable_base_krw=taxable_base,

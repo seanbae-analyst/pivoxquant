@@ -15,6 +15,7 @@ import pytest
 from services.tax.capital_gains import (
     ANNUAL_BASIC_DEDUCTION_KRW,
     US_CGT_RATE,
+    _NOTE_PRICE_MISSING,
     compute_capital_gain_lots,
     summarize_by_year,
 )
@@ -136,12 +137,80 @@ def test_fx_missing_lot_excluded_from_year_aggregate_but_counted():
     assert yr.total_realized_pnl_krw == pytest.approx(1_000_000.0)
 
 
+# ── Price miss (취득가·양도가 결손) → blank KRW, never a fake ₩0 cost ──
+# Symmetric with FX-miss: fifo_util coerces a NULL price_per_share to 0.0, so
+# None and a non-positive price are indistinguishable by the time they reach
+# the estimator. Trusting buy_price=0 would book the whole proceeds as a gain
+# and overstate the 22% estimate — the same 정직성 risk as a fabricated FX.
+@pytest.mark.parametrize("buy_px", [None, 0.0, -5.0])
+def test_zero_or_none_buy_price_blanks_krw_with_note(buy_px):
+    pairs = [_pair("AAPL", 100, D(2024, 1, 2), D(2024, 6, 3), buy_px, 15.0)]
+    lots = compute_capital_gain_lots(pairs, fx_resolver=_fixed_fx(1300.0))
+    assert len(lots) == 1
+    lot = lots[0]
+    assert lot.taxable is True
+    # No fabricated ₩0 cost basis / proceeds → all KRW blank, never computed.
+    assert lot.buy_cost_krw is None
+    assert lot.sell_proceeds_krw is None
+    assert lot.realized_pnl_krw is None
+    # FX is not even resolved when price is missing (price is more fundamental).
+    assert lot.buy_fx is None
+    assert lot.sell_fx is None
+    assert lot.note == _NOTE_PRICE_MISSING
+    assert "취득가" in lot.note
+
+
+def test_zero_sell_price_also_blanks_krw():
+    pairs = [_pair("AAPL", 100, D(2024, 1, 2), D(2024, 6, 3), 10.0, 0.0)]
+    lots = compute_capital_gain_lots(pairs, fx_resolver=_fixed_fx(1300.0))
+    assert lots[0].realized_pnl_krw is None
+    assert lots[0].note == _NOTE_PRICE_MISSING
+
+
+def test_price_missing_lot_excluded_from_year_aggregate_and_counted_separately():
+    # One FX-complete real lot + one price-missing lot (the repro): the
+    # missing lot must NOT inflate the aggregate / tax, and is disclosed under
+    # its OWN count (price_missing_count), distinct from fx_missing_count.
+    good = _pair("AAPL", 10, D(2024, 1, 2), D(2024, 6, 3), 100.0, 200.0)
+    bad = _pair("MSFT", 100, D(2024, 2, 2), D(2024, 7, 3), None, 15.0)
+    lots = compute_capital_gain_lots([good, bad], fx_resolver=_fixed_fx(1000.0))
+    summary = summarize_by_year(lots)
+    assert len(summary) == 1
+    yr = summary[0]
+    assert yr.trade_count == 1            # only the FX+price-complete lot
+    assert yr.price_missing_count == 1    # the missing-price one disclosed
+    assert yr.fx_missing_count == 0       # NOT mislabelled as an FX miss
+    # Aggregate = (200-100)*10*1000 = 1,000,000 — the fake-₩0 lot contributes 0.
+    assert yr.total_realized_pnl_krw == pytest.approx(1_000_000.0)
+    assert yr.estimated_tax_krw == 0.0    # below 250만 deduction
+
+
+def test_price_and_fx_missing_counted_in_distinct_buckets():
+    good = _pair("AAPL", 10, D(2024, 1, 2), D(2024, 6, 3), 100.0, 200.0)
+    price_bad = _pair("MSFT", 100, D(2024, 2, 2), D(2024, 7, 3), 0.0, 15.0)
+    fx_bad = _pair("NVDA", 10, D(2024, 3, 2), D(2024, 8, 3), 100.0, 200.0)
+    fx = _date_fx({
+        "2024-01-02": 1000.0, "2024-06-03": 1000.0,  # AAPL ok
+        "2024-03-02": 1000.0,                         # NVDA sell FX missing
+    })
+    lots = compute_capital_gain_lots(
+        [good, price_bad, fx_bad], fx_resolver=fx
+    )
+    yr = summarize_by_year(lots)[0]
+    assert yr.trade_count == 1
+    assert yr.price_missing_count == 1
+    assert yr.fx_missing_count == 1
+
+
 # ── 기본공제 250만 + 22% ──────────────────────────────────────────────
 def test_basic_deduction_and_rate_above_threshold():
     # realised = +5,000,000 KRW. 과세표준 = 5,000,000 - 2,500,000 = 2,500,000.
     # tax = 2,500,000 * 0.22 = 550,000.
-    pairs = [_pair("AAPL", 1, D(2024, 1, 2), D(2024, 6, 3), 0.0, 5000.0)]
-    fx = _fixed_fx(1000.0)  # proceeds = 5000*1*1000 = 5,000,000; cost 0
+    # Non-zero acquisition price (a ₩0/None cost basis is now excluded as
+    # missing — see test_zero_or_none_buy_price_*). cost 1000*1*1000=1,000,000;
+    # proceeds 6000*1*1000=6,000,000 → realised +5,000,000.
+    pairs = [_pair("AAPL", 1, D(2024, 1, 2), D(2024, 6, 3), 1000.0, 6000.0)]
+    fx = _fixed_fx(1000.0)
     lots = compute_capital_gain_lots(pairs, fx_resolver=fx)
     summary = summarize_by_year(lots)
     yr = summary[0]
@@ -154,7 +223,8 @@ def test_basic_deduction_and_rate_above_threshold():
 
 def test_gain_below_deduction_yields_zero_tax():
     # realised = +1,000,000 < 2,500,000 deduction → base 0, tax 0.
-    pairs = [_pair("AAPL", 1, D(2024, 1, 2), D(2024, 6, 3), 0.0, 1000.0)]
+    # cost 1000*1*1000=1,000,000; proceeds 2000*1*1000=2,000,000 → +1,000,000.
+    pairs = [_pair("AAPL", 1, D(2024, 1, 2), D(2024, 6, 3), 1000.0, 2000.0)]
     lots = compute_capital_gain_lots(pairs, fx_resolver=_fixed_fx(1000.0))
     yr = summarize_by_year(lots)[0]
     assert yr.taxable_base_krw == 0.0
@@ -165,7 +235,8 @@ def test_gain_below_deduction_yields_zero_tax():
 def test_loss_offsets_gain_within_year():
     # Gain lot +6,000,000, loss lot -2,000,000 → net 4,000,000.
     # base = 4,000,000 - 2,500,000 = 1,500,000; tax = 330,000.
-    gain = _pair("AAPL", 1, D(2024, 1, 2), D(2024, 3, 3), 0.0, 6000.0)
+    # gain: cost 1000*1*1000=1M, proceeds 7000*1*1000=7M → +6,000,000.
+    gain = _pair("AAPL", 1, D(2024, 1, 2), D(2024, 3, 3), 1000.0, 7000.0)
     loss = _pair("MSFT", 1, D(2024, 2, 2), D(2024, 4, 4), 5000.0, 3000.0)
     lots = compute_capital_gain_lots([gain, loss], fx_resolver=_fixed_fx(1000.0))
     yr = summarize_by_year(lots)[0]
@@ -186,8 +257,8 @@ def test_net_loss_year_listed_with_zero_tax():
 
 
 def test_multiple_years_separated():
-    a = _pair("AAPL", 1, D(2023, 1, 2), D(2023, 6, 3), 0.0, 4000.0)
-    b = _pair("AAPL", 1, D(2024, 1, 2), D(2024, 6, 3), 0.0, 5000.0)
+    a = _pair("AAPL", 1, D(2023, 1, 2), D(2023, 6, 3), 1000.0, 4000.0)
+    b = _pair("AAPL", 1, D(2024, 1, 2), D(2024, 6, 3), 1000.0, 5000.0)
     lots = compute_capital_gain_lots([a, b], fx_resolver=_fixed_fx(1000.0))
     summary = summarize_by_year(lots)
     years = [y.attribution_year for y in summary]

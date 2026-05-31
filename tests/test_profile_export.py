@@ -849,7 +849,7 @@ def test_csv_export_empty_emits_header_only(client, auth_user):
     # Capital-gains datasets carry a leading disclaimer comment row, then the
     # header, then zero data rows for an empty user (honest empty file).
     for dataset, expected_cols in (
-        ("capital_gains", 15), ("capital_gains_summary", 7),
+        ("capital_gains", 15), ("capital_gains_summary", 8),
     ):
         resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
         assert resp.status_code == 200, (dataset, resp.data)
@@ -994,8 +994,8 @@ def test_csv_export_capital_gains_summary_deduction_and_rate(
     rows = list(_csv.reader(_io.StringIO(text)))
     header = rows[1]
     assert header == [
-        "귀속연도", "거래수", "환율결손제외수", "합산실현손익KRW",
-        "기본공제KRW", "과세표준KRW", "예상세액KRW(22%)",
+        "귀속연도", "거래수", "환율결손제외수", "취득가결손제외수",
+        "합산실현손익KRW", "기본공제KRW", "과세표준KRW", "예상세액KRW(22%)",
     ]
     data = dict(zip(header, rows[2]))
     assert data["귀속연도"] == "2024"
