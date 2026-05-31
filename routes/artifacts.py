@@ -190,6 +190,108 @@ def _since_to_cutoff(since: str | None) -> datetime | None:
         return None
 
 
+# ── React preview-shape adapters ─────────────────────────────────────────────
+#
+# The React /reports/preview/<slug> templates (frontend/src/components/reports/
+# templates/*.tsx) consume a camelCase `*Data` interface, while the persisted
+# `Artifact.data_json` is the raw snake_case payload from each service's
+# `generate_for_user()`. These adapters convert raw → React shape for the LIST
+# endpoint's `data_preview` field so the preview shell renders real data
+# instead of throwing into render_error.
+#
+# Invariants:
+#   - Read-only over `data_json`; never mutate the persisted blob (Jinja PDF,
+#     download routes, and the §101 compliance scanner all read the raw shape).
+#   - Honest-empty only: emit "—" / "" for fields the backend does not compute.
+#     NEVER fabricate sample numbers (표시광고법 — fake-data ban).
+#   - Only register a type here when EVERY field the template dereferences
+#     without a guard can be supplied from real `data_json` (or is a `.map()`ed
+#     array that is safe to leave empty). Templates that hard-access nested
+#     fields the backend never computes (risk_board `beta`; monthly_finance
+#     P&L / balance-sheet / cash-flow layer) are intentionally NOT wired here —
+#     a partial shape would still throw on the unguarded access and reproduce
+#     the render_error symptom. See the carry-over comments in those .tsx files.
+
+def _kpi_dashboard_preview_shape(data: dict) -> dict:
+    """Raw kpi_dashboard `data_json` → React `KpiDashboardData` shape.
+
+    Mirrors frontend/src/components/reports/templates/kpi-dashboard.tsx. Every
+    field the template dereferences directly (doc/navEom/ytdReturn/sharpe/
+    status/issued + coverMonth?) maps to real backend metrics; the three
+    arrays (scorecard/decisions/decisionCards) are accessed via `.map()` and
+    are intentionally empty (separate sprint — kept empty, never faked).
+    """
+    as_of = data.get("as_of")
+    as_of_label = str(as_of) if as_of else "—"
+    month_label = as_of_label[:7] if as_of_label and as_of_label != "—" else "—"
+
+    def _money(v) -> str:
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            return "—"
+        ccy = data.get("portfolio_ccy") or "USD"
+        prefix = "₩" if ccy == "KRW" else "$"
+        an = abs(n)
+        sign = "−" if n < 0 else ""
+        if an >= 1_000_000:
+            return f"{sign}{prefix}{an / 1_000_000:.2f}M"
+        if an >= 1_000:
+            return f"{sign}{prefix}{an / 1_000:.0f}k"
+        return f"{sign}{prefix}{an:,.0f}"
+
+    def _pct(v) -> str:
+        try:
+            return f"{float(v):+.1f}%"
+        except (TypeError, ValueError):
+            return "—"
+
+    sharpe = data.get("sharpe_annual")
+    sharpe_str = f"{float(sharpe):.2f}" if sharpe is not None else "—"
+
+    return {
+        "doc":          f"{month_label} · KPI · 01/04",
+        "coverMonth":   month_label if month_label != "—" else None,
+        "navEom":       _money(data.get("portfolio_value")),
+        "navEomDelta":  "",
+        "ytdReturn":    _pct(data.get("ytd_return_pct")),
+        "ytdDelta":     "",
+        "sharpe":       sharpe_str,
+        "sharpeDelta":  "",
+        "status":       "관찰",
+        "statusDelta":  "",
+        "issued":       f"Issued · {as_of_label}",
+        # Intentionally empty — deferred sprint. Templates `.map()` these so
+        # an empty list renders cleanly (no fabricated rows).
+        "scorecard":     [],
+        "decisions":     [],
+        "decisionCards": [],
+    }
+
+
+# Registry of type → raw-to-React preview shaper. Add a type ONLY after
+# verifying the template renders cleanly with the shape this produces.
+_PREVIEW_SHAPERS: dict[str, "callable"] = {
+    "kpi_dashboard": _kpi_dashboard_preview_shape,
+}
+
+
+def _preview_shape_for(artifact_type: str, data: dict):
+    """Return the React-shaped preview dict for `artifact_type`, or None when
+    no adapter is registered (caller falls back to the legacy whitelist).
+    Per-type try/except isolates a shaper bug to that one row instead of
+    failing the whole list response."""
+    shaper = _PREVIEW_SHAPERS.get(artifact_type)
+    if shaper is None:
+        return None
+    try:
+        return shaper(data or {})
+    except Exception:
+        logger.warning("preview shape failed for type=%s", artifact_type,
+                       exc_info=True)
+        return None
+
+
 @artifacts_bp.route("/list", methods=["GET"])
 @api_auth
 def artifacts_list():
@@ -255,11 +357,27 @@ def artifacts_list():
         data = base.get("data") or {}
         base["subtitle"] = data.get("subtitle") or data.get("summary") or None
         base["period_label"] = data.get("month_label") or data.get("week_label")
-        base["data_preview"] = {
-            k: v for k, v in data.items()
-            if k in {"return_pct", "summary", "subtitle", "week_label",
-                     "month_label", "ticker", "earnings_dt"}
-        } or None
+        # `data_preview` serves two distinct consumers:
+        #   1. latest-artifact-card.tsx — reads only `mentioned_tickers`
+        #      (graceful [] otherwise), so extra keys are harmless.
+        #   2. report-preview-shell.tsx — casts `data_preview` to the
+        #      template's `*Data` interface. For React templates whose
+        #      interface is camelCase + nested (kpi-dashboard) the raw
+        #      snake_case `data_json` does NOT match, so the template
+        #      throws and falls back to render_error EmptyState even when
+        #      real data exists. `_preview_shape_for` converts the persisted
+        #      `data_json` into the React shape WITHOUT mutating `data_json`
+        #      (Jinja/download/compliance consumers keep the raw snake_case
+        #      blob untouched, and old rows convert at read-time).
+        shaped = _preview_shape_for(a.type, data)
+        if shaped is not None:
+            base["data_preview"] = shaped
+        else:
+            base["data_preview"] = {
+                k: v for k, v in data.items()
+                if k in {"return_pct", "summary", "subtitle", "week_label",
+                         "month_label", "ticker", "earnings_dt"}
+            } or None
         return base
 
     return jsonify({
