@@ -24,18 +24,30 @@ It is deliberately **not**:
 * The market-microstructure ``DispositionEffect`` (CGO) signal in
   ``services/quant/signals.py``. That computes a *market-wide* factor from
   price/volume history. This module touches only the user's *own* realised
-  ``TradeHistory`` round trips via :func:`fifo_match_closed_trades`.
+  ``TradeHistory`` round trips via
+  :func:`fifo_match_closed_trades_with_pnl`.
 
 Relationship to ``holding_mirror.compute_holding_mirror``
 ---------------------------------------------------------
-Both mirrors slice the same FIFO-matched closed pairs by the SELL row's
-stored ``pnl_pct`` sign, so the two never diverge — both are anchored on
-``services.profile.fifo_util.fifo_match_closed_trades``. The win/loss
-classification logic is intentionally **duplicated** here (not imported)
-rather than coupling this module to the holding mirror, which the
-``BehavioralScore`` cron transitively depends on: a refactor there is far
-costlier than a few lines of shared slicing. There is no divergence risk
-because both derive the sign from the identical per-SELL ``pnl_pct``.
+Both **live** mirrors slice the same FIFO-matched closed pairs by the
+SELL row's ``pnl_pct`` sign and both are anchored on
+``services.profile.fifo_util.fifo_match_closed_trades_with_pnl`` — the
+collision-free matcher that attaches each SELL's ``pnl_pct`` to its pair
+*inside* the matcher — so these two never diverge from each other. The
+win/loss classification logic is intentionally **duplicated** here (not
+imported) rather than coupling this module to the holding mirror: a
+refactor across both is not worth a few lines of shared slicing.
+
+Note this is no longer true of the **dormant**
+``group_benchmark._user_mistakes`` (the disposition arm of the disabled
+``BehavioralScore`` cron). It still uses the plain
+:func:`fifo_match_closed_trades` and re-buckets via a
+``{(ticker, sell_time): holds}`` dict, whose key **collides** when the
+same ticker is sold 2+ times on one calendar day (see the collision
+discussion in the :func:`fifo_match_closed_trades_with_pnl` docstring).
+So on a same-day multi-SELL these live mirrors can disagree with that
+dormant path. It is left untouched on purpose — the cron is dormant — and
+should be migrated to the collision-free helper if/when it is reactivated.
 
 Where the holding mirror surfaces *example* round trips, this mirror does
 **not** — the disposition mirror already exposes examples on the same

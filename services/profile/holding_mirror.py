@@ -27,13 +27,23 @@ It is deliberately **not**:
 
 Relationship to ``group_benchmark._user_mistakes``
 ---------------------------------------------------
-The winner/loser hold-day slicing logic was extracted from
-``group_benchmark._user_mistakes`` (lines 482-523 as of 2026-05-30) so
-both share the same per-SELL pnl-attribution. The original is left
-untouched on purpose: the ``BehavioralScore`` cron depends on it and a
-behavioural-change regression there is far costlier than a small amount
-of duplicated slicing logic. If the two ever need to converge, do it in
-a dedicated refactor with a regression test on both call sites.
+The winner/loser hold-day slicing logic originated in
+``group_benchmark._user_mistakes`` (roughly lines 482-525), but the two
+no longer share the same attribution. This live mirror was migrated
+(2026-05-31) to :func:`fifo_match_closed_trades_with_pnl`, which attaches
+each SELL's ``pnl_pct`` to its pair **inside** the matcher and is
+therefore collision-free. The dormant ``_user_mistakes`` still calls the
+plain :func:`fifo_match_closed_trades` and re-buckets via a
+``{(ticker, sell_time): holds}`` dict — a key that **collides** when the
+same ticker is sold 2+ times on one calendar day (see the collision
+discussion in the :func:`fifo_match_closed_trades_with_pnl` docstring),
+merging hold-day slices under the last same-key SELL's sign. So on a
+same-day multi-SELL the two can disagree. ``_user_mistakes`` is left
+untouched on purpose: the ``BehavioralScore`` cron that owns it is
+dormant (no live route), and a behavioural-change regression there is
+far costlier than the disagreement. When that cron is reactivated it
+should be migrated to the collision-free helper too, with a regression
+test on both call sites.
 
 Statistics
 ----------
