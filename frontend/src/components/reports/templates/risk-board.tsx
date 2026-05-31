@@ -35,13 +35,20 @@ import { EmptyState } from "../empty-state";
 export interface RiskBoardData {
   weekTag: string; // "Week of Apr 26, 2026 · RB-2026-W17"
   asOfStamp: string; // "As of Apr 26, 2026 · 18:00 KST"
-  // KPI row
+  // KPI row — only the four metrics the backend actually computes
+  // (services/artifacts/risk_board_service.py: var95_pct / sharpe_annual /
+  // max_drawdown_pct / vix_current). `beta` was dropped: the backend never
+  // computes a portfolio beta, so a `beta` card would be either a hardcoded
+  // fabrication (표시광고법) or an unguarded undefined deref → render_error.
+  // VIX takes its slot.
   var95: { value: string; nav: string; tone: "green" | "amber" | "red" };
-  beta: { value: string; band: string; tone: "green" | "amber" | "red" };
   maxDD: { value: string; limit: string; tone: "green" | "amber" | "red" };
   sharpe: { value: string; vsPrior: string; tone: "green" | "amber" | "red" };
-  // Stress
-  pairwiseCorr: { value: string; gauge: number; verdict: string };
+  vix: { value: string; band: string; tone: "green" | "amber" | "red" };
+  // Stress — pairwise correlation proxy (backend derives from sector
+  // concentration). Optional so an empty/short book elides the card rather
+  // than throwing.
+  pairwiseCorr?: { value: string; gauge: number; verdict: string };
 }
 
 
@@ -62,12 +69,13 @@ export function RiskBoard({ data }: { data?: RiskBoardData }) {
         />
 
         {/* Executive Summary narrative omitted: the backend does not supply a
-            risk-board narrative shape into RiskBoardData (the snake/camel
-            adapter is unbuilt). Per CEO 2026-05-31 "있는 데이터로만, 없으면
-            없대 해" — render only the real VaR/Beta/MaxDD/Sharpe KPI row and the
-            real pairwise-correlation card below. Carry-over: build a backend →
-            RiskBoardData adapter for ExecSum, Risk Limits, the 7-Layer matrix,
-            and stress scenarios, then restore those surfaces with real data. */}
+            risk-board narrative shape into RiskBoardData. Per CEO 2026-05-31
+            "있는 데이터로만, 없으면 없대 해" — render only the real
+            VaR/Sharpe/MaxDD/VIX KPI row and the real pairwise-correlation card
+            below (all wired from data_json via _risk_board_preview_shape).
+            Carry-over: build a backend → RiskBoardData adapter for ExecSum,
+            Risk Limits, the 7-Layer matrix, and stress scenarios, then restore
+            those surfaces with real data. */}
         <p
           className="font-mono"
           style={{
@@ -95,36 +103,57 @@ export function RiskBoard({ data }: { data?: RiskBoardData }) {
               deltaTone: "neg",
             },
             {
-              label: "Beta vs S&P",
-              value: data.beta.value,
+              label: "VIX · Current",
+              value: data.vix.value,
               delta: (
                 <>
-                  {data.beta.band} · <PdfHeat tone={data.beta.tone}>OVER</PdfHeat>
+                  {data.vix.band} ·{" "}
+                  <PdfHeat tone={data.vix.tone}>{data.vix.tone.toUpperCase()}</PdfHeat>
                 </>
               ),
               deltaTone: "warn",
             },
             {
-              label: "Max Drawdown YTD",
+              label: "Max Drawdown",
               value: data.maxDD.value,
               delta: (
                 <>
-                  {data.maxDD.limit} · <PdfHeat tone={data.maxDD.tone}>OK</PdfHeat>
+                  {data.maxDD.limit} ·{" "}
+                  <PdfHeat tone={data.maxDD.tone}>{data.maxDD.tone.toUpperCase()}</PdfHeat>
                 </>
               ),
+              deltaTone: "neg",
             },
             {
-              label: "Sharpe · 12M",
+              label: "Sharpe · Annual",
               value: data.sharpe.value,
               delta: (
                 <>
-                  {data.sharpe.vsPrior} · <PdfHeat tone={data.sharpe.tone}>OK</PdfHeat>
+                  {data.sharpe.vsPrior} ·{" "}
+                  <PdfHeat tone={data.sharpe.tone}>{data.sharpe.tone.toUpperCase()}</PdfHeat>
                 </>
               ),
               deltaTone: "pos",
             },
           ]}
         />
+
+        {/* Pairwise-correlation card — rendered only when the backend supplies
+            the proxy (derived from sector concentration). Elided otherwise so a
+            short/empty book never shows a fabricated correlation. */}
+        {data.pairwiseCorr ? (
+          <div style={{ marginTop: 20 }}>
+            <PdfKpiRow
+              kpis={[
+                {
+                  label: "Pairwise Corr · proxy",
+                  value: data.pairwiseCorr.value,
+                  delta: data.pairwiseCorr.verdict,
+                },
+              ]}
+            />
+          </div>
+        ) : null}
 
         {/* Risk Limits gauge list omitted: the cap/fill/observed values were
             hardcoded, not wired from RiskBoardData. Carry-over: wire backend

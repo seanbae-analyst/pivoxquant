@@ -206,11 +206,12 @@ def _since_to_cutoff(since: str | None) -> datetime | None:
 #     NEVER fabricate sample numbers (표시광고법 — fake-data ban).
 #   - Only register a type here when EVERY field the template dereferences
 #     without a guard can be supplied from real `data_json` (or is a `.map()`ed
-#     array that is safe to leave empty). Templates that hard-access nested
-#     fields the backend never computes (risk_board `beta`; monthly_finance
-#     P&L / balance-sheet / cash-flow layer) are intentionally NOT wired here —
-#     a partial shape would still throw on the unguarded access and reproduce
-#     the render_error symptom. See the carry-over comments in those .tsx files.
+#     array that is safe to leave empty, or is `?`-optional so an omitted key
+#     elides the surface). risk_board and monthly_finance were reduced
+#     (option-b, 2026-05-31): their React interfaces dropped the
+#     backend-uncomputed fields (risk_board `beta`; monthly_finance
+#     P&L/balance-sheet/cash-flow) so the remaining surfaces map 1:1 to real
+#     data_json. They are now wired below.
 
 def _kpi_dashboard_preview_shape(data: dict) -> dict:
     """Raw kpi_dashboard `data_json` → React `KpiDashboardData` shape.
@@ -269,10 +270,254 @@ def _kpi_dashboard_preview_shape(data: dict) -> dict:
     }
 
 
+def _risk_board_preview_shape(data: dict) -> dict:
+    """Raw risk_board `data_json` → React `RiskBoardData` shape.
+
+    Mirrors frontend/src/components/reports/templates/risk-board.tsx (option-b
+    reduction, 2026-05-31). The React interface was narrowed to the four KPIs
+    services/artifacts/risk_board_service.py actually computes —
+    var95_pct / sharpe_annual / max_drawdown_pct / vix_current — plus a
+    pairwise-correlation proxy derived from sector concentration (the same
+    heuristic _to_v3_shape uses). `beta` was DROPPED from the interface because
+    the backend never computes a portfolio beta; emitting a hardcoded one would
+    be a 표시광고법 fabrication. Honest-empty: every missing metric degrades to
+    "—" / OK tone, and pairwiseCorr is omitted entirely when there is no sector
+    data (the template elides the card).
+    """
+    period_label = data.get("period_label") or "—"
+    trigger_token = "S" if data.get("trigger") == "vix_spike" else "M"
+    week_tag = f"RB-{trigger_token} · {period_label}"
+    as_of_stamp = f"As of {period_label}"
+
+    cur = "₩" if data.get("portfolio_ccy") == "KRW" else "$"
+
+    def _heat_var(v):
+        if v is None:
+            return "green"
+        av = abs(float(v))
+        if av < 2.0:
+            return "green"
+        if av < 3.5:
+            return "amber"
+        return "red"
+
+    def _heat_sharpe(s):
+        if s is None:
+            return "green"
+        if s >= 1.0:
+            return "green"
+        if s >= 0.5:
+            return "amber"
+        return "red"
+
+    def _heat_mdd(m):
+        if m is None:
+            return "green"
+        am = abs(float(m))
+        if am < 10.0:
+            return "green"
+        if am < 20.0:
+            return "amber"
+        return "red"
+
+    def _heat_vix(v):
+        if v is None:
+            return "green"
+        if v < 20.0:
+            return "green"
+        if v < 25.0:
+            return "amber"
+        return "red"
+
+    var95 = data.get("var95_pct")
+    sharpe = data.get("sharpe_annual")
+    mdd = data.get("max_drawdown_pct")
+    vix = data.get("vix_current")
+    port_value = data.get("portfolio_value")
+
+    # NAV-loss label for the VaR card (₩/$ at 95% × NAV). Only when both exist.
+    if var95 is not None and port_value:
+        est_loss = abs(float(var95)) / 100.0 * float(port_value)
+        var_nav = f"≈{cur}{est_loss:,.0f} NAV"
+    else:
+        var_nav = "Historical · 3M"
+
+    shape: dict = {
+        "weekTag":   week_tag,
+        "asOfStamp": as_of_stamp,
+        "var95": {
+            "value": f"{-abs(float(var95)):.1f}%" if var95 is not None else "—",
+            "nav":   var_nav,
+            "tone":  _heat_var(var95),
+        },
+        "maxDD": {
+            "value": f"{-abs(float(mdd)):.1f}%" if mdd is not None else "—",
+            "limit": "Peak-to-trough",
+            "tone":  _heat_mdd(mdd),
+        },
+        "sharpe": {
+            "value":   f"{float(sharpe):.2f}" if sharpe is not None else "—",
+            "vsPrior": "Risk-adj. · annual",
+            "tone":    _heat_sharpe(sharpe),
+        },
+        "vix": {
+            "value": f"{float(vix):.1f}" if vix is not None else "—",
+            "band":  "Volatility regime",
+            "tone":  _heat_vix(vix),
+        },
+    }
+
+    # Pairwise-correlation proxy — only when sector data exists (mirrors the
+    # _to_v3_shape heuristic). Omitted otherwise so the template elides the card
+    # rather than rendering a fabricated correlation.
+    sectors = data.get("sector_breakdown") or []
+    if sectors:
+        try:
+            top_w = float(sectors[0].get("weight_pct") or 0) / 100.0
+        except (TypeError, ValueError):
+            top_w = 0.0
+        corr_value = max(0.0, min(0.95, 0.10 + top_w * 1.10))
+        if corr_value >= 0.65:
+            verdict = "상위 섹터 비중 집중 — 평균 페어와이즈 상관 관찰 지표."
+        elif corr_value >= 0.45:
+            verdict = "섹터 비중 상승 — 분산 효과 모니터링 항목."
+        else:
+            verdict = "섹터 분산 양호 — 평균 페어와이즈 상관 관찰 지표."
+        shape["pairwiseCorr"] = {
+            "value":   f"{corr_value:.2f}",
+            "gauge":   round(corr_value * 100.0, 1),
+            "verdict": verdict,
+        }
+
+    return shape
+
+
+def _monthly_finance_preview_shape(data: dict) -> dict:
+    """Raw monthly_finance `data_json` → React `MonthlyFinanceData` shape.
+
+    Mirrors frontend/src/components/reports/templates/monthly-finance.tsx
+    (option-b reduction, 2026-05-31). The React interface was narrowed to the
+    personal cash/cost/tax statement services/artifacts/monthly_finance_service.py
+    actually computes (cash / positions_mv / liquidity_ratio / runway_months +
+    cost_breakdown / tax_estimate ledgers). The corporate-style P&L, balance
+    sheet, cash-flow, NAV-return, alpha and Sharpe surfaces were REMOVED because
+    the backend never computes them — a partial shape would still throw on the
+    unguarded P&L/BS/CF derefs and reproduce render_error. Honest-empty: missing
+    KPIs are omitted (the template elides the card); the ledgers only emit rows
+    that carry a real non-zero figure.
+    """
+    month_label = data.get("month_label") or "—"
+    generated = data.get("generated_at") or month_label
+    period_end = data.get("period_end") or month_label
+
+    cash = data.get("cash") or {}
+    positions_mv = data.get("positions_mv") or {}
+    cost_breakdown = data.get("cost_breakdown") or {}
+    tax_estimate = data.get("tax_estimate") or {}
+    liquidity_ratio = data.get("liquidity_ratio")
+    runway_months = data.get("runway_months")
+
+    def _krw(v) -> str:
+        try:
+            n = float(v)
+        except (TypeError, ValueError):
+            return "—"
+        an = abs(n)
+        sign = "−" if n < 0 else ""
+        if an >= 1_000_000:
+            return f"{sign}₩{an / 1_000_000:.2f}M"
+        if an >= 1_000:
+            return f"{sign}₩{an / 1_000:.0f}k"
+        return f"{sign}₩{an:,.0f}"
+
+    # NAV (KRW) = cash total + positions market value (both KRW-normalized by
+    # the service). None when neither is present.
+    try:
+        nav_total = float(cash.get("total_krw") or 0) + float(positions_mv.get("total_krw") or 0)
+    except (TypeError, ValueError):
+        nav_total = 0.0
+    nav_str = _krw(nav_total) if nav_total else "—"
+
+    try:
+        cash_total = float(cash.get("total_krw") or 0)
+    except (TypeError, ValueError):
+        cash_total = 0.0
+
+    shape: dict = {
+        "doc":        f"{month_label} · MF",
+        "coverMonth": month_label if month_label != "—" else None,
+        "asOf":       str(period_end) if period_end else "",
+        "issued":     f"Issued · {generated}",
+        "navEom":     nav_str,
+    }
+
+    if nav_total:
+        shape["navEomKpi"] = {"value": nav_str, "delta": "EOM 합산 (KRW)"}
+    if cash_total:
+        shape["cashKpi"] = {"value": _krw(cash_total), "delta": "현금 합산"}
+    if liquidity_ratio is not None:
+        try:
+            shape["liquidityKpi"] = {
+                "value": f"{float(liquidity_ratio):.2f}",
+                "delta": "Cash / (Cash + MV)",
+            }
+        except (TypeError, ValueError):
+            pass
+    if runway_months is not None:
+        try:
+            shape["runwayKpi"] = {
+                "value": f"{float(runway_months):.1f}",
+                "delta": "현재 burn 기준",
+            }
+        except (TypeError, ValueError):
+            pass
+
+    # Cost ledger — only the real fields the service computes. Each row is
+    # emitted only when its figure is non-zero (no fabricated/zero placeholders).
+    cost_rows: list[dict] = []
+    for label, key, detail in [
+        ("Commission (US)", "us_commission_usd", "거래 수수료 추정 (USD)"),
+        ("Commission (KR)", "kr_commission_krw", "거래 수수료 추정 (KRW)"),
+        ("Transaction Tax (KR)", "kr_transaction_tax_krw", "증권거래세 추정"),
+        ("FX Spread", "fx_spread_krw", "환전 스프레드 추정"),
+        ("Total Cost", "total_krw", "월간 합계 (KRW)"),
+    ]:
+        try:
+            amt = float(cost_breakdown.get(key) or 0)
+        except (TypeError, ValueError):
+            amt = 0.0
+        if amt:
+            is_usd = key.endswith("_usd")
+            amt_str = (
+                f"${amt:,.2f}" if is_usd else _krw(amt)
+            )
+            cost_rows.append({"label": label, "amount": amt_str, "detail": detail})
+    shape["costRows"] = cost_rows
+
+    # Tax ledger — same honest-non-zero rule.
+    tax_rows: list[dict] = []
+    for label, key, detail in [
+        ("US Capital Gains (est)", "us_capital_gains_krw", "해외주식 양도세 추정"),
+        ("Dividend Withholding (est)", "dividend_withholding_krw", "배당 원천징수 추정"),
+        ("Total Tax (est)", "total_estimated_krw", "추정 합계 (KRW)"),
+    ]:
+        try:
+            amt = float(tax_estimate.get(key) or 0)
+        except (TypeError, ValueError):
+            amt = 0.0
+        if amt:
+            tax_rows.append({"label": label, "amount": _krw(amt), "detail": detail})
+    shape["taxRows"] = tax_rows
+
+    return shape
+
+
 # Registry of type → raw-to-React preview shaper. Add a type ONLY after
 # verifying the template renders cleanly with the shape this produces.
 _PREVIEW_SHAPERS: dict[str, "callable"] = {
     "kpi_dashboard": _kpi_dashboard_preview_shape,
+    "risk_board": _risk_board_preview_shape,
+    "monthly_finance": _monthly_finance_preview_shape,
 }
 
 

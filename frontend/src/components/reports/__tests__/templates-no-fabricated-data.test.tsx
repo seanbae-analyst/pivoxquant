@@ -15,6 +15,8 @@ import { describe, it, expect } from "vitest";
 
 import { WeeklyMemo, type WeeklyMemoData } from "../templates/weekly-memo";
 import { KpiDashboard, type KpiDashboardData } from "../templates/kpi-dashboard";
+import { RiskBoard as RiskBoardReal, type RiskBoardData } from "../templates/risk-board";
+import { MonthlyFinance as MonthlyFinanceReal, type MonthlyFinanceData } from "../templates/monthly-finance";
 import { YearEndLetter, type YearEndLetterData } from "../templates/year-end-letter";
 import { BragCard, type BragCardData } from "../templates/brag-card";
 import { DdChecklist } from "../templates/dd-checklist";
@@ -239,6 +241,81 @@ describe("DdChecklist — backend pending-review render + empty state", () => {
     );
     expect(screen.getByText("Real Co")).toBeInTheDocument();
     expect(screen.getByText("REALTKR")).toBeInTheDocument();
+    expect(document.querySelector("[data-pq-empty-reason]")).toBeNull();
+  });
+});
+
+describe("RiskBoard — reduced real-data render (option-b, no beta)", () => {
+  const data: RiskBoardData = {
+    weekTag: "RB-M · May 2026",
+    asOfStamp: "As of May 2026",
+    var95: { value: "-2.7%", nav: "≈$33,333 NAV", tone: "amber" },
+    maxDD: { value: "-8.3%", limit: "Peak-to-trough", tone: "green" },
+    sharpe: { value: "1.42", vsPrior: "Risk-adj. · annual", tone: "green" },
+    vix: { value: "18.6", band: "Volatility regime", tone: "green" },
+    pairwiseCorr: { value: "0.56", gauge: 56, verdict: "REAL_CORR_VERDICT" },
+  };
+
+  it("renders the four real KPIs + corr card, never the removed Beta", () => {
+    render(<RiskBoardReal data={data} />);
+    expect(screen.getByText("-2.7%")).toBeInTheDocument();
+    expect(screen.getByText("1.42")).toBeInTheDocument();
+    expect(screen.getByText("18.6")).toBeInTheDocument();
+    expect(screen.getByText("REAL_CORR_VERDICT")).toBeInTheDocument();
+    // `beta` was dropped from the interface — no Beta card label.
+    expect(document.body.textContent).not.toContain("Beta vs S&P");
+    expect(document.querySelector("[data-pq-empty-reason]")).toBeNull();
+  });
+
+  it("elides the correlation card when pairwiseCorr is absent (no throw)", () => {
+    const { pairwiseCorr: _omit, ...noCorr } = data;
+    render(<RiskBoardReal data={noCorr} />);
+    expect(screen.getByText("-2.7%")).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("Pairwise Corr");
+  });
+});
+
+describe("MonthlyFinance — reduced real-data render (option-b, no P&L/BS/CF)", () => {
+  const data: MonthlyFinanceData = {
+    doc: "2026-04 · MF",
+    coverMonth: "2026-04",
+    asOf: "2026-04-30",
+    issued: "Issued · 2026-05-01",
+    navEom: "₩25.00M",
+    navEomKpi: { value: "₩25.00M", delta: "EOM 합산 (KRW)" },
+    cashKpi: { value: "₩5.00M", delta: "현금 합산" },
+    liquidityKpi: { value: "0.20", delta: "Cash / (Cash + MV)" },
+    runwayKpi: { value: "8.5", delta: "현재 burn 기준" },
+    costRows: [
+      { label: "REAL_COST_ITEM", amount: "₩40k", detail: "증권거래세 추정" },
+    ],
+    taxRows: [
+      { label: "REAL_TAX_ITEM", amount: "₩220k", detail: "해외주식 양도세 추정" },
+    ],
+  };
+
+  it("renders NAV/cost/tax, never the removed P&L / balance sheet", () => {
+    render(<MonthlyFinanceReal data={data} />);
+    expect(screen.getAllByText("₩25.00M").length).toBeGreaterThan(0);
+    expect(screen.getByText("REAL_COST_ITEM")).toBeInTheDocument();
+    expect(screen.getByText("REAL_TAX_ITEM")).toBeInTheDocument();
+    // Removed corporate-statement headers must be gone.
+    expect(document.body.textContent).not.toContain("Income Statement");
+    expect(document.body.textContent).not.toContain("Balance Sheet");
+    expect(document.body.textContent).not.toContain("Cash Flow");
+    expect(document.querySelector("[data-pq-empty-reason]")).toBeNull();
+  });
+
+  it("elides KPI cards that are absent without throwing", () => {
+    const minimal: MonthlyFinanceData = {
+      doc: "2026-04 · MF",
+      asOf: "2026-04-30",
+      issued: "Issued · 2026-05-01",
+      navEom: "—",
+      costRows: [],
+      taxRows: [],
+    };
+    render(<MonthlyFinanceReal data={minimal} />);
     expect(document.querySelector("[data-pq-empty-reason]")).toBeNull();
   });
 });
