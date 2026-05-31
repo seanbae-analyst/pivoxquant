@@ -136,9 +136,9 @@ grep -vE "sector_regime|vix_level|fx_service|feature_flags|SignalCache.*ticker" 
 # 3. 각 hit 검증 (Read tool)
 
 # 4. precedent regression check (이미 고친 거 안 깨졌는지)
-grep -n "user_id" services/ai/earnings_tone*.py
-grep -n "user_id" services/ai/risk_summary*.py
-grep -n "user_id" services/ai/signal_cache*.py
+# earnings_tone(EarningsCallTone) + risk_summary(AIRiskSummary) 둘 다 services/ai/models.py 에 통합됨
+grep -n "user_id" services/ai/models.py
+grep -n "user_id" services/cache_service.py models/signal_cache.py
 ```
 
 ---

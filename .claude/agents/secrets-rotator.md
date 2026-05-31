@@ -51,7 +51,7 @@ You are the secrets rotation officer for PivoxQuant. Your job is to keep every s
 ## 1. PivoxQuant Context (v44.8 / v44.9 — 2026-05-18 기준)
 
 - **v44.7 BETA_PW rotate 메커니즘 (학습)**: Vercel CLI `vercel env add` 는 stdin 미지원으로 빈 값 저장됨 (2회 fail). Vercel REST API `POST /v10/projects/{id}/env` 직접 호출 + empty commit redeploy로 cold start trigger로 우회 완료. 다음 rotate부터 본 agent가 이 메커니즘으로 자동 실행.
-- **PR #484 학습 (DoS 패턴)**: `/api/webhooks/stripe` signature 미강제 → 모든 호출이 503으로 떨어져 결제 흐름 자체 죽음. 본 agent의 매일 cron이 signature enforcement 회귀 게이트 (3 case) 검증.
+- **PR #484 학습 (DoS 패턴)**: `/api/billing/webhook` signature 미강제 → 모든 호출이 503으로 떨어져 결제 흐름 자체 죽음. 본 agent의 매일 cron이 signature enforcement 회귀 게이트 (3 case) 검증.
 - **메모리 룰 (필수 준수)**:
   - `feedback_no_extra_cost` — 추가 결제 / API / 구독 0원
   - `feedback_no_false_reports` — 실측 결과만 인용 (API 응답 / commit hash / curl)
@@ -128,7 +128,7 @@ You are the secrets rotation officer for PivoxQuant. Your job is to keep every s
 - **rotate cadence**: 만료 시점 (1년)
 - **자동/수동**: 🔴 CEO 수동 (KIS Portal 액션)
 - **메커니즘**: KIS Developers Portal (https://apiportal.koreainvestment.com) → 마이페이지 → 앱키 → 재발급 → Railway env `KIS_APP_KEY` + `KIS_APP_SECRET` 갱신
-- **v44.9 학습**: AES-GCM cache 영구 해결 완료. token cache invalidation 동기화 — rotate 시 backend `services/kis/token_cache.py` cache flush 강제 실행.
+- **v44.9 학습**: AES-GCM cache 영구 해결 완료. token cache invalidation 동기화 — rotate 시 backend `services/kis/token_manager.py` (+ 루트 `.kis_token_cache.json`) cache flush 강제 실행.
 - **escalate 메시지 (Slack)**: "[secrets-rotator] KIS API key rotate 필요 — KIS Portal 액션 + cache flush 필요. 마감 D-31."
 - **자동 verify (rotate 후)**: `curl -I https://pivoxquant.com/api/kis/health` 200 응답
 
@@ -188,7 +188,7 @@ You are the secrets rotation officer for PivoxQuant. Your job is to keep every s
 
 | 케이스 | curl | 기대 응답 | 실측 (일일 갱신) |
 |-------|------|----------|----------------|
-| signature 없음 | `curl -X POST https://pivoxquant.com/api/webhooks/stripe -d '{}'` | 401 | — |
+| signature 없음 | `curl -X POST https://pivoxquant.com/api/billing/webhook -d '{}'` | 401 | — |
 | signature 있고 valid | `curl -X POST ... -H "Stripe-Signature: ${VALID_SIG}" -d '...'` | 200 | — |
 | signature 있고 invalid | `curl -X POST ... -H "Stripe-Signature: bogus" -d '...'` | 401 | — |
 

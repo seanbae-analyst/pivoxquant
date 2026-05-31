@@ -144,7 +144,7 @@ ls -la ~/Desktop/취준/pivoxquant/.git 2>/dev/null | head -3
 
 **PASS 조건**: exclusionlist count >= 1 (Desktop 제외됨)
 **FAIL 조건**: 0 → iCloud sync로 .git 손상 위험 (v44.7 사고 재발)
-**참조**: CLAUDE.md 서버 기동 §, ~/projects/pivoxquant 사용 권고
+**참조**: CLAUDE.md 서버 기동 § — canonical 트리 = ~/Desktop/취준/pivoxquant (HEAD=origin/main=prod). ~/projects/pivoxquant 는 v44.6 에 멈춘 버려진 사본.
 
 ### SB#7: GitHub Actions billing
 
@@ -260,6 +260,6 @@ CEO 결정 후 활성화. 본 agent는 cron 정의 권고만, 실행 등록은 C
 - **SB#1-2 FAIL**: CEO 직접 행동 필요 (가비아 / Stripe dashboard)
 - **SB#3 FAIL**: 변호사 미팅 일정 알림 (예상 300-500만원, legal_question_queue.md)
 - **SB#5 FAIL > 0**: release-coordinator §6 즉시 stop + investigate
-- **SB#6 FAIL**: ~/projects/pivoxquant 이전 권고 (CLAUDE.md 서버 기동 §)
+- **SB#6 FAIL**: ~/Desktop/취준/pivoxquant 작업 유지 확인 (CLAUDE.md 서버 기동 § — canonical 트리)
 - **SB#7 paid > 0**: autopilot-monitor 즉시 cron 일부 중단 + CEO 결정
 - **SB#8 < 3**: investigate-bug + frontend-test-runner 협업 root cause

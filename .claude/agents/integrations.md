@@ -50,10 +50,10 @@ You are the Integration Architect at Stripe-level reliability. External APIs are
 | **KIS API** (한국투자증권) | KR 종목 시세 / 한국 시장 데이터 | ACTIVE (read-only) | `services/kis/service.py` + multi-broker | 무료 (KIS 계좌 보유) | 주문 disabled — 투자중개업 회피. AES-GCM 토큰 캐시 (v44.9 fix) |
 | **FMP $29 plan** (Financial Modeling Prep) | US 종목 시세 / 펀더멘털 | ACTIVE (월 $29) | `services/data/fmp.py` | $29/월 | v4 stable. 750 req/min, soft daily 10k. 429 24h lockout (v44.9 fix). caret-prefixed 402 전환 이슈 발생 |
 | **Alpaca paper** | 백테스트 / paper trading | ACTIVE | `services/data/fetcher.py` (Alpaca→FMP 폴백) | 무료 (paper) | 실주문 0건. 백테스트 + 시뮬레이션만 |
-| **SEC EDGAR** | US 공시 (10-K, 10-Q, 8-K) | ACTIVE | `services/sec_edgar.py` | 무료 (정부 공식) | rate limit 10 req/sec |
-| **DART OpenAPI** | KR 공시 (사업보고서, 분기보고서) | ACTIVE | `services/dart_service.py` | 무료 (정부 공식) | 인증키 필요. 일 10,000 req |
-| **KRX Open Data Portal** | KR 정부 공식 지수 / 종목 마스터 | ACTIVE | `services/krx_service.py` | 무료 (정부 공식) | KOSPI / KOSDAQ 공식 데이터 |
-| **Stripe Live** | 결제 (SaaS 3 tier 구독) | ACTIVE (Live mode) | `routes/billing.py` + `services/stripe_service.py` | Stripe 수수료 (2.9% + ₩300) | webhook signature 강제 (v44.8 DoS fix). 5법 sweep 필수 |
+| **SEC EDGAR** | US 공시 (10-K, 10-Q, 8-K) | ACTIVE | `services/data/sec_edgar_service.py` | 무료 (정부 공식) | rate limit 10 req/sec |
+| **DART OpenAPI** | KR 공시 (사업보고서, 분기보고서) | ACTIVE | `services/data/dart_corp_code.py` + `services/data/dart_insider.py` | 무료 (정부 공식) | 인증키 필요. 일 10,000 req |
+| **KRX / KIS 시장데이터** | KR 정부 공식 지수 / 종목 마스터 | ACTIVE | `services/data/kis_market_adapter.py` (pykrx 는 ToS 위반 stub) | 무료 (정부 공식) | KOSPI / KOSDAQ 공식 데이터 |
+| **Stripe (게이트 비활성)** | 결제 (SaaS 3 tier 구독) | 코드 완성·BUSINESS_REGISTRATION 게이트로 503 | `routes/billing.py` (+ `services/billing_followup.py` / `services/billing_notifications.py`) | Stripe 수수료 (2.9% + ₩300) | webhook signature 강제 (v44.8 DoS fix). 5법 sweep 필수 |
 | **Google OAuth** | 인증 (소셜 로그인) | ACTIVE | `routes/auth.py` (Authlib) | 무료 | stateless HMAC state (PR `d153340`) |
 | **Kakao OAuth** | 인증 (한국 사용자) | ACTIVE | `routes/auth.py` (Authlib) | 무료 | stateless HMAC state |
 | **Claude API** (Anthropic) | AI artifact 생성 (Weekly Memo, Brag Card, Earnings Brief, SWOT) | ACTIVE | `services/ai/service.py` | Max plan (CC) + API credit | PIPA §28-8 국외이전 동의 필수 (US Anthropic) |
@@ -110,7 +110,7 @@ KOSPI/KOSDAQ 지수 누락 (v28 사고 패턴): pykrx 사용 금지 → KIS Inde
 
 ## 💳 Stripe Live 5법 sweep checklist (P0 결제 변경 시 필수)
 
-결제 코드 (`routes/billing.py`, `services/stripe_service.py`) 또는 pricing 페이지 변경 시 아래 5법 동시 sweep.
+결제 코드 (`routes/billing.py`, `services/billing_followup.py`, `services/billing_notifications.py`) 또는 pricing 페이지 변경 시 아래 5법 동시 sweep.
 
 | 법령 | 조항 | 요건 | PivoxQuant 적용 |
 |------|------|------|----------------|
@@ -154,15 +154,15 @@ KOSPI/KOSDAQ 지수 누락 (v28 사고 패턴): pykrx 사용 금지 → KIS Inde
 | 패턴 | 구현 파일 | 비고 |
 |------|----------|------|
 | TTL Cache | `services/data/fmp.py` (TTLCache + budget enforcement) | FMP 429 24h lockout (v44.9 fix) |
-| SignalCache (per-user) | `services/signal_cache.py` | cross-user sizing leak 방지 (v44.9 fix) |
-| earnings_tone cache | `services/earnings_tone_cache.py` | 90일 cross-user poisoning 방지 (v44.9 fix) |
-| Retry exponential backoff | `services/retry.py` | 모든 외부 호출 wrapping |
-| Circuit Breaker | `services/circuit_breaker.py` | 5회 연속 실패 시 OPEN, 60초 후 HALF-OPEN |
+| SignalCache (per-user) | `models/signal_cache.py` | cross-user sizing leak 방지 (v44.9 fix) |
+| earnings_tone cache | `services/ai/models.py` (cache_key=`earnings_tone:{ticker}`) + `services/cache_service.py` | 90일 cross-user poisoning 방지 (v44.9 fix) |
+| Retry exponential backoff | 분산 구현 — `services/kis/websocket_service.py` / `services/email/{sendgrid,brevo}_provider.py` (중앙 모듈 없음) | 5xx 재시도, 4xx no-retry |
+| Circuit Breaker | ⚠️ 범용 API 서킷브레이커 미구현 — `services/quant/risk_defense.py` Layer 5 는 트레이딩 손실한도(별개 개념) | 신규 도입 시 별도 검토 |
 | Webhook Signature (Stripe) | `routes/billing.py` (HMAC SHA-256 verify) | 미강제 시 503 — auto-opt-out DoS (v44.8 fix) |
 | FX Conversion | `services/fx_service.py` | equity curve KRW raw 합산 금지 (v44.8 fix +52,281% 사고) |
-| portfolio_history spot FX | `services/portfolio_history.py` | G-5 회귀 방지 (v44.9 fix) |
-| risk_quant N+1 → 병렬 | `services/risk_quant.py` | 8s → 1s (v44.9 fix) |
-| KIS Token Cache | `services/kis/service.py` | AES-GCM (v44.9 fix, 평문 → 암호화) |
+| portfolio_history spot FX | `routes/portfolio.py` + `routes/risk.py` | G-5 회귀 방지 (v44.9 fix) |
+| risk_quant N+1 → 병렬 | `routes/risk_quant.py` | 8s → 1s (v44.9 fix) |
+| KIS Token Cache | `services/kis/token_manager.py` | AES-GCM (v44.9 fix, 평문 → 암호화) |
 
 ## Per-API Checklist (신규 integration 추가 시)
 ```

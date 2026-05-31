@@ -173,7 +173,7 @@ grep -rn "추천\|권유\|매수하세요\|매도하세요\|recommend\|should bu
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀
+**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
 **최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
 **Brand**: PivoxQuant (NOT stockpilot) — 폴더 `stockpilot/` 만 historical, 모든 UI/copy 는 PivoxQuant
 **디자인 v3 lock-in** (`project_design_v3.md` 2026-04-27): Vantablack + Bronze + Playfair + KR 컨벤션 + 11단계 타이포 토큰

@@ -68,7 +68,7 @@ effort: high
 ## 4. viral loop / product 결함 감지
 
 ### A. brag-card OG endpoint (v44.8 PR #484 학습)
-- **일일 grep**: `grep -rn "brag.card.*api_auth\|brag.card.*login_required" pivoxquant/` 실행
+- **일일 grep**: `grep -rn "brag.card.*api_auth\|brag.card.*login_required" routes/ services/` 실행
 - **검증**: brag-card OG endpoint가 public access 유지하는지 확인
 - **회귀 시**: viral loop 즉시 BLOCKED → CRITICAL 보고 + `bug-hunter` 호출
 

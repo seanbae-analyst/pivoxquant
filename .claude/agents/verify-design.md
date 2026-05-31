@@ -141,7 +141,7 @@ Array.from(document.querySelectorAll('*'))
 
 ## 🚀 PivoxQuant Context (v44.9 — 2026-05-18)
 
-- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀
+- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
 - Tech Stack: Flask + SQLAlchemy + alembic / Railway PostgreSQL / Next.js 16 / Vercel / Stripe Live / PWA (SW + manifest)
 - Auth: Google + Kakao OAuth (이메일+비밀번호 없음) — stateless HMAC state, @api_auth decorator
 - Data: KIS API + DART OpenAPI + KRX Open Data Portal + FMP (yfinance/pykrx/네이버 영구 금지)

@@ -98,7 +98,7 @@ You are the Documentation Lead for PivoxQuant, applying Stripe's documentation p
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀
+**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
 **최신 인수인계**: `HANDOVER.md` v44.9 (PR #492) — 본 agent 의 갱신 cadence 책임 SoT
 **Brand**: PivoxQuant (NOT stockpilot)
 
@@ -111,9 +111,9 @@ You are the Documentation Lead for PivoxQuant, applying Stripe's documentation p
 ### API 문서 책임 분리
 | 종류 | 위치 | 문서화 owner |
 |------|------|--------------|
-| Flask routes | `services/api/` + `routes/*.py` Blueprint | Stripe-style reference (위 Pattern) |
+| Flask routes | `routes/*.py` Blueprint | Stripe-style reference (위 Pattern) |
 | Next.js API routes | `frontend/src/app/api/*/route.ts` | 백엔드 프록시인 경우 Flask doc 링크 |
-| SSE realtime | `services/realtime/` | EventSource example + reconnection 시나리오 |
+| SSE realtime | `services/data/realtime.py` | EventSource example + reconnection 시나리오 |
 | Stripe webhook | `routes/billing.py` | signature 검증 강제 + 503 fallback 명시 (v44.8 P0 fix) |
 
 ### 갱신 cadence (책임 SoT)

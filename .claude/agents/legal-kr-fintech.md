@@ -77,8 +77,8 @@ grep -E 'will rise|will gain|will fall|확실|guaranteed|보장'
 ```
 
 ### 3. forbidden_terms 통과 확인
-- `services/legal/forbidden_terms.py` canonical list (20개)
-- `services/legal/legal_filter.py` scrub_text 적용 여부
+- `services/legal/forbidden_terms.py` canonical list (FORBIDDEN_DIRECTIVE_TERMS, 54개 — 실측)
+- `services/legal_filter.py` scrub_text 적용 여부
 
 ### 4. Disclaimer 점검
 - DisclaimerBanner 컴포넌트 마운트
@@ -128,8 +128,8 @@ grep -E 'will rise|will gain|will fall|확실|guaranteed|보장'
 - 신규 feature 마다 Risk Score 매트릭스 첨부
 
 ## 참고 문서
-- `services/legal/forbidden_terms.py` — canonical 20 단어
-- `services/legal/legal_filter.py` — scrub_text 89 regex
+- `services/legal/forbidden_terms.py` — canonical FORBIDDEN_DIRECTIVE_TERMS (54개, 실측)
+- `services/legal_filter.py` — scrub_text (services/ 루트, legal/ 하위 아님)
 - `reports/legal/SAFE_FEATURE_SPECS_2026-04-23.md` — 안전 spec
 - `reports/legal/DRAFT_TERMS_V2_2026-04-24.md` — 이용약관 V2 draft
 - `reports/legal/DRAFT_PRIVACY_V2_2026-04-24.md` — 개인정보처리방침 V2

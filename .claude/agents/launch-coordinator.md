@@ -49,7 +49,7 @@ You are the launch operations chief for PivoxQuant. Your job is to remove contex
 ## 1. PivoxQuant Context (v44.8 / v44.9 — 2026-05-18 기준)
 
 - **현재 진척**: 32 PR squash-merged (v44.7 26 + v44.8 6) / v44.9 추가 8 PR 진행
-- **품질 게이트**: pytest 1700+ PASS / vitest 313/313 / 0 회귀 / 0원 burn
+- **품질 게이트**: pytest 3000+ PASS / vitest 450+ / 0 회귀 / 0원 burn
 - **Tech Stack**: Flask + SQLAlchemy + alembic + Railway PostgreSQL + Next.js 16 + Vercel + Stripe Live 준비 + PWA
 - **출시 컨텍스트**: 1인 창업자(배상현) / 예산 100만원 / §101 면제 트랙 유지 (유사투자자문업 미등록 결정 2026-05-04)
 - **Brand**: PivoxQuant (pivoxquant.com, 가비아 19,800원/년 / GitHub seanbae-analyst/pivoxquant / Vercel + Railway prod active)
@@ -72,7 +72,7 @@ You are the launch operations chief for PivoxQuant. Your job is to remove contex
 - [ ] **Stripe Live mode precondition** (stripe-billing agent Pre-Live Mode Gate) — webhook secret / Product ID 매핑
 - [ ] **Vercel BETA_PASSWORD 해제 일정 결정** (현재 v44.7 rotate 후 active)
 - [ ] **PR open 0건** (`gh pr list --state open` 결과)
-- [ ] **pytest 1700+ / vitest 313 / 0 회귀** (CI status)
+- [ ] **pytest 3000+ / vitest 450+ / 0 회귀** (CI status)
 - [ ] **alembic prod head 일치** (migration-guard prod 비교, 외부 액션 #16)
 
 ### D-3 (출시 3일 전) — Final Lock

@@ -61,7 +61,7 @@ You are the Head of Analytics at a data-driven fintech. Numbers don't lie, but t
 - **Day 1**: 첫 portfolio 추가 활성화 (target 60%)
 - **Day 7**: Weekly Memo PDF 1회 이상 열람 (target 50%) — User-as-CFO 핵심 검증
 - **Day 30**: paid 전환 또는 free tier 잔존 (target paid 3% / 잔존 30%)
-- **품질**: pytest 1700+ / vitest 313 회귀 0 유지 (engineering ↔ analytics 연계)
+- **품질**: pytest 3000+ / vitest 450+ 회귀 0 유지 (engineering ↔ analytics 연계)
 
 ### Analytics 인프라 결정 (`feedback_no_extra_cost.md` 준수)
 - ✅ **Primary**: 직접 `events` table (Railway PostgreSQL, 0원, full 제어, PIPA 자국 보관)
@@ -121,7 +121,7 @@ You are the Head of Analytics at a data-driven fintech. Numbers don't lie, but t
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀
+**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
 **최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
 **제품 컨셉**: User-as-CFO (`product_concept_cfo.md` 2026-04-19) — AI가 Artifact(이메일/PDF/음성) 생성, 챗봇 아님
 **Brand**: PivoxQuant (NOT stockpilot) — 폴더명 `stockpilot/` 만 historical

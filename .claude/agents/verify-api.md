@@ -109,27 +109,27 @@ railway logs --service=backend | tail -200 | grep -E "column.*does not exist|Und
 | 6 | `/api/artifacts/weekly-memo` | GET (auth) | 200 | Weekly Memo (MVP 핵심) |
 | 7 | `/api/artifacts/brag-card/og.png` | GET (**public**) | 200 image/png | **인증 분기 검증** — viral loop (v44.8 PR #484: @api_auth → public endpoint 회귀 게이트) |
 | 8 | `/api/billing/checkout` | POST (auth) | 200 + checkout_url | Stripe Live — 전자상거래법 §17 확인 |
-| 9 | `/api/webhooks/stripe` | POST | 503 (sig 없음) | signature 강제 검증 — 아래 섹션 참조 |
+| 9 | `/api/billing/webhook` | POST | 503 (sig 없음) | signature 강제 검증 — 아래 섹션 참조 |
 
 ## Stripe Webhook Signature 강제 검증 (PR #484 회귀 게이트)
 v44.8 DoS auto-opt-out 학습: signature 미강제 시 항상 503 → webhook 영구 fail → 결제 자동 opt-out.
 
 ```bash
 # Case 1: signature 없음 → 503 정상 (signature required)
-curl -s -o /dev/null -w "%{http_code}" -X POST ${RAILWAY_BACKEND_URL}/api/webhooks/stripe \
+curl -s -o /dev/null -w "%{http_code}" -X POST ${RAILWAY_BACKEND_URL}/api/billing/webhook \
   -H "Content-Type: application/json" \
   -d '{"type":"checkout.session.completed"}'
 # 기대: 503 (또는 400 "missing stripe-signature")
 
 # Case 2: signature 잘못됨 → 401 정상
-curl -s -o /dev/null -w "%{http_code}" -X POST ${RAILWAY_BACKEND_URL}/api/webhooks/stripe \
+curl -s -o /dev/null -w "%{http_code}" -X POST ${RAILWAY_BACKEND_URL}/api/billing/webhook \
   -H "Content-Type: application/json" \
   -H "Stripe-Signature: t=1234,v1=invalid" \
   -d '{"type":"checkout.session.completed"}'
 # 기대: 401 (signature verification failed)
 
 # Case 3: signature 유효 (Stripe CLI 또는 test fixture) → 200
-# stripe trigger checkout.session.completed --forward-to ${RAILWAY_BACKEND_URL}/api/webhooks/stripe
+# stripe trigger checkout.session.completed --forward-to ${RAILWAY_BACKEND_URL}/api/billing/webhook
 # 기대: 200
 ```
 **FAIL 조건**: Case 1에서 200 반환 → signature 미강제 = 즉시 SHIP-BLOCKER.

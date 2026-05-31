@@ -45,7 +45,7 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 - **Auth: Google + Kakao OAuth (이메일+비밀번호 없음)** — stateless HMAC state, `@api_auth` decorator
 - **Hosting: Vercel (frontend), Railway (backend)** — Vercel REST API로 env rotate
 - **PWA: service worker + manifest** (`project_pwa.md` 2026-04-27 확정) — SW 캐시 무효화 필수
-- **Realtime: SSE (Server-Sent Events)** via Flask `realtime_service.py`
+- **Realtime: SSE (Server-Sent Events)** via Flask `services/data/realtime.py`
 - **Data: KIS API + DART OpenAPI + KRX Open Data Portal + FMP $29 plan** (yfinance/pykrx/네이버 finance 영구 금지)
 - Architecture: PWA, 3-Layer Adaptive Trading Parameters
 
@@ -114,7 +114,7 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀 (v44.9 P0 5건 추가 fix: earnings_tone cross-user / SignalCache leak / equity FX G-5 / FMP 429 lockout / risk_quant N+1 + KIS token AES-GCM)
+**프로덕션 상태**: Railway + Vercel ACTIVE / 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀 (v44.9 P0 5건 추가 fix: earnings_tone cross-user / SignalCache leak / equity FX G-5 / FMP 429 lockout / risk_quant N+1 + KIS token AES-GCM)
 **베타 비밀번호**: Vercel env `BETA_PASSWORD` — 평문 git 금지. rotate 메커니즘 = Vercel REST API `POST /v10/projects/{id}/env` 직접 호출 + empty commit redeploy trigger (CLI stdin 미지원)
 **최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4 모두 시점 지남 — 출시 직전 단계)
@@ -138,7 +138,7 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 
 ### 공식 데이터만 룰 (`feedback_official_data_only.md`)
 - ❌ **영구 금지**: yfinance / pykrx / 네이버 finance / 비공식 스크래핑
-- ✅ **허용**: KIS API (KR 시세) / KRX Open Data Portal (정부 공식) / DART OpenAPI (공시) / FMP $29 plan (US) / Alpaca (US paper) / SEC EDGAR
+- ✅ **허용**: KIS API (KR 시세) / KRX Open Data Portal (정부 공식) / DART OpenAPI (공시) / FMP Stable (US) / SEC EDGAR  ※ Alpaca 는 2026-05-27(commit 6bea95f8) 완전 제거 — ALPACA_ENABLED 기본 OFF
 - KR 데이터 path 제시 시 KIS 우회 + KRX + DART 만 제안. yfinance 코드 발견 시 즉시 fix.
 
 ### PR 워크플로우 5대 룰 (`feedback_pr_workflow.md`)

@@ -108,7 +108,6 @@ curl -s -X POST ${RAILWAY_BACKEND_URL}/api/auth/dev-login \
 ```bash
 grep -rE "recommendation|recommend|should buy|should sell|투자 추천|매수 권유" \
   /Users/seanbae/Desktop/취준/pivoxquant/routes/ \
-  /Users/seanbae/Desktop/취준/pivoxquant/ai_service.py \
   /Users/seanbae/Desktop/취준/pivoxquant/services/ \
   2>/dev/null | grep -v "\.pyc" | head -10
 ```
@@ -143,7 +142,7 @@ grep -nE "STRIPE_WEBHOOK_SECRET|construct_event" /Users/seanbae/Desktop/취준/p
 ```bash
 cd /Users/seanbae/Desktop/취준/pivoxquant
 alembic heads | wc -l   # 1 이어야 함 (multiple heads = 머지 충돌)
-grep -n "_do_migrations\|ADD COLUMN" services/db_runtime.py
+grep -n "_do_migrations\|ADD COLUMN" app.py
 # runtime ADD COLUMN fallback이 production startup에서 실행되는지
 ```
 - 사고 사례: alembic 035 prod 미적용 → `users.provisioned_at` 컬럼 없음 → OAuth callback 500 → runtime ADD COLUMN hotfix
@@ -190,7 +189,7 @@ grep -rE "청약철회|7일|withdraw|refund" \
 ```bash
 grep -rnE "설명의무|적합성|투자자문이?\s*아닙?|데이터\s*제공\s*서비스" \
   /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/app/pricing \
-  /Users/seanbae/Desktop/취준/pivoxquant/components/billing 2>/dev/null
+  /Users/seanbae/Desktop/취준/pivoxquant/frontend/src/components/settings 2>/dev/null
 ```
 
 **(3) 표시광고법 §3 — sample data 검출 (default 패턴)**

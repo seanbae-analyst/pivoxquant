@@ -335,7 +335,7 @@ def downgrade_tier(user_id: int, reason: str):
 
 ## 🚀 PivoxQuant Context (v44.8 갱신, 2026-05-18)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / pytest 1700+ pass (v44.9 기준) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
+**프로덕션 상태**: Railway + Vercel ACTIVE / pytest 3000+ pass (실측 기준) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
 **최신 인수인계**: `HANDOVER.md` v44.7+ (자율 overnight 8h, 26+ PR squash-merged)
 **Stripe Live 활성 status**: ❌ **BLOCKED** — Pre-Live Mode Gate 6개 중 0개 충족 (Q1-Q15 변호사 답변 대기, 통신판매업 미완)
 **누적 PR**: 40 PR (v44.7 26 + v44.8 6 + v44.9 8)

@@ -17,7 +17,7 @@ hard_frozen:
 
   - path: services/quant/models.py
     owner: persona-quant-domain
-    reason: 58 quant 모델 (StatArb, MeanReversion, TSMOM, ML 등)
+    reason: 40 quant 모델 (MODEL_CATALOG — StatArb, MeanReversion, TSMOM, ML 등)
     legacy_path: quant_models.py
     iron_rule_source: "CLAUDE.md 중요 원칙 §1"
 

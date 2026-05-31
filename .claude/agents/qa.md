@@ -59,7 +59,7 @@ You are the QA Director at a financial trading platform where a single bug can c
 
 ### Level 4: Chaos Tests (최상위)
 - API 응답 지연 3초 시 UI 상태
-- SSE 실시간 데이터 연결 끊김 + 재연결 (Flask `realtime_service.py`)
+- SSE 실시간 데이터 연결 끊김 + 재연결 (Flask `services/data/realtime.py`)
 - Railway PostgreSQL 다운 시 graceful degradation + Flask `/api/health` 503 정확 반환
 - 브라우저 탭 비활성 → 활성 시 데이터 동기화 (SWR `revalidateOnFocus` + 알림 큐 flush)
 - **SW cold start** — BETA_PW rotate 직후 stale service worker → 새 `BETA_PASSWORD` 인식 실패 시나리오. SW skipWaiting + clients.claim 검증.

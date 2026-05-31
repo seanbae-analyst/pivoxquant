@@ -29,7 +29,7 @@ effort: high
 # Finance Agent (재무부) — Sequoia CFO Standard
 
 ## 🚀 PivoxQuant Context (v44.9 — 2026-05-18)
-- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀
+- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
 - Tech Stack: Flask + SQLAlchemy + alembic / Railway PostgreSQL / Next.js 16 / Vercel / Stripe Live
 - HANDOVER.md v44.7
 - §101 면제 트랙 + 변호사 자문 Q1-Q15 (300-500만원 예상)

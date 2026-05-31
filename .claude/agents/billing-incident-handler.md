@@ -26,7 +26,7 @@ Stripe webhook 실패 / failed payment / chargeback 발생 시:
   - `feedback_no_extra_cost` — 추가 결제 인프라 도입 금지, 기존 Stripe + Railway + 이메일만 사용
   - `feedback_pre_launch_full_throttle` — 출시 전 토큰 절약 X, 깊이 max
 - 결제 인프라:
-  - Stripe webhook endpoint: `/api/webhooks/stripe`
+  - Stripe webhook endpoint: `/api/billing/webhook` (routes/billing.py)
   - Railway PG `users.tier` (Free / Pro / Premium)
   - 전자상거래법 §17 청약철회 7일 (가분적 디지털콘텐츠 예외 검토 필요)
   - 금소법 §19 부적합성 원칙 / 표시광고법 §3 / PIPA §28-8 / 정통망법 §50 sweep 완료 (v44.8)
@@ -54,7 +54,7 @@ Stripe webhook 실패 / failed payment / chargeback 발생 시:
   - Sentry error rate (`webhooks.stripe` namespace)
   - Railway logs grep `webhooks.stripe.*ERROR`
 - **즉시 대응**:
-  1. webhook endpoint `/api/webhooks/stripe` health check (`curl -X POST` with dummy signature → 400 expected)
+  1. webhook endpoint `/api/billing/webhook` health check (`curl -X POST` with dummy signature → 400 expected)
   2. signature 검증 강제 확인 (PR #484 회귀 방지 — `stripe.Webhook.construct_event` 호출 grep)
   3. Railway logs 마지막 1시간 grep `webhooks.stripe` ERROR
   4. 결제 누락 발생 시 manual reconciliation:
@@ -241,7 +241,7 @@ Stripe webhook 실패 / failed payment / chargeback 발생 시:
 ## 8. 회귀 방지 게이트
 
 - **PR #484 회귀**: webhook signature 검증 누락 시 항상 503 returning → DoS auto-opt-out 발생
-  - CI gate: `grep "stripe.Webhook.construct_event" /api/webhooks/stripe.py` MUST exist
+  - CI gate: `grep "stripe.Webhook.construct_event" routes/billing.py` MUST exist (routes/billing.py:319)
 - **tier 강등 무한 루프**: grace period 만료 cron 멱등성 보장
   - `grace_until < NOW()` AND `tier != 'free'` 조건 필수
 - **refund 중복 처리**: `refund_log` table unique constraint (`charge_id`)

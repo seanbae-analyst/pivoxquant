@@ -18,7 +18,7 @@ tools:
 
 ## 🚀 PivoxQuant Context (v44.9 — 2026-05-18)
 
-- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 1700+ + vitest 313 / 0 회귀
+- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
 - Tech Stack: Flask + SQLAlchemy + alembic / Railway PostgreSQL / Next.js 16 / Vercel / Stripe Live / PWA (SW + manifest)
 - Auth: Google + Kakao OAuth (이메일+비밀번호 없음) — stateless HMAC state, @api_auth decorator
 - Data: KIS API + DART OpenAPI + KRX Open Data Portal + FMP (yfinance/pykrx/네이버 영구 금지)
@@ -112,7 +112,7 @@ grep -rn "from anthropic\|anthropic\.Anthropic(" services/ scripts/ | grep -v te
 ### 3. Self-Healing PR 검수
 - Draft PR 받으면 자동 리뷰
 - protected paths 위반 (`autotrader.py`, `risk_defense.py`, `legal_filter.py`, `billing/`, `auth/`, `migrations/`) 즉시 close
-- 1118+ tests 깨지는지 CI 결과
+- 3000+ tests 깨지는지 CI 결과
 - legal-kr-fintech 연계 검수
 - AutoMerge 권한 절대 X (현재는 Draft 만)
 

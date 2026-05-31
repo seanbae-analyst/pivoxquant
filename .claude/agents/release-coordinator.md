@@ -16,7 +16,7 @@ effort: high
 
 - 누적 32 PR squash-merged (v44.7 26 + v44.8 6)
 - main HEAD: `git rev-parse --short HEAD` 로 실측 (하드코딩 금지 — sha 는 매 머지마다 변함)
-- pytest 1700+ PASS / vitest 313/313 / 0 회귀 / 0원
+- pytest 3000+ PASS / vitest 450+ / 0 회귀 / 0원
 - v44.7 가장 큰 incident: **OAuth provisioning_failed P0 hotfix** — alembic 035가 prod에 미적용 → `_do_migrations` runtime `ADD COLUMN`으로 응급 복구
 - v44.8 위험 패턴 학습:
   - viral loop broken (brag-card OG `@api_auth` → public endpoint)
@@ -99,7 +99,7 @@ effort: high
 - **깊이 review 조건**: 큰 변화 (> 500 lines / 단일 파일) 시 audit wide-scope 호출
 - **FAIL 조건**: spot check 1건이라도 의심 패턴 발견 시 → BLOCK + investigate
 - **Evidence schema (5 항목 checklist 필수)**:
-  - [ ] pytest 일부 실행 결과 (변경된 모듈 한정 — 예: `pytest backend/tests/test_billing.py -q`)
+  - [ ] pytest 일부 실행 결과 (변경된 모듈 한정 — 예: `pytest tests/test_billing.py -q`)
   - [ ] lint 결과 (`ruff check . --select=E,F,W` exit 0)
   - [ ] typecheck 결과 (frontend `npx tsc --noEmit` exit 0)
   - [ ] `git log --stat -1` stdout (최신 commit + 변경 파일 list)
@@ -135,9 +135,9 @@ effort: high
 ## 4. 배포 전 체크리스트 (모든 prod 배포)
 
 - [ ] 5룰 게이트 통과 (위 §3)
-- [ ] pytest 1700+ PASS / vitest 313 PASS / 0 회귀
+- [ ] pytest 3000+ PASS / vitest 450+ PASS / 0 회귀
   ```bash
-  cd /Users/seanbae/Desktop/취준/pivoxquant/backend && pytest -q 2>&1 | tail -5
+  cd /Users/seanbae/Desktop/취준/pivoxquant && ./venv/bin/python -m pytest -q 2>&1 | tail -5
   cd /Users/seanbae/Desktop/취준/pivoxquant/frontend && npm test -- --run 2>&1 | tail -5
   ```
 - [ ] 변경된 `.env` / settings 검토 (security agent 협업)
@@ -186,7 +186,7 @@ effort: high
    - dev-login endpoint 200 응답 확인
    - v44.7 provisioning_failed 재발 감지 게이트
 
-4. **Stripe webhook `/api/webhooks/stripe` signature 검증** (회귀 게이트)
+4. **Stripe webhook `/api/billing/webhook` signature 검증** (회귀 게이트)
    - v44.8 DoS auto-opt-out incident 재발 방지
    - signature 강제 활성화 확인
 

@@ -147,8 +147,8 @@ grep -v "services/quant/portfolio.py:26[0-9]\|services/data/fx_service.py" /tmp/
 
 # 4. precedent regression
 grep -n "fx_service\|convert_to_krw" services/quant/portfolio.py | head
-grep -n "fx_service\|convert_to_krw" services/ai/risk_summary*.py | head
-grep -n "fx_service\|convert_to_krw" services/ai/portfolio_context*.py | head
+# AIRiskSummary 등은 services/ai/models.py 에 통합됨
+grep -n "fx_service\|convert_to_krw" services/ai/models.py | head
 ```
 
 ---

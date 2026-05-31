@@ -107,7 +107,7 @@ clamp(0, 100)
 1. 학술 출처 WebSearch + 인용 정확성 확인
 2. SQLAlchemy 모델 + Alembic migration 영향 (migration-guard 와 연계)
 3. backtest 로직 sanity (Sharpe/Sortino 단위 확인)
-4. 기존 1288 tests 영향 분석
+4. 기존 3000+ tests 영향 분석
 5. legal-kr-fintech 와 연계 (모델 description 의 advisory 어휘 검증)
 
 ## 보고 형식
@@ -141,6 +141,6 @@ clamp(0, 100)
 ## 참고
 - `services/profile/persona_classifier_v2.py` — v2 분류기
 - `services/profile/group_benchmark.py` — peer 통계
-- `quant_models.py` / `engine.py` / `backtester.py` — 모델 구현
+- `services/quant/models.py` / `services/quant/engine.py` / `services/quant/backtester.py` — 모델 구현
 - `reports/product/PERSONA_SPEC_2026-04-23.md` — centroid 출처
 - `frontend/src/components/landing/engine-models-drawer.tsx` — 40 모델 정의 (truth source)

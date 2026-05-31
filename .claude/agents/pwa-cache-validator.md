@@ -73,7 +73,7 @@ PivoxQuant PWA의 service worker lifecycle, manifest, precache 회귀를 단일 
 
 ### C. manifest.json 회귀
 
-- **검증 대상**: `public/manifest.json` (또는 `app/manifest.ts`)
+- **검증 대상**: `frontend/src/app/manifest.ts` (Next.js app router — 정적 `public/manifest.json` 없음)
 - **필수 필드**:
   - `name`, `short_name`
   - `start_url`, `scope` (정확히 `"/"` 또는 명시 경로)
@@ -85,10 +85,11 @@ PivoxQuant PWA의 service worker lifecycle, manifest, precache 회귀를 단일 
 - **검증 방법**:
   ```bash
   # 필수 필드 존재 확인
-  cat public/manifest.json | grep -E "name|start_url|theme_color|icons"
-  # icon 파일 실재 확인
-  ls public/icons/icon-192.png public/icons/icon-512.png
-  ls public/icons/apple-touch-icon-180.png
+  # manifest 는 Next.js app router (frontend/src/app/manifest.ts) — 정적 public/manifest.json 아님
+  grep -E "name|start_url|theme_color|icons" frontend/src/app/manifest.ts
+  # icon 파일 실재 확인 (실제 파일명: WxH 형식)
+  ls frontend/public/icons/icon-192x192.png frontend/public/icons/icon-512x512.png
+  ls frontend/public/icons/apple-touch-icon.png
   ```
 
 ### D. Precache 리스트

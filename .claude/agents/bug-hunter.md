@@ -233,7 +233,7 @@ fetch('/api/auth/dev-login', {
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.8 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / pytest 1600+ pass (누적 v44.9까지) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
+**프로덕션 상태**: Railway + Vercel ACTIVE / pytest 3000+ pass (누적, 실측 기준) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
 **최신 인수인계**: `HANDOVER.md` v44.7 자율 overnight (v44.8 / v44.9 Wave G/H 누적 40 PR squash-merged #454~#491)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
 **자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
@@ -243,7 +243,7 @@ fetch('/api/auth/dev-login', {
 - **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
 - **Tier 1 (오늘 push)**: Quant Composer / Persona Preset / PersonaSnapshot Evolution / AI Twin / Pre-Trade Friction / Behavioral Score
-- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `legal_filter.py`
+- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `services/legal_filter.py`
 
 ### 자동 호출 매핑 (new 8 agents)
 | 상황 | 호출할 agent |

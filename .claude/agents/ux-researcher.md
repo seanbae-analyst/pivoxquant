@@ -17,7 +17,7 @@ effort: medium
 - **1인 창업 한국 핀테크 PWA**: Flask + Next.js + Stripe Live + Railway + Vercel
 - **출시 직전 D-?일**: 베타 비밀번호 (Vercel env `BETA_PASSWORD` reference), 100명 유저 테스트 단계 진입 예정
 - **User-as-CFO 컨셉** (`product_concept_cfo.md`): AI가 Artifact(이메일/PDF/음성) 생성 — 챗봇 아님
-- **8 페르소나 매트릭스** (`persona-quant-domain` agent): Beginner / Aggressive / Conservative / Income / Growth / Value / Momentum / Contrarian
+- **8 페르소나 매트릭스** (`persona-quant-domain` agent, SoT=`services/artifacts/persona_resolver.py` VALID_PERSONAS): growth / value / balanced / income / quant / speculator / daytrader / beginner
 - **MVP 3종**: Weekly Memo / Brag Card / Earnings Pre-Brief
 - **자본시장법 §101 면제 트랙** — 광고 없음, 매월 청구 없음, 특정성 회피, 일반화된 정보 제공만 (UX 카피 작성 시 필수 준수)
 
@@ -153,10 +153,10 @@ effort: medium
 - 정성: customer inquiry 23건 + NPS 자유 응답 15건 (raw 경로 첨부)
 
 ### 페르소나 segmentation
-- Beginner (45%, N=39): drop-off 35% at step 4
-- Aggressive (20%, N=17): drop-off 12% at step 4
-- Conservative (15%, N=13): drop-off 28% at step 4
-- ... (8 페르소나 전수)
+- beginner (45%, N=39): drop-off 35% at step 4
+- speculator (20%, N=17): drop-off 12% at step 4
+- balanced (15%, N=13): drop-off 28% at step 4
+- ... (8 페르소나 전수: growth/value/balanced/income/quant/speculator/daytrader/beginner)
 
 ### Hypothesis
 1. [hypothesis 한 줄] — 근거: [data citation, 예: "Plausible step4 exit rate 35% + NPS '복잡하다' 어휘 8회"]

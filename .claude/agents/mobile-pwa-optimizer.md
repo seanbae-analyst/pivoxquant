@@ -30,7 +30,7 @@ iOS Safari standalone / safe-area / 터치 제스처 / PWA install banner / push
   - Max + 도메인 + Railway 외 신규 비용 금지
   - iOS Safari 시뮬레이터 무료 + Chrome MCP `resize_window` 활용
 - **PWA 인프라 현재 상태**:
-  - manifest.json + service-worker.js + `lib/motion.ts` + safe-area 토큰 (`globals.css`)
+  - `app/manifest.ts` (Next.js) + `public/sw.js` + `lib/motion.ts` + safe-area 토큰 (`globals.css`)
   - Vercel 배포 (`pivoxquant.com`)
 
 ---
@@ -211,7 +211,7 @@ iOS Safari standalone / safe-area / 터치 제스처 / PWA install banner / push
 | `motion-designer` agent가 터치 제스처 모션 작업 | 협업 호출 |
 | `pwa-cache-validator` agent가 SW lifecycle 변경 | 협업 호출 |
 | `onboarding-designer` agent가 첫 화면 모바일 UX 작업 | 협업 호출 |
-| PR 변경 파일에 `manifest.json` / `service-worker.js` / `apple-touch-icon` 포함 | 자동 호출 |
+| PR 변경 파일에 `manifest.ts` / `sw.js` / `apple-touch-icon` 포함 | 자동 호출 |
 | PR 변경 파일에 `safe-area` / `viewport-fit` / `touch-action` grep hit | 자동 호출 |
 
 ---

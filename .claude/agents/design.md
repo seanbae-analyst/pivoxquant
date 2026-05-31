@@ -326,9 +326,9 @@ PWA safe-area 토큰: `--pq-safe-top` / `--pq-safe-bottom` / `--pq-safe-left` / 
 
 ---
 
-## §12. PivoxQuant Context (2026-04-25 v9 기준)
+## §12. PivoxQuant Context (실측 기준 — 최신 수치는 HANDOVER.md/SessionStart hook 참조)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / 1469→1509 tests pass / 베타 `${BETA_PASSWORD}`
+**프로덕션 상태**: Railway + Vercel ACTIVE / 3000+ tests pass / 베타 `${BETA_PASSWORD}`
 **최신 인수인계**: `HANDOVER.md` v9
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
 **자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
