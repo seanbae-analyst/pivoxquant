@@ -12,13 +12,12 @@ import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { useLocale } from "@/lib/locale";
 import { OnboardingBragCard } from "@/components/growth/onboarding-brag-card";
-import { declaredSurfaceLabel } from "@/lib/cfo/hooks";
+import { declaredSurfaceLabel, declaredSurfaceHighlights } from "@/lib/cfo/hooks";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
   CATEGORIES,
   INVESTOR_TYPES,
-  PROFILE_HIGHLIGHTS,
 } from "@/data/onboarding-questions";
 import type { OnboardingOption, OnboardingQuestion } from "@/data/onboarding-questions";
 
@@ -438,18 +437,21 @@ function ResultScreen({
   loading: boolean;
 }) {
   const typeData = INVESTOR_TYPES[investorType];
-  const highlights = PROFILE_HIGHLIGHTS[investorType];
   const { locale } = useLocale();
 
-  // §101 compliance (legal F-01): the result headline must surface ONE of the
-  // 3 disclosed buckets (성장형 / 균형형 / 수익형) — never a short-horizon
-  // granular persona name (e.g. "공격형 스캘퍼" / "스윙 트레이더"). The 8 raw
-  // questionnaire codes stay internal; declaredSurfaceLabel() collapses them
-  // to 3 via the same map as backend persona_analytics.PERSONA_TO_SURFACE.
-  // Hard fallback to 균형형 so an unmapped/empty code can never leak granular.
+  // §101 compliance (legal F-01): the result headline AND its tagline/features
+  // body must surface ONE of the 3 disclosed buckets (성장형 / 균형형 / 수익형)
+  // — never a short-horizon granular persona name OR its behavioural copy
+  // (e.g. "공격형 스캘퍼" / "스윙 진입·청산 신호" / "장중 모멘텀" / "실시간 신호
+  // 스트리밍"). The 8 raw questionnaire codes stay internal for classification;
+  // declaredSurfaceLabel()/declaredSurfaceHighlights() collapse them to 3 via
+  // the same map as backend persona_analytics.PERSONA_TO_SURFACE. Hard
+  // fallback to 균형형 / balanced so an unmapped/empty code can never leak
+  // granular copy.
   const surfacedLabel = declaredSurfaceLabel(investorType) ?? "균형형";
+  const highlights = declaredSurfaceHighlights(investorType);
 
-  if (!typeData || !highlights) return null;
+  if (!typeData) return null;
 
   return (
     <motion.div

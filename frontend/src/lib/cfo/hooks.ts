@@ -428,6 +428,86 @@ export function surfaceTagline(persona: PersonaId): string {
 }
 
 /**
+ * Neutral, §101-safe result-screen body copy keyed by the 3 disclosed
+ * surface buckets. Mirrors SURFACE_LABELS / SURFACE_TAGLINES so the
+ * onboarding result screen can render tagline + features from the
+ * collapsed bucket instead of a granular short-horizon persona's
+ * description. No granular short-horizon vocabulary
+ * (장중 / 스윙 / 스캘퍼 / 단타 / 실시간 신호 / 잦은 시도 / 투기) appears here —
+ * these are 3 disclosed-bucket characterisations only.
+ */
+const SURFACE_HIGHLIGHTS: Record<
+  "growth" | "balanced" | "income",
+  { tagline: string; tagline_kr: string; features: string[]; features_kr: string[] }
+> = {
+  growth: {
+    tagline: SURFACE_TAGLINES.growth,
+    tagline_kr: SURFACE_TAGLINES.growth,
+    features: [
+      "Growth-oriented behavioural mirror",
+      "Sector & concentration insight",
+      "Quant models matched to your profile",
+    ],
+    features_kr: [
+      "성장 지향 행동 거울",
+      "섹터·집중도 인사이트",
+      "프로필에 맞춘 퀀트 모델",
+    ],
+  },
+  balanced: {
+    tagline: SURFACE_TAGLINES.balanced,
+    tagline_kr: SURFACE_TAGLINES.balanced,
+    features: [
+      "Balanced behavioural mirror",
+      "Diversification & risk insight",
+      "Quant models matched to your profile",
+    ],
+    features_kr: [
+      "균형 잡힌 행동 거울",
+      "분산·리스크 인사이트",
+      "프로필에 맞춘 퀀트 모델",
+    ],
+  },
+  income: {
+    tagline: SURFACE_TAGLINES.income,
+    tagline_kr: SURFACE_TAGLINES.income,
+    features: [
+      "Income-oriented behavioural mirror",
+      "Cash-flow & stability insight",
+      "Quant models matched to your profile",
+    ],
+    features_kr: [
+      "현금흐름 지향 행동 거울",
+      "안정성·현금흐름 인사이트",
+      "프로필에 맞춘 퀀트 모델",
+    ],
+  },
+};
+
+export interface SurfaceHighlights {
+  tagline: string;
+  tagline_kr: string;
+  features: string[];
+  features_kr: string[];
+}
+
+/**
+ * Map a raw declared `profile_type` string → its 3-bucket disclosed
+ * tagline + features. Returns the 균형형 (balanced) neutral set as a hard
+ * fallback for any unknown / empty code, so an unmapped persona can never
+ * leak granular short-horizon body copy onto the result screen.
+ */
+export function declaredSurfaceHighlights(
+  profileType: string | null | undefined,
+): SurfaceHighlights {
+  const code = profileType
+    ? DECLARED_TO_PERSONA[profileType.toLowerCase()]
+    : undefined;
+  const surface = code ? PERSONA_TO_SURFACE[code] : undefined;
+  return SURFACE_HIGHLIGHTS[surface ?? "balanced"];
+}
+
+/**
  * Map a raw declared `profile_type` column value → 8-code persona id.
  * Mirrors backend `persona_analytics.DECLARED_TO_PERSONA` so any surface
  * that only has the raw onboarding string can still collapse to 3 labels
