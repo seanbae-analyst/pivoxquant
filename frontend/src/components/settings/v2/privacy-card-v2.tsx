@@ -34,6 +34,21 @@ const ERROR_LINK_BORDER = "rgba(209,136,136,0.30)";
 
 const COOKIE_LS_KEY = "pq_cookie_consent_v2";
 
+/** Shared bronze-outline pill for every CSV download button (E2b/E2c). */
+const CSV_BUTTON_STYLE: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "10px 18px",
+  background: "transparent",
+  color: "var(--pq-ivory, #f5f0e8)",
+  fontSize: "var(--pq-text-eyebrow)",
+  letterSpacing: "0.18em",
+  borderRadius: 2,
+  border: "1px solid var(--pq-bronze)",
+  cursor: "pointer",
+};
+
 type CookieCategory = "necessary" | "analytics" | "performance" | "marketing";
 type CookieState = Record<CookieCategory, boolean>;
 
@@ -255,8 +270,20 @@ function DeleteAccountModal({
   );
 }
 
-/** CSV datasets a user can download (raw stored fields only). */
-export type CsvDataset = "trades" | "positions" | "watchlist";
+/**
+ * CSV datasets a user can download.
+ *   - trades / positions / watchlist / journal / pulse → raw stored fields.
+ *   - capital_gains / capital_gains_summary → 해외주식 양도소득세 참고용 추정
+ *     (FIFO realised P&L + trade-date FX; KRW blank when FX unavailable).
+ */
+export type CsvDataset =
+  | "trades"
+  | "positions"
+  | "watchlist"
+  | "capital_gains"
+  | "capital_gains_summary"
+  | "journal"
+  | "pulse";
 
 interface Props {
   /** Last export metadata, for the E2 row. */
@@ -624,29 +651,74 @@ export function PrivacyCardV2({
                 ["trades", "거래내역 · Trades"],
                 ["positions", "보유종목 · Positions"],
                 ["watchlist", "관심종목 · Watchlist"],
+                ["journal", "투자 저널 · Journal"],
+                ["pulse", "주간 기록 · Pulse"],
               ] as const).map(([dataset, label]) => (
                 <button
                   key={dataset}
                   type="button"
                   onClick={() => onExportCsv?.(dataset)}
                   className="font-mono uppercase"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 18px",
-                    background: "transparent",
-                    color: "var(--pq-ivory, #f5f0e8)",
-                    fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.18em",
-                    borderRadius: 2,
-                    border: "1px solid var(--pq-bronze)",
-                    cursor: "pointer",
-                  }}
+                  style={CSV_BUTTON_STYLE}
                 >
                   {label} ↓
                 </button>
               ))}
+            </div>
+
+            {/* E2c — 해외주식 양도소득세 (참고용 추정). Computed from your own
+                trades via FIFO matching + trade-date FX. NOT advice — a
+                calculation record only; KRW left blank where FX is
+                unavailable (never fabricated). */}
+            <div style={{ marginTop: 22 }}>
+              <div
+                className="font-mono uppercase"
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  letterSpacing: "0.22em",
+                  color: "rgba(245,240,232,0.55)",
+                  marginBottom: 10,
+                }}
+              >
+                해외주식 양도소득세 · Capital gains
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 10,
+                }}
+              >
+                {([
+                  ["capital_gains", "양도세 내역 · Lots"],
+                  ["capital_gains_summary", "양도세 요약 · Yearly"],
+                ] as const).map(([dataset, label]) => (
+                  <button
+                    key={dataset}
+                    type="button"
+                    onClick={() => onExportCsv?.(dataset)}
+                    className="font-mono uppercase"
+                    style={CSV_BUTTON_STYLE}
+                  >
+                    {label} ↓
+                  </button>
+                ))}
+              </div>
+              <p
+                className="font-serif"
+                style={{
+                  fontSize: "var(--pq-text-caption)",
+                  color: "rgba(245,240,232,0.45)",
+                  marginTop: 10,
+                  lineHeight: 1.55,
+                }}
+              >
+                참고용 추정치이며 세무대리·세무자문이 아닙니다. FIFO 실현손익을
+                거래일 환율(FMP 종가)로 환산 — 국세청 매매기준율과 차이가 날 수
+                있고, 환율 결손분은 빈칸으로 둡니다. 한국 일반주식은 대주주 외
+                비과세입니다. 실제 신고는 홈택스·세무사 확인이 필요하며, 신고
+                책임은 본인에게 있습니다.
+              </p>
             </div>
           </div>
         </div>

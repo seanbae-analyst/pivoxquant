@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 
 def _utc_now() -> datetime:
@@ -834,14 +835,249 @@ def test_csv_export_positions_and_watchlist(app, client, auth_user, add_position
 def test_csv_export_empty_emits_header_only(client, auth_user):
     """A user with no rows still gets a valid CSV — header, zero data rows.
     Honest: an empty CSV, never fabricated data."""
+    # Datasets without a leading disclaimer row → _parse_csv reads header at row0.
     for dataset, expected_cols in (
         ("trades", 9), ("positions", 6), ("watchlist", 4),
+        ("journal", 8), ("pulse", 6),
     ):
         resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
         assert resp.status_code == 200, (dataset, resp.data)
         header, rows = _parse_csv(resp)
         assert len(header) == expected_cols, (dataset, header)
         assert rows == [], f"{dataset} should have zero data rows for empty user"
+
+    # Capital-gains datasets carry a leading disclaimer comment row, then the
+    # header, then zero data rows for an empty user (honest empty file).
+    for dataset, expected_cols in (
+        ("capital_gains", 15), ("capital_gains_summary", 7),
+    ):
+        resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
+        assert resp.status_code == 200, (dataset, resp.data)
+        text = resp.data.decode("utf-8-sig")
+        rows = list(_csv.reader(_io.StringIO(text)))
+        assert rows[0][0].startswith("# "), (dataset, rows[0])
+        assert len(rows[1]) == expected_cols, (dataset, rows[1])
+        assert rows[2:] == [], f"{dataset} should have zero data rows for empty user"
+
+
+def _seed_us_round_trip(app, uid, *, buy_px=100.0, sell_px=200.0,
+                        buy_dt, sell_dt, ticker="AAPL", shares=10.0):
+    """Insert a BUY+SELL pair so FIFO produces one closed lot."""
+    from extensions import db
+    from models import TradeHistory
+    with app.app_context():
+        db.session.add(TradeHistory(
+            user_id=uid, ticker=ticker, name=ticker, action="BUY",
+            shares=shares, price_per_share=buy_px,
+            total_value=buy_px * shares, currency="USD", traded_at=buy_dt,
+        ))
+        db.session.add(TradeHistory(
+            user_id=uid, ticker=ticker, name=ticker, action="SELL",
+            shares=shares, price_per_share=sell_px,
+            total_value=sell_px * shares, currency="USD", traded_at=sell_dt,
+        ))
+        db.session.commit()
+
+
+def test_csv_export_capital_gains_lot_detail_with_fx_and_disclaimer(
+    app, client, auth_user,
+):
+    """capital_gains CSV: disclaimer comment row, per-lot KRW from trade-date
+    FX (mocked deterministically), correct attribution year, no fabricated FX."""
+    from datetime import datetime
+    uid = auth_user["id"]
+    _seed_us_round_trip(
+        app, uid, buy_px=100.0, sell_px=150.0,
+        buy_dt=datetime(2024, 1, 2), sell_dt=datetime(2024, 6, 3),
+    )
+
+    # Inject deterministic strict FX (no live FMP). Buy FX 1000, sell FX 1200.
+    def _strict(d):
+        return {"2024-01-02": 1000.0, "2024-06-03": 1200.0}.get(
+            d.isoformat()[:10]
+        )
+
+    with patch("services.fx_service.get_rate_at_strict", side_effect=_strict):
+        resp = client.get("/api/profile/export?format=csv&dataset=capital_gains")
+    assert resp.status_code == 200, resp.data
+
+    cd = resp.headers.get("Content-Disposition", "")
+    assert "pivoxquant-capital_gains-" in cd, cd
+    text = resp.data.decode("utf-8-sig")
+    # legal-confirmed disclaimer (§5-B) markers: 참고용 추정 framing + the
+    # §20③-protective "세무대리·세무자문 아님" + KR 비과세 carve-out.
+    assert "참고용" in text and "추정" in text
+    assert "세무자문" in text  # NOT tax advisory — 세무사법 §20③ protection
+    assert "비과세" in text  # KR carve-out language in disclaimer
+
+    rows = list(_csv.reader(_io.StringIO(text)))
+    # row0 = disclaimer (single cell, leading "# "), row1 = header, row2 = data
+    assert rows[0][0].startswith("# "), rows[0]
+    header = rows[1]
+    assert header[0] == "귀속연도"
+    data = dict(zip(header, rows[2]))
+    assert data["귀속연도"] == "2024"
+    assert data["종목코드"] == "AAPL"
+    assert data["과세대상"] == "과세"
+    # cost = 100*10*1000 = 1,000,000 ; proceeds = 150*10*1200 = 1,800,000
+    assert data["취득가KRW"] == "1000000"
+    assert data["양도가KRW"] == "1800000"
+    assert data["실현손익KRW"] == "800000"
+
+
+def test_csv_export_capital_gains_fx_miss_blanks_krw_never_fabricated(
+    app, client, auth_user,
+):
+    """When strict FX returns None (weekend / data gap), KRW columns are blank
+    and a note is set — NEVER a fabricated rate or 0."""
+    from datetime import datetime
+    uid = auth_user["id"]
+    _seed_us_round_trip(
+        app, uid, buy_dt=datetime(2024, 1, 2), sell_dt=datetime(2024, 6, 3),
+    )
+
+    with patch("services.fx_service.get_rate_at_strict", return_value=None):
+        resp = client.get("/api/profile/export?format=csv&dataset=capital_gains")
+    assert resp.status_code == 200
+    text = resp.data.decode("utf-8-sig")
+    rows = list(_csv.reader(_io.StringIO(text)))
+    header = rows[1]
+    data = dict(zip(header, rows[2]))
+    assert data["취득가KRW"] == "", "FX miss must leave KRW blank"
+    assert data["양도가KRW"] == ""
+    assert data["실현손익KRW"] == ""
+    assert "환율" in data["note"]
+    # No fabricated zero rate anywhere in the KRW/FX columns.
+    assert data["취득일환율"] == ""
+    assert data["양도일환율"] == ""
+
+
+def test_csv_export_capital_gains_kr_stock_non_taxable(app, client, auth_user):
+    """A KR round trip appears as 비과세 with blank KRW (never dropped)."""
+    from datetime import datetime
+    uid = auth_user["id"]
+    _seed_us_round_trip(
+        app, uid, ticker="005930.KS", buy_px=70000.0, sell_px=80000.0,
+        buy_dt=datetime(2024, 1, 2), sell_dt=datetime(2024, 3, 4),
+    )
+    with patch("services.fx_service.get_rate_at_strict", return_value=1300.0):
+        resp = client.get("/api/profile/export?format=csv&dataset=capital_gains")
+    assert resp.status_code == 200
+    text = resp.data.decode("utf-8-sig")
+    rows = list(_csv.reader(_io.StringIO(text)))
+    data = dict(zip(rows[1], rows[2]))
+    assert data["과세대상"] == "비과세"
+    assert "비과세" in data["note"]
+    assert data["실현손익KRW"] == ""
+
+
+def test_csv_export_capital_gains_summary_deduction_and_rate(
+    app, client, auth_user,
+):
+    """capital_gains_summary: 손익통산, 250만 공제, 22% 세액 on a single year."""
+    from datetime import datetime
+    uid = auth_user["id"]
+    # proceeds 150*10*1000=1,500,000 ; cost 100*10*1000=1,000,000 → +500,000.
+    # Below the 2,500,000 deduction → base 0, tax 0.
+    _seed_us_round_trip(
+        app, uid, buy_px=100.0, sell_px=150.0,
+        buy_dt=datetime(2024, 1, 2), sell_dt=datetime(2024, 6, 3),
+    )
+    with patch("services.fx_service.get_rate_at_strict", return_value=1000.0):
+        resp = client.get(
+            "/api/profile/export?format=csv&dataset=capital_gains_summary"
+        )
+    assert resp.status_code == 200
+    text = resp.data.decode("utf-8-sig")
+    assert "참고용" in text and "추정" in text  # disclaimer also on the summary
+    assert "세무자문" in text  # §20③-protective framing present on summary too
+    rows = list(_csv.reader(_io.StringIO(text)))
+    header = rows[1]
+    assert header == [
+        "귀속연도", "거래수", "환율결손제외수", "합산실현손익KRW",
+        "기본공제KRW", "과세표준KRW", "예상세액KRW(22%)",
+    ]
+    data = dict(zip(header, rows[2]))
+    assert data["귀속연도"] == "2024"
+    assert data["합산실현손익KRW"] == "500000"
+    assert data["기본공제KRW"] == "2500000"
+    assert data["과세표준KRW"] == "0"
+    assert data["예상세액KRW(22%)"] == "0"
+
+
+def test_csv_export_journal_and_pulse_self_record(app, client, auth_user):
+    """journal (PreTradeReflection) + pulse (WeeklyPulse) render the user's
+    own free-text records."""
+    from datetime import datetime
+    from extensions import db
+    from models import PreTradeReflection, WeeklyPulse
+    uid = auth_user["id"]
+    now = datetime(2024, 5, 1)
+    with app.app_context():
+        db.session.add(PreTradeReflection(
+            user_id=uid, intended_ticker="AAPL", intended_side="BUY",
+            intended_shares=3, rationale="long-term conviction",
+            devil_advocate_seen="valuation stretched",
+            cooldown_started_at=now, cooldown_ends_at=now,
+        ))
+        db.session.add(WeeklyPulse(
+            user_id=uid, mood=4, confidence=3,
+            worry="macro headwinds", learn="size smaller",
+            topics='["fed", "earnings"]',
+        ))
+        db.session.commit()
+
+    # Journal
+    resp = client.get("/api/profile/export?format=csv&dataset=journal")
+    assert resp.status_code == 200, resp.data
+    jheader, jrows = _parse_csv(resp)
+    assert jheader == [
+        "작성일", "종목코드", "종목명", "의도", "수량", "rationale",
+        "devil_advocate_seen", "상태",
+    ]
+    assert len(jrows) == 1
+    jrow = dict(zip(jheader, jrows[0]))
+    assert jrow["종목코드"] == "AAPL"
+    assert jrow["의도"] == "BUY"
+    assert jrow["rationale"] == "long-term conviction"
+    assert jrow["devil_advocate_seen"] == "valuation stretched"
+
+    # Pulse
+    resp2 = client.get("/api/profile/export?format=csv&dataset=pulse")
+    assert resp2.status_code == 200
+    pheader, prows = _parse_csv(resp2)
+    assert pheader == ["제출일", "mood", "confidence", "worry", "learn", "topics"]
+    assert len(prows) == 1
+    prow = dict(zip(pheader, prows[0]))
+    assert prow["mood"] == "4"
+    assert prow["confidence"] == "3"
+    assert prow["worry"] == "macro headwinds"
+    assert prow["learn"] == "size smaller"
+    assert "fed" in prow["topics"] and "earnings" in prow["topics"]
+
+
+def test_csv_export_capital_gains_scopes_to_caller(
+    app, client, make_user, auth_user,
+):
+    """CRITICAL: another user's trades must never appear in the caller's
+    capital-gains CSV."""
+    from datetime import datetime
+    uid = auth_user["id"]
+    other = make_user(email="cgother@test.com", password="otherpw123")
+    _seed_us_round_trip(
+        app, uid, ticker="AAPL",
+        buy_dt=datetime(2024, 1, 2), sell_dt=datetime(2024, 6, 3),
+    )
+    _seed_us_round_trip(
+        app, other["id"], ticker="TSLAOTHER",
+        buy_dt=datetime(2024, 1, 2), sell_dt=datetime(2024, 6, 3),
+    )
+    with patch("services.fx_service.get_rate_at_strict", return_value=1000.0):
+        resp = client.get("/api/profile/export?format=csv&dataset=capital_gains")
+    assert resp.status_code == 200
+    raw = resp.data.decode("utf-8-sig")
+    assert "TSLAOTHER" not in raw, "Other user's trade leaked into capital_gains"
+    assert "AAPL" in raw
 
 
 def test_csv_export_scopes_strictly_to_caller(

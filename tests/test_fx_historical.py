@@ -126,6 +126,64 @@ class TestGetRateAt:
         assert r == 1208.75
 
 
+class TestGetRateAtStrict:
+    """``get_rate_at_strict`` returns None (never spot) when no genuine
+    historical rate exists — the capital-gains CSV relies on this to leave
+    KRW blank rather than fabricate a rate (표시광고법)."""
+
+    def test_none_input_returns_none(self):
+        assert fx_service.get_rate_at_strict(None) is None
+
+    def test_future_date_returns_none_not_spot(self):
+        future = date.today() + timedelta(days=30)
+        with patch.object(fx_service, "get_rate", return_value=1380.0):
+            assert fx_service.get_rate_at_strict(future) is None
+
+    def test_today_returns_none(self):
+        with patch.object(fx_service, "get_rate", return_value=1380.0):
+            assert fx_service.get_rate_at_strict(date.today()) is None
+
+    def test_exact_date_hit_returns_rate(self):
+        target = date(2020, 6, 15)
+        payload = _bars(("2020-06-15", 1208.75), ("2020-06-12", 1210.50))
+        with patch("services.data.fmp._fmp_get", return_value=payload):
+            r = fx_service.get_rate_at_strict(target)
+        assert r == 1208.75
+
+    def test_weekend_rolls_to_prior_trading_day(self):
+        target = date(2020, 6, 14)  # Sunday
+        payload = _bars(("2020-06-12", 1209.00))
+        with patch("services.data.fmp._fmp_get", return_value=payload):
+            r = fx_service.get_rate_at_strict(target)
+        assert r == 1209.00
+
+    def test_cache_hit_skips_fetch(self):
+        target = date(2020, 6, 15)
+        fx_service._hist_cache["2020-06-15"] = 1234.56
+        with patch("services.data.fmp._fmp_get") as m:
+            r = fx_service.get_rate_at_strict(target)
+            m.assert_not_called()
+        assert r == 1234.56
+
+    def test_empty_payload_returns_none_and_marks_miss(self):
+        target = date(2020, 6, 15)
+        with patch("services.data.fmp._fmp_get", return_value=[]):
+            with patch.object(fx_service, "get_rate", return_value=1380.0):
+                r = fx_service.get_rate_at_strict(target)
+        assert r is None  # NOT 1380.0 spot
+        assert "2020-06-15" in fx_service._hist_miss_ts
+
+    def test_negative_cache_returns_none(self):
+        import time as _t
+        target = date(2020, 6, 15)
+        fx_service._hist_miss_ts["2020-06-15"] = _t.time()
+        with patch("services.data.fmp._fmp_get") as m:
+            with patch.object(fx_service, "get_rate", return_value=1380.0):
+                r = fx_service.get_rate_at_strict(target)
+            m.assert_not_called()
+        assert r is None
+
+
 class TestCounterfactualUsesHistoricalRate:
     """Light integration check: the route imports get_rate_at and consults
     it during ingress conversion. We don't exercise the price-history

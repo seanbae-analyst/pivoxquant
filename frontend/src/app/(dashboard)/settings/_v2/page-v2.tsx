@@ -57,7 +57,7 @@ import { BrokerCardV2 } from "@/components/settings/v2/broker-card-v2";
 import { NotificationsMatrix } from "@/components/settings/v2/notifications-matrix";
 import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
 import { SubscriptionCardV2 } from "@/components/settings/v2/subscription-card-v2";
-import { PrivacyCardV2 } from "@/components/settings/v2/privacy-card-v2";
+import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
 
 // 2026-05-17: keys aligned with backend `routes/billing.py:372` which
 // actually returns `subscription_tier` / `subscription_status` /
@@ -362,7 +362,7 @@ export default function SettingsPageV2() {
   }, [t]);
 
   const handleExportCsv = React.useCallback(
-    async (dataset: "trades" | "positions" | "watchlist") => {
+    async (dataset: CsvDataset) => {
       try {
         // CSV is a binary attachment, not JSON — bypass apiFetch (which
         // assumes a JSON body) and stream the blob straight to a download.

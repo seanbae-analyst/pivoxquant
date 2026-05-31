@@ -1832,7 +1832,37 @@ def _serialize_companion_waitlist(w) -> dict:
 # no calculation, so it stays within the raw-fact boundary. We always emit BOTH
 # ``name`` and ``ticker`` columns so the raw identifier is never lost.
 
-_CSV_DATASETS = ("trades", "positions", "watchlist")
+_CSV_DATASETS = (
+    "trades", "positions", "watchlist",
+    # Capital-gains (해외주식 양도소득세) — computed from the user's own trades
+    # via FIFO matching + trade-date FX. capital_gains = per-lot detail,
+    # capital_gains_summary = per-year 손익통산/공제/예상세액. NOT raw stored
+    # fields (they involve a deterministic calc), so they are built specially
+    # in _csv_export_response rather than mapped from a single ORM row.
+    "capital_gains", "capital_gains_summary",
+    # Self-record journals — the user's own PreTradeReflection / WeeklyPulse
+    # free-text. Raw stored fields, mapped row-by-row like trades/positions.
+    "journal", "pulse",
+)
+
+
+def _csv_num(value, ndigits=2):
+    """Round a numeric CSV cell to ``ndigits``; blank for None.
+
+    Keeps KRW/USD amounts readable in a sheet without fabricating precision.
+    A genuinely-missing value (FX unavailable) stays an empty cell — never 0.
+    """
+    if value is None:
+        return ""
+    try:
+        rounded = round(float(value), ndigits)
+    except (TypeError, ValueError):
+        return ""
+    # ndigits=0 → emit a clean integer cell (KRW amounts have no fractional
+    # won), not a trailing ".0" that clutters the sheet.
+    if ndigits == 0:
+        return int(rounded)
+    return rounded
 
 
 def _csv_resolve_name(ticker):
@@ -1909,6 +1939,78 @@ _CSV_SPECS = {
             _iso_or_none(getattr(w, "added_at", None)) or "",
         ],
     ),
+    # ── Capital-gains lot detail (해외주식 양도소득세, lot별 상세) ──────────
+    # Rows are CapitalGainLot NamedTuples from services.tax.capital_gains.
+    # KRW columns are blank (never 0) when FX is unavailable; the note column
+    # carries the reason (KR 비과세 / 환율 확인 불가).
+    "capital_gains": (
+        ["귀속연도", "종목코드", "종목명", "수량", "취득일", "양도일",
+         "취득가USD", "양도가USD", "취득일환율", "양도일환율",
+         "취득가KRW", "양도가KRW", "실현손익KRW", "과세대상", "note"],
+        lambda lot: [
+            lot.attribution_year or "",
+            lot.ticker or "",
+            lot.name or "",
+            _csv_num(lot.quantity, 6),
+            lot.buy_date or "",
+            lot.sell_date or "",
+            _csv_num(lot.buy_price_usd, 4),
+            _csv_num(lot.sell_price_usd, 4),
+            _csv_num(lot.buy_fx, 2),
+            _csv_num(lot.sell_fx, 2),
+            _csv_num(lot.buy_cost_krw, 0),
+            _csv_num(lot.sell_proceeds_krw, 0),
+            _csv_num(lot.realized_pnl_krw, 0),
+            "과세" if lot.taxable else "비과세",
+            lot.note or "",
+        ],
+    ),
+    # ── Capital-gains yearly summary (연간 요약: 손익통산/공제/예상세액) ────
+    # Rows are CapitalGainYear NamedTuples.
+    "capital_gains_summary": (
+        ["귀속연도", "거래수", "환율결손제외수", "합산실현손익KRW",
+         "기본공제KRW", "과세표준KRW", "예상세액KRW(22%)"],
+        lambda y: [
+            y.attribution_year or "",
+            y.trade_count,
+            y.fx_missing_count,
+            _csv_num(y.total_realized_pnl_krw, 0),
+            _csv_num(y.basic_deduction_krw, 0),
+            _csv_num(y.taxable_base_krw, 0),
+            _csv_num(y.estimated_tax_krw, 0),
+        ],
+    ),
+    # ── Investment journal (PreTradeReflection — 본인 기록) ────────────────
+    # intended_side is the user's OWN record of intent (a fact they entered),
+    # not a signal/recommendation — mirrors how the trades CSV surfaces the
+    # raw ``action``. Free-text rationale / devil-advocate pass through the
+    # injection guard in _build_csv.
+    "journal": (
+        ["작성일", "종목코드", "종목명", "의도", "수량", "rationale",
+         "devil_advocate_seen", "상태"],
+        lambda r: [
+            _iso_or_none(getattr(r, "created_at", None)) or "",
+            getattr(r, "intended_ticker", None) or "",
+            _csv_resolve_name(getattr(r, "intended_ticker", None)),
+            getattr(r, "intended_side", None) or "",
+            r.intended_shares if getattr(r, "intended_shares", None) is not None else "",
+            getattr(r, "rationale", None) or "",
+            getattr(r, "devil_advocate_seen", None) or "",
+            r.status_label() if hasattr(r, "status_label") else "",
+        ],
+    ),
+    # ── Weekly pulse (WeeklyPulse — 본인 기록) ─────────────────────────────
+    "pulse": (
+        ["제출일", "mood", "confidence", "worry", "learn", "topics"],
+        lambda p: [
+            _iso_or_none(getattr(p, "submitted_at", None)) or "",
+            p.mood if getattr(p, "mood", None) is not None else "",
+            p.confidence if getattr(p, "confidence", None) is not None else "",
+            getattr(p, "worry", None) or "",
+            getattr(p, "learn", None) or "",
+            ", ".join(p.topics_list()) if hasattr(p, "topics_list") else "",
+        ],
+    ),
 }
 
 
@@ -1933,7 +2035,7 @@ def _safe_cell(value):
     return value
 
 
-def _build_csv(dataset, rows):
+def _build_csv(dataset, rows, disclaimer=None):
     """Render ``rows`` of ``dataset`` to a UTF-8 (BOM-prefixed) CSV string.
 
     The UTF-8 BOM (``\\ufeff``) makes Excel on Windows/macOS auto-detect UTF-8
@@ -1945,14 +2047,54 @@ def _build_csv(dataset, rows):
 
     An empty dataset still emits the header row (honest: an empty CSV with
     columns, never fabricated data).
+
+    ``disclaimer`` (optional): when set, a leading single-column comment row
+    "# <text>" is written above the header — used by the capital-gains
+    datasets to make the 참고용 추정 framing impossible to miss in a sheet.
+    The text is run through :func:`_safe_cell` so it can never become a
+    formula either.
     """
     header, row_fn = _CSV_SPECS[dataset]
     buf = io.StringIO()
     writer = csv.writer(buf)
+    if disclaimer:
+        writer.writerow([_safe_cell("# " + disclaimer)])
     writer.writerow(header)
     for row in rows:
         writer.writerow([_safe_cell(c) for c in row_fn(row)])
     return "﻿" + buf.getvalue()
+
+
+def _capital_gain_rows(user_id):
+    """Build (lots, summary) for the user's own overseas-equity capital gains.
+
+    Pulls the user's TradeHistory (self-only), FIFO-matches via the shared
+    :func:`fifo_match_closed_trades`, then computes lots + per-year summary
+    with the STRICT FX resolver (``get_rate_at_strict``) so a missing
+    historical rate yields a blank KRW cell + note, never a fabricated rate.
+    """
+    from services.profile.fifo_util import fifo_match_closed_trades
+    from services.tax.capital_gains import (
+        compute_capital_gain_lots,
+        summarize_by_year,
+    )
+    from services.fx_service import get_rate_at_strict
+
+    trades = (
+        TradeHistory.query
+        .filter_by(user_id=user_id)
+        .order_by(TradeHistory.traded_at.asc())
+        .limit(_EXPORT_TRADE_LIMIT)
+        .all()
+    )
+    pairs = fifo_match_closed_trades(trades)
+    lots = compute_capital_gain_lots(
+        pairs,
+        fx_resolver=get_rate_at_strict,
+        name_resolver=lambda tk: _csv_resolve_name(tk),
+    )
+    summary = summarize_by_year(lots)
+    return lots, summary
 
 
 def _csv_export_response(user_id, dataset, now):
@@ -1961,6 +2103,7 @@ def _csv_export_response(user_id, dataset, now):
     Scope is STRICTLY ``user_id == current_user.id`` — identical isolation
     rule to the JSON export. No user-id parameter is ever accepted.
     """
+    disclaimer = None
     if dataset == "trades":
         rows = (
             TradeHistory.query
@@ -1976,15 +2119,37 @@ def _csv_export_response(user_id, dataset, now):
             .order_by(Position.added_at.desc())
             .all()
         )
-    else:  # watchlist (validated by caller against _CSV_DATASETS)
+    elif dataset == "watchlist":
         rows = (
             Watchlist.query
             .filter_by(user_id=user_id)
             .order_by(Watchlist.added_at.desc())
             .all()
         )
+    elif dataset in ("capital_gains", "capital_gains_summary"):
+        # Both views derive from one FIFO+tax pass over the user's trades.
+        from services.tax.capital_gains import DISCLAIMER_KR
+        lots, summary = _capital_gain_rows(user_id)
+        rows = lots if dataset == "capital_gains" else summary
+        disclaimer = DISCLAIMER_KR
+    elif dataset == "journal":
+        rows = (
+            PreTradeReflection.query
+            .filter_by(user_id=user_id)
+            .order_by(PreTradeReflection.created_at.desc())
+            .limit(_EXPORT_REFLECTION_LIMIT)
+            .all()
+        )
+    else:  # pulse (validated by caller against _CSV_DATASETS)
+        rows = (
+            WeeklyPulse.query
+            .filter_by(user_id=user_id)
+            .order_by(WeeklyPulse.submitted_at.desc())
+            .limit(_EXPORT_PULSE_LIMIT)
+            .all()
+        )
 
-    body = _build_csv(dataset, rows)
+    body = _build_csv(dataset, rows, disclaimer=disclaimer)
     filename = f"pivoxquant-{dataset}-{now.strftime('%Y%m%d')}.csv"
     response = Response(body, mimetype="text/csv; charset=utf-8")
     response.headers["Content-Disposition"] = (
@@ -2058,7 +2223,11 @@ def export_profile():
                     "Invalid CSV dataset. Use one of: "
                     + ", ".join(_CSV_DATASETS)
                 ),
-                kr="잘못된 CSV 데이터셋입니다. trades / positions / watchlist 중 하나를 선택하세요.",
+                kr=(
+                    "잘못된 CSV 데이터셋입니다. "
+                    + " / ".join(_CSV_DATASETS)
+                    + " 중 하나를 선택하세요."
+                ),
                 code="PROFILE_EXPORT_BAD_DATASET", status=400,
             )
         try:

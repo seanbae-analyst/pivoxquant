@@ -279,6 +279,93 @@ def get_rate_at(d) -> float:
     return get_rate()
 
 
+def get_rate_at_strict(d) -> float | None:
+    """Return the *genuine historical* USD/KRW rate for ``d``, or ``None``.
+
+    Unlike :func:`get_rate_at` — which guarantees a usable number by falling
+    back to the current spot rate when no historical quote exists — this
+    variant returns ``None`` whenever the only available answer would be the
+    spot fallback. It exists for callers that must NOT silently substitute a
+    today rate for a years-old transaction (e.g. the capital-gains tax CSV,
+    where a fabricated FX rate would mislabel a realised-gain amount and is a
+    표시광고법 risk). Such callers leave the KRW column blank + emit a
+    "환율 확인 불가" note instead.
+
+    Returns ``None`` for:
+      * ``d is None``
+      * today or a future date (no settled EOD close — spot, not historical)
+      * a date with a recent negative-cache miss (upstream had no quote)
+      * a window fetch that yields neither the exact date nor any prior
+        trading day within 7 days
+
+    Returns a ``float`` ONLY on a real cache hit or a freshly-fetched
+    historical close (exact date or nearest prior trading day). Never raises.
+
+    Note: this does NOT mutate the spot rate or the negative cache beyond
+    what :func:`get_rate_at`'s window fetch already populates, so calling it
+    is side-effect-equivalent to the historical branch of ``get_rate_at``.
+    """
+    if d is None:
+        return None
+
+    key = _hist_key(d)
+
+    # 1. Cache hit — a genuine historical (or aliased prior-day) close.
+    cached = _hist_cache.get(key)
+    if cached:
+        return cached
+
+    # Today / future → only spot exists, which is not a historical rate.
+    try:
+        target = date.fromisoformat(key)
+    except ValueError:
+        return None
+    if target >= date.today():
+        return None
+
+    # Recent negative-cache miss → upstream has no quote; do not re-hammer.
+    miss_ts = _hist_miss_ts.get(key, 0.0)
+    if miss_ts and (time.time() - miss_ts) < HIST_MISS_TTL:
+        return None
+
+    # Fetch a small surrounding window (also populates neighbouring dates).
+    start_iso = (target - timedelta(days=7)).isoformat()
+    end_iso = (target + timedelta(days=7)).isoformat()
+    bars = _fetch_historical_window(start_iso, end_iso)
+
+    if bars:
+        with _hist_lock:
+            for k, v in bars.items():
+                _hist_cache[k] = v
+            if len(_hist_cache) > HIST_MAX:
+                drop_n = HIST_MAX // 10
+                for k in list(_hist_cache.keys())[:drop_n]:
+                    _hist_cache.pop(k, None)
+
+        if key in _hist_cache:
+            return _hist_cache[key]
+
+        # Nearest prior trading day within the fetched window.
+        for back in range(1, 8):
+            prior = (target - timedelta(days=back)).isoformat()
+            if prior in _hist_cache:
+                with _hist_lock:
+                    _hist_cache[key] = _hist_cache[prior]
+                return _hist_cache[prior]
+
+    # No genuine historical close available — mark a miss (mirror get_rate_at)
+    # and return None so the caller honestly flags the gap rather than
+    # silently substituting spot.
+    with _hist_lock:
+        _hist_miss_ts[key] = time.time()
+        if len(_hist_miss_ts) > HIST_MISS_MAX:
+            drop_n = HIST_MISS_MAX // 10
+            for k in list(_hist_miss_ts.keys())[:drop_n]:
+                _hist_miss_ts.pop(k, None)
+    logger.debug("FX strict historical miss for %s; returning None", key)
+    return None
+
+
 def _refresh_fx_rate(app):
     """APScheduler entrypoint — runs every 5 minutes.
     Logs a WARNING when the rate has been stale for more than 10 minutes.

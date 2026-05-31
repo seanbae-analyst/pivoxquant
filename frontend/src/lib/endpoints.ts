@@ -194,12 +194,23 @@ export const API = {
     capital: "/api/profile/capital",
     // PIPA §35 self-service data export (routes/profile.py::export_profile).
     //   - `export`     → full personal-data record as JSON (instant download).
-    //   - `exportCsv`  → single tabular dataset as CSV (raw stored fields only;
-    //                    no live price / metric / FX / advice). dataset ∈
-    //                    trades | positions | watchlist.
+    //   - `exportCsv`  → single tabular dataset as CSV. dataset ∈
+    //                    trades | positions | watchlist (raw stored fields) |
+    //                    capital_gains | capital_gains_summary (해외주식
+    //                    양도소득세 — FIFO realised P&L + trade-date FX,
+    //                    참고용 추정; KRW blank when FX unavailable, never
+    //                    fabricated) | journal | pulse (본인 기록 free-text).
     export: "/api/profile/export",
-    exportCsv: (dataset: "trades" | "positions" | "watchlist") =>
-      `/api/profile/export?format=csv&dataset=${dataset}`,
+    exportCsv: (
+      dataset:
+        | "trades"
+        | "positions"
+        | "watchlist"
+        | "capital_gains"
+        | "capital_gains_summary"
+        | "journal"
+        | "pulse",
+    ) => `/api/profile/export?format=csv&dataset=${dataset}`,
     // Email opt-out preferences (정통망법 §50). Backend: PATCH
     // routes/profile.py::patch_email_preferences. Body accepts either
     // or both of `email_opt_out` (global) and `email_opt_out_earnings`
