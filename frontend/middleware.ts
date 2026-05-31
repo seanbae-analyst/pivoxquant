@@ -59,6 +59,13 @@ const BETA_BYPASS_PREFIXES = [
   // lets human recipients through the beta gate too.
   "/card",
   "/r",
+  // Legal documents must be readable BEFORE agreeing to them. The signup/login
+  // consent text ("계속하면 이용약관 및 개인정보처리방침에 동의하게 됩니다.")
+  // links to these pages; gating them behind the beta password makes consent
+  // legally defective (약관규제법 §3, 전자상거래법 §11). Static content only —
+  // no auth/data exposure. Surfaces: login/signup/contact/docs footers.
+  "/terms",
+  "/privacy",
 ];
 
 // Social/search crawler User-Agents that should see the rendered OG metadata
