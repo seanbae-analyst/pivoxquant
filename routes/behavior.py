@@ -7,6 +7,8 @@ Endpoints (all under ``/api/behavior``):
     GET /concentration-mirror   — cost-basis concentration of open positions
     GET /profit-loss-mirror     — profit/loss hold-day + return mirror
                                   (?period=30d|all)
+    GET /turnover-mirror        — trade-activity mirror: fill counts +
+                                  per-currency gross value (?period=30d|all)
 
 The former AI behavioural-scoring endpoints (``/score``, ``/breakdown``,
 ``/persona-comparison``) were removed 2026-05-30 per the "AI 점수화 폐기"
@@ -28,6 +30,7 @@ from flask_login import current_user
 from models import TradeHistory
 from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
+from services.behavior.turnover_mirror import compute_turnover_mirror
 from services.profile.holding_mirror import compute_holding_mirror
 
 from .decorators import api_auth
@@ -167,6 +170,61 @@ def profit_loss_mirror():
     body = {
         "ok": True,
         "disclaimer": _PROFIT_LOSS_MIRROR_DISCLAIMER,
+        "period": period,
+    }
+    body.update(result)
+    return jsonify(body), 200
+
+
+# ── /turnover-mirror ─────────────────────────────────────────────────
+
+# Wording kept byte-identical to the other retrospective trade-history
+# mirror disclaimers so all behaviour mirrors read with one legal voice.
+_TURNOVER_MIRROR_DISCLAIMER = (
+    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 "
+    "아닙니다."
+)
+
+# Accepted ``?period`` values → window in days. ``all`` (default) = no
+# window. Kept tiny and explicit so we never echo an arbitrary
+# user-supplied integer back into a window.
+_TURNOVER_MIRROR_PERIODS: dict[str, int | None] = {
+    "all": None,
+    "30d": 30,
+}
+
+
+@behavior_bp.route("/turnover-mirror", methods=["GET"])
+@api_auth
+def turnover_mirror():
+    """Retrospective trade-activity mirror for the user.
+
+    ``?period=30d|all`` (default ``all``). Returns observational fill
+    counts (BUY/SELL) and per-currency gross traded value — never a
+    turnover ratio, score, grade, or label — over the user's own trade
+    history. No live price / FX call.
+    """
+    period = request.args.get("period", "all")
+    if period not in _TURNOVER_MIRROR_PERIODS:
+        return jsonify({
+            "error": (
+                "period must be one of: "
+                + ", ".join(sorted(_TURNOVER_MIRROR_PERIODS))
+            ),
+            "code": "BAD_INPUT",
+        }), 400
+    period_days = _TURNOVER_MIRROR_PERIODS[period]
+
+    trades = (
+        TradeHistory.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    result = compute_turnover_mirror(trades, period_days=period_days)
+
+    body = {
+        "ok": True,
+        "disclaimer": _TURNOVER_MIRROR_DISCLAIMER,
         "period": period,
     }
     body.update(result)

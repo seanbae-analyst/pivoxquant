@@ -908,6 +908,21 @@
       "insufficient": "아직 매도 기록이 적어 평균을 안정적으로 비추기 어렵습니다. 기록이 쌓이면 자동으로 나타납니다.",
       "emptyTitle": "아직 비출 기록이 없습니다",
       "emptyDesc": "매도가 기록되면, 이익을 실현한 매도와 손실을 실현한 매도의 평균 보유 기간과 실현 손익률을 나란히 보여드립니다."
+    },
+    "turnoverMirror": {
+      "kicker": "관찰됨 · OBSERVED",
+      "heading": "당신의 매매 활동",
+      "daysUnit": "일",
+      "tradesLabel": "매매 건수",
+      "buysLabel": "매수 횟수",
+      "sellsLabel": "매도 횟수",
+      "grossLabel": "통화별 거래대금",
+      "currencyRow": "{currency} · {count}건",
+      "avgHold": "평균 보유 기간",
+      "framing": "거래 기록을 그대로 비춰 보여드립니다. 평가나 권유는 담지 않습니다.",
+      "insufficient": "아직 거래 기록이 적어 안정적으로 비추기 어렵습니다. 기록이 쌓이면 자동으로 나타납니다.",
+      "emptyTitle": "아직 비출 기록이 없습니다",
+      "emptyDesc": "거래가 기록되면, 매수·매도 횟수와 통화별 거래대금을 그대로 보여드립니다."
     }
   },
   "companion": {

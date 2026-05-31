@@ -295,6 +295,13 @@ export const API = {
     // mirrors on /journal; NEVER a score, grade, or "처분효과/편향" label
     // (자본시장법 / PIPA §23). Response = ProfitLossMirrorResponse, 1:1.
     profitLossMirror: "/api/behavior/profit-loss-mirror",
+    // Turnover Mirror — factual trade-activity: BUY/SELL fill counts +
+    // per-currency gross traded value (NO ratio/percentage — a turnover
+    // ratio needs a live valuation denominator + meaningless across FX).
+    // Read-only, @api_auth. Renders as a neutral panel beneath the other
+    // mirrors on /journal; NEVER a score, grade, or "회전율/과잉거래" label
+    // (자본시장법 / PIPA §23). Response = TurnoverMirrorResponse, 1:1.
+    turnoverMirror: "/api/behavior/turnover-mirror",
   },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished

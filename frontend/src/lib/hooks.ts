@@ -32,6 +32,7 @@ import type {
   HoldingMirrorResponse,
   ConcentrationMirrorResponse,
   ProfitLossMirrorResponse,
+  TurnoverMirrorResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -378,6 +379,51 @@ export function useProfitLossMirror() {
   const swr = useSWR<ProfitLossMirrorResponse | null>(
     API.behavior.profitLossMirror,
     async (url: string): Promise<ProfitLossMirrorResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Turnover (trade-activity) Mirror — neutral count of the user's own
+ * BUY/SELL fills plus per-currency gross traded value.
+ *
+ * A 404 (backend not yet wired) is normalised to `data === null` so the
+ * panel shows its calm empty state rather than an error. A 5xx / network
+ * failure surfaces through `error` so the panel can render nothing rather
+ * than a broken card — a mirror failure must NEVER take down the journal
+ * feed beneath it.
+ *
+ * Never returns a score / grade / ratio — only fill counts, per-currency
+ * gross value, and the average hold days for context.
+ */
+export function useTurnoverMirror() {
+  const swr = useSWR<TurnoverMirrorResponse | null>(
+    API.behavior.turnoverMirror,
+    async (url: string): Promise<TurnoverMirrorResponse | null> => {
       const res = await fetch(url, { credentials: "include" });
       // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
       if (res.status === 404) return null;

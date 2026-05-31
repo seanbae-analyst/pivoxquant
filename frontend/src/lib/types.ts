@@ -578,6 +578,56 @@ export interface ProfitLossMirrorResponse {
   stop_loss: ProfitLossMirrorStopLossSide | null;
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+ * Turnover Mirror — factual trade-activity reflection (GET
+ * /api/behavior/turnover-mirror + services/behavior/turnover_mirror.py). A
+ * neutral count of the user's own BUY/SELL fills plus per-currency gross
+ * traded value. It is purely observational — raw counts and value sums,
+ * never a verdict on activity level.
+ *
+ * There is deliberately NO turnover ratio / percentage: a ratio needs a
+ * live portfolio-valuation denominator (breaking determinism) and mixing
+ * KRW/USD market values into one figure is meaningless. So we report
+ * absolute frequency + per-currency gross value only. No score, grade,
+ * index, ratio, or "회전율 / 과잉거래 / 과속" label is ever surfaced
+ * (자본시장법 / PIPA §23 / DECISIONS.md AI 점수화 폐기). Efficacy statistics
+ * (Barber&Odean, KCMI 회전율, etc.) are NEVER cited.
+ *
+ * Backend contract is locked 1:1 with this shape — do NOT rename keys.
+ *   - `sufficient_data` false → fewer than the minimum fills in the window;
+ *                               count fields are null, by_currency is [].
+ *   - per-currency `gross_value` is the sum of total_value for that
+ *                               currency, NEVER FX-converted into a mix.
+ *   - `median_hold_days` / `mean_hold_days` are null when no round trip
+ *                               closed in the window.
+ * ────────────────────────────────────────────────────────────────────── */
+export interface TurnoverMirrorCurrencyRow {
+  currency: string;
+  /** Sum of total_value for this currency (raw, not FX-converted). */
+  gross_value: number;
+  trade_count: number;
+}
+
+export interface TurnoverMirrorResponse {
+  ok: boolean;
+  disclaimer?: string;
+  /** Trailing window label echoed by the route ("all" / "30d"). */
+  period?: string;
+  /** Window length in days the backend applied (null = all history). */
+  period_days: number | null;
+  sufficient_data: boolean;
+  /** Total BUY + SELL fills in the window. */
+  trade_count: number;
+  /** Null when sufficient_data is false. */
+  buy_count: number | null;
+  sell_count: number | null;
+  /** Per-currency gross traded value; [] when sufficient_data is false. */
+  by_currency: TurnoverMirrorCurrencyRow[];
+  /** Null when no round trip closed in the window. */
+  median_hold_days: number | null;
+  mean_hold_days: number | null;
+}
+
 /* ── Artifact / Reports Archive ── */
 
 export type ArtifactType =

@@ -908,6 +908,21 @@
       "insufficient": "There are still too few sell records to mirror a stable average. It will appear automatically as records accumulate.",
       "emptyTitle": "Nothing to mirror yet",
       "emptyDesc": "Once a sell is recorded, we show the average holding period and realised return of positions sold at a profit and at a loss, side by side."
+    },
+    "turnoverMirror": {
+      "kicker": "OBSERVED",
+      "heading": "Your trading activity",
+      "daysUnit": "d",
+      "tradesLabel": "Trades",
+      "buysLabel": "Buys",
+      "sellsLabel": "Sells",
+      "grossLabel": "Traded value by currency",
+      "currencyRow": "{currency} · {count}",
+      "avgHold": "Average holding period",
+      "framing": "We reflect your trade records as they are. No grade, no recommendation.",
+      "insufficient": "There are still too few trade records to mirror stably. It will appear automatically as records accumulate.",
+      "emptyTitle": "Nothing to mirror yet",
+      "emptyDesc": "Once trades are recorded, we show the buy and sell counts and the traded value by currency, as they are."
     }
   },
   "companion": {
