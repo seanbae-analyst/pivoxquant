@@ -35,6 +35,7 @@ import {
   PdfDisclaimerMini,
   PdfFlexBetween,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 interface AnnualRow {
   year: string;
@@ -110,12 +111,17 @@ const DEFAULT: Sp500BacktestData = {
 };
 
 export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* PAGE 1 */}
       <PdfPage>
         <PdfHeader tier="pro" title="S&P 500 BACKTEST" meta={`${data.asOf} · 01/03`} />
         <PdfGoldRule />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Strategy Backtest · S&amp;P 500 Universe</PdfEyebrow>
         <PdfCoverTitle size={42}>

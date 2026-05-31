@@ -35,6 +35,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 export interface SelfAuditData {
   asOf: string; // "Apr 26, 2026 · SA-2026-04"
@@ -138,12 +139,17 @@ const TONE_STYLE: Record<"pos" | "neg" | "warn" | "neutral", string | undefined>
 };
 
 export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* ═══════ PAGE 1 ═══════ */}
       <PdfPage>
         <PdfHeader tier="pro" title="SELF AUDIT" meta={data.asOf} />
         <PdfGoldRule />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Self Audit · On Demand</PdfEyebrow>
         <PdfCoverTitle size={42}>

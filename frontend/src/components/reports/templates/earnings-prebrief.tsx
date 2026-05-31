@@ -38,6 +38,7 @@ import {
 } from "../pdf-primitives";
 import { displayTicker, normalizeTicker } from "@/lib/format";
 import { DEFAULT_GOVERNANCE } from "@/lib/reports/disclaimer";
+import { SampleDataBadge } from "../sample-data-badge";
 
 export type SignalLabel = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
 
@@ -144,6 +145,8 @@ const SIGNAL_TONE: Record<SignalLabel, string> = {
 };
 
 export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* ───── PAGE 1 — BRIEF ───── */}
@@ -158,24 +161,10 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         <PdfGoldRule />
 
         {/* SAMPLE banner — never let the static NVDA (NVIDIA) mockup be
-            mistaken for the user's own holdings. Mirrors the DD Checklist
-            pattern so all sample-reports surfaces label themselves
-            consistently. */}
-        <div
-          style={{
-            margin: "12px 0 4px",
-            padding: "10px 14px",
-            background: "rgba(184, 149, 106, 0.08)",
-            border: "1px solid rgba(184, 149, 106, 0.4)",
-            borderRadius: 2,
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "var(--r-gold-deep, #8b6f47)",
-          }}
-        className="font-mono" >
-          ▍ Sample · 양식 — 실제 보유 데이터 아님
-        </div>
+            mistaken for the user's own holdings. Only renders in sample mode
+            (DEFAULT fixture); hidden for real member reports. Shared component
+            so all 18 templates label themselves consistently. */}
+        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Pre-Earnings Brief · For Growth / Quant Personas</PdfEyebrow>
         <PdfCoverTitle size={48}>

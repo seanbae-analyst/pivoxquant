@@ -34,6 +34,7 @@ import {
   PdfDisclaimerMini,
 } from "../pdf-primitives";
 import { displayTicker } from "@/lib/format";
+import { SampleDataBadge } from "../sample-data-badge";
 
 type Tone = "pos" | "neg" | "warn";
 
@@ -280,23 +281,10 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
         <PdfGoldRule />
 
         {/* SAMPLE banner — never let the static PLTR (Palantir) mockup
-            be mistaken for the user's own holdings. Only renders when no
-            backend payload is available. */}
-        <div
-          style={{
-            margin: "12px 0 4px",
-            padding: "10px 14px",
-            background: "rgba(184, 149, 106, 0.08)",
-            border: "1px solid rgba(184, 149, 106, 0.4)",
-            borderRadius: 2,
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "var(--r-gold-deep, #8b6f47)",
-          }}
-        className="font-mono" >
-          ▍ Sample · 양식 — 실제 보유 데이터 아님
-        </div>
+            be mistaken for the user's own holdings. This code path only runs
+            when no backend payload is available (sample mode); the real-data
+            view returns early above via <BackendDdChecklistView />. */}
+        <SampleDataBadge />
 
         <PdfEyebrow>Due Diligence · Pre-Entry</PdfEyebrow>
         {/* PR #212 follow-up — company name first, ticker only as fallback. */}

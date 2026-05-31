@@ -42,6 +42,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 interface DecisionRow {
   when: string;
@@ -122,11 +123,17 @@ const DEFAULT: YearEndLetterData = {
 };
 
 export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* PAGE 1 — COVER */}
       <PdfPage>
         <PdfHeader tier="premium" title="YEAR-END LETTER" meta={data.doc} />
+
+        {/* SAMPLE banner — public sample renders DEFAULT fixture; label it so
+            visitors don't mistake illustrative numbers for real performance. */}
+        {isSample && <SampleDataBadge />}
 
         <div style={{ marginTop: "30mm" }}>
           <PdfCoverEyebrow>Annual Letter · To the CFO of My Portfolio</PdfCoverEyebrow>

@@ -35,6 +35,7 @@ import {
   PdfDisclaimerMini,
 } from "../pdf-primitives";
 import { displayTicker, normalizeTicker } from "@/lib/format";
+import { SampleDataBadge } from "../sample-data-badge";
 
 type BurnStatus = "PROFITABLE" | "SAFE" | "WATCH" | "CRITICAL";
 
@@ -132,12 +133,17 @@ const DEFAULT: BurnRateData = {
 };
 
 export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* PAGE 1 */}
       <PdfPage>
         <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 01/03`} />
         <PdfGoldRule />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Burn Rate · For Growth Holdings</PdfEyebrow>
         <PdfCoverTitle size={42}>

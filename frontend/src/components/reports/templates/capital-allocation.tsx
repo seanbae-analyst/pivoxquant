@@ -42,6 +42,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 export interface CapitalAllocationData {
   doc: string;
@@ -111,11 +112,16 @@ const DEFAULT: CapitalAllocationData = {
 };
 
 export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocationData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* PAGE 1 — COVER */}
       <PdfPage>
         <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta={data.doc} />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <div style={{ marginTop: "30mm" }}>
           <PdfCoverEyebrow>Quarterly Review · The CFO&apos;s Question</PdfCoverEyebrow>

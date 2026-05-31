@@ -36,6 +36,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 interface BuyRow {
   ticker: string;
@@ -118,12 +119,17 @@ const DEFAULT: InsiderMirrorData = {
 };
 
 export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* PAGE 1 */}
       <PdfPage>
         <PdfHeader tier="pro" title="INSIDER MIRROR" meta={data.asOf} />
         <PdfGoldRule />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Insider Mirror · Weekly</PdfEyebrow>
         <PdfCoverTitle size={42}>

@@ -32,6 +32,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 interface Payment {
   date: string;
@@ -90,11 +91,16 @@ const DEFAULT: DividendIncomeData = {
 // Body PdfPage no longer crowds gov+disclaim onto one sheet; chromium
 // no longer pushes a ghost disclosure-only page.
 export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
     <PdfPage>
       <PdfHeader tier="pro" title="DIVIDEND INCOME" meta={`${data.asOf} · DI-2026-04 · 01/02`} />
       <PdfGoldRule />
+
+      {/* SAMPLE banner — sample mode only. */}
+      {isSample && <SampleDataBadge />}
 
       <PdfEyebrow>Dividend Income · Monthly</PdfEyebrow>
       <PdfCoverTitle size={42}>

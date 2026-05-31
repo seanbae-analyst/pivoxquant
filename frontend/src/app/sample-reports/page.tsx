@@ -66,8 +66,33 @@ export default function SampleReportsIndexPage() {
         </h1>
         <p style={{ color: "#5a5a5a", maxWidth: 560, lineHeight: 1.55 }}>
           Click any tile to preview the print-ready design. Use Cmd/Ctrl+P inside
-          a preview to save as A4 PDF. Sample data is hard-coded.
+          a preview to save as A4 PDF.
         </p>
+
+        {/* Prominent sample-data notice — every report below renders
+            illustrative, fictional data (not real holdings or performance).
+            Keeps the public design preview from being mistaken for product
+            performance (CEO 2026-05-31). */}
+        <div
+          role="note"
+          style={{
+            marginTop: 18,
+            padding: "12px 16px",
+            maxWidth: 620,
+            background: "rgba(184, 149, 106, 0.10)",
+            border: "1px solid rgba(184, 149, 106, 0.45)",
+            borderRadius: 2,
+            color: "#6b5836",
+            fontSize: "var(--pq-text-eyebrow)",
+            letterSpacing: "0.06em",
+            lineHeight: 1.5,
+          }}
+          className="font-mono"
+        >
+          ▍ 모든 리포트는 가상 예시 데이터입니다 — 실제 보유·실적이 아닙니다.{" "}
+          All reports below show illustrative sample data, not real holdings or
+          performance.
+        </div>
 
         <div
           style={{

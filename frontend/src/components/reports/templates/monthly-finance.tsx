@@ -39,6 +39,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 interface IncomeRow {
   label: string;
@@ -134,11 +135,16 @@ const DEFAULT: MonthlyFinanceData = {
 };
 
 export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* PAGE 1 — COVER */}
       <PdfPage>
         <PdfHeader tier="premium" title="MONTHLY FINANCE" meta={data.doc} />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <div style={{ marginTop: "26mm" }}>
           <PdfCoverEyebrow>Monthly Financial Report · Personal Portfolio</PdfCoverEyebrow>

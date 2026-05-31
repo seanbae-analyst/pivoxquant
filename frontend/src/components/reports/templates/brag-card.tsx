@@ -30,6 +30,7 @@ import {
   PdfTicker,
 } from "../pdf-primitives";
 import { fmtPct } from "@/lib/format";
+import { SampleDataBadge } from "../sample-data-badge";
 
 export interface BragCardData {
   monthLabel: string;     // "April 2026"
@@ -224,30 +225,17 @@ export function BragCard({
   data?: BragCardData | BackendBragPayload;
 }) {
   const data = normalizeBragCardData(rawData ?? null);
+  // Sample mode = normalizer fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
     <PdfPage>
       <PdfHeader tier="free" title="BRAG CARD" meta={`${data.monthLabel} · ${data.reportTag} · 01/02`} />
 
       {/* SAMPLE banner — never let the static PLTR (Palantir) mockup be
-          mistaken for the user's own holdings. Mirrors the DD Checklist
-          pattern so all sample-reports surfaces label themselves
-          consistently. */}
-      <div
-        style={{
-          margin: "12px 0 4px",
-          padding: "10px 14px",
-          background: "rgba(184, 149, 106, 0.08)",
-          border: "1px solid rgba(184, 149, 106, 0.4)",
-          borderRadius: 2,
-          fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          color: "var(--r-gold-deep, #8b6f47)",
-        }}
-      className="font-mono" >
-        ▍ Sample · 양식 — 실제 보유 데이터 아님
-      </div>
+          mistaken for the user's own holdings. Only renders in sample mode
+          (DEFAULT fixture); hidden for real member reports. */}
+      {isSample && <SampleDataBadge />}
 
       <PdfEyebrow>Brag Card · Monthly</PdfEyebrow>
       <PdfCoverTitle size={42}>

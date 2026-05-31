@@ -38,6 +38,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 interface ScoreRow {
   kpi: string;
@@ -119,11 +120,16 @@ const DEFAULT: KpiDashboardData = {
 };
 
 export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* PAGE 1 — COVER (light, matches other Premium covers per CEO 2026-04-27) */}
       <PdfPage>
         <PdfHeader tier="premium" title="KPI DASHBOARD · IC PACK" meta={data.doc} />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <div style={{ marginTop: "30mm" }}>
           <PdfCoverEyebrow>Investment Committee Pack · Monthly</PdfCoverEyebrow>

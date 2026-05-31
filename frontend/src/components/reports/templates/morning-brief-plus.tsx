@@ -30,6 +30,7 @@ import {
   PdfDisclaimerMini,
   PdfSectionTitle,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 export interface MorningBriefPlusData {
   asOf: string;            // "2026-04-28"
@@ -92,6 +93,8 @@ const DEFAULT_DATA: MorningBriefPlusData = {
 };
 
 export function MorningBriefPlus({ data = DEFAULT_DATA }: { data?: MorningBriefPlusData }) {
+  // Sample mode = template fell back to its DEFAULT_DATA fixture (no real data).
+  const isSample = data === DEFAULT_DATA;
   return (
     <PdfPage>
       <PdfHeader
@@ -99,6 +102,9 @@ export function MorningBriefPlus({ data = DEFAULT_DATA }: { data?: MorningBriefP
         title="MORNING BRIEF PLUS"
         meta={`${data.asOf} · ${data.briefTag}`}
       />
+
+      {/* SAMPLE banner — sample mode only. */}
+      {isSample && <SampleDataBadge />}
 
       <PdfEyebrow>Morning Brief · Before The Bell</PdfEyebrow>
       <PdfCoverTitle size={42}>

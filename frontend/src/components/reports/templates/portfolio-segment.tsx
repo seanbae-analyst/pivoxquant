@@ -36,6 +36,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 interface FactorRow {
   factor: string;
@@ -126,12 +127,17 @@ const DEFAULT: PortfolioSegmentData = {
 };
 
 export function PortfolioSegment({ data = DEFAULT }: { data?: PortfolioSegmentData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* PAGE 1 */}
       <PdfPage>
         <PdfHeader tier="pro" title="PORTFOLIO SEGMENT" meta={`${data.asOf} · 01/03`} />
         <PdfGoldRule />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Portfolio Segment · Monthly</PdfEyebrow>
         <PdfCoverTitle size={32}>

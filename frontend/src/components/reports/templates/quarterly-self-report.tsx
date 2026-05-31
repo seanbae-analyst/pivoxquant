@@ -34,6 +34,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 export interface QuarterlySelfReportData {
   quarter: string; // "Q1 2026 · QSR-2026-04"
@@ -136,6 +137,8 @@ const TONE_STYLE: Record<"pos" | "neg" | "warn" | "neutral", string | undefined>
 };
 
 export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfReportData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* ═══════ PAGE 1 ═══════ */}
@@ -146,6 +149,9 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
           meta={`${data.quarter} · 01/03`}
         />
         <PdfGoldRule />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <PdfEyebrow>Quarterly Self Report</PdfEyebrow>
         <PdfCoverTitle size={42}>

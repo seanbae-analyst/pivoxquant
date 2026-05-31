@@ -30,6 +30,7 @@ import {
   PdfSectionTitle,
 } from "../pdf-primitives";
 import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
+import { SampleDataBadge } from "../sample-data-badge";
 
 export interface WeeklyMemoData {
   asOf: string;            // "2026-04-26"
@@ -104,6 +105,8 @@ function pathFromReturns(values: number[], all: number[], width = 600, height = 
 }
 
 export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
+  // Sample mode = template fell back to its DEFAULT_DATA fixture (no real data).
+  const isSample = data === DEFAULT_DATA;
   const allReturns = [...data.trajectory.portfolio, ...data.trajectory.benchmark];
   const portPath = pathFromReturns(data.trajectory.portfolio, allReturns);
   const benchPath = pathFromReturns(data.trajectory.benchmark, allReturns);
@@ -112,6 +115,9 @@ export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
   return (
     <PdfPage>
       <PdfHeader tier="free" title="WEEKLY MEMO" meta={`${data.asOf} · ${data.weekTag}`} />
+
+      {/* SAMPLE banner — sample mode only. */}
+      {isSample && <SampleDataBadge />}
 
       <PdfEyebrow>{`Weekly Memo · ${WEEKLY_MEMO_WHEN_SHORT}`}</PdfEyebrow>
       <PdfCoverTitle size={42}>

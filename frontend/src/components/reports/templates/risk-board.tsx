@@ -41,6 +41,7 @@ import {
   PdfDisclaimer,
   PdfDisclaimerMini,
 } from "../pdf-primitives";
+import { SampleDataBadge } from "../sample-data-badge";
 
 export interface RiskBoardData {
   weekTag: string; // "Week of Apr 26, 2026 · RB-2026-W17"
@@ -69,6 +70,8 @@ const DEFAULT: RiskBoardData = {
 };
 
 export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
+  // Sample mode = template fell back to its DEFAULT fixture (no real data).
+  const isSample = data === DEFAULT;
   return (
     <>
       {/* ═══════ PAGE 1 — EXECUTIVE SUMMARY + LIMITS ═══════ */}
@@ -78,6 +81,9 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
           title="RISK BOARD · WEEKLY"
           meta={`${data.weekTag} · 01/04`}
         />
+
+        {/* SAMPLE banner — sample mode only. */}
+        {isSample && <SampleDataBadge />}
 
         <PdfExecSum
           stamp={data.asOfStamp}
