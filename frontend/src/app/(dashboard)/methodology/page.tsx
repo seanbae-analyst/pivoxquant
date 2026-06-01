@@ -126,7 +126,7 @@ export default function MethodologyPage() {
               <p
                 className="mt-1.5 font-serif"
                 style={{
-                  fontSize: 13.5,
+                  fontSize: "var(--pq-text-body-sm)",
                   lineHeight: 1.45,
                   color: "var(--pq-ivory)",
                 }}
@@ -177,7 +177,7 @@ export default function MethodologyPage() {
                       <span
                         className="font-mono"
                         style={{
-                          fontSize: 13.5,
+                          fontSize: "var(--pq-text-body-sm)",
                           color: "var(--pq-ivory)",
                           letterSpacing: "-0.01em",
                         }}
@@ -191,7 +191,7 @@ export default function MethodologyPage() {
                     <p
                       className="font-serif"
                       style={{
-                        fontSize: 13.5,
+                        fontSize: "var(--pq-text-body-sm)",
                         lineHeight: 1.5,
                         color: "rgba(245,240,232,0.72)",
                       }}
@@ -242,7 +242,7 @@ function Stat({
         {suffix ? (
           <span
             className="font-mono"
-            style={{ fontSize: 14, color: "rgba(245,240,232,0.45)" }}
+            style={{ fontSize: "var(--pq-text-body)", color: "rgba(245,240,232,0.45)" }}
           >
             {suffix}
           </span>

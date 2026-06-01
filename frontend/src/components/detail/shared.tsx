@@ -60,7 +60,7 @@ export function EmptyNote({
       className={`font-serif ${className}`}
       style={{
         fontStyle: "normal",
-        fontSize: 14,
+        fontSize: "var(--pq-text-body)",
         lineHeight: 1.5,
         color: "rgba(245,240,232,0.5)",
         letterSpacing: "-0.005em",
