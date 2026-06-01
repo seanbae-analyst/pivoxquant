@@ -294,9 +294,13 @@ class EmailSender:
             # 이메일이 발송될 수 있었다. 정통망법 §50 ① default-deny 원칙으로
             # marketing_consent_at NULL = 발송 차단.
             if not getattr(user, "marketing_consent_at", None):
-                logger.debug(
+                # 2026-06-01: debug→info (silent-drop 비-silent화). The baseline
+                # default-deny gate is Q-S1-INDEPENDENT (the category gate below
+                # is the Q-S1-flagged layer), so making suppressed marketing
+                # sends observable in prod logs does not wait on the lawyer.
+                logger.info(
                     "skipping email for user %s — marketing_consent_at NULL "
-                    "(정통망법 §50 default-deny)",
+                    "(정통망법 §50 default-deny, baseline marketing-consent gate)",
                     getattr(user, "id", "?"),
                 )
                 return False
