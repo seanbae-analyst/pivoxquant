@@ -1012,17 +1012,6 @@ export interface MethodologyDataSource {
   coverage: string;
 }
 
-/** Risk-metric methodology — how a risk number (VaR / CDaR / Sortino / …) is
- *  computed + its published method anchor. Backend SoT: services/quant/
- *  risk_methodology.py (drift-guarded against routes/risk_quant.py). */
-export interface MethodologyRiskMetric {
-  key: string;
-  label_kr: string;
-  label_en: string;
-  methodology: string;
-  academic_source: string;
-}
-
 export interface MethodologyResponse {
   ok: boolean;
   categories: string[];
@@ -1031,7 +1020,6 @@ export interface MethodologyResponse {
   active: number;
   models: MethodologyModel[];
   data_lineage: MethodologyDataSource[];
-  risk_metrics: MethodologyRiskMetric[];
   reproducibility: { statement_kr: string; statement_en: string };
   disclaimer: string;
 }
