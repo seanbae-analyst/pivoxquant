@@ -550,8 +550,8 @@ Top Headlines:
                 system=SYSTEM_PROMPT,
                 messages=[{
                     "role": "user",
-                    "content": f"""Look at this portfolio and give ONE specific, actionable insight in 2-3 sentences.
-Focus on: concentration risk, sector balance, or positions that need attention.
+                    "content": f"""Look at this portfolio and give ONE specific, observational note in 2-3 sentences.
+Focus on: concentration patterns, sector distribution, or positions showing indicator divergence.
 
 IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean. Do NOT cut off mid-sentence.
 

@@ -82,7 +82,7 @@
   "landing": {
     "hero": {
       "badge": "AI Quant Research Tool",
-      "title": "Invest with Data",
+      "title": "Observe with Data",
       "subtitle": "58 quant models, 7-layer risk defense, AI portfolio analysis. Unified US & Korean equity management.",
       "cta": "Start for Free",
       "learnMore": "Learn More",
@@ -985,7 +985,7 @@
       },
       "timeline": {
         "title": "Composite timeline",
-        "body": "0–100 score derived from rolling VaR; higher = more strain. Backend may publish a first-class composite score in a future release."
+        "body": "0–100 observation metric derived from rolling VaR; higher indicates more observed strain."
       }
     },
     "v1": {

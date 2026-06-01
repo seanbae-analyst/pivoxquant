@@ -12,7 +12,7 @@
  * finished thinking" record (services/pre_trade/friction.py). This page is
  * INFORMATIONAL, not a recommendation and not a trade-execution log.
  *
- * Compliance posture (KCMA §17 / 자본시장법):
+ * Compliance posture (자본시장법 §6 / §101):
  *   - intended_side BUY/SELL is NEVER surfaced raw. Rendered through
  *     `@/lib/pre-trade` sideLabel as "Long Entry · 진입" / "Position Exit · 정리".
  *   - No 추천/조언 language. DisclaimerBanner mounted at the page head.
