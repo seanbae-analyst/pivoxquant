@@ -1963,6 +1963,27 @@ def portfolio_history():
     # response so frontend can annotate the data point.
     from services.fx_service import get_rate_at as _fx_at  # noqa: PLC0415
 
+    # PERF: warm the historical FX cache for the whole window in ONE fetch so the
+    # per-date _fx_at() calls below are O(1) cache hits. Cold cache was ~N/14
+    # *sequential* FMP round-trips on the first load (≈7s for 6mo) — see
+    # services.fx_service.prefetch_range. KR-only: with no .KS/.KQ position the
+    # equity-curve loop never calls _fx_at, so there is nothing to warm.
+    if any(
+        isinstance(p.ticker, str)
+        and (p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
+        for p in positions
+    ):
+        try:
+            from datetime import date as _d, timedelta as _td  # noqa: PLC0415
+            from services.fx_service import prefetch_range as _fx_prefetch  # noqa: PLC0415
+            _win_days = {"5d": 10, "1mo": 38, "3mo": 100, "6mo": 195, "1y": 380}.get(period, 10)
+            _fx_prefetch(
+                (_d.today() - _td(days=_win_days)).isoformat(),
+                _d.today().isoformat(),
+            )
+        except Exception:
+            logger.debug("silent-fallback: fx prefetch_range", exc_info=True)
+
     _fx_stale_used = False  # set to True if any date fell back to the hardcoded default
 
     all_values = {}

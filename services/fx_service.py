@@ -279,6 +279,40 @@ def get_rate_at(d) -> float:
     return get_rate()
 
 
+def prefetch_range(start, end) -> int:
+    """Warm the historical FX cache for an entire ``[start, end]`` window in ONE
+    upstream fetch.
+
+    ``portfolio_history()``'s equity curve calls :func:`get_rate_at` once per
+    trading day per KR position. On a cold cache that lazily fires a 14-day
+    window fetch per ~14-day gap — ``~N/14`` *sequential* FMP round-trips
+    (≈7s for a 6-month window, re-paid by the first request after every deploy
+    clears the in-process cache). Calling this once before the loop collapses
+    that to a single range fetch; the per-date lookups are then O(1) cache hits.
+
+    Does NOT change any rate VALUE — it uses the same ``_fetch_historical_window``
+    source (and the same ``_hist_cache``) as :func:`get_rate_at`, so FX
+    consistency is unaffected. Never raises; on failure the lazy per-date path
+    still works (just slower). Returns the number of dates warmed.
+    """
+    try:
+        s = start if isinstance(start, str) else start.isoformat()
+        e = end if isinstance(end, str) else end.isoformat()
+    except Exception:
+        return 0
+    bars = _fetch_historical_window(s, e)
+    if not bars:
+        return 0
+    with _hist_lock:
+        for k, v in bars.items():
+            _hist_cache[k] = v
+        if len(_hist_cache) > HIST_MAX:
+            drop_n = HIST_MAX // 10
+            for k in list(_hist_cache.keys())[:drop_n]:
+                _hist_cache.pop(k, None)
+    return len(bars)
+
+
 def get_rate_at_strict(d) -> float | None:
     """Return the *genuine historical* USD/KRW rate for ``d``, or ``None``.
 
