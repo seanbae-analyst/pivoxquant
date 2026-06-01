@@ -990,3 +990,36 @@ export interface LivingMirrorGenerateResponse {
   id: number;
   data: LivingMirrorData;
 }
+
+/* ── Methodology & data-provenance transparency (Data-trust Stage 1) ──
+ * Backs GET /api/methodology (routes/methodology.py) and the /methodology
+ * page. Observation-only disclosure; field names locked to the backend
+ * contract. See docs/strategy/DATA_TRUST_STRATEGY.md. */
+
+export interface MethodologyModel {
+  name: string;
+  category: string;
+  module: string;
+  description_kr: string;
+  description_en: string;
+  /** Published paper / textbook anchor — the reproducibility hook. */
+  academic_source: string;
+}
+
+export interface MethodologyDataSource {
+  source: string;
+  description: string;
+  coverage: string;
+}
+
+export interface MethodologyResponse {
+  ok: boolean;
+  categories: string[];
+  category_counts: Record<string, number>;
+  total: number;
+  active: number;
+  models: MethodologyModel[];
+  data_lineage: MethodologyDataSource[];
+  reproducibility: { statement_kr: string; statement_en: string };
+  disclaimer: string;
+}

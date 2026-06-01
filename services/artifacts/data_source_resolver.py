@@ -76,6 +76,18 @@ _SYSTEM_LINEAGE: tuple[dict[str, str], ...] = (
 )
 
 
+def system_data_lineage() -> list[dict[str, str]]:
+    """Public, user-independent view of the system data sources.
+
+    The methodology / transparency surface (``routes/methodology.py``)
+    renders these as the provenance every PivoxQuant computation rests on,
+    with no user context. Returns fresh copies so callers can never mutate
+    the canonical ``_SYSTEM_LINEAGE`` tuple. Same truthfulness rule as the
+    per-user resolvers: we only ever list sources we actually use.
+    """
+    return [dict(row) for row in _SYSTEM_LINEAGE]
+
+
 # ── per-broker connectivity checks ──────────────────────────────────────────
 
 def _has_active_alpaca(user_id: int) -> bool:

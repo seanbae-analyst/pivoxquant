@@ -9,6 +9,7 @@ import {
   RISK_ROLLING_VAR,
   RISK_CORRELATION,
   PUBLIC_MARKET_SNAPSHOT,
+  METHODOLOGY,
 } from "./endpoints";
 import { displayTicker } from "./format";
 import { liveRefresh } from "./market-hours";
@@ -34,6 +35,7 @@ import type {
   ProfitLossMirrorResponse,
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
+  MethodologyResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -1553,5 +1555,18 @@ export async function replyToInquiry(
   return apiFetch<SupportAdminInquiry>(API.support.adminReply(id), {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+/* ── Methodology & data-provenance (Data-trust Stage 1) ──
+ * Backs the /methodology transparency page. The payload is a static model
+ * catalog + system data lineage, so we disable focus revalidation and dedupe
+ * aggressively — it changes only on deploy. Flag-gated behind login by default
+ * (METHODOLOGY_PUBLIC; Q-DT4) — `fetcher`'s credentialed request carries the
+ * session cookie, so logged-in dashboard users pass; public after Q-DT4. */
+export function useMethodology() {
+  return useSWR<MethodologyResponse>(METHODOLOGY, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
   });
 }

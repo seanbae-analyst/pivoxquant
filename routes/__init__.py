@@ -36,6 +36,7 @@ def register_blueprints(app):
     from .artifacts import artifacts_bp
     from .health import health_bp
     from .data_status import data_status_bp  # Wave G C-CS3 — public stale-banner endpoint
+    from .methodology import methodology_bp  # Data-trust Stage 1 — methodology/provenance (flag-gated, Q-DT4)
     from .admin_fmp import admin_fmp_bp
     from .admin_preview import admin_preview_bp
     from .risk import risk_bp
@@ -72,6 +73,7 @@ def register_blueprints(app):
     blueprints = [
         health_bp,
         data_status_bp,
+        methodology_bp,
         auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, daytrade_bp, alerts_bp, notifications_bp, trades_bp,
         ai_bp, watchlist_bp, backtest_bp,

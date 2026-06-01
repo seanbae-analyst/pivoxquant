@@ -439,6 +439,12 @@ export const PUBLIC_MARKET_SNAPSHOT = `${API_BASE}/api/public/market-snapshot`;
 // routes/data_status.py for the locked response contract. Wave G C-CS3.
 export const DATA_STALE_STATUS = `${API_BASE}/api/data/stale-status`;
 
+// Methodology + data-provenance disclosure — backs /methodology (Data-trust
+// Stage 1). Flag-gated behind login by default (METHODOLOGY_PUBLIC; Q-DT4) —
+// static model catalog + system data lineage from routes/methodology.py.
+// See docs/strategy/DATA_TRUST_STRATEGY.md.
+export const METHODOLOGY = `${API_BASE}/api/methodology`;
+
 // NPS 1-click feedback — backs <NpsWidget /> rendered after the first
 // Weekly Memo. Transactional (§50 서비스 개선); no consent required.
 // Body: { score: 1-10, weekly_memo_id?: string }. Wave G C-AC2.
