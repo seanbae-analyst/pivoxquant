@@ -704,7 +704,7 @@ class CapitalAllocationService:
         # We still distinguish "sent OK" vs "skipped" via the bool
         # return; a False return either means opt-out, no transport,
         # or a logged failure (sender doesn't raise).
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
         sender = EmailSender()
 
         ok = skipped = failed = 0
@@ -712,6 +712,7 @@ class CapitalAllocationService:
             try:
                 if sender.send(
                     u,
+                    email_category=EmailCategory.INFORMATION,
                     subject=subject,
                     html_body=body_html,
                     from_env_var="WEEKLY_MEMO_FROM_EMAIL",

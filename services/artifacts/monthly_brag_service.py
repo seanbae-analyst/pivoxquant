@@ -572,7 +572,7 @@ background:#0B0D12;color:#F5F0E8;padding:32px;">
         ``from_default`` so the sender's single ``os.environ.get``
         produces the same result.
         """
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         # Two-tier env fallback — first specific, then global default.
         # Keeps behaviour identical to the Phase 2 inlined chain.
@@ -582,6 +582,7 @@ background:#0B0D12;color:#F5F0E8;padding:32px;">
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject="당신의 월간 브래그 카드가 도착했어요",
             html_body=html_body,
             from_env_var="MONTHLY_BRAG_FROM_EMAIL",

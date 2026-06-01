@@ -793,11 +793,12 @@ class MonthlyFinanceService:
     def send_email(self, user: User, pdf_bytes: Optional[bytes],
                    html_body: str, month_label: str) -> bool:
         """Phase 7 — delegate to :class:`EmailSender`."""
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject=f"PivoxQuant Finance Report — {month_label}",
             html_body=html_body,
             from_env_var="WEEKLY_MEMO_FROM_EMAIL",

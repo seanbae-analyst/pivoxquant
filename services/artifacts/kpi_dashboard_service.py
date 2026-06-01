@@ -574,11 +574,12 @@ class KPIDashboardService:
 
     def send_email(self, user: User, html_body: str) -> bool:
         """Phase 7 — delegate to :class:`EmailSender`. HTML-only."""
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject=f"PivoxQuant KPIs — {date.today().isoformat()}",
             html_body=html_body,
             from_env_var="WEEKLY_MEMO_FROM_EMAIL",

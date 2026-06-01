@@ -845,11 +845,12 @@ class BragCardService:
         artefact that ships an image attachment, so we override
         ``attachment_mime`` to ``image/png``.
         """
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject="당신의 월간 브래그 카드가 도착했어요",
             html_body=html_body,
             from_env_var="BRAG_CARD_FROM_EMAIL",

@@ -608,11 +608,12 @@ class BurnRateService:
         keyed off ``period_label``; opt-out + transport handling lives
         in the consolidated sender.
         """
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject=f"PivoxQuant Burn Rate — {period_label}",
             html_body=html_body,
             from_env_var="WEEKLY_MEMO_FROM_EMAIL",

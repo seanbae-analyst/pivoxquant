@@ -576,11 +576,12 @@ class CreditRatingService:
         """Phase 7 — delegate to :class:`EmailSender`. No PDF attachment;
         the credit rating is HTML-only.
         """
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject=f"PivoxQuant Credit Rating — {grade}",
             html_body=html_body,
             from_env_var="WEEKLY_MEMO_FROM_EMAIL",

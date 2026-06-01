@@ -811,11 +811,12 @@ class YearEndLetterService:
     def send_email(self, user: User, pdf_bytes: Optional[bytes],
                    html_body: str) -> bool:
         """Phase 7 — delegate to :class:`EmailSender`."""
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject="PivoxQuant Year-End Investor Letter — for you only",
             html_body=html_body,
             from_env_var="WEEKLY_MEMO_FROM_EMAIL",

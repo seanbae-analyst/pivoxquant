@@ -12,6 +12,6 @@ utilities (currency prefix, etc.).
 from __future__ import annotations
 
 from services.email.format_helpers import currency_prefix
-from services.email.sender import EmailSender
+from services.email.sender import EmailCategory, EmailSender
 
-__all__ = ["EmailSender", "currency_prefix"]
+__all__ = ["EmailCategory", "EmailSender", "currency_prefix"]

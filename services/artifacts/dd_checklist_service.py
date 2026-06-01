@@ -412,11 +412,12 @@ class DDChecklistService:
         if pending_count <= 0:
             return False
 
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject=f"PivoxQuant DD Checklist — {pending_count}개 포지션 점검",
             html_body=html_body,
             from_env_var="WEEKLY_MEMO_FROM_EMAIL",

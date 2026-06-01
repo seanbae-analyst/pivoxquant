@@ -1590,13 +1590,14 @@ class WeeklyMemoService:
         SMTP fallback, and PDF attachment. We keep ownership of
         subject + filename here because both vary per artefact type.
         """
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
 
         _iso = datetime.now(timezone.utc).replace(tzinfo=None).isocalendar()
         subject = f"Week {_iso[1]}, {_iso[0]} Investor Memo"
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject=subject,
             html_body=html_body,
             from_env_var="WEEKLY_MEMO_FROM_EMAIL",

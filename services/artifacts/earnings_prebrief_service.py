@@ -1333,7 +1333,7 @@ class EarningsPreBriefService:
         so the sender short-circuits on either. Two-tier from-email
         override is preserved by resolving the chain inline.
         """
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
         from services.push_service import _label_for_ticker
 
         ticker = data.get("ticker", "?")
@@ -1348,6 +1348,7 @@ class EarningsPreBriefService:
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject=f"[Pre-Brief] {label} — Earnings in {_lead_minutes()} min",
             html_body=html_body,
             from_env_var="EARNINGS_PREBRIEF_FROM_EMAIL",
@@ -1728,6 +1729,7 @@ class EarningsPreBriefService:
         sender = EmailSender()
         ok = sender.send(
             user,
+            email_category=EmailCategory.INFORMATION,
             subject=subject,
             html_body=html_body,
             from_env_var="EARNINGS_PREBRIEF_FROM_EMAIL",
