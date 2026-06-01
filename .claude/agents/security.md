@@ -175,16 +175,16 @@ Stripe Live 활성화 전 필수:
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀 (v44.9: KIS token AES-GCM 영구 해결 + P0 5건 fix)
+**프로덕션 상태**: Railway + Vercel ACTIVE / 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지) / pytest 3000+ / vitest 450+ / 0 회귀
 **베타 비밀번호**: Vercel env `BETA_PASSWORD` — 평문 git 금지. rotate = Vercel REST API 직접 호출 + empty commit redeploy (CLI stdin 미지원, 2회 fail 사례). 이전 평문은 `git-filter-repo` (C1) scrub 완료
 **최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
 **Launch bundle**: `docs/LAUNCH_BUNDLE_SPEC.md` Tier 1-4 모두 시점 지남 — 출시 직전
-**자율 운영 인프라**: 8+ cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+**자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)
 
 ### 도메인 reference
-- **40+ quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **40+ quant 모델** (`services/quant/model_catalog.py` + `services/quant/engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
-- **법적 안전**: 자본시장법 §17 §101 면제 트랙 / 표시광고법 §3 / 신용정보법 / PIPA §28-8 (10% 과징금) / 정통망법 §50 (6%) / 금소법 §19 / 전자상거래법 §17 — `services/legal/forbidden_terms.py` + `legal_filter.py`
+- **법적 안전**: 자본시장법 §17 §101 면제 트랙 / 표시광고법 §3 / 신용정보법 / PIPA §28-8 (10% 과징금) / 정통망법 §50 (6%) / 금소법 §19 / 전자상거래법 §17 — `services/legal/forbidden_terms.py` + `services/legal_filter.py`
 
 ### 자동 호출 매핑
 | 상황 | 호출할 agent |

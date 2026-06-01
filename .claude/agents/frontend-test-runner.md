@@ -211,7 +211,7 @@ jobs:
 
 ## 참고
 - `frontend/src/` — 기존 컴포넌트
-- `HANDOVER.md` v44.7 (2026-05-17 자율 overnight + v44.8 / v44.9 Wave G/H 누적 40 PR) — Wave A-H 누적 작업 + 미완료 항목
+- `HANDOVER.md` 최신본 직접 확인 (버전·PR수 하드코딩 금지) — Wave 누적 작업 + 미완료 항목
 - `verify-ux` — prod 검증 전담 (이 agent 와 역할 분리)
 - `services/legal/forbidden_terms.py` — 컴플라이언스 어휘 단일 SoT (vitest 케이스도 이 파일 import 또는 동기화)
 - 9 bug 패턴 원본: `~/.claude/projects/-Users-seanbae-Desktop---/memory/feedback_bug_fix_patterns.md`

@@ -189,7 +189,7 @@ grep -niE "\\bsupabase\\b" <draft_output>
 
 ## 🚀 PivoxQuant Context (v44.8 갱신, 2026-05-18)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / pytest **1700+ pass** (v44.9 기준) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
+**프로덕션 상태**: Railway + Vercel ACTIVE / pytest **3000+ pass** (실측 기준) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
 **최신 인수인계**: `HANDOVER.md` v44.7+ (자율 overnight 8h, 누적 **40 PR** squash-merged: v44.7 26 + v44.8 6 + v44.9 8)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4) — **시점 지남** (v44.7+ 신규 surface 대량 추가, 별도 인벤토리 필요)
 **자율 운영 인프라**: 6개 GitHub Actions cron + scheduled-tasks (Max) Layer B/C — autopilot-monitor agent 참조
@@ -197,10 +197,10 @@ grep -niE "\\bsupabase\\b" <draft_output>
 **프롬프트 출시 모드**: Full Throttle (feedback_pre_launch_full_throttle, 2026-05-17) — 깊이 max, 토큰/모델/wave 절약 X
 
 ### 도메인 reference
-- **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **40 quant 모델** (`services/quant/model_catalog.py` + `services/quant/engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
 - **Tier 1 (오늘 push)**: Quant Composer / Persona Preset / PersonaSnapshot Evolution / AI Twin / Pre-Trade Friction / Behavioral Score
-- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `legal_filter.py`
+- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `services/legal_filter.py`
 
 ### 자동 호출 매핑 (new 8 agents)
 | 상황 | 호출할 agent |

@@ -18,7 +18,7 @@ tools:
 
 ## 🚀 PivoxQuant Context (v44.9 — 2026-05-18)
 
-- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
+- 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지 — 매 세션 변함) / pytest 3000+ / vitest 450+ / 0 회귀
 - Tech Stack: Flask + SQLAlchemy + alembic / Railway PostgreSQL / Next.js 16 / Vercel / Stripe Live / PWA (SW + manifest)
 - Auth: Google + Kakao OAuth (이메일+비밀번호 없음) — stateless HMAC state, @api_auth decorator
 - Data: KIS API + DART OpenAPI + KRX Open Data Portal + FMP (yfinance/pykrx/네이버 영구 금지)
@@ -197,7 +197,7 @@ schedule:
 - Multiple opens detected: 0 ✅
 
 ### Drift Signals
-- pytest pass count: 1700+ (v44.8 baseline) — drift ±2%
+- pytest pass count: 3000+ (실측 baseline — `HANDOVER.md`/CI) — drift ±2%
 - workflow duration: stable
 - Issue creation rate: N/week (baseline N±2)
 

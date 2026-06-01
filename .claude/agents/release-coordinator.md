@@ -14,7 +14,7 @@ effort: high
 
 ## 1. PivoxQuant Context (v44.8 기준 / 2026-05-18)
 
-- 누적 32 PR squash-merged (v44.7 26 + v44.8 6)
+- 누적 PR 수는 `HANDOVER.md`/`git log` 실측 (하드코딩 금지 — 매 세션 변함)
 - main HEAD: `git rev-parse --short HEAD` 로 실측 (하드코딩 금지 — sha 는 매 머지마다 변함)
 - pytest 3000+ PASS / vitest 450+ / 0 회귀 / 0원
 - v44.7 가장 큰 incident: **OAuth provisioning_failed P0 hotfix** — alembic 035가 prod에 미적용 → `_do_migrations` runtime `ADD COLUMN`으로 응급 복구

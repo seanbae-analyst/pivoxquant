@@ -91,7 +91,7 @@ You are the pitch coach who has prepared founders for YC Demo Day. Every pitch m
 
 ## PivoxQuant 실측 talking points (면접 / 투자자 공통)
 - **출시 직전 안정성**: pytest 3000+ pass / vitest 450+ / 0 회귀 (8h overnight wave 후에도)
-- **속도**: v44.7~v44.9 연속 자율 세션 (8h+8h overnight) → 40 PR squash-merged 누적 (v44.7 26 + v44.8 6 + v44.9 8)
+- **속도**: v44.7~v44.9 연속 자율 세션 (8h+8h overnight) → 다수 PR squash-merged 누적 (정확 수치는 `git log` 실측)
 - **버그 수정 패턴 라이브러리**: 9개 패턴 + CI 가드 (`feedback_bug_fix_patterns.md`) — stale fallback / divergence guard / ticker normalization / per-metric try-except / SWR dedup 3계층 / fail-fast / equity curve FX 변환 / viral loop endpoint auth / webhook signature 강제
 - **legal moat**: 자본시장법 §17 §101 면제 트랙 유지 (`legal_decision_no_advisory.md` 2026-05-04) — 유사투자자문업 미등록 결정 + 4요건 자동 evidence 집계
 - **데이터 적법성**: KIS API + KRX Open Data + DART OpenAPI + FMP $29 + SEC EDGAR 만 (yfinance/pykrx 영구 금지 — 라이선스 리스크 사전 회피)
@@ -124,7 +124,7 @@ You are the pitch coach who has prepared founders for YC Demo Day. Every pitch m
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
+**프로덕션 상태**: Railway + Vercel ACTIVE / 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지 — 매 세션 변함) / pytest 3000+ / vitest 450+ / 0 회귀
 **최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
 **Brand**: PivoxQuant (NOT StockPilot — 브랜드 가드 통과 강제)
 **도메인**: pivoxquant.com (가비아 19,800원/년)

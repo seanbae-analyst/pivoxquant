@@ -114,16 +114,16 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀 (v44.9 P0 5건 추가 fix: earnings_tone cross-user / SignalCache leak / equity FX G-5 / FMP 429 lockout / risk_quant N+1 + KIS token AES-GCM)
+**프로덕션 상태**: Railway + Vercel ACTIVE / 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지) / pytest 3000+ / vitest 450+ / 0 회귀
 **베타 비밀번호**: Vercel env `BETA_PASSWORD` — 평문 git 금지. rotate 메커니즘 = Vercel REST API `POST /v10/projects/{id}/env` 직접 호출 + empty commit redeploy trigger (CLI stdin 미지원)
 **최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4 모두 시점 지남 — 출시 직전 단계)
-**자율 운영 인프라**: 8+ cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+**자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)
 
 ### 도메인 reference
-- **40+ quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **40+ quant 모델** (`services/quant/model_catalog.py` + `services/quant/engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
-- **법적 안전**: 자본시장법 §17 §101 면제 트랙 / 표시광고법 §3 / 신용정보법 / PIPA / 정통망법 §50 / 금소법 §19 / 전자상거래법 §17 — `services/legal/forbidden_terms.py` + `legal_filter.py`
+- **법적 안전**: 자본시장법 §17 §101 면제 트랙 / 표시광고법 §3 / 신용정보법 / PIPA / 정통망법 §50 / 금소법 §19 / 전자상거래법 §17 — `services/legal/forbidden_terms.py` + `services/legal_filter.py`
 
 ### 9-bug-pattern checklist (코드 작성 시 회귀 방지 — `feedback_bug_fix_patterns.md`)
 - [ ] **stale fallback** — old cache 그대로 반환 금지 (TTL 만료 시 fresh fetch + fallback)

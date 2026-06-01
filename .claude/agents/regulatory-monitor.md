@@ -59,19 +59,21 @@ tools:
 
 ## 🆕 2026-04~05 신규 규제 7건 — Daily Dashboard
 
-매일 스캔 시 아래 7건 status를 PASS/FAIL/PENDING으로 출력. 다음 정기 재검토: **2026-08-15**.
+> ⚠️ **status 컬럼은 2026-05 스냅샷 — 그대로 출력 금지.** 매 스캔 시 "측정 방법" 컬럼대로 실측(grep/test/Read)해서 status 를 *재계산*해 출력할 것. 아래 값은 마지막 측정값 참고용일 뿐 시간이 지나면 rot 한다. 규제 목록·surface·측정방법은 reference 로 유지.
 
-| # | 규제 | 영향도 | PivoxQuant 적용 surface | 현재 status | 액션 |
-|---|------|--------|------------------------|------------|------|
-| 1 | **정통망법 §50** (이메일 마케팅 opt-out, 6% 과징금) | HIGH | EmailSender (`services/email/sender.py`) / 모든 마케팅 이메일 | PASS (v44.7 EmailSender 통합 + opt-out 자동 부착) | weekly grep `tests/test_email_optout.py` 회귀 가드 |
-| 2 | **유사투자자문업 양방향 채널** (HIGH) | HIGH | AI Chat / Comment / Q&A 등 양방향 surface | PENDING (AI Chat 1:1 자문 회피 검증 필요) | legal_question_queue Q1 + Q16 추가 / 변호사 자문 |
-| 3 | **AI 생성물 표시제** (MEDIUM) | MEDIUM | Weekly Memo / Brag Card / SWOT / Earnings Brief (AI 생성 모든 artifact) | PARTIAL (artifact 푸터 표시 일부 적용, 전수 sweep 필요) | Wave 신규: AI 생성 표기 전수 점검 |
-| 4 | **PIPA §28-8** (마케팅 옵트인 10% 과징금) | HIGH | 회원가입 / 결제 / 마케팅 동의 체크박스 | PASS (Cookie Consent + 별도 체크박스 v44.7) | quarterly 회귀 가드 |
-| 5 | **금소법** (금융소비자보호법, MEDIUM) | MEDIUM | Stripe Live 결제 페이지 / pricing / 약관 동의 흐름 | PENDING (§19 설명 의무 자가 검증 필요) | legal sweep + checklist 추가 |
-| 6 | **전자상거래법** (가분적 디지털콘텐츠 청약철회, MEDIUM) | MEDIUM | Stripe Live 구독 환불 정책 | PENDING (가분적 청약철회 정책 미수립) | 환불 정책 docs 작성 |
-| 7 | **KRX** (LOW — 공시 양식 변경) | LOW | DART/KRX 공시 fetch 로직 | PASS (현재 영향 없음) | 월간 점검 |
+규제 본문 변화(시행일·개정)는 별도로 WebSearch + 출처 날짜 확인 (훈련데이터·기억 인용 금지).
 
-**위 7건 중 HIGH 3 / MEDIUM 3 / LOW 1.** Daily scan 마지막에 본 표를 항상 출력.
+| # | 규제 | 영향도 | PivoxQuant 적용 surface | 측정 방법 (실측 → status 재계산) | 2026-05 스냅샷 |
+|---|------|--------|------------------------|------------------------------|---------------|
+| 1 | **정통망법 §50** (이메일 마케팅 opt-out, 6% 과징금) | HIGH | EmailSender (`services/email/sender.py`) / 모든 마케팅 이메일 | `pytest tests/test_email_optout.py -q` + opt-out 토큰 grep | (PASS) |
+| 2 | **유사투자자문업 양방향 채널** (HIGH) | HIGH | AI Chat / Comment / Q&A 등 양방향 surface | legal_question_queue Q1/Q16 답변 여부 + 챗봇 1:1 자문 grep | (PENDING) |
+| 3 | **AI 생성물 표시제** (MEDIUM) | MEDIUM | Weekly Memo / Brag Card / SWOT / Earnings Brief (AI 생성 모든 artifact) | `grep -rniE "AI[- ]?생성\|AI[- ]?generated" services/artifacts/ frontend/src/` 전수 커버 여부 | (PARTIAL) |
+| 4 | **PIPA §28-8** (마케팅 옵트인 10% 과징금) | HIGH | 회원가입 / 결제 / 마케팅 동의 체크박스 | Cookie Consent + 별도 동의 체크박스 코드 존재 확인 | (PASS) |
+| 5 | **금소법** (금융소비자보호법, MEDIUM) | MEDIUM | Stripe Live 결제 페이지 / pricing / 약관 동의 흐름 | §19 설명의무 UI + 위험고지 grep | (PENDING) |
+| 6 | **전자상거래법** (가분적 디지털콘텐츠 청약철회, MEDIUM) | MEDIUM | Stripe Live 구독 환불 정책 | terms-ko §17 환불정책 + 환불 코드 (`routes/billing.py`) 존재 확인 | (PENDING) |
+| 7 | **KRX** (LOW — 공시 양식 변경) | LOW | DART/KRX 공시 fetch 로직 | 공시 fetch 로직 정상 동작 확인 | (PASS) |
+
+**위 7건 중 HIGH 3 / MEDIUM 3 / LOW 1.** Daily scan 마지막에 본 표를 출력하되 **status 는 매번 실측 재계산** (스냅샷 그대로 복붙 금지).
 
 ---
 

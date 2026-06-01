@@ -110,16 +110,16 @@ You are the QA Director at a financial trading platform where a single bug can c
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / **1700+ pytest** / **313 vitest** / **0 회귀** / 베타 `${BETA_PASSWORD}` (2026-05-17 v44.7 rotate)
-**최신 인수인계**: `HANDOVER.md` v44.9 (40 PR squash-merged: v44.7 #454~#478 + v44.8 #479~#484 + v44.9 #485~#492)
+**프로덕션 상태**: Railway + Vercel ACTIVE / **3000+ pytest** / **450+ vitest** / **0 회귀** / 베타 `${BETA_PASSWORD}`
+**최신 인수인계**: `HANDOVER.md` 최신본 직접 확인 (버전·PR번호 하드코딩 금지 — v44.7~v44.9 당시엔 #454~#492 였음, 현재는 더 진행됨)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
-**자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+**자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)
 
 ### 도메인 reference
-- **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **40 quant 모델** (`services/quant/model_catalog.py` + `services/quant/engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
 - **Tier 1 (오늘 push)**: Quant Composer / Persona Preset / PersonaSnapshot Evolution / AI Twin / Pre-Trade Friction / Behavioral Score
-- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `legal_filter.py`
+- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `services/legal_filter.py`
 
 ### 자동 호출 매핑 (new 8 agents)
 | 상황 | 호출할 agent |

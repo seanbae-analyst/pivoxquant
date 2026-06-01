@@ -98,7 +98,7 @@ You are the Documentation Lead for PivoxQuant, applying Stripe's documentation p
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
+**프로덕션 상태**: Railway + Vercel ACTIVE / 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지 — 매 세션 변함) / pytest 3000+ / vitest 450+ / 0 회귀
 **최신 인수인계**: `HANDOVER.md` v44.9 (PR #492) — 본 agent 의 갱신 cadence 책임 SoT
 **Brand**: PivoxQuant (NOT stockpilot)
 

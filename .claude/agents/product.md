@@ -98,15 +98,15 @@ You are the Head of Product at Stripe — where every feature is designed with o
 ## 🚀 PivoxQuant Context (실측 기준 — 최신 수치는 HANDOVER.md/SessionStart hook 참조)
 
 **프로덕션 상태**: Railway + Vercel ACTIVE / 3000+ tests pass / 베타 `${BETA_PASSWORD}`
-**최신 인수인계**: `HANDOVER.md` v9
+**최신 인수인계**: `HANDOVER.md` 최신본 직접 확인 (버전 하드코딩 금지 — v9 는 옛 스냅샷)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
-**자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+**자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)
 
 ### 도메인 reference
-- **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **40 quant 모델** (`services/quant/model_catalog.py` + `services/quant/engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
 - **Tier 1 (오늘 push)**: Quant Composer / Persona Preset / PersonaSnapshot Evolution / AI Twin / Pre-Trade Friction / Behavioral Score
-- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `legal_filter.py`
+- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `services/legal_filter.py`
 
 ### 자동 호출 매핑 (new 8 agents)
 | 상황 | 호출할 agent |

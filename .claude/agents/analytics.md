@@ -121,7 +121,7 @@ You are the Head of Analytics at a data-driven fintech. Numbers don't lie, but t
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / **40 PR squash-merged** (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
+**프로덕션 상태**: Railway + Vercel ACTIVE / 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지 — 매 세션 변함) / pytest 3000+ / vitest 450+ / 0 회귀
 **최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
 **제품 컨셉**: User-as-CFO (`product_concept_cfo.md` 2026-04-19) — AI가 Artifact(이메일/PDF/음성) 생성, 챗봇 아님
 **Brand**: PivoxQuant (NOT stockpilot) — 폴더명 `stockpilot/` 만 historical

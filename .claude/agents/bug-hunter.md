@@ -234,13 +234,13 @@ fetch('/api/auth/dev-login', {
 ## 🚀 PivoxQuant Context (2026-05-18 v44.8 기준)
 
 **프로덕션 상태**: Railway + Vercel ACTIVE / pytest 3000+ pass (누적, 실측 기준) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
-**최신 인수인계**: `HANDOVER.md` v44.7 자율 overnight (v44.8 / v44.9 Wave G/H 누적 40 PR squash-merged #454~#491)
+**최신 인수인계**: `HANDOVER.md` 최신본 직접 확인 (버전 하드코딩 금지 — v44.7~v44.9 당시 #454~#491)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
-**자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+**자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)
 **9 bug 패턴 원본**: `~/.claude/projects/-Users-seanbae-Desktop---/memory/feedback_bug_fix_patterns.md` (2026-04-24 확립)
 
 ### 도메인 reference
-- **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **40 quant 모델** (`services/quant/model_catalog.py` + `services/quant/engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
 - **Tier 1 (오늘 push)**: Quant Composer / Persona Preset / PersonaSnapshot Evolution / AI Twin / Pre-Trade Friction / Behavioral Score
 - **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `services/legal_filter.py`

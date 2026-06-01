@@ -366,7 +366,7 @@ SoT: `/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/legal_que
 
 ## 🚀 PivoxQuant Context (v44.9 — 2026-05-18)
 
-- 40 PR squash-merged (v44.7 26 + v44.8 6 + v44.9 8) / pytest 3000+ / vitest 450+ / 0 회귀
+- 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지 — 매 세션 변함) / pytest 3000+ / vitest 450+ / 0 회귀
 - Tech Stack: Flask + SQLAlchemy + alembic / Railway PostgreSQL / Next.js 16 / Vercel / Stripe Live / PWA (SW + manifest)
 - Auth: Google + Kakao OAuth (이메일+비밀번호 없음) — stateless HMAC state, @api_auth decorator
 - Data: KIS API + DART OpenAPI + KRX Open Data Portal + FMP (yfinance/pykrx/네이버 영구 금지)
@@ -379,17 +379,17 @@ SoT: `/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/legal_que
 - **§101 면제 4요건** (광고 없음 / 매월 청구 없음 / 특정성 회피 / 일반화된 정보 제공만) — 분기별 `compliance-evidence` skill 스냅샷 필수
 - **Q1-Q15 변호사 자문 큐** (`legal_question_queue.md`) — 유료결제 활성화 BLOCKER. 출시 전 일괄 의견서 (예상 300-500만원), 금융규제·자본시장법 전문 변호사
 - **7건 신규 규제 (2026-04~05)** — HIGH 3 / MEDIUM 3 / LOW 1: 정통망법 §50 6% 과징금 / 유사투자자문업 양방향 채널 / AI 생성물 표시제 / PIPA 10% 과징금 / 금소법 / 전자상거래법 가분적 디지털콘텐츠 / KRX. 다음 스캔 2026-08-15
-- **자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA** — `services/legal/forbidden_terms.py` + `legal_filter.py` 가 어휘 SoT
+- **자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA** — `services/legal/forbidden_terms.py` + `services/legal_filter.py` 가 어휘 SoT
 - **Stripe Live 5종 sweep (v44.8)** — 전자상거래법 §17 + 금소법 §19 + 표시광고법 §3 + PIPA §28-8 + 정통망법 §50 통과
 
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
 **자율 운영 인프라**: 6개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`) — v44.8 기준 축소 (legal-deep-scan / legal-risk-monitor 포함)
 
 ### 도메인 reference
-- **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **40 quant 모델** (`services/quant/model_catalog.py` + `services/quant/engine.py`)
 - **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
 - **Tier 1 (오늘 push)**: Quant Composer / Persona Preset / PersonaSnapshot Evolution / AI Twin / Pre-Trade Friction / Behavioral Score
-- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `legal_filter.py`
+- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `services/legal_filter.py`
 
 ### 자동 호출 매핑 (new 8 agents)
 | 상황 | 호출할 agent |
