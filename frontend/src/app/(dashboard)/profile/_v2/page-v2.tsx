@@ -258,7 +258,7 @@ export default function ProfilePageV2() {
     } finally {
       setExporting(false);
     }
-  }, []);
+  }, [t]);
 
   /* ── Agent memory delete ── */
   const handleDelete = React.useCallback(async () => {
@@ -312,7 +312,7 @@ export default function ProfilePageV2() {
     } finally {
       setWaitlistSubmitting(false);
     }
-  }, []);
+  }, [t]);
 
   /* ── Six-dimension grid wiring ──
    * Backend exposes a 9-feature `breakdown` (FEATURE_KEYS in

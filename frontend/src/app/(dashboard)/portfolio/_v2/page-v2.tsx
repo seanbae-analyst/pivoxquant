@@ -341,7 +341,7 @@ export default function PortfolioPageV2() {
     } finally {
       setReconciling(false);
     }
-  }, [reconciling, reconcileAvailable]);
+  }, [reconciling, reconcileAvailable, tl]);
 
   // KPI deck values — preserved from v1 PortfolioPage (line 144-164).
   // Falls through to derived figures from positions when summary is silent.

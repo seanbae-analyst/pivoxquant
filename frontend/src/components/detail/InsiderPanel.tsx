@@ -9,7 +9,6 @@
 
 import { Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FieldLabel } from "@/components/ui/editorial";
 import { SectionHeading, EmptyNote } from "./shared";
 import { formatRelative } from "./types";
 import type { InsiderFiling } from "./types";

@@ -38,6 +38,7 @@ interface PositionsShape {
 //
 // Wave 4-B (2026-05-20): migrated to lib/fmtMoneyPlain — byte-identical
 // (abs + ASCII "-" sign + KRW round / USD 2dp + "—" sentinel).
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   return fmtMoneyPlain(n, currency, currency === "KRW" ? 0 : 2);
 }

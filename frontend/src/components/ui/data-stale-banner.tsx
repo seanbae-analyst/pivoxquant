@@ -41,7 +41,7 @@
  *   - "데이터 지연" only — no advice, no guarantee language, no BUY/SELL.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { DATA_STALE_STATUS } from "@/lib/endpoints";
 
@@ -95,14 +95,24 @@ function formatMarkets(markets: ReadonlyArray<"KR" | "US">): string {
 }
 
 export function DataStaleBanner() {
-  // Hydration-safe: start with the assumption that the user has not yet
-  // dismissed (server has no localStorage). After mount we re-check.
-  const [dismissedUntil, setDismissedUntil] = useState<number>(0);
-  const [mounted, setMounted] = useState(false);
+  // `dismissed` derives from the persisted expiry timestamp. A lazy useState
+  // initializer keeps Date.now() OUT of the render body (react-hooks/purity),
+  // and because SWR `data` is undefined on the server + first client paint the
+  // banner renders null during hydration regardless of this value — so the
+  // client-only localStorage read never causes an SSR/CSR mismatch. The effect
+  // only arms a re-show timer; its setState lives inside the timeout callback,
+  // never synchronously in the effect body (react-hooks set-state-in-effect).
+  const [dismissed, setDismissed] = useState(() => readDismissedUntil() > Date.now());
+  const reshowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    setDismissedUntil(readDismissedUntil());
+    const remaining = readDismissedUntil() - Date.now();
+    if (remaining > 0) {
+      reshowTimer.current = setTimeout(() => setDismissed(false), remaining);
+    }
+    return () => {
+      if (reshowTimer.current) clearTimeout(reshowTimer.current);
+    };
   }, []);
 
   const { data, error } = useSWR<DataStaleStatus>(
@@ -117,17 +127,18 @@ export function DataStaleBanner() {
     },
   );
 
-  // Never render until after mount — avoids SSR/CSR mismatch on the
-  // dismiss state.
-  if (!mounted) return null;
   if (error || !data) return null;
   if (!data.is_stale) return null;
-  if (dismissedUntil > Date.now()) return null;
+  if (dismissed) return null;
 
   const handleDismiss = () => {
-    const until = Date.now() + DISMISS_DURATION_MS;
-    writeDismissedUntil(until);
-    setDismissedUntil(until);
+    writeDismissedUntil(Date.now() + DISMISS_DURATION_MS);
+    setDismissed(true);
+    if (reshowTimer.current) clearTimeout(reshowTimer.current);
+    reshowTimer.current = setTimeout(
+      () => setDismissed(false),
+      DISMISS_DURATION_MS,
+    );
   };
 
   const marketLabel = formatMarkets(data.affected_markets);

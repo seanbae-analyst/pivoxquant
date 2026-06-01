@@ -81,6 +81,7 @@ function weekdayOf(d: Date): string {
 //   fmtPct    — toFixed(1) vs lib/fmtPct toFixed(2), AND no "+" prefix
 //   fmtMoneySigned (below) — 0-decimal USD vs lib 2-decimal under 1000
 // Hero card intentionally suppresses cents/decimals for editorial weight.
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   if (n == null || !Number.isFinite(n)) return "—";
   const abs = Math.abs(n);
@@ -93,12 +94,14 @@ function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   return `${sign}${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtPct(n: number | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
   return `${n.toFixed(1)}%`;
 }
 
 /** Like fmtMoney but always emits an explicit +/− sign for non-zero values. */
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoneySigned(
   n: number | undefined,
   currency: "USD" | "KRW",

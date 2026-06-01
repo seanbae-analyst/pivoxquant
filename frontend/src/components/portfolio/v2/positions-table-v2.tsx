@@ -53,6 +53,7 @@ interface PositionsTableV2Props {
 //   ("—" sentinel, ASCII "-" for negatives, KRW round, USD 2dp).
 // fmtPctSigned → fmtPctSignedMinus(n, 2): byte-identical (U+2212, "—" on
 //   non-finite, no sign at zero, 2dp).
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   return fmtMoneyPlain(n, currency, currency === "KRW" ? 0 : 2);
 }
@@ -65,6 +66,7 @@ function fmtShares(n: number): string {
   });
 }
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtPctSigned(n: number): string {
   return fmtPctSignedMinus(n, 2);
 }

@@ -23,6 +23,7 @@ interface WatchlistMiniProps {
 // produce identical output in practice. Migrating would shift the
 // negative-value rendering (legacy "$-50.00" vs lib "-$50.00") which is
 // behaviour we don't currently exercise but want to preserve for safety.
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   if (!Number.isFinite(n)) return "—";
   const dec = currency === "KRW" ? 0 : 2;
@@ -33,6 +34,7 @@ function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   return `${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtPctSigned(n: number): string {
   return fmtPctSignedMinus(n, 2);
 }

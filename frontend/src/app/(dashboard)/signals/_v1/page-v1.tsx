@@ -154,7 +154,7 @@ export default function SignalsPageV1() {
       }
       setRefreshing(false);
     }
-  }, [mutate]);
+  }, [mutate, t]);
 
   const onToggle = useCallback(
     (ticker: string) =>

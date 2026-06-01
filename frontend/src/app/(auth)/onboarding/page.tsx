@@ -893,7 +893,7 @@ export default function OnboardingPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [answers, refresh, router]);
+  }, [answers, refresh]);
 
   // Brag Card "대시보드로 이동" → finally route to /home.
   const goToDashboard = useCallback(() => {

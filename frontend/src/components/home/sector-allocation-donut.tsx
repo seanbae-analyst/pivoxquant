@@ -72,6 +72,7 @@ const BRONZE_TAIL = "#6F5636";
 //     for both. Two-decimal "$1.23M" was the deliberate design call so the
 //     tooltip pairing with the legend percentage reads truthfully.
 // Migration would visibly shift every tooltip value — kept inline.
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   if (!Number.isFinite(n)) return "—";
   if (currency === "KRW") {

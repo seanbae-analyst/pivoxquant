@@ -159,6 +159,7 @@ interface SignalRow {
 // sourced from lib/format.ts (single source of truth — Task #4).
 // `fmtMoney(n, "USD"|"KRW")` is preserved as a thin shim because the
 // render callbacks already pass the resolved currency.
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   return currency === "KRW" ? fmtKrw(n) : fmtUsd(n);
 }

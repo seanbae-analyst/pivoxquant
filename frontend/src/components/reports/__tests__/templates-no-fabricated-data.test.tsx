@@ -17,7 +17,7 @@ import { WeeklyMemo, type WeeklyMemoData } from "../templates/weekly-memo";
 import { KpiDashboard, type KpiDashboardData } from "../templates/kpi-dashboard";
 import { RiskBoard as RiskBoardReal, type RiskBoardData } from "../templates/risk-board";
 import { MonthlyFinance as MonthlyFinanceReal, type MonthlyFinanceData } from "../templates/monthly-finance";
-import { YearEndLetter, type YearEndLetterData } from "../templates/year-end-letter";
+import { YearEndLetter } from "../templates/year-end-letter";
 import { BragCard, type BragCardData } from "../templates/brag-card";
 import { DdChecklist } from "../templates/dd-checklist";
 import { CreditRating } from "../templates/credit-rating";
@@ -268,6 +268,7 @@ describe("RiskBoard — reduced real-data render (option-b, no beta)", () => {
   });
 
   it("elides the correlation card when pairwiseCorr is absent (no throw)", () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- rest-omit idiom: name the key only to drop it from noCorr
     const { pairwiseCorr: _omit, ...noCorr } = data;
     render(<RiskBoardReal data={noCorr} />);
     expect(screen.getByText("-2.7%")).toBeInTheDocument();

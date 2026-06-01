@@ -90,6 +90,7 @@ function isBackendShape(data: unknown): data is BackendDdChecklistData {
     && Array.isArray((data as { pending?: unknown }).pending);
 }
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number, korean: boolean): string {
   if (!isFinite(n)) return "—";
   if (korean) return `KRW ${Math.round(n).toLocaleString()}`;

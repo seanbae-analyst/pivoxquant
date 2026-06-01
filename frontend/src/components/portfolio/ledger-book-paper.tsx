@@ -49,6 +49,7 @@ interface Props {
 
 /* ── Paper-scope formatters (dark-on-ivory, editorial) ── */
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoneyBig(v: number | null | undefined, cur: "USD" | "KRW"): string {
   if (v == null || Number.isNaN(v)) return "—";
   if (cur === "KRW") return "KRW " + Math.round(v).toLocaleString();
@@ -60,6 +61,7 @@ function fmtMoneyBig(v: number | null | undefined, cur: "USD" | "KRW"): string {
     })
   );
 }
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoneyCell(v: number, cur: "USD" | "KRW"): string {
   if (cur === "KRW") return "KRW " + Math.round(v).toLocaleString();
   return (

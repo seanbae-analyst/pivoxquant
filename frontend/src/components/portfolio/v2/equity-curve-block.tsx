@@ -46,6 +46,7 @@ const RANGES: { id: string; key: EquityRange; label: string }[] = [
 //   fmtPct   — `n > 0 ? "+"` (zero shows no sign) vs lib's `n >= 0 ? "+"`
 //              (zero shows "+0.00%"). Equity curve renders 0% on flat days
 //              and we keep the sign-suppressed look here intentionally.
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   if (n == null || !Number.isFinite(n)) return "—";
   const abs = Math.abs(n);
@@ -57,6 +58,7 @@ function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
   return `${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtPct(n: number | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
   const sign = n > 0 ? "+" : "";

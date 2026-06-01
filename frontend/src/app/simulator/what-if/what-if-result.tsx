@@ -57,6 +57,7 @@ interface WhatIfResultProps {
      locale-native negative format is unreachable at this callsite.
    - fmtPctStrong   → fmtPct1(v, 1). Already migrated Wave 3. */
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(v: number, currency: "USD" | "KRW"): string {
   if (currency === "KRW") {
     return fmtKrwAbbrev(v, { dpEok: 2, dpMan: 0, trimTrailing: true });
@@ -64,6 +65,7 @@ function fmtMoney(v: number, currency: "USD" | "KRW"): string {
   return fmtMoneyPlain(v, "USD", 0);
 }
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtPctStrong(v: number): string {
   return fmtPct1(v, 1);
 }

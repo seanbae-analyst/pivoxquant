@@ -46,7 +46,7 @@ import {
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 import { PersonaEvolution } from "@/components/dashboard/persona-evolution";
 import { PersonaV2Card } from "@/components/dashboard/persona-v2-card";
-import { useT, useLocale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale";
 
 
 function initials(name?: string | null, email?: string | null): string {
@@ -588,7 +588,6 @@ function AgentDataSubsection() {
 
 export default function ProfilePageV1() {
   const router = useRouter();
-  const t = useT();
   const { locale } = useLocale();
   const { user, loading: authLoading, refresh } = useAuth();
   const { data: profileData, isLoading: profileLoading } = useInvestmentProfile();

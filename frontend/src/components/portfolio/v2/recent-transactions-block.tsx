@@ -38,6 +38,7 @@ function actionLabel(row: TransactionRow): {
 // caller always passes Math.abs(amount)). Migration locks USD 2-decimal
 // across all magnitudes — the original Wave 2 "keep 2dp" concern is now
 // preserved in lib via the explicit `dp=2` argument.
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   return fmtMoneyPlain(n, currency, currency === "KRW" ? 0 : 2);
 }

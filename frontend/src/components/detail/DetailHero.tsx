@@ -25,7 +25,6 @@ import {
   fmtPct,
   pctColorClass,
   priceGlyph,
-  normalizeTicker,
 } from "@/lib/format";
 import { FieldLabel } from "@/components/ui/editorial";
 import { Eyebrow } from "@/components/landing/eyebrow";
@@ -157,6 +156,17 @@ export function DetailHero(props: DetailHeroProps) {
     return () => obs.disconnect();
   }, []);
 
+  // `now` ticks every 60 s so the relative "관측 N분 전" label stays fresh.
+  // The lazy useState initializer keeps Date.now() OUT of the render body
+  // (react-hooks/purity) and the only setState lives inside the interval
+  // callback — never synchronously in the effect (react-hooks set-state-in-
+  // effect). Mirrors the proven pattern in components/ui/price-with-timestamp.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const signalToken =
     signal?.signal === "POSITIVE" || signal?.signal === "NEGATIVE"
       ? signal.signal
@@ -196,7 +206,7 @@ export function DetailHero(props: DetailHeroProps) {
   const heroPrice = formatHeroPrice(signal?.price, krw);
   const heroSplit = splitHeroPrice(signal?.price, krw);
   const obsRel = signal?.observed_at
-    ? relativeTime(signal.observed_at, Date.now())
+    ? relativeTime(signal.observed_at, now)
     : null;
 
   /* ── Quote-density stats — all DERIVED from existing data (no new fetch) ── */

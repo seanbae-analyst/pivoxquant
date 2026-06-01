@@ -179,6 +179,7 @@ function pickStatusByLayerNum(
   return layers?.find((l) => l.num === num)?.status ?? "NEUTRAL";
 }
 
+// eslint-disable-next-line no-restricted-syntax -- local fmt* helper kept per Wave 2/4-B sweep (delegates to, or intentionally diverges from, @/lib/format); see adjacent note
 function fmtPct(n: number | undefined, opts?: { signed?: boolean }): string {
   if (n == null || !Number.isFinite(n)) return "—";
   const v = Math.abs(n) <= 1 ? n * 100 : n;

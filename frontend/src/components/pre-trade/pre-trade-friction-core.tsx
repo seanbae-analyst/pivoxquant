@@ -119,7 +119,7 @@ export interface PreTradeCycle {
 
 export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
   const {
-    side, ticker, sharesText, rationale, acks, answers,
+    side, ticker, sharesText, rationale, answers,
     onProceeded, onCancelled,
   } = args;
 
