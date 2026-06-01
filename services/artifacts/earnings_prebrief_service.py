@@ -1709,7 +1709,7 @@ class EarningsPreBriefService:
         user has multiple tickers we'd blow past inbox size limits.
         Subject summarises count + leading ticker.
         """
-        from services.email import EmailSender
+        from services.email import EmailSender, EmailCategory
         from services.push_service import _label_for_ticker
 
         count = len(entries)
