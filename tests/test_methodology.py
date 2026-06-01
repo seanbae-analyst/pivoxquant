@@ -22,7 +22,7 @@ import pytest
 
 _REQUIRED_FIELDS = {
     "ok", "categories", "category_counts", "total", "active",
-    "models", "data_lineage", "reproducibility", "disclaimer",
+    "models", "data_lineage", "risk_metrics", "reproducibility", "disclaimer",
 }
 
 # Word-boundary-sensitive for the English directives so we don't false-match
@@ -106,6 +106,16 @@ def test_data_lineage_is_truthful_system_only(client):
     for row in data["data_lineage"]:
         for field in ("source", "description", "coverage"):
             assert row.get(field), f"lineage row missing {field}: {row}"
+
+
+def test_risk_metrics_present_and_shaped(client):
+    """Risk-metric methodology catalog — the risk-surface reproducibility anchor."""
+    data = _hit(client)
+    rm = data["risk_metrics"]
+    assert isinstance(rm, list) and rm, "risk_metrics must be a non-empty list"
+    for m in rm:
+        for field in ("key", "label_kr", "label_en", "methodology", "academic_source"):
+            assert m.get(field), f"risk metric {m.get('key')!r} missing {field}"
 
 
 def test_reproducibility_statement_present_bilingual(client):

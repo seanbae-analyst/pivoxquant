@@ -74,6 +74,7 @@ from services.quant.model_catalog import (
     CATEGORIES,
     MODEL_CATALOG,
 )
+from services.quant.risk_methodology import RISK_METHODOLOGY
 
 from .decorators import legal_scrub_response
 
@@ -160,6 +161,16 @@ def methodology():
             for m in MODEL_CATALOG
         ],
         "data_lineage": data_lineage,
+        "risk_metrics": [
+            {
+                "key": r["key"],
+                "label_kr": r["label_kr"],
+                "label_en": r["label_en"],
+                "methodology": r["methodology"],
+                "academic_source": r["academic_source"],
+            }
+            for r in RISK_METHODOLOGY
+        ],
         "reproducibility": {
             "statement_kr": _REPRODUCIBILITY_KR,
             "statement_en": _REPRODUCIBILITY_EN,

@@ -108,6 +108,10 @@ export default function MethodologyPage() {
           value={`${data.data_lineage.length}`}
           label="데이터 출처 · DATA SOURCES"
         />
+        <Stat
+          value={`${data.risk_metrics.length}`}
+          label="리스크 지표 · RISK METRICS"
+        />
       </div>
 
       {/* ── Data sources ────────────────────────────────────── */}
@@ -214,6 +218,58 @@ export default function MethodologyPage() {
             </div>
           );
         })}
+      </section>
+
+      {/* ── Risk metrics ────────────────────────────────────── */}
+      <section className="space-y-5">
+        <div className="space-y-2">
+          <RuledKicker>리스크 지표 · RISK METRICS</RuledKicker>
+          <Caption>
+            리스크 수치(VaR·낙폭·소르티노 등)의 산출 방법과 학술 출처입니다.
+            식은 공개, 가중치는 비공개입니다.
+          </Caption>
+        </div>
+        <div className="space-y-4">
+          {data.risk_metrics.map((m) => (
+            <article key={m.key} className="space-y-1">
+              <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: 13.5,
+                    color: "var(--pq-ivory)",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {m.label_kr}
+                </span>
+                <span className="font-sans" style={EYEBROW}>
+                  {m.label_en}
+                </span>
+              </div>
+              <p
+                className="font-serif"
+                style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.5,
+                  color: "rgba(245,240,232,0.72)",
+                }}
+              >
+                {m.methodology}
+              </p>
+              <p
+                className="font-sans"
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  lineHeight: 1.45,
+                  color: "var(--pq-bronze)",
+                }}
+              >
+                근거 · {m.academic_source}
+              </p>
+            </article>
+          ))}
+        </div>
       </section>
 
       {/* ── Disclaimer footer ───────────────────────────────── */}
