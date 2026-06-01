@@ -203,9 +203,11 @@ CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in templ
 - **SENDGRID_API_KEY 확인** — Railway Variables (발신 실제 작동 확정).
 
 ### 🟠 코드 측 (내부 — 자율 진행 가능)
-- 이메일 동의 silent-drop 비-silent화 + signup 동의 캡처 (flag-gated, Q-S1 의존부 분리).
-- 백엔드 flaky 테스트 격리 (test_daytrade_smoke / test_fx_staleness — full suite 시 fail, 단독 PASS).
-- 잔여 deferred (owner): 부분환불 §17 / 국외이전 §28-8 / DCA XIRR / lookahead / Composer synthetic / KR 52w.
+> 2026-06-01 실측 갱신: 아래 다수가 이미 처리/빌드 확인됨 (메모리 STALE 정정).
+- ✅ 이메일 동의 silent-drop 비-silent화 (sender.py debug→info, `fcbd1f55`). signup 동의 캡처(part-2)는 routes/auth.py **frozen** + Q-S1 의존.
+- ✅ flaky 테스트 — test_daytrade_smoke/test_fx_staleness **이미 격리 fix됨, 전체 스위트 green** (2026-06-01 exit0). 옛 "full suite fail"은 STALE.
+- ✅ artifact 18 send() §50 카테고리 prep (INFORMATION, `a82fcb89`, flag-off inert).
+- 잔여 deferred (owner 판단): 부분환불 §17 / 국외이전 §28-8 / DCA XIRR / lookahead / Composer synthetic / KR 52w. 대부분 billing/lawyer/frozen 의존이라 자율 빌드 제한적.
 
 ## 유저 플로우 자동 테스트 방안
 Claude in Chrome MCP + user-tester agent 로 6개 플로우 자동 테스트 가능 (Chrome 연결 필요 — CEO 세션).
