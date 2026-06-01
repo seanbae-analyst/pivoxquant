@@ -36,8 +36,8 @@ AI + Quant 기반 개인 투자 어드바이저 플랫폼.
 - **Backend**: Flask + SQLAlchemy + **PostgreSQL (Railway, prod)** / SQLite (local test)
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
 - **AI**: Claude API (Anthropic) — SWOT, Chat, Sector, Coaching, Earnings Tone, Artifacts
-- **Broker**: Alpaca (US, paper=True) + KIS 한국투자증권 (read-only)
-- **Data**: FMP Stable + Alpaca + KIS + SEC EDGAR (공식 라이선스 데이터만)
+- **Broker**: KIS 한국투자증권 (read-only). ~~Alpaca~~ 2026-05-27 통합 제거 (commit 6bea95f8, c3801359) — 데이터 fallback stub `services/data/alpaca_market_adapter.py` 만 `ALPACA_ENABLED` 게이트(기본 OFF)로 비활성 보존, 완전제거는 별도 task.
+- **Data**: FMP Stable + KIS + SEC EDGAR (공식 라이선스 데이터만). Alpaca 데이터경로는 비활성(위 참조).
 - **Auth**: Google + Kakao OAuth (email+password 없음). 라이브 동작 정상.
 - **Payment**: Stripe 통합 완료 (BUSINESS_REGISTRATION 게이트로 비활성)
 - **Design**: v3 락-인 — Vantablack + Bronze + Playfair + KR 컨벤션 (옛 Nexora
@@ -68,8 +68,10 @@ pivoxquant/               # 2026-05-17 wave 13: 'stockpilot/' 명칭은 폐기
     │                   #   (pykrx_service.py 는 ToS 위반으로 비활성 stub)
     ├── ai/             # Claude API (SWOT/Chat/Sector/Coaching/EarningsTone/Artifacts)
     ├── kis/            # KIS read-only (주문 disabled) + token_manager(AES-GCM)
-    ├── broker/         # Alpaca(paper) + 브로커 연동
-    ├── artifacts/      # 17 artifact service (PDF/이메일 — User as CFO)
+    ├── broker/         # user_kis_service.py (KIS read-only). Alpaca 통합 제거됨(2026-05-27)
+    ├── artifacts/      # 18 artifact type (PDF/PNG/HTML — User as CFO). SoT=routes/artifacts.py
+    │                   #   _ARTIFACT_DISPATCH (생성 15 + interactive 3). 템플릿 18개와 일치.
+    │                   #   tier: Pro 6 / Premium 9 / 무료·universal 3 + living_mirror. (옛 "17" stale)
     ├── legal/          # legal_filter scrub · §101 detector · forbidden_terms
     ├── email/          # EmailSender + sendgrid/brevo provider cascade
     ├── profile/        # questionnaire(20문항) · investor profiles

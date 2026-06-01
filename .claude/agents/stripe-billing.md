@@ -140,9 +140,11 @@ Stripe Live 활성 직전 자율 sweep — 5개 한국 규제를 한 번에 swee
 
 | Tier | 가격(월) | Stripe Product | 기능 |
 |------|---------|---------------|------|
-| Free | 0 | — | 기본 조회, Artifact 미포함 |
-| Pro | ₩9,900 | `STRIPE_PRICE_PRO` | 7개 Pro Artifact |
-| Premium | ₩19,900 | `STRIPE_PRICE_PREMIUM` | 17개 전체 Artifact |
+| Free | 0 | — | 기본 조회 + 무료/universal artifact (brag_card · monthly_brag · sp500_backtest · living_mirror) |
+| Pro | ₩9,900 | `STRIPE_PRICE_PRO` | Pro-gate 6종 (weekly_memo · earnings_prebrief · kpi_dashboard · burn_rate · credit_rating · dd_checklist) + 무료분 |
+| Premium | ₩19,900 | `STRIPE_PRICE_PREMIUM` | Pro 6종 + Premium-gate 9종 = tier-gate 15종 전체 + 무료분 |
+
+> SoT: `routes/artifacts.py` `_ARTIFACT_MIN_TIER` (pro 6 / premium 9) + `_ARTIFACT_DISPATCH` (18 type). 개수 변경 시 이 두 dict 로 실측 — "7개/17개" 는 stale 였음.
 
 ## 필수 Webhook 이벤트
 
