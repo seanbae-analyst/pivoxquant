@@ -1137,7 +1137,7 @@ class AdaptiveParams:
                         "desc": "Moderate trend — hold until trend breaks (EMA50/regime)",
                         "tp_mode": "trail_only"},
         "scalper":     {"tp": 6.0, "sl": 2.0, "trail": 3.0, "cooldown": 3,
-                        "label": "Scalper", "label_kr": "단타",
+                        "label": "Scalper", "label_kr": "단기 패턴",
                         "desc": "Choppy market — take quick profits",
                         "tp_mode": "normal"},
         "defensive":   {"tp": 3.0, "sl": 3.0, "trail": 2.5, "cooldown": 5,
