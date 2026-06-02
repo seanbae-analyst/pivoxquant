@@ -52,18 +52,61 @@ def _use_fake_fx(fake_fx):
 
 
 def _load_module(tmp_path):
-    """Import fx_staleness_check with patched _PROJECT_ROOT."""
+    """Import fx_staleness_check with state I/O redirected into ``tmp_path``.
+
+    The module recomputes ``_STATE_DIR`` / ``_STATE_FILE`` from ``__file__`` at
+    exec time (see fx_staleness_check.py ~L58-60), so they MUST be reassigned
+    *after* ``exec_module()``. Assigning them *before* exec — as this helper
+    used to — is silently clobbered by the module body, making those lines dead.
+
+    That was the real source of the full-suite flake: ``TestFxDedup`` (unlike
+    ``TestFxStale24h``) never re-patched the paths after load, so
+    ``check_fx_staleness()`` read/wrote the REAL ``state/fx_staleness_alerted.json``.
+    Its dedup verdict then hinged on that shared file's ``last_alert_at`` vs
+    wall-clock (and on whatever a prior run left behind): suppressed inside the
+    6h ``DEDUP_HOURS`` window → ``rc==0`` (pass), outside it → alert → ``rc==1``
+    (fail). Hence "passes in isolation right after a run, fails from a clean tree".
+    Redirecting here, after exec, isolates every test that loads via this helper.
+
+    ``_PROJECT_ROOT`` is intentionally left at its real value: the module only
+    uses it for a ``sys.path`` insert, and pointing it at tmp_path would both
+    pollute ``sys.path`` and break the ``from services import fx_service`` import.
+    """
     spec = importlib.util.spec_from_file_location(
         "fx_staleness_check",
         _ROOT / "scripts/nightly/fx_staleness_check.py",
     )
     mod = importlib.util.module_from_spec(spec)
-    # Patch _PROJECT_ROOT before exec so state files land in tmp_path
-    mod.__dict__["_PROJECT_ROOT"] = tmp_path
-    mod.__dict__["_STATE_DIR"] = tmp_path / "state"
-    mod.__dict__["_STATE_FILE"] = tmp_path / "state" / "fx_staleness_alerted.json"
     spec.loader.exec_module(mod)
+    # AFTER exec (see docstring): redirect state reads/writes to the per-test tmp dir.
+    mod._STATE_DIR = tmp_path / "state"
+    mod._STATE_FILE = tmp_path / "state" / "fx_staleness_alerted.json"
     return mod
+
+
+# Real on-disk state file the production module touches in prod. No test should
+# read or write it — it is shared, runtime-mutable state (git-ignored via the
+# ``state/`` rule). ``_load_module`` already redirects every loaded instance to
+# tmp_path; this autouse fixture is the backstop: it snapshots the real file and
+# restores it around each test, so even if some future path reaches it the
+# working tree (and git) can never be left dirty — the way it was before this
+# fix (full-suite-only flake + a perpetually ``M state/fx_staleness_alerted.json``).
+_REAL_STATE_FILE = _ROOT / "state" / "fx_staleness_alerted.json"
+
+
+@pytest.fixture(autouse=True)
+def _guard_real_fx_state():
+    snapshot = _REAL_STATE_FILE.read_bytes() if _REAL_STATE_FILE.exists() else None
+    try:
+        yield
+    finally:
+        if snapshot is None:
+            # File didn't exist before the test — remove anything a leak created.
+            if _REAL_STATE_FILE.exists():
+                _REAL_STATE_FILE.unlink()
+        elif (not _REAL_STATE_FILE.exists()) or _REAL_STATE_FILE.read_bytes() != snapshot:
+            # Restore only if a leak actually mutated/removed it (keeps mtime stable otherwise).
+            _REAL_STATE_FILE.write_bytes(snapshot)
 
 
 # ── Tests ────────────────────────────────────────────────────────────────────
