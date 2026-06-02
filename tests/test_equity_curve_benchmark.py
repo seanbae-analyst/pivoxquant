@@ -21,16 +21,32 @@ External APIs are mocked — no network calls (per conftest policy).
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
-# Positions must be opened BEFORE the mocked history window — the equity-curve
-# endpoint clamps each position to dates >= added_at (honesty: no fabricated
-# pre-ownership history). A far-past open date keeps every mocked date in range.
+from extensions import db
+from models import PortfolioNavSnapshot
+
+# Positions are opened far in the past so the position itself is never the
+# limiting factor. The equity curve no longer reconstructs from holdings — it
+# plots REAL recorded NAV (PortfolioNavSnapshot). So benchmark tests seed real
+# snapshots on RECENT dates (within the period window) and assert the benchmark
+# overlay attaches to those real curve dates.
 _OPENED = datetime(2000, 1, 1)
+
+
+def _seed_snapshots(app, user_id, dated_values):
+    """Insert real NAV snapshots. ``dated_values``: list[(date, nav_usd)]."""
+    with app.app_context():
+        for d, v in dated_values:
+            db.session.add(PortfolioNavSnapshot(
+                user_id=user_id, as_of_date=d,
+                nav_total_usd=v, nav_us_usd=v, nav_kr_krw=0, fx_rate=1300,
+            ))
+        db.session.commit()
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -75,18 +91,17 @@ def _portfolio_history_df(dates: list[str], closes: list[float]) -> pd.DataFrame
 
 class TestUsPortfolioBenchmark:
     def test_spy_benchmark_attached_to_each_point(
-        self, client, auth_user, add_position
+        self, app, client, auth_user, add_position
     ):
         add_position(auth_user["id"], ticker="AAPL", shares=10.0, avg_cost=150.0, added_at=_OPENED)
 
-        dates = ["2026-05-05", "2026-05-06", "2026-05-07"]
-        position_hist = _portfolio_history_df(dates, [150.0, 151.0, 152.0])
-        spy_hist      = _spy_history_df(dates, [500.0, 502.0, 504.0])
+        d2, d1 = date.today() - timedelta(days=2), date.today() - timedelta(days=1)
+        _seed_snapshots(app, auth_user["id"], [(d2, 1500.0), (d1, 1510.0)])
+        spy_hist = _spy_history_df([d2.isoformat(), d1.isoformat()], [500.0, 502.0])
 
         def _fmp_get_history(ticker, period="3mo"):
-            if ticker == "SPY":
-                return spy_hist
-            return position_hist
+            # Curve no longer uses position history — only the SPY benchmark.
+            return spy_hist if ticker == "SPY" else None
 
         with patch("services.data.fmp.get_history", side_effect=_fmp_get_history), \
              patch("routes.portfolio.realtime") as rt:
@@ -94,14 +109,11 @@ class TestUsPortfolioBenchmark:
             r = client.get("/api/portfolio/history?period=5d")
 
         assert r.status_code == 200
-        payload = r.get_json()
-        data = payload["data"]
-        assert len(data) >= 1
-        assert all("benchmark" in pt for pt in data), \
-            f"benchmark missing on at least one point: {data}"
-        # SPY closes are passed through raw — frontend normalises.
-        for pt in data:
-            assert pt["benchmark"] in (500.0, 502.0, 504.0)
+        by_date = {pt["date"]: pt for pt in r.get_json()["data"]}
+        # Benchmark attaches to the REAL recorded snapshot dates (raw closes —
+        # frontend normalises).
+        assert by_date[d2.isoformat()]["benchmark"] == 500.0
+        assert by_date[d1.isoformat()]["benchmark"] == 502.0
 
     def test_spy_fetch_failure_omits_benchmark_field(
         self, client, auth_user, add_position
@@ -136,45 +148,43 @@ class TestUsPortfolioBenchmark:
 
 class TestKrPortfolioBenchmark:
     def test_kospi200_benchmark_attached_for_kr_portfolio(
-        self, client, auth_user, add_position
+        self, app, client, auth_user, add_position
     ):
         # .KS suffix → KR branch
         add_position(auth_user["id"], ticker="005930.KS", shares=10.0,
                      avg_cost=70000.0, added_at=_OPENED)
 
-        dates_iso = ["2026-05-05", "2026-05-06", "2026-05-07"]
-        dates_kis = ["20260505", "20260506", "20260507"]
-        position_hist = _portfolio_history_df(dates_iso, [71000.0, 72000.0, 73000.0])
+        d2, d1 = date.today() - timedelta(days=2), date.today() - timedelta(days=1)
+        _seed_snapshots(app, auth_user["id"], [(d2, 800.0), (d1, 810.0)])
+        dates_kis = [d2.strftime("%Y%m%d"), d1.strftime("%Y%m%d")]
 
         kis_svc = MagicMock()
         kis_svc.get_index_history.return_value = _kis_index_rows(
-            dates_kis, [380.5, 381.2, 382.0]
+            dates_kis, [380.5, 381.2]
         )
 
-        with patch("services.data.fmp.get_history", return_value=position_hist), \
+        with patch("services.data.fmp.get_history", return_value=None), \
              patch("services.kis.service.KISService", return_value=kis_svc), \
              patch("routes.portfolio.realtime") as rt:
             rt.get_prices_batch.return_value = {}
             r = client.get("/api/portfolio/history?period=5d")
 
         assert r.status_code == 200
-        data = r.get_json()["data"]
+        by_date = {pt["date"]: pt for pt in r.get_json()["data"]}
         # First call should ask for KOSPI 200 (code "2001").
         kis_svc.get_index_history.assert_called_with("2001", period="5d")
-        assert len(data) >= 1
-        for pt in data:
-            assert "benchmark" in pt
-            assert pt["benchmark"] in (380.5, 381.2, 382.0)
+        assert by_date[d2.isoformat()]["benchmark"] == 380.5
+        assert by_date[d1.isoformat()]["benchmark"] == 381.2
 
     def test_kis_2001_empty_falls_back_to_0001(
-        self, client, auth_user, add_position
+        self, app, client, auth_user, add_position
     ):
         add_position(auth_user["id"], ticker="000660.KS", shares=2.0,
                      avg_cost=100000.0, added_at=_OPENED)
 
-        dates_iso = ["2026-05-05", "2026-05-06"]
-        dates_kis = ["20260505", "20260506"]
-        position_hist = _portfolio_history_df(dates_iso, [101000.0, 102000.0])
+        d2, d1 = date.today() - timedelta(days=2), date.today() - timedelta(days=1)
+        _seed_snapshots(app, auth_user["id"], [(d2, 200.0), (d1, 205.0)])
+        dates_kis = [d2.strftime("%Y%m%d"), d1.strftime("%Y%m%d")]
 
         kis_svc = MagicMock()
         # 2001 (KOSPI 200) returns empty → 0001 (KOSPI broad) succeeds.
@@ -183,20 +193,20 @@ class TestKrPortfolioBenchmark:
             _kis_index_rows(dates_kis, [2700.1, 2705.5]),
         ]
 
-        with patch("services.data.fmp.get_history", return_value=position_hist), \
+        with patch("services.data.fmp.get_history", return_value=None), \
              patch("services.kis.service.KISService", return_value=kis_svc), \
              patch("routes.portfolio.realtime") as rt:
             rt.get_prices_batch.return_value = {}
             r = client.get("/api/portfolio/history?period=5d")
 
         assert r.status_code == 200
-        data = r.get_json()["data"]
+        by_date = {pt["date"]: pt for pt in r.get_json()["data"]}
         codes_called = [c.args[0] for c in kis_svc.get_index_history.call_args_list]
         assert codes_called == ["2001", "0001"], \
             f"expected 2001 then 0001 fallback, got {codes_called}"
-        # 0001 closes attached.
-        for pt in data:
-            assert pt["benchmark"] in (2700.1, 2705.5)
+        # 0001 closes attached to the real snapshot dates.
+        assert by_date[d2.isoformat()]["benchmark"] in (2700.1, 2705.5)
+        assert by_date[d1.isoformat()]["benchmark"] in (2700.1, 2705.5)
 
     def test_kis_total_failure_omits_benchmark(
         self, client, auth_user, add_position
@@ -257,19 +267,17 @@ class TestKrPortfolioBenchmark:
 
 class TestBenchmarkDateAlignment:
     def test_partial_overlap_only_matched_points_get_benchmark(
-        self, client, auth_user, add_position
+        self, app, client, auth_user, add_position
     ):
         add_position(auth_user["id"], ticker="NVDA", shares=2.0, avg_cost=900.0, added_at=_OPENED)
 
-        port_dates = ["2026-05-05", "2026-05-06", "2026-05-07"]
-        # Benchmark only covers 2 of 3 portfolio days (e.g. KIS holiday).
-        bench_dates = ["2026-05-06", "2026-05-07"]
-
-        position_hist = _portfolio_history_df(port_dates,  [900.0, 905.0, 910.0])
-        spy_hist      = _spy_history_df(bench_dates, [500.0, 502.0])
+        d3, d2, d1 = (date.today() - timedelta(days=n) for n in (3, 2, 1))
+        # Three real snapshot days; benchmark only covers 2 (e.g. data holiday).
+        _seed_snapshots(app, auth_user["id"], [(d3, 900.0), (d2, 905.0), (d1, 910.0)])
+        spy_hist = _spy_history_df([d2.isoformat(), d1.isoformat()], [500.0, 502.0])
 
         def _fmp_get_history(ticker, period="3mo"):
-            return spy_hist if ticker == "SPY" else position_hist
+            return spy_hist if ticker == "SPY" else None
 
         with patch("services.data.fmp.get_history", side_effect=_fmp_get_history), \
              patch("routes.portfolio.realtime") as rt:
@@ -277,13 +285,12 @@ class TestBenchmarkDateAlignment:
             r = client.get("/api/portfolio/history?period=5d")
 
         assert r.status_code == 200
-        data = r.get_json()["data"]
-        by_date = {pt["date"]: pt for pt in data}
-        # The first portfolio day has no benchmark counterpart.
-        assert "benchmark" not in by_date["2026-05-05"]
-        # Subsequent days do.
-        assert by_date["2026-05-06"]["benchmark"] == 500.0
-        assert by_date["2026-05-07"]["benchmark"] == 502.0
+        by_date = {pt["date"]: pt for pt in r.get_json()["data"]}
+        # The earliest snapshot day has no benchmark counterpart.
+        assert "benchmark" not in by_date[d3.isoformat()]
+        # The overlapping days do.
+        assert by_date[d2.isoformat()]["benchmark"] == 500.0
+        assert by_date[d1.isoformat()]["benchmark"] == 502.0
 
 
 # ── Backwards compatibility: empty portfolio still works ────────────────────

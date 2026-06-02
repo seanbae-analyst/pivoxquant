@@ -1940,107 +1940,51 @@ def portfolio_history():
     if period not in ("5d", "1mo", "3mo", "6mo", "1y"):
         period = "5d"
 
-    # PERF-004: Parallelize history fetches across positions. Previous serial
-    # loop was O(n) FMP RTTs (often 800ms+ each). ThreadPoolExecutor with a
-    # small pool keeps the upstream rate manageable while cutting wall time
-    # to roughly the slowest single fetch.
-    from concurrent.futures import ThreadPoolExecutor
+    # ── Honest equity curve: plot REAL recorded NAV, never reconstruct. ──────
+    # This curve used to apply the CURRENT share count to historical prices,
+    # fabricating portfolio value for dates the user never actually held that
+    # book (CEO flagged repeatedly as fake data; 표시광고법 fabrication risk).
+    # The previous `added_at` clamp was only a band-aid — it moved the start
+    # date but still drew a counterfactual "if you'd held today's book back
+    # then" line, and for KIS-synced positions `added_at` is our sync time, not
+    # the real purchase date. We now plot ONLY NAV we actually observed and
+    # stored (services/portfolio/nav_snapshot.py). No backfill — a new account
+    # shows a short/empty curve, which is the truth.
+    from datetime import date as _d, timedelta as _td
 
-    def _fetch_one(p):
-        try:
-            return p, fmp.get_history(p.ticker, period=period)
-        except Exception:
-            logger.debug("silent-fallback: portfolio_history", exc_info=True)
-            return p, None
+    # Opportunistically record today's NAV on every load, so the curve keeps
+    # accumulating from real usage even without the daily cron. Best-effort —
+    # must never break the read.
+    try:
+        from services.portfolio.nav_snapshot import record_today_snapshot
+        record_today_snapshot(current_user.id)
+    except Exception:
+        logger.debug("silent-fallback: nav snapshot record", exc_info=True)
 
-    # P0-3 (Wave H-2): per-date historical FX for equity curve.
-    # G-5 #482 added FX conversion but used fx_service.get_rate() (today's
-    # USD/KRW spot) for every historical data point. Over a 1y window the
-    # USD/KRW path can drift ±10%+ (e.g. 1290→1450), silently distorting
-    # historical KRW→USD conversions. Fix: fx_service.get_rate_at(d) per
-    # date — already implemented in fx_service for counterfactual simulators.
-    # Fallback to 1370 if historical rate unavailable; mark fx_stale=True in
-    # response so frontend can annotate the data point.
-    from services.fx_service import get_rate_at as _fx_at  # noqa: PLC0415
+    _win_days = {"5d": 8, "1mo": 35, "3mo": 100, "6mo": 200, "1y": 370}.get(period, 8)
+    _since = _d.today() - _td(days=_win_days)
 
-    # PERF: warm the historical FX cache for the whole window in ONE fetch so the
-    # per-date _fx_at() calls below are O(1) cache hits. Cold cache was ~N/14
-    # *sequential* FMP round-trips on the first load (≈7s for 6mo) — see
-    # services.fx_service.prefetch_range. KR-only: with no .KS/.KQ position the
-    # equity-curve loop never calls _fx_at, so there is nothing to warm.
-    if any(
-        isinstance(p.ticker, str)
-        and (p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
-        for p in positions
-    ):
-        try:
-            from datetime import date as _d, timedelta as _td  # noqa: PLC0415
-            from services.fx_service import prefetch_range as _fx_prefetch  # noqa: PLC0415
-            _win_days = {"5d": 10, "1mo": 38, "3mo": 100, "6mo": 195, "1y": 380}.get(period, 10)
-            _fx_prefetch(
-                (_d.today() - _td(days=_win_days)).isoformat(),
-                _d.today().isoformat(),
+    all_values: dict[str, float] = {}
+    try:
+        from models import PortfolioNavSnapshot
+        snap_rows = (
+            PortfolioNavSnapshot.query
+            .filter(
+                PortfolioNavSnapshot.user_id == current_user.id,
+                PortfolioNavSnapshot.as_of_date >= _since,
             )
-        except Exception:
-            logger.debug("silent-fallback: fx prefetch_range", exc_info=True)
-
-    _fx_stale_used = False  # set to True if any date fell back to the hardcoded default
-
-    all_values = {}
-    with ThreadPoolExecutor(max_workers=5) as ex:
-        for p, h in ex.map(_fetch_one, positions):
-            if h is None or h.empty:
-                continue
-            is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-            # Honesty clamp (CEO 2026-05-24: "내 1년 데이터 갖고 있어?"): only
-            # count a position from the date it was actually opened (added_at).
-            # Without this the curve applies the CURRENT share count to the full
-            # FMP window, fabricating portfolio value for dates BEFORE the user
-            # held anything — a brand-new account would show a full 1y curve.
-            # Clamping makes "How the book moves" start when the book really did.
-            opened_date = None
-            _added = getattr(p, "added_at", None)
-            if _added is not None:
-                try:
-                    opened_date = _added.date()
-                except Exception:
-                    opened_date = None
-            try:
-                for date_idx, row in h.iterrows():
-                    try:
-                        if opened_date is not None and date_idx.date() < opened_date:
-                            continue  # position not yet held on this date
-                    except Exception:
-                        pass
-                    ds = date_idx.strftime("%Y-%m-%d")
-                    if ds not in all_values:
-                        all_values[ds] = 0
-                    mv = float(row["Close"]) * p.shares
-                    if is_kr:
-                        try:
-                            from datetime import date as _date
-                            d_obj = (
-                                date_idx.date()
-                                if hasattr(date_idx, "date")
-                                else _date.fromisoformat(ds)
-                            )
-                            fx = _fx_at(d_obj)
-                            # get_rate_at falls back to spot on miss; detect by
-                            # comparing against today's spot (close enough heuristic).
-                            if not fx or fx <= 0:
-                                fx = 1370.0
-                                _fx_stale_used = True
-                        except Exception:
-                            fx = 1370.0
-                            _fx_stale_used = True
-                        mv = mv / fx
-                    all_values[ds] += mv
-            except Exception:
-                logger.debug("silent-fallback: portfolio_history", exc_info=True)
-                pass
-
-    if not all_values:
-        return jsonify({"data": []})
+            .order_by(PortfolioNavSnapshot.as_of_date.asc())
+            .all()
+        )
+        for _r in snap_rows:
+            all_values[_r.as_of_date.strftime("%Y-%m-%d")] = round(
+                float(_r.nav_total_usd), 2
+            )
+    except Exception:
+        # Table may be absent on a lagging deploy — degrade to today-only
+        # rather than 500. db.create_all() at boot makes this transient.
+        logger.debug("silent-fallback: nav snapshot read", exc_info=True)
+        all_values = {}
 
     try:
         today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")

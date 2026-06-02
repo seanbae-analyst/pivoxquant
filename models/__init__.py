@@ -27,6 +27,7 @@ from .persona_group_stats import (
     VALID_WINDOWS,
 )
 from .persona_snapshot import PersonaSnapshot, VALID_SNAPSHOT_PERSONAS
+from .portfolio_nav_snapshot import PortfolioNavSnapshot
 from .pre_trade_reflection import (
     PreTradeReflection,
     MIN_RATIONALE_CHARS,
@@ -77,6 +78,7 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "CompanionWaitlist",
            "PersonaGroupStats", "MIN_GROUP_SIZE", "VALID_PERSONAS", "VALID_WINDOWS",
            "PersonaSnapshot", "VALID_SNAPSHOT_PERSONAS",
+           "PortfolioNavSnapshot",
            "PreTradeReflection", "MIN_RATIONALE_CHARS",
            "DEFAULT_COOLDOWN_SECONDS", "EXTENDED_COOLDOWN_SECONDS",
            "AUTO_EXTEND_REASONS",
