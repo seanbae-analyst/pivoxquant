@@ -74,12 +74,28 @@ def growth_tables(app):
     """Provision growth_reflections + growth_scores in the test DB.
 
     These are not SQLAlchemy models so the autouse ``_reset_db`` fixture
-    in conftest cannot truncate them. We create them on entry and DROP
-    them on exit so each test starts clean.
+    in conftest cannot truncate them. We DROP-then-CREATE on entry and
+    DROP on exit so each test starts from a known plain schema regardless
+    of prior state.
+
+    The DROP-before-CREATE is load-bearing, not belt-and-suspenders: the
+    session-scoped ``app`` fixture runs ``app.py:_do_migrations()`` at build
+    time, which creates ``growth_scores`` with a GENERATED ``total_score``
+    column (``CAST(... AS INTEGER) STORED``). A bare ``CREATE TABLE IF NOT
+    EXISTS`` would then be a no-op against that generated-column table, so
+    the explicit ``INSERT ... total_score`` in ``test_growth_data_is_user_scoped``
+    would raise ``cannot INSERT into generated column``. This test only passed
+    in the full deterministic suite by accident — an earlier test's teardown
+    DROP happened to leave the table absent. Dropping first makes the fixture
+    authoritative under isolation and randomized order (pytest-randomly).
     """
     from extensions import db
 
     with app.app_context():
+        # Mirror the teardown DROPs so entry is authoritative too.
+        db.session.execute(text("DROP TABLE IF EXISTS growth_reflections"))
+        db.session.execute(text("DROP TABLE IF EXISTS growth_scores"))
+        db.session.execute(text("DROP TABLE IF EXISTS growth_daily_logs"))
         db.session.execute(text(_REFLECTIONS_DDL))
         db.session.execute(text(_SCORES_DDL))
         db.session.execute(text(_DAILY_LOGS_DDL))
