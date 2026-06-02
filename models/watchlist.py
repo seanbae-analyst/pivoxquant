@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 class Watchlist(db.Model):
@@ -9,7 +10,8 @@ class Watchlist(db.Model):
                           nullable=False, index=True)
     ticker   = db.Column(db.String(20), nullable=False)
     # Free-text user memo — "observations only", never a recommendation.
-    note     = db.Column(db.String(500))
+    # Encrypted at rest (EncryptedText). Not used in any SQL filter/order.
+    note     = db.Column(EncryptedText)
     added_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (

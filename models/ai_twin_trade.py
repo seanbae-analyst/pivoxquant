@@ -17,6 +17,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 # Allowed paper-trade sides — keep in sync with the CHECK constraint
@@ -43,7 +44,8 @@ class AITwinTrade(db.Model):
     shares = db.Column(db.Numeric(20, 4), nullable=False)
     price = db.Column(db.Numeric(20, 4), nullable=False)
     executed_at = db.Column(db.DateTime, nullable=False, default=_utc_now_naive)
-    rationale = db.Column(db.Text, nullable=True)
+    # Free-text twin-trade rationale → encrypted at rest (EncryptedText).
+    rationale = db.Column(EncryptedText, nullable=True)
     composite_score = db.Column(db.Numeric(5, 2), nullable=True)
     pnl_at_close = db.Column(db.Numeric(20, 4), nullable=True)
     is_paper = db.Column(db.Boolean, nullable=False, default=True)

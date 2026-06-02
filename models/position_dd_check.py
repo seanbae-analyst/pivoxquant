@@ -14,6 +14,7 @@ matches `positions` so deleting a position cleans up the checklist.
 """
 from datetime import datetime, timezone
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 class PositionDDCheck(db.Model):
@@ -32,8 +33,9 @@ class PositionDDCheck(db.Model):
     valuation_checked    = db.Column(db.Boolean, default=False, nullable=False)
     risks_checked        = db.Column(db.Boolean, default=False, nullable=False)
 
-    # Free-form note (optional; 500 char cap to stay inside DB index limits)
-    note                 = db.Column(db.String(500), nullable=True)
+    # Free-form user note (optional) — encrypted at rest (EncryptedText).
+    # DB type becomes TEXT; not used in any SQL filter/order.
+    note                 = db.Column(EncryptedText, nullable=True)
 
     created_at   = db.Column(
         db.DateTime,

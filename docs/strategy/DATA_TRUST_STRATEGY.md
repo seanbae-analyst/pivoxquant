@@ -166,8 +166,33 @@ CEO 질문("Oracle 같은 걸로 데이터 검증해서 신뢰 증명")엔 함�
   무비용(Vercel 게이트 하위). Q-DT4 변호사 사인 후 플래그 ON = public 복원.
   test 8개(6 schema + 2 gate) · 거짓 "No auth" 프론트 주석 정합.
 
+### ✅ Stage 2(저장 신뢰 절반) — at-rest 암호화 전수 + 키 로테이션 + 삭제 완결 — 2026-06-02 빌드
+Layer B(a) "내 감정데이터 안 새나"의 **기술 토대**. CEO "데이터 보관 확실하게" 지시(자율모드).
+"안전합니다"가 아니라 **증명 가능한 저장 신뢰**. e2e 의 전제 토대(자유서술만 e2e 가능).
+
+- **키 로테이션 안전화** (`services/crypto_service.py`): `pqenc:{version}:` 키링 도입.
+  기존 "schema theater"(버전 마커가 키 선택에 안 쓰임) 제거 → 모듈 헤더가 경고하던
+  "키 교체 시 전 데이터 영구 복구불가" 구멍을 메움. v1=master(하위호환), `PIVOX_USER_TEXT_KEY_V2`
+  추가 시 신규는 v2·기존 v1 계속 복호. `reencrypt_user_text` + `scripts/reencrypt_user_text.py`(dry-run 기본).
+- **속마음 평문 전수 암호화** (`EncryptedText` 13컬럼): 기존 pre_trade(rationale·devil) 2개 +
+  신규 11개 — positions.thesis/thesis_reason, watchlist.note, position_dd_checks.note,
+  weekly_pulse.worry/learn, behavioral_scores.notes, inquiries.body/admin_reply,
+  ai_twin_trades.rationale, ai_twin_weekly_reports.rationale_summary. (subject 등 검색대상·숫자 제외.)
+  쿼리 안전성 사전검증(WHERE/order_by 히트 0). 레거시 평문 행 하위호환(무backfill).
+- **String(500)→TEXT widen**: 암호문이 VARCHAR(500) overflow(한글 500자 암호문 ~2KB) →
+  Alembic `048_widen_encrypted_text_columns` + app.py `_do_migrations` self-heal twin
+  (v44.7 "prod 미적용" 클래스 방지, idempotent, PG-only).
+- **삭제 완결** (PIPA §36): `Inquiry`·`PositionDDCheck` 를 delete_account + pipa_purge 양 경로에
+  명시 추가(belt-and-suspenders 계약 동기화). FK CASCADE 가 이미 덮지만 명시로 certainty ↑.
+- **검증**: keyring 6 + encrypted_columns 9 + reflection 6 = 21 passed,
+  영향영역 회귀 196 passed(pipa/twin/behavior/support/pre_trade). 긴 한글(>500자) round-trip 확인.
+- **잔여(미빌드, 의존)**: 데이터 통제 UI(기능부) + 비판단/confabulation 카피(legal 검수 후).
+  **E2E**(우리도 못 읽음) = [E2E_ENCRYPTION_DESIGN.md](E2E_ENCRYPTION_DESIGN.md) — OAuth-only 블로커로
+  CEO 제품 결정 4건 대기(키 출처/분실정책/시점/법무).
+
 ### ⏳ 다음 (CEO 지시 대기)
 - Stage 1 잔여: per-metric `methodology` 문자열(risk_quant 등) 페이지 통합 / 공개 라우트화
-- Stage 2: 데이터 통제 UI(기능부) + **비판단/confabulation 카피(legal-kr-fintech 검수 후)**
+- Stage 2 잔여: 데이터 통제 UI(기능부) + **비판단/confabulation 카피(legal-kr-fintech 검수 후)**
+- **E2E 착수 게이트**: `E2E_ENCRYPTION_DESIGN.md` §7 CEO 결정 4건 → 확정 시 빌드
 - (다) `legal-kr-fintech` 로 timestamping/ISMS-P/학술검증 한국 법적 표기 한계 정밀 검수
 - 방향 확정 시 → DECISIONS.md 승격

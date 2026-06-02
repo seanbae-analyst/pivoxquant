@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 def _utc_now_naive() -> datetime:
@@ -31,7 +32,8 @@ class AITwinWeeklyReport(db.Model):
     diff_pct = db.Column(db.Numeric(8, 4), nullable=True)
     user_trades_count = db.Column(db.Integer, nullable=True)
     twin_trades_count = db.Column(db.Integer, nullable=True)
-    rationale_summary = db.Column(db.Text, nullable=True)
+    # Free-text weekly rationale summary → encrypted at rest (EncryptedText).
+    rationale_summary = db.Column(EncryptedText, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=_utc_now_naive)
 
     __table_args__ = (

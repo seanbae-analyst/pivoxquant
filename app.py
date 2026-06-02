@@ -535,6 +535,34 @@ def _do_migrations():
                 ))
         logger.info(f"Migration: added {table}.{column}")
 
+    def _widen_column_to_text(table, column):
+        """Idempotently widen an existing VARCHAR column to TEXT (PG only).
+
+        Needed where a column that used to be ``String(500)`` now stores
+        ``EncryptedText`` ciphertext — base64(AES-GCM) of multi-byte Korean
+        text easily exceeds 500 chars and would overflow VARCHAR(500) on
+        PostgreSQL. SQLite has no VARCHAR length enforcement, so this is a
+        no-op there. Already-TEXT columns are skipped. Mirrors Alembic 048.
+        """
+        if not is_postgres:
+            return
+        try:
+            col = {c["name"]: c for c in inspector.get_columns(table)}.get(column)
+        except Exception:
+            return
+        if col is None:
+            return  # absent → a fresh box adds/creates it as TEXT already
+        if "TEXT" in str(col.get("type", "")).upper():
+            return  # already wide
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TEXT"
+                ))
+            logger.info("Migration: widened %s.%s to TEXT", table, column)
+        except Exception as exc:
+            logger.warning("Migration: widen %s.%s skipped: %s", table, column, exc)
+
     # Users table — full coverage of User model columns so any DB
     # (new PG instance, restored snapshot, legacy SQLite dev box) can
     # boot without ProgrammingError / OperationalError on SELECT.
@@ -662,11 +690,15 @@ def _do_migrations():
     # _do_migrations() was never updated, causing ProgrammingError on
     # INSERT when Railway PostgreSQL does not have these columns.
     _add_column_if_missing("positions", "buy_fx_rate", "FLOAT", default="0.0")
-    _add_column_if_missing("positions", "thesis", "VARCHAR(500)")
+    # thesis / thesis_reason are EncryptedText (ciphertext) → create as TEXT,
+    # not VARCHAR(500); a long encrypted 매수 이유 overflows VARCHAR on PG.
+    # Existing VARCHAR(500) boxes are widened by the pass at the end of this
+    # function (Alembic 048 is the canonical equivalent).
+    _add_column_if_missing("positions", "thesis", "TEXT")
     _add_column_if_missing("positions", "thesis_created_at", "TIMESTAMP")
     _add_column_if_missing("positions", "thesis_last_checked", "TIMESTAMP")
     _add_column_if_missing("positions", "thesis_status", "VARCHAR(20)", default="'pending'")
-    _add_column_if_missing("positions", "thesis_reason", "VARCHAR(500)")
+    _add_column_if_missing("positions", "thesis_reason", "TEXT")
 
     # Alerts table — full coverage of Alert model columns.
     # Added defensively because post-creation column additions (score, signal,
@@ -761,9 +793,9 @@ def _do_migrations():
     # User referrals — `invited_count` is the one post-create candidate.
     _add_column_if_missing("user_referrals", "invited_count", "INTEGER", default="0")
 
-    # Watchlist — `note` is a free-text memo (2026-04-22). Added post-create
-    # so legacy DBs need an idempotent ALTER here.
-    _add_column_if_missing("watchlist", "note", "VARCHAR(500)")
+    # Watchlist — `note` is a free-text memo (2026-04-22), now EncryptedText.
+    # Create as TEXT (ciphertext); existing VARCHAR(500) boxes widened below.
+    _add_column_if_missing("watchlist", "note", "TEXT")
 
     # 2026-04-19 — position_dd_checks: create the table if absent.
     # The model is covered by `db.create_all()` on first boot, but we
@@ -788,7 +820,7 @@ def _do_migrations():
         _add_column_if_missing("position_dd_checks", "management_checked", "BOOLEAN", default="0")
         _add_column_if_missing("position_dd_checks", "valuation_checked",  "BOOLEAN", default="0")
         _add_column_if_missing("position_dd_checks", "risks_checked",      "BOOLEAN", default="0")
-        _add_column_if_missing("position_dd_checks", "note",               "VARCHAR(500)")
+        _add_column_if_missing("position_dd_checks", "note",               "TEXT")  # EncryptedText
 
     # anthropic_usage_log (Wave I G-3) — Anthropic API 비용 추적 테이블.
     # 이 테이블은 ORM 모델이 아니라 services/ai/service.py 가 raw SQL INSERT
@@ -1131,6 +1163,22 @@ def _do_migrations():
             db.session.rollback()
         except Exception:
             pass
+
+    # 2026-06-02 — EncryptedText rollout: widen columns that used to be
+    # String(500) and now hold AES-GCM ciphertext. Existing PG boxes created
+    # them as VARCHAR(500); _add_column_if_missing short-circuits on existing
+    # columns, so widen them explicitly here. Fresh boxes already get TEXT.
+    # Alembic 048 is the canonical migration; this is the alembic-less Railway
+    # self-heal twin (prevents the v44.7 "migration not applied to prod" class).
+    for _wt, _wc in (
+        ("positions", "thesis"),
+        ("positions", "thesis_reason"),
+        ("watchlist", "note"),
+        ("position_dd_checks", "note"),
+        ("weekly_pulse", "worry"),
+        ("weekly_pulse", "learn"),
+    ):
+        _widen_column_to_text(_wt, _wc)
 
     # Backfill FX rates
     from models import Position

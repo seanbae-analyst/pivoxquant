@@ -164,6 +164,7 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
         ArtifactFeedback, BehavioralScore,
         AITwinPortfolio, AITwinWeeklyReport,
         PreTradeReflection, PersonaSnapshot, WeeklyPulse,
+        PositionDDCheck, Inquiry,
         ScheduledEmail, NpsFeedback, AuthEvent, User,
     )
 
@@ -193,6 +194,12 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
     _cnt("weekly_pulse", WeeklyPulse.query.filter_by(user_id=user_id))
     _cnt("scheduled_email", ScheduledEmail.query.filter_by(user_id=user_id))
     _cnt("nps_feedback", NpsFeedback.query.filter_by(user_id=user_id))
+    # 2026-06-02 — encrypted user free-text, listed explicitly per the
+    # belt-and-suspenders contract (kept in sync with routes/auth.py
+    # delete_account). position_dd_check is usually already gone via the
+    # positions cascade above, so its count is often 0 — harmless.
+    _cnt("position_dd_check", PositionDDCheck.query.filter_by(user_id=user_id))
+    _cnt("inquiry", Inquiry.query.filter_by(user_id=user_id))
 
     # ── auth_events: anonymize, do NOT delete ────────────────────────────────
     # PIPA §29 requires retention of access/auth logs for security audit

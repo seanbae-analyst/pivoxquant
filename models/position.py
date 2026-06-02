@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 class Position(db.Model):
@@ -25,9 +26,13 @@ class Position(db.Model):
     buy_fx_rate = db.Column(db.Float,      default=0.0)
     added_at   = db.Column(db.DateTime,    default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
-    # Thesis Tracker — 매수 이유 + 주간 AI 유효성 체크
-    thesis              = db.Column(db.String(500), nullable=True)
+    # Thesis Tracker — 매수 이유 + 주간 AI 유효성 체크.
+    # thesis / thesis_reason are user/AI free-text ("매수 이유") → encrypted at
+    # rest (EncryptedText, server-held key). DB type becomes TEXT; not used in
+    # any SQL filter/order so encryption is transparent. thesis_status stays a
+    # plaintext enum because it IS filtered on.
+    thesis              = db.Column(EncryptedText,  nullable=True)
     thesis_created_at   = db.Column(db.DateTime,    nullable=True)
     thesis_last_checked = db.Column(db.DateTime,    nullable=True)
     thesis_status       = db.Column(db.String(20),  default="pending")  # pending/valid/warning/invalidated
-    thesis_reason       = db.Column(db.String(500), nullable=True)       # AI check 결과 이유
+    thesis_reason       = db.Column(EncryptedText,  nullable=True)       # AI check 결과 이유

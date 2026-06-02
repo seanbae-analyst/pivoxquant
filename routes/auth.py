@@ -49,6 +49,7 @@ from models import (
     ArtifactFeedback, BehavioralScore,
     AITwinPortfolio, AITwinWeeklyReport,
     PreTradeReflection, PersonaSnapshot, WeeklyPulse,
+    PositionDDCheck, Inquiry,
     ScheduledEmail, NpsFeedback,
     AuthEvent,
 )
@@ -1571,6 +1572,14 @@ def delete_account():
         # in sync — adding a user-owned model requires updating BOTH.
         ScheduledEmail.query.filter_by(user_id=user_id).delete()
         NpsFeedback.query.filter_by(user_id=user_id).delete()
+        # 2026-06-02 — data-trust completeness. PositionDDCheck.note and
+        # Inquiry.body/.admin_reply are now encrypted user free-text. The
+        # ``db.session.delete(current_user)`` below already drops them via FK
+        # CASCADE, but per the explicit-delete contract (belt-and-suspenders for
+        # any path with FK enforcement off) they are listed here too. Keep in
+        # sync with scripts/nightly/pipa_purge._delete_user_cascade.
+        PositionDDCheck.query.filter_by(user_id=user_id).delete()
+        Inquiry.query.filter_by(user_id=user_id).delete()
 
         # SHIP-BLOCKER: cancel any live Stripe subscription BEFORE dropping the
         # user row, otherwise Stripe keeps billing the card and the webhook can

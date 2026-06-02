@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 # Sub-score names — kept here as a tuple constant so the service +
@@ -51,7 +52,8 @@ class BehavioralScore(db.Model):
     # JSON blobs as TEXT — see module docstring.
     sub_scores = db.Column(db.Text, nullable=False)
     persona_avg = db.Column(db.Text, nullable=True)
-    notes = db.Column(db.Text, nullable=True)
+    # Observational free-text behavioural commentary → encrypted at rest.
+    notes = db.Column(EncryptedText, nullable=True)
     trade_count = db.Column(db.Integer, nullable=True)
     created_at = db.Column(
         db.DateTime,

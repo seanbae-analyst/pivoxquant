@@ -29,6 +29,7 @@ status transitions: ``open`` → ``answered`` (operator replied) → ``closed``
 from datetime import datetime, timezone
 
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 VALID_STATUSES = ("open", "answered", "closed")
@@ -51,10 +52,12 @@ class Inquiry(db.Model):
         index=True,
     )
     category = db.Column(db.String(32), nullable=False, default="other")
+    # subject stays plaintext (short title, more likely operator-searched).
     subject = db.Column(db.String(200), nullable=False)
-    body = db.Column(db.Text, nullable=False)
+    # body / admin_reply are free-text → encrypted at rest (EncryptedText).
+    body = db.Column(EncryptedText, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="open", index=True)
-    admin_reply = db.Column(db.Text, nullable=True)
+    admin_reply = db.Column(EncryptedText, nullable=True)
     # Email at creation time so an operator can reply post soft-delete.
     email_snapshot = db.Column(db.String(255), nullable=True)
     created_at = db.Column(

@@ -52,6 +52,7 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 import secrets
 
 from sqlalchemy.types import Text, TypeDecorator
@@ -154,6 +155,59 @@ except Exception:  # pragma: no cover — cryptography optional in dev
     )
 
 
+# ── User-text key ring (rotation-safe) ─────────────────────────────────────
+# The broker ``encrypt``/``decrypt`` path uses the single master key. User
+# free-text columns (``EncryptedText``) instead resolve their key by VERSION
+# from this ring, so the user-text key can be rotated WITHOUT making existing
+# rows unrecoverable — the exact failure mode this module's header warns about.
+# Version 1 is ALWAYS the master key: this keeps every pre-existing
+# ``pqenc:1:`` row (and the no-migration legacy-plaintext fallback) readable.
+# Add ``PIVOX_USER_TEXT_KEY_V2`` (base64, 32 bytes) to introduce v2 — new writes
+# use it while v1 rows still decrypt; a re-encrypt sweep then rolls rows forward
+# (scripts/reencrypt_user_text.py).
+def _load_user_text_key_ring() -> dict:
+    ring = {1: _MASTER_KEY}
+    for var, raw in os.environ.items():
+        m = re.fullmatch(r"PIVOX_USER_TEXT_KEY_V(\d+)", var)
+        if not m:
+            continue
+        version = int(m.group(1))
+        if version < 2:
+            # v1 is reserved for the master key — never let a stray env var
+            # orphan existing v1 ciphertext.
+            continue
+        val = (raw or "").strip()
+        if not val:
+            continue
+        try:
+            key = base64.b64decode(val)
+        except Exception:
+            key = val.encode("utf-8")
+        if len(key) != 32:
+            key = hashlib.sha256(key).digest()
+        ring[version] = key
+    return ring
+
+
+_USER_TEXT_KEY_RING: dict = _load_user_text_key_ring()
+_CURRENT_TEXT_VERSION: int = max(_USER_TEXT_KEY_RING)
+_AESGCM_RING: dict = {}
+
+
+def _aesgcm_for(version: int):
+    """Return a cached AESGCM bound to the ring key for ``version``."""
+    inst = _AESGCM_RING.get(version)
+    if inst is None:
+        key = _USER_TEXT_KEY_RING.get(version)
+        if key is None:
+            raise ValueError(
+                f"crypto_service: no user-text key for version {version}"
+            )
+        inst = AESGCM(key)
+        _AESGCM_RING[version] = inst
+    return inst
+
+
 # ── Public API ────────────────────────────────────────────────────────────
 def encrypt(plaintext: str, aad: bytes = b"broker") -> str:
     """Encrypt and return a base64 string. Nonce is prepended (12 bytes)."""
@@ -204,19 +258,99 @@ def backend_name() -> str:
 
 def is_encrypted_value(value: str | None) -> bool:
     """True iff ``value`` carries the EncryptedText version marker — i.e. it is
-    our ciphertext rather than a legacy plaintext row."""
-    return bool(value) and value.startswith(_ENC_PREFIX)
+    our ciphertext rather than a legacy plaintext row. Matches any key version
+    (``pqenc:1:``, ``pqenc:2:`` …) via the shared base prefix."""
+    return bool(value) and value.startswith(_ENC_PREFIX_BASE)
 
 
 # ── Transparent encrypted column (SQLAlchemy) ─────────────────────────────
-# Version marker prepended to every ciphertext we persist. Lets the column
-# distinguish its own ciphertext from *legacy plaintext* rows written before
-# encryption was switched on — so the rollout needs no data migration.
+# Every ciphertext we persist starts with ``pqenc:{version}:`` — the version
+# selects the key from the user-text key ring so the column can (a) tell its
+# own ciphertext apart from *legacy plaintext* rows written before encryption
+# was switched on (the rollout needs no data migration) and (b) survive a key
+# rotation (``pqenc:2:`` rows coexist with ``pqenc:1:``).
+_ENC_PREFIX_BASE = "pqenc:"
+_ENC_VERSIONED_RE = re.compile(r"^pqenc:(\d+):")
+# Retained literal for the v1 prefix (back-compat with any external reference).
 _ENC_PREFIX = "pqenc:1:"
 
 # AAD context for user free-text. Distinct from b"broker" (credentials) so a
 # ciphertext from one domain can never be replayed into the other.
 _USER_TEXT_AAD = b"pivox_user_text"
+
+
+def encrypt_user_text(plaintext, version: int | None = None) -> str:
+    """Encrypt a user free-text value for an :class:`EncryptedText` column.
+
+    Returns ``pqenc:{version}:{base64(nonce||ciphertext)}``. Uses the current
+    (highest) key-ring version unless ``version`` is pinned — pinning is used
+    only by the re-encrypt utility and tests.
+    """
+    v = _CURRENT_TEXT_VERSION if version is None else int(version)
+    data = str(plaintext).encode("utf-8")
+    if _BACKEND == "aesgcm":
+        nonce = os.urandom(12)
+        ct = _aesgcm_for(v).encrypt(nonce, data, _USER_TEXT_AAD)
+        body = base64.b64encode(nonce + ct).decode("ascii")
+    else:
+        key = _USER_TEXT_KEY_RING.get(v)
+        if key is None:
+            raise ValueError(f"crypto_service: no key for user-text version {v}")
+        body = _fallback_encrypt(data, _USER_TEXT_AAD, key=key)
+    return f"{_ENC_PREFIX_BASE}{v}:{body}"
+
+
+def decrypt_user_text(stored: str) -> str:
+    """Decrypt a value produced by :func:`encrypt_user_text` (any version)."""
+    m = _ENC_VERSIONED_RE.match(stored or "")
+    if not m:
+        raise ValueError("crypto_service: not a versioned user-text ciphertext")
+    v = int(m.group(1))
+    body = stored[m.end():]
+    if _BACKEND == "aesgcm":
+        raw = base64.b64decode(body)
+        if len(raw) < 13:
+            raise ValueError("Ciphertext too short")
+        nonce, ct = raw[:12], raw[12:]
+        return _aesgcm_for(v).decrypt(nonce, ct, _USER_TEXT_AAD).decode("utf-8")
+    key = _USER_TEXT_KEY_RING.get(v)
+    if key is None:
+        raise ValueError(f"crypto_service: key version {v} not in ring")
+    return _fallback_decrypt(base64.b64decode(body), _USER_TEXT_AAD, key=key)
+
+
+def reencrypt_user_text(stored):
+    """Roll one stored value forward to the current key version.
+
+    Returns the re-encrypted ciphertext, or ``None`` when nothing needs doing
+    (empty, legacy plaintext — those re-encrypt on the next ORM write — or
+    already at the current version). Used by ``scripts/reencrypt_user_text.py``
+    for an eager rotation sweep.
+    """
+    if not stored or not str(stored).startswith(_ENC_PREFIX_BASE):
+        return None
+    m = _ENC_VERSIONED_RE.match(stored)
+    if not m or int(m.group(1)) == _CURRENT_TEXT_VERSION:
+        return None
+    return encrypt_user_text(decrypt_user_text(stored))
+
+
+def current_text_key_version() -> int:
+    """Highest key-ring version — the one new writes are encrypted under."""
+    return _CURRENT_TEXT_VERSION
+
+
+def user_text_key_versions() -> list:
+    """Sorted list of every key version currently loadable for decryption."""
+    return sorted(_USER_TEXT_KEY_RING)
+
+
+def _set_user_text_key_ring_for_test(ring) -> None:
+    """TEST-ONLY: swap the in-memory key ring and reset the AESGCM cache."""
+    global _USER_TEXT_KEY_RING, _CURRENT_TEXT_VERSION
+    _USER_TEXT_KEY_RING = dict(ring)
+    _CURRENT_TEXT_VERSION = max(_USER_TEXT_KEY_RING)
+    _AESGCM_RING.clear()
 
 
 class EncryptedText(TypeDecorator):
@@ -248,51 +382,55 @@ class EncryptedText(TypeDecorator):
     def process_bind_param(self, value, dialect):  # noqa: D401 - SA hook
         if value is None:
             return None
-        return _ENC_PREFIX + encrypt(str(value), aad=_USER_TEXT_AAD)
+        return encrypt_user_text(str(value))
 
     def process_result_value(self, value, dialect):  # noqa: D401 - SA hook
         if value is None:
             return None
-        if not value.startswith(_ENC_PREFIX):
+        if not value.startswith(_ENC_PREFIX_BASE):
             # Legacy plaintext (written before this column was encrypted).
             return value
         try:
-            return decrypt(value[len(_ENC_PREFIX):], aad=_USER_TEXT_AAD)
+            return decrypt_user_text(value)
         except Exception:  # pragma: no cover - key mismatch / tamper only
             # Never 500 the journal over one unreadable row; log loud, blank it.
             logger.error(
                 "EncryptedText: decrypt failed for a user_text column — "
-                "returning empty. Check PIVOX_BROKER_ENCRYPTION_KEY rotation."
+                "returning empty. Check key rotation (PIVOX_USER_TEXT_KEY_V*) "
+                "or the master key."
             )
             return ""
 
 
 # ── Fallback (dev/test only) ──────────────────────────────────────────────
-def _fallback_encrypt(data: bytes, aad: bytes) -> str:
+def _fallback_encrypt(data: bytes, aad: bytes, key: bytes | None = None) -> str:
     """Authenticated XOR stream. NOT cryptographically equivalent to AES-GCM
     but preserves confidentiality + integrity for dev. Format:
 
         nonce(12) || xor_stream(data) || hmac_sha256_tag(16)
 
-    Emits base64. Do NOT rely on this in production.
+    Emits base64. ``key`` defaults to the master key (broker path); the
+    user-text ring passes the per-version key. Do NOT rely on this in prod.
     """
+    k = key if key is not None else _MASTER_KEY
     nonce = os.urandom(12)
-    stream = _kdf_stream(_MASTER_KEY, nonce, len(data))
+    stream = _kdf_stream(k, nonce, len(data))
     ct = bytes(a ^ b for a, b in zip(data, stream))
-    tag = hmac.new(_MASTER_KEY, nonce + aad + ct, hashlib.sha256).digest()[:16]
+    tag = hmac.new(k, nonce + aad + ct, hashlib.sha256).digest()[:16]
     return base64.b64encode(nonce + ct + tag).decode("ascii")
 
 
-def _fallback_decrypt(raw: bytes, aad: bytes) -> str:
+def _fallback_decrypt(raw: bytes, aad: bytes, key: bytes | None = None) -> str:
+    k = key if key is not None else _MASTER_KEY
     if len(raw) < 12 + 16:
         raise ValueError("Ciphertext too short")
     nonce = raw[:12]
     tag = raw[-16:]
     ct = raw[12:-16]
-    expected = hmac.new(_MASTER_KEY, nonce + aad + ct, hashlib.sha256).digest()[:16]
+    expected = hmac.new(k, nonce + aad + ct, hashlib.sha256).digest()[:16]
     if not hmac.compare_digest(tag, expected):
         raise ValueError("HMAC verification failed — ciphertext tampered or wrong key")
-    stream = _kdf_stream(_MASTER_KEY, nonce, len(ct))
+    stream = _kdf_stream(k, nonce, len(ct))
     pt = bytes(a ^ b for a, b in zip(ct, stream))
     return pt.decode("utf-8")
 

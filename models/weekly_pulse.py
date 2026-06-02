@@ -18,6 +18,7 @@ import json
 from datetime import datetime, timezone
 
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 VALID_CADENCES = ("weekly", "biweekly", "monthly")
@@ -35,10 +36,12 @@ class WeeklyPulse(db.Model):
     )
     mood = db.Column(db.Integer, nullable=False)          # 1..5
     confidence = db.Column(db.Integer, nullable=False)    # 1..5
-    worry = db.Column(db.String(500), default="")
+    # worry / learn are the user's free-text mood self-report → encrypted at
+    # rest (EncryptedText, server-held key). Not used in any SQL filter/order.
+    worry = db.Column(EncryptedText, default="")
     # Stored as JSON text for portability (SQLite + Postgres).
     topics = db.Column(db.Text, default="[]")
-    learn = db.Column(db.String(500), default="")
+    learn = db.Column(EncryptedText, default="")
     cadence = db.Column(db.String(16), default="weekly", nullable=False)
     submitted_at = db.Column(
         db.DateTime,
