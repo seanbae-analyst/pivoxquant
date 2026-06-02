@@ -485,11 +485,9 @@ export function EquityCurveBlock({
                   maxWidth: 520,
                 }}
               >
-                포지션을 추가하면 매일 종가 기준으로 곡선이 그려집니다. 하루치
-                데이터로는 곡선을 그리지 않습니다 — 가짜 시리즈는 만들지 않습니다.
+                포지션을 추가하면 매일 종가 기준으로 곡선이 그려집니다.
                 <br />
-                Add a position; the curve draws itself once we have two real
-                closes. We never synthesise a fake series.
+                Add a position — the curve fills in from daily closes.
               </span>
             </div>
           ) : (
