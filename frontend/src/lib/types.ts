@@ -438,6 +438,32 @@ export interface PreTradeJournalResponse {
   reflections: PreTradeReflection[];
 }
 
+/**
+ * Storage-proof trust artifact (2026-06-02). The caller's OWN rationale in two
+ * forms — the plaintext they see, and the exact ciphertext stored at rest —
+ * so encryption is *witnessed* on their data, not asserted on a policy page.
+ */
+export interface PreTradeStorageProof {
+  reflection_id: number;
+  /** What the user typed — server-decrypted for the owner. */
+  rationale_plaintext: string;
+  /** Exact value on disk: version-marked ciphertext, or legacy plaintext. */
+  rationale_stored: string | null;
+  /** True when the stored value is our ciphertext (not a legacy plaintext row). */
+  encrypted: boolean;
+  /** "AES-256-GCM" in prod, "dev-fallback" without a real key. */
+  cipher: string;
+  /** Honest bilingual note — server-held key tier (defeats a DB leak). */
+  note_kr: string;
+  note_en: string;
+}
+
+export interface PreTradeStorageProofResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  storage_proof: PreTradeStorageProof;
+}
+
 /* ────────────────────────────────────────────────────────────────────────
  * Holding-Mirror — disposition-effect "mirror" (NOT a score / diagnosis).
  *

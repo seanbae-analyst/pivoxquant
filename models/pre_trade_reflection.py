@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from extensions import db
+from services.crypto_service import EncryptedText
 
 
 # Minimum length we require for a self-reflection. Below this the user
@@ -68,8 +69,12 @@ class PreTradeReflection(db.Model):
     # Free-text label, validated upstream. Allowed: 'BUY' / 'SELL' / null.
     intended_side = db.Column(db.String(4), nullable=True)
     intended_shares = db.Column(db.Numeric(20, 4), nullable=True)
-    rationale = db.Column(db.Text, nullable=False)
-    devil_advocate_seen = db.Column(db.Text, nullable=True)
+    # Free-text the user pours in (their stated reason, the devil's-advocate
+    # they read). Encrypted at rest — see services.crypto_service.EncryptedText.
+    # DB type stays TEXT (ciphertext) so no migration is needed; the ORM still
+    # reads/writes plaintext. A leaked DB dump cannot read these words.
+    rationale = db.Column(EncryptedText, nullable=False)
+    devil_advocate_seen = db.Column(EncryptedText, nullable=True)
     market_volatility_at_request = db.Column(db.Numeric(8, 4), nullable=True)
     cooldown_started_at = db.Column(db.DateTime, nullable=False)
     cooldown_ends_at = db.Column(db.DateTime, nullable=False)

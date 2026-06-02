@@ -31,6 +31,7 @@ from services.pre_trade import (
     list_reflections,
     proceed as proceed_reflection,
     start_cooldown,
+    storage_proof,
 )
 
 from .decorators import api_auth
@@ -119,6 +120,26 @@ def get_status(reflection_id: int):
             status=404,
         )
     return _envelope({"reflection": result})
+
+
+# ── /<id>/storage-proof ─────────────────────────────────────────────
+
+@pre_trade_bp.route("/<int:reflection_id>/storage-proof", methods=["GET"])
+@api_auth
+def storage_proof_view(reflection_id: int):
+    """Trust artifact — show the caller their OWN free-text exactly as it is
+    stored (ciphertext), so they witness the at-rest encryption instead of
+    reading a claim about it. Ownership enforced in the service layer."""
+    try:
+        result = storage_proof(reflection_id, current_user.id)
+    except LookupError:
+        return api_error(
+            en="Not found",
+            kr="reflection을 찾을 수 없습니다.",
+            code="PRE_TRADE_NOT_FOUND",
+            status=404,
+        )
+    return _envelope({"storage_proof": result})
 
 
 # ── /<id>/proceed ───────────────────────────────────────────────────

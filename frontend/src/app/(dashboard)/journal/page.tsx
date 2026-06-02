@@ -42,6 +42,7 @@ import { ConcentrationMirror } from "@/components/journal/concentration-mirror";
 import { ProfitLossMirror } from "@/components/journal/profit-loss-mirror";
 import { TurnoverMirror } from "@/components/journal/turnover-mirror";
 import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror";
+import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import type { PreTradeReflection } from "@/lib/types";
 
@@ -259,6 +260,12 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
             </p>
           )}
         </div>
+      )}
+
+      {/* "Show, don't tell" — let the user witness their own words as the
+          ciphertext stored at rest, rather than asserting privacy in copy. */}
+      {r.rationale.trim().length > 0 && (
+        <StorageProofToggle reflectionId={r.id} />
       )}
     </article>
   );

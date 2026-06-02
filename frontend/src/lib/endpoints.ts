@@ -348,6 +348,10 @@ export const API = {
     status: (id: number) => `/api/pre-trade/${id}`,
     proceed: (id: number) => `/api/pre-trade/${id}/proceed`,
     cancel: (id: number) => `/api/pre-trade/${id}/cancel`,
+    // 2026-06-02: Storage-proof trust artifact — returns the caller's OWN
+    // rationale in BOTH plaintext and the exact ciphertext stored at rest, so
+    // the user *witnesses* encryption instead of reading a claim. @api_auth.
+    storageProof: (id: number) => `/api/pre-trade/${id}/storage-proof`,
     // 2026-05-21: Journal feed — the user's own pre-trade reflections in
     // reverse-chronological order (newest first). Read-only, @api_auth.
     // Each row is "user finished thinking" — never an executed order.

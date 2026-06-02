@@ -54,6 +54,8 @@ import logging
 import os
 import secrets
 
+from sqlalchemy.types import Text, TypeDecorator
+
 logger = logging.getLogger(__name__)
 
 
@@ -198,6 +200,71 @@ def is_configured() -> bool:
 def backend_name() -> str:
     """Return which backend is in use ('aesgcm' or 'fallback')."""
     return _BACKEND
+
+
+def is_encrypted_value(value: str | None) -> bool:
+    """True iff ``value`` carries the EncryptedText version marker — i.e. it is
+    our ciphertext rather than a legacy plaintext row."""
+    return bool(value) and value.startswith(_ENC_PREFIX)
+
+
+# ── Transparent encrypted column (SQLAlchemy) ─────────────────────────────
+# Version marker prepended to every ciphertext we persist. Lets the column
+# distinguish its own ciphertext from *legacy plaintext* rows written before
+# encryption was switched on — so the rollout needs no data migration.
+_ENC_PREFIX = "pqenc:1:"
+
+# AAD context for user free-text. Distinct from b"broker" (credentials) so a
+# ciphertext from one domain can never be replayed into the other.
+_USER_TEXT_AAD = b"pivox_user_text"
+
+
+class EncryptedText(TypeDecorator):
+    """Transparent application-level encryption for sensitive free-text columns.
+
+    Persisted on the database as ``TEXT`` (so switching an existing ``Text``
+    column to this type needs **no schema migration** — the stored bytes are
+    just ciphertext), but the ORM keeps reading and writing *plaintext*. Every
+    existing call site (``row.rationale = "..."`` / ``row.rationale``) is
+    unchanged; encryption happens at the bind/result boundary.
+
+    Tier — encrypt-at-rest with a **server-held** key
+    (``PIVOX_BROKER_ENCRYPTION_KEY``):
+      - Covers: a DB dump, a leaked backup, or a read-access contractor can no
+        longer read the user's words. This is the realistic breach for a small
+        startup.
+      - Does NOT cover: this is **not** end-to-end. The app can still decrypt to
+        render the mirror to its owner. A true "we *cannot* read it" guarantee
+        needs a user-held key — a separate product decision, because it would
+        also stop the server-side pattern/mirror from reading the text.
+
+    Backward compatible: a legacy plaintext row (no version marker) is returned
+    as-is on read and re-encrypted the next time it is written.
+    """
+
+    impl = Text
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):  # noqa: D401 - SA hook
+        if value is None:
+            return None
+        return _ENC_PREFIX + encrypt(str(value), aad=_USER_TEXT_AAD)
+
+    def process_result_value(self, value, dialect):  # noqa: D401 - SA hook
+        if value is None:
+            return None
+        if not value.startswith(_ENC_PREFIX):
+            # Legacy plaintext (written before this column was encrypted).
+            return value
+        try:
+            return decrypt(value[len(_ENC_PREFIX):], aad=_USER_TEXT_AAD)
+        except Exception:  # pragma: no cover - key mismatch / tamper only
+            # Never 500 the journal over one unreadable row; log loud, blank it.
+            logger.error(
+                "EncryptedText: decrypt failed for a user_text column — "
+                "returning empty. Check PIVOX_BROKER_ENCRYPTION_KEY rotation."
+            )
+            return ""
 
 
 # ── Fallback (dev/test only) ──────────────────────────────────────────────

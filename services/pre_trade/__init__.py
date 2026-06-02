@@ -11,6 +11,7 @@ from .friction import (
     list_reflections,
     proceed,
     cancel,
+    storage_proof,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "list_reflections",
     "proceed",
     "cancel",
+    "storage_proof",
 ]

@@ -43,6 +43,8 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
+from sqlalchemy import text
+
 from extensions import db
 from models import (
     PreTradeReflection,
@@ -50,6 +52,7 @@ from models import (
     DEFAULT_COOLDOWN_SECONDS,
     EXTENDED_COOLDOWN_SECONDS,
 )
+from services.crypto_service import backend_name, is_encrypted_value
 from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
@@ -351,6 +354,48 @@ def _ticker_moved_more_than(ticker: str, pct: float, now: datetime) -> bool:
 def _utc_now() -> datetime:
     """Naive-UTC, matches the rest of the codebase."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def storage_proof(reflection_id: int, user_id: int) -> dict[str, Any]:
+    """Trust artifact — return the user's own free-text in *both* forms: the
+    plaintext they typed, and the exact ciphertext stored on disk.
+
+    "Show, don't tell": instead of a policy page asserting "your notes are
+    encrypted", the user witnesses it on their own data. Ownership is enforced
+    (``LookupError`` on miss / wrong owner). The raw column is read with
+    textual SQL so it bypasses the ``EncryptedText`` decoder — we hand back the
+    literal bytes-on-disk.
+
+    Honest about the tier: the key is server-held, so the server *can* decrypt
+    (that is how the plaintext below is produced). This defeats a DB leak, not
+    a malicious operator — a user-held-key / end-to-end stage is separate. See
+    ``services.crypto_service.EncryptedText``.
+    """
+    row = _load_owned(reflection_id, user_id)
+    stored = db.session.execute(
+        text("SELECT rationale FROM pre_trade_reflections WHERE id = :id"),
+        {"id": int(reflection_id)},
+    ).scalar()
+    return {
+        "reflection_id": int(reflection_id),
+        "rationale_plaintext": row.rationale,
+        "rationale_stored": stored,
+        "encrypted": is_encrypted_value(stored),
+        "cipher": "AES-256-GCM" if backend_name() == "aesgcm" else "dev-fallback",
+        "note_kr": (
+            "이것이 데이터베이스에 저장된 당신 메모의 실제 형태입니다. "
+            "데이터베이스가 통째로 유출되어도 공격자는 이 암호문만 보게 됩니다. "
+            "지금은 복호화 키를 서버가 보관합니다 — 화면에 보여드리기 위해 서버는 "
+            "복호화할 수 있습니다. ‘우리도 못 읽는’ 종단간 암호화는 다음 단계입니다."
+        ),
+        "note_en": (
+            "This is exactly how your note is stored in our database. A full "
+            "database leak would expose only this ciphertext. The decryption "
+            "key is currently held server-side — so the server can decrypt to "
+            "show you the text above. A 'we cannot read it' end-to-end stage "
+            "is next."
+        ),
+    }
 
 
 def _load_owned(reflection_id: int, user_id: int) -> PreTradeReflection:
