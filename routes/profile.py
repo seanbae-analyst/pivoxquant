@@ -19,6 +19,7 @@ import csv
 import io
 import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify, Response
@@ -2167,13 +2168,27 @@ _XLSX_SHEET_TITLES = {
 _XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
+# openpyxl raises IllegalCharacterError on XML-illegal control chars
+# (\x00-\x08, \x0B, \x0C, \x0E-\x1F — tab/newline/CR are fine). Pasted user
+# free-text (note / worry / rationale) can carry these; CSV tolerates them but
+# an .xlsx cannot, so one stray control char would 500 the WHOLE workbook.
+# Strip them. 32767 is Excel's hard per-cell character cap.
+_XLSX_ILLEGAL_RE = re.compile(r"[\x00-\x08\x0B\x0C\x0E-\x1F]")
+_XLSX_CELL_MAXLEN = 32767
+
+
 def _xlsx_cell(value):
-    """formula-injection guard + Decimal→float so openpyxl stores a number."""
+    """formula-injection guard + Decimal→float + strip openpyxl-illegal chars
+    + cap length, so no single user cell can crash workbook generation."""
     from decimal import Decimal
 
     v = _safe_cell(value)
     if isinstance(v, Decimal):
         return float(v)
+    if isinstance(v, str):
+        v = _XLSX_ILLEGAL_RE.sub("", v)
+        if len(v) > _XLSX_CELL_MAXLEN:
+            v = v[:_XLSX_CELL_MAXLEN]
     return v
 
 
@@ -2194,13 +2209,30 @@ def _build_xlsx(user_id, datasets):
     wb.remove(wb.active)  # drop the default empty sheet
     for dataset in datasets:
         header, row_fn = _CSV_SPECS[dataset]
-        rows, disclaimer = _query_dataset_rows(user_id, dataset)
         ws = wb.create_sheet(title=_XLSX_SHEET_TITLES.get(dataset, dataset)[:31])
-        if disclaimer:
-            ws.append([_xlsx_cell("# " + disclaimer)])
-        ws.append([_xlsx_cell(h) for h in header])
-        for r in rows:
-            ws.append([_xlsx_cell(c) for c in row_fn(r)])
+        # Per-dataset isolation: one dataset that throws (e.g. a capital-gains
+        # FIFO/FX edge case, or a single malformed row) must NOT kill the whole
+        # workbook — the user still gets every other sheet. The failed sheet
+        # carries its header + an honest note instead of fabricated data.
+        try:
+            rows, disclaimer = _query_dataset_rows(user_id, dataset)
+            if disclaimer:
+                ws.append([_xlsx_cell("# " + disclaimer)])
+            ws.append([_xlsx_cell(h) for h in header])
+            for r in rows:
+                ws.append([_xlsx_cell(c) for c in row_fn(r)])
+        except Exception:
+            logger.exception(
+                "xlsx export: dataset %s failed — emitting header-only sheet",
+                dataset,
+            )
+            # A freshly-created openpyxl sheet reports max_row == 1, so <= 1
+            # means "nothing written yet" — add the header before the note.
+            if ws.max_row <= 1:
+                ws.append([_xlsx_cell(h) for h in header])
+            ws.append(
+                [_xlsx_cell("# 이 표는 일시적으로 생성하지 못했습니다 — 다시 시도해 주세요.")]
+            )
     bio = io.BytesIO()
     wb.save(bio)
     return bio.getvalue()

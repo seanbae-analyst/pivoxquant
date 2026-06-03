@@ -133,3 +133,54 @@ def test_xlsx_self_scope_only(app, client, auth_user, make_user):
 def test_xlsx_bad_dataset_400(client, auth_user):
     resp = client.get("/api/profile/export?format=xlsx&dataset=bogus")
     assert resp.status_code == 400, resp.data
+
+
+def test_xlsx_control_chars_dont_crash(app, client, auth_user):
+    """A note carrying XML-illegal control chars must NOT 500 the workbook.
+    openpyxl rejects \\x00-\\x1F; _xlsx_cell strips them and keeps the text."""
+    uid = auth_user["id"]
+    with app.app_context():
+        db.session.add(Watchlist(user_id=uid, ticker="AAPL", note="메모\x00\x07\x1f끝"))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export?format=xlsx&dataset=watchlist")
+    assert resp.status_code == 200, resp.data
+    blob = "\n".join(_all_cell_strings(load_workbook(BytesIO(resp.data))))
+    assert "메모끝" in blob       # control chars stripped, surrounding text kept
+    assert "\x00" not in blob
+
+
+def test_xlsx_one_failing_dataset_does_not_kill_workbook(
+    app, client, auth_user, monkeypatch,
+):
+    """If one dataset throws (e.g. a capital-gains FIFO/FX edge case), the rest
+    of the workbook still renders — isolation, not a whole-export 500."""
+    import routes.profile as profile_mod
+
+    uid = auth_user["id"]
+    with app.app_context():
+        db.session.add(Position(user_id=uid, ticker="AAPL", shares=1, avg_cost=100.0))
+        db.session.commit()
+
+    def _boom(_user_id):
+        raise RuntimeError("simulated capital-gains failure")
+
+    monkeypatch.setattr(profile_mod, "_capital_gain_rows", _boom)
+
+    resp = client.get("/api/profile/export?format=xlsx")
+    assert resp.status_code == 200, resp.data
+    wb = load_workbook(BytesIO(resp.data))
+    # The good sheets survived; the failed tax sheets still exist (header + note).
+    assert "보유종목" in wb.sheetnames
+    assert "양도손익(상세)" in wb.sheetnames
+
+
+def test_xlsx_empty_user_still_valid_workbook(app, client, auth_user):
+    """A user with zero data gets a valid workbook — every sheet present with
+    just its header row (honest empty, never fabricated)."""
+    resp = client.get("/api/profile/export?format=xlsx")
+    assert resp.status_code == 200, resp.data
+    wb = load_workbook(BytesIO(resp.data))
+    assert {"보유종목", "관심종목", "거래내역"} <= set(wb.sheetnames)
+    # Positions sheet exists and has at least the header row.
+    assert wb["보유종목"].max_row >= 1
