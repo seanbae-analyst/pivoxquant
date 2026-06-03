@@ -471,50 +471,18 @@ def _thesis_checks(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if not entries:
         return []
 
-    try:
-        import ai_service  # type: ignore
-        svc_ = getattr(ai_service, "ai_service", None) or ai_service.AIService()
-        available = getattr(svc_, "available", False)
-    except Exception:
-        svc_, available = None, False
-
+    # AI thesis-validity check retired (2026-06-03 legal re-audit): orphaned
+    # `import ai_service` (services/ reorg → services.ai.service) always raised
+    # ModuleNotFoundError and fell back to the stored thesis_status. We surface
+    # that stored label directly — no AI-derived verdict. This also resolves
+    # the §101 ④ concern of an AI setting a "warning" verdict on a held
+    # position (see legal_question_queue Q-G1).
     out: list[dict[str, Any]] = []
     for e in entries[:10]:
-        verdict = e.get("status") or "pending"
-        note = e.get("reason") or ""
-        if available and e.get("thesis"):
-            try:
-                prompt = (
-                    "투자자가 기록한 thesis 문장 1개가 주어진다. "
-                    "해당 thesis가 '여전히 타당해 보이는지 / 주의 필요 / 근거 약함' "
-                    "중 하나로 판단하고, 중립적인 1-2문장 한국어로 근거를 서술하라.\n"
-                    "추천/매수/매도/조언 단어 사용 금지.\n\n"
-                    f"thesis: {e.get('thesis')}"
-                )
-                resp = svc_.client.messages.create(
-                    model=ai_service.MODEL,
-                    max_tokens=200,
-                    messages=[{"role": "user", "content": prompt}],
-                )
-                txt = "".join(
-                    getattr(b, "text", "") for b in (resp.content or [])
-                    if getattr(b, "type", "") == "text"
-                ).strip()
-                note = _safe_scrub(txt) or note
-                lower = txt.lower()
-                if any(k in lower for k in ("근거 약함", "invalid", "약함")):
-                    verdict = "warning"
-                elif any(k in lower for k in ("주의", "watch")):
-                    verdict = "warning"
-                else:
-                    verdict = verdict or "valid"
-            except Exception as exc:
-                logger.debug("thesis AI check failed for %s: %s",
-                             e.get("ticker"), exc)
         out.append({
             "ticker":  e["ticker"],
-            "verdict": verdict,
-            "note":    note,
+            "verdict": e.get("status") or "pending",
+            "note":    e.get("reason") or "",
         })
     return out
 
@@ -566,35 +534,11 @@ def _mdna(ctx_partial: dict[str, Any]) -> str:
     lines.append("본 서술은 사실 관찰이며 매매 권유가 아닙니다.")
     fallback = " ".join(lines)
 
-    try:
-        import ai_service  # type: ignore
-        svc_ = getattr(ai_service, "ai_service", None) or ai_service.AIService()
-        if not getattr(svc_, "available", False):
-            return _safe_scrub(fallback) or fallback
-
-        seg_str = ", ".join(f"{s['sector']}({s['pnl']:+.0f})" for s in segs[:5]) or "n/a"
-        prompt = (
-            "Self 10-K 형식의 'Management Discussion & Analysis' 섹션을 "
-            "2 문단(총 4-6문장, 한국어, 중립적 서술체)으로 작성하라. "
-            "추천/매수/매도/조언/목표가 단어 사용 금지.\n\n"
-            f"분기: {qlabel}\n"
-            f"분기 수익률(관찰): {_fmt_pct(qr)}\n"
-            f"순현금흐름(관찰): {cf}\n"
-            f"섹터 P/L 요약: {seg_str}\n"
-        )
-        resp = svc_.client.messages.create(
-            model=ai_service.MODEL,
-            max_tokens=500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = "".join(
-            getattr(b, "text", "") for b in (resp.content or [])
-            if getattr(b, "type", "") == "text"
-        ).strip()
-        return (_safe_scrub(text) or _safe_scrub(fallback) or fallback)[:1500]
-    except Exception as exc:
-        logger.debug("mdna AI failed: %s", exc)
-        return _safe_scrub(fallback) or fallback
+    # AI MD&A narrative retired (2026-06-03 legal re-audit): orphaned
+    # `import ai_service` (services/ reorg → services.ai.service) always raised
+    # ModuleNotFoundError and fell back. The deterministic, scrubbed fallback
+    # above is the actual product output.
+    return _safe_scrub(fallback) or fallback
 
 
 # ── service ──────────────────────────────────────────────────────────────────

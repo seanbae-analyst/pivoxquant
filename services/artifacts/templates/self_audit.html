@@ -71,7 +71,7 @@
           <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Audited trades{% else %}감사 대상 거래{% endif %}</div>
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Hit Rate{% else %}적중률{% endif %}</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Consistency{% else %}일치율{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.kpi_winrate | default('—') }}</div>
           <div class="pq-pdf-kpi-delta">{% if locale == 'en' %}Realised basis{% else %}실현 거래 기준{% endif %}</div>
         </div>

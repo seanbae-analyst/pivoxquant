@@ -2,7 +2,7 @@
 
 **SoT**: 자율 운영 시스템 외부 액션 + 변호사 큐 + 메모리 carry-over 통합 매트릭스.
 **갱신 정책**: 매일 06:27 morning-briefing이 prepend 형태로 노출. 항목 변경 시 PR로 갱신.
-**최근 갱신**: 2026-06-01 09:52 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 6건 / SHIP-AT-RISK 11건 / POST-LAUNCH 15건 / 변호사 큐 21건)
+**최근 갱신**: 2026-06-02 07:39 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 6건 / SHIP-AT-RISK 11건 / POST-LAUNCH 15건 / 변호사 큐 21건)
 
 상태 코드: BLOCKED(외부 대기) / IN_PROGRESS / PENDING(미착수) / RESOLVED
 
@@ -18,6 +18,7 @@
 | R4 | Stripe 유료결제 활성화 (require_business_registration 게이트) | billing | CEO | R3 + R1 후 | R3 신고 완료 + R1 Q-S3 (§101 ②월구독 충돌) 사인 | BLOCKED |
 | R5 | terms-ko.md "변호사 검토 대기 중" 표기 제거 | legal | CEO | R1 후 | 변호사 사인 후 표기 제거 | BLOCKED |
 | R6 | privacy-ko.md "변호사 검토 대기 중" 표기 제거 | legal | CEO | R1 후 | 변호사 사인 후 표기 제거 | BLOCKED |
+| R7 | KIS 시세 재배포 라이선스 갭 — `kis_market_adapter.py`가 KIS Open API로 임의 KR 종목/지수 시세를 받아 전 유저 대시보드(/market)·PDF·시그널에 표출(fetcher "KR: KIS primary"). KIS 앱키 ≠ 상업 재배포 권한, KRX/KOSCOM 정보이용계약 필요(비제도권 핀테크 제휴 불가). 유료결제 활성화 시 상업 재배포 성립 | legal/data | CEO+변호사+엔지니어 | R1/R4 전 | (택1) FMP 상위플랜 업그레이드(⚠️실측 2026-06-03 현 Premium $29는 KR 미서빙·US만, KR fallback 배선도 없음) / 또는 금융위 공공데이터 T+1로 전환(무료·재배포OK but 실시간 아님) / 또는 KOSCOM 시세라이선스 체결(fintechdata@koscom.co.kr, 적격성 OPEN) / 또는 prod `KIS_USE_REAL=0`+KR 라우팅 제거(KR 실시간 시세 전면 중단). KIS는 본인계좌(표면1) 격리. **무료 드롭인 대체 없음** — 비용/품질/리스크 trade-off. Q-KIS1~4 변호사 사인 | BLOCKED |
 
 **출처**:
 - R1: `legal_question_queue.md:9-148` (21건 누적, 2026-05-28 Q-S4 추가)
@@ -43,6 +44,8 @@
 | A9 | Anthropic 크레딧 0 → 챗봇 LLM OFF, FAQ 즉답만 작동 | infra | CEO | 미정 | 크레딧 충전 시 `SUPPORT_CHAT_LLM_ENABLED=1` 전환. 미충전 시 FAQ 검색만 (0원 운영) | PENDING |
 | A10 | VAPID env 미설정 (push 알림 OFF) | env | CEO | 미정 | Vercel env VAPID 키쌍 입력 | PENDING |
 | A11 | 변호사 미팅 자료 준비 (사업자등록증 PDF, terms/privacy, regulatory 자료, Q-S1 KISA 가이드) | legal | CEO | R1 전 | 자료 패킷 완성 → 변호사 컨택 (`session_2026-05-18-v45.md` 컨택 가이드 488줄 + 첨부 4 PDF 완성) | IN_PROGRESS |
+| A12 | `dd_checklist_email.html` 면책 §6 verbatim + §101 footer 미포함 (`_disclaimer.html` include 없음, 단문 1줄만) | legal | CEO+변호사 | R1/Q-S1 후 | 변호사 사인 후 `_disclaimer.html` include 전환 또는 §6+§101 문구 수동 추가 (코드 주석 NEEDS_CONFIG.md §11) | BLOCKED |
+| A13 | `brag_card_email.html` 인라인 면책에 §101 "미신고 면제 트랙" footer 누락 + `_disclaimer.html` 동기화 단절 | legal | CEO | R1/Q-S1 후 | §101 footer 문구 수동 추가 또는 `_disclaimer.html` include 전환 (이메일 CSS 호환 확인) | PENDING |
 
 **출처**:
 - A1: `project_email_infra.md:28` "ImprovMX 수신(MX 레코드 + alias) 미설정"
@@ -56,6 +59,7 @@
 - A9: `session_2026-05-26.md:41` "Anthropic 크레딧 충전 시 SUPPORT_CHAT_LLM_ENABLED=1"
 - A10: `MEMORY.md` v49.1/.2 "VAPID env 근본수정" + `session_2026-05-22-v49.md:24` "VAPID env 미설정(CEO Vercel)"
 - A11: `legal_question_queue.md:171-183` CEO 액션 + `MEMORY.md` v45 컨택 가이드
+- A12/A13: `docs/qa/legal-advisory-audit-2026-06-03.md` §2 M2 (compliance-gatekeeper 면책 매트릭스 — 23 템플릿 중 2건만 §6/§101 누락, 나머지 21건 완비)
 
 ---
 

@@ -450,13 +450,17 @@ def _position_sensitivity(shares: float, current_price: Optional[float],
     return round(move, 2), round(-move, 2)
 
 
-_FORBIDDEN_PHRASES = ("buy", "sell", "추천", "매수 시점", "매도 시점",
-                      "recommend", "advice", "조언")
-
-
 def _is_compliant_question(q: str) -> bool:
-    low = q.lower()
-    return not any(p in low for p in _FORBIDDEN_PHRASES)
+    """True when the question carries no canonical forbidden directive term.
+
+    Uses the single source of truth (``services.legal.forbidden_terms``)
+    instead of a local 8-token mirror that had drifted from the canonical
+    50+ set (2026-06-03 legal audit H4). ``contains_forbidden_term`` is
+    case-insensitive + substring-based, covering English ("buy"/"sell"/
+    "recommend") and the full Korean directive vocabulary.
+    """
+    from services.legal.forbidden_terms import contains_forbidden_term
+    return contains_forbidden_term(q) is None
 
 
 def _parse_numbered_questions(text: str) -> list[str]:
@@ -502,12 +506,14 @@ def _call_claude_for_questions(ticker: str, fiscal_period: str,
 
     news_block = "\n".join(f"- {s}" for s in news_snippets[:5]) or "- (no recent news)"
     prompt = (
-        f"당신은 월스트리트 시니어 애널리스트. {ticker} {fiscal_period} 실적 발표 전 "
-        f"투자자가 주목할 질문 5개 작성.\n"
+        f"당신은 공개 공시·실적 데이터를 중립적으로 요약하는 정보 도구입니다. "
+        f"투자 조언이나 추천을 제공하지 않습니다.\n"
+        f"{ticker} {fiscal_period} 실적 발표와 관련해 투자자가 공시·컨퍼런스콜에서 "
+        f"확인할 수 있는 관찰 항목 5개를 작성하세요.\n"
         f"최근 뉴스:\n{news_block}\n"
-        f"전분기 주요 이슈: 마진 트렌드, 가이던스 톤, 자본 배분.\n\n"
-        f"형식: 번호 매김 5개. 각 질문은 1문장, 20-30자. "
-        f"'매수/매도 시점', '추천' 같은 표현 금지."
+        f"참고 맥락: 마진 트렌드, 가이던스 톤, 자본 배분.\n\n"
+        f"형식: 번호 매김 5개. 각 항목은 1문장, 20-30자. "
+        f"'매수/매도 시점', '추천', '조언' 같은 표현 금지."
     )
 
     def _one_shot() -> list[str]:
@@ -1144,7 +1150,7 @@ class EarningsPreBriefService:
                 "case":           "Bull Case",
                 "case_detail":    "Beat consensus EPS",
                 "trigger":        "EPS > 컨센서스 · 가이던스 상향",
-                "action":         "본인 룰 기준 시점 — 사전 정의된 한도와 시나리오 재확인 권장",
+                "action":         "본인 룰 기준 — 사전 정의한 한도·시나리오 대조 시점",
                 "pos_delta":      beat_str,
                 "pos_delta_tone": "pos" if beat is not None else "",
                 "stop":           "—",
@@ -1153,7 +1159,7 @@ class EarningsPreBriefService:
                 "case":           "Base Case",
                 "case_detail":    "In-line",
                 "trigger":        "EPS ≈ 컨센서스 · 가이던스 ≥ 컨센서스",
-                "action":         "본인 룰 기준 시점 — 컨퍼런스콜 후 가정 재검토 권장",
+                "action":         "본인 룰 기준 — 컨퍼런스콜 후 가정 대조 시점",
                 "pos_delta":      "$0",
                 "pos_delta_tone": "",
                 "stop":           "—",
@@ -1162,7 +1168,7 @@ class EarningsPreBriefService:
                 "case":           "Bear Case",
                 "case_detail":    "Miss or weak guide",
                 "trigger":        "EPS < 컨센서스 OR 가이던스 < 컨센서스",
-                "action":         "본인 룰 기준 시점 — 리스크 한도 재확인 권장",
+                "action":         "본인 룰 기준 — 리스크 한도 대조 시점",
                 "pos_delta":      miss_str,
                 "pos_delta_tone": "neg" if miss is not None else "",
                 "stop":           "—",
@@ -1195,7 +1201,7 @@ class EarningsPreBriefService:
         matches the colophon's neutral-line policy (Wave 6)."""
         ds = data.get("data_sources") or []
         if not ds:
-            return "FMP · Alpaca · SEC EDGAR"
+            return "FMP · SEC EDGAR"
         parts: list[str] = []
         for d in ds:
             if not isinstance(d, dict):
@@ -1203,7 +1209,7 @@ class EarningsPreBriefService:
             label = d.get("source") or d.get("note") or d.get("description")
             if label:
                 parts.append(str(label))
-        return " · ".join(parts) if parts else "FMP · Alpaca · SEC EDGAR"
+        return " · ".join(parts) if parts else "FMP · SEC EDGAR"
 
     def render_email_html(self, data: dict[str, Any],
                            pdf_url: Optional[str] = None) -> str:

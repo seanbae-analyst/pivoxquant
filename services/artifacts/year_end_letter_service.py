@@ -420,55 +420,13 @@ def _shareholder_letter(ctx_partial: dict[str, Any]) -> str:
     lines.append("본 서한은 판단이 아닌 기록이며, 모든 결정의 주체는 귀하 본인입니다.")
     fallback = " ".join(lines)
 
-    # Try Haiku
-    try:
-        import ai_service  # type: ignore
-        svc_ = getattr(ai_service, "ai_service", None) or ai_service.AIService()
-        if not getattr(svc_, "available", False):
-            return _safe_scrub(fallback) or fallback
-
-        best_lines = "; ".join(
-            f"{b['ticker']} {_fmt_pct(b.get('return_pct'))}" for b in best[:3]
-        ) or "n/a"
-        worst_lines = "; ".join(
-            f"{w['ticker']} {_fmt_pct(w.get('return_pct'))}" for w in worst[:3]
-        ) or "n/a"
-        prompt = (
-            "아래는 한 투자자의 **본인 연간 거래 기록**이다. "
-            "Warren Buffett 의 주주 서한 톤(겸손·장기·절제)으로 2 문단(총 5-7문장, "
-            "한국어)의 '연말 자기 거래 회고 서한' 을 작성하라.\n"
-            "\n"
-            "**자본시장법 §101 회피 규칙 (2026-04-29 강화)**\n"
-            "- 시장 전망/의견/예측 금지. 거시 경제·섹터·종목에 대한 견해 일절 금지.\n"
-            "- 시장 데이터는 **객관 통계 수치**만 사실로 인용 (예: 'S&P 500 YTD +12%').\n"
-            "  벤치마크 대비 비교는 **숫자 대조까지만**, 그 의미 해석 금지.\n"
-            "- 사용자 본인 거래 기록만 회고. **본인이 거래한 종목 외 다른 종목 언급 금지**.\n"
-            "- 추천/매수/매도/조언/목표가/예측/전망/유망/주목 같은 단어 금지.\n"
-            "- '귀하' 또는 '당신'으로 독자를 지칭.\n"
-            "- 수치는 %만 인용 (금액 언급 금지).\n"
-            "- 본인의 실수와 교훈을 정직하게 서술 (blame 없이, 다만 자기 결정 한정).\n"
-            "\n"
-            f"연도: {year}\n"
-            f"본인 YTD: {_fmt_pct(ytd)} / 시장 벤치마크 통계: {_fmt_pct(bench)}\n"
-            f"본인 베스트 거래: {best_lines}\n"
-            f"본인 워스트 거래: {worst_lines}\n"
-        )
-        resp = svc_.client.messages.create(
-            model=ai_service.MODEL,
-            max_tokens=600,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = "".join(
-            getattr(b, "text", "") for b in (resp.content or [])
-            if getattr(b, "type", "") == "text"
-        ).strip()
-        scrubbed = _safe_scrub(text) or text
-        if not scrubbed:
-            return _safe_scrub(fallback) or fallback
-        return scrubbed[:1500]
-    except Exception as exc:
-        logger.debug("year-end letter AI failed: %s", exc)
-        return _safe_scrub(fallback) or fallback
+    # AI shareholder-letter retired (2026-06-03 legal re-audit): orphaned
+    # `import ai_service` (services/ reorg → services.ai.service) always raised
+    # ModuleNotFoundError and fell back. The deterministic, scrubbed fallback
+    # above is the actual product output. Reviving AI narrative here is also
+    # off the v55 strategy (away from AI prose / efficacy framing) — treat as a
+    # deliberate post-launch feature with credits + a compliance pass.
+    return _safe_scrub(fallback) or fallback
 
 
 # ── service ──────────────────────────────────────────────────────────────────

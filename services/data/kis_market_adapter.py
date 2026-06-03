@@ -1,9 +1,19 @@
 """PivoxQuant — KIS Market Data adapter (KR OHLCV via public app key).
 
-Legal data source replacement for pyKRX's ``get_market_ohlcv`` scraper.
-KIS (Korea Investment & Securities) is a licensed broker whose Open API
-serves official KRX-derived price data under a commercial ToS we already
-accept as part of the `KIS_APP_KEY` registration.
+⚠️ LEGAL STATUS (2026-06-03 audit — CORRECTION; do not rely on the old claim).
+This was introduced as a "legal replacement for pyKRX". That premise is WRONG.
+A KIS ``KIS_APP_KEY`` registration does NOT grant the right to REDISTRIBUTE
+KRX-derived market data to third parties (our users). KIS serves KRX/KOSCOM
+market data; third-party display/redistribution requires a SEPARATE KOSCOM
+시세 license + KRX 정보이용계약 — which non-제도권 fintechs generally cannot
+obtain (KIS Developers provider-info + KOSCOM open-api docs, 2026-06-03).
+Using this adapter as the KR market-data feed shown to users (the current
+``fetcher.py`` "KR: KIS primary" routing) is a redistribution-license gap and
+a SHIP-BLOCKER before paid launch (SHIP_BLOCKERS R7). It is the SAME landmine
+that got pyKRX banned, reached through a different door — NOT a legal fix.
+Until a vendor/lawyer sign-off lands (legal_question_queue Q-KIS1~4), scope KIS
+to surface-1 only (the user's OWN account balance, read-only) and source KR
+market quotes from a licensed vendor (FMP Commercial) or 금융위 공공데이터 (T+1).
 
 Why a separate file (not added to kis_service.py):
   The engineering rules forbid modifying ``kis_service.py``. This adapter

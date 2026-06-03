@@ -572,60 +572,11 @@ def _top_risks_narrative(defense_result: dict[str, Any],
                 "관찰되지 않았습니다. 본 문서는 정보 제공 목적의 관찰 "
                 "체크리스트이며 매매 판단을 포함하지 않습니다.")
 
-    # Haiku narrative (optional)
-    try:
-        import ai_service  # type: ignore
-        svc_ = getattr(ai_service, "ai_service", None) or ai_service.AIService()
-        if not getattr(svc_, "available", False):
-            return safe_scrub(fallback, context="risk_board.fallback") or fallback
-        seed_lines = []
-        if vix is not None:
-            seed_lines.append(f"- VIX current: {vix:.1f}")
-        if sector_top:
-            seed_lines.append(
-                f"- Top sector weight: {sector_top['sector']} "
-                f"{sector_top['weight_pct']:.1f}%"
-            )
-        for c in ces[:3]:
-            seed_lines.append(
-                f"- CES contributor: {c['ticker']} "
-                f"{c.get('sector','')} es={c['es_contrib']}"
-            )
-        for w in warnings_[:3]:
-            seed_lines.append(f"- Layer warning: {w}")
-        seed = "\n".join(seed_lines) or "- (관찰 지표 없음)"
-        prompt = (
-            "다음은 한 투자자 포트폴리오의 리스크 관찰 지표다. "
-            "이 지표들을 바탕으로 상위 3가지 '관찰 포인트'를 한국어 1 문단 "
-            "(3-4문장)으로 중립적으로 서술하라.\n"
-            "금지 단어: 추천, 조언, 매수, 매도, 비중 축소, 손절, 익절, "
-            "buy, sell, recommend, advice, reduce. 대신 '관찰 지표', "
-            "'체크리스트', '모니터링'을 사용하라.\n\n"
-            f"{seed}"
-        )
-        resp = svc_.client.messages.create(
-            model=ai_service.MODEL,
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = "".join(
-            getattr(b, "text", "") for b in (resp.content or [])
-            if getattr(b, "type", "") == "text"
-        ).strip()
-        # Authoritative scrub first — services.legal_filter.safe_scrub owns the
-        # lookbehind-guarded replacements (89 patterns) and does NOT corrupt
-        # quant terms like 과매수/과매도/매수세 (the previous home-rolled
-        # IGNORECASE banned-list mangled 과매수 → 과진입 관찰). It covers
-        # 매수신호/매도신호/손절/익절/take profit/stop loss/recommend/advice/
-        # 조언 드립니다 etc.
-        text = safe_scrub(text, context="risk_board.ai") or ""
-        text = _board_supplemental_scrub(text)
-        if not text:
-            return safe_scrub(fallback, context="risk_board.empty") or fallback
-        return text[:600]
-    except Exception as exc:
-        logger.debug("risk board narrative AI failed: %s", exc)
-        return safe_scrub(fallback, context="risk_board.err") or fallback
+    # AI narrative retired (2026-06-03 legal re-audit): orphaned
+    # `import ai_service` (services/ reorg moved it to services.ai.service)
+    # always raised ModuleNotFoundError and fell back. The deterministic,
+    # scrubbed fallback above is the actual product output.
+    return safe_scrub(fallback, context="risk_board.fallback") or fallback
 
 
 # ── service ──────────────────────────────────────────────────────────────────

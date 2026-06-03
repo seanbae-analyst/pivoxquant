@@ -98,7 +98,7 @@
           {% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Hit Rate · MTD{% else %}적중률 · 월누적{% endif %}</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Consistency · MTD{% else %}일치율 · 월누적{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.hit_rate | default('—') }}</div>
           {% if v3.hit_rate_detail %}
           <div class="pq-pdf-kpi-delta">{{ v3.hit_rate_detail }}</div>

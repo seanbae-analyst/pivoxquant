@@ -242,7 +242,7 @@
           {% if v3.mirror_24m.delta %}<div class="pq-pdf-kpi-delta pos">{{ v3.mirror_24m.delta }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Hit Rate{% else %}적중률{% endif %}</div>
+          <div class="pq-pdf-kpi-lbl">{% if locale == 'en' %}Consistency{% else %}일치율{% endif %}</div>
           <div class="pq-pdf-kpi-val">{{ v3.win_rate.value | default('—') }}</div>
           {% if v3.win_rate.detail %}<div class="pq-pdf-kpi-delta">{{ v3.win_rate.detail }}</div>{% endif %}
         </div>

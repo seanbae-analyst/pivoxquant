@@ -303,56 +303,19 @@ def _pattern_summary(scored: list[dict[str, Any]],
     wr_str = f"{win_rate:.0f}%" if win_rate is not None else "—"
     ar_str = f"{avg_ret:+.1f}%" if avg_ret is not None else "—"
     fallback = (
-        f"분기 내 총 {len(scored)}건의 매수 결정 중 승률 {wr_str}, "
+        f"분기 내 총 {len(scored)}건의 거래 결정 중 승률 {wr_str}, "
         f"평균 수익률 {ar_str}가 관찰되었습니다. "
         f"가장 자주 거래된 종목은 {most_traded} 였으며, "
         f"반복 매매 패턴이 기록되었습니다."
     )
 
-    # Try Haiku
-    try:
-        import ai_service  # type: ignore
-        svc_ = getattr(ai_service, "ai_service", None) or ai_service.AIService()
-        if not getattr(svc_, "available", False):
-            return fallback if is_compliant(fallback) else fallback[:500]
-        # Compact the scored list for the prompt to stay within 3K tokens.
-        sample = scored[:15]
-        lines = []
-        for s in sample:
-            ret = s.get("return_pct")
-            ret_str = f"{ret:+.1f}%" if ret is not None else "n/a"
-            lines.append(
-                f"- {s['ticker']} bought {s['buy_date']} @ {s['buy_price']} "
-                f"outcome={s['outcome']} return={ret_str}"
-            )
-        ctx = "\n".join(lines)
-        prompt = (
-            "아래는 한 투자자가 최근 한 분기에 실행한 매수 결정과 결과다. "
-            "반복 패턴(집중 거래 종목, 승률 분포, 평균 수익/손실)을 중립적으로 "
-            "1 문단(3-4문장, 한국어)으로 요약하라.\n"
-            "절대 '추천' / '매수' / '매도' / '조언' 같은 단어를 쓰지 말 것.\n"
-            "데이터는 사실만 서술하고, 판단이나 조언은 금지.\n\n"
-            f"{ctx}"
-        )
-        resp = svc_.client.messages.create(
-            model=ai_service.MODEL,
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = "".join(
-            getattr(b, "text", "") for b in (resp.content or [])
-            if getattr(b, "type", "") == "text"
-        ).strip()
-        # Defensive scrub via the authoritative legal filter (surgical
-        # lookbehind-guarded replacements; does NOT corrupt quant terms like
-        # 과매수/매수세, and covers 익절/손절/take profit/stop loss + 89 patterns).
-        text = safe_scrub(text, context="self_audit") or ""
-        if not text or not is_compliant(text):
-            return fallback
-        return text[:500]
-    except Exception as exc:
-        logger.debug("self-audit pattern AI failed: %s", exc)
-        return fallback
+    # AI pattern-summary retired (2026-06-03 legal re-audit): this was an
+    # orphaned `import ai_service` (the module moved to services.ai.service in
+    # the services/ reorg) that always raised ModuleNotFoundError and fell
+    # back. The deterministic, is_compliant-safe fallback above is the actual
+    # product output. To revive AI here, fix the import + route output through
+    # safe_scrub + a hard-reject gate, and run a compliance pass first.
+    return fallback
 
 
 # ── service ──────────────────────────────────────────────────────────────────

@@ -184,7 +184,6 @@ class DDChecklistService:
         sentence when Claude Haiku is unavailable. Routed through legal_filter.
         """
         n = len(pending)
-        tickers = ", ".join((p.get("ticker") or "—") for p in pending[:5])
         days_max = max((p.get("days_since") or 0 for p in pending), default=0)
 
         fallback = (
@@ -196,41 +195,11 @@ class DDChecklistService:
             "지점입니다. 결정의 주체는 귀하 본인입니다."
         )
 
-        try:
-            import ai_service  # type: ignore
-            svc_ = getattr(ai_service, "ai_service", None) or ai_service.AIService()
-            if not getattr(svc_, "available", False):
-                return safe_scrub(fallback, context="dd_checklist") or fallback
-            prompt = (
-                "아래는 한 투자자가 매수한 지 3일 이상 지난 본인 포지션 목록이다. "
-                "Warren Buffett 의 주주 서한 톤(겸손·장기·절제)으로 1 문단(3-4 문장, "
-                "한국어)의 '체크리스트 자기 점검 권유 글' 을 작성하라.\n"
-                "\n"
-                "**자본시장법 §6 / §101 회피 규칙**\n"
-                "- 시장 전망/의견/예측 금지. 종목에 대한 견해 일절 금지.\n"
-                "- 사용자 본인 매수 기록만 회고. 다른 종목 언급 금지.\n"
-                "- 추천/매수/매도/조언/목표가/예측/유망/주목 같은 단어 금지.\n"
-                "- '귀하' 또는 '당신'으로 독자를 지칭.\n"
-                "- 5가지 질문 (재무/해자/경영진/밸류에이션/리스크) 자체에 대한 답은 하지 말 것 — "
-                "  사용자가 직접 답하도록 권유만.\n"
-                "\n"
-                f"점검 대상 포지션: {tickers}\n"
-                f"포지션 수: {n}, 가장 오래된 매수 후 일수: {days_max}\n"
-            )
-            resp = svc_.client.messages.create(
-                model=ai_service.MODEL,
-                max_tokens=400,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            text = "".join(
-                getattr(b, "text", "") for b in (resp.content or [])
-                if getattr(b, "type", "") == "text"
-            ).strip()
-            scrubbed = safe_scrub(text, context="dd_checklist") or text
-            return (scrubbed[:1200] if scrubbed else fallback) or fallback
-        except Exception as exc:
-            logger.debug("dd_checklist AI reflection failed: %s", exc)
-            return safe_scrub(fallback, context="dd_checklist") or fallback
+        # AI reflection retired (2026-06-03 legal re-audit): orphaned
+        # `import ai_service` (services/ reorg → services.ai.service) always
+        # raised ModuleNotFoundError and fell back. The deterministic,
+        # scrubbed fallback above is the actual product output.
+        return safe_scrub(fallback, context="dd_checklist") or fallback
 
     def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
         """Map run_for_user(...) onto the v3 2-page Pro design shape.
