@@ -37,7 +37,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight, FileText } from "lucide-react";
-import { useT } from "@/lib/locale";
+import { useT, useLocale } from "@/lib/locale";
 
 const MarketTicker = dynamic(
   () => import("./market-ticker").then((m) => m.MarketTicker),
@@ -58,6 +58,7 @@ const MarketTicker = dynamic(
 
 export function Hero() {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <section
       aria-labelledby="pq-hero-heading"
@@ -104,9 +105,13 @@ export function Hero() {
             className="pq-hero-h1 mb-9 font-serif font-normal"
           >
             {t("landing.hero.h1Part1")}{" "}
+            {/* Korean has no real Playfair italic → browser synthesizes a
+                slanted fallback that clashes with the upright first half
+                ("폰트 개별로"). v3 bans synthetic italic, so for ko we keep the
+                bronze accent but drop the slant; en keeps true Playfair italic. */}
             <em
               className="pq-cfo-word"
-              style={{ fontStyle: "italic" }}
+              style={{ fontStyle: locale === "ko" ? "normal" : "italic" }}
             >
               {t("landing.hero.h1Italic")}
             </em>
