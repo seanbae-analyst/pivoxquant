@@ -2098,11 +2098,11 @@ def _capital_gain_rows(user_id):
     return lots, summary
 
 
-def _csv_export_response(user_id, dataset, now):
-    """Query the user's own ``dataset`` rows and return a CSV download Response.
+def _query_dataset_rows(user_id, dataset):
+    """Query the user's own rows for one export dataset → ``(rows, disclaimer)``.
 
-    Scope is STRICTLY ``user_id == current_user.id`` — identical isolation
-    rule to the JSON export. No user-id parameter is ever accepted.
+    Self-only scope (``user_id == current_user.id``). Shared by the CSV and the
+    XLSX export paths so both stay in lock-step on what each dataset contains.
     """
     disclaimer = None
     if dataset == "trades":
@@ -2149,7 +2149,89 @@ def _csv_export_response(user_id, dataset, now):
             .limit(_EXPORT_PULSE_LIMIT)
             .all()
         )
+    return rows, disclaimer
 
+
+# Friendly per-sheet titles for the multi-sheet .xlsx workbook. Excel caps a
+# sheet title at 31 chars and forbids []:*?/\ — all of these are safe.
+_XLSX_SHEET_TITLES = {
+    "trades": "거래내역",
+    "positions": "보유종목",
+    "watchlist": "관심종목",
+    "capital_gains": "양도손익(상세)",
+    "capital_gains_summary": "양도손익(연간)",
+    "journal": "매매일지",
+    "pulse": "주간펄스",
+}
+
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _xlsx_cell(value):
+    """formula-injection guard + Decimal→float so openpyxl stores a number."""
+    from decimal import Decimal
+
+    v = _safe_cell(value)
+    if isinstance(v, Decimal):
+        return float(v)
+    return v
+
+
+def _build_xlsx(user_id, datasets):
+    """Build a multi-sheet ``.xlsx`` workbook (one sheet per dataset) of the
+    user's own data. Returns raw bytes.
+
+    Reuses the exact CSV column specs (``_CSV_SPECS``) + the same
+    formula-injection guard (``_safe_cell``) so the Excel file carries the same
+    raw-fact columns as the CSV — no live price, no computed metric, no advice.
+    openpyxl is imported lazily (already a dependency for broker-statement
+    import) so a non-xlsx request never pays for it. An empty dataset still
+    emits its header row (honest empty sheet, never fabricated rows).
+    """
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    wb.remove(wb.active)  # drop the default empty sheet
+    for dataset in datasets:
+        header, row_fn = _CSV_SPECS[dataset]
+        rows, disclaimer = _query_dataset_rows(user_id, dataset)
+        ws = wb.create_sheet(title=_XLSX_SHEET_TITLES.get(dataset, dataset)[:31])
+        if disclaimer:
+            ws.append([_xlsx_cell("# " + disclaimer)])
+        ws.append([_xlsx_cell(h) for h in header])
+        for r in rows:
+            ws.append([_xlsx_cell(c) for c in row_fn(r)])
+    bio = io.BytesIO()
+    wb.save(bio)
+    return bio.getvalue()
+
+
+def _xlsx_export_response(user_id, datasets, now):
+    """Build the multi-sheet workbook and return it as an .xlsx download.
+
+    Same self-only scope + no-store cache headers as the CSV path.
+    """
+    body = _build_xlsx(user_id, datasets)
+    filename = f"pivoxquant-export-{now.strftime('%Y%m%d')}.xlsx"
+    response = Response(body, mimetype=_XLSX_MIME)
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+    # Personal data — never let an intermediate cache retain it.
+    response.headers["Cache-Control"] = (
+        "no-store, no-cache, must-revalidate, private"
+    )
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+def _csv_export_response(user_id, dataset, now):
+    """Query the user's own ``dataset`` rows and return a CSV download Response.
+
+    Scope is STRICTLY ``user_id == current_user.id`` — identical isolation
+    rule to the JSON export. No user-id parameter is ever accepted.
+    """
+    rows, disclaimer = _query_dataset_rows(user_id, dataset)
     body = _build_csv(dataset, rows, disclaimer=disclaimer)
     filename = f"pivoxquant-{dataset}-{now.strftime('%Y%m%d')}.csv"
     response = Response(body, mimetype="text/csv; charset=utf-8")
@@ -2241,6 +2323,35 @@ def export_profile():
             return api_error(
                 en="Failed to compile CSV export. Please try again.",
                 kr="CSV 내보내기 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+                code="PROFILE_EXPORT_FAILED", status=500,
+            )
+
+    # ── XLSX branch — multi-sheet Excel workbook of the raw-fact datasets ──
+    # No ``dataset`` param → every dataset becomes its own sheet in one .xlsx.
+    # An optional ``?dataset=`` narrows to a single sheet. Same self-only scope
+    # + same raw-fact columns as CSV (no live price / metric / advice).
+    if export_format in ("xlsx", "excel"):
+        ds_param = (request.args.get("dataset") or "").strip().lower()
+        if ds_param and ds_param not in _CSV_DATASETS:
+            return api_error(
+                en="Invalid Excel dataset. Use one of: " + ", ".join(_CSV_DATASETS),
+                kr=(
+                    "잘못된 엑셀 데이터셋입니다. "
+                    + " / ".join(_CSV_DATASETS)
+                    + " 중 하나를 선택하세요."
+                ),
+                code="PROFILE_EXPORT_BAD_DATASET", status=400,
+            )
+        datasets = [ds_param] if ds_param else list(_CSV_DATASETS)
+        try:
+            return _xlsx_export_response(current_user.id, datasets, now)
+        except Exception:
+            logger.exception(
+                "profile.export_profile XLSX failed (user_id=%s)", current_user.id,
+            )
+            return api_error(
+                en="Failed to compile Excel export. Please try again.",
+                kr="엑셀 내보내기 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.",
                 code="PROFILE_EXPORT_FAILED", status=500,
             )
 

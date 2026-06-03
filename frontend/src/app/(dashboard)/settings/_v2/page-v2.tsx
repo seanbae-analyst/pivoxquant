@@ -396,6 +396,34 @@ export default function SettingsPageV2() {
     [t],
   );
 
+  const handleExportXlsx = React.useCallback(async () => {
+    try {
+      // Multi-sheet Excel workbook — a binary attachment, so bypass apiFetch
+      // and stream the blob straight to a download (same pattern as CSV).
+      const res = await fetch(API.profile.exportXlsx(), {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error(`XLSX export failed: ${res.status}`);
+      }
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename =
+        match?.[1] ??
+        `pivoxquant-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("settingsV2.toast.exportReady"));
+    } catch {
+      toast.error(t("settingsV2.toast.exportFail"));
+    }
+  }, [t]);
+
   /* ── Auth gate ── */
   React.useEffect(() => {
     if (!authLoading && !user) {
@@ -891,6 +919,7 @@ export default function SettingsPageV2() {
             <PrivacyCardV2
               onRequestExport={handleRequestExport}
               onExportCsv={handleExportCsv}
+              onExportXlsx={handleExportXlsx}
               onSignOut={handleSignOut}
               signingOut={signingOut}
             />

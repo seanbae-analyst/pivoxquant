@@ -211,6 +211,23 @@ export const API = {
         | "journal"
         | "pulse",
     ) => `/api/profile/export?format=csv&dataset=${dataset}`,
+    //   - `exportXlsx` → ALL tabular datasets as ONE multi-sheet .xlsx
+    //                    workbook (one sheet per dataset), or a single dataset
+    //                    when one is passed. Same raw-fact columns as CSV;
+    //                    opens directly in Excel / Numbers / Google Sheets.
+    exportXlsx: (
+      dataset?:
+        | "trades"
+        | "positions"
+        | "watchlist"
+        | "capital_gains"
+        | "capital_gains_summary"
+        | "journal"
+        | "pulse",
+    ) =>
+      dataset
+        ? `/api/profile/export?format=xlsx&dataset=${dataset}`
+        : `/api/profile/export?format=xlsx`,
     // Email opt-out preferences (정통망법 §50). Backend: PATCH
     // routes/profile.py::patch_email_preferences. Body accepts either
     // or both of `email_opt_out` (global) and `email_opt_out_earnings`

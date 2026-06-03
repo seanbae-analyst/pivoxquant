@@ -291,6 +291,8 @@ interface Props {
   onRequestExport?: () => void;
   /** Download a single dataset as CSV (raw stored fields, instant). */
   onExportCsv?: (dataset: CsvDataset) => void;
+  /** Download ALL datasets as one multi-sheet .xlsx workbook. */
+  onExportXlsx?: () => void;
   onSignOut?: () => void;
   signingOut?: boolean;
   /** Mailto for account deletion — defaults to PivoxQuant support address. */
@@ -301,6 +303,7 @@ export function PrivacyCardV2({
   lastExport,
   onRequestExport,
   onExportCsv,
+  onExportXlsx,
   onSignOut,
   signingOut,
   deleteAccountMailto = "mailto:support@pivoxquant.com?subject=Account%20Deletion%20Request",
@@ -664,6 +667,21 @@ export function PrivacyCardV2({
                   {label} ↓
                 </button>
               ))}
+            </div>
+
+            {/* E2b-xlsx — one click downloads every table as ONE multi-sheet
+                .xlsx workbook (보유종목 / 거래내역 / 매매일지 / 주간펄스 …). Same
+                raw-fact columns as the CSVs; nothing computed beyond the tax
+                sheets. */}
+            <div style={{ marginTop: 16 }}>
+              <button
+                type="button"
+                onClick={() => onExportXlsx?.()}
+                className="font-mono uppercase"
+                style={CSV_BUTTON_STYLE}
+              >
+                전체 데이터 · Excel (.xlsx) ↓
+              </button>
             </div>
 
             {/* E2c — 해외주식 양도소득세 (참고용 추정). Computed from your own
