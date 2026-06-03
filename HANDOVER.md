@@ -1,6 +1,26 @@
-# PivoxQuant — 인수인계서 (2026-06-03 v56 — 출시 하드닝: FX·FIFO·crypto·privacy)
+# PivoxQuant — 인수인계서 (2026-06-04 v56.1 — 출시 하드닝 + Stripe OFF, prod 배포)
 
-## v56 2026-06-03 — 자율 버그헌팅 + legal 전수 + 미커밋 WIP 마감 (✅ 로컬커밋 3, 미푸시)
+## v56.1 2026-06-04 — push + prod 배포 (2회) + Stripe 전면 비활성화 (✅ 완료)
+
+> CEO "푸시해라"·"stripe 비활성화 모든 부분에서(무료출시)" → **2회 prod 배포 전부
+> health green**. 1차 `bcddc73a`(overnight: crypto/behavior/privacy). 2차
+> `bbf4b073`(Stripe 마스터 kill-switch + nav flake fix). 각 pre-push 가드 5단계 green.
+>
+> - **Stripe 전면 OFF**(삭제 아닌 게이트, Stage1 부활 보존): `STRIPE_ENABLED` 마스터
+>   플래그 + `billing_bp.before_request` 가 결제/상태변경 라우트 전부 503(기존
+>   비게이트 **webhook 포함**). read-only `/subscription` + 공개 `/availability`
+>   EXEMPT(무료유저 본인 tier 조회 + off-state 표시). CSP stripe 도메인 제거. **prod
+>   검증**: `/api/billing/availability` → `available:false`. 이미 OFF였던 것:
+>   pricing 307 redirect · checkout/portal 503 · 업셀 진입점 숨김 · d7 메일 게이트.
+> - **nav_snapshot KST-morning flake fix**(test-only): record_today_snapshot 가 UTC
+>   date, 테스트는 local date.today() → KST 00–09시 매일 충돌 fail. UTC 통일. full
+>   suite 3791 green 복구. **prod equity curve 무영향**(이미 UTC 일관, 과거행 무손상).
+> - 검증: pytest 3791/0fail · tsc 0 · vitest 541 · billing 81.
+> - **출시 실게이트 = 외부 변호사뿐**(약관 v2 §13 등록번호 + 처리방침 게시). 코드 GO.
+
+---
+
+## v56 2026-06-03 — 자율 버그헌팅 + legal 전수 + 미커밋 WIP 마감 (✅ 로컬커밋 3 → push·배포됨)
 
 > **결론**: CEO "자율모드 버그헌팅+구조+출시 미완성 100%+legal 싹다" 취침 위임.
 > **빌드 100% green 실측**: 백엔드 **pytest 3791 passed / 0 fail** (608s) + 프론트
