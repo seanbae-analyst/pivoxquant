@@ -121,11 +121,17 @@ def test_history_returns_recorded_snapshots(
 ):
     """Pre-recorded real snapshots ARE returned as the curve."""
     add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=100.0)
+    # Seed the historical rows by the SAME day the recorder keys on —
+    # ``record_today_snapshot`` uses ``datetime.now(timezone.utc).date()``. The
+    # read-path records today's NAV live on every load (1500 here), so using a
+    # local ``date.today()`` basis here let "yesterday" collide with the
+    # recorder's UTC "today" during the KST 00:00–09:00 window (local date is a
+    # day ahead of UTC) and get overwritten by the live upsert. UTC throughout
+    # keeps the seeded history strictly before the recorder's today.
+    utc_today = datetime.now(timezone.utc).date()
+    d2, d1 = utc_today - timedelta(days=2), utc_today - timedelta(days=1)
     with app.app_context():
-        for d, v in (
-            (date.today() - timedelta(days=2), 1000.0),
-            (date.today() - timedelta(days=1), 1100.0),
-        ):
+        for d, v in ((d2, 1000.0), (d1, 1100.0)):
             db.session.add(PortfolioNavSnapshot(
                 user_id=auth_user["id"], as_of_date=d,
                 nav_total_usd=v, nav_us_usd=v, nav_kr_krw=0, fx_rate=1300,
@@ -140,5 +146,5 @@ def test_history_returns_recorded_snapshots(
     assert resp.status_code == 200
     data = resp.get_json()["data"]
     dvals = {pt["date"]: pt["value"] for pt in data}
-    assert dvals[(date.today() - timedelta(days=2)).isoformat()] == 1000.0
-    assert dvals[(date.today() - timedelta(days=1)).isoformat()] == 1100.0
+    assert dvals[d2.isoformat()] == 1000.0
+    assert dvals[d1.isoformat()] == 1100.0
