@@ -1,4 +1,45 @@
-# PivoxQuant — 인수인계서 (2026-05-30 v55 — Research 2R + 정직한 컨셉 재포지셔닝)
+# PivoxQuant — 인수인계서 (2026-06-03 v56 — 출시 하드닝: FX·FIFO·crypto·privacy)
+
+## v56 2026-06-03 — 자율 버그헌팅 + legal 전수 + 미커밋 WIP 마감 (✅ 로컬커밋 3, 미푸시)
+
+> **결론**: CEO "자율모드 버그헌팅+구조+출시 미완성 100%+legal 싹다" 취침 위임.
+> **빌드 100% green 실측**: 백엔드 **pytest 3791 passed / 0 fail** (608s) + 프론트
+> **tsc 0 / vitest 541**. 4 agent 병렬 헌팅(WIP correctness / crypto 보안 / FX 일관성 /
+> legal-kr-fintech) → 모든 finding 을 lead 가 코드 실측 재검증(추측·forward 금지).
+> **로컬 커밋 3건**(`319cdbca` crypto / `a97c517e` behavior / `555e2bbc` chore),
+> **미푸시**(feedback_push_workflow 🟥 — CEO 명시 push 지시 없었음). 0원.
+>
+> **출시 = 무료(Stage 0) code-side GO** (legal-kr-fintech 판정): §101 면제 4요건
+> 충족 / R7 KIS 마케팅카피 게이트 clean(금지표현 0) / 금지어 유저표면 0. **진짜
+> 남은 게이트 = 외부 변호사뿐**: 약관 v2 §13 유사투자자문 등록번호 공란 + 처리방침
+> v2 게시 검토(핀테크 상담소 무료 1.5h). **코드가 막는 출시 BLOCKER 없음.**
+>
+> ### 처리 (미커밋 WIP = "미완성 부분" 검증+마감 + 헌팅 발견 fix)
+> - **미커밋 WIP 커밋**: 행동거울 correctness — FIFO 동일타임스탬프 결정성 +
+>   같은날 동일종목 2매수 collision 으로 open-share 누락 fix / concentration FX
+>   정규화 / persona-benchmark sub-score strip / 5거울 DOM 렌더 테스트(옛
+>   "16/18 render test 누락" carry-over 해소). bug-hunter 적대검증 → WIP clean.
+> - **FX-consistency Pattern 7 쌍둥이 fix**: concentration_mirror 가 고친 raw
+>   cross-currency `shares*avg_cost` 합산 버그가 `scorer._position_sizing_subscore`
+>   에도 동일 존재(group_benchmark 코호트 median 으로 전파). 공유 헬퍼
+>   `fx_service.cost_basis_krw()` 신설 → 둘 다 경유(영구 drift 차단). scorer 는
+>   DEPRECATED지만 group_benchmark 가 live 호출 → 실수정.
+> - **crypto 데이터안전**: keyring 복호화 실패 시 silent `""`(→다음 write 시 원문
+>   영구 덮어쓰기) 를 키버전부재(operator env-drift)=fail-loud / 변조=blank 로 분리.
+>   latent(아직 v2 키 없음)지만 첫 로테이션 전 차단.
+> - **privacy 게이트**: persona-benchmark API sub-score 5개 strip(점수화폐기+§3) +
+>   common_mistakes count 재식별 floor `max(2, n//10)`(소규모 베타 코호트 PIPA §23).
+> - +회귀테스트 6건. 상세 메모리 `session_2026-06-03-overnight.md`.
+>
+> ### ⚠️ CEO 액션 (코드 아님)
+> 1. **push 결정**: 위 3커밋 검토 후 `git push origin feat/data-storage-trust`(또는
+>    main FF 병합). 검증 끝남(3791/541/tsc0). 미푸시 사유 = 명시 push 지시 부재.
+> 2. **출시 실게이트 = 외부 변호사**: 약관 v2 §13 등록번호 + 처리방침 v2(핀테크상담소).
+>    이거 풀리면 베타게이트(Vercel 307) 내리고 무료 출시 가능.
+> 3. legal carry-over(BLOCKER 아님): insider-mirror "매수/매도 공시"→"취득" 관찰어화
+>    (LOW 허용) / comparison_to_all 미렌더 필드(향후 렌더 시 §3 재검수).
+
+---
 
 ## v55 2026-05-30 — Research 2라운드(행동심리+행동재무) + 정직한 컨셉 재포지셔닝
 
