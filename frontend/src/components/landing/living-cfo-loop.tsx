@@ -131,8 +131,8 @@ export function LivingCfoLoop() {
             color: "rgba(245, 240, 232, 0.65)",
           }}
         >
-          처음 만난 CFO와 2년 뒤 CFO는 다르다. 매주 한 번, 조용히 당신을
-          다시 배운다.
+          처음의 당신과 2년 뒤의 당신은 다르다. 매주 한 번, 조용히 당신의
+          거래를 다시 관측한다.
         </motion.p>
 
         <motion.ol

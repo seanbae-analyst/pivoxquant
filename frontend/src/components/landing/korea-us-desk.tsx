@@ -80,7 +80,7 @@ export function KoreaUsDesk() {
             className="font-serif text-pq-mono-sm uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
-            Korea × US · A CFO That Doesn&rsquo;t Sleep
+            Korea × US · A Desk That Doesn&rsquo;t Sleep
           </span>
         </motion.div>
 
@@ -115,8 +115,8 @@ export function KoreaUsDesk() {
           }}
         >
           Seoul session ends, New York opens. New York closes, Seoul warms up.
-          Your CFO briefs you at both ends of the day — 한국 시간과 뉴욕 시간을
-          잇는 연속 브리핑.
+          Both of your markets, observed at each end of the day — 한국 시간과
+          뉴욕 시간을 잇는 연속 관측.
         </motion.p>
 
         {/* Timeline */}

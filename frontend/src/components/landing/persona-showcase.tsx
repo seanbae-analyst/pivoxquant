@@ -64,8 +64,8 @@ const PERSONAS: readonly Persona[] = [
   },
   {
     key: "beginner",
-    en: "Beginner CFO",
-    kr: "입문 CFO",
+    en: "Beginner",
+    kr: "입문형",
     identity: "First year. Learning the ropes.",
     ko: "처음 내 돈을 굴려본다.",
     hue: "bronze",
@@ -115,7 +115,7 @@ export function PersonaShowcase() {
             fontWeight: 500,
           }}
         >
-          A CFO that speaks
+          A mirror that speaks
           <br />
           your investor language.
         </motion.h2>

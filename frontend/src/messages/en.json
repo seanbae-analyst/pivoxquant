@@ -86,11 +86,11 @@
       "subtitle": "58 quant models, 7-layer risk defense, AI portfolio analysis. Unified US & Korean equity management.",
       "cta": "Start for Free",
       "learnMore": "Learn More",
-      "eyebrow": "PivoxQuant · Living CFO",
-      "h1Part1": "Your CFO",
-      "h1Italic": "learns you.",
-      "description": "Twice each morning. Seven gates before entry. One page every Sunday. Twenty onboarding questions place you in one of several investor archetypes — every artifact is then rewritten in that persona's vocabulary. Observational data only, not a directive to act.",
-      "ctaPrimary": "Meet your CFO",
+      "eyebrow": "PivoxQuant · A mirror before you trade",
+      "h1Part1": "We don't promise",
+      "h1Italic": "to make you rich.",
+      "description": "The data is clear: high-turnover trading shaves your returns every year — about 7 percentage points versus low turnover. PivoxQuant mirrors your own trading pattern back to you and makes you pause once, right before you hit buy or sell. No scoring, no recommendations. Observational data only, not a directive to act.",
+      "ctaPrimary": "See my mirror",
       "ctaSecondary": "See a sample",
       "disclaimer": "Not investment advice. Informational research only. Past performance does not guarantee future results."
     },
@@ -100,22 +100,22 @@
     },
     "personas": {
       "eyebrow": "Investor Personas · Selected shown",
-      "heading": "A CFO that speaks\nyour investor language.",
+      "heading": "A mirror that speaks\nyour investor language.",
       "description": "Twenty onboarding questions classify you into one of several investor archetypes. When drift is detected, the persona recalibrates automatically.",
       "sampleReport": "Sample report",
       "alsoAvailable": "Also available: Income and more. The desk reshapes every artifact around the persona you test into.",
-      "viewAll": "View all CFO Personas"
+      "viewAll": "View all Investor Personas"
     },
     "topNav": {
-      "brandTagline": "· Living CFO",
+      "brandTagline": "· Living Mirror",
       "loginLink": "Log in",
       "goToDesk": "Go to desk",
-      "meetCfo": "Meet your CFO",
+      "meetCfo": "See my mirror",
       "openDesk": "Open desk",
       "openMenu": "Open menu",
       "groups": {
         "livingCfo": {
-          "label": "Living CFO",
+          "label": "Living Mirror",
           "footnote": "The architecture of your personal research desk."
         },
         "personas": {
@@ -645,7 +645,7 @@
       }
     },
     "v2": {
-      "eyebrow": "Archive · CFO",
+      "eyebrow": "Archive · Mirror",
       "latestHeading": "Just out.",
       "footNote": "PivoxQuant · Archive · Volume IV · Not investment advice"
     }
@@ -1126,7 +1126,7 @@
     },
     "sectionC": {
       "eyebrow": "C · Notifications · Channels × Events",
-      "heading": "When the CFO",
+      "heading": "When PivoxQuant",
       "headingItalic": "should reach you."
     },
     "push": {

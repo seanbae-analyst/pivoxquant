@@ -55,8 +55,8 @@ const FOUR: readonly PreviewPersona[] = [
   },
   {
     code: "BE",
-    en: "Beginner CFO",
-    kr: "입문 CFO",
+    en: "Beginner",
+    kr: "입문형",
     tagline: "First year. Learning the ropes.",
     italic: "처음 내 돈을 굴려본다.",
     sampleHref: "/sample-reports/weekly-memo",

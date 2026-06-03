@@ -204,7 +204,7 @@ export function ThreeLayers() {
         >
           Three layers.
           <br />
-          One learning CFO.
+          One mirror.
         </motion.h2>
 
         <motion.p

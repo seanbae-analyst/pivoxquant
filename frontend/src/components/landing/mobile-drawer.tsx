@@ -277,7 +277,7 @@ export default function MobileDrawer({
                   fontWeight: 500,
                 }}
               >
-                Meet your CFO
+                See my mirror
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>

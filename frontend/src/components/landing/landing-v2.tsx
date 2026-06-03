@@ -119,16 +119,16 @@ const TIERS: readonly TierSlim[] = [
 
 const FAQ_ITEMS = [
   {
-    q: "Is a personal CFO the same as investment advisory?",
+    q: "Is this 'pre-trade mirror' the same as investment advisory?",
     a: "No. 자본시장법 제6조상 개인 투자자문업과 무관합니다. PivoxQuant는 당신 자신의 포트폴리오를 관측하고 기록하는 informational research tool입니다. 모든 artifact는 관측치 (concentration, drawdown, factor tilts, earnings posture)이며 매수/매도 지시가 아닙니다. Labels are POSITIVE / NEGATIVE / NEUTRAL — never buy, sell, or hold. 결정은 전적으로 당신의 몫입니다.",
   },
   {
-    q: "How is my trade data used — what does the CFO “learn”?",
+    q: "How is my trade data used — what does the mirror “observe”?",
     a: "당신의 온보딩 20문항과 포트폴리오 이력을 바탕으로 Layer 1 Identity를 구성합니다. Layer 2 Learning은 롤링 윈도우로 drift를 감지해 페르소나를 재조정하고, Layer 3 Artifact는 그 결과로 당신에게 맞는 리포트를 발행합니다. 원본 거래 데이터는 암호화 저장되며 광고·외부 판매에 사용되지 않습니다. 탈퇴 시 30일 내 완전 삭제됩니다.",
   },
   {
     q: "How does my persona change over time?",
-    a: "Drift detection이 매주 동작합니다. 최근 90일의 거래·반응 패턴이 현재 페르소나와 유의미하게 달라지면 CFO가 “당신이 다르게 움직이기 시작했다”는 Pulse 리포트를 발행합니다. 재분류는 자동이 아니라 제안입니다 — 수락해야 다음 사이클부터 새 페르소나 기준으로 리포트가 나옵니다.",
+    a: "Drift detection이 매주 동작합니다. 최근 90일의 거래·반응 패턴이 현재 페르소나와 유의미하게 달라지면 거울이 “당신이 다르게 움직이기 시작했다”는 Pulse 리포트를 발행합니다. 재분류는 자동이 아니라 제안입니다 — 수락해야 다음 사이클부터 새 페르소나 기준으로 리포트가 나옵니다.",
   },
   {
     q: "What happens after I subscribe?",
@@ -608,10 +608,10 @@ function SiteFooter() {
 
           {[
             {
-              title: "Living CFO",
+              title: "Living Mirror",
               links: [
                 { label: "3-Layer Architecture", href: "/features/engine#three-layers" },
-                { label: "Living CFO Loop", href: "/features/engine#loop" },
+                { label: "Living Mirror Loop", href: "/features/engine#loop" },
                 { label: "40-Model Engine", href: "/features/engine" },
                 { label: "Feature Explorer", href: "/features/explorer" },
               ],
@@ -619,7 +619,7 @@ function SiteFooter() {
             {
               title: "Personas",
               links: [
-                { label: "CFO Personas", href: "/features/personas" },
+                { label: "Investor Personas", href: "/features/personas" },
                 { label: "Sample Reports", href: "/features/reports" },
                 { label: "Dashboard Preview", href: "/features/dashboard" },
               ],

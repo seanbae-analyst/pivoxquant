@@ -208,9 +208,9 @@ export default function ReportsGallery() {
               marginBottom: 24,
             }}
           >
-            17 artifacts
+            Every artifact
             <br />
-            your CFO publishes.
+            from your own data.
           </h2>
           <p
             className="font-serif"

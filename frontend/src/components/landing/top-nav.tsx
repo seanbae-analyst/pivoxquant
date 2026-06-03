@@ -68,7 +68,7 @@ export type NavGroup = {
 export const NAV_GROUPS: readonly NavGroup[] = [
   {
     key: "living-cfo",
-    label: "Living CFO",
+    label: "Living Mirror",
     footnote: "The architecture of your personal research desk.",
     items: [
       {
@@ -78,7 +78,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         icon: Layers,
       },
       {
-        label: "Living CFO Loop",
+        label: "Living Mirror Loop",
         href: "/features/engine#loop",
         description: "The six-step cycle from onboarding to self-audit.",
         icon: CircuitBoard,
@@ -92,7 +92,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       {
         label: "Feature Explorer",
         href: "/features/explorer",
-        description: "All 17 research artifacts, opened one at a time.",
+        description: "All your research artifacts, opened one at a time.",
         icon: Compass,
       },
     ],
@@ -103,7 +103,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     footnote: "Investor identities. One desk that speaks them all.",
     items: [
       {
-        label: "CFO Personas",
+        label: "Investor Personas",
         href: "/features/personas",
         description: "Growth, Value, Balanced, Income, Quant, and more.",
         icon: Users,
@@ -397,7 +397,7 @@ export default function TopNav() {
                   letterSpacing: "0.08em",
                 }}
               >
-                · Living CFO
+                · Living Mirror
               </span>
             </Link>
 

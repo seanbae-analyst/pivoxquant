@@ -227,11 +227,11 @@
       "subtitle": "58개 퀀트 모델, 7-레이어 리스크 방어, AI 포트폴리오 분석. 미국·한국 주식 통합 관리.",
       "cta": "무료로 시작하기",
       "learnMore": "자세히 보기",
-      "eyebrow": "PivoxQuant · Living CFO",
-      "h1Part1": "당신의 CFO가",
-      "h1Italic": "당신을 배웁니다.",
-      "description": "매일 아침 두 번. 진입 전 일곱 관문. 일요일마다 한 페이지. 온보딩 20문항이 당신을 투자자 유형 중 하나로 분류하면, 모든 artifact가 그 페르소나의 어휘로 다시 쓰입니다. 관측 자료이며 매수·매도 권유가 아닙니다.",
-      "ctaPrimary": "CFO 만나기",
+      "eyebrow": "PivoxQuant · 거래 전 거울",
+      "h1Part1": "부자로 만들어 준다고",
+      "h1Italic": "약속하지 않습니다.",
+      "description": "고회전 매매가 매년 당신 수익을 깎는다는 건 데이터로 분명합니다 — 저회전 대비 연 7%p. PivoxQuant는 당신의 거래 패턴을 거울처럼 보여주고, 매수·매도 직전 한 번 멈춰 세웁니다. 채점도 추천도 없이. 관측 자료이며 투자 권유가 아닙니다.",
+      "ctaPrimary": "내 거울 보기",
       "ctaSecondary": "샘플 보기",
       "disclaimer": "투자 권유 아님. 정보 제공 전용 리서치. 과거 실적은 미래 수익을 보장하지 않습니다."
     },
@@ -241,22 +241,22 @@
     },
     "personas": {
       "eyebrow": "투자자 유형 · 일부 표시",
-      "heading": "당신의 투자자 언어로\n말하는 CFO.",
+      "heading": "당신의 투자자 언어로\n말하는 거울.",
       "description": "온보딩 20문항이 당신을 투자자 유형 중 하나로 분류합니다. Drift가 감지되면 페르소나는 자동으로 재조정됩니다.",
       "sampleReport": "샘플 리포트",
       "alsoAvailable": "Income, Quant 유형도 포함됩니다. 데스크는 당신이 선택한 유형에 맞게 모든 artifact를 재구성합니다.",
-      "viewAll": "CFO 유형 전체 보기"
+      "viewAll": "투자자 유형 전체 보기"
     },
     "topNav": {
-      "brandTagline": "· Living CFO",
+      "brandTagline": "· Living Mirror",
       "loginLink": "로그인",
       "goToDesk": "데스크로",
-      "meetCfo": "CFO 만나기",
+      "meetCfo": "내 거울 보기",
       "openDesk": "데스크 열기",
       "openMenu": "메뉴 열기",
       "groups": {
         "livingCfo": {
-          "label": "Living CFO",
+          "label": "Living Mirror",
           "footnote": "나만의 리서치 데스크 구조."
         },
         "personas": {
@@ -645,7 +645,7 @@
       }
     },
     "v2": {
-      "eyebrow": "아카이브 · CFO",
+      "eyebrow": "아카이브 · 거울",
       "latestHeading": "방금 도착.",
       "footNote": "PivoxQuant · 아카이브 · Volume IV · 투자 조언 아님"
     }
@@ -1126,7 +1126,7 @@
     },
     "sectionC": {
       "eyebrow": "C · 알림 · 채널 × 이벤트",
-      "heading": "CFO가",
+      "heading": "PivoxQuant가",
       "headingItalic": "연락할 시점."
     },
     "push": {
