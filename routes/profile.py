@@ -2178,13 +2178,24 @@ _XLSX_CELL_MAXLEN = 32767
 
 
 def _xlsx_cell(value):
-    """formula-injection guard + Decimal→float + strip openpyxl-illegal chars
-    + cap length, so no single user cell can crash workbook generation."""
+    """formula-injection guard + Decimal→float + non-finite guard + strip
+    openpyxl-illegal chars + cap length, so no single user/computed cell can
+    crash workbook generation or produce an Excel-invalid number."""
+    import math
     from decimal import Decimal
 
     v = _safe_cell(value)
     if isinstance(v, Decimal):
-        return float(v)
+        # Decimal('Infinity')/('NaN') are valid Decimals but become non-finite
+        # floats; fall through to the isfinite guard below.
+        try:
+            v = float(v)
+        except (ValueError, OverflowError):
+            return None
+    if isinstance(v, float) and not math.isfinite(v):
+        # NaN / ±Inf are not valid spreadsheet numbers (well-formed XML but
+        # Excel rejects them). Blank the cell rather than emit a bad workbook.
+        return None
     if isinstance(v, str):
         v = _XLSX_ILLEGAL_RE.sub("", v)
         if len(v) > _XLSX_CELL_MAXLEN:

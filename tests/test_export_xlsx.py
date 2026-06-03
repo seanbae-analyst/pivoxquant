@@ -175,6 +175,38 @@ def test_xlsx_one_failing_dataset_does_not_kill_workbook(
     assert "양도손익(상세)" in wb.sheetnames
 
 
+def test_xlsx_cell_guards_every_hazard():
+    """Unit-level: _xlsx_cell neutralises every cell-level hazard so no single
+    value (user-supplied or computed) can crash workbook generation."""
+    from decimal import Decimal
+
+    from routes.profile import _xlsx_cell
+
+    # formula injection → prefixed with '
+    assert _xlsx_cell("=SUM(A1)") == "'=SUM(A1)"
+    assert _xlsx_cell("+1") == "'+1"
+    assert _xlsx_cell("-5") == "'-5"
+    assert _xlsx_cell("@x") == "'@x"
+    # XML-illegal control chars stripped; surrounding text kept
+    assert _xlsx_cell("a\x00\x07b") == "ab"
+    assert _xlsx_cell("\x01\x02\x03") == ""          # all stripped → empty, no crash
+    # tab/newline/CR are allowed
+    assert _xlsx_cell("a\tb\nc\rd") == "a\tb\nc\rd"
+    # length cap at Excel's per-cell maximum
+    assert len(_xlsx_cell("x" * 50000)) == 32767
+    # NaN / ±Inf / Decimal non-finite → None (never an Excel-invalid number)
+    assert _xlsx_cell(float("nan")) is None
+    assert _xlsx_cell(float("inf")) is None
+    assert _xlsx_cell(float("-inf")) is None
+    assert _xlsx_cell(Decimal("Infinity")) is None
+    assert _xlsx_cell(Decimal("NaN")) is None
+    # normal values pass through untouched
+    assert _xlsx_cell("삼성전자 😬 中文") == "삼성전자 😬 中文"
+    assert _xlsx_cell(Decimal("123.45")) == 123.45
+    assert _xlsx_cell(42) == 42
+    assert _xlsx_cell(None) is None
+
+
 def test_xlsx_empty_user_still_valid_workbook(app, client, auth_user):
     """A user with zero data gets a valid workbook — every sheet present with
     just its header row (honest empty, never fabricated)."""
