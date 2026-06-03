@@ -151,9 +151,11 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.kakaocdn.net https://k.kakaocdn.net https://t1.kakaocdn.net",
               "font-src 'self' data: https://cdn.jsdelivr.net",
               "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
-              // Stripe checkout iframe (billing currently gated, but keep the
-              // static CSP from blocking it once activated — mirrors middleware).
-              "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
+              // Stripe checkout iframe domains removed at Stage 0 (무료 출시 —
+              // billing fully gated, no Stripe.js loads). Re-add
+              // https://js.stripe.com + https://hooks.stripe.com here AND in
+              // middleware.ts connect/frame-src to revive paid checkout (Stage 1).
+              "frame-src 'self'",
               "frame-ancestors 'none'",
               "object-src 'none'",
               "base-uri 'self'",

@@ -65,6 +65,23 @@ def _business_registration_complete() -> bool:
     )
 
 
+def _stripe_enabled() -> bool:
+    """Master Stripe/billing kill-switch — 무료 출시(Stage 0) = OFF.
+
+    무료 출시 동안 결제는 전면 비활성(DECISIONS: 삭제 아닌 게이트). 명시적
+    ``STRIPE_ENABLED=0`` 은 사업자등록이 설정돼 있어도 결제를 강제 OFF 시키는
+    절대 kill-switch. 미설정 시 기존 사업자등록 게이트를 따르므로 Stage 1
+    (등록 완료) 부활이 코드 변경 없이 되고, 등록 env 를 세팅하는 기존 결제
+    테스트/픽스처도 그대로 유효하다.
+    """
+    raw = os.environ.get("STRIPE_ENABLED", "").strip().lower()
+    if raw in ("0", "false", "no", "off"):
+        return False
+    if raw in ("1", "true", "yes", "on"):
+        return True
+    return _business_registration_complete()
+
+
 def _registration_pending_response():
     return jsonify({
         "error": "Subscription not yet available",
@@ -81,6 +98,30 @@ def require_business_registration(f):
             return _registration_pending_response()
         return f(*args, **kwargs)
     return wrapper
+
+
+# Stage 0 master gate: every payment-initiating / state-mutating billing route
+# returns 503 unless Stripe is enabled. Closes the webhook path too (it mutates
+# subscription_tier on signed events). Two read-only surfaces stay EXEMPT — a
+# free user must still read their own subscription status, and the public
+# pricing page polls availability to render the "off" state (both pinned by
+# tests/test_billing_gate.py: test_subscription_read_not_blocked + the
+# availability tests). checkout/portal keep @require_business_registration too.
+_BILLING_GATE_EXEMPT = frozenset({
+    "billing.get_subscription",      # read-only status — free users need it
+    "billing.billing_availability",  # public off-state probe
+})
+
+
+@billing_bp.before_request
+def _gate_billing_when_stripe_off():
+    if request.method == "OPTIONS":  # never 503 a CORS preflight
+        return None
+    if request.endpoint in _BILLING_GATE_EXEMPT:
+        return None
+    if not _stripe_enabled():
+        return _registration_pending_response()
+    return None
 
 
 def _get_or_create_customer(user):
@@ -1042,7 +1083,7 @@ def billing_availability():
     No auth required — the pricing page is publicly visible and needs to know
     whether to show the "Coming soon" state before the user logs in.
     """
-    available = _business_registration_complete()
+    available = _stripe_enabled()
     payload = {
         "available": available,
         "code": None if available else "BUSINESS_REGISTRATION_PENDING",

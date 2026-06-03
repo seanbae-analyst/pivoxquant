@@ -171,8 +171,8 @@ export async function middleware(request: NextRequest) {
 
   const isDev = process.env.NODE_ENV === "development";
   const connectSrc = isDev
-    ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app https://cdn.jsdelivr.net https://api.stripe.com https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com"
-    : "'self' https://*.railway.app https://cdn.jsdelivr.net https://api.stripe.com https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com";
+    ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app https://cdn.jsdelivr.net https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com"
+    : "'self' https://*.railway.app https://cdn.jsdelivr.net https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com";
 
   // Dev keeps 'unsafe-eval' + 'unsafe-inline' for React Fast Refresh / HMR
   // (webpack injects literal `eval(…)` and inline `<script>` runtime patches
@@ -190,7 +190,7 @@ export async function middleware(request: NextRequest) {
     media-src 'self';
     connect-src ${connectSrc};
     worker-src 'self';
-    frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
+    frame-src 'self';
     frame-ancestors 'none';
     base-uri 'self';
     form-action 'self';
