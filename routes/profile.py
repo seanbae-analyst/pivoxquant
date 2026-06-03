@@ -2203,6 +2203,105 @@ def _xlsx_cell(value):
     return v
 
 
+# Byte-identical to routes.behavior._TURNOVER_MIRROR_DISCLAIMER so every
+# behaviour mirror reads with one legal voice (자본시장법 §49 — 사실 관찰, not
+# advice). test_export_xlsx asserts the two never drift.
+_ACTIVITY_MIRROR_DISCLAIMER = (
+    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 아닙니다."
+)
+
+
+def _activity_gross(mirror, code):
+    """Pull one currency's gross traded value out of a turnover-mirror dict."""
+    for row in (mirror.get("by_currency") or []):
+        if (row.get("currency") or "").upper() == code:
+            return row.get("gross_value")
+    return None
+
+
+def _build_activity_summary_sheet(wb, user_id):
+    """Prepend an observational 'Activity' summary sheet built from the SAME
+    vetted computation the in-app turnover mirror uses
+    (services.behavior.turnover_mirror, surfaced at routes/behavior.py).
+
+    Facts ONLY — BUY/SELL fill counts + per-currency gross traded value +
+    hold-day median/mean, for all-history vs the last 30 days. There is
+    deliberately NO turnover ratio, NO score/grade/label, and NO efficacy
+    statistic (Barber&Odean / KCMI 회전율) — that juxtaposition would be an
+    implicit "과잉거래" verdict (자본시장법 §49 advice + 표시광고법 efficacy
+    risk), which the product intentionally avoids (DECISIONS.md AI 점수화 폐기;
+    v55 research: non-judgmental beats judgmental). Best-effort: any failure
+    leaves the workbook's data sheets untouched.
+    """
+    try:
+        from models import TradeHistory
+        from services.behavior.turnover_mirror import compute_turnover_mirror
+
+        trades = TradeHistory.query.filter_by(user_id=user_id).all()
+        m_all = compute_turnover_mirror(trades, period_days=None)
+        m_30 = compute_turnover_mirror(trades, period_days=30)
+
+        ws = wb.create_sheet(title="활동 요약", index=0)
+
+        def _v(mirror, key):
+            """Numeric fact, or '—' when the window lacks enough fills."""
+            if not mirror.get("sufficient_data"):
+                return "—"
+            val = mirror.get(key)
+            return val if val is not None else "—"
+
+        ws.append([_xlsx_cell("활동 요약 · Activity Mirror")])
+        ws.append([_xlsx_cell(_ACTIVITY_MIRROR_DISCLAIMER)])
+        ws.append([])
+        ws.append([_xlsx_cell(x) for x in ("구분", "전체 기록", "최근 30일")])
+        rows = [
+            ("매수 체결 (건)", "buy_count"),
+            ("매도 체결 (건)", "sell_count"),
+            ("총 체결 (건)", "trade_count"),
+        ]
+        for label, key in rows:
+            ws.append([_xlsx_cell(label), _xlsx_cell(_v(m_all, key)), _xlsx_cell(_v(m_30, key))])
+        # Per-currency gross traded value (KRW / USD reported separately —
+        # never FX-merged, matching the mirror module).
+        for label, code in (("거래대금 합계 (KRW)", "KRW"), ("거래대금 합계 (USD)", "USD")):
+            a = _activity_gross(m_all, code) if m_all.get("sufficient_data") else None
+            b = _activity_gross(m_30, code) if m_30.get("sufficient_data") else None
+            ws.append([
+                _xlsx_cell(label),
+                _xlsx_cell(a if a is not None else "—"),
+                _xlsx_cell(b if b is not None else "—"),
+            ])
+        for label, key in (("보유기간 중앙값 (일)", "median_hold_days"),
+                           ("보유기간 평균 (일)", "mean_hold_days")):
+            ws.append([_xlsx_cell(label), _xlsx_cell(_v(m_all, key)), _xlsx_cell(_v(m_30, key))])
+
+        if not m_all.get("sufficient_data"):
+            ws.append([])
+            ws.append([_xlsx_cell("거래가 더 쌓이면 숫자가 표시됩니다.")])
+
+        # Light formatting: bold title + the 구분 header row + label column.
+        try:
+            from openpyxl.styles import Font
+            bold = Font(bold=True)
+            ws.cell(1, 1).font = Font(bold=True, size=13)
+            for c in range(1, 4):
+                ws.cell(4, c).font = bold
+            for r in range(5, ws.max_row + 1):
+                ws.cell(r, 1).font = bold
+            ws.column_dimensions["A"].width = 22
+            ws.column_dimensions["B"].width = 16
+            ws.column_dimensions["C"].width = 16
+            for r in range(5, ws.max_row + 1):
+                for c in (2, 3):
+                    cell = ws.cell(r, c)
+                    if isinstance(cell.value, (int, float)):
+                        cell.number_format = "#,##0.##"
+        except Exception:
+            logger.exception("activity summary styling failed (non-fatal)")
+    except Exception:
+        logger.exception("activity summary sheet failed (non-fatal) user_id=%s", user_id)
+
+
 def _style_xlsx_sheet(ws, dataset, header, header_row):
     """Visual polish on a finished sheet: bold header, thousands-separator
     number format on numeric cells, estimated column widths, a frozen header,
@@ -2250,9 +2349,10 @@ def _style_xlsx_sheet(ws, dataset, header, header_row):
         logger.exception("xlsx styling failed for %s (non-fatal)", dataset)
 
 
-def _build_xlsx(user_id, datasets):
+def _build_xlsx(user_id, datasets, include_summary=False):
     """Build a multi-sheet ``.xlsx`` workbook (one sheet per dataset) of the
-    user's own data. Returns raw bytes.
+    user's own data. Returns raw bytes. ``include_summary`` prepends the
+    observational activity-mirror summary sheet (used for the full export only).
 
     Reuses the exact CSV column specs (``_CSV_SPECS``) + the same
     formula-injection guard (``_safe_cell``) so the Excel file carries the same
@@ -2294,17 +2394,19 @@ def _build_xlsx(user_id, datasets):
             ws.append(
                 [_xlsx_cell("# 이 표는 일시적으로 생성하지 못했습니다 — 다시 시도해 주세요.")]
             )
+    if include_summary:
+        _build_activity_summary_sheet(wb, user_id)
     bio = io.BytesIO()
     wb.save(bio)
     return bio.getvalue()
 
 
-def _xlsx_export_response(user_id, datasets, now):
+def _xlsx_export_response(user_id, datasets, now, include_summary=False):
     """Build the multi-sheet workbook and return it as an .xlsx download.
 
     Same self-only scope + no-store cache headers as the CSV path.
     """
-    body = _build_xlsx(user_id, datasets)
+    body = _build_xlsx(user_id, datasets, include_summary=include_summary)
     filename = f"pivoxquant-export-{now.strftime('%Y%m%d')}.xlsx"
     response = Response(body, mimetype=_XLSX_MIME)
     response.headers["Content-Disposition"] = (
@@ -2437,7 +2539,11 @@ def export_profile():
             )
         datasets = [ds_param] if ds_param else list(_CSV_DATASETS)
         try:
-            return _xlsx_export_response(current_user.id, datasets, now)
+            # Full export (no single dataset requested) leads with the
+            # observational activity-mirror summary sheet.
+            return _xlsx_export_response(
+                current_user.id, datasets, now, include_summary=not ds_param,
+            )
         except Exception:
             logger.exception(
                 "profile.export_profile XLSX failed (user_id=%s)", current_user.id,

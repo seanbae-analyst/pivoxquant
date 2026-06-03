@@ -17,7 +17,7 @@ from io import BytesIO
 from openpyxl import load_workbook
 
 from extensions import db
-from models import Position, Watchlist, WeeklyPulse
+from models import Position, Watchlist, WeeklyPulse, TradeHistory
 
 
 _XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -133,6 +133,80 @@ def test_xlsx_self_scope_only(app, client, auth_user, make_user):
 def test_xlsx_bad_dataset_400(client, auth_user):
     resp = client.get("/api/profile/export?format=xlsx&dataset=bogus")
     assert resp.status_code == 400, resp.data
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Activity-mirror summary sheet (the "big picture" first sheet)
+# ─────────────────────────────────────────────────────────────────────
+
+def test_activity_disclaimer_in_sync_with_behavior_route():
+    """The summary sheet's legal disclaimer must stay byte-identical to the
+    in-app turnover mirror's — one legal voice across every mirror surface."""
+    from routes.behavior import _TURNOVER_MIRROR_DISCLAIMER
+    from routes.profile import _ACTIVITY_MIRROR_DISCLAIMER
+
+    assert _ACTIVITY_MIRROR_DISCLAIMER == _TURNOVER_MIRROR_DISCLAIMER
+
+
+def _seed_trades(uid, n=10):
+    for i in range(n):
+        db.session.add(TradeHistory(
+            user_id=uid, ticker="AAPL",
+            action="BUY" if i % 2 == 0 else "SELL",
+            shares=1.0, price_per_share=100.0 + i, total_value=100.0 + i,
+            currency="USD",
+        ))
+    db.session.commit()
+
+
+def test_xlsx_full_export_leads_with_activity_summary(app, client, auth_user):
+    uid = auth_user["id"]
+    with app.app_context():
+        _seed_trades(uid, 10)
+
+    resp = client.get("/api/profile/export?format=xlsx")
+    assert resp.status_code == 200, resp.data
+    wb = load_workbook(BytesIO(resp.data))
+    # The summary leads the workbook.
+    assert wb.sheetnames[0] == "활동 요약", wb.sheetnames
+    blob = "\n".join(_all_cell_strings(wb))
+    # Observational disclaimer present; the fill counts are present.
+    assert "거래 권유가 아닙니다" in blob
+    assert "총 체결 (건)" in blob
+
+
+def test_xlsx_activity_summary_has_no_judgmental_framing(app, client, auth_user):
+    """Facts only — NO turnover ratio, NO efficacy stat, NO verdict/score.
+    This is the 자본시장법 §49 / 표시광고법 line the product deliberately holds."""
+    uid = auth_user["id"]
+    with app.app_context():
+        _seed_trades(uid, 10)
+
+    resp = client.get("/api/profile/export?format=xlsx")
+    blob = "\n".join(_all_cell_strings(load_workbook(BytesIO(resp.data))))
+    for banned in ("회전율", "과잉거래", "Barber", "점수", "등급", "추천", "조언"):
+        assert banned not in blob, f"judgmental framing leaked: {banned}"
+
+
+def test_xlsx_single_dataset_has_no_activity_summary(app, client, auth_user):
+    uid = auth_user["id"]
+    with app.app_context():
+        db.session.add(Position(user_id=uid, ticker="AAPL", shares=1, avg_cost=100.0))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export?format=xlsx&dataset=positions")
+    wb = load_workbook(BytesIO(resp.data))
+    assert "활동 요약" not in wb.sheetnames, wb.sheetnames
+
+
+def test_xlsx_activity_summary_insufficient_data_no_crash(app, client, auth_user):
+    """A user below the fill threshold still gets the summary sheet — values
+    show as '—', never a crash, never fabricated numbers."""
+    resp = client.get("/api/profile/export?format=xlsx")
+    assert resp.status_code == 200, resp.data
+    wb = load_workbook(BytesIO(resp.data))
+    assert wb.sheetnames[0] == "활동 요약"
+    assert "—" in "\n".join(_all_cell_strings(wb))
 
 
 def test_xlsx_control_chars_dont_crash(app, client, auth_user):
