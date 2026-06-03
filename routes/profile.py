@@ -2203,6 +2203,53 @@ def _xlsx_cell(value):
     return v
 
 
+def _style_xlsx_sheet(ws, dataset, header, header_row):
+    """Visual polish on a finished sheet: bold header, thousands-separator
+    number format on numeric cells, estimated column widths, a frozen header,
+    and an Excel Table (banded rows + auto-filter). Best-effort — any styling
+    failure is swallowed so it can never break the export itself. The cell
+    VALUES are never changed (only presentation), so the raw-fact guarantee and
+    every value-level test still hold."""
+    try:
+        from openpyxl.styles import Font
+        from openpyxl.utils import get_column_letter
+        from openpyxl.worksheet.table import Table, TableStyleInfo
+
+        ncols = len(header)
+        last_row = ws.max_row
+        n_data = last_row - header_row
+
+        bold = Font(bold=True)
+        for c in range(1, ncols + 1):
+            ws.cell(header_row, c).font = bold
+            longest = 0
+            for r in range(header_row, last_row + 1):
+                cell = ws.cell(r, c)
+                if r > header_row and isinstance(cell.value, (int, float)):
+                    cell.number_format = "#,##0.####"
+                if cell.value is not None:
+                    longest = max(longest, len(str(cell.value)))
+            ws.column_dimensions[get_column_letter(c)].width = max(10, min(48, longest + 2))
+
+        # Freeze the header row so it stays visible while scrolling.
+        ws.freeze_panes = ws.cell(header_row + 1, 1).coordinate
+
+        # Convert the range into a real Excel Table (banded rows + auto-filter).
+        # Excel requires ≥1 data row AND unique header names.
+        if n_data >= 1 and len(set(header)) == ncols:
+            ref = f"A{header_row}:{get_column_letter(ncols)}{last_row}"
+            name = "tbl_" + re.sub(r"[^A-Za-z0-9_]", "_", str(dataset))
+            tbl = Table(displayName=name, ref=ref)
+            tbl.tableStyleInfo = TableStyleInfo(
+                name="TableStyleMedium2", showRowStripes=True,
+                showColumnStripes=False, showFirstColumn=False,
+                showLastColumn=False,
+            )
+            ws.add_table(tbl)
+    except Exception:
+        logger.exception("xlsx styling failed for %s (non-fatal)", dataset)
+
+
 def _build_xlsx(user_id, datasets):
     """Build a multi-sheet ``.xlsx`` workbook (one sheet per dataset) of the
     user's own data. Returns raw bytes.
@@ -2227,11 +2274,14 @@ def _build_xlsx(user_id, datasets):
         # carries its header + an honest note instead of fabricated data.
         try:
             rows, disclaimer = _query_dataset_rows(user_id, dataset)
+            header_row = 1
             if disclaimer:
                 ws.append([_xlsx_cell("# " + disclaimer)])
+                header_row = 2
             ws.append([_xlsx_cell(h) for h in header])
             for r in rows:
                 ws.append([_xlsx_cell(c) for c in row_fn(r)])
+            _style_xlsx_sheet(ws, dataset, header, header_row)
         except Exception:
             logger.exception(
                 "xlsx export: dataset %s failed — emitting header-only sheet",

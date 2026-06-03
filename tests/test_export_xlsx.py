@@ -207,6 +207,27 @@ def test_xlsx_cell_guards_every_hazard():
     assert _xlsx_cell(None) is None
 
 
+def test_xlsx_has_formatted_table_and_frozen_bold_header(app, client, auth_user):
+    """Visual polish: a real Excel Table (banded rows + auto-filter), a bold +
+    frozen header — applied WITHOUT changing any cell value."""
+    uid = auth_user["id"]
+    with app.app_context():
+        db.session.add(Position(user_id=uid, ticker="AAPL", shares=3, avg_cost=190.0))
+        db.session.add(Position(user_id=uid, ticker="MSFT", shares=2, avg_cost=400.0))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export?format=xlsx&dataset=positions")
+    assert resp.status_code == 200
+    wb = load_workbook(BytesIO(resp.data))
+    ws = wb["보유종목"]
+    assert len(ws.tables) >= 1, "expected an Excel Table on the sheet"
+    assert ws.cell(1, 1).font.bold is True          # header bold
+    assert ws.freeze_panes == "A2"                  # header row frozen
+    # values untouched by the styling pass
+    blob = "\n".join(_all_cell_strings(wb))
+    assert "AAPL" in blob and "MSFT" in blob
+
+
 def test_xlsx_empty_user_still_valid_workbook(app, client, auth_user):
     """A user with zero data gets a valid workbook — every sheet present with
     just its header row (honest empty, never fabricated)."""
