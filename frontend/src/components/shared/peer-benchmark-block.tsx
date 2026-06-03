@@ -275,8 +275,13 @@ export function PeerBenchmarkBlock({
                 <span className="text-[rgba(245,240,232,0.65)]">
                   {MISTAKE_LABELS_KR[m.label] ?? m.label}
                 </span>
+                {/* Unit suffix "명" (persons) — `count` is the number of
+                    cohort members exhibiting the pattern (one vote per user,
+                    group_benchmark.py). Without a unit a bare number reads
+                    ambiguously (users vs trades) — 표시광고법 §3 clarity
+                    (legal-kr-fintech 2026-06). */}
                 <span className="font-mono tabular-nums text-[rgba(245,240,232,0.45)]">
-                  {m.count}
+                  {m.count ?? "—"}명
                 </span>
               </li>
             ))}

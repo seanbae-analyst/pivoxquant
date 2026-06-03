@@ -1180,6 +1180,24 @@ def _parse_window(raw: str | None) -> int | None:
     return val if val in VALID_WINDOWS else None
 
 
+def _public_benchmark_metrics(metrics: dict | None) -> dict:
+    """Strip the 5 behavioural sub-score (0-100) keys before peer-benchmark
+    metrics leave the API.
+
+    legal-kr-fintech (2026-06, 현행법): an anonymised cohort MEDIAN is not
+    individual profiling (PIPA §37조의2 / 한국 AI기본법 = LOW), but surfacing a
+    0-100 score-shaped number still (a) risks 표시광고법 §3 우열 오인, (b)
+    contradicts the "AI 점수화 폐기" decision (DECISIONS.md), and (c) escalates
+    to 자본시장법 §101 MED-HIGH on a paid tier. The medians stay COMPUTED in the
+    stored PersonaGroupStats.metrics for the internal
+    ``scorer._persona_avg_with_floor`` consumer — only this API surface is
+    stripped. Legitimate peer stats (CAGR / Sharpe / holding / win-rate /
+    drawdown / sectors / comparison_to_all) are kept.
+    """
+    from models import SUB_SCORE_KEYS
+    return {k: v for k, v in (metrics or {}).items() if k not in SUB_SCORE_KEYS}
+
+
 @profile_bp.route("/persona-benchmark", methods=["GET"])
 @api_auth
 def get_persona_benchmark():
@@ -1246,7 +1264,7 @@ def get_persona_benchmark():
     # directly matches the contract 1:1. We flatten at the route layer
     # only — ``to_dict()`` keeps its nested shape for internal consumers
     # (e.g. ``services.behavior.scorer._persona_avg_with_floor``).
-    flat_stats = stats.get("metrics") or {}
+    flat_stats = _public_benchmark_metrics(stats.get("metrics"))
     return jsonify({
         "available": True,
         "persona": persona,
@@ -1320,7 +1338,7 @@ def get_persona_benchmark_all():
             out[persona] = {
                 "available": True,
                 "label": label,
-                "stats": stats.get("metrics") or {},
+                "stats": _public_benchmark_metrics(stats.get("metrics")),
             }
             continue
         reason = (

@@ -150,6 +150,28 @@ def test_position_sizing_balanced_high_score(app, make_user):
         assert score == 100.0
 
 
+def test_position_sizing_normalises_mixed_currency(app, make_user):
+    """KRW + USD cost bases are FX-normalised before the concentration ratio.
+
+    A raw ``shares * avg_cost`` sum let a ₩-denominated holding dwarf a
+    $-denominated one (Pattern-7 currency mixing — same bug fixed in
+    concentration_mirror). Both holdings below are ₩130M once converted (USD
+    via ``buy_fx_rate`` 1300; the KR row is already won) → a 50/50 split →
+    balanced ~55.6. Pre-fix the raw sum saw KR ₩130M vs AAPL raw 100,000 ≈
+    99.9% concentration → ~0, a systematically wrong score for mixed books.
+    """
+    user = make_user(email="bs-fx@test.com")
+    with app.app_context():
+        db.session.add(Position(user_id=user["id"], ticker="AAPL",
+                                 shares=1000, avg_cost=100, buy_fx_rate=1300))
+        db.session.add(Position(user_id=user["id"], ticker="005930.KS",
+                                 shares=2600, avg_cost=50000))
+        db.session.commit()
+        score = _position_sizing_subscore(user["id"])
+    # Normalised 50/50 → balanced band. The old raw-sum bug returned ~0.
+    assert 54.0 < score < 57.0
+
+
 def test_fomo_resistance_metric(app, make_user):
     """A buy on a day with another trade carrying ≥5% pnl_pct ⇒ FOMO flagged."""
     user = make_user(email="bs-fomo@test.com")

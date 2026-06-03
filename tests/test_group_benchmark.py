@@ -260,6 +260,34 @@ class TestCommonMistakesTop3:
                 assert entry["label"] in (
                     "disposition_effect", "herding", "anchoring",
                 )
+                # No surfaced count may fall below the re-identification floor.
+                assert entry["count"] >= 2
+
+    def test_min_mistake_count_floor(self):
+        """The privacy floor never drops below 2 and scales at n//10."""
+        from services.profile.group_benchmark import _min_mistake_count
+        assert _min_mistake_count(20) == 2     # MIN_GROUP_SIZE → 2 (count=1 hidden)
+        assert _min_mistake_count(5) == 2      # never below 2
+        assert _min_mistake_count(100) == 10
+
+    def test_rare_mistake_below_floor_is_suppressed(self, app, make_user):
+        """A mistake exhibited by a single cohort member (count=1) is hidden —
+        the floor keeps any surfaced pattern un-pinnable to one identifiable
+        person (PIPA §23 re-identification, legal-kr-fintech 2026-06)."""
+        from services.profile import compute_persona_stats
+
+        user_ids = _make_users(app, make_user, n=20, profile_type="growth")
+        # Only ONE of the 20 exhibits the anchoring pattern → raw count = 1.
+        lone = user_ids[0]
+        _add_round_trip(app, lone, ticker="XYZ", pnl_pct=-2.0, days_ago=30)
+        _add_round_trip(app, lone, ticker="XYZ", pnl_pct=-3.0, days_ago=20)
+        _add_round_trip(app, lone, ticker="XYZ", pnl_pct=-1.0, days_ago=10)
+
+        with app.app_context():
+            row = compute_persona_stats("growth", 90)
+            mistakes = row.metrics_dict().get("common_mistakes", [])
+        # count=1 < floor (2 for n=20) → suppressed entirely.
+        assert mistakes == []
 
 
 # ═════════════════════════════════════════════════════════════════════
@@ -366,6 +394,13 @@ class TestPersonaBenchmarkAPI:
         assert stats.get("metrics") is None
         assert "n_users" not in stats
         assert "suppressed" not in stats
+        # legal-kr-fintech (2026-06): the 5 behavioural sub-scores (0-100) must
+        # NOT leave the API — surfacing a score-shaped number contradicts the
+        # "AI 점수화 폐기" decision + 표시광고법 §3. Legitimate peer stats
+        # (avg_cagr/avg_sharpe/win_rate/comparison_to_all, asserted above) stay.
+        from models import SUB_SCORE_KEYS
+        for _k in SUB_SCORE_KEYS:
+            assert _k not in stats, f"sub-score {_k!r} leaked to persona-benchmark API"
         # Sanity: no ticker leaked
         import json as _json
         blob = _json.dumps(d, ensure_ascii=False)
@@ -432,6 +467,11 @@ class TestPersonaBenchmarkAllAPI:
         assert stats.get("metrics") is None
         assert "n_users" not in stats
         assert "suppressed" not in stats
+        # legal-kr-fintech (2026-06): no 0-100 behavioural sub-score leaves the
+        # API here either (점수화 폐기 + 표시광고법 §3).
+        from models import SUB_SCORE_KEYS
+        for _k in SUB_SCORE_KEYS:
+            assert _k not in stats, f"sub-score {_k!r} leaked to persona-benchmark-all API"
 
 
 # ═════════════════════════════════════════════════════════════════════

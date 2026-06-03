@@ -117,7 +117,10 @@ def fifo_match_closed_trades(
     """
     ordered = sorted(
         (t for t in trades if t.traded_at and t.ticker),
-        key=lambda t: t.traded_at,
+        # Tiebreak on row id so same-timestamp trades (date-grain manual
+        # entries share a midnight ``traded_at``) match in a stable, insertion
+        # order instead of DB-arbitrary order — deterministic FIFO pairing.
+        key=lambda t: (t.traded_at, t.id or 0),
     )
 
     # ticker → FIFO queue of (time, remaining_shares, buy_price)
@@ -195,7 +198,10 @@ def fifo_match_closed_trades_with_pnl(
     """
     ordered = sorted(
         (t for t in trades if t.traded_at and t.ticker),
-        key=lambda t: t.traded_at,
+        # Tiebreak on row id so same-timestamp trades (date-grain manual
+        # entries share a midnight ``traded_at``) match in a stable, insertion
+        # order instead of DB-arbitrary order — deterministic FIFO pairing.
+        key=lambda t: (t.traded_at, t.id or 0),
     )
 
     opens: dict[str, list[tuple[datetime, float, float]]] = {}
@@ -283,34 +289,46 @@ def fifo_open_position_ages(
             # User.created_at convention referenced above).
             reference_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    pairs = fifo_match_closed_trades(materialised)
-    # We need the queue *after* matching — easiest is to re-walk and
-    # let pairs absorb the closed BUYs.
-    closed_index: dict[tuple[str, datetime], float] = {}
-    for p in pairs:
-        closed_index[(p.ticker, p.buy_time)] = (
-            closed_index.get((p.ticker, p.buy_time), 0.0) + p.quantity
-        )
-
-    ordered_buys = [
-        t for t in sorted(materialised, key=lambda x: x.traded_at)
-        if (t.action or "").upper() == "BUY"
-    ]
+    # Replay the FIFO match but KEEP the residual open queue — each leftover
+    # slice is a still-open BUY. Reading open lots straight off the queue
+    # (instead of a ``{(ticker, buy_time): qty}`` index) avoids a collision:
+    # two same-ticker BUYs that share a date-grain ``traded_at`` are distinct
+    # queue entries, so consuming one never zeroes the other. The old index
+    # summed them under one key, so a user with ≥2 same-day buys of one ticker
+    # had still-open shares silently dropped from this average-holding fallback.
+    ordered = sorted(materialised, key=lambda t: (t.traded_at, t.id or 0))
+    opens: dict[str, list[list]] = {}  # ticker → [[buy_time, remaining_sh], …]
+    for t in ordered:
+        action = (t.action or "").upper()
+        key = t.ticker.upper()
+        shares = float(t.shares or 0.0)
+        if shares <= 0:
+            continue
+        if action == "BUY":
+            opens.setdefault(key, []).append([t.traded_at, shares])
+            continue
+        if action != "SELL":
+            continue
+        remaining = shares
+        queue = opens.get(key, [])
+        while remaining > _SHARE_EPSILON and queue:
+            buy_time, buy_sh = queue[0]
+            take = min(buy_sh, remaining)
+            remaining -= take
+            if take >= buy_sh - _SHARE_EPSILON:
+                queue.pop(0)
+            else:
+                queue[0][1] = buy_sh - take
 
     elapsed: list[float] = []
-    for t in ordered_buys:
-        opened = float(t.shares or 0.0)
-        if opened <= 0:
-            continue
-        consumed = closed_index.get((t.ticker.upper(), t.traded_at), 0.0)
-        # Guard against rounding making consumed appear slightly larger.
-        remaining = max(0.0, opened - consumed)
-        if remaining <= _SHARE_EPSILON:
-            continue
-        delta_days = max(
-            0.0, (reference_time - t.traded_at).total_seconds() / 86400.0
-        )
-        elapsed.append(delta_days)
+    for queue in opens.values():
+        for buy_time, remaining_sh in queue:
+            if remaining_sh <= _SHARE_EPSILON:
+                continue
+            delta_days = max(
+                0.0, (reference_time - buy_time).total_seconds() / 86400.0
+            )
+            elapsed.append(delta_days)
     return elapsed
 
 

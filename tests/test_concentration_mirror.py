@@ -181,6 +181,81 @@ class TestComputeFunction:
         assert ".KS" not in result["largest_ticker"]
         _assert_no_scoring(result)
 
+    # ── currency normalisation (regression: KRW+USD were summed raw) ──
+
+    def test_mixed_currency_normalised_to_krw(self, app, user_id, monkeypatch):
+        """KRW + USD cost bases are FX-normalised to one unit before weighting.
+
+        Regression for the currency-mixing bug: a raw ``shares*avg_cost`` sum
+        folded ₩ and $ into one denominator, so a numerically-large KRW cost
+        basis always dominated a larger-in-reality USD holding. The USD row
+        below is the true largest (₩130M once converted), yet its raw USD
+        number (100,000) is smaller than the KR number (5,000,000) — pre-fix
+        the mirror named the KR holding at ~98%.
+        """
+        import services.behavior.concentration_mirror as mod
+        from extensions import db
+        # Pin the spot fallback so the assertion is rate-independent; the USD
+        # row also carries its own buy_fx_rate (the primary conversion path).
+        monkeypatch.setattr(mod.fx_service, "get_rate", lambda: 1300.0)
+        with app.app_context():
+            db.session.add(Position(
+                user_id=user_id, ticker="AAPL",
+                shares=1000.0, avg_cost=100.0, buy_fx_rate=1300.0,
+            ))  # 1000 × $100 × 1300 = ₩130,000,000
+            db.session.add(Position(
+                user_id=user_id, ticker="005930.KS",
+                shares=100.0, avg_cost=50000.0,
+            ))  # 100 × ₩50,000 = ₩5,000,000
+            db.session.commit()
+            result = compute_concentration_mirror(user_id)
+        # Once normalised, the USD holding is the largest (130M / 135M ≈ 96.3%).
+        assert result["largest_ticker"] == "AAPL"
+        assert result["max_weight_pct"] == pytest.approx(96.3, abs=0.3)
+        _assert_no_scoring(result)
+
+    def test_buy_fx_rate_used_over_spot(self, app, user_id, monkeypatch):
+        """USD conversion uses the row's purchase rate, not the live spot."""
+        import services.behavior.concentration_mirror as mod
+        from extensions import db
+        # Spot is wildly off the purchase rate — if spot were wrongly used the
+        # KR holding would win.
+        monkeypatch.setattr(mod.fx_service, "get_rate", lambda: 100.0)
+        with app.app_context():
+            db.session.add(Position(
+                user_id=user_id, ticker="AAPL",
+                shares=10.0, avg_cost=200.0, buy_fx_rate=1400.0,
+            ))  # buy_fx path: 10 × $200 × 1400 = ₩2,800,000
+            db.session.add(Position(
+                user_id=user_id, ticker="005930.KS",
+                shares=10.0, avg_cost=140000.0,
+            ))  # ₩1,400,000
+            db.session.commit()
+            result = compute_concentration_mirror(user_id)
+        # With buy_fx (1400): AAPL 2.8M vs KR 1.4M → AAPL 66.7%.
+        assert result["largest_ticker"] == "AAPL"
+        assert result["max_weight_pct"] == pytest.approx(66.7, abs=0.3)
+
+    def test_usd_without_buy_fx_falls_back_to_spot(self, app, user_id, monkeypatch):
+        """A legacy USD row with no buy_fx_rate converts at the cached spot."""
+        import services.behavior.concentration_mirror as mod
+        from extensions import db
+        monkeypatch.setattr(mod.fx_service, "get_rate", lambda: 1300.0)
+        with app.app_context():
+            db.session.add(Position(
+                user_id=user_id, ticker="AAPL",
+                shares=100.0, avg_cost=100.0,  # no buy_fx_rate → spot 1300
+            ))  # 100 × $100 × 1300 = ₩13,000,000
+            db.session.add(Position(
+                user_id=user_id, ticker="005930.KS",
+                shares=100.0, avg_cost=70000.0,
+            ))  # ₩7,000,000
+            db.session.commit()
+            result = compute_concentration_mirror(user_id)
+        # AAPL 13M vs KR 7M → AAPL 65.0%.
+        assert result["largest_ticker"] == "AAPL"
+        assert result["max_weight_pct"] == pytest.approx(65.0, abs=0.3)
+
 
 # ═════════════════════════════════════════════════════════════════════
 # API surface — GET /api/behavior/concentration-mirror

@@ -24,10 +24,17 @@ It is deliberately **not**:
 Cost basis, not market value
 ----------------------------
 Weights are computed on ``shares * avg_cost`` (the amount the user
-actually paid), never on a live market price. This keeps the module
-free of any external price call (feedback_official_data_only.md) and
-makes the figure deterministic and self-consistent with what the user
-entered.
+actually paid), never on a live market price — no external market
+price call (feedback_official_data_only.md).
+
+Mixed currencies are normalised first. ``Position`` stores ``avg_cost``
+in the holding's native currency (KRW for ``.KS``/``.KQ`` codes, USD
+otherwise) and has no currency column, so a raw cross-currency
+``shares * avg_cost`` sum is meaningless — a ₩-denominated cost basis
+dwarfs a $-denominated one numerically. Each USD cost basis is converted
+to KRW at the rate the user purchased at (``buy_fx_rate``; cached spot
+fallback for legacy rows), keeping every holding in one unit and true to
+the won actually deployed. The cached FX read is not a network call.
 
 Name display
 ------------
@@ -45,6 +52,7 @@ Public API
 from __future__ import annotations
 
 from models import Position
+from services import fx_service
 from services.name_resolver import kr_display_name
 
 
@@ -85,22 +93,20 @@ def compute_concentration_mirror(user_id: int) -> dict:
     """
     positions = Position.query.filter_by(user_id=user_id).all()
 
-    # Pair each surviving position with its cost-basis value so we can
-    # name the largest one without a second scan. A position is counted
-    # only when BOTH shares and avg_cost are strictly positive — a 0/None
-    # share or 0/None cost contributes nothing and is excluded entirely.
+    # Pair each surviving position with its KRW-normalised cost-basis value so
+    # we can name the largest one without a second scan. A position is counted
+    # only when shares and avg_cost are strictly positive AND the value can be
+    # expressed in KRW — a 0/None share or cost, or an unconvertible USD row,
+    # contributes nothing and is excluded entirely.
     valued: list[tuple[Position, float]] = []
     for p in positions:
-        try:
-            shares = float(p.shares or 0)
-            avg_cost = float(p.avg_cost or 0)
-        except (TypeError, ValueError):
-            continue
-        if shares <= 0 or avg_cost <= 0:
-            continue
-        value = shares * avg_cost
-        if value > 0:
-            valued.append((p, value))
+        # Cost basis normalised to one unit (KRW) by the shared helper.
+        # ``cost_basis_krw`` returns None for 0/None shares-or-cost and for any
+        # USD row with no usable FX rate, so numerator (largest) and denominator
+        # (total) share one normalised set — no raw cross-currency mixing.
+        krw_value = fx_service.cost_basis_krw(p)
+        if krw_value is not None and krw_value > 0:
+            valued.append((p, krw_value))
 
     total = sum(value for _, value in valued)
     # zero-div guard: no positions, or every position netted to zero cost

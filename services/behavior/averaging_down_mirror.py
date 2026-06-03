@@ -108,7 +108,10 @@ def _classify_follow_ons(
     """
     ordered = sorted(
         (t for t in trades if t.traded_at and t.ticker),
-        key=lambda t: t.traded_at,
+        # Tiebreak on row id so same-day fills (date-grain entries share a
+        # midnight ``traded_at``) keep a stable insertion order rather than
+        # DB-arbitrary order — the running average is then deterministic.
+        key=lambda t: (t.traded_at, t.id or 0),
     )
 
     # ticker -> (total_shares, total_cost, latest_name)

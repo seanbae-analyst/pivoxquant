@@ -53,6 +53,7 @@ from models import (
     SUB_SCORE_KEYS,
     TradeHistory,
 )
+from services import fx_service
 from services.legal.forbidden_terms import (
     contains_forbidden_term,
 )
@@ -272,11 +273,14 @@ def _position_sizing_subscore(user_id: int) -> float:
         return 50.0
     values = []
     for p in positions:
-        try:
-            v = float(p.shares or 0) * float(p.avg_cost or 0)
-        except (TypeError, ValueError):
-            v = 0.0
-        if v > 0:
+        # Cost basis normalised to KRW. A raw ``shares * avg_cost`` sum mixes
+        # ₩ (.KS/.KQ) and $ holdings into one denominator — a ₩ figure dwarfs a
+        # $ one, so the largest-share concentration was systematically wrong for
+        # mixed portfolios (and propagated into persona-cohort medians via
+        # group_benchmark). Shared with concentration_mirror through
+        # fx_service.cost_basis_krw — FX-consistency guard, Pattern 7.
+        v = fx_service.cost_basis_krw(p)
+        if v is not None and v > 0:
             values.append(v)
     total = sum(values)
     if total <= 0:
@@ -463,7 +467,7 @@ def _trades_in_window(
             TradeHistory.traded_at >= start_dt,
             TradeHistory.traded_at <= end_dt,
         )
-        .order_by(TradeHistory.traded_at.asc())
+        .order_by(TradeHistory.traded_at.asc(), TradeHistory.id.asc())
         .all()
     )
 
@@ -475,7 +479,7 @@ def _trades_through(user_id: int, end_dt: datetime) -> list[TradeHistory]:
             TradeHistory.user_id == user_id,
             TradeHistory.traded_at <= end_dt,
         )
-        .order_by(TradeHistory.traded_at.asc())
+        .order_by(TradeHistory.traded_at.asc(), TradeHistory.id.asc())
         .all()
     )
 

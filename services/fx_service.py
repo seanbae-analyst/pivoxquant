@@ -52,6 +52,45 @@ def get_rate() -> float:
     return _usdkrw
 
 
+def cost_basis_krw(position) -> float | None:
+    """Normalise one holding's native-currency cost basis to KRW.
+
+    ``Position`` has no currency column, so ``shares * avg_cost`` is in the
+    holding's *native* currency — KRW for ``.KS`` / ``.KQ`` listings, USD
+    otherwise. Summing a ₩-cost basis with a $-cost basis raw is meaningless
+    (a ₩ figure dwarfs a $ one numerically), so USD holdings are converted to
+    the won the user actually deployed: ``buy_fx_rate`` (the USD/KRW at
+    purchase, stored on the row) when present, else the cached spot
+    (:func:`get_rate` — a cached read, never a network call). Returns ``None``
+    only when shares/avg_cost are non-positive or a USD holding has no usable
+    rate, so callers EXCLUDE it rather than mix currencies.
+
+    Shared by ``services.behavior.concentration_mirror`` and
+    ``services.behavior.scorer`` so the two cost-basis aggregations cannot
+    drift apart — the FX-consistency regression this guards (Pattern 7) bit
+    ``portfolio_history`` (+52,281%) and ``risk_summary`` (700×) before.
+    """
+    try:
+        shares = float(getattr(position, "shares", 0) or 0)
+        avg_cost = float(getattr(position, "avg_cost", 0) or 0)
+    except (TypeError, ValueError):
+        return None
+    if shares <= 0 or avg_cost <= 0:
+        return None
+    native = shares * avg_cost
+    ticker = (getattr(position, "ticker", "") or "").upper()
+    if ticker.endswith(".KS") or ticker.endswith(".KQ"):
+        return native  # already KRW
+    try:
+        buy_fx = float(getattr(position, "buy_fx_rate", 0) or 0)
+    except (TypeError, ValueError):
+        buy_fx = 0.0
+    fx = buy_fx if buy_fx > 0 else get_rate()
+    if not fx or fx <= 0:
+        return None
+    return native * fx
+
+
 def last_updated() -> float:
     """Unix timestamp of the last successful refresh (0 if never)."""
     return _usdkrw_ts

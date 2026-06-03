@@ -84,6 +84,20 @@ _TOP_SECTORS_N = 5
 _TOP_MISTAKES_N = 3
 
 
+def _min_mistake_count(n_users: int) -> int:
+    """Minimum cohort-member count for a ``common_mistakes`` entry to surface.
+
+    Each count is "how many cohort members showed this pattern" (one vote per
+    user). A group is only served at ``n_users >= MIN_GROUP_SIZE`` (20), but
+    even there a count of 1 narrows a behavioural label to a single
+    identifiable member — a re-identification risk in a small beta cohort
+    (PIPA §23 / 표시광고법 §3 clarity, legal-kr-fintech 2026-06). Require at
+    least ``max(2, n_users // 10)`` so no surfaced mistake can be pinned to one
+    person.
+    """
+    return max(2, n_users // 10)
+
+
 # ═════════════════════════════════════════════════════════════════════
 # Compute — called by cron (scripts/compute_group_stats.py) or on demand
 # ═════════════════════════════════════════════════════════════════════
@@ -328,8 +342,9 @@ def _aggregate_metrics(
         "most_held_sectors": sectors[:_TOP_SECTORS_N],
         "common_mistakes": [
             {"label": label, "count": count}
-            for label, count in mistake_counter.most_common(_TOP_MISTAKES_N)
-        ],
+            for label, count in mistake_counter.most_common()
+            if count >= _min_mistake_count(len(user_ids))
+        ][:_TOP_MISTAKES_N],
         "comparison_to_all": {
             "avg_cagr_all": all_users_stats.get("avg_cagr"),
             "avg_sharpe_all": all_users_stats.get("avg_sharpe"),
