@@ -72,6 +72,20 @@ const PERSONAS: readonly Persona[] = [
   },
 ] as const;
 
+// Each persona links to a thematically-apt sample report so the gallery
+// actually demonstrates report breadth (previously all 6 cards linked to the
+// same weekly-memo). The live product additionally persona-tints every
+// artifact's copy server-side — see services/artifacts/persona_resolver.py.
+// All slugs below exist in /sample-reports/[slug] TEMPLATES.
+const PERSONA_SAMPLE: Record<string, string> = {
+  growth: "earnings-prebrief",
+  value: "credit-rating",
+  balanced: "risk-board",
+  income: "dividend-income",
+  quant: "kpi-dashboard",
+  beginner: "weekly-memo",
+};
+
 export function PersonaShowcase() {
   const reduce = useReducedMotion();
 
@@ -220,7 +234,7 @@ export function PersonaShowcase() {
               </div>
 
               <Link
-                href={`/sample-reports/weekly-memo`}
+                href={`/sample-reports/${PERSONA_SAMPLE[p.key] ?? "weekly-memo"}`}
                 className="mt-6 inline-flex items-center gap-1.5 self-start font-serif text-pq-caption italic"
                 style={{
                   letterSpacing: "0.02em",
