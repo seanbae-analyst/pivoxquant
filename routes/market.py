@@ -187,6 +187,37 @@ def search_stocks():
     return jsonify({"results": results[:limit]})
 
 
+def _scope_kr_public_quote(ticker: str, result: dict) -> dict:
+    """§101/R7 de-risk gate (GATED, default OFF — set KR_QUOTE_OWN_SCOPE=1).
+
+    A KIS app-key does NOT license redistributing live KRX quotes for arbitrary
+    tickers to the public. When enabled, KR results the requester has NOT added
+    (held / watchlist) are returned WITHOUT the live price — symbol/name/currency
+    stay (public metadata). Default off preserves the public /lookup viral funnel;
+    flipping it is a deliberate CEO/legal action that narrows the funnel for KR.
+    NOTE: covers /lookup only — /detail snapshot + market search price paths need
+    the same guard for full coverage (follow-up).
+    """
+    if os.environ.get("KR_QUOTE_OWN_SCOPE", "0") not in ("1", "true", "True"):
+        return result
+    if not isinstance(result, dict):
+        return result
+    is_kr = ticker.endswith((".KS", ".KQ")) or result.get("currency") == "KRW"
+    if not is_kr:
+        return result
+    try:
+        if getattr(current_user, "is_authenticated", False) and \
+                is_user_allowed_ticker(current_user.id, ticker):
+            return result  # the requester's own holding/watchlist — allowed
+    except Exception:
+        pass
+    for k in ("price", "price_display", "change_pct", "change", "changesPercentage",
+              "volume", "dayLow", "dayHigh", "open", "previousClose"):
+        result.pop(k, None)
+    result["quote_scoped"] = True
+    return result
+
+
 @market_bp.route("/lookup/<ticker>")
 @general_rate_limit
 def lookup_ticker(ticker):
@@ -199,9 +230,10 @@ def lookup_ticker(ticker):
     # Earlier SEC-009 hardening required auth here, but the quick_lookup
     # response carries no PII / portfolio data — only what every public
     # quote page exposes — so the trade-off favors UX.
-    result = fetcher.quick_lookup(ticker.strip().upper())
+    norm = ticker.strip().upper()
+    result = fetcher.quick_lookup(norm)
     if result:
-        return jsonify(result)
+        return jsonify(_scope_kr_public_quote(norm, result))
     return jsonify({"ok": False, "error": f"Ticker '{ticker}' not found"}), 404
 
 
@@ -1166,11 +1198,17 @@ def _compute_indices_snapshot(region: str) -> list[dict]:
             if snap is not None:
                 out.append(snap)
     else:
-        # KR indices via KIS
-        for raw_ticker, display, kis_code, _macro_key in _KR_INDEX_SPEC:
-            snap = _kis_index_snapshot(kis_code, raw_ticker, display)
-            if snap is not None:
-                out.append(snap)
+        # KR indices via KIS — GATED (SHIP_BLOCKERS R7). A KIS app-key does NOT
+        # license commercial redistribution of KRX-derived index levels to all
+        # users (KOSCOM/KRX 정보이용계약 required). Set KR_INDEX_KIS_ENABLED=0 to
+        # stop serving the KIS index path (de-risk) until a licensed source
+        # (금융위 공공데이터 T+1 / KOSCOM) is wired. Default "1" = current behavior,
+        # so flipping this is a deliberate CEO/legal action — no prod change now.
+        if os.environ.get("KR_INDEX_KIS_ENABLED", "1") not in ("0", "false", "False"):
+            for raw_ticker, display, kis_code, _macro_key in _KR_INDEX_SPEC:
+                snap = _kis_index_snapshot(kis_code, raw_ticker, display)
+                if snap is not None:
+                    out.append(snap)
 
         # USD/KRW — fx_service is always live (refreshed on app boot +
         # background tick). Fall back to macro payload if fx_service empty.
