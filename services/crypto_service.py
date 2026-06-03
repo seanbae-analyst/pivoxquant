@@ -194,13 +194,26 @@ _CURRENT_TEXT_VERSION: int = max(_USER_TEXT_KEY_RING)
 _AESGCM_RING: dict = {}
 
 
+class MissingKeyVersionError(ValueError):
+    """A versioned ciphertext references a key version absent from the ring.
+
+    Distinct from a GCM authentication failure (tamper / corruption): this is a
+    RECOVERABLE operator error — a ``PIVOX_USER_TEXT_KEY_V*`` env var dropped on
+    a redeploy after rows were written at that version. ``EncryptedText`` fails
+    LOUD on it rather than blanking the value, because a blanked value would be
+    re-encrypted on the next ORM write and permanently overwrite the original
+    ciphertext (transient env-drift → permanent data loss). Subclasses
+    ``ValueError`` for back-compat with callers that catch the broader type.
+    """
+
+
 def _aesgcm_for(version: int):
     """Return a cached AESGCM bound to the ring key for ``version``."""
     inst = _AESGCM_RING.get(version)
     if inst is None:
         key = _USER_TEXT_KEY_RING.get(version)
         if key is None:
-            raise ValueError(
+            raise MissingKeyVersionError(
                 f"crypto_service: no user-text key for version {version}"
             )
         inst = AESGCM(key)
@@ -315,7 +328,9 @@ def decrypt_user_text(stored: str) -> str:
         return _aesgcm_for(v).decrypt(nonce, ct, _USER_TEXT_AAD).decode("utf-8")
     key = _USER_TEXT_KEY_RING.get(v)
     if key is None:
-        raise ValueError(f"crypto_service: key version {v} not in ring")
+        raise MissingKeyVersionError(
+            f"crypto_service: key version {v} not in ring"
+        )
     return _fallback_decrypt(base64.b64decode(body), _USER_TEXT_AAD, key=key)
 
 
@@ -392,12 +407,23 @@ class EncryptedText(TypeDecorator):
             return value
         try:
             return decrypt_user_text(value)
-        except Exception:  # pragma: no cover - key mismatch / tamper only
-            # Never 500 the journal over one unreadable row; log loud, blank it.
+        except MissingKeyVersionError:
+            # Recoverable operator error: a PIVOX_USER_TEXT_KEY_V* env var went
+            # missing after rows were written at that version. Fail LOUD — never
+            # blank, because a blanked value re-encrypts on the next ORM write
+            # and permanently overwrites the original ciphertext. Restore the key.
+            logger.error(
+                "EncryptedText: user_text key version missing from the ring — "
+                "refusing to blank the row to avoid a permanent overwrite. "
+                "Restore the dropped PIVOX_USER_TEXT_KEY_V* and redeploy."
+            )
+            raise
+        except Exception:  # pragma: no cover - tamper / corruption only
+            # Genuine GCM auth failure or malformed ciphertext: don't 500 the
+            # whole feed over one unreadable row; log loud and blank just it.
             logger.error(
                 "EncryptedText: decrypt failed for a user_text column — "
-                "returning empty. Check key rotation (PIVOX_USER_TEXT_KEY_V*) "
-                "or the master key."
+                "returning empty (tamper/corruption). Check the master key."
             )
             return ""
 

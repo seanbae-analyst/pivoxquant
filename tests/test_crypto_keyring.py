@@ -108,3 +108,36 @@ def test_loader_ignores_v1_env_override():
         assert ring[1] == cs._MASTER_KEY  # master wins, env V1 ignored
     finally:
         del os.environ["PIVOX_USER_TEXT_KEY_V1"]
+
+
+def test_missing_key_version_fails_loud_not_blank():
+    """A row written at v2, then read after the v2 key is dropped on a redeploy
+    (env-drift), must FAIL LOUD — never silently blank. A blanked value would be
+    re-encrypted on the next ORM write and permanently overwrite the original
+    ciphertext, turning a recoverable env mistake into permanent data loss."""
+    et = cs.EncryptedText()
+    k1 = cs._USER_TEXT_KEY_RING[1]
+    cs._set_user_text_key_ring_for_test({1: k1, 2: os.urandom(32)})
+    stored_v2 = et.process_bind_param("키 사라지기 전 저장", None)
+    assert stored_v2.startswith("pqenc:2:")
+
+    # Operator drops PIVOX_USER_TEXT_KEY_V2 → ring loses v2 (master only).
+    cs._set_user_text_key_ring_for_test({1: k1})
+
+    with pytest.raises(cs.MissingKeyVersionError):
+        et.process_result_value(stored_v2, None)
+
+
+def test_corrupt_ciphertext_blanks_not_raises():
+    """A genuinely corrupted/tampered row (key present, auth tag mismatch) blanks
+    just that one row rather than 500-ing the whole feed — the opposite policy
+    from a missing key version."""
+    et = cs.EncryptedText()
+    stored = et.process_bind_param("정상 저장", None)
+    prefix = "pqenc:1:"
+    assert stored.startswith(prefix)
+    body = stored[len(prefix):]
+    mid = len(body) // 2
+    flipped = "A" if body[mid] != "A" else "B"  # swap one base64 char → tag fails
+    corrupt = prefix + body[:mid] + flipped + body[mid + 1:]
+    assert et.process_result_value(corrupt, None) == ""
