@@ -134,8 +134,8 @@
     </div>
     {% endif %}
 
-    {# ───────── Persona Action Points ───────── #}
-    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Action Points{% else %}Action Points{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
+    {# ───────── Persona Observations ───────── #}
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Observation Points{% else %}관찰 항목{% endif %} &middot; {{ pm.persona_label(persona) }}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
       {% if locale == 'en' %}A per-persona cost observation list. Informational only — not a solicitation to buy or sell.{% else %}페르소나별 비용 관찰 항목입니다. 정보 제공 목적이며 거래 권유가 아닙니다.{% endif %}
     </p>

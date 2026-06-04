@@ -351,7 +351,7 @@
       {% endfor %}
     </div>
 
-    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}Action Points &middot; {{ pm.persona_label(persona) }} observation checklist{% else %}Action Points &middot; {{ pm.persona_label(persona) }} 관찰 체크리스트{% endif %}</h2>
+    <h2 class="pq-pdf-section-title sm">{% if locale == 'en' %}{{ pm.persona_label(persona) }} Observation Checklist{% else %}{{ pm.persona_label(persona) }} 관찰 체크리스트{% endif %}</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
       {% if locale == 'en' %}A per-persona information observation list. Not a solicitation to buy or sell — data points for personal review.{% else %}페르소나별 정보 관찰 항목입니다. 거래 권유가 아닌 본인이 직접 점검할 데이터 포인트.{% endif %}
     </p>

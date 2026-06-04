@@ -9,6 +9,13 @@
 
 ---
 
+> **🔄 2026-06-04 갱신 (지참 전 필독)**
+> ① **출시 = 무료(Stage 0)** — Stripe 마스터 kill-switch OFF. 위 "유료결제(Stripe) 활성화"는 **Stage-1 목표**(변호사 사인 + 통신판매업 신고 후). 무료 출시 자체는 코드측 GO.
+> ② **라이브 약관/처리방침**(`frontend/src/content/{terms,privacy}-ko.md`, v2.0-draft)의 위탁표는 **이미 Alpaca/Supabase 0건**(아래 체크리스트의 "위탁표 STALE → 갱신 필요" 항목 = 라이브 기준 **완료**, grep 2026-06-04 확인). `docs/legal/*.md`는 폐기본(SUPERSEDED 워터마크) — **변호사 첨부·인용 금지**.
+> ③ 변호사 큐 **89건**(`legal_question_queue.md` SoT), 최신 전수감사 `docs/qa/legal-advisory-audit-2026-06-04.md`, 신규 임박 규제 **전상법 §17 가분 디지털콘텐츠 청약철회 2026-07-21(D-47)** — 유료 전환 전 환불조항(Q15/Q-R1).
+
+---
+
 ## 5분 인트로 — 변호사에게 전달할 배경
 
 PivoxQuant는 개인 투자자가 본인의 포트폴리오 데이터를 퀀트 모델로 분석·시각화하는 SaaS입니다.
