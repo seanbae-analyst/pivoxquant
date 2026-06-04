@@ -23,8 +23,14 @@ AI + Quant 기반 개인 투자 어드바이저 플랫폼.
   변호사 의견서 후.
 
 ## 알려진 잔여 이슈 (2026-05-23 기준, 외부 액션 / 법무 의존)
-- **이메일 수신(MX) 미설정**: 발신(SendGrid SPF/DKIM/DMARC)은 됐으나 MX 없어
-  support@/reports@ 수신 불가. 가이드: `docs/ops/email-setup.md` (ImprovMX 경로).
+- **이메일: 발신 ✅ / 수신 ✅ (2026-06-04 해결)**: **발신** = SendGrid(SPF/DKIM/DMARC). **수신** =
+  ImprovMX 포워딩 **active**. 근본원인은 alias 아니라 **옛 ImprovMX 계정 충돌**(도메인 "already
+  registered") + **SPF에 improvmx 누락**이었음. 해결: ① DNS TXT 소유권 인증(`_improvmx` TXT)으로
+  도메인을 seanbae1521 계정으로 이전 ② 가비아 SPF에 `include:spf.improvmx.com` 추가(sendgrid 유지).
+  결과 MX✓·SPF✓·forwarding active, **ImprovMX 로그 "DELIVERED 250 OK gmail-smtp-in"** 확정.
+  catch-all `*@pivoxquant.com → seanbae1521@gmail.com` (13개 alias 전부 커버). 최종 SPF =
+  `v=spf1 include:spf.improvmx.com include:sendgrid.net ~all`. ⚠️ 자동발송 테스트메일(noreply@,
+  동일도메인)은 Gmail 자체필터로 받은편지함 미표시 — 외부발신 실문의는 정상 도착. 가이드 `docs/ops/email-setup.md`.
 - **Pro 아티팩트 이메일 동의 게이트**: `marketing_consent_at` NULL 유저는
   아티팩트 메일 미수신. 정통망법 §50 분리동의(변호사 Q-S1) 의존 — 코드는
   `PIVOX_CS1_CONSENT_ENABLED` 플래그 뒤 준비.
