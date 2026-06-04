@@ -118,7 +118,7 @@ export function ReportsHeroV2({
             >
               {counts.memos}
             </span>{" "}
-            memos,{" "}
+            memo{counts.memos === 1 ? "" : "s"},{" "}
             <span
               className="font-mono"
               style={{
@@ -128,7 +128,7 @@ export function ReportsHeroV2({
             >
               {counts.briefs}
             </span>{" "}
-            pre-briefs, and{" "}
+            pre-brief{counts.briefs === 1 ? "" : "s"}, and{" "}
             <span
               className="font-mono"
               style={{
@@ -138,7 +138,7 @@ export function ReportsHeroV2({
             >
               {counts.bragCards}
             </span>{" "}
-            brag cards. Drafted by AI, reviewed by you. None of it is
+            brag card{counts.bragCards === 1 ? "" : "s"}. Drafted by AI, reviewed by you. None of it is
             instruction to trade.
           </>
         )}

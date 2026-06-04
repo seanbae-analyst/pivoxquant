@@ -262,7 +262,7 @@ export function PortfolioHeroV2({
           margin: "0 0 32px 0",
         }}
       >
-        {positionsText} positions{" "}
+        {positionsText} position{positionCount === 1 ? "" : "s"}{" "}
         <span style={{ color: "var(--pq-bronze)" }}>observed</span>
         {" · "}
         {navText} of capital

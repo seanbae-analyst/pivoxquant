@@ -187,7 +187,7 @@ export default function LoginPageV2() {
                 textTransform: "uppercase",
               }}
             >
-              {t("auth.login.title")}
+              {locale === "ko" ? "로그인" : "Sign in"}
             </span>
             <h2
               className="font-display"
