@@ -35,7 +35,10 @@ def vix_strategy():
     result = VIXStrategy.analyze()
     if result:
         return jsonify(result)
-    return jsonify({"error": "VIX data unavailable"}), 500
+    # Data-unavailable is a normal condition (upstream feed down / thin history),
+    # not a server fault → 503 (retryable), mirroring signals_quant herding. A 500
+    # here alerts Sentry + makes a client treat a routine no-data state as a crash.
+    return jsonify({"error": "VIX data unavailable"}), 503
 
 
 @strategy_quant_bp.route("/cross-asset")
@@ -52,7 +55,8 @@ def cross_asset():
     if result:
         _bounded_set(_ca_cache, uid, {"data": result, "ts": now})
         return jsonify(result)
-    return jsonify({"error": "Insufficient data"}), 500
+    # Data-unavailable → 503 (retryable), not a 500 server-fault. See vix-strategy.
+    return jsonify({"error": "Insufficient data"}), 503
 
 
 @strategy_quant_bp.route("/stat-arb")

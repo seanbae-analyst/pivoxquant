@@ -254,12 +254,21 @@ def twin_comparison():
     # the denominator and silently understated ``user_lifetime_pct`` (e.g. a
     # $1000 buy → $1100 sell read as 4.76% instead of the true 10%). Roundtrips
     # are now measured against the cost basis actually put to work.
+    # Multi-currency ledgers (US + KR) must NOT raw-sum ₩ + $ — normalise both
+    # legs of the ratio to KRW (same fix class as performance_quant F-1, CEO
+    # 2026-06-05). NOTE: the twin/paper side (twin_total above) can also mix
+    # currencies if the paper portfolio holds both KR and US tickers — its base-
+    # currency convention is unresolved, tracked in docs/qa overnight report.
+    from services import fx_service
+    _fx = fx_service.get_rate()
     user_invested = sum(
-        float(t.total_value or 0)
+        fx_service.amount_to_krw(t.total_value, t.currency, t.ticker, _fx)
         for t in user_trades
         if (t.action or "").upper() == "BUY"
     ) or 0.0
-    user_pnl = sum(float(t.pnl or 0) for t in user_trades) or 0.0
+    user_pnl = sum(
+        fx_service.amount_to_krw(t.pnl, t.currency, t.ticker, _fx) for t in user_trades
+    ) or 0.0
     user_lifetime_pct = (user_pnl / user_invested * 100.0) if user_invested > 0 else None
 
     payload = {

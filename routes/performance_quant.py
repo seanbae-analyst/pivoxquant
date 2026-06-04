@@ -601,19 +601,17 @@ def _bucket_holding_periods(pairs):
 # native `total_value`/`pnl` + a `currency` column; summing them raw is meaningless
 # (the portfolio_history +52,281% / risk_summary 700× class). We normalise every
 # CROSS-currency aggregate to KRW at the current USD/KRW rate — KRW passes through,
-# USD × rate — mirroring fx_service.cost_basis_krw for positions. Single-currency
-# ledgers are unaffected; the fix matters for multi-currency (US+KR) users.
+# USD × rate. Canonical impl lives in fx_service (single source of truth, shared
+# with routes/twin.py); these stay as terse module-local aliases the regression
+# test imports.
 def _is_krw_ccy(currency, ticker=None) -> bool:
-    if (currency or "").upper() == "KRW":
-        return True
-    t = (ticker or "").upper()
-    return t.endswith(".KS") or t.endswith(".KQ")
+    from services import fx_service
+    return fx_service.is_krw_currency(currency, ticker)
 
 
 def _to_krw(amount, currency, ticker, rate) -> float:
-    """Normalise a native-currency amount to KRW. USD × rate; KRW passthrough."""
-    amt = float(amount or 0.0)
-    return amt if _is_krw_ccy(currency, ticker) else amt * rate
+    from services import fx_service
+    return fx_service.amount_to_krw(amount, currency, ticker, rate)
 
 
 @performance_quant_bp.route("/analytics/turnover")

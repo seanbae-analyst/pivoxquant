@@ -123,3 +123,27 @@ CEO: "합산하지 말고 환율에 맞게 KRW/USD 다르게." → implemented F
 - **Test**: `tests/test_turnover_report_currency.py` — helper unit + precise ledger assertion
   (US $100 × 1300 + KR ₩10,000 = ₩140,000, vs raw-mixed bug 10,100) + turnover smoke. 4/4 pass.
 - F-1 status: 🟠 REPORT → ✅ **FIXED**.
+
+---
+
+## UPDATE 2026-06-05 (part 2) — structure + simulation
+**Structure / FX-class eradication.** Centralised the currency normaliser in
+`fx_service.amount_to_krw()` / `is_krw_currency()` (single source of truth alongside
+`cost_basis_krw`); `performance_quant._to_krw` now delegates. Repo-wide scan found a
+THIRD dormant same-class site — `routes/twin.py twin_comparison()` raw-summed user
+`pnl`/`total_value` (₩+$) → `user_lifetime_pct` skewed for multi-currency users.
+Fixed (both ratio legs → KRW). (Twin paper-side `twin_total` can also mix if the paper
+book holds KR+US tickers — base-currency convention unresolved, flagged for CEO.)
+god-files noted (artifacts.py 4093, profile.py 2921…) — NOT refactored unsupervised.
+
+**Bug simulation (CEO "모든 상황").** `tests/test_scenario_simulation.py` sweeps 38
+FE-used read endpoints × 5 states (empty / single-US / single-KR / multi-currency /
+extreme magnitudes), asserting no 5xx-crash and no NaN/Infinity. Found:
+- 🟠 `strategy_quant.py vix-strategy:38 + cross-asset:55` returned **500** for a normal
+  data-unavailable condition (inconsistent with herding's 503 + canslim's 404). → **503**
+  (retryable). Both dormant (0 live FE), but a 500 alerts Sentry + mis-signals clients.
+- ✅ After fix: all 5 states × 38 endpoints clean (no crash, all numbers finite).
+The 503s (signals/herding, vix, cross-asset) are deliberate graceful degradation.
+
+Tests added: twin user-pct KRW (49.97% vs raw-mix 30%), fx_service.amount_to_krw unit,
+scenario sweep ×5. pytest green.

@@ -109,3 +109,53 @@ def test_turnover_mixed_currency_smoke(client, auth_user, app):
     # Finite, non-negative — the raw ₩+$ mix used to produce a garbage ratio.
     assert data["annualized_turnover_pct"] >= 0
     assert data["estimated_annual_cost_pct"] >= 0
+
+
+# ── fx_service canonical primitive (centralised, shared with twin) ────────────
+def test_fx_amount_to_krw_canonical():
+    from services import fx_service
+    fx_service.set_rate(1300.0)
+    assert fx_service.is_krw_currency("KRW", "AAPL") is True
+    assert fx_service.is_krw_currency("USD", "005930.KS") is True
+    assert fx_service.is_krw_currency("USD", "AAPL") is False
+    assert fx_service.amount_to_krw(100, "USD", "AAPL", 1300) == 130000
+    assert fx_service.amount_to_krw(70000, "KRW", "005930.KS", 1300) == 70000
+    # default rate (no explicit) uses get_rate() — set to 1300 above
+    assert fx_service.amount_to_krw(100, "USD", "AAPL") == pytest.approx(130000.0)
+
+
+# ── twin /comparison user return is KRW-normalised, not raw ₩+$ ───────────────
+def test_twin_comparison_user_pct_normalised_to_krw(client, auth_user, app):
+    from datetime import timedelta
+    from services import fx_service
+    from services.twin import initialize_twin
+    from extensions import db
+    from models.trade_history import TradeHistory
+
+    fx_service.set_rate(1300.0)
+    uid = auth_user["id"]
+    with app.app_context():
+        twin = initialize_twin(uid)
+        t0 = twin.initialized_at + timedelta(hours=1)
+        # US: $1000 invested, +$500 realised (the big, ~50% position).
+        # KR: ₩1000 invested, +₩100 realised (tiny — must NOT be weighted as if $1000).
+        rows = [
+            dict(ticker="AAPL", action="BUY", currency="USD", total_value=1000.0, pnl=0.0),
+            dict(ticker="AAPL", action="SELL", currency="USD", total_value=1500.0, pnl=500.0, pnl_pct=50.0),
+            dict(ticker="005930.KS", action="BUY", currency="KRW", total_value=1000.0, pnl=0.0),
+            dict(ticker="005930.KS", action="SELL", currency="KRW", total_value=1100.0, pnl=100.0, pnl_pct=10.0),
+        ]
+        for r in rows:
+            db.session.add(TradeHistory(
+                user_id=uid, ticker=r["ticker"], action=r["action"], currency=r["currency"],
+                shares=1, price_per_share=r["total_value"], total_value=r["total_value"],
+                pnl=r["pnl"], pnl_pct=r.get("pnl_pct", 0.0), traded_at=t0,
+            ))
+        db.session.commit()
+
+    resp = client.get("/api/twin/comparison")
+    assert resp.status_code == 200, resp.data
+    data = resp.get_json()["data"]
+    # KRW-normalised: invested=$1000×1300+₩1000=1,301,000; pnl=$500×1300+₩100=650,100
+    # → ≈ 49.97%.  The raw ₩+$ mix bug would read 600/2000 = 30%.
+    assert data["user_lifetime_pct"] == pytest.approx(49.97, abs=0.5)

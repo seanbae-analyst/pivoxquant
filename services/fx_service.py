@@ -91,6 +91,28 @@ def cost_basis_krw(position) -> float | None:
     return native * fx
 
 
+def is_krw_currency(currency=None, ticker=None) -> bool:
+    """True if an amount is KRW-denominated. Explicit ``currency`` wins; else the
+    ticker suffix (``.KS`` / ``.KQ`` = KRW). Default → USD (not KRW)."""
+    if (currency or "").upper() == "KRW":
+        return True
+    t = (ticker or "").upper()
+    return t.endswith(".KS") or t.endswith(".KQ")
+
+
+def amount_to_krw(amount, currency=None, ticker=None, rate=None) -> float:
+    """Normalise a bare native-currency amount to KRW (USD × rate; KRW passes
+    through). The canonical primitive for aggregating multi-currency ledgers
+    (TradeHistory ``total_value`` / ``pnl``) without the raw ₩+$ Pattern-7 sum.
+    ``cost_basis_krw`` is the Position-shaped sibling. ``rate`` defaults to the
+    cached spot :func:`get_rate`."""
+    amt = float(amount or 0.0)
+    if is_krw_currency(currency, ticker):
+        return amt
+    fx = rate if (rate and rate > 0) else get_rate()
+    return amt * fx
+
+
 def last_updated() -> float:
     """Unix timestamp of the last successful refresh (0 if never)."""
     return _usdkrw_ts
