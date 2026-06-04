@@ -107,3 +107,19 @@ frontend `tsc` clean · `vitest` 541/541 · backend `pytest` 3791/0.
 - **R19 KIS read-only (LEGAL CRITICAL)** — `buy_order`/`sell_order`/`_place_order` all permanently DISABLED ("투자일임업 자본시장법 규제로 영구 비활성화"); zero reachable execution path. ✅ §101/advisory-avoidance intact.
 
 **Total: ~18 rounds. Verdict unchanged — code launch-ready; only F-1 (report) + F-2 (minor). Pushed after full verify per CEO instruction.**
+
+---
+
+## UPDATE 2026-06-05 — F-1 FIXED (CEO decision: FX-normalize)
+CEO: "합산하지 말고 환율에 맞게 KRW/USD 다르게." → implemented FX-normalization to KRW.
+- **Discovery**: both `/api/analytics/turnover` (turnover_report) AND `/api/performance/ledger`
+  (performance_ledger) are **dormant** — 0 live FE consumers (FE uses `turnover-mirror`, which
+  was already per-currency-correct). So F-1 never affected a live surface; fix is launch hygiene.
+- **Fix** (`routes/performance_quant.py`): added `_to_krw()`/`_is_krw_ccy()` helpers; normalised
+  every cross-currency aggregate to KRW at `fx_service.get_rate()` (KRW passthrough, USD × rate) —
+  turnover_report (total_sell/buy/traded value) + performance_ledger (total_pnl, gross_gains/losses,
+  per-ticker, monthly). Added `"currency": "KRW"` to both payloads. Percentages (pnl_pct) untouched
+  (currency-neutral). turnover_report returns only ratios → no API/FE coupling.
+- **Test**: `tests/test_turnover_report_currency.py` — helper unit + precise ledger assertion
+  (US $100 × 1300 + KR ₩10,000 = ₩140,000, vs raw-mixed bug 10,100) + turnover smoke. 4/4 pass.
+- F-1 status: 🟠 REPORT → ✅ **FIXED**.

@@ -594,6 +594,28 @@ def _bucket_holding_periods(pairs):
     return [{"bucket": label, "count": counts[label]} for label, _, _ in _HOLDING_BUCKETS]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Currency normalisation — never raw-sum KRW + USD trade amounts.
+# Per CEO 2026-06-05 ("합산하지 말고 환율에 맞게 KRW/USD 다르게"): a user's ledger can
+# mix ₩-denominated (KR, .KS/.KQ) and $-denominated (US) rows. TradeHistory stores
+# native `total_value`/`pnl` + a `currency` column; summing them raw is meaningless
+# (the portfolio_history +52,281% / risk_summary 700× class). We normalise every
+# CROSS-currency aggregate to KRW at the current USD/KRW rate — KRW passes through,
+# USD × rate — mirroring fx_service.cost_basis_krw for positions. Single-currency
+# ledgers are unaffected; the fix matters for multi-currency (US+KR) users.
+def _is_krw_ccy(currency, ticker=None) -> bool:
+    if (currency or "").upper() == "KRW":
+        return True
+    t = (ticker or "").upper()
+    return t.endswith(".KS") or t.endswith(".KQ")
+
+
+def _to_krw(amount, currency, ticker, rate) -> float:
+    """Normalise a native-currency amount to KRW. USD × rate; KRW passthrough."""
+    amt = float(amount or 0.0)
+    return amt if _is_krw_ccy(currency, ticker) else amt * rate
+
+
 @performance_quant_bp.route("/analytics/turnover")
 @api_auth
 @legal_scrub_response
@@ -626,6 +648,9 @@ def turnover_report():
             status=404,
         )
 
+    from services import fx_service
+    fx_rate = fx_service.get_rate()
+
     total_trades = len(trades)
     buys = [t for t in trades if t.action == "BUY"]
     sells = [t for t in trades if t.action == "SELL"]
@@ -652,9 +677,11 @@ def turnover_report():
     distribution = _bucket_holding_periods(pairs)
 
     # Annualized turnover: (sum of sell values / avg portfolio value) * (252 / trading_days)
-    total_sell_value = sum(p["sell_value"] for p in pairs)
-    avg_buy_value = sum(t.total_value for t in buys) / max(len(buys), 1)
-    avg_sell_value = sum(t.total_value for t in sells) / max(len(sells), 1)
+    total_sell_value = sum(
+        (p["sell_value"] if p.get("is_kr") else p["sell_value"] * fx_rate) for p in pairs
+    )
+    avg_buy_value = sum(_to_krw(t.total_value, t.currency, t.ticker, fx_rate) for t in buys) / max(len(buys), 1)
+    avg_sell_value = sum(_to_krw(t.total_value, t.currency, t.ticker, fx_rate) for t in sells) / max(len(sells), 1)
     avg_portfolio_value = (avg_buy_value + avg_sell_value) / 2 if sells else avg_buy_value
 
     # Determine trading days in the period
@@ -673,7 +700,7 @@ def turnover_report():
 
     # Cost breakdown
     kr_sell_value = sum(p["sell_value"] for p in pairs if p.get("is_kr"))
-    total_traded_value = sum(t.total_value for t in trades)
+    total_traded_value = sum(_to_krw(t.total_value, t.currency, t.ticker, fx_rate) for t in trades)
 
     commission_cost = total_traded_value * _COMMISSION_BPS
     slippage_cost = total_traded_value * _SLIPPAGE_BPS
@@ -716,6 +743,7 @@ def turnover_report():
         "median_holding_period_days": round(median_holding, 1),
         "annualized_turnover_pct": round(annualized_turnover * 100, 1),
         "estimated_annual_cost_pct": round(estimated_annual_cost_pct, 2),
+        "currency": "KRW",  # monetary intermediates normalised to KRW (no ₩+$ raw sum)
         "holding_distribution": distribution,
         "cost_breakdown": {
             "commission": round(commission_cost / max(avg_portfolio_value, 1) * (252 / trading_days) * 100, 2),
@@ -767,7 +795,10 @@ def performance_ledger():
             status=404,
         )
 
-    # ── Aggregate stats ──
+    from services import fx_service
+    fx_rate = fx_service.get_rate()
+
+    # ── Aggregate stats ── (pnl totals normalised to KRW — no ₩+$ raw sum)
     total_signals = len(trades)
     sell_trades = [t for t in trades if t.action == "SELL"]
     buy_trades = [t for t in trades if t.action == "BUY"]
@@ -785,14 +816,14 @@ def performance_ledger():
         sum(t.pnl_pct or 0 for t in losses) / len(losses), 2
     ) if losses else 0.0
 
-    total_pnl = sum(t.pnl or 0 for t in sell_trades)
+    total_pnl = sum(_to_krw(t.pnl, t.currency, t.ticker, fx_rate) for t in sell_trades)
     total_pnl_pct = round(
         sum(t.pnl_pct or 0 for t in sell_trades) / total_executed, 2
     ) if total_executed > 0 else 0.0
 
     # Profit factor = gross gains / gross losses
-    gross_gains = sum(t.pnl or 0 for t in wins)
-    gross_losses = abs(sum(t.pnl or 0 for t in losses))
+    gross_gains = sum(_to_krw(t.pnl, t.currency, t.ticker, fx_rate) for t in wins)
+    gross_losses = abs(sum(_to_krw(t.pnl, t.currency, t.ticker, fx_rate) for t in losses))
     profit_factor = round(gross_gains / gross_losses, 2) if gross_losses > 0 else 0.0
 
     # ── Per-strategy attribution (group by ticker) ──
@@ -803,7 +834,7 @@ def performance_ledger():
     for t in sell_trades:
         s = strategy_stats[t.ticker]
         s["trades"] += 1
-        s["total_pnl"] += t.pnl or 0
+        s["total_pnl"] += _to_krw(t.pnl, t.currency, t.ticker, fx_rate)
         s["total_pnl_pct"] += t.pnl_pct or 0
         if (t.pnl or 0) > 0:
             s["wins"] += 1
@@ -835,7 +866,7 @@ def performance_ledger():
         month_key = t.traded_at.strftime("%Y-%m")
         m = monthly[month_key]
         m["trades"] += 1
-        m["total_pnl"] += t.pnl or 0
+        m["total_pnl"] += _to_krw(t.pnl, t.currency, t.ticker, fx_rate)
         if (t.pnl or 0) > 0:
             m["wins"] += 1
         elif (t.pnl or 0) < 0:
@@ -857,6 +888,7 @@ def performance_ledger():
 
     payload = {
         "period": period,
+        "currency": "KRW",  # pnl totals + per-ticker/monthly rows normalised to KRW
         "total_signals": total_signals,
         "total_buys": len(buy_trades),
         "total_sells": total_executed,
