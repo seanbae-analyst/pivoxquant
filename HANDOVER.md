@@ -1,4 +1,39 @@
-# PivoxQuant — 인수인계서 (2026-06-04 v56.1 — 출시 하드닝 + Stripe OFF, prod 배포)
+# PivoxQuant — 인수인계서 (2026-06-05 v57 — 자율 버그헌팅+카피감사+8 fix, prod 배포)
+
+## v57 2026-06-05 — 자율모드: 버그헌팅 전수 + legal 결론 + 임베디드 카피 감사 (✅ 커밋·push·배포)
+
+> CEO "자율모드 최고판단 다 하라(베타게이트 해제만 제외)" + "예산/메모 최신화" + "박혀있던
+> 문구 싹다 전수조사→최신동향 파악". → 9 agent 병렬(버그헌팅 6 + 카피감사 3) → **모든 finding
+> lead 가 코드 실측 재검증**(에이전트 주장 정정 포함). **빌드 green: pytest 3810 passed/0fail
+> (1150s) · tsc 0 · vitest 541.** 버그 8건 fix + "58→40" 오버클레임 정정, 5건 근거 문서화 보류.
+>
+> - **법적 결론**: 무료 출시 = **코드 GO**. 유일 hard blocker = **PIPA §30** 처리방침/약관 "초안"
+>   라벨 라이브 게시(내용 완성형·라벨만 제거하면 됨·과태료 최대 3천만 형사X). §101 = 무료(대가없음)
+>   →면제 LOW. **"초안 제거 + 베타게이트 해제"는 CEO 지시로 보류**(공개출시 = 변호사 게이트와 한 쌍).
+>   무료상담 패킷 `docs/legal/상담A·B·실행계획` 준비완료.
+> - **버그 fix 8**: B1 `/api/*` 4xx JSON(HTML→프론트 .json() silent 실패) · B2 regime/turnover/
+>   ledger NaN 차단(_finite_floats) · B5 AI Twin paper-side USD 정규화(₩+$ raw 합산 Pattern-7,
+>   cash=$10k base) · B6 Artifact 5종 TradeHistory 혼합통화 정규화(year_end/quarterly/brag/
+>   monthly_brag/kpi, +회귀6) · B7 FX fallback 단일상수(1370/1380→`FALLBACK_USDKRW`) · B8
+>   legal_filter↔forbidden_terms core-directive 파리티 테스트 · B4 /pre-trade 면책 coaching 매핑 ·
+>   B13 what-if raw hex→`var(--down)` 토큰.
+> - **카피 감사(3 agent)**: "58 quant models" = 오버클레임(SoT `model_catalog.py` assert==40,
+>   features 페이지는 이미 40 = 내부 모순) → **6곳 58→40 정정**(표시광고법 §3, 2026 시행령 "외부
+>   자문 감경 삭제"로 미실증 수치 직격 — 시의적절). **lead 정정**: discover 배너 누락=FALSE
+>   POSITIVE(layout PATH_TO_TYPE 매핑 존재) · seven-layer 가독성=비활성 v1만(DOWNGRADE).
+> - **보류(근거 문서화·추측 fix 금지)**: B3 iOS `window.confirm` 무음(실기기 검증·invasive) · B9
+>   consent 컬럼(net-safe·§50 Q-S1 lawyer-gated) · B10 랜딩 indices null(코드버그 아님·cache-only
+>   설계·prod 로그 의존) · B11 SENDGRID env(Railway·CEO) · B12 TierGate /pricing(Stage1 전용) ·
+>   paper-trading 페이지 §101 어휘(CEO 결정) · 17vs18 artifacts(canonical 재조정) · §31 이메일템플릿
+>   갭(brag_celebration/dd_checklist, 변호사 검토).
+> - **CLEAN 확인(실측)**: cross-user PII 누수 0(cache 198참조) · 동결파일 위반 0 · FX precedent 3종
+>   (portfolio_history/risk_summary/build_context) fix 유지 · BUY/SELL 0 · violet 0 · naked ticker 0.
+> - **메모리 최신화**: `qa_bug_log.md`(v57 전수) · `finance_budget.md`(이번 세션 0원) ·
+>   `legal_copy_audit_2026-06-05.md`(신규).
+> - **검증**: pytest 3810/0fail · tsc 0 · vitest 541. 스코프드 커밋 3(backend/frontend/docs) → main
+>   FF → prod 배포. **베타게이트 유지(공개 노출 0)**.
+
+---
 
 ## v56.1 2026-06-04 — push + prod 배포 (2회) + Stripe 전면 비활성화 (✅ 완료)
 
