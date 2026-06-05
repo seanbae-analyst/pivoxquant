@@ -42,7 +42,6 @@ import {
   NotebookPen,
   UserCircle,
   Sprout,
-  Sigma,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -133,10 +132,8 @@ const SYSTEM: Item[] = [
   { key: "growth", label: "Routine", href: "/growth", icon: Sprout },
   { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
-  // 2026-06-01: Methodology trust surface (/methodology). Login-gated until
-  // Q-DT4 (METHODOLOGY_PUBLIC flag); surfaced here so beta users can read how
-  // the engine works (40-model catalog + academic sources + data lineage).
-  { key: "methodology", label: "Methodology", href: "/methodology", icon: Sigma },
+  // Methodology moved to a PUBLIC landing page (/methodology) 2026-06-05 per CEO
+  // — no longer a login-gated sidebar item.
 ];
 
 const ALL_ITEMS: Item[] = [...TOP, ...ARTIFACTS, ...PORTFOLIO, ...RESEARCH, ...SYSTEM];

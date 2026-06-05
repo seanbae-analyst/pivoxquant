@@ -42,7 +42,6 @@ import {
   LogOut,
   Sparkles,
   UserCircle,
-  Sigma,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -130,8 +129,6 @@ const DRAWER_GROUPS: DrawerGroup[] = [
       { href: "/journal", label: "Journal", icon: NotebookPen },
       { href: "/profile", label: "Profile · Persona", icon: UserCircle },
       { href: "/settings", label: "Settings", icon: SettingsIcon },
-      // 2026-06-01: Methodology trust surface — login-gated until Q-DT4.
-      { href: "/methodology", label: "Methodology", icon: Sigma },
     ],
   },
 ];

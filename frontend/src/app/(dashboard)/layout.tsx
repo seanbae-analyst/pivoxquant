@@ -37,7 +37,7 @@ type DisclaimerKind = "signal" | "ai-analysis" | "coaching";
 const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   // most specific / multi-segment first
   ["/pre-trade", "coaching"],  // behavioural pre-trade surface — educational AI framing, not the default "signal"
-  ["/methodology", "signal"],
+  ["/journal", "coaching"],    // behavioural reflection feed — same framing as pre-trade
   ["/ai-chat", "ai-analysis"],
   ["/watchlist", "signal"],
   ["/portfolio", "signal"],
