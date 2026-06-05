@@ -24,7 +24,12 @@ from datetime import date, datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-_usdkrw = 1380.0
+# Single source of truth for the offline fallback rate — used as the initial
+# _usdkrw seed AND imported by downstream consumers (nav_snapshot, portfolio) so
+# a total FX-fetch failure can't make modules disagree (was 1380 here vs 1370 in
+# nav_snapshot/portfolio — a Pattern-2 divergence).
+FALLBACK_USDKRW = 1380.0
+_usdkrw = FALLBACK_USDKRW
 _usdkrw_ts = 0.0  # Last SUCCESSFUL update timestamp (0 = never fetched)
 _last_attempt_ts = 0.0  # Last attempt timestamp (for 5s short-cache)
 _lock = threading.Lock()

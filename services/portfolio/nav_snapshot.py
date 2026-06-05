@@ -43,9 +43,9 @@ def compute_current_nav(user_id: int) -> dict | None:
         prices = {}
 
     try:
-        fx = float(fx_service.get_rate() or 0) or 1370.0
+        fx = float(fx_service.get_rate() or 0) or fx_service.FALLBACK_USDKRW
     except Exception:
-        fx = 1370.0
+        fx = fx_service.FALLBACK_USDKRW
 
     nav_us_usd = 0.0
     nav_kr_krw = 0.0

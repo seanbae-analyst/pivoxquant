@@ -1992,7 +1992,7 @@ def portfolio_history():
         today_val = 0
         # Today's realtime values: use today's spot rate (get_rate_at(today) →
         # get_rate() for same-day dates — consistent with fx_service design).
-        fx_today = fx_service.get_rate() or 1370.0
+        fx_today = fx_service.get_rate() or fx_service.FALLBACK_USDKRW
         for p in positions:
             if p.ticker in rt_prices:
                 is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")

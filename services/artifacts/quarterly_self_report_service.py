@@ -56,6 +56,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, TradeHistory, User
+from services import fx_service
 
 # Re-use the Self Audit aggregator — we wrap, not duplicate.
 from services.artifacts.self_audit_service import (
@@ -148,6 +149,24 @@ def _mv_usd(price: float, shares: float, ticker: str, fx: float) -> float:
     return native
 
 
+def _amount_usd(amount: float, currency: Optional[str],
+                ticker: Optional[str], fx: float) -> float:
+    """Normalise a bare TradeHistory amount (`total_value` / `pnl`) to USD.
+
+    The quarterly report's numeraire is USD (every figure rendered with `$`,
+    `closing_val`/`opening_val` summed via `_mv_usd`). A KR trade's
+    `total_value` is native KRW, so summing it raw with a US trade's USD
+    value over-weights KR ~1000x — the Pattern-7 ₩+$ corruption. Defers the
+    KRW/USD decision to `fx_service.is_krw_currency` (explicit `currency`
+    column wins, else `.KS`/`.KQ` suffix) so the convention cannot drift from
+    the canonical primitive, then divides KRW → USD to match the report.
+    """
+    amt = float(amount or 0.0)
+    if fx_service.is_krw_currency(currency, ticker):
+        return amt / fx if fx > 0 else 0.0
+    return amt
+
+
 def _sector_for_ticker(ticker: str) -> str:
     try:
         from models import SignalCache
@@ -233,9 +252,17 @@ class QuarterlyContext:
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-def _quarter_cash_flow(user_id: int, start: date, end: date
+def _quarter_cash_flow(user_id: int, start: date, end: date, fx: float
                        ) -> tuple[Optional[float], Optional[float], Optional[float]]:
-    """Return (total_buys, total_sells, net_cash_flow) for the quarter."""
+    """Return (total_buys, total_sells, net_cash_flow) for the quarter, in USD.
+
+    Each trade's `total_value` is native (KRW for `.KS`/`.KQ`, USD otherwise),
+    so it is normalised to the report's USD numeraire via `_amount_usd` before
+    summing — without this a mixed KR(₩)+US($) book over-weights KR ~1000x
+    (Pattern-7) and the downstream `opening_val = closing_val - net` subtracts
+    a ₩+$ mixture from a USD figure. `fx` is the USD→KRW spot, fetched once by
+    the caller and reused.
+    """
     ps_dt = datetime.combine(start, datetime.min.time())
     pe_dt = datetime.combine(end, datetime.max.time())
     try:
@@ -253,7 +280,7 @@ def _quarter_cash_flow(user_id: int, start: date, end: date
     buys = 0.0
     sells = 0.0
     for t in rows:
-        val = float(t.total_value or 0)
+        val = _amount_usd(t.total_value, t.currency, t.ticker, fx)
         if (t.action or "").upper() == "BUY":
             buys += val
         elif (t.action or "").upper() == "SELL":
@@ -276,11 +303,16 @@ def _segments(user_id: int, start: date, end: date) -> list[dict[str, Any]]:
     except Exception:
         return []
 
+    # Sector buckets can mix KR(₩) and US($) tickers (e.g. 005930.KS + AAPL
+    # both map to Technology), so each pnl is normalised to USD — the report
+    # numeraire ($-rendered, ranked) — before bucketing. Raw ₩+$ would
+    # over-weight KR ~1000x and corrupt the best-sector ranking (Pattern-7).
+    fx = _fx_rate()  # USD → KRW
     bucket: dict[str, dict[str, float]] = {}
     for t in rows:
         sec = _sector_for_ticker(t.ticker or "")
         b = bucket.setdefault(sec, {"pnl": 0.0, "count": 0})
-        b["pnl"] += float(t.pnl or 0)
+        b["pnl"] += _amount_usd(t.pnl, t.currency, t.ticker, fx)
         b["count"] += 1
     out: list[dict[str, Any]] = []
     for sec, v in bucket.items():
@@ -565,10 +597,15 @@ class QuarterlySelfReportService:
 
         positions = Position.query.filter_by(user_id=user_id).all()
 
-        buys, sells, net = _quarter_cash_flow(user_id, start, end)
+        # USD→KRW spot, fetched once and reused for every currency
+        # normalisation in this report (cash flow + closing/opening value).
+        fx = _fx_rate()  # USD → KRW
+
+        # Cash flow normalised to USD ($) — the report numeraire — so the
+        # opening-value identity below stays currency-coherent.
+        buys, sells, net = _quarter_cash_flow(user_id, start, end, fx)
 
         # Closing value (live) — normalised to USD ($), the report numeraire.
-        fx = _fx_rate()  # USD → KRW
         closing = 0.0
         for p in positions:
             shares = float(p.shares or 0)

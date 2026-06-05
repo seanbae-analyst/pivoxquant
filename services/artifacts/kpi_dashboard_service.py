@@ -287,9 +287,18 @@ def _max_drawdown_pct(daily_rets: list[float]) -> Optional[float]:
     return round(mdd * 100, 2)
 
 
-def _turnover_ratio(user_id: int, portfolio_value: Optional[float]
-                    ) -> Optional[float]:
+def _turnover_ratio(user_id: int, portfolio_value: Optional[float],
+                    ccy: str = "USD") -> Optional[float]:
     """Σ|trade_notional| over last 30d / portfolio_value.
+
+    `portfolio_value` is expressed in `ccy` (the numeraire chosen by
+    `_portfolio_value`: KRW for an all-KR book, USD otherwise). Each trade's
+    `total_value` is native (KRW for `.KS`/`.KQ`, USD otherwise), so it MUST
+    be normalised to that same `ccy` before summing — otherwise a mixed
+    KR(₩)+US($) book sums ₩ and $ raw in the numerator while the denominator
+    is single-currency, yielding a meaningless ratio (Pattern-7). KRW is the
+    canonical bridge (`fx_service.amount_to_krw`); for a USD numeraire we
+    divide back by the spot.
 
     Returns None if portfolio_value is missing/zero or there are no trades.
     Can exceed 1.0 (>100% turnover) — consistent with standard definition.
@@ -309,10 +318,14 @@ def _turnover_ratio(user_id: int, portfolio_value: Optional[float]
         return None
     if not rows:
         return 0.0
+    from services import fx_service
+    fx = _fx_rate()  # USD → KRW
     total = 0.0
     for r in rows:
         try:
-            total += abs(float(r.total_value or 0))
+            krw = fx_service.amount_to_krw(r.total_value, r.currency, r.ticker, fx)
+            notional = krw if ccy == "KRW" else (krw / fx if fx > 0 else 0.0)
+            total += abs(notional)
         except Exception:
             logger.debug("silent-fallback: _turnover_ratio", exc_info=True)
             continue
@@ -363,7 +376,7 @@ def compute_kpis_for_user(user_id: int,
     daily_rets = _equal_weight_daily_returns(positions) if positions else []
     sharpe = _sharpe_annual(daily_rets)
     mdd = _max_drawdown_pct(daily_rets)
-    turnover = _turnover_ratio(user_id, pv)
+    turnover = _turnover_ratio(user_id, pv, ccy)
     cash = _cash_pct(user, pv)
 
     # Wave 6 — colophon data lineage. Only include broker rows for a

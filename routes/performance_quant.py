@@ -258,6 +258,7 @@ def regime_report():
     }
 
     add_disclaimer(payload, "analysis")
+    payload = _finite_floats(payload)  # strip NaN/Inf before caching+serialising (mirror _bench_cache)
     _bounded_set(_regime_cache, uid, {"data": payload, "ts": now, "key": cache_key})
     return jsonify(payload)
 
@@ -751,6 +752,7 @@ def turnover_report():
         "assessment": rec,
     }
     add_disclaimer(payload, "analysis")
+    payload = _finite_floats(payload)  # strip NaN/Inf → valid JSON (e.g. avg_holding edge cases)
     return jsonify(payload)
 
 
@@ -905,4 +907,5 @@ def performance_ledger():
         "monthly_breakdown": monthly_breakdown,
     }
     add_disclaimer(payload, "analysis")
+    payload = _finite_floats(payload)  # strip NaN/Inf → valid JSON (e.g. avg_holding edge cases)
     return jsonify(payload)

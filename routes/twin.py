@@ -233,10 +233,18 @@ def twin_comparison():
     except Exception:
         logger.exception("twin_comparison: get_prices_batch failed user=%s", current_user.id)
         price_map = {}
+    # Twin paper cash/starting_cash are USD (DEFAULT_STARTING_CASH = $10,000), so
+    # normalise each position's value to USD before summing — a raw ₩+$ sum is the
+    # Pattern-7 defect (cf. performance_quant F-1 + the user-side ratio below). A
+    # KR (.KS/.KQ) holding is priced in ₩, so /fx it before adding to USD cash.
+    from services import fx_service
+    _fx = fx_service.get_rate()
     for pos in twin.positions:
         snap = price_map.get(pos.ticker)
         price_now = float(snap["price"]) if snap and snap.get("price") else float(pos.avg_cost or 0)
-        market_value += float(pos.shares or 0) * price_now
+        mv_native = float(pos.shares or 0) * price_now
+        is_kr = (pos.ticker or "").upper().endswith((".KS", ".KQ"))
+        market_value += (mv_native / _fx) if (is_kr and _fx and _fx > 0) else mv_native
     twin_total = cash + market_value
     twin_lifetime_pct = ((twin_total - starting) / starting * 100.0) if starting > 0 else None
 
@@ -256,11 +264,10 @@ def twin_comparison():
     # are now measured against the cost basis actually put to work.
     # Multi-currency ledgers (US + KR) must NOT raw-sum ₩ + $ — normalise both
     # legs of the ratio to KRW (same fix class as performance_quant F-1, CEO
-    # 2026-06-05). NOTE: the twin/paper side (twin_total above) can also mix
-    # currencies if the paper portfolio holds both KR and US tickers — its base-
-    # currency convention is unresolved, tracked in docs/qa overnight report.
-    from services import fx_service
-    _fx = fx_service.get_rate()
+    # 2026-06-05). The twin/paper side (twin_total above) is now normalised to
+    # USD (its cash base) in the market_value loop, so both ratios are self-
+    # consistent within their own currency (USD for twin, KRW for the user) — a %
+    # comparison is valid regardless of base. ``_fx`` is computed above.
     user_invested = sum(
         fx_service.amount_to_krw(t.total_value, t.currency, t.ticker, _fx)
         for t in user_trades

@@ -60,6 +60,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, TradeHistory, User, UserReferral
+from services import fx_service
 from services.legal_filter import detect_prohibited, safe_scrub
 
 logger = logging.getLogger(__name__)
@@ -246,8 +247,13 @@ def _compute_monthly_stats(
 
     # Per-ticker tally: buy cost, sell pnl
     per_ticker: dict[str, dict[str, float]] = {}
+    # Headline realized aggregate — normalised to KRW so a mixed KR(₩)+US($)
+    # book does not produce a garbage ratio (Pattern-7: raw ₩+$ sum). The
+    # ratio (pnl/cost) is currency-invariant *only* when numerator and
+    # denominator share one currency, so both legs go through KRW.
     realized_pnl = 0.0
     realized_cost = 0.0
+    fx_rate = fx_service.get_rate()
     hold_days: list[float] = []
     # Map of first-BUY date per ticker for hold-days proxy.
     first_buy: dict[str, datetime] = {}
@@ -268,8 +274,10 @@ def _compute_monthly_stats(
         elif action == "SELL":
             bucket["sell_pnl"] += pnl
             bucket["sell_cost"] += tv
-            realized_pnl += pnl
-            realized_cost += max(tv, 0.0)
+            realized_pnl += fx_service.amount_to_krw(
+                pnl, t.currency, t.ticker, fx_rate)
+            realized_cost += max(
+                fx_service.amount_to_krw(tv, t.currency, t.ticker, fx_rate), 0.0)
             buy_ts = first_buy.get(tkr)
             if buy_ts and t.traded_at:
                 hd = (t.traded_at - buy_ts).total_seconds() / 86400.0

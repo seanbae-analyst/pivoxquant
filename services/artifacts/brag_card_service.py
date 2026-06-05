@@ -59,6 +59,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, TradeHistory, User, UserReferral, Watchlist
+from services import fx_service
 from services.legal_filter import scrub_signal
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 
@@ -293,8 +294,13 @@ def _compute_monthly_stats(
         }
 
     per_ticker: dict[str, dict[str, float]] = {}
+    # Headline realized aggregate — normalised to KRW so a mixed KR(₩)+US($)
+    # book does not produce a garbage ratio (Pattern-7: raw ₩+$ sum). The
+    # ratio (pnl/cost) is currency-invariant *only* when numerator and
+    # denominator share one currency, so both legs go through KRW.
     realized_pnl = 0.0
     realized_cost = 0.0
+    fx_rate = fx_service.get_rate()
 
     for t in trades:
         tkr = (t.ticker or "").upper()
@@ -311,8 +317,10 @@ def _compute_monthly_stats(
         elif action == "SELL":
             bucket["sell_pnl"] += pnl
             bucket["sell_cost"] += tv
-            realized_pnl += pnl
-            realized_cost += max(tv, 0.0)
+            realized_pnl += fx_service.amount_to_krw(
+                pnl, t.currency, t.ticker, fx_rate)
+            realized_cost += max(
+                fx_service.amount_to_krw(tv, t.currency, t.ticker, fx_rate), 0.0)
 
     return_pct: Optional[float] = None
     if realized_cost > 0:

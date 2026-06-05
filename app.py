@@ -301,6 +301,20 @@ def create_app():
                     "HTTP %s on %s %s — request_id=%s",
                     exc.code, request.method, request.path, request_id,
                 )
+            # API clients expect JSON, not Flask's default HTML error page.
+            # Without this, a 404 (wrong URL) or 405 (wrong method) under /api/
+            # returns text/html → frontend fetch().json() throws SyntaxError and
+            # the real status is lost. 5xx already gets JSON below; mirror it for
+            # 4xx HTTPExceptions on API routes. (429 has its own handler and
+            # never reaches here.)
+            if request.path.startswith("/api/"):
+                return (
+                    jsonify({
+                        "error": exc.description or exc.name,
+                        "code": f"HTTP_{exc.code}",
+                    }),
+                    exc.code or 500,
+                )
             return exc
 
         request_id = uuid.uuid4().hex[:12]

@@ -48,8 +48,26 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, InvestmentProfile, Position, TradeHistory, User
+from services import fx_service
 
 logger = logging.getLogger(__name__)
+
+
+def _amount_usd(amount, currency, ticker, fx: float) -> float:
+    """Normalise a bare TradeHistory amount (`total_value`) to USD.
+
+    `closing_value` in this letter is summed in USD (KR `.KS`/`.KQ` market
+    values divided by the USD→KRW rate), so the opening-value approximation
+    `total_buys - total_sells` must use the same numeraire — otherwise a
+    mixed KR(₩)+US($) book sums ₩ and $ raw and over-weights KR ~1000x
+    (Pattern-7). Defers the KRW/USD decision to `fx_service.is_krw_currency`
+    (explicit `currency` column wins, else ticker suffix) and divides
+    KRW → USD.
+    """
+    amt = float(amount or 0.0)
+    if fx_service.is_krw_currency(currency, ticker):
+        return amt / fx if fx > 0 else 0.0
+    return amt
 
 
 def _fx_rate() -> float:
@@ -486,6 +504,10 @@ class YearEndLetterService:
         # hides the row when None.
         opening_value = None
         try:
+            # USD numeraire — matches `closing_value` above so the row pair is
+            # currency-coherent. Each trade's `total_value` is native (KRW for
+            # `.KS`/`.KQ`), normalised via `_amount_usd` (reusing the same
+            # `krw_per_usd` spot) before summing.
             total_buys = 0.0
             total_sells = 0.0
             for t in (TradeHistory.query
@@ -493,7 +515,7 @@ class YearEndLetterService:
                       .all()):
                 if not t.traded_at or t.traded_at.date() >= start:
                     continue
-                val = float(t.total_value or 0)
+                val = _amount_usd(t.total_value, t.currency, t.ticker, krw_per_usd)
                 if (t.action or "").upper() == "BUY":
                     total_buys += val
                 elif (t.action or "").upper() == "SELL":
