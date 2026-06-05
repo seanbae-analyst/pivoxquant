@@ -3290,7 +3290,11 @@ html {
    Display (--font-display) for the editorial Didone feel. */
 .pq-hero-h1 {
   position: relative;
-  font-family: var(--font-display), Georgia, "Source Serif 4", serif;
+  /* CEO 2026-06-06: Playfair has no Hangul glyphs → the Korean hero H1 fell back
+     to an ugly system serif ("개구림"). Insert Pretendard (the brand KO font, same
+     family the body + other sections use) right after Playfair so 한글 renders
+     clean while Latin still uses Playfair. Per-glyph fallback, no Latin change. */
+  font-family: var(--font-display), "Pretendard Variable", Pretendard, Georgia, "Source Serif 4", serif;
   font-size: clamp(2.4rem, 5.6vw, 4.5rem);
   font-weight: 600;
   line-height: 1.05;
@@ -3305,7 +3309,7 @@ html {
 .pq-hero-h1-static,
 .pq-hero-h1-glyphs {
   display: block;
-  font-family: var(--font-display), Georgia, "Source Serif 4", serif;
+  font-family: var(--font-display), "Pretendard Variable", Pretendard, Georgia, "Source Serif 4", serif;
 }
 
 /* ══════════════════════════════════════════════════════════
