@@ -21,6 +21,8 @@
 | L3 | `frontend/src/components/ui/legal-consent-modal.tsx` | 가입 동의 게이트(4 필수 + 1 선택) | 🔧 국외이전 고지 정확화 |
 | L4 | `frontend/src/lib/reports/disclaimer.ts` | 아티팩트/PDF 면책(common·ai·backtest·cadence) | 🔧 AI기본법 §31 근거 명시 |
 | L5 | `frontend/src/lib/consents.ts` | 동의 기록 helper(§50 마케팅 · §28-8 국외이전) | ✅ 변경 불요(로직 정상) |
+| L6 | `frontend/src/components/ui/disclaimer-banner.tsx` | 화면 면책 배너(signal·ai-analysis·coaching·backtest·mirror) | 🔧 ai-analysis 변이에 AI기본법 §31 명시 |
+| L7 | `frontend/src/components/companion/disclaimer-band.tsx` | Journal Companion 면책(session/inline/legal) | 🔧 legal 변이에 §31① AI 고지 |
 | — | `docs/legal/{terms,privacy,disclaimer}.md` | **폐기본(SUPERSEDED)** | ⛔ 변호사 첨부·인용 금지 |
 
 > ⚠️ SoT 주의: 라이브 = `frontend/src/content/*-ko.md`. `docs/legal/*.md` 는 폐기본이다.
@@ -31,10 +33,11 @@
 
 | 규제 (시행/상태) | 적용 surface | 감사 결과 | 조치 |
 |---|---|---|---|
-| **AI기본법 §31** 생성형AI 표시·고지 (시행 **2026-01-22**, 계도 ~2027-01-22) | L1 §6.2 · L2 §6.3 · L4 AI_DISCLAIMER | 🔴 표시는 있었으나 **법적 근거(§31) 미인용 + §31① 사전고지 불명시** | ✅ §31①(서비스가 AI 기반임을 고지) + §31②(결과물 "AI 생성" 표시) 인용. regulatory_basis 추가 |
+| **AI기본법 §31** 생성형AI 표시·고지 (시행 **2026-01-22**, 계도 ~2027-01-22) | L1 §6.2 · L2 §6.3 · L4 AI_DISCLAIMER · L6 ai-analysis 배너 · L7 companion legal | 🔴 표시는 있었으나 **법적 근거(§31) 미인용 + §31① 사전고지 불명시** | ✅ §31①(서비스가 AI 기반임을 고지) + §31②(결과물 "AI 생성" 표시)를 약관·처리방침·아티팩트 면책·화면 면책 배너·companion 전반에 인용. regulatory_basis 추가 |
 | **PIPA §28-8** 국외이전 별도동의 (시행 2024-09) | L2 §6 · L3 동의모달 · L5 | ✅ 8개 SaaS 처리방침 §6 반영. 단 **모달 라벨이 4개만 열거**(고지 부정확) | ✅ 모달 라벨을 "미국·프랑스 8개 사업자 — 처리방침 §6" 로 정확화 + 링크 |
 | **PIPA 개정** 국외이전 영향평가·사전심사제 신설, CPO 책임 명문화, 중대유출 징벌 과징금 매출10% (국회통과 2026-02-12 / 시행 **2026-09-11**, D-98) | L2 §6 | 🟡 forward-note 부재 + 과징금 "10%" 오인 소지 | ✅ §6 비고4: 8개 수탁자 영향평가/사전심사 적용 여부 변호사 확인(Q6) + **§28-8 위반=전체매출 3% 이하(상한) / 중대유출 최대 10%=별개 징벌** 구분 명시 |
 | **전상법 §17** 가분 디지털콘텐츠 청약철회 (시행 **2026-07-21**, D-46) | L1 §3 | 🟡 유료조항 deferred 명시는 있으나 §17 근거 미인용 | ✅ §3 비고: 유료 전환 환불조항은 §17(미제공분 청약철회·일할환불·시용 제공 의무) 반영 의무 명시(Q15) |
+| **전상법 다크패턴 개정** 정기결제 사전동의·해지방해 금지 (시행 **2025-02-14** / 지침 2025-10-24 / 2026 과징금 적극) | (유료 Stage-1) | 🟡 무료단계 N/A이나 무료→유료 모델이라 전환 시 필수 | ⏸ Stage-1 초안 **제E-2조 신설**(무료→유료 30일 사전동의 + 간편해지 + 다크패턴 금지). 변호사 E2-1 |
 | **정통망법 §50의9** 매출 6% 과징금 (공포 2026-03-31 / 시행 **2026-09-30**, D-117) | L5 마케팅동의 · L2 §3 | ✅ §50 분리동의·default-deny 구조 구현. §50의9는 미래 시행 | ⏸ opt-out 14일 처리 로깅 = 변호사 최소요건 확인(Q12). 분리 opt-in checkbox = Q-S1(routes/auth.py frozen) |
 | **자본시장법 §101** 면제 트랙(투자자문 비해당) | L1 §5 · L3 비자문 동의 · L4 | ✅ 비해당 선언·POSITIVE/NEGATIVE/NEUTRAL·비자문 동의 구현 | ⏸ **핵심 전략 = 변호사 사인 영역. 코드 미변경**(Q-S3/Q7/Q13) |
 | **약관규제법 §7** 손해배상 한도 | L1 §11.3 | ✅ 무료단계 = 결제기준 한도 삭제(0원 무효 위험 회피) | ⏸ 유료 전환 시 한도 적법성 변호사 검토(Q11) |
@@ -51,6 +54,8 @@
 2. **L2 privacy-ko.md** — regulatory_basis 에 AI기본법 추가 · §6.3 AI기본법 §31 고지 인용 · §6 비고4(PIPA 2026-09-11 영향평가·사전심사 + 과징금 3%/10% 구분) · 변경이력 행 추가 · last_updated 2026-06-05.
 3. **L3 legal-consent-modal.tsx** — 국외이전 라벨 4개→"미국·프랑스 8개 사업자 + 처리방침 §6 링크" 정확화(헤더 주석 동기화).
 4. **L4 disclaimer.ts** — AI_DISCLAIMER(ko/en)에 AI기본법 §31 생성형AI 표시 근거 명시 + 파일 헤더 갱신.
+5. **L6 disclaimer-banner.tsx / L7 companion disclaimer-band.tsx** — ai-analysis 배너 + companion legal 변이에 AI기본법 §31(①AI 기반 고지 / ②생성형 표시) 인용 — 화면 면책 surface 까지 §31 일관 확장.
+6. **stage1-paid-terms-draft** — 제E-2조(정기결제·다크패턴) 신설: 무료→유료 전환 30일 사전동의 + 간편 해지 + 다크패턴 금지(전상법 2025-02-14 개정). 근거 법령·체크리스트 갱신.
 
 > 모든 변경은 **DRAFT 유지**(시행일 = 변호사 검토 후 확정). §101 전략·유료 조항·동의 게이트 로직은 **미변경**.
 

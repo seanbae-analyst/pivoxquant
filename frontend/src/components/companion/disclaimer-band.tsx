@@ -42,8 +42,8 @@ const CONTENT = {
     cta: "I understand · 확인",
   },
   legal: {
-    en: "The Personal Journal Companion is an experimental reflective tool operating under Closed Beta. It does not constitute investment advice under the Financial Investment Services and Capital Markets Act (자본시장법) of the Republic of Korea, and is not a substitute for licensed financial guidance. The service declines to produce buy/sell recommendations, price predictions, or performance guarantees. All investment decisions are your own. Logs may be reviewed for safety and compliance; personally identifying information is minimized and handled per our Privacy Policy.",
-    ko: "Personal Journal Companion은 Closed Beta 단계의 실험적 회고 도구입니다. 자본시장법상 투자자문에 해당하지 않으며, 공인 투자자문의 대체가 아닙니다. 특정 종목의 매수·매도 권유, 가격 예측, 수익 보장은 제공하지 않습니다. 모든 투자 판단의 책임은 이용자 본인에게 있습니다. 안전 및 컴플라이언스를 위해 로그가 검토될 수 있으며, 개인정보는 최소 수집 원칙에 따라 처리되고 개인정보처리방침의 적용을 받습니다.",
+    en: "The Personal Journal Companion is an experimental reflective tool operating under Closed Beta. It is operated using generative AI, disclosed under Article 31(1) of the Korean AI Framework Act. It does not constitute investment advice under the Financial Investment Services and Capital Markets Act (자본시장법) of the Republic of Korea, and is not a substitute for licensed financial guidance. The service declines to produce buy/sell recommendations, price predictions, or performance guarantees. All investment decisions are your own. Logs may be reviewed for safety and compliance; personally identifying information is minimized and handled per our Privacy Policy.",
+    ko: "Personal Journal Companion은 Closed Beta 단계의 실험적 회고 도구입니다. 본 도구는 인공지능(생성형 AI)에 기반하여 운용됨을 고지합니다(인공지능기본법 제31조 제1항). 자본시장법상 투자자문에 해당하지 않으며, 공인 투자자문의 대체가 아닙니다. 특정 종목의 매수·매도 권유, 가격 예측, 수익 보장은 제공하지 않습니다. 모든 투자 판단의 책임은 이용자 본인에게 있습니다. 안전 및 컴플라이언스를 위해 로그가 검토될 수 있으며, 개인정보는 최소 수집 원칙에 따라 처리되고 개인정보처리방침의 적용을 받습니다.",
   },
 } as const;
 
