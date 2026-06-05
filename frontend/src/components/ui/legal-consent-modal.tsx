@@ -11,7 +11,7 @@
  *   2. Non-advisory disclosure (자본시장법)
  *   3. Age confirmation — 14+ (PIPA §22)
  *   4. Cross-border data transfer consent (PIPA §28-8, 2024-09 시행) —
- *      Anthropic/Stripe/Vercel/Railway US 이전 동의
+ *      미국·프랑스 소재 8개 사업자 (처리방침 §6 이 SoT) 이전 동의
  *
  * Optional marketing consent is offered but not required.
  *
@@ -361,8 +361,18 @@ export function LegalConsentModal({
               style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
             >
               <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> 개인정보의
-              국외 이전(미국 — Anthropic, Stripe, Vercel, Railway)에
-              동의합니다. (개인정보보호법 §28-8)
+              국외 이전(미국·프랑스 소재 8개 사업자 — 상세는{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+                style={{ color: "var(--pq-ivory)" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                개인정보처리방침 §6
+              </Link>
+              )에 동의합니다. (개인정보보호법 §28-8)
             </span>
           </label>
 
