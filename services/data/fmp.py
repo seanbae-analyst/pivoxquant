@@ -757,7 +757,7 @@ def get_history(ticker, period="3mo"):
     # Map period to date range
     today = datetime.now()
     period_map = {
-        "1mo": 30, "3mo": 90, "6mo": 180,
+        "1mo": 30, "2mo": 60, "3mo": 90, "6mo": 180,
         "1y": 365, "2y": 730, "5y": 1825,
         "5d": 5, "1d": 1,
     }

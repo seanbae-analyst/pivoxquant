@@ -241,9 +241,10 @@ export function EquityCurveChart({
   }
   if (rows.length === 0) {
     return (
-      <StateFrame label="No data" height={height}>
-        No portfolio history yet. Add a position to see your 3-month
-        equity curve.
+      <StateFrame label="모으는 중" height={height}>
+        아직 기록이 없습니다 — 포지션을 추가하면 매일 종가로 곡선이 채워집니다.
+        <br />
+        Collecting — add a position and the curve fills from daily closes.
       </StateFrame>
     );
   }

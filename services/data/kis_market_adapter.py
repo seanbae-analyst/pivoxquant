@@ -63,7 +63,7 @@ _RATE_LIMIT_SLEEP = 0.12    # seconds between calls (~8 req/sec, well under 20/s
 
 _PERIOD_DAYS: dict[str, int] = {
     "1d": 1, "5d": 5,
-    "1mo": 30, "3mo": 90, "6mo": 180,
+    "1mo": 30, "2mo": 60, "3mo": 90, "6mo": 180,
     "1y": 365, "2y": 730, "5y": 1825,
 }
 

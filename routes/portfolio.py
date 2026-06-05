@@ -1937,7 +1937,7 @@ def portfolio_history():
     from services.data import fmp as fmp
 
     period = request.args.get("period", "5d")
-    if period not in ("5d", "1mo", "3mo", "6mo", "1y"):
+    if period not in ("5d", "1mo", "2mo", "3mo", "6mo", "1y"):
         period = "5d"
 
     # ── Honest equity curve: plot REAL recorded NAV, never reconstruct. ──────
@@ -1961,7 +1961,7 @@ def portfolio_history():
     except Exception:
         logger.debug("silent-fallback: nav snapshot record", exc_info=True)
 
-    _win_days = {"5d": 8, "1mo": 35, "3mo": 100, "6mo": 200, "1y": 370}.get(period, 8)
+    _win_days = {"5d": 8, "1mo": 35, "2mo": 60, "3mo": 100, "6mo": 200, "1y": 370}.get(period, 8)
     _since = _d.today() - _td(days=_win_days)
 
     all_values: dict[str, float] = {}

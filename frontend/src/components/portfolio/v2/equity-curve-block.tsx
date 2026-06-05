@@ -33,12 +33,14 @@ interface EquityCurveBlockProps {
 // (and aria handle); `key` is the backend period actually requested.
 // When the backend grows a "max" period, swap the period for the All
 // tab here without changing the UI label.
+// CEO 2026-06-05: week-scale windows so a new (free-launch) account whose book
+// is days/weeks old sees a curve that FILLS the window — month/year labels over
+// a 2-week book read as "fake/misleading" (range labeled 1Y, only 2wk of data).
+// Maps to backend periods: 1주→5d (8d), 4주→1mo (35d), 8주→2mo (60d).
 const RANGES: { id: string; key: EquityRange; label: string }[] = [
-  { id: "1mo", key: "1mo", label: "1M" },
-  { id: "3mo", key: "3mo", label: "3M" },
-  { id: "6mo", key: "6mo", label: "6M" },
-  { id: "1y", key: "1y", label: "1Y" },
-  { id: "all", key: "1y", label: "All" },
+  { id: "5d", key: "5d", label: "1주" },
+  { id: "1mo", key: "1mo", label: "4주" },
+  { id: "2mo", key: "2mo", label: "8주" },
 ];
 
 // Wave 2 sweep (2026-05-19): NOT migrated to @/lib/format.
@@ -152,13 +154,12 @@ export function EquityCurveBlock({
   navUsd,
   navKrw,
 }: EquityCurveBlockProps) {
-  // `activeId` is the tab the user clicked (id="1mo"|"3mo"|"6mo"|"1y"|"all").
-  // The backend period is resolved through the RANGES table so the "All"
-  // tab can map to "1y" without duplicating React keys or aria handles.
-  const [activeId, setActiveId] = React.useState<string>("6mo");
+  // `activeId` is the tab the user clicked (id="5d"|"1mo"|"2mo" → 1주/4주/8주).
+  // The backend period is resolved through the RANGES table.
+  const [activeId, setActiveId] = React.useState<string>("1mo");
   const activeRange =
     RANGES.find((r) => r.id === activeId)?.key ??
-    ("6mo" as EquityRange);
+    ("1mo" as EquityRange);
   const { data, isLoading, error } = useEquityCurve(activeRange);
   const benchmarkLabel: string =
     (data?.benchmark?.name?.trim() || "") || "Benchmark";

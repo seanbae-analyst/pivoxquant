@@ -31,7 +31,7 @@ const fetcher = async (url: string) => {
  * silently falls back to "5d" (Bug #8 — frontend "1yr"/"all" had been
  * resolving to a 5-day window). UI exposes "1y" via the "1Y" tab.
  */
-export type EquityRange = "1mo" | "3mo" | "6mo" | "1y";
+export type EquityRange = "5d" | "1mo" | "2mo" | "3mo" | "6mo" | "1y";
 
 export interface EquityPoint {
   t: string; // ISO date
