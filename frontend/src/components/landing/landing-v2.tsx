@@ -830,6 +830,13 @@ function SiteFooter() {
    EXPORT
    ═══════════════════════════════════════════════════════════════ */
 
+// Stage 0 (free launch): the pricing/membership section is HIDDEN. 결제 OFF +
+// BUSINESS_REGISTRATION_PENDING means a visitor cannot actually subscribe, so
+// showing ₩ tiers reads as broken/confusing. Env-gated (default off, mirrors the
+// LAUNCH_FREE_ALL_TIERS pattern) — set NEXT_PUBLIC_SHOW_PRICING=true in Vercel to
+// restore for Stage 1; PricingPreview + TIERS data are kept intact above. (CEO 2026-06-06)
+const SHOW_PRICING = process.env.NEXT_PUBLIC_SHOW_PRICING === "true";
+
 export default function LandingV2() {
   return (
     <div
@@ -849,9 +856,13 @@ export default function LandingV2() {
       <SectionCurtain>
         <ReportsGallery />
       </SectionCurtain>
-      <SectionCurtain>
-        <PricingPreview />
-      </SectionCurtain>
+      {/* Pricing/Membership section hidden for Stage 0 free launch (CEO 2026-06-06).
+          Flip SHOW_PRICING above to restore for Stage 1. */}
+      {SHOW_PRICING && (
+        <SectionCurtain>
+          <PricingPreview />
+        </SectionCurtain>
+      )}
       <SectionCurtain divider={false}>
         <Faq />
       </SectionCurtain>
