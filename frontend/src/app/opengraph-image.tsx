@@ -75,7 +75,7 @@ export default function OpengraphImage() {
               maxWidth: 900,
             }}
           >
-            58 quant models. 7-layer risk defense. US + Korean equities.
+            40 quant models. 7-layer risk defense. US + Korean equities.
           </span>
         </div>
 

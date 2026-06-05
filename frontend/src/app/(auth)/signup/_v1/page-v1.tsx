@@ -254,7 +254,7 @@ export default function SignupPageV1() {
         계정 만들기
       </h1>
       <p className="mt-2 text-center text-sm text-slate-500">
-        58개 퀀트 모델을 무료로 시작하세요
+        40개 퀀트 모델을 무료로 시작하세요
       </p>
 
       {/* Legal consent checkboxes (required before OAuth) */}

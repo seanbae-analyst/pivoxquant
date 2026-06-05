@@ -319,7 +319,7 @@ export function WhatIfClient() {
           >
             <AlertCircle
               className="mt-0.5 h-4 w-4 shrink-0"
-              style={{ color: "#7aa0c8" }}
+              style={{ color: "var(--down)" }}
             />
             <div className="min-w-0">
               <div className="font-medium" style={{ color: "var(--pq-ivory)" }}>

@@ -36,6 +36,7 @@ type DisclaimerKind = "signal" | "ai-analysis" | "coaching";
 /** Longest-prefix matching: more specific paths first. */
 const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   // most specific / multi-segment first
+  ["/pre-trade", "coaching"],  // behavioural pre-trade surface — educational AI framing, not the default "signal"
   ["/methodology", "signal"],
   ["/ai-chat", "ai-analysis"],
   ["/watchlist", "signal"],

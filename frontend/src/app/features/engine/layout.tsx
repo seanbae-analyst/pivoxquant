@@ -16,12 +16,12 @@ export const metadata: Metadata = {
   // bypass the template and need standalone context.
   title: "Quant Engine",
   description:
-    "58개 퀀트 모델 + 7-Layer Risk Defense. 머신이 읽고, 사람이 결정합니다. 정보 제공 목적의 관찰 도구.",
+    "40개 퀀트 모델 + 7-Layer Risk Defense. 머신이 읽고, 사람이 결정합니다. 정보 제공 목적의 관찰 도구.",
   alternates: { canonical: "/features/engine" },
   openGraph: {
     title: "Quant Engine — PivoxQuant",
     description:
-      "58개 퀀트 모델 + 7-Layer Risk Defense. 머신이 읽고, 사람이 결정합니다. 정보 제공 목적의 관찰 도구.",
+      "40개 퀀트 모델 + 7-Layer Risk Defense. 머신이 읽고, 사람이 결정합니다. 정보 제공 목적의 관찰 도구.",
     url: "/features/engine",
     type: "website",
   },
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Quant Engine — PivoxQuant",
     description:
-      "58개 퀀트 모델 + 7-Layer Risk Defense. 머신이 읽고, 사람이 결정합니다. 정보 제공 목적의 관찰 도구.",
+      "40개 퀀트 모델 + 7-Layer Risk Defense. 머신이 읽고, 사람이 결정합니다. 정보 제공 목적의 관찰 도구.",
   },
 };
 

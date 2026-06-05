@@ -422,7 +422,7 @@ export default function AiPage() {
               AI Analysis Tools
             </EditorialHead>
             <p className="mt-2 font-serif text-pq-lead text-[var(--pq-ivory)] max-w-2xl">
-              Claude-driven research notes, drawn over 58 quant signals.
+              Claude-driven research notes, drawn over 40 quant signals.
             </p>
             <Caption className="mt-1 max-w-2xl">
               Generative summaries, not advice. Every line here is informational only.
