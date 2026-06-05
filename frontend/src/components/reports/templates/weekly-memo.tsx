@@ -69,7 +69,11 @@ function pathFromReturns(values: number[], all: number[], width = 600, height = 
 export function WeeklyMemo({ data }: { data?: WeeklyMemoData }) {
   // No fabricated fixture — when there is no real artifact data, render the
   // honest empty state instead of a fake sample portfolio.
-  if (!data) {
+  // Guard the full data contract, not just `data`: the preview endpoint can
+  // return a different shape (alpha_pct / top_movers …) WITHOUT `trajectory`,
+  // and `data.trajectory.portfolio` then threw a TypeError that the preview
+  // ErrorBoundary caught as "REPORT REFRESHING" for every user (2026-06-05 hunt).
+  if (!data || !data.trajectory?.portfolio || !data.trajectory?.benchmark) {
     return <EmptyState type="weekly_memo" reason="no_artifact" />;
   }
   const allReturns = [...data.trajectory.portfolio, ...data.trajectory.benchmark];

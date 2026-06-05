@@ -388,10 +388,13 @@ export default function StockDetailPage() {
   const artifactsSwr = useArtifacts({ limit: 3 });
   const allowlistLoading = watchlistLoading || positionsSwr.isLoading;
   const inPortfolio = useMemo(() => {
-    const upper = (ticker || "").toUpperCase();
+    // Normalize BOTH sides — a KR holding is stored "005930.KS" but the detail
+    // URL is the bare "005930", so a raw compare gated KR holders out of their
+    // OWN holdings' analysis (2026-06-05 hunt). normalizeTicker strips .KS/.KQ.
+    const upper = normalizeTicker(ticker || "").toUpperCase();
     return (positionsSwr.data?.positions ?? []).some((p) => {
       const t = p as { ticker?: string; symbol?: string };
-      return (t.ticker || t.symbol || "").toUpperCase() === upper;
+      return normalizeTicker(t.ticker || t.symbol || "").toUpperCase() === upper;
     });
   }, [positionsSwr.data, ticker]);
   const isAllowed = inWatchlist || inPortfolio;
