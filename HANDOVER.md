@@ -1,4 +1,42 @@
-# PivoxQuant — 인수인계서 (2026-06-05 v57 — 자율 버그헌팅+카피감사+8 fix, prod 배포)
+# PivoxQuant — 인수인계서 (2026-06-06 v58 — UI(포트폴리오/methodology/폰트) + 새벽 버그헌팅, prod 배포)
+
+## v58 2026-06-06 — CEO UI 지시 4건 + 새벽 버그헌팅(5 agent) (✅ 커밋 4 · push · 배포)
+
+> CEO: 포트폴리오 가짜데이터→"모으는중"+기간 1주/4주/8주 / methodology 공개페이지+사이드바 제거 /
+> 랜딩 한글폰트 / "새벽동안 버그헌팅 모든 경우의 수 + 유저모방 자동화 점검". → UI 4건 구현 + 5 agent
+> 헌팅 → **lead 실측 재검증** → 명확건 fix·배포, 나머지 문서화. 검증: tsc 0 · vitest 541 ·
+> pytest(타겟) green · **next build exit 0** · pre-push 5가드 green. 커밋 4 (`ef2bedc2`→`67a4d966`),
+> feat+main FF push, **베타게이트 유지**.
+>
+> - **U2/U3 포트폴리오 equity**: 기간 **1주/4주/8주**(5d/1mo/2mo, 백엔드 portfolio.py+fmp.py+
+>   **kis_market_adapter.py** 2mo=60d) default 4주. 데이터 없으면 "기록이 쌓이는 중"/"모으는 중"(합성
+>   0). ※ 백엔드 history는 이미 REAL NAV만 plot(가짜 0) — 진짜 원인은 월단위 윈도우라 신규유저 2주
+>   데이터가 우측 몰림/misleading → 주단위로 해소.
+> - **U4 methodology**: 공개 `app/methodology/page.tsx`(static·public-safe — gated academic_source
+>   dump 제외=METHODOLOGY_PUBLIC/Q-DT4 유지) 신설, **dashboard 라우트 삭제**, 사이드바(terminal+bottom)
+>   에서 제거. 로그인 게이트 아님.
+> - **U1 hero 한글폰트**: Playfair에 한글 글리프 없어 system serif fallback("개구림") → `pq-hero-h1`
+>   스택에 Pretendard 삽입(한글=Pretendard·Latin=Playfair, per-glyph). ⚠️ **시각 미확인**(베타게이트+
+>   무브라우저) — CEO 의도 섹션이 hero 아니면 재지정 필요.
+> - **새벽 헌팅 fix(배포)**: **weekly-memo 전유저 크래시 가드**(`data.trajectory` 없으면 EmptyState —
+>   "REPORT REFRESHING"/서버에러 해소) · **KR 보유종목 detail 게이트**(normalizeTicker 양측, 005930.KS↔005930).
+> - **유저모방 자동화(N2)**: AI Twin = 유저 페르소나 모방 paper 거래. ✅ **실주문 차단**(KIS order
+>   permanently disabled) · paper-only 강제 · 멱등(max_instances=1/workers=1) · §101 OK. 이메일 자동화
+>   5종 전부 flag-OFF + is_simulated 필터.
+>
+> ### 🟠 carry-over (문서화·미fix — CEO 검토/판단 필요)
+> - **G: twin_runner.py 쓰기경로 KR 통화혼재**(`_close_check`:293-296, buy:361-376) + `twin_reporter.py`:66-77 —
+>   B5는 routes/twin.py 읽기경로만 fix. 쓰기경로는 KRW proceeds를 USD cash에 raw 가산(latent: twin paper가
+>   KR 보유 시). 같은 Pattern-7. **money-math+DB write라 신중 fix 필요**(추측 금지로 보류).
+> - **F: V1 home naked ticker**(`home/_v1/page-v1.tsx`:318/410/488/921 `{r.ticker}` + `candlestick-chart.tsx`:380) +
+>   ⚠️ **`.env.production NEXT_PUBLIC_HOME_V2=false`** ↔ CLAUDE.md "V2 prod true" **모순** → **Vercel env 확인
+>   필요**(V1이 prod active면 naked ticker 라이브 노출). normalizeTicker fix는 V1/V2 양쪽 안전.
+> - **MED**: equity NAV 첫호출 divergence ~16.6%(record_today_snapshot+RT race) · 혼합포트 KOSPI200 벤치마크
+>   (`any(.KS)`, 비중기반 아님) · todayPnlUsd=0(US change_pct overlay 누락) · weekly-memo artifact raw .KS
+>   (백엔드 정규화 필요) · KOSPI 8,160 의심값(sanitize 범위 광범) · risk_quant period whitelist 부재.
+> - 상세 + 위치: `qa_bug_log.md` v58 섹션.
+
+---
 
 ## v57 2026-06-05 — 자율모드: 버그헌팅 전수 + legal 결론 + 임베디드 카피 감사 (✅ 커밋·push·배포)
 
