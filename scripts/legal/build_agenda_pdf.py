@@ -23,6 +23,7 @@ import markdown
 
 BASE = Path(__file__).resolve().parents[2]
 DEFAULT_MD = BASE / "docs/legal/2026-05-29_lawyer_consultation_agenda.md"
+CHROME_MAC = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 CSS = """
   @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
@@ -73,16 +74,41 @@ def build(md_path: Path) -> tuple[Path, Path]:
         f"<style>{CSS}</style>\n</head><body>\n{PRINT_HINT}\n{body}\n</body></html>\n"
     )
     html_path.write_text(html, encoding="utf-8")
+    engine = _write_pdf(html_path, pdf_path, html)
+    print(f"[build_agenda_pdf] PDF engine = {engine}", file=sys.stderr)
+    return html_path, pdf_path
 
+
+def _write_pdf(html_path: Path, pdf_path: Path, html: str) -> str:
+    """HTML→PDF. 이 맥에선 weasyprint native-lib 깨짐 → Chrome headless 우선,
+    실패 시 weasyprint 폴백. Chrome headless 는 PDF 기록 후에도 프로세스가 안 죽어
+    timeout+pkill 로 강제 회수한다(내 user-data-dir 한정 = CEO 실제 Chrome 보호)."""
+    if Path(CHROME_MAC).exists():
+        if pdf_path.exists():
+            pdf_path.unlink()
+        cmd = [
+            CHROME_MAC, "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
+            "--run-all-compositor-stages-before-draw", "--virtual-time-budget=12000",
+            "--user-data-dir=/tmp/pq-chrome-pdf",
+            f"--print-to-pdf={pdf_path}", f"file://{html_path}",
+        ]
+        try:
+            subprocess.run(cmd, timeout=45, check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.TimeoutExpired:
+            pass
+        finally:
+            subprocess.run(["pkill", "-f", "pq-chrome-pdf"], check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if pdf_path.exists() and pdf_path.stat().st_size > 10_000:
+            return "chrome-headless"
     try:
         from weasyprint import HTML as WHTML  # type: ignore
 
         WHTML(string=html, base_url=str(BASE)).write_pdf(str(pdf_path))
-    except Exception as exc:  # pragma: no cover - fallback path
-        print(f"[build_agenda_pdf] weasyprint module 실패 ({exc}) — CLI 폴백", file=sys.stderr)
-        subprocess.run(["weasyprint", str(html_path), str(pdf_path)], check=True)
-
-    return html_path, pdf_path
+        return "weasyprint"
+    except Exception as exc:  # pragma: no cover
+        raise RuntimeError(f"PDF 생성 실패 (chrome headless + weasyprint 둘 다): {exc}")
 
 
 if __name__ == "__main__":
