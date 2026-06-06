@@ -280,7 +280,7 @@ def _compute_insider_signal(transactions):
     """Compute insider sentiment summary and signal strength from FMP data.
 
     Args:
-        transactions: list of dicts from FMP /insider-trading endpoint
+        transactions: list of dicts from FMP /insider-trading/search endpoint
 
     Returns:
         (insider_list, summary, signal_strength)
@@ -298,7 +298,11 @@ def _compute_insider_signal(transactions):
 
     for tx in transactions:
         tx_type_raw = (tx.get("transactionType") or "").upper()
-        acq_disp = (tx.get("acquistionOrDisposition") or "").upper()
+        # /insider-trading/search returns correctly-spelled "acquisitionOrDisposition";
+        # the legacy /insider-trading path used the misspelled "acquistionOrDisposition".
+        # Read both so classification is robust across FMP endpoint versions.
+        acq_disp = (tx.get("acquisitionOrDisposition")
+                    or tx.get("acquistionOrDisposition") or "").upper()
 
         # Classify: P-Purchase / S-Sale, or use A/D flag
         if tx_type_raw.startswith("P") or acq_disp == "A":

@@ -185,10 +185,24 @@ class TestEarningsTranscriptKrGuard:
         m_get.assert_not_called()
         assert out is None
 
-    def test_us_transcript_still_calls_fmp(self):
+    def test_us_transcript_calls_fmp_when_plan_enabled(self):
+        # When the FMP plan includes earning-call-transcript (gate flipped on),
+        # US tickers pass the KR guard and reach the FMP layer.
         from services.ai.models import EarningsCallToneAnalyzer
-        with patch("services.data.fmp._fmp_get",
-                   return_value=[{"content": "x" * 200}]) as m_get:
-            out = EarningsCallToneAnalyzer._fetch_transcript("AAPL")
+        with patch("services.ai.models._FMP_TRANSCRIPT_AVAILABLE", True):
+            with patch("services.data.fmp._fmp_get",
+                       return_value=[{"content": "x" * 200}]) as m_get:
+                out = EarningsCallToneAnalyzer._fetch_transcript("AAPL")
         m_get.assert_called_once()
         assert out is not None
+
+    def test_us_transcript_skipped_when_plan_gated(self):
+        # Default state: earning-call-transcript is 402-gated on the Starter plan,
+        # so _FMP_TRANSCRIPT_AVAILABLE is False and even US tickers skip FMP
+        # (no wasted call / 402 log). Users supply transcript_text instead.
+        from services.ai.models import EarningsCallToneAnalyzer, _FMP_TRANSCRIPT_AVAILABLE
+        assert _FMP_TRANSCRIPT_AVAILABLE is False
+        with patch("services.data.fmp._fmp_get") as m_get:
+            out = EarningsCallToneAnalyzer._fetch_transcript("AAPL")
+        m_get.assert_not_called()
+        assert out is None

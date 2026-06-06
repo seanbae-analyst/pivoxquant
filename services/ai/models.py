@@ -119,6 +119,15 @@ Transcript:
 {transcript}"""
 
 
+# FMP earning-call-transcript is plan-gated: it returns 402 "Restricted
+# Endpoint" on the Starter $29 plan (confirmed 2026-06-06) — a higher FMP data
+# tier is required. We short-circuit the auto-fetch so every earnings-tone
+# request doesn't burn an FMP call + log a 402; Pro users can still paste a
+# transcript in the request body for analysis. Flip to True if the FMP plan is
+# upgraded to a tier that includes earning-call-transcript.
+_FMP_TRANSCRIPT_AVAILABLE = False
+
+
 class EarningsCallToneAnalyzer:
     """Analyzes earnings call transcripts using Claude API.
     Loughran & McDonald (2011) financial NLP.
@@ -157,7 +166,7 @@ class EarningsCallToneAnalyzer:
             result = {
                 "available": False,
                 "ticker": ticker,
-                "reason": "No transcript found. Earnings call transcripts may not be available for this ticker or this quarter.",
+                "reason": "Automatic transcript fetch is unavailable on the current data plan. Paste an earnings call transcript to analyze its tone.",
             }
             return result, 200
 
@@ -190,6 +199,12 @@ class EarningsCallToneAnalyzer:
         # KR guard: FMP has no KRX earnings-call-transcript coverage, so .KS/.KQ
         # tickers always return [] while still burning an FMP API call. Skip.
         if isinstance(ticker, str) and ticker.endswith((".KS", ".KQ")):
+            return None
+        # Plan gate: earning-call-transcript is 402 "Restricted" on the current
+        # FMP plan (see _FMP_TRANSCRIPT_AVAILABLE). Skip the auto-fetch entirely
+        # so we don't burn a call + log a 402 on every analysis; users can still
+        # supply a transcript via transcript_text.
+        if not _FMP_TRANSCRIPT_AVAILABLE:
             return None
         try:
             from services.data import fmp as fmp

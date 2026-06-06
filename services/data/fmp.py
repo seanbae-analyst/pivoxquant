@@ -1387,15 +1387,26 @@ def get_institutional_ownership(ticker):
     }
 
     # Try the time-series summary (most useful — gives QoQ delta).
+    # FMP renamed the stable path /institutional-ownership/symbol-ownership →
+    # /institutional-ownership/symbol-positions-summary (2026). NOTE: the whole
+    # /institutional-ownership/* family is plan-gated — it returns 402
+    # "Restricted Endpoint" on the Starter $29 plan (and would on Free too), so
+    # _fmp_get returns None here and we degrade to available:False below; the
+    # CANSLIM "I" pillar then falls back to its price-momentum proxy. The path
+    # is corrected so this works immediately if the FMP plan is ever upgraded.
     summary = _fmp_get(
-        "/institutional-ownership/symbol-ownership",
+        "/institutional-ownership/symbol-positions-summary",
         {"symbol": ticker, "includeCurrentQuarter": "true"},
     )
     if summary and isinstance(summary, list) and len(summary) >= 1:
         latest = summary[0] or {}
         prev = summary[1] if len(summary) > 1 else {}
         own_pct = latest.get("ownershipPercent") or latest.get("ownership")
-        prev_pct = prev.get("ownershipPercent") or prev.get("ownership")
+        # symbol-positions-summary embeds the prior quarter in the same row
+        # (lastOwnershipPercent); fall back to the next list row for the older
+        # symbol-ownership response shape.
+        prev_pct = (latest.get("lastOwnershipPercent")
+                    or prev.get("ownershipPercent") or prev.get("ownership"))
         try:
             own_pct_f = float(own_pct) if own_pct is not None else None
             prev_pct_f = float(prev_pct) if prev_pct is not None else None
@@ -1421,30 +1432,12 @@ def get_institutional_ownership(ticker):
         _set_cache(cache_key, result)
         return result
 
-    # Fallback: individual holder list (free-plan friendly on some accounts).
-    holders = _fmp_get("/institutional-holder", {"symbol": ticker})
-    if holders and isinstance(holders, list) and len(holders) > 0:
-        total_shares = 0.0
-        total_change = 0.0
-        for h in holders:
-            try:
-                total_shares += float(h.get("shares") or 0)
-                total_change += float(h.get("change") or 0)
-            except (TypeError, ValueError):
-                logger.debug("silent-fallback: get_institutional_ownership", exc_info=True)
-                continue
-        change_pct = None
-        if total_shares > 0:
-            change_pct = (total_change / total_shares) * 100.0
-        result.update({
-            "available": True,
-            "holder_count": len(holders),
-            "ownership_pct": None,  # raw holder list can't give total %
-            "ownership_change": change_pct,
-            "source": "institutional-holder",
-        })
-        _set_cache(cache_key, result)
-        return result
+    # (The legacy /institutional-holder list fallback was removed: FMP deleted
+    # that path from the stable API — it now 404s. Unlike a 402, a 404 does not
+    # arm _fmp_get's endpoint cooldown, so re-probing it just burned one FMP call
+    # on every cache miss for data that never comes. symbol-positions-summary
+    # above is now the sole source; when it's plan-gated we return available:False
+    # and the caller (canslim "I") uses its price-momentum proxy.)
 
     _set_cache(cache_key, result)
     return result
@@ -1739,7 +1732,10 @@ def get_general_news(limit=15):
         stale = _get_cache_stale(cache_key)
         if stale:
             return stale
-    data = _fmp_get("/news/general", {"limit": limit})
+    # FMP renamed the stable path /news/general → /news/general-latest (2026).
+    # Same response schema (title/text/publishedDate/url/site/image), so the
+    # get_wall_street_brief consumer needs no field changes. Page-based params.
+    data = _fmp_get("/news/general-latest", {"page": 0, "limit": limit})
     if data and isinstance(data, list):
         _set_cache(cache_key, data)
         return data
@@ -1964,13 +1960,17 @@ def get_insider_trades(ticker, limit=50):
         if stale is not None:
             return stale
 
-    data = _fmp_get("/insider-trading", {"symbol": ticker, "limit": limit})
+    # FMP renamed the stable path /insider-trading → /insider-trading/search
+    # (2026). The new payload fixes FMP's old field typo: it returns
+    # "acquisitionOrDisposition" (correct) where the legacy path returned
+    # "acquistionOrDisposition" — the consumer reads both (signals_quant.py).
+    data = _fmp_get("/insider-trading/search", {"symbol": ticker, "limit": limit})
     if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
         return data
     alt = _class_share_alt(ticker)
     if alt:
-        data = _fmp_get("/insider-trading", {"symbol": alt, "limit": limit})
+        data = _fmp_get("/insider-trading/search", {"symbol": alt, "limit": limit})
         if data and isinstance(data, list) and len(data) > 0:
             logger.info("FMP insider-trading resolved %s via class-share alt %s", ticker, alt)
             _set_cache(cache_key, data)
@@ -1982,10 +1982,24 @@ def get_insider_trades(ticker, limit=50):
 
 # ── Short Interest ─────────────────────────────────────────────
 
+# FMP removed short interest from its stable API: as of 2026-06-06 none of
+# /historical/short-interest, /short-interest, /short-interest/historical, or
+# /equity-short-interest resolve (all 404 — a removed path, NOT a 402 plan gate,
+# so a higher tier wouldn't restore it). A 404 (unlike a 402) does not arm
+# _fmp_get's endpoint cooldown, so probing it burned one FMP call (and Free-tier
+# 250/day budget) on every cache miss for data that can never come back.
+# Short-circuit until FMP restores a working stable short-interest path.
+_FMP_SHORT_INTEREST_AVAILABLE = False
+
+
 def get_short_interest(ticker):
     """Get historical short interest data. Cache 24h (fundamental-level refresh).
-    FMP endpoint: /historical/short-interest?symbol=AAPL
-    Returns list of dicts with date, shortInterest, floatShort, etc.
+
+    FMP removed the stable short-interest endpoint (see
+    _FMP_SHORT_INTEREST_AVAILABLE) so this returns [] without an upstream call;
+    the /api/signals/short-interest route then degrades to a clean 404. Flip the
+    flag to re-enable if FMP restores a working path.
+    Returns list of dicts with date, shortInterest, floatShort, etc. when available.
     """
     cache_key = f"short_interest:{ticker}"
     cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
@@ -1995,6 +2009,9 @@ def get_short_interest(ticker):
         stale = _get_cache_stale(cache_key)
         if stale is not None:
             return stale
+    if not _FMP_SHORT_INTEREST_AVAILABLE:
+        _set_cache(cache_key, [])
+        return []
     data = _fmp_get("/historical/short-interest", {"symbol": ticker})
     if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
