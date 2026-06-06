@@ -639,6 +639,9 @@ function SiteFooter() {
               links: [
                 { label: "Terms", href: "/terms" },
                 { label: "Privacy", href: "/privacy" },
+                // Public methodology/transparency page (moved off the login-gated
+                // sidebar 2026-06-06 per CEO) — landing entry point lives here.
+                { label: "Methodology", href: "/methodology" },
                 { label: "Contact", href: "mailto:hello@pivoxquant.com" },
               ],
             },
