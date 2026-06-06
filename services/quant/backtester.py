@@ -418,7 +418,11 @@ class Backtester:
             cost_drag_pct = (total_costs / initial_capital) * 100
 
             bh_start = max(0, warmup)
-            bh_return = (float(closes[-1]) - float(closes[bh_start])) / float(closes[bh_start]) * 100
+            # Guard a 0-price warmup bar (KR halt days surface as 0.0 close
+            # rows): an unguarded divide produced inf in buy_hold_return/alpha
+            # and broke the response (Infinity/NaN are invalid JSON).
+            _bh_base = float(closes[bh_start])
+            bh_return = (float(closes[-1]) - _bh_base) / _bh_base * 100 if _bh_base != 0 else 0.0
 
             # ── Sanity check: flag anomalous buy-and-hold returns ────────────
             data_warning = None
@@ -468,7 +472,11 @@ class Backtester:
             calmar = None
             if len(values) >= 2:
                 pv_arr = np.array(values, dtype=np.float64)
-                daily_rets = np.diff(pv_arr) / pv_arr[:-1]
+                # A 0 portfolio-value bar would divide to inf/nan and poison
+                # the Sharpe/Sortino std — drop non-finite daily returns.
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    daily_rets = np.diff(pv_arr) / pv_arr[:-1]
+                daily_rets = daily_rets[np.isfinite(daily_rets)]
                 if len(daily_rets) > 1 and np.std(daily_rets, ddof=1) > 0:
                     mean_annual = np.mean(daily_rets) * 252
                     std_annual = np.std(daily_rets, ddof=1) * np.sqrt(252)
@@ -588,7 +596,7 @@ class Backtester:
                 score += 12
             elif closes[-1] > ma20:
                 score += 6
-            mom20 = (closes[-1] - closes[-20]) / closes[-20] * 100
+            mom20 = (closes[-1] - closes[-20]) / closes[-20] * 100 if closes[-20] != 0 else 0.0
             if mom20 > 5: score += 8
             elif mom20 > 2: score += 4
 

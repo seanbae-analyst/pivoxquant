@@ -13,6 +13,7 @@ import pandas as pd
 import requests
 
 from services.data import fmp
+from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -318,8 +319,13 @@ class DataFetcher:
         ticker = ticker.strip().upper()
         if not ticker:
             return None
+        # Bare 6-digit KR code → registry-guided .KS/.KQ. Hardcoding ".KS"
+        # mis-routed EVERY KOSDAQ ticker to the KOSPI exchange (e.g. 035760
+        # CJ ENM, 293490 Kakao Games → .KS), so quick_lookup queried the wrong
+        # exchange and could surface a different security's price. normalize_ticker
+        # consults the KR registry and falls back to .KS only for unknown codes.
         if ticker.isdigit() and len(ticker) == 6:
-            ticker = ticker + ".KS"
+            ticker = normalize_ticker(ticker)
         try:
             curr = self.currency(ticker)
             price = None

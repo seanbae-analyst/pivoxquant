@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { apiFetch } from "./api";
 import { API } from "./endpoints";
 import { clearHadSession, markHadSession } from "./had-session";
@@ -122,6 +122,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // SWR will not retry-storm on auth failures.
     },
   );
+  // Global SWR mutate — used on logout to evict every other per-user cache
+  // key (the bound `mutate` above only clears the auth.me key).
+  const { mutate: globalMutate } = useSWRConfig();
 
   // Local override for logout — clears the user immediately without waiting
   // for the network round-trip, mirroring the previous setUser(null) behavior.
@@ -199,9 +202,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Force the SWR cache to drop the authenticated payload so any
       // subsequent revalidation reflects the logged-out state.
       await mutate({ authenticated: false }, { revalidate: false });
+      // Evict every OTHER per-user SWR key (portfolio, watchlist, signals,
+      // risk…). The bound mutate above clears only auth.me and clearSwApiCache
+      // only clears the service-worker HTTP cache — the in-memory SWR store
+      // survived, so a different user signing in on this device could see the
+      // previous user's data on first paint (no full reload on OAuth switch).
+      await globalMutate(
+        (key) => key !== API.auth.me,
+        undefined,
+        { revalidate: false },
+      );
       clearSwApiCache();
     }
-  }, [mutate]);
+  }, [mutate, globalMutate]);
 
   const value = useMemo<AuthCtx>(
     () => ({ user, loading, login, signup, logout, refresh }),

@@ -1,4 +1,28 @@
-# PivoxQuant — 인수인계서 (2026-06-06 v58 — UI(포트폴리오/methodology/폰트) + 새벽 버그헌팅, prod 배포)
+# PivoxQuant — 인수인계서 (2026-06-07 v59 — 자율 새벽 버그헌팅 7-lane, 검증 fix 3건 + 동결/머니매스 문서화)
+
+## v59 2026-06-07 — 자율모드 새벽 버그헌팅 (7 정적 헌터 + lead 실측 재검증) (⚠️ feature 브랜치 커밋만, **push 안 함**)
+
+> CEO: "자율모드로 버그 다잡고 모든 가능한 케이스들 다 확인 … 구조잡고 나자러가게". browser 불가(CEO 세션
+> 부재)라 정적+prod-API+테스트 헌팅. **baseline green 고정**(pytest 3811 / vitest 541 / tsc 0) → 7 lane 병렬 →
+> **lead 가 모든 finding 실측 재검증**(v58 verify-gap 교훈) → 안전·비동결만 fix+test, 동결·머니매스·판단은 패치까지
+> 작성해 문서화. 상세: `docs/overnight_bug_hunt_2026-06-07.md`.
+>
+> **✅ FIXED (검증완료)**: ① KOSDAQ 거래소 오라우팅 — `fetcher.quick_lookup` 가 6자리 코드에 무조건 `.KS` →
+>   KOSDAQ(035760 등)가 KOSPI로 조회돼 **다른 종목 가격** 반환. `normalize_ticker()`로 교체(+test). ② Backtester
+>   0-가격 바(KR 거래정지일) 나눗셈 가드 3곳(bh_return/mom20/daily_rets) — 무가드시 백테스트 None 붕괴/inf JSON
+>   (backtester.py 비동결, +test). ③ 로그아웃 SWR 인메모리 캐시 미삭제 → 공용기기 cross-user 첫페인트 노출
+>   (auth.tsx, global mutate evict). 회귀: 신규 7 test green + 타겟 848 passed + tsc0/vitest541.
+>
+> **🟠 CEO 결정 필요 (패치 작성됨, 자율 미적용)**: B1 동결 퀀트 crash 4건(StatArb std0 / portfolio cummax NaN /
+>   AnchoringBias 0-price / GKYZ log0 — 전부 degenerate 입력, Iron Rule §1 승인 필요). B2 **AI Twin KRW/USD
+>   통화혼재**(twin_runner write-path, `RUN_SCHEDULER=1`+활성트윈 시 LIVE — v58이 deferred한 그 버그). ⚠️
+>   **FX-환산 금지**([[feedback_currency_separate]] — CEO "krw usd 냅두라 몇번말하노"): 해법은 KR제외(권장) or
+>   통화별 cash 분리, **절대 환산해 합치기 아님**. B3 portfolio_analytics 통화 raw 합산도 동일 — 통화별 버킷 분리(환산X).
+>
+> **🟡 문서화**: billing cancel/refund 404(결제 전 SHIP-BLOCKER) · S&P/Nasdaq=SPY/QQQ ETF proxy 표기(디스클로저
+>   칩 렌더 확인) · .env.production V2 플래그 false footgun · chat-stream 청크 scrub(AI_CHAT_ENABLED=0 무surface) 등.
+>
+> **✅ CLEAN(증거기반)**: 캐시 cross-user(Pattern6) 0건 · 인증/티어/IDOR/webhook/OAuth state 0건.
 
 ## v58 2026-06-06 — CEO UI 지시 4건 + 새벽 버그헌팅(5 agent) (✅ 커밋 4 · push · 배포)
 
