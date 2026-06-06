@@ -64,8 +64,7 @@ export type TerminalSidebarKey =
   | "journal"
   | "growth"
   | "profile"
-  | "settings"
-  | "methodology";
+  | "settings";
 
 type Item = {
   key: TerminalSidebarKey;
