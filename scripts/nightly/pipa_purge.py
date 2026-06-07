@@ -166,6 +166,8 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
         PreTradeReflection, PersonaSnapshot, WeeklyPulse,
         PositionDDCheck, Inquiry,
         ScheduledEmail, NpsFeedback, AuthEvent, User,
+        CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit,
+        CompanionWaitlist,
     )
 
     counts: dict[str, int] = {}
@@ -200,6 +202,18 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
     # positions cascade above, so its count is often 0 — harmless.
     _cnt("position_dd_check", PositionDDCheck.query.filter_by(user_id=user_id))
     _cnt("inquiry", Inquiry.query.filter_by(user_id=user_id))
+    # 2026-06-07 — user-FK tables previously missing from BOTH purge paths.
+    # Kept in sync with routes/auth.py:delete_account. Model FK is CASCADE, so
+    # a schema-correct prod cascades them; purge explicitly so a drifted prod
+    # FK can't block the user-row delete below.
+    _cnt("checkout_expiration", CheckoutExpiration.query.filter_by(user_id=user_id))
+    _cnt("portfolio_nav_snapshot", PortfolioNavSnapshot.query.filter_by(user_id=user_id))
+    _cnt("user_agent_audit", UserAgentAudit.query.filter_by(user_id=user_id))
+    # companion_waitlist: SET NULL (keep anonymous waitlist signal, detach user).
+    counts["companion_waitlist_detached"] = int(
+        CompanionWaitlist.query.filter_by(user_id=user_id)
+        .update({CompanionWaitlist.user_id: None}, synchronize_session=False) or 0
+    )
 
     # ── auth_events: anonymize, do NOT delete ────────────────────────────────
     # PIPA §29 requires retention of access/auth logs for security audit
