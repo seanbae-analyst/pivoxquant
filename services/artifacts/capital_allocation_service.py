@@ -71,6 +71,30 @@ _DIVIDEND_ETF_WHITELIST: dict[str, str] = {
 }
 
 _MAX_SCENARIOS = 4
+
+
+def _tickers_label(tickers: list[str]) -> str:
+    """Compact scenario-constituent label. Korean codes (035760 / 005930.KS)
+    render as the hangul company name; US symbols stay as-is (the recognisable
+    brand — AAPL reads better than "Apple Inc."). Bare 6-digit KR codes are
+    normalized to their suffixed form first so resolution succeeds. Empty list
+    → em-dash. See [[티커번호 대신 종목이름 표시]] — naked KRX codes must never
+    surface as the displayed label.
+    """
+    if not tickers:
+        return "—"
+    try:
+        from services.name_resolver import kr_display_name
+        from services.ticker_normalizer import normalize_ticker
+    except Exception:  # pragma: no cover — defensive import guard
+        return ", ".join(tickers) or "—"
+    labels: list[str] = []
+    for t in tickers:
+        try:
+            labels.append(kr_display_name(normalize_ticker(t)) or t)
+        except Exception:
+            labels.append(t)
+    return ", ".join(labels) or "—"
 _MAX_CASH = 10_000_000_000.0   # sanity ceiling (10 B in caller's ccy)
 _MIN_CASH = 0.0
 _TRADING_DAYS = 252
@@ -522,7 +546,7 @@ class CapitalAllocationService:
                 "label":       sc.get("label") or "—",
                 "type":        sc.get("type") or "—",
                 "tickers":     sc.get("tickers") or [],
-                "tickers_str": ", ".join(sc.get("tickers") or []) or "—",
+                "tickers_str": _tickers_label(sc.get("tickers") or []),
                 "cagr":        _pct(sc.get("return_cagr")),
                 "cagr_tone":   _tone(sc.get("return_cagr")),
                 "vol":         (f"{float(sc.get('volatility')):.2f}%"

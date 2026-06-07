@@ -52,6 +52,7 @@ from models import (
     PositionDDCheck, Inquiry,
     ScheduledEmail, NpsFeedback,
     AuthEvent,
+    CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit, CompanionWaitlist,
 )
 from security import auth_rate_limit, general_rate_limit
 from services.age_verification import (
@@ -1527,59 +1528,77 @@ def delete_account():
     user_id = current_user.id
 
     try:
-        # Delete all user data in dependency-safe order.
+        # Delete every user-owned row, each in its own SAVEPOINT.
         #
-        # Why explicit per-model deletes (vs relying on FK CASCADE)
-        # ---------------------------------------------------------
-        # The Artifact / UserReferral FKs declare ``ondelete="CASCADE"`` and
-        # PostgreSQL (prod) will honour them. SQLite (dev) honours them only
-        # when ``PRAGMA foreign_keys=ON`` is set — which is now the case via
-        # ``extensions._enable_sqlite_fk`` — but explicit deletes give us
-        # belt-and-suspenders coverage and remain safe under both backends.
+        # Why per-table savepoints (2026-06-07 — fixes a prod-only 500)
+        # ------------------------------------------------------------
+        # delete_account had NEVER run against prod until self-service deletion
+        # shipped (the UI was a mailto link). Its first real run 500'd because
+        # PostgreSQL aborts the WHOLE transaction on the first failing statement
+        # — so a single drifted FK or a table the model declares ``ondelete=
+        # CASCADE`` but whose prod constraint predates that clause (Railway's
+        # hybrid create_all + _do_migrations strategy lags alembic) blocks the
+        # user-row delete and 500s the entire erasure.
         #
-        # IMPORTANT: ``user_agent_audit`` is intentionally NOT deleted here.
-        # Audit/decision-trace records have a separate retention obligation
-        # (legal review pending) and must outlive the user row. Tracked
-        # separately as P1 #14.
-        Position.query.filter_by(user_id=user_id).delete()
-        TradeHistory.query.filter_by(user_id=user_id).delete()
-        Alert.query.filter_by(user_id=user_id).delete()
-        Watchlist.query.filter_by(user_id=user_id).delete()
-        # SignalCache is a global cache keyed by ticker only (no user_id column).
-        # Skipping per-user cleanup; entries are shared and TTL-managed.
-        InvestmentProfile.query.filter_by(user_id=user_id).delete()
-        BrokerConnection.query.filter_by(user_id=user_id).delete()
-        PushSubscription.query.filter_by(user_id=user_id).delete()
-        PortfolioShare.query.filter_by(user_id=user_id).delete()
-
-        # P0 + P1 (2026-05-03) — explicit deletion of user-owned rows whose
-        # FKs were previously not enforced on SQLite and/or whose models
-        # were never wired into delete_account.
-        Artifact.query.filter_by(user_id=user_id).delete()
-        UserReferral.query.filter_by(user_id=user_id).delete()
-        ArtifactFeedback.query.filter_by(user_id=user_id).delete()
-        BehavioralScore.query.filter_by(user_id=user_id).delete()
-        AITwinPortfolio.query.filter_by(user_id=user_id).delete()
-        AITwinWeeklyReport.query.filter_by(user_id=user_id).delete()
-        PreTradeReflection.query.filter_by(user_id=user_id).delete()
-        PersonaSnapshot.query.filter_by(user_id=user_id).delete()
-        WeeklyPulse.query.filter_by(user_id=user_id).delete()
-        # 2026-05-22 — sync gap fix: ScheduledEmail + NpsFeedback are
-        # user-scoped PII (user_id FK) purged by the 30-day cron
-        # (scripts/nightly/pipa_purge._delete_user_cascade) but were
-        # missing from the immediate hard-delete path. Same relative
-        # order as pipa_purge (after WeeklyPulse). Both lists MUST stay
-        # in sync — adding a user-owned model requires updating BOTH.
-        ScheduledEmail.query.filter_by(user_id=user_id).delete()
-        NpsFeedback.query.filter_by(user_id=user_id).delete()
-        # 2026-06-02 — data-trust completeness. PositionDDCheck.note and
-        # Inquiry.body/.admin_reply are now encrypted user free-text. The
-        # ``db.session.delete(current_user)`` below already drops them via FK
-        # CASCADE, but per the explicit-delete contract (belt-and-suspenders for
-        # any path with FK enforcement off) they are listed here too. Keep in
-        # sync with scripts/nightly/pipa_purge._delete_user_cascade.
-        PositionDDCheck.query.filter_by(user_id=user_id).delete()
-        Inquiry.query.filter_by(user_id=user_id).delete()
+        # Each purge now runs in a nested transaction (SAVEPOINT): one table's
+        # failure is isolated + logged, never poisoning the rest, and the user
+        # row delete below no longer depends on DB-level cascade being correct
+        # on prod. Belt-and-suspenders over the FK ondelete clauses.
+        #
+        # SignalCache is global (ticker-keyed, no user_id) — skipped.
+        # Keep this list in sync with scripts/nightly/pipa_purge._delete_user_cascade.
+        _d = lambda q: q.delete(synchronize_session=False)  # noqa: E731
+        purge_ops = [
+            ("positions", lambda: _d(Position.query.filter_by(user_id=user_id))),
+            ("trade_history", lambda: _d(TradeHistory.query.filter_by(user_id=user_id))),
+            ("alerts", lambda: _d(Alert.query.filter_by(user_id=user_id))),
+            ("watchlist", lambda: _d(Watchlist.query.filter_by(user_id=user_id))),
+            ("investment_profiles", lambda: _d(InvestmentProfile.query.filter_by(user_id=user_id))),
+            ("broker_connections", lambda: _d(BrokerConnection.query.filter_by(user_id=user_id))),
+            ("push_subscriptions", lambda: _d(PushSubscription.query.filter_by(user_id=user_id))),
+            ("portfolio_shares", lambda: _d(PortfolioShare.query.filter_by(user_id=user_id))),
+            ("artifacts", lambda: _d(Artifact.query.filter_by(user_id=user_id))),
+            ("user_referrals", lambda: _d(UserReferral.query.filter_by(user_id=user_id))),
+            ("artifact_feedback", lambda: _d(ArtifactFeedback.query.filter_by(user_id=user_id))),
+            ("behavioral_scores", lambda: _d(BehavioralScore.query.filter_by(user_id=user_id))),
+            ("ai_twin_portfolios", lambda: _d(AITwinPortfolio.query.filter_by(user_id=user_id))),
+            ("ai_twin_weekly_reports", lambda: _d(AITwinWeeklyReport.query.filter_by(user_id=user_id))),
+            ("pre_trade_reflections", lambda: _d(PreTradeReflection.query.filter_by(user_id=user_id))),
+            ("persona_snapshots", lambda: _d(PersonaSnapshot.query.filter_by(user_id=user_id))),
+            ("weekly_pulse", lambda: _d(WeeklyPulse.query.filter_by(user_id=user_id))),
+            ("scheduled_emails", lambda: _d(ScheduledEmail.query.filter_by(user_id=user_id))),
+            ("nps_feedback", lambda: _d(NpsFeedback.query.filter_by(user_id=user_id))),
+            ("position_dd_checks", lambda: _d(PositionDDCheck.query.filter_by(user_id=user_id))),
+            ("inquiries", lambda: _d(Inquiry.query.filter_by(user_id=user_id))),
+            # 2026-06-07 — tables with a users FK that were MISSING from the
+            # explicit list (the prod 500 culprit class). Model ondelete is
+            # CASCADE, so a schema-correct prod cascades them — purging here
+            # makes erasure independent of prod FK drift.
+            ("checkout_expirations", lambda: _d(CheckoutExpiration.query.filter_by(user_id=user_id))),
+            ("portfolio_nav_snapshots", lambda: _d(PortfolioNavSnapshot.query.filter_by(user_id=user_id))),
+            # user_agent_audit: model FK is CASCADE (deleted with the user today
+            # regardless of the old "retain" comment, which tracked an
+            # unimplemented P1). Purge explicitly so a drifted prod FK can't
+            # block erasure. Real 2-yr retention, if pursued, needs nullable
+            # user_id + SET NULL + counsel sign-off (legal_question_queue).
+            ("user_agent_audit", lambda: _d(UserAgentAudit.query.filter_by(user_id=user_id))),
+            # companion_waitlist: SET NULL semantics — keep the (now anonymous)
+            # waitlist signal, just detach the user.
+            ("companion_waitlist", lambda: CompanionWaitlist.query.filter_by(
+                user_id=user_id).update({CompanionWaitlist.user_id: None},
+                                        synchronize_session=False)),
+        ]
+        purge_failures = []
+        for label, op in purge_ops:
+            try:
+                with db.session.begin_nested():
+                    op()
+            except Exception as exc:  # noqa: BLE001 — isolate per-table failure
+                purge_failures.append(label)
+                logger.warning(
+                    "delete_account: purge of %s failed (continuing): %s",
+                    label, exc,
+                )
 
         # SHIP-BLOCKER: cancel any live Stripe subscription BEFORE dropping the
         # user row, otherwise Stripe keeps billing the card and the webhook can
@@ -1587,9 +1606,19 @@ def delete_account():
         # Non-fatal — a Stripe outage must not block the user's erasure right.
         _cancel_stripe_subscription(current_user)
 
-        # Delete user record
+        # Delete the user row. All FK children are purged above, so this no
+        # longer depends on the DB-level cascade being present/correct on prod.
         db.session.delete(current_user)
         db.session.commit()
+
+        if purge_failures:
+            # The user row WAS deleted; some auxiliary tables couldn't be purged
+            # (missing table / drifted FK that didn't block the user delete).
+            # Log loudly for ops follow-up — the account itself is gone.
+            logger.error(
+                "delete_account: user_id=%s deleted but unpurged tables=%s",
+                user_id, purge_failures,
+            )
 
         # 2026-05-17 thorough cookie cleanup (Wave 7 PR #409 follow-up):
         # delete_account previously called logout_user() then returned a bare
@@ -1604,14 +1633,21 @@ def delete_account():
         session.clear()
         response = jsonify({"ok": True, "message": "Account and all data deleted."})
         return _clear_auth_cookies(response)
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
         logger.exception("Account deletion failed for user_id=%s", user_id)
+        # Surface a SANITISED cause in the response. The caller is deleting
+        # THEIR OWN account and prod logs aren't reachable to the operator, so
+        # the exception class + truncated message (e.g. a ForeignKeyViolation
+        # naming the blocking constraint) is the only practical way to diagnose
+        # a prod-only failure. No PII — SQLAlchemy errors carry table/constraint
+        # names, not row data. Safe to remove once the deletion path is stable.
         return api_error(
             en="An internal error occurred. Please try again.",
             kr="계정 삭제 중 오류가 발생했습니다. 다시 시도해주세요.",
             code="AUTH_DELETE_ACCOUNT_FAILED",
             status=500,
+            detail=f"{type(exc).__name__}: {str(exc)[:240]}",
         )
 
 

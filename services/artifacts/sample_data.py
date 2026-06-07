@@ -1000,6 +1000,21 @@ def sample_insider_mirror() -> dict[str, Any]:
         "generated_at": _now_iso(),
         "issue_number": 4,
         "doc_ref":      "PQ-IM-04 \u00b7 v2026.04.22",
+        # Form 4 / DART event tape \u2014 the key InsiderMirrorService._to_v3_shape
+        # reads to build the Top Acquisitions + Dispositions tables. KR holdings
+        # (005930.KS / 000660.KS) render with the hangul company name as the
+        # hero + the ticker as the muted subline (\uc0bc\uc131\uc804\uc790 / SK\ud558\uc774\ub2c9\uc2a4), exactly
+        # the name-primary pattern from feedback memory \ud2f0\ucee4\ubc88\ud638 \ub300\uc2e0 \uc885\ubaa9\uc774\ub984 \ud45c\uc2dc.
+        "events": [
+            {"ticker": "NVDA",      "insider_name": "Huang, Jen-Hsun", "title": "CEO / Director", "transaction_type": "buy",  "value": 137774400, "date": "2026-04-18", "signal_label": "Cluster",       "signal_tone": "pos",     "is_10b5_1": False},
+            {"ticker": "005930.KS", "insider_name": "Lee, Jae-Yong",   "title": "Chair",          "transaction_type": "buy",  "value":   5680000, "date": "2026-04-07", "signal_label": "Cluster",       "signal_tone": "pos",     "is_10b5_1": False},
+            {"ticker": "BRK.B",     "insider_name": "Buffett, Warren",  "title": "CEO / Chair",   "transaction_type": "buy",  "value":   1092500, "date": "2026-04-09", "signal_label": "CEO buy",       "signal_tone": "pos",     "is_10b5_1": False},
+            {"ticker": "AVGO",      "insider_name": "Tan, Hock E.",     "title": "CEO",           "transaction_type": "buy",  "value":    846000, "date": "2026-04-11", "signal_label": "Single",        "signal_tone": "neutral", "is_10b5_1": False},
+            {"ticker": "000660.KS", "insider_name": "Kwak, Noh-Jung",  "title": "CEO",            "transaction_type": "buy",  "value":    512000, "date": "2026-04-15", "signal_label": "Single",        "signal_tone": "neutral", "is_10b5_1": False},
+            {"ticker": "AMZN",   "insider_name": "Olsavsky, Brian",  "title": "CFO",            "transaction_type": "sell", "value":   1580000, "date": "2026-04-13", "signal_label": "10b5-1",        "signal_tone": "neutral", "is_10b5_1": True},
+            {"ticker": "GOOGL",  "insider_name": "Porat, Ruth",      "title": "President",      "transaction_type": "sell", "value":   2014800, "date": "2026-04-11", "signal_label": "10b5-1",        "signal_tone": "neutral", "is_10b5_1": True},
+            {"ticker": "TSLA",   "insider_name": "Kirkhorn, Zach",   "title": "Former CFO",     "transaction_type": "sell", "value":   3240000, "date": "2026-04-16", "signal_label": "Discretionary", "signal_tone": "neg",     "is_10b5_1": False},
+        ],
         "hero_headline": [
             "Insiders leave paperwork.",
             "The market reads it",
