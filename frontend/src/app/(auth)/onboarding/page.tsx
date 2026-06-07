@@ -1252,12 +1252,10 @@ function classifyInvestorTypeLocal(answers: Record<string, string | string[] | n
   const dropScores: Record<string, number> = { sell_all: 1, sell_half: 3, hold: 6, buy_some: 8, buy_heavy: 10 };
   const crashScores: Record<string, number> = { cut_loss: 2, trim: 4, hold: 6, avg_down: 8, double_down: 10 };
   const relativeScores: Record<string, number> = { too_much: 2, acceptable: 5, opportunistic: 8, regret_upside: 10 };
-  const coinScores: Record<string, number> = { never: 1, maybe_small: 4, yes_once: 7, yes_repeat: 10 };
 
   riskRaw += dropScores[String(answers.scenario_portfolio_drop)] ?? 5;
   riskRaw += crashScores[String(answers.scenario_single_stock_crash)] ?? 5;
   riskRaw += relativeScores[String(answers.scenario_market_crash_relative)] ?? 5;
-  riskRaw += coinScores[String(answers.loss_aversion_coinflip)] ?? 5;
 
   // Leverage
   const levMap: Record<string, number> = { never: 0, etf_only: 2, light: 5, moderate: 8, full: 10 };
@@ -1276,7 +1274,9 @@ function classifyInvestorTypeLocal(answers: Record<string, string | string[] | n
   activityRaw += holdMap[String(answers.holding_period)] ?? 3;
   activityRaw += rebalMap[String(answers.rebalance_preference)] ?? 3;
 
-  const riskNorm = Math.min(riskRaw / 5.5, 10);
+  // max riskRaw = drop+crash+relative (30) + leverage (10) + conc*0.5 (5) = 45.
+  // Coin-flip question removed 2026-06-07 → divisor 5.5 → 4.5 to keep 0-10 scale.
+  const riskNorm = Math.min(riskRaw / 4.5, 10);
   const activityNorm = Math.min(activityRaw / 3.0, 10);
 
   // Return ambition
