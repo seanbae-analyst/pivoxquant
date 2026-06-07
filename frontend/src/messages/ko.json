@@ -434,7 +434,7 @@
     "signingOut": "로그아웃 중...",
     "deleteAccount": "계정 삭제",
     "deleteAccountTitle": "계정 삭제",
-    "deleteAccountDesc": "앱에서 직접 계정 삭제는 현재 지원되지 않습니다. 삭제를 원하시면 고객지원에 문의해 주세요.",
+    "deleteAccountDesc": "보유 종목·관심목록·전달된 아티팩트가 모두 제거됩니다. 기본은 30일 유예이며, 그 기간 안에는 메일 링크로 직접 철회할 수 있습니다.",
     "contactSupport": "고객지원 문의",
     "cancelBtn": "취소",
     "notifications": {

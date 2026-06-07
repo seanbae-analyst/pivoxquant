@@ -66,6 +66,11 @@ const BETA_BYPASS_PREFIXES = [
   // no auth/data exposure. Surfaces: login/signup/contact/docs footers.
   "/terms",
   "/privacy",
+  // PIPA §21 deletion-request cancel. The "탈퇴 철회하기" email link lands here
+  // for a LOGGED-OUT recipient (login is refused during the 30-day grace),
+  // possibly days later on another device — it must not hit the beta gate or
+  // the user's erasure-cancel right is unreachable. Token-authenticated POST.
+  "/delete-cancel",
 ];
 
 // Social/search crawler User-Agents that should see the rendered OG metadata

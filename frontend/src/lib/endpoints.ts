@@ -21,6 +21,12 @@ export const API = {
      */
     oauthFinalize: "/api/auth/oauth-finalize",
     deleteAccount: "/api/auth/delete-account",
+    // PIPA §21 30-day soft-delete request (default deletion path — sets
+    // deletion_requested_at, logs out, emails a self-service cancel link).
+    deleteRequest: "/api/auth/delete-request",
+    // Token-authenticated cancel of the 30-day request (no session — the
+    // emailed HMAC token is the credential). Hit by /delete-cancel page.
+    deleteCancel: "/api/auth/delete-cancel",
   },
   portfolio: {
     list: "/api/portfolio",

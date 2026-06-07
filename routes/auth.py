@@ -1753,6 +1753,45 @@ def _cancel_stripe_subscription(user) -> None:
         )
 
 
+# ── PIPA §21 deletion-request self-service cancel (token-authenticated) ──────
+#
+# A user inside the 30-day grace window is LOGGED OUT and OAuth login is
+# refused (deletion_requested_at != NULL), so they cannot authenticate a
+# session to undo the request. We instead email an unforgeable, time-limited
+# token (HMAC over SECRET_KEY) that the /delete-cancel page exchanges for a
+# restore — the same trust model as a password-reset link. No ambient session,
+# no CSRF cookie required (security.py:_csrf_protect skips unauthenticated POSTs).
+_DELETE_CANCEL_SALT = "pivoxquant.delete-cancel.v1"
+# Token lifetime = grace window + small clock buffer. Past this the row is
+# already hard-deleted by the pipa_purge cron, so a stale token restores nothing.
+_DELETE_CANCEL_MAX_AGE = 31 * 24 * 3600  # 31 days (30d grace + 1d buffer)
+
+
+def _delete_cancel_serializer() -> URLSafeTimedSerializer:
+    """Serializer for deletion-cancel tokens, bound to the app SECRET_KEY."""
+    secret = current_app.secret_key
+    if not secret:
+        logger.critical("delete-cancel serializer: SECRET_KEY missing on app")
+        raise RuntimeError("SECRET_KEY not configured")
+    return URLSafeTimedSerializer(secret, salt=_DELETE_CANCEL_SALT)
+
+
+def _make_delete_cancel_token(user_id) -> str:
+    """Sign a {uid} payload the /delete-cancel page later exchanges for a restore."""
+    return _delete_cancel_serializer().dumps({"uid": int(user_id)})
+
+
+def _delete_cancel_url(user_id) -> str:
+    """Absolute frontend URL the user clicks to undo a deletion request.
+
+    Uses FRONTEND_URL (stable per-deploy) rather than the request-derived
+    origin — the link is read from an email days later, possibly on another
+    device, so it must not depend on the request that generated it.
+    """
+    base = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    return f"{base}/delete-cancel?token={_make_delete_cancel_token(user_id)}"
+
+
 def _send_deletion_request_email(user, *, scheduled_purge_at) -> bool:
     """Send the 30-day deletion-request confirmation. TRANSACTIONAL.
 
@@ -1767,6 +1806,7 @@ def _send_deletion_request_email(user, *, scheduled_purge_at) -> bool:
     purge_iso = _compute_purge_at(scheduled_purge_at) or ""
     purge_display = purge_iso[:10] if purge_iso else "30일 후"
     user_name = escape((getattr(user, "name", "") or "").strip() or "고객")
+    cancel_url = escape(_delete_cancel_url(getattr(user, "id", None)))
 
     html_body = f"""<!doctype html>
 <html lang="ko"><body style="margin:0;padding:24px;background:#F6F3EC;
@@ -1786,9 +1826,17 @@ font-family:'Source Serif 4',Georgia,serif;color:#0A0A0A;">
     <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
       예정 파기일: <strong>{escape(purge_display)}</strong>
     </p>
-    <p style="margin:24px 0 8px 0;line-height:1.5;color:#5A5A5A;font-size:13px;">
-      이 기간 동안에는 로그인이 차단됩니다. 탈퇴를 철회하시려면
-      고객센터(support@pivoxquant.com)로 연락해주세요.
+    <p style="margin:24px 0 12px 0;line-height:1.5;color:#5A5A5A;font-size:13px;">
+      실수로 요청하셨거나 마음이 바뀌셨나요? 파기 전까지 아래 버튼으로 직접
+      탈퇴를 철회하실 수 있습니다. (이 기간 동안에는 로그인이 차단됩니다.)
+    </p>
+    <p style="margin:0 0 8px 0;">
+      <a href="{cancel_url}" style="display:inline-block;padding:11px 22px;
+        background:#B8956A;color:#0A0A0A;text-decoration:none;font-size:13px;
+        letter-spacing:0.04em;font-weight:600;border-radius:2px;">탈퇴 철회하기</a>
+    </p>
+    <p style="margin:8px 0 0 0;font-size:11px;color:#999;word-break:break-all;">
+      버튼이 작동하지 않으면 다음 주소를 브라우저에 붙여넣어 주세요:<br>{cancel_url}
     </p>
     <p style="margin:24px 0 0 0;font-size:11px;color:#888;">
       본 메일은 거래 관련(transactional) 정보로 §50 광고성 정보 발신에
@@ -1805,3 +1853,75 @@ font-family:'Source Serif 4',Georgia,serif;color:#0A0A0A;">
         from_default="reports@pivoxquant.com",
         email_category=EmailCategory.TRANSACTIONAL,
     )
+
+
+@auth_bp.route("/delete-cancel", methods=["POST"])
+@general_rate_limit
+def delete_cancel():
+    """Self-service cancel of a PIPA §21 30-day deletion request.
+
+    Token-authenticated, NOT session-authenticated — a user inside the grace
+    window is logged out and OAuth login is refused (deletion_requested_at !=
+    NULL), so the unforgeable HMAC token emailed at request time is the only
+    credential they can present. Clearing ``deletion_requested_at`` +
+    ``deleted_at`` returns the account to active; the user then logs in
+    normally. Mirrors the password-reset-link trust model.
+
+    Idempotent: a token whose account is no longer pending deletion returns
+    200 ``already_active=true`` so a double-click / email pre-fetch is safe.
+    Never logs the user in — restoration ≠ authentication.
+    """
+    data = request.get_json(silent=True) or {}
+    token = (data.get("token") or "").strip()
+    if not token:
+        return api_error(
+            en="Missing cancellation token.",
+            kr="철회 토큰이 없습니다.",
+            code="AUTH_DELETE_CANCEL_NO_TOKEN", status=400,
+        )
+
+    try:
+        payload = _delete_cancel_serializer().loads(
+            token, max_age=_DELETE_CANCEL_MAX_AGE
+        )
+    except SignatureExpired:
+        return api_error(
+            en="This cancellation link has expired. The account data may already be erased.",
+            kr="철회 링크가 만료되었습니다. 계정 데이터가 이미 파기되었을 수 있습니다.",
+            code="AUTH_DELETE_CANCEL_EXPIRED", status=400,
+        )
+    except BadSignature:
+        return api_error(
+            en="Invalid cancellation link.",
+            kr="유효하지 않은 철회 링크입니다.",
+            code="AUTH_DELETE_CANCEL_INVALID", status=400,
+        )
+
+    uid = payload.get("uid") if isinstance(payload, dict) else None
+    user = db.session.get(User, uid) if uid is not None else None
+    if user is None:
+        # Row already hard-deleted (grace elapsed) or token uid is bogus.
+        # Same generic answer either way — don't leak account existence.
+        return api_error(
+            en="This account can no longer be restored.",
+            kr="이 계정은 더 이상 복구할 수 없습니다.",
+            code="AUTH_DELETE_CANCEL_GONE", status=404,
+        )
+
+    try:
+        if user.deletion_requested_at is None:
+            # Not pending deletion — already active or already cancelled.
+            return jsonify({"ok": True, "already_active": True})
+        user.deletion_requested_at = None
+        user.deleted_at = None
+        db.session.commit()
+        logger.info("PIPA delete-cancel: user_id=%s restored to active", uid)
+        return jsonify({"ok": True, "restored": True})
+    except Exception:
+        db.session.rollback()
+        logger.exception("delete-cancel failed for user_id=%s", uid)
+        return api_error(
+            en="An internal error occurred. Please try again.",
+            kr="철회 처리 중 오류가 발생했습니다. 다시 시도해주세요.",
+            code="AUTH_DELETE_CANCEL_FAILED", status=500,
+        )
