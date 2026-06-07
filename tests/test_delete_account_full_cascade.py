@@ -85,3 +85,51 @@ def test_delete_account_purges_all_user_fk_tables(app, client, make_user):
             {"u": uid},
         ).scalar()
         assert fe == 1, "funnel_events analytics snapshot should survive deletion"
+
+
+def test_delete_account_handles_migration_only_fk_table(app, client, make_user):
+    """Reproduce the exact prod 500: a MIGRATION-ONLY table (no ORM model) with
+    a plain users FK and NO ON DELETE CASCADE — like morning_briefs (mig 003) —
+    must not block deletion. The dynamic DB-introspection sweep clears it.
+
+    The model-based explicit list can never cover this table (there is no
+    model), so this locks the dynamic sweep specifically.
+    """
+    from extensions import db
+    from models import User
+    from sqlalchemy import text
+
+    user = make_user(email="mig_only_fk@test.com")
+    uid = user["id"]
+
+    with app.app_context():
+        # Mimic morning_briefs: plain FK, NO cascade (the prod-drift shape).
+        db.session.execute(text("DROP TABLE IF EXISTS morning_briefs"))
+        db.session.execute(text(
+            "CREATE TABLE morning_briefs ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "user_id INTEGER NOT NULL REFERENCES users(id))"
+        ))
+        db.session.execute(
+            text("INSERT INTO morning_briefs (user_id) VALUES (:u)"), {"u": uid}
+        )
+        db.session.commit()
+
+    try:
+        login = client.post("/api/auth/login",
+                            json={"email": user["email"], "password": user["password"]})
+        assert login.status_code == 200, login.data
+
+        resp = client.delete("/api/auth/delete-account")
+        assert resp.status_code == 200, f"delete failed: {resp.get_json()}"
+
+        with app.app_context():
+            assert db.session.get(User, uid) is None
+            n = db.session.execute(
+                text("SELECT COUNT(*) FROM morning_briefs WHERE user_id = :u"), {"u": uid}
+            ).scalar()
+            assert n == 0, "migration-only FK table not purged by dynamic sweep"
+    finally:
+        with app.app_context():
+            db.session.execute(text("DROP TABLE IF EXISTS morning_briefs"))
+            db.session.commit()

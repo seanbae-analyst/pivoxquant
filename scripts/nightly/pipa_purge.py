@@ -253,6 +253,40 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
                 "purge-complete email failed (non-fatal) user_id=%s", user_id,
             )
 
+    # ── dynamic FK safety net ────────────────────────────────────────────────
+    # Mirrors routes/auth.py:delete_account. Clears any remaining users-
+    # referencing row (incl. migration-only / cascade-less tables like
+    # morning_briefs, mig 003) so the hard delete below can't be blocked by a
+    # ForeignKeyViolation. Each in its own savepoint; never raises.
+    if user is not None:
+        try:
+            from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+            _insp = _sa_inspect(db.engine)
+            for _tbl in _insp.get_table_names():
+                if _tbl == "users":
+                    continue
+                for _fk in _insp.get_foreign_keys(_tbl):
+                    if _fk.get("referred_table") != "users":
+                        continue
+                    if "id" not in (_fk.get("referred_columns") or []):
+                        continue
+                    _cols = _fk.get("constrained_columns") or []
+                    if not _cols:
+                        continue
+                    try:
+                        with db.session.begin_nested():
+                            db.session.execute(
+                                _sa_text(f'DELETE FROM "{_tbl}" WHERE "{_cols[0]}" = :uid'),
+                                {"uid": user_id},
+                            )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning(
+                            "pipa_purge: dynamic purge of %s.%s failed: %s",
+                            _tbl, _cols[0], exc,
+                        )
+        except Exception:
+            logger.exception("pipa_purge: dynamic FK sweep init failed (continuing)")
+
     # ── final hard delete of the User row ────────────────────────────────────
     if user is not None:
         db.session.delete(user)

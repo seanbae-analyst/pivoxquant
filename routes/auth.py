@@ -1600,6 +1600,50 @@ def delete_account():
                     label, exc,
                 )
 
+        # Dynamic safety net (2026-06-07): the explicit list covers ORM models,
+        # but a MIGRATION-ONLY table with a users FK and no model — e.g.
+        # ``morning_briefs`` (mig 003), whose FK is a plain ``ForeignKey(
+        # "users.id")`` with NO ON DELETE CASCADE — is invisible to it and
+        # BLOCKS the user-row delete on prod (ForeignKeyViolation, the actual
+        # 500 the user hit). Introspect the LIVE DB and clear every remaining
+        # users-referencing row so erasure can't be defeated by an unknown /
+        # cascade-less table. Each delete in its own SAVEPOINT.
+        #
+        # Tables already handled above (incl. companion_waitlist SET NULL) match
+        # zero rows here and are no-ops. funnel_events has no FK (deliberate
+        # analytics snapshot) so it is never touched.
+        try:
+            from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+            _insp = _sa_inspect(db.engine)
+            for _tbl in _insp.get_table_names():
+                if _tbl == "users":
+                    continue
+                for _fk in _insp.get_foreign_keys(_tbl):
+                    if _fk.get("referred_table") != "users":
+                        continue
+                    if "id" not in (_fk.get("referred_columns") or []):
+                        continue
+                    _cols = _fk.get("constrained_columns") or []
+                    if not _cols:
+                        continue
+                    _col = _cols[0]
+                    try:
+                        with db.session.begin_nested():
+                            db.session.execute(
+                                _sa_text(f'DELETE FROM "{_tbl}" WHERE "{_col}" = :uid'),
+                                {"uid": user_id},
+                            )
+                    except Exception as exc:  # noqa: BLE001
+                        purge_failures.append(_tbl)
+                        logger.warning(
+                            "delete_account: dynamic purge of %s.%s failed: %s",
+                            _tbl, _col, exc,
+                        )
+        except Exception:
+            logger.exception(
+                "delete_account: dynamic FK sweep init failed (continuing)"
+            )
+
         # SHIP-BLOCKER: cancel any live Stripe subscription BEFORE dropping the
         # user row, otherwise Stripe keeps billing the card and the webhook can
         # no longer map the charge back to a user (전자상거래법 §17 / PIPA §21).
