@@ -434,7 +434,7 @@
     "signingOut": "Signing out...",
     "deleteAccount": "Delete Account",
     "deleteAccountTitle": "Delete Account",
-    "deleteAccountDesc": "In-app account deletion is not currently supported. Please contact support to request account deletion.",
+    "deleteAccountDesc": "Removes your positions, watchlists, and delivered artifacts. Defaults to a 30-day grace period you can cancel yourself via an emailed link.",
     "contactSupport": "Contact Support",
     "cancelBtn": "Cancel",
     "notifications": {

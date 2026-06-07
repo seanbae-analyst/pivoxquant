@@ -16,17 +16,17 @@
  *     + trades + alerts + consent state per PIPA §35 ① "complete personal
  *     data record" requirement. settings/_v2/page-v2.tsx export handler
  *     now calls /api/profile/export (was /api/agent/export, subset only).
- *   - E3 Danger zone (Sign out + Delete account; mailto fallback per v1 — GAP-J).
- *     ModalShell is reused for the delete-account confirmation flow.
+ *   - E3 Danger zone (Sign out + Delete account). GAP-J resolved: account
+ *     deletion now opens the self-service <DeleteAccountModal /> (30-day
+ *     soft-delete default + immediate hard-delete) instead of a mailto link.
  *
- * Pure presentational. Host wires `useAuth().logout`.
+ * Host wires `useAuth().logout` (sign-out). Account deletion is self-contained.
  *
  * Legal: persona vocabulary only. PIPA · 30-day purge phrasing matches mockup.
  */
 
 import * as React from "react";
-import { ModalShell } from "@/components/ui/modal-shell";
-import { AlertTriangle, X } from "lucide-react";
+import { DeleteAccountModal } from "@/components/account/delete-account-modal";
 
 const ERROR_COLOR = "var(--pq-error, #d18888)";
 const ERROR_BORDER = "rgba(209,136,136,0.18)";
@@ -160,116 +160,6 @@ function PrivacyToggle({
   );
 }
 
-function DeleteAccountModal({
-  onClose,
-  mailto,
-}: {
-  onClose: () => void;
-  mailto: string;
-}) {
-  return (
-    <ModalShell onClose={onClose} ariaLabel="Delete account">
-      <div
-        className="my-auto w-full max-w-md"
-        style={{
-          background: "var(--pq-ink, #050505)",
-          border: "1px solid rgba(245,240,232,0.12)",
-          padding: 24,
-          borderRadius: 2,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 16,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <AlertTriangle
-              className="h-4 w-4"
-              style={{ color: ERROR_COLOR }}
-            />
-            <h3
-              className="font-display"
-              style={{
-                fontWeight: 500,
-                fontSize: "var(--pq-text-h4)",  // 20px — no exact v3 token (between body 14 and quote 24)
-                color: "var(--pq-ivory)",
-              }}
-            >
-              Delete account
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              color: "rgba(245,240,232,0.55)",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <p
-          className="font-serif"
-          style={{
-            fontSize: "var(--pq-text-body)",
-            color: "rgba(245,240,232,0.65)",
-            marginBottom: 24,
-          }}
-        >
-          Deletion is permanent and removes all positions, watchlists,
-          persona snapshots, and delivered artifacts. PIPA · 30-day purge
-          after request.
-        </p>
-        <div style={{ display: "flex", gap: 12 }}>
-          <a
-            href={mailto}
-            className="font-mono uppercase"
-            style={{
-              flex: 1,
-              textAlign: "center",
-              padding: "11px 20px",
-              background: "var(--pq-bronze)",
-              color: "var(--pq-ink, #050505)",
-              fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.2em",
-              borderRadius: 2,
-              textDecoration: "none",
-            }}
-          >
-            Contact support
-          </a>
-          <button
-            type="button"
-            onClick={onClose}
-            className="font-mono uppercase"
-            style={{
-              flex: 1,
-              padding: "11px 20px",
-              background: "transparent",
-              color: "var(--pq-bronze)",
-              border: "1px solid var(--pq-bronze)",
-              fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.2em",
-              borderRadius: 2,
-              cursor: "pointer",
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
-
 /**
  * CSV datasets a user can download.
  *   - trades / positions / watchlist / journal / pulse → raw stored fields.
@@ -295,8 +185,6 @@ interface Props {
   onExportXlsx?: () => void;
   onSignOut?: () => void;
   signingOut?: boolean;
-  /** Mailto for account deletion — defaults to PivoxQuant support address. */
-  deleteAccountMailto?: string;
 }
 
 export function PrivacyCardV2({
@@ -306,7 +194,6 @@ export function PrivacyCardV2({
   onExportXlsx,
   onSignOut,
   signingOut,
-  deleteAccountMailto = "mailto:support@pivoxquant.com?subject=Account%20Deletion%20Request",
 }: Props) {
   const [cookies, setCookies] = React.useState<CookieState>(DEFAULT_COOKIES);
   const [showDelete, setShowDelete] = React.useState(false);
@@ -892,10 +779,7 @@ export function PrivacyCardV2({
       `}</style>
 
       {showDelete ? (
-        <DeleteAccountModal
-          onClose={() => setShowDelete(false)}
-          mailto={deleteAccountMailto}
-        />
+        <DeleteAccountModal onClose={() => setShowDelete(false)} />
       ) : null}
     </section>
   );

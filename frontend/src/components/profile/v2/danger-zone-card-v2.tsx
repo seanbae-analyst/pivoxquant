@@ -8,22 +8,23 @@
  *
  * Renders two cards side-by-side:
  *   - Left (col-span-7): "Your CFO's memory is yours." Export agent memory CTA + Delete all agent data red link.
- *   - Right (col-span-5): Danger zone (red border) — mailto support link for account deletion.
+ *   - Right (col-span-5): Danger zone (red border) — opens the self-service
+ *     <DeleteAccountModal /> (30-day soft-delete default + immediate hard-delete).
  *
- * Pure presentational — host wires `onExport` and `onDelete` (apiFetch).
+ * Host wires `onExport` and `onDelete` (agent-data, apiFetch). Account deletion
+ * is self-contained in the modal — no host wiring needed.
  *
  * Legal: PIPA · 30-day purge phrasing matches mockup. No advice strings.
  */
 
 import * as React from "react";
+import { DeleteAccountModal } from "@/components/account/delete-account-modal";
 
 interface Props {
   onExport?: () => void;
   onDelete?: () => void;
   exporting?: boolean;
   deleting?: boolean;
-  /** Mailto target for account deletion. Defaults to PivoxQuant support address. */
-  deleteAccountMailto?: string;
 }
 
 const ERROR_COLOR = "var(--pq-error, #d18888)";
@@ -35,9 +36,10 @@ export function DangerZoneCardV2({
   onDelete,
   exporting = false,
   deleting = false,
-  deleteAccountMailto = "mailto:support@pivoxquant.com?subject=Account%20Deletion%20Request",
 }: Props) {
+  const [showDelete, setShowDelete] = React.useState(false);
   return (
+    <>
     <section
       style={{
         display: "grid",
@@ -184,8 +186,9 @@ export function DangerZoneCardV2({
           artifacts. PIPA · 30-day purge.
         </p>
 
-        <a
-          href={deleteAccountMailto}
+        <button
+          type="button"
+          onClick={() => setShowDelete(true)}
           className="font-mono uppercase"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
@@ -193,13 +196,18 @@ export function DangerZoneCardV2({
             color: ERROR_COLOR,
             borderBottom: `1px solid ${ERROR_LINK_BORDER}`,
             paddingBottom: 2,
-            textDecoration: "none",
+            background: "transparent",
+            border: "none",
+            borderBottomStyle: "solid",
+            cursor: "pointer",
           }}
         >
-          Contact support to delete
-        </a>
+          계정 삭제
+        </button>
       </div>
     </section>
+    {showDelete && <DeleteAccountModal onClose={() => setShowDelete(false)} />}
+    </>
   );
 }
 
