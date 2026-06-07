@@ -174,6 +174,21 @@ def _resolve_stock_name_uncached(ticker: str) -> Optional[str]:
     if not t:
         return None
 
+    # Bare 6-digit KRX codes ("035760", "005930") carry no .KS/.KQ suffix, so
+    # _is_korean() below misclassifies them as US tickers; both the KR registry
+    # and us_stock_registry then miss and the name resolves to None — which
+    # makes every PDF/email artifact fall back to rendering the naked numeric
+    # code as the hero (the exact regression behind [[티커번호 대신 종목이름 표시]],
+    # CEO repeated "티커번호말고 종목이름"). Normalize the bare code to its
+    # suffixed KOSPI(.KS)/KOSDAQ(.KQ) form first so resolution succeeds. US
+    # symbols are never all-digit, so this never mis-fires on them.
+    if t.isdigit() and len(t) == 6:
+        try:
+            from services.ticker_normalizer import normalize_ticker
+            t = normalize_ticker(t)
+        except Exception:
+            logger.debug("silent-fallback: normalize bare KR code", exc_info=True)
+
     try:
         if _is_korean(t):
             # 1. Curated registry (fast, ~2,770 names, no network)

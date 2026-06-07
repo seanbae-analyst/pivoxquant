@@ -11,12 +11,19 @@ Run from repo root (venv with weasyprint installed):
 from __future__ import annotations
 
 import datetime as _dt
+import sys as _sys
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+# Running `python scripts/render_artifact_samples.py` puts scripts/ (not the
+# repo root) on sys.path, so `import services.*` fails. Add the repo root so the
+# harness can reuse the real sample_data SoT + service shapers + name enrichment
+# (without this, the enrich/reshape steps silently no-op and samples drift).
+if str(REPO_ROOT) not in _sys.path:
+    _sys.path.insert(0, str(REPO_ROOT))
 TEMPLATE_DIR = REPO_ROOT / "services" / "artifacts" / "templates"
 OUT_DIR = REPO_ROOT / "samples" / "artifacts"
 PDF_DIR = REPO_ROOT / "samples" / "pdf"
@@ -1961,6 +1968,32 @@ def main() -> None:
     else:
         samples_to_run = SAMPLES
 
+    # These 5 templates were redesigned but their inline SAMPLES blocks drifted
+    # (missing v3.nav / cluster_buys / this_month), so they failed to render and
+    # left STALE samples that showed old naked ticker codes. Render them through
+    # the real service exactly the way the admin preview route does
+    # (X_service.render_html(sample_data.sample_X())) so the HTML comes from the
+    # production _to_v3_shape + enrich_v3_names pipeline and can never silently
+    # drift from the templates again. SoT: routes/admin_preview.py::_render_standard
+    # + [[티커번호 대신 종목이름 표시]].
+    _render_via_service: dict = {}
+    try:
+        from services.artifacts import sample_data as _sd
+        from services.artifacts.monthly_finance_service import MonthlyFinanceService as _MFS
+        from services.artifacts.insider_mirror_service import InsiderMirrorService as _IMS
+        from services.artifacts.dividend_income_service import DividendIncomeService as _DIS
+        from services.artifacts.portfolio_segment_service import PortfolioSegmentService as _PSS
+        from services.artifacts.burn_rate_service import BurnRateService as _BRS
+        _render_via_service = {
+            "monthly_finance.html":   (_MFS, _sd.sample_monthly_finance),
+            "insider_mirror.html":    (_IMS, _sd.sample_insider_mirror),
+            "dividend_income.html":   (_DIS, _sd.sample_dividend_income),
+            "portfolio_segment.html": (_PSS, _sd.sample_portfolio_segment),
+            "burn_rate.html":         (_BRS, _sd.sample_burn_rate),
+        }
+    except Exception as _e:  # noqa: BLE001 — keep harness running on any drift
+        print(f"[warn] service-render wiring skipped: {_e}")
+
     rendered = []
     failed = []
     pdf_rendered = []
@@ -1973,10 +2006,31 @@ def main() -> None:
     else:
         print("[warn] Neither WeasyPrint nor Chrome available; PDFs will be skipped.")
 
+    # Backfill company names from tickers so these previews match the real
+    # service output. The production path runs enrich_v3_names() before render;
+    # this QA harness historically skipped it, so KR tickers surfaced as naked
+    # numeric codes (035760 / 005930) in the CEO-reviewed samples even though
+    # generated artifacts resolve them. See [[티커번호 대신 종목이름 표시]].
+    try:
+        from services.artifacts._name_enrich import enrich_v3_names
+    except Exception:  # noqa: BLE001 — harness must run even if services absent
+        enrich_v3_names = None
+
     for tpl_name, ctx in samples_to_run.items():
+        if enrich_v3_names is not None:
+            try:
+                enrich_v3_names(ctx)
+            except Exception:  # noqa: BLE001 — never let enrich break a render
+                pass
         try:
-            tpl = env.get_template(tpl_name)
-            html = tpl.render(**ctx)
+            if tpl_name in _render_via_service:
+                # Canonical production path (mirrors admin_preview): the service
+                # runs _to_v3_shape + enrich_v3_names + template render itself.
+                _Svc, _sample_fn = _render_via_service[tpl_name]
+                html = _Svc().render_html(_sample_fn())
+            else:
+                tpl = env.get_template(tpl_name)
+                html = tpl.render(**ctx)
         except Exception as e:  # noqa: BLE001
             failed.append((tpl_name, str(e)))
             continue

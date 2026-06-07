@@ -28,6 +28,27 @@ class TestPureResolver:
         # 005930.KS Samsung is in the curated registry
         assert name_resolver.resolve_stock_name("005930.KS") == "삼성전자"
 
+    def test_bare_kr_code_normalizes_and_resolves(self):
+        # Bare 6-digit KRX codes (no .KS/.KQ suffix) must normalize and resolve
+        # to the hangul name. Before the fix these fell through _is_korean() as
+        # if they were US tickers and resolved to None, so every PDF/email
+        # artifact rendered the naked number as the hero. Regression gate for
+        # [[티커번호 대신 종목이름 표시]] (CEO "티커번호말고 종목이름").
+        assert name_resolver.resolve_stock_name("005930") == "삼성전자"   # KOSPI
+        assert name_resolver.resolve_stock_name("035760") == "CJ ENM"     # KOSDAQ
+        assert name_resolver.resolve_stock_name("000660") == "SK하이닉스"
+
+    def test_bare_kr_code_matches_suffixed_form(self):
+        # Bare and .KS/.KQ-suffixed forms must resolve identically.
+        assert (name_resolver.resolve_stock_name("373220")
+                == name_resolver.resolve_stock_name("373220.KS") == "LG에너지솔루션")
+
+    def test_us_symbol_not_treated_as_bare_kr_code(self):
+        # US symbols are never all-digit, so the bare-code normalization path
+        # must not fire on them.
+        out = name_resolver.resolve_stock_name("AAPL")
+        assert out and "Apple" in out
+
     def test_us_registry_hit(self):
         # AAPL must exist in the Alpaca asset master
         out = name_resolver.resolve_stock_name("AAPL")
