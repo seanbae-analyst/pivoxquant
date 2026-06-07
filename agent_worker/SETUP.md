@@ -118,7 +118,7 @@ app.register_blueprint(admin_agent_bp)
 ### 7-1. 로컬에서 단발 헬스체크 실행
 
 ```bash
-cd /Users/seanbae/Desktop/취준/stockpilot
+cd /Users/seanbae/Desktop/취준/pivoxquant
 
 # .env 로드 후 (또는 export)
 export DATABASE_URL="postgresql://..."

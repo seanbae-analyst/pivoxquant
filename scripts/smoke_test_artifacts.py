@@ -15,7 +15,7 @@ falls back to the HTML-only path. PDF rendering is exercised on
 Railway Linux (Dockerfile installs libpango/libcairo/libgdk-pixbuf).
 
 Usage:
-    cd /Users/seanbae/Desktop/취준/stockpilot
+    cd /Users/seanbae/Desktop/취준/pivoxquant
     source venv/bin/activate
     PYTHONPATH=. python3 scripts/smoke_test_artifacts.py
 """

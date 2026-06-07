@@ -4,7 +4,7 @@
     {
       "name": "next-dev",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "source $HOME/.nvm/nvm.sh && cd /Users/seanbae/Desktop/취준/stockpilot/frontend && npx next dev --port $PORT"],
+      "runtimeArgs": ["-c", "source $HOME/.nvm/nvm.sh && cd /Users/seanbae/Desktop/취준/pivoxquant/frontend && npx next dev --port $PORT"],
       "port": 3000,
       "autoPort": true
     }

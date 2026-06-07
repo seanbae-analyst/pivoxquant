@@ -11,7 +11,7 @@ suite (unit/integration with mocked backends) is unaffected.  To run manually
 against a live backend:
 
     # 1. Start backend
-    cd /Users/seanbae/Desktop/취준/stockpilot && python3 run.py
+    cd /Users/seanbae/Desktop/취준/pivoxquant && python3 run.py
 
     # 2. In another terminal:
     pytest tests/test_market_indices_sparkline_regression.py -m live_api -v

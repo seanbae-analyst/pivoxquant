@@ -43,8 +43,10 @@ import pandas as pd
 
 warnings.filterwarnings("ignore")
 
-# Project root so we can import the real PivoxQuant scoring
-ROOT = Path("/Users/seanbae/Desktop/취준/stockpilot")
+# Project root so we can import the real PivoxQuant scoring.
+# Repo-relative (dynamic) so it works regardless of clone location/name —
+# previously hardcoded to the dead "stockpilot" path (brand renamed 2026-05).
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 # Load .env for Alpaca/FMP keys so DataFetcher can authenticate

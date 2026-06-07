@@ -16,7 +16,7 @@ file is missing (CEO has not yet onboarded the sim alias).
 #### Local dry-run
 
 ```bash
-cd /Users/seanbae/Desktop/취준/stockpilot
+cd /Users/seanbae/Desktop/취준/pivoxquant
 python3 scripts/caus_daily_sweep.py
 ```
 
@@ -45,7 +45,7 @@ Register once via the `scheduled-tasks` MCP tool
 |-------|-------|
 | `name` | `caus-daily-sweep` |
 | `cron` | `0 18 * * *` (UTC) — equivalent to **03:00 KST** |
-| `command` | `cd /Users/seanbae/Desktop/취준/stockpilot && python3 scripts/caus_daily_sweep.py` |
+| `command` | `cd /Users/seanbae/Desktop/취준/pivoxquant && python3 scripts/caus_daily_sweep.py` |
 | `timeout_minutes` | 5 (Phase 1 launcher is fast; Phase 2 will increase) |
 
 The task lives in Claude Code Max plan (no GitHub Actions billed minutes, no
