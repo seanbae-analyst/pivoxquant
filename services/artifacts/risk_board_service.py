@@ -115,7 +115,8 @@ def _safe_price(ticker: str) -> Optional[float]:
         hist = fetcher.get_price_history(ticker, period="5d")
         if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
             return None
-        return float(hist["Close"].iloc[-1])
+        v = float(hist["Close"].iloc[-1])
+        return v if math.isfinite(v) else None
     except Exception:
         logger.debug("silent-fallback: _safe_price", exc_info=True)
         return None
@@ -128,7 +129,8 @@ def get_current_vix() -> Optional[float]:
         hist = fetcher.get_price_history("^VIX", period="5d")
         if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
             return None
-        return float(hist["Close"].iloc[-1])
+        v = float(hist["Close"].iloc[-1])
+        return v if math.isfinite(v) else None
     except Exception as exc:
         logger.debug("vix fetch failed: %s", exc)
         return None

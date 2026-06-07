@@ -38,6 +38,7 @@ storage backend.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import threading
 from dataclasses import dataclass
@@ -447,7 +448,8 @@ def _ticker_last_price(ticker: str) -> Optional[float]:
         try:
             closes = hist["Close"] if "Close" in hist else None
             if closes is not None and len(closes) >= 1:
-                return float(closes.iloc[-1])
+                v = float(closes.iloc[-1])
+                return v if math.isfinite(v) else None
         except Exception as exc:
             logger.debug("history close fallback failed for %s: %s", ticker, exc)
     return None

@@ -24,7 +24,7 @@ import type { OnboardingOption, OnboardingQuestion } from "@/data/onboarding-que
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "pivoxquant_onboarding_answers";
-const TOTAL_STEPS = WIZARD_QUESTIONS.length + 1; // 19 wizard + 1 legal
+const TOTAL_STEPS = WIZARD_QUESTIONS.length + 1; // 18 wizard + 1 legal
 // SPRING replaced: spring easing causes overshoot in financial UI — use PQ_EASE instead.
 const SPRING = { duration: PQ_DUR_BASE, ease: PQ_EASE };
 

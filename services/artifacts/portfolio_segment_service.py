@@ -28,6 +28,7 @@ The disclaimer partial is included on page 4.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
 from dataclasses import dataclass
@@ -214,6 +215,8 @@ def _safe_price_at(ticker: str, period_start: date) -> tuple[Optional[float],
                 start_px = float(closes.iloc[idx])
         except Exception:
             start_px = float(closes.iloc[0])
+        start_px = start_px if math.isfinite(start_px) else None
+        end_px = end_px if math.isfinite(end_px) else None
         return start_px, end_px
     except Exception as exc:
         logger.debug("price window failed for %s: %s", ticker, exc)

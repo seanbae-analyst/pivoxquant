@@ -1,4 +1,25 @@
-# PivoxQuant — 인수인계서 (2026-06-07 v59 — 자율 새벽 버그헌팅 7-lane, 검증 fix 3건 + 동결/머니매스 문서화)
+# PivoxQuant — 인수인계서 (2026-06-07 v60 — CEO 라이브: 온보딩 broker 레이아웃 fix + 저품질 Q14 제거 + 밤샘 버그헌팅 4-lane + NaN-display fix)
+
+## v60 2026-06-07 — CEO 라이브 신고 fix 2건 + 자율 버그헌팅 세션 2 (⚠️ feature 브랜치 커밋만, **push 안 함**)
+
+> CEO 라이브 사용 중 신고 2건 → fix → "자율모드로 밤새 버그헌팅, 모든 케이스, 버그 없게". 상세:
+> `docs/overnight_bug_hunt_2026-06-07_session2.md`. baseline green(pytest 3833 / vitest 545 / tsc 0).
+>
+> **✅ FIXED (검증완료, 커밋 `64546d4a` + 후속)**: ① **온보딩 broker 데스크탑 레이아웃 붕괴** — `(auth)/layout.tsx`
+>   가 모든 자식을 `max-w-sm`(384px) 폼 셸에 가둠. 온보딩(broker/질문지)은 자체 풀폭 앱셸(max-w-3xl/lg)이라
+>   md+ 에서 `md:grid-cols-2` 가 384px 안에서 발동→카드 찌부·한글 세로·뱃지 겹침. 좁은 셸을 login/signup
+>   레이아웃으로 이전, 온보딩 풀폭 해방(login/signup V2 는 pq-auth-shell fixed full-bleed 라 무영향, 실측 확인).
+>   ② **저품질 동전던지기 Q14 제거**(CEO "이딴 질문 빼라") — 20→19문항. 크로스-스택(프론트 data slice 19→18 +
+>   risk 정규화 FE 5.5→4.5/BE 4.0→3.0 + loss_aversion 파생으로 출력스키마 불변 + 테스트 fixture). 배포경계
+>   안전(step 항상 0 초기화). ③ **아티팩트/상세 `$nan` 방어**(Lane E A1/B2) — `_safe_price` NaN 미가드 →
+>   `or avg_cost` fallback defeated → 유료 PDF `$nan`. 7함수 non-finite→None + fetcher 상세가드 `cur != cur`.
+>
+> **🟠 CEO 결정(자동 미적용)**: **통화 KRW/USD 혼합**([[feedback_currency_separate]] "냅두라 몇번말하노") —
+>   신규 열거 F1 `simulate.py` ×5 엔드포인트 raw-mix(가중치 왜곡) + F2 `credit_rating` raw-mix. 기존 known
+>   B2(twin)/B3(portfolio_analytics)와 함께 **통화-정책 일괄 결정** 안건. **절대 FX-환산 합산 금지**.
+>
+> **✅ CLEAN(증거)**: 캐시 cross-user(Pattern6) 0 · auth/세션/OAuth/리다이렉트 0 · 법적 라벨(BUY/SELL/HOLD·추천) 0 ·
+>   티어게이팅(Pro6/Prem9/free3) · FX silent-1.0 없음 · KR 티커 normalize 2,770엔트리.
 
 ## v59 2026-06-07 — 자율모드 새벽 버그헌팅 (7 정적 헌터 + lead 실측 재검증) (⚠️ feature 브랜치 커밋만, **push 안 함**)
 

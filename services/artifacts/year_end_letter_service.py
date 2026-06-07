@@ -40,6 +40,7 @@ by default. Override with `YEAR_END_LETTER_STORAGE_DIR`.
 from __future__ import annotations
 
 import logging
+import math
 import os
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -141,7 +142,8 @@ def _safe_price(ticker: str) -> Optional[float]:
         hist = fetcher.get_price_history(ticker, period="5d")
         if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
             return None
-        return float(hist["Close"].iloc[-1])
+        v = float(hist["Close"].iloc[-1])
+        return v if math.isfinite(v) else None
     except Exception as exc:
         logger.debug("price fetch failed for %s: %s", ticker, exc)
         return None
