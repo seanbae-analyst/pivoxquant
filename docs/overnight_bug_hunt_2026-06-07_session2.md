@@ -62,11 +62,15 @@
 | Cache Pattern 6 (agent) | services/ai·data·agents·profile·artifacts·twin 캐시 키 user_id scoping | **CLEAN** — 전 user-specific 캐시 scoped, 커밋 캐시쓰기 0, earnings_tone/risk_summary precedent 유지 |
 | 법적 라벨 (lead 직접) | BUY/SELL/HOLD 금지, 추천/조언/AI Coach 금지, 시그널 라벨 SoT | **CLEAN** — "HOLD" 는 "never render" 주석뿐, "recommendation" 은 전부 부정형 디스클레이머, 라벨=POSITIVE/NEGATIVE/NEUTRAL |
 | 아티팩트(18종)+데이터 (agent) | 엣지 데이터 크래시 / 0.00·NaN·null / 티어게이팅 / KR 티커 | **대부분 CLEAN** — 티어게이팅(Pro6/Prem9/free3) ✓, 크래시 격리(per-user try/except+rollback) ✓, FX(silent 1.0 없음·fallback 1380·staleness 관측가능) ✓, KR 티커(2,770 엔트리 normalize_ticker 정상) ✓, hardcoded sample 가드 ✓, div-by-zero 가드 ✓. **발견: A1 `$nan`(→Fix 4 적용)**. P2 잔여 아래 |
+| 실시간 SSE + PWA (agent) — 2차 wave | SSE cross-user/auth/cleanup/reconnect/app-context, SW 캐시 무효화·per-user·offline, push consent | **CLEAN (P0/P1 0)** — cross-user SSE 누락 0(payload=ticker+price, PII無), 스트림 `@api_auth` ✓, EventSource teardown(abort+timer clear) ✓, reconnect MAX 7+backoff+jitter+visibility-gate ✓, generator app-context capture+`db.session.remove` ✓, SW `NETWORK_ONLY`(auth/ai/realtime/broker) + login·logout `CLEAR_API_CACHE` ✓, offline 2xx만 캐시·`/api/auth/*` network-only ✓, push 14d dismiss+ownership 409 ✓. **gevent monkey-patch 확인**(`time.sleep` SSE 비차단). sw.js 미커밋 = benign(cache-version bump, prebuild가 SHA로 덮어씀). LOW 2건 아래 |
+| 대시보드 코어 read 경로 (agent) — 2차 wave | home/market/signals/watchlist/discover/portfolio, 신규 0-position 유저 크래시/500/None-산술/empty-state | **CLEAN (크래시 0)** — **실측 스모크: 신규 empty-book 유저로 29개 코어 read 엔드포인트 → 29/29 `<500`**(FMP kill 최악조건). 빈 포트폴리오 분기가 first-branch 로 의도적 엔지니어링(`{} if tickers else {}`, `sum([])=0`, 모든 나눗셈 `>0` 가드, risk `state is None`→honest zeros, signals no-cache→NEUTRAL placeholder). discover 503 = FMP 불가 시 의도적 fail-fast(mock 금지·프론트 retry-state 처리). FE: ErrorBoundary + 카드별 null-safe + `Array.isArray`/`?? []`/`Number.isFinite`. 392 passed |
 
 ### 🟡 P2 문서화 (자율 미적용 — 저영향/cosmetic/도달불가)
 - **A2** `capital_allocation`/`portfolio_segment` 포매터·비율 게이트 NaN-fragile — **현재 도달불가**(`_stats_single` 가 `first/last<=0` 선가드). 방어 노트.
 - **B1** 매크로 위젯 commodity/DXY/BTC `_safe` 가 NaN→`0` 으로 floor → "Gold $0.00" 가능(KR 지수 sanity-drop 처럼 키별 drop 없음). market-summary 위젯(유저 보유 아님) → P2.
 - **B3** `realtime.py:436` KOSDAQ live-quote **표시 라벨**이 `.KS` 하드코딩 — **가격은 정확**(6자리 코드 `"J"` 시장코드로 exchange-agnostic 조회), 라벨만 불일치(registry `get_name` 이 `.KS↔.KQ` 토글로 이름은 해결). cosmetic.
+- **PWA #3 (LOW)** `install-prompt.tsx:67-74` 배포 후 auto-reload 가 `controllerchange` 만 의존 + 리스너를 `controller` 동기 스냅샷 안에서만 등록 → `clients.claim()` 가 effect 등록보다 빠르면 열린 탭이 **옛 번들 유지(Cmd+Shift+R 필요)**. 권고 fix: `registration.onupdatefound → installing.statechange==='activated'` 도 청취. **자율 미적용**(SW 라이프사이클 — 오적용 시 reload 루프 위험, 배포 실측 필요 → pwa-cache-validator 로 신중 적용 권장).
+- **PWA #4 (LOW, by-design)** `auth.tsx` `CLEAR_API_CACHE` 가 배포 직후 1 nav 동안 옛 SW 로 전달 — benign(새 SW activate 가 non-current 캐시 전부 purge; 신규설치는 누출할 prior-user 캐시 없음). fix 불요.
 
 ---
 

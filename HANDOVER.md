@@ -1,4 +1,4 @@
-# PivoxQuant — 인수인계서 (2026-06-07 v60 — CEO 라이브: 온보딩 broker 레이아웃 fix + 저품질 Q14 제거 + 밤샘 버그헌팅 4-lane + NaN-display fix)
+# PivoxQuant — 인수인계서 (2026-06-07 v60 — CEO 라이브: 온보딩 broker 레이아웃 fix + 저품질 Q14 제거 + 밤샘 버그헌팅 8-lane + NaN-display fix)
 
 ## v60 2026-06-07 — CEO 라이브 신고 fix 2건 + 자율 버그헌팅 세션 2 (⚠️ feature 브랜치 커밋만, **push 안 함**)
 
@@ -18,8 +18,10 @@
 >   신규 열거 F1 `simulate.py` ×5 엔드포인트 raw-mix(가중치 왜곡) + F2 `credit_rating` raw-mix. 기존 known
 >   B2(twin)/B3(portfolio_analytics)와 함께 **통화-정책 일괄 결정** 안건. **절대 FX-환산 합산 금지**.
 >
-> **✅ CLEAN(증거)**: 캐시 cross-user(Pattern6) 0 · auth/세션/OAuth/리다이렉트 0 · 법적 라벨(BUY/SELL/HOLD·추천) 0 ·
->   티어게이팅(Pro6/Prem9/free3) · FX silent-1.0 없음 · KR 티커 normalize 2,770엔트리.
+> **✅ CLEAN(증거, 8 lane)**: 캐시 cross-user(Pattern6) 0 · auth/세션/OAuth/리다이렉트 0 · 법적 라벨(BUY/SELL/HOLD·추천) 0 ·
+>   티어게이팅(Pro6/Prem9/free3) · FX silent-1.0 없음 · KR 티커 normalize 2,770엔트리 · **대시보드 코어 29 엔드포인트 신규유저
+>   실측 29/29 `<500`** · SSE cross-user 0 + 스트림 auth ✓ + PWA SW per-user 캐시 evict ✓. LOW 2(배포후 stale-bundle race
+>   `install-prompt.tsx`·CLEAR_API_CACHE old-SW) = 문서화. §101 AI 텍스트 = 라우트 레이어 scrub(10 routes+decorator) 확인.
 
 ## v59 2026-06-07 — 자율모드 새벽 버그헌팅 (7 정적 헌터 + lead 실측 재검증) (⚠️ feature 브랜치 커밋만, **push 안 함**)
 
