@@ -457,6 +457,30 @@ export default function TopNav() {
                   </div>
                 );
               })}
+
+              {/* Standalone Methodology link — public transparency page,
+                  surfaced directly in the top bar (CEO 2026-06 "잘 보이게").
+                  No dropdown: a single visible entry to /methodology. */}
+              <Link
+                href="/methodology"
+                onMouseEnter={() => setActiveKey(null)}
+                className="group relative inline-flex h-9 items-center px-3 font-serif text-pq-body transition-colors duration-300"
+                style={{
+                  color: "rgba(245,240,232,0.68)",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                <span>Methodology</span>
+                {/* Bronze underline on hover — matches the group buttons */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-2 bottom-1 h-px origin-center scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent 0%, rgba(184,149,106,0.6) 50%, transparent 100%)",
+                  }}
+                />
+              </Link>
             </nav>
 
             {/* Right cluster */}
