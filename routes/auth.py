@@ -1784,11 +1784,18 @@ def _make_delete_cancel_token(user_id) -> str:
 def _delete_cancel_url(user_id) -> str:
     """Absolute frontend URL the user clicks to undo a deletion request.
 
-    Uses FRONTEND_URL (stable per-deploy) rather than the request-derived
-    origin — the link is read from an email days later, possibly on another
-    device, so it must not depend on the request that generated it.
+    Resolves the origin the same way OAuth callbacks do (``_resolve_frontend_url``:
+    X-Forwarded-Host / Origin / Referer restricted to ``_ALLOWED_OAUTH_ORIGINS``,
+    then the ``FRONTEND_URL`` env). The delete-request POST originates from the
+    whitelisted frontend, so this yields the real prod domain even when
+    FRONTEND_URL is unset — the same reason OAuth redirects already work in prod.
+    Falls back to the env var when called outside a request context (cron/CLI
+    re-send), since ``_resolve_frontend_url`` reads ``request``.
     """
-    base = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    try:
+        base = _resolve_frontend_url().rstrip("/")
+    except RuntimeError:
+        base = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
     return f"{base}/delete-cancel?token={_make_delete_cancel_token(user_id)}"
 
 

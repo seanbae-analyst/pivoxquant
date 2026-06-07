@@ -126,12 +126,26 @@ def test_token_only_restores_its_own_user(app, raw_client, make_user):
 def test_cancel_url_round_trips_to_uid(app):
     from routes.auth import _delete_cancel_url, _delete_cancel_serializer
 
-    with app.app_context():
+    # test_request_context so _resolve_frontend_url (reads request headers) works.
+    with app.test_request_context():
         url = _delete_cancel_url(4242)
         assert "/delete-cancel?token=" in url
         token = url.split("token=", 1)[1]
         payload = _delete_cancel_serializer().loads(token)
         assert payload == {"uid": 4242}
+
+
+def test_cancel_url_honors_forwarded_host_in_prod(app):
+    """The emailed cancel link must point at the real prod domain (resolved
+    from X-Forwarded-Host, whitelisted), NOT localhost — independent of whether
+    FRONTEND_URL env is set on the box."""
+    from routes.auth import _delete_cancel_url
+
+    with app.test_request_context(
+        headers={"X-Forwarded-Host": "www.pivoxquant.com", "X-Forwarded-Proto": "https"}
+    ):
+        url = _delete_cancel_url(7)
+        assert url.startswith("https://www.pivoxquant.com/delete-cancel?token=")
 
 
 def test_delete_request_email_embeds_self_service_cancel_link(
