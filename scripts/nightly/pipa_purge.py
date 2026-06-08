@@ -306,6 +306,37 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
         except Exception:
             logger.exception("pipa_purge: dynamic FK sweep init failed (continuing)")
 
+        # Model-less, FK-less user_id tables (e.g. ``anthropic_usage_log``) —
+        # the ORM list and the FK sweep both miss them, so a deleted user's
+        # rows survive → orphaned PII (PIPA §21). Allowlist ONLY so the
+        # deliberately-retained funnel_events analytics snapshot is never
+        # touched. Kept in sync with routes/auth.py:delete_account.
+        try:
+            from sqlalchemy import inspect as _ml_inspect, text as _ml_text
+            _ml_insp = _ml_inspect(db.engine)
+            _ml_existing = set(_ml_insp.get_table_names())
+            for _ml_tbl in ("anthropic_usage_log",):
+                if _ml_tbl not in _ml_existing:
+                    continue
+                if "user_id" not in {c["name"] for c in _ml_insp.get_columns(_ml_tbl)}:
+                    continue
+                try:
+                    with db.session.begin_nested():
+                        n = db.session.execute(
+                            _ml_text(f'DELETE FROM "{_ml_tbl}" WHERE "user_id" = :uid'),
+                            {"uid": user_id},
+                        ).rowcount
+                        counts[_ml_tbl] = int(n or 0)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "pipa_purge: model-less purge of %s failed: %s",
+                        _ml_tbl, exc,
+                    )
+        except Exception:
+            logger.exception(
+                "pipa_purge: model-less user_id sweep init failed (continuing)"
+            )
+
     # ── final hard delete of the User row ────────────────────────────────────
     if user is not None:
         db.session.delete(user)

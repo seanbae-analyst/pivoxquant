@@ -51,6 +51,7 @@ export function NotificationDropdown() {
   const router = useRouter();
   const { locale, t } = useLocale();
   const [open, setOpen] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
   // BUG-8 FIX 2: unify the SWR cache key with `useAlerts()` in hooks.ts
@@ -95,10 +96,16 @@ export function NotificationDropdown() {
   }, []);
 
   async function markAllRead() {
+    // Guard double-submit — parity with the /alerts page (markingRead). The
+    // POST is idempotent server-side, so this only avoids redundant requests.
+    if (markingRead) return;
+    setMarkingRead(true);
     try {
       await apiFetch(API.alerts.readAll, { method: "POST" });
     } catch {
       // swallow — mutate below will pick up server state either way
+    } finally {
+      setMarkingRead(false);
     }
     mutate();
   }
@@ -177,7 +184,8 @@ export function NotificationDropdown() {
               <button
                 onClick={markAllRead}
                 type="button"
-                className="text-xs underline underline-offset-4 transition-colors"
+                disabled={markingRead}
+                className="text-xs underline underline-offset-4 transition-colors disabled:opacity-50"
                 style={{ color: "var(--pq-bronze)" }}
               >
                 {t("topbar.markAllRead")}

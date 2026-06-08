@@ -1,4 +1,38 @@
-# PivoxQuant — 인수인계서 (2026-06-07 v60 — CEO 라이브: 온보딩 broker 레이아웃 fix + 저품질 Q14 제거 + 밤샘 버그헌팅 8-lane + NaN-display fix)
+# PivoxQuant — 인수인계서 (2026-06-08 v61 — 자율 밤샘 버그헌팅 세션3: JSON NaN 시스템가드 + flaky 격리 + PIPA 소거갭 + cfo pulse crash + 데드코드)
+
+## v61 2026-06-08 — 자율모드 밤샘 버그헌팅 세션3 (6 lane + lead 2 lane, ⚠️ feature 브랜치 커밋만, **push 안 함**)
+
+> CEO "나 자는동안 버그헌팅이랑 구조 다 잡아놔라 자율모드". 6 병렬 헌터(write-path/concurrency/exception/
+> migration/structure/frontend) + lead 직접(JSON-NaN/legal-scrub) → **lead 모든 finding 실측+repro 재검증**
+> → 안전·비동결만 fix+test, money/legal/frozen/prod-ops/대규모리팩터는 문서화. 상세:
+> `docs/overnight_bug_hunt_2026-06-08.md`. **검증: BE full-suite 3861 passed/0 fail(pre-fix는 flaky로 4 fail
+> = "baseline green" 오인) · FE tsc0/vitest545.**
+>
+> **✅ FIXED (검증완료)**: ① **JSON 직렬화 NaN/Inf→null 시스템가드**(`services/json_provider.py`+app.py) —
+>   Flask 기본 provider가 invalid JSON(`NaN`/`Infinity`) 방출 → 브라우저 `.json()` throw로 payload 통째 손실.
+>   74개 산발 guard + `_finite_floats` 재구현(canonical docstring이 직접 경고한 whack-a-mole)을 단일 경계
+>   sanitizer로 대체(+7 test, clean-path 무복사·캐시 불변). ② **flaky 테스트 격리**(conftest autouse) —
+>   realtime 싱글톤 KR-health(`_kr_last_fail`)가 테스트간 누수 → data_status overlay가 `is_stale=True` 강제
+>   → full-suite 순서에서만 4 fail(**이전 "baseline green 3833"이 가렸던 것**). 싱글톤 reset로 class 제거(probe
+>   검증). ③ **PIPA §21 소거갭**(auth.py+pipa_purge.py+test) — `anthropic_usage_log`가 model無+prod FK無(mig042
+>   미적용)이라 explicit·FK-sweep 둘다 누락 → 삭제유저 PII 잔존. allowlist sweep(SAVEPOINT격리·funnel_events
+>   불가침). ④ **cfo Weekly-Pulse localStorage crash**(P2, hooks.ts) — 구 스키마 `pq_cfo_pulse_v1`→
+>   `[...history]` throw(이미 SHIP-BLOCKER 낸 class의 hook 루트 미fix분). `coercePulse` 양 진입점.
+>   ⑤ **데드코드**: `cache_service.ca_cache`(미사용 글로벌)·`fmp.normalize_ticker`(데드+footgun: canonical
+>   `ticker_normalizer.normalize_ticker`와 동명 역의미·KR→None). ⑥ notification 더블서밋 가드(P3 parity).
+>
+> **🔴 DOCUMENTED(자동 미적용)**: **[P0] prod alembic_version 032 vs head 048**(migration agent 라이브 prod) —
+>   self-heal(`_do_migrations`)로 스키마는 current(parity pass)지만 alembic이 실 migrator 아님 = v44.7 incident
+>   class. prod stamp/upgrade는 **불가역 ops, CEO/ops 전용**. money/legal 통합(fx `_fx_rate` 9 byte-copy +
+>   1380/1350 상수분기 · disclaimer 8문구 · `is_korean_ticker` 48 inline+7 redef · positions loader ~30 copy =
+>   "캐노니컬 존재, 채택이 갭"). pykrx 데드스텁이 LIVE `/alt-data/kr/*` 빈데이터 서빙(제품결정). 마이그 004/005
+>   JSONB·016-019 BigInteger SQLite 비replay(latent: prod=PG/test=create_all). 통화 KRW/USD 혼합 = CEO LEAVE IT
+>   유지([[feedback_currency_separate]]).
+>
+> **✅ CLEAN(증거, 6 lane)**: write-path 128 handler IDOR/검증/mass-assign/race **0**(예외적 하드닝) · concurrency
+>   P0/P1 0(EGW02004 self-heal depth-2 bounded·token-mgr 락 정상·scheduler max_instances=1) · exception(framework
+>   글로벌핸들러로 stack-leak/HTML-into-json 0·user int/float 전부 400가드) · migration head 단일 048 linear
+>   (data-loss 0) · frontend SSE teardown·timer/observer cleanup·mutation 더블서밋 가드·format.ts NaN 가드 존재.
 
 ## v60 2026-06-07 — CEO 라이브 신고 fix 2건 + 자율 버그헌팅 세션 2 (⚠️ feature 브랜치 커밋만, **push 안 함**)
 

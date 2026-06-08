@@ -1644,6 +1644,43 @@ def delete_account():
                 "delete_account: dynamic FK sweep init failed (continuing)"
             )
 
+        # 2026-06-08 — model-less, FK-less user_id tables. The explicit ORM list
+        # can't reach them (no model) and the FK-driven sweep above skips them
+        # (no users FK on prod — e.g. ``anthropic_usage_log``: migration 042
+        # declares the FK but never ran on prod, so the app.py self-heal CREATE
+        # TABLE owns the live schema and omits it). Without this, a deleted
+        # user's rows survive → orphaned PII (PIPA §21 right-to-erasure).
+        # Allowlist ONLY — a blanket "every user_id table" would wrongly wipe
+        # ``funnel_events`` (the deliberately-retained anonymous analytics
+        # snapshot). Each delete in its own SAVEPOINT so it can never block the
+        # user-row delete. Keep in sync with
+        # scripts/nightly/pipa_purge._delete_user_cascade.
+        try:
+            from sqlalchemy import inspect as _ml_inspect, text as _ml_text
+            _ml_insp = _ml_inspect(db.engine)
+            _ml_existing = set(_ml_insp.get_table_names())
+            for _ml_tbl in ("anthropic_usage_log",):
+                if _ml_tbl not in _ml_existing:
+                    continue
+                if "user_id" not in {c["name"] for c in _ml_insp.get_columns(_ml_tbl)}:
+                    continue
+                try:
+                    with db.session.begin_nested():
+                        db.session.execute(
+                            _ml_text(f'DELETE FROM "{_ml_tbl}" WHERE "user_id" = :uid'),
+                            {"uid": user_id},
+                        )
+                except Exception as exc:  # noqa: BLE001
+                    purge_failures.append(_ml_tbl)
+                    logger.warning(
+                        "delete_account: model-less purge of %s failed: %s",
+                        _ml_tbl, exc,
+                    )
+        except Exception:
+            logger.exception(
+                "delete_account: model-less user_id sweep init failed (continuing)"
+            )
+
         # SHIP-BLOCKER: cancel any live Stripe subscription BEFORE dropping the
         # user row, otherwise Stripe keeps billing the card and the webhook can
         # no longer map the charge back to a user (전자상거래법 §17 / PIPA §21).

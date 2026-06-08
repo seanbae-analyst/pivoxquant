@@ -2027,18 +2027,6 @@ def get_short_interest(ticker):
     return []
 
 
-# ── Korean Stock Helper ─────────────────────────────────────────
-
-def normalize_ticker(ticker):
-    """Convert Korean ticker format for FMP.
-    Korean stocks (.KS/.KQ) are NOT supported on FMP free tier.
-    Use KIS API instead. This returns None for Korean tickers.
-    """
-    if ticker.endswith(".KS") or ticker.endswith(".KQ"):
-        return None  # Signal to use KIS API
-    return ticker
-
-
 # ── API Health ──────────────────────────────────────────────────
 
 def get_api_usage():
