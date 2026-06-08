@@ -154,3 +154,51 @@ def test_token_manager_force_domain_re_pins_and_clears(monkeypatch):
     # Idempotent: calling again on the same domain is a no-op.
     tm.force_domain(use_real=False)
     assert tm.base_url == REST_URL_VTS
+
+
+def test_egw02004_correction_is_once_only_under_concurrency(monkeypatch):
+    """Concurrent EGW02004 (the self-heal trigger) must flip the domain EXACTLY
+    once. The pre-fix unguarded check-then-set let two threads both 'correct'
+    and flip the domain back and forth, permanently stranding kis_base on the
+    wrong endpoint (→ every later KIS call EGW02004 → silent stale until restart).
+    """
+    import threading
+    import time as _time
+
+    def always_egw(url, headers=None, params=None, timeout=None):
+        _time.sleep(0.01)  # widen the window so an unguarded set would interleave
+        return _Resp({"rt_cd": "1", "msg_cd": "EGW02004", "msg1": "x", "output": {}})
+
+    monkeypatch.setattr(requests, "get", always_egw)
+
+    force_calls = {"n": 0}
+
+    class _FakeTM:
+        def force_domain(self, use_real=False):
+            force_calls["n"] += 1
+
+    monkeypatch.setattr(
+        "services.kis.token_manager.get_kis_token_manager",
+        lambda: _FakeTM(),
+    )
+
+    rt = RealtimeService()
+    rt.kis_available = True
+    rt.kis_key = "k"
+    rt.kis_secret = "s"
+    rt.kis_base = _REAL  # misconfigured start (real domain + VTS key)
+    monkeypatch.setattr(rt, "_ensure_kis_ws", lambda: None)
+    monkeypatch.setattr(rt, "_get_kis_token", lambda: "tok")
+
+    threads = [
+        threading.Thread(target=rt._get_kis_price, args=("005930.KS",))
+        for _ in range(8)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert rt._kis_domain_corrected is True
+    assert rt.kis_base == _VTS, "domain must end corrected (VTS), never reverted to real"
+    assert force_calls["n"] == 1, "domain correction must happen exactly once across threads"

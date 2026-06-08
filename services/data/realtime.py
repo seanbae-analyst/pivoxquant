@@ -107,6 +107,14 @@ class RealtimeService:
         # returns EGW02004 (app-key/domain mismatch) so _get_kis_price
         # corrects self.kis_base exactly once and never recurses forever.
         self._kis_domain_corrected = False
+        # The EGW02004 self-heal mutates _kis_domain_corrected AND self.kis_base
+        # together. Under the concurrent KR batch (ThreadPoolExecutor workers are
+        # real OS threads) an unguarded check-then-set let two threads both
+        # "correct" and flip the domain back and forth, permanently stranding
+        # kis_base on the wrong endpoint (→ every later KIS call EGW02004 → silent
+        # stale fallback until restart). This lock makes the flip strictly
+        # once-only and atomic.
+        self._kis_domain_lock = threading.Lock()
 
         # KR realtime health (exposed via /api/realtime/status). Epoch
         # seconds of the last successful / failed KIS KR fetch — lets ops see
@@ -552,22 +560,37 @@ class RealtimeService:
             # re-pin the token there, and retry so live KR prices keep
             # flowing regardless of the env var. A correctly-configured
             # deployment never returns EGW02004, so this branch is inert.
-            if data.get("msg_cd") == "EGW02004" and not self._kis_domain_corrected:
-                self._kis_domain_corrected = True
-                real_now = self.kis_base == "https://openapi.koreainvestment.com:9443"
-                self.kis_base = (
-                    "https://openapivts.koreainvestment.com:29443"
-                    if real_now
-                    else "https://openapi.koreainvestment.com:9443"
-                )
+            if data.get("msg_cd") == "EGW02004":
+                # Atomic, once-only domain correction (see _kis_domain_lock).
+                corrected_base = None
+                with self._kis_domain_lock:
+                    if not self._kis_domain_corrected:
+                        self._kis_domain_corrected = True
+                        real_now = self.kis_base == "https://openapi.koreainvestment.com:9443"
+                        self.kis_base = (
+                            "https://openapivts.koreainvestment.com:29443"
+                            if real_now
+                            else "https://openapi.koreainvestment.com:9443"
+                        )
+                        corrected_base = self.kis_base
+                if corrected_base is None:
+                    # Another thread already performed the one-time correction;
+                    # this EGW02004 is a stale reply on the old domain. Do NOT
+                    # flip again (that caused the back-and-forth strand). Fail
+                    # this ticker for this cycle — the next fetch uses the
+                    # corrected domain.
+                    return None
                 logger.error(
                     "KIS EGW02004 app-key/domain mismatch (%s) — auto-switching "
                     "to %s and retrying. Set KIS_USE_REAL=%s to fix at the source.",
-                    data.get("msg1"), self.kis_base, "0" if real_now else "1",
+                    data.get("msg1"), corrected_base,
+                    "0" if corrected_base.startswith("https://openapivts") else "1",
                 )
                 try:
                     from services.kis.token_manager import get_kis_token_manager
-                    get_kis_token_manager().force_domain(use_real=not real_now)
+                    get_kis_token_manager().force_domain(
+                        use_real=not corrected_base.startswith("https://openapivts")
+                    )
                 except Exception as exc:
                     logger.warning("KIS token domain switch failed: %s", exc)
                 return self._get_kis_price(ticker)  # one retry on corrected domain
