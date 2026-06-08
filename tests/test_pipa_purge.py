@@ -6,7 +6,9 @@ Covers
 2. ``deletion_requested_at`` ≥ 30d → user IS purged + cascade rows
    removed + auth_events anonymized + deleted_at stamped.
 3. ``deletion_requested_at`` IS NULL → never purged.
-4. Already-purged (``deleted_at`` NOT NULL) → idempotent skip.
+4. Stuck row (``deleted_at`` NOT NULL, row still present) → RE-INCLUDED
+   and purged to completion; the duplicate "data purged" email is
+   suppressed on the retry.
 5. /api/auth/delete-request endpoint:
    - 200 + soft-delete state set
    - second call is idempotent
@@ -140,22 +142,47 @@ def test_null_deletion_request_skipped(app):
         assert User.query.get(uid) is not None
 
 
-# ── 4. already-deleted skipped ──────────────────────────────────────────────
+# ── 4. stuck row (deleted_at stamped, row not yet deleted) → recovered ───────
 
-def test_already_deleted_skipped(app):
-    """deleted_at IS NOT NULL excludes the user from candidates (idempotency)."""
+def test_stuck_row_is_recovered_and_completed(app):
+    """A row left ``deleted_at NOT NULL`` but STILL PRESENT (a prior pass
+    crashed between the two commits) must be RE-INCLUDED and the purge
+    completed — not stranded forever. The pre-fix ``deleted_at IS NULL`` filter
+    dropped it from every future pass → silent PIPA §21 violation."""
     from scripts.nightly.pipa_purge import run_once
+    from models import User
 
-    _make_user(
-        app, email="done@test.com",
-        requested_days_ago=45, already_deleted=True,
+    uid = _make_user(
+        app, email="stuck@test.com",
+        requested_days_ago=45, already_deleted=True,  # deleted_at set, row present
     )
 
     with app.app_context():
         with _patch_transport_succeed():
             s = run_once()
-        assert s["candidates"] == 0
-        assert s["purged"] == 0
+        assert s["candidates"] == 1, "stuck row must be re-included as a candidate"
+        assert s["purged"] == 1
+        assert s["errors"] == 0
+        assert User.query.get(uid) is None, "stuck row must be hard-deleted on retry"
+
+
+def test_stuck_row_retry_suppresses_duplicate_purge_email(app):
+    """On a stuck-row retry the one-time 'data purged' email is NOT re-sent
+    (it already went out on the first, crashed pass)."""
+    from unittest.mock import patch
+    from scripts.nightly.pipa_purge import run_once
+
+    _make_user(
+        app, email="stuck-noemail@test.com",
+        requested_days_ago=45, already_deleted=True,
+    )
+
+    with app.app_context():
+        with _patch_transport_succeed():
+            with patch("scripts.nightly.pipa_purge._send_purge_complete_email") as m:
+                s = run_once()
+        assert s["purged"] == 1
+        m.assert_not_called()
 
 
 # ── 5. delete-request endpoint ──────────────────────────────────────────────

@@ -31,12 +31,17 @@ tomorrow.
 
 Idempotency
 -----------
-``deleted_at IS NULL`` filter prevents re-processing. If a purge
-crashes mid-cascade we restart from the same candidate set on the
-next run — but step 3 commits ``deleted_at`` BEFORE the row delete,
-so a crash between steps 3 and 4 leaves the row in
-``deleted_at NOT NULL`` state which is then skipped on next pass.
-(Manual ops cleanup needed for those — logged + Slack-alerted.)
+Re-running the cascade on the same user is idempotent (child deletes
+match 0 rows the 2nd time; the "data purged" email re-send is
+suppressed on a retry). Step 3 commits ``deleted_at`` BEFORE the row
+delete (the 2-step commit preserves the stamp in the WAL/binlog as
+audit evidence). If a crash lands between the two commits the row is
+left ``deleted_at NOT NULL`` but still present ("stuck").
+``find_purge_candidates`` deliberately RE-INCLUDES such rows so the
+next nightly pass completes the purge automatically — they are no
+longer stranded. (The old ``deleted_at IS NULL`` filter skipped them
+forever → silent PIPA §21 violation.) A fully-purged user has no row,
+so it is never re-processed.
 
 Salt for SHA256 anonymization
 -----------------------------
@@ -124,7 +129,14 @@ def find_purge_candidates(*, now: datetime | None = None):
     Eligibility:
       * ``deletion_requested_at`` is NOT NULL
       * ``deletion_requested_at <= now - 30 days``
-      * ``deleted_at`` IS NULL
+
+    Includes BOTH fresh candidates (``deleted_at`` IS NULL) and "stuck"
+    rows from a prior crashed pass (``deleted_at`` IS NOT NULL but the
+    row still exists — the 2-step commit stamped ``deleted_at`` then the
+    process died before the row delete). Re-running the cascade on a
+    stuck row is idempotent and completes the purge, so we no longer
+    filter them out (that previously stranded them forever → PIPA §21).
+    A successfully-purged user has no row at all, so it can never match.
     """
     from models import User
 
@@ -135,8 +147,10 @@ def find_purge_candidates(*, now: datetime | None = None):
         User.query.filter(
             User.deletion_requested_at.isnot(None),
             User.deletion_requested_at <= threshold,
-            User.deleted_at.is_(None),
         )
+        # NOTE: intentionally NOT filtering ``deleted_at IS NULL`` — stuck
+        # rows (deleted_at stamped, row not yet deleted) must be re-attempted,
+        # and a fully-purged user has no row to match. See module docstring.
         .all()
     )
 
@@ -230,6 +244,10 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
     # ── stamp deleted_at + commit (audit-trail evidence) ─────────────────────
     user = User.query.get(user_id)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
+    # A user whose deleted_at is already set is a "stuck" retry from a prior
+    # crashed pass (find_purge_candidates re-includes those). Track it so the
+    # one-time "data purged" email isn't re-sent on the retry.
+    is_retry = bool(user is not None and user.deleted_at is not None)
     if user is not None:
         user.deleted_at = now
         db.session.commit()
@@ -245,7 +263,8 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
         _cancel_stripe_subscription(user)
 
     # ── send TRANSACTIONAL "purge complete" email BEFORE deleting row ────────
-    if user is not None:
+    # Skip on a stuck-row retry — the email already went out on the first pass.
+    if user is not None and not is_retry:
         try:
             _send_purge_complete_email(user)
         except Exception:

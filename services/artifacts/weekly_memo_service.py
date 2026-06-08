@@ -243,7 +243,7 @@ def _weekly_return_for_ticker(ticker: str) -> Optional[float]:
         tail = closes.tail(6)  # 5 trading days ~ 1 week
         first = float(tail.iloc[0])
         last = float(tail.iloc[-1])
-        if first <= 0:
+        if not (math.isfinite(first) and math.isfinite(last)) or first <= 0:
             return None
         return round((last / first - 1) * 100, 2)
     except Exception as exc:

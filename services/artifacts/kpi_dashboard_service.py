@@ -202,7 +202,7 @@ def _ytd_return(positions: list[Position]) -> Optional[float]:
                 continue
             first = float(closes.iloc[0])
             last = float(closes.iloc[-1])
-            if first <= 0:
+            if not (math.isfinite(first) and math.isfinite(last)) or first <= 0:
                 continue
             rets.append((last / first - 1) * 100)
         except Exception:
@@ -453,6 +453,8 @@ class KPIDashboardService:
                 n = float(v)
             except (TypeError, ValueError):
                 return "—"
+            if not math.isfinite(n):
+                return "—"
             if n >= 1_000_000:
                 return f"${n/1_000_000:.2f}M"
             if n >= 1_000:
@@ -461,11 +463,18 @@ class KPIDashboardService:
 
         def _pct(v):
             try:
-                return f"{float(v):+.1f}%"
+                n = float(v)
             except (TypeError, ValueError):
                 return "—"
+            if not math.isfinite(n):
+                return "—"
+            return f"{n:+.1f}%"
 
-        sharpe_str = f"{sharpe:.2f}" if sharpe is not None else "—"
+        sharpe_str = (
+            f"{sharpe:.2f}"
+            if sharpe is not None and math.isfinite(sharpe)
+            else "—"
+        )
         return {
             "doc":         f"{month_label} · KPI · 01/03",
             "doc_short":   month_label,
