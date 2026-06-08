@@ -83,6 +83,11 @@ class RealtimeService:
             self.kis_available = True
             logger.info("Realtime: KIS initialized (KR stocks) — base=%s real=%s", self.kis_base, _use_real)
 
+        # Self-heal guard: flips to True the first time a live KIS quote
+        # returns EGW02004 (app-key/domain mismatch) so _get_kis_price
+        # corrects self.kis_base exactly once and never recurses forever.
+        self._kis_domain_corrected = False
+
     @staticmethod
     def is_korean(ticker):
         t = ticker.upper().strip()
@@ -427,6 +432,35 @@ class RealtimeService:
                 headers=headers, params=params, timeout=10,
             )
             data = r.json()
+
+            # ── Self-heal: app-key / domain mismatch (EGW02004) ──
+            # A 모의(VTS) app-key hitting the 실전 domain (or vice-versa) is
+            # rejected with EGW02004 BEFORE any price comes back. That is the
+            # exact KIS_USE_REAL/app-key drift that silently froze KR quotes
+            # at the prior daily close. Flip to the opposite KIS domain once,
+            # re-pin the token there, and retry so live KR prices keep
+            # flowing regardless of the env var. A correctly-configured
+            # deployment never returns EGW02004, so this branch is inert.
+            if data.get("msg_cd") == "EGW02004" and not self._kis_domain_corrected:
+                self._kis_domain_corrected = True
+                real_now = self.kis_base == "https://openapi.koreainvestment.com:9443"
+                self.kis_base = (
+                    "https://openapivts.koreainvestment.com:29443"
+                    if real_now
+                    else "https://openapi.koreainvestment.com:9443"
+                )
+                logger.error(
+                    "KIS EGW02004 app-key/domain mismatch (%s) — auto-switching "
+                    "to %s and retrying. Set KIS_USE_REAL=%s to fix at the source.",
+                    data.get("msg1"), self.kis_base, "0" if real_now else "1",
+                )
+                try:
+                    from services.kis.token_manager import get_kis_token_manager
+                    get_kis_token_manager().force_domain(use_real=not real_now)
+                except Exception as exc:
+                    logger.warning("KIS token domain switch failed: %s", exc)
+                return self._get_kis_price(ticker)  # one retry on corrected domain
+
             o = data.get("output", {})
             price = int(o.get("stck_prpr", 0))
             if not price:

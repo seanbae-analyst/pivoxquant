@@ -192,6 +192,42 @@ class KISTokenManager:
             except Exception as e:
                 logger.debug("KIS token cache cleanup failed: %s", e)
 
+    def force_domain(self, use_real: bool) -> None:
+        """Runtime-correct the KIS REST domain when the configured
+        ``KIS_USE_REAL`` contradicts the actual app-key type.
+
+        A 모의(VTS) app-key called against the 실전 domain (or vice-versa) is
+        rejected with ``EGW02004`` on a live business call — NOT at token
+        issue time (a mismatched key still mints a token on either domain).
+        So the mismatch is only observable downstream (``realtime_service``),
+        which calls this to re-pin auth at the domain that actually works.
+
+        Invalidates the cached token (memory + disk) so the next
+        ``get_token()`` mints against the corrected domain. No-op when the
+        manager is already on the requested domain — a correctly-configured
+        deployment never reaches the mismatch branch that triggers this.
+        """
+        new_base = REST_URL_REAL if use_real else REST_URL_VTS
+        with self._lock:
+            if new_base == self.base_url:
+                return
+            logger.error(
+                "KIS token domain auto-correction: %s → %s "
+                "(KIS_USE_REAL contradicts app-key type; set KIS_USE_REAL=%s)",
+                "real" if self.is_real else "vts",
+                "real" if use_real else "vts",
+                "1" if use_real else "0",
+            )
+            self.base_url = new_base
+            self.is_real = use_real
+            self._token = None
+            self._expires_at = None
+            try:
+                if os.path.exists(_CACHE_FILE):
+                    os.remove(_CACHE_FILE)
+            except Exception as e:
+                logger.debug("KIS token cache cleanup (force_domain) failed: %s", e)
+
     # ── Internal helpers ────────────────────────────────────────────
 
     @staticmethod
