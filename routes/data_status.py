@@ -95,11 +95,34 @@ def stale_status():
     a generic boolean from a public endpoint leaks zero PII.
     """
     threshold_pct = _DEFAULT_STALE_THRESHOLD_PCT
+
+    # Live in-process KR feed health overlays the nightly ticker_health
+    # artifact: a mid-session KIS stall flips kr_health().degraded
+    # immediately, so the banner surfaces a systemic KR delay before the next
+    # nightly artifact would. Self-clears on the next KR success; the banner's
+    # own ~5-min poll naturally debounces transient single-poll blips.
+    kr_live_degraded = False
+    try:
+        from services.container import realtime as _rt
+        kr_live_degraded = bool(_rt.kr_health().get("degraded"))
+    except Exception:
+        logger.debug("kr_health overlay in stale-status failed", exc_info=True)
+
+    def _respond(payload: dict[str, Any]):
+        if kr_live_degraded:
+            payload = dict(payload)
+            payload["is_stale"] = True
+            markets = list(payload.get("affected_markets") or [])
+            if "KR" not in markets:
+                markets.append("KR")
+            payload["affected_markets"] = markets
+        return jsonify(payload)
+
     results_path = Path(os.environ.get("RESULTS_PATH", _DEFAULT_RESULTS_PATH))
 
     if not results_path.exists():
         # Cron hasn't run yet (fresh deploy, dev laptop). Don't false-alarm.
-        return jsonify(_empty_payload(threshold_pct))
+        return _respond(_empty_payload(threshold_pct))
 
     # Import lazily so this blueprint stays import-cheap on cold starts and
     # so a refactor of scripts/nightly/ doesn't break the public surface at
@@ -108,16 +131,16 @@ def stale_status():
         from scripts.nightly import ticker_health_alert as _alert
     except Exception as exc:  # pragma: no cover — defensive
         logger.warning("ticker_health_alert import failed: %s", exc)
-        return jsonify(_empty_payload(threshold_pct))
+        return _respond(_empty_payload(threshold_pct))
 
     try:
         rows = _alert._read_artifact(results_path)
     except Exception as exc:  # pragma: no cover — _read_artifact already guards OSError
         logger.warning("ticker_health artifact read failed: %s", exc)
-        return jsonify(_empty_payload(threshold_pct))
+        return _respond(_empty_payload(threshold_pct))
 
     if not rows:
-        return jsonify(_empty_payload(threshold_pct))
+        return _respond(_empty_payload(threshold_pct))
 
     # Evaluate KR and US independently so the banner can name the affected
     # region. A KIS outage typically nukes KR alone; an FMP outage nukes US
@@ -152,7 +175,7 @@ def stale_status():
     except OSError:
         updated_at = None
 
-    return jsonify({
+    return _respond({
         "is_stale": bool(affected),
         "stale_ratio": round(worst_ratio, 4),
         "affected_markets": affected,

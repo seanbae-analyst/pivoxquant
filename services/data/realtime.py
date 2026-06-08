@@ -13,6 +13,26 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
+# ── KIS REST quote throttle ──────────────────────────────────────────────
+# KIS public tier allows ~20 req/sec but trips a per-second guard near the
+# cap. When the KR batch fetches tickers concurrently, space the quote calls
+# ~0.12s apart (~8 req/s) so parallelism never hits the throttle. Module-level
+# so the spacing is shared across all concurrent callers/greenlets.
+_KIS_QUOTE_MIN_INTERVAL = 0.12
+_kis_quote_lock = threading.Lock()
+_kis_quote_last_ts = 0.0
+
+
+def _kis_quote_throttle() -> None:
+    """Thread-safe fixed-interval spacer between KIS quote calls (never raises)."""
+    global _kis_quote_last_ts
+    with _kis_quote_lock:
+        elapsed = time.time() - _kis_quote_last_ts
+        if elapsed < _KIS_QUOTE_MIN_INTERVAL:
+            time.sleep(_KIS_QUOTE_MIN_INTERVAL - elapsed)
+        _kis_quote_last_ts = time.time()
+
+
 class RealtimeService:
     """Unified real-time price service. Alpaca (US) + KIS (KR) + FMP fallback.
 
@@ -88,6 +108,15 @@ class RealtimeService:
         # corrects self.kis_base exactly once and never recurses forever.
         self._kis_domain_corrected = False
 
+        # KR realtime health (exposed via /api/realtime/status). Epoch
+        # seconds of the last successful / failed KIS KR fetch — lets ops see
+        # a degraded KR feed instead of discovering frozen prices by chance.
+        self._kr_last_ok = None
+        self._kr_last_fail = None
+        # Per-quote REST timeout. Was 10s; bounded to 4s so one slow ticker
+        # can't stall the concurrent KR batch past its deadline.
+        self._KIS_QUOTE_TIMEOUT = 4
+
     @staticmethod
     def is_korean(ticker):
         t = ticker.upper().strip()
@@ -123,6 +152,7 @@ class RealtimeService:
 
         if self.is_korean(ticker):
             result = self._get_kis_price(ticker)
+            self._mark_kr(bool(result))  # track KR live-feed health
         else:
             result = self._get_alpaca_price(ticker)
 
@@ -134,8 +164,12 @@ class RealtimeService:
             result["_ts"] = time.time()
             with self._price_cache_lock:
                 self._price_cache[ticker] = result
+            return result
 
-        return result
+        # Resilience: every live provider missed. Degrade to the last-known
+        # cached value (flagged stale) so the price never vanishes from the UI
+        # on a transient outage. Returns None only if nothing was ever cached.
+        return self._serve_stale(ticker)
 
     def get_prices_batch(self, tickers):
         """Get prices for multiple tickers at once."""
@@ -187,8 +221,12 @@ class RealtimeService:
             except Exception as e:
                 logger.warning("Alpaca batch failed: %s", e)
 
-        # KR: warm up WS subscriptions, then fetch per-ticker
-        # (KIS REST doesn't support batch; WS pushes updates into cache)
+        # KR: warm up WS subscriptions, then fetch tickers CONCURRENTLY.
+        # KIS REST has no batch endpoint; the old serial loop stalled multi-KR
+        # portfolios (N × per-call). Parallel fetch + shared per-second
+        # throttle (_kis_quote_throttle, applied in _get_kis_price) + a hard
+        # collect deadline keeps it fast without tripping the KIS rate guard.
+        # WS still pushes ticks into the cache for subsequent rounds.
         if kr_tickers and self.kis_available:
             ws = self._ensure_kis_ws()
             if ws is not None:
@@ -196,27 +234,52 @@ class RealtimeService:
                     code = self.to_kr_code(t)
                     if code:
                         ws.subscribe(code)
-        for t in kr_tickers:
-            p = self._get_kis_price(t)
-            if p:
-                results[t] = p
+            from concurrent.futures import (
+                ThreadPoolExecutor, as_completed, TimeoutError as _FTimeout,
+            )
+            with ThreadPoolExecutor(max_workers=min(len(kr_tickers), 6)) as pool:
+                kr_fut = {pool.submit(self._get_kis_price, t): t for t in kr_tickers}
+                try:
+                    for fut in as_completed(kr_fut, timeout=8):
+                        try:
+                            p = fut.result()
+                            if p:
+                                results[kr_fut[fut]] = p
+                        except Exception:
+                            logger.debug("silent-fallback: KR batch fetch", exc_info=True)
+                except _FTimeout:
+                    logger.warning("KR batch hit 8s collect deadline; partial result")
+            self._mark_kr(any(t in results for t in kr_tickers))
 
-        # Fallback for missing — parallel FMP calls with 5s hard deadline.
-        # Previously this was a serial loop: N tickers * 10s FMP timeout = N*10s stall.
-        # Now all missing tickers are fetched concurrently; the whole batch times out in 5s.
+        # Fallback for missing — parallel FMP calls with a 5s collect deadline.
+        # Previously serial: N tickers * 10s FMP timeout = N*10s stall. Now all
+        # missing tickers run concurrently and we stop collecting after 5s.
         missing = [t for t in tickers if t not in results]
         if missing:
-            from concurrent.futures import ThreadPoolExecutor, as_completed
+            from concurrent.futures import (
+                ThreadPoolExecutor, as_completed, TimeoutError as _FTimeout,
+            )
             with ThreadPoolExecutor(max_workers=min(len(missing), 6)) as pool:
                 fut_map = {pool.submit(self._get_fmp_price, t): t for t in missing}
-                for fut in as_completed(fut_map, timeout=5):
-                    try:
-                        p = fut.result()
-                        if p:
-                            results[fut_map[fut]] = p
-                    except Exception:
-                        logger.debug("silent-fallback: get_prices_batch", exc_info=True)
-                        pass
+                try:
+                    for fut in as_completed(fut_map, timeout=5):
+                        try:
+                            p = fut.result()
+                            if p:
+                                results[fut_map[fut]] = p
+                        except Exception:
+                            logger.debug("silent-fallback: get_prices_batch", exc_info=True)
+                except _FTimeout:
+                    # Don't let the collect deadline bubble out of the batch.
+                    logger.warning("FMP batch fallback hit 5s collect deadline; partial result")
+
+        # Resilience: anything STILL missing degrades to its last-known cached
+        # value (flagged stale) so a transient KIS/FMP outage shows "last
+        # price + 지연" instead of a vanished row. Mostly matters for KR.
+        for t in [tk for tk in tickers if tk not in results]:
+            stale = self._serve_stale(t)
+            if stale is not None:
+                results[t] = stale
 
         return results
 
@@ -229,6 +292,53 @@ class RealtimeService:
         with self._price_cache_lock:
             items = list(self._price_cache.items())
         return {k: v for k, v in items if now - v.get("_ts", 0) < 30}
+
+    # ── Resilience: stale fallback + health ───────────────────
+
+    def _serve_stale(self, ticker):
+        """Return the last-known cached quote flagged ``stale``, or None.
+
+        Resilience backstop: when every live provider misses, the client
+        shows the last good price + a 'stale/지연' badge instead of the value
+        vanishing. Combined with the frontend's ``keepPreviousData`` this
+        makes a transient KIS/FMP outage invisible beyond the badge. Matters
+        most for KR (FMP can't serve KRW quotes, so KIS is the only feed).
+        """
+        t = ticker.upper().strip()
+        with self._price_cache_lock:
+            cached = (
+                self._price_cache.get(t)
+                or self._price_cache.get(self.to_kr_code(t) or "")
+            )
+        if not cached or not cached.get("price"):
+            return None
+        out = dict(cached)
+        out["stale"] = True
+        out["stale_at"] = cached.get("_ts")
+        out.pop("_ts", None)  # never let a stale entry pass the freshness check
+        return out
+
+    def _mark_kr(self, ok):
+        """Record KR live-feed success/failure for the /status health probe."""
+        if ok:
+            self._kr_last_ok = time.time()
+        else:
+            self._kr_last_fail = time.time()
+
+    def kr_health(self):
+        """KR realtime health snapshot for /api/realtime/status.
+
+        ``degraded`` is True when the most recent KR fetch failed (and was
+        recent) — i.e. we are likely serving stale KR prices right now.
+        """
+        now = time.time()
+        ok, fail = self._kr_last_ok, self._kr_last_fail
+        degraded = bool(fail and (ok is None or fail >= ok) and (now - fail) < 120)
+        return {
+            "last_ok_age_s": round(now - ok, 1) if ok else None,
+            "last_fail_age_s": round(now - fail, 1) if fail else None,
+            "degraded": degraded,
+        }
 
     # ── Alpaca (US) ───────────────────────────────────────────
 
@@ -427,9 +537,10 @@ class RealtimeService:
                 "tr_id": "FHKST01010100",
             }
             params = {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": kr_code}
+            _kis_quote_throttle()  # space concurrent KR calls under the KIS rate guard
             r = req.get(
                 f"{self.kis_base}/uapi/domestic-stock/v1/quotations/inquire-price",
-                headers=headers, params=params, timeout=10,
+                headers=headers, params=params, timeout=self._KIS_QUOTE_TIMEOUT,
             )
             data = r.json()
 
@@ -469,7 +580,7 @@ class RealtimeService:
             # Normalize ticker to .KS format
             norm_ticker = ticker if ".K" in ticker else kr_code + ".KS"
 
-            return {
+            result = {
                 "ticker": norm_ticker,
                 "price": price,
                 "price_display": f"₩{price:,}",
@@ -483,6 +594,14 @@ class RealtimeService:
                 "source": "kis",
                 "timestamp": datetime.now().isoformat(),
             }
+            # Seed the shared cache (both key forms) so every caller — get_price,
+            # get_prices_batch, quick_lookup — leaves a last-known KR value for
+            # the stale fallback to serve during a later outage.
+            with self._price_cache_lock:
+                result["_ts"] = time.time()
+                self._price_cache[norm_ticker] = result
+                self._price_cache[kr_code] = result
+            return result
         except Exception as e:
             logger.warning("KIS price failed %s: %s", ticker, e)
             return None
