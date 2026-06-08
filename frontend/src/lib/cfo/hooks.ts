@@ -325,7 +325,7 @@ export function useFeedback() {
  * `pq_cfo_pulse_v1` snapshot from crashing `[...history]` spreads downstream
  * (same corruption class that already shipped a SHIP-BLOCKER in
  * living-cfo-status.tsx — fixed there at one consumer, here at the root). */
-function coercePulse(
+export function coercePulse(
   raw: PulseResponse | null | undefined,
 ): PulseResponse | undefined {
   if (!raw || !Array.isArray(raw.history)) return undefined;

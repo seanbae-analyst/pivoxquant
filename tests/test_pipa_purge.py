@@ -277,3 +277,59 @@ def test_hash_email_different_inputs_differ(app):
     from scripts.nightly.pipa_purge import _hash_email
 
     assert _hash_email("a@b.com") != _hash_email("b@b.com")
+
+
+# ── model-less, FK-less user_id table (anthropic_usage_log) ──────────────────
+
+def test_modelless_fkless_user_id_table_purged_by_nightly(app):
+    """The NIGHTLY purge path clears model-less + FK-less user_id tables.
+
+    ``anthropic_usage_log`` has a ``user_id`` column but no ORM model and no
+    users FK on prod (mig 042 FK never applied → app.py self-heal CREATE TABLE
+    owns the live schema). The ORM cascade list and the FK-driven sweep both
+    miss it. Mirrors the delete_account endpoint test — this locks the SECOND
+    erasure path (scripts/nightly/pipa_purge) so the allowlist sweep is verified
+    on both paths, not just by parity.
+    """
+    from extensions import db
+    from models import User
+    from scripts.nightly.pipa_purge import run_once
+    from sqlalchemy import text
+
+    uid = _make_user(app, email="modelless_nightly@test.com", requested_days_ago=31)
+    other_uid = 999999  # FK-less table → no real user row needed for the survivor
+
+    with app.app_context():
+        db.session.execute(text("DROP TABLE IF EXISTS anthropic_usage_log"))
+        db.session.execute(text(
+            "CREATE TABLE anthropic_usage_log ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "user_id INTEGER, tokens INTEGER)"
+        ))
+        db.session.execute(
+            text("INSERT INTO anthropic_usage_log (user_id, tokens) "
+                 "VALUES (:u, 10), (:u, 20), (:o, 30)"),
+            {"u": uid, "o": other_uid},
+        )
+        db.session.commit()
+
+    try:
+        with app.app_context():
+            with _patch_transport_succeed():
+                s = run_once()
+            assert s["purged"] == 1
+            assert User.query.get(uid) is None
+            mine = db.session.execute(
+                text("SELECT COUNT(*) FROM anthropic_usage_log WHERE user_id = :u"),
+                {"u": uid},
+            ).scalar()
+            assert mine == 0, "purged user's anthropic_usage_log PII survived nightly purge"
+            theirs = db.session.execute(
+                text("SELECT COUNT(*) FROM anthropic_usage_log WHERE user_id = :o"),
+                {"o": other_uid},
+            ).scalar()
+            assert theirs == 1, "non-candidate user's rows must survive the purge"
+    finally:
+        with app.app_context():
+            db.session.execute(text("DROP TABLE IF EXISTS anthropic_usage_log"))
+            db.session.commit()
