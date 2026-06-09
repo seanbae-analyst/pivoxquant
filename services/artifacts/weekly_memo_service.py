@@ -61,14 +61,10 @@ def _fx_rate() -> float:
     stale/abnormal small rates (e.g. 7.x) that would otherwise corrupt the
     KR→USD aggregation.
     """
-    try:
-        from services import fx_service
-        rate = float(fx_service.get_rate() or 0)
-        if rate >= 900:
-            return rate
-    except Exception as exc:
-        logger.debug("fx lookup failed: %s", exc)
-    return 1380.0
+    # Single SoT: services.fx_service.spot_usdkrw (live rate when sane >=900,
+    # else FALLBACK_USDKRW). Was a copy-pasted >=900/1380 block in 7 artifacts.
+    from services import fx_service
+    return fx_service.spot_usdkrw()
 
 
 # ── paths / config ───────────────────────────────────────────────────────────
