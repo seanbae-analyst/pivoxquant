@@ -13,44 +13,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { Gavel } from "lucide-react";
 import { fadeUp } from "@/lib/motion";
-
-const QUESTIONS: readonly { n: number; q_en: string; q_ko: string }[] = [
-  {
-    n: 1,
-    q_en: "What is your thesis in one sentence?",
-    q_ko: "한 문장으로 이 포지션 진입 논리를 말해보라.",
-  },
-  {
-    n: 2,
-    q_en: "What would prove you wrong?",
-    q_ko: "어떤 사실이 확인되면 당신이 틀린 것인가?",
-  },
-  {
-    n: 3,
-    q_en: "How does this fit your persona allocation?",
-    q_ko: "현재 페르소나 배분에 이 포지션이 부합하는가?",
-  },
-  {
-    n: 4,
-    q_en: "Is this inside your drift band?",
-    q_ko: "당신의 Drift 허용 범위 안에 있는가?",
-  },
-  {
-    n: 5,
-    q_en: "Size: is this a normal position for you?",
-    q_ko: "평소 크기인가? 이례적으로 크다면 왜인가?",
-  },
-  {
-    n: 6,
-    q_en: "Have you seen a similar setup before — and what happened?",
-    q_ko: "비슷한 국면에서 당신은 어떻게 행동했고 결과는?",
-  },
-  {
-    n: 7,
-    q_en: "If it drops 20% tomorrow — are you adding or cutting?",
-    q_ko: "내일 -20% 라면 더 담는가, 잘라내는가?",
-  },
-] as const;
+import { PRE_TRADE_QUESTIONS as QUESTIONS } from "@/data/pre-trade-questions";
 
 export function DepositionTeaser() {
   const reduce = useReducedMotion();
@@ -204,7 +167,7 @@ export function DepositionTeaser() {
                       className="font-serif"
                       style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.45 }}
                     >
-                      {q.q_en}
+                      {q.en}
                     </p>
                     <div
                       className="mt-2 h-px"
@@ -262,7 +225,7 @@ export function DepositionTeaser() {
                       color: "var(--pq-ivory)",
                     }}
                   >
-                    {q.q_en}
+                    {q.en}
                   </p>
                   <p
                     className="font-serif italic"
@@ -272,7 +235,7 @@ export function DepositionTeaser() {
                       color: "rgba(139,111,71,0.75)",
                     }}
                   >
-                    {q.q_ko}
+                    {q.ko}
                   </p>
                 </div>
               </li>

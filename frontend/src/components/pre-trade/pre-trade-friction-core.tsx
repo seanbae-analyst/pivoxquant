@@ -31,23 +31,17 @@ import { API } from "@/lib/endpoints";
 import { Caption } from "@/components/ui/editorial";
 import { type Side, sideLabel, sideToWire } from "@/lib/pre-trade";
 import { useT } from "@/lib/locale";
+import { PRE_TRADE_QUESTIONS } from "@/data/pre-trade-questions";
 
 // 2026-05-22 (CEO "50자 너무 많아 10자"): lowered 50 → 10. Keep in lock-step
 // with models/pre_trade_reflection.py MIN_RATIONALE_CHARS — the backend
 // rejects a shorter rationale, so both constants must match.
 export const MIN_RATIONALE_CHARS = 10;
 
-// 7 reflective questions — verbatim parity with the landing DepositionTeaser.
-// Listed once here so future copy edits stay in lock-step.
-export const QUESTIONS: readonly { n: number; en: string; ko: string }[] = [
-  { n: 1, en: "What is your thesis in one sentence?", ko: "한 문장으로 진입 논리를 말해보라." },
-  { n: 2, en: "What would prove you wrong?", ko: "어떤 사실이 확인되면 당신이 틀린 것인가?" },
-  { n: 3, en: "How does this fit your persona allocation?", ko: "현재 페르소나 배분에 부합하는가?" },
-  { n: 4, en: "Is this inside your drift band?", ko: "당신의 Drift 허용 범위 안에 있는가?" },
-  { n: 5, en: "Size: is this a normal position for you?", ko: "평소 크기인가? 이례적이라면 왜인가?" },
-  { n: 6, en: "Have you seen a similar setup before — and what happened?", ko: "비슷한 국면에서 결과는?" },
-  { n: 7, en: "If it drops 20% tomorrow — are you adding or cutting?", ko: "내일 -20% 라면 더 담는가, 잘라내는가?" },
-] as const;
+// The seven reflective questions live in a single SoT shared with the landing
+// teaser — see `@/data/pre-trade-questions`. Re-exported here under the
+// historical name so existing imports (modal, route page) stay unchanged.
+export const QUESTIONS = PRE_TRADE_QUESTIONS;
 
 export interface Reflection {
   id: number;
