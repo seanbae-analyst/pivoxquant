@@ -1,4 +1,39 @@
-# PivoxQuant — 인수인계서 (2026-06-08 v61 — 자율 밤샘 버그헌팅 세션3: JSON NaN 시스템가드 + flaky 격리 + PIPA 소거갭 + cfo pulse crash + 데드코드)
+# PivoxQuant — 인수인계서 (2026-06-09 v62 — 구조 통합 5클러스터: fx/ticker/disclaimer/_safe_price/render SoT 단일화)
+
+## v62 2026-06-09 — 자율 구조 통합 (CEO "구조 제대로 싹다 잡으라") (⚠️ feature 브랜치 커밋만, **push 안 함**)
+
+> v61에서 리스크로 미뤘던 대규모 구조 통합을 CEO greenlight로 실행. 방법: 정밀 인벤토리(ticker/disclaimer
+> agent) → **lead 모든 site 코드 실측 재검증** → 동작보존만, 클러스터별 커밋+전수테스트, 동결파일(quant/*·
+> ai/models) 불가침. 상세: `docs/structural_consolidation_2026-06-09.md`.
+>
+> **✅ 통합 완료 (3 클러스터, 동작보존, 검증)**: ① **fx** `_fx_rate` 7 byte-copy → `fx_service.spot_usdkrw()`
+>   단일 SoT(>=900 가드+FALLBACK_USDKRW; 7 wrapper 위임, call-site 불변; engine.py 1350은 frozen이라 유지·문서화).
+>   251 test. `19fbc170`. ② **ticker** 7개 private KR판별 재정의(`_is_korean`/`_is_kr`/`_is_kr_ticker`/
+>   `DataFetcher.is_korean`) → 캐노니컬 `ticker_normalizer.is_korean_ticker` 위임(모든 입력 동작동일 검증, null-safe
+>   개선). KOSDAQ 오라우팅 class 제거. 192 test. `c9f20ed7`. ③ **disclaimer** 16개 byte-동일 법률문구 →
+>   `services/legal/disclaimers.py` 4상수(텍스트 0변경; lock test로 정확문구 고정). mirror 5(drift위험)+artifact
+>   KR 8+bilingual 4. 669 test. `cc861ac1`.
+>
+> **✅ ④ _safe_price (CEO "positions 제대로 파악" 푸시로 재검토 → 1차 누락분 발견·수정)** `9cb5dabf`: 1차엔
+>   query 줄만 보고 "중복아님" 단정했으나, 진짜 중복은 그 뒤 **가격fetch 로직**이었음. `_safe_price` 5개 byte-동일
+>   카피(year_end/risk_board/quarterly/monthly_finance/kpi — `5d hist→last close→isfinite 가드→None`) →
+>   `services/artifacts/_pricing.py::safe_last_price` 단일화(=v60 $nan-7곳-수정의 근본원인). 미사용 `import math` 3개 제거. 163 test.
+>
+> **✅ ⑤ render import helper (전체 dup 스캔으로 추가 발견)** `8c5eb1ad`: _safe_price 누락 후 services/ 전체
+>   함수바디 md5 dup 스캔 → 최대 잔여 중복 = `_try_import_weasyprint`(14)+`_try_import_jinja`(18)=**32함수/18파일**
+>   (로그문구/레벨만 차이) → `services/artifacts/_render.py` 2함수로 단일화(call-site 불변·동작동일·log WARNING 정규화).
+>   AST 기반 제거(변종 바디 일괄), −228줄. 스캔 부산물: _fx_rate/_is_kr "2카피"=내 위임 delegator(정상), _safe_history=context별(유지).
+>
+> **⛔ 진짜 비중복 (정확히 안 건드림)**: positions **query** 줄 ~30곳(=`.count()` 존재확인/각자 raw Position 로직) ·
+>   `_load_positions_with_prices`(SignalCache+KRW정규화 enriched dict=CEO 손대지말란 통화경로) · weekly_memo
+>   `_ticker_last_price`(fmp.get_quote) · portfolio_segment `_safe_price_at`(date-window tuple) = 전부 context별 단일 함수.
+>   **교훈**: query 줄 중복 플래그가 한 층 아래(연산)의 진짜 중복을 가릴 수 있음 — CEO 재검토 지시가 맞았음.
+>
+> **🟡 idiom (debt 아님, 미적용)**: inline `is_korean_ticker` `.endswith((.KS,.KQ))` ~60곳 = 동작하는 일관된
+>   idiom(재정의와 달리 drift위험 아님). 캐노니컬 존재+SAFE-list 매핑됨 → 클린 mechanical follow-up. money/routing
+>   60곳 sweep은 idiom 대비 risk 과다라 미적용.
+>
+> **검증**: 클러스터별 타겟 green(251/192/669) + 결합 full-suite(본문 §6) · 동결파일 0변경 · FE 무변경(BE-only).
 
 ## v61 2026-06-08 — 자율모드 밤샘 버그헌팅 세션3 (6 lane + lead 2 lane, ⚠️ feature 브랜치 커밋만, **push 안 함**)
 
