@@ -13,7 +13,8 @@
 | 진입 전 7개 질문 — 리서치 재설계 + 단일 SoT + **페르소나 톤 캘리브레이션** | ✅ 완료·검증·커밋 |
 | 백엔드 버그 2건(P2) fix + 회귀 테스트 10개 추가 | ✅ 완료·검증·커밋 |
 | 전략 메모 "기록을 척추로" (코드 실측 기반, 로드맵 포함) | ✅ 완료 (`docs/strategy/record-as-spine_2026-06-09.md`) |
-| 버그 사냥 (2개 에이전트, 전수) | ✅ 완료 — **P0/P1 제로** |
+| 버그 사냥 (4개 에이전트, 2 웨이브) | ✅ 완료 — wave1 P0/P1 0; **wave2 artifact P1 2건 발견·수정** (§7) |
+| wave2 artifact `$nan`/`nan%` P1 fix + 테스트 | ✅ 완료·검증·푸시 (§7) |
 | feat 브랜치 푸시 (non-main → prod 배포 안 됨) | ⏳ 백엔드 전체 스위트 green 확인 후 |
 | **당신 결정 필요** | per-persona 톤 분기 GO/보류 · P3 5건 처리 여부 (아래 §5) |
 
@@ -167,3 +168,40 @@ sw.js/docs/legal/* 등은 **안 건드림**):
 ✅ **푸시 완료** — `fdfff515..56fb6e30 → origin/feat/data-storage-trust` (fast-forward, 내 3커밋만).
 pre-push 훅 전부 통과: alembic single-head ✓ · stripe webhook guard ✓ · regression guards ✓ ·
 changed-route pytest ✓ · smoke ✓. 리모트는 이미 fdfff515(v62)에 있었으므로 당신의 기존 작업엔 영향 없음.
+
+---
+
+## 7. 2차 버그헌트 (artifacts/AI + billing/auth/scheduler)
+
+자율 계속 지시로 미커버 영역 2 에이전트 추가 투입. **artifacts에서 P1 2건** 발견 →
+**고쳤다** (frozen 아님 + CEO가 반복적으로 싸운 `$nan` 클래스 + 이미 올바른 형제에
+맞추는 컨벤션 수정 + 유효 데이터엔 영향 0). billing/auth는 민감 영역이라 **플래그만.**
+
+### 7.1 고친 것 — artifact `$nan`/`nan%` (P1×2 + P2 + P3, 한 뿌리)
+근본원인: 2026-06-07 `$nan` fix가 가드를 표준화하려 했으나 **5개 `_money` 포매터가
+가드를 copy-paste 중 누락**(drift), 그리고 risk_board가 **null Close 한 칸**으로 VaR 오염.
+
+- **[P1] risk_board `nan%`/`$nan`** — `risk_board_service.py`: returns 루프에 finite 체크
+  (null bar skip) + `_var_pct` isfinite 가드. *(에이전트가 end-to-end 재현: null bar 1개 → `VaR='nan%'`, `est_loss='$nan'`)*
+- **[P1] `_money` 5개 가드 유실** — dividend_income / burn_rate / insider_mirror(가드 전무·최악) /
+  portfolio_segment / monthly_finance → 전부 `finite_or_none()` 가드. **유효값 포맷 100% 보존.**
+- **[P2] `_pct` 가드 누락** (dividend_income) + **[P3] quarterly `_mv_usd` fx>0 비대칭** → 같이 수정.
+- **근본 차단**: 가드를 `services/artifacts/_pricing.py::finite_or_none()` **단일 SoT**로 (drift 재발 방지, v62 방향).
+- **검증**: `tests/test_artifact_nan_guard.py` +3 테스트(finite_or_none 단위 / `_var_pct` NaN→None /
+  빌더가 NaN bar 제거). artifact 스위트 **46 passed**. 전체 백엔드 스위트 재실행 중.
+- **남은 권고(미적용)**: 5개 `_money`가 포맷이 제각각 → **공유 `format_money()`로 포맷까지 통합**하면
+  drift 완전 차단. 단 유효값 출력 변할 위험 있어 **당신 리뷰 후** 권장.
+
+### 7.2 플래그만 — billing/auth/scheduler (민감 영역, 밤에 자동수정 안 함)
+> 광범위하게 "정상" 확인됨: webhook 서명·idempotency·OAuth HMAC state·account-takeover 가드·
+> 동의 default-deny·beta gate·CSRF — 전부 견고. 아래 3건만.
+
+| # | 버그 | 권고 |
+|---|---|---|
+| W2-P2 | **Stripe `current_period_end`** (billing.py:1038) — SDK 15.1.0(API 2026-04-22)에선 이 필드가 subscription **items**로 이동 → 갱신/취소일 빈칸 | 결제 OFF라 latent. fix=items에서 읽기+top-level fallback. **결제+변호사 대기라 미적용** |
+| W2-P2 | **예약 이메일 dispatcher 중복발송** — per-row commit이 `FOR UPDATE` 락 해제 → 병렬 tick 재발송. 오늘 bounded(시퀀스 플래그 OFF) | 스케줄러 아키텍처 결정(in-process vs crontab 택1) 또는 advisory lock. **택1 필요라 플래그** |
+| W2-P3 | **dev-login이 `FLASK_ENV` 문자열만 게이트 + premium 부여** | 현 배포 안전(low conf). 권고: Railway env 마커 추가 가드 + 테스트 유저 free tier 생성 |
+
+### 7.3 4번째 커밋
+`fix(artifacts)` — `$nan`/`nan%` 가드 통합 + risk_board null-bar + quarterly fx + 테스트.
+전체 스위트 green 확인 후 feat 브랜치 푸시(동일하게 non-main).
