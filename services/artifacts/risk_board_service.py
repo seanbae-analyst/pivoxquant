@@ -59,6 +59,7 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "risk
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
+from services.artifacts._pricing import safe_last_price as _safe_price
 
 
 def _storage_dir() -> Path:
@@ -109,18 +110,6 @@ def _safe_snapshot(ticker: str) -> dict[str, Any] | None:
         logger.debug("snapshot fetch failed for %s: %s", ticker, exc)
         return None
 
-
-def _safe_price(ticker: str) -> Optional[float]:
-    try:
-        from services.container import fetcher
-        hist = fetcher.get_price_history(ticker, period="5d")
-        if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
-            return None
-        v = float(hist["Close"].iloc[-1])
-        return v if math.isfinite(v) else None
-    except Exception:
-        logger.debug("silent-fallback: _safe_price", exc_info=True)
-        return None
 
 
 def get_current_vix() -> Optional[float]:

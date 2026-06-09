@@ -38,7 +38,6 @@ from __future__ import annotations
 
 import calendar
 import logging
-import math
 import os
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -58,6 +57,7 @@ _DEFAULT_STORAGE_DIR = (
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.artifacts._pricing import safe_last_price as _safe_price
 
 # Rough cost heuristics (informational only — defensible because actual
 # broker fees aren't available in the user's book; these are industry defaults
@@ -114,18 +114,6 @@ def _safe_scrub(text: str) -> str:
     except Exception:
         return text
 
-
-def _safe_price(ticker: str) -> Optional[float]:
-    try:
-        from services.container import fetcher
-        hist = fetcher.get_price_history(ticker, period="5d")
-        if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
-            return None
-        v = float(hist["Close"].iloc[-1])
-        return v if math.isfinite(v) else None
-    except Exception as exc:
-        logger.debug("price fetch failed for %s: %s", ticker, exc)
-        return None
 
 
 def _safe_dividends(ticker: str) -> list[dict[str, Any]]:

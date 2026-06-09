@@ -40,7 +40,6 @@ by default. Override with `YEAR_END_LETTER_STORAGE_DIR`.
 from __future__ import annotations
 
 import logging
-import math
 import os
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -51,6 +50,7 @@ from extensions import db
 from models import Artifact, InvestmentProfile, Position, TradeHistory, User
 from services import fx_service
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
+from services.artifacts._pricing import safe_last_price as _safe_price
 
 logger = logging.getLogger(__name__)
 
@@ -132,18 +132,6 @@ def _safe_scrub(text: str | None) -> str:
     except Exception:
         return text
 
-
-def _safe_price(ticker: str) -> Optional[float]:
-    try:
-        from services.container import fetcher
-        hist = fetcher.get_price_history(ticker, period="5d")
-        if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
-            return None
-        v = float(hist["Close"].iloc[-1])
-        return v if math.isfinite(v) else None
-    except Exception as exc:
-        logger.debug("price fetch failed for %s: %s", ticker, exc)
-        return None
 
 
 def _sector_for_ticker(ticker: str) -> str:

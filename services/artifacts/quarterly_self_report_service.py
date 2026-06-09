@@ -48,7 +48,6 @@ Entry points
 from __future__ import annotations
 
 import logging
-import math
 import os
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -76,6 +75,7 @@ _DEFAULT_STORAGE_DIR = (
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
+from services.artifacts._pricing import safe_last_price as _safe_price
 
 
 def _storage_dir() -> Path:
@@ -112,18 +112,6 @@ def _safe_scrub(text: str | None) -> str:
     except Exception:
         return text
 
-
-def _safe_price(ticker: str) -> Optional[float]:
-    try:
-        from services.container import fetcher
-        hist = fetcher.get_price_history(ticker, period="5d")
-        if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
-            return None
-        v = float(hist["Close"].iloc[-1])
-        return v if math.isfinite(v) else None
-    except Exception as exc:
-        logger.debug("price fetch failed for %s: %s", ticker, exc)
-        return None
 
 
 def _fx_rate() -> float:
