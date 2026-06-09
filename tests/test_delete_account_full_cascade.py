@@ -133,3 +133,62 @@ def test_delete_account_handles_migration_only_fk_table(app, client, make_user):
         with app.app_context():
             db.session.execute(text("DROP TABLE IF EXISTS morning_briefs"))
             db.session.commit()
+
+
+def test_delete_account_purges_modelless_fkless_user_id_table(app, client, make_user):
+    """Reproduce the anthropic_usage_log erasure gap: a table with a ``user_id``
+    column but NO ORM model and NO users FK — exactly the prod self-heal CREATE
+    TABLE shape (migration 042 declares the FK but never ran on prod). The
+    explicit ORM list can't reach it (no model) and the FK-driven dynamic sweep
+    skips it (no users FK), so without the model-less allowlist sweep a deleted
+    user's rows survive → orphaned PII (PIPA §21). Locks: target user's rows
+    purged, another user's rows untouched, the table itself survives.
+    """
+    from extensions import db
+    from models import User
+    from sqlalchemy import text
+
+    user = make_user(email="modelless_purge@test.com")
+    other = make_user(email="modelless_other@test.com")
+    uid, oid = user["id"], other["id"]
+
+    with app.app_context():
+        db.session.execute(text("DROP TABLE IF EXISTS anthropic_usage_log"))
+        # No REFERENCES clause — the exact FK-less prod self-heal shape.
+        db.session.execute(text(
+            "CREATE TABLE anthropic_usage_log ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "user_id INTEGER, tokens INTEGER)"
+        ))
+        db.session.execute(
+            text("INSERT INTO anthropic_usage_log (user_id, tokens) "
+                 "VALUES (:u, 100), (:u, 200), (:o, 300)"),
+            {"u": uid, "o": oid},
+        )
+        db.session.commit()
+
+    try:
+        login = client.post("/api/auth/login",
+                            json={"email": user["email"], "password": user["password"]})
+        assert login.status_code == 200, login.data
+
+        resp = client.delete("/api/auth/delete-account")
+        assert resp.status_code == 200, f"delete failed: {resp.get_json()}"
+
+        with app.app_context():
+            assert db.session.get(User, uid) is None
+            mine = db.session.execute(
+                text("SELECT COUNT(*) FROM anthropic_usage_log WHERE user_id = :u"),
+                {"u": uid},
+            ).scalar()
+            assert mine == 0, "deleted user's anthropic_usage_log PII not purged"
+            # The other user's rows — and the table itself — must survive.
+            theirs = db.session.execute(
+                text("SELECT COUNT(*) FROM anthropic_usage_log WHERE user_id = :o"),
+                {"o": oid},
+            ).scalar()
+            assert theirs == 1, "other user's usage rows must not be touched"
+    finally:
+        with app.app_context():
+            db.session.execute(text("DROP TABLE IF EXISTS anthropic_usage_log"))
+            db.session.commit()

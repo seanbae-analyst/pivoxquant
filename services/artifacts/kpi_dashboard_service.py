@@ -57,30 +57,12 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
+from services.artifacts._pricing import safe_last_price as _safe_price
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 
 # ── lazy imports ─────────────────────────────────────────────────────────────
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s); template rendering will fail.", exc)
-        return None, None, None
-
-
-def _safe_price(ticker: str) -> Optional[float]:
-    """Latest close via the shared fetcher. Never raises."""
-    try:
-        from services.container import fetcher
-        hist = fetcher.get_price_history(ticker, period="5d")
-        if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
-            return None
-        return float(hist["Close"].iloc[-1])
-    except Exception as exc:
-        logger.debug("price fetch failed for %s: %s", ticker, exc)
-        return None
 
 
 def _safe_history(ticker: str, period: str = "3mo"):
@@ -144,14 +126,10 @@ class KPIContext:
 
 def _fx_rate() -> float:
     """Spot USD/KRW with a safe fallback (mirrors dividend_income)."""
-    try:
-        from services import fx_service
-        rate = float(fx_service.get_rate() or 0)
-        if rate >= 900:
-            return rate
-    except Exception as exc:
-        logger.debug("fx lookup failed: %s", exc)
-    return 1380.0
+    # Single SoT: services.fx_service.spot_usdkrw (live rate when sane >=900,
+    # else FALLBACK_USDKRW). Was a copy-pasted >=900/1380 block in 7 artifacts.
+    from services import fx_service
+    return fx_service.spot_usdkrw()
 
 
 def _portfolio_value(positions: list[Position]) -> tuple[Optional[float], str]:
@@ -201,7 +179,7 @@ def _ytd_return(positions: list[Position]) -> Optional[float]:
                 continue
             first = float(closes.iloc[0])
             last = float(closes.iloc[-1])
-            if first <= 0:
+            if not (math.isfinite(first) and math.isfinite(last)) or first <= 0:
                 continue
             rets.append((last / first - 1) * 100)
         except Exception:
@@ -404,7 +382,7 @@ def compute_kpis_for_user(user_id: int,
         turnover_ratio=turnover,
         cash_pct=cash,
         position_count=len(positions),
-        disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+        disclaimer=DISCLAIMER_ARTIFACT_KR,
         data_sources=data_sources,
     )
     return ctx.to_dict()
@@ -452,6 +430,8 @@ class KPIDashboardService:
                 n = float(v)
             except (TypeError, ValueError):
                 return "—"
+            if not math.isfinite(n):
+                return "—"
             if n >= 1_000_000:
                 return f"${n/1_000_000:.2f}M"
             if n >= 1_000:
@@ -460,11 +440,18 @@ class KPIDashboardService:
 
         def _pct(v):
             try:
-                return f"{float(v):+.1f}%"
+                n = float(v)
             except (TypeError, ValueError):
                 return "—"
+            if not math.isfinite(n):
+                return "—"
+            return f"{n:+.1f}%"
 
-        sharpe_str = f"{sharpe:.2f}" if sharpe is not None else "—"
+        sharpe_str = (
+            f"{sharpe:.2f}"
+            if sharpe is not None and math.isfinite(sharpe)
+            else "—"
+        )
         return {
             "doc":         f"{month_label} · KPI · 01/03",
             "doc_short":   month_label,

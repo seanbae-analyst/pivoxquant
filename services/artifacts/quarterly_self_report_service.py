@@ -74,6 +74,10 @@ _DEFAULT_STORAGE_DIR = (
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
+from services.artifacts._pricing import safe_last_price as _safe_price
+from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 
 def _storage_dir() -> Path:
@@ -81,24 +85,6 @@ def _storage_dir() -> Path:
     d = Path(override) if override else _DEFAULT_STORAGE_DIR
     d.mkdir(parents=True, exist_ok=True)
     return d
-
-
-def _try_import_weasyprint():
-    try:
-        from weasyprint import HTML  # type: ignore
-        return HTML
-    except Exception as exc:  # pragma: no cover
-        logger.info("WeasyPrint unavailable (%s); PDF skipped.", exc)
-        return None
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s).", exc)
-        return None, None, None
 
 
 def _safe_scrub(text: str | None) -> str:
@@ -111,28 +97,13 @@ def _safe_scrub(text: str | None) -> str:
         return text
 
 
-def _safe_price(ticker: str) -> Optional[float]:
-    try:
-        from services.container import fetcher
-        hist = fetcher.get_price_history(ticker, period="5d")
-        if hist is None or "Close" not in hist or len(hist["Close"]) == 0:
-            return None
-        return float(hist["Close"].iloc[-1])
-    except Exception as exc:
-        logger.debug("price fetch failed for %s: %s", ticker, exc)
-        return None
-
 
 def _fx_rate() -> float:
     """Spot USD/KRW with a safe fallback (mirrors dividend_income)."""
-    try:
-        from services import fx_service
-        rate = float(fx_service.get_rate() or 0)
-        if rate >= 900:
-            return rate
-    except Exception as exc:
-        logger.debug("fx lookup failed: %s", exc)
-    return 1380.0
+    # Single SoT: services.fx_service.spot_usdkrw (live rate when sane >=900,
+    # else FALLBACK_USDKRW). Was a copy-pasted >=900/1380 block in 7 artifacts.
+    from services import fx_service
+    return fx_service.spot_usdkrw()
 
 
 def _mv_usd(price: float, shares: float, ticker: str, fx: float) -> float:
@@ -695,8 +666,7 @@ class QuarterlySelfReportService:
             thesis_checklist=thesis_checklist,
             watch_items=_watch_items(end),
             disclaimer=(
-                "정보 제공 목적이며 투자 권유가 아닙니다. "
-                "투자 판단은 본인 책임입니다."
+                DISCLAIMER_ARTIFACT_KR
             ),
             data_sources=data_sources,
         )

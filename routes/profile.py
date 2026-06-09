@@ -72,6 +72,7 @@ from services.profile import (
 )
 from .decorators import api_auth
 from security import general_rate_limit, limiter
+from services.legal.disclaimers import DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 logger = logging.getLogger(__name__)
 
@@ -2224,9 +2225,7 @@ def _xlsx_cell(value):
 # Byte-identical to routes.behavior._TURNOVER_MIRROR_DISCLAIMER so every
 # behaviour mirror reads with one legal voice (자본시장법 §49 — 사실 관찰, not
 # advice). test_export_xlsx asserts the two never drift.
-_ACTIVITY_MIRROR_DISCLAIMER = (
-    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 아닙니다."
-)
+_ACTIVITY_MIRROR_DISCLAIMER = DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 
 def _activity_gross(mirror, code):

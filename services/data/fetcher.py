@@ -192,8 +192,8 @@ class DataFetcher:
 
     @staticmethod
     def is_korean(ticker: str) -> bool:
-        t = ticker.upper()
-        return t.endswith(".KS") or t.endswith(".KQ")
+        from services.ticker_normalizer import is_korean_ticker
+        return is_korean_ticker(ticker)
 
     @staticmethod
     def currency(ticker: str) -> str:
@@ -1113,11 +1113,13 @@ Reply ONLY in this exact JSON format, nothing else:
                     q = fmp.get_quote(ticker)
                     cur = float(q.get("price", 0)) if q else float(info.get("price", 0) or 0)
 
-            # Fallback to last close from history if live price missing
-            if (not cur or cur <= 0) and hist is not None and not hist.empty:
+            # Fallback to last close from history if live price missing.
+            # `cur != cur` catches NaN (a NaN last-close otherwise slips past
+            # `not cur` / `cur <= 0` and surfaces as "$nan" on the detail page).
+            if (not cur or cur != cur or cur <= 0) and hist is not None and not hist.empty:
                 cur = float(hist["Close"].iloc[-1])
 
-            if not cur or cur <= 0:
+            if not cur or cur != cur or cur <= 0:
                 return None
 
             if hist is None or hist.empty or len(hist) < 20:

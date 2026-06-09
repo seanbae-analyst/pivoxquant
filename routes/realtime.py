@@ -309,11 +309,16 @@ def single(ticker):
 @realtime_bp.route("/status")
 @api_auth
 def status():
+    try:
+        kr_health = realtime.kr_health()
+    except Exception:
+        kr_health = None
     return jsonify({
         "alpaca": realtime.alpaca_available,
         "kis": realtime.kis_available,
         "sources": {
             "us": "alpaca" if realtime.alpaca_available else "fmp",
             "kr": "kis" if realtime.kis_available else "fmp",
-        }
+        },
+        "kr_health": kr_health,
     })

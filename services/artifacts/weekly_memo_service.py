@@ -38,6 +38,7 @@ storage backend.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import threading
 from dataclasses import dataclass
@@ -60,14 +61,10 @@ def _fx_rate() -> float:
     stale/abnormal small rates (e.g. 7.x) that would otherwise corrupt the
     KR→USD aggregation.
     """
-    try:
-        from services import fx_service
-        rate = float(fx_service.get_rate() or 0)
-        if rate >= 900:
-            return rate
-    except Exception as exc:
-        logger.debug("fx lookup failed: %s", exc)
-    return 1380.0
+    # Single SoT: services.fx_service.spot_usdkrw (live rate when sane >=900,
+    # else FALLBACK_USDKRW). Was a copy-pasted >=900/1380 block in 7 artifacts.
+    from services import fx_service
+    return fx_service.spot_usdkrw()
 
 
 # ── paths / config ───────────────────────────────────────────────────────────
@@ -79,6 +76,9 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "week
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_BILINGUAL
+from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 
 def _storage_dir() -> Path:
@@ -106,32 +106,6 @@ def _build_unsubscribe_url(user_id: Any) -> str:
 
 
 # ── lazy optional deps ───────────────────────────────────────────────────────
-
-def _try_import_weasyprint():
-    """Return the WeasyPrint HTML class, or None if unavailable.
-
-    WeasyPrint requires native libs (pango, cairo) that aren't always
-    installed in CI / lightweight dev containers. Falling back to None
-    lets the rest of the pipeline run — PDF attachment is simply
-    skipped and the email ships with the HTML body only.
-    """
-    try:
-        from weasyprint import HTML  # type: ignore
-        return HTML
-    except Exception as exc:  # pragma: no cover — depends on env
-        # DIAG 2026-04-29: INFO → WARNING (Railway 로그 가시성 ↑)
-        logger.warning("WeasyPrint unavailable (%s); PDF generation will be skipped.", exc)
-        return None
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s); template rendering will fail.", exc)
-        return None, None, None
-
 
 # ── data assembly ────────────────────────────────────────────────────────────
 
@@ -242,7 +216,7 @@ def _weekly_return_for_ticker(ticker: str) -> Optional[float]:
         tail = closes.tail(6)  # 5 trading days ~ 1 week
         first = float(tail.iloc[0])
         last = float(tail.iloc[-1])
-        if first <= 0:
+        if not (math.isfinite(first) and math.isfinite(last)) or first <= 0:
             return None
         return round((last / first - 1) * 100, 2)
     except Exception as exc:
@@ -447,7 +421,8 @@ def _ticker_last_price(ticker: str) -> Optional[float]:
         try:
             closes = hist["Close"] if "Close" in hist else None
             if closes is not None and len(closes) >= 1:
-                return float(closes.iloc[-1])
+                v = float(closes.iloc[-1])
+                return v if math.isfinite(v) else None
         except Exception as exc:
             logger.debug("history close fallback failed for %s: %s", ticker, exc)
     return None
@@ -455,9 +430,8 @@ def _ticker_last_price(ticker: str) -> Optional[float]:
 
 def _is_kr_ticker(ticker: str) -> bool:
     """Mirror of fmp_service._is_us_ticker — KR tickers end in .KS / .KQ."""
-    if not isinstance(ticker, str):
-        return False
-    return ticker.endswith(".KS") or ticker.endswith(".KQ")
+    from services.ticker_normalizer import is_korean_ticker
+    return is_korean_ticker(ticker)
 
 
 def _portfolio_value_usd(positions: list[Position]) -> Optional[float]:
@@ -922,8 +896,7 @@ class WeeklyMemoService:
             risk_notes=risk,
             risk_kpi=risk_kpi,
             data_sources=data_sources,
-            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다. / "
-                        "Information only, not investment advice. Decisions are your own."),
+            disclaimer=(DISCLAIMER_ARTIFACT_BILINGUAL),
         )
         # Legal scrub at user-facing boundary — risk_notes free-text and any
         # AI-derived prose. scrub_signal handles known free-text fields;

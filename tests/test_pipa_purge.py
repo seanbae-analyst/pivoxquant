@@ -6,7 +6,9 @@ Covers
 2. ``deletion_requested_at`` ≥ 30d → user IS purged + cascade rows
    removed + auth_events anonymized + deleted_at stamped.
 3. ``deletion_requested_at`` IS NULL → never purged.
-4. Already-purged (``deleted_at`` NOT NULL) → idempotent skip.
+4. Stuck row (``deleted_at`` NOT NULL, row still present) → RE-INCLUDED
+   and purged to completion; the duplicate "data purged" email is
+   suppressed on the retry.
 5. /api/auth/delete-request endpoint:
    - 200 + soft-delete state set
    - second call is idempotent
@@ -140,22 +142,47 @@ def test_null_deletion_request_skipped(app):
         assert User.query.get(uid) is not None
 
 
-# ── 4. already-deleted skipped ──────────────────────────────────────────────
+# ── 4. stuck row (deleted_at stamped, row not yet deleted) → recovered ───────
 
-def test_already_deleted_skipped(app):
-    """deleted_at IS NOT NULL excludes the user from candidates (idempotency)."""
+def test_stuck_row_is_recovered_and_completed(app):
+    """A row left ``deleted_at NOT NULL`` but STILL PRESENT (a prior pass
+    crashed between the two commits) must be RE-INCLUDED and the purge
+    completed — not stranded forever. The pre-fix ``deleted_at IS NULL`` filter
+    dropped it from every future pass → silent PIPA §21 violation."""
     from scripts.nightly.pipa_purge import run_once
+    from models import User
 
-    _make_user(
-        app, email="done@test.com",
-        requested_days_ago=45, already_deleted=True,
+    uid = _make_user(
+        app, email="stuck@test.com",
+        requested_days_ago=45, already_deleted=True,  # deleted_at set, row present
     )
 
     with app.app_context():
         with _patch_transport_succeed():
             s = run_once()
-        assert s["candidates"] == 0
-        assert s["purged"] == 0
+        assert s["candidates"] == 1, "stuck row must be re-included as a candidate"
+        assert s["purged"] == 1
+        assert s["errors"] == 0
+        assert User.query.get(uid) is None, "stuck row must be hard-deleted on retry"
+
+
+def test_stuck_row_retry_suppresses_duplicate_purge_email(app):
+    """On a stuck-row retry the one-time 'data purged' email is NOT re-sent
+    (it already went out on the first, crashed pass)."""
+    from unittest.mock import patch
+    from scripts.nightly.pipa_purge import run_once
+
+    _make_user(
+        app, email="stuck-noemail@test.com",
+        requested_days_ago=45, already_deleted=True,
+    )
+
+    with app.app_context():
+        with _patch_transport_succeed():
+            with patch("scripts.nightly.pipa_purge._send_purge_complete_email") as m:
+                s = run_once()
+        assert s["purged"] == 1
+        m.assert_not_called()
 
 
 # ── 5. delete-request endpoint ──────────────────────────────────────────────
@@ -250,3 +277,59 @@ def test_hash_email_different_inputs_differ(app):
     from scripts.nightly.pipa_purge import _hash_email
 
     assert _hash_email("a@b.com") != _hash_email("b@b.com")
+
+
+# ── model-less, FK-less user_id table (anthropic_usage_log) ──────────────────
+
+def test_modelless_fkless_user_id_table_purged_by_nightly(app):
+    """The NIGHTLY purge path clears model-less + FK-less user_id tables.
+
+    ``anthropic_usage_log`` has a ``user_id`` column but no ORM model and no
+    users FK on prod (mig 042 FK never applied → app.py self-heal CREATE TABLE
+    owns the live schema). The ORM cascade list and the FK-driven sweep both
+    miss it. Mirrors the delete_account endpoint test — this locks the SECOND
+    erasure path (scripts/nightly/pipa_purge) so the allowlist sweep is verified
+    on both paths, not just by parity.
+    """
+    from extensions import db
+    from models import User
+    from scripts.nightly.pipa_purge import run_once
+    from sqlalchemy import text
+
+    uid = _make_user(app, email="modelless_nightly@test.com", requested_days_ago=31)
+    other_uid = 999999  # FK-less table → no real user row needed for the survivor
+
+    with app.app_context():
+        db.session.execute(text("DROP TABLE IF EXISTS anthropic_usage_log"))
+        db.session.execute(text(
+            "CREATE TABLE anthropic_usage_log ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "user_id INTEGER, tokens INTEGER)"
+        ))
+        db.session.execute(
+            text("INSERT INTO anthropic_usage_log (user_id, tokens) "
+                 "VALUES (:u, 10), (:u, 20), (:o, 30)"),
+            {"u": uid, "o": other_uid},
+        )
+        db.session.commit()
+
+    try:
+        with app.app_context():
+            with _patch_transport_succeed():
+                s = run_once()
+            assert s["purged"] == 1
+            assert User.query.get(uid) is None
+            mine = db.session.execute(
+                text("SELECT COUNT(*) FROM anthropic_usage_log WHERE user_id = :u"),
+                {"u": uid},
+            ).scalar()
+            assert mine == 0, "purged user's anthropic_usage_log PII survived nightly purge"
+            theirs = db.session.execute(
+                text("SELECT COUNT(*) FROM anthropic_usage_log WHERE user_id = :o"),
+                {"o": other_uid},
+            ).scalar()
+            assert theirs == 1, "non-candidate user's rows must survive the purge"
+    finally:
+        with app.app_context():
+            db.session.execute(text("DROP TABLE IF EXISTS anthropic_usage_log"))
+            db.session.commit()

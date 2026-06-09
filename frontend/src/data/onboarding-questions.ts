@@ -258,21 +258,6 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       { value: "regret_upside", label: "I wish I had more exposure to capture the recovery", label_kr: "아쉽다 — 반등 수익을 더 잡으려면 비중이 높았어야 했다", score: 10 },
     ],
   },
-  {
-    id: "loss_aversion_coinflip",
-    category: "C",
-    category_label: "Risk Psychology",
-    category_label_kr: "리스크 심리",
-    question: "Would you take this bet? Heads you win USD 200, tails you lose USD 100.",
-    question_kr: "이 내기를 하시겠어요? 앞면이 나오면 USD 200 획득, 뒷면이 나오면 USD 100 손실.",
-    type: "single",
-    options: [
-      { value: "never", label: "No -- I hate losing money, even in favorable bets", label_kr: "아니요 — 유리한 조건이어도 돈을 잃는 건 싫다", score: 1 },
-      { value: "maybe_small", label: "Maybe once if the amount was smaller", label_kr: "금액이 더 작다면 한 번은 해볼 것 같다", score: 4 },
-      { value: "yes_once", label: "Yes, I'd take it once", label_kr: "네, 한 번은 하겠다", score: 7 },
-      { value: "yes_repeat", label: "Yes, and I'd repeat it -- the math is in my favor", label_kr: "네, 계속 반복하겠다 — 기댓값이 유리하다", score: 10 },
-    ],
-  },
 
   // ═══ D. RETURN EXPECTATIONS ═══
   {
@@ -388,9 +373,9 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
   },
 ];
 
-/** Questions 0-18 are the wizard screens; question 19 (legal) is the final step. */
-export const WIZARD_QUESTIONS = ONBOARDING_QUESTIONS.slice(0, 19);
-export const LEGAL_QUESTION = ONBOARDING_QUESTIONS[19];
+/** Questions 0-17 are the wizard screens; question 18 (legal) is the final step. */
+export const WIZARD_QUESTIONS = ONBOARDING_QUESTIONS.slice(0, 18);
+export const LEGAL_QUESTION = ONBOARDING_QUESTIONS[18];
 
 // ── Category metadata ────────────────────────────────────────────────────────
 

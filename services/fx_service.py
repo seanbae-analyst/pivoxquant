@@ -57,6 +57,24 @@ def get_rate() -> float:
     return _usdkrw
 
 
+def spot_usdkrw() -> float:
+    """USD/KRW spot for money-math (artifact aggregation, etc.).
+
+    Single source of truth for the "live rate when sane, else fallback" rule
+    that was previously copy-pasted as a private ``_fx_rate()`` in 7 artifact
+    services. Returns the live cached rate when it passes the ``>= 900`` sanity
+    guard (rejects an abnormally small misfetch — e.g. a 7.x EUR/USD-style value
+    — that would otherwise corrupt KR→USD aggregation), else ``FALLBACK_USDKRW``.
+    """
+    try:
+        rate = float(get_rate() or 0)
+        if rate >= 900:
+            return rate
+    except Exception:  # noqa: BLE001 — never let FX lookup raise into money-math
+        pass
+    return FALLBACK_USDKRW
+
+
 def cost_basis_krw(position) -> float | None:
     """Normalise one holding's native-currency cost basis to KRW.
 

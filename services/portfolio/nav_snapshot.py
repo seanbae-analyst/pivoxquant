@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 def _is_kr(ticker: str) -> bool:
-    t = (ticker or "").upper()
-    return t.endswith(".KS") or t.endswith(".KQ")
+    from services.ticker_normalizer import is_korean_ticker
+    return is_korean_ticker(ticker)
 
 
 def compute_current_nav(user_id: int) -> dict | None:

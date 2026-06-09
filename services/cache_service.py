@@ -18,8 +18,6 @@ discover_cache: dict = {}  # user_id -> {ts, data}
 _discover_cache_lock = threading.Lock()  # P1-1: thread-safe discover_cache writes
 DISCOVER_TTL = 7200        # 2 hours — extended 2026-04-22 to absorb FMP 402 bursts
 
-ca_cache: dict = {}        # cross-asset cache
-
 # ── Earnings Tone cache (90-day TTL, lazy-loaded from routes/ai.py) ──
 # Structure: {ticker: {"data": {...}, "ts": unix_timestamp}}
 # Earnings calls are quarterly, so 90 days comfortably covers one cycle.

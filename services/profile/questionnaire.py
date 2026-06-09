@@ -278,27 +278,6 @@ QUESTIONNAIRE_V2: list[dict[str, Any]] = [
         "maps_to": "risk_score, max_drawdown_tolerance, concentration",
         "weight": 8,
     },
-    {
-        "id": "loss_aversion_coinflip",
-        "category": "C",
-        "category_label": "Risk Psychology",
-        "category_label_kr": "리스크 심리",
-        "question": "Would you take this bet? A fair coin flip: heads you win $200, tails you lose $100.",
-        "question_kr": "이 내기를 하시겠어요? 동전 던지기: 앞면이면 +$200, 뒷면이면 -$100.",
-        "type": "single",
-        "options": [
-            {"value": "never",        "label": "No -- I hate losing money, even in favorable bets",
-             "label_kr": "절대 안 함 -- 유리한 내기라도 돈 잃는 건 싫음",       "score": 1},
-            {"value": "maybe_small",  "label": "Maybe once if the amount was smaller",
-             "label_kr": "금액이 적으면 한 번은 할 수도",                       "score": 4},
-            {"value": "yes_once",     "label": "Yes, I'd take it once",
-             "label_kr": "네, 한 번은 하겠어요",                               "score": 7},
-            {"value": "yes_repeat",   "label": "Yes, and I'd repeat it many times -- the math is in my favor",
-             "label_kr": "네, 여러 번 반복하겠어요 -- 수학적으로 유리하니까",   "score": 10},
-        ],
-        "maps_to": "loss_aversion_score, risk_score, kelly_fraction_multiplier",
-        "weight": 8,
-    },
 
     # =====================================================================
     # D. RETURN EXPECTATIONS — Calibrating reality
@@ -767,13 +746,6 @@ def calculate_profile_v2(answers: dict) -> dict:
     relative_scores = {"too_much": 2, "acceptable": 5, "opportunistic": 8, "regret_upside": 10}
     risk_raw += relative_scores.get(relative_option, 5)
 
-    # C4: Coin flip loss aversion
-    coin_option = answers.get("loss_aversion_coinflip", "yes_once")
-    coin_scores = {"never": 1, "maybe_small": 4, "yes_once": 7, "yes_repeat": 10}
-    la_score = coin_scores.get(coin_option, 5)
-    loss_aversion_raw = 10 - la_score  # invert: higher = more loss averse
-    risk_raw += la_score
-
     # ---- D: Return Expectations ----
 
     # D1: Expected annual return
@@ -830,9 +802,14 @@ def calculate_profile_v2(answers: dict) -> dict:
     # Normalize dimension scores
     # -----------------------------------------------------------------
     # risk_raw is pure C-block risk psychology: drop(10) + crash(10) +
-    # relative(10) + coin(10) = max 40 (conc/leverage removed 2026-05-26 — see
-    # note above; they weight the composite directly as explicit 10% terms).
-    risk_normalized = min(risk_raw / 4.0, 10)
+    # relative(10) = max 30 (conc/leverage removed 2026-05-26 — see note above;
+    # coin-flip removed 2026-06-07 for low signal quality. They weight the
+    # composite directly as explicit 10% terms).
+    risk_normalized = min(risk_raw / 3.0, 10)
+    # Loss aversion proxy: the coin-flip question (its only source) was removed
+    # 2026-06-07. Derive from risk psychology instead — more risk-tolerant
+    # answers ⇒ less loss-averse. Keeps the output field stable (0-10).
+    loss_aversion_raw = round(10 - risk_normalized, 1)
     # activity_raw: 3 questions max 10 each = 30
     activity_normalized = min(activity_raw / 3.0, 10)
     # experience_raw: 2 questions max 10 each = 20

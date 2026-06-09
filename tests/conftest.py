@@ -235,6 +235,30 @@ def _reset_db(request):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _reset_realtime_kr_health():
+    """Isolate the process-wide realtime singleton's transient KR-health state.
+
+    ``services.container.realtime`` is a module singleton that lives for the
+    entire test session. A test that drives its KR feed into failure (calls the
+    SINGLETON's ``get_price`` on a KR ticker with a stubbed-down fetch) sets
+    ``_kr_last_fail = now`` via ``_record_kr_health``. ``kr_health().degraded``
+    then stays True for 120 s, and the public ``/api/data/stale-status`` overlay
+    (routes/data_status.py) turns that into a forced ``is_stale=True`` — which
+    silently pollutes any later test asserting "not stale" (the flaky
+    test_data_status_endpoint ``*_returns_not_stale`` cases). Reset to the
+    pristine no-signal state before each test so health state can never leak
+    across tests through the shared singleton.
+    """
+    try:
+        from services.container import realtime as _rt
+        _rt._kr_last_ok = None
+        _rt._kr_last_fail = None
+    except Exception:
+        pass
+    yield
+
+
 class CSRFTestClient:
     """Flask test client that auto-attaches the CSRF token on mutating requests.
 

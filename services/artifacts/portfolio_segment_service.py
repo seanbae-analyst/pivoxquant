@@ -28,6 +28,7 @@ The disclaimer partial is included on page 4.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
 from dataclasses import dataclass
@@ -49,6 +50,9 @@ _DEFAULT_STORAGE_DIR = (
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
+from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 
 # GICS 11 (canonical).
@@ -126,38 +130,16 @@ def _style_from_signal_or_sector(ticker: str, sector_canon: str) -> str:
 
 # ── lazy deps ────────────────────────────────────────────────────────────────
 
-def _try_import_weasyprint():
-    try:
-        from weasyprint import HTML  # type: ignore
-        return HTML
-    except Exception as exc:  # pragma: no cover
-        logger.info("WeasyPrint unavailable (%s); skipping PDF.", exc)
-        return None
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s).", exc)
-        return None, None, None
-
-
 def _fx_rate() -> float:
     """Spot USD/KRW with a safe fallback when the service is unavailable.
 
     Mirrors `dividend_income_service._fx_rate` so multi-currency books are
     normalised identically across artefacts.
     """
-    try:
-        from services import fx_service
-        rate = float(fx_service.get_rate() or 0)
-        if rate >= 900:
-            return rate
-    except Exception as exc:
-        logger.debug("fx lookup failed: %s", exc)
-    return 1380.0
+    # Single SoT: services.fx_service.spot_usdkrw (live rate when sane >=900,
+    # else FALLBACK_USDKRW). Was a copy-pasted >=900/1380 block in 7 artifacts.
+    from services import fx_service
+    return fx_service.spot_usdkrw()
 
 
 def _normalize_mv(native_mv: float, ticker: str, report_ccy: str,
@@ -214,6 +196,8 @@ def _safe_price_at(ticker: str, period_start: date) -> tuple[Optional[float],
                 start_px = float(closes.iloc[idx])
         except Exception:
             start_px = float(closes.iloc[0])
+        start_px = start_px if math.isfinite(start_px) else None
+        end_px = end_px if math.isfinite(end_px) else None
         return start_px, end_px
     except Exception as exc:
         logger.debug("price window failed for %s: %s", ticker, exc)
@@ -472,7 +456,7 @@ class PortfolioSegmentService:
             best_segments=best,
             worst_segments=worst,
             narrative=narrative,
-            disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+            disclaimer=DISCLAIMER_ARTIFACT_KR,
             data_sources=data_sources,
         )
         return ctx.to_dict()

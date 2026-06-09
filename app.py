@@ -186,6 +186,17 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    # JSON safety net: coerce non-finite floats (NaN/Inf/-Inf) → null at the
+    # serialisation boundary. Python's json emits the bare tokens `NaN`/
+    # `Infinity`, which are invalid JSON and make the browser's response.json()
+    # throw — losing the *entire* payload (silent blank/error card despite a
+    # 200). Routes guard ad-hoc with `_finite_floats`, but that is opt-in and
+    # most modules skip it; this makes a missed guard unable to ship a
+    # non-parseable body. See services/json_provider.py.
+    from services.json_provider import SafeJSONProvider
+
+    app.json = SafeJSONProvider(app)
+
     # ── Trusted proxy chain (W5.2 — 2026-05-11) ───────────────────────────
     # PivoxQuant runs behind a single trusted reverse proxy in production:
     # Vercel Edge → Railway gunicorn (apex) and Railway → gunicorn (api

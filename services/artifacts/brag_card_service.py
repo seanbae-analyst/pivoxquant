@@ -62,6 +62,8 @@ from models import Artifact, Position, TradeHistory, User, UserReferral, Watchli
 from services import fx_service
 from services.legal_filter import scrub_signal
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_BRAG_BILINGUAL
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 logger = logging.getLogger(__name__)
 
@@ -122,17 +124,6 @@ def _try_import_playwright():
             exc,
         )
         return None
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning(
-            "Jinja2 unavailable (%s); template rendering will fail.", exc,
-        )
-        return None, None, None
 
 
 # ── data assembly ────────────────────────────────────────────────────────────
@@ -510,8 +501,7 @@ class BragCardService:
             is_empty=is_empty,
             share_token=None,  # populated on first persist
             data_sources=data_sources,
-            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. / "
-                        "Information only, not investment advice."),
+            disclaimer=(DISCLAIMER_BRAG_BILINGUAL),
             mode=mode,
             empty_reason=empty_reason,
             snapshot_tickers=[

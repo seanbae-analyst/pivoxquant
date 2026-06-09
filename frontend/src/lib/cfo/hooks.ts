@@ -320,6 +320,18 @@ export function useFeedback() {
   return { submit };
 }
 
+/** Coerce a persisted/raw pulse blob to a valid shape, or `undefined` when it
+ * is missing / corrupt / an older schema (no `history` array). Stops a stale
+ * `pq_cfo_pulse_v1` snapshot from crashing `[...history]` spreads downstream
+ * (same corruption class that already shipped a SHIP-BLOCKER in
+ * living-cfo-status.tsx — fixed there at one consumer, here at the root). */
+export function coercePulse(
+  raw: PulseResponse | null | undefined,
+): PulseResponse | undefined {
+  if (!raw || !Array.isArray(raw.history)) return undefined;
+  return raw;
+}
+
 /** Weekly pulse history + submission helper. */
 export function usePulse() {
   const swr = useSWR<PulseResponse>(
@@ -328,7 +340,7 @@ export function usePulse() {
     {
       revalidateOnFocus: false,
       dedupingInterval: 300_000,
-      fallbackData: safeRead<PulseResponse>(LS_KEYS.pulse) ?? undefined,
+      fallbackData: coercePulse(safeRead<PulseResponse>(LS_KEYS.pulse)),
     },
   );
   if (swr.data) safeWrite(LS_KEYS.pulse, swr.data);
@@ -339,7 +351,7 @@ export function usePulse() {
         submitted_at: new Date().toISOString(),
         ...entry,
       };
-      const current = swr.data ?? mockPulse();
+      const current = coercePulse(swr.data) ?? mockPulse();
       const optimistic: PulseResponse = {
         ...current,
         history: [...current.history, stamped],

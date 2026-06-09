@@ -1,4 +1,96 @@
-# PivoxQuant — 인수인계서 (2026-06-07 v59 — 자율 새벽 버그헌팅 7-lane, 검증 fix 3건 + 동결/머니매스 문서화)
+# PivoxQuant — 인수인계서 (2026-06-09 v62 — 구조 통합 5클러스터: fx/ticker/disclaimer/_safe_price/render SoT 단일화)
+
+## v62 2026-06-09 — 자율 구조 통합 (CEO "구조 제대로 싹다 잡으라") (⚠️ feature 브랜치 커밋만, **push 안 함**)
+
+> v61에서 리스크로 미뤘던 대규모 구조 통합을 CEO greenlight로 실행. 방법: 정밀 인벤토리(ticker/disclaimer
+> agent) → **lead 모든 site 코드 실측 재검증** → 동작보존만, 클러스터별 커밋+전수테스트, 동결파일(quant/*·
+> ai/models) 불가침. 상세: `docs/structural_consolidation_2026-06-09.md`.
+>
+> **✅ 통합 완료 (3 클러스터, 동작보존, 검증)**: ① **fx** `_fx_rate` 7 byte-copy → `fx_service.spot_usdkrw()`
+>   단일 SoT(>=900 가드+FALLBACK_USDKRW; 7 wrapper 위임, call-site 불변; engine.py 1350은 frozen이라 유지·문서화).
+>   251 test. `19fbc170`. ② **ticker** 7개 private KR판별 재정의(`_is_korean`/`_is_kr`/`_is_kr_ticker`/
+>   `DataFetcher.is_korean`) → 캐노니컬 `ticker_normalizer.is_korean_ticker` 위임(모든 입력 동작동일 검증, null-safe
+>   개선). KOSDAQ 오라우팅 class 제거. 192 test. `c9f20ed7`. ③ **disclaimer** 16개 byte-동일 법률문구 →
+>   `services/legal/disclaimers.py` 4상수(텍스트 0변경; lock test로 정확문구 고정). mirror 5(drift위험)+artifact
+>   KR 8+bilingual 4. 669 test. `cc861ac1`.
+>
+> **✅ ④ _safe_price (CEO "positions 제대로 파악" 푸시로 재검토 → 1차 누락분 발견·수정)** `9cb5dabf`: 1차엔
+>   query 줄만 보고 "중복아님" 단정했으나, 진짜 중복은 그 뒤 **가격fetch 로직**이었음. `_safe_price` 5개 byte-동일
+>   카피(year_end/risk_board/quarterly/monthly_finance/kpi — `5d hist→last close→isfinite 가드→None`) →
+>   `services/artifacts/_pricing.py::safe_last_price` 단일화(=v60 $nan-7곳-수정의 근본원인). 미사용 `import math` 3개 제거. 163 test.
+>
+> **✅ ⑤ render import helper (전체 dup 스캔으로 추가 발견)** `8c5eb1ad`: _safe_price 누락 후 services/ 전체
+>   함수바디 md5 dup 스캔 → 최대 잔여 중복 = `_try_import_weasyprint`(14)+`_try_import_jinja`(18)=**32함수/18파일**
+>   (로그문구/레벨만 차이) → `services/artifacts/_render.py` 2함수로 단일화(call-site 불변·동작동일·log WARNING 정규화).
+>   AST 기반 제거(변종 바디 일괄), −228줄. 스캔 부산물: _fx_rate/_is_kr "2카피"=내 위임 delegator(정상), _safe_history=context별(유지).
+>
+> **⛔ 진짜 비중복 (정확히 안 건드림)**: positions **query** 줄 ~30곳(=`.count()` 존재확인/각자 raw Position 로직) ·
+>   `_load_positions_with_prices`(SignalCache+KRW정규화 enriched dict=CEO 손대지말란 통화경로) · weekly_memo
+>   `_ticker_last_price`(fmp.get_quote) · portfolio_segment `_safe_price_at`(date-window tuple) = 전부 context별 단일 함수.
+>   **교훈**: query 줄 중복 플래그가 한 층 아래(연산)의 진짜 중복을 가릴 수 있음 — CEO 재검토 지시가 맞았음.
+>
+> **🟡 idiom (debt 아님, 미적용)**: inline `is_korean_ticker` `.endswith((.KS,.KQ))` ~60곳 = 동작하는 일관된
+>   idiom(재정의와 달리 drift위험 아님). 캐노니컬 존재+SAFE-list 매핑됨 → 클린 mechanical follow-up. money/routing
+>   60곳 sweep은 idiom 대비 risk 과다라 미적용.
+>
+> **검증**: 클러스터별 타겟 green(251/192/669) + 결합 full-suite(본문 §6) · 동결파일 0변경 · FE 무변경(BE-only).
+
+## v61 2026-06-08 — 자율모드 밤샘 버그헌팅 세션3 (6 lane + lead 2 lane, ⚠️ feature 브랜치 커밋만, **push 안 함**)
+
+> CEO "나 자는동안 버그헌팅이랑 구조 다 잡아놔라 자율모드". 6 병렬 헌터(write-path/concurrency/exception/
+> migration/structure/frontend) + lead 직접(JSON-NaN/legal-scrub) → **lead 모든 finding 실측+repro 재검증**
+> → 안전·비동결만 fix+test, money/legal/frozen/prod-ops/대규모리팩터는 문서화. 상세:
+> `docs/overnight_bug_hunt_2026-06-08.md`. **검증: BE full-suite 3861 passed/0 fail(pre-fix는 flaky로 4 fail
+> = "baseline green" 오인) · FE tsc0/vitest545.**
+>
+> **✅ FIXED (검증완료)**: ① **JSON 직렬화 NaN/Inf→null 시스템가드**(`services/json_provider.py`+app.py) —
+>   Flask 기본 provider가 invalid JSON(`NaN`/`Infinity`) 방출 → 브라우저 `.json()` throw로 payload 통째 손실.
+>   74개 산발 guard + `_finite_floats` 재구현(canonical docstring이 직접 경고한 whack-a-mole)을 단일 경계
+>   sanitizer로 대체(+7 test, clean-path 무복사·캐시 불변). ② **flaky 테스트 격리**(conftest autouse) —
+>   realtime 싱글톤 KR-health(`_kr_last_fail`)가 테스트간 누수 → data_status overlay가 `is_stale=True` 강제
+>   → full-suite 순서에서만 4 fail(**이전 "baseline green 3833"이 가렸던 것**). 싱글톤 reset로 class 제거(probe
+>   검증). ③ **PIPA §21 소거갭**(auth.py+pipa_purge.py+test) — `anthropic_usage_log`가 model無+prod FK無(mig042
+>   미적용)이라 explicit·FK-sweep 둘다 누락 → 삭제유저 PII 잔존. allowlist sweep(SAVEPOINT격리·funnel_events
+>   불가침). ④ **cfo Weekly-Pulse localStorage crash**(P2, hooks.ts) — 구 스키마 `pq_cfo_pulse_v1`→
+>   `[...history]` throw(이미 SHIP-BLOCKER 낸 class의 hook 루트 미fix분). `coercePulse` 양 진입점.
+>   ⑤ **데드코드**: `cache_service.ca_cache`(미사용 글로벌)·`fmp.normalize_ticker`(데드+footgun: canonical
+>   `ticker_normalizer.normalize_ticker`와 동명 역의미·KR→None). ⑥ notification 더블서밋 가드(P3 parity).
+>
+> **🔴 DOCUMENTED(자동 미적용)**: **[P0] prod alembic_version 032 vs head 048**(migration agent 라이브 prod) —
+>   self-heal(`_do_migrations`)로 스키마는 current(parity pass)지만 alembic이 실 migrator 아님 = v44.7 incident
+>   class. prod stamp/upgrade는 **불가역 ops, CEO/ops 전용**. money/legal 통합(fx `_fx_rate` 9 byte-copy +
+>   1380/1350 상수분기 · disclaimer 8문구 · `is_korean_ticker` 48 inline+7 redef · positions loader ~30 copy =
+>   "캐노니컬 존재, 채택이 갭"). pykrx 데드스텁이 LIVE `/alt-data/kr/*` 빈데이터 서빙(제품결정). 마이그 004/005
+>   JSONB·016-019 BigInteger SQLite 비replay(latent: prod=PG/test=create_all). 통화 KRW/USD 혼합 = CEO LEAVE IT
+>   유지([[feedback_currency_separate]]).
+>
+> **✅ CLEAN(증거, 6 lane)**: write-path 128 handler IDOR/검증/mass-assign/race **0**(예외적 하드닝) · concurrency
+>   P0/P1 0(EGW02004 self-heal depth-2 bounded·token-mgr 락 정상·scheduler max_instances=1) · exception(framework
+>   글로벌핸들러로 stack-leak/HTML-into-json 0·user int/float 전부 400가드) · migration head 단일 048 linear
+>   (data-loss 0) · frontend SSE teardown·timer/observer cleanup·mutation 더블서밋 가드·format.ts NaN 가드 존재.
+
+## v60 2026-06-07 — CEO 라이브 신고 fix 2건 + 자율 버그헌팅 세션 2 (⚠️ feature 브랜치 커밋만, **push 안 함**)
+
+> CEO 라이브 사용 중 신고 2건 → fix → "자율모드로 밤새 버그헌팅, 모든 케이스, 버그 없게". 상세:
+> `docs/overnight_bug_hunt_2026-06-07_session2.md`. baseline green(pytest 3833 / vitest 545 / tsc 0).
+>
+> **✅ FIXED (검증완료, 커밋 `64546d4a` + 후속)**: ① **온보딩 broker 데스크탑 레이아웃 붕괴** — `(auth)/layout.tsx`
+>   가 모든 자식을 `max-w-sm`(384px) 폼 셸에 가둠. 온보딩(broker/질문지)은 자체 풀폭 앱셸(max-w-3xl/lg)이라
+>   md+ 에서 `md:grid-cols-2` 가 384px 안에서 발동→카드 찌부·한글 세로·뱃지 겹침. 좁은 셸을 login/signup
+>   레이아웃으로 이전, 온보딩 풀폭 해방(login/signup V2 는 pq-auth-shell fixed full-bleed 라 무영향, 실측 확인).
+>   ② **저품질 동전던지기 Q14 제거**(CEO "이딴 질문 빼라") — 20→19문항. 크로스-스택(프론트 data slice 19→18 +
+>   risk 정규화 FE 5.5→4.5/BE 4.0→3.0 + loss_aversion 파생으로 출력스키마 불변 + 테스트 fixture). 배포경계
+>   안전(step 항상 0 초기화). ③ **아티팩트/상세 `$nan` 방어**(Lane E A1/B2) — `_safe_price` NaN 미가드 →
+>   `or avg_cost` fallback defeated → 유료 PDF `$nan`. 7함수 non-finite→None + fetcher 상세가드 `cur != cur`.
+>
+> **🟠 CEO 결정(자동 미적용)**: **통화 KRW/USD 혼합**([[feedback_currency_separate]] "냅두라 몇번말하노") —
+>   신규 열거 F1 `simulate.py` ×5 엔드포인트 raw-mix(가중치 왜곡) + F2 `credit_rating` raw-mix. 기존 known
+>   B2(twin)/B3(portfolio_analytics)와 함께 **통화-정책 일괄 결정** 안건. **절대 FX-환산 합산 금지**.
+>
+> **✅ CLEAN(증거, 8 lane)**: 캐시 cross-user(Pattern6) 0 · auth/세션/OAuth/리다이렉트 0 · 법적 라벨(BUY/SELL/HOLD·추천) 0 ·
+>   티어게이팅(Pro6/Prem9/free3) · FX silent-1.0 없음 · KR 티커 normalize 2,770엔트리 · **대시보드 코어 29 엔드포인트 신규유저
+>   실측 29/29 `<500`** · SSE cross-user 0 + 스트림 auth ✓ + PWA SW per-user 캐시 evict ✓. LOW 2(배포후 stale-bundle race
+>   `install-prompt.tsx`·CLEAR_API_CACHE old-SW) = 문서화. §101 AI 텍스트 = 라우트 레이어 scrub(10 routes+decorator) 확인.
 
 ## v59 2026-06-07 — 자율모드 새벽 버그헌팅 (7 정적 헌터 + lead 실측 재검증) (⚠️ feature 브랜치 커밋만, **push 안 함**)
 

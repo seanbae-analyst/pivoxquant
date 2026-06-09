@@ -62,6 +62,7 @@ from extensions import db
 from models import Artifact, Position, TradeHistory, User, UserReferral
 from services import fx_service
 from services.legal_filter import detect_prohibited, safe_scrub
+from services.legal.disclaimers import DISCLAIMER_BRAG_BILINGUAL
 
 logger = logging.getLogger(__name__)
 
@@ -389,8 +390,7 @@ class MonthlyBragService:
             worst_return_pct=stats["worst_return_pct"],
             anonymous=anonymous,
             is_empty=is_empty,
-            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. / "
-                        "Information only, not investment advice."),
+            disclaimer=(DISCLAIMER_BRAG_BILINGUAL),
         )
         return ctx.to_dict()
 

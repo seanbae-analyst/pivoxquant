@@ -137,7 +137,7 @@ def build_noon_brief():
   <h2>🔴 오후 P0 액션 (CEO 직접 처리)</h2>
   <ul>
     <li class="p0">Railway env → <code>NAVER_CLIENT_ID</code> + <code>NAVER_CLIENT_SECRET</code> 설정 (KR 뉴스)</li>
-    <li class="p0">Railway env → <code>KIS_USE_REAL=1</code> 확인 (한국주식 P/E · EPS)</li>
+    <li class="p0">Railway env → <code>KIS_USE_REAL=0</code> 확인 (현재 KIS 앱키=모의투자용 → 0이어야 KR 실시간 시세 작동; 1로 두면 EGW02004로 시세 실패)</li>
     <li class="p0">Railway env → <code>ALPHAVANTAGE_API_KEY</code> 발급 (무료 2분, NVDA/MSFT/TSLA)</li>
   </ul>
 

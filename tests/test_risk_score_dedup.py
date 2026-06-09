@@ -24,7 +24,6 @@ def _base():
         scenario_portfolio_drop="hold",
         scenario_single_stock_crash="hold",
         scenario_market_crash_relative="acceptable",
-        loss_aversion_coinflip="yes_once",
         expected_annual_return="10to20",
         return_vs_stability="mostly_steady",
         min_acceptable_return="beat_spy",
@@ -68,7 +67,6 @@ def test_risk_score_stays_in_range():
         scenario_portfolio_drop="sell_all",
         scenario_single_stock_crash="cut_loss",
         scenario_market_crash_relative="too_much",
-        loss_aversion_coinflip="never",
     )
     hi = _score(
         leverage_appetite="full",
@@ -76,7 +74,6 @@ def test_risk_score_stays_in_range():
         scenario_portfolio_drop="buy_heavy",
         scenario_single_stock_crash="double_down",
         scenario_market_crash_relative="regret_upside",
-        loss_aversion_coinflip="yes_repeat",
     )
     assert 0 <= lo <= 100 and 0 <= hi <= 100
     assert hi > lo  # higher-risk answers → higher score

@@ -12,5 +12,13 @@ export default function SignupLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  // Narrow centered form shell — moved off the shared (auth) layout 2026-06-07
+  // so the onboarding pages can render full-width. Harmlessly redundant for the
+  // V2 page (which self-centers); restores centering for the V1 rollback page.
+  // Also wraps signup/oauth-finalize (a narrow form — correct here).
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center px-4">
+      <div className="w-full max-w-sm">{children}</div>
+    </div>
+  );
 }
