@@ -123,7 +123,7 @@ EN parparity 동일 갱신. §17 안전: 전부 2인칭 자기심문, 추천/조
 | 프론트 `tsc --noEmit` (source) | ✅ clean |
 | 프론트 vitest 전체 | ✅ **548/548** (60 파일) |
 | 백엔드 pytest `tests/test_pre_trade_friction.py` | ✅ **30/30** |
-| 백엔드 pytest **전체 스위트** | ⏳ 실행 중 — 결과는 §6 / 푸시 전 확인 |
+| 백엔드 pytest **전체 스위트** | ✅ **3878 passed, 0 failed** (20 skip, 171 xfail, 11분) |
 | frozen 파일 변경 | ✅ 없음 (friction.py는 frozen 목록 밖) |
 | §17 / BUY·SELL 위반 | ✅ 없음 |
 
@@ -163,4 +163,7 @@ sw.js/docs/legal/* 등은 **안 건드림**):
 3. `docs(strategy)` 척추 전략 메모 + 본 리포트
 
 → feat 브랜치 `feat/data-storage-trust` 푸시 (vercel.json: non-main 빌드 skip → **prod 배포 안 일어남**).
-백엔드 전체 스위트 green 확인 후 푸시. (결과는 푸시 커밋/세션 말미 기재)
+
+✅ **푸시 완료** — `fdfff515..56fb6e30 → origin/feat/data-storage-trust` (fast-forward, 내 3커밋만).
+pre-push 훅 전부 통과: alembic single-head ✓ · stripe webhook guard ✓ · regression guards ✓ ·
+changed-route pytest ✓ · smoke ✓. 리모트는 이미 fdfff515(v62)에 있었으므로 당신의 기존 작업엔 영향 없음.
