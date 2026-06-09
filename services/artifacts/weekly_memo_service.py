@@ -77,6 +77,8 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "week
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_BILINGUAL
+from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 
 def _storage_dir() -> Path:
@@ -104,32 +106,6 @@ def _build_unsubscribe_url(user_id: Any) -> str:
 
 
 # ── lazy optional deps ───────────────────────────────────────────────────────
-
-def _try_import_weasyprint():
-    """Return the WeasyPrint HTML class, or None if unavailable.
-
-    WeasyPrint requires native libs (pango, cairo) that aren't always
-    installed in CI / lightweight dev containers. Falling back to None
-    lets the rest of the pipeline run — PDF attachment is simply
-    skipped and the email ships with the HTML body only.
-    """
-    try:
-        from weasyprint import HTML  # type: ignore
-        return HTML
-    except Exception as exc:  # pragma: no cover — depends on env
-        # DIAG 2026-04-29: INFO → WARNING (Railway 로그 가시성 ↑)
-        logger.warning("WeasyPrint unavailable (%s); PDF generation will be skipped.", exc)
-        return None
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s); template rendering will fail.", exc)
-        return None, None, None
-
 
 # ── data assembly ────────────────────────────────────────────────────────────
 

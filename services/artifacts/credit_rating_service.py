@@ -51,6 +51,7 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 _GRADE_THRESHOLDS: list[tuple[int, str]] = [
     (90, "AAA"),
@@ -71,15 +72,6 @@ _FACTOR_WEIGHTS = {
 
 
 # ── lazy deps ────────────────────────────────────────────────────────────────
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s).", exc)
-        return None, None, None
-
 
 def _safe_history(ticker: str, period: str = "3mo"):
     try:

@@ -34,6 +34,8 @@ from typing import Any, Optional
 
 from services.legal_filter import detect_prohibited, safe_scrub
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 logger = logging.getLogger(__name__)
 
@@ -42,24 +44,6 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
 # ── lazy deps ────────────────────────────────────────────────────────────────
-
-def _try_import_weasyprint():
-    try:
-        from weasyprint import HTML  # type: ignore
-        return HTML
-    except Exception as exc:  # pragma: no cover
-        logger.info("WeasyPrint unavailable (%s); skipping PDF.", exc)
-        return None
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s).", exc)
-        return None, None, None
-
 
 # ── service ──────────────────────────────────────────────────────────────────
 

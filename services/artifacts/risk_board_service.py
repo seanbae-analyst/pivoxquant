@@ -60,6 +60,8 @@ from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 from services.artifacts._pricing import safe_last_price as _safe_price
+from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 
 def _storage_dir() -> Path:
@@ -74,24 +76,6 @@ def _vix_state_path() -> Path:
 
 
 # ── lazy deps ────────────────────────────────────────────────────────────────
-
-def _try_import_weasyprint():
-    try:
-        from weasyprint import HTML  # type: ignore
-        return HTML
-    except Exception as exc:  # pragma: no cover
-        logger.info("WeasyPrint unavailable (%s); skipping PDF.", exc)
-        return None
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s).", exc)
-        return None, None, None
-
 
 def _safe_history(ticker: str, period: str = "6mo"):
     try:

@@ -65,6 +65,8 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "earn
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_BILINGUAL
+from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
+from services.artifacts._render import try_import_jinja as _try_import_jinja
 
 # ± window (minutes) around the 30-min-before target. Must exceed cron cadence
 # to avoid gaps. Default 10-min cron + ±6min window → every earnings is matched
@@ -156,24 +158,6 @@ def _storage_dir() -> Path:
 
 
 # ── lazy optional deps ───────────────────────────────────────────────────────
-
-def _try_import_weasyprint():
-    try:
-        from weasyprint import HTML  # type: ignore
-        return HTML
-    except Exception as exc:  # pragma: no cover — native libs
-        logger.info("WeasyPrint unavailable (%s); PDF generation will be skipped.", exc)
-        return None
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s); template rendering will fall back to string.", exc)
-        return None, None, None
-
 
 # ── AI budget (module-level; mirrors weekly_memo) ────────────
 

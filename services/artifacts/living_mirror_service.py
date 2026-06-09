@@ -70,6 +70,8 @@ from services.profile.persona_classifier_v2 import (
     classify_persona_multi,
 )
 from services.profile.persona_history import compute_drift, get_history
+from services.artifacts._render import try_import_jinja as _try_import_jinja
+from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
 
 logger = logging.getLogger(__name__)
 
@@ -101,24 +103,6 @@ LIVING_MIRROR_NOTE = (
     "그대로 비추는 관찰 기록입니다. 진단·치료·투자자문이 아니며, 점수·"
     "등급·순위를 매기지 않습니다. 모든 해석과 판단은 이용자 본인의 몫입니다."
 )
-
-
-def _try_import_jinja():
-    try:
-        from jinja2 import Environment, FileSystemLoader, select_autoescape
-        return Environment, FileSystemLoader, select_autoescape
-    except Exception as exc:  # pragma: no cover
-        logger.warning("Jinja2 unavailable (%s).", exc)
-        return None, None, None
-
-
-def _try_import_weasyprint():
-    try:
-        from weasyprint import HTML  # type: ignore
-        return HTML
-    except Exception as exc:  # pragma: no cover
-        logger.info("WeasyPrint unavailable (%s); skipping PDF.", exc)
-        return None
 
 
 def _storage_dir() -> Path:
