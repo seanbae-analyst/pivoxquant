@@ -458,3 +458,77 @@ def test_start_us_ticker_uppercased_unchanged(app, make_user):
             rationale=LONG_RATIONALE,
         )
         assert out["intended_ticker"] == "AAPL"
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Numeric input hardening (2026-06-09) — a crafted inf / NaN / huge value
+# must surface as a clean ValueError (→ 400), never reach the DB where
+# Postgres NUMERIC would raise DataError (→ uncaught 500) or persist a NaN.
+# ─────────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("bad", [float("inf"), float("-inf"), float("nan"), 1e12])
+def test_start_rejects_non_finite_or_huge_shares(app, make_user, bad):
+    user = _make_user(make_user, email=f"pt-shares-{bad}@test.com")
+    with app.app_context():
+        with pytest.raises(ValueError, match="shares"):
+            start_cooldown(
+                user_id=user["id"],
+                ticker="AAPL",
+                side="BUY",
+                shares=bad,
+                rationale=LONG_RATIONALE,
+            )
+
+
+def test_start_still_accepts_normal_and_zero_shares(app, make_user):
+    """The hardening must not reject legitimate values (0 stays allowed)."""
+    user = _make_user(make_user, email="pt-shares-ok@test.com")
+    with app.app_context():
+        for s in (0, 1, 1000.5, 1e9):
+            out = start_cooldown(
+                user_id=user["id"],
+                ticker="AAPL",
+                side="BUY",
+                shares=s,
+                rationale=LONG_RATIONALE,
+            )
+            assert out["id"]
+
+
+@pytest.mark.parametrize("bad_vol", [float("inf"), float("nan"), 1e9, -5.0])
+def test_start_drops_bad_volatility_instead_of_failing(app, make_user, bad_vol):
+    """market_volatility is optional telemetry: a bad snapshot is dropped to
+    None, not a 500 — the reflection still writes."""
+    user = _make_user(make_user, email=f"pt-vol-{bad_vol}@test.com")
+    with app.app_context(), patch(
+        "services.pre_trade.friction._should_extend_cooldown", return_value=None
+    ):
+        out = start_cooldown(
+            user_id=user["id"],
+            ticker="AAPL",
+            side="BUY",
+            shares=1,
+            rationale=LONG_RATIONALE,
+            market_volatility=bad_vol,
+        )
+        row = db.session.get(PreTradeReflection, out["id"])
+        assert row is not None
+        assert row.market_volatility_at_request is None
+
+
+def test_start_keeps_valid_volatility(app, make_user):
+    """A sane VIX snapshot is preserved."""
+    user = _make_user(make_user, email="pt-vol-ok@test.com")
+    with app.app_context(), patch(
+        "services.pre_trade.friction._should_extend_cooldown", return_value=None
+    ):
+        out = start_cooldown(
+            user_id=user["id"],
+            ticker="AAPL",
+            side="BUY",
+            shares=1,
+            rationale=LONG_RATIONALE,
+            market_volatility=22.5,
+        )
+        row = db.session.get(PreTradeReflection, out["id"])
+        assert float(row.market_volatility_at_request) == 22.5

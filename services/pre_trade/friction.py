@@ -39,6 +39,7 @@ leave ``auto_extended_reason`` null and use the default duration.
 from __future__ import annotations
 
 import logging
+import math
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
@@ -56,6 +57,14 @@ from services.crypto_service import backend_name, is_encrypted_value
 from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
+
+# Finite + bounded guards for user-supplied numerics. Mirrors
+# routes/portfolio.py:_validate_amount so a crafted inf / NaN / 1e308 payload
+# can't reach the DB — Postgres NUMERIC raises DataError on a non-finite or
+# out-of-precision Decimal, which the /start route (catching only ValueError)
+# would surface as an uncaught 500 instead of a clean 400.
+_MAX_SHARES = 1e9          # well within intended_shares Numeric(20,4)
+_MAX_VOLATILITY = 9999.0   # market_volatility_at_request Numeric(8,4) ceiling
 
 
 # ── Public surface ───────────────────────────────────────────────────
@@ -95,10 +104,15 @@ def start_cooldown(
         )
     if shares is not None:
         try:
-            if float(shares) < 0:
-                raise ValueError("shares must be non-negative")
+            shares_f = float(shares)
         except (TypeError, ValueError):
             raise ValueError("shares must be a number")
+        if not math.isfinite(shares_f):
+            raise ValueError("shares must be a finite number")
+        if shares_f < 0:
+            raise ValueError("shares must be non-negative")
+        if shares_f > _MAX_SHARES:
+            raise ValueError("shares is out of range")
 
     now = now or _utc_now()
 
@@ -113,7 +127,9 @@ def start_cooldown(
 
     side_label = _normalise_side(side)
     shares_dec = _to_decimal(shares)
-    vol_dec = _to_decimal(market_volatility)
+    # Telemetry, not user input — drop a non-finite / out-of-range snapshot to
+    # None rather than 500 the user's reflection on commit.
+    vol_dec = _to_decimal(_sane_volatility(market_volatility))
 
     row = PreTradeReflection(
         user_id=user_id,
@@ -188,7 +204,7 @@ def proceed(reflection_id: int, user_id: int) -> dict:
     (``/api/portfolio/position/...`` or ``/api/autotrade/...``) which is
     untouched by this feature.
     """
-    row = _load_owned(reflection_id, user_id)
+    row = _load_owned(reflection_id, user_id, for_update=True)
     now = _utc_now()
     if row.cancelled_at is not None:
         raise ValueError("reflection already cancelled")
@@ -203,7 +219,7 @@ def proceed(reflection_id: int, user_id: int) -> dict:
 
 def cancel(reflection_id: int, user_id: int) -> dict:
     """Stamp ``cancelled_at`` and end the reflection."""
-    row = _load_owned(reflection_id, user_id)
+    row = _load_owned(reflection_id, user_id, for_update=True)
     now = _utc_now()
     if row.cancelled_at is not None:
         # Idempotent — re-cancelling is a no-op for the caller.
@@ -398,8 +414,24 @@ def storage_proof(reflection_id: int, user_id: int) -> dict[str, Any]:
     }
 
 
-def _load_owned(reflection_id: int, user_id: int) -> PreTradeReflection:
-    row = db.session.get(PreTradeReflection, int(reflection_id))
+def _load_owned(
+    reflection_id: int, user_id: int, *, for_update: bool = False
+) -> PreTradeReflection:
+    # ``for_update`` takes a row lock so concurrent /proceed + /cancel calls
+    # serialize on the same reflection. Without it, two double-submitted POSTs
+    # both read null terminal flags, both pass the guard, and both stamp —
+    # duplicate journal write, or a row that ends up both proceeded AND
+    # cancelled. The rest of the portfolio layer uses with_for_update() for
+    # exactly this class; SQLite (dev/test) treats the lock as a no-op.
+    if for_update:
+        row = (
+            db.session.query(PreTradeReflection)
+            .filter(PreTradeReflection.id == int(reflection_id))
+            .with_for_update()
+            .one_or_none()
+        )
+    else:
+        row = db.session.get(PreTradeReflection, int(reflection_id))
     if row is None or int(row.user_id) != int(user_id):
         # Same error for "not found" vs. "wrong owner" — we don't want
         # to leak existence to a different user (timing-safe-ish).
@@ -414,6 +446,24 @@ def _normalise_side(side: Any) -> str | None:
     if s in ("BUY", "SELL"):
         return s
     return None
+
+
+def _sane_volatility(v: Any) -> float | None:
+    """Drop a non-finite / out-of-range volatility snapshot to ``None``.
+
+    ``market_volatility`` is optional telemetry; a crafted inf / NaN / huge
+    value must not break the user's reflection write (it lands in
+    ``Numeric(8,4)`` which raises on Postgres). We silently drop it.
+    """
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(f) or f < 0 or f > _MAX_VOLATILITY:
+        return None
+    return f
 
 
 def _to_decimal(v: Any) -> Decimal | None:
