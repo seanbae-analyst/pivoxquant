@@ -82,8 +82,8 @@ def _cache_set(key: tuple, data: dict):
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 def _is_korean(ticker: str) -> bool:
-    t = (ticker or "").upper()
-    return t.endswith(".KS") or t.endswith(".KQ")
+    from services.ticker_normalizer import is_korean_ticker
+    return is_korean_ticker(ticker)
 
 
 def _period_for_years(years: float) -> str:

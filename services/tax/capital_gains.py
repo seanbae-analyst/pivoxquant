@@ -45,7 +45,8 @@ ANNUAL_BASIC_DEDUCTION_KRW: float = 2_500_000.0
 def _is_kr_ticker(ticker: str | None) -> bool:
     """True for KR-listed symbols (``.KS`` / ``.KQ``) — a property of the
     symbol itself, so it stays inside the raw-fact boundary."""
-    return bool(ticker) and str(ticker).upper().endswith((".KS", ".KQ"))
+    from services.ticker_normalizer import is_korean_ticker
+    return is_korean_ticker(ticker)
 
 
 class CapitalGainLot(NamedTuple):

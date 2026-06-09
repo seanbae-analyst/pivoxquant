@@ -106,8 +106,8 @@ def _prev_month_bounds(today: date) -> tuple[date, date, str]:
 
 
 def _is_kr(ticker: str) -> bool:
-    t = (ticker or "").upper()
-    return t.endswith(".KS") or t.endswith(".KQ")
+    from services.ticker_normalizer import is_korean_ticker
+    return is_korean_ticker(ticker)
 
 
 # ── data ─────────────────────────────────────────────────────────────────────

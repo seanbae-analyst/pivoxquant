@@ -453,9 +453,8 @@ def _ticker_last_price(ticker: str) -> Optional[float]:
 
 def _is_kr_ticker(ticker: str) -> bool:
     """Mirror of fmp_service._is_us_ticker — KR tickers end in .KS / .KQ."""
-    if not isinstance(ticker, str):
-        return False
-    return ticker.endswith(".KS") or ticker.endswith(".KQ")
+    from services.ticker_normalizer import is_korean_ticker
+    return is_korean_ticker(ticker)
 
 
 def _portfolio_value_usd(positions: list[Position]) -> Optional[float]:

@@ -96,8 +96,8 @@ def clear_name_cache() -> None:
 
 
 def _is_korean(ticker: str) -> bool:
-    t = ticker.upper()
-    return t.endswith(".KS") or t.endswith(".KQ")
+    from services.ticker_normalizer import is_korean_ticker
+    return is_korean_ticker(ticker)
 
 
 def _kis_name(ticker: str) -> Optional[str]:
