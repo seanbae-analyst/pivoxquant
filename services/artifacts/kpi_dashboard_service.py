@@ -57,6 +57,7 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 
 
 # ── lazy imports ─────────────────────────────────────────────────────────────
@@ -401,7 +402,7 @@ def compute_kpis_for_user(user_id: int,
         turnover_ratio=turnover,
         cash_pct=cash,
         position_count=len(positions),
-        disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+        disclaimer=DISCLAIMER_ARTIFACT_KR,
         data_sources=data_sources,
     )
     return ctx.to_dict()

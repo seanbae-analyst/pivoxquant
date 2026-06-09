@@ -58,6 +58,7 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "risk
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 
 
 def _storage_dir() -> Path:
@@ -686,7 +687,7 @@ class RiskBoardService:
             defense_status=defense.get("status"),
             layer_status=layer_status,
             top_risks=narrative,
-            disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+            disclaimer=DISCLAIMER_ARTIFACT_KR,
             data_sources=data_sources,
         )
         return ctx.to_dict()

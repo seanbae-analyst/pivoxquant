@@ -40,6 +40,7 @@ from services.behavior.turnover_mirror import compute_turnover_mirror
 from services.profile.holding_mirror import compute_holding_mirror
 
 from .decorators import api_auth
+from services.legal.disclaimers import DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +59,7 @@ behavior_bp = Blueprint("behavior", __name__, url_prefix="/api/behavior")
 
 # ── /holding-mirror ─────────────────────────────────────────────────
 
-_HOLDING_MIRROR_DISCLAIMER = (
-    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 "
-    "아닙니다."
-)
+_HOLDING_MIRROR_DISCLAIMER = DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 # Accepted ``?period`` values → window in days. ``all`` (default) = no
 # window. Keep the set tiny and explicit so we never echo an arbitrary
@@ -131,10 +129,7 @@ def concentration_mirror():
 
 # Wording kept byte-identical to the holding-mirror disclaimer so the two
 # retrospective trade-history mirrors read with one legal voice.
-_PROFIT_LOSS_MIRROR_DISCLAIMER = (
-    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 "
-    "아닙니다."
-)
+_PROFIT_LOSS_MIRROR_DISCLAIMER = DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 # Accepted ``?period`` values → window in days. ``all`` (default) = no
 # window. Kept tiny and explicit so we never echo an arbitrary
@@ -186,10 +181,7 @@ def profit_loss_mirror():
 
 # Wording kept byte-identical to the other retrospective trade-history
 # mirror disclaimers so all behaviour mirrors read with one legal voice.
-_TURNOVER_MIRROR_DISCLAIMER = (
-    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 "
-    "아닙니다."
-)
+_TURNOVER_MIRROR_DISCLAIMER = DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 # Accepted ``?period`` values → window in days. ``all`` (default) = no
 # window. Kept tiny and explicit so we never echo an arbitrary
@@ -241,10 +233,7 @@ def turnover_mirror():
 
 # Wording kept byte-identical to the other retrospective trade-history
 # mirror disclaimers so all behaviour mirrors read with one legal voice.
-_AVERAGING_DOWN_MIRROR_DISCLAIMER = (
-    "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 "
-    "아닙니다."
-)
+_AVERAGING_DOWN_MIRROR_DISCLAIMER = DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 # Accepted ``?period`` values → window in days. ``all`` (default) = no
 # window. Kept tiny and explicit so we never echo an arbitrary

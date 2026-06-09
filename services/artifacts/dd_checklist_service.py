@@ -46,6 +46,7 @@ _TEMPLATE_DIR = Path(__file__).parent / "templates"
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 # Pending window: `added_at` in [now - (N+1)d, now - Nd)
 _PENDING_LAG_DAYS = 3
 
@@ -439,7 +440,7 @@ class DDChecklistService:
             "as_of":       date.today().isoformat(),
             "generated_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
             "pending":     pending,
-            "disclaimer":  "정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+            "disclaimer":  DISCLAIMER_ARTIFACT_KR,
         }
         # 2026-05-02: use the email-specific template (inline styles +
         # system font stack + CTA link). The PDF body keeps the heavy

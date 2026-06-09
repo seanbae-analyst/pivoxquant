@@ -76,6 +76,7 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "week
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_BILINGUAL
 
 
 def _storage_dir() -> Path:
@@ -919,8 +920,7 @@ class WeeklyMemoService:
             risk_notes=risk,
             risk_kpi=risk_kpi,
             data_sources=data_sources,
-            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다. / "
-                        "Information only, not investment advice. Decisions are your own."),
+            disclaimer=(DISCLAIMER_ARTIFACT_BILINGUAL),
         )
         # Legal scrub at user-facing boundary — risk_notes free-text and any
         # AI-derived prose. scrub_signal handles known free-text fields;

@@ -75,6 +75,7 @@ _DEFAULT_STORAGE_DIR = (
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 
 
 def _storage_dir() -> Path:
@@ -693,8 +694,7 @@ class QuarterlySelfReportService:
             thesis_checklist=thesis_checklist,
             watch_items=_watch_items(end),
             disclaimer=(
-                "정보 제공 목적이며 투자 권유가 아닙니다. "
-                "투자 판단은 본인 책임입니다."
+                DISCLAIMER_ARTIFACT_KR
             ),
             data_sources=data_sources,
         )

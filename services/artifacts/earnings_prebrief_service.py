@@ -64,6 +64,7 @@ _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "earn
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
 from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_BILINGUAL
 
 # ± window (minutes) around the 30-min-before target. Must exceed cron cadence
 # to avoid gaps. Default 10-min cron + ±6min window → every earnings is matched
@@ -757,8 +758,7 @@ class EarningsPreBriefService:
             sensitivity_beat=sens_beat,
             sensitivity_miss=sens_miss,
             risk_notes=risk_notes,
-            disclaimer=("정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다. / "
-                        "Information only, not investment advice. Decisions are your own."),
+            disclaimer=(DISCLAIMER_ARTIFACT_BILINGUAL),
             data_sources=data_sources,
             option_source=option_source,
         )

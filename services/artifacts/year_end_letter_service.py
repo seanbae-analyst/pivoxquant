@@ -50,6 +50,7 @@ from typing import Any, Optional
 from extensions import db
 from models import Artifact, InvestmentProfile, Position, TradeHistory, User
 from services import fx_service
+from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 
 logger = logging.getLogger(__name__)
 
@@ -566,8 +567,7 @@ class YearEndLetterService:
             watch_items=_watch_items(target_year),
             shareholder_letter=letter,
             disclaimer=(
-                "정보 제공 목적이며 투자 권유가 아닙니다. "
-                "투자 판단은 본인 책임입니다."
+                DISCLAIMER_ARTIFACT_KR
             ),
         )
         return ctx.to_dict()
