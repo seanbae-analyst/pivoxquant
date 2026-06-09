@@ -227,7 +227,10 @@ def _fetch_position_returns(positions: list[Position],
             rets = []
             for a, b in zip(closes[:-1], closes[1:]):
                 a, b = float(a), float(b)
-                if a <= 0:
+                # Skip a non-finite bar (a null/NaN Close from the feed) — left
+                # in, it makes (b/a)-1 NaN, which then poisons VaR/Sharpe and
+                # renders nan% / $nan in the paid PDF.
+                if not (math.isfinite(a) and math.isfinite(b)) or a <= 0:
                     continue
                 rets.append((b / a) - 1.0)
             if not rets:
@@ -274,6 +277,8 @@ def _var_pct(rets: list[float], pct: float) -> Optional[float]:
     try:
         arr = np.array(rets, dtype=np.float64)
         q = float(np.percentile(arr, pct))
+        if not math.isfinite(q):
+            return None  # defence-in-depth — never render a nan% VaR
         # VaR expressed as a positive loss % (e.g. 2.7 means -2.7%)
         return round(-q * 100, 2)
     except Exception:

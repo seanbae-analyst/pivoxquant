@@ -477,10 +477,11 @@ class PortfolioSegmentService:
         narrative = data.get("narrative") or ""
         label = data.get("quarter_label") or "—"
 
+        from services.artifacts._pricing import finite_or_none
+
         def _money(v: Any) -> str:
-            try:
-                n = float(v)
-            except (TypeError, ValueError):
+            n = finite_or_none(v)
+            if n is None:
                 return "—"
             if n >= 1_000_000_000:
                 return f"${n/1_000_000_000:.2f}B"

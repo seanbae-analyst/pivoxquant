@@ -412,9 +412,14 @@ class InsiderMirrorService:
             except (TypeError, ValueError):
                 return 0.0
 
+        from services.artifacts._pricing import finite_or_none
+
         def _money(v: float, *, signed: bool = True) -> str:
-            sign = ("+" if v >= 0 else "−")
-            an = abs(v)
+            n = finite_or_none(v)
+            if n is None:
+                return "—"
+            sign = ("+" if n >= 0 else "−")
+            an = abs(n)
             if an >= 1_000_000:
                 return f"{sign if signed else ''}${an/1_000_000:.1f}M"
             if an >= 1_000:

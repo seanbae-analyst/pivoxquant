@@ -116,7 +116,7 @@ def _mv_usd(price: float, shares: float, ticker: str, fx: float) -> float:
     """
     native = price * shares
     if ticker.upper().endswith((".KS", ".KQ")):
-        return native / fx
+        return native / fx if fx > 0 else 0.0
     return native
 
 

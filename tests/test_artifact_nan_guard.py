@@ -111,3 +111,55 @@ def test_capital_allocation_finite_vol_sharpe_still_render():
     assert sc["vol"] == "18.50%"
     assert sc["sharpe"] == "0.67"
     assert sc["cagr"] == "+12.34%"
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 2026-06-09: second wave. Five per-service `_money` formatters had dropped
+# the `math.isfinite` guard, and `risk_board` let a single null Close bar
+# poison VaR → `nan%` / `$nan`. Centralised the guard in `_pricing.finite_or_none`
+# and cleaned the risk_board return series at the source.
+# ─────────────────────────────────────────────────────────────────────
+
+def test_finite_or_none_guard():
+    """The shared guard every `_money`/`_pct` formatter now delegates to."""
+    from services.artifacts._pricing import finite_or_none
+    for bad in (float("nan"), float("inf"), float("-inf"), None, "x", "", [], {}):
+        assert finite_or_none(bad) is None, bad
+    assert finite_or_none(0) == 0.0
+    assert finite_or_none(1234.5) == 1234.5
+    assert finite_or_none("12.5") == 12.5  # numeric string coerces, like float()
+
+
+def test_risk_board_var_pct_nan_returns_none():
+    from services.artifacts import risk_board_service as rb
+    # ≥20 values clears the len gate; the NaN makes np.percentile NaN, which
+    # the isfinite guard must turn into None (never a rendered "nan%").
+    assert rb._var_pct([0.01] * 24 + [float("nan")], 5) is None
+    # sanity: a clean series still yields a finite VaR.
+    assert rb._var_pct([0.01, -0.02] * 15, 5) is not None
+
+
+def test_risk_board_fetch_returns_drops_nan_bar(monkeypatch):
+    """A null Close bar must not leak a NaN return into the VaR matrix."""
+    import numpy as np
+    import pandas as pd
+    from services.artifacts import risk_board_service as rb
+
+    class _P:
+        ticker = "AAPL"
+        avg_cost = 100.0
+        shares = 10
+
+    closes = [100.0, 101.0, float("nan"), 103.0, 104.0, 105.0,
+              106.0, 107.0, 108.0, 109.0, 110.0, 111.0]
+    monkeypatch.setattr(rb, "_safe_price", lambda t: 100.0)
+    monkeypatch.setattr(rb, "_safe_snapshot", lambda t: {})
+    monkeypatch.setattr(
+        rb, "_safe_history",
+        lambda t, period="3mo": pd.DataFrame({"Close": closes}),
+    )
+    monkeypatch.setattr("services.fx_service.get_rate", lambda: 1380.0)
+
+    _tickers, _recs, aligned = rb._fetch_position_returns([_P()])
+    assert aligned is not None
+    assert np.isfinite(aligned).all(), "a NaN return reached the VaR matrix"

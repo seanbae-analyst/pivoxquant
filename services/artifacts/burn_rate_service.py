@@ -414,10 +414,11 @@ class BurnRateService:
         burn_pct = data.get("burn_pct")
         period_label = data.get("period_label") or "—"
 
+        from services.artifacts._pricing import finite_or_none
+
         def _money(v, *, signed: bool = False) -> str:
-            try:
-                n = float(v)
-            except (TypeError, ValueError):
+            n = finite_or_none(v)
+            if n is None:
                 return "—"
             sign = ("−" if n > 0 and signed else "")
             an = abs(n)
