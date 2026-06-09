@@ -202,6 +202,26 @@ changed-route pytest ✓ · smoke ✓. 리모트는 이미 fdfff515(v62)에 있�
 | W2-P2 | **예약 이메일 dispatcher 중복발송** — per-row commit이 `FOR UPDATE` 락 해제 → 병렬 tick 재발송. 오늘 bounded(시퀀스 플래그 OFF) | 스케줄러 아키텍처 결정(in-process vs crontab 택1) 또는 advisory lock. **택1 필요라 플래그** |
 | W2-P3 | **dev-login이 `FLASK_ENV` 문자열만 게이트 + premium 부여** | 현 배포 안전(low conf). 권고: Railway env 마커 추가 가드 + 테스트 유저 free tier 생성 |
 
-### 7.3 4번째 커밋
-`fix(artifacts)` — `$nan`/`nan%` 가드 통합 + risk_board null-bar + quarterly fx + 테스트.
-전체 스위트 green 확인 후 feat 브랜치 푸시(동일하게 non-main).
+### 7.3 커밋/푸시 (완료)
+`fix(artifacts)` (`32a01298`) — `$nan`/`nan%` 가드 통합 + risk_board null-bar + quarterly fx + 테스트.
+✅ **전체 백엔드 스위트 3881 passed / 0 failed** (신규 3 테스트 포함) 확인 후 푸시 완료
+(`698355c4..ffc94966 → feat/data-storage-trust`, non-main → prod 무영향).
+
+---
+
+## 8. 세션 종료 상태 (최종)
+
+**커밋 6개 전부 푸시됨** (feat/data-storage-trust, fast-forward, 당신 기존 작업·in-flight 파일 무손상):
+1. `111b2811` feat(pre-trade) 질문 리서치+SoT+톤
+2. `60fd8bca` fix(pre-trade) 수치검증+row-lock+테스트
+3. `56fb6e30` docs(strategy) 척추 메모
+4. `698355c4` docs(ops) 리포트 검증결과
+5. `32a01298` fix(artifacts) `$nan` 가드 통합
+6. `ffc94966` docs(ops) wave2 결과
+
+**최종 검증**: frontend vitest 548/548 · tsc clean · backend pytest **3881 passed / 0 failed** ·
+artifact 46 passed · pre-trade 30/30 · pre-push 훅(alembic/stripe/regression/pytest/smoke) 전부 green.
+
+**아침에 당신이 결정할 것** (요약): ① per-persona 톤 분기 GO/보류(§5.1) ② 플래그된 버그 7건 처리
+순서(§5.2 P3 5건 + §7.2 W2 3건 — NAV 버킷팅·Stripe period_end가 우선순위) ③ `/features/pre-trade` 404(§5.3).
+전부 정확한 수정안 첨부됨. 자동수정한 건 frozen 아님 + 컨벤션 + 유효데이터 영향 0 인 것만.
