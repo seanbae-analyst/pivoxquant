@@ -102,9 +102,13 @@ class SignalScopeError extends Error {
 }
 
 function isScopeError(e: unknown): e is SignalScopeError {
-  return e instanceof SignalScopeError ||
-    (typeof e === "object" && e !== null && "scopeDenied" in e &&
-      (e as { scopeDenied?: unknown }).scopeDenied === true);
+  return (
+    e instanceof SignalScopeError ||
+    (typeof e === "object" &&
+      e !== null &&
+      "scopeDenied" in e &&
+      (e as { scopeDenied?: unknown }).scopeDenied === true)
+  );
 }
 
 const signalFetcher = async (url: string) => {
@@ -154,16 +158,20 @@ export default function StockDetailPage() {
     error: signalErr,
     isValidating: signalValidating,
     mutate: retrySignal,
-  } = useSWR<SignalDetail>(ticker ? API.signals.one(ticker) : null, signalFetcher, {
-    refreshInterval: () => liveRefresh(5_000, 30_000),
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 5_000,
-    errorRetryCount: 2,
-    errorRetryInterval: 5_000,
-    // A scope denial (403) is deterministic — retrying never helps.
-    shouldRetryOnError: (err) => !isScopeError(err),
-  });
+  } = useSWR<SignalDetail>(
+    ticker ? API.signals.one(ticker) : null,
+    signalFetcher,
+    {
+      refreshInterval: () => liveRefresh(5_000, 30_000),
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5_000,
+      errorRetryCount: 2,
+      errorRetryInterval: 5_000,
+      // A scope denial (403) is deterministic — retrying never helps.
+      shouldRetryOnError: (err) => !isScopeError(err),
+    },
+  );
   const signalScopeDenied = isScopeError(signalErr);
   // A scope denial is a known state with its own CTA, not a load failure.
   const signalErrorState = !!signalErr && !signal && !signalScopeDenied;
@@ -280,7 +288,9 @@ export default function StockDetailPage() {
   /* ── Zone3: insider (US only, independent) ── */
   const insiderEligible = !!ticker && !/^\d{6}\.(KS|KQ)$/i.test(ticker);
   const { data: insiderRes } = useSWR<InsiderResponse>(
-    insiderEligible ? `/api/alt-data/us/insider-trades/${ticker}?days=90` : null,
+    insiderEligible
+      ? `/api/alt-data/us/insider-trades/${ticker}?days=90`
+      : null,
     fetcher,
     {
       refreshInterval: 600_000,
@@ -305,17 +315,15 @@ export default function StockDetailPage() {
      out of the user's scope), 404, or empty all collapse to [] → the
      EarningsPanel renders its genuine empty state. shouldRetryOnError keeps
      a 403 from looping. */
-  const { data: earningsRes } = useSWR<EarningsResponse | EarningsItem[] | EarningsItem>(
-    ticker ? API.market.earningsByTicker(ticker) : null,
-    fetcher,
-    {
-      refreshInterval: 600_000,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 60_000,
-      shouldRetryOnError: false,
-    },
-  );
+  const { data: earningsRes } = useSWR<
+    EarningsResponse | EarningsItem[] | EarningsItem
+  >(ticker ? API.market.earningsByTicker(ticker) : null, fetcher, {
+    refreshInterval: 600_000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 60_000,
+    shouldRetryOnError: false,
+  });
   const earningsForTicker: EarningsItem[] = useMemo(() => {
     if (!ticker || earningsRes == null) return [];
     let list: EarningsItem[];
@@ -381,7 +389,15 @@ export default function StockDetailPage() {
     mutate: refreshWatchlist,
     isLoading: watchlistLoading,
   } = useWatchlist();
-  const watchlistEntry = watchlistData?.watchlist?.find((w) => w.ticker === ticker);
+  // Normalize BOTH sides (wave-3 P3, 2026-06-10) — symmetric with the
+  // inPortfolio fix below: a watchlist row "005930.KS" vs a bare-code URL
+  // "/detail/005930" raw-compared false, gating the user out of an allowed
+  // ticker and 409-ing its "add to watchlist" CTA.
+  const watchlistEntry = watchlistData?.watchlist?.find(
+    (w) =>
+      normalizeTicker(w.ticker || "").toUpperCase() ===
+      normalizeTicker(ticker || "").toUpperCase(),
+  );
   const inWatchlist = Boolean(watchlistEntry);
 
   const positionsSwr = usePortfolioPositions<{ positions?: Position[] }>();
@@ -394,7 +410,9 @@ export default function StockDetailPage() {
     const upper = normalizeTicker(ticker || "").toUpperCase();
     return (positionsSwr.data?.positions ?? []).some((p) => {
       const t = p as { ticker?: string; symbol?: string };
-      return normalizeTicker(t.ticker || t.symbol || "").toUpperCase() === upper;
+      return (
+        normalizeTicker(t.ticker || t.symbol || "").toUpperCase() === upper
+      );
     });
   }, [positionsSwr.data, ticker]);
   const isAllowed = inWatchlist || inPortfolio;
@@ -517,8 +535,17 @@ export default function StockDetailPage() {
 
         {/* ════ Zone2 ANALYTICS — big breath above (mt-16), tight inside ════ */}
         <div className="mt-16 space-y-10">
-          <PillarGrid signal={signal} hasPillars={hasPillars} loading={loadingSignal} />
-          <FundamentalsPanel signal={signal} mcap={mcap} krw={krw} loading={loadingSignal} />
+          <PillarGrid
+            signal={signal}
+            hasPillars={hasPillars}
+            loading={loadingSignal}
+          />
+          <FundamentalsPanel
+            signal={signal}
+            mcap={mcap}
+            krw={krw}
+            loading={loadingSignal}
+          />
         </div>
 
         {/* ════ Zone3 DOSSIER — editorial (mt-16 + space-y-12) ════ */}
