@@ -179,6 +179,16 @@ def get_portfolio():
     overlay = overlay_prices(tickers)
 
     out = []
+    # NAV totals are accumulated on the suffix-derived `is_kr` (authoritative),
+    # NOT the cache-blob `currency` string echoed per-row. A cross-contaminated
+    # or stale SignalCache row can carry the wrong currency; bucketing a native
+    # USD market_value into the KRW bucket (or vice versa) skews
+    # total_value_all_krw by ~1380x for that position (Pattern-7 FX class).
+    # The sibling endpoints (_build_positions_list, summary) already bucket on
+    # the suffix — this brings get_portfolio in line. The per-row "currency"
+    # field is untouched (display only).
+    total_usd = 0.0
+    total_krw = 0.0
     for p in positions:
         cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
@@ -244,6 +254,12 @@ def get_portfolio():
         else:
             display_name = resolve_stock_name(p.ticker) or p.ticker
 
+        market_value = round(cur_px * p.shares, 2)
+        if is_kr:
+            total_krw += market_value
+        else:
+            total_usd += market_value
+
         out.append({
             "id": p.id, "ticker": p.ticker, "shares": p.shares,
             "avg_cost": p.avg_cost, "price": cur_px, "current_price": cur_px,
@@ -255,7 +271,7 @@ def get_portfolio():
             "cur_fx_rate": fx_service.get_rate() if not is_kr else 0,
             "krw_cost": round(krw_cost) if krw_cost else None,
             "krw_value": round(krw_value) if krw_value else None,
-            "market_value": round(cur_px * p.shares, 2),
+            "market_value": market_value,
             "signal": sd.get("signal", "—"), "score": sd.get("score", 0),
             "rec_shares": sd.get("rec_shares", 0),
             "rec_investment": sd.get("rec_investment", 0),
@@ -276,8 +292,6 @@ def get_portfolio():
             "priority": sd.get("priority", 0),
         })
 
-    total_usd = sum(p["market_value"] for p in out if p["currency"] == "USD")
-    total_krw = sum(p["market_value"] for p in out if p["currency"] == "KRW")
     total_all_krw = round(total_usd * fx_service.get_rate() + total_krw)
     cap_krw = getattr(current_user, "available_capital_krw", 0.0) or 0.0
 
