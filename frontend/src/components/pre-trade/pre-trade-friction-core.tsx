@@ -31,7 +31,11 @@ import { API } from "@/lib/endpoints";
 import { Caption } from "@/components/ui/editorial";
 import { type Side, sideLabel, sideToWire } from "@/lib/pre-trade";
 import { useT } from "@/lib/locale";
-import { PRE_TRADE_QUESTIONS } from "@/data/pre-trade-questions";
+import {
+  PRE_TRADE_QUESTIONS,
+  PERSONA_QUESTION_HINTS,
+} from "@/data/pre-trade-questions";
+import { cachedPersonaId } from "@/lib/cfo/hooks";
 
 // 2026-05-22 (CEO "50자 너무 많아 10자"): lowered 50 → 10. Keep in lock-step
 // with models/pre_trade_reflection.py MIN_RATIONALE_CHARS — the backend
@@ -302,6 +306,19 @@ export function QuestionsStep(props: {
   bare?: boolean;
 }) {
   const { acks, setAcks, answers, setAnswers, allAcked, submitting, onBack, onStart, bare } = props;
+
+  // Persona-aware hint lines (record-as-spine §7, 2026-06-10). Resolved
+  // client-side AFTER mount from the usePersona() localStorage cache —
+  // no fetch from the deposition flow (would break the host modals'
+  // strict apiFetch call-count tests), no SSR/hydration mismatch (first
+  // paint is always the neutral copy). Cold cache / offline-mock → null
+  // → questions render exactly as before.
+  const [hints, setHints] = useState<Readonly<Record<number, string>> | null>(null);
+  useEffect(() => {
+    const code = cachedPersonaId();
+    setHints((code && PERSONA_QUESTION_HINTS[code]) || null);
+  }, []);
+
   return (
     <section className="space-y-6">
       {!bare && <SectionLabel n={2} title="The Deposition · 7개 질문" />}
@@ -325,6 +342,15 @@ export function QuestionsStep(props: {
                 <p className="font-serif text-pq-body-sm text-[rgba(245,240,232,0.55)]">
                   {q.ko}
                 </p>
+                {hints?.[q.n] && (
+                  <p
+                    className="font-serif text-pq-caption leading-snug"
+                    style={{ color: "rgba(184,149,106,0.66)" }}
+                    data-testid={`persona-hint-${q.n}`}
+                  >
+                    {hints[q.n]}
+                  </p>
+                )}
               </div>
             </div>
             <div className="mt-3 ml-[34px] flex flex-col gap-2">

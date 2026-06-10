@@ -262,6 +262,25 @@ async function cfoFetch<T>(url: string, fallback: () => T): Promise<T> {
 
 /* ═════════════ Hooks ═════════════ */
 
+/**
+ * Synchronous, network-free read of the user's declared persona from the
+ * localStorage cache that `usePersona()` maintains on every fetch.
+ *
+ * For surfaces that want persona-aware *tone* without owning a fetch —
+ * e.g. the pre-trade deposition's per-persona question hints — issuing a
+ * request from a sub-component would entangle it with SWR and break the
+ * host modals' strict apiFetch call-count tests. Home/Profile/Reports all
+ * call `usePersona()`, so in any real session this cache is already warm
+ * by the time a trade modal opens. Returns `null` (callers fall back to
+ * neutral copy) when the cache is cold or holds the offline mock —
+ * `_isMock` payloads must never personalize (the mock is always "growth").
+ */
+export function cachedPersonaId(): PersonaId | null {
+  const cached = safeRead<PersonaResponse>(LS_KEYS.persona);
+  if (!cached || cached._isMock) return null;
+  return cached.declared?.persona ?? null;
+}
+
 /** Declared + observed persona, with rolling-window drift indicator. */
 export function usePersona() {
   const swr = useSWR<PersonaResponse>(
