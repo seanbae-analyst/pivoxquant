@@ -137,29 +137,63 @@ const OBSERVE: Item[] = [
   { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
   // REMOVED 2026-04-27 per CEO + legal: autotrade item (투자일임업 회피).
   { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
-  { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye, hidden: true },
-  { key: "market", label: "Market", href: "/market", icon: Activity, hidden: true },
-  { key: "discover", label: "Discover", href: "/discover", icon: Compass, hidden: true },
-  { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare, hidden: true },
+  {
+    key: "watchlist",
+    label: "Watchlist",
+    href: "/watchlist",
+    icon: Eye,
+    hidden: true,
+  },
+  {
+    key: "market",
+    label: "Market",
+    href: "/market",
+    icon: Activity,
+    hidden: true,
+  },
+  {
+    key: "discover",
+    label: "Discover",
+    href: "/discover",
+    icon: Compass,
+    hidden: true,
+  },
+  {
+    key: "ai-chat",
+    label: "AI Chat",
+    href: "/ai-chat",
+    icon: MessageSquare,
+    hidden: true,
+  },
 ];
 
 // ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
 const SYSTEM: Item[] = [
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
   { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
-  { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
+  {
+    key: "profile",
+    label: "Profile · Persona",
+    href: "/profile",
+    icon: UserCircle,
+  },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
   // Methodology moved to a PUBLIC landing page (/methodology) 2026-06-05 per CEO
   // — no longer a login-gated sidebar item.
 ];
 
-const ALL_ITEMS: Item[] = [...TOP, ...RECORD, ...ARTIFACTS, ...OBSERVE, ...SYSTEM];
+const ALL_ITEMS: Item[] = [
+  ...TOP,
+  ...RECORD,
+  ...ARTIFACTS,
+  ...OBSERVE,
+  ...SYSTEM,
+];
 
 function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
   if (!pathname) return null;
   // Longest-prefix match so "/portfolio/123" lights Portfolio.
-  const match = ALL_ITEMS
-    .slice()
+  const match = ALL_ITEMS.slice()
     .sort((a, b) => b.href.length - a.href.length)
     .find((it) => pathname === it.href || pathname.startsWith(it.href + "/"));
   return match?.key ?? null;
@@ -208,31 +242,51 @@ export function TerminalSidebar({
           ))}
         </ul>
 
+        {/* aria-label on each <ul> — the visual GroupHeader is aria-hidden,
+            which left screen readers one flat 13-link list (design audit
+            2026-06-10). Labelled lists restore the record-as-spine grouping
+            for AT users. */}
         <GroupHeader label="Record" />
-        <ul className="space-y-0.5 px-3">
+        <ul className="space-y-0.5 px-3" aria-label="Record">
           {RECORD.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+            <SidebarLink
+              key={item.key}
+              item={item}
+              isActive={resolvedActive === item.key}
+            />
           ))}
         </ul>
 
         <GroupHeader label="Artifacts" />
-        <ul className="space-y-0.5 px-3">
+        <ul className="space-y-0.5 px-3" aria-label="Artifacts">
           {ARTIFACTS.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+            <SidebarLink
+              key={item.key}
+              item={item}
+              isActive={resolvedActive === item.key}
+            />
           ))}
         </ul>
 
         <GroupHeader label="Observe" />
-        <ul className="space-y-0.5 px-3">
+        <ul className="space-y-0.5 px-3" aria-label="Observe">
           {OBSERVE.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+            <SidebarLink
+              key={item.key}
+              item={item}
+              isActive={resolvedActive === item.key}
+            />
           ))}
         </ul>
 
         <GroupHeader label="System" />
-        <ul className="space-y-0.5 px-3 pb-4">
+        <ul className="space-y-0.5 px-3 pb-4" aria-label="System">
           {SYSTEM.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+            <SidebarLink
+              key={item.key}
+              item={item}
+              isActive={resolvedActive === item.key}
+            />
           ))}
         </ul>
       </nav>
@@ -293,9 +347,7 @@ function SidebarLink({ item, isActive }: { item: Item; isActive: boolean }) {
           fontSize: "var(--pq-text-body)",
           letterSpacing: "0.2em",
           color: isActive ? "var(--pq-ivory)" : "rgba(245,240,232,0.5)",
-          backgroundColor: isActive
-            ? "rgba(247,245,239,0.06)"
-            : "transparent",
+          backgroundColor: isActive ? "rgba(247,245,239,0.06)" : "transparent",
           borderLeft: isActive
             ? "3px solid var(--pq-bronze)"
             : "3px solid transparent",

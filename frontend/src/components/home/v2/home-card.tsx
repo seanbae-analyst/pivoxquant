@@ -92,12 +92,16 @@ export function HomeCard({
 export function HomeCardStyles() {
   return (
     <style jsx global>{`
+      /* Design audit 2026-06-10 (P2): --muted-foreground resolves to the
+         LIGHT-theme slate-600 (#475569) on the un-classed dashboard html —
+         the spec comment above says "hairline → bronze on hover". Use the
+         brand token, matching TodaysReviewCard directly above the gallery. */
       .pq-home-card-v2:hover {
-        border-color: var(--muted-foreground) !important;
+        border-color: var(--pq-bronze) !important;
         background: rgba(184, 149, 106, 0.025) !important;
       }
       .pq-home-card-v2:hover .pq-home-card-v2__corner {
-        color: var(--muted-foreground) !important;
+        color: var(--pq-bronze) !important;
       }
       @media (prefers-reduced-motion: reduce) {
         .pq-home-card-v2 {

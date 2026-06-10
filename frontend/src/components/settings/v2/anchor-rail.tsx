@@ -105,7 +105,7 @@ export function AnchorRail() {
             style={{
               display: "block",
               padding: "10px 0 10px 14px",
-              borderLeft: `1px solid ${isActive ? "var(--pq-bronze)" : "var(--pq-hairline, var(--pq-ivory-line))"}`,
+              borderLeft: `1px solid ${isActive ? "var(--pq-bronze)" : "var(--pq-hairline-ink, var(--pq-ivory-line))"}`,
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.16em",
               color: isActive

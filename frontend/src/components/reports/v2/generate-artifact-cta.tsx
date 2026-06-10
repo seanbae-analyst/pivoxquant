@@ -336,7 +336,7 @@ export function GenerateArtifactCta({ tier }: Props) {
               key={tile.type + tile.displayName}
               style={{
                 border:
-                  "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+                  "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                 borderRadius: 4,
                 padding: 24,
                 background: "rgba(255,255,255,0.02)",
@@ -413,7 +413,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                     width: "100%",
                     background: "rgba(0,0,0,0.3)",
                     border:
-                      "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+                      "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                     borderRadius: 2,
                     color: "var(--pq-ivory, #F5F0E8)",
                     padding: "8px 10px",

@@ -394,7 +394,10 @@ export function QuestionsStep(props: {
                 {hints?.[q.n] && (
                   <p
                     className="font-serif text-pq-caption leading-snug"
-                    style={{ color: "rgba(184,149,106,0.66)" }}
+                    // 0.85 alpha — 12px text must clear the project's WCAG
+                    // ladder (globals.css: alpha 0.45 ≈ 3.99:1 is large-text
+                    // only; bronze 0.66 ≈ 3.65:1 failed AA for small text).
+                    style={{ color: "rgba(184,149,106,0.85)" }}
                     data-testid={`persona-hint-${q.n}`}
                   >
                     {hints[q.n]}

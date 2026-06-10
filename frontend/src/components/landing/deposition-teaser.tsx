@@ -75,8 +75,8 @@ export function DepositionTeaser() {
             color: "rgba(245, 240, 232, 0.65)",
           }}
         >
-          진입 결정 앞에 서는 7개의 관문. 당신을 변호할 기회가 아니라,
-          당신의 논리를 스스로 검증할 기회다. 이것은 조언이 아니라 규율이다.
+          진입 결정 앞에 서는 7개의 관문. 당신을 변호할 기회가 아니라, 당신의
+          논리를 스스로 검증할 기회다. 이것은 조언이 아니라 규율이다.
         </motion.p>
 
         <div className="grid grid-cols-1 gap-10 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)] md:gap-14 items-start">
@@ -127,14 +127,20 @@ export function DepositionTeaser() {
                 </h3>
                 <p
                   className="mt-1 font-serif italic"
-                  style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.55)" }}
+                  style={{
+                    fontSize: "var(--pq-text-eyebrow)",
+                    color: "rgba(10,10,10,0.55)",
+                  }}
                 >
                   Counterparty · Yourself
                 </p>
               </div>
               <div
                 className="text-right font-mono tabular-nums"
-                style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.55)" }}
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  color: "rgba(10,10,10,0.55)",
+                }}
               >
                 <div>DOCKET · PQ-0074</div>
                 <div>SESSION · 09:42 KST</div>
@@ -165,7 +171,10 @@ export function DepositionTeaser() {
                   <div>
                     <p
                       className="font-serif"
-                      style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.45 }}
+                      style={{
+                        fontSize: "var(--pq-text-body)",
+                        lineHeight: 1.45,
+                      }}
                     >
                       {q.en}
                     </p>
@@ -186,7 +195,10 @@ export function DepositionTeaser() {
                 --pq-text-eyebrow (10.5px) to --pq-text-body-sm (13px). */}
             <p
               className="mt-8 font-serif italic"
-              style={{ fontSize: "var(--pq-text-body-sm)", color: "rgba(10,10,10,0.45)" }}
+              style={{
+                fontSize: "var(--pq-text-body-sm)",
+                color: "rgba(10,10,10,0.45)",
+              }}
             >
               Not investment advice. A reflection tool, logged to your
               compounding memory.
@@ -250,7 +262,11 @@ export function DepositionTeaser() {
           variants={fadeUp}
           className="mt-12 font-serif italic"
           style={{
-            fontSize: "var(--pq-text-eyebrow)",
+            // FINDING-LAND-002 (design audit 2026-06-10): compliance
+            // disclaimers must not render below 13px. The W19 fontSize sweep
+            // (2d85829f) had mechanically shrunk this line 12px → the 10.5px
+            // eyebrow token — below the project's own legal floor.
+            fontSize: "var(--pq-text-body-sm)",
             color: "var(--pq-muted)",
             borderTop: "0.5px solid var(--pq-border)",
             paddingTop: 16,

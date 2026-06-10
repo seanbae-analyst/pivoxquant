@@ -87,7 +87,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
     return (
       <div
         style={{
-          border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           borderRadius: 4,
           padding: "clamp(28px, 5vw, 52px) clamp(20px, 5vw, 56px)",
           background: "rgba(255,255,255,0.02)",
@@ -103,7 +103,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
     return (
       <div
         style={{
-          border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           borderRadius: 4,
           padding: "clamp(28px, 5vw, 52px) clamp(20px, 5vw, 56px)",
           background: "rgba(255,255,255,0.02)",
@@ -152,7 +152,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
   return (
     <article
       style={{
-        border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         borderRadius: 4,
         padding: "52px 56px",
         background: "rgba(255,255,255,0.02)",
@@ -177,7 +177,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             }
             .pq-latest-artifact-mentioned {
               border-left: 0 !important;
-              border-top: 1px solid var(--pq-hairline, var(--pq-ivory-line)) !important;
+              border-top: 1px solid var(--pq-hairline-ink, var(--pq-ivory-line)) !important;
               padding-left: 0 !important;
               padding-top: 24px !important;
             }
@@ -327,7 +327,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         <div
           className="pq-latest-artifact-mentioned"
           style={{
-            borderLeft: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+            borderLeft: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
             paddingLeft: 36,
           }}
         >

@@ -59,8 +59,11 @@ export function TodaysReviewCard() {
     <Link
       href="/journal"
       aria-label="오늘의 리뷰 — open journal"
-      className="group mb-8 block rounded-[2px] border p-5 transition-colors hover:border-[var(--pq-bronze)]"
+      className="group mb-8 block border p-6 transition-colors hover:border-[var(--pq-bronze)]"
       style={{
+        // Match the HomeCard shell it sits above (design audit 2026-06-10):
+        // radius 4 (--pq-radius-card) + 24px padding.
+        borderRadius: 4,
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
       }}
@@ -77,8 +80,8 @@ export function TodaysReviewCard() {
         >
           오늘의 리뷰 · The Record
         </span>
-        <span className="font-mono text-pq-caption uppercase tracking-[0.14em] text-[rgba(245,240,232,0.45)] transition-colors group-hover:text-[var(--pq-bronze)]">
-          Journal →
+        <span className="font-mono text-pq-caption uppercase tracking-[0.2em] text-[rgba(245,240,232,0.55)] transition-colors group-hover:text-[var(--pq-bronze)]">
+          Journal ›
         </span>
       </div>
 

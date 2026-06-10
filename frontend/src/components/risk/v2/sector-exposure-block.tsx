@@ -128,7 +128,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           className="pq-card"
           style={{
             background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
-            border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+            border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
             borderRadius: 4,
             padding: 24,
             minHeight: 380,
@@ -224,7 +224,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           className="pq-card"
           style={{
             background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
-            border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+            border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
             borderRadius: 4,
             padding: 24,
             minHeight: 380,
@@ -259,7 +259,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     padding: "12px 0",
                     fontWeight: 400,
                     borderBottom:
-                      "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+                      "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                   }}
                 >
                   Sector
@@ -274,7 +274,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     padding: "12px 0",
                     fontWeight: 400,
                     borderBottom:
-                      "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+                      "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                   }}
                 >
                   Leader
@@ -289,7 +289,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     padding: "12px 0",
                     fontWeight: 400,
                     borderBottom:
-                      "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+                      "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                   }}
                 >
                   Weight
@@ -321,7 +321,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                         verticalAlign: "baseline",
                         borderBottom:
                           i < sectors.length - 1
-                            ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
+                            ? "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))"
                             : "none",
                       }}
                     >
@@ -345,7 +345,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                         verticalAlign: "baseline",
                         borderBottom:
                           i < sectors.length - 1
-                            ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
+                            ? "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))"
                             : "none",
                       }}
                     >
@@ -384,7 +384,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                         verticalAlign: "baseline",
                         borderBottom:
                           i < sectors.length - 1
-                            ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
+                            ? "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))"
                             : "none",
                       }}
                     >

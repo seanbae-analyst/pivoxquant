@@ -83,7 +83,7 @@ export function SignalsHeroV2({ eyebrow, counts, loading = false }: Props) {
     <header
       style={{
         padding: "80px 0 64px",
-        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+        borderBottom: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         marginBottom: 0,
       }}
     >
