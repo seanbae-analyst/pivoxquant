@@ -63,18 +63,44 @@ def _compute_user_return(user_id: int, week_ending: date) -> tuple[float | None,
     )
     if not rows:
         return None, 0
-    invested = 0.0
+    # Wave-3 P2 (2026-06-10): the old math summed EVERY row's total_value as
+    # the denominator. A SELL's total_value is PROCEEDS (cost + pnl), so a
+    # same-week $1,000→$1,100 round trip read +4.76% instead of +10%, and
+    # mixed KR/US weeks raw-summed ₩ + $ (Pattern-7).
+    #
+    # Weekly semantics differ from the routes/twin.py lifetime fix (BUY legs
+    # only): a week often contains ONLY the closing SELL of a position bought
+    # earlier — a BUY-only denominator would null out exactly the weeks with
+    # realized results. Match _compute_twin_return's documented measure
+    # instead — "realized P&L over realized cost basis": denominator = each
+    # SELL's cost basis (proceeds − pnl), both legs normalised to KRW.
+    # Same-week round trip: (1100−100)=1000 → 100/1000 = +10% ✓.
+    #
+    # NOTE: weekly rows persisted by earlier cron runs used the old math and
+    # are idempotent-cached; history is left as-is (documented drift).
+    from services import fx_service
+
+    fx = fx_service.get_rate()
+    realized_cost = 0.0
     pnl = 0.0
     for r in rows:
         try:
-            invested += float(r.total_value or 0.0)
-            pnl += float(r.pnl or 0.0)
+            if (r.action or "").upper() != "SELL":
+                continue
+            proceeds = fx_service.amount_to_krw(
+                r.total_value, r.currency, r.ticker, fx
+            )
+            row_pnl = fx_service.amount_to_krw(r.pnl, r.currency, r.ticker, fx)
+            cost = proceeds - row_pnl
+            if cost > 0:
+                realized_cost += cost
+                pnl += row_pnl
         except (TypeError, ValueError):
             logger.debug("silent-fallback: _compute_user_return", exc_info=True)
             continue
-    if invested <= 0:
+    if realized_cost <= 0:
         return None, len(rows)
-    return round((pnl / invested) * 100.0, 4), len(rows)
+    return round((pnl / realized_cost) * 100.0, 4), len(rows)
 
 
 def _compute_twin_return(user_id: int, week_ending: date) -> tuple[float | None, int]:

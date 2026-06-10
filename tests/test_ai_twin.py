@@ -302,14 +302,18 @@ def test_weekly_report_compares_user_vs_twin(app, make_user):
             pnl_at_close=Decimal("50"),
             is_paper=True,
         ))
-        # Add a real user TradeHistory with +10%.
+        # Add a real user TradeHistory with +10%. total_value is the SELL's
+        # PROCEEDS (price × shares = 1,100), matching how routes/portfolio.py
+        # records sells; the old fixture's 1,000 contradicted its own
+        # price_per_share. The weekly math measures realized P&L over realized
+        # cost basis: (1100 − 100) = 1000 cost → 100/1000 = +10%.
         db.session.add(TradeHistory(
             user_id=user["id"],
             ticker="ZZZ",
             action="SELL",
             shares=10.0,
             price_per_share=110.0,
-            total_value=1000.0,
+            total_value=1100.0,
             pnl=100.0,
             traded_at=sell_time,
         ))

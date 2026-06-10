@@ -94,6 +94,16 @@ class TestGetPortfolio:
         # The per-row display field still echoes the cache (unchanged behavior).
         assert d["positions"][0]["currency"] == "USD"
 
+        # Wave-3 P1 (2026-06-10): the SAME poisoned-cache bucketing bug lived
+        # on in /api/portfolio/positions — the endpoint the v2 frontend
+        # actually polls. Its totals must bucket on suffix too.
+        r2 = client.get("/api/portfolio/positions")
+        assert r2.status_code == 200
+        d2 = r2.get_json()
+        assert d2["total_value_krw"] == 700000.0
+        assert d2["total_value_usd"] == 0
+        assert d2["total_value_all_krw"] == 700000
+
 
 # ── POST /api/portfolio/position (add) ──────────────────────────────────────
 

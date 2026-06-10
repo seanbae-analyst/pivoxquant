@@ -191,7 +191,7 @@ def get_portfolio():
     total_krw = 0.0
     for p in positions:
         cached = cache_map.get(p.ticker)
-        sd = json.loads(cached.data_json) if cached and cached.data_json else {}
+        sd = cache_service.safe_cache_blob(cached)
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
         o = overlay.get(p.ticker) or {}
         # Bug C (2026-04-24): add price_display parse as last-resort before
@@ -596,7 +596,7 @@ def buy_more(pid):
     # get_signal() returns None if the row is stale, so callers fall back to
     # safe defaults below instead of rendering stale name/currency values.
     cached = cache_service.get_signal(p.ticker)
-    sd = json.loads(cached.data_json) if cached and cached.data_json else {}
+    sd = cache_service.safe_cache_blob(cached)
     # When the SignalCache row is stale (TTL expired → sd == {}), a plain
     # ``.get("is_korean", False)`` mis-classifies .KS/.KQ tickers as USD and
     # routes their capital into the wrong bucket. Fall back to the ticker
@@ -824,7 +824,7 @@ def buy_new_position():
         locked_user.available_capital = cap - cost
 
     cached = cache_service.get_signal(ticker)
-    sd = json.loads(cached.data_json) if cached and cached.data_json else {}
+    sd = cache_service.safe_cache_blob(cached)
     name = canonical_display_name(sd.get("name"), ticker)
     db.session.add(TradeHistory(
         user_id=current_user.id, ticker=ticker, name=name,
@@ -985,7 +985,7 @@ def sell_position(pid):
         )
 
     cached = cache_service.get_signal(p.ticker)
-    sd = json.loads(cached.data_json) if cached and cached.data_json else {}
+    sd = cache_service.safe_cache_blob(cached)
     if sell_price <= 0:
         sell_price = sd.get("price", p.avg_cost) if sd else p.avg_cost
 
@@ -1114,7 +1114,7 @@ def portfolio_analytics():
     pl = []
     for p in positions:
         cached = cache_map.get(p.ticker)
-        sd = json.loads(cached.data_json) if cached and cached.data_json else {}
+        sd = cache_service.safe_cache_blob(cached)
         pl.append({
             "ticker": p.ticker,
             "name": canonical_display_name(sd.get("name"), p.ticker),
@@ -1157,7 +1157,7 @@ def _build_positions_list():
     out = []
     for p in positions:
         cached = cache_map.get(p.ticker)
-        sd = json.loads(cached.data_json) if cached and cached.data_json else {}
+        sd = cache_service.safe_cache_blob(cached)
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
         o = overlay.get(p.ticker) or {}
         if o.get("price"):
@@ -1230,14 +1230,21 @@ def list_positions_alias():
         positions = _build_positions_list()
         # Portfolio totals — the /risk weight aggregators divide each holding's
         # market value by these. Omitting them made `denom = 0` → every
-        # concentration/sector weight rendered 0% (CEO 2026-05-24). Mirrors the
-        # totals block in get_portfolio().
+        # concentration/sector weight rendered 0% (CEO 2026-05-24).
+        #
+        # 2026-06-10 (wave-3 P1): bucket on the suffix-derived `is_korean`
+        # flag, NOT the cache-blob `currency` string — the same Pattern-7
+        # poisoned-cache bug fixed in get_portfolio (2610c824) lived on here,
+        # and THIS is the endpoint the v2 frontend actually polls (feeds
+        # useConcentration/useSectorExposure weights). `is_korean` is computed
+        # from the .KS/.KQ suffix in _build_positions_list; the per-row
+        # `currency` display field stays cache-echoed (unchanged).
         rate = fx_service.get_rate() or 0
         total_usd = sum(
-            p["market_value"] for p in positions if p.get("currency") == "USD"
+            p["market_value"] for p in positions if not p.get("is_korean")
         )
         total_krw = sum(
-            p["market_value"] for p in positions if p.get("currency") == "KRW"
+            p["market_value"] for p in positions if p.get("is_korean")
         )
         total_all_krw = round(total_usd * rate + total_krw)
         return jsonify({
@@ -1289,7 +1296,7 @@ def portfolio_summary_alias():
 
         for p in positions:
             cached = cache_map.get(p.ticker)
-            sd = json.loads(cached.data_json) if cached and cached.data_json else {}
+            sd = cache_service.safe_cache_blob(cached)
             is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
             o = overlay.get(p.ticker) or {}
             cur_px = float(o.get("price") or p.avg_cost or 0)
@@ -1785,7 +1792,7 @@ def create_trade_alias():
         )
 
     cached = cache_service.get_signal(p.ticker)
-    sd = json.loads(cached.data_json) if cached and cached.data_json else {}
+    sd = cache_service.safe_cache_blob(cached)
     is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
     name = canonical_display_name(sd.get("name"), p.ticker)
     currency = sd.get("currency", "KRW" if is_kr else "USD")

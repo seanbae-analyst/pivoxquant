@@ -34,6 +34,26 @@ EARNINGS_TONE_DAILY_LIMIT = 50
 _earnings_tone_usage: dict = {"day": None, "count": 0}
 
 
+
+def safe_cache_blob(cached) -> dict:
+    """Parse a SignalCache row's data_json — `{}` on absence/corruption.
+
+    Wave-3 P3 (2026-06-10): a dozen route loops did
+    ``json.loads(c.data_json)`` unguarded, so ONE corrupted/truncated cache
+    row 500'd the user's entire watchlist/signals/alerts/portfolio response.
+    get_signals already guarded (routes/signals.py); this is that guard,
+    centralised so the next loop can't forget it.
+    """
+    if not cached or not getattr(cached, "data_json", None):
+        return {}
+    try:
+        v = json.loads(cached.data_json)
+        return v if isinstance(v, dict) else {}
+    except (json.JSONDecodeError, TypeError, ValueError):
+        logger.warning("safe_cache_blob: corrupt data_json for %s",
+                       getattr(cached, "ticker", "?"))
+        return {}
+
 def earnings_tone_cache_get(ticker: str):
     """Thread-safe read of the earnings-tone cache. Returns data dict or None."""
     if not ticker:

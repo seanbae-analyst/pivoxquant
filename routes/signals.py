@@ -290,7 +290,16 @@ def signal_detail(ticker):
     r = None
     timed_out = False
     try:
-        with ThreadPoolExecutor(max_workers=1) as _ex:
+        # Wave-3 P1 (2026-06-10): the previous `with ThreadPoolExecutor(...)`
+        # form CONTRADICTED the detach comment — Executor.__exit__ calls
+        # shutdown(wait=True), so after the 15s result() timeout the request
+        # thread still blocked until the hung analyze finished (verified by
+        # execution: with-block exit waited for the worker). Build the pool
+        # without a context manager and detach via shutdown(wait=False); the
+        # runaway worker thread then truly completes in the background and
+        # the Flask thread returns the SignalCache fallback at ~timeout_s.
+        _ex = ThreadPoolExecutor(max_workers=1)
+        try:
             future = _ex.submit(
                 engine.analyze,
                 t_up,
@@ -308,10 +317,11 @@ def signal_detail(ticker):
                     "falling through to SignalCache. user_id=%s",
                     t_up, timeout_s, current_user.id,
                 )
-                # Note: do NOT cancel the worker; ThreadPoolExecutor's
-                # cancel() is best-effort on running tasks. Let the
-                # worker complete in the background; gunicorn worker
-                # recycling will reclaim if it leaks.
+                # Do NOT cancel the running worker (best-effort no-op); the
+                # leaked thread is bounded by gunicorn worker recycling.
+        finally:
+            # wait=False — never block the request thread on the worker.
+            _ex.shutdown(wait=False)
     except Exception as exc:
         # ThreadPoolExecutor setup or pool shutdown error — extremely
         # rare. Log and fall through to cache path.
@@ -322,7 +332,7 @@ def signal_detail(ticker):
     if not r:
         cached = db.session.get(SignalCache, t_up)
         if cached and cached.data_json:
-            d = json.loads(cached.data_json)
+            d = cache_service.safe_cache_blob(cached)
             d["name"] = _canonical_name(d, t_up)
             # Tell the client this is a stale cache hit, not a fresh
             # analyze result. The frontend can render an "approximate"
@@ -359,7 +369,9 @@ def refresh():
     done = []
     for t, p in pos_map.items():
         cached = cache_map.get(t)
-        cur_price = json.loads(cached.data_json).get("price", p.avg_cost) if cached and cached.data_json else p.avg_cost
+        # Wave-3 (2026-06-10): guarded parse + `or` fallback — a corrupt blob
+        # or an explicit "price": null used to 500 the whole refresh POST.
+        cur_price = cache_service.safe_cache_blob(cached).get("price") or p.avg_cost
         pnl_pct = (cur_price - p.avg_cost) / p.avg_cost * 100 if p.avg_cost > 0 else 0
         r = engine.analyze(t, current_user.available_capital,
                            getattr(current_user, "available_capital_krw", 0.0) or 0.0,
@@ -391,7 +403,7 @@ def scan():
     if not r:
         cached = db.session.get(SignalCache, ticker)
         if cached and cached.data_json:
-            d = json.loads(cached.data_json)
+            d = cache_service.safe_cache_blob(cached)
             d["name"] = _canonical_name(d, ticker)
             return jsonify(d)
         return jsonify({"error": f"Analysis failed for '{ticker}'"}), 404
