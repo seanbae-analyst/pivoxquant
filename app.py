@@ -847,6 +847,12 @@ def _do_migrations():
         _add_column_if_missing("position_dd_checks", "risks_checked",      "BOOLEAN", default="0")
         _add_column_if_missing("position_dd_checks", "note",               "TEXT")  # EncryptedText
 
+    # pre_trade_reflections.observed_context_json — record-as-spine Phase 2
+    # (2026-06-10). Alembic twin: 049_reflection_observed_context. Snapshot of
+    # the observation surfaces (signal label/score, VIX, 1h move) at the
+    # moment the reflection was opened. Nullable TEXT — purely additive.
+    _add_column_if_missing("pre_trade_reflections", "observed_context_json", "TEXT")
+
     # anthropic_usage_log (Wave I G-3) — Anthropic API 비용 추적 테이블.
     # 이 테이블은 ORM 모델이 아니라 services/ai/service.py 가 raw SQL INSERT
     # 로 직접 기록하므로 db.create_all() 범위 밖이다. 생성은 alembic

@@ -63,6 +63,8 @@ export interface Reflection {
   proceeded_at: string | null;
   cancelled_at: string | null;
   auto_extended_reason: string | null;
+  /** Phase-2 observation snapshot (server echo) — rendered in /journal only. */
+  observed_context?: Record<string, unknown> | null;
   seconds_remaining: number;
   status: "pending" | "ready" | "proceeded" | "cancelled" | "expired";
 }
@@ -117,8 +119,13 @@ export interface PreTradeCycle {
 
 export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
   const {
-    side, ticker, sharesText, rationale, answers,
-    onProceeded, onCancelled,
+    side,
+    ticker,
+    sharesText,
+    rationale,
+    answers,
+    onProceeded,
+    onCancelled,
   } = args;
 
   const [phase, setPhase] = useState<Phase>("setup");
@@ -133,9 +140,12 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
   const proceedWith = useCallback(
     async (target: Reflection) => {
       try {
-        const r = await apiFetch<StartResponse>(API.preTrade.proceed(target.id), {
-          method: "POST",
-        });
+        const r = await apiFetch<StartResponse>(
+          API.preTrade.proceed(target.id),
+          {
+            method: "POST",
+          },
+        );
         setReflection(r.reflection);
         setPhase("terminal");
         // Commit the host's real journal record AFTER the reflection is
@@ -144,7 +154,9 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
           await onProceeded?.();
         } catch (commitErr) {
           const cmsg =
-            commitErr instanceof Error ? commitErr.message : "Failed to record entry.";
+            commitErr instanceof Error
+              ? commitErr.message
+              : "Failed to record entry.";
           toast.error(cmsg);
         }
       } catch (err) {
@@ -225,15 +237,24 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
       setReflection((r) => {
         if (!r) return r;
         const next = Math.max(0, r.seconds_remaining - 1);
-        return { ...r, seconds_remaining: next, status: next > 0 ? "pending" : "ready" };
+        return {
+          ...r,
+          seconds_remaining: next,
+          status: next > 0 ? "pending" : "ready",
+        };
       });
     }, 1000);
 
     const serverSync = window.setInterval(async () => {
       try {
-        const r = await apiFetch<StartResponse>(API.preTrade.status(reflectionId));
+        const r = await apiFetch<StartResponse>(
+          API.preTrade.status(reflectionId),
+        );
         setReflection(r.reflection);
-        if (r.reflection.status === "proceeded" || r.reflection.status === "cancelled") {
+        if (
+          r.reflection.status === "proceeded" ||
+          r.reflection.status === "cancelled"
+        ) {
           setPhase("terminal");
         }
       } catch {
@@ -266,9 +287,12 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
     if (!reflection) return;
     setSubmitting(true);
     try {
-      const r = await apiFetch<StartResponse>(API.preTrade.cancel(reflection.id), {
-        method: "POST",
-      });
+      const r = await apiFetch<StartResponse>(
+        API.preTrade.cancel(reflection.id),
+        {
+          method: "POST",
+        },
+      );
       setReflection(r.reflection);
       setPhase("terminal");
       toast.success("Cancelled.");
@@ -287,16 +311,29 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
     setSubmitting(false);
   }, []);
 
-  return { phase, reflection, submitting, startCooldown, proceed, cancel, reset, setPhase };
+  return {
+    phase,
+    reflection,
+    submitting,
+    startCooldown,
+    proceed,
+    cancel,
+    reset,
+    setPhase,
+  };
 }
 
 /* ─── Questions step ─────────────────────────────────────────────────────── */
 
 export function QuestionsStep(props: {
   acks: Record<number, boolean>;
-  setAcks: (f: (prev: Record<number, boolean>) => Record<number, boolean>) => void;
+  setAcks: (
+    f: (prev: Record<number, boolean>) => Record<number, boolean>,
+  ) => void;
   answers: Record<number, string>;
-  setAnswers: (f: (prev: Record<number, string>) => Record<number, string>) => void;
+  setAnswers: (
+    f: (prev: Record<number, string>) => Record<number, string>,
+  ) => void;
   allAcked: boolean;
   submitting: boolean;
   /** Optional Back affordance (route page: → setup). Hidden when omitted. */
@@ -305,7 +342,17 @@ export function QuestionsStep(props: {
   /** When true, render without the leading numbered SectionLabel (modal). */
   bare?: boolean;
 }) {
-  const { acks, setAcks, answers, setAnswers, allAcked, submitting, onBack, onStart, bare } = props;
+  const {
+    acks,
+    setAcks,
+    answers,
+    setAnswers,
+    allAcked,
+    submitting,
+    onBack,
+    onStart,
+    bare,
+  } = props;
 
   // Persona-aware hint lines (record-as-spine §7, 2026-06-10). Resolved
   // client-side AFTER mount from the usePersona() localStorage cache —
@@ -313,7 +360,9 @@ export function QuestionsStep(props: {
   // strict apiFetch call-count tests), no SSR/hydration mismatch (first
   // paint is always the neutral copy). Cold cache / offline-mock → null
   // → questions render exactly as before.
-  const [hints, setHints] = useState<Readonly<Record<number, string>> | null>(null);
+  const [hints, setHints] = useState<Readonly<Record<number, string>> | null>(
+    null,
+  );
   useEffect(() => {
     const code = cachedPersonaId();
     setHints((code && PERSONA_QUESTION_HINTS[code]) || null);
@@ -356,7 +405,9 @@ export function QuestionsStep(props: {
             <div className="mt-3 ml-[34px] flex flex-col gap-2">
               <input
                 value={answers[q.n] ?? ""}
-                onChange={(e) => setAnswers((prev) => ({ ...prev, [q.n]: e.target.value }))}
+                onChange={(e) =>
+                  setAnswers((prev) => ({ ...prev, [q.n]: e.target.value }))
+                }
                 placeholder="(optional) 한 줄로 답해보라"
                 aria-label={`Answer to question ${q.n}: ${q.en}`}
                 className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
@@ -365,7 +416,9 @@ export function QuestionsStep(props: {
                 <input
                   type="checkbox"
                   checked={!!acks[q.n]}
-                  onChange={(e) => setAcks((prev) => ({ ...prev, [q.n]: e.target.checked }))}
+                  onChange={(e) =>
+                    setAcks((prev) => ({ ...prev, [q.n]: e.target.checked }))
+                  }
                   className="accent-[var(--pq-bronze)]"
                 />
                 I considered this · 검토했음
@@ -415,7 +468,11 @@ export function QuestionsStep(props: {
 /* ─── Cooldown step ──────────────────────────────────────────────────────── */
 
 export function CooldownStep({
-  reflection, submitting, onProceed, onCancel, bare,
+  reflection,
+  submitting,
+  onProceed,
+  onCancel,
+  bare,
 }: {
   reflection: Reflection;
   submitting: boolean;
@@ -424,9 +481,11 @@ export function CooldownStep({
   bare?: boolean;
 }) {
   const t = useT();
-  const isReady = reflection.status === "ready" || reflection.seconds_remaining === 0;
+  const isReady =
+    reflection.status === "ready" || reflection.seconds_remaining === 0;
   const totalSec = useMemo(() => {
-    if (!reflection.cooldown_started_at || !reflection.cooldown_ends_at) return 120;
+    if (!reflection.cooldown_started_at || !reflection.cooldown_ends_at)
+      return 120;
     const start = new Date(reflection.cooldown_started_at).getTime();
     const end = new Date(reflection.cooldown_ends_at).getTime();
     return Math.max(1, Math.round((end - start) / 1000));
@@ -439,7 +498,10 @@ export function CooldownStep({
   return (
     <section className="space-y-6">
       {!bare && (
-        <SectionLabel n={3} title={isReady ? "Ready · 결정의 시간" : "Cooldown · 진입 시계"} />
+        <SectionLabel
+          n={3}
+          title={isReady ? "Ready · 결정의 시간" : "Cooldown · 진입 시계"}
+        />
       )}
 
       <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-6">
@@ -465,7 +527,11 @@ export function CooldownStep({
         <div className="text-center py-4">
           <div
             className="font-mono tabular-nums text-[var(--pq-ivory)]"
-            style={{ fontSize: "clamp(48px, 9vw, 96px)", lineHeight: 1, letterSpacing: "-0.02em" }}
+            style={{
+              fontSize: "clamp(48px, 9vw, 96px)",
+              lineHeight: 1,
+              letterSpacing: "-0.02em",
+            }}
           >
             {String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}
           </div>
@@ -532,7 +598,10 @@ export function CooldownStep({
 /* ─── Terminal step ──────────────────────────────────────────────────────── */
 
 export function TerminalStep({
-  reflection, onReset, resetLabel, bare,
+  reflection,
+  onReset,
+  resetLabel,
+  bare,
 }: {
   reflection: Reflection;
   onReset: () => void;
@@ -544,7 +613,10 @@ export function TerminalStep({
   return (
     <section className="space-y-6">
       {!bare && (
-        <SectionLabel n={4} title={proceeded ? "Proceeded · 기록 완료" : "Cancelled · 취소"} />
+        <SectionLabel
+          n={4}
+          title={proceeded ? "Proceeded · 기록 완료" : "Cancelled · 취소"}
+        />
       )}
       <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
         <div
@@ -552,9 +624,15 @@ export function TerminalStep({
           style={{ letterSpacing: "-0.01em" }}
         >
           {proceeded ? (
-            <>You did the work. <em style={{ color: "var(--pq-bronze)" }}>The record stands.</em></>
+            <>
+              You did the work.{" "}
+              <em style={{ color: "var(--pq-bronze)" }}>The record stands.</em>
+            </>
           ) : (
-            <>Step away. <em style={{ color: "var(--pq-bronze)" }}>The desk waits.</em></>
+            <>
+              Step away.{" "}
+              <em style={{ color: "var(--pq-bronze)" }}>The desk waits.</em>
+            </>
           )}
         </div>
         <p className="font-serif text-pq-body leading-relaxed text-[rgba(245,240,232,0.65)]">
@@ -563,8 +641,13 @@ export function TerminalStep({
             : "취소되었습니다. 기록되지 않았습니다. 다음 결정 때 다시 7개 질문을 거치세요."}
         </p>
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[rgba(245,240,232,0.55)]">
-          <span>{sideLabel(reflection.intended_side)} · {reflection.intended_ticker_name || reflection.intended_ticker}</span>
-          {reflection.intended_shares !== null && <span>{reflection.intended_shares} shares</span>}
+          <span>
+            {sideLabel(reflection.intended_side)} ·{" "}
+            {reflection.intended_ticker_name || reflection.intended_ticker}
+          </span>
+          {reflection.intended_shares !== null && (
+            <span>{reflection.intended_shares} shares</span>
+          )}
           <span>
             {proceeded
               ? `Proceeded ${formatTime(reflection.proceeded_at)}`
@@ -669,7 +752,10 @@ export function extendReasonLabel(reason: string): string {
 export function formatTime(iso: string | null): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    return new Date(iso).toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } catch {
     return "—";
   }

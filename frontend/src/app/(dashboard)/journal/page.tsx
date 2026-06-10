@@ -93,14 +93,14 @@ function StatusChip({ kind }: { kind: StatusKind }) {
     kind === "proceeded"
       ? t("journal.page.statusProceeded")
       : kind === "cancelled"
-      ? t("journal.page.statusCancelled")
-      : t("journal.page.statusPending");
+        ? t("journal.page.statusCancelled")
+        : t("journal.page.statusPending");
   const enLabel =
     kind === "proceeded"
       ? t("journal.page.statusProceededEn")
       : kind === "cancelled"
-      ? t("journal.page.statusCancelledEn")
-      : t("journal.page.statusPendingEn");
+        ? t("journal.page.statusCancelledEn")
+        : t("journal.page.statusPendingEn");
   return (
     <span
       className="font-mono text-pq-caption uppercase"
@@ -113,9 +113,7 @@ function StatusChip({ kind }: { kind: StatusKind }) {
         letterSpacing: "0.16em",
         border: "0.5px solid var(--pq-ivory-line)",
         background: "var(--pq-ivory-line-faint)",
-        color: dimmed
-          ? "rgba(245,240,232,0.45)"
-          : "rgba(245,240,232,0.82)",
+        color: dimmed ? "rgba(245,240,232,0.45)" : "rgba(245,240,232,0.82)",
       }}
     >
       <span
@@ -128,13 +126,49 @@ function StatusChip({ kind }: { kind: StatusKind }) {
             kind === "proceeded"
               ? "var(--pq-bronze)"
               : kind === "cancelled"
-              ? "rgba(245,240,232,0.3)"
-              : "rgba(245,240,232,0.55)",
+                ? "rgba(245,240,232,0.3)"
+                : "rgba(245,240,232,0.55)",
         }}
       />
       {koLabel}
       <span style={{ opacity: 0.5 }}>· {enLabel}</span>
     </span>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Observed context — "그때 무엇을 보고 있었나" one-liner
+ * ────────────────────────────────────────────────────────────────────── */
+
+function ObservedContextLine({
+  ctx,
+}: {
+  ctx: NonNullable<PreTradeReflection["observed_context"]>;
+}) {
+  const parts: string[] = [];
+  if (ctx.signal) {
+    parts.push(
+      typeof ctx.score === "number"
+        ? `${ctx.signal} ${Math.round(ctx.score)}`
+        : ctx.signal,
+    );
+  }
+  if (typeof ctx.vix === "number") parts.push(`VIX ${ctx.vix}`);
+  if (typeof ctx.change_1h_pct === "number") {
+    parts.push(`1H ${ctx.change_1h_pct > 0 ? "+" : ""}${ctx.change_1h_pct}%`);
+  }
+  if (parts.length === 0) return null;
+  return (
+    <p
+      className="mt-2 font-mono text-pq-caption text-[rgba(245,240,232,0.5)]"
+      data-testid="observed-context"
+    >
+      <span className="uppercase tracking-[0.14em] text-[var(--pq-bronze-light)]">
+        진입 시점 관측 · At entry
+      </span>
+      <span className="mx-2 opacity-40">—</span>
+      {parts.join(" · ")}
+    </p>
   );
 }
 
@@ -196,7 +230,9 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
         {typeof r.intended_shares === "number" && r.intended_shares > 0 && (
           <span className="font-mono text-pq-caption text-[rgba(245,240,232,0.55)]">
             {r.intended_shares.toLocaleString()}
-            <span className="ml-1 opacity-60">{t("journal.page.sharesUnit")}</span>
+            <span className="ml-1 opacity-60">
+              {t("journal.page.sharesUnit")}
+            </span>
           </span>
         )}
         {ts && (
@@ -222,6 +258,12 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
         </p>
       )}
 
+      {/* Observed context — what the desk was showing at the moment the
+          reflection was opened (record-as-spine Phase 2). Factual record
+          only: the POSITIVE/NEGATIVE/NEUTRAL label is the legal observation
+          surface; no directive fields ever reach this object (§17). */}
+      {r.observed_context && <ObservedContextLine ctx={r.observed_context} />}
+
       {/* Auto-extended cooldown note (volatility context) */}
       {r.auto_extended_reason && (
         <p className="mt-2 font-mono text-pq-caption text-[rgba(245,240,232,0.45)]">
@@ -231,7 +273,10 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
 
       {/* 7-question reflection — collapsible */}
       {hasDevilsAdvocate && (
-        <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--pq-ivory-line-soft)" }}>
+        <div
+          className="mt-3 border-t pt-3"
+          style={{ borderColor: "var(--pq-ivory-line-soft)" }}
+        >
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}

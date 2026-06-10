@@ -428,6 +428,21 @@ export interface PreTradeReflection {
   /** ISO timestamp the user chose to cancel, else null. */
   cancelled_at: string | null;
   auto_extended_reason: string | null;
+  /**
+   * Snapshot of the observation surfaces at the moment the reflection was
+   * opened (record-as-spine Phase 2, 2026-06-10) — "그때 무엇을 보고 있었나".
+   * Factual record only (§17): the signal label is the legal
+   * POSITIVE/NEGATIVE/NEUTRAL surface; never rec_* or target/stop fields.
+   * Null for rows predating the feature or when collection found nothing.
+   */
+  observed_context?: {
+    signal?: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
+    score?: number;
+    sector?: string;
+    vix?: number;
+    change_1h_pct?: number;
+    captured_at?: string;
+  } | null;
   seconds_remaining: number;
   status: "pending" | "ready" | "proceeded" | "cancelled";
 }
@@ -770,7 +785,7 @@ export type SignalLabel = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
 
 export interface SignalEntry {
   id?: number | string;
-  ticker: string;            // "AAPL", "005930.KS"
+  ticker: string; // "AAPL", "005930.KS"
   /**
    * Company display name. The legacy `/api/signals` endpoint already
    * sends this on the v1 MemoSignalItem shape, so re-using it is safe.
@@ -780,10 +795,10 @@ export interface SignalEntry {
    */
   name?: string | null;
   exchange?: string | null;
-  signal?: string;           // v1 alias — same value as label
+  signal?: string; // v1 alias — same value as label
   label?: SignalLabel;
-  score?: number;            // v1: 0..100 composite
-  strength?: number;         // v2: 0..1 (derived from score / 100)
+  score?: number; // v1: 0..100 composite
+  strength?: number; // v2: 0..1 (derived from score / 100)
   rationale?: string | null;
   observed_at?: string | null;
   price?: number | null;
@@ -807,8 +822,8 @@ export interface SignalsResponse {
 
 export interface SignalFilters {
   labels: Set<SignalLabel>;
-  strengthMin: number;   // 0..1
-  strengthMax: number;   // 0..1
+  strengthMin: number; // 0..1
+  strengthMax: number; // 0..1
   symbol: string | null; // exact ticker or null
   // W6-1 (Wave 6 follow-up, 2026-05-09): "all" added so the V2 signals
   // page can opt out of the freshness cutoff. Backend `observed_at` is

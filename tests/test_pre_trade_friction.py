@@ -532,3 +532,92 @@ def test_start_keeps_valid_volatility(app, make_user):
         )
         row = db.session.get(PreTradeReflection, out["id"])
         assert float(row.market_volatility_at_request) == 22.5
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Observed-context snapshot (record-as-spine Phase 2, 2026-06-10) —
+# "그때 무엇을 보고 있었나" is captured best-effort at /start. A collection
+# failure must never block the reflection write, and only the legal
+# observation fields (signal label / score / sector / vix / 1h move) may
+# be copied — never rec_* / take_profit / stop_loss (§17).
+# ─────────────────────────────────────────────────────────────────────
+
+def test_start_captures_observed_context_from_signal_cache(app, make_user):
+    import json as _json
+    from models import SignalCache
+
+    user = _make_user(make_user, email="pt-ctx@test.com")
+    with app.app_context(), patch(
+        "services.pre_trade.friction._should_extend_cooldown", return_value=None
+    ):
+        db.session.add(SignalCache(
+            ticker="AAPL",
+            data_json=_json.dumps({
+                "signal": "POSITIVE", "score": 71.5, "sector": "Technology",
+                # Directive fields that must NOT be copied (§17):
+                "rec_shares": 12, "take_profit": 250.0, "stop_loss": 180.0,
+            }),
+        ))
+        db.session.commit()
+
+        out = start_cooldown(
+            user_id=user["id"],
+            ticker="AAPL",
+            side="BUY",
+            shares=1,
+            rationale=LONG_RATIONALE,
+            market_volatility=18.2,
+        )
+        ctx = out["observed_context"]
+        assert ctx is not None
+        assert ctx["signal"] == "POSITIVE"
+        assert ctx["score"] == 71.5
+        assert ctx["sector"] == "Technology"
+        assert ctx["vix"] == 18.2
+        assert "captured_at" in ctx
+        # §17 — no directive field may leak into the record.
+        for banned in ("rec_shares", "take_profit", "stop_loss"):
+            assert banned not in ctx
+
+
+def test_start_survives_observed_context_failure(app, make_user):
+    """Broken lookups inside the collection must not block the write.
+
+    Pins the contract that ``_collect_observed_context`` wraps EVERY
+    dependency: a corrupt SignalCache blob (json.loads raises) and a broken
+    vix reader yield a null context — never an exception into /start."""
+    import json as _json
+    from models import SignalCache
+
+    user = _make_user(make_user, email="pt-ctx-fail@test.com")
+    with app.app_context(), patch(
+        "services.pre_trade.friction._should_extend_cooldown", return_value=None
+    ), patch(
+        "services.pre_trade.friction._read_vix", side_effect=RuntimeError("boom"),
+    ):
+        db.session.add(SignalCache(ticker="BROKEN", data_json="{not json"))
+        db.session.commit()
+
+        out = start_cooldown(
+            user_id=user["id"], ticker="BROKEN", side="BUY",
+            shares=1, rationale=LONG_RATIONALE,
+        )
+        assert out["id"]
+        assert out["observed_context"] is None
+
+
+def test_start_without_cache_yields_null_context_but_writes(app, make_user):
+    user = _make_user(make_user, email="pt-ctx-none@test.com")
+    with app.app_context(), patch(
+        "services.pre_trade.friction._should_extend_cooldown", return_value=None
+    ):
+        out = start_cooldown(
+            user_id=user["id"],
+            ticker="ZZZNOCACHE",
+            side="BUY",
+            shares=1,
+            rationale=LONG_RATIONALE,
+        )
+        assert out["id"]
+        # No cache row, no vix passed, no realtime service in tests → null.
+        assert out["observed_context"] is None
