@@ -1,6 +1,32 @@
-# PivoxQuant — 인수인계서 (2026-06-10 v63 — record-as-spine GO: nav IA 재편 + pre-trade persona 배선)
+# PivoxQuant — 인수인계서 (2026-06-10 v64 — 야간 2탄: 20-유저 sweep + wave-3 10건 fix + 사업·디자인 감사)
 
-## v63 2026-06-10 — record-as-spine Phase 0+1 실행 (CEO "진행해" GO) + 야간 자율 세션
+## v64 2026-06-10 야간 — CEO "버그헌팅+사업·디자인 감사+구조+가상유저 20명+옛 명령 확인, 새벽 동안 다"
+
+> 상세 정직보고: `docs/ops/overnight_report_2026-06-10.md`. 요지:
+> - **CAUS("옛 명령") 실태**: 돌아는 감(매일 03:00, 리포트 16개) — 단 **1유저/일** 로테이션 + 6-03~08
+>   6일 갭(launchd RETIRED → Claude 스케줄러 의존, 맥 꺼지면 미발화). 보완으로 ↓
+> - **20-유저 sweep 하네스 신설** `scripts/qa/virtual_user_sweep.py` (`2d28fd14`): 8 페르소나×3 tier×8
+>   포트폴리오 유형, deposition→journal 포함 전 표면, 5xx/NaN/NAV-버킷/journal 무결성 검사. **336 호출
+>   0 findings ×2회**. in-process·₩0·수 초.
+> - **wave-3 버그헌트 12건 → 10건 수정** (`08c51390`,`c05e4915`): **[P1] NAV alias 버킷팅**(어제 fix가
+>   get_portfolio만 커버 — v2가 실제 쓰는 /positions에 같은 버그 잔존, 커밋 메시지의 "형제는 이미 suffix"
+>   주장 오류 인정) / **[P1] signal_detail 15s 타임아웃 무효**(with-Executor exit이 wait — 실행 검증,
+>   shutdown(wait=False) detach) / twin 주간 수익률(SELL proceeds 분모+₩$ raw-sum → realized/realized
+>   KRW-정규화; 에이전트의 BUY-only 제안은 주간 시맨틱 회귀라 수정 적용; 과거 rows는 문서화된 drift) /
+>   risk_summary literal NaN(invalid JSON) / **SW 캐시 cross-user**(PIPA export 60분 디스크 캐시 →
+>   network-only + user-id 변경 시 SW 캐시 클리어) / `safe_cache_blob()` SoT(corrupt 1행이 응답 전체
+>   500내던 13곳 통합) / $0 SL 오발 / refresh null TypeError / detail watchlist normalize / watchlist N+1.
+>   보류: SSE slot leak(재설계 필요), rolling_metrics 성능.
+> - **사업모델 감사** (`docs/strategy/business_model_audit_2026-06-10.md`): **B2 = 가격표↔코드 9건 불일치
+>   실측 확정** — Pro로 파는 6개가 Premium 게이트, Premium 광고 3개가 Pro 배송. 결제 ON 순간 첫 Pro
+>   유저부터 깨짐 + 표시광고법. **tier 통일 방향 = CEO 가격 결정 대기** (밤에 안 건드림). B1=§101 vs
+>   월구독(변호사 Q-S3) / B3=AI 예산 전역 카운터=유료 상한 200명 / 3-tier를 시간지평 기준 재편 제안.
+> - **디자인 감사 → 수정** (`01e95300`): **41곳/19파일 카드 보더가 투명**(--pq-hairline=ink-on-ivory를
+>   Vantablack 위에 — signals/risk/reports/settings 윤곽선 전부 미표시) → --pq-hairline-ink 일괄 스왑 /
+>   랜딩 법적 면책 10.5px→13px(자체 floor) / HomeCard hover slate→bronze / **Source Serif italic 미로드
+>   (75곳 합성 오블리크)→진짜 이탤릭** / 신규표면 대비·셸 정합 / 사이드바 그룹 aria-label. LILA BAN 유지 확인.
+> - 검증: 프론트 **559/559**(63파일) · 영향권 백엔드 174+ · 백엔드 전체 스위트 → green 후 푸시.
+> - **아침 결정 4건**: B2 tier 방향 / CAUS에 sweep 편입+이중화 / B3 per-user 예산 / 그림자색 토큰화 sweep.
 
 > **야간 세션(06-09 밤)**: ① 7문항 리서치 재설계(Steenbarger/Edgewonk/Douglas/Duke 근거) + 단일 SoT
 > (`frontend/src/data/pre-trade-questions.ts`, 랜딩 teaser와 drift 차단) + 톤 캘리브레이션 ② 버그헌트
