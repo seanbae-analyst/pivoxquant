@@ -1,4 +1,28 @@
-# PivoxQuant — 인수인계서 (2026-06-09 v62 — 구조 통합 5클러스터: fx/ticker/disclaimer/_safe_price/render SoT 단일화)
+# PivoxQuant — 인수인계서 (2026-06-10 v63 — record-as-spine GO: nav IA 재편 + pre-trade persona 배선)
+
+## v63 2026-06-10 — record-as-spine Phase 0+1 실행 (CEO "진행해" GO) + 야간 자율 세션
+
+> **야간 세션(06-09 밤)**: ① 7문항 리서치 재설계(Steenbarger/Edgewonk/Douglas/Duke 근거) + 단일 SoT
+> (`frontend/src/data/pre-trade-questions.ts`, 랜딩 teaser와 drift 차단) + 톤 캘리브레이션 ② 버그헌트
+> 4-agent 2-wave: P0 0 / **P1 2 (artifact `$nan` — 수정완료)** / P2 2 (pre-trade row-lock + 수치검증 —
+> 수정완료) / 민감영역(billing·NAV버킷팅·이메일 dispatcher 중복발송·dev-login) **플래그만** ③ 전략메모
+> `docs/strategy/record-as-spine_2026-06-09.md` + 정직보고 `docs/ops/overnight_report_2026-06-09.md`.
+> 7커밋 push 완료(suite 3881 green).
+>
+> **아침 GO 실행 (Phase 0+1)**:
+> - **Phase 0 nav IA 재편**: `terminal-sidebar.tsx`/`bottom-nav.tsx` — **Record 그룹 신설·최상단**
+>   (Journal·Pre-Trade(복원, 2026-05-21 제거 번복 per memo §4.1)·Routine), Artifacts=Reports만,
+>   **Observe**(=Research 개명+옛 Portfolio 그룹 흡수: Portfolio·Signals·Risk·AI Analysis+hidden 4),
+>   System=Alerts·Companion·Profile·Settings. 모바일 primary 4탭은 불변(드로어만 미러).
+> - **Phase 1 persona 배선**: 질문 7개는 불변 SoT, persona별 **힌트 1줄만 분기**
+>   (`PERSONA_QUESTION_HINTS` — beginner 존댓말/quant 수식/value·income·growth 렌즈, balanced=중립
+>   fallback). persona는 **fetch 없이** `cachedPersonaId()`(신규, `lib/cfo/hooks.ts`) = usePersona()의
+>   localStorage 캐시 sync read + `_isMock` 가드(오프라인 mock=growth로 오개인화 방지). 모달 테스트의
+>   엄격 apiFetch call-count 단언 보존이 이 설계의 이유. 힌트는 mount 후 렌더(hydration 안전).
+> - 검증: vitest **557/557**(+9 신규: §17 카피가드+힌트 렌더 4계약) · tsc clean. ⚠️ 로그인 게이트로
+>   브라우저 스크린샷은 미실시(렌더 로직은 테스트 커버).
+> - 다음 후보: Phase 2(진입 시점 Signal/Risk 스냅샷을 reflection에 동봉) · 홈=오늘의 리뷰(Phase 3) ·
+>   플래그 버그 7건(overnight_report §5/§7.2 — NAV 버킷팅·Stripe period_end 우선).
 
 ## v62 2026-06-09 — 자율 구조 통합 (CEO "구조 제대로 싹다 잡으라") (⚠️ feature 브랜치 커밋만, **push 안 함**)
 
