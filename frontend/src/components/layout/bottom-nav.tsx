@@ -42,6 +42,8 @@ import {
   LogOut,
   Sparkles,
   UserCircle,
+  Gavel,
+  Sprout,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -84,36 +86,49 @@ const PRIMARY_TABS: Tab[] = [
   { href: "/signals", label: "Signals", icon: Zap },
 ];
 
-// Drawer — mirrors the desktop sidebar's 4-group IA exactly. Home is
-// excluded from the drawer (it's already a primary tab); Morning Brief
-// and Signals are kept in their canonical Artifacts group so the user's
-// mental map matches the desktop sidebar even though those two appear
-// up in the primary bar as well.
+// Drawer — mirrors the desktop sidebar's 4-group IA exactly
+// (2026-06-10 record-as-spine reorg, CEO GO on
+// docs/strategy/record-as-spine_2026-06-09.md §4.1): Record / Artifacts /
+// Observe / System. Home is excluded from the drawer (it's already a
+// primary tab); Reports and Signals are kept in their canonical groups so
+// the user's mental map matches the desktop sidebar even though those two
+// appear up in the primary bar as well.
 const DRAWER_GROUPS: DrawerGroup[] = [
+  {
+    // 기록 — 척추 본체. Previously buried in "System" next to Settings.
+    label: "Record",
+    items: [
+      // /journal — the user's own pre-trade decision-reflection feed
+      // (read-only) + Behavior Mirrors.
+      { href: "/journal", label: "Journal", icon: NotebookPen },
+      // 2026-06-10: Pre-Trade RESTORED (removed 2026-05-21 as redundant
+      // with the inline modal) — standalone deposition entry point.
+      { href: "/pre-trade", label: "Pre-Trade", icon: Gavel },
+      // Habit/reflection routine tracker. "Routine" label avoids §101
+      // asset-growth language (see terminal-sidebar note).
+      { href: "/growth", label: "Routine", icon: Sprout },
+    ],
+  },
   {
     label: "Artifacts",
     items: [
       // Morning Brief item REMOVED 2026-04-29 — backend deprecated.
       { href: "/reports", label: "Reports", icon: FileText },
-      { href: "/signals", label: "Signals", icon: Zap },
     ],
   },
   {
-    label: "Portfolio",
+    // 관측 — renamed from Research; absorbs the old Portfolio group.
+    label: "Observe",
     items: [
       { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-      { href: "/watchlist", label: "Watchlist", icon: Eye, hidden: true },
+      { href: "/signals", label: "Signals", icon: Zap },
       { href: "/risk", label: "Risk Board", icon: Shield },
       // REMOVED 2026-04-27 per CEO + legal: autotrade nav (투자일임업 회피).
-    ],
-  },
-  {
-    label: "Research",
-    items: [
+      { href: "/ai", label: "AI Analysis", icon: Sparkles },
+      { href: "/watchlist", label: "Watchlist", icon: Eye, hidden: true },
       { href: "/market", label: "Market", icon: Activity, hidden: true },
       { href: "/discover", label: "Discover", icon: Compass, hidden: true },
       { href: "/ai-chat", label: "AI Chat", icon: MessageSquare, hidden: true },
-      { href: "/ai", label: "AI Analysis", icon: Sparkles },
     ],
   },
   {
@@ -123,10 +138,6 @@ const DRAWER_GROUPS: DrawerGroup[] = [
       // Journal Companion — Closed Beta, Premium Plus / Founding
       // Lifetime only. Entitlement enforcement lives on the page.
       { href: "/companion", label: "Companion", icon: BookHeart, premiumPlus: true },
-      // 2026-05-21: "Journal" restored — /journal is the user's own pre-trade
-      // decision-reflection feed (read-only). Distinct from the founder-only
-      // /growth Growth OS, which stays hidden (backend not deployed).
-      { href: "/journal", label: "Journal", icon: NotebookPen },
       { href: "/profile", label: "Profile · Persona", icon: UserCircle },
       { href: "/settings", label: "Settings", icon: SettingsIcon },
     ],

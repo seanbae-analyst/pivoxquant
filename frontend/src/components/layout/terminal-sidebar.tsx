@@ -3,11 +3,21 @@
 /**
  * TerminalSidebar — full-height Vantablack navigation rail.
  *
- * IA: Home (top, ungrouped) + 4 thematic groups —
- *   ARTIFACTS  · CFO 생산물 (Morning Brief / Reports / Signals)
- *   PORTFOLIO  · 자산 관리 (Portfolio / Watchlist / Risk / Autotrade)
- *   RESEARCH   · 조사·분석 (Market / Discover / AI Chat / AI Analysis)
- *   SYSTEM     · 도구·계정 (Alerts / Companion / Journal / Profile · Persona / Settings)
+ * IA (2026-06-10 record-as-spine reorg, CEO GO on
+ * docs/strategy/record-as-spine_2026-06-09.md §4.1): Home (top, ungrouped)
+ * + 4 thematic groups —
+ *   RECORD     · 기록 — 척추 본체 (Journal / Pre-Trade / Routine)
+ *   ARTIFACTS  · 기록의 요약본 (Reports)
+ *   OBSERVE    · 관측 — 기록에 먹이를 주는 입력단 (Portfolio / Signals /
+ *                Risk / AI Analysis; Market·Discover·AI Chat·Watchlist hidden)
+ *   SYSTEM     · 도구·계정 (Alerts / Companion / Profile · Persona / Settings)
+ *
+ * Previous IA buried Journal·Pre-Trade·Routine at the bottom of "System"
+ * next to Settings while the brand sells "거래 전 거울 / compounding
+ * memory" — the spine sat in the appendix slot. The reorg promotes the
+ * record to the first group. Portfolio leads OBSERVE (highest-traffic
+ * destination; the memo's sketch listed it last but did not intend a
+ * demotion).
  *
  * Note: /growth (Growth OS — a habit/reflection routine tracker) is
  * surfaced as "Routine". The label avoids the word "Growth" to prevent
@@ -42,6 +52,7 @@ import {
   NotebookPen,
   UserCircle,
   Sprout,
+  Gavel,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -87,55 +98,62 @@ const TOP: Item[] = [
   { key: "home", label: "Home", href: "/home", icon: HomeIcon },
 ];
 
-// ── ARTIFACTS — CFO 생산물 ──────────────────────────────────────────
-// REMOVED 2026-04-29: Morning Brief item retired (backend deprecated).
-const ARTIFACTS: Item[] = [
-  { key: "reports", label: "Reports", href: "/reports", icon: FileText },
-  { key: "signals", label: "Signals", href: "/signals", icon: Zap },
-];
-
-// ── PORTFOLIO — 자산 관리 ──────────────────────────────────────────
-const PORTFOLIO: Item[] = [
-  { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye, hidden: true },
-  { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
-  // REMOVED 2026-04-27 per CEO + legal: autotrade item (투자일임업 회피).
-];
-
-// ── RESEARCH — 조사·분석 ───────────────────────────────────────────
-const RESEARCH: Item[] = [
-  { key: "market", label: "Market", href: "/market", icon: Activity, hidden: true },
-  { key: "discover", label: "Discover", href: "/discover", icon: Compass, hidden: true },
-  { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare, hidden: true },
-  { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
-];
-
-// ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
-const SYSTEM: Item[] = [
-  { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
-  // 2026-05-21: "Pre-Trade" nav item REMOVED entirely (per CEO). The
-  // 7-question + cooldown reflection is now INLINE at position add (ENTRY) /
-  // exit (EXIT), so a standalone nav destination is redundant. The /pre-trade
-  // route still resolves for direct/deep links; the past reflections are
-  // reviewed in Journal (/journal).
-  { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
-  // 2026-05-21: "Journal" restored as a real user surface — /journal renders
-  // the user's own pre-trade decision-reflection feed (read-only, "User as
-  // CFO").
+// ── RECORD — 기록 (척추 본체) ──────────────────────────────────────
+// 2026-06-10 record-as-spine reorg: Journal / Pre-Trade / Routine were
+// previously buried at the bottom of "System" next to Settings. They are
+// the product's most differentiated surfaces — promoted to the first group.
+const RECORD: Item[] = [
+  // /journal renders the user's own pre-trade decision-reflection feed +
+  // 5 Behavior Mirrors (read-only, "User as CFO"). Restored 2026-05-21.
   { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
+  // 2026-06-10: "Pre-Trade" RESTORED (was removed 2026-05-21 as
+  // "redundant with the inline modal"). The record-as-spine memo (§4.1,
+  // CEO GO) re-establishes it as the deposition's direct entry point —
+  // the inline modal stays the primary path; this is the standalone door.
+  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
   // 2026-05-28: Growth OS (/growth) surfaced in the rail per CEO. Earlier
   // comment claimed "agent_worker backend not deployed → 준비 중" — STALE:
   // verified live in prod (/api/growth/{today,data,weekly}=401-behind-auth,
   // /reflect=405). It is a habit/reflection routine tracker; label "Routine"
   // avoids the asset-growth/return implication of "Growth" under §101.
   { key: "growth", label: "Routine", href: "/growth", icon: Sprout },
+];
+
+// ── ARTIFACTS — 기록의 요약본 (CFO 생산물) ─────────────────────────
+// REMOVED 2026-04-29: Morning Brief item retired (backend deprecated).
+// 2026-06-10: Signals moved to OBSERVE (it is an input that feeds the
+// record, not a produced report).
+const ARTIFACTS: Item[] = [
+  { key: "reports", label: "Reports", href: "/reports", icon: FileText },
+];
+
+// ── OBSERVE — 관측 (기록에 먹이를 주는 입력단) ─────────────────────
+// 2026-06-10: renamed from RESEARCH and absorbs the old PORTFOLIO group —
+// portfolio positions, signals and the risk board are all observation
+// inputs in the record loop (관측 → 성찰·기록 → 리뷰 → 복리).
+const OBSERVE: Item[] = [
+  { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
+  { key: "signals", label: "Signals", href: "/signals", icon: Zap },
+  { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
+  // REMOVED 2026-04-27 per CEO + legal: autotrade item (투자일임업 회피).
+  { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
+  { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye, hidden: true },
+  { key: "market", label: "Market", href: "/market", icon: Activity, hidden: true },
+  { key: "discover", label: "Discover", href: "/discover", icon: Compass, hidden: true },
+  { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare, hidden: true },
+];
+
+// ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
+const SYSTEM: Item[] = [
+  { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
+  { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
   { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
   // Methodology moved to a PUBLIC landing page (/methodology) 2026-06-05 per CEO
   // — no longer a login-gated sidebar item.
 ];
 
-const ALL_ITEMS: Item[] = [...TOP, ...ARTIFACTS, ...PORTFOLIO, ...RESEARCH, ...SYSTEM];
+const ALL_ITEMS: Item[] = [...TOP, ...RECORD, ...ARTIFACTS, ...OBSERVE, ...SYSTEM];
 
 function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
   if (!pathname) return null;
@@ -190,6 +208,13 @@ export function TerminalSidebar({
           ))}
         </ul>
 
+        <GroupHeader label="Record" />
+        <ul className="space-y-0.5 px-3">
+          {RECORD.filter((it) => !it.hidden).map((item) => (
+            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+          ))}
+        </ul>
+
         <GroupHeader label="Artifacts" />
         <ul className="space-y-0.5 px-3">
           {ARTIFACTS.filter((it) => !it.hidden).map((item) => (
@@ -197,16 +222,9 @@ export function TerminalSidebar({
           ))}
         </ul>
 
-        <GroupHeader label="Portfolio" />
+        <GroupHeader label="Observe" />
         <ul className="space-y-0.5 px-3">
-          {PORTFOLIO.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
-          ))}
-        </ul>
-
-        <GroupHeader label="Research" />
-        <ul className="space-y-0.5 px-3">
-          {RESEARCH.filter((it) => !it.hidden).map((item) => (
+          {OBSERVE.filter((it) => !it.hidden).map((item) => (
             <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
           ))}
         </ul>
