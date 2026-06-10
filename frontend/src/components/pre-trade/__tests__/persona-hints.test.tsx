@@ -3,8 +3,8 @@
  *
  * Persona is resolved synchronously from the localStorage cache that
  * `usePersona()` maintains (`pq_cfo_persona_v1`) — the deposition flow
- * itself must NEVER fetch (the host modals' tests assert strict apiFetch
- * call counts). Contracts:
+ * itself must NEVER issue a network request: the host modals' tests
+ * assert strict apiFetch call counts. Contracts:
  *   - warm cache + real payload → that persona's hints render
  *   - `_isMock` payload → NO hints (the offline mock is always "growth";
  *     personalizing from it would be wrong for most users)
