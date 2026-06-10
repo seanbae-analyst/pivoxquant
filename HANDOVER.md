@@ -41,6 +41,21 @@
 >   렌더). backend friction 33/33 · frontend 557/557.
 > - ⚠️ 발견: `run.py use_reloader=False` — 로컬 백엔드는 코드 변경 자동반영 안 됨(재시작 필요). E2E 중
 >   옛 코드로 한 번 헛돈 원인.
+>
+> **같은 날 저녁 — CEO "다진행해라" (잔여 전부)**:
+> - **이메일 drain 중복발송 차단** (`914a48f3`): per-row commit이 FOR UPDATE 락을 풀어 병렬 tick
+>   재발송 가능하던 W2-P2 — `services/drain_lock.py` 신설, 3개 dispatcher(onboarding/retention/
+>   checkout-followup) tick을 PG advisory lock으로 직렬화(진 쪽은 `skipped_lock` 스킵, SQLite=무조건
+>   획득, 락 배관 실패=fail-open). 아키텍처 택1(in-process vs crontab) 없이 양쪽 모두 안전.
+> - **방어 hardening 4건** (동일 커밋): dev-login mount가 Railway env 마커에도 거부(FLASK_ENV 무관) /
+>   계정삭제 500 detail→예외 타입명만(UniqueViolation 값 노출 차단) / `_serve_stale` KR-code fallback
+>   `is_korean` 게이트 / `cost_basis_krw` 저장 buy_fx_rate에 >=900 floor. 영향권 테스트 109 passed.
+> - **Phase 3 완료** (`39e4703a`): 홈 데스크 인사 아래 **"오늘의 리뷰 · The Record"** 카드 — 최신
+>   reflection 인용 + Phase 2 관측 칩("관측 NEUTRAL 62") + /journal 링크. 빈 journal=null 렌더
+>   (신규 유저 홈 불변). dev-login 라이브 검증(어제 E2E reflection이 칩과 함께 렌더) + 카드 테스트 2.
+>   §4.3 풀스펙(미결 회상/미러 요약/관측 입력단 프레이밍)은 후속 — 첫 절단면은 회상 카드.
+> - **여전히 보류(의도)**: orphan reflection 순서 뒤집기(동작계약 변경 — CEO 리뷰 필요), dev-login
+>   기본 tier 강등(premium 의존 E2E 정리 후).
 
 ## v62 2026-06-09 — 자율 구조 통합 (CEO "구조 제대로 싹다 잡으라") (⚠️ feature 브랜치 커밋만, **push 안 함**)
 
