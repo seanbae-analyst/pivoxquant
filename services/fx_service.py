@@ -108,7 +108,12 @@ def cost_basis_krw(position) -> float | None:
         buy_fx = float(getattr(position, "buy_fx_rate", 0) or 0)
     except (TypeError, ValueError):
         buy_fx = 0.0
-    fx = buy_fx if buy_fx > 0 else get_rate()
+    # Same >=900 sanity floor as spot_usdkrw(): a stored rate below any
+    # plausible USD/KRW level (e.g. a garbage 7.5 written by a future bug)
+    # would silently shrink the KRW cost basis ~150x. No current write path
+    # produces one (writes gate to >1000), so this is a latent guard — fall
+    # back to the live spot instead of trusting an implausible stored rate.
+    fx = buy_fx if buy_fx >= 900 else get_rate()
     if not fx or fx <= 0:
         return None
     return native * fx

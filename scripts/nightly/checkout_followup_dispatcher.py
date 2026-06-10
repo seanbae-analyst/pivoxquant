@@ -82,7 +82,24 @@ def _post_slack(text: str) -> None:
 
 
 def _drain_once() -> dict[str, int]:
-    """Process all due rows in one tick. Returns stats dict."""
+    """Process all due rows in one tick. Returns stats dict.
+
+    Concurrency (W2-P2): per-row commits release the ``pending_due``
+    FOR UPDATE row locks mid-batch, so an overlapping tick (in-process
+    APScheduler racing the crontab fallback) could re-send later rows.
+    The advisory drain lock serializes whole ticks across processes —
+    the loser skips with ``skipped_lock`` instead of double-sending.
+    """
+    from services.drain_lock import DRAIN_CHECKOUT_FOLLOWUP, drain_lock
+
+    with drain_lock(DRAIN_CHECKOUT_FOLLOWUP) as acquired:
+        if not acquired:
+            logger.info("checkout-followup drain skipped — another drain holds the lock")
+            return {"due": 0, "skipped_lock": 1}
+        return _drain_once_locked()
+
+
+def _drain_once_locked() -> dict[str, int]:
     from app import create_app
     from extensions import db
     from models import CheckoutExpiration, User

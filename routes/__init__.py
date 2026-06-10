@@ -108,11 +108,20 @@ def register_blueprints(app):
     # Production (Railway) must NOT set this variable.
     # 2026-05-10 (security M3): fail-fast if both production AND
     # DEV_LOGIN_SECRET are set. Operator-error defense.
+    # 2026-06-10 (bug-hunt W2-P3): the guard was a single env-string check —
+    # if FLASK_ENV were ever unset/overridden on Railway, the bypass would
+    # mount in prod with only the brute-forceable secret as a barrier. Also
+    # refuse whenever a Railway environment marker is present, independent
+    # of FLASK_ENV (belt and suspenders).
     if os.environ.get("DEV_LOGIN_SECRET"):
-        if os.environ.get("FLASK_ENV") == "production":
+        on_railway = bool(
+            os.environ.get("RAILWAY_ENVIRONMENT")
+            or os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+        )
+        if os.environ.get("FLASK_ENV") == "production" or on_railway:
             raise RuntimeError(
-                "DEV_LOGIN_SECRET must NOT be set in production. "
-                "Refusing to mount dev_auth blueprint (security M3)."
+                "DEV_LOGIN_SECRET must NOT be set in production / on Railway. "
+                "Refusing to mount dev_auth blueprint (security M3 + W2-P3)."
             )
         from .dev_auth import dev_auth_bp
         blueprints.append(dev_auth_bp)

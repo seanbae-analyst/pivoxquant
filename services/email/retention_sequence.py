@@ -454,7 +454,22 @@ def dispatch_retention(now: datetime | None = None) -> dict[str, int]:
       - ``skipped_no_consent`` : MARKETING consent missing / revoked / provider
                                  refused — row stamped + closed
       - ``skipped_error``      : exception inside ``_send_one``
+      - ``skipped_lock``       : another drain held the tick lock (W2-P2)
+
+    Concurrency: per-row commits release the FOR UPDATE row locks mid-batch,
+    so overlapping ticks could re-send later rows. The advisory drain lock
+    serializes whole ticks across processes (see services/drain_lock.py).
     """
+    from services.drain_lock import DRAIN_RETENTION, drain_lock
+
+    with drain_lock(DRAIN_RETENTION) as acquired:
+        if not acquired:
+            logger.info("retention dispatch skipped — another drain holds the lock")
+            return {"due": 0, "skipped_lock": 1}
+        return _dispatch_retention_locked(now)
+
+
+def _dispatch_retention_locked(now: datetime | None = None) -> dict[str, int]:
     from extensions import db
 
     stats = {

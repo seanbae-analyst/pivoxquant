@@ -1717,18 +1717,19 @@ def delete_account():
     except Exception as exc:
         db.session.rollback()
         logger.exception("Account deletion failed for user_id=%s", user_id)
-        # Surface a SANITISED cause in the response. The caller is deleting
-        # THEIR OWN account and prod logs aren't reachable to the operator, so
-        # the exception class + truncated message (e.g. a ForeignKeyViolation
-        # naming the blocking constraint) is the only practical way to diagnose
-        # a prod-only failure. No PII — SQLAlchemy errors carry table/constraint
-        # names, not row data. Safe to remove once the deletion path is stable.
+        # Surface only the exception CLASS NAME in the response. The earlier
+        # form appended str(exc)[:240] on the claim that "SQLAlchemy errors
+        # carry table/constraint names, not row data" — true for
+        # ForeignKeyViolation but NOT universally: a Postgres UniqueViolation/
+        # CheckViolation DETAIL can embed the offending value (e.g.
+        # "Key (email)=(x@y.com)"). 2026-06-09 bug-hunt W2-P3: whitelist to
+        # the type name; the full message stays in the server log above.
         return api_error(
             en="An internal error occurred. Please try again.",
             kr="계정 삭제 중 오류가 발생했습니다. 다시 시도해주세요.",
             code="AUTH_DELETE_ACCOUNT_FAILED",
             status=500,
-            detail=f"{type(exc).__name__}: {str(exc)[:240]}",
+            detail=type(exc).__name__,
         )
 
 

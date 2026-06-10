@@ -314,10 +314,13 @@ class RealtimeService:
         """
         t = ticker.upper().strip()
         with self._price_cache_lock:
-            cached = (
-                self._price_cache.get(t)
-                or self._price_cache.get(self.to_kr_code(t) or "")
-            )
+            cached = self._price_cache.get(t)
+            # KR-code fallback applies only to KR listings. Benign for US
+            # tickers today (to_kr_code returns None → .get("") misses) but
+            # a latent footgun if to_kr_code ever grows a non-None sentinel —
+            # gate it explicitly (2026-06-09 bug-hunt W2-P3).
+            if cached is None and self.is_korean(t):
+                cached = self._price_cache.get(self.to_kr_code(t) or "")
         if not cached or not cached.get("price"):
             return None
         out = dict(cached)
