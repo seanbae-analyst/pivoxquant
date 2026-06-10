@@ -23,6 +23,24 @@
 >   브라우저 스크린샷은 미실시(렌더 로직은 테스트 커버).
 > - 다음 후보: Phase 2(진입 시점 Signal/Risk 스냅샷을 reflection에 동봉) · 홈=오늘의 리뷰(Phase 3) ·
 >   플래그 버그 7건(overnight_report §5/§7.2 — NAV 버킷팅·Stripe period_end 우선).
+>
+> **같은 날 오후 — CEO "스크린샷부터 다해봐" 후속 실행**:
+> - **시각검증 완료**: 로컬 dev 서버 + `dev-login`(QA 유저)으로 게이트 돌파 — 사이드바 Record 그룹 /
+>   7문항+beginner 힌트(브론즈) / 모바일 드로어 스크린샷 실증. journal 관측라인은 DOM 텍스트로 확정
+>   ("진입 시점 관측 · At entry — NEUTRAL 62" ×2 — preview 캡처 파이프라인 버그로 마지막 1장만 흰화면).
+> - **/features/* 404 = false alarm**: 어젯밤 dev 서버 인스턴스의 일시 컴파일 상태였음. 새 dev + prod
+>   둘 다 전 라우트 200 실측. 코드 무변경.
+> - **NAV 버킷팅 fix** (`2610c824`): get_portfolio 합계가 cache-blob currency로 버킷팅 → suffix `is_kr`
+>   권위 누적으로 (오염 캐시 시 ~1380x 오산 차단, 형제 endpoint와 동일 컨벤션). +회귀테스트, 75/75.
+> - **Stripe period_end fix** (`93c0d946`): API 2025-03-31에서 items로 이동한 `current_period_end` —
+>   `_subscription_period_end()` items-first+top-level fallback. +4 단위테스트, 32/32.
+> - **Phase 2 완료** (`e5c4e9bc`): `pre_trade_reflections.observed_context_json` (migration **049** +
+>   app.py self-heal twin — prod 실제 경로). start_cooldown이 SignalCache signal/score/sector + VIX +
+>   1h 변화를 best-effort 수집(§17: rec_*/target 절대 미복사 — 테스트로 고정, corrupt-blob도 write 안
+>   막음). journal 카드에 "진입 시점 관측" 1줄. **라이브 E2E 실증**(실 UI 플로우 → NEUTRAL 61.8 저장 →
+>   렌더). backend friction 33/33 · frontend 557/557.
+> - ⚠️ 발견: `run.py use_reloader=False` — 로컬 백엔드는 코드 변경 자동반영 안 됨(재시작 필요). E2E 중
+>   옛 코드로 한 번 헛돈 원인.
 
 ## v62 2026-06-09 — 자율 구조 통합 (CEO "구조 제대로 싹다 잡으라") (⚠️ feature 브랜치 커밋만, **push 안 함**)
 
