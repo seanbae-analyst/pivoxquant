@@ -114,7 +114,7 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
             style={{
               height: 120,
               background:
-                "repeating-linear-gradient(0deg, rgba(139,111,71,0.08) 0, rgba(139,111,71,0.08) 1px, transparent 1px, transparent 8px)",
+                "repeating-linear-gradient(0deg, rgba(var(--pq-bronze-wash-rgb),0.08) 0, rgba(var(--pq-bronze-wash-rgb),0.08) 1px, transparent 1px, transparent 8px)",
             }}
           />
         ) : (
@@ -237,10 +237,10 @@ function EvolutionChart({
   };
 
   const strokeColor = bare ? "var(--pq-bronze, #B8956A)" : "#B8956A";
-  const areaFill = bare ? "rgba(184,149,106,0.14)" : "rgba(139,111,71,0.10)";
+  const areaFill = bare ? "rgba(184,149,106,0.14)" : "rgba(var(--pq-bronze-wash-rgb),0.10)";
   const axisColor = bare
     ? "rgba(245,240,232,0.14)"
-    : "rgba(139,111,71,0.22)";
+    : "rgba(var(--pq-bronze-wash-rgb),0.22)";
   const labelColor = bare
     ? "rgba(245,240,232,0.5)"
     : "rgba(26,22,18,0.55)";

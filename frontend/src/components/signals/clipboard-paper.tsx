@@ -37,7 +37,7 @@ interface Props {
 function toneColor(tone: Tone): string {
   if (tone === "pos") return "#4a7a52";
   if (tone === "neg") return "#a54545";
-  return "rgba(139,111,71,0.7)";
+  return "rgba(var(--pq-bronze-wash-rgb),0.7)";
 }
 
 function toneLabel(tone: Tone): string {

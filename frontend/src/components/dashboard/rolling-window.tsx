@@ -101,12 +101,12 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
                   borderColor: active
                     ? "#B8956A"
                     : paper
-                      ? "rgba(139,111,71,0.25)"
+                      ? "rgba(var(--pq-bronze-wash-rgb),0.25)"
                       : "rgba(245,240,232,0.12)",
                   background: active
                     ? paper
-                      ? "rgba(139,111,71,0.15)"
-                      : "rgba(139,111,71,0.22)"
+                      ? "rgba(var(--pq-bronze-wash-rgb),0.15)"
+                      : "rgba(var(--pq-bronze-wash-rgb),0.22)"
                     : "transparent",
                   color: paper
                     ? active

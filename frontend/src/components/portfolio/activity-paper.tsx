@@ -203,7 +203,7 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
           bottom: 18,
           right: 22,
           fontSize: "var(--pq-text-eyebrow)",
-          color: "rgba(139,111,71,0.55)",
+          color: "rgba(var(--pq-bronze-wash-rgb),0.55)",
           letterSpacing: "0.06em",
         }}
         aria-hidden

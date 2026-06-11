@@ -84,7 +84,7 @@ export function RelatedArtefacts({
                 })}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-sm p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"
+                className="block bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-sm p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.04)] transition-all group"
               >
                 <FieldLabel>{dateLabel}</FieldLabel>
                 {/* UPRIGHT — no italic. */}

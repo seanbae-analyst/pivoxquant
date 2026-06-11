@@ -106,7 +106,7 @@ export function PersonaShowcase() {
           <span
             aria-hidden
             className="h-px w-7"
-            style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+            style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)" }}
           />
           <span
             className="font-serif text-pq-mono-sm uppercase"
@@ -165,7 +165,7 @@ export function PersonaShowcase() {
               style={{
                 minHeight: 230,
                 backgroundColor: "var(--pq-card-veil)",
-                border: "0.5px solid rgba(139,111,71,0.28)",
+                border: "0.5px solid rgba(var(--pq-bronze-wash-rgb),0.28)",
                 boxShadow: "0 1px 0 0 var(--pq-ivory-line-ghost) inset",
               }}
             >
@@ -226,7 +226,7 @@ export function PersonaShowcase() {
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
                     lineHeight: 1.5,
-                    color: "rgba(139,111,71,0.75)",
+                    color: "rgba(var(--pq-bronze-wash-rgb),0.75)",
                   }}
                 >
                   {p.ko}

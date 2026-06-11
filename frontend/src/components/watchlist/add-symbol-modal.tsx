@@ -142,7 +142,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
             style={{ color: "var(--pq-muted)" }}
           >
             <X className="h-4 w-4" />
@@ -188,7 +188,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
                 type="button"
                 onClick={() => openSearchCommand()}
                 aria-label="Open search palette"
-                className="flex items-center gap-1.5 rounded px-2 py-1 text-pq-eyebrow uppercase transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-pq-eyebrow uppercase transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
                 style={{ color: "var(--pq-bronze)", letterSpacing: "0.15em" }}
               >
                 <Search className="h-3 w-3" />
@@ -215,7 +215,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
                       setPicked(true);
                       setSuggestions([]);
                     }}
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+                    className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
                   >
                     <span
                       className="w-24 truncate font-mono text-xs font-semibold"

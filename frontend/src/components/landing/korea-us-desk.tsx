@@ -74,7 +74,7 @@ export function KoreaUsDesk() {
           <span
             aria-hidden
             className="h-px w-7"
-            style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+            style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)" }}
           />
           <span
             className="font-serif text-pq-mono-sm uppercase"
@@ -131,7 +131,7 @@ export function KoreaUsDesk() {
           <div
             aria-hidden
             className="absolute left-0 right-0 top-6 h-px hidden md:block"
-            style={{ backgroundColor: "rgba(139,111,71,0.35)" }}
+            style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb),0.35)" }}
           />
 
           <ol className="grid grid-cols-1 gap-10 md:grid-cols-4 md:gap-6">
@@ -188,7 +188,7 @@ export function KoreaUsDesk() {
                     className="font-serif italic mb-2"
                     style={{
                       fontSize: "var(--pq-text-body)",
-                      color: "rgba(139,111,71,0.8)",
+                      color: "rgba(var(--pq-bronze-wash-rgb),0.8)",
                     }}
                   >
                     {t.title_ko}

@@ -34,7 +34,7 @@ export function InsiderPanel({ data }: { data: InsiderFiling[] }) {
               return (
                 <li
                   key={i}
-                  className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-[rgba(139,111,71,0.03)] transition-colors"
+                  className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.03)] transition-colors"
                 >
                   <div className="min-w-0 flex-1">
                     <span className="text-pq-body text-[var(--pq-ivory)] font-serif">

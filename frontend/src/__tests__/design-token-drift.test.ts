@@ -67,4 +67,22 @@ describe("shadow color token drift", () => {
       expect(css).toContain(token);
     }
   });
+
+  it("bronze-wash (#8B6F47) never reappears as a literal anywhere", () => {
+    // 2026-06-11 follow-up sweep: ALL 105 rgba(139,111,71,*) literals were
+    // tokenized (shadows AND washes/gradients/rings), so the pending design
+    // decision — merge into canonical --pq-bronze or keep — is a ONE-LINE
+    // token edit. A new literal would silently fork that decision again.
+    const violations: string[] = [];
+    const LIT = /rgba\(\s*139\s*,\s*111\s*,\s*71\s*,/;
+    for (const file of walk(SRC)) {
+      const lines = readFileSync(file, "utf-8").split("\n");
+      lines.forEach((line, i) => {
+        if (LIT.test(line)) {
+          violations.push(`${file.replace(SRC, "src")}:${i + 1}`);
+        }
+      });
+    }
+    expect(violations).toEqual([]);
+  });
 });

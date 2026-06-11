@@ -135,7 +135,7 @@ export function NotificationDropdown() {
         /* FINDING-020: rounded-full → rounded (4px) — §0 editorial radius. */
         /* 2026-05-17 wave C-3 P2: h-10/w-10 (40px) below Apple HIG 44px tap-target.
            Bump to h-11/w-11 so notification bell is reliably tappable on mobile. */
-        className="pq-topbar-icon-btn relative flex h-11 w-11 items-center justify-center rounded transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-0"
+        className="pq-topbar-icon-btn relative flex h-11 w-11 items-center justify-center rounded transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-0"
         style={{
           color: open
             ? "var(--pq-bronze)"
@@ -241,7 +241,7 @@ export function NotificationDropdown() {
                     type="button"
                     onClick={() => onItemClick(n)}
                     className={cn(
-                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(139,111,71,0.05)]",
+                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.05)]",
                     )}
                     style={{
                       borderTop: i === 0 ? "none" : "0.5px solid var(--pq-hairline-soft)",
@@ -291,7 +291,7 @@ export function NotificationDropdown() {
           <Link
             href="/alerts"
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center px-4 py-3 text-xs uppercase transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+            className="flex items-center justify-center px-4 py-3 text-xs uppercase transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
             style={{
               borderTop: "0.5px solid var(--pq-hairline)",
               letterSpacing: "0.18em",

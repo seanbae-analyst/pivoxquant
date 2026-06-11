@@ -62,7 +62,7 @@ export function TierGate({ tier, children, fallback, theme = "dark" }: TierGateP
         className={cn(
           "mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full",
           isDark
-            ? "bg-[rgba(139,111,71,0.18)] border border-[rgba(139,111,71,0.35)]"
+            ? "bg-[rgba(var(--pq-bronze-wash-rgb),0.18)] border border-[rgba(var(--pq-bronze-wash-rgb),0.35)]"
             : "bg-primary-gradient",
         )}
       >

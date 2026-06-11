@@ -48,7 +48,7 @@ function ProxyPillSmall({ proxy }: { proxy: string }) {
         letterSpacing: "0.18em",
         textTransform: "uppercase",
         color: "#8b6f47",
-        border: "0.5px solid rgba(139,111,71,0.55)",
+        border: "0.5px solid rgba(var(--pq-bronze-wash-rgb),0.55)",
         background: "rgba(184,149,106,0.08)",
         padding: "1.5px 5px",
         borderRadius: 2,

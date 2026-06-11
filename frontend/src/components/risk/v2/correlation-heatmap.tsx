@@ -92,7 +92,7 @@ export function CorrelationHeatmap() {
             flex: 1,
             maxWidth: 220,
             background:
-              "linear-gradient(to right, rgba(209,136,136,0.7), rgba(245,240,232,0.12), rgba(139,111,71,0.75))",
+              "linear-gradient(to right, rgba(209,136,136,0.7), rgba(245,240,232,0.12), rgba(var(--pq-bronze-wash-rgb),0.75))",
           }}
         />
         <span>+1</span>
@@ -193,7 +193,7 @@ export function CorrelationHeatmap() {
                     const bg = !isNum
                       ? "transparent"
                       : v >= 0
-                        ? `rgba(139, 111, 71, ${alpha * 0.55})`
+                        ? `rgba(var(--pq-bronze-wash-rgb), ${alpha * 0.55})`
                         : `rgba(209, 136, 136, ${alpha * 0.5})`;
                     const cellText = isNum ? v.toFixed(2) : "—";
                     return (

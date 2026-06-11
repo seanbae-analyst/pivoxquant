@@ -35,7 +35,7 @@ export function DepositionTeaser() {
           <span
             aria-hidden
             className="h-px w-7"
-            style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+            style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)" }}
           />
           <span
             className="font-serif text-pq-mono-sm uppercase"
@@ -91,7 +91,7 @@ export function DepositionTeaser() {
               backgroundColor: "#F5F0E8",
               color: "#050505",
               boxShadow:
-                "0 30px 80px -20px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(139,111,71,0.25)",
+                "0 30px 80px -20px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(var(--pq-bronze-wash-rgb),0.25)",
               aspectRatio: "3/4",
               minHeight: 360,
             }}
@@ -101,14 +101,14 @@ export function DepositionTeaser() {
                 <div className="mb-2 flex items-center gap-2">
                   <Gavel
                     className="h-3.5 w-3.5"
-                    style={{ color: "rgba(139,111,71,0.8)" }}
+                    style={{ color: "rgba(var(--pq-bronze-wash-rgb),0.8)" }}
                     aria-hidden
                   />
                   <span
                     className="font-mono text-pq-kicker uppercase tabular-nums"
                     style={{
                       letterSpacing: "0.22em",
-                      color: "rgba(139,111,71,0.8)",
+                      color: "rgba(var(--pq-bronze-wash-rgb),0.8)",
                     }}
                   >
                     Pre-Trade Checklist
@@ -161,7 +161,7 @@ export function DepositionTeaser() {
                   <span
                     className="font-mono text-pq-eyebrow tabular-nums"
                     style={{
-                      color: "rgba(139,111,71,0.85)",
+                      color: "rgba(var(--pq-bronze-wash-rgb),0.85)",
                       letterSpacing: "0.1em",
                       paddingTop: 2,
                     }}
@@ -244,7 +244,7 @@ export function DepositionTeaser() {
                     style={{
                       fontSize: "var(--pq-text-body)",
                       lineHeight: 1.5,
-                      color: "rgba(139,111,71,0.75)",
+                      color: "rgba(var(--pq-bronze-wash-rgb),0.75)",
                     }}
                   >
                     {q.ko}
@@ -272,7 +272,7 @@ export function DepositionTeaser() {
             paddingTop: 16,
           }}
         >
-          <span style={{ color: "rgba(139, 111, 71, 0.9)" }}>— </span>
+          <span style={{ color: "rgba(var(--pq-bronze-wash-rgb), 0.9)" }}>— </span>
           Pre-Trade Checklist is a reflection tool. It does not constitute
           investment advice or a recommendation to buy or sell any security.
         </motion.p>

@@ -72,7 +72,7 @@ function CardChrome({
         border:
           side === "front"
             ? "0.5px solid rgba(184,149,106,0.25)"
-            : "1px solid rgba(139,111,71,0.38)",
+            : "1px solid rgba(var(--pq-bronze-wash-rgb),0.38)",
         // 3D face stacking — hide the rotated-away face completely.
         backfaceVisibility: "hidden",
         WebkitBackfaceVisibility: "hidden",
@@ -243,7 +243,7 @@ function BackFace({
       <div
         aria-hidden
         className="pointer-events-none absolute inset-[10px] rounded-[3px]"
-        style={{ border: "0.5px solid rgba(139, 111, 71, 0.32)" }}
+        style={{ border: "0.5px solid rgba(var(--pq-bronze-wash-rgb), 0.32)" }}
       />
 
       {/* Paper grain overlay */}
@@ -252,7 +252,7 @@ function BackFace({
         className="pointer-events-none absolute inset-0 rounded-sm"
         style={{
           backgroundImage:
-            "radial-gradient(circle at 50% 50%, rgba(139, 111, 71, 0.04) 0%, transparent 65%), repeating-linear-gradient(0deg, rgba(10,10,10,0.012) 0px, rgba(10,10,10,0.012) 1px, transparent 1px, transparent 3px)",
+            "radial-gradient(circle at 50% 50%, rgba(var(--pq-bronze-wash-rgb), 0.04) 0%, transparent 65%), repeating-linear-gradient(0deg, rgba(10,10,10,0.012) 0px, rgba(10,10,10,0.012) 1px, transparent 1px, transparent 3px)",
           mixBlendMode: "multiply",
         }}
       />
@@ -443,7 +443,7 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
               className="absolute inset-0 flex flex-col overflow-hidden rounded-sm p-7"
               style={{
                 backgroundColor: "#FAF8F3",
-                border: "1px solid rgba(139,111,71,0.38)",
+                border: "1px solid rgba(var(--pq-bronze-wash-rgb),0.38)",
               }}
             >
               <BackFaceContent s={s} onFlip={toggle} hidden={!showBack} />

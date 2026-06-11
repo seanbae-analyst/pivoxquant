@@ -102,7 +102,7 @@ export function PushPermission() {
         className="relative overflow-hidden rounded-[2px] border p-5 shadow-2xl backdrop-blur-md"
         style={{
           background: "rgba(10, 10, 10, 0.96)",
-          borderColor: "rgba(139, 111, 71, 0.42)",
+          borderColor: "rgba(var(--pq-bronze-wash-rgb), 0.42)",
           color: "var(--pq-ivory)",
         }}
       >
@@ -111,7 +111,7 @@ export function PushPermission() {
             <div
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[2px] border"
               style={{
-                borderColor: "rgba(139, 111, 71, 0.5)",
+                borderColor: "rgba(var(--pq-bronze-wash-rgb), 0.5)",
                 color: "var(--pq-bronze)",
               }}
             >

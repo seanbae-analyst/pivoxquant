@@ -48,7 +48,7 @@ const MarketTicker = dynamic(
         aria-hidden
         style={{
           height: 32,
-          borderBottom: "1px solid rgba(139, 111, 71, 0.22)",
+          borderBottom: "1px solid rgba(var(--pq-bronze-wash-rgb), 0.22)",
           backgroundColor: "rgba(5, 5, 5, 0.78)",
         }}
       />
@@ -82,7 +82,7 @@ export function Hero() {
               aria-hidden
               className="h-px"
               style={{
-                backgroundColor: "rgba(139, 111, 71, 0.7)",
+                backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)",
                 width: 28,
               }}
             />
@@ -151,7 +151,7 @@ export function Hero() {
               rel="noopener"
               className="inline-flex items-center gap-2 rounded-[2px] border px-6 py-3.5 text-sm font-medium tracking-wide transition-colors hover:bg-[var(--pq-ivory-line-faint)]"
               style={{
-                borderColor: "rgba(139, 111, 71, 0.5)",
+                borderColor: "rgba(var(--pq-bronze-wash-rgb), 0.5)",
                 color: "var(--pq-bronze-light)",
               }}
             >
@@ -169,7 +169,7 @@ export function Hero() {
               color: "var(--pq-muted)",
             }}
           >
-            <span style={{ color: "rgba(139, 111, 71, 0.9)" }}>— </span>
+            <span style={{ color: "rgba(var(--pq-bronze-wash-rgb), 0.9)" }}>— </span>
             {t("landing.hero.disclaimer")}
           </p>
         </div>
