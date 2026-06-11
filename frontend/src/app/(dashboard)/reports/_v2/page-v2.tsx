@@ -84,8 +84,13 @@ function pickLatest(artifacts: Artifact[]): Artifact | null {
   let best: Artifact | null = null;
   let bestTs = -Infinity;
   for (const a of artifacts) {
-    const ts = a.sent_at ? Date.parse(a.sent_at) : 0;
-    if (ts > bestTs) {
+    // Order by sent_at ?? created_at. A just-generated artifact has sent_at=null
+    // (only the cron email path stamps sent_at), so keying off sent_at alone
+    // scored it as epoch 0 — an older *emailed* artifact then always won
+    // "latest" for any user who had ever received one.
+    const stamp = a.sent_at ?? a.created_at;
+    const ts = stamp ? Date.parse(stamp) : 0;
+    if (!Number.isNaN(ts) && ts > bestTs) {
       bestTs = ts;
       best = a;
     }

@@ -166,6 +166,12 @@ _ARTIFACT_DOWNLOAD_META = {
     # 2026-04-19 — Premium retrospective artefacts (download-only, no share)
     "year_end_letter":        ("application/pdf", "pdf"),
     "quarterly_self_report":  ("application/pdf", "pdf"),
+    # 2026-06-11 — Living Mirror. Has its own /living-mirror/download/<id>
+    # route, but LatestArtifactCard uses the UNIFIED download — without this
+    # entry that path 415'd ("type not downloadable") for a valid PDF artefact.
+    # The unified route is owner-only (send_file of pdf_path), identical to the
+    # dedicated route's body, so this is a safe parity add.
+    "living_mirror":          ("application/pdf", "pdf"),
 }
 
 
