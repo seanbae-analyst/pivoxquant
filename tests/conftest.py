@@ -48,6 +48,19 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+# ── WeasyPrint native libs (macOS) ───────────────────────────────────────────
+# On macOS the brew-installed pango/gobject dylibs are not on the default
+# dlopen search path, so `from weasyprint import HTML` raises OSError and the
+# 170-case artifact render matrix xfails its entire PDF branch. cffi resolves
+# libraries through ctypes.util.find_library, which reads this env var at
+# CALL time — so setting it here (before any weasyprint import) is sufficient;
+# no wrapper script needed. Linux (CI/Railway) resolves via ldconfig — no-op.
+if sys.platform == "darwin" and "DYLD_FALLBACK_LIBRARY_PATH" not in os.environ:
+    for _brew_lib in ("/opt/homebrew/lib", "/usr/local/lib"):
+        if os.path.isdir(_brew_lib):
+            os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = _brew_lib
+            break
+
 # Force a clean, throwaway environment.
 _test_db_fd, _test_db_path = tempfile.mkstemp(suffix=".sqlite", prefix="pivoxquant_test_")
 os.close(_test_db_fd)
