@@ -117,12 +117,16 @@ def earnings_tone_budget_check_and_increment() -> bool:
 
 
 def earnings_tone_budget_remaining() -> int:
-    """Return how many calls are left in today's budget."""
-    today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
-    with _earnings_tone_lock:
-        if _earnings_tone_usage["day"] != today:
-            return EARNINGS_TONE_DAILY_LIMIT
-        return max(0, EARNINGS_TONE_DAILY_LIMIT - _earnings_tone_usage["count"])
+    """Return how many calls are left in today's budget.
+
+    Reads the live DailyAiBudget snapshot — the same source of truth that
+    earnings_tone_budget_check_and_increment() spends against. (Previously
+    referenced a since-deleted ``_earnings_tone_usage`` dict and a fixed
+    EARNINGS_TONE_DAILY_LIMIT constant, so it ignored the env override /
+    cohort scaling and would NameError if ever called.)
+    """
+    snap = _earnings_tone_budget.snapshot()
+    return max(0, snap["limit"] - snap["count"])
 
 
 def get_signal(ticker: str):

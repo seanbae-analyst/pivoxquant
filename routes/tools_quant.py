@@ -477,11 +477,15 @@ def sector_heatmap():
             continue
 
     if not sectors:
+        # Upstream data is unavailable (provider quota / empty feed) — return
+        # 503 (matching /api/discover/*), not 500. A server-error status here
+        # pollutes error monitoring and shows users a "server error" for what
+        # is really a transient data gap.
         return api_error(
             en="Sector data unavailable",
             kr="섹터 데이터를 가져올 수 없습니다.",
-            code="TOOL_QUANT_COMPUTATION_FAILED",
-            status=500,
+            code="TOOL_QUANT_DATA_UNAVAILABLE",
+            status=503,
         )
 
     # Sort by day return (strongest first)

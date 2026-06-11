@@ -67,6 +67,13 @@ def test_inverted_range_returns_none():
     assert _call(_resp(_payload("50000", "90000"))) is None
 
 
+def test_equal_range_returns_none():
+    # hi == lo (flat 52w window) is a feed artifact the alert layer also rejects
+    # (services/alert.py uses <=) — reject it here too instead of returning a
+    # degenerate (X, X) range. Regression guard for the adapter/alert contract.
+    assert _call(_resp(_payload("50000", "50000"))) is None
+
+
 def test_unavailable_kis_returns_none():
     with patch.object(kma, "is_available", return_value=False):
         assert kma.get_52w_range("005930.KS") is None

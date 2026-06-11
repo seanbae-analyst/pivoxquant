@@ -1138,12 +1138,17 @@ class RiskBoardService:
                 "meta": "다음 리밸런스",
             })
             priority += 1
+        # feedback_ticker_display: KR ticker → hangul name (US stays as ticker).
+        # Naked .KS/.KQ suffixes must never surface in the rendered PDF/HTML.
+        from services.name_resolver import kr_display_name
         for c in ces[:2]:
             if priority > 4:
                 break
+            _ticker = c.get("ticker")
+            _label = kr_display_name(_ticker) if _ticker else "—"
             actions.append({
                 "body": (
-                    f"<strong>P{priority}</strong> · {c.get('ticker','—')} "
+                    f"<strong>P{priority}</strong> · {_label} "
                     f"꼬리 손실 기여도 관찰"
                 ),
                 "meta": "월간",

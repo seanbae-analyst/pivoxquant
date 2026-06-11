@@ -128,7 +128,7 @@ class TestSignalStatePushGate:
             assert row is not None
 
 
-# ── FIX 2: check_52w_highs_lows skips KR tickers ────────────────────────────
+# ── FIX 2: check_52w_highs_lows routes KR tickers through KIS ───────────────
 
 class TestCheck52wKrRouting:
     """2026-06-11: the old "KR skipped before any range lookup" contract was

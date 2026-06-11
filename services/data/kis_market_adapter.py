@@ -385,7 +385,10 @@ def get_52w_range(ticker: str) -> tuple[float, float] | None:
             lo = float(output.get("w52_lwpr") or 0)
         except (TypeError, ValueError):
             return None
-        if hi <= 0 or lo <= 0 or hi < lo:
+        # hi <= lo (not just hi < lo): a flat 52w window (hi == lo) is a feed
+        # artifact the alert layer also rejects (services/alert.py uses <=), so
+        # reject it here too rather than hand back a degenerate (X, X) range.
+        if hi <= 0 or lo <= 0 or hi <= lo:
             return None
         return hi, lo
     except Exception as exc:
