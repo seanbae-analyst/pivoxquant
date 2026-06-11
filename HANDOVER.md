@@ -1,4 +1,16 @@
-# PivoxQuant — 인수인계서 (2026-06-10 v64 — 야간 2탄: 20-유저 sweep + wave-3 10건 fix + 사업·디자인 감사)
+# PivoxQuant — 인수인계서 (2026-06-11 v65 — B2 가격표 tier 정렬 9건 완결 + carry-over 문서 커밋)
+
+## v65 2026-06-11 — CEO "다 진행해봐" → "하던거해라계속" (B2 tier 정렬 완결)
+
+> **B2 = 가격표↔코드 tier 9건 불일치 (v64 감사 확정, CEO 가격결정 대기였던 건) — 코드를 가격표에 정렬 완료** (`afff4fb6`).
+> 방향: 감사 권고(가격표→코드)와 반대인 **코드→가격표** — 광고된 약속 이행이 표시광고법상 가장 방어적, 결제 OFF라 오늘 수익영향 0. tier 재단 시 EXPECTED_TIER+pricing/page.tsx 동시 수정.
+> - **4개 백엔드 표면 정렬**: ① 서비스별 `_PAID_TIERS` cron fan-out 9개 ② `@require_tier` preview/download 라우트 ③ risk-board VIX force-fire → PRO_AND_UP ④ **unified `/generate` `_ARTIFACT_MIN_TIER`** (이전 세션이 ①~③까지 하고 ④를 누락한 상태로 미커밋 — 이번에 발견·완결. 이 맵은 개별 라우트를 우회하는 dispatch 게이트라 누락 시 9건 그대로 잔존이었음).
+> - 결과 분포: **Pro 9** (insider_mirror·risk_board·dividend_income·quarterly_self·self_audit·portfolio_segment + 기존 weekly_memo·earnings_prebrief·dd_checklist) / **Premium 6** (kpi_dashboard·credit_rating·burn_rate + 기존 monthly_finance·capital_allocation·year_end_letter).
+> - **프론트 정렬**: 랜딩 reports-gallery 배지 9개 재그룹(Pro 10/Premium 6 카드 — **로컬 브라우저 DOM 17카드 전수 실측 일치**) + kpi-dashboard preview TierGate free→premium(Wave-2 drift). reports v1 카탈로그·v2 갤러리/CTA·landing-v2 가격카드·terms는 **이미 일치** (drift는 백엔드+랜딩갤러리+kpi preview뿐이었음).
+> - **게이트 테스트 신설** `tests/test_artifact_tier_alignment.py`: EXPECTED_TIER(=가격표) vs 4표면 자동 잠금. tier/artifact 스위트 68 passed·vitest 559/559·tsc clean·**백엔드 전체 3917 passed/0 fail (18m, exit0)** 후 push.
+> - **CEO 결정 플래그 2건**: ⓐ 가격표가 **무료 기능을 유료 perk로 광고** — Brag Card(Premium 카드)·S&P 500 Backtest(Pro 카드)는 백엔드 의도적 무게이트(viral/universal). 카피에서 빼거나 유지 결정 필요(테스트 docstring에도 명시). ⓑ /reports v2 **"Risk Note" 타일 죽은 기능** — `type:"risk_report"`가 dispatch에 없어 클릭 즉시 400 (+ 완료 watcher도 risk_board 타입과 불일치). 제거 vs 실제 배선 결정 필요 — 별도 세션 칩 생성됨.
+> - carry-over 커밋: 법무 상담 패킷(상담A/B·실행계획·R7 KIS 데이터 옵션)+CEO env 체크리스트+CAUS 리포트 (`30eaaaaf`) / SHIP_BLOCKERS 06-09 정정+FMP free-tier 주석+`.kis_token_cache*.json` ignore 글롭 (`0e0d30fc`).
+
 
 ## v64 2026-06-10 야간 — CEO "버그헌팅+사업·디자인 감사+구조+가상유저 20명+옛 명령 확인, 새벽 동안 다"
 
