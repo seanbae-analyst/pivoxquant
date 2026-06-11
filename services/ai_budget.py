@@ -120,7 +120,14 @@ class DailyAiBudget:
 
     def _maybe_warn_locked(self) -> None:
         limit = self._effective_locked()
-        if not self._warned and limit > 0 and self._count >= WARN_PCT * limit:
+        # floor(), not the raw float: ``count >= WARN_PCT*limit`` evaluates to
+        # ``count >= ceil`` for ints, which equals ``limit`` itself for limit<=4
+        # (0.8*4=3.2 → warns at 4 = the last allowed call, i.e. AT exhaustion,
+        # not before). floor() gives a genuine advance warning whenever limit>=2
+        # (limit=1 cannot warn in advance) while leaving prod limits (50/100/200)
+        # unchanged: floor(0.8*200)=160 == the old threshold.
+        threshold = max(1, math.floor(WARN_PCT * limit))
+        if not self._warned and limit > 0 and self._count >= threshold:
             self._warned = True
             logger.warning(
                 "ai_budget[%s]: %d/%d daily AI calls used (>=80%%) — raise %s "

@@ -109,6 +109,112 @@ def test_try_consume_atomic_exhaustion():
     assert b.snapshot()["count"] == 2
 
 
+def test_warn_fires_before_exhaustion_for_small_limits(caplog):
+    """Bug-hunt #10: for limit<=4, `count >= WARN_PCT*limit` (float) warned AT
+    exhaustion (0.8*4=3.2 → warns at count 4 == limit). floor() gives a genuine
+    advance warning whenever limit>=2."""
+    b = _fresh(base=5)
+    with caplog.at_level(logging.WARNING, logger="services.ai_budget"):
+        for _ in range(4):  # floor(0.8*5)=4 → warn fires at the 4th
+            b.consume()
+        warns = [r for r in caplog.records if "test_kind" in r.getMessage()]
+        assert len(warns) == 1
+        assert b.available(), "warning must fire BEFORE exhaustion (count 4 < limit 5)"
+
+
+# ── earnings_tone budget remaining (bug-hunt #9) ─────────────────────────────
+
+def test_earnings_tone_budget_remaining_no_nameerror(monkeypatch):
+    """Previously referenced a deleted `_earnings_tone_usage` dict (NameError if
+    ever called) and a fixed constant. Now reads the live snapshot."""
+    import services.cache_service as cs
+    monkeypatch.setattr(
+        cs, "_earnings_tone_budget", DailyAiBudget("earnings_tone", 5),
+    )
+    assert cs.earnings_tone_budget_remaining() == 5
+    cs.earnings_tone_budget_check_and_increment()
+    cs.earnings_tone_budget_check_and_increment()
+    assert cs.earnings_tone_budget_remaining() == 3  # tracks the SAME counter
+
+
+# ── interactive AI daily ceiling (bug-hunt #2) ───────────────────────────────
+
+def _stub_ai(available: bool):
+    return type("StubAI", (), {"available": available})()
+
+
+def test_interactive_ai_guard_429_when_exhausted(app, monkeypatch):
+    import routes.ai as rai
+    monkeypatch.setattr(rai, "ai", _stub_ai(True))
+    monkeypatch.setattr(rai, "_interactive_ai_budget", DailyAiBudget("interactive_ai", 1))
+
+    @rai._interactive_ai_budget_guard
+    def ok_view():
+        return {"ok": True}, 200
+
+    calls = {"n": 0}
+
+    @rai._interactive_ai_budget_guard
+    def counted_view():
+        calls["n"] += 1
+        return {"ok": True}, 200
+
+    with app.app_context():
+        _, status = ok_view()            # spends the only unit (2xx → consume)
+        assert status == 200
+        resp = counted_view()            # budget gone → 429, handler skipped
+        assert resp[1] == 429
+        assert calls["n"] == 0
+
+
+def test_interactive_ai_guard_does_not_consume_on_503(app, monkeypatch):
+    """An Anthropic outage returns 503 fast — those must NOT consume budget,
+    or a sustained outage would trip the breaker and lock everyone out."""
+    import routes.ai as rai
+    monkeypatch.setattr(rai, "ai", _stub_ai(True))
+    b = DailyAiBudget("interactive_ai", 5)
+    monkeypatch.setattr(rai, "_interactive_ai_budget", b)
+
+    @rai._interactive_ai_budget_guard
+    def failing_view():
+        return {"error": "AI down"}, 503
+
+    with app.app_context():
+        for _ in range(10):
+            failing_view()
+    assert b.snapshot()["count"] == 0
+
+
+def test_interactive_ai_guard_skips_when_ai_unconfigured(app, monkeypatch):
+    import routes.ai as rai
+    monkeypatch.setattr(rai, "ai", _stub_ai(False))
+    b = DailyAiBudget("interactive_ai", 1)
+    monkeypatch.setattr(rai, "_interactive_ai_budget", b)
+
+    @rai._interactive_ai_budget_guard
+    def view():
+        return {"ok": True}, 200
+
+    with app.app_context():
+        for _ in range(3):
+            view()
+    assert b.snapshot()["count"] == 0  # never gated when AI is unavailable
+
+
+def test_interactive_ai_guard_present_on_on_demand_routes():
+    """Source-level lock: the six on-demand AI routes must carry the daily
+    ceiling guard (regression for the enforcement gap). Same convention as
+    test_crons_note_their_cohorts_in_source."""
+    import inspect
+    import routes.ai as rai
+
+    src = inspect.getsource(rai)
+    for name in ("swot", "competitor", "sector_trend",
+                 "commentary", "morning_summary", "coaching"):
+        marker = f"@_interactive_ai_budget_guard\ndef {name}("
+        assert marker in src, f"{name} missing @_interactive_ai_budget_guard"
+
+
 # ── call-site wiring ────────────────────────────────────────────────────────
 
 def test_weekly_memo_wrappers_delegate(monkeypatch):

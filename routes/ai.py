@@ -7,6 +7,7 @@ Every AI response MUST pass through ``legal_filter.scrub_response`` before
 투자자문업) and §101 (불공정 영업행위) violations. Use ``_scrub_and_jsonify``
 helper instead of calling ``jsonify`` directly.
 """
+import functools
 import json
 import logging
 import os
@@ -31,6 +32,7 @@ _AI_DETAIL_IN_RESPONSE = (
 from security import ai_rate_limit
 from services.container import ai, fetcher
 from services import cache_service, fx_service
+from services.ai_budget import DailyAiBudget
 from services.access_guard import is_user_allowed_ticker, access_denied_response
 from services.error_responses import api_error
 from services.legal_filter import scrub_response
@@ -81,6 +83,73 @@ def _extract_ticker_from_payload(d: dict) -> str:
     return t.upper()
 
 
+# ── Interactive AI daily ceiling (cost circuit-breaker) ──────────────────────
+# The on-demand AI routes below (swot/competitor/sector-trend/commentary/
+# morning-summary/coaching) previously had ONLY per-minute @ai_rate_limit and
+# no daily ceiling. Under the free launch (LAUNCH_FREE_ALL_TIERS — every authed
+# user is effectively "premium", models/user.py), a scripted caller could run
+# unbounded Claude spend day-over-day. The cron artifact paths and earnings-tone
+# already have their own DailyAiBudget; this closes the on-demand gap.
+#
+# It is a GLOBAL runaway/abuse breaker, not a per-user quota — the per-minute
+# rate limit already bounds burst per user; this bounds aggregate per day. The
+# default is deliberately generous so no normal user is ever blocked (beta = first
+# ~100 users, normal use is a handful of analyses/day). Ops tune it up with
+# PIVOX_INTERACTIVE_AI_DAILY_LIMIT. Budget is consumed only on a 2xx (a real
+# analysis went out) so an Anthropic outage — which returns 503 fast — cannot
+# trip the breaker and lock everyone out. Any internal error in the guard fails
+# OPEN: a budget bug must never break a feature.
+_interactive_ai_budget = DailyAiBudget(
+    "interactive_ai",
+    base_limit=2000,
+    env_var="PIVOX_INTERACTIVE_AI_DAILY_LIMIT",
+)
+
+
+def _response_status(resp) -> int:
+    """Best-effort HTTP status from a Flask view return value
+    ((body, status) tuple, a Response, or a bare body → 200)."""
+    if isinstance(resp, tuple) and len(resp) >= 2 and isinstance(resp[1], int):
+        return resp[1]
+    status = getattr(resp, "status_code", None)
+    return status if isinstance(status, int) else 200
+
+
+def _interactive_ai_budget_guard(fn):
+    """Gate an on-demand AI route on the global daily ceiling.
+
+    429 when the day's budget is already spent; otherwise runs the handler and
+    consumes one unit ONLY if it returned 2xx. Skips entirely when ``ai`` is
+    unconfigured (the handler returns 503 without calling Claude) and fails OPEN
+    on any internal error.
+    """
+    @functools.wraps(fn)
+    def _wrapped(*args, **kwargs):
+        gated = False
+        try:
+            if getattr(ai, "available", False):
+                if not _interactive_ai_budget.available():
+                    return api_error(
+                        en="Daily AI analysis limit reached. Please try again tomorrow.",
+                        kr="오늘의 AI 분석 한도에 도달했습니다. 내일 다시 시도해 주세요.",
+                        code="AI_DAILY_BUDGET_EXCEEDED",
+                        status=429,
+                    )
+                gated = True
+        except Exception:
+            logger.warning("interactive_ai budget gate error — failing open", exc_info=True)
+            gated = False
+        resp = fn(*args, **kwargs)
+        if gated:
+            try:
+                if 200 <= _response_status(resp) < 300:
+                    _interactive_ai_budget.consume()
+            except Exception:
+                logger.debug("interactive_ai budget consume skipped", exc_info=True)
+        return resp
+    return _wrapped
+
+
 @ai_bp.route("/status")
 @api_auth
 def status():
@@ -91,6 +160,7 @@ def status():
 @api_auth
 @require_tier("pro")
 @ai_rate_limit
+@_interactive_ai_budget_guard
 def swot():
     if not ai.available:
         return jsonify({
@@ -134,6 +204,7 @@ def swot():
 @api_auth
 @require_tier("pro")
 @ai_rate_limit
+@_interactive_ai_budget_guard
 def competitor():
     if not ai.available:
         return jsonify({
@@ -187,6 +258,7 @@ def competitor():
 @api_auth
 @require_tier("pro")
 @ai_rate_limit
+@_interactive_ai_budget_guard
 def sector_trend():
     if not ai.available:
         return jsonify({
@@ -325,6 +397,7 @@ def chat():
 @api_auth
 @require_tier("pro")
 @ai_rate_limit
+@_interactive_ai_budget_guard
 def commentary():
     if not ai.available:
         return jsonify({
@@ -356,6 +429,7 @@ def commentary():
 @api_auth
 @require_tier("pro")
 @ai_rate_limit
+@_interactive_ai_budget_guard
 def morning_summary():
     if not ai.available:
         return jsonify({
@@ -382,6 +456,7 @@ def morning_summary():
 @api_auth
 @require_tier("pro")
 @ai_rate_limit
+@_interactive_ai_budget_guard
 def coaching():
     if not ai.available:
         return jsonify({
