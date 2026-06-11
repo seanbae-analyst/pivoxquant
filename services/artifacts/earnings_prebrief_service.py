@@ -40,7 +40,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-import threading
 from dataclasses import dataclass
 from datetime import date, datetime, time as _time, timedelta, timezone
 from pathlib import Path
@@ -160,28 +159,26 @@ def _storage_dir() -> Path:
 # ── lazy optional deps ───────────────────────────────────────────────────────
 
 # ── AI budget (module-level; mirrors weekly_memo) ────────────
+# B3 fix (2026-06-11): the fixed 100/day global cap starved holders on a
+# heavy earnings day (one popular ticker → hundreds of entitled prebriefs).
+# DailyAiBudget scales the ceiling with the matches run_scan() notes
+# (max(base, entitled×1.25)); the 10-minute scans note cumulatively, which
+# only widens headroom. Warns once a day at 80%. Zero-arg wrappers keep
+# the names call sites and tests (monkeypatch) already use.
+from services.ai_budget import DailyAiBudget  # noqa: E402
 
-_AI_LIMIT = 100  # per UTC day — earnings events are rare
-_ai_usage = {"day": None, "count": 0}
-_ai_lock = threading.Lock()
+_AI_LIMIT = 100  # base floor; env PIVOX_PREBRIEF_AI_LIMIT overrides
+_AI_BUDGET = DailyAiBudget(
+    "earnings_prebrief", _AI_LIMIT, env_var="PIVOX_PREBRIEF_AI_LIMIT",
+)
 
 
 def _ai_budget_available() -> bool:
-    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
-    with _ai_lock:
-        if _ai_usage["day"] != today_utc:
-            _ai_usage["day"] = today_utc
-            _ai_usage["count"] = 0
-        return _ai_usage["count"] < _AI_LIMIT
+    return _AI_BUDGET.available()
 
 
 def _ai_budget_consume() -> None:
-    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
-    with _ai_lock:
-        if _ai_usage["day"] != today_utc:
-            _ai_usage["day"] = today_utc
-            _ai_usage["count"] = 0
-        _ai_usage["count"] += 1
+    _AI_BUDGET.consume()
 
 
 # ── data shape ───────────────────────────────────────────────────────────────
@@ -1588,6 +1585,11 @@ class EarningsPreBriefService:
         # Filter to the tight 30-min window.
         in_window = [c for c in candidates
                      if target_window_start <= c["earnings_dt"] <= target_window_end]
+
+        # B3: today's AI ceiling scales with the matched fan-out. Cumulative
+        # across the 10-min scans (an event matching ~3 consecutive scans
+        # only adds headroom — consumption stays once per generation).
+        _AI_BUDGET.note_entitled(len(in_window))
 
         successes = 0
         failures = 0

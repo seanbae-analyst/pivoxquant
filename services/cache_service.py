@@ -30,8 +30,20 @@ _earnings_tone_lock = threading.Lock()
 
 # Daily call budget for earnings-tone to cap Claude API spend even if many
 # Pro users hit it. Reset on the calendar day (UTC).
-EARNINGS_TONE_DAILY_LIMIT = 50
-_earnings_tone_usage: dict = {"day": None, "count": 0}
+# B3 review (2026-06-11, business_model_audit §B3): this budget stays
+# GLOBAL by design — tone results are cached per ticker for 90 days and
+# shared across users, so the cap gates *new-ticker analyses per day*, not
+# users (the audit's "51st user gets 429" only bites on the 51st UNCACHED
+# ticker). Per-user split would multiply spend without serving anyone
+# faster. Backed by DailyAiBudget for the env lever + the 80% warning.
+from services.ai_budget import DailyAiBudget  # noqa: E402
+
+EARNINGS_TONE_DAILY_LIMIT = 50  # base floor; env PIVOX_EARNINGS_TONE_DAILY_LIMIT
+_earnings_tone_budget = DailyAiBudget(
+    "earnings_tone",
+    EARNINGS_TONE_DAILY_LIMIT,
+    env_var="PIVOX_EARNINGS_TONE_DAILY_LIMIT",
+)
 
 
 
@@ -96,16 +108,12 @@ def earnings_tone_cache_set(ticker: str, data: dict) -> None:
 def earnings_tone_budget_check_and_increment() -> bool:
     """Returns True if the daily budget still has room (and increments usage).
     Returns False if today's limit has been reached — caller should reject with 429.
+
+    Atomic check-and-spend via DailyAiBudget.try_consume() (same UTC-day
+    semantics the old inline counter had, plus the env override and the
+    once-a-day 80% exhaustion warning).
     """
-    today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
-    with _earnings_tone_lock:
-        if _earnings_tone_usage["day"] != today:
-            _earnings_tone_usage["day"] = today
-            _earnings_tone_usage["count"] = 0
-        if _earnings_tone_usage["count"] >= EARNINGS_TONE_DAILY_LIMIT:
-            return False
-        _earnings_tone_usage["count"] += 1
-        return True
+    return _earnings_tone_budget.try_consume()
 
 
 def earnings_tone_budget_remaining() -> int:

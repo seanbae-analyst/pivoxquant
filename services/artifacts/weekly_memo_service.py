@@ -40,7 +40,6 @@ from __future__ import annotations
 import logging
 import math
 import os
-import threading
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -158,29 +157,25 @@ class MemoContext:
 
 
 # ── AI budget (module-level) ─────────────────────────────────────────────────
-# Daily-counter pattern keeps us under Claude Haiku budget even when a large
-# Pro cohort triggers the Sunday run at once.
-_WEEKLY_AI_LIMIT = 200
-_ai_usage = {"day": None, "count": 0}
-_ai_lock = threading.Lock()
+# B3 fix (2026-06-11, business_model_audit §B3): the fixed 200/day global
+# cap doubled as a paid-user ceiling — the 201st Pro user got placeholder
+# content. DailyAiBudget keeps the cost defence but scales the ceiling with
+# the cohort run_weekly() notes (max(base, entitled×1.25)) and warns once a
+# day at 80%. Zero-arg wrappers keep the names call sites and tests use.
+from services.ai_budget import DailyAiBudget  # noqa: E402
+
+_WEEKLY_AI_LIMIT = 200  # base floor; env PIVOX_WEEKLY_MEMO_AI_LIMIT overrides
+_AI_BUDGET = DailyAiBudget(
+    "weekly_memo", _WEEKLY_AI_LIMIT, env_var="PIVOX_WEEKLY_MEMO_AI_LIMIT",
+)
 
 
 def _ai_budget_available() -> bool:
-    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
-    with _ai_lock:
-        if _ai_usage["day"] != today_utc:
-            _ai_usage["day"] = today_utc
-            _ai_usage["count"] = 0
-        return _ai_usage["count"] < _WEEKLY_AI_LIMIT
+    return _AI_BUDGET.available()
 
 
 def _ai_budget_consume() -> None:
-    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
-    with _ai_lock:
-        if _ai_usage["day"] != today_utc:
-            _ai_usage["day"] = today_utc
-            _ai_usage["count"] = 0
-        _ai_usage["count"] += 1
+    _AI_BUDGET.consume()
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -1675,6 +1670,10 @@ class WeeklyMemoService:
             .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
             .all()
         )
+
+        # B3: today's AI ceiling scales with the cohort we are about to
+        # serve, so the fan-out can never starve an entitled user.
+        _AI_BUDGET.note_entitled(len(paid_users))
 
         successes = 0
         failures = 0
