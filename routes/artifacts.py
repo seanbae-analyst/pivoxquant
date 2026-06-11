@@ -3197,6 +3197,21 @@ _ARTIFACT_MIN_TIER: dict[str, str] = {
     "portfolio_segment": "pro",
 }
 
+# Legacy request aliases — normalised to a canonical dispatch key BEFORE the
+# dispatch/tier/empty/persist pipeline, so gating and the persisted
+# Artifact.type always use the canonical slug. NOT part of _ARTIFACT_MIN_TIER
+# (the tier-alignment gate test pins that map 1:1 to the pricing page).
+#
+# risk_report → risk_board (2026-06-11): the reports-v2 "Risk Note" tile
+# shipped posting type="risk_report" against a service that never existed
+# (SPEC §4 documented it as a GAP → guaranteed 400). The tile now requests
+# "risk_board" — the existing deck already carries the advertised VaR /
+# drawdown / tail-risk / sector-concentration content. This alias keeps
+# already-open tabs working through the deploy window.
+_ARTIFACT_TYPE_ALIASES: dict[str, str] = {
+    "risk_report": "risk_board",
+}
+
 # Interactive types — frontend redirects to a dedicated UI instead of
 # generating from the unified button. Map → redirect path so the response
 # can hint the frontend without hard-coding URLs there.
@@ -3355,6 +3370,9 @@ def artifacts_generate():
     """
     body = request.get_json(silent=True) or {}
     artifact_type = (body.get("type") or "").strip().lower()
+    # Canonicalise legacy aliases first — every later stage (dispatch, tier
+    # gate, empty checks, persistence, response echo) sees the real type.
+    artifact_type = _ARTIFACT_TYPE_ALIASES.get(artifact_type, artifact_type)
     params = body.get("params") or {}
 
     if not isinstance(params, dict):

@@ -151,6 +151,20 @@ Tiles:
 | Earnings Pre-Brief | Queue a pre-brief for `ticker` (autocomplete from book + watchlist) | **GAP** — `POST /api/artifacts/generate` body `{ type: "earnings_prebrief", ticker }` |
 | Risk Note | Free-text request → custom artifact | **GAP** — `POST /api/artifacts/generate` body `{ type: "risk_report", topic }` |
 
+> **2026-06-11 resolution** — `POST /api/artifacts/generate` shipped (synchronous; no
+> job id — `status: "ready"` on resolve means the artifact row already exists) and the
+> GAPs above closed with two contract corrections:
+> 1. `ticker` rides under `params.ticker`, not top-level (the top-level field was
+>    ignored by the backend → every Earnings Pre-Brief request 400'd).
+> 2. The **Risk Note tile is now the Risk Board tile**. `type: "risk_report"` never
+>    existed in the backend dispatch (dead on click), and a free-text personalized AI
+>    memo is 투자자문-adjacent — parked pending counsel review (Q1–Q15). The tile posts
+>    `{ type: "risk_board" }` (existing Pro deck: VaR, drawdown, tail ratio, sector
+>    concentration — the content this tile advertised). `risk_report` survives
+>    server-side only as a normalising alias for stale tabs. `topic` is gone from
+>    `GenerateArtifactBody`; the sample `generateArtifact` later in this doc is
+>    superseded by `src/lib/hooks.ts:generateArtifact`.
+
 Tile composition:
 - Display name (Playfair 20px) + sub-line (mono dim) — 종목명 main pattern.
 - Description (Source Serif 13px).

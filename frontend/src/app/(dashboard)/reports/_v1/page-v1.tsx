@@ -55,7 +55,9 @@ const CATALOG: CatalogEntry[] = [
   { slug: "weekly_memo",           type: "weekly_memo",          title: "Weekly Memo",             cadence: "Every Sunday",   minTier: "free",    personas: ["all"] },
   { slug: "brag_card",             type: "monthly_brag",         title: "Brag Card",               cadence: "Monthly",        minTier: "free",    personas: ["all"] },
   { slug: "earnings_prebrief",     type: "earnings_prebrief",    title: "Earnings Pre-Brief",      cadence: "Per event",      minTier: "pro",     personas: ["growth", "quant"] },
-  { slug: "risk_board",            type: "risk_report",          title: "Risk Board",              cadence: "Weekly",         minTier: "pro",     personas: ["beginner", "balanced"] },
+  // 2026-06-11: was type "risk_report" — a type no backend row ever carries
+  // (DB rows are "risk_board"), so the live-data match never fired.
+  { slug: "risk_board",            type: "risk_board",           title: "Risk Board",              cadence: "Weekly",         minTier: "pro",     personas: ["beginner", "balanced"] },
   { slug: "quarterly_self_report", type: "quarterly_review",     title: "Quarterly Self Report",   cadence: "Quarterly",      minTier: "pro",     personas: ["all"] },
   { slug: "self_audit",            type: "custom",               title: "Self Audit",              cadence: "On demand",      minTier: "pro",     personas: ["all"] },
   { slug: "dd_checklist",          type: "custom",               title: "DD Checklist",            cadence: "On demand",      minTier: "pro",     personas: ["value", "growth"] },
