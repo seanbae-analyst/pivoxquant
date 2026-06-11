@@ -346,3 +346,48 @@ def get_name(ticker: str) -> str | None:
     except Exception as exc:
         logger.info("KIS get_name(%s) failed: %s", ticker, exc)
     return None
+
+
+def get_52w_range(ticker: str) -> tuple[float, float] | None:
+    """Return ``(52w high, 52w low)`` for a KRX ticker, or ``None``.
+
+    Official-source counterpart of FMP's yearHigh/yearLow: FMP's KRX
+    coverage is unreliable (services/alert.py FIX 2 2026-05-22 skipped KR
+    entirely because of it), while KIS is the exchange-licensed feed. Uses
+    the same rate-limited ``inquire-price`` call as :func:`get_name` —
+    ``w52_hgpr`` / ``w52_lwpr`` ride along on the quote payload, so the
+    cost is one quote request (~120ms behind the module rate limit).
+
+    Never raises; any missing/garbled field returns ``None`` so the alert
+    layer's "rather miss than fabricate" rule holds.
+    """
+    code = _to_code(ticker)
+    if not code or not is_available():
+        return None
+
+    headers = _auth_headers("FHKST01010100")
+    if headers is None:
+        return None
+    params = {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
+    url = f"{_BASE_URL}/uapi/domestic-stock/v1/quotations/inquire-price"
+
+    try:
+        _rate_limit()
+        resp = requests.get(url, headers=headers, params=params, timeout=_REQUEST_TIMEOUT)
+        if not resp.ok:
+            return None
+        payload = resp.json()
+        if payload.get("rt_cd") != "0":
+            return None
+        output = payload.get("output", {}) or {}
+        try:
+            hi = float(output.get("w52_hgpr") or 0)
+            lo = float(output.get("w52_lwpr") or 0)
+        except (TypeError, ValueError):
+            return None
+        if hi <= 0 or lo <= 0 or hi < lo:
+            return None
+        return hi, lo
+    except Exception as exc:
+        logger.info("KIS get_52w_range(%s) failed: %s", ticker, exc)
+    return None

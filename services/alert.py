@@ -334,16 +334,13 @@ def check_52w_highs_lows() -> dict:
         # Pull 52W range from FMP quote (yearHigh / yearLow). Missing fields
         # skip silently — we'd rather miss an alert than emit a false one.
         for ticker in tickers:
-            # FIX 2 (2026-05-22) — skip KR tickers. ``_lookup_52w_range`` is
-            # FMP-backed and FMP's yearHigh/yearLow coverage is unreliable
-            # for KRX (see its docstring), so calling it for a .KS/.KQ ticker
-            # either wastes an FMP request (silent miss) or fires a spurious
-            # alert off stale data. A KIS-based KR 52-week range source is a
-            # deferred feature (not implemented) — until then KR positions
-            # get no 52w-range alert here. US behaviour is unchanged.
-            tk = (ticker or "").upper()
-            if tk.endswith(".KS") or tk.endswith(".KQ"):
-                continue
+            # FIX 2 (2026-05-22) used to skip KR tickers entirely because the
+            # range lookup was FMP-only and FMP's KRX coverage is unreliable.
+            # 2026-06-11: ``_lookup_52w_range`` now routes KR → KIS
+            # ``w52_hgpr``/``w52_lwpr`` (official feed), so KR positions get
+            # real 52w-range alerts; when KIS is unavailable the lookup
+            # returns a missing pair and the hi/lo validation below skips —
+            # identical safety to the old guard, never a fabricated range.
             px = prices.get(ticker)
             if not px:
                 continue
@@ -431,11 +428,24 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
 
 
 def _lookup_52w_range(ticker: str) -> tuple[Optional[float], Optional[float]]:
-    """Return ``(yearHigh, yearLow)`` from FMP quote, or ``(None, None)``.
+    """Return ``(52w high, 52w low)``, or ``(None, None)``. Never raises.
 
-    Never raises. US tickers only — KR tickers return a missing pair because
-    FMP quote yearHigh/yearLow coverage is inconsistent for KRX.
+    Source routing (2026-06-11 — closes the FIX 2 deferred KR gap):
+      * KR (.KS/.KQ)  → KIS ``inquire-price`` ``w52_hgpr``/``w52_lwpr``
+        (exchange-licensed feed; FMP's KRX yearHigh/yearLow is unreliable).
+        KIS unavailable/missing → missing pair, i.e. the old silent skip —
+        never a fabricated range, never a false alert.
+      * US            → FMP quote yearHigh/yearLow (unchanged).
     """
+    tk = (ticker or "").upper()
+    if tk.endswith(".KS") or tk.endswith(".KQ"):
+        try:
+            from services.data import kis_market_adapter
+            rng = kis_market_adapter.get_52w_range(tk)
+        except Exception:
+            return None, None
+        return rng if rng else (None, None)
+
     try:
         from services.data import fmp as fmp_service
     except Exception:

@@ -130,8 +130,14 @@ class TestSignalStatePushGate:
 
 # ── FIX 2: check_52w_highs_lows skips KR tickers ────────────────────────────
 
-class TestCheck52wKrSkip:
-    def test_kr_ticker_skipped_us_still_processed(self, app, make_user, add_position):
+class TestCheck52wKrRouting:
+    """2026-06-11: the old "KR skipped before any range lookup" contract was
+    replaced — KR now routes through the KIS-backed ``_lookup_52w_range``
+    (w52_hgpr/w52_lwpr, official feed). The surviving safety contract: KR
+    must never touch the FMP quote path, and a missing KIS range must stay
+    a silent no-alert skip."""
+
+    def test_kr_and_us_both_looked_up_us_alert_fires(self, app, make_user, add_position):
         from services import alert as alert_mod
 
         user = make_user(email="kr52w@test.com")
@@ -148,8 +154,11 @@ class TestCheck52wKrSkip:
 
             def fake_range(ticker):
                 range_calls.append(ticker)
-                # US AAPL at/above 52w high to force an alert path.
-                return (200.0, 100.0)
+                if ticker == "AAPL":
+                    # US AAPL at/above 52w high to force an alert path.
+                    return (200.0, 100.0)
+                # KR: KIS range unavailable → missing pair → silent skip.
+                return (None, None)
 
             with patch("services.container.fetcher") as mock_fetcher, \
                  patch.object(alert_mod, "_lookup_52w_range", side_effect=fake_range), \
@@ -159,34 +168,32 @@ class TestCheck52wKrSkip:
                 mock_fetcher.get_prices_batch.return_value = prices
                 metrics = alert_mod.check_52w_highs_lows()
 
-            # KR ticker must NEVER reach the FMP range lookup.
-            assert "005930.KS" not in range_calls, \
-                "KR ticker must be skipped before the FMP range lookup"
-            # US ticker is still processed.
+            # KR now reaches the (KIS-routed) lookup alongside US.
+            assert "005930.KS" in range_calls, \
+                "KR ticker must be looked up via the KIS route"
             assert "AAPL" in range_calls, "US ticker must still be processed"
             assert metrics["users_scanned"] >= 1
 
-    def test_kq_ticker_also_skipped(self, app, make_user, add_position):
+    def test_kq_missing_kis_range_creates_no_alert(self, app, make_user, add_position):
         from services import alert as alert_mod
+        from models import Alert
 
         user = make_user(email="kq52w@test.com")
         with app.app_context():
             add_position(user["id"], "124500.KQ", shares=5, avg_cost=10000.0)
 
-            range_calls = []
-
-            def fake_range(ticker):
-                range_calls.append(ticker)
-                return (20000.0, 5000.0)
-
             with patch("services.container.fetcher") as mock_fetcher, \
-                 patch.object(alert_mod, "_lookup_52w_range", side_effect=fake_range), \
+                 patch.object(alert_mod, "_lookup_52w_range",
+                              return_value=(None, None)), \
                  patch("services.name_resolver.resolve_stock_name",
                        return_value=None), \
                  patch("services.push_service.notify_bell_alert"):
                 mock_fetcher.get_prices_batch.return_value = {
                     "124500.KQ": {"price": 19000.0},
                 }
-                alert_mod.check_52w_highs_lows()
+                metrics = alert_mod.check_52w_highs_lows()
 
-            assert range_calls == [], "KQ ticker must be skipped (no range lookup)"
+            # Missing range = silent skip — the old guard's safety, kept.
+            assert metrics["alerts_created"] == 0
+            assert Alert.query.filter_by(
+                user_id=user["id"], ticker="124500.KQ").count() == 0
