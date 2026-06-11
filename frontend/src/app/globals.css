@@ -184,6 +184,10 @@
   --pq-bronze-light-rgb: 163, 132, 92;
   --pq-ivory-rgb: 245, 240, 232;
   --pq-ink-rgb: 5, 5, 5;
+  /* 그림자·워시에 도는 제3의 브론즈(#8B6F47) — 캐노니컬 --pq-bronze(#B8956A)와
+     통일 여부는 디자인 리뷰 대상(시각 변경이라 CEO 결정). 우선 토큰으로 이름만
+     붙여 drift 확산을 차단 (2026-06-11 그림자 토큰화 sweep). */
+  --pq-bronze-wash-rgb: 139, 111, 71;
 
   /* WCAG AA contrast ladder for ivory-on-Vantablack (#050505).
      Computed contrast ratios (text on #050505):
@@ -1063,8 +1067,8 @@
 @media (min-width: 640px) {
   .pivox-silver-matte {
     filter:
-      drop-shadow(0 8px 28px rgba(245, 240, 232, 0.12))
-      drop-shadow(0 2px 4px rgba(245, 240, 232, 0.06));
+      drop-shadow(0 8px 28px rgba(var(--pq-ivory-rgb), 0.12))
+      drop-shadow(0 2px 4px rgba(var(--pq-ivory-rgb), 0.06));
   }
 }
 
@@ -1140,7 +1144,7 @@
 }
 @media (min-width: 640px) {
   .pq-silver-matte {
-    filter: drop-shadow(0 10px 20px rgba(245, 240, 232, 0.15));
+    filter: drop-shadow(0 10px 20px rgba(var(--pq-ivory-rgb), 0.15));
   }
 }
 
@@ -1924,11 +1928,11 @@ i.italic,
 }
 .pq-ink-btn-bronze:hover:not(:disabled):not([aria-disabled="true"]) {
   transform: translateY(-0.5px);
-  box-shadow: 0 3px 12px rgba(139, 111, 71, 0.18);
+  box-shadow: 0 3px 12px rgba(var(--pq-bronze-wash-rgb), 0.18);
 }
 .pq-ink-btn-bronze:active {
   transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(139, 111, 71, 0.12);
+  box-shadow: 0 1px 3px rgba(var(--pq-bronze-wash-rgb), 0.12);
 }
 
 /* Ghost button — bronze underline slide on hover */
@@ -2026,7 +2030,7 @@ i.italic,
 .pq-ink-input:focus-visible {
   border-color: var(--pq-bronze);
   background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--pq-bronze-wash-rgb), 0.1);
   outline: none;
 }
 
@@ -2614,8 +2618,8 @@ i.italic,
   box-shadow:
     6px 20px 40px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(184, 149, 106, 0.08),
-    0 0 0 0.5px rgba(245, 240, 232, 0.07);
+    inset 0 0 0 1px rgba(var(--pq-bronze-rgb), 0.08),
+    0 0 0 0.5px rgba(var(--pq-ivory-rgb), 0.07);
   will-change: transform, box-shadow;
   outline: none;
 }
@@ -2643,7 +2647,7 @@ i.italic,
   box-shadow:
     0 28px 60px rgba(0, 0, 0, 0.6),
     0 8px 24px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 1px rgba(184, 149, 106, 0.16);
+    inset 0 0 0 1px rgba(var(--pq-bronze-rgb), 0.16);
 }
 .pq-paper--dimmed {
   opacity: 0.55;
@@ -2656,8 +2660,8 @@ i.italic,
   box-shadow:
     6px 20px 40px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(184, 149, 106, 0.08),
-    0 0 0 2px rgba(184, 149, 106, 0.5);
+    inset 0 0 0 1px rgba(var(--pq-bronze-rgb), 0.08),
+    0 0 0 2px rgba(var(--pq-bronze-rgb), 0.5);
 }
 
 /* Hover micro-lift for interactive papers (desktop only) */
@@ -2913,7 +2917,7 @@ i.italic,
   height: 9px;
   background: var(--pq-bronze, #B8956A);
   transform: scale(1);
-  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.18);
+  box-shadow: 0 0 0 3px rgba(var(--pq-bronze-wash-rgb), 0.18);
 }
 .pq-flip-dots__count {
   pointer-events: none;
@@ -3023,7 +3027,7 @@ i.italic,
   will-change: transform;
   /* Subtle text shadow bumps edges against the dark desk so letterforms
      read crisply at a glance. */
-  text-shadow: 0 0 24px rgba(245, 240, 232, 0.06);
+  text-shadow: 0 0 24px rgba(var(--pq-ivory-rgb), 0.06);
 }
 
 @keyframes pq-splash-breath {
@@ -3337,7 +3341,7 @@ html {
   border: 1px solid rgba(184, 149, 106, 0.28);
   border-radius: 2px;
   box-shadow:
-    inset 0 1px 0 rgba(245, 240, 232, 0.04),
+    inset 0 1px 0 rgba(var(--pq-ivory-rgb), 0.04),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 .pq-gate-card-head {
@@ -3379,7 +3383,7 @@ html {
   height: 5px;
   border-radius: 9999px;
   background: var(--pq-bronze);
-  box-shadow: 0 0 6px rgba(184, 149, 106, 0.65);
+  box-shadow: 0 0 6px rgba(var(--pq-bronze-rgb), 0.65);
 }
 .pq-gate-card-ping-ring {
   position: absolute;
@@ -3523,7 +3527,7 @@ html {
   border-radius: 2px;
   /* Subtle inner edge highlight for the bezel feel. */
   box-shadow:
-    inset 0 1px 0 rgba(245, 240, 232, 0.04),
+    inset 0 1px 0 rgba(var(--pq-ivory-rgb), 0.04),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 /* Bronze wax-seal disc, top-right */
@@ -3552,7 +3556,7 @@ html {
   letter-spacing: -0.02em;
   /* Deboss-y feel via tiny dual shadow */
   text-shadow:
-    0 1px 0 rgba(245, 240, 232, 0.18),
+    0 1px 0 rgba(var(--pq-ivory-rgb), 0.18),
     0 -1px 0 rgba(0, 0, 0, 0.35);
 }
 .pq-friday-card-eyebrow {
@@ -3838,7 +3842,7 @@ html {
    tables stay calm on focus traversal. */
 .pq-dash-focus:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(184, 149, 106, 0.4);
+  box-shadow: 0 0 0 2px rgba(var(--pq-bronze-rgb), 0.4);
   border-radius: 2px;
 }
 
@@ -3885,7 +3889,7 @@ html {
    classes with a soft bronze rim that doesn't appear on touch). */
 @media (hover: hover) {
   .pq-artifact-queue li > a:hover {
-    box-shadow: 0 0 0 1px rgba(184, 149, 106, 0.28);
+    box-shadow: 0 0 0 1px rgba(var(--pq-bronze-rgb), 0.28);
   }
 }
 

@@ -225,7 +225,7 @@ export default function BetaGateForm() {
             placeholder={copy.placeholder}
             aria-invalid={!!error}
             aria-describedby={error ? "beta-error" : undefined}
-            className="w-full rounded-xl border px-4 py-3 text-pq-lead outline-none transition-[box-shadow,border-color] duration-200 focus:border-[var(--pq-bronze)] focus:shadow-[0_0_0_4px_rgba(184,149,106,0.32)]"
+            className="w-full rounded-xl border px-4 py-3 text-pq-lead outline-none transition-[box-shadow,border-color] duration-200 focus:border-[var(--pq-bronze)] focus:shadow-[0_0_0_4px_rgba(var(--pq-bronze-rgb),0.32)]"
             style={{
               backgroundColor: "rgba(10, 10, 10, 0.6)",
               borderColor: "rgba(184, 149, 106, 0.32)",
@@ -251,7 +251,7 @@ export default function BetaGateForm() {
           style={{
             backgroundColor: "var(--pq-bronze-light)",
             color: "var(--pq-ink)",
-            boxShadow: "0 6px 20px -6px rgba(184, 149, 106, 0.45)",
+            boxShadow: "0 6px 20px -6px rgba(var(--pq-bronze-rgb), 0.45)",
           }}
         >
           {submitting ? (
