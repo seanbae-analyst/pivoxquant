@@ -2,7 +2,7 @@
 
 **SoT**: 자율 운영 시스템 외부 액션 + 변호사 큐 + 메모리 carry-over 통합 매트릭스.
 **갱신 정책**: 매일 06:27 morning-briefing이 prepend 형태로 노출. 항목 변경 시 PR로 갱신.
-**최근 갱신**: 2026-06-02 07:39 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 6건 / SHIP-AT-RISK 11건 / POST-LAUNCH 15건 / 변호사 큐 21건)
+**최근 갱신**: 2026-06-10 06:46 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 11건 / POST-LAUNCH 15건 / 변호사 큐 21건)
 
 상태 코드: BLOCKED(외부 대기) / IN_PROGRESS / PENDING(미착수) / RESOLVED
 
@@ -33,17 +33,17 @@
 
 | # | 항목 | 카테고리 | Owner | ETA | 해제조건 | 상태 |
 |---|---|---|---|---|---|---|
-| A1 | DNS MX 레코드 미설정 (ImprovMX 수신) | email | CEO | 미정 (15분 작업) | 가비아 콘솔에서 `MX @ mail.improvmx.com 10` + ImprovMX alias 4개(noreply/support/legal/billing) | PENDING |
-| A2 | Brevo fallback API key 미설정 | email | CEO | 미정 | Brevo 가입 + API key 발급 → Vercel env `BREVO_API_KEY` / `BREVO_FROM_EMAIL` / `BREVO_FROM_NAME` 입력 | PENDING |
+| A1 | DNS MX 레코드 미설정 (ImprovMX 수신) | email | CEO | 확인만 | 가비아 MX **2줄**(mx1.improvmx.com 우선순위10 · mx2.improvmx.com 20) + catch-all `*@pivoxquant.com`(13 alias). ⚠️정정 2026-06-09: "MX 1줄+alias 4개"는 부정확. `project_email_infra.md:28` 2026-06-04 로그상 MX 2줄 active → **확인만 필요(RESOLVED 추정)** | 확인필요 |
+| A2 | Brevo fallback API key 미설정 | email | CEO | 미정 | Brevo 가입 + API key 발급 → **Railway** env `BREVO_API_KEY` / `BREVO_FROM_EMAIL` / `BREVO_FROM_NAME`. ⚠️정정 2026-06-09: 소비처가 백엔드(`services/email/brevo_provider.py`)라 Vercel 아닌 **Railway**. 베타 규모 비차단(출시 후 OK) | PENDING |
 | A3 | SENDGRID_WEBHOOK_PUBLIC_KEY 미설정 (이벤트 추적 OFF) | email | CEO | 미정 | SendGrid Event Webhook 서명 키 입력 → `/api/webhooks/sendgrid` 503 해제. 발송과 무관, 추적만 OFF | PENDING |
-| A4 | `~/.pivoxquant-env` 8개 변수 미입력 (랩탑 cron RETIRED 후 가치 낮음) | env | CEO | 미정 | SLACK_WEBHOOK_URL / DATABASE_URL / GPG_PASSPHRASE / SENDGRID_API_KEY / SENTRY_AUTH_TOKEN / SENTRY_ORG_SLUG / SENTRY_PROJECT_SLUG / STRIPE_SECRET_KEY | PENDING |
+| A4 | `~/.pivoxquant-env` 8개 변수 — **건너뛰기 권장** | env | CEO | — | ⚠️정정 2026-06-09: 랩탑 crontab/launchd 2026-05-28 RETIRED. 8변수 전부 타 항목 중복/무가치(SLACK=A5, SENDGRID=완료, STRIPE=R4, DATABASE_URL=Railway 자동, GPG·SENTRY 3종=죽은 로컬). Sentry 발신은 SENTRY_DSN 으로 이미 라이브 → **입력 불필요** | SKIP |
 | A5 | Slack webhook URL 미설정 (모든 alert silent) | env | CEO | 미정 | Slack incoming webhook 발급 → Railway env `SLACK_WEBHOOK_URL` + `~/.pivoxquant-env` | PENDING |
 | A6 | Naver News API key 미설정 (`.KS` News empty) | data | CEO | 미정 | Naver Developers 등록 → Railway env 입력 | PENDING |
-| A7 | Vercel 사업자정보 footer env 6개 미입력 (전자상거래법 §13) | env | CEO | 미정 | Vercel env: NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER / _NAME / _REPRESENTATIVE / _ADDRESS / _TYPE | PENDING |
-| A8 | 로컬 14 commit + 이전 carry-over push 안 됨 (canonical=~/dev/pivoxquant) | infra | CEO | 미정 | CEO 별도 세션에서 reconcile 후 push (feedback_push_workflow 규칙) | BLOCKED |
+| A7 | Vercel 사업자정보 footer env 6개 미입력 (전자상거래법 §13) | env | CEO | 미정 | Vercel env(canonical, `business-info.ts` SoT): NEXT_PUBLIC_BUSINESS_NAME / _REPRESENTATIVE / _REGISTRATION_NUMBER / _ADDRESS / _TYPE / **_SUBTYPE**. ⚠️정정 2026-06-09: 기존 목록 5개로 `_SUBTYPE` 누락 → **6개가 맞음**. 상세 `docs/ops/ceo_env_checklist_2026-06-09.md` | PENDING |
+| A8 | 로컬 **16 commit** push 안 됨 (v59~v62) | infra | CEO | go 대기 | reconcile 후 push (feedback_push_workflow). ⚠️정정 2026-06-09: 14→**16 commit**, canonical=`~/Desktop/취준/pivoxquant`(~/dev 아님). 실측 `git cherry`로 **push 무유실 확정** + 전수테스트 **3868 passed/0 fail(exit0)** → 랜딩 안전, CEO go 만 남음 | READY(go 대기) |
 | A9 | Anthropic 크레딧 0 → 챗봇 LLM OFF, FAQ 즉답만 작동 | infra | CEO | 미정 | 크레딧 충전 시 `SUPPORT_CHAT_LLM_ENABLED=1` 전환. 미충전 시 FAQ 검색만 (0원 운영) | PENDING |
-| A10 | VAPID env 미설정 (push 알림 OFF) | env | CEO | 미정 | Vercel env VAPID 키쌍 입력 | PENDING |
-| A11 | 변호사 미팅 자료 준비 (사업자등록증 PDF, terms/privacy, regulatory 자료, Q-S1 KISA 가이드) | legal | CEO | R1 전 | 자료 패킷 완성 → 변호사 컨택 (`session_2026-05-18-v45.md` 컨택 가이드 488줄 + 첨부 4 PDF 완성) | IN_PROGRESS |
+| A10 | VAPID env 미설정 (push 알림 OFF) | env | CEO | 미정 | ⚠️정정 2026-06-09: "Vercel만" 아니라 **2곳 분리** — 공개키 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`=**Vercel**, 비밀키 `VAPID_PRIVATE_KEY`+`VAPID_EMAIL`=**Railway**. `npx web-push generate-vapid-keys` 1회로 쌍 생성 | PENDING |
+| A11 | 변호사 미팅 자료 준비 (사업자등록증 PDF, terms/privacy, regulatory 자료, Q-S1 KISA 가이드) | legal | CEO | R1 전 | 자료 패킷 완성 → 변호사 컨택. ⚠️갱신 2026-06-09: 상담A 의뢰서 마감(Q-A10 만14세·A11 §50분리동의·A12 업태·A13 §17환불 추가 + 국외수탁자 6→8 정정 + 별첨 라이브경로). md+html 갱신, **PDF 재export 필요(weasyprint 환경 미비)** | IN_PROGRESS |
 | A12 | `dd_checklist_email.html` 면책 §6 verbatim + §101 footer 미포함 (`_disclaimer.html` include 없음, 단문 1줄만) | legal | CEO+변호사 | R1/Q-S1 후 | 변호사 사인 후 `_disclaimer.html` include 전환 또는 §6+§101 문구 수동 추가 (코드 주석 NEEDS_CONFIG.md §11) | BLOCKED |
 | A13 | `brag_card_email.html` 인라인 면책에 §101 "미신고 면제 트랙" footer 누락 + `_disclaimer.html` 동기화 단절 | legal | CEO | R1/Q-S1 후 | §101 footer 문구 수동 추가 또는 `_disclaimer.html` include 전환 (이메일 CSS 호환 확인) | PENDING |
 
