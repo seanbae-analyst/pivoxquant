@@ -21,7 +21,6 @@ HMAC-signed with ``app.config["SECRET_KEY"]``.
 """
 from __future__ import annotations
 
-from typing import Optional
 
 from flask import current_app
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer

@@ -1,5 +1,4 @@
 """Portfolio routes: positions CRUD, buy/sell, capital, analytics."""
-import json
 import logging
 import math
 import threading
