@@ -91,10 +91,13 @@ const TIERS: Tier[] = [
     price: "9,900",
     unit: "KRW",
     period: "per month",
-    tagline: "Full desk access. 12 artifacts. Weekly ship.",
+    tagline: "Full desk access. 11 artifacts. Weekly ship.",
     features: [
       "Everything in Free",
-      "Pro artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Insider Mirror, Risk Board, Dividend Income, Quarterly Self-Report, S&P 500 Backtest, Self-Audit, Portfolio Segment, AI Assistant, Weekly Memo (full)",
+      // 표시광고 정직성 (2026-06-11 B2 후속): 전 티어 무료인 것(S&P 500
+      // Backtest, Brag Card)은 유료 카드의 perk 로 표기하지 않는다 —
+      // tests/test_artifact_tier_alignment.py 의 SoT 와 동기.
+      "Pro artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Insider Mirror, Risk Board, Dividend Income, Quarterly Self-Report, Self-Audit, Portfolio Segment, AI Assistant, Weekly Memo (full)",
       "2 broker connections",
       "Risk Board — 7-layer observation",
     ],
@@ -111,7 +114,7 @@ const TIERS: Tier[] = [
     tagline: "Concierge research. Priority renders. Year-end letter.",
     features: [
       "Everything in Pro",
-      "Premium artifacts — Capital Allocation, Credit Rating, Burn Rate, Monthly Finance, KPI Dashboard, Year-End Letter, Brag Card",
+      "Premium artifacts — Capital Allocation, Credit Rating, Burn Rate, Monthly Finance, KPI Dashboard, Year-End Letter",
       "Priority render queue",
       "Unlimited broker connections",
     ],
@@ -131,7 +134,7 @@ interface FaqItem {
 const FAQ_ITEMS: FaqItem[] = [
   {
     q: "What does a PivoxQuant subscription include?",
-    a: "A research desk that writes for you. Free receives an abridged Weekly Memo. Pro adds the full twelve Pro artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Insider Mirror, Risk Board, and more, shipped on a weekly cadence. Premium adds seven additional Premium artifacts including Year-End Letter and priority render queue.",
+    a: "A research desk that writes for you. Free receives an abridged Weekly Memo. Pro adds the full eleven Pro artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Insider Mirror, Risk Board, and more, shipped on a weekly cadence. Premium adds six additional Premium artifacts including Year-End Letter and priority render queue.",
   },
   {
     q: "Can I cancel at any time?",
@@ -355,8 +358,8 @@ function ConsentModal({
           <div
             className="mt-2 rounded-sm p-3"
             style={{
-              backgroundColor: "rgba(139,111,71,0.08)",
-              border: "0.5pt solid rgba(139,111,71,0.25)",
+              backgroundColor: "rgba(var(--pq-bronze-wash-rgb),0.08)",
+              border: "0.5pt solid rgba(var(--pq-bronze-wash-rgb),0.25)",
             }}
           >
             <p
@@ -569,7 +572,7 @@ export default function PricingPage() {
               <span
                 aria-hidden
                 className="h-px w-7"
-                style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
+                style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb),0.7)" }}
               />
               <span
                 className="font-serif text-pq-mono-sm uppercase"
@@ -629,8 +632,8 @@ export default function PricingPage() {
             role="status"
             className="rounded-sm p-5 flex items-start gap-3"
             style={{
-              backgroundColor: "rgba(139,111,71,0.08)",
-              border: "0.5pt solid rgba(139,111,71,0.32)",
+              backgroundColor: "rgba(var(--pq-bronze-wash-rgb),0.08)",
+              border: "0.5pt solid rgba(var(--pq-bronze-wash-rgb),0.32)",
             }}
           >
             <Info
@@ -692,7 +695,7 @@ export default function PricingPage() {
                         ? "0.5pt solid rgba(245,240,232,0.10)"
                         : "0.5pt solid rgba(10,10,10,0.10)",
                     boxShadow: p.recommended
-                      ? "0 40px 80px -40px rgba(139,111,71,0.35)"
+                      ? "0 40px 80px -40px rgba(var(--pq-bronze-wash-rgb),0.35)"
                       : "none",
                   }}
                 >
@@ -864,7 +867,7 @@ export default function PricingPage() {
             <span
               aria-hidden
               className="h-px w-7"
-              style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
+              style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb),0.7)" }}
             />
             <span
               className="font-serif text-pq-mono-sm uppercase"
@@ -909,8 +912,8 @@ export default function PricingPage() {
           <div
             className="rounded-sm p-5"
             style={{
-              backgroundColor: "rgba(139,111,71,0.06)",
-              border: "0.5pt solid rgba(139,111,71,0.20)",
+              backgroundColor: "rgba(var(--pq-bronze-wash-rgb),0.06)",
+              border: "0.5pt solid rgba(var(--pq-bronze-wash-rgb),0.20)",
             }}
           >
             <p

@@ -19,10 +19,10 @@ apart silently again.
 
 Deliberately ungated (absent from EXPECTED_TIER): brag_card / monthly_brag
 (viral share loop) and sp500_backtest (universal observation record) are
-free for every tier by design — see _ARTIFACT_MIN_TIER's comment. The
-pricing page currently lists "Brag Card" under Premium and "S&P 500
-Backtest" under Pro; whether to keep advertising free features as paid
-perks is a CEO pricing-copy call (flagged in HANDOVER), not a code gate.
+free for every tier by design — see _ARTIFACT_MIN_TIER's comment. As of
+2026-06-11 (CEO "안한것도 다해라") the pricing page no longer lists them
+as paid perks — free features must never be advertised under a paid card
+(표시광고 정직성, pricing/page.tsx Pro/Premium feature comments).
 """
 from __future__ import annotations
 
