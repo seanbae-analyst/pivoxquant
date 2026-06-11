@@ -8,11 +8,12 @@ path used a hardcoded literal `subscription_tier.in_(["premium", "elite"])`:
   * premium_plus (rank 3) + founding_lifetime (rank 4) — the highest-paying
     cohorts incl. the owner — were excluded → they missed the force-fired deck.
 
-The fix routes selection through the canonical shared set
-`services.artifacts._tiers.PAID_TIERS_PREMIUM_AND_UP`, the same set
-`RiskBoardService.run_monthly()` filters on. This test asserts the route
-fans out to premium / premium_plus / founding_lifetime and skips free / pro,
-and that the legacy ghost "elite" literal is gone from the route source.
+The fix routes selection through the canonical shared set in
+`services.artifacts._tiers`, the same set `RiskBoardService.run_monthly()`
+filters on. 2026-06-10 (B2 tier alignment): Risk Board is sold as a PRO
+artifact on the pricing page, so both the cron service and this force-fire
+fan-out moved to PAID_TIERS_PRO_AND_UP — the test now asserts pro IS
+included, free still excluded, and the ghost "elite" literal stays gone.
 """
 from unittest.mock import patch
 
@@ -35,7 +36,7 @@ def _make_tiered_user(app, make_user, tier):
 
 class TestVixForceFireTierSelection:
     def test_fans_out_to_premium_and_up_only(self, raw_client, app, make_user, admin_secret):
-        from services.artifacts._tiers import PAID_TIERS_PREMIUM_AND_UP
+        from services.artifacts._tiers import PAID_TIERS_PRO_AND_UP
 
         # Create one user per tier (incl. the previously-excluded top tiers).
         for tier in ("free", "pro", "premium", "premium_plus", "founding_lifetime"):
@@ -66,11 +67,13 @@ class TestVixForceFireTierSelection:
         assert "premium_plus" in selected
         assert "founding_lifetime" in selected
         assert "premium" in selected
-        # Lower / non-paying tiers excluded.
+        # B2 tier alignment (2026-06-10): Risk Board is a PRO artifact on the
+        # pricing page — pro is now INCLUDED in the fan-out.
+        assert "pro" in selected
+        # Non-paying tier still excluded.
         assert "free" not in selected
-        assert "pro" not in selected
         # Every selected tier belongs to the canonical shared set.
-        assert selected <= set(PAID_TIERS_PREMIUM_AND_UP)
+        assert selected <= set(PAID_TIERS_PRO_AND_UP)
         assert summary["attempted"] == len(called_for_tiers)
         assert summary["notified"] == len(called_for_tiers)
 
@@ -90,4 +93,6 @@ class TestVixForceFireTierSelection:
         assert '"elite"' not in code and "'elite'" not in code, (
             "ghost-tier literal 'elite' must not reappear in the force-fire path"
         )
-        assert "PAID_TIERS_PREMIUM_AND_UP" in code
+        # B2 alignment (2026-06-10): Risk Board is a PRO artifact, so the
+        # force-fire fan-out uses the PRO_AND_UP canonical set.
+        assert "PAID_TIERS_PRO_AND_UP" in code

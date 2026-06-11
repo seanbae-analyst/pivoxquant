@@ -77,7 +77,8 @@ pivoxquant/               # 2026-05-17 wave 13: 'stockpilot/' 명칭은 폐기
     ├── broker/         # user_kis_service.py (KIS read-only). Alpaca 통합 제거됨(2026-05-27)
     ├── artifacts/      # 18 artifact type (PDF/PNG/HTML — User as CFO). SoT=routes/artifacts.py
     │                   #   _ARTIFACT_DISPATCH (생성 15 + interactive 3). 템플릿 18개와 일치.
-    │                   #   tier: Pro 6 / Premium 9 / 무료·universal 3 + living_mirror. (옛 "17" stale)
+    │                   #   tier: Pro 9 / Premium 6 / 무료·universal 3 + living_mirror — 2026-06-11
+    │                   #   B2 가격표 정렬(SoT=pricing/page.tsx, lock=test_artifact_tier_alignment.py)
     ├── legal/          # legal_filter scrub · §101 detector · forbidden_terms
     ├── email/          # EmailSender + sendgrid/brevo provider cascade
     ├── profile/        # questionnaire(20문항) · investor profiles
