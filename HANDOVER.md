@@ -1,4 +1,21 @@
-# PivoxQuant — 인수인계서 (2026-06-11 v65 — B2 가격표 tier 정렬 9건 완결 + carry-over 문서 커밋)
+# PivoxQuant — 인수인계서 (2026-06-12 v66 — 버그헌트 14건 처분 + 가상유저 3-레이어 감사·구축 완료)
+
+## v66 2026-06-11~12 — CEO "버그들 다 진행 + 가상유저 구축 제대로 됐는지 파악하고 구축해놔라" (야간 자율)
+
+> **Part A — 버그헌트 14건 처분 완료**: 11건 fix + 3건 근거 있는 no-fix (#4 interactive-before-tier = 테스트로 고정된 의도 + 프론트 도달 불가 / #8 observed_at = 관측시각이 정답 / #11 TOCTOU = max_instances=1로 실위험 없음, reserve/refund 배관이 더 위험). 커밋 4개: `9b9810b7`(백엔드 6건) `e4dd5f4e`(AI예산 — **인터랙티브 AI 라우트 일일 캡 신설** swot/competitor/sector-trend/commentary/morning-summary/coaching, 2000/day 글로벌 breaker, env `PIVOX_INTERACTIVE_AI_DAILY_LIMIT`, 2xx만 소비/장애시 fail-open) `30150213`(discover **proxy_ticker 고지 배지** "via SPY" + reports pickLatest sent_at??created_at + living_mirror 통합 다운로드 415 fix) `ff9ea9a1`(ruff F401/F541 12건 정리).
+>
+> **Part B — 가상유저 3-레이어 감사 결과 + 구축** (CEO 질문 "구축 제대로 된건지"에 대한 답: **레이어별로 반쪽이었고, 이제 전부 실동작**):
+> - **L1 아티팩트 렌더 매트릭스 (10명×17종=172케이스)**: HTML 브랜치만 살아있고 **PDF 브랜치는 생성 이래 전부 xfail** (macOS dlopen libgobject 실패). conftest+run.py에 darwin 전용 `DYLD_FALLBACK_LIBRARY_PATH` 부트스트랩(`8dd91d2c`) → **172/172 passed 첫 완주** (24m, PDF 렌더+크기+pypdf 추출+§101 마커 실검증). 로컬 dev 서버 PDF 다운로드도 함께 해결. 풀 PDF는 스위트 +24m이라 **`PIVOX_MATRIX_PDF=1` 옵트인 게이트**(`a569b2ec`) — 기본 스위트는 HTML 상시 검증, 일요일 cron이 풀 매트릭스 (SKILL.md 반영).
+> - **L2 API 스위프 (20 가상유저)**: 10 엔드포인트 read-only였던 걸 **40 엔드포인트 + tier별 generate leg + 음성 권한체크(inbox 403 고정) + proxy 고지 패리티 + structured-degradation 검증**으로 확장(`5f928734`). cron이 git-guard에 자주 스킵되는 구멍 → **pytest 게이트 신설**(`tests/test_virtual_user_sweep.py`, N=6, 스위트 상시 편입). 최종 실측: **991 calls, 0 findings**.
+> - **L3 CAUS (브라우저 1명/일)**: **수 주간 가짜-클린이었음을 적발** — sim 세션 만료(수명 1일, 파일은 5/13-17산) + `/tmp/sim-onboard-secret.txt` 재부팅 소실 상태에서 **세션 없음 스텁이 "findings: 0 clean run"과 동일 포맷**으로 기록돼 옴. fix(`7f04ee1a`): ① 스텁 → `status: SKIPPED` 정직 기록 ② **public 시나리오(day6/8)는 세션 없이 실행** ③ `_pass_beta_gate()` — `PIVOX_BETA_PASSWORD`로 베타게이트 쿠키 자동 발급 ④ un-stub 첫 실행이 곧바로 P0 5건 발사 → **전부 가양성**(법적 필수 면책문구 "매수·매도를 권유하지 않습니다"가 금지어 스캔에 걸림, #509-513 close) → `grep_forbidden` **부정문 인지(문장 단위)** 로 수정+회귀테스트 4종. 재실행 = prod 실 브라우저 런 **0 findings (진짜 clean)**, `auto-sim-reports/2026-06-12.md` status: ran.
+>
+> **부수 발견**: ⓐ **로컬 dev 서버 wedge 재발 규명** — 8h 후 스레드 2,049개/SQLite FD 290/CPU 80%, `*/2분` ops cron 동일 슬롯 4-5중 동시실행 (Mac 수면 후 misfire 폭풍 의심). prod 무관(불면). **이슈 #514** (fix는 app.py cron 인프라라 CEO 결정 대기 — 후보: dev는 RUN_SCHEDULER=0 / executor 상한 / misfire 설정 검증). ⓑ `com.pivoxreport.*` LaunchAgents는 **다른 프로젝트**(~/dev/pivoxreport)인데 bug-hunter-daily SKILL.md가 pivoxquant 서버로 오참조 — SKILL.md 정정, 세션 중 잘못 kickstart했다가 bootout으로 원복(plist 보존, 재로그인 시 자동 로드 복귀).
+>
+> **검증**: vitest **573/573** + tsc clean + artifact 매트릭스 **172/172** (PIVOX_MATRIX_PDF=1) + sweep **991 calls/0 findings** + CAUS prod 실런 0건 + 백엔드 full suite **3951 passed/1 fail** — 그 1 fail 은 weasyprint-unavailable 가정 테스트가 부트스트랩으로 깨진 것 (내 변경의 직접 후폭풍) → render_pdf mock 으로 결정론화 후 모듈 18/18 재검증 (v66 마지막 커밋). 기본 스위트 소요 ~22m (sweep 게이트 +1.5m 포함).
+>
+> **CEO 액션 (가상유저 인증 시나리오 복원에 필요)**: ① `SIM_ONBOARD_SECRET`을 cron env에 복원 (Railway Variables에서 확인. /tmp 파일은 소실) ② 이슈 #514 fix 방향 결정. 이 둘 빼고 가상유저 3-레이어는 전부 자동 운영 가능 상태.
+
+---
 
 ## v65 2026-06-11 — CEO "다 진행해봐" → "하던거해라계속" (B2 tier 정렬 완결)
 

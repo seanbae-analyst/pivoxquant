@@ -217,16 +217,23 @@ def test_generate_weekly_memo_with_position_returns_ready(
 # ── H2: PDF render outcome must be non-silent ──────────────────────────────
 
 def test_generate_reports_pdf_status_when_weasyprint_unavailable(
-    client, paid_auth_user, app, mock_fetcher, add_position,
+    client, paid_auth_user, app, mock_fetcher, add_position, monkeypatch,
 ):
-    """No WeasyPrint in the test env → render_pdf returns None. The response
-    must stay `ready` (data is valid/viewable) but explicitly say the PDF is
-    unavailable, never silently claim a clean completion with no attachment."""
+    """WeasyPrint unavailable → render_pdf returns None. The response must
+    stay `ready` (data is valid/viewable) but explicitly say the PDF is
+    unavailable, never silently claim a clean completion with no attachment.
+
+    2026-06-12: render_pdf is mocked to None alongside the flag — the conftest
+    DYLD bootstrap made WeasyPrint genuinely importable on macOS, so this test
+    can no longer rely on the host accidentally lacking the native dep."""
     import routes.artifacts as ra
+    from services.artifacts.weekly_memo_service import WeeklyMemoService
 
     add_position(paid_auth_user["id"], ticker="AAPL", shares=10)
-    # Force the "dep missing" branch deterministically.
+    # Force the "dep missing" branch deterministically: flag False AND no bytes.
     ra._WEASYPRINT_OK = False
+    monkeypatch.setattr(WeeklyMemoService, "render_pdf",
+                        lambda self, data: None)
     try:
         resp = client.post("/api/artifacts/generate", json={"type": "weekly_memo"})
     finally:
