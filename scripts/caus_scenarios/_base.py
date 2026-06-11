@@ -155,20 +155,47 @@ def collect_network(page, sink: list[dict]) -> None:
     page.on("response", _on_response)
 
 
+# Sentences that NEGATE the forbidden vocabulary are the legally REQUIRED
+# disclaimers ("특정 종목의 매수·매도를 권유하지 않습니다", "Labels are
+# POSITIVE/NEGATIVE/NEUTRAL — never buy, sell, or hold"). 2026-06-12: the
+# first un-stubbed day8 prod run fired 5 bogus P0s on exactly these
+# disclaimer sentences (issues #509–#513, closed as false-positive). A naive
+# grep therefore flags every COMPLIANT page. Sentences matching these
+# negation/disclaimer markers are exempt; a directive sentence ("삼성전자
+# 매수 추천") contains none of them and is still caught.
+_NEGATION_KO_RE = re.compile(
+    r"(권유하지\s*않|권유하는\s*것이\s*아|권유하지\s*아니|지시가\s*아니"
+    r"|아닙니다|아니며|않습니다|않으며|않는다|금지)"
+)
+_NEGATION_EN_RE = re.compile(r"\b(never|not|no)\b|n't\b", re.IGNORECASE)
+_SENTENCE_SPLIT_RE = re.compile(r"[.!?。\n]+")
+
+
 def grep_forbidden(text: str) -> list[str]:
     """Return forbidden cap-markets words found in `text` (case-sensitive for KO).
+
+    Negation-aware: a sentence that contains an explicit disclaimer/negation
+    marker is exempt — the mandated legal-floor disclaimers themselves contain
+    the forbidden words and must not fire the scan. Scanning is per sentence
+    so a directive in one sentence is never excused by a disclaimer in another.
 
     Returns the unique list of hits. Empty list = clean.
     """
     hits: set[str] = set()
-    for word in FORBIDDEN_WORDS_KO:
-        if word in text:
-            hits.add(word)
-    # English: case-insensitive but require word boundary.
-    lower = text.lower()
-    for word in FORBIDDEN_WORDS_EN:
-        if re.search(rf"\b{re.escape(word.lower())}\b", lower):
-            hits.add(word)
+    for sentence in _SENTENCE_SPLIT_RE.split(text):
+        if not sentence.strip():
+            continue
+        ko_negated = bool(_NEGATION_KO_RE.search(sentence))
+        en_negated = bool(_NEGATION_EN_RE.search(sentence))
+        if not ko_negated:
+            for word in FORBIDDEN_WORDS_KO:
+                if word in sentence:
+                    hits.add(word)
+        if not en_negated:
+            lower = sentence.lower()
+            for word in FORBIDDEN_WORDS_EN:
+                if re.search(rf"\b{re.escape(word.lower())}\b", lower):
+                    hits.add(word)
     return sorted(hits)
 
 
