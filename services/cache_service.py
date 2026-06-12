@@ -47,6 +47,51 @@ _earnings_tone_budget = DailyAiBudget(
 
 
 
+# ── AI 분석 결과 캐시 (SWOT / commentary / competitor / sector-trend) ──
+# 2026-06-12 토큰 최적화: 이 4개 인터랙티브 엔드포인트는 ticker(또는 sector)
+# 단위의 비개인화 분석인데 캐시가 전혀 없어 — 같은 종목을 두 유저가(또는 한
+# 유저가 두 번) 열 때마다 동일한 Claude 호출이 반복됐다. earnings_tone(90d)
+# 패턴을 따르되 입력(quant score/price)이 더 자주 변하므로 TTL 6h.
+# 비개인화 결과의 유저간 공유는 §101 면제 트랙(불특정 다수 대상 정보 제공)
+# 관점에서도 개인화보다 방어적이다. 개인화 경로(coaching/morning_summary/
+# chat)는 절대 여기 캐시하지 않는다.
+# Structure: {(endpoint, key): {"data": {...}, "ts": unix}}
+ai_result_cache: dict = {}
+AI_RESULT_TTL = 6 * 3600          # 6 h — quant 입력 갱신 주기와 균형
+AI_RESULT_MAX_ENTRIES = 2000      # (4 endpoint × ~500 ticker) LRU 상한
+_ai_result_lock = threading.Lock()
+
+
+def ai_result_cache_get(endpoint: str, key: str):
+    """Thread-safe read of the AI-result cache. Returns data dict or None."""
+    if not endpoint or not key:
+        return None
+    ck = (endpoint, key.upper().strip())
+    with _ai_result_lock:
+        entry = ai_result_cache.get(ck)
+        if not entry:
+            return None
+        if time.time() - entry.get("ts", 0) >= AI_RESULT_TTL:
+            return None
+        return entry.get("data")
+
+
+def ai_result_cache_set(endpoint: str, key: str, data: dict) -> None:
+    """Thread-safe write. LRU-prunes oldest 25% past AI_RESULT_MAX_ENTRIES."""
+    if not endpoint or not key or data is None:
+        return
+    ck = (endpoint, key.upper().strip())
+    with _ai_result_lock:
+        ai_result_cache[ck] = {"data": data, "ts": time.time()}
+        if len(ai_result_cache) > AI_RESULT_MAX_ENTRIES:
+            ordered = sorted(
+                ai_result_cache.items(),
+                key=lambda kv: kv[1].get("ts", 0),
+            )
+            for old_key, _ in ordered[: len(ordered) // 4]:
+                ai_result_cache.pop(old_key, None)
+
+
 def safe_cache_blob(cached) -> dict:
     """Parse a SignalCache row's data_json — `{}` on absence/corruption.
 

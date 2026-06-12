@@ -457,7 +457,13 @@ class DataFetcher:
         return items[:15]
 
     _news_score_cache = {}  # {ticker: (timestamp, (score, sigs))}
-    _NEWS_SCORE_TTL = 600  # 10 min cache for news sentiment
+    # 2026-06-12 토큰 최적화: 600s → 6h. _scheduled_refresh(3분 cron)가 전
+    # 포지션을 analyze하는 구조에서 10분 TTL은 "같은 헤드라인을 종목당
+    # 하루 ~144회 Claude로 재채점"을 의미했다 (보유 30종목 ≈ 4,300콜/일,
+    # 월 $110+ — _log_usage도 안 타서 usage 테이블에 안 보이는 침묵 지출).
+    # 헤드라인 자체가 intraday에 거의 안 바뀌므로 6h(하루 4회 갱신)로도
+    # 뉴스 필러의 정보가치는 유지된다. 추가 방어선: _NEWS_AI_BUDGET 아래.
+    _NEWS_SCORE_TTL = 21_600  # 6 h cache for news sentiment
 
     def score_news_sentiment(self, ticker: str) -> tuple[float, list[dict]]:
         import time as _time
@@ -476,6 +482,26 @@ class DataFetcher:
         _capped_insert(self._news_score_cache, cache_key, (_time.time(), result))
         return result
 
+    # Daily AI-call breaker for the news-sentiment path (B3 gap closure,
+    # 2026-06-12): every other Claude call site has a DailyAiBudget; this one
+    # — sitting INSIDE the engine.analyze hot path — had none, so a runaway
+    # analyze loop meant unbounded spend. Generous limit (≈5x the expected
+    # post-TTL-fix volume); on exhaustion the keyword fallback takes over
+    # gracefully (same contract, $0). Env lever: PIVOX_NEWS_AI_DAILY_LIMIT.
+    _NEWS_AI_BUDGET = None  # lazily constructed below (import-light module)
+    _news_ai_client = None  # reused across calls (was: new client per call)
+
+    @classmethod
+    def _news_ai_budget(cls):
+        if cls._NEWS_AI_BUDGET is None:
+            from services.ai_budget import DailyAiBudget
+            cls._NEWS_AI_BUDGET = DailyAiBudget(
+                "news_sentiment",
+                base_limit=600,
+                env_var="PIVOX_NEWS_AI_DAILY_LIMIT",
+            )
+        return cls._NEWS_AI_BUDGET
+
     def _score_news_with_ai(self, ticker: str, news: list) -> "tuple[float, list[dict]] | None":
         """Use Claude Haiku for context-aware news sentiment analysis."""
         try:
@@ -486,9 +512,19 @@ class DataFetcher:
             if not api_key:
                 return None
 
+            # Atomic check-and-spend — exhausted budget falls back to the
+            # keyword scorer via the caller's `ai_result or keywords` chain.
+            if not self._news_ai_budget().try_consume():
+                logger.info("news AI budget exhausted — keyword fallback (%s)", ticker)
+                return None
+
             headlines = "\n".join(f"- {n['title']}" for n in news[:8])
 
-            client = anthropic.Anthropic(api_key=api_key, timeout=15.0, max_retries=1)
+            if type(self)._news_ai_client is None:
+                type(self)._news_ai_client = anthropic.Anthropic(
+                    api_key=api_key, timeout=15.0, max_retries=1,
+                )
+            client = type(self)._news_ai_client
             resp = client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=300,
@@ -508,6 +544,15 @@ Reply ONLY in this exact JSON format, nothing else:
 {{"score": <number 0-100>, "sentiment": "<bullish/bearish/neutral>", "reason": "<1 sentence why>", "reason_kr": "<same in Korean>"}}"""
                 }]
             )
+            # Spend visibility (2026-06-12): this was the ONLY Claude call site
+            # not writing to anthropic_usage_log — the highest-volume path was
+            # invisible in the usage table. Lazy import keeps fetcher light.
+            try:
+                from services.ai.service import _log_usage
+                _log_usage("claude-haiku-4-5-20251001", "news_sentiment",
+                           getattr(resp, "usage", None))
+            except Exception:
+                pass
             import json
             import re
             raw = resp.content[0].text.strip()

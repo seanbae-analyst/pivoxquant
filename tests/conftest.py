@@ -272,6 +272,25 @@ def _reset_realtime_kr_health():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _reset_ai_result_cache():
+    """Isolate the process-wide AI-result cache (2026-06-12 토큰 최적화).
+
+    ``services.cache_service.ai_result_cache`` is a module-level dict that
+    survives across tests. A test that exercises a cached AI route (swot/
+    competitor/sector-trend/commentary) would otherwise leak its entry into a
+    later test expecting a FRESH generation/failure path — e.g. ai_smoke's
+    "SWOT 500 surfaces last_error" cases got a cache-hit 200 instead. Mirrors
+    the _reset_realtime_kr_health singleton-isolation pattern above.
+    """
+    try:
+        from services import cache_service as _cs
+        _cs.ai_result_cache.clear()
+    except Exception:
+        pass
+    yield
+
+
 class CSRFTestClient:
     """Flask test client that auto-attaches the CSRF token on mutating requests.
 

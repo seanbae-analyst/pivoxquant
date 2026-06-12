@@ -181,8 +181,16 @@ def swot():
     if not is_user_allowed_ticker(current_user.id, ticker):
         body, status = access_denied_response()
         return jsonify(body), status
+    # 비개인화 ticker 단위 분석 — 6h 앱 캐시 (2026-06-12 토큰 최적화).
+    # 캐시 조회는 반드시 allowlist 검사 *이후* (히트가 §101 접근통제를 우회
+    # 금지). 저장값은 scrub 완료된 최종 dict — 단일 출구(_scrub_and_jsonify)
+    # 재통과는 멱등.
+    cached = cache_service.ai_result_cache_get("swot", ticker)
+    if cached:
+        return _scrub_and_jsonify(cached)
     result = ai.generate_swot(d)
     if result:
+        cache_service.ai_result_cache_set("swot", ticker, result)
         return _scrub_and_jsonify(result)
     # Bug #14: was an opaque 500 ("Failed to generate SWOT"); the AAPL detail
     # page surfaced it as "Failed to generate SWOT" with no clue why. The
@@ -226,6 +234,10 @@ def competitor():
     if not is_user_allowed_ticker(current_user.id, ticker_check):
         body, status = access_denied_response()
         return jsonify(body), status
+    # 비개인화 ticker 단위 분석 — 6h 앱 캐시 (allowlist 이후, swot 와 동일).
+    cached = cache_service.ai_result_cache_get("competitor", ticker_check)
+    if cached:
+        return _scrub_and_jsonify(cached)
     target_sector = d.get("sector", d.get("snapshot", {}).get("sector", ""))
     peers = []
     # Intentional global scan: peer discovery requires sampling every cached
@@ -242,6 +254,7 @@ def competitor():
             pass
     result = ai.generate_competitor_analysis(d, peers[:8])
     if result:
+        cache_service.ai_result_cache_set("competitor", ticker_check, result)
         return _scrub_and_jsonify(result)
     detail = getattr(ai, "last_error", None)
     body = {
@@ -276,6 +289,12 @@ def sector_trend():
         body, status = access_denied_response()
         return jsonify(body), status
     sector = d.get("sector", "")
+    # 비개인화 sector 단위 분석 — 6h 앱 캐시 (sector 가 key; ticker 검사는
+    # 위에서 이미 통과). 빈 sector 는 키가 불안정하므로 캐시 미적용.
+    if sector:
+        cached = cache_service.ai_result_cache_get("sector_trend", sector)
+        if cached:
+            return _scrub_and_jsonify(cached)
     stocks = []
     # Intentional global scan: sector-trend aggregates every cached ticker
     # in the sector. Single query (not N+1). See competitor() comment.
@@ -289,6 +308,8 @@ def sector_trend():
             pass
     result = ai.generate_sector_trend(sector, stocks[:10])
     if result:
+        if sector:
+            cache_service.ai_result_cache_set("sector_trend", sector, result)
         return _scrub_and_jsonify(result)
     detail = getattr(ai, "last_error", None)
     body = {
@@ -411,8 +432,15 @@ def commentary():
     if ticker_check and not is_user_allowed_ticker(current_user.id, ticker_check):
         body, status = access_denied_response()
         return jsonify(body), status
+    # ticker 가 있을 때만 캐시 (키 안정성). allowlist 이후 — swot 와 동일 규칙.
+    if ticker_check:
+        cached = cache_service.ai_result_cache_get("commentary", ticker_check)
+        if cached:
+            return _scrub_and_jsonify(cached)
     result = ai.generate_commentary(d)
     if result:
+        if ticker_check:
+            cache_service.ai_result_cache_set("commentary", ticker_check, result)
         return _scrub_and_jsonify(result)
     detail = getattr(ai, "last_error", None)
     body = {
