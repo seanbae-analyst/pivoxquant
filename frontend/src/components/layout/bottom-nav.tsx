@@ -85,9 +85,8 @@ type DrawerGroup = {
 // bar stays at 4 tabs + More.
 const PRIMARY_TABS: Tab[] = [
   { href: "/mirror", label: "Mirror", icon: Contrast },
-  { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-  { href: "/reports", label: "Reports", icon: FileText },
+  { href: "/pre-trade", label: "Pre-Trade", icon: Gavel },
 ];
 
 // Drawer — mirrors the desktop sidebar's 4-group IA exactly
@@ -99,36 +98,17 @@ const PRIMARY_TABS: Tab[] = [
 // appear up in the primary bar as well.
 const DRAWER_GROUPS: DrawerGroup[] = [
   {
-    // 기록 — 척추 본체. Previously buried in "System" next to Settings.
-    label: "Record",
+    // Everything outside the 3 primary doors — demoted but fully reachable.
+    label: "More",
     items: [
-      // /journal — the user's own pre-trade decision-reflection feed
-      // (read-only) + Behavior Mirrors.
+      { href: "/home", label: "Home", icon: HomeIcon },
       { href: "/journal", label: "Journal", icon: NotebookPen },
-      // 2026-06-10: Pre-Trade RESTORED (removed 2026-05-21 as redundant
-      // with the inline modal) — standalone deposition entry point.
-      { href: "/pre-trade", label: "Pre-Trade", icon: Gavel },
-      // Habit/reflection routine tracker. "Routine" label avoids §101
-      // asset-growth language (see terminal-sidebar note).
-      { href: "/growth", label: "Routine", icon: Sprout },
-    ],
-  },
-  {
-    label: "Artifacts",
-    items: [
-      // Morning Brief item REMOVED 2026-04-29 — backend deprecated.
       { href: "/reports", label: "Reports", icon: FileText },
-    ],
-  },
-  {
-    // 관측 — renamed from Research; absorbs the old Portfolio group.
-    label: "Observe",
-    items: [
-      { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-      { href: "/signals", label: "Signals", icon: Zap },
       { href: "/risk", label: "Risk Board", icon: Shield },
-      // REMOVED 2026-04-27 per CEO + legal: autotrade nav (투자일임업 회피).
+      { href: "/signals", label: "Signals", icon: Zap },
       { href: "/ai", label: "AI Analysis", icon: Sparkles },
+      // Closed doors — pages preserved, off-nav (deep-link reachable).
+      { href: "/growth", label: "Routine", icon: Sprout, hidden: true },
       { href: "/watchlist", label: "Watchlist", icon: Eye, hidden: true },
       { href: "/market", label: "Market", icon: Activity, hidden: true },
       { href: "/discover", label: "Discover", icon: Compass, hidden: true },
@@ -136,11 +116,9 @@ const DRAWER_GROUPS: DrawerGroup[] = [
     ],
   },
   {
-    label: "System",
+    label: "Account",
     items: [
       { href: "/alerts", label: "Alerts", icon: Bell },
-      // Journal Companion — Closed Beta, Premium Plus / Founding
-      // Lifetime only. Entitlement enforcement lives on the page.
       { href: "/companion", label: "Companion", icon: BookHeart, premiumPlus: true },
       { href: "/profile", label: "Profile · Persona", icon: UserCircle },
       { href: "/settings", label: "Settings", icon: SettingsIcon },

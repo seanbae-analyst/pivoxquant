@@ -3,6 +3,11 @@
 /**
  * TerminalSidebar — full-height Vantablack navigation rail.
  *
+ * 2026-06-15 (CEO 19→3): collapsed to a 3-door IA — Mirror /
+ * Portfolio / Pre-Trade up top, everything else under "More";
+ * growth/market/discover/watchlist/ai-chat hidden (pages preserved).
+ * The 4-group notes below are legacy.
+ *
  * IA (2026-06-10 record-as-spine reorg, CEO GO on
  * docs/strategy/record-as-spine_2026-06-09.md §4.1): Home (top, ungrouped)
  * + 4 thematic groups —
@@ -95,105 +100,42 @@ type Item = {
   hidden?: boolean;
 };
 
-// Top — ungrouped, sits above the first group label.
-// 거울 leads the rail: the behavioural Mirror is the product spine
-// (멈춤 → 기록 → 거울). 2026-06-15 per CEO direction.
-const TOP: Item[] = [
+// PRIMARY — the 3 doors. 19→3 reduction (CEO 2026-06-15): the behavioural
+// loop IS the product (멈춤 → 기록 → 거울). Everything else is demoted to
+// "More" or hidden — NO pages deleted, all still reachable.
+const PRIMARY: Item[] = [
   { key: "mirror", label: "Mirror", href: "/mirror", icon: Contrast },
-  { key: "home", label: "Home", href: "/home", icon: HomeIcon },
-];
-
-// ── RECORD — 기록 (척추 본체) ──────────────────────────────────────
-// 2026-06-10 record-as-spine reorg: Journal / Pre-Trade / Routine were
-// previously buried at the bottom of "System" next to Settings. They are
-// the product's most differentiated surfaces — promoted to the first group.
-const RECORD: Item[] = [
-  // /journal renders the user's own pre-trade decision-reflection feed +
-  // 5 Behavior Mirrors (read-only, "User as CFO"). Restored 2026-05-21.
-  { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
-  // 2026-06-10: "Pre-Trade" RESTORED (was removed 2026-05-21 as
-  // "redundant with the inline modal"). The record-as-spine memo (§4.1,
-  // CEO GO) re-establishes it as the deposition's direct entry point —
-  // the inline modal stays the primary path; this is the standalone door.
-  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
-  // 2026-05-28: Growth OS (/growth) surfaced in the rail per CEO. Earlier
-  // comment claimed "agent_worker backend not deployed → 준비 중" — STALE:
-  // verified live in prod (/api/growth/{today,data,weekly}=401-behind-auth,
-  // /reflect=405). It is a habit/reflection routine tracker; label "Routine"
-  // avoids the asset-growth/return implication of "Growth" under §101.
-  { key: "growth", label: "Routine", href: "/growth", icon: Sprout },
-];
-
-// ── ARTIFACTS — 기록의 요약본 (CFO 생산물) ─────────────────────────
-// REMOVED 2026-04-29: Morning Brief item retired (backend deprecated).
-// 2026-06-10: Signals moved to OBSERVE (it is an input that feeds the
-// record, not a produced report).
-const ARTIFACTS: Item[] = [
-  { key: "reports", label: "Reports", href: "/reports", icon: FileText },
-];
-
-// ── OBSERVE — 관측 (기록에 먹이를 주는 입력단) ─────────────────────
-// 2026-06-10: renamed from RESEARCH and absorbs the old PORTFOLIO group —
-// portfolio positions, signals and the risk board are all observation
-// inputs in the record loop (관측 → 성찰·기록 → 리뷰 → 복리).
-const OBSERVE: Item[] = [
   { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { key: "signals", label: "Signals", href: "/signals", icon: Zap },
-  { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
-  // REMOVED 2026-04-27 per CEO + legal: autotrade item (투자일임업 회피).
-  { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
-  {
-    key: "watchlist",
-    label: "Watchlist",
-    href: "/watchlist",
-    icon: Eye,
-    hidden: true,
-  },
-  {
-    key: "market",
-    label: "Market",
-    href: "/market",
-    icon: Activity,
-    hidden: true,
-  },
-  {
-    key: "discover",
-    label: "Discover",
-    href: "/discover",
-    icon: Compass,
-    hidden: true,
-  },
-  {
-    key: "ai-chat",
-    label: "AI Chat",
-    href: "/ai-chat",
-    icon: MessageSquare,
-    hidden: true,
-  },
+  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
 ];
 
-// ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
-const SYSTEM: Item[] = [
+// MORE — demoted but fully reachable (no longer competing for attention).
+const MORE: Item[] = [
+  { key: "home", label: "Home", href: "/home", icon: HomeIcon },
+  { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
+  { key: "reports", label: "Reports", href: "/reports", icon: FileText },
+  { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
+  { key: "signals", label: "Signals", href: "/signals", icon: Zap },
+  { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
   { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
-  {
-    key: "profile",
-    label: "Profile · Persona",
-    href: "/profile",
-    icon: UserCircle,
-  },
+  { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
-  // Methodology moved to a PUBLIC landing page (/methodology) 2026-06-05 per CEO
-  // — no longer a login-gated sidebar item.
 ];
 
-const ALL_ITEMS: Item[] = [
-  ...TOP,
-  ...RECORD,
-  ...ARTIFACTS,
-  ...OBSERVE,
-  ...SYSTEM,
+// HIDDEN — pages preserved, off-nav (deep-link + active-state still resolve).
+// Closed doors: growth = founder's personal "Solo Founder Growth OS" (not a
+// user feature); market / discover = generic data available anywhere;
+// watchlist / ai-chat = superseded surfaces.
+const HIDDEN: Item[] = [
+  { key: "growth", label: "Routine", href: "/growth", icon: Sprout, hidden: true },
+  { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye, hidden: true },
+  { key: "market", label: "Market", href: "/market", icon: Activity, hidden: true },
+  { key: "discover", label: "Discover", href: "/discover", icon: Compass, hidden: true },
+  { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare, hidden: true },
 ];
+
+const ALL_ITEMS: Item[] = [...PRIMARY, ...MORE, ...HIDDEN];
 
 function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
   if (!pathname) return null;
@@ -236,9 +178,9 @@ export function TerminalSidebar({
 
       {/* Scrollable nav body */}
       <nav className="flex-1 overflow-y-auto" aria-label="Primary">
-        {/* TOP — Home (ungrouped) */}
-        <ul className="space-y-0.5 px-3">
-          {TOP.filter((it) => !it.hidden).map((item) => (
+        {/* The 3 doors — Mirror / Portfolio / Pre-Trade */}
+        <ul className="space-y-0.5 px-3" aria-label="Primary doors">
+          {PRIMARY.filter((it) => !it.hidden).map((item) => (
             <SidebarLink
               key={item.key}
               item={item}
@@ -247,46 +189,9 @@ export function TerminalSidebar({
           ))}
         </ul>
 
-        {/* aria-label on each <ul> — the visual GroupHeader is aria-hidden,
-            which left screen readers one flat 13-link list (design audit
-            2026-06-10). Labelled lists restore the record-as-spine grouping
-            for AT users. */}
-        <GroupHeader label="Record" />
-        <ul className="space-y-0.5 px-3" aria-label="Record">
-          {RECORD.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink
-              key={item.key}
-              item={item}
-              isActive={resolvedActive === item.key}
-            />
-          ))}
-        </ul>
-
-        <GroupHeader label="Artifacts" />
-        <ul className="space-y-0.5 px-3" aria-label="Artifacts">
-          {ARTIFACTS.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink
-              key={item.key}
-              item={item}
-              isActive={resolvedActive === item.key}
-            />
-          ))}
-        </ul>
-
-        <GroupHeader label="Observe" />
-        <ul className="space-y-0.5 px-3" aria-label="Observe">
-          {OBSERVE.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink
-              key={item.key}
-              item={item}
-              isActive={resolvedActive === item.key}
-            />
-          ))}
-        </ul>
-
-        <GroupHeader label="System" />
-        <ul className="space-y-0.5 px-3 pb-4" aria-label="System">
-          {SYSTEM.filter((it) => !it.hidden).map((item) => (
+        <GroupHeader label="More" />
+        <ul className="space-y-0.5 px-3 pb-4" aria-label="More">
+          {MORE.filter((it) => !it.hidden).map((item) => (
             <SidebarLink
               key={item.key}
               item={item}
