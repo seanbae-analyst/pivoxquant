@@ -269,12 +269,26 @@ def movers():
                 "price":      float(r.get("price") or 0),
                 "change_pct": float(r.get("change_pct") or 0),
             }
-        gainers = [_fmt(r) for r in filtered[:10]]
-        losers  = [_fmt(r) for r in list(reversed(filtered))[:10]]
+        # 2026-06-15 fix (P1-A): losers was `reversed(filtered)[:10]` — i.e. the
+        # smallest-GAIN end of a change_pct-descending list, NOT actual decliners.
+        # On an all-up or small (<20) KR pool that surfaced POSITIVE-% stocks in
+        # the "하락 종목" slot, overlapping the gainers list. Partition by sign:
+        # gainers = strictly >0 (already DESC), losers = strictly <0 ascending
+        # (largest loss first). Either side may legitimately be empty (e.g. an
+        # all-up day → no decliners), and the frontend renders that empty state.
+        gainers = [_fmt(r) for r in filtered if r.get("change_pct", 0) > 0][:10]
+        losers = [
+            _fmt(r) for r in sorted(
+                (r for r in filtered if r.get("change_pct", 0) < 0),
+                key=lambda r: r.get("change_pct", 0),
+            )
+        ][:10]
     except Exception as e:
         logger.debug("discover.movers live path skip: %s", e)
 
-    if len(gainers) >= 3 and len(losers) >= 3:
+    # Show the live path when EITHER side has enough real movers — a one-sided
+    # tape (all-up or all-down) is valid data, not a reason to fall back.
+    if len(gainers) >= 3 or len(losers) >= 3:
         observed_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         payload = {
             "region": region,

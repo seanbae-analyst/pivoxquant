@@ -227,11 +227,16 @@ class TestMoversSWR:
         _reset_swr_ttls()
 
     def _seed_user_discover(self, uid):
-        """Plant analyzed rows into discover_cache so movers can derive."""
+        """Plant analyzed rows into discover_cache so movers can derive.
+
+        change_pct spans BOTH signs (P1-A fix, 2026-06-15): losers are now
+        strictly negative, so an all-positive seed would yield zero losers.
+        ``(5 - i) * 0.9`` → 5 gainers (>0), 1 flat (=0), 4 losers (<0).
+        """
         from services import cache_service
         rows = [
             {"ticker": f"T{i}", "name": f"Stock {i}", "is_korean": False,
-             "price": 100.0 + i, "change_pct": (10 - i) * 0.7}
+             "price": 100.0 + i, "change_pct": (5 - i) * 0.9}
             for i in range(10)
         ]
         cache_service.discover_cache[uid] = {"data": rows, "ts": time.time()}
