@@ -1064,3 +1064,50 @@ export interface MethodologyResponse {
   reproducibility: { statement_kr: string; statement_en: string };
   disclaimer: string;
 }
+
+/* ── Mirror home (거울) — composed 선언/관찰/트윈 read ────────────────────
+ * Backend: routes/mirror_home.py (GET /api/mirror-home, @api_auth).
+ * Append-only (types.ts is add-only per frontend/CLAUDE.md). This payload
+ * NEVER carries an 8-code persona — only the 3 disclosed buckets
+ * (성장형/균형형/수익형) + neutral behavioural dimension labels. The radar
+ * vectors are raw 0..1 shapes for geometry only; no score is ever printed. */
+export type MirrorStage = "new" | "observed";
+
+export interface MirrorGapDimension {
+  /** FEATURE_KEYS member, e.g. "holding_period". */
+  key: string;
+  /** Disclosed neutral dimension label, e.g. "평균 보유기간". */
+  label: string;
+  /** Observed higher ("up") or lower ("down") than the declared centroid. */
+  direction: "up" | "down";
+  delta: number;
+  declared: number;
+  observed: number;
+}
+
+export interface MirrorTwinWeek {
+  week_ending: string | null;
+  user_return_pct: number | null;
+  twin_return_pct: number | null;
+  /** twin_return_pct − user_return_pct (positive = twin ahead). */
+  diff_pct: number | null;
+  user_trades_count: number;
+  twin_trades_count: number;
+}
+
+export interface MirrorHomeResponse {
+  ok: boolean;
+  stage: MirrorStage;
+  declared: { label: string | null; tagline: string | null; score: number | null };
+  observed: { label: string | null; bucket_changed: boolean; trade_count: number };
+  gap: MirrorGapDimension[];
+  drift: { available: boolean; descriptor: string | null };
+  radar: {
+    keys: string[];
+    labels: string[];
+    declared: number[];
+    /** null in the "new" stage (not enough observed behaviour yet). */
+    observed: number[] | null;
+  };
+  twin: MirrorTwinWeek | null;
+}

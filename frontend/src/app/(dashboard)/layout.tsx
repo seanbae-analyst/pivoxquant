@@ -38,6 +38,7 @@ const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   // most specific / multi-segment first
   ["/pre-trade", "coaching"],  // behavioural pre-trade surface — educational AI framing, not the default "signal"
   ["/journal", "coaching"],    // behavioural reflection feed — same framing as pre-trade
+  ["/mirror", "coaching"],     // 거울 home — persona/behaviour mirror, educational framing
   ["/ai-chat", "ai-analysis"],
   ["/watchlist", "signal"],
   ["/portfolio", "signal"],

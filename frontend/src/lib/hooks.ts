@@ -36,6 +36,7 @@ import type {
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
   MethodologyResponse,
+  MirrorHomeResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -287,6 +288,39 @@ export function usePreTradeJournal(limit = 50) {
  *
  * Never returns a score / grade — only counts and average hold days.
  */
+/**
+ * Mirror home (거울) — the composed 선언/관찰/트윈 read for the new home.
+ * 404-safe soft-empty (returns null) so the surface degrades gracefully
+ * before the route is reachable. Read-only; not refreshed on focus.
+ */
+export function useMirrorHome() {
+  const swr = useSWR<MirrorHomeResponse | null>(
+    API.mirror.home,
+    async (url: string): Promise<MirrorHomeResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & { status?: number };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as (Error & { status?: number }) | undefined,
+    mutate: swr.mutate,
+  };
+}
+
 export function useHoldingMirror() {
   const swr = useSWR<HoldingMirrorResponse | null>(
     API.behavior.holdingMirror,
