@@ -119,7 +119,7 @@ export default function QuantScoringPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] mb-6">
             <BarChart3 className="w-6 h-6 text-[var(--pq-bronze)]" />
           </div>
-          <h1 className="font-[var(--font-display)] italic text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
+          <h1 className="font-[var(--font-display)] text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
             How Quant Scoring Works
           </h1>
           <p className="text-base text-[rgba(245,240,232,0.62)] max-w-xl mx-auto">
@@ -193,7 +193,7 @@ export default function QuantScoringPage() {
                     <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-semibold text-[var(--pq-ivory)] mb-1">{pillar.title}</h3>
                       <p className="text-pq-mono-sm font-medium uppercase tracking-[0.16em] text-[var(--pq-bronze)] mb-2">{pillar.count}</p>
-                      <p className="text-sm text-[rgba(245,240,232,0.62)] italic">&ldquo;{pillar.question}&rdquo;</p>
+                      <p className="text-sm text-[rgba(245,240,232,0.62)]">&ldquo;{pillar.question}&rdquo;</p>
                     </div>
                   </div>
                 </div>
@@ -253,7 +253,7 @@ export default function QuantScoringPage() {
         {/* ── CTA ── */}
         <SectionCurtain>
         <section className="text-center py-12 px-6 rounded-sm border border-[rgba(184,149,106,0.18)] bg-[rgba(184,149,106,0.04)]">
-          <h2 className="font-[var(--font-display)] italic text-2xl font-medium text-[var(--pq-ivory)] mb-3">
+          <h2 className="font-[var(--font-display)] text-2xl font-medium text-[var(--pq-ivory)] mb-3">
             See scores for any stock — free
           </h2>
           <p className="text-[rgba(245,240,232,0.62)] mb-6 max-w-md mx-auto">

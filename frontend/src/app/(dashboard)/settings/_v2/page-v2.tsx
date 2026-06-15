@@ -646,7 +646,6 @@ export default function SettingsPageV2() {
                   <span
                     style={{
                       color: "var(--pq-bronze)",
-                      fontStyle: "italic",
                     }}
                   >
                     {t("settingsV2.sectionC.headingItalic")}
@@ -939,7 +938,6 @@ export default function SettingsPageV2() {
             <strong
               style={{
                 color: "rgba(245,240,232,0.82)",
-                fontStyle: "italic",
               }}
             className="font-serif" >
               {t("settingsV2.notice.title")}

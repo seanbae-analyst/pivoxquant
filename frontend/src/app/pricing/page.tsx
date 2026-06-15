@@ -599,7 +599,7 @@ export default function PricingPage() {
               }}
             >
               Pick the tier that matches your{" "}
-              <span className="italic">cadence</span>.
+              <span>cadence</span>.
             </h1>
 
             <p

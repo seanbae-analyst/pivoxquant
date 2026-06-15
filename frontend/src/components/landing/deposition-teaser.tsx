@@ -126,7 +126,7 @@ export function DepositionTeaser() {
                   Record of Reasoning
                 </h3>
                 <p
-                  className="mt-1 font-serif italic"
+                  className="mt-1 font-serif"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(10,10,10,0.55)",
@@ -194,7 +194,7 @@ export function DepositionTeaser() {
                 disclaimers must not render below 13px — raised from
                 --pq-text-eyebrow (10.5px) to --pq-text-body-sm (13px). */}
             <p
-              className="mt-8 font-serif italic"
+              className="mt-8 font-serif"
               style={{
                 fontSize: "var(--pq-text-body-sm)",
                 color: "rgba(10,10,10,0.45)",
@@ -240,7 +240,7 @@ export function DepositionTeaser() {
                     {q.en}
                   </p>
                   <p
-                    className="font-serif italic"
+                    className="font-serif"
                     style={{
                       fontSize: "var(--pq-text-body)",
                       lineHeight: 1.5,
@@ -260,7 +260,7 @@ export function DepositionTeaser() {
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mt-12 font-serif italic"
+          className="mt-12 font-serif"
           style={{
             // FINDING-LAND-002 (design audit 2026-06-10): compliance
             // disclaimers must not render below 13px. The W19 fontSize sweep

@@ -151,12 +151,12 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
           }}
         >
           Ask the{" "}
-          <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+          <span style={{ color: "var(--pq-bronze)" }}>
             desk.
           </span>
         </h2>
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
@@ -476,7 +476,7 @@ function ChatInner() {
             }}
           >
             What are you{" "}
-            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               observing
             </span>{" "}
             today?

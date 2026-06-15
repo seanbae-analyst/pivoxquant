@@ -102,7 +102,7 @@ export default function DashboardPreviewPage() {
           </motion.div>
 
           <div className="mt-12 flex flex-wrap items-center justify-between gap-4">
-            <p className="font-serif italic" style={{ color: "rgba(245,240,232,0.55)", fontSize: "var(--pq-text-body)" }}>
+            <p className="font-serif" style={{ color: "rgba(245,240,232,0.55)", fontSize: "var(--pq-text-body)" }}>
               Live dashboard opens after account creation. Every pane respects your persona.
             </p>
             <Link

@@ -292,7 +292,7 @@ export function ThreeLayers() {
                         {layer.label}
                       </span>
                       <span
-                        className="font-serif text-pq-mono-sm italic"
+                        className="font-serif text-pq-mono-sm"
                         style={{ color: "rgba(245,240,232,0.45)" }}
                       >
                         {layer.korean}

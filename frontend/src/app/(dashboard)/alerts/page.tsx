@@ -187,7 +187,7 @@ export default function AlertsPage() {
               }}
             >
               When the desk{" "}
-              <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+              <span style={{ color: "var(--pq-bronze)" }}>
                 spoke.
               </span>
             </h1>
@@ -300,7 +300,7 @@ export default function AlertsPage() {
               }}
             >
               The desk has been{" "}
-              <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+              <span style={{ color: "var(--pq-bronze)" }}>
                 quiet.
               </span>
             </p>

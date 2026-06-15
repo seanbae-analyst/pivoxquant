@@ -418,7 +418,6 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
               <p
                 style={{
                   fontSize: "var(--pq-text-body)",
-                  fontStyle: "italic",
                   color: "rgba(20,20,20,0.55)",
                   padding: "20px 0",
                   margin: 0,

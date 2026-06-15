@@ -1320,11 +1320,12 @@
 /* 2026-05-09: keyframe glow removed per CEO Hero rebuild ("싹다 새로
    만들어 / 마우스 따라오는 그거 지우고"). The Hero is now static
    editorial to match every other page on the site — no entrance
-   animation. The `learns` word stays italic + bronze, but paints
-   once at first render and never moves. */
+   animation. The `learns` word stays bronze (upright — decorative
+   italic removed globally per CEO 2026-06-15), and paints once at
+   first render and never moves. */
 .pq-cfo-word {
   display: inline-block;
-  font-style: italic;
+  font-style: normal;
   color: var(--pq-bronze-light);
   -webkit-text-fill-color: var(--pq-bronze-light);
 }
@@ -1447,10 +1448,11 @@
   color: var(--pq-bronze);
 }
 
-/* Editorial H1 — Playfair Display italic ivory on ink (v3 lock-in) */
+/* Editorial H1 — Playfair Display, ivory on ink (v3 lock-in; upright,
+   decorative italic removed globally per CEO 2026-06-15) */
 .pq-ink-h1 {
   font-family: var(--font-display), "Playfair Display", "EB Garamond", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 500;
   font-size: clamp(1.75rem, 3.2vw, 2.25rem);
   line-height: 1.1;
@@ -1810,10 +1812,10 @@ button:hover > .pq-ink-pill,
   }
 }
 
-/* /home — Terminal stat number (italic serif hero) */
+/* /home — Terminal stat number (serif hero; upright per CEO 2026-06-15) */
 .pq-home-stat {
   font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   font-size: 28px;
   line-height: 1.05;
@@ -1900,7 +1902,16 @@ h1, h2, h3, h4 {
   text-rendering: optimizeLegibility;
 }
 
-/* Italic Playfair / Serif — tighten tracking for editorial feel */
+/* Serif / display headings — tighten tracking for editorial feel.
+   NOTE (CEO 2026-06-15 "이탤릭 이상한거 다 빼라" — escalation of the
+   2026-05-20 partial directive to GLOBAL): all decorative italic was
+   removed across the frontend. Every `font-style: italic` editorial rule
+   in this file is now `normal`, and all `italic` Tailwind utilities were
+   stripped from component className strings. The `.font-serif.italic`,
+   `em.italic`, `i.italic` selectors below are therefore inert (no element
+   carries the `italic` class any longer); they only add tracking when
+   matched and intentionally do NOT set font-style. Kept for `.pq-ink-h1`
+   / `.pq-ink-h2`. Do not re-introduce decorative italic. */
 .font-serif.italic,
 em.italic,
 i.italic,
@@ -2084,7 +2095,7 @@ i.italic,
   gap: 12px;
   color: var(--pq-bronze);
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 14px;
   opacity: 0.7;
 }
@@ -2134,7 +2145,7 @@ i.italic,
   border-radius: 999px;
   border: 0.5pt solid var(--pq-bronze);
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   letter-spacing: 0;
   color: var(--pq-bronze);
@@ -2271,7 +2282,7 @@ i.italic,
 /* 17. Editorial drop-cap utility */
 .pq-dropcap::first-letter {
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 3.2em;
   line-height: 0.88;
   float: left;
@@ -2479,7 +2490,8 @@ i.italic,
 }
 
 /* News group date header — editorial drop-letter style.
-   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings). */
+   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings;
+   escalated to GLOBAL no-decorative-italic by CEO 2026-06-15). */
 .pq-news-date-header {
   font-family: var(--font-serif), Georgia, serif;
   font-style: normal;
@@ -2492,7 +2504,8 @@ i.italic,
 }
 
 /* Editorial note fallback for missing data.
-   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings). */
+   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings;
+   escalated to GLOBAL no-decorative-italic by CEO 2026-06-15). */
 .pq-detail-empty-note {
   font-family: var(--font-serif), Georgia, serif;
   font-style: normal;
@@ -2582,7 +2595,7 @@ i.italic,
 .pq-emboss-seal {
   display: inline-block;
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 24px;
   letter-spacing: -0.01em;
   color: var(--pq-bronze, #B8956A);
@@ -2697,7 +2710,7 @@ i.italic,
 
 .pq-paper-hero-title {
   font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   font-size: clamp(2.5rem, 5vw, 4rem);
   line-height: 1.02;
@@ -2718,7 +2731,7 @@ i.italic,
 .pq-paper-hero-num {
   display: inline-block;
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 500;
   font-size: clamp(3.5rem, 7vw, 5rem);
   line-height: 1;
@@ -2765,7 +2778,7 @@ i.italic,
   background: var(--pq-bronze-deep);
   color: #2a1f10;
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -2945,7 +2958,7 @@ i.italic,
   transform: translateX(-50%);
   z-index: 55;
   font-family: var(--font-serif, "EB Garamond", Georgia, serif);
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -3232,7 +3245,7 @@ html {
 }
 .pq-paper-sub {
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   line-height: 1.35;
   color: rgba(111, 86, 54, 0.85);
@@ -3276,7 +3289,7 @@ html {
   display: flex;
   justify-content: space-between;
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   color: rgba(111, 86, 54, 0.7);
   letter-spacing: 0.02em;
@@ -3450,7 +3463,7 @@ html {
   box-shadow: 0 0 6px rgba(217, 163, 90, 0.55);
 }
 .pq-gate-row-label {
-  font-style: italic;
+  font-style: normal;
   letter-spacing: 0.005em;
 }
 .pq-gate-row-status {
@@ -3490,7 +3503,7 @@ html {
 }
 .pq-gate-card-foot-recheck {
   font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   color: rgba(184, 149, 106, 0.85);
 }
@@ -3549,7 +3562,7 @@ html {
 }
 .pq-friday-card-seal-mark {
   font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 22px;
   font-weight: 600;
   color: rgba(15, 12, 8, 0.85);
@@ -3588,7 +3601,7 @@ html {
   gap: 10px;
 }
 .pq-friday-card-issue-week {
-  font-style: italic;
+  font-style: normal;
 }
 .pq-friday-card-issue-dot {
   color: rgba(184, 149, 106, 0.55);
@@ -3604,7 +3617,7 @@ html {
 }
 .pq-friday-card-body {
   font-family: var(--font-display), Georgia, "Source Serif 4", serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 15px;
   line-height: 1.65;
   color: rgba(245, 240, 232, 0.78);
@@ -3642,7 +3655,7 @@ html {
 }
 .pq-friday-card-sealed {
   font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 11px;
   color: var(--pq-bronze);
   letter-spacing: 0.04em;

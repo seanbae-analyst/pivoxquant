@@ -147,7 +147,7 @@ function UpgradePrompt() {
           {t("companion.page.upgradeDesc")}
         </p>
         <p
-          className="mt-2 font-serif italic"
+          className="mt-2 font-serif"
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.65,
@@ -273,7 +273,7 @@ function ComingSoon({ phase }: { phase: string }) {
           {t("companion.page.comingSoonDesc")}
         </p>
         <p
-          className="mt-2 font-serif italic"
+          className="mt-2 font-serif"
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.65,

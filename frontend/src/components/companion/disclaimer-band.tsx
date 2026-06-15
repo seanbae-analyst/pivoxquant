@@ -78,7 +78,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         role="note"
       >
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.01em",
@@ -131,7 +131,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
           {CONTENT.legal.ko}
         </p>
         <p
-          className="mt-3 font-serif italic"
+          className="mt-3 font-serif"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             lineHeight: 1.6,
@@ -184,7 +184,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         {CONTENT.session.titleEn}
       </h2>
       <p
-        className="mt-2 font-serif italic"
+        className="mt-2 font-serif"
         style={{
           fontSize: "var(--pq-text-body)",
           lineHeight: 1.5,

@@ -377,7 +377,7 @@ export default function TopNav() {
                   mixed-case "PivoxQuant" (unified across splash / sidebar /
                   market masthead). Was roman uppercase "PIVOXQUANT". */}
               <span
-                className="font-serif italic"
+                className="font-serif"
                 style={{
                   color: "var(--pq-ivory)",
                   letterSpacing: "0.01em",
@@ -390,7 +390,7 @@ export default function TopNav() {
               </span>
               <span
                 aria-hidden
-                className="hidden font-serif italic md:inline"
+                className="hidden font-serif md:inline"
                 style={{
                   color: "rgba(184,149,106,0.75)",
                   fontSize: "var(--pq-text-eyebrow)",
@@ -648,7 +648,7 @@ export default function TopNav() {
                           </span>
                         </div>
                         <p
-                          className="font-serif italic"
+                          className="font-serif"
                           style={{
                             color: "rgba(245,240,232,0.78)",
                             fontSize: "var(--pq-text-lead)",

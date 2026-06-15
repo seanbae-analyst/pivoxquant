@@ -166,7 +166,7 @@ export default function ReportsPage() {
               </span>
             </div>
             <span
-              className="hidden font-serif italic sm:inline"
+              className="hidden font-serif sm:inline"
               style={{
                 color: "rgba(245,240,232,0.45)",
                 fontSize: "var(--pq-text-eyebrow)",

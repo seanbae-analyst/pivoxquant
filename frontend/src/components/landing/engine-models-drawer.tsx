@@ -709,7 +709,7 @@ function DrawerContent({
             Reference
           </h4>
           <p
-            className="font-serif italic"
+            className="font-serif"
             style={{
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
@@ -726,7 +726,7 @@ function DrawerContent({
         style={{ borderTop: "1px solid var(--pq-ivory-line)" }}
       >
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             color: "rgba(245,240,232,0.58)",
@@ -947,7 +947,7 @@ export default function EngineModelsDrawer() {
                 </ul>
 
                 <p
-                  className="mt-auto pt-8 font-serif italic"
+                  className="mt-auto pt-8 font-serif"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
                     lineHeight: 1.6,
@@ -963,7 +963,7 @@ export default function EngineModelsDrawer() {
 
         {/* Figure caption */}
         <p
-          className="mt-16 md:mt-24 max-w-3xl font-serif italic"
+          className="mt-16 md:mt-24 max-w-3xl font-serif"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             lineHeight: 1.7,

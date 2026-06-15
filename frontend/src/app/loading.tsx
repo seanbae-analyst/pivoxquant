@@ -26,7 +26,7 @@ export default function Loading() {
 
       {/* Wordmark */}
       <div
-        className="font-serif italic text-lg tracking-tight mb-8"
+        className="font-serif text-lg tracking-tight mb-8"
         style={{ color: "rgba(245,240,232,0.6)" }}
       >
         PivoxQuant

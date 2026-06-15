@@ -105,13 +105,11 @@ export function Hero() {
             className="pq-hero-h1 mb-9 font-serif font-normal"
           >
             {t("landing.hero.h1Part1")}{" "}
-            {/* Korean has no real Playfair italic → browser synthesizes a
-                slanted fallback that clashes with the upright first half
-                ("폰트 개별로"). v3 bans synthetic italic, so for ko we keep the
-                bronze accent but drop the slant; en keeps true Playfair italic. */}
+            {/* Accent word: bronze, upright. Decorative italic removed
+                globally per CEO 2026-06-15 ("이탤릭 이상한거 다 빼라"). */}
             <em
               className="pq-cfo-word"
-              style={{ fontStyle: locale === "ko" ? "normal" : "italic" }}
+              style={{ fontStyle: "normal" }}
             >
               {t("landing.hero.h1Italic")}
             </em>
@@ -163,7 +161,7 @@ export function Hero() {
           {/* Disclaimer — same italic Playfair micro-copy seen on every
               /features page footer + the disclaimer-banner. */}
           <p
-            className="mt-12 max-w-2xl border-t pt-6 font-serif text-[11px] italic leading-relaxed tracking-wide"
+            className="mt-12 max-w-2xl border-t pt-6 font-serif text-[11px] leading-relaxed tracking-wide"
             style={{
               borderColor: "var(--pq-border)",
               color: "var(--pq-muted)",

@@ -117,7 +117,6 @@ export default function SplashPage() {
             letterSpacing: "0.24em",
             textTransform: "uppercase",
             color: "rgba(var(--pq-bronze-wash-rgb), 0.40)",
-            fontStyle: "italic",
           }}
         >
           {t("landing.splash.scrollHint")}

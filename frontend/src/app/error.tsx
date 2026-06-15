@@ -52,7 +52,7 @@ export default function Error({
         </div>
 
         <h1
-          className="font-serif italic mb-6 leading-[1.05]"
+          className="font-serif mb-6 leading-[1.05]"
           style={{ fontSize: "clamp(1.75rem,4vw,2.5rem)" }}
         >
           The desk hit a snag.

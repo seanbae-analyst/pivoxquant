@@ -567,7 +567,7 @@ export function CooldownStep({
         {/* Rationale recap */}
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-4">
           <Caption>{t("preTrade.thesis")}</Caption>
-          <p className="mt-2 font-serif text-pq-body leading-relaxed italic text-[rgba(245,240,232,0.78)]">
+          <p className="mt-2 font-serif text-pq-body leading-relaxed text-[rgba(245,240,232,0.78)]">
             &ldquo;{reflection.rationale}&rdquo;
           </p>
         </div>

@@ -202,7 +202,7 @@ export default function SignalsPageV1() {
             <span className="pq-ink-pill pq-ink-pill--neg">Negative</span>
             <span className="-ml-1">= score &lt; 35</span>
           </div>
-          <p className="mt-2 max-w-xl text-pq-mono-sm italic text-[rgba(245,240,232,0.45)]">
+          <p className="mt-2 max-w-xl text-pq-mono-sm text-[rgba(245,240,232,0.45)]">
             Objective classification by composite score — not advice or recommendation.
           </p>
         </div>

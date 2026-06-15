@@ -159,7 +159,7 @@ function FrontFace({
           {s.name}
         </h3>
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             color: "rgba(184,149,106,0.85)",
             fontSize: "var(--pq-text-caption)",
@@ -188,7 +188,7 @@ function FrontFace({
           onClick={(e) => e.stopPropagation()}
           tabIndex={interactiveTabIndex}
           aria-hidden={hidden || undefined}
-          className="inline-flex items-center gap-1.5 font-serif italic"
+          className="inline-flex items-center gap-1.5 font-serif"
           style={{
             color: "var(--pq-bronze)",
             fontSize: "var(--pq-text-body)",
@@ -269,7 +269,7 @@ function BackFace({
           {s.preview.kicker}
         </span>
         <span
-          className="font-serif italic"
+          className="font-serif"
           style={{
             color: "rgba(111, 86, 54, 0.7)",
             fontSize: "var(--pq-text-caption)",
@@ -280,7 +280,7 @@ function BackFace({
       </div>
 
       <h4
-        className="relative z-10 mt-4 font-serif italic"
+        className="relative z-10 mt-4 font-serif"
         style={{
           color: "#2A1F13",
           fontSize: "var(--pq-text-h5)",
@@ -334,7 +334,7 @@ function BackFace({
 
       <div className="relative z-10 mt-auto flex items-end justify-between pt-4">
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             color: "rgba(42,31,19,0.6)",
             fontSize: "var(--pq-text-caption)",
@@ -568,7 +568,7 @@ function FrontFaceContent({
           {s.name}
         </h3>
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{ color: "rgba(184,149,106,0.85)", fontSize: "var(--pq-text-caption)" }}
         >
           {s.subtitle}
@@ -592,7 +592,7 @@ function FrontFaceContent({
           onClick={(e) => e.stopPropagation()}
           tabIndex={interactiveTabIndex}
           aria-hidden={hidden || undefined}
-          className="inline-flex items-center gap-1.5 font-serif italic"
+          className="inline-flex items-center gap-1.5 font-serif"
           style={{
             color: "var(--pq-bronze)",
             fontSize: "var(--pq-text-body)",
@@ -652,14 +652,14 @@ function BackFaceContent({
           {s.preview.kicker}
         </span>
         <span
-          className="font-serif italic"
+          className="font-serif"
           style={{ color: "rgba(111,86,54,0.7)", fontSize: "var(--pq-text-caption)" }}
         >
           {s.cadence}
         </span>
       </div>
       <h4
-        className="relative z-10 mt-4 font-serif italic"
+        className="relative z-10 mt-4 font-serif"
         style={{
           color: "#2A1F13",
           fontSize: "var(--pq-text-h5)",
@@ -710,7 +710,7 @@ function BackFaceContent({
       </ul>
       <div className="relative z-10 mt-auto flex items-end justify-between pt-4">
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             color: "rgba(42,31,19,0.6)",
             fontSize: "var(--pq-text-caption)",

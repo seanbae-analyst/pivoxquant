@@ -217,7 +217,7 @@ export function TerminalSidebar({
           "PIVOXQUANT", a competing second treatment. Now unified. */}
       <div className="px-6 pt-7 pb-6">
         <span
-          className="font-serif italic"
+          className="font-serif"
           style={{
             fontSize: "var(--pq-text-h6)",
             letterSpacing: "0.01em",

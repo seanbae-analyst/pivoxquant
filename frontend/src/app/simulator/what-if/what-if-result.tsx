@@ -217,7 +217,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
             {t(headlineKey)}
           </div>
           <h2
-            className="mt-2 font-serif italic leading-snug"
+            className="mt-2 font-serif leading-snug"
             style={{
               color: "var(--pq-ivory)",
               fontSize: "clamp(1rem, 2vw, 1.25rem)",

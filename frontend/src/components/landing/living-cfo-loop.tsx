@@ -198,7 +198,7 @@ export function LivingCfoLoop() {
                   {s.en}
                 </p>
                 <p
-                  className="font-serif italic"
+                  className="font-serif"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(var(--pq-bronze-wash-rgb),0.75)",
@@ -216,7 +216,7 @@ export function LivingCfoLoop() {
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mt-16 font-serif italic text-center"
+          className="mt-16 font-serif text-center"
           style={{
             fontSize: "var(--pq-text-body)",
             color: "rgba(var(--pq-bronze-wash-rgb),0.85)",

@@ -185,7 +185,7 @@ export function KoreaUsDesk() {
                     {t.title_en}
                   </h3>
                   <p
-                    className="font-serif italic mb-2"
+                    className="font-serif mb-2"
                     style={{
                       fontSize: "var(--pq-text-body)",
                       color: "rgba(var(--pq-bronze-wash-rgb),0.8)",

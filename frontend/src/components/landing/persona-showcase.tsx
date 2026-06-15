@@ -193,7 +193,7 @@ export function PersonaShowcase() {
                     {p.key.slice(0, 2).toUpperCase()}
                   </span>
                   <span
-                    className="font-serif text-pq-caption italic"
+                    className="font-serif text-pq-caption"
                     style={{ color: "rgba(245,240,232,0.45)" }}
                   >
                     {p.kr}
@@ -222,7 +222,7 @@ export function PersonaShowcase() {
                   {p.identity}
                 </p>
                 <p
-                  className="font-serif italic"
+                  className="font-serif"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
                     lineHeight: 1.5,
@@ -235,7 +235,7 @@ export function PersonaShowcase() {
 
               <Link
                 href={`/sample-reports/${PERSONA_SAMPLE[p.key] ?? "weekly-memo"}`}
-                className="mt-6 inline-flex items-center gap-1.5 self-start font-serif text-pq-caption italic"
+                className="mt-6 inline-flex items-center gap-1.5 self-start font-serif text-pq-caption"
                 style={{
                   letterSpacing: "0.02em",
                   color: "var(--pq-bronze-light, #B8956A)",

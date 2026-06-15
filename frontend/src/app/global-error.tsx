@@ -71,7 +71,6 @@ export default function GlobalError({
 
           <h1
             style={{
-              fontStyle: "italic",
               fontSize: "clamp(1.5rem, 4vw, 2rem)",
               fontWeight: 500,
               margin: "0 0 16px",

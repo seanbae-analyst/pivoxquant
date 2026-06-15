@@ -388,7 +388,7 @@ export default function DiscoverPage() {
             }}
           >
             What the desk{" "}
-            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               observed.
             </span>
           </h1>
@@ -503,7 +503,7 @@ export default function DiscoverPage() {
                         the strip, not on every row, to keep the rhythm clean. */}
                     {rows.some((r) => r.observed_at) && (
                       <p
-                        className="mt-2 font-serif italic text-pq-caption"
+                        className="mt-2 font-serif text-pq-caption"
                         style={{ color: "rgba(245,240,232,0.4)" }}
                       >
                         Last observed{" "}
@@ -592,7 +592,7 @@ export default function DiscoverPage() {
               </table>
             </div>
           ) : (
-            <p className="mt-5 text-pq-caption italic text-[rgba(245,240,232,0.4)]">
+            <p className="mt-5 text-pq-caption text-[rgba(245,240,232,0.4)]">
               Sector rotation data unavailable.
             </p>
           )}
@@ -728,7 +728,7 @@ export default function DiscoverPage() {
             </div>
           )}
           {data?.cached && data.cached_at && (
-            <p className="mt-3 font-serif italic text-pq-caption text-[rgba(245,240,232,0.4)]">
+            <p className="mt-3 font-serif text-pq-caption text-[rgba(245,240,232,0.4)]">
               Cached at{" "}
               <span className="font-mono not-italic tabular-nums">
                 {new Date(data.cached_at).toLocaleString("en-US")}
@@ -786,7 +786,7 @@ function SectionKicker({
       </h2>
       {sub ? (
         <p
-          className="mt-1.5 font-serif italic"
+          className="mt-1.5 font-serif"
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.5,
@@ -819,7 +819,7 @@ function EditorialEmpty({
     <div className="mt-6 flex flex-col items-center gap-3 py-12 text-center">
       <PqFleuron size={14} />
       <p
-        className="font-serif italic"
+        className="font-serif"
         style={{
           fontSize: "var(--pq-text-body)",
           color: "rgba(245,240,232,0.5)",
@@ -898,7 +898,7 @@ function EmptyBlock({ title }: { title: string }) {
         {title}
       </div>
       <p
-        className="py-4 font-serif italic"
+        className="py-4 font-serif"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
           color: "rgba(245,240,232,0.45)",

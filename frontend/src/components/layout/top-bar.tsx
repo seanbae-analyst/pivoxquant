@@ -64,7 +64,7 @@ export function TopBar() {
           />
           {/* FINDING-039: brand-voice placeholder, not generic "Search …". */}
           <span
-            className="flex-1 text-sm italic font-serif"
+            className="flex-1 text-sm font-serif"
             style={{
               color: "rgba(245, 240, 232, 0.45)",
             }}
