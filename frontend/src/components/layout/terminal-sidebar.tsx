@@ -53,11 +53,13 @@ import {
   UserCircle,
   Sprout,
   Gavel,
+  Contrast,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type TerminalSidebarKey =
   | "home"
+  | "mirror"
   // "morning-brief" key REMOVED 2026-04-29 — backend deprecated.
   | "reports"
   | "signals"
@@ -94,7 +96,10 @@ type Item = {
 };
 
 // Top — ungrouped, sits above the first group label.
+// 거울 leads the rail: the behavioural Mirror is the product spine
+// (멈춤 → 기록 → 거울). 2026-06-15 per CEO direction.
 const TOP: Item[] = [
+  { key: "mirror", label: "Mirror", href: "/mirror", icon: Contrast },
   { key: "home", label: "Home", href: "/home", icon: HomeIcon },
 ];
 

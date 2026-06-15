@@ -44,6 +44,7 @@ import {
   UserCircle,
   Gavel,
   Sprout,
+  Contrast,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -79,11 +80,14 @@ type DrawerGroup = {
 // group sibling) on the primary bar so the mobile shell still has 4
 // primary destinations after hiding Morning Brief.
 // 2026-04-29: Morning Brief deep link fully removed (backend deprecated).
+// 2026-06-15 per CEO: 거울 (Mirror) leads as the product spine. Signals moves
+// to the More drawer (it is already in the Observe group there) so the primary
+// bar stays at 4 tabs + More.
 const PRIMARY_TABS: Tab[] = [
+  { href: "/mirror", label: "Mirror", icon: Contrast },
   { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/signals", label: "Signals", icon: Zap },
 ];
 
 // Drawer — mirrors the desktop sidebar's 4-group IA exactly
