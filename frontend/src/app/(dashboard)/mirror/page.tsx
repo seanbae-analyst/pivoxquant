@@ -29,6 +29,7 @@ import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
 import { TwinWeekCard } from "@/components/mirror/twin-week-card";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
+import { ArchiveLinks } from "@/components/mirror/archive-links";
 
 function LegendDot({ colorVar, label }: { colorVar: string; label: string }) {
   return (
@@ -120,6 +121,7 @@ export default function MirrorPage() {
 
               <TwinWeekCard twin={data.twin} />
               <OneThingNudge data={data} />
+              <ArchiveLinks />
 
               <DisclaimerBanner type="behavior-mirror" />
             </div>

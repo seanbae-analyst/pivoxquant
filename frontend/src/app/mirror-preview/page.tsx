@@ -18,6 +18,7 @@ import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
 import { TwinWeekCard } from "@/components/mirror/twin-week-card";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
+import { ArchiveLinks } from "@/components/mirror/archive-links";
 
 const SAMPLE: MirrorHomeResponse = {
   ok: true,
@@ -124,6 +125,7 @@ export default function MirrorPreviewPage() {
 
           <TwinWeekCard twin={data.twin} />
           <OneThingNudge data={data} />
+          <ArchiveLinks />
 
           <DisclaimerBanner type="behavior-mirror" />
         </div>
