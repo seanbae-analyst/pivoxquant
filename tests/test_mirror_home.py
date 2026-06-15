@@ -70,3 +70,40 @@ def test_twin_report_surfaces(client, auth_user, app):
     assert twin["diff_pct"] == 2.2
     assert twin["user_trades_count"] == 2
     assert twin["twin_trades_count"] == 3
+
+
+def test_observed_stage_gap_and_radar(client, auth_user, monkeypatch):
+    """With enough observed behaviour the endpoint surfaces the gap + observed
+    radar, mapping the observed code to a 3-bucket label (never the 8-code)."""
+    fake_features = {
+        "holding_period": 0.45, "turnover": 0.35, "sector_diversity": 0.40,
+        "ticker_diversity": 0.50, "hold_variance": 0.50, "loss_cut_discipline": 0.50,
+        "declared_risk": 0.80, "conviction_stability": 0.60, "feedback_engagement": 0.55,
+    }
+    monkeypatch.setattr(
+        "routes.mirror_home.classify_persona_multi",
+        lambda *a, **k: {
+            "features": fake_features,
+            "trade_count": 20,
+            "data_sparse": False,
+            "persona": "growth",  # 8-code; endpoint must surface only the bucket
+        },
+    )
+
+    data = client.get("/api/mirror-home").get_json()
+    assert data["stage"] == "observed"
+
+    # Gap is populated with neutral dimension facts (label + direction).
+    assert 1 <= len(data["gap"]) <= 3
+    for g in data["gap"]:
+        assert g["direction"] in {"up", "down"}
+        assert g["label"] and g["key"]
+
+    # Observed radar shape present, 9 axes.
+    assert data["radar"]["observed"] is not None
+    assert len(data["radar"]["observed"]) == 9
+
+    # Observed surfaced as a 3-bucket label only — the 8-code never leaks.
+    assert data["observed"]["label"] in {"성장형", "균형형", "수익형"}
+    blob = json.dumps(data, ensure_ascii=False).lower()
+    assert "growth" not in blob and "speculator" not in blob

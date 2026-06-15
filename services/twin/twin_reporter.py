@@ -141,13 +141,34 @@ def _compute_twin_return(user_id: int, week_ending: date) -> tuple[float | None,
     trade_count = len(sells) + len(buys)
     if not sells:
         return None, trade_count
+    # Pattern-7 fix (2026-06-15): AITwinTrade has no currency column and the
+    # twin universe holds BOTH US ($) and KR (₩) names, so raw-summing pnl/cost
+    # across a mixed week let a single ₩-scale SELL dominate the %. The user
+    # leg (_compute_user_return) and the lifetime path (routes/twin.py
+    # twin_comparison) already normalize; only this weekly twin leg did not.
+    # Infer currency from the ticker suffix and normalize every leg to KRW
+    # before summing. A % is scale-invariant, so single-currency weeks are
+    # unchanged (fx cancels in the ratio); only mixed weeks are corrected.
+    from services import fx_service
+
+    fx = fx_service.get_rate()
     realized_pnl = Decimal("0")
     cost_basis = Decimal("0")
     for s in sells:
         if s.pnl_at_close is None:
             continue
-        realized_pnl += Decimal(str(s.pnl_at_close))
-        cost_basis += Decimal(str(s.shares or 0)) * Decimal(str(s.price or 0)) - Decimal(str(s.pnl_at_close))
+        ticker = (s.ticker or "").upper()
+        currency = "KRW" if ticker.endswith((".KS", ".KQ")) else "USD"
+        raw_pnl = float(s.pnl_at_close)
+        raw_cost = float(s.shares or 0) * float(s.price or 0) - raw_pnl
+        try:
+            pnl_krw = fx_service.amount_to_krw(raw_pnl, currency, s.ticker, fx)
+            cost_krw = fx_service.amount_to_krw(raw_cost, currency, s.ticker, fx)
+        except (TypeError, ValueError):
+            logger.debug("silent-fallback: _compute_twin_return fx", exc_info=True)
+            pnl_krw, cost_krw = raw_pnl, raw_cost
+        realized_pnl += Decimal(str(pnl_krw))
+        cost_basis += Decimal(str(cost_krw))
     if cost_basis <= 0:
         return None, trade_count
     return float(round((realized_pnl / cost_basis) * 100, 4)), trade_count

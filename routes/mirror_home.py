@@ -110,9 +110,12 @@ def get_mirror_home():
     observed_vec = [float(observed_features.get(k, 0.5)) for k in FEATURE_KEYS]
     trade_count = int(clf.get("trade_count", 0) or 0)
     observed_code = clf.get("persona")
-    has_observed = (
-        trade_count >= _MIN_TRADES_FOR_OBSERVED and not clf.get("data_sparse", False)
-    )
+    # Gate on closed-trade count only — matches the Living Mirror artifact's
+    # 5-trade threshold so the two surfaces agree. (The classifier's own
+    # data_sparse flag uses a stricter 10; ANDing it here kept the home in the
+    # "new" stage until 10 while the PDF already showed the observed overlay at
+    # 5 — a cross-surface contradiction. P2 fix 2026-06-15.)
+    has_observed = trade_count >= _MIN_TRADES_FOR_OBSERVED
     stage = "observed" if has_observed else "new"
 
     # (3) The gap — only meaningful once behaviour is observed.
