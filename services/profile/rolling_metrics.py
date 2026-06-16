@@ -197,10 +197,28 @@ def _sector_tilt_hhi(
     sector_map: dict[str, str],
 ) -> float:
     """HHI on traded-volume weighted sector exposure (higher = more tilt)."""
+    # Pattern-7 fix (2026-06-15): total_value is in the trade's NATIVE currency
+    # (₩ for .KS/.KQ, $ otherwise). Raw-summing across currencies let a ₩-scale
+    # KR position dominate the sector weights, distorting the HHI for any mixed
+    # US+KR book. Normalize each leg to KRW first. HHI is scale-invariant, so a
+    # single-currency book is unaffected (the common case); only mixed books
+    # are corrected.
+    from services import fx_service
+
+    fx = fx_service.get_rate()
     volume_by_sector: dict[str, float] = {}
     for t in trades:
         sector = sector_map.get((t.ticker or "").upper(), "UNKNOWN")
-        amount = abs(float(t.total_value or 0.0)) or abs(float(t.shares or 0.0))
+        money = abs(float(t.total_value or 0.0))
+        if money > 0:
+            try:
+                amount = fx_service.amount_to_krw(money, t.currency, t.ticker, fx)
+            except (TypeError, ValueError):
+                amount = money
+        else:
+            # No traded value — fall back to raw share count (a currency-
+            # agnostic rough proxy; a count cannot be FX-normalized).
+            amount = abs(float(t.shares or 0.0))
         if amount <= 0:
             continue
         volume_by_sector[sector] = volume_by_sector.get(sector, 0.0) + amount
