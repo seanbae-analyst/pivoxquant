@@ -53,6 +53,7 @@ import {
   deriveArtifactStats,
 } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
+import { isDemoMode } from "@/lib/demo";
 import type { Artifact, Position, PortfolioResponse } from "@/lib/types";
 import { useT } from "@/lib/locale";
 
@@ -200,8 +201,8 @@ export default function ReportsPageV2() {
         {/* BLOCK 2 — Gallery */}
         <ArtifactGalleryGrid artifacts={artifacts} tier={tier} />
 
-        {/* BLOCK 3 — Generate CTAs */}
-        <GenerateArtifactCta tier={tier} />
+        {/* BLOCK 3 — Generate CTAs (hidden in demo: AI generation costs tokens) */}
+        {!isDemoMode() && <GenerateArtifactCta tier={tier} />}
 
         {/* BLOCK 4 — Year timeline */}
         <YearTimelineBlock

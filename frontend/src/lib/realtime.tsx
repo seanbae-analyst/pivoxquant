@@ -33,6 +33,7 @@ import useSWR, { mutate as globalMutate } from "swr";
 import { useAuth } from "./auth";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY } from "./endpoints";
 import type { PortfolioResponse } from "./types";
+import { isDemoMode, demoResponseFor } from "./demo";
 
 /* ── Types ── */
 
@@ -173,6 +174,7 @@ const THROTTLE_MS = 500;
  *  returns 400 when no positions exist, which triggered infinite onerror
  *  retries). */
 const portfolioFetcher = async (url: string): Promise<PortfolioResponse> => {
+  if (isDemoMode()) return demoResponseFor(url).body as PortfolioResponse;
   const r = await fetch(url, { credentials: "include" });
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));

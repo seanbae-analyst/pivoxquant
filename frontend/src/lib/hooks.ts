@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { apiFetch } from "./api";
+import { isDemoMode, demoResponseFor } from "./demo";
 import {
   API,
   PORTFOLIO_SUMMARY,
@@ -44,6 +45,7 @@ import type {
 // dedupingInterval that would otherwise serve pre-mutation data after an
 // add/edit/sell.
 export const fetcher = async (url: string) => {
+  if (isDemoMode()) return demoResponseFor(url).body;
   const r = await fetch(url, { credentials: "include" });
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));
@@ -63,6 +65,7 @@ export const fetcher = async (url: string) => {
  * SWR error (consumers degrade gracefully rather than render garbage).
  */
 const publicFetcher = async (url: string) => {
+  if (isDemoMode()) return demoResponseFor(url).body;
   const r = await fetch(url, { credentials: "omit" });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
@@ -297,6 +300,7 @@ export function useMirrorHome() {
   const swr = useSWR<MirrorHomeResponse | null>(
     API.mirror.home,
     async (url: string): Promise<MirrorHomeResponse | null> => {
+      if (isDemoMode()) return demoResponseFor(url).body as MirrorHomeResponse | null;
       const res = await fetch(url, { credentials: "include" });
       if (res.status === 404) return null;
       if (!res.ok) {

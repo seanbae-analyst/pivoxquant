@@ -40,6 +40,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isDemoMode } from "@/lib/demo";
 import {
   Home as HomeIcon,
   Briefcase,
@@ -137,6 +138,11 @@ const HIDDEN: Item[] = [
 
 const ALL_ITEMS: Item[] = [...PRIMARY, ...MORE, ...HIDDEN];
 
+// DEMO mode: AI surfaces depend on paid Anthropic tokens to function, so they
+// are dropped from the nav in the portfolio demo (pages preserved; CEO 2026-06-18).
+const DEMO_HIDDEN_KEYS = new Set(["ai", "companion"]);
+const isDemoHidden = (key: string) => isDemoMode() && DEMO_HIDDEN_KEYS.has(key);
+
 function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
   if (!pathname) return null;
   // Longest-prefix match so "/portfolio/123" lights Portfolio.
@@ -191,7 +197,7 @@ export function TerminalSidebar({
 
         <GroupHeader label="More" />
         <ul className="space-y-0.5 px-3 pb-4" aria-label="More">
-          {MORE.filter((it) => !it.hidden).map((item) => (
+          {MORE.filter((it) => !it.hidden && !isDemoHidden(it.key)).map((item) => (
             <SidebarLink
               key={item.key}
               item={item}

@@ -49,6 +49,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { useAuth } from "@/lib/auth";
+import { isDemoMode } from "@/lib/demo";
 
 type Tab = {
   href: string;
@@ -127,6 +128,11 @@ const DRAWER_GROUPS: DrawerGroup[] = [
 ];
 
 const ALL_DRAWER_HREFS: string[] = DRAWER_GROUPS.flatMap((g) => g.items.map((it) => it.href));
+
+// DEMO mode: AI surfaces need paid Anthropic tokens to work — drop them from
+// the nav for the portfolio demo (pages preserved; CEO 2026-06-18).
+const DEMO_HIDDEN_HREFS = new Set(["/ai", "/companion"]);
+const isDemoHidden = (href: string) => isDemoMode() && DEMO_HIDDEN_HREFS.has(href);
 
 function isRouteActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
@@ -340,7 +346,7 @@ function DrawerGroupSection({
       </div>
 
       <ul role="list">
-        {group.items.filter((it) => !it.hidden).map((item) => {
+        {group.items.filter((it) => !it.hidden && !isDemoHidden(it.href)).map((item) => {
           const active = isRouteActive(pathname, item.href);
           const Icon = item.icon;
           return (

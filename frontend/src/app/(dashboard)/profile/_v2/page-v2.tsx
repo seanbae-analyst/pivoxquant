@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth";
+import { isDemoMode } from "@/lib/demo";
 import { useT } from "@/lib/locale";
 import { useInvestmentProfile } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
@@ -615,7 +616,7 @@ export default function ProfilePageV2() {
             trajectory, on one editorial page. Generate (POST) → download.
             Opens to all tiers via LAUNCH_FREE_ALL_TIERS (no TierGate).
             Legal: AI label + negation microcopy + 410-graceful download. */}
-        <LivingMirrorCta />
+        {!isDemoMode() && <LivingMirrorCta />}
 
         {/* BLOCK 5 — Peer benchmark
             Wired to `/api/profile/persona-benchmark` — surfaces CAGR /

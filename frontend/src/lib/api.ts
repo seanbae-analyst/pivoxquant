@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { hadSession } from "./had-session";
+import { isDemoMode, demoResponseFor } from "./demo";
 
 /** Default request timeout in milliseconds. */
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -57,6 +58,13 @@ export async function apiFetch<T = unknown>(
   path: string,
   init?: ApiFetchOptions,
 ): Promise<T> {
+  // DEMO mode (portfolio showcase): never touch a backend — resolve from canned
+  // data. Additive + flag-gated; a no-op when NEXT_PUBLIC_DEMO_MODE is unset.
+  if (isDemoMode()) {
+    const demo = demoResponseFor(path, init?.method);
+    if (demo.hit) return demo.body as T;
+  }
+
   const csrfToken = getCsrfToken();
   const extra = init?.headers
     ? (init.headers instanceof Headers

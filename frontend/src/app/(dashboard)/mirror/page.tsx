@@ -104,7 +104,7 @@ export default function MirrorPage() {
 
                 <div className="mt-2 flex justify-center">
                   <SelfObservedRadar
-                    className="w-full max-w-[320px]"
+                    className="w-full max-w-[460px]"
                     labels={data.radar.labels}
                     declared={data.radar.declared}
                     observed={data.radar.observed}
@@ -115,7 +115,7 @@ export default function MirrorPage() {
                   className="mt-1 text-center text-[10.5px]"
                   style={{ color: "var(--pq-bronze)" }}
                 >
-                  점수·등급 없이 — 모양으로만 비춥니다
+                  각 축의 % = 최근 30일 관찰값 · 브론즈=선언, 아이보리=관찰
                 </p>
               </section>
 

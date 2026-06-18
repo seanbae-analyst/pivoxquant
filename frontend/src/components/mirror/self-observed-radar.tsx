@@ -17,6 +17,8 @@ interface SelfObservedRadarProps {
   declared: number[];
   /** Observed 30d shape, 0..1 per axis — null in the "new" stage. */
   observed: number[] | null;
+  /** Print the observed value (%) under each axis label. */
+  showValues?: boolean;
   className?: string;
 }
 
@@ -52,6 +54,7 @@ export function SelfObservedRadar({
   labels,
   declared,
   observed,
+  showValues = true,
   className,
 }: SelfObservedRadarProps) {
   const n = declared.length || 9;
@@ -93,12 +96,13 @@ export function SelfObservedRadar({
         />
       )}
 
-      {/* axis labels — names only, never a value (legal: shape, not score) */}
+      {/* axis labels + the observed value (%) for each behavioural dimension */}
       {labels.slice(0, n).map((label, i) => {
         const a = axisAngle(i, n);
         const lx = CX + LABEL_R * Math.cos(a);
         const ly = CY + LABEL_R * Math.sin(a);
         const anchor = lx < CX - 4 ? "end" : lx > CX + 4 ? "start" : "middle";
+        const obs = observed && observed.length === n ? observed[i] : null;
         return (
           <text
             key={label}
@@ -106,13 +110,26 @@ export function SelfObservedRadar({
             y={ly.toFixed(1)}
             textAnchor={anchor}
             dominantBaseline="middle"
-            fontSize={9}
+            fontSize={10}
             style={{
               fill: "rgba(var(--pq-ivory-rgb), 0.55)",
               fontFamily: "var(--pq-font-sans)",
             }}
           >
-            {label}
+            <tspan x={lx.toFixed(1)}>{label}</tspan>
+            {showValues && obs != null && (
+              <tspan
+                x={lx.toFixed(1)}
+                dy="1.3em"
+                fontSize={8.5}
+                style={{
+                  fill: "var(--pq-bronze)",
+                  fontFamily: "var(--pq-font-mono)",
+                }}
+              >
+                {Math.round(obs * 100)}%
+              </tspan>
+            )}
           </text>
         );
       })}

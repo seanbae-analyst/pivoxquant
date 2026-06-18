@@ -20,8 +20,18 @@ function leadSentence(d: MirrorHomeResponse): string {
   return `${label}으로 선언하셨고, 최근 30일 행동도 같은 결로 관찰됩니다.`;
 }
 
+/** 선언 centroid vs 30일 관찰 shape 의 정합도(%) — 두 9축 벡터의 평균 절대편차 기반. */
+function alignmentPct(d: MirrorHomeResponse): number | null {
+  const a = d.radar.declared;
+  const b = d.radar.observed;
+  if (!b || a.length === 0 || a.length !== b.length) return null;
+  const mad = a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0) / a.length;
+  return Math.round((1 - mad) * 100);
+}
+
 function GapChip({ dim }: { dim: MirrorGapDimension }) {
   const arrow = dim.direction === "up" ? "↑" : "↓";
+  const mag = Math.round(Math.abs(dim.delta) * 100);
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px]"
@@ -31,13 +41,16 @@ function GapChip({ dim }: { dim: MirrorGapDimension }) {
       }}
     >
       {dim.label}
-      <span style={{ color: "var(--pq-bronze)" }}>{arrow}</span>
+      <span style={{ color: "var(--pq-bronze)", fontFamily: "var(--pq-font-mono)" }}>
+        {arrow}{mag}%p
+      </span>
     </span>
   );
 }
 
 export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
   const gap = data.gap.slice(0, 3);
+  const align = alignmentPct(data);
 
   return (
     <section>
@@ -54,6 +67,30 @@ export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
       >
         {leadSentence(data)}
       </h1>
+
+      {align != null && (
+        <div className="mt-4 flex items-baseline gap-2.5">
+          <span
+            className="text-[11px] uppercase tracking-[0.18em]"
+            style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
+          >
+            선언 ↔ 관찰 정합도
+          </span>
+          <span
+            className="leading-none"
+            style={{
+              fontFamily: "var(--pq-font-mono)",
+              fontSize: "1.9rem",
+              color: "var(--pq-ivory)",
+            }}
+          >
+            {align}
+            <span className="text-[0.9rem]" style={{ color: "var(--pq-bronze)" }}>
+              %
+            </span>
+          </span>
+        </div>
+      )}
 
       {gap.length > 0 && (
         <div className="mt-5">

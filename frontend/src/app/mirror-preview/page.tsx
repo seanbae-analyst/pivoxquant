@@ -1,9 +1,10 @@
 /**
- * /mirror-preview — DEV-ONLY visual preview of the 거울 home with sample data.
+ * /mirror-preview — public 거울 demo with sample data (portfolio / LinkedIn).
  *
- * Mirrors the codebase's /reports/preview/* pattern: render a surface with
- * representative sample data so the design can be reviewed without auth or a
- * live backend. Blocked in production (notFound) so it never reaches users.
+ * Renders the Mirror home surface with representative sample data — no auth, no
+ * live backend. Repurposed 2026-06-18 from a dev-only preview into the public
+ * portfolio demo face (memory: portfolio-pivot). Set PIVOX_HIDE_MIRROR_DEMO=1
+ * to pull it offline.
  *
  * Sample = "성장형 선언 → 최근 30일 균형형 관찰" (영역 이동). The radar vectors
  * are the real growth/balanced centroids from persona_classifier_v2 so the
@@ -13,7 +14,6 @@ import { notFound } from "next/navigation";
 
 import type { MirrorHomeResponse } from "@/lib/types";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
 import { TwinWeekCard } from "@/components/mirror/twin-week-card";
@@ -59,7 +59,7 @@ const SAMPLE: MirrorHomeResponse = {
 };
 
 export default function MirrorPreviewPage() {
-  if (process.env.NODE_ENV === "production") notFound();
+  if (process.env.PIVOX_HIDE_MIRROR_DEMO === "1") notFound();
   const data = SAMPLE;
 
   return (
@@ -69,7 +69,7 @@ export default function MirrorPreviewPage() {
           className="text-[10.5px] uppercase tracking-[0.2em]"
           style={{ color: "rgba(var(--pq-ivory-rgb), 0.4)" }}
         >
-          dev preview · sample data
+          데모 · 샘플 데이터
         </div>
 
         <EditorialHead>거울</EditorialHead>
@@ -108,7 +108,7 @@ export default function MirrorPreviewPage() {
 
             <div className="mt-2 flex justify-center">
               <SelfObservedRadar
-                className="w-full max-w-[320px]"
+                className="w-full max-w-[460px]"
                 labels={data.radar.labels}
                 declared={data.radar.declared}
                 observed={data.radar.observed}
@@ -119,15 +119,13 @@ export default function MirrorPreviewPage() {
               className="mt-1 text-center text-[10.5px]"
               style={{ color: "var(--pq-bronze)" }}
             >
-              점수·등급 없이 — 모양으로만 비춥니다
+              각 축의 % = 최근 30일 관찰값 · 브론즈=선언, 아이보리=관찰
             </p>
           </section>
 
           <TwinWeekCard twin={data.twin} />
           <OneThingNudge data={data} />
           <ArchiveLinks />
-
-          <DisclaimerBanner type="behavior-mirror" />
         </div>
       </div>
 

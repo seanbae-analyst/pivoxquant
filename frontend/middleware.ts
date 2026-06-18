@@ -71,6 +71,10 @@ const BETA_BYPASS_PREFIXES = [
   // possibly days later on another device — it must not hit the beta gate or
   // the user's erasure-cancel right is unreachable. Token-authenticated POST.
   "/delete-cancel",
+  // Public portfolio demo (2026-06-18 pivot — memory portfolio-pivot). The 거울
+  // sample-data demo is the LinkedIn-shareable showpiece; it must open for a
+  // logged-out, non-beta visitor (recruiters). Sample data only, no auth/data.
+  "/mirror-preview",
 ];
 
 // Social/search crawler User-Agents that should see the rendered OG metadata
