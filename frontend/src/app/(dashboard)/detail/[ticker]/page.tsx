@@ -25,6 +25,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { API } from "@/lib/endpoints";
+import { isDemoMode } from "@/lib/demo";
 import { apiFetch, ApiError } from "@/lib/api";
 import { WATCHLIST, WATCHLIST_ITEM } from "@/lib/endpoints";
 import { toast } from "sonner";
@@ -571,7 +572,7 @@ export default function StockDetailPage() {
 
           <EarningsPanel displayName={displayName} items={earningsForTicker} />
 
-          <CompanionCta ticker={ticker} displayName={displayName} />
+          {!isDemoMode() && <CompanionCta ticker={ticker} displayName={displayName} />}
 
           <RelatedArtefacts artifacts={artifactsSwr.artifacts} />
 

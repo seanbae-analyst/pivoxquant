@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { PQ_EASE, PQ_DUR_FAST, PQ_DUR_MICRO } from "@/lib/motion";
 import { useInvestmentProfile, useArtifacts } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
+import { isDemoMode } from "@/lib/demo";
 import {
   usePersona,
   usePulse,
@@ -158,7 +159,7 @@ export function LivingCFOStatusBar() {
           ? undefined
           : { label: "Open Companion", href: "/companion" },
     },
-  ];
+  ].filter((l) => !(isDemoMode() && l.id === 4)) as LayerState[];
 
   /* The outer container handles "click anywhere on the bar to open the
      modal" while each LayerDot is itself a <button> that opens with focus

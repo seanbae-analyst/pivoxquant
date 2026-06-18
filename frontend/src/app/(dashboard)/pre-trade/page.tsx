@@ -201,8 +201,8 @@ function SetupStep(props: {
                 aria-label={sideLabel(s)}
                 className={`px-4 py-2 text-pq-eyebrow uppercase tracking-[0.2em] transition-colors ${
                   side === s
-                    ? "bg-[var(--pq-bronze)] text-[var(--pq-ink)]"
-                    : "border border-[rgba(245,240,232,0.15)] text-[rgba(245,240,232,0.65)] hover:border-[var(--pq-bronze)]"
+                    ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
+                    : "border border-[rgba(245,240,232,0.15)] text-[rgba(245,240,232,0.65)] hover:border-[rgba(245,240,232,0.45)]"
                 }`}
               >
                 {SIDE_LABEL_EN[s]} · {SIDE_LABEL_KO[s]}

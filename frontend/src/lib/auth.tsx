@@ -13,6 +13,7 @@ import useSWR, { useSWRConfig } from "swr";
 import { apiFetch } from "./api";
 import { API } from "./endpoints";
 import { clearHadSession, markHadSession } from "./had-session";
+import { isDemoMode, DEMO_USER } from "./demo";
 
 // PIPA: drop the service-worker API_CACHE so per-user SWR endpoints
 // (/api/profile, /api/earnings, /api/discover — cached by URL only with
@@ -133,14 +134,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // for the network round-trip, mirroring the previous setUser(null) behavior.
   const [logoutPending, setLogoutPending] = useState(false);
 
-  const user: User | null = logoutPending
-    ? null
-    : data?.authenticated
-      ? (data.user ?? null)
-      : null;
+  // DEMO mode (portfolio showcase): inject a fixed user so the dashboard
+  // renders with no login. Flag-gated — a no-op when the env var is unset.
+  const demo = isDemoMode();
+
+  const user: User | null = demo
+    ? DEMO_USER
+    : logoutPending
+      ? null
+      : data?.authenticated
+        ? (data.user ?? null)
+        : null;
 
   // Match prior semantics: loading is true only on the very first fetch.
-  const loading = isLoading && !data;
+  const loading = demo ? false : isLoading && !data;
 
   // Track "this browser has held a session" so apiFetch can disambiguate
   // a real expiry from a fresh-guest 401 when redirecting to /login.
