@@ -269,6 +269,7 @@ const DEMO_PERSONA_BENCHMARK_ALL = {
   },
 };
 const DEMO_PROFILE = {
+  has_profile: true,
   profile: { profile_type: "growth", risk_tolerance: "moderate", tagline: "성장 가능성에 무게를 두고 관찰합니다." },
 };
 
@@ -375,9 +376,219 @@ const DEMO_DISCOVER_SCREENERS = {
 };
 const DEMO_DISCOVER_OVERVIEW = DEMO_MARKET_INDICES.map((b) => ({ name: b.name, symbol: b.ticker, level: b.level, change_pct: b.change_1d_pct, is_stale: false }));
 
+/* ── Living CFO Layer-2 + profile depth (usePersona / usePulse / useRollingWindow,
+ *    lib/cfo/hooks.ts). In demo mode apiFetch resolves {} WITHOUT throwing, so the
+ *    cfoFetch mock fallback never fires — these must be canned or L2 reads "missing"
+ *    on every page's status bar. window_30d present + ≥3 pulses ⇒ L2 "ready". ── */
+const _wkBase = Date.parse("2026-03-27T00:00:00Z");
+const DEMO_PERSONA = {
+  declared: { persona: "growth", label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다.", score: 78 },
+  observed: {
+    window_30d: { date: "2026-06-18", persona: "balanced", score: 72 },
+    window_60d: { date: "2026-05-19", persona: "growth", score: 70 },
+    window_90d: { date: "2026-04-19", persona: "growth", score: 74 },
+  },
+  sparkline: Array.from({ length: 12 }, (_, i) => ({
+    week: new Date(_wkBase + i * 7 * 86_400_000).toISOString().slice(0, 10),
+    score: Math.round(70 + 6 * Math.sin(i / 2.4) + (i >= 8 ? 4 : 0)),
+  })),
+  last_computed_at: "2026-06-18T07:30:00+09:00",
+  drift: 18,
+};
+const DEMO_PULSE = {
+  history: [
+    { submitted_at: "2026-05-26T22:00:00Z", mood: 4, confidence: 3, worry: "기술 섹터 비중이 높아 변동성이 신경 쓰입니다.", topics: ["집중도", "변동성"], learn: "섹터 분산을 한 단계 더 넓히기" },
+    { submitted_at: "2026-06-02T22:00:00Z", mood: 3, confidence: 4, worry: "급등 종목 추격 매수 충동이 있었습니다.", topics: ["매매 규율"], learn: "진입 전 멈춤 한 박자" },
+    { submitted_at: "2026-06-09T22:00:00Z", mood: 4, confidence: 4, worry: "손절 라인을 자꾸 미루게 됩니다.", topics: ["손절 규율"], learn: "손절 기준을 사전에 고정" },
+    { submitted_at: "2026-06-16T22:00:00Z", mood: 5, confidence: 4, worry: "", topics: ["보유 기간"], learn: "장기 보유 비중 유지" },
+  ],
+  next_due_at: "2026-06-23T22:00:00Z",
+  cadence: "weekly",
+};
+const _rwBase2 = Date.parse("2026-03-20T00:00:00Z");
+const _rw = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({
+    date: new Date(_rwBase2 + i * 86_400_000).toISOString().slice(0, 10),
+    holdingPeriod: Math.round(26 + 7 * Math.sin(i / 6)),
+    turnover: +(0.18 + 0.06 * Math.cos(i / 7)).toFixed(2),
+    sectorTilt: +(0.34 + 0.09 * Math.abs(Math.sin(i / 8))).toFixed(2),
+  }));
+const DEMO_ROLLING_WINDOW = {
+  series: { window_30d: _rw(30), window_60d: _rw(60), window_90d: _rw(90) },
+  contrast: { declared_persona: "growth", declared_score: 78, observed_persona: "balanced", observed_score: 72, window_days: 30 },
+};
+
+/* ── Portfolio equity curve (/api/portfolio/history?period=) + trades. Backend
+ *    shape = { data:[{date,value,benchmark}], benchmark:{name} }; hooks-v2
+ *    normalizes. NAV grows to the canned summary total (~65,633 USD-unified). ── */
+const _eqBase = Date.parse("2026-03-20T00:00:00Z");
+const DEMO_EQUITY_FULL = Array.from({ length: 64 }, (_, i) => {
+  const f = i / 63;
+  const nav = 58000 * (1 + 0.131 * f + 0.022 * Math.sin(i / 4.5) + 0.012 * Math.cos(i / 2.7));
+  const bench = 2580 * (1 + 0.071 * f + 0.018 * Math.sin(i / 5.1)); // KOSPI200-scale, rebased in UI
+  return { date: new Date(_eqBase + i * 86_400_000).toISOString().slice(0, 10), value: Math.round(nav), benchmark: +bench.toFixed(1) };
+});
+DEMO_EQUITY_FULL[DEMO_EQUITY_FULL.length - 1].value = 65633; // tie to summary NAV
+const _demoEquity = (period: string) => {
+  const take = period === "5d" ? 8 : period === "1mo" ? 24 : period === "2mo" ? 48 : period === "3mo" ? 64 : 64;
+  return { data: DEMO_EQUITY_FULL.slice(-take), benchmark: { name: "KOSPI 200" } };
+};
+const DEMO_TRADES = {
+  trades: [
+    { id: 7, date: "2026-06-15T01:05:00Z", symbol: "NVDA", name: "NVIDIA", side: "buy", shares: 15, price: 176.2, amount: 2643, currency: "USD" },
+    { id: 6, date: "2026-06-11T06:20:00Z", symbol: "005930", name: "삼성전자", side: "buy", shares: 50, price: 81000, amount: 4050000, currency: "KRW" },
+    { id: 5, date: "2026-06-05T01:40:00Z", symbol: "LLY", name: "Eli Lilly", side: "sell", shares: 4, price: 768.0, amount: 3072, currency: "USD" },
+    { id: 4, date: "2026-05-28T02:10:00Z", symbol: "TSLA", name: "Tesla", side: "buy", shares: 10, price: 332.5, amount: 3325, currency: "USD" },
+    { id: 3, date: "2026-05-20T05:30:00Z", symbol: "005380", name: "현대차", side: "buy", shares: 20, price: 252000, amount: 5040000, currency: "KRW" },
+    { id: 2, date: "2026-05-12T01:15:00Z", symbol: "AAPL", name: "Apple", side: "buy", shares: 20, price: 221.0, amount: 4420, currency: "USD" },
+    { id: 1, date: "2026-05-04T01:50:00Z", symbol: "JPM", name: "JPMorgan Chase", side: "buy", shares: 30, price: 248.0, amount: 7440, currency: "USD" },
+  ],
+};
+/* Full /api/portfolio (legacy) so RealtimeProvider sees positions ⇒ ribbon "● Live". */
+const DEMO_FULL_PORTFOLIO = { positions: DEMO_POSITION_ROWS, total_value_usd: 65633, fx_rate: FX };
+
+/* ── Per-ticker detail (/detail/[ticker]): signal hero + chart + company profile.
+ *    Clicking a holding in /portfolio (or a /signals row) lands here — without
+ *    these it falls to NoDataScreen. Keyed by bare uppercase code. ── */
+type TInfo = { name: string; sector: string; currency: "USD" | "KRW"; is_korean: boolean; price: number; change_pct: number; score: number; signal: string; pe: number; eps: number; beta: number; mcap: number; w52h: number; w52l: number; industry: string; country: string; employees: number; summary: string };
+const DEMO_TICKER_INFO: Record<string, TInfo> = {
+  NVDA: { name: "NVIDIA", sector: "Technology", currency: "USD", is_korean: false, price: 182.5, change_pct: 2.1, score: 82, signal: "POSITIVE", pe: 48.2, eps: 3.79, beta: 1.62, mcap: 4.46e12, w52h: 192.4, w52l: 86.6, industry: "Semiconductors", country: "United States", employees: 29600, summary: "가속 컴퓨팅·AI 가속기 설계 기업. 데이터센터 GPU 수요가 실적을 견인합니다." },
+  AAPL: { name: "Apple", sector: "Technology", currency: "USD", is_korean: false, price: 241.2, change_pct: 0.3, score: 61, signal: "NEUTRAL", pe: 32.4, eps: 7.44, beta: 1.21, mcap: 3.62e12, w52h: 260.1, w52l: 196.0, industry: "Consumer Electronics", country: "United States", employees: 164000, summary: "아이폰·서비스 생태계 중심의 소비자 하드웨어 기업. 서비스 매출 비중이 꾸준히 확대." },
+  TSLA: { name: "Tesla", sector: "Consumer Discretionary", currency: "USD", is_korean: false, price: 412.6, change_pct: 3.4, score: 74, signal: "POSITIVE", pe: 71.0, eps: 5.81, beta: 2.04, mcap: 1.32e12, w52h: 428.9, w52l: 212.1, industry: "Auto Manufacturers", country: "United States", employees: 125000, summary: "전기차·에너지 저장·자율주행을 영위. 변동성이 큰 성장주입니다." },
+  JPM: { name: "JPMorgan Chase", sector: "Financials", currency: "USD", is_korean: false, price: 268.4, change_pct: 0.5, score: 58, signal: "NEUTRAL", pe: 13.1, eps: 20.5, beta: 1.08, mcap: 7.5e11, w52h: 280.2, w52l: 200.4, industry: "Banks — Diversified", country: "United States", employees: 309000, summary: "미국 최대 규모의 종합 금융그룹. 금리 환경에 민감한 이자수익 구조." },
+  LLY: { name: "Eli Lilly", sector: "Healthcare", currency: "USD", is_korean: false, price: 742.0, change_pct: -1.8, score: 43, signal: "NEGATIVE", pe: 58.7, eps: 12.6, beta: 0.42, mcap: 7.0e11, w52h: 972.5, w52l: 678.0, industry: "Drug Manufacturers", country: "United States", employees: 47000, summary: "대사질환·비만 치료제 파이프라인을 보유한 제약사. 고점 대비 조정 국면." },
+  MSFT: { name: "Microsoft", sector: "Technology", currency: "USD", is_korean: false, price: 498.3, change_pct: 1.3, score: 77, signal: "POSITIVE", pe: 37.8, eps: 13.2, beta: 0.91, mcap: 3.7e12, w52h: 512.0, w52l: 385.6, industry: "Software — Infrastructure", country: "United States", employees: 228000, summary: "클라우드(Azure)·생산성·AI 코파일럿을 영위하는 소프트웨어 기업." },
+  GOOGL: { name: "Alphabet", sector: "Communication", currency: "USD", is_korean: false, price: 198.4, change_pct: -0.2, score: 60, signal: "NEUTRAL", pe: 24.6, eps: 8.06, beta: 1.03, mcap: 2.4e12, w52h: 215.3, w52l: 148.2, industry: "Internet Content", country: "United States", employees: 183000, summary: "검색·광고·클라우드·AI(제미나이)를 영위. 광고 경기에 민감." },
+  AVGO: { name: "Broadcom", sector: "Technology", currency: "USD", is_korean: false, price: 1820.5, change_pct: 2.0, score: 71, signal: "POSITIVE", pe: 42.3, eps: 43.0, beta: 1.18, mcap: 8.5e11, w52h: 1880.0, w52l: 980.5, industry: "Semiconductors", country: "United States", employees: 37000, summary: "네트워킹·맞춤형 AI 반도체 및 인프라 소프트웨어 기업." },
+  UNH: { name: "UnitedHealth", sector: "Healthcare", currency: "USD", is_korean: false, price: 512.4, change_pct: -0.4, score: 54, signal: "NEUTRAL", pe: 18.9, eps: 27.1, beta: 0.58, mcap: 4.7e11, w52h: 624.0, w52l: 436.2, industry: "Healthcare Plans", country: "United States", employees: 440000, summary: "보험(UnitedHealthcare)·헬스케어 서비스(Optum)를 영위." },
+  "005930": { name: "삼성전자", sector: "Technology", currency: "KRW", is_korean: true, price: 84300, change_pct: 1.2, score: 69, signal: "POSITIVE", pe: 14.2, eps: 5937, beta: 0.98, mcap: 5.03e14, w52h: 88000, w52l: 49900, industry: "반도체·전자", country: "Korea", employees: 267000, summary: "메모리 반도체·파운드리·모바일·가전을 영위하는 종합 전자기업." },
+  "005380": { name: "현대차", sector: "Consumer Discretionary", currency: "KRW", is_korean: true, price: 268500, change_pct: 0.7, score: 55, signal: "NEUTRAL", pe: 5.2, eps: 51600, beta: 1.12, mcap: 5.6e13, w52h: 302000, w52l: 188000, industry: "완성차", country: "Korea", employees: 121000, summary: "완성차·전동화·수소 모빌리티를 영위. 수출 비중이 높아 환율에 민감." },
+  "035720": { name: "카카오", sector: "Communication", currency: "KRW", is_korean: true, price: 58700, change_pct: 2.4, score: 66, signal: "POSITIVE", pe: 39.5, eps: 1486, beta: 1.31, mcap: 2.6e13, w52h: 61200, w52l: 32450, industry: "인터넷 플랫폼", country: "Korea", employees: 18000, summary: "메신저·콘텐츠·핀테크를 아우르는 인터넷 플랫폼 기업." },
+  "000660": { name: "SK하이닉스", sector: "Technology", currency: "KRW", is_korean: true, price: 198000, change_pct: 0.6, score: 59, signal: "NEUTRAL", pe: 9.8, eps: 20200, beta: 1.24, mcap: 1.44e14, w52h: 248000, w52l: 134000, industry: "반도체", country: "Korea", employees: 32000, summary: "DRAM·HBM·낸드 메모리 반도체 전문기업. AI 메모리 수요 수혜." },
+};
+const _GENERIC_TINFO: TInfo = { name: "", sector: "—", currency: "USD", is_korean: false, price: 100, change_pct: 0.0, score: 55, signal: "NEUTRAL", pe: 20, eps: 5, beta: 1.0, mcap: 1e10, w52h: 120, w52l: 80, industry: "—", country: "—", employees: 0, summary: "" };
+function _normTicker(t: string): string {
+  return (t || "").toUpperCase().replace(/\.(KS|KQ|KRX|KR)$/i, "");
+}
+function _tickerInfo(rawTicker: string): TInfo {
+  const k = _normTicker(rawTicker);
+  const hit = DEMO_TICKER_INFO[k];
+  if (hit) return hit;
+  return { ..._GENERIC_TINFO, name: k || "—" };
+}
+function _clampScore(n: number): number { return Math.max(2, Math.min(98, Math.round(n))); }
+function _demoSignalDetail(rawTicker: string) {
+  const info = _tickerInfo(rawTicker);
+  const krLimited = info.is_korean; // KIS license: no margin/revenue/debt for KR
+  return {
+    ticker: rawTicker, name: info.name, signal: info.signal, score: info.score,
+    price: info.price, change_pct: info.change_pct, sector: info.sector,
+    currency: info.currency, is_korean: info.is_korean,
+    tp_pct: info.signal === "NEGATIVE" ? 6 : 12, sl_pct: 8,
+    tech_score: _clampScore(info.score + 4), fund_score: _clampScore(info.score - 6),
+    news_score: _clampScore(info.score + 1), quant_score: _clampScore(info.score + 2),
+    snapshot: {
+      pe_ratio: info.pe, eps: info.eps, beta: info.beta, market_cap: info.mcap,
+      week52_high: info.w52h, week52_low: info.w52l, industry: info.industry,
+      profit_margin: krLimited ? null : 0.24, revenue_growth: krLimited ? null : 0.18,
+      debt_equity: krLimited ? null : 0.42, fundamentals_limited: krLimited,
+    },
+    observed_at: "2026-06-18T06:50:00+09:00",
+    data_coverage: { fundamental_present: krLimited ? 4 : 6, fundamental_total: 6, fundamental_pct: krLimited ? 0.67 : 1, news_present: true, history_bars: 252, technical_ok: true, quant_full: true, low_data: false },
+  };
+}
+const _chartBase = Date.parse("2026-03-20T00:00:00Z");
+function _demoChart(rawTicker: string) {
+  const info = _tickerInfo(rawTicker);
+  const end = info.price;
+  const start = end * (info.signal === "NEGATIVE" ? 1.12 : 0.82);
+  const n = 90;
+  const data = Array.from({ length: n }, (_, i) => {
+    const trend = start + (end - start) * (i / (n - 1));
+    const wob = 1 + 0.018 * Math.sin(i / 4.3) + 0.011 * Math.cos(i / 2.6);
+    const close = +(trend * wob).toFixed(info.currency === "KRW" ? 0 : 2);
+    return { date: new Date(_chartBase + i * 86_400_000).toISOString().slice(0, 10), close };
+  });
+  data[n - 1].close = end; // anchor last close to the live price
+  return { data };
+}
+function _demoProfile(rawTicker: string) {
+  const info = _tickerInfo(rawTicker);
+  return {
+    ticker: _normTicker(rawTicker), name: info.name, summary: info.summary,
+    sector: info.sector, industry: info.industry, country: info.country,
+    employees: info.employees || null, market_cap: info.mcap, currency: info.currency,
+  };
+}
+function _demoNews(rawTicker: string) {
+  const info = _tickerInfo(rawTicker);
+  const nm = info.name || _normTicker(rawTicker);
+  return {
+    news: [
+      { title: `${nm}, 분기 실적 시장 기대치 부합`, link: "#", source: "Market Wire", published: "2026-06-17T22:30:00Z" },
+      { title: `애널리스트, ${nm} 목표가 상향 조정`, link: "#", source: "Street Notes", published: "2026-06-16T01:10:00Z" },
+      { title: `${info.sector} 섹터 자금 유입 지속`, link: "#", source: "Sector Daily", published: "2026-06-14T05:00:00Z" },
+    ],
+  };
+}
+function _demoEarningsOne(rawTicker: string) {
+  const info = _tickerInfo(rawTicker);
+  const k = _normTicker(rawTicker);
+  const hit = DEMO_EARNINGS.earnings.find((e) => e.ticker === k);
+  return { earnings: [hit ?? { ticker: k, name: info.name, date: "2026-07-15" }] };
+}
+
+/* ── Global search (Cmd+K) — filter a small universe by q. ── */
+const DEMO_SEARCH_UNIVERSE = [
+  { ticker: "NVDA", name: "NVIDIA", exchange: "NASDAQ", is_korean: false },
+  { ticker: "AAPL", name: "Apple", exchange: "NASDAQ", is_korean: false },
+  { ticker: "MSFT", name: "Microsoft", exchange: "NASDAQ", is_korean: false },
+  { ticker: "TSLA", name: "Tesla", exchange: "NASDAQ", is_korean: false },
+  { ticker: "GOOGL", name: "Alphabet", exchange: "NASDAQ", is_korean: false },
+  { ticker: "AVGO", name: "Broadcom", exchange: "NASDAQ", is_korean: false },
+  { ticker: "JPM", name: "JPMorgan Chase", exchange: "NYSE", is_korean: false },
+  { ticker: "LLY", name: "Eli Lilly", exchange: "NYSE", is_korean: false },
+  { ticker: "UNH", name: "UnitedHealth", exchange: "NYSE", is_korean: false },
+  { ticker: "005930", name: "삼성전자", exchange: "KRX", is_korean: true },
+  { ticker: "005380", name: "현대차", exchange: "KRX", is_korean: true },
+  { ticker: "000660", name: "SK하이닉스", exchange: "KRX", is_korean: true },
+  { ticker: "035720", name: "카카오", exchange: "KRX", is_korean: true },
+];
+function _demoSearch(query: string) {
+  const params = new URLSearchParams(query);
+  const q = (params.get("q") || "").trim().toLowerCase();
+  if (!q) return { results: [] };
+  const results = DEMO_SEARCH_UNIVERSE.filter(
+    (r) => r.ticker.toLowerCase().includes(q) || r.name.toLowerCase().includes(q),
+  ).slice(0, 10);
+  return { results };
+}
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
-  const base = path.split("?")[0];
+  const qIdx = path.indexOf("?");
+  const base = qIdx === -1 ? path : path.slice(0, qIdx);
+  const query = qIdx === -1 ? "" : path.slice(qIdx + 1);
+
+  // ── Dynamic per-ticker endpoints (single trailing segment) ── the detail
+  // page (/detail/[ticker]) fans out to these; without canned data it falls to
+  // its NoDataScreen. Multi-segment variants (signals/insider/<t> etc.) keep
+  // falling through to the graceful {} empty state.
+  const seg = (prefix: string) => {
+    if (!base.startsWith(prefix)) return null;
+    const s = base.slice(prefix.length);
+    return s && !s.includes("/") ? decodeURIComponent(s) : null;
+  };
+  let t: string | null;
+  if ((t = seg("/api/signals/")) && t !== "refresh") return _demoSignalDetail(t);
+  if ((t = seg("/api/chart/"))) return _demoChart(t);
+  if ((t = seg("/api/market/profile/"))) return _demoProfile(t);
+  if ((t = seg("/api/news/"))) return _demoNews(t);
+  if ((t = seg("/api/earnings/"))) return _demoEarningsOne(t);
+  if (base === "/api/search") return _demoSearch(query);
+  if (base === "/api/portfolio/history")
+    return _demoEquity(new URLSearchParams(query).get("period") || "1mo");
+
   switch (base) {
     case "/api/auth/me":
       return { authenticated: true, user: DEMO_USER };
@@ -447,6 +658,18 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_DISCOVER_SECTORS;
     case "/api/discover/screeners":
       return DEMO_DISCOVER_SCREENERS;
+    // Living CFO Layer-2 + profile depth
+    case "/api/profile/persona":
+      return DEMO_PERSONA;
+    case "/api/profile/pulse":
+      return DEMO_PULSE;
+    case "/api/profile/rolling-window":
+      return DEMO_ROLLING_WINDOW;
+    // Portfolio equity/trades + legacy full read
+    case "/api/portfolio/trades":
+      return DEMO_TRADES;
+    case "/api/portfolio":
+      return DEMO_FULL_PORTFOLIO;
     default:
       return undefined;
   }
