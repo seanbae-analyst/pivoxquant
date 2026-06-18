@@ -139,7 +139,7 @@ export default function WatchlistPage() {
             }}
           >
             Symbols you are{" "}
-            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               observing.
             </span>
           </h1>
@@ -179,7 +179,7 @@ export default function WatchlistPage() {
               style={{ lineHeight: 1.2 }}
             >
               No symbols on{" "}
-              <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+              <span style={{ color: "var(--pq-bronze)" }}>
                 watch.
               </span>
             </EditorialHead>

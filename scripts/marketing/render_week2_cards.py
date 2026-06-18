@@ -1227,7 +1227,7 @@ def render_d14_slide5_cta():
 # 메인 실행
 # ═══════════════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
-    print(f"=== PivoxQuant D8~D14 Card Render ===")
+    print("=== PivoxQuant D8~D14 Card Render ===")
     print(f"출력 디렉토리: {OUT_DIR}\n")
 
     # D8 — Brag Card (단일, 4:5, §101 4요소 병기)

@@ -36,7 +36,7 @@ export function ReportsHeroV2({
         // CEO 2026-05-28 직격 #5: 모바일 375px 에서 80/64 패딩 = 1/3 화면을
         // 빈 헤더가 먹음. clamp 으로 24px(모바일) → 80px(데스크) 스케일.
         padding: "clamp(40px, 8vw, 80px) 0 clamp(28px, 6vw, 64px)",
-        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+        borderBottom: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         marginBottom: 0,
       }}
     >

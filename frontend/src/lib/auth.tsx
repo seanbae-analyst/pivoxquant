@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
@@ -26,7 +27,9 @@ function clearSwApiCache(): void {
       typeof navigator !== "undefined" &&
       navigator.serviceWorker?.controller
     ) {
-      navigator.serviceWorker.controller.postMessage({ type: "CLEAR_API_CACHE" });
+      navigator.serviceWorker.controller.postMessage({
+        type: "CLEAR_API_CACHE",
+      });
     }
   } catch {
     // SW not controlling this page yet / messaging unsupported — ignore.
@@ -142,8 +145,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Track "this browser has held a session" so apiFetch can disambiguate
   // a real expiry from a fresh-guest 401 when redirecting to /login.
   // See lib/had-session.ts and the SESSION_EXPIRED branch in lib/api.ts.
+  //
+  // Wave-3 P2 (2026-06-10): also clear the service-worker API cache whenever
+  // the authenticated user ID CHANGES. The password login() below already
+  // clears, but prod auth is OAuth (full-page redirect) which never calls
+  // login() — so User B logging in after User A's session expired (no
+  // explicit logout) could be served A's SW-cached /api/profile* responses
+  // for up to 60min. The SWR in-memory cache resets with the redirect; the
+  // SW disk cache is the one that must be evicted here.
+  const prevUserIdRef = useRef<number | null>(null);
   useEffect(() => {
-    if (user) markHadSession();
+    if (user) {
+      markHadSession();
+      if (prevUserIdRef.current !== null && prevUserIdRef.current !== user.id) {
+        clearSwApiCache();
+      }
+      prevUserIdRef.current = user.id;
+    }
   }, [user]);
 
   const refresh = useCallback(async () => {
@@ -192,7 +210,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         typeof console !== "undefined" &&
         process.env.NODE_ENV !== "production"
       ) {
-        console.warn("logout request failed (clearing local state anyway):", err);
+        console.warn(
+          "logout request failed (clearing local state anyway):",
+          err,
+        );
       }
     } finally {
       setLogoutPending(true);
@@ -207,11 +228,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // only clears the service-worker HTTP cache — the in-memory SWR store
       // survived, so a different user signing in on this device could see the
       // previous user's data on first paint (no full reload on OAuth switch).
-      await globalMutate(
-        (key) => key !== API.auth.me,
-        undefined,
-        { revalidate: false },
-      );
+      await globalMutate((key) => key !== API.auth.me, undefined, {
+        revalidate: false,
+      });
       clearSwApiCache();
     }
   }, [mutate, globalMutate]);

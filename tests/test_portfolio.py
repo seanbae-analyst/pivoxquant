@@ -59,6 +59,51 @@ class TestGetPortfolio:
         assert d["total_value_usd"] == 1500.0
         assert d["total_value_all_krw"] > 0
 
+    def test_totals_bucket_by_suffix_not_poisoned_cache_currency(
+        self, client, auth_user, add_position, app,
+    ):
+        """NAV totals must bucket on the ticker-suffix is_kr, NOT the cache
+        blob's `currency` string. A cross-contaminated SignalCache row that
+        says a .KS position is "USD" used to push its native-KRW market value
+        into the USD bucket — total_value_all_krw then multiplied it by the
+        FX rate (~1380x overstatement). 2026-06-10 fix: suffix-authoritative
+        accumulation (same as _build_positions_list / summary)."""
+        from extensions import db
+        from models import SignalCache
+
+        # 10 shares × ₩70,000 — a KR position whose cache lies "USD".
+        add_position(auth_user["id"], ticker="005930.KS", shares=10, avg_cost=70000.0)
+        with app.app_context():
+            db.session.add(SignalCache(
+                ticker="005930.KS",
+                data_json=json.dumps({
+                    "name": "삼성전자", "is_korean": False, "currency": "USD",
+                    "price": 70000.0,
+                }),
+            ))
+            db.session.commit()
+
+        r = client.get("/api/portfolio")
+        assert r.status_code == 200
+        d = r.get_json()
+        # The KR market value must land in the KRW bucket despite the cache.
+        assert d["total_value_krw"] == 700000.0
+        assert d["total_value_usd"] == 0
+        # And the blended total must NOT be FX-inflated (700k KRW, not 700k USD→KRW).
+        assert d["total_value_all_krw"] == 700000
+        # The per-row display field still echoes the cache (unchanged behavior).
+        assert d["positions"][0]["currency"] == "USD"
+
+        # Wave-3 P1 (2026-06-10): the SAME poisoned-cache bucketing bug lived
+        # on in /api/portfolio/positions — the endpoint the v2 frontend
+        # actually polls. Its totals must bucket on suffix too.
+        r2 = client.get("/api/portfolio/positions")
+        assert r2.status_code == 200
+        d2 = r2.get_json()
+        assert d2["total_value_krw"] == 700000.0
+        assert d2["total_value_usd"] == 0
+        assert d2["total_value_all_krw"] == 700000
+
 
 # ── POST /api/portfolio/position (add) ──────────────────────────────────────
 

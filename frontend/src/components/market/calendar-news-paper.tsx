@@ -295,7 +295,6 @@ export function CalendarNewsPaper({
             <p
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                fontStyle: "italic",
                 color: "rgba(20,20,20,0.5)",
                 margin: "8px 0 0",
               }}

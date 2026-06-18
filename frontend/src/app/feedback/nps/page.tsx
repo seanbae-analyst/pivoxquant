@@ -116,7 +116,7 @@ function NpsPageInner(): React.ReactElement {
           <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
             Feedback
           </p>
-          <h1 className="mt-2 font-serif text-3xl italic md:text-4xl">
+          <h1 className="mt-2 font-serif text-3xl md:text-4xl">
             한 줄 평가, 30초.
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">

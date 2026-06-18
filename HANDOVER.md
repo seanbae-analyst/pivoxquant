@@ -1,4 +1,121 @@
-# PivoxQuant — 인수인계서 (2026-06-09 v62 — 구조 통합 5클러스터: fx/ticker/disclaimer/_safe_price/render SoT 단일화)
+# PivoxQuant — 인수인계서 (2026-06-12 v66 — 버그헌트 14건 처분 + 가상유저 3-레이어 감사·구축 완료)
+
+## v66 2026-06-11~12 — CEO "버그들 다 진행 + 가상유저 구축 제대로 됐는지 파악하고 구축해놔라" (야간 자율)
+
+> **Part A — 버그헌트 14건 처분 완료**: 11건 fix + 3건 근거 있는 no-fix (#4 interactive-before-tier = 테스트로 고정된 의도 + 프론트 도달 불가 / #8 observed_at = 관측시각이 정답 / #11 TOCTOU = max_instances=1로 실위험 없음, reserve/refund 배관이 더 위험). 커밋 4개: `9b9810b7`(백엔드 6건) `e4dd5f4e`(AI예산 — **인터랙티브 AI 라우트 일일 캡 신설** swot/competitor/sector-trend/commentary/morning-summary/coaching, 2000/day 글로벌 breaker, env `PIVOX_INTERACTIVE_AI_DAILY_LIMIT`, 2xx만 소비/장애시 fail-open) `30150213`(discover **proxy_ticker 고지 배지** "via SPY" + reports pickLatest sent_at??created_at + living_mirror 통합 다운로드 415 fix) `ff9ea9a1`(ruff F401/F541 12건 정리).
+>
+> **Part B — 가상유저 3-레이어 감사 결과 + 구축** (CEO 질문 "구축 제대로 된건지"에 대한 답: **레이어별로 반쪽이었고, 이제 전부 실동작**):
+> - **L1 아티팩트 렌더 매트릭스 (10명×17종=172케이스)**: HTML 브랜치만 살아있고 **PDF 브랜치는 생성 이래 전부 xfail** (macOS dlopen libgobject 실패). conftest+run.py에 darwin 전용 `DYLD_FALLBACK_LIBRARY_PATH` 부트스트랩(`8dd91d2c`) → **172/172 passed 첫 완주** (24m, PDF 렌더+크기+pypdf 추출+§101 마커 실검증). 로컬 dev 서버 PDF 다운로드도 함께 해결. 풀 PDF는 스위트 +24m이라 **`PIVOX_MATRIX_PDF=1` 옵트인 게이트**(`a569b2ec`) — 기본 스위트는 HTML 상시 검증, 일요일 cron이 풀 매트릭스 (SKILL.md 반영).
+> - **L2 API 스위프 (20 가상유저)**: 10 엔드포인트 read-only였던 걸 **40 엔드포인트 + tier별 generate leg + 음성 권한체크(inbox 403 고정) + proxy 고지 패리티 + structured-degradation 검증**으로 확장(`5f928734`). cron이 git-guard에 자주 스킵되는 구멍 → **pytest 게이트 신설**(`tests/test_virtual_user_sweep.py`, N=6, 스위트 상시 편입). 최종 실측: **991 calls, 0 findings**.
+> - **L3 CAUS (브라우저 1명/일)**: **수 주간 가짜-클린이었음을 적발** — sim 세션 만료(수명 1일, 파일은 5/13-17산) + `/tmp/sim-onboard-secret.txt` 재부팅 소실 상태에서 **세션 없음 스텁이 "findings: 0 clean run"과 동일 포맷**으로 기록돼 옴. fix(`7f04ee1a`): ① 스텁 → `status: SKIPPED` 정직 기록 ② **public 시나리오(day6/8)는 세션 없이 실행** ③ `_pass_beta_gate()` — `PIVOX_BETA_PASSWORD`로 베타게이트 쿠키 자동 발급 ④ un-stub 첫 실행이 곧바로 P0 5건 발사 → **전부 가양성**(법적 필수 면책문구 "매수·매도를 권유하지 않습니다"가 금지어 스캔에 걸림, #509-513 close) → `grep_forbidden` **부정문 인지(문장 단위)** 로 수정+회귀테스트 4종. 재실행 = prod 실 브라우저 런 **0 findings (진짜 clean)**, `auto-sim-reports/2026-06-12.md` status: ran.
+>
+> **부수 발견**: ⓐ **로컬 dev 서버 wedge 재발 규명** — 8h 후 스레드 2,049개/SQLite FD 290/CPU 80%, `*/2분` ops cron 동일 슬롯 4-5중 동시실행 (Mac 수면 후 misfire 폭풍 의심). prod 무관(불면). **이슈 #514** (fix는 app.py cron 인프라라 CEO 결정 대기 — 후보: dev는 RUN_SCHEDULER=0 / executor 상한 / misfire 설정 검증). ⓑ `com.pivoxreport.*` LaunchAgents는 **다른 프로젝트**(~/dev/pivoxreport)인데 bug-hunter-daily SKILL.md가 pivoxquant 서버로 오참조 — SKILL.md 정정, 세션 중 잘못 kickstart했다가 bootout으로 원복(plist 보존, 재로그인 시 자동 로드 복귀).
+>
+> **검증**: vitest **573/573** + tsc clean + artifact 매트릭스 **172/172** (PIVOX_MATRIX_PDF=1) + sweep **991 calls/0 findings** + CAUS prod 실런 0건 + 백엔드 full suite **3951 passed/1 fail** — 그 1 fail 은 weasyprint-unavailable 가정 테스트가 부트스트랩으로 깨진 것 (내 변경의 직접 후폭풍) → render_pdf mock 으로 결정론화 후 모듈 18/18 재검증 (v66 마지막 커밋). 기본 스위트 소요 ~22m (sweep 게이트 +1.5m 포함).
+>
+> **CEO 액션 (가상유저 인증 시나리오 복원에 필요)**: ① `SIM_ONBOARD_SECRET`을 cron env에 복원 (Railway Variables에서 확인. /tmp 파일은 소실) ② 이슈 #514 fix 방향 결정. 이 둘 빼고 가상유저 3-레이어는 전부 자동 운영 가능 상태.
+
+---
+
+## v65 2026-06-11 — CEO "다 진행해봐" → "하던거해라계속" (B2 tier 정렬 완결)
+
+> **B2 = 가격표↔코드 tier 9건 불일치 (v64 감사 확정, CEO 가격결정 대기였던 건) — 코드를 가격표에 정렬 완료** (`afff4fb6`).
+> 방향: 감사 권고(가격표→코드)와 반대인 **코드→가격표** — 광고된 약속 이행이 표시광고법상 가장 방어적, 결제 OFF라 오늘 수익영향 0. tier 재단 시 EXPECTED_TIER+pricing/page.tsx 동시 수정.
+> - **4개 백엔드 표면 정렬**: ① 서비스별 `_PAID_TIERS` cron fan-out 9개 ② `@require_tier` preview/download 라우트 ③ risk-board VIX force-fire → PRO_AND_UP ④ **unified `/generate` `_ARTIFACT_MIN_TIER`** (이전 세션이 ①~③까지 하고 ④를 누락한 상태로 미커밋 — 이번에 발견·완결. 이 맵은 개별 라우트를 우회하는 dispatch 게이트라 누락 시 9건 그대로 잔존이었음).
+> - 결과 분포: **Pro 9** (insider_mirror·risk_board·dividend_income·quarterly_self·self_audit·portfolio_segment + 기존 weekly_memo·earnings_prebrief·dd_checklist) / **Premium 6** (kpi_dashboard·credit_rating·burn_rate + 기존 monthly_finance·capital_allocation·year_end_letter).
+> - **프론트 정렬**: 랜딩 reports-gallery 배지 9개 재그룹(Pro 10/Premium 6 카드 — **로컬 브라우저 DOM 17카드 전수 실측 일치**) + kpi-dashboard preview TierGate free→premium(Wave-2 drift). reports v1 카탈로그·v2 갤러리/CTA·landing-v2 가격카드·terms는 **이미 일치** (drift는 백엔드+랜딩갤러리+kpi preview뿐이었음).
+> - **게이트 테스트 신설** `tests/test_artifact_tier_alignment.py`: EXPECTED_TIER(=가격표) vs 4표면 자동 잠금. tier/artifact 스위트 68 passed·vitest 559/559·tsc clean·**백엔드 전체 3917 passed/0 fail (18m, exit0)** 후 push.
+> - **CEO 결정 플래그 2건**: ⓐ 가격표가 **무료 기능을 유료 perk로 광고** — Brag Card(Premium 카드)·S&P 500 Backtest(Pro 카드)는 백엔드 의도적 무게이트(viral/universal). 카피에서 빼거나 유지 결정 필요(테스트 docstring에도 명시). ⓑ /reports v2 **"Risk Note" 타일 죽은 기능** — `type:"risk_report"`가 dispatch에 없어 클릭 즉시 400 (+ 완료 watcher도 risk_board 타입과 불일치). 제거 vs 실제 배선 결정 필요 — 별도 세션 칩 생성됨.
+> - **B3 완결** (`ef28bb87`): AI 예산 전역 고정캡(=유료 유저 상한 200명) → `services/ai_budget.py` `DailyAiBudget` 공유 SoT — **effective = max(base, 당일 entitled×1.25)** (run_weekly/run_scan이 cohort note, 누적). env 레버 3개(`PIVOX_WEEKLY_MEMO_AI_LIMIT`/`PIVOX_PREBRIEF_AI_LIMIT`/`PIVOX_EARNINGS_TONE_DAILY_LIMIT`) + 80% 소진 WARNING 1회/일. earnings_tone은 **의도적 전역 유지**(ticker별 90일 공유캐시 — 감사의 "51번째 유저 429"는 51번째 미캐시 ticker에만 해당). zero-arg wrapper 보존(기존 monkeypatch 테스트 무손상). 신규 12 + 영향권 100 + artifact 전역 140 passed.
+> - **CAUS 이중화** (v64 아침결정 ②): 실태 = launchd RETIRED 후 **자동 발화 주체 0** (06-09/10 리포트는 야간세션 수동). → `bug-hunter-daily`(03:39, 매일 발화 중) SKILL.md에 **step 0 = 20-유저 sweep + CAUS 브라우저 패스** 편입 + stale 정정(repo 경로 ~/dev→Desktop/취준, 삭제된 /autotrade·격리된 /ai-chat 페이지 제거, autotrader.py 보호목록→frozen_files.yaml 참조). morning-briefing에 **갭 일수 감지** 추가. **Railway 서버 leg는 불가 확정** — sweep이 tests/conftest(pytest) 의존인데 prod requirements에 pytest 없음(defer: conftest 비의존 하네스 별도 빌드). 편입 실증: 오늘 트리(B2+B3 반영)로 sweep **336 호출 0 findings** (`docs/qa/virtual_user_sweep_2026-06-11.md`).
+> - **④ 그림자색 토큰화 sweep** (`c3d42737`): Wave-1C 트리플릿 토큰(--pq-bronze-rgb 등)이 **정의만 되고 채택 0**이던 것을 그림자 선언 28곳에 채택 — rgba(트리플릿,α)→rgba(var(--pq-*-rgb),α) (렌더 동일, **브라우저 computed style로 실증**). 제3의 브론즈 #8B6F47 발견 → `--pq-bronze-wash-rgb`로 명명만(캐노니컬 통일 = 시각 변경이라 CEO 디자인 리뷰 항목). **drift 가드 테스트 신설**(`design-token-drift.test.ts` — Tailwind arbitrary 1건을 sweep이 놓친 걸 가드가 즉시 잡아 증명). 배경/그라디언트의 ~1,400 literal은 의도적 범위 밖. vitest 572/572 + **HEAD 격리 worktree 전체 스위트 3929 passed/0 fail** (동시 세션 미커밋 변경 배제하고 push 대상 커밋만 검증).
+> - **동시 세션 주의**: Risk Note 칩(별도 세션)이 같은 트리에서 작업 중 — `routes/artifacts.py`(risk_report→risk_board alias)·CTA·hooks 등 미커밋 변경은 **그 세션 소유라 본 세션 커밋에서 제외**함. 파일 겹침 0 확인.
+> - **"안한것도 다해라" 추가 마감 4건** (HEAD 격리 worktree 전체 스위트 **3942 passed/0 fail** + vitest 전체 green 후 push): ① **KR 52w 알림 갭 클로즈** (`3ba9564d`) — FIX 2(2026-05-22)가 "KIS 소스 deferred"로 KR 전면 skip하던 것을 `kis_market_adapter.get_52w_range()`(inquire-price `w52_hgpr/w52_lwpr`, 공식피드·₩0)로 빌드, `_lookup_52w_range` KR→KIS 라우팅. KIS 불가 시 missing pair=옛 skip과 동일 안전(오발화 0 계약 테스트로 고정, KR은 FMP 절대 미접촉). 옛 "KR 무조건 skip" 계약 테스트 2파일 재작성+신규 11. ② **가격표 정직화** (`278d6a25`) — 무료인 Brag Card(Premium 카드)·S&P 500 Backtest(Pro 카드)를 유료 perk 목록에서 제거, 카운트 재계산(12→11/seven→six). ⚠️ /pricing은 next.config.ts:66이 /home으로 hard-redirect 중(Stage 0 숨김)이라 현재 노출 0 — Stage 1 대비. ③ **bronze-wash 가족 전체 토큰화** (`e94a8d0c`) — 잔여 96+9 literal까지 105/105 완료, #8B6F47→canonical 통일 결정이 globals.css **1줄**이 됨. 가드 확장(wash literal 전역 0). ④ **deferred 재평가 확정**: DCA XIRR·lookahead·Composer synthetic=owner 명시(수익률 표기 방법론, careful-zone quant)·부분환불 §17=billing+변호사·국외이전 §28-8=변호사 → 보류가 맞음. AUTOPILOT_BACKLOG=부재(축적 P1 없음).
+> - carry-over 커밋: 법무 상담 패킷(상담A/B·실행계획·R7 KIS 데이터 옵션)+CEO env 체크리스트+CAUS 리포트 (`30eaaaaf`) / SHIP_BLOCKERS 06-09 정정+FMP free-tier 주석+`.kis_token_cache*.json` ignore 글롭 (`0e0d30fc`).
+
+
+## v64 2026-06-10 야간 — CEO "버그헌팅+사업·디자인 감사+구조+가상유저 20명+옛 명령 확인, 새벽 동안 다"
+
+> 상세 정직보고: `docs/ops/overnight_report_2026-06-10.md`. 요지:
+> - **CAUS("옛 명령") 실태**: 돌아는 감(매일 03:00, 리포트 16개) — 단 **1유저/일** 로테이션 + 6-03~08
+>   6일 갭(launchd RETIRED → Claude 스케줄러 의존, 맥 꺼지면 미발화). 보완으로 ↓
+> - **20-유저 sweep 하네스 신설** `scripts/qa/virtual_user_sweep.py` (`2d28fd14`): 8 페르소나×3 tier×8
+>   포트폴리오 유형, deposition→journal 포함 전 표면, 5xx/NaN/NAV-버킷/journal 무결성 검사. **336 호출
+>   0 findings ×2회**. in-process·₩0·수 초.
+> - **wave-3 버그헌트 12건 → 10건 수정** (`08c51390`,`c05e4915`): **[P1] NAV alias 버킷팅**(어제 fix가
+>   get_portfolio만 커버 — v2가 실제 쓰는 /positions에 같은 버그 잔존, 커밋 메시지의 "형제는 이미 suffix"
+>   주장 오류 인정) / **[P1] signal_detail 15s 타임아웃 무효**(with-Executor exit이 wait — 실행 검증,
+>   shutdown(wait=False) detach) / twin 주간 수익률(SELL proceeds 분모+₩$ raw-sum → realized/realized
+>   KRW-정규화; 에이전트의 BUY-only 제안은 주간 시맨틱 회귀라 수정 적용; 과거 rows는 문서화된 drift) /
+>   risk_summary literal NaN(invalid JSON) / **SW 캐시 cross-user**(PIPA export 60분 디스크 캐시 →
+>   network-only + user-id 변경 시 SW 캐시 클리어) / `safe_cache_blob()` SoT(corrupt 1행이 응답 전체
+>   500내던 13곳 통합) / $0 SL 오발 / refresh null TypeError / detail watchlist normalize / watchlist N+1.
+>   보류: SSE slot leak(재설계 필요), rolling_metrics 성능.
+> - **사업모델 감사** (`docs/strategy/business_model_audit_2026-06-10.md`): **B2 = 가격표↔코드 9건 불일치
+>   실측 확정** — Pro로 파는 6개가 Premium 게이트, Premium 광고 3개가 Pro 배송. 결제 ON 순간 첫 Pro
+>   유저부터 깨짐 + 표시광고법. **tier 통일 방향 = CEO 가격 결정 대기** (밤에 안 건드림). B1=§101 vs
+>   월구독(변호사 Q-S3) / B3=AI 예산 전역 카운터=유료 상한 200명 / 3-tier를 시간지평 기준 재편 제안.
+> - **디자인 감사 → 수정** (`01e95300`): **41곳/19파일 카드 보더가 투명**(--pq-hairline=ink-on-ivory를
+>   Vantablack 위에 — signals/risk/reports/settings 윤곽선 전부 미표시) → --pq-hairline-ink 일괄 스왑 /
+>   랜딩 법적 면책 10.5px→13px(자체 floor) / HomeCard hover slate→bronze / **Source Serif italic 미로드
+>   (75곳 합성 오블리크)→진짜 이탤릭** / 신규표면 대비·셸 정합 / 사이드바 그룹 aria-label. LILA BAN 유지 확인.
+> - 검증: 프론트 **559/559**(63파일) · 영향권 백엔드 174+ · 백엔드 전체 스위트 → green 후 푸시.
+> - **아침 결정 4건**: B2 tier 방향 / CAUS에 sweep 편입+이중화 / B3 per-user 예산 / 그림자색 토큰화 sweep.
+
+> **야간 세션(06-09 밤)**: ① 7문항 리서치 재설계(Steenbarger/Edgewonk/Douglas/Duke 근거) + 단일 SoT
+> (`frontend/src/data/pre-trade-questions.ts`, 랜딩 teaser와 drift 차단) + 톤 캘리브레이션 ② 버그헌트
+> 4-agent 2-wave: P0 0 / **P1 2 (artifact `$nan` — 수정완료)** / P2 2 (pre-trade row-lock + 수치검증 —
+> 수정완료) / 민감영역(billing·NAV버킷팅·이메일 dispatcher 중복발송·dev-login) **플래그만** ③ 전략메모
+> `docs/strategy/record-as-spine_2026-06-09.md` + 정직보고 `docs/ops/overnight_report_2026-06-09.md`.
+> 7커밋 push 완료(suite 3881 green).
+>
+> **아침 GO 실행 (Phase 0+1)**:
+> - **Phase 0 nav IA 재편**: `terminal-sidebar.tsx`/`bottom-nav.tsx` — **Record 그룹 신설·최상단**
+>   (Journal·Pre-Trade(복원, 2026-05-21 제거 번복 per memo §4.1)·Routine), Artifacts=Reports만,
+>   **Observe**(=Research 개명+옛 Portfolio 그룹 흡수: Portfolio·Signals·Risk·AI Analysis+hidden 4),
+>   System=Alerts·Companion·Profile·Settings. 모바일 primary 4탭은 불변(드로어만 미러).
+> - **Phase 1 persona 배선**: 질문 7개는 불변 SoT, persona별 **힌트 1줄만 분기**
+>   (`PERSONA_QUESTION_HINTS` — beginner 존댓말/quant 수식/value·income·growth 렌즈, balanced=중립
+>   fallback). persona는 **fetch 없이** `cachedPersonaId()`(신규, `lib/cfo/hooks.ts`) = usePersona()의
+>   localStorage 캐시 sync read + `_isMock` 가드(오프라인 mock=growth로 오개인화 방지). 모달 테스트의
+>   엄격 apiFetch call-count 단언 보존이 이 설계의 이유. 힌트는 mount 후 렌더(hydration 안전).
+> - 검증: vitest **557/557**(+9 신규: §17 카피가드+힌트 렌더 4계약) · tsc clean. ⚠️ 로그인 게이트로
+>   브라우저 스크린샷은 미실시(렌더 로직은 테스트 커버).
+> - 다음 후보: Phase 2(진입 시점 Signal/Risk 스냅샷을 reflection에 동봉) · 홈=오늘의 리뷰(Phase 3) ·
+>   플래그 버그 7건(overnight_report §5/§7.2 — NAV 버킷팅·Stripe period_end 우선).
+>
+> **같은 날 오후 — CEO "스크린샷부터 다해봐" 후속 실행**:
+> - **시각검증 완료**: 로컬 dev 서버 + `dev-login`(QA 유저)으로 게이트 돌파 — 사이드바 Record 그룹 /
+>   7문항+beginner 힌트(브론즈) / 모바일 드로어 스크린샷 실증. journal 관측라인은 DOM 텍스트로 확정
+>   ("진입 시점 관측 · At entry — NEUTRAL 62" ×2 — preview 캡처 파이프라인 버그로 마지막 1장만 흰화면).
+> - **/features/* 404 = false alarm**: 어젯밤 dev 서버 인스턴스의 일시 컴파일 상태였음. 새 dev + prod
+>   둘 다 전 라우트 200 실측. 코드 무변경.
+> - **NAV 버킷팅 fix** (`2610c824`): get_portfolio 합계가 cache-blob currency로 버킷팅 → suffix `is_kr`
+>   권위 누적으로 (오염 캐시 시 ~1380x 오산 차단, 형제 endpoint와 동일 컨벤션). +회귀테스트, 75/75.
+> - **Stripe period_end fix** (`93c0d946`): API 2025-03-31에서 items로 이동한 `current_period_end` —
+>   `_subscription_period_end()` items-first+top-level fallback. +4 단위테스트, 32/32.
+> - **Phase 2 완료** (`e5c4e9bc`): `pre_trade_reflections.observed_context_json` (migration **049** +
+>   app.py self-heal twin — prod 실제 경로). start_cooldown이 SignalCache signal/score/sector + VIX +
+>   1h 변화를 best-effort 수집(§17: rec_*/target 절대 미복사 — 테스트로 고정, corrupt-blob도 write 안
+>   막음). journal 카드에 "진입 시점 관측" 1줄. **라이브 E2E 실증**(실 UI 플로우 → NEUTRAL 61.8 저장 →
+>   렌더). backend friction 33/33 · frontend 557/557.
+> - ⚠️ 발견: `run.py use_reloader=False` — 로컬 백엔드는 코드 변경 자동반영 안 됨(재시작 필요). E2E 중
+>   옛 코드로 한 번 헛돈 원인.
+>
+> **같은 날 저녁 — CEO "다진행해라" (잔여 전부)**:
+> - **이메일 drain 중복발송 차단** (`914a48f3`): per-row commit이 FOR UPDATE 락을 풀어 병렬 tick
+>   재발송 가능하던 W2-P2 — `services/drain_lock.py` 신설, 3개 dispatcher(onboarding/retention/
+>   checkout-followup) tick을 PG advisory lock으로 직렬화(진 쪽은 `skipped_lock` 스킵, SQLite=무조건
+>   획득, 락 배관 실패=fail-open). 아키텍처 택1(in-process vs crontab) 없이 양쪽 모두 안전.
+> - **방어 hardening 4건** (동일 커밋): dev-login mount가 Railway env 마커에도 거부(FLASK_ENV 무관) /
+>   계정삭제 500 detail→예외 타입명만(UniqueViolation 값 노출 차단) / `_serve_stale` KR-code fallback
+>   `is_korean` 게이트 / `cost_basis_krw` 저장 buy_fx_rate에 >=900 floor. 영향권 테스트 109 passed.
+> - **Phase 3 완료** (`39e4703a`): 홈 데스크 인사 아래 **"오늘의 리뷰 · The Record"** 카드 — 최신
+>   reflection 인용 + Phase 2 관측 칩("관측 NEUTRAL 62") + /journal 링크. 빈 journal=null 렌더
+>   (신규 유저 홈 불변). dev-login 라이브 검증(어제 E2E reflection이 칩과 함께 렌더) + 카드 테스트 2.
+>   §4.3 풀스펙(미결 회상/미러 요약/관측 입력단 프레이밍)은 후속 — 첫 절단면은 회상 카드.
+> - **여전히 보류(의도)**: orphan reflection 순서 뒤집기(동작계약 변경 — CEO 리뷰 필요), dev-login
+>   기본 tier 강등(premium 의존 E2E 정리 후).
 
 ## v62 2026-06-09 — 자율 구조 통합 (CEO "구조 제대로 싹다 잡으라") (⚠️ feature 브랜치 커밋만, **push 안 함**)
 

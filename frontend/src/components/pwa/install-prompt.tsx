@@ -184,7 +184,7 @@ export function InstallPrompt() {
             </div>
             <h3
               id="pq-install-title"
-              className="font-display italic"
+              className="font-display"
               style={{
                 fontWeight: 500,
                 fontSize: "var(--pq-text-h4)",

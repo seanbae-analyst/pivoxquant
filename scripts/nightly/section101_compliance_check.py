@@ -335,7 +335,7 @@ def main() -> int:
 
     # 위반 보고서 작성
     lines = [
-        f"[PivoxQuant] section101_compliance_check ALERT — §101 면제 요건 점검 필요",
+        "[PivoxQuant] section101_compliance_check ALERT — §101 면제 요건 점검 필요",
         f"생성: {now_kst}",
         "⚠️ 아래 항목은 위반 '가능성' 힌트 — 실제 판단은 CEO/법무팀 필수",
         "",

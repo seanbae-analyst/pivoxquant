@@ -178,7 +178,7 @@ export function FeatureCardsGrid({ cards }: { cards: readonly FeatureCard[] }) {
                   </p>
 
                   <span
-                    className="mt-auto inline-flex items-center gap-1.5 pt-3 font-serif italic"
+                    className="mt-auto inline-flex items-center gap-1.5 pt-3 font-serif"
                     style={{
                       color: "var(--pq-bronze)",
                       fontSize: "var(--pq-text-body)",

@@ -263,7 +263,7 @@ function PulseForm({
                     ? "var(--pq-bronze)"
                     : "rgba(245,240,232,0.1)",
                   background: active
-                    ? "rgba(139,111,71,0.18)"
+                    ? "rgba(var(--pq-bronze-wash-rgb),0.18)"
                     : "rgba(255,255,255,0.02)",
                   color: active ? "var(--pq-ivory)" : "rgba(245,240,232,0.7)",
                 }}
@@ -334,7 +334,7 @@ function LikertRow({
                   ? "var(--pq-bronze)"
                   : "rgba(245,240,232,0.1)",
                 background: active
-                  ? "rgba(139,111,71,0.22)"
+                  ? "rgba(var(--pq-bronze-wash-rgb),0.22)"
                   : "rgba(255,255,255,0.02)",
                 color: active ? "var(--pq-ivory)" : "rgba(245,240,232,0.55)",
               }}

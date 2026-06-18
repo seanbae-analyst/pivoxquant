@@ -63,12 +63,34 @@ import { GenerateArtifactCta } from "@/components/reports/v2/generate-artifact-c
 import { YearTimelineBlock } from "@/components/reports/v2/year-timeline-block";
 import type { Tier } from "@/components/reports/v2/artifact-kind-card";
 
+/**
+ * Collapse the backend's 5-value tier space onto the 3-value UI `Tier`.
+ *
+ * founding_lifetime / premium_plus carry every premium entitlement on the
+ * backend (the PAID_TIERS_* frozensets include both — see
+ * services/artifacts/_tiers.py), so they map to "premium" here. 2026-06-11
+ * fix: the previous raw `as Tier` cast let those strings through, and the
+ * v2 components' 3-key TIER_RANK lookups ranked them `undefined` → a
+ * founding user saw EVERY tile locked, including the free Brag Card
+ * ("Upgrade to free"). Same bug class as the tier-gate.tsx P1 fix —
+ * normalise at the page boundary so every v2 consumer inherits it.
+ */
+export function toUiTier(raw: string | undefined | null): Tier {
+  if (raw === "premium_plus" || raw === "founding_lifetime") return "premium";
+  return raw === "pro" || raw === "premium" ? raw : "free";
+}
+
 function pickLatest(artifacts: Artifact[]): Artifact | null {
   let best: Artifact | null = null;
   let bestTs = -Infinity;
   for (const a of artifacts) {
-    const ts = a.sent_at ? Date.parse(a.sent_at) : 0;
-    if (ts > bestTs) {
+    // Order by sent_at ?? created_at. A just-generated artifact has sent_at=null
+    // (only the cron email path stamps sent_at), so keying off sent_at alone
+    // scored it as epoch 0 — an older *emailed* artifact then always won
+    // "latest" for any user who had ever received one.
+    const stamp = a.sent_at ?? a.created_at;
+    const ts = stamp ? Date.parse(stamp) : 0;
+    if (!Number.isNaN(ts) && ts > bestTs) {
       bestTs = ts;
       best = a;
     }
@@ -79,7 +101,7 @@ function pickLatest(artifacts: Artifact[]): Artifact | null {
 export default function ReportsPageV2() {
   const t = useT();
   const { user } = useAuth();
-  const tier = ((user?.subscription_tier as Tier) || "free") as Tier;
+  const tier = toUiTier(user?.subscription_tier);
 
   // Pull a generous window so the gallery + year timeline can derive
   // stats client-side until the dedicated endpoints land.

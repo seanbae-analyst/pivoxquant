@@ -591,7 +591,7 @@ export default function ProfilePageV2() {
           </div>
           <EditorialHead size={30} as="div" style={{ marginBottom: 20 }}>
             How your persona{" "}
-            <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               drifted.
             </span>
           </EditorialHead>
@@ -678,7 +678,7 @@ export default function ProfilePageV2() {
             </div>
             <EditorialHead size={30} as="div" style={{ marginBottom: 8 }}>
               Tell the CFO{" "}
-              <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+              <span style={{ color: "var(--pq-bronze)" }}>
                 how you read.
               </span>
             </EditorialHead>
@@ -743,7 +743,6 @@ export default function ProfilePageV2() {
           <strong
             style={{
               color: "rgba(245,240,232,0.82)",
-              fontStyle: "italic",
             }}
           className="font-serif" >
             Notice / 면책 고지.

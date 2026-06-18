@@ -114,7 +114,7 @@ function IsoLayer({
         translateZ: reduce ? baseZ : z,
         backgroundColor: bg,
         boxShadow:
-          "0 12px 40px -12px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(139,111,71,0.4)",
+          "0 12px 40px -12px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(var(--pq-bronze-wash-rgb),0.4)",
         color: idx === 2 ? "var(--pq-ivory)" : "var(--pq-ink)",
       }}
     >
@@ -179,7 +179,7 @@ export function ThreeLayers() {
           <span
             aria-hidden
             className="h-px w-7"
-            style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+            style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)" }}
           />
           <span
             className="font-serif text-pq-mono-sm uppercase"
@@ -273,7 +273,7 @@ export function ThreeLayers() {
                   <div
                     className="flex h-10 w-10 items-center justify-center rounded-sm"
                     style={{
-                      border: "0.5px solid rgba(139,111,71,0.45)",
+                      border: "0.5px solid rgba(var(--pq-bronze-wash-rgb),0.45)",
                       color: "var(--pq-bronze)",
                     }}
                     aria-hidden
@@ -292,7 +292,7 @@ export function ThreeLayers() {
                         {layer.label}
                       </span>
                       <span
-                        className="font-serif text-pq-mono-sm italic"
+                        className="font-serif text-pq-mono-sm"
                         style={{ color: "rgba(245,240,232,0.45)" }}
                       >
                         {layer.korean}

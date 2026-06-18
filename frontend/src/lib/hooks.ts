@@ -36,6 +36,7 @@ import type {
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
   MethodologyResponse,
+  MirrorHomeResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -287,6 +288,39 @@ export function usePreTradeJournal(limit = 50) {
  *
  * Never returns a score / grade — only counts and average hold days.
  */
+/**
+ * Mirror home (거울) — the composed 선언/관찰/트윈 read for the new home.
+ * 404-safe soft-empty (returns null) so the surface degrades gracefully
+ * before the route is reachable. Read-only; not refreshed on focus.
+ */
+export function useMirrorHome() {
+  const swr = useSWR<MirrorHomeResponse | null>(
+    API.mirror.home,
+    async (url: string): Promise<MirrorHomeResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & { status?: number };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as (Error & { status?: number }) | undefined,
+    mutate: swr.mutate,
+  };
+}
+
 export function useHoldingMirror() {
   const swr = useSWR<HoldingMirrorResponse | null>(
     API.behavior.holdingMirror,
@@ -1335,26 +1369,46 @@ export function deriveArchiveMonths(
 
 export interface GenerateArtifactBody {
   type: ArtifactType;
-  ticker?: string;          // for earnings_prebrief
-  topic?: string;           // for risk_report / custom
-}
-
-export interface GenerateArtifactResponse {
-  job_id: string;
-  eta_seconds: number;
+  /** earnings_prebrief only — sent to the backend as `params.ticker`. */
+  ticker?: string;
 }
 
 /**
- * On-demand artifact generation (Brag Card / Earnings Pre-Brief / Risk Note).
- * Returns a job id; SWR polling on `useArtifacts()` will surface the new
- * artifact when ready (no separate polling hook needed for the v2 launch).
+ * Mirror of the unified endpoint's JSON response
+ * (routes/artifacts.py:api_artifacts_generate). Generation is SYNCHRONOUS —
+ * a resolved promise with status "ready" means the artifact row already
+ * exists in the archive. (The pre-launch `{job_id, eta_seconds}` queue shape
+ * never shipped; 2026-06-11 this type was aligned to the real backend.)
+ */
+export interface GenerateArtifactResponse {
+  status: "ready" | "empty" | "interactive";
+  type: ArtifactType;
+  artifact_id: number | null;
+  data: unknown;
+  /** "empty" → enum like "no_positions" / "no_trades" / "not_in_portfolio". */
+  reason: string | null;
+  message: string | null;
+  redirect: string | null;
+  /** Present on "ready" — whether a PDF attachment was rendered. */
+  pdf_available?: boolean;
+  pdf_status?: "ok" | "unavailable" | "render_failed" | "not_applicable";
+}
+
+/**
+ * On-demand artifact generation (Brag Card / Earnings Pre-Brief / Risk Board).
+ * Resolves when the backend finishes generating (synchronous endpoint).
  *
- * Backend GAP: `POST /api/artifacts/generate`. Until shipped, this throws
- * a recognizable error so the UI can show a "queued offline" state.
+ * Wire shape: optional kwargs ride under `params` — the endpoint reads
+ * `params.ticker`, NOT a top-level `ticker` (2026-06-11 fix: the top-level
+ * field was silently ignored, 400ing every earnings_prebrief request).
  */
 export async function generateArtifact(
   body: GenerateArtifactBody,
 ): Promise<GenerateArtifactResponse> {
+  const wire: { type: ArtifactType; params?: { ticker: string } } = {
+    type: body.type,
+  };
+  if (body.ticker) wire.params = { ticker: body.ticker };
   // 2026-05-17 wave 12 P1: the raw `fetch(...)` here previously did NOT
   // attach the X-CSRF-Token header that `apiFetch` injects automatically.
   // Backend CSRF middleware (security.py:_csrf_protect) would reject any
@@ -1363,7 +1417,7 @@ export async function generateArtifact(
   // timeout + sentry breadcrumbs all match the rest of the SPA.
   return apiFetch<GenerateArtifactResponse>(API.artifacts.generate, {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(wire),
   });
 }
 

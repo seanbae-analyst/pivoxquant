@@ -107,7 +107,7 @@ export default function DocsPage() {
       <div className="max-w-4xl mx-auto">
         <header className="mb-12">
           <div className="pq-ink-kicker mb-2">Documentation</div>
-          <h1 className="font-serif italic text-4xl md:text-5xl mb-4">
+          <h1 className="font-serif text-4xl md:text-5xl mb-4">
             How PivoxQuant works.
           </h1>
           <p className="text-pq-body text-[rgba(245,240,232,0.7)] max-w-2xl">
@@ -123,7 +123,7 @@ export default function DocsPage() {
               <section key={section.title}>
                 <div className="flex items-center gap-3 mb-6 pb-3 border-b border-[var(--pq-ivory-line)]">
                   <Icon className="h-4 w-4 text-[var(--pq-bronze)]" />
-                  <h2 className="font-serif italic text-xl">{section.title}</h2>
+                  <h2 className="font-serif text-xl">{section.title}</h2>
                 </div>
                 <dl className="space-y-5">
                   {section.items.map((item) => (

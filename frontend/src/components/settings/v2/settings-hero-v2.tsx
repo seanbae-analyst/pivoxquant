@@ -22,7 +22,7 @@ export function SettingsHeroV2({
     <section
       style={{
         padding: "80px 0 48px",
-        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+        borderBottom: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
       }}
     >
       <div

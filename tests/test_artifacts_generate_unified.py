@@ -128,6 +128,65 @@ def test_generate_self_audit_empty_without_trades(client, paid_auth_user):
     assert body["reason"] == "no_trades"
 
 
+# ── legacy alias — risk_report → risk_board ────────────────────────────────
+# The reports-v2 "Risk Note" tile shipped posting type="risk_report" against
+# a service that never existed (SPEC §4 GAP → guaranteed 400 before any tier
+# gate). 2026-06-11 fix: the tile requests "risk_board"; the endpoint keeps a
+# normalising alias so already-open tabs survive the deploy window.
+
+def test_generate_risk_report_alias_gates_at_pro(client, make_user):
+    """Alias is canonicalised BEFORE the tier gate: a free user posting the
+    legacy slug must hit risk_board's pro gate, not UNKNOWN_ARTIFACT_TYPE."""
+    user = make_user(email="alias_free@test.com")  # tier defaults to free
+    login = client.post("/api/auth/login", json={
+        "email": user["email"], "password": user["password"],
+    })
+    assert login.status_code == 200
+    resp = client.post("/api/artifacts/generate", json={"type": "risk_report"})
+    assert resp.status_code == 403
+    body = resp.get_json() or {}
+    assert body.get("code") == "UPGRADE_REQUIRED"
+    assert body.get("required_tier") == "pro"
+
+
+def test_generate_risk_report_alias_dispatches_to_risk_board(
+    client, paid_auth_user,
+):
+    """Paid user + legacy slug reaches the risk_board pipeline (empty-state
+    pre-flight for a positionless user) and echoes the CANONICAL type, so the
+    frontend completion watcher matches the persisted Artifact.type."""
+    resp = client.post("/api/artifacts/generate", json={"type": "risk_report"})
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["type"] == "risk_board"
+    assert body["status"] == "empty"
+    assert body["reason"] == "no_positions"
+
+
+def test_alias_map_is_disjoint_from_dispatch_and_tier_maps():
+    """Structural lock: every alias target must be a real dispatch key, and
+    alias keys must never leak into the dispatch / min-tier maps — the B2
+    tier-alignment gate (tests/test_artifact_tier_alignment.py) pins those
+    maps 1:1 to the pricing page."""
+    from routes.artifacts import (
+        _ARTIFACT_DISPATCH,
+        _ARTIFACT_MIN_TIER,
+        _ARTIFACT_TYPE_ALIASES,
+    )
+
+    for legacy, canonical in _ARTIFACT_TYPE_ALIASES.items():
+        assert canonical in _ARTIFACT_DISPATCH, (
+            f"alias {legacy!r} points at {canonical!r} which is not dispatchable"
+        )
+        assert legacy not in _ARTIFACT_DISPATCH, (
+            f"alias key {legacy!r} must not shadow a real dispatch type"
+        )
+        assert legacy not in _ARTIFACT_MIN_TIER, (
+            f"alias key {legacy!r} must not appear in _ARTIFACT_MIN_TIER "
+            "(tier gating happens after canonicalisation)"
+        )
+
+
 # ── happy path — weekly memo for a user with a position ─────────────────────
 
 def test_generate_weekly_memo_with_position_returns_ready(
@@ -158,16 +217,23 @@ def test_generate_weekly_memo_with_position_returns_ready(
 # ── H2: PDF render outcome must be non-silent ──────────────────────────────
 
 def test_generate_reports_pdf_status_when_weasyprint_unavailable(
-    client, paid_auth_user, app, mock_fetcher, add_position,
+    client, paid_auth_user, app, mock_fetcher, add_position, monkeypatch,
 ):
-    """No WeasyPrint in the test env → render_pdf returns None. The response
-    must stay `ready` (data is valid/viewable) but explicitly say the PDF is
-    unavailable, never silently claim a clean completion with no attachment."""
+    """WeasyPrint unavailable → render_pdf returns None. The response must
+    stay `ready` (data is valid/viewable) but explicitly say the PDF is
+    unavailable, never silently claim a clean completion with no attachment.
+
+    2026-06-12: render_pdf is mocked to None alongside the flag — the conftest
+    DYLD bootstrap made WeasyPrint genuinely importable on macOS, so this test
+    can no longer rely on the host accidentally lacking the native dep."""
     import routes.artifacts as ra
+    from services.artifacts.weekly_memo_service import WeeklyMemoService
 
     add_position(paid_auth_user["id"], ticker="AAPL", shares=10)
-    # Force the "dep missing" branch deterministically.
+    # Force the "dep missing" branch deterministically: flag False AND no bytes.
     ra._WEASYPRINT_OK = False
+    monkeypatch.setattr(WeeklyMemoService, "render_pdf",
+                        lambda self, data: None)
     try:
         resp = client.post("/api/artifacts/generate", json={"type": "weekly_memo"})
     finally:

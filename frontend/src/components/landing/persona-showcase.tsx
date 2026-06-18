@@ -106,7 +106,7 @@ export function PersonaShowcase() {
           <span
             aria-hidden
             className="h-px w-7"
-            style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+            style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)" }}
           />
           <span
             className="font-serif text-pq-mono-sm uppercase"
@@ -165,7 +165,7 @@ export function PersonaShowcase() {
               style={{
                 minHeight: 230,
                 backgroundColor: "var(--pq-card-veil)",
-                border: "0.5px solid rgba(139,111,71,0.28)",
+                border: "0.5px solid rgba(var(--pq-bronze-wash-rgb),0.28)",
                 boxShadow: "0 1px 0 0 var(--pq-ivory-line-ghost) inset",
               }}
             >
@@ -193,7 +193,7 @@ export function PersonaShowcase() {
                     {p.key.slice(0, 2).toUpperCase()}
                   </span>
                   <span
-                    className="font-serif text-pq-caption italic"
+                    className="font-serif text-pq-caption"
                     style={{ color: "rgba(245,240,232,0.45)" }}
                   >
                     {p.kr}
@@ -222,11 +222,11 @@ export function PersonaShowcase() {
                   {p.identity}
                 </p>
                 <p
-                  className="font-serif italic"
+                  className="font-serif"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
                     lineHeight: 1.5,
-                    color: "rgba(139,111,71,0.75)",
+                    color: "rgba(var(--pq-bronze-wash-rgb),0.75)",
                   }}
                 >
                   {p.ko}
@@ -235,7 +235,7 @@ export function PersonaShowcase() {
 
               <Link
                 href={`/sample-reports/${PERSONA_SAMPLE[p.key] ?? "weekly-memo"}`}
-                className="mt-6 inline-flex items-center gap-1.5 self-start font-serif text-pq-caption italic"
+                className="mt-6 inline-flex items-center gap-1.5 self-start font-serif text-pq-caption"
                 style={{
                   letterSpacing: "0.02em",
                   color: "var(--pq-bronze-light, #B8956A)",

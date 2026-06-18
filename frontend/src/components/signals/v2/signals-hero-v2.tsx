@@ -39,19 +39,19 @@ export function SignalsHeroV2({ eyebrow, counts, loading = false }: Props) {
     locale === "ko" ? (
       <>
         스트림은{" "}
-        <span style={{ fontStyle: "italic", color: "var(--pq-bronze, #B8956A)" }}>관측</span>될 뿐,
+        <span style={{ color: "var(--pq-bronze, #B8956A)" }}>관측</span>될 뿐,
         <br />
         조언이 아닙니다 —{" "}
-        <span style={{ fontStyle: "italic", color: "var(--pq-bronze, #B8956A)" }}>보유</span>
+        <span style={{ color: "var(--pq-bronze, #B8956A)" }}>보유</span>
         하신 종목으로 좁혔습니다.
       </>
     ) : (
       <>
         The stream is{" "}
-        <span style={{ fontStyle: "italic", color: "var(--pq-bronze, #B8956A)" }}>observed</span>,
+        <span style={{ color: "var(--pq-bronze, #B8956A)" }}>observed</span>,
         <br />
         not advised — filtered to your{" "}
-        <span style={{ fontStyle: "italic", color: "var(--pq-bronze, #B8956A)" }}>holdings</span>.
+        <span style={{ color: "var(--pq-bronze, #B8956A)" }}>holdings</span>.
       </>
     );
 
@@ -83,7 +83,7 @@ export function SignalsHeroV2({ eyebrow, counts, loading = false }: Props) {
     <header
       style={{
         padding: "80px 0 64px",
-        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+        borderBottom: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         marginBottom: 0,
       }}
     >

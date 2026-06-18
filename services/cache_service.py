@@ -30,9 +30,86 @@ _earnings_tone_lock = threading.Lock()
 
 # Daily call budget for earnings-tone to cap Claude API spend even if many
 # Pro users hit it. Reset on the calendar day (UTC).
-EARNINGS_TONE_DAILY_LIMIT = 50
-_earnings_tone_usage: dict = {"day": None, "count": 0}
+# B3 review (2026-06-11, business_model_audit §B3): this budget stays
+# GLOBAL by design — tone results are cached per ticker for 90 days and
+# shared across users, so the cap gates *new-ticker analyses per day*, not
+# users (the audit's "51st user gets 429" only bites on the 51st UNCACHED
+# ticker). Per-user split would multiply spend without serving anyone
+# faster. Backed by DailyAiBudget for the env lever + the 80% warning.
+from services.ai_budget import DailyAiBudget  # noqa: E402
 
+EARNINGS_TONE_DAILY_LIMIT = 50  # base floor; env PIVOX_EARNINGS_TONE_DAILY_LIMIT
+_earnings_tone_budget = DailyAiBudget(
+    "earnings_tone",
+    EARNINGS_TONE_DAILY_LIMIT,
+    env_var="PIVOX_EARNINGS_TONE_DAILY_LIMIT",
+)
+
+
+
+# ── AI 분석 결과 캐시 (SWOT / commentary / competitor / sector-trend) ──
+# 2026-06-12 토큰 최적화: 이 4개 인터랙티브 엔드포인트는 ticker(또는 sector)
+# 단위의 비개인화 분석인데 캐시가 전혀 없어 — 같은 종목을 두 유저가(또는 한
+# 유저가 두 번) 열 때마다 동일한 Claude 호출이 반복됐다. earnings_tone(90d)
+# 패턴을 따르되 입력(quant score/price)이 더 자주 변하므로 TTL 6h.
+# 비개인화 결과의 유저간 공유는 §101 면제 트랙(불특정 다수 대상 정보 제공)
+# 관점에서도 개인화보다 방어적이다. 개인화 경로(coaching/morning_summary/
+# chat)는 절대 여기 캐시하지 않는다.
+# Structure: {(endpoint, key): {"data": {...}, "ts": unix}}
+ai_result_cache: dict = {}
+AI_RESULT_TTL = 6 * 3600          # 6 h — quant 입력 갱신 주기와 균형
+AI_RESULT_MAX_ENTRIES = 2000      # (4 endpoint × ~500 ticker) LRU 상한
+_ai_result_lock = threading.Lock()
+
+
+def ai_result_cache_get(endpoint: str, key: str):
+    """Thread-safe read of the AI-result cache. Returns data dict or None."""
+    if not endpoint or not key:
+        return None
+    ck = (endpoint, key.upper().strip())
+    with _ai_result_lock:
+        entry = ai_result_cache.get(ck)
+        if not entry:
+            return None
+        if time.time() - entry.get("ts", 0) >= AI_RESULT_TTL:
+            return None
+        return entry.get("data")
+
+
+def ai_result_cache_set(endpoint: str, key: str, data: dict) -> None:
+    """Thread-safe write. LRU-prunes oldest 25% past AI_RESULT_MAX_ENTRIES."""
+    if not endpoint or not key or data is None:
+        return
+    ck = (endpoint, key.upper().strip())
+    with _ai_result_lock:
+        ai_result_cache[ck] = {"data": data, "ts": time.time()}
+        if len(ai_result_cache) > AI_RESULT_MAX_ENTRIES:
+            ordered = sorted(
+                ai_result_cache.items(),
+                key=lambda kv: kv[1].get("ts", 0),
+            )
+            for old_key, _ in ordered[: len(ordered) // 4]:
+                ai_result_cache.pop(old_key, None)
+
+
+def safe_cache_blob(cached) -> dict:
+    """Parse a SignalCache row's data_json — `{}` on absence/corruption.
+
+    Wave-3 P3 (2026-06-10): a dozen route loops did
+    ``json.loads(c.data_json)`` unguarded, so ONE corrupted/truncated cache
+    row 500'd the user's entire watchlist/signals/alerts/portfolio response.
+    get_signals already guarded (routes/signals.py); this is that guard,
+    centralised so the next loop can't forget it.
+    """
+    if not cached or not getattr(cached, "data_json", None):
+        return {}
+    try:
+        v = json.loads(cached.data_json)
+        return v if isinstance(v, dict) else {}
+    except (json.JSONDecodeError, TypeError, ValueError):
+        logger.warning("safe_cache_blob: corrupt data_json for %s",
+                       getattr(cached, "ticker", "?"))
+        return {}
 
 def earnings_tone_cache_get(ticker: str):
     """Thread-safe read of the earnings-tone cache. Returns data dict or None."""
@@ -76,25 +153,25 @@ def earnings_tone_cache_set(ticker: str, data: dict) -> None:
 def earnings_tone_budget_check_and_increment() -> bool:
     """Returns True if the daily budget still has room (and increments usage).
     Returns False if today's limit has been reached — caller should reject with 429.
+
+    Atomic check-and-spend via DailyAiBudget.try_consume() (same UTC-day
+    semantics the old inline counter had, plus the env override and the
+    once-a-day 80% exhaustion warning).
     """
-    today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
-    with _earnings_tone_lock:
-        if _earnings_tone_usage["day"] != today:
-            _earnings_tone_usage["day"] = today
-            _earnings_tone_usage["count"] = 0
-        if _earnings_tone_usage["count"] >= EARNINGS_TONE_DAILY_LIMIT:
-            return False
-        _earnings_tone_usage["count"] += 1
-        return True
+    return _earnings_tone_budget.try_consume()
 
 
 def earnings_tone_budget_remaining() -> int:
-    """Return how many calls are left in today's budget."""
-    today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
-    with _earnings_tone_lock:
-        if _earnings_tone_usage["day"] != today:
-            return EARNINGS_TONE_DAILY_LIMIT
-        return max(0, EARNINGS_TONE_DAILY_LIMIT - _earnings_tone_usage["count"])
+    """Return how many calls are left in today's budget.
+
+    Reads the live DailyAiBudget snapshot — the same source of truth that
+    earnings_tone_budget_check_and_increment() spends against. (Previously
+    referenced a since-deleted ``_earnings_tone_usage`` dict and a fixed
+    EARNINGS_TONE_DAILY_LIMIT constant, so it ignored the env override /
+    cohort scaling and would NameError if ever called.)
+    """
+    snap = _earnings_tone_budget.snapshot()
+    return max(0, snap["limit"] - snap["count"])
 
 
 def get_signal(ticker: str):

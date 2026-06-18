@@ -152,7 +152,7 @@ function AnalysisSectionCard({
       >
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[2px] border border-[rgba(245,240,232,0.1)]"
-          style={{ background: "rgba(139,111,71,0.12)" }}
+          style={{ background: "rgba(var(--pq-bronze-wash-rgb),0.12)" }}
         >
           <Icon className="h-4 w-4 text-[var(--pq-bronze)]" />
         </div>
@@ -438,7 +438,7 @@ export default function AiPage() {
             <div className="flex items-start gap-4">
               <div
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[2px] border border-[rgba(245,240,232,0.1)]"
-                style={{ background: "rgba(139,111,71,0.14)" }}
+                style={{ background: "rgba(var(--pq-bronze-wash-rgb),0.14)" }}
               >
                 <Sparkles className="h-5 w-5 text-[var(--pq-bronze)]" />
               </div>

@@ -135,6 +135,28 @@ def test_grep_forbidden_clean(base):
     assert base.grep_forbidden("NEUTRAL") == []
 
 
+def test_grep_forbidden_exempts_legal_disclaimers(base):
+    """2026-06-12 false-positive fix (issues #509–#513): the legally REQUIRED
+    disclaimer sentences contain the forbidden vocabulary in NEGATED form —
+    they must not fire the scan, or every compliant page reads as a P0."""
+    assert base.grep_forbidden(
+        "본 페이지의 모든 정보는 교육·연구 목적의 관찰이며 "
+        "특정 종목의 매수·매도·보유를 권유하지 않습니다."
+    ) == []
+    assert base.grep_forbidden(
+        "Labels are POSITIVE / NEGATIVE / NEUTRAL — never buy, sell, or hold."
+    ) == []
+    assert base.grep_forbidden(
+        "특정 종목의 매수 또는 매도를 권유하는 것이 아닙니다."
+    ) == []
+
+
+def test_grep_forbidden_negation_is_per_sentence(base):
+    """A disclaimer in ONE sentence must not excuse a directive in ANOTHER."""
+    hits = base.grep_forbidden("이 종목은 매도하세요. 책임은 지지 않습니다.")
+    assert "매도" in hits
+
+
 def test_grep_forbidden_word_boundary(base):
     """'BUYER' should NOT match BUY (word boundary)."""
     assert "BUY" not in base.grep_forbidden("BUYER seller")

@@ -28,9 +28,10 @@
   `--pq-positive`(bronze) / `--pq-negative`(carmine) 은 **시그널 평가 라벨 전용**이며
   가격 방향에 쓰면 안 됨(2026-05-24 반전 버그 fix). 토큰 drift 는 `design-token-drift` skill 가드.
 - **BANNED**: Inter, violet/purple AI gradient, neon glow, raw hex(토큰만)
-- **italic**: 전역 금지 아님 (실측 92파일 의도적 사용 — 랜딩/마케팅/v2 컴포넌트 Playfair 강조).
-  v3 락-인 = "no synthetic italic on Playfair" → detail/journal/support 헤딩만 upright 전환됨.
-  전역 italic sweep 금지(브랜드 변경, CEO 결정 사항). 상세 메모리 `project_design_v3.md`.
+- **italic**: 전역 제거됨 (CEO 2026-06-15 "이탤릭 이상한거 다 빼라" — 옛 "전역 sweep 금지" 결정 폐기).
+  모든 장식 italic(Playfair 헤딩·워드마크·히어로 강조·캡션 + globals.css 편집 규칙) upright 전환.
+  className `italic` 0건 / inline `fontStyle:"italic"` 0건 — `not-italic`·next/font italic cut·PDF `em` 규칙만 보존.
+  **신규 컴포넌트도 italic 금지.** 상세 메모리 `project_design_v3.md`.
 
 ## 중요 원칙
 - **백엔드 코드 / endpoints.ts URL / hooks.ts SWR 키 변경 금지** (백엔드 1:1 매핑)

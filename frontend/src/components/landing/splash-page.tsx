@@ -106,7 +106,7 @@ export default function SplashPage() {
           style={{
             width: "18px",
             height: "18px",
-            color: "rgba(139, 111, 71, 0.55)",
+            color: "rgba(var(--pq-bronze-wash-rgb), 0.55)",
           }}
           aria-hidden="true"
         />
@@ -116,8 +116,7 @@ export default function SplashPage() {
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.24em",
             textTransform: "uppercase",
-            color: "rgba(139, 111, 71, 0.40)",
-            fontStyle: "italic",
+            color: "rgba(var(--pq-bronze-wash-rgb), 0.40)",
           }}
         >
           {t("landing.splash.scrollHint")}

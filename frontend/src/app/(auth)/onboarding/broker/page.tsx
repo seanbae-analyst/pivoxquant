@@ -172,7 +172,7 @@ export default function OnboardingBrokerPage() {
             <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
               Step 0 · Connection
             </div>
-            <h1 className="font-serif italic text-3xl text-[var(--pq-ivory)] sm:text-4xl">
+            <h1 className="font-serif text-3xl text-[var(--pq-ivory)] sm:text-4xl">
               {t("brokerOnboarding.title")}
             </h1>
             <p className="mt-3 text-sm text-[rgba(245,240,232,0.6)] leading-relaxed sm:text-base">

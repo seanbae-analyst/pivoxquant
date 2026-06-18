@@ -93,7 +93,7 @@ export default function ExplorerPage() {
                 >
                   {a.name}
                 </h3>
-                <p className="font-serif italic" style={{ color: "rgba(184,149,106,0.8)", fontSize: "var(--pq-text-body)" }}>
+                <p className="font-serif" style={{ color: "rgba(184,149,106,0.8)", fontSize: "var(--pq-text-body)" }}>
                   {a.tagline}
                 </p>
                 <p
@@ -108,7 +108,7 @@ export default function ExplorerPage() {
                       href={a.sampleUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 font-serif italic"
+                      className="inline-flex items-center gap-1.5 font-serif"
                       style={{
                         color: "var(--pq-bronze)",
                         fontSize: "var(--pq-text-body)",
@@ -121,7 +121,7 @@ export default function ExplorerPage() {
                     </Link>
                   ) : (
                     <span
-                      className="inline-flex items-center gap-1.5 font-serif italic"
+                      className="inline-flex items-center gap-1.5 font-serif"
                       style={{ color: "rgba(245,240,232,0.4)", fontSize: "var(--pq-text-body)" }}
                     >
                       <Lock className="h-3 w-3" aria-hidden />

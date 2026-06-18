@@ -401,7 +401,24 @@ def dispatch_due(now: datetime | None = None) -> dict[str, int]:
       - ``skipped_no_user``    : user gone or missing email
       - ``skipped_no_consent`` : EmailSender refused (opt-out / consent)
       - ``skipped_error``      : exception inside ``_send_one``
+      - ``skipped_lock``       : another drain held the tick lock (W2-P2)
+
+    Concurrency: the per-row commits inside the drain release the
+    ``pending_due`` FOR UPDATE row locks, so an overlapping tick (in-process
+    APScheduler racing the crontab fallback) could re-send later rows. The
+    advisory drain lock serializes whole ticks across processes — the loser
+    skips, it never double-sends.
     """
+    from services.drain_lock import DRAIN_ONBOARDING, drain_lock
+
+    with drain_lock(DRAIN_ONBOARDING) as acquired:
+        if not acquired:
+            logger.info("onboarding dispatch skipped — another drain holds the lock")
+            return {"due": 0, "skipped_lock": 1}
+        return _dispatch_due_locked(now)
+
+
+def _dispatch_due_locked(now: datetime | None = None) -> dict[str, int]:
     from extensions import db
     from models import ScheduledEmail
 

@@ -20,7 +20,6 @@ new NotificationDropdown and legacy /alerts page can share it.
 """
 from __future__ import annotations
 
-import json
 import logging
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
@@ -28,6 +27,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import Position, Alert, SignalCache
+from services import cache_service
 from services.error_responses import api_error
 from services.serializers import serialize_alert
 from services.name_resolver import canonical_display_name
@@ -245,8 +245,13 @@ def price_check():
         c = cache_map.get(p.ticker)
         if not c or not c.data_json:
             continue
-        sd = json.loads(c.data_json)
-        price = sd.get("price", 0)
+        sd = cache_service.safe_cache_blob(c)
+        price = sd.get("price") or 0
+        # Wave-3 P3 (2026-06-10): a blob with no/zero price used to satisfy
+        # `price <= sl` and fire a spurious "$0 SL 도달" alert. No price,
+        # no comparison.
+        if not price:
+            continue
         tp = sd.get("take_profit")
         sl = sd.get("stop_loss")
         name = canonical_display_name(sd.get("name"), p.ticker)

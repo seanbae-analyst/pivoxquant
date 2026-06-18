@@ -170,7 +170,7 @@ export default function FeaturePageShell({
                   {s.description}
                 </p>
                 <span
-                  className="mt-2 inline-flex items-center gap-1.5 font-serif italic"
+                  className="mt-2 inline-flex items-center gap-1.5 font-serif"
                   style={{
                     color: "var(--pq-bronze)",
                     fontSize: "var(--pq-text-body)",
@@ -269,7 +269,7 @@ export default function FeaturePageShell({
       >
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
           <p
-            className="font-serif italic"
+            className="font-serif"
             style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(245,240,232,0.4)" }}
           >
             © {new Date().getFullYear()} PivoxQuant · Research tool only.
@@ -295,7 +295,7 @@ export default function FeaturePageShell({
               dashboard DisclaimerBanner component) because /features/* runs
               the landing shell, not the dashboard shell. */}
           <p
-            className="mx-auto mt-8 max-w-3xl text-center font-serif italic"
+            className="mx-auto mt-8 max-w-3xl text-center font-serif"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
               lineHeight: 1.7,

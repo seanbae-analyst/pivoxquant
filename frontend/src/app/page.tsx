@@ -34,7 +34,7 @@ function LoadingScreen() {
 
       {/* Wordmark — italic serif, mirrors /loading.tsx */}
       <div
-        className="font-serif italic text-lg tracking-tight mb-8"
+        className="font-serif text-lg tracking-tight mb-8"
         style={{ color: "rgba(245,240,232,0.6)" }}
       >
         PivoxQuant

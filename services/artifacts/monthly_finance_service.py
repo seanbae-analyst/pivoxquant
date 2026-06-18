@@ -574,10 +574,11 @@ class MonthlyFinanceService:
         liquidity_ratio = data.get("liquidity_ratio")
         runway_months = data.get("runway_months")
 
+        from services.artifacts._pricing import finite_or_none
+
         def _money(v) -> str:
-            try:
-                n = float(v)
-            except (TypeError, ValueError):
+            n = finite_or_none(v)
+            if n is None:
                 return "—"
             an = abs(n)
             sign = "−" if n < 0 else ""

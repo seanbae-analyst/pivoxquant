@@ -219,7 +219,7 @@ function TickerShell({
       className="relative w-full max-w-full overflow-x-clip overflow-y-hidden border-b box-border"
       style={{
         height: 32,
-        borderColor: "rgba(139, 111, 71, 0.22)",
+        borderColor: "rgba(var(--pq-bronze-wash-rgb), 0.22)",
         backgroundColor: "rgba(5, 5, 5, 0.78)",
         backdropFilter: "blur(6px)",
         WebkitBackdropFilter: "blur(6px)",

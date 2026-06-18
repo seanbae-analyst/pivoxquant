@@ -48,7 +48,7 @@ _DEFAULT_STORAGE_DIR = (
     Path(__file__).resolve().parents[2] / "artifacts" / "insider_mirror"
 )
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
-from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
+from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
 from services.artifacts._render import try_import_jinja as _try_import_jinja
@@ -412,9 +412,14 @@ class InsiderMirrorService:
             except (TypeError, ValueError):
                 return 0.0
 
+        from services.artifacts._pricing import finite_or_none
+
         def _money(v: float, *, signed: bool = True) -> str:
-            sign = ("+" if v >= 0 else "−")
-            an = abs(v)
+            n = finite_or_none(v)
+            if n is None:
+                return "—"
+            sign = ("+" if n >= 0 else "−")
+            an = abs(n)
             if an >= 1_000_000:
                 return f"{sign if signed else ''}${an/1_000_000:.1f}M"
             if an >= 1_000:

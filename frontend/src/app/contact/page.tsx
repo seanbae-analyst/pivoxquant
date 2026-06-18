@@ -30,7 +30,7 @@ export default function ContactPage() {
       <div className="max-w-3xl mx-auto">
         <header className="mb-12">
           <div className="pq-ink-kicker mb-2">Contact</div>
-          <h1 className="font-serif italic text-4xl md:text-5xl mb-4">
+          <h1 className="font-serif text-4xl md:text-5xl mb-4">
             How to reach the desk.
           </h1>
           <p className="text-pq-body text-[rgba(245,240,232,0.7)] max-w-xl">
@@ -53,7 +53,7 @@ export default function ContactPage() {
               >
                 <div className="flex items-center gap-3 mb-4">
                   <Icon className="h-4 w-4 text-[var(--pq-bronze)]" />
-                  <h2 className="font-serif italic text-xl">{c.title}</h2>
+                  <h2 className="font-serif text-xl">{c.title}</h2>
                 </div>
                 <a
                   href={`mailto:${c.address}`}
@@ -70,7 +70,7 @@ export default function ContactPage() {
         </div>
 
         <section className="mt-12 pt-10 border-t border-[var(--pq-ivory-line)]">
-          <h2 className="font-serif italic text-xl mb-4">Before you write</h2>
+          <h2 className="font-serif text-xl mb-4">Before you write</h2>
           <p className="text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed mb-3">
             Most product questions are answered in our docs.
           </p>

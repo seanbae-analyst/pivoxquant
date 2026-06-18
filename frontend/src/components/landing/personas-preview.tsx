@@ -176,7 +176,7 @@ export default function PersonasPreview() {
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span
-                  className="font-serif italic"
+                  className="font-serif"
                   style={{
                     color: "rgba(245,240,232,0.4)",
                     fontSize: "var(--pq-text-eyebrow)",
@@ -221,7 +221,7 @@ export default function PersonasPreview() {
                 {p.tagline}
               </p>
               <p
-                className="font-serif italic"
+                className="font-serif"
                 style={{
                   color: "rgba(184,149,106,0.78)",
                   fontSize: "var(--pq-text-eyebrow)",
@@ -235,7 +235,7 @@ export default function PersonasPreview() {
               <div className="mt-auto">
                 <Link
                   href={p.sampleHref}
-                  className="inline-flex items-center gap-1.5 font-serif italic"
+                  className="inline-flex items-center gap-1.5 font-serif"
                   style={{
                     color: "var(--pq-bronze-light, #B8956A)",
                     fontSize: "var(--pq-text-eyebrow)",
@@ -261,7 +261,7 @@ export default function PersonasPreview() {
           className="mt-14 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between"
         >
           <p
-            className="font-serif italic"
+            className="font-serif"
             style={{
               color: "rgba(245,240,232,0.55)",
               fontSize: "var(--pq-text-body)",

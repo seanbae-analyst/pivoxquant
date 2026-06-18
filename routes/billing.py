@@ -993,6 +993,28 @@ def _handle_charge_dispute(dispute, *, phase: str):
 
 # ── Get Subscription Status ─────────────────────────────────────────────────
 
+def _subscription_period_end(sub) -> int | None:
+    """``current_period_end``, API-version-proof.
+
+    Stripe API ``2025-03-31`` moved ``current_period_{start,end}`` off the
+    Subscription object onto its ITEMS (multi-interval support). The pinned
+    SDK (15.x → API 2026-04-22) therefore returns no top-level key on a fresh
+    retrieve — ``sub.get("current_period_end")`` is silently ``None`` and the
+    frontend's "renews/cancels on" date renders blank. Our subscriptions are
+    single-price, so ``items.data[0]`` is canonical; the top-level read stays
+    as a fallback for accounts pinned to a pre-2025-03-31 API version.
+    """
+    try:
+        items = (sub.get("items") or {}).get("data") or []
+        if items:
+            v = items[0].get("current_period_end")
+            if v:
+                return v
+    except Exception:  # noqa: BLE001 — malformed payload must not 500 the read
+        logger.debug("silent-fallback: _subscription_period_end", exc_info=True)
+    return sub.get("current_period_end")
+
+
 @billing_bp.route("/subscription")
 @api_auth
 def get_subscription():
@@ -1035,7 +1057,7 @@ def get_subscription():
     if u.stripe_subscription_id:
         try:
             sub = stripe.Subscription.retrieve(u.stripe_subscription_id)
-            result["current_period_end"] = sub.get("current_period_end")
+            result["current_period_end"] = _subscription_period_end(sub)
             result["cancel_at_period_end"] = sub.get("cancel_at_period_end", False)
         except stripe.StripeError:
             logger.debug("silent-fallback: get_subscription", exc_info=True)

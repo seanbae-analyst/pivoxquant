@@ -17,6 +17,23 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+def finite_or_none(v) -> Optional[float]:
+    """Coerce ``v`` to a float, or ``None`` if uncoercible / non-finite.
+
+    This is the exact guard the per-artifact ``_money`` / ``_pct`` formatters
+    keep losing on copy-paste — the root cause of every recurring ``$nan`` /
+    ``nan%`` in a paid PDF. Centralised here so a formatter only writes
+    ``n = finite_or_none(v); if n is None: return "—"`` and can never drift back
+    to an unguarded ``float(v)``. Catches NaN and ±inf (``math.isfinite`` covers
+    both), unlike a bare ``math.isnan`` check.
+    """
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
+
+
 def safe_last_price(ticker: str) -> Optional[float]:
     """Latest close via the shared fetcher, or ``None``. Never raises.
 

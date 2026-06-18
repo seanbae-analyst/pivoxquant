@@ -327,7 +327,7 @@ function EmptyState() {
       role="note"
     >
       <p
-        className="font-serif italic"
+        className="font-serif"
         style={{
           fontSize: "var(--pq-text-body)",
           lineHeight: 1.65,
@@ -337,7 +337,7 @@ function EmptyState() {
         Your journal, remembered. Ask what you once wrote — or how a pattern of yours recurred.
       </p>
       <p
-        className="mt-2 font-serif italic"
+        className="mt-2 font-serif"
         style={{
           fontSize: "var(--pq-text-body)",
           lineHeight: 1.65,
@@ -369,7 +369,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
           }}
         >
           <p
-            className="font-serif italic"
+            className="font-serif"
             style={{
               fontSize: "var(--pq-text-lead)",
               lineHeight: 1.55,
@@ -434,7 +434,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
               aria-hidden
             />
             <span
-              className="font-serif italic"
+              className="font-serif"
               style={{
                 fontSize: "var(--pq-text-body)",
                 color: "rgba(245, 240, 232, 0.55)",
@@ -480,7 +480,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
             </p>
             {hint && (
               <p
-                className="mt-3 font-serif italic"
+                className="mt-3 font-serif"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   lineHeight: 1.55,
@@ -593,7 +593,7 @@ function Composer({
             rows={1}
             aria-describedby="companion-hint companion-counter"
             aria-invalid={overHard || !!inputError}
-            className="w-full resize-none bg-transparent px-4 py-3 font-serif outline-none placeholder:italic"
+            className="w-full resize-none bg-transparent px-4 py-3 font-serif outline-none"
             style={{
               color: "var(--pq-ivory, #F5F0E8)",
               fontSize: "var(--pq-text-lead)",
@@ -609,7 +609,7 @@ function Composer({
           >
             <p
               id="companion-hint"
-              className="font-serif italic"
+              className="font-serif"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 lineHeight: 1.4,

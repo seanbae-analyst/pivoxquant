@@ -184,6 +184,10 @@
   --pq-bronze-light-rgb: 163, 132, 92;
   --pq-ivory-rgb: 245, 240, 232;
   --pq-ink-rgb: 5, 5, 5;
+  /* 그림자·워시에 도는 제3의 브론즈(#8B6F47) — 캐노니컬 --pq-bronze(#B8956A)와
+     통일 여부는 디자인 리뷰 대상(시각 변경이라 CEO 결정). 우선 토큰으로 이름만
+     붙여 drift 확산을 차단 (2026-06-11 그림자 토큰화 sweep). */
+  --pq-bronze-wash-rgb: 139, 111, 71;
 
   /* WCAG AA contrast ladder for ivory-on-Vantablack (#050505).
      Computed contrast ratios (text on #050505):
@@ -1063,8 +1067,8 @@
 @media (min-width: 640px) {
   .pivox-silver-matte {
     filter:
-      drop-shadow(0 8px 28px rgba(245, 240, 232, 0.12))
-      drop-shadow(0 2px 4px rgba(245, 240, 232, 0.06));
+      drop-shadow(0 8px 28px rgba(var(--pq-ivory-rgb), 0.12))
+      drop-shadow(0 2px 4px rgba(var(--pq-ivory-rgb), 0.06));
   }
 }
 
@@ -1140,7 +1144,7 @@
 }
 @media (min-width: 640px) {
   .pq-silver-matte {
-    filter: drop-shadow(0 10px 20px rgba(245, 240, 232, 0.15));
+    filter: drop-shadow(0 10px 20px rgba(var(--pq-ivory-rgb), 0.15));
   }
 }
 
@@ -1316,11 +1320,12 @@
 /* 2026-05-09: keyframe glow removed per CEO Hero rebuild ("싹다 새로
    만들어 / 마우스 따라오는 그거 지우고"). The Hero is now static
    editorial to match every other page on the site — no entrance
-   animation. The `learns` word stays italic + bronze, but paints
-   once at first render and never moves. */
+   animation. The `learns` word stays bronze (upright — decorative
+   italic removed globally per CEO 2026-06-15), and paints once at
+   first render and never moves. */
 .pq-cfo-word {
   display: inline-block;
-  font-style: italic;
+  font-style: normal;
   color: var(--pq-bronze-light);
   -webkit-text-fill-color: var(--pq-bronze-light);
 }
@@ -1343,7 +1348,7 @@
   content: "";
   position: absolute; inset: 0;
   background-image:
-    radial-gradient(circle at 50% 50%, rgba(139, 111, 71, 0.04) 0%, transparent 65%),
+    radial-gradient(circle at 50% 50%, rgba(var(--pq-bronze-wash-rgb), 0.04) 0%, transparent 65%),
     repeating-linear-gradient(
       0deg,
       rgba(10, 10, 10, 0.012) 0px, rgba(10, 10, 10, 0.012) 1px,
@@ -1443,10 +1448,11 @@
   color: var(--pq-bronze);
 }
 
-/* Editorial H1 — Playfair Display italic ivory on ink (v3 lock-in) */
+/* Editorial H1 — Playfair Display, ivory on ink (v3 lock-in; upright,
+   decorative italic removed globally per CEO 2026-06-15) */
 .pq-ink-h1 {
   font-family: var(--font-display), "Playfair Display", "EB Garamond", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 500;
   font-size: clamp(1.75rem, 3.2vw, 2.25rem);
   line-height: 1.1;
@@ -1514,7 +1520,7 @@
   font-size: 13px;
 }
 .pq-ink-table tr:hover td {
-  background: rgba(139, 111, 71, 0.04);
+  background: rgba(var(--pq-bronze-wash-rgb), 0.04);
 }
 .pq-ink-table td.num {
   font-family: var(--font-mono), "JetBrains Mono", monospace;
@@ -1661,7 +1667,7 @@ button:hover > .pq-ink-pill,
 }
 .pq-ink-btn-ghost:hover {
   border-color: var(--pq-bronze);
-  background: rgba(139, 111, 71, 0.08);
+  background: rgba(var(--pq-bronze-wash-rgb), 0.08);
 }
 
 /* Hairline divider (ink) */
@@ -1806,10 +1812,10 @@ button:hover > .pq-ink-pill,
   }
 }
 
-/* /home — Terminal stat number (italic serif hero) */
+/* /home — Terminal stat number (serif hero; upright per CEO 2026-06-15) */
 .pq-home-stat {
   font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   font-size: 28px;
   line-height: 1.05;
@@ -1896,7 +1902,16 @@ h1, h2, h3, h4 {
   text-rendering: optimizeLegibility;
 }
 
-/* Italic Playfair / Serif — tighten tracking for editorial feel */
+/* Serif / display headings — tighten tracking for editorial feel.
+   NOTE (CEO 2026-06-15 "이탤릭 이상한거 다 빼라" — escalation of the
+   2026-05-20 partial directive to GLOBAL): all decorative italic was
+   removed across the frontend. Every `font-style: italic` editorial rule
+   in this file is now `normal`, and all `italic` Tailwind utilities were
+   stripped from component className strings. The `.font-serif.italic`,
+   `em.italic`, `i.italic` selectors below are therefore inert (no element
+   carries the `italic` class any longer); they only add tracking when
+   matched and intentionally do NOT set font-style. Kept for `.pq-ink-h1`
+   / `.pq-ink-h2`. Do not re-introduce decorative italic. */
 .font-serif.italic,
 em.italic,
 i.italic,
@@ -1924,11 +1939,11 @@ i.italic,
 }
 .pq-ink-btn-bronze:hover:not(:disabled):not([aria-disabled="true"]) {
   transform: translateY(-0.5px);
-  box-shadow: 0 3px 12px rgba(139, 111, 71, 0.18);
+  box-shadow: 0 3px 12px rgba(var(--pq-bronze-wash-rgb), 0.18);
 }
 .pq-ink-btn-bronze:active {
   transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(139, 111, 71, 0.12);
+  box-shadow: 0 1px 3px rgba(var(--pq-bronze-wash-rgb), 0.12);
 }
 
 /* Ghost button — bronze underline slide on hover */
@@ -1989,7 +2004,7 @@ i.italic,
   box-shadow: inset 2px 0 0 var(--pq-bronze);
 }
 .pq-ink-table tbody tr:hover td {
-  background: rgba(139, 111, 71, 0.045);
+  background: rgba(var(--pq-bronze-wash-rgb), 0.045);
 }
 
 /* 6. Editorial link with sliding underline */
@@ -2026,7 +2041,7 @@ i.italic,
 .pq-ink-input:focus-visible {
   border-color: var(--pq-bronze);
   background: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--pq-bronze-wash-rgb), 0.1);
   outline: none;
 }
 
@@ -2041,7 +2056,7 @@ i.italic,
 
 /* 9. Text selection — brand on-brand */
 ::selection {
-  background: rgba(139, 111, 71, 0.35);
+  background: rgba(var(--pq-bronze-wash-rgb), 0.35);
   color: var(--pq-ivory);
 }
 
@@ -2059,7 +2074,7 @@ i.italic,
   border: 2px solid var(--pq-ink);
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 111, 71, 0.35);
+  background: rgba(var(--pq-bronze-wash-rgb), 0.35);
 }
 
 /* 11. Dividers — three calibrated weights */
@@ -2070,7 +2085,7 @@ i.italic,
   border-top: 0.5px solid rgba(245, 240, 232, 0.12);
 }
 .pq-hairline-bronze {
-  border-top: 0.5px solid rgba(139, 111, 71, 0.25);
+  border-top: 0.5px solid rgba(var(--pq-bronze-wash-rgb), 0.25);
 }
 
 /* 12. Fleuron — editorial separator */
@@ -2080,7 +2095,7 @@ i.italic,
   gap: 12px;
   color: var(--pq-bronze);
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 14px;
   opacity: 0.7;
 }
@@ -2089,7 +2104,7 @@ i.italic,
   content: "";
   height: 0.5px;
   width: 24px;
-  background: rgba(139, 111, 71, 0.3);
+  background: rgba(var(--pq-bronze-wash-rgb), 0.3);
 }
 
 /* 12b. Section fleuron — horizontal divider between sections.
@@ -2109,7 +2124,7 @@ i.italic,
   content: "";
   flex: 1;
   height: 0.5px;
-  background: rgba(139, 111, 71, 0.45);
+  background: rgba(var(--pq-bronze-wash-rgb), 0.45);
 }
 .pq-section-fleuron > span {
   width: 5px;
@@ -2130,7 +2145,7 @@ i.italic,
   border-radius: 999px;
   border: 0.5pt solid var(--pq-bronze);
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   letter-spacing: 0;
   color: var(--pq-bronze);
@@ -2144,10 +2159,10 @@ i.italic,
 /* 12d. Editorial FAQ — <details> accordion.
    Hairline bronze top/bottom ruler per item. Respects reduced-motion. */
 .pq-faq-item {
-  border-top: 0.5px solid rgba(139, 111, 71, 0.22);
+  border-top: 0.5px solid rgba(var(--pq-bronze-wash-rgb), 0.22);
 }
 .pq-faq-item:last-child {
-  border-bottom: 0.5px solid rgba(139, 111, 71, 0.22);
+  border-bottom: 0.5px solid rgba(var(--pq-bronze-wash-rgb), 0.22);
 }
 .pq-faq-item > summary {
   cursor: pointer;
@@ -2267,7 +2282,7 @@ i.italic,
 /* 17. Editorial drop-cap utility */
 .pq-dropcap::first-letter {
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 3.2em;
   line-height: 0.88;
   float: left;
@@ -2410,7 +2425,7 @@ i.italic,
 .pq-detail-rule-bronze {
   border: 0;
   height: 0;
-  border-top: 0.5px solid rgba(139, 111, 71, 0.35);
+  border-top: 0.5px solid rgba(var(--pq-bronze-wash-rgb), 0.35);
   margin: 0;
 }
 
@@ -2475,7 +2490,8 @@ i.italic,
 }
 
 /* News group date header — editorial drop-letter style.
-   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings). */
+   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings;
+   escalated to GLOBAL no-decorative-italic by CEO 2026-06-15). */
 .pq-news-date-header {
   font-family: var(--font-serif), Georgia, serif;
   font-style: normal;
@@ -2488,7 +2504,8 @@ i.italic,
 }
 
 /* Editorial note fallback for missing data.
-   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings). */
+   font-style upright (CEO 2026-05-20: no synthetic italic on serif headings;
+   escalated to GLOBAL no-decorative-italic by CEO 2026-06-15). */
 .pq-detail-empty-note {
   font-family: var(--font-serif), Georgia, serif;
   font-style: normal;
@@ -2578,7 +2595,7 @@ i.italic,
 .pq-emboss-seal {
   display: inline-block;
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 24px;
   letter-spacing: -0.01em;
   color: var(--pq-bronze, #B8956A);
@@ -2614,8 +2631,8 @@ i.italic,
   box-shadow:
     6px 20px 40px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(184, 149, 106, 0.08),
-    0 0 0 0.5px rgba(245, 240, 232, 0.07);
+    inset 0 0 0 1px rgba(var(--pq-bronze-rgb), 0.08),
+    0 0 0 0.5px rgba(var(--pq-ivory-rgb), 0.07);
   will-change: transform, box-shadow;
   outline: none;
 }
@@ -2643,7 +2660,7 @@ i.italic,
   box-shadow:
     0 28px 60px rgba(0, 0, 0, 0.6),
     0 8px 24px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 1px rgba(184, 149, 106, 0.16);
+    inset 0 0 0 1px rgba(var(--pq-bronze-rgb), 0.16);
 }
 .pq-paper--dimmed {
   opacity: 0.55;
@@ -2656,8 +2673,8 @@ i.italic,
   box-shadow:
     6px 20px 40px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(184, 149, 106, 0.08),
-    0 0 0 2px rgba(184, 149, 106, 0.5);
+    inset 0 0 0 1px rgba(var(--pq-bronze-rgb), 0.08),
+    0 0 0 2px rgba(var(--pq-bronze-rgb), 0.5);
 }
 
 /* Hover micro-lift for interactive papers (desktop only) */
@@ -2693,7 +2710,7 @@ i.italic,
 
 .pq-paper-hero-title {
   font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 400;
   font-size: clamp(2.5rem, 5vw, 4rem);
   line-height: 1.02;
@@ -2714,7 +2731,7 @@ i.italic,
 .pq-paper-hero-num {
   display: inline-block;
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-weight: 500;
   font-size: clamp(3.5rem, 7vw, 5rem);
   line-height: 1;
@@ -2761,7 +2778,7 @@ i.italic,
   background: var(--pq-bronze-deep);
   color: #2a1f10;
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -2913,7 +2930,7 @@ i.italic,
   height: 9px;
   background: var(--pq-bronze, #B8956A);
   transform: scale(1);
-  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.18);
+  box-shadow: 0 0 0 3px rgba(var(--pq-bronze-wash-rgb), 0.18);
 }
 .pq-flip-dots__count {
   pointer-events: none;
@@ -2941,13 +2958,13 @@ i.italic,
   transform: translateX(-50%);
   z-index: 55;
   font-family: var(--font-serif, "EB Garamond", Georgia, serif);
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(245, 240, 232, 0.55);
   padding: 0.55rem 1rem;
-  border: 0.5pt solid rgba(139, 111, 71, 0.35);
+  border: 0.5pt solid rgba(var(--pq-bronze-wash-rgb), 0.35);
   border-radius: 2px;
   background: rgba(10, 10, 10, 0.6);
   backdrop-filter: blur(12px);
@@ -3023,7 +3040,7 @@ i.italic,
   will-change: transform;
   /* Subtle text shadow bumps edges against the dark desk so letterforms
      read crisply at a glance. */
-  text-shadow: 0 0 24px rgba(245, 240, 232, 0.06);
+  text-shadow: 0 0 24px rgba(var(--pq-ivory-rgb), 0.06);
 }
 
 @keyframes pq-splash-breath {
@@ -3113,7 +3130,7 @@ html {
   background-image:
     radial-gradient(
       1200px 600px at 50% 0%,
-      rgba(139, 111, 71, 0.045) 0%,
+      rgba(var(--pq-bronze-wash-rgb), 0.045) 0%,
       transparent 65%
     );
 }
@@ -3228,7 +3245,7 @@ html {
 }
 .pq-paper-sub {
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   line-height: 1.35;
   color: rgba(111, 86, 54, 0.85);
@@ -3272,7 +3289,7 @@ html {
   display: flex;
   justify-content: space-between;
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   color: rgba(111, 86, 54, 0.7);
   letter-spacing: 0.02em;
@@ -3337,7 +3354,7 @@ html {
   border: 1px solid rgba(184, 149, 106, 0.28);
   border-radius: 2px;
   box-shadow:
-    inset 0 1px 0 rgba(245, 240, 232, 0.04),
+    inset 0 1px 0 rgba(var(--pq-ivory-rgb), 0.04),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 .pq-gate-card-head {
@@ -3379,7 +3396,7 @@ html {
   height: 5px;
   border-radius: 9999px;
   background: var(--pq-bronze);
-  box-shadow: 0 0 6px rgba(184, 149, 106, 0.65);
+  box-shadow: 0 0 6px rgba(var(--pq-bronze-rgb), 0.65);
 }
 .pq-gate-card-ping-ring {
   position: absolute;
@@ -3446,7 +3463,7 @@ html {
   box-shadow: 0 0 6px rgba(217, 163, 90, 0.55);
 }
 .pq-gate-row-label {
-  font-style: italic;
+  font-style: normal;
   letter-spacing: 0.005em;
 }
 .pq-gate-row-status {
@@ -3486,7 +3503,7 @@ html {
 }
 .pq-gate-card-foot-recheck {
   font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 12px;
   color: rgba(184, 149, 106, 0.85);
 }
@@ -3523,7 +3540,7 @@ html {
   border-radius: 2px;
   /* Subtle inner edge highlight for the bezel feel. */
   box-shadow:
-    inset 0 1px 0 rgba(245, 240, 232, 0.04),
+    inset 0 1px 0 rgba(var(--pq-ivory-rgb), 0.04),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5);
 }
 /* Bronze wax-seal disc, top-right */
@@ -3545,14 +3562,14 @@ html {
 }
 .pq-friday-card-seal-mark {
   font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 22px;
   font-weight: 600;
   color: rgba(15, 12, 8, 0.85);
   letter-spacing: -0.02em;
   /* Deboss-y feel via tiny dual shadow */
   text-shadow:
-    0 1px 0 rgba(245, 240, 232, 0.18),
+    0 1px 0 rgba(var(--pq-ivory-rgb), 0.18),
     0 -1px 0 rgba(0, 0, 0, 0.35);
 }
 .pq-friday-card-eyebrow {
@@ -3584,7 +3601,7 @@ html {
   gap: 10px;
 }
 .pq-friday-card-issue-week {
-  font-style: italic;
+  font-style: normal;
 }
 .pq-friday-card-issue-dot {
   color: rgba(184, 149, 106, 0.55);
@@ -3600,7 +3617,7 @@ html {
 }
 .pq-friday-card-body {
   font-family: var(--font-display), Georgia, "Source Serif 4", serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 15px;
   line-height: 1.65;
   color: rgba(245, 240, 232, 0.78);
@@ -3638,7 +3655,7 @@ html {
 }
 .pq-friday-card-sealed {
   font-family: var(--font-display), Georgia, serif;
-  font-style: italic;
+  font-style: normal;
   font-size: 11px;
   color: var(--pq-bronze);
   letter-spacing: 0.04em;
@@ -3785,7 +3802,7 @@ html {
     radial-gradient(
       ellipse 60% 50% at 50% 20%,
       rgba(184, 149, 106, 0.08) 0%,
-      rgba(139, 111, 71, 0.035) 35%,
+      rgba(var(--pq-bronze-wash-rgb), 0.035) 35%,
       transparent 70%
     );
   --pq-dash-reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -3838,7 +3855,7 @@ html {
    tables stay calm on focus traversal. */
 .pq-dash-focus:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(184, 149, 106, 0.4);
+  box-shadow: 0 0 0 2px rgba(var(--pq-bronze-rgb), 0.4);
   border-radius: 2px;
 }
 
@@ -3885,7 +3902,7 @@ html {
    classes with a soft bronze rim that doesn't appear on touch). */
 @media (hover: hover) {
   .pq-artifact-queue li > a:hover {
-    box-shadow: 0 0 0 1px rgba(184, 149, 106, 0.28);
+    box-shadow: 0 0 0 1px rgba(var(--pq-bronze-rgb), 0.28);
   }
 }
 

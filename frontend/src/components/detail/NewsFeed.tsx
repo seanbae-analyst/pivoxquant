@@ -69,7 +69,7 @@ export function NewsFeed({
                         href={n.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group flex items-start justify-between gap-4 py-3 hover:bg-[rgba(139,111,71,0.03)] transition-colors px-1 -mx-1"
+                        className="group flex items-start justify-between gap-4 py-3 hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.03)] transition-colors px-1 -mx-1"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="font-serif text-pq-lead leading-snug text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors line-clamp-2">

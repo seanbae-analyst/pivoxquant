@@ -28,10 +28,15 @@ const mono = JetBrains_Mono({
 });
 
 // Editorial serif for report surfaces (Morning Brief, Weekly Memo, 10-K Personal)
+// Design audit 2026-06-10 (P2): 75 call sites use `font-serif italic`, but
+// only the normal style was loaded — every editorial italic (brand wordmark,
+// deposition quotes, rationale pull-quotes) rendered as a browser-synthesized
+// oblique. Load the real italic cuts (build-time fetch, ~tens of KB).
 const serif = Source_Serif_4({
   variable: "--font-serif",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -61,8 +66,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://pivoxquant.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pivoxquant.com";
 const SITE_NAME = "PivoxQuant";
 // Korean-first positioning — the CFO framing is the marketing spear, so the
 // default title + OG card speak in that voice. English sub-copy kept in the

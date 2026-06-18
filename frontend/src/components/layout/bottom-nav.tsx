@@ -42,6 +42,9 @@ import {
   LogOut,
   Sparkles,
   UserCircle,
+  Gavel,
+  Sprout,
+  Contrast,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -77,56 +80,46 @@ type DrawerGroup = {
 // group sibling) on the primary bar so the mobile shell still has 4
 // primary destinations after hiding Morning Brief.
 // 2026-04-29: Morning Brief deep link fully removed (backend deprecated).
+// 2026-06-15 per CEO: 거울 (Mirror) leads as the product spine. Signals moves
+// to the More drawer (it is already in the Observe group there) so the primary
+// bar stays at 4 tabs + More.
 const PRIMARY_TABS: Tab[] = [
-  { href: "/home", label: "Home", icon: HomeIcon },
+  { href: "/mirror", label: "Mirror", icon: Contrast },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-  { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/signals", label: "Signals", icon: Zap },
+  { href: "/pre-trade", label: "Pre-Trade", icon: Gavel },
 ];
 
-// Drawer — mirrors the desktop sidebar's 4-group IA exactly. Home is
-// excluded from the drawer (it's already a primary tab); Morning Brief
-// and Signals are kept in their canonical Artifacts group so the user's
-// mental map matches the desktop sidebar even though those two appear
-// up in the primary bar as well.
+// Drawer — mirrors the desktop sidebar's 4-group IA exactly
+// (2026-06-10 record-as-spine reorg, CEO GO on
+// docs/strategy/record-as-spine_2026-06-09.md §4.1): Record / Artifacts /
+// Observe / System. Home is excluded from the drawer (it's already a
+// primary tab); Reports and Signals are kept in their canonical groups so
+// the user's mental map matches the desktop sidebar even though those two
+// appear up in the primary bar as well.
 const DRAWER_GROUPS: DrawerGroup[] = [
   {
-    label: "Artifacts",
+    // Everything outside the 3 primary doors — demoted but fully reachable.
+    label: "More",
     items: [
-      // Morning Brief item REMOVED 2026-04-29 — backend deprecated.
+      { href: "/home", label: "Home", icon: HomeIcon },
+      { href: "/journal", label: "Journal", icon: NotebookPen },
       { href: "/reports", label: "Reports", icon: FileText },
-      { href: "/signals", label: "Signals", icon: Zap },
-    ],
-  },
-  {
-    label: "Portfolio",
-    items: [
-      { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-      { href: "/watchlist", label: "Watchlist", icon: Eye, hidden: true },
       { href: "/risk", label: "Risk Board", icon: Shield },
-      // REMOVED 2026-04-27 per CEO + legal: autotrade nav (투자일임업 회피).
-    ],
-  },
-  {
-    label: "Research",
-    items: [
+      { href: "/signals", label: "Signals", icon: Zap },
+      { href: "/ai", label: "AI Analysis", icon: Sparkles },
+      // Closed doors — pages preserved, off-nav (deep-link reachable).
+      { href: "/growth", label: "Routine", icon: Sprout, hidden: true },
+      { href: "/watchlist", label: "Watchlist", icon: Eye, hidden: true },
       { href: "/market", label: "Market", icon: Activity, hidden: true },
       { href: "/discover", label: "Discover", icon: Compass, hidden: true },
       { href: "/ai-chat", label: "AI Chat", icon: MessageSquare, hidden: true },
-      { href: "/ai", label: "AI Analysis", icon: Sparkles },
     ],
   },
   {
-    label: "System",
+    label: "Account",
     items: [
       { href: "/alerts", label: "Alerts", icon: Bell },
-      // Journal Companion — Closed Beta, Premium Plus / Founding
-      // Lifetime only. Entitlement enforcement lives on the page.
       { href: "/companion", label: "Companion", icon: BookHeart, premiumPlus: true },
-      // 2026-05-21: "Journal" restored — /journal is the user's own pre-trade
-      // decision-reflection feed (read-only). Distinct from the founder-only
-      // /growth Growth OS, which stays hidden (backend not deployed).
-      { href: "/journal", label: "Journal", icon: NotebookPen },
       { href: "/profile", label: "Profile · Persona", icon: UserCircle },
       { href: "/settings", label: "Settings", icon: SettingsIcon },
     ],

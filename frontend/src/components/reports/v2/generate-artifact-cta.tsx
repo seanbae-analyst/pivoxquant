@@ -3,13 +3,20 @@
 /**
  * <GenerateArtifactCta /> — 3 horizontal request tiles. On click the
  * tile POSTs to `generateArtifact()` and surfaces a toast-style status
- * line. New artifact appears in the list once the backend job completes
- * (existing `useArtifacts` SWR revalidates).
+ * line. The unified endpoint is SYNCHRONOUS — status "ready" on resolve
+ * means the artifact is already in the archive (the SPEC-era job-queue
+ * shape never shipped).
  *
- * Tier gating: Earnings Pre-Brief / Risk Note are Pro-only. Brag Card
+ * Tier gating: Earnings Pre-Brief / Risk Board are Pro-only. Brag Card
  * is free-tier.
  *
- * Source: design-mockups/reports-v2/SPEC.md §4.
+ * Source: design-mockups/reports-v2/SPEC.md §4 (+ 2026-06-11 resolution
+ * note: the old "Risk Note" free-text tile posted type "risk_report",
+ * which never existed in the backend dispatch → 400 on every click. The
+ * tile now runs the existing Pro `risk_board` deck, which already carries
+ * the advertised VaR / drawdown / tail-risk / sector-exposure content.
+ * The free-text memo concept is dropped pending counsel review — a
+ * personalized free-text AI answer is 투자자문-adjacent).
  *
  * Legal: pure desk metaphor — no banned vocabulary. Description text
  * is reviewed copy, no recommend/advice tokens.
@@ -47,11 +54,18 @@ interface RequestTile {
   type: ArtifactType;
   /** Optional ticker prompt — when present we ask for input. */
   needsTicker?: boolean;
-  /** Optional topic prompt. */
-  needsTopic?: boolean;
   /** Minimum tier. */
   minTier: Tier;
 }
+
+/** status:"empty" reason enums → display copy (observational, no advice). */
+const EMPTY_COPY: Record<string, string> = {
+  no_positions: "Your book is empty — add a position first.",
+  no_trades: "No trades on record for this period yet.",
+  not_in_portfolio: "That ticker isn't in your book or watchlist.",
+  no_upcoming_earnings: "No upcoming earnings date on file for that ticker.",
+};
+const EMPTY_FALLBACK = "Nothing to draft for this period yet.";
 
 const TILES: RequestTile[] = [
   {
@@ -74,13 +88,15 @@ const TILES: RequestTile[] = [
     minTier: "pro",
   },
   {
-    displayName: "Risk Note",
-    subLine: "Custom · plain-prose answer",
+    // 2026-06-11: was the "Risk Note" free-text tile posting the
+    // never-built "risk_report" type (dead on click — 400 before any
+    // tier gate). Re-pointed at the existing risk_board deck.
+    displayName: "Risk Board",
+    subLine: "Current book · 8-page deck",
     description:
-      "Free-text request — VaR concentration, tail risk, sector exposure. The desk drafts a memo.",
-    ctaLabel: "Open request ›",
-    type: "risk_report",
-    needsTopic: true,
+      "Run the risk deck on your current book — VaR, max drawdown, tail ratio, sector concentration, the 7-layer check.",
+    ctaLabel: "Run the board ›",
+    type: "risk_board",
     minTier: "pro",
   },
 ];
@@ -218,18 +234,6 @@ export function GenerateArtifactCta({ tier }: Props) {
           return;
         }
         body.ticker = inputValue.toUpperCase();
-      } else if (tile.needsTopic) {
-        if (!inputValue) {
-          setStates((s) => ({
-            ...s,
-            [tile.type]: {
-              status: "error",
-              message: "Describe what to look at.",
-            },
-          }));
-          return;
-        }
-        body.topic = inputValue;
       }
       setStates((s) => ({
         ...s,
@@ -237,29 +241,63 @@ export function GenerateArtifactCta({ tier }: Props) {
       }));
       try {
         const r = await generateArtifact(body);
+        // 2026-06-11: handle the REAL (synchronous) response shape. The old
+        // code read an ETA field from a job-queue contract that never
+        // shipped → "ETA ~undefineds" copy, and an `empty` response left the
+        // tile stuck on "Drafting…" forever.
+        if (r.status === "ready") {
+          // The artifact row already exists — resolve immediately.
+          setStates((s) => ({
+            ...s,
+            [tile.type]: {
+              status: "done",
+              message: "Ready · in your archive ↑",
+            },
+          }));
+          toast.success(`${tile.displayName} is ready`, {
+            description: "Drafted by AI · review it in the archive above.",
+          });
+          revalidateAllArtifacts();
+          scrollToLatest();
+          return;
+        }
+        if (r.status === "empty") {
+          // Nothing to draft (new book / no trades / unknown ticker) — a
+          // terminal outcome, not a pending job.
+          setStates((s) => ({
+            ...s,
+            [tile.type]: {
+              status: "error",
+              message:
+                (r.reason && EMPTY_COPY[r.reason]) || EMPTY_FALLBACK,
+            },
+          }));
+          return;
+        }
+        // Fallback — unknown/future async status: keep the identity-watch
+        // path. Register this tile as awaiting completion. Snapshot the
+        // artifact ids that exist right now so a NEW id of this tile's type
+        // is what resolves it (identity match, not count delta).
         setStates((s) => ({
           ...s,
           [tile.type]: {
             status: "queued",
-            message: `Drafting · ETA ~${r.eta_seconds}s`,
+            message: "Queued · drafting now",
           },
         }));
-        // Register this tile as awaiting completion. Snapshot the artifact
-        // ids that exist right now so a NEW id of this tile's type is what
-        // resolves it (identity match, not count delta).
         pendingRef.current[tile.type] = {
           type: tile.type,
           label: tile.displayName,
           knownIds: new Set(artifacts.map((a) => a.id)),
         };
         toast(`${tile.displayName} queued`, {
-          description: `The desk is drafting it — ETA ~${r.eta_seconds}s. It'll appear in the archive above.`,
+          description:
+            "The desk is drafting it — it'll appear in the archive above.",
         });
         // Revalidate every artifacts-list cache key a few times so the async
         // job's output surfaces promptly across this CTA, the status bar, and
         // the queue; the identity-watch effect closes the loop.
-        const etaMs = Math.max(2_000, (r.eta_seconds || 8) * 1_000);
-        [etaMs, etaMs + 4_000, etaMs + 12_000].forEach((delay) => {
+        [8_000, 16_000, 28_000].forEach((delay) => {
           pollTimers.current.push(
             setTimeout(() => {
               revalidateAllArtifacts();
@@ -279,7 +317,7 @@ export function GenerateArtifactCta({ tier }: Props) {
         }));
       }
     },
-    [inputs, artifacts, revalidateAllArtifacts],
+    [inputs, artifacts, revalidateAllArtifacts, scrollToLatest],
   );
 
   return (
@@ -336,7 +374,7 @@ export function GenerateArtifactCta({ tier }: Props) {
               key={tile.type + tile.displayName}
               style={{
                 border:
-                  "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+                  "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                 borderRadius: 4,
                 padding: 24,
                 background: "rgba(255,255,255,0.02)",
@@ -393,33 +431,27 @@ export function GenerateArtifactCta({ tier }: Props) {
                 {tile.description}
               </p>
 
-              {(tile.needsTicker || tile.needsTopic) && !locked && (
+              {tile.needsTicker && !locked && (
                 <input
                   type="text"
                   value={inputs[tile.type] ?? ""}
                   onChange={(e) =>
                     setInputs((s) => ({ ...s, [tile.type]: e.target.value }))
                   }
-                  placeholder={
-                    tile.needsTicker ? "AAPL" : "e.g. tail risk in semis"
-                  }
-                  aria-label={
-                    tile.needsTicker
-                      ? `Ticker symbol for ${tile.displayName}`
-                      : `Topic for ${tile.displayName}`
-                  }
+                  placeholder="AAPL"
+                  aria-label={`Ticker symbol for ${tile.displayName}`}
                   className="font-mono pq-input-noom-xs"
                   style={{
                     width: "100%",
                     background: "rgba(0,0,0,0.3)",
                     border:
-                      "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+                      "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                     borderRadius: 2,
                     color: "var(--pq-ivory, #F5F0E8)",
                     padding: "8px 10px",
                     marginBottom: 12,
-                    letterSpacing: tile.needsTicker ? "0.14em" : "normal",
-                    textTransform: tile.needsTicker ? "uppercase" : "none",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
                   }}
                 />
               )}

@@ -250,7 +250,7 @@ export default function GrowthPage() {
                 margin: "0 0 24px 0",
               }}
             >
-              <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+              <span style={{ color: "var(--pq-bronze)" }}>
                 {growthUnavailable ? t("growth.page.unavailableTitle") : t("growth.page.loadingTitle")}
               </span>
             </h1>
@@ -339,7 +339,7 @@ export default function GrowthPage() {
             }}
           >
             {t("growth.page.heroTitle1")}{" "}
-            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>{t("growth.page.heroItalic")}</span>{" "}
+            <span style={{ color: "var(--pq-bronze)" }}>{t("growth.page.heroItalic")}</span>{" "}
             {t("growth.page.heroTitle2")}
           </h1>
 

@@ -90,7 +90,7 @@ function PersonaHeader({
           <div className="font-serif text-2xl text-[var(--pq-ivory)]">
             {label}
           </div>
-          <div className="mt-1 font-serif italic text-pq-body-sm text-[rgba(184,149,106,0.85)]">
+          <div className="mt-1 font-serif text-pq-body-sm text-[rgba(184,149,106,0.85)]">
             {tagline}
           </div>
         </div>

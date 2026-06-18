@@ -535,7 +535,7 @@ export function DetailHero(props: DetailHeroProps) {
                     <div className="mt-2 h-1 bg-[var(--pq-ivory-line)] relative rounded-[1px]">
                       {rangePos != null && (
                         <div
-                          className="absolute top-1/2 h-2.5 w-2.5 rounded-full bg-[var(--pq-bronze)] shadow-[0_0_8px_rgba(139,111,71,0.5)]"
+                          className="absolute top-1/2 h-2.5 w-2.5 rounded-full bg-[var(--pq-bronze)] shadow-[0_0_8px_rgba(var(--pq-bronze-wash-rgb),0.5)]"
                           style={{
                             left: `${rangePos}%`,
                             transform: "translate(-50%, -50%)",

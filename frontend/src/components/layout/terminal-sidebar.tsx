@@ -3,11 +3,26 @@
 /**
  * TerminalSidebar — full-height Vantablack navigation rail.
  *
- * IA: Home (top, ungrouped) + 4 thematic groups —
- *   ARTIFACTS  · CFO 생산물 (Morning Brief / Reports / Signals)
- *   PORTFOLIO  · 자산 관리 (Portfolio / Watchlist / Risk / Autotrade)
- *   RESEARCH   · 조사·분석 (Market / Discover / AI Chat / AI Analysis)
- *   SYSTEM     · 도구·계정 (Alerts / Companion / Journal / Profile · Persona / Settings)
+ * 2026-06-15 (CEO 19→3): collapsed to a 3-door IA — Mirror /
+ * Portfolio / Pre-Trade up top, everything else under "More";
+ * growth/market/discover/watchlist/ai-chat hidden (pages preserved).
+ * The 4-group notes below are legacy.
+ *
+ * IA (2026-06-10 record-as-spine reorg, CEO GO on
+ * docs/strategy/record-as-spine_2026-06-09.md §4.1): Home (top, ungrouped)
+ * + 4 thematic groups —
+ *   RECORD     · 기록 — 척추 본체 (Journal / Pre-Trade / Routine)
+ *   ARTIFACTS  · 기록의 요약본 (Reports)
+ *   OBSERVE    · 관측 — 기록에 먹이를 주는 입력단 (Portfolio / Signals /
+ *                Risk / AI Analysis; Market·Discover·AI Chat·Watchlist hidden)
+ *   SYSTEM     · 도구·계정 (Alerts / Companion / Profile · Persona / Settings)
+ *
+ * Previous IA buried Journal·Pre-Trade·Routine at the bottom of "System"
+ * next to Settings while the brand sells "거래 전 거울 / compounding
+ * memory" — the spine sat in the appendix slot. The reorg promotes the
+ * record to the first group. Portfolio leads OBSERVE (highest-traffic
+ * destination; the memo's sketch listed it last but did not intend a
+ * demotion).
  *
  * Note: /growth (Growth OS — a habit/reflection routine tracker) is
  * surfaced as "Routine". The label avoids the word "Growth" to prevent
@@ -42,11 +57,14 @@ import {
   NotebookPen,
   UserCircle,
   Sprout,
+  Gavel,
+  Contrast,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type TerminalSidebarKey =
   | "home"
+  | "mirror"
   // "morning-brief" key REMOVED 2026-04-29 — backend deprecated.
   | "reports"
   | "signals"
@@ -82,66 +100,47 @@ type Item = {
   hidden?: boolean;
 };
 
-// Top — ungrouped, sits above the first group label.
-const TOP: Item[] = [
-  { key: "home", label: "Home", href: "/home", icon: HomeIcon },
-];
-
-// ── ARTIFACTS — CFO 생산물 ──────────────────────────────────────────
-// REMOVED 2026-04-29: Morning Brief item retired (backend deprecated).
-const ARTIFACTS: Item[] = [
-  { key: "reports", label: "Reports", href: "/reports", icon: FileText },
-  { key: "signals", label: "Signals", href: "/signals", icon: Zap },
-];
-
-// ── PORTFOLIO — 자산 관리 ──────────────────────────────────────────
-const PORTFOLIO: Item[] = [
+// PRIMARY — the 3 doors. 19→3 reduction (CEO 2026-06-15): the behavioural
+// loop IS the product (멈춤 → 기록 → 거울). Everything else is demoted to
+// "More" or hidden — NO pages deleted, all still reachable.
+const PRIMARY: Item[] = [
+  { key: "mirror", label: "Mirror", href: "/mirror", icon: Contrast },
   { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye, hidden: true },
-  { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
-  // REMOVED 2026-04-27 per CEO + legal: autotrade item (투자일임업 회피).
+  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
 ];
 
-// ── RESEARCH — 조사·분석 ───────────────────────────────────────────
-const RESEARCH: Item[] = [
+// MORE — demoted but fully reachable (no longer competing for attention).
+const MORE: Item[] = [
+  { key: "home", label: "Home", href: "/home", icon: HomeIcon },
+  { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
+  { key: "reports", label: "Reports", href: "/reports", icon: FileText },
+  { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
+  { key: "signals", label: "Signals", href: "/signals", icon: Zap },
+  { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
+  { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
+  { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
+  { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
+  { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
+];
+
+// HIDDEN — pages preserved, off-nav (deep-link + active-state still resolve).
+// Closed doors: growth = founder's personal "Solo Founder Growth OS" (not a
+// user feature); market / discover = generic data available anywhere;
+// watchlist / ai-chat = superseded surfaces.
+const HIDDEN: Item[] = [
+  { key: "growth", label: "Routine", href: "/growth", icon: Sprout, hidden: true },
+  { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye, hidden: true },
   { key: "market", label: "Market", href: "/market", icon: Activity, hidden: true },
   { key: "discover", label: "Discover", href: "/discover", icon: Compass, hidden: true },
   { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare, hidden: true },
-  { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
 ];
 
-// ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
-const SYSTEM: Item[] = [
-  { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
-  // 2026-05-21: "Pre-Trade" nav item REMOVED entirely (per CEO). The
-  // 7-question + cooldown reflection is now INLINE at position add (ENTRY) /
-  // exit (EXIT), so a standalone nav destination is redundant. The /pre-trade
-  // route still resolves for direct/deep links; the past reflections are
-  // reviewed in Journal (/journal).
-  { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
-  // 2026-05-21: "Journal" restored as a real user surface — /journal renders
-  // the user's own pre-trade decision-reflection feed (read-only, "User as
-  // CFO").
-  { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
-  // 2026-05-28: Growth OS (/growth) surfaced in the rail per CEO. Earlier
-  // comment claimed "agent_worker backend not deployed → 준비 중" — STALE:
-  // verified live in prod (/api/growth/{today,data,weekly}=401-behind-auth,
-  // /reflect=405). It is a habit/reflection routine tracker; label "Routine"
-  // avoids the asset-growth/return implication of "Growth" under §101.
-  { key: "growth", label: "Routine", href: "/growth", icon: Sprout },
-  { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
-  { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
-  // Methodology moved to a PUBLIC landing page (/methodology) 2026-06-05 per CEO
-  // — no longer a login-gated sidebar item.
-];
-
-const ALL_ITEMS: Item[] = [...TOP, ...ARTIFACTS, ...PORTFOLIO, ...RESEARCH, ...SYSTEM];
+const ALL_ITEMS: Item[] = [...PRIMARY, ...MORE, ...HIDDEN];
 
 function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
   if (!pathname) return null;
   // Longest-prefix match so "/portfolio/123" lights Portfolio.
-  const match = ALL_ITEMS
-    .slice()
+  const match = ALL_ITEMS.slice()
     .sort((a, b) => b.href.length - a.href.length)
     .find((it) => pathname === it.href || pathname.startsWith(it.href + "/"));
   return match?.key ?? null;
@@ -165,7 +164,7 @@ export function TerminalSidebar({
           "PIVOXQUANT", a competing second treatment. Now unified. */}
       <div className="px-6 pt-7 pb-6">
         <span
-          className="font-serif italic"
+          className="font-serif"
           style={{
             fontSize: "var(--pq-text-h6)",
             letterSpacing: "0.01em",
@@ -179,9 +178,9 @@ export function TerminalSidebar({
 
       {/* Scrollable nav body */}
       <nav className="flex-1 overflow-y-auto" aria-label="Primary">
-        {/* TOP — Home (ungrouped) */}
-        <ul className="space-y-0.5 px-3">
-          {TOP.filter((it) => !it.hidden).map((item) => (
+        {/* The 3 doors — Mirror / Portfolio / Pre-Trade */}
+        <ul className="space-y-0.5 px-3" aria-label="Primary doors">
+          {PRIMARY.filter((it) => !it.hidden).map((item) => (
             <SidebarLink
               key={item.key}
               item={item}
@@ -190,31 +189,14 @@ export function TerminalSidebar({
           ))}
         </ul>
 
-        <GroupHeader label="Artifacts" />
-        <ul className="space-y-0.5 px-3">
-          {ARTIFACTS.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
-          ))}
-        </ul>
-
-        <GroupHeader label="Portfolio" />
-        <ul className="space-y-0.5 px-3">
-          {PORTFOLIO.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
-          ))}
-        </ul>
-
-        <GroupHeader label="Research" />
-        <ul className="space-y-0.5 px-3">
-          {RESEARCH.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
-          ))}
-        </ul>
-
-        <GroupHeader label="System" />
-        <ul className="space-y-0.5 px-3 pb-4">
-          {SYSTEM.filter((it) => !it.hidden).map((item) => (
-            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+        <GroupHeader label="More" />
+        <ul className="space-y-0.5 px-3 pb-4" aria-label="More">
+          {MORE.filter((it) => !it.hidden).map((item) => (
+            <SidebarLink
+              key={item.key}
+              item={item}
+              isActive={resolvedActive === item.key}
+            />
           ))}
         </ul>
       </nav>
@@ -275,9 +257,7 @@ function SidebarLink({ item, isActive }: { item: Item; isActive: boolean }) {
           fontSize: "var(--pq-text-body)",
           letterSpacing: "0.2em",
           color: isActive ? "var(--pq-ivory)" : "rgba(245,240,232,0.5)",
-          backgroundColor: isActive
-            ? "rgba(247,245,239,0.06)"
-            : "transparent",
+          backgroundColor: isActive ? "rgba(247,245,239,0.06)" : "transparent",
           borderLeft: isActive
             ? "3px solid var(--pq-bronze)"
             : "3px solid transparent",

@@ -72,7 +72,7 @@ _DEFAULT_STORAGE_DIR = (
     Path(__file__).resolve().parents[2] / "artifacts" / "quarterly_self_report"
 )
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
-from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
+from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 from services.artifacts._pricing import safe_last_price as _safe_price
@@ -116,7 +116,7 @@ def _mv_usd(price: float, shares: float, ticker: str, fx: float) -> float:
     """
     native = price * shares
     if ticker.upper().endswith((".KS", ".KQ")):
-        return native / fx
+        return native / fx if fx > 0 else 0.0
     return native
 
 

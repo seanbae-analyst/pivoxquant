@@ -951,7 +951,7 @@ def render_d7_slide4():
 # 메인 실행
 # ═══════════════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
-    print(f"=== PivoxQuant D1~D7 Card Render ===")
+    print("=== PivoxQuant D1~D7 Card Render ===")
     print(f"출력 디렉토리: {OUT_DIR}\n")
 
     render_d1()

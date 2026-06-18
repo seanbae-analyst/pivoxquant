@@ -319,3 +319,39 @@ class TestWebhook:
             r = raw_client.post("/api/billing/webhook", data=b"{}",
                                  headers={"Stripe-Signature": "t=1,v1=bad"})
         assert r.status_code == 400
+
+
+# ── _subscription_period_end — Stripe API ≥2025-03-31 items relocation ──────
+
+class TestSubscriptionPeriodEnd:
+    """Stripe API 2025-03-31 moved current_period_end onto subscription ITEMS;
+    the pinned SDK (15.x) returns no top-level key, so the old direct read
+    rendered a blank renews/cancels date for every paying user. The helper
+    must read items.data[0] first and keep the top-level key as a fallback
+    for older pinned API versions."""
+
+    def test_reads_from_items_first(self):
+        from routes.billing import _subscription_period_end
+        sub = {
+            "items": {"data": [{"current_period_end": 1767225600}]},
+            # top-level absent — the post-2025-03-31 shape
+        }
+        assert _subscription_period_end(sub) == 1767225600
+
+    def test_falls_back_to_top_level_for_old_api_versions(self):
+        from routes.billing import _subscription_period_end
+        sub = {"items": {"data": []}, "current_period_end": 1735689600}
+        assert _subscription_period_end(sub) == 1735689600
+
+    def test_items_wins_over_top_level_when_both_present(self):
+        from routes.billing import _subscription_period_end
+        sub = {
+            "items": {"data": [{"current_period_end": 222}]},
+            "current_period_end": 111,
+        }
+        assert _subscription_period_end(sub) == 222
+
+    def test_returns_none_when_absent_everywhere(self):
+        from routes.billing import _subscription_period_end
+        assert _subscription_period_end({"items": {"data": [{}]}}) is None
+        assert _subscription_period_end({}) is None

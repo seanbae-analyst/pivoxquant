@@ -83,7 +83,7 @@ export default function AiAssistantPage() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] mb-6">
             <Brain className="w-6 h-6 text-[var(--pq-bronze)]" />
           </div>
-          <h1 className="font-[var(--font-display)] italic text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
+          <h1 className="font-[var(--font-display)] text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
             당신의 전속 리서치 데스크
           </h1>
           <p className="text-base text-[rgba(245,240,232,0.62)] max-w-xl mx-auto">
@@ -185,7 +185,7 @@ export default function AiAssistantPage() {
         {/* ── CTA ── */}
         <SectionCurtain>
         <section className="text-center py-12 px-6 rounded-sm border border-[rgba(184,149,106,0.18)] bg-[rgba(184,149,106,0.04)]">
-          <h2 className="font-[var(--font-display)] italic text-2xl font-medium text-[var(--pq-ivory)] mb-3">
+          <h2 className="font-[var(--font-display)] text-2xl font-medium text-[var(--pq-ivory)] mb-3">
             내일 아침 6시, 첫 리포트가 메일함에.
           </h2>
           <p className="text-[rgba(245,240,232,0.62)] mb-6 max-w-md mx-auto">

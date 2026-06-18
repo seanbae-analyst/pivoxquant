@@ -43,7 +43,7 @@ export function PublicCardNotFound() {
           borderRadius: "var(--pq-radius-cta)",
           backgroundColor: "var(--pq-bronze)",
           color: "var(--pq-ink)",
-          boxShadow: "0 6px 16px rgba(184,149,106,0.25)",
+          boxShadow: "0 6px 16px rgba(var(--pq-bronze-rgb),0.25)",
         }}
       >
         내 카드 만들기

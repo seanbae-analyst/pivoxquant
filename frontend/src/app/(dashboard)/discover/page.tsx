@@ -47,7 +47,7 @@ import {
 
 const jsonFetcher = <T,>(url: string) => apiFetch<T>(url);
 
-interface BackendOverviewItem { name: string; symbol: string; level: number; change_pct: number; observed_at?: string; is_stale?: boolean; }
+interface BackendOverviewItem { name: string; symbol: string; level: number; change_pct: number; observed_at?: string; is_stale?: boolean; proxy_ticker?: string; }
 interface BackendMover { ticker: string; name: string; price: number; change_pct: number; }
 interface BackendMoversResponse { region: string; gainers: BackendMover[]; losers: BackendMover[]; }
 // d5 / m1 are now `number | null`: the backend no longer fabricates them
@@ -186,7 +186,7 @@ export default function DiscoverPage() {
     // capital-markets-law misrepresentation risk. Return empty so the UI
     // renders a "data unavailable" editorial state instead of fake numbers.
     if (!overviewLive || overviewLive.length === 0) {
-      return [] as Array<{ name: string; level: string; changePct: number; observed_at: string | undefined; is_stale: boolean }>;
+      return [] as Array<{ name: string; level: string; changePct: number; observed_at: string | undefined; is_stale: boolean; proxy_ticker?: string }>;
     }
     return overviewLive.map((o) => ({
       name: o.name,
@@ -196,6 +196,12 @@ export default function DiscoverPage() {
       changePct: o.change_pct,
       observed_at: o.observed_at,
       is_stale: Boolean(o.is_stale),
+      // Carry the ETF proxy through so the row can disclose "via SPY" — the
+      // backend sends it (routes/discover.py) but it was being dropped here,
+      // leaving an ETF share price (SPY ~$600) labelled as "S&P 500" with no
+      // disclosure. The /market page already discloses it (ProxyPill); this is
+      // surface parity (capital-markets-law misrepresentation guard).
+      proxy_ticker: o.proxy_ticker,
     }));
   }, [overviewLive]);
 
@@ -382,7 +388,7 @@ export default function DiscoverPage() {
             }}
           >
             What the desk{" "}
-            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               observed.
             </span>
           </h1>
@@ -443,9 +449,38 @@ export default function DiscoverPage() {
                         >
                           <span
                             className="font-serif text-pq-body"
-                            style={{ color: "var(--pq-ivory)" }}
+                            style={{
+                              color: "var(--pq-ivory)",
+                              display: "inline-flex",
+                              alignItems: "baseline",
+                              gap: 6,
+                              flexWrap: "wrap",
+                            }}
                           >
                             {o.name}
+                            {o.proxy_ticker ? (
+                              <span
+                                role="note"
+                                aria-label={`Level sourced via ${o.proxy_ticker} ETF proxy`}
+                                title={`Level via ${o.proxy_ticker} ETF proxy — not the underlying index level.`}
+                                className="font-mono"
+                                style={{
+                                  fontSize: 9,
+                                  letterSpacing: "0.16em",
+                                  textTransform: "uppercase",
+                                  color: "rgb(var(--pq-bronze-wash-rgb))",
+                                  border: "0.5px solid rgba(var(--pq-bronze-wash-rgb), 0.55)",
+                                  background: "rgba(var(--pq-bronze-wash-rgb), 0.08)",
+                                  padding: "1px 4px",
+                                  borderRadius: 2,
+                                  lineHeight: 1,
+                                  whiteSpace: "nowrap",
+                                  fontStyle: "normal",
+                                }}
+                              >
+                                via {o.proxy_ticker}
+                              </span>
+                            ) : null}
                           </span>
                           <span
                             className="font-mono tabular-nums text-pq-lead"
@@ -468,7 +503,7 @@ export default function DiscoverPage() {
                         the strip, not on every row, to keep the rhythm clean. */}
                     {rows.some((r) => r.observed_at) && (
                       <p
-                        className="mt-2 font-serif italic text-pq-caption"
+                        className="mt-2 font-serif text-pq-caption"
                         style={{ color: "rgba(245,240,232,0.4)" }}
                       >
                         Last observed{" "}
@@ -557,7 +592,7 @@ export default function DiscoverPage() {
               </table>
             </div>
           ) : (
-            <p className="mt-5 text-pq-caption italic text-[rgba(245,240,232,0.4)]">
+            <p className="mt-5 text-pq-caption text-[rgba(245,240,232,0.4)]">
               Sector rotation data unavailable.
             </p>
           )}
@@ -693,7 +728,7 @@ export default function DiscoverPage() {
             </div>
           )}
           {data?.cached && data.cached_at && (
-            <p className="mt-3 font-serif italic text-pq-caption text-[rgba(245,240,232,0.4)]">
+            <p className="mt-3 font-serif text-pq-caption text-[rgba(245,240,232,0.4)]">
               Cached at{" "}
               <span className="font-mono not-italic tabular-nums">
                 {new Date(data.cached_at).toLocaleString("en-US")}
@@ -751,7 +786,7 @@ function SectionKicker({
       </h2>
       {sub ? (
         <p
-          className="mt-1.5 font-serif italic"
+          className="mt-1.5 font-serif"
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.5,
@@ -784,7 +819,7 @@ function EditorialEmpty({
     <div className="mt-6 flex flex-col items-center gap-3 py-12 text-center">
       <PqFleuron size={14} />
       <p
-        className="font-serif italic"
+        className="font-serif"
         style={{
           fontSize: "var(--pq-text-body)",
           color: "rgba(245,240,232,0.5)",
@@ -863,7 +898,7 @@ function EmptyBlock({ title }: { title: string }) {
         {title}
       </div>
       <p
-        className="py-4 font-serif italic"
+        className="py-4 font-serif"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
           color: "rgba(245,240,232,0.45)",

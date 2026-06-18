@@ -104,7 +104,7 @@ export function ProfileDropdown() {
           aria-expanded={open}
           /* 2026-05-17 wave C-3 P2: h-10/w-10 (40px) below Apple HIG 44px tap-target.
              Bump to h-11/w-11 so profile avatar is reliably tappable on mobile. */
-          className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+          className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
         >
           <span
             className="flex h-8 w-8 items-center justify-center rounded-full font-mono text-pq-mono-sm font-semibold"
@@ -193,7 +193,7 @@ export function ProfileDropdown() {
                 type="button"
                 role="menuitem"
                 onClick={handleSignOut}
-                className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+                className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
                 style={{ color: "var(--pq-bronze)" }}
               >
                 <LogOut className="h-4 w-4" />
@@ -228,7 +228,7 @@ function MenuLink({
       onClick={onNavigate}
       role="menuitem"
       className={cn(
-        "flex min-h-[44px] items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]",
+        "flex min-h-[44px] items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]",
       )}
       style={{ color: "var(--pq-ivory)" }}
     >
@@ -252,7 +252,7 @@ function MenuButton({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+      className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
       style={{ color: "var(--pq-ivory)" }}
     >
       <span style={{ color: "var(--pq-muted)" }}>{icon}</span>

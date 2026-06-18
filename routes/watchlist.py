@@ -1,7 +1,6 @@
 """Watchlist routes."""
 from __future__ import annotations
 
-import json
 import logging
 
 from flask import Blueprint, request, jsonify
@@ -24,16 +23,24 @@ logger = logging.getLogger(__name__)
 watchlist_bp = Blueprint("watchlist", __name__, url_prefix="/api/watchlist")
 
 
-def _serialize(w: Watchlist, overlay_entry: dict | None = None) -> dict:
+def _serialize(
+    w: Watchlist,
+    overlay_entry: dict | None = None,
+    cached: SignalCache | None = None,
+) -> dict:
     """Build the response payload for a watchlist row.
 
     Preferred price source: realtime/non-stale overlay (Alpaca/KIS/SignalCache).
     Falls back to the blob-only cache (even stale) for non-price metadata like
     name / signal / score. Price fields stay 0 when no fresh source exists —
     we never render a days-old number as "current".
+
+    ``cached`` lets list callers batch-load SignalCache once (wave-3 P3: the
+    GET loop issued one PK lookup per row — 50 queries per poll on a 50-item
+    watchlist, polled every 5s in market hours). Single-row callers omit it.
     """
-    c = db.session.get(SignalCache, w.ticker)
-    sd = json.loads(c.data_json) if c and c.data_json else {}
+    c = cached if cached is not None else db.session.get(SignalCache, w.ticker)
+    sd = cache_service.safe_cache_blob(c)
     is_kr = w.ticker.upper().endswith(".KS") or w.ticker.upper().endswith(".KQ")
 
     o = overlay_entry or {}
@@ -123,7 +130,17 @@ def get_watchlist():
              .order_by(Watchlist.added_at.desc())
              .all())
     overlay = overlay_prices([w.ticker for w in items])
-    out = [_serialize(w, overlay.get(w.ticker)) for w in items]
+    # Batch-load SignalCache in one query (same pattern as signals/alerts/
+    # portfolio) instead of one PK lookup per row inside _serialize.
+    tickers = [w.ticker for w in items]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+    out = [
+        _serialize(w, overlay.get(w.ticker), cached=cache_map.get(w.ticker))
+        for w in items
+    ]
     return jsonify({"watchlist": out})
 
 

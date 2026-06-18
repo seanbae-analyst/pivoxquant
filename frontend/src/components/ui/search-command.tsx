@@ -309,7 +309,7 @@ export function SearchCommandMenu() {
             onClick={close}
             type="button"
             aria-label={t("search.ariaClose")}
-            className="flex h-11 w-11 items-center justify-center rounded-md transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pq-bronze)]"
+            className="flex h-11 w-11 items-center justify-center rounded-md transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pq-bronze)]"
             style={{ color: "var(--pq-muted)" }}
           >
             <X className="h-4 w-4" />
@@ -481,7 +481,7 @@ function CommandRow({
         "flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--pq-bronze)]",
       )}
       style={{
-        background: active ? "rgba(139, 111, 71, 0.08)" : "transparent",
+        background: active ? "rgba(var(--pq-bronze-wash-rgb), 0.08)" : "transparent",
       }}
     >
       {children}

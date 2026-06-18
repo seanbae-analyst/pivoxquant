@@ -450,3 +450,33 @@ class TestTemplateContent:
         assert expected.issubset(actual), (
             f"missing onboarding templates: {expected - actual}"
         )
+
+
+class TestDrainLock:
+    """W2-P2 (2026-06-10): per-row commits release the FOR UPDATE row locks
+    mid-batch, so overlapping drain ticks could double-send. Each dispatch
+    now serializes its tick behind a PG advisory lock — the LOSER must skip
+    cleanly without touching any row."""
+
+    def test_dispatch_skips_when_lock_held_elsewhere(self, app):
+        from contextlib import contextmanager
+        from unittest.mock import patch
+
+        from services.email import onboarding_sequence as osq
+
+        @contextmanager
+        def _lost_lock(key):
+            yield False  # another process holds the drain lock
+
+        with app.app_context(), patch(
+            "services.drain_lock.drain_lock", _lost_lock
+        ):
+            stats = osq.dispatch_due()
+        assert stats == {"due": 0, "skipped_lock": 1}
+
+    def test_sqlite_dev_path_always_acquires(self, app):
+        """On SQLite (dev/test) the lock is a no-op — drains always run."""
+        from services.drain_lock import DRAIN_ONBOARDING, drain_lock
+
+        with app.app_context(), drain_lock(DRAIN_ONBOARDING) as acquired:
+            assert acquired is True

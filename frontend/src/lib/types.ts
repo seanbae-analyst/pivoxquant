@@ -428,6 +428,21 @@ export interface PreTradeReflection {
   /** ISO timestamp the user chose to cancel, else null. */
   cancelled_at: string | null;
   auto_extended_reason: string | null;
+  /**
+   * Snapshot of the observation surfaces at the moment the reflection was
+   * opened (record-as-spine Phase 2, 2026-06-10) — "그때 무엇을 보고 있었나".
+   * Factual record only (§17): the signal label is the legal
+   * POSITIVE/NEGATIVE/NEUTRAL surface; never rec_* or target/stop fields.
+   * Null for rows predating the feature or when collection found nothing.
+   */
+  observed_context?: {
+    signal?: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
+    score?: number;
+    sector?: string;
+    vix?: number;
+    change_1h_pct?: number;
+    captured_at?: string;
+  } | null;
   seconds_remaining: number;
   status: "pending" | "ready" | "proceeded" | "cancelled";
 }
@@ -770,7 +785,7 @@ export type SignalLabel = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
 
 export interface SignalEntry {
   id?: number | string;
-  ticker: string;            // "AAPL", "005930.KS"
+  ticker: string; // "AAPL", "005930.KS"
   /**
    * Company display name. The legacy `/api/signals` endpoint already
    * sends this on the v1 MemoSignalItem shape, so re-using it is safe.
@@ -780,10 +795,10 @@ export interface SignalEntry {
    */
   name?: string | null;
   exchange?: string | null;
-  signal?: string;           // v1 alias — same value as label
+  signal?: string; // v1 alias — same value as label
   label?: SignalLabel;
-  score?: number;            // v1: 0..100 composite
-  strength?: number;         // v2: 0..1 (derived from score / 100)
+  score?: number; // v1: 0..100 composite
+  strength?: number; // v2: 0..1 (derived from score / 100)
   rationale?: string | null;
   observed_at?: string | null;
   price?: number | null;
@@ -807,8 +822,8 @@ export interface SignalsResponse {
 
 export interface SignalFilters {
   labels: Set<SignalLabel>;
-  strengthMin: number;   // 0..1
-  strengthMax: number;   // 0..1
+  strengthMin: number; // 0..1
+  strengthMax: number; // 0..1
   symbol: string | null; // exact ticker or null
   // W6-1 (Wave 6 follow-up, 2026-05-09): "all" added so the V2 signals
   // page can opt out of the freshness cutoff. Backend `observed_at` is
@@ -1048,4 +1063,51 @@ export interface MethodologyResponse {
   data_lineage: MethodologyDataSource[];
   reproducibility: { statement_kr: string; statement_en: string };
   disclaimer: string;
+}
+
+/* ── Mirror home (거울) — composed 선언/관찰/트윈 read ────────────────────
+ * Backend: routes/mirror_home.py (GET /api/mirror-home, @api_auth).
+ * Append-only (types.ts is add-only per frontend/CLAUDE.md). This payload
+ * NEVER carries an 8-code persona — only the 3 disclosed buckets
+ * (성장형/균형형/수익형) + neutral behavioural dimension labels. The radar
+ * vectors are raw 0..1 shapes for geometry only; no score is ever printed. */
+export type MirrorStage = "new" | "observed";
+
+export interface MirrorGapDimension {
+  /** FEATURE_KEYS member, e.g. "holding_period". */
+  key: string;
+  /** Disclosed neutral dimension label, e.g. "평균 보유기간". */
+  label: string;
+  /** Observed higher ("up") or lower ("down") than the declared centroid. */
+  direction: "up" | "down";
+  delta: number;
+  declared: number;
+  observed: number;
+}
+
+export interface MirrorTwinWeek {
+  week_ending: string | null;
+  user_return_pct: number | null;
+  twin_return_pct: number | null;
+  /** twin_return_pct − user_return_pct (positive = twin ahead). */
+  diff_pct: number | null;
+  user_trades_count: number;
+  twin_trades_count: number;
+}
+
+export interface MirrorHomeResponse {
+  ok: boolean;
+  stage: MirrorStage;
+  declared: { label: string | null; tagline: string | null; score: number | null };
+  observed: { label: string | null; bucket_changed: boolean; trade_count: number };
+  gap: MirrorGapDimension[];
+  drift: { available: boolean; descriptor: string | null };
+  radar: {
+    keys: string[];
+    labels: string[];
+    declared: number[];
+    /** null in the "new" stage (not enough observed behaviour yet). */
+    observed: number[] | null;
+  };
+  twin: MirrorTwinWeek | null;
 }

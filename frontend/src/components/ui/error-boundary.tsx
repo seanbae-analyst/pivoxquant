@@ -18,7 +18,7 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
   const t = useT();
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-      <div className="w-14 h-14 rounded-[2px] bg-[rgba(139,111,71,0.12)] border border-[rgba(139,111,71,0.3)] flex items-center justify-center mb-5">
+      <div className="w-14 h-14 rounded-[2px] bg-[rgba(var(--pq-bronze-wash-rgb),0.12)] border border-[rgba(var(--pq-bronze-wash-rgb),0.3)] flex items-center justify-center mb-5">
         <AlertTriangle className="w-6 h-6 text-[var(--pq-bronze-light)]" />
       </div>
       <div className="text-pq-kicker tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mb-2">

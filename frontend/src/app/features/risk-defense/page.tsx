@@ -98,7 +98,7 @@ export default function RiskDefensePage() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] mb-6">
             <Shield className="w-6 h-6 text-[var(--pq-bronze)]" />
           </div>
-          <h1 className="font-[var(--font-display)] italic text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
+          <h1 className="font-[var(--font-display)] text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
             7-Layer Risk Defense
           </h1>
           <p className="text-base text-[rgba(245,240,232,0.62)] max-w-xl mx-auto">
@@ -154,7 +154,7 @@ export default function RiskDefensePage() {
                         </span>
                         <h3 className="text-base font-semibold text-[var(--pq-ivory)]">{layer.title}</h3>
                       </div>
-                      <p className="text-sm text-[rgba(245,240,232,0.62)] italic mb-2">
+                      <p className="text-sm text-[rgba(245,240,232,0.62)] mb-2">
                         &ldquo;{layer.question}&rdquo;
                       </p>
                       <p className="text-sm text-[rgba(245,240,232,0.82)] leading-relaxed">
@@ -221,7 +221,7 @@ export default function RiskDefensePage() {
         {/* ── CTA ── */}
         <SectionCurtain>
         <section className="text-center py-12 px-6 rounded-sm border border-[rgba(184,149,106,0.18)] bg-[rgba(184,149,106,0.04)]">
-          <h2 className="font-[var(--font-display)] italic text-2xl font-medium text-[var(--pq-ivory)] mb-3">
+          <h2 className="font-[var(--font-display)] text-2xl font-medium text-[var(--pq-ivory)] mb-3">
             Run a risk simulation today
           </h2>
           <p className="text-[rgba(245,240,232,0.62)] mb-6 max-w-md mx-auto">

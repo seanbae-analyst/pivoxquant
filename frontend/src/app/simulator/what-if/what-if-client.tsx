@@ -378,7 +378,7 @@ export function WhatIfClient() {
           </div>
           <p>{t("whatIf.disclaimer.ko")}</p>
           <p
-            className="mt-1 italic"
+            className="mt-1"
             style={{ color: "rgba(245, 240, 232, 0.4)" }}
           >
             {t("whatIf.disclaimer.en")}
@@ -394,7 +394,7 @@ export function WhatIfClient() {
           }}
         >
           <h3
-            className="font-serif italic text-lg sm:text-xl"
+            className="font-serif text-lg sm:text-xl"
             style={{ color: "var(--pq-ivory)" }}
           >
             이 결과가 마음에 들었다면?

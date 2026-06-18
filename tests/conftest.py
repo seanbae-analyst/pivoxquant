@@ -48,6 +48,19 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+# ── WeasyPrint native libs (macOS) ───────────────────────────────────────────
+# On macOS the brew-installed pango/gobject dylibs are not on the default
+# dlopen search path, so `from weasyprint import HTML` raises OSError and the
+# 170-case artifact render matrix xfails its entire PDF branch. cffi resolves
+# libraries through ctypes.util.find_library, which reads this env var at
+# CALL time — so setting it here (before any weasyprint import) is sufficient;
+# no wrapper script needed. Linux (CI/Railway) resolves via ldconfig — no-op.
+if sys.platform == "darwin" and "DYLD_FALLBACK_LIBRARY_PATH" not in os.environ:
+    for _brew_lib in ("/opt/homebrew/lib", "/usr/local/lib"):
+        if os.path.isdir(_brew_lib):
+            os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = _brew_lib
+            break
+
 # Force a clean, throwaway environment.
 _test_db_fd, _test_db_path = tempfile.mkstemp(suffix=".sqlite", prefix="pivoxquant_test_")
 os.close(_test_db_fd)
@@ -254,6 +267,25 @@ def _reset_realtime_kr_health():
         from services.container import realtime as _rt
         _rt._kr_last_ok = None
         _rt._kr_last_fail = None
+    except Exception:
+        pass
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _reset_ai_result_cache():
+    """Isolate the process-wide AI-result cache (2026-06-12 토큰 최적화).
+
+    ``services.cache_service.ai_result_cache`` is a module-level dict that
+    survives across tests. A test that exercises a cached AI route (swot/
+    competitor/sector-trend/commentary) would otherwise leak its entry into a
+    later test expecting a FRESH generation/failure path — e.g. ai_smoke's
+    "SWOT 500 surfaces last_error" cases got a cache-hit 200 instead. Mirrors
+    the _reset_realtime_kr_health singleton-isolation pattern above.
+    """
+    try:
+        from services import cache_service as _cs
+        _cs.ai_result_cache.clear()
     except Exception:
         pass
     yield

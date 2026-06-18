@@ -363,6 +363,14 @@ export const API = {
     // Response = AveragingDownMirrorResponse, 1:1.
     averagingDownMirror: "/api/behavior/averaging-down-mirror",
   },
+  // Mirror home (거울) — single composed read: 선언 vs 관찰 persona shape, the
+  // top diverging behavioural dimensions, the drift descriptor, and the latest
+  // AI-twin weekly paper-vs-user report. Read-only, @api_auth. Composes the
+  // existing persona/twin services (routes/mirror_home.py). NEVER surfaces an
+  // 8-code persona — only 성장형/균형형/수익형 + neutral dimension labels.
+  mirror: {
+    home: "/api/mirror-home",
+  },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished
   // thinking". See routes/pre_trade.py and services/pre_trade/friction.py.

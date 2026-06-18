@@ -470,7 +470,7 @@ function ResultScreen({
           backgroundColor: "rgba(184,149,106,0.08)",
           border: "1px solid var(--pq-bronze)",
           borderRadius: "var(--pq-radius-card)",
-          boxShadow: "0 8px 24px rgba(184,149,106,0.18)",
+          boxShadow: "0 8px 24px rgba(var(--pq-bronze-rgb),0.18)",
         }}
       >
         <span className="text-3xl">{"\u{1F3AF}"}</span>
@@ -563,7 +563,7 @@ function ResultScreen({
           backgroundColor: "var(--pq-bronze)",
           color: "var(--pq-ink)",
           borderRadius: "var(--pq-radius-cta)",
-          boxShadow: "0 8px 24px rgba(184,149,106,0.25)",
+          boxShadow: "0 8px 24px rgba(var(--pq-bronze-rgb),0.25)",
         }}
       >
         {loading ? (
@@ -1124,7 +1124,7 @@ export default function OnboardingPage() {
               borderRadius: "var(--pq-radius-cta)",
               backgroundColor: isStepValid ? "var(--pq-bronze)" : "rgba(var(--pq-ivory-rgb), 0.06)",
               color: isStepValid ? "var(--pq-ink)" : "rgba(var(--pq-ivory-rgb), 0.35)",
-              boxShadow: isStepValid ? "0 6px 16px rgba(184,149,106,0.25)" : "none",
+              boxShadow: isStepValid ? "0 6px 16px rgba(var(--pq-bronze-rgb),0.25)" : "none",
               border: isStepValid ? "none" : "1px solid var(--pq-border)",
             }}
           >

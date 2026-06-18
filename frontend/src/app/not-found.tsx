@@ -15,7 +15,7 @@ export default function NotFound() {
           Error 404 · Page not found
         </div>
         <h1
-          className="font-serif italic mb-6 leading-[1.05]"
+          className="font-serif mb-6 leading-[1.05]"
           style={{ fontSize: "clamp(2.5rem,6vw,3.75rem)" }}
         >
           Nothing to observe here.

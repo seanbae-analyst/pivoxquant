@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "risk_board"
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
-from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
+from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 from services.artifacts._pricing import safe_last_price as _safe_price
@@ -227,7 +227,10 @@ def _fetch_position_returns(positions: list[Position],
             rets = []
             for a, b in zip(closes[:-1], closes[1:]):
                 a, b = float(a), float(b)
-                if a <= 0:
+                # Skip a non-finite bar (a null/NaN Close from the feed) — left
+                # in, it makes (b/a)-1 NaN, which then poisons VaR/Sharpe and
+                # renders nan% / $nan in the paid PDF.
+                if not (math.isfinite(a) and math.isfinite(b)) or a <= 0:
                     continue
                 rets.append((b / a) - 1.0)
             if not rets:
@@ -274,6 +277,8 @@ def _var_pct(rets: list[float], pct: float) -> Optional[float]:
     try:
         arr = np.array(rets, dtype=np.float64)
         q = float(np.percentile(arr, pct))
+        if not math.isfinite(q):
+            return None  # defence-in-depth — never render a nan% VaR
         # VaR expressed as a positive loss % (e.g. 2.7 means -2.7%)
         return round(-q * 100, 2)
     except Exception:
@@ -1133,12 +1138,17 @@ class RiskBoardService:
                 "meta": "다음 리밸런스",
             })
             priority += 1
+        # feedback_ticker_display: KR ticker → hangul name (US stays as ticker).
+        # Naked .KS/.KQ suffixes must never surface in the rendered PDF/HTML.
+        from services.name_resolver import kr_display_name
         for c in ces[:2]:
             if priority > 4:
                 break
+            _ticker = c.get("ticker")
+            _label = kr_display_name(_ticker) if _ticker else "—"
             actions.append({
                 "body": (
-                    f"<strong>P{priority}</strong> · {c.get('ticker','—')} "
+                    f"<strong>P{priority}</strong> · {_label} "
                     f"꼬리 손실 기여도 관찰"
                 ),
                 "meta": "월간",

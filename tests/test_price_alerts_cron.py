@@ -10,9 +10,12 @@
   1. ``app.py:_init_scheduler`` 가 ``price_alerts_daily`` job 을 등록하고, 그 trigger
      가 ``timezone='Asia/Seoul'`` + max_instances=1 + coalesce=True 임을 검증
      (UTC 9시간 시프트 / 멱등성 회귀 방지).
-  2. ``check_52w_highs_lows`` 가 KR(.KS/.KQ) 티커를 skip 하는 wave1 가드를 유지함
-     (FMP KRX 커버리지 불량 → 오발화/예산낭비 회피)을 검증.
-  3. US 티커는 52주 고점 터치 시 실제 벨 알림을 생성함을 검증(기능 동작).
+  2. KR(.KS/.KQ) 티커의 52주 레인지가 **KIS 라우트**로 조회됨을 검증
+     (2026-06-11 — 옛 wave1 "KR 무조건 skip" 가드를 KIS 공식 피드로 대체.
+     FMP 는 KR 에 대해 절대 호출되지 않고, KIS 불가 시 missing pair → 옛
+     skip 과 동일하게 무발화. 오발화/예산낭비 회피 계약은 그대로).
+  3. US 티커는 52주 고점 터치 시 실제 벨 알림을 생성함을 검증(기능 동작)
+     + KR 티커도 KIS 레인지가 있으면 동일하게 발화함을 검증.
 """
 from __future__ import annotations
 
@@ -70,42 +73,57 @@ def test_price_alerts_job_registered_with_seoul_cron():
     assert job.coalesce is True
 
 
-# ─── 2. check_52w_highs_lows — KR skip 보존 ────────────────────────────────
+# ─── 2. _lookup_52w_range — KR 은 KIS 라우트 (2026-06-11, 옛 skip 대체) ────
 
 
-def test_check_52w_skips_kr_tickers(app, make_user, add_position):
-    """.KS / .KQ 티커는 FMP-guard 로 skip — ``_lookup_52w_range`` 호출조차 안 됨."""
+def test_lookup_52w_routes_kr_to_kis_never_fmp(app):
+    """.KS/.KQ 는 KIS ``get_52w_range`` 로 라우팅되고 FMP 는 호출되지 않는다."""
+    from services import alert as alert_mod
+    from services.data import kis_market_adapter
+    from services.data import fmp as fmp_service
+
+    with patch.object(
+        kis_market_adapter, "get_52w_range", return_value=(90000.0, 50000.0)
+    ) as mock_kis, patch.object(fmp_service, "get_quote") as mock_fmp:
+        hi, lo = alert_mod._lookup_52w_range("005930.KS")
+
+    assert (hi, lo) == (90000.0, 50000.0)
+    mock_kis.assert_called_once_with("005930.KS")
+    assert mock_fmp.call_count == 0, "KR must never hit the FMP quote path"
+
+
+def test_lookup_52w_kr_missing_kis_degrades_to_silent_skip(app):
+    """KIS 불가/결손 → (None, None) — 옛 KR-skip 과 동일하게 무발화 안전."""
+    from services import alert as alert_mod
+    from services.data import kis_market_adapter
+
+    with patch.object(kis_market_adapter, "get_52w_range", return_value=None):
+        assert alert_mod._lookup_52w_range("035720.KQ") == (None, None)
+
+
+def test_check_52w_creates_alert_for_kr_high_via_kis(app, make_user, add_position):
+    """KR 티커도 KIS 레인지가 있으면 52주 고점 알림이 실제로 발화한다."""
     user = make_user()
     add_position(user["id"], ticker="005930.KS", shares=10, avg_cost=70000)
-    add_position(user["id"], ticker="035720.KQ", shares=5, avg_cost=50000)
 
     from services import alert as alert_mod
+    from models import Alert
     from unittest.mock import MagicMock
 
-    # check_52w_highs_lows does `from services.container import fetcher`, so we
-    # patch the singleton on the container module.
     fake_fetcher = MagicMock()
-    fake_fetcher.get_prices_batch.return_value = {
-        "005930.KS": {"price": 70000.0},
-        "035720.KQ": {"price": 50000.0},
-    }
+    # price >= hi*0.999 → 52w-high alert (KRW scale).
+    fake_fetcher.get_prices_batch.return_value = {"005930.KS": {"price": 90000.0}}
 
-    # Even if every KR position were "at its high", the KR guard must prevent
-    # any range lookup or alert. We stub the range to always trip — if the
-    # guard were broken, we'd see alerts_created > 0.
     with app.app_context():
         with patch.object(
-            alert_mod, "_lookup_52w_range", return_value=(100.0, 50.0)
-        ) as mock_range, \
-             patch("services.container.fetcher", fake_fetcher):
+            alert_mod, "_lookup_52w_range", return_value=(90000.0, 50000.0)
+        ), patch("services.container.fetcher", fake_fetcher):
             metrics = alert_mod.check_52w_highs_lows()
 
-    # KR tickers skipped → no range lookups, no alerts.
-    assert mock_range.call_count == 0, (
-        "KR (.KS/.KQ) tickers must be skipped before _lookup_52w_range — "
-        f"got {mock_range.call_count} lookups"
-    )
-    assert metrics["alerts_created"] == 0
+        assert metrics["alerts_created"] == 1, metrics
+        rows = Alert.query.filter_by(user_id=user["id"], ticker="005930.KS").all()
+        kinds = [r.kind for r in rows]
+        assert "price_52w_high" in kinds, f"kinds={kinds}"
 
 
 # ─── 3. check_52w_highs_lows — US 티커 실제 발화 ───────────────────────────

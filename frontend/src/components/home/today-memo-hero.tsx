@@ -128,7 +128,6 @@ export function TodayMemoHero({
               color: "rgba(245, 240, 232, 0.55)",
               margin: 0,
               fontWeight: 400,
-              fontStyle: "italic",
             }}
           >
             Today&rsquo;s brief is being prepared. Check back at 09:00 KST.

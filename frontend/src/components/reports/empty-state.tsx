@@ -184,7 +184,7 @@ export function EmptyState({
           height: 56,
           borderRadius: 4,
           border: "0.5pt solid rgba(184,149,106,0.32)",
-          backgroundColor: "rgba(139,111,71,0.10)",
+          backgroundColor: "rgba(var(--pq-bronze-wash-rgb),0.10)",
           marginBottom: 24,
         }}
       >

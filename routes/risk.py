@@ -493,7 +493,12 @@ def risk_summary():
             recent = matrix[-20:]
             c = np.corrcoef(recent.T)
             mask = ~np.eye(c.shape[0], dtype=bool)
-            corr_idx = float(np.nanmean(c[mask]))
+            v = float(np.nanmean(c[mask]))
+            # Wave-3 P2 (2026-06-10): a flat (halted) price series makes the
+            # corrcoef row NaN -> nanmean NaN -> jsonify emits literal NaN =
+            # invalid JSON, breaking the /risk poll. Mirror risk_layers'
+            # isfinite guard.
+            corr_idx = v if np.isfinite(v) else 0.0
 
         payload["var_1d_pct"]      = round(var_1d_pct, 2)
         payload["es_1d_pct"]       = round(es_1d_pct, 2)

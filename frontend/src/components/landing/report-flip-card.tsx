@@ -72,7 +72,7 @@ function CardChrome({
         border:
           side === "front"
             ? "0.5px solid rgba(184,149,106,0.25)"
-            : "1px solid rgba(139,111,71,0.38)",
+            : "1px solid rgba(var(--pq-bronze-wash-rgb),0.38)",
         // 3D face stacking — hide the rotated-away face completely.
         backfaceVisibility: "hidden",
         WebkitBackfaceVisibility: "hidden",
@@ -159,7 +159,7 @@ function FrontFace({
           {s.name}
         </h3>
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             color: "rgba(184,149,106,0.85)",
             fontSize: "var(--pq-text-caption)",
@@ -188,7 +188,7 @@ function FrontFace({
           onClick={(e) => e.stopPropagation()}
           tabIndex={interactiveTabIndex}
           aria-hidden={hidden || undefined}
-          className="inline-flex items-center gap-1.5 font-serif italic"
+          className="inline-flex items-center gap-1.5 font-serif"
           style={{
             color: "var(--pq-bronze)",
             fontSize: "var(--pq-text-body)",
@@ -243,7 +243,7 @@ function BackFace({
       <div
         aria-hidden
         className="pointer-events-none absolute inset-[10px] rounded-[3px]"
-        style={{ border: "0.5px solid rgba(139, 111, 71, 0.32)" }}
+        style={{ border: "0.5px solid rgba(var(--pq-bronze-wash-rgb), 0.32)" }}
       />
 
       {/* Paper grain overlay */}
@@ -252,7 +252,7 @@ function BackFace({
         className="pointer-events-none absolute inset-0 rounded-sm"
         style={{
           backgroundImage:
-            "radial-gradient(circle at 50% 50%, rgba(139, 111, 71, 0.04) 0%, transparent 65%), repeating-linear-gradient(0deg, rgba(10,10,10,0.012) 0px, rgba(10,10,10,0.012) 1px, transparent 1px, transparent 3px)",
+            "radial-gradient(circle at 50% 50%, rgba(var(--pq-bronze-wash-rgb), 0.04) 0%, transparent 65%), repeating-linear-gradient(0deg, rgba(10,10,10,0.012) 0px, rgba(10,10,10,0.012) 1px, transparent 1px, transparent 3px)",
           mixBlendMode: "multiply",
         }}
       />
@@ -269,7 +269,7 @@ function BackFace({
           {s.preview.kicker}
         </span>
         <span
-          className="font-serif italic"
+          className="font-serif"
           style={{
             color: "rgba(111, 86, 54, 0.7)",
             fontSize: "var(--pq-text-caption)",
@@ -280,7 +280,7 @@ function BackFace({
       </div>
 
       <h4
-        className="relative z-10 mt-4 font-serif italic"
+        className="relative z-10 mt-4 font-serif"
         style={{
           color: "#2A1F13",
           fontSize: "var(--pq-text-h5)",
@@ -334,7 +334,7 @@ function BackFace({
 
       <div className="relative z-10 mt-auto flex items-end justify-between pt-4">
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             color: "rgba(42,31,19,0.6)",
             fontSize: "var(--pq-text-caption)",
@@ -443,7 +443,7 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
               className="absolute inset-0 flex flex-col overflow-hidden rounded-sm p-7"
               style={{
                 backgroundColor: "#FAF8F3",
-                border: "1px solid rgba(139,111,71,0.38)",
+                border: "1px solid rgba(var(--pq-bronze-wash-rgb),0.38)",
               }}
             >
               <BackFaceContent s={s} onFlip={toggle} hidden={!showBack} />
@@ -568,7 +568,7 @@ function FrontFaceContent({
           {s.name}
         </h3>
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{ color: "rgba(184,149,106,0.85)", fontSize: "var(--pq-text-caption)" }}
         >
           {s.subtitle}
@@ -592,7 +592,7 @@ function FrontFaceContent({
           onClick={(e) => e.stopPropagation()}
           tabIndex={interactiveTabIndex}
           aria-hidden={hidden || undefined}
-          className="inline-flex items-center gap-1.5 font-serif italic"
+          className="inline-flex items-center gap-1.5 font-serif"
           style={{
             color: "var(--pq-bronze)",
             fontSize: "var(--pq-text-body)",
@@ -652,14 +652,14 @@ function BackFaceContent({
           {s.preview.kicker}
         </span>
         <span
-          className="font-serif italic"
+          className="font-serif"
           style={{ color: "rgba(111,86,54,0.7)", fontSize: "var(--pq-text-caption)" }}
         >
           {s.cadence}
         </span>
       </div>
       <h4
-        className="relative z-10 mt-4 font-serif italic"
+        className="relative z-10 mt-4 font-serif"
         style={{
           color: "#2A1F13",
           fontSize: "var(--pq-text-h5)",
@@ -710,7 +710,7 @@ function BackFaceContent({
       </ul>
       <div className="relative z-10 mt-auto flex items-end justify-between pt-4">
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             color: "rgba(42,31,19,0.6)",
             fontSize: "var(--pq-text-caption)",

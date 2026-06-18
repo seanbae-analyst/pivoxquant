@@ -22,7 +22,7 @@
 //   - v5 → v6: bug-fix wave (auth.tsx 8s timeout, reports routing,
 //     companion premium gate, etc.) needed cache flush.
 // Going forward, the build script does this work — no manual bump.
-const CACHE_VERSION = "pq-build-8c01bf6b";
+const CACHE_VERSION = "pq-build-b5834882";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
@@ -42,6 +42,11 @@ const NETWORK_ONLY_PATTERNS = [
   /\/api\/realtime\//,
   /\/api\/autotrade\//,
   /\/api\/broker\/kis\//,
+  // Wave-3 P2 (2026-06-10): the "/api/profile" SWR prefix also matched the
+  // PIPA full personal-data export — a 60-minute disk cache of the most
+  // sensitive payload in the product (and a cross-user window on account
+  // switch without logout). Never cache it.
+  /\/api\/profile\/export/,
 ];
 
 const CACHE_FIRST_PATTERNS = [];

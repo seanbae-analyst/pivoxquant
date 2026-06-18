@@ -961,7 +961,7 @@ export default function HomePageV1() {
             <Fleuron size={13} />
             <p
               className="font-serif"
-              style={{ marginTop: 12, fontStyle: "italic", fontSize: "var(--pq-text-body)" }}
+              style={{ marginTop: 12, fontSize: "var(--pq-text-body)" }}
             >
               Add your first position to see your top holding chart.
             </p>

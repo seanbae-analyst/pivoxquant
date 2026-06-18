@@ -13,44 +13,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { Gavel } from "lucide-react";
 import { fadeUp } from "@/lib/motion";
-
-const QUESTIONS: readonly { n: number; q_en: string; q_ko: string }[] = [
-  {
-    n: 1,
-    q_en: "What is your thesis in one sentence?",
-    q_ko: "한 문장으로 이 포지션 진입 논리를 말해보라.",
-  },
-  {
-    n: 2,
-    q_en: "What would prove you wrong?",
-    q_ko: "어떤 사실이 확인되면 당신이 틀린 것인가?",
-  },
-  {
-    n: 3,
-    q_en: "How does this fit your persona allocation?",
-    q_ko: "현재 페르소나 배분에 이 포지션이 부합하는가?",
-  },
-  {
-    n: 4,
-    q_en: "Is this inside your drift band?",
-    q_ko: "당신의 Drift 허용 범위 안에 있는가?",
-  },
-  {
-    n: 5,
-    q_en: "Size: is this a normal position for you?",
-    q_ko: "평소 크기인가? 이례적으로 크다면 왜인가?",
-  },
-  {
-    n: 6,
-    q_en: "Have you seen a similar setup before — and what happened?",
-    q_ko: "비슷한 국면에서 당신은 어떻게 행동했고 결과는?",
-  },
-  {
-    n: 7,
-    q_en: "If it drops 20% tomorrow — are you adding or cutting?",
-    q_ko: "내일 -20% 라면 더 담는가, 잘라내는가?",
-  },
-] as const;
+import { PRE_TRADE_QUESTIONS as QUESTIONS } from "@/data/pre-trade-questions";
 
 export function DepositionTeaser() {
   const reduce = useReducedMotion();
@@ -72,7 +35,7 @@ export function DepositionTeaser() {
           <span
             aria-hidden
             className="h-px w-7"
-            style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+            style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)" }}
           />
           <span
             className="font-serif text-pq-mono-sm uppercase"
@@ -112,8 +75,8 @@ export function DepositionTeaser() {
             color: "rgba(245, 240, 232, 0.65)",
           }}
         >
-          진입 결정 앞에 서는 7개의 관문. 당신을 변호할 기회가 아니라,
-          당신의 논리를 스스로 검증할 기회다. 이것은 조언이 아니라 규율이다.
+          진입 결정 앞에 서는 7개의 관문. 당신을 변호할 기회가 아니라, 당신의
+          논리를 스스로 검증할 기회다. 이것은 조언이 아니라 규율이다.
         </motion.p>
 
         <div className="grid grid-cols-1 gap-10 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)] md:gap-14 items-start">
@@ -128,7 +91,7 @@ export function DepositionTeaser() {
               backgroundColor: "#F5F0E8",
               color: "#050505",
               boxShadow:
-                "0 30px 80px -20px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(139,111,71,0.25)",
+                "0 30px 80px -20px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(var(--pq-bronze-wash-rgb),0.25)",
               aspectRatio: "3/4",
               minHeight: 360,
             }}
@@ -138,14 +101,14 @@ export function DepositionTeaser() {
                 <div className="mb-2 flex items-center gap-2">
                   <Gavel
                     className="h-3.5 w-3.5"
-                    style={{ color: "rgba(139,111,71,0.8)" }}
+                    style={{ color: "rgba(var(--pq-bronze-wash-rgb),0.8)" }}
                     aria-hidden
                   />
                   <span
                     className="font-mono text-pq-kicker uppercase tabular-nums"
                     style={{
                       letterSpacing: "0.22em",
-                      color: "rgba(139,111,71,0.8)",
+                      color: "rgba(var(--pq-bronze-wash-rgb),0.8)",
                     }}
                   >
                     Pre-Trade Checklist
@@ -163,15 +126,21 @@ export function DepositionTeaser() {
                   Record of Reasoning
                 </h3>
                 <p
-                  className="mt-1 font-serif italic"
-                  style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.55)" }}
+                  className="mt-1 font-serif"
+                  style={{
+                    fontSize: "var(--pq-text-eyebrow)",
+                    color: "rgba(10,10,10,0.55)",
+                  }}
                 >
                   Counterparty · Yourself
                 </p>
               </div>
               <div
                 className="text-right font-mono tabular-nums"
-                style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.55)" }}
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  color: "rgba(10,10,10,0.55)",
+                }}
               >
                 <div>DOCKET · PQ-0074</div>
                 <div>SESSION · 09:42 KST</div>
@@ -192,7 +161,7 @@ export function DepositionTeaser() {
                   <span
                     className="font-mono text-pq-eyebrow tabular-nums"
                     style={{
-                      color: "rgba(139,111,71,0.85)",
+                      color: "rgba(var(--pq-bronze-wash-rgb),0.85)",
                       letterSpacing: "0.1em",
                       paddingTop: 2,
                     }}
@@ -202,9 +171,12 @@ export function DepositionTeaser() {
                   <div>
                     <p
                       className="font-serif"
-                      style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.45 }}
+                      style={{
+                        fontSize: "var(--pq-text-body)",
+                        lineHeight: 1.45,
+                      }}
                     >
-                      {q.q_en}
+                      {q.en}
                     </p>
                     <div
                       className="mt-2 h-px"
@@ -222,8 +194,11 @@ export function DepositionTeaser() {
                 disclaimers must not render below 13px — raised from
                 --pq-text-eyebrow (10.5px) to --pq-text-body-sm (13px). */}
             <p
-              className="mt-8 font-serif italic"
-              style={{ fontSize: "var(--pq-text-body-sm)", color: "rgba(10,10,10,0.45)" }}
+              className="mt-8 font-serif"
+              style={{
+                fontSize: "var(--pq-text-body-sm)",
+                color: "rgba(10,10,10,0.45)",
+              }}
             >
               Not investment advice. A reflection tool, logged to your
               compounding memory.
@@ -262,17 +237,17 @@ export function DepositionTeaser() {
                       color: "var(--pq-ivory)",
                     }}
                   >
-                    {q.q_en}
+                    {q.en}
                   </p>
                   <p
-                    className="font-serif italic"
+                    className="font-serif"
                     style={{
                       fontSize: "var(--pq-text-body)",
                       lineHeight: 1.5,
-                      color: "rgba(139,111,71,0.75)",
+                      color: "rgba(var(--pq-bronze-wash-rgb),0.75)",
                     }}
                   >
-                    {q.q_ko}
+                    {q.ko}
                   </p>
                 </div>
               </li>
@@ -285,15 +260,19 @@ export function DepositionTeaser() {
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mt-12 font-serif italic"
+          className="mt-12 font-serif"
           style={{
-            fontSize: "var(--pq-text-eyebrow)",
+            // FINDING-LAND-002 (design audit 2026-06-10): compliance
+            // disclaimers must not render below 13px. The W19 fontSize sweep
+            // (2d85829f) had mechanically shrunk this line 12px → the 10.5px
+            // eyebrow token — below the project's own legal floor.
+            fontSize: "var(--pq-text-body-sm)",
             color: "var(--pq-muted)",
             borderTop: "0.5px solid var(--pq-border)",
             paddingTop: 16,
           }}
         >
-          <span style={{ color: "rgba(139, 111, 71, 0.9)" }}>— </span>
+          <span style={{ color: "rgba(var(--pq-bronze-wash-rgb), 0.9)" }}>— </span>
           Pre-Trade Checklist is a reflection tool. It does not constitute
           investment advice or a recommendation to buy or sell any security.
         </motion.p>

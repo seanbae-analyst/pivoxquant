@@ -85,7 +85,7 @@ function StreamingDots() {
 
 function AssistantAvatar() {
   return (
-    <div className="w-7 h-7 rounded-full bg-[rgba(139,111,71,0.15)] border border-[rgba(139,111,71,0.3)] flex items-center justify-center shrink-0">
+    <div className="w-7 h-7 rounded-full bg-[rgba(var(--pq-bronze-wash-rgb),0.15)] border border-[rgba(var(--pq-bronze-wash-rgb),0.3)] flex items-center justify-center shrink-0">
       <span className="text-pq-eyebrow text-[var(--pq-bronze)] font-serif">
         PQ
       </span>
@@ -107,8 +107,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       <div
         className={
           isUser
-            ? "max-w-[75%] bg-[rgba(139,111,71,0.08)] border border-[rgba(139,111,71,0.15)] rounded-[2px] px-4 py-3"
-            : "max-w-[75%] text-[rgba(245,240,232,0.85)] border-l-2 border-[rgba(139,111,71,0.3)] pl-4"
+            ? "max-w-[75%] bg-[rgba(var(--pq-bronze-wash-rgb),0.08)] border border-[rgba(var(--pq-bronze-wash-rgb),0.15)] rounded-[2px] px-4 py-3"
+            : "max-w-[75%] text-[rgba(245,240,232,0.85)] border-l-2 border-[rgba(var(--pq-bronze-wash-rgb),0.3)] pl-4"
         }
       >
         {isEmpty ? (
@@ -151,12 +151,12 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
           }}
         >
           Ask the{" "}
-          <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+          <span style={{ color: "var(--pq-bronze)" }}>
             desk.
           </span>
         </h2>
         <p
-          className="font-serif italic"
+          className="font-serif"
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
@@ -476,7 +476,7 @@ function ChatInner() {
             }}
           >
             What are you{" "}
-            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+            <span style={{ color: "var(--pq-bronze)" }}>
               observing
             </span>{" "}
             today?

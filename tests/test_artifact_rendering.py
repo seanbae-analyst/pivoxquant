@@ -272,7 +272,15 @@ def test_render_matrix(app, artifact, profile):
     # generic regex gate.  Per-artefact empty-state coverage is a deliberate
     # follow-up (needs each service's expected 0-position contract).
 
-    # ── PDF render (WeasyPrint optional) ────────────────────────────────────
+    # ── PDF render (opt-in: PIVOX_MATRIX_PDF=1) ─────────────────────────────
+    # 2026-06-12: WeasyPrint now works on macOS (conftest DYLD bootstrap), so
+    # this branch is REAL — but 170 PDF renders add ~24 minutes, which would
+    # turn the pre-push full suite from ~15m into ~40m.  Default runs keep the
+    # (cheap, always-on) HTML assertions above and skip here; the nightly QA
+    # cron and manual deep runs set PIVOX_MATRIX_PDF=1 to render everything:
+    #     PIVOX_MATRIX_PDF=1 pytest -m artifact_qa tests/test_artifact_rendering.py
+    if os.environ.get("PIVOX_MATRIX_PDF", "") != "1":
+        pytest.skip("PDF branch opt-in — set PIVOX_MATRIX_PDF=1 (renders 170 PDFs, ~24m)")
     # When WeasyPrint native deps (libgobject/pango/cairo) are absent the
     # PDF branch cannot run.  This is an *environment* gap, not a passing
     # test — surface it as xfail(strict=False) so it reads distinctly from

@@ -72,7 +72,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
         className="pq-card"
         style={{
           background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
-          border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           borderRadius: 4,
           padding: "16px 28px",
         }}
@@ -104,7 +104,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                   padding: "18px 0",
                   borderBottom:
                     i < entries.length - 1
-                      ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
+                      ? "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))"
                       : "none",
                 }}
               >

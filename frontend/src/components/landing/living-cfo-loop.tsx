@@ -91,7 +91,7 @@ export function LivingCfoLoop() {
           <span
             aria-hidden
             className="h-px w-7"
-            style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+            style={{ backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)" }}
           />
           <span
             className="font-serif text-pq-mono-sm uppercase"
@@ -151,7 +151,7 @@ export function LivingCfoLoop() {
                 className="relative overflow-hidden rounded-sm p-6 md:p-7"
                 style={{
                   backgroundColor: "var(--pq-card-veil)",
-                  border: "0.5px solid rgba(139,111,71,0.28)",
+                  border: "0.5px solid rgba(var(--pq-bronze-wash-rgb),0.28)",
                   minHeight: 180,
                 }}
               >
@@ -159,7 +159,7 @@ export function LivingCfoLoop() {
                   <div
                     className="flex h-9 w-9 items-center justify-center rounded-sm"
                     style={{
-                      border: "0.5px solid rgba(139,111,71,0.45)",
+                      border: "0.5px solid rgba(var(--pq-bronze-wash-rgb),0.45)",
                       color: "var(--pq-bronze)",
                     }}
                     aria-hidden
@@ -198,10 +198,10 @@ export function LivingCfoLoop() {
                   {s.en}
                 </p>
                 <p
-                  className="font-serif italic"
+                  className="font-serif"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
-                    color: "rgba(139,111,71,0.75)",
+                    color: "rgba(var(--pq-bronze-wash-rgb),0.75)",
                   }}
                 >
                   {s.ko}
@@ -216,10 +216,10 @@ export function LivingCfoLoop() {
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mt-16 font-serif italic text-center"
+          className="mt-16 font-serif text-center"
           style={{
             fontSize: "var(--pq-text-body)",
-            color: "rgba(139,111,71,0.85)",
+            color: "rgba(var(--pq-bronze-wash-rgb),0.85)",
             letterSpacing: "0.01em",
           }}
         >

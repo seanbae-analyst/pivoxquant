@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 _DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "burn_rate"
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
-from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
+from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
 from services.artifacts._render import try_import_jinja as _try_import_jinja
@@ -414,10 +414,11 @@ class BurnRateService:
         burn_pct = data.get("burn_pct")
         period_label = data.get("period_label") or "—"
 
+        from services.artifacts._pricing import finite_or_none
+
         def _money(v, *, signed: bool = False) -> str:
-            try:
-                n = float(v)
-            except (TypeError, ValueError):
+            n = finite_or_none(v)
+            if n is None:
                 return "—"
             sign = ("−" if n > 0 and signed else "")
             an = abs(n)

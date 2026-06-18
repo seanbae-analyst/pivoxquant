@@ -109,7 +109,7 @@ export default function MobileDrawer({
             <div className="flex items-center justify-between px-5 py-4">
               {/* FINDING-030: canonical italic Playfair mixed-case wordmark. */}
               <span
-                className="font-serif italic"
+                className="font-serif"
                 style={{
                   color: "var(--pq-ivory)",
                   letterSpacing: "0.01em",

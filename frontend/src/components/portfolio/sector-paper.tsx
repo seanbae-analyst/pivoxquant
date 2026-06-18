@@ -126,7 +126,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                       inset: 0,
                       width: `${barW}%`,
                       background:
-                        "linear-gradient(90deg, rgba(139,111,71,0.95), rgba(184,149,106,0.55))",
+                        "linear-gradient(90deg, rgba(var(--pq-bronze-wash-rgb),0.95), rgba(184,149,106,0.55))",
                       transition: "width 480ms cubic-bezier(0.16,1,0.3,1)",
                     }}
                   />
@@ -155,7 +155,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
           bottom: 18,
           right: 22,
           fontSize: "var(--pq-text-eyebrow)",
-          color: "rgba(139,111,71,0.55)",
+          color: "rgba(var(--pq-bronze-wash-rgb),0.55)",
           letterSpacing: "0.06em",
         }}
         aria-hidden

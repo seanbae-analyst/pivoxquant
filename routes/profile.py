@@ -70,7 +70,7 @@ from services.profile import (
     compute_drift,
     detect_significant_drift,
 )
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 from security import general_rate_limit, limiter
 from services.legal.disclaimers import DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
@@ -813,6 +813,7 @@ def update_profile():
 
 @profile_bp.route("/persona", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def get_persona_analysis():
     """Return declared + observed persona for Layer 2 hero card.
 
@@ -832,6 +833,7 @@ def get_persona_analysis():
 
 @profile_bp.route("/persona-detail", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def get_persona_detail():
     """Return the multi-dimensional persona classification (v2).
 
@@ -880,6 +882,7 @@ def get_persona_detail():
 
 @profile_bp.route("/persona-explain", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def get_persona_explain():
     """Lightweight explainability payload — tooltip-sized.
 
@@ -1380,6 +1383,7 @@ _HISTORY_DEFAULT_DAYS = 180
 
 @profile_bp.route("/persona-history", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def get_persona_history():
     """Return the authenticated user's PersonaSnapshot timeline.
 
@@ -1427,6 +1431,7 @@ def get_persona_history():
 
 @profile_bp.route("/persona-drift", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def get_persona_drift():
     """Return a recent-drift summary for the authenticated user.
 

@@ -146,7 +146,7 @@ export function SignalCard({ entry, resolveName }: Props) {
         gridTemplateColumns: "minmax(0, 1fr) 280px 120px",
         gap: 28,
         padding: "22px 0",
-        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+        borderBottom: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         transition: "background 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms",
         // CEO 2026-05-13: align all 3 columns to the top so the right
         // timestamp doesn't visually overlap the rationale below the

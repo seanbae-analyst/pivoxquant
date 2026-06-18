@@ -109,6 +109,13 @@ SCENARIO_MODULE_MAP: dict[str, int] = {
 }
 SCENARIO_MODULE_MAP.update({f"day{idx}": idx for idx, _ in enumerate(DAY_SCENARIOS)})
 
+# Scenarios that exercise PUBLIC marketing surfaces only (no login needed):
+# day6 /pricing, day8 /features. When no sim session is available (secret
+# unset + no cookie file — the state that silently stubbed out weeks of runs
+# as fake-clean), these still run for real instead of skipping. The beta
+# gate is handled separately via PIVOX_BETA_PASSWORD (see _pass_beta_gate).
+PUBLIC_SCENARIOS: frozenset[int] = frozenset({6, 8})
+
 # Severity normalization map — accepts upper/lower, P0/P1/P2 or p0/p1/p2.
 VALID_SEVERITIES = {"p0", "p1", "p2"}
 
@@ -336,6 +343,39 @@ def _validate_finding(finding: dict, agent_id: str) -> dict | None:
     return out
 
 
+def _pass_beta_gate(context) -> None:
+    """Authenticate the Playwright context past the Vercel beta gate.
+
+    Prod serves a sitewide beta-password interstitial (middleware.ts,
+    cookie ``pivox_beta_access``). Without the cookie, even PUBLIC_SCENARIOS
+    short-circuit at the gate via ``is_beta_gate`` and verify nothing.
+    ``context.request`` shares the context cookie jar, so one POST to
+    /api/beta-auth plants the cookie for every subsequent page.goto.
+
+    No-op when PIVOX_BETA_PASSWORD is unset (e.g. local dev target without
+    a gate). Best-effort — a failure only means scenarios short-circuit at
+    the gate exactly as before this helper existed.
+    """
+    beta_pw = os.environ.get("PIVOX_BETA_PASSWORD", "")
+    if not beta_pw:
+        return
+    try:
+        resp = context.request.post(
+            f"{PIVOXQUANT_BASE_URL}/api/beta-auth",
+            data=json.dumps({"password": beta_pw}),
+            headers={"Content-Type": "application/json"},
+            timeout=15_000,
+        )
+        if resp.status != 200:
+            slack_notify(
+                f"beta-gate auth non-200 ({resp.status}) — scenarios may "
+                "short-circuit at the gate",
+                "warn",
+            )
+    except Exception as exc:
+        slack_notify(f"beta-gate auth failed: {exc}", "warn")
+
+
 def run_user_tester(
     cookies_path: Path,
     scenario_module_name: str,
@@ -411,6 +451,7 @@ def run_user_tester(
                 scenario_base.inject_session(
                     context, cookies_path, PIVOXQUANT_BASE_URL
                 )
+                _pass_beta_gate(context)
 
                 page = context.new_page()
                 raw_findings = run_fn(
@@ -583,8 +624,17 @@ def write_daily_report(
     scenario: str,
     findings: list[dict],
     issue_urls: list[str | None],
+    *,
+    status: str = "ran",
 ) -> Path:
-    """Write the daily report with findings embedded (Phase 2)."""
+    """Write the daily report with findings embedded (Phase 2).
+
+    ``status`` integrity fix (2026-06-12): SKIPPED runs (no session / no
+    secret) previously wrote the SAME "findings: 0 … no findings — clean run"
+    body as a real clean pass, so weeks of no-op stubs read as green. A
+    skipped run must say SKIPPED loudly — the morning-briefing absence check
+    and any human reader keys off this line.
+    """
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LOG_DIR / f"{today.isoformat()}.md"
 
@@ -605,13 +655,22 @@ def write_daily_report(
                 f"- issue: {url or 'N/A'}\n"
                 f"- agent_id: `{f.get('agent_id', 'unknown')}`\n\n"
             )
-    else:
+    elif status == "ran":
         findings_md = "_no findings — clean run_\n\n"
+    else:
+        findings_md = (
+            f"_scenario NOT run — {status}. This is a skip, not a pass._\n\n"
+        )
 
+    status_line = (
+        "- status: ran\n" if status == "ran"
+        else f"- status: **SKIPPED** ({status})\n"
+    )
     body = (
         f"# CAUS — {today.isoformat()}\n\n"
         f"- user: `{user_id}` (Gmail alias: `seanbae1521+{user_id}@gmail.com`)\n"
         f"- scenario: {scenario}\n"
+        f"{status_line}"
         f"- started: {started_iso}\n"
         f"- launcher: `scripts/caus_daily_sweep.py` (Phase 3 — Playwright)\n"
         f"- findings: {len(findings)} ({sum(1 for f in findings if _normalize_severity(f.get('severity')) == 'p0')} P0)\n\n"
@@ -711,25 +770,42 @@ def main(argv: list[str] | None = None) -> int:
             )
             sess = minted
         elif not sess.exists():
+            if day_idx in PUBLIC_SCENARIOS:
+                slack_notify(
+                    f"sim-onboard failed for `{user_id}` — day-{day_idx} is a "
+                    "PUBLIC scenario, proceeding session-less",
+                    "info",
+                )
+            else:
+                slack_notify(
+                    f"sim-onboard failed AND no fallback session for `{user_id}`",
+                    "warn",
+                )
+                # Trail must read as a SKIP, not a clean pass (integrity fix).
+                write_daily_report(today, user_id, scenario, [], [],
+                                   status="skipped_sim_onboard_failed")
+                return 0
+    elif not sess.exists():
+        if day_idx in PUBLIC_SCENARIOS:
             slack_notify(
-                f"sim-onboard failed AND no fallback session for `{user_id}`",
+                f"no session for `{user_id}` — day-{day_idx} is a PUBLIC "
+                "scenario, proceeding session-less",
+                "info",
+            )
+        else:
+            slack_notify(
+                (
+                    f"user `{user_id}` session missing at `{sess}`. "
+                    f"One-time OAuth onboarding required: login as "
+                    f"`seanbae1521+{user_id}@gmail.com` and save cookies, "
+                    f"OR set SIM_ONBOARD_SECRET for autonomous HMAC login."
+                ),
                 "warn",
             )
-            # Still write a report stub so the cron leaves a trail.
-            write_daily_report(today, user_id, scenario, [], [])
+            # Trail must read as a SKIP, not a clean pass (integrity fix).
+            write_daily_report(today, user_id, scenario, [], [],
+                               status="skipped_no_session")
             return 0
-    elif not sess.exists():
-        slack_notify(
-            (
-                f"user `{user_id}` session missing at `{sess}`. "
-                f"One-time OAuth onboarding required: login as "
-                f"`seanbae1521+{user_id}@gmail.com` and save cookies, "
-                f"OR set SIM_ONBOARD_SECRET for autonomous HMAC login."
-            ),
-            "warn",
-        )
-        write_daily_report(today, user_id, scenario, [], [])
-        return 0
 
     # Phase 3 — run Playwright scenario module against prod.
     findings = run_user_tester(

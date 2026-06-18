@@ -50,6 +50,7 @@ import type { PortfolioResponse } from "@/lib/types";
 // Morning Brief deprecated 2026-04-29 — useMorningBrief removed.
 
 import { DeskCheckinHero } from "@/components/home/v2/desk-checkin-hero";
+import { TodaysReviewCard } from "@/components/home/v2/todays-review-card";
 import { HomeCardStyles } from "@/components/home/v2/home-card";
 import { PortfolioSnapshotCard } from "@/components/home/v2/portfolio-snapshot-card";
 import { RiskBoardCard } from "@/components/home/v2/risk-board-card";
@@ -127,6 +128,12 @@ export default function HomePageV2() {
            first-run CTA doesn't flash for returning users mid-fetch. */
         hasPositions={positionsLoading || hasPositions}
       />
+
+      {/* ═══════════ 오늘의 리뷰 — the record looks back (Phase 3) ═══════════
+       * record-as-spine §4.3: the first content block is the user's own most
+       * recent reflection, quoted back with its observed context. Renders
+       * nothing for empty journals — a new user's home is unchanged. */}
+      <TodaysReviewCard />
 
       {/* ═══════════ GALLERY — 6 cards, 3 × 2 ═══════════ */}
       <section

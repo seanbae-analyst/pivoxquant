@@ -219,7 +219,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
               gap: 16,
               alignItems: "baseline",
               padding: "20px 0 8px",
-              borderTop: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+              borderTop: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
               marginTop: 8,
             }}
           >

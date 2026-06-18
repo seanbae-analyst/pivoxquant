@@ -63,18 +63,44 @@ def _compute_user_return(user_id: int, week_ending: date) -> tuple[float | None,
     )
     if not rows:
         return None, 0
-    invested = 0.0
+    # Wave-3 P2 (2026-06-10): the old math summed EVERY row's total_value as
+    # the denominator. A SELL's total_value is PROCEEDS (cost + pnl), so a
+    # same-week $1,000→$1,100 round trip read +4.76% instead of +10%, and
+    # mixed KR/US weeks raw-summed ₩ + $ (Pattern-7).
+    #
+    # Weekly semantics differ from the routes/twin.py lifetime fix (BUY legs
+    # only): a week often contains ONLY the closing SELL of a position bought
+    # earlier — a BUY-only denominator would null out exactly the weeks with
+    # realized results. Match _compute_twin_return's documented measure
+    # instead — "realized P&L over realized cost basis": denominator = each
+    # SELL's cost basis (proceeds − pnl), both legs normalised to KRW.
+    # Same-week round trip: (1100−100)=1000 → 100/1000 = +10% ✓.
+    #
+    # NOTE: weekly rows persisted by earlier cron runs used the old math and
+    # are idempotent-cached; history is left as-is (documented drift).
+    from services import fx_service
+
+    fx = fx_service.get_rate()
+    realized_cost = 0.0
     pnl = 0.0
     for r in rows:
         try:
-            invested += float(r.total_value or 0.0)
-            pnl += float(r.pnl or 0.0)
+            if (r.action or "").upper() != "SELL":
+                continue
+            proceeds = fx_service.amount_to_krw(
+                r.total_value, r.currency, r.ticker, fx
+            )
+            row_pnl = fx_service.amount_to_krw(r.pnl, r.currency, r.ticker, fx)
+            cost = proceeds - row_pnl
+            if cost > 0:
+                realized_cost += cost
+                pnl += row_pnl
         except (TypeError, ValueError):
             logger.debug("silent-fallback: _compute_user_return", exc_info=True)
             continue
-    if invested <= 0:
+    if realized_cost <= 0:
         return None, len(rows)
-    return round((pnl / invested) * 100.0, 4), len(rows)
+    return round((pnl / realized_cost) * 100.0, 4), len(rows)
 
 
 def _compute_twin_return(user_id: int, week_ending: date) -> tuple[float | None, int]:
@@ -115,13 +141,34 @@ def _compute_twin_return(user_id: int, week_ending: date) -> tuple[float | None,
     trade_count = len(sells) + len(buys)
     if not sells:
         return None, trade_count
+    # Pattern-7 fix (2026-06-15): AITwinTrade has no currency column and the
+    # twin universe holds BOTH US ($) and KR (₩) names, so raw-summing pnl/cost
+    # across a mixed week let a single ₩-scale SELL dominate the %. The user
+    # leg (_compute_user_return) and the lifetime path (routes/twin.py
+    # twin_comparison) already normalize; only this weekly twin leg did not.
+    # Infer currency from the ticker suffix and normalize every leg to KRW
+    # before summing. A % is scale-invariant, so single-currency weeks are
+    # unchanged (fx cancels in the ratio); only mixed weeks are corrected.
+    from services import fx_service
+
+    fx = fx_service.get_rate()
     realized_pnl = Decimal("0")
     cost_basis = Decimal("0")
     for s in sells:
         if s.pnl_at_close is None:
             continue
-        realized_pnl += Decimal(str(s.pnl_at_close))
-        cost_basis += Decimal(str(s.shares or 0)) * Decimal(str(s.price or 0)) - Decimal(str(s.pnl_at_close))
+        ticker = (s.ticker or "").upper()
+        currency = "KRW" if ticker.endswith((".KS", ".KQ")) else "USD"
+        raw_pnl = float(s.pnl_at_close)
+        raw_cost = float(s.shares or 0) * float(s.price or 0) - raw_pnl
+        try:
+            pnl_krw = fx_service.amount_to_krw(raw_pnl, currency, s.ticker, fx)
+            cost_krw = fx_service.amount_to_krw(raw_cost, currency, s.ticker, fx)
+        except (TypeError, ValueError):
+            logger.debug("silent-fallback: _compute_twin_return fx", exc_info=True)
+            pnl_krw, cost_krw = raw_pnl, raw_cost
+        realized_pnl += Decimal(str(pnl_krw))
+        cost_basis += Decimal(str(cost_krw))
     if cost_basis <= 0:
         return None, trade_count
     return float(round((realized_pnl / cost_basis) * 100, 4)), trade_count

@@ -269,7 +269,7 @@ function PricingPreview() {
               </div>
 
               <p
-                className="font-serif italic"
+                className="font-serif"
                 style={{
                   color: "rgba(245,240,232,0.6)",
                   fontSize: "var(--pq-text-body-sm)",
@@ -583,7 +583,7 @@ function SiteFooter() {
             <Link href="/" className="mb-5 inline-block">
               {/* FINDING-030: canonical italic Playfair mixed-case wordmark. */}
               <span
-                className="font-serif italic"
+                className="font-serif"
                 style={{
                   fontSize: "var(--pq-text-h5)",
                   letterSpacing: "0.01em",
@@ -779,7 +779,7 @@ function SiteFooter() {
         >
           <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
             <p
-              className="font-serif italic"
+              className="font-serif"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.01em",
@@ -794,7 +794,7 @@ function SiteFooter() {
                 to the --pq-text-body-sm (13px) token so the legal notice
                 is legible rather than visually minimized. */}
             <p
-              className="font-serif italic text-center"
+              className="font-serif text-center"
               style={{
                 fontSize: "var(--pq-text-body-sm)",
                 lineHeight: 1.6,

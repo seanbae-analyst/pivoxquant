@@ -52,7 +52,7 @@ export function TopBar() {
           // 2026-05-17 wave C-3 P2: h-9 = 36px is below Apple HIG / Material 44px
           // minimum tap target — small but persistent miss-tap source on mobile
           // top bar. Bump to h-11 (44px).
-          className="flex h-11 w-full max-w-[440px] items-center gap-3 rounded px-4 text-left transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+          className="flex h-11 w-full max-w-[440px] items-center gap-3 rounded px-4 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
           style={{
             border: "0.5px solid rgba(245, 240, 232, 0.12)",
             background: "rgba(255, 255, 255, 0.02)",
@@ -64,7 +64,7 @@ export function TopBar() {
           />
           {/* FINDING-039: brand-voice placeholder, not generic "Search …". */}
           <span
-            className="flex-1 text-sm italic font-serif"
+            className="flex-1 text-sm font-serif"
             style={{
               color: "rgba(245, 240, 232, 0.45)",
             }}

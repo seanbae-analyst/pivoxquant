@@ -25,7 +25,7 @@ playwright-report/
 .env
 .env.*
 !.env.example
-.kis_token_cache.json
+.kis_token_cache*.json
 *.pem
 *.key
 
@@ -85,3 +85,5 @@ state/
 # To reproduce: run scripts/v2-smoke.sh (or the worktree capture script).
 # MANIFEST.txt files in qa/ ARE committed (text, ~3KB each).
 qa/v2-smoke/**/*.png
+tests/artifacts/output/
+instance/

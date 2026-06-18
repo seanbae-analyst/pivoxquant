@@ -139,7 +139,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
               key={`${s.ticker}-${s.id ?? ""}`}
               className="mover-card"
               style={{
-                border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
+                border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                 borderRadius: "var(--pq-radius-card, 4px)",
                 padding: 16,
                 background: "transparent",

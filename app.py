@@ -847,6 +847,12 @@ def _do_migrations():
         _add_column_if_missing("position_dd_checks", "risks_checked",      "BOOLEAN", default="0")
         _add_column_if_missing("position_dd_checks", "note",               "TEXT")  # EncryptedText
 
+    # pre_trade_reflections.observed_context_json — record-as-spine Phase 2
+    # (2026-06-10). Alembic twin: 049_reflection_observed_context. Snapshot of
+    # the observation surfaces (signal label/score, VIX, 1h move) at the
+    # moment the reflection was opened. Nullable TEXT — purely additive.
+    _add_column_if_missing("pre_trade_reflections", "observed_context_json", "TEXT")
+
     # anthropic_usage_log (Wave I G-3) — Anthropic API 비용 추적 테이블.
     # 이 테이블은 ORM 모델이 아니라 services/ai/service.py 가 raw SQL INSERT
     # 로 직접 기록하므로 db.create_all() 범위 밖이다. 생성은 alembic
@@ -1936,12 +1942,13 @@ def _init_scheduler(app):
 
         Cadence is deliberately conservative: 06:35 KST (= 21:35 EST, just
         after the NYSE 16:00 ET close, mirroring ``twin_us_daily`` at 06:30).
-        A single daily fire keeps FMP budget + PG pressure low — these checks
-        fan out across every holder's tickers and call FMP's quote endpoint.
-        KR (.KS/.KQ) tickers are skipped inside ``check_52w_highs_lows`` (FMP
-        coverage is unreliable for KRX); ``create_alert`` already dedups via a
-        24h/7d window so a daily cadence cannot spam. Bell prefs routing is
-        unchanged from every other bell alert (fail-open) — not wired here.
+        A single daily fire keeps FMP/KIS budget + PG pressure low — these
+        checks fan out across every holder's tickers. US tickers price via FMP;
+        KR (.KS/.KQ) tickers route through KIS (``w52_hgpr``/``w52_lwpr`` in
+        kis_market_adapter.get_52w_range) since commit 3ba9564d — they are no
+        longer skipped. ``create_alert`` already dedups via a 24h/7d window so a
+        daily cadence cannot spam. Bell prefs routing is unchanged from every
+        other bell alert (fail-open) — not wired here.
 
         Per-check failures are isolated; a bad 52w sweep must not block the
         concentration sweep, and neither must raise out of the scheduler.
@@ -1951,23 +1958,28 @@ def _init_scheduler(app):
             check_concentration_alerts,
         )
         with app.app_context():
-            ok = True
+            # Two independent jobs — track success per-job. A shared ``ok`` flag
+            # would let a concentration failure suppress the 52w success record
+            # (and vice-versa), leaving a clean sweep's 3-strike counter un-reset.
+            ok_52w = True
             try:
                 m = check_52w_highs_lows()
                 logger.info(f"52w high/low sweep: {m}")
             except Exception as e:
-                ok = False
+                ok_52w = False
                 logger.error(f"52w high/low sweep failed: {e}")
                 _alert_sched("sched_price_alerts_52w", e)
+            ok_conc = True
             try:
                 m = check_concentration_alerts()
                 logger.info(f"Concentration sweep: {m}")
             except Exception as e:
-                ok = False
+                ok_conc = False
                 logger.error(f"Concentration sweep failed: {e}")
                 _alert_sched("sched_price_alerts_concentration", e)
-            if ok:
+            if ok_52w:
                 _record_sched_success("sched_price_alerts_52w")
+            if ok_conc:
                 _record_sched_success("sched_price_alerts_concentration")
 
     # PERF-001 / CONN-001: apply pile-up guards as scheduler-wide job defaults
@@ -2313,8 +2325,9 @@ def _init_scheduler(app):
     # 평일 06:35 KST (= 21:35 EST, NYSE 마감 직후) — 52주 고/저 + 섹터 집중도
     # 벨 알림 스윕. 두 check 함수는 services.alert 에 존재했으나 cron 미등록이라
     # 사용자가 설정한 52w 알림이 자동 발화되지 않았다(어드민 수동 POST 외 0회).
-    # 하루 1회 보수적 cadence — FMP budget + PG 압박 회피. KR 티커는 check 내부
-    # FMP-guard 로 skip, create_alert 24h/7d dedup 로 스팸 방지.
+    # 하루 1회 보수적 cadence — FMP/KIS budget + PG 압박 회피. KR 티커는 KIS
+    # (get_52w_range) 로 라우팅(커밋 3ba9564d, 더 이상 skip 아님), create_alert
+    # 24h/7d dedup 로 스팸 방지.
     sched.add_job(
         _scheduled_price_alerts,
         trigger="cron",

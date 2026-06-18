@@ -166,6 +166,12 @@ _ARTIFACT_DOWNLOAD_META = {
     # 2026-04-19 — Premium retrospective artefacts (download-only, no share)
     "year_end_letter":        ("application/pdf", "pdf"),
     "quarterly_self_report":  ("application/pdf", "pdf"),
+    # 2026-06-11 — Living Mirror. Has its own /living-mirror/download/<id>
+    # route, but LatestArtifactCard uses the UNIFIED download — without this
+    # entry that path 415'd ("type not downloadable") for a valid PDF artefact.
+    # The unified route is owner-only (send_file of pdf_path), identical to the
+    # dedicated route's body, so this is a safe parity add.
+    "living_mirror":          ("application/pdf", "pdf"),
 }
 
 
@@ -1637,7 +1643,7 @@ from services.artifacts.kpi_dashboard_service import (  # noqa: E402
 
 @artifacts_bp.route("/kpi-dashboard/preview", methods=["GET"])
 @api_auth
-@require_tier("pro")
+@require_tier("premium")
 def kpi_dashboard_preview():
     """Generate (don't email) the current KPI snapshot for the caller.
 
@@ -1702,7 +1708,7 @@ from services.artifacts.self_audit_service import (  # noqa: E402
 
 @artifacts_bp.route("/self-audit/preview", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def self_audit_preview():
     """Generate (don't email) a preview Self Audit for the caller.
 
@@ -1936,7 +1942,7 @@ from services.artifacts.burn_rate_service import (  # noqa: E402
 
 @artifacts_bp.route("/burn-rate/preview", methods=["GET"])
 @api_auth
-@require_tier("pro")
+@require_tier("premium")
 def burn_rate_preview():
     """Generate (don't email) a preview Burn Rate for the caller.
 
@@ -1958,7 +1964,7 @@ def burn_rate_preview():
 
 @artifacts_bp.route("/burn-rate/download", methods=["GET"])
 @api_auth
-@require_tier("pro")
+@require_tier("premium")
 def burn_rate_download_latest():
     """Stream the most recent Burn Rate PDF for the caller. Owner-only.
 
@@ -2050,7 +2056,7 @@ from services.artifacts.credit_rating_service import (  # noqa: E402
 
 @artifacts_bp.route("/credit-rating/preview", methods=["GET"])
 @api_auth
-@require_tier("pro")
+@require_tier("premium")
 def credit_rating_preview():
     """Generate (don't email) a preview Credit Rating for the caller.
 
@@ -2107,7 +2113,7 @@ from services.artifacts.dividend_income_service import (  # noqa: E402
 
 @artifacts_bp.route("/dividend-income/preview", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def dividend_income_preview():
     """Generate (don't email) a preview dividend statement for the caller.
 
@@ -2126,7 +2132,7 @@ def dividend_income_preview():
 
 @artifacts_bp.route("/dividend-income/download", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def dividend_income_download_latest():
     """Stream the most recent Dividend Statement PDF for the caller.
 
@@ -2321,7 +2327,7 @@ from services.artifacts.risk_board_service import (  # noqa: E402
 
 @artifacts_bp.route("/risk-board/preview", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def risk_board_preview():
     """Generate (don't email) a preview Risk Board deck for the caller.
 
@@ -2343,7 +2349,7 @@ def risk_board_preview():
 
 @artifacts_bp.route("/risk-board/download", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def risk_board_download_latest():
     """Stream the caller's most recent Risk Board PDF. Owner-only.
 
@@ -2428,10 +2434,13 @@ def risk_board_trigger():
             # matched nobody, and premium_plus / founding_lifetime (the highest-
             # paying cohorts) were excluded — exactly the drift _tiers.py exists
             # to prevent.
-            from services.artifacts._tiers import PAID_TIERS_PREMIUM_AND_UP
+            # 2026-06-10 B2 tier alignment: Risk Board is sold as a PRO artifact
+            # on the pricing page — the cron service moved to PRO_AND_UP, so the
+            # force-fire fan-out must match (one tier truth per artifact).
+            from services.artifacts._tiers import PAID_TIERS_PRO_AND_UP
             paid = (
                 _User.query
-                .filter(_User.subscription_tier.in_(list(PAID_TIERS_PREMIUM_AND_UP)))
+                .filter(_User.subscription_tier.in_(list(PAID_TIERS_PRO_AND_UP)))
                 .all()
             )
             notified = 0
@@ -2468,7 +2477,7 @@ from services.artifacts.portfolio_segment_service import (  # noqa: E402
 
 @artifacts_bp.route("/portfolio-segment/preview", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def portfolio_segment_preview():
     """Generate (don't email) a preview Portfolio Segment report for the caller.
 
@@ -2488,7 +2497,7 @@ def portfolio_segment_preview():
 
 @artifacts_bp.route("/portfolio-segment/download", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def portfolio_segment_download_latest():
     """Stream the caller's most recent Portfolio Segment PDF. Owner-only.
 
@@ -2738,7 +2747,7 @@ from services.artifacts.insider_mirror_service import (  # noqa: E402
 
 @artifacts_bp.route("/insider-mirror/preview", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def insider_mirror_preview():
     """Generate (don't email) a preview Insider Mirror for the caller.
 
@@ -2759,7 +2768,7 @@ def insider_mirror_preview():
 
 @artifacts_bp.route("/insider-mirror/download", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def insider_mirror_download_latest():
     """Stream the caller's most recent Insider Mirror PDF. Owner-only."""
     artefact = (
@@ -2973,7 +2982,7 @@ from services.artifacts.quarterly_self_report_service import (  # noqa: E402
 
 @artifacts_bp.route("/quarterly-self/preview", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def quarterly_self_report_preview():
     """Generate (don't email) a preview Quarterly Self Report for the caller.
 
@@ -3007,7 +3016,7 @@ def quarterly_self_report_preview():
 
 @artifacts_bp.route("/quarterly-self/download", methods=["GET"])
 @api_auth
-@require_tier("premium")
+@require_tier("pro")
 def quarterly_self_report_download_latest():
     """Stream the caller's most recent Quarterly Self Report PDF. Owner-only."""
     artefact = (
@@ -3173,22 +3182,40 @@ _ARTIFACT_DISPATCH: dict[str, tuple] = {
 # map a free user could POST {"type":"weekly_memo"} and receive a paid artifact
 # (tier bypass / revenue leak). Types absent here are intentionally free
 # (brag_card / monthly_brag = viral; sp500_backtest = universal observation).
+# 2026-06-11 B2 tier alignment: tiers follow the PRICING PAGE
+# (frontend/src/app/pricing/page.tsx) — locked by
+# tests/test_artifact_tier_alignment.py.
 _ARTIFACT_MIN_TIER: dict[str, str] = {
     "weekly_memo": "pro",
     "earnings_prebrief": "pro",
-    "kpi_dashboard": "pro",
-    "burn_rate": "pro",
-    "credit_rating": "pro",
+    "kpi_dashboard": "premium",
+    "burn_rate": "premium",
+    "credit_rating": "premium",
     "dd_checklist": "pro",
-    "self_audit": "premium",
-    "risk_board": "premium",
+    "self_audit": "pro",
+    "risk_board": "pro",
     "year_end_letter": "premium",
-    "quarterly_self_report": "premium",
-    "dividend_income": "premium",
+    "quarterly_self_report": "pro",
+    "dividend_income": "pro",
     "monthly_finance": "premium",
     "capital_allocation": "premium",
-    "insider_mirror": "premium",
-    "portfolio_segment": "premium",
+    "insider_mirror": "pro",
+    "portfolio_segment": "pro",
+}
+
+# Legacy request aliases — normalised to a canonical dispatch key BEFORE the
+# dispatch/tier/empty/persist pipeline, so gating and the persisted
+# Artifact.type always use the canonical slug. NOT part of _ARTIFACT_MIN_TIER
+# (the tier-alignment gate test pins that map 1:1 to the pricing page).
+#
+# risk_report → risk_board (2026-06-11): the reports-v2 "Risk Note" tile
+# shipped posting type="risk_report" against a service that never existed
+# (SPEC §4 documented it as a GAP → guaranteed 400). The tile now requests
+# "risk_board" — the existing deck already carries the advertised VaR /
+# drawdown / tail-risk / sector-concentration content. This alias keeps
+# already-open tabs working through the deploy window.
+_ARTIFACT_TYPE_ALIASES: dict[str, str] = {
+    "risk_report": "risk_board",
 }
 
 # Interactive types — frontend redirects to a dedicated UI instead of
@@ -3349,6 +3376,9 @@ def artifacts_generate():
     """
     body = request.get_json(silent=True) or {}
     artifact_type = (body.get("type") or "").strip().lower()
+    # Canonicalise legacy aliases first — every later stage (dispatch, tier
+    # gate, empty checks, persistence, response echo) sees the real type.
+    artifact_type = _ARTIFACT_TYPE_ALIASES.get(artifact_type, artifact_type)
     params = body.get("params") or {}
 
     if not isinstance(params, dict):

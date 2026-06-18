@@ -48,7 +48,7 @@ const MarketTicker = dynamic(
         aria-hidden
         style={{
           height: 32,
-          borderBottom: "1px solid rgba(139, 111, 71, 0.22)",
+          borderBottom: "1px solid rgba(var(--pq-bronze-wash-rgb), 0.22)",
           backgroundColor: "rgba(5, 5, 5, 0.78)",
         }}
       />
@@ -82,7 +82,7 @@ export function Hero() {
               aria-hidden
               className="h-px"
               style={{
-                backgroundColor: "rgba(139, 111, 71, 0.7)",
+                backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)",
                 width: 28,
               }}
             />
@@ -105,13 +105,11 @@ export function Hero() {
             className="pq-hero-h1 mb-9 font-serif font-normal"
           >
             {t("landing.hero.h1Part1")}{" "}
-            {/* Korean has no real Playfair italic → browser synthesizes a
-                slanted fallback that clashes with the upright first half
-                ("폰트 개별로"). v3 bans synthetic italic, so for ko we keep the
-                bronze accent but drop the slant; en keeps true Playfair italic. */}
+            {/* Accent word: bronze, upright. Decorative italic removed
+                globally per CEO 2026-06-15 ("이탤릭 이상한거 다 빼라"). */}
             <em
               className="pq-cfo-word"
-              style={{ fontStyle: locale === "ko" ? "normal" : "italic" }}
+              style={{ fontStyle: "normal" }}
             >
               {t("landing.hero.h1Italic")}
             </em>
@@ -151,7 +149,7 @@ export function Hero() {
               rel="noopener"
               className="inline-flex items-center gap-2 rounded-[2px] border px-6 py-3.5 text-sm font-medium tracking-wide transition-colors hover:bg-[var(--pq-ivory-line-faint)]"
               style={{
-                borderColor: "rgba(139, 111, 71, 0.5)",
+                borderColor: "rgba(var(--pq-bronze-wash-rgb), 0.5)",
                 color: "var(--pq-bronze-light)",
               }}
             >
@@ -163,13 +161,13 @@ export function Hero() {
           {/* Disclaimer — same italic Playfair micro-copy seen on every
               /features page footer + the disclaimer-banner. */}
           <p
-            className="mt-12 max-w-2xl border-t pt-6 font-serif text-[11px] italic leading-relaxed tracking-wide"
+            className="mt-12 max-w-2xl border-t pt-6 font-serif text-[11px] leading-relaxed tracking-wide"
             style={{
               borderColor: "var(--pq-border)",
               color: "var(--pq-muted)",
             }}
           >
-            <span style={{ color: "rgba(139, 111, 71, 0.9)" }}>— </span>
+            <span style={{ color: "rgba(var(--pq-bronze-wash-rgb), 0.9)" }}>— </span>
             {t("landing.hero.disclaimer")}
           </p>
         </div>

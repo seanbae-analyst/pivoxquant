@@ -81,6 +81,13 @@ class PreTradeReflection(db.Model):
     proceeded_at = db.Column(db.DateTime, nullable=True)
     cancelled_at = db.Column(db.DateTime, nullable=True)
     auto_extended_reason = db.Column(db.String(50), nullable=True)
+    # record-as-spine Phase 2 (2026-06-10): JSON snapshot of the observation
+    # surfaces at the moment the reflection was opened — the ticker's own
+    # signal label/score (POSITIVE/NEGATIVE/NEUTRAL — the legal surface),
+    # VIX, last-hour move. Factual record only; never rec_*/target fields
+    # (§17). Best-effort: null when collection failed or found nothing.
+    # Mirrored in migrations/versions/049_reflection_observed_context.py.
+    observed_context_json = db.Column(db.Text, nullable=True)
     created_at = db.Column(
         db.DateTime,
         nullable=False,
@@ -152,6 +159,18 @@ class PreTradeReflection(db.Model):
             "proceeded_at": self.proceeded_at.isoformat() if self.proceeded_at else None,
             "cancelled_at": self.cancelled_at.isoformat() if self.cancelled_at else None,
             "auto_extended_reason": self.auto_extended_reason,
+            "observed_context": self._observed_context(),
             "seconds_remaining": self.seconds_remaining(now),
             "status": self.status_label(now),
         }
+
+    def _observed_context(self) -> dict | None:
+        """Parsed ``observed_context_json`` — or None on absence/corruption."""
+        if not self.observed_context_json:
+            return None
+        try:
+            import json
+            v = json.loads(self.observed_context_json)
+            return v if isinstance(v, dict) and v else None
+        except Exception:
+            return None

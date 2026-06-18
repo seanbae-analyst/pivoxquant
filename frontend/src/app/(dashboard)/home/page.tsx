@@ -22,7 +22,14 @@ import HomePageV2 from "./_v2/page-v2";
 // SSR remains enabled (default) so behavior is unchanged.
 const HomePageV1 = dynamic(() => import("./_v1/page-v1"));
 
+// 거울 promotion (2026-06-15): when NEXT_PUBLIC_MIRROR_HOME=true the
+// behavioural Mirror becomes the home surface (strategy: mirror as spine).
+// Default off → the existing V1/V2 home is unchanged in prod until the env
+// var is flipped, so this is a one-variable, fully reversible promotion.
+const MirrorHome = dynamic(() => import("../mirror/page"));
+
 export default function HomePage() {
+  if (process.env.NEXT_PUBLIC_MIRROR_HOME === "true") return <MirrorHome />;
   const v2Enabled = process.env.NEXT_PUBLIC_HOME_V2 === "true";
   return v2Enabled ? <HomePageV2 /> : <HomePageV1 />;
 }

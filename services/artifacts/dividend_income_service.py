@@ -60,7 +60,7 @@ _DEFAULT_STORAGE_DIR = (
     Path(__file__).resolve().parents[2] / "artifacts" / "dividend_income"
 )
 # Shared set so premium_plus / founding_lifetime are never silently dropped.
-from ._tiers import PAID_TIERS_PREMIUM_AND_UP as _PAID_TIERS  # noqa: E402
+from ._tiers import PAID_TIERS_PRO_AND_UP as _PAID_TIERS  # noqa: E402
 from services.artifacts._i18n import localize_ctx, resolve_locale  # Wave F i18n
 from services.artifacts._render import try_import_weasyprint as _try_import_weasyprint
 from services.artifacts._render import try_import_jinja as _try_import_jinja
@@ -438,10 +438,11 @@ class DividendIncomeService:
         ann_yield = data.get("annual_yield_est") or {}
         forward = data.get("forward_totals") or {}
 
+        from services.artifacts._pricing import finite_or_none
+
         def _money(v: Any, *, signed: bool = False) -> str:
-            try:
-                n = float(v)
-            except (TypeError, ValueError):
+            n = finite_or_none(v)
+            if n is None:
                 return "—"
             sign = ("+" if n >= 0 else "−") if signed else ""
             an = abs(n)
@@ -452,10 +453,10 @@ class DividendIncomeService:
             return f"{sign}${an:,.2f}"
 
         def _pct(v: Any) -> str:
-            try:
-                return f"{float(v):.2f}%"
-            except (TypeError, ValueError):
+            n = finite_or_none(v)
+            if n is None:
                 return "—"
+            return f"{n:.2f}%"
 
         # KPI block — uses received_totals + ann_yield + forward
         gross_usd = totals.get("gross_usd")
