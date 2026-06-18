@@ -20,6 +20,13 @@
       "runtimeArgs": ["-c", "source $HOME/.nvm/nvm.sh && cd frontend && npx next start --port $PORT"],
       "port": 3100,
       "autoPort": true
+    },
+    {
+      "name": "frontend-prod-utc",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "source $HOME/.nvm/nvm.sh && cd frontend && TZ=UTC npx next start --port $PORT"],
+      "port": 3200,
+      "autoPort": true
     }
   ]
 }

@@ -134,20 +134,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // for the network round-trip, mirroring the previous setUser(null) behavior.
   const [logoutPending, setLogoutPending] = useState(false);
 
-  // DEMO mode (portfolio showcase): inject a fixed user so the dashboard
-  // renders with no login. Flag-gated — a no-op when the env var is unset.
+  // DEMO mode (portfolio showcase): inject a fixed user so the dashboard renders
+  // with no login. Flag-gated — a no-op when the env var is unset.
+  //
+  // Render the authenticated shell CLIENT-ONLY: stay "loading" until mounted, so
+  // SSR emits the skeleton — exactly like the real app's unauthenticated SSR.
+  // Rendering authenticated content on the SERVER would bake in server-timezone
+  // dates (Vercel = UTC) that mismatch the viewer's client (KST / any TZ) on
+  // hydration → React #418 → hydration aborts → SWR never runs → data frozen.
+  // Deferring to post-mount makes SSR + the first client render both the
+  // skeleton, so hydration matches and the data then fills client-side.
   const demo = isDemoMode();
+  const [demoMounted, setDemoMounted] = useState(false);
+  useEffect(() => {
+    if (demo) setDemoMounted(true);
+  }, [demo]);
 
   const user: User | null = demo
-    ? DEMO_USER
+    ? demoMounted
+      ? DEMO_USER
+      : null
     : logoutPending
       ? null
       : data?.authenticated
         ? (data.user ?? null)
         : null;
 
-  // Match prior semantics: loading is true only on the very first fetch.
-  const loading = demo ? false : isLoading && !data;
+  // Match prior semantics: loading is true only on the very first fetch. In demo
+  // mode, stay loading until mounted so the authenticated shell is client-only.
+  const loading = demo ? !demoMounted : isLoading && !data;
 
   // Track "this browser has held a session" so apiFetch can disambiguate
   // a real expiry from a fresh-guest 401 when redirecting to /login.
