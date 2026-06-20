@@ -1,9 +1,10 @@
 """
 PivoxQuant — FMP (Financial Modeling Prep) Service
 Official FMP API for market data.
-Premium $29 plan: 750 req/min, no daily cap. We keep an env-configurable
-soft daily limit (FMP_DAILY_SOFT_LIMIT, default 10000) as a runaway-usage
-safety net. Set FMP_DAILY_SOFT_LIMIT=250 if downgrading to Starter $14.
+Default tuned for the FMP FREE tier (250 calls/day) so the repo runs as-is on
+a free key. FMP_DAILY_SOFT_LIMIT is env-configurable — it doubles as the
+free-tier cap and a runaway-usage safety net. Set FMP_DAILY_SOFT_LIMIT=10000
+on a paid plan (Premium $29: 750 req/min, no daily cap).
 """
 
 import os
@@ -19,9 +20,10 @@ logger = logging.getLogger(__name__)
 FMP_BASE = "https://financialmodelingprep.com/stable"
 FMP_KEY = os.environ.get("FMP_API_KEY", "")
 
-# FMP Premium $29 plan: 750 req/min, no daily cap. We keep a soft daily limit
-# as a safety net against runaway usage (bug/attack) — env-configurable.
-_FMP_DAILY_SOFT_LIMIT = int(os.environ.get("FMP_DAILY_SOFT_LIMIT", "10000"))
+# FMP FREE tier: 250 calls/day. Default tuned to free so a fresh clone runs on
+# a free key out of the box; doubles as a runaway-usage safety net. Set
+# FMP_DAILY_SOFT_LIMIT=10000 on a paid plan (Premium $29: 750 req/min, no cap).
+_FMP_DAILY_SOFT_LIMIT = int(os.environ.get("FMP_DAILY_SOFT_LIMIT", "250"))
 _FMP_BUDGET_STALE_PCT = float(os.environ.get("FMP_BUDGET_STALE_PCT", "0.88"))  # 88% → stale fallback
 _FMP_BUDGET_HARD_STOP_PCT = float(os.environ.get("FMP_BUDGET_HARD_STOP_PCT", "0.99"))  # 99% → block
 
