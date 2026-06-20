@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import LandingV2 from "@/components/landing/landing-v2";
+import { isDemoMode } from "@/lib/demo";
 
 /**
  * Root LoadingScreen — Vantablack editorial treatment.
@@ -60,13 +61,21 @@ function LoadingScreen() {
 export default function Page() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const demo = isDemoMode();
 
   useEffect(() => {
-    if (!loading && user) {
+    // Real app: send a logged-in user straight to /home. In DEMO the demo user
+    // is always "logged in", so skipping this keeps the landing as the public
+    // entry — its CTAs (/signup, /login) then redirect onward to /home.
+    if (!demo && !loading && user) {
       router.replace("/home");
     }
-  }, [user, loading, router]);
+  }, [demo, user, loading, router]);
 
+  // DEMO (portfolio showcase): landing IS the front door. Render it the same on
+  // SSR + client (independent of user) so there's no redirect and no hydration
+  // divergence.
+  if (demo) return <LandingV2 />;
   if (loading) return <LoadingScreen />;
   if (user) return <LoadingScreen />;
 
