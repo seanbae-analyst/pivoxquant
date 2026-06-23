@@ -505,6 +505,27 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // DEMO mode (portfolio showcase): never open a real EventSource. It is not
+    // `fetch`, so the installDemoFetch() global patch (lib/demo.ts) can't
+    // intercept it — the stream would 500-loop against the absent backend,
+    // raising the red "연결 실패" banner and flooding the network tab with
+    // failed requests. Instead present a static "connected" state so
+    // <TopTicker/> reads "● Live" and <RealtimeStatusBanner/> stays hidden
+    // (connected && !failed → null). Canned position prices already arrive via
+    // /api/portfolio; the realtime overlay is purely decorative in the demo.
+    if (isDemoMode()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState((s) => ({
+        ...s,
+        connected: true,
+        streamActive: true,
+        failed: false,
+        limitExceeded: false,
+        lastUpdate: Date.now(),
+      }));
+      return;
+    }
+
     /** Explicit disconnect — used by logout / no-positions / hidden-tab /
      *  unmount branches. Aborts the AbortController so a queued reconnect
      *  bails out, closes any open EventSource, and cancels a pending
