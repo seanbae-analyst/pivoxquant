@@ -785,14 +785,17 @@
   },
   "detail": {
     "currentPrice": "현재가",
-    "signal": "Signal",
+    "signal": "신호",
     "composite": "종합",
     "compositeTooltip": "종합 점수 — 4개 관찰 지표의 복합 평가입니다.",
+    "watchlistAdd": "관심목록 추가",
+    "watchlistIn": "관심목록에 있음",
+    "usListed": "미국 상장",
     "pillar": {
       "technical": "기술적",
       "fundamental": "기본적",
       "sentiment": "심리",
-      "quant": "Quant"
+      "quant": "퀀트"
     }
   },
   "swot": {
