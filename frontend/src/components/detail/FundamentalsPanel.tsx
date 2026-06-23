@@ -106,11 +106,11 @@ export function FundamentalsPanel({
             {/* Column 1 — Valuation · Earnings */}
             <div>
               <StatRow
-                label="P/E ratio"
+                label="PER"
                 value={statVal(num(s?.pe_ratio) ? Number(s!.pe_ratio).toFixed(1) : "—")}
               />
               <StatRow
-                label="EPS (ttm)"
+                label="EPS (최근 4분기)"
                 value={statVal(
                   num(s?.eps)
                     ? krw
@@ -119,16 +119,16 @@ export function FundamentalsPanel({
                     : "—",
                 )}
               />
-              <StatRow label="Market cap" value={statVal(fmtMcap(mcap, krw))} />
+              <StatRow label="시가총액" value={statVal(fmtMcap(mcap, krw))} />
               <StatRow
-                label="Beta (vs S&P 500)"
+                label="베타 (S&P 500 대비)"
                 value={statVal(num(s?.beta) ? Number(s!.beta).toFixed(2) : "—")}
               />
             </div>
             {/* Column 2 — Liquidity · Quality */}
             <div>
               <StatRow
-                label="Avg volume (3mo)"
+                label="평균 거래량 (3개월)"
                 value={statVal(
                   num(s?.avg_volume)
                     ? (s!.avg_volume as number).toLocaleString()
@@ -136,7 +136,7 @@ export function FundamentalsPanel({
                 )}
               />
               <StatRow
-                label="Profit margin"
+                label="순이익률"
                 value={statVal(
                   num(s?.profit_margin)
                     ? `${(Number(s!.profit_margin) * 100).toFixed(1)}%`
@@ -151,7 +151,7 @@ export function FundamentalsPanel({
                 }
               />
               <StatRow
-                label="Revenue growth (YoY)"
+                label="매출 성장률 (전년比)"
                 value={statVal(
                   num(s?.revenue_growth)
                     ? `${(Number(s!.revenue_growth) * 100).toFixed(1)}%`
@@ -166,7 +166,7 @@ export function FundamentalsPanel({
                 }
               />
               <StatRow
-                label="Debt / Equity"
+                label="부채비율"
                 value={statVal(num(s?.debt_equity) ? Number(s!.debt_equity).toFixed(2) : "—")}
               />
             </div>
