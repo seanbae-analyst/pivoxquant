@@ -788,6 +788,9 @@
     "signal": "Signal",
     "composite": "Composite",
     "compositeTooltip": "Composite score — 4-pillar observational blend.",
+    "watchlistAdd": "Add to watchlist",
+    "watchlistIn": "In watchlist",
+    "usListed": "US Listed",
     "pillar": {
       "technical": "Technical",
       "fundamental": "Fundamental",

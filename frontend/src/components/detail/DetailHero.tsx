@@ -303,12 +303,12 @@ export function DetailHero(props: DetailHeroProps) {
             {inWatchlist ? (
               <>
                 <Check className="h-3.5 w-3.5" />
-                In watchlist
+                {t("detail.watchlistIn")}
               </>
             ) : (
               <>
                 <Plus className="h-3.5 w-3.5" />
-                Add to watchlist
+                {t("detail.watchlistAdd")}
               </>
             )}
           </button>
@@ -363,7 +363,7 @@ export function DetailHero(props: DetailHeroProps) {
                 ? rawTicker.toUpperCase().endsWith(".KQ")
                   ? "KRW · KOSDAQ"
                   : "KRW · KOSPI"
-                : "USD · US Listed"}
+                : `USD · ${t("detail.usListed")}`}
             </span>
             {(() => {
               const { num, suffix } = splitMcap(fmtMcap(mcap, krw));
