@@ -241,6 +241,45 @@ def test_smtp_fallback_when_no_sendgrid(app, make_user, monkeypatch):
             smtp_instance.send_message.assert_called_once()
 
 
+def test_smtp_from_override_pins_from_header(app, make_user, monkeypatch):
+    """SMTP_FROM pins the From to the relay account (Gmail gotcha) — without it,
+    Gmail rewrites a mismatched domain From and deliverability suffers."""
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+
+    user = make_user(email="smtp-from@test.com")
+    monkeypatch.delenv("SENDGRID_API_KEY", raising=False)
+    monkeypatch.setenv("SMTP_HOST", "smtp.gmail.com")
+    monkeypatch.setenv("SMTP_USER", "seanbae1521@gmail.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "app-pw")
+    monkeypatch.setenv("SMTP_FROM", "seanbae1521@gmail.com")
+
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        from datetime import datetime
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
+        smtp_instance = MagicMock()
+        smtp_cm = MagicMock()
+        smtp_cm.__enter__.return_value = smtp_instance
+        smtp_cm.__exit__.return_value = False
+
+        with patch("smtplib.SMTP", MagicMock(return_value=smtp_cm)):
+            sent = EmailSender().send(
+                u,
+                subject="hi",
+                html_body="<p>body</p>",
+                from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                from_default="reports@pivoxquant.com",  # domain From, would be rewritten by Gmail
+            )
+            assert sent is True
+            msg = smtp_instance.send_message.call_args.args[0]
+            # From header carries the relay account, not the domain default.
+            assert "seanbae1521@gmail.com" in msg["From"]
+            assert "reports@pivoxquant.com" not in msg["From"]
+
+
 def test_no_transport_returns_false(app, make_user, monkeypatch, caplog):
     """No env vars → log info + return False; never raises."""
     from extensions import db
