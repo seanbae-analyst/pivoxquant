@@ -255,6 +255,15 @@ class EmailSender:
         # a reused EmailSender instance never reports a stale id from a prior
         # call. Set only when a SendGrid 2xx returns an X-Message-Id.
         self.last_message_id: str | None = None
+        # Why the most recent ``send()`` returned False, so queue-draining
+        # callers can distinguish a PERMANENT suppression (consent / opt-out /
+        # preference — must never be retried, 정통망법 §50) from a TRANSIENT
+        # provider outage (all transports down — safe to retry later). Stays
+        # ``None`` on success and on every consent/preference gate below; set to
+        # ``"provider_unavailable"`` only when the SendGrid→Brevo→SMTP cascade is
+        # exhausted. Callers that don't read it are unaffected (return type and
+        # all gate behaviour are unchanged).
+        self.last_failure_reason: str | None = None
 
         # ── 1a. simulated-user guard (Continuous User Simulation Phase 1) ──
         # ``User.is_simulated`` (migration 032) tags synthetic test users the
@@ -495,6 +504,8 @@ class EmailSender:
                     "SMTP send failed for user %s",
                     getattr(user, "id", "?"),
                 )
+                # Last transport down too — transient, retryable by the caller.
+                self.last_failure_reason = "provider_unavailable"
                 return False
 
         # ── 5. no transport configured ─────────────────────────────────
@@ -502,6 +513,9 @@ class EmailSender:
             "no email transport configured; skipping send for user %s",
             getattr(user, "id", "?"),
         )
+        # Every configured transport was exhausted (or none configured) — this
+        # is a provider outage, NOT a consent suppression. Retryable.
+        self.last_failure_reason = "provider_unavailable"
         return False
 
     # ── private transport helpers ──────────────────────────────────────

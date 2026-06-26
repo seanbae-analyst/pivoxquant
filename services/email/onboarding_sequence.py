@@ -335,6 +335,15 @@ def _step_for(slug: str) -> _Step | None:
     return None
 
 
+# Provider-outage retry window. When every email transport is down, a queued
+# onboarding row is left pending so a later tick re-sends it once a provider
+# recovers (the designed SendGrid→Brevo failover). There is no attempts column,
+# so the retry is bounded by TIME: once a row has been overdue longer than this,
+# the dispatcher gives up (marks it skipped) rather than looping forever on a
+# permanently undeliverable address.
+_PROVIDER_RETRY_WINDOW = timedelta(days=3)
+
+
 def _send_one(row: Any) -> bool:
     """Render + send one queued email. Returns True on provider accept.
 
@@ -346,6 +355,12 @@ def _send_one(row: Any) -> bool:
     """
     from services.email import EmailSender
     from services.email.sender import EmailCategory
+
+    # Transient (non-persisted) marker telling the dispatcher WHY a False was
+    # returned. Default = permanent skip (bad config / missing user) — every
+    # early return below leaves it None. Only a provider-cascade exhaustion
+    # overwrites it to "provider_unavailable" (→ dispatcher retries later).
+    row._send_failure_reason = None
 
     step = _step_for(row.email_type)
     if step is None:
@@ -381,7 +396,8 @@ def _send_one(row: Any) -> bool:
         )
         category = EmailCategory.INFORMATION
 
-    return EmailSender().send(
+    sender = EmailSender()
+    ok = sender.send(
         user,
         subject=step.subject,
         html_body=html_body,
@@ -389,6 +405,11 @@ def _send_one(row: Any) -> bool:
         from_default="reports@pivoxquant.com",
         email_category=category,
     )
+    if not ok:
+        # "provider_unavailable" → all transports down (retryable); anything
+        # else (consent/opt-out/preference) stays None → permanent skip.
+        row._send_failure_reason = sender.last_failure_reason
+    return ok
 
 
 def dispatch_due(now: datetime | None = None) -> dict[str, int]:
@@ -429,7 +450,22 @@ def _dispatch_due_locked(now: datetime | None = None) -> dict[str, int]:
         "skipped_no_user": 0,
         "skipped_no_consent": 0,
         "skipped_error": 0,
+        # Provider-outage handling (silent-drop fix). ``deferred_provider`` =
+        # rows left pending for a later retry; ``skipped_provider_expired`` =
+        # rows still undeliverable past the retry window, closed permanently.
+        "deferred_provider": 0,
+        "skipped_provider_expired": 0,
     }
+
+    # Naive-UTC "now" for the overdue calc below — mirrors pending_due's
+    # coercion so the comparison against the naive ``scheduled_send_at`` column
+    # is apples-to-apples.
+    if now is None:
+        now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    elif now.tzinfo is not None:
+        now_naive = now.astimezone(timezone.utc).replace(tzinfo=None)
+    else:
+        now_naive = now
 
     # Type-filter: dispatch_due owns ONLY the onboarding SEQUENCE slugs.
     # Other queues (retention_sequence's retention_d7 / retention_d30,
@@ -456,15 +492,27 @@ def _dispatch_due_locked(now: datetime | None = None) -> dict[str, int]:
                 continue
 
             ok = _send_one(row)
+            reason = getattr(row, "_send_failure_reason", None)
             if ok:
                 row.mark_sent()
                 stats["sent"] += 1
+            elif reason == "provider_unavailable":
+                # Every transport was down — transient, NOT a consent refusal.
+                # Leave the row pending (sent_at + skipped_reason both NULL) so
+                # the next tick re-sends it once a provider recovers. This is
+                # the designed SendGrid→Brevo failover that was previously
+                # silently dropped. Bounded by time so a permanently
+                # undeliverable row can't loop forever.
+                if (now_naive - row.scheduled_send_at) <= _PROVIDER_RETRY_WINDOW:
+                    stats["deferred_provider"] += 1
+                else:
+                    row.mark_skipped("provider_unavailable_expired")
+                    stats["skipped_provider_expired"] += 1
             else:
-                # ``_send_one`` returns False for any non-success path
-                # (no user, no email, opt-out, consent missing, provider
-                # exhausted). We collapse all into ``no_consent`` /
-                # ``no_user`` based on a cheap re-check so ops can
-                # distinguish without re-running.
+                # Permanent: no user / no email / opt-out / consent missing.
+                # Never retried — 정통망법 §50 default-deny + opt-out must not be
+                # re-attempted. Cheap re-check splits no_user vs consent so ops
+                # can distinguish without re-running.
                 from models import User
                 user = db.session.get(User, row.user_id)
                 if user is None or not getattr(user, "email", None):

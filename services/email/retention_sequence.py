@@ -383,6 +383,11 @@ def _pending_retention_rows(now: datetime | None, limit: int = 200) -> list[Any]
     )
 
 
+# Mirrors onboarding_sequence: a provider-outage row is retried (left pending)
+# only until this long past its due time, then closed (no attempts column).
+_PROVIDER_RETRY_WINDOW = timedelta(days=3)
+
+
 def _send_one(row: Any) -> bool:
     """Render + send one queued retention email. Returns True on accept.
 
@@ -395,6 +400,10 @@ def _send_one(row: Any) -> bool:
     from services.email_token import build_unsubscribe_url
     from extensions import db
     from models import User
+
+    # Transient marker for the dispatcher: default = permanent skip; only a
+    # provider-cascade exhaustion overwrites it to "provider_unavailable".
+    row._send_failure_reason = None
 
     step = _step_for(row.email_type)
     if step is None:
@@ -431,7 +440,8 @@ def _send_one(row: Any) -> bool:
     _assert_legal_safe(html_body,    where=f"retention/{step.slug}/html")
     _assert_legal_safe(txt_body,     where=f"retention/{step.slug}/txt")
 
-    return EmailSender().send(
+    sender = EmailSender()
+    ok = sender.send(
         user,
         subject=step.subject,
         html_body=html_body,
@@ -439,6 +449,11 @@ def _send_one(row: Any) -> bool:
         from_default="reports@pivoxquant.com",
         email_category=EmailCategory.MARKETING,
     )
+    if not ok:
+        # "provider_unavailable" → all transports down (retryable); consent /
+        # revoke / opt-out stays None → permanent skip.
+        row._send_failure_reason = sender.last_failure_reason
+    return ok
 
 
 def dispatch_retention(now: datetime | None = None) -> dict[str, int]:
@@ -480,7 +495,18 @@ def _dispatch_retention_locked(now: datetime | None = None) -> dict[str, int]:
         "skipped_no_user": 0,
         "skipped_no_consent": 0,
         "skipped_error": 0,
+        # Provider-outage handling (silent-drop fix), mirrors onboarding.
+        "deferred_provider": 0,
+        "skipped_provider_expired": 0,
     }
+
+    # Naive-UTC "now" for the overdue calc in the provider-outage branch.
+    if now is None:
+        now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    elif now.tzinfo is not None:
+        now_naive = now.astimezone(timezone.utc).replace(tzinfo=None)
+    else:
+        now_naive = now
 
     rows = _pending_retention_rows(now=now)
     stats["due"] = len(rows)
@@ -506,10 +532,22 @@ def _dispatch_retention_locked(now: datetime | None = None) -> dict[str, int]:
                 continue
 
             ok = _send_one(row)
+            reason = getattr(row, "_send_failure_reason", None)
             if ok:
                 row.mark_sent()
                 stats["sent"] += 1
+            elif reason == "provider_unavailable":
+                # All transports down — transient. Leave the row pending so a
+                # later tick re-sends it once a provider recovers (mirrors the
+                # §61의2 night-gate's leave-pending path). Bounded by time.
+                if (now_naive - row.scheduled_send_at) <= _PROVIDER_RETRY_WINDOW:
+                    stats["deferred_provider"] += 1
+                else:
+                    row.mark_skipped("provider_unavailable_expired")
+                    stats["skipped_provider_expired"] += 1
             else:
+                # Permanent: no user / consent missing / revoked. Never retried
+                # (§50 / §49 / §62).
                 from models import User
                 user = db.session.get(User, row.user_id)
                 if user is None or not getattr(user, "email", None):
