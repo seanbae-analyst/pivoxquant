@@ -77,6 +77,10 @@ legal_monitor_artifacts/
 
 # Bug hunt session artifacts (transient — not meant for git)
 .bug-hunt/
+# Root bug-sweep reports are auto-generated, never committed, and have leaked a
+# transient dev secret before (beta pw) — keep them local-only. (auto-sim-reports
+# under docs/qa/ ARE deliberately tracked and are intentionally NOT ignored.)
+/BUG_SWEEP_*.md
 
 # APScheduler runtime state (Wave H) — not source-of-truth
 state/
