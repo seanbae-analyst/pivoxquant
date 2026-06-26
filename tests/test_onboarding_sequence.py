@@ -414,6 +414,125 @@ class TestDispatchDue:
             )
             assert all(r.sent_at is None for r in rows)
 
+    def test_provider_outage_defers_and_retries_then_sends(
+        self, app, make_user, monkeypatch,
+    ):
+        """Provider outage (all transports down) must NOT close the row.
+
+        Regression for the silent-drop bug: when EmailSender's cascade is
+        exhausted, ``last_failure_reason == "provider_unavailable"`` and the
+        dispatcher leaves the row pending (within the retry window) so a later
+        tick re-sends it once a provider recovers — instead of stamping
+        ``no_consent_or_provider`` and dropping it forever.
+        """
+        _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)
+        u = make_user(email="outage@test.com")
+
+        from extensions import db
+        from models import User, ScheduledEmail
+        from services.email.onboarding_sequence import (
+            schedule_onboarding, dispatch_due,
+        )
+
+        base = datetime(2026, 5, 19, 12, 0, 0)
+        with app.app_context():
+            user = db.session.get(User, u["id"])
+            schedule_onboarding(user, now=base)
+            db.session.commit()
+
+        def _provider_down(row):
+            # Mirror EmailSender surfacing an exhausted-cascade failure.
+            row._send_failure_reason = "provider_unavailable"
+            return False
+
+        # Pass 1 — provider down, welcome row exactly due (0 days overdue, well
+        # within the window): deferred, NOT closed.
+        with app.app_context(), patch(
+            "services.email.onboarding_sequence._send_one",
+            side_effect=_provider_down,
+        ):
+            stats = dispatch_due(now=base)
+        assert stats["sent"] == 0
+        assert stats["deferred_provider"] == 1
+        assert stats["skipped_no_consent"] == 0
+        with app.app_context():
+            welcome = ScheduledEmail.query.filter_by(
+                user_id=u["id"], email_type="welcome",
+            ).one()
+            assert welcome.sent_at is None
+            assert welcome.skipped_reason is None  # still pending, not dropped
+
+        # Pass 2 — still down: still deferred (proves it keeps retrying).
+        with app.app_context(), patch(
+            "services.email.onboarding_sequence._send_one",
+            side_effect=_provider_down,
+        ):
+            stats2 = dispatch_due(now=base)
+        assert stats2["deferred_provider"] == 1
+        with app.app_context():
+            welcome = ScheduledEmail.query.filter_by(
+                user_id=u["id"], email_type="welcome",
+            ).one()
+            assert welcome.sent_at is None and welcome.skipped_reason is None
+
+        # Pass 3 — provider recovers: the row finally sends.
+        with app.app_context(), patch(
+            "services.email.onboarding_sequence._send_one",
+            return_value=True,
+        ):
+            stats3 = dispatch_due(now=base)
+        assert stats3["sent"] == 1
+        with app.app_context():
+            welcome = ScheduledEmail.query.filter_by(
+                user_id=u["id"], email_type="welcome",
+            ).one()
+            assert welcome.sent_at is not None
+
+    def test_provider_outage_past_window_is_closed(
+        self, app, make_user, monkeypatch,
+    ):
+        """Past the retry window an undeliverable row is closed, not looped.
+
+        Bounds the (no-attempts-column) retry by time so a permanently
+        undeliverable address can't be re-attempted every tick forever.
+        """
+        _enable_flag(monkeypatch)
+        _disable_paid_plans(monkeypatch)
+        u = make_user(email="expired@test.com")
+
+        from extensions import db
+        from models import User, ScheduledEmail
+        from services.email.onboarding_sequence import (
+            schedule_onboarding, dispatch_due,
+        )
+
+        base = datetime(2026, 5, 19, 12, 0, 0)
+        with app.app_context():
+            user = db.session.get(User, u["id"])
+            schedule_onboarding(user, now=base)
+            db.session.commit()
+
+        def _provider_down(row):
+            row._send_failure_reason = "provider_unavailable"
+            return False
+
+        # +10 days: welcome (10d overdue) and d3 (7d overdue) both exceed the
+        # 3-day window → closed as provider_unavailable_expired.
+        with app.app_context(), patch(
+            "services.email.onboarding_sequence._send_one",
+            side_effect=_provider_down,
+        ):
+            stats = dispatch_due(now=base + timedelta(days=10))
+        assert stats["deferred_provider"] == 0
+        assert stats["skipped_provider_expired"] == 2
+        with app.app_context():
+            rows = ScheduledEmail.query.filter_by(user_id=u["id"]).all()
+            assert all(
+                r.skipped_reason == "provider_unavailable_expired" for r in rows
+            )
+            assert all(r.sent_at is None for r in rows)
+
 
 # ── 4. template marketing-copy ban ─────────────────────────────────────────
 

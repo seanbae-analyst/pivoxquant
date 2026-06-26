@@ -263,6 +263,56 @@ def test_no_transport_returns_false(app, make_user, monkeypatch, caplog):
         assert sent is False
 
 
+def test_last_failure_reason_distinguishes_provider_vs_consent(
+    app, make_user, monkeypatch,
+):
+    """Source of truth for the silent-drop fix.
+
+    ``send()`` must set ``last_failure_reason == "provider_unavailable"`` ONLY
+    when every transport is exhausted, and leave it ``None`` for a
+    consent/preference refusal — so queue-draining callers retry a provider
+    outage but NEVER re-attempt an opt-out (정통망법 §50).
+    """
+    from datetime import datetime
+
+    from extensions import db
+    from models import User
+    from services.email import EmailSender
+
+    monkeypatch.delenv("SENDGRID_API_KEY", raising=False)
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+    monkeypatch.delenv("BREVO_API_KEY", raising=False)
+
+    # Case A — consent OK, but no transport configured → provider_unavailable.
+    ua = make_user(email="reason-provider@test.com")
+    with app.app_context():
+        u = db.session.get(User, ua["id"])
+        u.marketing_consent_at = datetime.utcnow()
+        db.session.commit()
+        sender = EmailSender()
+        sent = sender.send(
+            u, subject="x", html_body="<p>b</p>",
+            from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+            from_default="reports@pivoxquant.com",
+        )
+        assert sent is False
+        assert sender.last_failure_reason == "provider_unavailable"
+
+    # Case B — marketing consent missing → consent gate fires first. A
+    # PERMANENT suppression: must NOT be reported as provider_unavailable.
+    ub = make_user(email="reason-consent@test.com")
+    with app.app_context():
+        u = db.session.get(User, ub["id"])  # marketing_consent_at stays NULL
+        sender = EmailSender()
+        sent = sender.send(
+            u, subject="x", html_body="<p>b</p>",
+            from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+            from_default="reports@pivoxquant.com",
+        )
+        assert sent is False
+        assert sender.last_failure_reason is None
+
+
 # ── headers + attachment shape (SMTP path — easiest to introspect) ──────
 
 
