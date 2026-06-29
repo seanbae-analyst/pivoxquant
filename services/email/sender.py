@@ -722,7 +722,14 @@ class EmailSender:
         SMTPS (465) we add a branch here keyed on ``SMTP_PORT``.
         """
         msg = EmailMessage()
-        msg["From"] = self._format_from(display_name, from_email)
+        # Gmail (and most authenticated SMTP relays) rewrite a From that doesn't
+        # match the authenticated account, which hurts deliverability / lands in
+        # spam. ``SMTP_FROM`` lets the operator pin the From to the relay's own
+        # account (e.g. the Gmail address backing SMTP_USER) without changing the
+        # SendGrid path's domain From (noreply@pivoxquant.com). Falls back to the
+        # caller's from_email when unset, so non-Gmail relays are unaffected.
+        smtp_from = os.environ.get("SMTP_FROM", "").strip() or from_email
+        msg["From"] = self._format_from(display_name, smtp_from)
         msg["To"] = to_email
         msg["Subject"] = subject
         msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
