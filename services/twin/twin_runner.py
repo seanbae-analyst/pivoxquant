@@ -120,6 +120,31 @@ DEFAULT_UNIVERSE: tuple[str, ...] = tuple()  # populated lazily in _scan_univers
 _MIN_PAPER_SHARES = Decimal("0.0001")
 
 
+def _price_to_usd(price: float, ticker: str,
+                  currency: str | None = None,
+                  is_korean: bool | None = None) -> float:
+    """Convert a native-currency quote to USD for the paper ledger.
+
+    The Twin's ledger — ``starting_cash`` / ``current_cash`` / ``avg_cost`` —
+    is USD (``DEFAULT_STARTING_CASH`` = $10,000). Engine / fetcher snapshots
+    return KR (``.KS`` / ``.KQ``) prices in KRW, so booking one raw made a
+    ₩71,000 share look like it cost $71,000: the buy allocated the right USD
+    cash but received ~1/1380th the shares, leaving a near-worthless position
+    that read as a ~-100% loss on the portfolio view. Converting KRW → USD at
+    the price boundary keeps shares, avg_cost and cash all USD-consistent.
+
+    This is the Pattern-7 (FX consistency) guard the rest of the codebase
+    already applies (``fx_service.cost_basis_krw`` / ``routes/risk.py``);
+    the twin runner was never given it.
+    """
+    from services import fx_service
+    krw = bool(is_korean) or fx_service.is_krw_currency(currency, ticker)
+    if not krw:
+        return price
+    rate = fx_service.spot_usdkrw()  # USD/KRW, sanity-floored at >=900
+    return price / rate if rate and rate > 0 else price
+
+
 def _utc_now_naive() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -218,6 +243,14 @@ def _score_universe(persona: str, candidates: Iterable[str]) -> list[_ScoredCand
         price = float(result.get("price") or 0.0)
         if price <= 0:
             continue
+        # Book the entry price in USD — the engine returns KR quotes in KRW.
+        price = _price_to_usd(
+            price, ticker,
+            currency=result.get("currency"),
+            is_korean=result.get("is_korean"),
+        )
+        if price <= 0:
+            continue
         rationale = str(result.get("signal") or result.get("rationale") or "engine")
         out.append(_ScoredCandidate(
             ticker=ticker,
@@ -272,7 +305,13 @@ def _close_check(
             continue
         if not snap or not snap.get("price"):
             continue
-        price_now = Decimal(str(snap["price"]))
+        # avg_cost is now booked in USD (see _price_to_usd); value the live
+        # quote in USD too so TP/SL % and proceeds stay on one basis.
+        price_now = Decimal(str(_price_to_usd(
+            float(snap["price"]), pos.ticker,
+            currency=snap.get("currency"),
+            is_korean=snap.get("is_korean"),
+        )))
         cost = Decimal(str(pos.avg_cost or 0))
         if cost <= 0:
             continue
@@ -379,7 +418,8 @@ def run_twin_decisions(
             twin_id=twin.id,
             ticker=cand.ticker,
             shares=shares,
-            avg_cost=price,
+            avg_cost=price,  # price already USD-converted via _price_to_usd
+            avg_cost_is_usd=True,
             opened_at=now,
         )
         db.session.add(new_pos)
@@ -422,9 +462,70 @@ def run_twin_decisions(
     }
 
 
+# ─────────────────────────────────────────────────────────────────────
+# One-time repair — legacy KR positions booked in KRW (pre _price_to_usd)
+# ─────────────────────────────────────────────────────────────────────
+
+def reconcile_legacy_krw_positions(dry_run: bool = True) -> dict:
+    """Repair KR twin positions booked in KRW before the FX fix.
+
+    Before :func:`_price_to_usd`, a ``.KS`` / ``.KQ`` buy stored ``avg_cost``
+    in KRW and ``shares = alloc_usd / price_krw`` — ~1/1380th the real count.
+    The USD cash debited was already correct (``price_krw * shares`` equals the
+    intended ``alloc_usd``), so **only the position row is wrong**: valued in
+    USD it reads as ~$0, dragging ``twin_lifetime_pct`` to ~-100% for any KR
+    holding. This moves the row onto the USD basis while preserving its USD
+    cost (``shares * avg_cost`` is invariant), so cash needs no adjustment::
+
+        avg_cost_usd = avg_cost_krw / spot
+        shares_usd   = shares       * spot
+
+    Legacy detection is the per-row :attr:`AITwinPosition.avg_cost_is_usd`
+    marker — NOT a price magnitude. A legacy KRW row and its correctly-converted
+    USD row differ by exactly the FX factor in BOTH ``avg_cost`` and ``shares``,
+    and their USD-cost product is invariant, so no single-row magnitude test can
+    tell them apart. A correctly-USD-booked high-priced KR share (e.g. LG생활건강
+    at ₩1.5M → avg_cost≈$1,087) would be misread as legacy by any floor and
+    re-divided by ~1380 into $0.79 on the next boot; the marker makes that
+    impossible. Converting a legacy row sets the marker True, so it is repaired
+    exactly once and skipped forever after — exact and idempotent at any price.
+
+    ``dry_run`` (default) reports what would change without writing or flipping
+    the marker. Returns a summary dict.
+    """
+    from services import fx_service
+    rate = Decimal(str(fx_service.spot_usdkrw()))
+    changed: list[dict] = []
+    for pos in AITwinPosition.query.all():
+        ticker = (pos.ticker or "").upper()
+        if not (ticker.endswith(".KS") or ticker.endswith(".KQ")):
+            continue
+        if getattr(pos, "avg_cost_is_usd", False):
+            continue  # already USD — never touch (exact, marker-gated)
+        if rate <= 0:
+            continue  # unusable FX rate — leave untouched
+        avg_cost = Decimal(str(pos.avg_cost or 0))
+        new_avg = (avg_cost / rate).quantize(Decimal("0.0001"))
+        new_shares = (Decimal(str(pos.shares or 0)) * rate).quantize(Decimal("0.0001"))
+        changed.append({
+            "position_id": pos.id,
+            "ticker": pos.ticker,
+            "avg_cost": f"{avg_cost} → {new_avg}",
+            "shares": f"{pos.shares} → {new_shares}",
+        })
+        if not dry_run:
+            pos.avg_cost = new_avg
+            pos.shares = new_shares
+            pos.avg_cost_is_usd = True
+    if not dry_run and changed:
+        db.session.commit()
+    return {"rate": float(rate), "dry_run": dry_run, "count": len(changed), "positions": changed}
+
+
 __all__ = [
     "initialize_twin",
     "run_twin_decisions",
+    "reconcile_legacy_krw_positions",
     "PERSONA_POSITION_SIZING",
     "PERSONA_BUY_THRESHOLD",
     "PERSONA_TP_PCT",

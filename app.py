@@ -1229,6 +1229,33 @@ def _do_migrations():
         logger.debug("silent-fallback: _do_migrations", exc_info=True)
         pass
 
+    # 2026-06 — AI Twin FX-consistency repair (Feature 5, Pattern 7).
+    # Legacy KR (.KS/.KQ) paper positions were booked with the KRW quote written
+    # straight into the USD twin ledger: the buy debited the right USD cash but
+    # received ~1/1380th the shares, so the position read as ~-100% on the
+    # portfolio view. `twin_runner._price_to_usd` fixes NEW bookings; this repairs
+    # EXISTING ones. It is idempotent (the per-row `avg_cost_is_usd` marker makes
+    # a converted row a no-op on re-run), so running it every boot is safe. Lazy
+    # import to avoid import-cycle / boot-order issues (matches app.py convention).
+    #
+    # The column must exist BEFORE the reconcile queries it. server_default=false
+    # backfills every PRE-EXISTING row as legacy (correct: no code booked USD for
+    # KR before this commit); new ORM inserts get default=True.
+    _add_column_if_missing("ai_twin_positions", "avg_cost_is_usd", "BOOLEAN", default="0")
+    try:
+        from services.twin import reconcile_legacy_krw_positions
+        res = reconcile_legacy_krw_positions(dry_run=False)
+        if res.get("count"):
+            logger.info(
+                "twin FX reconcile: repaired %d legacy KRW positions", res["count"]
+            )
+    except Exception:
+        logger.debug("silent-fallback: twin FX reconcile", exc_info=True)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
 
 def _populate_cache(app):
     """Warm the signal cache for currently-held tickers.
