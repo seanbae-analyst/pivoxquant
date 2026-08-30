@@ -105,10 +105,14 @@ export default function SettingsPageV2() {
     subData?.tier ||
     "free"
   ).toLowerCase();
+  // founding_lifetime / premium_plus carry every premium entitlement on the
+  // backend (PAID_TIERS_* frozensets) — omitting them here fell through to
+  // "free", hiding Billing/Cancel/Receipt UI from the highest-tier users.
+  // Same tier-drift bug class fixed in reports/_v2 (toUiTier) on 2026-06-11.
   const currentTier: "free" | "pro" | "premium" =
     tier === "pro" || tier === "operator"
       ? "pro"
-      : tier === "premium" || tier === "partner"
+      : tier === "premium" || tier === "partner" || tier === "premium_plus" || tier === "founding_lifetime"
         ? "premium"
         : "free";
 
