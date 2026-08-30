@@ -735,7 +735,11 @@ def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
     partial data is more honest than hardcoded mocks.
     """
     level: float | None = None
-    change_pct: float = 0.0
+    # `None` (not 0.0) when the daily change cannot be derived: emitting a
+    # fabricated "+0.00%" reads as a real "no change" datapoint. Same
+    # data-honesty contract as `range_52w` above — the frontend renders
+    # null as "—" (lib/format.ts::fmtPct, 자본시장법 §101 guard).
+    change_pct: float | None = None
 
     # 1) Live quote — identical code path as /api/lookup/<ticker>.
     try:
@@ -800,7 +804,7 @@ def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
         "proxy_ticker":  etf,
         "name":          display,
         "level":         round(level, 2),
-        "change_1d_pct": round(change_pct, 2),
+        "change_1d_pct": round(change_pct, 2) if change_pct is not None else None,
         "range_52w":     range_52w,
         "sparkline_30d": sparkline,
         "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -818,7 +822,11 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     EITHER the KIS quote OR the history engine produced a level.
     """
     level: float | None = None
-    change_pct: float = 0.0
+    # `None` (not 0.0) when the daily change cannot be derived: emitting a
+    # fabricated "+0.00%" reads as a real "no change" datapoint. Same
+    # data-honesty contract as `range_52w` above — the frontend renders
+    # null as "—" (lib/format.ts::fmtPct, 자본시장법 §101 guard).
+    change_pct: float | None = None
 
     # Candidate KIS index codes. KIS's `inquire-index-price` endpoint is
     # documented with 0001/1001 for KOSPI/KOSDAQ and 2001/2203 for
@@ -1163,7 +1171,7 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         "ticker":        ticker,
         "name":          display,
         "level":         round(level, 2),
-        "change_1d_pct": round(change_pct, 2),
+        "change_1d_pct": round(change_pct, 2) if change_pct is not None else None,
         "range_52w":     range_52w,
         "sparkline_30d": sparkline,
         "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -1239,7 +1247,7 @@ def _compute_indices_snapshot(region: str) -> list[dict]:
             #   KRW=X    → Last-ditch inversion attempt.
             # If ALL three are empty, range_52w becomes None so the
             # frontend can render "N/A" instead of the buggy [0,0] hardcode.
-            fx_change_pct = 0.0
+            fx_change_pct: float | None = None
             fx_sparkline: list[float] = []
             fx_range_52w: list[float] | None = None
             fx_is_stale = False
@@ -1296,7 +1304,7 @@ def _compute_indices_snapshot(region: str) -> list[dict]:
                 "ticker":        "USDKRW",
                 "name":          "USD / KRW",
                 "level":         round(usdkrw_level, 2),
-                "change_1d_pct": round(fx_change_pct, 2),
+                "change_1d_pct": round(fx_change_pct, 2) if fx_change_pct is not None else None,
                 "range_52w":     fx_range_52w,
                 "sparkline_30d": fx_sparkline,
                 "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -1633,12 +1641,14 @@ def public_market_snapshot():
             # is_stale: honor the snapshot's own flag, OR mark stale when
             # the region cache itself has aged past TTL.
             stale = bool(snap.get("is_stale")) or not region_fresh.get(region_key, False)
-            change_pct = snap.get("change_1d_pct", 0.0) or 0.0
+            change_pct = snap.get("change_1d_pct")
             items.append({
                 "symbol": ticker,
                 "name": display,
                 "value": snap.get("level"),
-                "change_pct": round(float(change_pct), 2),
+                "change_pct": (
+                    round(float(change_pct), 2) if change_pct is not None else None
+                ),
                 "direction": _direction(change_pct),
                 "is_stale": stale,
                 "observed_at": snap.get("observed_at"),
@@ -1651,7 +1661,7 @@ def public_market_snapshot():
                 "symbol": ticker,
                 "name": display,
                 "value": None,
-                "change_pct": 0.0,
+                "change_pct": None,
                 "direction": "flat",
                 "is_stale": True,
                 "observed_at": None,

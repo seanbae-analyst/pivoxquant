@@ -63,7 +63,8 @@ interface BackendIndex {
   ticker: string;
   name: string;
   level: number;
-  change_1d_pct: number;
+  /** Null when the daily change could not be derived — render "—", never 0. */
+  change_1d_pct: number | null;
   /**
    * 52-week extremes. Backend emits `null` when the upstream history
    * window cannot be trusted alongside the current level (see

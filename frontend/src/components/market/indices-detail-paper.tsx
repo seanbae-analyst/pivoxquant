@@ -18,7 +18,7 @@ import {
   useNowTick,
   proxyLabel,
 } from "@/lib/market";
-import { fmtPct } from "@/lib/format";
+import { fmtPct, paperDeltaClass } from "@/lib/format";
 import { isMarketOpen } from "@/lib/market-hours";
 
 /** Simple domestic futures/options summary rows. Sourced from backend
@@ -124,7 +124,7 @@ function InkSpark({
 }
 
 function DetailRow({ quote }: { quote: IndexQuote }) {
-  const isPositive = quote.changePct >= 0;
+  const isPositive = quote.changePct != null && quote.changePct >= 0;
   const now = useNowTick(1000);
   const rel = relativeTime(quote.observed_at, now);
   const stale = Boolean(quote.is_stale);
@@ -259,7 +259,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
           ) : null}
         </div>
         <div
-          className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
+          className={`font-mono ${paperDeltaClass(quote.changePct)}`}
           style={{
             fontVariantNumeric: "tabular-nums",
             fontSize: "var(--pq-text-eyebrow)",

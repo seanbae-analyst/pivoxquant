@@ -14,7 +14,14 @@ export interface IndexQuote {
   symbol: string;
   name: string;
   level: number;
-  changePct: number;
+  /**
+   * Daily change. Null when the upstream cannot derive it (live quote
+   * succeeded but the history window was empty or discarded as stale —
+   * routes/market.py::_etf_snapshot). Renderers MUST show "—" and never
+   * 0: a fabricated "+0.00%" reads as a real "no change" datapoint
+   * (lib/format.ts::fmtPct, 자본시장법 §101 guard).
+   */
+  changePct: number | null;
   /**
    * 52-week extremes. Null when the upstream source cannot be trusted
    * (e.g. KIS daily-history endpoint lagging the live level by more
