@@ -15,23 +15,23 @@ PivoxQuant 코드베이스를 도메인별로 병렬 헌팅한 뒤 audit-code로
 
 Task 1 — 백엔드 버그헌팅:
   agent: bug-hunter
-  prompt: "~/dev/pivoxquant/backend/ 디렉토리 전체를 헌팅하세요.
+  prompt: " 디렉토리 전체를 헌팅하세요.
            집중 도메인: 퀀트 수식(Sharpe/Sortino/FX), 보안(auth/tier bypass),
            법규(§101/PIPA). P0/P1/P2 분류해 보고."
 
 Task 2 — 프론트엔드 버그헌팅:
   agent: bug-hunter
-  prompt: "~/dev/pivoxquant/frontend/src/ 전체를 헌팅하세요.
+  prompt: "frontend/src/ 전체를 헌팅하세요.
            집중 도메인: SWR 캐시 누수, 티커 표시(naked ticker), 색상 반전,
            모바일 safe-area. P0/P1/P2 분류해 보고."
 
 Task 3 — 데이터/API 검증:
   agent: verify-data
-  prompt: "~/dev/pivoxquant/backend/services/ 의 데이터 파이프라인을 검증하세요.
+  prompt: "services/ 의 데이터 파이프라인을 검증하세요.
            FX 변환 일관성, 퀀트 수식 입력값 null 처리, 캐시 cross-user 누수."
 
 Task 4 (Task 1-3 완료 후) — 교차 감사:
-  agent: audit-code
+  agent: qa
   prompt: "bug-hunter 3개 결과를 종합해 중복 제거하고 우선순위 최종 확정.
            P0(SHIP-BLOCKER)만 즉시 fix 목록으로 추출."
 ```

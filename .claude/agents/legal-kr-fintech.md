@@ -1,6 +1,6 @@
 ---
 name: legal-kr-fintech
-description: "한국 핀테크 / 자본시장 규제 전문 검수자 — 자본시장법 §17 (advisory) / 표시광고법 §3 (기만표시) / 신용정보법 §2-9-2 (My Data) / PIPA / 전자금융거래법. 모든 신규 feature 의 법적 위험 스코어링 + KIS API 약관 / Alpaca paper / 유사투자자문업 신고 가이드. 출시 전 / 새 feature 추가 / artifact 생성 / AI output 경로에서 사용."
+description: "한국 금융규제 검수 — 자본시장법 §17, 표시광고법 §3, 신용정보법, PIPA, 전자금융거래법. 신규 feature·artifact·AI output 의 법적 위험 스코어링."
 model: sonnet
 effort: high
 tools:

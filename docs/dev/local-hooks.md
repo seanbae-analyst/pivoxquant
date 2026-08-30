@@ -52,8 +52,24 @@ git config --get core.hooksPath
 | 1 | **Alembic head guard**: heads 2개 이상 BLOCK | `alembic-head-guard.yml` |
 | 2 | **Regression guards**: `scripts/check_regression_guards.py` (9 bug pattern SoT) | `regression-guards.yml` |
 | 3 | **Pytest sanity**: 변경 routes/services 매칭 test + core regression test | `ci.yml` (subset) |
+| 4 | **Pytest smoke**: `@pytest.mark.smoke` 3건 (health / auth-required / login→portfolio), ~1.3s | `daily-api-smoke.yml` |
 
 전체 pytest는 시간이 길어서 pre-push에서 skip. nightly 또는 출시 전 별도 실행.
+
+#### smoke 게이트는 차단이 기본 (2026-08-30 변경)
+
+`[4/4]` 는 원래 warn-only 였다 — 실패해도 경고만 찍고 push 가 통과했다. GitHub Actions
+28개가 전부 `.disabled` 인 현재 **이 훅이 origin 과 깨진 auth 경로 사이의 유일한 게이트**라,
+빨간 smoke 가 스크롤에 묻혀 그대로 올라갈 수 있었다. 1.3초짜리 검사에 그만한 위험을
+감수할 이유가 없어 기본값을 뒤집었다.
+
+```bash
+PIVOX_PREPUSH_BLOCK=0 git push   # WIP 브랜치 등 의도적 우회
+git push --no-verify             # 훅 전체 우회 (최후 수단)
+```
+
+**CI 가 살아나면 이 기본값을 되돌릴지 재검토할 것** — CI 가 같은 검사를 우회 불가하게
+수행하면 로컬 훅은 빠른 피드백 역할로 물러나도 된다.
 
 ### `.githooks/post-checkout` (INFORMATIONAL, never blocks)
 

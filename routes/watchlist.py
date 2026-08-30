@@ -171,6 +171,15 @@ def add():
             en="Ticker required", kr="종목 코드가 필요합니다.",
             code="WATCHLIST_TICKER_REQUIRED", status=400,
         )
+    # SEC-004 (mirrors routes/portfolio.py add_position): reject over-length
+    # tickers before the insert. models.Watchlist.ticker is String(20); on
+    # Postgres an over-length value raised DataError caught as a generic 500,
+    # and on SQLite it was silently stored. Client input error → 400.
+    if len(ticker) > 20:
+        return api_error(
+            en="Invalid ticker", kr="유효하지 않은 종목 코드입니다.",
+            code="WATCHLIST_INVALID_TICKER", status=400,
+        )
     # 2026-05-17 wave 14 P2 (PR #450): TOCTOU race fix. Two concurrent
     # POST /api/watchlist with the same ticker both passed the
     # check below and both reached commit; the second raised

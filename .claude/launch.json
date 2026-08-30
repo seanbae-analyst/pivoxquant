@@ -2,6 +2,24 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "pivoxreport",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "echo 'pivoxreport already running via launchd on :3000' && sleep infinity"],
+      "port": 3000
+    },
+    {
+      "name": "pivox-brief-docs",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8123", "-d", "/Users/seanbae/Desktop/취준/pivox-brief/docs"],
+      "port": 8123
+    },
+    {
+      "name": "dataready-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8104", "--directory", "/Users/seanbae/Desktop/취준/dataready"],
+      "port": 8104
+    },
+    {
       "name": "PivoxQuant",
       "runtimeExecutable": "venv/bin/python",
       "runtimeArgs": ["run.py"],

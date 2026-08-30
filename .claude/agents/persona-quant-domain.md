@@ -1,6 +1,6 @@
 ---
 name: persona-quant-domain
-description: "Persona 분류기 / Quant 모델 도메인 전문가 — 9-dim feature engineering / 8 페르소나 centroid 검증 / k-means adaptive learning / 40 quant 모델 학술 출처 / Sharpe/Sortino/MaxDD 계산 / Outcome Attribution (Fama-French + behavioral). Tier 2-4 (Adaptive Centroid / Outcome Attribution / Behavioral Score 깊이) 작업 시 사용."
+description: "퀀트/페르소나 도메인 전문가 — 9-dim feature, 8 페르소나 centroid, k-means, Sharpe/Sortino/MaxDD, Outcome Attribution. 퀀트 모델·페르소나 로직 작업 시."
 model: sonnet
 effort: high
 tools:

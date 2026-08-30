@@ -59,10 +59,6 @@
           {
             "type": "command",
             "command": "bash /Users/seanbae/Desktop/취준/pivoxquant/.claude/hooks/h6-handover-prepend.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash /Users/seanbae/dev/pivoxquant/.claude/hooks/h11-agent-inventory.sh"
           }
         ]
       }
@@ -72,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /Users/seanbae/dev/pivoxquant/.claude/hooks/h12-autopilot-log-tick.sh"
+            "command": "bash /Users/seanbae/Desktop/취준/pivoxquant/.claude/hooks/h12-autopilot-log-tick.sh"
           }
         ]
       }

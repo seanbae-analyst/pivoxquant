@@ -1,29 +1,38 @@
-# PivoxQuant — Session Handoff (2026-05-23 Updated)
+# PivoxQuant — Session Handoff (2026-08-30 Updated)
 
-> ⚠️ 이 파일은 2026-04-14 작성 후 오래 STALE 상태였다 (백엔드 85% / 미배포 /
-> 결제 미연결 등). 2026-05-23 에 실측 기준으로 현행화. 옛 "당장 고쳐야 할
-> CRITICAL/HIGH 버그 목록" (Add Position 불가, Search 안 됨 등) 은 **전부 해결**
-> 되어 삭제했다. 상세 진행 이력은 메모리 MEMORY.md 의 세션 로그 참조.
+> ⚠️ **2026-07-05 ~ 2026-08-30 약 7주간 프로젝트 중단.** 재개하며 실측 현행화.
+> 이 파일은 매 턴 로드되므로 **틀린 값은 곧 잘못된 판단**이 된다. 상태 블록은
+> 반드시 실측 후 갱신할 것. 상세 이력은 HANDOVER.md (v56~v66) 및
+> `docs/archive/HANDOVER-history-v55-and-older.md` 참조.
 
 ## 프로젝트 개요
 AI + Quant 기반 개인 투자 어드바이저 플랫폼.
 미국 + 한국 주식 지원. SaaS 3티어 (Free / Pro ₩9,900 / Premium ₩19,900).
 1인 창업자(배상현) 운영. **현재 클로즈드 베타 + 출시 직전.**
 
-## 현재 상태 요약 (2026-05-23 실측)
-**백엔드: prod 라이브** — Railway `web-production-7b484b.up.railway.app`, PostgreSQL,
-  200+ 엔드포인트, pytest 3000+ 통과. health version = git sha.
-**프론트엔드: prod 라이브** — Vercel `pivoxquant.com` (베타 게이트 307), Next.js 16,
-  vitest 450+ 통과. V2 디자인 플래그 9개 모두 prod true.
-**인프라: 배포 완료** — Railway(BE, GitHub auto-deploy 정상화 v46) + Vercel(FE).
-  배포 메커니즘 상세는 메모리 MEMORY.md DevOps 섹션 참조.
-**결제: Stripe 통합 완료, 게이트로 비활성** — 코드 완성. `BUSINESS_REGISTRATION`
-  미완 + 변호사 Q1-Q15 자문 대기로 prod 는 503 `BUSINESS_REGISTRATION_PENDING`
-  반환. 사업자등록 459-01-03808 발급됨, 통신판매업 신고 + 유료결제 활성화는
-  변호사 의견서 후.
+## 현재 상태 요약 (2026-08-30 실측)
+🔴 **백엔드: 소멸 (복구 불가)** — CEO 가 **Railway 계정 자체를 삭제**(2026-08-30 확인).
+  앱 + PostgreSQL prod DB 가 함께 사라졌다. 되살리는 게 아니라 **재구축 대상**이다.
+  · 남은 것: alembic 리비전 52개 → **스키마는 100% 재생성 가능**. 코드 전량 보존.
+  · 사라진 것: prod DB 데이터(클로즈드 베타라 실사용자 데이터는 사실상 없음),
+    Railway env vars(BREVO_API_KEY 등 시크릿 **전부 재발급/재설정 필요**).
+  · 로컬 `pivoxquant.db` 는 dev 사본이지 prod 백업이 아니다.
+  → 재개 시 호스팅을 새로 고른다(Railway 재가입 / Render / Fly.io / Supabase 등).
+    **결정 전까지 백엔드 의존 작업은 전부 보류.**
+✅ **프론트엔드: prod 라이브** — Vercel `www.pivoxquant.com` 200 정상, 실제 제품
+  (로그인 게이트) 서빙 중. 마지막 배포 2026-06-29 (PR #531, demo mode OFF).
+  Vercel 계정에 pivoxquant / pivox-brief / pivoxdata 3개 프로젝트 정상 존재.
+**결제: Stripe 통합 완료, 게이트로 비활성** — `BUSINESS_REGISTRATION` 미완 +
+  변호사 Q1-Q15 자문 대기로 prod 는 503 `BUSINESS_REGISTRATION_PENDING` 반환.
+  사업자등록 459-01-03808 발급됨, 통신판매업 신고 + 유료결제 활성화는 의견서 후.
+**코드**: 브랜치 `fix/email-provider-retry` 계열, 진짜 미푸시 커밋 1건
+  (`38beb633` twin KRW→USD P0 데이터손상 fix). 나머지 3건은 이미 main 에 반영됨.
 
 ## 알려진 잔여 이슈 (2026-05-23 기준, 외부 액션 / 법무 의존)
-- **이메일: 발신 ✅ / 수신 ✅ (2026-06-04 해결)**: **발신** = SendGrid(SPF/DKIM/DMARC). **수신** =
+- **이메일: 발신 ✅ / 수신 ✅**: **발신** = **Brevo HTTP API** (2026-06-30 전환 — Railway 가
+  SMTP 아웃바운드를 막아 `OSError 101`, SendGrid 는 401. `BREVO_PROVIDER_PRIMARY=true` 로
+  cascade SendGrid→Brevo→SMTP 의 우선순위를 뒤집어 사용. 코드: `services/email/brevo_provider.py`).
+  ⚠️ 백엔드가 DOWN 인 현재는 발송 경로 전체가 미동작. **수신** =
   ImprovMX 포워딩 **active**. 근본원인은 alias 아니라 **옛 ImprovMX 계정 충돌**(도메인 "already
   registered") + **SPF에 improvmx 누락**이었음. 해결: ① DNS TXT 소유권 인증(`_improvmx` TXT)으로
   도메인을 seanbae1521 계정으로 이전 ② 가비아 SPF에 `include:spf.improvmx.com` 추가(sendgrid 유지).

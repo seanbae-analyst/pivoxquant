@@ -27,7 +27,7 @@
 #       so that once they land, regressions are caught immediately.
 #
 # Local invocation:
-#   python3 scripts/check_design_safety_guards.py
+#   (no local runner — the checks below are inline grep/node steps)
 #
 # After fix PRs are merged and all guards pass, remove the
 # `continue-on-error: true` from DS5/DS6/DS7 steps below.
@@ -156,7 +156,7 @@ jobs:
             | grep -v '^+++' || true)
           if [ -n "$NEW_USES" ]; then
             echo "::error::DS3 FAIL — New dangerouslySetInnerHTML detected in PR diff."
-            echo "Use the allowlist renderer in frontend/src/components/editorial-html.tsx instead."
+            echo "Use the allowlist renderer in frontend/src/lib/editorial-html.tsx instead."
             echo "$NEW_USES"
             exit 1
           fi
@@ -181,6 +181,25 @@ jobs:
               "frontend/src/messages/en.json",
           ]
 
+          # Keys that are correctly empty in a given locale (2026-08-30).
+          # Korean attaches a counter or honorific directly to the value —
+          # "3개", "배상현님" — and renders as `${value}${particle}`. English
+          # has no such particle, so the right English string is the empty
+          # one; "3 items" or "Mr." would each be wrong in the surrounding
+          # copy. frontend/src/components/journal/__tests__/
+          # concentration-mirror.test.ts already encodes this ("factCountUnit
+          # may legitimately be an empty string in en").
+          #
+          # Scoped per locale on purpose: the same key going empty in ko is
+          # still a failure, which is the accident this guard exists to catch.
+          ALLOWED_EMPTY = {
+              "frontend/src/messages/en.json": {
+                  "dashboard.positions.total",              # ko: 개
+                  "dashboard.deskCheckin.honorific",        # ko: 님
+                  "journal.concentrationMirror.factCountUnit",  # ko: 개
+              },
+          }
+
           failures = []
 
           def check(d, path, filename):
@@ -191,6 +210,10 @@ jobs:
                   if isinstance(v, dict):
                       check(v, full_path, filename)
                   elif v == "":
+                      if full_path in ALLOWED_EMPTY.get(filename, set()):
+                          print(f"DS4 ALLOW — {filename}: [{full_path}] "
+                                f"(no English equivalent for the Korean particle)")
+                          continue
                       failures.append(f"{filename}: [{full_path}] is empty string")
 
           for f in message_files:

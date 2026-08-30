@@ -65,6 +65,22 @@ interface Surface {
   assert: (page: Page) => Promise<void>;
 }
 
+/**
+ * The first *visible* main region.
+ *
+ * DashboardLayout renders the desktop and mobile shells simultaneously and
+ * hides one with Tailwind `hidden md:flex` / `md:hidden`, so several <main>
+ * elements are always in the DOM — at 375px the desktop one is still there,
+ * collapsed to 0x0. `page.locator("main").first()` picks in document order,
+ * which on mobile is that collapsed desktop shell, and Playwright counts a
+ * zero-size element as not visible. That is why every needsAuth surface
+ * failed on mobile and passed on desktop from the first CI run onward: the
+ * pages render fine, the locator just pointed at the wrong element.
+ *
+ * `:visible` filters to the shell actually painted for the viewport.
+ */
+const mainRegion = (page: Page) => page.locator("main:visible, [role=main]:visible").first();
+
 const SURFACES: readonly Surface[] = [
   {
     name: "01-login",
@@ -84,9 +100,25 @@ const SURFACES: readonly Surface[] = [
     path: "/signup",
     needsAuth: false,
     assert: async (page) => {
-      // Same V1/V2 split as login — OAuth-only in V1.
+      // NOT the same shape as login, despite the shared OAuth providers.
+      // Signup gates the OAuth anchors behind the mandatory consent boxes
+      // (CLAUDE.md: "Terms checkbox 필수 (회원가입 시)"), so until every
+      // required box is ticked the page renders `aria-disabled` buttons that
+      // carry no href — see (auth)/signup/_v1/page-v1.tsx, `allRequired`.
+      // The old assertion reused login's href-only selector, which a freshly
+      // loaded /signup can never satisfy; it only passed while the suite ran
+      // against a browser that already had a session and got redirected off
+      // the page entirely. Assert what an anonymous visitor actually sees:
+      // the consent gate, and a Google affordance in either state.
       await expect(
-        page.locator('input[type="email"], a[href*="/api/auth/google"], a[href*="/api/auth/kakao"]').first(),
+        page.locator('input[type="checkbox"], [role="checkbox"]').first(),
+      ).toBeVisible({ timeout: 15000 });
+      await expect(
+        page
+          .locator(
+            'a[href*="/api/auth/google"], button:has-text("Google"), a[href*="/api/auth/kakao"], button:has-text("카카오")',
+          )
+          .first(),
       ).toBeVisible({ timeout: 15000 });
     },
   },
@@ -96,7 +128,7 @@ const SURFACES: readonly Surface[] = [
     needsAuth: true,
     assert: async (page) => {
       // Either variant must render some primary heading — accept any <h1> or main role
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -104,7 +136,7 @@ const SURFACES: readonly Surface[] = [
     path: "/portfolio",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -112,7 +144,7 @@ const SURFACES: readonly Surface[] = [
     path: "/risk",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -120,7 +152,7 @@ const SURFACES: readonly Surface[] = [
     path: "/signals",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -128,7 +160,7 @@ const SURFACES: readonly Surface[] = [
     path: "/reports",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -136,7 +168,7 @@ const SURFACES: readonly Surface[] = [
     path: "/profile",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -144,7 +176,7 @@ const SURFACES: readonly Surface[] = [
     path: "/settings",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
 ] as const;

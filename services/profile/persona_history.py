@@ -152,6 +152,7 @@ def _parse_iso(s: str | None) -> datetime | None:
 def get_history(
     user_id: int,
     days_back: int = 180,
+    now: datetime | None = None,
 ) -> list[dict]:
     """Return the user's persona snapshots, oldest → newest.
 
@@ -160,9 +161,20 @@ def get_history(
 
     Empty list when the user has no snapshots — *never* raises. This is
     a graceful-degradation contract the frontend SWR layer relies on.
+
+    ``now`` overrides the clock the ``days_back`` cutoff is measured from,
+    matching the convention already used by :func:`record_snapshot` and
+    :func:`compute_drift` in this module. Callers that already resolved a
+    reference time (LivingMirrorService takes ``now=`` and threads it
+    through every other query) must pass it here too — otherwise this one
+    query silently reads the wall clock and the caller's result stops
+    being a pure function of its inputs. Added 2026-08-30 after exactly
+    that: ``_resolve_stage`` accepted ``when`` but dropped it here, so
+    fixed-clock tests decayed into failures once real time drifted past
+    the window.
     """
     days_back = max(1, min(365, int(days_back)))
-    cutoff = _utc_now() - timedelta(days=days_back)
+    cutoff = (_utc_now() if now is None else now) - timedelta(days=days_back)
     rows = (
         PersonaSnapshot.query
         .filter(PersonaSnapshot.user_id == int(user_id))

@@ -562,7 +562,6 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     // and auto-(dis)connect as positions appear or go to zero.
     if (!user) {
       teardown();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(INITIAL_STATE);
       return;
     }

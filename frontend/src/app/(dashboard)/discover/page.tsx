@@ -465,7 +465,7 @@ export default function DiscoverPage() {
                                 title={`Level via ${o.proxy_ticker} ETF proxy — not the underlying index level.`}
                                 className="font-mono"
                                 style={{
-                                  fontSize: 9,
+                                  fontSize: "var(--pq-text-kicker)",
                                   letterSpacing: "0.16em",
                                   textTransform: "uppercase",
                                   color: "rgb(var(--pq-bronze-wash-rgb))",

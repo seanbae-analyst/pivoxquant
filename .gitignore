@@ -81,6 +81,8 @@ legal_monitor_artifacts/
 # transient dev secret before (beta pw) — keep them local-only. (auto-sim-reports
 # under docs/qa/ ARE deliberately tracked and are intentionally NOT ignored.)
 /BUG_SWEEP_*.md
+# Archived copies of the same reports (moved out of the repo root 2026-08-30).
+docs/qa/archive/bug-sweeps/
 
 # APScheduler runtime state (Wave H) — not source-of-truth
 state/
@@ -91,3 +93,4 @@ state/
 qa/v2-smoke/**/*.png
 tests/artifacts/output/
 instance/
+.vercel

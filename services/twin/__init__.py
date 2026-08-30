@@ -13,6 +13,7 @@ chain ever reaches Alpaca / KIS / any broker. Validated by
 from .twin_runner import (
     initialize_twin,
     run_twin_decisions,
+    reconcile_legacy_krw_positions,
     PERSONA_POSITION_SIZING,
     PERSONA_BUY_THRESHOLD,
     PERSONA_TP_PCT,
@@ -24,6 +25,7 @@ from .twin_reporter import generate_weekly_report
 __all__ = [
     "initialize_twin",
     "run_twin_decisions",
+    "reconcile_legacy_krw_positions",
     "generate_weekly_report",
     "PERSONA_POSITION_SIZING",
     "PERSONA_BUY_THRESHOLD",

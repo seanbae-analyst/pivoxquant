@@ -15,7 +15,7 @@ PivoxQuant 디자인 시스템 v3 기준 시각 일관성, 모션 스펙, 카피
 
 Task 1 — 시각 디자인 점검:
   agent: verify-design
-  prompt: "~/dev/pivoxquant/frontend/src/components/ 전체를 디자인 시스템 v3 기준으로
+  prompt: "frontend/src/components/ 전체를 디자인 시스템 v3 기준으로
            점검하세요.
            - raw hex (#XXXXXX) 직접 사용 → var(--token) 교체 필요 목록
            - 라임 색상 잔존 여부
@@ -25,7 +25,7 @@ Task 1 — 시각 디자인 점검:
 
 Task 2 — 모션 스펙 점검:
   agent: motion-designer
-  prompt: "~/dev/pivoxquant/frontend/src/ 에서 transition/animation/motion 관련 코드 전수 스캔.
+  prompt: "frontend/src/ 에서 transition/animation/motion 관련 코드 전수 스캔.
            - 금지 패턴(bounce/infinite spin/장식 모션) 탐지
            - duration 토큰 이탈 (임의 ms 값)
            - easing 토큰 이탈
@@ -34,7 +34,7 @@ Task 2 — 모션 스펙 점검:
 
 Task 3 — 브랜드 보이스 점검:
   agent: brand-voice
-  prompt: "~/dev/pivoxquant/frontend/src/ 의 UI 문자열(버튼/레이블/빈 상태/에러 메시지)을
+  prompt: "frontend/src/ 의 UI 문자열(버튼/레이블/빈 상태/에러 메시지)을
            PivoxQuant 톤앤매너 기준으로 점검하세요.
            - 'stockpilot' 잔존 여부 (브랜드 오염)
            - 지나치게 캐주얼하거나 모호한 금융 표현

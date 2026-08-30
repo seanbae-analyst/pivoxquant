@@ -37,7 +37,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight, FileText } from "lucide-react";
-import { useT, useLocale } from "@/lib/locale";
+import { useT } from "@/lib/locale";
 
 const MarketTicker = dynamic(
   () => import("./market-ticker").then((m) => m.MarketTicker),
@@ -58,7 +58,6 @@ const MarketTicker = dynamic(
 
 export function Hero() {
   const t = useT();
-  const { locale } = useLocale();
   return (
     <section
       aria-labelledby="pq-hero-heading"

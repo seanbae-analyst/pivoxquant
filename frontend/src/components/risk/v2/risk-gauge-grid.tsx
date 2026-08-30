@@ -188,9 +188,12 @@ function fmtPct(n: number | undefined, opts?: { signed?: boolean }): string {
 }
 
 export function RiskGaugeGrid({ summary, layers }: Props) {
-  // VaR 95% / 1-day — value + gauge
+  // VaR 95% / 1-day — value + gauge.
+  // Backend (routes/risk.py) returns var_1d_pct already scaled to percent
+  // (`-percentile(...)*100`). The old `|x|<=1 ? x*100` heuristic re-multiplied
+  // any genuine sub-1% VaR (e.g. a defensive portfolio's 0.6%) into 60%.
   const var95Raw = summary?.var_95 ?? summary?.var_1d_pct;
-  const var95Pct = var95Raw != null ? (Math.abs(var95Raw) <= 1 ? var95Raw * 100 : var95Raw) : null;
+  const var95Pct = var95Raw != null ? var95Raw : null;
   const var95Display = var95Pct != null ? `−${Math.abs(var95Pct).toFixed(2)}` : "—";
   // Map |VaR| 0..7% → 0..100% along gauge.
   const var95Gauge = var95Pct != null ? Math.min(100, (Math.abs(var95Pct) / 7) * 100) : 0;
@@ -215,9 +218,10 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
   // 0 → 0%, 1 → 100%.
   const corrGauge = corr != null && Number.isFinite(corr) ? Math.min(100, corr * 100) : 0;
 
-  // Tail (Component ES) — value % already.
+  // Tail (Component ES) — es_1d_pct is already percent-scaled by the backend
+  // (same contract as var_1d_pct); no re-multiplication.
   const tailRaw = summary?.tail_ces ?? summary?.es_1d_pct;
-  const tailPct = tailRaw != null ? (Math.abs(tailRaw) <= 1 ? tailRaw * 100 : tailRaw) : null;
+  const tailPct = tailRaw != null ? tailRaw : null;
   const tailDisplay = tailPct != null ? `−${Math.abs(tailPct).toFixed(2)}` : "—";
   // |ES| 0..8% → 0..100%.
   const tailGauge = tailPct != null ? Math.min(100, (Math.abs(tailPct) / 8) * 100) : 0;
