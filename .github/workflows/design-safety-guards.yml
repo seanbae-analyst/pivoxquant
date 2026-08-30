@@ -27,7 +27,7 @@
 #       so that once they land, regressions are caught immediately.
 #
 # Local invocation:
-#   python3 scripts/check_design_safety_guards.py
+#   (no local runner — the checks below are inline grep/node steps)
 #
 # After fix PRs are merged and all guards pass, remove the
 # `continue-on-error: true` from DS5/DS6/DS7 steps below.
@@ -156,7 +156,7 @@ jobs:
             | grep -v '^+++' || true)
           if [ -n "$NEW_USES" ]; then
             echo "::error::DS3 FAIL — New dangerouslySetInnerHTML detected in PR diff."
-            echo "Use the allowlist renderer in frontend/src/components/editorial-html.tsx instead."
+            echo "Use the allowlist renderer in frontend/src/lib/editorial-html.tsx instead."
             echo "$NEW_USES"
             exit 1
           fi
