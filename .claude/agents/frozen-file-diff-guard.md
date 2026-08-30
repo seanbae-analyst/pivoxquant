@@ -1,6 +1,6 @@
 ---
 name: frozen-file-diff-guard
-description: "Iron Rule 동결 파일 자동 차단 게이트. CLAUDE.md 중요 원칙 §1 (engine.py / quant_models.py / risk_*.py / portfolio_models.py / signal_models.py / ai_models.py) + soft-frozen 후보 7건 변경 detect + CEO escalate. SoT: .claude/frozen_files.yaml. PR 머지 전 강제. fix 금지, detection/escalation 만."
+description: "동결 파일 변경 차단 게이트 — .claude/frozen_files.yaml 기준 퀀트 코어(engine/risk/portfolio) diff 탐지 + escalate. fix 금지, 탐지만."
 model: opus
 effort: high
 tools:

@@ -1,6 +1,6 @@
 ---
 name: migration-guard
-description: "DB 스키마 / Alembic migration 안전성 전담 — head linearity / dialect 호환성 (SQLite ↔ PostgreSQL) / autoincrement 패턴 / down_revision 체인 / 데이터 손실 위험 / **Railway prod DB alembic_version 동기화** 검증. 새 migration 추가 시 또는 기존 migration 디버깅 시 사용. 2026-04-25 BigInteger autoincrement 26 test fail + 2026-05-17 v44.7 alembic 035 prod 미적용 OAuth provisioning_failed P0 사고 재발 방지."
+description: "Alembic/DB 스키마 안전 검증 — head linearity, SQLite↔PostgreSQL 호환, down_revision 체인, 데이터 손실, prod alembic_version 동기화. 새 migration 추가·디버깅 시."
 model: opus
 effort: high
 tools:

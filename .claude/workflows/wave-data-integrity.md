@@ -25,7 +25,7 @@ PivoxQuant 데이터 파이프라인의 3축 invariant 를 한 번에 회귀 검
 
 Task 1 — FX consistency 회귀:
   agent: fx-consistency-guard
-  prompt: "~/dev/pivoxquant/services/ + routes/ 전수 sweep.
+  prompt: "services/ + routes/ 전수 sweep.
            aggregation 패턴 grep → 각 hit 직전 100줄 fx_service / convert_to_krw /
            value_krw|value_usd 별도 필드 검증. 화이트리스트 (portfolio.py:260-272,
            fx_service.py) 외에서 user-facing aggregation 이면서 FX 변환 없으면 P0 FLAG.
@@ -33,7 +33,7 @@ Task 1 — FX consistency 회귀:
 
 Task 2 — 데이터 freshness 회귀:
   agent: data-freshness-monitor
-  prompt: "~/dev/pivoxquant/services/ + scripts/nightly/ sweep.
+  prompt: "services/ + scripts/nightly/ sweep.
            KIS / DART / KRX / FMP / SEC EDGAR / Alpaca 6 소스 staleness 임계값
            준수 여부 + budget 80% 한도 + 비공식 데이터 (yfinance/pykrx/naver/daum
            finance) grep 0건. fx_service.STALE_SECONDS / cache_ttl 모듈 / price_overlay
@@ -41,7 +41,7 @@ Task 2 — 데이터 freshness 회귀:
 
 Task 3 — Cache poisoning 회귀:
   agent: cache-poisoning-sentinel
-  prompt: "~/dev/pivoxquant/services/ai/ + services/data/ + services/agents/ +
+  prompt: "services/ai/ + services/data/ + services/agents/ +
            services/quant/ + routes/ 전수 sweep. 모든 cache write (_cache.set /
            _set_cache / @lru_cache / SignalCache / Redis) 의 key composition 에
            user_id 포함 여부 검증. 화이트리스트 (sector_regime / vix_level / fx_service
@@ -49,7 +49,7 @@ Task 3 — Cache poisoning 회귀:
            hit 은 P0 FLAG. recent diff 신규 cache.set 라인 강제 통과."
 
 Task 4 (Task 1-3 완료 후) — 통합 게이트 회귀 테스트:
-  Bash: cd ~/dev/pivoxquant && ./venv/bin/python -m pytest \
+  Bash: ./venv/bin/python -m pytest \
         tests/test_data_integrity_gates.py \
         tests/test_fx_staleness.py \
         tests/test_fx_historical.py \

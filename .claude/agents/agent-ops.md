@@ -1,6 +1,6 @@
 ---
 name: agent-ops
-description: "에이전트 운영부 — agent 들의 agent. 58개 agent (수시 변동 — `ls .claude/agents/*.md` 로 실측) 의 telemetry 수집 / failure pattern 탐지 / upgrade 제안 / sunset 결정 / 새 agent gap 식별. 매주 일요일 자동 health audit + 수동 호출. 이번 세션 26 test fail 한 background verify gap 같은 사고 재발 방지가 목적. agent 의 메타-부서."
+description: "agent 운영 메타-부서 — .claude/agents 실측 후 중복·stale·gap 탐지, upgrade/sunset 제안. agent 체계 점검 시."
 model: sonnet
 effort: high
 tools:
