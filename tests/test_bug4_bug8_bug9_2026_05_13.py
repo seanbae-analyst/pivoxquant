@@ -32,7 +32,15 @@ class TestDiscoverUnavailableEnvelope:
     catastrophic. ``error_kr`` is now part of the contract.
     """
 
-    def test_movers_503_envelope_has_new_copy(self, client, auth_user):
+    def test_movers_503_envelope_names_the_real_cause(self, client, auth_user):
+        """An empty per-user cache is "nothing scanned", not a provider outage.
+
+        Superseded 2026-08-30: this case used to assert the shared
+        DISCOVER_FMP_UNAVAILABLE envelope. Movers has no provider call — it
+        reads the per-user discover cache — so blaming FMP quota sent US users
+        to wait out an outage that was not happening. The non-catastrophic-copy
+        contract this class guards still holds, on the accurate code.
+        """
         from services import cache_service
         cache_service.discover_section_cache_clear()
         # Empty user discover cache → no rows for movers + no section cache → 503.
@@ -41,11 +49,28 @@ class TestDiscoverUnavailableEnvelope:
         r = client.get("/api/discover/movers?region=us")
         assert r.status_code == 503
         body = r.get_json()
+        assert body["code"] == "MOVERS_US_NO_DATA"
+        assert body["error"] != "Data temporarily unavailable"
+        assert "quota" not in body["error"].lower()
+        assert "한도" not in body["error_kr"]
+        assert body["retry_after"] == 60
+
+    def test_data_unavailable_envelope_still_guards_real_provider_failures(
+        self, client, auth_user
+    ):
+        """The reworded FMP envelope stays intact for endpoints that do call it."""
+        from unittest.mock import patch
+        from services import cache_service
+        cache_service.discover_section_cache_clear()
+
+        with patch("routes.discover.fetcher") as mock_fetcher:
+            mock_fetcher.get_enhanced_macro.side_effect = RuntimeError("FMP 402")
+            r = client.get("/api/discover/market-overview")
+        assert r.status_code == 503
+        body = r.get_json()
         assert body["code"] == "DISCOVER_FMP_UNAVAILABLE"
         assert "tape" in body["error"].lower()
-        assert body["error"] != "Data temporarily unavailable"
         assert "라이브" in body["error_kr"]
-        assert body["retry_after"] == 60
 
 
 class TestDiscoverFreshTtlBump:

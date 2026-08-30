@@ -272,10 +272,18 @@ class TestMoversSWR:
         assert "last_updated" in body
 
     def test_movers_503_when_no_cache_and_no_data(self, client, auth_user):
-        # No priming, no rows.
+        """Empty per-user cache → "nothing scanned", NOT a provider outage.
+
+        This assertion used to demand DISCOVER_FMP_UNAVAILABLE ("provider
+        quota cooling off"), which named a cause that is not in play: movers
+        never calls FMP directly — it reads the per-user discover cache. An
+        account with nothing scanned got told to wait out an outage that was
+        not happening. KR already had its own code; US now matches.
+        """
         from services import cache_service
         cache_service.discover_cache.pop(auth_user["id"], None)
         r = client.get("/api/discover/movers?region=us")
         assert r.status_code == 503
         body = r.get_json()
-        assert body.get("code") == "DISCOVER_FMP_UNAVAILABLE"
+        assert body.get("code") == "MOVERS_US_NO_DATA"
+        assert body.get("cache_populated") is False
