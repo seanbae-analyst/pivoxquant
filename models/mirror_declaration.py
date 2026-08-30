@@ -54,10 +54,19 @@ class MirrorDeclaration(db.Model):
 
     @classmethod
     def latest_for(cls, user_id: int) -> "MirrorDeclaration | None":
+        # Ordered by id, not declared_at. `declared_at` is stamped from the
+        # application clock at flush time, so two near-simultaneous
+        # re-answers can carry timestamps in the opposite order from the one
+        # they were actually appended in — a request that read its clock
+        # first can still commit second. Ordering on that returns the older
+        # answer as "latest", and the gap then closes against a belief the
+        # user has already replaced. The primary key is assigned by the
+        # database in commit order, which is the order this table's
+        # append-only guarantee is actually about.
         return (
             cls.query
             .filter_by(user_id=int(user_id))
-            .order_by(cls.declared_at.desc(), cls.id.desc())
+            .order_by(cls.id.desc())
             .first()
         )
 

@@ -204,15 +204,29 @@ def _disposition_gap(report: GapReport, decl: Declaration, pl: dict | None) -> N
         return
 
     win_text, lose_text = _fmt_days_pair(win, lose)
-    if win > lose:
-        actual = "profit"
-        observed_text = f"수익 {win_text} · 손실 {lose_text}"
-    elif lose > win:
-        actual = "loss"
-        observed_text = f"손실 {lose_text} · 수익 {win_text}"
-    else:
+
+    # The verdict is decided on the *rendered* values, not the raw ones.
+    #
+    # Comparing raw floats let a 0.1-day gap become "기록은 반대입니다" beside
+    # two identical printed numbers — "손실 90일 · 수익 90일" — because the
+    # display rounds and the comparison did not. A product whose only claim
+    # is that it reports the record faithfully cannot assert a difference the
+    # reader cannot see. If the two sides print the same, they are the same
+    # as far as anything this module is allowed to say.
+    #
+    # This deliberately withholds real sub-resolution differences. That is
+    # the correct trade: a difference too small to show is also too small to
+    # call a contradiction, and stating it would be asking the user to trust
+    # a number instead of reading one.
+    if win_text == lose_text:
         actual = "same"
         observed_text = f"양쪽 모두 {win_text}"
+    elif win > lose:
+        actual = "profit"
+        observed_text = f"수익 {win_text} · 손실 {lose_text}"
+    else:
+        actual = "loss"
+        observed_text = f"손실 {lose_text} · 수익 {win_text}"
 
     declared_text = {
         "profit": "수익 난 쪽을 더 오래",

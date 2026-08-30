@@ -225,3 +225,32 @@ def test_malformed_shapes_do_not_raise():
         r = _parse_response(payload)
         assert isinstance(r, ExtractionResult)
         assert r.trades == []
+
+
+# ── bug-hunt 2026-08-30 회귀 ────────────────────────────────────────────
+
+@pytest.mark.parametrize("raw", [
+    "2099-01-01",   # 연도 한 자리 오독 (2026 → 2099)
+    "9999-12-31",   # %Y 는 네 자리면 무엇이든 받는다
+    "1899-06-01",   # 전자거래 이전
+    "0001-01-01",
+])
+def test_implausible_dates_are_refused(raw):
+    """OCR 이 연도를 한 자리 잘못 읽어도 형식은 유효해서 통과하던 문제.
+
+    미래 날짜 하나가 그대로 TradeHistory 에 들어가면 보유기간·회전율 계산이
+    전부 오염된다. 지어내지 않는다는 규칙은 "읽은 값이 말이 되는가" 까지
+    포함해야 한다.
+    """
+    assert _parse_when(raw) is None
+
+
+def test_a_normal_date_still_passes():
+    from datetime import datetime as _dt
+    assert _parse_when("2026-03-14") == _dt(2026, 3, 14)
+
+
+def test_row_with_future_date_lands_in_unreadable():
+    trade, rejection = _coerce_row(_row(traded_at="2099-01-01"))
+    assert trade is None
+    assert "거래일시" in rejection

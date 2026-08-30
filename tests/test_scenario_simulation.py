@@ -29,7 +29,6 @@ READ_ENDPOINTS = [
     "/api/behavior/turnover-mirror",
     "/api/market/overview", "/api/market/fx", "/api/market/status",
     "/api/discover",
-    "/api/artifacts/list", "/api/artifacts/stats",
     "/api/alerts", "/api/alerts/unread-count",
     "/api/growth/today", "/api/growth/weekly",
     "/api/twin/comparison", "/api/twin/portfolio", "/api/twin/trades",

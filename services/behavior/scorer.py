@@ -501,14 +501,18 @@ def _resolve_persona(user_id: int) -> str:
     prof = InvestmentProfile.query.filter_by(user_id=user_id).first()
     if not prof:
         return "balanced"
-    # Resolve through the shared SoT resolver so V2 questionnaire tokens
-    # (passive_index_hugger, steady_accumulator, …) map to a canonical persona
-    # instead of silently falling back to "balanced" — those tokens are not
-    # PERSONA_HOLDING_DAYS keys themselves. Keeps behaviour scoring on the same
-    # persona as the PDF/peer-benchmark surfaces. (local import: no cycle)
-    from services.artifacts.persona_resolver import resolve_persona
-    persona = resolve_persona(prof)
-    return persona if persona in PERSONA_HOLDING_DAYS else "balanced"
+    # The shared resolver lived in services/artifacts/persona_resolver.py and
+    # went with that tree on 2026-08-30. It mapped V2 questionnaire tokens
+    # (passive_index_hugger, steady_accumulator, …) onto canonical personas;
+    # without it those tokens fall through to "balanced", which is the same
+    # answer this function already gave whenever resolution failed.
+    #
+    # Not reimplemented on purpose: this module has been deprecated since
+    # 2026-05-30 ("AI 점수화 폐기"), its cron and API are off, and it is
+    # slated for removal with the rest of the persona machinery. Rebuilding
+    # the mapping here would be work spent on a path already being cut.
+    declared = getattr(prof, "persona", None) or getattr(prof, "risk_profile", None)
+    return declared if declared in PERSONA_HOLDING_DAYS else "balanced"
 
 
 def _last_sunday(today: date) -> date:

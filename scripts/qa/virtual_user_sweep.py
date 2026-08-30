@@ -13,8 +13,7 @@ What each user does (per persona/portfolio archetype):
   totals sanity: suffix-bucketing, no NaN) → pre-trade deposition
   (start → proceed, observed-context capture) → journal feed → persona read →
   ~40-endpoint read surface (book/profile + discover/market + behavior
-  mirrors + artifacts + analytics/growth/notifications/twin/search) →
-  per-tier artifact generate (gate + dispatch + persistence).
+  mirrors + analytics/growth/notifications/twin/search).
 
 Checks collected as findings:
   * any status outside the endpoint's allowed set (5xx → P0)
@@ -23,9 +22,6 @@ Checks collected as findings:
   * portfolio totals that violate suffix bucketing (KR value in USD bucket)
   * pre-trade rows missing after proceed
   * US index entries missing proxy_ticker disclosure (bug-hunt 2026-06-11 #1)
-  * tier-gate misses on /api/artifacts/generate (free → paid artifact)
-  * interactive artifact contract breaks (no redirect hint)
-  * generated artifact missing from /api/artifacts/list (persistence)
 
 Usage:
     ./venv/bin/python scripts/qa/virtual_user_sweep.py [--users 20]
@@ -111,10 +107,6 @@ READ_ENDPOINTS = [
     ("bhv-holding",      "/api/behavior/holding-mirror",         OK_EMPTYISH),
     ("bhv-pnl",          "/api/behavior/profit-loss-mirror",     OK_EMPTYISH),
     ("bhv-turnover",     "/api/behavior/turnover-mirror",        OK_EMPTYISH),
-    # ── artifacts read surface ──
-    ("art-list",         "/api/artifacts/list",            OK),
-    ("art-stats",        "/api/artifacts/stats",           OK),
-    ("art-bymonth",      "/api/artifacts/by-month?month=2026-06", OK),
     # ── misc read surface ──
     ("analytics-bench",  "/api/analytics/benchmark",       OK_EMPTYISH),
     ("analytics-turn",   "/api/analytics/turnover",        OK_EMPTYISH),
@@ -136,19 +128,6 @@ READ_ENDPOINTS = [
 # (2026-06-11 bug-hunt #1 — discover page dropped proxy_ticker and labelled
 # SPY's share price as "S&P 500"). Backend must always emit the field.
 _PROXY_INDEX_TOKENS = ("S&P", "NASDAQ", "DOW", "RUSSELL")
-
-# Per-tier artifact-generate matrix (unified /api/artifacts/generate).
-# conftest sets LAUNCH_FREE_ALL_TIERS=0, so tier gates are REAL here:
-#   - free generating a Pro artifact must get 403 UPGRADE_REQUIRED
-#     (B2 tier-alignment regression, 2026-06-11)
-#   - entitled generates must come back ready|empty (AI key killed →
-#     placeholder fallback, ₩0)
-#   - interactive types must short-circuit with a redirect hint
-_GENERATE_BY_TIER = {
-    "free":    [("sp500_backtest", "entitled"), ("weekly_memo", "gated")],
-    "pro":     [("weekly_memo", "entitled")],
-    "premium": [("risk_board", "entitled"), ("dd_checklist", "interactive")],
-}
 
 
 def _body_text(resp) -> str:
@@ -201,59 +180,6 @@ class Sweep:
                              f"{name}: US index entry missing proxy_ticker disclosure",
                              f"name={it.get('name')} level={it.get('level')}")
 
-    # ── artifact generate leg ────────────────────────────────────────
-    def _artifact_leg(self, client, label: str, tier: str, headers: dict):
-        """Unified /api/artifacts/generate: tier gate + dispatch + persistence.
-
-        conftest sets LAUNCH_FREE_ALL_TIERS=0 → gates are real. AI keys are
-        killed → entitled generates fall back to placeholders (₩0, hermetic).
-        """
-        for artifact_type, expectation in _GENERATE_BY_TIER.get(tier, []):
-            r = client.post("/api/artifacts/generate", headers=headers,
-                            json={"type": artifact_type})
-            self.calls += 1
-            body = _body_text(r)
-            d = r.get_json(silent=True) or {}
-
-            if r.status_code >= 500:
-                self.finding(label, "P0", f"generate {artifact_type} 5xx",
-                             f"{r.status_code}: {body[:200]}")
-                continue
-            if _has_bad_float(body):
-                self.finding(label, "P1",
-                             f"generate {artifact_type} body contains NaN/Infinity",
-                             body[:200])
-
-            if expectation == "gated":
-                if r.status_code != 403 or d.get("code") != "UPGRADE_REQUIRED":
-                    self.finding(label, "P1",
-                                 f"tier gate MISSED: {tier} generated {artifact_type}",
-                                 f"{r.status_code}: {body[:200]}")
-            elif expectation == "interactive":
-                if r.status_code != 200 or d.get("status") != "interactive" \
-                        or not d.get("redirect"):
-                    self.finding(label, "P1",
-                                 f"interactive contract broken: {artifact_type}",
-                                 f"{r.status_code}: {body[:200]}")
-            else:  # entitled
-                if r.status_code != 200 or d.get("status") not in ("ready", "empty"):
-                    self.finding(label, "P1",
-                                 f"entitled generate failed: {artifact_type} ({tier})",
-                                 f"{r.status_code}: {body[:200]}")
-                elif d.get("status") == "ready" and d.get("artifact_id"):
-                    # Persistence integrity: the new artifact must appear in
-                    # the archive list (pickLatest/identity-watch feed).
-                    rl = client.get("/api/artifacts/list?limit=50")
-                    self.calls += 1
-                    ids = {a.get("id") for a in
-                           ((rl.get_json(silent=True) or {}).get("artifacts") or [])}
-                    if d["artifact_id"] not in ids:
-                        self.finding(label, "P1",
-                                     f"generated {artifact_type} id={d['artifact_id']} "
-                                     "missing from /api/artifacts/list",
-                                     f"list ids={sorted(ids)[:10]}")
-
-    # ── per-user flow ────────────────────────────────────────────────
     def run_user(self, idx: int):
         persona = PERSONAS[idx % len(PERSONAS)]
         archetype = ARCHETYPE_ORDER[idx % len(ARCHETYPE_ORDER)]
@@ -382,7 +308,6 @@ class Sweep:
                 self._check_proxy_disclosure(label, name, body)
 
         # 3b) Artifact generate leg — tier gates + dispatch + persistence.
-        self._artifact_leg(client, label, tier, headers)
 
         # 4) Portfolio totals: suffix bucketing must hold (2026-06-10 fix).
         r = client.get("/api/portfolio")

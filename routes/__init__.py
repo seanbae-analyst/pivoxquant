@@ -31,12 +31,9 @@ def register_blueprints(app):
     from .simulate import simulate_bp
     from .counterfactual import counterfactual_bp
     from .alt_data import alt_data_bp
-    from .artifacts import artifacts_bp
     from .health import health_bp
     from .data_status import data_status_bp  # Wave G C-CS3 — public stale-banner endpoint
-    from .methodology import methodology_bp  # Data-trust Stage 1 — methodology/provenance (flag-gated, Q-DT4)
     from .admin_fmp import admin_fmp_bp
-    from .admin_preview import admin_preview_bp
     from .risk import risk_bp
     from .agent import agent_bp
     from .agent_admin import agent_admin_bp
@@ -72,7 +69,7 @@ def register_blueprints(app):
     blueprints = [
         health_bp,
         data_status_bp,
-        methodology_bp,
+        
         auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, alerts_bp, notifications_bp, trades_bp,
         ai_bp, watchlist_bp, backtest_bp,
@@ -81,7 +78,7 @@ def register_blueprints(app):
         quant_composer_bp, realtime_bp, profile_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
         counterfactual_bp, alt_data_bp,
-        artifacts_bp, admin_fmp_bp, admin_preview_bp,
+        admin_fmp_bp,
         risk_bp, agent_bp, agent_admin_bp,
         twin_bp,
         pre_trade_bp, behavior_bp,

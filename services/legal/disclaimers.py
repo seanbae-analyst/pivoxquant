@@ -41,3 +41,24 @@ DISCLAIMER_BRAG_BILINGUAL = (
 DISCLAIMER_MIRROR_RETROSPECTIVE_KR = (
     "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 아닙니다."
 )
+
+# ─────────────────────────────────────────────────────────────────────────
+# AI 생성물 표시 의무 (방통위 AI 생성물 표시제) — 현재 적용 대상 없음
+# ─────────────────────────────────────────────────────────────────────────
+# Until 2026-08-30 every AI-written artefact carried an "AI 생성 콘텐츠 /
+# AI-generated" badge via services/artifacts/templates/_disclaimer.html, and
+# two test files froze that: tests/test_ai_content_label.py and
+# tests/test_artifact_none_default_and_ai_badge.py.
+#
+# Those templates went with services/artifacts. The seven surviving email
+# templates (onboarding, retention) are hand-written static copy, so nothing
+# the product currently sends is AI-generated and the badge has no surface
+# to sit on. The guards were removed rather than left asserting against
+# deleted files.
+#
+# The obligation did not go away — the subject did. The moment this product
+# ships AI-written user-facing text again (the reflection questions in the
+# mirror flow are the likely first), the badge and a guard freezing it must
+# come back with it. Recorded here rather than in a commit message because
+# a commit message is not somewhere anyone looks before writing a new
+# AI-backed feature.

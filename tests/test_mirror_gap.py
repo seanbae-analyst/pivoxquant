@@ -199,3 +199,36 @@ def test_duration_wording_matches_the_scale(days, expected):
     decl, _ = Declaration.from_answers({"hold_days": days})
     r = compute_gap_report(decl, turnover=_turnover(mean_hold_days=days))
     assert expected in r.gaps[0].statement
+
+
+# ── bug-hunt 2026-08-30 회귀 ────────────────────────────────────────────
+
+@pytest.mark.parametrize("win,lose", [
+    (89.9, 90.0),    # 0.1일 — 표시 반올림으로 양쪽 "90일"
+    (90.0, 95.0),    # 90일 경계 — 양쪽 "약 3개월"
+    (4.4, 4.4001),   # 일 단위 아래
+    (365.0, 366.0),  # 연 단위 표시
+])
+def test_verdict_never_contradicts_the_numbers_shown(win, lose):
+    """보이는 두 값이 같으면 "반대"라고 말할 수 없다.
+
+    원래는 원본 float 로 비교하고 표시는 따로 반올림해서, 0.1일 차이가
+    "기록은 반대입니다 — 손실 90일 · 수익 90일" 로 나왔다. 기록을 그대로
+    돌려준다는 약속을 정면으로 깨는 출력이라, 판정을 표시값 기준으로 바꿨다.
+    """
+    decl, _ = Declaration.from_answers({"hold_longer": "same"})
+    r = compute_gap_report(decl, profit_loss=_pl(win=win, lose=lose))
+    statement = r.gaps[0].statement
+    observed = r.gaps[0].observed_text
+
+    # 같은 숫자가 두 번 나오면서 "반대" 라고 하는 조합은 불가능해야 한다.
+    assert "반대" not in statement, f"동일 표시값에 반대 단언: {statement!r}"
+    assert "양쪽 모두" in observed
+
+
+def test_a_difference_large_enough_to_show_is_still_reported():
+    """반올림 방어가 진짜 격차까지 삼키면 안 된다."""
+    decl, _ = Declaration.from_answers({"hold_longer": "profit"})
+    r = compute_gap_report(decl, profit_loss=_pl(win=5.0, lose=47.0))
+    assert "반대입니다" in r.gaps[0].statement
+    assert "47일" in r.gaps[0].statement and "5일" in r.gaps[0].statement

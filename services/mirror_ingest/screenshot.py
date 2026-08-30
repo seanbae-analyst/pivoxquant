@@ -32,16 +32,17 @@ import re
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Vision model. Haiku is the tier the rest of the codebase already uses and
-# is enough to transcribe a table of printed digits; the task is reading,
-# not reasoning. Overridable so a harder source (a photographed notebook)
-# can be sent to a stronger model without touching callers.
-_MODEL = os.environ.get("PIVOX_INGEST_MODEL", "claude-haiku-4-5")
+# Vision model for the SDK path only. The CLI path — the default — runs
+# whatever model the local `claude` session is configured with and ignores
+# this, because pinning a model there would also pin the session's own
+# config for the call. Named accordingly so the two are not confused: this
+# is not a global knob.
+_API_MODEL = os.environ.get("PIVOX_INGEST_API_MODEL", "claude-haiku-4-5")
 
 _MAX_IMAGE_BYTES = 5 * 1024 * 1024  # Anthropic per-image limit
 _CLI_TIMEOUT_S = int(os.environ.get("PIVOX_INGEST_TIMEOUT_S", "180"))
@@ -134,7 +135,17 @@ def _media_type(data: bytes) -> str | None:
     return None
 
 
-def _parse_when(raw: Any) -> datetime | None:
+# Sanity bounds for a transcribed trade date. `%Y` accepts any four digits,
+# so a single misread digit turns 2026 into 2096 and the row still parses —
+# and a trade dated in the future silently distorts every hold-period and
+# turnover figure computed from it. Korea's electronic trading predates
+# neither bound by enough to matter; anything outside them is a misread,
+# not a trade.
+_MIN_TRADE_YEAR = 1990
+_FUTURE_GRACE_DAYS = 1  # timezone skew between the screenshot and this host
+
+
+def _parse_when(raw: Any, *, now: datetime | None = None) -> datetime | None:
     """Parse the date/time as transcribed. Returns None rather than guessing."""
     if not isinstance(raw, str) or not raw.strip():
         return None
@@ -142,9 +153,15 @@ def _parse_when(raw: Any) -> datetime | None:
     text = re.sub(r"\s+", " ", text)
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
         try:
-            return datetime.strptime(text, fmt)
+            parsed = datetime.strptime(text, fmt)
         except ValueError:
             continue
+        reference = now or datetime.now()
+        if parsed.year < _MIN_TRADE_YEAR:
+            return None
+        if parsed > reference + timedelta(days=_FUTURE_GRACE_DAYS):
+            return None
+        return parsed
     return None
 
 
@@ -237,7 +254,7 @@ def _call_api(client: Any, image_bytes: bytes, media_type: str, model: str | Non
     """
     try:
         response = client.messages.create(
-            model=model or _MODEL,
+            model=model or _API_MODEL,
             max_tokens=4000,
             system=_SYSTEM,
             messages=[{
@@ -292,15 +309,33 @@ def _call_cli(image_bytes: bytes, media_type: str) -> str | None:
             f"Read the image at {tmp_path} and transcribe it under those rules.\n"
             f"Output ONLY the JSON object."
         )
+        # The prompt carries a path the subprocess is told to read, and the
+        # image it reads is supplied by a user. That makes this an injection
+        # surface: text inside the screenshot can address the agent.
+        #
+        # `--allowedTools Read` narrows the capability but not the reach —
+        # Read has no path-scoping syntax, so it can open anything the
+        # process can. So the process itself is narrowed instead:
+        #
+        #   cwd  — a directory holding only the uploaded image, so a relative
+        #          path in an injected instruction resolves nowhere useful.
+        #   env  — a minimal set. The parent holds ANTHROPIC_API_KEY, the
+        #          database URL and the broker encryption key; inheriting
+        #          those means a successful injection reads them out of
+        #          /proc/self/environ on Linux. Only what the CLI needs to
+        #          find its own session is passed through.
+        #
+        # A model refusing an obvious injection is not a control — it is one
+        # model version's judgement about one phrasing. These are.
+        safe_env = {
+            k: v for k, v in os.environ.items()
+            if k in ("HOME", "PATH", "USER", "LANG", "LC_ALL", "TMPDIR")
+        }
         proc = subprocess.run(
-            [
-                "claude", "-p", prompt,
-                # Read is the only capability transcription needs. Anything
-                # wider would hand a tool surface to text that came out of a
-                # user-supplied image.
-                "--allowedTools", "Read",
-            ],
+            ["claude", "-p", prompt, "--allowedTools", "Read"],
             capture_output=True, text=True, timeout=_CLI_TIMEOUT_S,
+            cwd=os.path.dirname(tmp_path),
+            env=safe_env,
         )
         if proc.returncode != 0:
             logger.warning(
