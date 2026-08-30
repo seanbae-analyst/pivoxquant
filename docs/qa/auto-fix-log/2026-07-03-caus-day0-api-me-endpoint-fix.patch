@@ -1,0 +1,98 @@
+diff --git a/scripts/caus_scenarios/day0_signup.py b/scripts/caus_scenarios/day0_signup.py
+index 5eecd8aa..e3295d79 100644
+--- a/scripts/caus_scenarios/day0_signup.py
++++ b/scripts/caus_scenarios/day0_signup.py
+@@ -2,7 +2,8 @@
+ 
+ Assertions:
+   - Post-sim-onboard, GET /home returns 200 (no redirect loop to /login)
+-  - /api/me responds with onboarding_completed=True for the sim user
++  - /api/auth/me responds with authenticated=True and
++    user.onboarding_completed=True for the sim user
+   - No raw stack-trace text on the landing page (graceful fallback)
+   - No forbidden cap-markets words on /home
+   - No console errors during the 5s after page load
+@@ -13,6 +14,15 @@ import json
+ 
+ from . import _base
+ 
++# Canonical session-inspection endpoint. Backend route lives at
++# ``routes/auth.py::me`` under ``auth_bp`` (url_prefix=/api/auth), and the
++# frontend calls the same URL via ``ENDPOINTS.auth.me`` in
++# ``frontend/src/lib/endpoints.ts``. The old ``/api/me`` shorthand was never
++# a real route — hitting it produced a 403 from the beta-gate / birthdate
++# gate pattern-match on ``/api/*``, which the sim mis-diagnosed as "session
++# cookie not accepted".
++ME_ENDPOINT = "/api/auth/me"
++
+ 
+ def run(page, context, *, agent_id: str, base_url: str) -> list[dict]:
+     findings: list[dict] = []
+@@ -35,38 +45,51 @@ def run(page, context, *, agent_id: str, base_url: str) -> list[dict]:
+         ))
+         return findings
+ 
+-    # 2. /api/me onboarding_completed sanity
++    # 2. /api/auth/me onboarding_completed sanity. Response shape from
++    #    routes/auth.py::me is ``{authenticated: bool, user?: {...,
++    #    onboarding_completed: bool, ...}}`` — the flag is nested under
++    #    ``user``, NOT at the top level.
+     try:
+-        resp = context.request.get(f"{base_url}/api/me", timeout=15_000)
++        resp = context.request.get(f"{base_url}{ME_ENDPOINT}", timeout=15_000)
+         if resp.status == 200:
+             try:
+                 data = resp.json()
+-                onboard = bool(data.get("onboarding_completed", False))
+-                if not onboard:
++                authed = bool(data.get("authenticated", False))
++                if not authed:
+                     findings.append(_base.new_finding(
+-                        severity="P1", category="기능", page="/api/me",
+-                        summary="onboarding_completed=False after sim-onboard",
+-                        repro="POST sim-onboard → GET /api/me",
++                        severity="P0", category="기능", page=ME_ENDPOINT,
++                        summary="authenticated=False after sim-onboard (session cookie not accepted)",
++                        repro=f"sim-onboard mint then GET {ME_ENDPOINT}",
+                         screenshot=snap,
+                     ))
++                else:
++                    user = data.get("user") or {}
++                    onboard = bool(user.get("onboarding_completed", False))
++                    if not onboard:
++                        findings.append(_base.new_finding(
++                            severity="P1", category="기능", page=ME_ENDPOINT,
++                            summary="user.onboarding_completed=False after sim-onboard",
++                            repro=f"POST sim-onboard → GET {ME_ENDPOINT}",
++                            screenshot=snap,
++                        ))
+             except json.JSONDecodeError:
+                 findings.append(_base.new_finding(
+-                    severity="P1", category="기능", page="/api/me",
+-                    summary="/api/me returned 200 but body not JSON",
+-                    repro="GET /api/me", screenshot="N/A",
++                    severity="P1", category="기능", page=ME_ENDPOINT,
++                    summary=f"{ME_ENDPOINT} returned 200 but body not JSON",
++                    repro=f"GET {ME_ENDPOINT}", screenshot="N/A",
+                 ))
+         elif resp.status in (401, 403):
+             findings.append(_base.new_finding(
+-                severity="P0", category="기능", page="/api/me",
+-                summary=f"/api/me {resp.status} — session cookie not accepted",
+-                repro="sim-onboard mint then GET /api/me",
++                severity="P0", category="기능", page=ME_ENDPOINT,
++                summary=f"{ME_ENDPOINT} {resp.status} — session cookie not accepted",
++                repro=f"sim-onboard mint then GET {ME_ENDPOINT}",
+                 screenshot=snap,
+             ))
+     except Exception as exc:
+         findings.append(_base.new_finding(
+-            severity="P2", category="데이터", page="/api/me",
+-            summary=f"/api/me request error: {exc}"[:120],
+-            repro="GET /api/me", screenshot="N/A",
++            severity="P2", category="데이터", page=ME_ENDPOINT,
++            summary=f"{ME_ENDPOINT} request error: {exc}"[:120],
++            repro=f"GET {ME_ENDPOINT}", screenshot="N/A",
+         ))
+ 
+     # 3. raw stack trace / forbidden text
