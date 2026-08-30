@@ -10,6 +10,8 @@ import time
 import threading
 from datetime import datetime
 
+from services.time_utils import observed_at_iso
+
 logger = logging.getLogger(__name__)
 
 
@@ -211,8 +213,8 @@ class RealtimeService:
                         continue
                     price = trade_price if trade_price is not None else float(bar.close)
                     ts = (
-                        trade.timestamp.isoformat() if (trade and getattr(trade, "timestamp", None))
-                        else (bar.timestamp.isoformat() if bar else datetime.now().isoformat())
+                        observed_at_iso(trade.timestamp) if (trade and getattr(trade, "timestamp", None))
+                        else (observed_at_iso(bar.timestamp) if bar else observed_at_iso())
                     )
                     results[sym] = {
                         "ticker": sym,
@@ -420,7 +422,7 @@ class RealtimeService:
                 "volume": int(bar.volume) if bar else 0,
                 "currency": "USD",
                 "source": "alpaca",
-                "timestamp": trade_ts or (bar.timestamp.isoformat() if bar else datetime.now().isoformat()),
+                "timestamp": observed_at_iso(trade_ts or (bar.timestamp if bar else None)),
             }
         except Exception as e:
             logger.warning("Alpaca price failed %s: %s", ticker, e)
@@ -618,7 +620,7 @@ class RealtimeService:
                 "change_pct": float(o.get("prdy_ctrt", 0)),
                 "currency": "KRW",
                 "source": "kis",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": observed_at_iso(),
             }
             # Seed the shared cache (both key forms) so every caller — get_price,
             # get_prices_batch, quick_lookup — leaves a last-known KR value for
@@ -668,7 +670,7 @@ class RealtimeService:
                 ),
                 "currency": "KRW" if is_kr else "USD",
                 "source": "fmp_stale" if is_stale else "fmp",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": observed_at_iso(),
             }
             if is_stale:
                 payload["stale"] = True

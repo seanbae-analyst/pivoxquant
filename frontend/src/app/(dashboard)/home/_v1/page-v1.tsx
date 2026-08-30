@@ -24,6 +24,7 @@
  * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner retained.
  */
 
+import { parseUtcSafe } from "@/lib/relative-time";
 import Link from "next/link";
 import { useMemo } from "react";
 import useSWR from "swr";
@@ -527,7 +528,7 @@ export default function HomePageV1() {
         align: "right",
         render: (r) =>
           r.observedAt
-            ? new Date(r.observedAt).toLocaleTimeString("en-GB", {
+            ? new Date(parseUtcSafe(r.observedAt)).toLocaleTimeString("en-GB", {
                 hour: "2-digit",
                 minute: "2-digit",
               })

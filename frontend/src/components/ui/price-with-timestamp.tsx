@@ -22,6 +22,8 @@
 
 import { useEffect, useState } from "react";
 
+import { parseUtcSafe } from "@/lib/relative-time";
+
 interface Props {
   price: number | null | undefined;
   /** ISO 8601 timestamp of when the price was observed on the backend. */
@@ -58,7 +60,7 @@ function relativeTime(
   now: number,
 ): string {
   if (!iso) return "—";
-  const t = new Date(iso).getTime();
+  const t = parseUtcSafe(iso);
   if (!Number.isFinite(t)) return "—";
   const sec = Math.max(0, Math.floor((now - t) / 1000));
   if (sec < 2) return "live";
@@ -67,7 +69,7 @@ function relativeTime(
   if (min < 60) return `${min}m ago`;
   const hr = Math.floor(min / 60);
   if (hr < 24) return `${hr}h ago`;
-  return new Date(iso).toLocaleDateString();
+  return new Date(t).toLocaleDateString();
 }
 
 export function PriceWithTimestamp({
@@ -89,7 +91,7 @@ export function PriceWithTimestamp({
 
   const priceStr = formatPrice(price, currency);
   const rel = relativeTime(observedAt, now);
-  const obsMs = observedAt ? new Date(observedAt).getTime() : 0;
+  const obsMs = observedAt ? parseUtcSafe(observedAt) : 0;
   const hasObservation = !!observedAt && Number.isFinite(obsMs);
   const isStale = !observedAt || now - obsMs > staleThresholdMs;
   const isLive = rel === "live";
