@@ -226,14 +226,35 @@ jobs:
 
       - name: Broker safety guards
         run: |
-          # KIS buy/sell must remain disabled
-          if ! grep -q 'KIS_READ_ONLY\|주문 기능이 비활성화' kis_service.py 2>/dev/null; then
-            echo "::error::KIS read-only guard text missing in kis_service.py"
+          # 2026-08-30: both checks pointed at files that no longer exist, so
+          # this step could only ever fail. It never surfaced because the
+          # workflow was disabled in May, before the paths moved under it.
+          #   kis_service.py                        → services/kis/service.py
+          #   services/broker/user_alpaca_service.py → deleted with the Alpaca
+          #                                            integration (2026-05-27)
+          # `grep -q ... 2>/dev/null` also conflated "the guard text is gone"
+          # with "the file moved", so both are now reported distinctly.
+
+          # KIS must stay read-only — placing orders would make this an
+          # investment-discretion business (투자일임업) under 자본시장법.
+          KIS_SVC=services/kis/service.py
+          if [ ! -f "$KIS_SVC" ]; then
+            echo "::error::$KIS_SVC is missing — the KIS read-only guard cannot be verified. If the module moved, update this workflow in the same commit."
             exit 1
           fi
-          # Alpaca paper=True hardcoded
-          if ! grep -q 'paper\s*=\s*True' services/broker/user_alpaca_service.py 2>/dev/null; then
-            echo "::error::Alpaca paper=True not hardcoded in user_alpaca_service.py"
+          if ! grep -q 'KIS_READ_ONLY\|주문 기능이 비활성화' "$KIS_SVC"; then
+            echo "::error::KIS read-only guard text missing in $KIS_SVC"
             exit 1
           fi
+
+          # The Alpaca broker integration was removed on 2026-05-27; the old
+          # guard pinned paper=True so it could never trade live. The
+          # equivalent guarantee now is that it stays removed. Only the
+          # gated-off data adapter (services/data/alpaca_market_adapter.py,
+          # ALPACA_ENABLED default off) may remain.
+          if [ -e services/broker/user_alpaca_service.py ]; then
+            echo "::error::services/broker/user_alpaca_service.py is back. The Alpaca broker integration was removed deliberately; reinstating it needs a live-vs-paper guard and a legal review, not a silent restore."
+            exit 1
+          fi
+
           echo "✅ Broker safety guards intact"
