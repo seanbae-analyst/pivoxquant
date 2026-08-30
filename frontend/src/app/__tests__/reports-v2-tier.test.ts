@@ -6,7 +6,7 @@
  * locked, including the free Brag Card ("Upgrade to free"). 2026-06-11 fix.
  */
 import { describe, it, expect } from "vitest";
-import { toUiTier } from "@/app/(dashboard)/reports/_v2/page-v2";
+import { toUiTier } from "@/app/(dashboard)/reports/page";
 
 describe("reports v2 toUiTier", () => {
   it("collapses lifetime/plus entitlement tiers to premium", () => {

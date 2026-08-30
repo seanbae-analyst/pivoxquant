@@ -356,7 +356,7 @@ export function GenerateArtifactCta({ tier }: Props) {
           Tailwind `md:` is min-width 768px (mobile-first), so it forced ONE
           column on desktop while the inline `repeat(3, …)` stayed 3-up on
           mobile (<768px) → 375px overflow. Switched to the proven max-width
-          `<style jsx>` collapse used by home/_v2/page-v2.tsx: 3-up desktop,
+          `<style jsx>` collapse used by home/home-surface.tsx: 3-up desktop,
           1-up mobile. */}
       <div
         style={{

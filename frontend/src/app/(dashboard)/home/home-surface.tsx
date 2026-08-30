@@ -4,7 +4,7 @@
  * /home v2 — Direction B · Gallery layout.
  *
  * Source of truth: frontend/design-mockups/home-v2/{SPEC.md, MIGRATION.md}.
- * Toggle: NEXT_PUBLIC_HOME_V2=true. Default off; v1 remains live.
+ * The /home gallery surface — rendered unless NEXT_PUBLIC_MIRROR_HOME=true.
  *
  * Surface map (matches v1 17-module inventory):
  *   - TopTicker                 (reused, full-bleed)

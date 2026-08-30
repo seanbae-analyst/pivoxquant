@@ -304,7 +304,7 @@ export default function DiscoverPage() {
       // no feedback. apiFetch already routes 401 → /login and 429 → its
       // own toast, so re-throws on 408/500/network land here and need
       // their own surface. Use sonner (same canonical pattern as
-      // alerts/page.tsx, watchlist/page.tsx, settings/_v2/page-v2.tsx).
+      // alerts/page.tsx, watchlist/page.tsx, settings/page.tsx).
       if (err instanceof ApiError) {
         if (err.status === 408) {
           toast.error("스캔 요청이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.");

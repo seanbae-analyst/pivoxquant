@@ -21,7 +21,7 @@
  *   We map each to a Korean + English message.
  *
  * Visual layer follows v3 Vantablack lock-in tokens — same Bronze hairline
- * + JetBrains mono labels as ``signup/_v2/page-v2.tsx`` so the page reads
+ * + JetBrains mono labels as ``signup/page.tsx`` so the page reads
  * as a continuation of the consent flow, not a stand-alone form.
  */
 

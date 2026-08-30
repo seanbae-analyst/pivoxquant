@@ -18,7 +18,7 @@ import {
   UNDER_AGE_KO,
 } from "@/lib/age-verification";
 
-import SignupPageV2 from "@/app/(auth)/signup/_v2/page-v2";
+import SignupPageV2 from "@/app/(auth)/signup/page";
 import { LegalConsentModal } from "@/components/ui/legal-consent-modal";
 
 // Mocks shared with signup-v2.test.tsx

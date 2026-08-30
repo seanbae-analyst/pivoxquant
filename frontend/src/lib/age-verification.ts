@@ -5,7 +5,7 @@
  * 동의를 받아야 함. PivoxQuant 출시 시점에는 법정대리인 동의 절차가
  * 구축되어 있지 않으므로 만 14세 미만은 회원가입을 fail-fast 한다.
  *
- * 본 헬퍼는 회원가입 컴포넌트(legal-consent-modal / signup _v1 / _v2) 가
+ * 본 헬퍼는 회원가입 컴포넌트(legal-consent-modal / signup) 가
  * 동일한 만나이 계산 로직을 공유하기 위함이다.
  */
 
