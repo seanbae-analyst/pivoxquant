@@ -132,7 +132,11 @@ export default function RiskPageV2() {
       />
 
       {/* BLOCKS */}
-      <main style={{ paddingTop: 56 }}>
+      {/* Not <main>: DashboardLayout already provides the page's single
+          <main id="main-content"> landmark, and nesting a second one is
+          invalid HTML — it gives the page two main landmarks and makes
+          "skip to main content" ambiguous for screen readers. */}
+      <div style={{ paddingTop: 56 }}>
         <RiskGaugeGrid summary={summary} layers={layers} />
 
         <SevenLayerBreakdown
@@ -269,7 +273,7 @@ export default function RiskPageV2() {
             ))}
           </ul>
         </section>
-      </main>
+      </div>
 
       {/* Foot signature */}
       <div style={{ marginTop: 24 }}>
