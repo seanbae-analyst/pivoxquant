@@ -65,6 +65,22 @@ interface Surface {
   assert: (page: Page) => Promise<void>;
 }
 
+/**
+ * The first *visible* main region.
+ *
+ * DashboardLayout renders the desktop and mobile shells simultaneously and
+ * hides one with Tailwind `hidden md:flex` / `md:hidden`, so several <main>
+ * elements are always in the DOM — at 375px the desktop one is still there,
+ * collapsed to 0x0. `page.locator("main").first()` picks in document order,
+ * which on mobile is that collapsed desktop shell, and Playwright counts a
+ * zero-size element as not visible. That is why every needsAuth surface
+ * failed on mobile and passed on desktop from the first CI run onward: the
+ * pages render fine, the locator just pointed at the wrong element.
+ *
+ * `:visible` filters to the shell actually painted for the viewport.
+ */
+const mainRegion = (page: Page) => page.locator("main:visible, [role=main]:visible").first();
+
 const SURFACES: readonly Surface[] = [
   {
     name: "01-login",
@@ -112,7 +128,7 @@ const SURFACES: readonly Surface[] = [
     needsAuth: true,
     assert: async (page) => {
       // Either variant must render some primary heading — accept any <h1> or main role
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -120,7 +136,7 @@ const SURFACES: readonly Surface[] = [
     path: "/portfolio",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -128,7 +144,7 @@ const SURFACES: readonly Surface[] = [
     path: "/risk",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -136,7 +152,7 @@ const SURFACES: readonly Surface[] = [
     path: "/signals",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -144,7 +160,7 @@ const SURFACES: readonly Surface[] = [
     path: "/reports",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -152,7 +168,7 @@ const SURFACES: readonly Surface[] = [
     path: "/profile",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
@@ -160,7 +176,7 @@ const SURFACES: readonly Surface[] = [
     path: "/settings",
     needsAuth: true,
     assert: async (page) => {
-      await expect(page.locator("main, [role=main]").first()).toBeVisible({ timeout: 15000 });
+      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
 ] as const;
