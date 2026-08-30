@@ -2,7 +2,6 @@
 
 세 endpoint/context 에서 임의 ticker 분석을 차단하는 가드를 검증한다:
 
-AI#1  GET /api/daytrade/analyze/<ticker>
         - 보유/관심 외 ticker → 403 access_denied
         - 보유 ticker → 게이트 통과(403 아님), take_profit 노출은 보유종목 한정
 AI#2  GET /api/peers/<ticker>
@@ -17,55 +16,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 
-# ── AI#1: /api/daytrade/analyze/<ticker> ─────────────────────────────────────
 
-class TestDaytradeAnalyzeGate:
-    def test_out_of_scope_ticker_returns_403(self, client, auth_user):
-        # 보유/관심 없는 임의 종목 → §101 거부.
-        r = client.get("/api/daytrade/analyze/TSLA")
-        assert r.status_code == 403
-        assert r.get_json()["error"] == "ticker_not_in_user_scope"
-
-    def test_out_of_scope_kr_ticker_returns_403(self, client, auth_user):
-        # bare 6-digit KR 코드 역시 정규화 후 거부.
-        r = client.get("/api/daytrade/analyze/005930")
-        assert r.status_code == 403
-        assert r.get_json()["error"] == "ticker_not_in_user_scope"
-
-    def test_owned_us_ticker_passes_gate_and_exposes_take_profit(
-        self, client, auth_user, add_position,
-    ):
-        add_position(auth_user["id"], ticker="AAPL")
-        # daytrade 서비스 boundary 를 mock — 게이트 통과 후 take_profit 포함 흐름 보존.
-        with patch("routes.daytrade.daytrade") as mock_dt:
-            mock_dt.available = True
-            mock_dt.analyze_short_term.return_value = {
-                "ticker": "AAPL", "name": "Apple", "signal": "NEUTRAL",
-                "take_profit": 200, "stop_loss": 180,
-            }
-            r = client.get("/api/daytrade/analyze/AAPL")
-        # 게이트 통과 (403 아님). take_profit 은 보유종목 한정으로만 노출.
-        assert r.status_code == 200
-        body = r.get_json()
-        assert body["ticker"] == "AAPL"
-        assert body["take_profit"] == 200
-
-    def test_watched_ticker_passes_gate(self, app, client, auth_user):
-        from extensions import db
-        from models import Watchlist
-        with app.app_context():
-            db.session.add(Watchlist(user_id=auth_user["id"], ticker="MSFT"))
-            db.session.commit()
-        with patch("routes.daytrade.daytrade") as mock_dt:
-            mock_dt.available = True
-            mock_dt.analyze_short_term.return_value = {
-                "ticker": "MSFT", "name": "Microsoft", "signal": "NEUTRAL",
-            }
-            r = client.get("/api/daytrade/analyze/MSFT")
-        assert r.status_code != 403
-
-
-# ── AI#2: /api/peers/<ticker> ────────────────────────────────────────────────
 
 class TestPeerComparisonGate:
     def test_out_of_scope_ticker_returns_403(self, client, auth_user):

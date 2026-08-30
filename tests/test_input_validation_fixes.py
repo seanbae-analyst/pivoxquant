@@ -4,7 +4,6 @@ One test per fix. Each pins the specific failure mode the fix closes:
 
 API#2  performance_quant — benchmark NaN correlation → 0.0 (no JSON `NaN`).
 API#3  ai/chat — message length cap (4000 chars) → 400 MESSAGE_TOO_LONG.
-API#4  daytrade/chart — `?limit=abc` no longer 500s; limit clamps; tf allowlist.
 API#6  backtest — period allowlist + 422 (not 500) on failure.
 API#8  alt_data FRED — limit caps at 1000; no-data → 404 (not 502); start format.
 API#1/#9 quant_helpers — KR ticker format passes regex; US-only signals reject KR.
@@ -97,43 +96,7 @@ class TestChatMessageLengthCap:
         assert body.get("code") != "MESSAGE_TOO_LONG"
 
 
-# ── API#4: daytrade/chart limit + tf validation ───────────────────────────────
 
-class TestDaytradeChartValidation:
-    def test_non_numeric_limit_does_not_500(self, client, auth_user):
-        with patch("routes.daytrade.daytrade") as mock_dt:
-            mock_dt.available = True
-            mock_dt.get_intraday_bars.return_value = []
-            r = client.get("/api/daytrade/chart/AAPL?limit=abc")
-        assert r.status_code == 200
-        # falls back to default 100
-        _, kwargs_args, _ = (mock_dt.get_intraday_bars.call_args.args + (None,) * 3)[:3]
-        assert mock_dt.get_intraday_bars.call_args.args[2] == 100
-
-    def test_oversized_limit_clamped_to_500(self, client, auth_user):
-        with patch("routes.daytrade.daytrade") as mock_dt:
-            mock_dt.available = True
-            mock_dt.get_intraday_bars.return_value = []
-            client.get("/api/daytrade/chart/AAPL?limit=999999")
-        assert mock_dt.get_intraday_bars.call_args.args[2] == 500
-
-    def test_invalid_tf_falls_back_to_5min(self, client, auth_user):
-        with patch("routes.daytrade.daytrade") as mock_dt:
-            mock_dt.available = True
-            mock_dt.get_intraday_bars.return_value = []
-            r = client.get("/api/daytrade/chart/AAPL?tf=bogus")
-        assert mock_dt.get_intraday_bars.call_args.args[1] == "5Min"
-        assert r.get_json()["timeframe"] == "5Min"
-
-    def test_valid_tf_preserved(self, client, auth_user):
-        with patch("routes.daytrade.daytrade") as mock_dt:
-            mock_dt.available = True
-            mock_dt.get_intraday_bars.return_value = []
-            client.get("/api/daytrade/chart/AAPL?tf=15Min")
-        assert mock_dt.get_intraday_bars.call_args.args[1] == "15Min"
-
-
-# ── API#6: backtest period allowlist + 422 ────────────────────────────────────
 
 class TestBacktestValidation:
     def test_arbitrary_period_coerced_to_1y(self, client, auth_user):

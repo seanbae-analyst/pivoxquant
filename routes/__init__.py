@@ -9,7 +9,6 @@ def register_blueprints(app):
     from .signals import signals_bp
     from .discover import discover_bp
     from .market import market_bp
-    from .daytrade import daytrade_bp
     from .alerts import alerts_bp
     from .notifications import notifications_bp
     from .trades import trades_bp
@@ -76,7 +75,7 @@ def register_blueprints(app):
         data_status_bp,
         methodology_bp,
         auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
-        market_bp, daytrade_bp, alerts_bp, notifications_bp, trades_bp,
+        market_bp, alerts_bp, notifications_bp, trades_bp,
         ai_bp, watchlist_bp, backtest_bp,
         signals_quant_bp, risk_quant_bp, performance_quant_bp,
         tools_quant_bp, strategy_quant_bp,
