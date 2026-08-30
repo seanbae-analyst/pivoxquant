@@ -84,9 +84,25 @@ const SURFACES: readonly Surface[] = [
     path: "/signup",
     needsAuth: false,
     assert: async (page) => {
-      // Same V1/V2 split as login — OAuth-only in V1.
+      // NOT the same shape as login, despite the shared OAuth providers.
+      // Signup gates the OAuth anchors behind the mandatory consent boxes
+      // (CLAUDE.md: "Terms checkbox 필수 (회원가입 시)"), so until every
+      // required box is ticked the page renders `aria-disabled` buttons that
+      // carry no href — see (auth)/signup/_v1/page-v1.tsx, `allRequired`.
+      // The old assertion reused login's href-only selector, which a freshly
+      // loaded /signup can never satisfy; it only passed while the suite ran
+      // against a browser that already had a session and got redirected off
+      // the page entirely. Assert what an anonymous visitor actually sees:
+      // the consent gate, and a Google affordance in either state.
       await expect(
-        page.locator('input[type="email"], a[href*="/api/auth/google"], a[href*="/api/auth/kakao"]').first(),
+        page.locator('input[type="checkbox"], [role="checkbox"]').first(),
+      ).toBeVisible({ timeout: 15000 });
+      await expect(
+        page
+          .locator(
+            'a[href*="/api/auth/google"], button:has-text("Google"), a[href*="/api/auth/kakao"], button:has-text("카카오")',
+          )
+          .first(),
       ).toBeVisible({ timeout: 15000 });
     },
   },
