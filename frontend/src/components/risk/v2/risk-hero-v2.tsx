@@ -5,13 +5,18 @@
  *
  * Mirrors the home-v2 / portfolio-v2 hero rhythm: 80px / 64px padding,
  * hairline-bottom seal, no border. H1 Playfair 500 / 48px with bronze
- * italic accents. Posture vocabulary is legal-safe (composed / attentive
- * / strained / breached) — observation language only, never action.
+ * italic accents. Posture vocabulary is legal-safe (insufficient / composed /
+ * attentive / strained / breached) — observation language only, never action.
  */
 
 import * as React from "react";
 
-type Posture = "composed" | "attentive" | "strained" | "breached";
+type Posture =
+  | "insufficient"
+  | "composed"
+  | "attentive"
+  | "strained"
+  | "breached";
 
 interface Props {
   eyebrow: string;
@@ -23,6 +28,7 @@ interface Props {
 }
 
 const POSTURE_KR: Record<Posture, string> = {
+  insufficient: "not yet observable",
   composed: "composed",
   attentive: "attentive",
   strained: "strained",
@@ -37,12 +43,20 @@ export function RiskHeroV2({
   loudestSignal,
   observedAtKst,
 }: Props) {
-  const observedClause = observedAtKst
-    ? `Seven layers observed at ${observedAtKst}.`
-    : "Seven layers observed at the latest market close.";
+  // With no layers there is nothing to report on. Saying "seven layers
+  // observed … all within band" about an empty book would describe a
+  // measurement that never happened.
+  const nothingObserved = posture === "insufficient";
 
-  const strainClause =
-    breachedCount > 0
+  const observedClause = nothingObserved
+    ? "No layers observed yet — the seven-layer view needs holdings to read."
+    : observedAtKst
+      ? `Seven layers observed at ${observedAtKst}.`
+      : "Seven layers observed at the latest market close.";
+
+  const strainClause = nothingObserved
+    ? "Nothing measured"
+    : breachedCount > 0
       ? `${breachedCount} layer${breachedCount === 1 ? "" : "s"} breached`
       : strainedCount > 0
         ? `${strainedCount} under strain, none breached`

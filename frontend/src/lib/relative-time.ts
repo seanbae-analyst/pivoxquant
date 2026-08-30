@@ -25,6 +25,26 @@ export interface RelativeTimeOptions {
   verbose?: boolean;
 }
 
+/**
+ * UTC-safe timestamp parse — shared guard against the naive-ISO drift.
+ *
+ * `new Date("2026-08-30T07:00:00")` is parsed as LOCAL time per ECMA-262, so a
+ * naive UTC stamp from the backend read ~9 hours off for KST users. Backend
+ * payloads now carry an explicit `Z` (`services/time_utils.observed_at_iso`),
+ * but this guard stays as defense-in-depth for legacy/cached responses.
+ *
+ * Returns epoch milliseconds, or `NaN` when the input is absent/unparseable.
+ */
+export function parseUtcSafe(input: string | Date | null | undefined): number {
+  if (!input) return NaN;
+  if (input instanceof Date) return input.getTime();
+  const needsUtcGuard =
+    typeof input === "string" &&
+    !input.endsWith("Z") &&
+    !/[+-]\d{2}:?\d{2}$/.test(input);
+  return new Date(needsUtcGuard ? input + "Z" : input).getTime();
+}
+
 export function relativeTime(
   input: string | Date,
   locale: Locale,
@@ -38,16 +58,7 @@ export function relativeTime(
   // time per ECMA-262 — for KST users this drifted relative-time
   // readings by 9 hours. Force UTC interpretation when no timezone
   // marker is present.
-  let t: number;
-  if (input instanceof Date) {
-    t = input.getTime();
-  } else {
-    const needsUtcGuard =
-      typeof input === "string" &&
-      !input.endsWith("Z") &&
-      !/[+-]\d{2}:?\d{2}$/.test(input);
-    t = new Date(needsUtcGuard ? input + "Z" : input).getTime();
-  }
+  const t = parseUtcSafe(input);
   if (Number.isNaN(t)) return "";
 
   const diff = Date.now() - t;

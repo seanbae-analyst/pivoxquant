@@ -10,7 +10,7 @@
  *
  * Scope mirrors the sweep deliberately: SHADOW declarations only (box/text/
  * drop-shadow). Backgrounds and gradients still carry literals — widening
- * the guard is a separate design decision. _v1 rollback bundles excluded
+ * the guard is a separate design decision.
  * (frozen byte-for-byte as rollback insurance).
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -26,7 +26,7 @@ const SHADOW_KEY = /box-shadow|text-shadow|drop-shadow|boxShadow|textShadow/i;
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
-    if (name === "_v1" || name === "node_modules") continue;
+    if (name === "node_modules") continue;
     if (statSync(p).isDirectory()) walk(p, out);
     else if (/\.(tsx|ts|css)$/.test(name) && !/\.(test|spec)\./.test(name)) out.push(p);
   }

@@ -3,6 +3,7 @@ from .position import Position
 from .alert import Alert
 from .signal_cache import SignalCache
 from .trade_history import TradeHistory
+from .mirror_declaration import MirrorDeclaration
 from .watchlist import Watchlist
 from .investment_profile import InvestmentProfile
 from .broker_connection import BrokerConnection
@@ -68,7 +69,8 @@ from .auth_event import (
     PROVIDER_KAKAO as AUTH_PROVIDER_KAKAO,
 )
 
-__all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlist",
+__all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory",
+    "MirrorDeclaration", "Watchlist",
            "InvestmentProfile", "BrokerConnection", "PushSubscription", "PortfolioShare",
            "Artifact", "ARTIFACT_TYPES",
            "UserReferral", "generate_referral_code",

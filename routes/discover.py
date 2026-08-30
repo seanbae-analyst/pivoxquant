@@ -307,52 +307,59 @@ def movers():
         )
         return jsonify(_stale_envelope(entry["data"], entry["ts"]))
 
-    # Bug #5 (2026-05-14): KR movers draws solely from the per-user engine
-    # discover cache (owned + watchlist KR holdings, §101-restricted — there
-    # is no broad KR market scan). When the user reaches /market's KR tab
-    # without first populating that cache, or holds no KR names, the result
-    # is legitimately empty — NOT an FMP quota failure. Returning the generic
-    # DISCOVER_FMP_UNAVAILABLE code mislabels the cause and the frontend
-    # cannot tell "provider down" from "no KR data for this account".
-    # Emit a KR-specific code so the UI can show an accurate empty state.
-    if region == "kr":
-        try:
-            uid = current_user.id
-            uc = cache_service.discover_cache.get(uid)
-            cache_populated = bool((uc or {}).get("data"))
-            kr_rows = [
-                r for r in ((uc or {}).get("data") or [])
-                if bool(r.get("is_korean"))
-            ]
-        except Exception:
-            cache_populated, kr_rows = False, []
-        logger.warning(
-            "discover.movers (kr): %d gainers / %d losers, "
-            "cache_populated=%s kr_rows=%d — no KR market data for this "
-            "account",
-            len(gainers), len(losers), cache_populated, len(kr_rows),
-        )
-        body = {
-            "error":       "No Korean market data for this account yet",
-            "error_kr":    "이 계정에 표시할 한국 시장 데이터가 아직 없습니다",
-            "code":        "MOVERS_KR_NO_DATA",
-            "endpoint":    "movers:kr",
-            "retry_after": 60,
-            # Diagnostic hint: distinguishes "engine cache never built"
-            # from "built but holds no KR names" without leaking PII.
-            "cache_populated": cache_populated,
-        }
-        response = jsonify(body)
-        response.status_code = 503
-        response.headers["Retry-After"] = "60"
-        return response
+    # Bug #5 (2026-05-14, generalised to US 2026-08-30): movers for BOTH
+    # regions draws solely from the per-user engine discover cache (owned +
+    # watchlist holdings, §101-restricted — there is no broad market scan for
+    # either region; see the cache_key and the shared `filtered` build above).
+    # When the user has not populated that cache, or holds no names in this
+    # region, the result is legitimately empty — NOT an FMP quota failure.
+    # DISCOVER_FMP_UNAVAILABLE ("provider quota cooling off") told US users to
+    # wait out a provider outage that was not happening, and the frontend had
+    # no way to tell "provider down" from "nothing scanned for this account".
+    # Emit a region-specific no-data code instead.
+    try:
+        uid = current_user.id
+        uc = cache_service.discover_cache.get(uid)
+        cache_populated = bool((uc or {}).get("data"))
+        region_rows = [
+            r for r in ((uc or {}).get("data") or [])
+            if bool(r.get("is_korean")) == (region == "kr")
+        ]
+    except Exception:
+        cache_populated, region_rows = False, []
 
     logger.warning(
-        "discover.movers (%s): only %d gainers / %d losers and no cache — "
-        "failing fast (no mock fallback)",
-        region, len(gainers), len(losers),
+        "discover.movers (%s): %d gainers / %d losers, "
+        "cache_populated=%s region_rows=%d — no market data for this account",
+        region, len(gainers), len(losers), cache_populated, len(region_rows),
     )
-    return _data_unavailable(f"movers:{region}")
+    _NO_DATA = {
+        "kr": (
+            "No Korean market data for this account yet",
+            "이 계정에 표시할 한국 시장 데이터가 아직 없습니다",
+            "MOVERS_KR_NO_DATA",
+        ),
+        "us": (
+            "No US market data for this account yet",
+            "이 계정에 표시할 미국 시장 데이터가 아직 없습니다",
+            "MOVERS_US_NO_DATA",
+        ),
+    }
+    error_en, error_kr, code = _NO_DATA[region]
+    body = {
+        "error":       error_en,
+        "error_kr":    error_kr,
+        "code":        code,
+        "endpoint":    f"movers:{region}",
+        "retry_after": 60,
+        # Diagnostic hint: distinguishes "engine cache never built"
+        # from "built but holds no names in this region" without leaking PII.
+        "cache_populated": cache_populated,
+    }
+    response = jsonify(body)
+    response.status_code = 503
+    response.headers["Retry-After"] = "60"
+    return response
 
 
 @discover_bp.route("/discover/sectors")

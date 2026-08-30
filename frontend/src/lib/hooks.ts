@@ -167,7 +167,7 @@ export function useWatchlist() {
     // fired — every page hit the empty-list UI for one frame, then
     // swapped in the real data. NPE protection is preserved at every
     // call site via `data?.watchlist ?? []` (verified across 5 consumers:
-    // signals/_v2, watchlist, discover, detail/[ticker], ai, home/_v1).
+    // signals, watchlist, discover, detail/[ticker], ai, home).
   });
 }
 

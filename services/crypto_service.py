@@ -24,9 +24,12 @@ Week 1 — 2026-04-18.
 ────────────────────────────────────────────────────────────────────────────
 `BrokerConnection.encryption_key_version` exists as a SmallInteger column on
 the broker_connections table but is currently **schema theater**: every row
-is hardcoded to `1` at write time (see services/broker/user_kis_service.py
-upsert_kis_connection + services/broker/user_alpaca_service.py
-upsert_alpaca_connection). This module loads a SINGLE master key from
+was hardcoded to `1` at write time. Both writers are gone — the Alpaca
+integration on 2026-05-27, and services/broker/ on 2026-08-30 once KIS
+confirmed partnership is closed to non-licensed firms — so nothing writes
+this table any more. The model and this module stay because PIPA deletion
+and the data-export path still enumerate the rows. This module loads a
+SINGLE master key from
 `PIVOX_BROKER_ENCRYPTION_KEY` — there is no key ring, no `decrypt_versioned()`
 selector, and no per-version env var fanout (e.g.
 `PIVOX_BROKER_ENCRYPTION_KEY_V1`, `_V2`, ...).

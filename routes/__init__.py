@@ -9,7 +9,6 @@ def register_blueprints(app):
     from .signals import signals_bp
     from .discover import discover_bp
     from .market import market_bp
-    from .daytrade import daytrade_bp
     from .alerts import alerts_bp
     from .notifications import notifications_bp
     from .trades import trades_bp
@@ -26,7 +25,6 @@ def register_blueprints(app):
     from .quant_composer import quant_composer_bp  # Feature 1 — Quant Composer
     from .realtime import realtime_bp
     from .profile import profile_bp
-    from .broker_oauth import broker_oauth_bp
     from .billing import billing_bp
     from .push import push_bp
     from .share import share_bp
@@ -76,11 +74,11 @@ def register_blueprints(app):
         data_status_bp,
         methodology_bp,
         auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
-        market_bp, daytrade_bp, alerts_bp, notifications_bp, trades_bp,
+        market_bp, alerts_bp, notifications_bp, trades_bp,
         ai_bp, watchlist_bp, backtest_bp,
         signals_quant_bp, risk_quant_bp, performance_quant_bp,
         tools_quant_bp, strategy_quant_bp,
-        quant_composer_bp, realtime_bp, profile_bp, broker_oauth_bp,
+        quant_composer_bp, realtime_bp, profile_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
         counterfactual_bp, alt_data_bp,
         artifacts_bp, admin_fmp_bp, admin_preview_bp,

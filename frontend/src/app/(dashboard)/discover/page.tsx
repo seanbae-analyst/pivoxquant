@@ -131,6 +131,14 @@ export default function DiscoverPage() {
   const { data: krMovers, mutate: mutateKrMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=kr`, jsonFetcher, discoverOpts);
   const { data: sectorsLive, mutate: mutateSectors } = useSWR<BackendSectorRow[]>(DISCOVER_SECTORS, jsonFetcher, discoverOpts);
   const { data: screenersLive, mutate: mutateScreeners } = useSWR<BackendScreeners>(DISCOVER_SCREENERS, jsonFetcher, discoverOpts);
+  // The screeners endpoint is unconditionally 503 until a thematic source is
+  // wired, so gate the block on real rows rather than on the user's holdings —
+  // holdings have no bearing on whether it works.
+  const screenersWired = Boolean(
+    screenersLive?.oversold_rsi?.length ||
+      screenersLive?.highs_52w?.length ||
+      screenersLive?.earnings_beats?.length,
+  );
 
   // BUG A fix (movers cold-load race): /api/discover/movers reads the
   // per-user `discover_cache` that the base scan (useDiscover → /api/discover)
@@ -304,7 +312,7 @@ export default function DiscoverPage() {
       // no feedback. apiFetch already routes 401 → /login and 429 → its
       // own toast, so re-throws on 408/500/network land here and need
       // their own surface. Use sonner (same canonical pattern as
-      // alerts/page.tsx, watchlist/page.tsx, settings/_v2/page-v2.tsx).
+      // alerts/page.tsx, watchlist/page.tsx, settings/page.tsx).
       if (err instanceof ApiError) {
         if (err.status === 408) {
           toast.error("스캔 요청이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.");
@@ -598,18 +606,25 @@ export default function DiscoverPage() {
           )}
         </section>
 
-        {/* Thematic — limited to user's holdings + watchlist (§101 회피) */}
+        {/* Thematic — limited to user's holdings + watchlist (§101 회피).
+         *
+         * 2026-08-30: the backing endpoint (`/api/discover/screeners`) has no
+         * live source wired and returns 503 unconditionally — holdings do not
+         * change that. The empty state used to read "보유 종목이나 관심종목을
+         * 추가하면 자동으로 분석합니다" with Add-position / Add-watchlist
+         * buttons, promising an unlock that adding holdings cannot deliver.
+         * Say the feature is not wired yet instead of blaming an empty book. */}
         <section className="mb-12">
           <SectionKicker
             eyebrow="Screeners"
             title="Thematic Observations"
             sub={
-              hasUserScope
+              screenersWired
                 ? "Observational filters — limited to your holdings and watchlist."
-                : "Add holdings or watchlist symbols to surface thematic observations."
+                : "Not wired yet — no thematic source is connected."
             }
           />
-          {hasUserScope ? (
+          {screenersWired ? (
             <div className="mt-5 grid gap-8 sm:grid-cols-3">
               {oversold.length > 0
                 ? <ThematicBlockInk title="Oversold (RSI < 32)" items={oversold} />
@@ -625,24 +640,8 @@ export default function DiscoverPage() {
             <div className="pq-ink-empty mt-5 flex flex-col items-center gap-3 rounded border border-[var(--pq-ivory-line-soft)] py-10 text-center">
               <Fleuron />
               <p className="text-pq-caption text-[rgba(245,240,232,0.55)]">
-                보유 종목이나 관심종목을 추가하면 자동으로 분석합니다.
+                테마 관찰 목록은 아직 연결되지 않았습니다.
               </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => router.push("/portfolio")}
-                  className="font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[var(--pq-bronze)] underline underline-offset-2 hover:text-[var(--pq-ivory)] transition-colors"
-                >
-                  포지션 추가
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/watchlist")}
-                  className="font-mono text-pq-eyebrow uppercase tracking-[0.18em] text-[rgba(245,240,232,0.5)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.85)] transition-colors"
-                >
-                  관심종목 추가
-                </button>
-              </div>
             </div>
           )}
         </section>

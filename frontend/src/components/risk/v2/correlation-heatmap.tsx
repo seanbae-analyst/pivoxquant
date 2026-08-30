@@ -9,7 +9,7 @@
  * Vantablack + Bronze tone (hairline borders, mono labels, bronze hover
  * outline) per the design system v3 lock-in.
  *
- * Source of v1 visuals: src/app/(dashboard)/risk/_v1/page-v1.tsx
+ * Source of v1 visuals: src/app/(dashboard)/risk/page.tsx
  *   · Diverging gradient (Bronze positive, muted-rose negative)
  *   · Cell title text "{rowLabel} × {colLabel}: {value.toFixed(2)}"
  *   · Sticky header row with bronze tracking-[0.12em] tickers

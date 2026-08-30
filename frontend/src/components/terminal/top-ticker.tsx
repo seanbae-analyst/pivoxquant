@@ -70,7 +70,7 @@ interface IndexBlock {
   ticker: string;
   name: string;
   level: number;
-  change_1d_pct: number;
+  change_1d_pct: number | null;
   is_stale?: boolean;
   proxy_ticker?: string;
 }

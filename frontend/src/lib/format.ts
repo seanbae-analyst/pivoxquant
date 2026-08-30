@@ -202,6 +202,18 @@ export function pctColorClass(value: number | null | undefined): string {
   return PRICE_COLOR_CLASS[priceDir(value)];
 }
 
+/**
+ * Paper-tone delta class for a possibly-unknown percentage.
+ *
+ * Null/non-finite → `.pq-paper-neu` (neutral ink), matching `fmtPct`'s "—".
+ * Colouring an unknown change red or blue would assert a direction the data
+ * does not support (자본시장법 §101 data-honesty guard).
+ */
+export function paperDeltaClass(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "pq-paper-neu";
+  return value >= 0 ? "pq-paper-pos" : "pq-paper-neg";
+}
+
 export const PRICE_GLYPH = {
   up: "▲",
   down: "▼",

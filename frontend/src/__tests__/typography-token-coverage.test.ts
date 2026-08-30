@@ -59,12 +59,6 @@ const TOP5_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> =
  *  must stay tokenized; future contributors cannot re-introduce them. */
 const PHASE2_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
   {
-    path: "app/(dashboard)/home/_v1/page-v1.tsx",
-    cap: 10,
-    reason:
-      "9× 9px chip/micro-label (below HIG floor) + 1× 20px sub-heading — no exact v3 token",
-  },
-  {
     path: "components/market/indices-detail-paper.tsx",
     cap: 7,
     reason:
@@ -102,7 +96,7 @@ const PHASE2_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     reason: "all literals match an exact v3 token (12 / 14 / 24)",
   },
   {
-    path: "app/(dashboard)/settings/_v2/page-v2.tsx",
+    path: "app/(dashboard)/settings/page.tsx",
     cap: 0,
     reason: "all literals match an exact v3 token (12 / 14)",
   },
@@ -240,12 +234,12 @@ const PHASE3_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     reason: "2×15 migrated → --pq-text-lead; no others remain",
   },
   {
-    path: "app/(auth)/signup/_v2/page-v2.tsx",
+    path: "app/(auth)/signup/page.tsx",
     cap: 8,
     reason: "2×13 migrated → --pq-text-button; 8 unrelated literals remain (12/14)",
   },
   {
-    path: "app/(auth)/login/_v2/page-v2.tsx",
+    path: "app/(auth)/login/page.tsx",
     cap: 3,
     reason: "1×13 + 1×16 migrated → --pq-text-button/h6; 3 unrelated literals remain (12/14)",
   },
@@ -492,7 +486,7 @@ makeCapAssertion(
  *   - components/terminal/candlestick-chart.tsx (1)  Lightweight Charts numeric API
  *   - components/landing/top-nav.tsx (1)             8px chevron glyph (sub-kicker)
  *   - components/market/overview-paper.tsx (1)       0.45em em-relative unit suffix
- *   - app/(auth)/signup/_v2/page-v2.tsx (1)          0.85em em-relative inline note
+ *   - app/(auth)/signup/page.tsx (1)          0.85em em-relative inline note
  *   - components/ui/editorial.tsx (1)                JSDoc comment example
  *
  * The treewide cap below pins these counts. Any new file that introduces

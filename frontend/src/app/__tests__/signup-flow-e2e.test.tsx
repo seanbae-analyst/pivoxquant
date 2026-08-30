@@ -10,8 +10,7 @@
  *      invalid/<14 이면 agree_age = false 로 초기화 (fail-fast 유지).
  *
  * 3 surface 회귀 게이트:
- *   - signup _v1 (page-v1.tsx)
- *   - signup _v2 (page-v2.tsx)
+ *   - signup (page.tsx — the v1 variant was deleted 2026-08-30)
  *   - legal-consent-modal.tsx
  */
 import { describe, it, expect, vi } from "vitest";
@@ -40,8 +39,7 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import SignupPageV1 from "@/app/(auth)/signup/_v1/page-v1";
-import SignupPageV2 from "@/app/(auth)/signup/_v2/page-v2";
+import SignupPageV2 from "@/app/(auth)/signup/page";
 import { LegalConsentModal } from "@/components/ui/legal-consent-modal";
 
 function makeBirthdate(yearsAgo: number): string {
@@ -51,70 +49,6 @@ function makeBirthdate(yearsAgo: number): string {
   const d = String(today.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
-
-describe("SignupPageV1 — DOB auto-derive agree_age (SHIP-BLOCKER fix)", () => {
-  it("valid DOB ≥14 auto-checks agree_age (no manual click required)", async () => {
-    render(<SignupPageV1 />);
-
-    const birthdateInput = screen.getByLabelText(/생년월일/) as HTMLInputElement;
-    fireEvent.change(birthdateInput, { target: { value: makeBirthdate(35) } });
-
-    // agree_age checkbox should be aria-checked=true WITHOUT manual click.
-    const ageCheckbox = screen.getByRole("checkbox", { name: /만 14세/ });
-    expect(ageCheckbox).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("DOB <14 keeps agree_age false + OAuth disabled (fail-fast preserved)", async () => {
-    render(<SignupPageV1 />);
-
-    const birthdateInput = screen.getByLabelText(/생년월일/) as HTMLInputElement;
-    fireEvent.change(birthdateInput, { target: { value: makeBirthdate(13) } });
-
-    const ageCheckbox = screen.getByRole("checkbox", { name: /만 14세/ });
-    expect(ageCheckbox).toHaveAttribute("aria-checked", "false");
-
-    // OAuth still disabled.
-    const googleBtn = screen.getByText(/Google로 계속하기/i).closest("button");
-    expect(googleBtn).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("OAuth enables after DOB+other consents (no agree_age click needed)", async () => {
-    const user = userEvent.setup();
-    render(<SignupPageV1 />);
-
-    await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
-    await user.click(
-      screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
-    );
-    const birthdateInput = screen.getByLabelText(/생년월일/) as HTMLInputElement;
-    fireEvent.change(birthdateInput, { target: { value: makeBirthdate(35) } });
-    await user.click(
-      screen.getByRole("checkbox", { name: /국외 이전에 동의/ }),
-    );
-
-    // OAuth collapses from <button> → <a> when allRequired = true.
-    const google = screen.getByText(/Google로 계속하기/i).closest("a");
-    expect(google).toBeInTheDocument();
-  });
-
-  it("DOB change from ≥14 to <14 resets agree_age to false", async () => {
-    render(<SignupPageV1 />);
-
-    const birthdateInput = screen.getByLabelText(/생년월일/) as HTMLInputElement;
-
-    // First: 35 yo → auto-checked
-    fireEvent.change(birthdateInput, { target: { value: makeBirthdate(35) } });
-    expect(
-      screen.getByRole("checkbox", { name: /만 14세/ }),
-    ).toHaveAttribute("aria-checked", "true");
-
-    // Then: 13 yo → auto-unchecked
-    fireEvent.change(birthdateInput, { target: { value: makeBirthdate(13) } });
-    expect(
-      screen.getByRole("checkbox", { name: /만 14세/ }),
-    ).toHaveAttribute("aria-checked", "false");
-  });
-});
 
 describe("SignupPageV2 — DOB auto-derive agree_age (SHIP-BLOCKER fix)", () => {
   it("valid DOB ≥14 auto-checks agree_age (no manual click required)", async () => {

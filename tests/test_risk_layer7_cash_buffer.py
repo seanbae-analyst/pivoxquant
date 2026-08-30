@@ -142,29 +142,3 @@ def test_layer7_observation_no_advice_language(client, auth_user, add_position):
         assert banned not in obs, f"Layer 7 observation has banned word '{banned}': {obs!r}"
 
 
-def test_layer7_broker_fetch_failure_falls_back_to_red(
-    client, auth_user, add_position
-):
-    """If KIS raises, source='none' and status is RED — never GREEN.
-
-    Pre-fix B-05 would have returned GREEN here because the status was
-    literally hardcoded. Post-fix the absence of broker data is treated as
-    "no buffer observable → conservative RED".
-    """
-    add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=100)
-
-    def _raise(*a, **kw):
-        raise RuntimeError("broker offline")
-
-    with patch(
-        "services.broker.user_kis_service.UserKISService",
-        side_effect=_raise,
-    ):
-        r = client.get("/api/risk/layers")
-    assert r.status_code == 200
-    layer7 = _layer7(r.get_json())
-    assert layer7 is not None
-    assert layer7["status"] == "RED", (
-        f"Broker fetch failure must fall back to RED, got {layer7['status']}. "
-        "Otherwise the original B-05 hardcoded-GREEN bug is reintroduced."
-    )

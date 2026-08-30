@@ -4,6 +4,15 @@ name: Morning Triage (Layer B)
 # has finished opening/updating issues. Reads the freshest open
 # `nightly-bug-hunt` issue(s) and posts a Claude-generated root-cause
 # analysis as a comment. Advisory only — never modifies code.
+#
+# DRY RUN semantics (corrected 2026-08-30)
+# ----------------------------------------
+# The guard used to be `github.event.inputs.dry_run != 'true'`. The
+# `default: 'true'` below applies to workflow_dispatch ONLY — on
+# `schedule` the inputs context is empty, so '' != 'true' was TRUE and
+# every 09:00 KST cron run really called Claude and really posted issue
+# comments. The guard is now anchored on the event name: schedule is
+# ALWAYS dry run, and only a manual run with dry_run=false calls Claude.
 
 on:
   schedule:
@@ -49,7 +58,9 @@ jobs:
       #    behaviour stays consistent.
 
       - name: Run morning triage via Claude Code Action
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        # Manual + explicit dry_run=false only; schedule carries no inputs
+        # so this is always false for cron (2026-08-30).
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true' }}
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -105,7 +116,8 @@ jobs:
             <one-liner test or curl that will prove the fix>
 
       - name: Dry-run notice
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+        # Exact negation of the step above, so exactly one of the two runs.
+        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true') }}
         run: |
-          echo "::notice::dry_run=true → skipped Claude Code Action invocation."
+          echo "::notice::dry run (event=${{ github.event_name }}) → skipped Claude Code Action invocation."
           echo "::notice::Run locally with TRIAGE_DRY_RUN=1 python3 scripts/triage/morning_triage.py to inspect prompts."

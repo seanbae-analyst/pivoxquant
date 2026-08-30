@@ -31,6 +31,8 @@ from models import SignalCache
 from services.container import realtime
 from services import cache_service
 
+from services.time_utils import normalize_observed_at
+
 logger = logging.getLogger(__name__)
 
 # Matches an unsigned/signed number with optional commas + decimal inside a
@@ -109,7 +111,7 @@ def overlay_prices(tickers: Iterable[str]) -> dict:
             out[t] = {
                 "price": float(price),
                 "change_pct": chg,
-                "observed_at": r.get("timestamp") or now,
+                "observed_at": normalize_observed_at(r.get("timestamp")) or now,
                 "source": "realtime",
             }
             continue

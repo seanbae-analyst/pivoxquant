@@ -7,7 +7,7 @@
  * gallery + cool minimalism. Mirrors the v2 home-card hover pattern (bronze
  * border + bronze-08 background fade).
  *
- * Source of truth: frontend/src/app/(dashboard)/reports/_v1/page-v1.tsx CATALOG
+ * Source of truth: frontend/src/app/(dashboard)/reports/page.tsx CATALOG
  * (lines 51-70). 17 artifacts mapped 1:1 — slug, title, cadence, minTier.
  * (sp500-backtest removed 2026-05-07 — services/artifacts/sp500_backtest_service.py
  *  documents itself as "Admin preview only … not a per-user artifact". User-facing

@@ -17,7 +17,7 @@
 import * as React from "react";
 import type { IndexQuote } from "@/lib/market";
 import { proxyLabel } from "@/lib/market";
-import { fmtPct } from "@/lib/format";
+import { fmtPct, paperDeltaClass } from "@/lib/format";
 
 /**
  * Proxy badge pill — bronze-outlined, mono "VIA <PROXY>" surfaced next to
@@ -148,7 +148,7 @@ function PaperSparkline({
 }
 
 function MiniRow({ quote }: { quote: IndexQuote }) {
-  const isPositive = quote.changePct >= 0;
+  const isPositive = quote.changePct != null && quote.changePct >= 0;
   return (
     <div
       style={{
@@ -201,7 +201,7 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
         <span>{fmtLevel(quote.level, quote.format)}</span>
       </div>
       <div
-        className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
+        className={`font-mono ${paperDeltaClass(quote.changePct)}`}
         style={{
           fontVariantNumeric: "tabular-nums",
           fontSize: "var(--pq-text-eyebrow)",
@@ -240,7 +240,7 @@ export function OverviewPaper({
     );
   }
 
-  const heroPositive = hero.changePct >= 0;
+  const heroPositive = hero.changePct != null && hero.changePct >= 0;
   const regionLabel = region === "US" ? "United States" : "Korea";
 
   return (
@@ -388,7 +388,7 @@ export function OverviewPaper({
             ) : null}
           </div>
           <div
-            className={`font-mono ${heroPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
+            className={`font-mono ${paperDeltaClass(hero.changePct)}`}
             style={{
               fontVariantNumeric: "tabular-nums",
               fontSize: "var(--pq-text-body)",

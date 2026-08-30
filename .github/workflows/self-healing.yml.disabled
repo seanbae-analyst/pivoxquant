@@ -1,8 +1,20 @@
 name: Self-Healing (Layer C)
 
 # Scans Railway runtime logs for recurring errors and proposes fixes.
-# Defaults to DRY RUN. Only opens a Draft PR when AUTO_PR=1 is
-# explicitly set via workflow_dispatch input or repo variable.
+#
+# DRY RUN semantics (corrected 2026-08-30)
+# ----------------------------------------
+# The old header claimed "Defaults to DRY RUN", but the guards were
+# `github.event.inputs.dry_run != 'true'`. `dry_run`'s default: 'true'
+# applies to workflow_dispatch ONLY — on `schedule` (and
+# `repository_dispatch`) the inputs context is empty, so '' != 'true'
+# was TRUE and every cron run invoked Claude for real. With repo vars
+# AUTOFIX_ENABLED=1 that reached the auto-PR path too.
+# Every guard is now anchored on `github.event_name == 'workflow_dispatch'`,
+# so schedule/repository_dispatch are ALWAYS dry run (scan + upload
+# artifacts only) and only an explicit manual run with dry_run=false
+# can call Claude. Draft PRs additionally require auto_pr=true AND the
+# AUTOFIX_ENABLED repo variable.
 #
 # Safety
 # ------
@@ -16,9 +28,9 @@ name: Self-Healing (Layer C)
 on:
   schedule:
     # 2026-04-29 cost reduction: was every 2h (~360 runs/mo at ~5min each),
-    # now every 12h. DRY RUN by default so cron frequency has no functional
-    # impact — only matters once AUTO_PR=1 is enabled, and even then daily
-    # cadence is enough.
+    # now every 12h. Since 2026-08-30 cron is ALWAYS dry run (scan +
+    # artifact upload only; it cannot call Claude or open a PR), so this
+    # cadence only controls how often patterns are collected.
     - cron: '0 */12 * * *'   # every 12 hours, UTC
   workflow_dispatch:
     inputs:
@@ -46,13 +58,16 @@ jobs:
     timeout-minutes: 20
     continue-on-error: true   # alerting, not gating
 
-    # Effective flags. workflow_dispatch carries explicit inputs; schedule
-    # has none, so we fall back to the AUTOFIX_ENABLED repo variable.
-    # Default for cron is OFF (variable unset → '0') so the workflow stays
-    # in scan-only mode until the operator explicitly opts in via:
+    # Effective auto-PR flag (rewritten 2026-08-30).
+    # Previously schedule/repository_dispatch fell back to the
+    # AUTOFIX_ENABLED repo variable — and that variable is currently set
+    # to 1, so unattended cron runs could apply patches and open PRs.
+    # Auto-PR now requires ALL of: a manual workflow_dispatch, an explicit
+    # dry_run=false, auto_pr=true, and AUTOFIX_ENABLED=1. Cron can never
+    # satisfy the first condition, so cron is structurally scan-only.
     #   gh variable set AUTOFIX_ENABLED --body 1 --repo seanbae-analyst/pivoxquant
     env:
-      AUTOFIX_ON: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.auto_pr == 'true') || (github.event_name == 'schedule' && vars.AUTOFIX_ENABLED == '1') || (github.event_name == 'repository_dispatch' && vars.AUTOFIX_ENABLED == '1') }}
+      AUTOFIX_ON: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true' && github.event.inputs.auto_pr == 'true' && vars.AUTOFIX_ENABLED == '1' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -95,7 +110,9 @@ jobs:
       #    so downstream `Apply patch + run pytest` step glob remains valid.
 
       - name: Propose fix patches via Claude Code Action
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        # Manual + explicit dry_run=false only. schedule/repository_dispatch
+        # carry no inputs, so this is always false for them (2026-08-30).
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true' }}
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -152,13 +169,15 @@ jobs:
             the second patch even if more patterns exist.
 
       - name: Dry-run notice
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+        # Exact negation of the Claude step above, so exactly one of the
+        # two always runs (2026-08-30).
+        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true') }}
         run: |
-          echo "::notice::dry_run=true → skipped Claude Code Action invocation."
+          echo "::notice::dry run (event=${{ github.event_name }}) → skipped Claude Code Action invocation."
           echo "::notice::Patterns scanned but no patches generated. Inspect self_healing_artifacts/railway_patterns.jsonl in the artefact bundle."
 
       - name: Apply patch + run pytest (only if patches exist and autofix on)
-        if: ${{ env.AUTOFIX_ON == 'true' && github.event.inputs.dry_run != 'true' }}
+        if: ${{ env.AUTOFIX_ON == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true' }}
         id: apply
         run: |
           set -e
@@ -193,7 +212,10 @@ jobs:
           echo "applied_count=${applied_count}" >> "$GITHUB_OUTPUT"
 
       - name: Open Draft PR (only if AUTO_PR=1 and a patch was applied)
-        if: ${{ steps.apply.outputs.applied_count != '' && steps.apply.outputs.applied_count != '0' }}
+        # 2026-08-30: added the explicit AUTOFIX_ON re-check. The previous
+        # guard relied solely on the skipped apply step yielding an empty
+        # output — correct but implicit; make the dry-run contract explicit.
+        if: ${{ env.AUTOFIX_ON == 'true' && steps.apply.outputs.applied_count != '' && steps.apply.outputs.applied_count != '0' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

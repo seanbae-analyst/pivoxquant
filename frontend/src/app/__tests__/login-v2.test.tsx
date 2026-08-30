@@ -37,7 +37,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 // Import AFTER mocks are registered.
-import LoginPageV2 from "@/app/(auth)/login/_v2/page-v2";
+import LoginPageV2 from "@/app/(auth)/login/page";
 import { LocaleProvider } from "@/lib/locale";
 
 function renderWithLocale(ui: React.ReactElement) {

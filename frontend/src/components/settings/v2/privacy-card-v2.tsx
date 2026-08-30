@@ -14,7 +14,7 @@
  *     2026-05-15: GAP-X resolved — backend `/api/profile/export` IS
  *     declared (routes/profile.py:1172) and covers positions + watchlist
  *     + trades + alerts + consent state per PIPA §35 ① "complete personal
- *     data record" requirement. settings/_v2/page-v2.tsx export handler
+ *     data record" requirement. settings/page.tsx export handler
  *     now calls /api/profile/export (was /api/agent/export, subset only).
  *   - E3 Danger zone (Sign out + Delete account). GAP-J resolved: account
  *     deletion now opens the self-service <DeleteAccountModal /> (30-day

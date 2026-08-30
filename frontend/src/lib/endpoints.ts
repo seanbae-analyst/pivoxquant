@@ -78,14 +78,6 @@ export const API = {
     dividend: (ticker: string) => `/api/dividend/${ticker}`,
     news: (ticker: string) => `/api/news/${ticker}`,
   },
-  daytrade: {
-    status: "/api/daytrade/status",
-    scan: "/api/daytrade/scan",
-    analyze: (ticker: string) => `/api/daytrade/analyze/${ticker}`,
-    chart: (ticker: string) => `/api/daytrade/chart/${ticker}`,
-    prices: "/api/daytrade/prices",
-    stream: "/api/daytrade/stream",
-  },
   alerts: {
     list: "/api/alerts",
     read: "/api/alerts/read",

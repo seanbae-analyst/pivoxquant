@@ -85,7 +85,6 @@ class TestFxConsistency:
             "services/artifacts/weekly_memo_service.py",
             "services/artifacts/dividend_income_service.py",
             "services/artifacts/monthly_finance_service.py",
-            "services/broker/user_kis_service.py",
         ]
         missing = []
         for rel in sites:

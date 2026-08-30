@@ -8,6 +8,16 @@ name: Legal Risk Monitor
 #   - daily-legal-scan: fast grep on a small hardcoded EN/KR list
 #   - this monitor:     full FORBIDDEN_DIRECTIVE_TERMS set +
 #                       HTML/PDF artifact samples + scrub-call audit
+#
+# DRY RUN semantics (corrected 2026-08-30)
+# ----------------------------------------
+# The write guards used to be `github.event.inputs.dry_run != 'true'`.
+# The `default: 'true'` below applies to workflow_dispatch ONLY — on
+# `schedule` the inputs context is empty, so '' != 'true' was TRUE and
+# the Monday cron really opened/commented GitHub issues and really
+# posted to Slack. Every write guard is now anchored on the event name:
+# schedule ALWAYS scans + uploads artifacts only, and only a manual run
+# with dry_run=false writes to GitHub/Slack.
 
 on:
   schedule:
@@ -73,8 +83,17 @@ jobs:
           path: legal_monitor_artifacts/
           retention-days: 30
 
+      - name: Dry-run notice
+        # 2026-08-30: added so a skipped write path is visible in the log.
+        # Exact negation of the write guards' event/input half.
+        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true') }}
+        run: |
+          echo "::notice::dry run (event=${{ github.event_name }}) → no GitHub issue / Slack write."
+          echo "::notice::severity=${{ steps.monitor.outputs.severity }} total=${{ steps.monitor.outputs.total }} — see the legal-monitor artifact bundle."
+
       - name: Open or update issue
-        if: ${{ steps.monitor.outputs.severity != 'none' && github.event.inputs.dry_run != 'true' }}
+        # Manual + explicit dry_run=false only (2026-08-30).
+        if: ${{ steps.monitor.outputs.severity != 'none' && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEVERITY: ${{ steps.monitor.outputs.severity }}
@@ -116,7 +135,8 @@ jobs:
           fi
 
       - name: Slack notify (critical only)
-        if: ${{ steps.monitor.outputs.severity == 'critical' && github.event.inputs.dry_run != 'true' }}
+        # Manual + explicit dry_run=false only (2026-08-30).
+        if: ${{ steps.monitor.outputs.severity == 'critical' && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true' }}
         continue-on-error: true
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -136,7 +156,10 @@ jobs:
 
       - name: Close stale issue on recovery
         continue-on-error: true
-        if: ${{ steps.monitor.outputs.severity == 'none' }}
+        # 2026-08-30: this step comments on and CLOSES issues but carried no
+        # dry-run guard at all. Added for consistency — a dry run must not
+        # write to GitHub, and cron no longer opens these issues either.
+        if: ${{ steps.monitor.outputs.severity == 'none' && github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

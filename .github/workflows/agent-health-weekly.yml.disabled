@@ -1,8 +1,30 @@
+# Agent Health Weekly — MANUAL ONLY. Cannot work on a stock CI checkout.
+#
+# 2026-08-30 finding. scripts/agent_ops/analyze_health.py:30 reads
+# `.bkit/state/agent_telemetry.jsonl`, which .gitignore excludes twice
+# (line 46 `.bkit/`, line 73 the explicit path) and `git ls-files .bkit/`
+# confirms is untracked. A CI checkout therefore never contains it,
+# load_records() returns [], and the report is empty — verified locally:
+# 0 runs, 0 anomalies, and all 25 agents listed as "sunset candidates".
+#
+# That empty report is worse than useless. The anomaly grep below counts 0,
+# so the job reports success, and the "Close stale incident issues" step then
+# auto-closes every open agent-health issue — real findings included.
+#
+# The schedule trigger was removed rather than the workflow: the analyzer is
+# genuinely useful *locally*, where scripts/agent_ops/log_run.py writes the
+# telemetry it reads. It is left dispatchable so it is ready the day someone
+# adds a path that carries telemetry into CI (artifact upload from the writer,
+# or committing an aggregated digest). Until then the gate step below fails
+# fast instead of emitting a clean report.
+#
+# Not rebuilt around git-tracked inputs (option b): agent-file integrity is
+# already covered by the active agent-upgrades-monthly.yml, which runs the
+# sibling scripts/agent_ops/propose_upgrades.py against `.claude/agents/`.
+# Duplicating it here would add a second owner for the same signal.
 name: Agent Health Weekly
 
 on:
-  schedule:
-    - cron: '0 2 * * 0'  # Sun 11:00 KST
   workflow_dispatch:
 
 permissions:
@@ -18,6 +40,18 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Require telemetry before analyzing
+        run: |
+          # Fail-fast gate. Without this, a missing telemetry file yields an
+          # empty "0 anomalies" report that passes, then auto-closes every open
+          # agent-health issue. An honest error beats a false green.
+          TELEMETRY=.bkit/state/agent_telemetry.jsonl
+          if [ ! -s "$TELEMETRY" ]; then
+            echo "::error::$TELEMETRY is absent or empty. It is gitignored (.gitignore:46, :73), so a plain checkout never has it and this analysis would report 0 anomalies regardless of actual agent health. Run scripts/agent_ops/analyze_health.py locally, or wire a step that supplies telemetry to the runner before this one."
+            exit 1
+          fi
+          echo "Telemetry present: $(wc -l < "$TELEMETRY" | tr -d ' ') record(s)"
 
       - name: Run agent health analyzer
         run: |
