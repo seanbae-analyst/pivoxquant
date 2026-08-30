@@ -31,15 +31,86 @@ jobs:
       - name: Install project dependencies
         run: pip install -r requirements.txt
 
-      - name: pytest — kill switch + waitlist regression
-        id: pytest_kill
+      - name: pytest — waitlist regression
+        id: pytest_waitlist
         run: |
           set +e
+          # 2026-08-30: `tests/test_alpaca_kill_switch.py` was dropped from this
+          # list — the file no longer exists. It was deleted in 6bea95f8
+          # (2026-05-27, "remove Alpaca integration entirely"), i.e. *after* this
+          # workflow was disabled on 2026-05-19, so no run ever caught the
+          # dangling path. Left in place it would fail every Monday 05:00 KST on
+          # a missing file and open a fake security incident every week.
+          # The safety property that test guarded is now enforced by the
+          # "Alpaca stays removed" step below — see the rationale there.
           pytest \
-            tests/test_alpaca_kill_switch.py \
             tests/test_agent_waitlist.py \
-            -v --tb=short 2>&1 | tee /tmp/pytest_kill.log
+            -v --tb=short 2>&1 | tee /tmp/pytest_waitlist.log
           echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Alpaca stays removed — inverted kill-switch guard
+        id: alpaca_guard
+        run: |
+          set +e
+          # Why this step exists (2026-08-30)
+          # ---------------------------------
+          # The deleted test asserted a *runtime* contract: every
+          # /api/broker/alpaca/* endpoint returns 503 ALPACA_DISABLED while the
+          # kill switch is off. That contract is now unrepresentable — the whole
+          # broker integration (routes, per-user credentials, connect/sync UI)
+          # was removed, so there is nothing left to return 503.
+          #
+          # Following the same inversion applied to legal-guard.yml's "Broker
+          # safety guards" step: when the guarded thing is deleted, the guard
+          # becomes "verify it stays deleted". Two properties carry the original
+          # intent — Alpaca must never reach real trading:
+          #   (1) no user-facing Alpaca broker surface comes back, and
+          #   (2) the one surviving remnant — an internal US-price fallback
+          #       adapter — stays default-off behind ALPACA_ENABLED.
+          # Restoration of services/broker/user_alpaca_service.py is already
+          # covered by legal-guard.yml (runs on every PR), so it is not
+          # duplicated here.
+
+          violations=""
+
+          # (1) Broker endpoint surface must stay gone. A reinstated endpoint is
+          #     not a flag flip — it is an unlicensed broker surface, and the
+          #     Terms/Privacy no longer list Alpaca (표시광고법 §3 mismatch).
+          route_hits=$(grep -rnE \
+            'broker/alpaca|alpaca/(connect|sync|disconnect|status)' \
+            routes services \
+            --include='*.py' 2>/dev/null || true)
+          if [ -n "$route_hits" ]; then
+            violations+="### Alpaca broker route surface restored\n\`\`\`\n$route_hits\n\`\`\`\n\n"
+            echo "::error::Alpaca broker endpoint(s) reappeared under routes/ or services/ — the integration was removed on 2026-05-27 and cannot return without legal sign-off"
+          fi
+
+          # (2) ALPACA_ENABLED must keep defaulting to "0". Flipping it on
+          #     re-enables the server-key data fallback, which needs an Alpaca
+          #     commercial data licence (see the comment block in config.py).
+          #     A missing config.py is reported as a distinct failure rather than
+          #     silently passing, so a moved module cannot mute the guard.
+          if [ ! -f config.py ]; then
+            violations+="### config.py missing — ALPACA_ENABLED default could not be verified\n\n"
+            echo "::error::config.py not found; the ALPACA_ENABLED default-off guard cannot be verified. If the module moved, update this workflow in the same commit."
+          elif ! grep -qE \
+            'ALPACA_ENABLED[[:space:]]*=[[:space:]]*os\.environ\.get\([[:space:]]*"ALPACA_ENABLED",[[:space:]]*"0"' \
+            config.py; then
+            violations+="### ALPACA_ENABLED no longer defaults to \"0\"\n\n"
+            echo "::error::ALPACA_ENABLED default is no longer \"0\" in config.py — the Alpaca market-data fallback must stay off by default"
+          fi
+
+          if [ -n "$violations" ]; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "failed=false" >> $GITHUB_OUTPUT
+            echo "✅ Alpaca broker surface still removed; ALPACA_ENABLED still defaults to 0"
+          fi
+          {
+            echo "report<<EOF"
+            printf '%b' "$violations"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: KIS terms-of-service violation patterns
         id: kis_patterns
@@ -109,7 +180,8 @@ jobs:
       - name: Evaluate results
         id: evaluate
         run: |
-          pytest_ok="${{ steps.pytest_kill.outputs.exit_code }}"
+          pytest_ok="${{ steps.pytest_waitlist.outputs.exit_code }}"
+          alpaca_failed="${{ steps.alpaca_guard.outputs.failed }}"
           kis_total="${{ steps.kis_patterns.outputs.total }}"
           env_found="${{ steps.env_check.outputs.found }}"
 
@@ -118,9 +190,16 @@ jobs:
 
           if [ "$pytest_ok" != "0" ]; then
             failed=true
-            summary+="- pytest kill switch + waitlist: FAILED (exit $pytest_ok)\n"
+            summary+="- pytest waitlist regression: FAILED (exit $pytest_ok)\n"
           else
-            summary+="- pytest kill switch + waitlist: PASSED\n"
+            summary+="- pytest waitlist regression: PASSED\n"
+          fi
+
+          if [ "$alpaca_failed" = "true" ]; then
+            failed=true
+            summary+="- Alpaca stays-removed guard: FAILED\n"
+          else
+            summary+="- Alpaca stays-removed guard: PASSED\n"
           fi
 
           if [ "$kis_total" != "0" ] && [ -n "$kis_total" ]; then
@@ -159,6 +238,9 @@ jobs:
           ### Check results
           ${{ steps.evaluate.outputs.summary }}
 
+          ### Alpaca stays-removed detail
+          ${{ steps.alpaca_guard.outputs.report }}
+
           ### KIS pattern detail
           ${{ steps.kis_patterns.outputs.report }}
 
@@ -166,7 +248,7 @@ jobs:
           ${{ steps.env_check.outputs.hits }}
 
           ### Remediation
-          1. Kill switch / waitlist test failure: check if `ALPACA_DISABLED` flag and waitlist gate are intact
+          1. Waitlist test failure: check that the agent waitlist gate is intact. Alpaca guard failure: a broker endpoint or the `ALPACA_ENABLED` default-off gate regressed — revert it; re-adding Alpaca needs legal sign-off (data licence + Terms/Privacy update), not a flag flip
           2. KIS raw dump: replace `resp.text[:]` slices with structured JSON parsing
           3. Debug prints: remove all `print()` calls containing credential tokens before next deploy
           4. .env in git: run `git filter-repo` or BFG to purge history, rotate all exposed secrets immediately
