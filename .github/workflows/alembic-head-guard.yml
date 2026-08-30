@@ -84,31 +84,77 @@ jobs:
       - name: Static filesystem head check (no DB required)
         # First-line defense: parse migration files directly. Catches
         # multi-head conditions without booting Flask. Runs in ~1s.
+        #
+        # 2026-08-30: rewritten to use ast instead of a regex. The regex form
+        # only matched a single quoted string or None on one line, so a
+        # multi-line tuple down_revision — Alembic's own syntax for a merge
+        # revision joining several parents — parsed as "no parent". That made
+        # every branch this repo had legitimately merged look like a live
+        # head: the check reported 3 heads where `ScriptDirectory.get_heads()`
+        # reports exactly one (049_reflection_observed_context). A guard that
+        # fails on correct history gets muted, so this parses the actual
+        # assignment expression and handles str / None / tuple / list alike.
         run: |
           python3 << 'PY'
-          import re, glob, sys
+          import ast, glob, sys
+
+          def parents_of(tree):
+              """Return the down_revision targets declared in a migration."""
+              for node in tree.body:
+                  if not isinstance(node, ast.Assign):
+                      continue
+                  if not any(getattr(t, "id", None) == "down_revision"
+                             for t in node.targets):
+                      continue
+                  try:
+                      value = ast.literal_eval(node.value)
+                  except ValueError:
+                      # Computed expression — can't resolve statically.
+                      return None
+                  if value is None:
+                      return ()
+                  if isinstance(value, str):
+                      return (value,)
+                  if isinstance(value, (tuple, list)):
+                      return tuple(v for v in value if isinstance(v, str))
+                  return None
+              return ()
+
           revs = {}
           for f in sorted(glob.glob("migrations/versions/*.py")):
-              text = open(f).read()
-              m = re.search(r"^revision\s*=\s*['\"]([^'\"]+)['\"]", text, re.M)
-              d = re.search(r"^down_revision\s*=\s*(?:['\"]([^'\"]+)['\"]|None)", text, re.M)
-              if not m:
-                  print(f"WARN: {f} has no revision id, skipping")
+              tree = ast.parse(open(f).read(), filename=f)
+              rev = None
+              for node in tree.body:
+                  if isinstance(node, ast.Assign) and any(
+                      getattr(t, "id", None) == "revision" for t in node.targets
+                  ):
+                      try:
+                          rev = ast.literal_eval(node.value)
+                      except ValueError:
+                          rev = None
+              if not isinstance(rev, str):
+                  print(f"WARN: {f} has no static revision id, skipping")
                   continue
-              revs[m.group(1)] = d.group(1) if (d and d.group(1)) else None
+              parents = parents_of(tree)
+              if parents is None:
+                  print(f"FAIL: {f} computes down_revision dynamically — "
+                        f"this check cannot verify it statically.")
+                  sys.exit(1)
+              revs[rev] = parents
 
-          # Detect orphans: down_revision pointing at non-existent rev
-          orphans = [(r, dr) for r, dr in revs.items() if dr and dr not in revs]
+          # Orphans: a parent that no migration defines.
+          orphans = [(r, p) for r, ps in revs.items() for p in ps if p not in revs]
           if orphans:
               print("FAIL: orphan migrations (down_revision references missing rev):")
-              for r, dr in orphans:
-                  print(f"  {r} -> {dr} (missing)")
+              for r, p in orphans:
+                  print(f"  {r} -> {p} (missing)")
               sys.exit(1)
 
-          # Detect multiple heads
-          parents = {dr for dr in revs.values() if dr}
-          heads = sorted(r for r in revs if r not in parents)
+          referenced = {p for ps in revs.values() for p in ps}
+          heads = sorted(r for r in revs if r not in referenced)
+          bases = sorted(r for r, ps in revs.items() if not ps)
           print(f"Total revisions: {len(revs)}")
+          print(f"Bases detected: {bases}")
           print(f"Heads detected: {heads}")
           if len(heads) != 1:
               print(f"FAIL: expected exactly 1 alembic head, found {len(heads)}")

@@ -43,16 +43,38 @@ fi
 
 if [ -n "$ALEMBIC_DIR" ]; then
   # Prefer venv alembic if present (avoids PATH ambiguity).
+  # Absolute, because the invocation below runs inside `cd "$ALEMBIC_DIR"`.
+  # As a relative path this resolved to migrations/venv/bin/alembic and died
+  # with exit 127 — the third way this guard was unable to fire (2026-08-30).
   ALEMBIC_BIN=""
-  if [ -x "./venv/bin/alembic" ]; then
-    ALEMBIC_BIN="./venv/bin/alembic"
+  if [ -x "$REPO_ROOT/venv/bin/alembic" ]; then
+    ALEMBIC_BIN="$REPO_ROOT/venv/bin/alembic"
   elif command -v alembic >/dev/null 2>&1; then
     ALEMBIC_BIN="alembic"
   fi
   if [ -n "$ALEMBIC_BIN" ]; then
-    HEADS_OUT=$(cd "$ALEMBIC_DIR" && "$ALEMBIC_BIN" heads 2>&1 || true)
-    HEAD_COUNT=$(echo "$HEADS_OUT" | grep -cE '^[a-f0-9]+ \(head' || true)
-    if [ "$HEAD_COUNT" -gt 1 ] 2>/dev/null; then
+    # 2026-08-30: this guard had never once fired. Two defects, both of
+    # which made it report success unconditionally:
+    #   1. `^[a-f0-9]+ \(head` only matches hex revision ids. Every revision
+    #      in this repo is named (038_scheduled_emails, 049_reflection_…),
+    #      so the count was always 0 and `0 -gt 1` is false.
+    #   2. `2>&1 || true` folds alembic's own failure into the same path —
+    #      when the command errors, output is a stack trace, count is 0, and
+    #      the hook prints the check passed.
+    # Given alembic 035 reaching prod unapplied caused a P0 in May, a guard
+    # that cannot fail is worse than no guard: it manufactures confidence.
+    # Now: match named ids too, and treat a non-zero exit as a hard failure
+    # rather than a silent pass.
+    HEADS_OUT=$(cd "$ALEMBIC_DIR" && "$ALEMBIC_BIN" heads 2>&1)
+    ALEMBIC_RC=$?
+    HEAD_COUNT=$(echo "$HEADS_OUT" | grep -cE '\(head\)' || true)
+    if [ "$ALEMBIC_RC" -ne 0 ]; then
+      report "alembic heads failed to run (exit $ALEMBIC_RC) — cannot verify head count:"
+      echo "$HEADS_OUT" | tail -5 | sed 's/^/    /'
+    elif [ "$HEAD_COUNT" -eq 0 ]; then
+      report "alembic heads returned no head lines — the guard cannot verify anything. Output:"
+      echo "$HEADS_OUT" | tail -5 | sed 's/^/    /'
+    elif [ "$HEAD_COUNT" -gt 1 ] 2>/dev/null; then
       report "alembic has $HEAD_COUNT heads (must be 1). Diverged migrations:"
       echo "$HEADS_OUT" | sed 's/^/    /'
       echo "    Fix: alembic merge -m \"merge heads\" <head1> <head2>"

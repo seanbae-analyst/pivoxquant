@@ -79,9 +79,47 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
       - run: npx playwright install --with-deps chromium
+
+      # The E2E suite needs a backend. `next dev` proxies /api/* to
+      # localhost:5050, and every page resolves auth through /api/auth/me on
+      # load — with nothing listening, /signup never finishes rendering and
+      # the OAuth-link assertion times out. That is what failed on the first
+      # run of this workflow (2026-08-30), and it is a missing dependency in
+      # the job rather than a broken test, so the job now provides it.
+      #
+      # Config falls back to sqlite:///pivoxquant.db whenever DATABASE_URL is
+      # empty (config.py), so no service container is needed.
+      - name: Set up Python for the backend
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install backend dependencies
+        working-directory: .
+        run: pip install -r requirements.txt
+      - name: Start backend on :5050
+        working-directory: .
+        run: |
+          python run.py > /tmp/backend.log 2>&1 &
+          echo "waiting for /api/health..."
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:5050/api/health > /dev/null; then
+              echo "backend up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::backend did not become healthy within 45s"
+          tail -40 /tmp/backend.log
+          exit 1
+
       - run: npm run e2e
         env:
           CI: 'true'
+
+      - name: Backend log on failure
+        if: failure()
+        run: tail -80 /tmp/backend.log || true
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v7
