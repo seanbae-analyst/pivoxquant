@@ -23,7 +23,13 @@
  * `@/lib/pre-trade`. The DB schema / audit row stay untouched.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { toast } from "sonner";
 import { Gavel, RotateCcw, Check, X, AlertCircle } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
@@ -36,6 +42,20 @@ import {
   PERSONA_QUESTION_HINTS,
 } from "@/data/pre-trade-questions";
 import { cachedPersonaId } from "@/lib/cfo/hooks";
+
+// useSyncExternalStore plumbing for the persona hint cache (QuestionsStep).
+// Both must be module-scope constants: React resubscribes whenever the
+// `subscribe` identity changes, so an inline arrow would resubscribe every
+// render.
+//
+// The cache is written once per session by usePersona() and only read here
+// on open, so there is no live-update channel worth subscribing to — the
+// unsubscribe is a no-op. If a live persona swap ever needs to repaint an
+// open deposition, wire this to a real storage/event listener.
+const subscribePersonaCache = () => () => {};
+// Server render has no localStorage — null keeps SSR and first paint on the
+// neutral copy, which is what avoids the hydration mismatch.
+const getServerPersonaId = () => null;
 
 // 2026-05-22 (CEO "50자 너무 많아 10자"): lowered 50 → 10. Keep in lock-step
 // with models/pre_trade_reflection.py MIN_RATIONALE_CHARS — the backend
@@ -355,18 +375,26 @@ export function QuestionsStep(props: {
   } = props;
 
   // Persona-aware hint lines (record-as-spine §7, 2026-06-10). Resolved
-  // client-side AFTER mount from the usePersona() localStorage cache —
-  // no fetch from the deposition flow (would break the host modals'
-  // strict apiFetch call-count tests), no SSR/hydration mismatch (first
-  // paint is always the neutral copy). Cold cache / offline-mock → null
-  // → questions render exactly as before.
-  const [hints, setHints] = useState<Readonly<Record<number, string>> | null>(
-    null,
+  // client-side from the usePersona() localStorage cache — no fetch from
+  // the deposition flow (would break the host modals' strict apiFetch
+  // call-count tests), no SSR/hydration mismatch (first paint is always
+  // the neutral copy). Cold cache / offline-mock → null → questions
+  // render exactly as before.
+  //
+  // 2026-08-30: was useState + a mount useEffect that called setHints.
+  // That is render → effect → setState → re-render on every mount, which
+  // `react-hooks/set-state-in-effect` flags as a cascading render. Reading
+  // a client-only external store is what useSyncExternalStore is for:
+  // getServerSnapshot returns null so SSR and first paint keep the neutral
+  // copy, and the client snapshot is a primitive PersonaId, so it stays
+  // referentially stable across renders (no resubscribe/render loop).
+  const personaId = useSyncExternalStore(
+    subscribePersonaCache,
+    cachedPersonaId,
+    getServerPersonaId,
   );
-  useEffect(() => {
-    const code = cachedPersonaId();
-    setHints((code && PERSONA_QUESTION_HINTS[code]) || null);
-  }, []);
+  const hints: Readonly<Record<number, string>> | null =
+    (personaId && PERSONA_QUESTION_HINTS[personaId]) || null;
 
   return (
     <section className="space-y-6">

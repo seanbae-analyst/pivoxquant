@@ -319,15 +319,42 @@ def test_main_dry_run_skip_onboard(caus, tmp_path, monkeypatch):
 
 
 def test_main_no_session_no_secret_admits(caus, tmp_path, monkeypatch, capsys):
-    """No session file + no SIM_ONBOARD_SECRET → warn + exit 0 (graceful)."""
+    """No session file + no SIM_ONBOARD_SECRET → warn + exit 0 (graceful).
+
+    Pins the scenario. Without ``--scenario`` main() derives day_idx from
+    ``date.today().toordinal() % 10``, and days 6 and 8 are PUBLIC_SCENARIOS
+    that deliberately proceed session-less with an *info* line instead of the
+    warning asserted below — so the unpinned form passed on 8 days out of 10
+    and failed on the other 2 (caught 2026-08-30, day_idx 8). day0_signup is
+    non-public, which is the branch this test is about.
+    """
     monkeypatch.setattr(caus, "LOG_DIR", tmp_path / "reports")
     monkeypatch.setattr(caus, "SESSION_DIR", tmp_path / "sessions-empty")
     monkeypatch.setattr(caus, "SIM_ONBOARD_SECRET", "")
 
-    rc = caus.main(["--dry-run"])
+    rc = caus.main(["--dry-run", "--scenario", "day0_signup"])
     assert rc == 0
     out = capsys.readouterr().out
     assert "session missing" in out or "no fallback session" in out
+
+
+def test_main_no_session_public_scenario_proceeds(caus, tmp_path, monkeypatch, capsys):
+    """PUBLIC scenario + no session → *info*, not warn, and still exit 0.
+
+    The complement of the test above, and the branch that actually runs on
+    days 6/8. It was uncovered, which is how the rotation-dependent failure
+    above stayed hidden: whenever the real calendar landed on a public day
+    the other test failed, and nothing asserted this path was correct.
+    """
+    monkeypatch.setattr(caus, "LOG_DIR", tmp_path / "reports")
+    monkeypatch.setattr(caus, "SESSION_DIR", tmp_path / "sessions-empty")
+    monkeypatch.setattr(caus, "SIM_ONBOARD_SECRET", "")
+
+    rc = caus.main(["--dry-run", "--scenario", "day8_features"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "PUBLIC scenario, proceeding session-less" in out
+    assert "session missing" not in out
 
 
 # --- Day scenario rotation invariant ---------------------------------------

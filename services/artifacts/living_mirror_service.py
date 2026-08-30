@@ -301,7 +301,7 @@ class LivingMirrorService:
         trajectory: Optional[dict[str, Any]] = None
         sparkline_path: Optional[str] = None
         if stage == "trajectory":
-            history = get_history(user_id, days_back=_HISTORY_DAYS_BACK)
+            history = get_history(user_id, days_back=_HISTORY_DAYS_BACK, now=when)
             drift = compute_drift(history)
             trajectory = self._trajectory_view(drift)
             sparkline_path = self._sparkline_path(response.get("sparkline") or [])
@@ -351,7 +351,7 @@ class LivingMirrorService:
             return "new"
         # Trajectory requires ≥2 historical snapshots to narrate a move.
         try:
-            history = get_history(user_id, days_back=_HISTORY_DAYS_BACK)
+            history = get_history(user_id, days_back=_HISTORY_DAYS_BACK, now=when)
         except Exception:
             logger.debug("living_mirror: get_history failed", exc_info=True)
             history = []
