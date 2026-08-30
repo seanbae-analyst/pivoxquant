@@ -47,12 +47,16 @@ import { SectorExposureBlock } from "@/components/risk/v2/sector-exposure-block"
 import { RiskTimelineChart } from "@/components/risk/v2/risk-timeline-chart";
 import { CorrelationHeatmap } from "@/components/risk/v2/correlation-heatmap";
 
-function derivePosture(
+export function derivePosture(
   layersCount: number,
   breached: number,
   strained: number,
-): "composed" | "attentive" | "strained" | "breached" {
-  if (layersCount === 0) return "composed";
+): "insufficient" | "composed" | "attentive" | "strained" | "breached" {
+  // No layers means nothing was measured — not that everything measured came
+  // back calm. Reporting "composed" here made an empty book indistinguishable
+  // from a genuinely steady one, and the hero went on to claim "all layers
+  // within band, none breached" about layers that were never observed.
+  if (layersCount === 0) return "insufficient";
   if (breached >= 1) return "breached";
   if (strained >= 3) return "strained";
   if (strained >= 1) return "attentive";
