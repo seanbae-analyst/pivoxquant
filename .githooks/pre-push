@@ -188,15 +188,27 @@ fi
 #   @pytest.mark.smoke def test_auth_me()    → GET /api/auth/me == 401 (unauthed)
 #   @pytest.mark.smoke def test_portfolio()  → GET /api/portfolio/summary (mock)
 # ----------------------------------------------------------------------
-echo "[4/4] pytest smoke (warn-only unless PIVOX_PREPUSH_BLOCK=1)"
+echo "[4/4] pytest smoke (blocking — opt out with PIVOX_PREPUSH_BLOCK=0)"
 
-BLOCK_MODE="${PIVOX_PREPUSH_BLOCK:-0}"
+# 2026-08-30: default flipped 0 → 1 (warn-only → blocking).
+# The smoke marker set runs in ~1.3s and covers health / auth-required /
+# login→portfolio. With all 28 GitHub Actions workflows still `.disabled`
+# (billing), this hook is the ONLY gate between a broken auth path and
+# origin/main — warn-only meant a red smoke run scrolled past and pushed
+# anyway. Opt out per-push with PIVOX_PREPUSH_BLOCK=0 when you genuinely
+# need to land a WIP branch; `git push --no-verify` still bypasses all of it.
+BLOCK_MODE="${PIVOX_PREPUSH_BLOCK:-1}"
 TESTS_DIR="$REPO_ROOT/tests"
 
 if [ ! -d "$TESTS_DIR" ]; then
   echo "  (tests/ directory not found — skip)"
 else
-  SMOKE_COUNT=$(grep -r '@pytest.mark.smoke' "$TESTS_DIR" 2>/dev/null | wc -l | tr -d ' ')
+  # Anchored to line start: the unanchored form also counted the prose in
+  # test_smoke.py's module docstring ("Marked ``@pytest.mark.smoke`` so the
+  # pre-push hook can gate on them"), so the hook reported 4 markers for 3
+  # real tests. A gate that miscounts its own coverage invites doubt about
+  # the rest of what it reports. (2026-08-30)
+  SMOKE_COUNT=$(grep -rE '^\s*@pytest\.mark\.smoke' "$TESTS_DIR" 2>/dev/null | wc -l | tr -d ' ')
 
   if [ "$SMOKE_COUNT" -eq 0 ]; then
     echo ""
@@ -241,11 +253,10 @@ else
         echo "  ---"
         echo ""
         if [ "$BLOCK_MODE" = "1" ]; then
-          report "smoke tests FAILED (PIVOX_PREPUSH_BLOCK=1 is set — push blocked)"
+          report "smoke tests FAILED — push blocked (override: PIVOX_PREPUSH_BLOCK=0 git push)"
         else
-          echo "  WARNING: smoke tests failed (warn-only mode — push continues)."
-          echo "  To block on failure: PIVOX_PREPUSH_BLOCK=1 git push"
-          echo "  Emergency bypass:    git push --no-verify"
+          echo "  WARNING: smoke tests failed (PIVOX_PREPUSH_BLOCK=0 — push continues)."
+          echo "  Emergency bypass:  git push --no-verify"
           echo ""
         fi
       else
