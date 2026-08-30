@@ -120,7 +120,10 @@ READ_ENDPOINTS = [
     ("perf-ledger",      "/api/performance/ledger",        OK_EMPTYISH),
     ("twin-portfolio",   "/api/twin/portfolio",            OK_EMPTYISH),
     ("billing-avail",    "/api/billing/availability",      OK_PROVIDER),
-    ("methodology",      "/api/methodology",               OK),
+    # NOTE: /api/methodology was deliberately deleted with the artefact tree
+    # (e064118e). The public /methodology page is a static server component and
+    # never called it, so there is nothing left to sweep — the assertion only
+    # produced one false finding per virtual user (20/run) and masked signal.
     ("search",           "/api/search?q=AAPL",             OK),
 ]
 
