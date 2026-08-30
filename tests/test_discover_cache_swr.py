@@ -287,3 +287,37 @@ class TestMoversSWR:
         body = r.get_json()
         assert body.get("code") == "MOVERS_US_NO_DATA"
         assert body.get("cache_populated") is False
+
+
+class TestScreenersNotWired:
+    """`/api/discover/screeners` has no live source; holdings do not change that.
+
+    The Discover UI used to render "보유 종목이나 관심종목을 추가하면 자동으로
+    분석합니다" with Add-position / Add-watchlist buttons for this block —
+    implying the screeners were gated on an empty book. They are not gated on
+    anything: the endpoint 503s unconditionally until a thematic source is
+    wired. These pin the invariant the corrected copy depends on.
+    """
+
+    def test_screeners_503_without_holdings(self, client, auth_user):
+        from services import cache_service
+        cache_service.discover_cache.pop(auth_user["id"], None)
+        r = client.get("/api/discover/screeners")
+        assert r.status_code == 503
+
+    def test_screeners_503_with_holdings_too(self, client, auth_user):
+        """A populated discover cache must not change the outcome."""
+        from services import cache_service
+        cache_service.discover_cache[auth_user["id"]] = {
+            "data": [
+                {"ticker": "AAPL", "name": "Apple", "price": 315.32,
+                 "change_pct": 1.1, "is_korean": False},
+            ],
+            "ts": time.time(),
+        }
+        r = client.get("/api/discover/screeners")
+        assert r.status_code == 503, (
+            "screeners must not appear holdings-gated — adding positions "
+            "cannot unlock a source that was never wired"
+        )
+        cache_service.discover_cache.pop(auth_user["id"], None)
