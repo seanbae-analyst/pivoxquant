@@ -178,9 +178,10 @@ _INACTIVITY_TIMEOUT = timedelta(hours=2)
 # ── Sensitive Header Masking (shared with app.py Sentry filter) ──────────────
 
 # Headers whose values must never appear in logs, Sentry events, or request dumps.
-# Broker headers (appkey/appsecret) are set by services/broker/user_kis_service.py
-# during authenticated KIS requests; if an upstream 4xx/5xx is logged naively,
-# the raw credentials would be exposed.
+# Broker headers (appkey/appsecret) are set by services/kis during authenticated
+# KIS market-data requests; if an upstream 4xx/5xx is logged naively, the raw
+# credentials would be exposed. (The user-linked broker path that also set them
+# was removed on 2026-08-30; the market-data path still does.)
 SENSITIVE_HEADERS = frozenset({
     "authorization", "cookie", "set-cookie",
     "x-csrf-token", "x-api-key",

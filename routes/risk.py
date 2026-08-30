@@ -263,30 +263,11 @@ def _compute_cash_weight_pct(portfolio_value: float) -> tuple[float, str]:
     cash_native = 0.0
     source = "none"
 
-    # KIS cash buffer (KR users — KRW-denominated). KIS is the only supported
-    # broker integration (Alpaca removed 2026-05-27).
-    if source == "none":
-        try:
-            from services.broker.user_kis_service import (
-                UserKISService,
-                UserKISError,
-            )
-            try:
-                svc = UserKISService(getattr(current_user, "id", None))
-            except UserKISError:
-                svc = None
-            except Exception:
-                svc = None
-            if svc is not None:
-                bal = svc.get_balance()
-                if bal.get("ok"):
-                    cash_val = bal.get("available_cash")
-                    if cash_val is not None:
-                        cash_native = float(cash_val)
-                        source = "kis"
-        except Exception as exc:
-            logger.debug("L7 cash: kis lookup skipped (%s)", exc)
-
+    # No broker cash source. The user-linked KIS path was removed on
+    # 2026-08-30: KIS states partnership is unavailable to non-licensed
+    # firms, so a third-party service cannot hold a user's brokerage
+    # credentials. Cash weight degrades to 0 with source="none" rather
+    # than reporting a number it cannot source.
     if source == "none" or cash_native <= 0:
         return 0.0, source
 

@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 # Sensitive header names (lowercased) — must NEVER reach Sentry/logs.
 # Broker headers (appkey/appsecret) were added after the Wave 1 KIS OAuth work
-# introduced services/broker/user_kis_service.py::_auth_headers(), which embeds
+# introduced the (since removed, 2026-08-30) user KIS auth headers, which embedded
 # the user's raw KIS credentials in outbound HTTP headers. Without masking, any
 # exception raised during a KIS request would ship those credentials to Sentry.
 SENSITIVE_HEADERS = frozenset({
