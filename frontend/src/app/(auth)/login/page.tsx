@@ -147,12 +147,19 @@ export default function LoginPageV2() {
               ? '다시 오신 것을 <span class="br">환영합니다</span>.<br/>데스크는 이미 <span class="br">준비됐습니다.</span>'
               : 'Welcome <span class="br">back</span>.<br/>The desk is <span class="br">already lit.</span>'
           }
+          // 2026-09-01: this sold weekly memos, earnings pre-briefs and AI
+          // artifacts — all three deleted in the prune. The first screen a
+          // user sees promised three things the product no longer does.
           deck={
             locale === "ko"
-              ? "로그인하여 주간 메모, 실적 프리브리프, AI가 준비한 아티팩트를 확인하세요."
-              : "Sign in to continue your weekly memo, your earnings pre-briefs, and the artifacts your CFO has been holding for you."
+              ? "로그인하면 당신이 남긴 기록과, 그 기록이 비추는 거울이 기다리고 있습니다."
+              : "Sign in for the record you kept, and the mirror it holds up."
           }
-          signature={locale === "ko" ? "AI 초안 · 당신의 검토" : "Drafted by AI · Reviewed by you"}
+          signature={
+            locale === "ko"
+              ? "당신이 기록하고 · 당신이 확인합니다"
+              : "You record it · You review it"
+          }
         />
       </div>
 

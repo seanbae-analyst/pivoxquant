@@ -22,6 +22,9 @@ interface EquityCurveBlockProps {
    *  (USD X · KRW Y) instead of one FX-unified USD figure (CEO 2026-05-24). */
   navUsd?: number;
   navKrw?: number;
+  /** Whether the book currently holds anything. Decides which empty-state
+   *  reason the "building the curve" panel gives — see below. */
+  hasPositions?: boolean;
 }
 
 // Backend whitelist: "5d" | "1mo" | "3mo" | "6mo" | "1y" — Bug #8 fix.
@@ -153,6 +156,7 @@ export function EquityCurveBlock({
   currentNav,
   navUsd,
   navKrw,
+  hasPositions = false,
 }: EquityCurveBlockProps) {
   // `activeId` is the tab the user clicked (id="5d"|"1mo"|"2mo" → 1주/4주/8주).
   // The backend period is resolved through the RANGES table.
@@ -486,9 +490,27 @@ export function EquityCurveBlock({
                   maxWidth: 520,
                 }}
               >
-                포지션을 추가하면 매일 종가 기준으로 곡선이 그려집니다.
-                <br />
-                Add a position — the curve fills in from daily closes.
+                {/* 2026-09-01: this used to always say "add a position", which
+                    is false for a user who already holds one — their curve is
+                    empty because no daily NAV snapshot has been taken yet, not
+                    because the book is empty. Telling them to do something they
+                    have already done is the same class of dishonesty as the
+                    synthesised series this panel was built to replace. */}
+                {hasPositions ? (
+                  <>
+                    곡선은 매일 종가 스냅샷으로 그려집니다. 첫 스냅샷이 기록되면
+                    여기에 나타납니다.
+                    <br />
+                    The curve is drawn from daily closing snapshots — it appears
+                    once the first one is recorded.
+                  </>
+                ) : (
+                  <>
+                    포지션을 추가하면 매일 종가 기준으로 곡선이 그려집니다.
+                    <br />
+                    Add a position — the curve fills in from daily closes.
+                  </>
+                )}
               </span>
             </div>
           ) : (
