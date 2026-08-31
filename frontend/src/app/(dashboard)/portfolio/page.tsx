@@ -469,6 +469,7 @@ export default function PortfolioPageV2() {
         currentNav={totalNav}
         navUsd={navUsdFinal}
         navKrw={navKrwFinal}
+        hasPositions={positions.length > 0}
       />
 
       {/* ═══════════ POSITIONS TABLE ═══════════ */}

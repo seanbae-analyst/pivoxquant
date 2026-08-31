@@ -115,30 +115,34 @@ const TIERS: readonly TierSlim[] = [
 
 /* ───────────────────────── FAQ data ───────────────────────── */
 
+// 2026-09-01: every answer below used to describe artifacts, a Risk Board,
+// weekly memos, earnings pre-briefs and a three-layer report pipeline. None
+// of those exist any more. A storefront FAQ that answers questions about a
+// deleted product is worse than no FAQ — rewritten against what ships.
 const FAQ_ITEMS = [
   {
     q: "Is this 'pre-trade mirror' the same as investment advisory?",
-    a: "No. 자본시장법 제6조상 개인 투자자문업과 무관합니다. PivoxQuant는 당신 자신의 포트폴리오를 관측하고 기록하는 informational research tool입니다. 모든 artifact는 관측치 (concentration, drawdown, factor tilts, earnings posture)이며 매수/매도 지시가 아닙니다. Labels are POSITIVE / NEGATIVE / NEUTRAL — never buy, sell, or hold. 결정은 전적으로 당신의 몫입니다.",
+    a: "No. 자본시장법 제6조상 개인 투자자문업과 무관합니다. PivoxQuant는 당신이 직접 입력한 기록과 보유 종목을 그대로 되비추는 informational research tool입니다. 종목을 고르지도, 점수를 매기지도, 사고팔라고 말하지도 않습니다. 결정은 전적으로 당신의 몫입니다.",
   },
   {
     q: "How is my trade data used — what does the mirror “observe”?",
-    a: "당신의 온보딩 20문항과 포트폴리오 이력을 바탕으로 Layer 1 Identity를 구성합니다. Layer 2 Learning은 롤링 윈도우로 drift를 감지해 페르소나를 재조정하고, Layer 3 Artifact는 그 결과로 당신에게 맞는 리포트를 발행합니다. 원본 거래 데이터는 암호화 저장되며 광고·외부 판매에 사용되지 않습니다. 탈퇴 시 30일 내 완전 삭제됩니다.",
+    a: "두 가지를 나란히 놓습니다. 하나는 당신이 온보딩 20문항에서 스스로 선언한 투자자 유형이고, 다른 하나는 최근 90일 거래에서 관측된 행동입니다. 평균 보유기간, 회전율, 섹터 분산 같은 9개 축을 당신의 기록에서 계산할 뿐, 새로운 판단을 만들지 않습니다. 원본 거래 데이터는 암호화 저장되며 광고·외부 판매에 사용되지 않습니다. 탈퇴 시 30일 내 완전 삭제됩니다.",
   },
   {
     q: "How does my persona change over time?",
-    a: "Drift detection이 매주 동작합니다. 최근 90일의 거래·반응 패턴이 현재 페르소나와 유의미하게 달라지면 거울이 “당신이 다르게 움직이기 시작했다”는 Pulse 리포트를 발행합니다. 재분류는 자동이 아니라 제안입니다 — 수락해야 다음 사이클부터 새 페르소나 기준으로 리포트가 나옵니다.",
+    a: "관측 페르소나는 최근 90일 거래를 다시 계산할 때마다 갱신됩니다. 선언한 유형은 당신이 20문항을 다시 풀기 전까지 그대로입니다 — 거울의 요점은 둘이 갈라지는 지점을 보여주는 것이지, 당신 대신 하나를 고르는 것이 아닙니다.",
   },
   {
-    q: "What happens after I subscribe?",
-    a: "Pro 티어 풀액세스. 첫 weekly memo · earnings pre-brief · Risk Board가 24시간 내 당신의 실제 보유에서 렌더됩니다. 전자상거래법상 첫 결제 14일 이내 미사용 시 전액 환불 대상. 이후 월 KRW 9,900.",
+    q: "What do I actually do here?",
+    a: "세 가지입니다. 사기 전에 멈춰 7문항으로 근거를 남기고(Pre-Trade), 보유 종목과 거래를 기록하고(Portfolio), 몇 주 뒤 그 기록이 비추는 당신을 봅니다(Mirror). 리포트를 받아보는 서비스가 아니라, 당신이 남긴 기록이 재료인 도구입니다.",
   },
   {
     q: "Do you have access to my brokerage account?",
-    a: "Read-only. KIS (KR) read-only scope로 연결됩니다. 주문 · 출금 · 수정 불가. 연결 해제 시 artifact 렌더링 중단, 데이터는 30일 보관 후 파기.",
+    a: "Read-only. KIS (KR) read-only scope로 연결됩니다. 주문 · 출금 · 수정 불가. 연결하지 않고 보유 종목을 직접 입력해도 모든 기능이 동일하게 동작합니다. 연결 해제 시 시세 동기화가 멈추고, 데이터는 30일 보관 후 파기됩니다.",
   },
   {
-    q: "Can I cancel? How do refunds work?",
-    a: "Settings에서 언제든 취소 — 이메일·전화 없이. 전자상거래법상 첫 결제 14일 이내 미사용 시 전액 환불 대상. 이후에는 현재 주기 종료 시 청구가 멈춥니다.",
+    q: "What does it cost?",
+    a: "현재 클로즈드 베타 기간 동안 전 기능 무료입니다. 유료 요금제는 아직 활성화되어 있지 않으며, 켜질 경우 사전에 안내합니다.",
   },
 ];
 

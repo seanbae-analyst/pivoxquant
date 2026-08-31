@@ -158,7 +158,7 @@ export function NpsWidget({
   return (
     <div
       role="group"
-      aria-label="NPS 점수 — 이번 주간 메모를 친구에게 추천할 가능성을 골라 주세요"
+      aria-label="NPS 점수 — PivoxQuant를 친구에게 추천할 가능성을 골라 주세요"
       className={[
         "rounded-lg border border-border bg-card px-4 py-3",
         className ?? "",
@@ -166,7 +166,7 @@ export function NpsWidget({
       data-testid="nps-widget"
     >
       <p className="text-sm font-medium text-foreground">
-        이번 주간 메모를 친구에게 추천할 가능성은 얼마인가요?
+        PivoxQuant를 친구에게 추천할 가능성은 얼마인가요?
       </p>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {SCORES.map((score) => {

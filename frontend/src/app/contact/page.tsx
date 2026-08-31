@@ -20,7 +20,7 @@ const CHANNELS = [
     title: "Support",
     address: "support@pivoxquant.com",
     helper:
-      "Account, billing, broker connection, missing artifacts. We reply within one business day.",
+      "Account, billing, broker connection, a record that is not showing up. We reply within one business day.",
   },
 ];
 

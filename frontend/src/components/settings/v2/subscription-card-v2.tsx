@@ -37,6 +37,11 @@ interface Tier {
   bullets: string[];
 }
 
+// 2026-09-01: every bullet here named a deleted surface — watchlist, weekly
+// memo, risk dashboard, earnings pre-brief, brag card, Companion. Billing is
+// gated off (BUSINESS_REGISTRATION) and the launch is free for every tier, so
+// this card's job today is to state that plainly rather than to list features
+// that would not arrive if someone did pay.
 const TIERS: Tier[] = [
   {
     id: "free",
@@ -44,35 +49,31 @@ const TIERS: Tier[] = [
     name: "Free",
     price: "KRW 0 / month",
     bullets: [
-      "Watchlist · 5 symbols",
-      "Weekly memo · read-only",
-      "Risk dashboard · 30-day window",
+      "Pre-Trade · seven questions before a position change",
+      "Journal · every entry, next to what followed",
+      "Portfolio · holdings, ledger and sector mix",
     ],
   },
   {
     id: "pro",
     eyebrow: "Tier 2",
     name: "Pro",
-    price: "KRW 9,900 / month",
+    price: "Not billing during beta",
     bullets: [
-      "Unlimited watchlist + alerts",
-      "Earnings pre-brief · all holdings",
-      "Brag card · monthly · email + PDF",
+      "Everything in Free",
+      "Mirror · declared vs observed across nine axes",
       "Broker sync · KIS read-only",
-      "Persona v3 classifier · 90D window",
     ],
   },
   {
     id: "premium",
     eyebrow: "Tier 3",
     name: "Premium",
-    price: "KRW 19,900 / month",
+    price: "Not billing during beta",
     bullets: [
       "Everything in Pro",
-      "Companion · reflective journal agent",
-      "Persona v3 · 365D rolling window",
+      "Persona · 365-day rolling window",
       "Peer benchmark · all cohorts",
-      "Priority queue · same-day briefs",
     ],
   },
 ];

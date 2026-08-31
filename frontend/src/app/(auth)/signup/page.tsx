@@ -31,7 +31,6 @@ import Link from "next/link";
 
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
-import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 import {
   isValidBirthdate,
   isAtLeastMinAge,
@@ -364,12 +363,16 @@ export default function SignupPageV2() {
           borderRight: "0.5px solid rgba(184,149,106,0.18)",
         }}
       >
+        {/* 2026-09-01: promised a weekly editorial, an earnings pre-brief and
+            a shareable brag card, plus a date for "the first memo". All three
+            surfaces were deleted in the prune; the signup screen was selling a
+            product that no longer exists. */}
         <AuthHeroV2
           eyebrow={"PivoxQuant · Entry"}
           headlineHtml={
-            `Create your <span class="br">CFO</span>.<br/>The first memo lands <span class="br">${WEEKLY_MEMO_WHEN_SHORT}.</span>`
+            'Stop, <span class="br">write it down</span>,<br/>then look in the <span class="br">mirror.</span>'
           }
-          deck="A weekly editorial, an earnings pre-brief, and a brag card you can ship — drafted by AI, reviewed by you, addressed only to you."
+          deck="Record why you bought before you buy. Weeks later the same record shows you who you actually are — not who you said you were."
           signature="Beta · Free during preview"
         />
       </div>

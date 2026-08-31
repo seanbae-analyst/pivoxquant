@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Book, HelpCircle, MessageSquare, FileText, Shield } from "lucide-react";
-import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
+import { Book, NotebookPen, Contrast, Shield } from "lucide-react";
 
 export const metadata = {
   title: "Docs",
@@ -15,7 +14,7 @@ const SECTIONS = [
     items: [
       {
         q: "What is PivoxQuant?",
-        a: "A quiet operating system for private capital — observational research, not investment advice.",
+        a: "A record you keep about your own investing, and a mirror it holds up. Stop before you buy and write down why; weeks later the same record shows how you actually behaved. Observational only — not investment advice.",
       },
       {
         q: "Do you execute real trades?",
@@ -28,56 +27,38 @@ const SECTIONS = [
     ],
   },
   {
-    icon: FileText,
-    title: "Reports & Artifacts",
+    icon: NotebookPen,
+    title: "The record",
     items: [
       {
-        q: "How often are reports generated?",
-        a: `Weekly Memo arrives ${WEEKLY_MEMO_WHEN_SHORT}. Morning Brief daily. Monthly/Quarterly reports on calendar.`,
+        q: "What is Pre-Trade?",
+        a: "Seven questions you answer before a position change — ticker, side, and a written thesis, then your own cross-examination. Nothing is submitted to a broker; the point is the pause and the written reason.",
       },
       {
-        q: "What tier gets which reports?",
-        a: "Free: Weekly Memo preview. Pro: 12 artifacts. Premium: All + priority + concierge notes.",
+        q: "Where do my entries go?",
+        a: "Journal keeps every pre-trade entry alongside the trades you recorded, so a decision and what followed sit next to each other.",
       },
       {
-        q: "Can I download PDFs?",
-        a: "Yes — via Reports page or email delivery.",
+        q: "Do I need to connect a broker?",
+        a: "No. Positions can be entered by hand and every surface works the same. A KIS connection only saves you the typing.",
       },
     ],
   },
   {
-    icon: HelpCircle,
-    title: "Signals & Risk",
+    icon: Contrast,
+    title: "The mirror",
     items: [
       {
-        q: "What do POSITIVE / NEGATIVE / NEUTRAL mean?",
-        a: "Observation labels based on a 4-pillar quant score. Not recommendations to buy or sell.",
+        q: "What does the Mirror show?",
+        a: "Your declared investor type from the 20-question assessment next to the type your last 90 days of trades actually read as, across nine axes — holding period, turnover, sector spread, and so on.",
       },
       {
-        q: "How is risk measured?",
-        a: "VaR, ES, max drawdown, correlation, VIX regime, tail ratio, cash buffer — 7 independent observations.",
+        q: "Is the mirror scoring me?",
+        a: "No. It counts what is in your record and shows it back. There is no grade, no ranking, and no suggestion about what to do next.",
       },
       {
-        q: "What is the Risk Board demo?",
-        a: "If you have not added positions, the Risk Board shows sample observations so you can see the format.",
-      },
-    ],
-  },
-  {
-    icon: MessageSquare,
-    title: "AI Chat",
-    items: [
-      {
-        q: "What can I ask?",
-        a: "Anything about your portfolio observations, market context, or historical patterns. Responses are informational only.",
-      },
-      {
-        q: "Is it real Claude?",
-        a: "Yes. Claude-augmented synthesis via Anthropic API. Each response is scrubbed through our legal filter.",
-      },
-      {
-        q: "Does it remember my portfolio?",
-        a: "Yes — it reads your observation state on each turn.",
+        q: "Why is my mirror empty?",
+        a: "It fills from your own trades. Until a few are recorded there is nothing to reflect, and the surface says so rather than inventing a reading.",
       },
     ],
   },
@@ -111,8 +92,8 @@ export default function DocsPage() {
             How PivoxQuant works.
           </h1>
           <p className="text-pq-body text-[rgba(245,240,232,0.7)] max-w-2xl">
-            Everything you need to observe your book, read the weekly memo, and
-            understand what the engine does — and what it does not.
+            How the record works, what the mirror reads from it, and what this
+            tool does not do.
           </p>
         </header>
 

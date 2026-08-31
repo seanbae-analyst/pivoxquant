@@ -60,7 +60,13 @@ export function ProfileHeroV2({
           marginBottom: 28,
         }}
       >
-        Identity · Persona · Living CFO
+        {/* 2026-09-01: was "Identity · Persona · Living CFO", which left the
+            headline below unlabelled. `personaName` is the OBSERVED
+            classification (see the prop doc), and a user whose declared
+            assessment is still 미설정 read the hero as their declared type —
+            collapsing the 선언 vs 관찰 distinction the whole product rests on.
+            "관찰됨 · OBSERVED" is the same marker the journal mirrors use. */}
+        관찰됨 · Observed persona · Living CFO
       </div>
 
       <h1
