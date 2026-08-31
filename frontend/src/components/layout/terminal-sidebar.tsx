@@ -8,7 +8,7 @@
  * list; this pass deletes them instead of hiding them. What is left is
  * the behavioural loop (멈춤 → 기록 → 거울) plus the account:
  *   PRIMARY · Mirror / Portfolio / Pre-Trade
- *   MORE    · Home / Journal / Profile · Persona / Settings
+ *   MORE    · Journal / Profile · Persona / Settings
  *
  * There is no hidden list any more — an item in this file is a page that
  * exists, and every page that exists is in this file.
@@ -21,7 +21,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home as HomeIcon,
   Briefcase,
   Settings as SettingsIcon,
   NotebookPen,
@@ -32,7 +31,6 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 export type TerminalSidebarKey =
-  | "home"
   | "mirror"
   | "portfolio"
   | "pre-trade"
@@ -57,7 +55,6 @@ const PRIMARY: Item[] = [
 
 // MORE — the record's own surfaces plus the account.
 const MORE: Item[] = [
-  { key: "home", label: "Home", href: "/home", icon: HomeIcon },
   { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
   { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },

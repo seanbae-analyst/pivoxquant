@@ -99,7 +99,7 @@ export default function Error({
             Try again
           </button>
           <Link
-            href="/home"
+            href="/mirror"
             className="inline-flex items-center px-5 py-2.5 rounded-sm border text-sm font-medium tracking-wide"
             style={{
               borderColor: "rgba(var(--pq-ivory-rgb),0.15)",

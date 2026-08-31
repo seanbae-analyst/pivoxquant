@@ -14,5 +14,5 @@ import { redirect } from "next/navigation";
  * a flash of empty content.
  */
 export default function LandingPage() {
-  redirect("/home");
+  redirect("/mirror");
 }

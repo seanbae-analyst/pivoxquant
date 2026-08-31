@@ -39,14 +39,14 @@ describe("ErrorBoundary page", () => {
     expect(reset).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a 'Back to desk' link pointing at /home", () => {
+  it("renders a 'Back to desk' link pointing at /mirror", () => {
     const reset = vi.fn();
     const error = new Error("synthetic test failure");
     render(<ErrorBoundary error={error} reset={reset} />);
 
     const back = screen.getByRole("link", { name: /Back to desk/i });
     expect(back).toBeInTheDocument();
-    expect(back).toHaveAttribute("href", "/home");
+    expect(back).toHaveAttribute("href", "/mirror");
   });
 
   it("shows raw error message in non-production (dev/test) mode", () => {

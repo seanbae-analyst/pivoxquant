@@ -20,7 +20,6 @@ export default function robots(): MetadataRoute.Robots {
           "/admin/",
 
           // ── Authenticated dashboard pages ─────────────
-          "/home/",
           "/mirror/",
           "/portfolio/",
           "/journal/",

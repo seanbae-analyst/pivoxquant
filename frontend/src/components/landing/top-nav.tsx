@@ -365,7 +365,7 @@ export default function TopNav() {
                   minimum. inline-flex + min-height:44 lifts it to spec
                   without changing the visual padding rhythm. */}
               <Link
-                href={user ? "/home" : "/login"}
+                href={user ? "/mirror" : "/login"}
                 className="hidden items-center font-serif text-pq-body transition-colors lg:inline-flex"
                 style={{
                   color: "rgba(245,240,232,0.68)",
@@ -377,7 +377,7 @@ export default function TopNav() {
                 {user ? (user.name?.trim() ? user.name : t("landing.topNav.goToDesk")) : t("landing.topNav.loginLink")}
               </Link>
               <Link
-                href={user ? "/home" : "/signup"}
+                href={user ? "/mirror" : "/signup"}
                 className="group relative inline-flex items-center gap-2 overflow-hidden rounded-sm px-4 font-serif text-pq-body transition-transform duration-200 active:scale-[0.98]"
                 style={{
                   // WCAG 2.5.5 AA — 44x44 minimum tap target. Was 36 (failed
