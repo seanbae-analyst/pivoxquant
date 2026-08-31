@@ -44,19 +44,6 @@ export const API = {
     // PUT /api/portfolio/capital handler is still live (test_security.py +
     // test_portfolio.py exercise it); deleting only the unused frontend slot.
   },
-  signals: {
-    all: "/api/signals",
-    one: (ticker: string) => `/api/signals/${ticker}`,
-    refresh: "/api/signals/refresh",
-    scan: "/api/scan",
-    shortInterest: (ticker: string) => `/api/signals/short-interest/${ticker}`,
-    insider: (ticker: string) => `/api/signals/insider/${ticker}`,
-    disposition: (ticker: string) => `/api/signals/disposition/${ticker}`,
-    ofi: (ticker: string) => `/api/signals/ofi/${ticker}`,
-    sentimentDivergence: (ticker: string) => `/api/signals/sentiment-divergence/${ticker}`,
-    anchoring: (ticker: string) => `/api/signals/anchoring/${ticker}`,
-    herding: "/api/signals/herding",
-  },
   discover: "/api/discover",
   market: {
     overview: "/api/market/overview",
@@ -90,23 +77,6 @@ export const API = {
     itemDelete: (id: string | number) => `/api/alerts/${id}`,
   },
   trades: "/api/trades",
-  // REMOVED 2026-04-27 per CEO + legal: autotrade endpoints group retired
-  // (투자일임업 등록 회피 — feature 자체 제거). Restore path:
-  // 1) re-enable backend blueprint in routes/__init__.py and app.py
-  // 2) restore this group + frontend page/nav/i18n.
-  ai: {
-    status: "/api/ai/status",
-    chat: "/api/ai/chat",
-    swot: "/api/ai/swot",
-    competitor: "/api/ai/competitor",
-    sectorTrend: "/api/ai/sector-trend",
-    commentary: "/api/ai/commentary",
-    morningSummary: "/api/ai/morning-summary",
-    coaching: "/api/ai/coaching",
-    earningsTone: "/api/ai/earnings-tone",
-    sectorRegime: "/api/ai/sector-regime",
-    riskSummary: "/api/ai/risk-summary",
-  },
   watchlist: {
     list: "/api/watchlist",
     add: "/api/watchlist",
@@ -127,58 +97,6 @@ export const API = {
     status: "/api/realtime/status",
   },
   backtest: (ticker: string) => `/api/backtest/${ticker}`,
-  quant: {
-    vixStrategy: "/api/vix-strategy",
-    crossAsset: "/api/cross-asset",
-    statArb: "/api/stat-arb",
-    indicators: (ticker: string) => `/api/indicators/${ticker}`,
-    canslim: (ticker: string) => `/api/screener/canslim/${ticker}`,
-    interestRateRegime: "/api/regime/interest-rate",
-  },
-  analytics: {
-    regimeReport: "/api/analytics/regime-report",
-    benchmark: "/api/analytics/benchmark",
-    turnover: "/api/analytics/turnover",
-  },
-  risk: {
-    var: "/api/risk/var",
-    drawdown: "/api/risk/drawdown",
-    stressTest: "/api/risk/stress-test",
-    volatility: (ticker: string) => `/api/risk/volatility/${ticker}`,
-    componentEs: "/api/risk/component-es",
-    defenseStatus: "/api/risk/defense-status",
-  },
-  simulate: {
-    hrp: "/api/portfolio/simulate/hrp",
-    trp: "/api/portfolio/simulate/trp",
-    mdp: "/api/portfolio/simulate/mdp",
-    erc: "/api/portfolio/simulate/erc",
-    minVariance: "/api/portfolio/simulate/min-variance",
-    counterfactual: (params: {
-      ticker: string;
-      start_date: string;
-      amount: number;
-      currency?: string | null;
-      recurring?: string | null;
-    }) => {
-      const q = new URLSearchParams({
-        ticker: params.ticker,
-        start_date: params.start_date,
-        amount: String(params.amount),
-      });
-      if (params.currency) q.set("currency", params.currency);
-      if (params.recurring) q.set("recurring", params.recurring);
-      return `/api/simulate/counterfactual?${q.toString()}`;
-    },
-  },
-  performance: {
-    ledger: "/api/performance/ledger",
-  },
-  tools: {
-    positionSizing: "/api/tools/position-sizing",
-    correlationMatrix: "/api/tools/correlation-matrix",
-    sectorHeatmap: "/api/tools/sector-heatmap",
-  },
   profile: {
     get: "/api/profile",
     onboarding: "/api/profile/onboarding",
@@ -269,56 +187,12 @@ export const API = {
     kisDisconnect: "/api/broker/kis/disconnect",
     kisStatus: "/api/broker/kis/status",
   },
-  share: {
-    create: "/api/portfolio/share",
-    get: (token: string) => `/api/portfolio/share/${token}`,
-  },
-  growth: {
-    data: (range: string) => `/api/growth/data?range=${range}`,
-    today: "/api/growth/today",
-    reflect: "/api/growth/reflect",
-    weekly: "/api/growth/weekly",
-  },
-  artifacts: {
-    list: "/api/artifacts/list",
-    download: (id: number) => `/api/artifacts/${id}/download`,
-    preview: (id: number) => `/api/artifacts/${id}/preview`,
-    markRead: (id: number) => `/api/artifacts/${id}/read`,
-    // reports-v2 — additive (Stage 10, 2026-04-27). Backend GAPs.
-    // Hooks fall back to client-side derivation from `list` when these 404.
-    stats: "/api/artifacts/stats",
-    byMonth: "/api/artifacts/by-month",
-    generate: "/api/artifacts/generate",
-    // Brag Card — instant on-demand preview (snapshot mode supports empty
-    // portfolios). Returns { ok, data, png_base64, html }. The `data` payload
-    // carries share_token / referral_code / mode / empty_reason /
-    // snapshot_tickers used by the onboarding viral surface.
-    bragCardPreview: "/api/artifacts/brag-card/preview",
-    // Living Mirror — persona capstone PDF (선언 radar → 행동 overlay → drift
-    // trajectory). On-demand: POST generate → { ok, id, data }; then
-    // download(id) streams the PDF (410 when Railway's ephemeral disk has no
-    // rendered file) and preview(id) returns { ok, id, data, html }.
-    // Backend: routes/artifacts.py living_mirror_* (LAUNCH_FREE_ALL_TIERS).
-    livingMirrorGenerate: "/api/artifacts/living-mirror/generate",
-    livingMirrorPreview: (id: number) =>
-      `/api/artifacts/living-mirror/preview/${id}`,
-    livingMirrorDownload: (id: number) =>
-      `/api/artifacts/living-mirror/download/${id}`,
-  },
   admin: {
     artifactsList: "/api/admin/artifacts/list",
     artifactPreview: (type: string, format: "html" | "pdf" | "email" | "png") =>
       `/api/admin/artifacts/preview/${type}?format=${format}`,
     artifactDownload: (type: string, format: "html" | "pdf" | "email" | "png") =>
       `/api/admin/artifacts/preview/${type}?format=${format}&download=1`,
-  },
-  // Personal Journal Companion — Closed Beta (Premium Plus / Founding Lifetime).
-  // Reflective-only agent: Remember · Mirror · Question. Not advice.
-  // See reports/legal/SAFE_FEATURE_SPECS_2026-04-23.md §6.
-  agent: {
-    query: "/api/agent/query",
-    status: "/api/agent/status",
-    waitlist: "/api/agent/waitlist",
   },
   // Behaviour Mirror — factual holding-period statistics from the user's own
   // closed trade pairs (disposition-effect "mirror"). Read-only, @api_auth.
@@ -389,34 +263,6 @@ export const API = {
     marketing: "/api/consents/marketing",
     crossBorder: "/api/consents/cross-border",
   },
-  // Customer support — 고객문의센터 + AI 고객지원 챗봇 (2026-05-26).
-  // Backend contract (locked, see routes/support.py):
-  //   POST   /api/support/inquiries      {category,subject,body}
-  //            → 201 {id,status,created_at} | 400/401/429 RATE_LIMITED
-  //   GET    /api/support/inquiries      → {inquiries:[...]}
-  //   GET    /api/support/inquiries/:id  → {id,category,subject,body,status,
-  //            admin_reply,created_at,answered_at,has_reply}
-  //   POST   /api/support/chat           {message(1..2000),history?:[...]}
-  //            → 200 {reply,escalated,inquiry_id} | 400 INVALID_MESSAGE/401/429
-  // Admin slots are declared for parity with routes/support.py admin handlers
-  // (no frontend consumer yet — the user-facing pages never call them).
-  // Viral loop — funnel telemetry + public OG card landing (backend commit
-  // 7a57a9da, routes/growth.py). Contract (locked):
-  //   POST /api/track                      (PUBLIC, no auth) → {ok}
-  //     body {event, channel?, ref_code?, anon_id?, meta?}
-  //     event ∈ landing_view|signup|onboarding_done|artifact_opened|
-  //            share_clicked|referral_signup
-  //   GET  /api/card/<share_token>         (PUBLIC, OG landing)
-  //     200 {ok, owner_display_name, card_image_url, summary_safe,
-  //          month_label, referral_code}
-  //     404 {code: CARD_NOT_FOUND|INVALID_SHARE_TOKEN} (private/missing same)
-  //   POST /api/card/<share_token>/visibility (auth, owner) {is_public}
-  viral: {
-    track: "/api/track",
-    card: (shareToken: string) => `/api/card/${encodeURIComponent(shareToken)}`,
-    cardVisibility: (shareToken: string) =>
-      `/api/card/${encodeURIComponent(shareToken)}/visibility`,
-  },
   support: {
     inquiries: "/api/support/inquiries",
     inquiry: (id: string | number) => `/api/support/inquiries/${id}`,
@@ -439,8 +285,6 @@ export const PORTFOLIO_TRADES = "/api/portfolio/trades";
 // new watchlist page and the Cmd+K command palette. `API.watchlist.*` above
 // remains authoritative for existing callers; these are path-only shortcuts.
 const API_BASE = "";
-export const WATCHLIST = `${API_BASE}/api/watchlist`;
-export const WATCHLIST_ITEM = (id: string | number) => `${API_BASE}/api/watchlist/${id}`;
 export const SEARCH = `${API_BASE}/api/search`;
 
 // Risk + Discover + Market (added 2026-04-22) — observation endpoints wired to
@@ -449,11 +293,6 @@ export const RISK_SUMMARY       = `${API_BASE}/api/risk/summary`;
 export const RISK_LAYERS        = `${API_BASE}/api/risk/layers`;
 export const RISK_CORRELATION   = `${API_BASE}/api/risk/correlation`;
 export const RISK_ROLLING_VAR   = `${API_BASE}/api/risk/rolling-var`;
-export const RISK_CONCENTRATION = `${API_BASE}/api/risk/concentration`;
-export const DISCOVER_OVERVIEW  = `${API_BASE}/api/discover/market-overview`;
-export const DISCOVER_MOVERS    = `${API_BASE}/api/discover/movers`;
-export const DISCOVER_SECTORS   = `${API_BASE}/api/discover/sectors`;
-export const DISCOVER_SCREENERS = `${API_BASE}/api/discover/screeners`;
 export const MARKET_INDICES     = `${API_BASE}/api/market/indices`;
 
 // Public (no-auth) cache-only market snapshot — backs the landing-page
@@ -466,11 +305,6 @@ export const PUBLIC_MARKET_SNAPSHOT = `${API_BASE}/api/public/market-snapshot`;
 // routes/data_status.py for the locked response contract. Wave G C-CS3.
 export const DATA_STALE_STATUS = `${API_BASE}/api/data/stale-status`;
 
-// Methodology + data-provenance disclosure — backs /methodology (Data-trust
-// Stage 1). Flag-gated behind login by default (METHODOLOGY_PUBLIC; Q-DT4) —
-// static model catalog + system data lineage from routes/methodology.py.
-// See docs/strategy/DATA_TRUST_STRATEGY.md.
-export const METHODOLOGY = `${API_BASE}/api/methodology`;
 
 // NPS 1-click feedback — backs <NpsWidget /> rendered after the first
 // Weekly Memo. Transactional (§50 서비스 개선); no consent required.

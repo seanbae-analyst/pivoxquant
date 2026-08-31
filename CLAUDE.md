@@ -11,10 +11,12 @@
 루프는 하나다 — **멈춤 → 기록 → 거울**.
 미국 + 한국 주식. 1인 창업자(배상현) 운영. 현재 클로즈드 베타.
 
-> 2026-08-31 **대규모 prune 완료.** 종목 스코어링 / 시그널 / 리스크보드 /
-> AI 분석 / 디스커버 / 마켓 / 관심종목 / 그로스 / 컴패니언 / 18종 아티팩트
-> 리포트 — **전부 삭제됐다.** 이 파일에서 그 기능들을 찾지 마라. 없다.
-> 코드가 필요하면 git tag / 커밋 `80431ac0`·`1c23fac6` 이전 이력에 있다.
+> 2026-08-31 **대규모 prune 완료 (−123,000줄 / 레포 3.7G→1.2G).** 종목
+> 스코어링 / 시그널 / 리스크보드 / AI 분석 / 디스커버 / 마켓 / 관심종목 /
+> 그로스 / 컴패니언 / AI 트레이더 트윈 / 18종 아티팩트 리포트 — **전부
+> 삭제됐다.** 이 파일에서 그 기능들을 찾지 마라. 없다.
+> 코드가 필요하면 커밋 `80431ac0`·`1c23fac6`·`dfb4a98f` 이전 이력에 있다.
+> 검증: pytest 2235 pass / vitest 351 pass / tsc·eslint clean / 부팅 135 rules.
 
 ## 현재 상태 요약 (2026-08-30 실측)
 🔴 **백엔드: 소멸 (복구 불가)** — CEO 가 **Railway 계정 자체를 삭제**(2026-08-30 확인).
@@ -85,10 +87,8 @@ pivoxquant/
     │  dev_auth · sim_onboard · command_center (opt-in)
     └── decorators.py
 └── services/
-    ├── quant/          # portfolio.py(HRP/ERC/MaxDiv/MinVar/TailRiskParity)
-    │                   #   risk_metrics.py(GKYZ/LedoitWolf/ComponentES/Sortino)
-    │                   #   ← engine/models/risk_defense/signals/backtester/
-    │                   #     canslim/indicators/composer/model_catalog 전부 삭제
+    │  (services/quant/ 는 통째로 삭제됨 — 남겨뒀던 portfolio.py·risk_metrics.py
+    │   조차 소비자가 0이었다. 퀀트 코드는 이 트리에 더 이상 없다.)
     ├── data/           # fetcher.py · fmp.py · kis_market_adapter.py ·
     │                   #   kr_fundamentals.py · edgar.py · realtime.py
     ├── behavior/       # 5종 mirror (holding/turnover/concentration/
@@ -167,10 +167,10 @@ cd ~/Desktop/취준/pivoxquant/frontend && npm run dev
 
 ## 중요 원칙
 - 🔴 **최신 정보 파악 (모든 agent 필수)** — CEO 반복 지시 (2026-05-30 "자꾸 옛날 데이터 가져온다"). **코드/수치** = grep·Read 실측 (메모리·기억 인용 금지) / **시장·경쟁·규제** = WebSearch + 출처 날짜 확인 (훈련데이터 금지, 예: 키움 자동일지 = 검색으로 확인) / **결정**(가격·법·수익모델) = `~/.claude/projects/-Users-seanbae-Desktop---/memory/DECISIONS.md` (SoT) / **동적수치**(HEAD·cron·test) = SessionStart hook LIVE 값. 오늘 날짜 기준. 모르면 "확인 불가". "최근/요즘" 막연 표현 금지 → 출처+날짜.
-- **퀀트 잔존분 신중 수정** — `services/quant/` 에 남은 것은 `portfolio.py` +
-  `risk_metrics.py` 둘뿐이고, 둘 다 검증된 완성 코드다. 수정 시 수식 단위/회귀
-  테스트 필수. engine/risk_defense/models/backtester 등은 2026-08-31 삭제됐다 —
-  없는 파일을 찾거나 되살리지 마라.
+- **퀀트 코드 없음** — `services/quant/` 는 2026-08-31 통째로 삭제됐다.
+  engine / risk_defense / models / backtester / portfolio / risk_metrics 전부.
+  없는 파일을 찾거나 되살리지 마라. 다시 필요해지면 커밋 `1c23fac6` 이전
+  이력에서 꺼내되, 그때는 "왜 이 제품에 알파 스코어링이 필요한가"부터 답할 것.
   autotrade 는 2026-04-27 비활성화 → 2026-05-05 물리 삭제 (투자일임업 회피,
   rollback 은 git tag `legal-pre-autotrader-removal` 만)
 - **routes/, models/, services/ 구조 유지**

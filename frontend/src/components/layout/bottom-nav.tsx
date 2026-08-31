@@ -25,25 +25,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home as HomeIcon,
-  Activity,
   Briefcase,
-  Zap,
   MoreHorizontal,
   X,
-  Eye,
-  Compass,
-  Shield,
-  MessageSquare,
-  BookHeart,
   NotebookPen,
-  FileText,
-  Bell,
   Settings as SettingsIcon,
   LogOut,
-  Sparkles,
   UserCircle,
   Gavel,
-  Sprout,
   Contrast,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";

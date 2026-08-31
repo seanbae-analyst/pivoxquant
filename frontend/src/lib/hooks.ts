@@ -5,30 +5,15 @@ import {
   API,
   PORTFOLIO_SUMMARY,
   PORTFOLIO_POSITIONS,
-  RISK_SUMMARY,
-  RISK_LAYERS,
-  RISK_ROLLING_VAR,
-  RISK_CORRELATION,
   PUBLIC_MARKET_SNAPSHOT,
-  METHODOLOGY,
 } from "./endpoints";
 import { displayTicker } from "./format";
 import { liveRefresh } from "./market-hours";
 import type {
-  DiscoverResponse,
   ProfileResponse,
   WatchlistResponse,
   WatchlistItem,
   AlertsResponse,
-  GrowthScoreEntry,
-  GrowthTodayResponse,
-  GrowthWeeklyReport,
-  ArtifactsListResponse,
-  ArtifactType,
-  SignalEntry,
-  SignalsResponse,
-  SignalFilters,
-  SignalLabel,
   Position,
   PreTradeJournalResponse,
   HoldingMirrorResponse,
@@ -36,7 +21,6 @@ import type {
   ProfitLossMirrorResponse,
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
-  MethodologyResponse,
   MirrorHomeResponse,
 } from "./types";
 
@@ -194,17 +178,6 @@ export function useAlerts() {
 
 /* ── Growth OS ── */
 
-// 2026-05-08 (NEW-E): agent_worker.growth_routes is registered as an
-// optional blueprint (routes/__init__.py:48-58). When the agent_worker
-// package is missing from a deploy, the entire /api/growth/* surface
-// returns 404. Without `shouldRetryOnError: false`, SWR retried in a
-// tight loop and the page got stuck on "Loading..." forever. Now the
-// hook fails fast and the page renders the unavailable-fallback UI.
-const GROWTH_SWR_OPTS = {
-  revalidateOnFocus: false,
-  shouldRetryOnError: false,
-  errorRetryCount: 0,
-} as const;
 
 /* ── Pre-Trade Journal (decision-reflection feed) ── */
 
@@ -491,52 +464,6 @@ export function useAveragingDownMirror() {
   };
 }
 
-/* ── Artifacts (My Reports library) ── */
-
-export interface UseArtifactsOptions {
-  type?: ArtifactType | "all";
-  since?: "30d" | "90d" | "all";
-  limit?: number;
-}
-
-/**
- * Fetches the user's artifact (report) archive.
- * Returns artifacts plus total count and unread count for sidebar badge.
- * Builds the request URL with query params so SWR caches each filter
- * combination independently.
- */
-export function useArtifacts(options: UseArtifactsOptions = {}) {
-  const { type, since, limit } = options;
-  const qs = new URLSearchParams();
-  if (type && type !== "all") qs.set("type", type);
-  if (since && since !== "all") qs.set("since", since);
-  if (typeof limit === "number") qs.set("limit", String(limit));
-  const qsStr = qs.toString();
-  const key = qsStr.length > 0 ? `${API.artifacts.list}?${qsStr}` : API.artifacts.list;
-
-  // DORMANT since e064118e (artefact tree deleted). `/api/artifacts/list` no
-  // longer exists, so fetching it returns 404 on every render of /reports, the
-  // home queue, the companion archive and the detail panel. A null SWR key
-  // disables the request while leaving the shape below untouched: every caller
-  // takes its existing empty-state branch instead of an error branch.
-  //
-  // The key is still computed above so the query contract stays visible and
-  // reviewable. To restore, drop the `false &&`.
-  const swr = useSWR<ArtifactsListResponse>(false && key, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30_000,
-  });
-
-  return {
-    artifacts: swr.data?.artifacts ?? [],
-    total: swr.data?.total ?? 0,
-    unreadCount: swr.data?.unread_count ?? 0,
-    isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
-    mutate: swr.mutate,
-  };
-}
-
 /* ── Broker connections (KIS read-only) ── */
 
 export interface BrokerConnectionsResponse {
@@ -672,83 +599,6 @@ export type { RealtimePriceDetail, PriceDirection, RealtimeState } from "./realt
  * window — same cadence as the existing portfolio hooks.
  */
 
-interface BackendRiskLayer {
-  no?: number;
-  num?: number;
-  name: string;
-  description?: string;
-  metric_label?: string;
-  metric_value?: string;
-  value?: string;
-  threshold?: string;
-  status: "POSITIVE" | "NEGATIVE" | "NEUTRAL" | "GREEN" | "YELLOW" | "RED";
-  observation?: string;
-  observed_at_kst?: string;
-}
-
-interface RiskLayersV2Response {
-  layers?: BackendRiskLayer[];
-  defense_score?: number;
-  overall_status?: string;
-}
-
-interface RawPosition {
-  ticker?: string;
-  symbol?: string;
-  name?: string;
-  company_name?: string;
-  exchange?: string;
-  market?: string;
-  weight?: number;
-  weight_pct?: number;
-  market_value?: number;
-  market_value_usd?: number;
-  total_value?: number;
-  is_korean?: boolean;
-  currency?: string;
-}
-
-interface RawPositionsPayload {
-  positions?: RawPosition[];
-  total_value_usd?: number;
-  total_value_all_krw?: number;
-  fx_rate?: number;
-}
-
-function inferExchange(p: RawPosition): string {
-  if (p.exchange) return p.exchange;
-  if (p.market) return p.market;
-  // Check the suffix before is_korean: a .KQ ticker also has
-  // is_korean=true, so an is_korean-first test would swallow every
-  // KOSDAQ name into KOSPI.
-  const t = (p.ticker ?? "").toUpperCase();
-  if (t.endsWith(".KQ")) return "KOSDAQ";
-  if (t.endsWith(".KS")) return "KOSPI";
-  if (p.is_korean) return "KOSPI"; // korean, suffix unknown → default KOSPI
-  return "NASDAQ";
-}
-
-interface RawPositionWithSector extends RawPosition {
-  sector?: string;
-}
-
-interface RollingVarPayload {
-  date: string;
-  var_pct: number;
-}
-
-/**
- * Composite risk score 0..100 derived from rolling VaR. Higher = more
- * strain. We map |VaR%| into a soft 0..100 band where ~−5% maps to ~80
- * (the strain threshold). The series is "data-source: derived" (per
- * SPEC §6) until the backend ships a first-class composite endpoint.
- */
-function varToScore(varPct: number): number {
-  const abs = Math.abs(varPct);
-  // 0% -> 0, 5% -> 80, 7%+ saturates near 100
-  const score = (abs / 5) * 80;
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
 
 /* ── Risk v2 — Correlation Matrix (additive, v1 parity preservation) ──
  *
@@ -820,8 +670,6 @@ export function resolveTickerName(
  * Legal: hooks consume server data only; banned vocabulary
  * (BUY/SELL/HOLD/recommend/advice) MUST never round-trip through here.
  */
-
-import type { Artifact } from "./types";
 
 /* ── Notification preferences (settings v2 §C matrix) ──────────────────────
  *

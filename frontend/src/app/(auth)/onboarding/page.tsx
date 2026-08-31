@@ -845,6 +845,9 @@ export default function OnboardingPage() {
   }, [step, answers]);
 
   // Submit answers to backend
+  const goToDashboard = useCallback(() => {
+    router.replace("/home");
+  }, [router]);
   const handleSubmit = useCallback(async () => {
     setSubmitting(true);
     try {
@@ -878,13 +881,9 @@ export default function OnboardingPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [answers, refresh]);
+  }, [answers, refresh, goToDashboard]);
 
   // Brag Card "대시보드로 이동" → finally route to /home.
-  const goToDashboard = useCallback(() => {
-    router.replace("/home");
-  }, [router]);
-
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
 
   useEffect(() => {
