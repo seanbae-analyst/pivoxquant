@@ -110,6 +110,14 @@ interface TileState {
   message?: string;
 }
 
+/**
+ * DORMANT since e064118e — `POST /api/artifacts/generate` went with the artefact
+ * tree, so all three request tiles would 404. The tiles, their queue states and
+ * the SWR revalidation below are kept for the mirror-based rebuild; only the
+ * offer is withheld. Flip to true when the route returns.
+ */
+const GENERATE_AVAILABLE = false;
+
 export function GenerateArtifactCta({ tier }: Props) {
   const [states, setStates] = React.useState<Record<string, TileState>>({});
   const [inputs, setInputs] = React.useState<Record<string, string>>({});
@@ -319,6 +327,41 @@ export function GenerateArtifactCta({ tier }: Props) {
     },
     [inputs, artifacts, revalidateAllArtifacts, scrollToLatest],
   );
+
+  if (!GENERATE_AVAILABLE) {
+    return (
+      <section
+        aria-labelledby="ask-heading"
+        style={{ marginTop: "clamp(48px, 8vw, 80px)" }}
+      >
+        <h2
+          id="ask-heading"
+          className="font-display"
+          style={{
+            fontWeight: 500,
+            fontSize: "clamp(26px, 3.4vw, 40px)",
+            lineHeight: 1.1,
+            color: "var(--pq-ivory, #F5F0E8)",
+            margin: "0 0 12px",
+          }}
+        >
+          Ask the desk.
+        </h2>
+        <p
+          className="font-serif"
+          style={{
+            fontSize: "var(--pq-text-body)",
+            lineHeight: 1.6,
+            color: "rgba(245,240,232,0.72)",
+            maxWidth: 620,
+            margin: 0,
+          }}
+        >
+          지금은 요청을 받을 수 없습니다. 거울 기록을 바탕으로 다시 만드는 중입니다.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section

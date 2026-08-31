@@ -85,6 +85,15 @@ const fetcher = async (url: string): Promise<SubscriptionResponse> => {
   return r.json();
 };
 
+/**
+ * DORMANT since 237a1b67 — see onboarding/broker/page.tsx for the full reason.
+ * KIS partnership is unavailable to non-licensed firms and Toss's Open API
+ * terms §5② forbid sharing the app key, so the connect surface is withheld
+ * rather than deleted. Section B keeps its anchor (#section-b, wired from
+ * AnchorRail and the settings hero) and states what is actually true.
+ */
+const BROKER_LINKING_AVAILABLE = false;
+
 export default function SettingsPageV2() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
@@ -602,19 +611,53 @@ export default function SettingsPageV2() {
             style={{ scrollMarginTop: 96 }}
             aria-label="Brokers"
           >
-            <BrokerCardV2
-              kisSlot={
-                <KisCard
-                  connected={Boolean(brokerData?.kis_connected)}
-                  lastSync={brokerData?.kis_last_sync ?? null}
-                  onConnect={() => setKisModalOpen(true)}
-                  onSync={handleKisSync}
-                  onDisconnect={handleKisDisconnect}
-                  syncing={kisSyncing}
-                  disconnecting={kisDisconnecting}
-                />
-              }
-            />
+            {BROKER_LINKING_AVAILABLE ? (
+              <BrokerCardV2
+                kisSlot={
+                  <KisCard
+                    connected={Boolean(brokerData?.kis_connected)}
+                    lastSync={brokerData?.kis_last_sync ?? null}
+                    onConnect={() => setKisModalOpen(true)}
+                    onSync={handleKisSync}
+                    onDisconnect={handleKisDisconnect}
+                    syncing={kisSyncing}
+                    disconnecting={kisDisconnecting}
+                  />
+                }
+              />
+            ) : (
+              <div
+                style={{
+                  border: "1px solid var(--pq-ivory-line)",
+                  borderRadius: 4,
+                  padding: 24,
+                }}
+              >
+                <span
+                  className="font-mono uppercase"
+                  style={{
+                    fontSize: "var(--pq-text-eyebrow)",
+                    letterSpacing: "0.2em",
+                    color: "rgba(245,240,232,0.55)",
+                  }}
+                >
+                  B · Brokers
+                </span>
+                <p
+                  className="font-serif"
+                  style={{
+                    fontSize: "var(--pq-text-body)",
+                    lineHeight: 1.6,
+                    color: "rgba(245,240,232,0.72)",
+                    margin: "12px 0 0",
+                    maxWidth: 620,
+                  }}
+                >
+                  증권사 계좌 연결은 제공하지 않습니다. 보유 종목은 포트폴리오에서
+                  직접 입력해 관리합니다.
+                </p>
+              </div>
+            )}
           </section>
 
           {/* SECTION C — Notifications */}

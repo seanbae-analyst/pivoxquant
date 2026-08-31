@@ -508,7 +508,10 @@
       "badge": "No sync",
       "description": "If you don't use KIS, or prefer to manage holdings yourself, just add positions manually. You can always change this later.",
       "cta": "Start manually"
-    }
+    },
+    "titleDormant": "Add your positions",
+    "subtitleDormant": "Start by entering the holdings you already have. You can add or edit them anytime.",
+    "noteDormant": "Automatic brokerage linking is not offered. Positions are entered by hand."
   },
   "whatIf": {
     "badge": "Time Machine",

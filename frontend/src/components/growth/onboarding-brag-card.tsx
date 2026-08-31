@@ -57,6 +57,17 @@ function snapshotLine(data: BragCardPreviewData): string {
   return `${names.join(" · ")} 기준 스냅샷`;
 }
 
+/**
+ * DORMANT since e064118e. `POST /api/artifacts/brag-card/preview` went with the
+ * artefact tree, and so did the weekly-memo generator this step used to promise.
+ *
+ * The card rendering below is kept whole for the mirror-based rebuild; only the
+ * request and the two claims that depend on it are withheld. Onboarding still
+ * completes — that is this step's actual job — but it no longer announces a card
+ * it has not made or a memo nothing will send.
+ */
+const BRAG_CARD_AVAILABLE = false;
+
 export function OnboardingBragCard({ onDone }: { onDone: () => void }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<BragCardPreviewData | null>(null);
@@ -68,6 +79,10 @@ export function OnboardingBragCard({ onDone }: { onDone: () => void }) {
   const trackedOpen = useRef(false);
 
   const generate = useCallback(async () => {
+    if (!BRAG_CARD_AVAILABLE) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await apiFetch<BragCardPreviewResponse>(
@@ -228,6 +243,48 @@ export function OnboardingBragCard({ onDone }: { onDone: () => void }) {
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (!BRAG_CARD_AVAILABLE) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
+        className="flex flex-col items-center gap-5 py-6"
+      >
+        <div className="flex flex-col items-center text-center">
+          <h2
+            className="text-2xl font-bold leading-tight font-display"
+            style={{ color: "var(--pq-ivory)" }}
+          >
+            설정을 마쳤어요
+          </h2>
+          <p
+            className="mt-1.5 text-sm"
+            style={{ color: "rgba(var(--pq-ivory-rgb), 0.6)" }}
+          >
+            보유 종목이 쌓이면 기록을 그대로 비춰 보여드립니다.
+          </p>
+        </div>
+        <div className="flex w-full max-w-xs flex-col gap-3">
+          <button
+            type="button"
+            onClick={onDone}
+            className="flex w-full items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold transition-all active:scale-[0.98]"
+            style={{
+              borderRadius: "var(--pq-radius-cta)",
+              backgroundColor: "var(--pq-bronze)",
+              color: "var(--pq-ink)",
+              boxShadow: "0 6px 16px rgba(var(--pq-bronze-rgb),0.25)",
+            }}
+          >
+            대시보드로 이동
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </motion.div>

@@ -1,0 +1,44 @@
+# Frontend endpoints deliberately left without a backend route.
+#
+# The contract checker counts these separately so a genuinely new break still
+# stands out. An entry here is a promise that the calling surface does not fire
+# the request — a dormant *call* is a bug; only a dormant *constant* belongs
+# here. Delete the line when the route returns.
+#
+# One path per line, exactly as it appears in frontend/src/lib/endpoints.ts.
+
+# ── artefact tree deleted in e064118e; frontend calls disabled 2026-08-31 ──
+# Callers hold their empty-state branch: useArtifacts / useArtifactStats use a
+# null SWR key; LivingMirrorCta, OnboardingBragCard and GenerateArtifactCta are
+# flag-gated (GENERATE_AVAILABLE / BRAG_CARD_AVAILABLE).
+#
+# One exception, deliberate: /reports/[id] still fires the preview request on a
+# deep link, because it already redirects to /reports on any failure. The route
+# is unreachable through the UI (the list it comes from is empty), so the cost
+# is one 404 in the log rather than a broken screen.
+/api/artifacts/list
+/api/artifacts/stats
+/api/artifacts/by-month
+/api/artifacts/generate
+/api/artifacts/${id}/download
+/api/artifacts/${id}/preview
+/api/artifacts/${id}/read
+/api/artifacts/brag-card/preview
+/api/artifacts/living-mirror/generate
+/api/artifacts/living-mirror/preview/${id}
+/api/artifacts/living-mirror/download/${id}
+/api/admin/artifacts/list
+/api/admin/artifacts/preview/${type}?format=${format}
+/api/admin/artifacts/preview/${type}?format=${format}&download=1
+
+# ── user-linked broker integration deleted in 237a1b67 ──
+# Legal, not technical: KIS partnership is unavailable to non-licensed firms and
+# Toss Open API terms §5② forbid sharing the app key (접근매체, 전자금융거래법
+# §16③). Frontend calls disabled 2026-08-31 — useBrokerConnections uses a
+# null SWR key; the onboarding step and settings section B are flag-gated
+# (BROKER_LINKING_AVAILABLE). KisConnectModal is unreachable: nothing opens it.
+/api/broker/connections
+/api/broker/kis/connect
+/api/broker/kis/sync
+/api/broker/kis/disconnect
+/api/broker/kis/status

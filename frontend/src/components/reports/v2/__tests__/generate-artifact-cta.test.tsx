@@ -65,8 +65,14 @@ beforeEach(() => {
   (toast.success as unknown as ReturnType<typeof vi.fn>).mockClear();
 });
 
+// The five tile tests below are SKIPPED, not deleted. GENERATE_AVAILABLE is
+// false while `POST /api/artifacts/generate` is gone with the artefact tree, so
+// the tiles do not render and these would fail on an offer nobody is making.
+// They are the acceptance suite for flipping that flag back on — deleting them
+// would mean rebuilding the generator with no coverage. The dormant-state test
+// below asserts what the component actually does today.
 describe("GenerateArtifactCta — Risk Board tile", () => {
-  it("renders the Risk Board tile (not Risk Note) with no free-text input", () => {
+  it.skip("renders the Risk Board tile (not Risk Note) with no free-text input", () => {
     render(<GenerateArtifactCta tier="pro" />);
     expect(screen.getByText("Risk Board")).toBeTruthy();
     expect(screen.queryByText("Risk Note")).toBeNull();
@@ -75,7 +81,7 @@ describe("GenerateArtifactCta — Risk Board tile", () => {
     expect(screen.getAllByRole("textbox")).toHaveLength(1);
   });
 
-  it("posts type risk_board and resolves immediately on a ready response", async () => {
+  it.skip("posts type risk_board and resolves immediately on a ready response", async () => {
     mockGenerate.mockResolvedValue(READY);
     render(<GenerateArtifactCta tier="pro" />);
 
@@ -96,7 +102,7 @@ describe("GenerateArtifactCta — Risk Board tile", () => {
     expect(mockMutate).toHaveBeenCalled();
   });
 
-  it("an empty response (new book) shows terminal copy, not a stuck Drafting state", async () => {
+  it.skip("an empty response (new book) shows terminal copy, not a stuck Drafting state", async () => {
     mockGenerate.mockResolvedValue({
       status: "empty",
       type: "risk_board",
@@ -114,7 +120,7 @@ describe("GenerateArtifactCta — Risk Board tile", () => {
     expect(screen.queryByText("Drafting…")).toBeNull();
   });
 
-  it("earnings pre-brief sends its ticker uppercased", async () => {
+  it.skip("earnings pre-brief sends its ticker uppercased", async () => {
     mockGenerate.mockResolvedValue({ ...READY, type: "earnings_prebrief" });
     render(<GenerateArtifactCta tier="pro" />);
 
@@ -130,7 +136,7 @@ describe("GenerateArtifactCta — Risk Board tile", () => {
     });
   });
 
-  it("free tier locks the two Pro tiles behind /pricing", () => {
+  it.skip("free tier locks the two Pro tiles behind /pricing", () => {
     render(<GenerateArtifactCta tier="free" />);
     const upgrades = screen.getAllByText("Upgrade to pro");
     expect(upgrades).toHaveLength(2);
@@ -154,5 +160,14 @@ describe("GenerateArtifactCta — Risk Board tile", () => {
     expect(src).not.toContain('type: "risk_report"');
     expect(src).not.toContain("needsTopic");
     expect(src).not.toContain("eta_seconds");
+  });
+});
+
+describe("GenerateArtifactCta — dormant", () => {
+  it("states the desk cannot take requests, and offers no tile to click", () => {
+    render(<GenerateArtifactCta tier="pro" />);
+    expect(screen.getByText(/지금은 요청을 받을 수 없습니다/)).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(mockGenerate).not.toHaveBeenCalled();
   });
 });

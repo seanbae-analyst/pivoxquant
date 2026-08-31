@@ -126,6 +126,69 @@ export function LivingMirrorCta() {
 
   const stageNote = stage ? STAGE_NOTE[stage] : null;
 
+  // DORMANT since e064118e. `POST /api/artifacts/living-mirror/generate` went
+  // with the artefact tree, so the button below would 404 on every click.
+  //
+  // Everything else in this file is deliberately kept: the generate call, the
+  // 410-graceful download, the legal copy and its four wired conditions. When
+  // the mirror-based generator lands, flipping this one constant restores the
+  // whole flow — no rewrite. Until then the card states plainly that it is not
+  // ready, because offering an action that cannot complete is the failure mode
+  // this branch has been removing everywhere else.
+  const GENERATE_AVAILABLE = false;
+
+  if (!GENERATE_AVAILABLE) {
+    return (
+      <section
+        aria-labelledby="living-mirror-heading"
+        style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid var(--pq-ivory-line)",
+          borderRadius: 4,
+          padding: 32,
+          marginBottom: 48,
+        }}
+      >
+        <div
+          className="font-mono uppercase"
+          style={{
+            fontSize: "var(--pq-text-eyebrow)",
+            letterSpacing: "0.22em",
+            color: "var(--pq-bronze)",
+            marginBottom: 8,
+          }}
+        >
+          Living Mirror · 페르소나 캡스톤
+        </div>
+        <h2
+          id="living-mirror-heading"
+          className="font-display"
+          style={{
+            fontWeight: 500,
+            fontSize: "clamp(24px, 3vw, 32px)",
+            lineHeight: 1.15,
+            color: "var(--pq-ivory, #F5F0E8)",
+            margin: "0 0 12px",
+          }}
+        >
+          내 페르소나 거울 PDF
+        </h2>
+        <p
+          className="font-serif"
+          style={{
+            fontSize: "var(--pq-text-body)",
+            lineHeight: 1.6,
+            color: "rgba(245,240,232,0.72)",
+            maxWidth: 620,
+            margin: 0,
+          }}
+        >
+          지금은 만들 수 없습니다. 거울 기록을 바탕으로 다시 만드는 중입니다.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section
       aria-labelledby="living-mirror-heading"

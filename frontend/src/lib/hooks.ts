@@ -559,7 +559,15 @@ export function useArtifacts(options: UseArtifactsOptions = {}) {
   const qsStr = qs.toString();
   const key = qsStr.length > 0 ? `${API.artifacts.list}?${qsStr}` : API.artifacts.list;
 
-  const swr = useSWR<ArtifactsListResponse>(key, fetcher, {
+  // DORMANT since e064118e (artefact tree deleted). `/api/artifacts/list` no
+  // longer exists, so fetching it returns 404 on every render of /reports, the
+  // home queue, the companion archive and the detail panel. A null SWR key
+  // disables the request while leaving the shape below untouched: every caller
+  // takes its existing empty-state branch instead of an error branch.
+  //
+  // The key is still computed above so the query contract stays visible and
+  // reviewable. To restore, drop the `false &&`.
+  const swr = useSWR<ArtifactsListResponse>(false && key, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 30_000,
   });
@@ -582,8 +590,14 @@ export interface BrokerConnectionsResponse {
 }
 
 export function useBrokerConnections() {
+  // DORMANT since 237a1b67 — `/api/broker/connections` went with the user-linked
+  // broker integration (KIS partnership is closed to non-licensed firms; Toss's
+  // Open API terms forbid sharing the app key). A null key stops the request;
+  // `data` stays undefined, so `kis_connected` reads false and every caller —
+  // settings section B, the onboarding step, the portfolio reconcile affordance —
+  // takes its not-connected branch instead of erroring.
   return useSWR<BrokerConnectionsResponse>(
-    API.broker.connections,
+    false && API.broker.connections,
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );
@@ -1296,7 +1310,10 @@ export interface ArtifactStats {
  * client-side derivation via `deriveArtifactStats(artifacts)` below.
  */
 export function useArtifactStats() {
-  const swr = useSWR<ArtifactStats>(API.artifacts.stats, fetcher, {
+  // DORMANT since e064118e — see useArtifacts. `/api/artifacts/stats` is gone;
+  // callers already fall back to `deriveArtifactStats(artifacts)`, which now
+  // derives from an empty list and yields zeroes rather than a 404.
+  const swr = useSWR<ArtifactStats>(false && API.artifacts.stats, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60_000,
     shouldRetryOnError: false,
