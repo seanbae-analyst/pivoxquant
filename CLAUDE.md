@@ -16,7 +16,8 @@
 > 그로스 / 컴패니언 / AI 트레이더 트윈 / 18종 아티팩트 리포트 — **전부
 > 삭제됐다.** 이 파일에서 그 기능들을 찾지 마라. 없다.
 > 코드가 필요하면 커밋 `80431ac0`·`1c23fac6`·`dfb4a98f` 이전 이력에 있다.
-> 검증: pytest 2235 pass / vitest 351 pass / tsc·eslint clean / 부팅 135 rules.
+> 검증: pytest 2235 pass / vitest 353 pass / tsc·eslint clean / 부팅 135 rules /
+> Playwright v2 smoke 16 pass / next build 36 routes. **prod 배포 완료.**
 
 ## 현재 상태 요약 (2026-08-30 실측)
 🔴 **백엔드: 소멸 (복구 불가)** — CEO 가 **Railway 계정 자체를 삭제**(2026-08-30 확인).
@@ -80,7 +81,7 @@ pivoxquant/
 ├── models/             # SQLAlchemy 모델
 ├── migrations/         # Alembic (리비전 전량 보존 — 삭제 금지)
 └── routes/             # 25 blueprint
-    │  auth · portfolio · trades · pre_trade · behavior · twin · mirror_home
+    │  auth · portfolio · trades · pre_trade · behavior · mirror_home
     │  profile · settings계열(consents/email_preferences) · billing
     │  alerts · notifications · push · realtime · market(지수/FX만)
     │  support · inbox · feedback · health · data_status
@@ -94,7 +95,6 @@ pivoxquant/
     ├── behavior/       # 5종 mirror (holding/turnover/concentration/
     │                   #   averaging-down/profit-loss) — 거울 표면의 본체
     ├── twin/ · pre_trade/ · profile/ · portfolio/ · trading/
-    ├── artifacts/      # mirror_home·profile 가 아직 참조 — 살아있음
     ├── ai/ · email/ · kis/ · broker/ · legal/ · scheduler/ · customer/
     ├── support/ · inbox/ · marketing/ · tax/ · mock_data/
     └── (루트) container(fetcher·ai·realtime 싱글턴) · cache_service ·
@@ -102,8 +102,11 @@ pivoxquant/
 ```
 
 ## 프론트엔드 구조
-> 2026-08-31 prune 후 실측. 대시보드 화면 **7개** (prune 전 19개).
+> 2026-09-01 실측. 대시보드 화면 **6개** (prune 전 19개).
 > nav 파일에 있는 것 = 존재하는 페이지. hidden 목록은 더 이상 없다.
+> `/home` 은 삭제됨 — `NEXT_PUBLIC_MIRROR_HOME` 플래그 뒤에서 거울과 같은
+> 화면을 렌더하던 중복 문이었다. 이제 `/mirror` 가 유일한 홈이고, 로그인·온보딩
+> 완료 후 착지 지점도 `/mirror` 다. `/home` 은 308 로 `/mirror` 에 리다이렉트.
 ```
 frontend/src/
 ├── app/
@@ -114,7 +117,6 @@ frontend/src/
 │   │   ├── mirror        # 거울 — 선언 vs 기록. PRIMARY
 │   │   ├── portfolio     # 보유 종목 · NAV · 섹터 · 거래내역. PRIMARY
 │   │   ├── pre-trade     # 멈춤 — 7문항 사전 기록. PRIMARY
-│   │   ├── home          # 2카드 요약 (스냅샷 + 상위 보유)
 │   │   ├── journal       # 결정 저널
 │   │   ├── profile       # 페르소나 · 펄스 · 데이터 내보내기/삭제
 │   │   ├── settings(+/profile)
@@ -124,14 +126,14 @@ frontend/src/
 │   └── card/[token]      # 폐기된 공유링크 tombstone (404 대신 안내)
 ├── components/
 │   ├── layout/           # terminal-sidebar · bottom-nav · top-bar · dashboard-layout
-│   ├── mirror/ · portfolio/ · journal/ · pre-trade/ · home/ · profile/
+│   ├── mirror/ · portfolio/ · journal/ · pre-trade/ · profile/
 │   ├── dashboard/        # living-cfo-status(2 layer) · weekly-pulse · persona-*
 │   ├── landing/ · settings/ · support/ · broker/ · account/ · feedback/
 │   ├── terminal/top-ticker · shared/ · share/ · ui/ · pwa/ · auth/
 ├── lib/
 │   ├── auth.ts · endpoints.ts · hooks.ts · types.ts · format.ts
 │   ├── cfo/hooks.ts · pre-trade.ts · realtime.tsx · locale.tsx · demo.ts
-│   └── use-keyboard-nav.tsx (G+H 홈 / G+P 포트폴리오 / G+M 거울)
+│   └── use-keyboard-nav.tsx (G+P 포트폴리오 / G+M 거울 / G+J 저널)
 ```
 
 ## 로컬 git hooks (2026-05-19 신규)
@@ -225,12 +227,13 @@ CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in templ
 
 ## 출시까지 남은 것 (2026-08-31 갱신)
 
-### 🔴 최우선 (prune 직후 — 아직 안 한 것)
+### 🔴 최우선
 - **백엔드 호스팅 재선정** — Railway 계정 삭제로 prod 백엔드 부재. 이게 정해지기
-  전까지 백엔드 배포 의존 작업은 전부 보류.
-- **prod 프론트 재배포** — Vercel 에 아직 prune 전 19-door 버전이 떠 있다.
-  배포하면 유저가 보는 화면이 7개로 줄어든다. 배포 전 CEO 확인 필요.
+  전까지 백엔드 배포 의존 작업은 전부 보류. 프론트는 살아있지만 로그인 이후는
+  전부 죽어 있다.
 - **시크릿 전량 재발급** — BREVO_API_KEY 등 Railway env vars 소실.
+- ✅ **prod 프론트 재배포 완료** (2026-09-01, PR #538·540·541·542). 화면 6개,
+  삭제 경로 18개는 살아있는 목적지로 308 리다이렉트, sitemap 7 URL.
 
 ### 🔴 출시 BLOCKER (외부 / 법무 의존 — CEO 액션)
 - **변호사 의견서 Q1-Q15 + Q-S1** — 유료결제 활성화 BLOCKER. `legal_question_queue.md`.
