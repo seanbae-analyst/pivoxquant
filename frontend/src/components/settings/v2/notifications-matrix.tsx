@@ -61,7 +61,7 @@ const EVENTS: EventRow[] = [
   {
     id: "pulse_prompt",
     name: "Pulse prompt · Weekly",
-    help: "One reflective question for the Companion.",
+    help: "One reflective question, to answer in your own words.",
     defaults: { email: true, push: false, inapp: true },
   },
   {

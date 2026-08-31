@@ -124,7 +124,7 @@ export interface PeerBenchmarkBlockProps {
   ownHolding?: number | null;
   /** Rolling window for the benchmark — 30 | 90 | 365 days. */
   windowDays?: PersonaBenchmarkWindow;
-  /** Optional kicker override (e.g. "Weekly Memo · peer view"). */
+  /** Optional kicker override (e.g. "관찰됨 · peer view"). */
   kicker?: string;
   /** Extra className — lets the caller control width / margins. */
   className?: string;

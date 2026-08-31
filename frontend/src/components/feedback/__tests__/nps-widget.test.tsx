@@ -43,7 +43,7 @@ describe("<NpsWidget /> — Wave G C-AC2", () => {
   it("renders the KR prompt + scale anchors", () => {
     render(<NpsWidget weeklyMemoId="memo-1" />);
     expect(
-      screen.getByText(/이번 주간 메모를 친구에게 추천할 가능성/),
+      screen.getByText(/PivoxQuant를 친구에게 추천할 가능성/),
     ).toBeInTheDocument();
     expect(screen.getByText("1 — 매우 별로")).toBeInTheDocument();
     expect(screen.getByText("10 — 매우 좋음")).toBeInTheDocument();
