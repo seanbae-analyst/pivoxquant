@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
-import { apiFetch } from "./api";
+import { apiFetch, ApiError } from "./api";
 import { API } from "./endpoints";
 import { clearHadSession, markHadSession } from "./had-session";
 import { isDemoMode, DEMO_USER } from "./demo";
@@ -90,18 +90,37 @@ const AuthContext = createContext<AuthCtx | null>(null);
 // 2026-05-02: Railway cold-start could push /api/auth/me to ~10s on
 // the first call after idle, exceeding the implicit Vercel proxy
 // window and leaving the SPA stuck on its loading splash forever.
-// Hard-cap the auth probe at 8s so the UI always unblocks — a
-// timeout means "treat as unauthenticated for now"; the next 5-min
-// refresh will pick up the warm-cache response when Railway is up.
-const meFetcher = async (url: string): Promise<MeResponse> => {
+// Hard-cap the auth probe at 8s so the UI always unblocks.
+//
+// 2026-09-01: the catch used to answer EVERY failure with
+// `{ authenticated: false }`. That conflates two different facts — "the
+// server says you are not signed in" and "we could not reach the server" —
+// and the second one is not something we know. A single 429, a timeout, or
+// a 502 mid-session made the dashboard guard read `user == null` and bounce
+// a signed-in user to /login; the login page then saw the next (successful)
+// probe, bounced them back, and the two guards ping-ponged. Reproduced
+// locally by exhausting the backend's 100/min limit: /login and /portfolio
+// alternated indefinitely and the app never painted.
+//
+// Now only a real 401/403 asserts "signed out". Anything else rethrows, and
+// SWR keeps the last known response — so a transient blip is invisible
+// instead of logging the user out. On a cold start there is no previous
+// response to keep, so `data` stays undefined and the shell renders its
+// unauthenticated branch exactly as before.
+export class AuthUnknownError extends Error {}
+
+export const meFetcher = async (url: string): Promise<MeResponse> => {
   const ctrl = new AbortController();
   const timeoutId = setTimeout(() => ctrl.abort(), 8000);
   try {
     return await apiFetch<MeResponse>(url, { signal: ctrl.signal });
-  } catch {
-    // Treat any failure (timeout / network / 401) as unauthenticated so the
-    // UI shell unblocks. A subsequent refresh will pick up the real state.
-    return { authenticated: false };
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return { authenticated: false };
+    }
+    throw new AuthUnknownError(
+      err instanceof Error ? err.message : "auth probe failed",
+    );
   } finally {
     clearTimeout(timeoutId);
   }
@@ -122,8 +141,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       errorRetryCount: 2,
-      // The fetcher already converts errors to { authenticated: false } so
-      // SWR will not retry-storm on auth failures.
+      // keepPreviousData is what makes an unreachable backend a no-op rather
+      // than a logout: on an AuthUnknownError SWR surfaces the error but
+      // leaves `data` at the last good response.
+      keepPreviousData: true,
     },
   );
   // Global SWR mutate — used on logout to evict every other per-user cache
