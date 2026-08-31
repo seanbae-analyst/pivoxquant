@@ -1,5 +1,10 @@
 # QA Test Scenarios (User Story 기반)
 
+> 2026-08-31 프룬 반영. 살아있는 화면만 대상: `/mirror` `/portfolio` `/journal`
+> `/pre-trade` `/home` `/profile` `/settings` + auth + 공개 법적/지원 페이지.
+> 삭제된 화면(signals / discover / market / watchlist / risk / ai-chat /
+> reports / detail / features / simulator)의 시나리오는 함께 제거됨.
+
 ## 0. Dev Login (E2E 전용)
 - POST `/api/auth/dev-login` with `{"secret": "<DEV_LOGIN_SECRET>"}` -> `{"ok": true, "user": {...}}`
 - 잘못된 secret -> 401
@@ -14,37 +19,31 @@
 - 원화 기호 표시 확인
 - 저장 후 다시 열어서 단가 값 보존 확인
 
-## 2. Market 데이터
-- /market 페이지 -> US 탭: S&P500, NASDAQ, DOW 값 존재
-- KR 탭: KOSPI, KOSDAQ 값 존재
-- 섹터 성과 차트 렌더
+## 2. Journal (기록)
+- 매매 기록 작성 -> 저장 -> 목록에 표시
+- 기록 수정/삭제 round-trip
+- 빈 기록 상태(empty state) 문구 확인 — 가짜 수치 노출 금지
 
-## 3. 타임머신
-- 기본값 계산 -> 결과 카드 렌더
-- 공유 링크 ?ticker=AAPL&start_date=2020-01-01&amount=1000 -> 폼 프리필
-- 결과로 자동 스크롤
+## 3. Pre-trade
+- 매수/매도 전 체크인 작성 -> 저장
+- 저장된 체크인이 이후 기록과 연결되는지 확인
 
-## 4. 시그널
-- /signals 페이지 -> 포지션 있으면 시그널 카드 표시
-- Positive/Negative/Neutral 필터
+## 4. Mirror (거울 홈)
+- 기록 0건 유저: 빈 상태 안내만, 추정 수치 표시 금지
+- 기록 있는 유저: 실제 기록 기반 요약만 표시
 
-## 5. Discover
-- /discover -> 종목 스캔 결과 표시 (50+ 종목)
-
-## 6. Watchlist
-- AAPL 검색 -> 추가 -> 목록에 표시 -> 삭제
-
-## 7. Settings
+## 5. Settings / Profile
 - 언어 토글 (한/영)
 - 프로필 표시
 - 로그아웃
+- 회원탈퇴 (PIPA) 플로우 진입 확인
 
-## 8. 모바일 (375x812)
+## 6. 모바일 (375x812)
 - Bottom nav 모든 탭
 - 메뉴 시트 열기/닫기
 - 포트폴리오 추가 모달
 
-## 9. 엣지 케이스
+## 7. 엣지 케이스
 - 빈 입력으로 검색
 - 존재하지 않는 티커 "ZZZZZ"
 - 수량 0 / 음수 / 소수점

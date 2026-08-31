@@ -35,13 +35,16 @@ import ast
 # ─── 1. a user-data endpoint must reject X-Admin-Secret ──────────────────
 
 def test_admin_secret_does_not_reach_user_endpoint(client, monkeypatch):
-    """`/api/watchlist` reads `current_user.id`, so an admin secret must not
-    authenticate the request — it would arrive Anonymous and crash.
+    """`/api/portfolio/positions` reads `current_user.id`, so an admin secret
+    must not authenticate the request — it would arrive Anonymous and crash.
+
+    Was `/api/watchlist` until the 2026-08-31 prune deleted that surface; the
+    guard is about api_auth, not about which route exercises it.
     """
     monkeypatch.setenv("ADMIN_SECRET", "test-admin-secret")
 
     resp = client.get(
-        "/api/watchlist",
+        "/api/portfolio/positions",
         headers={"X-Admin-Secret": "test-admin-secret"},
     )
 
@@ -58,9 +61,9 @@ def test_admin_secret_does_not_reach_user_write_endpoint(client, monkeypatch):
     monkeypatch.setenv("ADMIN_SECRET", "test-admin-secret")
 
     resp = client.post(
-        "/api/watchlist",
+        "/api/portfolio/positions",
         headers={"X-Admin-Secret": "test-admin-secret"},
-        json={"ticker": "005930"},
+        json={"ticker": "005930", "shares": 1, "avg_cost": 1000},
     )
 
     assert resp.status_code == 401, (

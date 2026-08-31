@@ -183,15 +183,3 @@ class TestGetRateAtStrict:
             m.assert_not_called()
         assert r is None
 
-
-class TestCounterfactualUsesHistoricalRate:
-    """Light integration check: the route imports get_rate_at and consults
-    it during ingress conversion. We don't exercise the price-history
-    fetch (that's bigger surface) — just confirm the wiring.
-    """
-
-    def test_route_imports_get_rate_at(self):
-        from routes import counterfactual
-        assert hasattr(counterfactual, "_fx_get_rate_at")
-        # And it points to fx_service.get_rate_at
-        assert counterfactual._fx_get_rate_at is fx_service.get_rate_at

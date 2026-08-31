@@ -309,11 +309,23 @@ def cache_ticker(ticker: str) -> None:
         if not row or not row.get("ok"):
             return
 
+        from services.price_overlay import parse_price_display
+
+        # `price` is the numeric field every reader prefers; `price_display`
+        # is the pre-formatted string. When the quote path returned only the
+        # display string, recover the number from it rather than storing a
+        # row whose numeric field is None (test_price_display_fallback_present
+        # pins this invariant repo-wide).
+        price = row.get("price")
+        display = row.get("price_display")
+        if price is None:
+            price = parse_price_display(display)
+
         blob = {
             "ticker":        row.get("ticker", ticker),
             "name":          row.get("name"),
-            "price":         row.get("price"),
-            "price_display": row.get("price_display"),
+            "price":         price,
+            "price_display": display,
             "currency":      row.get("currency"),
             "is_korean":     row.get("is_korean"),
         }

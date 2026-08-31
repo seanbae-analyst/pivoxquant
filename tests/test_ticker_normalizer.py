@@ -122,10 +122,6 @@ class TestStripKrSuffix:
 class TestRouteIntegration:
     """Spot-check that updated route handlers use the helper end-to-end."""
 
-    def test_watchlist_imports_normalize_ticker(self):
-        from routes import watchlist
-        assert watchlist.normalize_ticker is normalize_ticker
-
     def test_market_imports_normalize_ticker(self):
         from routes import market
         assert market.normalize_ticker is normalize_ticker

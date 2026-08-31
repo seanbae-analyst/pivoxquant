@@ -84,23 +84,12 @@ READ_ENDPOINTS = [
     ("journal",          "/api/pre-trade/list",            OK),
     ("persona",          "/api/profile/persona",           OK),
     ("profile",          "/api/profile",                   OK),
-    ("signals",          "/api/signals",                   OK),
     ("alerts",           "/api/alerts",                    OK),
-    ("watchlist",        "/api/watchlist",                 OK),
-    ("risk",             "/api/risk/summary",              OK_EMPTYISH),
     ("me",               "/api/auth/me",                   OK),
     # ── 2026-06-11 expansion: discover/market (provider-backed) ──
-    ("discover",         "/api/discover",                  OK_PROVIDER),
-    ("disc-overview",    "/api/discover/market-overview",  OK_PROVIDER),
-    ("disc-movers",      "/api/discover/movers",           OK_PROVIDER),
-    ("disc-sectors",     "/api/discover/sectors",          OK_PROVIDER),
     ("mkt-indices",      "/api/market/indices",            OK_PROVIDER),
-    ("mkt-overview",     "/api/market/overview",           OK_PROVIDER),
     ("mkt-fx",           "/api/market/fx",                 OK_PROVIDER),
     ("mkt-status",       "/api/market/status",             OK_PROVIDER),
-    ("earnings",         "/api/earnings",                  OK_PROVIDER),
-    ("macro",            "/api/macro",                     OK_PROVIDER),
-    ("sector-heatmap",   "/api/tools/sector-heatmap",      OK_PROVIDER),
     # ── behavior mirrors (in-process compute from the book) ──
     ("bhv-avgdown",      "/api/behavior/averaging-down-mirror",  OK_EMPTYISH),
     ("bhv-conc",         "/api/behavior/concentration-mirror",   OK_EMPTYISH),
@@ -108,17 +97,12 @@ READ_ENDPOINTS = [
     ("bhv-pnl",          "/api/behavior/profit-loss-mirror",     OK_EMPTYISH),
     ("bhv-turnover",     "/api/behavior/turnover-mirror",        OK_EMPTYISH),
     # ── misc read surface ──
-    ("analytics-bench",  "/api/analytics/benchmark",       OK_EMPTYISH),
-    ("analytics-turn",   "/api/analytics/turnover",        OK_EMPTYISH),
-    ("growth-today",     "/api/growth/today",              OK_EMPTYISH),
     ("notifications",    "/api/notifications",             OK),
     ("notif-unread",     "/api/notifications/unread-count", OK),
     # NEGATIVE access-control check: /api/inbox is the admin-only CEO inbox
     # (v57). A regular user must ALWAYS get 403 — a 200 here is a P0-class
     # authz regression, which the allowed-set mechanism flags automatically.
     ("inbox-denied",     "/api/inbox",                     frozenset({403})),
-    ("perf-ledger",      "/api/performance/ledger",        OK_EMPTYISH),
-    ("twin-portfolio",   "/api/twin/portfolio",            OK_EMPTYISH),
     ("billing-avail",    "/api/billing/availability",      OK_PROVIDER),
     # NOTE: /api/methodology was deliberately deleted with the artefact tree
     # (e064118e). The public /methodology page is a static server component and
