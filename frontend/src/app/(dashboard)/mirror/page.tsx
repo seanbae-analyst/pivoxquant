@@ -57,8 +57,19 @@ export default function MirrorPage() {
   const { loading: authLoading } = useAuth();
   const { data, isLoading, error } = useMirrorHome();
 
+  // A 200 is not the same as a usable payload. A backend that answers this
+  // route with a partial body — `{}` from a proxy stub, a half-migrated
+  // deploy, a serializer that dropped a key — used to reach
+  // `data.radar.labels` and throw during THIS component's render, which the
+  // ErrorBoundary below could not catch because the JSX was evaluated here
+  // rather than inside a child. The whole surface white-screened, and
+  // /mirror is the product's front door.
+  const ready = Boolean(
+    data && data.radar && Array.isArray(data.radar.labels) && Array.isArray(data.radar.declared),
+  );
   const showSkeleton = authLoading || isLoading;
-  const showError = !showSkeleton && (Boolean(error) || !data);
+  const showError = !showSkeleton && Boolean(error);
+  const showEmpty = !showSkeleton && !showError && !ready;
 
   return (
     <div className="min-h-screen bg-[rgb(5,5,5)] text-[var(--pq-ivory)]">
@@ -79,7 +90,23 @@ export default function MirrorPage() {
           </p>
         )}
 
-        {data && (
+        {showEmpty && (
+          <div className="space-y-3">
+            <p className="text-[13px]" style={{ color: "var(--pq-ivory)" }}>
+              아직 비출 기록이 없어요.
+            </p>
+            <p
+              className="text-[12.5px]"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)", lineHeight: 1.6 }}
+            >
+              보유 종목을 등록하고 사기 전에 이유를 남기면, 선언한 나와 기록 속의
+              나를 나란히 보여드립니다.
+            </p>
+            <ArchiveLinks />
+          </div>
+        )}
+
+        {ready && data && (
           <ErrorBoundary>
             <div className="space-y-8">
               <MirrorHeadline data={data} />

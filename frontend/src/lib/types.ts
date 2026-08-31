@@ -923,15 +923,6 @@ export interface MirrorGapDimension {
   observed: number;
 }
 
-export interface MirrorTwinWeek {
-  week_ending: string | null;
-  user_return_pct: number | null;
-  twin_return_pct: number | null;
-  /** twin_return_pct − user_return_pct (positive = twin ahead). */
-  diff_pct: number | null;
-  user_trades_count: number;
-  twin_trades_count: number;
-}
 
 export interface MirrorHomeResponse {
   ok: boolean;
@@ -947,5 +938,4 @@ export interface MirrorHomeResponse {
     /** null in the "new" stage (not enough observed behaviour yet). */
     observed: number[] | null;
   };
-  twin: MirrorTwinWeek | null;
 }
