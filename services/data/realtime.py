@@ -8,7 +8,6 @@ import os
 import logging
 import time
 import threading
-from datetime import datetime
 
 from services.time_utils import observed_at_iso
 

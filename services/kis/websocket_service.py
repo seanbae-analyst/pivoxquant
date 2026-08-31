@@ -30,7 +30,6 @@ import os
 import re
 import threading
 import time
-from datetime import datetime
 
 from services.time_utils import observed_at_iso
 from typing import Callable, Dict, Optional, Set

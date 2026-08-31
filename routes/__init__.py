@@ -1,5 +1,4 @@
 """Blueprint registration."""
-import logging
 import os
 
 
