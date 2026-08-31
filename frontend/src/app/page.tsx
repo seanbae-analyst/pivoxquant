@@ -68,7 +68,7 @@ export default function Page() {
     // is always "logged in", so skipping this keeps the landing as the public
     // entry — its CTAs (/signup, /login) then redirect onward to /home.
     if (!demo && !loading && user) {
-      router.replace("/home");
+      router.replace("/mirror");
     }
   }, [demo, user, loading, router]);
 

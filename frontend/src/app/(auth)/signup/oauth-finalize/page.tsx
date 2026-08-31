@@ -6,7 +6,7 @@
  * Reached when the OAuth callback (``routes/auth.py`` Google/Kakao)
  * provisions a User row with ``birthdate IS NULL``. The page captures
  * a yyyy-mm-dd birthdate, POSTs it to ``/api/auth/oauth-finalize``, and
- * redirects to ``next`` (or ``/home``) on success.
+ * redirects to ``next`` (or ``/mirror``) on success.
  *
  * Why a dedicated page (not a modal):
  *   The callback completes a server-side redirect chain and ends with
@@ -99,7 +99,7 @@ export default function OAuthFinalizePage() {
   useEffect(() => {
     if (loading || !user) return;
     if (user.birthdate_required === false) {
-      const next = searchParams.get("next") || "/home";
+      const next = searchParams.get("next") || "/mirror";
       router.replace(next);
     }
   }, [loading, user, searchParams, router]);
@@ -134,7 +134,7 @@ export default function OAuthFinalizePage() {
       })
         .then(async () => {
           await refresh();
-          const next = searchParams.get("next") || "/home";
+          const next = searchParams.get("next") || "/mirror";
           router.replace(next);
         })
         .catch((err) => {
@@ -166,7 +166,7 @@ export default function OAuthFinalizePage() {
       // Refresh the cached user so ``birthdate_required`` flips to false
       // before downstream pages mount.
       await refresh();
-      const next = searchParams.get("next") || "/home";
+      const next = searchParams.get("next") || "/mirror";
       router.replace(next);
     } catch (err) {
       // ``apiFetch`` throws ``ApiError(status, body.error ?? statusText)``

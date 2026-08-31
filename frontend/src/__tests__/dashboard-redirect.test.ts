@@ -31,12 +31,12 @@ describe("/dashboard/* redirect (W6.3 / E2E P1 #3)", () => {
     expect(typeof nextConfig.redirects).toBe("function");
   });
 
-  it("redirects /dashboard to /home (308 permanent)", async () => {
+  it("redirects /dashboard to /mirror (308 permanent)", async () => {
     const rules = (await nextConfig.redirects!()) as RedirectRule[];
     const rule = rules.find((r) => r.source === "/dashboard");
 
     expect(rule, "missing rule for /dashboard").toBeDefined();
-    expect(rule!.destination).toBe("/home");
+    expect(rule!.destination).toBe("/mirror");
     expect(rule!.permanent).toBe(true);
   });
 

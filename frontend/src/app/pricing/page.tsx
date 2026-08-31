@@ -804,7 +804,7 @@ export default function PricingPage() {
                       // Wave 5 #6: logged-in users go straight to /home
                       // (the Free tier landing) rather than bouncing
                       // through /signup → auto-redirect.
-                      href={user ? "/home" : p.href}
+                      href={user ? "/mirror" : p.href}
                       className="block text-center w-full py-3 px-4 font-serif text-pq-body transition-colors"
                       style={{
                         backgroundColor: p.recommended

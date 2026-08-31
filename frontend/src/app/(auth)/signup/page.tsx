@@ -6,7 +6,7 @@
  * Sole /signup surface — the pre-v3 variant was deleted 2026-08-30.
  *
  * Function preservation (verbatim from v1):
- * - useAuth + router.replace("/home") on existing session.
+ * - useAuth + router.replace("/mirror") on existing session.
  * - Three required + one optional consent (terms / non_advisory / age /
  *   marketing). `allRequired` gates the OAuth buttons.
  * - On click, persist consent snapshot to localStorage under
@@ -176,7 +176,7 @@ export default function SignupPageV2() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/home");
+      router.replace("/mirror");
     }
   }, [user, loading, router]);
 

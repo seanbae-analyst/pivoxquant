@@ -45,7 +45,11 @@ const nextConfig: NextConfig = {
     // structure their app shell). Issue a 308 permanent redirect at the
     // edge so we never serve a 404 for these paths.
     return [
-      { source: "/dashboard", destination: "/home", permanent: true },
+      { source: "/dashboard", destination: "/mirror", permanent: true },
+      // /home rendered <MirrorHome /> behind NEXT_PUBLIC_MIRROR_HOME=true — a
+      // second door into the same room. The flag, the route and the unused
+      // gallery surface behind it are all gone; /mirror is the single home.
+      { source: "/home", destination: "/mirror", permanent: true },
       { source: "/dashboard/:path*", destination: "/:path*", permanent: true },
       // 2026-08-31 prune: 아래 표면들은 페이지가 물리적으로 삭제됐다. 북마크
       // ·외부링크·검색결과는 남아 있으므로 404 대신 살아있는 목적지로 보낸다.
@@ -53,16 +57,16 @@ const nextConfig: NextConfig = {
       //  목적지가 404 였다 — 아래 규칙이 그걸 대체한다.)
       //
       // 종목·분석 성격 → /home, 기록·행동 성격 → /mirror.
-      { source: "/ai", destination: "/home", permanent: true },
-      { source: "/ai/:path*", destination: "/home", permanent: true },
-      { source: "/ai-chat", destination: "/home", permanent: true },
-      { source: "/ai-chat/:path*", destination: "/home", permanent: true },
-      { source: "/signals", destination: "/home", permanent: true },
-      { source: "/signals/:path*", destination: "/home", permanent: true },
-      { source: "/discover", destination: "/home", permanent: true },
-      { source: "/discover/:path*", destination: "/home", permanent: true },
-      { source: "/market", destination: "/home", permanent: true },
-      { source: "/market/:path*", destination: "/home", permanent: true },
+      { source: "/ai", destination: "/mirror", permanent: true },
+      { source: "/ai/:path*", destination: "/mirror", permanent: true },
+      { source: "/ai-chat", destination: "/mirror", permanent: true },
+      { source: "/ai-chat/:path*", destination: "/mirror", permanent: true },
+      { source: "/signals", destination: "/mirror", permanent: true },
+      { source: "/signals/:path*", destination: "/mirror", permanent: true },
+      { source: "/discover", destination: "/mirror", permanent: true },
+      { source: "/discover/:path*", destination: "/mirror", permanent: true },
+      { source: "/market", destination: "/mirror", permanent: true },
+      { source: "/market/:path*", destination: "/mirror", permanent: true },
       { source: "/watchlist", destination: "/portfolio", permanent: true },
       { source: "/watchlist/:path*", destination: "/portfolio", permanent: true },
       { source: "/detail/:path*", destination: "/portfolio", permanent: true },
@@ -74,8 +78,8 @@ const nextConfig: NextConfig = {
       { source: "/companion/:path*", destination: "/journal", permanent: true },
       { source: "/reports", destination: "/journal", permanent: true },
       { source: "/reports/:path*", destination: "/journal", permanent: true },
-      { source: "/alerts", destination: "/home", permanent: true },
-      { source: "/alerts/:path*", destination: "/home", permanent: true },
+      { source: "/alerts", destination: "/mirror", permanent: true },
+      { source: "/alerts/:path*", destination: "/mirror", permanent: true },
       // 공개 마케팅 표면 — 랜딩으로.
       { source: "/features", destination: "/", permanent: true },
       { source: "/features/:path*", destination: "/", permanent: true },
@@ -93,8 +97,8 @@ const nextConfig: NextConfig = {
       // ⚠️ permanent:false (307) — ai-chat 격리(§101 법적 영구차단)와 달리
       // pricing 은 Stage 1 유료화 부활 가능성이 있어 브라우저 영구캐시(308)를
       // 피한다. 부활 = 이 두 줄 + sitemap/진입점 hidden 을 되돌리면 된다.
-      { source: "/pricing", destination: "/home", permanent: false },
-      { source: "/pricing/:path*", destination: "/home", permanent: false },
+      { source: "/pricing", destination: "/mirror", permanent: false },
+      { source: "/pricing/:path*", destination: "/mirror", permanent: false },
     ];
   },
   async headers() {

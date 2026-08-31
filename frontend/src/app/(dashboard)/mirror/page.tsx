@@ -24,7 +24,6 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
@@ -148,7 +147,6 @@ export default function MirrorPage() {
               <OneThingNudge data={data} />
               <ArchiveLinks />
 
-              <DisclaimerBanner type="behavior-mirror" />
             </div>
           </ErrorBoundary>
         )}

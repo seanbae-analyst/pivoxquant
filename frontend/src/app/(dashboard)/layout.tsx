@@ -31,18 +31,24 @@ import { useKeyboardNav } from "@/lib/use-keyboard-nav";
 
 // REMOVED 2026-04-27 per CEO + legal: "auto-trade" disclaimer kind retired
 // alongside the autotrade feature removal (투자일임업 등록 회피).
-type DisclaimerKind = "signal" | "ai-analysis" | "coaching";
+type DisclaimerKind = "signal" | "coaching" | "behavior-mirror";
 
 /** Longest-prefix matching: more specific paths first. */
 const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   // most specific / multi-segment first
   ["/pre-trade", "coaching"],  // behavioural pre-trade surface — educational AI framing, not the default "signal"
-  ["/journal", "coaching"],    // behavioural reflection feed — same framing as pre-trade
-  ["/mirror", "coaching"],     // 거울 home — persona/behaviour mirror, educational framing
+  // /journal and /mirror show statistics computed from the user's own trades
+  // and holdings, so they take the legally-tuned "behavior-mirror" copy (not a
+  // medical / psychological service, not a recommendation). Both pages used to
+  // ALSO mount that banner inline; since a collapsed banner shows the common
+  // sentence, the user saw the same line twice and the tuned copy stayed
+  // hidden. Mounting it once, here, from the path map fixes both.
+  ["/journal", "behavior-mirror"],
+  ["/mirror", "behavior-mirror"],
   ["/portfolio", "signal"],
   ["/settings", "signal"],
   ["/profile", "signal"],
-  ["/home", "signal"],
+  ["/mirror", "signal"],
 ];
 
 /** Routes that need the banner force-expanded (highest-risk surfaces). */

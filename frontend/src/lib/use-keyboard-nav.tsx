@@ -36,9 +36,9 @@ const PENDING_WINDOW_MS = 1500;
 
 /** Keep in sync with `ShortcutsModal` — visible to users. */
 const GOTO_MAP: Readonly<Record<string, string>> = {
-  h: "/home",
   p: "/portfolio",
   m: "/mirror",
+  j: "/journal",
 };
 
 function isEditableTarget(target: EventTarget | null): boolean {
