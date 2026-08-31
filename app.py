@@ -1205,34 +1205,6 @@ def _do_migrations():
         logger.debug("silent-fallback: _do_migrations", exc_info=True)
         pass
 
-    # 2026-06 — AI Twin FX-consistency repair (Feature 5, Pattern 7).
-    # Legacy KR (.KS/.KQ) paper positions were booked with the KRW quote written
-    # straight into the USD twin ledger: the buy debited the right USD cash but
-    # received ~1/1380th the shares, so the position read as ~-100% on the
-    # portfolio view. `twin_runner._price_to_usd` fixes NEW bookings; this repairs
-    # EXISTING ones. It is idempotent (the per-row `avg_cost_is_usd` marker makes
-    # a converted row a no-op on re-run), so running it every boot is safe. Lazy
-    # import to avoid import-cycle / boot-order issues (matches app.py convention).
-    #
-    # The column must exist BEFORE the reconcile queries it. server_default=false
-    # backfills every PRE-EXISTING row as legacy (correct: no code booked USD for
-    # KR before this commit); new ORM inserts get default=True.
-    _add_column_if_missing("ai_twin_positions", "avg_cost_is_usd", "BOOLEAN", default="0")
-    try:
-        from services.twin import reconcile_legacy_krw_positions
-        res = reconcile_legacy_krw_positions(dry_run=False)
-        if res.get("count"):
-            logger.info(
-                "twin FX reconcile: repaired %d legacy KRW positions", res["count"]
-            )
-    except Exception:
-        logger.debug("silent-fallback: twin FX reconcile", exc_info=True)
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
-
-
 def _populate_cache(app):
     """Warm the signal cache for currently-held tickers.
 
@@ -1499,95 +1471,6 @@ def _init_scheduler(app):
             except Exception:
                 logger.exception("self_audit alert emit failed")
 
-    # ── Feature 5 — AI Trader Twin (paper-only) ─────────────────────────
-    # Twin runs daily decision passes and a Sunday weekly comparison.
-    # Every job operates on initialized twins only — uninitialized users
-    # get a no-op pass so the cron never grows broker-style state.
-    def _scheduled_twin_decisions_kr():
-        """Run Twin decisions after KOSPI/KOSDAQ close (16:30 KST).
-
-        Iterates every active AITwinPortfolio and invokes
-        ``run_twin_decisions``. Per-user failures never block the rest.
-        """
-        from models import AITwinPortfolio
-        from services.twin import run_twin_decisions
-        with app.app_context():
-            try:
-                # CONN-001: materialise the active user-ids then release the
-                # connection before the per-twin analyse loop. Each
-                # run_twin_decisions() call hits FMP/KIS (engine.analyze) for
-                # seconds and manages its own short session internally — we
-                # must not pin the list-query connection across that loop.
-                uids = [int(uid) for (uid,) in
-                        AITwinPortfolio.query
-                        .filter_by(is_active=True)
-                        .with_entities(AITwinPortfolio.user_id).all()]
-                db.session.remove()
-                for uid in uids:
-                    try:
-                        run_twin_decisions(uid)
-                    except Exception as e:
-                        logger.error(f"Twin KR decisions failed user={uid}: {e}")
-                    finally:
-                        db.session.remove()
-                logger.info(f"Twin KR daily run: {len(uids)} twins scanned")
-                _record_sched_success("sched_twin_decisions_kr")
-            except Exception as e:
-                logger.error(f"Twin KR scheduler failed: {e}")
-                _alert_sched("sched_twin_decisions_kr", e)
-
-    def _scheduled_twin_decisions_us():
-        """Run Twin decisions after the NYSE close (06:30 KST = 21:30 EST)."""
-        from models import AITwinPortfolio
-        from services.twin import run_twin_decisions
-        with app.app_context():
-            try:
-                # CONN-001: see _scheduled_twin_decisions_kr — release the
-                # connection before the slow per-twin analyse loop.
-                uids = [int(uid) for (uid,) in
-                        AITwinPortfolio.query
-                        .filter_by(is_active=True)
-                        .with_entities(AITwinPortfolio.user_id).all()]
-                db.session.remove()
-                for uid in uids:
-                    try:
-                        run_twin_decisions(uid)
-                    except Exception as e:
-                        logger.error(f"Twin US decisions failed user={uid}: {e}")
-                    finally:
-                        db.session.remove()
-                logger.info(f"Twin US daily run: {len(uids)} twins scanned")
-                _record_sched_success("sched_twin_decisions_us")
-            except Exception as e:
-                logger.error(f"Twin US scheduler failed: {e}")
-                _alert_sched("sched_twin_decisions_us", e)
-
-    def _scheduled_twin_weekly():
-        """Sunday 21:00 KST — user-vs-twin weekly comparison row."""
-        from models import AITwinPortfolio
-        from services.twin import generate_weekly_report
-        with app.app_context():
-            try:
-                # CONN-001: release the connection before the per-twin report
-                # loop; generate_weekly_report manages its own session.
-                uids = [int(uid) for (uid,) in
-                        AITwinPortfolio.query
-                        .filter_by(is_active=True)
-                        .with_entities(AITwinPortfolio.user_id).all()]
-                db.session.remove()
-                for uid in uids:
-                    try:
-                        generate_weekly_report(uid)
-                    except Exception as e:
-                        logger.error(f"Twin weekly report failed user={uid}: {e}")
-                    finally:
-                        db.session.remove()
-                logger.info(f"Twin weekly run: {len(uids)} twins reported")
-                _record_sched_success("sched_twin_weekly")
-            except Exception as e:
-                logger.error(f"Twin weekly scheduler failed: {e}")
-                _alert_sched("sched_twin_weekly", e)
-
     def _scheduled_persona_snapshots():
         """Weekly Sunday 23:00 KST — PersonaSnapshot for every active user.
 
@@ -1623,7 +1506,7 @@ def _init_scheduler(app):
         practice. This wrapper drives both once per US trading day.
 
         Cadence is deliberately conservative: 06:35 KST (= 21:35 EST, just
-        after the NYSE 16:00 ET close, mirroring ``twin_us_daily`` at 06:30).
+        after the NYSE 16:00 ET close, at 06:30 KST).
         A single daily fire keeps FMP/KIS budget + PG pressure low — these
         checks fan out across every holder's tickers. US tickers price via FMP;
         KR (.KS/.KQ) tickers route through KIS (``w52_hgpr``/``w52_lwpr`` in
@@ -1735,39 +1618,6 @@ def _init_scheduler(app):
     # behavioral_score_weekly 잡은 2026-05-30 "AI 점수화 폐기" 결정
     # (DECISIONS.md)에 따라 제거했다. 점수는 더 이상 계산되지 않으며
     # BehavioralScore 모델/스코어러는 dormant 보존한다.
-    # ── Feature 5 — AI Trader Twin (paper-only) ─────────────────────────
-    # 매일 16:30 KST — KOSPI/KOSDAQ 마감 직후 Twin paper 의사결정.
-    sched.add_job(
-        _scheduled_twin_decisions_kr,
-        trigger="cron",
-        hour=16, minute=30,
-        timezone="Asia/Seoul",
-        id="twin_kr_daily",
-        max_instances=1,
-        coalesce=True,
-    )
-    # 매일 06:30 KST — NYSE 마감 후 (≈21:30 EST 전일) Twin paper 의사결정.
-    sched.add_job(
-        _scheduled_twin_decisions_us,
-        trigger="cron",
-        hour=6, minute=30,
-        timezone="Asia/Seoul",
-        id="twin_us_daily",
-        max_instances=1,
-        coalesce=True,
-    )
-    # 매주 일요일 21:00 KST — Twin 주간 비교 리포트 생성. 22:00 KST의
-    # Behavioural Score (Feature 7) cron 보다 1시간 먼저 돌려, score 가 최신
-    # 비교 데이터를 참고할 수 있도록 의도적으로 분리한다.
-    sched.add_job(
-        _scheduled_twin_weekly,
-        trigger="cron",
-        day_of_week="sun", hour=21, minute=0,
-        timezone="Asia/Seoul",
-        id="twin_weekly_report",
-        max_instances=1,
-        coalesce=True,
-    )
     # 매주 일요일 23:00 KST — PersonaSnapshot 영속화 (Feature 3+4).
     # 같은 일요일 02:00 KST 의 ``compute_group_stats`` cron 이후에 실행되도록
     # 21시간 뒤로 배치. PersonaGroupStats 가 최신 스냅샷에 반영된 상태에서

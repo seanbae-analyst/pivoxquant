@@ -5,7 +5,7 @@
  *
  * The Mirror-centric home surface: one upright editorial sentence about who
  * you ARE vs how you've TRADED (선언 vs 관찰), the 9-axis shape gap, last
- * week's AI-twin paper return vs yours, and a single pause-and-reflect nudge
+ * and a single pause-and-reflect nudge
  * into 「멈춤」. The behavioural loop's face: 멈춤 → 기록 → 거울.
  *
  * Additive route — does NOT replace /home (no feature flag flip here). The
@@ -27,7 +27,6 @@ import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
-import { TwinWeekCard } from "@/components/mirror/twin-week-card";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
 import { ArchiveLinks } from "@/components/mirror/archive-links";
 
@@ -119,7 +118,6 @@ export default function MirrorPage() {
                 </p>
               </section>
 
-              <TwinWeekCard twin={data.twin} />
               <OneThingNudge data={data} />
               <ArchiveLinks />
 

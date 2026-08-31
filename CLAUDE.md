@@ -1,4 +1,4 @@
-# PivoxQuant — Session Handoff (2026-08-30 Updated)
+# PivoxQuant — Session Handoff (2026-08-31 Updated)
 
 > ⚠️ **2026-07-05 ~ 2026-08-30 약 7주간 프로젝트 중단.** 재개하며 실측 현행화.
 > 이 파일은 매 턴 로드되므로 **틀린 값은 곧 잘못된 판단**이 된다. 상태 블록은
@@ -6,9 +6,15 @@
 > `docs/archive/HANDOVER-history-v55-and-older.md` 참조.
 
 ## 프로젝트 개요
-AI + Quant 기반 개인 투자 어드바이저 플랫폼.
-미국 + 한국 주식 지원. SaaS 3티어 (Free / Pro ₩9,900 / Premium ₩19,900).
-1인 창업자(배상현) 운영. **현재 클로즈드 베타 + 출시 직전.**
+**기록(記錄) 중심 개인 투자 회고 도구.** 유저가 이미 들고 있는 포트폴리오를
+읽고, 사기 전에 멈춰 이유를 적게 하고, 그 기록을 나중에 거울처럼 되비춘다.
+루프는 하나다 — **멈춤 → 기록 → 거울**.
+미국 + 한국 주식. 1인 창업자(배상현) 운영. 현재 클로즈드 베타.
+
+> 2026-08-31 **대규모 prune 완료.** 종목 스코어링 / 시그널 / 리스크보드 /
+> AI 분석 / 디스커버 / 마켓 / 관심종목 / 그로스 / 컴패니언 / 18종 아티팩트
+> 리포트 — **전부 삭제됐다.** 이 파일에서 그 기능들을 찾지 마라. 없다.
+> 코드가 필요하면 git tag / 커밋 `80431ac0`·`1c23fac6` 이전 이력에 있다.
 
 ## 현재 상태 요약 (2026-08-30 실측)
 🔴 **백엔드: 소멸 (복구 불가)** — CEO 가 **Railway 계정 자체를 삭제**(2026-08-30 확인).
@@ -48,82 +54,84 @@ AI + Quant 기반 개인 투자 어드바이저 플랫폼.
 - 상세 버그 이력: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md`
 
 ## 기술 스택
-- **Backend**: Flask + SQLAlchemy + **PostgreSQL (Railway, prod)** / SQLite (local test)
+- **Backend**: Flask + SQLAlchemy + PostgreSQL (prod, 현재 호스팅 미정) / SQLite (local)
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
-- **AI**: Claude API (Anthropic) — SWOT, Chat, Sector, Coaching, Earnings Tone, Artifacts
-- **Broker**: KIS 한국투자증권 (read-only). ~~Alpaca~~ 2026-05-27 통합 제거 (commit 6bea95f8, c3801359) — 데이터 fallback stub `services/data/alpaca_market_adapter.py` 만 `ALPACA_ENABLED` 게이트(기본 OFF)로 비활성 보존, 완전제거는 별도 task.
-- **Data**: FMP Stable + KIS + SEC EDGAR (공식 라이선스 데이터만). Alpaca 데이터경로는 비활성(위 참조).
-- **Auth**: Google + Kakao OAuth (email+password 없음). 라이브 동작 정상.
+- **AI**: Claude API — 남은 사용처는 지원 챗봇 / 이메일 문안 등 보조 경로.
+  종목 SWOT·시그널·섹터·코칭 등 **분석 AI 는 표면과 함께 삭제됨**.
+- **Broker**: KIS 한국투자증권 (read-only). Alpaca 는 2026-05-27 통합 제거,
+  데이터 fallback stub 만 `ALPACA_ENABLED` 게이트(기본 OFF)로 잔존.
+- **Data**: FMP Stable + KIS (공식 라이선스 데이터만). 2026-08-31 prune 으로
+  FRED / pykrx / SEC EDGAR full service / DART insider 는 삭제. `services/data/edgar.py`
+  만 잔존.
+- **Auth**: Google + Kakao OAuth (email+password 없음).
 - **Payment**: Stripe 통합 완료 (BUSINESS_REGISTRATION 게이트로 비활성)
-- **Design**: v3 락-인 — Vantablack + Bronze + Playfair + KR 컨벤션 (옛 Nexora
-  purple/blue gradient 는 폐기). 상세 메모리 `project_design_v3.md`.
+- **Design**: v3 락-인 — Vantablack + Bronze + Playfair + KR 컨벤션.
+  상세 메모리 `project_design_v3.md`.
 
 ## 백엔드 구조
-> ⚠️ 2026-05-24 현행화. 옛 트리는 engine.py / quant_models.py / risk_defense.py /
-> data_fetcher.py / fmp_service.py / ai_service.py 등을 루트에 표기했으나, 전부
-> `services/` 하위 패키지로 재편되었다(루트에 해당 .py 없음). 실측 반영:
+> 2026-08-31 prune 후 실측. 등록 blueprint 25개 / URL rule **141개**
+> (prune 전 249개). `create_app()` 부팅 검증됨.
 ```
-pivoxquant/               # 2026-05-17 wave 13: 'stockpilot/' 명칭은 폐기
+pivoxquant/
 ├── app.py              # create_app() factory
-├── config.py           # Config 클래스
-├── extensions.py       # db, login_manager
-├── run.py              # 진입점 (port 5050)
-├── security.py         # CORS/RateLimit/CSRF/세션만료
-├── models/             # SQLAlchemy 모델 (10개+)
-├── routes/             # Flask Blueprint (40+ 파일, 200+ endpoints)
-├── migrations/         # Alembic
-└── services/           # 비즈니스 로직 (전부 여기로 통합)
-    ├── quant/          # engine.py(4-pillar) · models.py(퀀트모델) · risk_defense.py
-    │                   #   (7-Layer) · risk_metrics.py(GKYZ/LedoitWolf/Sortino) ·
-    │                   #   portfolio.py(HRP/ERC/MaxDiv) · signals.py · backtester.py ·
-    │                   #   canslim.py · indicators.py · composer.py · model_catalog.py
-    ├── data/           # fetcher.py(가격) · fmp.py(FMP stable+budget) ·
-    │                   #   kis_market_adapter.py · kr_fundamentals.py · edgar.py ·
-    │                   #   sec_edgar_service.py · dart_* · fred_service.py · realtime.py
-    │                   #   (pykrx_service.py 는 ToS 위반으로 비활성 stub)
-    ├── ai/             # Claude API (SWOT/Chat/Sector/Coaching/EarningsTone/Artifacts)
-    ├── kis/            # KIS read-only (주문 disabled) + token_manager(AES-GCM)
-    ├── broker/         # user_kis_service.py (KIS read-only). Alpaca 통합 제거됨(2026-05-27)
-    ├── artifacts/      # 18 artifact type (PDF/PNG/HTML — User as CFO). SoT=routes/artifacts.py
-    │                   #   _ARTIFACT_DISPATCH (생성 15 + interactive 3). 템플릿 18개와 일치.
-    │                   #   tier: Pro 9 / Premium 6 / 무료·universal 3 + living_mirror — 2026-06-11
-    │                   #   B2 가격표 정렬(SoT=pricing/page.tsx, lock=test_artifact_tier_alignment.py)
-    ├── legal/          # legal_filter scrub · §101 detector · forbidden_terms
-    ├── email/          # EmailSender + sendgrid/brevo provider cascade
-    ├── profile/        # questionnaire(20문항) · investor profiles
-    ├── behavior/ · pre_trade/ · trading/ · twin/ · scheduler/ · customer/ · agents/
-    └── (루트 모듈) container · serializers · fx_service · cache_service ·
-                      alert · alert_service · error_responses · push 등
+├── config.py · extensions.py · security.py · run.py (port 5050)
+├── models/             # SQLAlchemy 모델
+├── migrations/         # Alembic (리비전 전량 보존 — 삭제 금지)
+└── routes/             # 25 blueprint
+    │  auth · portfolio · trades · pre_trade · behavior · twin · mirror_home
+    │  profile · settings계열(consents/email_preferences) · billing
+    │  alerts · notifications · push · realtime · market(지수/FX만)
+    │  support · inbox · feedback · health · data_status
+    │  dev_auth · sim_onboard · command_center (opt-in)
+    └── decorators.py
+└── services/
+    ├── quant/          # portfolio.py(HRP/ERC/MaxDiv/MinVar/TailRiskParity)
+    │                   #   risk_metrics.py(GKYZ/LedoitWolf/ComponentES/Sortino)
+    │                   #   ← engine/models/risk_defense/signals/backtester/
+    │                   #     canslim/indicators/composer/model_catalog 전부 삭제
+    ├── data/           # fetcher.py · fmp.py · kis_market_adapter.py ·
+    │                   #   kr_fundamentals.py · edgar.py · realtime.py
+    ├── behavior/       # 5종 mirror (holding/turnover/concentration/
+    │                   #   averaging-down/profit-loss) — 거울 표면의 본체
+    ├── twin/ · pre_trade/ · profile/ · portfolio/ · trading/
+    ├── artifacts/      # mirror_home·profile 가 아직 참조 — 살아있음
+    ├── ai/ · email/ · kis/ · broker/ · legal/ · scheduler/ · customer/
+    ├── support/ · inbox/ · marketing/ · tax/ · mock_data/
+    └── (루트) container(fetcher·ai·realtime 싱글턴) · cache_service ·
+              serializers · fx_service · alert · alert_service · push 등
 ```
 
 ## 프론트엔드 구조
+> 2026-08-31 prune 후 실측. 대시보드 화면 **7개** (prune 전 19개).
+> nav 파일에 있는 것 = 존재하는 페이지. hidden 목록은 더 이상 없다.
 ```
 frontend/src/
 ├── app/
-│   ├── page.tsx                    # 랜딩 (미로그인) / 홈 리다이렉트 (로그인)
-│   ├── globals.css                 # Nexora 디자인 시스템 (--sp-* 변수)
-│   ├── (auth)/login, signup, onboarding  # 인증 플로우
-│   ├── (dashboard)/               # 메인 대시보드 (13개 페이지)
-│   │   ├── home, market, signals, discover, watchlist
-│   │   ├── detail/[ticker], alerts, ai-chat, ai
-│   │   ├── settings, risk  (autotrade REMOVED 2026-04-27 per legal)
-│   ├── pricing/                    # 3-tier 가격표
-│   ├── features/                   # 6개 기능 소개 페이지
-│   ├── terms/, privacy/            # 법적 문서
+│   ├── page.tsx                 # 랜딩(미로그인) / 홈 리다이렉트(로그인)
+│   ├── landing/                 # 랜딩 본체 (features/* 마케팅 12페이지는 삭제)
+│   ├── (auth)/                  # login · signup · oauth-finalize · onboarding(+broker)
+│   ├── (dashboard)/
+│   │   ├── mirror        # 거울 — 선언 vs 기록. PRIMARY
+│   │   ├── portfolio     # 보유 종목 · NAV · 섹터 · 거래내역. PRIMARY
+│   │   ├── pre-trade     # 멈춤 — 7문항 사전 기록. PRIMARY
+│   │   ├── home          # 2카드 요약 (스냅샷 + 상위 보유)
+│   │   ├── journal       # 결정 저널
+│   │   ├── profile       # 페르소나 · 펄스 · 데이터 내보내기/삭제
+│   │   ├── settings(+/profile)
+│   │   └── support/      # 문의 · 챗봇 · inbox
+│   ├── admin/ · beta/ · beta-gate/ · docs/ · feedback/nps/
+│   ├── pricing · terms · privacy · contact · support · delete-cancel
+│   └── card/[token]      # 폐기된 공유링크 tombstone (404 대신 안내)
 ├── components/
-│   ├── landing/landing-page.tsx    # 10-section 랜딩
-│   ├── dashboard/                  # positions-list, equity-chart, signals-widget 등
-│   ├── layout/                     # sidebar, top-bar, bottom-nav, dashboard-layout
-│   ├── ui/                         # tier-gate, disclaimer-banner, loading-skeleton 등
-│   ├── pwa/                        # install-prompt, push-permission
+│   ├── layout/           # terminal-sidebar · bottom-nav · top-bar · dashboard-layout
+│   ├── mirror/ · portfolio/ · journal/ · pre-trade/ · home/ · profile/
+│   ├── dashboard/        # living-cfo-status(2 layer) · weekly-pulse · persona-*
+│   ├── landing/ · settings/ · support/ · broker/ · account/ · feedback/
+│   ├── terminal/top-ticker · shared/ · share/ · ui/ · pwa/ · auth/
 ├── lib/
-│   ├── auth.ts                     # useAuth hook
-│   ├── endpoints.ts                # 백엔드 API URL 매핑
-│   ├── hooks.ts                    # SWR data hooks (일부 미사용)
-│   ├── types.ts                    # TypeScript 인터페이스
-│   ├── format.ts                   # 숫자/날짜 포매터
-│   ├── realtime.tsx                # SSE EventSource provider
-│   ├── push.ts                     # Web Push (미사용)
+│   ├── auth.ts · endpoints.ts · hooks.ts · types.ts · format.ts
+│   ├── cfo/hooks.ts · pre-trade.ts · realtime.tsx · locale.tsx · demo.ts
+│   └── use-keyboard-nav.tsx (G+H 홈 / G+P 포트폴리오 / G+M 거울)
 ```
 
 ## 로컬 git hooks (2026-05-19 신규)
@@ -159,15 +167,23 @@ cd ~/Desktop/취준/pivoxquant/frontend && npm run dev
 
 ## 중요 원칙
 - 🔴 **최신 정보 파악 (모든 agent 필수)** — CEO 반복 지시 (2026-05-30 "자꾸 옛날 데이터 가져온다"). **코드/수치** = grep·Read 실측 (메모리·기억 인용 금지) / **시장·경쟁·규제** = WebSearch + 출처 날짜 확인 (훈련데이터 금지, 예: 키움 자동일지 = 검색으로 확인) / **결정**(가격·법·수익모델) = `~/.claude/projects/-Users-seanbae-Desktop---/memory/DECISIONS.md` (SoT) / **동적수치**(HEAD·cron·test) = SessionStart hook LIVE 값. 오늘 날짜 기준. 모르면 "확인 불가". "최근/요즘" 막연 표현 금지 → 출처+날짜.
-- **핵심 퀀트 엔진 신중 수정** — `services/quant/`(engine/risk_defense/risk_metrics/
-  portfolio/backtester 등)는 검증된 완성 코드. 버그 fix 시 수식 단위/회귀 테스트 필수.
-  autotrade 기능은 2026-04-27 비활성화 → 2026-05-05 물리 삭제 (투자일임업 회피, rollback 은 git tag `legal-pre-autotrader-removal` 만)
+- **퀀트 잔존분 신중 수정** — `services/quant/` 에 남은 것은 `portfolio.py` +
+  `risk_metrics.py` 둘뿐이고, 둘 다 검증된 완성 코드다. 수정 시 수식 단위/회귀
+  테스트 필수. engine/risk_defense/models/backtester 등은 2026-08-31 삭제됐다 —
+  없는 파일을 찾거나 되살리지 마라.
+  autotrade 는 2026-04-27 비활성화 → 2026-05-05 물리 삭제 (투자일임업 회피,
+  rollback 은 git tag `legal-pre-autotrader-removal` 만)
 - **routes/, models/, services/ 구조 유지**
 - **API endpoints URL 변경 금지** — `endpoints.ts`와 1:1 매핑
 - **시그널 라벨: POSITIVE/NEGATIVE/NEUTRAL** — BUY/SELL/HOLD 절대 사용 금지 (자본시장법)
 - **"AI Assistant"** — "AI Coach", "투자 코치" 사용 금지 (법적)
 - **추천/조언 언어 금지** — "recommendation", "advice", "추천", "조언" 사용 금지
-- **DisclaimerBanner** — 모든 분석/시그널 페이지에 면책 배너 필수
+- **DisclaimerBanner** — 모든 데이터 표시 페이지에 면책 배너 필수.
+  `(dashboard)/layout.tsx` 가 경로별로 1회 마운트한다 (mirror/journal/pre-trade =
+  "coaching", 나머지 = "signal"). 페이지 안에서 중복 마운트 금지.
+- **없는 기능을 파는 카피 금지** — 2026-08-31 prune 으로 랜딩 메가메뉴 3개 그룹과
+  Companion 업셀(가짜 좌석 카운트 포함)을 지운 이유다. 삭제된 표면을 가리키는
+  링크·문구를 새로 만들지 마라.
 
 ## 법적 컴플라이언스
 - KIS 주문 기능 disabled (read-only)
@@ -207,10 +223,14 @@ brew install grep
 
 CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in template defaults`) 이 green 이어야 머지 가능. CI 는 ubuntu-latest (GNU grep) 에서 실행되므로 `-Pzo` 가 정상 작동한다.
 
-## 출시까지 남은 것 (2026-05-23 기준)
+## 출시까지 남은 것 (2026-08-31 갱신)
 
-옛 P0/P1 기능 미동작 목록(Portfolio/Search/Watchlist/Risk/Discover/알림벨/
-프로필/Alpaca/코스피·코스닥/OAuth)은 **전부 구현·배포 완료**. 남은 것은:
+### 🔴 최우선 (prune 직후 — 아직 안 한 것)
+- **백엔드 호스팅 재선정** — Railway 계정 삭제로 prod 백엔드 부재. 이게 정해지기
+  전까지 백엔드 배포 의존 작업은 전부 보류.
+- **prod 프론트 재배포** — Vercel 에 아직 prune 전 19-door 버전이 떠 있다.
+  배포하면 유저가 보는 화면이 7개로 줄어든다. 배포 전 CEO 확인 필요.
+- **시크릿 전량 재발급** — BREVO_API_KEY 등 Railway env vars 소실.
 
 ### 🔴 출시 BLOCKER (외부 / 법무 의존 — CEO 액션)
 - **변호사 의견서 Q1-Q15 + Q-S1** — 유료결제 활성화 BLOCKER. `legal_question_queue.md`.
@@ -219,14 +239,18 @@ CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in templ
 - **SENDGRID_API_KEY 확인** — Railway Variables (발신 실제 작동 확정).
 
 ### 🟠 코드 측 (내부 — 자율 진행 가능)
-> 2026-06-01 실측 갱신: 아래 다수가 이미 처리/빌드 확인됨 (메모리 STALE 정정).
-- ✅ 이메일 동의 silent-drop 비-silent화 (sender.py debug→info, `fcbd1f55`). signup 동의 캡처(part-2)는 routes/auth.py **frozen** + Q-S1 의존.
-- ✅ flaky 테스트 — test_daytrade_smoke/test_fx_staleness **이미 격리 fix됨, 전체 스위트 green** (2026-06-01 exit0). 옛 "full suite fail"은 STALE.
-- ✅ artifact 18 send() §50 카테고리 prep (INFORMATION, `a82fcb89`, flag-off inert).
-- 잔여 deferred (owner 판단): 부분환불 §17 / 국외이전 §28-8 / DCA XIRR / lookahead / Composer synthetic / KR 52w. 대부분 billing/lawyer/frozen 의존이라 자율 빌드 제한적.
+- ✅ 이메일 동의 silent-drop 비-silent화 (`fcbd1f55`). signup 동의 캡처(part-2)는
+  routes/auth.py **frozen** + Q-S1 의존.
+- prune 후속: 삭제된 표면을 참조하던 문서·메모리 정리 (일부 잔존 가능).
+- 잔여 deferred (owner 판단): 부분환불 §17 / 국외이전 §28-8.
+  billing/lawyer 의존이라 자율 빌드 제한적.
+- ⬛ 삭제된 항목: artifact 18종 §50 카테고리 / DCA XIRR / lookahead /
+  Composer synthetic / KR 52w — 해당 기능 자체가 없어졌으므로 백로그에서 제외.
 
 ## 유저 플로우 자동 테스트 방안
-Claude in Chrome MCP + user-tester agent 로 6개 플로우 자동 테스트 가능 (Chrome 연결 필요 — CEO 세션).
+Claude in Chrome MCP + user-tester agent 로 자동 테스트 가능 (Chrome 연결 필요 — CEO 세션).
+prune 후 플로우는 3개로 줄었다: 가입→온보딩→첫 포지션 / 사전기록(pre-trade) /
+거울 열람.
 상세: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md` 하단 참조.
 
 ## 메모리 파일 위치

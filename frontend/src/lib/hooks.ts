@@ -124,16 +124,6 @@ export function usePublicMarketSnapshot() {
 
 /* ── Market ── */
 
-export function useDiscover() {
-  return useSWR<DiscoverResponse>(API.discover, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 600_000,
-    // P1 (wave1-critical): render-safe default — consumers reading
-    // `data.results` won't NPE during the initial undefined frame.
-    fallbackData: { results: [], cached: false },
-  });
-}
-
 export function useInvestmentProfile() {
   return useSWR<ProfileResponse>(API.profile.get, fetcher, {
     revalidateOnFocus: false,
@@ -215,41 +205,6 @@ const GROWTH_SWR_OPTS = {
   shouldRetryOnError: false,
   errorRetryCount: 0,
 } as const;
-
-export function useGrowthData(range = "365d") {
-  return useSWR<GrowthScoreEntry[]>(
-    API.growth.data(range),
-    fetcher,
-    {
-      ...GROWTH_SWR_OPTS,
-      dedupingInterval: 60_000,
-      // P1 (wave1-critical): empty-array default so chart renderers
-      // (Recharts) don't NPE during initial render.
-      fallbackData: [],
-    },
-  );
-}
-
-export function useGrowthToday() {
-  return useSWR<GrowthTodayResponse>(
-    API.growth.today,
-    fetcher,
-    { ...GROWTH_SWR_OPTS, dedupingInterval: 30_000 },
-  );
-}
-
-export function useGrowthWeekly() {
-  return useSWR<GrowthWeeklyReport[]>(
-    API.growth.weekly,
-    fetcher,
-    {
-      ...GROWTH_SWR_OPTS,
-      dedupingInterval: 300_000,
-      // P1 (wave1-critical): empty-array default for consumers that map.
-      fallbackData: [],
-    },
-  );
-}
 
 /* ── Pre-Trade Journal (decision-reflection feed) ── */
 
@@ -717,53 +672,6 @@ export type { RealtimePriceDetail, PriceDirection, RealtimeState } from "./realt
  * window — same cadence as the existing portfolio hooks.
  */
 
-export interface RiskSummaryV2 {
-  var_1d_pct?: number;
-  var_95?: number;
-  var_99?: number;
-  es_1d_pct?: number;
-  tail_ces?: number;
-  max_dd_90d_pct?: number;
-  daily_dd_pct?: number;
-  corr_risk_index?: number;
-  correlation_avg?: number;
-  correlation_max?: number;
-  hhi?: number;
-  sector_top_name?: string;
-  sector_top_pct?: number;
-  vix?: number;
-  vix_regime?: string;
-  cash_pct?: number;
-  posture?: "composed" | "attentive" | "strained" | "breached";
-  layers_breached?: number;
-  observed_at_kst?: string;
-}
-
-export function useRiskSummary() {
-  return useSWR<RiskSummaryV2>(RISK_SUMMARY, fetcher, {
-    refreshInterval: () => liveRefresh(15_000, 60_000),
-    // Bug #3 (HANDOVER v22): risk metrics already poll every 15-60s. Focus
-    // revalidate would compound the load when the user navigates from
-    // /home → /risk and back. Network reconnect still triggers refresh.
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 15_000,
-    errorRetryCount: 2,
-  });
-}
-
-export type RiskLayerStatus = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
-
-export interface RiskLayerV2 {
-  num: 1 | 2 | 3 | 4 | 5 | 6 | 7;
-  name: string;
-  description?: string;
-  status: RiskLayerStatus;
-  value: string;
-  threshold?: string;
-  observedAtKst?: string;
-}
-
 interface BackendRiskLayer {
   no?: number;
   num?: number;
@@ -782,74 +690,6 @@ interface RiskLayersV2Response {
   layers?: BackendRiskLayer[];
   defense_score?: number;
   overall_status?: string;
-}
-
-export function mapLayerStatus(
-  s: BackendRiskLayer["status"],
-): RiskLayerStatus {
-  if (s === "POSITIVE" || s === "GREEN") return "POSITIVE";
-  if (s === "NEGATIVE" || s === "RED") return "NEGATIVE";
-  return "NEUTRAL";
-}
-
-export function useRiskLayers() {
-  const swr = useSWR<RiskLayersV2Response | BackendRiskLayer[]>(
-    RISK_LAYERS,
-    fetcher,
-    {
-      refreshInterval: () => liveRefresh(15_000, 60_000),
-      // Bug #3 (HANDOVER v22): same rationale as useRiskSummary.
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 15_000,
-      errorRetryCount: 2,
-    },
-  );
-
-  const raw = Array.isArray(swr.data) ? swr.data : swr.data?.layers ?? [];
-  const layers: RiskLayerV2[] = raw.map((l): RiskLayerV2 => {
-    const num = ((l.num ?? l.no) as RiskLayerV2["num"]) ?? 1;
-    return {
-      num,
-      name: l.name,
-      description: l.description ?? l.metric_label,
-      status: mapLayerStatus(l.status),
-      value: l.value ?? l.metric_value ?? "—",
-      threshold: l.threshold,
-      observedAtKst: l.observed_at_kst,
-    };
-  });
-
-  // Breach / strain counts derived directly from layer status.
-  //
-  // The backend /api/risk/summary payload exposes the 5 raw metrics
-  // (var/es/hhi/corr/dd) but NOT a `layers_breached` field, so the v2 hero
-  // previously fell back to `?? 0` and always rendered "none breached" even
-  // when a layer was RED — a dangerous risk-misread for a finance surface.
-  //
-  // Mapping (see risk_defense.py — layer status is GREEN/YELLOW/RED only):
-  //   RED    → NEGATIVE → breached
-  //   YELLOW → NEUTRAL  → strained
-  //   GREEN  → POSITIVE → within band
-  const breachedCount = layers.filter((l) => l.status === "NEGATIVE").length;
-  const strainedCount = layers.filter((l) => l.status === "NEUTRAL").length;
-
-  return {
-    layers,
-    breachedCount,
-    strainedCount,
-    isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
-    mutate: swr.mutate,
-  };
-}
-
-export interface ConcentrationEntry {
-  rank: number;
-  name: string;
-  ticker: string;
-  exchange: string;
-  weightPct: number;
 }
 
 interface RawPosition {
@@ -888,171 +728,8 @@ function inferExchange(p: RawPosition): string {
   return "NASDAQ";
 }
 
-export function useConcentration(top = 5) {
-  const swr = usePortfolioPositions<RawPositionsPayload>();
-  // Array.isArray guard mirrors the useRiskTimeline fix — a backend
-  // shape regression that delivers `{ positions: null }` or `{}` must
-  // not page-down the /risk v2 board.
-  const positions = Array.isArray(swr.data?.positions)
-    ? swr.data!.positions!
-    : [];
-
-  const totalKrw = swr.data?.total_value_all_krw ?? 0;
-  const totalUsd = swr.data?.total_value_usd ?? 0;
-  const fx = swr.data?.fx_rate ?? 1300;
-
-  // Compute weights even when backend doesn't return them pre-computed.
-  const weighted = positions
-    .map((p): { p: RawPosition; weight: number } => {
-      const explicit = p.weight_pct ?? p.weight;
-      if (explicit != null && Number.isFinite(explicit)) {
-        return { p, weight: explicit > 1 ? explicit : explicit * 100 };
-      }
-      const mvUsd = p.market_value_usd ?? p.market_value ?? p.total_value ?? 0;
-      const mvKrw =
-        p.currency === "KRW" || p.is_korean ? mvUsd : mvUsd * fx;
-      const denom = totalKrw > 0 ? totalKrw : totalUsd > 0 ? totalUsd : 0;
-      const w = denom > 0 ? (mvKrw / denom) * 100 : 0;
-      return { p, weight: w };
-    })
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, top);
-
-  const entries: ConcentrationEntry[] = weighted.map((row, i) => ({
-    rank: i + 1,
-    name: row.p.name ?? row.p.company_name ?? row.p.ticker ?? row.p.symbol ?? "—",
-    ticker: row.p.ticker ?? row.p.symbol ?? "—",
-    exchange: inferExchange(row.p),
-    weightPct: Number.isFinite(row.weight) ? row.weight : 0,
-  }));
-
-  return {
-    entries,
-    sumPct: entries.reduce((acc, e) => acc + e.weightPct, 0),
-    isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
-  };
-}
-
-export interface SectorEntry {
-  name: string;
-  pct: number;
-  leaderName: string;
-  leaderTicker: string;
-}
-
-export interface SectorExposureResult {
-  sectors: SectorEntry[];
-  sectorCount: number;
-  cashPct: number;
-  isLoading: boolean;
-  error: Error | undefined;
-}
-
 interface RawPositionWithSector extends RawPosition {
   sector?: string;
-}
-
-export function useSectorExposure(): SectorExposureResult {
-  const positions = usePortfolioPositions<RawPositionsPayload>();
-  const summary = usePortfolioSummary();
-
-  const raw = (
-    Array.isArray(positions.data?.positions)
-      ? positions.data!.positions!
-      : []
-  ) as RawPositionWithSector[];
-  const totalKrw = positions.data?.total_value_all_krw ?? 0;
-  const totalUsd = positions.data?.total_value_usd ?? 0;
-  const fx = positions.data?.fx_rate ?? 1300;
-
-  const groups = new Map<
-    string,
-    { pct: number; leaderName: string; leaderTicker: string; leaderWeight: number }
-  >();
-
-  for (const p of raw) {
-    const explicit = p.weight_pct ?? p.weight;
-    let w =
-      explicit != null && Number.isFinite(explicit)
-        ? explicit > 1
-          ? explicit
-          : explicit * 100
-        : 0;
-    if (w === 0) {
-      const mvUsd = p.market_value_usd ?? p.market_value ?? p.total_value ?? 0;
-      const mvKrw =
-        p.currency === "KRW" || p.is_korean ? mvUsd : mvUsd * fx;
-      const denom = totalKrw > 0 ? totalKrw : totalUsd > 0 ? totalUsd : 0;
-      w = denom > 0 ? (mvKrw / denom) * 100 : 0;
-    }
-    const sector = (p.sector ?? "Other").toString();
-    const name = p.name ?? p.company_name ?? p.ticker ?? p.symbol ?? "—";
-    const ticker = p.ticker ?? p.symbol ?? "—";
-    const cur = groups.get(sector);
-    if (!cur) {
-      groups.set(sector, {
-        pct: w,
-        leaderName: name,
-        leaderTicker: ticker,
-        leaderWeight: w,
-      });
-    } else {
-      cur.pct += w;
-      if (w > cur.leaderWeight) {
-        cur.leaderWeight = w;
-        cur.leaderName = name;
-        cur.leaderTicker = ticker;
-      }
-    }
-  }
-
-  const sectors: SectorEntry[] = Array.from(groups.entries())
-    .map(([name, v]) => ({
-      name,
-      pct: v.pct,
-      leaderName: v.leaderName,
-      leaderTicker: v.leaderTicker,
-    }))
-    .sort((a, b) => b.pct - a.pct);
-
-  // cashPct sourced from summary if exposed; otherwise inferred from
-  // positions (1 - sum of position weights). Falls back to 0 cleanly.
-  type SummaryWithCash = { cashPct?: number; cash_pct?: number };
-  const sum = summary.data as (typeof summary.data & SummaryWithCash) | undefined;
-  const summaryCash = sum?.cashPct ?? sum?.cash_pct;
-  const positionsTotal = sectors.reduce((a, s) => a + s.pct, 0);
-  const inferredCash = Math.max(0, 100 - positionsTotal);
-  const cashPct =
-    summaryCash != null && Number.isFinite(summaryCash)
-      ? summaryCash > 1
-        ? summaryCash
-        : summaryCash * 100
-      : inferredCash;
-
-  return {
-    sectors,
-    sectorCount: sectors.length,
-    cashPct,
-    isLoading: positions.isLoading || summary.isLoading,
-    error: (positions.error ?? summary.error) as Error | undefined,
-  };
-}
-
-export interface RiskTimelinePoint {
-  t: string;
-  score: number;
-}
-
-export interface RiskTimelineResult {
-  series: RiskTimelinePoint[];
-  today: number | null;
-  avg: number | null;
-  max: number | null;
-  daysAboveStrain: number;
-  strainThreshold: number;
-  isLoading: boolean;
-  error: Error | undefined;
 }
 
 interface RollingVarPayload {
@@ -1073,50 +750,6 @@ function varToScore(varPct: number): number {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-export function useRiskTimeline(days: 30 | 90 | 180 = 30): RiskTimelineResult {
-  const swr = useSWR<RollingVarPayload[]>(RISK_ROLLING_VAR, fetcher, {
-    refreshInterval: () => liveRefresh(30_000, 300_000),
-    revalidateOnFocus: false,
-    dedupingInterval: 60_000,
-    errorRetryCount: 2,
-  });
-
-  // Defensive: backend always returns `jsonify([])` for rolling-var, but
-  // a stale ServiceWorker cache, an upstream proxy that wraps errors as
-  // `{}`, or a future shape change can deliver a non-array. Calling
-  // `.slice` on a non-array is a root-level crash for /risk v2 — guard
-  // with Array.isArray so partial degradation surfaces as an empty
-  // timeline rather than a page-down ErrorBoundary.
-  // (feedback_bug_fix_patterns: stale fallback + divergence guard)
-  const raw = Array.isArray(swr.data) ? swr.data : [];
-  const sliced = raw.slice(-days);
-  const series: RiskTimelinePoint[] = sliced.map((p) => ({
-    t: p.date,
-    score: varToScore(p.var_pct),
-  }));
-
-  const today = series.length > 0 ? series[series.length - 1].score : null;
-  const avg =
-    series.length > 0
-      ? Math.round(series.reduce((a, p) => a + p.score, 0) / series.length)
-      : null;
-  const max =
-    series.length > 0 ? series.reduce((a, p) => Math.max(a, p.score), 0) : null;
-  const strainThreshold = 60;
-  const daysAboveStrain = series.filter((p) => p.score > strainThreshold).length;
-
-  return {
-    series,
-    today,
-    avg,
-    max,
-    daysAboveStrain,
-    strainThreshold,
-    isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
-  };
-}
-
 /* ── Risk v2 — Correlation Matrix (additive, v1 parity preservation) ──
  *
  * Restores the v1 RISK_CORRELATION call that was dropped from the
@@ -1126,35 +759,6 @@ export function useRiskTimeline(days: 30 | 90 | 180 = 30): RiskTimelineResult {
  * underlying observation surface.
  */
 
-export interface RiskCorrelationPayload {
-  labels: string[];
-  matrix: number[][];
-}
-
-export function useRiskCorrelation() {
-  const swr = useSWR<RiskCorrelationPayload>(RISK_CORRELATION, fetcher, {
-    refreshInterval: () => liveRefresh(60_000, 300_000),
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 60_000,
-    errorRetryCount: 2,
-    shouldRetryOnError: false,
-  });
-
-  const labels = swr.data?.labels ?? [];
-  const matrix = swr.data?.matrix ?? [];
-  const hasData = labels.length > 0 && matrix.length > 0;
-
-  return {
-    labels,
-    matrix,
-    hasData,
-    isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
-    mutate: swr.mutate,
-  };
-}
-
 /* ── Earnings Pre-Brief (home v2 Card 3, 2026-05-19 P2 #11) ────────────
  *
  * GET /api/brief/earnings/upcoming?days=7 — 6h server-side cache + 1h
@@ -1163,47 +767,6 @@ export function useRiskCorrelation() {
  * (true implied move requires options-chain pricing — see
  * routes/brief.py::_implied_move_pct).
  */
-
-export interface EarningsBriefNextEvent {
-  ticker: string;
-  name: string;
-  when: string;                  // ISO 8601, e.g. "2026-05-22T13:30:00Z"
-  eps_est: number | null;
-  rev_est: number | null;        // millions
-  implied_move: number | null;   // percent (30d proxy)
-}
-
-export interface EarningsBriefQueueItem {
-  ticker: string;
-  name: string;
-  when: string;
-}
-
-export interface EarningsBriefResponse {
-  next_event: EarningsBriefNextEvent | null;
-  queue: EarningsBriefQueueItem[];
-}
-
-export function useEarningsBrief(days: number = 7) {
-  const key = `/api/brief/earnings/upcoming?days=${days}`;
-  const swr = useSWR<EarningsBriefResponse>(key, fetcher, {
-    // Backend cache is 6h; revalidate hourly so a freshly-cached payload
-    // surfaces on next mount without spamming FMP.
-    refreshInterval: 60 * 60 * 1000,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 5 * 60 * 1000,
-    errorRetryCount: 2,
-    shouldRetryOnError: false,
-  });
-
-  return {
-    data: swr.data,
-    isLoading: swr.isLoading,
-    error: swr.error as Error | undefined,
-    mutate: swr.mutate,
-  };
-}
 
 /* ── Signals v2 (additive — does not modify any v1 hook) ──
  *
@@ -1215,36 +778,6 @@ export function useEarningsBrief(days: number = 7) {
  * Banned vocabulary (BUY/SELL/HOLD/recommend/advice) is rejected by
  * the legal-guard CI and assumed clean on arrival.
  */
-
-export function useSignals(filters: Partial<SignalFilters> = {}) {
-  const qs = new URLSearchParams();
-  if (filters.labels && filters.labels.size > 0) {
-    qs.set("labels", Array.from(filters.labels).join(","));
-  }
-  if (typeof filters.strengthMin === "number") {
-    qs.set("strength_min", String(filters.strengthMin));
-  }
-  if (typeof filters.strengthMax === "number") {
-    qs.set("strength_max", String(filters.strengthMax));
-  }
-  if (filters.symbol) qs.set("symbol", filters.symbol);
-  if (filters.window) qs.set("window", filters.window);
-  const qsStr = qs.toString();
-  const key = qsStr.length > 0 ? `${API.signals.all}?${qsStr}` : API.signals.all;
-
-  return useSWR<SignalsResponse>(key, fetcher, {
-    // Match v1 cadence: 10s open / 60s closed.
-    refreshInterval: () => liveRefresh(10_000, 60_000),
-    // Bug #3 (HANDOVER v22): the signals feed already polls every 10-60s.
-    // Focus revalidate compounds load when the user navigates between the
-    // signals list and detail pages. Reconnect revalidation is retained.
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 4_000,
-    errorRetryCount: 2,
-    errorRetryInterval: 5_000,
-  });
-}
 
 /**
  * Resolve a company name from a ticker by consulting the user's
@@ -1277,9 +810,6 @@ export function resolveTickerName(
   return displayTicker(ticker);
 }
 
-// Re-export for downstream import convenience without a second import line.
-export type { SignalEntry, SignalsResponse, SignalFilters, SignalLabel };
-
 /* ── Reports v2 — Artifact stats + archive + generate (Stage 10, 2026-04-27)
  *
  * Additive. Existing `useArtifacts(...)` is untouched. These hooks back the
@@ -1292,155 +822,6 @@ export type { SignalEntry, SignalsResponse, SignalFilters, SignalLabel };
  */
 
 import type { Artifact } from "./types";
-
-export interface ArtifactStats {
-  total: number;
-  countYtd: number;
-  countMemos: number;       // weekly_memo + legacy morning_brief
-  countBriefs: number;      // earnings_prebrief
-  countBragCards: number;   // monthly_brag
-  byType: Partial<Record<ArtifactType, number>>;
-  nextScheduled: { type: ArtifactType; at: string } | null;
-  latestIndexedAt: string | null;
-}
-
-/**
- * Aggregate stats for the /reports v2 hero + status bar. When the backend
- * endpoint 404s, the SWR error path lets the caller fall back to a
- * client-side derivation via `deriveArtifactStats(artifacts)` below.
- */
-export function useArtifactStats() {
-  // DORMANT since e064118e — see useArtifacts. `/api/artifacts/stats` is gone;
-  // callers already fall back to `deriveArtifactStats(artifacts)`, which now
-  // derives from an empty list and yields zeroes rather than a 404.
-  const swr = useSWR<ArtifactStats>(false && API.artifacts.stats, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 60_000,
-    shouldRetryOnError: false,
-  });
-  return swr;
-}
-
-/**
- * Pure helper — derives `ArtifactStats` from a flat artifact list.
- * Matches the backend contract so callers can swap server data for
- * client-derived stats without refactoring.
- */
-export function deriveArtifactStats(artifacts: Artifact[]): ArtifactStats {
-  const yearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
-  const byType: Partial<Record<ArtifactType, number>> = {};
-  let countYtd = 0;
-  let latestTs = 0;
-  for (const a of artifacts) {
-    byType[a.type] = (byType[a.type] ?? 0) + 1;
-    const ts = a.sent_at ? Date.parse(a.sent_at) : 0;
-    if (ts && ts >= yearStart) countYtd += 1;
-    if (ts && ts > latestTs) latestTs = ts;
-  }
-  return {
-    total: artifacts.length,
-    countYtd,
-    countMemos: byType.weekly_memo ?? 0,
-    countBriefs: byType.earnings_prebrief ?? 0,
-    // 2026-05-02: count both monthly_brag (auto digest) and brag_card
-    // (one-off) — keep client-derived stats in lockstep with the server
-    // contract in routes/artifacts.py::artifacts_stats.
-    countBragCards: (byType.monthly_brag ?? 0) + (byType.brag_card ?? 0),
-    byType,
-    nextScheduled: null,
-    latestIndexedAt: latestTs ? new Date(latestTs).toISOString() : null,
-  };
-}
-
-export interface ArtifactArchiveMonth {
-  month: string;            // "YYYY-MM"
-  artifacts: Artifact[];
-  count: number;
-}
-
-/**
- * Pure helper — buckets artifacts into the most recent N months
- * (default 12). Returns months descending (newest first), each with
- * its full artifact list and count. Months with zero artifacts are
- * still included so the year timeline renders all 12 rows.
- */
-export function deriveArchiveMonths(
-  artifacts: Artifact[],
-  monthsBack: number = 12,
-): ArtifactArchiveMonth[] {
-  const buckets = new Map<string, Artifact[]>();
-  // Seed empty buckets for the rolling window
-  const now = new Date();
-  for (let i = 0; i < monthsBack; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    buckets.set(key, []);
-  }
-  for (const a of artifacts) {
-    if (!a.sent_at) continue;
-    const d = new Date(a.sent_at);
-    if (isNaN(d.getTime())) continue;
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (buckets.has(key)) buckets.get(key)!.push(a);
-  }
-  return Array.from(buckets.entries())
-    .map(([month, arr]) => ({ month, artifacts: arr, count: arr.length }))
-    .sort((a, b) => (a.month < b.month ? 1 : -1));
-}
-
-export interface GenerateArtifactBody {
-  type: ArtifactType;
-  /** earnings_prebrief only — sent to the backend as `params.ticker`. */
-  ticker?: string;
-}
-
-/**
- * Mirror of the unified endpoint's JSON response
- * (routes/artifacts.py:api_artifacts_generate). Generation is SYNCHRONOUS —
- * a resolved promise with status "ready" means the artifact row already
- * exists in the archive. (The pre-launch `{job_id, eta_seconds}` queue shape
- * never shipped; 2026-06-11 this type was aligned to the real backend.)
- */
-export interface GenerateArtifactResponse {
-  status: "ready" | "empty" | "interactive";
-  type: ArtifactType;
-  artifact_id: number | null;
-  data: unknown;
-  /** "empty" → enum like "no_positions" / "no_trades" / "not_in_portfolio". */
-  reason: string | null;
-  message: string | null;
-  redirect: string | null;
-  /** Present on "ready" — whether a PDF attachment was rendered. */
-  pdf_available?: boolean;
-  pdf_status?: "ok" | "unavailable" | "render_failed" | "not_applicable";
-}
-
-/**
- * On-demand artifact generation (Brag Card / Earnings Pre-Brief / Risk Board).
- * Resolves when the backend finishes generating (synchronous endpoint).
- *
- * Wire shape: optional kwargs ride under `params` — the endpoint reads
- * `params.ticker`, NOT a top-level `ticker` (2026-06-11 fix: the top-level
- * field was silently ignored, 400ing every earnings_prebrief request).
- */
-export async function generateArtifact(
-  body: GenerateArtifactBody,
-): Promise<GenerateArtifactResponse> {
-  const wire: { type: ArtifactType; params?: { ticker: string } } = {
-    type: body.type,
-  };
-  if (body.ticker) wire.params = { ticker: body.ticker };
-  // 2026-05-17 wave 12 P1: the raw `fetch(...)` here previously did NOT
-  // attach the X-CSRF-Token header that `apiFetch` injects automatically.
-  // Backend CSRF middleware (security.py:_csrf_protect) would reject any
-  // POST from an authenticated client, so artifact generation silently
-  // failed for the strict CSRF flow. Routed through `apiFetch` so CSRF +
-  // timeout + sentry breadcrumbs all match the rest of the SPA.
-  return apiFetch<GenerateArtifactResponse>(API.artifacts.generate, {
-    method: "POST",
-    body: JSON.stringify(wire),
-  });
-}
 
 /* ── Notification preferences (settings v2 §C matrix) ──────────────────────
  *
@@ -1630,18 +1011,5 @@ export async function replyToInquiry(
   return apiFetch<SupportAdminInquiry>(API.support.adminReply(id), {
     method: "POST",
     body: JSON.stringify(body),
-  });
-}
-
-/* ── Methodology & data-provenance (Data-trust Stage 1) ──
- * Backs the /methodology transparency page. The payload is a static model
- * catalog + system data lineage, so we disable focus revalidation and dedupe
- * aggressively — it changes only on deploy. Flag-gated behind login by default
- * (METHODOLOGY_PUBLIC; Q-DT4) — `fetcher`'s credentialed request carries the
- * session cookie, so logged-in dashboard users pass; public after Q-DT4. */
-export function useMethodology() {
-  return useSWR<MethodologyResponse>(METHODOLOGY, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 60_000,
   });
 }

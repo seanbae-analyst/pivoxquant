@@ -44,10 +44,6 @@ import {
 import type { PersonaBreakdownRow } from "@/lib/cfo/hooks";
 import type { DimensionEntry } from "@/components/profile/v2/six-dimensions-grid";
 import type { PeerMetric } from "@/components/profile/v2/peer-benchmark-block-v2";
-import {
-  hasCompanionEntitlement,
-  useCompanionStatus,
-} from "@/lib/cfo/useCompanion";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
@@ -176,12 +172,9 @@ export default function ProfilePageV2() {
   const { data: benchmark, isLoading: benchmarkLoading } =
     usePersonaBenchmark(90);
   const { data: pulse } = usePulse();
-  const { data: companionStatus } = useCompanionStatus();
 
   const [exporting, setExporting] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
-  const [waitlistDone, setWaitlistDone] = React.useState(false);
-  const [waitlistSubmitting, setWaitlistSubmitting] = React.useState(false);
 
   React.useEffect(() => {
     if (!authLoading && !user) {
@@ -197,11 +190,6 @@ export default function ProfilePageV2() {
       : tier === "premium" || tier === "partner"
         ? "Premium"
         : "Free";
-
-  const entitled = hasCompanionEntitlement(
-    user?.subscription_tier,
-    companionStatus?.entitlement_plans,
-  );
 
   /* ── Agent memory export ── */
   const handleExport = React.useCallback(async () => {
@@ -292,25 +280,6 @@ export default function ProfilePageV2() {
     }
     setDeleting(false);
     toast.success(t("profileV2.toast.memoryCleared"));
-  }, [t]);
-
-  /* ── Companion waitlist ── */
-  const handleWaitlist = React.useCallback(async (email: string) => {
-    setWaitlistSubmitting(true);
-    try {
-      await apiFetch("/api/agent/waitlist", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      setWaitlistDone(true);
-      toast.success(t("profileV2.toast.waitlistDone"));
-    } catch {
-      // graceful fallback — UI still acknowledges
-      setWaitlistDone(true);
-      toast.success(t("profileV2.toast.waitlistSaved"));
-    } finally {
-      setWaitlistSubmitting(false);
-    }
   }, [t]);
 
   /* ── Six-dimension grid wiring ──
@@ -629,7 +598,7 @@ export default function ProfilePageV2() {
           emptyReason={peerEmptyReason}
         />
 
-        {/* BLOCK 6 + 7 — Pulse (7) + Companion (5) */}
+        {/* BLOCK 6 — Pulse */}
         <section
           style={{
             display: "grid",
@@ -642,14 +611,14 @@ export default function ProfilePageV2() {
           {/* Pulse */}
           <div
             style={{
-              gridColumn: "span 7",
+              gridColumn: "span 12",
               background: "rgba(255,255,255,0.02)",
               border: "1px solid var(--pq-ivory-line)",
               borderRadius: 4,
               padding: 24,
               position: "relative",
             }}
-            className="pq-profile-col-7"
+            className="pq-profile-col-12"
           >
             <span
               className="font-mono uppercase"
@@ -690,8 +659,8 @@ export default function ProfilePageV2() {
                 marginBottom: 20,
               }}
             >
-              One question, every Monday at 07:00 KST. The Companion uses your
-              pulse to weight which sections it writes for you next.
+              One question, every Monday at 07:00 KST. Your pulse feeds the
+              mirror — how you read yourself, next to how the record reads.
             </p>
 
             <div role="list" aria-label="Recent pulse answers">

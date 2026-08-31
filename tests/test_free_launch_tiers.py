@@ -11,7 +11,7 @@ These tests pin three invariants:
   2. Flag OFF           → original logic (env override + stored column) is
      restored verbatim — the opening is reversible by config alone.
   3. §101③ carve-out    → "premium" passes @require_tier("premium") but does
-     NOT satisfy the Companion gate (_ENTITLED_PLANS = premium_plus /
+     NOT satisfy the (since-deleted) Companion gate (premium_plus /
      founding_lifetime). Two-way AI chat stays closed.
 """
 
@@ -20,7 +20,6 @@ from types import SimpleNamespace
 import pytest
 
 from models import User
-from routes.agent import _entitled, _ENTITLED_PLANS
 from routes.decorators import _TIER_RANK
 
 
@@ -83,24 +82,3 @@ def test_premium_passes_require_tier_premium():
     assert _TIER_RANK["premium"] >= _TIER_RANK["pro"]
 
 
-def test_premium_does_not_unlock_companion():
-    # The free-launch opening returns "premium"; the Companion gate requires a
-    # strictly-higher entitlement (premium_plus / founding_lifetime).
-    assert "premium" not in _ENTITLED_PLANS
-    fake_user = SimpleNamespace(effective_tier="premium")
-    assert _entitled(fake_user) is False
-
-
-def test_companion_still_open_for_higher_tiers():
-    # Sanity: the carve-out only excludes "premium"; the genuinely-entitled
-    # plans still pass (no accidental over-lock).
-    for plan in ("premium_plus", "founding_lifetime"):
-        assert _entitled(SimpleNamespace(effective_tier=plan)) is True
-
-
-def test_flag_on_user_does_not_satisfy_companion(monkeypatch):
-    # End-to-end: a flag-promoted User instance must fail the Companion gate.
-    monkeypatch.delenv("LAUNCH_FREE_ALL_TIERS", raising=False)
-    u = User(email="anyone@example.com", subscription_tier="free")
-    assert u.effective_tier == "premium"
-    assert _entitled(u) is False

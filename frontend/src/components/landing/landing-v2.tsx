@@ -801,8 +801,6 @@ export default function LandingV2() {
       <SectionCurtain>
         <PersonasPreview />
       </SectionCurtain>
-      <SectionCurtain>
-      </SectionCurtain>
       {/* Pricing/Membership section hidden for Stage 0 free launch (CEO 2026-06-06).
           Flip SHOW_PRICING above to restore for Stage 1. */}
       {SHOW_PRICING && (

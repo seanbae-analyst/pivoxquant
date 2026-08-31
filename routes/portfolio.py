@@ -14,7 +14,7 @@ from security import trade_rate_limit
 from services import fx_service, cache_service
 from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name, canonical_display_name
-from services.container import engine, fetcher, realtime
+from services.container import fetcher, realtime
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth, legal_scrub_response
@@ -88,18 +88,16 @@ def _deprecated_singular(plural_hint: str):
 
 def _cache_ticker_async(app, ticker: str, capital: float):
     """Warm the SignalCache for a newly-added ticker without blocking the
-    HTTP response. engine.analyze() can take 10-30s when FMP/Alpaca are
-    slow (e.g. FMP 402 fallbacks), which would exceed the frontend
-    apiFetch timeout and surface as a false 'add failed' error even
-    though the Position row was already committed. Running it in a
-    background thread keeps add_position snappy and idempotent —
-    the cache miss on the next GET /portfolio call will simply fall
-    back to stored avg_cost defaults, exactly as cache_service already
-    handles."""
+    HTTP response. The warm is a quote lookup rather than the old
+    engine.analyze() run, so it is fast now, but it still hits FMP/KIS and
+    can stall on a 402 fallback. Running it in a background thread keeps
+    add_position snappy and idempotent — the cache miss on the next
+    GET /portfolio call will simply fall back to stored avg_cost defaults,
+    exactly as cache_service already handles."""
     def _run():
         with app.app_context():
             try:
-                cache_service.cache_ticker(ticker, capital, engine)
+                cache_service.cache_ticker(ticker)
             except Exception as e:
                 logger.error("Background cache_ticker failed %s: %s", ticker, e)
 
@@ -529,7 +527,7 @@ def edit_position(pid):
             en="Failed to update position", kr="포지션 업데이트에 실패했습니다.",
             code="POSITION_UPDATE_FAILED", status=500,
         )
-    cache_service.cache_ticker(p.ticker, current_user.available_capital, engine)
+    cache_service.cache_ticker(p.ticker)
     return jsonify({"ok": True})
 
 
@@ -1095,33 +1093,6 @@ def set_capital():
             code="CAPITAL_UPDATE_FAILED", status=500,
         )
     return jsonify({"ok": True, "capital_usd": cap_usd, "capital_krw": cap_krw})
-
-
-@portfolio_bp.route("/analytics")
-@api_auth
-@legal_scrub_response
-def portfolio_analytics():
-    positions = Position.query.filter_by(user_id=current_user.id).all()
-
-    # Batch-load all SignalCache rows in a single query to avoid N+1.
-    tickers = [p.ticker for p in positions]
-    cache_map = {
-        c.ticker: c
-        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
-    } if tickers else {}
-
-    pl = []
-    for p in positions:
-        cached = cache_map.get(p.ticker)
-        sd = cache_service.safe_cache_blob(cached)
-        pl.append({
-            "ticker": p.ticker,
-            "name": canonical_display_name(sd.get("name"), p.ticker),
-            "shares": p.shares,
-            "market_value": sd.get("price", p.avg_cost) * p.shares,
-            "sector": sd.get("sector", "Unknown"),
-        })
-    return jsonify(engine.portfolio_analytics(pl, current_user.available_capital))
 
 
 # ── Frontend-friendly aliases (added 2026-04-22) ──────────────────────────────

@@ -8,7 +8,6 @@ render the "오늘의 거울" hero without four separate round-trips:
   2. Observed persona over 30d (9-dim feature vector)         — persona_classifier_v2
   3. The gap: top dimensions where 관찰 diverges from 선언     — computed here
   4. Drift descriptor (유지 / 이동 중 / 영역 이동 관찰)        — persona_history
-  5. Latest AI-twin weekly paper P&L vs the user             — AITwinWeeklyReport
 
 Legal posture (mirrors services/artifacts/living_mirror_service.py):
   • NEVER surfaces an 8-code persona (value / speculator / daytrader …).
@@ -30,7 +29,6 @@ import logging
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
-from models import AITwinWeeklyReport
 from services.profile import (
     classify_persona_multi,
     compute_drift,
@@ -140,34 +138,6 @@ def get_mirror_home():
     except Exception:  # pragma: no cover — defensive
         logger.debug("mirror-home: drift unavailable", exc_info=True)
 
-    # (5) Latest AI-twin weekly paper-vs-user report.
-    twin = None
-    report = (
-        AITwinWeeklyReport.query
-        .filter_by(user_id=user_id)
-        .order_by(AITwinWeeklyReport.week_ending.desc())
-        .first()
-    )
-    if report is not None:
-        twin = {
-            "week_ending": (
-                report.week_ending.isoformat() if report.week_ending else None
-            ),
-            "user_return_pct": (
-                float(report.user_return_pct)
-                if report.user_return_pct is not None else None
-            ),
-            "twin_return_pct": (
-                float(report.twin_return_pct)
-                if report.twin_return_pct is not None else None
-            ),
-            "diff_pct": (
-                float(report.diff_pct) if report.diff_pct is not None else None
-            ),
-            "user_trades_count": int(report.user_trades_count or 0),
-            "twin_trades_count": int(report.twin_trades_count or 0),
-        }
-
     return jsonify({
         "ok": True,
         "stage": stage,
@@ -191,5 +161,4 @@ def get_mirror_home():
                 [round(v, 3) for v in observed_vec] if has_observed else None
             ),
         },
-        "twin": twin,
     })

@@ -14,7 +14,6 @@
  *       1. PortfolioSnapshotCard  (NAV / spark / Today P/L / Positions / Cash%)
  *       2. PositionsTopCard       (top 5 by weight, mini-rows)
  *   - WeeklyPulseCard           (reused, invisible Mon 07:00 trigger)
- *   - UpsellPlus                (reused, conditional on free tier)
  *   - FootSignature             (reused, page foot)
  *   - DisclaimerBanner          (mounted by (dashboard)/layout.tsx — NOT here)
  *
@@ -32,7 +31,6 @@ import { TopTicker } from "@/components/terminal/top-ticker";
 
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
-import { UpsellPlus } from "@/components/dashboard/upsell-plus";
 
 import { useAuth } from "@/lib/auth";
 import { usePortfolioPositions } from "@/lib/hooks";
@@ -177,11 +175,6 @@ export default function HomePageV2() {
           }
         `}</style>
       </section>
-
-      {/* ═══════════ Premium Plus upsell (conditional) ═══════════ */}
-      <div className="mt-4">
-        <UpsellPlus />
-      </div>
 
       {/* ═══════════ Foot signature ═══════════ */}
       {/* Legal disclaimer is mounted once by (dashboard)/layout.tsx as a
