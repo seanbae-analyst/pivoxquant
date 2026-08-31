@@ -47,13 +47,43 @@ const nextConfig: NextConfig = {
     return [
       { source: "/dashboard", destination: "/home", permanent: true },
       { source: "/dashboard/:path*", destination: "/:path*", permanent: true },
-      // §101③ 격리 (DECISIONS.md ✅확정 2026-05-30): 양방향 자유텍스트 채팅
-      // (`/ai-chat`) = 유사투자자문업 면제 트랙의 표적 채널. 코드는 보존하되
-      // URL 직접접근을 차단해 단방향 분석(`/ai`: SWOT/경쟁사/섹터/코칭)으로
-      // 보낸다. nav 항목은 이미 hidden:true. page.tsx 는 의도적으로 삭제하지
-      // 않음(코드 보존 요건) — redirect 가 도달 자체를 막는다.
-      { source: "/ai-chat", destination: "/ai", permanent: true },
-      { source: "/ai-chat/:path*", destination: "/ai", permanent: true },
+      // 2026-08-31 prune: 아래 표면들은 페이지가 물리적으로 삭제됐다. 북마크
+      // ·외부링크·검색결과는 남아 있으므로 404 대신 살아있는 목적지로 보낸다.
+      // (`/ai-chat` → `/ai` 였던 §101③ 격리 리다이렉트는 `/ai` 자체가 사라져
+      //  목적지가 404 였다 — 아래 규칙이 그걸 대체한다.)
+      //
+      // 종목·분석 성격 → /home, 기록·행동 성격 → /mirror.
+      { source: "/ai", destination: "/home", permanent: true },
+      { source: "/ai/:path*", destination: "/home", permanent: true },
+      { source: "/ai-chat", destination: "/home", permanent: true },
+      { source: "/ai-chat/:path*", destination: "/home", permanent: true },
+      { source: "/signals", destination: "/home", permanent: true },
+      { source: "/signals/:path*", destination: "/home", permanent: true },
+      { source: "/discover", destination: "/home", permanent: true },
+      { source: "/discover/:path*", destination: "/home", permanent: true },
+      { source: "/market", destination: "/home", permanent: true },
+      { source: "/market/:path*", destination: "/home", permanent: true },
+      { source: "/watchlist", destination: "/portfolio", permanent: true },
+      { source: "/watchlist/:path*", destination: "/portfolio", permanent: true },
+      { source: "/detail/:path*", destination: "/portfolio", permanent: true },
+      { source: "/risk", destination: "/mirror", permanent: true },
+      { source: "/risk/:path*", destination: "/mirror", permanent: true },
+      { source: "/growth", destination: "/mirror", permanent: true },
+      { source: "/growth/:path*", destination: "/mirror", permanent: true },
+      { source: "/companion", destination: "/journal", permanent: true },
+      { source: "/companion/:path*", destination: "/journal", permanent: true },
+      { source: "/reports", destination: "/journal", permanent: true },
+      { source: "/reports/:path*", destination: "/journal", permanent: true },
+      { source: "/alerts", destination: "/home", permanent: true },
+      { source: "/alerts/:path*", destination: "/home", permanent: true },
+      // 공개 마케팅 표면 — 랜딩으로.
+      { source: "/features", destination: "/", permanent: true },
+      { source: "/features/:path*", destination: "/", permanent: true },
+      { source: "/methodology", destination: "/", permanent: true },
+      { source: "/sample-reports", destination: "/", permanent: true },
+      { source: "/sample-reports/:path*", destination: "/", permanent: true },
+      { source: "/simulator/:path*", destination: "/", permanent: true },
+      { source: "/mirror-preview", destination: "/", permanent: true },
       // 무료 출시 (DECISIONS.md ✅확정 2026-05-30: Stage 0 무료, 월구독
       // ⬛superseded). `/pricing` 결제/플랜 비교 페이지는 코드를 보존하되
       // URL 직접접근을 `/home` 으로 차단한다. 진입점 링크(nav/footer/dropdown/
