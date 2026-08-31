@@ -68,7 +68,7 @@ export default function OnboardingBrokerPage() {
       return;
     }
     if (!authLoading && user?.onboarding_completed === true) {
-      router.replace("/home");
+      router.replace("/mirror");
     }
   }, [authLoading, user, router]);
 

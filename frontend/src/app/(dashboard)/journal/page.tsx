@@ -43,7 +43,6 @@ import { ProfitLossMirror } from "@/components/journal/profit-loss-mirror";
 import { TurnoverMirror } from "@/components/journal/turnover-mirror";
 import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror";
 import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import type { PreTradeReflection } from "@/lib/types";
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -458,7 +457,6 @@ function JournalContent() {
           <AveragingDownMirror />
         </div>
 
-        <DisclaimerBanner type="behavior-mirror" />
       </section>
 
       {/* Feed */}

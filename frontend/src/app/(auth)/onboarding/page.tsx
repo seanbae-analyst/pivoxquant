@@ -600,7 +600,7 @@ export default function OnboardingPage() {
       return;
     }
     if (!authLoading && user && user.onboarding_completed === true) {
-      router.replace("/home");
+      router.replace("/mirror");
     }
   }, [authLoading, user, router]);
 
@@ -832,7 +832,7 @@ export default function OnboardingPage() {
     } catch {
       // Fall through — still navigate so user isn't stuck if backend is down.
     } finally {
-      router.replace("/home");
+      router.replace("/mirror");
     }
   }, [router, refresh, skipping]);
 
@@ -846,7 +846,7 @@ export default function OnboardingPage() {
 
   // Submit answers to backend
   const goToDashboard = useCallback(() => {
-    router.replace("/home");
+    router.replace("/mirror");
   }, [router]);
   const handleSubmit = useCallback(async () => {
     setSubmitting(true);

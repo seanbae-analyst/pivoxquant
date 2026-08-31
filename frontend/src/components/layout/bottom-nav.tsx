@@ -24,7 +24,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Home as HomeIcon,
   Briefcase,
   MoreHorizontal,
   X,
@@ -62,13 +61,11 @@ const PRIMARY_TABS: Tab[] = [
   { href: "/pre-trade", label: "Pre-Trade", icon: Gavel },
 ];
 
-// Drawer — mirrors the desktop sidebar exactly. Home is in "More" rather
-// than the primary bar because the 3 doors already carry the loop.
+// Drawer — mirrors the desktop sidebar exactly.
 const DRAWER_GROUPS: DrawerGroup[] = [
   {
     label: "More",
     items: [
-      { href: "/home", label: "Home", icon: HomeIcon },
       { href: "/journal", label: "Journal", icon: NotebookPen },
     ],
   },

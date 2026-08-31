@@ -200,11 +200,6 @@ const PHASE7_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     reason: "W17: 1×28 secondary heading migrated → --pq-text-avatar (PHASE2 cap 1 → 0)",
   },
   {
-    path: "components/home/v2/portfolio-snapshot-card.tsx",
-    cap: 7,
-    reason: "1×28 NAV value migrated → --pq-text-avatar; 7 unrelated 12/14/15 literals remain",
-  },
-  {
     path: "app/(auth)/signup/oauth-finalize/page.tsx",
     cap: 0,
     reason: "W18: 2×11 PIPA eyebrow + birthdate label migrated → --pq-text-micro (W17 28px already tokenized); no raw literals remain",

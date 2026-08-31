@@ -75,7 +75,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur md:px-6">
         <div className="flex items-center gap-3">
           <Link
-            href="/home"
+            href="/mirror"
             className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
             aria-label="Back to app"
           >
@@ -102,7 +102,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex items-center gap-3 text-xs text-slate-500">
           <span className="hidden truncate sm:inline">{user?.email}</span>
           <Link
-            href="/home"
+            href="/mirror"
             className="rounded-md border border-slate-200 px-3 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
           >
             Exit

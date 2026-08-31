@@ -150,7 +150,7 @@ function NpsPageInner(): React.ReactElement {
             </p>
             <div className="mt-4">
               <Link
-                href="/home"
+                href="/mirror"
                 className="inline-flex items-center text-sm font-medium text-accent hover:underline"
               >
                 홈으로 돌아가기 →

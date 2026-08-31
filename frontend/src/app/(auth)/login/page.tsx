@@ -15,7 +15,7 @@
  *
  * Function preservation:
  * - OAuth handler unchanged — anchors point at API.auth.google / .kakao.
- * - useAuth + router.replace("/home") + loading + null user gating
+ * - useAuth + router.replace("/mirror") + loading + null user gating
  *   identical to v1, copied 1:1 (only visual layer changed).
  */
 
@@ -63,7 +63,7 @@ export default function LoginPageV2() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/home");
+      router.replace("/mirror");
     }
   }, [user, loading, router]);
 

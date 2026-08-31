@@ -123,15 +123,6 @@ const SURFACES: readonly Surface[] = [
     },
   },
   {
-    name: "03-home",
-    path: "/home",
-    needsAuth: true,
-    assert: async (page) => {
-      // Either variant must render some primary heading — accept any <h1> or main role
-      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
-    },
-  },
-  {
     name: "04-portfolio",
     path: "/portfolio",
     needsAuth: true,
