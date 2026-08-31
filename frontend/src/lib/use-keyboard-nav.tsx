@@ -8,7 +8,7 @@
  *
  *   G then H  → /home
  *   G then P  → /portfolio
- *   G then W  → /watchlist
+ *   G then M  → /mirror
  *
  * Until this commit, those rows were aspirational — no handler was wired,
  * so pressing the sequence did nothing. The modal advertised functionality
@@ -38,7 +38,7 @@ const PENDING_WINDOW_MS = 1500;
 const GOTO_MAP: Readonly<Record<string, string>> = {
   h: "/home",
   p: "/portfolio",
-  w: "/watchlist",
+  m: "/mirror",
 };
 
 function isEditableTarget(target: EventTarget | null): boolean {

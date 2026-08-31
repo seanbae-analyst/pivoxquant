@@ -35,11 +35,9 @@ import SplashPage from "./splash-page";
 import { Hero } from "./hero";
 import MarqueeLogos from "./marquee-logos";
 import PersonasPreview from "./personas-preview";
-import ReportsGallery from "./reports-gallery";
 import { FilmGrain } from "./film-grain";
 import { SectionCurtain } from "./section-curtain";
 import { Eyebrow } from "./eyebrow";
-import { MainLandingViewTracker } from "@/components/growth/main-landing-view-tracker";
 import { fadeUp, stagger } from "@/lib/motion";
 import {
   businessInfoRaw,
@@ -536,32 +534,6 @@ function CtaFooter() {
           >
             {t("landing.cta.logIn")}
           </Link>
-          <Link
-            href="/simulator/what-if"
-            className="inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-colors"
-            style={{
-              border: "0.75pt solid var(--pq-bronze)",
-              color: "var(--pq-bronze)",
-              fontSize: "var(--pq-text-body)",
-              letterSpacing: "0.02em",
-              backgroundColor: "transparent",
-            }}
-          >
-            {t("landing.cta.tryWhatIf")}
-          </Link>
-          <Link
-            href="/features/reports"
-            className="inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-colors"
-            style={{
-              border: "0.75pt solid var(--pq-bronze)",
-              color: "var(--pq-bronze)",
-              fontSize: "var(--pq-text-body)",
-              letterSpacing: "0.02em",
-              backgroundColor: "transparent",
-            }}
-          >
-            {t("landing.cta.readSampleReports")}
-          </Link>
         </motion.div>
       </div>
     </section>
@@ -608,40 +580,14 @@ function SiteFooter() {
 
           {[
             {
-              title: "Living Mirror",
-              links: [
-                { label: "3-Layer Architecture", href: "/features/engine#three-layers" },
-                { label: "Living Mirror Loop", href: "/features/engine#loop" },
-                { label: "40-Model Engine", href: "/features/engine" },
-                { label: "Feature Explorer", href: "/features/explorer" },
-              ],
-            },
-            {
-              title: "Personas",
-              links: [
-                { label: "Investor Personas", href: "/features/personas" },
-                { label: "Sample Reports", href: "/features/reports" },
-                { label: "Dashboard Preview", href: "/features/dashboard" },
-              ],
-            },
-            {
-              title: "Signature",
-              links: [
-                { label: "Pre-Trade Checklist", href: "/features/pre-trade" },
-                { label: "Korea × US Desk", href: "/features/global-desk" },
-                { label: "Journal Companion", href: "/companion" },
-              ],
-            },
-            {
               title: "Company",
               // Pricing 링크 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0).
               // /pricing 은 next.config.ts 307 redirect → /home. Stage 1 부활 시 복원.
+              // Living Mirror / Personas / Signature 열은 /features/* 페이지와
+              // 함께 삭제 — 없는 화면을 파는 링크는 남기지 않는다.
               links: [
                 { label: "Terms", href: "/terms" },
                 { label: "Privacy", href: "/privacy" },
-                // Public methodology/transparency page (moved off the login-gated
-                // sidebar 2026-06-06 per CEO) — landing entry point lives here.
-                { label: "Methodology", href: "/methodology" },
                 { label: "Contact", href: "mailto:hello@pivoxquant.com" },
               ],
             },
@@ -846,7 +792,6 @@ export default function LandingV2() {
       className="min-h-screen overflow-x-hidden"
       style={{ backgroundColor: "var(--pq-ink)", color: "var(--pq-ivory)" }}
     >
-      <MainLandingViewTracker />
       <TopNav />
       <SplashPage />
       <Hero />
@@ -855,9 +800,6 @@ export default function LandingV2() {
       </SectionCurtain>
       <SectionCurtain>
         <PersonasPreview />
-      </SectionCurtain>
-      <SectionCurtain>
-        <ReportsGallery />
       </SectionCurtain>
       {/* Pricing/Membership section hidden for Stage 0 free launch (CEO 2026-06-06).
           Flip SHOW_PRICING above to restore for Stage 1. */}

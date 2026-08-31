@@ -1,97 +1,29 @@
 {
   "nav": {
-    "home": "Home",
-    "portfolio": "Portfolio",
-    "market": "Market",
-    "signals": "Signals",
-    "discover": "Discover",
-    "watchlist": "Watchlist",
-    "ai": "AI Assistant",
-    "risk": "Risk",
-    "alerts": "Alerts",
-    "reports": "My Reports",
-    "settings": "Settings",
-    "upgrade": "Upgrade to Pro"
+    "home": "Home"
   },
   "topbar": {
-    "searchPlaceholder": "Search stocks, features...",
-    "searchTicker": "Search by ticker (e.g. AAPL, TSLA)...",
     "notifications": "Notifications",
     "observations": "Observations",
     "markAllRead": "Mark all as read",
-    "noNotifications": "No notifications",
     "noAlertsYet": "No alerts yet. Signals will appear here as we observe them.",
-    "unableToLoad": "Unable to load alerts",
-    "viewAll": "View all",
-    "loading": "Loading...",
-    "searching": "Searching...",
-    "noResults": "No results for \"{query}\"",
-    "typeToSearch": "Type a ticker symbol to search"
-  },
-  "a11y": {
-    "bell": "Notifications",
-    "profile": "Profile menu",
-    "search": "Search",
-    "menu": "Menu",
-    "openMenu": "Open menu"
-  },
-  "common": {
-    "add": "Add",
-    "edit": "Edit",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "save": "Save",
-    "confirm": "Confirm",
-    "close": "Close",
-    "back": "Back",
-    "next": "Next",
-    "submit": "Submit",
-    "search": "Search",
-    "filter": "Filter",
-    "export": "Export",
-    "import": "Import",
-    "refresh": "Refresh",
-    "loading": "Loading...",
-    "error": "Error",
-    "retry": "Retry",
-    "viewAll": "View All",
-    "seeMore": "See More",
-    "learnMore": "Learn More",
-    "getStarted": "Get Started",
-    "signIn": "Sign In",
-    "signOut": "Sign Out",
-    "signUp": "Sign Up",
-    "settings": "Settings"
+    "unableToLoad": "Unable to load alerts"
   },
   "auth": {
     "login": {
-      "title": "Welcome back",
-      "subtitle": "AI Quant Research Tool",
       "continueWithGoogle": "Continue with Google",
       "continueWithKakao": "Continue with Kakao",
       "noAccount": "Don't have an account?",
       "createAccount": "Create account"
-    },
-    "signup": {
-      "title": "Get started",
-      "subtitle": "AI Quant Research Platform",
-      "haveAccount": "Already have an account?",
-      "signIn": "Sign in"
     }
   },
   "landing": {
     "hero": {
-      "badge": "AI Quant Research Tool",
-      "title": "Observe with Data",
-      "subtitle": "40 quant models, 7-layer risk defense, AI portfolio analysis. Unified US & Korean equity management.",
-      "cta": "Start for Free",
-      "learnMore": "Learn More",
       "eyebrow": "PivoxQuant · A mirror before you trade",
       "h1Part1": "We don't promise",
       "h1Italic": "to make you rich.",
       "description": "The data is clear: high-turnover trading shaves your returns every year — about 7 percentage points versus low turnover. PivoxQuant mirrors your own trading pattern back to you and makes you pause once, right before you hit buy or sell. No scoring, no recommendations. Observational data only, not a directive to act.",
       "ctaPrimary": "See my mirror",
-      "ctaSecondary": "See a sample",
       "disclaimer": "Not investment advice. Informational research only. Past performance does not guarantee future results."
     },
     "splash": {
@@ -102,81 +34,20 @@
       "eyebrow": "Investor Personas · Selected shown",
       "heading": "A mirror that speaks\nyour investor language.",
       "description": "Twenty onboarding questions classify you into one of several investor archetypes. When drift is detected, the persona recalibrates automatically.",
-      "sampleReport": "Sample report",
       "alsoAvailable": "Also available: Income and more. The desk reshapes every artifact around the persona you test into.",
-      "viewAll": "View all Investor Personas"
+      "takeQuiz": "Take the 20-question assessment"
     },
     "topNav": {
-      "brandTagline": "· Living Mirror",
       "loginLink": "Log in",
       "goToDesk": "Go to desk",
       "meetCfo": "See my mirror",
       "openDesk": "Open desk",
-      "openMenu": "Open menu",
-      "groups": {
-        "livingCfo": {
-          "label": "Living Mirror",
-          "footnote": "The architecture of your personal research desk."
-        },
-        "personas": {
-          "label": "Personas",
-          "footnote": "Investor identities. One desk that speaks them all."
-        },
-        "signature": {
-          "label": "Signature",
-          "footnote": "The four signature workflows that define the desk."
-        },
-        "pricing": {
-          "label": "Pricing",
-          "footnote": "Four tiers. We are never paid when you trade."
-        },
-        "docs": {
-          "label": "Docs",
-          "footnote": "Terms, privacy, and the non-advisory boundary."
-        }
-      }
-    },
-    "stats": {
-      "quantModels": "Quant Models",
-      "riskDefense": "Risk Defense",
-      "markets": "Markets",
-      "mdd": "MDD (backtest, past data)",
-      "mddDisclaimer": "Past performance does not guarantee future results."
-    },
-    "pricing": {
-      "title": "Pricing",
-      "free": "Free",
-      "pro": "Pro",
-      "premium": "Premium",
-      "elite": "Elite",
-      "perMonth": "/mo",
-      "proPrice": "KRW 9,900",
-      "premiumPrice": "KRW 19,900",
-      "elitePrice": "KRW 29,900",
-      "startFree": "Start Free",
-      "startPro": "Start Pro",
-      "startPremium": "Start Premium",
-      "startElite": "Start Elite"
+      "openMenu": "Open menu"
     },
     "cta": {
       "signUp": "Sign up",
-      "logIn": "Log in",
-      "tryWhatIf": "Try the What-If simulator",
-      "readSampleReports": "Read sample reports"
+      "logIn": "Log in"
     }
-  },
-  "errors": {
-    "generic": "Something went wrong. Please try again.",
-    "network": "Please check your network connection.",
-    "notFound": "Page not found.",
-    "unauthorized": "Please sign in to continue.",
-    "forbidden": "You do not have permission to access this.",
-    "serverError": "Server error. Please try again later.",
-    "somethingWrong": "An error occurred",
-    "tryRefresh": "An unexpected error occurred. Try refreshing the page.",
-    "tryAgain": "Try again",
-    "pageNotFound": "Page not found",
-    "goHome": "Go to Home"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -190,51 +61,8 @@
     "essentialOnly": "Essential only",
     "acceptAll": "Accept all"
   },
-  "tierGate": {
-    "unlockPro": "Unlock with Pro",
-    "unlockPremium": "Unlock with Premium",
-    "upgradeDesc": "Upgrade your plan to access this feature.",
-    "viewPlans": "View Plans"
-  },
   "dashboard": {
-    "greeting": {
-      "morning": "Good morning",
-      "afternoon": "Good afternoon",
-      "evening": "Good evening"
-    },
-    "metrics": {
-      "portfolioValue": "Portfolio Value",
-      "totalPnl": "Total P&L",
-      "riskScore": "Risk Score",
-      "noPositionsYet": "No positions yet",
-      "positions": "positions"
-    },
-    "positions": {
-      "title": "My Positions",
-      "total": "",
-      "noPositions": "No positions yet",
-      "noPositionsDesc": "Add your first position to start tracking your portfolio performance.",
-      "addPosition": "Add Position",
-      "viewPortfolio": "View Portfolio",
-      "shares": "share"
-    },
-    "signals": {
-      "title": "Key Signals",
-      "noSignals": "No signals",
-      "noSignalsDesc": "Add positions to view AI-generated quant signals.",
-      "viewAllSignals": "View all signals",
-      "allSignals": "All signals",
-      "positive": "POSITIVE",
-      "negative": "NEGATIVE",
-      "neutral": "NEUTRAL",
-      "generatedAt": "Generated at"
-    },
     "home": {
-      "title": "Dashboard",
-      "portfolioValue": "Portfolio Value",
-      "totalReturn": "Total Return",
-      "todayPnl": "Today's P&L",
-      "positions": "Positions",
       "srTitle": "Home — Portfolio dashboard"
     },
     "deskCheckin": {
@@ -248,7 +76,7 @@
       "topMoverPrefix": "Today's biggest mover is",
       "topMoverSuffix": ".",
       "addFirst": "Add first position →",
-      "viewRisk": "Risk · Concentration →"
+      "viewMirror": "Open the mirror →"
     },
     "moodNudge": {
       "ariaLabel": "Mood check",
@@ -262,19 +90,7 @@
       "coachingExcited": "On good days, slow down a beat. Excitement can rush judgment — what you see today will still be there tomorrow.",
       "coachingAnxious": "On anxious days, closing the screen is a valid move. Markets open tomorrow. Observe only for now; decide when you're calm."
     },
-    "earningsCard": {
-      "noEarningsNext7d": "No earnings scheduled in the next 7 days.",
-      "noMoreQueued": "No more queued."
-    },
     "portfolio": {
-      "title": "Portfolio",
-      "addPosition": "Add Position",
-      "noPositions": "No positions yet",
-      "noPositionsDesc": "Add your first position to start tracking your portfolio",
-      "totalValue": "Total Value",
-      "unrealizedPnl": "Unrealized P&L",
-      "realizedPnl": "Realized P&L",
-      "allocation": "Allocation",
       "kisConnectRequired": "KIS broker connection required",
       "kisSyncConfirm": "Sync holdings, average cost, and quantity from your KIS account. Proceed?",
       "kisSyncResult": "{added} added · {updated} updated · {removed} removed",
@@ -282,185 +98,12 @@
       "kisNoBroker": "No broker connected.",
       "kisSyncFailed": "Broker sync failed. Please try again later.",
       "kisSyncError": "An error occurred during sync."
-    },
-    "market": {
-      "title": "Market",
-      "usMarket": "US Market",
-      "krMarket": "KR Market",
-      "indices": "Indices",
-      "gainers": "Top Gainers",
-      "losers": "Top Losers",
-      "volume": "Volume"
-    },
-    "risk": {
-      "title": "Risk",
-      "riskDefense": "Risk Defense",
-      "layers": "Layers",
-      "var": "VaR",
-      "drawdown": "Max Drawdown",
-      "sharpe": "Sharpe Ratio",
-      "status": "Status",
-      "safe": "Safe",
-      "warning": "Warning",
-      "critical": "Critical"
-    },
-    "alerts": {
-      "title": "Alerts",
-      "createAlert": "Create Alert",
-      "noAlerts": "No alerts set",
-      "price": "Price",
-      "signal": "Signal",
-      "risk": "Risk",
-      "trade": "Trade"
-    },
-    "discover": {
-      "title": "Discover",
-      "scanStocks": "Scan Stocks",
-      "topRated": "Top Rated",
-      "noResults": "No results found"
-    },
-    "watchlist": {
-      "title": "Watchlist",
-      "addStock": "Add Stock",
-      "empty": "Your watchlist is empty",
-      "emptyDesc": "Add stocks to monitor them here",
-      "remove": "Remove"
-    },
-    "settings": {
-      "title": "Settings",
-      "profile": "Profile",
-      "broker": "Broker Connections",
-      "notifications": "Notifications",
-      "security": "Security",
-      "plan": "Subscription Plan",
-      "connectKIS": "Connect KIS",
-      "deleteAccount": "Delete Account"
     }
-  },
-  "empty": {
-    "default": "No data available",
-    "noData": "Nothing to display",
-    "comingSoon": "Coming soon"
-  },
-  "modal": {
-    "addPosition": {
-      "title": "Add Position",
-      "ticker": "Ticker",
-      "shares": "Shares",
-      "avgPrice": "Avg. Cost",
-      "currency": "Currency"
-    },
-    "editPosition": {
-      "title": "Edit Position"
-    },
-    "deletePosition": {
-      "title": "Delete Position",
-      "description": "Are you sure you want to remove this position from your portfolio? This action cannot be undone."
-    },
-    "addAlert": {
-      "title": "Create Alert",
-      "ticker": "Ticker",
-      "condition": "Condition",
-      "value": "Value"
-    }
-  },
-  "disclaimer": {
-    "text": "This service is for informational purposes only. Not investment advice. All investment decisions are your own responsibility.",
-    "short": "For informational use only — not investment advice"
   },
   "settings": {
-    "tabs": {
-      "account": "Account",
-      "subscription": "Subscription",
-      "connections": "Connections",
-      "notifications": "Notifications",
-      "language": "Language"
-    },
-    "pageTitle": "Settings",
-    "pageSubtitle": "Manage your account, plan, and integrations",
-    "account": {
-      "title": "Account Info",
-      "name": "Name",
-      "email": "Email",
-      "joined": "Member since",
-      "loginMethod": "Login method",
-      "investorType": "Investor type",
-      "retakeAssessment": "Retake Assessment",
-      "takeAssessment": "Take Assessment",
-      "retakeSubtitle": "Update your investor profile and preferences",
-      "takeSubtitle": "Set up your personalized investor profile",
-      "notSet": "Not set"
-    },
     "subscription": {
-      "title": "Subscription",
-      "activePlan": "Active subscription",
-      "freePlan": "Free plan (basic features)",
-      "upgradeToPro": "Upgrade to Pro",
-      "manage": "Manage subscription",
       "renewsOn": "Renews on",
-      "cancelsOn": "Cancels on",
-      "proFeatures": "Pro plan benefits",
-      "proFeaturesList": [
-        "Unlimited stock tracking",
-        "25+ technical indicators",
-        "AI Assistant — 10 queries/day",
-        "Full risk analytics dashboard",
-        "Priority signal processing"
-      ]
-    },
-    "connections": {
-      "title": "Broker Integrations",
-      "kisName": "Korea Investment & Securities",
-      "kisDesc": "Read-only Korean equity sync via KIS API",
-      "connected": "Connected",
-      "notConnected": "Not connected",
-      "comingSoon": "Coming Soon",
-      "connecting": "Connecting...",
-      "connect": "Connect",
-      "cancel": "Cancel",
-      "apiKey": "API Key",
-      "apiSecret": "API Secret",
-      "brokerNote": "Broker integrations enable read-only portfolio synchronization."
-    },
-    "language": {
-      "title": "Language",
-      "subtitle": "Select your preferred display language",
-      "korean": "Korean",
-      "english": "English",
-      "saved": "Language updated"
-    },
-    "dangerZone": "Danger Zone",
-    "signOut": "Sign Out",
-    "signingOut": "Signing out...",
-    "deleteAccount": "Delete Account",
-    "deleteAccountTitle": "Delete Account",
-    "deleteAccountDesc": "Removes your positions, watchlists, and delivered artifacts. Defaults to a 30-day grace period you can cancel yourself via an emailed link.",
-    "contactSupport": "Contact Support",
-    "cancelBtn": "Cancel",
-    "notifications": {
-      "title": "Notification Settings",
-      "subtitle": "Manage push, email, and KakaoTalk alerts",
-      "timeLabel": "Delivery time (KST)",
-      "timeHelp": "Push notifications are sent daily at this time (KST)",
-      "emailTitle": "Email alerts",
-      "emailDesc": "Available on Pro and above",
-      "kakaoTitle": "KakaoTalk alerts",
-      "kakaoDesc": "Coming soon on the Premium plan",
-      "enable": "Enable",
-      "disable": "Disable",
-      "saving": "Saving...",
-      "saved": "Saved",
-      "notSupported": "Push notifications are not supported on this browser",
-      "permissionDenied": "Please allow notifications in your browser settings",
-      "enableFirst": "Enable push notifications first",
-      "pushEnabled": "Morning Brief push notifications enabled",
-      "pushDisabled": "Push notifications disabled",
-      "pushError": "Failed to update notification settings",
-      "emailEnabledSuccess": "Email notifications enabled",
-      "emailDisabledSuccess": "Email notifications disabled",
-      "emailProRequired": "Email alerts are available on the Pro plan and above",
-      "timeChanged": "Delivery time updated",
-      "dismissAnytime": "Notifications can be disabled at any time"
+      "cancelsOn": "Cancels on"
     }
   },
   "brokerOnboarding": {
@@ -471,29 +114,12 @@
     "nextStep": "Continue",
     "cancel": "Cancel",
     "note": "You can update these connections anytime in Settings → Connections.",
-    "badge": {
-      "connected": "Connected",
-      "notConnected": "Not connected",
-      "uploadNeeded": "Upload needed"
-    },
     "kis": {
       "name": "Korea Investment & Securities",
-      "desc": "Auto-sync via API key",
-      "connect": "Connect",
-      "connectBtn": "Connect",
-      "connecting": "Connecting...",
       "sync": "Sync",
       "syncing": "Syncing...",
       "disconnect": "Disconnect",
-      "lastSync": "Last sync",
-      "modalTitle": "Connect KIS",
-      "modalSubtitle": "Enter the API credentials issued from the KIS developer portal.",
-      "appKey": "App Key",
-      "appSecret": "App Secret",
-      "accountNo": "Account No. (first 8 digits)",
       "accountNoHint": "Please enter exactly 8 digits.",
-      "accountProd": "Product",
-      "helpLink": "How to issue an App Key",
       "connectSuccess": "KIS connected successfully!",
       "connectError": "Failed to connect KIS. Please double-check your keys and account number.",
       "syncSuccess": "Balances synced.",
@@ -505,156 +131,17 @@
     "manual": {
       "title": "Manual",
       "subtitle": "Track positions by hand",
-      "badge": "No sync",
       "description": "If you don't use KIS, or prefer to manage holdings yourself, just add positions manually. You can always change this later.",
       "cta": "Start manually"
-    }
-  },
-  "whatIf": {
-    "badge": "Time Machine",
-    "hero": "If You Had Invested...",
-    "sub": "What would your past investment be worth today?",
-    "tryIt": "Try the Time Machine",
-    "form": {
-      "ticker": "Ticker",
-      "tickerPlaceholder": "Search ticker (e.g. AAPL, NVDA)",
-      "startDate": "Start Date",
-      "amount": "Amount",
-      "currency": "Currency",
-      "krw": "KRW",
-      "usd": "USD",
-      "recurring": "Strategy",
-      "lumpSum": "Lump Sum",
-      "monthly": "Monthly DCA",
-      "weekly": "Weekly DCA",
-      "calculate": "Calculate",
-      "calculating": "Calculating...",
-      "recalculate": "Recalculate"
     },
-    "result": {
-      "headline": "Investing {amount} in {ticker} on {date}",
-      "currentValue": "Current Value",
-      "returnPct": "Return",
-      "invested": "Invested",
-      "profit": "Profit / Loss",
-      "annualized": "Annualized",
-      "duration": "Duration",
-      "days": "days",
-      "years": "years",
-      "vs": "vs {benchmark}",
-      "vsBenchmark": "vs S&P 500",
-      "moreThanBench": "{amount} more than S&P 500",
-      "lessThanBench": "{amount} less than S&P 500",
-      "chartTitle": "Growth Over Time",
-      "milestones": "Milestones",
-      "share": "Share",
-      "kakao": "KakaoTalk",
-      "twitter": "X (Twitter)",
-      "saveImage": "Save Image",
-      "copyLink": "Copy Link",
-      "copied": "Link copied",
-      "presets": "Try more dramatic scenarios",
-      "watermark": "pivoxquant.com/simulator/what-if"
-    },
-    "headlines": {
-      "legendary": "Life-Changing Scenario",
-      "crazy": "Insane Return",
-      "strong": "2x+ Gain",
-      "solid": "Solid Growth",
-      "flat": "Sideways",
-      "negative": "Alternative Scenario"
-    },
-    "errors": {
-      "noTicker": "Please select a ticker",
-      "notFound": "Ticker not found. Try AAPL, NVDA, TSLA",
-      "beforeListing": "This stock wasn't listed on that date yet",
-      "futureDate": "Date cannot be in the future",
-      "amountRange": "Amount must be between 1,000 and 1 billion",
-      "dataUnavailable": "Could not load data for this scenario",
-      "generic": "Something went wrong. Please try again."
-    },
-    "disclaimer": {
-      "title": "Disclaimer",
-      "ko": "본 시뮬레이션은 과거 데이터 기반 계산이며, 미래 수익을 보장하지 않습니다. 배당·세금·수수료는 반영되지 않습니다. 투자자문이 아닙니다.",
-      "en": "This simulation is based on past data only. Past performance does not guarantee future results. Dividends, taxes, and fees are not included. Not investment advice."
-    }
-  },
-  "reports": {
-    "title": "My Reports",
-    "subtitle": "A library of reports your AI built for you",
-    "empty": {
-      "title": "No reports yet",
-      "description": "Your first report will arrive every Sunday."
-    },
-    "filters": {
-      "type": "Type",
-      "period": "Period",
-      "typeAll": "All",
-      "typeWeekly": "Weekly Memo",
-      "typeMorning": "Morning Brief",
-      "typeEarnings": "Earnings Prebrief",
-      "typeMonthly": "Monthly Card",
-      "typeQuarterly": "Quarterly Review",
-      "typeRisk": "Risk Report",
-      "period30": "Last 30 days",
-      "period90": "Last 90 days",
-      "periodAll": "All time"
-    },
-    "card": {
-      "new": "NEW",
-      "download": "Download",
-      "preview": "Preview"
-    },
-    "preview": {
-      "title": "Report Preview",
-      "close": "Close",
-      "download": "Download PDF",
-      "share": "Share",
-      "shareKakao": "KakaoTalk",
-      "shareInsta": "Instagram",
-      "notAvailable": "Preview is being prepared"
-    },
-    "badge": {
-      "weeklyMemo": "Weekly Memo",
-      "earningsPrebrief": "Earnings Prebrief",
-      "monthlyBrag": "Monthly Card",
-      "quarterlyReview": "Quarterly Review",
-      "riskReport": "Risk Report",
-      "custom": "Report"
-    },
-    "v1": {
-      "kicker": "PDF · Observational archive",
-      "heading": "Reports",
-      "subtitle": "Every artifact the desk can deliver — from the weekly memo to the year-end letter.",
-      "caption": "Free-tier samples are public; Pro and Premium items are generated against your portfolio.",
-      "tierAll": "All tiers",
-      "personaLabel": "Persona",
-      "allPersonas": "All personas",
-      "sampleAvailable": "Sample available",
-      "lastGenerated": "Last generated —",
-      "optimisedFor": "Optimised for",
-      "actions": {
-        "open": "Open",
-        "pdf": "PDF",
-        "upgradeTo": "Upgrade to"
-      },
-      "footer": {
-        "artifacts": "artifacts",
-        "tier": "tier",
-        "note": "PivoxQuant · Observational archive · Not investment advice"
-      }
-    },
-    "v2": {
-      "eyebrow": "Archive · Mirror",
-      "latestHeading": "Just out.",
-      "footNote": "PivoxQuant · Archive · Volume IV · Not investment advice"
-    }
+    "titleDormant": "Add your positions",
+    "subtitleDormant": "Start by entering the holdings you already have. You can add or edit them anytime.",
+    "noteDormant": "Automatic brokerage linking is not offered. Positions are entered by hand."
   },
   "profileMenu": {
     "ariaLabel": "Profile menu",
     "myProfile": "My Profile",
     "settings": "Settings",
-    "billing": "Billing",
     "keyboardShortcuts": "Keyboard shortcuts",
     "helpDocs": "Help & Docs",
     "signOut": "Sign out",
@@ -662,78 +149,14 @@
     "shortcutsModalTitle": "Keyboard shortcuts",
     "shortcutsKicker": "Reference",
     "shortcuts": {
-      "openSearch": "Open search palette",
       "goHome": "Go to Home",
       "goPortfolio": "Go to Portfolio",
-      "goWatchlist": "Go to Watchlist",
+      "goMirror": "Go to Mirror",
       "closeModal": "Close modal",
       "navList": "Navigate list",
       "select": "Select"
     },
     "close": "Close"
-  },
-  "search": {
-    "placeholder": "Search ticker, page…",
-    "ariaLabel": "Search ticker or page",
-    "ariaClose": "Close",
-    "ariaSearching": "Searching",
-    "paletteAriaLabel": "Search palette",
-    "unavailable": "Search temporarily unavailable",
-    "noMatches": "No matches for \"{query}\"",
-    "searching": "Searching…",
-    "footerTagline": "observe · view · open",
-    "sections": {
-      "stocks": "Stocks",
-      "pages": "Pages",
-      "recent": "Recent"
-    },
-    "pages": {
-      "home": "Home",
-      "homeHint": "Dashboard overview",
-      "portfolio": "Portfolio",
-      "portfolioHint": "Positions & analytics",
-      "watchlist": "Watchlist",
-      "watchlistHint": "Observed symbols",
-      "risk": "Risk",
-      "riskHint": "Defense status",
-      "discover": "Discover",
-      "discoverHint": "Universe scan",
-      "market": "Market",
-      "marketHint": "Indexes & macro",
-      "alerts": "Alerts",
-      "alertsHint": "Notification log",
-      "settings": "Settings",
-      "settingsHint": "Account & broker"
-    }
-  },
-  "alertsPage": {
-    "filters": {
-      "all": "All",
-      "unread": "Unread",
-      "read": "Read"
-    },
-    "table": {
-      "time": "Time",
-      "kind": "Kind",
-      "title": "Title"
-    },
-    "actions": {
-      "markAllRead": "Mark all as read",
-      "clearAll": "Clear all",
-      "confirmClear": "Confirm · delete all"
-    },
-    "toast": {
-      "marked": "Marked all as read",
-      "markFailed": "Failed to mark as read",
-      "cleared": "All alerts cleared",
-      "clearFailed": "Failed to clear"
-    },
-    "stats": {
-      "total": "Total",
-      "unread": "Unread",
-      "today": "Today",
-      "thisWeek": "This week"
-    }
   },
   "settingsV1": {
     "toast": {
@@ -741,116 +164,11 @@
       "seedRangeUsd": "USD must be 0 – {max}.",
       "seedRangeKrw": "KRW must be 0 – {max}.",
       "seedSaved": "Seed capital saved.",
-      "seedFailed": "Failed to save.",
-      "billingPortalFailed": "Could not open billing portal.",
-      "kisSynced": "KIS synchronized.",
-      "kisSyncFailed": "Sync failed.",
-      "kisDisconnected": "KIS disconnected.",
-      "kisDisconnectFailed": "Disconnect failed.",
-      "emailSaved": "Email preferences saved.",
-      "emailSaveFailed": "Failed to save email preferences.",
-      "pushNotSupported": "Push notifications not supported here.",
-      "pushPermissionDenied": "Permission denied.",
-      "pushEnabled": "Push enabled.",
-      "pushDisabled": "Push disabled.",
-      "pushUpdateFailed": "Could not update push.",
-      "emailEnabled": "Email enabled.",
-      "emailDisabled": "Email disabled.",
-      "languageUpdated": "Language updated."
-    },
-    "confirm": {
-      "kisDisconnect": "Disconnect KIS?"
+      "seedFailed": "Failed to save."
     }
-  },
-  "portfolioModal": {
-    "addPosition": {
-      "errorRequired": "Symbol, quantity, and price required.",
-      "success": "Position recorded — informational only, not advice.",
-      "failed": "Failed to add position."
-    },
-    "tradeModal": {
-      "errorAvgCost": "Average cost must be positive.",
-      "errorRequired": "Quantity and price required.",
-      "errorOverSell": "Cannot sell more than {shares} shares held.",
-      "failed": "Failed to record trade."
-    }
-  },
-  "watchlistModal": {
-    "added": "{ticker} added to watchlist",
-    "alreadyExists": "Already in watchlist",
-    "failed": "Could not add {ticker}"
-  },
-  "disclaimerLabel": {
-    "kicker": "Disclaimer"
-  },
-  "detail": {
-    "currentPrice": "Current price",
-    "signal": "Signal",
-    "composite": "Composite",
-    "compositeTooltip": "Composite score — 4-pillar observational blend.",
-    "watchlistAdd": "Add to watchlist",
-    "watchlistIn": "In watchlist",
-    "usListed": "US Listed",
-    "pillar": {
-      "technical": "Technical",
-      "fundamental": "Fundamental",
-      "sentiment": "Sentiment",
-      "quant": "Quant"
-    }
-  },
-  "swot": {
-    "eyebrow": "AI assistant · observation",
-    "title": "AI analysis",
-    "preparingBodyPrefix": "AI analysis is being prepared. Trigger an observation summary for",
-    "preparingBodySuffix": "below.",
-    "generating": "Generating…",
-    "generateBtn": "Generate AI summary",
-    "errorMsg": "Unable to generate right now ({error}). Try again later."
   },
   "preTrade": {
     "thesis": "Your thesis"
-  },
-  "growth": {
-    "legendLess": "Less",
-    "legendMore": "More",
-    "page": {
-      "eyebrow": "Growth OS · Solo Founder",
-      "heroTitle1": "Your",
-      "heroItalic": "steady",
-      "heroTitle2": "streak.",
-      "heroDesc": "Streak · morning priorities · evening reflection · 365-day graph · weekly trend · archived reports — one editorial board, drafted with you.",
-      "headerTitle": "Growth OS",
-      "headerDesc": "Personal growth tracking and reflection",
-      "activityLabel": "Activity",
-      "activityDesc": "Today's activity score",
-      "reflectionLabel": "Reflection",
-      "reflectionDesc": "Today's reflection score",
-      "noScoreYet": "No score for today yet.",
-      "todayPriorities": "Today's Priorities",
-      "eveningReflection": "Evening Reflection",
-      "growthGraph": "Growth Graph",
-      "growthGraphDesc": "Past 365 days. Click a day for details.",
-      "weeklyTrend": "Weekly Trend",
-      "weeklyTrendDesc": "Activity vs reflection over the last 4 weeks.",
-      "weeklyReports": "Weekly Reports",
-      "weekOf": "Week of {date}",
-      "patterns": "Patterns",
-      "nextWeek": "Next Week",
-      "unavailableTitle": "Couldn't load just now",
-      "loadingTitle": "Loading",
-      "unavailableDesc": "Could not load Growth OS data. Please try again shortly.",
-      "loadingDesc": "Loading your Growth OS…",
-      "unavailableSubDesc": "Couldn't load Growth OS just now. Please try again.",
-      "loadingSubDesc": "Loading your Growth OS…",
-      "retry": "Try again",
-      "dayDetailTitle": "Growth detail · {date}",
-      "priorities": "Priorities",
-      "reflection": "Reflection",
-      "scoreTotal": "Total",
-      "noDetailOtherDate": "Detailed data is only available for today.",
-      "closeAriaLabel": "Close",
-      "notAnswered": "Not answered yet."
-    }
   },
   "journal": {
     "page": {
@@ -936,84 +254,13 @@
       "byTickerLabel": "Adds by name",
       "tickerRow": "{followOn} added · {below} below average",
       "framing": "We reflect your adds to positions you already held, measured against the average cost at that moment, as they are. No grade, no recommendation.",
-      "insufficient": "There are still too few follow-on buys to mirror stably. It will appear automatically as records accumulate.",
       "emptyTitle": "Nothing to mirror yet",
-      "emptyDesc": "When you buy more of a name you already hold, we show whether that price was below or above your average at the time, as a plain count."
-    }
-  },
-  "companion": {
-    "page": {
-      "loadingLabel": "Loading",
-      "upgradeBadge": "Premium Plus · Closed Beta",
-      "upgradeHeading": "When you're ready, ascend.",
-      "upgradeDesc": "A reflective companion that remembers what you wrote — not an advisor. Reserved for Premium Plus and Founding Lifetime members during Closed Beta.",
-      "upgradeSubDesc": "Ready to ascend? A companion for Premium Plus · Founding Lifetime members.",
-      "upgradeCta": "Upgrade to Premium Plus",
-      "upgradeBack": "Back to Home",
-      "comingSoonBadgeInternal": "Internal · Staff",
-      "comingSoonBadge": "Coming Soon · Closed Beta",
-      "comingSoonHeading": "Your journal, remembered.",
-      "comingSoonDesc": "The Personal Journal Companion is in Closed Beta. Leave your email — we open seats in small batches so responses stay slow, careful, and within reflective bounds.",
-      "comingSoonSubDesc": "Closed Beta in progress. Invited in small batches.",
-      "emailPlaceholder": "you@domain.com",
-      "joinWaitlist": "Join Waitlist",
-      "submitting": "Submitting…",
-      "waitlistSuccess": "You're on the waitlist. We'll email when your seat opens.",
-      "emailLabel": "Email"
-    }
-  },
-  "riskBoard": {
-    "methodologyEyebrow": "Methodology · How these are observed",
-    "methodologyHeading": "Notes.",
-    "notes": {
-      "var": {
-        "title": "VaR (1-day, 95%)",
-        "body": "Historical percentile on the 90-day return window, weighted by position size."
-      },
-      "es": {
-        "title": "Component Expected Shortfall",
-        "body": "Mean of returns below the VaR cutoff — the 5% left-tail observation."
-      },
-      "hhi": {
-        "title": "Concentration HHI",
-        "body": "Herfindahl–Hirschman index on sector weights. < 0.25 considered diffuse."
-      },
-      "correlation": {
-        "title": "Correlation",
-        "body": "Pairwise 90-day returns, Ledoit–Wolf shrunk covariance. Cluster max flagged when > 0.65."
-      },
-      "sevenLayer": {
-        "title": "7-Layer Defense",
-        "body": "Independent observations across VaR, correlation, VIX, tail, daily drawdown, sector concentration, and cash buffer."
-      },
-      "timeline": {
-        "title": "Composite timeline",
-        "body": "0–100 observation metric derived from rolling VaR; higher indicates more observed strain."
-      }
-    },
-    "v1": {
-      "methodologyHeading": "Methodology Notes",
-      "notes": {
-        "var": "VaR (1-day, 95%) — historical percentile on the 90-day return window, weighted by position size.",
-        "es": "Expected Shortfall — mean of returns below the VaR cutoff (5% left tail).",
-        "maxdd": "Max Drawdown (90D) — peak-to-trough of the portfolio equity curve over the trailing window.",
-        "corr": "Correlation Index — average pairwise correlation across holdings on the last 20 sessions.",
-        "sevenLayer": "Seven-Layer Ladder — soft-limit observations across VaR, correlation, VIX, tail, daily loss, concentration, and cash buffer."
-      }
+      "emptyDesc": "When you buy more of a name you already hold, we show whether that price was below or above your average at the time, as a plain count.",
+      "insufficient": "There are still too few follow-on buys to mirror stably. It will appear automatically as records accumulate."
     }
   },
   "persona": {
     "classifierKicker": "Persona classifier",
-    "names": {
-      "passive_index_hugger": "The Passive Index Hugger",
-      "steady_accumulator": "The Steady Accumulator",
-      "value_hunter": "The Value Hunter",
-      "risk_managed_growth": "The Risk-Managed Grower",
-      "swing_trader": "The Swing Trader",
-      "momentum_rider": "The Momentum Rider",
-      "macro_rotator": "The Macro Rotator",
-      "aggressive_scalper": "The Aggressive Scalper"
-    },
     "surfaceNames": {
       "growth": "Growth",
       "balanced": "Balanced",
@@ -1071,55 +318,6 @@
         "a": "After signing in, you can ask quick questions about billing, your account, or how to use the platform via 'Ask AI Support', or submit a direct inquiry through the 1:1 inquiry form. Your submitted inquiries and responses are available in 'My Inquiries'."
       }
     }
-  },
-  "signals": {
-    "eyebrow": "Signals · Live",
-    "heroTitle": "The stream is <bronze>observed</bronze>,<br/>not advised — filtered to your <bronze>holdings</bronze>.",
-    "heroLoadingBody": "Aggregating today's observations — reading signals across your holdings.",
-    "heroCounts": "{positive} positive, {negative} negative, {neutral} neutral across {symbols} symbols. Not a trading directive.",
-    "heroCountsPrefix": "Today the system surfaced",
-    "streamLoadingEyebrow": "Stream · Loading",
-    "streamLoadingBody": "Reading observations…",
-    "streamEmptyEyebrow": "Stream · Empty",
-    "streamEmptyTitle": "No observations match these filters.",
-    "streamEmptyBody": "Try widening the strength range or extending the time window.",
-    "streamEyebrow": "Stream · {count} observations",
-    "streamTitle": "Today's observations.",
-    "dayObsCount": "· {count} observations",
-    "moversAriaLabel": "Top 5 observations by strength",
-    "moversEyebrow": "Top Strength · KR Priority",
-    "moversTitle": "Five notable observations today.",
-    "labelPositive": "Positive",
-    "labelNegative": "Negative",
-    "labelNeutral": "Neutral",
-    "strength": "Strength",
-    "staleTitle": "Cached observation past freshness TTL",
-    "staleLabel": "Stale",
-    "justNow": "Just now",
-    "minutesAgo": "{n}m ago",
-    "hoursAgo": "{n}h ago",
-    "daysAgo": "{n}d ago",
-    "filterStrength": "Strength",
-    "filterSymbol": "Symbol",
-    "filterSymbolPlaceholder": "Samsung · Kakao · Apple …",
-    "filterWindowAll": "All",
-    "filterWindowToday": "Today",
-    "filterWindow7d": "7d",
-    "filterWindow30d": "30d",
-    "filterRefresh": "Refresh",
-    "filterRefreshAriaLabel": "Refresh signals",
-    "filterMinStrengthAriaLabel": "Minimum strength",
-    "filterMaxStrengthAriaLabel": "Maximum strength",
-    "clipBoard1": "Clip Board · I",
-    "clipBoard2": "Clip Board · II",
-    "clipBoard3": "Clip Board · III",
-    "topPositive": "Top Positive",
-    "neutralZone": "Neutral Zone",
-    "topNegative": "Top Negative",
-    "clickToExpand": "Click any clipboard to draw it forward.",
-    "toastRefreshTimeout": "Refresh timed out. Please try again in a moment.",
-    "toastRefreshServerError": "Server error during refresh. Please try again in a moment.",
-    "toastRefreshFailed": "Refresh failed"
   },
   "settingsV2": {
     "sectionA": {
@@ -1183,9 +381,7 @@
       "localExportReady": "Local memory exported.",
       "exportFailed": "Export failed.",
       "deleteConfirm": "Delete all agent memory? Persona, pulse, feedback, and Companion history will be wiped. This cannot be undone.",
-      "memoryCleared": "Agent memory cleared.",
-      "waitlistDone": "You're on the waitlist.",
-      "waitlistSaved": "Saved — we'll reach out."
+      "memoryCleared": "Agent memory cleared."
     }
   }
 }

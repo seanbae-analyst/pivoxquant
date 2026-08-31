@@ -25,29 +25,6 @@ from unittest.mock import patch
 # ══════════════════════════════════════════════════════════════════════
 
 
-class TestDiscoverUnavailableEnvelope:
-    """The reworded envelope must keep ``code=DISCOVER_FMP_UNAVAILABLE``
-    (frontend SWR + log alerts dispatch on the machine code) but ship a
-    user-facing ``error`` that names the upstream cause without sounding
-    catastrophic. ``error_kr`` is now part of the contract.
-    """
-
-    def test_movers_503_envelope_has_new_copy(self, client, auth_user):
-        from services import cache_service
-        cache_service.discover_section_cache_clear()
-        # Empty user discover cache → no rows for movers + no section cache → 503.
-        cache_service.discover_cache.pop(auth_user["id"], None)
-
-        r = client.get("/api/discover/movers?region=us")
-        assert r.status_code == 503
-        body = r.get_json()
-        assert body["code"] == "DISCOVER_FMP_UNAVAILABLE"
-        assert "tape" in body["error"].lower()
-        assert body["error"] != "Data temporarily unavailable"
-        assert "라이브" in body["error_kr"]
-        assert body["retry_after"] == 60
-
-
 class TestDiscoverFreshTtlBump:
     """DISCOVER_FRESH_TTL must be at least 1 hour so a cached payload
     written at the top of the hour still classifies as ``fresh`` mid-hour
@@ -60,95 +37,6 @@ class TestDiscoverFreshTtlBump:
 
 # ══════════════════════════════════════════════════════════════════════
 # Bug #9 — Watchlist range_52w
-# ══════════════════════════════════════════════════════════════════════
-
-
-class TestWatchlistRange52W:
-    def _seed(self, app, user_id, ticker, signal_data):
-        from extensions import db
-        from models import Watchlist, SignalCache
-        with app.app_context():
-            db.session.add(Watchlist(user_id=user_id, ticker=ticker, note=""))
-            db.session.add(SignalCache(
-                ticker=ticker,
-                data_json=json.dumps(signal_data),
-            ))
-            db.session.commit()
-
-    def test_kr_ticker_range_52w_published(self, client, auth_user, app):
-        """005930.KS — KIS history feeds snapshot.week52_high/low, which
-        watchlist serializer now surfaces as range_52w: [lo, hi]."""
-        self._seed(app, auth_user["id"], "005930.KS", {
-            "name": "삼성전자",
-            "currency": "KRW",
-            "is_korean": True,
-            "price_display": "₩53,700",
-            "snapshot": {
-                "week52_low": 53700,
-                "week52_high": 291500,
-                "currency": "KRW",
-            },
-        })
-        with patch("routes.watchlist.overlay_prices", return_value={}):
-            r = client.get("/api/watchlist")
-        assert r.status_code == 200
-        items = r.get_json()["watchlist"]
-        assert len(items) == 1
-        # KR = integer (dp=0)
-        assert items[0]["range_52w"] == [53700, 291500]
-
-    def test_us_ticker_range_52w_published(self, client, auth_user, app):
-        self._seed(app, auth_user["id"], "AAPL", {
-            "name": "Apple Inc.",
-            "currency": "USD",
-            "is_korean": False,
-            "price_display": "$182.34",
-            "snapshot": {
-                "week52_low": 164.08,
-                "week52_high": 237.49,
-                "currency": "USD",
-            },
-        })
-        with patch("routes.watchlist.overlay_prices", return_value={}):
-            r = client.get("/api/watchlist")
-        items = r.get_json()["watchlist"]
-        assert len(items) == 1
-        # USD = 2 dp
-        assert items[0]["range_52w"] == [164.08, 237.49]
-
-    def test_missing_bounds_returns_none(self, client, auth_user, app):
-        """No week52 in snapshot → range_52w stays None (UI renders "—").
-        Never fabricated from the current price."""
-        self._seed(app, auth_user["id"], "TSLA", {
-            "name": "Tesla, Inc.",
-            "currency": "USD",
-            "is_korean": False,
-            "price_display": "$251.10",
-            # snapshot absent entirely
-        })
-        with patch("routes.watchlist.overlay_prices", return_value={}):
-            r = client.get("/api/watchlist")
-        items = r.get_json()["watchlist"]
-        assert len(items) == 1
-        assert items[0]["range_52w"] is None
-
-    def test_inverted_or_zero_bounds_rejected(self, client, auth_user, app):
-        """Defensive: a snapshot with low > high or any 0 bound is
-        rejected — we never publish a sentinel/garbage range as truth."""
-        self._seed(app, auth_user["id"], "MSFT", {
-            "name": "Microsoft Corporation",
-            "currency": "USD",
-            "is_korean": False,
-            "snapshot": {"week52_low": 500, "week52_high": 100},
-        })
-        with patch("routes.watchlist.overlay_prices", return_value={}):
-            r = client.get("/api/watchlist")
-        items = r.get_json()["watchlist"]
-        assert items[0]["range_52w"] is None
-
-
-# ══════════════════════════════════════════════════════════════════════
-# Bug #8 — Snapshot fundamentals data-source hint
 # ══════════════════════════════════════════════════════════════════════
 
 

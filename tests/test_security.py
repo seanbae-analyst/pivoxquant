@@ -350,33 +350,6 @@ class TestCSRFSessionBinding:
 # ── S#1 / S#3 / S#5: new rate-limit coverage (2026-05-26 security-agent) ─────
 
 class TestNewRateLimits:
-    def test_counterfactual_is_public_and_rate_limited(
-        self, raw_client, enable_rate_limit
-    ):
-        """S#1: /api/simulate/counterfactual stays PUBLIC (no auth redirect /
-        401) but is throttled at 20/min to protect the FMP quota. The 21st
-        unauthenticated request in a window must 429."""
-        params = "?ticker=AAPL&start_date=2020-01-01&amount=1000"
-        # First call must NOT be an auth wall (public viral what-if).
-        first = raw_client.get("/api/simulate/counterfactual" + params)
-        assert first.status_code not in (401, 302), (
-            f"counterfactual must stay public, got {first.status_code}: {first.data!r}"
-        )
-        last = first
-        for _ in range(25):
-            last = raw_client.get("/api/simulate/counterfactual" + params)
-            if last.status_code == 429:
-                break
-        assert last.status_code == 429, (
-            "counterfactual did not throttle within 26 requests "
-            f"(last status {last.status_code}) — 20/min limit not applied"
-        )
-
-    # NOTE: test_google/kakao_oauth_start_rate_limited (S#3) removed from this
-    # commit — the auth.py @auth_rate_limit change is parked with the parallel
-    # viral/referral feature work (interleaved in routes/auth.py). Re-add when
-    # that auth.py change lands.
-
     def test_nps_submission_rate_limited(
         self, raw_client, make_user, enable_rate_limit
     ):

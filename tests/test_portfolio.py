@@ -487,20 +487,6 @@ class TestSellPosition:
 
 # ── GET /api/portfolio/analytics ────────────────────────────────────────────
 
-class TestAnalytics:
-    def test_analytics_empty(self, client, auth_user, mock_engine):
-        mock_engine.portfolio_analytics.return_value = {"total": 0}
-        r = client.get("/api/portfolio/analytics")
-        assert r.status_code == 200
-        assert r.get_json() == {"total": 0}
-
-    def test_analytics_unauthenticated(self, client):
-        r = client.get("/api/portfolio/analytics")
-        assert r.status_code == 401
-
-
-# ── GET /api/portfolio/history ──────────────────────────────────────────────
-
 class TestHistory:
     def test_history_empty_portfolio_returns_empty_list(self, client, auth_user):
         r = client.get("/api/portfolio/history")

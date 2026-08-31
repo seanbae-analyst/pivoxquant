@@ -4,94 +4,33 @@
  * TopBar — PivoxQuant editorial shell header, Vantablack variant.
  *
  * Hosts:
- *   - Search trigger (opens <SearchCommandMenu/> via Cmd+K).
  *   - <NotificationDropdown/> — Bronze-accent bell.
  *   - <ProfileDropdown/> — Bronze-outline avatar with tier chip.
+ *
+ * The Cmd+K palette that used to lead this bar is gone with the surfaces it
+ * searched: its stock results only ever routed to /detail/[ticker], and its
+ * page list is now shorter than the sidebar it duplicated.
  *
  * Height 56px, ink background to blend seamlessly into the new
  * full-screen dashboard shell. Single ivory hairline at the bottom.
  */
 
-import { useSyncExternalStore } from "react";
-import { Search } from "lucide-react";
-import { SearchCommandMenu, openSearchCommand } from "@/components/ui/search-command";
 import { NotificationDropdown } from "@/components/ui/notification-dropdown";
 import { ProfileDropdown } from "@/components/ui/profile-dropdown";
 
-// UA detection is a static client-only fact; no real subscription.
-const noopSubscribe = () => () => {};
-const getIsMacSnapshot = (): boolean => {
-  if (typeof navigator === "undefined") return false;
-  return /mac/i.test(navigator.userAgent);
-};
-const getIsMacServerSnapshot = () => false;
-
 export function TopBar() {
-  const isMac = useSyncExternalStore(
-    noopSubscribe,
-    getIsMacSnapshot,
-    getIsMacServerSnapshot,
-  );
-
   return (
-    <>
-      <header
-        className="relative z-50 flex h-14 items-center justify-between gap-4 px-4 md:px-6"
-        style={{
-          background: "var(--pq-ink)",
-          borderBottom: "0.5px solid var(--pq-ivory-line)",
-        }}
-      >
-        {/* ── Search trigger (opens command palette) ──
-            FINDING-020: rounded-full → rounded (4px). §0 forbids pill/full
-            radius in the editorial tone; only the avatar stays circular. */}
-        <button
-          type="button"
-          onClick={() => openSearchCommand()}
-          aria-label="Find a ticker, an artifact, or a page"
-          // 2026-05-17 wave C-3 P2: h-9 = 36px is below Apple HIG / Material 44px
-          // minimum tap target — small but persistent miss-tap source on mobile
-          // top bar. Bump to h-11 (44px).
-          className="flex h-11 w-full max-w-[440px] items-center gap-3 rounded px-4 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
-          style={{
-            border: "0.5px solid rgba(245, 240, 232, 0.12)",
-            background: "rgba(255, 255, 255, 0.02)",
-          }}
-        >
-          <Search
-            className="h-[14px] w-[14px] shrink-0"
-            style={{ color: "var(--pq-bronze)" }}
-          />
-          {/* FINDING-039: brand-voice placeholder, not generic "Search …". */}
-          <span
-            className="flex-1 text-sm font-serif"
-            style={{
-              color: "rgba(245, 240, 232, 0.45)",
-            }}
-          >
-            Find a ticker, an artifact, a page…
-          </span>
-          <kbd
-            className="hidden md:inline-flex rounded px-1.5 py-0.5 font-mono text-pq-eyebrow"
-            style={{
-              border: "0.5px solid rgba(245, 240, 232, 0.15)",
-              color: "rgba(245, 240, 232, 0.55)",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {isMac ? "⌘K" : "Ctrl+K"}
-          </kbd>
-        </button>
-
-        {/* ── Right cluster ── */}
-        <div className="flex items-center gap-2 md:gap-1.5">
-          <NotificationDropdown />
-          <ProfileDropdown />
-        </div>
-      </header>
-
-      {/* Global command palette — mounted once, controlled by openSearchCommand() */}
-      <SearchCommandMenu />
-    </>
+    <header
+      className="relative z-50 flex h-14 items-center justify-end gap-4 px-4 md:px-6"
+      style={{
+        background: "var(--pq-ink)",
+        borderBottom: "0.5px solid var(--pq-ivory-line)",
+      }}
+    >
+      <div className="flex items-center gap-2 md:gap-1.5">
+        <NotificationDropdown />
+        <ProfileDropdown />
+      </div>
+    </header>
   );
 }

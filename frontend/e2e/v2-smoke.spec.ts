@@ -140,24 +140,24 @@ const SURFACES: readonly Surface[] = [
     },
   },
   {
-    name: "05-risk",
-    path: "/risk",
+    name: "05-mirror",
+    path: "/mirror",
     needsAuth: true,
     assert: async (page) => {
       await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
-    name: "06-signals",
-    path: "/signals",
+    name: "06-pre-trade",
+    path: "/pre-trade",
     needsAuth: true,
     assert: async (page) => {
       await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
     },
   },
   {
-    name: "07-reports",
-    path: "/reports",
+    name: "07-journal",
+    path: "/journal",
     needsAuth: true,
     assert: async (page) => {
       await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });

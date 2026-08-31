@@ -107,7 +107,8 @@ describe("NotificationDropdown", () => {
     expect(bell).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("menu")).toBeInTheDocument();
     expect(screen.getByText(/Threshold reached/)).toBeInTheDocument();
-    // KR footer link: "전체 보기" (was "View all" pre-Wave C-1).
-    expect(screen.getByText(/전체 보기/)).toBeInTheDocument();
+    // The "전체 보기" footer link went with /alerts in the 2026-08-31 prune —
+    // the dropdown is now the only place notifications are read.
+    expect(screen.queryByText(/전체 보기/)).not.toBeInTheDocument();
   });
 });

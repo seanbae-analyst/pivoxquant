@@ -1500,27 +1500,3 @@ Reply ONLY in this exact JSON format, nothing else:
                 logger.warning("Alpaca sector fallback failed: %s", exc)
         return result
 
-    # ── Pre-warm Cache ────────────────────────────────────────────────────────
-
-    def prefetch_discover_pool(self, tickers: list[str] = None):
-        """Pre-warm FMP cache for discover pool tickers using batch API calls.
-
-        This should be called once on app startup or before a discover scan.
-        Dramatically reduces FMP API calls by:
-        - Fetching profiles in batch (50 tickers = 1 call instead of 50)
-        - Fetching quotes in batch (50 tickers = 1 call instead of 50)
-        - Pre-building get_info() cache from components
-
-        Without prefetch: 50 tickers * 6 calls = 300 FMP calls
-        With prefetch:    2 batch + ~100 individual ratios/metrics = ~102 calls (first run)
-                          2 batch + 0 (cached from 24h TTL) = 2 calls (subsequent runs same day)
-        """
-        if tickers is None:
-            # Import discover pool from engine if not provided
-            try:
-                from services.quant.engine import QuantEngine
-                tickers = QuantEngine.DISCOVER_POOL
-            except ImportError:
-                logger.warning("Cannot import QuantEngine for discover pool")
-                return
-        fmp.prefetch_fundamentals(tickers)

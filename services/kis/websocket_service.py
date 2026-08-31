@@ -30,7 +30,8 @@ import os
 import re
 import threading
 import time
-from datetime import datetime
+
+from services.time_utils import observed_at_iso
 from typing import Callable, Dict, Optional, Set
 
 import requests
@@ -526,7 +527,7 @@ class KISWebSocketService:
                     "change_pct": change_pct,
                     "currency": "KRW",
                     "source": "kis_ws",
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": observed_at_iso(),
                 }
 
                 if self.on_price:

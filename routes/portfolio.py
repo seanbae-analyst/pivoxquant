@@ -14,7 +14,7 @@ from security import trade_rate_limit
 from services import fx_service, cache_service
 from services.error_responses import api_error
 from services.name_resolver import resolve_stock_name, canonical_display_name
-from services.container import engine, fetcher, realtime
+from services.container import fetcher, realtime
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth, legal_scrub_response
@@ -88,18 +88,16 @@ def _deprecated_singular(plural_hint: str):
 
 def _cache_ticker_async(app, ticker: str, capital: float):
     """Warm the SignalCache for a newly-added ticker without blocking the
-    HTTP response. engine.analyze() can take 10-30s when FMP/Alpaca are
-    slow (e.g. FMP 402 fallbacks), which would exceed the frontend
-    apiFetch timeout and surface as a false 'add failed' error even
-    though the Position row was already committed. Running it in a
-    background thread keeps add_position snappy and idempotent —
-    the cache miss on the next GET /portfolio call will simply fall
-    back to stored avg_cost defaults, exactly as cache_service already
-    handles."""
+    HTTP response. The warm is a quote lookup rather than the old
+    engine.analyze() run, so it is fast now, but it still hits FMP/KIS and
+    can stall on a 402 fallback. Running it in a background thread keeps
+    add_position snappy and idempotent — the cache miss on the next
+    GET /portfolio call will simply fall back to stored avg_cost defaults,
+    exactly as cache_service already handles."""
     def _run():
         with app.app_context():
             try:
-                cache_service.cache_ticker(ticker, capital, engine)
+                cache_service.cache_ticker(ticker)
             except Exception as e:
                 logger.error("Background cache_ticker failed %s: %s", ticker, e)
 
@@ -529,7 +527,7 @@ def edit_position(pid):
             en="Failed to update position", kr="포지션 업데이트에 실패했습니다.",
             code="POSITION_UPDATE_FAILED", status=500,
         )
-    cache_service.cache_ticker(p.ticker, current_user.available_capital, engine)
+    cache_service.cache_ticker(p.ticker)
     return jsonify({"ok": True})
 
 
@@ -1095,33 +1093,6 @@ def set_capital():
             code="CAPITAL_UPDATE_FAILED", status=500,
         )
     return jsonify({"ok": True, "capital_usd": cap_usd, "capital_krw": cap_krw})
-
-
-@portfolio_bp.route("/analytics")
-@api_auth
-@legal_scrub_response
-def portfolio_analytics():
-    positions = Position.query.filter_by(user_id=current_user.id).all()
-
-    # Batch-load all SignalCache rows in a single query to avoid N+1.
-    tickers = [p.ticker for p in positions]
-    cache_map = {
-        c.ticker: c
-        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
-    } if tickers else {}
-
-    pl = []
-    for p in positions:
-        cached = cache_map.get(p.ticker)
-        sd = cache_service.safe_cache_blob(cached)
-        pl.append({
-            "ticker": p.ticker,
-            "name": canonical_display_name(sd.get("name"), p.ticker),
-            "shares": p.shares,
-            "market_value": sd.get("price", p.avg_cost) * p.shares,
-            "sector": sd.get("sector", "Unknown"),
-        })
-    return jsonify(engine.portfolio_analytics(pl, current_user.available_capital))
 
 
 # ── Frontend-friendly aliases (added 2026-04-22) ──────────────────────────────
@@ -2141,135 +2112,3 @@ def portfolio_history():
 #
 # 2026-05-19 (P2 #11): added per mockup spec
 # `frontend/src/app/(dashboard)/portfolio/_v2/page-v2.tsx:309`.
-
-@portfolio_bp.route("/reconcile", methods=["POST"])
-@api_auth
-@trade_rate_limit
-def reconcile_positions():
-    """Sync positions from any connected broker (KIS preferred, then Alpaca).
-
-    Response (200)::
-
-        {
-          "ok":         true,
-          "added":      [..tickers..],
-          "updated":    [..tickers..],
-          "removed":    [..tickers..],
-          "synced_at":  "2026-05-19T10:30:00Z",
-          "broker":     "kis" | "alpaca",
-          "available_cash":     float,
-          "total_value":        float
-        }
-
-    Errors
-      * 404 NO_BROKER_CONNECTION — no broker linked.
-      * 502 SYNC_FAILED         — broker reachable but errored.
-    """
-    from models import BrokerConnection
-    from services.broker.user_kis_service import (
-        UserKISError,
-        UserKISService,
-    )
-
-    user_id = current_user.id
-
-    # Inventory active connections, KIS first.
-    try:
-        connections = (
-            BrokerConnection.query
-            .filter_by(user_id=user_id, is_active=True)
-            .all()
-        )
-    except Exception as exc:
-        logger.error("reconcile: connection lookup failed user_id=%s: %s",
-                     user_id, exc)
-        return api_error(
-            en="broker_lookup_failed",
-            kr="브로커 연결 정보를 조회할 수 없습니다.",
-            status=500,
-        )
-
-    if not connections:
-        return jsonify({
-            "ok":      False,
-            "error":   "연결된 브로커가 없습니다.",
-            "code":    "NO_BROKER_CONNECTION",
-        }), 404
-
-    # Snapshot existing tickers BEFORE the sync so we can report removed.
-    try:
-        before = {
-            p.ticker for p in
-            Position.query.filter_by(user_id=user_id).filter(Position.shares > 0).all()
-        }
-    except Exception:
-        before = set()
-
-    kis_conn = next((c for c in connections if c.broker == "kis"), None)
-
-    if kis_conn is not None:
-        try:
-            service = UserKISService(user_id, connection=kis_conn)
-        except UserKISError as exc:
-            return jsonify({
-                "ok":    False,
-                "error": exc.message,
-                "code":  exc.code,
-            }), exc.http_status
-
-        # Tier cap (2026-05-22): Free 티어(또는 tier 미설정)는 총 3 포지션까지만
-        # 보유 가능. reconcile/broker sync가 add_position(L282-291) 등과 동일한
-        # cap을 우회하지 못하도록 신규 insert를 cap까지만 허용한다. 기존 포지션
-        # upsert(shares/avg_cost 갱신)는 cap과 무관하게 항상 허용.
-        # effective_tier 사용 — DEV_PREMIUM_EMAILS bypass와 일관.
-        max_new_positions = None
-        if getattr(current_user, "effective_tier", None) in (None, "free"):
-            FREE_POSITION_CAP = 3
-            held = Position.query.filter_by(user_id=user_id).filter(
-                Position.shares > 0
-            ).count()
-            max_new_positions = max(FREE_POSITION_CAP - held, 0)
-
-        result = service.sync_to_db(max_new_positions=max_new_positions)
-        if not result.get("ok"):
-            return jsonify({
-                "ok":    False,
-                "error": result.get("error", "동기화에 실패했습니다."),
-                "code":  result.get("code", "SYNC_FAILED"),
-            }), 502
-
-        try:
-            after = {
-                p.ticker for p in
-                Position.query.filter_by(user_id=user_id).filter(Position.shares > 0).all()
-            }
-        except Exception:
-            after = set()
-        removed = sorted(before - after)
-
-        capped = result.get("capped", []) or []
-        payload = {
-            "ok":             True,
-            "broker":         "kis",
-            "added":          result.get("added", []),
-            "updated":        result.get("updated", []),
-            "removed":        removed,
-            "synced_at":      datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "available_cash": result.get("available_cash", 0.0),
-            "total_value":    result.get("total_value", 0.0),
-        }
-        if capped:
-            # Partial import — free 티어 cap에 걸려 일부 신규 포지션을 건너뜀.
-            payload["capped"] = capped
-            payload["capped_count"] = len(capped)
-            payload["code"] = "TIER_LIMIT_PARTIAL"
-            payload["message"] = (
-                "Free plan limited to 3 positions. Upgrade for broker sync/unlimited."
-            )
-        return jsonify(payload), 200
-
-    return jsonify({
-        "ok":    False,
-        "error": "지원되는 브로커가 연결되지 않았습니다.",
-        "code":  "NO_BROKER_CONNECTION",
-    }), 404

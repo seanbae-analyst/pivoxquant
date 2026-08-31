@@ -57,8 +57,6 @@ ALLOWED_FILES = {
     "services/kis/websocket_service.py",
     # QuantEngine.analyze() emits a real `price` (numeric) alongside
     # `price_display`. Downstream routes (routes/quant.py, routes/discover.py,
-    # routes/signals.py) consume these dicts and apply price_overlay.
-    "services/quant/engine.py",
 }
 
 

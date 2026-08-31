@@ -289,12 +289,59 @@ def save_signal(ticker: str, data: dict):
         db.session.commit()
 
 
-def cache_ticker(ticker: str, capital: float, engine):
-    """Analyze and cache a single ticker."""
+def cache_ticker(ticker: str) -> None:
+    """Warm the SignalCache row for one ticker.
+
+    Until 2026-08-31 this ran ``QuantEngine.analyze()`` and stored a full
+    4-pillar scoring blob. The engine is gone with the surfaces that read
+    those scores; what still reads this cache — the Portfolio surface — only
+    needs identity and price: name, price, price_display, currency,
+    is_korean, sector. So the warm path is now a metadata lookup, not an
+    analysis run, which also drops it from 10-30s to one quote call.
+
+    Silent on failure by design: a cache miss makes the Portfolio read fall
+    back to the stored avg_cost, exactly as before.
+    """
     try:
-        r = engine.analyze(ticker, capital)
-        if r:
-            save_signal(ticker, r)
+        from services.container import fetcher
+
+        row = fetcher.quick_lookup(ticker)
+        if not row or not row.get("ok"):
+            return
+
+        from services.price_overlay import parse_price_display
+
+        # `price` is the numeric field every reader prefers; `price_display`
+        # is the pre-formatted string. When the quote path returned only the
+        # display string, recover the number from it rather than storing a
+        # row whose numeric field is None (test_price_display_fallback_present
+        # pins this invariant repo-wide).
+        price = row.get("price")
+        display = row.get("price_display")
+        if price is None:
+            price = parse_price_display(display)
+
+        blob = {
+            "ticker":        row.get("ticker", ticker),
+            "name":          row.get("name"),
+            "price":         price,
+            "price_display": display,
+            "currency":      row.get("currency"),
+            "is_korean":     row.get("is_korean"),
+        }
+
+        # Sector is only used for the allocation donut; a snapshot call is
+        # more expensive than the quote, so a miss leaves the field absent
+        # and the donut buckets the position under "Unknown" as it already
+        # does for any uncached ticker.
+        try:
+            snap = fetcher.get_stock_snapshot(ticker)
+            if snap and snap.get("sector"):
+                blob["sector"] = snap["sector"]
+        except Exception:
+            logger.debug("cache_ticker: sector lookup failed for %s", ticker, exc_info=True)
+
+        save_signal(ticker, blob)
     except Exception as e:
         logger.error("Cache update failed %s: %s", ticker, e)
 

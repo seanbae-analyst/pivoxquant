@@ -66,14 +66,6 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
     declared: [0.48, 0.3, 0.45, 0.55, 0.45, 0.55, 0.75, 0.65, 0.6],
     observed: [0.55, 0.15, 0.85, 0.8, 0.3, 0.6, 0.5, 0.7, 0.6],
   },
-  twin: {
-    week_ending: "2026-06-14",
-    user_return_pct: 1.1,
-    twin_return_pct: 3.3,
-    diff_pct: 2.2,
-    user_trades_count: 2,
-    twin_trades_count: 3,
-  },
 };
 
 /* ── Consistent demo book — a 성장형→균형형 investor, mixed KR+US, 7 holdings

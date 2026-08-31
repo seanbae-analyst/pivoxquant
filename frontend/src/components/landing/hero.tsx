@@ -36,7 +36,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowRight, FileText } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useT } from "@/lib/locale";
 
 const MarketTicker = dynamic(
@@ -141,19 +141,6 @@ export function Hero() {
             >
               {t("landing.hero.ctaPrimary")}
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-            </Link>
-            <Link
-              href="/sample-reports/weekly-memo"
-              target="_blank"
-              rel="noopener"
-              className="inline-flex items-center gap-2 rounded-[2px] border px-6 py-3.5 text-sm font-medium tracking-wide transition-colors hover:bg-[var(--pq-ivory-line-faint)]"
-              style={{
-                borderColor: "rgba(var(--pq-bronze-wash-rgb), 0.5)",
-                color: "var(--pq-bronze-light)",
-              }}
-            >
-              <FileText className="h-4 w-4" />
-              {t("landing.hero.ctaSecondary")}
             </Link>
           </div>
 

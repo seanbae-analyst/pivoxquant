@@ -1,123 +1,24 @@
 {
   "nav": {
-    "home": "홈",
-    "portfolio": "포트폴리오",
-    "market": "시장",
-    "signals": "시그널",
-    "discover": "탐색",
-    "watchlist": "관심종목",
-    "ai": "AI Assistant",
-    "risk": "리스크",
-    "alerts": "알림",
-    "reports": "나의 리포트",
-    "settings": "설정",
-    "upgrade": "Pro 업그레이드"
+    "home": "홈"
   },
   "topbar": {
-    "searchPlaceholder": "종목, 기능 검색...",
-    "searchTicker": "티커 검색 (예: AAPL, TSLA)...",
     "notifications": "알림",
     "observations": "관측 기록",
     "markAllRead": "모두 읽음으로",
-    "noNotifications": "알림이 없습니다",
     "noAlertsYet": "아직 알림이 없습니다. 시그널이 관측되면 여기에 표시됩니다.",
-    "unableToLoad": "알림을 불러올 수 없습니다",
-    "viewAll": "전체 보기",
-    "loading": "로딩 중...",
-    "searching": "검색 중...",
-    "noResults": "'{query}'에 대한 결과 없음",
-    "typeToSearch": "티커 심볼을 입력하세요"
-  },
-  "a11y": {
-    "bell": "알림",
-    "profile": "프로필 메뉴",
-    "search": "검색",
-    "menu": "메뉴",
-    "openMenu": "메뉴 열기"
-  },
-  "common": {
-    "add": "추가",
-    "edit": "편집",
-    "delete": "삭제",
-    "cancel": "취소",
-    "save": "저장",
-    "confirm": "확인",
-    "close": "닫기",
-    "back": "뒤로",
-    "next": "다음",
-    "submit": "제출",
-    "search": "검색",
-    "filter": "필터",
-    "export": "내보내기",
-    "import": "가져오기",
-    "refresh": "새로고침",
-    "loading": "로딩 중...",
-    "error": "오류",
-    "retry": "재시도",
-    "viewAll": "전체 보기",
-    "seeMore": "더 보기",
-    "learnMore": "자세히",
-    "getStarted": "시작하기",
-    "signIn": "로그인",
-    "signOut": "로그아웃",
-    "signUp": "회원가입",
-    "settings": "설정"
+    "unableToLoad": "알림을 불러올 수 없습니다"
   },
   "auth": {
     "login": {
-      "title": "다시 오신 것을 환영합니다",
-      "subtitle": "AI 퀀트 리서치 툴",
       "continueWithGoogle": "Google로 계속",
       "continueWithKakao": "Kakao로 계속",
       "noAccount": "계정이 없으신가요?",
       "createAccount": "계정 만들기"
-    },
-    "signup": {
-      "title": "시작하기",
-      "subtitle": "AI 퀀트 리서치 플랫폼",
-      "haveAccount": "이미 계정이 있으신가요?",
-      "signIn": "로그인"
     }
   },
   "dashboard": {
-    "greeting": {
-      "morning": "좋은 아침이에요",
-      "afternoon": "좋은 오후예요",
-      "evening": "좋은 저녁이에요"
-    },
-    "metrics": {
-      "portfolioValue": "포트폴리오 가치",
-      "totalPnl": "총 손익",
-      "riskScore": "리스크 점수",
-      "noPositionsYet": "아직 포지션이 없습니다",
-      "positions": "개 포지션"
-    },
-    "positions": {
-      "title": "내 포지션",
-      "total": "개",
-      "noPositions": "아직 포지션이 없습니다",
-      "noPositionsDesc": "첫 번째 포지션을 추가하여 포트폴리오 성과를 추적해 보세요.",
-      "addPosition": "포지션 추가",
-      "viewPortfolio": "포트폴리오 보기",
-      "shares": "주"
-    },
-    "signals": {
-      "title": "주요 시그널",
-      "noSignals": "시그널 없음",
-      "noSignalsDesc": "포지션을 추가하면 AI 시그널을 확인할 수 있습니다.",
-      "viewAllSignals": "전체 시그널 보기",
-      "allSignals": "전체 시그널",
-      "positive": "POSITIVE",
-      "negative": "NEGATIVE",
-      "neutral": "NEUTRAL",
-      "generatedAt": "생성 시각"
-    },
     "home": {
-      "title": "대시보드",
-      "portfolioValue": "포트폴리오 가치",
-      "totalReturn": "총 수익",
-      "todayPnl": "오늘 손익",
-      "positions": "보유 종목",
       "srTitle": "홈 — 포트폴리오 대시보드"
     },
     "deskCheckin": {
@@ -131,7 +32,7 @@
       "topMoverPrefix": "오늘 가장 큰 움직임은",
       "topMoverSuffix": "였어요.",
       "addFirst": "첫 종목 추가 →",
-      "viewRisk": "리스크 · 집중도 보기 →"
+      "viewMirror": "거울 보기 →"
     },
     "moodNudge": {
       "ariaLabel": "기분 체크",
@@ -145,19 +46,7 @@
       "coachingExcited": "기분 좋은 날일수록 한 박자 쉬어가요. 들뜸은 판단을 서두르게 만들 수 있어요 — 오늘 본 건 내일 다시 봐도 늦지 않아요.",
       "coachingAnxious": "불안한 날엔 화면을 잠깐 닫는 것도 방법이에요. 시장은 내일도 열려요. 지금은 관찰만, 판단은 차분해진 뒤에 해도 돼요."
     },
-    "earningsCard": {
-      "noEarningsNext7d": "다음 7일 내 예정된 실적 발표 없음.",
-      "noMoreQueued": "추가 예정 항목 없음."
-    },
     "portfolio": {
-      "title": "포트폴리오",
-      "addPosition": "종목 추가",
-      "noPositions": "보유 종목이 없습니다",
-      "noPositionsDesc": "첫 번째 종목을 추가해 포트폴리오를 시작하세요",
-      "totalValue": "총 가치",
-      "unrealizedPnl": "미실현 손익",
-      "realizedPnl": "실현 손익",
-      "allocation": "비중",
       "kisConnectRequired": "KIS broker 연결 필요",
       "kisSyncConfirm": "KIS 계좌에서 보유 종목/평단/수량을 동기화합니다. 진행할까요?",
       "kisSyncResult": "{added}개 추가 · {updated}개 업데이트 · {removed}개 제거",
@@ -165,74 +54,15 @@
       "kisNoBroker": "연결된 브로커가 없습니다.",
       "kisSyncFailed": "브로커 동기화에 실패했습니다. 잠시 후 재시도해 주세요.",
       "kisSyncError": "동기화 중 오류가 발생했습니다."
-    },
-    "market": {
-      "title": "시장",
-      "usMarket": "미국 시장",
-      "krMarket": "한국 시장",
-      "indices": "지수",
-      "gainers": "상승 종목",
-      "losers": "하락 종목",
-      "volume": "거래량"
-    },
-    "discover": {
-      "title": "탐색",
-      "scanStocks": "종목 스캔",
-      "topRated": "상위 종목",
-      "noResults": "검색 결과가 없습니다"
-    },
-    "watchlist": {
-      "title": "관심종목",
-      "addStock": "종목 추가",
-      "empty": "관심종목이 비어 있습니다",
-      "emptyDesc": "관심 있는 종목을 추가해 모니터링하세요",
-      "remove": "삭제"
-    },
-    "risk": {
-      "title": "리스크",
-      "riskDefense": "리스크 방어",
-      "layers": "레이어",
-      "var": "VaR",
-      "drawdown": "최대 낙폭",
-      "sharpe": "샤프 비율",
-      "status": "상태",
-      "safe": "안전",
-      "warning": "경고",
-      "critical": "위험"
-    },
-    "alerts": {
-      "title": "알림",
-      "createAlert": "알림 만들기",
-      "noAlerts": "알림이 없습니다",
-      "price": "가격",
-      "signal": "시그널",
-      "risk": "리스크",
-      "trade": "거래"
-    },
-    "settings": {
-      "title": "설정",
-      "profile": "프로필",
-      "broker": "브로커 연결",
-      "notifications": "알림 설정",
-      "security": "보안",
-      "plan": "구독 플랜",
-      "connectKIS": "KIS 연결",
-      "deleteAccount": "계정 삭제"
     }
   },
   "landing": {
     "hero": {
-      "badge": "AI 퀀트 리서치 툴",
-      "title": "데이터로 관찰하세요",
-      "subtitle": "40개 퀀트 모델, 7-레이어 리스크 방어, AI 포트폴리오 분석. 미국·한국 주식 통합 관리.",
-      "cta": "무료로 시작하기",
-      "learnMore": "자세히 보기",
       "eyebrow": "PivoxQuant · 거래 전 거울",
       "h1Part1": "부자로 만들어 준다고",
       "h1Italic": "약속하지 않습니다.",
       "description": "고회전 매매가 매년 당신 수익을 깎는다는 건 데이터로 분명합니다 — 저회전 대비 연 7%p. PivoxQuant는 당신의 거래 패턴을 거울처럼 보여주고, 매수·매도 직전 한 번 멈춰 세웁니다. 채점도 추천도 없이. 관측 자료이며 투자 권유가 아닙니다.",
       "ctaPrimary": "내 거울 보기",
-      "ctaSecondary": "샘플 보기",
       "disclaimer": "투자 권유 아님. 정보 제공 전용 리서치. 과거 실적은 미래 수익을 보장하지 않습니다."
     },
     "splash": {
@@ -243,81 +73,20 @@
       "eyebrow": "투자자 유형 · 일부 표시",
       "heading": "당신의 투자자 언어로\n말하는 거울.",
       "description": "온보딩 20문항이 당신을 투자자 유형 중 하나로 분류합니다. Drift가 감지되면 페르소나는 자동으로 재조정됩니다.",
-      "sampleReport": "샘플 리포트",
       "alsoAvailable": "Income, Quant 유형도 포함됩니다. 데스크는 당신이 선택한 유형에 맞게 모든 artifact를 재구성합니다.",
-      "viewAll": "투자자 유형 전체 보기"
+      "takeQuiz": "20문항 진단 받기"
     },
     "topNav": {
-      "brandTagline": "· Living Mirror",
       "loginLink": "로그인",
       "goToDesk": "데스크로",
       "meetCfo": "내 거울 보기",
       "openDesk": "데스크 열기",
-      "openMenu": "메뉴 열기",
-      "groups": {
-        "livingCfo": {
-          "label": "Living Mirror",
-          "footnote": "나만의 리서치 데스크 구조."
-        },
-        "personas": {
-          "label": "Personas",
-          "footnote": "투자자 유형. 하나의 데스크가 모두를 지원합니다."
-        },
-        "signature": {
-          "label": "Signature",
-          "footnote": "데스크를 정의하는 4가지 시그니처 워크플로우."
-        },
-        "pricing": {
-          "label": "요금제",
-          "footnote": "4단계 요금제. 거래 수익과 무관하게 운영됩니다."
-        },
-        "docs": {
-          "label": "문서",
-          "footnote": "이용약관, 개인정보처리방침, 비투자권유 경계."
-        }
-      }
-    },
-    "stats": {
-      "quantModels": "퀀트 모델",
-      "riskDefense": "리스크 방어",
-      "markets": "시장",
-      "mdd": "MDD (백테스트, 과거 데이터)",
-      "mddDisclaimer": "과거 실적은 미래 수익을 보장하지 않습니다."
-    },
-    "pricing": {
-      "title": "요금제",
-      "free": "무료",
-      "pro": "Pro",
-      "premium": "Premium",
-      "elite": "Elite",
-      "perMonth": "/월",
-      "proPrice": "KRW 9,900",
-      "premiumPrice": "KRW 19,900",
-      "elitePrice": "KRW 29,900",
-      "startFree": "무료 시작",
-      "startPro": "Pro 시작",
-      "startPremium": "Premium 시작",
-      "startElite": "Elite 시작"
+      "openMenu": "메뉴 열기"
     },
     "cta": {
       "signUp": "회원가입",
-      "logIn": "로그인",
-      "tryWhatIf": "What-If 시뮬레이터 체험",
-      "readSampleReports": "샘플 리포트 보기"
+      "logIn": "로그인"
     }
-  },
-  "errors": {
-    "generic": "오류가 발생했습니다. 다시 시도해 주세요.",
-    "network": "네트워크 연결을 확인해 주세요.",
-    "notFound": "페이지를 찾을 수 없습니다.",
-    "unauthorized": "로그인이 필요합니다.",
-    "forbidden": "접근 권한이 없습니다.",
-    "serverError": "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
-    "somethingWrong": "오류가 발생했습니다",
-    "tryRefresh": "예상치 못한 오류가 발생했습니다. 페이지를 새로고침해 보세요.",
-    "tryAgain": "다시 시도",
-    "pageNotFound": "페이지를 찾을 수 없습니다",
-    "goHome": "홈으로 이동"
   },
   "errorBoundary": {
     "title": "오류가 발생했습니다",
@@ -331,136 +100,10 @@
     "essentialOnly": "필수만",
     "acceptAll": "전체 허용"
   },
-  "tierGate": {
-    "unlockPro": "Pro로 잠금 해제",
-    "unlockPremium": "Premium으로 잠금 해제",
-    "upgradeDesc": "이 기능을 사용하려면 플랜을 업그레이드하세요.",
-    "viewPlans": "요금제 보기"
-  },
-  "empty": {
-    "default": "데이터가 없습니다",
-    "noData": "표시할 데이터가 없습니다",
-    "comingSoon": "준비 중입니다"
-  },
-  "modal": {
-    "addPosition": {
-      "title": "종목 추가",
-      "ticker": "티커",
-      "shares": "수량",
-      "avgPrice": "평균 매수가",
-      "currency": "통화"
-    },
-    "editPosition": {
-      "title": "종목 수정"
-    },
-    "deletePosition": {
-      "title": "종목 삭제",
-      "description": "이 종목을 포트폴리오에서 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
-    },
-    "addAlert": {
-      "title": "알림 만들기",
-      "ticker": "티커",
-      "condition": "조건",
-      "value": "값"
-    }
-  },
-  "disclaimer": {
-    "text": "본 서비스는 투자 정보 제공 목적으로만 운영됩니다. 투자 권유가 아니며, 투자 결과에 대한 책임은 투자자 본인에게 있습니다.",
-    "short": "투자 정보 제공 전용 — 투자 권유 아님"
-  },
   "settings": {
-    "tabs": {
-      "account": "계정",
-      "subscription": "구독",
-      "connections": "연동",
-      "notifications": "알림",
-      "language": "언어"
-    },
-    "pageTitle": "설정",
-    "pageSubtitle": "계정, 플랜, 연동을 관리하세요",
-    "account": {
-      "title": "계정 정보",
-      "name": "이름",
-      "email": "이메일",
-      "joined": "가입일",
-      "loginMethod": "로그인 방법",
-      "investorType": "투자자 유형",
-      "retakeAssessment": "투자자 진단 다시 하기",
-      "takeAssessment": "투자자 진단 시작",
-      "retakeSubtitle": "투자자 프로필과 선호도를 업데이트하세요",
-      "takeSubtitle": "나만의 맞춤 투자자 프로필을 설정하세요",
-      "notSet": "미설정"
-    },
     "subscription": {
-      "title": "구독",
-      "activePlan": "구독 활성",
-      "freePlan": "무료 플랜 (기본 기능)",
-      "upgradeToPro": "Pro로 업그레이드",
-      "manage": "구독 관리",
       "renewsOn": "갱신일",
-      "cancelsOn": "해지 예정일",
-      "proFeatures": "Pro 플랜 혜택",
-      "proFeaturesList": [
-        "종목 무제한 트래킹",
-        "25+ 기술적 지표",
-        "AI Assistant 하루 10회 질문",
-        "전체 리스크 분석 대시보드",
-        "우선 시그널 처리"
-      ]
-    },
-    "connections": {
-      "title": "브로커 연동",
-      "kisName": "한국투자증권",
-      "kisDesc": "KIS API로 한국 주식 잔고를 자동 불러옵니다 (조회 전용)",
-      "connected": "연결됨",
-      "notConnected": "미연결",
-      "comingSoon": "출시 예정",
-      "connecting": "연결 중...",
-      "connect": "연결",
-      "cancel": "취소",
-      "apiKey": "API Key",
-      "apiSecret": "API Secret",
-      "brokerNote": "브로커 연동 시 포트폴리오 조회가 자동 동기화됩니다 (read-only)."
-    },
-    "language": {
-      "title": "언어",
-      "subtitle": "표시 언어를 선택하세요",
-      "korean": "한국어",
-      "english": "English",
-      "saved": "언어가 변경됐습니다"
-    },
-    "dangerZone": "계정 관리",
-    "signOut": "로그아웃",
-    "signingOut": "로그아웃 중...",
-    "deleteAccount": "계정 삭제",
-    "deleteAccountTitle": "계정 삭제",
-    "deleteAccountDesc": "보유 종목·관심목록·전달된 아티팩트가 모두 제거됩니다. 기본은 30일 유예이며, 그 기간 안에는 메일 링크로 직접 철회할 수 있습니다.",
-    "contactSupport": "고객지원 문의",
-    "cancelBtn": "취소",
-    "notifications": {
-      "title": "알림 설정",
-      "subtitle": "푸시, 이메일, 카카오톡 알림을 관리하세요",
-      "timeLabel": "발송 시간 (KST)",
-      "timeHelp": "매일 이 시간에 푸시가 발송됩니다 (KST 기준)",
-      "emailTitle": "이메일 알림",
-      "emailDesc": "Pro 이상 플랜에서 이용 가능",
-      "kakaoTitle": "카카오톡 알림",
-      "kakaoDesc": "Premium 플랜에서 곧 제공됩니다",
-      "enable": "활성화",
-      "disable": "비활성화",
-      "saving": "저장 중...",
-      "saved": "저장됨",
-      "notSupported": "이 브라우저는 푸시 알림을 지원하지 않습니다",
-      "permissionDenied": "브라우저 설정에서 알림 권한을 허용해 주세요",
-      "enableFirst": "먼저 푸시 알림을 활성화해 주세요",
-      "pushEnabled": "아침 브리핑 푸시가 활성화됐습니다",
-      "pushDisabled": "푸시 알림이 해제됐습니다",
-      "pushError": "알림 설정에 실패했습니다",
-      "emailEnabledSuccess": "이메일 알림이 활성화됐습니다",
-      "emailDisabledSuccess": "이메일 알림이 해제됐습니다",
-      "emailProRequired": "이메일 알림은 Pro 이상 플랜에서 이용할 수 있습니다",
-      "timeChanged": "발송 시간이 변경됐습니다",
-      "dismissAnytime": "알림은 언제든지 해제할 수 있습니다"
+      "cancelsOn": "해지 예정일"
     }
   },
   "brokerOnboarding": {
@@ -471,29 +114,12 @@
     "nextStep": "다음 단계로",
     "cancel": "취소",
     "note": "연결은 언제든지 설정 > 연동에서 변경할 수 있습니다.",
-    "badge": {
-      "connected": "연결됨",
-      "notConnected": "미연결",
-      "uploadNeeded": "업로드 필요"
-    },
     "kis": {
       "name": "한국투자증권",
-      "desc": "API 키로 자동 동기화",
-      "connect": "연결하기",
-      "connectBtn": "연결",
-      "connecting": "연결 중...",
       "sync": "동기화",
       "syncing": "동기화 중...",
       "disconnect": "해제",
-      "lastSync": "마지막 동기화",
-      "modalTitle": "한국투자증권 연결",
-      "modalSubtitle": "KIS 개발자 센터에서 발급받은 API 키를 입력하세요.",
-      "appKey": "앱키 (App Key)",
-      "appSecret": "시크릿 (App Secret)",
-      "accountNo": "계좌번호 (앞 8자리)",
       "accountNoHint": "정확히 8자리 숫자를 입력해주세요.",
-      "accountProd": "상품코드",
-      "helpLink": "앱키 발급 방법 안내",
       "connectSuccess": "한국투자증권이 연결됐습니다!",
       "connectError": "KIS 연결에 실패했습니다. 키와 계좌번호를 다시 확인해주세요.",
       "syncSuccess": "잔고를 동기화했습니다.",
@@ -505,156 +131,17 @@
     "manual": {
       "title": "직접 입력",
       "subtitle": "증권사 연결 없이 수동으로 관리",
-      "badge": "연동 없음",
       "description": "KIS를 쓰지 않거나 다른 증권사를 쓰신다면, 포지션을 직접 입력해서 관리할 수 있어요. 언제든 추가·삭제 가능합니다.",
       "cta": "수동으로 시작하기"
-    }
-  },
-  "whatIf": {
-    "badge": "타임머신",
-    "hero": "만약에 샀다면?",
-    "sub": "과거에 이 종목을 샀다면 지금 얼마?",
-    "tryIt": "타임머신 체험하기",
-    "form": {
-      "ticker": "종목",
-      "tickerPlaceholder": "티커 검색 (예: AAPL, NVDA)",
-      "startDate": "시작일",
-      "amount": "투자금액",
-      "currency": "통화",
-      "krw": "원",
-      "usd": "달러",
-      "recurring": "매수 방식",
-      "lumpSum": "일시 투자",
-      "monthly": "월 적립",
-      "weekly": "주 적립",
-      "calculate": "계산하기",
-      "calculating": "계산 중...",
-      "recalculate": "다시 계산"
     },
-    "result": {
-      "headline": "{date}에 {ticker}에 {amount} 샀다면",
-      "currentValue": "현재 가치",
-      "returnPct": "수익률",
-      "invested": "투자 원금",
-      "profit": "평가 손익",
-      "annualized": "연환산 수익률",
-      "duration": "투자 기간",
-      "days": "일",
-      "years": "년",
-      "vs": "vs {benchmark}",
-      "vsBenchmark": "S&P 500 대비",
-      "moreThanBench": "{amount} 더 벌었음",
-      "lessThanBench": "{amount} 덜 벌었음",
-      "chartTitle": "가치 성장 추이",
-      "milestones": "마일스톤",
-      "share": "공유",
-      "kakao": "카카오톡",
-      "twitter": "X (트위터)",
-      "saveImage": "이미지 저장",
-      "copyLink": "링크 복사",
-      "copied": "링크 복사됨",
-      "presets": "더 극적인 결과 보기",
-      "watermark": "pivoxquant.com/simulator/what-if"
-    },
-    "headlines": {
-      "legendary": "인생 역전 시나리오",
-      "crazy": "미친 수익률",
-      "strong": "2배 이상 달성",
-      "solid": "견조한 성장",
-      "flat": "박스권",
-      "negative": "대안 시나리오"
-    },
-    "errors": {
-      "noTicker": "종목을 선택해주세요",
-      "notFound": "티커를 찾을 수 없습니다. 예: AAPL, NVDA, TSLA",
-      "beforeListing": "이 종목은 해당 날짜에 상장 전이었어요",
-      "futureDate": "미래 날짜는 입력할 수 없습니다",
-      "amountRange": "금액은 1,000원 ~ 10억원 사이여야 합니다",
-      "dataUnavailable": "해당 데이터를 불러올 수 없습니다",
-      "generic": "잠시 후 다시 시도해주세요"
-    },
-    "disclaimer": {
-      "title": "면책 고지",
-      "ko": "본 시뮬레이션은 과거 데이터 기반 계산이며, 미래 수익을 보장하지 않습니다. 배당·세금·수수료는 반영되지 않습니다. 투자자문이 아닙니다.",
-      "en": "This simulation is based on past data only. Past performance does not guarantee future results. Dividends, taxes, and fees are not included. Not investment advice."
-    }
-  },
-  "reports": {
-    "title": "나의 리포트",
-    "subtitle": "AI가 당신을 위해 만든 리포트 라이브러리",
-    "empty": {
-      "title": "아직 리포트가 없어요",
-      "description": "첫 리포트는 매주 일요일에 도착합니다."
-    },
-    "filters": {
-      "type": "유형",
-      "period": "기간",
-      "typeAll": "전체",
-      "typeWeekly": "주간 메모",
-      "typeMorning": "아침 브리핑",
-      "typeEarnings": "실적 프리브리프",
-      "typeMonthly": "월간 카드",
-      "typeQuarterly": "분기 리뷰",
-      "typeRisk": "리스크 리포트",
-      "period30": "최근 30일",
-      "period90": "최근 90일",
-      "periodAll": "전체"
-    },
-    "card": {
-      "new": "NEW",
-      "download": "다운로드",
-      "preview": "미리보기"
-    },
-    "preview": {
-      "title": "리포트 미리보기",
-      "close": "닫기",
-      "download": "PDF 다운로드",
-      "share": "공유",
-      "shareKakao": "카카오톡",
-      "shareInsta": "인스타그램",
-      "notAvailable": "미리보기를 준비 중입니다"
-    },
-    "badge": {
-      "weeklyMemo": "주간 메모",
-      "earningsPrebrief": "실적 프리브리프",
-      "monthlyBrag": "월간 카드",
-      "quarterlyReview": "분기 리뷰",
-      "riskReport": "리스크 리포트",
-      "custom": "리포트"
-    },
-    "v1": {
-      "kicker": "PDF · 관측 아카이브",
-      "heading": "리포트",
-      "subtitle": "데스크가 제공할 수 있는 모든 리포트 — 주간 메모부터 연말 레터까지.",
-      "caption": "무료 티어 샘플은 공개; Pro·Premium 항목은 포트폴리오 기반으로 생성됩니다.",
-      "tierAll": "전체 티어",
-      "personaLabel": "페르소나",
-      "allPersonas": "전체 페르소나",
-      "sampleAvailable": "샘플 제공 중",
-      "lastGenerated": "마지막 생성 —",
-      "optimisedFor": "에 최적화됨",
-      "actions": {
-        "open": "열기",
-        "pdf": "PDF",
-        "upgradeTo": "업그레이드 →"
-      },
-      "footer": {
-        "artifacts": "개 리포트",
-        "tier": "티어",
-        "note": "PivoxQuant · 관측 아카이브 · 투자 조언 아님"
-      }
-    },
-    "v2": {
-      "eyebrow": "아카이브 · 거울",
-      "latestHeading": "방금 도착.",
-      "footNote": "PivoxQuant · 아카이브 · Volume IV · 투자 조언 아님"
-    }
+    "titleDormant": "보유 종목 추가",
+    "subtitleDormant": "보유 중인 종목을 직접 입력해 시작합니다. 나중에 언제든 추가하거나 고칠 수 있어요.",
+    "noteDormant": "증권사 자동 연결은 제공하지 않습니다. 포지션은 직접 입력합니다."
   },
   "profileMenu": {
     "ariaLabel": "프로필 메뉴",
     "myProfile": "내 프로필",
     "settings": "설정",
-    "billing": "결제 및 구독",
     "keyboardShortcuts": "키보드 단축키",
     "helpDocs": "도움말 및 문서",
     "signOut": "로그아웃",
@@ -662,78 +149,14 @@
     "shortcutsModalTitle": "키보드 단축키",
     "shortcutsKicker": "참고",
     "shortcuts": {
-      "openSearch": "검색 팔레트 열기",
       "goHome": "홈으로",
       "goPortfolio": "포트폴리오로",
-      "goWatchlist": "관심종목으로",
+      "goMirror": "거울로",
       "closeModal": "모달 닫기",
       "navList": "리스트 탐색",
       "select": "선택"
     },
     "close": "닫기"
-  },
-  "search": {
-    "placeholder": "티커, 페이지 검색…",
-    "ariaLabel": "티커 또는 페이지 검색",
-    "ariaClose": "닫기",
-    "ariaSearching": "검색 중",
-    "paletteAriaLabel": "검색 팔레트",
-    "unavailable": "검색을 일시적으로 사용할 수 없습니다",
-    "noMatches": "'{query}'에 대한 결과 없음",
-    "searching": "검색 중…",
-    "footerTagline": "관측 · 조회 · 열기",
-    "sections": {
-      "stocks": "종목",
-      "pages": "페이지",
-      "recent": "최근"
-    },
-    "pages": {
-      "home": "홈",
-      "homeHint": "대시보드 개요",
-      "portfolio": "포트폴리오",
-      "portfolioHint": "포지션 및 분석",
-      "watchlist": "관심종목",
-      "watchlistHint": "관측 종목",
-      "risk": "리스크",
-      "riskHint": "방어 상태",
-      "discover": "탐색",
-      "discoverHint": "유니버스 스캔",
-      "market": "시장",
-      "marketHint": "지수 및 매크로",
-      "alerts": "알림",
-      "alertsHint": "알림 로그",
-      "settings": "설정",
-      "settingsHint": "계정 및 브로커"
-    }
-  },
-  "alertsPage": {
-    "filters": {
-      "all": "전체",
-      "unread": "안 읽음",
-      "read": "읽음"
-    },
-    "table": {
-      "time": "시각",
-      "kind": "유형",
-      "title": "내용"
-    },
-    "actions": {
-      "markAllRead": "모두 읽음으로",
-      "clearAll": "모두 삭제",
-      "confirmClear": "확인 · 모두 삭제"
-    },
-    "toast": {
-      "marked": "모두 읽음 처리했습니다",
-      "markFailed": "읽음 처리에 실패했습니다",
-      "cleared": "모든 알림이 삭제됐습니다",
-      "clearFailed": "삭제에 실패했습니다"
-    },
-    "stats": {
-      "total": "전체",
-      "unread": "안 읽음",
-      "today": "오늘",
-      "thisWeek": "이번 주"
-    }
   },
   "settingsV1": {
     "toast": {
@@ -741,116 +164,11 @@
       "seedRangeUsd": "USD는 0 ~ {max} 범위여야 합니다",
       "seedRangeKrw": "KRW는 0 ~ {max} 범위여야 합니다",
       "seedSaved": "시드 자본이 저장됐습니다",
-      "seedFailed": "저장에 실패했습니다",
-      "billingPortalFailed": "결제 포털을 열 수 없습니다",
-      "kisSynced": "KIS 잔고를 동기화했습니다",
-      "kisSyncFailed": "동기화에 실패했습니다",
-      "kisDisconnected": "KIS 연결이 해제됐습니다",
-      "kisDisconnectFailed": "연결 해제에 실패했습니다",
-      "emailSaved": "이메일 설정이 저장됐습니다",
-      "emailSaveFailed": "이메일 설정 저장에 실패했습니다",
-      "pushNotSupported": "이 브라우저에서는 푸시 알림을 지원하지 않습니다",
-      "pushPermissionDenied": "알림 권한이 거부됐습니다",
-      "pushEnabled": "푸시 알림이 활성화됐습니다",
-      "pushDisabled": "푸시 알림이 해제됐습니다",
-      "pushUpdateFailed": "푸시 설정을 변경할 수 없습니다",
-      "emailEnabled": "이메일 알림이 활성화됐습니다",
-      "emailDisabled": "이메일 알림이 해제됐습니다",
-      "languageUpdated": "언어가 변경됐습니다"
-    },
-    "confirm": {
-      "kisDisconnect": "KIS 연결을 해제하시겠어요?"
+      "seedFailed": "저장에 실패했습니다"
     }
-  },
-  "portfolioModal": {
-    "addPosition": {
-      "errorRequired": "심볼, 수량, 가격이 모두 필요합니다",
-      "success": "포지션이 기록됐습니다 — 정보 제공 목적이며 투자 권유가 아닙니다",
-      "failed": "포지션 추가에 실패했습니다"
-    },
-    "tradeModal": {
-      "errorAvgCost": "평균 단가는 양수여야 합니다",
-      "errorRequired": "수량과 가격이 필요합니다",
-      "errorOverSell": "보유 수량({shares}주)을 초과해 매도할 수 없습니다",
-      "failed": "거래 기록에 실패했습니다"
-    }
-  },
-  "watchlistModal": {
-    "added": "{ticker}을(를) 관심종목에 추가했습니다",
-    "alreadyExists": "이미 관심종목에 있습니다",
-    "failed": "{ticker} 추가에 실패했습니다"
-  },
-  "disclaimerLabel": {
-    "kicker": "면책"
-  },
-  "detail": {
-    "currentPrice": "현재가",
-    "signal": "신호",
-    "composite": "종합",
-    "compositeTooltip": "종합 점수 — 4개 관찰 지표의 복합 평가입니다.",
-    "watchlistAdd": "관심목록 추가",
-    "watchlistIn": "관심목록에 있음",
-    "usListed": "미국 상장",
-    "pillar": {
-      "technical": "기술적",
-      "fundamental": "기본적",
-      "sentiment": "심리",
-      "quant": "퀀트"
-    }
-  },
-  "swot": {
-    "eyebrow": "AI 관찰 보조",
-    "title": "AI 분석",
-    "preparingBodyPrefix": "AI 분석이 준비 중입니다. 아래에서",
-    "preparingBodySuffix": "의 관찰 요약을 생성해 주세요.",
-    "generating": "생성 중…",
-    "generateBtn": "AI 요약 생성",
-    "errorMsg": "지금은 생성할 수 없습니다 ({error}). 잠시 후 다시 시도해 주세요."
   },
   "preTrade": {
     "thesis": "나의 투자 논거"
-  },
-  "growth": {
-    "legendLess": "낮음",
-    "legendMore": "높음",
-    "page": {
-      "eyebrow": "Growth OS · Solo Founder",
-      "heroTitle1": "당신의",
-      "heroItalic": "꾸준한",
-      "heroTitle2": "스트릭.",
-      "heroDesc": "스트릭 · 아침 우선순위 · 저녁 회고 · 365일 그래프 · 주간 트렌드 · 아카이브 리포트 — 함께 작성하는 하나의 에디토리얼 보드.",
-      "headerTitle": "Growth OS",
-      "headerDesc": "개인 성장 추적 및 회고",
-      "activityLabel": "활동",
-      "activityDesc": "오늘의 활동 점수",
-      "reflectionLabel": "회고",
-      "reflectionDesc": "오늘의 회고 점수",
-      "noScoreYet": "아직 오늘의 점수가 없습니다.",
-      "todayPriorities": "오늘의 우선순위",
-      "eveningReflection": "저녁 회고",
-      "growthGraph": "성장 그래프",
-      "growthGraphDesc": "최근 365일. 날짜를 클릭하면 상세 정보가 표시됩니다.",
-      "weeklyTrend": "주간 트렌드",
-      "weeklyTrendDesc": "최근 4주 활동 vs 회고.",
-      "weeklyReports": "주간 리포트",
-      "weekOf": "주: {date}",
-      "patterns": "패턴",
-      "nextWeek": "다음 주",
-      "unavailableTitle": "잠시 불러오지 못했어요",
-      "loadingTitle": "불러오는 중",
-      "unavailableDesc": "Growth OS 데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
-      "loadingDesc": "Growth OS를 불러오는 중입니다…",
-      "unavailableSubDesc": "방금 Growth OS를 불러오지 못했습니다. 다시 시도해 주세요.",
-      "loadingSubDesc": "Growth OS를 불러오는 중…",
-      "retry": "다시 시도",
-      "dayDetailTitle": "성장 상세 · {date}",
-      "priorities": "우선순위",
-      "reflection": "회고",
-      "scoreTotal": "합계",
-      "noDetailOtherDate": "상세 데이터는 오늘 날짜에서만 확인할 수 있습니다.",
-      "closeAriaLabel": "닫기",
-      "notAnswered": "아직 답변하지 않았습니다."
-    }
   },
   "journal": {
     "page": {
@@ -936,84 +254,13 @@
       "byTickerLabel": "종목별 추가 매수",
       "tickerRow": "추가 {followOn}건 · 평균가 아래 {below}건",
       "framing": "이미 보유한 종목을 추가로 매수한 기록을, 그때의 평균가를 기준으로 그대로 비춰 보여드립니다. 평가나 권유는 담지 않습니다.",
-      "insufficient": "아직 추가 매수 기록이 적어 안정적으로 비추기 어렵습니다. 기록이 쌓이면 자동으로 나타납니다.",
       "emptyTitle": "아직 비출 기록이 없습니다",
-      "emptyDesc": "이미 보유한 종목을 다시 매수하면, 그 매수가가 그때의 평균가보다 낮았는지 높았는지를 건수로 그대로 보여드립니다."
-    }
-  },
-  "companion": {
-    "page": {
-      "loadingLabel": "불러오는 중",
-      "upgradeBadge": "Premium Plus · Closed Beta",
-      "upgradeHeading": "준비가 되면, 다음 단계로.",
-      "upgradeDesc": "당신이 쓴 내용을 기억하는 성찰 동행자 — 투자 조언자가 아닙니다. Closed Beta 기간 동안 Premium Plus 및 Founding Lifetime 멤버 전용입니다.",
-      "upgradeSubDesc": "준비가 되면, 한 단계 위로. Premium Plus · Founding Lifetime 멤버를 위한 동행.",
-      "upgradeCta": "Premium Plus로 업그레이드",
-      "upgradeBack": "홈으로",
-      "comingSoonBadgeInternal": "Internal · Staff",
-      "comingSoonBadge": "Coming Soon · Closed Beta",
-      "comingSoonHeading": "당신의 일지, 기억됩니다.",
-      "comingSoonDesc": "Personal Journal Companion이 Closed Beta 운영 중입니다. 이메일을 남겨주세요 — 소규모로 순차 초대하며, 응답은 느리고 신중하게, 성찰의 범위 안에서 이루어집니다.",
-      "comingSoonSubDesc": "Closed Beta 운영 중입니다. 소규모로 순차 초대합니다.",
-      "emailPlaceholder": "you@domain.com",
-      "joinWaitlist": "대기자 등록",
-      "submitting": "등록 중…",
-      "waitlistSuccess": "대기자 명단에 등록됐습니다. 자리가 열리면 이메일로 알려드립니다.",
-      "emailLabel": "이메일"
-    }
-  },
-  "riskBoard": {
-    "methodologyEyebrow": "방법론 · 관측 방식",
-    "methodologyHeading": "노트.",
-    "notes": {
-      "var": {
-        "title": "VaR (1일, 95%)",
-        "body": "90일 수익 구간의 역사적 백분위, 포지션 크기 가중."
-      },
-      "es": {
-        "title": "Component Expected Shortfall",
-        "body": "VaR 임계값 이하 수익 평균 — 5% 좌측 꼬리 관측."
-      },
-      "hhi": {
-        "title": "집중도 HHI",
-        "body": "섹터 비중의 Herfindahl-Hirschman 지수. < 0.25는 분산된 것으로 간주."
-      },
-      "correlation": {
-        "title": "상관관계",
-        "body": "쌍별 90일 수익, Ledoit-Wolf 수축 공분산. 클러스터 최대값이 > 0.65이면 플래그."
-      },
-      "sevenLayer": {
-        "title": "7-Layer Defense",
-        "body": "VaR, 상관관계, VIX, 테일, 일일 낙폭, 섹터 집중도, 현금 버퍼에 걸친 독립적 관측."
-      },
-      "timeline": {
-        "title": "복합 타임라인",
-        "body": "롤링 VaR에서 도출된 0–100 관측 지표. 높을수록 관측된 압박 수준이 높음을 나타냅니다."
-      }
-    },
-    "v1": {
-      "methodologyHeading": "방법론 노트",
-      "notes": {
-        "var": "VaR (1일, 95%) — 90일 수익 구간의 역사적 백분위, 포지션 크기 가중.",
-        "es": "Expected Shortfall — VaR 임계값 이하 수익 평균 (5% 좌측 꼬리).",
-        "maxdd": "최대 낙폭 (90D) — 추적 구간 포트폴리오 자산 곡선의 고점-저점.",
-        "corr": "상관관계 지수 — 최근 20세션 보유 종목 간 쌍별 평균 상관관계.",
-        "sevenLayer": "7단계 사다리 — VaR, 상관관계, VIX, 테일, 일일 손실, 집중도, 현금 버퍼에 걸친 소프트 한도 관측."
-      }
+      "emptyDesc": "이미 보유한 종목을 다시 매수하면, 그 매수가가 그때의 평균가보다 낮았는지 높았는지를 건수로 그대로 보여드립니다.",
+      "insufficient": "아직 추가 매수 기록이 적어 안정적으로 비추기 어렵습니다. 기록이 쌓이면 자동으로 나타납니다."
     }
   },
   "persona": {
     "classifierKicker": "투자자 유형 분류",
-    "names": {
-      "passive_index_hugger": "패시브 인덱스형",
-      "steady_accumulator": "꾸준 적립형",
-      "value_hunter": "가치 탐색형",
-      "risk_managed_growth": "리스크 관리 성장형",
-      "swing_trader": "스윙 트레이더",
-      "momentum_rider": "모멘텀 추종형",
-      "macro_rotator": "매크로 로테이션형",
-      "aggressive_scalper": "공격형 스캘퍼"
-    },
     "surfaceNames": {
       "growth": "성장형",
       "balanced": "균형형",
@@ -1071,55 +318,6 @@
         "a": "로그인 후 「AI 고객지원에게 물어보기」로 결제·계정·사용법 질문을 빠르게 해결하거나, 「1:1 문의하기」로 직접 문의를 접수할 수 있습니다. 접수한 문의와 답변은 「내 문의함」에서 확인할 수 있습니다."
       }
     }
-  },
-  "signals": {
-    "eyebrow": "시그널 · 실시간",
-    "heroTitle": "스트림은 <bronze>관측</bronze>될 뿐,<br/>조언이 아닙니다 — <bronze>보유</bronze>하신 종목으로 좁혔습니다.",
-    "heroLoadingBody": "오늘의 관측을 집계 중입니다 — 보유 종목 전반의 신호를 읽고 있어요.",
-    "heroCounts": "{positive}건 긍정, {negative}건 부정, {neutral}건 중립이며, 총 {symbols}개 종목에 걸쳐 있습니다. 이는 매매 지시가 아닙니다.",
-    "heroCountsPrefix": "오늘 시스템이 표면화한 관측은",
-    "streamLoadingEyebrow": "스트림 · 불러오는 중",
-    "streamLoadingBody": "관측을 읽고 있습니다…",
-    "streamEmptyEyebrow": "스트림 · 비어 있음",
-    "streamEmptyTitle": "조건에 맞는 관측이 없습니다.",
-    "streamEmptyBody": "강도 범위를 넓히거나 기간을 늘려 다시 확인해 보세요.",
-    "streamEyebrow": "스트림 · 관측 {count}건",
-    "streamTitle": "오늘의 관측.",
-    "dayObsCount": "· 관측 {count}건",
-    "moversAriaLabel": "강도 상위 5개 관측",
-    "moversEyebrow": "강도 상위 · 한국 종목 우선",
-    "moversTitle": "오늘의 큰 관측 다섯.",
-    "labelPositive": "긍정",
-    "labelNegative": "부정",
-    "labelNeutral": "중립",
-    "strength": "강도",
-    "staleTitle": "신선도 TTL 경과된 캐시 관측",
-    "staleLabel": "오래됨",
-    "justNow": "방금",
-    "minutesAgo": "{n}분 전",
-    "hoursAgo": "{n}시간 전",
-    "daysAgo": "{n}일 전",
-    "filterStrength": "강도",
-    "filterSymbol": "종목",
-    "filterSymbolPlaceholder": "삼성전자 · 카카오 · Apple …",
-    "filterWindowAll": "전체",
-    "filterWindowToday": "오늘",
-    "filterWindow7d": "7일",
-    "filterWindow30d": "30일",
-    "filterRefresh": "새로고침",
-    "filterRefreshAriaLabel": "시그널 새로고침",
-    "filterMinStrengthAriaLabel": "최소 강도",
-    "filterMaxStrengthAriaLabel": "최대 강도",
-    "clipBoard1": "클립보드 · I",
-    "clipBoard2": "클립보드 · II",
-    "clipBoard3": "클립보드 · III",
-    "topPositive": "긍정 상위",
-    "neutralZone": "중립 구간",
-    "topNegative": "부정 상위",
-    "clickToExpand": "클립보드를 클릭하면 앞으로 펼쳐집니다.",
-    "toastRefreshTimeout": "새로고침이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.",
-    "toastRefreshServerError": "새로고침 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-    "toastRefreshFailed": "새로고침 실패"
   },
   "settingsV2": {
     "sectionA": {
@@ -1183,9 +381,7 @@
       "localExportReady": "로컬 메모리 내보내기 완료.",
       "exportFailed": "내보내기 실패.",
       "deleteConfirm": "에이전트 메모리를 모두 삭제하시겠어요? 페르소나, 펄스, 피드백, Companion 기록이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
-      "memoryCleared": "에이전트 메모리가 삭제됐습니다.",
-      "waitlistDone": "대기 목록에 추가됐습니다.",
-      "waitlistSaved": "저장됨 — 연락드리겠습니다."
+      "memoryCleared": "에이전트 메모리가 삭제됐습니다."
     }
   }
 }

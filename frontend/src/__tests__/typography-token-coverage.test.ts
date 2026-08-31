@@ -31,26 +31,6 @@ const TOP5_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> =
     cap: 1,
     reason: "1× 20px modal heading — no exact v3 token between body(14) and quote(24)",
   },
-  {
-    path: "components/landing/report-flip-card.tsx",
-    cap: 4,
-    reason: "2× 18px back-face heading, 2× 20px front-face heading — no exact v3 token",
-  },
-  {
-    path: "components/risk/v2/sector-exposure-block.tsx",
-    cap: 2,
-    reason: "2× 16px leader-name (Playfair) — 종목명 main pattern, no exact v3 token",
-  },
-  {
-    path: "components/landing/engine-models-drawer.tsx",
-    cap: 3,
-    reason: "3× 15px body copy — no exact v3 token between body(14) and quote(24)",
-  },
-  {
-    path: "components/portfolio/ledger-book-paper.tsx",
-    cap: 4,
-    reason: "2× 9px micro-label (below HIG floor), 2× 15px paper body — no exact v3 token",
-  },
 ];
 
 /** Files migrated in PR `fontsize-phase2-w9` — Top 6-10 offenders.
@@ -58,24 +38,6 @@ const TOP5_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> =
  *  v3 token — 9, 11, 15, 16, 18, 20, 28). Migrated sizes (12 / 14 / 24 / 32)
  *  must stay tokenized; future contributors cannot re-introduce them. */
 const PHASE2_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
-  {
-    path: "app/(dashboard)/home/_v1/page-v1.tsx",
-    cap: 10,
-    reason:
-      "9× 9px chip/micro-label (below HIG floor) + 1× 20px sub-heading — no exact v3 token",
-  },
-  {
-    path: "components/market/indices-detail-paper.tsx",
-    cap: 7,
-    reason:
-      "6× 9px paper kicker (Vantablack paper aesthetic) + 1× 18px hero number — no exact v3 token",
-  },
-  {
-    path: "components/companion/chat-panel.tsx",
-    cap: 4,
-    reason:
-      "3× 15px chat body + 1× 9px micro-timestamp — no exact v3 token between body(14)/quote(24)",
-  },
   {
     path: "components/settings/v2/subscription-card-v2.tsx",
     cap: 1,
@@ -87,29 +49,9 @@ const PHASE2_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     reason: "2× 15px/16px tier body copy — no exact v3 token between body(14) and quote(24)",
   },
   {
-    path: "components/signals/signal-memo-strip.tsx",
-    cap: 1,
-    reason: "1× 18px memo headline — no exact v3 token between body(14) and quote(24)",
-  },
-  {
-    path: "components/reports/templates/dd-checklist.tsx",
-    cap: 0,
-    reason: "W18: 1×11 ticker subline migrated → --pq-text-micro; no raw literals remain",
-  },
-  {
-    path: "components/profile/v2/companion-entry-v2.tsx",
-    cap: 0,
-    reason: "all literals match an exact v3 token (12 / 14 / 24)",
-  },
-  {
-    path: "app/(dashboard)/settings/_v2/page-v2.tsx",
+    path: "app/(dashboard)/settings/page.tsx",
     cap: 0,
     reason: "all literals match an exact v3 token (12 / 14)",
-  },
-  {
-    path: "app/(dashboard)/companion/page.tsx",
-    cap: 2,
-    reason: "2× 15px hero-card body copy — no exact v3 token between body(14) and quote(24)",
   },
 ];
 
@@ -170,49 +112,9 @@ makeCapAssertion(
  *  plus tree-wide 12/14/24/32 ratchet. */
 const PHASE3_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
   {
-    path: "components/landing/report-flip-card.tsx",
-    cap: 0,
-    reason: "4 literals (2×18, 2×20) migrated → --pq-text-h5/h4; no others remain",
-  },
-  {
-    path: "components/reports/v2/latest-artifact-card.tsx",
-    cap: 9,
-    reason: "2×15 + 1×18 migrated → --pq-text-lead/h5; 9 unrelated literals remain (12/14)",
-  },
-  {
-    path: "components/landing/engine-models-drawer.tsx",
-    cap: 0,
-    reason: "3×15 migrated → --pq-text-lead; no others remain",
-  },
-  {
-    path: "components/companion/chat-panel.tsx",
-    cap: 1,
-    reason: "3×15 migrated → --pq-text-lead; 1×9 micro-timestamp remains (HIG borderline)",
-  },
-  {
-    path: "components/risk/v2/seven-layer-breakdown.tsx",
-    cap: 8,
-    reason: "1×16 + 1×18 migrated → --pq-text-h6/h5; 8 unrelated literals remain (12/14)",
-  },
-  {
-    path: "components/risk/v2/sector-exposure-block.tsx",
-    cap: 0,
-    reason: "2×16 leader-name migrated → --pq-text-h6; no others remain",
-  },
-  {
-    path: "components/risk/v2/concentration-table.tsx",
-    cap: 6,
-    reason: "2×18 migrated → --pq-text-h5; 6 unrelated literals remain (12/14)",
-  },
-  {
     path: "components/portfolio/v2/portfolio-hero-v2.tsx",
     cap: 4,
     reason: "2×18 migrated → --pq-text-h5; 4 unrelated literals remain (12/14)",
-  },
-  {
-    path: "components/portfolio/ledger-book-paper.tsx",
-    cap: 2,
-    reason: "2×15 migrated → --pq-text-lead; 2×9 micro-label remain (paper aesthetic)",
   },
   {
     path: "components/landing/landing-v2.tsx",
@@ -220,54 +122,19 @@ const PHASE3_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     reason: "1×15 + 1×18 migrated → --pq-text-lead/h5; 4 unrelated literals remain (12/14)",
   },
   {
-    path: "components/landing/feature-page-shell.tsx",
-    cap: 8,
-    reason: "1×15 + 1×20 migrated → --pq-text-lead/h4; 8 unrelated literals remain (12/14)",
-  },
-  {
     path: "app/pricing/page.tsx",
     cap: 0,
     reason: "1×15 + 1×16 migrated → --pq-text-lead/h6; no others remain (only PHASE2 caps)",
   },
   {
-    path: "app/(dashboard)/growth/page.tsx",
-    cap: 0,
-    reason: "2×18 migrated → --pq-text-h5; no others remain",
-  },
-  {
-    path: "app/(dashboard)/companion/page.tsx",
-    cap: 0,
-    reason: "2×15 migrated → --pq-text-lead; no others remain",
-  },
-  {
-    path: "app/(auth)/signup/_v2/page-v2.tsx",
+    path: "app/(auth)/signup/page.tsx",
     cap: 8,
     reason: "2×13 migrated → --pq-text-button; 8 unrelated literals remain (12/14)",
   },
   {
-    path: "app/(auth)/login/_v2/page-v2.tsx",
+    path: "app/(auth)/login/page.tsx",
     cap: 3,
     reason: "1×13 + 1×16 migrated → --pq-text-button/h6; 3 unrelated literals remain (12/14)",
-  },
-  {
-    path: "components/signals/v2/top-movers-strip.tsx",
-    cap: 6,
-    reason: "1×18 migrated → --pq-text-h5; 6 unrelated literals remain (12/14)",
-  },
-  {
-    path: "components/signals/v2/signals-hero-v2.tsx",
-    cap: 1,
-    reason: "1×15 migrated → --pq-text-lead; 1×12 unrelated literal remains",
-  },
-  {
-    path: "components/signals/v2/signals-filter-bar.tsx",
-    cap: 4,
-    reason: "1×16 migrated → --pq-text-h6; 4 unrelated literals remain (12)",
-  },
-  {
-    path: "components/signals/signal-memo-strip.tsx",
-    cap: 0,
-    reason: "1×18 migrated → --pq-text-h5; no others remain (only PHASE2 cap)",
   },
 ];
 
@@ -283,44 +150,9 @@ makeCapAssertion(
  *  previously tokenized sizes (12 / 14 / 24 / 32 / 16 / 18 / 20). */
 const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
   {
-    path: "components/reports/templates/insider-mirror.tsx",
-    cap: 0,
-    reason: "W17: 5×9 mono kicker migrated → --pq-text-kicker; no raw literals remain",
-  },
-  {
-    path: "components/home/sector-allocation-donut.tsx",
-    cap: 0,
-    reason: "W17: 2×9 mono kicker migrated → --pq-text-kicker; no raw literals remain",
-  },
-  {
-    path: "components/reports/templates/risk-board.tsx",
-    cap: 0,
-    reason: "W18: 7×11 PDF caption + 1×11 paragraph migrated → --pq-text-micro (W17 36px already tokenized); no raw literals remain",
-  },
-  {
-    path: "components/market/overview-paper.tsx",
-    cap: 1,
-    reason: "W17: 1×9 kicker migrated → --pq-text-kicker; 1×0.45em em-relative unit suffix remains",
-  },
-  {
     path: "components/settings/v2/broker-card-v2.tsx",
     cap: 0,
     reason: "all 10 literals (12/14/32) migrated → --pq-text-eyebrow/body/h3",
-  },
-  {
-    path: "components/risk/v2/correlation-heatmap.tsx",
-    cap: 0,
-    reason: "W17: 3×9 ticker label header migrated → --pq-text-kicker; no raw literals remain",
-  },
-  {
-    path: "components/reports/v2/artifact-kind-card.tsx",
-    cap: 0,
-    reason: "W17: 2×9 micro-label migrated → --pq-text-kicker; no raw literals remain",
-  },
-  {
-    path: "components/reports/templates/burn-rate.tsx",
-    cap: 0,
-    reason: "W17: 2×9 PDF mono kicker migrated → --pq-text-kicker; no raw literals remain",
   },
   {
     path: "components/profile/v2/identity-card-v2.tsx",
@@ -336,11 +168,6 @@ const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     path: "components/landing/personas-preview.tsx",
     cap: 0,
     reason: 'all 10 literals (string-form "12px"/"14px"/"24px") migrated → tokens',
-  },
-  {
-    path: "components/home/today-memo-hero.tsx",
-    cap: 0,
-    reason: "W17: 2×9 meta-strip kicker migrated → --pq-text-kicker; no raw literals remain",
   },
 ];
 
@@ -368,11 +195,6 @@ const PHASE7_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     reason: "1×9 footer kicker migrated → --pq-text-kicker; 3 unrelated 12/14 literals remain",
   },
   {
-    path: "components/charts/interactive-line-chart.tsx",
-    cap: 2,
-    reason: "1×9 chart tooltip kicker migrated → --pq-text-kicker; 2 unrelated literals remain",
-  },
-  {
     path: "components/settings/v2/subscription-card-v2.tsx",
     cap: 0,
     reason: "W17: 1×28 secondary heading migrated → --pq-text-avatar (PHASE2 cap 1 → 0)",
@@ -383,29 +205,9 @@ const PHASE7_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     reason: "1×28 NAV value migrated → --pq-text-avatar; 7 unrelated 12/14/15 literals remain",
   },
   {
-    path: "components/reports/templates/morning-brief-plus.tsx",
-    cap: 2,
-    reason: "1×28 tape-tone hero migrated → --pq-text-avatar; 2 unrelated literals remain",
-  },
-  {
     path: "app/(auth)/signup/oauth-finalize/page.tsx",
     cap: 0,
     reason: "W18: 2×11 PIPA eyebrow + birthdate label migrated → --pq-text-micro (W17 28px already tokenized); no raw literals remain",
-  },
-  {
-    path: "components/reports/templates/earnings-prebrief.tsx",
-    cap: 7,
-    reason: "2×36 implied-move + quant-signal migrated → --pq-text-pdf-hero; 7 unrelated 12/24 literals remain",
-  },
-  {
-    path: "components/risk/v2/risk-gauge-grid.tsx",
-    cap: 8,
-    reason: "1×26 unit suffix snap → --pq-text-quote(24); 8 unrelated 12/14/32/44 literals remain",
-  },
-  {
-    path: "components/reports/templates/brag-card.tsx",
-    cap: 0,
-    reason: "W17: 1×26 hero heading snap → --pq-text-quote(24); no raw literals remain",
   },
 ];
 
@@ -435,41 +237,6 @@ const PHASE8_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     cap: 8,
     reason: "W18: 1×11 sub-eyebrow loading-state migrated → --pq-text-micro; 8 unrelated 12/14 literals remain",
   },
-  {
-    path: "components/signals/v2/signal-card.tsx",
-    cap: 8,
-    reason: "W18: 1×10 stale-chip kicker migrated → --pq-text-eyebrow-sm (10.5px snap); 8 unrelated 12/14 literals remain",
-  },
-  {
-    path: "components/landing/three-layers.tsx",
-    cap: 0,
-    reason: "W18: 1×15 serif body migrated → --pq-text-lead; no raw literals remain",
-  },
-  {
-    path: "components/landing/deposition-teaser.tsx",
-    cap: 7,
-    reason: "W18: 1×15 question copy migrated → --pq-text-lead; 7 unrelated 12/14 literals remain",
-  },
-  {
-    path: "components/portfolio/v2/watchlist-mini.tsx",
-    cap: 7,
-    reason: "W18: 1×15 display name migrated → --pq-text-lead; 7 unrelated 12/14 literals remain",
-  },
-  {
-    path: "components/reports/empty-state.tsx",
-    cap: 3,
-    reason: "W18: 1×15 serif body migrated → --pq-text-lead; 3 unrelated 12/14 literals remain",
-  },
-  {
-    path: "components/reports/v2/reports-hero-v2.tsx",
-    cap: 2,
-    reason: "W18: 1×15 serif lead migrated → --pq-text-lead; 2 unrelated 12/14 literals remain",
-  },
-  {
-    path: "app/features/personas/page.tsx",
-    cap: 2,
-    reason: "W18: 1×15 serif body migrated → --pq-text-lead; 2 unrelated 12/14 literals remain",
-  },
 ];
 
 makeCapAssertion(
@@ -485,14 +252,14 @@ makeCapAssertion(
  *   --pq-text-pdf-micro  6px  (PDF micro footnote — pdf-primitives print only)
  *
  * The W20 sweep migrated 201 raw fontSize literals across 80 files,
- * collapsing the corpus from 216 → 15. The 15 remaining literals are all
+ * collapsing the corpus from 216 → 15. The 2026-08-31 surface prune
+ * (80431ac0) deleted candlestick-chart / overview-paper and the top-nav
+ * chevron, taking the corpus to 13. The 13 remaining literals are all
  * intentional non-token sites where a CSS custom property cannot resolve:
  *   - app/opengraph-image.tsx (4)   Next ImageResponse — edge runtime, no var resolution
  *   - app/global-error.tsx (6)      root error boundary — runs without document tokens
- *   - components/terminal/candlestick-chart.tsx (1)  Lightweight Charts numeric API
- *   - components/landing/top-nav.tsx (1)             8px chevron glyph (sub-kicker)
- *   - components/market/overview-paper.tsx (1)       0.45em em-relative unit suffix
- *   - app/(auth)/signup/_v2/page-v2.tsx (1)          0.85em em-relative inline note
+ *   - components/mirror/mirror-headline.tsx (1)      1.9rem rem-relative headline
+ *   - app/(auth)/signup/page.tsx (1)          0.85em em-relative inline note
  *   - components/ui/editorial.tsx (1)                JSDoc comment example
  *
  * The treewide cap below pins these counts. Any new file that introduces
@@ -501,7 +268,7 @@ makeCapAssertion(
  * Adding a new intentional allowlist entry requires bumping TREEWIDE_CAP
  * and documenting the reason in the list above.
  */
-const TREEWIDE_CAP = 15;
+const TREEWIDE_CAP = 13;
 const TREEWIDE_GLOB_DIRS = ["components", "app"] as const;
 
 describe("typography token coverage — Phase 9 (W20 long-tail closure) treewide cap", () => {

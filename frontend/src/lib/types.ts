@@ -140,32 +140,6 @@ export interface ProfileResponse {
 
 /* ── AI ── */
 
-export interface AiCoachingResponse {
-  insight: string;
-  insight_kr: string;
-}
-
-export interface AiSwotResponse {
-  swot: string;
-  swot_kr: string;
-}
-
-export interface AiCommentaryResponse {
-  commentary: string;
-  commentary_kr: string;
-}
-
-export interface AiCompetitorResponse {
-  analysis: string;
-  analysis_kr: string;
-}
-
-export interface AiSectorTrendResponse {
-  trend: string;
-  trend_kr: string;
-  sector: string;
-}
-
 /* ── Watchlist ── */
 
 export interface WatchlistItem {
@@ -250,18 +224,6 @@ export interface AlertsResponse {
 
 /* ── Lookup ── */
 
-export interface LookupResult {
-  ticker: string;
-  name: string;
-  price: number;
-  change_pct?: number;
-  exchange?: string;
-  currency: string;
-  ok?: boolean;
-  price_display?: string;
-  is_korean?: boolean;
-}
-
 /* ── Morning Brief ── REMOVED 2026-04-29
  * Backend Morning Brief service deprecated. All MorningBrief* types
  * (MorningBriefIndex / MorningBriefPortfolioChange / MorningBriefEvent /
@@ -275,81 +237,10 @@ export interface LookupResult {
 
 /* ── Counterfactual ("What-If") Simulator ── */
 
-export type RecurringMode = "none" | "monthly" | "weekly" | null;
-
-export interface WhatIfChartPoint {
-  date: string;
-  price: number;
-  invested: number;
-  value: number;
-  buy_point?: boolean;
-}
-
-export interface WhatIfMilestone {
-  date: string;
-  label: string;
-  label_kr?: string;
-  type: "multiplier" | "threshold" | "ath" | "drawdown";
-  value: number | null;
-}
-
-export interface WhatIfBenchmark {
-  ticker: string;
-  end_value: number;
-  return_pct: number;
-  total_invested?: number;
-  diff_value?: number;
-  diff_pct?: number;
-}
-
 /**
  * Backend shape is flat (no nested input/result) — see
  * routes/counterfactual.py:625. Keep this 1:1 with the JSON keys.
  */
-export interface WhatIfSuccessResponse {
-  success: true;
-  ticker: string;
-  start_date: string;
-  first_buy_date: string;
-  end_date: string;
-  recurring: "none" | "weekly" | "monthly";
-  recurring_amount?: number;
-  amount_initial: number;
-  total_invested: number;
-  end_value: number;
-  profit_loss: number;
-  return_pct: number;
-  annualized_return_pct: number | null;
-  duration_days: number;
-  shares_total: number;
-  first_buy_price: number;
-  last_price: number;
-  currency: "USD" | "KRW";
-  chart_data: WhatIfChartPoint[];
-  milestones: WhatIfMilestone[];
-  benchmark: WhatIfBenchmark | null;
-  disclaimers: string[];
-}
-
-export interface WhatIfErrorResponse {
-  success: false;
-  error_code:
-    | "TICKER_NOT_FOUND"
-    | "DATE_BEFORE_LISTING"
-    | "DATE_IN_FUTURE"
-    | "AMOUNT_OUT_OF_RANGE"
-    | "DATA_UNAVAILABLE"
-    | string;
-  message: string;
-  suggestion?: {
-    field: string;
-    value: string;
-    reason?: string;
-  };
-}
-
-export type WhatIfResponse = WhatIfSuccessResponse | WhatIfErrorResponse;
-
 /* ── Growth OS ── */
 
 export interface GrowthScoreEntry {
@@ -939,23 +830,7 @@ export interface SupportAdminReplyBody {
 // ── Viral loop (backend commit 7a57a9da) ──────────────────────────────────
 
 /** Whitelisted funnel events accepted by POST /api/track. */
-export type FunnelEvent =
-  | "landing_view"
-  | "signup"
-  | "onboarding_done"
-  | "artifact_opened"
-  | "share_clicked"
-  | "referral_signup";
-
 /** POST /api/track body. All fields except `event` optional + bounded. */
-export interface TrackEventBody {
-  event: FunnelEvent;
-  channel?: string; // ≤40
-  ref_code?: string; // ≤16
-  anon_id?: string; // ≤64
-  meta?: Record<string, string | number | boolean>; // keys ≤12 / vals ≤200
-}
-
 /**
  * `data` payload inside the brag-card preview response
  * (POST /api/artifacts/brag-card/preview → { ok, data, png_base64, html }).
@@ -963,49 +838,12 @@ export interface TrackEventBody {
  * (`mode` / `empty_reason` / `snapshot_tickers`) drive the empty-portfolio
  * Activation surface in onboarding.
  */
-export interface BragCardPreviewData {
-  user_name: string;
-  referral_code: string;
-  month_label: string;
-  month_label_long: string;
-  return_pct: number | null;
-  trade_count: number;
-  best_ticker: string | null;
-  best_return_pct: number | null;
-  anonymous: boolean;
-  is_empty: boolean;
-  share_token: string | null;
-  mode: "trades" | "snapshot";
-  empty_reason:
-    | "no_closed_trades_holdings"
-    | "no_closed_trades_watchlist"
-    | "no_activity"
-    | null;
-  snapshot_tickers: string[];
-}
-
 /** Full envelope from POST /api/artifacts/brag-card/preview. */
-export interface BragCardPreviewResponse {
-  ok: boolean;
-  data: BragCardPreviewData;
-  png_base64: string | null;
-  html: string;
-}
-
 /**
  * GET /api/card/<share_token> — public OG landing payload.
  * 404 (private/missing) surfaces as a thrown ApiError, never this shape.
  * `summary_safe` is server-generated §101-safe copy (factual + generic).
  */
-export interface PublicCardResponse {
-  ok: boolean;
-  owner_display_name: string;
-  card_image_url: string | null;
-  summary_safe: string;
-  month_label: string | null;
-  referral_code: string | null;
-}
-
 /**
  * POST /api/artifacts/living-mirror/generate — persists the caller's persona
  * capstone PDF and returns its id + the render context payload.
@@ -1085,15 +923,6 @@ export interface MirrorGapDimension {
   observed: number;
 }
 
-export interface MirrorTwinWeek {
-  week_ending: string | null;
-  user_return_pct: number | null;
-  twin_return_pct: number | null;
-  /** twin_return_pct − user_return_pct (positive = twin ahead). */
-  diff_pct: number | null;
-  user_trades_count: number;
-  twin_trades_count: number;
-}
 
 export interface MirrorHomeResponse {
   ok: boolean;
@@ -1109,5 +938,4 @@ export interface MirrorHomeResponse {
     /** null in the "new" stage (not enough observed behaviour yet). */
     observed: number[] | null;
   };
-  twin: MirrorTwinWeek | null;
 }

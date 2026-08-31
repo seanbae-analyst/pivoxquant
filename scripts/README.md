@@ -99,13 +99,16 @@ steps 1–5 monthly for each active alias.
 
 ## Other cron scripts
 
+> 2026-08-31 프룬: 삭제된 화면(alerts / signals / reports·artifact)을 위해서만
+> 존재하던 `check_price_alerts.py` · `seed_alerts.py` · `run_benchmark_backtest.py`
+> 는 제거됨. 실제 스케줄의 SoT 는 `services/scheduler/cron_jobs.py` 다.
+
 | Script | Cadence | Purpose |
 |--------|---------|---------|
-| `check_price_alerts.py` | 15 min during KR/US market hours | 52W high/low + concentration sweep |
-| `morning_brief.py` | Daily 06:00 KST | CEO morning brief artifact |
-| `nightly/*.py` | Daily 02:00 KST | Aggregation, ticker health, endpoint smoke |
-| `weekly_memo_blast.py` | Sunday 09:00 KST | Weekly memo email blast |
+| `morning_brief/build_brief_kpi.py` | Daily 06:00 KST | CEO morning brief (KPI) |
+| `nightly/*.py` | Daily 02:00~ KST | ops 점검 (db backup, ssl, env, error-rate, 이메일 컴플라이언스 등) |
 | `legal_monitor/*.py` | Daily 09:00 KST | Regulatory change scanner |
+| `legal/lawyer_packet_build.py` | Weekly | 변호사 패킷 빌드 |
 
 All run inside Claude Code scheduled-tasks (Max plan) — see
 `docs/AUTONOMOUS_OPS.md` for the orchestration overview.

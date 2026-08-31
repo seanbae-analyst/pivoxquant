@@ -12,6 +12,8 @@ import time
 import numpy as np
 from datetime import datetime
 
+from services.time_utils import observed_at_iso
+
 logger = logging.getLogger(__name__)
 
 
@@ -181,7 +183,7 @@ class KISService:
                     "open": int(output.get("stck_oprc", 0)),
                     "prev_close": int(output.get("stck_sdpr", 0)),
                     "market_cap": int(output.get("hts_avls", 0)) * 100000000,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": observed_at_iso(),
                 }
             elif r.status_code == 500 and "초당" in r.text:
                 time.sleep(1.0)
@@ -203,7 +205,7 @@ class KISService:
                         "open": int(output.get("stck_oprc", 0)),
                         "prev_close": int(output.get("stck_sdpr", 0)),
                         "market_cap": int(output.get("hts_avls", 0)) * 100000000,
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": observed_at_iso(),
                     }
             return None
         except Exception:

@@ -25,46 +25,24 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home as HomeIcon,
-  Activity,
   Briefcase,
-  Zap,
   MoreHorizontal,
   X,
-  Eye,
-  Compass,
-  Shield,
-  MessageSquare,
-  BookHeart,
   NotebookPen,
-  FileText,
-  Bell,
   Settings as SettingsIcon,
   LogOut,
-  Sparkles,
   UserCircle,
   Gavel,
-  Sprout,
   Contrast,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { useAuth } from "@/lib/auth";
-import { isDemoMode } from "@/lib/demo";
 
 type Tab = {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Render a small "Premium Plus" bronze seal next to the label. */
-  premiumPlus?: boolean;
-  /**
-   * If true, the item is excluded from rendering but kept in the array
-   * so the underlying route (e.g. /watchlist) continues to resolve when
-   * users hit it via deep link, and route→active-state mapping stays
-   * intact. 2026-04-27 per CEO: hide Morning Brief / Watchlist / Market
-   * / Discover / AI Chat from sidebar + drawer (pages preserved).
-   */
-  hidden?: boolean;
 };
 
 type DrawerGroup = {
@@ -77,50 +55,26 @@ type DrawerGroup = {
 // Labels are literal (no locale dep) so a missing i18n key can never
 // blank the bar on mobile.
 //
-// 2026-04-27 per CEO: Morning Brief replaced with Reports (Artifacts
-// group sibling) on the primary bar so the mobile shell still has 4
-// primary destinations after hiding Morning Brief.
-// 2026-04-29: Morning Brief deep link fully removed (backend deprecated).
-// 2026-06-15 per CEO: 거울 (Mirror) leads as the product spine. Signals moves
-// to the More drawer (it is already in the Observe group there) so the primary
-// bar stays at 4 tabs + More.
+// 거울 (Mirror) leads as the product spine: 멈춤 → 기록 → 거울.
 const PRIMARY_TABS: Tab[] = [
   { href: "/mirror", label: "Mirror", icon: Contrast },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/pre-trade", label: "Pre-Trade", icon: Gavel },
 ];
 
-// Drawer — mirrors the desktop sidebar's 4-group IA exactly
-// (2026-06-10 record-as-spine reorg, CEO GO on
-// docs/strategy/record-as-spine_2026-06-09.md §4.1): Record / Artifacts /
-// Observe / System. Home is excluded from the drawer (it's already a
-// primary tab); Reports and Signals are kept in their canonical groups so
-// the user's mental map matches the desktop sidebar even though those two
-// appear up in the primary bar as well.
+// Drawer — mirrors the desktop sidebar exactly. Home is in "More" rather
+// than the primary bar because the 3 doors already carry the loop.
 const DRAWER_GROUPS: DrawerGroup[] = [
   {
-    // Everything outside the 3 primary doors — demoted but fully reachable.
     label: "More",
     items: [
       { href: "/home", label: "Home", icon: HomeIcon },
       { href: "/journal", label: "Journal", icon: NotebookPen },
-      { href: "/reports", label: "Reports", icon: FileText },
-      { href: "/risk", label: "Risk Board", icon: Shield },
-      { href: "/signals", label: "Signals", icon: Zap },
-      { href: "/ai", label: "AI Analysis", icon: Sparkles },
-      // Closed doors — pages preserved, off-nav (deep-link reachable).
-      { href: "/growth", label: "Routine", icon: Sprout, hidden: true },
-      { href: "/watchlist", label: "Watchlist", icon: Eye, hidden: true },
-      { href: "/market", label: "Market", icon: Activity, hidden: true },
-      { href: "/discover", label: "Discover", icon: Compass, hidden: true },
-      { href: "/ai-chat", label: "AI Chat", icon: MessageSquare, hidden: true },
     ],
   },
   {
     label: "Account",
     items: [
-      { href: "/alerts", label: "Alerts", icon: Bell },
-      { href: "/companion", label: "Companion", icon: BookHeart, premiumPlus: true },
       { href: "/profile", label: "Profile · Persona", icon: UserCircle },
       { href: "/settings", label: "Settings", icon: SettingsIcon },
     ],
@@ -128,11 +82,6 @@ const DRAWER_GROUPS: DrawerGroup[] = [
 ];
 
 const ALL_DRAWER_HREFS: string[] = DRAWER_GROUPS.flatMap((g) => g.items.map((it) => it.href));
-
-// DEMO mode: AI surfaces need paid Anthropic tokens to work — drop them from
-// the nav for the portfolio demo (pages preserved; CEO 2026-06-18).
-const DEMO_HIDDEN_HREFS = new Set(["/ai", "/companion"]);
-const isDemoHidden = (href: string) => isDemoMode() && DEMO_HIDDEN_HREFS.has(href);
 
 function isRouteActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
@@ -346,7 +295,7 @@ function DrawerGroupSection({
       </div>
 
       <ul role="list">
-        {group.items.filter((it) => !it.hidden && !isDemoHidden(it.href)).map((item) => {
+        {group.items.map((item) => {
           const active = isRouteActive(pathname, item.href);
           const Icon = item.icon;
           return (
@@ -381,23 +330,6 @@ function DrawerGroupSection({
                   }}
                 />
                 <span className="flex-1">{item.label}</span>
-                {item.premiumPlus && (
-                  <span
-                    aria-label="Premium Plus · Closed Beta"
-                    className="font-mono uppercase"
-                    style={{
-                      fontSize: "var(--pq-text-eyebrow)",
-                      letterSpacing: "0.2em",
-                      padding: "2px 6px",
-                      borderRadius: 1,
-                      background: "rgba(184, 149, 106, 0.12)",
-                      border: "0.5px solid rgba(184, 149, 106, 0.4)",
-                      color: "var(--pq-bronze)",
-                    }}
-                  >
-                    Plus
-                  </span>
-                )}
               </Link>
             </li>
           );

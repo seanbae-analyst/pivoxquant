@@ -175,7 +175,7 @@ export function DeskCheckinHero({
           </Link>
         ) : (
           <Link
-            href="/risk"
+            href="/mirror"
             className="font-mono uppercase"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
@@ -187,7 +187,7 @@ export function DeskCheckinHero({
               textDecoration: "none",
             }}
           >
-            {t("dashboard.deskCheckin.viewRisk")}
+            {t("dashboard.deskCheckin.viewMirror")}
           </Link>
         )}
       </div>

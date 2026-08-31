@@ -1,7 +1,7 @@
 /**
- * ArchiveLinks — the 거울 hub's links into the folded record surfaces:
- * Reports (CFO archive) and the decision Journal. Part of the 19→3 fold —
- * Reports/Journal left the primary nav, so 거울 surfaces them here.
+ * ArchiveLinks — the 거울 hub's link into the folded record surface:
+ * the decision Journal. Part of the 19→3 fold — Journal left the primary
+ * nav, so 거울 surfaces it here.
  *
  * Plain links (no data fetch) — safe and observational. No italic.
  */
@@ -9,7 +9,6 @@ import * as React from "react";
 import Link from "next/link";
 
 const LINKS: ReadonlyArray<{ href: string; label: string; note: string }> = [
-  { href: "/reports", label: "리포트 보관함", note: "주간·분기 CFO 리포트" },
   { href: "/journal", label: "결정 저널", note: "사기 전 기록 모아보기" },
 ];
 
@@ -22,7 +21,7 @@ export function ArchiveLinks() {
       >
         보관함 · 기록
       </div>
-      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+      <div className="mt-2 grid gap-2">
         {LINKS.map((l) => (
           <Link
             key={l.href}

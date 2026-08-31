@@ -39,22 +39,10 @@ const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   ["/pre-trade", "coaching"],  // behavioural pre-trade surface — educational AI framing, not the default "signal"
   ["/journal", "coaching"],    // behavioural reflection feed — same framing as pre-trade
   ["/mirror", "coaching"],     // 거울 home — persona/behaviour mirror, educational framing
-  ["/ai-chat", "ai-analysis"],
-  ["/watchlist", "signal"],
   ["/portfolio", "signal"],
-  ["/companion", "ai-analysis"],
-  ["/discover", "signal"],
   ["/settings", "signal"],
   ["/profile", "signal"],
-  ["/reports", "ai-analysis"],
-  ["/signals", "signal"],
-  ["/alerts", "signal"],
-  ["/market", "signal"],
-  ["/detail", "signal"],
-  ["/growth", "signal"],
-  ["/risk", "signal"],
   ["/home", "signal"],
-  ["/ai", "ai-analysis"],
 ];
 
 /** Routes that need the banner force-expanded (highest-risk surfaces). */

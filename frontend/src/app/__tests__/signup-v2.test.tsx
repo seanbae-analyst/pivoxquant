@@ -33,7 +33,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 // Import AFTER mocks.
-import SignupPageV2 from "@/app/(auth)/signup/_v2/page-v2";
+import SignupPageV2 from "@/app/(auth)/signup/page";
 
 describe("SignupPageV2", () => {
   beforeEach(() => {

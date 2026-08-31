@@ -274,3 +274,42 @@ P1 findings accumulated by the daily bug sweep. Not auto-fixed (detection-only o
 
 ### 🔁 Recurring systemic gap (meta) — CEO action, 4th+ repeat
 - _**Restore `SIM_ONBOARD_SECRET` to the cron env.** Without it, authed CAUS = SKIPPED and the bug-hunter's only reachable prod state is demo mode, whose `demo.ts` fixtures make every dynamic-data finding a false positive (now ~6 consecutive runs churned this way). Restoring it unlocks authed coverage, stops the FP churn, AND enables the genuine refresh-pipeline ops check needed to settle the "stale data" question above. Railway Variables holds the matching HMAC; `/tmp/sim-onboard-secret.txt` was lost to reboot._
+
+## 2026-08-31 (daily-sweep) — P1 merge blocker on `refactor/prune-artifacts`
+
+**Nothing shipping is broken.** `origin/main` still has `routes/artifacts.py`; the
+break below exists only on branch `refactor/prune-artifacts` (16 commits ahead,
+unmerged). Prod is separately down (Railway account deleted 2026-08-30), so none
+of this is observable in prod today.
+
+- [ ] **P1 — artefact prune (`e064118e`) deleted the backend routes but left ~8 live frontend consumers.** `routes/artifacts.py` is gone (verified: no artifact route file in `routes/`), yet `frontend/src/lib/endpoints.ts:282-313` still exports the `/api/artifacts/*` constants and these surfaces still call them:
+  - `frontend/src/app/(dashboard)/reports/page.tsx:109,116` (`useArtifacts`, `useArtifactStats`) — the whole `/reports` page
+  - `frontend/src/app/(dashboard)/reports/[id]/page.tsx:56` (`API.artifacts.preview`)
+  - `frontend/src/components/reports/v2/latest-artifact-card.tsx:269` (`API.artifacts.download`)
+  - `frontend/src/components/reports/v2/generate-artifact-cta.tsx:145,156`
+  - `frontend/src/components/reports/report-preview-shell.tsx:104`
+  - `frontend/src/components/home/artifact-queue.tsx:100`
+  - `frontend/src/components/home/v2/companion-archive-card.tsx:36`
+  - `frontend/src/components/dashboard/living-cfo-status.tsx:64`
+  - `frontend/src/app/(dashboard)/detail/[ticker]/page.tsx:405`
+
+  **Merging this branch as-is breaks `/reports` plus the home artefact queue, the
+  detail related-artefacts panel, and the living-CFO status card.** Not auto-fixed:
+  removing user-facing surfaces is a CEO framing call (`feedback_feature_preservation`
+  requires a v1-inventory → v2-mapping table), and P1 is backlog-only by the sweep's
+  own triage rule. Branch owner decides: finish the prune on the frontend too, or
+  restore the backend routes.
+
+- [ ] **P2 — dead `useMethodology` hook.** `/api/methodology` was deleted in the same
+  commit. `frontend/src/lib/hooks.ts:1625` still defines `useMethodology()` and
+  `endpoints.ts:473` still exports `METHODOLOGY`, but **nothing calls the hook**
+  (verified) and the public `/methodology` page is a static server component, so no
+  user path breaks. Dead code only — cleanup, not a bug.
+
+### Coverage gap exposed this run
+- _The virtual-user sweep reports **0 findings** while the branch's `/reports` surface
+  is contract-broken, because the sweep's endpoint table has **no `/api/artifacts/*`
+  coverage at all** (verified: zero artifact entries in `scripts/qa/virtual_user_sweep.py`).
+  Whatever "artifact leg" commit `5f928734` added is gone. Once the artefact question is
+  settled, the sweep table should regain coverage for whichever artifact endpoints survive
+  — otherwise this class of break stays invisible to the nightly sweep._

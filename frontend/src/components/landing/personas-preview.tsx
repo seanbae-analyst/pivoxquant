@@ -3,10 +3,10 @@
 /**
  * PersonasPreview — selected persona cards on the slim landing.
  * ----------------------------------------------------------------
- * The full persona showcase lives at /features/personas. This preview
- * surfaces only Growth / Value / Balanced / Beginner — the four the
- * onboarding quiz resolves to most often in the first cohort — and ends
- * with "View all CFO Personas →".
+ * Surfaces Growth / Value / Balanced / Beginner — the four the onboarding
+ * quiz resolves to most often in the first cohort — and ends with a link
+ * into the quiz itself. The per-card "sample report" links and the
+ * /features/personas showcase went with the surfaces they pointed at.
  *
  * Palette-safe (Vantablack + Ivory + Bronze). 1-col mobile / 2-col tablet
  * / 4-col desktop. 21st.dev polish: gradient bronze border on hover,
@@ -25,7 +25,6 @@ type PreviewPersona = {
   kr: string;
   tagline: string;
   italic: string;
-  sampleHref: string;
 };
 
 const FOUR: readonly PreviewPersona[] = [
@@ -35,7 +34,6 @@ const FOUR: readonly PreviewPersona[] = [
     kr: "성장형",
     tagline: "High-beta compounders. Narrative-led.",
     italic: "미래 현금흐름에 베팅한다.",
-    sampleHref: "/sample-reports/weekly-memo",
   },
   {
     code: "VA",
@@ -43,7 +41,6 @@ const FOUR: readonly PreviewPersona[] = [
     kr: "가치형",
     tagline: "Margin of safety. Balance-sheet first.",
     italic: "싼 값에 산다. 느리게 부자가 된다.",
-    sampleHref: "/sample-reports/weekly-memo",
   },
   {
     code: "BA",
@@ -51,7 +48,6 @@ const FOUR: readonly PreviewPersona[] = [
     kr: "균형형",
     tagline: "Classic 60/40. Ballast over bravery.",
     italic: "평온한 복리.",
-    sampleHref: "/sample-reports/weekly-memo",
   },
   {
     code: "BE",
@@ -59,7 +55,6 @@ const FOUR: readonly PreviewPersona[] = [
     kr: "입문형",
     tagline: "First year. Learning the ropes.",
     italic: "처음 내 돈을 굴려본다.",
-    sampleHref: "/sample-reports/weekly-memo",
   },
 ] as const;
 
@@ -232,22 +227,6 @@ export default function PersonasPreview() {
                 {p.italic}
               </p>
 
-              <div className="mt-auto">
-                <Link
-                  href={p.sampleHref}
-                  className="inline-flex items-center gap-1.5 font-serif"
-                  style={{
-                    color: "var(--pq-bronze-light, #B8956A)",
-                    fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.02em",
-                    borderBottom: "0.5px solid rgba(184,149,106,0.4)",
-                    paddingBottom: 2,
-                  }}
-                >
-                  {t("landing.personas.sampleReport")}
-                  <ArrowRight className="h-3 w-3" aria-hidden />
-                </Link>
-              </div>
             </motion.article>
           ))}
         </motion.div>
@@ -271,7 +250,7 @@ export default function PersonasPreview() {
             {t("landing.personas.alsoAvailable")}
           </p>
           <Link
-            href="/features/personas"
+            href="/signup"
             className="group inline-flex items-center gap-2 rounded-sm px-5 py-3 font-serif transition-colors"
             style={{
               backgroundColor: "transparent",
@@ -281,7 +260,7 @@ export default function PersonasPreview() {
               letterSpacing: "0.02em",
             }}
           >
-            {t("landing.personas.viewAll")}
+            {t("landing.personas.takeQuiz")}
             <ArrowRight
               className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5"
               style={{ color: "var(--pq-bronze)" }}

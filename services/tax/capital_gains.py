@@ -34,9 +34,12 @@ from __future__ import annotations
 
 from typing import Callable, Iterable, NamedTuple
 
-# Shared SoT with services/artifacts/burn_rate_service.py so the headline CGT
-# rate can never drift between the burn-rate card and the tax CSV.
-from services.artifacts.burn_rate_service import _US_CGT_RATE as US_CGT_RATE
+# 미국 주식 양도세 — 양도소득세 20% + 지방소득세 2%. This module is the SoT.
+# It previously lived in services/artifacts/burn_rate_service.py and was
+# imported from here, which put a tax constant inside a PDF renderer and made
+# the tax path depend on the artefact tree. That tree was removed on
+# 2026-08-30; the rate belongs with the tax logic that uses it.
+US_CGT_RATE: float = 0.22
 
 # 기본공제: 해외주식 양도소득 기본공제 250만원/년 (소득세법 §103).
 ANNUAL_BASIC_DEDUCTION_KRW: float = 2_500_000.0

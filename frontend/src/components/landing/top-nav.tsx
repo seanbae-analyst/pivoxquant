@@ -27,19 +27,11 @@ import type { Variants } from "motion/react";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST } from "@/lib/motion";
 import {
   ArrowRight,
-  Bookmark,
-  Brain,
-  CircuitBoard,
   Compass,
   FileText,
   Gavel,
-  Globe2,
-  Layers,
-  LineChart,
   Menu,
   Shield,
-  Target,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import { FilmGrain } from "./film-grain";
@@ -66,103 +58,9 @@ export type NavGroup = {
 /* ───────────────────────── data ───────────────────────── */
 
 export const NAV_GROUPS: readonly NavGroup[] = [
-  {
-    key: "living-cfo",
-    label: "Living Mirror",
-    footnote: "The architecture of your personal research desk.",
-    items: [
-      {
-        label: "3-Layer Architecture",
-        href: "/features/engine#three-layers",
-        description: "Identity · Learning · Artifact. The three strata.",
-        icon: Layers,
-      },
-      {
-        label: "Living Mirror Loop",
-        href: "/features/engine#loop",
-        description: "The six-step cycle from onboarding to self-audit.",
-        icon: CircuitBoard,
-      },
-      {
-        label: "40-Model Engine",
-        href: "/features/engine",
-        description: "Quant, risk, and AI models feeding every artifact.",
-        icon: Brain,
-      },
-      {
-        label: "Feature Explorer",
-        href: "/features/explorer",
-        description: "All your research artifacts, opened one at a time.",
-        icon: Compass,
-      },
-    ],
-  },
-  {
-    key: "personas",
-    label: "Personas",
-    footnote: "Investor identities. One desk that speaks them all.",
-    items: [
-      {
-        label: "Investor Personas",
-        href: "/features/personas",
-        description: "Growth, Value, Balanced, Income, Quant, and more.",
-        icon: Users,
-      },
-      {
-        label: "Sample Reports",
-        href: "/features/reports",
-        description: "Weekly Memo, Earnings Pre-Brief, Risk Board deck.",
-        icon: FileText,
-      },
-      {
-        label: "Dashboard Preview",
-        href: "/features/dashboard",
-        description: "The research terminal — equity, signals, ledger.",
-        icon: LineChart,
-      },
-      {
-        label: "Archetype Quiz",
-        href: "/features/personas#archetype",
-        description: "20 questions. One honest portrait of how you invest.",
-        icon: Target,
-      },
-    ],
-  },
-  {
-    key: "signature",
-    label: "Signature",
-    footnote: "The four signature workflows that define the desk.",
-    items: [
-      {
-        label: "Pre-Trade Checklist",
-        href: "/features/pre-trade",
-        description: "Seven gates before any position change.",
-        icon: Shield,
-      },
-      {
-        label: "Korea × US Desk",
-        href: "/features/global-desk",
-        description: "One pane. KRW and USD. Unified market feed.",
-        icon: Globe2,
-      },
-      {
-        label: "Journal Companion",
-        href: "/companion",
-        description: "A private thinking partner. Closed beta.",
-        icon: Bookmark,
-      },
-      {
-        label: "The Deposition",
-        href: "/features/pre-trade#deposition",
-        description: "Your own trade, cross-examined — on the record.",
-        icon: Gavel,
-      },
-    ],
-  },
-  // Pricing 메가메뉴 제거 (DECISIONS.md ✅확정 2026-05-30: Stage 0 무료 출시).
-  // `/pricing` + `/#pricing` 진입점은 무료 출시라 노출하지 않는다. /pricing 은
-  // next.config.ts 에서 /home 으로 307 redirect 되며, 페이지·백엔드는 보존.
-  // Stage 1 유료화 부활 시 이 그룹을 복원하면 된다.
+  // The Living Mirror / Personas / Signature groups are gone with the
+  // /features/* pages they advertised. A marketing menu that sells screens
+  // the product no longer has is worse than no menu.
   {
     key: "docs",
     label: "Docs",
@@ -458,29 +356,6 @@ export default function TopNav() {
                 );
               })}
 
-              {/* Standalone Methodology link — public transparency page,
-                  surfaced directly in the top bar (CEO 2026-06 "잘 보이게").
-                  No dropdown: a single visible entry to /methodology. */}
-              <Link
-                href="/methodology"
-                onMouseEnter={() => setActiveKey(null)}
-                className="group relative inline-flex h-9 items-center px-3 font-serif text-pq-body transition-colors duration-300"
-                style={{
-                  color: "rgba(245,240,232,0.68)",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                <span>Methodology</span>
-                {/* Bronze underline on hover — matches the group buttons */}
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-2 bottom-1 h-px origin-center scale-x-0 transition-transform duration-300 group-hover:scale-x-100"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, transparent 0%, rgba(184,149,106,0.6) 50%, transparent 100%)",
-                  }}
-                />
-              </Link>
             </nav>
 
             {/* Right cluster */}

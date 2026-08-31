@@ -37,18 +37,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.5,
     },
-    {
-      url: `${BASE_URL}/simulator/what-if`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${BASE_URL}/sample-reports`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
 
     // ── Docs (Wave C-2 SEO 2026-05-17: was missing — public Q&A surface) ─
     {
@@ -58,86 +46,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
 
-    // ── Feature pages (all 13 directories under /features/ + index) ───
-    // W7.4 (2026-05-10): /features index added — was 404 dead route.
-    {
-      url: `${BASE_URL}/features`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${BASE_URL}/features/paper-trading`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/ai-assistant`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/canslim`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/profiles`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/quant-scoring`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/risk-defense`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/dashboard`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/engine`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/explorer`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/global-desk`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/personas`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/features/pre-trade`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
 
     // ── Auth (entry points but lower crawl priority) ───────
     {

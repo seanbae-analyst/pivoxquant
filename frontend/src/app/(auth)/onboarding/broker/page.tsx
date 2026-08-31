@@ -26,6 +26,23 @@ import {
  *
  * Skip is always allowed; the user can connect a broker later from Settings.
  */
+/**
+ * DORMANT since 237a1b67, and unlikely to return in this form.
+ *
+ * The five KIS connect/sync/disconnect/status routes were deleted for a legal
+ * reason, not a technical one: KIS states partnership is unavailable to
+ * non-licensed firms, and Toss's Open API terms §5② forbid handing the app key
+ * to a third party — the key is an 접근매체 under 전자금융거래법, and §16③ voids
+ * the broker's liability once it is shared. Asking a user to paste brokerage
+ * credentials asks them to breach their own broker's terms.
+ *
+ * So this step keeps everything it is still responsible for — the legal consent
+ * gate, the progress header, the skip path, manual entry — and stops offering
+ * the connection. KisCard and KisConnectModal stay imported and intact; only
+ * the offer is withheld.
+ */
+const BROKER_LINKING_AVAILABLE = false;
+
 export default function OnboardingBrokerPage() {
   const router = useRouter();
   const t = useT();
@@ -173,10 +190,10 @@ export default function OnboardingBrokerPage() {
               Step 0 · Connection
             </div>
             <h1 className="font-serif text-3xl text-[var(--pq-ivory)] sm:text-4xl">
-              {t("brokerOnboarding.title")}
+              {t(BROKER_LINKING_AVAILABLE ? "brokerOnboarding.title" : "brokerOnboarding.titleDormant")}
             </h1>
             <p className="mt-3 text-sm text-[rgba(245,240,232,0.6)] leading-relaxed sm:text-base">
-              {t("brokerOnboarding.subtitle")}
+              {t(BROKER_LINKING_AVAILABLE ? "brokerOnboarding.subtitle" : "brokerOnboarding.subtitleDormant")}
             </p>
           </div>
 
@@ -194,21 +211,29 @@ export default function OnboardingBrokerPage() {
               <span className="sr-only">Loading broker connections…</span>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 items-start">
-              <KisCard
-                connected={kisConnected}
-                onConnect={() => setKisModalOpen(true)}
-                onSync={handleSync}
-                onDisconnect={handleDisconnect}
-                syncing={syncing}
-                disconnecting={disconnecting}
-              />
+            <div
+              className={
+                BROKER_LINKING_AVAILABLE
+                  ? "grid gap-4 md:grid-cols-2 items-start"
+                  : "grid gap-4 items-start"
+              }
+            >
+              {BROKER_LINKING_AVAILABLE && (
+                <KisCard
+                  connected={kisConnected}
+                  onConnect={() => setKisModalOpen(true)}
+                  onSync={handleSync}
+                  onDisconnect={handleDisconnect}
+                  syncing={syncing}
+                  disconnecting={disconnecting}
+                />
+              )}
               <ManualCard onSelect={goNext} />
             </div>
           )}
 
           <p className="mt-6 text-pq-mono-sm text-[rgba(245,240,232,0.4)] text-center leading-relaxed">
-            {t("brokerOnboarding.note")}
+            {t(BROKER_LINKING_AVAILABLE ? "brokerOnboarding.note" : "brokerOnboarding.noteDormant")}
           </p>
         </div>
       </main>
@@ -226,9 +251,11 @@ export default function OnboardingBrokerPage() {
             onClick={goNext}
             className="pq-ink-btn-bronze inline-flex items-center gap-1"
           >
-            {kisConnected
+            {!BROKER_LINKING_AVAILABLE
               ? t("brokerOnboarding.nextStep")
-              : "브로커 없이 계속하기"}
+              : kisConnected
+                ? t("brokerOnboarding.nextStep")
+                : "브로커 없이 계속하기"}
             <ChevronRight size={14} />
           </button>
         </div>
