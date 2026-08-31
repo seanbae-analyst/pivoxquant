@@ -18,24 +18,15 @@ export default function robots(): MetadataRoute.Robots {
           // Defence-in-depth: robots.ts disallow + allowlist gate
           // in admin/layout.tsx + admin paths absent from sitemap.
           "/admin/",
-          "/admin/preview/",
 
           // ── Authenticated dashboard pages ─────────────
           "/home/",
+          "/mirror/",
           "/portfolio/",
+          "/journal/",
+          "/pre-trade/",
+          "/profile/",
           "/settings/",
-          "/risk/",
-          "/discover/",
-          "/watchlist/",
-          "/ai/",
-          "/ai-chat/",
-          // REMOVED 2026-04-27 per CEO + legal: "/autotrade/" route retired.
-          "/market/",
-          "/signals/",
-          "/alerts/",
-          "/detail/",
-          "/reports/",
-          "/growth/",
 
           // ── Onboarding (post-signup, requires session) ─
           "/onboarding/",

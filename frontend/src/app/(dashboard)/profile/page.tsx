@@ -13,7 +13,6 @@
  *   04 · The six dimensions                (SixDimensionsGrid)
  *   05 · Peer benchmark                    (PeerBenchmarkBlockV2)
  *   06 · Pulse · Weekly                    (WeeklyPulseCard · reused) · 7-col
- *   07 · Companion · Layer 4               (CompanionEntryV2)        · 5-col
  *   08 · Agent data · PIPA + Danger zone   (DangerZoneCardV2)
  *
  * Reused (zero-modification imports):
@@ -62,7 +61,6 @@ import { ProfileHeroV2 } from "@/components/profile/v2/profile-hero-v2";
 import { IdentityCardV2 } from "@/components/profile/v2/identity-card-v2";
 import { SixDimensionsGrid } from "@/components/profile/v2/six-dimensions-grid";
 import { PeerBenchmarkBlockV2 } from "@/components/profile/v2/peer-benchmark-block-v2";
-import { CompanionEntryV2 } from "@/components/profile/v2/companion-entry-v2";
 import { DangerZoneCardV2 } from "@/components/profile/v2/danger-zone-card-v2";
 import { LivingMirrorCta } from "@/components/profile/v2/living-mirror-cta";
 
@@ -707,19 +705,6 @@ export default function ProfilePageV2() {
             </div>
           </div>
 
-          {/* Companion */}
-          <div
-            style={{ gridColumn: "span 5" }}
-            className="pq-profile-col-5"
-          >
-            <CompanionEntryV2
-              entitled={entitled}
-              email={user.email}
-              waitlistDone={waitlistDone}
-              submitting={waitlistSubmitting}
-              onJoinWaitlist={handleWaitlist}
-            />
-          </div>
         </section>
 
         {/* BLOCK 8 — Agent data + Danger zone */}

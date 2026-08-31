@@ -10,24 +10,15 @@
  *   - TopTicker                 (reused, full-bleed)
  *   - LivingCFOStatusBar        (reused, sticky)
  *   - TodayMemoHeroV2           (new — editorial CFO hero)
- *   - 6-card gallery (3×2):
+ *   - 2-card gallery:
  *       1. PortfolioSnapshotCard  (NAV / spark / Today P/L / Positions / Cash%)
- *       2. RiskBoardCard          (4 horizontal CSS gauges + composure word)
- *       3. EarningsPreBriefCard   (graceful empty until backend ships)
- *       4. PositionsTopCard       (top 5 by weight, mini-rows)
- *       5. SignalsCard            (top 3 POSITIVE/NEGATIVE/NEUTRAL)
- *       6. CompanionArchiveCard   (artifact count + last 3)
+ *       2. PositionsTopCard       (top 5 by weight, mini-rows)
  *   - WeeklyPulseCard           (reused, invisible Mon 07:00 trigger)
  *   - UpsellPlus                (reused, conditional on free tier)
  *   - FootSignature             (reused, page foot)
  *   - DisclaimerBanner          (mounted by (dashboard)/layout.tsx — NOT here)
  *
- * Deep links replace the 5 dense surfaces v1 carried inline:
- *   Watchlist table         → /watchlist
- *   EquityCurveChart        → /portfolio
- *   SectorAllocationDonut   → /portfolio
- *   CandlestickChart        → /detail/[ticker]
- *   PulseActivity table     → /portfolio
+ * Deep links: everything dense lives on /portfolio, /journal and /mirror.
  *
  * Legal: POSITIVE / NEGATIVE / NEUTRAL only. No BUY/SELL/HOLD/recommend/advice.
  */
@@ -53,12 +44,8 @@ import { DeskCheckinHero } from "@/components/home/v2/desk-checkin-hero";
 import { TodaysReviewCard } from "@/components/home/v2/todays-review-card";
 import { HomeCardStyles } from "@/components/home/v2/home-card";
 import { PortfolioSnapshotCard } from "@/components/home/v2/portfolio-snapshot-card";
-import { RiskBoardCard } from "@/components/home/v2/risk-board-card";
 import { MoodNudgeCard } from "@/components/home/v2/mood-nudge-card";
-import { EarningsPreBriefCard } from "@/components/home/v2/earnings-pre-brief-card";
 import { PositionsTopCard } from "@/components/home/v2/positions-top-card";
-import { SignalsCard } from "@/components/home/v2/signals-card";
-import { CompanionArchiveCard } from "@/components/home/v2/companion-archive-card";
 
 // Morning Brief types removed 2026-04-29 — backend deprecated.
 
@@ -164,7 +151,7 @@ export default function HomePageV2() {
               The Book · Snapshot
             </div>
             <EditorialHead size={40} as="h2">
-              Six rooms.
+              Two rooms.
             </EditorialHead>
           </div>
         </div>
@@ -172,26 +159,17 @@ export default function HomePageV2() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: 12,
           }}
           className="pq-home-grid-v2"
         >
           <PortfolioSnapshotCard />
-          <RiskBoardCard />
-          <EarningsPreBriefCard />
           <PositionsTopCard />
-          <SignalsCard />
-          <CompanionArchiveCard />
         </div>
 
         {/* Mobile/tablet collapse */}
         <style jsx>{`
-          @media (max-width: 1023px) {
-            .pq-home-grid-v2 {
-              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            }
-          }
           @media (max-width: 767px) {
             .pq-home-grid-v2 {
               grid-template-columns: 1fr !important;

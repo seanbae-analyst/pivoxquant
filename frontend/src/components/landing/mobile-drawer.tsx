@@ -242,22 +242,6 @@ export default function MobileDrawer({
                 );
               })}
 
-              {/* Methodology — standalone link (no dropdown): the public
-                  transparency page, surfaced as a top-level drawer entry
-                  (CEO 2026-06 "잘 보이게"). */}
-              <Link
-                href="/methodology"
-                onClick={onClose}
-                className="flex items-center px-3 py-3 font-serif"
-                style={{
-                  color: "var(--pq-ivory)",
-                  fontSize: "var(--pq-text-body)",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                Methodology
-              </Link>
-
               {/* Log in */}
               <Link
                 href="/login"

@@ -266,10 +266,9 @@ function MenuButton({
 function ShortcutsModal({ onClose }: { onClose: () => void }) {
   const t = useT();
   const rows: Array<[string, string]> = [
-    [t("profileMenu.shortcuts.openSearch"), "⌘ K"],
     [t("profileMenu.shortcuts.goHome"), "G then H"],
     [t("profileMenu.shortcuts.goPortfolio"), "G then P"],
-    [t("profileMenu.shortcuts.goWatchlist"), "G then W"],
+    [t("profileMenu.shortcuts.goMirror"), "G then M"],
     [t("profileMenu.shortcuts.closeModal"), "Esc"],
     [t("profileMenu.shortcuts.navList"), "↑ ↓"],
     [t("profileMenu.shortcuts.select"), "Enter"],

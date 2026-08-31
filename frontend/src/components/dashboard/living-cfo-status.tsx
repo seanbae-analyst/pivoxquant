@@ -1,49 +1,42 @@
 "use client";
 
 /**
- * <LivingCFOStatusBar /> — sticky hairline bar showing the four layers of
+ * <LivingCFOStatusBar /> — sticky hairline bar showing the two layers of
  * the Living CFO product:
  *
  *   Layer 1 · Identity    → InvestmentProfile onboarding (green when set)
  *   Layer 2 · Learning    → Drift + Pulse + Feedback (yellow while training)
- *   Layer 3 · Artifacts   → Delivered PDFs / emails
- *   Layer 4 · Companion   → Personal Journal Companion (Premium Plus)
+ *
+ * Layers 3 (Artifacts) and 4 (Companion) were dropped with the surfaces
+ * that fed them — the bar no longer reports on things the product does
+ * not do.
  *
  * Click opens a modal explaining what the CFO has learned so far and what
  * it's still learning. Clicking a single dot scrolls the modal to the
  * matching layer for a quick "what is this?" read.
  *
  * No data writes. Purely informational. Uses `usePersona` + `usePulse` +
- * existing `useInvestmentProfile` + `useArtifacts` to compute the three
- * first readiness signals; the fourth (Companion) is driven by
- * `useCompanionStatus` + entitlement.
+ * `useInvestmentProfile` to compute both readiness signals.
  */
 
 import * as React from "react";
 import Link from "next/link";
-import { X, Check, Circle, Lock } from "lucide-react";
+import { X, Check, Circle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { PQ_EASE, PQ_DUR_FAST, PQ_DUR_MICRO } from "@/lib/motion";
-import { useInvestmentProfile, useArtifacts } from "@/lib/hooks";
-import { useAuth } from "@/lib/auth";
-import { isDemoMode } from "@/lib/demo";
+import { useInvestmentProfile } from "@/lib/hooks";
 import {
   usePersona,
   usePulse,
   PERSONA_LABELS,
   declaredSurfaceLabel,
 } from "@/lib/cfo/hooks";
-import {
-  hasCompanionEntitlement,
-  useCompanionStatus,
-  useCompanionHistory,
-} from "@/lib/cfo/useCompanion";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 
-type Readiness = "ready" | "learning" | "missing" | "locked";
+type Readiness = "ready" | "learning" | "missing";
 
 interface LayerState {
-  id: 1 | 2 | 3 | 4;
+  id: 1 | 2;
   name: string;
   state: Readiness;
   summary: string;
@@ -57,13 +50,9 @@ export function LivingCFOStatusBar() {
     null,
   );
 
-  const { user } = useAuth();
   const { data: profile } = useInvestmentProfile();
   const { data: persona } = usePersona();
   const { data: pulse } = usePulse();
-  const { artifacts } = useArtifacts({ type: "all", since: "all" });
-  const { data: companionStatus } = useCompanionStatus();
-  const { messages: companionMessages } = useCompanionHistory();
 
   const layer1State: Readiness = profile?.profile?.profile_type
     ? "ready"
@@ -90,21 +79,6 @@ export function LivingCFOStatusBar() {
         ? "learning"
         : "missing";
 
-  const layer3State: Readiness =
-    artifacts.length >= 3 ? "ready" : artifacts.length >= 1 ? "learning" : "missing";
-
-  const companionEntitled = hasCompanionEntitlement(
-    user?.subscription_tier,
-    companionStatus?.entitlement_plans,
-  );
-  const companionTurns = companionMessages.filter((m) => m.role === "user").length;
-  const layer4State: Readiness = !companionEntitled
-    ? "locked"
-    : companionTurns >= 3
-      ? "ready"
-      : companionTurns >= 1
-        ? "learning"
-        : "missing";
 
   const layers: LayerState[] = [
     {
@@ -130,36 +104,7 @@ export function LivingCFOStatusBar() {
         hasObservedPersona ? "30-day drift tracked" : "no drift data yet"
       }.`,
     },
-    {
-      id: 3,
-      name: "Artifacts",
-      state: layer3State,
-      summary: `${artifacts.length} delivered to your inbox.`,
-      cta:
-        artifacts.length === 0
-          ? { label: "Open the desk", href: "/reports" }
-          : undefined,
-    },
-    {
-      id: 4,
-      name: "Companion",
-      state: layer4State,
-      summary:
-        layer4State === "locked"
-          ? "Premium Plus — Closed Beta."
-          : companionTurns === 0
-            ? "Open a reflection to begin."
-            : `${companionTurns} conversation${companionTurns === 1 ? "" : "s"} with your CFO.`,
-      // 무료 출시 (DECISIONS.md ✅확정 2026-05-30): locked 상태의 "Unlock"
-      // CTA 는 `/pricing?plan=plus` 결제 업셀이라 숨긴다(/pricing 은 307
-      // redirect → /home). Closed Beta 안내 문구(summary)만 남긴다. Stage 1
-      // 부활 시 locked → Unlock CTA 복원.
-      cta:
-        layer4State === "locked"
-          ? undefined
-          : { label: "Open Companion", href: "/companion" },
-    },
-  ].filter((l) => !(isDemoMode() && l.id === 4)) as LayerState[];
+  ];
 
   /* The outer container handles "click anywhere on the bar to open the
      modal" while each LayerDot is itself a <button> that opens with focus
@@ -242,8 +187,6 @@ function LayerDot({
         className="pq-skeleton-dark inline-block h-2.5 w-2.5"
         style={{ borderRadius: 1 }}
       />
-    ) : layer.state === "locked" ? (
-      <Lock className="h-2.5 w-2.5" />
     ) : (
       <Circle className="h-2.5 w-2.5" />
     );
@@ -253,9 +196,7 @@ function LayerDot({
       ? "var(--pq-live)"
       : layer.state === "learning"
         ? "var(--pq-bronze)"
-        : layer.state === "locked"
-          ? "var(--pq-bronze-deep, #6F5636)"
-          : "rgba(245,240,232,0.55)";
+        : "rgba(245,240,232,0.55)";
 
   return (
     <button
@@ -396,9 +337,7 @@ function StatusModal({
                         ? "var(--pq-live)"
                         : l.state === "learning"
                           ? "var(--pq-bronze)"
-                          : l.state === "locked"
-                            ? "var(--pq-bronze-deep, #6F5636)"
-                            : "rgba(245,240,232,0.3)",
+                          : "rgba(245,240,232,0.3)",
                   }}
                   aria-hidden
                 />
@@ -407,12 +346,6 @@ function StatusModal({
                     <span className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
                       Layer {l.id} · {l.name}
                     </span>
-                    {l.state === "locked" && (
-                      <Lock
-                        className="h-3 w-3 text-[var(--pq-bronze-deep,#6F5636)]"
-                        aria-hidden
-                      />
-                    )}
                   </div>
                   <div className="mt-1 text-sm text-[var(--pq-ivory)]">
                     {l.summary}

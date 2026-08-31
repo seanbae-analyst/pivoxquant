@@ -13,7 +13,7 @@
  *   - EquityCurveBlock           (timeframe toggle 1mo/3mo/6mo/1yr/All)
  *   - PositionsTableV2           (8 columns, 종목명 main pattern)
  *   - 3-col grid:
- *       SectorDonutBlock | WatchlistMini | RecentTransactionsBlock
+ *       SectorDonutBlock | RecentTransactionsBlock
  *   - WeeklyPulseCard            (reused, invisible Mon 07:00 trigger)
  *   - FootSignature              (reused)
  *
@@ -57,7 +57,6 @@ import { PortfolioHeroV2 } from "@/components/portfolio/v2/portfolio-hero-v2";
 import { EquityCurveBlock } from "@/components/portfolio/v2/equity-curve-block";
 import { PositionsTableV2 } from "@/components/portfolio/v2/positions-table-v2";
 import { SectorDonutBlock } from "@/components/portfolio/v2/sector-donut-block";
-import { WatchlistMini } from "@/components/portfolio/v2/watchlist-mini";
 import { RecentTransactionsBlock } from "@/components/portfolio/v2/recent-transactions-block";
 import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal-v2";
 import { TradeModalV2 } from "@/components/portfolio/v2/trade-modal-v2";
@@ -494,7 +493,7 @@ export default function PortfolioPageV2() {
           className="pq-portfolio-v2-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: 16,
           }}
         >
@@ -503,7 +502,6 @@ export default function PortfolioPageV2() {
             fxRate={fxRate}
             displayCurrency={displayCurrency}
           />
-          <WatchlistMini limit={6} />
           <RecentTransactionsBlock limit={6} />
         </div>
 

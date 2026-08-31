@@ -287,19 +287,6 @@ export function NotificationDropdown() {
             )}
           </div>
 
-          {/* Footer */}
-          <Link
-            href="/alerts"
-            onClick={() => setOpen(false)}
-            className="flex items-center justify-center px-4 py-3 text-xs uppercase transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
-            style={{
-              borderTop: "0.5px solid var(--pq-hairline)",
-              letterSpacing: "0.18em",
-              color: "var(--pq-bronze)",
-            }}
-          >
-            {t("topbar.viewAll")}
-          </Link>
         </div>
       )}
     </div>

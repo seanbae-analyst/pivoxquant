@@ -131,7 +131,7 @@
       "topMoverPrefix": "오늘 가장 큰 움직임은",
       "topMoverSuffix": "였어요.",
       "addFirst": "첫 종목 추가 →",
-      "viewRisk": "리스크 · 집중도 보기 →"
+      "viewMirror": "거울 보기 →"
     },
     "moodNudge": {
       "ariaLabel": "기분 체크",
@@ -243,9 +243,8 @@
       "eyebrow": "투자자 유형 · 일부 표시",
       "heading": "당신의 투자자 언어로\n말하는 거울.",
       "description": "온보딩 20문항이 당신을 투자자 유형 중 하나로 분류합니다. Drift가 감지되면 페르소나는 자동으로 재조정됩니다.",
-      "sampleReport": "샘플 리포트",
       "alsoAvailable": "Income, Quant 유형도 포함됩니다. 데스크는 당신이 선택한 유형에 맞게 모든 artifact를 재구성합니다.",
-      "viewAll": "투자자 유형 전체 보기"
+      "takeQuiz": "20문항 진단 받기"
     },
     "topNav": {
       "brandTagline": "· Living Mirror",
@@ -665,10 +664,9 @@
     "shortcutsModalTitle": "키보드 단축키",
     "shortcutsKicker": "참고",
     "shortcuts": {
-      "openSearch": "검색 팔레트 열기",
       "goHome": "홈으로",
       "goPortfolio": "포트폴리오로",
-      "goWatchlist": "관심종목으로",
+      "goMirror": "거울로",
       "closeModal": "모달 닫기",
       "navList": "리스트 탐색",
       "select": "선택"
