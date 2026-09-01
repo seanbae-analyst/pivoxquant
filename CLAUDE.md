@@ -16,8 +16,8 @@
 > 그로스 / 컴패니언 / AI 트레이더 트윈 / 18종 아티팩트 리포트 — **전부
 > 삭제됐다.** 이 파일에서 그 기능들을 찾지 마라. 없다.
 > 코드가 필요하면 커밋 `80431ac0`·`1c23fac6`·`dfb4a98f` 이전 이력에 있다.
-> 검증: pytest 2235 pass / vitest 353 pass / tsc·eslint clean / 부팅 135 rules /
-> Playwright v2 smoke 16 pass / next build 36 routes. **prod 배포 완료.**
+> 검증(2026-09-01 최종): pytest 2221 / vitest 353 / Playwright v2 smoke 16 /
+> tsc·eslint clean / 부팅 135 rules / next build 36 routes. **prod 배포 완료.**
 
 ## 현재 상태 요약 (2026-08-30 실측)
 🔴 **백엔드: 소멸 (복구 불가)** — CEO 가 **Railway 계정 자체를 삭제**(2026-08-30 확인).
@@ -94,11 +94,11 @@ pivoxquant/
     │                   #   kr_fundamentals.py · edgar.py · realtime.py
     ├── behavior/       # 5종 mirror (holding/turnover/concentration/
     │                   #   averaging-down/profit-loss) — 거울 표면의 본체
-    ├── twin/ · pre_trade/ · profile/ · portfolio/ · trading/
+    ├── pre_trade/ · profile/ · portfolio/ · trading/
     ├── ai/ · email/ · kis/ · broker/ · legal/ · scheduler/ · customer/
     ├── support/ · inbox/ · marketing/ · tax/ · mock_data/
     └── (루트) container(fetcher·ai·realtime 싱글턴) · cache_service ·
-              serializers · fx_service · alert · alert_service · push 등
+              serializers · fx_service · alert(벨 3종) · push 등
 ```
 
 ## 프론트엔드 구조
@@ -167,6 +167,15 @@ cd ~/Desktop/취준/pivoxquant/frontend && npm run dev
 - KIS: 계좌번호 XXXXXXXX-01 (read-only)
 - Alpaca: paper trading 계정 (.env에 키 있음)
 
+## 알림 (2026-09-01 개편)
+설정 → 알림 매트릭스는 **실제로 발신되는 2종만** 노출한다:
+`price_52w`(52주 고/저 스윕) · `concentration`(섹터 30% 초과 스윕). 둘 다
+app.py 의 `_scheduled_price_alerts` 크론이 발신하고, `_BELL_KIND_TO_EVENT_ID`
+를 통해 토글이 실제로 걸린다. SoT = `models/user.py::NOTIFICATION_EVENT_IDS`
+(프론트 `notifications-matrix.tsx` 와 1:1). 옛 7종(weekly_memo /
+earnings_pre_brief / signal_state / risk_breach / pulse_prompt / brag_card /
+broker_sync_error)은 전부 발신자가 없어 삭제 — 되살리려면 **발신자부터** 만들 것.
+
 ## 중요 원칙
 - 🔴 **최신 정보 파악 (모든 agent 필수)** — CEO 반복 지시 (2026-05-30 "자꾸 옛날 데이터 가져온다"). **코드/수치** = grep·Read 실측 (메모리·기억 인용 금지) / **시장·경쟁·규제** = WebSearch + 출처 날짜 확인 (훈련데이터 금지, 예: 키움 자동일지 = 검색으로 확인) / **결정**(가격·법·수익모델) = `~/.claude/projects/-Users-seanbae-Desktop---/memory/DECISIONS.md` (SoT) / **동적수치**(HEAD·cron·test) = SessionStart hook LIVE 값. 오늘 날짜 기준. 모르면 "확인 불가". "최근/요즘" 막연 표현 금지 → 출처+날짜.
 - **퀀트 코드 없음** — `services/quant/` 는 2026-08-31 통째로 삭제됐다.
@@ -227,13 +236,31 @@ CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in templ
 
 ## 출시까지 남은 것 (2026-08-31 갱신)
 
-### 🔴 최우선
-- **백엔드 호스팅 재선정** — Railway 계정 삭제로 prod 백엔드 부재. 이게 정해지기
-  전까지 백엔드 배포 의존 작업은 전부 보류. 프론트는 살아있지만 로그인 이후는
-  전부 죽어 있다.
-- **시크릿 전량 재발급** — BREVO_API_KEY 등 Railway env vars 소실.
-- ✅ **prod 프론트 재배포 완료** (2026-09-01, PR #538·540·541·542). 화면 6개,
-  삭제 경로 18개는 살아있는 목적지로 308 리다이렉트, sitemap 7 URL.
+### 🔴 최우선 — 다음 세션 주제: 백엔드 복구
+prod 프론트는 살아있지만 **로그인 이후가 전부 죽어 있다**. 순서대로:
+
+1. **호스팅 선정** (CEO 액션 — 가입·결제는 agent 가 못 한다).
+   후보: Railway 재가입 / Render / Fly.io / Supabase. Postgres 가 붙는 곳이면 된다.
+2. **DB 재생성** — alembic 리비전 52개로 스키마 100% 재현 가능.
+   `flask db upgrade` (Procfile 의 release 단계가 이미 이걸 한다).
+   prod 데이터는 소실됐지만 클로즈드 베타라 실사용자 데이터는 사실상 없다.
+3. **시크릿 재설정** — Railway env vars 전량 소실. 필요 목록은 `.env.example`.
+   최소 세트: `DATABASE_URL` · `SECRET_KEY` · `PIVOX_BROKER_ENCRYPTION_KEY` ·
+   Google/Kakao OAuth client id+secret · `FMP_API_KEY` · `BREVO_API_KEY`
+   (+`BREVO_PROVIDER_PRIMARY=true`) · KIS 앱키. `DEV_LOGIN_SECRET` 은 **절대 금지**
+   (routes/__init__.py 가 Railway 마커 감지 시 부팅을 거부한다).
+4. **프론트 재연결** — Vercel 대시보드의 `RAILWAY_BACKEND_URL`(또는
+   `NEXT_PUBLIC_API_URL`)을 새 호스트로. `vercel env` + `vercel redeploy`.
+   ⚠️ 이 값이 `/api` 프록시의 SoT다 (next.config.ts:9-10).
+5. **검증** — `/api/health` 200 → 로그인 → `/mirror` 렌더 → `/portfolio` 포지션.
+
+**Dockerfile 은 2026-09-01 에 122→63 줄로 줄였다** (삭제된 PDF/PNG 렌더용
+폰트스택·Chromium 제거). 다만 **이 머신에 Docker 가 없어 정적 감사만 했다** —
+새 호스트의 첫 빌드가 실질 검증이다. 실패하면 `git show c982e273^:Dockerfile`
+로 옛 버전 대조.
+
+- ✅ **prod 프론트 재배포 완료** (2026-09-01, PR #538·540·541·542·543·544).
+  화면 6개, 삭제 경로 18개는 살아있는 목적지로 308 리다이렉트, sitemap 7 URL.
 
 ### 🔴 출시 BLOCKER (외부 / 법무 의존 — CEO 액션)
 - **변호사 의견서 Q1-Q15 + Q-S1** — 유료결제 활성화 BLOCKER. `legal_question_queue.md`.
