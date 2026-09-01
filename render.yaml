@@ -98,8 +98,6 @@ services:
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: BETA_PASSWORD
-        sync: false
 
       # RAILWAY_BACKEND_URL is misnamed but not Railway-specific: routes/auth.py
       # reads it to build the logout Origin allowlist. Set it to the Render URL
@@ -110,6 +108,11 @@ services:
       # ── Deliberately NOT set ──────────────────────────────────────────────
       # DEV_LOGIN_SECRET — routes/__init__.py refuses to boot when this is set
       #   alongside FLASK_ENV=production. It is an E2E-only bypass.
+      # BETA_PASSWORD — frontend-only. The beta interstitial lives in
+      #   frontend/middleware.ts and frontend/src/app/api/beta-auth/route.ts,
+      #   so the value belongs on Vercel, where it already is. The backend
+      #   never reads it; services/launch_prep.py lists it in its env
+      #   inventory, which is why it looks like a backend variable and is not.
       # SIM_ONBOARD_SECRET — only needed to restore the CAUS sim user flow.
       # STRIPE_* — payment stays gated off until BUSINESS_REGISTRATION and the
       #   lawyer's Q1-Q15 opinion land. Adding the keys does not enable it.

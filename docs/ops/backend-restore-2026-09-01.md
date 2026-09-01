@@ -115,7 +115,12 @@ dev-login 으로 세션을 만든 뒤 실제 엔드포인트를 때렸다.
 4. 첫 배포 → URL 발급되면 `RAILWAY_BACKEND_URL` 에 그 URL 을 넣고 재배포
    (이름은 Railway 지만 Railway 전용이 아니다 — `routes/auth.py` 의 로그아웃
    Origin 허용목록이 이 값을 읽는다)
-5. Google / Kakao OAuth 콘솔의 **redirect URI 에 새 Render 도메인 추가**
+5. **OAuth 콘솔은 손댈 필요 없다** (2026-09-01 정정). redirect URI 는 백엔드가
+   아니라 **프론트 origin** 으로 만들어진다 — `routes/auth.py:1025` 가
+   `_resolve_frontend_url()` 로 origin 을 잡고 `{origin}/api/auth/google/callback`
+   을 쓴다. 그 origin 은 `_ALLOWED_OAUTH_ORIGINS` 화이트리스트로 제한되고
+   Render 도메인은 거기 없다. 프론트 도메인이 그대로이므로 기존 등록값
+   `https://www.pivoxquant.com/api/auth/{google,kakao}/callback` 이 계속 맞다.
 
 ### 요금
 
