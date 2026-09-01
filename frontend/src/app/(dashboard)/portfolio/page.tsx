@@ -7,7 +7,6 @@
  * Sole /portfolio surface — the ledger-binder variant was deleted 2026-08-30.
  *
  * Surface map (4-block structure):
- *   - TopTicker                  (reused, full-bleed)
  *   - LivingCFOStatusBar         (reused, sticky)
  *   - PortfolioHeroV2            (NAV + reconciled time + Add / Reconcile CTAs)
  *   - EquityCurveBlock           (timeframe toggle 1mo/3mo/6mo/1yr/All)
@@ -33,7 +32,6 @@ import { toast } from "sonner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { FootSignature } from "@/components/ui/editorial";
 
-import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 import { RollingWindowWidget } from "@/components/dashboard/rolling-window";
@@ -367,7 +365,6 @@ export default function PortfolioPageV2() {
         className="-mx-4 md:-ml-10 md:-mr-10 mb-4"
         style={{ maxWidth: "100vw" }}
       >
-        <TopTicker />
       </div>
 
       {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════

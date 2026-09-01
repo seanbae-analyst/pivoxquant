@@ -18,22 +18,6 @@ from unittest.mock import patch
 
 
 
-class TestPeerComparisonGate:
-    def test_out_of_scope_ticker_returns_403(self, client, auth_user):
-        r = client.get("/api/peers/TSLA")
-        assert r.status_code == 403
-        assert r.get_json()["error"] == "ticker_not_in_user_scope"
-
-    def test_owned_ticker_passes_gate(self, client, auth_user, add_position):
-        # 보유 ticker 는 게이트 통과 → SignalCache 없으면 404(분석먼저)지만 403 아님.
-        add_position(auth_user["id"], ticker="AAPL")
-        r = client.get("/api/peers/AAPL")
-        assert r.status_code != 403
-
-    def test_legal_scrub_decorator_attached(self):
-        # 형제 endpoint 일치 — @legal_scrub_response 부착 확인.
-        from routes import market as market_route
-        assert hasattr(market_route.peer_comparison, "__wrapped__")
 
 
 # ── AI#3: build_analysis_context take_profit/stop_loss 미주입 ─────────────────

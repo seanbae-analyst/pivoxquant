@@ -17,7 +17,7 @@
  *
  * Reused (zero-modification imports):
  *   PersonaV2Card · PersonaEvolution · WeeklyPulseCard · ModalShell
- *   TopTicker · LivingCFOStatusBar · FootSignature · ErrorBoundary
+ *   LivingCFOStatusBar · FootSignature · ErrorBoundary
  *
  * Legal: persona vocabulary only. POSITIVE / NEGATIVE / NEUTRAL.
  * Pulse posture pill rendered as STEADY (not HOLD) per CEO 2026-04-28.
@@ -46,7 +46,6 @@ import type { PeerMetric } from "@/components/profile/v2/peer-benchmark-block-v2
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
-import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { PersonaV2Card } from "@/components/dashboard/persona-v2-card";
 import { PersonaEvolution } from "@/components/dashboard/persona-evolution";
@@ -440,7 +439,6 @@ export default function ProfilePageV2() {
         className="-mx-4 md:-ml-10 md:-mr-10 mb-4"
         style={{ maxWidth: "100vw" }}
       >
-        <TopTicker />
       </div>
 
       {/* Mock-data banner: shown until first trade flips persona to live */}

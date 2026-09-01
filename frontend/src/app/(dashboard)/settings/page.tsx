@@ -15,7 +15,7 @@
  *
  * Reused (zero-modification imports):
  *   KisCard · KisConnectModal
- *   ModalShell · TopTicker · LivingCFOStatusBar · FootSignature · ErrorBoundary
+ *   ModalShell · LivingCFOStatusBar · FootSignature · ErrorBoundary
  *
  * 11 CEO settings features mapped per MIGRATION §1; 6 GAPs surfaced as UI
  * with graceful fallbacks (mailto / localStorage / "TBD" hint).
@@ -42,7 +42,6 @@ import {
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
-import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 
 import { KisCard } from "@/components/broker/kis-card";
@@ -468,7 +467,6 @@ export default function SettingsPageV2() {
         className="-mx-4 md:-ml-10 md:-mr-10 mb-4"
         style={{ maxWidth: "100vw" }}
       >
-        <TopTicker />
       </div>
 
       {/* LIVING CFO STATUS — sticky hairline.

@@ -22,7 +22,6 @@ import { useAuth } from "@/lib/auth";
 import { useMirrorHome } from "@/lib/hooks";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
-import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
@@ -72,7 +71,6 @@ export default function MirrorPage() {
 
   return (
     <div className="min-h-screen bg-[rgb(5,5,5)] text-[var(--pq-ivory)]">
-      <TopTicker />
       <LivingCFOStatusBar />
 
       <div className="mx-auto max-w-3xl space-y-8 px-5 py-8 md:px-8">

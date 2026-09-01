@@ -17,9 +17,10 @@
 > 삭제됐다.** 이 파일에서 그 기능들을 찾지 마라. 없다.
 > 코드가 필요하면 커밋 `80431ac0`·`1c23fac6`·`dfb4a98f` 이전 이력에 있다.
 > 검증(2026-09-01 재실측 — **모든 수치를 다시 셌다**): pytest **2174** /
-> vitest **353** / tsc·eslint clean / 부팅 **URL rule 134 · blueprint 23**.
-> pytest 가 2221→2174 로 준 건 같은 날 **지원 챗봇을 제거**하며 그 테스트
-> 53개가 함께 빠졌기 때문이다(회귀 아님, 전부 green).
+> vitest **353** / tsc·eslint clean / 부팅 **URL rule 120 · blueprint 23**.
+> pytest 2221→2174→**2156**, URL rule 135→134→**120**. 감소는 전부 같은 날의
+> 의도적 제거다 — 지원 챗봇(테스트 53) + market 죽은 라우트 14개(테스트 ~20).
+> 회귀 아님, 최종 **2156 passed / 0 failed**.
 
 ## 현재 상태 요약 (2026-09-01 실측)
 🟡 **백엔드: DB 재구축 완료 / 앱 호스팅 대기** (2026-09-01 실측). Railway 계정이
@@ -92,7 +93,7 @@
   상세 메모리 `project_design_v3.md`.
 
 ## 백엔드 구조
-> **2026-09-01 재실측: blueprint 23개 / URL rule 134개.** `create_app()` 부팅 검증됨.
+> **2026-09-01 재실측: blueprint 23개 / URL rule 120개.** `create_app()` 부팅 검증됨.
 > ⚠️ 이 자리에 있던 "blueprint 25 / URL rule 141" 은 틀린 값이었고, 같은 파일
 > 상단이 동시에 "135 rules" 라고 적어 **자기모순** 상태였다. 숫자를 적을 땐
 > `create_app()` 을 실제로 띄워서 셀 것.
@@ -109,6 +110,9 @@ pivoxquant/
     │  alerts · notifications · push · realtime · market(지수/FX만)
     │  support(문의만 — 챗봇 9-01 제거) · inbox · feedback · health
     │  data_status · sendgrid_webhook · dev_auth
+    │  ⚠️ market 은 2026-09-01 에 18→**4 라우트**로 줄었다 (search / market/fx /
+    │     market/indices / public/market-snapshot). 나머지 14개는 프론트
+    │     소비자가 0 이던 8-31 prune 잔재였고, FMP 를 가장 많이 쓰던 것들이다.
     │  (조건부·부팅 시 미등록: sim_onboard=SIM_ONBOARD_SECRET 필요,
     │   command_center=opt-in. 위 23개 카운트에 포함되지 않는다)
     └── decorators.py

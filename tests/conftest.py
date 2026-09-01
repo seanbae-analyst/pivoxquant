@@ -469,8 +469,11 @@ def mock_realtime():
     mock = MagicMock()
     mock.get_prices_batch.return_value = {}
     mock.alpaca_available = False
-    with patch("routes.market.realtime", mock), \
-         patch("routes.portfolio.realtime", mock):
+    # 2026-09-01 — `routes.market` 는 더 이상 `realtime` 을 import 하지 않는다.
+    # 이를 쓰던 라우트(/prices, /chart, /market/overview 등 14개)가 프론트
+    # 소비자 0 으로 제거되면서 import 도 함께 사라졌다. `mock_engine` 이
+    # 같은 이유로 이미 portfolio 만 패치하고 있다 — 같은 패턴을 따른다.
+    with patch("routes.portfolio.realtime", mock):
         yield mock
 
 

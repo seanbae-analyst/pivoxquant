@@ -89,7 +89,8 @@ READ_ENDPOINTS = [
     # ── 2026-06-11 expansion: discover/market (provider-backed) ──
     ("mkt-indices",      "/api/market/indices",            OK_PROVIDER),
     ("mkt-fx",           "/api/market/fx",                 OK_PROVIDER),
-    ("mkt-status",       "/api/market/status",             OK_PROVIDER),
+    # 2026-09-01 — /api/market/status 는 프론트 소비자가 0이라 라우트와 함께
+    # 제거됐다. 스윕에서 빼지 않으면 매 실행이 404 를 finding 으로 올린다.
     # ── behavior mirrors (in-process compute from the book) ──
     ("bhv-avgdown",      "/api/behavior/averaging-down-mirror",  OK_EMPTYISH),
     ("bhv-conc",         "/api/behavior/concentration-mirror",   OK_EMPTYISH),

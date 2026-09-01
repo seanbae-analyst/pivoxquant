@@ -8,7 +8,6 @@ that a single-shot check misses.
 
 Endpoints probed each iteration:
   - GET /api/health                       → must be 200 + {"status":"ok"}
-  - GET /api/agent/status                 → must be 200
   - GET /api/search?q=AAPL                → 200 expected (auth) or 401 (unauth mode)
   - GET /api/market/indices?region=us     → 200 expected (auth) or 401 (unauth)
   - GET /api/market/indices?region=kr     → 200 expected (auth) or 401 (unauth)
@@ -95,7 +94,9 @@ def _login_dev() -> Optional[list[str]]:
 # (name, path, expected_when_authed)
 PROBES = [
     ("health",             "/api/health",                    200),
-    ("agent_status",       "/api/agent/status",              200),
+    # 2026-09-01 — /api/agent/status 는 존재하지 않는다. 8-31 prune 이 agent
+    # 라우트를 지웠는데 이 모니터만 남아 매일 밤 200 을 기대하며 실패해 왔다.
+    # (오늘 market 라우트 정리 중에 발견 — 내 변경이 만든 게 아니다.)
     ("search_aapl",        "/api/search?q=AAPL",             200),
     ("indices_us",         "/api/market/indices?region=us",  200),
     ("indices_kr",         "/api/market/indices?region=kr",  200),

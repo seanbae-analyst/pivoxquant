@@ -46,24 +46,13 @@ export const API = {
   },
   discover: "/api/discover",
   market: {
-    overview: "/api/market/overview",
-    status: "/api/market/status",
+    // 2026-09-01 — 14개 죽은 라우트를 백엔드에서 제거하면서 함께 정리했다.
+    // overview / status / macro / sectors / lookup / prices / chart /
+    // earnings / earningsByTicker / peers / profile / dividend / news 는
+    // 8-31 prune 으로 사라진 디스커버·마켓 화면의 잔재였고, 정의만 남아
+    // FMP 를 가장 많이 쓰는 엔드포인트들을 살아있는 것처럼 보이게 했다.
     fx: "/api/market/fx",
-    macro: "/api/macro",
-    sectors: "/api/sectors",
     search: (query: string) => `/api/search?q=${encodeURIComponent(query)}`,
-    lookup: (ticker: string) => `/api/lookup/${ticker}`,
-    prices: "/api/prices",
-    chart: (ticker: string) => `/api/chart/${ticker}`,
-    earnings: "/api/earnings",
-    // Per-ticker earnings (gated to user holdings+watchlist, §101-safe).
-    // Returns the SAME item shape as the /api/earnings list items.
-    earningsByTicker: (ticker: string) =>
-      `/api/earnings/${encodeURIComponent(ticker)}`,
-    peers: (ticker: string) => `/api/peers/${ticker}`,
-    profile: (ticker: string) => `/api/market/profile/${ticker}`,
-    dividend: (ticker: string) => `/api/dividend/${ticker}`,
-    news: (ticker: string) => `/api/news/${ticker}`,
   },
   alerts: {
     list: "/api/alerts",
@@ -292,7 +281,6 @@ export const RISK_SUMMARY       = `${API_BASE}/api/risk/summary`;
 export const RISK_LAYERS        = `${API_BASE}/api/risk/layers`;
 export const RISK_CORRELATION   = `${API_BASE}/api/risk/correlation`;
 export const RISK_ROLLING_VAR   = `${API_BASE}/api/risk/rolling-var`;
-export const MARKET_INDICES     = `${API_BASE}/api/market/indices`;
 
 // Public (no-auth) cache-only market snapshot — backs the landing-page
 // MarketTicker. Rate-limited, cache-only, always HTTP 200. No session
