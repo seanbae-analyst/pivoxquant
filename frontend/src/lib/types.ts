@@ -782,29 +782,6 @@ export interface SupportInquiryCreateResponse {
   created_at: string;
 }
 
-/** One conversation turn passed back to POST /api/support/chat (history). */
-export interface SupportChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-/** POST /api/support/chat body. history is capped at 10 turns server-side. */
-export interface SupportChatRequest {
-  message: string;
-  history?: SupportChatMessage[];
-}
-
-/**
- * POST /api/support/chat → reply envelope. When `escalated` is true and
- * `inquiry_id` is a positive number, the bot opened a 1:1 inquiry on the
- * user's behalf (surface a "내 문의함에서 보기" link).
- */
-export interface SupportChatResponse {
-  reply: string;
-  escalated: boolean;
-  inquiry_id: number | null;
-}
-
 /**
  * Admin view of an inquiry (GET /api/support/admin/inquiries). Extends the
  * detail record with operator-only fields. Reuses SupportInquiryDetail so the

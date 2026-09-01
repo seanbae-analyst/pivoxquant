@@ -7,7 +7,6 @@
  * 제출 → POST /api/support/inquiries. 성공 시 인라인 성공 + 폼 리셋 +
  * 내 문의함 안내 + 목록 mutate. 429/401/400 분기.
  *
- * 상단에 "먼저 AI 고객지원에게 물어보면 더 빨라요" → /support/chat 링크.
  *
  * v3 tone. DisclaimerBanner 는 (dashboard)/layout.tsx 가 하단에 1회 마운트.
  */
@@ -15,7 +14,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useSWRConfig } from "swr";
-import { MessageSquare, CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { API } from "@/lib/endpoints";
 import { createSupportInquiry } from "@/lib/hooks";
 import { ApiError } from "@/lib/api";
@@ -102,22 +101,6 @@ function ContactForm() {
           확인할 수 있습니다.
         </Caption>
       </header>
-
-      {/* AI shortcut hint */}
-      <Link
-        href="/support/chat"
-        className="mb-6 flex items-center gap-2 rounded-[2px] border px-4 py-3 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
-        style={{
-          borderColor: "var(--pq-ivory-line)",
-          background: "var(--pq-card-veil)",
-        }}
-      >
-        <MessageSquare className="h-4 w-4 shrink-0" style={{ color: "var(--pq-bronze)" }} />
-        <span className="font-serif text-pq-caption" style={{ color: "var(--pq-ivory-soft)" }}>
-          먼저 AI 고객지원에게 물어보면 더 빨라요
-        </span>
-        <ArrowRight className="ml-auto h-3.5 w-3.5 shrink-0" style={{ color: "var(--pq-muted)" }} />
-      </Link>
 
       {/* Success banner */}
       {state.kind === "success" && (

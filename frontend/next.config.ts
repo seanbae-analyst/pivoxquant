@@ -67,6 +67,8 @@ const nextConfig: NextConfig = {
       { source: "/discover/:path*", destination: "/mirror", permanent: true },
       { source: "/market", destination: "/mirror", permanent: true },
       { source: "/market/:path*", destination: "/mirror", permanent: true },
+      // 2026-09-01 — 지원 챗봇 제거. 문의 접수가 유일한 지원 경로가 됐다.
+      { source: "/support/chat", destination: "/support/contact", permanent: true },
       { source: "/watchlist", destination: "/portfolio", permanent: true },
       { source: "/watchlist/:path*", destination: "/portfolio", permanent: true },
       { source: "/detail/:path*", destination: "/portfolio", permanent: true },

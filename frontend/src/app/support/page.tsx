@@ -15,7 +15,7 @@
  */
 
 import Link from "next/link";
-import { MessageSquare, FileText, Inbox, ArrowRight } from "lucide-react";
+import { FileText, Inbox, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { EditorialHead, RuledKicker, Caption } from "@/components/ui/editorial";
 import { FaqSection } from "@/components/support/faq-section";
@@ -124,12 +124,9 @@ export default function SupportPage() {
 
           {isAuthed ? (
             <div className="space-y-3">
-              <PrimaryCta href="/support/chat" icon={<MessageSquare className="h-5 w-5" />}>
-                AI 고객지원에게 물어보기
-              </PrimaryCta>
-              <SecondaryCta href="/support/contact" icon={<FileText className="h-5 w-5" />}>
+              <PrimaryCta href="/support/contact" icon={<FileText className="h-5 w-5" />}>
                 1:1 문의하기
-              </SecondaryCta>
+              </PrimaryCta>
               <SecondaryCta href="/support/inbox" icon={<Inbox className="h-5 w-5" />}>
                 내 문의함
               </SecondaryCta>

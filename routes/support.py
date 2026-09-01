@@ -1,4 +1,4 @@
-"""Customer support center (고객문의센터) + support chatbot.
+"""Customer support center (고객문의센터).
 
 Endpoints (url_prefix ``/api/support``)
 ---------------------------------------
@@ -7,13 +7,21 @@ Endpoints (url_prefix ``/api/support``)
 - GET  /inquiries/<iid>         — my ticket detail (IDOR-safe)
 - GET  /admin/inquiries         — all tickets (admin only, 404 to others)
 - POST /admin/inquiries/<iid>/reply — operator replies (admin only)
-- POST /chat                    — support chatbot (all tiers)
 
-Legal posture
+2026-09-01 — the support chatbot (``POST /chat``) was removed. It was the
+only live consumer of ``ANTHROPIC_API_KEY``, so the key is gone from the
+deploy config too. Support is now a single honest path: the user files an
+inquiry and a human answers it. Nothing auto-escalates any more, which also
+retires the flood guard that existed only for chatbot-filed tickets.
+
+legal posture
 -------------
-The chatbot NEVER surfaces investment advice — see
-``services/support/chatbot.py`` for the 3-layer defense. The /chat path
-escalates anything it cannot safely answer to a human Inquiry.
+# legal-exempt: 이 파일의 모든 응답은 사람이 쓴 문의·답변을 그대로 돌려주는
+경로다. 생성된 시장 콘텐츠가 아니므로 legal_scrub_response 대상이 아니다.
+스크럽 데코레이터는 원래 제거된 /chat (모델 생성 응답) 에만 붙어 있었고,
+문의 경로에는 붙은 적이 없다 — exempt 는 기존 동작을 그대로 유지한다.
+⚠️ 운영자 답변(admin_reply)까지 스크럽할지는 별도 정책 결정이다. 붙이면
+동작 변경이므로 여기서 임의로 바꾸지 않았다.
 
 XSS
 ---
@@ -25,8 +33,6 @@ from __future__ import annotations
 
 import html
 import logging
-import threading
-import time as _time
 from datetime import datetime, timezone
 
 from flask import Blueprint, abort, jsonify, request
@@ -34,11 +40,10 @@ from flask_login import current_user
 
 from extensions import db
 from models.inquiry import Inquiry, VALID_CATEGORIES
-from routes.decorators import api_auth, legal_scrub_response
+from routes.decorators import api_auth
 from services.admin_emails import get_admin_emails as _admin_emails
 from services.error_responses import api_error
 from services.email.sender import EmailSender, EmailCategory
-from services.support.chatbot import answer_support_question, _is_investment_question
 
 logger = logging.getLogger(__name__)
 
@@ -47,15 +52,9 @@ support_bp = Blueprint("support", __name__, url_prefix="/api/support")
 
 # ── constants ────────────────────────────────────────────────────────────────
 _OPEN_INQUIRY_CAP = 10            # user-filed open tickets
-_AUTO_ESCALATION_OPEN_CAP = 15    # chatbot auto-filed open tickets (flood guard)
 _INQUIRY_COOLDOWN_SECONDS = 30
-_CHAT_COOLDOWN_SECONDS = 3
-_CHAT_DAILY_CAP = 50
 _SUBJECT_MAX = 200
 _BODY_MAX = 5000
-_CHAT_MSG_MAX = 2000
-_HISTORY_MAX_TURNS = 10
-_HISTORY_CONTENT_MAX = 1000
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -328,163 +327,3 @@ def admin_reply_inquiry(iid: int):
     d["user_id"] = inquiry.user_id
     d["email_snapshot"] = inquiry.email_snapshot
     return jsonify(d)
-
-
-# ── chatbot endpoint ───────────────────────────────────────────────────────────
-# Per-user in-memory rate-limit state (single gevent worker). Reset on reboot.
-_chat_lock = threading.Lock()
-_chat_state: dict[int, dict] = {}  # uid -> {"last": ts, "day": "YYYY-MM-DD", "count": int}
-
-
-def _chat_rate_limited(uid: int) -> bool:
-    now = _time.time()
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    with _chat_lock:
-        st = _chat_state.get(uid)
-        if st is None:
-            _chat_state[uid] = {"last": now, "day": today, "count": 1}
-            return False
-        if st["day"] != today:
-            st["day"] = today
-            st["count"] = 0
-        if now - st["last"] < _CHAT_COOLDOWN_SECONDS:
-            return True
-        if st["count"] >= _CHAT_DAILY_CAP:
-            return True
-        st["last"] = now
-        st["count"] += 1
-        return False
-
-
-def _validate_history(history) -> bool:
-    if history is None:
-        return True
-    if not isinstance(history, list):
-        return False
-    if len(history) > _HISTORY_MAX_TURNS:
-        return False
-    for turn in history:
-        if not isinstance(turn, dict):
-            return False
-        if turn.get("role") not in ("user", "assistant"):
-            return False
-        content = turn.get("content")
-        if not isinstance(content, str) or len(content) > _HISTORY_CONTENT_MAX:
-            return False
-    return True
-
-
-_DEFLECT_INVESTMENT = (
-    "투자 관련 질문에는 답변드릴 수 없어요. 시장 데이터 분석은 앱 내 "
-    "AI Assistant를 이용해 주세요. 고객지원은 결제·계정·사용법 문의를 "
-    "도와드립니다."
-)
-
-
-def _history_summary(history) -> str:
-    """Compact 2-3 most-recent turns for the auto-filed ticket body."""
-    if not isinstance(history, list) or not history:
-        return ""
-    recent = history[-3:]
-    lines = []
-    for turn in recent:
-        role = turn.get("role", "")
-        content = (turn.get("content") or "")[:300]
-        lines.append(f"[{role}] {content}")
-    return "\n".join(lines)
-
-
-@support_bp.route("/chat", methods=["POST"])
-@api_auth
-@legal_scrub_response
-def support_chat():
-    data = request.get_json(silent=True) or {}
-    message = data.get("message")
-    history = data.get("history")
-
-    if not isinstance(message, str) or not (1 <= len(message.strip()) <= _CHAT_MSG_MAX):
-        return api_error(
-            en="Invalid message.",
-            kr="메시지가 유효하지 않습니다.",
-            code="INVALID_MESSAGE",
-            status=400,
-        )
-    if not _validate_history(history):
-        return api_error(
-            en="Invalid message.",
-            kr="메시지가 유효하지 않습니다.",
-            code="INVALID_MESSAGE",
-            status=400,
-        )
-
-    if _chat_rate_limited(current_user.id):
-        return api_error(
-            en="Too many requests.",
-            kr="요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
-            code="RATE_LIMITED",
-            status=429,
-        )
-
-    # Layer 1: pre-filter investment questions (zero model tokens).
-    if _is_investment_question(message):
-        return jsonify({
-            "reply": _DEFLECT_INVESTMENT,
-            "escalated": False,
-            "inquiry_id": None,
-        })
-
-    result = answer_support_question(message, history)
-    if result.get("can_answer"):
-        return jsonify({
-            "reply": result["answer"],
-            "escalated": False,
-            "inquiry_id": None,
-        })
-
-    # Escalate to a human Inquiry.
-    from services.support.chatbot import ai as _ai  # bound singleton
-    ai_unavailable = not _ai.available or _ai.client is None
-
-    # Flood guard: cap auto-filed open tickets per user.
-    auto_open = Inquiry.query.filter_by(
-        user_id=current_user.id, status="open", category="other"
-    ).count()
-    inquiry_id = None
-    if auto_open < _AUTO_ESCALATION_OPEN_CAP:
-        summary = _history_summary(history)
-        body = "[챗봇 자동 접수]\n\n" + message
-        if summary:
-            body += "\n\n--- 최근 대화 ---\n" + summary
-        inquiry = Inquiry(
-            user_id=current_user.id,
-            category="other",
-            subject=(message.strip()[:60]) or "고객 문의",
-            body=body,
-            status="open",
-            email_snapshot=current_user.email,
-            created_at=_now(),
-        )
-        db.session.add(inquiry)
-        db.session.commit()
-        inquiry_id = inquiry.id
-        _notify_operator(inquiry)
-
-    if inquiry_id is not None:
-        reply = (
-            f"제가 바로 답변드리기 어려운 문의예요. 상담으로 접수했고 "
-            f"담당자가 확인 후 회신드릴게요. (문의 #{inquiry_id}) "
-            "내 문의함에서 확인하실 수 있어요."
-        )
-    else:
-        reply = (
-            "제가 바로 답변드리기 어려운 문의예요. 처리 대기 중인 문의가 "
-            "많아 추가 접수가 어렵습니다. 잠시 후 다시 시도해 주세요."
-        )
-    if ai_unavailable:
-        reply = "지금 자동 답변이 어려워 " + reply
-
-    return jsonify({
-        "reply": reply,
-        "escalated": inquiry_id is not None,
-        "inquiry_id": inquiry_id,
-    })

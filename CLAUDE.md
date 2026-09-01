@@ -73,8 +73,12 @@
   (ap-northeast-2, session pooler 경유), 앱 호스팅 = **Render**(`render.yaml`,
   배포 대기) / SQLite (local)
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
-- **AI**: Claude API — 남은 사용처는 지원 챗봇 / 이메일 문안 등 보조 경로.
-  종목 SWOT·시그널·섹터·코칭 등 **분석 AI 는 표면과 함께 삭제됨**.
+- **AI**: **없음** (2026-09-01). 지원 챗봇을 제거하면서 `ANTHROPIC_API_KEY` 의
+  마지막 실사용처가 사라졌다 — Render env 에서도 뺐다. `services/ai/` 는 트리에
+  남아 있으나 **공개 메서드 9개 전부 호출처 0곳**이고(8-31 prune 이 분석 표면을
+  지우며 본체만 남김), `fetcher.score_news_sentiment` 뉴스 AI 도 호출처가 없다.
+  즉 지금 이 제품은 런타임에 Claude API 를 한 번도 부르지 않는다.
+  되살릴 거면 **소비자부터** 만들 것.
 - **Broker**: KIS 한국투자증권 (read-only). Alpaca 는 2026-05-27 통합 제거,
   데이터 fallback stub 만 `ALPACA_ENABLED` 게이트(기본 OFF)로 잔존.
 - **Data**: FMP Stable + KIS (공식 라이선스 데이터만). 2026-08-31 prune 으로
@@ -134,7 +138,7 @@ frontend/src/
 │   │   ├── journal       # 결정 저널
 │   │   ├── profile       # 페르소나 · 펄스 · 데이터 내보내기/삭제
 │   │   ├── settings(+/profile)
-│   │   └── support/      # 문의 · 챗봇 · inbox
+│   │   └── support/      # 문의(contact) · inbox  ← 챗봇 2026-09-01 제거
 │   ├── admin/ · beta/ · beta-gate/ · docs/ · feedback/nps/
 │   ├── pricing · terms · privacy · contact · support · delete-cancel
 │   └── card/[token]      # 폐기된 공유링크 tombstone (404 대신 안내)
@@ -217,36 +221,41 @@ broker_sync_error)은 전부 발신자가 없어 삭제 — 되살리려면 **�
 - 회원탈퇴 기능 (PIPA 준수)
 - Terms checkbox 필수 (회원가입 시)
 
-### Template Hardcoding Guard
+### Template Hardcoding Guard — ⚠️ 2026-09-01 실측: **현재 방어선 0개**
 
-**방어선 2개 (이중 방어)**
+이 섹션은 오래도록 "이중 방어"라고 적혀 있었지만 **둘 다 지금은 동작하지 않는다.**
+실측으로 확인했다:
 
-| 방어선 | 위치 | 실행 환경 | 검증 대상 |
-|--------|------|-----------|-----------|
-| CI legal-guard | `.github/workflows/legal-guard.yml` | ubuntu-latest (GNU grep) | PR + push to main 자동 실행 |
-| 로컬 pytest | `tests/test_no_hardcoded_samples.py` | 크로스 플랫폼 (Python) | 로컬 개발 + CI 동일 실행 |
+| 방어선 | 문서상 | 실제 |
+|--------|--------|------|
+| CI legal-guard 하드코딩 스캔 | `services/artifacts/templates/` 스캔 | 🔴 **그 디렉터리가 없다** (8-31 prune 으로 아티팩트 18종과 함께 삭제) → 스캔 대상 0개로 **공허하게 통과** |
+| 로컬 pytest | `tests/test_no_hardcoded_samples.py` | 🔴 **파일이 존재하지 않는다** |
 
-**macOS 주의사항**
+**이건 사고가 아니라 정합이다.** 이 가드는 아티팩트 템플릿의 하드코딩된 종목·금액을
+막으려고 존재했는데, **지킬 템플릿 자체가 사라졌다.** 되살릴 이유가 없다. 다만
+`.github/workflows/legal-guard.yml` 의 해당 스텝들은 없는 경로를 스캔하며 green 을
+찍고 있으므로, **그 green 을 "하드코딩이 없다"는 증거로 읽으면 안 된다.**
+아티팩트류를 다시 만든다면 가드도 같이 되살릴 것.
 
-`.github/workflows/legal-guard.yml` 의 `grep -rnPzo` 는 PCRE (`-P`) 플래그를 사용한다.
-macOS 기본 BSD grep 은 `-P` 를 지원하지 않으며, 오류 메시지(`grep: invalid option -- P`)와 함께 exit 0 을 반환한다 — 즉, 위반이 있어도 **통과로 오탐**한다.
+**살아있는 legal 방어선** (2026-09-01 실측 — 이쪽은 진짜 동작한다):
 
-로컬(macOS) 에서 template 변경 후 반드시 pytest 로 검증:
 ```bash
-pytest tests/test_no_hardcoded_samples.py -v
+pytest tests/test_disclaimer_sot.py tests/test_forbidden_terms_sync.py \
+       tests/test_legal_deep_scan_local.py tests/test_legal_filter.py \
+       tests/test_legal_filter_forbidden_parity.py \
+       tests/test_legal_scrub_decorator.py tests/test_pivoxaudit_secret_leak.py
+# → 225 passed
 ```
 
-**선택: GNU grep 로컬 설치**
-```bash
-brew install grep
-# 설치 후 ~/.zshrc 또는 ~/.bash_profile 에 추가:
-# export PATH="$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
-```
-설치 후에는 `grep -Pzo` 가 macOS 에서도 정상 동작한다.
+CI 쪽에서 실제로 무언가를 지키고 있는 스텝은 advisory vocab 스캔 / DisclaimerBanner
+커버리지 / 베타 비번 유출 / broker safety (`KIS_READ_ONLY` 존재 확인) 넷이다.
 
-**PR 머지 전**
+**macOS grep 주의 — 이 문서의 옛 설명도 이 머신에선 틀리다**
 
-CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in template defaults`) 이 green 이어야 머지 가능. CI 는 ubuntu-latest (GNU grep) 에서 실행되므로 `-Pzo` 가 정상 작동한다.
+옛 설명은 "macOS BSD grep 은 `-P` 미지원이라 오탐 통과"였다. **이 머신의 `grep` 은
+BSD 도 GNU 도 아닌 `ugrep` 이고 `-P`(pcre2jit)를 지원한다.** 즉 옛 경고문의 전제가
+성립하지 않는다. 다만 ugrep ≠ GNU grep 이므로 `-Pzo` 의 세부 동작이 CI(ubuntu,
+GNU grep)와 100% 같다고 가정하지 말 것. 판단은 항상 pytest 쪽을 SoT 로 삼는다.
 
 ## 출시까지 남은 것 (2026-08-31 갱신)
 

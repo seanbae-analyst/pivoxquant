@@ -266,7 +266,6 @@ export const API = {
   support: {
     inquiries: "/api/support/inquiries",
     inquiry: (id: string | number) => `/api/support/inquiries/${id}`,
-    chat: "/api/support/chat",
     // Admin slots — blueprint url_prefix is `/api/support`, so the admin
     // handlers live under `/api/support/admin/...` (NOT `/api/admin/support`).
     // Consumed by the operator console at /admin/support.

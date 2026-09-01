@@ -96,8 +96,6 @@ services:
         sync: false
       - key: BREVO_API_KEY
         sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
 
       # RAILWAY_BACKEND_URL is misnamed but not Railway-specific: routes/auth.py
       # reads it to build the logout Origin allowlist. Set it to the Render URL
@@ -113,6 +111,10 @@ services:
       #   so the value belongs on Vercel, where it already is. The backend
       #   never reads it; services/launch_prep.py lists it in its env
       #   inventory, which is why it looks like a backend variable and is not.
+      # ANTHROPIC_API_KEY — the support chatbot was the only live consumer and
+      #   it was removed 2026-09-01. services/ai/ still exists but every one of
+      #   its nine public methods has zero callers (the 8-31 prune deleted the
+      #   analysis surfaces), and fetcher's news scorer is likewise unreachable.
       # SIM_ONBOARD_SECRET — only needed to restore the CAUS sim user flow.
       # STRIPE_* — payment stays gated off until BUSINESS_REGISTRATION and the
       #   lawyer's Q1-Q15 opinion land. Adding the keys does not enable it.

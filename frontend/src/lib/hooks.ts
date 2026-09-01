@@ -748,9 +748,6 @@ import type {
   SupportInquiryDetail,
   SupportInquiryCreateBody,
   SupportInquiryCreateResponse,
-  SupportChatMessage,
-  SupportChatRequest,
-  SupportChatResponse,
   SupportAdminInquiriesResponse,
   SupportAdminInquiry,
   SupportAdminReplyBody,
@@ -803,26 +800,6 @@ export async function createSupportInquiry(
   return apiFetch<SupportInquiryCreateResponse>(API.support.inquiries, {
     method: "POST",
     body: JSON.stringify(body),
-  });
-}
-
-/**
- * Send one AI-support chat turn. `history` should carry only normal
- * conversation turns (≤10) — error/guidance bubbles are excluded by the
- * caller. Throws `ApiError` on 400 (INVALID_MESSAGE) / 401 / 429.
- */
-export async function sendSupportChat(
-  message: string,
-  history?: SupportChatMessage[],
-): Promise<SupportChatResponse> {
-  const payload: SupportChatRequest = { message };
-  if (history && history.length > 0) {
-    // Defensive cap — the backend also enforces ≤10 turns.
-    payload.history = history.slice(-10);
-  }
-  return apiFetch<SupportChatResponse>(API.support.chat, {
-    method: "POST",
-    body: JSON.stringify(payload),
   });
 }
 

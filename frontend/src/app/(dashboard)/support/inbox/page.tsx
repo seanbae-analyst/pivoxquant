@@ -11,7 +11,7 @@
 
 import { useCallback } from "react";
 import Link from "next/link";
-import { Inbox, MessageSquare, ChevronRight } from "lucide-react";
+import { Inbox, ChevronRight } from "lucide-react";
 import { useSupportInquiries } from "@/lib/hooks";
 import { CategoryBadge, StatusBadge } from "@/components/support/support-badges";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -113,19 +113,11 @@ function EmptyState() {
         아직 접수한 문의가 없습니다.
       </p>
       <Caption className="mx-auto mt-2 max-w-md">
-        결제·계정·사용법 문의는 AI 고객지원에게 바로 묻거나 1:1 문의로 남길 수
-        있습니다.
+        결제·계정·사용법 문의를 1:1 문의로 남기시면 담당자가 확인 후
+        답변드립니다.
       </Caption>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          href="/support/chat"
-          className="inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
-          style={{ borderColor: "var(--pq-bronze)", color: "var(--pq-bronze)" }}
-        >
-          <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-          AI 고객지원
-        </Link>
-        <Link
+                <Link
           href="/support/contact"
           className="inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
           style={{ borderColor: "var(--pq-ivory-line)", color: "var(--pq-ivory-soft)" }}
