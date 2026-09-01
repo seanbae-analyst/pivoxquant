@@ -1,10 +1,53 @@
 # PivoxQuant SHIP_BLOCKERS.md
 
-**SoT**: 자율 운영 시스템 외부 액션 + 변호사 큐 + 메모리 carry-over 통합 매트릭스.
-**갱신 정책**: 매일 06:27 morning-briefing이 prepend 형태로 노출. 항목 변경 시 PR로 갱신.
-**최근 갱신**: 2026-06-20 07:59 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 11건 / POST-LAUNCH 15건 / 변호사 큐 21건)
+**SoT**: 출시를 막는 것들의 단일 목록.
+**최근 갱신**: **2026-09-01 — 실측 재작성.**
+
+> ⚠️ **2026-09-01 전면 재작성.** 직전 갱신이 2026-06-20 이었고, 그 사이
+> **Railway 계정이 삭제**되면서 이 파일의 상당수가 무효가 됐다. "Railway env
+> 에서 토글" 류의 해제조건은 가리키는 대상이 없다. 아래는 **오늘 실제로 확인한
+> 것만** 남기고, 확인 못 한 것은 그렇게 표시했다.
+>
+> **이번에 실측으로 뒤집힌 항목 5건** — 전부 "PENDING 인데 실은 이미 끝나 있던" 것:
+> A1(MX) · A7(사업자정보 env) · A8(미푸시 커밋) · A9(Anthropic) · P13/P14/P15(Railway 의존).
 
 상태 코드: BLOCKED(외부 대기) / IN_PROGRESS / PENDING(미착수) / RESOLVED
+
+---
+
+## 🔵 지금 진행 중 — 백엔드 재구축 (2026-09-01)
+
+| # | 항목 | Owner | 상태 |
+|---|---|---|---|
+| B1 | Supabase Postgres 구축 | agent | ✅ **완료** — 43 테이블 + alembic `049` stamp + `/api/health` 200 + 로그인 이후 API E2E 통과 |
+| B2 | Google OAuth | agent | ✅ **완료** — 9/1 삭제돼 있던 클라이언트 복원 + 브랜딩 채우고 **프로덕션 게시**(심사 불필요, 민감범위 0) |
+| B3 | Kakao OAuth | agent | ✅ **확인 완료** — 앱 정상, 로그인 ON, Redirect URI 2개 정확 |
+| B4 | Render 앱 배포 | **CEO** | ⬜ **여기서 막혀 있음.** `render.yaml` Blueprint 준비 완료, 폼도 세팅됨. **시크릿 10개 붙여넣기 + Deploy 클릭**만 남음 (키 입력은 agent 권한 밖) |
+| B5 | 남은 키 수집 | **CEO** | ⬜ FMP(로그아웃 상태) · KIS×2 · Brevo. Google/Kakao 시크릿은 콘솔에서 복사만 |
+| B6 | Vercel 재연결 | agent | ⬜ B4 후 즉시 (`vercel` CLI 인증됨) |
+| B7 | 브라우저 E2E | agent | ⬜ B6 후 |
+
+---
+
+## 🟢 "무료 베타 출시" 에 실제로 걸리는 것 — **법무 블로커 아님**
+
+CEO 가 이번 주 목표로 잡은 건 **무료** 배포다. 아래 R 목록이 위압적으로 보이지만,
+**대부분 유상 거래를 전제로 성립하는 조항**이라 무료에는 걸리지 않는다.
+
+| 블로커 | 무료 베타에 적용되나 | 왜 |
+|---|---|---|
+| R3 통신판매업 신고 | ❌ 아니오 | 전자상거래법상 **재화·용역의 판매**가 전제. 무료 제공은 통신판매가 아니다 |
+| R4 Stripe 유료결제 | ❌ 아니오 | 애초에 게이트로 꺼져 있고, 무료면 켤 이유가 없다 |
+| R1 변호사 의견서 | 🟡 성격이 달라짐 | 핵심 쟁점 §101 유사투자자문업은 **대가를 받고** 조언할 때 성립. 무료면 위험도가 크게 내려간다 |
+| R7 KIS 시세 재배포 | 🟡 성격이 달라짐 | 문서 자체가 *"유료결제 활성화 시 상업 재배포 성립"* 이라고 적고 있다 |
+| R5/R6 "변호사 검토 대기 중" 표기 | ❌ 아니오 | 표기를 **유지한 채** 운영하면 된다. 오히려 정직하다 |
+
+**따라서 무료 클로즈드 베타를 막는 법적 블로커는 사실상 없다.** 지금 막고 있는 건
+법무가 아니라 **B4/B5 — Render 배포와 키 수집**이다.
+
+⚠️ 단 이건 agent 판단이지 법률 자문이 아니다. R1 의견서를 받을 때 **"무료 운영은
+§101 밖인가"** 를 질문 목록에 넣을 것. 순서는 **무료로 먼저 열고, 유료화 직전에
+의견서**가 합리적이다.
 
 ---
 
@@ -33,16 +76,16 @@
 
 | # | 항목 | 카테고리 | Owner | ETA | 해제조건 | 상태 |
 |---|---|---|---|---|---|---|
-| A1 | DNS MX 레코드 미설정 (ImprovMX 수신) | email | CEO | 확인만 | 가비아 MX **2줄**(mx1.improvmx.com 우선순위10 · mx2.improvmx.com 20) + catch-all `*@pivoxquant.com`(13 alias). ⚠️정정 2026-06-09: "MX 1줄+alias 4개"는 부정확. `project_email_infra.md:28` 2026-06-04 로그상 MX 2줄 active → **확인만 필요(RESOLVED 추정)** | 확인필요 |
-| A2 | Brevo fallback API key 미설정 | email | CEO | 미정 | Brevo 가입 + API key 발급 → **Railway** env `BREVO_API_KEY` / `BREVO_FROM_EMAIL` / `BREVO_FROM_NAME`. ⚠️정정 2026-06-09: 소비처가 백엔드(`services/email/brevo_provider.py`)라 Vercel 아닌 **Railway**. 베타 규모 비차단(출시 후 OK) | PENDING |
+| A1 | ~~DNS MX 미설정~~ → **RESOLVED** | email | — | ✅ 2026-09-01 실측: `mx1/mx2.improvmx.com` 둘 다 등록, SPF=`v=spf1 include:spf.improvmx.com include:sendgrid.net ~all` | 가비아 MX **2줄**(mx1.improvmx.com 우선순위10 · mx2.improvmx.com 20) + catch-all `*@pivoxquant.com`(13 alias). ⚠️정정 2026-06-09: "MX 1줄+alias 4개"는 부정확. `project_email_infra.md:28` 2026-06-04 로그상 MX 2줄 active → **확인만 필요(RESOLVED 추정)** | ✅ RESOLVED (9-01 실측: MX 2줄 + SPF 정상) |
+| A2 | Brevo fallback API key 미설정 | email | CEO | 미정 | Brevo 가입 + API key 발급 → **Railway** env `BREVO_API_KEY` / `BREVO_FROM_EMAIL` / `BREVO_FROM_NAME`. ⚠️정정 2026-06-09: 소비처가 백엔드(`services/email/brevo_provider.py`)라 Vercel 아닌 **Railway**. 베타 규모 비차단(출시 후 OK) | ✅ RESOLVED (Brevo 6-30 라이브 — CLAUDE.md 참조). 단 **Render env 에 재입력 필요** |
 | A3 | SENDGRID_WEBHOOK_PUBLIC_KEY 미설정 (이벤트 추적 OFF) | email | CEO | 미정 | SendGrid Event Webhook 서명 키 입력 → `/api/webhooks/sendgrid` 503 해제. 발송과 무관, 추적만 OFF | PENDING |
 | A4 | `~/.pivoxquant-env` 8개 변수 — **건너뛰기 권장** | env | CEO | — | ⚠️정정 2026-06-09: 랩탑 crontab/launchd 2026-05-28 RETIRED. 8변수 전부 타 항목 중복/무가치(SLACK=A5, SENDGRID=완료, STRIPE=R4, DATABASE_URL=Railway 자동, GPG·SENTRY 3종=죽은 로컬). Sentry 발신은 SENTRY_DSN 으로 이미 라이브 → **입력 불필요** | SKIP |
-| A5 | Slack webhook URL 미설정 (모든 alert silent) | env | CEO | 미정 | Slack incoming webhook 발급 → Railway env `SLACK_WEBHOOK_URL` + `~/.pivoxquant-env` | PENDING |
-| A6 | Naver News API key 미설정 (`.KS` News empty) | data | CEO | 미정 | Naver Developers 등록 → Railway env 입력 | PENDING |
-| A7 | Vercel 사업자정보 footer env 6개 미입력 (전자상거래법 §13) | env | CEO | 미정 | Vercel env(canonical, `business-info.ts` SoT): NEXT_PUBLIC_BUSINESS_NAME / _REPRESENTATIVE / _REGISTRATION_NUMBER / _ADDRESS / _TYPE / **_SUBTYPE**. ⚠️정정 2026-06-09: 기존 목록 5개로 `_SUBTYPE` 누락 → **6개가 맞음**. 상세 `docs/ops/ceo_env_checklist_2026-06-09.md` | PENDING |
-| A8 | 로컬 **16 commit** push 안 됨 (v59~v62) | infra | CEO | go 대기 | reconcile 후 push (feedback_push_workflow). ⚠️정정 2026-06-09: 14→**16 commit**, canonical=`~/Desktop/취준/pivoxquant`(~/dev 아님). 실측 `git cherry`로 **push 무유실 확정** + 전수테스트 **3868 passed/0 fail(exit0)** → 랜딩 안전, CEO go 만 남음 | READY(go 대기) |
-| A9 | Anthropic 크레딧 0 → 챗봇 LLM OFF, FAQ 즉답만 작동 | infra | CEO | 미정 | 크레딧 충전 시 `SUPPORT_CHAT_LLM_ENABLED=1` 전환. 미충전 시 FAQ 검색만 (0원 운영) | PENDING |
-| A10 | VAPID env 미설정 (push 알림 OFF) | env | CEO | 미정 | ⚠️정정 2026-06-09: "Vercel만" 아니라 **2곳 분리** — 공개키 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`=**Vercel**, 비밀키 `VAPID_PRIVATE_KEY`+`VAPID_EMAIL`=**Railway**. `npx web-push generate-vapid-keys` 1회로 쌍 생성 | PENDING |
+| A5 | Slack webhook URL 미설정 (모든 alert silent) | env | CEO | 미정 | Slack incoming webhook 발급 → Railway env `SLACK_WEBHOOK_URL` + `~/.pivoxquant-env` | PENDING — 단 해제조건이 'Railway env' 라 **Render 로 읽을 것** |
+| A6 | Naver News API key 미설정 (`.KS` News empty) | data | CEO | 미정 | Naver Developers 등록 → Railway env 입력 | PENDING — 해제조건 'Railway env' → **Render** |
+| A7 | Vercel 사업자정보 footer env 6개 미입력 (전자상거래법 §13) | env | CEO | 미정 | Vercel env(canonical, `business-info.ts` SoT): NEXT_PUBLIC_BUSINESS_NAME / _REPRESENTATIVE / _REGISTRATION_NUMBER / _ADDRESS / _TYPE / **_SUBTYPE**. ⚠️정정 2026-06-09: 기존 목록 5개로 `_SUBTYPE` 누락 → **6개가 맞음**. 상세 `docs/ops/ceo_env_checklist_2026-06-09.md` | ✅ RESOLVED (9-01 실측: Vercel prod 에 BUSINESS_* 6종 전부 존재) |
+| A8 | 로컬 **16 commit** push 안 됨 (v59~v62) | infra | CEO | go 대기 | reconcile 후 push (feedback_push_workflow). ⚠️정정 2026-06-09: 14→**16 commit**, canonical=`~/Desktop/취준/pivoxquant`(~/dev 아님). 실측 `git cherry`로 **push 무유실 확정** + 전수테스트 **3868 passed/0 fail(exit0)** → 랜딩 안전, CEO go 만 남음 | ✅ RESOLVED (9-01 실측: `38beb633` 은 origin 에 있음 — 미푸시가 아니라 미머지였음) |
+| A9 | Anthropic 크레딧 0 → 챗봇 LLM OFF, FAQ 즉답만 작동 | infra | CEO | 미정 | 크레딧 충전 시 `SUPPORT_CHAT_LLM_ENABLED=1` 전환. 미충전 시 FAQ 검색만 (0원 운영) | ✅ **무효화** — 9-01 지원 챗봇 제거로 Anthropic 소비자 0. 크레딧과 무관해짐 |
+| A10 | VAPID env 미설정 (push 알림 OFF) | env | CEO | 미정 | ⚠️정정 2026-06-09: "Vercel만" 아니라 **2곳 분리** — 공개키 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`=**Vercel**, 비밀키 `VAPID_PRIVATE_KEY`+`VAPID_EMAIL`=**Railway**. `npx web-push generate-vapid-keys` 1회로 쌍 생성 | 부분 RESOLVED — 공개키는 Vercel 에 존재(9-01 실측). **비밀키는 Render 에 재입력 필요** |
 | A11 | 변호사 미팅 자료 준비 (사업자등록증 PDF, terms/privacy, regulatory 자료, Q-S1 KISA 가이드) | legal | CEO | R1 전 | 자료 패킷 완성 → 변호사 컨택. ⚠️갱신 2026-06-09: 상담A 의뢰서 마감(Q-A10 만14세·A11 §50분리동의·A12 업태·A13 §17환불 추가 + 국외수탁자 6→8 정정 + 별첨 라이브경로). md+html 갱신, **PDF 재export 필요(weasyprint 환경 미비)** | IN_PROGRESS |
 | A12 | `dd_checklist_email.html` 면책 §6 verbatim + §101 footer 미포함 (`_disclaimer.html` include 없음, 단문 1줄만) | legal | CEO+변호사 | R1/Q-S1 후 | 변호사 사인 후 `_disclaimer.html` include 전환 또는 §6+§101 문구 수동 추가 (코드 주석 NEEDS_CONFIG.md §11) | BLOCKED |
 | A13 | `brag_card_email.html` 인라인 면책에 §101 "미신고 면제 트랙" footer 누락 + `_disclaimer.html` 동기화 단절 | legal | CEO | R1/Q-S1 후 | §101 footer 문구 수동 추가 또는 `_disclaimer.html` include 전환 (이메일 CSS 호환 확인) | PENDING |
@@ -68,20 +111,20 @@
 | # | 항목 | 카테고리 | Owner | ETA | 해제조건 | 상태 |
 |---|---|---|---|---|---|---|
 | P1 | NPS baseline 수집 (분석 시스템 가동) | data | agent | 출시 +30일 | 가입자 ≥50 후 첫 NPS 설문 | PENDING |
-| P2 | PIPA §28-8 국외이전 신고 (SendGrid + Stripe + Vercel + Railway + Anthropic 미국 이전) | regulatory | CEO + 변호사 | R1 사인 후 | 변호사 사인 → 신고서 제출 | BLOCKED |
+| P2 | PIPA §28-8 국외이전 신고 (SendGrid/Brevo + Stripe + Vercel + **Render** + **Supabase** 이전 — ⚠️ 수탁자 목록이 바뀌었다. Anthropic 은 챗봇 제거로 빠짐) | regulatory | CEO + 변호사 | R1 사인 후 | 변호사 사인 → 신고서 제출 | BLOCKED |
 | P3 | 세무 고문 계약 (월 ~100,000원, 6월부터 권고) | finance | CEO | 출시 후 | 세무사 컨택 | PENDING |
 | P4 | 법인카드 발급 | finance | CEO | 출시 후 | 은행 신청 | PENDING |
-| P5 | 출시 +7일 후: `PIVOX_FUNNEL_ALERT_MODE=alert` + `PIVOX_ERROR_RATE_MODE=alert` 전환 (warn-only → enforce) | env | CEO | 출시 +7일 | Railway env 토글 | PENDING |
-| P6 | 출시 +7일 후: `PIVOX_H4_MODE=enforce` + `PIVOX_H9_MODE=enforce` 전환 | env | CEO | 출시 +7일 | Railway env 토글 | PENDING |
+| P5 | 출시 +7일 후: `PIVOX_FUNNEL_ALERT_MODE=alert` + `PIVOX_ERROR_RATE_MODE=alert` 전환 | env | CEO | 출시 +7일 | **Render** env 토글 | PENDING |
+| P6 | 출시 +7일 후: `PIVOX_H4_MODE=enforce` + `PIVOX_H9_MODE=enforce` 전환 | env | CEO | 출시 +7일 | **Render** env 토글 | PENDING |
 | P7 | 정통망법 §50 시행령 재스캔 (매출 6% 과징금 + 야간 22-08 시간대 별도 동의 + 2년 주기 재확인 자동화) | regulatory | agent | 2026-08-15 | 시행령 공포 후 6개월 추적, 재스캔 자동 | PENDING |
 | P8 | DMARC 정책 `p=none` → `p=quarantine` 검토 | email | CEO | 출시 +30일 | 모니터링 리포트 검토 후 강제 모드 전환 | PENDING |
 | P9 | Q-S4 영문 레짐 신호 (engine.py "avoid new longs"/"momentum favors longs") KR/EN 비대칭 정리 | legal | 변호사 → agent | R1 후 | 변호사 사인 후 (a) engine.py 영문 중립화 or (b) legal_filter 영문 패턴 추가 or (c) 현 구조 유지 결정 | BLOCKED |
 | P10 | persona 이중 매핑 (PDF taxonomy vs 피어 코호트 taxonomy) blind 통합 검토 | data | persona-quant-domain agent | 출시 후 | 도메인 판단 필요 (의도적 별개 가능성) | PENDING |
 | P11 | DEFERRED 기존 carry-over: regime Sharpe rf / VARCHAR(10) / email_category flag / SSE Vercel proxy / agent_worker | infra | agent | 출시 후 | 개별 도메인 판단 | PENDING |
 | P12 | DEFERRED owner 판단 항목: 알림 prefs 6 event wiring / past_due 강등 정책 / refund 부분환불 §17 / DCA XIRR / backtester lookahead / Composer synthetic backtest / KR 52w KIS range / SSE 테스트 인프라 / worktree 20 locked | infra | agent + CEO | 출시 후 | 개별 결정 | PENDING |
-| P13 | merry-abundance Railway 프로젝트 정체불명 (과금 방지 삭제 검토) | infra | CEO | 미정 | 웹 대시보드에서 사용 여부 확인 후 삭제 | PENDING |
-| P14 | 구 `~/Desktop/취준/pivoxquant` (11G) Finder 휴지통 삭제 (iCloud 동기화 위험 회피 완료) | infra | CEO | 미정 | canonical=~/dev/pivoxquant 안정 확인 후 삭제 | PENDING |
-| P15 | section101 fix prod 배포 (랩탑 working tree만, in-container 스케줄러 미적용) | regulatory | CEO | A8 push 시 동시 | push → Railway auto-deploy 시 자동 반영 | PENDING |
+| P13 | ~~merry-abundance Railway 프로젝트~~ | infra | — | — | ✅ **무효** — Railway 계정 자체가 삭제됨(2026-08-30). 과금 대상 없음 | RESOLVED |
+| P14 | ~~구 Desktop 트리 삭제~~ | infra | — | — | ✅ **무효 (방향이 반대였음)** — canonical 은 `~/dev` 가 아니라 **`~/Desktop/취준/pivoxquant`** 다. 지우면 안 되는 트리였다 | RESOLVED |
+| P15 | section101 fix prod 배포 | regulatory | CEO | B4 후 | ⚠️ 해제조건이 'Railway auto-deploy' 였다 → **Render 첫 배포 시 자동 반영**으로 대체 | PENDING |
 
 **출처**:
 - P1: `analytics_metrics.md` (메모리 인덱스)
