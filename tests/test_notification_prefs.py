@@ -35,11 +35,11 @@ def test_channel_enabled_falls_back_to_defaults(app, make_user):
     with app.app_context():
         u = db.session.get(User, user["id"])
         assert u.notification_prefs is None
-        # signal_state default: email=False, push=True, inapp=True
-        assert u.notification_channel_enabled("signal_state", "email") is False
-        assert u.notification_channel_enabled("signal_state", "push") is True
-        # weekly_memo default: all True
-        assert u.notification_channel_enabled("weekly_memo", "email") is True
+        # price_52w default: email=False, push=True, inapp=True
+        assert u.notification_channel_enabled("price_52w", "email") is False
+        assert u.notification_channel_enabled("price_52w", "push") is True
+        # concentration default: all True
+        assert u.notification_channel_enabled("concentration", "email") is True
 
 
 def test_channel_enabled_honours_stored_value(app, make_user):
@@ -47,14 +47,14 @@ def test_channel_enabled_honours_stored_value(app, make_user):
     user = make_user(email="np-stored@test.com")
     with app.app_context():
         u = db.session.get(User, user["id"])
-        u.notification_prefs = {"weekly_memo": {"email": False}}
+        u.notification_prefs = {"concentration": {"email": False}}
         db.session.commit()
         # overridden
-        assert u.notification_channel_enabled("weekly_memo", "email") is False
+        assert u.notification_channel_enabled("concentration", "email") is False
         # un-stored channel of same event → default (True)
-        assert u.notification_channel_enabled("weekly_memo", "push") is True
+        assert u.notification_channel_enabled("concentration", "push") is True
         # un-stored event → default
-        assert u.notification_channel_enabled("risk_breach", "email") is True
+        assert u.notification_channel_enabled("price_52w", "push") is True
 
 
 def test_channel_enabled_unknown_event_fails_open(app, make_user):
@@ -64,13 +64,13 @@ def test_channel_enabled_unknown_event_fails_open(app, make_user):
         u = db.session.get(User, user["id"])
         assert u.notification_channel_enabled("does_not_exist", "email") is True
         # unknown channel on a known event also fails open
-        assert u.notification_channel_enabled("weekly_memo", "sms") is True
+        assert u.notification_channel_enabled("concentration", "sms") is True
 
 
 # ── (b) GET defaults ─────────────────────────────────────────────────────
 
 
-def test_get_preferences_returns_all_seven(auth_user, client):
+def test_get_preferences_returns_every_event(auth_user, client):
     resp = client.get("/api/notifications/preferences")
     assert resp.status_code == 200, resp.data
     prefs = resp.get_json()["prefs"]
@@ -89,20 +89,20 @@ def test_get_preferences_requires_auth(client):
 
 
 def test_put_then_get_round_trip(auth_user, client):
-    body = {"prefs": {"weekly_memo": {"email": False, "push": False, "inapp": True}}}
+    body = {"prefs": {"concentration": {"email": False, "push": False, "inapp": True}}}
     put = client.put("/api/notifications/preferences", json=body)
     assert put.status_code == 200, put.data
     put_prefs = put.get_json()["prefs"]
-    # Response is merged — still all seven events.
+    # Response is merged — still every event.
     assert set(put_prefs.keys()) == set(NOTIFICATION_EVENT_IDS)
-    assert put_prefs["weekly_memo"] == {"email": False, "push": False, "inapp": True}
+    assert put_prefs["concentration"] == {"email": False, "push": False, "inapp": True}
     # Untouched event keeps defaults.
-    assert put_prefs["risk_breach"] == NOTIFICATION_PREF_DEFAULTS["risk_breach"]
+    assert put_prefs["price_52w"] == NOTIFICATION_PREF_DEFAULTS["price_52w"]
 
     # Re-fetch — persisted value survives.
     get = client.get("/api/notifications/preferences")
     assert get.status_code == 200
-    assert get.get_json()["prefs"]["weekly_memo"] == {
+    assert get.get_json()["prefs"]["concentration"] == {
         "email": False, "push": False, "inapp": True,
     }
 
@@ -122,7 +122,7 @@ def test_put_rejects_unknown_event(auth_user, client):
 def test_put_rejects_unknown_channel(auth_user, client):
     resp = client.put(
         "/api/notifications/preferences",
-        json={"prefs": {"weekly_memo": {"sms": True}}},
+        json={"prefs": {"concentration": {"sms": True}}},
     )
     assert resp.status_code == 400
     assert resp.get_json()["code"] == "NOTIF_PREFS_UNKNOWN_CHANNEL"
@@ -131,7 +131,7 @@ def test_put_rejects_unknown_channel(auth_user, client):
 def test_put_rejects_non_bool_value(auth_user, client):
     resp = client.put(
         "/api/notifications/preferences",
-        json={"prefs": {"weekly_memo": {"email": "yes"}}},
+        json={"prefs": {"concentration": {"email": "yes"}}},
     )
     assert resp.status_code == 400
     assert resp.get_json()["code"] == "NOTIF_PREFS_BAD_VALUE"
@@ -157,7 +157,7 @@ def test_send_skips_when_event_email_disabled(app, make_user, monkeypatch):
         from datetime import datetime, timezone
         u.marketing_consent_at = datetime.now(timezone.utc).replace(tzinfo=None)
         u.email_opt_out = False
-        u.notification_prefs = {"weekly_memo": {"email": False}}
+        u.notification_prefs = {"concentration": {"email": False}}
         db.session.commit()
 
         monkeypatch.setenv("SENDGRID_API_KEY", "sg-xxx")
@@ -172,7 +172,7 @@ def test_send_skips_when_event_email_disabled(app, make_user, monkeypatch):
                 html_body="<p>body</p>",
                 from_env_var="WEEKLY_MEMO_FROM_EMAIL",
                 from_default="reports@pivoxquant.com",
-                event_id="weekly_memo",
+                event_id="concentration",
             )
         assert sent is False
 
@@ -187,7 +187,7 @@ def test_send_proceeds_when_event_email_enabled(app, make_user, monkeypatch):
         from datetime import datetime, timezone
         u.marketing_consent_at = datetime.now(timezone.utc).replace(tzinfo=None)
         u.email_opt_out = False
-        # weekly_memo email default is True; leave prefs untouched.
+        # concentration email default is True; leave prefs untouched.
         db.session.commit()
 
         monkeypatch.setenv("SENDGRID_API_KEY", "sg-xxx")
@@ -201,7 +201,7 @@ def test_send_proceeds_when_event_email_enabled(app, make_user, monkeypatch):
                 html_body="<p>body</p>",
                 from_env_var="WEEKLY_MEMO_FROM_EMAIL",
                 from_default="reports@pivoxquant.com",
-                event_id="weekly_memo",
+                event_id="concentration",
             )
         assert sent is True
         sg.assert_called_once()

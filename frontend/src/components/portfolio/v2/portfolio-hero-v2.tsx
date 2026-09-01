@@ -214,6 +214,14 @@ export function PortfolioHeroV2({
     ? "—"
     : relativeTime(lastReconciledAt);
 
+  // 2026-09-01: an empty book used to get the same sentence as a real one —
+  // "0 positions observed · USD 0 of capital · last reconciled just now. Cash
+  // buffer at 100.0%." Every clause there is either vacuous or false for an
+  // account that has never recorded anything: the 100% cash buffer is 0/0, and
+  // "reconciled just now" reads as a broker sync that never happened. Say what
+  // is true instead, and let the ledger below carry the call to action.
+  const isEmptyBook = !loading && positionCount === 0;
+
   return (
     <section
       className="pq-portfolio-hero-v2"
@@ -262,20 +270,35 @@ export function PortfolioHeroV2({
           margin: "0 0 32px 0",
         }}
       >
-        {positionsText} position{positionCount === 1 ? "" : "s"}{" "}
-        <span style={{ color: "var(--pq-bronze)" }}>observed</span>
-        {" · "}
-        {navText} of capital
-        {" · "}
-        last{" "}
-        <span style={{ color: "var(--pq-bronze)" }}>reconciled</span>{" "}
-        {reconcileText}. Cash buffer at {cashText}.
+        {isEmptyBook ? (
+          <>
+            아직 아무것도 기록되지 않았습니다. 첫 종목을 더하면 여기에{" "}
+            <span style={{ color: "var(--pq-bronze)" }}>책</span>이 열립니다.
+          </>
+        ) : (
+          <>
+            {positionsText} position{positionCount === 1 ? "" : "s"}{" "}
+            <span style={{ color: "var(--pq-bronze)" }}>observed</span>
+            {" · "}
+            {navText} of capital
+            {" · "}
+            last{" "}
+            {/* This timestamp is the summary's `observed_at` — when the data
+                was read, not when a broker reconciliation ran. Calling it
+                "reconciled" promised a sync to users who never connected one. */}
+            <span style={{ color: "var(--pq-bronze)" }}>observed</span>{" "}
+            {reconcileText}. Cash buffer at {cashText}.
+          </>
+        )}
       </p>
 
       {/* KPI deck — v1 parity (today P&L / unrealized / realized YTD).
           Renders only when at least one figure is present so v2 doesn't
-          get a row of em-dashes during the initial load. */}
-      {(todayPnl != null || unrealized != null || realizedYtd != null) && (
+          get a row of em-dashes during the initial load — and never on an
+          empty book, where the backend's zeros would print a "+0.00%" day
+          for a portfolio that does not exist yet. */}
+      {!isEmptyBook &&
+        (todayPnl != null || unrealized != null || realizedYtd != null) && (
         <div
           aria-label="Portfolio KPI deck"
           style={{

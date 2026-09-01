@@ -14,24 +14,25 @@ from extensions import db
 # defaults and always returns all seven events.
 NOTIFICATION_CHANNELS: tuple[str, ...] = ("email", "push", "inapp")
 
+# 2026-09-01: was seven ids — weekly_memo, earnings_pre_brief, signal_state,
+# risk_breach, pulse_prompt, brag_card, broker_sync_error. Six of them had no
+# producer left after the prune, and the seventh (signal_state) died with the
+# quant engine, so Settings offered toggles for notifications that could never
+# arrive. Meanwhile the two alerts that DO fire — the 52-week range sweep and
+# the sector-concentration sweep, both scheduled in app.py — mapped to no event
+# id at all, so their toggles did nothing.
+#
+# These two are the notifications this product actually sends. Stale keys left
+# in a user's stored ``notification_prefs`` JSON are simply ignored by
+# ``notification_channel_enabled`` below, so no migration is required.
 NOTIFICATION_EVENT_IDS: tuple[str, ...] = (
-    "weekly_memo",
-    "earnings_pre_brief",
-    "signal_state",
-    "risk_breach",
-    "pulse_prompt",
-    "brag_card",
-    "broker_sync_error",
+    "price_52w",
+    "concentration",
 )
 
 NOTIFICATION_PREF_DEFAULTS: dict[str, dict[str, bool]] = {
-    "weekly_memo":        {"email": True,  "push": True,  "inapp": True},
-    "earnings_pre_brief": {"email": True,  "push": True,  "inapp": True},
-    "signal_state":       {"email": False, "push": True,  "inapp": True},
-    "risk_breach":        {"email": True,  "push": True,  "inapp": True},
-    "pulse_prompt":       {"email": True,  "push": False, "inapp": True},
-    "brag_card":          {"email": True,  "push": False, "inapp": True},
-    "broker_sync_error":  {"email": True,  "push": True,  "inapp": True},
+    "price_52w":     {"email": False, "push": True,  "inapp": True},
+    "concentration": {"email": True,  "push": True,  "inapp": True},
 }
 
 

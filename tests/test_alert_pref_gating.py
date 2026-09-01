@@ -1,13 +1,10 @@
-"""FIX 1 + FIX 2 (2026-05-22) regression coverage.
+"""FIX 2 (2026-05-22) regression coverage.
 
-FIX 1 — per-event notification_prefs matrix must actually gate delivery:
-  * A signal alert maps to the canonical event_id "signal_state". With
-    push=False for "signal_state" the user gets NO signal_state push; with
-    push=True they do.
-  * The in-app (bell) channel pref for "signal_state" gates the persisted
-    Alert row too.
-  * Fail-open is covered in tests/test_alert_push.py (unmapped kind ships
-    regardless of prefs).
+The FIX 1 half of this file covered the "signal_state" gate in
+services/alert_service.maybe_generate. That module went with the quant engine
+on 2026-09-01 — no signals are produced any more, so there is no signal alert
+to gate. The equivalent contract for the alerts that DO fire (52-week range,
+sector concentration) is pinned in tests/test_alert_push.py.
 
 FIX 2 — check_52w_highs_lows must skip KR (.KS/.KQ) tickers (FMP range
 lookup is unreliable for KRX) while preserving US behaviour exactly.
@@ -50,85 +47,6 @@ def _set_signal_state_prefs(user_id, *, push, inapp):
 
 
 # ── FIX 1: signal_state push pref gate ──────────────────────────────────────
-
-class TestSignalStatePushGate:
-    def test_push_false_suppresses_signal_push(self, app, make_user):
-        from services import alert_service
-
-        user = make_user(email="sigpush-off@test.com")
-        with app.app_context():
-            _set_signal_state_prefs(user["id"], push=False, inapp=True)
-            with patch("services.alert_service.datetime") as mock_dt, \
-                 patch("services.push_service.notify_alert") as mock_push:
-                mock_dt.now.return_value = _us_market_hours_now()
-                mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
-                alert_service.maybe_generate(user["id"], _us_signal())
-            mock_push.assert_not_called()
-
-    def test_push_true_delivers_signal_push(self, app, make_user):
-        from services import alert_service
-
-        user = make_user(email="sigpush-on@test.com")
-        with app.app_context():
-            _set_signal_state_prefs(user["id"], push=True, inapp=True)
-            with patch("services.alert_service.datetime") as mock_dt, \
-                 patch("services.push_service.notify_alert") as mock_push:
-                mock_dt.now.return_value = _us_market_hours_now()
-                mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
-                alert_service.maybe_generate(user["id"], _us_signal())
-            assert mock_push.called, "signal push must fire when push=True"
-
-    def test_inapp_false_suppresses_bell_row(self, app, make_user):
-        from models import Alert
-        from services import alert_service
-
-        user = make_user(email="siginapp-off@test.com")
-        with app.app_context():
-            _set_signal_state_prefs(user["id"], push=True, inapp=False)
-            with patch("services.alert_service.datetime") as mock_dt, \
-                 patch("services.push_service.notify_alert"):
-                mock_dt.now.return_value = _us_market_hours_now()
-                mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
-                alert_service.maybe_generate(user["id"], _us_signal("MSFT"))
-            row = Alert.query.filter_by(user_id=user["id"], ticker="MSFT").first()
-            assert row is None, "inapp=False must suppress the persisted bell row"
-
-    def test_inapp_true_persists_bell_row(self, app, make_user):
-        from models import Alert
-        from services import alert_service
-
-        user = make_user(email="siginapp-on@test.com")
-        with app.app_context():
-            _set_signal_state_prefs(user["id"], push=True, inapp=True)
-            with patch("services.alert_service.datetime") as mock_dt, \
-                 patch("services.push_service.notify_alert"):
-                mock_dt.now.return_value = _us_market_hours_now()
-                mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
-                alert_service.maybe_generate(user["id"], _us_signal("NVDA"))
-            row = Alert.query.filter_by(user_id=user["id"], ticker="NVDA").first()
-            assert row is not None, "inapp=True must persist the bell row"
-
-    def test_default_prefs_deliver_signal_push(self, app, make_user):
-        """No customisation → NOTIFICATION_PREF_DEFAULTS (signal_state push=True
-        / inapp=True) → both channels deliver. Confirms the gate is fail-open
-        on the default path."""
-        from models import Alert
-        from services import alert_service
-
-        user = make_user(email="sigdefault@test.com")
-        with app.app_context():
-            # notification_prefs left NULL (never customised).
-            with patch("services.alert_service.datetime") as mock_dt, \
-                 patch("services.push_service.notify_alert") as mock_push:
-                mock_dt.now.return_value = _us_market_hours_now()
-                mock_dt.side_effect = lambda *a, **kw: datetime(*a, **kw)
-                alert_service.maybe_generate(user["id"], _us_signal("AMZN"))
-            assert mock_push.called
-            row = Alert.query.filter_by(user_id=user["id"], ticker="AMZN").first()
-            assert row is not None
-
-
-# ── FIX 2: check_52w_highs_lows routes KR tickers through KIS ───────────────
 
 class TestCheck52wKrRouting:
     """2026-06-11: the old "KR skipped before any range lookup" contract was

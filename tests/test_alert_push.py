@@ -56,13 +56,13 @@ class TestCreateAlertPushHook:
                    side_effect=RuntimeError("push backend down")):
             a = create_alert(
                 user_id=user["id"],
-                kind="macro_event",
+                kind="concentration_alert",
                 title="FOMC tomorrow",
                 body=None,
             )
             assert a is not None, "alert insert must survive push failure"
             row = Alert.query.filter_by(user_id=user["id"],
-                                        kind="macro_event").first()
+                                        kind="concentration_alert").first()
             assert row is not None
             db.session.rollback()
 
@@ -225,12 +225,17 @@ class TestSendPushOptOutGate:
 
     # ── FIX 1: per-event notification_prefs fail-open for bell alerts ──────
 
-    def test_bell_alert_with_no_matching_event_id_is_delivered_regardless_of_prefs(
-        self, app, make_user,
-    ):
-        """A bell kind that maps to NO event_id (52w / concentration / macro)
-        must be delivered even when the user has muted everything — there is
-        no pref to consult, so FAIL-OPEN governs."""
+    def test_bell_alert_honours_the_pref_its_kind_maps_to(self, app, make_user):
+        """A bell kind that DOES map to an event id must respect the matrix.
+
+        2026-09-01: this test used to assert the opposite — that
+        ``concentration_alert`` mapped to no event id and therefore shipped
+        regardless of prefs. That was true, and it was the defect: the Settings
+        matrix had no effect on the only alerts this product sends. The kind is
+        mapped now, so muting it must actually mute it.
+
+        Fail-open still governs a kind with no mapping; ALLOWED_KINDS means no
+        such kind can be emitted today, so there is nothing left to assert."""
         from extensions import db
         from models import Alert, User
         from services.alert import create_alert, _BELL_KIND_TO_EVENT_ID
@@ -247,8 +252,8 @@ class TestSendPushOptOutGate:
             }
             db.session.commit()
 
-            # Sanity: concentration_alert is unmapped (fail-open).
-            assert _BELL_KIND_TO_EVENT_ID.get("concentration_alert") is None
+            # Sanity: this kind is mapped, so the muted pref above governs it.
+            assert _BELL_KIND_TO_EVENT_ID.get("concentration_alert") == "concentration"
 
             with patch("services.push_service.notify_bell_alert") as mock_notify:
                 a = create_alert(
@@ -256,13 +261,13 @@ class TestSendPushOptOutGate:
                     kind="concentration_alert",
                     title="Portfolio concentration — Tech 42.0%",
                     body="Observation",
-                    link="/risk",
+                    link="/portfolio",
                 )
-            assert a is not None, "unmapped bell alert must be delivered (fail-open)"
+            assert a is None, "a muted mapped kind must not create a bell row"
             row = Alert.query.filter_by(user_id=user["id"],
                                         kind="concentration_alert").first()
-            assert row is not None
-            assert mock_notify.called, "push fan-out must run for unmapped kind"
+            assert row is None
+            assert not mock_notify.called, "muted kind must not fan out to push"
             db.session.rollback()
 
     def test_marketing_push_consults_opt_out_when_not_opted_out(self, app, make_user):

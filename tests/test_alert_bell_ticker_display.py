@@ -96,23 +96,3 @@ class TestAlert52wLowTitle:
         assert "ZZZZ" in title, title
         assert not _DUP_PAREN.search(title), title
 
-
-class TestAlertWatchlistEventTitle:
-    def test_resolved_renders_name_with_ticker(self, app):
-        from services import alert
-        with _captured_create_alert() as ca:
-            alert.alert_watchlist_event(1, "AAPL", name="Apple Inc.")
-        title = ca.call_args.kwargs["title"]
-        assert "Apple Inc. (AAPL)" in title, title
-        assert not _DUP_PAREN.search(title), title
-
-    def test_unresolved_no_dup(self, app):
-        from services import alert
-        with _captured_create_alert() as ca, patch(
-            "services.name_resolver.resolve_stock_name_with_db",
-            return_value=None,
-        ):
-            alert.alert_watchlist_event(1, "ZZZZ")
-        title = ca.call_args.kwargs["title"]
-        assert "ZZZZ" in title, title
-        assert not _DUP_PAREN.search(title), title
