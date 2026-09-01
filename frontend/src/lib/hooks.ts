@@ -7,14 +7,10 @@ import {
   PORTFOLIO_POSITIONS,
   PUBLIC_MARKET_SNAPSHOT,
 } from "./endpoints";
-import { displayTicker } from "./format";
 import { liveRefresh } from "./market-hours";
 import type {
   ProfileResponse,
-  WatchlistResponse,
-  WatchlistItem,
   AlertsResponse,
-  Position,
   PreTradeJournalResponse,
   HoldingMirrorResponse,
   ConcentrationMirrorResponse,
@@ -116,32 +112,6 @@ export function useInvestmentProfile() {
     // onboarding gates evaluate `has_profile` immediately without
     // an interim undefined frame.
     fallbackData: { profile: null, has_profile: false },
-  });
-}
-
-/* ── Watchlist ── */
-
-export function useWatchlist() {
-  return useSWR<WatchlistResponse>(API.watchlist.list, fetcher, {
-    // Market-aware: 5s when any market is open, 60s when all closed.
-    refreshInterval: () => liveRefresh(5_000, 60_000),
-    // Bug #3 (HANDOVER v22): focus revalidation is redundant when an
-    // aggressive `refreshInterval` already keeps data fresh. Tab-switch
-    // focus events were the documented trigger for the 5-6× duplicate
-    // fetch flood on page navigation. `revalidateOnReconnect` still
-    // covers long-idle network resume.
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    dedupingInterval: 2_000,
-    errorRetryCount: 2,
-    errorRetryInterval: 5_000,
-    // Bug #6 (Wave 1, fix 2026-05-09): `fallbackData: { watchlist: [] }`
-    // forced SWR's `isLoading` to false on first paint because `data` was
-    // already defined. Consumers had `isLoading` branches that never
-    // fired — every page hit the empty-list UI for one frame, then
-    // swapped in the real data. NPE protection is preserved at every
-    // call site via `data?.watchlist ?? []` (verified across 5 consumers:
-    // signals, watchlist, discover, detail/[ticker], ai, home).
   });
 }
 
@@ -629,36 +599,18 @@ export type { RealtimePriceDetail, PriceDirection, RealtimeState } from "./realt
  * the legal-guard CI and assumed clean on arrival.
  */
 
-/**
- * Resolve a company name from a ticker by consulting the user's
- * portfolio positions and watchlist. Falls back to the ticker itself
- * when no match is found (graceful degradation per audit WARN-2).
+/* `resolveTickerName(ticker, positions, watchlist)` lived here until
+ * 2026-09-01. It resolved a company name from the user's positions/watchlist
+ * and fell back to `displayTicker()` so a naked ".KS"/".KQ" code could never
+ * reach the UI. Removed because it had ZERO callers — only a mention in a
+ * format.ts comment — and it depended on the watchlist endpoint, which no
+ * longer exists on the backend.
  *
- * Pure function — does NOT call any hook. Components are expected to
- * pull `usePortfolioPositions` + `useWatchlist` once and pass the
- * arrays in. This keeps the resolver cheap inside list-rendering loops.
+ * ⚠️ The RULE it enforced still stands (feedback_ticker_display: never surface
+ * a bare ticker code). `displayTicker()` in lib/format.ts is what enforces it
+ * today. If you need name resolution again, rebuild it against a surface that
+ * actually has data — not against watchlist.
  */
-export function resolveTickerName(
-  ticker: string,
-  positions: Position[] | undefined,
-  watchlist: WatchlistItem[] | undefined,
-): string {
-  if (!ticker) return "";
-  const t = ticker.toUpperCase();
-  if (Array.isArray(positions)) {
-    for (const p of positions) {
-      if ((p?.ticker ?? "").toUpperCase() === t && p?.name) return p.name;
-    }
-  }
-  if (Array.isArray(watchlist)) {
-    for (const w of watchlist) {
-      if ((w?.ticker ?? "").toUpperCase() === t && w?.name) return w.name;
-    }
-  }
-  // No name found in positions/watchlist — never surface a naked ".KS"/".KQ"
-  // code (feedback_ticker_display); fall back to the seed-resolved label.
-  return displayTicker(ticker);
-}
 
 /* ── Reports v2 — Artifact stats + archive + generate (Stage 10, 2026-04-27)
  *

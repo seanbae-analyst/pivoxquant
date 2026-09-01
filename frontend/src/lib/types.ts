@@ -112,37 +112,6 @@ export interface ProfileResponse {
 
 /* ── Watchlist ── */
 
-export interface WatchlistItem {
-  id: number;
-  ticker: string;
-  name: string;
-  note?: string;
-  price: number;
-  /** Alias of `price` (backend serializer sends both). */
-  last_price?: number;
-  change_pct: number;
-  /** Alias of `change_pct` (backend serializer sends both). */
-  change_1d_pct?: number;
-  signal: string;
-  score: number;
-  currency: "USD" | "KRW";
-  is_korean: boolean;
-  added_at: string;
-  /** ISO 8601 timestamp the backend observed the last `price`. */
-  observed_at?: string | null;
-  /**
-   * 52-week price range `[low, high]`. Backend emits KRW=integer / USD=2dp,
-   * or `null` when either bound is missing (routes/watchlist.py:74-87 — Bug
-   * #9 wire-up 2026-05-13). Frontend renders em-dash on null instead of
-   * fabricating "$0.00 - $0.00".
-   */
-  range_52w?: [number, number] | null;
-}
-
-export interface WatchlistResponse {
-  watchlist: WatchlistItem[];
-}
-
 /* ── Alerts ── */
 
 export interface AlertItem {

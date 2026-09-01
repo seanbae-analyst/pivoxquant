@@ -514,19 +514,16 @@ def init_security(app):
 
 # ── Rate Limit Decorators for Routes ─────────────────────────────────────────
 # Usage in route files:
-#   from security import ai_rate_limit, trade_rate_limit
-#   @ai_bp.route("/chat", methods=["POST"])
-#   @ai_rate_limit
-#   def chat(): ...
-
-def ai_rate_limit(f):
-    """10 requests/minute — protects AI endpoints (Claude API cost)."""
-    @wraps(f)
-    @limiter.limit("10 per minute")
-    def wrapped(*args, **kwargs):
-        return f(*args, **kwargs)
-    return wrapped
-
+#   from security import trade_rate_limit
+#   @trades_bp.route("/trades", methods=["POST"])
+#   @trade_rate_limit
+#   def add_trade(): ...
+#
+# 2026-09-01: ``ai_rate_limit`` (10/min, Claude cost) and ``artifact_rate_limit``
+# (3/min, WeasyPrint cost) were removed — the endpoints they guarded are gone
+# (routes/ai.py, routes/artifacts.py), so both had zero applications. Bring the
+# limiter back WITH the endpoint if either surface returns; a limiter nothing
+# decorates protects nothing.
 
 def trade_rate_limit(f):
     """30 requests/minute — protects trading endpoints."""
@@ -546,23 +543,10 @@ def auth_rate_limit(f):
     return wrapped
 
 
-def artifact_rate_limit(f):
-    """3 requests/minute — protects PDF/artifact generation (WeasyPrint CPU cost).
-
-    Applied to artifacts.py trigger endpoints to prevent abuse of expensive
-    PDF generation pipelines (FMP fetch + AI summarisation + WeasyPrint render).
-    """
-    @wraps(f)
-    @limiter.limit("3 per minute")
-    def wrapped(*args, **kwargs):
-        return f(*args, **kwargs)
-    return wrapped
-
-
 def general_rate_limit(f):
     """60 requests/minute — generic write-endpoint guard.
 
-    Applied to POST/PUT/DELETE endpoints that don't fit ai/trade/auth/artifact
+    Applied to POST/PUT/DELETE endpoints that don't fit the trade/auth
     buckets (e.g. alerts read/clear, watchlist add, profile update). Prevents
     sustained abuse without throttling normal user activity.
     """

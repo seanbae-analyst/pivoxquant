@@ -30,7 +30,6 @@ export const API = {
   },
   portfolio: {
     list: "/api/portfolio",
-    analytics: "/api/portfolio/analytics",
     history: (period: string) => `/api/portfolio/history?period=${period}`,
     // Singular `/position` endpoints (addPosition / editPosition / deletePosition /
     // buyMore / sellShares / buyNew) were removed 2026-05-02 — the frontend uses
@@ -44,7 +43,6 @@ export const API = {
     // PUT /api/portfolio/capital handler is still live (test_security.py +
     // test_portfolio.py exercise it); deleting only the unused frontend slot.
   },
-  discover: "/api/discover",
   market: {
     // 2026-09-01 — 14개 죽은 라우트를 백엔드에서 제거하면서 함께 정리했다.
     // overview / status / macro / sectors / lookup / prices / chart /
@@ -65,13 +63,16 @@ export const API = {
     itemRead: (id: string | number) => `/api/alerts/${id}/read`,
     itemDelete: (id: string | number) => `/api/alerts/${id}`,
   },
+  // 2026-09-01 — removed four constants whose backend routes do not exist:
+  //   portfolio.analytics · discover · watchlist.{list,add,remove,update} · backtest
+  // Each was checked against the live Flask url_map and had ZERO callers in
+  // src/ (the `useWatchlist` hook that read watchlist.list was itself never
+  // called). They were traps: wiring a feature to one would 404 silently.
+  // NOT removed, and deliberately so — `broker.*` and `admin.artifacts*` also
+  // 404, but broker is gated off behind BROKER_LINKING_AVAILABLE=false with a
+  // documented reason (KIS partnership / Toss terms) and the admin pages treat
+  // 401/403/404 as "render blank".
   trades: "/api/trades",
-  watchlist: {
-    list: "/api/watchlist",
-    add: "/api/watchlist",
-    remove: (id: number) => `/api/watchlist/${id}`,
-    update: (id: number) => `/api/watchlist/${id}`,
-  },
   realtime: {
     // 2026-05-17 — Wave F-2 Bug #5: `/api/realtime/stream` removed.
     // Had zero frontend consumers yet still shared the per-user SSE
@@ -85,7 +86,6 @@ export const API = {
     price: (ticker: string) => `/api/realtime/price/${ticker}`,
     status: "/api/realtime/status",
   },
-  backtest: (ticker: string) => `/api/backtest/${ticker}`,
   profile: {
     get: "/api/profile",
     onboarding: "/api/profile/onboarding",
