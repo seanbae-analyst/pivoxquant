@@ -62,10 +62,44 @@ stamp 로 복구했다.
 | 앱 ↔ DB | 연결됨 | `/api/health` → **200**, `{"db":"ok"}` |
 | 접속 경로 | session pooler `aws-0-ap-northeast-2.pooler.supabase.com:5432` | 직결 호스트(`db.*.supabase.co`)는 **IPv4 미해석** — pooler 필수 |
 | DB 롤 | `pivox_app` (postgres 아님) | Supabase 는 `postgres` 롤 비번 변경을 막는다 (`42501: permission denied to alter role`) |
+| 외부 노출 | 차단됨 | anon key 로 `/rest/v1/users`·`positions`·`trade_history`·`broker_connections` → 전부 **401 `42501`** |
+| **로그인 이후 E2E** | **통과** | 아래 §2.1 |
 
 DB 는 `postgres` 가 아니라 전용 롤 `pivox_app` 으로 붙는다. Supabase 가
-`postgres` 롤 비밀번호 변경을 superuser 로 제한하기 때문에 우회한 것인데,
-앱이 superuser 로 돌지 않는 편이 어차피 낫다.
+`postgres` 롤 비밀번호 변경을 superuser 로 제한해서 우회한 것인데, 결과적으로
+이게 데이터를 지켰다 — 표의 "외부 노출" 행이 그 덕분이다. 앱이 superuser 로
+돌지 않는 편이 어차피 낫다.
+
+### 2.1 로그인 이후 표면 — 새 DB 에서 실제로 동작한다
+
+Render 가 서기 전에 5단계를 미리 검증했다. 로컬 백엔드를 Supabase 에 붙이고
+dev-login 으로 세션을 만든 뒤 실제 엔드포인트를 때렸다.
+
+| 엔드포인트 | 결과 |
+|---|---|
+| `/api/auth/dev-login` | 200 (유저가 새 DB 에 생성됨) |
+| `/api/auth/oauth-finalize` (생년월일 게이트) | 200 |
+| `/api/mirror-home` — **거울, PRIMARY** | 200 |
+| `/api/portfolio` · `/api/portfolio/positions` | 200 (`fx_rate: 1368.52` 라이브) |
+| `/api/behavior/holding-mirror` · `concentration-mirror` | 200 |
+| `/api/pre-trade/list` · `/api/pre-trade/start` — **멈춤, PRIMARY** | 200, **행 INSERT 확인** |
+| `/api/notifications` · `/api/profile` | 200 |
+
+두 가지가 부수적으로 증명됐다:
+
+- **스키마가 alembic head 와 실제로 일치한다.** `pre_trade_reflections` 에
+  `observed_context_json` 이 있다 — 마이그레이션 **049 가 추가한 그 컬럼**이다.
+  create_all 산출물이 head 와 같은 모양이라는 직접 증거다.
+- **앱 레벨 암호화가 새 DB 에서 동작한다.** 기록된 `rationale` 이 평문이 아니라
+  `pqenc:1:...` 로 저장됐다.
+
+검증에 쓴 QA 유저와 행은 **전부 삭제했다** (`users=0`,
+`pre_trade_reflections=0`). DB 는 출시 기준 백지 상태다.
+
+⚠️ 처음 프로브에서 `/api/journal` 이 404 였는데 **결함이 아니다** — 그런
+엔드포인트는 없고 `/journal` 페이지는 behavior mirror 들로 조립된다. 마찬가지로
+`intended_side` 가 NULL 로 들어간 것도 파라미터명이 `action` 이 아니라 `side`
+이기 때문이었다 (`routes/pre_trade.py:66`). 둘 다 프로브 쪽 오류다.
 
 ---
 
@@ -121,6 +155,7 @@ DB 는 `postgres` 가 아니라 전용 롤 `pivox_app` 으로 붙는다. Supabas
 - **Dockerfile 실빌드 검증** — 이 머신에 Docker 가 없어 여전히 정적 감사만
   된 상태다. Render 의 첫 빌드가 실질 검증이다. 실패하면
   `git show c982e273^:Dockerfile` 로 옛 버전 대조
-- **로그인 → `/mirror` → `/portfolio` E2E** — 백엔드가 붙어야 가능
+- **브라우저 E2E** — API 레벨은 §2.1 에서 통과했다. 남은 건 프론트가 실제로
+  렌더하는지이고, 그건 Render URL 로 Vercel 을 재연결한 뒤에 가능하다
 - **시크릿 재발급** — `.secrets/RENDER_PASTE_VALUES.txt` 의 "CEO 가 가져와야
   하는 값" 목록

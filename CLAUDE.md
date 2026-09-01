@@ -25,6 +25,9 @@
   · **Supabase Postgres 가동 중** — 프로젝트 `pivoxquant` / `yjiztgummaxecriiuumt`
     / ap-northeast-2. 43 테이블 생성 + alembic `049` stamp 완료.
     앱 부팅 → `/api/health` **200 `{"db":"ok"}`** 실측됨.
+    **로그인 이후 E2E 도 API 레벨은 통과** — dev-login → 생년월일 게이트 →
+    `/api/mirror-home`·`/api/portfolio`·`/api/pre-trade/start`(행 INSERT)·
+    behavior mirror 전부 200. 검증 데이터는 삭제해 DB 는 백지 상태다.
     접속은 **session pooler 경유 필수** (`aws-0-ap-northeast-2.pooler.supabase.com:5432`)
     — 직결 호스트 `db.*.supabase.co` 는 IPv4 로 해석되지 않는다.
     롤은 `postgres` 가 아니라 전용 `pivox_app` (Supabase 가 postgres 롤 비번 변경을 막는다).
