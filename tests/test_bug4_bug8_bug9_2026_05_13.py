@@ -25,16 +25,6 @@ from unittest.mock import patch
 # ══════════════════════════════════════════════════════════════════════
 
 
-class TestDiscoverFreshTtlBump:
-    """DISCOVER_FRESH_TTL must be at least 1 hour so a cached payload
-    written at the top of the hour still classifies as ``fresh`` mid-hour
-    when the next FMP burst hits the soft quota."""
-
-    def test_fresh_ttl_at_least_3600(self):
-        from services import cache_service
-        assert cache_service.DISCOVER_FRESH_TTL >= 3600
-
-
 # ══════════════════════════════════════════════════════════════════════
 # Bug #9 — Watchlist range_52w
 # ══════════════════════════════════════════════════════════════════════

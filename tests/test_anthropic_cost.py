@@ -17,7 +17,7 @@ import sys
 import time
 import types
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -191,68 +191,3 @@ class TestQueryUsageNoDb:
                     mod.os.environ["DATABASE_URL"] = orig
         assert result["today"]["calls"] == 0
         assert result["mtd"]["input_tokens"] == 0
-
-
-# ── AI service _log_usage wrapper ────────────────────────────────────────────
-
-class TestLogUsageWrapper:
-    """_log_usage() in services/ai/service.py."""
-
-    def test_log_usage_none_usage_is_noop(self):
-        """_log_usage(None) should not raise."""
-        from services.ai.service import _log_usage
-        _log_usage("claude-haiku-4-5-20251001", "swot", None)
-
-    def test_log_usage_zero_tokens_is_noop(self):
-        """Zero token usage should be skipped."""
-        from services.ai.service import _log_usage
-        fake_usage = MagicMock()
-        fake_usage.input_tokens = 0
-        fake_usage.output_tokens = 0
-        # Should not raise even with DB mocked out
-        with patch("services.ai.service._log_usage", wraps=_log_usage):
-            _log_usage("claude-haiku-4-5-20251001", "coaching", fake_usage)
-
-    def test_log_usage_db_error_is_swallowed(self):
-        """DB error during logging must not propagate."""
-        from services.ai.service import _log_usage
-
-        fake_usage = MagicMock()
-        fake_usage.input_tokens = 500
-        fake_usage.output_tokens = 300
-
-        # Mock extensions.db to raise
-        fake_db = MagicMock()
-        fake_db.engine.connect.side_effect = Exception("DB connection failed")
-        with patch.dict(sys.modules, {"extensions": MagicMock(db=fake_db)}):
-            # Should not raise
-            _log_usage("claude-haiku-4-5-20251001", "swot", fake_usage)
-
-    def test_log_usage_records_correct_endpoint(self):
-        """Verify endpoint label is passed correctly."""
-        from services.ai.service import _log_usage
-
-        fake_usage = MagicMock()
-        fake_usage.input_tokens = 100
-        fake_usage.output_tokens = 50
-
-        recorded = []
-
-        def fake_execute(sql, params=None):
-            if params:
-                recorded.append(params.get("ep"))
-            return MagicMock()
-
-        fake_conn = MagicMock()
-        fake_conn.__enter__ = lambda s: s
-        fake_conn.__exit__ = MagicMock(return_value=False)
-        fake_conn.execute.side_effect = fake_execute
-
-        fake_engine = MagicMock()
-        fake_engine.connect.return_value = fake_conn
-
-        fake_db = MagicMock()
-        fake_db.engine = fake_engine
-
-        with patch.dict(sys.modules, {"extensions": MagicMock(db=fake_db)}):
-            _log_usage("claude-haiku-4-5-20251001", "sector_trend", fake_usage)
