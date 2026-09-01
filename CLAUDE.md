@@ -16,8 +16,10 @@
 > 그로스 / 컴패니언 / AI 트레이더 트윈 / 18종 아티팩트 리포트 — **전부
 > 삭제됐다.** 이 파일에서 그 기능들을 찾지 마라. 없다.
 > 코드가 필요하면 커밋 `80431ac0`·`1c23fac6`·`dfb4a98f` 이전 이력에 있다.
-> 검증(2026-09-01 최종): pytest 2221 / vitest 353 / Playwright v2 smoke 16 /
-> tsc·eslint clean / 부팅 135 rules / next build 36 routes. **prod 배포 완료.**
+> 검증(2026-09-01 재실측 — **모든 수치를 다시 셌다**): pytest **2174** /
+> vitest **353** / tsc·eslint clean / 부팅 **URL rule 134 · blueprint 23**.
+> pytest 가 2221→2174 로 준 건 같은 날 **지원 챗봇을 제거**하며 그 테스트
+> 53개가 함께 빠졌기 때문이다(회귀 아님, 전부 green).
 
 ## 현재 상태 요약 (2026-09-01 실측)
 🟡 **백엔드: DB 재구축 완료 / 앱 호스팅 대기** (2026-09-01 실측). Railway 계정이
@@ -90,20 +92,25 @@
   상세 메모리 `project_design_v3.md`.
 
 ## 백엔드 구조
-> 2026-08-31 prune 후 실측. 등록 blueprint 25개 / URL rule **141개**
-> (prune 전 249개). `create_app()` 부팅 검증됨.
+> **2026-09-01 재실측: blueprint 23개 / URL rule 134개.** `create_app()` 부팅 검증됨.
+> ⚠️ 이 자리에 있던 "blueprint 25 / URL rule 141" 은 틀린 값이었고, 같은 파일
+> 상단이 동시에 "135 rules" 라고 적어 **자기모순** 상태였다. 숫자를 적을 땐
+> `create_app()` 을 실제로 띄워서 셀 것.
 ```
 pivoxquant/
 ├── app.py              # create_app() factory
 ├── config.py · extensions.py · security.py · run.py (port 5050)
 ├── models/             # SQLAlchemy 모델
 ├── migrations/         # Alembic (리비전 전량 보존 — 삭제 금지)
+│                       # ⚠️ 단 빈 DB 세우는 경로는 alembic 이 아니다 — 위 §복구 참조
 └── routes/             # 25 blueprint
-    │  auth · portfolio · trades · pre_trade · behavior · mirror_home
-    │  profile · settings계열(consents/email_preferences) · billing
+    │  auth · auth_alias · portfolio · trades · pre_trade · behavior
+    │  mirror_home · profile · consents · email_preferences · billing
     │  alerts · notifications · push · realtime · market(지수/FX만)
-    │  support · inbox · feedback · health · data_status
-    │  dev_auth · sim_onboard · command_center (opt-in)
+    │  support(문의만 — 챗봇 9-01 제거) · inbox · feedback · health
+    │  data_status · sendgrid_webhook · dev_auth
+    │  (조건부·부팅 시 미등록: sim_onboard=SIM_ONBOARD_SECRET 필요,
+    │   command_center=opt-in. 위 23개 카운트에 포함되지 않는다)
     └── decorators.py
 └── services/
     │  (services/quant/ 는 통째로 삭제됨 — 남겨뒀던 portfolio.py·risk_metrics.py
@@ -113,8 +120,11 @@ pivoxquant/
     ├── behavior/       # 5종 mirror (holding/turnover/concentration/
     │                   #   averaging-down/profit-loss) — 거울 표면의 본체
     ├── pre_trade/ · profile/ · portfolio/ · trading/
-    ├── ai/ · email/ · kis/ · broker/ · legal/ · scheduler/ · customer/
-    ├── support/ · inbox/ · marketing/ · tax/ · mock_data/
+    ├── email/ · kis/ · broker/ · legal/ · scheduler/ · customer/
+    ├── support/(문의) · inbox/ · marketing/ · tax/ · mock_data/
+    ├── observability/  # alerts.py — 위 트리에서 누락돼 있던 디렉터리
+    ├── ai/             # ⚠️ 죽은 코드. AIService 공개 메서드 9개 전부 호출처 0곳.
+    │                   #   삭제 후보지만 트리에 남아 있다 (9-01 실측)
     └── (루트) container(fetcher·ai·realtime 싱글턴) · cache_service ·
               serializers · fx_service · alert(벨 3종) · push 등
 ```
