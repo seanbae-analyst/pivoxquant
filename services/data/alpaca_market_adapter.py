@@ -12,7 +12,9 @@ Design rules (match the old adapter so callers don't have to change):
     can short-circuit to the next fallback (e.g. stale cache, SEC EDGAR).
   - Results are normalised to the same shape FMP returns so
     ``fmp_service.get_quote/get_history/...`` can use the fallback without
-    changes to downstream consumers (``engine.py``, ``quant_models.py`` etc.).
+    changes to downstream consumers. (Those consumers were ``engine.py`` /
+    ``quant_models.py``, both deleted 2026-08-31; today they are
+    ``services/data/fetcher.py`` and ``services/data/realtime.py``.)
   - TTL caching lives in ``fmp_service`` — this module is stateless.
   - The alpaca-py import is deferred to call-time so missing installs
     degrade gracefully (fallback simply disables itself).

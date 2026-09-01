@@ -67,36 +67,6 @@ export interface PortfolioResponse {
   fx_rate: number;
 }
 
-/* ── Discover ── */
-
-export interface DiscoverResult {
-  ticker: string;
-  name: string;
-  signal: string;
-  score: number;
-  price: number;
-  price_display?: string;
-  change_pct: number;
-  priority: number;
-  is_korean: boolean;
-  currency: string;
-  sector: string;
-  already_owned: boolean;
-  take_profit: number;
-  stop_loss: number;
-  rec_shares: number;
-  rec_investment: number;
-  rec_timing: string;
-  needs_capital?: boolean;
-  snapshot: Record<string, number | string | null>;
-}
-
-export interface DiscoverResponse {
-  results: DiscoverResult[];
-  cached: boolean;
-  cached_at?: string;
-}
-
 // ── Investment Profile ──
 export interface InvestmentProfile {
   profile_type: string;
@@ -241,50 +211,6 @@ export interface AlertsResponse {
  * Backend shape is flat (no nested input/result) — see
  * routes/counterfactual.py:625. Keep this 1:1 with the JSON keys.
  */
-/* ── Growth OS ── */
-
-export interface GrowthScoreEntry {
-  date: string;
-  activity: number;
-  reflection: number;
-  total: number;
-  streak: number;
-}
-
-export interface GrowthBriefing {
-  priorities: string[];
-  motivation: string;
-}
-
-export interface GrowthReflection {
-  id: number;
-  questions: string[];
-  answers: string[] | null;
-  mood: number | null;
-}
-
-export interface GrowthTodayResponse {
-  date: string;
-  briefing: GrowthBriefing | null;
-  reflection: GrowthReflection | null;
-  score: {
-    activity: number;
-    reflection: number;
-    total: number;
-    streak: number;
-  } | null;
-}
-
-export interface GrowthWeeklyReport {
-  id: number;
-  week_start: string;
-  summary: string;
-  patterns: string[];
-  growth_areas: string[];
-  next_week_suggestions: string[];
-  week_score: number;
-}
-
 /* ── Pre-Trade Journal (decision-reflection feed) ── */
 
 /**
@@ -658,12 +584,6 @@ export interface Artifact {
   has_file?: boolean;
 }
 
-export interface ArtifactsListResponse {
-  artifacts: Artifact[];
-  total: number;
-  unread_count: number;
-}
-
 /* ── Signals v2 (additive — does not modify any v1 type) ──
  *
  * Wire format: POSITIVE / NEGATIVE / NEUTRAL only. Banned vocabulary
@@ -671,58 +591,6 @@ export interface ArtifactsListResponse {
  * Backend `routes/signals.py::all()` is responsible for the label
  * mapper; this front-end type just consumes the canonical shape.
  */
-
-export type SignalLabel = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
-
-export interface SignalEntry {
-  id?: number | string;
-  ticker: string; // "AAPL", "005930.KS"
-  /**
-   * Company display name. The legacy `/api/signals` endpoint already
-   * sends this on the v1 MemoSignalItem shape, so re-using it is safe.
-   * If the field is missing, the v2 page will fall back to the
-   * watchlist+positions name resolver and ultimately to the ticker
-   * itself (graceful degradation).
-   */
-  name?: string | null;
-  exchange?: string | null;
-  signal?: string; // v1 alias — same value as label
-  label?: SignalLabel;
-  score?: number; // v1: 0..100 composite
-  strength?: number; // v2: 0..1 (derived from score / 100)
-  rationale?: string | null;
-  observed_at?: string | null;
-  price?: number | null;
-  change_pct?: number | null;
-  currency?: "USD" | "KRW";
-  is_korean?: boolean;
-  sector?: string | null;
-  // Backend `routes/signals.py:45` flags entries served from the
-  // SignalCache when the underlying data crossed the freshness TTL.
-  // Frontend uses this to badge a "STALE" indicator so users can
-  // distinguish a fresh observation from a cached one.
-  is_stale?: boolean;
-}
-
-export interface SignalsResponse {
-  signals: SignalEntry[];
-  total?: number;
-  counts?: { positive: number; negative: number; neutral: number };
-  symbols_filtered?: number;
-}
-
-export interface SignalFilters {
-  labels: Set<SignalLabel>;
-  strengthMin: number; // 0..1
-  strengthMax: number; // 0..1
-  symbol: string | null; // exact ticker or null
-  // W6-1 (Wave 6 follow-up, 2026-05-09): "all" added so the V2 signals
-  // page can opt out of the freshness cutoff. Backend `observed_at` is
-  // a cache-write timestamp, so a 24h "today" default silently emptied
-  // the list when SignalCache lagged. See signals/_v2/page-v2.tsx
-  // DEFAULT_FILTERS comment.
-  window: "today" | "7d" | "30d" | "all";
-}
 
 /* ──────────────────────────────────────────────────────────────────────────
  * Customer support — 고객문의센터 + AI 고객지원 (2026-05-26).
@@ -821,65 +689,6 @@ export interface SupportAdminReplyBody {
  * 404 (private/missing) surfaces as a thrown ApiError, never this shape.
  * `summary_safe` is server-generated §101-safe copy (factual + generic).
  */
-/**
- * POST /api/artifacts/living-mirror/generate — persists the caller's persona
- * capstone PDF and returns its id + the render context payload.
- *
- * `data` is the LivingMirrorService context (JSON-serialisable). We only type
- * the fields the UI surfaces; the full shape carries radar/gap/trajectory the
- * PDF renders. Stage drives the post-generate copy:
- *   new        — declared radar only (행동/궤적 빈칸)
- *   observed   — declared vs observed overlay + gap rows
- *   trajectory — overlay + drift narrative + sparkline
- * No score / grade / percentile / rank ever appears here (점수화 폐기).
- */
-export interface LivingMirrorData {
-  stage?: "new" | "observed" | "trajectory";
-  declared_label?: string;
-  observed_label?: string | null;
-  period_label?: string;
-  has_observed?: boolean;
-}
-
-export interface LivingMirrorGenerateResponse {
-  ok: boolean;
-  id: number;
-  data: LivingMirrorData;
-}
-
-/* ── Methodology & data-provenance transparency (Data-trust Stage 1) ──
- * Backs GET /api/methodology (routes/methodology.py) and the /methodology
- * page. Observation-only disclosure; field names locked to the backend
- * contract. See docs/strategy/DATA_TRUST_STRATEGY.md. */
-
-export interface MethodologyModel {
-  name: string;
-  category: string;
-  module: string;
-  description_kr: string;
-  description_en: string;
-  /** Published paper / textbook anchor — the reproducibility hook. */
-  academic_source: string;
-}
-
-export interface MethodologyDataSource {
-  source: string;
-  description: string;
-  coverage: string;
-}
-
-export interface MethodologyResponse {
-  ok: boolean;
-  categories: string[];
-  category_counts: Record<string, number>;
-  total: number;
-  active: number;
-  models: MethodologyModel[];
-  data_lineage: MethodologyDataSource[];
-  reproducibility: { statement_kr: string; statement_en: string };
-  disclaimer: string;
-}
-
 /* ── Mirror home (거울) — composed 선언/관찰/트윈 read ────────────────────
  * Backend: routes/mirror_home.py (GET /api/mirror-home, @api_auth).
  * Append-only (types.ts is add-only per frontend/CLAUDE.md). This payload

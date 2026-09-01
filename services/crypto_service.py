@@ -259,14 +259,6 @@ def decrypt(ciphertext_b64: str, aad: bytes = b"broker") -> str:
     return _fallback_decrypt(raw, aad)
 
 
-def is_configured() -> bool:
-    """True if a real encryption key is configured (not ephemeral)."""
-    return bool(
-        os.environ.get("PIVOX_BROKER_ENCRYPTION_KEY")
-        or os.environ.get("BROKER_ENCRYPTION_KEY")
-    )
-
-
 def backend_name() -> str:
     """Return which backend is in use ('aesgcm' or 'fallback')."""
     return _BACKEND

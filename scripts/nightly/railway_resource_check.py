@@ -3,11 +3,14 @@
 
 목적
 ----
-Railway Hobby free tier 는 컨테이너당 **512MB RAM / 1 vCPU** 한도를 갖는다.
-gunicorn workers=1 + gevent 으로 띄운 Flask + APScheduler 가 메모리 누수 (예:
-``data_fetcher.DataFrame`` 캐시, ``AISummaryService`` 의 in-process LRU) 또는
-CPU spike (예: ``quant_models`` 백테스트 동시 실행) 로 RSS 가 한도를 초과하면
-Railway 가 컨테이너를 SIGKILL 한다 — gunicorn 자동 재시작이지만 그 사이
+Railway Hobby free tier 는 컨테이너당 **512MB RAM / 1 vCPU** 한도를 가졌다.
+⚠️ 2026-09-01: Railway 계정은 삭제됐고 백엔드는 Render 로 간다(`render.yaml`,
+`plan: free`). Render free 도 **512MB** 라 아래 RSS 임계값 450MB 는 그대로
+유효하다 — 다만 이 스크립트는 psutil 로 **자기 프로세스만** 재므로 플랫폼
+중립이다. 파일명의 'railway' 는 이제 역사적 명칭일 뿐이다.
+gunicorn workers=1 + gevent 으로 띄운 Flask + APScheduler 가 메모리 누수
+(예: ``services/data/fetcher.py`` 의 in-process 캐시들 — SignalCache 하이드레이션,
+``_indices_cache``) 로 RSS 가 한도를 초과하면 플랫폼이 컨테이너를 SIGKILL 한다 — gunicorn 자동 재시작이지만 그 사이
 SSE 스트림 / OAuth 콜백 / 결제 webhook 이 끊긴다.
 
 이 스크립트는 **본인 프로세스의 RSS + 시스템 CPU** 를 측정해 임계 초과를

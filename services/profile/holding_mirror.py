@@ -14,9 +14,9 @@ It is deliberately **not**:
   internal winner/loser hold comparison is used only to decide whether
   the data is "one-sided" — no numeric judgement leaves this module.
   (DECISIONS.md — AI 점수화 폐기.)
-* The market-microstructure ``DispositionEffect`` (CGO) signal in
-  ``services/quant/signals.py``. That computes a *market-wide*
-  capital-gains-overhang factor from price/volume history. This module
+* The market-microstructure ``DispositionEffect`` (CGO) signal that used to
+  live in ``services/quant/signals.py`` (deleted 2026-08-31). That computed a
+  *market-wide* capital-gains-overhang factor from price/volume history. This module
   touches only the user's *own* realised ``TradeHistory`` round trips
   via :func:`fifo_match_closed_trades`. The two must never be conflated
   — importing ``signals.DispositionEffect`` here is forbidden.

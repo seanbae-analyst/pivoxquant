@@ -246,13 +246,16 @@ CI 스캔 대상 `services/artifacts/templates/` 는 8-31 prune 으로 **없어�
 존재하지 않는다.** 지킬 템플릿이 사라졌으니 정합이지만, **그 green 을
 "하드코딩 없음"의 증거로 읽으면 안 된다.**
 
-살아있는 legal 방어선은 이쪽이다:
+살아있는 legal 방어선은 이쪽이다 (2026-09-01 실측 **228 passed**):
 ```bash
 ./venv/bin/python -m pytest tests/test_disclaimer_sot.py \
   tests/test_forbidden_terms_sync.py tests/test_legal_deep_scan_local.py \
   tests/test_legal_filter.py tests/test_legal_filter_forbidden_parity.py \
   tests/test_legal_scrub_decorator.py tests/test_pivoxaudit_secret_leak.py
 ```
+⚠️ 이 green 이 실제로 무엇을 보장하는지는 **함정 §10** 을 먼저 읽어라 —
+2026-09-01 까지 이 스위트는 green 이면서도 `scrub_response` 의 최상위 문자열
+구멍을 못 잡고 있었다 (테스트가 dict 페이로드만 덮었다).
 
 ### 5. 로컬 grep 은 `ugrep`, 파이썬은 3.12 다
 
@@ -322,6 +325,62 @@ QA 가 **없는 제품을 검사**하고 있었고, 산출물은 오탐 아니�
 + `week1-cards/*.png` 를 읽고, ship-blocker 잡은 루트 `SHIP_BLOCKERS.md` 를 읽는다.
 지우면 **조용히** 깨진다 (크론은 best-effort 로 예외를 삼킨다).
 
+
+### 9-2. CSP `connect-src` 는 **Render** 를 가리킨다 (2026-09-01 교체)
+
+`frontend/middleware.ts` 의 CSP 백엔드 호스트가 `https://*.railway.app` 이었다.
+Railway 계정은 삭제됐고 백엔드는 Render 로 간다 → `https://*.onrender.com` 으로
+바꿨다.
+
+지금 당장은 아무것도 안 깨졌었다 — `lib/endpoints.ts` 가 `API_BASE = ""` 라
+모든 호출(포트폴리오 SSE 포함)이 same-origin 이고 Next rewrites 가 /api 를
+프록시하므로 `'self'` 로 이미 커버된다. **이 항목은 백엔드 오리진에 직접
+붙는 순간에만 의미가 있다.** 문제는 그때 죽은 플랫폼이 적혀 있으면 **조용히**
+실패한다는 것 — CSP 위반은 콘솔에만 뜨고 네트워크 에러로도 안 잡힌다.
+
+⚠️ `RAILWAY_BACKEND_URL` **환경변수 이름은 일부러 안 바꿨다.** `render.yaml` ·
+`frontend/next.config.ts` · `routes/auth.py` · **Vercel 대시보드**가 동시에
+이 이름에 걸려 있어서, 넷 중 하나만 바꾸면 `/api` 프록시가 죽는다. 이름은
+틀렸지만 값은 Render URL 이 들어간다. 바꾸려면 **네 곳을 한 번에** 바꿔라.
+
+### 10. 법적 스크럽은 **구현이 하나**다 — 두 번째 복사본을 만들지 마라
+
+2026-09-01 정리 중 발견. `services/legal_filter.scrub_response()` 와
+`routes/decorators._deep_scrub()` 가 **같은 딥 스크럽 로직을 각자 구현**하고
+있었고, 이미 갈라져 있었다:
+
+| | legal_filter.scrub_response (구) | decorators._deep_scrub (구) |
+|---|---|---|
+| 최상위 문자열 | **스크럽 안 함** ← 취약점 | 스크럽함 |
+| 입력 dict | **제자리 변형** ← 캐시 오염 | 새 객체 반환 |
+| 테스트 | 있음 | 없음 |
+| 프로덕션 사용 | **0곳** | 라우트 12곳 |
+
+즉 **테스트된 쪽은 안 쓰이고, 쓰이는 쪽은 테스트가 없었다.** 그리고 테스트된
+쪽에는 실제 구멍이 있었다 — `scrub_response("you should buy now")` 가 문구를
+**그대로 반환**했다. `__all__` 에 노출돼 있어 누가 bare string 을 반환하는
+엔드포인트에 쓰면 자본시장법 경계가 통째로 우회됐을 것이다.
+
+지금은 `scrub_response()` **하나**이고 `_deep_scrub` 은 얇은 별칭이다(로그
+context 만 다름). 회귀 테스트 4종 추가:
+`test_bare_top_level_string_is_scrubbed` · `test_does_not_mutate_caller_payload`
+· `test_decorator_helper_shares_one_implementation` (+기존 nested).
+
+**교훈: 법적으로 중요한 규칙은 구현이 둘이면 반드시 갈라진다.** 라우트 쪽에
+"편의 헬퍼"를 새로 만들지 말고 `services/legal_filter` 를 불러라.
+
+### 11. 메모리 디렉터리가 **두 개**다 — 어느 쪽인지 확인하고 써라
+
+```
+~/.claude/projects/-Users-seanbae-Desktop---/            ← 123 files, 장기 메모리
+~/.claude/projects/-Users-seanbae-Desktop----pivoxquant/ ←  20 files, 이 세션 auto-memory
+```
+
+`scripts/legal/lawyer_packet_build.py` 는 **전자**를 읽고(`legal_question_queue.md`
+396줄이 거기 있다), 이 파일의 §제품 전제 절은 **후자**를 가리킨다. 둘 다 맞지만
+**같은 곳이 아니다.** `legal_question_queue.md` / `DECISIONS.md` /
+`business_registration.md` 는 전자에만 있다. 파일이 "없다"고 결론내기 전에
+**두 경로를 다 확인**할 것 (2026-09-01 에 이걸로 버그를 오진할 뻔했다).
 
 ## 중요 원칙
 

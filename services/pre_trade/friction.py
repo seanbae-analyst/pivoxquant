@@ -204,10 +204,13 @@ def proceed(reflection_id: int, user_id: int) -> dict:
     * cooldown has not elapsed yet,
     * the reflection is already cancelled / proceeded.
 
-    NOTE: we do not invoke the broker here. The frontend pulls this
-    return value, then triggers the user's existing broker route
-    (``/api/portfolio/position/...`` or ``/api/autotrade/...``) which is
-    untouched by this feature.
+    NOTE: we do not invoke a broker here — and neither does anything else.
+    2026-09-01 correction: this used to say the frontend then triggers
+    ``/api/autotrade/...``. That route was physically deleted 2026-05-05 to
+    stay clear of 투자일임업, and KIS is read-only (three ``KIS_READ_ONLY``
+    guards in services/kis/service.py). The portfolio routes the frontend
+    calls next (``/api/portfolio/buy-new`` etc.) only WRITE A RECORD of a
+    trade the user made elsewhere. **PivoxQuant places no orders at all.**
     """
     row = _load_owned(reflection_id, user_id, for_update=True)
     now = _utc_now()

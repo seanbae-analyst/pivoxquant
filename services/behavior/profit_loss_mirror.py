@@ -21,9 +21,9 @@ It is deliberately **not**:
   fully rational (rational disposition, JBF 2023), the module never判定s
   any individual round trip — it reports only aggregate hold-day and
   return statistics per side.
-* The market-microstructure ``DispositionEffect`` (CGO) signal in
-  ``services/quant/signals.py``. That computes a *market-wide* factor from
-  price/volume history. This module touches only the user's *own* realised
+* The market-microstructure ``DispositionEffect`` (CGO) signal that used to
+  live in ``services/quant/signals.py`` (deleted 2026-08-31). That computed a
+  *market-wide* factor from price/volume history. This module touches only the user's *own* realised
   ``TradeHistory`` round trips via
   :func:`fifo_match_closed_trades_with_pnl`.
 

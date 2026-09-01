@@ -4,30 +4,34 @@ from functools import wraps
 from flask import jsonify
 from flask_login import current_user
 
-from services.legal_filter import safe_scrub
+from services.legal_filter import scrub_response
 
 
 def _deep_scrub(obj):
     """Recursively walk a JSON-shaped structure, scrubbing every string leaf.
 
     Used by :func:`legal_scrub_response` to enforce the legal boundary on
-    risk/quant endpoint responses without touching engine code.
+    endpoint responses.
+
+    2026-09-01: this was a second, independent copy of
+    ``services.legal_filter.scrub_response``. Two implementations of one
+    legal-critical rule is a divergence waiting to happen — and they HAD
+    diverged: the copy here handled bare top-level strings and did not
+    mutate its input, while the tested one in legal_filter did neither.
+    They are now one function; this stays as a thin alias so the ~12
+    ``@legal_scrub_response`` call sites keep their own log context.
     """
-    if isinstance(obj, dict):
-        return {k: _deep_scrub(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_deep_scrub(x) for x in obj]
-    if isinstance(obj, str):
-        return safe_scrub(obj, context="legal_scrub_response")
-    return obj
+    return scrub_response(obj, context="legal_scrub_response")
 
 
 def legal_scrub_response(f):
     """Scrub legally risky phrases out of a JSON response before it ships.
 
-    Wraps any route that may surface engine-generated ``action`` / ``message``
-    / ``recommendation`` fields (risk_defense.py, quant_models.py, etc.) and
-    rewrites them to information-only wording. No-op for non-JSON responses.
+    Wraps any route that may surface generated ``action`` / ``message``
+    fields and rewrites them to information-only wording. No-op for non-JSON
+    responses. (The generators it was built for — risk_defense.py,
+    quant_models.py — were deleted 2026-08-31; the live sources are now
+    stored SignalCache payloads and behaviour-mirror text.)
 
     Layering: place AFTER ``@api_auth`` so auth still short-circuits 401s
     unscrubbed, but the happy-path body is always filtered::

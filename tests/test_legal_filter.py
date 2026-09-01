@@ -241,6 +241,39 @@ class TestScrubResponse:
         assert "SELL" not in out["items"][1]["analysis"]
         assert "상승 관찰" in out["note"]
 
+    def test_bare_top_level_string_is_scrubbed(self):
+        """A top-level string must not pass through unscrubbed.
+
+        Regression for a real gap found 2026-09-01: scrub_response only
+        descended into dicts and lists, so an endpoint returning a bare
+        string got NO scrubbing at all — the function is public and in
+        ``__all__``, so this was a live 자본시장법 bypass waiting to be used.
+        """
+        assert "buy" not in scrub_response("You should buy now").lower()
+        assert "매수" not in scrub_response("지금 매수 추천합니다")
+
+    def test_does_not_mutate_caller_payload(self):
+        """Scrubbing a response must not rewrite the caller's dict.
+
+        The old implementation assigned into the input dict and returned it,
+        so scrubbing a cached payload once corrupted it for every later read.
+        """
+        payload = {"analysis": "매수 권고합니다", "nested": {"x": "SELL signal"}}
+        before = {"analysis": "매수 권고합니다", "nested": {"x": "SELL signal"}}
+        out = scrub_response(payload)
+        assert payload == before, "input payload was mutated"
+        assert out is not payload
+        assert "권고" not in out["analysis"]
+        assert "SELL" not in out["nested"]["x"]
+
+    def test_decorator_helper_shares_one_implementation(self):
+        """routes/decorators._deep_scrub must not grow a second copy again."""
+        from routes.decorators import _deep_scrub
+        for probe in ("You should buy now", "지금 매수 추천합니다"):
+            assert _deep_scrub(probe) == scrub_response(
+                probe, context="legal_scrub_response"
+            )
+
 
 class TestWave4LegalFilterShipBlocker:
     """Wave 4 (2026-05-17) — F1+F2+F3 SHIP-BLOCKER 회귀 게이트.

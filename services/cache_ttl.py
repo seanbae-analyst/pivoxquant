@@ -60,8 +60,3 @@ def indices_ttl() -> int:
 def fx_ttl() -> int:
     """FX rate cache TTL: 5s intraday, 30s off-hours."""
     return 5 if _is_market_open() else 30
-
-
-def discover_ttl() -> int:
-    """Discover section cache TTL: 600s intraday, 7200s off-hours."""
-    return 600 if _is_market_open() else 7200

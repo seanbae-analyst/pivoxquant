@@ -1,9 +1,13 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
-// Backend API URL: Railway production or local development.
+// Backend API URL: the deployed backend, or local development.
 // NEXT_PUBLIC_API_URL is evaluated in next.config.ts at build time.
-// On Vercel set NEXT_PUBLIC_API_URL (or RAILWAY_BACKEND_URL) to the Railway hostname.
+// On Vercel set NEXT_PUBLIC_API_URL (or RAILWAY_BACKEND_URL) to the backend host.
+// ⚠️ RAILWAY_BACKEND_URL is a misnomer kept on purpose: the name is load-bearing
+// across render.yaml, this file, routes/auth.py AND the Vercel dashboard at the
+// same time, so a partial rename silently breaks the /api proxy. Renaming means
+// changing all four together. It holds the RENDER url now (Railway is gone).
 // Local dev falls back to localhost:5050.
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -153,7 +157,7 @@ const nextConfig: NextConfig = {
             // 2026-05-15 (P1 verify-security finding): Vercel HTML
             // responses shipped no Content-Security-Policy header,
             // leaving the browser unable to enforce script/style/
-            // connect-src restrictions. The Railway backend has its own
+            // connect-src restrictions. The backend has its own
             // CSP (security.py) but the static HTML the user actually
             // loads from Vercel was unguarded — a real XSS guard gap on
             // the public landing surface. Added here so every Vercel
@@ -165,7 +169,7 @@ const nextConfig: NextConfig = {
             //   Strict-CSP with nonces is a future refinement; current
             //   priority is closing the no-CSP gap before launch.
             // - `connect-src` covers Sentry ingest (event reporting)
-            //   and `'self'` (Next.js rewrites proxy /api → Railway).
+            //   and `'self'` (Next.js rewrites proxy /api → backend).
             // - `img-src` allows Google + Kakao avatar CDNs (OAuth
             //   profile photos render in the top-nav and profile page).
             // - `frame-ancestors 'none'` mirrors X-Frame-Options DENY.

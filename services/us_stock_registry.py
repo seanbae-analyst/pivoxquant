@@ -62,8 +62,3 @@ def get_name(symbol: str) -> "str | None":
     """Return company name for a symbol, else None."""
     entry = US_STOCKS.get(symbol.upper())
     return entry.get("name") if entry else None
-
-
-def get_exchange(symbol: str) -> "str | None":
-    entry = US_STOCKS.get(symbol.upper())
-    return entry.get("exchange") if entry else None

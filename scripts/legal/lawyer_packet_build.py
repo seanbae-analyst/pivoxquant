@@ -85,24 +85,73 @@ _CODE_PATH_MAP: dict[str, str] = {
     "Q2": "services/data/ (KIS read-only)",
     "Q3": "services/data/ (KIS read-only)",
     "Q4": "services/data/ (KIS read-only)",
-    "Q5": "frontend/src/app/(public)/pricing/",
-    "Q6": "frontend/src/app/(auth)/signup_v2/",
-    "Q7": "services/legal/terms-ko.md §6.1",
+    "Q5": "frontend/src/app/pricing/",
+    "Q6": "frontend/src/app/(auth)/signup/",
+    "Q7": "docs/legal/terms-of-service.md §6.1",
     "Q8": "business_registration.md",
-    "Q9": "frontend/src/app/(auth)/signup_v2/page-v2.tsx",
-    "Q10": "services/ai/service.py",
-    "Q11": "services/legal/terms-ko.md",
-    "Q12": "services/email/* (opt-out)",
-    "Q13": "services/twin/twin_runner.py",
-    "Q14": "services/artifacts/templates/",
-    "Q15": "services/legal/terms-ko.md §17",
-    "Q-S1": "services/email/ + signup_v2/",
+    "Q9": "frontend/src/app/(auth)/signup/",
+    "Q10": "(삭제됨: services/ai/service.py — 2026-09-01)",
+    "Q11": "docs/legal/terms-of-service.md",
+    "Q12": "services/email/ (opt-out)",
+    "Q13": "(삭제됨: services/twin/twin_runner.py)",
+    "Q14": "(삭제됨: services/artifacts/templates/ — 8-31 prune)",
+    "Q15": "docs/legal/terms-of-service.md §17",
+    "Q-S1": "services/email/ + frontend/src/app/(auth)/signup/",
     "Q-S3": "scripts/nightly/commerce_registration_reminder.py",
-    "Q-S4": "services/quant/engine.py",
-    "Q-M1": "frontend/src/app/(public)/landing/",
-    "Q-M2": "frontend/src/app/(public)/landing/",
+    "Q-S4": "(삭제됨: services/quant/engine.py — 8-31 prune)",
+    "Q-M1": "frontend/src/app/landing/",
+    "Q-M2": "frontend/src/app/landing/",
     "Q-M3": "(외부 채널)",
 }
+
+# 2026-09-01: 위 경로 중 일부는 코드가 실제로 삭제되어 "(삭제됨: ...)" 로 바뀌었다.
+# 이게 중요한 이유 — 변호사 의견서는 1회 300-500만원이고, **없어진 기능에 대한
+# 질문에 돈을 쓰면 안 된다.** Q10(rec_shares 포지션 사이즈 문구) · Q13/Q14
+# (Artifact 푸시·AI 라벨링) · Q-S4(RegimeSwitching 영문 신호) 는 근거 코드가
+# 전부 사라졌으므로 **상담 전에 CEO 가 "지금도 유효한 질문인가"를 판단**해야 한다.
+# 큐 원본(legal_question_queue.md)은 CEO 의 법률 문서라 이 스크립트가 고치지
+# 않는다 — 대신 패킷에 경고로 노출한다(_stale_code_warning).
+
+
+# 주간 git log 를 뽑을 경로. 2026-09-01 이전엔 여기에 `services/billing/` ·
+# `services/quant/engine.py` · `signup_v2/` 가 있었는데 **셋 다 존재하지 않는
+# 경로**였다. `git log -- <없는 경로>` 는 에러 없이 그 경로만 조용히 기여 0으로
+# 처리하므로 패킷은 **과소보고**했다 — 실측(2026-09-01): 옛 목록 1건 vs 아래
+# 목록 3건. 특히 결제가 `services/billing/`(없음)로 잡혀 있어 실제 결제 코드인
+# `routes/billing.py` 변경이 한 번도 안 잡혔다. 아래는 **존재하는 경로만**
+# 남기도록 필터링해서, 다음에 또 경로가 사라져도 조용히 새지 않게 한다.
+_CANDIDATE_GIT_LOG_PATHS: tuple[str, ...] = (
+    "services/legal/",
+    "services/email/",
+    "scripts/legal/",
+    "routes/billing.py",          # 결제는 services/billing/ 이 아니라 여기다
+    "docs/legal/",
+    "frontend/src/app/(auth)/signup/",
+    "frontend/src/app/landing/",
+)
+_GIT_LOG_PATHS: list[str] = [
+    _p for _p in _CANDIDATE_GIT_LOG_PATHS if (_REPO_ROOT / _p).exists()
+]
+
+
+def _stale_code_warning() -> str:
+    """경로가 '(삭제됨' 으로 표시된 질문을 패킷 상단에 경고로 모은다.
+
+    자동 점검이라 다음에 또 코드가 지워져도 스스로 드러난다 — 이 표가
+    조용히 낡아서 없는 파일을 변호사에게 들이미는 걸 막는 게 목적이다.
+    """
+    stale = [q for q, path in _CODE_PATH_MAP.items() if path.startswith("(삭제됨")]
+    if not stale:
+        return ""
+    lines = [
+        "> ⚠️ **근거 코드가 삭제된 질문 %d건 — 상담 전 유효성 확인 필요**" % len(stale),
+        ">",
+        "> 아래 질문들은 이미 트리에서 사라진 코드를 근거로 작성됐다. 의견서는",
+        "> 1회 300-500만원이므로 **없는 기능을 묻는 데 쓰지 말 것.**",
+        ">",
+    ]
+    lines += ["> - `%s` — %s" % (q, _CODE_PATH_MAP[q]) for q in stale]
+    return "\n".join(lines) + "\n"
 
 _PRIORITY_MAP: dict[str, str] = {
     "Q1": "P0", "Q2": "P0", "Q3": "P0", "Q4": "P0",
@@ -158,12 +207,7 @@ def _git_log_legal_paths(since_days: int = 7) -> str:
     cmd = [
         "git", "-C", str(_REPO_ROOT),
         "log", f"--since={since}", "--oneline", "--",
-        "services/legal/",
-        "services/billing/",
-        "services/email/",
-        "scripts/legal/",
-        "services/quant/engine.py",
-        "frontend/src/app/(auth)/signup_v2/",
+        *_GIT_LOG_PATHS,
     ]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
@@ -241,13 +285,14 @@ def _build_packet(dry_run: bool = False) -> str:
 
 ## 2. 질문 큐 전체 표
 
+{_stale_code_warning()}
 {table}
 
 ---
 
 ## 3. 지난 1주 관련 코드 변경
 
-경로: services/legal/ / services/billing/ / services/email/ / scripts/legal/ / services/quant/engine.py / frontend/src/app/(auth)/signup_v2/
+경로: {" / ".join(_GIT_LOG_PATHS)}
 
 ```
 {git_log}

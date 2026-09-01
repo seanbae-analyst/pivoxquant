@@ -179,9 +179,18 @@ export async function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
   const isDev = process.env.NODE_ENV === "development";
+  // Backend host allowance. 2026-09-01: this said `https://*.railway.app`,
+  // but that account was deleted and the backend moves to Render
+  // (render.yaml). Today every call is same-origin — `lib/endpoints.ts` sets
+  // `API_BASE = ""` and Next rewrites proxy /api → backend, so `'self'`
+  // already covers the API and the portfolio SSE stream. The host entry only
+  // matters the moment something connects to the backend origin DIRECTLY.
+  // Keeping a dead platform there would fail that first direct call silently
+  // (CSP violations are console-only), so it now names the real one.
+  const backendHost = "https://*.onrender.com";
   const connectSrc = isDev
-    ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app https://cdn.jsdelivr.net https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com"
-    : "'self' https://*.railway.app https://cdn.jsdelivr.net https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com";
+    ? `'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* ${backendHost} https://cdn.jsdelivr.net https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com`
+    : `'self' ${backendHost} https://cdn.jsdelivr.net https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com`;
 
   // Dev keeps 'unsafe-eval' + 'unsafe-inline' for React Fast Refresh / HMR
   // (webpack injects literal `eval(…)` and inline `<script>` runtime patches

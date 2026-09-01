@@ -374,9 +374,6 @@ def _fmp_get(endpoint, params=None, timeout=5):
     return None
 
 
-def endpoint_is_blocked(endpoint):
-    """Public helper — callers can proactively skip FMP if endpoint is cooling down."""
-    return _is_endpoint_blocked(endpoint)
 
 
 # ── Alpaca Market Data fallback (lazy import) ───────────────────
@@ -1349,100 +1346,6 @@ def get_annual_eps(ticker, years=4):
     return out
 
 
-def get_institutional_ownership(ticker):
-    """Fetch institutional ownership summary if FMP plan allows.
-
-    Tries the `symbol-ownership` summary endpoint first (returns a time
-    series of institutional metrics). Falls back to the `institutional-holder`
-    endpoint which lists individual holders — in that case we synthesize a
-    summary from the list length and recent shares deltas.
-
-    Returns a dict like::
-
-        {
-            "available": True/False,
-            "holder_count": int or None,
-            "ownership_pct": float or None,     # % of shares held by institutions
-            "ownership_change": float or None,  # QoQ change in ownership %
-            "source": "symbol-ownership" | "institutional-holder" | None,
-        }
-
-    When the endpoint is plan-gated (402) or cooling down, returns
-    ``{"available": False, ...}`` so callers can route to the price/volume
-    proxy. Cache 24h.
-    """
-    cache_key = f"inst_own:{ticker}"
-    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
-    if cached is not None:
-        return cached
-    if _is_budget_stale():
-        stale = _get_cache_stale(cache_key)
-        if stale is not None:
-            return stale
-
-    result = {
-        "available": False,
-        "holder_count": None,
-        "ownership_pct": None,
-        "ownership_change": None,
-        "source": None,
-    }
-
-    # Try the time-series summary (most useful — gives QoQ delta).
-    # FMP renamed the stable path /institutional-ownership/symbol-ownership →
-    # /institutional-ownership/symbol-positions-summary (2026). NOTE: the whole
-    # /institutional-ownership/* family is plan-gated — it returns 402
-    # "Restricted Endpoint" on the Starter $29 plan (and would on Free too), so
-    # _fmp_get returns None here and we degrade to available:False below; the
-    # CANSLIM "I" pillar then falls back to its price-momentum proxy. The path
-    # is corrected so this works immediately if the FMP plan is ever upgraded.
-    summary = _fmp_get(
-        "/institutional-ownership/symbol-positions-summary",
-        {"symbol": ticker, "includeCurrentQuarter": "true"},
-    )
-    if summary and isinstance(summary, list) and len(summary) >= 1:
-        latest = summary[0] or {}
-        prev = summary[1] if len(summary) > 1 else {}
-        own_pct = latest.get("ownershipPercent") or latest.get("ownership")
-        # symbol-positions-summary embeds the prior quarter in the same row
-        # (lastOwnershipPercent); fall back to the next list row for the older
-        # symbol-ownership response shape.
-        prev_pct = (latest.get("lastOwnershipPercent")
-                    or prev.get("ownershipPercent") or prev.get("ownership"))
-        try:
-            own_pct_f = float(own_pct) if own_pct is not None else None
-            prev_pct_f = float(prev_pct) if prev_pct is not None else None
-        except (TypeError, ValueError):
-            own_pct_f, prev_pct_f = None, None
-
-        change = None
-        if own_pct_f is not None and prev_pct_f is not None:
-            change = own_pct_f - prev_pct_f
-
-        try:
-            holder_count = int(latest.get("investorsHolding") or latest.get("holders") or 0) or None
-        except (TypeError, ValueError):
-            holder_count = None
-
-        result.update({
-            "available": True,
-            "holder_count": holder_count,
-            "ownership_pct": own_pct_f,
-            "ownership_change": change,
-            "source": "symbol-ownership",
-        })
-        _set_cache(cache_key, result)
-        return result
-
-    # (The legacy /institutional-holder list fallback was removed: FMP deleted
-    # that path from the stable API — it now 404s. Unlike a 402, a 404 does not
-    # arm _fmp_get's endpoint cooldown, so re-probing it just burned one FMP call
-    # on every cache miss for data that never comes. symbol-positions-summary
-    # above is now the sole source; when it's plan-gated we return available:False
-    # and the caller (canslim "I") uses its price-momentum proxy.)
-
-    _set_cache(cache_key, result)
-    return result
 
 
 # ── Balance Sheet & Income Statement ────────────────────────────
@@ -1823,28 +1726,6 @@ def get_earnings_calendar(ticker=None, days_ahead=30):
 
 # ── Dividends ───────────────────────────────────────────────────
 
-def get_dividends(ticker):
-    """Get dividend data. Cache 24h. Stale-while-revalidate when budget low."""
-    cache_key = f"dividends:{ticker}"
-    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
-    if cached:
-        return cached
-    if _is_budget_stale():
-        stale = _get_cache_stale(cache_key)
-        if stale:
-            return stale
-    data = _fmp_get("/dividends", {"symbol": ticker})
-    if data and isinstance(data, list) and len(data) > 0:
-        _set_cache(cache_key, data)
-        return data
-    alt = _class_share_alt(ticker)
-    if alt:
-        data = _fmp_get("/dividends", {"symbol": alt})
-        if data and isinstance(data, list) and len(data) > 0:
-            logger.info("FMP dividends resolved %s via class-share alt %s", ticker, alt)
-            _set_cache(cache_key, data)
-            return data
-    return []
 
 
 # ── Intraday (1min bars) ───────────────────────────────────────
@@ -1994,61 +1875,10 @@ def get_insider_trades(ticker, limit=50):
 _FMP_SHORT_INTEREST_AVAILABLE = False
 
 
-def get_short_interest(ticker):
-    """Get historical short interest data. Cache 24h (fundamental-level refresh).
-
-    FMP removed the stable short-interest endpoint (see
-    _FMP_SHORT_INTEREST_AVAILABLE) so this returns [] without an upstream call;
-    the /api/signals/short-interest route then degrades to a clean 404. Flip the
-    flag to re-enable if FMP restores a working path.
-    Returns list of dicts with date, shortInterest, floatShort, etc. when available.
-    """
-    cache_key = f"short_interest:{ticker}"
-    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
-    if cached is not None:
-        return cached
-    if _is_budget_stale():
-        stale = _get_cache_stale(cache_key)
-        if stale is not None:
-            return stale
-    if not _FMP_SHORT_INTEREST_AVAILABLE:
-        _set_cache(cache_key, [])
-        return []
-    data = _fmp_get("/historical/short-interest", {"symbol": ticker})
-    if data and isinstance(data, list) and len(data) > 0:
-        _set_cache(cache_key, data)
-        return data
-    alt = _class_share_alt(ticker)
-    if alt:
-        data = _fmp_get("/historical/short-interest", {"symbol": alt})
-        if data and isinstance(data, list) and len(data) > 0:
-            logger.info("FMP short-interest resolved %s via class-share alt %s", ticker, alt)
-            _set_cache(cache_key, data)
-            return data
-    _set_cache(cache_key, [])
-    return []
 
 
 # ── API Health ──────────────────────────────────────────────────
 
-def get_api_usage():
-    """Return current API usage stats."""
-    now = time.time()
-    blocked = {ep: max(0, int(until - now))
-               for ep, until in _endpoint_402_cooldown.items()
-               if until > now}
-    return {
-        "daily_calls": _daily_calls,
-        "daily_limit": _FMP_DAILY_SOFT_LIMIT,
-        "remaining": max(0, _FMP_DAILY_SOFT_LIMIT - _daily_calls),
-        "cache_entries": len(_cache),
-        "stale_mode": _is_budget_stale(),
-        "hard_stopped": _is_budget_exhausted(),
-        "stale_threshold": _BUDGET_STALE_THRESHOLD,
-        "hard_stop_threshold": _BUDGET_HARD_STOP,
-        "blocked_endpoints": blocked,   # {path: seconds_remaining}
-        "402_counts": dict(_endpoint_402_counts),
-    }
 
 
 def is_available():

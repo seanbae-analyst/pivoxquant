@@ -15,12 +15,22 @@ Pattern taxonomy
 Integration points
 ------------------
 - services/cache_service.py :: cache_ticker() — SignalCache write path.
-- ai_service.py :: generator 메서드 return 직전 safe_scrub() 호출.
-- routes/ai.py :: 모든 엔드포인트 응답 return 직전 safe_scrub() 호출.
+- services/alert.py :: create_alert() 의 title/body safe_scrub().
+- routes/decorators.py :: @legal_scrub_response → scrub_response() 로 응답 전체
+  딥 스크럽. alerts / mirror_home / profile / market / portfolio 약 12 엔드포인트.
+  (구 ai_service.py · routes/ai.py 경로는 2026-09-01 삭제됨.)
+
+⚠️ 2026-09-01 — 이 파일의 위상이 바뀌었다. 아래 주석 여러 곳이
+``services/quant/engine.py`` 의 "소스 직접 수정이 primary, 정규식은
+defense-in-depth" 라고 적고 있는데, **그 소스는 8-31 prune 으로 삭제됐다.**
+따라서 지금 이 정규식들은 보조 방어선이 아니라 **유일한 방어선**이다.
+"어차피 소스에서 고치니 중복" 이라고 읽고 지우지 마라 — 고칠 소스가 없다.
+스크럽 대상은 이제 stale ``SignalCache`` 페이로드 등 **이미 저장된 문자열**이다.
 
 Non-goals
 ---------
-- engine.py / quant_models.py 는 **수정 없이** 출력 경계면에서만 치환.
+- (역사) engine.py / quant_models.py 는 **수정 없이** 출력 경계면에서만 치환.
+  두 파일 모두 현재는 존재하지 않는다.
 - 완벽한 NLP 필터 아님 — 알려진 pattern 에 한해 정규식 치환.
 - _compliance_filter (ai_service.py) 와 달리 hard-drop 이 아닌 surgical replacement.
 """
@@ -228,7 +238,8 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bcontrarian\s+buy\b", re.IGNORECASE), "contrarian indicator"),
 
     # ── Group 10: Wave 3 — KR advisory phrases from engine.py msg_kr (NEW-A) ──
-    # services/quant/engine.py 의 9 advisory string 잔존 케이스 cover.
+    # (삭제된) services/quant/engine.py 가 남긴 9 advisory string 잔존 케이스 cover
+    # — 저장된 SignalCache 페이로드에 아직 살아있을 수 있다.
     # 순서 주의: 복합 구문 → 단순 단어 순.
     (re.compile(r"매수\s*기준\s*강화"), "변동성 격화 국면"),
     (re.compile(r"낙폭\s*확대\s*가능,?\s*매수\s*신호\s*아님"), "낙폭 확대 가능, 역추세 신호 부재"),
@@ -252,7 +263,7 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"분할\s*진입\s*권고"), "분할 패턴 영역"),
     (re.compile(r"(?<!과)매수\s*압력"), "유입 강도"),
     # Wave 4 (2026-05-17) — engine.py msg_kr 잔존 4종.
-    # services/quant/engine.py:639,644,1220,1350 sites 의 한국어 메시지.
+    # (삭제된) services/quant/engine.py:639,644,1220,1350 이 남긴 한국어 메시지.
     (re.compile(r"기관\s*매수\s*추정"), "기관 유입 관찰"),
     (re.compile(r"기관\s*매도\s*추정"), "기관 유출 관찰"),
     (re.compile(r"신규\s*매수\s*회피"), "신규 진입 보류 구간"),
@@ -276,15 +287,15 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"매도\s*(하세요|하세|하시면|해야|하면|하라|하십시오)\b"), "관찰 중"),
 
     # ── Group 11c: 영문 sell_reason 백업 (Wave E P1-02 2026-05-17) ────────
-    # services/quant/engine.py:327,335 sell_reason 소스 직접 수정이 primary,
-    # 본 정규식은 향후 신규 호출 사이트 추가 시 defense-in-depth.
+    # (역사) services/quant/engine.py:327,335 sell_reason 소스 직접 수정이
+    # primary 였으나 그 파일은 삭제됐다 → 이 정규식이 현재 유일한 방어선.
     (re.compile(r"\bcut\s+(?:the\s+)?loss(?:es)?\b", re.IGNORECASE), "indicator threshold breached"),
     (re.compile(r"\block\s+in\s+(?:the\s+)?profits?\b", re.IGNORECASE), "indicator ceiling reached"),
 
     # ── Group 11h: rec_timing / disq advisory backstop (2026-05-26) ───────
-    # services/quant/engine.py _size() rec_timing + disq_reasons 소스 직접
-    # 중립화가 primary; 본 정규식은 stale SignalCache 페이로드 등 구 문자열이
-    # scrub 경로로 흘러올 때의 defense-in-depth. 모두 다단어 명확 지시어라
+    # (역사) services/quant/engine.py _size() rec_timing + disq_reasons 소스
+    # 직접 중립화가 primary 였으나 그 파일은 삭제됐다. 남은 실제 대상은 stale
+    # SignalCache 페이로드 등 이미 저장된 구 문자열이고, 이 정규식이 유일한 방어선. 모두 다단어 명확 지시어라
     # IGNORECASE 가 산문을 over-scrub 하지 않음 ([[feedback_legal_filter_design]]).
     (re.compile(r"\baggressive\s+accumulation\b", re.IGNORECASE), "elevated band observed"),
     (re.compile(r"\bstrong\s+accumulation\b", re.IGNORECASE), "high band observed"),
@@ -303,7 +314,8 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bstop[\s\-]?loss(es)?\b", re.IGNORECASE), "SL 레벨 관찰"),
 
     # ── Group 11d: KR/EN 잔존 가드 (Wave E P2-03/P2-05 2026-05-17) ────────
-    # services/quant/engine.py:525,704 소스 직접 수정 primary + 회귀 가드.
+    # (역사) services/quant/engine.py:525,704 소스 수정이 primary 였음 — 파일
+    # 삭제됨. 지금은 저장된 페이로드에 대한 유일한 가드.
     (re.compile(r"스마트머니\s*매도\s*중"), "스마트머니 유출 중"),
     (re.compile(r"\bstrong\s+bounce\s+expected\b", re.IGNORECASE), "oversold indicator region"),
     (re.compile(r"강한\s*반등\s*(기대|예상)"), "지표 저점 구간 관찰"),
@@ -572,21 +584,38 @@ def scrub_signal(data: Any) -> Any:
     return data
 
 
-def scrub_response(data: Any) -> Any:
-    """Deep-scrub an arbitrary JSON-shaped response dict.
+def scrub_response(data: Any, context: str = "response") -> Any:
+    """Deep-scrub an arbitrary JSON-shaped response payload.
 
-    Walks every string leaf recursively. Used by routes/ai.py to enforce
-    the legal boundary on all AI endpoint responses regardless of shape.
+    Walks every string leaf recursively and returns a NEW structure — the
+    input is never mutated.
+
+    This is the single implementation behind ``@legal_scrub_response``
+    (routes/decorators.py), which is applied to ~12 endpoints across
+    alerts / mirror_home / profile / market / portfolio.
+
+    Two bugs were fixed here on 2026-09-01, both found by noticing that
+    routes/decorators.py had grown its OWN copy of this logic:
+
+      1. **A bare top-level string was returned unscrubbed.** The old body
+         only descended into dicts and lists, so ``scrub_response("you
+         should buy now")`` handed back the advisory text verbatim. The
+         function is public and in ``__all__``, so any endpoint returning a
+         bare string would have bypassed the 자본시장법 boundary entirely.
+      2. **It mutated the caller's dict in place** and returned the same
+         object, so a cached payload could be scrubbed permanently as a
+         side effect of rendering one response.
+
+    The duplicate in routes/decorators.py had neither bug but no tests; this
+    one had tests but both bugs. They are now one function — tested, and the
+    one production actually runs.
     """
+    if isinstance(data, str):
+        return safe_scrub(data, context=context)
     if isinstance(data, dict):
-        for k, v in list(data.items()):
-            if isinstance(v, str):
-                data[k] = safe_scrub(v, context=f"response.{k}")
-            elif isinstance(v, (dict, list)):
-                data[k] = scrub_response(v)
-        return data
+        return {k: scrub_response(v, context=f"{context}.{k}") for k, v in data.items()}
     if isinstance(data, list):
-        return [scrub_response(x) for x in data]
+        return [scrub_response(x, context=context) for x in data]
     return data
 
 

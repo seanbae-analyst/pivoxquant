@@ -10,10 +10,12 @@ Endpoints (all under ``/api/pre-trade``):
 
 Legal posture
 -------------
-This route NEVER places an order. ``/proceed`` only marks the reflection
-record as "the user finished thinking"; the actual broker call lives in
-the existing portfolio / autotrade routes and is invoked by the
-frontend separately. Every payload is suffixed with the standard
+This route NEVER places an order — and no route does. ``/proceed`` only
+marks the reflection record as "the user finished thinking". 2026-09-01
+correction: this used to say "the actual broker call lives in the existing
+portfolio / autotrade routes". There is no such call. Autotrade was deleted
+2026-05-05 (투자일임업), KIS is read-only, and the portfolio routes merely
+record a trade the user placed at their own broker. Every payload is suffixed with the standard
 information-only disclaimer so a screen-grab of the response can't be
 misread as a recommendation.
 """

@@ -59,9 +59,11 @@ _PER_USER_FIELDS = frozenset(("rec_inv", "rec_sh", "capital_needed", "capital_ga
 def hydrate_sizing(cached_data: dict, capital_usd: float, capital_krw: float, price: float) -> dict:
     """Re-compute per-user sizing fields from a cached (stripped) signal dict.
 
-    This mirrors the sizing logic in services/quant/engine.py so read callers
-    get the correct values for the requesting user's capital without those
-    values ever entering the shared cache.
+    This originally mirrored the sizing logic in services/quant/engine.py so
+    read callers got the correct values for the requesting user's capital
+    without those values ever entering the shared cache. That engine was
+    deleted 2026-08-31, so this function is now the ONLY implementation of
+    the sizing math — there is no upstream left to re-sync against.
 
     Returns a new dict (does not mutate cached_data).
     """
