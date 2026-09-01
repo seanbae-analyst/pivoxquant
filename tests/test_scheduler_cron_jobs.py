@@ -58,7 +58,6 @@ EXPECTED_JOB_IDS = {
     "ops_checkout_followup",
     "ops_email_scheduler",
     "ops_inactive_nudge",
-    "ops_caus_daily_sweep",
     "ops_finance_weekly_check",
     # Wave I — 추가 4개 (FX staleness / Anthropic cost / Railway resource / Domain WHOIS)
     "ops_fx_staleness_check",
@@ -88,8 +87,9 @@ EXPECTED_JOB_IDS = {
     "ops_lawyer_packet_weekly",
 }
 # 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) + 1 (viral) + 1 (marketing)
-# + 1 (T9 launch audit) + 1 (T10 data integrity) + 1 (T11 lawyer packet) = 31
-EXPECTED_JOB_COUNT = 31
+# + 1 (T9 launch audit) + 1 (T10 data integrity) + 1 (T11 lawyer packet) = 31,
+# minus ops_caus_daily_sweep (CAUS retired 2026-09-01 — CLAUDE.md 함정 §7) = 30
+EXPECTED_JOB_COUNT = 30
 
 
 @pytest.fixture
@@ -185,7 +185,6 @@ EXPECTED_TRIGGER_FIELDS = {
     "ops_checkout_followup":  {"minute": "*/15"},
     "ops_email_scheduler":    {"minute": "1-59/15"},
     "ops_inactive_nudge":     {"minute": "0"},
-    "ops_caus_daily_sweep":   {"hour": "3", "minute": "0"},
     "ops_finance_weekly_check": {"day_of_week": "sun", "hour": "9", "minute": "0"},
     # Wave I additions
     "ops_fx_staleness_check":    {"minute": "0"},

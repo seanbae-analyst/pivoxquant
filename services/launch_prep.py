@@ -152,12 +152,6 @@ _INVENTORY: tuple[tuple[str, Literal["required", "recommended", "optional"], str
     ("STRIPE_WEBHOOK_SECRET", "optional",
      "Stripe webhook signature verification. Pair with the above."),
 
-    # Sim / CAUS
-    ("SIM_ONBOARD_SECRET", "optional",
-     "HMAC ticket for CAUS sim-onboard (autonomous user simulation). "
-     "Without it the daily Playwright sweep falls back to manual "
-     "cookie file. Production-only."),
-
     # Observability
     ("SENTRY_DSN", "optional",
      "Sentry error reporting. Without it errors only land in Railway "

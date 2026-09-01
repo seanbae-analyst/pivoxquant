@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 # --- SSL context (cron-safe) -------------------------------------------
-# Mirror of `scripts/caus_daily_sweep.py::_build_ssl_context`. The legal
+# Same defense the CAUS sweep carried (PR #362; retired 2026-09-01). The legal
 # monitor is invoked from GitHub Actions and (optionally) cron — both run
 # detached from the user shell, so the macOS Python build's stale system
 # trust store can yield CERTIFICATE_VERIFY_FAILED against pivoxquant.com /

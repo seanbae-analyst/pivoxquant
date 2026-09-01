@@ -81,12 +81,12 @@ _KILL_KEYS = (
     "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
     "KAKAO_CLIENT_ID", "KAKAO_CLIENT_SECRET",
     "SENTRY_DSN",
-    # Dev/QA bypass secrets — a developer's .env commonly sets these, but
-    # they conditionally register the dev-login / sim-onboard blueprints
-    # (routes/__init__.py). Tests must run in the prod-default state where
-    # those routes do NOT exist (test_dev_auth_smoke / test_sim_onboard
-    # opt in explicitly via monkeypatch + their own app).
-    "DEV_LOGIN_SECRET", "SIM_ONBOARD_SECRET",
+    # Dev/QA bypass secret — a developer's .env commonly sets this, but it
+    # conditionally registers the dev-login blueprint (routes/__init__.py).
+    # Tests must run in the prod-default state where that route does NOT
+    # exist (test_dev_auth_smoke opts in explicitly via monkeypatch + its
+    # own app).
+    "DEV_LOGIN_SECRET",
 )
 for _k in _KILL_KEYS:
     os.environ.pop(_k, None)
@@ -108,13 +108,13 @@ os.environ["LAUNCH_FREE_ALL_TIERS"] = "0"
 
 # Eagerly import the app module NOW. ``app.py`` runs
 # ``load_dotenv(..., override=True)`` at module import, which RE-injects every
-# .env value (incl. DEV_LOGIN_SECRET / SIM_ONBOARD_SECRET). The test app uses
-# the pure ``app.birthdate_gate_blocks`` predicate for the PIPA §22 ⑥ age gate,
-# so this import is unavoidable. Triggering it here — then stripping the dev
-# bypass secrets one more time — guarantees that by the time any test app is
-# built (and its blueprints conditionally registered), the dev-login /
-# sim-onboard routes are absent (prod-default), which test_dev_auth_smoke /
-# test_sim_onboard depend on. (Their own apps opt back in explicitly.)
+# .env value (incl. DEV_LOGIN_SECRET). The test app uses the pure
+# ``app.birthdate_gate_blocks`` predicate for the PIPA §22 ⑥ age gate, so this
+# import is unavoidable. Triggering it here — then stripping the dev bypass
+# secret one more time — guarantees that by the time any test app is built
+# (and its blueprints conditionally registered), the dev-login route is absent
+# (prod-default), which test_dev_auth_smoke depends on. (Its own app opts back
+# in explicitly.)
 # Neutralise ``load_dotenv`` BEFORE importing app.py. app.py does
 # ``from dotenv import load_dotenv; load_dotenv(..., override=True)`` at module
 # top, which would RE-INJECT every real .env value (FMP_API_KEY etc.) — and

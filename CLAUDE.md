@@ -94,16 +94,20 @@ Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대�
 |---|---|---|
 | 부팅 URL rules | **120** | 2026-09-01 |
 | blueprints | **23** | 2026-09-01 |
-| pytest | **2139 passed / 0 failed** (18 skip, 1 xfail) | 2026-09-01 (죽은코드 정리 후) |
+| pytest | **2007 passed / 0 failed** (18 skip, 1 xfail) | 2026-09-01 (죽은코드 + CAUS 정리 후) |
 | vitest | **353 / 353** | 2026-09-01 |
 | next build | **36 routes** | 2026-09-01 |
 | alembic | 52 revisions, head `049_reflection_observed_context` | 2026-09-01 |
 
-> pytest 가 **2175 → 2139 (-36)** 로 줄어든 것은 회귀가 아니다. 2026-09-01 죽은코드
-> 정리로 **테스트 대상 자체가 사라져서** 함께 지운 수다 — AI 테스트 7파일(31) +
-> `TestLogUsageWrapper`(4) + `TestDiscoverFreshTtlBump`(1) = 36. skip 18 / xfail 1 /
-> fail 0 은 정리 전후 동일하고, URL rule 120 · blueprint 23 · vitest 353 · next 36
-> routes 도 전부 그대로다.
+> pytest 가 **2175 → 2007 (-168)** 로 줄어든 것은 회귀가 아니다. 2026-09-01 정리로
+> **테스트 대상 자체가 사라져서** 함께 지운 수다:
+> - AI 삭제 −36 — 테스트 7파일(31) + `TestLogUsageWrapper`(4) + `TestDiscoverFreshTtlBump`(1)
+> - CAUS 삭제 −132 — `test_caus_{scenarios,daily_sweep,auto_fix}` + `test_sim_onboard`
+>
+> skip 18 / xfail 1 / fail 0 은 정리 전후 동일하고, URL rule 120 · blueprint 23 ·
+> vitest 353 · next 36 routes 도 전부 그대로다. 스케줄러 job 만 31 → **30** (CAUS).
+> ⚠️ `tests/test_scheduler_cron_jobs.py::EXPECTED_JOB_COUNT` 는 **하드코딩된 수**다 —
+> cron job 을 더하거나 뺄 때 같이 고쳐야 한다 (이번에 안 고쳐서 3건 실패했었다).
 
 ---
 
@@ -172,9 +176,9 @@ routes/   alerts · auth(+auth_alias) · behavior · billing · consents · data
           · dev_auth · email_preferences · feedback · health · inbox
           · market · mirror_home · notifications · portfolio · pre_trade
           · profile · push · realtime · sendgrid_webhook · support · trades
-          (조건부·부팅 시 미등록: sim_onboard=SIM_ONBOARD_SECRET 필요,
-           command_center=opt-in. 위 23 카운트에 없다)
-services/ ai(죽음) · behavior · broker · customer · data · email · inbox · kis
+          (조건부·부팅 시 미등록: command_center=opt-in. 위 23 카운트에 없다.
+           sim_onboard 은 2026-09-01 CAUS 와 함께 삭제 — 함정 §7)
+services/ behavior · broker · customer · data · email · inbox · kis
           · legal · marketing · mock_data · observability · portfolio
           · pre_trade · profile · scheduler · support · tax · trading
 ```
@@ -269,32 +273,27 @@ CI 스캔 대상 `services/artifacts/templates/` 는 8-31 prune 으로 **없어�
 
 ---
 
-### 7. CAUS 는 **살아있는 cron** 인데 **죽은 화면**을 찌른다 (미결)
+### 7. CAUS 는 **삭제됐다** (2026-09-01) — 되살리지 마라
 
-2026-09-01 죽은코드 정리 중 확인. `scripts/caus_daily_sweep.py` + `caus_scenarios/`
-는 "안 쓰는 QA 스크립트" 처럼 보이지만 **지우면 안 된다** —
-`services/scheduler/cron_jobs.py:489` 가 `ops_caus_daily_sweep` 로 **앱 스케줄러에
-등록**하고, `routes/sim_onboard.py` 가 이걸 위해 존재하며,
-`tests/test_scheduler_cron_jobs.py` 가 그 cron 의 존재를 assert 한다.
+Continuous Autonomous User Simulation(브라우저 sim 유저 1명/일). **CEO 결정으로
+retire.** 시나리오가 겨냥하던 URL 10개 중 9개가 8-31 prune 으로 사라져서 매일 도는
+QA 가 **없는 제품을 검사**하고 있었고, 산출물은 오탐 아니면 `SKIPPED` 뿐이었다.
 
-문제는 **시나리오가 겨냥하는 URL 10개 중 9개가 8-31 prune 으로 사라졌다**는 것:
+지운 것: `scripts/caus_daily_sweep.py` · `caus_auto_fix.py` · `caus_scenarios/`(12)
+· `check_caus_today.sh` · `routes/sim_onboard.py` · 스케줄러 `ops_caus_daily_sweep`
+등록 · 테스트 4종(`test_caus_*` 3 + `test_sim_onboard`) · `SIM_ONBOARD_SECRET`
+배선 전부 · `docs/qa/auto-sim-reports/`(43) · `docs/specs/continuous-user-sim-spec.md`
+· **`playwright` 의존성**(삭제 후 import 0곳).
 
-| 시나리오 | 겨냥 URL | 상태 |
-|---|---|---|
-| day0 / day9 | `/home` | 삭제 (308→`/mirror`) |
-| day1 | `/signals` | 삭제 |
-| day2 | `/watchlist` · `/ai` | 삭제 |
-| day3 | `/portfolio` · `/risk` | `/portfolio` 만 생존 |
-| day4 | `/alerts` · `/companion` | 삭제 |
-| day5 | `/reports` | 삭제 |
-| day6 | `/pricing` | 삭제 (307) |
-| day7 | `/simulator/what-if` | 삭제 |
-| day8 | `/features` | 삭제 |
+⚠️ **`users.is_simulated` 는 남겼다** — 지우지 마라. migration 032 + 모델 컬럼 +
+이메일/푸시의 `is_simulated` 가드가 **합성 유저에게 실제 메일·푸시가 나가는 걸
+막는다.** `scripts/qa/virtual_user_sweep.py` 가 아직 sim 유저를 만들기 때문에 이
+가드는 여전히 살아있는 방어선이다 (`services/email/sender.py:269`,
+`services/email/{sendgrid,brevo}_provider.py`, `services/push_service.py:59`,
+`services/customer/inactive_nudge.py:125`).
 
-즉 **매일 도는 QA 가 없는 제품을 검사하고 있다.** `AUTOPILOT_BACKLOG.md` 에 이미
-P1 두 건(day-6 false P1, stale-session "fake-clean")으로 적혀 있다. **repoint 냐
-retire 냐는 CEO 결정 사항** — agent 가 임의로 지우지 말 것. 지운다면 cron_jobs 등록
-· `routes/sim_onboard.py` · `test_scheduler_cron_jobs.py` 를 **같이** 손대야 한다.
+검증: 삭제 전후 URL rule 120 · blueprint 23 동일. `SIM_ONBOARD_SECRET=x` 를 세팅하고
+부팅해도 120/23 그대로 — blueprint 가 실제로 사라졌다는 뜻이다.
 
 ### 8. `services/access_guard.py` 는 **호출처 0곳**이다 (의도적으로 남김)
 
@@ -306,6 +305,23 @@ retire 냐는 CEO 결정 사항** — agent 가 임의로 지우지 말 것. 지
 판단으로 지우는 건 범위를 넘는다. 되살릴 거면 §101 게이트가 필요한 route 에
 붙이고, 영영 안 쓸 거면 테스트와 함께 지울 것. **"테스트가 green 이니 가드가
 동작 중"으로 읽지 말 것** — 가드는 아무것도 안 지키고 있다.
+### 9. Docker 빌드 컨텍스트 — `.dockerignore` 를 지워도 되는 파일로 착각하지 마라
+
+`render.yaml` 이 `runtime: docker` 로 빌드하고 `Dockerfile` 끝이 `COPY . .` 다.
+2026-09-01 까지 **`.dockerignore` 가 없었다** — 빌드 컨텍스트 전체가 이미지에
+들어갔다는 뜻이다. 로컬 기준 ~1.7 GB(`node_modules` 815M · `.next` 587M ·
+`venv` 179M · `.git` 157M)가 불필요하게 실렸고, 더 중요한 건 **로컬에서
+`docker build .` 를 하면 `.env` 와 `.secrets/` 가 이미지 레이어에 구워진다**는
+점이었다. (Render 는 레포를 clone 하므로 gitignore 된 그 둘은 원래 없었다 —
+로컬 빌드만의 문제였지만 실재하는 유출 경로였다.)
+
+⚠️ **`.dockerignore` 에서 `docs/` · `frontend/` · `tests/` · `scripts/` 를 빼지 마라.**
+크게 보여도 **런타임에 읽힌다** — 인프로세스 APScheduler(`RUN_SCHEDULER=1`)가
+`scripts/nightly/*` 크론 30개를 돌리고, 그중 legal scan 은 `frontend/` 소스에서
+금지어를 훑고, `marketing_daily_dispatch` 는 `docs/marketing/content-bank.json`
++ `week1-cards/*.png` 를 읽고, ship-blocker 잡은 루트 `SHIP_BLOCKERS.md` 를 읽는다.
+지우면 **조용히** 깨진다 (크론은 best-effort 로 예외를 삼킨다).
+
 
 ## 중요 원칙
 

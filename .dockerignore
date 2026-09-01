@@ -1,0 +1,75 @@
+# Docker build context excludes — added 2026-09-01.
+#
+# Why this file exists: render.yaml builds with `runtime: docker` and the
+# Dockerfile ends in `COPY . .`, so WITHOUT this file the entire build context
+# is baked into the production image. Two consequences, one of them a security
+# problem:
+#
+#   1. Size. Locally the context is ~1.7 GB of things the image never needs
+#      (node_modules 815M, frontend/.next 587M, venv 179M, .git 157M).
+#   2. Secrets. `.env` and `.secrets/` are gitignored, so they are absent from
+#      Render's clone — but a `docker build .` run on this machine WOULD copy
+#      real credentials into an image layer. Excluding them here makes that
+#      impossible regardless of who builds.
+#
+# ⚠️ What is deliberately NOT excluded, and why — do not "optimise" these away:
+#   docs/ frontend/ tests/ scripts/  are read AT RUNTIME by the in-process
+#   APScheduler cron jobs (services/scheduler/cron_jobs.py). The legal scans
+#   read frontend/ sources for forbidden terms, marketing_daily_dispatch reads
+#   docs/marketing/{content-bank.json,week1-cards/*.png}, and ship_blockers
+#   reads SHIP_BLOCKERS.md. Dropping them would silently break those jobs.
+
+# ── Version control ──
+.git
+.gitignore
+.githooks
+.github
+
+# ── Local virtualenvs / dependency trees (reinstalled from requirements.txt) ──
+venv
+.venv
+**/node_modules
+
+# ── Frontend build output — Vercel serves the frontend, not this image ──
+frontend/.next
+frontend/out
+frontend/.vercel
+
+# ── Secrets & local env (see note above — this is the security-relevant part) ──
+.env
+.env.*
+!.env.example
+.secrets
+*.pem
+*.key
+
+# ── Local databases & instance state ──
+*.db
+*.sqlite
+*.sqlite3
+instance
+.kis_token_cache.json
+
+# ── Caches & build junk ──
+__pycache__
+**/__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.DS_Store
+
+# ── Local-only run artifacts (regenerated; never read by the web service) ──
+qa
+reports
+state
+legal_monitor_artifacts
+self_healing_artifacts
+.bug-hunt
+.bughunt-*
+BUG_SWEEP_*.md
+
+# ── Editor / tooling ──
+.obsidian
+.vercel
+.bkit

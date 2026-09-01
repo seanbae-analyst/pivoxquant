@@ -28,8 +28,9 @@ import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-# Mirror of scripts/legal_monitor/monitor.py::_build_ssl_context (PR #370)
-# and scripts/caus_daily_sweep.py (PR #362). The launchd / cron daemon
+# Mirror of scripts/legal_monitor/monitor.py::_build_ssl_context (PR #370);
+# the same fix originated in the CAUS sweep (PR #362, retired 2026-09-01).
+# The launchd / cron daemon
 # does not source the user shell environment, so the default urllib SSL
 # trust store may resolve before certifi is loaded — Slack webhook posts
 # silently fail with SSL: CERTIFICATE_VERIFY_FAILED on some macOS

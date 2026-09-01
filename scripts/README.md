@@ -3,99 +3,23 @@
 Operational scripts triggered by Claude Code scheduled-tasks (Max plan, $0)
 or run on-demand by the CEO. Zero non-stdlib deps wherever practical.
 
-## CAUS (Continuous Autonomous User Simulation)
+## CAUS — 폐기됨 (2026-09-01)
 
-**Spec**: [`docs/specs/continuous-user-sim-spec.md`](../docs/specs/continuous-user-sim-spec.md)
+Continuous Autonomous User Simulation(브라우저 sim 유저 1명/일 + Playwright
+시나리오 10종)은 **삭제됐다.** 시나리오가 겨냥하던 URL 10개 중 9개가 8-31 prune
+으로 사라져서, 매일 도는 QA 가 **없는 제품을 검사하고 있었다** (`/signals`
+`/watchlist` `/reports` `/pricing` `/simulator/what-if` `/features` `/risk`
+`/companion` `/home` — 전부 삭제됨). 남아 있던 건 오탐뿐이라 CEO 결정으로 retire.
 
-### `caus_daily_sweep.py`
+함께 삭제된 것: `caus_daily_sweep.py` · `caus_auto_fix.py` · `caus_scenarios/`
+· `check_caus_today.sh` · `routes/sim_onboard.py` · 스케줄러의
+`ops_caus_daily_sweep` · 테스트 4종 · `docs/qa/auto-sim-reports/`(43건) ·
+`docs/specs/continuous-user-sim-spec.md` · `playwright` 의존성.
 
-Daily launcher for the simulated-user sweep. Phase 1 MVP — writes a per-day
-report stub, posts a Slack heads-up, and gracefully no-ops when the session
-file is missing (CEO has not yet onboarded the sim alias).
-
-#### Local dry-run
-
-```bash
-cd /Users/seanbae/Desktop/취준/pivoxquant
-python3 scripts/caus_daily_sweep.py
-```
-
-Expected output (no `SLACK_WEBHOOK_URL`, no session file):
-
-```
-[caus] report stub: .../docs/qa/auto-sim-reports/YYYY-MM-DD.md
-[slack-stub] info: daily sweep started · simN · day-K · ...
-[slack-stub] warn: user `simN` session missing at `~/.pivoxquant-sim/sessions/simN.json` ...
-```
-
-Exit code is always `0` on missing session (graceful — cron must not flap).
-
-#### Environment variables
-
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `SLACK_WEBHOOK_URL` | No | Slack incoming webhook. Falls back to `SLACK_WEBHOOK_CAUS`. If neither is set, the script prints `[slack-stub]` lines to stdout (still exits 0). |
-
-#### Claude Code scheduled-task registration
-
-Register once via the `scheduled-tasks` MCP tool
-(`mcp__scheduled-tasks__create_scheduled_task`) or the `/schedule` skill:
-
-| Field | Value |
-|-------|-------|
-| `name` | `caus-daily-sweep` |
-| `cron` | `0 18 * * *` (UTC) — equivalent to **03:00 KST** |
-| `command` | `cd /Users/seanbae/Desktop/취준/pivoxquant && python3 scripts/caus_daily_sweep.py` |
-| `timeout_minutes` | 5 (Phase 1 launcher is fast; Phase 2 will increase) |
-
-The task lives in Claude Code Max plan (no GitHub Actions billed minutes, no
-external cron-as-a-service). See `feedback_no_extra_cost.md`.
-
-#### D+0 CEO onboarding (one-time per sim alias)
-
-CAUS uses Gmail aliases (`seanbae1521+sim1@gmail.com` ~ `+sim10@gmail.com`)
-instead of `DEV_LOGIN_SECRET`. Gmail accepts `+anything` suffixes on a single
-inbox — Google ToS-compliant and free.
-
-> **Why not DEV_LOGIN_SECRET?** A 2026-05-10 security guard
-> (`routes/__init__.py:97–102`, "M3") refuses prod boot when
-> `FLASK_ENV=production` AND `DEV_LOGIN_SECRET` are both set. This guard is
-> intentional and stays. Verified by failed Railway redeploy on 2026-05-13.
-
-Per alias (~5 minutes):
-
-1. Open `https://pivoxquant.com` in an incognito window. Enter `BETA_PASSWORD`.
-2. Click Google login → "Use another account" → enter
-   `seanbae1521+sim{N}@gmail.com` (password is the main Gmail password —
-   alias inherits).
-3. Complete the 20-question onboarding. Optionally vary answers per `simN` so
-   personas (spec §5) diverge.
-4. In Railway psql, mark the new user as simulated:
-   ```sql
-   UPDATE users SET is_simulated = TRUE
-   WHERE email = 'seanbae1521+sim1@gmail.com';
-   ```
-5. Export cookies and `localStorage` via Claude in Chrome MCP, save to
-   `~/.pivoxquant-sim/sessions/sim{N}.json`. Suggested shape:
-   ```json
-   {
-     "cookies": [ { "name": "session", "value": "...", "domain": ".pivoxquant.com", "expiry": 1747000000 } ],
-     "localStorage": { "pivoxquant.tier": "free" },
-     "captured_at": "2026-05-13T12:00:00Z"
-   }
-   ```
-6. From next cron tick on, `caus_daily_sweep.py` finds the file and (Phase 2)
-   hands it to the `user-tester` agent.
-
-The directory `~/.pivoxquant-sim/` is CEO-local only — gitignored, never
-synced to iCloud/Dropbox. If the laptop is lost, force-reset the sim aliases
-in the prod DB.
-
-#### Refresh cadence
-
-Google OAuth refresh tokens expire after **30 days** without activity. The
-launcher will Slack-warn when a session file's mtime > 30 days. Repeat
-steps 1–5 monthly for each active alias.
+**남긴 것**: `users.is_simulated` 컬럼 + migration 032 + 이메일/푸시의
+`is_simulated` 가드. `scripts/qa/virtual_user_sweep.py` 가 아직 sim 유저를
+만들고, 그 가드가 **합성 유저에게 실제 메일이 나가는 걸 막는다.**
+합성 유저 QA 가 필요하면 이제 그쪽이 유일한 경로다.
 
 ## Other cron scripts
 

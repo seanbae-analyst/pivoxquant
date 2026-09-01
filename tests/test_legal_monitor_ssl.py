@@ -4,7 +4,8 @@ SSL context for runtime DB scans.
 The legal_monitor cron / GitHub Action runs detached from the user shell,
 so urllib's default context can fall back to a stale system trust store
 and yield ``CERTIFICATE_VERIFY_FAILED`` — mirrors the failure that
-already bit scripts/caus_daily_sweep.py (PR #362).
+already bit the CAUS daily sweep (PR #362; that script was retired
+2026-09-01, but the SSL failure mode it found is general).
 
 This test pins the same defense: a module-level ``_SSL_CONTEXT`` rooted
 at certifi when available, fallback to ``ssl.create_default_context()``,
