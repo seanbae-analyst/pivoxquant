@@ -2,6 +2,42 @@
 
 P1 findings accumulated by the daily bug sweep. Not auto-fixed (detection-only or deferred). Check off when resolved.
 
+## 2026-09-02 (daily-sweep, prod, Wed) — DETECTION-ONLY
+
+**P0=2 · P1=5 · P2=6 · 자동수정 0건.** 미커밋 앱 소스 없음(dirty 서브모듈 + untracked QA 리포트만) — 하지만 자동수정을 안 한 이유는 가드가 아니라 **P0 2건 모두 코드 대상이 아니기 때문**이다(상세: `BUG_SWEEP_2026-09-02.md` §4).
+
+스코프 주의: 08-31 prune 으로 라우트 9개가 삭제돼 **태스크 정의서의 페이지 목록이 stale** 이다. 실측 31 라우트로 재작성해 돌렸다. CAUS 레그도 `938bfcf4` 에서 폐기됨.
+자동 스윕은 전부 green: virtual-user 516 calls/0 findings · 회귀가드 all passed(신규 0) · 야간 pytest 2010/0 · tsc 0 · 엔드포인트 계약 68/68 · 라이브 법규 스캔 위반 0.
+
+### 🟥 P0 — 릴리스 게이트 (자동수정 불가, CEO 액션)
+- [ ] **P0 — prod 백엔드 완전 불능.** Vercel `RAILWAY_BACKEND_URL` 이 삭제된 Railway 호스트를 가리키고 `NEXT_PUBLIC_API_URL` 은 빈 문자열이라 폴백된다(`next.config.ts:12-14`). 모든 `/api/*` → 404 `Application not found`. 신규 아님 — `docs/ops/backend-restore-2026-09-01.md` §5 의 기록된 항목. **CEO: ① Render 배포 → ② vercel env 교체 → redeploy.**
+- [ ] **P0 — PIPA §28-8 국외이전 동의서가 삭제된 처리자(Railway)를 명시하고 실제 처리자(Render/Supabase)는 누락.** `frontend/src/content/privacy-ko.md:26,167,252` + `(auth)/signup/page.tsx:599` 라벨(`Anthropic / Vercel / Railway / Google / SendGrid`) + `lib/consents.ts:180-184` 주석. 해당 동의는 **[필수]** 로 가입 제출 조건(`signup/page.tsx:166`).
+      ⚠️ **현재 실제 노출은 없다** — 백엔드 404 로 `POST /api/auth/signup` 자체가 실패(실측). 그러나 **Render 가 살아나는 순간 잘못된 고지로 가입이 재개**되므로 **컷오버 릴리스 게이트로 묶을 것.**
+      자동수정 보류 사유: 올바른 처리자 목록은 Render/Supabase 리전 확정 후에야 정해지고, 문서 자체가 "변호사 검토 전 게시 금지" 초안이라 §28-8 필수 고지문을 에이전트가 단독 재작성하는 건 부적절.
+
+### 🟠 P1 (5건 — 전부 소스+라이브 prod 재검증 완료)
+- [ ] **P1 — 베타 게이트가 prod 에서 꺼져 있다(사이트 전면 공개).** Vercel prod 에 `BETA_PASSWORD` 없음(`BETA_SIGNING_SECRET` 은 있음). `middleware.ts:127` 이 env 없으면 게이트를 통째로 스킵 → 쿠키 없이 `/portfolio` 200. `/api/beta-auth` 는 500 "Beta gate is not configured". **의도(Stage 0 공개 전환)인지 설정 유실인지 근거가 없다 — CEO 결정 필요.**
+- [ ] **P1 — `/admin` 진입 즉시 404.** `admin/page.tsx:19` 가 삭제된 `/admin/preview` 로 `router.replace`, `admin/layout.tsx:89` 도 동일 링크. 경로는 prune `47a5e8f3` 에서 삭제. 관리자 화면 전면 불능(유저 노출면 아님).
+- [ ] **P1 — `/portfolio` 포지션 행 클릭이 자기 자신으로 되돌아온다.** `positions-table-v2.tsx:407` 이 삭제된 `/detail/[ticker]` 로 push, `next.config.ts:78` 이 그걸 `/portfolio` 로 308. 행은 `cursor:pointer`+hover(`:421-426`)로 클릭 가능해 보인다. 리다이렉트는 정상 — **호출부(핸들러+어피던스) 제거가 fix.**
+- [ ] **P1 — `/support` FAQ 가 폐기된 유료 3단계 요금제를 안내.** `messages/ko.json:259-262`(+`en.json`) "무료/Pro 월 ₩9,900/Premium 월 ₩19,900" + 리다이렉트되는 `/pricing` 유도. Stripe 는 마스터 kill-switch 로 OFF, `/pricing` → `/mirror` 307(실측). 살 수 없는 플랜 광고 = 표시광고법 리스크.
+- [ ] **P1 — `/support` 가 제거된 "AI 고객지원" 챗봇을 계속 광고.** `messages/ko.json:283-286` "로그인 후 「AI 고객지원에게 물어보기」". 챗봇은 2026-09-01 제거(`/support/chat` → `/support/contact` 308 실측). 로그인해도 1:1 문의/문의함만 존재.
+
+### 🟡 P2 (6건 — 카운트 + 근거만)
+- [ ] **P2 — `lib/demo.ts:302,304` 에 폐기된 점수화·시그널 어휘** (`"NVDA POSITIVE 신호"`, `score: 82`). dormant(`NEXT_PUBLIC_DEMO_MODE` 가 Vercel prod 에 없음) 이나 파일 용도가 "LinkedIn 쇼케이스" 라 플래그 하나면 공개 노출. + 삭제된 페이지용 픽스처 25개 잔존.
+- [ ] **P2 — 면책 경로 맵 중복.** `(dashboard)/layout.tsx` `PATH_TO_TYPE` 에 `/mirror` 항목 2개. 선착순 매칭이라 지금은 정상이나 순서 바뀌면 조용히 잘못된 법적 문구.
+- [ ] **P2 — 법규 필터에 `목표주가` 누락.** `legal_filter.py:87-88` 은 `목표가`·`목표 가격` 만. 실측 무변경 통과. 생성 경로 0건이라 노출 없음(백스톱 갭). 양성 용례 없어 추가 안전.
+- [ ] **P2 — `/terms` 가 삭제된 시그널/점수 기능을 규정 중.** 변호사 큐.
+- [ ] **P2 — `.claude/hooks/h6-handover-prepend.sh:34` 가 죽은 Railway 를 헬스체크** → 인수인계서에 잘못된 백엔드 상태를 계속 기록(`feedback_no_false_reports` 위반 경로).
+- [ ] **P2 — 백로그 자체가 stale.** 열린 58건 중 **41건이 삭제된 라우트/서브시스템 참조.** 확인 사례: 07-12 P1 "realtime 가격 9h 오표기" 는 `price-with-timestamp.tsx` 와 원인 코드가 **둘 다 삭제돼 이미 무효**. **정합성 재조사 1회 필요.**
+
+### 태스크 정의서(`SKILL.md`) 수정 필요
+- [ ] 페이지 목록 → 현존 31 라우트 (현재 9개가 삭제된 경로)
+- [ ] CAUS 레그 삭제 (`938bfcf4` 폐기)
+- [ ] prod 호스트를 `https://www.pivoxquant.com` 으로 (apex 는 307)
+- [ ] 베타 비번 절차 보류 (게이트 OFF, `/api/beta-auth` 500)
+- [ ] Railway 참조 → Render + Supabase
+
+
 ## 2026-07-12 (daily-sweep, prod, Sun) — DETECTION-ONLY (uncommitted user work: `.claude/launch.json`, `.gitignore`, `SHIP_BLOCKERS.md`, `frontend/.env.production`, `frontend/public/sw.js`, `settings/_v2/page-v2.tsx`, `risk/v2/risk-gauge-grid.tsx`, `routes/watchlist.py`, submodule `ui-ux-pro-max`)
 
 **P0=0 · P1(NEW)=4 · P2=2 · recurring(scheduler)=1(REFINED).** No auto-fix/commit (detection-only). ✅ **First FULL-authenticated prod sweep** — bug-hunter minted a legit CAUS sim-onboard session (`SIM_ONBOARD_SECRET` via `railway variables`) + drove headless Chromium (Playwright), so all 12 dashboard + 6 detail pages got real logged-in console/network/DOM checks (prior 10+ runs only reached public pages). Hermetic virtual sweep CLEAN (991 calls / 0 findings). Sunday artifact PDF full matrix **172 passed / 0 failed** (8m32s). CAUS rotated to authed **day-9** → honestly **SKIPPED (skipped_no_session)** (no cron `SIM_ONBOARD_SECRET`). Legal CLEAN (forbidden_terms 181 lines; DisclaimerBanner central `(dashboard)/layout.tsx`; 0 live BUY/SELL/HOLD/매수/매도 in detail+signals components; on-demand lookup healthy AAPL $315.32 / SPY $754.95 / QQQ $725.51 / VIXY $20.68). Backend health OK (`v47a2db735a50`, unchanged ≥12 days). Full detail: `BUG_SWEEP_2026-07-12.md`.

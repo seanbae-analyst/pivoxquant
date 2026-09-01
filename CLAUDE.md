@@ -152,6 +152,11 @@ Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대�
   부르지 않는다. 되살릴 거면 **소비자부터** 만들 것 (원본은 `git show cee3d291:services/ai/service.py`).
   ⚠️ `anthropic_usage_log` 테이블 + migration 042 + `scripts/nightly/
   anthropic_cost_estimate.py` 는 **남겼다** — `pipa_purge` 가 참조한다.
+  🟥 **법적 후속 조치가 미완이다.** 개인정보처리방침이 아직 Anthropic 을
+  국외 처리자로 명시하고(`privacy-ko.md:169`) 가입 **필수** 동의 문구에도
+  들어 있다(`signup/page.tsx:599`). 코드가 사라졌으므로 **일어나지 않는
+  이전에 동의를 받는 상태**다. `SHIP_BLOCKERS.md` R0 (컷오버 게이트) 참조 —
+  Render 배포 전에 정정해야 한다.
 - **Broker**: KIS 한국투자증권 (read-only — `services/kis/service.py` 의
   `KIS_READ_ONLY` 가드 3곳). Alpaca 는 데이터 fallback stub 만
   `ALPACA_ENABLED` 게이트(기본 OFF)로 잔존
@@ -424,6 +429,34 @@ Supabase 의 43 테이블은 그대로다. 새 DB 만 이 7개를 안 받는다.
 교훈: `_do_migrations` 안의 DDL 은 **모델이 없으면 아무도 안 본다.** 새 테이블을
 여기 추가할 거면 소비자(모델·라우트·서비스)부터 만들고, 소비자가 사라질 땐 DDL 도
 같이 지워라. 그러지 않으면 부팅마다 유령 스키마가 늘어난다.
+
+### 14. 베타 비번 리터럴은 **스윕 리포트를 통해 반복 재유입**된다
+
+2026-09-02 실측: `tests/test_pivoxaudit_secret_leak.py` 가 빨갛게 떴는데 원인이
+**야간 daily-sweep 이 03:00 에 쓴 `BUG_SWEEP_2026-09-02.md:63`** 이었다. 스윕이
+`/api/beta-auth` 를 curl 로 찌른 뒤 **명령줄을 그대로** 리포트에 붙여서 비번
+리터럴이 파일로 떨어졌다.
+
+**처음이 아니다** — `git log -S` 에 최소 두 번의 선례가 있다
+(`416425bb` — HANDOVER 평문 self-heal, "v32 PR #224 동일 패턴" 이라고 적혀 있다;
+`53c063fe` "obfuscate BETA_PW literal"). 커밋 제목 자체에 리터럴이 들어 있으니
+**여기에 그대로 인용하지 마라** — 이 문단을 쓰면서 실제로 한 번 밟았고, 가드가
+바로 잡았다. 확인할 땐 `git log --all -S` 로 직접 조회할 것. 즉 **가드는 매번 잡지만 소스가 계속
+재생산**한다.
+
+알아둘 것:
+- 가드는 **git 추적 여부와 무관하게 파일시스템을 스캔**한다. `BUG_SWEEP_*.md`
+  는 gitignore 라 커밋될 일이 없는데도 테스트는 실패한다 — 의도된 설계다
+  (커밋되기 *전에* 잡는 게 목적).
+- 허용 파일은 딱 둘: `tests/test_pivoxaudit_secret_leak.py` ·
+  `.github/workflows/legal-guard.yml`.
+- 그래서 **pytest 가 이 한 건으로 빨갛게 뜨면 코드 회귀가 아니라 리포트 오염을
+  먼저 의심하라.** 조치는 리포트의 리터럴만 마스킹하는 것 — 리포트 자체를
+  지우면 그날 스윕이 찾은 P0 도 같이 날아간다.
+
+근본 해결은 둘 중 하나이고 **둘 다 CEO 판단**이다: ① 스윕 출력에서 시크릿을
+마스킹하게 만들거나, ② 베타 게이트가 어차피 열려 있으니(`BETA_PASSWORD` 가
+Vercel 에 미설정) 비번 자체를 폐기하거나.
 
 ## 중요 원칙
 
