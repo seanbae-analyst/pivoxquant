@@ -57,17 +57,30 @@ def register_blueprints(app):
     # 2026-06-10 (bug-hunt W2-P3): the guard was a single env-string check —
     # if FLASK_ENV were ever unset/overridden on Railway, the bypass would
     # mount in prod with only the brute-forceable secret as a barrier. Also
-    # refuse whenever a Railway environment marker is present, independent
+    # refuse whenever a hosting-platform marker is present, independent
     # of FLASK_ENV (belt and suspenders).
+    #
+    # 2026-09-01: the marker list was Railway-only, so moving the backend to
+    # Render silently deleted the second layer — FLASK_ENV would have been the
+    # sole barrier again, which is the exact single-check state W2-P3 fixed.
+    # Markers are checked by presence, not value: Render sets RENDER=true and
+    # RENDER_SERVICE_ID on every service it runs.
     if os.environ.get("DEV_LOGIN_SECRET"):
-        on_railway = bool(
-            os.environ.get("RAILWAY_ENVIRONMENT")
-            or os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+        on_platform = any(
+            os.environ.get(marker)
+            for marker in (
+                "RAILWAY_ENVIRONMENT",
+                "RAILWAY_PUBLIC_DOMAIN",
+                "RENDER",
+                "RENDER_SERVICE_ID",
+                "FLY_APP_NAME",
+            )
         )
-        if os.environ.get("FLASK_ENV") == "production" or on_railway:
+        if os.environ.get("FLASK_ENV") == "production" or on_platform:
             raise RuntimeError(
-                "DEV_LOGIN_SECRET must NOT be set in production / on Railway. "
-                "Refusing to mount dev_auth blueprint (security M3 + W2-P3)."
+                "DEV_LOGIN_SECRET must NOT be set in production / on a hosting "
+                "platform. Refusing to mount dev_auth blueprint "
+                "(security M3 + W2-P3)."
             )
         from .dev_auth import dev_auth_bp
         blueprints.append(dev_auth_bp)

@@ -94,3 +94,6 @@ qa/v2-smoke/**/*.png
 tests/artifacts/output/
 instance/
 .vercel
+
+# Local-only secret material (Supabase DB password, etc). Never commit.
+.secrets/

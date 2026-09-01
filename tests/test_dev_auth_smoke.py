@@ -11,6 +11,8 @@ without standing up a separate app.
 """
 from __future__ import annotations
 
+import pytest
+
 
 class TestDevAuthRouteNotRegistered:
     """When DEV_LOGIN_SECRET is unset (prod default), the routes 404."""
@@ -39,3 +41,69 @@ class TestDevAuthModuleImports:
         from routes.dev_auth import dev_auth_bp
         # Each @route decorator adds a deferred function to deferred_functions.
         assert len(dev_auth_bp.deferred_functions) == 2
+
+
+class TestPlatformMarkerRefusal:
+    """The DEV_LOGIN_SECRET guard must refuse on ANY hosting platform, not
+    just Railway.
+
+    2026-09-01: the marker list was Railway-only. Moving the backend to Render
+    would have silently dropped the second layer of the W2-P3 belt-and-
+    suspenders check, leaving FLASK_ENV as the sole barrier — which is the
+    single-check state W2-P3 was written to fix. These cases lock each marker
+    in by presence (Render sets RENDER=true / RENDER_SERVICE_ID; Fly sets
+    FLY_APP_NAME), with FLASK_ENV explicitly NOT production so that only the
+    marker can be doing the work.
+    """
+
+    @pytest.mark.parametrize(
+        "marker",
+        [
+            "RAILWAY_ENVIRONMENT",
+            "RAILWAY_PUBLIC_DOMAIN",
+            "RENDER",
+            "RENDER_SERVICE_ID",
+            "FLY_APP_NAME",
+        ],
+    )
+    def test_marker_alone_refuses_to_mount(self, monkeypatch, marker):
+        from flask import Flask
+
+        from routes import register_blueprints
+
+        monkeypatch.setenv("DEV_LOGIN_SECRET", "anything")
+        monkeypatch.setenv("FLASK_ENV", "development")
+        for m in (
+            "RAILWAY_ENVIRONMENT",
+            "RAILWAY_PUBLIC_DOMAIN",
+            "RENDER",
+            "RENDER_SERVICE_ID",
+            "FLY_APP_NAME",
+        ):
+            monkeypatch.delenv(m, raising=False)
+        monkeypatch.setenv(marker, "1")
+
+        with pytest.raises(RuntimeError, match="DEV_LOGIN_SECRET"):
+            register_blueprints(Flask(__name__))
+
+    def test_no_marker_and_not_production_still_mounts(self, monkeypatch):
+        """The guard must not become a blanket refusal — local dev with
+        DEV_LOGIN_SECRET set is the supported E2E workflow."""
+        from flask import Flask
+
+        from routes import register_blueprints
+
+        monkeypatch.setenv("DEV_LOGIN_SECRET", "anything")
+        monkeypatch.setenv("FLASK_ENV", "development")
+        for m in (
+            "RAILWAY_ENVIRONMENT",
+            "RAILWAY_PUBLIC_DOMAIN",
+            "RENDER",
+            "RENDER_SERVICE_ID",
+            "FLY_APP_NAME",
+        ):
+            monkeypatch.delenv(m, raising=False)
+
+        app = Flask(__name__)
+        register_blueprints(app)
+        assert "dev_auth" in app.blueprints
