@@ -1,339 +1,336 @@
-# PivoxQuant — Session Handoff (2026-08-31 Updated)
+# PivoxQuant — 세션 컨텍스트
 
-> ⚠️ **2026-07-05 ~ 2026-08-30 약 7주간 프로젝트 중단.** 재개하며 실측 현행화.
-> 이 파일은 매 턴 로드되므로 **틀린 값은 곧 잘못된 판단**이 된다. 상태 블록은
-> 반드시 실측 후 갱신할 것. 상세 이력은 HANDOVER.md (v56~v66) 및
-> `docs/archive/HANDOVER-history-v55-and-older.md` 참조.
+> **2026-09-01 전면 재작성.** 이전 판은 자기 자신과 모순돼 있었고(같은 파일이
+> "135 rules"와 "141 rules"를 동시에 적고 있었다), 이미 삭제된 것들을 살아있다고
+> 기술했다. 그 결과 이 파일을 읽은 세션이 잘못된 판단을 반복했다.
+>
+> **이 파일의 규칙: 잰 것만 적는다. 재는 방법을 같이 적는다.**
+> 숫자를 갱신할 땐 아래 §검증 명령을 실제로 돌리고 그 출력을 적을 것.
+> 모르면 "확인 불가"라고 적는다. 추정을 사실처럼 적지 않는다.
+> 상세 이력은 `HANDOVER.md` 와 `docs/ops/backend-restore-2026-09-01.md`.
 
-## 프로젝트 개요
-**기록(記錄) 중심 개인 투자 회고 도구.** 유저가 이미 들고 있는 포트폴리오를
-읽고, 사기 전에 멈춰 이유를 적게 하고, 그 기록을 나중에 거울처럼 되비춘다.
-루프는 하나다 — **멈춤 → 기록 → 거울**.
-미국 + 한국 주식. 1인 창업자(배상현) 운영. 현재 클로즈드 베타.
+---
 
-> 2026-08-31 **대규모 prune 완료 (−123,000줄 / 레포 3.7G→1.2G).** 종목
-> 스코어링 / 시그널 / 리스크보드 / AI 분석 / 디스커버 / 마켓 / 관심종목 /
-> 그로스 / 컴패니언 / AI 트레이더 트윈 / 18종 아티팩트 리포트 — **전부
-> 삭제됐다.** 이 파일에서 그 기능들을 찾지 마라. 없다.
-> 코드가 필요하면 커밋 `80431ac0`·`1c23fac6`·`dfb4a98f` 이전 이력에 있다.
-> 검증(2026-09-01 재실측 — **모든 수치를 다시 셌다**): pytest **2174** /
-> vitest **353** / tsc·eslint clean / 부팅 **URL rule 120 · blueprint 23**.
-> pytest 2221→2174→**2156**, URL rule 135→134→**120**. 감소는 전부 같은 날의
-> 의도적 제거다 — 지원 챗봇(테스트 53) + market 죽은 라우트 14개(테스트 ~20).
-> 회귀 아님, 최종 **2156 passed / 0 failed**.
+## 이 파일을 믿기 전에
 
-## 현재 상태 요약 (2026-09-01 실측)
-🟡 **백엔드: DB 재구축 완료 / 앱 호스팅 대기** (2026-09-01 실측). Railway 계정이
-  삭제되어 앱 + prod DB 가 함께 사라졌던 건에 대해, **DB 는 이미 새로 세웠다.**
-  · **Supabase Postgres 가동 중** — 프로젝트 `pivoxquant` / `yjiztgummaxecriiuumt`
-    / ap-northeast-2. 43 테이블 생성 + alembic `049` stamp 완료.
-    앱 부팅 → `/api/health` **200 `{"db":"ok"}`** 실측됨.
-    **로그인 이후 E2E 도 API 레벨은 통과** — dev-login → 생년월일 게이트 →
-    `/api/mirror-home`·`/api/portfolio`·`/api/pre-trade/start`(행 INSERT)·
-    behavior mirror 전부 200. 검증 데이터는 삭제해 DB 는 백지 상태다.
-    접속은 **session pooler 경유 필수** (`aws-0-ap-northeast-2.pooler.supabase.com:5432`)
-    — 직결 호스트 `db.*.supabase.co` 는 IPv4 로 해석되지 않는다.
-    롤은 `postgres` 가 아니라 전용 `pivox_app` (Supabase 가 postgres 롤 비번 변경을 막는다).
-  · 남은 것: **앱 호스팅** — Render 로 결정됨. `render.yaml` Blueprint 작성 완료,
-    CEO 가입 + Blueprint 클릭 + 시크릿 붙여넣기만 남았다.
-    붙여넣을 값: `.secrets/RENDER_PASTE_VALUES.txt` (gitignore, 커밋 안 됨).
-  · 사라진 것: prod DB 데이터(클로즈드 베타라 실사용자 데이터는 사실상 없음),
-    Railway env vars(BREVO_API_KEY 등 시크릿 **전부 재발급/재설정 필요**).
-  · 로컬 `pivoxquant.db` 는 dev 사본이지 prod 백업이 아니다.
-  → 런북: `docs/ops/backend-restore-2026-09-01.md`
-✅ **프론트엔드: prod 라이브** — Vercel `www.pivoxquant.com` 200 정상, 실제 제품
-  (로그인 게이트) 서빙 중. 마지막 배포 2026-06-29 (PR #531, demo mode OFF).
-  Vercel 계정에 pivoxquant / pivox-brief / pivoxdata 3개 프로젝트 정상 존재.
-**결제: Stripe 통합 완료, 게이트로 비활성** — `BUSINESS_REGISTRATION` 미완 +
-  변호사 Q1-Q15 자문 대기로 prod 는 503 `BUSINESS_REGISTRATION_PENDING` 반환.
-  사업자등록 459-01-03808 발급됨, 통신판매업 신고 + 유료결제 활성화는 의견서 후.
-**코드**: 백엔드 복구는 `fix/backend-restore-render-supabase` → **PR #546**.
-  ⚠️ 2026-09-01 정정: `38beb633` 을 "미푸시" 로 적어 뒀던 건 **틀렸다** —
-  `origin/fix/email-provider-retry` 에 이미 올라가 있다. 미푸시가 아니라
-  **미머지**다 (`git branch -a --contains 38beb633` 로 확인).
+수치는 **측정 시각과 함께** 적혀 있다. 오래됐으면 다시 재라.
 
-## 알려진 잔여 이슈 (2026-05-23 기준, 외부 액션 / 법무 의존)
-- **이메일: 발신 ✅ / 수신 ✅**: **발신** = **Brevo HTTP API** (2026-06-30 전환 — Railway 가
-  SMTP 아웃바운드를 막아 `OSError 101`, SendGrid 는 401. `BREVO_PROVIDER_PRIMARY=true` 로
-  cascade SendGrid→Brevo→SMTP 의 우선순위를 뒤집어 사용. 코드: `services/email/brevo_provider.py`).
-  ⚠️ 백엔드가 DOWN 인 현재는 발송 경로 전체가 미동작. **수신** =
-  ImprovMX 포워딩 **active**. 근본원인은 alias 아니라 **옛 ImprovMX 계정 충돌**(도메인 "already
-  registered") + **SPF에 improvmx 누락**이었음. 해결: ① DNS TXT 소유권 인증(`_improvmx` TXT)으로
-  도메인을 seanbae1521 계정으로 이전 ② 가비아 SPF에 `include:spf.improvmx.com` 추가(sendgrid 유지).
-  결과 MX✓·SPF✓·forwarding active, **ImprovMX 로그 "DELIVERED 250 OK gmail-smtp-in"** 확정.
-  catch-all `*@pivoxquant.com → seanbae1521@gmail.com` (13개 alias 전부 커버). 최종 SPF =
-  `v=spf1 include:spf.improvmx.com include:sendgrid.net ~all`. ⚠️ 자동발송 테스트메일(noreply@,
-  동일도메인)은 Gmail 자체필터로 받은편지함 미표시 — 외부발신 실문의는 정상 도착. 가이드 `docs/ops/email-setup.md`.
-- **Pro 아티팩트 이메일 동의 게이트**: `marketing_consent_at` NULL 유저는
-  아티팩트 메일 미수신. 정통망법 §50 분리동의(변호사 Q-S1) 의존 — 코드는
-  `PIVOX_CS1_CONSENT_ENABLED` 플래그 뒤 준비.
-- **env 미설정 1건**: prod `missing_recommended:1` (SENDGRID_API_KEY 또는
-  SENDGRID_WEBHOOK_PUBLIC_KEY — Railway Variables/Deploy Logs 에서 확인).
-- 상세 버그 이력: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md`
+```bash
+# 부팅 — URL rule / blueprint 수
+RUN_SCHEDULER=0 POPULATE_CACHE_ON_BOOT=0 ./venv/bin/python -c "
+from app import create_app
+a=create_app(); print('rules', len(list(a.url_map.iter_rules())), '| bp', len(a.blueprints))"
+
+# 백엔드 테스트
+./venv/bin/python -m pytest -q | tail -2
+
+# 프론트
+cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run build
+```
+
+---
+
+## 제품
+
+**기록(記錄) 중심 개인 투자 회고 도구.** 유저가 이미 들고 있는 포트폴리오를 읽고,
+사기 전에 멈춰 이유를 적게 하고, 그 기록을 나중에 거울처럼 되비춘다.
+루프는 하나다 — **멈춤 → 기록 → 거울.**
+미국 + 한국 주식. 1인 창업자(배상현). 클로즈드 베타, 무료.
+
+### 핵심 3축 (측정 2026-09-01)
+
+| 화면 | 하는 일 | 시세 필요? |
+|---|---|---|
+| `/pre-trade` **멈춤** | 사기 전 7문항 기록. 쿨다운은 현재 **0초** (`DEFAULT_COOLDOWN_SECONDS=0`, CEO가 제거) — 지금의 마찰은 시간이 아니라 질문 자체다 | ❌ |
+| `/journal` **기록** | 기록 + behavior mirror 5종 (보유기간/회전율/집중도/물타기/손익처분) | ❌ |
+| `/mirror` **거울** (홈) | 선언 페르소나 vs 관찰 페르소나(30일 9차원)의 **간극** + 드리프트 | ❌ |
+
+**셋 다 시세를 한 번도 안 부른다.** `services/behavior/*.py` 전부 시세 서비스를
+import 하지 않으며, `averaging_down_mirror.py` 가 자기 docstring 에
+*"no network, no live price / FX call"* 이라고 적어 뒀다. 의도된 설계다.
+
+시세는 **오직 `/portfolio` 의 평가액(NAV·미실현손익·섹터비중)** 때문에 존재한다.
+이 사실이 데이터 라이선스 문제의 출구다 — 평가액을 유저 본인 계좌에서 받으면
+FMP 재배포 문제와 R7 이 함께 닫힌다.
+
+### 나머지 화면
+`/portfolio` (보유·NAV·거래내역) · `/profile` (페르소나·펄스·데이터 내보내기/삭제)
+· `/settings` · `/support/contact` · `/support/inbox`
+
+---
+
+## 지금 상태 (2026-09-01 실측)
+
+### 🟡 백엔드 — DB 완료 / 앱 호스팅만 남음
+
+**Supabase Postgres 가동 중.** 프로젝트 `pivoxquant` / `yjiztgummaxecriiuumt` /
+ap-northeast-2. 43 테이블 + alembic `049` stamp.
+`/api/health` **200 `{"db":"ok"}`**, 로그인 이후 API E2E 통과 (dev-login → 생년월일
+게이트 → mirror-home · portfolio · pre-trade 행 INSERT · behavior mirror 전부 200).
+
+- **접속은 session pooler 경유 필수** — `aws-0-ap-northeast-2.pooler.supabase.com:5432`.
+  직결 호스트 `db.*.supabase.co` 는 **IPv4 로 해석되지 않는다.**
+- **DB 롤은 `postgres` 가 아니라 전용 `pivox_app`.** Supabase 가 postgres 롤
+  비번 변경을 막아 우회한 것인데, 결과적으로 이게 데이터를 지켰다 — Supabase 는
+  public 스키마를 PostgREST 로 자동 공개하는데 `anon` 에 grant 가 새지 않아
+  `/rest/v1/users` 가 **401 `42501`** 을 낸다 (실제 엔드포인트 타격으로 확인).
+
+**남은 것: Render 배포 하나.** `render.yaml` Blueprint 준비 완료.
+→ 런북: `docs/ops/backend-restore-2026-09-01.md`
+
+### ✅ 프론트엔드 — prod 라이브
+Vercel `www.pivoxquant.com` **200**. 단 `/api` 프록시가 죽은 Railway 를 가리켜
+**로그인 이후가 전부 동작하지 않는다.** Render URL 나오면 재연결.
+(`vercel` CLI 인증됨. SoT 는 `next.config.ts:9-10` 이 읽는
+`RAILWAY_BACKEND_URL` / `NEXT_PUBLIC_API_URL`.)
+
+### 🔴 결제 — 게이트로 비활성
+Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대기로 prod 는
+503 `BUSINESS_REGISTRATION_PENDING`. 사업자등록 459-01-03808 발급됨.
+
+### 측정값
+
+| 항목 | 값 | 측정 |
+|---|---|---|
+| 부팅 URL rules | **120** | 2026-09-01 |
+| blueprints | **23** | 2026-09-01 |
+| pytest | **2175 passed / 0 failed** | 2026-09-01 |
+| vitest | **353 / 353** | 2026-09-01 |
+| next build | **36 routes** | 2026-09-01 |
+| alembic | 52 revisions, head `049_reflection_observed_context` | 2026-09-01 |
+
+---
+
+## 🔴 지금 막혀 있는 것 — 하나뿐이다
+
+**Render 배포.** 다른 모든 것이 이것 하나를 기다린다.
+
+1. Render → New Blueprint → 이 레포 (`render.yaml` 을 읽는다)
+2. 시크릿 12칸 붙여넣기 → **값은 `.secrets/RENDER_PASTE_VALUES.txt`** (gitignore)
+   - ⚠️ **`BREVO_API_KEY` 하나만 없다.** 나머지는 전부 로컬 `.env` 에 이미 있다.
+     (2026-09-01 에 "키 4개를 콘솔에서 모아와라"고 안내한 적이 있는데 **틀렸다** —
+     `.env` 를 확인하지 않은 실수였다. 같은 실수를 반복하지 마라: 키를 찾기 전에
+     `.env` 부터 열어라.)
+3. URL 발급 → `RAILWAY_BACKEND_URL` 채우고 재배포 → Vercel 재연결 → E2E
+
+**OAuth 콘솔은 손댈 필요 없다** (2026-09-01 확인·조치 완료). Google 클라이언트는
+그날 삭제돼 있던 것을 **복원**했고 redirect URI 2개(`pivoxquant.com`,
+`www.pivoxquant.com`)가 정확하며, 게시 상태를 **테스트 중 → 프로덕션**으로 올렸다
+(민감 범위 0개라 Google 심사 불필요). Kakao 앱도 정상, Redirect URI 맞다.
+`.env` 의 client id 들이 콘솔 값과 일치함을 교차 확인했다.
+
+---
 
 ## 기술 스택
-- **Backend**: Flask + SQLAlchemy + PostgreSQL — prod DB = **Supabase**
-  (ap-northeast-2, session pooler 경유), 앱 호스팅 = **Render**(`render.yaml`,
-  배포 대기) / SQLite (local)
+
+- **Backend**: Flask + SQLAlchemy + PostgreSQL(Supabase) / SQLite(local)
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
-- **AI**: **없음** (2026-09-01). 지원 챗봇을 제거하면서 `ANTHROPIC_API_KEY` 의
-  마지막 실사용처가 사라졌다 — Render env 에서도 뺐다. `services/ai/` 는 트리에
-  남아 있으나 **공개 메서드 9개 전부 호출처 0곳**이고(8-31 prune 이 분석 표면을
-  지우며 본체만 남김), `fetcher.score_news_sentiment` 뉴스 AI 도 호출처가 없다.
-  즉 지금 이 제품은 런타임에 Claude API 를 한 번도 부르지 않는다.
-  되살릴 거면 **소비자부터** 만들 것.
-- **Broker**: KIS 한국투자증권 (read-only). Alpaca 는 2026-05-27 통합 제거,
-  데이터 fallback stub 만 `ALPACA_ENABLED` 게이트(기본 OFF)로 잔존.
-- **Data**: FMP Stable + KIS (공식 라이선스 데이터만). 2026-08-31 prune 으로
-  FRED / pykrx / SEC EDGAR full service / DART insider 는 삭제. `services/data/edgar.py`
-  만 잔존.
-- **Auth**: Google + Kakao OAuth (email+password 없음).
-- **Payment**: Stripe 통합 완료 (BUSINESS_REGISTRATION 게이트로 비활성)
-- **Design**: v3 락-인 — Vantablack + Bronze + Playfair + KR 컨벤션.
-  상세 메모리 `project_design_v3.md`.
+- **AI**: **없음.** 2026-09-01 지원 챗봇 제거로 `ANTHROPIC_API_KEY` 의 마지막
+  실사용처가 사라졌다. `services/ai/` 는 트리에 남아 있으나 **공개 메서드 9개 전부
+  호출처 0곳**이고 `fetcher.score_news_sentiment` 도 도달 불가다. 런타임에 Claude
+  API 를 한 번도 부르지 않는다. 되살릴 거면 **소비자부터** 만들 것.
+- **Broker**: KIS 한국투자증권 (read-only — `services/kis/service.py` 의
+  `KIS_READ_ONLY` 가드 3곳). Alpaca 는 데이터 fallback stub 만
+  `ALPACA_ENABLED` 게이트(기본 OFF)로 잔존
+- **Data**: FMP + KIS. ⚠️ **FMP 약관 §2.2.2 — 별도 Data Display Agreement 없이는
+  유저에게 표시 금지.** *"complimentary or paid"* 를 명시하므로 **무료 서비스도
+  해당된다.** R7(KIS 시세 재배포)의 미장 버전이며 **미해결**
+- **Auth**: Google + Kakao OAuth (이메일+비번 없음)
+- **Payment**: Stripe (게이트로 비활성)
+- **Design**: v3 락-인 — Vantablack + Bronze + Playfair + KR 컨벤션
 
-## 백엔드 구조
-> **2026-09-01 재실측: blueprint 23개 / URL rule 120개.** `create_app()` 부팅 검증됨.
-> ⚠️ 이 자리에 있던 "blueprint 25 / URL rule 141" 은 틀린 값이었고, 같은 파일
-> 상단이 동시에 "135 rules" 라고 적어 **자기모순** 상태였다. 숫자를 적을 땐
-> `create_app()` 을 실제로 띄워서 셀 것.
+---
+
+## 구조
+
+### 백엔드 (2026-09-01 실측: blueprint 23 / URL rule 120)
+
 ```
-pivoxquant/
-├── app.py              # create_app() factory
-├── config.py · extensions.py · security.py · run.py (port 5050)
-├── models/             # SQLAlchemy 모델
-├── migrations/         # Alembic (리비전 전량 보존 — 삭제 금지)
-│                       # ⚠️ 단 빈 DB 세우는 경로는 alembic 이 아니다 — 위 §복구 참조
-└── routes/             # 25 blueprint
-    │  auth · auth_alias · portfolio · trades · pre_trade · behavior
-    │  mirror_home · profile · consents · email_preferences · billing
-    │  alerts · notifications · push · realtime · market(지수/FX만)
-    │  support(문의만 — 챗봇 9-01 제거) · inbox · feedback · health
-    │  data_status · sendgrid_webhook · dev_auth
-    │  ⚠️ market 은 2026-09-01 에 18→**4 라우트**로 줄었다 (search / market/fx /
-    │     market/indices / public/market-snapshot). 나머지 14개는 프론트
-    │     소비자가 0 이던 8-31 prune 잔재였고, FMP 를 가장 많이 쓰던 것들이다.
-    │  (조건부·부팅 시 미등록: sim_onboard=SIM_ONBOARD_SECRET 필요,
-    │   command_center=opt-in. 위 23개 카운트에 포함되지 않는다)
-    └── decorators.py
-└── services/
-    │  (services/quant/ 는 통째로 삭제됨 — 남겨뒀던 portfolio.py·risk_metrics.py
-    │   조차 소비자가 0이었다. 퀀트 코드는 이 트리에 더 이상 없다.)
-    ├── data/           # fetcher.py · fmp.py · kis_market_adapter.py ·
-    │                   #   kr_fundamentals.py · edgar.py · realtime.py
-    ├── behavior/       # 5종 mirror (holding/turnover/concentration/
-    │                   #   averaging-down/profit-loss) — 거울 표면의 본체
-    ├── pre_trade/ · profile/ · portfolio/ · trading/
-    ├── email/ · kis/ · broker/ · legal/ · scheduler/ · customer/
-    ├── support/(문의) · inbox/ · marketing/ · tax/ · mock_data/
-    ├── observability/  # alerts.py — 위 트리에서 누락돼 있던 디렉터리
-    ├── ai/             # ⚠️ 죽은 코드. AIService 공개 메서드 9개 전부 호출처 0곳.
-    │                   #   삭제 후보지만 트리에 남아 있다 (9-01 실측)
-    └── (루트) container(fetcher·ai·realtime 싱글턴) · cache_service ·
-              serializers · fx_service · alert(벨 3종) · push 등
+app.py              # create_app() factory  ⚠️ L414 에서 db.create_all() 무조건 실행
+config.py · extensions.py · security.py · run.py (5050)
+models/ · migrations/   # alembic 리비전 전량 보존 — 삭제 금지
+routes/   alerts · auth(+auth_alias) · behavior · billing · consents · data_status
+          · dev_auth · email_preferences · feedback · health · inbox
+          · market · mirror_home · notifications · portfolio · pre_trade
+          · profile · push · realtime · sendgrid_webhook · support · trades
+          (조건부·부팅 시 미등록: sim_onboard=SIM_ONBOARD_SECRET 필요,
+           command_center=opt-in. 위 23 카운트에 없다)
+services/ ai(죽음) · behavior · broker · customer · data · email · inbox · kis
+          · legal · marketing · mock_data · observability · portfolio
+          · pre_trade · profile · scheduler · support · tax · trading
 ```
 
-## 프론트엔드 구조
-> 2026-09-01 실측. 대시보드 화면 **6개** (prune 전 19개).
-> nav 파일에 있는 것 = 존재하는 페이지. hidden 목록은 더 이상 없다.
-> `/home` 은 삭제됨 — `NEXT_PUBLIC_MIRROR_HOME` 플래그 뒤에서 거울과 같은
-> 화면을 렌더하던 중복 문이었다. 이제 `/mirror` 가 유일한 홈이고, 로그인·온보딩
-> 완료 후 착지 지점도 `/mirror` 다. `/home` 은 308 로 `/mirror` 에 리다이렉트.
-```
-frontend/src/
-├── app/
-│   ├── page.tsx                 # 랜딩(미로그인) / 홈 리다이렉트(로그인)
-│   ├── landing/                 # 랜딩 본체 (features/* 마케팅 12페이지는 삭제)
-│   ├── (auth)/                  # login · signup · oauth-finalize · onboarding(+broker)
-│   ├── (dashboard)/
-│   │   ├── mirror        # 거울 — 선언 vs 기록. PRIMARY
-│   │   ├── portfolio     # 보유 종목 · NAV · 섹터 · 거래내역. PRIMARY
-│   │   ├── pre-trade     # 멈춤 — 7문항 사전 기록. PRIMARY
-│   │   ├── journal       # 결정 저널
-│   │   ├── profile       # 페르소나 · 펄스 · 데이터 내보내기/삭제
-│   │   ├── settings(+/profile)
-│   │   └── support/      # 문의(contact) · inbox  ← 챗봇 2026-09-01 제거
-│   ├── admin/ · beta/ · beta-gate/ · docs/ · feedback/nps/
-│   ├── pricing · terms · privacy · contact · support · delete-cancel
-│   └── card/[token]      # 폐기된 공유링크 tombstone (404 대신 안내)
-├── components/
-│   ├── layout/           # terminal-sidebar · bottom-nav · top-bar · dashboard-layout
-│   ├── mirror/ · portfolio/ · journal/ · pre-trade/ · profile/
-│   ├── dashboard/        # living-cfo-status(2 layer) · weekly-pulse · persona-*
-│   ├── landing/ · settings/ · support/ · broker/ · account/ · feedback/
-│   ├── terminal/top-ticker · shared/ · share/ · ui/ · pwa/ · auth/
-├── lib/
-│   ├── auth.ts · endpoints.ts · hooks.ts · types.ts · format.ts
-│   ├── cfo/hooks.ts · pre-trade.ts · realtime.tsx · locale.tsx · demo.ts
-│   └── use-keyboard-nav.tsx (G+P 포트폴리오 / G+M 거울 / G+J 저널)
-```
+**`routes/market.py` 는 2026-09-01 에 18 → 4 라우트로 줄었다**
+(`/search` · `/market/fx` · `/market/indices` · `/public/market-snapshot`).
+나머지 14개는 8-31 prune 으로 사라진 화면의 잔재였고 **FMP 를 가장 많이 쓰던
+것들**이다. 되살리지 마라.
 
-## 로컬 git hooks (2026-05-19 신규)
+**퀀트 코드는 없다.** `services/quant/` 는 2026-08-31 통째로 삭제됐다.
+autotrade 는 2026-05-05 물리 삭제 (투자일임업 회피).
 
-GitHub Actions billing 결제 차단으로 로컬 hooks 이전. clone 직후 1회 실행:
+### 프론트엔드 (2026-09-01 실측: `page.tsx` 보유 디렉터리)
+
+```
+frontend/src/app/(dashboard)/
+  mirror · portfolio · pre-trade · journal · profile
+  settings(+/profile) · support/contact · support/inbox(+/[id])
+```
+nav(`terminal-sidebar.tsx` / `bottom-nav.tsx`)에 있는 것 = 유저가 갈 수 있는 곳.
+`/home` 은 삭제 → `/mirror` 로 308.
+
+⚠️ **프론트가 어떤 API 를 쓰는지 볼 땐 경로 문자열로 grep 하지 마라.**
+컴포넌트는 `endpoints.ts` 의 **심볼**(`API.market.fx` 등)로 호출한다. 경로 리터럴
+매칭은 실사용처를 전부 놓친다 — 2026-09-01 에 이걸로 틀린 결론을 냈다.
+심볼을 먼저 찾고 그 심볼의 소비자를 추적할 것.
+
+---
+
+## ⚠️ 함정 — 여기서 사람들이 틀린다
+
+### 1. 빈 DB 를 alembic 으로 세우려 하지 마라
+
+이전 문서는 *"alembic 리비전 52개로 스키마 100% 재현 가능"* 이라고 했다.
+**틀렸다.** 빈 DB 에 `flask db upgrade` 를 걸면 **004 에서 DuplicateTable 로
+죽는다** (실측). `app.py:414` 의 `db.create_all()` 이 조건 없이 돌고, alembic 의
+`migrations/env.py` 는 Flask 앱을 import 해야 동작하기 때문이다 — alembic 이
+시작하기도 전에 create_all 이 전부 만들어 놓는다.
+
+**스키마의 SoT 는 ORM 모델**이고 alembic 은 이력이다. 빈 DB 순서:
 
 ```bash
-git config core.hooksPath .githooks
+# ① 앱을 DATABASE_URL 만 걸고 1회 부팅 (create_all 이 스키마 생성)
+# ② 반드시 stamp — 빼먹으면 alembic_version 이 없어 이후 마이그레이션이
+#    001 부터 다시 돌다 영구히 깨진다
+./venv/bin/python -m flask db stamp head
 ```
 
-상세: `docs/dev/local-hooks.md`
+### 2. `.env` 가 `override=True` 다
 
-## 서버 기동
+`app.py:13` 이 `load_dotenv(..., override=True)`. **셸 환경변수를 `.env` 가
+덮어쓴다.** `RUN_SCHEDULER=0` 을 앞에 붙여도 `.env` 에 `=1` 이 있으면 스케줄러가
+뜬다. 로컬에서 prod 환경을 재현하려면 `.env` 를 잠시 치워야 한다.
+
+### 3. 로컬 dev 서버는 demo fixture 를 서빙할 수 있다
+
+`.env.local`(gitignore)의 `NEXT_PUBLIC_DEMO_MODE=1` 이면 백엔드가 아니라
+canned fixture 를 본다. `=0` 으로 띄울 것.
+
+### 4. Template Hardcoding Guard 는 현재 **방어선 0개**다
+
+문서는 오래 "이중 방어"라고 적혀 있었지만 둘 다 동작하지 않는다 —
+CI 스캔 대상 `services/artifacts/templates/` 는 8-31 prune 으로 **없어졌고**
+(→ 대상 0개로 공허하게 green), `tests/test_no_hardcoded_samples.py` 는 **파일이
+존재하지 않는다.** 지킬 템플릿이 사라졌으니 정합이지만, **그 green 을
+"하드코딩 없음"의 증거로 읽으면 안 된다.**
+
+살아있는 legal 방어선은 이쪽이다:
 ```bash
-# 🟥 경로 정정 (2026-05-22 v49): canonical 트리 = ~/Desktop/취준/pivoxquant.
-#   - 이 트리의 HEAD = origin/main = prod 배포 커밋 (실측 0/0 동기화).
-#   - 2026-05-17 의 ~/projects/pivoxquant relocation 은 v44.6(2d0699bf, 5/17)에
-#     멈춘 버려진 사본 — CEO 가 그 후 Desktop 으로 복귀해 작업/배포 중.
-#   - 따라서 아래 "Desktop 사용금지" 옛 안내는 STALE. Desktop 에서 작업/커밋/푸시.
-#   - iCloud .git 손상은 과거 이슈 — 재발 시 git fsck 후 대응(상시 손상 아님).
-
-# 백엔드 (port 5050)
-cd ~/Desktop/취준/pivoxquant && ./venv/bin/python run.py
-
-# 프론트엔드 (port 3000)
-cd ~/Desktop/취준/pivoxquant/frontend && npm run dev
+./venv/bin/python -m pytest tests/test_disclaimer_sot.py \
+  tests/test_forbidden_terms_sync.py tests/test_legal_deep_scan_local.py \
+  tests/test_legal_filter.py tests/test_legal_filter_forbidden_parity.py \
+  tests/test_legal_scrub_decorator.py tests/test_pivoxaudit_secret_leak.py
 ```
 
-## 테스트 계정
-- Google: seanbae1521@gmail.com (OAuth redirect URI 등록 완료 + commit `d153340` 이후 동작)
-- KIS: 계좌번호 XXXXXXXX-01 (read-only)
-- Alpaca: paper trading 계정 (.env에 키 있음)
+### 5. 로컬 grep 은 `ugrep`, 파이썬은 3.12 다
 
-## 알림 (2026-09-01 개편)
-설정 → 알림 매트릭스는 **실제로 발신되는 2종만** 노출한다:
-`price_52w`(52주 고/저 스윕) · `concentration`(섹터 30% 초과 스윕). 둘 다
-app.py 의 `_scheduled_price_alerts` 크론이 발신하고, `_BELL_KIND_TO_EVENT_ID`
-를 통해 토글이 실제로 걸린다. SoT = `models/user.py::NOTIFICATION_EVENT_IDS`
-(프론트 `notifications-matrix.tsx` 와 1:1). 옛 7종(weekly_memo /
-earnings_pre_brief / signal_state / risk_breach / pulse_prompt / brag_card /
-broker_sync_error)은 전부 발신자가 없어 삭제 — 되살리려면 **발신자부터** 만들 것.
+`grep` 은 BSD 도 GNU 도 아닌 **ugrep**(`-P` 지원). 옛 "macOS BSD grep 은 -P
+미지원" 경고는 이 머신에선 성립하지 않는다. 다만 CI 는 GNU grep 이므로
+`-Pzo` 동작이 같다고 가정하지 말고 **판단은 pytest 를 SoT 로** 삼는다.
+
+**로컬 venv 는 Python 3.12, 프로덕션은 3.11**(`runtime.txt`, `Dockerfile`).
+이 머신에 3.11 이 없어 **프로덕션 파이썬으로는 아무것도 검증하지 못한다.**
+호환성은 이력이 보증할 뿐 측정된 게 아니다. Docker 도 없어 이미지 빌드는
+미검증 — Render 첫 빌드가 둘을 동시에 검증하는 지점이다.
+
+### 6. 로컬 pre-commit legal-guard 는 **추가된 줄만** 스캔한다
+
+기존 코드의 금지어는 안 걸리고 새로 추가한 줄만 걸린다. 의도된 경우 그 줄에
+`// legal-ok` 를 단다. `# noqa: legal` 도 훅은 받지만 **ruff 가 자기 지시어로
+오해해 경고**를 내므로 전자를 쓸 것.
+
+---
 
 ## 중요 원칙
-- 🔴 **최신 정보 파악 (모든 agent 필수)** — CEO 반복 지시 (2026-05-30 "자꾸 옛날 데이터 가져온다"). **코드/수치** = grep·Read 실측 (메모리·기억 인용 금지) / **시장·경쟁·규제** = WebSearch + 출처 날짜 확인 (훈련데이터 금지, 예: 키움 자동일지 = 검색으로 확인) / **결정**(가격·법·수익모델) = `~/.claude/projects/-Users-seanbae-Desktop---/memory/DECISIONS.md` (SoT) / **동적수치**(HEAD·cron·test) = SessionStart hook LIVE 값. 오늘 날짜 기준. 모르면 "확인 불가". "최근/요즘" 막연 표현 금지 → 출처+날짜.
-- **퀀트 코드 없음** — `services/quant/` 는 2026-08-31 통째로 삭제됐다.
-  engine / risk_defense / models / backtester / portfolio / risk_metrics 전부.
-  없는 파일을 찾거나 되살리지 마라. 다시 필요해지면 커밋 `1c23fac6` 이전
-  이력에서 꺼내되, 그때는 "왜 이 제품에 알파 스코어링이 필요한가"부터 답할 것.
-  autotrade 는 2026-04-27 비활성화 → 2026-05-05 물리 삭제 (투자일임업 회피,
-  rollback 은 git tag `legal-pre-autotrader-removal` 만)
-- **routes/, models/, services/ 구조 유지**
-- **API endpoints URL 변경 금지** — `endpoints.ts`와 1:1 매핑
-- **시그널 라벨: POSITIVE/NEGATIVE/NEUTRAL** — BUY/SELL/HOLD 절대 사용 금지 (자본시장법)
-- **"AI Assistant"** — "AI Coach", "투자 코치" 사용 금지 (법적)
-- **추천/조언 언어 금지** — "recommendation", "advice", "추천", "조언" 사용 금지
-- **DisclaimerBanner** — 모든 데이터 표시 페이지에 면책 배너 필수.
-  `(dashboard)/layout.tsx` 가 경로별로 1회 마운트한다 (mirror/journal/pre-trade =
-  "coaching", 나머지 = "signal"). 페이지 안에서 중복 마운트 금지.
-- **없는 기능을 파는 카피 금지** — 2026-08-31 prune 으로 랜딩 메가메뉴 3개 그룹과
-  Companion 업셀(가짜 좌석 카운트 포함)을 지운 이유다. 삭제된 표면을 가리키는
-  링크·문구를 새로 만들지 마라.
 
-## 법적 컴플라이언스
-- KIS 주문 기능 disabled (read-only)
-- 모든 분석 페이지에 한글+영문 면책 고지
-- Cookie Consent 구현됨
-- 회원탈퇴 기능 (PIPA 준수)
-- Terms checkbox 필수 (회원가입 시)
+- 🔴 **최신 정보 파악** — **코드/수치** = grep·Read 실측 (기억 인용 금지) /
+  **시장·경쟁·규제** = WebSearch + 출처 날짜 확인 / **결정**(가격·법·수익모델) =
+  메모리 `DECISIONS.md`.
+- 🔴 **주장 범위 = 측정 범위.** 한 파일 재고 "전체가 그렇다"고 하지 마라.
+  "~뿐이다 / 없다" 를 말할 프로브엔 `head` 를 걸지 마라. 결과를 말할 때 **무엇을
+  쟀는지 같이** 적어라. (2026-09-01 에 이 규칙을 어겨 여러 번 틀렸다.)
+- **API endpoint URL 변경 금지** — `frontend/src/lib/endpoints.ts` 와 1:1
+- **routes/ · models/ · services/ 구조 유지**
+- **시그널 라벨: POSITIVE / NEGATIVE / NEUTRAL** — BUY·SELL·HOLD 절대 금지 (자본시장법)
+- **"AI Assistant"** — "AI Coach" · "투자 코치" 금지
+- **추천·조언 언어 금지** — recommendation / advice / 추천 / 조언
+- **DisclaimerBanner** — `(dashboard)/layout.tsx` 가 경로별 1회 마운트.
+  페이지 안에서 중복 마운트 금지
+- **없는 기능을 파는 카피 금지** — 삭제된 표면을 가리키는 링크·문구를 만들지 마라
 
-### Template Hardcoding Guard — ⚠️ 2026-09-01 실측: **현재 방어선 0개**
+### 법적 컴플라이언스
+KIS 주문 disabled (read-only) · 한글+영문 면책 고지 · Cookie Consent ·
+회원탈퇴(PIPA) · 가입 시 Terms checkbox 필수
 
-이 섹션은 오래도록 "이중 방어"라고 적혀 있었지만 **둘 다 지금은 동작하지 않는다.**
-실측으로 확인했다:
+---
 
-| 방어선 | 문서상 | 실제 |
-|--------|--------|------|
-| CI legal-guard 하드코딩 스캔 | `services/artifacts/templates/` 스캔 | 🔴 **그 디렉터리가 없다** (8-31 prune 으로 아티팩트 18종과 함께 삭제) → 스캔 대상 0개로 **공허하게 통과** |
-| 로컬 pytest | `tests/test_no_hardcoded_samples.py` | 🔴 **파일이 존재하지 않는다** |
+## 알림 (2026-09-01 기준)
 
-**이건 사고가 아니라 정합이다.** 이 가드는 아티팩트 템플릿의 하드코딩된 종목·금액을
-막으려고 존재했는데, **지킬 템플릿 자체가 사라졌다.** 되살릴 이유가 없다. 다만
-`.github/workflows/legal-guard.yml` 의 해당 스텝들은 없는 경로를 스캔하며 green 을
-찍고 있으므로, **그 green 을 "하드코딩이 없다"는 증거로 읽으면 안 된다.**
-아티팩트류를 다시 만든다면 가드도 같이 되살릴 것.
+설정 → 알림 매트릭스는 **실제로 발신되는 2종만** 노출한다:
+`price_52w`(52주 고/저) · `concentration`(섹터 30% 초과). 둘 다 `app.py` 의
+`_scheduled_price_alerts` 크론이 발신하고 `_BELL_KIND_TO_EVENT_ID` 로 토글이
+걸린다. SoT = `models/user.py::NOTIFICATION_EVENT_IDS`.
+옛 7종은 **발신자가 없어 삭제**됐다 — 되살리려면 **발신자부터** 만들 것.
 
-**살아있는 legal 방어선** (2026-09-01 실측 — 이쪽은 진짜 동작한다):
+---
+
+## 개발
 
 ```bash
-pytest tests/test_disclaimer_sot.py tests/test_forbidden_terms_sync.py \
-       tests/test_legal_deep_scan_local.py tests/test_legal_filter.py \
-       tests/test_legal_filter_forbidden_parity.py \
-       tests/test_legal_scrub_decorator.py tests/test_pivoxaudit_secret_leak.py
-# → 225 passed
+git config core.hooksPath .githooks        # clone 직후 1회
+./venv/bin/python run.py                   # 백엔드 :5050
+cd frontend && npm run dev                 # 프론트 :3000
 ```
+canonical 트리 = `~/Desktop/취준/pivoxquant` (여기서 작업·커밋·푸시).
+`~/dev/pivoxquant` 는 2026-05-17 에 멈춘 버려진 사본.
 
-CI 쪽에서 실제로 무언가를 지키고 있는 스텝은 advisory vocab 스캔 / DisclaimerBanner
-커버리지 / 베타 비번 유출 / broker safety (`KIS_READ_ONLY` 존재 확인) 넷이다.
+**테스트 계정**: Google `seanbae1521@gmail.com` / KIS 계좌 read-only
 
-**macOS grep 주의 — 이 문서의 옛 설명도 이 머신에선 틀리다**
+---
 
-옛 설명은 "macOS BSD grep 은 `-P` 미지원이라 오탐 통과"였다. **이 머신의 `grep` 은
-BSD 도 GNU 도 아닌 `ugrep` 이고 `-P`(pcre2jit)를 지원한다.** 즉 옛 경고문의 전제가
-성립하지 않는다. 다만 ugrep ≠ GNU grep 이므로 `-Pzo` 의 세부 동작이 CI(ubuntu,
-GNU grep)와 100% 같다고 가정하지 말 것. 판단은 항상 pytest 쪽을 SoT 로 삼는다.
+## 출시 블로커
 
-## 출시까지 남은 것 (2026-08-31 갱신)
+`SHIP_BLOCKERS.md` 가 SoT (2026-09-01 실측 재작성).
 
-### 🔴 최우선 — 백엔드 복구 (1·2 완료 / 3~5 남음)
-prod 프론트는 살아있지만 **로그인 이후가 전부 죽어 있다**. 순서대로:
+**무료 베타에는 법적 블로커가 사실상 없다** — 통신판매업 신고·Stripe 는 유상
+거래 전제고, §101 유사투자자문업은 대가를 받을 때 성립한다. 지금 막는 건 법무가
+아니라 **Render 배포**다. (agent 판단이지 법률 자문이 아니다. 변호사 의견서
+질문 목록에 "무료 운영은 §101 밖인가"를 넣을 것.)
 
-1. ✅ **호스팅 선정** — **Render(앱) + Supabase(Postgres)**. 2026-09-01 결정.
-2. ✅ **DB 재생성 완료** — Supabase `pivoxquant` (ap-northeast-2), 43 테이블 +
-   alembic `049` stamp + `/api/health` 200 실측.
-   ⚠️ **인수인계서가 틀렸던 지점**: "alembic 52 리비전으로 스키마 100% 재현"은
-   **사실이 아니다.** `app.py:414` 의 `db.create_all()` 이 조건 없이 돌기 때문에,
-   `flask db upgrade` 는 자기가 실행되기 전에 create_all 이 만들어 놓은 테이블과
-   충돌해 **004 에서 DuplicateTable 로 죽는다**(실측). 스키마의 SoT 는 **ORM 모델**
-   이고 alembic 은 이력일 뿐이다 — `app.py:1024` 주석이 이미 "prod 는 alembic
-   미실행" 이라고 적고 있다. 빈 DB 를 세우는 올바른 순서는
-   **① 앱 1회 부팅(create_all) → ② `flask db stamp head`** 이다. ②를 빼먹으면
-   `alembic_version` 이 없어 다음 마이그레이션이 001 부터 다시 돌다 영구히 깨진다.
-3. **시크릿 재설정** — Railway env vars 전량 소실.
-   `render.yaml` 이 `sync: false` 로 Render 에게 물어보게 해 뒀고, 붙여넣을 값과
-   출처는 `.secrets/RENDER_PASTE_VALUES.txt` 에 있다(gitignore).
-   `DATABASE_URL` 과 `PIVOX_BROKER_ENCRYPTION_KEY` 는 이미 생성해 넣어 뒀다.
-   `DEV_LOGIN_SECRET` 은 **절대 금지** — `routes/__init__.py` 가 플랫폼 마커
-   (Railway/**Render**/Fly) 또는 `FLASK_ENV=production` 감지 시 부팅을 거부한다.
-4. **프론트 재연결** — Vercel 의 `RAILWAY_BACKEND_URL`(또는 `NEXT_PUBLIC_API_URL`)
-   을 Render URL 로. `vercel env` + `vercel redeploy`. vercel CLI 는 인증돼 있다.
-   ⚠️ 이 값이 `/api` 프록시의 SoT다 (next.config.ts:9-10).
-5. **검증** — `/api/health` 200 → 로그인 → `/mirror` 렌더 → `/portfolio` 포지션.
-   Google/Kakao OAuth 콘솔의 **redirect URI 에 Render 도메인 추가**가 선행돼야 한다.
+---
 
-**Dockerfile 은 2026-09-01 에 122→63 줄로 줄였다** (삭제된 PDF/PNG 렌더용
-폰트스택·Chromium 제거). 다만 **이 머신에 Docker 가 없어 정적 감사만 했다** —
-새 호스트의 첫 빌드가 실질 검증이다. 실패하면 `git show c982e273^:Dockerfile`
-로 옛 버전 대조.
+## 제품 전제 — 불리한 근거를 먼저 본다
 
-- ✅ **prod 프론트 재배포 완료** (2026-09-01, PR #538·540·541·542·543·544).
-  화면 6개, 삭제 경로 18개는 살아있는 목적지로 308 리다이렉트, sitemap 7 URL.
+메모리: `~/.claude/projects/-Users-seanbae-Desktop----pivoxquant/memory/`
+(`MEMORY.md` 가 인덱스). 조사는 `research_habit_premise.md` /
+`research_substitute_threat.md` / `research_toss_openapi.md`.
 
-### 🔴 출시 BLOCKER (외부 / 법무 의존 — CEO 액션)
-- **변호사 의견서 Q1-Q15 + Q-S1** — 유료결제 활성화 BLOCKER. `legal_question_queue.md`.
-- **통신판매업 신고** — 사업자등록(459-01-03808)은 발급됨, 통신판매업 별도.
-- **이메일 수신(MX)** — `docs/ops/email-setup.md` (가비아 콘솔 ImprovMX).
-- **SENDGRID_API_KEY 확인** — Railway Variables (발신 실제 작동 확정).
+- **"질문을 던진다"는 차별화가 아니다** — ChatGPT Study Mode(2025-07-29)가 전 플랜
+  무료로 제공한다.
+- **"자동 수집"도 해자가 아니다** — 키움 자동일지, MyData 금투-003, 도미노가 이미
+  커버한다.
+- **비-아첨 해자는 2026-09-01 기준 사실상 소멸했다.** 8-30 메모는 "12~18개월
+  시한부"로 봤지만, [lechmazur/sycophancy](https://github.com/lechmazur/sycophancy/)
+  (2026-08-05 갱신) 실측은 GPT-5.6 Terra **0.0%** / Claude Fable 5 **0.5%**(결단
+  커버리지 77.3%)다. 프론티어 모델이 이미 아첨하지 않으면서 판단을 내린다.
+- **수요 신호가 나쁘다** — 한국 매매일지 앱 카테고리에 승자가 없다. 동일 컨셉
+  '살래말래'가 출시 9개월에 평가 5개.
 
-### 🟠 코드 측 (내부 — 자율 진행 가능)
-- ✅ 이메일 동의 silent-drop 비-silent화 (`fcbd1f55`). signup 동의 캡처(part-2)는
-  routes/auth.py **frozen** + Q-S1 의존.
-- prune 후속: 삭제된 표면을 참조하던 문서·메모리 정리 (일부 잔존 가능).
-- 잔여 deferred (owner 판단): 부분환불 §17 / 국외이전 §28-8.
-  billing/lawyer 의존이라 자율 빌드 제한적.
-- ⬛ 삭제된 항목: artifact 18종 §50 카테고리 / DCA XIRR / lookahead /
-  Composer synthetic / KR 52w — 해당 기능 자체가 없어졌으므로 백로그에서 제외.
+**남은 진짜 자산은 "일어나지 않은 거래"다.** 증권사도 MyData 도 체결만 알지
+*사려다 말았는지*를 모르고, ChatGPT 는 유저가 매번 다시 붙여넣지 않는 한 모른다 —
+그리고 안 산 거래를 붙여넣는 사람은 없다. 이걸 계산하는 게
+`services/pre_trade/friction_outcome.py` 이고,
+`scripts/friction_outcome_report.py` 로 바로 돌려볼 수 있다.
 
-## 유저 플로우 자동 테스트 방안
-Claude in Chrome MCP + user-tester agent 로 자동 테스트 가능 (Chrome 연결 필요 — CEO 세션).
-prune 후 플로우는 3개로 줄었다: 가입→온보딩→첫 포지션 / 사전기록(pre-trade) /
-거울 열람.
-상세: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md` 하단 참조.
-
-## 메모리 파일 위치
-모든 프로젝트 지식은 `~/.claude/projects/-Users-seanbae-Desktop---/memory/` 에 저장:
-- `qa_bug_log.md` — 버그 17개 + 출시 전 작업 23개 + 유저플로우 테스트 방안
-- `product_features.md` — 기능 맵
-- `design_system.md` — 디자인 가이드
-- `project_tech_decisions.md` — 기술 결정사항
-- `security_checklist.md` — 보안 체크리스트
-- `legal_compliance.md` — 법적 컴플라이언스
-- 기타 20+ 메모리 파일 (MEMORY.md에서 인덱스 확인)
+**다음 세션이 답해야 할 질문은 코드가 아니다** — *"한국 개인투자자가 기록을
+하긴 하는가."* 직접 통계가 존재하지 않아 조사로는 못 푼다. 무료 베타의 목적을
+수익이 아니라 **이 질문의 답을 얻는 것**에 두는 게 맞다.
