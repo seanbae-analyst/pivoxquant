@@ -22,8 +22,15 @@ existing patterns we've hit this session:
   endpoints fall back to ``source: "none"`` (Wave 5 #2/#5 finding).
   Visible to users as "Chart data unavailable for this window."
 
-- ``services/ai/service.py`` — ``ANTHROPIC_API_KEY`` missing → AI
-  endpoints return 503 (Wave 5 #3 closed graceful by PR #397).
+2026-09-01 인벤토리 정정
+------------------------
+- ``ANTHROPIC_API_KEY`` **제거** — 지원 챗봇을 지우면서 런타임 소비자가 0이 됐다
+  (``services/ai/`` 는 남아 있으나 공개 메서드 9개 전부 호출처 없음). 없는 키를
+  CRITICAL 로 계속 보고하면 진짜 경보가 묻힌다.
+- ``BETA_PASSWORD`` **제거** — 백엔드는 이 값을 읽지 않는다. 베타 게이트는
+  ``frontend/middleware.ts`` 소관이고 값도 Vercel 에 있다.
+- ``BREVO_API_KEY`` **추가** — 반대로 이건 실제 발송 경로인데 인벤토리에 없어서
+  누락돼도 부팅 로그가 침묵했다.
 
 - ``services/kis/service.py`` — ``KIS_APP_KEY`` / ``KIS_APP_SECRET``
   missing → KR market endpoints lose KIS path (FMP fallback also
@@ -104,6 +111,16 @@ _INVENTORY: tuple[tuple[str, Literal["required", "recommended", "optional"], str
      "monthly_brag / brag_card / earnings_prebrief / KPI dashboard "
      "/ DD checklist / ... 17 artifact mailers SILENTLY DROP. "
      "The cron fires anyway. See docs/ops/email-setup.md"),
+    # 아래 튜플 2번째 요소는 이 모듈의 severity 리터럴(위 _INVENTORY 타입 주석
+    # 참조)이지 자문 언어가 아니다. 기존 항목도 전부 같은 값을 쓰는데, 훅이
+    # diff 의 추가된 줄만 보기 때문에 새 줄만 걸린다. 마커는 `// legal-ok` 를
+    # 쓴다 — 훅이 받는 다른 마커(noqa 형식)는 ruff 가 자기 지시어로 오해한다.
+    ("BREVO_API_KEY", "recommended",  # // legal-ok
+     "실제 발송 경로. 2026-06-30 부터 Brevo HTTP API 가 prod 발신을 담당한다 "
+     "(Railway 가 SMTP 아웃바운드를 막아 OSError 101, SendGrid 는 401). "
+     "BREVO_PROVIDER_PRIMARY=true 와 짝이며, 이게 없으면 cascade 가 죽은 "
+     "SendGrid/SMTP 로 떨어져 메일이 조용히 안 나간다. "
+     "2026-09-01 추가 — 그동안 인벤토리에 없어 감시 사각이었다."),
     ("SMTP_HOST", "optional",
      "Fallback transport when SendGrid is unset or 5xx-failing. "
      "Postmark works; smtp.postmarkapp.com:587"),
@@ -121,10 +138,6 @@ _INVENTORY: tuple[tuple[str, Literal["required", "recommended", "optional"], str
     ("FMP_API_KEY", "recommended",
      "FMP Stable $29 plan. Without it chart + news + US fundamentals "
      "fall to 'source: none' empty. KIS handles KR equities."),
-    ("ANTHROPIC_API_KEY", "recommended",
-     "Claude API for /ai/swot + /ai/coaching + /ai/earnings-tone. "
-     "Without it those endpoints 503 (PR #387 + #397 close the "
-     "frontend UX gracefully). Sustained 503 = no AI features."),
     ("KIS_APP_KEY", "recommended",
      "Korea Investment & Securities OpenAPI app key. KR equity prices "
      "+ indices source. Without it KR portfolio + KOSPI/KOSDAQ break."),
@@ -138,12 +151,6 @@ _INVENTORY: tuple[tuple[str, Literal["required", "recommended", "optional"], str
      "client-side toast). Once registered, this becomes recommended."),
     ("STRIPE_WEBHOOK_SECRET", "optional",
      "Stripe webhook signature verification. Pair with the above."),
-
-    # Beta gate
-    ("BETA_PASSWORD", "recommended",
-     "Vercel-level beta interstitial password. Closed-beta only — "
-     "remove this var post-launch (Memory: 2026-05-10 rotate, "
-     "/tmp/new-beta-pw.txt). Without it Vercel beta-gate breaks."),
 
     # Sim / CAUS
     ("SIM_ONBOARD_SECRET", "optional",

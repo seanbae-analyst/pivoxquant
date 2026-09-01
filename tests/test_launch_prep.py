@@ -61,11 +61,10 @@ class TestInventoryShape:
         names = {e[0] for e in lp._INVENTORY}
         for must_have in (
             "SENDGRID_API_KEY",  # Wave 5: PDF cron silent drop
-            "ANTHROPIC_API_KEY",  # Wave 5: /ai 503 root cause
+            "BREVO_API_KEY",  # 2026-09-01: the actual prod email path
             "FMP_API_KEY",  # Wave 5: chart + news empty root cause
             "KIS_APP_KEY",  # KR market data sourcing
             "DATABASE_URL",  # core
-            "BETA_PASSWORD",  # gate
         ):
             assert must_have in names, f"{must_have} missing from inventory"
 
