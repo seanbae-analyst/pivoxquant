@@ -115,12 +115,46 @@ dev-login 으로 세션을 만든 뒤 실제 엔드포인트를 때렸다.
 4. 첫 배포 → URL 발급되면 `RAILWAY_BACKEND_URL` 에 그 URL 을 넣고 재배포
    (이름은 Railway 지만 Railway 전용이 아니다 — `routes/auth.py` 의 로그아웃
    Origin 허용목록이 이 값을 읽는다)
-5. **OAuth 콘솔은 손댈 필요 없다** (2026-09-01 정정). redirect URI 는 백엔드가
+5. **Google OAuth — 2026-09-01 에 복구 + 게시 완료.** 아래 §3.1 참조.
+
+   원래 이 자리에는 "OAuth 콘솔은 손댈 필요 없다" 라고 적었었다. redirect URI 는 백엔드가
    아니라 **프론트 origin** 으로 만들어진다 — `routes/auth.py:1025` 가
    `_resolve_frontend_url()` 로 origin 을 잡고 `{origin}/api/auth/google/callback`
    을 쓴다. 그 origin 은 `_ALLOWED_OAUTH_ORIGINS` 화이트리스트로 제한되고
    Render 도메인은 거기 없다. 프론트 도메인이 그대로이므로 기존 등록값
    `https://www.pivoxquant.com/api/auth/{google,kakao}/callback` 이 계속 맞다.
+
+### 3.1 Google OAuth — 삭제돼 있었고, 복구했다
+
+콘솔을 직접 열어 보고 나서야 안 사실이다. **redirect URI 를 새로 등록할 필요가
+없다는 판단 자체는 맞았지만**(`routes/auth.py:1025` 가 `_resolve_frontend_url()`
+= 프론트 origin 으로 URI 를 만들고, 그 origin 은 `_ALLOWED_OAUTH_ORIGINS` 로
+제한되며 Render 도메인은 거기 없다), **정작 클라이언트가 사라져 있었다.**
+
+- OAuth 클라이언트 `StockPilot Web` 이 **2026-09-01 에 삭제**돼 있었다. Railway
+  계정을 지운 것과 같은 날이다. 30일 복원 창이 남아 있어 **복원**했다
+  (새로 만드는 것보다 낫다 — 클라이언트 ID 와 등록된 URI 가 그대로 살아난다).
+- 복원 후 확인한 redirect URI: `https://pivoxquant.com/api/auth/google/callback`
+  과 `https://www.pivoxquant.com/api/auth/google/callback`. 둘 다 정확하다.
+- `GOOGLE_CLIENT_ID` =
+  `1029651476294-icjlnngdi9438i9qka064g9mq0h1r0o1.apps.googleusercontent.com`
+  (GCP 프로젝트 `PivoxQuant` / `stockpilot-492803`).
+  ⚠️ 같은 계정의 다른 프로젝트 `stockpilot`(491804) 에도 `StockPilot` 이라는
+  클라이언트가 있는데 **그건 nuscale-analyzer 용**이다(콜백이
+  `ynpyhxeflkihmnmfexre.supabase.co`). 헷갈리지 말 것.
+
+**그리고 게시 상태가 "테스트 중" 이었다.** 그대로 뒀으면 백엔드가 떠도 테스트
+사용자로 등록한 사람만 로그인됐다 — 무료 베타의 조용한 킬러다. 막고 있던 건
+브랜딩의 링크 2개뿐이라 채우고 게시했다:
+
+- 앱 이름 `StockPilot` → **`PivoxQuant`** (동의 화면에 옛 제품명이 뜨고 있었다)
+- 홈페이지 / 개인정보처리방침 / 서비스 약관 링크 = `https://www.pivoxquant.com`
+  `/privacy` `/terms` (셋 다 200 확인)
+- **게시 상태 = 프로덕션.** 민감·제한 범위가 0개고 로고도 없어서 Google 심사
+  대상이 아니었다 — 즉시 반영됐다.
+
+⚠️ **Kakao 도 같은 날 삭제됐을 수 있다.** Google 이 그랬으니 카카오 개발자
+콘솔의 앱도 상태를 확인할 것.
 
 ### 요금
 
