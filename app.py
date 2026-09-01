@@ -895,228 +895,27 @@ def _do_migrations():
         except Exception as exc:
             logger.warning("Migration: could not create inquiries: %s", exc)
 
-    # ── Growth OS tables (growth_*) ─────────────────────────────────────────
-    # SHIP-BLOCKER (2026-05-28): Growth OS 4개 테이블은 ORM 모델 클래스가 없고
-    # (agent_worker/growth_routes.py 가 raw SQL 로 직접 조회), 오직 alembic
-    # migration 005/020/036 의 raw DDL 로만 정의돼 있다. prod 는 alembic 미실행
-    # (db.create_all() + _do_migrations() self-heal 패턴) 으로 운영되므로 이 4개
-    # 테이블이 prod DB 에 물리적으로 존재한 적이 없다 (to_regclass = NULL 실측,
-    # Railway Postgres). 그 결과 /api/growth/{data,today,weekly} 가 없는 테이블을
-    # 쳐서 동시 500 → Growth OS 페이지 "데이터 못 불러왔다" 패널.
+    # ── Growth OS + agent_worker tables — REMOVED 2026-09-01 ────────────────
+    # This block used to CREATE 7 model-less tables on every boot:
+    #   growth_daily_logs · growth_reflections · growth_scores ·
+    #   growth_weekly_reports · agent_tasks · agent_decisions · agent_budget
     #
-    # 스키마는 migration 005(기본) + 020(user_id + unique) + 036(FK CASCADE) 병합
-    # 결과와 정확히 일치한다. Postgres / SQLite 양쪽에서 valid 하도록 dialect 분기:
-    #   - JSONB(PG) vs JSON(SQLite)
-    #   - growth_scores.total_score 는 GENERATED ... STORED 컬럼. 양쪽 모두 STORED
-    #     문법을 지원하나 PG 는 LEAST(), SQLite 는 MIN() 을 쓴다.
-    #   - user_id FK 는 CREATE TABLE 내 인라인 정의 (양쪽 호환).
-    # 테스트는 SQLite 에서 alembic 이 먼저 테이블을 만들므로 IF NOT EXISTS no-op
-    # 이 되지만, SQLite 가 statement 전체를 파싱하므로 SQLite DDL 도 완전 valid 해야
-    # 한다. 멱등 (테이블 존재 시 CREATE 는 no-op, ADD COLUMN/INDEX 도 IF NOT EXISTS).
-    if any(
-        t not in existing_tables
-        for t in (
-            "growth_daily_logs",
-            "growth_reflections",
-            "growth_scores",
-            "growth_weekly_reports",
-        )
-    ):
-        json_type = "JSONB" if is_postgres else "JSON"
-        # GENERATED expression: PG=LEAST, SQLite=MIN (LEAST is not a SQLite fn).
-        least_fn = "LEAST" if is_postgres else "MIN"
-        total_score_expr = (
-            f"CAST(activity_score * 0.4 + reflection_score * 0.4 "
-            f"+ {least_fn}(streak_days, 30) * 0.67 AS INTEGER)"
-        )
-        try:
-            with db.engine.begin() as conn:
-                conn.execute(text(
-                    "CREATE TABLE IF NOT EXISTS growth_daily_logs ("
-                    "id INTEGER PRIMARY KEY, "
-                    "date DATE NOT NULL UNIQUE, "
-                    "type VARCHAR(20) NOT NULL, "
-                    f"priorities {json_type}, "
-                    "motivation TEXT, "
-                    f"actual_done {json_type}, "
-                    "raw_response TEXT, "
-                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                    ")"
-                ))
-                conn.execute(text(
-                    "CREATE TABLE IF NOT EXISTS growth_reflections ("
-                    "id INTEGER PRIMARY KEY, "
-                    "date DATE NOT NULL, "
-                    f"questions {json_type} NOT NULL, "
-                    f"answers {json_type}, "
-                    "mood INTEGER, "
-                    "answered_at TIMESTAMP, "
-                    "raw_response TEXT, "
-                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-                    "user_id INTEGER NOT NULL, "
-                    "CONSTRAINT ck_growth_reflections_mood_range "
-                    "CHECK (mood IS NULL OR mood BETWEEN 1 AND 5), "
-                    "CONSTRAINT fk_growth_reflections_user_id_users "
-                    "FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE"
-                    ")"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS idx_growth_reflections_date "
-                    "ON growth_reflections (date)"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS ix_growth_reflections_user_id "
-                    "ON growth_reflections (user_id)"
-                ))
-                conn.execute(text(
-                    "CREATE TABLE IF NOT EXISTS growth_scores ("
-                    "date DATE NOT NULL, "
-                    "activity_score INTEGER NOT NULL DEFAULT 0, "
-                    "reflection_score INTEGER NOT NULL DEFAULT 0, "
-                    "streak_days INTEGER NOT NULL DEFAULT 0, "
-                    f"total_score INTEGER GENERATED ALWAYS AS ({total_score_expr}) STORED, "
-                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-                    "user_id INTEGER NOT NULL, "
-                    # Row identity is (user_id, date): every user keeps one
-                    # score row per day. A sole ``date`` PK would collide the
-                    # moment a second user submits a reflection on the same
-                    # day (UNIQUE constraint failed: growth_scores.date → 500).
-                    # The composite PK also backs ``ON CONFLICT (user_id, date)``
-                    # upserts in agent_worker/growth_routes.py, so the separate
-                    # uq_growth_scores_user_date UNIQUE is redundant and dropped.
-                    "PRIMARY KEY (user_id, date), "
-                    "CONSTRAINT fk_growth_scores_user_id_users "
-                    "FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE"
-                    ")"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS idx_growth_scores_range "
-                    "ON growth_scores (date)"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS ix_growth_scores_user_id "
-                    "ON growth_scores (user_id)"
-                ))
-                conn.execute(text(
-                    "CREATE TABLE IF NOT EXISTS growth_weekly_reports ("
-                    "id INTEGER PRIMARY KEY, "
-                    "week_start DATE NOT NULL UNIQUE, "
-                    "summary TEXT NOT NULL, "
-                    f"patterns {json_type}, "
-                    f"growth_areas {json_type}, "
-                    f"next_week_suggestions {json_type}, "
-                    "week_score INTEGER, "
-                    "raw_response TEXT, "
-                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                    ")"
-                ))
-            logger.info("Migration: ensured Growth OS tables (growth_*)")
-        except Exception as exc:
-            # Never block boot — Growth OS degrades to the empty-data panel
-            # rather than taking the whole app down.
-            logger.warning("Migration: could not create growth_* tables: %s", exc)
+    # Both consumers named in the original comments are gone from the tree:
+    # `agent_worker/` (worker.py / budget.py / escalation.py / admin_routes.py)
+    # and `growth_routes.py`. Measured 2026-09-01: zero references to any of
+    # the seven table names anywhere outside app.py and the alembic history,
+    # and zero /api/growth or /api/agent URL rules. The DDL was boot-time work
+    # producing tables nothing ever read or wrote.
+    #
+    # Existing databases are UNAFFECTED — dropping the creation code does not
+    # drop tables, so Supabase keeps the rows it already has. Only a fresh DB
+    # stops being seeded with the seven.
+    #
+    # The alembic revisions that also create them (004_add_agent_tables and the
+    # growth revisions) are deliberately untouched — revision history is never
+    # deleted (see CLAUDE.md). If either surface returns, restore the DDL from
+    # `git show 5c0187dc:app.py`.
 
-    # agent_worker tables (agent_tasks / agent_decisions / agent_budget) —
-    # 자율 백그라운드 워커(agent_worker/worker.py, budget.py, escalation.py,
-    # admin_routes.py, scenarios/daily_healthcheck.py)의 백킹 스토어. 이 3개는
-    # ORM 모델 클래스가 없고(워커가 SQLAlchemy Core / raw SQL 로 직접 쿼리),
-    # 오직 alembic migration 004_add_agent_tables.py 의 raw DDL 로만 정의돼 있다.
-    # prod 는 alembic 미실행(db.create_all() + _do_migrations() self-heal 패턴)
-    # 으로 운영되므로 이 3개 테이블이 prod DB 에 물리적으로 존재한 적이 없다
-    # (to_regclass / inspector exists=False 실측, Railway Postgres). 그 결과 워커가
-    # 테이블을 칠 때마다 실패한다.
-    #
-    # 스키마는 migration 004 와 정확히 일치한다. Postgres / SQLite 양쪽에서 valid
-    # 하도록 dialect 분기:
-    #   - JSONB(PG) vs JSON(SQLite)  (payload / result)
-    #   - 생성 순서가 중요: agent_tasks 가 자기참조 FK(parent_task_id) 를 가지므로
-    #     먼저, 그 다음 agent_decisions(task_id FK ON DELETE CASCADE), agent_budget.
-    #   - Numeric(10,6)/Numeric(10,2), Boolean default false, CheckConstraint
-    #     (risk_score 0~100, confidence NULL or 0~100) 보존.
-    # 부분 인덱스(idx_agent_tasks_pending ... WHERE status='pending')는 PG/SQLite
-    # 양쪽 모두 WHERE 절을 지원한다. 멱등 (CREATE TABLE/INDEX IF NOT EXISTS).
-    if any(
-        t not in existing_tables
-        for t in ("agent_tasks", "agent_decisions", "agent_budget")
-    ):
-        json_type = "JSONB" if is_postgres else "JSON"
-        # PG: BOOLEAN literal `false`; SQLite accepts `false` too (= 0).
-        try:
-            with db.engine.begin() as conn:
-                # agent_tasks first — self-referential parent_task_id FK is
-                # defined inline within this same CREATE statement.
-                conn.execute(text(
-                    "CREATE TABLE IF NOT EXISTS agent_tasks ("
-                    "id INTEGER PRIMARY KEY, "
-                    "type VARCHAR(50) NOT NULL, "
-                    "status VARCHAR(20) NOT NULL DEFAULT 'pending', "
-                    "assigned_to VARCHAR(50), "
-                    f"payload {json_type}, "
-                    f"result {json_type}, "
-                    "description TEXT, "
-                    "parent_task_id INTEGER, "
-                    "chain_depth INTEGER NOT NULL DEFAULT 0, "
-                    "risk_score INTEGER NOT NULL DEFAULT 0, "
-                    "escalated_at TIMESTAMP, "
-                    "approved_by VARCHAR(100), "
-                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-                    "completed_at TIMESTAMP, "
-                    "retry_count INTEGER NOT NULL DEFAULT 0, "
-                    "max_retries INTEGER NOT NULL DEFAULT 3, "
-                    "CONSTRAINT ck_agent_tasks_risk_range "
-                    "CHECK (risk_score BETWEEN 0 AND 100), "
-                    "CONSTRAINT fk_agent_tasks_parent_task_id "
-                    "FOREIGN KEY (parent_task_id) REFERENCES agent_tasks (id)"
-                    ")"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS idx_agent_tasks_pending "
-                    "ON agent_tasks (status, assigned_to) "
-                    "WHERE status = 'pending'"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS idx_agent_tasks_chain "
-                    "ON agent_tasks (parent_task_id)"
-                ))
-                conn.execute(text(
-                    "CREATE TABLE IF NOT EXISTS agent_decisions ("
-                    "id INTEGER PRIMARY KEY, "
-                    "task_id INTEGER, "
-                    "agent VARCHAR(50) NOT NULL, "
-                    "decision_type VARCHAR(50) NOT NULL, "
-                    "reasoning TEXT, "
-                    "prompt_snapshot TEXT, "
-                    "response_snapshot TEXT, "
-                    "input_tokens INTEGER, "
-                    "output_tokens INTEGER, "
-                    "cost_usd NUMERIC(10, 6), "
-                    "confidence INTEGER, "
-                    "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-                    "CONSTRAINT ck_agent_decisions_confidence_range "
-                    "CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 100), "
-                    "CONSTRAINT fk_agent_decisions_task_id "
-                    "FOREIGN KEY (task_id) REFERENCES agent_tasks (id) "
-                    "ON DELETE CASCADE"
-                    ")"
-                ))
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS idx_agent_decisions_task "
-                    "ON agent_decisions (task_id)"
-                ))
-                conn.execute(text(
-                    "CREATE TABLE IF NOT EXISTS agent_budget ("
-                    "date DATE PRIMARY KEY, "
-                    "tokens_used INTEGER NOT NULL DEFAULT 0, "
-                    "cost_usd NUMERIC(10, 6) NOT NULL DEFAULT 0, "
-                    "daily_cap_usd NUMERIC(10, 2) NOT NULL DEFAULT 5.00, "
-                    "halted BOOLEAN NOT NULL DEFAULT false"
-                    ")"
-                ))
-            logger.info("Migration: ensured agent_worker tables (agent_*)")
-        except Exception as exc:
-            # Never block boot — the background agent worker degrades rather
-            # than taking the whole app down.
-            logger.warning("Migration: could not create agent_* tables: %s", exc)
 
     # Portfolio shares / push subscriptions / signal_cache / watchlist —
     # all their current columns are in the initial create_all snapshot.
