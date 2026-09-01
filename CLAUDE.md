@@ -19,7 +19,7 @@
 > 검증(2026-09-01 최종): pytest 2221 / vitest 353 / Playwright v2 smoke 16 /
 > tsc·eslint clean / 부팅 135 rules / next build 36 routes. **prod 배포 완료.**
 
-## 현재 상태 요약 (2026-08-30 실측)
+## 현재 상태 요약 (2026-09-01 실측)
 🟡 **백엔드: DB 재구축 완료 / 앱 호스팅 대기** (2026-09-01 실측). Railway 계정이
   삭제되어 앱 + prod DB 가 함께 사라졌던 건에 대해, **DB 는 이미 새로 세웠다.**
   · **Supabase Postgres 가동 중** — 프로젝트 `pivoxquant` / `yjiztgummaxecriiuumt`
@@ -44,8 +44,10 @@
 **결제: Stripe 통합 완료, 게이트로 비활성** — `BUSINESS_REGISTRATION` 미완 +
   변호사 Q1-Q15 자문 대기로 prod 는 503 `BUSINESS_REGISTRATION_PENDING` 반환.
   사업자등록 459-01-03808 발급됨, 통신판매업 신고 + 유료결제 활성화는 의견서 후.
-**코드**: 브랜치 `fix/email-provider-retry` 계열, 진짜 미푸시 커밋 1건
-  (`38beb633` twin KRW→USD P0 데이터손상 fix). 나머지 3건은 이미 main 에 반영됨.
+**코드**: 백엔드 복구는 `fix/backend-restore-render-supabase` → **PR #546**.
+  ⚠️ 2026-09-01 정정: `38beb633` 을 "미푸시" 로 적어 뒀던 건 **틀렸다** —
+  `origin/fix/email-provider-retry` 에 이미 올라가 있다. 미푸시가 아니라
+  **미머지**다 (`git branch -a --contains 38beb633` 로 확인).
 
 ## 알려진 잔여 이슈 (2026-05-23 기준, 외부 액션 / 법무 의존)
 - **이메일: 발신 ✅ / 수신 ✅**: **발신** = **Brevo HTTP API** (2026-06-30 전환 — Railway 가
@@ -67,7 +69,9 @@
 - 상세 버그 이력: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md`
 
 ## 기술 스택
-- **Backend**: Flask + SQLAlchemy + PostgreSQL (prod, 현재 호스팅 미정) / SQLite (local)
+- **Backend**: Flask + SQLAlchemy + PostgreSQL — prod DB = **Supabase**
+  (ap-northeast-2, session pooler 경유), 앱 호스팅 = **Render**(`render.yaml`,
+  배포 대기) / SQLite (local)
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
 - **AI**: Claude API — 남은 사용처는 지원 챗봇 / 이메일 문안 등 보조 경로.
   종목 SWOT·시그널·섹터·코칭 등 **분석 AI 는 표면과 함께 삭제됨**.
