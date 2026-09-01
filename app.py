@@ -23,8 +23,8 @@ from config import Config
 from extensions import db, login_manager, migrate
 from routes import register_blueprints
 from security import init_security
-from services import container as svc
-from services import fx_service, cache_service, alert_service
+
+from services import fx_service, cache_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1222,10 +1222,10 @@ def _populate_cache(app):
                 logger.info(f"[cache-warmup] populating signal cache for {len(missing)} tickers...")
                 for ticker in missing:
                     try:
-                        r = svc.engine.analyze(ticker, 10000)
-                        if r:
-                            cache_service.save_signal(ticker, r)
-                            logger.info(f"[cache-warmup]   cached: {ticker}")
+                        # Was svc.engine.analyze() + save_signal; the engine is
+                        # gone and cache_ticker fetches the same fields.
+                        cache_service.cache_ticker(ticker)
+                        logger.info(f"[cache-warmup]   cached: {ticker}")
                     except Exception as e:
                         logger.error(f"[cache-warmup]   failed {ticker}: {e}")
                 logger.info("[cache-warmup] complete.")
@@ -1328,84 +1328,43 @@ def _init_scheduler(app):
             pass
 
     def _scheduled_refresh():
-        from models import Position, User
+        """Refresh the SignalCache metadata for every held ticker.
+
+        2026-09-01: this used to run ``svc.engine.analyze()`` per ticker and
+        hand the result to ``alert_service.maybe_generate``. The quant engine
+        was deleted with the scoring surfaces, so every iteration raised into
+        the per-ticker except and logged a failure — every three minutes,
+        forever, with nothing refreshed.
+
+        What the surviving Portfolio surface reads out of SignalCache is
+        identity and price: name, price, price_display, currency, is_korean,
+        sector. ``cache_service.cache_ticker`` fetches exactly that in one
+        quote call, so the job now does that and nothing else.
+
+        CONN-001 (2026-05-20) still applies: read the ticker list, release the
+        pooled connection, then let each cache_ticker call take a short one of
+        its own. Nothing holds a connection across an upstream request.
+        """
+        from models import Position
         with app.app_context():
-            # CONN-001 (2026-05-20): release the DB connection BEFORE the slow
-            # external-API analyse loop. Previously this held one pooled
-            # connection checked out for the ENTIRE loop body — each
-            # ``svc.engine.analyze()`` call hits FMP/Alpaca (multiple seconds)
-            # while still pinning the connection. With pool max 5 and an
-            # in-process scheduler (26 jobs) plus a deploy-overlap second
-            # scheduler instance, that pinned connection was a primary driver
-            # of ``FATAL: sorry, too many clients already`` → cold 500 burst.
-            #
-            # Strategy: read everything we need into plain Python objects, then
-            # ``db.session.remove()`` so the connection returns to the pool
-            # while the (connection-free) external API calls run. The per-
-            # ticker write path (save_signal / maybe_generate) lazily
-            # re-acquires a SHORT connection from the pool and we release it
-            # again at the end of each iteration so no connection is ever held
-            # across an ``analyze()`` call.
-            positions = Position.query.all()
-            # Continuous User Simulation Phase 1 — exclude ``is_simulated=True``
-            # from the alert-generation refresh. Sim users would otherwise
-            # trigger real Alert rows + push/email side effects via
-            # alert_service.maybe_generate. The push/email layers also
-            # short-circuit per-row, but excluding here saves the engine
-            # analyse loop overhead. Position rows owned by a sim user
-            # fall through with available_capital=10_000 default (no user
-            # row found) and produce a signal only when a *real* user also
-            # holds the same ticker — which is the intended behaviour.
-            cap_by_uid = {u.id: u.available_capital for u in
-                          User.query.filter_by(is_simulated=False).all()}
-            tku: dict[str, list[int]] = {}
-            for p in positions:
-                tku.setdefault(p.ticker, []).append(p.user_id)
-            # Materialise to plain tuples so nothing below touches a detached
-            # ORM instance after the session is removed.
-            work = list(tku.items())
-            # Release the connection before any external API work.
-            db.session.remove()
+            try:
+                tickers = sorted({p.ticker for p in Position.query.all()})
+                # Release the connection before any external API work.
+                db.session.remove()
 
-            # Phase 1 — parallel external analyze(). engine.analyze() is
-            # DB-free (no db.session/query anywhere in services/quant/engine.py),
-            # so a bounded ThreadPoolExecutor cuts the cycle wall time from the
-            # serial sum of upstream RTTs to ~the slowest single call WITHOUT
-            # ever holding a pool connection across analyze() — preserving the
-            # "no connection across the slow call" invariant that fixed the past
-            # ``FATAL: too many clients`` outage. max_workers=4 also caps the
-            # FMP/KIS request burst (avoids the 429 cooldown). No thread touches
-            # the DB here, so the pool is untouched during Phase 1.
-            from concurrent.futures import ThreadPoolExecutor  # noqa: PLC0415
+                for ticker in tickers:
+                    try:
+                        cache_service.cache_ticker(ticker)
+                    except Exception as e:
+                        logger.error(f"Scheduler refresh failed {ticker}: {e}")
+                    finally:
+                        db.session.remove()
 
-            def _analyze_one(item):
-                tk, us = item
-                cap = cap_by_uid.get(us[0], 10_000)
-                try:
-                    return tk, us, svc.engine.analyze(tk, cap)
-                except Exception as e:  # noqa: BLE001
-                    logger.error(f"Scheduler analyze failed {tk}: {e}")
-                    return tk, us, None
-
-            with ThreadPoolExecutor(max_workers=4) as ex:
-                analyzed = list(ex.map(_analyze_one, work))
-
-            # Phase 2 — serial DB writes only. Single-threaded, so the number of
-            # concurrent pool connections never exceeds one; each iteration
-            # releases it before the next so nothing is pinned.
-            for ticker, uids, r in analyzed:
-                if not r:
-                    continue
-                try:
-                    cache_service.save_signal(ticker, r)
-                    for uid in uids:
-                        alert_service.maybe_generate(uid, r)
-                except Exception as e:
-                    logger.error(f"Scheduler write failed {ticker}: {e}")
-                finally:
-                    db.session.remove()
-            logger.info(f"Scheduled refresh done — {len(work)} tickers")
-            _record_sched_success("sched_refresh")
+                logger.info(f"Scheduled refresh done — {len(tickers)} tickers")
+                _record_sched_success("sched_refresh")
+            except Exception as e:
+                logger.error(f"Scheduler refresh failed: {e}")
+                _alert_sched("sched_refresh", e)
 
     def _scheduled_indices_cache_warm():
         """Keep the headline-index cache warm for the public landing ticker.

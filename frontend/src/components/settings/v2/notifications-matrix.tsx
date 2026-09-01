@@ -19,7 +19,6 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { WEEKLY_MEMO_WHEN_SHORT } from "@/lib/cfo/memo-schedule";
 import {
   useNotificationPreferences,
   saveNotificationPreferences,
@@ -33,47 +32,26 @@ interface EventRow {
   defaults: { email: boolean; push: boolean; inapp: boolean };
 }
 
+// Must stay aligned with models.user.NOTIFICATION_EVENT_IDS.
+//
+// 2026-09-01: was seven rows — weekly memo, earnings pre-brief, signal state,
+// risk breach, pulse prompt, brag card, broker sync error. Every one of them
+// had lost its producer, so Settings let you toggle notifications that could
+// never arrive. The two alerts this product does send — the 52-week range
+// sweep and the sector-concentration sweep, both scheduled in app.py — mapped
+// to no event id at all, so their rows did not exist and their toggles could
+// not have worked. These two are what actually fires.
 const EVENTS: EventRow[] = [
   {
-    id: "weekly_memo",
-    name: `Weekly memo · ${WEEKLY_MEMO_WHEN_SHORT}`,
-    help: "Drafted weekly editorial brief.",
-    defaults: { email: true, push: true, inapp: true },
-  },
-  {
-    id: "earnings_pre_brief",
-    name: "Earnings pre-brief",
-    help: "Drafted 4 days before any holding's print.",
-    defaults: { email: true, push: true, inapp: true },
-  },
-  {
-    id: "signal_state",
-    name: "Signal state change",
-    help: "POSITIVE / NEGATIVE / NEUTRAL transitions on watchlist.",
+    id: "price_52w",
+    name: "52-week range",
+    help: "When a holding touches the top or bottom of its trailing 52-week range. Observation only.",
     defaults: { email: false, push: true, inapp: true },
   },
   {
-    id: "risk_breach",
-    name: "Risk layer breach",
-    help: "VaR, concentration, correlation, tail, drawdown thresholds.",
-    defaults: { email: true, push: true, inapp: true },
-  },
-  {
-    id: "pulse_prompt",
-    name: "Pulse prompt · Weekly",
-    help: "One reflective question, to answer in your own words.",
-    defaults: { email: true, push: false, inapp: true },
-  },
-  {
-    id: "brag_card",
-    name: "Brag card · Monthly",
-    help: "Shareable performance artifact.",
-    defaults: { email: true, push: false, inapp: true },
-  },
-  {
-    id: "broker_sync_error",
-    name: "Broker sync error",
-    help: "Token refresh, rate-limit, or auth failures.",
+    id: "concentration",
+    name: "Sector concentration",
+    help: "When one sector passes 30% of the book, by average cost.",
     defaults: { email: true, push: true, inapp: true },
   },
 ];

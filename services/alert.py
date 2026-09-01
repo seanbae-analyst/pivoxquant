@@ -22,25 +22,23 @@ logger = logging.getLogger(__name__)
 
 
 # Allowed kinds. New kinds must stay observation-neutral.
+# 2026-09-01: macro_event / artifact_ready / account_sync / watchlist_event
+# went with their emitters — every one had lost its caller. What remains is
+# what the scheduled sweeps in app.py actually produce.
 ALLOWED_KINDS = {
     "price_52w_high",
     "price_52w_low",
     "concentration_alert",
-    "macro_event",
-    "artifact_ready",
-    "account_sync",
-    "watchlist_event",
 }
 
 
-# FIX 1 (2026-05-22) — bell-alert kind → notification_prefs event_id map.
+# Bell-alert kind → notification_prefs event_id map.
 #
-# models/user.py defines exactly 7 NOTIFICATION_EVENT_IDS:
-#   weekly_memo · earnings_pre_brief · signal_state · risk_breach ·
-#   pulse_prompt · brag_card · broker_sync_error
+# models/user.py defines the NOTIFICATION_EVENT_IDS the Settings matrix
+# exposes: price_52w · concentration.
 #
 # The per-event × per-channel matrix (User.notification_prefs, served by
-# /api/notifications/preferences, toggled in Settings) only governs those 7.
+# /api/notifications/preferences, toggled in Settings) governs those.
 # When a bell-alert ``kind`` maps to one of them we gate the in-app (and the
 # email channel, if/when an alert ever sends email) by the user's stored
 # pref. When it does NOT map (the common case below) we DELIVER AS BEFORE —
@@ -48,33 +46,23 @@ ALLOWED_KINDS = {
 # strictly safer than wrongly suppressing a real one.
 #
 # Call-site → event_id mapping for the kinds this module emits:
-#   price_52w_high      → None  (52w high — no matching event_id; KIS-based
-#                                KR range is a deferred feature, see FIX 2)
-#   price_52w_low       → None  (52w low — no matching event_id)
-#   concentration_alert → None  (portfolio concentration — no event_id;
-#                                NOT "risk_breach", which is the 7-Layer Risk
-#                                Defense breach surface, a different signal)
-#   macro_event         → None  (macro calendar — no event_id)
-#   artifact_ready      → None  (generic artifact-ready; the artifact-type
-#                                events weekly_memo / earnings_pre_brief /
-#                                brag_card are emitted by their own services,
-#                                not via this generic bell kind)
-#   account_sync        → None  (broker sync SUCCESS — distinct from the
-#                                "broker_sync_error" event_id, which is the
-#                                FAILURE notification only)
-#   watchlist_event     → None  (watchlist move — no event_id)
+#   price_52w_high      → "price_52w"
+#   price_52w_low       → "price_52w"     (one toggle covers both ends)
+#   concentration_alert → "concentration"
 #
-# Every entry is None today → every bell kind ships unconditionally, exactly
-# as before this fix. The map exists so a future kind that DOES correspond to
-# one of the 7 events can be gated by adding a single line here.
+# A kind absent from the map ships unconditionally: there is no pref to
+# consult, and FAIL-OPEN is strictly safer than wrongly suppressing a real
+# alert. ALLOWED_KINDS above means that case cannot arise today.
+# 2026-09-01: every kind used to map to None, so the Settings → Notifications
+# matrix had no effect on the only two alerts this product actually sends. The
+# 52-week sweep and the concentration sweep now carry the event ids the matrix
+# exposes, which is what makes those toggles real. The four kinds that used to
+# sit here (macro_event / artifact_ready / account_sync / watchlist_event) went
+# with their emitters — none had a caller left.
 _BELL_KIND_TO_EVENT_ID: dict[str, Optional[str]] = {
-    "price_52w_high":      None,
-    "price_52w_low":       None,
-    "concentration_alert": None,
-    "macro_event":         None,
-    "artifact_ready":      None,
-    "account_sync":        None,
-    "watchlist_event":     None,
+    "price_52w_high":      "price_52w",
+    "price_52w_low":       "price_52w",
+    "concentration_alert": "concentration",
 }
 
 
@@ -175,7 +163,7 @@ def create_alert(
             kind=kind,
             title=title,
             body=body or "",
-            link=link or "/alerts",
+            link=link or "/mirror",
         )
     except Exception:
         logger.warning("push delivery failed for alert id=%s kind=%s",
@@ -213,7 +201,7 @@ def alert_52w_high(user_id: int, ticker: str, name: Optional[str] = None):
         title=f"{label} reached 52-week high",
         body="Observation — price level noted against trailing 52-week range.",
         ticker=ticker,
-        link=f"/detail/{ticker}",
+        link="/portfolio",
         dedup_window_hours=24,
     )
 
@@ -226,7 +214,7 @@ def alert_52w_low(user_id: int, ticker: str, name: Optional[str] = None):
         title=f"{label} at 52-week low",
         body="Observation — price level noted against trailing 52-week range.",
         ticker=ticker,
-        link=f"/detail/{ticker}",
+        link="/portfolio",
         dedup_window_hours=24,
     )
 
@@ -237,66 +225,9 @@ def alert_concentration(user_id: int, sector: str, pct: float):
         kind="concentration_alert",
         title=f"Portfolio concentration — {sector} {pct:.1f}%",
         body="Observation — single-sector weighting exceeds 30% of portfolio.",
-        link="/risk",
+        link="/mirror",
         dedup_window_hours=12,
     )
-
-
-def alert_macro_event(user_id: int, event: str, when: str):
-    return create_alert(
-        user_id,
-        kind="macro_event",
-        title=f"{event} {when}",
-        body="Macro calendar event noted.",
-        link="/market",
-        dedup_window_hours=6,
-    )
-
-
-def alert_artifact_ready(user_id: int, artifact_label: str, artifact_id: Optional[int] = None):
-    link = f"/reports/{artifact_id}" if artifact_id else "/reports"
-    return create_alert(
-        user_id,
-        kind="artifact_ready",
-        title=f"{artifact_label} ready",
-        body="Artifact rendered and available for review.",
-        link=link,
-    )
-
-
-def alert_account_sync(user_id: int, broker: str = "KIS"):
-    return create_alert(
-        user_id,
-        kind="account_sync",
-        title=f"{broker} account sync complete",
-        body="Positions refreshed from broker.",
-        link="/settings",
-        dedup_window_hours=1,
-    )
-
-
-def alert_watchlist_event(user_id: int, ticker: str, name: Optional[str] = None):
-    label = _ticker_label(ticker, name)
-    return create_alert(
-        user_id,
-        kind="watchlist_event",
-        title=f"{label} movement noted",
-        body="Watchlist observation — significant intraday move recorded.",
-        ticker=ticker,
-        link=f"/detail/{ticker}",
-        dedup_window_hours=4,
-    )
-
-
-# ── Cron drivers (2026-04-22) ───────────────────────────────────────────────
-#
-# Scheduled by scripts/check_price_alerts.py. Intended cadence:
-#   - check_52w_highs_lows   — every 15 minutes during market hours
-#   - check_concentration    — once per day (after close)
-#
-# Each driver iterates all users that own positions, fans out across their
-# holdings, and dedups via the 24h/7d window on create_alert. Never raises
-# — a single bad ticker must not kill the sweep.
 
 
 def check_52w_highs_lows() -> dict:

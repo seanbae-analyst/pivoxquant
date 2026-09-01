@@ -36,14 +36,12 @@ function hookReturn(prefs: Record<string, Record<string, boolean>> | undefined) 
   } as any;
 }
 
+// 2026-09-01: was the seven legacy event ids. Six had lost their producer and
+// the seventh died with the quant engine; the matrix now exposes the two
+// notifications this product actually sends (models.user.NOTIFICATION_EVENT_IDS).
 const FULL_SERVER_PREFS = {
-  weekly_memo: { email: true, push: true, inapp: true },
-  earnings_pre_brief: { email: true, push: true, inapp: true },
-  signal_state: { email: false, push: true, inapp: true },
-  risk_breach: { email: true, push: true, inapp: true },
-  pulse_prompt: { email: true, push: false, inapp: true },
-  brag_card: { email: true, push: false, inapp: true },
-  broker_sync_error: { email: true, push: true, inapp: true },
+  price_52w: { email: false, push: true, inapp: true },
+  concentration: { email: true, push: true, inapp: true },
 };
 
 describe("NotificationsMatrix — server wiring", () => {
@@ -61,23 +59,23 @@ describe("NotificationsMatrix — server wiring", () => {
     vi.useRealTimers();
   });
 
-  it("reflects the server prefs map once loaded (signal_state email = off)", async () => {
+  it("reflects the server prefs map once loaded (price_52w email = off)", async () => {
     mockedUseHook.mockReturnValue(hookReturn(FULL_SERVER_PREFS));
     render(<NotificationsMatrix />);
 
-    // signal_state email toggle should hydrate to OFF from the server map.
+    // price_52w email toggle should hydrate to OFF from the server map.
     const signalEmail = await screen.findByRole("switch", {
-      name: /Signal state change · email/i,
+      name: /52-week range · email/i,
     });
     await waitFor(() => {
       expect(signalEmail).toHaveAttribute("aria-checked", "false");
     });
 
-    // weekly_memo email is ON from the server map.
-    const memoEmail = screen.getByRole("switch", {
-      name: /Weekly memo.*· email/i,
+    // concentration email is ON from the server map.
+    const concentrationEmail = screen.getByRole("switch", {
+      name: /Sector concentration · email/i,
     });
-    expect(memoEmail).toHaveAttribute("aria-checked", "true");
+    expect(concentrationEmail).toHaveAttribute("aria-checked", "true");
   });
 
   it("PUTs the updated map after the debounce on toggle, then toasts success", async () => {
@@ -88,13 +86,13 @@ describe("NotificationsMatrix — server wiring", () => {
     render(<NotificationsMatrix />);
 
     const signalEmail = await screen.findByRole("switch", {
-      name: /Signal state change · email/i,
+      name: /52-week range · email/i,
     });
     await waitFor(() =>
       expect(signalEmail).toHaveAttribute("aria-checked", "false"),
     );
 
-    // Toggle signal_state email ON — optimistic update is immediate.
+    // Toggle price_52w email ON — optimistic update is immediate.
     await user.click(signalEmail);
     expect(signalEmail).toHaveAttribute("aria-checked", "true");
 
@@ -108,7 +106,7 @@ describe("NotificationsMatrix — server wiring", () => {
 
     await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
     const sentMap = mockedSave.mock.calls[0][0];
-    expect(sentMap.signal_state.email).toBe(true);
+    expect(sentMap.price_52w.email).toBe(true);
 
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("알림 설정 저장됨"),
@@ -123,7 +121,7 @@ describe("NotificationsMatrix — server wiring", () => {
     render(<NotificationsMatrix />);
 
     const signalEmail = await screen.findByRole("switch", {
-      name: /Signal state change · email/i,
+      name: /52-week range · email/i,
     });
     await waitFor(() =>
       expect(signalEmail).toHaveAttribute("aria-checked", "false"),
@@ -157,7 +155,7 @@ describe("NotificationsMatrix — server wiring", () => {
     render(<NotificationsMatrix />);
 
     const signalEmail = screen.getByRole("switch", {
-      name: /Signal state change · email/i,
+      name: /52-week range · email/i,
     });
     // Toggle is disabled while loading.
     expect(signalEmail).toBeDisabled();
@@ -183,7 +181,7 @@ describe("NotificationsMatrix — server wiring", () => {
     render(<NotificationsMatrix />);
 
     const signalEmail = await screen.findByRole("switch", {
-      name: /Signal state change · email/i,
+      name: /52-week range · email/i,
     });
     await waitFor(() => expect(signalEmail).not.toBeDisabled());
 
@@ -203,17 +201,17 @@ describe("NotificationsMatrix — server wiring", () => {
     render(<NotificationsMatrix />);
 
     const signalEmail = await screen.findByRole("switch", {
-      name: /Signal state change · email/i,
+      name: /52-week range · email/i,
     });
     await waitFor(() =>
       expect(signalEmail).toHaveAttribute("aria-checked", "false"),
     );
-    const pulsePush = screen.getByRole("switch", {
-      name: /Pulse prompt.*· push/i,
+    const concentrationPush = screen.getByRole("switch", {
+      name: /Sector concentration · push/i,
     });
 
     await user.click(signalEmail);
-    await user.click(pulsePush);
+    await user.click(concentrationPush);
 
     await act(async () => {
       vi.advanceTimersByTime(700);
@@ -221,7 +219,7 @@ describe("NotificationsMatrix — server wiring", () => {
 
     await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
     const sentMap = mockedSave.mock.calls[0][0];
-    expect(sentMap.signal_state.email).toBe(true);
-    expect(sentMap.pulse_prompt.push).toBe(true);
+    expect(sentMap.price_52w.email).toBe(true);
+    expect(sentMap.concentration.push).toBe(false);
   });
 });
