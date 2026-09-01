@@ -23,10 +23,9 @@ stripe>=8.0.0
 pywebpush>=2.0.0
 flask-limiter>=3.5.0
 cryptography>=42.0.0
-# CA bundle for the CAUS cron — macOS/LibreSSL Python and headless cron
-# environments can't always rely on the system trust store, so the sweep
-# points every urllib call at certifi explicitly
-# (scripts/caus_daily_sweep.py::_build_ssl_context).
+# CA bundle for the cron scripts — macOS/LibreSSL Python and headless cron
+# environments can't always rely on the system trust store, so legal_monitor
+# and finance_weekly_check point every urllib call at certifi explicitly.
 certifi>=2024.7.4
 gunicorn>=22.0.0
 gevent>=24.2.1
@@ -36,12 +35,6 @@ gevent>=24.2.1
 openpyxl>=3.1.0
 weasyprint>=62.0
 jinja2>=3.1.6
-# Monthly Brag Card (MVP #2) PNG rendering via headless Chromium.
-# First run on a fresh host requires: `playwright install chromium`
-# (downloads a ~120 MB browser bundle). The service tolerates a missing
-# install: render_png() returns None and the Artifact row is still
-# persisted for later rasterization.
-playwright>=1.40
 # Wave I D-2: Railway OOM/CPU pressure detector
 # (scripts/nightly/railway_resource_check.py). psutil is already a
 # transitive dep via sentry-sdk on some platforms, but pin explicitly

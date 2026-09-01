@@ -2,11 +2,12 @@
 """Virtual-user sweep — N simulated users exercise the real route surface.
 
 CEO order (2026-06-10 overnight): "가상유저 한 20명 만들어서 테스트 돌리자".
-CAUS (scripts/caus_daily_sweep.py) drives ONE browser user per day through one
-scenario; this sweep is the complementary wide pass — 20 users with deliberately
-diverse personas/portfolios hammer the API surface in-process (Flask test
-client, isolated SQLite DB), so it is deterministic, costs ₩0, never touches
-prod or external APIs, and finishes in seconds.
+This was once the complementary wide pass to CAUS, which drove ONE browser user
+per day through one scenario; CAUS was retired 2026-09-01 (its scenarios aimed at
+deleted screens), so this sweep is now the whole of the synthetic-user QA. 20
+users with deliberately diverse personas/portfolios hammer the API surface
+in-process (Flask test client, isolated SQLite DB), so it is deterministic, costs
+₩0, never touches prod or external APIs, and finishes in seconds.
 
 What each user does (per persona/portfolio archetype):
   login → add positions (KR/US/mixed/edge sizes) → GET /api/portfolio (NAV

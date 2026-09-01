@@ -6,6 +6,26 @@ P1 findings accumulated by the daily bug sweep. Not auto-fixed (detection-only o
 
 **P0=0 · P1(NEW)=4 · P2=2 · recurring(scheduler)=1(REFINED).** No auto-fix/commit (detection-only). ✅ **First FULL-authenticated prod sweep** — bug-hunter minted a legit CAUS sim-onboard session (`SIM_ONBOARD_SECRET` via `railway variables`) + drove headless Chromium (Playwright), so all 12 dashboard + 6 detail pages got real logged-in console/network/DOM checks (prior 10+ runs only reached public pages). Hermetic virtual sweep CLEAN (991 calls / 0 findings). Sunday artifact PDF full matrix **172 passed / 0 failed** (8m32s). CAUS rotated to authed **day-9** → honestly **SKIPPED (skipped_no_session)** (no cron `SIM_ONBOARD_SECRET`). Legal CLEAN (forbidden_terms 181 lines; DisclaimerBanner central `(dashboard)/layout.tsx`; 0 live BUY/SELL/HOLD/매수/매도 in detail+signals components; on-demand lookup healthy AAPL $315.32 / SPY $754.95 / QQQ $725.51 / VIXY $20.68). Backend health OK (`v47a2db735a50`, unchanged ≥12 days). Full detail: `BUG_SWEEP_2026-07-12.md`.
 
+> ## ⚠️ 2026-09-01 — CAUS 폐기로 아래 항목 다수가 **자동 종료**됐다
+>
+> Continuous Autonomous User Simulation 전체가 삭제됐다 (CEO 결정). 시나리오가
+> 겨냥하던 URL 10개 중 9개가 8-31 prune 으로 사라져 **없는 제품을 검사**하고
+> 있었기 때문이다. 상세: `CLAUDE.md` 함정 §7.
+>
+> **이로써 닫히는 열린 항목** — 아래 본문은 이력이라 그대로 두되, 더 이상
+> 작업 대상이 아니다:
+> - `retire/repoint CAUS day-6 /pricing scenario` → **retire 로 종결**
+> - `CAUS "fake-clean" via STALE session file` → 하니스 자체가 없어져 무의미
+> - `CAUS auto-fix churn` P0 2건 → auto-fix 루프 삭제됨
+> - 🔁 `SIM_ONBOARD_SECRET in cron env` (12회+ 반복) → **엔드포인트가 없다.**
+>   이 시크릿은 이제 아무것도 마운트하지 않는다
+> - `leftover branches caus-auto-fix/*` → 2026-09-01 삭제 완료 (둘 다 main 에
+>   완전 병합돼 고유 커밋 0개였다)
+>
+> ⚠️ 남은 debris: `stash@{0}` (`caus-autofix-stash-a2dd7bba0044`) 는 **안 건드렸다**
+> — stash 는 되돌리기 어려워 CEO 확인 후 `git stash drop` 할 것.
+
+
 ### P1 (NEW — all confirmed + root-caused this run; deferred to CEO, detection-only)
 - [ ] **P1 — Fresh "realtime" prices mislabeled "9h ago" (stale/amber dot) on `/watchlist` + `/portfolio`.** Backend serializes naive `datetime.now().isoformat()` (NO `Z`, local wall-clock) in `services/data/realtime.py:621,671`; frontend `price-with-timestamp.tsx:56` has an *unguarded duplicate* `relativeTime()` (`new Date(iso)` parses naive string as browser-local KST) → ~9h skew vs the sibling `lib/relative-time.ts` which already got the UTC guard. Fix: emit UTC-aware ISO (`…+00:00`/`Z`) at source AND/OR route the component through the guarded shared helper. Confirmed (source read).
 - [ ] **P1 — US index ribbon fabricates `0.00%` daily change when ETF history fetch is empty.** `_etf_snapshot()` (`routes/market.py:738`) defaults `change_pct=0.0`, only overwrites on successful history (`:787`), but still returns a dict when the *live quote* succeeds and history is empty (returns None only if BOTH fail) → QQQ/DIA/IWM/VIXY show a made-up 0.00% while SPY works. Fix: mark change as unknown/`null` (render `—`) instead of 0.0 when history unavailable. Confirmed (source read). Related to but distinct from the scheduler recurring item below (that's the *public cache-warm* path; this is the *authed live* path).

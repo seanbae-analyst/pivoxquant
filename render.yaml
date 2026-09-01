@@ -127,9 +127,10 @@ services:
       #   never reads it; services/launch_prep.py lists it in its env
       #   inventory, which is why it looks like a backend variable and is not.
       # ANTHROPIC_API_KEY — the support chatbot was the only live consumer and
-      #   it was removed 2026-09-01. services/ai/ still exists but every one of
-      #   its nine public methods has zero callers (the 8-31 prune deleted the
-      #   analysis surfaces), and fetcher's news scorer is likewise unreachable.
-      # SIM_ONBOARD_SECRET — only needed to restore the CAUS sim user flow.
+      #   it was removed 2026-09-01; services/ai/ itself was deleted the same
+      #   day (zero callers). Only the disabled self-healing / morning-triage
+      #   scripts still import anthropic, and they do not run on Render.
+      # SIM_ONBOARD_SECRET — gone. CAUS was retired 2026-09-01 and the
+      #   sim-onboard blueprint deleted with it; setting this now does nothing.
       # STRIPE_* — payment stays gated off until BUSINESS_REGISTRATION and the
       #   lawyer's Q1-Q15 opinion land. Adding the keys does not enable it.

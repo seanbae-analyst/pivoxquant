@@ -85,19 +85,5 @@ def register_blueprints(app):
         from .dev_auth import dev_auth_bp
         blueprints.append(dev_auth_bp)
 
-    # Sim-onboard bypass for CAUS daily sweep (Continuous Autonomous User
-    # Simulation, scripts/caus_daily_sweep.py). Mounted only when
-    # SIM_ONBOARD_SECRET is set. Separate from DEV_LOGIN_SECRET — safe to
-    # enable on production because the endpoint:
-    #   * restricts emails to a sim-only regex (seanbae1521+sim{N}@gmail.com
-    #     or sim{N}@pivoxquant-test.local),
-    #   * forces is_simulated=True on every created user,
-    #   * refuses to flip the flag on existing real users,
-    #   * requires a 5-minute HMAC-signed ticket + PivoxQuantCAUS/ User-Agent.
-    # See routes/sim_onboard.py for the full security model.
-    if os.environ.get("SIM_ONBOARD_SECRET"):
-        from .sim_onboard import sim_onboard_bp
-        blueprints.append(sim_onboard_bp)
-
     for bp in blueprints:
         app.register_blueprint(bp)

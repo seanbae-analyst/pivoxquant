@@ -94,10 +94,20 @@ Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대�
 |---|---|---|
 | 부팅 URL rules | **120** | 2026-09-01 |
 | blueprints | **23** | 2026-09-01 |
-| pytest | **2175 passed / 0 failed** | 2026-09-01 |
+| pytest | **2007 passed / 0 failed** (18 skip, 1 xfail) | 2026-09-01 (죽은코드 + CAUS 정리 후) |
 | vitest | **353 / 353** | 2026-09-01 |
 | next build | **36 routes** | 2026-09-01 |
 | alembic | 52 revisions, head `049_reflection_observed_context` | 2026-09-01 |
+
+> pytest 가 **2175 → 2007 (-168)** 로 줄어든 것은 회귀가 아니다. 2026-09-01 정리로
+> **테스트 대상 자체가 사라져서** 함께 지운 수다:
+> - AI 삭제 −36 — 테스트 7파일(31) + `TestLogUsageWrapper`(4) + `TestDiscoverFreshTtlBump`(1)
+> - CAUS 삭제 −132 — `test_caus_{scenarios,daily_sweep,auto_fix}` + `test_sim_onboard`
+>
+> skip 18 / xfail 1 / fail 0 은 정리 전후 동일하고, URL rule 120 · blueprint 23 ·
+> vitest 353 · next 36 routes 도 전부 그대로다. 스케줄러 job 만 31 → **30** (CAUS).
+> ⚠️ `tests/test_scheduler_cron_jobs.py::EXPECTED_JOB_COUNT` 는 **하드코딩된 수**다 —
+> cron job 을 더하거나 뺄 때 같이 고쳐야 한다 (이번에 안 고쳐서 3건 실패했었다).
 
 ---
 
@@ -106,11 +116,18 @@ Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대�
 **Render 배포.** 다른 모든 것이 이것 하나를 기다린다.
 
 1. Render → New Blueprint → 이 레포 (`render.yaml` 을 읽는다)
-2. 시크릿 12칸 붙여넣기 → **값은 `.secrets/RENDER_PASTE_VALUES.txt`** (gitignore)
-   - ⚠️ **`BREVO_API_KEY` 하나만 없다.** 나머지는 전부 로컬 `.env` 에 이미 있다.
-     (2026-09-01 에 "키 4개를 콘솔에서 모아와라"고 안내한 적이 있는데 **틀렸다** —
-     `.env` 를 확인하지 않은 실수였다. 같은 실수를 반복하지 마라: 키를 찾기 전에
-     `.env` 부터 열어라.)
+2. 시크릿 **15칸** 붙여넣기 → **값은 `.secrets/RENDER_PASTE_VALUES.txt`** (gitignore)
+   - ✅ **15칸 전부 채워져 있다** (2026-09-01 재실측: 파일의 15개 키 이름이
+     `render.yaml` 의 `sync: false` 15개와 정확히 일치, 빈 값 0개).
+   - ⚠️ **`BREVO_API_KEY` 는 필요 없다.** 이 파일이 한때 "Brevo 하나만 없다"고
+     적었는데 **틀렸다** — HEAD 커밋 `cee3d291` 이 이미 뒤집었다. 전송 캐스케이드는
+     SendGrid → Brevo → SMTP 이고 SendGrid·SMTP 자격증명은 `.env` 에 있다. Brevo 는
+     **Railway 가 outbound SMTP 를 막아서**(OSError 101) 들어왔던 우회로일 뿐,
+     Render 에도 해당한다는 근거는 없다.
+   - 교훈은 그대로다: **키를 찾기 전에 `.env` 부터 열어라.** (2026-09-01 에
+     "키 4개를 콘솔에서 모아와라"고 안내했다가 틀린 적이 있는데, `.env` 를 안 열어본
+     실수였다. FMP·KIS×2 는 그때도 이미 `.env` 에 있었다 — `SHIP_BLOCKERS.md` B5 는
+     아직 이 stale 한 4개 목록을 들고 있으니 그쪽을 믿지 말 것.)
 3. URL 발급 → `RAILWAY_BACKEND_URL` 채우고 재배포 → Vercel 재연결 → E2E
 
 **OAuth 콘솔은 손댈 필요 없다** (2026-09-01 확인·조치 완료). Google 클라이언트는
@@ -125,10 +142,16 @@ Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대�
 
 - **Backend**: Flask + SQLAlchemy + PostgreSQL(Supabase) / SQLite(local)
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
-- **AI**: **없음.** 2026-09-01 지원 챗봇 제거로 `ANTHROPIC_API_KEY` 의 마지막
-  실사용처가 사라졌다. `services/ai/` 는 트리에 남아 있으나 **공개 메서드 9개 전부
-  호출처 0곳**이고 `fetcher.score_news_sentiment` 도 도달 불가다. 런타임에 Claude
-  API 를 한 번도 부르지 않는다. 되살릴 거면 **소비자부터** 만들 것.
+- **AI**: **없음 — 코드까지 삭제됨.** 2026-09-01 지원 챗봇 제거로
+  `ANTHROPIC_API_KEY` 의 마지막 실사용처가 사라졌고, 같은 날 죽은 코드를
+  **트리에서도 걷어냈다**: `services/ai/`(9개 공개 메서드 + 3개 모델 클래스),
+  `services/ai_budget.py`, `container.ai` 싱글턴, `fetcher.score_news_sentiment`
+  (+`_score_news_with_ai`/`_score_news_keywords`), `cache_service` 의
+  `ai_result_cache_*`/`earnings_tone_*`. 전부 **호출처 0곳**임을 확인 후 삭제했고,
+  삭제 전후 URL rule 120 / blueprint 23 이 동일하다. 런타임에 Claude API 를 한 번도
+  부르지 않는다. 되살릴 거면 **소비자부터** 만들 것 (원본은 `git show cee3d291:services/ai/service.py`).
+  ⚠️ `anthropic_usage_log` 테이블 + migration 042 + `scripts/nightly/
+  anthropic_cost_estimate.py` 는 **남겼다** — `pipa_purge` 가 참조한다.
 - **Broker**: KIS 한국투자증권 (read-only — `services/kis/service.py` 의
   `KIS_READ_ONLY` 가드 3곳). Alpaca 는 데이터 fallback stub 만
   `ALPACA_ENABLED` 게이트(기본 OFF)로 잔존
@@ -153,9 +176,9 @@ routes/   alerts · auth(+auth_alias) · behavior · billing · consents · data
           · dev_auth · email_preferences · feedback · health · inbox
           · market · mirror_home · notifications · portfolio · pre_trade
           · profile · push · realtime · sendgrid_webhook · support · trades
-          (조건부·부팅 시 미등록: sim_onboard=SIM_ONBOARD_SECRET 필요,
-           command_center=opt-in. 위 23 카운트에 없다)
-services/ ai(죽음) · behavior · broker · customer · data · email · inbox · kis
+          (조건부·부팅 시 미등록: command_center=opt-in. 위 23 카운트에 없다.
+           sim_onboard 은 2026-09-01 CAUS 와 함께 삭제 — 함정 §7)
+services/ behavior · broker · customer · data · email · inbox · kis
           · legal · marketing · mock_data · observability · portfolio
           · pre_trade · profile · scheduler · support · tax · trading
 ```
@@ -249,6 +272,56 @@ CI 스캔 대상 `services/artifacts/templates/` 는 8-31 prune 으로 **없어�
 오해해 경고**를 내므로 전자를 쓸 것.
 
 ---
+
+### 7. CAUS 는 **삭제됐다** (2026-09-01) — 되살리지 마라
+
+Continuous Autonomous User Simulation(브라우저 sim 유저 1명/일). **CEO 결정으로
+retire.** 시나리오가 겨냥하던 URL 10개 중 9개가 8-31 prune 으로 사라져서 매일 도는
+QA 가 **없는 제품을 검사**하고 있었고, 산출물은 오탐 아니면 `SKIPPED` 뿐이었다.
+
+지운 것: `scripts/caus_daily_sweep.py` · `caus_auto_fix.py` · `caus_scenarios/`(12)
+· `check_caus_today.sh` · `routes/sim_onboard.py` · 스케줄러 `ops_caus_daily_sweep`
+등록 · 테스트 4종(`test_caus_*` 3 + `test_sim_onboard`) · `SIM_ONBOARD_SECRET`
+배선 전부 · `docs/qa/auto-sim-reports/`(43) · `docs/specs/continuous-user-sim-spec.md`
+· **`playwright` 의존성**(삭제 후 import 0곳).
+
+⚠️ **`users.is_simulated` 는 남겼다** — 지우지 마라. migration 032 + 모델 컬럼 +
+이메일/푸시의 `is_simulated` 가드가 **합성 유저에게 실제 메일·푸시가 나가는 걸
+막는다.** `scripts/qa/virtual_user_sweep.py` 가 아직 sim 유저를 만들기 때문에 이
+가드는 여전히 살아있는 방어선이다 (`services/email/sender.py:269`,
+`services/email/{sendgrid,brevo}_provider.py`, `services/push_service.py:59`,
+`services/customer/inactive_nudge.py:125`).
+
+검증: 삭제 전후 URL rule 120 · blueprint 23 동일. `SIM_ONBOARD_SECRET=x` 를 세팅하고
+부팅해도 120/23 그대로 — blueprint 가 실제로 사라졌다는 뜻이다.
+
+### 8. `services/access_guard.py` 는 **호출처 0곳**이다 (의도적으로 남김)
+
+`is_user_allowed_ticker()` / `access_denied_response()` — §101 회피용 화이트리스트
+가드인데 **프로덕션 호출처가 없다.** `tests/test_access_guard.py` 만 부른다
+(2026-09-01 전수 grep 확인). 이걸 걸던 endpoint 들이 prune 으로 사라졌기 때문.
+
+**죽은 코드지만 2026-09-01 정리에서 일부러 남겼다** — 법무 성격의 가드를 agent
+판단으로 지우는 건 범위를 넘는다. 되살릴 거면 §101 게이트가 필요한 route 에
+붙이고, 영영 안 쓸 거면 테스트와 함께 지울 것. **"테스트가 green 이니 가드가
+동작 중"으로 읽지 말 것** — 가드는 아무것도 안 지키고 있다.
+### 9. Docker 빌드 컨텍스트 — `.dockerignore` 를 지워도 되는 파일로 착각하지 마라
+
+`render.yaml` 이 `runtime: docker` 로 빌드하고 `Dockerfile` 끝이 `COPY . .` 다.
+2026-09-01 까지 **`.dockerignore` 가 없었다** — 빌드 컨텍스트 전체가 이미지에
+들어갔다는 뜻이다. 로컬 기준 ~1.7 GB(`node_modules` 815M · `.next` 587M ·
+`venv` 179M · `.git` 157M)가 불필요하게 실렸고, 더 중요한 건 **로컬에서
+`docker build .` 를 하면 `.env` 와 `.secrets/` 가 이미지 레이어에 구워진다**는
+점이었다. (Render 는 레포를 clone 하므로 gitignore 된 그 둘은 원래 없었다 —
+로컬 빌드만의 문제였지만 실재하는 유출 경로였다.)
+
+⚠️ **`.dockerignore` 에서 `docs/` · `frontend/` · `tests/` · `scripts/` 를 빼지 마라.**
+크게 보여도 **런타임에 읽힌다** — 인프로세스 APScheduler(`RUN_SCHEDULER=1`)가
+`scripts/nightly/*` 크론 30개를 돌리고, 그중 legal scan 은 `frontend/` 소스에서
+금지어를 훑고, `marketing_daily_dispatch` 는 `docs/marketing/content-bank.json`
++ `week1-cards/*.png` 를 읽고, ship-blocker 잡은 루트 `SHIP_BLOCKERS.md` 를 읽는다.
+지우면 **조용히** 깨진다 (크론은 best-effort 로 예외를 삼킨다).
+
 
 ## 중요 원칙
 

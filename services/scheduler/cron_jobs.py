@@ -483,16 +483,6 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
                 job_id="ops_inactive_nudge",
             ),
         ),
-        # 0 3 * * * — caus-daily-sweep (daily 03:00 — separate from run.sh
-        # but present in macOS crontab; bring it under the same umbrella)
-        (
-            "ops_caus_daily_sweep",
-            CronTrigger(hour=3, minute=0, timezone=KST),
-            _wrap_python_main(
-                "scripts.caus_daily_sweep",
-                job_id="ops_caus_daily_sweep",
-            ),
-        ),
         # 0 9 * * 0 — finance-weekly-check (Sun 09:00)
         (
             "ops_finance_weekly_check",

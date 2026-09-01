@@ -304,14 +304,3 @@ def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: flo
     # Trade confirmation is a transactional/portfolio event — must reach
     # opted-out users too (bypasses the 정통망법 §50 marketing gate).
     send_push_to_user(user_id=user_id, title=title, body=body, url="/trades", transactional=True)
-
-
-def notify_insight(user_id: int, title_text: str, body_text: str):
-    """Send push for AI insights."""
-    # send_push_to_user lives in this module now (PR #437).
-    send_push_to_user(
-        user_id=user_id,
-        title=f"PivoxQuant — {title_text}",
-        body=body_text[:200],
-        url="/ai-alerts",
-    )
