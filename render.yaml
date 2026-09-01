@@ -57,10 +57,6 @@ services:
         # gunicorn to --workers 1, so this is that process
       - key: ALPACA_ENABLED
         value: "0" # legal: enabling this needs an Alpaca commercial data licence
-      - key: BREVO_PROVIDER_PRIMARY
-        value: "true" # inverts the SendGrid→Brevo→SMTP cascade. Railway blocked
-        # SMTP outbound (OSError 101); Brevo's HTTP API is what
-        # actually delivers. Harmless on Render, keep it.
       - key: FRONTEND_URL
         value: https://www.pivoxquant.com
       - key: CORS_ORIGINS
@@ -94,7 +90,26 @@ services:
         sync: false
       - key: KIS_APP_SECRET
         sync: false
-      - key: BREVO_API_KEY
+      # ── 이메일 전송 ───────────────────────────────────────────────────
+      # cascade 는 SendGrid → Brevo → SMTP 다 (services/email/sender.py).
+      # 자격증명이 실제로 있는 건 SendGrid 와 SMTP 두 개이므로 그 둘을 넣는다.
+      #
+      # 2026-09-01 정정: 이 자리에는 원래 BREVO_API_KEY 만 있었고 SendGrid 와
+      # SMTP 는 빠져 있었다. 그대로 배포했다면 **전송 경로가 하나도 설정되지
+      # 않은 채** 부팅해서, 탈퇴 확인 메일(PIPA §21 ① 법적 의무)까지 조용히
+      # 실패했을 것이다. Brevo 는 Railway 가 SMTP 아웃바운드를 막아서
+      # (OSError 101) 넣었던 우회로이고, Render 에서도 막히는지는 미검증이다.
+      # 배포 후 SendGrid·SMTP 가 둘 다 실패하면 그때 Brevo 를 발급받아
+      # 대시보드에서 BREVO_API_KEY 를 추가하면 된다 — Blueprint 수정 불필요.
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
         sync: false
 
       # RAILWAY_BACKEND_URL is misnamed but not Railway-specific: routes/auth.py
