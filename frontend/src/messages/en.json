@@ -62,34 +62,6 @@
     "acceptAll": "Accept all"
   },
   "dashboard": {
-    "home": {
-      "srTitle": "Home — Portfolio dashboard"
-    },
-    "deskCheckin": {
-      "yourDesk": "Your desk",
-      "greetingMorning": "Good morning",
-      "greetingAfternoon": "Good afternoon",
-      "greetingEvening": "Good evening",
-      "honorific": "",
-      "noPositions": "Add your first position to the ledger and the desk will start watching your portfolio.",
-      "watchingCount": "Watching {count} positions.",
-      "topMoverPrefix": "Today's biggest mover is",
-      "topMoverSuffix": ".",
-      "addFirst": "Add first position →",
-      "viewMirror": "Open the mirror →"
-    },
-    "moodNudge": {
-      "ariaLabel": "Mood check",
-      "question": "How are you feeling?",
-      "dismissAriaLabel": "Dismiss mood check",
-      "personaFallback": "Today's check-in",
-      "calm": "Calm",
-      "excited": "Energised",
-      "anxious": "Anxious",
-      "coachingCalm": "Good. Principles set in a calm state carry you through volatile days. Logging what you observed today is enough.",
-      "coachingExcited": "On good days, slow down a beat. Excitement can rush judgment — what you see today will still be there tomorrow.",
-      "coachingAnxious": "On anxious days, closing the screen is a valid move. Markets open tomorrow. Observe only for now; decide when you're calm."
-    },
     "portfolio": {
       "kisConnectRequired": "KIS broker connection required",
       "kisSyncConfirm": "Sync holdings, average cost, and quantity from your KIS account. Proceed?",
@@ -260,12 +232,7 @@
     }
   },
   "persona": {
-    "classifierKicker": "Persona classifier",
-    "surfaceNames": {
-      "growth": "Growth",
-      "balanced": "Balanced",
-      "income": "Income"
-    }
+    "classifierKicker": "Persona classifier"
   },
   "support": {
     "contactKicker": "Contact",

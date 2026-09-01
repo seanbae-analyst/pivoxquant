@@ -18,34 +18,6 @@
     }
   },
   "dashboard": {
-    "home": {
-      "srTitle": "홈 — 포트폴리오 대시보드"
-    },
-    "deskCheckin": {
-      "yourDesk": "Your desk",
-      "greetingMorning": "좋은 아침이에요",
-      "greetingAfternoon": "좋은 오후예요",
-      "greetingEvening": "편안한 저녁이에요",
-      "honorific": "님",
-      "noPositions": "첫 종목을 장부에 올리면, 데스크가 당신의 포트폴리오를 지켜보기 시작해요.",
-      "watchingCount": "{count}개 종목을 지켜보고 있어요.",
-      "topMoverPrefix": "오늘 가장 큰 움직임은",
-      "topMoverSuffix": "였어요.",
-      "addFirst": "첫 종목 추가 →",
-      "viewMirror": "거울 보기 →"
-    },
-    "moodNudge": {
-      "ariaLabel": "기분 체크",
-      "question": "지금 기분, 어때요?",
-      "dismissAriaLabel": "기분 체크 닫기",
-      "personaFallback": "오늘의 컨디션",
-      "calm": "차분",
-      "excited": "들뜸",
-      "anxious": "불안",
-      "coachingCalm": "좋아요. 차분할 때 세운 원칙이 변동성 큰 날을 버티게 해줘요. 오늘 본 데이터는 기록만 남겨둬도 충분해요.",
-      "coachingExcited": "기분 좋은 날일수록 한 박자 쉬어가요. 들뜸은 판단을 서두르게 만들 수 있어요 — 오늘 본 건 내일 다시 봐도 늦지 않아요.",
-      "coachingAnxious": "불안한 날엔 화면을 잠깐 닫는 것도 방법이에요. 시장은 내일도 열려요. 지금은 관찰만, 판단은 차분해진 뒤에 해도 돼요."
-    },
     "portfolio": {
       "kisConnectRequired": "KIS broker 연결 필요",
       "kisSyncConfirm": "KIS 계좌에서 보유 종목/평단/수량을 동기화합니다. 진행할까요?",
@@ -260,12 +232,7 @@
     }
   },
   "persona": {
-    "classifierKicker": "투자자 유형 분류",
-    "surfaceNames": {
-      "growth": "성장형",
-      "balanced": "균형형",
-      "income": "수익형"
-    }
+    "classifierKicker": "투자자 유형 분류"
   },
   "support": {
     "contactKicker": "문의하기",
