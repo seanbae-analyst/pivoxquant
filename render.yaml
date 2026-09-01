@@ -103,6 +103,16 @@ services:
       # 대시보드에서 BREVO_API_KEY 를 추가하면 된다 — Blueprint 수정 불필요.
       - key: SENDGRID_API_KEY
         sync: false
+      # SENDGRID_WEBHOOK_PUBLIC_KEY is NOT listed here on purpose — it is the
+      # ECDSA key that verifies SendGrid's event webhook, and it is the only
+      # `recommended` inventory entry render.yaml does not supply (measured
+      # 2026-09-01: required-missing 0, recommended-missing 1). Consequence:
+      # POST /api/webhooks/sendgrid returns 503 and open/bounce tracking
+      # (Artifact.opened_at, auto opt-out on spamreport) stays dark until it
+      # is added in the Render dashboard. It fails CLOSED — an unset key
+      # refuses events rather than accepting forged ones — so this does not
+      # block launch and does not affect sending. Add it when you want
+      # delivery telemetry; no Blueprint change needed.
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

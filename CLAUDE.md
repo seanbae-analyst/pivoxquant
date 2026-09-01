@@ -178,9 +178,13 @@ routes/   alerts · auth(+auth_alias) · behavior · billing · consents · data
           · profile · push · realtime · sendgrid_webhook · support · trades
           (조건부·부팅 시 미등록: command_center=opt-in. 위 23 카운트에 없다.
            sim_onboard 은 2026-09-01 CAUS 와 함께 삭제 — 함정 §7)
-services/ behavior · broker · customer · data · email · inbox · kis
-          · legal · marketing · mock_data · observability · portfolio
-          · pre_trade · profile · scheduler · support · tax · trading
+services/ behavior · customer · data · email · inbox · kis · legal
+          · marketing · observability · portfolio · pre_trade · profile
+          · scheduler · support · tax
+          (+ 루트 모듈 다수: cache_service · legal_filter · fx_service …)
+          ⚠️ `broker/` `mock_data/` `trading/` 은 **디렉터리는 있어도 추적 파일
+          0개**다 — 내용이 지워지고 껍데기만 남았다(로컬 `__pycache__` 뿐).
+          import 하는 코드도 0곳. 2026-09-01 실측.
 ```
 
 **`routes/market.py` 는 2026-09-01 에 18 → 4 라우트로 줄었다**

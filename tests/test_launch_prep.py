@@ -61,7 +61,7 @@ class TestInventoryShape:
         names = {e[0] for e in lp._INVENTORY}
         for must_have in (
             "SENDGRID_API_KEY",  # Wave 5: PDF cron silent drop
-            "BREVO_API_KEY",  # 2026-09-01: the actual prod email path
+            "BREVO_API_KEY",  # middle of the SendGrid->Brevo->SMTP cascade
             "FMP_API_KEY",  # Wave 5: chart + news empty root cause
             "KIS_APP_KEY",  # KR market data sourcing
             "DATABASE_URL",  # core

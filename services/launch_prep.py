@@ -29,8 +29,9 @@ existing patterns we've hit this session:
   CRITICAL 로 계속 보고하면 진짜 경보가 묻힌다.
 - ``BETA_PASSWORD`` **제거** — 백엔드는 이 값을 읽지 않는다. 베타 게이트는
   ``frontend/middleware.ts`` 소관이고 값도 Vercel 에 있다.
-- ``BREVO_API_KEY`` **추가** — 반대로 이건 실제 발송 경로인데 인벤토리에 없어서
-  누락돼도 부팅 로그가 침묵했다.
+- ``BREVO_API_KEY`` — 2026-09-01 에 인벤토리에 추가했다가 같은 날 severity 를
+  ``optional`` 로 내렸다. "실제 발송 경로" 라는 근거가 Railway 의 SMTP 차단이었고,
+  Render 는 SendGrid/SMTP 를 그대로 쓴다 (커밋 ``cee3d291`` 참조).
 
 - ``services/kis/service.py`` — ``KIS_APP_KEY`` / ``KIS_APP_SECRET``
   missing → KR market endpoints lose KIS path (FMP fallback also
@@ -115,12 +116,16 @@ _INVENTORY: tuple[tuple[str, Literal["required", "recommended", "optional"], str
     # 참조)이지 자문 언어가 아니다. 기존 항목도 전부 같은 값을 쓰는데, 훅이
     # diff 의 추가된 줄만 보기 때문에 새 줄만 걸린다. 마커는 `// legal-ok` 를
     # 쓴다 — 훅이 받는 다른 마커(noqa 형식)는 ruff 가 자기 지시어로 오해한다.
-    ("BREVO_API_KEY", "recommended",  # // legal-ok
-     "실제 발송 경로. 2026-06-30 부터 Brevo HTTP API 가 prod 발신을 담당한다 "
-     "(Railway 가 SMTP 아웃바운드를 막아 OSError 101, SendGrid 는 401). "
-     "BREVO_PROVIDER_PRIMARY=true 와 짝이며, 이게 없으면 cascade 가 죽은 "
-     "SendGrid/SMTP 로 떨어져 메일이 조용히 안 나간다. "
-     "2026-09-01 추가 — 그동안 인벤토리에 없어 감시 사각이었다."),
+    ("BREVO_API_KEY", "optional",  # // legal-ok
+     "Brevo HTTP API. cascade 는 SendGrid → Brevo → SMTP 이고 Brevo 는 "
+     "**가운데 단계**다. 2026-06-30 에 prod 발신을 담당했던 건 Railway 가 "
+     "아웃바운드 SMTP 를 막았기(OSError 101) 때문인데, 그건 Railway 사실이지 "
+     "일반 사실이 아니다. Render 로 옮기면서 `render.yaml` 은 "
+     "SENDGRID_API_KEY + SMTP_* 를 요구하고 Brevo 는 요구하지 않는다 "
+     "(둘 다 로컬 .env 에 자격증명이 있고 Brevo 만 없다). "
+     "2026-09-01 정정: severity 를 optional 로 내렸다. 이 키가 없다고 경고하면 "
+     "필요 없는 키를 찾게 만든다. Render 에서 SMTP 가 실제로 막히는 게 "
+     "확인되면 그때 대시보드에서 추가하면 된다 — Blueprint 수정 불필요."),
     ("SMTP_HOST", "optional",
      "Fallback transport when SendGrid is unset or 5xx-failing. "
      "Postmark works; smtp.postmarkapp.com:587"),

@@ -211,8 +211,19 @@ Render 첫 배포에서 터질 수 있는 걸 미리 잡으려고 돌린 것들.
 없다). 결과 `/api/health` **200**, `production: true`, `db: ok`.
 URL rule 은 로컬 134 가 아니라 **132** 로 떴는데 정상이다 — `DEV_LOGIN_SECRET`
 이 없어 `dev_auth` 가 마운트를 거부한 것이고, 이는 가드가 의도대로 동작한다는 뜻.
+(⚠️ 134/132 는 **이 문서 작성 시점 수치**다. 2026-09-01 밤 죽은코드 정리 이후
+로컬 기준선은 **120 rule / 23 blueprint** — 차이 자체가 아니라 `dev_auth` 만큼
+줄어드는 **패턴**을 보라.)
 
 ### 6.2 env 인벤토리 버그 — 고침
+
+> ⚠️ **2026-09-01 밤 정정.** 아래 문단의 "BREVO 가 실제 발신 경로" 라는 전제는
+> 같은 날 커밋 `cee3d291` 이 뒤집었다. cascade 는 SendGrid → Brevo → SMTP 이고
+> Brevo 가 prod 를 담당한 이유는 **Railway 가 아웃바운드 SMTP 를 막아서**였다 —
+> Railway 사실이지 일반 사실이 아니다. `render.yaml` 은 SENDGRID_API_KEY +
+> SMTP_* 를 요구하고 Brevo 는 요구하지 않으며, 그 둘의 자격증명은 `.env` 에 있다.
+> `launch_prep` 의 BREVO severity 도 `recommended` → **`optional`** 로 내렸다.
+> **Render 배포에 Brevo 키는 필요 없다.**
 
 부팅 점검이 **엉뚱한 키를 보고 있었다**. `BREVO_API_KEY` — 6-30 부터 실제 발신을
 담당하는 그 키 — 가 인벤토리에 **아예 없어서**, 누락돼도 부팅 로그가 침묵했다.

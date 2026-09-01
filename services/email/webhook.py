@@ -9,9 +9,20 @@ Security
 SendGrid signs every request with ECDSA P-256 (SHA-256) when the
 "Signed Event Webhook Requests" feature is enabled. We verify the
 signature via the public key configured at
-``SENDGRID_WEBHOOK_PUBLIC_KEY`` (PEM). When the env var is unset we
-skip verification — useful for local smoke tests, but the production
-deployment must always have it set.
+``SENDGRID_WEBHOOK_PUBLIC_KEY`` (PEM).
+
+⚠️ 2026-09-01 correction: this used to say "when the env var is unset we
+skip verification". **It does not.** Since the Wave G-3 P0 fix the handler
+returns **503 and processes nothing** when the key is missing, regardless of
+FLASK_ENV — because skipping meant production could accept forged ``bounce``
+/ ``spamreport`` events and force any user into ``email_opt_out=True``
+(정통망법 §50 auto opt-out). Local smoke tests must set a throwaway key or
+mock the route; there is no silent-skip path to rely on.
+
+Deploy note: `render.yaml` does not declare this key, so on Render every
+SendGrid event webhook 503s until it is added in the dashboard. That costs
+open/bounce tracking (``Artifact.opened_at`` etc.) — it does NOT block
+sending, and it fails closed rather than open.
 
 CSRF
 ----
