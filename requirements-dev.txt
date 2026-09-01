@@ -1,6 +1,7 @@
 # PivoxQuant — development-only dependencies
 # Install: pip install -r requirements-dev.txt
-# These are NOT included in the production Railway deployment.
+# These are NOT included in the production deployment (render.yaml installs
+# requirements.txt only).
 
 # Secret entropy scan — used by .githooks/pre-commit (H1 detect-secrets guard)
 # Open source (Yelp), PyPI, 0 cost.
@@ -14,4 +15,12 @@ ruff>=0.4.0
 # Test runner — used by .githooks/pre-push (H3 smoke guard)
 # Already transitive via production tests but pinned here for explicitness.
 pytest>=8.0.0
-pytest-timeout>=2.3.1
+
+# pytest-timeout was declared here until 2026-09-01 and removed: it was never
+# installed in the venv, no test uses @pytest.mark.timeout, and
+# .githooks/pre-push:256 already works around its absence in a comment
+# ("pytest-timeout is not installed; smoke is fast anyway"). A declared-but-
+# absent dependency is worse than none — passing --timeout to pytest fails with
+# "unrecognized arguments", which reads like a broken command rather than a
+# missing package. Add it back together with an actual timeout marker if a
+# hanging test ever justifies it.
