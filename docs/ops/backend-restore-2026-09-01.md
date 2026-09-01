@@ -198,3 +198,49 @@ dev-login 으로 세션을 만든 뒤 실제 엔드포인트를 때렸다.
   렌더하는지이고, 그건 Render URL 로 Vercel 을 재연결한 뒤에 가능하다
 - **시크릿 재발급** — `.secrets/RENDER_PASTE_VALUES.txt` 의 "CEO 가 가져와야
   하는 값" 목록
+
+---
+
+## 6. 배포 전 사전 검증 (2026-09-01 오후, CEO 부재중 자율 진행)
+
+Render 첫 배포에서 터질 수 있는 걸 미리 잡으려고 돌린 것들.
+
+### 6.1 Render 환경 재현 부팅 — ✅ 통과
+
+`.env` 를 치우고 **`render.yaml` 이 주는 변수만으로** 부팅했다 (Render 엔 .env 가
+없다). 결과 `/api/health` **200**, `production: true`, `db: ok`.
+URL rule 은 로컬 134 가 아니라 **132** 로 떴는데 정상이다 — `DEV_LOGIN_SECRET`
+이 없어 `dev_auth` 가 마운트를 거부한 것이고, 이는 가드가 의도대로 동작한다는 뜻.
+
+### 6.2 env 인벤토리 버그 — 고침
+
+부팅 점검이 **엉뚱한 키를 보고 있었다**. `BREVO_API_KEY` — 6-30 부터 실제 발신을
+담당하는 그 키 — 가 인벤토리에 **아예 없어서**, 누락돼도 부팅 로그가 침묵했다.
+반대로 소비자가 0 이 된 `ANTHROPIC_API_KEY` 와 백엔드가 읽지도 않는
+`BETA_PASSWORD`(프론트 전용, 값은 Vercel)는 CRITICAL 로 계속 보고되고 있었다.
+셋 다 정정했다.
+
+### 6.3 requirements 누락 2건 — 고침
+
+직접 import 하는데 선언은 없던 패키지 둘. `itsdangerous` 는 Flask 전이라 안전하지만,
+**`websockets` 는 위험했다** — KIS 웹소켓(KR 실시간 시세)이 쓰는데 이 패키지가
+**제거 예정인 `alpaca-py` 의 전이 의존성으로만** 들어오고 있었다. 게다가 import 가
+try/except 로 감싸져 `WEBSOCKETS_OK=False` 로 **조용히** degrade 하므로 터져도
+원인이 안 보인다. 둘 다 직접 선언했다.
+
+### 6.4 의존성 해석 — ✅ 충돌 없음
+
+`pip install --dry-run -r requirements.txt` exit 0.
+
+### ⚠️ 6.5 정직 고지 — 파이썬 버전이 다르다
+
+**로컬 venv 는 3.12.1 인데 프로덕션은 3.11** (`runtime.txt` = python-3.11.9,
+Dockerfile = `python:3.11-slim`). 이 머신에 3.11 이 없어서 **프로덕션 파이썬으로는
+아무것도 검증하지 못했다.** 위 6.1~6.4 는 전부 3.12 기준 결과다.
+
+호환성 자체는 이력이 보증한다 — 이 코드는 Railway 에서 3.11 로 돌던 코드다.
+오늘 변경분도 코드 삭제·주석·requirements 3줄이라 3.11 리스크는 낮다. 다만
+"검증했다"고 말할 수 있는 범위는 아니다.
+
+Docker 실빌드도 여전히 미검증이다(이 머신에 Docker 없음). **Render 첫 빌드가
+6.5 와 Dockerfile 을 동시에 검증하는 지점**이다.
