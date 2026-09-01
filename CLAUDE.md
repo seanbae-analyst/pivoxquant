@@ -19,23 +19,35 @@
 > 검증(2026-09-01 최종): pytest 2221 / vitest 353 / Playwright v2 smoke 16 /
 > tsc·eslint clean / 부팅 135 rules / next build 36 routes. **prod 배포 완료.**
 
-## 현재 상태 요약 (2026-08-30 실측)
-🔴 **백엔드: 소멸 (복구 불가)** — CEO 가 **Railway 계정 자체를 삭제**(2026-08-30 확인).
-  앱 + PostgreSQL prod DB 가 함께 사라졌다. 되살리는 게 아니라 **재구축 대상**이다.
-  · 남은 것: alembic 리비전 52개 → **스키마는 100% 재생성 가능**. 코드 전량 보존.
+## 현재 상태 요약 (2026-09-01 실측)
+🟡 **백엔드: DB 재구축 완료 / 앱 호스팅 대기** (2026-09-01 실측). Railway 계정이
+  삭제되어 앱 + prod DB 가 함께 사라졌던 건에 대해, **DB 는 이미 새로 세웠다.**
+  · **Supabase Postgres 가동 중** — 프로젝트 `pivoxquant` / `yjiztgummaxecriiuumt`
+    / ap-northeast-2. 43 테이블 생성 + alembic `049` stamp 완료.
+    앱 부팅 → `/api/health` **200 `{"db":"ok"}`** 실측됨.
+    **로그인 이후 E2E 도 API 레벨은 통과** — dev-login → 생년월일 게이트 →
+    `/api/mirror-home`·`/api/portfolio`·`/api/pre-trade/start`(행 INSERT)·
+    behavior mirror 전부 200. 검증 데이터는 삭제해 DB 는 백지 상태다.
+    접속은 **session pooler 경유 필수** (`aws-0-ap-northeast-2.pooler.supabase.com:5432`)
+    — 직결 호스트 `db.*.supabase.co` 는 IPv4 로 해석되지 않는다.
+    롤은 `postgres` 가 아니라 전용 `pivox_app` (Supabase 가 postgres 롤 비번 변경을 막는다).
+  · 남은 것: **앱 호스팅** — Render 로 결정됨. `render.yaml` Blueprint 작성 완료,
+    CEO 가입 + Blueprint 클릭 + 시크릿 붙여넣기만 남았다.
+    붙여넣을 값: `.secrets/RENDER_PASTE_VALUES.txt` (gitignore, 커밋 안 됨).
   · 사라진 것: prod DB 데이터(클로즈드 베타라 실사용자 데이터는 사실상 없음),
     Railway env vars(BREVO_API_KEY 등 시크릿 **전부 재발급/재설정 필요**).
   · 로컬 `pivoxquant.db` 는 dev 사본이지 prod 백업이 아니다.
-  → 재개 시 호스팅을 새로 고른다(Railway 재가입 / Render / Fly.io / Supabase 등).
-    **결정 전까지 백엔드 의존 작업은 전부 보류.**
+  → 런북: `docs/ops/backend-restore-2026-09-01.md`
 ✅ **프론트엔드: prod 라이브** — Vercel `www.pivoxquant.com` 200 정상, 실제 제품
   (로그인 게이트) 서빙 중. 마지막 배포 2026-06-29 (PR #531, demo mode OFF).
   Vercel 계정에 pivoxquant / pivox-brief / pivoxdata 3개 프로젝트 정상 존재.
 **결제: Stripe 통합 완료, 게이트로 비활성** — `BUSINESS_REGISTRATION` 미완 +
   변호사 Q1-Q15 자문 대기로 prod 는 503 `BUSINESS_REGISTRATION_PENDING` 반환.
   사업자등록 459-01-03808 발급됨, 통신판매업 신고 + 유료결제 활성화는 의견서 후.
-**코드**: 브랜치 `fix/email-provider-retry` 계열, 진짜 미푸시 커밋 1건
-  (`38beb633` twin KRW→USD P0 데이터손상 fix). 나머지 3건은 이미 main 에 반영됨.
+**코드**: 백엔드 복구는 `fix/backend-restore-render-supabase` → **PR #546**.
+  ⚠️ 2026-09-01 정정: `38beb633` 을 "미푸시" 로 적어 뒀던 건 **틀렸다** —
+  `origin/fix/email-provider-retry` 에 이미 올라가 있다. 미푸시가 아니라
+  **미머지**다 (`git branch -a --contains 38beb633` 로 확인).
 
 ## 알려진 잔여 이슈 (2026-05-23 기준, 외부 액션 / 법무 의존)
 - **이메일: 발신 ✅ / 수신 ✅**: **발신** = **Brevo HTTP API** (2026-06-30 전환 — Railway 가
@@ -57,7 +69,9 @@
 - 상세 버그 이력: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md`
 
 ## 기술 스택
-- **Backend**: Flask + SQLAlchemy + PostgreSQL (prod, 현재 호스팅 미정) / SQLite (local)
+- **Backend**: Flask + SQLAlchemy + PostgreSQL — prod DB = **Supabase**
+  (ap-northeast-2, session pooler 경유), 앱 호스팅 = **Render**(`render.yaml`,
+  배포 대기) / SQLite (local)
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
 - **AI**: Claude API — 남은 사용처는 지원 챗봇 / 이메일 문안 등 보조 경로.
   종목 SWOT·시그널·섹터·코칭 등 **분석 AI 는 표면과 함께 삭제됨**.
@@ -236,23 +250,31 @@ CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in templ
 
 ## 출시까지 남은 것 (2026-08-31 갱신)
 
-### 🔴 최우선 — 다음 세션 주제: 백엔드 복구
+### 🔴 최우선 — 백엔드 복구 (1·2 완료 / 3~5 남음)
 prod 프론트는 살아있지만 **로그인 이후가 전부 죽어 있다**. 순서대로:
 
-1. **호스팅 선정** (CEO 액션 — 가입·결제는 agent 가 못 한다).
-   후보: Railway 재가입 / Render / Fly.io / Supabase. Postgres 가 붙는 곳이면 된다.
-2. **DB 재생성** — alembic 리비전 52개로 스키마 100% 재현 가능.
-   `flask db upgrade` (Procfile 의 release 단계가 이미 이걸 한다).
-   prod 데이터는 소실됐지만 클로즈드 베타라 실사용자 데이터는 사실상 없다.
-3. **시크릿 재설정** — Railway env vars 전량 소실. 필요 목록은 `.env.example`.
-   최소 세트: `DATABASE_URL` · `SECRET_KEY` · `PIVOX_BROKER_ENCRYPTION_KEY` ·
-   Google/Kakao OAuth client id+secret · `FMP_API_KEY` · `BREVO_API_KEY`
-   (+`BREVO_PROVIDER_PRIMARY=true`) · KIS 앱키. `DEV_LOGIN_SECRET` 은 **절대 금지**
-   (routes/__init__.py 가 Railway 마커 감지 시 부팅을 거부한다).
-4. **프론트 재연결** — Vercel 대시보드의 `RAILWAY_BACKEND_URL`(또는
-   `NEXT_PUBLIC_API_URL`)을 새 호스트로. `vercel env` + `vercel redeploy`.
+1. ✅ **호스팅 선정** — **Render(앱) + Supabase(Postgres)**. 2026-09-01 결정.
+2. ✅ **DB 재생성 완료** — Supabase `pivoxquant` (ap-northeast-2), 43 테이블 +
+   alembic `049` stamp + `/api/health` 200 실측.
+   ⚠️ **인수인계서가 틀렸던 지점**: "alembic 52 리비전으로 스키마 100% 재현"은
+   **사실이 아니다.** `app.py:414` 의 `db.create_all()` 이 조건 없이 돌기 때문에,
+   `flask db upgrade` 는 자기가 실행되기 전에 create_all 이 만들어 놓은 테이블과
+   충돌해 **004 에서 DuplicateTable 로 죽는다**(실측). 스키마의 SoT 는 **ORM 모델**
+   이고 alembic 은 이력일 뿐이다 — `app.py:1024` 주석이 이미 "prod 는 alembic
+   미실행" 이라고 적고 있다. 빈 DB 를 세우는 올바른 순서는
+   **① 앱 1회 부팅(create_all) → ② `flask db stamp head`** 이다. ②를 빼먹으면
+   `alembic_version` 이 없어 다음 마이그레이션이 001 부터 다시 돌다 영구히 깨진다.
+3. **시크릿 재설정** — Railway env vars 전량 소실.
+   `render.yaml` 이 `sync: false` 로 Render 에게 물어보게 해 뒀고, 붙여넣을 값과
+   출처는 `.secrets/RENDER_PASTE_VALUES.txt` 에 있다(gitignore).
+   `DATABASE_URL` 과 `PIVOX_BROKER_ENCRYPTION_KEY` 는 이미 생성해 넣어 뒀다.
+   `DEV_LOGIN_SECRET` 은 **절대 금지** — `routes/__init__.py` 가 플랫폼 마커
+   (Railway/**Render**/Fly) 또는 `FLASK_ENV=production` 감지 시 부팅을 거부한다.
+4. **프론트 재연결** — Vercel 의 `RAILWAY_BACKEND_URL`(또는 `NEXT_PUBLIC_API_URL`)
+   을 Render URL 로. `vercel env` + `vercel redeploy`. vercel CLI 는 인증돼 있다.
    ⚠️ 이 값이 `/api` 프록시의 SoT다 (next.config.ts:9-10).
 5. **검증** — `/api/health` 200 → 로그인 → `/mirror` 렌더 → `/portfolio` 포지션.
+   Google/Kakao OAuth 콘솔의 **redirect URI 에 Render 도메인 추가**가 선행돼야 한다.
 
 **Dockerfile 은 2026-09-01 에 122→63 줄로 줄였다** (삭제된 PDF/PNG 렌더용
 폰트스택·Chromium 제거). 다만 **이 머신에 Docker 가 없어 정적 감사만 했다** —
