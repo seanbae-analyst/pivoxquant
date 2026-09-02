@@ -35,6 +35,13 @@
  *
  * Tone: v3 — Vantablack + Bronze + Playfair UPRIGHT, no italic.
  * Mobile-first (375px): every row stacks, no horizontal scroll.
+ *
+ * Motion + shell match the five sibling mirrors exactly: `animate="visible"`
+ * on mount (NOT `whileInView`) inside the same bordered card treatment. The
+ * first draft used a scroll-triggered reveal and no border, which both looked
+ * wrong beside its five neighbours in one section and broke mirror-render's
+ * jsdom mount — jsdom has no IntersectionObserver, which is exactly why that
+ * suite exists.
  */
 
 import { motion } from "motion/react";
@@ -127,16 +134,22 @@ export function FrictionOutcomeMirror() {
     );
   }
 
-  if (!view) return null;
-
-  if (!view.hasData) {
+  // null data (no rows yet, or a 404 soft-empty) renders the EMPTY state, not
+  // nothing — that is the shared contract with the five sibling mirrors, and
+  // mirror-render.test.tsx pins it. Bailing to null here made this mirror
+  // silently vanish on a fresh account while its five neighbours showed their
+  // empty states.
+  if (!view || !view.hasData) {
     return (
       <motion.section
         variants={fadeUp}
         initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-60px" }}
-        className="py-6"
+        animate="visible"
+        className="rounded-[2px] border p-5 sm:p-6"
+        style={{
+          borderColor: "var(--pq-ivory-line)",
+          background: "var(--pq-card-veil)",
+        }}
         aria-label="멈춤의 귀결"
       >
         <RuledKicker>멈춤의 귀결</RuledKicker>
@@ -156,9 +169,12 @@ export function FrictionOutcomeMirror() {
     <motion.section
       variants={fadeUp}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-60px" }}
-      className="py-6"
+      animate="visible"
+      className="rounded-[2px] border p-5 sm:p-6"
+      style={{
+        borderColor: "var(--pq-ivory-line)",
+        background: "var(--pq-card-veil)",
+      }}
       aria-label="멈춤의 귀결"
     >
       <RuledKicker>멈춤의 귀결</RuledKicker>
