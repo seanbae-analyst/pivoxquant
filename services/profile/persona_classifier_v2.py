@@ -123,6 +123,32 @@ PERSONA_CENTROIDS_V2: dict[str, tuple[float, ...]] = {
 
 # Per-feature weight into the cosine. Trade mechanics dominate
 # (it's the hardest-to-lie-about signal); self-report is weakest.
+#
+# ⚠️ D9 ``feedback_engagement`` is weighted 0.0 — the axis is structurally
+# uncomputable, not merely sparse (2026-09-02).
+#
+# It is derived from ``ArtifactFeedback`` rows, which require an
+# ``artifact_id``; the artefact tree was deleted on 2026-08-31 (47a5e8f3) and
+# nothing creates artefacts any more, so ``_fetch_feedback`` returns [] for
+# every user, forever. That left the axis pinned at its 0.5 "no evidence"
+# default while the eight persona centroids spread D9 across 0.30 (beginner)
+# to 0.70 (quant) — so a constant 0.5 was not neutral. It applied a permanent
+# distance penalty to the personas furthest from 0.5 and an equally permanent
+# advantage to those nearest it, biasing classification *against* `beginner`
+# — the persona most new closed-beta users should land on.
+#
+# Weight 0.0 removes it from both places that consume these weights:
+#   * ``_weighted_distance`` — the term contributes 0 to `total` AND 0 to
+#     `norm`, so the axis drops out of the distance entirely (not merely
+#     shrinks).
+#   * ``_confidence_from_ranking`` — `total_w` no longer counts a slot that
+#     `present_w` could never fill, so evidence_ratio can reach 1.0 again.
+#     Before this, no user could exceed 0.45/8.00 = 5.6% short of full
+#     evidence, i.e. confidence was silently capped.
+#
+# The key, label and centroid values are deliberately KEPT so the 9-D
+# centroid table stays intact and the axis is revivable. **If artefact
+# feedback ever returns, restore this weight to 0.45** — and only then.
 FEATURE_WEIGHTS: dict[str, float] = {
     "holding_period":       1.25,
     "turnover":             1.25,
@@ -132,7 +158,7 @@ FEATURE_WEIGHTS: dict[str, float] = {
     "loss_cut_discipline":  1.00,
     "declared_risk":        0.70,
     "conviction_stability": 0.55,
-    "feedback_engagement":  0.45,
+    "feedback_engagement":  0.00,  # dormant — see note above
 }
 
 
@@ -391,10 +417,18 @@ def _confidence_from_ranking(
 
 
 def _breakdown(vec: dict[str, float], best_persona: str) -> list[dict]:
-    """Per-feature contribution: closer to centroid = higher contribution."""
+    """Per-feature contribution: closer to centroid = higher contribution.
+
+    Zero-weight axes are omitted. A weight of 0 means the axis took no part
+    in choosing this persona (see the FEATURE_WEIGHTS note on D9), so listing
+    it would present a number the classification never used — the breakdown
+    is meant to answer "why this persona", and a 0-weight row answers nothing.
+    """
     centroid = PERSONA_CENTROIDS_V2[best_persona]
     rows: list[dict] = []
     for key, cz in zip(FEATURE_KEYS, centroid):
+        if FEATURE_WEIGHTS[key] == 0:
+            continue
         dist = abs(vec[key] - cz)
         # Raw "closeness" ∈ [0, 1]. Weight-scaled contribution.
         closeness = 1.0 - min(1.0, dist)
