@@ -40,7 +40,7 @@ from services.behavior.turnover_mirror import compute_turnover_mirror
 from services.pre_trade.friction_outcome import compute_friction_outcome
 from services.profile.holding_mirror import compute_holding_mirror
 
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 from services.legal.disclaimers import DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 logger = logging.getLogger(__name__)
@@ -298,6 +298,17 @@ _FRICTION_OUTCOME_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/friction-outcome", methods=["GET"])
 @api_auth
+# 2026-09-02 — 이 파일에서 스크럽 데코레이터를 단 첫 라우트다. legal-deep-scan
+# 의 scan-api-decorator 가 이 라우트 추가를 잡았고, 워크플로가 제시하는 다른
+# 선택지(`# legal-exempt:`)는 "변호사 사인 필요, 자가 승인 불가" 라고 명시돼
+# 있으므로 데코레이터를 다는 쪽이 맞다. api_auth **뒤에** 놓아 401 은 스크럽
+# 없이 짧게 끊고 happy-path 본문만 필터한다 (decorators.py 계약).
+#
+# ⚠️ 위쪽 5종 mirror 라우트는 이 가드보다 먼저 만들어져 아직 스크럽되지
+# 않는다. 응답이 숫자 + 고정 면책 문자열이라 현재 위험은 낮지만, 이 파일이
+# 이제 `legal_scrub_response` 를 포함하므로 **가드는 앞으로 이 파일의 새
+# 라우트를 잡지 못한다.** 5종에도 붙일지는 별도 판단이 필요하다.
+@legal_scrub_response
 def friction_outcome():
     """멈춤이 실제로 무엇으로 이어졌는지 되비추는 거울.
 
