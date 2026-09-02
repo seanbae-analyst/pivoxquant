@@ -41,45 +41,29 @@ import { motion, useReducedMotion } from "motion/react";
 
 import { Eyebrow } from "./eyebrow";
 import { fadeUp, stagger } from "@/lib/motion";
+import { useT } from "@/lib/locale";
 
 type Step = {
   /** Ledger numeral — editorial, not a progress indicator. */
   numeral: string;
-  /** Korean verb — the section's spine. */
-  verb: string;
+  /** i18n key prefix under `landing.steps` (s1/s2/s3). */
+  key: string;
   /** The route this step is, so the claim stays checkable. */
   route: string;
-  /** What the user does. Second person, present tense. */
-  body: string;
-  /** The honest limit of the step — what it deliberately does NOT do. */
-  limit: string;
 };
 
+// Copy lives in messages/{ko,en}.json under `landing.steps` — the rest of the
+// landing reads through useT() and this section must too. It was hardcoded
+// Korean when first written (2026-09-02), which rendered a half-Korean page for
+// anyone on the en locale.
 const STEPS: readonly Step[] = [
-  {
-    numeral: "I",
-    verb: "멈춤",
-    route: "/pre-trade",
-    body: "매수 버튼을 누르기 전에 일곱 개의 질문에 답합니다. 왜 지금인지, 무엇이 틀리면 파는지, 이 돈을 잃어도 되는지. 답을 적는 데 걸리는 시간이 유일한 마찰입니다.",
-    limit: "종목을 골라주지 않습니다.",
-  },
-  {
-    numeral: "II",
-    verb: "기록",
-    route: "/journal",
-    body: "산 것과 사려다 만 것이 같은 자리에 남습니다. 보유기간, 회전율, 집중도, 물타기, 손익 처분 — 다섯 가지 습관이 당신의 기록에서 그대로 계산됩니다.",
-    limit: "점수를 매기지 않습니다.",
-  },
-  {
-    numeral: "III",
-    verb: "거울",
-    route: "/mirror",
-    body: "온보딩에서 스스로 선언한 투자자와, 최근 30일 거래가 말해주는 투자자를 나란히 놓습니다. 아홉 개 축에서 둘이 갈라지는 지점이 이 도구의 전부입니다.",
-    limit: "어느 쪽이 옳다고 말하지 않습니다.",
-  },
+  { numeral: "I", key: "s1", route: "/pre-trade" },
+  { numeral: "II", key: "s2", route: "/journal" },
+  { numeral: "III", key: "s3", route: "/mirror" },
 ] as const;
 
 export default function ThreeSteps() {
+  const t = useT();
   const reduce = useReducedMotion();
 
   return (
@@ -97,7 +81,7 @@ export default function ThreeSteps() {
           variants={fadeUp}
           className="mb-14 max-w-2xl md:mb-20"
         >
-          <Eyebrow className="mb-6">The loop</Eyebrow>
+          <Eyebrow className="mb-6">{t("landing.steps.eyebrow")}</Eyebrow>
           <h2
             id="pq-steps-heading"
             className="pq-silver-matte font-serif"
@@ -109,7 +93,7 @@ export default function ThreeSteps() {
               marginBottom: 24,
             }}
           >
-            화면은 셋뿐입니다.
+            {t("landing.steps.heading")}
           </h2>
           <p
             className="font-serif"
@@ -120,8 +104,7 @@ export default function ThreeSteps() {
               maxWidth: 560,
             }}
           >
-            리포트를 받아보는 서비스가 아닙니다. 당신이 남긴 기록이 유일한
-            재료이고, 도구가 하는 일은 그것을 나중에 다시 보여주는 것뿐입니다.
+            {t("landing.steps.deck")}
           </p>
         </motion.div>
 
@@ -135,7 +118,7 @@ export default function ThreeSteps() {
         >
           {STEPS.map((s) => (
             <motion.li
-              key={s.verb}
+              key={s.key}
               variants={fadeUp}
               className="flex flex-col p-7 md:p-8 lg:p-9"
               style={{ backgroundColor: "#050505" }}
@@ -160,7 +143,7 @@ export default function ThreeSteps() {
                     letterSpacing: "-0.01em",
                   }}
                 >
-                  {s.verb}
+                  {t(`landing.steps.${s.key}verb`)}
                 </h3>
                 {/* The route is the receipt: every claim in this card is
                     checkable by opening that path in the app. */}
@@ -184,7 +167,7 @@ export default function ThreeSteps() {
                   lineHeight: 1.7,
                 }}
               >
-                {s.body}
+                {t(`landing.steps.${s.key}body`)}
               </p>
 
               {/* Stating the limit is the point, not a disclaimer bolt-on:
@@ -200,7 +183,7 @@ export default function ThreeSteps() {
                   paddingTop: 14,
                 }}
               >
-                {s.limit}
+                {t(`landing.steps.${s.key}limit`)}
               </p>
             </motion.li>
           ))}

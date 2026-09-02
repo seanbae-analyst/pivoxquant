@@ -80,42 +80,19 @@ import { useT } from "@/lib/locale";
 
 /* ───────────────────────── FAQ data ───────────────────────── */
 
-// 2026-09-01: every answer below used to describe artifacts, a Risk Board,
-// weekly memos, earnings pre-briefs and a three-layer report pipeline. None
-// of those exist any more. A storefront FAQ that answers questions about a
-// deleted product is worse than no FAQ — rewritten against what ships.
-const FAQ_ITEMS = [
-  {
-    q: "이거 투자자문 아닌가요?",
-    a: "No. 자본시장법 제6조상 개인 투자자문업과 무관합니다. PivoxQuant는 당신이 직접 입력한 기록과 보유 종목을 그대로 되비추는 informational research tool입니다. 종목을 고르지도, 점수를 매기지도, 사고팔라고 말하지도 않습니다. 결정은 전적으로 당신의 몫입니다.",
-  },
-  {
-    q: "제 거래 데이터로 뭘 하나요 — 거울이 “관측”한다는 게 뭔가요?",
-    a: "두 가지를 나란히 놓습니다. 하나는 당신이 온보딩 18문항에서 스스로 선언한 투자자 유형이고, 다른 하나는 최근 30일 거래에서 관측된 행동입니다. 평균 보유기간, 회전율, 섹터 분산 같은 9개 축을 당신의 기록에서 계산할 뿐, 새로운 판단을 만들지 않습니다. 원본 거래 데이터는 암호화 저장되며 광고·외부 판매에 사용되지 않습니다. 탈퇴 시 30일 내 완전 삭제됩니다.",
-  },
-  {
-    q: "제 투자자 유형은 시간이 지나면 바뀌나요?",
-    a: "관측 페르소나는 최근 30일 거래를 다시 계산할 때마다 갱신됩니다. 선언한 유형은 당신이 18문항을 다시 풀기 전까지 그대로입니다 — 거울의 요점은 둘이 갈라지는 지점을 보여주는 것이지, 당신 대신 하나를 고르는 것이 아닙니다.",
-  },
-  {
-    q: "여기서 제가 실제로 하는 일이 뭔가요?",
-    a: "세 가지입니다. 사기 전에 멈춰 7문항으로 근거를 남기고(Pre-Trade), 보유 종목과 거래를 기록하고(Portfolio), 몇 주 뒤 그 기록이 비추는 당신을 봅니다(Mirror). 리포트를 받아보는 서비스가 아니라, 당신이 남긴 기록이 재료인 도구입니다.",
-  },
-  {
-    q: "제 증권계좌에 접근하나요?",
-    a: "Read-only. KIS (KR) read-only scope로 연결됩니다. 주문 · 출금 · 수정 불가. 연결하지 않고 보유 종목을 직접 입력해도 모든 기능이 동일하게 동작합니다. 연결 해제 시 시세 동기화가 멈추고, 데이터는 30일 보관 후 파기됩니다.",
-  },
-  {
-    q: "돈이 드나요?",
-    a: "현재 클로즈드 베타 기간 동안 전 기능 무료입니다. 유료 요금제는 아직 활성화되어 있지 않으며, 켜질 경우 사전에 안내합니다.",
-  },
-];
+// Copy lives in messages/{ko,en}.json under `landing.faq`. 2026-09-01 rewrote
+// the answers against what ships (they used to describe artifacts, a Risk Board
+// and weekly memos — none of which exist). 2026-09-02 moved them out of this
+// file: the questions were English with Korean answers, and the Korean rewrite
+// left the en locale rendering a half-Korean page.
+const FAQ_KEYS = ["1", "2", "3", "4", "5", "6"] as const;
 
 /* ═══════════════════════════════════════════════════════════════
    FAQ
    ═══════════════════════════════════════════════════════════════ */
 
 function Faq() {
+  const t = useT();
   const reduce = useReducedMotion();
   return (
     <section
@@ -131,12 +108,10 @@ function Faq() {
           variants={fadeUp}
           className="mb-12 md:mb-16"
         >
-          <Eyebrow className="mb-6">Desk Notes</Eyebrow>
-          {/* 2026-09-02: "before they subscribe" — nobody subscribes. Billing
-              is gated 503 and the beta is free. */}
-          <p className="pq-deck mb-4">
-            베타 시작 전에 가장 많이 받는 질문들.
-          </p>
+          <Eyebrow className="mb-6">{t("landing.faq.eyebrow")}</Eyebrow>
+          {/* 2026-09-02: was "Questions members ask before they subscribe."
+              — nobody subscribes. Billing is gated 503 and the beta is free. */}
+          <p className="pq-deck mb-4">{t("landing.faq.deck")}</p>
           <h2
             className="pq-silver-matte font-serif"
             style={{
@@ -146,7 +121,7 @@ function Faq() {
               fontWeight: 500,
             }}
           >
-            시작하기 전에.
+            {t("landing.faq.heading")}
           </h2>
         </motion.div>
 
@@ -156,15 +131,15 @@ function Faq() {
           viewport={{ once: true, margin: "-60px" }}
           variants={stagger}
         >
-          {FAQ_ITEMS.map((item, i) => (
+          {FAQ_KEYS.map((k, i) => (
             <motion.details
-              key={item.q}
+              key={k}
               variants={fadeUp}
               className="pq-faq-item"
               {...(i === 0 ? { open: true } : {})}
             >
               <summary>
-                <span>{item.q}</span>
+                <span>{t(`landing.faq.q${k}`)}</span>
                 <span aria-hidden className="pq-faq-icon" />
               </summary>
               <div
@@ -178,7 +153,7 @@ function Faq() {
                   maxWidth: "62ch",
                 }}
               >
-                {item.a}
+                {t(`landing.faq.a${k}`)}
               </div>
             </motion.details>
           ))}
@@ -219,7 +194,7 @@ function CtaFooter() {
           variants={fadeUp}
           className="mb-6 flex justify-center"
         >
-          <Eyebrow withDashRight>Ready?</Eyebrow>
+          <Eyebrow withDashRight>{t("landing.cta.eyebrow")}</Eyebrow>
         </motion.div>
 
         <motion.h2
@@ -245,9 +220,9 @@ function CtaFooter() {
               that promised an entity that writes to you. Nothing writes to
               you: the artifact pipeline is gone and no AI runs. The mirror
               only replays what you wrote. */}
-          당신이 적은 것을,
+          {t("landing.cta.heading1")}
           <br />
-          몇 주 뒤에 다시 봅니다.
+          {t("landing.cta.heading2")}
         </motion.h2>
 
         <motion.p
@@ -270,8 +245,7 @@ function CtaFooter() {
               even allowed by CSP at Stage 0. Advertising payment methods that
               cannot be used is 표시광고법 §3; naming card brands we have no
               merchant agreement for compounds it. */}
-          클로즈드 베타 — 전 기능 무료입니다. 결제 수단을 받지 않습니다.
-          Google 또는 Kakao 계정으로 시작하세요.
+          {t("landing.cta.sub")}
         </motion.p>
 
         <motion.div
