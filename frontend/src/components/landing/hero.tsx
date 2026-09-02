@@ -1,60 +1,57 @@
 "use client";
 
 /**
- * Hero — landing entry section.
+ * Hero — landing masthead.
  * -----------------------------------------------------------------------
- * Rebuilt 2026-05-09 (round 2) per CEO follow-up:
- *   "디자인은 뭐 변경 안한거야? 그냥 지우기만 한 마우스 따라다니는 거?"
+ * Single column, same geometry the rest of the landing uses:
  *
- * Round 1 only stripped ambient effects (cursor spotlight / aurora /
- * particles / film grain / glyph reveal / ink-bleed). The grid layout
- * with the right-side Today's Gate panel stayed identical to v4 — so
- * structurally the Hero still didn't read like /features/engine,
- * /features/personas, /features/dashboard, etc., which are all
- * single-column editorial pages: eyebrow + big italic Playfair H1 +
- * description paragraph + (downstream visuals appear in subsequent
- * sections, not docked beside the H1).
- *
- * Round 2 mirrors that exact structure. The Hero now:
- *
- *   [MarketTicker]                  ← thin info strip, retained
  *   [eyebrow rule + label]
- *   [BIG italic H1 "Your CFO learns you."]
+ *   [H1  "부자로 만들어 준다고 / 약속하지 않습니다."]
  *   [description paragraph]
- *   [primary + secondary CTAs]
+ *   [primary CTA → /signup]
  *   [disclaimer]
  *
- * No right column. No Today's Gate panel here — that surface lives in
- * the Pre-Trade feature page (/features/pre-trade) which is its
- * canonical home. The Hero now reads as the desk's masthead, exactly
- * like the masthead on every other editorial page on the site.
+ * Pure Vantablack. Zero animation. Zero cursor tracking. No italic
+ * (CEO 2026-06-15). Copy lives in messages/{ko,en}.json under `landing.hero`.
  *
- * Pure Vantablack background. Zero animation. Zero cursor tracking.
+ * 2026-09-02: the previous header described a "[MarketTicker] ← retained"
+ * strip, an H1 reading "Your CFO learns you.", and pointed at /features/engine,
+ * /features/personas, /features/explorer and /features/pre-trade as the pages
+ * this layout mirrors. The ticker is gone (see the note below), the CFO copy
+ * was replaced when the artifact pipeline was deleted, and every /features/*
+ * route 308s to "/". Header rewritten to describe what the component renders.
  *
  * Compliance: no BUY/SELL/HOLD/recommend/advice/추천/조언 vocabulary.
  */
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useT } from "@/lib/locale";
 
-const MarketTicker = dynamic(
-  () => import("./market-ticker").then((m) => m.MarketTicker),
-  {
-    ssr: false,
-    loading: () => (
-      <div
-        aria-hidden
-        style={{
-          height: 32,
-          borderBottom: "1px solid rgba(var(--pq-bronze-wash-rgb), 0.22)",
-          backgroundColor: "rgba(5, 5, 5, 0.78)",
-        }}
-      />
-    ),
-  },
-);
+/*
+ * ⚠️ 2026-09-02 — <MarketTicker/> removed from the public Hero.
+ *
+ * The strip read GET /api/public/market-snapshot (no auth) and rendered KOSPI,
+ * KOSDAQ, USD/KRW, S&P 500, Nasdaq 100 and VIX to anyone who opened the site.
+ * Three reasons it had to go, in order of weight:
+ *
+ * 1. FMP terms §2.2.2 forbid displaying their data to users without a separate
+ *    Data Display Agreement, and the clause says "complimentary or paid" — a
+ *    free beta is covered. The US rows here are FMP-derived (SPY/QQQ/VIXY
+ *    proxies, see routes/market.py::public_market_snapshot). An unauthenticated,
+ *    crawlable page was the widest possible surface for that exposure.
+ * 2. It contradicted the product. CLAUDE.md: the three screens that matter
+ *    (/pre-trade, /journal, /mirror) never call a price feed at all — quotes
+ *    exist only for /portfolio valuation. A macro ticker above the hero framed
+ *    the product as a market terminal, which is the thing it deliberately is not.
+ * 3. It was dead on prod anyway. The backend is unreachable (api/health → 404
+ *    measured 2026-09-02), so the component's honest no-fabricated-values
+ *    fallback rendered an empty 32px band on every visit.
+ *
+ * market-ticker.tsx is intentionally KEPT — the dashboard-side usage and its
+ * proxy-disclosure logic are still wanted. This is a landing-only removal.
+ * Reinstating it here needs the FMP Data Display Agreement first.
+ */
 
 export function Hero() {
   const t = useT();
@@ -67,8 +64,6 @@ export function Hero() {
         color: "var(--pq-ivory)",
       }}
     >
-      <MarketTicker />
-
       {/* Same column geometry the /features pages use:
           mx-auto max-w-7xl + asymmetric vertical padding so the Hero
           reads as the page's masthead, not a centered marketing splash. */}
@@ -96,9 +91,8 @@ export function Hero() {
             </span>
           </div>
 
-          {/* H1 — big italic Playfair, identical sizing to /features/engine,
-              /features/personas, /features/explorer.
-              Bronze italic on "learns" stays as the only typographic accent. */}
+          {/* H1 — Playfair. The second clause is the bronze accent and the
+              whole point of the sentence: it names what we will not do. */}
           <h1
             id="pq-hero-heading"
             className="pq-hero-h1 mb-9 font-serif font-normal"

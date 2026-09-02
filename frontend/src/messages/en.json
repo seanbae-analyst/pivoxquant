@@ -33,9 +33,9 @@
     "personas": {
       "eyebrow": "Investor Personas · Selected shown",
       "heading": "A mirror that speaks\nyour investor language.",
-      "description": "Twenty onboarding questions classify you into one of several investor archetypes. When drift is detected, the persona recalibrates automatically.",
-      "alsoAvailable": "Also available: Income and more. The desk reshapes every artifact around the persona you test into.",
-      "takeQuiz": "Take the 20-question assessment"
+      "description": "Eighteen onboarding questions sort you into one of eight investor archetypes. That is only what you declared; the mirror watches what your last 30 days of trades say instead.",
+      "alsoAvailable": "Eight in all — Income, Quant, Speculator and Daytrader round out the set. The mirror explains the gap in the language of the one you picked.",
+      "takeQuiz": "Take the 18-question assessment"
     },
     "topNav": {
       "loginLink": "Log in",

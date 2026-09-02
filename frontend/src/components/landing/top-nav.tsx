@@ -5,7 +5,8 @@
  * ---------------------------------------------------------------
  * Polish target: Apple HIG + Linear.app + Vercel.com.
  *  • Sticky; shrinks 20% + backdrop blur intensifies after 20px scroll.
- *  • 4 menus: Living CFO / Personas / Signature / Docs.
+ *  • 1 menu: Docs. (Living CFO / Personas / Signature were removed with
+ *    the /features/* pages they advertised — see NAV_GROUPS below.)
  *    (Pricing menu removed 2026-05-30 — free Stage 0 launch.)
  *  • Mega dropdown: 3-col grid, icon + title + one-line description.
  *  • Vantablack bg, bronze hairline, gradient bronze underline on hover.

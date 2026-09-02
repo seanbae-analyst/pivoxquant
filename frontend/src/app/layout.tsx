@@ -27,7 +27,9 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-// Editorial serif for report surfaces (Morning Brief, Weekly Memo, 10-K Personal)
+// Editorial serif for long-form reading surfaces (landing, /docs, terms, privacy).
+// Was "report surfaces (Morning Brief, Weekly Memo, 10-K Personal)" — those
+// artifacts were deleted in the 2026-08-31 prune; the font is still in use.
 // Design audit 2026-06-10 (P2): 75 call sites use `font-serif italic`, but
 // only the normal style was loaded — every editorial italic (brand wordmark,
 // deposition quotes, rationale pull-quotes) rendered as a browser-synthesized
@@ -68,16 +70,25 @@ export const viewport: Viewport = {
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pivoxquant.com";
 const SITE_NAME = "PivoxQuant";
-// Korean-first positioning — the CFO framing is the marketing spear, so the
-// default title + OG card speak in that voice. English sub-copy kept in the
-// description for US previews (LinkedIn, Slack).
-const SITE_TITLE_KR = `${SITE_NAME} — 당신은 당신 포트폴리오의 CFO`;
+// Korean-first positioning.
+//
+// ⚠️ 2026-09-02: this block used to read "당신은 당신 포트폴리오의 CFO / 리포트는
+// 저희가 씁니다 / 매주 일요일 리포트가 도착합니다 / 자는 동안 만든다". Every one of
+// those sentences described the artifact-report pipeline and the AI writer, and
+// BOTH were deleted (artifacts in the 8-31 prune, `services/ai/` on 2026-09-01).
+// It was the most-seen copy on the product — the browser tab title and the OG
+// card on every share — and it promised a product that no longer exists.
+//
+// The replacement describes the three screens that actually ship:
+// /pre-trade (멈춤) · /journal (기록) · /mirror (거울). Nothing is generated for
+// the user; the user's own record is the material. Keep it that way.
+const SITE_TITLE_KR = `${SITE_NAME} — 사기 전에 멈추고, 나중에 되비춘다`;
 const SITE_DESCRIPTION_KR =
-  "ChatGPT는 물어야 답한다. PivoxQuant는 자는 동안 만든다. 매주 일요일 당신의 포트폴리오 리포트가 도착합니다.";
+  "사기 전에 한 번 멈춰 이유를 적습니다. 몇 주 뒤 그 기록이 당신의 실제 매매 습관을 되비춥니다. 점수를 매기지도, 종목을 골라주지도 않습니다. 클로즈드 베타 무료.";
 const SITE_DESCRIPTION_OG =
-  "전속 리서치 데스크가 매주 당신의 투자 리포트를 씁니다.";
+  "스스로 선언한 투자자와, 거래가 말해주는 투자자 사이의 간극을 봅니다.";
 const SITE_DESCRIPTION_TWITTER =
-  "당신은 당신 포트폴리오의 CFO. 리포트는 저희가 씁니다.";
+  "멈춤 · 기록 · 거울. 내 매매 기록을 되비추는 투자 회고 도구.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -87,21 +98,24 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION_KR,
   applicationName: SITE_NAME,
+  // 2026-09-02: "AI 주식 / AI 퀀트 / AI 리서치 툴 / 퀀트 투자 / VaR" 를 뺐다.
+  // 런타임에 AI 호출이 0회이고(`services/ai/` 삭제) `services/quant/` 도 없다 —
+  // 검색 키워드는 마케팅 희망이 아니라 제품 설명이어야 한다. 남긴 것은 실제로
+  // 하는 일(기록·회고·습관)과 시장 범위(코스피/코스닥/미국주식)뿐.
   keywords: [
-    "AI 주식",
-    "AI 퀀트",
-    "주식 분석",
-    "포트폴리오 관리",
-    "AI 리서치 툴",
-    "퀀트 투자",
-    "리스크 분석",
-    "VaR",
+    "매매일지",
+    "투자 기록",
+    "투자 회고",
+    "매매 습관",
+    "포트폴리오 기록",
+    "투자 심리",
     "코스피",
     "코스닥",
-    "stock analysis",
-    "AI investing",
-    "quantitative finance",
-    "portfolio risk",
+    "미국주식",
+    "trading journal",
+    "investment reflection",
+    "trading habits",
+    "portfolio journal",
   ],
   authors: [{ name: "PivoxQuant" }],
   creator: "PivoxQuant",

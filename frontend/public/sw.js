@@ -22,7 +22,7 @@
 //   - v5 → v6: bug-fix wave (auth.tsx 8s timeout, reports routing,
 //     companion premium gate, etc.) needed cache flush.
 // Going forward, the build script does this work — no manual bump.
-const CACHE_VERSION = "pq-build-aea575de";
+const CACHE_VERSION = "pq-build-c1f61809";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
