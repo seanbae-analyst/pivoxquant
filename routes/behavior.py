@@ -30,13 +30,14 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from models import TradeHistory
+from models import PreTradeReflection, TradeHistory
 from services.behavior.averaging_down_mirror import (
     compute_averaging_down_mirror,
 )
 from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
 from services.behavior.turnover_mirror import compute_turnover_mirror
+from services.pre_trade.friction_outcome import compute_friction_outcome
 from services.profile.holding_mirror import compute_holding_mirror
 
 from .decorators import api_auth
@@ -276,6 +277,71 @@ def averaging_down_mirror():
     body = {
         "ok": True,
         "disclaimer": _AVERAGING_DOWN_MIRROR_DISCLAIMER,
+        "period": period,
+    }
+    body.update(result)
+    return jsonify(body), 200
+
+
+# ── /friction-outcome ───────────────────────────────────────────────
+
+_FRICTION_OUTCOME_DISCLAIMER = DISCLAIMER_MIRROR_RETROSPECTIVE_KR
+
+# Same tiny explicit period set as the other mirrors — never echo an
+# arbitrary user-supplied integer back into a window.
+_FRICTION_OUTCOME_PERIODS: dict[str, int | None] = {
+    "all": None,
+    "90d": 90,
+    "30d": 30,
+}
+
+
+@behavior_bp.route("/friction-outcome", methods=["GET"])
+@api_auth
+def friction_outcome():
+    """멈춤이 실제로 무엇으로 이어졌는지 되비추는 거울.
+
+    ``?period=30d|90d|all`` (default ``all``).
+
+    2026-09-02 — 이 엔드포인트가 생기기 전까지
+    ``services/pre_trade/friction_outcome.py`` 는 완성·테스트돼 있으면서도
+    호출처가 CLI 스크립트 하나뿐이었다. 즉 유저는 볼 수 없었다.
+
+    다른 5종 mirror 와 계약이 같다: 라우트가 행을 읽어 넘기고, 서비스는
+    순수 계산만 한다 (시세·FX·네트워크 호출 0).
+
+    ⚠️ 응답의 ``caveats`` 와 ``realised.comparable`` 을 프론트가 임의로
+    떨어뜨리면 안 된다. 이건 장식이 아니라 이 비교가 무작위 배정이 아니라는
+    고지이고, 표본이 ``min_group_n`` 미만이면 서비스가 비교 자체를 거부한다.
+    """
+    period = request.args.get("period", "all")
+    if period not in _FRICTION_OUTCOME_PERIODS:
+        return jsonify({
+            "error": (
+                "period must be one of: "
+                + ", ".join(sorted(_FRICTION_OUTCOME_PERIODS))
+            ),
+            "code": "BAD_INPUT",
+        }), 400
+    window_days = _FRICTION_OUTCOME_PERIODS[period]
+
+    reflections = (
+        PreTradeReflection.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    trades = (
+        TradeHistory.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    result = compute_friction_outcome(
+        reflections, trades, window_days=window_days
+    )
+
+    body = {
+        "ok": True,
+        "disclaimer": _FRICTION_OUTCOME_DISCLAIMER,
         "period": period,
     }
     body.update(result)

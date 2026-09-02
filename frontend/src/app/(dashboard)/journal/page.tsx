@@ -42,6 +42,7 @@ import { ConcentrationMirror } from "@/components/journal/concentration-mirror";
 import { ProfitLossMirror } from "@/components/journal/profit-loss-mirror";
 import { TurnoverMirror } from "@/components/journal/turnover-mirror";
 import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror";
+import { FrictionOutcomeMirror } from "@/components/journal/friction-outcome-mirror";
 import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
 import type { PreTradeReflection } from "@/lib/types";
 
@@ -453,8 +454,18 @@ function JournalContent() {
           <TurnoverMirror />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-8">
           <AveragingDownMirror />
+        </div>
+
+        {/* Friction outcome sits LAST in the section on purpose. The five
+            mirrors above read TradeHistory — what you did. This one reads
+            PreTradeReflection alongside it, so it is the only one that can
+            speak about the trade that did not happen, and it reads best after
+            the reader has seen what the executed record looks like.
+            (2026-09-02 — until then the module had no UI at all.) */}
+        <div className="mb-6">
+          <FrictionOutcomeMirror />
         </div>
 
       </section>

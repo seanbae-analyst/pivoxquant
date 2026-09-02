@@ -196,6 +196,18 @@ export const API = {
     // mirror on /journal; NEVER a score, grade, or "과집중/위험" label
     // (자본시장법 / PIPA §23). Response = ConcentrationMirrorResponse, 1:1.
     concentrationMirror: "/api/behavior/concentration-mirror",
+    // Friction Outcome — what the *pause* actually led to: how the started
+    // records resolved (proceeded / cancelled / open), whether cancellations
+    // persisted or were merely delayed, and the two realised-return
+    // distributions side by side. Read-only, @api_auth.
+    //
+    // ⚠️ The response carries `caveats` and `realised.comparable`. Those are
+    // NOT decoration — the comparison is not randomised (the user chooses
+    // which trades to pause), and the service REFUSES the comparison below
+    // `min_group_n`. Any UI reading this must surface them; dropping them
+    // turns an honest observation into an implied causal claim
+    // (자본시장법 / DECISIONS.md AI 점수화 폐기).
+    frictionOutcome: "/api/behavior/friction-outcome",
     // Profit/Loss Mirror — factual hold-day + return statistics split by
     // whether the user's own closed pairs realised a profit or a loss.
     // Read-only, @api_auth. Renders as a neutral 2-up beneath the other
