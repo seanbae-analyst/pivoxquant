@@ -368,7 +368,7 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       { value: "experience_acknowledged", label: "I have confirmed my investment experience level accurately", label_kr: "저는 투자 경험 수준을 정확하게 입력하였습니다.", required: true },
       { value: "risk_acknowledged", label: "I understand that all investments carry risk and I may lose money", label_kr: "모든 투자에는 위험이 따르며 원금 손실이 발생할 수 있음을 이해합니다.", required: true },
       { value: "past_performance", label: "I understand that past performance does not guarantee future results", label_kr: "과거 수익률이 미래 성과를 보장하지 않음을 이해합니다.", required: true },
-      { value: "ai_advisory", label: "I understand that PivoxQuant reflects my own record back to me and is not licensed financial advice", label_kr: "PivoxQuant은 제가 직접 입력한 기록을 되비추어 보여줄 뿐, 정식 투자 자문이 아님을 이해합니다.", required: true },
+      { value: "ai_advisory", label: "I understand that PivoxQuant provides AI-generated analysis, not licensed financial advice", label_kr: "PivoxQuant은 AI 기반 분석 정보를 제공하며, 정식 투자 자문이 아님을 이해합니다.", required: true },
     ],
   },
 ];
