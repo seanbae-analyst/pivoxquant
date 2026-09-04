@@ -99,7 +99,7 @@ ROUTES = REPO / "routes"
 # from the list — that locks in the migration.
 ROUTES_LEGACY_BASELINE: frozenset[str] = frozenset({
     "auth.py", "command_center.py", "billing.py", "dev_auth.py",
-    "twin.py", "behavior.py", "realtime.py", "agent_admin.py",
+    "twin.py", "realtime.py", "agent_admin.py",
     "email_preferences.py", "health.py", "broker_oauth.py", "ai.py",
     "profile.py", "counterfactual.py", "admin_preview.py",
     "watchlist.py", "share.py", "agent.py", "trades.py",
@@ -133,6 +133,39 @@ def test_routes_files_have_scrub_decorator_or_exempt() -> None:
         "routes/*.py with @bp.route but no legal_scrub_response / "
         f"# legal-exempt:: {bad}"
     )
+
+
+# Files where the decorator is a per-route contract, not a file-level mention.
+# The file-level check above goes blind the moment a file contains the import
+# once — routes/behavior.py hit exactly that on 2026-09-02, when the first
+# decorated route made the guard stop noticing the five undecorated ones.
+# For these files every handler must carry it in its own decorator stack.
+ROUTES_PER_ROUTE_SCRUB: frozenset[str] = frozenset({"behavior.py"})
+
+_BP_ROUTE_RE = re.compile(r"@\w*bp\.route\(")
+
+
+@pytest.mark.skipif(not ROUTES.is_dir(), reason="routes dir missing")
+def test_per_route_scrub_decorator() -> None:
+    """Every @bp.route handler in ROUTES_PER_ROUTE_SCRUB carries
+    @legal_scrub_response (or a `# legal-exempt:` marker) in its own
+    decorator stack — a file-level mention is not enough."""
+    bad: list[str] = []
+    for name in sorted(ROUTES_PER_ROUTE_SCRUB):
+        lines = (ROUTES / name).read_text(encoding="utf-8").splitlines()
+        i = 0
+        while i < len(lines):
+            if _BP_ROUTE_RE.search(lines[i]):
+                j = i
+                while j < len(lines) and not lines[j].startswith("def "):
+                    j += 1
+                block = "\n".join(lines[i:j])
+                if "@legal_scrub_response" not in block and "# legal-exempt:" not in block:
+                    handler = lines[j] if j < len(lines) else "<eof>"
+                    bad.append(f"routes/{name}: {handler.strip()}")
+                i = j
+            i += 1
+    assert not bad, f"route handlers without @legal_scrub_response: {bad}"
 
 
 # ---------------------------------------------------------------------

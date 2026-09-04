@@ -73,6 +73,7 @@ _HOLDING_MIRROR_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/holding-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def holding_mirror():
     """Retrospective winner/loser holding-period mirror for the user.
 
@@ -113,6 +114,7 @@ _CONCENTRATION_MIRROR_DISCLAIMER = (
 
 @behavior_bp.route("/concentration-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def concentration_mirror():
     """Cost-basis concentration mirror for the user's open positions.
 
@@ -143,6 +145,7 @@ _PROFIT_LOSS_MIRROR_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/profit-loss-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def profit_loss_mirror():
     """Retrospective profit/loss holding + return mirror for the user.
 
@@ -195,6 +198,7 @@ _TURNOVER_MIRROR_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/turnover-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def turnover_mirror():
     """Retrospective trade-activity mirror for the user.
 
@@ -247,6 +251,7 @@ _AVERAGING_DOWN_MIRROR_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/averaging-down-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def averaging_down_mirror():
     """Retrospective follow-on-add mirror for the user.
 
@@ -304,10 +309,11 @@ _FRICTION_OUTCOME_PERIODS: dict[str, int | None] = {
 # 있으므로 데코레이터를 다는 쪽이 맞다. api_auth **뒤에** 놓아 401 은 스크럽
 # 없이 짧게 끊고 happy-path 본문만 필터한다 (decorators.py 계약).
 #
-# ⚠️ 위쪽 5종 mirror 라우트는 이 가드보다 먼저 만들어져 아직 스크럽되지
-# 않는다. 응답이 숫자 + 고정 면책 문자열이라 현재 위험은 낮지만, 이 파일이
-# 이제 `legal_scrub_response` 를 포함하므로 **가드는 앞으로 이 파일의 새
-# 라우트를 잡지 못한다.** 5종에도 붙일지는 별도 판단이 필요하다.
+# 2026-09-04 — 위쪽 5종 mirror 라우트에도 같은 데코레이터를 백필했다. 응답이
+# 숫자 + 공용 면책 문자열뿐이라 스크럽 전후가 동일함을 실측했고(변경 0), 이
+# 파일은 이제 라우트 단위로 한 계약만 갖는다. 파일 단위 가드가 새 라우트를
+# 못 잡는 문제는 tests/test_legal_deep_scan_local.py 의 behavior.py 전용
+# 라우트별 검사가 대신 막는다.
 @legal_scrub_response
 def friction_outcome():
     """멈춤이 실제로 무엇으로 이어졌는지 되비추는 거울.
