@@ -51,23 +51,15 @@ curl -sI https://www.pivoxquant.com/ | grep -i "content-security-policy"
 - ❌ `'unsafe-eval'` 프로덕션에 있으면 위반
 - ✅ `connect-src`에 Railway/Stripe/Sentry/Google/Kakao
 
-### 2. 베타 게이트
+### 2. 베타 게이트 — 폐기됨 (2026-09-04, 무료 공개)
 ```bash
-# 쿠키 없이 접근 → 리다이렉트?
-curl -sI https://www.pivoxquant.com/ | grep -iE "HTTP|location"
-# 기대: HTTP/2 307 + location: /beta-gate
+# 게이트 없음: 쿠키 없이 / 가 바로 200 이어야 한다 (apex → www 307 은 정상)
+curl -sL -o /dev/null -w "%{url_effective} %{http_code}\n" https://pivoxquant.com/
+# 기대: https://www.pivoxquant.com/ 200
 
-# 잘못된 비번
-curl -s -X POST https://www.pivoxquant.com/api/beta-auth \
-  -H "Content-Type: application/json" \
-  -d '{"password":"wrong"}' -w "\n%{http_code}\n"
-# 기대: 401 {"error":"Invalid password"}
-
-# 맞는 비번
-curl -s -X POST https://www.pivoxquant.com/api/beta-auth \
-  -H "Content-Type: application/json" \
-  -d "{\"password\":\"$BETA_PASSWORD\"}" -w "\n%{http_code}\n"
-# 기대: 200 {"ok":true}
+# 옛 라우트는 사라졌다. 404 가 정답 (200/500 이면 회귀).
+curl -s -o /dev/null -w "%{http_code}\n" https://www.pivoxquant.com/api/beta-auth
+# 기대: 404
 ```
 
 ### 3. OAuth state
@@ -80,7 +72,7 @@ grep -E "authorize_redirect.*state|session\[.oauth_state" /Users/seanbae/Desktop
 ```bash
 cd /Users/seanbae/Desktop/취준/pivoxquant
 grep -rE "ghp_[A-Za-z0-9]{36,}|sk_live_|ANTHROPIC_API_KEY=[^=]" --include="*.ts" --include="*.tsx" --include="*.py" --include="*.json" --exclude-dir=node_modules
-# (BETA_PASSWORD/DEV_LOGIN_SECRET 평문 잔존 검사: 별도 grep — 값은 Railway env에서만 보유)
+# (DEV_LOGIN_SECRET 평문 잔존 검사: 별도 grep — 값은 Render env에서만 보유)
 # 기대: 결과 없음 (시크릿은 env만)
 
 # Git 히스토리에 .env
@@ -147,16 +139,7 @@ grep -n "_do_migrations\|ADD COLUMN" app.py
 ```
 - 사고 사례: alembic 035 prod 미적용 → `users.provisioned_at` 컬럼 없음 → OAuth callback 500 → runtime ADD COLUMN hotfix
 
-**(4) BETA_PW rotate cold start 검증**
-- 원칙: Vercel CLI `vercel env add` stdin 미지원 → 빈 값 저장 위험. REST API `POST /v10/projects/{id}/env` + empty commit redeploy 필수
-- 회귀 검사:
-```bash
-# rotate 후 cold start로 실제 적용 확인
-curl -s -X POST https://www.pivoxquant.com/api/beta-auth \
-  -H "Content-Type: application/json" \
-  -d "{\"password\":\"$NEW_BETA_PASSWORD\"}" -w "\n%{http_code}\n"
-# 기대: 200. 401이면 redeploy 미발생 → empty commit 추가 PR
-```
+**(4) ~~BETA_PW rotate cold start 검증~~ — 폐기 (2026-09-04, 게이트 없음)**
 - 사고 사례: v44.7 — Vercel CLI 2회 빈 값 저장 → REST API 우회 + chore #463 empty commit으로 redeploy trigger
 
 **(5) Git history secret scrub (filter-repo)**

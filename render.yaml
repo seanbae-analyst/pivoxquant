@@ -131,11 +131,9 @@ services:
       # ── Deliberately NOT set ──────────────────────────────────────────────
       # DEV_LOGIN_SECRET — routes/__init__.py refuses to boot when this is set
       #   alongside FLASK_ENV=production. It is an E2E-only bypass.
-      # BETA_PASSWORD — frontend-only. The beta interstitial lives in
-      #   frontend/middleware.ts and frontend/src/app/api/beta-auth/route.ts,
-      #   so the value belongs on Vercel, where it already is. The backend
-      #   never reads it; services/launch_prep.py lists it in its env
-      #   inventory, which is why it looks like a backend variable and is not.
+      # BETA_PASSWORD — retired 2026-09-04 (free launch, no gate). The
+      #   frontend interstitial and its env vars were deleted; nothing
+      #   reads this anywhere any more.
       # ANTHROPIC_API_KEY — the support chatbot was the only live consumer and
       #   it was removed 2026-09-01; services/ai/ itself was deleted the same
       #   day (zero callers). Only the disabled self-healing / morning-triage

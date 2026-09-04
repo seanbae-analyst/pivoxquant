@@ -176,7 +176,7 @@ Stripe Live 활성화 전 필수:
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
 **프로덕션 상태**: Railway + Vercel ACTIVE / 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지) / pytest 3000+ / vitest 450+ / 0 회귀
-**베타 비밀번호**: Vercel env `BETA_PASSWORD` — 평문 git 금지. rotate = Vercel REST API 직접 호출 + empty commit redeploy (CLI stdin 미지원, 2회 fail 사례). 이전 평문은 `git-filter-repo` (C1) scrub 완료
+**베타 비밀번호**: 없음 — 게이트 2026-09-04 폐기(무료 공개). `BETA_PASSWORD`/`BETA_SIGNING_SECRET` 은 코드·env 에서 삭제됨.
 **최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
 **Launch bundle**: `docs/LAUNCH_BUNDLE_SPEC.md` Tier 1-4 모두 시점 지남 — 출시 직전
 **자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)

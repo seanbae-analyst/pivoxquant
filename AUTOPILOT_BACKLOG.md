@@ -16,7 +16,7 @@ P1 findings accumulated by the daily bug sweep. Not auto-fixed (detection-only o
       자동수정 보류 사유: 올바른 처리자 목록은 Render/Supabase 리전 확정 후에야 정해지고, 문서 자체가 "변호사 검토 전 게시 금지" 초안이라 §28-8 필수 고지문을 에이전트가 단독 재작성하는 건 부적절.
 
 ### 🟠 P1 (5건 — 전부 소스+라이브 prod 재검증 완료)
-- [ ] **P1 — 베타 게이트가 prod 에서 꺼져 있다(사이트 전면 공개).** Vercel prod 에 `BETA_PASSWORD` 없음(`BETA_SIGNING_SECRET` 은 있음). `middleware.ts:127` 이 env 없으면 게이트를 통째로 스킵 → 쿠키 없이 `/portfolio` 200. `/api/beta-auth` 는 500 "Beta gate is not configured". **의도(Stage 0 공개 전환)인지 설정 유실인지 근거가 없다 — CEO 결정 필요.**
+- [x] ~~**P1 — 베타 게이트가 prod 에서 꺼져 있다(사이트 전면 공개).**~~ **CLOSED 2026-09-04 — CEO 결정 = 의도(무료 공개). 게이트·비번·env 전부 폐기.** Vercel prod 에 `BETA_PASSWORD` 없음(`BETA_SIGNING_SECRET` 은 있음). `middleware.ts:127` 이 env 없으면 게이트를 통째로 스킵 → 쿠키 없이 `/portfolio` 200. `/api/beta-auth` 는 500 "Beta gate is not configured". **의도(Stage 0 공개 전환)인지 설정 유실인지 근거가 없다 — CEO 결정 필요.**
 - [ ] **P1 — `/admin` 진입 즉시 404.** `admin/page.tsx:19` 가 삭제된 `/admin/preview` 로 `router.replace`, `admin/layout.tsx:89` 도 동일 링크. 경로는 prune `47a5e8f3` 에서 삭제. 관리자 화면 전면 불능(유저 노출면 아님).
 - [ ] **P1 — `/portfolio` 포지션 행 클릭이 자기 자신으로 되돌아온다.** `positions-table-v2.tsx:407` 이 삭제된 `/detail/[ticker]` 로 push, `next.config.ts:78` 이 그걸 `/portfolio` 로 308. 행은 `cursor:pointer`+hover(`:421-426`)로 클릭 가능해 보인다. 리다이렉트는 정상 — **호출부(핸들러+어피던스) 제거가 fix.**
 - [ ] **P1 — `/support` FAQ 가 폐기된 유료 3단계 요금제를 안내.** `messages/ko.json:259-262`(+`en.json`) "무료/Pro 월 ₩9,900/Premium 월 ₩19,900" + 리다이렉트되는 `/pricing` 유도. Stripe 는 마스터 kill-switch 로 OFF, `/pricing` → `/mirror` 307(실측). 살 수 없는 플랜 광고 = 표시광고법 리스크.
@@ -204,7 +204,7 @@ P1 findings accumulated by the daily bug sweep. Not auto-fixed (detection-only o
 - [ ] **P2 (NEW) — `morning-brief-plus` template orphaned from `/sample-reports` index.** The dynamic route `sample-reports/[slug]/page.tsx:40` registers 18 templates incl. `morning-brief-plus`, but the index `sample-reports/page.tsx` REPORTS array lists only **17 slugs** (weekly-memo … year-end-letter) — `morning-brief-plus` absent. Reachable by direct URL, but unlinked from the gallery (so effectively invisible to visitors). Confirmed via grep 2026-06-30. Fix: add the entry to the index REPORTS array + verify sample data wiring.
 
 ### Known/tracked — re-confirmed, NOT re-escalated
-- [ ] **P2 (recurring, since 2026-06-25) — `/api/beta-auth` → 500 + sitewide beta gate OPEN** (`BETA_PASSWORD` unset on Vercel; free-launch posture, no user blocked). Bug-hunter re-flagged as "P1 #1"; our standing diagnosis holds it at P2 (dead 500 route + daily CAUS auth warning only). CEO call: set `BETA_PASSWORD=<value — see Vercel env / password manager>` on Vercel or retire the dead route.
+- [x] ~~**P2 (recurring, since 2026-06-25) — `/api/beta-auth` → 500 + sitewide beta gate OPEN**~~ **CLOSED 2026-09-04 — 라우트 삭제(게이트 폐기).** (`BETA_PASSWORD` unset on Vercel; free-launch posture, no user blocked). Bug-hunter re-flagged as "P1 #1"; our standing diagnosis holds it at P2 (dead 500 route + daily CAUS auth warning only). CEO call: set `BETA_PASSWORD=<value — see Vercel env / password manager>` on Vercel or retire the dead route.
 - [ ] **(external blocker, not a code bug) — Draft ToS/Privacy live with "변호사 검토 대기 초안 … 게시 금지" banners on `/terms` & `/privacy`**, linked from login/signup consent. Known SHIP_BLOCKER awaiting external lawyer sign-off (핀테크 상담소). No new action; tracked in `SHIP_BLOCKERS.md`.
 
 ### 🔁 Recurring systemic gap (meta) — CEO action, 5th+ repeat
@@ -369,3 +369,45 @@ of this is observable in prod today.
   Whatever "artifact leg" commit `5f928734` added is gone. Once the artefact question is
   settled, the sweep table should regain coverage for whichever artifact endpoints survive
   — otherwise this class of break stays invisible to the nightly sweep._
+
+### legal-guard 2026-09-04 — P1: scrub-decorator drift in `routes/behavior.py`
+- Five of the six mirror routes (`/holding-mirror`, `/concentration-mirror`,
+  `/profit-loss-mirror`, `/turnover-mirror`, `/averaging-down-mirror`) carry only
+  `@api_auth`; `@legal_scrub_response` is on `/friction-outcome` alone (added
+  2026-09-02, `routes/behavior.py:311`). Not a leak today — verified the five legacy
+  payloads emit numbers plus one disclaimer literal (`behavior.py:109`), no advisory
+  prose — so this is consistency drift, not a P0. Worth backfilling the decorator on
+  all six so the file has one contract rather than "new routes only".
+
+
+## 2026-09-04 daily-sweep (detection-only — 미커밋 사용자 작업 존재)
+
+- [ ] 🔴 **P0 (3일째 이월) — PIPA §28-8 동의문·처리방침이 삭제된 수탁처(Railway)를 명시.**
+  실제 수탁처 Render/Supabase 는 어디에도 없음. 위치: `frontend/src/app/(auth)/signup/page.tsx:599`,
+  `frontend/src/content/privacy-ko.md:26,167,252`. 랜딩 §13 호스팅 표기는 이미 "Render" 로
+  고쳐져 있어 **리포 내부 모순** 상태 — 부분 수정(`feedback_thorough_fixes` 위반).
+  자동 수정 안 함: 법적 문안 + 수탁처(리전 포함) 확정 선행 필요 → `legal` / 변호사 큐 경유.
+  미푸시 커밋 `c1f61809` 의 "PIPA cutover 게이트"와 묶을 것.
+
+- [ ] 🟠 **P1 (3일째 이월) — 베타 게이트가 prod 에서 열려 있다.** Vercel prod env 에
+  `BETA_PASSWORD` 미설정 → `middleware.ts:128` 이 게이트를 스킵. `www.pivoxquant.com` 이
+  비인증 200 + 랜딩 전문 27KB 서빙(실측). `POST /api/beta-auth` → 500 "Beta gate is not
+  configured". 코드 변경 불필요 — **Vercel 프로덕션 env 재설정 = CEO 액션.**
+
+- [ ] 🟡 **P2 — 비로그인 아바타가 "게" 한 글자.** `profile-dropdown.tsx:35-46` `initials()` 가
+  공백분리 이니셜(서구식)만 가정 → "게스트"에서 1글자만 남고 `"PQ"` 폴백에 도달 못 함.
+  가드 1줄이면 해소.
+
+- [ ] 🟡 **P2 — 라이브 CSP `connect-src` 가 죽은 `*.railway.app` 지시.** ⚠️ **재수정 금지** —
+  미푸시 커밋 `4ca0bfd3` 에 이미 수정돼 있어 **push 시 자동 해소**된다. Render 백엔드가
+  살아난 뒤에도 push 가 안 된 상태면 조용히 막히므로(CSP 위반은 콘솔에만 뜸) push 전까지 열어둔다.
+
+### 이번 런에서 CLOSE 된 이월 항목
+- ✅ P1 "`/api/artifacts/*` 계약 파손" — 프론트 프룬 완료로 해소(`reports/` 부재, `API.artifacts` 참조 0건).
+- ✅ P2 "dead `useMethodology` 훅" — 제거 확인.
+
+### 오탐 (재보고 금지)
+- ❌ "Vercel 자동배포 동결 / prod 가 3커밋 뒤처짐" — **사실 아님.** prod 는 `origin/main`(`cee3d291`)과
+  타임스탬프까지 정확히 일치. 해당 3커밋은 main 이 아니라 **미머지 피처 브랜치**에 있고, 로컬 main 은
+  10커밋 **미푸시**(= `feedback_push_workflow` 정상 운영, `SHIP_BLOCKERS` A8). `vercel --prod` 강제
+  재배포는 무의미하니 하지 말 것.

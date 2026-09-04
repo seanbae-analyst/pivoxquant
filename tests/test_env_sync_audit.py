@@ -29,7 +29,7 @@ def test_expected_env_keys_file_exists():
     content = EXPECTED_FILE.read_text("utf-8")
     # Must include at least the high-leverage keys CEO cares about.
     for key in (
-        "DATABASE_URL", "FMP_API_KEY", "BETA_PASSWORD",
+        "DATABASE_URL", "FMP_API_KEY",
         "SENDGRID_API_KEY", "ANTHROPIC_API_KEY",
     ):
         assert key in content, f"expected key {key} missing from allowlist"

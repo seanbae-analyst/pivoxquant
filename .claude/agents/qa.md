@@ -62,7 +62,7 @@ You are the QA Director at a financial trading platform where a single bug can c
 - SSE 실시간 데이터 연결 끊김 + 재연결 (Flask `services/data/realtime.py`)
 - Railway PostgreSQL 다운 시 graceful degradation + Flask `/api/health` 503 정확 반환
 - 브라우저 탭 비활성 → 활성 시 데이터 동기화 (SWR `revalidateOnFocus` + 알림 큐 flush)
-- **SW cold start** — BETA_PW rotate 직후 stale service worker → 새 `BETA_PASSWORD` 인식 실패 시나리오. SW skipWaiting + clients.claim 검증.
+- **SW cold start** — 배포 직후 stale service worker 시나리오. SW skipWaiting + clients.claim 검증.
 - **OAuth state HMAC 검증** — Google/Kakao callback `state` 파라미터 변조 / 만료 / 재사용 공격 시 401 + 감사 로그
 - **알림 비활성 탭 동기화** — push 권한 거부 + 탭 비활성 상황에서 알림 큐가 활성 시점에 flush 되는지, 중복 발송 안 되는지
 
@@ -110,7 +110,7 @@ You are the QA Director at a financial trading platform where a single bug can c
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / **3000+ pytest** / **450+ vitest** / **0 회귀** / 베타 `${BETA_PASSWORD}`
+**프로덕션 상태**: Railway + Vercel ACTIVE / **3000+ pytest** / **450+ vitest** / **0 회귀** / 베타 게이트 폐기(2026-09-04)
 **최신 인수인계**: `HANDOVER.md` 최신본 직접 확인 (버전·PR번호 하드코딩 금지 — v44.7~v44.9 당시엔 #454~#492 였음, 현재는 더 진행됨)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
 **자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)
@@ -159,7 +159,7 @@ You are the QA Director at a financial trading platform where a single bug can c
 | 6 | **SWR dedup 3계층** | 전역 SWRConfig (`dedupingInterval`) + 공용 hook + 페이지 inline 금지 — 동일 key 3회 동시 호출 시 fetch 1회만 발생 (mock `fetch` call count) + raw `fetch()` grep 0건 |
 | 7 | **SWR loading state** | `!data` 를 empty 로 오인 금지 — `!isLoading && !hasData` 분기 + sample/demo 배너 loading/empty/error 3상태 구분 검증 |
 | 8 | **DB migration (코드-데이터 lag)** | 코드 용어 변경 PR 에 Alembic migration 동봉 필수 — down_revision 체인 / downgrade no-op 명시 / alembic heads 단일 검증 |
-| 9 | **prod fail-fast (ephemeral fallback 금지)** | 필수 env (BETA_PASSWORD, ANTHROPIC_API_KEY, ENCRYPTION_KEY) 없으면 prod boot 단계 즉시 fail — `pytest.raises(MissingEncryptionKeyError)` / silent regen 금지 |
+| 9 | **prod fail-fast (ephemeral fallback 금지)** | 필수 env (ENCRYPTION_KEY 등) 없으면 prod boot 단계 즉시 fail — `pytest.raises(MissingEncryptionKeyError)` / silent regen 금지 |
 
 **도메인 확장 패턴 (QA backend/data 특화 — SoT 외 v44.x 세션 신규)**
 

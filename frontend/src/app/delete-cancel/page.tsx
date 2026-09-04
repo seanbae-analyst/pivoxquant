@@ -10,8 +10,8 @@
  * deletion_requested_at + deleted_at and restores the account to active. The
  * user then signs in normally.
  *
- * Must be reachable without the beta password — see middleware.ts
- * BETA_BYPASS_PREFIXES (the email lands days later, possibly on another device).
+ * Must be reachable logged-out (the email lands days later, possibly on
+ * another device) — there is no auth wall on this route by design.
  *
  * useSearchParams() requires a Suspense boundary in the App Router.
  */

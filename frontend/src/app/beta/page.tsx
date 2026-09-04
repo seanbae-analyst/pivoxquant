@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 
 /**
- * /beta → /beta-gate redirect.
+ * /beta → / redirect.
  *
- * The actual private-beta gate lives at /beta-gate; /beta is a common
- * shorthand users type or paste. Without this route, /beta hit the global
- * 404. Backend `_safe_next()` also maps /beta → /beta-gate; this page
- * covers direct navigation.
+ * The private-beta gate (/beta-gate + /api/beta-auth) was retired on
+ * 2026-09-04 (CEO: free launch, no gate). /beta is still a common shorthand
+ * people type or paste from old messages; keep it out of the global 404.
+ * Backend `_safe_next()` maps /beta the same way.
  */
 export default function BetaPage() {
-  redirect("/beta-gate");
+  redirect("/");
 }

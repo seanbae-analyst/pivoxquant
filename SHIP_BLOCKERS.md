@@ -1,7 +1,7 @@
 # PivoxQuant SHIP_BLOCKERS.md
 
 **SoT**: 출시를 막는 것들의 단일 목록.
-**최근 갱신**: **2026-09-01 — 실측 재작성.**
+**최근 갱신**: 2026-09-04 07:45 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 5건 / POST-LAUNCH 15건 / 변호사 큐 21건)
 
 > ⚠️ **2026-09-01 전면 재작성.** 직전 갱신이 2026-06-20 이었고, 그 사이
 > **Railway 계정이 삭제**되면서 이 파일의 상당수가 무효가 됐다. "Railway env
@@ -202,6 +202,7 @@ CEO 가 이번 주 목표로 잡은 건 **무료** 배포다. 아래 R 목록이
 
 | # | 항목 | 해결 일자 | 출처 |
 |---|---|---|---|
+| ✅ | **베타 게이트 폐기** — CEO "일단 무료로 배포, 베타비번 폐기". `/beta-gate`·`/api/beta-auth`·middleware 게이트·`BETA_PASSWORD`/`BETA_SIGNING_SECRET`(코드+Vercel env) 전부 삭제. prod 는 06-25 부터 이미 게이트 OFF 였음 | 2026-09-04 | 커밋 `chore(beta)` / `MEMORY.md` Brand |
 | ✅ | BETA_PASSWORD rotate 영구 해결 (`<BETA_PASSWORD>` 평문 고정값 + Vercel REST API, literal은 MEMORY.md/Vercel env 만) | 2026-05-26 | `MEMORY.md` Brand 섹션 |
 | ✅ | OAuth provisioning_failed P0 hotfix (alembic 035 prod 미적용 → _do_migrations runtime ADD COLUMN) | 2026-05-17 v44.7 | `MEMORY.md` |
 | ✅ | Railway PG too-many-clients (pool 3/2 + self-heal 가드 7개) | 2026-05-20 v46 | `MEMORY.md` Brand 섹션 |
