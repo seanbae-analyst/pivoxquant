@@ -1,7 +1,7 @@
 # PivoxQuant SHIP_BLOCKERS.md
 
 **SoT**: 출시를 막는 것들의 단일 목록.
-**최근 갱신**: 2026-09-04 07:45 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 5건 / POST-LAUNCH 15건 / 변호사 큐 21건)
+**최근 갱신**: 2026-09-04 22:55 KST (B4/B6 완료, B7 curl-only, R0 노출 시작) (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 5건 / POST-LAUNCH 15건 / 변호사 큐 21건)
 
 > ⚠️ **2026-09-01 전면 재작성.** 직전 갱신이 2026-06-20 이었고, 그 사이
 > **Railway 계정이 삭제**되면서 이 파일의 상당수가 무효가 됐다. "Railway env
@@ -22,10 +22,10 @@
 | B1 | Supabase Postgres 구축 | agent | ✅ **완료** — 43 테이블 + alembic `049` stamp + `/api/health` 200 + 로그인 이후 API E2E 통과 |
 | B2 | Google OAuth | agent | ✅ **완료** — 9/1 삭제돼 있던 클라이언트 복원 + 브랜딩 채우고 **프로덕션 게시**(심사 불필요, 민감범위 0) |
 | B3 | Kakao OAuth | agent | ✅ **확인 완료** — 앱 정상, 로그인 ON, Redirect URI 2개 정확 |
-| B4 | Render 앱 배포 | **CEO** | ⬜ **여기서 막혀 있음.** `render.yaml` Blueprint 준비 완료, 폼도 세팅됨. **시크릿 10개 붙여넣기 + Deploy 클릭**만 남음 (키 입력은 agent 권한 밖) |
+| B4 | Render 앱 배포 | CEO | ✅ **완료 2026-09-04 22:38 KST** — Blueprint `pivoxquant` (srv-dadcjiv10e5c73eb60vg, singapore, plan free) `main@c1f6180`. `https://pivoxquant-api.onrender.com/api/health` → 200 `db:ok, missing_required:0`. ⚠️ free 플랜 = 유휴 시 spin-down, 첫 요청 50s+ 지연·일시 502 (실측) |
 | B5 | 남은 키 수집 | — | ✅ **불필요 — 2026-09-01 재실측으로 소멸.** `.secrets/RENDER_PASTE_VALUES.txt` 의 15개 키가 `render.yaml` 의 `sync:false` 15개와 정확히 일치하고 **빈 값이 0개**다. FMP·KIS×2 는 이미 로컬 `.env` 에 있었고(len 32/36/180), Brevo 는 `cee3d291` 이후 **필요 없다**(캐스케이드가 SendGrid→Brevo→SMTP 이고 SendGrid·SMTP 자격증명이 있음). B4 는 이 항목을 기다리지 않는다 |
-| B6 | Vercel 재연결 | agent | ⬜ B4 후 즉시 (`vercel` CLI 인증됨) |
-| B7 | 브라우저 E2E | agent | ⬜ B6 후 |
+| B6 | Vercel 재연결 | agent | ✅ **완료 2026-09-04** — `RAILWAY_BACKEND_URL` **와 `NEXT_PUBLIC_API_URL`(sensitive, 우선순위 높음 — 5번째 연결점, pull 로는 빈값으로 보여 함정)** 둘 다 Render URL 로 PATCH + 재빌드. `www.pivoxquant.com/api/health` → 200, `/api/auth/me` → 200 |
+| B7 | 브라우저 E2E | agent | 🟡 **curl E2E 만 통과** — `/api/auth/google`·`/api/auth/kakao` → 302, redirect_uri=`https://www.pivoxquant.com/api/auth/*/callback` 정확. **브라우저 검증 NOT-TESTED**: pivoxquant.com 이 agent 브라우저(Chrome 확장·앱 내 브라우저 둘 다) 조직 정책으로 차단됨. CEO 가 직접 로그인 1회 확인 필요 |
 
 ---
 
@@ -121,7 +121,7 @@ CEO 가 이번 주 목표로 잡은 건 **무료** 배포다. 아래 R 목록이
 > **다음 세션도 여기서 멈출 것.** 고칠 준비가 됐다는 신호는 두 가지다:
 > Render 리전 확정 + 변호사 §28-8 사인.
 
-**지금 노출은 없다** — 백엔드 404 라 `POST /api/auth/signup` 자체가 실패한다.
+~~**지금 노출은 없다**~~ → **2026-09-04 22:38 부터 노출된다.** 백엔드가 Render 에서 살아나 가입이 열렸다. CEO 가 "일단 무료로 배포" 지시로 알고 진행한 상태 — 변호사 사인 전까지 이 문구로 동의를 받는다는 사실을 기록한다.
 그래서 이건 "지금 터진 사고" 가 아니라 **Render 가 살아나는 순간 터지는 것**이고,
 따라서 **B4 배포와 같은 게이트에 묶어야 한다.** 배포 → 가입 재개 사이에 정정할 것.
 
