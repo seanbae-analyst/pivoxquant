@@ -712,7 +712,7 @@ export default function ProfilePageV2() {
 
         {/* Helper for retake link surfaced as anchor for keyboard users */}
         <div className="sr-only">
-          <Link href="/onboarding">Retake the 20-question assessment</Link>
+          <Link href="/onboarding">Retake the 18-question assessment</Link>
         </div>
       </main>
 

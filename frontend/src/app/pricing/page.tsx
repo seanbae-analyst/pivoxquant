@@ -1,5 +1,34 @@
 "use client";
 
+/**
+ * 🛑 DO NOT RE-ENABLE THIS PAGE WITHOUT REWRITING ITS COPY FIRST.
+ * ---------------------------------------------------------------------
+ * Unreachable today: next.config.ts 307s /pricing → /mirror, and sitemap.ts
+ * deliberately omits it (DECISIONS.md 2026-05-30, Stage 0 무료). The redirect
+ * is `permanent: false`, i.e. one line away from being live again.
+ *
+ * Audited 2026-09-02 — the tier copy below sells a product that no longer
+ * exists. Every one of these is gone:
+ *
+ *   "AI Assistant"                    → services/ai/ deleted 2026-09-01
+ *   "Risk Board — 7-layer observation" → 0 layers; the surface was pruned
+ *   "A research desk that writes for you."
+ *   "Morning Brief Plus · Earnings Pre-Brief · DD Checklist · Insider Mirror ·
+ *    Dividend Income · Quarterly Self-Report · Self-Audit · Portfolio Segment ·
+ *    Weekly Memo · Year-End Letter · priority render queue"
+ *                                      → the whole artifact pipeline died in
+ *                                        the 2026-08-31 prune
+ *
+ * Publishing a price against those bullets is 표시광고법 §3 부당표시, and once
+ * money changes hands 전자상거래법 §21. The equivalent block on the landing page
+ * was deleted for this reason (see landing-v2.tsx "pricing: removed 2026-09-02").
+ * This page was left standing only because it is 958 lines and reviving Stage 1
+ * pricing is a product decision, not a cleanup.
+ *
+ * Reviving it means: open each shipping route, write the bullets from what you
+ * actually find there, then flip the redirect — in that order.
+ */
+
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";

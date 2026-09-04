@@ -1,5 +1,5 @@
 /**
- * mirror-render.test.tsx — DOM render coverage for the 5 behavioural mirrors.
+ * mirror-render.test.tsx — DOM render coverage for the 6 behavioural mirrors.
  *
  * The existing per-mirror suites test the pure `compute*View` view-models
  * exhaustively, but NEVER mount the components — so the JSX state machine
@@ -27,6 +27,7 @@ const hooks = vi.hoisted(() => ({
   useProfitLossMirror: vi.fn(),
   useTurnoverMirror: vi.fn(),
   useAveragingDownMirror: vi.fn(),
+  useFrictionOutcome: vi.fn(),
 }));
 vi.mock("@/lib/hooks", () => hooks);
 vi.mock("@/lib/locale", () => ({
@@ -39,6 +40,7 @@ import { ConcentrationMirror } from "@/components/journal/concentration-mirror";
 import { ProfitLossMirror } from "@/components/journal/profit-loss-mirror";
 import { TurnoverMirror } from "@/components/journal/turnover-mirror";
 import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror";
+import { FrictionOutcomeMirror } from "@/components/journal/friction-outcome-mirror";
 
 afterEach(() => {
   cleanup();
@@ -101,6 +103,34 @@ const LOADED: Record<string, unknown> = {
       { ticker: "005930", name: "삼성전자", follow_on: 2, below_avg: 1, above_avg: 0 },
     ],
   },
+  // Shaped from the live GET /api/behavior/friction-outcome capture
+  // (2026-09-02), with `comparable` flipped true so the loaded branch renders
+  // the distribution block — the refusal path is covered in the view-model
+  // suite (friction-outcome-mirror.test.ts).
+  frictionOutcome: {
+    ok: true,
+    period: "all",
+    window_days: null,
+    stopped: { started: 22, proceeded: 14, cancelled: 6, open: 2 },
+    cancelled_followthrough: {
+      cancelled: 6,
+      bought_later_anyway: 2,
+      never_bought: 4,
+      median_days_until_bought: 3,
+    },
+    realised: {
+      with_friction: { n: 8, median_pct: 2.4, mean_pct: 1.9 },
+      without_friction: { n: 11, median_pct: -3.64, mean_pct: -1.15 },
+      comparable: true,
+      min_group_n: 5,
+    },
+    caveats: {
+      not_randomised: true,
+      attribution_window_days: 7,
+      cooldown_seconds_currently: 0,
+    },
+    insufficient: false,
+  },
 };
 
 const MIRRORS = [
@@ -108,6 +138,7 @@ const MIRRORS = [
   { name: "ConcentrationMirror", Comp: ConcentrationMirror, hook: hooks.useConcentrationMirror, key: "concentration" },
   { name: "ProfitLossMirror", Comp: ProfitLossMirror, hook: hooks.useProfitLossMirror, key: "profitLoss" },
   { name: "TurnoverMirror", Comp: TurnoverMirror, hook: hooks.useTurnoverMirror, key: "turnover" },
+  { name: "FrictionOutcomeMirror", Comp: FrictionOutcomeMirror, hook: hooks.useFrictionOutcome, key: "frictionOutcome" },
   { name: "AveragingDownMirror", Comp: AveragingDownMirror, hook: hooks.useAveragingDownMirror, key: "averagingDown" },
 ] as const;
 

@@ -250,7 +250,7 @@ export function IdentityCardV2({
             </>
           ) : (
             <>
-              Take the 20-question assessment to calibrate every analytical
+              Take the 18-question assessment to calibrate every analytical
               surface to your declared persona.
             </>
           )}

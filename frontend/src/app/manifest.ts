@@ -6,10 +6,13 @@ import type { MetadataRoute } from "next";
 // redirects to /home for logged-in users, marketing for guests).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PivoxQuant — 당신은 당신 포트폴리오의 CFO",
+    // 2026-09-02: "당신은 당신 포트폴리오의 CFO" 는 삭제된 artifact 리포트
+    // 파이프라인의 카피였다. 홈 화면에 설치되면 이 이름이 아이콘 밑에 박히므로
+    // 실제 하는 일로 교체 (layout.tsx SITE_TITLE_KR 과 같은 문장을 쓴다).
+    name: "PivoxQuant — 사기 전에 멈추고, 나중에 되비춘다",
     short_name: "PivoxQuant",
     description:
-      "A quiet operating system for private capital. Observational research tool — not investment advice.",
+      "사기 전에 멈춰 이유를 적고, 그 기록으로 자신의 매매 습관을 되비추는 도구. 관측 자료이며 투자 권유가 아닙니다.",
     start_url: "/",
     scope: "/",
     display: "standalone",

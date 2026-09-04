@@ -1,39 +1,43 @@
 "use client";
 
 /**
- * LandingV2 — PivoxQuant slim landing (7 sections, 21st.dev polish).
+ * LandingV2 — PivoxQuant public landing.
  * ---------------------------------------------------------------------
- * Structure (per 2026-04-23 CEO directive):
- *   1. SplashPage          (existing)
- *   2. Hero                (existing, v4)
- *   3. MarqueeLogos        (new — benchmark wordmark marquee)
- *   4. ThreeLayers         (existing, acts as 3-Layer + Loop preview)
- *   5. PersonasPreview     (new — 4 of 8)
- *   6. PricingPreview      (local — condensed 4-tier summary)
- *   7. Faq                 (local — 7 accordion items from legacy)
- *   8. CtaFooter           (local — "Give your portfolio someone to report to")
- *   9. Footer              (local)
+ * Structure (measured 2026-09-02 — this list is the render order below):
+ *   1. TopNav
+ *   2. SplashPage      — wordmark cover
+ *   3. Hero            — "부자로 만들어 준다고 약속하지 않습니다"
+ *   4. ThreeSteps      — 멈춤 · 기록 · 거울, one card per shipping route
+ *   5. PersonasPreview — 4 of the 8 real personas (models VALID_PERSONAS)
+ *   6. Faq             — 6 items, answered against what ships
+ *   7. CtaFooter       — free closed beta, Google/Kakao only
+ *   8. SiteFooter      — 전자상거래법 §13 business disclosure
  *
- * Everything removed from the legacy monolith (FeatureExplorer, Engine,
- * Sample Reports, Archetype, Dashboard Preview, Pre-Trade Checklist,
- * Korea×US Desk, Journal Companion, Living CFO Loop, Pull-Quote) is
- * reachable via TopNav mega-dropdowns → /features/* routes which load
- * the legacy LandingPage component scrolled to a hash anchor.
+ * ⚠️ The header this replaced described a nine-section page whose middle
+ * was <MarqueeLogos/> ("Built on the methodology of" — twelve quant models
+ * with zero implementations, see three-steps.tsx) and <PricingPreview/>
+ * (paid tiers listing deleted artifacts + an AI Assistant). It also sent
+ * readers to TopNav mega-dropdowns into /features/* — those routes all 308 to
+ * "/", and the only dropdown TopNav still has is Docs (FAQ / Terms / Privacy).
+ *
+ * The rule that keeps it from rotting again: **a section may only claim
+ * what a route does.** ThreeSteps prints the route on each card for exactly
+ * that reason. Before editing copy here, open the route and read it.
  *
  * Palette: Vantablack #050505 + Bronze #B8956A + Ivory #F5F0E8.
- * Type:    Playfair Display + Source Serif 4 + JetBrains Mono.
+ * Type:    Playfair Display + Source Serif 4 + JetBrains Mono. No italic.
  * Motion:  cubic-bezier(0.16, 1, 0.3, 1) universally.
- * Banned:  purple/violet, BUY/SELL/HOLD/recommend/advice.
+ * Banned:  purple/violet, BUY/SELL/HOLD/recommend/advice/추천/조언.
  */
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import TopNav from "./top-nav";
 import SplashPage from "./splash-page";
 import { Hero } from "./hero";
-import MarqueeLogos from "./marquee-logos";
+import ThreeSteps from "./three-steps";
 import PersonasPreview from "./personas-preview";
 import { FilmGrain } from "./film-grain";
 import { SectionCurtain } from "./section-curtain";
@@ -46,316 +50,49 @@ import {
 } from "@/lib/business-info";
 import { useT } from "@/lib/locale";
 
-/* ───────────────────────── pricing data ───────────────────────── */
-
-type TierSlim = {
-  name: string;
-  numeral: string;
-  price: string;
-  period: string;
-  tagline: string;
-  features: string[];
-  cta: string;
-  href: string;
-  dark?: boolean;
-  recommended?: boolean;
-};
-
-// Tier SoT: frontend/src/content/terms-ko.md §8.1 (Free / Pro / Premium).
-// 2026-04-27: 4-tier (incl. Elite + Founding Lifetime) consolidated to 3-tier
-// per legal review — see REPORT_LEGAL_AUDIT_2026-04-27.md.
-const TIERS: readonly TierSlim[] = [
-  {
-    name: "Free",
-    numeral: "I",
-    price: "0",
-    period: "forever",
-    tagline: "Read-only observation. 1 artifact per week.",
-    features: [
-      "Weekly Memo (abridged)",
-      "Portfolio observation dashboard",
-      "1 broker connection",
-    ],
-    cta: "Create free account",
-    href: "/signup",
-  },
-  {
-    name: "Pro",
-    numeral: "II",
-    price: "9,900",
-    period: "per month",
-    tagline: "Full desk. 12 artifacts. AI Assistant.",
-    dark: true,
-    recommended: true,
-    features: [
-      "Everything in Free",
-      "Morning Brief Plus · Earnings Pre-Brief",
-      "DD Checklist · Risk Board · Insider Mirror",
-      "2 broker connections · AI Assistant",
-    ],
-    cta: "Subscribe to Pro",
-    href: "/signup",
-  },
-  {
-    name: "Premium",
-    numeral: "III",
-    price: "19,900",
-    period: "per month",
-    tagline: "Board-grade decks. Quarterly self-audit. Year-end letter.",
-    features: [
-      "Everything in Pro",
-      "Capital Allocation · Credit Rating · Burn Rate",
-      "Monthly Finance · KPI Dashboard",
-      "Year-End Letter · Unlimited brokers",
-    ],
-    cta: "Upgrade to Premium",
-    href: "/signup",
-  },
-] as const;
+/* ───────────── pricing: removed 2026-09-02 ─────────────
+ *
+ * A <PricingPreview/> section and a TIERS array lived here (Free ₩0 / Pro
+ * ₩9,900 / Premium ₩19,900). They were env-gated OFF for the Stage 0 free
+ * launch, so nothing rendered — but the feature bullets they carried had
+ * gone false:
+ *
+ *   "AI Assistant"  → `services/ai/` deleted 2026-09-01, 0 runtime calls
+ *   "1/2/Unlimited broker connections" → BROKER_LINKING_AVAILABLE=false
+ *   "Weekly Memo · Morning Brief Plus · Earnings Pre-Brief · DD Checklist ·
+ *    Risk Board · Insider Mirror · Capital Allocation · Credit Rating ·
+ *    Burn Rate · KPI Dashboard · Year-End Letter · 12 artifacts"
+ *                   → every one of these artifact surfaces died in the
+ *                     2026-08-31 prune
+ *
+ * Keeping it behind a flag meant one env var away from publishing a paid
+ * price list for a product that does not exist — 표시광고법 §3 and, once
+ * money changes hands, 전자상거래법 §21. A dormant landmine is not "kept
+ * intact", it is deferred breakage.
+ *
+ * Reviving Stage 1 pricing needs fresh feature lists measured against the
+ * app anyway, so the stale ones buy nothing. Recover the old markup (layout
+ * only — never the bullets) with:
+ *     git show c1f61809:frontend/src/components/landing/landing-v2.tsx
+ * Price SoT stays frontend/src/content/terms-ko.md §8.1.
+ * Backend billing remains gated (503 BUSINESS_REGISTRATION_PENDING).
+ */
 
 /* ───────────────────────── FAQ data ───────────────────────── */
 
-// 2026-09-01: every answer below used to describe artifacts, a Risk Board,
-// weekly memos, earnings pre-briefs and a three-layer report pipeline. None
-// of those exist any more. A storefront FAQ that answers questions about a
-// deleted product is worse than no FAQ — rewritten against what ships.
-const FAQ_ITEMS = [
-  {
-    q: "Is this 'pre-trade mirror' the same as investment advisory?",
-    a: "No. 자본시장법 제6조상 개인 투자자문업과 무관합니다. PivoxQuant는 당신이 직접 입력한 기록과 보유 종목을 그대로 되비추는 informational research tool입니다. 종목을 고르지도, 점수를 매기지도, 사고팔라고 말하지도 않습니다. 결정은 전적으로 당신의 몫입니다.",
-  },
-  {
-    q: "How is my trade data used — what does the mirror “observe”?",
-    a: "두 가지를 나란히 놓습니다. 하나는 당신이 온보딩 20문항에서 스스로 선언한 투자자 유형이고, 다른 하나는 최근 90일 거래에서 관측된 행동입니다. 평균 보유기간, 회전율, 섹터 분산 같은 9개 축을 당신의 기록에서 계산할 뿐, 새로운 판단을 만들지 않습니다. 원본 거래 데이터는 암호화 저장되며 광고·외부 판매에 사용되지 않습니다. 탈퇴 시 30일 내 완전 삭제됩니다.",
-  },
-  {
-    q: "How does my persona change over time?",
-    a: "관측 페르소나는 최근 90일 거래를 다시 계산할 때마다 갱신됩니다. 선언한 유형은 당신이 20문항을 다시 풀기 전까지 그대로입니다 — 거울의 요점은 둘이 갈라지는 지점을 보여주는 것이지, 당신 대신 하나를 고르는 것이 아닙니다.",
-  },
-  {
-    q: "What do I actually do here?",
-    a: "세 가지입니다. 사기 전에 멈춰 7문항으로 근거를 남기고(Pre-Trade), 보유 종목과 거래를 기록하고(Portfolio), 몇 주 뒤 그 기록이 비추는 당신을 봅니다(Mirror). 리포트를 받아보는 서비스가 아니라, 당신이 남긴 기록이 재료인 도구입니다.",
-  },
-  {
-    q: "Do you have access to my brokerage account?",
-    a: "Read-only. KIS (KR) read-only scope로 연결됩니다. 주문 · 출금 · 수정 불가. 연결하지 않고 보유 종목을 직접 입력해도 모든 기능이 동일하게 동작합니다. 연결 해제 시 시세 동기화가 멈추고, 데이터는 30일 보관 후 파기됩니다.",
-  },
-  {
-    q: "What does it cost?",
-    a: "현재 클로즈드 베타 기간 동안 전 기능 무료입니다. 유료 요금제는 아직 활성화되어 있지 않으며, 켜질 경우 사전에 안내합니다.",
-  },
-];
-
-/* ═══════════════════════════════════════════════════════════════
-   PRICING PREVIEW
-   ═══════════════════════════════════════════════════════════════ */
-
-function PricingPreview() {
-  const reduce = useReducedMotion();
-  return (
-    <section
-      id="pricing"
-      className="relative py-24 md:py-36 lg:py-48"
-      style={{ backgroundColor: "#050505" }}
-    >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={reduce ? undefined : "hidden"}
-          whileInView={reduce ? undefined : "visible"}
-          viewport={{ once: true, margin: "-80px" }}
-          variants={fadeUp}
-          className="mb-16 max-w-2xl md:mb-24"
-        >
-          <Eyebrow className="mb-6">Membership</Eyebrow>
-          <p className="pq-deck mb-4">
-            Three tiers. We are never paid when you trade.
-          </p>
-          <h2
-            className="pq-silver-matte font-serif"
-            style={{
-              fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)",
-              lineHeight: 1.08,
-              letterSpacing: "-0.02em",
-              fontWeight: 500,
-              marginBottom: 28,
-            }}
-          >
-            We are paid
-            <br />
-            when you stay subscribed.
-          </h2>
-          <p
-            className="font-serif"
-            style={{
-              fontSize: "clamp(15px, 1.3vw, 17px)",
-              lineHeight: 1.65,
-              color: "rgba(245,240,232,0.65)",
-              maxWidth: 560,
-            }}
-          >
-            The incentive is your quiet compounding. No trade commissions, no
-            payment for order flow, no sponsored artifacts.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={reduce ? undefined : "hidden"}
-          whileInView={reduce ? undefined : "visible"}
-          viewport={{ once: true, margin: "-60px" }}
-          variants={stagger}
-          className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3 md:gap-7"
-        >
-          {TIERS.map((t) => (
-            <motion.article
-              key={t.name}
-              variants={fadeUp}
-              className="pq-tier-card-v2 group relative flex flex-col overflow-hidden rounded-sm p-7"
-              style={{
-                backgroundColor: t.dark ? "var(--pq-card-veil)" : "#050505",
-                border: t.recommended
-                  ? "0.5px solid rgba(184,149,106,0.55)"
-                  : "0.5px solid rgba(184,149,106,0.22)",
-                boxShadow: t.recommended
-                  ? "0 1px 0 rgba(184,149,106,0.12) inset, 0 24px 48px -32px rgba(184,149,106,0.25)"
-                  : "none",
-                transition:
-                  "border-color 240ms cubic-bezier(0.16,1,0.3,1), background-color 240ms cubic-bezier(0.16,1,0.3,1)",
-              }}
-            >
-              <div className="mb-6 flex items-baseline gap-2">
-                <span
-                  className="font-serif"
-                  style={{
-                    color: "var(--pq-bronze)",
-                    fontSize: "var(--pq-text-caption)",
-                    letterSpacing: "0.22em",
-                  }}
-                >
-                  {t.numeral}
-                </span>
-                <h3
-                  className="font-serif"
-                  style={{
-                    color: "var(--pq-ivory)",
-                    fontSize: "var(--pq-text-quote)",
-                    fontWeight: 500,
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {t.name}
-                </h3>
-              </div>
-
-              <div className="mb-5">
-                <span
-                  className="font-serif"
-                  style={{
-                    color: "var(--pq-ivory)",
-                    fontSize: "var(--pq-text-h3)",
-                    fontWeight: 500,
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  KRW {t.price}
-                </span>
-                <span
-                  className="font-serif"
-                  style={{
-                    color: "rgba(245,240,232,0.45)",
-                    fontSize: "var(--pq-text-caption)",
-                    marginLeft: 6,
-                  }}
-                >
-                  / {t.period}
-                </span>
-              </div>
-
-              <p
-                className="font-serif"
-                style={{
-                  color: "rgba(245,240,232,0.6)",
-                  fontSize: "var(--pq-text-body-sm)",
-                  lineHeight: 1.5,
-                  marginBottom: 20,
-                }}
-              >
-                {t.tagline}
-              </p>
-
-              <ul className="mb-8 flex-1 space-y-2.5">
-                {t.features.map((f) => (
-                  <li
-                    key={f}
-                    className="flex items-start gap-2.5 font-serif"
-                    style={{
-                      color: "rgba(245,240,232,0.78)",
-                      fontSize: "var(--pq-text-body-sm)",
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    <Check
-                      className="mt-0.5 h-3.5 w-3.5 flex-none"
-                      style={{ color: "var(--pq-bronze)" }}
-                      aria-hidden
-                    />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href={t.href}
-                className="group/cta inline-flex items-center justify-center gap-2 rounded-sm px-5 py-3 font-serif transition-transform active:scale-[0.98]"
-                style={{
-                  backgroundColor: t.recommended
-                    ? "var(--pq-bronze)"
-                    : "transparent",
-                  color: t.recommended ? "var(--pq-ink)" : "var(--pq-ivory)",
-                  border: t.recommended
-                    ? "none"
-                    : "0.5pt solid rgba(184,149,106,0.5)",
-                  fontSize: "var(--pq-text-body-sm)",
-                  letterSpacing: "0.02em",
-                  fontWeight: 500,
-                }}
-              >
-                {t.cta}
-                <ArrowRight
-                  className="h-3.5 w-3.5 transition-transform duration-300 group-hover/cta:translate-x-0.5"
-                  aria-hidden
-                />
-              </Link>
-            </motion.article>
-          ))}
-        </motion.div>
-
-        {/* Founding Lifetime panel removed 2026-04-27 per legal review:
-            "평생 사용권" 약속은 1인 시드 단계에서 영업 지속성 의존 채무.
-            전자상거래법 §21 기만적 광고 가능성. 향후 안정 단계 진입 후 재검토. */}
-      </div>
-
-      {/* C — hover consistency: bronze border + bronze-08 fill on hover.
-          Mirrors home-card.tsx pq-home-card-v2 pattern. */}
-      <style jsx global>{`
-        .pq-tier-card-v2:hover {
-          border-color: var(--pq-bronze) !important;
-          background-color: rgba(184, 149, 106, 0.025) !important;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .pq-tier-card-v2 {
-            transition: none !important;
-          }
-        }
-      `}</style>
-    </section>
-  );
-}
+// Copy lives in messages/{ko,en}.json under `landing.faq`. 2026-09-01 rewrote
+// the answers against what ships (they used to describe artifacts, a Risk Board
+// and weekly memos — none of which exist). 2026-09-02 moved them out of this
+// file: the questions were English with Korean answers, and the Korean rewrite
+// left the en locale rendering a half-Korean page.
+const FAQ_KEYS = ["1", "2", "3", "4", "5", "6"] as const;
 
 /* ═══════════════════════════════════════════════════════════════
    FAQ
    ═══════════════════════════════════════════════════════════════ */
 
 function Faq() {
+  const t = useT();
   const reduce = useReducedMotion();
   return (
     <section
@@ -371,10 +108,10 @@ function Faq() {
           variants={fadeUp}
           className="mb-12 md:mb-16"
         >
-          <Eyebrow className="mb-6">Desk Notes</Eyebrow>
-          <p className="pq-deck mb-4">
-            Questions members ask before they subscribe.
-          </p>
+          <Eyebrow className="mb-6">{t("landing.faq.eyebrow")}</Eyebrow>
+          {/* 2026-09-02: was "Questions members ask before they subscribe."
+              — nobody subscribes. Billing is gated 503 and the beta is free. */}
+          <p className="pq-deck mb-4">{t("landing.faq.deck")}</p>
           <h2
             className="pq-silver-matte font-serif"
             style={{
@@ -384,7 +121,7 @@ function Faq() {
               fontWeight: 500,
             }}
           >
-            Before you open the desk.
+            {t("landing.faq.heading")}
           </h2>
         </motion.div>
 
@@ -394,15 +131,15 @@ function Faq() {
           viewport={{ once: true, margin: "-60px" }}
           variants={stagger}
         >
-          {FAQ_ITEMS.map((item, i) => (
+          {FAQ_KEYS.map((k, i) => (
             <motion.details
-              key={item.q}
+              key={k}
               variants={fadeUp}
               className="pq-faq-item"
               {...(i === 0 ? { open: true } : {})}
             >
               <summary>
-                <span>{item.q}</span>
+                <span>{t(`landing.faq.q${k}`)}</span>
                 <span aria-hidden className="pq-faq-icon" />
               </summary>
               <div
@@ -416,7 +153,7 @@ function Faq() {
                   maxWidth: "62ch",
                 }}
               >
-                {item.a}
+                {t(`landing.faq.a${k}`)}
               </div>
             </motion.details>
           ))}
@@ -457,7 +194,7 @@ function CtaFooter() {
           variants={fadeUp}
           className="mb-6 flex justify-center"
         >
-          <Eyebrow withDashRight>Ready?</Eyebrow>
+          <Eyebrow withDashRight>{t("landing.cta.eyebrow")}</Eyebrow>
         </motion.div>
 
         <motion.h2
@@ -479,9 +216,13 @@ function CtaFooter() {
             marginBottom: 24,
           }}
         >
-          Give your portfolio
+          {/* 2026-09-02: was "Give your portfolio someone to report to." —
+              that promised an entity that writes to you. Nothing writes to
+              you: the artifact pipeline is gone and no AI runs. The mirror
+              only replays what you wrote. */}
+          {t("landing.cta.heading1")}
           <br />
-          someone to report to.
+          {t("landing.cta.heading2")}
         </motion.h2>
 
         <motion.p
@@ -498,7 +239,13 @@ function CtaFooter() {
             marginBottom: 36,
           }}
         >
-          Cancel anytime. Visa · Master · Naver Pay · Kakao Pay.
+          {/* 2026-09-02: was "Cancel anytime. Visa · Master · Naver Pay ·
+              Kakao Pay." — there is no checkout to cancel. routes/billing.py
+              answers 503 BUSINESS_REGISTRATION_PENDING and Stripe.js is not
+              even allowed by CSP at Stage 0. Advertising payment methods that
+              cannot be used is 표시광고법 §3; naming card brands we have no
+              merchant agreement for compounds it. */}
+          {t("landing.cta.sub")}
         </motion.p>
 
         <motion.div
@@ -719,7 +466,11 @@ function SiteFooter() {
             >
               {businessInfoRaw.supportEmail || SUPPORT_EMAIL_DEFAULT}
             </a>
-            &nbsp;·&nbsp; 호스팅 Vercel · Railway
+            {/* 전자상거래법 §13 은 호스팅사업자를 표시하게 한다 — 즉 이 값은
+                장식이 아니라 진술이다. 2026-09-02 까지 "Railway" 라고 적혀
+                있었는데 그 계정은 삭제됐고 백엔드는 Render 로 간다. 배포처를
+                옮기면 이 줄도 같이 고쳐라. */}
+            &nbsp;·&nbsp; 호스팅 Vercel · Render
           </p>
         </div>
 
@@ -783,13 +534,11 @@ function SiteFooter() {
    EXPORT
    ═══════════════════════════════════════════════════════════════ */
 
-// Stage 0 (free launch): the pricing/membership section is HIDDEN. 결제 OFF +
-// BUSINESS_REGISTRATION_PENDING means a visitor cannot actually subscribe, so
-// showing ₩ tiers reads as broken/confusing. Env-gated (default off, mirrors the
-// LAUNCH_FREE_ALL_TIERS pattern) — set NEXT_PUBLIC_SHOW_PRICING=true in Vercel to
-// restore for Stage 1; PricingPreview + TIERS data are kept intact above. (CEO 2026-06-06)
-const SHOW_PRICING = process.env.NEXT_PUBLIC_SHOW_PRICING === "true";
-
+// Stage 0 (free launch): there is no pricing section, and NEXT_PUBLIC_SHOW_PRICING
+// no longer does anything — the section it gated was deleted 2026-09-02 (see the
+// "pricing: removed" note near the top of this file for why the flag was a
+// liability rather than an option). Backend billing stays gated at 503
+// BUSINESS_REGISTRATION_PENDING, so a visitor still cannot subscribe by any path.
 export default function LandingV2() {
   return (
     <div
@@ -800,18 +549,11 @@ export default function LandingV2() {
       <SplashPage />
       <Hero />
       <SectionCurtain divider={false}>
-        <MarqueeLogos />
+        <ThreeSteps />
       </SectionCurtain>
       <SectionCurtain>
         <PersonasPreview />
       </SectionCurtain>
-      {/* Pricing/Membership section hidden for Stage 0 free launch (CEO 2026-06-06).
-          Flip SHOW_PRICING above to restore for Stage 1. */}
-      {SHOW_PRICING && (
-        <SectionCurtain>
-          <PricingPreview />
-        </SectionCurtain>
-      )}
       <SectionCurtain divider={false}>
         <Faq />
       </SectionCurtain>

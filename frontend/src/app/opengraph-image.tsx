@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-export const alt = "PivoxQuant — AI Quant Research Tool";
+export const alt = "PivoxQuant — 사기 전에 멈추고, 나중에 되비춘다";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -10,6 +10,15 @@ export const contentType = "image/png";
  * Default OG image for the site.
  * Renders the PivoxQuant wordmark on a Vantablack canvas with a warm-gold accent.
  * Vantablack Luxe palette — no purple/violet gradients (THE LILA BAN).
+ *
+ * ⚠️ 2026-09-02: this card used to read "AI Quant Research Tool for serious
+ * investors / 40 quant models. 7-layer risk defense. / AI · Quant · Risk".
+ * `services/quant/` was deleted 2026-08-31 and `services/ai/` on 2026-09-01,
+ * so the true count of quant models is 0 and of risk layers is 0. This is the
+ * image every KakaoTalk / LinkedIn / Slack link preview renders — a hard,
+ * checkable number that was false is the worst possible thing to put there
+ * (표시광고법 §3 부당표시). Copy now states only what the three shipping
+ * screens do. If you add a number here, measure it first.
  */
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -63,9 +72,9 @@ export default function OpengraphImage() {
               maxWidth: 900,
             }}
           >
-            AI Quant Research Tool
+            사기 전에 멈추고,
             <br />
-            <span style={{ color: "#B8956A" }}>for serious investors</span>
+            <span style={{ color: "#B8956A" }}>나중에 되비춘다.</span>
           </span>
           <span
             style={{
@@ -75,7 +84,7 @@ export default function OpengraphImage() {
               maxWidth: 900,
             }}
           >
-            40 quant models. 7-layer risk defense. US + Korean equities.
+            멈춤 · 기록 · 거울. 종목을 골라주지 않습니다. 한국 + 미국 주식.
           </span>
         </div>
 
@@ -92,7 +101,7 @@ export default function OpengraphImage() {
           }}
         >
           <span>pivoxquant.com</span>
-          <span>AI · Quant · Risk</span>
+          <span>투자 권유 아님 · 정보 제공 전용</span>
         </div>
       </div>
     ),

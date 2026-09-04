@@ -14,6 +14,7 @@ import type {
   PreTradeJournalResponse,
   HoldingMirrorResponse,
   ConcentrationMirrorResponse,
+  FrictionOutcomeResponse,
   ProfitLossMirrorResponse,
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
@@ -789,4 +790,40 @@ export async function replyToInquiry(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+/**
+ * Friction Outcome — what the pause led to. Same SWR contract as the other
+ * behaviour mirrors: 404 is a soft-empty (route not deployed yet), never an
+ * error banner.
+ */
+export function useFrictionOutcome() {
+  const swr = useSWR<FrictionOutcomeResponse | null>(
+    API.behavior.frictionOutcome,
+    async (url: string): Promise<FrictionOutcomeResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
 }

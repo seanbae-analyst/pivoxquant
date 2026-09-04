@@ -114,7 +114,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (loading) return;
     // Single prioritized guard: login → birthdate finalize (PIPA §22) →
     // onboarding broker. Step 0 of onboarding is the broker-connect screen,
-    // which then routes into the 20-question wizard.
+    // which then routes into the 18-question wizard.
     const dest = nextAuthRedirect(user);
     if (dest) router.replace(dest);
   }, [user, loading, router]);
