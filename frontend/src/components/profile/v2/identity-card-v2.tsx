@@ -18,19 +18,7 @@
 import * as React from "react";
 import { useLocale } from "@/lib/locale";
 import { declaredSurfaceLabel } from "@/lib/cfo/hooks";
-
-function initials(name?: string | null, email?: string | null): string {
-  if (name) {
-    return name
-      .split(/\s+/)
-      .map((w) => w[0] ?? "")
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-  }
-  if (email) return email.slice(0, 2).toUpperCase();
-  return "PQ";
-}
+import { initials } from "@/lib/initials";
 
 interface IdentityCardV2Props {
   name?: string | null;
