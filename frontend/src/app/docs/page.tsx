@@ -50,7 +50,7 @@ const SECTIONS = [
     items: [
       {
         q: "What does the Mirror show?",
-        a: "Your declared investor type from the 18-question assessment next to the type your last 30 days of trades actually read as, across nine axes — holding period, turnover, sector spread, and so on.",
+        a: "What you said about your own habits in the five onboarding questions, next to what your last 30 days of trades actually show, across nine axes — holding period, turnover, sector spread, and so on.",
       },
       {
         q: "Is the mirror scoring me?",
