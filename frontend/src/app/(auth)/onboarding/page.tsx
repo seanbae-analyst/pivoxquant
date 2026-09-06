@@ -11,21 +11,28 @@ import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { useLocale } from "@/lib/locale";
-import { declaredSurfaceLabel, declaredSurfaceHighlights } from "@/lib/cfo/hooks";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
   CATEGORIES,
-  INVESTOR_TYPES,
 } from "@/data/onboarding-questions";
-import type { OnboardingOption, OnboardingQuestion } from "@/data/onboarding-questions";
+import type {
+  DeclaredStatement,
+  OnboardingOption,
+  OnboardingQuestion,
+} from "@/data/onboarding-questions";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = "pivoxquant_onboarding_answers";
-const TOTAL_STEPS = WIZARD_QUESTIONS.length + 1; // 18 wizard + 1 legal
-// SPRING replaced: spring easing causes overshoot in financial UI — use PQ_EASE instead.
-const SPRING = { duration: PQ_DUR_BASE, ease: PQ_EASE };
+const TOTAL_STEPS = WIZARD_QUESTIONS.length + 1; // 5 wizard + 1 legal
+
+/** Shape of POST /api/profile/onboarding for a V3 submission. */
+interface OnboardingV3Response {
+  ok: boolean;
+  questionnaire_version?: number;
+  declared?: DeclaredStatement[];
+}
 
 // ── Icon mapping (Lucide-compatible simple shapes) ───────────────────────────
 
@@ -425,32 +432,27 @@ function LegalStep({
   );
 }
 
-/** Result screen after completing all questions. */
+/**
+ * Result screen — the user's own answers, echoed back verbatim.
+ *
+ * v3 (2026-09-06): no persona label, no tagline, no "features activated".
+ * The competitor research (docs/strategy/onboarding-competitor-research_
+ * 2026-09-06.md §5) found self-report risk questionnaires explain little of
+ * later behaviour and regulators found most profiling tools defective; the
+ * only honest use of these answers is as a baseline the mirror can hold up
+ * against real trades later. So this screen says exactly that.
+ */
 function ResultScreen({
-  investorType,
+  statements,
   onContinue,
   loading,
 }: {
-  investorType: string;
+  statements: DeclaredStatement[];
   onContinue: () => void;
   loading: boolean;
 }) {
-  const typeData = INVESTOR_TYPES[investorType];
   const { locale } = useLocale();
-
-  // §101 compliance (legal F-01): the result headline AND its tagline/features
-  // body must surface ONE of the 3 disclosed buckets (성장형 / 균형형 / 수익형)
-  // — never a short-horizon granular persona name OR its behavioural copy
-  // (e.g. "공격형 스캘퍼" / "스윙 진입·청산 신호" / "장중 모멘텀" / "실시간 신호
-  // 스트리밍"). The 8 raw questionnaire codes stay internal for classification;
-  // declaredSurfaceLabel()/declaredSurfaceHighlights() collapse them to 3 via
-  // the same map as backend persona_analytics.PERSONA_TO_SURFACE. Hard
-  // fallback to 균형형 / balanced so an unmapped/empty code can never leak
-  // granular copy.
-  const surfacedLabel = declaredSurfaceLabel(investorType) ?? "균형형";
-  const highlights = declaredSurfaceHighlights(investorType);
-
-  if (!typeData) return null;
+  const ko = locale === "ko";
 
   return (
     <motion.div
@@ -459,95 +461,79 @@ function ResultScreen({
       transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
       className="flex flex-col items-center px-4 py-8"
     >
-      {/* Badge */}
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, ...SPRING }}
-        className="mb-6 flex h-20 w-20 items-center justify-center"
-        style={{
-          backgroundColor: "rgba(184,149,106,0.08)",
-          border: "1px solid var(--pq-bronze)",
-          borderRadius: "var(--pq-radius-card)",
-          boxShadow: "0 8px 24px rgba(var(--pq-bronze-rgb),0.18)",
-        }}
-      >
-        <span className="text-3xl">{"\u{1F3AF}"}</span>
-      </motion.div>
-
-      {/* Title */}
       <motion.p
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
+        transition={{ delay: 0.2, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         className="text-sm font-semibold uppercase tracking-wider"
         style={{
           color: "var(--pq-bronze)",
           letterSpacing: "var(--pq-track-eyebrow)",
         }}
       >
-        Your Investor Profile
+        {ko ? "기록해 두었습니다" : "Recorded"}
       </motion.p>
 
       <motion.h1
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
-        className="mt-2 text-center text-3xl font-bold tracking-tight font-display"
+        transition={{ delay: 0.3, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
+        className="mt-2 text-center text-2xl font-bold tracking-tight font-display sm:text-3xl"
         style={{
           color: "var(--pq-ivory)",
           letterSpacing: "var(--pq-track-tight)",
         }}
       >
-        <span style={{ color: "var(--pq-bronze)" }}>{surfacedLabel}</span>
+        {ko ? "오늘 이렇게 말씀하셨습니다." : "This is what you said today."}
       </motion.h1>
 
-      {/* Tagline */}
       <motion.p
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
+        transition={{ delay: 0.4, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         className="mt-3 max-w-sm text-center text-pq-lead leading-relaxed"
         style={{ color: "rgba(var(--pq-ivory-rgb), 0.7)" }}
       >
-        {locale === "ko" ? (highlights.tagline_kr || highlights.tagline) : highlights.tagline}
+        {ko
+          ? "점수도 유형도 매기지 않습니다. 거래가 쌓이면 이 문장을 실제 기록 옆에 나란히 보여드립니다."
+          : "No score, no type. Once trades accumulate, these lines are shown next to what you actually did."}
       </motion.p>
 
-      {/* Features */}
-      <motion.div
+      {/* The user's own words */}
+      <motion.dl
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
+        transition={{ delay: 0.5, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         className="mt-8 w-full max-w-sm space-y-3"
       >
-        {(locale === "ko" ? (highlights.features_kr || highlights.features) : highlights.features).map((feat, i) => (
+        {statements.map((st, i) => (
           <motion.div
-            key={i}
+            key={st.id}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.7 + i * 0.1, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
-            className="flex items-center gap-3 px-4 py-3"
+            transition={{ delay: 0.6 + i * 0.08, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
+            className="px-4 py-3"
             style={{
               backgroundColor: "rgba(184,149,106,0.06)",
               border: "1px solid rgba(184,149,106,0.2)",
               borderRadius: "var(--pq-radius-card)",
             }}
           >
-            <div
-              className="flex h-6 w-6 items-center justify-center rounded-full"
-              style={{ backgroundColor: "var(--pq-bronze)" }}
+            <dt
+              className="text-xs leading-snug"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
             >
-              <Check size={14} strokeWidth={3} style={{ color: "var(--pq-ink)" }} />
-            </div>
-            <span
-              className="text-sm font-medium"
-              style={{ color: "rgba(var(--pq-ivory-rgb), 0.85)" }}
+              {ko ? st.question_kr : st.question}
+            </dt>
+            <dd
+              className="mt-1 text-pq-lead font-medium"
+              style={{ color: "var(--pq-ivory)" }}
             >
-              {feat}
-            </span>
+              {ko ? st.label_kr : st.label}
+            </dd>
           </motion.div>
         ))}
-      </motion.div>
+      </motion.dl>
 
       {/* CTA */}
       <motion.button
@@ -569,7 +555,7 @@ function ResultScreen({
           <Loader2 size={20} className="animate-spin" />
         ) : (
           <>
-            Go to Dashboard
+            {ko ? "거울로 가기" : "Go to the mirror"}
             <ChevronRight size={18} />
           </>
         )}
@@ -584,12 +570,15 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { user, loading: authLoading, refresh } = useAuth();
 
-  // Steps: 0..18 = wizard questions, 19 = legal, 20 = result screen
+  // Steps: 0..4 = wizard questions, 5 = legal, 6 = result screen
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[] | number>>(loadSavedAnswers);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
   const [submitting, setSubmitting] = useState(false);
-  const [investorType, setInvestorType] = useState<string>("steady_accumulator");
+  // The backend's echo of the user's own answers (v3). Set once the POST
+  // succeeds; the result screen renders it verbatim.
+  const [declared, setDeclared] = useState<DeclaredStatement[]>([]);
+  const [finishing, setFinishing] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -784,14 +773,48 @@ export default function OnboardingPage() {
 
   // ── Navigation ───────────────────────────────────────────────────────────
 
+  // Submit answers to backend. v3: the POST happens when the user leaves the
+  // legal step, and the result screen shows what the server recorded — so
+  // the screen can never display something that was not saved.
+  const handleSubmit = useCallback(async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await apiFetch<OnboardingV3Response>(API.profile.onboarding, {
+        method: "POST",
+        body: JSON.stringify({ answers }),
+      });
+      setDeclared(Array.isArray(res?.declared) ? res.declared : []);
+      // Clean up stored progress (answers now live server-side).
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem("pivoxquant_onboarding_full_answers");
+      setDirection(1);
+      setStep(TOTAL_STEPS);
+      containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      // Sonner toast keeps the user in-flow; answers stay in localStorage so
+      // the next click retries cleanly.
+      toast.error(
+        "저장에 실패했습니다. 다시 시도해 주세요. " +
+          "(Failed to save — please retry)",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }, [answers, submitting]);
+
   const goNext = useCallback(() => {
     if (!isStepValid && !isResultScreen) return;
+    if (isLegalStep) {
+      void handleSubmit();
+      return;
+    }
     setDirection(1);
     if (step < TOTAL_STEPS) {
       setStep((s) => s + 1);
       containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     }
-  }, [step, isStepValid, isResultScreen]);
+  }, [step, isStepValid, isResultScreen, isLegalStep, handleSubmit]);
 
   const goBack = useCallback(() => {
     if (step > 0) {
@@ -812,9 +835,9 @@ export default function OnboardingPage() {
     // not a recurring surface (no design system promotion needed).
     if (typeof window !== "undefined") {
       const ok = window.confirm(
-        "투자자 유형 분석을 건너뛰시겠습니까?\n" +
-          "(Skip investor-type questionnaire?)\n" +
-          "지금 건너뛰면 분석 정확도가 떨어집니다.",
+        "다섯 문항을 건너뛰시겠습니까?\n" +
+          "(Skip the five questions?)\n" +
+          "건너뛰면 거울이 비교할 기준이 없습니다.",
       );
       if (!ok) return;
     }
@@ -836,54 +859,21 @@ export default function OnboardingPage() {
     }
   }, [router, refresh, skipping]);
 
-  // Determine investor type when reaching result screen
-  useEffect(() => {
-    if (step === TOTAL_STEPS) {
-      const type = classifyInvestorTypeLocal(answers);
-      setInvestorType(type);
-    }
-  }, [step, answers]);
-
-  // Submit answers to backend
-  const goToDashboard = useCallback(() => {
-    router.replace("/mirror");
-  }, [router]);
-  const handleSubmit = useCallback(async () => {
-    setSubmitting(true);
+  // Result screen CTA: refresh the user (onboarding_completed flips to true)
+  // and go to the mirror. Done here, not in handleSubmit, so the auth guard
+  // above does not redirect away before the user has read the screen.
+  const handleFinish = useCallback(async () => {
+    if (finishing) return;
+    setFinishing(true);
     try {
-      // Store full 20 answers in localStorage
-      localStorage.setItem("pivoxquant_onboarding_full_answers", JSON.stringify(answers));
-
-      // POST the answers to the onboarding endpoint
-      await apiFetch(API.profile.onboarding, {
-        method: "POST",
-        body: JSON.stringify({ answers }),
-      });
-
-      // Refresh user (onboarding_completed should flip to true)
       await refresh();
-
-      // Clean up stored progress + full-answers PII
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem("pivoxquant_onboarding_full_answers");
-
-      goToDashboard();
     } catch {
-      // 2026-05-17 wave 12 UX P2: native `alert()` was a 20-question
-      // dead-end — user had to re-tap "Go to Dashboard" with no clear
-      // retry path. Sonner toast keeps the user in-flow + state is
-      // preserved (answers stay in localStorage) so the next click of
-      // the submit button retries cleanly.
-      toast.error(
-        "프로필 저장에 실패했습니다. 다시 시도해 주세요. " +
-          "(Failed to save — please retry)",
-      );
+      // Fall through — /mirror re-fetches the user anyway.
     } finally {
-      setSubmitting(false);
+      router.replace("/mirror");
     }
-  }, [answers, refresh, goToDashboard]);
+  }, [finishing, refresh, router]);
 
-  // Brag Card "대시보드로 이동" → finally route to /home.
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
 
   useEffect(() => {
@@ -951,9 +941,9 @@ export default function OnboardingPage() {
       >
         <div className="mx-auto max-w-lg">
           <ResultScreen
-            investorType={investorType}
-            onContinue={handleSubmit}
-            loading={submitting}
+            statements={declared}
+            onContinue={handleFinish}
+            loading={finishing}
           />
         </div>
       </div>
@@ -994,7 +984,7 @@ export default function OnboardingPage() {
             </span>
             {/* P1-6 (2026-05-20 ux-flow fix): Skip was opacity-0.5 plain text
                 — easy to miss, hurting first-run completion for users who
-                want to explore before answering 20 questions. Bumped to a
+                want to explore before answering the questions. Bumped to a
                 higher-contrast hairline-bordered affordance so it reads as a
                 real, tappable escape hatch (44px touch target retained). */}
             <button
@@ -1096,8 +1086,12 @@ export default function OnboardingPage() {
               border: isStepValid ? "none" : "1px solid var(--pq-border)",
             }}
           >
-            {isLegalStep ? "See Results" : "Next"}
-            <ChevronRight size={16} />
+            {isLegalStep
+              ? submitting
+                ? <Loader2 size={16} className="animate-spin" />
+                : "Save"
+              : "Next"}
+            {!(isLegalStep && submitting) && <ChevronRight size={16} />}
           </button>
         </div>
       </footer>
@@ -1205,120 +1199,4 @@ function QuestionScreen({
       )}
     </div>
   );
-}
-
-// ── Local investor type classification (simplified frontend version) ─────────
-
-function classifyInvestorTypeLocal(answers: Record<string, string | string[] | number>): string {
-  // Simplified scoring to determine type on the frontend.
-  // The real scoring happens server-side; this is for the result preview.
-
-  let riskRaw = 0;
-  let activityRaw = 0;
-
-  // Risk from scenario questions
-  const dropScores: Record<string, number> = { sell_all: 1, sell_half: 3, hold: 6, buy_some: 8, buy_heavy: 10 };
-  const crashScores: Record<string, number> = { cut_loss: 2, trim: 4, hold: 6, avg_down: 8, double_down: 10 };
-  const relativeScores: Record<string, number> = { too_much: 2, acceptable: 5, opportunistic: 8, regret_upside: 10 };
-
-  riskRaw += dropScores[String(answers.scenario_portfolio_drop)] ?? 5;
-  riskRaw += crashScores[String(answers.scenario_single_stock_crash)] ?? 5;
-  riskRaw += relativeScores[String(answers.scenario_market_crash_relative)] ?? 5;
-
-  // Leverage
-  const levMap: Record<string, number> = { never: 0, etf_only: 2, light: 5, moderate: 8, full: 10 };
-  const leverageScore = levMap[String(answers.leverage_appetite)] ?? 0;
-  riskRaw += leverageScore;
-
-  // Concentration
-  const concMap: Record<string, number> = { ultra_focused: 10, focused: 7, moderate: 5, diversified: 3, broad: 1 };
-  riskRaw += (concMap[String(answers.concentration_preference)] ?? 5) * 0.5;
-
-  // Activity
-  const freqMap: Record<string, number> = { rare: 1, few: 3, moderate: 5, frequent: 8, daily: 10 };
-  const holdMap: Record<string, number> = { intraday: 10, days: 8, weeks: 5, months: 3, years: 1 };
-  const rebalMap: Record<string, number> = { auto_daily: 9, weekly: 7, biweekly: 5, monthly: 3, quarterly: 1 };
-  activityRaw += freqMap[String(answers.trading_frequency)] ?? 3;
-  activityRaw += holdMap[String(answers.holding_period)] ?? 3;
-  activityRaw += rebalMap[String(answers.rebalance_preference)] ?? 3;
-
-  // max riskRaw = drop+crash+relative (30) + leverage (10) + conc*0.5 (5) = 45.
-  // Coin-flip question removed 2026-06-07 → divisor 5.5 → 4.5 to keep 0-10 scale.
-  const riskNorm = Math.min(riskRaw / 4.5, 10);
-  const activityNorm = Math.min(activityRaw / 3.0, 10);
-
-  // Return ambition
-  const retMap: Record<string, number> = { lt5: 1, "5to10": 3, "10to20": 6, "20to40": 8, "40plus": 10 };
-  const rvsMap: Record<string, number> = { ultra_steady: 1, mostly_steady: 4, volatile_mid: 7, volatile_high: 10 };
-  const minRetMap: Record<string, number> = { positive: 1, beat_bank: 3, beat_spy: 6, beat_20: 9 };
-  let returnRaw = 0;
-  returnRaw += retMap[String(answers.expected_annual_return)] ?? 5;
-  returnRaw += rvsMap[String(answers.return_vs_stability)] ?? 4;
-  returnRaw += minRetMap[String(answers.min_acceptable_return)] ?? 4;
-  const returnNorm = Math.min(returnRaw / 3.0, 10);
-
-  // Experience
-  const expMap: Record<string, number> = { none: 0, lt1: 2, "1to3": 5, "3to5": 7, "5plus": 10 };
-  const experienceNorm = Math.min((expMap[String(answers.experience_years)] ?? 3) / 1.0, 10);
-
-  // Knowledge
-  const concepts = (answers.knowledge_concepts ?? []) as string[];
-  const conceptScores: Record<string, number> = {
-    pe_ratio: 1, market_cap: 1, short_selling: 2, candlestick: 2,
-    rsi_macd: 2, options_greeks: 3, beta_alpha: 2, kelly_criterion: 3,
-  };
-  let knowledgeRaw = concepts.reduce((sum, c) => sum + (conceptScores[c] ?? 0), 0);
-  knowledgeRaw = Math.min(knowledgeRaw, 10);
-  const selfRating = typeof answers.knowledge_self_rating === "number" ? answers.knowledge_self_rating : 3;
-  const knowledgeScore = Math.min(Math.round((knowledgeRaw + selfRating * 2) / 2), 10);
-
-  // Weighted distance classification (same as Python)
-  const typeCentroids: Record<string, number[]> = {
-    passive_index_hugger: [2.0, 1.0, 2.0, 2.0, 2.0, 0.0],
-    steady_accumulator: [3.5, 2.5, 4.0, 3.0, 3.5, 0.0],
-    value_hunter: [4.5, 3.0, 5.5, 6.0, 6.0, 1.0],
-    risk_managed_growth: [5.0, 5.0, 6.0, 4.5, 5.0, 1.5],
-    swing_trader: [6.0, 6.5, 6.5, 5.0, 6.0, 3.0],
-    momentum_rider: [7.5, 7.5, 8.0, 5.5, 5.5, 6.0],
-    macro_rotator: [5.0, 5.0, 6.0, 7.5, 8.0, 3.0],
-    aggressive_scalper: [9.5, 9.5, 9.5, 7.0, 7.0, 8.0],
-  };
-  const dimWeights = [2.5, 2.0, 1.5, 1.0, 1.0, 1.5];
-  const userVector = [riskNorm, activityNorm, returnNorm, experienceNorm, knowledgeScore, leverageScore];
-
-  let bestType = "steady_accumulator";
-  let bestDist = Infinity;
-
-  for (const [typeName, centroid] of Object.entries(typeCentroids)) {
-    let dist = 0;
-    for (let i = 0; i < 6; i++) {
-      dist += dimWeights[i] * Math.pow(userVector[i] - centroid[i], 2);
-    }
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestType = typeName;
-    }
-  }
-
-  // Override rules
-  const holdVal = String(answers.holding_period ?? "weeks");
-  const freqVal = String(answers.trading_frequency ?? "moderate");
-  const tradingStyle =
-    holdVal === "intraday" || freqVal === "daily"
-      ? activityNorm >= 8 ? "scalp" : "day"
-      : holdVal === "days" || holdVal === "weeks" || freqVal === "moderate" || freqVal === "frequent"
-        ? "swing"
-        : holdVal === "months"
-          ? "position"
-          : "buy_and_hold";
-
-  if (tradingStyle === "scalp" && activityNorm >= 8.5) bestType = "aggressive_scalper";
-  if (riskNorm <= 2 && activityNorm <= 2) bestType = "passive_index_hugger";
-  if (knowledgeScore >= 8 && experienceNorm >= 7 && activityNorm >= 4 && activityNorm <= 6)
-    bestType = "macro_rotator";
-  if (bestType === "aggressive_scalper" && tradingStyle !== "scalp") {
-    if (activityNorm >= 6 && riskNorm >= 6) bestType = "momentum_rider";
-  }
-
-  return bestType;
 }

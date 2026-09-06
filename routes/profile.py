@@ -1,4 +1,4 @@
-"""Investment profile routes: onboarding, get/update profile, questionnaire.
+"""Investment profile routes: onboarding (questionnaire V3), get/update profile.
 
 Also hosts the **Living CFO Layer 2** endpoints consumed by
 ``frontend/src/lib/cfo/hooks.ts``:
@@ -57,7 +57,6 @@ from models import (
     Watchlist,
     WeeklyPulse,
 )
-from models.investment_profile import calculate_profile_type
 from services.error_responses import api_error
 from services.profile import (
     compute_persona_response,
@@ -79,110 +78,31 @@ logger = logging.getLogger(__name__)
 profile_bp = Blueprint("profile", __name__, url_prefix="/api/profile")
 
 
-# ── Questionnaire (질문 목록) ──────────────────────────────────────────────
-
-QUESTIONNAIRE = [
-    {
-        "id": "experience_level",
-        "question": "How much investment experience do you have?",
-        "question_kr": "투자 경험은 어느 정도인가요?",
-        "options": [
-            {"value": "beginner", "label": "Beginner", "label_kr": "초보 (1년 미만)", "icon": "seedling"},
-            {"value": "intermediate", "label": "1-3 years", "label_kr": "1~3년", "icon": "sprout"},
-            {"value": "advanced", "label": "3-5 years", "label_kr": "3~5년", "icon": "tree"},
-            {"value": "expert", "label": "5+ years", "label_kr": "5년 이상", "icon": "mountain"},
-        ],
-    },
-    {
-        "id": "investment_goal",
-        "question": "What is your primary investment goal?",
-        "question_kr": "주요 투자 목표는?",
-        "options": [
-            {"value": "preservation", "label": "Capital Preservation", "label_kr": "자산 보존", "icon": "shield"},
-            {"value": "income", "label": "Stable Income", "label_kr": "안정적 수익", "icon": "wallet"},
-            {"value": "growth", "label": "Growth", "label_kr": "성장", "icon": "trending-up"},
-            {"value": "aggressive_growth", "label": "Aggressive Growth", "label_kr": "공격적 성장", "icon": "rocket"},
-        ],
-    },
-    {
-        "id": "risk_tolerance",
-        "question": "If your portfolio dropped 20%, what would you do?",
-        "question_kr": "포트폴리오가 -20% 하락하면?",
-        "type": "slider",
-        "options": [
-            {"value": 2, "label": "Sell Everything", "label_kr": "전량 매도"},
-            {"value": 4, "label": "Sell Some", "label_kr": "일부 매도"},
-            {"value": 6, "label": "Hold", "label_kr": "유지"},
-            {"value": 9, "label": "Buy More", "label_kr": "추가 매수"},
-        ],
-    },
-    {
-        "id": "time_horizon",
-        "question": "What is your preferred investment horizon?",
-        "question_kr": "선호하는 투자 기간은?",
-        "options": [
-            {"value": "short", "label": "Short-term (< 3 months)", "label_kr": "단기 (~3개월)", "icon": "zap"},
-            {"value": "medium", "label": "Medium (3-12 months)", "label_kr": "중기 (3~12개월)", "icon": "clock"},
-            {"value": "long", "label": "Long-term (1+ years)", "label_kr": "장기 (1년+)", "icon": "calendar"},
-        ],
-    },
-    {
-        "id": "preferred_markets",
-        "question": "Which markets are you interested in?",
-        "question_kr": "관심 있는 시장은?",
-        "options": [
-            {"value": "us", "label": "US Only", "label_kr": "미국만", "icon": "flag-us"},
-            {"value": "kr", "label": "Korea Only", "label_kr": "한국만", "icon": "flag-kr"},
-            {"value": "both", "label": "Both US & Korea", "label_kr": "둘 다", "icon": "globe"},
-        ],
-    },
-    {
-        "id": "preferred_sectors",
-        "question": "Which sectors interest you? (Select multiple)",
-        "question_kr": "관심 있는 섹터는? (복수 선택)",
-        "type": "multi",
-        "options": [
-            {"value": "Technology", "label": "Tech", "label_kr": "기술"},
-            {"value": "Healthcare", "label": "Healthcare", "label_kr": "헬스케어"},
-            {"value": "Financial Services", "label": "Finance", "label_kr": "금융"},
-            {"value": "Energy", "label": "Energy", "label_kr": "에너지"},
-            {"value": "Consumer Cyclical", "label": "Consumer", "label_kr": "소비재"},
-            {"value": "Industrials", "label": "Industrials", "label_kr": "산업재"},
-        ],
-    },
-    {
-        "id": "auto_trade_preference",
-        "question": "How do you want to manage trades?",
-        "question_kr": "자동 매매에 관심이 있나요?",
-        "options": [
-            {"value": "manual", "label": "Manual Only", "label_kr": "수동만", "icon": "hand"},
-            {"value": "signals", "label": "Signal Alerts", "label_kr": "시그널 알림", "icon": "bell"},
-            {"value": "semi_auto", "label": "Semi-Auto", "label_kr": "반자동", "icon": "settings"},
-            {"value": "full_auto", "label": "Full Auto", "label_kr": "완전 자동", "icon": "bot"},
-        ],
-    },
-    {
-        "id": "daily_time",
-        "question": "How much time can you spend on investing daily?",
-        "question_kr": "하루에 투자에 쓸 수 있는 시간은?",
-        "options": [
-            {"value": "minimal", "label": "< 10 minutes", "label_kr": "10분 이하", "icon": "coffee"},
-            {"value": "moderate", "label": "30 minutes", "label_kr": "30분", "icon": "clock"},
-            {"value": "active", "label": "1+ hours", "label_kr": "1시간 이상", "icon": "monitor"},
-        ],
-    },
-]
-
-
 @profile_bp.route("/questionnaire")
 def get_questionnaire():
-    """Return the 20-question v2 questionnaire (falls back to v1 8-question)."""
-    try:
-        from services.profile.questionnaire import QUESTIONNAIRE_V2
-        return jsonify({"questions": QUESTIONNAIRE_V2})
-    except ImportError:
-        # Fallback to v1 if questionnaire.py not available
-        return jsonify({"questions": QUESTIONNAIRE})
+    """Return the onboarding questionnaire (V3: 5 declarations + legal block)."""
+    from services.profile.questionnaire import QUESTIONNAIRE_V3
+    return jsonify({"version": 3, "questions": QUESTIONNAIRE_V3})
+
+
+def _apply_questionnaire_v3(profile, answers: dict, result: dict) -> None:
+    """Write a V3 result onto an ``InvestmentProfile`` row.
+
+    Shared by ``submit_onboarding`` and ``update_profile`` so the two paths
+    cannot drift (the V2 era had them diverge — see wave D-1 notes above).
+    The raw answers are kept verbatim; the legal block is stripped from the
+    stored copy because it is a consent record, not a self-statement, and
+    consents already live in their own table.
+    """
+    stored = {k: v for k, v in answers.items() if k != "legal_confirmations"}
+    profile.questionnaire_version = 3
+    profile.onboarding_answers_json = json.dumps(stored, ensure_ascii=False)
+    profile.declared_vector_json = json.dumps(result.get("declared_vector") or {})
+    profile.risk_tolerance = int(result.get("risk_tolerance", 6))
+    profile.time_horizon = result.get("time_horizon", profile.time_horizon or "medium")
+    # Columns V3 does not ask about keep their current value (or the column
+    # default for a brand-new row). They have no readers left; we neither
+    # invent values nor null them out.
 
 
 # 2026-05-17 wave 12 UX P0 — onboarding partial-save / device handoff.
@@ -332,15 +252,19 @@ def submit_onboarding():
             code="ONBOARDING_LEGAL_REQUIRED", status=400,
         )
 
-    from services.profile.questionnaire import calculate_profile_v2
-    profile_v2_result = calculate_profile_v2(answers)
-    is_v2_submission = bool(answers) and any(
-        k in answers for k in (
-            "experience_years", "portfolio_size", "scenario_portfolio_drop",
-            "legal_confirmations",
+    from services.profile.questionnaire import calculate_profile_v3, is_v3_answers
+
+    # Two shapes are accepted: ``{}`` (skip — the user answers later or never)
+    # and a V3 payload. Anything else is a client we no longer ship.
+    is_v3_submission = is_v3_answers(answers)
+    if answers and not is_v3_submission:
+        return api_error(
+            en="Unrecognised questionnaire payload. Reload the app and try again.",
+            kr="알 수 없는 문항 형식입니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
+            code="ONBOARDING_UNKNOWN_QUESTIONNAIRE", status=400,
         )
-    )
-    if is_v2_submission and not profile_v2_result.get("legal_confirmed", False):
+    profile_v3_result = calculate_profile_v3(answers) if is_v3_submission else None
+    if is_v3_submission and not profile_v3_result.get("legal_confirmed", False):
         return api_error(
             en=(
                 "Required legal confirmations missing: age 14+, risk acknowledgment, "
@@ -355,11 +279,12 @@ def submit_onboarding():
             code="ONBOARDING_LEGAL_REQUIRED", status=400,
         )
 
-    if is_v2_submission:
-        profile_type = profile_v2_result.get("investor_type", "risk_managed_growth")
-    else:
-        # Skip path (empty answers) or legacy v1 submission.
-        profile_type = calculate_profile_type(answers)
+    # Skip path keeps the neutral bucket; the mirror falls back to the
+    # persona centroid until the user declares something.
+    profile_type = (
+        profile_v3_result.get("investor_type", "balanced")
+        if is_v3_submission else "balanced"
+    )
 
     # Create or update investment profile
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
@@ -367,76 +292,8 @@ def submit_onboarding():
         profile = InvestmentProfile(user_id=current_user.id)
         db.session.add(profile)
 
-    # 2026-05-17 wave D-1 — persist V2 answers under the V2 IDs the wizard
-    # actually emits, not the V1 IDs (``experience_level`` / ``investment_goal``
-    # etc.) which no longer appear in the payload. Pre-fix every V2 submission
-    # caused the ``InvestmentProfile`` row to be filled with the ``.get(..., default)``
-    # defaults ("beginner" / "growth" / 5 / "medium" / "both" / "manual" /
-    # "moderate") regardless of what the user actually answered.
-    if is_v2_submission:
-        # Translate V2 IDs → existing ORM columns (kept stable so analytics
-        # downstream code that filters on ``profile_type`` / ``experience_level``
-        # keeps working). Use the V2-derived fields when available, fall back
-        # to the raw answer for direct-mapped fields.
-        profile.experience_level = profile_v2_result.get(
-            "experience_level", profile.experience_level or "beginner"
-        )
-        profile.risk_tolerance = int(round(profile_v2_result.get("risk_score", 50) / 10))
-        # holding_period is the V2 analogue of time_horizon
-        hold_to_horizon = {
-            "intraday": "short", "days": "short",
-            "weeks": "short", "months": "medium", "years": "long",
-        }
-        profile.time_horizon = hold_to_horizon.get(
-            answers.get("holding_period"), profile.time_horizon or "medium"
-        )
-        profile.preferred_markets = answers.get(
-            "preferred_markets", profile.preferred_markets or "both"
-        )
-        profile.preferred_sectors = json.dumps(
-            answers.get("preferred_sectors", [])
-            if isinstance(answers.get("preferred_sectors"), list) else []
-        )
-        # rebalance_preference maps to auto_trade_preference (auto_daily ≈
-        # full_auto; manual rebalance ≈ manual)
-        rebal_to_auto = {
-            "auto_daily": "full_auto", "weekly": "semi_auto",
-            "biweekly": "semi_auto", "monthly": "signals",
-            "quarterly": "manual",
-        }
-        profile.auto_trade_preference = rebal_to_auto.get(
-            answers.get("rebalance_preference"),
-            profile.auto_trade_preference or "manual",
-        )
-        # time_commitment from V2 maps to daily_time
-        commit_to_daily = {
-            "minimal": "minimal", "moderate": "moderate",
-            "active": "active", "full_time": "active",
-        }
-        profile.daily_time = commit_to_daily.get(
-            profile_v2_result.get("time_commitment"),
-            profile.daily_time or "moderate",
-        )
-        # investment_goal: derive from return ambition + risk tolerance
-        risk_score = profile_v2_result.get("risk_score", 50)
-        if risk_score <= 25:
-            profile.investment_goal = "preservation"
-        elif risk_score <= 45:
-            profile.investment_goal = "income"
-        elif risk_score <= 70:
-            profile.investment_goal = "growth"
-        else:
-            profile.investment_goal = "aggressive_growth"
-    else:
-        # Legacy v1 / skip-path: preserve existing behaviour exactly.
-        profile.experience_level = answers.get("experience_level", "beginner")
-        profile.investment_goal = answers.get("investment_goal", "growth")
-        profile.risk_tolerance = answers.get("risk_tolerance", 5)
-        profile.time_horizon = answers.get("time_horizon", "medium")
-        profile.preferred_markets = answers.get("preferred_markets", "both")
-        profile.preferred_sectors = json.dumps(answers.get("preferred_sectors", []))
-        profile.auto_trade_preference = answers.get("auto_trade_preference", "manual")
-        profile.daily_time = answers.get("daily_time", "moderate")
+    if is_v3_submission:
+        _apply_questionnaire_v3(profile, answers, profile_v3_result)
 
     # Set profile type and apply quant presets
     profile.profile_type = profile_type
@@ -464,9 +321,15 @@ def submit_onboarding():
 
     return jsonify({
         "ok": True,
+        "questionnaire_version": 3 if is_v3_submission else None,
         "profile_type": profile_type,
         "profile": profile.to_dict(),
-        "message": f"Profile set to {profile_type.title()}. Quant engine parameters updated.",
+        # The result screen renders the user's own statements verbatim — no
+        # label, no grade. ``profile_type`` is still returned for callers that
+        # key on it; the surfaced identity stays the 3-bucket label.
+        "declared": profile_v3_result.get("statements", []) if is_v3_submission else [],
+        "message": "Your answers were recorded." if is_v3_submission else "Onboarding skipped.",
+        "message_kr": "답하신 내용을 기록해 두었습니다." if is_v3_submission else "온보딩을 건너뛰었습니다.",
     })
 
 
@@ -682,22 +545,16 @@ def update_profile():
             code="PROFILE_LEGAL_REQUIRED", status=400,
         )
 
-    # 2026-05-17 wave D-1 — mirror the V2 path from ``submit_onboarding`` so
-    # re-taking the questionnaire actually re-classifies the user against
-    # the 8-type V2 system. Pre-fix this PUT path called only
-    # ``calculate_profile_type`` (V1 4-tier) — so a Pro user who re-took the
-    # 20-question wizard silently collapsed back to one of the 4 legacy types
-    # and lost any V2 preset (max_alloc_pct, leverage_allowed, preferred_models,
-    # etc.) the original submit had derived.
-    from services.profile.questionnaire import calculate_profile_v2
-    profile_v2_result = calculate_profile_v2(answers)
-    is_v2_submission = bool(answers) and any(
-        k in answers for k in (
-            "experience_years", "portfolio_size", "scenario_portfolio_drop",
-            "legal_confirmations",
+    from services.profile.questionnaire import calculate_profile_v3, is_v3_answers
+    is_v3_submission = is_v3_answers(answers)
+    if not is_v3_submission:
+        return api_error(
+            en="Unrecognised questionnaire payload. Reload the app and try again.",
+            kr="알 수 없는 문항 형식입니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
+            code="PROFILE_UNKNOWN_QUESTIONNAIRE", status=400,
         )
-    )
-    if is_v2_submission and not profile_v2_result.get("legal_confirmed", False):
+    profile_v3_result = calculate_profile_v3(answers)
+    if not profile_v3_result.get("legal_confirmed", False):
         return api_error(
             en=(
                 "Required legal confirmations missing: age 14+, risk acknowledgment, "
@@ -711,11 +568,7 @@ def update_profile():
             ),
             code="PROFILE_LEGAL_REQUIRED", status=400,
         )
-
-    if is_v2_submission:
-        profile_type = profile_v2_result.get("investor_type", "risk_managed_growth")
-    else:
-        profile_type = calculate_profile_type(answers)
+    profile_type = profile_v3_result.get("investor_type", "balanced")
 
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
     if not profile:
@@ -725,57 +578,7 @@ def update_profile():
             code="PROFILE_NOT_FOUND", status=404,
         )
 
-    if is_v2_submission:
-        profile.experience_level = profile_v2_result.get(
-            "experience_level", profile.experience_level
-        )
-        profile.risk_tolerance = int(round(profile_v2_result.get("risk_score", 50) / 10))
-        hold_to_horizon = {
-            "intraday": "short", "days": "short",
-            "weeks": "short", "months": "medium", "years": "long",
-        }
-        profile.time_horizon = hold_to_horizon.get(
-            answers.get("holding_period"), profile.time_horizon
-        )
-        profile.preferred_markets = answers.get(
-            "preferred_markets", profile.preferred_markets
-        )
-        if isinstance(answers.get("preferred_sectors"), list):
-            profile.preferred_sectors = json.dumps(answers.get("preferred_sectors", []))
-        rebal_to_auto = {
-            "auto_daily": "full_auto", "weekly": "semi_auto",
-            "biweekly": "semi_auto", "monthly": "signals",
-            "quarterly": "manual",
-        }
-        profile.auto_trade_preference = rebal_to_auto.get(
-            answers.get("rebalance_preference"), profile.auto_trade_preference
-        )
-        commit_to_daily = {
-            "minimal": "minimal", "moderate": "moderate",
-            "active": "active", "full_time": "active",
-        }
-        profile.daily_time = commit_to_daily.get(
-            profile_v2_result.get("time_commitment"), profile.daily_time
-        )
-        risk_score = profile_v2_result.get("risk_score", 50)
-        if risk_score <= 25:
-            profile.investment_goal = "preservation"
-        elif risk_score <= 45:
-            profile.investment_goal = "income"
-        elif risk_score <= 70:
-            profile.investment_goal = "growth"
-        else:
-            profile.investment_goal = "aggressive_growth"
-    else:
-        # Store answers
-        profile.experience_level = answers.get("experience_level", profile.experience_level)
-        profile.investment_goal = answers.get("investment_goal", profile.investment_goal)
-        profile.risk_tolerance = answers.get("risk_tolerance", profile.risk_tolerance)
-        profile.time_horizon = answers.get("time_horizon", profile.time_horizon)
-        profile.preferred_markets = answers.get("preferred_markets", profile.preferred_markets)
-        profile.preferred_sectors = json.dumps(answers.get("preferred_sectors", []))
-        profile.auto_trade_preference = answers.get("auto_trade_preference", profile.auto_trade_preference)
-        profile.daily_time = answers.get("daily_time", profile.daily_time)
+    _apply_questionnaire_v3(profile, answers, profile_v3_result)
 
     profile.profile_type = profile_type
     profile.apply_preset()
@@ -797,8 +600,10 @@ def update_profile():
 
     return jsonify({
         "ok": True,
+        "questionnaire_version": 3,
         "profile_type": profile_type,
         "profile": profile.to_dict(),
+        "declared": profile_v3_result.get("statements", []),
         "changes_left": current_user.profile_changes_left,
     })
 

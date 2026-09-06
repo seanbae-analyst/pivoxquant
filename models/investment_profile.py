@@ -1,4 +1,5 @@
-"""Investment profile model — stores onboarding answers + auto-calculated quant params."""
+"""Investment profile model — the user's onboarding declarations (V3) + legacy columns."""
+import json
 from datetime import datetime, timezone
 from extensions import db
 
@@ -29,41 +30,6 @@ PROFILE_PRESETS = {
         "ai_coaching_style": "aggressive", "alert_frequency": "realtime",
     },
 }
-
-
-def calculate_profile_type(answers: dict) -> str:
-    """Calculate profile type from 8-question onboarding answers.
-    Returns: conservative / balanced / growth / aggressive
-    """
-    score = 0
-    # Q1: experience
-    exp_map = {"beginner": 1, "intermediate": 3, "advanced": 5, "expert": 7}
-    score += exp_map.get(answers.get("experience_level", ""), 3)
-    # Q2: goal
-    goal_map = {"preservation": 1, "income": 3, "growth": 6, "aggressive_growth": 9}
-    score += goal_map.get(answers.get("investment_goal", ""), 4)
-    # Q3: risk tolerance (1-10 직접 값)
-    score += min(max(answers.get("risk_tolerance", 5), 1), 10)
-    # Q4: time horizon
-    horizon_map = {"short": 2, "medium": 5, "long": 8}
-    score += horizon_map.get(answers.get("time_horizon", ""), 5)
-    # Q5: auto trade preference
-    auto_map = {"manual": 1, "signals": 3, "semi_auto": 6, "full_auto": 9}
-    score += auto_map.get(answers.get("auto_trade_preference", ""), 3)
-    # Q6: daily time
-    time_map = {"minimal": 2, "moderate": 5, "active": 8}
-    score += time_map.get(answers.get("daily_time", ""), 4)
-
-    # 6문항 × max ~9 = 54점 만점, 평균으로 1~10 스케일
-    avg = score / 6.0
-    if avg <= 3.0:
-        return "conservative"
-    elif avg <= 5.0:
-        return "balanced"
-    elif avg <= 7.0:
-        return "growth"
-    else:
-        return "aggressive"
 
 
 class InvestmentProfile(db.Model):
@@ -105,44 +71,29 @@ class InvestmentProfile(db.Model):
     enabled_quant_models = db.Column(db.Text, default="[]")
     model_weights = db.Column(db.Text, default="{}")
 
+    # ── Questionnaire V3 (2026-09-06) ── the user's own words, kept.
+    # V2 discarded raw answers after classification, so ``/mirror`` could only
+    # compare observed behaviour against a persona *centroid*. V3 persists
+    # the answers verbatim and their projection onto the observed feature
+    # scale so the mirror compares "what you said" with "what you did".
+    # NULL for skip-path users and for rows written before V3.
+    questionnaire_version = db.Column(db.Integer, nullable=True)
+    onboarding_answers_json = db.Column(db.Text, nullable=True)   # raw {qid: value}
+    declared_vector_json = db.Column(db.Text, nullable=True)      # {feature_key: 0..1}
+
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     def apply_preset(self):
-        """Apply preset quant params based on ``profile_type``.
+        """Fill the legacy quant-parameter columns from ``profile_type``.
 
-        Lookup order (2026-05-17 wave D-1 fix):
-          1. V2 presets (``services.profile.questionnaire.PROFILE_PRESETS_V2``)
-             — the 8 investor types produced by the 20-question wizard.
-          2. V1 legacy presets (``PROFILE_PRESETS`` in this module)
-             — conservative / balanced / growth / aggressive.
-          3. ``balanced`` fallback.
-
-        Pre-fix every V2 type silently collapsed to ``balanced`` because the
-        V1 map had no overlapping keys, so e.g. a user classified as
-        ``momentum_rider`` (tp_max 30%, max_positions 6, leverage_allowed)
-        was running the 15%/15 pos/no-lev "balanced" preset against the
-        engine. Only the V1 4-tier flow (``calculate_profile_type``) ever
-        produced keys that the preset map could resolve.
+        The quant engine that read these columns was deleted 2026-08-31 and
+        nothing reads them now; they are kept populated only so existing
+        rows / exports keep a consistent shape. V3 persona codes that are
+        not in the 4-tier map (value, income, speculator, …) take the
+        ``balanced`` preset.
         """
-        # V2 preset has additional keys (max_alloc_pct, rebalance_interval_days,
-        # trailing_stop_pct, max_daily_trades, leverage_allowed, preferred_models,
-        # scan_interval_sec) that don't exist as ORM columns. ``setattr`` on a
-        # SQLAlchemy model with a name that isn't mapped creates an instance
-        # attribute that's silently dropped at commit — harmless but noisy.
-        # Filter to the intersection with V1 keys (which mirror the ORM cols).
-        try:
-            from services.profile.questionnaire import PROFILE_PRESETS_V2
-            v2_preset = PROFILE_PRESETS_V2.get(self.profile_type)
-        except ImportError:
-            v2_preset = None
-
-        if v2_preset is not None:
-            v1_keys = set(PROFILE_PRESETS["balanced"].keys())
-            preset = {k: v for k, v in v2_preset.items() if k in v1_keys}
-        else:
-            preset = PROFILE_PRESETS.get(self.profile_type, PROFILE_PRESETS["balanced"])
-
+        preset = PROFILE_PRESETS.get(self.profile_type, PROFILE_PRESETS["balanced"])
         for k, v in preset.items():
             setattr(self, k, v)
 
@@ -161,9 +112,41 @@ class InvestmentProfile(db.Model):
             "sell_threshold": self.sell_threshold,
         }
 
+    def declared_vector(self) -> dict:
+        """Parsed ``declared_vector_json`` — ``{}`` when absent or corrupt."""
+        raw = self.declared_vector_json
+        if not raw:
+            return {}
+        try:
+            data = json.loads(raw)
+        except (TypeError, ValueError):
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        out: dict[str, float] = {}
+        for k, v in data.items():
+            try:
+                out[str(k)] = max(0.0, min(1.0, float(v)))
+            except (TypeError, ValueError):
+                continue
+        return out
+
+    def onboarding_answers(self) -> dict:
+        """Parsed ``onboarding_answers_json`` — ``{}`` when absent or corrupt."""
+        raw = self.onboarding_answers_json
+        if not raw:
+            return {}
+        try:
+            data = json.loads(raw)
+        except (TypeError, ValueError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
     def to_dict(self) -> dict:
         """Serialize for API response."""
         return {
+            "questionnaire_version": self.questionnaire_version,
+            "declared_vector": self.declared_vector(),
             "profile_type": self.profile_type,
             "experience_level": self.experience_level,
             "investment_goal": self.investment_goal,

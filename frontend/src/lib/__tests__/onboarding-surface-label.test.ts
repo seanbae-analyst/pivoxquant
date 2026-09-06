@@ -1,50 +1,46 @@
 import { describe, it, expect } from "vitest";
 
 import { declaredSurfaceLabel, declaredSurfaceHighlights } from "@/lib/cfo/hooks";
-import { INVESTOR_TYPES } from "@/data/onboarding-questions";
+import { DECLARED_PERSONA_CODES, WIZARD_QUESTIONS } from "@/data/onboarding-questions";
 
 /**
  * §101 compliance regression guard (legal F-01).
  *
- * The onboarding RESULT headline must surface exactly one of the 3 disclosed
- * buckets — 성장형 / 균형형 / 수익형 — and must NEVER name a short-horizon
- * granular persona (e.g. "공격형 스캘퍼" / "스윙 트레이더" / "모멘텀 추종형").
- *
- * The result screen feeds `investorType` (one of the INVESTOR_TYPES keys, i.e.
- * the same 8 questionnaire codes the local classifier can produce) into
- * `declaredSurfaceLabel`. This test pins that every possible result code maps
- * to a 3-surface label and that no granular NAME can leak through.
+ * v3 (2026-09-06): the onboarding RESULT screen no longer shows a persona at
+ * all — it echoes the user's own answers. The 8-code persona the backend
+ * derives (`profile_type`) still reaches other surfaces (`/mirror`, profile
+ * hero, living-cfo status) through `declaredSurfaceLabel`, so this guard now
+ * pins that every code the v3 rule table can emit collapses to one of the 3
+ * disclosed buckets — 성장형 / 균형형 / 수익형 — and never a short-horizon name.
  */
 const SURFACE_SET = new Set(["성장형", "균형형", "수익형"]);
 
-// Every granular persona NAME that must never appear as a result headline.
-const GRANULAR_NAMES = Object.values(INVESTOR_TYPES).flatMap((t) => [
-  t.label,
-  t.label_kr,
-]);
+// Granular persona NAMES that must never appear on any user-facing surface.
+const GRANULAR_NAMES = [
+  "Growth CFO", "Value CFO", "Balanced CFO", "Income CFO", "Quant CFO",
+  "Speculator CFO", "Daytrader CFO", "Beginner CFO",
+  "공격형 스캘퍼", "스윙 트레이더", "모멘텀 라이더", "매크로 로테이터",
+  "가치투자 헌터", "패시브 인덱스 추종자", "꾸준한 적립 투자자", "리스크 관리형 성장투자",
+  "투기형", "데이트레이더", "초심자",
+];
 
-describe("onboarding result label — §101 3-surface collapse (F-01)", () => {
-  it("maps every questionnaire result type to a 3-surface label", () => {
-    const resultTypes = Object.keys(INVESTOR_TYPES);
-    expect(resultTypes.length).toBe(8); // sanity: all 8 codes present
-
-    for (const code of resultTypes) {
+describe("declared persona → §101 3-surface collapse (F-01)", () => {
+  it("maps every v3-reachable persona code to a 3-surface label", () => {
+    expect(DECLARED_PERSONA_CODES.length).toBe(8);
+    for (const code of DECLARED_PERSONA_CODES) {
       const label = declaredSurfaceLabel(code);
-      expect(label, `result type "${code}" must surface a 3-bucket label`).not.toBeNull();
+      expect(label, `persona "${code}" must surface a 3-bucket label`).not.toBeNull();
       expect(
         SURFACE_SET.has(label as string),
-        `result type "${code}" surfaced "${label}" — not in {성장형, 균형형, 수익형}`,
+        `persona "${code}" surfaced "${label}" — not in {성장형, 균형형, 수익형}`,
       ).toBe(true);
     }
   });
 
-  it("never surfaces a granular persona NAME for any result type", () => {
-    for (const code of Object.keys(INVESTOR_TYPES)) {
+  it("never surfaces a granular persona NAME for any code", () => {
+    for (const code of DECLARED_PERSONA_CODES) {
       const label = declaredSurfaceLabel(code) ?? "균형형";
-      expect(
-        GRANULAR_NAMES.includes(label),
-        `result type "${code}" leaked granular name "${label}"`,
-      ).toBe(false);
+      expect(GRANULAR_NAMES.includes(label), `persona "${code}" leaked "${label}"`).toBe(false);
     }
   });
 
@@ -56,62 +52,22 @@ describe("onboarding result label — §101 3-surface collapse (F-01)", () => {
     }
   });
 
-  // ── Result-screen BODY guard (tagline + features) ──────────────────────────
-  //
-  // Closes the gap where the headline collapsed to 3 buckets but the
-  // tagline/features body still rendered granular short-horizon persona copy
-  // (e.g. "속도가 곧 우위, 짧은 손절과 잦은 시도." / "장중 모멘텀 + 변동성 모델"
-  // / "실시간 신호 스트리밍" / "스윙 진입·청산 신호"). The result screen now
-  // renders tagline/features via declaredSurfaceHighlights() — this asserts no
-  // banned short-horizon vocabulary survives for any of the 8 result codes.
-  const BANNED_BODY_TERMS = [
-    "장중",
-    "스윙",
-    "스캘퍼",
-    "단타",
-    "실시간 신호",
-    "잦은 시도",
-    "투기",
-  ];
+  // ── Body guard (tagline + features on surfaces that still render them) ──
+  const BANNED_BODY_TERMS = ["장중", "스윙", "스캘퍼", "단타", "실시간 신호", "잦은 시도", "투기"];
 
-  it("never leaks granular short-horizon vocabulary in tagline/features for any of the 8 result types", () => {
-    const resultTypes = Object.keys(INVESTOR_TYPES);
-    expect(resultTypes.length).toBe(8);
-
-    for (const code of resultTypes) {
-      const h = declaredSurfaceHighlights(code);
-      // Mirror exactly what the result screen renders (ko + en surfaces).
-      const rendered = [
-        h.tagline,
-        h.tagline_kr,
-        ...h.features,
-        ...h.features_kr,
-      ].join("\n");
-
-      for (const term of BANNED_BODY_TERMS) {
-        expect(
-          rendered.includes(term),
-          `result type "${code}" leaked banned body term "${term}" in tagline/features`,
-        ).toBe(false);
-      }
-
-      // Body must be non-empty (feature preservation: screen still renders content).
-      expect(h.tagline.length, `result type "${code}" has empty tagline`).toBeGreaterThan(0);
-      expect(h.features.length, `result type "${code}" has no features`).toBeGreaterThan(0);
-      expect(h.features_kr.length, `result type "${code}" has no KR features`).toBeGreaterThan(0);
-    }
-  });
-
-  it("never leaks a granular persona NAME in tagline/features either", () => {
-    for (const code of Object.keys(INVESTOR_TYPES)) {
+  it("never leaks granular short-horizon vocabulary in tagline/features for any code", () => {
+    for (const code of DECLARED_PERSONA_CODES) {
       const h = declaredSurfaceHighlights(code);
       const rendered = [h.tagline, h.tagline_kr, ...h.features, ...h.features_kr].join("\n");
-      for (const name of GRANULAR_NAMES) {
-        expect(
-          rendered.includes(name),
-          `result type "${code}" leaked granular persona NAME "${name}" in body`,
-        ).toBe(false);
+      for (const term of BANNED_BODY_TERMS) {
+        expect(rendered.includes(term), `persona "${code}" leaked "${term}"`).toBe(false);
       }
+      for (const name of GRANULAR_NAMES) {
+        expect(rendered.includes(name), `persona "${code}" leaked name "${name}"`).toBe(false);
+      }
+      expect(h.tagline.length).toBeGreaterThan(0);
+      expect(h.features.length).toBeGreaterThan(0);
+      expect(h.features_kr.length).toBeGreaterThan(0);
     }
   });
 
@@ -123,6 +79,19 @@ describe("onboarding result label — §101 3-surface collapse (F-01)", () => {
         expect(rendered.includes(term)).toBe(false);
       }
       expect(h.features.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("v3 questionnaire copy — no grade, no type, no advice vocabulary", () => {
+  const BANNED = ["추천", "조언", "점수", "등급", "AI", "레버리지", "수익률", "recommend", "advice", "score"];
+
+  it("question and option copy stays observational", () => {
+    for (const q of WIZARD_QUESTIONS) {
+      const blob = [q.question, q.question_kr, ...q.options.flatMap((o) => [o.label, o.label_kr])].join("\n");
+      for (const term of BANNED) {
+        expect(blob.includes(term), `question "${q.id}" contains banned term "${term}"`).toBe(false);
+      }
     }
   });
 });
