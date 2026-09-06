@@ -1,7 +1,7 @@
 # PivoxQuant SHIP_BLOCKERS.md
 
 **SoT**: 출시를 막는 것들의 단일 목록.
-**최근 갱신**: 2026-09-04 22:55 KST (B4/B6 완료, B7 curl-only, R0 노출 시작) (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 5건 / POST-LAUNCH 15건 / 변호사 큐 21건)
+**최근 갱신**: 2026-09-05 20:16 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 5건 / POST-LAUNCH 15건 / 변호사 큐 21건)
 
 > ⚠️ **2026-09-01 전면 재작성.** 직전 갱신이 2026-06-20 이었고, 그 사이
 > **Railway 계정이 삭제**되면서 이 파일의 상당수가 무효가 됐다. "Railway env
@@ -56,7 +56,7 @@ CEO 가 이번 주 목표로 잡은 건 **무료** 배포다. 아래 R 목록이
 
 | # | 항목 | 카테고리 | Owner | ETA | 해제조건 | 상태 |
 |---|---|---|---|---|---|---|
-| R0 | **PIPA §28-8 국외이전 동의서가 사실과 다르다 — 컷오버 게이트** | legal | CEO (+변호사 확인) | Render 배포 직전 | 아래 §R0 세 항목 정정 후 배포 | 🟥 **NEW 2026-09-02** |
+| R0 | ~~PIPA §28-8 국외이전 동의서가 사실과 다르다~~ → **문구 정정 완료** (2026-09-06, CEO 지시). Anthropic 제거 · Railway→Render · **Supabase(서울) 신규 행** 분리 · terms 제6조 §2 AI 면책 조항 · 온보딩 필수 동의까지. 잔여: **기존 가입자는 옛 문구로 동의한 상태** — 소급 재동의 여부는 변호사 판단 | legal | CEO + 변호사 | — | 변호사 §28-8 사인 (서울 리전이 국외이전 대상인지 포함) | 🟠 **부분 해소** |
 | R1 | 변호사 일괄 의견서 Q1-Q15 + Q-S1/S3/S4 + Q-M1/M2/M3 (총 21건) | legal | CEO + 변호사 | 미정 (CEO 미팅 예약 전) | 금융규제·자본시장법 전문 변호사 사인. 예상 300-500만원 1회 의견서 | BLOCKED |
 | R2 | Q-S1 정통망법 §50 분리 동의 framework 답변 | legal | 변호사 | 미정 | 환영 메일 + onboarding nudge + retention 메일 (B/C 분류) 발송 가능 여부 사인 | BLOCKED |
 | R3 | 통신판매업 신고 (성동구청, 등록세 ~45,000원) | legal | CEO | 미정 | 신고 완료 → `PIVOX_COMMERCE_REGISTERED=true` 전환, Stripe Live 활성 가능 | PENDING |
