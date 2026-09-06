@@ -18,11 +18,11 @@ const SECTIONS = [
       },
       {
         q: "Do you execute real trades?",
-        a: "No. Korean brokers (KIS) are connected read-only. PivoxQuant never routes orders.",
+        a: "No. PivoxQuant has no order path to any broker — it never routes, places, or suggests an order. It only reads the record you keep.",
       },
       {
-        q: "How do I connect my account?",
-        a: "Settings → Brokers → Connect KIS (read-only). Additional brokers are on the roadmap.",
+        q: "Can I connect my brokerage account?",
+        a: "Not in this beta. Positions are entered by hand in Portfolio, and every surface works on what you enter. Account linking is not offered.",
       },
     ],
   },
@@ -40,7 +40,7 @@ const SECTIONS = [
       },
       {
         q: "Do I need to connect a broker?",
-        a: "No. Positions can be entered by hand and every surface works the same. A KIS connection only saves you the typing.",
+        a: "No — and there is nothing to connect. Positions are entered by hand and every surface works the same.",
       },
     ],
   },
@@ -72,7 +72,7 @@ const SECTIONS = [
       },
       {
         q: "How is my data protected?",
-        a: "See our Privacy Policy. Data encrypted in transit and at rest. Broker credentials encrypted per-user.",
+        a: "See our Privacy Policy. Data encrypted in transit and at rest. No broker credentials are collected.",
       },
       {
         q: "How do I delete my account?",

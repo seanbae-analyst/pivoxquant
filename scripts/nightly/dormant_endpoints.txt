@@ -7,26 +7,16 @@
 #
 # One path per line, exactly as it appears in frontend/src/lib/endpoints.ts.
 
-# ── artefact tree deleted in e064118e; frontend calls disabled 2026-08-31 ──
-# Callers hold their empty-state branch: useArtifacts / useArtifactStats use a
-# null SWR key; LivingMirrorCta, OnboardingBragCard and GenerateArtifactCta are
-# flag-gated (GENERATE_AVAILABLE / BRAG_CARD_AVAILABLE).
+# ── artefact tree deleted in e064118e ──
+# The 11 user-facing /api/artifacts/* constants were removed from endpoints.ts
+# (ac4ccb0f, 2026-09-04); the nightly contract check reported them STALE for
+# five runs before this prune (2026-09-06). Only the admin preview constants
+# remain declared in endpoints.ts — /admin renders 404 as blank by design.
 #
 # One exception, deliberate: /reports/[id] still fires the preview request on a
 # deep link, because it already redirects to /reports on any failure. The route
 # is unreachable through the UI (the list it comes from is empty), so the cost
 # is one 404 in the log rather than a broken screen.
-/api/artifacts/list
-/api/artifacts/stats
-/api/artifacts/by-month
-/api/artifacts/generate
-/api/artifacts/${id}/download
-/api/artifacts/${id}/preview
-/api/artifacts/${id}/read
-/api/artifacts/brag-card/preview
-/api/artifacts/living-mirror/generate
-/api/artifacts/living-mirror/preview/${id}
-/api/artifacts/living-mirror/download/${id}
 /api/admin/artifacts/list
 /api/admin/artifacts/preview/${type}?format=${format}
 /api/admin/artifacts/preview/${type}?format=${format}&download=1

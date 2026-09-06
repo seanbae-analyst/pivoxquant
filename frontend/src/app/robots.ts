@@ -20,15 +20,18 @@ export default function robots(): MetadataRoute.Robots {
           "/admin/",
 
           // ── Authenticated dashboard pages ─────────────
-          "/mirror/",
-          "/portfolio/",
-          "/journal/",
-          "/pre-trade/",
-          "/profile/",
-          "/settings/",
+          // No trailing slash: "/mirror/" only matches the subtree and
+          // leaves the bare "/mirror" (the app home) crawlable.
+          // Daily-sweep 2026-09-05 #6.
+          "/mirror",
+          "/portfolio",
+          "/journal",
+          "/pre-trade",
+          "/profile",
+          "/settings",
 
           // ── Onboarding (post-signup, requires session) ─
-          "/onboarding/",
+          "/onboarding",
         ],
       },
     ],
