@@ -131,26 +131,17 @@ def surface_tagline(persona_code: str) -> str:
     bucket = PERSONA_TO_SURFACE.get(persona_code, "balanced")
     return SURFACE_TAGLINES[bucket]
 
-# ``profile_type`` column values currently observed in the wild
-# (InvestmentProfile stores both the legacy 4-tier values and the
-# questionnaire V2 persona codes).
+# ``profile_type`` column values: the legacy 4-tier values (skip path writes
+# ``balanced``) and the canonical persona codes questionnaire V3 writes.
 DECLARED_TO_PERSONA: dict[str, str] = {
     # Legacy 4-tier (models/investment_profile.py PROFILE_PRESETS)
     "conservative":        "income",
     "balanced":            "balanced",
     "growth":              "growth",
     "aggressive":          "speculator",
-    # Questionnaire V2 (questionnaire.py PROFILE_PRESETS_V2)
-    "momentum_rider":      "growth",
-    "value_hunter":        "value",
-    "risk_managed_growth": "balanced",
-    "passive_index_hugger": "income",
-    "macro_rotator":       "quant",
-    "swing_trader":        "speculator",
-    "aggressive_scalper":  "daytrader",
-    "steady_accumulator":  "beginner",
-    # Already canonical persona codes — identity map so new writes
-    # survive the resolver untouched.
+    # Questionnaire V3 writes canonical persona codes directly — identity
+    # map so new writes survive the resolver untouched. (V2's eight
+    # investor-type codes were removed 2026-09-06 with the questionnaire.)
     "value":      "value",
     "income":     "income",
     "quant":      "quant",

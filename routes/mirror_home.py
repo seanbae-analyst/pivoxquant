@@ -29,6 +29,8 @@ import logging
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
+from models import InvestmentProfile
+
 from services.profile import (
     classify_persona_multi,
     compute_drift,
@@ -62,13 +64,51 @@ def _declared_centroid(code: str) -> list[float]:
     return [float(v) for v in vec]
 
 
-def _gap(declared_vec: list[float], observed_vec: list[float]) -> list[dict]:
+def _declared_shape(user_id: int, code: str) -> tuple[list[float], list[str], str]:
+    """The 9-dim "선언" vector and which axes the user actually declared.
+
+    2026-09-06 (questionnaire V3): when the user answered the V3 wizard, the
+    declared value on each axis they spoke to comes from THEIR OWN answer
+    (``InvestmentProfile.declared_vector_json``), projected onto the observed
+    feature scale by ``questionnaire.calculate_profile_v3``. Axes they were
+    not asked about fall back to the persona centroid so the radar keeps a
+    complete shape — but the gap below is computed only over declared axes,
+    because "you said X" is the only honest baseline for "you did Y".
+
+    Pre-V3 rows and skip-path users have no declared vector; the centroid is
+    used on every axis, exactly as before, and ``source`` says so.
+    """
+    vec = _declared_centroid(code)
+    try:
+        profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
+        declared = profile.declared_vector() if profile is not None else {}
+    except Exception:  # pragma: no cover — defensive; a bad row must not 500 the home
+        logger.debug("mirror-home: declared vector unreadable", exc_info=True)
+        declared = {}
+    axes: list[str] = []
+    for i, key in enumerate(FEATURE_KEYS):
+        if key in declared:
+            vec[i] = float(declared[key])
+            axes.append(key)
+    return vec, axes, ("self" if axes else "centroid")
+
+
+def _gap(
+    declared_vec: list[float],
+    observed_vec: list[float],
+    declared_axes: list[str] | None = None,
+) -> list[dict]:
     """Top dimensions where 관찰 diverges most from 선언.
 
     Neutral, factual, directional — never a persona name or a verdict.
+    When ``declared_axes`` is given, only those axes are compared — a gap
+    against a centroid the user never stated is not a gap.
     """
     diffs = []
+    axis_filter = set(declared_axes) if declared_axes else None
     for i, key in enumerate(FEATURE_KEYS):
+        if axis_filter is not None and key not in axis_filter:
+            continue
         delta = observed_vec[i] - declared_vec[i]
         diffs.append((abs(delta), key, delta, declared_vec[i], observed_vec[i]))
     diffs.sort(key=lambda t: t[0], reverse=True)
@@ -96,7 +136,7 @@ def get_mirror_home():
     persona = compute_persona_response(user_id)
     declared = persona.get("declared", {})
     declared_code = declared.get("persona", "balanced")
-    declared_vec = _declared_centroid(declared_code)
+    declared_vec, declared_axes, declared_source = _declared_shape(user_id, declared_code)
 
     # (2) Observed persona over 30d → 9-dim feature vector (ordered by FEATURE_KEYS).
     try:
@@ -117,7 +157,7 @@ def get_mirror_home():
     stage = "observed" if has_observed else "new"
 
     # (3) The gap — only meaningful once behaviour is observed.
-    gap = _gap(declared_vec, observed_vec) if has_observed else []
+    gap = _gap(declared_vec, observed_vec, declared_axes) if has_observed else []
 
     # Observed bucket (3-bucket disclosed label only — never the 8-code).
     observed_label = (
@@ -145,6 +185,9 @@ def get_mirror_home():
             "label": declared_label,
             "tagline": declared.get("tagline"),
             "score": declared.get("score"),
+            # "self" = axes come from the user's own V3 answers;
+            # "centroid" = persona-centroid fallback (pre-V3 / skipped).
+            "source": declared_source,
         },
         "observed": {
             "label": observed_label,
@@ -157,6 +200,7 @@ def get_mirror_home():
             "keys": list(FEATURE_KEYS),
             "labels": [FEATURE_LABELS.get(k, k) for k in FEATURE_KEYS],
             "declared": [round(v, 3) for v in declared_vec],
+            "declared_axes": declared_axes,
             "observed": (
                 [round(v, 3) for v in observed_vec] if has_observed else None
             ),

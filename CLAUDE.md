@@ -45,6 +45,14 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 | `/journal` **기록** | 기록 + behavior mirror 5종 (보유기간/회전율/집중도/물타기/손익처분) | ❌ |
 | `/mirror` **거울** (홈) | 선언 페르소나 vs 관찰 페르소나(30일 9차원)의 **간극** + 드리프트 | ❌ |
 
+**온보딩은 v3 5문항 + 법적 확인이다 (2026-09-06).** 보유기간 · 매매 빈도 · 종목 수 ·
+−10% 대응 · 기록 습관. 답은 `investment_profiles.onboarding_answers_json` 에 **원문 그대로**
+저장되고 `declared_vector_json` 으로 관찰 9축 눈금에 투영된다. `/mirror` 의 "선언"은
+이 벡터가 있으면 **유저 본인의 답**, 없으면 페르소나 센트로이드다 (`declared.source`).
+유형 라벨·점수는 만들지 않는다 — 결과 화면은 답변 문장을 되비출 뿐이다.
+설계·근거: `docs/strategy/onboarding-questionnaire-v3_2026-09-06.md`,
+`onboarding-competitor-research_2026-09-06.md`. **V1(8문항)·V2(19문항)는 같은 날 코드에서 삭제됐다** — `calculate_profile_type` · `QUESTIONNAIRE_V2` · `PROFILE_PRESETS_V2` · 프론트 로컬 분류기 전부. 옛 payload 는 `ONBOARDING_UNKNOWN_QUESTIONNAIRE` 400.
+
 **셋 다 시세를 한 번도 안 부른다.** `services/behavior/*.py` 전부 시세 서비스를
 import 하지 않으며, `averaging_down_mirror.py` 가 자기 docstring 에
 *"no network, no live price / FX call"* 이라고 적어 뒀다. 의도된 설계다.

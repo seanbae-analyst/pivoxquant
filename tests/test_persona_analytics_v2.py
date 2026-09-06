@@ -167,7 +167,7 @@ class TestClassifyPersonaMulti:
 
     def test_value_pattern_classifies_toward_long_hold_family(self, app, auth_user):
         from services.profile import classify_persona_multi
-        _set_profile(app, auth_user["id"], profile_type="value_hunter", risk_tolerance=4)
+        _set_profile(app, auth_user["id"], profile_type="value", risk_tolerance=4)
         _add_trades(app, auth_user["id"], _build_value_specs())
         with app.app_context():
             r = classify_persona_multi(auth_user["id"])
@@ -278,7 +278,7 @@ class TestClassifyPersonaMulti:
 
     def test_declared_persona_echoed(self, app, auth_user):
         from services.profile import classify_persona_multi
-        _set_profile(app, auth_user["id"], profile_type="value_hunter")
+        _set_profile(app, auth_user["id"], profile_type="value")
         with app.app_context():
             r = classify_persona_multi(auth_user["id"])
         assert r["declared_persona"] == "value"

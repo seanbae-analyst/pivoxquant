@@ -411,3 +411,107 @@ of this is observable in prod today.
   타임스탬프까지 정확히 일치. 해당 3커밋은 main 이 아니라 **미머지 피처 브랜치**에 있고, 로컬 main 은
   10커밋 **미푸시**(= `feedback_push_workflow` 정상 운영, `SHIP_BLOCKERS` A8). `vercel --prod` 강제
   재배포는 무의미하니 하지 말 것.
+
+
+---
+
+## 2026-09-05 (daily-sweep, prod) — DETECTION-ONLY (미커밋 사용자 작업: `.claude/skills/ui-ux-pro-max` 서브모듈 dirty)
+
+리포트: `BUG_SWEEP_2026-09-05.md` (572줄) · 브랜치 `fix/sweep-2026-09-04` @ `c20d7643`
+프로드 배포 빌드 = `main` @ `c1f61809` (실측: `www.pivoxquant.com/sw.js:25` `CACHE_VERSION="pq-build-c1f61809"`)
+
+- [ ] 🟥 **P0 (4일째 이월, 오늘 범위 확대) — 개인정보처리방침 §6 수탁자·국외이전 표가 3중으로 틀림.**
+  라이브 `/privacy` §6 이 `Railway Corp. | 미국 | DB 저장 데이터 | 백엔드 호스팅 및 데이터 저장` 으로 고지 중이고
+  §9-3 은 `국외 클라우드(Railway 등)` 라고 서술. **Railway 계정은 2026-08-30 삭제됐다.**
+  `grep -rn "Supabase\|Render" frontend/src/content/` → **0건.**
+  ⚠️ **오늘 코디네이터가 직접 실측해 확정한 신규 사실 2건** (bug-hunter 는 "미확정"으로 남겼던 부분):
+  1. **DB = Supabase 프로젝트 `pivoxquant`(ref `yjiztgummaxecriiuumt`), region `ap-northeast-2` = 서울, ACTIVE_HEALTHY**
+     (Supabase MCP `list_projects` 실측) → **DB 저장은 이제 국내다. 국외이전 대상이 아니다.**
+  2. **백엔드 호스팅 = Render, region `singapore`** — `render.yaml:28` 이 이미 명시:
+     `region: singapore # closest Render region to KR users; Supabase DB is in ap-northeast-2 (Seoul)`
+  → 따라서 현 고지는 **수탁자(Railway→Render/Supabase)·국가(미국→싱가포르)·이전범위(DB는 국외이전 없음)** 세 축 모두 오류.
+  가입 시 PIPA §28-8 [필수] 동의를 **틀린 목록으로 수집 중**이며, 백엔드가 09-04 부터 라이브라 **실노출이 재개됐다**
+  (어제까지는 signup 404 라 노출 0이었음 — 그 완충이 사라졌다).
+  동반 수정 대상: `frontend/src/content/privacy-ko.md:26,167,252` · `app/(auth)/signup/page.tsx:57,599`
+  · `lib/consents.ts:181-183` · `app/__tests__/signup-v2.test.tsx:78`(8개 카운트 테스트).
+  **자동 수정 안 함**: 국외이전 범위 축소는 문안·동의 재수집 여부까지 걸리는 법적 판단 → `legal` / 변호사 큐.
+  미푸시 `c1f61809` "PIPA cutover 게이트"와 반드시 묶을 것.
+
+- [ ] 🟠 **P1 — FMP API 쿼터 소진(HTTP 429) → US 데이터 경로 전면 정지. CEO 액션(대시보드 확인) 필요.**
+  `curl ".../stable/quote?symbol=SPY&apikey=<KEY>"` → 429 `{"Error Message":"Limit Reach . Please upgrade your plan…"}`
+  AAPL 3회 연속 + historical 도 동일 → 분당 rate 가 아니라 **플랜 쿼터 소진/구독 다운그레이드**.
+  영향: `services/fx_service.py` `services/alert.py` `services/data/{fetcher,realtime}.py` `routes/{market,portfolio}.py`
+  = US 시세·히스토리·뉴스·펀더멘털 + USD/KRW d/d%. `services/data/fmp.py:106-112` 의 10분 쿨다운 덕에 **500 아닌 조용한 degradation**.
+  ⚠️ `research_fmp_replacement.md` 와 결속: 무료 대체 없음(전 free tier 가 상업표출 금지)이 이미 확정 → **결제/플랜 판단은 CEO 전용**.
+  미확정: Render 의 `FMP_API_KEY` 가 로컬 `.env` 키와 동일한지 확인 불가.
+
+- [ ] 🟠 **P1 — 랜딩 히어로 티커 6칸 중 US 3칸(S&P 500 / Nasdaq 100 / VIX)이 영구 `—`.**
+  2회 폴링 동일: `^GSPC/^IXIC/^VIX` 전부 `value:null, is_stale:true, observed_at:null`.
+  체인 실측: `routes/market.py:753` US=ETF프록시 → `:346` 전부 None → **`:893 if out:` 라서 US 캐시가 영원히 안 채워짐**.
+  업스트림 둘 다 죽음 — Alpaca `render.yaml:58-59 ALPACA_ENABLED="0"`(라이선스 사유, 의도된 OFF) + FMP 429(위 항목).
+  스케줄러는 정상 가동(`app.py:1367-1375`, 60s) = 잡 문제 아님.
+  ⚠️ `cache_warm:true` 가 **KR 만 warm 인데 true 로 잡혀 US 실패를 가린다** → 지표 자체가 오탐 유발.
+  근본 fix = FMP 해소. 표시 fix(값 없을 때 US 행을 `—` 대신 숨김/명시)는 **비로그인 첫 화면**이라 CEO framing 권장.
+
+- [ ] 🟠 **P1 — `/beta-gate` 가 prod 에 생존, 제출 시 HTTP 500.** (어제 P1 의 잔여분 — 성격이 바뀜)
+  `/beta` → `<meta http-equiv="refresh" content="1;url=/beta-gate">` → `/beta-gate` 200 "Private Beta / 베타 비밀번호"
+  → `POST /api/beta-auth` → **500** `{"error":"Beta gate is not configured"}`.
+  **코드 fix 는 이미 존재한다** — 폐기 커밋 `9c6661f7` 이 `fix/sweep-2026-09-04` 에만 있고 `origin/main` 은 `c1f61809`.
+  백엔드도 동일 갭: `origin/main:routes/auth.py:38-39` 가 `_safe_next("/beta") → "/beta-gate"` 유지
+  → OAuth `next=/beta` 로 들어온 사용자가 로그인 성공 후 **죽은 비밀번호 벽에 착지**.
+  → **신규 코드 불필요. 머지+배포 = CEO 액션** (`feedback_push_workflow`).
+
+- [ ] 🟠 **P1 — `/docs` 가 존재하지 않는 브로커 연결 기능을 안내 (설정 화면과 정면 모순).**
+  라이브 `/docs`: `"Settings → Brokers → Connect KIS (read-only)"`
+  vs `settings/page.tsx:653-655`: `"증권사 계좌 연결은 제공하지 않습니다."`
+  `/api/broker/{connections,kis/connect,kis/status,kis/sync,kis/disconnect}` **전부 404** (`routes/broker_oauth.py` 삭제됨).
+  런타임 404 는 안 남 — `lib/hooks.ts:452` 가 `useSWR(false && …)` 로 요청 차단, UI 는 `BROKER_LINKING_AVAILABLE=false` 게이트.
+  **문서 카피만 문제**: `frontend/src/app/docs/page.tsx:21,25,42`.
+  ⚠️ 공개 문서가 없는 기능을 "제공한다"고 광고하는 형태 → **표시광고법 §3 각도로 P0 승격 여지, 법무 판단 필요.**
+
+- [ ] 🟡 **P2 (escalate, 확신도 ≤50% — 단독 확정 금지) — `pre-trade-questions.ts:98` 이 SoT 금칙어 '목표가' 포함.**
+  `"목표가는 어디까지 보나? 손절까지의 거리 대비 적어도 2배인가?"` — `FORBIDDEN_DIRECTIVE_TERMS` 에 `'목표가'` 정확히 존재.
+  단 `scripts/legal/scan_advisory_vocab.py` 는 `clean ✅` → 스캐너 커버리지 갭인지 의도된 예외인지 불명.
+  → `legal-kr-fintech` 판단 필요. ⚠️ `feedback_legal_filter_design`: 스캐너를 "고치는" 방향 금지.
+
+- [ ] 🟡 **P2 묶음 (fix 강제 아님, `feedback_no_busywork`)** — #6 `robots.ts:21-31` trailing-slash 로 `/mirror` 미차단
+  · #7 sitemap/robots Host=apex vs canonical=www · #8 `<title>` 누락 3곳(`/mirror` 앱 홈 포함, `/support`, `/support/inbox`)
+  · #9 `/support` FAQ 가 제거된 "시그널 라벨" 설명 유지 · #10 `lib/endpoints.ts` 죽은 상수 22개(호출자 0)
+  · #12 `/landing`·`/beta` 가 307 아닌 200+1초 meta-refresh · #13 처리방침이 폐기된 Stripe 를 수탁자로 계속 고지(과다고지 → P0-1 수정 시 동반 정리)
+  · #14 전 라우트 `Cache-Control: no-store`(nonce CSP 부작용, **버그 아님 기록용**)
+
+### 이번 런에서 CLOSE 된 이월 항목
+- ✅ **P0급 인프라 블로커 B4 "Render 첫 배포 미완료"** — 해소. `pivoxquant-api.onrender.com/api/health` → **200** `{"db":"ok","missing_required":0}`.
+- ✅ **P1 "prod 프론트 배포가 09-01 에 멈춤"(어제)** — 해소. Vercel Production Ready 배포 **5시간 전** 3건(`vercel ls` 실측).
+- ✅ **P1 "`www.pivoxquant.com/api/*` 404 (프록시가 죽은 Railway 향함)"** — 해소.
+  `/api/health` 200, `/api/billing/availability` 200 `{"available":false,"code":"BUSINESS_REGISTRATION_PENDING"}` = Stripe kill-switch 정상 동작.
+- ✅ **P2 "라이브 CSP `connect-src` 가 죽은 `*.railway.app` 지시"** — 해소. 라이브 헤더 실측:
+  `connect-src 'self' https://*.onrender.com …`, 응답 헤더에 `railway` 문자열 **0건**.
+- ✅ **P2 "비로그인 아바타가 '게' 한 글자"** — 코드 fix 존재(`9cc2172e`), 단 **미머지** → 위 `/beta-gate` 와 같은 배포 갭에 묶임.
+
+### 오탐 / 재보고 금지
+- ❌ `/pricing` 307 · `/home` `/market` `/ai-chat` 등 308 — **의도된 라우트 통합**(2026-08-31 prune). finding 아님.
+- ❌ `pivoxquant.com` 전 경로 307 — **apex→www 정규화**. 실제 호스트는 `www.pivoxquant.com`. 스윕은 www 로 할 것.
+- ❌ Render 첫 요청 40~60s — **free plan spin-down 알려진 특성**. 웜 이후 실측 0.405~0.910s 로 정상.
+- ❌ 프로드 JS 의 `"BUY"/"SELL"` 12건 — 전부 내부 enum. `sideLabel()` 이 `ENTRY:"진입"/EXIT:"정리"` 로 정규화. 법적 회귀 아님.
+
+### 2026-09-06 상태 점검 (세션 실측 — 위 09-05 항목을 하나씩 다시 쟀다)
+
+프로드 빌드는 **`main` @ `78755922`** (#548, `www.pivoxquant.com/sw.js` `CACHE_VERSION` 실측) 로 09-05 기록(`c1f61809`)에서 전진했다.
+브랜치 `fix/sweep-2026-09-04` 는 `origin/main` 보다 **21커밋 앞·1커밋 뒤** — `78755922` 를 아직 안 품었다. 푸시 전에 main 을 합칠 것.
+
+| 09-05 항목 | 09-06 실측 | 상태 |
+|---|---|---|
+| 🟥 P0 처리방침 §6 수탁자 3중 오류 | `privacy-ko.md:26-27,167-168` 이 Render(미국)·Supabase(서울 리전) 두 행으로 정정돼 있음 (`ba6dfe48`). **origin/main 에는 없다** → 라이브는 아직 옛 문구 | 🟡 코드 fix 완료 · **미배포** |
+| 🟠 P1 FMP 429 | `stable/quote?symbol=SPY` → 여전히 `Limit Reach`. CEO 플랜 판단 대기 | 🔴 open (외부) |
+| 🟠 P1 랜딩 US 티커 3칸 `—` | 라이브 `/api/public/market-snapshot`: KOSPI/KOSDAQ/USDKRW **fresh**, `^GSPC/^IXIC/^VIX` `value:null is_stale:true`. FMP 해소 전엔 불변 | 🔴 open (위와 동일 원인) |
+| 🟠 P1 `/beta-gate` 500 | 라이브 `/beta-gate` → **404**. 폐기 커밋이 배포됐다 | ✅ closed |
+| 🟠 P1 `/docs` 브로커 연결 안내 | 라이브에 `"Settings → Brokers → Connect KIS"` **아직 노출** (origin/main 도 동일). 이 세션에서 `docs/page.tsx` 4문장 수정 — 연결 기능·KIS 자격증명 언급 제거, 설정 화면 문구와 일치 | 🟡 코드 fix 완료 · 미배포 |
+| 🟡 P2 `pre-trade-questions.ts:98` '목표가' | 그대로. 유저 본인 질문("목표가는 어디까지 보나")이라 자문 어휘가 아니라는 해석이 가능하나 **단독 확정 금지** 원칙대로 legal 판단 대기 | 🟡 open (legal) |
+| 🟡 P2 #6 robots trailing-slash | `robots.ts` 대시보드 7경로를 슬래시 없는 prefix 로 변경 | ✅ fixed (미배포) |
+| 🟡 P2 #10 endpoints.ts 죽은 상수 22개 | `ac4ccb0f` 가 정리. 그 여파로 `dormant_endpoints.txt` 의 `/api/artifacts/*` 11줄이 **5일 연속 STALE** 로 보고되고 있었음 → 오늘 prune. `check_endpoint_contract.py`: STALE 0 · OK 74 | ✅ fixed |
+| 🟡 P2 #13 처리방침 Stripe 과다고지 | `privacy-ko.md:174,179` 가 "유료 전환 시 적용·현재 이전 없음" 으로 한정 서술. 과다고지 아님 | ✅ 해소 판정 |
+| 🟡 P2 #8 `<title>` 누락 · #7 Host 불일치 · #9 support FAQ · #12 meta-refresh · #14 no-store | 미착수 | 🟡 open (busywork 아님 판정 시만) |
+
+야간 리포트 5개(`docs/qa/nightly-verify-2026-09-0{4,5,6}.md`, `virtual_user_sweep_2026-09-0{4,5}.md`)는 `.gitignore` 의 "docs/qa 리포트는 의도적으로 추적" 규칙대로 이 커밋에 같이 넣는다.
+09-06 03:03 리포트의 수치(pytest 2000 · vitest 367)는 **온보딩 v3 커밋 `c1427a0f` 이전** 스냅샷이다 — 이후 실측은 pytest 1995 / vitest 368 (V2 테스트 29건 삭제 + v3 22건 신규).

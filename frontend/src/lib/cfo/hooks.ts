@@ -520,7 +520,7 @@ export function declaredSurfaceHighlights(
  * Map a raw declared `profile_type` column value → 8-code persona id.
  * Mirrors backend `persona_analytics.DECLARED_TO_PERSONA` so any surface
  * that only has the raw onboarding string can still collapse to 3 labels
- * instead of leaking a code like "swing_trader" / "aggressive_scalper".
+ * instead of leaking an 8-code like "speculator" / "daytrader".
  */
 const DECLARED_TO_PERSONA: Record<string, PersonaId> = {
   // Legacy 4-tier
@@ -529,16 +529,7 @@ const DECLARED_TO_PERSONA: Record<string, PersonaId> = {
   growth: "growth",
   aggressive: "speculator",
   moderate: "beginner",
-  // Questionnaire V2
-  momentum_rider: "growth",
-  value_hunter: "value",
-  risk_managed_growth: "balanced",
-  passive_index_hugger: "income",
-  macro_rotator: "quant",
-  swing_trader: "speculator",
-  aggressive_scalper: "daytrader",
-  steady_accumulator: "beginner",
-  // Canonical persona codes (identity)
+  // Canonical persona codes (identity) — what questionnaire V3 writes
   value: "value",
   income: "income",
   quant: "quant",

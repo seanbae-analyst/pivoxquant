@@ -90,7 +90,7 @@ export function LivingCFOStatusBar() {
           ? `Declared persona · ${
               declaredSurfaceLabel(profile?.profile?.profile_type) ?? "set"
             }.`
-          : "18-question assessment not yet taken.",
+          : "Five onboarding questions not yet answered.",
       cta:
         layer1State === "ready"
           ? undefined

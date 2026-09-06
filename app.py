@@ -790,6 +790,11 @@ def _do_migrations():
     # the engine stays backward compatible for users who never opted in.
     _add_column_if_missing("investment_profiles", "enabled_quant_models", "TEXT", default="'[]'")
     _add_column_if_missing("investment_profiles", "model_weights", "TEXT", default="'{}'")
+    # Questionnaire V3 (2026-09-06, alembic 050) — the user's own onboarding
+    # words + their projection onto the observed feature scale.
+    _add_column_if_missing("investment_profiles", "questionnaire_version", "INTEGER")
+    _add_column_if_missing("investment_profiles", "onboarding_answers_json", "TEXT")
+    _add_column_if_missing("investment_profiles", "declared_vector_json", "TEXT")
 
     # User referrals — `invited_count` is the one post-create candidate.
     _add_column_if_missing("user_referrals", "invited_count", "INTEGER", default="0")
