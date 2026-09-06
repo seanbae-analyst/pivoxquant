@@ -23,14 +23,24 @@ The Flask app needs:
 Splitting them lets the admin panes import without dragging in the
 cron-level ``argparse``/``logging.basicConfig`` boilerplate.
 
-§50 ① 분류
-----------
-Onboarding nudges are timer-triggered, not user-action-triggered, so
-they are NOT transactional. They fall under INFORMATION (정보성) and
-require the user's information-consent boolean
-(``marketing_consent_information_at``) on top of the umbrella
-``marketing_consent_at``. The EmailSender's category gate enforces
-this — we just pass ``EmailCategory.INFORMATION``.
+§50 ① 분류 — MARKETING (광고성), 2026-09-07 재분류
+------------------------------------------------
+Timer-triggered, not user-action-triggered, so not transactional. It was
+classified INFORMATION (정보성) on the grounds that the body is usage
+guidance. That reading no longer holds.
+
+The other periodic mails were rebuilt to carry the reader's own recorded
+counts (services/email/record_summary.py), which is what lets them be a
+retrospective statement of fact. **This one cannot**: it is sent precisely
+to users who have recorded nothing, so there is no fact to state. What
+remains is a message asking someone to come back — 광고성 정보 under
+§50 ①. Containing instructions does not make it 정보성.
+
+So it now passes ``EmailCategory.MARKETING`` and carries the full régime:
+``(광고)`` in subject and body head, MARKETING consent (not INFORMATION),
+the 21:00–08:00 KST night gate (시행령 §61의2), an unsubscribe link, and
+the sender-identity block (시행령 §62 ①). ``_send_one`` asserts these at
+render time rather than trusting the template to have kept them.
 
 Feature flags (both required to fire)
 -------------------------------------
@@ -188,7 +198,9 @@ def dispatch_inactive_nudges(
     for user in users:
         summary["candidates"] += 1
         try:
-            ok = _send_one(user)
+            # Same clock the caller passed — the night gate inside
+            # _send_one must not read a different one.
+            ok = _send_one(user, now=now)
         except Exception as exc:
             logger.exception(
                 "inactive_nudge send raised for user %s: %s", user.id, exc,
@@ -248,7 +260,9 @@ def _is_active(user_id: int) -> bool:
     return False
 
 
-def _render_email(user_name: str) -> tuple[str, str]:
+def _render_email(
+    user_name: str, *, unsubscribe_url: str = "",
+) -> tuple[str, str]:
     """Render the HTML + text bodies. Returns ``(html, text)``.
 
     Templates are loaded from disk so copy edits don't require a
@@ -266,59 +280,107 @@ def _render_email(user_name: str) -> tuple[str, str]:
 
     try:
         html = html_path.read_text(encoding="utf-8")
-        html = html.replace("{{user_name}}", name).replace(
-            "{{dashboard_url}}", safe_url
+        html = (
+            html.replace("{{user_name}}", name)
+            .replace("{{dashboard_url}}", safe_url)
+            .replace("{{unsubscribe_url}}", escape(unsubscribe_url))
         )
     except Exception as exc:
         logger.warning("inactive_nudge.html missing/unreadable (%s); using inline", exc)
+        # 폴백도 광고성 규격을 지킨다. 템플릿이 사라진 날 비준수 메일이
+        # 나가면 그 폴백이 곧 구멍이다 — (광고) 표시와 수신거부는 필수다.
         html = (
-            f"<p>{name}님, PivoxQuant 시작 가이드를 안내드립니다.</p>"
+            f"<p>(광고) {name}님, PivoxQuant 를 시작해 보세요.</p>"
             f"<p><a href=\"{safe_url}\">지금 시작하기</a></p>"
+            f"<p style=\"font-size:11px;color:#6B6B6B;\">"
+            f"PivoxQuant (피복스퀀트) · 사업자등록번호 459-01-03808 · "
+            f"support@pivoxquant.com<br/>"
+            f"수신거부: <a href=\"{escape(unsubscribe_url)}\">"
+            f"{escape(unsubscribe_url)}</a></p>"
         )
 
     try:
         text = text_path.read_text(encoding="utf-8")
-        text = text.replace("{{user_name}}", name).replace(
-            "{{dashboard_url}}", safe_url
+        text = (
+            text.replace("{{user_name}}", name)
+            .replace("{{dashboard_url}}", safe_url)
+            .replace("{{unsubscribe_url}}", unsubscribe_url)
         )
     except Exception as exc:
         logger.warning("inactive_nudge.txt missing/unreadable (%s); using inline", exc)
         text = (
-            f"{name}님, PivoxQuant 시작 가이드를 안내드립니다.\n"
-            f"지금 시작하기: {safe_url}\n"
+            f"(광고) {name}님, PivoxQuant 를 시작해 보세요.\n"
+            f"지금 시작하기: {safe_url}\n\n"
+            f"PivoxQuant (피복스퀀트) · 사업자등록번호 459-01-03808\n"
+            f"support@pivoxquant.com\n"
+            f"수신거부: {unsubscribe_url}\n"
         )
 
     return html, text
 
 
-def _send_one(user: Any) -> bool:
+def _send_one(user: Any, *, now: Any = None) -> bool:
     """Send the nudge to a single user. Returns the sender's bool.
 
-    The sender enforces the per-category §50 ① gate; we don't second-
-    guess it here. A False return means the sender refused (opt-out,
-    missing INFORMATION consent, or no transport configured) and is
-    NOT an error — caller increments ``skipped_send``.
+    ⚠️ 2026-09-07 — this was reclassified INFORMATION → **MARKETING** (광고성).
+
+    Why: the nudge goes to users who have recorded *nothing*. Every other
+    periodic mail was rebuilt to carry the reader's own counts, which is what
+    makes those a retrospective statement of fact rather than a solicitation
+    (see services/email/record_summary.py). This one structurally cannot do
+    that — there is no record to state — so it is, and only ever was, a
+    re-engagement message. 정통망법 §50 ① calls that 광고성 정보, and calling
+    it 정보성 because it happens to contain usage steps does not change what
+    it is. CEO decision 2026-09-07: keep it, ship it honestly.
+
+    Reclassifying is not a label change — it pulls in the full 광고성 régime,
+    all of which is asserted below rather than assumed:
+      * ``(광고)`` in subject AND body head (시행령 §62 ①)
+      * MARKETING consent, not INFORMATION
+      * night gate 21:00–08:00 KST (시행령 §61의2)
+      * unsubscribe link + sender-identity block in the body
+
+    The sender still enforces the per-category §50 ① gate; the checks here are
+    belt-and-braces so a future caller that bypasses ``dispatch_inactive_nudges``
+    cannot ship a non-compliant send.
     """
     from services.email import EmailSender
     from services.email.sender import EmailCategory
+    from services.email.retention_sequence import (
+        is_night_kst, _assert_ad_marker, _assert_legal_safe,
+    )
+    from services.email_token import build_unsubscribe_url
+
+    # 시행령 §61의2 — never at night. Returning False leaves the user in the
+    # inactive window for the next hourly tick, which is the desired behaviour.
+    if is_night_kst(now):
+        return False
 
     user_name = (getattr(user, "name", "") or "").strip()
     if not user_name:
         email = getattr(user, "email", "") or ""
         user_name = email.split("@")[0] if email else "Investor"
 
-    html_body, _text_body = _render_email(user_name)
+    unsubscribe_url = build_unsubscribe_url(user.id, kind="all")
+    html_body, _text_body = _render_email(user_name, unsubscribe_url=unsubscribe_url)
     # EmailSender.send() only accepts ``html_body`` — the underlying
     # transports derive a text-only fallback from the HTML. We still
     # render the text template so cron-mode operators can preview the
     # plain-text body (and so a future EmailSender refactor that
     # accepts ``text_body`` finds it ready).
 
+    subject = "(광고) PivoxQuant 시작하기"
+
+    # Render-time kill switches — same guardrails the retention path uses.
+    _assert_ad_marker(subject, html_body, where="inactive_nudge/html")
+    _assert_legal_safe(subject, where="inactive_nudge/subject")
+    _assert_legal_safe(html_body, where="inactive_nudge/html")
+
     return EmailSender().send(
         user,
-        subject="5분 가이드: PivoxQuant 시작하기",
+        subject=subject,
         html_body=html_body,
         from_env_var="INACTIVE_NUDGE_FROM_EMAIL",
         from_default="reports@pivoxquant.com",
-        email_category=EmailCategory.INFORMATION,
+        email_category=EmailCategory.MARKETING,
     )
