@@ -191,6 +191,17 @@ def _dashboard_url() -> str:
     return os.environ.get("PIVOX_DASHBOARD_URL", f"{frontend}/home")
 
 
+def _escape(text: str) -> str:
+    """Minimal HTML escape for composed record lines.
+
+    The lines are built from integer counts, not free text, so nothing here
+    can currently carry markup — this is belt-and-braces so a future field
+    (a ticker, a note) cannot turn a record line into an injection point.
+    """
+    from html import escape
+    return escape(text, quote=False)
+
+
 def _format_consent_kr(consent_at: datetime | None) -> str:
     """Render the user's consent timestamp in KST locale for the footer."""
     if consent_at is None:
@@ -206,6 +217,7 @@ def _render(
     *,
     user: Any,
     unsubscribe_url: str,
+    record: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
     """Read + substitute the .html and .txt templates.
 
@@ -227,12 +239,24 @@ def _render(
         or "고객"
     )
     consent_at = getattr(user, "marketing_consent_marketing_at", None)
+    # 2026-09-07: the record slots. Before these, every variable this template
+    # received was chrome (name, urls, consent metadata) and the body was
+    # generic promotion — the exact shape §50 reads as 광고성. `record` is the
+    # reader's own counts, composed in services/email/record_summary.py.
+    # `_send_one` refuses to send when the summary is None, so these slots are
+    # never empty at render time.
+    record = record or {}
+    lines = list(record.get("lines") or [])
     ctx = {
         "{{ name }}": name,
         "{{ dashboard_url }}": _dashboard_url(),
         "{{ unsubscribe_url }}": unsubscribe_url,
         "{{ consent_at_kr }}": _format_consent_kr(consent_at),
         "{{ consent_source }}": "회원가입 시 동의",
+        "{{ record_txt }}": "\n".join(lines),
+        "{{ record_html }}": "\n".join(
+            f"    <li>{_escape(l)}</li>" for l in lines
+        ),
     }
     html_path = _TEMPLATE_DIR / f"{basename}.html"
     txt_path = _TEMPLATE_DIR / f"{basename}.txt"
@@ -388,7 +412,7 @@ def _pending_retention_rows(now: datetime | None, limit: int = 200) -> list[Any]
 _PROVIDER_RETRY_WINDOW = timedelta(days=3)
 
 
-def _send_one(row: Any) -> bool:
+def _send_one(row: Any, *, now: Any = None) -> bool:
     """Render + send one queued retention email. Returns True on accept.
 
     All hard guardrails (§50 / §49 / §62) fire here so a future caller
@@ -425,9 +449,28 @@ def _send_one(row: Any) -> bool:
 
     unsubscribe_url = build_unsubscribe_url(user.id, kind="all")
 
+    # ── 침묵 규칙 (2026-09-07) ────────────────────────────────────────────
+    # 이 메일의 본문은 수신자 **본인의 기록**이다. 기록이 없으면 할 말이 없고,
+    # 할 말이 없을 때 "이번 주는 조용하셨네요" 로 채우면 그건 기록이 아니라
+    # 재방문 유도다 — §50 이 광고성으로 보는 바로 그것이고, 이 작업이 벗어나려던
+    # 형태다. 그래서 요약이 비면 **보내지 않는다.**
+    #
+    # 큐 행은 스킵으로 마감된다(재시도 아님). 다음 주기에 기록이 쌓였다면
+    # 그때의 행이 새로 잡는다.
+    from services.email.record_summary import build_record_summary
+    record = build_record_summary(
+        user.id, window_days=step.offset.days, now=now,
+    )
+    if not record:
+        row.skipped_reason = "no_record"
+        return False
+
     try:
         html_body, txt_body = _render(
-            step.template_basename, user=user, unsubscribe_url=unsubscribe_url,
+            step.template_basename,
+            user=user,
+            unsubscribe_url=unsubscribe_url,
+            record=record,
         )
     except FileNotFoundError as exc:
         logger.exception("retention template missing for %s: %s", step.slug, exc)
@@ -531,7 +574,9 @@ def _dispatch_retention_locked(now: datetime | None = None) -> dict[str, int]:
                 stats["skipped_night"] += 1
                 continue
 
-            ok = _send_one(row)
+            # Same clock the night gate used — see record_summary.build_
+            # record_summary(now=...) for why the two must not diverge.
+            ok = _send_one(row, now=now_naive)
             reason = getattr(row, "_send_failure_reason", None)
             if ok:
                 row.mark_sent()
