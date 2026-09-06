@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth";
+import { API } from "@/lib/endpoints";
 import { useT } from "@/lib/locale";
 import { useInvestmentProfile } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
@@ -197,7 +198,7 @@ export default function ProfilePageV2() {
       // of the agent-memory-only /api/agent/export subset, matching
       // settings/_v2 handleRequestExport. The localStorage fallback below
       // still covers the offline/degraded case.
-      const data: unknown = await apiFetch("/api/profile/export");
+      const data: unknown = await apiFetch(API.profile.export);
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });
@@ -260,11 +261,19 @@ export default function ProfilePageV2() {
       return;
     }
     setDeleting(true);
-    try {
-      await apiFetch("/api/agent/delete", { method: "DELETE" });
-    } catch {
-      /* non-fatal — we still wipe locally (GAP-J) */
-    }
+    // 2026-09-06 — the `DELETE /api/agent/delete` call that used to open this
+    // block is gone. It had no route: the agent surfaces were removed in the
+    // 8-31 prune (47a5e8f3) and `_do_migrations` stopped creating the `agent_*`
+    // tables entirely. So the request 404'd on every click, and the `catch {}`
+    // around it swallowed that — the user saw a success path either way.
+    //
+    // Removing the call is only half of it. The confirm copy promised that
+    // "페르소나, 펄스, 피드백" would be deleted, and a reader takes that to mean
+    // their account's data. It never did: `WeeklyPulse`, `InvestmentProfile`
+    // and `ArtifactFeedback` rows live on the server and this button has only
+    // ever cleared this browser. The copy now says what it does, and points at
+    // account deletion (routes/auth.py + scripts/nightly/pipa_purge.py) for the
+    // server side — that path is real and is what PIPA §36 is served by.
     if (typeof window !== "undefined") {
       [
         // Both generations. The v1 trio was orphaned by the 2026-09-06 key

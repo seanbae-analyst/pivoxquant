@@ -147,6 +147,22 @@ export const API = {
       `/api/profile/persona-benchmark?window=${windowDays}`,
     personaBenchmarkAll: (windowDays: 30 | 90 | 365 = 90) =>
       `/api/profile/persona-benchmark-all?window=${windowDays}`,
+    // ── Living-mirror reads consumed by lib/cfo/hooks.ts ──────────────────
+    // Added 2026-09-06. These five were called with hardcoded path literals
+    // for as long as they existed, which quietly made this file an INCOMPLETE
+    // source of truth: the 2026-09-01 audit that walked every constant here
+    // against the backend url_map could not see them, and the two dead routes
+    // found on 2026-09-02 (`/api/agent/delete`, `/api/portfolio/reconcile`)
+    // were both outside it. A path that is not here is a path nothing audits.
+    persona: "/api/profile/persona",
+    rollingWindow: "/api/profile/rolling-window",
+    // GET returns the vote history; POST records one artifact vote.
+    feedback: "/api/profile/feedback",
+    // GET pulse history; POST appends one weekly entry.
+    pulse: "/api/profile/pulse",
+    // PATCH persists the ko/en choice server-side so it survives a device
+    // change (the `sp_locale` cookie only covers this browser).
+    locale: "/api/profile/locale",
   },
   billing: {
     createCheckout: "/api/billing/create-checkout",

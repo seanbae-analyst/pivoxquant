@@ -377,7 +377,7 @@
       "exportReady": "Export ready.",
       "localExportReady": "Local memory exported.",
       "exportFailed": "Export failed.",
-      "deleteConfirm": "Delete all agent memory? Persona, pulse, feedback, and Companion history will be wiped. This cannot be undone.",
+      "deleteConfirm": "Clear the local record kept in this browser — cached persona, pulse, feedback and Companion history. Data stored on your account is untouched; delete that by closing your account in Settings. Continue?",
       "memoryCleared": "Agent memory cleared."
     }
   }

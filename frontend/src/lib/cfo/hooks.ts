@@ -252,7 +252,7 @@ export function cachedPersonaId(): PersonaId | null {
 /** Declared + observed persona, with rolling-window drift indicator. */
 export function usePersona() {
   const swr = useSWR<PersonaResponse>(
-    "/api/profile/persona",
+    API.profile.persona,
     (url) => cfoFetch<PersonaResponse>(url),
     {
       revalidateOnFocus: false,
@@ -268,7 +268,7 @@ export function usePersona() {
 /** 30 / 60 / 90 day behavioural vectors for the Rolling Window widget. */
 export function useRollingWindow() {
   const swr = useSWR<RollingWindowResponse>(
-    "/api/profile/rolling-window",
+    API.profile.rollingWindow,
     (url) => cfoFetch<RollingWindowResponse>(url),
     {
       revalidateOnFocus: false,
@@ -290,7 +290,7 @@ export function useFeedback() {
     safeWrite(LS_KEYS.feedback, existing.slice(-500));
 
     try {
-      await apiFetch("/api/profile/feedback", {
+      await apiFetch(API.profile.feedback, {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -322,7 +322,7 @@ export function coercePulse(
 /** Weekly pulse history + submission helper. */
 export function usePulse() {
   const swr = useSWR<PulseResponse>(
-    "/api/profile/pulse",
+    API.profile.pulse,
     (url) => cfoFetch<PulseResponse>(url),
     {
       revalidateOnFocus: false,
@@ -358,7 +358,7 @@ export function usePulse() {
       await swr.mutate(optimistic, { revalidate: false });
 
       try {
-        await apiFetch("/api/profile/pulse", {
+        await apiFetch(API.profile.pulse, {
           method: "POST",
           body: JSON.stringify(stamped),
         });
