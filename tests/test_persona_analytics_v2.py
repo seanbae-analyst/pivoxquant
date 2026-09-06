@@ -187,16 +187,54 @@ class TestClassifyPersonaMulti:
         # 8 personas, 8 rows.
         assert len(r["ranking"]) == 8
 
-    def test_breakdown_contains_all_features_sorted_by_contribution(self, app, auth_user):
+    def test_breakdown_contains_all_contributing_features_sorted(self, app, auth_user):
+        """breakdown covers every axis that actually took part, in order.
+
+        2026-09-02: this used to assert breakdown == the full 9-key feature
+        vector. It no longer does, and the difference is deliberate rather
+        than incidental — ``feedback_engagement`` is weighted 0.0 because it
+        reads deleted artefact data (see FEATURE_WEIGHTS). The raw ``features``
+        vector still carries all nine (it is the snapshot/export schema), but
+        ``breakdown`` answers "why this persona", so an axis the maths never
+        used has no row there. The invariant being checked is unchanged in
+        spirit: breakdown is complete over contributing axes, and sorted.
+        """
+        from services.profile.persona_classifier_v2 import FEATURE_WEIGHTS
         from services.profile import classify_persona_multi
         _add_trades(app, auth_user["id"], _build_value_specs())
         _set_profile(app, auth_user["id"], risk_tolerance=5)
         with app.app_context():
             r = classify_persona_multi(auth_user["id"])
         features_in_breakdown = [row["feature"] for row in r["breakdown"]]
-        assert set(features_in_breakdown) == set(r["features"].keys())
+        contributing = {k for k in r["features"] if FEATURE_WEIGHTS[k] > 0}
+        assert set(features_in_breakdown) == contributing
+        # every listed row genuinely contributed
+        assert all(row["weight"] > 0 for row in r["breakdown"])
         contribs = [row["closeness"] * row["weight"] for row in r["breakdown"]]
         assert contribs == sorted(contribs, reverse=True)
+
+    def test_dormant_axis_cannot_cap_confidence(self, app, auth_user):
+        """A structurally-uncomputable axis must not sit in the evidence ratio.
+
+        ``feedback_engagement`` can never be `present` (its source table is
+        never written any more), so if it still carried weight, evidence_ratio
+        could never reach 1.0 and confidence was silently capped for every
+        user. Weight 0 is what makes a full-evidence user reachable.
+        """
+        from services.profile.persona_classifier_v2 import (
+            FEATURE_KEYS, FEATURE_WEIGHTS,
+        )
+        assert FEATURE_WEIGHTS["feedback_engagement"] == 0.0
+        # the axis is kept (revivable) but contributes nothing
+        assert "feedback_engagement" in FEATURE_KEYS
+        total_w = sum(FEATURE_WEIGHTS.values())
+        computable_w = sum(
+            FEATURE_WEIGHTS[k] for k in FEATURE_KEYS
+            if k != "feedback_engagement"
+        )
+        assert total_w == computable_w, (
+            "a weighted axis that can never be present would cap confidence"
+        )
 
     def test_present_mask_reflects_sparse_data(self, app, auth_user):
         from services.profile import classify_persona_multi

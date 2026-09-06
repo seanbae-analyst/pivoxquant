@@ -274,7 +274,22 @@ export default function PortfolioPageV2() {
   /**
    * Reconcile from broker (KIS).
    *
-   * Backend: POST /api/portfolio/reconcile (routes/portfolio.py:1761).
+   * ⚠️ 2026-09-06 — THE BACKEND ROUTE DOES NOT EXIST. `POST /api/portfolio/
+   * reconcile` was deleted with the rest of the broker surface in the 8-31
+   * prune (47a5e8f3); `routes/portfolio.py:1761`, which this line used to
+   * cite, is now a note explaining the removal. The response contract below
+   * is kept as the spec a revival would have to satisfy — it is not live.
+   *
+   * This is NOT a live 404. The CTA is gated on `reconcileAvailable =
+   * brokerData?.kis_connected`, and `useBrokerConnections()` hands SWR the key
+   * `false && ...`, so the request never fires and `kis_connected` is never
+   * truthy. Reviving it means solving the KIS partnership problem first
+   * (CLAUDE.md 함정 §12) — and rewriting the route, since it is gone.
+   *
+   * The path stays a literal rather than an `API.*` constant on purpose:
+   * putting it in endpoints.ts would add a symbol that resolves to a 404 and
+   * would pass the "every constant maps to a route" audit by being absent
+   * from neither side.
    *   200  → {ok, broker, added, updated, removed, synced_at,
    *           available_cash, total_value}
    *   404  → NO_BROKER_CONNECTION  (no broker linked)

@@ -33,9 +33,9 @@
     "personas": {
       "eyebrow": "Investor Personas · Selected shown",
       "heading": "A mirror that speaks\nyour investor language.",
-      "description": "Twenty onboarding questions classify you into one of several investor archetypes. When drift is detected, the persona recalibrates automatically.",
-      "alsoAvailable": "Also available: Income and more. The desk reshapes every artifact around the persona you test into.",
-      "takeQuiz": "Take the 20-question assessment"
+      "description": "Eighteen onboarding questions sort you into one of eight investor archetypes. That is only what you declared; the mirror watches what your last 30 days of trades say instead.",
+      "alsoAvailable": "Eight in all — Income, Quant, Speculator and Daytrader round out the set. The mirror explains the gap in the language of the one you picked.",
+      "takeQuiz": "Take the 18-question assessment"
     },
     "topNav": {
       "loginLink": "Log in",
@@ -46,7 +46,42 @@
     },
     "cta": {
       "signUp": "Sign up",
-      "logIn": "Log in"
+      "logIn": "Log in",
+      "heading1": "What you wrote down,",
+      "heading2": "read back weeks later.",
+      "sub": "Closed beta — everything is free. No payment details are collected. Start with a Google or Kakao account.",
+      "eyebrow": "Ready?"
+    },
+    "steps": {
+      "eyebrow": "The loop",
+      "heading": "There are only three screens.",
+      "deck": "Nothing is written for you. Your own record is the only material, and all the tool does is show it back to you later.",
+      "s1verb": "Pause",
+      "s1body": "Seven questions before you hit buy. Why now, what would prove you wrong, whether you can afford to lose this. The time it takes to write the answers is the only friction.",
+      "s1limit": "It does not pick stocks for you.",
+      "s2verb": "Record",
+      "s2body": "What you bought and what you almost bought sit in the same place. Holding period, turnover, concentration, averaging down, how you close winners and losers — five habits computed straight from your record.",
+      "s2limit": "It does not score you.",
+      "s3verb": "Mirror",
+      "s3body": "The investor you declared at onboarding, next to the investor your last 30 days of trades describe. Where those two diverge, across nine axes, is the whole of this tool.",
+      "s3limit": "It does not say which one is right."
+    },
+    "faq": {
+      "eyebrow": "Desk Notes",
+      "deck": "What people ask most before starting the beta.",
+      "heading": "Before you begin.",
+      "q1": "Is this the same as investment advisory?",
+      "a1": "No. It falls outside licensed investment advisory under Article 6 of the Financial Investment Services and Capital Markets Act. PivoxQuant is an informational research tool that reflects back the record and holdings you entered yourself. It does not pick securities, score them, or tell you to buy or sell. Every decision remains yours.",
+      "q2": "What do you do with my trade data — what does the mirror “observe”?",
+      "a2": "It places two things side by side: the investor type you declared across eighteen onboarding questions, and the behaviour observed in your last 30 days of trades. Nine axes — average holding period, turnover, sector spread and so on — are computed from your own record; no new judgement is manufactured. Raw trade data is stored encrypted and is never used for advertising or sold onward. On account deletion it is fully erased within 30 days.",
+      "q3": "Does my investor type change over time?",
+      "a3": "The observed persona is recomputed from your last 30 days of trades. The declared one stays put until you retake the eighteen questions — the point of the mirror is to show where the two diverge, not to pick one for you.",
+      "q4": "What do I actually do here?",
+      "a4": "Three things. Pause before you buy and leave your reasoning in seven questions (Pre-Trade), record your holdings and trades (Portfolio), and weeks later look at the you those records describe (Mirror). It is not a service that sends you reports — your own record is the material.",
+      "q5": "Do you have access to my brokerage account?",
+      "a5": "Read-only. It connects through the KIS (Korea) read-only scope: no orders, no withdrawals, no modifications. Every feature works identically if you skip the connection and enter holdings by hand. Disconnecting stops price sync, and the data is destroyed after 30 days.",
+      "q6": "What does it cost?",
+      "a6": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes."
     }
   },
   "errorBoundary": {
@@ -338,16 +373,11 @@
     }
   },
   "profileV2": {
-    "sampleBanner": {
-      "label": "Sample",
-      "body": "Sample data — switches to live data after your first trade.",
-      "note": "Persona figures below are illustrative until your first trade is observed."
-    },
     "toast": {
       "exportReady": "Export ready.",
       "localExportReady": "Local memory exported.",
       "exportFailed": "Export failed.",
-      "deleteConfirm": "Delete all agent memory? Persona, pulse, feedback, and Companion history will be wiped. This cannot be undone.",
+      "deleteConfirm": "Clear the local record kept in this browser — cached persona, pulse, feedback and Companion history. Data stored on your account is untouched; delete that by closing your account in Settings. Continue?",
       "memoryCleared": "Agent memory cleared."
     }
   }

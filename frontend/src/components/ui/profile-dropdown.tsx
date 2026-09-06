@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/locale";
+import { initials } from "@/lib/initials";
 
 type Tier = "Free" | "Pro" | "Premium" | "Founding";
 
@@ -31,19 +32,6 @@ const TIER_LABELS: Record<string, Tier> = {
   premium_plus: "Premium",
   founding_lifetime: "Founding",
 };
-
-function initials(name?: string, email?: string): string {
-  if (name) {
-    return name
-      .split(/\s+/)
-      .map((w) => w[0] ?? "")
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-  }
-  if (email) return email.slice(0, 2).toUpperCase();
-  return "PQ";
-}
 
 export function ProfileDropdown() {
   const { user, logout } = useAuth();

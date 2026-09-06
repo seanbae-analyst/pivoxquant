@@ -32,11 +32,11 @@ def _safe_next(next_url):
 
     # 폐기/존재하지 않는 라우트 매핑.
     # /landing → /home (OAuth 콜백 후 404 방지, P0 hotfix 2026-05-03)
-    # /beta → /beta-gate (실제 Next.js 라우트)
+    # /beta → / (베타 게이트 2026-09-04 폐기 — 옛 링크만 흡수)
     if path_only in ("/landing", ""):
         return "/home"
     if path_only == "/beta":
-        return "/beta-gate"
+        return "/"
 
     return next_url
 

@@ -1,7 +1,7 @@
 # PivoxQuant SHIP_BLOCKERS.md
 
 **SoT**: 출시를 막는 것들의 단일 목록.
-**최근 갱신**: **2026-09-01 — 실측 재작성.**
+**최근 갱신**: 2026-09-05 20:16 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 5건 / POST-LAUNCH 15건 / 변호사 큐 21건)
 
 > ⚠️ **2026-09-01 전면 재작성.** 직전 갱신이 2026-06-20 이었고, 그 사이
 > **Railway 계정이 삭제**되면서 이 파일의 상당수가 무효가 됐다. "Railway env
@@ -22,10 +22,10 @@
 | B1 | Supabase Postgres 구축 | agent | ✅ **완료** — 43 테이블 + alembic `049` stamp + `/api/health` 200 + 로그인 이후 API E2E 통과 |
 | B2 | Google OAuth | agent | ✅ **완료** — 9/1 삭제돼 있던 클라이언트 복원 + 브랜딩 채우고 **프로덕션 게시**(심사 불필요, 민감범위 0) |
 | B3 | Kakao OAuth | agent | ✅ **확인 완료** — 앱 정상, 로그인 ON, Redirect URI 2개 정확 |
-| B4 | Render 앱 배포 | **CEO** | ⬜ **여기서 막혀 있음.** `render.yaml` Blueprint 준비 완료, 폼도 세팅됨. **시크릿 10개 붙여넣기 + Deploy 클릭**만 남음 (키 입력은 agent 권한 밖) |
+| B4 | Render 앱 배포 | CEO | ✅ **완료 2026-09-04 22:38 KST** — Blueprint `pivoxquant` (srv-dadcjiv10e5c73eb60vg, singapore, plan free) `main@c1f6180`. `https://pivoxquant-api.onrender.com/api/health` → 200 `db:ok, missing_required:0`. ⚠️ free 플랜 = 유휴 시 spin-down, 첫 요청 50s+ 지연·일시 502 (실측) |
 | B5 | 남은 키 수집 | — | ✅ **불필요 — 2026-09-01 재실측으로 소멸.** `.secrets/RENDER_PASTE_VALUES.txt` 의 15개 키가 `render.yaml` 의 `sync:false` 15개와 정확히 일치하고 **빈 값이 0개**다. FMP·KIS×2 는 이미 로컬 `.env` 에 있었고(len 32/36/180), Brevo 는 `cee3d291` 이후 **필요 없다**(캐스케이드가 SendGrid→Brevo→SMTP 이고 SendGrid·SMTP 자격증명이 있음). B4 는 이 항목을 기다리지 않는다 |
-| B6 | Vercel 재연결 | agent | ⬜ B4 후 즉시 (`vercel` CLI 인증됨) |
-| B7 | 브라우저 E2E | agent | ⬜ B6 후 |
+| B6 | Vercel 재연결 | agent | ✅ **완료 2026-09-04** — `RAILWAY_BACKEND_URL` **와 `NEXT_PUBLIC_API_URL`(sensitive, 우선순위 높음 — 5번째 연결점, pull 로는 빈값으로 보여 함정)** 둘 다 Render URL 로 PATCH + 재빌드. `www.pivoxquant.com/api/health` → 200, `/api/auth/me` → 200 |
+| B7 | 브라우저 E2E | agent | 🟡 **curl E2E 만 통과** — `/api/auth/google`·`/api/auth/kakao` → 302, redirect_uri=`https://www.pivoxquant.com/api/auth/*/callback` 정확. **브라우저 검증 NOT-TESTED**: pivoxquant.com 이 agent 브라우저(Chrome 확장·앱 내 브라우저 둘 다) 조직 정책으로 차단됨. CEO 가 직접 로그인 1회 확인 필요 |
 
 ---
 
@@ -56,7 +56,7 @@ CEO 가 이번 주 목표로 잡은 건 **무료** 배포다. 아래 R 목록이
 
 | # | 항목 | 카테고리 | Owner | ETA | 해제조건 | 상태 |
 |---|---|---|---|---|---|---|
-| R0 | **PIPA §28-8 국외이전 동의서가 사실과 다르다 — 컷오버 게이트** | legal | CEO (+변호사 확인) | Render 배포 직전 | 아래 §R0 세 항목 정정 후 배포 | 🟥 **NEW 2026-09-02** |
+| R0 | ~~PIPA §28-8 국외이전 동의서가 사실과 다르다~~ → **문구 정정 완료** (2026-09-06, CEO 지시). Anthropic 제거 · Railway→Render · **Supabase(서울) 신규 행** 분리 · terms 제6조 §2 AI 면책 조항 · 온보딩 필수 동의까지. **노출 구간 가입자 0명**이라 소급 동의 문제 없음(CEO 확인). 잔여는 서울 리전이 §28-8 대상인지 하나 | legal | 변호사 | — | 변호사 §28-8 사인 (서울 리전 분류) | 🟢 **실무 해소 · 변호사 확인만 대기** |
 | R1 | 변호사 일괄 의견서 Q1-Q15 + Q-S1/S3/S4 + Q-M1/M2/M3 (총 21건) | legal | CEO + 변호사 | 미정 (CEO 미팅 예약 전) | 금융규제·자본시장법 전문 변호사 사인. 예상 300-500만원 1회 의견서 | BLOCKED |
 | R2 | Q-S1 정통망법 §50 분리 동의 framework 답변 | legal | 변호사 | 미정 | 환영 메일 + onboarding nudge + retention 메일 (B/C 분류) 발송 가능 여부 사인 | BLOCKED |
 | R3 | 통신판매업 신고 (성동구청, 등록세 ~45,000원) | legal | CEO | 미정 | 신고 완료 → `PIVOX_COMMERCE_REGISTERED=true` 전환, Stripe Live 활성 가능 | PENDING |
@@ -74,36 +74,58 @@ CEO 가 이번 주 목표로 잡은 건 **무료** 배포다. 아래 R 목록이
 
 ---
 
-### R0 상세 — 가입 **필수** 동의가 없는 처리자를 명시한다
+### R0 상세 — ✅ 문구 정정 완료 (2026-09-06, CEO 지시)
 
-`(auth)/signup/page.tsx:599` 의 국외이전 동의는 **[필수]** 라 이게 틀리면
-**가입 자체가 잘못된 고지 위에서 이뤄진다.** 현재 문구:
+`(auth)/signup/page.tsx` 의 국외이전 동의는 **[필수]** 라 이게 틀리면 가입 자체가
+잘못된 고지 위에서 이뤄진다. 정정 전 문구:
 
-> PIPA §28-8 — Anthropic / Vercel / Railway / Google / SendGrid 외 …
+> PIPA §28-8 — Anthropic / Vercel / Railway / Google / SendGrid 외 8개 위탁처
 
-세 가지가 사실과 다르다 (2026-09-02 실측):
+**타임라인이 이 항목의 요점이다.** 2026-09-02 에는 "백엔드 404 라 가입이 실패하니
+지금 노출은 없다" 가 성립했다. 2026-09-04 22:38 Render 배포로 그 전제가 깨졌고,
+2026-09-06 정정까지 **이틀간 이 문구로 실제 동의를 받았다.**
 
-1. **`Railway` — 계정이 삭제됐다.** 실제 백엔드는 Render, DB 는 **Supabase
-   `ap-northeast-2`(서울)**. 서울 리전이면 그 부분은 애초에 "국외 이전" 이
-   아닐 수 있다 — 즉 빼야 할 뿐 아니라 **분류 자체가 달라질 수 있다.**
-   (`privacy-ko.md:26,167,252`)
-2. **`Anthropic` — 더 이상 데이터가 가지 않는다.** `privacy-ko.md:169` 는
-   "AI 기능 입력값·포트폴리오 요약" 이 Claude API 로 전송된다고 적지만,
-   `services/ai/` 는 **2026-09-01 커밋 `e19f28c3` 에서 삭제**됐고 런타임에
-   Anthropic 을 한 번도 부르지 않는다. **일어나지 않는 이전에 필수 동의를
-   받고 있다.**
-3. **`privacy-ko.md:195` 의 AI기본법 §31 고지가 반대로 틀렸다** — "본 서비스가
-   인공지능에 기반하여 운용됨을 고지" 라고 적혀 있으나 AI 기능이 없다.
+정정 내용 (커밋 `ba6dfe48`):
 
-⚠️ **에이전트가 단독 재작성하지 않는다.** ①의 올바른 처리자 목록은 Render 리전
-확정 후에야 정해지고, ②③ 은 "빼면 되는" 것처럼 보여도 §28-8 필수 고지문이라
-변호사 검토 전 개인정보처리방침 본문을 고쳐 쓰는 건 범위를 넘는다.
+| 항목 | 정정 전 | 정정 후 |
+|---|---|---|
+| Anthropic | 필수 수탁자 | **제거** — `services/ai/` 2026-09-01 삭제, 이전 미발생 |
+| Railway | 백엔드 호스팅 + 데이터 저장 (한 행) | **행 분리** |
+| → 앱 호스팅 | — | Render Services (미국), 영구 저장 없음 |
+| → 데이터 저장 | **표에 없었음** | Supabase (미국 법인 · 데이터는 **서울** ap-northeast-2) |
+| privacy §3 | "Claude API 로 전송됩니다" | "인공지능을 이용하지 않습니다" |
+| terms 제6조 §2 | AI 생성물 면책 + "AI 생성" 표시 약정 | 인공지능 미사용 고지 |
+| onboarding `ai_advisory` | `required` + "AI 기반 분석 정보를 제공하며" | 비-자문 확인은 유지, AI 주장 제거 |
 
-**지금 노출은 없다** — 백엔드 404 라 `POST /api/auth/signup` 자체가 실패한다.
-그래서 이건 "지금 터진 사고" 가 아니라 **Render 가 살아나는 순간 터지는 것**이고,
-따라서 **B4 배포와 같은 게이트에 묶어야 한다.** 배포 → 가입 재개 사이에 정정할 것.
+**서울 리전 분류는 정하지 않았다.** 외국 법인이 처리자이나 데이터가 국내에
+상주하는 경우 §28-8 해당 여부는 해석의 여지가 있어, **보수적으로 국외 이전에
+포함해 고지**하고 변호사 확인 사항(privacy-ko.md 검토 비고 5)으로 남겼다 —
+과소 고지의 위험이 과다 고지의 위험보다 크다.
 
-출처: 2026-09-02 daily-sweep P0 (`AUTOPILOT_BACKLOG.md` 상단), 본 세션 재확인.
+#### 왜 2026-09-02 시도는 revert 됐고 이번은 아닌가
+
+`8f9e1670` 이 단독 판단으로 같은 정정을 시도했다가 `3464912b` 로 되돌려졌다.
+실패 원인은 "건드려서" 가 아니라 **Railway → Render 를 치환으로 처리해서** 다.
+그 결과 "Render · 미국 · 데이터 저장" 이 되어 저장 위치를 새로 틀리게 진술했고,
+**부분적으로 맞는 고지문은 틀린 것보다 낫지 않다** — 정정한 외관 때문에 더 늦게
+발견된다.
+
+이번에 다른 점: ① CEO 지시로 진행 ② 치환이 아니라 **행 분리** ③ 서울 리전
+분류를 agent 가 정하지 않고 명시적으로 유보 ④ 모든 문서에 정정 이력을 남겨
+이전 판에 동의한 사람이 무엇이 바뀌었는지 확인할 수 있게 함.
+
+#### 🔴 남은 것 — 코드로 풀 수 없다
+
+1. ~~기존 가입자는 옛 문구로 동의한 상태다~~ → ✅ **해소. 노출 구간(2026-09-04
+   22:38 배포 ~ 2026-09-06 정정) 가입자 0명** (CEO 확인, 2026-09-06).
+   옛 문구로 실제 동의한 사람이 없으므로 소급 재동의 문제가 성립하지 않는다.
+   ※ 출처는 CEO 진술이다. 변호사에게 제출할 일이 생기면 prod `users` 테이블의
+   `created_at` 구간 COUNT 로 뒷받침할 것 — 조회는 집계만으로 충분하다.
+2. **서울 리전 저장분의 §28-8 해당 여부** — 위 참조. 변호사 큐 Q6 에 병합.
+3. 문서 상단의 "변호사 검토 대기 초안" 표기는 **그대로 둔다** (R5/R6). 이번
+   작업은 사실관계 정정이지 법률 검토가 아니다.
+
+출처: 2026-09-02 daily-sweep P0 → 2026-09-06 정정 (`ba6dfe48`).
 
 ## 🟧 SHIP-AT-RISK (출시 가능하나 운영 리스크 큼)
 
@@ -180,6 +202,7 @@ CEO 가 이번 주 목표로 잡은 건 **무료** 배포다. 아래 R 목록이
 
 | # | 항목 | 해결 일자 | 출처 |
 |---|---|---|---|
+| ✅ | **베타 게이트 폐기** — CEO "일단 무료로 배포, 베타비번 폐기". `/beta-gate`·`/api/beta-auth`·middleware 게이트·`BETA_PASSWORD`/`BETA_SIGNING_SECRET`(코드+Vercel env) 전부 삭제. prod 는 06-25 부터 이미 게이트 OFF 였음 | 2026-09-04 | 커밋 `chore(beta)` / `MEMORY.md` Brand |
 | ✅ | BETA_PASSWORD rotate 영구 해결 (`<BETA_PASSWORD>` 평문 고정값 + Vercel REST API, literal은 MEMORY.md/Vercel env 만) | 2026-05-26 | `MEMORY.md` Brand 섹션 |
 | ✅ | OAuth provisioning_failed P0 hotfix (alembic 035 prod 미적용 → _do_migrations runtime ADD COLUMN) | 2026-05-17 v44.7 | `MEMORY.md` |
 | ✅ | Railway PG too-many-clients (pool 3/2 + self-heal 가드 7개) | 2026-05-20 v46 | `MEMORY.md` Brand 섹션 |

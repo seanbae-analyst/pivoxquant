@@ -30,16 +30,17 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from models import TradeHistory
+from models import PreTradeReflection, TradeHistory
 from services.behavior.averaging_down_mirror import (
     compute_averaging_down_mirror,
 )
 from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
 from services.behavior.turnover_mirror import compute_turnover_mirror
+from services.pre_trade.friction_outcome import compute_friction_outcome
 from services.profile.holding_mirror import compute_holding_mirror
 
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 from services.legal.disclaimers import DISCLAIMER_MIRROR_RETROSPECTIVE_KR
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ _HOLDING_MIRROR_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/holding-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def holding_mirror():
     """Retrospective winner/loser holding-period mirror for the user.
 
@@ -112,6 +114,7 @@ _CONCENTRATION_MIRROR_DISCLAIMER = (
 
 @behavior_bp.route("/concentration-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def concentration_mirror():
     """Cost-basis concentration mirror for the user's open positions.
 
@@ -142,6 +145,7 @@ _PROFIT_LOSS_MIRROR_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/profit-loss-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def profit_loss_mirror():
     """Retrospective profit/loss holding + return mirror for the user.
 
@@ -194,6 +198,7 @@ _TURNOVER_MIRROR_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/turnover-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def turnover_mirror():
     """Retrospective trade-activity mirror for the user.
 
@@ -246,6 +251,7 @@ _AVERAGING_DOWN_MIRROR_PERIODS: dict[str, int | None] = {
 
 @behavior_bp.route("/averaging-down-mirror", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def averaging_down_mirror():
     """Retrospective follow-on-add mirror for the user.
 
@@ -276,6 +282,83 @@ def averaging_down_mirror():
     body = {
         "ok": True,
         "disclaimer": _AVERAGING_DOWN_MIRROR_DISCLAIMER,
+        "period": period,
+    }
+    body.update(result)
+    return jsonify(body), 200
+
+
+# ── /friction-outcome ───────────────────────────────────────────────
+
+_FRICTION_OUTCOME_DISCLAIMER = DISCLAIMER_MIRROR_RETROSPECTIVE_KR
+
+# Same tiny explicit period set as the other mirrors — never echo an
+# arbitrary user-supplied integer back into a window.
+_FRICTION_OUTCOME_PERIODS: dict[str, int | None] = {
+    "all": None,
+    "90d": 90,
+    "30d": 30,
+}
+
+
+@behavior_bp.route("/friction-outcome", methods=["GET"])
+@api_auth
+# 2026-09-02 — 이 파일에서 스크럽 데코레이터를 단 첫 라우트다. legal-deep-scan
+# 의 scan-api-decorator 가 이 라우트 추가를 잡았고, 워크플로가 제시하는 다른
+# 선택지(`# legal-exempt:`)는 "변호사 사인 필요, 자가 승인 불가" 라고 명시돼
+# 있으므로 데코레이터를 다는 쪽이 맞다. api_auth **뒤에** 놓아 401 은 스크럽
+# 없이 짧게 끊고 happy-path 본문만 필터한다 (decorators.py 계약).
+#
+# 2026-09-04 — 위쪽 5종 mirror 라우트에도 같은 데코레이터를 백필했다. 응답이
+# 숫자 + 공용 면책 문자열뿐이라 스크럽 전후가 동일함을 실측했고(변경 0), 이
+# 파일은 이제 라우트 단위로 한 계약만 갖는다. 파일 단위 가드가 새 라우트를
+# 못 잡는 문제는 tests/test_legal_deep_scan_local.py 의 behavior.py 전용
+# 라우트별 검사가 대신 막는다.
+@legal_scrub_response
+def friction_outcome():
+    """멈춤이 실제로 무엇으로 이어졌는지 되비추는 거울.
+
+    ``?period=30d|90d|all`` (default ``all``).
+
+    2026-09-02 — 이 엔드포인트가 생기기 전까지
+    ``services/pre_trade/friction_outcome.py`` 는 완성·테스트돼 있으면서도
+    호출처가 CLI 스크립트 하나뿐이었다. 즉 유저는 볼 수 없었다.
+
+    다른 5종 mirror 와 계약이 같다: 라우트가 행을 읽어 넘기고, 서비스는
+    순수 계산만 한다 (시세·FX·네트워크 호출 0).
+
+    ⚠️ 응답의 ``caveats`` 와 ``realised.comparable`` 을 프론트가 임의로
+    떨어뜨리면 안 된다. 이건 장식이 아니라 이 비교가 무작위 배정이 아니라는
+    고지이고, 표본이 ``min_group_n`` 미만이면 서비스가 비교 자체를 거부한다.
+    """
+    period = request.args.get("period", "all")
+    if period not in _FRICTION_OUTCOME_PERIODS:
+        return jsonify({
+            "error": (
+                "period must be one of: "
+                + ", ".join(sorted(_FRICTION_OUTCOME_PERIODS))
+            ),
+            "code": "BAD_INPUT",
+        }), 400
+    window_days = _FRICTION_OUTCOME_PERIODS[period]
+
+    reflections = (
+        PreTradeReflection.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    trades = (
+        TradeHistory.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    result = compute_friction_outcome(
+        reflections, trades, window_days=window_days
+    )
+
+    body = {
+        "ok": True,
+        "disclaimer": _FRICTION_OUTCOME_DISCLAIMER,
         "period": period,
     }
     body.update(result)

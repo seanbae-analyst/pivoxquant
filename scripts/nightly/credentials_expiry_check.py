@@ -3,7 +3,7 @@
 
 목적
 ----
-BETA_PASSWORD / SendGrid API key / KIS App Key·Secret 의 권장 회전 주기 종료
+SendGrid API key / KIS App Key·Secret 의 권장 회전 주기 종료
 D-7 시점에 Slack 으로 알림을 보낸다. 회전 누락으로 인한 인증·발송 사고를 방지.
 
 Wave I E-1: FMP Starter $29 구독 만료도 같은 메커니즘으로 D-30 / D-7 시점에
@@ -16,7 +16,6 @@ crontab ``0 10 * * *`` (KST 10:00 daily). GitHub Actions 미사용 (billing 결�
 
 회전 정책
 ---------
-- BETA_PASSWORD       : 90일 (마지막 rotate 2026-05-17 v44.7)
 - SENDGRID_API_KEY    : 180일 권장 (만료 개념 없음 → 권장 회전)
 - KIS_APP_KEY/SECRET  : 365일 (KIS dashboard 기준)
 - FMP_PLAN            : ``FMP_PLAN_EXPIRY`` env 의 ISO date (D-30 + D-7 alert).
@@ -84,16 +83,6 @@ class CredentialPolicy:
 
 # 회전 정책 catalog. last rotation 기본값은 메모리/세션 노트에서 가져온 ground truth.
 POLICIES: list[CredentialPolicy] = [
-    CredentialPolicy(
-        name="beta_password",
-        label="BETA_PASSWORD (Vercel)",
-        rotation_days=90,
-        default_last_rotated="2026-05-17",  # v44.7 rotate (memory: feedback session_2026-05-17)
-        rotation_instructions=(
-            "Vercel REST API `POST /v10/projects/{id}/env` + empty commit "
-            "redeploy. 자세히는 ~/.claude/.../memory/MEMORY.md `BETA_PASSWORD` 절 참조."
-        ),
-    ),
     CredentialPolicy(
         name="sendgrid_api_key",
         label="SENDGRID_API_KEY",

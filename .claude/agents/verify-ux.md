@@ -49,7 +49,7 @@ tools:
 
 ## 접속 기본 정보
 - URL: https://www.pivoxquant.com
-- 베타 비번: `${BETA_PASSWORD}` (Railway env에서 읽기)
+- 베타 게이트 없음 (2026-09-04 폐기 — 비번 입력 단계 없이 바로 접속)
 - dev-login: `POST /api/auth/dev-login` body `{"secret":"${DEV_LOGIN_SECRET}"}`
 
 ## 필수 프로토콜
@@ -77,8 +77,7 @@ caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
 
 ### 시작 단계
 1. Chrome 탭 생성 후 사이트 접속
-2. 베타 게이트 통과 (비번 `${BETA_PASSWORD}` — Railway env에서 읽기)
-   - **BETA_PW rotate stale fallback**: ${BETA_PASSWORD} 로그인 실패 시 즉시 stale 의심
+2. (베타 게이트 없음 — 2026-09-04 폐기, 바로 접속)
      - 2026-05-17 v44.7 메커니즘: Vercel REST API rotate + empty commit redeploy
      - 복구: Vercel REST API `GET /v10/projects/{id}/env` 호출로 최신 값 fetch, 또는 user manual override 요청
      - **로그인 1회 실패 시 즉시 caller escalate** ("BLOCKED: BETA_PW stale, latest value 요청")

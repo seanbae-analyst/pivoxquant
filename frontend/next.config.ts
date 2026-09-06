@@ -190,7 +190,17 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
               "img-src 'self' data: blob: https://*.googleusercontent.com https://*.kakaocdn.net https://k.kakaocdn.net https://t1.kakaocdn.net",
               "font-src 'self' data: https://cdn.jsdelivr.net",
-              "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
+              // ⚠️ middleware.ts emits its own CSP and the browser enforces the
+              // INTERSECTION of the two. It allows https://*.onrender.com as the
+              // backend origin (2026-09-01, replacing the dead *.railway.app);
+              // this header did not, so the intersection silently excluded it.
+              // Nothing broke yet only because lib/endpoints.ts uses API_BASE=""
+              // and every call goes same-origin through the /api rewrite. The
+              // moment anything talks to the backend origin directly — an SSE
+              // stream, a preview build pointed at Render — it would fail as a
+              // console-only CSP violation with no network error to catch it.
+              // Kept in sync with middleware.ts:190 on purpose.
+              "connect-src 'self' https://*.onrender.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io",
               // Stripe checkout iframe domains removed at Stage 0 (무료 출시 —
               // billing fully gated, no Stripe.js loads). Re-add
               // https://js.stripe.com + https://hooks.stripe.com here AND in

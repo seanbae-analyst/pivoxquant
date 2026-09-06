@@ -335,6 +335,57 @@ export interface HoldingMirrorResponse {
  *   - `cost_basis_note`        → the "평균매입가 기준 (시장가 아님)" clarifier the
  *                                backend supplies verbatim (oversight guard).
  * ────────────────────────────────────────────────────────────────────── */
+/**
+ * Friction Outcome — 1:1 with services/pre_trade/friction_outcome.py.
+ *
+ * Deliberately carries no verdict field. The module computes two return
+ * distributions but refuses the comparison when either group is under
+ * `min_group_n`; `comparable` is that refusal, and `caveats` explains why
+ * the two groups are not equivalent in the first place.
+ */
+export interface FrictionOutcomeGroup {
+  n: number;
+  median_pct: number | null;
+  mean_pct: number | null;
+}
+
+export interface FrictionOutcomeResponse {
+  ok: boolean;
+  disclaimer?: string;
+  period?: string;
+  window_days: number | null;
+  /** How the started records resolved. */
+  stopped: {
+    started: number;
+    proceeded: number;
+    cancelled: number;
+    open: number;
+  };
+  /** Did a cancellation stick, or was it only a delay? */
+  cancelled_followthrough: {
+    cancelled: number;
+    bought_later_anyway: number;
+    never_bought: number;
+    median_days_until_bought: number | null;
+  };
+  /** Two distributions, never a winner. */
+  realised: {
+    with_friction: FrictionOutcomeGroup;
+    without_friction: FrictionOutcomeGroup;
+    /** false → the UI must NOT render the comparison. */
+    comparable: boolean;
+    min_group_n: number;
+  };
+  /** Limits of the measurement, shipped in the same envelope as the result. */
+  caveats: {
+    not_randomised: boolean;
+    attribution_window_days: number;
+    cooldown_seconds_currently: number;
+  };
+  /** True when no pre-trade record exists in the window at all. */
+  insufficient: boolean;
+}
+
 export interface ConcentrationMirrorResponse {
   ok: boolean;
   disclaimer?: string;

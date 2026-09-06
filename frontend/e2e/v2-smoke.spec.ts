@@ -230,8 +230,8 @@ for (const surface of SURFACES) {
       }
 
       const resp = await page.goto(surface.path, { waitUntil: "domcontentloaded" });
-      // Accept any non-5xx — middleware may redirect 307 to /beta-gate in
-      // unconfigured envs; we trust the final URL.
+      // Accept any non-5xx — middleware may 307 (locale / www) in some
+      // envs; we trust the final URL.
       expect(resp?.status() ?? 0, `${surface.path} HTTP status`).toBeLessThan(500);
 
       // Give SWR + dynamic imports time to settle before snapping.

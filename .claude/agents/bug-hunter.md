@@ -59,7 +59,7 @@ investigate-bug와 차이:
 
 ## 접속 정보
 - URL: https://www.pivoxquant.com
-- 베타 비번: `${BETA_PASSWORD}` (Railway env에서 읽기)
+- 베타 게이트 없음 (2026-09-04 폐기 — 비번 입력 단계 없이 바로 접속)
 - dev-login: `POST /api/auth/dev-login` body `{"secret":"${DEV_LOGIN_SECRET}"}`
 
 ## 사냥 프로토콜
@@ -136,7 +136,7 @@ fetch('/api/auth/dev-login', {
 6. **SWR dedup 3계층** — Network 탭에서 동일 URL 중복 호출 (>1회) 발견 시 의심. 전역 SWRConfig `dedupingInterval` + 공용 hook + 페이지 inline 금지 + raw `fetch()` grep 0건
 7. **SWR loading state** — `!data` 를 empty 로 오인 금지 — UI 에 loading/empty/error 3상태 구분 + sample/demo 배너 플리커 버그 회귀 (risk/page.tsx 사례)
 8. **DB migration (코드-데이터 lag)** — 코드 용어 변경 PR 에 Alembic migration 동봉 필수. down_revision 체인 / downgrade no-op / alembic heads 단일 검증
-9. **prod fail-fast (ephemeral fallback 금지)** — 필수 env (BETA_PASSWORD, ANTHROPIC_API_KEY, ENCRYPTION_KEY) 없으면 prod boot 단계 즉시 fail. 주문 / 결제 같은 write path 가 fallback (silent retry) 하면 critical. ephemeral key 재생성 silent data loss 회귀 차단
+9. **prod fail-fast (ephemeral fallback 금지)** — 필수 env (ENCRYPTION_KEY 등) 없으면 prod boot 단계 즉시 fail. 주문 / 결제 같은 write path 가 fallback (silent retry) 하면 critical. ephemeral key 재생성 silent data loss 회귀 차단
 
 **도메인 확장 패턴 (bug-hunter 특화 — v44.x 세션 신규 — SoT 외)**
 
@@ -233,7 +233,7 @@ fetch('/api/auth/dev-login', {
 
 ## 🚀 PivoxQuant Context (2026-05-18 v44.8 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / pytest 3000+ pass (누적, 실측 기준) / 베타 `${BETA_PASSWORD}` (Vercel REST API rotate)
+**프로덕션 상태**: Railway + Vercel ACTIVE / pytest 3000+ pass (누적, 실측 기준) / 베타 게이트 폐기(2026-09-04)
 **최신 인수인계**: `HANDOVER.md` 최신본 직접 확인 (버전 하드코딩 금지 — v44.7~v44.9 당시 #454~#491)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
 **자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)

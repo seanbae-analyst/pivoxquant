@@ -20,6 +20,7 @@ import React, {
   useState,
 } from "react";
 import ko from "@/messages/ko.json";
+import { API } from "@/lib/endpoints";
 import en from "@/messages/en.json";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -116,7 +117,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     // this. credentials:"include" carries the session cookie.
     if (typeof window !== "undefined") {
       try {
-        void fetch("/api/profile/locale", {
+        void fetch(API.profile.locale, {
           method: "PUT",
           credentials: "include",
           headers: { "Content-Type": "application/json" },

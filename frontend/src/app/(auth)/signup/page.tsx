@@ -53,9 +53,13 @@ interface Consents {
   terms: boolean;
   non_advisory: boolean;
   age: boolean;
-  // PIPA §28-8 (개인정보 국외 이전 별도 동의). 모든 위탁처(Anthropic /
-  // Stripe / Vercel / Railway / Google) 가 미국 소재이므로 모든 사용자에게
-  // 적용 — 필수 체크 항목.
+  // PIPA §28-8 (개인정보 국외 이전 별도 동의) — 필수 체크 항목.
+  //
+  // 2026-09-06 정정: 목록이 Anthropic(2026-09-01 AI 코드 삭제로 이전 발생
+  // 안 함)과 Railway(계정 해지)를 이름으로 들고 있었고, 실제 저장소인
+  // Supabase 는 아예 빠져 있었다. 문구의 SoT 는
+  // frontend/src/content/privacy-ko.md 의 국외 이전 표다 — 여기를 고칠 땐
+  // 그 표와 반드시 같이 고칠 것. 수는 세어서 적는다(현재 8곳).
   cross_border: boolean;
   // 정통망법 §50 marketing — 선택.
   marketing: boolean;
@@ -596,7 +600,7 @@ export default function SignupPageV2() {
               />
               <span className="font-serif" style={consentLabelStyle}>
                 <span className="font-mono" style={requiredTagStyle}>[필수]</span>
-                개인정보의 국외 이전에 동의합니다. (PIPA §28-8 — Anthropic / Vercel / Railway / Google / SendGrid 외 미국·프랑스 소재 8개 위탁처, 상세 목록은 개인정보처리방침 참조)
+                개인정보의 국외 이전에 동의합니다. (PIPA §28-8 — Supabase(데이터는 서울 리전 보관) / Render / Vercel / Google / SendGrid 외 8개 위탁처, 상세 목록과 각 위탁처의 이전 항목은 개인정보처리방침 참조)
                 {" "}
                 <a
                   href="/privacy#cross-border"

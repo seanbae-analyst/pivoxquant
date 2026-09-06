@@ -76,7 +76,6 @@ CEO가 매번 "engine.py 만지지 마" / "ai_models.py 동결" 수동 지시하
 - frontend/src/app/privacy/page.tsx (PIPA SoT)
 - routes/auth.py — OAuth callback section (v44.7 사고 영역)
 - migrations/versions/035_user_onboarding_draft.py (alembic 035 영구 가드)
-- frontend/src/app/beta-gate/page.tsx (BETA_PASSWORD 노출 영역)
 - routes/health.py /api/health (release-coordinator 의존)
 - frontend/public/manifest.json (PWA SW 캐시)
 
@@ -233,5 +232,4 @@ PY
 | `legal-kr-fintech` | services/ai/models.py (Pattern 10) + terms/privacy 변경 review |
 | `migration-guard` | migrations/versions/035 변경 시 협업 |
 | `persona-quant-domain` | hard_frozen 7건 모든 변경 review owner |
-| `secrets-rotator` | beta-gate 변경 시 협업 |
 | `pwa-cache-validator` | manifest.json 변경 시 협업 |

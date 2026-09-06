@@ -14,7 +14,7 @@
 - [ ] CAUS state file: `python scripts/caus_auto_fix.py --state-dump` → 깨끗
 - [ ] frontend `npm run build` → 0 errors (Vercel CI 통과)
 - [ ] backend `pytest -q` → 0 failures
-- [ ] 베타 게이트 비활성화 (BETA_PASSWORD Railway env 삭제) — 진짜 공개 시점
+- [x] 베타 게이트 폐기 — 2026-09-04 (코드·Vercel env 삭제, 무료 공개)
 - [ ] Slack `#alerts` 채널 webhook 활성 확인
 
 ---

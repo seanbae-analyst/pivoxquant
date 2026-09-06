@@ -2095,20 +2095,18 @@ def portfolio_history():
     return jsonify(payload)
 
 
-# ── Reconcile (broker sync) ────────────────────────────────────────────────
+# ── Reconcile (broker sync) — REMOVED 2026-08-31 ───────────────────────────
 #
-# Symmetry note: `POST /api/broker/kis/sync` (routes/broker_oauth.py) already
-# triggers UserKISService.sync_to_db(). Frontend Portfolio Hero CTA reads
-# "Reconcile from broker" — the mockup names this endpoint `/portfolio/
-# reconcile` so we expose a thin wrapper at the portfolio surface that:
-#   1. checks each broker connection (KIS first, then Alpaca),
-#   2. invokes the existing sync_to_db() service,
-#   3. returns a unified {added, updated, removed, synced_at} response.
+# `POST /api/portfolio/reconcile` used to live here and was deleted with the
+# rest of the broker surface in the prune (47a5e8f3). Its ~20-line design note
+# was left behind describing the endpoint in the present tense — legal posture,
+# response shape, mockup reference — which reads as if the route still exists.
+# Removed 2026-09-06; recover the implementation with
+#     git show 47a5e8f3^:routes/portfolio.py
 #
-# Legal posture
-#   • READ-ONLY broker inquiry (KIS `inquire-balance`).
-#   • NO order placement, NO trade modification — §101 면제 트랙 유지.
-#   • Returns 404 if no broker connections exist (handled upstream by FE).
-#
-# 2026-05-19 (P2 #11): added per mockup spec
-# `frontend/src/app/(dashboard)/portfolio/_v2/page-v2.tsx:309`.
+# The frontend still names the path (`portfolio/page.tsx`), and that is not a
+# live 404: the CTA is gated on `reconcileAvailable = brokerData?.kis_connected`
+# and `useBrokerConnections()` passes SWR the key `false && ...`, so the request
+# never fires. It is dormant, like the rest of `API.broker.*` (CLAUDE.md 함정
+# §12) — KIS does not partner with fintech intermediaries, so reviving this
+# means solving that first, and the route would have to be rewritten anyway.

@@ -305,11 +305,10 @@ Next.js App Router에서 기본 모든 컴포넌트는 Server Component이다. P
 - **API 데이터 페칭**: 전적으로 클라이언트 SWR에 의존 — Server Component 내 `fetch()`는 사용하지 않음 (Flask 세션 쿠키 전달 제약)
 - **AuthProvider** (`providers.tsx`): `"use client"` 래퍼로 전체 트리에 인증 컨텍스트 제공
 
-### middleware.ts — Edge Runtime 처리 (3가지 역할)
+### middleware.ts — Edge Runtime 처리 (2가지 역할)
 
-1. **Beta 게이트**: `BETA_PASSWORD` 환경변수 설정 시 작동. Web Crypto API로 HMAC-SHA256 서명 토큰 생성, 쿠키 검증 실패 시 `/beta-gate`로 리다이렉트. `/simulator` 등 퍼블릭 경로는 우회(`BETA_BYPASS_PREFIXES`).
-2. **Locale 감지**: `sp_locale` 쿠키 → `Accept-Language` 헤더 순으로 `ko`/`en` 감지, 첫 방문 시 쿠키 설정.
-3. **CSP 헤더 주입**: 요청마다 nonce 생성, 개발/프로덕션 환경별 `connect-src` 분기 적용.
+1. **Locale 감지**: `sp_locale` 쿠키 → `Accept-Language` 헤더 순으로 `ko`/`en` 감지, 첫 방문 시 쿠키 설정.
+2. **CSP 헤더 주입**: 요청마다 nonce 생성, 개발/프로덕션 환경별 `connect-src` 분기 적용.
 
 ### next.config.ts — API 프록시 (line 8-19)
 
@@ -607,8 +606,6 @@ CMD ["sh", "-c", "gunicorn app:app --worker-class gevent --workers 1 --bind 0.0.
 | 변수명 | 설명 |
 |--------|------|
 | `NEXT_PUBLIC_API_URL` | Railway 백엔드 URL |
-| `BETA_PASSWORD` | 비공개 베타 비밀번호 (Vercel env에서만 보유) |
-| `BETA_SIGNING_SECRET` | 베타 토큰 서명 키 |
 
 ### 마이그레이션 전략
 
@@ -712,17 +709,9 @@ Kakao도 동일 패턴 적용 (`oauth_state_kakao`). Open Redirect 방어: `_saf
 
 로그인/OAuth 콜백 성공 시 `session.clear()` 호출 후 `login_user()` 실행 (auth.py line 85, 97, 176, 259). 기존 세션을 무효화하여 Session Fixation 공격 차단.
 
-### 베타 게이트 (middleware.ts — Edge Runtime)
+### 베타 게이트 — 폐기 (2026-09-04)
 
-```
-BETA_PASSWORD 환경변수 설정 시 작동:
-  요청 → HMAC-SHA256 서명 토큰 생성 (Web Crypto API)
-       → pivox_beta_access 쿠키 검증
-       → 불일치 → /beta-gate 리다이렉트
-       → 일치 → 정상 통과
-```
-
-서명에 `BETA_SIGNING_SECRET` (또는 `SECRET_KEY`) 사용. Edge Runtime 환경이므로 Node.js `crypto` 대신 `crypto.subtle` (Web Crypto API) 사용.
+`/beta-gate`·`/api/beta-auth`·middleware 게이트 블록·비밀번호/서명 env 전부 삭제. 무료 공개 출시 결정(CEO). `/beta` 는 `/` 로 리다이렉트만 남김.
 
 ---
 

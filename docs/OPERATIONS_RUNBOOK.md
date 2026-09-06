@@ -149,7 +149,6 @@ git push origin main
 |------|-----|------|
 | `RUN_SCHEDULER` | `1` | APScheduler 백그라운드 작업 활성화 (production에서만 `1`) |
 | `KIS_USE_REAL` | `0` or `1` | 한국 실전 계좌 사용 여부 (**현재 0 고정**) |
-| `BETA_PASSWORD` | `***REDACTED — Railway env에서만 보유***` | 베타 게이트 비밀번호. 오픈 런칭 시 제거 |
 | `DEV_LOGIN_SECRET` | `***REDACTED — Railway env에서만 보유***` | QA 전용 바이패스. **QA 종료 후 즉시 삭제** |
 | `CORS_ORIGINS` | `https://pivoxquant.com,https://www.pivoxquant.com,https://pivoxquant.vercel.app` | 쉼표 구분. 후행 슬래시 없이 |
 | `FRONTEND_URL` | `https://pivoxquant.com` | OAuth 콜백 후 리다이렉트 대상 |
@@ -159,8 +158,6 @@ git push origin main
 | 변수 | 값 | 주의사항 |
 |------|-----|----------|
 | `NEXT_PUBLIC_API_URL` | `<RAILWAY_BACKEND_URL>` (Vercel env로 등록) | **`NEXT_PUBLIC_` 접두사** 때문에 브라우저 노출됨. 비밀값 금지 |
-| `BETA_PASSWORD` | `***REDACTED — Vercel env에서만 보유***` | middleware.ts 베타 게이트용 |
-| `BETA_SIGNING_SECRET` | `4c492c93...(64자 hex)` | 베타 쿠키 서명. 변경 시 모든 베타 유저 재로그인 |
 
 ### 2-7. 변경 시 공통 주의사항
 

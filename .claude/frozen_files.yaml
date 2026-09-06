@@ -4,7 +4,7 @@
 # 2026-05-19 v45.3 마무리 (SoT 신규 작성)
 
 version: 1
-last_updated: "2026-05-19"
+last_updated: "2026-09-04"  # beta-gate entry removed (page deleted, CEO retirement)
 
 # Iron Rule 7건 동결 — CLAUDE.md "중요 원칙" 절 명시
 # 변경 절대 금지 (예외: §exceptions 조항)
@@ -78,11 +78,6 @@ soft_frozen_candidates:
     reason: v44.7 OAuth 사고 원인 — prod alembic_version 동기화 영구 가드
     incident: "변경 시 migration-guard + prod-migration-sync-verifier 강제"
     decision_owner: CEO + migration-guard
-
-  - path: frontend/src/app/beta-gate/page.tsx
-    reason: BETA_PASSWORD 노출 회귀 영역 (C1 git filter-repo 사건)
-    incident: "평문 BETA_PASSWORD 누출 차단. 코드 reveal 금지"
-    decision_owner: CEO + secrets-rotator
 
   - path: routes/health.py
     reason: /api/health endpoint — release-coordinator 5분 window의 SoT
