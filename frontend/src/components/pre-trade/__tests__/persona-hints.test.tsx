@@ -6,9 +6,15 @@
  * itself must NEVER issue a network request: the host modals' tests
  * assert strict apiFetch call counts. Contracts:
  *   - warm cache + real payload → that persona's hints render
- *   - `_isMock` payload → NO hints (the offline mock is always "growth";
- *     personalizing from it would be wrong for most users)
  *   - cold cache → NO hints (neutral copy, exactly the pre-wiring render)
+ *
+ * 2026-09-06: a third contract used to live here — "`_isMock` payload → NO
+ * hints", guarding against personalising from the offline mock (always
+ * "growth"). Both the mock factories and the fabricating fallback in
+ * `cfoFetch` are gone, so nothing can write such a payload any more and
+ * `cachedPersonaId()` no longer looks for the flag. What replaced that guard
+ * is the `pq_cfo_persona_v1 → _v2` key bump: a pre-existing mock cache is
+ * orphaned rather than inspected. The case below pins that.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -32,18 +38,17 @@ import { apiFetch } from "@/lib/api";
 import { QuestionsStep } from "@/components/pre-trade/pre-trade-friction-core";
 import { PERSONA_QUESTION_HINTS } from "@/data/pre-trade-questions";
 
-const LS_PERSONA_KEY = "pq_cfo_persona_v1";
+const LS_PERSONA_KEY = "pq_cfo_persona_v2";
 
-function seedPersona(persona: string, isMock = false) {
+function seedPersona(persona: string, key: string = LS_PERSONA_KEY) {
   window.localStorage.setItem(
-    LS_PERSONA_KEY,
+    key,
     JSON.stringify({
       declared: { persona, label: "x", tagline: "x", score: 80 },
       observed: {},
       sparkline: [],
       last_computed_at: null,
       drift: 0,
-      ...(isMock ? { _isMock: true } : {}),
     }),
   );
 }
@@ -89,8 +94,11 @@ describe("QuestionsStep — persona hints from the localStorage cache", () => {
     }
   });
 
-  it("renders NO hints when the cached payload is the offline mock", () => {
-    seedPersona("growth", /* isMock */ true);
+  it("ignores a pre-bump v1 cache, so a stale mock cannot personalize", () => {
+    // A browser that loaded the app while the backend was down still holds
+    // `pq_cfo_persona_v1` — fabricated, always "growth". The reader is on v2,
+    // so this must render as a cold cache.
+    seedPersona("growth", "pq_cfo_persona_v1");
     render(<Harness />);
     expect(screen.queryByTestId("persona-hint-1")).toBeNull();
     expect(screen.queryByTestId("persona-hint-4")).toBeNull();

@@ -43,11 +43,18 @@ interface Props {
 }
 
 export function RollingWindowWidget({ className = "", paper = true }: Props) {
-  const { data, isLoading } = useRollingWindow();
+  const { data, isLoading, error } = useRollingWindow();
   const [win, setWin] = React.useState<WindowKey>("window_30d");
 
   const series = data?.series?.[win] ?? [];
   const contrast = data?.contrast;
+  // 2026-09-06: before the fabricating fallback was removed from cfoFetch, a
+  // backend 404/5xx never reached here — the hook handed back `Math.sin`
+  // series and a made-up declared-vs-observed contrast, and this widget
+  // rendered them as if measured. Now the failure arrives, so it has to be
+  // said out loud; an empty chart with no explanation would read as "you have
+  // no history", which is a different and equally untrue claim.
+  const failed = Boolean(error) && !data;
 
   return (
     <section
@@ -123,6 +130,17 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
           })}
         </div>
       </header>
+
+      {failed && (
+        <p
+          role="status"
+          className="mt-3 font-serif text-pq-body-sm"
+          style={{ color: paper ? "rgba(26,22,18,0.55)" : "rgba(245,240,232,0.55)" }}
+        >
+          지금은 이 구간을 계산할 수 없습니다. 기록이 없어서가 아니라, 서버에서
+          값을 받지 못했습니다.
+        </p>
+      )}
 
       {/* Contrast line */}
       {contrast && (

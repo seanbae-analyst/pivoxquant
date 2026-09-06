@@ -373,11 +373,6 @@
     }
   },
   "profileV2": {
-    "sampleBanner": {
-      "label": "Sample",
-      "body": "Sample data — switches to live data after your first trade.",
-      "note": "Persona figures below are illustrative until your first trade is observed."
-    },
     "toast": {
       "exportReady": "Export ready.",
       "localExportReady": "Local memory exported.",

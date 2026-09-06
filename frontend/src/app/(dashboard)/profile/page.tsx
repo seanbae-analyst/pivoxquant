@@ -216,9 +216,16 @@ export default function ProfilePageV2() {
         if (typeof window === "undefined") throw new Error("no window");
         const snapshot = {
           exported_at: new Date().toISOString(),
-          persona: window.localStorage.getItem("pq_cfo_persona_v1"),
-          rolling: window.localStorage.getItem("pq_cfo_rolling_v1"),
-          pulse: window.localStorage.getItem("pq_cfo_pulse_v1"),
+          persona: window.localStorage.getItem("pq_cfo_persona_v2"),
+          rolling: window.localStorage.getItem("pq_cfo_rolling_v2"),
+          pulse: window.localStorage.getItem("pq_cfo_pulse_v2"),
+          // v1 keys were orphaned by the 2026-09-06 bump (see LS_KEYS in
+          // lib/cfo/hooks.ts). They can still sit in a returning user's
+          // browser, and PIPA §35 is a right to *their* data — not to the
+          // subset the current schema happens to use. Exported when present.
+          persona_v1: window.localStorage.getItem("pq_cfo_persona_v1"),
+          rolling_v1: window.localStorage.getItem("pq_cfo_rolling_v1"),
+          pulse_v1: window.localStorage.getItem("pq_cfo_pulse_v1"),
           feedback: window.localStorage.getItem("pq_cfo_feedback_v1"),
           companion_history: window.localStorage.getItem(
             "pq_companion_history_v1",
@@ -260,6 +267,14 @@ export default function ProfilePageV2() {
     }
     if (typeof window !== "undefined") {
       [
+        // Both generations. The v1 trio was orphaned by the 2026-09-06 key
+        // bump; if this list only wiped v2, a user asking to delete their
+        // local record would keep the older copy — including, for anyone who
+        // loaded the app while the backend was down, the fabricated persona
+        // cache that bump exists to abandon.
+        "pq_cfo_persona_v2",
+        "pq_cfo_rolling_v2",
+        "pq_cfo_pulse_v2",
         "pq_cfo_persona_v1",
         "pq_cfo_rolling_v1",
         "pq_cfo_pulse_v1",
@@ -429,7 +444,11 @@ export default function ProfilePageV2() {
         }))
       : FALLBACK_PULSE_HISTORY;
 
-  const personaIsMock = persona?._isMock === true;
+  // 2026-09-06: `personaIsMock` + its "sample data" banner are gone with the
+  // fabricating fallback in lib/cfo/hooks.ts. The banner existed to confess
+  // that /profile was showing invented persona data on a backend 404/5xx —
+  // there is nothing to confess now, because that payload is no longer
+  // manufactured. A failed read surfaces as SWR `error` instead.
 
 
   return (
@@ -442,24 +461,6 @@ export default function ProfilePageV2() {
       </div>
 
       {/* Mock-data banner: shown until first trade flips persona to live */}
-      {personaIsMock && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="mb-6 border border-[var(--pq-bronze)]/40 bg-[rgba(184,149,106,0.06)] px-4 py-3 rounded-[2px] flex items-start gap-3"
-        >
-          <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mt-0.5 shrink-0">
-            {t("profileV2.sampleBanner.label")}
-          </div>
-          <p className="text-xs leading-relaxed text-[rgba(245,240,232,0.72)]">
-            {t("profileV2.sampleBanner.body")}{" "}
-            <span className="text-[rgba(245,240,232,0.5)]">
-              {t("profileV2.sampleBanner.note")}
-            </span>
-          </p>
-        </div>
-      )}
-
       {/* LIVING CFO STATUS — sticky hairline.
        * z-10 (2026-05-13 thorough-fix sweep): was z-40, clipped the
        * NotificationDropdown panel by stacking above the TopBar wrapper

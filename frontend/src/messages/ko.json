@@ -373,11 +373,6 @@
     }
   },
   "profileV2": {
-    "sampleBanner": {
-      "label": "샘플",
-      "body": "샘플 데이터 — 거래 후 실데이터로 전환됩니다.",
-      "note": "아래 페르소나 수치는 첫 거래 관측 전까지 예시입니다."
-    },
     "toast": {
       "exportReady": "내보내기 완료.",
       "localExportReady": "로컬 메모리 내보내기 완료.",

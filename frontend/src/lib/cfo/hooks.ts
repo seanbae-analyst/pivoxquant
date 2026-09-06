@@ -76,12 +76,6 @@ export interface PersonaResponse {
   last_computed_at: string | null;
   /** Drift delta vs declared persona. 0–100; >20 = material drift. */
   drift: number;
-  /**
-   * True when this payload is local mock data (backend 404/5xx fallback).
-   * UI surfaces a "sample data — switches to live after first trade" banner
-   * when set. Real backend responses MUST omit this field (or set false).
-   */
-  _isMock?: boolean;
 }
 
 export interface RollingWindowPoint {
@@ -145,11 +139,26 @@ export interface PulseResponse {
 
 /* ═════════════ Local-storage fallback ═════════════ */
 
+// ⚠️ persona/rolling/pulse bumped v1 → v2 on 2026-09-06, and the bump is the
+// point of the change rather than housekeeping.
+//
+// Until that day `cfoFetch` answered a backend 404/5xx with fabricated data,
+// and these hooks wrote whatever they received straight into localStorage. So
+// any browser that loaded /profile or /portfolio while the backend was down is
+// holding a cached payload that was never measured — `pq_cfo_persona_v1` with
+// `_isMock: true` and persona "growth", `pq_cfo_rolling_v1` with `Math.sin`
+// series. The old `_isMock` guard in `cachedPersonaId()` is gone with the mock
+// factories, so on the next deploy those stale entries would have been read
+// back as if real — and personalised pre-trade hints from them.
+//
+// A new key orphans them instead of trusting them. The cost is one refetch per
+// user; the alternative is silently reviving invented data we just deleted the
+// producer of. `feedback` keeps v1 — it never went through cfoFetch.
 const LS_KEYS = {
-  persona: "pq_cfo_persona_v1",
-  rolling: "pq_cfo_rolling_v1",
+  persona: "pq_cfo_persona_v2",
+  rolling: "pq_cfo_rolling_v2",
   feedback: "pq_cfo_feedback_v1",
-  pulse: "pq_cfo_pulse_v1",
+  pulse: "pq_cfo_pulse_v2",
 } as const;
 
 function safeRead<T>(key: string): T | null {
@@ -172,71 +181,6 @@ function safeWrite<T>(key: string, value: T): void {
   }
 }
 
-/* ═════════════ Mocked payloads (fallback until backend ships) ═════════════ */
-
-function mockPersona(): PersonaResponse {
-  return {
-    declared: {
-      // §101: even the offline mock must carry only a 3-bucket disclosed
-      // surface label — never a CFO-style 8-label string.
-      persona: "growth",
-      label: surfaceLabel("growth"),
-      tagline: surfaceTagline("growth"),
-      score: 72,
-    },
-    observed: {
-      window_30d: { date: isoToday(-30), persona: "balanced", score: 65 },
-      window_60d: { date: isoToday(-60), persona: "growth", score: 69 },
-      window_90d: { date: isoToday(-90), persona: "growth", score: 71 },
-    },
-    sparkline: Array.from({ length: 12 }, (_, i) => ({
-      week: isoToday(-7 * (11 - i)),
-      score: 62 + Math.round(Math.sin(i / 2) * 6) + (i >= 8 ? -5 : 0),
-    })),
-    last_computed_at: new Date().toISOString(),
-    drift: 7,
-    _isMock: true,
-  };
-}
-
-function mockRolling(): RollingWindowResponse {
-  const pts = (n: number): RollingWindowPoint[] =>
-    Array.from({ length: n }, (_, i) => ({
-      date: isoToday(-(n - i)),
-      holdingPeriod: 18 + Math.round(Math.sin(i / 4) * 6),
-      turnover: 0.18 + (Math.cos(i / 5) + 1) * 0.08,
-      sectorTilt: 0.28 + Math.abs(Math.sin(i / 6)) * 0.12,
-    }));
-  return {
-    series: {
-      window_30d: pts(30),
-      window_60d: pts(60),
-      window_90d: pts(90),
-    },
-    contrast: {
-      declared_persona: "growth",
-      declared_score: 72,
-      observed_persona: "balanced",
-      observed_score: 65,
-      window_days: 30,
-    },
-  };
-}
-
-function mockPulse(): PulseResponse {
-  return {
-    history: [],
-    next_due_at: nextMondayIso(),
-    cadence: "weekly",
-  };
-}
-
-function isoToday(offsetDays: number): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
-
 function nextMondayIso(): string {
   const d = new Date();
   const day = d.getUTCDay(); // 0=Sun .. 6=Sat
@@ -246,18 +190,39 @@ function nextMondayIso(): string {
   return d.toISOString();
 }
 
-/* ═════════════ Fetcher — falls back to mock on any 404/5xx ═════════════ */
+/* ═════════════ Fetcher ═════════════ */
 
-async function cfoFetch<T>(url: string, fallback: () => T): Promise<T> {
-  try {
-    return await apiFetch<T>(url);
-  } catch (err) {
-    if (err instanceof ApiError && (err.status === 404 || err.status === 501 || err.status >= 500)) {
-      return fallback();
-    }
-    // 401 → bubble up so AuthGuard can redirect.
-    throw err;
-  }
+/**
+ * Plain authenticated read. Errors propagate to SWR's `error`.
+ *
+ * ⚠️ 2026-09-06 — this used to take a `fallback: () => T` and return
+ * FABRICATED data whenever the backend answered 404, 501 or any 5xx:
+ *
+ *     if (err.status === 404 || err.status === 501 || err.status >= 500)
+ *       return fallback();
+ *
+ * Three hooks used it — `usePersona`, `useRollingWindow`, `usePulse` — and the
+ * mocks they fell back to were not empty shells. `mockRolling` generated 30/60/
+ * 90-day holding-period, turnover and sector-tilt series from `Math.sin`, plus
+ * a declared-vs-observed contrast; `<RollingWindowWidget/>` renders that as
+ * "You declared X. Your last 30 days look like Y." on /portfolio. Only
+ * `mockPersona` carried an `_isMock` marker, and only /profile ever checked it,
+ * so the other surfaces showed invented behavioural analysis with nothing
+ * saying so.
+ *
+ * That is the worst possible failure for this product specifically: the whole
+ * claim is that we only reflect the user's own record back and never score or
+ * invent. A silent fabrication path contradicts the pitch more than an outage
+ * does. Errors now surface as errors — "we cannot compute this right now" is a
+ * true statement; an invented gap between the investor you declared and the
+ * investor you are is not.
+ *
+ * Note what deliberately STAYS: each hook's `fallbackData` reads the
+ * localStorage cache of that user's OWN last real response. Showing a stale
+ * real number is categorically different from showing a synthesised one.
+ */
+async function cfoFetch<T>(url: string): Promise<T> {
+  return apiFetch<T>(url);
 }
 
 /* ═════════════ Hooks ═════════════ */
@@ -272,12 +237,15 @@ async function cfoFetch<T>(url: string, fallback: () => T): Promise<T> {
  * host modals' strict apiFetch call-count tests. Home/Profile/Reports all
  * call `usePersona()`, so in any real session this cache is already warm
  * by the time a trade modal opens. Returns `null` (callers fall back to
- * neutral copy) when the cache is cold or holds the offline mock —
- * `_isMock` payloads must never personalize (the mock is always "growth").
+ * neutral copy) when the cache is cold.
+ *
+ * The old `_isMock` guard here is gone with the mock itself (2026-09-06):
+ * the cache can now only ever hold a real backend response, so there is no
+ * synthetic payload left to refuse to personalise from.
  */
 export function cachedPersonaId(): PersonaId | null {
   const cached = safeRead<PersonaResponse>(LS_KEYS.persona);
-  if (!cached || cached._isMock) return null;
+  if (!cached) return null;
   return cached.declared?.persona ?? null;
 }
 
@@ -285,7 +253,7 @@ export function cachedPersonaId(): PersonaId | null {
 export function usePersona() {
   const swr = useSWR<PersonaResponse>(
     "/api/profile/persona",
-    (url) => cfoFetch<PersonaResponse>(url, mockPersona),
+    (url) => cfoFetch<PersonaResponse>(url),
     {
       revalidateOnFocus: false,
       dedupingInterval: 300_000,
@@ -301,7 +269,7 @@ export function usePersona() {
 export function useRollingWindow() {
   const swr = useSWR<RollingWindowResponse>(
     "/api/profile/rolling-window",
-    (url) => cfoFetch<RollingWindowResponse>(url, mockRolling),
+    (url) => cfoFetch<RollingWindowResponse>(url),
     {
       revalidateOnFocus: false,
       dedupingInterval: 300_000,
@@ -355,7 +323,7 @@ export function coercePulse(
 export function usePulse() {
   const swr = useSWR<PulseResponse>(
     "/api/profile/pulse",
-    (url) => cfoFetch<PulseResponse>(url, mockPulse),
+    (url) => cfoFetch<PulseResponse>(url),
     {
       revalidateOnFocus: false,
       dedupingInterval: 300_000,
@@ -370,7 +338,17 @@ export function usePulse() {
         submitted_at: new Date().toISOString(),
         ...entry,
       };
-      const current = coercePulse(swr.data) ?? mockPulse();
+      // Empty base for the optimistic write when nothing is cached yet.
+      // This was `mockPulse()`, which — unlike the persona/rolling mocks that
+      // were deleted with the fabricating fallback — only ever returned an
+      // EMPTY history. Inlined rather than kept alive so no "mock" factory
+      // survives in this file to be reached for again.
+      const current: PulseResponse =
+        coercePulse(swr.data) ?? {
+          history: [],
+          next_due_at: nextMondayIso(),
+          cadence: "weekly",
+        };
       const optimistic: PulseResponse = {
         ...current,
         history: [...current.history, stamped],
