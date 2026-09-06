@@ -102,7 +102,11 @@ def test_dispatcher_flag_off_short_circuits(app, monkeypatch):
     _make_user_signed_at(app, created_hours_ago=24.5)
 
     with app.app_context():
-        with _patch_transport_succeed():
+        # Open the §61의2 night gate. These assert sent == 0 for a
+        # reason of their own (flag off / active user / simulated), so
+        # the gate must not be able to supply that 0 instead — that is
+        # how test_user_without_the_gating_consent_is_skipped rotted.
+        with _patch_transport_succeed(), _daytime():
             s = run_once()
     assert s["flag_off"] == 1
     assert s["sent"] == 0
@@ -119,7 +123,11 @@ def test_cs1_flag_off_short_circuits(app, monkeypatch):
     _make_user_signed_at(app, created_hours_ago=24.5)
 
     with app.app_context():
-        with _patch_transport_succeed():
+        # Open the §61의2 night gate. These assert sent == 0 for a
+        # reason of their own (flag off / active user / simulated), so
+        # the gate must not be able to supply that 0 instead — that is
+        # how test_user_without_the_gating_consent_is_skipped rotted.
+        with _patch_transport_succeed(), _daytime():
             s = run_once()
     assert s["flag_off"] == 1
     assert s["sent"] == 0
@@ -172,7 +180,11 @@ def test_user_with_position_is_skipped_as_active(app, monkeypatch):
         db.session.commit()
 
     with app.app_context():
-        with _patch_transport_succeed():
+        # Open the §61의2 night gate. These assert sent == 0 for a
+        # reason of their own (flag off / active user / simulated), so
+        # the gate must not be able to supply that 0 instead — that is
+        # how test_user_without_the_gating_consent_is_skipped rotted.
+        with _patch_transport_succeed(), _daytime():
             s = run_once()
     assert s["window_users"] == 1
     assert s["skipped_active"] == 1
@@ -205,22 +217,31 @@ def test_user_already_nudged_is_skipped_on_next_run(app, monkeypatch):
 
 # ── 6. consent missing → sender blocks ──────────────────────────────────────
 
-def test_user_without_information_consent_skipped(app, monkeypatch):
-    """User has no ``marketing_consent_information_at`` → sender's
-    category gate blocks the send → ``skipped_send`` counter ticks
-    and the timestamp stays NULL (so a future consent grant would
-    let the next run pick them up).
+def test_user_without_the_gating_consent_is_skipped(app, monkeypatch):
+    """Missing the category's consent → blocked, and the timestamp stays NULL
+    so a later consent grant lets the next run pick them up.
+
+    ⚠️ 2026-09-07: this used to withhold ``marketing_consent_information_at``
+    and was named ...without_information_consent_skipped. That premise died
+    when the nudge was reclassified 정보성 → 광고성 — INFORMATION consent no
+    longer gates this mail, MARKETING does.
+
+    It kept passing for a while anyway, for the wrong reason: the run happened
+    to fall inside the 21:00–08:00 KST night window, so the §61의2 gate blocked
+    the send and `skipped_send` ticked. It went red the moment the suite ran at
+    08:09 KST. Hence `_daytime()` here — the assertion is about consent, so the
+    clock must not be able to satisfy it.
     """
     from models import User
     from scripts.nightly.inactive_nudge_dispatcher import run_once
 
     _flags_on(monkeypatch)
     uid = _make_user_signed_at(
-        app, created_hours_ago=24.5, consent_information=False,
+        app, created_hours_ago=24.5, consent_marketing=False,
     )
 
     with app.app_context():
-        with _patch_transport_succeed():
+        with _patch_transport_succeed(), _daytime():
             s = run_once()
     assert s["window_users"] == 1
     assert s["sent"] == 0
@@ -242,7 +263,11 @@ def test_simulated_user_excluded_from_window(app, monkeypatch):
     )
 
     with app.app_context():
-        with _patch_transport_succeed():
+        # Open the §61의2 night gate. These assert sent == 0 for a
+        # reason of their own (flag off / active user / simulated), so
+        # the gate must not be able to supply that 0 instead — that is
+        # how test_user_without_the_gating_consent_is_skipped rotted.
+        with _patch_transport_succeed(), _daytime():
             s = run_once()
     assert s["window_users"] == 0
     assert s["sent"] == 0
