@@ -394,7 +394,14 @@ class TestFooterHas4Elements:
         with app.app_context():
             user = db.session.get(User, u["id"])
             unsub = build_unsubscribe_url(user.id, kind="all")
-            html, txt = _render("d7_summary", user=user, unsubscribe_url=unsub)
+            # `record` is required: the body is the reader's counts, so a
+            # render without them would be a mail with a blank content
+            # section. This test is about the §62 footer, so any non-empty
+            # record will do.
+            html, txt = _render(
+                "d7_summary", user=user, unsubscribe_url=unsub,
+                record={"lines": ["지난 7일 동안 체결 기록은 2건입니다."]},
+            )
 
         # 1 — 사업자명
         assert "PivoxQuant" in html and "PivoxQuant" in txt
@@ -507,6 +514,33 @@ class TestNightWindowLeavesRowsPending:
 # ── 10. dispatcher renders MARKETING category to EmailSender ─────────────────
 
 
+def _seed_record(app, user_id: int, *, at: datetime) -> None:
+    """Give the user something to reflect, so the send is not silenced.
+
+    2026-09-07: retention mail bodies are the reader's OWN counts, and
+    `_send_one` refuses to send when `build_record_summary` finds nothing
+    (services/email/record_summary.py — the silence rule). A fixture with an
+    empty record therefore produces zero sends, which is correct behaviour
+    and not what these tests are exercising.
+    """
+    from extensions import db
+    from models import TradeHistory
+
+    with app.app_context():
+        for i in range(3):
+            db.session.add(TradeHistory(
+                user_id=user_id,
+                ticker="AAPL",
+                action="BUY",
+                shares=1.0,
+                price_per_share=100.0,
+                total_value=100.0,
+                pnl=0.0,
+                traded_at=at - timedelta(days=i + 1),
+            ))
+        db.session.commit()
+
+
 class TestEmailSenderInvokedWithMarketing:
     """Send path must pass EmailCategory.MARKETING (not INFORMATION)."""
 
@@ -528,9 +562,13 @@ class TestEmailSenderInvokedWithMarketing:
             schedule_retention(user, now=base)
             db.session.commit()
 
+        # The mail states the reader's own counts; without a record the send
+        # is silenced by design. Seed fills inside both windows.
+        day_utc = datetime(2026, 6, 30, 3, 0, 0)
+        _seed_record(app, u["id"], at=day_utc)
+
         # 03:00 UTC = 12:00 KST (daytime). Patch EmailSender at its
         # canonical module and assert the kwargs the send path uses.
-        day_utc = datetime(2026, 6, 30, 3, 0, 0)
         with app.app_context(), \
              patch("services.email.EmailSender") as Sender:
             Sender.return_value.send.return_value = True
@@ -540,6 +578,126 @@ class TestEmailSenderInvokedWithMarketing:
                 kw = call.kwargs
                 assert kw["email_category"] is EmailCategory.MARKETING
                 assert "(광고)" in kw["subject"]
+
+
+class TestSilenceRuleIsReportedHonestly:
+    """The skip must be recorded as what it was, not as a consent failure.
+
+    The first cut set `row.skipped_reason` directly and the dispatcher's
+    else-branch overwrote it with "no_consent_or_provider", also ticking
+    stats["skipped_no_consent"]. An operator reading that summary would
+    conclude §50 consent plumbing was broken and go looking for a bug that
+    does not exist.
+    """
+
+    def test_no_record_keeps_its_own_reason_and_counter(
+        self, app, make_user, monkeypatch
+    ):
+        _enable(monkeypatch)
+        u = make_user(email="ret_reason@test.com")
+        _grant_marketing_consent(app, u["id"])
+
+        from extensions import db
+        from models import User, ScheduledEmail
+        from services.email.retention_sequence import (
+            schedule_retention, dispatch_retention,
+        )
+
+        base = datetime(2026, 5, 19, 12, 0, 0)
+        with app.app_context():
+            schedule_retention(db.session.get(User, u["id"]), now=base)
+            db.session.commit()
+
+        # No record seeded on purpose.
+        day_utc = datetime(2026, 6, 30, 3, 0, 0)
+        with app.app_context(), patch("services.email.EmailSender") as Sender:
+            Sender.return_value.send.return_value = True
+            stats = dispatch_retention(now=day_utc)
+
+            assert Sender.return_value.send.call_count == 0
+            assert stats["skipped_no_record"] >= 1
+            # The consent bucket must stay clean — that is the whole point.
+            assert stats["skipped_no_consent"] == 0
+
+            rows = (
+                ScheduledEmail.query
+                .filter_by(user_id=u["id"])
+                .filter(ScheduledEmail.skipped_reason.isnot(None))
+                .all()
+            )
+            assert rows, "the row should be closed, not left pending"
+            assert all(r.skipped_reason == "no_record" for r in rows), (
+                [r.skipped_reason for r in rows]
+            )
+
+
+class TestSilenceRule:
+    """No record → no mail. This is the contract, not an optimisation.
+
+    These mails carry the reader's own counts (2026-09-07). When the window
+    holds nothing, there is no fact to state, and filling the gap with
+    encouragement is exactly the re-engagement nudge 정통망법 §50 treats as
+    광고성 — the shape this redesign exists to leave behind. So the send is
+    refused rather than padded.
+    """
+
+    def test_user_with_no_record_is_not_mailed(self, app, make_user, monkeypatch):
+        _enable(monkeypatch)
+        u = make_user(email="ret_silent@test.com")
+        _grant_marketing_consent(app, u["id"])
+
+        from extensions import db
+        from models import User
+        from services.email.retention_sequence import (
+            schedule_retention, dispatch_retention,
+        )
+
+        base = datetime(2026, 5, 19, 12, 0, 0)
+        with app.app_context():
+            schedule_retention(db.session.get(User, u["id"]), now=base)
+            db.session.commit()
+
+        # Deliberately seed NOTHING. Daytime KST so the night gate is open —
+        # the only thing that can stop this send is the silence rule.
+        day_utc = datetime(2026, 6, 30, 3, 0, 0)
+        with app.app_context(), patch("services.email.EmailSender") as Sender:
+            Sender.return_value.send.return_value = True
+            dispatch_retention(now=day_utc)
+            assert Sender.return_value.send.call_count == 0
+
+    def test_seeded_record_is_mailed_and_carries_the_counts(
+        self, app, make_user, monkeypatch
+    ):
+        _enable(monkeypatch)
+        u = make_user(email="ret_speaks@test.com")
+        _grant_marketing_consent(app, u["id"])
+
+        from extensions import db
+        from models import User
+        from services.email.retention_sequence import (
+            schedule_retention, dispatch_retention,
+        )
+
+        base = datetime(2026, 5, 19, 12, 0, 0)
+        with app.app_context():
+            schedule_retention(db.session.get(User, u["id"]), now=base)
+            db.session.commit()
+
+        day_utc = datetime(2026, 6, 30, 3, 0, 0)
+        _seed_record(app, u["id"], at=day_utc)
+
+        with app.app_context(), patch("services.email.EmailSender") as Sender:
+            Sender.return_value.send.return_value = True
+            dispatch_retention(now=day_utc)
+            assert Sender.return_value.send.call_count >= 1
+            body = Sender.return_value.send.call_args_list[0].kwargs
+            joined = f"{body.get('html_body','')}{body.get('txt_body','')}"
+            # The reader's own number reached the rendered body — the whole
+            # point. Three fills were seeded inside both windows.
+            assert "체결 기록은 3건" in joined
+            # And the slot was substituted, not shipped raw.
+            assert "{{ record_txt }}" not in joined
+            assert "{{ record_html }}" not in joined
 
 
 # ── 11. onboarding dispatch does NOT consume retention rows ──────────────────

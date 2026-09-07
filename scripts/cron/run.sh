@@ -123,12 +123,16 @@ case "$JOB" in
   inactive-nudge)
     # Wave G C-S2 — 24h onboarding inactive nudge.
     # Suggested cadence: ``0 * * * *`` (every hour, on the hour). The
-    # window is a rolling 1h slice (24h-25h ago), so the 1h cadence
-    # gives every signup exactly one shot. Dispatcher is gated by
+    # window is 24h-72h ago — widened from a 1h slice on 2026-09-07.
+    # "exactly one shot per signup" stopped being survivable when this
+    # mail became 광고성 and inherited the §61의2 night ban: a shot that
+    # landed between 21:00 and 08:00 KST was simply lost. A user now gets
+    # a chance on every tick until nudged once (``inactive_nudge_sent_at
+    # IS NULL`` prevents repeats). Dispatcher is gated by
     # ``PIVOX_INACTIVE_NUDGE_ENABLED`` env (default false) AND
     # ``PIVOX_CS1_CONSENT_ENABLED`` (default false) — when either is
     # off the cron exits 0 without emailing. Both flips required;
-    # CS1 framework gates the per-user INFORMATION consent at the
+    # CS1 framework gates the per-user MARKETING consent at the
     # sender layer regardless of this script.
     ./venv/bin/python scripts/nightly/inactive_nudge_dispatcher.py; EC=$?
     ;;

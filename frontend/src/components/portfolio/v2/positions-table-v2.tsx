@@ -10,11 +10,10 @@
  *   mono 10.5px dim TICKER (secondary, below name)
  *
  * Legal: Action column uses `Add` / `Trim` / `Close` only — never BUY/SELL.
- * Row click → /detail/[ticker]. Action buttons stop propagation.
+ * Rows are not clickable — see the note above PositionRow for why.
  */
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { EditorialHead } from "@/components/ui/editorial";
 import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
@@ -162,7 +161,6 @@ export function PositionsTableV2({
   onReconcile,
   reconcileAvailable = false,
 }: PositionsTableV2Props) {
-  const router = useRouter();
   const [sortKey, setSortKey] = React.useState<SortKey>("weight");
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc");
 
@@ -400,14 +398,7 @@ export function PositionsTableV2({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <PositionRow
-                  key={r.raw.id}
-                  row={r}
-                  onClick={() =>
-                    router.push(`/detail/${encodeURIComponent(r.raw.symbol)}`)
-                  }
-                  onAction={onAction}
-                />
+                <PositionRow key={r.raw.id} row={r} onAction={onAction} />
               ))}
             </tbody>
           </table>
@@ -418,12 +409,12 @@ export function PositionsTableV2({
       <style jsx>{`
         :global(.pq-pos-row) {
           transition: background-color 160ms ease;
-          cursor: pointer;
         }
         :global(.pq-pos-row:hover) {
           background-color: rgba(184, 149, 106, 0.03);
         }
-        :global(.pq-pos-row:hover .pq-row-actions) {
+        :global(.pq-pos-row:hover .pq-row-actions),
+        :global(.pq-pos-row:focus-within .pq-row-actions) {
           opacity: 1;
         }
         :global(.pq-row-actions) {
@@ -439,13 +430,24 @@ export function PositionsTableV2({
   );
 }
 
+// The row is NOT a link. It used to be: onClick pushed /detail/[ticker],
+// which the 2026-08-31 prune deleted — next.config.ts:78 now permanently
+// redirects /detail/:path* → /portfolio, so clicking a row on /portfolio
+// navigated back to /portfolio. A no-op dressed as navigation, announced to
+// screen readers as role="link" and reachable by Tab.
+//
+// Removed rather than repointed, following the same prune's other consumer:
+// top-bar.tsx dropped its Cmd+K palette for exactly this reason (see the
+// comment there — "its stock results only ever routed to /detail/[ticker]").
+// Sending the row somewhere new would be a product decision, not a cleanup.
+//
+// The live affordances stay: the hover tint and the Add / Trim / Edit
+// buttons, which are real buttons and do real work.
 function PositionRow({
   row,
-  onClick,
   onAction,
 }: {
   row: DerivedPosition;
-  onClick: () => void;
   onAction?: (action: TradeAction, position: Position) => void;
 }) {
   const p = row.raw;
@@ -468,18 +470,7 @@ function PositionRow({
   };
 
   return (
-    <tr
-      className="pq-pos-row"
-      tabIndex={0}
-      role="link"
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-    >
+    <tr className="pq-pos-row">
       {/* 1 · Name (종목명 main pattern) */}
       <td style={{ ...cellStyle, textAlign: "left", minWidth: 200 }}>
         <EditorialHead

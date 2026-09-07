@@ -106,12 +106,16 @@ export default function PreTradePage() {
               letterSpacing: "-0.022em",
             }}
           >
-            Seven questions{" "}
-            <span style={{ color: "var(--pq-bronze)" }}>before every trade.</span>
+            매수 앞에 놓인{" "}
+            <span style={{ color: "var(--pq-bronze)" }}>일곱 번의 멈춤.</span>
           </h1>
+          {/* This caption DENIES the very thing FORBIDDEN_DIRECTIVE_TERMS
+              bans, which means it has to quote that word in the negative.
+              The marker is the documented escape (.githooks/pre-commit:136);
+              the guard scans added lines, it cannot read the negation. */}
           <Caption className="mt-3 max-w-[560px]">
-            진입 결정 앞에 서는 7개의 관문. 당신의 논리를 스스로 검증할
-            기회다 — 조언이 아니라 규율이다.
+            진입 결정 앞에 놓인 7개의 관문. 당신의 논리를 스스로 검증하는
+            자리입니다 — 조언이 아니라 규율입니다.{/* // legal-ok */}
           </Caption>
         </header>
 
