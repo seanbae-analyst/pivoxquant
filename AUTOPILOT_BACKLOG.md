@@ -515,3 +515,64 @@ of this is observable in prod today.
 
 야간 리포트 5개(`docs/qa/nightly-verify-2026-09-0{4,5,6}.md`, `virtual_user_sweep_2026-09-0{4,5}.md`)는 `.gitignore` 의 "docs/qa 리포트는 의도적으로 추적" 규칙대로 이 커밋에 같이 넣는다.
 09-06 03:03 리포트의 수치(pytest 2000 · vitest 367)는 **온보딩 v3 커밋 `c1427a0f` 이전** 스냅샷이다 — 이후 실측은 pytest 1995 / vitest 368 (V2 테스트 29건 삭제 + v3 22건 신규).
+
+## 2026-09-07 (daily-sweep, prod, Mon) — DETECTION-ONLY
+
+**P0=0 · P1=1 · P2=1 · 자동수정 0건.** 자동수정 단계는 **P0 이 0건이라 발화하지 않았다**(가드 때문이 아님). 워킹트리에 앱 소스 미커밋 없음(dirty 서브모듈 `.claude/skills/ui-ux-pro-max` + untracked QA 리포트만).
+
+자동 레그 전부 green: virtual-user 20명 **516 calls / 0 findings** · pytest **1995 pass / 0 fail** (18 skip, 1 xfail) · tsc 0 · vitest **368 pass** · prod 라우트 14개 전부 200(apex→www 307 경유) · 백엔드 `/api/health` 200 `db:ok` `missing_required:0`.
+CAUS = retired(`938bfcf4`). PDF 172-케이스 매트릭스 = 월요일이라 스킵(일요일 전용).
+
+### 🟠 P1 (1건)
+- [x] **P1 — `/portfolio` 포지션 행이 "클릭 가능한 링크"로 보이지만 아무 데도 안 간다(죽은 클릭 + a11y 오고지).** `frontend/src/components/portfolio/v2/positions-table-v2.tsx:406-408` 이 삭제된 `/detail/[ticker]` 로 `router.push` 하는데, `frontend/next.config.ts:78` 이 `/detail/:path* → /portfolio` 로 **permanent 리다이렉트** → 클릭하면 **보고 있던 그 페이지로 되돌아온다**(실측 체인: `/detail/AAPL` → 308 → `/portfolio`).
+      행에는 `cursor: pointer`(같은 파일 :421) + `role="link"` + `tabIndex={0}`(:473-474) 이 붙어 있어 **스크린리더에 링크로 announce 되고 키보드 포커스도 잡힌다** — 즉 시각/보조기술 양쪽에 "여기 누르면 뭔가 열린다"고 알린 뒤 아무 일도 안 일어난다.
+      원인: 2026-08-31 detail 페이지 prune(`47a5e8f3`/`5ed8a23d`) 이 이 소비자를 같이 정리하지 않음. **같은 prune 의 다른 소비자(top-bar 검색)는 이미 정리됨**(`components/layout/top-bar.tsx:11` 주석이 그 이유를 기록) → 단순 누락 1건.
+      ⚠️ 자동수정 안 한 이유 = **P1 은 정책상 CEO 리뷰 대상**(auto-fix 금지). 또한 fix 방향이 택일 사항이다: ① row-click/role/tabIndex/cursor 를 통째로 제거(정적 표로) vs ② 행을 journal/pre-trade 등 살아있는 목적지로 재연결. ②는 제품 결정이라 에이전트 단독 확정 부적절.
+      잔여 동일 패턴 점검 완료 — 소스의 `/detail/` 참조는 이 1곳뿐이고 나머지는 주석·테스트 픽스처(`lib/demo.ts`, `__tests__/ai-label-coverage.test.ts`)라 런타임 영향 없음.
+
+### 🟡 P2 (1건 — 카운트만, 참고 기록)
+- **P2 — `/api/inbox` 미인증 응답이 앱 표준 계약을 위반한다(302 HTML vs 401 JSON).** `routes/inbox.py:14,39` 만 `@login_required`(flask-login)를 쓰고 나머지 API 라우트가 쓰는 `@api_auth` 를 안 쓴다. 실측: `GET /api/inbox` → **302** `text/html` → `/?next=%2Fapi%2Finbox` / 대조군 `GET /api/support/inquiries` → **401** `{"code":"SESSION_EXPIRED",...}`.
+      **실사용 영향 낮음**: 프론트 소비자 0건(실제 `/support/inbox` 화면은 `/api/support/inquiries` 를 씀) + ADMIN_EMAILS 전용 CEO 내부 라우트. 유저 노출면·법적 표면 아님.
+
+### ✅ 이월 항목 중 오늘 닫힌 것
+- **CLOSED — 09-05 P1 `/docs` 가 삭제된 브로커 연결 기능을 광고(표시광고법 §3 각도).** 라이브 실측으로 해소 확인: `/docs` 가 이제 "Can I connect my brokerage account? **Not in this beta**", "Do I need to connect a broker? **No — and there is nothing to connect**", "No broker credentials are collected" 로 서술한다. `Settings → Brokers → Connect KIS` 문구 소멸.
+
+### ✅ 같은 날 늦게 닫힌 것 (CEO 지시, 18:49~19:0x KST 수동 세션)
+
+- **CLOSED — 위 P1 `/portfolio` 죽은 행 클릭.** `5359d9e8`. 리포트가 남긴 택일에서
+  **①(어포던스 제거)** 을 골랐다. 근거는 제품 취향이 아니라 선례다 — 같은 prune 의
+  다른 소비자인 top-bar 가 "결과가 `/detail/[ticker]` 로만 갔다"는 이유로 Cmd+K
+  팔레트를 이미 지웠고(그 파일 :11 주석), ②(살아있는 목적지로 재연결)는 리포트가
+  적은 대로 제품 결정이라 수동 세션에서도 단독 확정 대상이 아니다.
+  `role="link"` · `tabIndex` · `onKeyDown` · `cursor:pointer` · `router.push` 제거,
+  hover 틴트와 Add/Trim/Edit 버튼은 유지. `:hover` 에만 걸려 있던 액션 노출에
+  `:focus-within` 추가 — 행 자체가 포커스 가능할 땐 넘어갈 수 있었지만 이제는 아니다.
+  파일 헤더 독스트링이 아직 옛 클릭을 기술하고 있어 같이 고쳤다.
+  **회귀 테스트 4종 신규**(`positions-row-not-a-link.test.tsx`) — 이 컴포넌트를
+  렌더하는 테스트가 **0개**였던 것이 이 링크가 prune 을 살아남아 야간 스윕에서야
+  발견된 이유다. 이전 리비전에 대고 돌려 4개 전부 실패함을 확인해 공허하지 않음을
+  검증했다.
+
+- **P2 `/api/inbox` 는 열어 둔다.** 프론트 소비자 0 + ADMIN 전용이라 이번에 손대지
+  않았다. 카운트 유지.
+
+- **재스윕(18:49) 결과 — P0 0 / P1 0 / P2 1.** pytest **2021 pass / 0 fail**(18 skip,
+  1 xfail) · vitest **372**(368+신규 4) · tsc 0 · eslint 0 · next build exit 0 ·
+  부팅 `rules 121 / bp 23`(friction-outcome 라우트로 120→121) · 엔드포인트 계약 OK
+  74/74 · 법적 방어선 **229 pass** · 가상 유저 20명 **516 calls / 0 findings** ·
+  prod 프론트 `/ /docs /login /privacy /terms` 200(`/pricing` 307 의도됨) ·
+  백엔드 `/api/health` **`db:ok` `missing_required:0`**.
+  ⚠️ 세션 시작 hook 의 `backend=404` 는 **틀렸다** — Render 콜드스타트였다.
+
+  **이 재스윕이 덮지 못한 것 두 가지**(로컬 환경 한계, prod 문제 아님):
+  `FMP_API_KEY` 미설정이라 가상 유저의 시세 콜이 전부 에러 → **시세 표면은 검사되지
+  않았다**(516/0 이 아침과 같은 이유). `SENDGRID_API_KEY` 미설정이라
+  `email_compliance_check` **SKIP** → 이메일 발송 컴플라이언스 **미측정**.
+
+- **`section101_compliance_check` 가 exit 1(광고성 키워드 21건)을 내지만 조치 없음.**
+  스크립트 스스로 "위반 '가능성' 힌트"라고 적는 키워드 존재 스캔이고 표본이 오탐이다:
+  `opengraph-image.tsx` 는 주석의 **표시광고법**(부분문자열), `no-free-trial-copy.test.ts`
+  는 그 문구를 **금지하는** 테스트, 동의 문구의 `광고성 정보 수신 동의` 는 정통망법
+  §50④ 가 **요구하는** 표기다. 오늘 수동 세션 커밋이 추가한 `광고` 는 0줄
+  (`git diff 180b4bc2..HEAD -- frontend/src | grep -c '^+.*광고'` = 0). 상시 조건.
+
