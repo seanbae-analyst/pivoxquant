@@ -4,9 +4,13 @@
  * /admin — Index redirect.
  *
  * The parent `admin/layout.tsx` already gates the entire `/admin/*` tree
- * via `apiFetch(API.admin.artifactsList)` (any 401/403/404 → blank 404
- * screen). By the time this page renders we know the user is an admin,
- * so we simply forward to the default admin surface.
+ * (any 401/403/404 → blank 404 screen). By the time this page renders we
+ * know the user is an admin, so we forward to the default admin surface.
+ *
+ * That forward used to target /admin/preview, which the 2026-08-31 prune
+ * deleted — measured 2026-09-07, prod returns 404 for it. So the admin index
+ * rendered "Verifying admin…" and then threw the owner at a not-found page.
+ * /admin/support is the only admin screen left standing.
  */
 
 import { useEffect } from "react";
@@ -16,7 +20,7 @@ export default function AdminIndexPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/admin/preview");
+    router.replace("/admin/support");
   }, [router]);
 
   return (

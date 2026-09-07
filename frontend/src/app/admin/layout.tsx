@@ -5,16 +5,28 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { apiFetch, ApiError } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 
 /**
  * Admin-area layout. Gates the entire `/admin/*` tree on an allow-list
- * check performed server-side: we try `/api/admin/artifacts/list` and
- * treat any 404 / 401 / 403 as "not an admin → 404".
+ * check performed server-side: we call an admin-only endpoint and treat any
+ * 404 / 401 / 403 as "not an admin → 404".
  *
  * Spec: "일반 유저는 404". We intentionally show a blank not-found screen
  * rather than revealing the route exists.
+ *
+ * ⚠️ The probe used to be `/api/admin/artifacts/list`, which the 2026-08-31
+ * prune deleted along with the artifact surfaces. The backend has had ZERO
+ * routes matching /artifact/ ever since, so the probe returned 404, 404 is
+ * read as "not an admin", and the gate denied EVERYONE — the owner included.
+ * The whole `/admin/*` tree, `/admin/support` (the only customer-inquiry
+ * screen) with it, was silently unreachable: it fails closed to a blank
+ * not-found page, so it looks exactly like a correct denial.
+ *
+ * The probe is now `/api/support/admin/inquiries`, which is live and is
+ * itself ADMIN_EMAILS-gated — so it answers the same question the old one
+ * was meant to, and it is the endpoint this tree actually needs to work.
  */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -29,14 +41,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     if (!user) return;
     let alive = true;
-    apiFetch(API.admin.artifactsList)
+    apiFetch(API.support.adminInquiries)
       .then(() => alive && setGate("allowed"))
-      .catch((err: unknown) => {
-        if (!alive) return;
+      .catch(() => {
         // Any failure — 401/403/404/network — means "not an admin".
-        const is404 = err instanceof ApiError && err.status === 404;
-        void is404;
-        setGate("denied");
+        if (alive) setGate("denied");
       });
     return () => {
       alive = false;
@@ -85,12 +94,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             Admin
           </span>
           <nav className="flex items-center gap-1">
-            <Link
-              href="/admin/preview"
-              className="rounded-md px-2.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-            >
-              Artifact Preview
-            </Link>
+            {/* "Artifact Preview" lived at /admin/preview, which the
+                2026-08-31 prune deleted — the link 404'd. */}
             <Link
               href="/admin/support"
               className="rounded-md px-2.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"

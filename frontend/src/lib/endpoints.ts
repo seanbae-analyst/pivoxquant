@@ -192,13 +192,13 @@ export const API = {
     kisDisconnect: "/api/broker/kis/disconnect",
     kisStatus: "/api/broker/kis/status",
   },
-  admin: {
-    artifactsList: "/api/admin/artifacts/list",
-    artifactPreview: (type: string, format: "html" | "pdf" | "email" | "png") =>
-      `/api/admin/artifacts/preview/${type}?format=${format}`,
-    artifactDownload: (type: string, format: "html" | "pdf" | "email" | "png") =>
-      `/api/admin/artifacts/preview/${type}?format=${format}&download=1`,
-  },
+  // `admin.artifacts*` (list / preview / download) removed 2026-09-07. The
+  // 2026-08-31 prune deleted every artifact route — the backend url_map has
+  // matched /artifact/ ZERO times since. They survived because admin/layout
+  // used artifactsList as its allow-list probe, which is precisely what broke
+  // the gate: a 404 probe reads as "not an admin" and denied everyone. The
+  // gate now gets its answer from `support.adminInquiries`, so these three
+  // have no consumers left (verified by symbol, not by path string).
   // Behaviour Mirror — factual holding-period statistics from the user's own
   // closed trade pairs (disposition-effect "mirror"). Read-only, @api_auth.
   // Renders as a neutral 2-up comparison on the /journal page; NEVER a score,
