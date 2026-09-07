@@ -217,7 +217,10 @@ def _render(
     *,
     user: Any,
     unsubscribe_url: str,
-    record: dict[str, Any] | None = None,
+    # Required on purpose: the body has no meaning without it, so a caller
+    # that forgets it must fail at the call site rather than ship a mail whose
+    # only content section is blank.
+    record: dict[str, Any],
 ) -> tuple[str, str]:
     """Read + substitute the .html and .txt templates.
 
@@ -245,8 +248,7 @@ def _render(
     # reader's own counts, composed in services/email/record_summary.py.
     # `_send_one` refuses to send when the summary is None, so these slots are
     # never empty at render time.
-    record = record or {}
-    lines = list(record.get("lines") or [])
+    lines = list((record or {}).get("lines") or [])
     ctx = {
         "{{ name }}": name,
         "{{ dashboard_url }}": _dashboard_url(),
@@ -462,7 +464,14 @@ def _send_one(row: Any, *, now: Any = None) -> bool:
         user.id, window_days=step.offset.days, now=now,
     )
     if not record:
-        row.skipped_reason = "no_record"
+        # Signal through the same channel the provider path uses. Assigning
+        # `row.skipped_reason` directly does NOT survive: the dispatcher's
+        # else-branch calls mark_skipped("no_consent_or_provider") over the
+        # top of it and increments stats["skipped_no_consent"], so every
+        # record-less user was being reported as a §50 consent failure —
+        # a summary that would send someone hunting a consent bug that does
+        # not exist.
+        row._send_failure_reason = "no_record"
         return False
 
     try:
@@ -509,6 +518,9 @@ def dispatch_retention(now: datetime | None = None) -> dict[str, int]:
       - ``skipped_night``      : §61의2 night window — row LEFT pending
                                  (the only path that does *not* close the row)
       - ``skipped_no_user``    : user gone or missing email
+      - ``skipped_no_record``  : the window held nothing to reflect, so there
+                                 was no mail to send (services/email/
+                                 record_summary.py — the silence rule)
       - ``skipped_no_consent`` : MARKETING consent missing / revoked / provider
                                  refused — row stamped + closed
       - ``skipped_error``      : exception inside ``_send_one``
@@ -537,6 +549,7 @@ def _dispatch_retention_locked(now: datetime | None = None) -> dict[str, int]:
         "skipped_night": 0,
         "skipped_no_user": 0,
         "skipped_no_consent": 0,
+        "skipped_no_record": 0,
         "skipped_error": 0,
         # Provider-outage handling (silent-drop fix), mirrors onboarding.
         "deferred_provider": 0,
@@ -581,6 +594,13 @@ def _dispatch_retention_locked(now: datetime | None = None) -> dict[str, int]:
             if ok:
                 row.mark_sent()
                 stats["sent"] += 1
+            elif reason == "no_record":
+                # Permanent for THIS row: the window it covers is fixed, so a
+                # later tick would find the same empty record. Closed with its
+                # own reason and its own counter — conflating it with the
+                # consent bucket is what this branch exists to prevent.
+                row.mark_skipped("no_record")
+                stats["skipped_no_record"] += 1
             elif reason == "provider_unavailable":
                 # All transports down — transient. Leave the row pending so a
                 # later tick re-sends it once a provider recovers (mirrors the

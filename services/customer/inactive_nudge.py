@@ -362,7 +362,9 @@ def _send_one(user: Any, *, now: Any = None) -> bool:
         user_name = email.split("@")[0] if email else "Investor"
 
     unsubscribe_url = build_unsubscribe_url(user.id, kind="all")
-    html_body, _text_body = _render_email(user_name, unsubscribe_url=unsubscribe_url)
+    html_body, text_body = _render_email(
+        user_name, unsubscribe_url=unsubscribe_url,
+    )
     # EmailSender.send() only accepts ``html_body`` — the underlying
     # transports derive a text-only fallback from the HTML. We still
     # render the text template so cron-mode operators can preview the
@@ -371,10 +373,18 @@ def _send_one(user: Any, *, now: Any = None) -> bool:
 
     subject = "(광고) PivoxQuant 시작하기"
 
-    # Render-time kill switches — same guardrails the retention path uses.
+    # Render-time kill switches — same guardrails the retention path uses,
+    # over BOTH bodies. Only the HTML is transmitted today (EmailSender.send
+    # takes html_body and the transports derive their own plain-text part), so
+    # asserting the text costs nothing now — but this module renders it
+    # precisely so a future EmailSender that accepts text_body "finds it
+    # ready", and on that day an unasserted text body would start shipping
+    # with its (광고) marker and §62 block never once verified.
     _assert_ad_marker(subject, html_body, where="inactive_nudge/html")
+    _assert_ad_marker(subject, text_body, where="inactive_nudge/txt")
     _assert_legal_safe(subject, where="inactive_nudge/subject")
     _assert_legal_safe(html_body, where="inactive_nudge/html")
+    _assert_legal_safe(text_body, where="inactive_nudge/txt")
 
     return EmailSender().send(
         user,
