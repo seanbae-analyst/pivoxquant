@@ -54,7 +54,63 @@ export interface ApiFetchOptions extends RequestInit {
   timeoutMs?: number;
 }
 
+/**
+ * One retry when the FIRST attempt times out on a read.
+ *
+ * The backend runs on Render's free plan, which spins the service down after
+ * 15 idle minutes. Measured 2026-09-07 against production:
+ *
+ *   cold  /api/health → 43.9 s
+ *   warm  /api/health →  0.52 s (three consecutive samples, ±0.02)
+ *
+ * DEFAULT_TIMEOUT_MS is 30 s, which sits BETWEEN those two numbers. So every
+ * visitor arriving after an idle gap — on a closed beta with almost no
+ * traffic, that is most visitors — had their first request aborted at 30 s
+ * and saw ApiError(408). The service was not down; it was still booting.
+ *
+ * Raising the blanket timeout past 44 s would make every genuine failure hang
+ * for 44 s too. Retrying is better here because of what the first attempt
+ * does: it is the request that WAKES the service. By the time it is aborted
+ * the container is nearly up, so the retry lands on a warm server and returns
+ * in well under a second.
+ *
+ * Deliberately narrow:
+ *   - Only on OUR timeout. A caller-aborted request (route change, component
+ *     unmount, an explicit AbortController) throws as before and is never
+ *     retried.
+ *   - Only ONCE. A second timeout means something other than a cold start.
+ *   - Only for idempotent methods. Replaying a POST could double-create a
+ *     pre-trade record or a trade; a request that timed out may still have
+ *     been received and applied by the server.
+ *   - Only when the caller did not set its own timeoutMs — an explicit budget
+ *     is a decision we should not silently double.
+ *
+ * The real fix is for the service not to be asleep. Until then this keeps a
+ * cold start from reading as an outage.
+ */
+const IDEMPOTENT_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 export async function apiFetch<T = unknown>(
+  path: string,
+  init?: ApiFetchOptions,
+): Promise<T> {
+  try {
+    return await apiFetchOnce<T>(path, init);
+  } catch (err) {
+    const method = (init?.method ?? "GET").toUpperCase();
+    const isOurTimeout = err instanceof ApiError && err.status === 408;
+    const retryable =
+      isOurTimeout &&
+      IDEMPOTENT_METHODS.has(method) &&
+      init?.timeoutMs === undefined &&
+      !init?.signal?.aborted;
+    if (!retryable) throw err;
+    return await apiFetchOnce<T>(path, init);
+  }
+}
+
+
+async function apiFetchOnce<T = unknown>(
   path: string,
   init?: ApiFetchOptions,
 ): Promise<T> {
