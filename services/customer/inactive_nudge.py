@@ -324,9 +324,10 @@ def _render_email(
     template is missing (resilience > prettiness in a cron path).
     """
     name = escape((user_name or "").strip() or "Investor")
-    dashboard_url = os.environ.get(
-        "PIVOX_DASHBOARD_URL", "https://pivoxquant.com/home",
-    )
+    from services.email.urls import dashboard_url as _dashboard_url
+    # Was a hard-coded apex + the deleted /home — two redirect hops before
+    # the reader saw anything. services.email.urls is now the one source.
+    dashboard_url = _dashboard_url()
     safe_url = escape(dashboard_url)
 
     html_path = _TEMPLATE_DIR / "inactive_nudge.html"

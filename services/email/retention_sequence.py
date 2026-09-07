@@ -187,8 +187,11 @@ def _utc_naive(dt: datetime | None) -> datetime:
 
 
 def _dashboard_url() -> str:
-    frontend = os.environ.get("FRONTEND_URL", "https://pivoxquant.com").rstrip("/")
-    return os.environ.get("PIVOX_DASHBOARD_URL", f"{frontend}/home")
+    """Single source: :mod:`services.email.urls`. Kept as a thin alias so the
+    call sites below read unchanged — see that module for why the old local
+    copy pointed at the deleted ``/home``."""
+    from services.email.urls import dashboard_url
+    return dashboard_url()
 
 
 def _escape(text: str) -> str:
