@@ -50,15 +50,15 @@ type DrawerGroup = {
   items: Tab[];
 };
 
-// Primary bottom-bar tabs — Home / Portfolio / Reports / Signals.
+// Primary bottom-bar tabs — 거울 / Portfolio / 멈춤.
 // Labels are literal (no locale dep) so a missing i18n key can never
 // blank the bar on mobile.
 //
 // 거울 (Mirror) leads as the product spine: 멈춤 → 기록 → 거울.
 const PRIMARY_TABS: Tab[] = [
-  { href: "/mirror", label: "Mirror", icon: Contrast },
+  { href: "/mirror", label: "거울", icon: Contrast },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-  { href: "/pre-trade", label: "Pre-Trade", icon: Gavel },
+  { href: "/pre-trade", label: "멈춤", icon: Gavel },
 ];
 
 // Drawer — mirrors the desktop sidebar exactly.
@@ -66,7 +66,7 @@ const DRAWER_GROUPS: DrawerGroup[] = [
   {
     label: "More",
     items: [
-      { href: "/journal", label: "Journal", icon: NotebookPen },
+      { href: "/journal", label: "기록", icon: NotebookPen },
     ],
   },
   {

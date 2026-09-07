@@ -106,8 +106,8 @@ export default function PreTradePage() {
               letterSpacing: "-0.022em",
             }}
           >
-            Seven questions{" "}
-            <span style={{ color: "var(--pq-bronze)" }}>before every trade.</span>
+            매수 앞에 놓인{" "}
+            <span style={{ color: "var(--pq-bronze)" }}>일곱 번의 멈춤.</span>
           </h1>
           <Caption className="mt-3 max-w-[560px]">
             진입 결정 앞에 서는 7개의 관문. 당신의 논리를 스스로 검증할

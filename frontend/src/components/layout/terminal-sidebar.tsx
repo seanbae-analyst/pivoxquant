@@ -47,15 +47,25 @@ type Item = {
 
 // PRIMARY — the 3 doors. The behavioural loop IS the product
 // (멈춤 → 기록 → 거울).
+//
+// Naming rule: the product's OWN vocabulary is Korean, the generic app
+// shell stays English. 멈춤 / 기록 / 거울 are the words the landing page and
+// all six emails teach the reader; a nav that said "Pre-Trade" taught a
+// second vocabulary for the same three screens. Portfolio / Profile /
+// Settings are loanwords in Korean product UI already and carry no such
+// duty, so they keep the terminal tone.
+//
+// Labels stay literal (no t()) — same reason bottom-nav.tsx gives: a missing
+// locale key must never be able to blank the navigation.
 const PRIMARY: Item[] = [
-  { key: "mirror", label: "Mirror", href: "/mirror", icon: Contrast },
+  { key: "mirror", label: "거울", href: "/mirror", icon: Contrast },
   { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
+  { key: "pre-trade", label: "멈춤", href: "/pre-trade", icon: Gavel },
 ];
 
 // MORE — the record's own surfaces plus the account.
 const MORE: Item[] = [
-  { key: "journal", label: "Journal", href: "/journal", icon: NotebookPen },
+  { key: "journal", label: "기록", href: "/journal", icon: NotebookPen },
   { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
 ];

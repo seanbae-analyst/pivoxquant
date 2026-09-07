@@ -541,7 +541,7 @@ export function PrivacyCardV2({
                 ["trades", "거래내역 · Trades"],
                 ["positions", "보유종목 · Positions"],
                 ["watchlist", "관심종목 · Watchlist"],
-                ["journal", "투자 저널 · Journal"],
+                ["journal", "기록 · Journal"],
                 ["pulse", "주간 기록 · Pulse"],
               ] as const).map(([dataset, label]) => (
                 <button

@@ -9,7 +9,7 @@ import * as React from "react";
 import Link from "next/link";
 
 const LINKS: ReadonlyArray<{ href: string; label: string; note: string }> = [
-  { href: "/journal", label: "결정 저널", note: "사기 전 기록 모아보기" },
+  { href: "/journal", label: "기록", note: "사기 전 남긴 기록 모아보기" },
 ];
 
 export function ArchiveLinks() {
@@ -19,7 +19,7 @@ export function ArchiveLinks() {
         className="text-[10.5px] uppercase tracking-[0.2em]"
         style={{ color: "var(--pq-bronze)" }}
       >
-        보관함 · 기록
+        보관함
       </div>
       <div className="mt-2 grid gap-2">
         {LINKS.map((l) => (
