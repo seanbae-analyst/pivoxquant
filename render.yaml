@@ -93,6 +93,38 @@ services:
       # PIVOX_CHECKOUT_FOLLOWUP_ENABLED. The beta is free (CEO 2026-09-04);
       # both belong to the paid path and stay dormant.
       #
+      # ── Email transport: Brevo (CEO action 2026-09-07) ────────────────────
+      # Paste these in the Render dashboard — `sync: false` means Render
+      # prompts for them and the values never enter this repo.
+      #
+      # Why Brevo and not the two transports already wired: measured
+      # 2026-09-07, both are dead on this deployment.
+      #   * SendGrid → HTTP 401 "Maximum credits exceeded" (free credits gone).
+      #   * SMTP → Render blocks outbound ports 25/465/587 on FREE web
+      #     services. Confirmed against Render's own changelog, not inferred.
+      #     A Gmail SMTP send from a laptop still works and proves nothing
+      #     about this service. This is the Railway OSError-101 situation
+      #     repeating on a different host, and Brevo was the answer then too.
+      # Brevo's HTTP API is port 443, so the SMTP block does not touch it.
+      # That makes it the only transport compatible with `plan: free`.
+      #
+      # BREVO_PROVIDER_PRIMARY is not optional bookkeeping: sender.py's
+      # cascade only tries Brevo BEFORE SendGrid when it is true. Left unset,
+      # every single send first pokes the dead SendGrid key, eats the 401, and
+      # only then falls through.
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_PROVIDER_PRIMARY
+        value: "true"
+      # Default sender is noreply@pivoxquant.com, which Brevo rejects as an
+      # unverified sender until the domain is authenticated (brevo_provider.py
+      # names that failure explicitly). Until then this must be the address
+      # verified in Brevo's Senders screen.
+      - key: BREVO_FROM_EMAIL
+        sync: false
+      - key: BREVO_FROM_NAME
+        value: PivoxQuant
+
       # ⚠️ These four are necessary but NOT sufficient. Every one of these mails
       # is dispatched by the in-process APScheduler (cron_jobs.py:470-483
       # `ops_email_scheduler` / `ops_inactive_nudge`), and `plan: free` above
