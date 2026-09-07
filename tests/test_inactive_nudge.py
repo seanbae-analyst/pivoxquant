@@ -135,11 +135,20 @@ def test_cs1_flag_off_short_circuits(app, monkeypatch):
 
 # ── 3. window selection ─────────────────────────────────────────────────────
 
-def test_only_24h_to_25h_window_users_picked_up(app, monkeypatch):
-    """Three users: too-young (12h ago), in-window (24.5h ago),
-    too-old (26h ago). Only the 24.5h one is included.
+def test_window_lower_bound_excludes_users_younger_than_24h(app, monkeypatch):
+    """Too-young (12h) is excluded; two users inside the 24h-72h window are not.
+
+    ⚠️ 2026-09-07: this was `test_only_24h_to_25h_window_users_picked_up` and
+    asserted a 26h-old user was EXCLUDED. That encoded the old one-hour slice,
+    which the §61의2 night ban made unshippable — see find_inactive_users'
+    docstring. 26h is inside the window now; the too-old case moved to
+    test_user_older_than_the_window_is_not_swept_in.
+
+    The 24h floor is what still matters here: someone who signed up twelve
+    hours ago has not been inactive for a day yet.
     """
     from scripts.nightly.inactive_nudge_dispatcher import run_once
+    from models import User
 
     _flags_on(monkeypatch)
 
@@ -147,16 +156,15 @@ def test_only_24h_to_25h_window_users_picked_up(app, monkeypatch):
     in_window_id = _make_user_signed_at(
         app, created_hours_ago=24.5, email="in@test.com",
     )
-    _make_user_signed_at(app, created_hours_ago=26, email="old@test.com")
+    _make_user_signed_at(app, created_hours_ago=26, email="also_in@test.com")
 
     with app.app_context():
         with _patch_transport_succeed(), _daytime():
             s = run_once()
-    assert s["window_users"] == 1
-    assert s["sent"] == 1
+    assert s["window_users"] == 2, "the 12h user must not be selected"
+    assert s["sent"] == 2
 
     # And the timestamp was written on the right row.
-    from models import User
     with app.app_context():
         u = User.query.get(in_window_id)
         assert u.inactive_nudge_sent_at is not None
@@ -341,3 +349,115 @@ def test_rendered_body_passes_the_legal_scan(app):
     html, text = _render_email("Tester", unsubscribe_url="https://x.test/u")
     assert_legal_safe(html, "inactive_nudge/html")
     assert_legal_safe(text, "inactive_nudge/txt")
+
+
+# ── 9. 창 확대 (2026-09-07) ─────────────────────────────────────────────────
+
+def test_night_blocked_user_is_caught_the_next_morning(app, monkeypatch):
+    """The whole point of widening 25h → 72h.
+
+    With the old one-hour slice a user whose 24h mark fell inside the
+    §61의2 night ban was refused, stamped nothing, and had aged out of the
+    window before the next tick — never selected again. 21:00–08:00 is 11 of
+    24 hours, so ~46% of signups silently got nothing.
+    """
+    from scripts.nightly.inactive_nudge_dispatcher import run_once
+
+    _flags_on(monkeypatch)
+    _make_user_signed_at(app, created_hours_ago=24.5, email="deferred@test.com")
+
+    night = patch(
+        "services.email.retention_sequence.is_night_kst",
+        lambda *_a, **_kw: True,
+    )
+    with app.app_context():
+        with _patch_transport_succeed(), night:
+            blocked = run_once()
+    assert blocked["window_users"] == 1
+    assert blocked["sent"] == 0          # night ban held
+
+    # Morning. The user is now ~24.5h+ old — outside the OLD 25h slice, well
+    # inside the new 72h one.
+    with app.app_context():
+        with _patch_transport_succeed(), _daytime():
+            morning = run_once()
+    assert morning["window_users"] == 1, "user must still be selectable"
+    assert morning["sent"] == 1
+
+
+def test_user_older_than_the_window_is_not_swept_in(app, monkeypatch):
+    """72h is a bound, not 'everyone'.
+
+    Without an upper age limit, flipping PIVOX_INACTIVE_NUDGE_ENABLED on would
+    sweep every never-active user since launch into one mass send. This pins
+    that the lower bound is real.
+    """
+    from scripts.nightly.inactive_nudge_dispatcher import run_once
+
+    _flags_on(monkeypatch)
+    _make_user_signed_at(app, created_hours_ago=100, email="ancient@test.com")
+
+    with app.app_context():
+        with _patch_transport_succeed(), _daytime():
+            s = run_once()
+    assert s["window_users"] == 0
+    assert s["sent"] == 0
+
+
+def test_nudged_user_is_not_mailed_again_within_the_wider_window(
+    app, monkeypatch
+):
+    """A wider window must not become repeat mail.
+
+    ``inactive_nudge_sent_at IS NULL`` is what makes widening safe; this pins
+    it rather than trusting it.
+    """
+    from scripts.nightly.inactive_nudge_dispatcher import run_once
+
+    _flags_on(monkeypatch)
+    _make_user_signed_at(app, created_hours_ago=30, email="once@test.com")
+
+    with app.app_context():
+        with _patch_transport_succeed(), _daytime():
+            first = run_once()
+    assert first["sent"] == 1
+
+    with app.app_context():
+        with _patch_transport_succeed(), _daytime():
+            second = run_once()
+    assert second["window_users"] == 0, "already-nudged user must drop out"
+    assert second["sent"] == 0
+
+
+def test_window_bounds_have_exactly_one_implementation(app):
+    """The dispatcher must not restate the window.
+
+    It used to: a hardcoded `timedelta(hours=25)` copy fed the pre-probe
+    count. When the window widened to 72h that copy stayed at 25h, so
+    `window_users` reported 1 while `sent` reported 2 — a summary that
+    contradicted itself. Numbers agreeing today is not the fix; having one
+    source is.
+    """
+    import inspect
+    from scripts.nightly import inactive_nudge_dispatcher as disp
+    from services.customer.inactive_nudge import (
+        inactive_window_bounds,
+        INACTIVE_WINDOW_LOWER_HOURS,
+        INACTIVE_WINDOW_UPPER_HOURS,
+    )
+
+    src = inspect.getsource(disp)
+    assert "inactive_window_bounds" in src, (
+        "dispatcher must ask the service for the bounds"
+    )
+    assert "timedelta(hours=25)" not in src, "old hardcoded copy is back"
+    assert "hours=24)" not in src.replace("hours=24))", ""), (
+        "dispatcher is restating a window bound"
+    )
+
+    # And the helper is what find_inactive_users actually honours.
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    lower, upper = inactive_window_bounds(now)
+    assert round((now - lower).total_seconds() / 3600, 1) == INACTIVE_WINDOW_LOWER_HOURS
+    assert round((now - upper).total_seconds() / 3600, 1) == INACTIVE_WINDOW_UPPER_HOURS

@@ -4,7 +4,7 @@ Library surface for the C-S2 nudge — the cron entry point lives at
 ``scripts/nightly/inactive_nudge_dispatcher.py`` and delegates to the
 two public helpers here:
 
-* :func:`find_inactive_users` — query the rolling 24h-25h signup
+* :func:`find_inactive_users` — query the rolling 24h-72h signup
   window for users with zero activity and a NULL
   ``inactive_nudge_sent_at`` column.
 * :func:`dispatch_inactive_nudges` — render the email template, hand it
@@ -89,16 +89,42 @@ _TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "email" / "templates" / "c
 # ── public surface ──────────────────────────────────────────────────────────
 
 
+# Window defaults live here and ONLY here. The dispatcher used to keep its own
+# `timedelta(hours=25)` copy for the pre-probe count; when the window widened
+# to 72h on 2026-09-07 the two diverged instantly and `window_users` started
+# under-reporting against a `sent` it could not explain. Two implementations of
+# one rule always drift — so callers ask for the bounds instead of restating
+# them (CLAUDE.md 함정 §10, same lesson as the legal-scrub duplication).
+INACTIVE_WINDOW_LOWER_HOURS = 72.0
+INACTIVE_WINDOW_UPPER_HOURS = 24.0
+
+
+def inactive_window_bounds(
+    now: datetime | None = None,
+    *,
+    lower_hours: float | None = None,
+    upper_hours: float | None = None,
+) -> tuple[datetime, datetime]:
+    """Return ``(lower, upper)`` naive-UTC bounds for the eligibility window.
+
+    ``created_at`` is eligible when ``lower <= created_at < upper``.
+    """
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+    lo = INACTIVE_WINDOW_LOWER_HOURS if lower_hours is None else lower_hours
+    up = INACTIVE_WINDOW_UPPER_HOURS if upper_hours is None else upper_hours
+    return now - timedelta(hours=lo), now - timedelta(hours=up)
+
+
 def find_inactive_users(
     now: datetime | None = None,
     *,
-    window_lower_hours: float = 25.0,
-    window_upper_hours: float = 24.0,
+    window_lower_hours: float = INACTIVE_WINDOW_LOWER_HOURS,
+    window_upper_hours: float = INACTIVE_WINDOW_UPPER_HOURS,
 ) -> list[Any]:
     """Return users in the inactive-nudge eligible cohort.
 
     A user is eligible iff ALL of:
-      * ``created_at`` ∈ ``[now - lower, now - upper)``  (default 24h-25h)
+      * ``created_at`` ∈ ``[now - lower, now - upper)``  (default 24h-72h)
       * ``is_simulated`` is False
       * ``inactive_nudge_sent_at`` is NULL
       * activity probe returns False (no artefact / position / trade)
@@ -109,9 +135,36 @@ def find_inactive_users(
     Args:
         now: timestamp for window math. Defaults to ``utcnow()``
             (naive UTC to match ``User.created_at`` storage).
-        window_lower_hours: how far back the window extends (default 25h).
+        window_lower_hours: how far back the window extends (default 72h).
         window_upper_hours: how recent the window cuts off (default 24h).
             Must be < ``window_lower_hours``.
+
+    ⚠️ 2026-09-07 — the lower bound moved 25h → 72h, and the reason is a bug,
+    not a product whim.
+
+    The window used to be exactly one hour wide while the cron fires hourly,
+    so each user had exactly ONE chance to be selected. That was survivable
+    until this mail was reclassified 광고성, which brought the 시행령 §61의2
+    night ban with it: a user whose 24h mark landed between 21:00 and 08:00
+    KST was refused, stamped nothing, and had aged past 25h by the next tick —
+    never selected again. 21:00–08:00 is 11 of 24 hours, so roughly **46% of
+    signups would silently never receive the nudge**. Retention solves the
+    same collision by leaving its queued row pending until morning; this job
+    has no queue, so the window itself has to survive the night.
+
+    A three-day lower bound is deliberate rather than unbounded:
+
+    * **It bounds the first run after the flag is enabled.** With no lower
+      bound, switching ``PIVOX_INACTIVE_NUDGE_ENABLED`` on would sweep every
+      never-active user since launch into a single mass send. Three days caps
+      that blast radius to three days of signups.
+    * A nudge three weeks after signup is a different message from a nudge the
+      next morning, and this template only writes the latter.
+
+    Duplicates are already impossible: ``inactive_nudge_sent_at IS NULL`` is
+    part of the filter and is stamped on success, so a wider window means a
+    user gets *a* chance on each tick until they are nudged once — not repeat
+    mail.
 
     Returns:
         List of User ORM rows. Empty if column missing, no rows
@@ -126,8 +179,9 @@ def find_inactive_users(
     from models import User
 
     now = now or datetime.now(timezone.utc).replace(tzinfo=None)
-    lower = now - timedelta(hours=window_lower_hours)
-    upper = now - timedelta(hours=window_upper_hours)
+    lower, upper = inactive_window_bounds(
+        now, lower_hours=window_lower_hours, upper_hours=window_upper_hours,
+    )
 
     q = User.query.filter(
         User.created_at >= lower,

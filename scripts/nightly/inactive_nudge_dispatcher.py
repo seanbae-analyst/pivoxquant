@@ -34,7 +34,9 @@ the building.
 Schedule
 --------
 ``0 * * * *`` (every hour, on the hour). One run scans the rolling
-24h-25h signup window — the 1h granularity matches the cron cadence
+24h-72h signup window (widened 2026-09-07; the old 1h slice dropped
+every user whose 24h mark fell inside the §61의2 night ban — see
+services/customer/inactive_nudge.find_inactive_users)
 so no signup falls between two scans.
 
 Idempotency
@@ -80,7 +82,7 @@ def run_once(now: datetime | None = None) -> dict[str, int]:
     """Single dispatch pass. Returns a summary dict.
 
     Summary keys:
-      - ``window_users``   : count of rows in the 24h-25h slice
+      - ``window_users``   : count of rows in the 24h-72h slice
                               (post-activity-probe)
       - ``skipped_active`` : had artefact/position/trade activity
       - ``sent``           : email accepted by EmailSender
@@ -119,6 +121,7 @@ def run_once(now: datetime | None = None) -> dict[str, int]:
     from services.customer.inactive_nudge import (
         dispatch_inactive_nudges,
         find_inactive_users,
+        inactive_window_bounds,
     )
     from models import User
     from datetime import timedelta
@@ -130,8 +133,9 @@ def run_once(now: datetime | None = None) -> dict[str, int]:
     # The service collapses these two passes for callers that don't
     # need the breakdown; here we want the breakdown for the cron
     # summary.
-    lower = now - timedelta(hours=25)
-    upper = now - timedelta(hours=24)
+    # Bounds come from the service, never restated here — see
+    # services/customer/inactive_nudge.inactive_window_bounds.
+    lower, upper = inactive_window_bounds(now)
     try:
         pre_probe = User.query.filter(
             User.created_at >= lower,
