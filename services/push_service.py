@@ -20,12 +20,31 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# ── Deep-link targets ────────────────────────────────────────────────────────
+# A push notification is a link the reader taps on a phone, so a wrong path is
+# a dead end they cannot recover from — there is no back button to a page they
+# never reached. Measured against prod 2026-09-07:
+#
+#   /trades → 404. Hard, not redirected: next.config.ts has no entry for it.
+#             The trade-confirmation push has therefore been landing readers on
+#             a not-found page. Trade history renders in RecentTransactionsBlock
+#             on /portfolio, which is where it now points.
+#   /alerts → 308 to /mirror. It worked, but through a redirect to a route the
+#             2026-08-31 prune deleted. Bell alerts live in the top-bar
+#             NotificationDropdown, present on every dashboard screen, so
+#             /mirror (홈) is both the redirect's destination and the right one.
+#
+# Named here rather than repeated as literal defaults: the same three-copies
+# drift that put a deleted /home in all five emails started exactly this way.
+PUSH_URL_ALERTS = "/mirror"
+PUSH_URL_TRADES = "/portfolio"
+
 
 def send_push_to_user(
     user_id: int,
     title: str,
     body: str,
-    url: str = "/alerts",
+    url: str = PUSH_URL_ALERTS,
     actions: Optional[list] = None,
     transactional: bool = False,
 ):
@@ -229,13 +248,13 @@ def notify_alert(user_id: int, alert_data: dict):
         user_id=user_id,
         title=title,
         body=message[:200],
-        url="/alerts",
+        url=PUSH_URL_ALERTS,
         transactional=True,
     )
 
 
 def notify_bell_alert(user_id: int, kind: str, title: str,
-                      body: str = "", link: str = "/alerts"):
+                      body: str = "", link: str = PUSH_URL_ALERTS):
     """Send a PWA push for a NotificationDropdown bell alert.
 
     Called from ``services.alert.create_alert`` after a row is persisted.
@@ -284,7 +303,7 @@ def notify_bell_alert(user_id: int, kind: str, title: str,
             user_id=user_id,
             title=full_title[:120],
             body=(body or "")[:200],
-            url=link or "/alerts",
+            url=link or PUSH_URL_ALERTS,
             transactional=transactional,
         )
     except Exception:
@@ -303,4 +322,4 @@ def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: flo
 
     # Trade confirmation is a transactional/portfolio event — must reach
     # opted-out users too (bypasses the 정통망법 §50 marketing gate).
-    send_push_to_user(user_id=user_id, title=title, body=body, url="/trades", transactional=True)
+    send_push_to_user(user_id=user_id, title=title, body=body, url=PUSH_URL_TRADES, transactional=True)
