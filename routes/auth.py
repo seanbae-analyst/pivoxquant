@@ -14,6 +14,15 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from sqlalchemy.exc import IntegrityError, OperationalError, DBAPIError
 
 
+# Where a login lands when there is nowhere better to go. This is /mirror,
+# not /home: /home was deleted and the frontend answers it with a 308 to
+# /mirror, so every single OAuth login was paying a redirect hop to reach the
+# screen we could have named. Worse, the function below exists to map dead
+# routes onto live ones — its own docstring says so — and its fallback was a
+# dead route. The /landing → 404 P0 hotfix of 2026-05-03 was this same class.
+_POST_LOGIN_DEFAULT = "/mirror"
+
+
 def _safe_next(next_url):
     """Open redirect 방어 + 폐기된 경로 차단.
 
@@ -21,20 +30,20 @@ def _safe_next(next_url):
     - 존재하지 않는 Next.js 라우트 (/landing, /beta 등) → 유효 경로로 매핑
     """
     if not next_url or not isinstance(next_url, str):
-        return "/home"
+        return _POST_LOGIN_DEFAULT
     if next_url.startswith("//") or "://" in next_url:
-        return "/home"
+        return _POST_LOGIN_DEFAULT
     if not next_url.startswith("/"):
-        return "/home"
+        return _POST_LOGIN_DEFAULT
 
     # Path-only 비교용: 쿼리스트링/프래그먼트 제거.
     path_only = next_url.split("?", 1)[0].split("#", 1)[0].rstrip("/")
 
     # 폐기/존재하지 않는 라우트 매핑.
-    # /landing → /home (OAuth 콜백 후 404 방지, P0 hotfix 2026-05-03)
+    # /landing → 홈 (OAuth 콜백 후 404 방지, P0 hotfix 2026-05-03)
     # /beta → / (베타 게이트 2026-09-04 폐기 — 옛 링크만 흡수)
     if path_only in ("/landing", ""):
-        return "/home"
+        return _POST_LOGIN_DEFAULT
     if path_only == "/beta":
         return "/"
 

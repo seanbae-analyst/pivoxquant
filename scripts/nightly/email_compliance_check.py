@@ -65,7 +65,29 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-_SSL_CTX = ssl.create_default_context()
+def _ssl_context() -> ssl.SSLContext:
+    """TLS context that still has a CA bundle when the system store is empty.
+
+    ``ssl.create_default_context()`` alone trusts whatever the interpreter's
+    system store holds. On a Mac venv that store can be empty, and then BOTH
+    network legs of this check — the SendGrid POST and the opt-out URL GET —
+    fail with CERTIFICATE_VERIFY_FAILED. This script reports those failures as
+    "§50 위배 가능성", so a missing local CA bundle was being announced as a
+    legal-compliance breach. Measured 2026-09-07: urlopen bare = URLError,
+    urlopen with certifi = OK, curl against the same URL = 200.
+
+    Render (Linux, Docker) has a populated store, so this changes nothing in
+    production — it stops the local and CI runs from being permanently red for
+    a reason that has nothing to do with email compliance.
+    """
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:  # certifi absent — fall back to the system store
+        return ssl.create_default_context()
+
+
+_SSL_CTX = _ssl_context()
 
 _PUBLIC_URL = os.environ.get("PIVOX_PUBLIC_URL", "https://pivoxquant.com").rstrip("/")
 _TEST_EMAIL = os.environ.get("PIVOX_COMPLIANCE_TEST_EMAIL", "seanbae1521@gmail.com")

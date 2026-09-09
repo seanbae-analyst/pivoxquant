@@ -217,13 +217,17 @@ def _utc_naive(dt: datetime | None) -> datetime:
 
 
 def _dashboard_url() -> str:
-    frontend = os.environ.get("FRONTEND_URL", "https://pivoxquant.com").rstrip("/")
-    return os.environ.get("PIVOX_DASHBOARD_URL", f"{frontend}/home")
+    """Single source: :mod:`services.email.urls`. Kept as a thin alias so the
+    call sites below read unchanged — see that module for why the old local
+    copy pointed at the deleted ``/home``."""
+    from services.email.urls import dashboard_url
+    return dashboard_url()
 
 
 def _pricing_url() -> str:
-    frontend = os.environ.get("FRONTEND_URL", "https://pivoxquant.com").rstrip("/")
-    return os.environ.get("PIVOX_PRICING_URL", f"{frontend}/pricing")
+    """Single source: :mod:`services.email.urls`."""
+    from services.email.urls import pricing_url
+    return pricing_url()
 
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates" / "onboarding"

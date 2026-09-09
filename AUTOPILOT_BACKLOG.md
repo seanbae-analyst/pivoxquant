@@ -576,3 +576,48 @@ CAUS = retired(`938bfcf4`). PDF 172-케이스 매트릭스 = 월요일이라 스
   §50④ 가 **요구하는** 표기다. 오늘 수동 세션 커밋이 추가한 `광고` 는 0줄
   (`git diff 180b4bc2..HEAD -- frontend/src | grep -c '^+.*광고'` = 0). 상시 조건.
 
+
+## 2026-09-08 (daily-sweep, prod, Tue) — DETECTION-ONLY
+
+**P0=1 · P1=1(이월 재확인) · P2=3 · 자동수정 0건.** 가드 발동: 미커밋 사용자 작업(`frontend/public/sw.js` CACHE_VERSION + dirty 서브모듈) → fix/commit 단계 전면 스킵. 상세: `BUG_SWEEP_2026-09-08.md`.
+자동 레그 전부 green: virtual-user 516 calls/0 findings · 야간 pytest 2063/0 · tsc 0 · vitest 382/382 · eslint 0 · next build 0 · 죽은 import 0 · 엔드포인트 계약 74/74.
+
+### 🟥 P0 — 표시광고법 (자동수정 보류 = 가드, 코드상 fix 는 카피 2줄로 단순)
+- [ ] **P0 — 랜딩 FAQ 가 법적 사유로 삭제된 KIS 증권계좌 연동을 광고 중(라이브).** `frontend/src/messages/ko.json:92-93` (a5) + `en.json:81-82`. 프로드 실측 렌더: *"제 증권계좌에 접근하나요? / Read-only. KIS (KR) read-only scope로 연결됩니다. 주문 · 출금 · 수정 불가… 연결 해제 시 시세 동기화가 멈추고"*.
+      **기능은 존재하지 않는다(4중 실측)**: `settings/page.tsx:93` `BROKER_LINKING_AVAILABLE = false` / `(auth)/onboarding/broker/page.tsx:29-44` "KIS connect·sync·disconnect·status 5개 라우트는 법적 사유로 삭제"(KIS 제휴가 비인가 사업자에 닫힘, 토스 오픈API §5②) / prod `GET /api/broker/kis/status` **404**, `/api/broker/connections` **404** / `lib/hooks.ts:453` 키 `false && API.broker.connections` 로 하드 비활성.
+      **같은 사이트가 정반대를 말한다** — 공개 `/docs`: *"Account linking is not offered" · "there is nothing to connect" · "No broker credentials are collected."* 기능 철회 시 코드 경로는 전부 닫혔고 **마케팅 카피만 누락**됐다. 표시광고법 §3(거짓·과장 표시).
+      CEO 액션: 카피 정정 방향(연동 문항 자체 삭제 vs `/docs` 문구와 동일하게 "연동 없음"으로 재작성) = 제품·법무 판단이라 에이전트 단독 재작성 보류. **가드 해제되면 즉시 fix 가능한 최소 변경**(ko/en 각 1문항).
+
+### 🟠 P1 (이월 1건 — 재확인 + 신규 증거)
+- [ ] **P1 — `/support` 가 폐기된 유료 3-tier 와 제거된 AI 챗봇을 계속 안내**(09-02 부터 열림). `messages/ko.json:295-296, 319-320` + `en.json:296, 320`, **추가 발견: `frontend/src/app/support/page.tsx:146` 하드코딩**. `support/page.tsx:125-133` 의 `isAuthed` 분기는 1:1 문의 + 내 문의함만 제공 → 약속된 AI 채널은 **로그인 후에도 끝내 나타나지 않음**이 코드로 증명됨. 본문이 가리키는 "요금 안내 페이지" 는 `/pricing → 307 /mirror`. P0-1 과 **동일 패턴(철회된 기능의 카피 잔존)** → 전수 마감 권고.
+
+### 🟡 P2 (3건 — 카운트 + 기록만, 자동수정 대상 아님)
+- [ ] P2 — `/support` 가 루트 canonical 을 상속해 **홈페이지를 자기 canonical 로 선언**(`layout.tsx:164-166`, 다른 공개 페이지와 달리 override 없음)
+- [ ] P2 — `sitemap.ts:3`·`robots.ts:3` 이 apex 호스트 하드코딩 → sitemap 7개 URL 전부 307 리다이렉트, 실제 서빙 canonical 은 www
+- [ ] P2 — `robots.ts` 가 인증 대시보드 라우트를 전부 disallow 하면서 `/support` 서브트리만 예외 → `(dashboard)/support/inbox/[id]` 가 노출 대상에 포함
+
+### ✅ 이번 회차 CLOSED
+- [x] ~~**P1 — `/portfolio` 포지션 행 죽은 클릭**(삭제된 `/detail/[ticker]` → 308 자기 자신, 스크린리더에 링크 오고지)~~ **CLOSED — `5359d9e8`.** `positions-table-v2.tsx:446+` 가 평범한 `<tr>` 렌더로 전환 + 회귀 테스트 동반.
+
+### 🟠 P1 신규 (2026-09-08 legal-guard)
+- [ ] **P1 — Alpaca 마켓데이터 어댑터의 라이선스 정당화가 stale.** `services/data/alpaca_market_adapter.py` 모듈 독스트링이 상업적 재배포 권리를 *"we already subscribe as part of the brokerage relationship"* 로 근거 삼는데, 그 브로커리지 관계는 `562d2b85`(Alpaca 제거)에서 사라졌다. **현재 노출 0** — `alpaca_market_adapter.py:74` `ALPACA_ENABLED` 기본 `"0"` = OFF. 다만 `services/data/fmp.py:389`, `services/data/fetcher.py:647·1341` 에 FMP 폴백으로 배선돼 있어 **env 한 줄로 켜진다**. `research_fmp_replacement.md`(2026-06-07)의 "Alpaca market-data 재도입 = 변호사 필수" 와 정합. 액션: ① 독스트링의 죽은 라이선스 전제 정정(사실관계 오기) ② 켜기 전 약관 재확인 = 변호사 큐. 코드 fix 아님 — **가드 발동으로 이번 회차 미수정**.
+
+## 2026-09-09 (daily-sweep, prod, Wed) — DETECTION-ONLY (2일 연속 가드)
+
+**신규 P0=0 · P1=4 · P2=0.** 자동수정 0건 — 가드 발동(`frontend/public/sw.js` + dirty 서브모듈). 상세: `BUG_SWEEP_2026-09-09.md`.
+자동 레그: virtual-user **516 calls / findings 0** · 라우트 14종 200 · NaN/undefined 0건 · 매수/매도 지시어 0건. ⚠️ **야간 빌드 게이트는 미완주 = 오늘 빌드 보증 없음**(P1-1).
+
+### 🟠 P1 신규 (4건 — 자동수정 금지, CEO 검토)
+- [ ] **P1 — 야간 빌드 게이트가 2시간+ 정지한 채 조용히 열려 있다(fails open).** `nightly-verify-2026-09-09.md` = **11줄**(09-08 은 103줄·6섹션), ` ``` ` 펜스 연 채 절단, 섹션 3~6 부재. 프로세스 생존 확인: `36766 python -m pytest -q` **ELAPSED 02:02:55**, 최초 2시간 CPU 누적 `3:41`(가동률 ~3% = 대기). ✅확정 근본원인: **타임아웃 가드 부재** — `pytest.ini:10` addopts 에 timeout 없음 + `pytest-timeout` 미설치 + `scripts/nightly/verify_build.sh:79` 가 `pytest -q` 무제한 호출. ❓미확정: 어떤 테스트가 멈췄는지(스택은 libcrypto SHA256/PBKDF2 지배하나 3% 가동률과 모순, TCP 소켓 0개, soft-delete SQLite 픽스처 열림). 액션 ①per-test 타임아웃 ②**리포트 절단을 실패로 판정하는 체크**(현재 잘린 리포트가 green 처럼 보임).
+- [ ] **P1 — 라이브 이용약관이 삭제된 "시그널" 제품면을 20회 기술.** `/signals` 308(삭제)인데 `/terms` 렌더 텍스트에 `시그널` **20회**, `/privacy` **2회**. 원문: *"POSITIVE / NEGATIVE / NEUTRAL 시그널은 … 분석 결과 관찰값이며"* = 존재하지 않는 산출물을 규율하는 번호 조항. 면책 문맥이라 표시광고법 직격은 아니나 **약관 v2 변호사 큐와 직결**. 🟥 **철회 카피 잔존 4번째**(`/docs`→`/support`→랜딩 FAQ→`/terms`·`/privacy`) — `feedback_thorough_fixes` 적용, 개별 fix 말고 **전수 스캔 1회**(09-08 권고 미이행).
+- [ ] **P1 — 그날 첫 요청이 180초 안에 응답하지 않음.** `/api/health` 최초 `-m 180` → `code=000` 무응답, warm 재호출 `200 / 0.59s` (`db:ok`, `v37+`). 메모리 `project_render_migration` 기록값 "스핀다운 50s+" 를 최소 3.6배 초과. `80f53a05`(콜드스타트 43.9s > 타임아웃 30s)와 동일 계열 = **경로 미봉합**. ⚠️ 동일 호출의 `time_total=845s` 는 `-m 180` 과 모순 → 신뢰 불가, 확정 사실은 "180초 내 무응답" 하나. **1회 관측 = 재현 전 단정 금지**(재현엔 15분 유휴 필요).
+- [ ] **P1 — 빌드 산출물이 트리를 상시 더럽혀 자동수정을 2일째 봉쇄.** 가드를 발동시킨 `frontend/public/sw.js` 는 사람 코드가 아니라 **빌드 스탬프**(diff 1줄: `pq-build-ef755198`→`032fb7b2`, 파일 주석 자체가 *"the build script does this work"*). 스탬프가 **HEAD `921dff4d` 보다 2커밋 뒤** = 복구되지 않은 잔재. `verify_build.sh:96-107` 의 snapshot→복원 계약은 **그 스크립트 밖 빌드엔 적용되지 않음**. 결과: 안전장치가 **상시 차단기로 퇴화**해 라이브 P0(랜딩 FAQ 허위광고)의 수정을 이틀 붙잡는 중. CEO 판단 3택: ①스탬프 라인을 가드 판정에서 제외 ②커밋 대상에서 빼고 배포 시 주입 ③현재 스탬프를 HEAD 로 맞춰 커밋.
+
+### 🔁 이월 재확인 (오늘 실측 — 전부 그대로 라이브)
+- [ ] 🟥 **P0 (09-08 이월) 랜딩 FAQ 가 삭제된 KIS 연동을 광고 중** — `messages/ko.json:92-93`·`en.json:81-82` 문구 **오늘 재확인, 변동 없음**. 표시광고법 §3. **가드 때문에 이틀째 미수정.**
+- [ ] P1 (09-02~) `/support` 폐기 3-tier·제거된 AI 챗봇 안내 — `support/page.tsx:146` 하드코딩 **그대로**.
+- [ ] P1 (09-08) Alpaca 어댑터 독스트링 라이선스 전제 stale (노출 0, `ALPACA_ENABLED=0`).
+- [ ] P2 ×3 (09-08) `/support` canonical 상속 · `sitemap.ts`/`robots.ts` apex 하드코딩 · `robots.ts` 의 `/support` 서브트리 예외.
+
+### ❌ 이번 회차 미검증 (PASS 아님)
+콘솔 에러 · 네트워크 4xx/5xx · 375px 모바일 · DisclaimerBanner · naked ticker 회귀 — 인증 라우트가 클라이언트 셸(50.6~51.9KB 동일 크기대)이라 curl 판정 불가 + 위임한 bug-hunter 가 **브라우저 MCP 도구 없이 기동돼 600초 무진전 실패**.

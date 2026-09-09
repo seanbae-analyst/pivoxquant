@@ -187,8 +187,22 @@ def _utc_naive(dt: datetime | None) -> datetime:
 
 
 def _dashboard_url() -> str:
-    frontend = os.environ.get("FRONTEND_URL", "https://pivoxquant.com").rstrip("/")
-    return os.environ.get("PIVOX_DASHBOARD_URL", f"{frontend}/home")
+    """Single source: :mod:`services.email.urls`. Kept as a thin alias so the
+    call sites below read unchanged — see that module for why the old local
+    copy pointed at the deleted ``/home``."""
+    from services.email.urls import dashboard_url
+    return dashboard_url()
+
+
+def _escape(text: str) -> str:
+    """Minimal HTML escape for composed record lines.
+
+    The lines are built from integer counts, not free text, so nothing here
+    can currently carry markup — this is belt-and-braces so a future field
+    (a ticker, a note) cannot turn a record line into an injection point.
+    """
+    from html import escape
+    return escape(text, quote=False)
 
 
 def _escape(text: str) -> str:
