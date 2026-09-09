@@ -73,7 +73,6 @@ quota. Brevo provides a 300/day fallback if SendGrid 4xx's.
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
