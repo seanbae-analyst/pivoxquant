@@ -1,13 +1,15 @@
-# 야간 빌드 검증 — 2026-09-09 03:08 KST
+
+# 야간 빌드 검증 — 2026-09-09 21:50 KST
 
 브랜치: `chore/email-flags-on`
-HEAD: `921dff4d docs(qa): file the overnight bug hunt — five defects, four of one kind`
-미커밋: 3개 · untracked: 3개
+HEAD: `ae4a1f93 fix(lint): drop the now-unused os import from inactive_nudge`
+미커밋: 3개 · untracked: 0개
 
 ## 1. 앱 부팅
 - ✅ OK routes=121
 
 ## 2. 백엔드 테스트
+### pytest — ✅ exit 0
 ```
     assert Artifact.query.get(art_id).opened_at is None
 
@@ -20,7 +22,7 @@ tests/test_sendgrid_webhook.py::test_valid_signature_accepted
     assert Artifact.query.get(art_id).opened_at is not None
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-==== 2063 passed, 18 skipped, 1 xfailed, 483 warnings in 504.94s (0:08:24) =====
+==== 2063 passed, 18 skipped, 1 xfailed, 483 warnings in 323.56s (0:05:23) =====
 ```
 
 ## 3. 프론트엔드
@@ -31,17 +33,14 @@ tests/test_sendgrid_webhook.py::test_valid_signature_accepted
 ```
 ### vitest — ✅ exit 0
 ```
- [32m✓[39m src/components/portfolio/__tests__/to-position.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
- [32m✓[39m src/lib/__tests__/initials.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
- [32m✓[39m src/data/__tests__/onboarding-slider-seedable.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
- [32m✓[39m src/app/(dashboard)/__tests__/auth-redirect.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
- [32m✓[39m src/lib/cfo/__tests__/coerce-pulse.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
- [32m✓[39m src/__tests__/dashboard-redirect.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
 
-[2m Test Files [22m [1m[32m51 passed[39m[22m[90m (51)[39m
-[2m      Tests [22m [1m[32m382 passed[39m[22m[90m (382)[39m
-[2m   Start at [22m 06:55:33
-[2m   Duration [22m 30.00s[2m (transform 6.86s, setup 9.42s, import 35.95s, tests 31.48s, environment 108.46s)[22m
+ RUN  v4.1.5 /Users/seanbae/Desktop/취준/pivoxquant/frontend
+
+
+ Test Files  51 passed (51)
+      Tests  382 passed (382)
+   Start at  21:55:51
+   Duration  9.35s (transform 2.15s, setup 3.31s, import 10.26s, tests 10.08s, environment 31.17s)
 
 ```
 ### eslint — ✅ exit 0
@@ -95,9 +94,10 @@ OK 74 live frontend endpoints all match a backend route (119 rules parsed)
 routes 파일    24
 endpoints      121
 services 파일  87
-Python 줄      42015
+Python 줄      42025
 tests 파일     162
 ```
 
 ---
 읽기 전용 실행. 수정·커밋·푸시 없음.
+<!-- verify-build:complete -->
