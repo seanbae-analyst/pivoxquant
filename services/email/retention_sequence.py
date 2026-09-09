@@ -205,6 +205,17 @@ def _escape(text: str) -> str:
     return escape(text, quote=False)
 
 
+def _escape(text: str) -> str:
+    """Minimal HTML escape for composed record lines.
+
+    The lines are built from integer counts, not free text, so nothing here
+    can currently carry markup — this is belt-and-braces so a future field
+    (a ticker, a note) cannot turn a record line into an injection point.
+    """
+    from html import escape
+    return escape(text, quote=False)
+
+
 def _format_consent_kr(consent_at: datetime | None) -> str:
     """Render the user's consent timestamp in KST locale for the footer."""
     if consent_at is None:
