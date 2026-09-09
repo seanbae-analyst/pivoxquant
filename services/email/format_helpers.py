@@ -11,6 +11,29 @@ tests without an app context.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
+
+def utc_naive(dt: datetime | None) -> datetime:
+    """Normalise to timezone-naive UTC, the form the DB columns store.
+
+    onboarding_sequence and retention_sequence each carried a byte-identical
+    copy of this until 2026-09-10. Two copies of one rule always drift — the
+    lesson CLAUDE.md §10 records from the legal scrubber, and the one that had
+    already played out in this package with ``_dashboard_url`` (three copies,
+    two of which had diverged, all three pointing at a deleted route).
+
+    ``None`` means now. An aware datetime is converted, not merely stripped:
+    dropping the tzinfo off a KST timestamp would shift it nine hours, which
+    is exactly the kind of silent error a shared helper should make
+    impossible to write twice.
+    """
+    if dt is None:
+        return datetime.now(timezone.utc).replace(tzinfo=None)
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
 
 # ── Currency prefix ─────────────────────────────────────────────────────
 # Korean tickers carry a ``.KS`` (KOSPI) or ``.KQ`` (KOSDAQ) suffix in

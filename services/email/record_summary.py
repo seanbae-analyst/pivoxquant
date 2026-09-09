@@ -110,7 +110,7 @@ def build_record_summary(
     never_bought = int(follow.get("never_bought") or 0)
     bought_later = int(follow.get("bought_later_anyway") or 0)
 
-    trade_count = _trades_in_window(trades, window_days, now=now)
+    trade_count = _count_trades_in_window(trades, window_days, now=now)
 
     # The silence rule. Nothing recorded → nothing to reflect → no mail.
     if (started + trade_count) < MIN_EVENTS_TO_SPEAK:
@@ -140,7 +140,7 @@ def build_record_summary(
     }
 
 
-def _trades_in_window(
+def _count_trades_in_window(
     trades: list[Any], window_days: int, *, now: Any = None
 ) -> int:
     """Count fills inside the window. Timezone-naive UTC, matching storage."""
