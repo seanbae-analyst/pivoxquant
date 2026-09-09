@@ -33,6 +33,69 @@ for cand in "$HOME"/.nvm/versions/node/*/bin /opt/homebrew/bin /usr/local/bin; d
 done
 [ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
 
+# Run a command with a wall-clock cap, portably.
+#
+# macOS ships no coreutils `timeout`, so this polls instead. Returns the
+# command's own exit code, or 124 if the cap was hit — matching `timeout(1)`
+# so the caller can tell a hang from a failure.
+run_capped() {
+  local secs="$1"; shift
+  "$@" & local pid=$!
+  local waited=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$waited" -ge "$secs" ]; then
+      kill -TERM "$pid" 2>/dev/null
+      sleep 5
+      kill -KILL "$pid" 2>/dev/null
+      wait "$pid" 2>/dev/null
+      return 124
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+  wait "$pid"
+  return $?
+}
+
+# Run the backend suite, reporting its REAL exit status.
+#
+# 2026-09-09: this section was `pytest -q 2>&1 | tail -12`, which throws the
+# exit code away — the pipeline reports tail's status, so a red suite printed
+# its failures into the report and the report still read as fine. That night
+# pytest also sat for 2h02m at ~3% CPU with no cap, so the whole run never
+# finished and the report was left truncated mid-fence. Three ways to fail
+# open in four words. fe_check already did this correctly; the backend leg
+# just never got the same treatment.
+#
+# The cap is wall-clock rather than pytest-timeout: requirements-dev.txt
+# records why that plugin was dropped on 2026-09-01 ("a declared-but-absent
+# dependency is worse than none" — passing --timeout without it reads as a
+# broken command). A shell-level cap needs no plugin, and it also catches
+# hangs pytest-timeout cannot see, such as collection or a stuck fixture
+# teardown.
+PYTEST_CAP_SECONDS="${PYTEST_CAP_SECONDS:-1800}"
+
+py_check() {
+  local log rc
+  log=$(mktemp)
+  run_capped "$PYTEST_CAP_SECONDS" "$PY" -m pytest -q >"$log" 2>&1
+  rc=$?
+  if [ "$rc" -eq 0 ]; then
+    echo "### pytest — ✅ exit 0"
+  elif [ "$rc" -eq 124 ]; then
+    echo "### pytest — ❌ **${PYTEST_CAP_SECONDS}초 상한에서 강제 종료 (멈춤)**"
+    echo
+    echo "정상 완주는 로컬 기준 약 5분 30초다. 상한에 닿았다는 것은 실패가"
+    echo "아니라 **정지**이고, 이 리포트는 백엔드에 대해 아무것도 보증하지 않는다."
+  else
+    echo "### pytest — ❌ exit $rc"
+  fi
+  echo '```'
+  tail -12 "$log"
+  echo '```'
+  rm -f "$log"
+}
+
 # Run one frontend check, reporting its real exit status.
 fe_check() {
   local label="$1"; shift
@@ -50,6 +113,24 @@ fe_check() {
   echo '```'
   rm -f "$log"
 }
+
+# Truncation guard.
+#
+# The report is one `{ ... } > $OUT` block. If anything inside it hangs or is
+# killed, the file is left cut off mid-write and nothing says so — on
+# 2026-09-09 that produced an 11-line report (the day before: 103 lines, six
+# sections) with an unclosed code fence, and it read as a normal green
+# morning. A report that stops early must not be indistinguishable from one
+# that passed.
+#
+# So the banner goes in FIRST and is removed LAST. Any exit path that skips
+# the removal — hang, kill, power loss — leaves it visible at the top of the
+# file, where the reader cannot miss it. The end marker is what authorises
+# the removal, so it is the single thing that means "this ran to completion".
+INCOMPLETE_BANNER='> 🔴 **미완주 리포트** — 이 배너가 남아 있으면 검증이 도중에 끊긴 것이다. 여기 적힌 어떤 green 도 믿지 마라.'
+DONE_MARKER='<!-- verify-build:complete -->'
+
+printf '%s\n\n' "$INCOMPLETE_BANNER" > "$OUT"
 
 {
   echo "# 야간 빌드 검증 — $(date '+%Y-%m-%d %H:%M %Z')"
@@ -75,9 +156,7 @@ print(f'OK routes={len(list(a.url_map.iter_rules()))}')
   echo
 
   echo "## 2. 백엔드 테스트"
-  echo '```'
-  "$PY" -m pytest -q 2>&1 | tail -12
-  echo '```'
+  py_check
   echo
 
   echo "## 3. 프론트엔드"
@@ -146,6 +225,14 @@ print(f'OK routes={len(list(a.url_map.iter_rules()))}')
 
   echo "---"
   echo "읽기 전용 실행. 수정·커밋·푸시 없음."
-} > "$OUT" 2>&1
+  echo "$DONE_MARKER"
+} >> "$OUT" 2>&1
 
-echo "wrote $OUT"
+# Only a report that reached its own end marker earns the banner's removal.
+if grep -qF "$DONE_MARKER" "$OUT"; then
+  grep -vF "$INCOMPLETE_BANNER" "$OUT" > "$OUT.tmp" && mv "$OUT.tmp" "$OUT"
+  echo "wrote $OUT"
+else
+  echo "INCOMPLETE: $OUT — 완주 마커 없음, 배너 유지" >&2
+  exit 1
+fi

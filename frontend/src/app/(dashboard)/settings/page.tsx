@@ -882,7 +882,7 @@ export default function SettingsPageV2() {
                         marginTop: 2,
                       }}
                     >
-                      {t("settingsV2.emailDelivery.allArtifacts")}
+                      {t("settingsV2.emailDelivery.emailsSent")}
                     </div>
                   </div>
                   <button
