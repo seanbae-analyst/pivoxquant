@@ -68,10 +68,15 @@ export const API = {
   // Each was checked against the live Flask url_map and had ZERO callers in
   // src/ (the `useWatchlist` hook that read watchlist.list was itself never
   // called). They were traps: wiring a feature to one would 404 silently.
-  // NOT removed, and deliberately so — `broker.*` and `admin.artifacts*` also
-  // 404, but broker is gated off behind BROKER_LINKING_AVAILABLE=false with a
-  // documented reason (KIS partnership / Toss terms) and the admin pages treat
-  // 401/403/404 as "render blank".
+  // NOT removed, and deliberately so — `broker.*` also 404s, but it is gated
+  // off behind BROKER_LINKING_AVAILABLE=false with a documented reason (KIS
+  // partnership / Toss terms), so nothing fires the request.
+  //
+  // `admin.artifacts*` used to be listed here on the same grounds ("the admin
+  // pages treat 401/403/404 as render blank"). That reasoning was the bug:
+  // admin/layout probed artifactsList to decide who was an admin, so the 404
+  // denied everyone including the owner. Removed 2026-09-07 (e1dc8e64) once
+  // the gate moved to a live endpoint.
   trades: "/api/trades",
   realtime: {
     // 2026-05-17 — Wave F-2 Bug #5: `/api/realtime/stream` removed.
