@@ -6,8 +6,8 @@
     "notifications": "Notifications",
     "observations": "Observations",
     "markAllRead": "Mark all as read",
-    "noAlertsYet": "No alerts yet. Signals will appear here as we observe them.",
-    "unableToLoad": "Unable to load alerts"
+    "unableToLoad": "Unable to load alerts",
+    "noAlertsYet": "No alerts yet. 52-week highs/lows and sector concentration appear here."
   },
   "auth": {
     "login": {
@@ -344,7 +344,7 @@
       "sectionLabel": "C2 · Email",
       "channelLabel": "Email delivery",
       "sendToLabel": "Send to",
-      "allArtifacts": "All artifacts arrive in your inbox as PDF + HTML."
+      "emailsSent": "Onboarding and record-summary emails arrive at this address."
     },
     "notice": {
       "title": "Notice / 면책 고지.",

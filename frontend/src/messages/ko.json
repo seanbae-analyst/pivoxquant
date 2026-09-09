@@ -6,8 +6,8 @@
     "notifications": "알림",
     "observations": "관측 기록",
     "markAllRead": "모두 읽음으로",
-    "noAlertsYet": "아직 알림이 없습니다. 시그널이 관측되면 여기에 표시됩니다.",
-    "unableToLoad": "알림을 불러올 수 없습니다"
+    "unableToLoad": "알림을 불러올 수 없습니다",
+    "noAlertsYet": "아직 알림이 없습니다. 52주 고·저나 섹터 집중도가 관측되면 여기에 표시됩니다."
   },
   "auth": {
     "login": {
@@ -344,7 +344,7 @@
       "sectionLabel": "C2 · Email",
       "channelLabel": "이메일 수신",
       "sendToLabel": "수신 이메일",
-      "allArtifacts": "모든 리포트가 PDF + HTML로 이메일로 발송됩니다."
+      "emailsSent": "가입 안내와 기록 요약 메일을 이 주소로 받습니다."
     },
     "notice": {
       "title": "공지 / 면책 고지.",
