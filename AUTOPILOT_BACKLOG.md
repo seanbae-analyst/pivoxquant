@@ -621,3 +621,31 @@ CAUS = retired(`938bfcf4`). PDF 172-케이스 매트릭스 = 월요일이라 스
 
 ### ❌ 이번 회차 미검증 (PASS 아님)
 콘솔 에러 · 네트워크 4xx/5xx · 375px 모바일 · DisclaimerBanner · naked ticker 회귀 — 인증 라우트가 클라이언트 셸(50.6~51.9KB 동일 크기대)이라 curl 판정 불가 + 위임한 bug-hunter 가 **브라우저 MCP 도구 없이 기동돼 600초 무진전 실패**.
+
+## 2026-09-10 (daily-sweep, prod, Thu) — 이월 P0 2건 CLOSED
+
+**신규/확인 P0=0 · P1=8 · P2=3.** 자동수정 0건 — 가드는 해제됐으나(어젯밤 `bf759f6c` 가 sw.js 스탬프 정합) **P0 0건이라 트리거 없음**. 상세: `BUG_SWEEP_2026-09-10.md`.
+자동 레그: virtual-user **516 calls / findings 0** · 야간 게이트 **완주**(pytest 2063/0fail · tsc 0 · vitest 382 · eslint 0 · build 0 · 계약 74/74) · 라이브 라우트 14종 200 / 삭제 6종 308 · BUY/SELL/HOLD 0건 · NaN·undefined 0건.
+
+### ✅ 이월 P0 2건 종결 (오늘 실측)
+- [x] ~~랜딩 FAQ 가 삭제된 KIS 연동 광고 (표시광고법 §3)~~ → `e542bb70`(#553) main 머지 + **라이브 번들에서 배포 확인**(수정 카피 존재 / "40 quant models"·"7-layer"·"CFO" 0건)
+- [x] ~~PIPA §28-8 국외이전 고지의 Railway 잔존·Render/Supabase 누락~~ → `privacy-ko.md:167-168` Render·Supabase 각 행 + `:183-188` Railway 해지 명시
+
+### 🟠 P1 신규 (8건 — 자동수정 금지, CEO 검토)
+- [ ] **P1 — US 지수 3종 null 의 근본원인 확정(2일 미확정 해소). 액션 = Render env 에 `FMP_API_KEY` 설정.** 사슬: `market.py:753` US=ETF 프록시만 → `fetcher.py:317` US 체인 = Alpaca→FMP→FMP profile → `config.py:65` `ALPACA_ENABLED` 기본 **"0"** = 프로덕션 OFF → 유일 소스 FMP → prod health `missing_recommended:1` 중 recommended 는 정확히 3개(`FMP_API_KEY`/`KIS_APP_KEY`/`KIS_APP_SECRET`, `launch_prep.py:140-149`)이고 **KR 지수 fresh 가 KIS 두 키의 존재 증명** → 빠진 건 FMP → `_etf_snapshot` ×5 None → snapshot `[]` → `market.py:895` 가 **빈 결과를 캐시 안 함** → 에러 신호 0 으로 무기한 null. ⚠️ 마지막 링크만 추론(health 는 개수만 반환) — Render env 화면에서 즉시 확정 가능. 09-04 이관 env 유실 패턴(`SIM_ONBOARD_SECRET` 건)과 동일 계열 의심.
+- [ ] **P1 — 백엔드가 ~50초간 전면 502, 헤더 `x-render-routing: no-deploy`.** 03:45:40 health 200 → 03:45:50~03:46:11 전 엔드포인트 502(www 프록시·Render 직접 **양쪽**, 응답 0.15~0.5s = **콜드스타트 아님**; 콜드스타트는 별도로 43.6s 관측) → 03:46:29 자가복구, 이후 5/5 200. 그 창의 유저는 재시도 없이 API 전면 실패. ⚠️ **1회 관측 — 원인 단정 금지**(유력: free plan 스핀다운 전환). 09-09 P1 "첫 요청 180초 무응답"과 같은 뿌리로 보이며 오늘 시그니처가 훨씬 선명.
+- [ ] **P1 — `/settings` 가 삭제된 아티팩트 리포트 이메일을 약속.** `settings/page.tsx:885` 토글 옆 "모든 리포트가 PDF + HTML로 이메일로 발송됩니다". 실측 `services/artifacts/` **부재**, 남은 템플릿 6종(onboarding 3·retention 2·customer 1)에 **리포트 템플릿 0건**. 토글 자체는 실존 메일을 제어하므로 거짓보다 **과대 기술**.
+- [ ] **P1 — `/support` FAQ 가 삭제된 "시그널 라벨" 사용법을 안내.** `faq-section.tsx:84`,`:116` **2곳 렌더**, POSITIVE/NEGATIVE/NEUTRAL 설명. `/signals` 308.
+- [ ] **P1 (09-09 이월) — `/terms` 가 삭제된 "시그널" 제품면을 10회 기술.** `terms-ko.md:110` 제6조 제목이 "시그널·인공지능 미사용·백테스팅 면책", `:50` 이 POSITIVE/NEGATIVE/NEUTRAL 을 번호 조항으로 정의. 라이브 렌더 시그널 10·Signal 2. **법적 위반은 아님**(BUY/SELL/HOLD 0, 매수·매도 3/3 전부 "권유가 아닙니다" 부정문) — 약관 v2 변호사 큐와 직결.
+- [ ] **P1 — topbar 알림 드롭다운이 삭제된 시그널 참조.** `notification-dropdown.tsx:231` "시그널이 관측되면 여기에 표시됩니다". `/alerts`·`/signals` 308.
+- [ ] **P1 — 주문 메서드 회귀 감지기가 fails open.** `~/.claude/memory_tools/memory_audit.sh:45` 는 `def place_order|execute_trade|submit_order` 를 찾는데 실제 이름은 `buy_order`(`services/kis/service.py:506`)·`sell_order`(`:520`)·`_place_order`(`:534`) — 전부 미매칭(`def place_order` ≠ `def _place_order`). 오늘 셋 다 무력화 확인(`KIS_READ_ONLY` 반환·HTTP 호출 없음) = **현재 위험 0**. 결함은 실제 이름으로 주문이 되살아나도 훅이 계속 "0건 정상"을 보고한다는 것. `94cd7818` 로 고친 야간 게이트와 동일한 fails-open 계열. 3일째 지적.
+- [ ] **P1 — 위임 bug-hunter agent 구조적 불능(2일 연속).** agent 정의 도구명이 `mcp__Claude_in_Chrome__*`, 실제 서버는 `mcp__claude-in-chrome__*`(케이스 불일치) → 브라우저 도구 없이 기동, 8분 산출 0 으로 중단. 09-09 에도 동일(600초 무진전). 자동화 탐지 레그가 이틀째 lead 수작업으로만 성립.
+
+### 📌 철회 카피 — 전수 스캔 이행, 목록 종결
+09-08 부터 3일 연속 권고된 **"개별 fix 말고 전수 스캔 1회"** 를 이번 회차에 이행(i18n json + content md + 이메일 템플릿 × 20개 용어). **남은 표면은 위 4건뿐**(settings·support FAQ·terms·topbar)이며 목록은 닫혔다. 넷을 한 번에 처리하면 종결.
+
+### 🔵 P2 ×3
+`consents.ts:180-183` 주석의 Railway 잔존(비노출, 고지 SoT 는 정확) · `dormant_endpoints.txt` 3건 prune · `/support` canonical + sitemap/robots apex 하드코딩(09-08 이월).
+
+### ❌ 미검증 (PASS 아님, 3일 연속 사각지대)
+인증 페이지 **콘솔 에러·네트워크 4xx/5xx·375px·DisclaimerBanner·naked ticker**. 인증 라우트가 클라이언트 셸("Loading…"만 SSR)이라 curl 판정 불가 + 세션 브라우저가 `pivoxquant.com` **정책 차단** + 위임 agent 불능. 해소 경로 = carry-over B7(브라우저 로그인 1회 직접 확인).
