@@ -79,7 +79,7 @@
       "q4": "What do I actually do here?",
       "a4": "Three things. Pause before you buy and leave your reasoning in seven questions (Pre-Trade), record your holdings and trades (Portfolio), and weeks later look at the you those records describe (Mirror). It is not a service that sends you reports — your own record is the material.",
       "q5": "Do you have access to my brokerage account?",
-      "a5": "Read-only. It connects through the KIS (Korea) read-only scope: no orders, no withdrawals, no modifications. Every feature works identically if you skip the connection and enter holdings by hand. Disconnecting stops price sync, and the data is destroyed after 30 days.",
+      "a5": "No — and there is nothing to connect. Automatic brokerage linking is not offered; positions are entered by hand. No broker credentials are collected.",
       "q6": "What does it cost?",
       "a6": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes."
     }
@@ -293,7 +293,7 @@
       },
       "pricing": {
         "q": "How are the plans structured?",
-        "a": "Three plans are available: Free, Pro (₩9,900/mo), and Premium (₩19,900/mo). Features available under each plan can be reviewed on the pricing page."
+        "a": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes."
       },
       "refund": {
         "q": "How are billing and refunds handled?",
@@ -348,7 +348,7 @@
     },
     "notice": {
       "title": "Notice / 면책 고지.",
-      "body": "PivoxQuant produces editorial memos and analytical artifacts for the user's own record-keeping. Brokerage connections are read-only — no order routing, no investment advice, no recommendation to buy or sell. 본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며, 모든 의사결정과 책임은 이용자 본인에게 있습니다."
+      "body": "PivoxQuant reflects back the record you enter yourself. Automatic brokerage linking is not offered — no order routing, no investment advice, no recommendation to buy or sell. 본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며, 모든 의사결정과 책임은 이용자 본인에게 있습니다."
     },
     "toast": {
       "kisSynced": "KIS synchronized.",
