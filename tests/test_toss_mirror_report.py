@@ -234,3 +234,76 @@ def test_a_sale_with_no_cost_basis_is_measured_not_just_flagged():
     m = r["mismatches"][0]
     assert m["kind"] == "unmatched_sales" and m["unmatched_sell_qty"] == 4
     assert "부풀리지 않음" in m["reason"] and r["realised_trustworthy"] is False
+
+
+def test_a_position_watched_opening_from_zero_cannot_be_missing_purchases():
+    """ABTC on the live account: 177 shares bought from zero inside the window,
+    11 reported. Every purchase is present, so the count was rewritten by an
+    event the order history does not carry — and widening --since cannot help.
+    The cost basis does not carry over cleanly, which is said rather than hidden."""
+    book = reconstruct(fills_from_orders([
+        # an earlier round trip that closes to zero — this is what makes the
+        # later re-open observed rather than merely the first fill in view
+        _order("a0a", "ABTC", "BUY", 386, 1.36, "2025-05-20T23:30:00+09:00"),
+        _order("a0b", "ABTC", "SELL", 386, 1.55, "2025-08-29T23:30:00+09:00"),
+        _order("a1", "ABTC", "BUY", 62, 7.51, "2025-09-19T23:30:00+09:00"),
+        _order("a2", "ABTC", "BUY", 48, 6.97, "2025-09-24T23:30:00+09:00"),
+        _order("a3", "ABTC", "BUY", 56, 6.22, "2025-10-11T23:30:00+09:00"),
+        _order("a4", "ABTC", "BUY", 11, 4.77, "2025-10-21T23:30:00+09:00"),
+    ]))
+    assert book["ABTC"].quantity == 177 and book["ABTC"].sells_since_open == 0
+    assert book["ABTC"].opened_from_observed_zero is True
+    r = reconcile(book, [{"symbol": "ABTC", "quantity": "11", "averagePurchasePrice": "101.777118"}])
+    m = r["mismatches"][0]
+    assert m["kind"] == "share_count_changed" and m["cost_preserved"] is False
+    assert m["ratio"] == pytest.approx(16.09, abs=0.01)
+    assert "--since 를 넓혀도 닫히지 않는다" in m["reason"]
+    assert "매도가 없어 실현손익은 영향받지 않았다" in m["reason"]
+    assert r["realised_trustworthy"] is True
+
+
+def test_a_sale_after_the_event_is_called_out_as_possibly_misscaled():
+    book = reconstruct(fills_from_orders([
+        _order("b0a", "ABTC", "BUY", 50, 2.0, "2025-05-20T23:30:00+09:00"),
+        _order("b0b", "ABTC", "SELL", 50, 2.5, "2025-08-29T23:30:00+09:00"),
+        _order("b1", "ABTC", "BUY", 100, 6.0, "2025-09-19T23:30:00+09:00"),
+        _order("b2", "ABTC", "SELL", 20, 7.0, "2025-10-19T23:30:00+09:00"),
+    ]))
+    r = reconcile(book, [{"symbol": "ABTC", "quantity": "5", "averagePurchasePrice": "120"}])
+    assert book["ABTC"].sells_since_open == 1
+    m = r["mismatches"][0]
+    assert m["kind"] == "share_count_changed" and m["straddled"] is True
+    assert "다른 눈금으로 계산됐을 수 있다" in m["reason"]
+
+
+def test_sub_share_residue_is_read_as_fractional_dust_not_a_history_gap():
+    """TSLA on the live account: 0.024 shares sold with no cost basis. A missing
+    purchase cannot be a fortieth of a share; this is rounding residue."""
+    book = reconstruct(fills_from_orders([
+        _order("d1", "TSLA", "SELL", 0.024334, 341.0, "2024-11-22T23:30:00+09:00"),
+        _order("d2", "TSLA", "SELL", 0.00008, 355.0, "2025-02-18T23:30:00+09:00"),
+    ]))
+    r = reconcile(book, [])
+    m = r["mismatches"][0]
+    assert m["kind"] == "fractional_dust"
+    assert m["unmatched_sell_qty"] == pytest.approx(0.024414, abs=1e-6)
+    assert m["unmatched_sell_value"] == pytest.approx(8.33, abs=0.01)
+    assert "한 주에 못 미치므로" in m["reason"]
+    # Pocket change does not put ₩5m of realised P&L in doubt.
+    assert r["realised_trustworthy"] is True
+
+
+def test_a_whole_share_sold_without_a_basis_is_still_a_gap():
+    book = reconstruct(fills_from_orders([_order("g1", "TSLA", "SELL", 3, 341.0, "2024-11-22T23:30:00+09:00")]))
+    r = reconcile(book, [])
+    assert r["mismatches"][0]["kind"] == "unmatched_sales"
+    assert r["realised_trustworthy"] is False
+
+
+def test_the_first_purchase_in_view_is_not_treated_as_a_watched_opening():
+    """A window that starts mid-position sees a purchase first and cannot tell
+    that from a genuine opening. Only a liquidation we processed proves it."""
+    book = reconstruct(fills_from_orders([_order("f1", "ABTC", "BUY", 177, 6.78, "2025-09-19T23:30:00+09:00")]))
+    assert book["ABTC"].opened_from_observed_zero is False
+    r = reconcile(book, [{"symbol": "ABTC", "quantity": "11", "averagePurchasePrice": "40"}])
+    assert r["mismatches"][0]["kind"] == "quantity"

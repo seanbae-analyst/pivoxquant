@@ -280,8 +280,8 @@ def _mirror_block(m: dict, label: str) -> list[str]:
 def _mismatch_qty(mm: dict) -> str:
     """The number that actually matters for this finding — not always a pair of
     share counts (for an unmatched sale, both sides are zero and say nothing)."""
-    if mm["kind"] == "unmatched_sales":
-        return f"취득 기록 없는 매도 {mm.get('unmatched_sell_qty', 0):g}주"
+    if mm["kind"] in ("unmatched_sales", "fractional_dust"):
+        return f"{mm.get('unmatched_sell_qty', 0):g}주"
     if mm["kind"] == "absent":
         return f"토스 {mm['toss_qty']:g}주"
     return f"이력 {mm['rebuilt_qty']:g}주 / 토스 {mm['toss_qty']:g}주"

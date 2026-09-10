@@ -89,6 +89,10 @@ class PositionHistory:
     fees: Decimal = ZERO
     oversold: bool = False                     # a sale exceeded what the window had bought
     unmatched_sell_qty: Decimal = ZERO         # shares sold with no cost basis here — the size of the hole
+    unmatched_sell_value: Decimal = ZERO       # and what those shares fetched, so the hole has a price
+    sells_since_open: int = 0                  # sales against the position as it stands now
+    opened_from_observed_zero: bool = False    # the current holding began after a liquidation we watched,
+    #                                            not merely at the first fill the window happens to contain
     buy_outcomes: list[BuyOutcome] = field(default_factory=list)
     sell_outcomes: list[SellOutcome] = field(default_factory=list)
 
@@ -138,9 +142,14 @@ def reconstruct(fills: list[Fill]) -> dict[str, PositionHistory]:
         p.fees += f.commission + f.tax
         if f.side == _SIDE_IN:
             if p.quantity <= _QTY_EPS:
+                # The first fill of a symbol is a purchase whether the position
+                # opened here or the window merely starts here; only a zero we
+                # arrived at ourselves proves we saw the whole position.
+                p.opened_from_observed_zero = p.sells > 0 and not p.oversold
                 p.opened_at = f.at
                 p.cost = ZERO
                 p.quantity = ZERO
+                p.sells_since_open = 0
                 p.buy_outcomes.append(BuyOutcome(fill=f, follow_on=False, relation=None, avg_cost_before=None))
             else:
                 avg = p.cost / p.quantity
@@ -155,15 +164,18 @@ def reconstruct(fills: list[Fill]) -> dict[str, PositionHistory]:
                 # Selling what the window never bought: the history starts too late.
                 p.oversold = True
                 p.unmatched_sell_qty += f.quantity
+                p.unmatched_sell_value += f.quantity * f.price
                 continue
             avg = p.cost / p.quantity
             qty = f.quantity
             if qty > p.quantity + _QTY_EPS:
                 p.oversold = True
                 p.unmatched_sell_qty += qty - p.quantity
+                p.unmatched_sell_value += (qty - p.quantity) * f.price
                 qty = p.quantity
             gross = (f.price - avg) * qty
             pct = float((f.price - avg) / avg * 100) if avg > 0 else 0.0
+            p.sells_since_open += 1
             held = (f.at - p.opened_at).total_seconds() / 86400 if p.opened_at else 0.0
             p.sell_outcomes.append(SellOutcome(
                 fill=f, avg_cost_before=avg, realised_gross=gross,
@@ -178,6 +190,7 @@ def reconstruct(fills: list[Fill]) -> dict[str, PositionHistory]:
     return book
 
 
+_ONE_SHARE = Decimal(1)
 _COST_TOLERANCE = Decimal("0.01")   # 1 % — a split rounds the per-share figures, not the money
 # Which findings put the realised P&L in doubt. A share-count change does not by
 # itself: the money that went in is unchanged. It only misvalues a sale that
@@ -186,6 +199,9 @@ _COST_TOLERANCE = Decimal("0.01")   # 1 % — a split rounds the per-share figur
 # means our per-share cost is wrong, and every realised figure is measured
 # against it.
 _REALISED_BREAKING = {"absent", "quantity", "ghost", "unmatched_sales", "average"}
+# Kinds that leave the realised figures intact: a share count rewritten by an
+# event outside the order history (the buy/sell pairs behind realised were each
+# priced on one consistent scale), and fractional residue worth pocket change.
 
 
 def reconcile(book: dict[str, PositionHistory], holdings_items: list[dict]) -> dict:
@@ -226,20 +242,29 @@ def reconcile(book: dict[str, PositionHistory], holdings_items: list[dict]) -> d
         if abs(rq - tq) > _QTY_EPS:
             rebuilt_cost, toss_cost = p.cost, tq * ta
             cost_matches = toss_cost > 0 and abs(rebuilt_cost - toss_cost) / toss_cost <= _COST_TOLERANCE
-            if cost_matches and rq > _QTY_EPS:
-                ratio = rq / tq if tq > 0 else None
+            # Did we watch this position open from nothing inside the window? If we
+            # did, every share of it arrived through an order we have, so no
+            # purchase is missing and widening --since cannot change the count.
+            fully_observed = p.opened_from_observed_zero
+            ratio = float(rq / tq) if tq > _QTY_EPS else None
+            if (cost_matches or fully_observed) and rq > _QTY_EPS:
+                straddled = p.sells_since_open > 0
+                if cost_matches:
+                    money = (f"취득원가 총액은 {float(rebuilt_cost):,.2f} 대 {float(toss_cost):,.2f} 로 일치하고 "
+                             f"수량만 {ratio:.4g}:1 로 달라졌다. 들어오거나 나간 주식은 없다")
+                else:
+                    money = (f"이 포지션은 {p.opened_at.date()} 에 직전 전량 매도 뒤 0주에서 다시 시작해 창 안에서 {float(rq):g}주를 전부 매수했는데 "
+                             f"계좌엔 {float(tq):g}주다 ({ratio:.4g}:1). 빠진 매수는 없다 — **--since 를 넓혀도 닫히지 않는다**. "
+                             f"취득원가는 {float(rebuilt_cost):,.2f} 대 {float(toss_cost):,.2f} 로 어긋나며, 현재 포지션은 계좌 쪽이 맞다")
                 mismatches.append(row(
-                    sym, rq, tq, ra, ta, kind="share_count_changed",
-                    cost_krw_note=f"{float(rebuilt_cost):,.2f} ≈ {float(toss_cost):,.2f}",
-                    ratio=round(float(ratio), 4) if ratio else None,
-                    reason=("주식 수가 바뀌었다 (병합·분할·합병 전환) — 취득원가 총액은 "
-                            f"{float(rebuilt_cost):,.2f} 대 {float(toss_cost):,.2f} 로 일치하고 수량만 "
-                            f"{float(ratio):.4g}:1 로 달라졌다. 들어오거나 나간 주식은 없다. "
-                            "다만 이 이벤트를 사이에 두고 낸 매도는 손익이 다른 눈금으로 계산됐을 수 있다"
-                            if ratio else "주식 수가 바뀌었다 — 취득원가 총액은 일치한다")))
+                    sym, rq, tq, ra, ta, kind="share_count_changed", ratio=round(ratio, 4) if ratio else None,
+                    cost_preserved=cost_matches, straddled=straddled,
+                    reason="주식 수가 바뀌었다 (병합·분할·합병 전환) — " + money + (
+                        ". 이 포지션이 열린 뒤 낸 매도가 있어, 그 손익은 다른 눈금으로 계산됐을 수 있다" if straddled
+                        else ". 이 포지션이 열린 뒤로는 매도가 없어 실현손익은 영향받지 않았다")))
             else:
                 mismatches.append(row(sym, rq, tq, ra, ta, kind="quantity",
-                                      reason="수량과 취득원가가 모두 다름 — 이력 밖의 매수·입고가 있다. --since 를 넓혀라"))
+                                      reason="수량과 취득원가가 모두 다르고, 이 포지션이 열리는 것도 못 봤다 — 이력 밖의 매수·입고가 있다. --since 를 넓혀라"))
         elif ra is not None and ta > 0 and abs(ra - ta) / ta > _AVG_TOLERANCE:
             mismatches.append(row(sym, rq, tq, ra, ta, kind="average",
                                   reason="수량은 맞지만 평균단가가 다름 — 취득 경로가 이력과 다르다"))
@@ -250,10 +275,19 @@ def reconcile(book: dict[str, PositionHistory], holdings_items: list[dict]) -> d
             mismatches.append(row(sym, p.quantity, ZERO, p.average_cost, None, kind="ghost",
                                   reason="이력상 보유인데 계좌엔 없음 — 이력에 없는 매도·출고가 있다"))
         if p.oversold and sym not in {m["symbol"] for m in mismatches}:
-            mismatches.append(row(sym, p.quantity, D(toss.get(sym, {}).get("quantity")), None, None,
-                                  kind="unmatched_sales", unmatched_sell_qty=float(p.unmatched_sell_qty),
-                                  reason=(f"취득 기록 없이 판 주식 {float(p.unmatched_sell_qty):g}주 — 조회 시작일 이전 매수가 있다. "
-                                          "이 몫의 손익은 계산에서 빠져 있다 (0 으로 취급, 부풀리지 않음)")))
+            # Under one share is fractional residue, not a purchase that went
+            # unrecorded: no whole share is missing and the money is pocket change.
+            dust = p.unmatched_sell_qty < _ONE_SHARE
+            mismatches.append(row(
+                sym, p.quantity, D(toss.get(sym, {}).get("quantity")), None, None,
+                kind="fractional_dust" if dust else "unmatched_sales",
+                unmatched_sell_qty=float(p.unmatched_sell_qty), unmatched_sell_value=float(p.unmatched_sell_value),
+                reason=(f"소수점 주식 잔여 {float(p.unmatched_sell_qty):g}주 ({p.currency} {float(p.unmatched_sell_value):,.2f})를 "
+                        "취득 기록 없이 팔았다 — 소수점 거래의 반올림 찌꺼기다. 한 주에 못 미치므로 빠진 매수는 없다"
+                        if dust else
+                        f"취득 기록 없이 판 주식 {float(p.unmatched_sell_qty):g}주 "
+                        f"({p.currency} {float(p.unmatched_sell_value):,.2f}) — 조회 시작일 이전 매수가 있다. "
+                        "이 몫의 손익은 계산에서 빠져 있다 (0 으로 취급, 부풀리지 않음)")))
 
     return {
         "complete": not mismatches,

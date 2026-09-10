@@ -377,8 +377,8 @@ def _side(n, hold, pct) -> str:
 
 
 def _mismatch_qty(mm: dict) -> str:
-    if mm["kind"] == "unmatched_sales":
-        return f"취득 기록 없는 매도 {mm.get('unmatched_sell_qty', 0):g}주"
+    if mm["kind"] in ("unmatched_sales", "fractional_dust"):
+        return f"{mm.get('unmatched_sell_qty', 0):g}주"
     if mm["kind"] == "absent":
         return f"토스 {mm['toss_qty']:g}주"
     return f"이력 {mm['rebuilt_qty']:g}주 / 토스 {mm['toss_qty']:g}주"
