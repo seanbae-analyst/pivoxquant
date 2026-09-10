@@ -124,11 +124,12 @@ def test_cli_renders_from_raw_without_network(tmp_path):
     proc = subprocess.run(
         [sys.executable, "scripts/pivox_report.py", "--from-raw", FIX, "--out", str(out), "--json"],
         capture_output=True, text=True, cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        env={**os.environ, "TOSS_CLIENT_ID": "", "TOSS_CLIENT_SECRET": ""},
+        env={**os.environ, "TOSS_CLIENT_ID": "", "TOSS_CLIENT_SECRET": "", "RUN_SCHEDULER": "0", "POPULATE_CACHE_ON_BOOT": "0"},
     )
     assert proc.returncode == 0, proc.stderr
     rep = json.loads(proc.stdout)
     assert rep["account"]["account_no_masked"] == "***8901"
+    assert rep["version"] == 2  # the CLI renders the mirror report; v1 helpers stay as its valuation layer
     assert (out / "pivox_report_2026-03-30.md").exists()
     assert (out / "pivox_report_2026-03-30.json").exists()
 

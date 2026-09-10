@@ -169,7 +169,9 @@ Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대�
   `KIS_READ_ONLY` 가드 3곳). Alpaca 는 데이터 fallback stub 만
   `ALPACA_ENABLED` 게이트(기본 OFF)로 잔존.
   **토스증권 Open API 는 운영자 본인 계좌 read-only 전용** (2026-09-10,
-  `services/toss/` + `scripts/pivox_report.py`, GET allowlist 8개 · 주문 경로 0개).
+  `services/toss/` + `scripts/pivox_report.py`, GET allowlist 9개 · 주문 경로 0개).
+  리포트는 `services/behavior/*_mirror` **함수를 그대로** 실계좌 이력에 댄다 —
+  거울 로직을 두 벌 만들지 마라 (함정 §10 과 같은 이유).
   유저용 브로커 연동은 여전히 `BROKER_LINKING_AVAILABLE=false` — 토스 약관 §5②
   때문이고, 토스 토큰엔 scope 가 없어 조회 토큰으로 주문이 된다. 런북:
   `docs/ops/toss-personal-report.md`

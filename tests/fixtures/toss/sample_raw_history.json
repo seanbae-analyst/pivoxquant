@@ -1,0 +1,374 @@
+{
+  "fetched_at": "2026-09-10T18:00:00+09:00",
+  "window_days": 90,
+  "history_since": "2025-09-10",
+  "account": {
+    "accountNo": "12345678901",
+    "accountSeq": 1,
+    "accountType": "BROKERAGE"
+  },
+  "accounts_count": 1,
+  "holdings": {
+    "totalPurchaseAmount": {
+      "krw": "966000",
+      "usd": "1553"
+    },
+    "marketValue": {
+      "amount": {
+        "krw": "1080000",
+        "usd": "1785"
+      },
+      "amountAfterCost": {
+        "krw": "1075000",
+        "usd": "1780"
+      }
+    },
+    "profitLoss": {
+      "amount": {
+        "krw": "114000",
+        "usd": "232"
+      },
+      "amountAfterCost": {
+        "krw": "109000",
+        "usd": "227"
+      },
+      "rate": "0.1210",
+      "rateAfterCost": "0.1150"
+    },
+    "dailyProfitLoss": {
+      "amount": {
+        "krw": "15000",
+        "usd": "25"
+      },
+      "rate": "0.0130"
+    },
+    "items": [
+      {
+        "symbol": "005930",
+        "name": "삼성전자",
+        "marketCountry": "KR",
+        "currency": "KRW",
+        "quantity": "15",
+        "lastPrice": "72000",
+        "averagePurchasePrice": "64400",
+        "marketValue": {
+          "purchaseAmount": "966000",
+          "amount": "1080000",
+          "amountAfterCost": "1075000"
+        },
+        "profitLoss": {
+          "amount": "114000",
+          "amountAfterCost": "109000",
+          "rate": "0.1180",
+          "rateAfterCost": "0.1128"
+        },
+        "dailyProfitLoss": {
+          "amount": "15000",
+          "rate": "0.0141"
+        },
+        "cost": {
+          "commission": "2160",
+          "tax": "1620"
+        }
+      },
+      {
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "marketCountry": "US",
+        "currency": "USD",
+        "quantity": "10",
+        "lastPrice": "178.5",
+        "averagePurchasePrice": "155.3",
+        "marketValue": {
+          "purchaseAmount": "1553",
+          "amount": "1785",
+          "amountAfterCost": "1780"
+        },
+        "profitLoss": {
+          "amount": "232",
+          "amountAfterCost": "227",
+          "rate": "0.1494",
+          "rateAfterCost": "0.1462"
+        },
+        "dailyProfitLoss": {
+          "amount": "25",
+          "rate": "0.0142"
+        },
+        "cost": {
+          "commission": "3.57",
+          "tax": null
+        }
+      }
+    ]
+  },
+  "closed_orders": [
+    {
+      "orderId": "o11",
+      "symbol": "005930",
+      "side": "BUY",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "CANCELED",
+      "price": "60000",
+      "quantity": "1",
+      "orderAmount": null,
+      "currency": "KRW",
+      "orderedAt": "2026-09-01T09:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "0",
+        "averageFilledPrice": null,
+        "filledAmount": null,
+        "commission": null,
+        "tax": null,
+        "filledAt": null,
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o10",
+      "symbol": "TSLA",
+      "side": "BUY",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "REJECTED",
+      "price": "250",
+      "quantity": "1",
+      "orderAmount": null,
+      "currency": "USD",
+      "orderedAt": "2026-08-20T23:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "0",
+        "averageFilledPrice": null,
+        "filledAmount": null,
+        "commission": null,
+        "tax": null,
+        "filledAt": null,
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o9",
+      "symbol": "005930",
+      "side": "BUY",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "62000",
+      "quantity": "3",
+      "orderAmount": null,
+      "currency": "KRW",
+      "orderedAt": "2026-08-06T09:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "3",
+        "averageFilledPrice": "62000",
+        "filledAmount": "186000",
+        "commission": "279",
+        "tax": "0",
+        "filledAt": "2026-08-06T09:30:00+09:00",
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o8",
+      "symbol": "035420",
+      "side": "SELL",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "220000",
+      "quantity": "2",
+      "orderAmount": null,
+      "currency": "KRW",
+      "orderedAt": "2026-07-01T09:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "2",
+        "averageFilledPrice": "220000",
+        "filledAmount": "440000",
+        "commission": "660",
+        "tax": "880",
+        "filledAt": "2026-07-01T09:30:00+09:00",
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o7",
+      "symbol": "035420",
+      "side": "BUY",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "200000",
+      "quantity": "2",
+      "orderAmount": null,
+      "currency": "KRW",
+      "orderedAt": "2026-06-01T09:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "2",
+        "averageFilledPrice": "200000",
+        "filledAmount": "400000",
+        "commission": "600",
+        "tax": "0",
+        "filledAt": "2026-06-01T09:30:00+09:00",
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o6",
+      "symbol": "005930",
+      "side": "SELL",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "72000",
+      "quantity": "8",
+      "orderAmount": null,
+      "currency": "KRW",
+      "orderedAt": "2026-03-05T10:00:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "8",
+        "averageFilledPrice": "72000",
+        "filledAmount": "576000",
+        "commission": "864",
+        "tax": "1152",
+        "filledAt": "2026-03-05T10:00:00+09:00",
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o5",
+      "symbol": "005930",
+      "side": "BUY",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "70000",
+      "quantity": "10",
+      "orderAmount": null,
+      "currency": "KRW",
+      "orderedAt": "2026-02-10T10:00:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "10",
+        "averageFilledPrice": "70000",
+        "filledAmount": "700000",
+        "commission": "1050",
+        "tax": "0",
+        "filledAt": "2026-02-10T10:00:00+09:00",
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o4",
+      "symbol": "AAPL",
+      "side": "BUY",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "155.3",
+      "quantity": "10",
+      "orderAmount": null,
+      "currency": "USD",
+      "orderedAt": "2026-01-15T23:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "10",
+        "averageFilledPrice": "155.3",
+        "filledAmount": "1553.0",
+        "commission": "1.55",
+        "tax": "0",
+        "filledAt": "2026-01-15T23:30:00+09:00",
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o3",
+      "symbol": "NVDA",
+      "side": "SELL",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "100",
+      "quantity": "5",
+      "orderAmount": null,
+      "currency": "USD",
+      "orderedAt": "2026-01-20T23:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "5",
+        "averageFilledPrice": "100",
+        "filledAmount": "500",
+        "commission": "0.5",
+        "tax": "0",
+        "filledAt": "2026-01-20T23:30:00+09:00",
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o2",
+      "symbol": "NVDA",
+      "side": "BUY",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "120",
+      "quantity": "5",
+      "orderAmount": null,
+      "currency": "USD",
+      "orderedAt": "2025-11-01T23:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "5",
+        "averageFilledPrice": "120",
+        "filledAmount": "600",
+        "commission": "0.6",
+        "tax": "0",
+        "filledAt": "2025-11-01T23:30:00+09:00",
+        "settlementDate": null
+      }
+    },
+    {
+      "orderId": "o1",
+      "symbol": "005930",
+      "side": "BUY",
+      "orderType": "LIMIT",
+      "timeInForce": "DAY",
+      "status": "FILLED",
+      "price": "60000",
+      "quantity": "10",
+      "orderAmount": null,
+      "currency": "KRW",
+      "orderedAt": "2025-10-01T09:30:00+09:00",
+      "canceledAt": null,
+      "execution": {
+        "filledQuantity": "10",
+        "averageFilledPrice": "60000",
+        "filledAmount": "600000",
+        "commission": "900",
+        "tax": "0",
+        "filledAt": "2025-10-01T09:30:00+09:00",
+        "settlementDate": null
+      }
+    }
+  ],
+  "open_orders": [],
+  "fx": {
+    "baseCurrency": "USD",
+    "quoteCurrency": "KRW",
+    "rate": "1380.5",
+    "midRate": "1375",
+    "basisPoint": "40",
+    "rateChangeType": "UP",
+    "validFrom": "2026-09-10T17:59:00+09:00",
+    "validUntil": "2026-09-10T18:00:00+09:00"
+  },
+  "names": {
+    "NVDA": "엔비디아",
+    "035420": "NAVER"
+  }
+}

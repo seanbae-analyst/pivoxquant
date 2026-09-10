@@ -14,7 +14,8 @@
 사용법
 ------
     export TOSS_CLIENT_ID=... TOSS_CLIENT_SECRET=...      # 또는 .env
-    ./venv/bin/python scripts/pivox_report.py                # 최근 90일
+    ./venv/bin/python scripts/pivox_report.py                # 이력 730일 + 최근 90일 거울
+    ./venv/bin/python scripts/pivox_report.py --since 1500   # 계좌가 더 오래됐으면 넓혀서 — 리포트 첫 줄이 "일치"가 될 때까지
     ./venv/bin/python scripts/pivox_report.py --days 30 --json
     ./venv/bin/python scripts/pivox_report.py --dump-raw raw.json   # 응답 원본 저장
     ./venv/bin/python scripts/pivox_report.py --from-raw raw.json   # 네트워크 없이 재렌더
@@ -40,7 +41,8 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.toss.client import TossApiError, TossReadOnlyClient  # noqa: E402
-from services.toss.report import KST, build_report, render_markdown  # noqa: E402
+from services.toss.mirror_report import build_mirror_report, render_mirror_markdown  # noqa: E402
+from services.toss.report import KST  # noqa: E402
 
 DEFAULT_OUT = os.path.join("reports", "personal")
 
@@ -54,7 +56,7 @@ def _load_dotenv_if_present() -> None:
     load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"), override=True)
 
 
-def fetch_raw(client: TossReadOnlyClient, *, days: int, account_seq: int | None, as_of: datetime) -> dict:
+def fetch_raw(client: TossReadOnlyClient, *, days: int, since_days: int, account_seq: int | None, as_of: datetime) -> dict:
     accounts = client.accounts()
     if not accounts:
         raise SystemExit("토스 계좌 목록이 비어 있다 (종합매매 계좌만 노출됨).")
@@ -67,22 +69,35 @@ def fetch_raw(client: TossReadOnlyClient, *, days: int, account_seq: int | None,
         account = match[0]
     seq = int(account["accountSeq"])
     date_to = as_of.date().isoformat()
-    date_from = (as_of.date() - timedelta(days=days)).isoformat()
+    date_from = (as_of.date() - timedelta(days=since_days)).isoformat()
+    holdings = client.holdings(seq)
+    closed = list(client.iter_closed_orders(seq, date_from=date_from, date_to=date_to, max_pages=200))
+    held = {it.get("symbol") for it in holdings.get("items") or []}
+    departed = sorted({o.get("symbol") for o in closed if o.get("symbol")} - held)
+    names: dict[str, str] = {}
+    if departed:
+        try:  # reference data only; a failure here costs names, not numbers
+            names = {s["symbol"]: s.get("name") or "" for s in client.stocks(departed)}
+        except TossApiError as e:  # pragma: no cover - network path
+            print(f"종목명 조회 실패 (무시): {e}", file=sys.stderr)
     return {
         "fetched_at": as_of.isoformat(timespec="seconds"),
         "window_days": days,
+        "history_since": date_from,
         "account": account,
         "accounts_count": len(accounts),
-        "holdings": client.holdings(seq),
-        "closed_orders": list(client.iter_closed_orders(seq, date_from=date_from, date_to=date_to)),
+        "holdings": holdings,
+        "closed_orders": closed,
         "open_orders": client.open_orders(seq),
         "fx": client.exchange_rate("USD", "KRW"),
+        "names": names,
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--days", type=int, default=90, help="활동 집계 창 (기본 90일)")
+    ap.add_argument("--days", type=int, default=90, help="'최근' 거울의 창 (기본 90일)")
+    ap.add_argument("--since", type=int, default=730, help="주문 이력을 며칠 전부터 받을지 (기본 730일). 계좌 개설 이전까지 덮어야 이력이 완전하다")
     ap.add_argument("--account-seq", type=int, default=None, help="계좌가 여럿일 때 accountSeq 지정")
     ap.add_argument("--out", default=DEFAULT_OUT, help=f"출력 디렉터리 (기본 {DEFAULT_OUT})")
     ap.add_argument("--json", action="store_true", help="markdown 대신 JSON 을 stdout 에 출력")
@@ -104,7 +119,7 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         as_of = datetime.now(KST)
         try:
-            raw = fetch_raw(client, days=args.days, account_seq=args.account_seq, as_of=as_of)
+            raw = fetch_raw(client, days=args.days, since_days=args.since, account_seq=args.account_seq, as_of=as_of)
         except TossApiError as e:
             print(f"토스 API 실패: {e}", file=sys.stderr)
             if e.code == "edge-blocked" or e.status == 403:
@@ -114,16 +129,18 @@ def main(argv: list[str] | None = None) -> int:
             with open(args.dump_raw, "w", encoding="utf-8") as fh:
                 json.dump(raw, fh, ensure_ascii=False, indent=2)
 
-    report = build_report(
+    report = build_mirror_report(
         account=raw["account"],
         holdings=raw["holdings"],
         closed_orders=raw["closed_orders"],
         open_orders=raw.get("open_orders"),
         fx=raw["fx"],
+        history_since=raw.get("history_since"),
         window_days=int(raw.get("window_days") or args.days),
+        names=raw.get("names"),
         as_of=as_of,
     )
-    md = render_markdown(report)
+    md = render_mirror_markdown(report)
 
     if not args.no_write:
         os.makedirs(args.out, exist_ok=True)

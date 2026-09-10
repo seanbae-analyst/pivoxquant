@@ -44,6 +44,7 @@ READ_ONLY_PATHS: frozenset[str] = frozenset({
     "/api/v1/orders/{orderId}",    # GET only — one past order
     "/api/v1/exchange-rate",
     "/api/v1/prices",
+    "/api/v1/stocks",              # GET only — names for symbols no longer held
     "/api/v1/market-calendar/KR",
     "/api/v1/market-calendar/US",
 })
@@ -265,6 +266,12 @@ class TossReadOnlyClient:
     def exchange_rate(self, base: str = "USD", quote: str = "KRW") -> dict:
         """Display rate, refreshed every minute. Not the execution rate."""
         return self._get("/api/v1/exchange-rate", params={"baseCurrency": base, "quoteCurrency": quote})
+
+    def stocks(self, symbols: list[str]) -> list[dict]:
+        """``GET /api/v1/stocks`` — reference data (Korean name, market). Token only."""
+        if not symbols:
+            return []
+        return self._get("/api/v1/stocks", params={"symbols": ",".join(symbols[:200])})
 
     def prices(self, symbols: list[str]) -> list[dict]:
         if not symbols:

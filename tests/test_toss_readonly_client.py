@@ -68,6 +68,7 @@ def test_allowlist_contains_no_order_capable_path():
     "/api/v1/sellable-quantity",
     "/api/v1/commissions",
     "/api/v1/stocks/all",
+    "/api/v1/stocks/005930/warnings",
 ])
 def test_get_outside_allowlist_raises_before_any_request(path):
     c, sess = _client({})
