@@ -1170,47 +1170,6 @@ def _init_scheduler(app):
                 logger.error(f"Scheduler refresh failed: {e}")
                 _alert_sched("sched_refresh", e)
 
-    def _scheduled_indices_cache_warm():
-        """Keep the headline-index cache warm for the public landing ticker.
-
-        The unauthenticated ``GET /api/public/market-snapshot`` endpoint is
-        strictly cache-only — it reads ``routes.market._indices_cache`` and
-        never fetches upstream itself. That cache used to be filled ONLY
-        when an authenticated user opened the ``/market`` tab, so a
-        deployment with zero authenticated traffic left the landing ticker
-        cold (is_stale / null rows).
-
-        This job closes that gap: a controlled background refresh (NOT a
-        per-request fetch) of both regions via the shared
-        ``warm_indices_cache`` path. It is TTL-gated inside that helper, so
-        with the market-aware ``indices_ttl`` an upstream fetch only
-        actually fires roughly every 15s during market hours and every
-        ~5min off-hours — the fixed 60s tick below is just the upper bound.
-
-        No new infra / cost: reuses the existing KIS + Alpaca licenses and
-        the existing APScheduler. A failure here (KIS down, etc.) is logged
-        and swallowed so it never takes down the scheduler or the app.
-
-        2026-09-10: KR only. The US leg fetched five ETF proxies through FMP
-        every tick (15s TTL intraday) for a landing ticker that was unmounted
-        from hero.tsx on 2026-09-02 (R8, FMP §2.2.2). It drained the free-tier
-        quota to 429 within an hour of the open, for a value no screen shows,
-        and left nothing for /portfolio valuation. The public snapshot still
-        emits the US rows as value=null (unchanged shape — it already did).
-        /api/market/indices?region=us still fetches on demand; no frontend
-        symbol calls it. Re-add the US leg only together with a consumer and
-        an FMP Data Display Agreement.
-        """
-        with app.app_context():
-            try:
-                from services.data.indices import warm_indices_cache
-                kr_n = warm_indices_cache("kr")
-                logger.info("Indices cache-warm done — kr=%s rows", kr_n)
-                _record_sched_success("sched_indices_cache_warm")
-            except Exception as e:
-                logger.error(f"Indices cache-warm scheduler failed: {e}")
-                _alert_sched("sched_indices_cache_warm", e)
-
     def _scheduled_self_audit():
         """DEPRECATED (2026-04-19) — absorbed into Quarterly Self Report.
 
@@ -1368,23 +1327,13 @@ def _init_scheduler(app):
         max_instances=1,
         coalesce=True,
     )
-    # Headline-index cache warm — keeps routes.market._indices_cache fresh
-    # for the public (no-auth) /api/public/market-snapshot landing ticker,
-    # independent of authenticated /market traffic. Mirrors the FX job
-    # above: short fixed interval, TTL-gated inside warm_indices_cache so
-    # it only hits KIS/Alpaca often during market hours. `next_run_time`
-    # fires the first warm ~immediately after scheduler start (boot-time
-    # warm), minimising the post-deploy cold window.
-    from datetime import datetime as _dt_now, timezone as _tz
-    sched.add_job(
-        _scheduled_indices_cache_warm,
-        trigger="interval",
-        minutes=1,
-        id="indices_cache_warm",
-        next_run_time=_dt_now.now(_tz.utc),
-        max_instances=1,
-        coalesce=True,
-    )
+    # indices_cache_warm was removed 2026-09-10. It refreshed the headline
+    # index cache every minute for /api/public/market-snapshot and
+    # /api/market/indices, and neither has a frontend consumer: the landing
+    # ticker was unmounted on 2026-09-02 (R8) and endpoints.ts dropped
+    # API.market.indices on 2026-09-01. The US leg drained the FMP quota and
+    # the KR leg called KIS every minute during market hours, for nobody.
+    # warm_indices_cache() stays; /api/market/indices still fetches on demand.
     # behavioral_score_weekly 잡은 2026-05-30 "AI 점수화 폐기" 결정
     # (DECISIONS.md)에 따라 제거했다. 점수는 더 이상 계산되지 않으며
     # BehavioralScore 모델/스코어러는 dormant 보존한다.
@@ -1461,7 +1410,7 @@ def _init_scheduler(app):
     # ── CONN-001 (2026-05-20): deploy-overlap single-scheduler guard ─────────
     # During a Railway deploy the OLD and NEW containers run simultaneously
     # for a few minutes. Both have RUN_SCHEDULER=1, so BOTH spin up this
-    # scheduler → every per-minute job (indices_cache_warm, fx_rate_refresh)
+    # scheduler → every per-minute job (fx_rate_refresh; indices_cache_warm until 2026-09-10)
     # fires twice, and the symptom in the logs was the same job appearing
     # ~30x within a single minute during a rolling restart. coalesce /
     # max_instances cannot help here — they are per-process. A PG session
