@@ -78,7 +78,7 @@ def _row(label: str, figure: str, note: str, color: str, *, sub=False, rule=Fals
     """
     top = f"border-top:1.5px solid {PAPER_RULE};" if rule else ""
     pad = "padding:8px 0 8px 15px" if sub else "padding:8px 0"
-    lab = f"{_KEEP}font-size:12px;color:{_DIM}" if sub else f"{_KEEP}font-size:13px;color:{_SOFT}"
+    lab = f"font-size:12px;color:{_DIM}" if sub else f"font-size:13px;color:{_SOFT}"
     fig = (f"font-family:{_SERIF};font-size:19px" if big
            else f"font-family:{_MONO};font-size:{'12' if sub else '13'}px")
     return (
