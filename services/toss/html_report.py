@@ -18,6 +18,7 @@ from __future__ import annotations
 import html
 import re
 from datetime import date
+from typing import NamedTuple
 
 # ── v3 tokens (frontend/src/app/globals.css) ─────────────────────────────────
 INK = "#050505"
@@ -33,10 +34,75 @@ BRONZE_LIGHT = "#A3845C"
 UP = "#D18888"     # KR carmine — rise
 DOWN = "#7AA0C8"   # KR indigo — fall
 
-_CSS = f"""
-:root {{ --ink:{INK}; --onyx:{ONYX}; --ivory:{IVORY}; --ivory-soft:rgba(245,240,232,.78); --ivory-dim:rgba(245,240,232,.55);
-  --ivory-faint:rgba(245,240,232,.45); --line:rgba(245,240,232,.08); --line-soft:rgba(245,240,232,.05); --veil:rgba(245,240,232,.04);
-  --bronze:{BRONZE}; --bronze-light:{BRONZE_LIGHT}; --up:{UP}; --down:{DOWN};
+# The report surface tokens, also from globals.css (--report-paper / --report-ink
+# / --report-rule / --report-tldr-bg). The product already decided that anything
+# printable or exportable stays ivory paper no matter what the app's theme is —
+# "we do NOT invert: printed reports don't invert". A PDF of a Vantablack page is
+# unreadable on paper, and a dark-ground email is what Gmail's dark-mode transform
+# turns into ivory-on-ivory. So the same report renders on two grounds.
+PAPER = "#FAF8F3"
+PAPER_INK = "#1A1A1A"
+PAPER_RULE = "#D9D4C7"
+PAPER_TLDR = "#F1EEE5"
+# The three accents restepped for the light ground. The screen values are ~2.6:1
+# on paper — invisible. These sit at 4.7-5.4:1 while keeping the same three hues,
+# so the chart still reads as bronze / carmine / indigo.
+PAPER_BRONZE = "#8A6A3E"
+PAPER_BRONZE_LIGHT = "#A3845C"
+PAPER_UP = "#A34A4A"
+PAPER_DOWN = "#3F6A94"
+
+
+class Palette(NamedTuple):
+    """Every colour the page draws with, so the ground is a parameter.
+
+    The SVG charts write their fills as literal hex — a CSS custom property in
+    a presentation attribute is not something every renderer resolves, and the
+    PDF path is exactly the renderer that would silently drop it. Threading the
+    palette instead means the charts and the stylesheet can never disagree
+    about which ground they are on.
+    """
+
+    ground: str        # page background
+    raised: str        # tile / panel background
+    text: str
+    soft: str
+    dim: str
+    faint: str
+    line: str
+    line_soft: str
+    veil: str
+    bronze: str
+    bronze_light: str
+    up: str
+    down: str
+    ghost: str         # a departed symbol's track and label
+    sale: str          # the sale tick, which must read against the ground
+    scheme: str
+
+
+SCREEN = Palette(
+    ground=INK, raised=INK, text=IVORY,
+    soft="rgba(245,240,232,.78)", dim="rgba(245,240,232,.55)", faint="rgba(245,240,232,.45)",
+    line="rgba(245,240,232,.08)", line_soft="rgba(245,240,232,.05)", veil="rgba(245,240,232,.04)",
+    bronze=BRONZE, bronze_light=BRONZE_LIGHT, up=UP, down=DOWN,
+    ghost="rgba(245,240,232,.25)", sale=IVORY, scheme="dark",
+)
+
+PAPER_PALETTE = Palette(
+    ground=PAPER, raised=PAPER_TLDR, text=PAPER_INK,
+    soft="rgba(26,26,26,.80)", dim="#5A5A5A", faint="#6E6E6E",
+    line=PAPER_RULE, line_soft="rgba(217,212,199,.55)", veil=PAPER_TLDR,
+    bronze=PAPER_BRONZE, bronze_light=PAPER_BRONZE_LIGHT, up=PAPER_UP, down=PAPER_DOWN,
+    ghost="#9A9488", sale=PAPER_INK, scheme="light",
+)
+
+
+def _css(p: Palette) -> str:
+    return f"""
+:root {{ --ink:{p.ground}; --onyx:{p.raised}; --ivory:{p.text}; --ivory-soft:{p.soft}; --ivory-dim:{p.dim};
+  --ivory-faint:{p.faint}; --line:{p.line}; --line-soft:{p.line_soft}; --veil:{p.veil};
+  --bronze:{p.bronze}; --bronze-light:{p.bronze_light}; --up:{p.up}; --down:{p.down};
   /* The app's four roles, in its order. Geist carries latin and has no hangul,
      so Korean falls to Pretendard exactly as it does in the product. Pretendard
      is served from jsdelivr, which a published artifact's CSP does not admit for
@@ -46,7 +112,7 @@ _CSS = f"""
   --serif:"Source Serif 4", Georgia, "Times New Roman", serif;
   --sans:Geist, "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, system-ui, sans-serif;
   --mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }}
-html {{ color-scheme: dark; }}
+html {{ color-scheme: {p.scheme}; }}
 body {{ margin:0; background:var(--ink); color:var(--ivory); font-family:var(--sans); font-size:14px; line-height:1.6; padding-block:40px 64px; padding-inline:20px; -webkit-font-smoothing:antialiased; }}
 .wrap {{ max-width:720px; margin:0 auto; }}
 .eyebrow {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--bronze); }}
@@ -91,7 +157,41 @@ h3 {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-tran
 .head {{ margin:0; padding:10px 14px; border-left:2px solid var(--bronze); background:var(--veil); font-family:var(--display); font-size:16px; line-height:1.5; text-wrap:balance; }}
 ul.limits {{ margin:0; padding-left:18px; color:var(--ivory-soft); font-size:13px; }}
 .sig {{ margin-top:40px; font-family:var(--serif); font-style:italic; color:var(--ivory-dim); text-align:center; }}
+""" + (_PRINT_CSS if p.scheme == "light" else "")
+
+
+# Paper is a fixed width, so the horizontal-scroll escape hatch the screen page
+# uses for its 640px-wide charts has nowhere to scroll to. On paper the charts
+# shrink to the text column instead, and a section is asked not to straddle a
+# page break.
+_PRINT_CSS = """
+@page { size: A4; margin: 16mm 14mm 18mm; }
+body { padding-block: 0; padding-inline: 0; font-size: 12.5px; }
+.wrap { max-width: none; }
+svg { min-width: 0; }
+.tbl { overflow-x: visible; }
+h1 { font-size: 32px; }
+/* Keep a section's heading with the first of its content and never orphan a
+   chart or a tile row across the fold — but do NOT ask a whole section to stay
+   whole: the long ones are taller than a page, so the request is unsatisfiable
+   and each becomes its own page with a hand's width of white above it. */
+section { padding-block: 20px; }
+h2, h3 { break-after: avoid; }
+.tiles, .status, .head, svg, tr { break-inside: avoid; }
+.sig { margin-top: 28px; }
 """
+
+
+# Pretendard ships as a dynamic subset: ~250 ``@font-face`` rules that each
+# carry a slice of hangul behind a ``unicode-range``. A browser honours the
+# ranges; a PDF renderer that does not honour them reaches into whichever slice
+# it loaded first and paints the glyph sitting at that index — the text comes
+# out as other hangul and latin, which is worse than a fallback because it still
+# looks like writing. Screen only, therefore, and paper takes Noto Sans KR from
+# the same Google stylesheet the other three roles already come from.
+_PRETENDARD = ('<link rel="preconnect" href="https://cdn.jsdelivr.net">\n'
+               '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/'
+               'pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">')
 
 
 def _e(s) -> str:
@@ -130,7 +230,7 @@ def _d(s: str | None) -> date | None:
 
 
 # ── charts ───────────────────────────────────────────────────────────────────
-def _holdings_rows_svg(holdings: list[dict]) -> str:
+def _holdings_rows_svg(holdings: list[dict], p: Palette) -> str:
     """One row per holding: name · weight bar (bronze, magnitude) · return bar
     (diverging from a zero line, KR red/blue). Same order top to bottom so
     the two charts read as one table."""
@@ -155,11 +255,11 @@ def _holdings_rows_svg(holdings: list[dict]) -> str:
         label = _nm(h["symbol"], h["name"])
         out.append(f'<text x="0" y="{cy + 4}" class="lbl">{_e(label[:22])}</text>')
         w = (h["weight_pct"] or 0) / max_w * (wcol_w - 46)
-        out.append(f'<rect x="{wcol_x}" y="{y}" width="{w:.1f}" height="{bar_h}" fill="{BRONZE}" rx="0"><title>{_e(label)} · 비중 {_pct(h["weight_pct"], False)} · 평가액 {_won(h["market_value_krw"])}</title></rect>')
+        out.append(f'<rect x="{wcol_x}" y="{y}" width="{w:.1f}" height="{bar_h}" fill="{p.bronze}" rx="0"><title>{_e(label)} · 비중 {_pct(h["weight_pct"], False)} · 평가액 {_won(h["market_value_krw"])}</title></rect>')
         out.append(f'<text x="{wcol_x + w + 6:.1f}" y="{cy + 4}">{_pct(h["weight_pct"], False)}</text>')
         r = h["unrealised_rate_pct"] or 0
         rw = abs(r) / max_r * (rcol_w / 2 - 44)
-        color = UP if r > 0 else DOWN
+        color = p.up if r > 0 else p.down
         x = zero_x if r >= 0 else zero_x - rw
         out.append(f'<rect x="{x:.1f}" y="{y}" width="{max(rw, 1):.1f}" height="{bar_h}" fill="{color}"><title>{_e(label)} · 손익률 {_pct(r)} · 평단 {h["avg_purchase_price"]:,} → 현재가 기준</title></rect>')
         tx = zero_x + rw + 6 if r >= 0 else zero_x - rw - 6
@@ -169,7 +269,7 @@ def _holdings_rows_svg(holdings: list[dict]) -> str:
     return "".join(out)
 
 
-def _timeline_svg(rep: dict) -> str:
+def _timeline_svg(rep: dict, p: Palette) -> str:
     """The account's path: one track per symbol from its first fill to today
     (open) or its last fill (departed); each fill a tick — purchases in
     bronze above the track, sales in ivory below."""
@@ -200,38 +300,38 @@ def _timeline_svg(rep: dict) -> str:
             if m.month in (1, 4, 7, 10) or span < 200:
                 out.append(f'<text x="{x + 3:.1f}" y="{pad_top - 12}" class="muted">{m.strftime("%y.%m") if m.month != 1 else m.strftime("%Y")}</text>')
         m = date(m.year + (m.month // 12), m.month % 12 + 1, 1)
-    out.append(f'<line x1="{px(today):.1f}" y1="{pad_top - 8}" x2="{px(today):.1f}" y2="{H - 16}" stroke="{BRONZE}" stroke-width="1" stroke-dasharray="2 3"/>')
+    out.append(f'<line x1="{px(today):.1f}" y1="{pad_top - 8}" x2="{px(today):.1f}" y2="{H - 16}" stroke="{p.bronze}" stroke-width="1" stroke-dasharray="2 3"/>')
     out.append(f'<text x="{px(today) - 3:.1f}" y="{H - 4}" class="muted" text-anchor="end">오늘</text>')
     by_sym: dict[str, list[dict]] = {}
     for f in fills:
         by_sym.setdefault(f["symbol"], []).append(f)
     for i, (label, a, b, is_open, sym) in enumerate(tracks):
         y = pad_top + i * row_h + 10
-        out.append(f'<text x="0" y="{y + 4}" class="lbl" fill="{IVORY if is_open else "rgba(245,240,232,.55)"}">{_e(label[:22])}</text>')
+        out.append(f'<text x="0" y="{y + 4}" class="lbl" fill="{p.text if is_open else p.ghost}">{_e(label[:22])}</text>')
         xa, xb = px(a), px(b)
-        out.append(f'<line x1="{xa:.1f}" y1="{y}" x2="{max(xb, xa + 2):.1f}" y2="{y}" stroke="{BRONZE if is_open else "rgba(245,240,232,.25)"}" stroke-width="{3 if is_open else 2}"><title>{_e(label)} · {a} → {"오늘" if is_open else b} · {(b - a).days}일</title></line>')
+        out.append(f'<line x1="{xa:.1f}" y1="{y}" x2="{max(xb, xa + 2):.1f}" y2="{y}" stroke="{p.bronze if is_open else p.ghost}" stroke-width="{3 if is_open else 2}"><title>{_e(label)} · {a} → {"오늘" if is_open else b} · {(b - a).days}일</title></line>')
         for f in by_sym.get(sym, []):
             x = px(_d(f["date"]))
             if f["side"] == "in":
-                out.append(f'<path d="M{x:.1f},{y - 3} l-4,-7 h8 z" fill="{BRONZE}"><title>{f["date"]} 매수 {f["qty"]:g}주 @ {f["price"]:,}</title></path>')
+                out.append(f'<path d="M{x:.1f},{y - 3} l-4,-7 h8 z" fill="{p.bronze}"><title>{f["date"]} 매수 {f["qty"]:g}주 @ {f["price"]:,}</title></path>')
             else:
-                out.append(f'<path d="M{x:.1f},{y + 3} l-4,7 h8 z" fill="{IVORY}"><title>{f["date"]} 매도 {f["qty"]:g}주 @ {f["price"]:,} · {_pct(f.get("pnl_pct"))}</title></path>')
+                out.append(f'<path d="M{x:.1f},{y + 3} l-4,7 h8 z" fill="{p.sale}"><title>{f["date"]} 매도 {f["qty"]:g}주 @ {f["price"]:,} · {_pct(f.get("pnl_pct"))}</title></path>')
     out.append("</svg>")
     return "".join(out)
 
 
-def _split_bar_svg(kr: float | None, us: float | None) -> str:
+def _split_bar_svg(kr: float | None, us: float | None, p: Palette) -> str:
     if kr is None:
         return ""
     W, H = 720, 34
     kw = kr / 100 * W
     return (f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="국내 해외 비중">'
-            f'<rect x="0" y="6" width="{max(kw - 1, 0):.1f}" height="14" fill="{BRONZE}"><title>국내 {kr:.2f}%</title></rect>'
-            f'<rect x="{kw + 1:.1f}" y="6" width="{max(W - kw - 1, 0):.1f}" height="14" fill="{BRONZE_LIGHT}" opacity=".55"><title>해외 {us:.2f}%</title></rect>'
+            f'<rect x="0" y="6" width="{max(kw - 1, 0):.1f}" height="14" fill="{p.bronze}"><title>국내 {kr:.2f}%</title></rect>'
+            f'<rect x="{kw + 1:.1f}" y="6" width="{max(W - kw - 1, 0):.1f}" height="14" fill="{p.bronze_light}" opacity=".55"><title>해외 {us:.2f}%</title></rect>'
             f'<text x="0" y="32">국내 {kr:.2f}%</text><text x="{W}" y="32" text-anchor="end">해외 {us:.2f}%</text></svg>')
 
 
-def _attribution_svg(rows: list[dict]) -> str:
+def _attribution_svg(rows: list[dict], p: Palette) -> str:
     """One diverging bar per symbol: realised + unrealised, KRW. Largest
     contributors and detractors; the middle is folded when there are many."""
     if not rows:
@@ -251,9 +351,9 @@ def _attribution_svg(rows: list[dict]) -> str:
         v = r["total_krw"]
         w = abs(v) * scale
         x = zero if v >= 0 else zero - w
-        color = UP if v > 0 else DOWN
+        color = p.up if v > 0 else p.down
         label = _nm(r["symbol"], r["name"])
-        out.append(f'<text x="0" y="{y + bar_h / 2 + 4}" class="lbl" fill="{IVORY if r["held"] else "rgba(245,240,232,.55)"}">{_e(label[:22])}</text>')
+        out.append(f'<text x="0" y="{y + bar_h / 2 + 4}" class="lbl" fill="{p.text if r["held"] else p.ghost}">{_e(label[:22])}</text>')
         out.append(f'<rect x="{x:.1f}" y="{y}" width="{max(w, 1):.1f}" height="{bar_h}" fill="{color}"><title>{_e(label)} · 실현 {_won(r["realised_krw"])} · 미실현 {_won(r["unrealised_krw"])} · 합계 {_won(v)}</title></rect>')
         # Loss labels sit just right of the zero line, where no bar competes for
         # the space, so a long loss bar never runs its figure into the name column.
@@ -265,7 +365,7 @@ def _attribution_svg(rows: list[dict]) -> str:
     return "".join(out)
 
 
-def _timing_svg(tm: dict) -> str:
+def _timing_svg(tm: dict, p: Palette) -> str:
     if not tm.get("fills"):
         return ""
     W, H = 720, 92
@@ -277,20 +377,20 @@ def _timing_svg(tm: dict) -> str:
     bw = 200 / 7
     for i, x in enumerate(wd):
         h = x["fills"] / mw * 44
-        out.append(f'<rect x="{i * bw:.1f}" y="{62 - h:.1f}" width="{bw - 2:.1f}" height="{h:.1f}" fill="{BRONZE}"><title>{x["day"]} {x["fills"]}건</title></rect>')
+        out.append(f'<rect x="{i * bw:.1f}" y="{62 - h:.1f}" width="{bw - 2:.1f}" height="{h:.1f}" fill="{p.bronze}"><title>{x["day"]} {x["fills"]}건</title></rect>')
         out.append(f'<text x="{i * bw + bw / 2 - 1:.1f}" y="{H - 14}" text-anchor="middle">{x["day"]}</text>')
     out.append('<text x="240" y="12" class="muted">시간대 (KST)</text>')
     hw = (W - 240) / 24
     for i, x in enumerate(hr):
         h = x["fills"] / mh * 44
-        out.append(f'<rect x="{240 + i * hw:.1f}" y="{62 - h:.1f}" width="{hw - 1.5:.1f}" height="{h:.1f}" fill="{BRONZE}" opacity="{0.45 if 9 <= i < 16 else 1}"><title>{i:02d}시 {x["fills"]}건</title></rect>')
+        out.append(f'<rect x="{240 + i * hw:.1f}" y="{62 - h:.1f}" width="{hw - 1.5:.1f}" height="{h:.1f}" fill="{p.bronze}" opacity="{0.45 if 9 <= i < 16 else 1}"><title>{i:02d}시 {x["fills"]}건</title></rect>')
         if i % 3 == 0:
             out.append(f'<text x="{240 + i * hw:.1f}" y="{H - 14}">{i:02d}</text>')
     out.append("</svg>")
     return "".join(out)
 
 
-def _analysis_section(an: dict) -> str:
+def _analysis_section(an: dict, p: Palette) -> str:
     if not an:
         return ""
     a, t, af, tm, sz, bm = an["attribution"], an["trades"], an["after_selling"], an["timing"], an["sizing"], an["by_market"]
@@ -318,7 +418,7 @@ def _analysis_section(an: dict) -> str:
         after = '<p class="lede dim">현재가를 받지 못해 건너뜀.</p>'
     timing = ""
     if tm.get("fills"):
-        timing = (_timing_svg(tm) + f'<p class="lede" style="margin-top:8px">거래일 {tm["trade_days"]}일 · 하루 평균 {tm["fills_per_trade_day"]}건 · 3건 이상인 날 {tm["days_with_3plus"]}일 · 최다 {tm["busiest_day"]["date"]} {tm["busiest_day"]["fills"]}건'
+        timing = (_timing_svg(tm, p) + f'<p class="lede" style="margin-top:8px">거래일 {tm["trade_days"]}일 · 하루 평균 {tm["fills_per_trade_day"]}건 · 3건 이상인 날 {tm["days_with_3plus"]}일 · 최다 {tm["busiest_day"]["date"]} {tm["busiest_day"]["fills"]}건'
                   + (f' · 국내 체결 중 개장 첫 시간 {tm["kr_first_hour_pct"]}%' if tm.get("kr_first_hour_pct") is not None else "") + "</p>")
     size = (f'<p class="lede">매수 {sz["buys"]}건 · 중앙값 {_won(sz["median_buy_krw"])} · 평균 {_won(sz["mean_buy_krw"])} · 최대 {_won(sz["largest_buy_krw"])} (전체 매수액의 {sz["largest_share_pct"]}%) · 편차/평균 {sz["cv"]}</p>'
             if sz.get("buys") else "")
@@ -332,7 +432,7 @@ def _analysis_section(an: dict) -> str:
 
   <h3>손익 분해</h3>
   <p class="lede">실현 <span class="{_cls(a['realised_krw'])}">{_won(a['realised_krw'])}</span> + 미실현 <span class="{_cls(a['unrealised_krw'])}">{_won(a['unrealised_krw'])}</span> = <strong>{_won(a['total_krw'])}</strong> · 수수료·세금 {_won(a['fees_krw'])}. 밝은 이름은 보유 중, 흐린 이름은 정리한 종목.</p>
-  <div class="tbl">{_attribution_svg(a['rows'])}</div>
+  <div class="tbl">{_attribution_svg(a["rows"], p)}</div>
 
   <h3>닫힌 거래</h3>
   {tiles}
@@ -419,7 +519,15 @@ def _history_status(h: dict) -> str:
             f'조회 시작 {_e(h["since"] or "전체")} · 체결 {h["fills"]}건. {verdict}<ul>{items}</ul></div></div>')
 
 
-def render_mirror_html(rep: dict) -> str:
+def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
+    """The report as one self-contained page.
+
+    ``paper=True`` renders the same document on the product's report surface —
+    ivory ground, printed ink, accents restepped for it — which is what the PDF
+    and any print of this page want. The screen default stays Vantablack so the
+    page reads as the same product as ``/mirror``.
+    """
+    p = PAPER_PALETTE if paper else SCREEN
     v, c, h = rep["valuation"], rep["concentration"], rep["history"]
     acct = rep["account"]["account_no_masked"]
     gen = rep["generated_at"][:16].replace("T", " ")
@@ -451,9 +559,8 @@ def render_mirror_html(rep: dict) -> str:
     return f"""<title>PivoxReport {acct}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;1,8..60,400&family=Geist:wght@400;500&family=Noto+Sans+KR:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<style>{_CSS}</style>
+{_PRETENDARD if not paper else ""}
+<style>{_css(p)}</style>
 <div class="wrap">
 <header>
   <div class="eyebrow">PivoxReport · 토스증권 계좌 {_e(acct)}</div>
@@ -470,15 +577,15 @@ def render_mirror_html(rep: dict) -> str:
 <section>
   <h2>보유</h2>
   <p class="lede">왼쪽은 각 종목이 평가액에서 차지하는 몫, 오른쪽은 평단 대비 지금 위치. 같은 줄이 같은 종목이다.</p>
-  <div class="tbl">{_holdings_rows_svg(rep["holdings"])}</div>
-  <div class="legend"><span><i style="background:{BRONZE}"></i>비중</span><span><i style="background:{UP}"></i>평단 위</span><span><i style="background:{DOWN}"></i>평단 아래</span></div>
+  <div class="tbl">{_holdings_rows_svg(rep["holdings"], p)}</div>
+  <div class="legend"><span><i style="background:{p.bronze}"></i>비중</span><span><i style="background:{p.up}"></i>평단 위</span><span><i style="background:{p.down}"></i>평단 아래</span></div>
 </section>
 
 <section>
   <h2>경로</h2>
   <p class="lede">종목마다 처음 산 날부터 오늘까지의 선. 위쪽 삼각형이 매수, 아래쪽이 매도. 흐린 선은 이미 떠난 종목.</p>
-  <div class="tbl">{_timeline_svg(rep)}</div>
-  <div class="legend"><span><i style="background:{BRONZE}"></i>보유 중</span><span><i style="background:rgba(245,240,232,.25)"></i>정리함</span><span>▲ 매수 · ▼ 매도</span></div>
+  <div class="tbl">{_timeline_svg(rep, p)}</div>
+  <div class="legend"><span><i style="background:{p.bronze}"></i>보유 중</span><span><i style="background:{p.ghost}"></i>정리함</span><span>▲ 매수 · ▼ 매도</span></div>
 </section>
 
 <section>
@@ -490,7 +597,7 @@ def render_mirror_html(rep: dict) -> str:
 <section>
   <h2>집중</h2>
   {conc}
-  {_split_bar_svg(c["kr_pct"], c["us_pct"])}
+  {_split_bar_svg(c["kr_pct"], c["us_pct"], p)}
 </section>
 
 <section>
@@ -503,7 +610,7 @@ def render_mirror_html(rep: dict) -> str:
   <div class="tbl"><table class="plain"><thead><tr><th>종목</th><th>처음</th><th>마지막</th><th>매수/매도</th><th>실현손익</th><th>매도 수익률 중앙값</th></tr></thead><tbody>{dep_rows}</tbody></table></div>
 </section>
 
-{_analysis_section(rep.get("analysis") or {})}
+{_analysis_section(rep.get("analysis") or {}, p)}
 <section>
   <h2>이 숫자가 말하지 않는 것</h2>
   <ul class="limits">{limits}</ul>

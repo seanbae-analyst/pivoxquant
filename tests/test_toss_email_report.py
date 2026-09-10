@@ -14,6 +14,7 @@ from datetime import datetime
 import pytest
 
 from services.toss.email_report import render_email_html, render_email_text
+from services.toss.html_report import INK, IVORY, PAPER, PAPER_INK
 from services.toss.mirror_report import build_mirror_report
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures", "toss", "sample_raw_history.json")
@@ -43,7 +44,7 @@ def test_carries_nothing_an_inbox_strips_or_blocks(report):
 
 def test_every_element_that_paints_carries_its_own_style(report):
     """With no stylesheet surviving, a tag without an inline style renders
-    unstyled — so the ones that establish the dark ground must all have one."""
+    unstyled — so every one of them must carry its own."""
     page = render_email_html(report, url=URL)
     for tag in re.findall(r"<div(?![^>]*style=)[^>]*>", page):
         pytest.fail(f"div without inline style: {tag}")
@@ -52,7 +53,7 @@ def test_every_element_that_paints_carries_its_own_style(report):
 
 def test_bars_are_table_cells_with_a_width_not_a_drawing(report):
     page = render_email_html(report, url=URL)
-    bars = re.findall(r'<td width="([\d.]+)%" style="background:#B8956A', page)
+    bars = re.findall(r'<td width="([\d.]+)%" bgcolor="#8A6A3E"', page)
     assert len(bars) == len(report["holdings"])
     assert all(0 <= float(w) <= 100 for w in bars)
 
@@ -79,7 +80,31 @@ def test_the_account_number_is_masked_and_the_vocabulary_line_holds(report):
 
 def test_the_link_block_is_omitted_when_there_is_nowhere_to_link(report):
     page = render_email_html(report)
-    assert "전체 리포트 열기" not in page
+    assert "웹에서 열기" not in page
     assert "<a " not in page
     # the digest still stands on its own
     assert "기록이 되비추는 것" in page
+
+
+def test_the_ground_is_paper_and_the_text_is_ink(report):
+    """The bug this palette exists to fix: an ivory-on-Vantablack email meets
+    Gmail's dark-mode transform, which pushes the two toward each other until
+    the message is blank. Light ground, dark text is what survives it — and it
+    is what globals.css already decided every export surface should be."""
+    page = render_email_html(report, url=URL)
+    assert INK not in page and IVORY not in page          # no app-chrome ground
+    assert page.count(f'bgcolor="{PAPER}"') >= 2          # attribute, not only CSS
+    assert PAPER_INK in page
+    # every colour that carries text is opaque, so a client that repaints the
+    # ground cannot drag the text along with it
+    assert "rgba(" not in page
+
+
+def test_the_pdf_is_what_the_reader_is_pointed_at_not_the_link(report):
+    """A private page opened from an inbox has no session and renders as
+    nothing, so the attachment — not the link — is the way in."""
+    with_pdf = render_email_html(report, url=URL, attached=True)
+    assert "첨부한 PDF" in with_pdf
+    assert "로그인" in with_pdf                            # the link is labelled honestly
+    assert "첨부한 PDF" in render_email_text(report, attached=True)
+    assert "첨부한 PDF" not in render_email_html(report, url=URL)
