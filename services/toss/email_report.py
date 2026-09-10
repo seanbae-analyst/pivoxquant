@@ -107,6 +107,167 @@ def _bar(pct: float, color: str) -> str:
             f'style="height:9px;border-collapse:collapse"><tr style="height:9px">{cells}</tr></table>')
 
 
+def _spans(t: dict) -> str:
+    """The headline, drawn: how long each side was held, from a common origin.
+
+    An inbox blocks SVG, so the eight drawings on the page reach it as nothing
+    at all — and the phone is where this report is actually read. Everything
+    below is a chart built the only way an inbox will draw one: table cells
+    with a background colour and a width. A bar is a bar whether an SVG or a
+    <td> puts it on the screen.
+    """
+    w, l = t.get("win_hold_median_days"), t.get("loss_hold_median_days")
+    if not t.get("closed") or w is None or l is None:
+        return ""
+    mx = max(w, l, 1)
+    rows = ""
+    for label, days, pct, n, colour in (
+        ("이익을 실현할 때", w, t.get("median_win_pct"), t.get("wins"), PAPER_UP),
+        ("손실을 실현할 때", l, t.get("median_loss_pct"), t.get("losses"), PAPER_DOWN),
+    ):
+        rows += (
+            f'<tr><td style="padding:9px 0 3px;font-family:{_SANS};font-size:12.5px;{_KEEP}color:{PAPER_INK}">{_e(label)}</td>'
+            f'<td align="right" style="padding:9px 0 3px;font-family:{_MONO};font-size:11.5px;color:{_DIM};white-space:nowrap">{n or 0}건</td>'
+            f'<td align="right" width="118" style="padding:9px 0 3px;font-family:{_MONO};font-size:11.5px;'
+            f'color:{_hue(pct)};white-space:nowrap">{days:g}일 · {_pct(pct)}</td></tr>'
+            f'<tr><td colspan="3" style="padding:0 0 5px">{_bar(days / mx * 100, colour)}</td></tr>')
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+            f'style="border-collapse:collapse;margin-top:11px">{rows}</table>')
+
+
+def _columns(sales: list[dict]) -> str:
+    """Realised P&L accumulating, one column per month.
+
+    73 sales in 358px is four pixels a sale, so the columns are months — the
+    shape survives the binning and the individual sale was never legible at
+    that width anyway. Columns rather than a line because an inbox cannot draw
+    a line, and a column per month is honest about the resolution.
+    """
+    if len(sales) < 4:
+        return ""
+    months: dict[str, float] = {}
+    run = 0.0
+    for x in sales:
+        run += x["realised_krw"]
+        months[x["date"][:7]] = run
+    keys = sorted(months)
+    # carry the running total through months with no sale, or the chart would
+    # claim the total dropped to zero whenever nothing was sold
+    span, cur, series = [], 0.0, []
+    y, m = (int(v) for v in keys[0].split("-"))
+    ey, em = (int(v) for v in keys[-1].split("-"))
+    while (y, m) <= (ey, em):
+        k = f"{y:04d}-{m:02d}"
+        cur = months.get(k, cur)
+        span.append(k)
+        series.append(cur)
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    hi = max(max(series), 0) or 1
+    lo = min(min(series), 0)
+    rng = (hi - lo) or 1
+    H = 86
+    wid = 100 / len(series)
+    cells = ""
+    for k, v in zip(span, series):
+        h = max(round((v - lo) / rng * H), 1)
+        cells += (f'<td width="{wid:.2f}%" valign="bottom" style="padding:0 1px">'
+                  f'<div style="height:{h}px;background:{PAPER_MARK};font-size:0;line-height:0">&nbsp;</div></td>')
+    ticks = (f'<tr><td align="left" style="padding:5px 0 0;font-family:{_MONO};font-size:10px;color:{_DIM}">{_e(span[0])}</td>'
+             f'<td align="right" style="padding:5px 0 0;font-family:{_MONO};font-size:10px;color:{_DIM}">{_e(span[-1])}</td></tr>')
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+            f'style="border-collapse:collapse;margin-top:12px"><tr>{cells}</tr></table>'
+            f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+            f'style="border-collapse:collapse">{ticks}</table>')
+
+
+def _diverging(rows: list[dict], n: int = 4) -> str:
+    """Since-sale change for the biggest movers each way, around a zero line.
+
+    Two half-width columns that grow away from a shared centre: a bar to the
+    left is a price that fell after the sale, one to the right a price that
+    rose. The extremes are taken from *both* ends rather than by magnitude —
+    ranked by magnitude alone this account's top eight are all risers, and a
+    diverging chart with nothing on one side reads as a broken chart rather
+    than as a true fact about the data.
+    """
+    if len(rows) < 2:
+        return ""
+    ranked = sorted(rows, key=lambda r: r["since_sale_pct"])
+    top = {id(r): r for r in ranked[-n:] + ranked[:n]}.values()
+    mx = max(abs(r["since_sale_pct"]) for r in top) or 1
+    out = ""
+    for r in sorted(top, key=lambda r: -r["since_sale_pct"]):
+        v = r["since_sale_pct"]
+        p = min(abs(v) / mx * 100, 100)
+        inner = ('table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+                 'style="height:8px;border-collapse:collapse"')
+        gap = '<td style="height:8px;font-size:0;line-height:0">&nbsp;</td>'
+        mid = f"border-right:1px solid {PAPER_RULE};"
+        if v >= 0:
+            half = (f'<td width="50%" style="{mid}height:8px;font-size:0;line-height:0">&nbsp;</td>'
+                    f'<td width="50%" style="padding:0;height:8px"><{inner}><tr style="height:8px">'
+                    f'<td width="{p:.1f}%" bgcolor="{PAPER_UP}" style="height:8px;background:{PAPER_UP};font-size:0;line-height:0">&nbsp;</td>'
+                    f'{gap if p < 99.9 else ""}</tr></table></td>')
+        else:
+            half = (f'<td width="50%" style="{mid}padding:0;height:8px"><{inner}><tr style="height:8px">'
+                    f'{gap if p < 99.9 else ""}'
+                    f'<td width="{p:.1f}%" bgcolor="{PAPER_DOWN}" style="height:8px;background:{PAPER_DOWN};font-size:0;line-height:0">&nbsp;</td>'
+                    f'</tr></table></td><td width="50%" style="height:8px;font-size:0;line-height:0">&nbsp;</td>')
+        out += (f'<tr><td style="padding:8px 0 2px;font-family:{_SANS};font-size:12px;{_KEEP}color:{PAPER_INK}">'
+                f'{_e(_nm(r["symbol"], r.get("name")))}</td>'
+                f'<td align="right" style="padding:8px 0 2px;font-family:{_MONO};font-size:11.5px;'
+                f'color:{_hue(v)};white-space:nowrap">{v:+.0f}%</td></tr>'
+                f'<tr><td colspan="2" style="padding:0 0 4px"><table role="presentation" cellpadding="0" '
+                f'cellspacing="0" border="0" width="100%" style="height:8px;border-collapse:collapse">'
+                f'<tr style="height:8px">{half}</tr></table></td></tr>')
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+            f'style="border-collapse:collapse;margin-top:11px">{out}</table>')
+
+
+def _matrix(tm: dict) -> str:
+    """Fills by weekday and two-hour bin, as a table of tinted cells.
+
+    A heat matrix is the one chart an inbox draws natively — it is a table with
+    background colours and nothing else. Twelve bins rather than twenty-four
+    because 24 columns in 358px is fifteen pixels a column, and this only has
+    to show which half of the clock a weekday's trading sits in.
+    """
+    grid = tm.get("matrix")
+    if not grid:
+        return ""
+    binned = [[sum(r[h * 2:h * 2 + 2]) for h in range(12)] for r in grid]
+    mx = max(max(r) for r in binned) or 1
+    head = ('<tr><td width="26" style="font-size:0;line-height:0">&nbsp;</td>'
+            + "".join(f'<td align="center" style="padding:0 0 3px;font-family:{_MONO};font-size:9px;color:{_DIM}">'
+                      f'{h * 2:02d}</td>' if h % 2 == 0 else '<td style="font-size:0;line-height:0">&nbsp;</td>'
+                      for h in range(12)) + "</tr>")
+    body = ""
+    for d, name in enumerate(("월", "화", "수", "목", "금", "토", "일")):
+        cells = ""
+        for h in range(12):
+            n = binned[d][h]
+            # an inbox has no opacity on a background, so the tint is mixed
+            # against the ground here and shipped as a flat colour
+            bg = _tint(PAPER_MARK, n / mx) if n else PAPER_BAND
+            cells += (f'<td bgcolor="{bg}" align="center" style="background:{bg};border:1px solid {PAPER};'
+                      f'font-family:{_MONO};font-size:9px;line-height:15px;'
+                      f'color:{PAPER if n >= mx * 0.55 else _DIM}">{n or "&nbsp;"}</td>')
+        body += (f'<tr><td width="26" style="font-family:{_SANS};font-size:11px;color:{_SOFT};'
+                 f'padding-right:5px">{name}</td>{cells}</tr>')
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+            f'style="border-collapse:collapse;margin-top:12px">{head}{body}</table>')
+
+
+def _tint(hex_colour: str, t: float) -> str:
+    """Mix a colour toward the ground. Email has no rgba on a background, and a
+    PNG would be blocked until the reader asked for images — so the blend is
+    computed here and shipped as a flat hex."""
+    t = 0.18 + 0.82 * max(min(t, 1.0), 0.0)
+    fg = [int(hex_colour[i:i + 2], 16) for i in (1, 3, 5)]
+    bg = [int(PAPER[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(b + (f - b) * t):02X}" for f, b in zip(fg, bg))
+
+
 def _section(title: str, count: str = "") -> str:
     """A section head: a rule, the title, and the one figure that says how much
     follows. The count is information; an uppercase letterspaced label repeated
@@ -198,6 +359,11 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
 
     n_hold = f"{len(rep['holdings'])}종목"
     n_closed = f"닫힌 거래 {trades.get('closed') or 0}건"
+    sales = trades.get("sales") or []
+    spans, columns, diverging, matrix = _spans(trades), _columns(sales), "", _matrix(an.get("timing") or {})
+    if after.get("available") and after.get("rows"):
+        diverging = _diverging(after["rows"])
+    cap = (f'font-family:{_SANS};font-size:11px;line-height:1.6;{_KEEP}color:{_DIM};padding-top:8px')
 
     tail = ""
     if attached:
@@ -227,8 +393,20 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:26px">{stmt}</table>
 <div style="font-family:{_SANS};font-size:11.5px;line-height:1.7;{_KEEP}color:{_DIM};padding-top:10px">{_e(note)}</div>
 
+{_section("보유 기간", n_closed) if spans else ""}{spans}
+{f'<div style="{cap}">두 막대가 같은 자리에서 출발한다. 오른쪽 끝이 매도까지 걸린 날의 중앙값이다.</div>' if spans else ""}
+
 {_section("보유", n_hold)}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:13px">{holdings}</table>
+
+{_section("실현손익 누적", f"매도 {len(sales)}건") if columns else ""}{columns}
+{f'<div style="{cap}">한 칸이 한 달, 높이는 그때까지 쌓인 실현손익이다. 매도가 없던 달은 앞의 값을 그대로 잇는다.</div>' if columns else ""}
+
+{_section("팔고 난 뒤", f"{after.get('count') or 0}종목") if diverging else ""}{diverging}
+{f'<div style="{cap}">가운데가 판 가격이다. 오른쪽으로 뻗으면 판 뒤에 올랐고, 왼쪽이면 내렸다. 양쪽 끝에서 네 종목씩.</div>' if diverging else ""}
+
+{_section("체결의 리듬", f"체결 {(an.get('timing') or {}).get('fills') or 0}건") if matrix else ""}{matrix}
+{f'<div style="{cap}">가로가 두 시간 단위, 진할수록 그 칸의 체결이 많다. 국내 정규장은 09-15시, 미국은 22시 이후다.</div>' if matrix else ""}
 
 {_section("거래", n_closed) if fact_rows else ""}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:13px">{fact_rows}</table>

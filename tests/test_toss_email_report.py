@@ -137,3 +137,57 @@ def test_the_digest_fits_a_phone_with_no_stylesheet_to_help_it(report):
     assert 'width="100%" style="max-width:600px' in page
     # figures may never break; the notes beside them may
     assert page.count("white-space:nowrap") >= 8
+
+
+def test_the_inbox_gets_charts_too_built_the_only_way_it_draws_them(report):
+    """An inbox blocks SVG, so the eight drawings on the page reached the phone
+    as nothing at all — and the phone is where this report is read. Five forms
+    now, each built from table cells with a background colour and a width."""
+    import re
+
+    from services.toss.email_report import (
+        PAPER_MARK, _columns, _diverging, _matrix, _spans)
+    an = report["analysis"]
+    page = render_email_html(report, url=URL)
+    assert "<svg" not in page and "<img" not in page
+
+    spans = _spans(an["trades"])
+    assert "이익을 실현할 때" in spans and "손실을 실현할 때" in spans
+
+    # the fixture closes three trades, which is not a shape — the column chart
+    # declines to draw one, so it gets a series of its own here
+    series = [{"date": f"2026-{m:02d}-05", "realised_krw": v, "symbol": "X", "pnl_pct": 1.0}
+              for m, v in enumerate([120_000, -40_000, 300_000, 90_000, -10_000, 260_000], 1)]
+    cols = _columns(series)
+    assert cols.count('valign="bottom"') == 6          # one column per month
+    assert "2026-01" in cols and "2026-06" in cols     # the axis names both ends
+    assert _columns(series[:3]) == ""                  # too few to be a shape
+
+    div = _diverging(an["after_selling"]["rows"])
+    assert div.count("<tr>") >= 4
+
+    mx = _matrix(an["timing"])
+    assert mx.count("<tr>") == 8                        # a head row and seven days
+    # the busiest cell is the mark at full strength and quieter ones are mixed
+    # toward the paper, so a matrix that carries information carries more than
+    # one tint — one flat colour everywhere would mean the scale did nothing
+    tints = set(re.findall(r'bgcolor="(#[0-9A-Fa-f]{6})"', mx))
+    assert PAPER_MARK.upper() in {t.upper() for t in tints}
+    assert len(tints) >= 3
+
+    # and never a chart of nothing
+    assert _spans({"closed": 0}) == "" and _columns([]) == ""  # noqa: E501
+    assert _diverging([]) == "" and _matrix({"fills": 0}) == ""
+
+
+def test_a_tint_is_mixed_against_the_ground_not_faked_with_alpha(report):
+    """An inbox has no rgba on a background and would block a PNG until the
+    reader asked for images, so each heat cell ships as a flat hex."""
+    from services.toss.email_report import PAPER, PAPER_MARK, _tint
+    assert _tint(PAPER_MARK, 1.0).upper() == PAPER_MARK.upper()
+    faint, strong = _tint(PAPER_MARK, 0.0), _tint(PAPER_MARK, 0.8)
+    for c in (faint, strong):
+        assert len(c) == 7 and c.startswith("#")
+    # a fainter cell sits closer to the paper than a stronger one
+    lum = lambda h: sum(int(h[i:i + 2], 16) for i in (1, 3, 5))  # noqa: E731
+    assert lum(PAPER) > lum(faint) > lum(strong)
