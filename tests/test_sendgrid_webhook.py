@@ -512,3 +512,40 @@ def test_valid_signature_accepted(app, raw_client, monkeypatch, make_user):
     from models import Artifact
     with app.app_context():
         assert Artifact.query.get(art_id).opened_at is not None
+
+
+
+# ──────────────────────────────────────────────
+# 2026-09-10 — terminal events with no Artifact row fall back to the address
+# ──────────────────────────────────────────────
+
+@pytest.mark.parametrize("evt_type", ["bounce", "spamreport", "unsubscribe"])
+def test_terminal_event_without_artifact_opts_out_by_email(app, raw_client, make_user, evt_type):
+    """Nothing creates Artifact rows since the 08-31 prune, so onboarding /
+    retention mail has no sg_message_id match. Bounces and complaints must
+    still stop mail to that address."""
+    from extensions import db
+    from models import User
+
+    u = make_user(email=f"noart-{evt_type}@test.com")
+    resp = raw_client.post("/webhooks/sendgrid", json=[{
+        "sg_message_id": "no-such-artifact.filter0001",
+        "event": evt_type,
+        "email": f"NoArt-{evt_type}@Test.com",
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
+    }])
+    assert resp.status_code == 200
+    assert resp.get_json()["processed"] == 1
+    with app.app_context():
+        assert db.session.get(User, u["id"]).email_opt_out is True
+
+
+def test_terminal_event_without_artifact_unknown_email_is_noop(app, raw_client):
+    resp = raw_client.post("/webhooks/sendgrid", json=[{
+        "sg_message_id": "no-such-artifact.filter0001",
+        "event": "bounce",
+        "email": "nobody@nowhere.test",
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
+    }])
+    assert resp.status_code == 200
+    assert resp.get_json()["processed"] == 0
