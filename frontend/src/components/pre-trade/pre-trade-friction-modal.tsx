@@ -261,6 +261,7 @@ export function PreTradeFrictionModal({
 
         {cycle.phase === "terminal" && cycle.reflection && (
           <TerminalStep
+            commit={cycle.commit}
             bare
             reflection={cycle.reflection}
             onReset={onClose}

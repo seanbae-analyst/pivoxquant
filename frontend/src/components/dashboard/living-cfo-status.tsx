@@ -308,8 +308,8 @@ function StatusModal({
         </div>
 
         <p className="font-serif text-pq-body-sm text-[var(--pq-ivory-mid)] leading-relaxed">
-          Two years in, this dashboard knows your style better than you do.
-          It learns from every position you own and every pulse you submit.
+          It reads the positions you record and the pulses you submit, and
+          reflects them back — nothing more.
         </p>
 
         <ul className="mt-5 space-y-3">

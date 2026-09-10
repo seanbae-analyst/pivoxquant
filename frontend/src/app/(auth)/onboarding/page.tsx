@@ -878,6 +878,12 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      // Leave keys alone on interactive elements: Enter on a focused option or
+      // checkbox must activate it, not advance the wizard (2026-09-10).
+      const el = e.target as HTMLElement | null;
+      if (el && el.closest("button, a, input, textarea, select, [role='radio'], [role='checkbox'], [contenteditable='true']")) {
+        return;
+      }
       if (e.key === "Enter" && isStepValid && !isResultScreen) {
         e.preventDefault();
         goNext();

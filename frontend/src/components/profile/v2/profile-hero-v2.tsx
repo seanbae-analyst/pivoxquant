@@ -19,7 +19,6 @@
  */
 
 import * as React from "react";
-import Link from "next/link";
 
 interface ProfileHeroV2Props {
   /** Observed persona display name (e.g. "Defensive Allocator"). */
@@ -121,26 +120,6 @@ export function ProfileHeroV2({
           flexWrap: "wrap",
         }}
       >
-        <Link
-          href="/onboarding"
-          className="pq-cta-bronze font-mono"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 22px",
-            background: "var(--pq-bronze)",
-            color: "var(--pq-ink, #050505)",
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            borderRadius: 2,
-            textDecoration: "none",
-            transition: "background-color 200ms",
-          }}
-        >
-          Retake assessment →
-        </Link>
 
         {onExport ? (
           <button

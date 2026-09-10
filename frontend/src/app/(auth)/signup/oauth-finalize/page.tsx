@@ -25,6 +25,7 @@
  * as a continuation of the consent flow, not a stand-alone form.
  */
 
+import { safeNext } from "@/lib/safe-next";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -99,7 +100,7 @@ export default function OAuthFinalizePage() {
   useEffect(() => {
     if (loading || !user) return;
     if (user.birthdate_required === false) {
-      const next = searchParams.get("next") || "/mirror";
+      const next = safeNext(searchParams.get("next"));
       router.replace(next);
     }
   }, [loading, user, searchParams, router]);
@@ -134,7 +135,7 @@ export default function OAuthFinalizePage() {
       })
         .then(async () => {
           await refresh();
-          const next = searchParams.get("next") || "/mirror";
+          const next = safeNext(searchParams.get("next"));
           router.replace(next);
         })
         .catch((err) => {
@@ -166,7 +167,7 @@ export default function OAuthFinalizePage() {
       // Refresh the cached user so ``birthdate_required`` flips to false
       // before downstream pages mount.
       await refresh();
-      const next = searchParams.get("next") || "/mirror";
+      const next = safeNext(searchParams.get("next"));
       router.replace(next);
     } catch (err) {
       // ``apiFetch`` throws ``ApiError(status, body.error ?? statusText)``
