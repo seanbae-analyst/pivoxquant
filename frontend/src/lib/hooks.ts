@@ -693,7 +693,7 @@ export async function saveNotificationPreferences(
  * match the rest of the SPA (apiFetch throws `ApiError` with `.status`).
  *
  * Legal: this is a CUSTOMER-SUPPORT assistant (billing/account/usage) — not
- * an investment coach. No signal/advice vocabulary round-trips here.
+ * an investment-guidance surface. No signal vocabulary round-trips here.
  */
 
 import type {

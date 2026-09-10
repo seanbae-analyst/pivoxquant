@@ -32,11 +32,24 @@ jobs:
       - name: Install project dependencies
         run: pip install -r requirements.txt
 
-      - name: pytest — no hardcoded samples regression
+      # 2026-09-10: this step ran tests/test_no_hardcoded_samples.py, which was
+      # deleted with the artifact templates on 2026-08-31. pytest exited 4 ("file
+      # not found") every week, so the scan was red regardless of the code and a
+      # real regression would have been indistinguishable from the noise.
+      # It now runs the legal suite CLAUDE.md §4 names as the live defence line.
+      - name: pytest — live legal defence suite
         id: pytest_samples
         run: |
           set +e
-          pytest tests/test_no_hardcoded_samples.py -v --tb=short 2>&1 | tee /tmp/pytest_samples.log
+          pytest -q --tb=short \
+            tests/test_disclaimer_sot.py \
+            tests/test_forbidden_terms_sync.py \
+            tests/test_legal_deep_scan_local.py \
+            tests/test_legal_filter.py \
+            tests/test_legal_filter_forbidden_parity.py \
+            tests/test_legal_scrub_decorator.py \
+            tests/test_pivoxaudit_secret_leak.py \
+            2>&1 | tee /tmp/pytest_samples.log
           echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
       - name: Forbidden directive token sweep
@@ -59,13 +72,13 @@ jobs:
             --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
             | grep -v 'services/legal/forbidden_terms\.py' \
             | grep -v 'services/artifacts/year_end_letter_service\.py' \
-            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|consent' \
+            | grep -viE 'test_|__tests__/|\.test\.tsx?:|__pycache__|legal_filter\.py|disclaimer|consent' \
             | grep -viE 'never|not a|no |does not|misread|cannot|wording|solicitation' \
             | grep -viE 'informational|observational|no predict|advice or' \
             | grep -viE 'language|advice.*recommendation|recommendation.*advice|or advice' \
             | grep -viE '\* recommendation|recommendation.*fields|fields.*recommendation|``recommendation``' \
             | grep -v '``recommendation``' \
-            | grep -vE '_v2/page-v2\.tsx:[0-9]+:.*recommendation to buy or sell' \
+            | grep -vE 'profile/page\.tsx:[0-9]+:.*recommendation to buy or sell any security' \
             || true)
 
           # --- EN AI Coach / 투자 코치 ---
@@ -75,7 +88,7 @@ jobs:
             $SCAN_PATHS \
             --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
             | grep -v 'services/legal/forbidden_terms\.py' \
-            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer' \
+            | grep -viE 'test_|__tests__/|\.test\.tsx?:|__pycache__|legal_filter\.py|disclaimer' \
             | grep -viE 'scrubbed|forbidden|BUY/SELL/HOLD|scrub' \
             || true)
 
@@ -133,9 +146,9 @@ jobs:
 
           if [ "$pytest_ok" != "0" ]; then
             failed=true
-            summary+="- pytest test_no_hardcoded_samples: FAILED (exit $pytest_ok)\n"
+            summary+="- pytest legal suite: FAILED (exit $pytest_ok)\n"
           else
-            summary+="- pytest test_no_hardcoded_samples: PASSED\n"
+            summary+="- pytest legal suite: PASSED\n"
           fi
 
           if [ "$token_total" != "0" ] && [ -n "$token_total" ]; then
@@ -177,7 +190,7 @@ jobs:
           1. Review hits above
           2. Replace forbidden tokens with compliant alternatives (POSITIVE/NEGATIVE/NEUTRAL signals, AI Assistant)
           3. Verify `legal_filter.py` scrub is applied if the term is needed in context
-          4. Re-run: `pytest tests/test_no_hardcoded_samples.py -v`
+          4. Re-run the suite named in the pytest step above
 
           /cc @seanbae-analyst
           EOF

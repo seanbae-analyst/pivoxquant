@@ -13,7 +13,7 @@
  * returns 404 to non-admins, which we surface as a "권한 없음" notice.
  *
  * Tone follows the admin area (slate/white). Category/status chips reuse the
- * shared support badges (v3 tokens). No italic, no raw hex, no "AI Coach".
+ * shared support badges (v3 tokens). No italic, no raw hex, no coaching wording.
  */
 
 import { useMemo, useState } from "react";
