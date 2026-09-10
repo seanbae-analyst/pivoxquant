@@ -37,13 +37,13 @@ PAPER_UP = STOCK.rise
 PAPER_DOWN = STOCK.fall
 
 # Web-safe stacks: the display face is a nicety, the fallback is the design.
-_SERIF = "Georgia, 'Times New Roman', serif"          # stands in for Fraunces
+_SERIF = "Georgia,'Times New Roman',serif"             # stands in for Fraunces
 # Korean breaks inside a word unless told not to; an email has no stylesheet to
 # say it once, so it rides on every rule that sets a Korean-bearing family.
 _KEEP = "word-break:keep-all;"
-_SANS = ("-apple-system, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', "
-         "'Malgun Gothic', sans-serif")                        # stands in for IBM Plex Sans KR
-_MONO = "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace"  # for IBM Plex Mono
+_SANS = ("-apple-system,'Segoe UI','Apple SD Gothic Neo',"
+         "'Malgun Gothic',sans-serif")                         # stands in for IBM Plex Sans KR
+_MONO = "'SFMono-Regular',Consolas,Menlo,monospace"    # stands in for IBM Plex Mono
 # Opaque greys rather than an alpha on the ink: a client that recolours the
 # ground underneath would otherwise drag the text with it.
 _DIM = STOCK.ink3
@@ -250,7 +250,7 @@ def _matrix(tm: dict) -> str:
             # against the ground here and shipped as a flat colour
             bg = _tint(PAPER_MARK, n / mx) if n else PAPER_BAND
             cells += (f'<td bgcolor="{bg}" align="center" style="background:{bg};border:1px solid {PAPER};'
-                      f'font-family:{_MONO};font-size:9px;line-height:15px;'
+                      f'font-size:9px;line-height:15px;'
                       f'color:{PAPER if n >= mx * 0.55 else _DIM}">{n or "&nbsp;"}</td>')
         body += (f'<tr><td width="26" style="font-family:{_SANS};font-size:11px;color:{_SOFT};'
                  f'padding-right:5px">{name}</td>{cells}</tr>')
