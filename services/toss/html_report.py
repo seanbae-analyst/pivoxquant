@@ -225,18 +225,46 @@ def _nm(sym, name) -> str:
     return f"{name} ({sym})" if name and name != sym else sym
 
 
+def _fit(label: str, budget_px: float, size_px: float = 12.0) -> str:
+    """Trim a label to the pixels it actually gets.
+
+    A fixed character count cannot do this: hangul is a full em wide and latin
+    is a bit over half of one, so the same 22 characters are 264px of "아이티센
+    글로벌 (124520)" or 145px of "SMR". The wide ones ran into the bar beside
+    them. Widths are the standard CJK/latin advances, close enough for a
+    trim — and erring narrow only costs a character.
+    """
+    def w(ch: str) -> float:
+        return size_px if ord(ch) > 0x1100 else size_px * 0.62
+
+    if sum(w(c) for c in label) <= budget_px:
+        return label
+    budget_px -= size_px * 0.62  # room for the ellipsis
+    out, used = [], 0.0
+    for ch in label:
+        if used + w(ch) > budget_px:
+            break
+        out.append(ch)
+        used += w(ch)
+    return "".join(out).rstrip() + "…"
+
+
 def _d(s: str | None) -> date | None:
     return date.fromisoformat(s) if s else None
 
 
 # ── charts ───────────────────────────────────────────────────────────────────
-def _holdings_rows_svg(holdings: list[dict], p: Palette) -> str:
+def _holdings_rows_svg(holdings: list[dict], p: Palette, chunk: int | None = None) -> str:
     """One row per holding: name · weight bar (bronze, magnitude) · return bar
     (diverging from a zero line, KR red/blue). Same order top to bottom so
     the two charts read as one table."""
     if not holdings:
         return '<p class="dim">보유 종목 없음</p>'
-    W, name_w, gap, bar_h, row_h = 720, 176, 16, 18, 30
+    if chunk and len(holdings) > chunk:
+        # See _timeline_svg: a chart taller than the page loses its tail.
+        return "".join(_holdings_rows_svg(holdings[i:i + chunk], p)
+                       for i in range(0, len(holdings), chunk))
+    W, name_w, gap, bar_h, row_h = 720, 196, 16, 18, 30
     pad_top = 22
     wcol_x, wcol_w = name_w, 220
     rcol_x = wcol_x + wcol_w + gap + 44
@@ -253,7 +281,7 @@ def _holdings_rows_svg(holdings: list[dict], p: Palette) -> str:
         y = pad_top + i * row_h
         cy = y + bar_h / 2
         label = _nm(h["symbol"], h["name"])
-        out.append(f'<text x="0" y="{cy + 4}" class="lbl">{_e(label[:22])}</text>')
+        out.append(f'<text x="0" y="{cy + 4}" class="lbl">{_e(_fit(label, name_w - 14))}</text>')
         w = (h["weight_pct"] or 0) / max_w * (wcol_w - 46)
         out.append(f'<rect x="{wcol_x}" y="{y}" width="{w:.1f}" height="{bar_h}" fill="{p.bronze}" rx="0"><title>{_e(label)} · 비중 {_pct(h["weight_pct"], False)} · 평가액 {_won(h["market_value_krw"])}</title></rect>')
         out.append(f'<text x="{wcol_x + w + 6:.1f}" y="{cy + 4}">{_pct(h["weight_pct"], False)}</text>')
@@ -269,7 +297,7 @@ def _holdings_rows_svg(holdings: list[dict], p: Palette) -> str:
     return "".join(out)
 
 
-def _timeline_svg(rep: dict, p: Palette) -> str:
+def _timeline_svg(rep: dict, p: Palette, chunk: int | None = None) -> str:
     """The account's path: one track per symbol from its first fill to today
     (open) or its last fill (departed); each fill a tick — purchases in
     bronze above the track, sales in ivory below."""
@@ -286,9 +314,27 @@ def _timeline_svg(rep: dict, p: Palette) -> str:
         return '<p class="dim">이력 안에 체결이 없어 그릴 경로가 없다.</p>'
     x0d = min(t[1] for t in tracks)
     span = max((today - x0d).days, 1)
-    W, name_w, right = 720, 176, 24
+    W, name_w, right = 720, 196, 24
     row_h, pad_top = 26, 26
     px = lambda d: name_w + (d - x0d).days / span * (W - name_w - right)  # noqa: E731
+    by_sym: dict[str, list[dict]] = {}
+    for f in fills:
+        by_sym.setdefault(f["symbol"], []).append(f)
+    if chunk and len(tracks) > chunk:
+        # An SVG is a replaced element: a renderer paginating it cannot split it,
+        # so one taller than the page is not shrunk — it is cut off, and the
+        # tracks below the fold are simply gone. Emitting page-sized pieces that
+        # share one time axis is the same chart, drawn where it fits.
+        return "".join(
+            _one_timeline(tracks[i:i + chunk], by_sym, x0d, today, span, p,
+                          W, name_w, right, row_h, pad_top, px)
+            for i in range(0, len(tracks), chunk))
+    return _one_timeline(tracks, by_sym, x0d, today, span, p,
+                         W, name_w, right, row_h, pad_top, px)
+
+
+def _one_timeline(tracks, by_sym, x0d, today, span, p: Palette,
+                  W, name_w, right, row_h, pad_top, px) -> str:
     H = pad_top + row_h * len(tracks) + 20
     out = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="종목별 보유 경로와 체결">']
     # month grid
@@ -302,12 +348,9 @@ def _timeline_svg(rep: dict, p: Palette) -> str:
         m = date(m.year + (m.month // 12), m.month % 12 + 1, 1)
     out.append(f'<line x1="{px(today):.1f}" y1="{pad_top - 8}" x2="{px(today):.1f}" y2="{H - 16}" stroke="{p.bronze}" stroke-width="1" stroke-dasharray="2 3"/>')
     out.append(f'<text x="{px(today) - 3:.1f}" y="{H - 4}" class="muted" text-anchor="end">오늘</text>')
-    by_sym: dict[str, list[dict]] = {}
-    for f in fills:
-        by_sym.setdefault(f["symbol"], []).append(f)
     for i, (label, a, b, is_open, sym) in enumerate(tracks):
         y = pad_top + i * row_h + 10
-        out.append(f'<text x="0" y="{y + 4}" class="lbl" fill="{p.text if is_open else p.ghost}">{_e(label[:22])}</text>')
+        out.append(f'<text x="0" y="{y + 4}" class="lbl" fill="{p.text if is_open else p.ghost}">{_e(_fit(label, name_w - 14))}</text>')
         xa, xb = px(a), px(b)
         out.append(f'<line x1="{xa:.1f}" y1="{y}" x2="{max(xb, xa + 2):.1f}" y2="{y}" stroke="{p.bronze if is_open else p.ghost}" stroke-width="{3 if is_open else 2}"><title>{_e(label)} · {a} → {"오늘" if is_open else b} · {(b - a).days}일</title></line>')
         for f in by_sym.get(sym, []):
@@ -338,7 +381,7 @@ def _attribution_svg(rows: list[dict], p: Palette) -> str:
         return ""
     shown = rows if len(rows) <= 14 else rows[:7] + rows[-7:]
     folded = len(rows) - len(shown)
-    W, name_w, right, bar_h, row_h, pad_top = 720, 176, 96, 16, 26, 20
+    W, name_w, right, bar_h, row_h, pad_top = 720, 196, 96, 16, 26, 20
     plot_w = W - name_w - right
     mx = max(abs(r["total_krw"]) for r in shown) or 1
     zero = name_w + plot_w * (max(0, -min(r["total_krw"] for r in shown)) / (mx + max(0, -min(r["total_krw"] for r in shown)))) if any(r["total_krw"] < 0 for r in shown) else name_w
@@ -353,7 +396,7 @@ def _attribution_svg(rows: list[dict], p: Palette) -> str:
         x = zero if v >= 0 else zero - w
         color = p.up if v > 0 else p.down
         label = _nm(r["symbol"], r["name"])
-        out.append(f'<text x="0" y="{y + bar_h / 2 + 4}" class="lbl" fill="{p.text if r["held"] else p.ghost}">{_e(label[:22])}</text>')
+        out.append(f'<text x="0" y="{y + bar_h / 2 + 4}" class="lbl" fill="{p.text if r["held"] else p.ghost}">{_e(_fit(label, name_w - 14))}</text>')
         out.append(f'<rect x="{x:.1f}" y="{y}" width="{max(w, 1):.1f}" height="{bar_h}" fill="{color}"><title>{_e(label)} · 실현 {_won(r["realised_krw"])} · 미실현 {_won(r["unrealised_krw"])} · 합계 {_won(v)}</title></rect>')
         # Loss labels sit just right of the zero line, where no bar competes for
         # the space, so a long loss bar never runs its figure into the name column.
@@ -528,6 +571,12 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
     page reads as the same product as ``/mirror``.
     """
     p = PAPER_PALETTE if paper else SCREEN
+    # A4 less its margins is 182mm wide, so one viewBox unit is 0.253mm and a
+    # 263mm-tall text column holds ~1040 of them. Leaving the section's heading
+    # and lede their share, a chart gets ~880 — 32 timeline tracks at 26 units
+    # each, or 28 holdings rows at 30. The screen has no fold and no cap.
+    tracks_per_page = 32 if paper else None
+    rows_per_page = 28 if paper else None
     v, c, h = rep["valuation"], rep["concentration"], rep["history"]
     acct = rep["account"]["account_no_masked"]
     gen = rep["generated_at"][:16].replace("T", " ")
@@ -577,14 +626,14 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
 <section>
   <h2>보유</h2>
   <p class="lede">왼쪽은 각 종목이 평가액에서 차지하는 몫, 오른쪽은 평단 대비 지금 위치. 같은 줄이 같은 종목이다.</p>
-  <div class="tbl">{_holdings_rows_svg(rep["holdings"], p)}</div>
+  <div class="tbl">{_holdings_rows_svg(rep["holdings"], p, rows_per_page)}</div>
   <div class="legend"><span><i style="background:{p.bronze}"></i>비중</span><span><i style="background:{p.up}"></i>평단 위</span><span><i style="background:{p.down}"></i>평단 아래</span></div>
 </section>
 
 <section>
   <h2>경로</h2>
   <p class="lede">종목마다 처음 산 날부터 오늘까지의 선. 위쪽 삼각형이 매수, 아래쪽이 매도. 흐린 선은 이미 떠난 종목.</p>
-  <div class="tbl">{_timeline_svg(rep, p)}</div>
+  <div class="tbl">{_timeline_svg(rep, p, tracks_per_page)}</div>
   <div class="legend"><span><i style="background:{p.bronze}"></i>보유 중</span><span><i style="background:{p.ghost}"></i>정리함</span><span>▲ 매수 · ▼ 매도</span></div>
 </section>
 
