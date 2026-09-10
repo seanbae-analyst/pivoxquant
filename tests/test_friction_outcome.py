@@ -34,10 +34,11 @@ BASE = datetime(2026, 3, 2, 9, 0, 0)
 # Helpers — 영속되지 않은 행
 # ═════════════════════════════════════════════════════════════════════
 
-def _refl(ticker, *, created=None, proceeded=None, cancelled=None):
+def _refl(ticker, *, created=None, proceeded=None, cancelled=None, side=None):
     return PreTradeReflection(
         user_id=1,
         intended_ticker=ticker,
+        intended_side=side,
         rationale="x" * 20,
         created_at=created or BASE,
         cooldown_started_at=created or BASE,
@@ -259,3 +260,40 @@ class TestPurity:
         for banned in ("container import", "fetcher", "realtime", "requests",
                        "fx_service", "get_quote"):
             assert banned not in code, f"순수성 위반: {banned}"
+
+
+# ═════════════════════════════════════════════════════════════════════
+class TestSideAndDateOnlyTrades:
+    """2026-09-10 — an EXIT pause is not a pause before buying, and a trade
+    entered with only a date is compared by calendar day."""
+
+    def test_cancelled_sell_pause_is_not_bought_later_anyway(self):
+        refls = [_refl("AAPL", side="SELL", cancelled=BASE)]  # // legal-ok — stored enum
+        trades = [_trade("AAPL", "BUY", BASE + timedelta(days=2))]  # // legal-ok
+        out = compute_friction_outcome(refls, trades, now=BASE + timedelta(days=5))
+        assert out["stopped"]["cancelled"] == 1          # still counted as a pause
+        assert out["cancelled_followthrough"]["cancelled"] == 0
+        assert out["cancelled_followthrough"]["bought_later_anyway"] == 0
+
+    def test_proceeded_sell_pause_does_not_claim_a_buy(self):
+        refls = [_refl("AAPL", side="SELL", proceeded=BASE)]  # // legal-ok
+        trades = _round_trip("AAPL", BASE + timedelta(days=1), 100.0, 80.0)
+        out = compute_friction_outcome(refls, trades, now=BASE + timedelta(days=30))
+        assert out["realised"]["with_friction"]["n"] == 0
+        assert out["realised"]["without_friction"]["n"] == 1
+
+    def test_same_day_date_only_buy_is_attributed_to_the_pause(self):
+        proceeded = datetime(2026, 3, 2, 5, 1)   # 14:01 KST
+        buy_day = datetime(2026, 3, 2)           # entered as a date → midnight
+        refls = [_refl("AAPL", side="BUY", created=proceeded, proceeded=proceeded)]  # // legal-ok
+        trades = _round_trip("AAPL", buy_day, 100.0, 110.0)
+        out = compute_friction_outcome(refls, trades, now=buy_day + timedelta(days=30))
+        assert out["realised"]["with_friction"]["n"] == 1
+        assert out["realised"]["without_friction"]["n"] == 0
+
+    def test_timed_buy_before_the_pause_is_still_not_attributed(self):
+        proceeded = datetime(2026, 3, 2, 5, 1)
+        refls = [_refl("AAPL", side="BUY", created=proceeded, proceeded=proceeded)]  # // legal-ok
+        trades = _round_trip("AAPL", datetime(2026, 3, 2, 3, 0), 100.0, 110.0)
+        out = compute_friction_outcome(refls, trades, now=proceeded + timedelta(days=30))
+        assert out["realised"]["with_friction"]["n"] == 0

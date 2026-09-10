@@ -53,12 +53,11 @@ from models import (
 )
 
 from .common_util import utc_now as _utc_now
-from .fifo_util import fifo_match_closed_trades
+from .fifo_util import MatchedPair, fifo_match_closed_trades, fifo_open_position_ages
 from .persona_analytics import (
     PERSONA_CODES,
     PERSONA_LABELS,
     PERSONA_TAGLINES,
-    _avg_holding_period,
     _fetch_positions,
     _fetch_trades,
     _norm_log,
@@ -203,9 +202,20 @@ def _extract_features(
     trade_count = len(window_trades)
     sector_map = _sector_map_from_positions(positions)
 
-    # D1 holding_period — reuse v1 kernel
+    # Closed round trips whose SELL falls inside the window, FIFO-matched over  // legal-ok
+    # the FULL history. 2026-09-10: matching only window_trades dropped every
+    # buy older than the window, so a long-term holder who sold five positions
+    # bought 300 days ago had nothing to match against, fell through to the
+    # age of this month's new buys, and was reported as a 2-day holder.
+    window_pairs = [p for p in fifo_match_closed_trades(trades) if p.sell_time >= cutoff]
+
+    # D1 holding_period
     if trade_count >= MIN_TRADES_FOR_OBSERVATION:
-        hp_days = _avg_holding_period(window_trades)
+        if window_pairs:
+            hp_days = sum(p.hold_days for p in window_pairs) / len(window_pairs)
+        else:
+            ages = fifo_open_position_ages(trades, reference_time=now)
+            hp_days = (sum(ages) / len(ages)) if ages else 0.0
         values["holding_period"] = _norm_log(hp_days, floor=1.0, ceil=180.0)
         present["holding_period"] = 1
 
@@ -228,7 +238,7 @@ def _extract_features(
 
     # D5 hold_variance — coefficient of variation on realized hold times
     if trade_count >= MIN_TRADES_FOR_OBSERVATION:
-        cv = _hold_time_cv(window_trades)
+        cv = _hold_time_cv(window_pairs)
         if cv is not None:
             # CV ∈ [0, ~2]. 0 = consistent hold lengths (patient), 1.5+ = chaotic (impulsive)
             values["hold_variance"] = max(0.0, min(1.0, cv / 1.5))
@@ -236,7 +246,7 @@ def _extract_features(
 
     # D6 loss_cut_discipline — quick on losers vs winners (inverted disposition effect)
     if trade_count >= MIN_TRADES_FOR_OBSERVATION:
-        disc = _loss_cut_discipline(window_trades)
+        disc = _loss_cut_discipline(window_pairs)
         if disc is not None:
             values["loss_cut_discipline"] = disc
             present["loss_cut_discipline"] = 1
@@ -267,7 +277,7 @@ def _extract_features(
     return _FeatureBundle(values=values, present=present)
 
 
-def _hold_time_cv(trades: list[TradeHistory]) -> float | None:
+def _hold_time_cv(pairs: list[MatchedPair]) -> float | None:
     """Coefficient of variation over FIFO-matched realized hold days.
 
     Delegates to :mod:`fifo_util` so the pairing semantics match the
@@ -275,7 +285,7 @@ def _hold_time_cv(trades: list[TradeHistory]) -> float | None:
     closed pairs exist (CV is unstable below that count) or when the
     mean hold collapses to ~0 (degenerate intraday-only sample).
     """
-    holds = [p.hold_days for p in fifo_match_closed_trades(trades)]
+    holds = [p.hold_days for p in pairs]
     if len(holds) < 3:
         return None
     mean = sum(holds) / len(holds)
@@ -285,7 +295,7 @@ def _hold_time_cv(trades: list[TradeHistory]) -> float | None:
     return math.sqrt(var) / mean
 
 
-def _loss_cut_discipline(trades: list[TradeHistory]) -> float | None:
+def _loss_cut_discipline(pairs: list[MatchedPair]) -> float | None:
     """Return 1.0 when losers are cut faster than winners held.
 
     Uses per-SELL pnl sign (via ``pnl`` column if populated, else via
@@ -300,7 +310,7 @@ def _loss_cut_discipline(trades: list[TradeHistory]) -> float | None:
     # buy_px vs sell_px when pnl is missing or zero.
     win_holds: list[float] = []
     loss_holds: list[float] = []
-    for pair in fifo_match_closed_trades(trades):
+    for pair in pairs:
         is_win = (
             (pair.sell_pnl > 0)
             if abs(pair.sell_pnl) > 1e-9

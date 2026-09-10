@@ -63,7 +63,10 @@ def _envelope(payload: dict, *, status: int = 200):
 @api_auth
 @general_rate_limit
 def start():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    # A JSON array or scalar body used to reach data.get() and 500.
+    if not isinstance(data, dict):
+        data = {}
     ticker = data.get("ticker")
     side = data.get("side")
     shares = data.get("shares")

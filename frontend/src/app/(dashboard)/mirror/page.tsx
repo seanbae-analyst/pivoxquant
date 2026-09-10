@@ -131,6 +131,11 @@ export default function MirrorPage() {
                     labels={data.radar.labels}
                     declared={data.radar.declared}
                     observed={data.radar.observed}
+                    measured={
+                      data.radar.observed_axes
+                        ? data.radar.keys.map((k) => data.radar.observed_axes!.includes(k))
+                        : undefined
+                    }
                   />
                 </div>
 
@@ -138,7 +143,7 @@ export default function MirrorPage() {
                   className="mt-1 text-center text-[10.5px]"
                   style={{ color: "var(--pq-bronze)" }}
                 >
-                  각 축의 % = 최근 30일 관찰값 · 브론즈=선언, 아이보리=관찰
+                  각 축의 % = 최근 30일 관찰값 · — = 아직 잴 기록이 부족 · 브론즈=선언, 아이보리=관찰
                 </p>
               </section>
 
