@@ -38,6 +38,9 @@ from services.toss.html_report import (
 
 # Web-safe stacks: the display face is a nicety, the fallback is the design.
 _SERIF = "Georgia, 'Times New Roman', serif"
+# Korean breaks inside a word unless told not to; an email has no stylesheet to
+# say it once, so it rides on every rule that sets a Korean-bearing family.
+_KEEP = "word-break:keep-all;"
 _SANS = "-apple-system, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
 _MONO = "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace"
 # Opaque greys rather than an alpha on the ink: a client that recolours the
@@ -64,12 +67,27 @@ def _hue(v) -> str:
     return PAPER_UP if v > 0 else PAPER_DOWN
 
 
-def _tile(label: str, value: str, sub: str, color: str) -> str:
+def _row(label: str, figure: str, note: str, color: str, *, sub=False, rule=False, big=False) -> str:
+    """One statement line: label left, figure right, note in a third column.
+
+    A statement is the shape a brokerage prints. A 2x2 grid of big-number tiles
+    is the shape a dashboard prints — and the reader already has the dashboard
+    on their phone, so the tiles said nothing new and looked like every other
+    generated page.
+    """
+    top = f"border-top:1.5px solid {PAPER_RULE};" if rule else ""
+    pad = "padding:8px 0 8px 15px" if sub else "padding:8px 0"
+    lab = f"{_KEEP}font-size:12px;color:{_DIM}" if sub else f"{_KEEP}font-size:13px;color:{_SOFT}"
+    fig = (f"font-family:{_SERIF};font-size:19px" if big
+           else f"font-family:{_MONO};font-size:{'12' if sub else '13'}px")
     return (
-        f'<td width="50%" bgcolor="{PAPER}" style="padding:14px 12px;border:1px solid {PAPER_RULE};vertical-align:top">'
-        f'<div style="font-family:{_MONO};font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:{_DIM}">{_e(label)}</div>'
-        f'<div style="font-family:{_SERIF};font-size:22px;line-height:1.15;padding-top:7px;color:{color}">{_e(value)}</div>'
-        f'<div style="font-family:{_MONO};font-size:10.5px;color:{_DIM};padding-top:5px">{_e(sub)}</div></td>'
+        f'<tr>'
+        f'<td style="{top}{pad};border-bottom:1px solid {PAPER_RULE};font-family:{_SANS};{lab}">{_e(label)}</td>'
+        f'<td align="right" style="{top}padding:8px 0 8px 16px;border-bottom:1px solid {PAPER_RULE};'
+        f'{fig};color:{color};white-space:nowrap">{_e(figure)}</td>'
+        f'<td align="right" width="104" style="{top}padding:8px 0 8px 14px;border-bottom:1px solid {PAPER_RULE};'
+        f'font-family:{_MONO};font-size:11px;color:{_DIM};white-space:nowrap">{_e(note)}</td>'
+        f'</tr>'
     )
 
 
@@ -86,9 +104,17 @@ def _bar(pct: float, color: str) -> str:
             f'style="height:9px;border-collapse:collapse"><tr style="height:9px">{cells}</tr></table>')
 
 
-def _section(title: str) -> str:
-    return (f'<div style="font-family:{_MONO};font-size:10px;letter-spacing:.14em;text-transform:uppercase;'
-            f'color:{PAPER_BRONZE};padding:26px 0 9px">{_e(title)}</div>')
+def _section(title: str, count: str = "") -> str:
+    """A section head: a rule, the title, and the one figure that says how much
+    follows. The count is information; an uppercase letterspaced label repeated
+    on every section is furniture."""
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+            f'style="border-collapse:collapse;margin-top:30px">'
+            f'<tr><td style="border-top:1px solid {PAPER_RULE};padding:13px 0 0;'
+            f'font-family:{_SERIF};font-size:18px;{_KEEP}color:{PAPER_INK}">{_e(title)}</td>'
+            f'<td align="right" style="border-top:1px solid {PAPER_RULE};padding:15px 0 0;'
+            f'font-family:{_MONO};font-size:11px;color:{_DIM};white-space:nowrap">{_e(count)}</td>'
+            f'</tr></table>')
 
 
 def render_email_html(rep: dict, *, url: str | None = None, attached: bool = False) -> str:
@@ -101,24 +127,35 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
     after = an.get("after_selling") or {}
     gen = rep["generated_at"][:16].replace("T", " ")
 
-    tiles = (
-        "<tr>"
-        + _tile("주식 평가액", _won(v["equity_value_krw"]), f"USD/KRW {rep['fx']['usdkrw']}", PAPER_INK)
-        + _tile("미실현", _won(v["unrealised_krw"]), _pct(v["unrealised_rate_pct"]), _hue(v["unrealised_krw"]))
-        + "</tr><tr>"
-        + _tile("실현 누계", _won(h["realised_net_krw"]),
-                "전체 이력" if h.get("realised_trustworthy", h["complete"]) else "부분 이력",
-                _hue(h["realised_net_krw"]))
-        + _tile("오늘", _won(v["daily_krw"]), _pct(v["daily_rate_pct"]), _hue(v["daily_krw"]))
-        + "</tr>"
+    basis = "전체 이력" if h.get("realised_trustworthy", h["complete"]) else "부분 이력"
+    stmt = (
+        _row("주식 평가액", _won(v["equity_value_krw"]), "", PAPER_INK)
+        + _row("국내", _won(v["krw_leg"]), "", _DIM, sub=True)
+        + _row("해외", f"${(v['usd_leg'] or 0):,.2f}", f"USD/KRW {rep['fx']['usdkrw']}", _DIM, sub=True)
+        + _row("매입 총액", _won(v["purchase_total_krw"]), "", PAPER_INK)
+        + _row("미실현 손익", _won(v["unrealised_krw"]), _pct(v["unrealised_rate_pct"]),
+               _hue(v["unrealised_krw"]), rule=True, big=True)
+        + _row("실현 손익 누계", _won(h["realised_net_krw"]), basis, _hue(h["realised_net_krw"]), big=True)
+        + _row("당일", _won(v["daily_krw"]), _pct(v["daily_rate_pct"]), _hue(v["daily_krw"]), rule=True)
     )
 
-    heads = "".join(
-        f'<div bgcolor="{PAPER_TLDR}" style="background:{PAPER_TLDR};font-family:{_SERIF};font-size:14.5px;'
-        f'line-height:1.55;color:{PAPER_INK};border-left:2px solid {PAPER_BRONZE};'
-        f'padding:9px 12px;margin-bottom:9px">{_e(x)}</div>'
-        for x in an.get("headline", [])
-    )
+    heads = an.get("headline", [])
+    lead = ""
+    if heads:
+        lead = (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+                f'style="border-collapse:collapse;margin-top:26px">'
+                f'<tr><td width="22" valign="top" style="padding:4px 10px 0 0;font-family:{_MONO};'
+                f'font-size:11px;color:{PAPER_BRONZE}">1</td>'
+                f'<td style="font-family:{_SERIF};font-size:19px;line-height:1.45;{_KEEP}color:{PAPER_INK}">'
+                f'{_e(heads[0])}</td></tr></table>')
+    finds = "".join(
+        f'<tr><td width="22" valign="top" style="padding:9px 10px 0 0;font-family:{_MONO};'
+        f'font-size:11px;color:{PAPER_BRONZE}">{i}</td>'
+        f'<td style="padding:9px 0 0;font-family:{_SANS};font-size:13px;line-height:1.55;{_KEEP}color:{_SOFT}">{_e(x)}</td></tr>'
+        for i, x in enumerate(heads[1:], 2))
+    if finds:
+        finds = (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+                 f'style="border-collapse:collapse;margin-top:6px">{finds}</table>')
 
     rows = []
     for r in rep["holdings"]:
@@ -144,9 +181,9 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
         facts.append(("팔고 난 뒤", f"{after['count']}종목 중 {after['higher_now']}개가 판 가격보다 높다 · "
                                  f"안 팔았다면 {_won(after['kept_delta_krw'])} 차이"))
     fact_rows = "".join(
-        f'<tr><td width="120" style="padding:5px 10px 5px 0;font-family:{_MONO};font-size:10px;letter-spacing:.08em;'
-        f'text-transform:uppercase;color:{_DIM};vertical-align:top">{_e(k)}</td>'
-        f'<td style="padding:5px 0;font-family:{_SANS};font-size:12.5px;color:{_SOFT}">{_e(val)}</td></tr>'
+        f'<tr><td width="120" valign="top" style="padding:6px 12px 6px 0;font-family:{_SANS};font-size:12px;'
+        f'color:{_DIM}">{_e(k)}</td>'
+        f'<td style="padding:6px 0;font-family:{_SANS};font-size:12.5px;{_KEEP}color:{_SOFT}">{_e(val)}</td></tr>'
         for k, val in facts)
 
     if h["complete"]:
@@ -156,6 +193,10 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
                 "실현손익은 그대로 신뢰할 수 있다.")
     else:
         note = f"{len(h['mismatches'])}종목의 취득원가가 이력 밖에 있어 실현손익이 일부 비어 있다."
+    note = (f"실현 손익 누계는 {basis} · 수수료·세금 차감 기준이다. " + note)
+
+    n_hold = f"{len(rep['holdings'])}종목"
+    n_closed = f"닫힌 거래 {trades.get('closed') or 0}건"
 
     tail = ""
     if attached:
@@ -165,35 +206,38 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
     if url:
         tail += (f'<div style="padding:14px 0 0"><a href="{_e(url)}" '
                  f'style="font-family:{_MONO};font-size:12px;color:{PAPER};background:{PAPER_BRONZE};'
-                 f'text-decoration:none;padding:11px 18px;display:inline-block">웹에서 열기 →</a></div>'
+                 f'text-decoration:none;padding:11px 18px;display:inline-block">웹에서 열기 &#8594;</a></div>'
                  f'<div style="font-family:{_SANS};font-size:11.5px;color:{_DIM};padding-top:9px">'
                  f'링크는 로그인한 브라우저에서만 열린다.</div>')
 
     return f"""<div bgcolor="{PAPER}" style="margin:0;padding:0;background:{PAPER}">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="{PAPER}" style="background:{PAPER};border-collapse:collapse">
-<tr><td align="center" style="padding:28px 16px 44px">
+<tr><td align="center" style="padding:30px 16px 46px">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px;max-width:100%;border-collapse:collapse">
 <tr><td>
 
-<div style="font-family:{_MONO};font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:{PAPER_BRONZE}">
-PivoxReport · 토스증권 계좌 {_e(rep['account']['account_no_masked'])}</div>
-<div style="font-family:{_SERIF};font-size:27px;line-height:1.2;color:{PAPER_INK};padding:7px 0 5px">기록이 되비추는 것</div>
-<div style="font-family:{_MONO};font-size:10.5px;color:{_DIM}">{_e(gen)} KST · Toss Open API, read-only</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse">
+<tr>
+  <td valign="bottom" style="border-bottom:1.5px solid {PAPER_INK};padding-bottom:11px;font-family:{_SERIF};font-size:25px;line-height:1.18;color:{PAPER_INK}">기록이 되비추는 것</td>
+  <td valign="bottom" align="right" style="border-bottom:1.5px solid {PAPER_INK};padding:0 0 12px 20px;font-family:{_MONO};font-size:10.5px;line-height:1.7;color:{_DIM};white-space:nowrap">
+    토스증권 계좌 {_e(rep['account']['account_no_masked'])}<br>{_e(gen)} KST<br>Toss Open API · read-only</td>
+</tr></table>
 
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:18px">{tiles}</table>
-<div style="font-family:{_SANS};font-size:11.5px;color:{_DIM};padding-top:10px">{_e(note)}</div>
+{lead}
+{finds}
 
-{_section("이 계좌가 말하는 것") if heads else ""}{heads}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:26px">{stmt}</table>
+<div style="font-family:{_SANS};font-size:11.5px;line-height:1.7;{_KEEP}color:{_DIM};padding-top:10px">{_e(note)}</div>
 
-{_section("보유")}
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse">{holdings}</table>
+{_section("보유", n_hold)}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:13px">{holdings}</table>
 
-{_section("거래") if fact_rows else ""}
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse">{fact_rows}</table>
+{_section("거래", n_closed) if fact_rows else ""}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:13px">{fact_rows}</table>
 {tail}
 
-<div style="font-family:{_SERIF};font-style:italic;font-size:12.5px;color:{_DIM};padding:34px 0 0;text-align:center">
-기록을 되비추는 거울이다. 다음에 무엇을 할지는 여기 없다.</div>
+<div style="border-top:1.5px solid {PAPER_RULE};margin-top:38px;padding-top:15px;font-family:{_SANS};font-size:11.5px;line-height:1.75;{_KEEP}color:{_DIM}">
+토스증권 Open API 를 읽기 전용으로 조회해 만들었다. 주문 경로는 없다. 기록을 되비추는 거울이며, 다음에 무엇을 할지는 여기 없다.</div>
 
 </td></tr></table>
 </td></tr></table></div>"""

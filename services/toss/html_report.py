@@ -113,26 +113,68 @@ def _css(p: Palette) -> str:
   --sans:Geist, "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, system-ui, sans-serif;
   --mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }}
 html {{ color-scheme: {p.scheme}; }}
-body {{ margin:0; background:var(--ink); color:var(--ivory); font-family:var(--sans); font-size:14px; line-height:1.6; padding-block:40px 64px; padding-inline:20px; -webkit-font-smoothing:antialiased; }}
-.wrap {{ max-width:720px; margin:0 auto; }}
-.eyebrow {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--bronze); }}
-h1 {{ font-family:var(--display); font-weight:400; font-size:clamp(28px,6vw,40px); line-height:1.15; margin:8px 0 6px; text-wrap:balance; }}
-.meta {{ font-family:var(--mono); font-size:11px; color:var(--ivory-dim); }}
-h2 {{ font-family:var(--display); font-weight:400; font-size:22px; margin:0 0 4px; }}
-section {{ padding-block:28px; border-top:1px solid var(--line); }}
-section:first-of-type {{ border-top:0; }}
-.lede {{ font-family:var(--serif); color:var(--ivory-soft); font-size:13.5px; margin:0 0 18px; max-width:62ch; }}
-.tiles {{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--line); border:1px solid var(--line); margin-top:20px; }}
-@media (min-width:560px) {{ .tiles {{ grid-template-columns:repeat(4,1fr); }} }}
-.tile {{ background:var(--ink); padding:16px 14px 14px; }}
-.tile .k {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ivory-dim); }}
-.tile .v {{ font-family:var(--display); font-size:24px; line-height:1.1; margin-top:8px; font-variant-numeric:tabular-nums; }}
-.tile .s {{ font-family:var(--mono); font-size:11px; color:var(--ivory-dim); margin-top:6px; }}
+/* keep-all is the whole difference between Korean that is typeset and Korean
+   that is merely wrapped: without it the browser breaks inside a word, so
+   "손실은" becomes "손실" / "은" across two lines. Latin is unaffected — it has
+   no character-level break to suppress — and the long unbroken things that do
+   need to break (symbols, URLs) get anywhere back where they appear. */
+body {{ margin:0; background:var(--ink); color:var(--ivory); font-family:var(--sans); font-size:14px; line-height:1.62; padding-block:44px 72px; padding-inline:20px; word-break:keep-all; -webkit-font-smoothing:antialiased; }}
+td.v, td.x, .mirror td, table.plain td {{ overflow-wrap:anywhere; }}
+.wrap {{ max-width:760px; margin:0 auto; }}
+
+/* Masthead. A statement is headed, not launched: the document names itself on
+   the left and stamps its own provenance on the right, both sitting on one
+   baseline over a single heavy rule. No eyebrow, no hero. */
+.mast {{ display:flex; align-items:baseline; justify-content:space-between; gap:20px 28px; flex-wrap:wrap; border-bottom:1.5px solid var(--ivory); padding-bottom:11px; }}
+.mast h1 {{ font-family:var(--display); font-weight:400; font-size:27px; line-height:1.18; margin:0; }}
+.mast .who {{ font-family:var(--mono); font-size:11px; color:var(--ivory-dim); text-align:right; line-height:1.75; }}
+
+/* The lead. One sentence at reading-aloud size, then the rest of the findings
+   with their ordinal in the margin — the number is a position on the page, not
+   a badge stuck to a box. */
+.lead {{ display:grid; grid-template-columns:22px 1fr; gap:10px; margin:28px 0 0; align-items:baseline; }}
+.lead p {{ font-family:var(--serif); font-size:19.5px; line-height:1.45; margin:0; max-width:50ch; text-wrap:balance; }}
+.lead .n {{ font-family:var(--mono); font-size:11px; color:var(--bronze); }}
+.finds {{ margin:20px 0 0; padding:0; list-style:none; display:grid; gap:12px; }}
+.finds li {{ display:grid; grid-template-columns:22px 1fr; gap:10px; align-items:baseline; font-size:13.5px; line-height:1.58; color:var(--ivory-soft); max-width:64ch; }}
+.finds .n {{ font-family:var(--mono); font-size:11px; color:var(--bronze); }}
+
+/* The statement block. Label left, figure right in tabular mono, one hairline
+   per row, a heavier rule where a real 잔고 statement rules off a subtotal.
+   This is the shape a brokerage prints; a grid of big-number tiles is the shape
+   a dashboard prints, and the reader already has the dashboard. */
+.stmt {{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; margin-top:26px; }}
+.stmt td {{ padding:8px 0; border-bottom:1px solid var(--line-soft); vertical-align:baseline; }}
+.stmt td.k {{ font-size:13px; color:var(--ivory-soft); }}
+.stmt td.v {{ text-align:right; font-family:var(--mono); font-size:13.5px; white-space:nowrap; padding-left:16px; }}
+.stmt td.x {{ text-align:right; font-family:var(--mono); font-size:11.5px; color:var(--ivory-dim); white-space:nowrap; padding-left:14px; width:104px; }}
+.stmt tr.sub td.k {{ padding-left:15px; font-size:12.5px; color:var(--ivory-dim); }}
+.stmt tr.sub td.v {{ font-size:12.5px; color:var(--ivory-dim); }}
+.stmt tr.rule td {{ border-top:1.5px solid var(--line); }}
+.stmt tr.big td.v {{ font-family:var(--display); font-size:20px; }}
+.stmt tr:last-child td {{ border-bottom:0; }}
+
+/* Section head: a rule, the title, and on the same baseline at the right the
+   one figure that says how much follows. The count is information; an uppercase
+   letterspaced label repeated nine times is furniture. */
+.sec {{ padding-block:32px 0; }}
+.sh {{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; border-top:1px solid var(--line); padding-top:13px; margin-bottom:15px; }}
+.sh h2 {{ font-family:var(--display); font-weight:400; font-size:19px; margin:0; }}
+.sh .cnt {{ font-family:var(--mono); font-size:11px; color:var(--ivory-dim); white-space:nowrap; text-align:right; }}
+.note {{ font-family:var(--serif); color:var(--ivory-soft); font-size:13px; margin:0 0 15px; max-width:60ch; }}
+.note.tight {{ margin:10px 0 0; }}
 .up {{ color:var(--up); }} .down {{ color:var(--down); }} .dim {{ color:var(--ivory-dim); }}
-.status {{ display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:var(--veil); border-left:2px solid var(--bronze); font-size:13px; }}
-.status.warn {{ border-left-color:var(--down); }}
-.status ul {{ margin:8px 0 0; padding-left:18px; color:var(--ivory-soft); display:grid; gap:8px; }}
-.status li {{ line-height:1.5; }}
+
+/* The reconciliation verdict and its findings use the same margin device as the
+   lead: the symbol sits in the margin in mono, the reason runs in the column. */
+.recon {{ font-size:13.5px; line-height:1.6; margin:0; }}
+.recon strong {{ font-weight:600; }}
+.recon.warn {{ color:var(--ivory); }}
+.rlist {{ margin:14px 0 0; padding:0; list-style:none; display:grid; gap:11px; }}
+.rlist li {{ display:grid; grid-template-columns:132px 1fr; gap:12px; align-items:baseline; font-size:12.5px; line-height:1.55; color:var(--ivory-soft); }}
+.rlist .s {{ font-family:var(--mono); font-size:11.5px; color:var(--ivory); }}
+.rlist .s em {{ display:block; font-style:normal; color:var(--ivory-dim); font-size:10.5px; padding-top:2px; }}
+
 svg {{ display:block; width:100%; min-width:640px; height:auto; }}
 .tbl {{ overflow-x:auto; -webkit-overflow-scrolling:touch; }}
 svg text {{ font-family:var(--mono); font-size:11px; fill:var(--ivory-soft); }}
@@ -150,13 +192,19 @@ table.plain {{ width:100%; border-collapse:collapse; font-variant-numeric:tabula
 table.plain th {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ivory-dim); font-weight:400; text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }}
 table.plain td {{ padding:8px; border-bottom:1px solid var(--line-soft); }}
 table.plain td.n {{ text-align:right; font-family:var(--mono); }}
-.legend {{ display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:11px; color:var(--ivory-dim); margin-top:8px; }}
-.legend i {{ display:inline-block; width:10px; height:10px; margin-right:6px; vertical-align:-1px; }}
-h3 {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--bronze); font-weight:400; margin:26px 0 8px; }}
-.heads {{ display:grid; gap:10px; margin:14px 0 6px; }}
-.head {{ margin:0; padding:10px 14px; border-left:2px solid var(--bronze); background:var(--veil); font-family:var(--display); font-size:16px; line-height:1.5; text-wrap:balance; }}
-ul.limits {{ margin:0; padding-left:18px; color:var(--ivory-soft); font-size:13px; }}
-.sig {{ margin-top:40px; font-family:var(--serif); font-style:italic; color:var(--ivory-dim); text-align:center; }}
+.legend {{ display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; color:var(--ivory-dim); margin-top:9px; }}
+.legend i {{ display:inline-block; width:9px; height:9px; margin-right:6px; vertical-align:-1px; }}
+
+/* A sub-head inside a section, in the reading face rather than a second
+   uppercase mono label competing with the section head above it. */
+h3 {{ font-family:var(--sans); font-size:12.5px; letter-spacing:.02em; color:var(--ivory); font-weight:500; margin:28px 0 9px; padding-bottom:6px; border-bottom:1px solid var(--line-soft); }}
+
+/* Statement footer: what the figures are computed from, ruled off at the bottom
+   where a document puts its basis note. Not a centred italic epigraph. */
+.foot {{ margin-top:46px; border-top:1.5px solid var(--line); padding-top:15px; font-size:11.5px; line-height:1.75; color:var(--ivory-dim); max-width:66ch; }}
+.foot ul {{ margin:7px 0 0; padding-left:15px; }}
+.foot li {{ margin-bottom:3px; }}
+.foot .basis {{ color:var(--ivory-soft); }}
 """ + (_PRINT_CSS if p.scheme == "light" else "")
 
 
@@ -170,15 +218,16 @@ body { padding-block: 0; padding-inline: 0; font-size: 12.5px; }
 .wrap { max-width: none; }
 svg { min-width: 0; }
 .tbl { overflow-x: visible; }
-h1 { font-size: 32px; }
 /* Keep a section's heading with the first of its content and never orphan a
    chart or a tile row across the fold — but do NOT ask a whole section to stay
    whole: the long ones are taller than a page, so the request is unsatisfiable
    and each becomes its own page with a hand's width of white above it. */
-section { padding-block: 20px; }
-h2, h3 { break-after: avoid; }
-.tiles, .status, .head, svg, tr { break-inside: avoid; }
-.sig { margin-top: 28px; }
+.sec { padding-block: 22px 0; }
+.sh, h2, h3 { break-after: avoid; }
+.sh, .stmt tr, svg, tr, .finds li, .rlist li { break-inside: avoid; }
+.mast h1 { font-size: 24px; }
+.lead { font-size: 17px; }
+.foot { margin-top: 30px; }
 """
 
 
@@ -433,52 +482,104 @@ def _timing_svg(tm: dict, p: Palette) -> str:
     return "".join(out)
 
 
+def _stmt(rows) -> str:
+    """A statement block: label, figure, and a note in a third column.
+
+    ``rows`` are ``(label, figure, note, colour_class, flags)`` where ``flags``
+    is any of ``sub`` (a leg indented under the row above, the way a 잔고
+    statement breaks out a total), ``rule`` (the heavier rule a statement draws
+    where it rules off) and ``big`` (the figure a reader is looking for).
+    """
+    out = ['<table class="stmt">']
+    for label, figure, note, cls, flags in rows:
+        attr = f' class="{flags}"' if flags else ""
+        out.append(f'<tr{attr}><td class="k">{_e(label)}</td>'
+                   f'<td class="v {cls}">{_e(figure)}</td>'
+                   f'<td class="x">{_e(note)}</td></tr>')
+    out.append("</table>")
+    return "".join(out)
+
+
+def _hold_span_svg(t: dict, p: Palette) -> str:
+    """How long each side was held, drawn as two spans from the day of purchase.
+
+    The account's loudest fact is that losses are carried several times longer
+    than gains, and until now the report only said it in a sentence. Two bars on
+    one day-axis is the whole argument: same origin, same scale, one obviously
+    longer than the other.
+    """
+    w, l = t.get("win_hold_median_days"), t.get("loss_hold_median_days")
+    if not t.get("closed") or w is None or l is None:
+        return ""
+    W, name_w, right, bar_h, row_h, pad_top = 720, 150, 150, 22, 44, 24
+    plot = W - name_w - right
+    mx = max(w, l, 1)
+    H = pad_top + row_h * 2 + 6
+    out = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="이익과 손실을 쥐고 있던 기간">',
+           f'<text x="{name_w}" y="12" class="muted">매수일부터 매도일까지, 중앙값</text>',
+           f'<line x1="{name_w}" y1="{pad_top - 6}" x2="{name_w}" y2="{H - 6}" class="axis"/>']
+    for i, (label, days, pct, n, colour) in enumerate([
+        ("이익을 실현할 때", w, t.get("median_win_pct"), t.get("wins"), p.up),
+        ("손실을 실현할 때", l, t.get("median_loss_pct"), t.get("losses"), p.down),
+    ]):
+        y = pad_top + i * row_h
+        cy = y + bar_h / 2 + 4
+        out.append(f'<text x="0" y="{cy}" class="lbl">{_e(label)}</text>')
+        out.append(f'<text x="{name_w - 10}" y="{cy}" text-anchor="end" class="muted">{n or 0}건</text>')
+        bw = max(days / mx * plot, 2)
+        out.append(f'<rect x="{name_w + 1}" y="{y}" width="{bw:.1f}" height="{bar_h}" fill="{colour}">'
+                   f'<title>{_e(label)} · {n or 0}건 · 보유 중앙값 {days:g}일 · 수익률 중앙값 {_pct(pct)}</title></rect>')
+        out.append(f'<text x="{name_w + bw + 8:.1f}" y="{cy}">{days:g}일 · {_pct(pct)}</text>')
+    out.append("</svg>")
+    return "".join(out)
+
+
 def _analysis_section(an: dict, p: Palette) -> str:
     if not an:
         return ""
     a, t, af, tm, sz, bm = an["attribution"], an["trades"], an["after_selling"], an["timing"], an["sizing"], an["by_market"]
-    head = "".join(f'<p class="head">{_e(x)}</p>' for x in an["headline"]) or '<p class="lede">분석할 닫힌 거래가 없다.</p>'
-    tiles = ""
+    closed = ""
     if t.get("closed"):
-        tiles = "".join(f'<div class="tile"><div class="k">{_e(k)}</div><div class="v {cl}">{_e(v)}</div><div class="s">{_e(s)}</div></div>' for k, v, s, cl in [
-            ("승률", f"{t['win_rate_pct']}%", f"{t['closed']}건 중 이익 {t['wins']}", ""),
-            ("이길 때 중앙값", _pct(t["median_win_pct"]), f"보유 {_days(t['win_hold_median_days'])}", "up"),
-            ("질 때 중앙값", _pct(t["median_loss_pct"]), f"보유 {_days(t['loss_hold_median_days'])}", "down"),
-            ("거래당 기대값", _won(t["expectancy_krw"]), f"중앙값 {_won(t['median_trade_krw'])} · 크기 비 {t['payoff_ratio'] or '—'}", _cls(t["expectancy_krw"])),
-        ])
-        tiles = f'<div class="tiles">{tiles}</div>'
-        tiles += (f'<p class="lede" style="margin-top:14px">최고 {_e(t["best"]["symbol"])} {t["best"]["date"]} {_won(t["best"]["realised_krw"])} ({_pct(t["best"]["pnl_pct"])}) · '
-                  f'최저 {_e(t["worst"]["symbol"])} {t["worst"]["date"]} {_won(t["worst"]["realised_krw"])} ({_pct(t["worst"]["pnl_pct"])})'
-                  + (f' · 실현 이익의 {t["top5_share_pct"]}%가 상위 5건' if t.get("top5_share_pct") else "") + "</p>")
+        closed = _stmt([
+            ("닫힌 거래", f"{t['closed']}건", f"이익 {t['wins']} · 손실 {t['losses']}", "", ""),
+            ("승률", f"{t['win_rate_pct']}%", "", "", ""),
+            ("이익/손실 크기 비", str(t["payoff_ratio"] or "—"), "", "", ""),
+            ("거래당 기대값", _won(t["expectancy_krw"]), f"중앙값 {_won(t['median_trade_krw'])}",
+             _cls(t["expectancy_krw"]), "rule big"),
+        ]) + _hold_span_svg(t, p) + (
+            f'<p class="note tight">최고 {_e(t["best"]["symbol"])} {t["best"]["date"]} {_won(t["best"]["realised_krw"])} ({_pct(t["best"]["pnl_pct"])}) · '
+            f'최저 {_e(t["worst"]["symbol"])} {t["worst"]["date"]} {_won(t["worst"]["realised_krw"])} ({_pct(t["worst"]["pnl_pct"])})'
+            + (f' · 실현 이익의 {t["top5_share_pct"]}%가 상위 5건' if t.get("top5_share_pct") else "") + "</p>")
+    else:
+        closed = '<p class="note">분석할 닫힌 거래가 없다.</p>' 
     after = ""
     if af.get("available") and af.get("count"):
         rows = "".join(f'<tr><td>{_e(_nm(r["symbol"], r["name"]))}</td><td>{_e(r["last_sold_at"])}</td><td class="n">{r["avg_sell_price"]:,}</td><td class="n">{r["price_now"]:,}</td>'
                        f'<td class="n {_cls(r["since_sale_pct"])}">{_pct(r["since_sale_pct"])}</td><td class="n {_cls(r["kept_delta_krw"])}">{_won(r["kept_delta_krw"])}</td></tr>' for r in af["rows"])
-        after = (f'<p class="lede">정리한 {af["count"]}종목 중 지금 가격이 판 가격보다 높은 것 {af["higher_now"]}, 낮은 것 {af["lower_now"]}. 이후 변화 중앙값 {_pct(af["median_since_sale_pct"])}. '
+        after = (f'<p class="note">정리한 {af["count"]}종목 중 지금 가격이 판 가격보다 높은 것 {af["higher_now"]}, 낮은 것 {af["lower_now"]}. 이후 변화 중앙값 {_pct(af["median_since_sale_pct"])}. '
                  f'판 수량을 그대로 들고 있었다면 지금 <span class="{_cls(af["kept_delta_krw"])}">{_won(af["kept_delta_krw"])}</span> 차이.</p>'
                  f'<div class="tbl"><table class="plain"><thead><tr><th>종목</th><th>마지막 매도</th><th>평균 매도가</th><th>지금</th><th>이후</th><th>안 팔았다면</th></tr></thead><tbody>{rows}</tbody></table></div>')
     else:
-        after = '<p class="lede dim">현재가를 받지 못해 건너뜀.</p>'
+        after = '<p class="note dim">현재가를 받지 못해 건너뜀.</p>'
     timing = ""
     if tm.get("fills"):
-        timing = (_timing_svg(tm, p) + f'<p class="lede" style="margin-top:8px">거래일 {tm["trade_days"]}일 · 하루 평균 {tm["fills_per_trade_day"]}건 · 3건 이상인 날 {tm["days_with_3plus"]}일 · 최다 {tm["busiest_day"]["date"]} {tm["busiest_day"]["fills"]}건'
+        timing = (_timing_svg(tm, p) + f'<p class="note tight">거래일 {tm["trade_days"]}일 · 하루 평균 {tm["fills_per_trade_day"]}건 · 3건 이상인 날 {tm["days_with_3plus"]}일 · 최다 {tm["busiest_day"]["date"]} {tm["busiest_day"]["fills"]}건'
                   + (f' · 국내 체결 중 개장 첫 시간 {tm["kr_first_hour_pct"]}%' if tm.get("kr_first_hour_pct") is not None else "") + "</p>")
-    size = (f'<p class="lede">매수 {sz["buys"]}건 · 중앙값 {_won(sz["median_buy_krw"])} · 평균 {_won(sz["mean_buy_krw"])} · 최대 {_won(sz["largest_buy_krw"])} (전체 매수액의 {sz["largest_share_pct"]}%) · 편차/평균 {sz["cv"]}</p>'
+    size = (f'<p class="note">매수 {sz["buys"]}건 · 중앙값 {_won(sz["median_buy_krw"])} · 평균 {_won(sz["mean_buy_krw"])} · 최대 {_won(sz["largest_buy_krw"])} (전체 매수액의 {sz["largest_share_pct"]}%) · 편차/평균 {sz["cv"]}</p>'
             if sz.get("buys") else "")
     market = "".join(f'<tr><td>{m["market"]}</td><td class="n">{m["symbols"]}</td><td class="n">{m["closed"]}</td><td class="n">{_pct(m["win_rate_pct"], False)}</td><td class="n">{_days(m["median_hold_days"])}</td>'
                      f'<td class="n {_cls(m["realised_krw"])}">{_won(m["realised_krw"])}</td><td class="n {_cls(m["unrealised_krw"])}">{_won(m["unrealised_krw"])}</td><td class="n {_cls(m["total_krw"])}">{_won(m["total_krw"])}</td></tr>' for m in bm)
     return f"""
-<section>
-  <h2>분석</h2>
-  <p class="lede">거울이 하나씩 보여준 숫자를 나란히 놓고, 그 배열이 가리키는 것을 문장으로 적는다. 모든 문장은 위의 숫자로 다시 계산할 수 있다.</p>
-  <div class="heads">{head}</div>
+<section class="sec">
+  <div class="sh"><h2>분석</h2><span class="cnt">닫힌 거래 {t.get("closed") or 0}건</span></div>
+  <p class="note">위 문장들이 딛고 선 숫자를 항목별로 편다. 전부 이 리포트 안의 값으로 다시 계산할 수 있다.</p>
 
   <h3>손익 분해</h3>
-  <p class="lede">실현 <span class="{_cls(a['realised_krw'])}">{_won(a['realised_krw'])}</span> + 미실현 <span class="{_cls(a['unrealised_krw'])}">{_won(a['unrealised_krw'])}</span> = <strong>{_won(a['total_krw'])}</strong> · 수수료·세금 {_won(a['fees_krw'])}. 밝은 이름은 보유 중, 흐린 이름은 정리한 종목.</p>
+  <p class="note">실현 <span class="{_cls(a['realised_krw'])}">{_won(a['realised_krw'])}</span> + 미실현 <span class="{_cls(a['unrealised_krw'])}">{_won(a['unrealised_krw'])}</span> = <strong>{_won(a['total_krw'])}</strong> · 수수료·세금 {_won(a['fees_krw'])}. 밝은 이름은 보유 중, 흐린 이름은 정리한 종목.</p>
   <div class="tbl">{_attribution_svg(a["rows"], p)}</div>
 
   <h3>닫힌 거래</h3>
-  {tiles}
+  {closed}
 
   <h3>팔고 난 뒤</h3>
   {after}
@@ -522,7 +623,7 @@ def _mirror_table(m: dict, window_days: int) -> str:
     ]
     body = "".join(f"<tr><td>{_e(k)}</td><td>{_e(x)}</td><td>{_e(y)}</td></tr>" for k, x, y in rows)
     ages = m["open_lot_ages_days"]
-    foot = (f'<p class="lede" style="margin-top:14px">지금 들고 있는 매수분 {ages["lots"]}건의 나이: 중앙값 {_days(ages["median"])} · 가장 오래된 것 {_days(ages["oldest"])}</p>'
+    foot = (f'<p class="note tight">지금 들고 있는 매수분 {ages["lots"]}건의 나이: 중앙값 {_days(ages["median"])} · 가장 오래된 것 {_days(ages["oldest"])}</p>'
             if ages["lots"] else "")
     return (f'<div class="tbl"><table class="mirror"><thead><tr><th></th><th>최근 {window_days}일</th><th>전체 이력</th></tr></thead>'
             f'<tbody>{body}</tbody></table></div>{foot}')
@@ -549,17 +650,22 @@ def _mismatch_qty(mm: dict) -> str:
 
 
 def _history_status(h: dict) -> str:
+    stamp = (f'조회 시작 {_e(h["since"] or "전체")} · 첫 체결 {_e(h["first_fill_at"] or "—")} · 체결 {h["fills"]}건')
     if h["complete"]:
-        return (f'<div class="status"><div>이력으로 되짚은 보유 {h["checked_symbols"]}종목의 수량·평균단가가 <strong>토스 잔고와 전부 일치</strong>. '
-                f'조회 시작 {_e(h["since"] or "전체")} · 첫 체결 {_e(h["first_fill_at"] or "—")} · 체결 {h["fills"]}건. 아래 실현손익은 전체 이력 기준.</div></div>')
+        return (f'<p class="recon">이력으로 되짚은 보유 {h["checked_symbols"]}종목의 수량·평균단가가 '
+                f'<strong>토스 잔고와 전부 일치</strong>한다. 아래 실현손익은 전체 이력 기준이다.</p>'
+                f'<p class="note tight">{stamp}</p>')
     trust = h.get("realised_trustworthy")
     items = "".join(
-        f'<li><strong>{_e(m["symbol"])}</strong> <span class="dim">({_e(_mismatch_qty(m))})</span><br>{_em(m["reason"])}</li>'
+        f'<li><span class="s">{_e(m["symbol"])}<em>{_e(_mismatch_qty(m))}</em></span>'
+        f'<span>{_em(m["reason"])}</span></li>'
         for m in h["mismatches"])
     verdict = ("주식 수가 바뀐 것뿐이고 들어오거나 나간 주식은 없다 — <strong>실현손익은 그대로 신뢰할 수 있다</strong>."
                if trust else "<strong>실현손익은 이만큼 비어 있다</strong>.")
-    return (f'<div class="status{"" if trust else " warn"}"><div>이력으로 되짚은 결과가 토스 잔고와 <strong>{len(h["mismatches"])}종목에서 다르다</strong>. '
-            f'조회 시작 {_e(h["since"] or "전체")} · 체결 {h["fills"]}건. {verdict}<ul>{items}</ul></div></div>')
+    return (f'<p class="recon{"" if trust else " warn"}">이력으로 되짚은 결과가 토스 잔고와 '
+            f'<strong>{len(h["mismatches"])}종목에서 다르다</strong>. {verdict}</p>'
+            f'<ul class="rlist">{items}</ul>'
+            f'<p class="note tight">{stamp}</p>')
 
 
 def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
@@ -580,19 +686,32 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
     v, c, h = rep["valuation"], rep["concentration"], rep["history"]
     acct = rep["account"]["account_no_masked"]
     gen = rep["generated_at"][:16].replace("T", " ")
-    tiles = [
-        ("주식 평가액", _won(v["equity_value_krw"]), f"국내 {_won(v['krw_leg'])} · 해외 ${(v['usd_leg'] or 0):,.2f}", ""),
-        ("미실현", _won(v["unrealised_krw"]), f"매입 {_won(v['purchase_total_krw'])} 대비 {_pct(v['unrealised_rate_pct'])}", _cls(v["unrealised_krw"])),
-        ("실현 누계", _won(h["realised_net_krw"]),
-         ("전체 이력 · 수수료·세금 차감" if h.get("realised_trustworthy", h["complete"]) else "부분 이력 · 수수료·세금 차감"),
-         _cls(h["realised_net_krw"])),
-        ("오늘", _won(v["daily_krw"]), _pct(v["daily_rate_pct"]), _cls(v["daily_krw"])),
-    ]
-    tiles_html = "".join(f'<div class="tile"><div class="k">{_e(k)}</div><div class="v {cl}">{_e(val)}</div><div class="s">{_e(s)}</div></div>' for k, val, s, cl in tiles)
+    basis = "전체 이력" if h.get("realised_trustworthy", h["complete"]) else "부분 이력"
+    stmt = _stmt([
+        ("주식 평가액", _won(v["equity_value_krw"]), "", "", ""),
+        ("국내", _won(v["krw_leg"]), "", "", "sub"),
+        ("해외", f"${(v['usd_leg'] or 0):,.2f}", f"USD/KRW {rep['fx']['usdkrw']}", "", "sub"),
+        ("매입 총액", _won(v["purchase_total_krw"]), "", "", ""),
+        ("미실현 손익", _won(v["unrealised_krw"]), _pct(v["unrealised_rate_pct"]),
+         _cls(v["unrealised_krw"]), "rule big"),
+        ("실현 손익 누계", _won(h["realised_net_krw"]), basis, _cls(h["realised_net_krw"]), "big"),
+        ("당일", _won(v["daily_krw"]), _pct(v["daily_rate_pct"]), _cls(v["daily_krw"]), "rule"),
+    ])
+    stmt += f'<p class="note tight">실현 손익 누계는 {basis} · 수수료·세금 차감 기준이다.</p>'
+
+    # The lead is the report's own first finding, set to be read; the rest sit
+    # under it with their ordinal in the margin. They used to be three identical
+    # accent-railed boxes here AND again inside 분석 — the same sentences twice.
+    heads = (rep.get("analysis") or {}).get("headline") or []
+    lead = (f'<div class="lead"><span class="n">1</span><p>{_e(heads[0])}</p></div>'
+            if heads else "")
+    finds = ("".join(f'<li><span class="n">{i}</span><span>{_e(x)}</span></li>'
+                     for i, x in enumerate(heads[1:], 2)))
+    finds = f'<ul class="finds">{finds}</ul>' if finds else ""
 
     largest = c["largest"]
-    conc = (f'<p class="lede">보유 {c["positions"]}종목. 가장 큰 종목은 {_e(_nm(largest["symbol"], largest["name"]))}, 평가액의 {largest["weight_pct"]:.2f}%. '
-            f'30% 선을 넘는 종목: {_e(", ".join(c["over_30pct"]) if c["over_30pct"] else "없음")}.</p>' if largest else '<p class="lede">보유 종목 없음.</p>')
+    conc = (f'<p class="note">가장 큰 종목은 {_e(_nm(largest["symbol"], largest["name"]))}, 평가액의 {largest["weight_pct"]:.2f}%. '
+            f'30% 선을 넘는 종목: {_e(", ".join(c["over_30pct"]) if c["over_30pct"] else "없음")}.</p>' if largest else '<p class="note">보유 종목 없음.</p>')
 
     hold_rows = "".join(
         f'<tr><td>{_e(_nm(r["symbol"], r["name"]))}</td><td>{_e(r["opened_at"] or "이력 밖")}</td><td class="n">{_days(r["held_days"])}</td>'
@@ -604,6 +723,7 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
         f'<td class="n">{d["buys"]}/{d["sells"]}</td><td class="n {_cls(d["realised_net_krw"])}">{_won(d["realised_net_krw"])}</td><td class="n {_cls(d["median_sell_pct"])}">{_pct(d["median_sell_pct"])}</td></tr>'
         for d in rep["departed"]) or '<tr><td colspan="6" class="dim">이 이력 안에서 완전히 정리한 종목 없음</td></tr>'
     limits = "".join(f"<li>{_e(x)}</li>" for x in rep["limits"])
+    n_dep = len(rep["departed"])
 
     return f"""<title>PivoxReport {acct}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -611,59 +731,60 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
 {_PRETENDARD if not paper else ""}
 <style>{_css(p)}</style>
 <div class="wrap">
-<header>
-  <div class="eyebrow">PivoxReport · 토스증권 계좌 {_e(acct)}</div>
+<header class="mast">
   <h1>기록이 되비추는 것</h1>
-  <div class="meta">{_e(gen)} KST · Toss Open API, read-only · USD/KRW {rep["fx"]["usdkrw"]}</div>
-  <div class="tiles">{tiles_html}</div>
+  <div class="who">토스증권 계좌 {_e(acct)}<br>{_e(gen)} KST<br>Toss Open API · read-only</div>
 </header>
 
-<section>
-  <h2>이 리포트가 딛고 선 이력</h2>
+{lead}
+{finds}
+{stmt}
+
+<section class="sec">
+  <div class="sh"><h2>이 리포트가 딛고 선 이력</h2><span class="cnt">체결 {h["fills"]}건</span></div>
   {_history_status(h)}
 </section>
 
-<section>
-  <h2>보유</h2>
-  <p class="lede">왼쪽은 각 종목이 평가액에서 차지하는 몫, 오른쪽은 평단 대비 지금 위치. 같은 줄이 같은 종목이다.</p>
+<section class="sec">
+  <div class="sh"><h2>보유</h2><span class="cnt">{c["positions"]}종목</span></div>
+  <p class="note">왼쪽은 각 종목이 평가액에서 차지하는 몫, 오른쪽은 평단 대비 지금 위치. 같은 줄이 같은 종목이다.</p>
   <div class="tbl">{_holdings_rows_svg(rep["holdings"], p, rows_per_page)}</div>
   <div class="legend"><span><i style="background:{p.bronze}"></i>비중</span><span><i style="background:{p.up}"></i>평단 위</span><span><i style="background:{p.down}"></i>평단 아래</span></div>
 </section>
 
-<section>
-  <h2>경로</h2>
-  <p class="lede">종목마다 처음 산 날부터 오늘까지의 선. 위쪽 삼각형이 매수, 아래쪽이 매도. 흐린 선은 이미 떠난 종목.</p>
+<section class="sec">
+  <div class="sh"><h2>경로</h2><span class="cnt">{c["positions"]}종목 보유 · {n_dep}종목 정리</span></div>
+  <p class="note">종목마다 처음 산 날부터 오늘까지의 선. 위쪽 삼각형이 매수, 아래쪽이 매도. 흐린 선은 이미 떠난 종목.</p>
   <div class="tbl">{_timeline_svg(rep, p, tracks_per_page)}</div>
   <div class="legend"><span><i style="background:{p.bronze}"></i>보유 중</span><span><i style="background:{p.ghost}"></i>정리함</span><span>▲ 매수 · ▼ 매도</span></div>
 </section>
 
-<section>
-  <h2>거울</h2>
-  <p class="lede">같은 잣대를 최근 {rep["window_days"]}일과 전체 이력에 나란히 댄다. 두 열이 다르면 최근이 평소와 다른 것이다. 최근 열의 평단·보유일은 전체 이력을 딛고 계산한다.</p>
+<section class="sec">
+  <div class="sh"><h2>거울</h2><span class="cnt">최근 {rep["window_days"]}일 대 전체</span></div>
+  <p class="note">같은 잣대를 두 기간에 나란히 댄다. 두 열이 다르면 최근이 평소와 다른 것이다. 최근 열의 평단·보유일은 전체 이력을 딛고 계산한다.</p>
   {_mirror_table(rep["mirrors"], rep["window_days"])}
 </section>
 
-<section>
-  <h2>집중</h2>
+<section class="sec">
+  <div class="sh"><h2>집중</h2><span class="cnt">국내 {(c["kr_pct"] or 0):.1f}% · 해외 {(c["us_pct"] or 0):.1f}%</span></div>
   {conc}
   {_split_bar_svg(c["kr_pct"], c["us_pct"], p)}
 </section>
 
-<section>
-  <h2>보유 종목의 이력</h2>
+<section class="sec">
+  <div class="sh"><h2>보유 종목의 이력</h2><span class="cnt">{c["positions"]}종목</span></div>
   <div class="tbl"><table class="plain"><thead><tr><th>종목</th><th>보유 시작</th><th>보유일</th><th>매수/매도</th><th>마지막 체결</th><th>수량</th><th>평단</th><th>손익률</th></tr></thead><tbody>{hold_rows}</tbody></table></div>
 </section>
 
-<section>
-  <h2>떠난 종목</h2>
+<section class="sec">
+  <div class="sh"><h2>떠난 종목</h2><span class="cnt">{n_dep}종목</span></div>
   <div class="tbl"><table class="plain"><thead><tr><th>종목</th><th>처음</th><th>마지막</th><th>매수/매도</th><th>실현손익</th><th>매도 수익률 중앙값</th></tr></thead><tbody>{dep_rows}</tbody></table></div>
 </section>
 
 {_analysis_section(rep.get("analysis") or {}, p)}
-<section>
-  <h2>이 숫자가 말하지 않는 것</h2>
-  <ul class="limits">{limits}</ul>
-  <p class="sig">기록을 되비추는 거울이다. 다음에 무엇을 할지는 여기 없다.</p>
-</section>
+<div class="foot">
+  <span class="basis">이 리포트는 토스증권 Open API 를 읽기 전용으로 조회해 만들었다. 주문 경로는 없다. 기록을 되비추는 거울이며, 다음에 무엇을 할지는 여기 없다.</span>
+  <ul>{limits}</ul>
+</div>
 </div>
 """

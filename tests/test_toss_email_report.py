@@ -108,3 +108,17 @@ def test_the_pdf_is_what_the_reader_is_pointed_at_not_the_link(report):
     assert "로그인" in with_pdf                            # the link is labelled honestly
     assert "첨부한 PDF" in render_email_text(report, attached=True)
     assert "첨부한 PDF" not in render_email_html(report, url=URL)
+
+
+def test_no_dashboard_furniture_and_korean_breaks_at_word_boundaries(report):
+    """Same rebuild as the browser page: a statement block instead of a 2x2 tile
+    grid, section heads that carry a count instead of an uppercase eyebrow, and
+    no centred italic sign-off. Plus keep-all, without which Korean wraps inside
+    a word — "손실은" split across two lines."""
+    page = render_email_html(report, url=URL)
+    assert "text-transform:uppercase" not in page
+    assert "font-style:italic" not in page
+    assert "text-align:center" not in page
+    assert page.count("word-break:keep-all") > 8
+    # the statement rules off where a 잔고 statement does
+    assert page.count("border-top:1.5px solid") >= 2

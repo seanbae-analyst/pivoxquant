@@ -29,7 +29,8 @@ def _page(**kw):
 
 def test_html_draws_the_three_charts_and_names_every_symbol():
     page = _page()
-    assert page.count("<svg") == 5                      # holdings rows · timeline · KR/US split · attribution · timing
+    # holdings rows · timeline · KR/US split · attribution · hold-period spans · timing
+    assert page.count("<svg") == 6
     assert "팔고 난 뒤" in page and "엔비디아 (NVDA)" in page
     assert "삼성전자 (005930)" in page and "Apple Inc. (AAPL)" in page and "엔비디아 (NVDA)" in page
     assert "토스 잔고와 전부 일치" in page
@@ -70,7 +71,7 @@ def test_paper_mode_puts_the_whole_document_on_the_report_surface():
         assert app_chrome not in paper, app_chrome
     assert PAPER in paper and PAPER_INK in paper and PAPER_BRONZE in paper
     assert "color-scheme: light" in paper and "color-scheme: dark" in screen
-    assert paper.count("<svg") == screen.count("<svg") == 5
+    assert paper.count("<svg") == screen.count("<svg") == 6
 
 
 def test_paper_drops_the_dynamic_subset_webfont_that_pdf_renderers_mis_map():
@@ -79,3 +80,39 @@ def test_paper_drops_the_dynamic_subset_webfont_that_pdf_renderers_mis_map():
     comes out as *other* hangul, which reads as writing and so hides the bug."""
     assert "pretendard" in _page()
     assert "pretendard" not in _page(paper=True)
+
+
+def test_the_page_carries_no_dashboard_furniture():
+    """The layout language is a brokerage statement, not a dashboard. The tile
+    grid, the accent-railed callout boxes, the uppercase eyebrow on every
+    section and the centred italic sign-off were each a template tell, and each
+    was also saying something twice — the headline sentences appeared at the top
+    AND again inside 분석."""
+    page = _page()
+    for tell in ('class="tiles"', 'class="tile"', 'class="head"', 'class="eyebrow"',
+                 'class="sig"', 'class="status"', 'class="lede"'):
+        assert tell not in page, tell
+    assert page.count('<table class="stmt">') >= 2
+    assert page.count('class="lead"') == 1
+
+
+def test_the_lead_finding_is_stated_once_not_twice():
+    rep = _report()
+    heads = rep["analysis"]["headline"]
+    page = render_mirror_html(rep)
+    assert heads[0] in page
+    # each finding appears exactly once in the document
+    for line in heads:
+        assert page.count(line) == 1, line
+
+
+def test_the_holding_period_asymmetry_gets_its_own_chart():
+    """The report's own first sentence is about holding losses longer than
+    gains; until now only the sentence said so."""
+    from services.toss.html_report import _hold_span_svg, SCREEN
+    rep = _report()
+    svg = _hold_span_svg(rep["analysis"]["trades"], SCREEN)
+    assert "이익을 실현할 때" in svg and "손실을 실현할 때" in svg
+    assert svg.count("<rect") == 2
+    # no closed trades, no chart — never a chart of nothing
+    assert _hold_span_svg({"closed": 0}, SCREEN) == ""
