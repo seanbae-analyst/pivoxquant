@@ -51,7 +51,8 @@ section:first-of-type {{ border-top:0; }}
 .up {{ color:var(--up); }} .down {{ color:var(--down); }} .dim {{ color:var(--ivory-dim); }}
 .status {{ display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:var(--veil); border-left:2px solid var(--bronze); font-size:13px; }}
 .status.warn {{ border-left-color:var(--down); }}
-.status ul {{ margin:6px 0 0; padding-left:18px; color:var(--ivory-soft); }}
+.status ul {{ margin:8px 0 0; padding-left:18px; color:var(--ivory-soft); display:grid; gap:8px; }}
+.status li {{ line-height:1.5; }}
 svg {{ display:block; width:100%; min-width:640px; height:auto; }}
 .tbl {{ overflow-x:auto; -webkit-overflow-scrolling:touch; }}
 svg text {{ font-family:var(--mono); font-size:11px; fill:var(--ivory-soft); }}
@@ -375,13 +376,26 @@ def _side(n, hold, pct) -> str:
     return "없음" if not n else f"{n}건 · 보유 {_days(hold)} · {pct:+.2f}%"
 
 
+def _mismatch_qty(mm: dict) -> str:
+    if mm["kind"] == "unmatched_sales":
+        return f"취득 기록 없는 매도 {mm.get('unmatched_sell_qty', 0):g}주"
+    if mm["kind"] == "absent":
+        return f"토스 {mm['toss_qty']:g}주"
+    return f"이력 {mm['rebuilt_qty']:g}주 / 토스 {mm['toss_qty']:g}주"
+
+
 def _history_status(h: dict) -> str:
     if h["complete"]:
         return (f'<div class="status"><div>이력으로 되짚은 보유 {h["checked_symbols"]}종목의 수량·평균단가가 <strong>토스 잔고와 전부 일치</strong>. '
                 f'조회 시작 {_e(h["since"] or "전체")} · 첫 체결 {_e(h["first_fill_at"] or "—")} · 체결 {h["fills"]}건. 아래 실현손익은 전체 이력 기준.</div></div>')
-    items = "".join(f'<li>{_e(m["symbol"])}: {_e(m["reason"])} (이력 {m["rebuilt_qty"]:g}주 / 토스 {m["toss_qty"]:g}주)</li>' for m in h["mismatches"])
-    return (f'<div class="status warn"><div>이력으로 되짚은 결과가 토스 잔고와 <strong>{len(h["mismatches"])}종목에서 다르다</strong>. '
-            f'조회 시작 {_e(h["since"] or "전체")} · 체결 {h["fills"]}건. 실현손익은 부분 — 아래 종목은 취득단가가 틀렸을 수 있다.<ul>{items}</ul></div></div>')
+    trust = h.get("realised_trustworthy")
+    items = "".join(
+        f'<li><strong>{_e(m["symbol"])}</strong> <span class="dim">({_e(_mismatch_qty(m))})</span><br>{_e(m["reason"])}</li>'
+        for m in h["mismatches"])
+    verdict = ("주식 수가 바뀐 것뿐이고 들어오거나 나간 주식은 없다 — <strong>실현손익은 그대로 신뢰할 수 있다</strong>."
+               if trust else "<strong>실현손익은 이만큼 비어 있다</strong>.")
+    return (f'<div class="status{"" if trust else " warn"}"><div>이력으로 되짚은 결과가 토스 잔고와 <strong>{len(h["mismatches"])}종목에서 다르다</strong>. '
+            f'조회 시작 {_e(h["since"] or "전체")} · 체결 {h["fills"]}건. {verdict}<ul>{items}</ul></div></div>')
 
 
 def render_mirror_html(rep: dict) -> str:

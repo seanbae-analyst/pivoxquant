@@ -206,10 +206,15 @@ def build_mirror_report(
             "first_fill_at": fills[0].at.date().isoformat() if fills else None,
             "fills": len(fills),
             "complete": recon["complete"],
+            "realised_trustworthy": recon["realised_trustworthy"],
             "checked_symbols": recon["checked"],
             "mismatches": recon["mismatches"],
             "realised_net_krw": _f(realised_net_total, 0),
-            "realised_scope": "전체" if recon["complete"] else "부분 — 아래 불일치 종목의 실현손익은 취득단가가 틀렸을 수 있음",
+            "realised_scope": (
+                "전체" if recon["complete"]
+                else "전체 — 주식 수 변경은 취득원가를 바꾸지 않는다" if recon["realised_trustworthy"]
+                else "부분 — 아래 종목은 취득원가가 이력 밖에 있어 그 몫이 빠져 있다"
+            ),
         },
         "valuation": val["valuation"],
         "concentration": _concentration(val["holdings"]),
@@ -272,6 +277,16 @@ def _mirror_block(m: dict, label: str) -> list[str]:
     return L
 
 
+def _mismatch_qty(mm: dict) -> str:
+    """The number that actually matters for this finding — not always a pair of
+    share counts (for an unmatched sale, both sides are zero and say nothing)."""
+    if mm["kind"] == "unmatched_sales":
+        return f"취득 기록 없는 매도 {mm.get('unmatched_sell_qty', 0):g}주"
+    if mm["kind"] == "absent":
+        return f"토스 {mm['toss_qty']:g}주"
+    return f"이력 {mm['rebuilt_qty']:g}주 / 토스 {mm['toss_qty']:g}주"
+
+
 def _analysis_markdown(an: dict) -> list[str]:
     if not an:
         return []
@@ -331,9 +346,10 @@ def render_mirror_markdown(rep: dict) -> str:
     if h["complete"]:
         L.append(f"- 이력으로 되짚은 보유 {h['checked_symbols']}종목의 수량·평균단가가 **토스 잔고와 전부 일치** — 아래 실현손익은 전체 이력 기준이다")
     else:
-        L.append(f"- 이력으로 되짚은 결과가 토스 잔고와 **{len(h['mismatches'])}종목에서 다르다** — 실현손익은 {h['realised_scope']}")
+        verdict = "실현손익은 그대로 신뢰할 수 있다" if h.get("realised_trustworthy") else f"실현손익은 {h['realised_scope']}"
+        L.append(f"- 이력으로 되짚은 결과가 토스 잔고와 **{len(h['mismatches'])}종목에서 다르다** — {verdict}")
         for mm in h["mismatches"]:
-            L.append(f"  - {mm['symbol']}: {mm['reason']} (이력 {mm['rebuilt_qty']:g}주 / 토스 {mm['toss_qty']:g}주)")
+            L.append(f"  - **{mm['symbol']}** ({_mismatch_qty(mm)}): {mm['reason']}")
     L += [
         "",
         "## 평가",

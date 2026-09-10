@@ -70,7 +70,7 @@ def test_full_liquidation_resets_the_position(raw):
 def test_reconcile_passes_when_the_book_equals_the_holdings(raw):
     book = reconstruct(fills_from_orders(raw["closed_orders"]))
     r = reconcile(book, raw["holdings"]["items"])
-    assert r == {"complete": True, "checked": 2, "mismatches": []}
+    assert r == {"complete": True, "realised_trustworthy": True, "checked": 2, "mismatches": []}
 
 
 def test_reconcile_names_the_symbol_when_history_starts_too_late(raw):
@@ -78,16 +78,18 @@ def test_reconcile_names_the_symbol_when_history_starts_too_late(raw):
     book = reconstruct(fills_from_orders(orders))
     r = reconcile(book, raw["holdings"]["items"])
     assert r["complete"] is False
-    syms = {m["symbol"] for m in r["mismatches"]}
-    assert syms == {"005930"}
-    assert "수량 불일치" in r["mismatches"][0]["reason"]
+    assert {m["symbol"] for m in r["mismatches"]} == {"005930"}
+    # Both the share count and the money are short, so shares are genuinely missing.
+    assert r["mismatches"][0]["kind"] == "quantity"
+    assert r["realised_trustworthy"] is False
 
 
 def test_reconcile_flags_a_symbol_held_but_absent_from_history(raw):
     book = reconstruct(fills_from_orders([o for o in raw["closed_orders"] if o["symbol"] != "AAPL"]))
     r = reconcile(book, raw["holdings"]["items"])
     assert [m["symbol"] for m in r["mismatches"]] == ["AAPL"]
-    assert "이력에 이 종목의 체결이 없음" in r["mismatches"][0]["reason"]
+    assert r["mismatches"][0]["kind"] == "absent"
+    assert r["realised_trustworthy"] is False
 
 
 # ── report ───────────────────────────────────────────────────────────────────
@@ -188,3 +190,47 @@ def test_asymmetry_phrase_never_reports_a_ratio_below_one():
     from services.toss.analysis import asymmetry_phrase
     assert asymmetry_phrase(3.2) == "손실 쪽이 3.2배 길다"
     assert asymmetry_phrase(0.5) == "이익 쪽이 2.0배 길다"
+
+
+def _order(oid, sym, side, qty, px, at, cur="USD"):
+    return {"orderId": oid, "symbol": sym, "side": side, "status": "FILLED", "currency": cur,
+            "orderedAt": at, "execution": {"filledQuantity": str(qty), "averageFilledPrice": str(px),
+                                           "filledAmount": str(qty * px), "commission": "0", "tax": "0", "filledAt": at}}
+
+
+def test_share_count_change_that_preserves_cost_is_not_read_as_missing_shares():
+    """A reverse split rewrites the share count and leaves the money alone.
+    177 × 6.3251 == 11 × 101.7771; nothing entered or left the account."""
+    book = reconstruct(fills_from_orders([_order("s1", "ABTC", "BUY", 177, 6.3251, "2025-09-19T23:30:00+09:00")]))
+    holdings = [{"symbol": "ABTC", "quantity": "11", "averagePurchasePrice": "101.7771"}]
+    r = reconcile(book, holdings)
+    m = r["mismatches"][0]
+    assert m["kind"] == "share_count_changed"
+    assert m["ratio"] == pytest.approx(16.09, abs=0.01)
+    assert "들어오거나 나간 주식은 없다" in m["reason"]
+    # The money is intact, so the realised figures stand.
+    assert r["complete"] is False and r["realised_trustworthy"] is True
+
+
+def test_share_count_change_with_a_different_cost_is_read_as_missing_shares():
+    book = reconstruct(fills_from_orders([_order("s1", "ABTC", "BUY", 177, 6.3251, "2025-09-19T23:30:00+09:00")]))
+    r = reconcile(book, [{"symbol": "ABTC", "quantity": "11", "averagePurchasePrice": "40"}])
+    assert r["mismatches"][0]["kind"] == "quantity"
+    assert r["realised_trustworthy"] is False
+
+
+def test_a_sale_with_no_cost_basis_is_measured_not_just_flagged():
+    """Selling shares the window never saw bought: the hole is reported in shares,
+    and that sale contributes nothing to realised rather than a wrong number."""
+    book = reconstruct(fills_from_orders([
+        _order("x1", "NVDA", "SELL", 4, 100, "2026-01-20T23:30:00+09:00"),
+        _order("x2", "NVDA", "BUY", 2, 80, "2026-02-01T23:30:00+09:00"),
+        _order("x3", "NVDA", "SELL", 2, 90, "2026-03-01T23:30:00+09:00"),
+    ]))
+    p = book["NVDA"]
+    assert p.oversold is True and p.unmatched_sell_qty == 4
+    assert len(p.sell_outcomes) == 1 and p.sell_outcomes[0].pnl_pct == pytest.approx(12.5)
+    r = reconcile(book, [])
+    m = r["mismatches"][0]
+    assert m["kind"] == "unmatched_sales" and m["unmatched_sell_qty"] == 4
+    assert "부풀리지 않음" in m["reason"] and r["realised_trustworthy"] is False

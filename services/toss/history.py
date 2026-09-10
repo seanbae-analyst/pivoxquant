@@ -88,6 +88,7 @@ class PositionHistory:
     realised_gross: Decimal = ZERO
     fees: Decimal = ZERO
     oversold: bool = False                     # a sale exceeded what the window had bought
+    unmatched_sell_qty: Decimal = ZERO         # shares sold with no cost basis here — the size of the hole
     buy_outcomes: list[BuyOutcome] = field(default_factory=list)
     sell_outcomes: list[SellOutcome] = field(default_factory=list)
 
@@ -153,11 +154,13 @@ def reconstruct(fills: list[Fill]) -> dict[str, PositionHistory]:
             if p.quantity <= _QTY_EPS:
                 # Selling what the window never bought: the history starts too late.
                 p.oversold = True
+                p.unmatched_sell_qty += f.quantity
                 continue
             avg = p.cost / p.quantity
             qty = f.quantity
             if qty > p.quantity + _QTY_EPS:
                 p.oversold = True
+                p.unmatched_sell_qty += qty - p.quantity
                 qty = p.quantity
             gross = (f.price - avg) * qty
             pct = float((f.price - avg) / avg * 100) if avg > 0 else 0.0
@@ -175,41 +178,89 @@ def reconstruct(fills: list[Fill]) -> dict[str, PositionHistory]:
     return book
 
 
+_COST_TOLERANCE = Decimal("0.01")   # 1 % — a split rounds the per-share figures, not the money
+# Which findings put the realised P&L in doubt. A share-count change does not by
+# itself: the money that went in is unchanged. It only misvalues a sale that
+# straddles the event, which is called out in that finding's own wording.
+# "average" belongs here too: the share count agreeing while the money does not
+# means our per-share cost is wrong, and every realised figure is measured
+# against it.
+_REALISED_BREAKING = {"absent", "quantity", "ghost", "unmatched_sales", "average"}
+
+
 def reconcile(book: dict[str, PositionHistory], holdings_items: list[dict]) -> dict:
     """Compare the rebuilt book with what Toss says the account holds now.
 
-    Returns ``{complete: bool, checked: int, mismatches: [{symbol, reason,
-    rebuilt_qty, toss_qty, rebuilt_avg, toss_avg}]}``. ``complete`` is the
-    gate the report uses before calling any realised figure whole.
+    Every held symbol is checked on two axes — how many shares, and what they
+    cost in total — because the two disagree for different reasons and only
+    one of them means the money is wrong:
+
+    * **Share count differs, total cost matches.** Nothing entered or left; the
+      share count itself was rewritten by a split, a consolidation, or a merger
+      conversion, none of which appear in the order history. The realised
+      figures survive this, except for a sale that straddles the event, which
+      was priced on one scale against an average built on the other.
+    * **Both differ.** Shares genuinely entered or left outside this window —
+      a purchase before the start date, a transfer in, an order the Open API
+      cannot list. The cost basis is wrong and the realised figures with it.
+
+    Returns ``{complete, realised_trustworthy, checked, mismatches[]}`` where
+    each mismatch carries a ``kind`` and a sentence naming what to do about it.
     """
     toss = {str(it.get("symbol")): it for it in holdings_items}
     mismatches: list[dict] = []
 
+    def row(sym, rq, tq, ra, ta, **extra):
+        return {"symbol": sym, "rebuilt_qty": float(rq), "toss_qty": float(tq),
+                "rebuilt_avg": float(ra) if ra is not None else None,
+                "toss_avg": float(ta) if ta is not None else None, **extra}
+
     for sym, it in toss.items():
         tq, ta = D(it.get("quantity")), D(it.get("averagePurchasePrice"))
         p = book.get(sym)
-        rq = p.quantity if p else ZERO
-        ra = p.average_cost if p else None
-        row = {"symbol": sym, "rebuilt_qty": float(rq), "toss_qty": float(tq),
-               "rebuilt_avg": float(ra) if ra is not None else None, "toss_avg": float(ta)}
         if p is None:
-            mismatches.append({**row, "reason": "이력에 이 종목의 체결이 없음 — 조회 시작일 이전에 산 것"})
-        elif abs(rq - tq) > _QTY_EPS:
-            mismatches.append({**row, "reason": "수량 불일치 — 이력에 없는 매수·매도·입고가 있음"})
+            mismatches.append(row(sym, ZERO, tq, None, ta, kind="absent",
+                                  reason="이력에 이 종목의 체결이 하나도 없음 — 조회 시작일 이전에 산 것. --since 를 넓혀라"))
+            continue
+        rq, ra = p.quantity, p.average_cost
+        if abs(rq - tq) > _QTY_EPS:
+            rebuilt_cost, toss_cost = p.cost, tq * ta
+            cost_matches = toss_cost > 0 and abs(rebuilt_cost - toss_cost) / toss_cost <= _COST_TOLERANCE
+            if cost_matches and rq > _QTY_EPS:
+                ratio = rq / tq if tq > 0 else None
+                mismatches.append(row(
+                    sym, rq, tq, ra, ta, kind="share_count_changed",
+                    cost_krw_note=f"{float(rebuilt_cost):,.2f} ≈ {float(toss_cost):,.2f}",
+                    ratio=round(float(ratio), 4) if ratio else None,
+                    reason=("주식 수가 바뀌었다 (병합·분할·합병 전환) — 취득원가 총액은 "
+                            f"{float(rebuilt_cost):,.2f} 대 {float(toss_cost):,.2f} 로 일치하고 수량만 "
+                            f"{float(ratio):.4g}:1 로 달라졌다. 들어오거나 나간 주식은 없다. "
+                            "다만 이 이벤트를 사이에 두고 낸 매도는 손익이 다른 눈금으로 계산됐을 수 있다"
+                            if ratio else "주식 수가 바뀌었다 — 취득원가 총액은 일치한다")))
+            else:
+                mismatches.append(row(sym, rq, tq, ra, ta, kind="quantity",
+                                      reason="수량과 취득원가가 모두 다름 — 이력 밖의 매수·입고가 있다. --since 를 넓혀라"))
         elif ra is not None and ta > 0 and abs(ra - ta) / ta > _AVG_TOLERANCE:
-            mismatches.append({**row, "reason": "평균단가 불일치 — 수량은 맞지만 취득 경로가 다름"})
+            mismatches.append(row(sym, rq, tq, ra, ta, kind="average",
+                                  reason="수량은 맞지만 평균단가가 다름 — 취득 경로가 이력과 다르다"))
 
     for sym, p in book.items():
-        if sym not in toss and p.quantity > _QTY_EPS:
-            mismatches.append({"symbol": sym, "rebuilt_qty": float(p.quantity), "toss_qty": 0.0,
-                               "rebuilt_avg": float(p.average_cost or 0), "toss_avg": None,
-                               "reason": "이력상 보유인데 계좌엔 없음 — 이력에 없는 매도·출고가 있음"})
-        if p.oversold and not any(m["symbol"] == sym for m in mismatches):
-            mismatches.append({"symbol": sym, "rebuilt_qty": float(p.quantity), "toss_qty": float(D(toss.get(sym, {}).get("quantity"))),
-                               "rebuilt_avg": None, "toss_avg": None,
-                               "reason": "이력에 산 것보다 많이 팔았음 — 조회 시작일 이전 매수가 있음"})
+        already = {m["symbol"] for m in mismatches}
+        if sym not in toss and p.quantity > _QTY_EPS and sym not in already:
+            mismatches.append(row(sym, p.quantity, ZERO, p.average_cost, None, kind="ghost",
+                                  reason="이력상 보유인데 계좌엔 없음 — 이력에 없는 매도·출고가 있다"))
+        if p.oversold and sym not in {m["symbol"] for m in mismatches}:
+            mismatches.append(row(sym, p.quantity, D(toss.get(sym, {}).get("quantity")), None, None,
+                                  kind="unmatched_sales", unmatched_sell_qty=float(p.unmatched_sell_qty),
+                                  reason=(f"취득 기록 없이 판 주식 {float(p.unmatched_sell_qty):g}주 — 조회 시작일 이전 매수가 있다. "
+                                          "이 몫의 손익은 계산에서 빠져 있다 (0 으로 취급, 부풀리지 않음)")))
 
-    return {"complete": not mismatches, "checked": len(toss), "mismatches": mismatches}
+    return {
+        "complete": not mismatches,
+        "realised_trustworthy": not any(m["kind"] in _REALISED_BREAKING for m in mismatches),
+        "checked": len(toss),
+        "mismatches": mismatches,
+    }
 
 
 def to_trade_rows(fills: list[Fill], book: dict[str, PositionHistory], names: dict[str, str] | None = None) -> list:
