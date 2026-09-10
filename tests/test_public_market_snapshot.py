@@ -13,7 +13,8 @@ Guards:
 """
 import time
 
-import routes.market as market_mod
+import services.data.indices as market_mod   # _indices_cache lives here
+import routes.market as market_routes        # the view function does not
 
 
 def _seed_indices_cache(us=None, kr=None):
@@ -150,7 +151,7 @@ class TestRateLimitApplied:
         """Abuse defense: the view must be wrapped by @general_rate_limit.
         The conftest disables enforcement (RATELIMIT_ENABLED=False) so we
         assert the decorator is wired rather than hammering the limiter."""
-        view = market_mod.public_market_snapshot
+        view = market_routes.public_market_snapshot
         # general_rate_limit wraps via functools.wraps + limiter.limit;
         # the limiter attaches its metadata to the wrapped function.
         assert hasattr(view, "__wrapped__") or hasattr(view, "_rate_limit") \

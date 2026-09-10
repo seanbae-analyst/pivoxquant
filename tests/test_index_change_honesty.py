@@ -13,7 +13,8 @@ trusted: the frontend maps null to "—" (lib/format.ts::fmtPct).
 
 import pytest
 
-import routes.market as market
+import services.data.indices as market       # _etf_snapshot lives here
+import routes.market as market_routes        # the view function does not
 
 
 class _StubFetcher:
@@ -83,7 +84,7 @@ def test_no_level_still_returns_none(stub_fetcher):
 def test_direction_helper_tolerates_null():
     """`_direction` runs on the possibly-null change in the public snapshot."""
     import inspect
-    src = inspect.getsource(market.public_market_snapshot)
+    src = inspect.getsource(market_routes.public_market_snapshot)
     assert 'snap.get("change_1d_pct", 0.0) or 0.0' not in src, (
         "the public snapshot must not coerce an unknown change back to 0.0"
     )

@@ -1193,7 +1193,7 @@ def _init_scheduler(app):
         """
         with app.app_context():
             try:
-                from routes.market import warm_indices_cache
+                from services.data.indices import warm_indices_cache
                 us_n = warm_indices_cache("us")
                 kr_n = warm_indices_cache("kr")
                 logger.info(

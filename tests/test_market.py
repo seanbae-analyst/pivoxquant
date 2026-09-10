@@ -106,7 +106,7 @@ class TestMarketIndicesKR:
                 return self._fmp_history(hist_closes_kosdaq)
             return None
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None):
@@ -143,7 +143,7 @@ class TestMarketIndicesKR:
             },
         )
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None):
@@ -178,7 +178,7 @@ class TestMarketIndicesKR:
                 return self._fmp_history(fx_closes)
             return None
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", side_effect=_fmp_get_history):
@@ -241,7 +241,7 @@ class TestMarketIndicesKR:
             # FMP would return stale 1500 series — new code should ignore.
             return self._fmp_history(fmp_hist)
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None):
@@ -293,7 +293,7 @@ class TestMarketIndicesKR:
         def _fetcher_hist(ticker, period="1y"):
             return self._fmp_history(fmp_stale)
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None):
@@ -335,7 +335,7 @@ class TestMarketIndicesKR:
                       "2001": kis_hist, "2203": kis_hist},
         )
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None):
@@ -399,7 +399,7 @@ class TestMarketIndicesKR:
                 return {"price": 2540.0, "changesPercentage": 0.42}
             return None
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None), \
@@ -440,7 +440,7 @@ class TestMarketIndicesKR:
             },
         )
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None), \
@@ -481,7 +481,7 @@ class TestMarketIndicesKR:
         from unittest.mock import MagicMock
         fmp_quote = MagicMock(return_value={"price": 9999.0})
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None), \
@@ -525,7 +525,7 @@ class TestMarketIndicesKR:
                 return {"price": 749_800.0}
             return None
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None), \
@@ -578,7 +578,7 @@ class TestMarketIndicesKR:
                 return {"price": 2540.0}
             return None
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None), \

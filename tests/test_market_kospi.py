@@ -83,7 +83,7 @@ class TestRoutePerTickerBounds:
         _indices_cache.clear()
 
         MockKIS = self._kis_mock(kospi_value)
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None):
@@ -115,7 +115,7 @@ class TestRoutePerTickerBounds:
         _indices_cache.clear()
 
         MockKIS = self._kis_mock(kospi_value)
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("services.kis.service.KISService", MockKIS), \
                 patch("services.data.fmp.get_history", return_value=None), \
@@ -340,7 +340,7 @@ class TestIndexStaleGuardDownward:
     def test_level_below_spark_min_band_flags_stale(self):
         """level < spark_min * 0.85 → is_stale True + range_52w suppressed."""
         from unittest.mock import patch
-        from routes import market as market_mod
+        from services.data import indices as market_mod
 
         # Extreme downward deviation: history floor ~2041, live level 1600
         # (~22% below the floor) — almost certainly a stale history window.
@@ -350,7 +350,7 @@ class TestIndexStaleGuardDownward:
         assert level < spark_min * 0.85  # precondition: well below the floor
 
         MockKIS = self._kis_mock(level=level, history_closes=history)
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.kis.service.KISService", MockKIS):
             m_f.get_price_history.return_value = None
             snap = market_mod._kis_index_snapshot("2203", "^KQ150", "KOSDAQ 150")
@@ -371,7 +371,7 @@ class TestIndexStaleGuardDownward:
         on a genuine fresh 52-week low. Documents the conservative threshold.
         """
         from unittest.mock import patch
-        from routes import market as market_mod
+        from services.data import indices as market_mod
 
         history = [2041.65, 2100.0, 2250.0, 2483.80, 2300.0] * 6
         spark_min = min(history)
@@ -379,7 +379,7 @@ class TestIndexStaleGuardDownward:
         assert spark_min * 0.85 <= level < spark_min  # below floor but inside band
 
         MockKIS = self._kis_mock(level=level, history_closes=history)
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.kis.service.KISService", MockKIS):
             m_f.get_price_history.return_value = None
             snap = market_mod._kis_index_snapshot("2203", "^KQ150", "KOSDAQ 150")
@@ -390,13 +390,13 @@ class TestIndexStaleGuardDownward:
     def test_level_within_band_not_stale(self):
         """level inside [spark_min*0.85, spark_max*1.15] → is_stale False."""
         from unittest.mock import patch
-        from routes import market as market_mod
+        from services.data import indices as market_mod
 
         history = [2041.65, 2100.0, 2250.0, 2483.80, 2300.0] * 6
         level = 2250.0  # comfortably inside the band
 
         MockKIS = self._kis_mock(level=level, history_closes=history)
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
                 patch("services.kis.service.KISService", MockKIS):
             m_f.get_price_history.return_value = None
             snap = market_mod._kis_index_snapshot("2203", "^KQ150", "KOSDAQ 150")
