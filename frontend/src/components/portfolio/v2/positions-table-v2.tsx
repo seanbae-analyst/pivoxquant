@@ -225,7 +225,7 @@ export function PositionsTableV2({
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
           }}
         >
           {rows.length} {rows.length === 1 ? "row" : "rows"}
@@ -248,7 +248,7 @@ export function PositionsTableV2({
             style={{
               padding: 40,
               textAlign: "center",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               fontSize: "var(--pq-text-body)",
             }}
           className="font-serif" >
@@ -259,7 +259,7 @@ export function PositionsTableV2({
             style={{
               padding: 64,
               textAlign: "center",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           className="font-serif" >
             <p
@@ -334,7 +334,7 @@ export function PositionsTableV2({
                     background: "transparent",
                     color: reconcileAvailable
                       ? "var(--pq-bronze)"
-                      : "rgba(245,240,232,0.45)",
+                      : "var(--pq-ivory-faint)",
                     fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.2em",
                     border: `1px solid ${reconcileAvailable ? "var(--pq-bronze)" : "rgba(245,240,232,0.20)"}`,
@@ -462,7 +462,7 @@ function PositionRow({
   const cellStyle: React.CSSProperties = {
     padding: "16px 12px",
     fontSize: "var(--pq-text-body)",
-    color: "rgba(245,240,232,0.82)",
+    color: "var(--pq-ivory-strong)",
     borderBottom:
       "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
     whiteSpace: "nowrap",
@@ -485,7 +485,7 @@ function PositionRow({
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             marginTop: 3,
           }}
         >
@@ -522,7 +522,7 @@ function PositionRow({
         style={{
           ...cellStyle,
           textAlign: "right",
-          color: "rgba(245,240,232,0.55)",
+          color: "var(--pq-ivory-dim)",
         }}
       >
         {fmtMoney(p.avgCost, cur)}

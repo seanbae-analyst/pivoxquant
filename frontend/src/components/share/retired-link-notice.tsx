@@ -56,7 +56,7 @@ export function RetiredLinkNotice() {
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.7,
-            color: "rgba(245,240,232,0.72)",
+            color: "var(--pq-ivory-muted)",
             margin: 0,
           }}
         >

@@ -104,7 +104,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           </h3>
           <p
             className="font-serif"
-            style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.6, color: "rgba(245,240,232,0.72)", marginBottom: 12 }}
+            style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.6, color: "var(--pq-ivory-muted)", marginBottom: 12 }}
           >
             개인정보보호법 §21 에 따라 <strong>30일 후</strong> 모든 데이터가 영구
             파기됩니다. 확인 메일을 보내드렸어요 — 마음이 바뀌시면 메일의{" "}
@@ -112,7 +112,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           </p>
           <p
             className="font-serif"
-            style={{ fontSize: "var(--pq-text-caption)", lineHeight: 1.5, color: "rgba(245,240,232,0.5)", marginBottom: 20 }}
+            style={{ fontSize: "var(--pq-text-caption)", lineHeight: 1.5, color: "var(--pq-ivory-faint)", marginBottom: 20 }}
           >
             이 기간 동안에는 로그인이 차단됩니다.
           </p>
@@ -136,7 +136,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           </h3>
           <p
             className="font-serif"
-            style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.6, color: "rgba(245,240,232,0.72)", marginBottom: 20 }}
+            style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.6, color: "var(--pq-ivory-muted)", marginBottom: 20 }}
           >
             계정과 모든 데이터(보유 종목·관심목록·전달된 아티팩트 포함)가 영구
             삭제되었습니다. 이용해 주셔서 감사합니다.
@@ -168,7 +168,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             disabled={busy}
             aria-label="닫기"
-            style={{ color: "rgba(245,240,232,0.55)", background: "transparent", border: "none", cursor: busy ? "not-allowed" : "pointer" }}
+            style={{ color: "var(--pq-ivory-dim)", background: "transparent", border: "none", cursor: busy ? "not-allowed" : "pointer" }}
           >
             <X className="h-4 w-4" />
           </button>
@@ -208,7 +208,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
               padding: "8px 0",
               background: "transparent",
               border: "none",
-              color: "rgba(245,240,232,0.45)",
+              color: "var(--pq-ivory-faint)",
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.16em",
               cursor: busy ? "not-allowed" : "pointer",

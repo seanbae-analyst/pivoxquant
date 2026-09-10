@@ -135,7 +135,7 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
         className="font-serif"
         style={{
           fontSize: "var(--pq-text-body)",
-          color: "rgba(245,240,232,0.82)",
+          color: "var(--pq-ivory-strong)",
         }}
       >
         &ldquo;{row.question}&rdquo;
@@ -547,7 +547,7 @@ export default function ProfilePageV2() {
               right: 14,
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           >
             Full timeline ›
@@ -633,7 +633,7 @@ export default function ProfilePageV2() {
                 right: 14,
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.2em",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
               }}
             >
               All pulses ›
@@ -660,7 +660,7 @@ export default function ProfilePageV2() {
               style={{
                 fontSize: "var(--pq-text-body)",
                 lineHeight: 1.55,
-                color: "rgba(245,240,232,0.82)",
+                color: "var(--pq-ivory-strong)",
                 marginBottom: 20,
               }}
             >
@@ -697,12 +697,12 @@ export default function ProfilePageV2() {
             border: "1px dashed rgba(245,240,232,0.14)",
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.6,
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
           }}
         className="font-serif" >
           <strong
             style={{
-              color: "rgba(245,240,232,0.82)",
+              color: "var(--pq-ivory-strong)",
             }}
           className="font-serif" >
             Notice / 면책 고지.

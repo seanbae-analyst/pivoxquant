@@ -197,10 +197,21 @@
        0.45 ≈  3.99:1 — large-text-only (AA large 18pt+ regular OR 14pt+ bold)
      All values < 0.45 fail AA for any text. Use these tokens instead of
      hard-coded rgba(245,240,232,X) where X < 0.45. */
+  /* The scale below is the one the code actually uses. Before 2026-09-10 it
+     stopped at 0.78, while 0.82 (25 uses) and 0.72 (14) had no token at all —
+     so the two most common "bright body text" values were written as raw
+     rgba in component files. That is how a single wrong alpha spread across
+     78 files, and why --pq-ivory-faint sat below WCAG AA unnoticed.
+     Every value here clears 4.5:1 on #050505; ivory needs alpha ≥ 0.49. */
+  --pq-ivory-strong: rgba(245, 240, 232, 0.82);
   --pq-ivory-soft: rgba(245, 240, 232, 0.78);
+  --pq-ivory-muted: rgba(245, 240, 232, 0.72);
   --pq-ivory-mid: rgba(245, 240, 232, 0.65);
   --pq-ivory-dim: rgba(245, 240, 232, 0.55);
-  --pq-ivory-faint: rgba(245, 240, 232, 0.45);
+  /* 0.45 → 0.50 (2026-09-10): measured 4.05:1 on #050505, below WCAG AA's
+     4.5 for body text. Ivory needs alpha ≥ 0.49 against this ground; 0.50
+     gives 4.63. All four consumers use it as `color` on text. */
+  --pq-ivory-faint: rgba(245, 240, 232, 0.50);
 
   /* Hairline / surface tokens — α < 0.10 range, NOT for text.
      Use for borders, dividers, thin progress tracks, surface backgrounds.
@@ -234,7 +245,10 @@
   --pq-live: #7db487;                /* muted lime — "data is fresh / streaming" */
   --pq-live-bronze: var(--pq-bronze-light);  /* bronze-only variant for chrome that bans green */
   --pq-stale: #a88f4a;               /* muted yellow-bronze — "data is delayed" */
-  --pq-drift: #a35b3b;               /* behavioural drift / persona alert — semantically distinct from --up carmine */
+  /* #a35b3b measured 4.00:1 on #050505 as text (persona-evolution renders it
+     as a label, not only as a fill). Lifted 8% to clear AA at 4.53 while
+     staying the same hue — it must remain distinct from --up carmine. */
+  --pq-drift: #b0623f;               /* behavioural drift / persona alert — semantically distinct from --up carmine */
 
   /* Terminal chrome (Bloomberg-style dark panels).
      Locked-in palette used by components/terminal/* — kpi-card, data-table,

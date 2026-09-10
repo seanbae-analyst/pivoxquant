@@ -247,7 +247,7 @@ export default function LoginPageV2() {
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                   cursor: "pointer",
                   fontSize: "var(--pq-text-h6)",
                   lineHeight: 1,
@@ -299,18 +299,18 @@ export default function LoginPageV2() {
               marginTop: 12,
               fontSize: "var(--pq-text-eyebrow)",
               lineHeight: 1.55,
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               textAlign: "center",
             }}
           >
             {locale === "ko" ? (
               <>
                 계속하면{" "}
-                <Link href="/terms" style={{ color: "rgba(245,240,232,0.65)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                <Link href="/terms" style={{ color: "var(--pq-ivory-mid)", textDecoration: "underline", textUnderlineOffset: 2 }}>
                   이용약관
                 </Link>{" "}
                 및{" "}
-                <Link href="/privacy" style={{ color: "rgba(245,240,232,0.65)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                <Link href="/privacy" style={{ color: "var(--pq-ivory-mid)", textDecoration: "underline", textUnderlineOffset: 2 }}>
                   개인정보처리방침
                 </Link>
                 에 동의하게 됩니다.
@@ -318,11 +318,11 @@ export default function LoginPageV2() {
             ) : (
               <>
                 By continuing, you agree to our{" "}
-                <Link href="/terms" style={{ color: "rgba(245,240,232,0.65)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                <Link href="/terms" style={{ color: "var(--pq-ivory-mid)", textDecoration: "underline", textUnderlineOffset: 2 }}>
                   Terms of Service
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" style={{ color: "rgba(245,240,232,0.65)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                <Link href="/privacy" style={{ color: "var(--pq-ivory-mid)", textDecoration: "underline", textUnderlineOffset: 2 }}>
                   Privacy Policy
                 </Link>.
               </>

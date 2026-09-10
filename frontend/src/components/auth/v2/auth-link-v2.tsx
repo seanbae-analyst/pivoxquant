@@ -30,7 +30,7 @@ export function AuthLinkV2({ prompt, action, href }: AuthLinkV2Props) {
       style={{
         fontSize: "var(--pq-text-body)",
         lineHeight: 1.5,
-        color: "rgba(245,240,232,0.55)",
+        color: "var(--pq-ivory-dim)",
         textAlign: "center",
       }}
     >

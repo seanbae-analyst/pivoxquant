@@ -120,7 +120,7 @@ export function Caption({
       style={{
         fontSize: "var(--pq-text-eyebrow)",
         lineHeight: 1.4,
-        color: "rgba(245,240,232,0.55)",
+        color: "var(--pq-ivory-dim)",
       }}
     >
       {children}
@@ -337,7 +337,7 @@ export function FootSignature({
           fontStyle: "normal",
           fontSize: "var(--pq-text-eyebrow)",
           lineHeight: 1.45,
-          color: "rgba(245,240,232,0.45)",
+          color: "var(--pq-ivory-faint)",  /* was inline 0.45 = 4.05:1; the token is now 0.50 */
           letterSpacing: "0.02em",
         }}
       >

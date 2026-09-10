@@ -140,7 +140,7 @@ export function SectorDonutBlock({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
@@ -202,7 +202,7 @@ export function SectorDonutBlock({
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                   marginBottom: 2,
                 }}
               >
@@ -268,7 +268,7 @@ export function SectorDonutBlock({
                   className="font-mono tabular-nums"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
-                    color: "rgba(245,240,232,0.82)",
+                    color: "var(--pq-ivory-strong)",
                   }}
                 >
                   {s.pct.toFixed(1)}%

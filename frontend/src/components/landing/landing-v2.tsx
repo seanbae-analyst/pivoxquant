@@ -322,7 +322,7 @@ function SiteFooter() {
               style={{
                 fontSize: "var(--pq-text-body-sm)",
                 lineHeight: 1.6,
-                color: "rgba(245,240,232,0.5)",
+                color: "var(--pq-ivory-faint)",
               }}
             >
               Research desk for the self-managed portfolio.
@@ -363,7 +363,7 @@ function SiteFooter() {
                       className="font-serif transition-colors"
                       style={{
                         fontSize: "var(--pq-text-body-sm)",
-                        color: "rgba(245,240,232,0.55)",
+                        color: "var(--pq-ivory-dim)",
                       }}
                     >
                       {link.label}
@@ -391,10 +391,10 @@ function SiteFooter() {
               fontSize: "var(--pq-text-eyebrow)",
               lineHeight: 1.7,
               letterSpacing: "0.02em",
-              color: "rgba(245,240,232,0.45)",
+              color: "var(--pq-ivory-faint)",
             }}
           >
-            <strong style={{ color: "rgba(245,240,232,0.65)" }}>
+            <strong style={{ color: "var(--pq-ivory-mid)" }}>
               {businessInfoRaw.name || "PivoxQuant"}
             </strong>
             {businessInfoRaw.representative && (
@@ -484,7 +484,7 @@ function SiteFooter() {
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.01em",
-                color: "rgba(245,240,232,0.5)",
+                color: "var(--pq-ivory-faint)",
               }}
             >
               © {new Date().getFullYear()} PivoxQuant &nbsp;·&nbsp; All rights
@@ -499,7 +499,7 @@ function SiteFooter() {
               style={{
                 fontSize: "var(--pq-text-body-sm)",
                 lineHeight: 1.6,
-                color: "rgba(245,240,232,0.4)",
+                color: "var(--pq-ivory-faint)",
               }}
             >
               PivoxQuant is not a licensed investment advisor, discretionary
@@ -517,7 +517,7 @@ function SiteFooter() {
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.12em",
-                  color: "rgba(245,240,232,0.4)",
+                  color: "var(--pq-ivory-faint)",
                 }}
               >
                 EMAIL

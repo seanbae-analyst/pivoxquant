@@ -219,7 +219,7 @@ export default function MobileDrawer({
                                   <div
                                     className="font-serif"
                                     style={{
-                                      color: "rgba(245,240,232,0.55)",
+                                      color: "var(--pq-ivory-dim)",
                                       fontSize: "var(--pq-text-eyebrow)",
                                       lineHeight: 1.45,
                                     }}
@@ -248,7 +248,7 @@ export default function MobileDrawer({
                 onClick={onClose}
                 className="mt-4 inline-block px-3 py-3 font-serif"
                 style={{
-                  color: "rgba(245,240,232,0.72)",
+                  color: "var(--pq-ivory-muted)",
                   fontSize: "var(--pq-text-body)",
                   letterSpacing: "0.02em",
                 }}

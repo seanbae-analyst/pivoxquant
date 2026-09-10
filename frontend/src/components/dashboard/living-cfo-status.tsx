@@ -300,14 +300,14 @@ function StatusModal({
           <button
             type="button"
             onClick={onClose}
-            className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)]"
+            className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)]"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <p className="font-serif text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed">
+        <p className="font-serif text-pq-body-sm text-[var(--pq-ivory-mid)] leading-relaxed">
           Two years in, this dashboard knows your style better than you do.
           It learns from every position you own and every pulse you submit.
         </p>

@@ -291,12 +291,12 @@ export default function TopNav() {
                 aria-hidden
                 className="hidden font-serif md:inline"
                 style={{
-                  color: "rgba(184,149,106,0.75)",
+                  color: "rgba(184,149,106,0.80)",
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.08em",
                 }}
               >
-                · Living Mirror
+                · Living CFO
               </span>
             </Link>
 
@@ -526,7 +526,7 @@ export default function TopNav() {
                         <p
                           className="font-serif"
                           style={{
-                            color: "rgba(245,240,232,0.78)",
+                            color: "var(--pq-ivory-soft)",
                             fontSize: "var(--pq-text-lead)",
                             lineHeight: 1.55,
                             maxWidth: 240,

@@ -636,7 +636,7 @@ export default function SettingsPageV2() {
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.2em",
-                    color: "rgba(245,240,232,0.55)",
+                    color: "var(--pq-ivory-dim)",
                   }}
                 >
                   B · Brokers
@@ -646,7 +646,7 @@ export default function SettingsPageV2() {
                   style={{
                     fontSize: "var(--pq-text-body)",
                     lineHeight: 1.6,
-                    color: "rgba(245,240,232,0.72)",
+                    color: "var(--pq-ivory-muted)",
                     margin: "12px 0 0",
                     maxWidth: 620,
                   }}
@@ -728,7 +728,7 @@ export default function SettingsPageV2() {
                     right: 14,
                     fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.2em",
-                    color: "rgba(245,240,232,0.55)",
+                    color: "var(--pq-ivory-dim)",
                   }}
                 >
                   {t("settingsV2.push.sectionLabel")}
@@ -766,7 +766,7 @@ export default function SettingsPageV2() {
                       className="font-serif"
                       style={{
                         fontSize: "var(--pq-text-body)",
-                        color: "rgba(245,240,232,0.55)",
+                        color: "var(--pq-ivory-dim)",
                         marginTop: 2,
                       }}
                     >
@@ -840,7 +840,7 @@ export default function SettingsPageV2() {
                     right: 14,
                     fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.2em",
-                    color: "rgba(245,240,232,0.55)",
+                    color: "var(--pq-ivory-dim)",
                   }}
                 >
                   {t("settingsV2.emailDelivery.sectionLabel")}
@@ -878,7 +878,7 @@ export default function SettingsPageV2() {
                       className="font-serif"
                       style={{
                         fontSize: "var(--pq-text-body)",
-                        color: "rgba(245,240,232,0.55)",
+                        color: "var(--pq-ivory-dim)",
                         marginTop: 2,
                       }}
                     >
@@ -977,12 +977,12 @@ export default function SettingsPageV2() {
               border: "1px dashed rgba(245,240,232,0.14)",
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           className="font-serif" >
             <strong
               style={{
-                color: "rgba(245,240,232,0.82)",
+                color: "var(--pq-ivory-strong)",
               }}
             className="font-serif" >
               {t("settingsV2.notice.title")}

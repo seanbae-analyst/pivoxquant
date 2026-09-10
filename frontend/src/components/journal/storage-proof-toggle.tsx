@@ -72,7 +72,7 @@ export function StorageProofToggle({ reflectionId }: { reflectionId: number }) {
           저장 형태 보기 · HOW THIS IS STORED
         </span>
         <ChevronDown
-          className="h-3.5 w-3.5 shrink-0 text-[rgba(245,240,232,0.5)] transition-transform duration-200"
+          className="h-3.5 w-3.5 shrink-0 text-[var(--pq-ivory-faint)] transition-transform duration-200"
           style={{ transform: open ? "rotate(180deg)" : undefined }}
         />
       </button>
@@ -80,12 +80,12 @@ export function StorageProofToggle({ reflectionId }: { reflectionId: number }) {
       {open && (
         <div className="mt-3 space-y-3">
           {loading && (
-            <p className="font-mono text-pq-caption text-[rgba(245,240,232,0.5)]">
+            <p className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]">
               불러오는 중…
             </p>
           )}
           {failed && (
-            <p className="font-mono text-pq-caption text-[rgba(245,240,232,0.5)]">
+            <p className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]">
               저장 형태를 불러올 수 없습니다.
             </p>
           )}
@@ -107,7 +107,7 @@ export function StorageProofToggle({ reflectionId }: { reflectionId: number }) {
               />
               <p
                 className="font-sans text-pq-caption"
-                style={{ lineHeight: 1.5, color: "rgba(245,240,232,0.5)" }}
+                style={{ lineHeight: 1.5, color: "var(--pq-ivory-faint)" }}
               >
                 {proof.note_kr}
               </p>

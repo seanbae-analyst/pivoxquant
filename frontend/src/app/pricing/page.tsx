@@ -209,7 +209,7 @@ function FaqAccordion({ item }: { item: FaqItem }) {
             "h-4 w-4 shrink-0 transition-transform duration-200",
             open && "rotate-180",
           )}
-          style={{ color: "rgba(245,240,232,0.55)" }}
+          style={{ color: "var(--pq-ivory-dim)" }}
         />
       </button>
       {open && (
@@ -217,7 +217,7 @@ function FaqAccordion({ item }: { item: FaqItem }) {
           className="font-serif pb-5 leading-relaxed"
           style={{
             fontSize: "var(--pq-text-body)",
-            color: "rgba(245,240,232,0.72)",
+            color: "var(--pq-ivory-muted)",
             lineHeight: 1.7,
           }}
         >
@@ -331,7 +331,7 @@ function ConsentModal({
             onClick={onClose}
             aria-label="Close"
             className="rounded-sm p-1 transition-colors"
-            style={{ color: "rgba(245,240,232,0.55)" }}
+            style={{ color: "var(--pq-ivory-dim)" }}
           >
             <IconClose className="h-4 w-4" />
           </button>
@@ -427,7 +427,7 @@ function ConsentModal({
               className="mb-3 text-center font-serif"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
                 letterSpacing: "0.04em",
               }}
             >
@@ -462,7 +462,7 @@ function ConsentModal({
             style={{
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.16em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           >
             PROCESSED BY STRIPE, INC. (UNITED STATES)
@@ -586,7 +586,7 @@ export default function PricingPage() {
             style={{
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.08em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -636,7 +636,7 @@ export default function PricingPage() {
               style={{
                 fontSize: "clamp(15px, 1.3vw, 17px)",
                 lineHeight: 1.65,
-                color: "rgba(245,240,232,0.65)",
+                color: "var(--pq-ivory-mid)",
                 maxWidth: "56ch",
               }}
             >
@@ -686,7 +686,7 @@ export default function PricingPage() {
                 className="font-serif leading-relaxed"
                 style={{
                   fontSize: "var(--pq-text-body)",
-                  color: "rgba(245,240,232,0.72)",
+                  color: "var(--pq-ivory-muted)",
                   lineHeight: 1.65,
                   maxWidth: "62ch",
                 }}
@@ -883,7 +883,7 @@ export default function PricingPage() {
           {/* Billing footnote */}
           <p
             className="mt-12 font-serif text-pq-mono-sm leading-relaxed"
-            style={{ color: "rgba(245,240,232,0.45)" }}
+            style={{ color: "var(--pq-ivory-faint)" }}
           >
             Billed in KRW. VAT included. Cancel anytime. Informational research
             tool — no trade instructions issued.
@@ -966,7 +966,7 @@ export default function PricingPage() {
             style={{
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           >
             PAYMENT PROCESSED BY STRIPE, INC. (UNITED STATES)

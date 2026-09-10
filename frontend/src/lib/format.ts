@@ -195,7 +195,7 @@ export function pctColor(value: number | null | undefined): string {
 export const PRICE_COLOR_CLASS = {
   up: "text-[#D18888]",
   down: "text-[#7AA0C8]",
-  flat: "text-[rgba(245,240,232,0.55)]",
+  flat: "text-[var(--pq-ivory-dim)]",
 } as const;
 
 export function pctColorClass(value: number | null | undefined): string {

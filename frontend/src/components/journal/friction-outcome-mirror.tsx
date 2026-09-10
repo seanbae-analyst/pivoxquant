@@ -210,7 +210,7 @@ export function FrictionOutcomeMirror() {
             style={{
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.7,
-              color: "rgba(245,240,232,0.78)",
+              color: "var(--pq-ivory-soft)",
               wordBreak: "keep-all",
             }}
           >

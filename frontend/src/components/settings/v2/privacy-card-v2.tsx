@@ -301,7 +301,7 @@ export function PrivacyCardV2({
               right: 14,
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           >
             E1 · Consent
@@ -349,7 +349,7 @@ export function PrivacyCardV2({
                   className="font-serif"
                   style={{
                     fontSize: "var(--pq-text-body)",
-                    color: "rgba(245,240,232,0.55)",
+                    color: "var(--pq-ivory-dim)",
                     marginTop: 2,
                   }}
                 >
@@ -400,7 +400,7 @@ export function PrivacyCardV2({
               right: 14,
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           >
             E2 · Export
@@ -422,7 +422,7 @@ export function PrivacyCardV2({
             style={{
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.55,
-              color: "rgba(245,240,232,0.82)",
+              color: "var(--pq-ivory-strong)",
               marginBottom: 20,
             }}
           >
@@ -456,7 +456,7 @@ export function PrivacyCardV2({
                   style={{
                     fontVariantNumeric: "tabular-nums",
                     fontSize: "var(--pq-text-body)",
-                    color: "rgba(245,240,232,0.55)",
+                    color: "var(--pq-ivory-dim)",
                     marginTop: 2,
                   }}
                 >
@@ -492,7 +492,7 @@ export function PrivacyCardV2({
             className="font-serif"
             style={{
               fontSize: "var(--pq-text-caption)",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               marginTop: 12,
             }}
           >
@@ -513,7 +513,7 @@ export function PrivacyCardV2({
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
                 marginBottom: 12,
               }}
             >
@@ -523,7 +523,7 @@ export function PrivacyCardV2({
               className="font-serif"
               style={{
                 fontSize: "var(--pq-text-caption)",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
                 marginBottom: 14,
               }}
             >
@@ -581,7 +581,7 @@ export function PrivacyCardV2({
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                   marginBottom: 10,
                 }}
               >
@@ -613,7 +613,7 @@ export function PrivacyCardV2({
                 className="font-serif"
                 style={{
                   fontSize: "var(--pq-text-caption)",
-                  color: "rgba(245,240,232,0.45)",
+                  color: "var(--pq-ivory-faint)",
                   marginTop: 10,
                   lineHeight: 1.55,
                 }}
@@ -691,7 +691,7 @@ export function PrivacyCardV2({
               style={{
                 fontSize: "var(--pq-text-body)",
                 lineHeight: 1.55,
-                color: "rgba(245,240,232,0.82)",
+                color: "var(--pq-ivory-strong)",
                 marginBottom: 16,
               }}
             >
@@ -740,7 +740,7 @@ export function PrivacyCardV2({
               style={{
                 fontSize: "var(--pq-text-body)",
                 lineHeight: 1.55,
-                color: "rgba(245,240,232,0.82)",
+                color: "var(--pq-ivory-strong)",
                 marginBottom: 16,
               }}
             >

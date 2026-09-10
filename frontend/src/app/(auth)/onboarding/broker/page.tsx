@@ -156,7 +156,7 @@ export default function OnboardingBrokerPage() {
             <button
               type="button"
               onClick={handleSkip}
-              className="text-pq-eyebrow tracking-[0.22em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] transition-colors"
+              className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)] transition-colors"
             >
               {t("brokerOnboarding.skip")}
             </button>
@@ -166,7 +166,7 @@ export default function OnboardingBrokerPage() {
             <span className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
               {t("brokerOnboarding.stepLabel")}
             </span>
-            <span className="text-pq-mono-sm tabular-nums text-[rgba(245,240,232,0.5)]">
+            <span className="text-pq-mono-sm tabular-nums text-[var(--pq-ivory-faint)]">
               0 · 20
             </span>
           </div>

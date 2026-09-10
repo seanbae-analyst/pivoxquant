@@ -79,16 +79,29 @@ const SITE_NAME = "PivoxQuant";
 // It was the most-seen copy on the product — the browser tab title and the OG
 // card on every share — and it promised a product that no longer exists.
 //
-// The replacement describes the three screens that actually ship:
-// /pre-trade (멈춤) · /journal (기록) · /mirror (거울). Nothing is generated for
-// the user; the user's own record is the material. Keep it that way.
-const SITE_TITLE_KR = `${SITE_NAME} — 사기 전에 멈추고, 나중에 되비춘다`;
+// 2026-09-10 (CEO): the CFO concept comes back as the umbrella, but only the
+// true half of it. What was deleted in 2026-09-02 was never the metaphor — it
+// was "리포트는 저희가 씁니다 / 매주 일요일 리포트가 도착합니다", which described
+// an artifact pipeline that no longer exists. That stays deleted.
+//
+// The half that is true is the one that actually describes a CFO: a CFO does
+// not pick the investments. A CFO keeps the books, closes the period, and puts
+// the numbers back in front of whoever decides. That is exactly 멈춤 → 기록 →
+// 거울, so the concept sits above the loop rather than replacing it.
+//
+// Nothing is generated for the user; the user's own record is the material.
+// Keep it that way — the moment this copy promises output, it is false again.
+const SITE_TITLE_KR = `${SITE_NAME} — 당신 포트폴리오의 CFO`;
 const SITE_DESCRIPTION_KR =
-  "사기 전에 한 번 멈춰 이유를 적습니다. 몇 주 뒤 그 기록이 당신의 실제 매매 습관을 되비춥니다. 점수를 매기지도, 종목을 골라주지도 않습니다. 클로즈드 베타 무료.";
+  // The sentence DENIES giving the thing FORBIDDEN_DIRECTIVE_TERMS bans, which
+  // means it has to quote that word in the negative. The marker is the
+  // documented escape (.githooks/pre-commit) — the guard scans added lines and
+  // cannot read a negation.
+  "CFO 는 종목을 고르지 않습니다. 장부를 지키고, 결산해서, 숫자를 결정권자 앞에 돌려놓습니다. 사기 전에 한 번 멈춰 이유를 적고, 그 기록이 몇 주 뒤 당신의 실제 매매 습관을 되비춥니다. 점수도 추천도 없습니다. 클로즈드 베타 무료."; // legal-ok
 const SITE_DESCRIPTION_OG =
-  "스스로 선언한 투자자와, 거래가 말해주는 투자자 사이의 간극을 봅니다.";
+  "당신 포트폴리오의 CFO. 스스로 선언한 투자자와, 거래가 말해주는 투자자 사이의 간극을 봅니다.";
 const SITE_DESCRIPTION_TWITTER =
-  "멈춤 · 기록 · 거울. 내 매매 기록을 되비추는 투자 회고 도구.";
+  "당신 포트폴리오의 CFO. 멈춤 · 기록 · 거울.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

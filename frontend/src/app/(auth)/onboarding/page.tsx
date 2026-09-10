@@ -330,7 +330,7 @@ function SliderInput({
               ${
                 Number(opt.value) === value
                   ? "bg-[var(--pq-bronze)] text-[var(--pq-ink)] shadow-lg shadow-[rgba(184,149,106,0.3)]"
-                  : "bg-[var(--pq-ivory-line-soft)] text-[rgba(245,240,232,0.55)] hover:bg-[rgba(245,240,232,0.12)]"
+                  : "bg-[var(--pq-ivory-line-soft)] text-[var(--pq-ivory-dim)] hover:bg-[rgba(245,240,232,0.12)]"
               }
             `}
           >

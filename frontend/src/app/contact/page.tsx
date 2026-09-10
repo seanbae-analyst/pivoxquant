@@ -61,7 +61,7 @@ export default function ContactPage() {
                 >
                   {c.address}
                 </a>
-                <p className="text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed">
+                <p className="text-pq-body-sm text-[var(--pq-ivory-mid)] leading-relaxed">
                   {c.helper}
                 </p>
               </section>
@@ -71,7 +71,7 @@ export default function ContactPage() {
 
         <section className="mt-12 pt-10 border-t border-[var(--pq-ivory-line)]">
           <h2 className="font-serif text-xl mb-4">Before you write</h2>
-          <p className="text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed mb-3">
+          <p className="text-pq-body-sm text-[var(--pq-ivory-mid)] leading-relaxed mb-3">
             Most product questions are answered in our docs.
           </p>
           <Link

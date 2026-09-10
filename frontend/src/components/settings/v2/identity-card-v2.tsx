@@ -35,13 +35,13 @@ const ROW_LABEL_STYLE: React.CSSProperties = {
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
   fontSize: "var(--pq-text-body)",
-  color: "rgba(245,240,232,0.55)",
+  color: "var(--pq-ivory-dim)",
   marginTop: 2,
 };
 const ROW_VALUE_STYLE: React.CSSProperties = {
   fontVariantNumeric: "tabular-nums",
   fontSize: "var(--pq-text-body)",
-  color: "rgba(245,240,232,0.82)",
+  color: "var(--pq-ivory-strong)",
 };
 
 export function SettingsIdentityCardV2({
@@ -69,7 +69,7 @@ export function SettingsIdentityCardV2({
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.55)",
+          color: "var(--pq-ivory-dim)",
         }}
       >
         A1 · Identity

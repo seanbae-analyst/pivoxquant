@@ -86,7 +86,7 @@ export function AuthHeroV2({
           style={{
             fontSize: "var(--pq-text-h5)",
             lineHeight: 1.55,
-            color: "rgba(245,240,232,0.72)",
+            color: "var(--pq-ivory-muted)",
             maxWidth: 480,
             margin: "0 0 40px 0",
           }}
@@ -101,7 +101,7 @@ export function AuthHeroV2({
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             paddingTop: 24,
             borderTop: "0.5px solid var(--pq-ivory-line)",
             textTransform: "uppercase",

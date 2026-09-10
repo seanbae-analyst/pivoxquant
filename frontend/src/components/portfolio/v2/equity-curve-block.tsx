@@ -374,7 +374,7 @@ export function EquityCurveBlock({
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                 }}
               >
                 Spread
@@ -409,7 +409,7 @@ export function EquityCurveBlock({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
                 fontSize: "var(--pq-text-body)",
                 borderRadius: 4,
               }}
@@ -628,7 +628,7 @@ function KpiCell({
         style={{
           fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
-          color: "rgba(245,240,232,0.55)",
+          color: "var(--pq-ivory-dim)",
           marginBottom: 6,
         }}
       >
@@ -675,7 +675,7 @@ function LegendSwatch({
         style={{
           fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
-          color: "rgba(245,240,232,0.55)",
+          color: "var(--pq-ivory-dim)",
         }}
       >
         {label}

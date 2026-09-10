@@ -373,7 +373,7 @@ export function TradeModalV2({
             style={{
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.5,
-              color: "rgba(245,240,232,0.65)",
+              color: "var(--pq-ivory-mid)",
               margin: 0,
             }}
           >
@@ -384,7 +384,7 @@ export function TradeModalV2({
               className="font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
                 letterSpacing: "0.16em",
               }}
             >
@@ -513,7 +513,7 @@ export function TradeModalV2({
                     style={{
                       fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.06em",
-                      color: noteOk ? "var(--pq-bronze)" : "rgba(245,240,232,0.45)",
+                      color: noteOk ? "var(--pq-bronze)" : "var(--pq-ivory-faint)",
                       marginTop: 2,
                     }}
                   >
@@ -555,7 +555,7 @@ export function TradeModalV2({
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
               }}
             >
               Saved to your book · not sent to broker
@@ -568,7 +568,7 @@ export function TradeModalV2({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   cursor: "pointer",

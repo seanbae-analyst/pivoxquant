@@ -97,7 +97,7 @@ function BenchmarkCompareRow({
                 delta > 0
                   ? "rgba(184,149,106,0.85)"
                   : delta < 0
-                    ? "rgba(245,240,232,0.45)"
+                    ? "var(--pq-ivory-faint)"
                     : "rgba(245,240,232,0.55)",
             }}
             aria-label={`Your ${label} vs group median: delta ${fmt(delta, digits, suffix)}`}
@@ -171,7 +171,7 @@ export function PeerBenchmarkBlock({
         style={{ background: PAPER_BG, border: `1px solid ${PAPER_BORDER}` }}
       >
         <Kicker>{_kicker}</Kicker>
-        <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
+        <p className="mt-2 text-xs text-[var(--pq-ivory-dim)]">
           {data.reason === "insufficient_group_size"
             ? `The ${personaLabel} group currently has fewer than 20 members — peer stats are withheld for privacy.`
             : "Peer stats are being computed. Check back soon."}
@@ -189,11 +189,11 @@ export function PeerBenchmarkBlock({
     >
       <div className="flex items-baseline justify-between gap-3">
         <Kicker>{_kicker}</Kicker>
-        <span className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+        <span className="text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)]">
           N ≥ 20 · anonymized
         </span>
       </div>
-      <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
+      <p className="mt-2 text-xs text-[var(--pq-ivory-dim)]">
         Median statistics across everyone classified as{" "}
         <span className="text-[var(--pq-ivory)]">{personaLabel}</span>.
         Observational — no individual record is exposed.
@@ -237,7 +237,7 @@ export function PeerBenchmarkBlock({
 
       {s.most_held_sectors && s.most_held_sectors.length > 0 && (
         <div className="mt-4">
-          <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)]">
             Most-held sectors
           </div>
           <ul className="mt-2 flex flex-wrap gap-2">
@@ -263,7 +263,7 @@ export function PeerBenchmarkBlock({
 
       {s.common_mistakes && s.common_mistakes.length > 0 && (
         <div className="mt-4">
-          <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)]">
             Common behavioural patterns in this group
           </div>
           <ul className="mt-2 flex flex-col gap-1.5">
@@ -272,7 +272,7 @@ export function PeerBenchmarkBlock({
                 key={m.label}
                 className="flex items-baseline justify-between gap-3 text-xs"
               >
-                <span className="text-[rgba(245,240,232,0.65)]">
+                <span className="text-[var(--pq-ivory-mid)]">
                   {MISTAKE_LABELS_KR[m.label] ?? m.label}
                 </span>
                 {/* Unit suffix "명" (persons) — `count` is the number of
@@ -280,7 +280,7 @@ export function PeerBenchmarkBlock({
                     group_benchmark.py). Without a unit a bare number reads
                     ambiguously (users vs trades) — 표시광고법 §3 clarity
                     (legal-kr-fintech 2026-06). */}
-                <span className="font-mono tabular-nums text-[rgba(245,240,232,0.45)]">
+                <span className="font-mono tabular-nums text-[var(--pq-ivory-faint)]">
                   {m.count ?? "—"}명
                 </span>
               </li>

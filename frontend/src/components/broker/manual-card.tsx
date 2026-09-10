@@ -22,11 +22,11 @@ export function ManualCard({ onSelect }: { onSelect: () => void }) {
           <h3 className="font-serif text-lg text-[var(--pq-ivory)]">
             {t("brokerOnboarding.manual.title")}
           </h3>
-          <p className="mt-1 text-pq-mono-sm text-[rgba(245,240,232,0.5)]">
+          <p className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-faint)]">
             {t("brokerOnboarding.manual.subtitle")}
           </p>
         </div>
-        <span className="inline-flex items-center gap-1 border border-[rgba(245,240,232,0.2)] px-2 py-0.5 text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] shrink-0">
+        <span className="inline-flex items-center gap-1 border border-[rgba(245,240,232,0.2)] px-2 py-0.5 text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)] shrink-0">
           <PencilLine className="h-2.5 w-2.5" />
           Manual
         </span>

@@ -94,7 +94,7 @@ export function DangerZoneCardV2({
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
-            color: "rgba(245,240,232,0.82)",
+            color: "var(--pq-ivory-strong)",
             marginBottom: 20,
           }}
         >
@@ -178,7 +178,7 @@ export function DangerZoneCardV2({
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
-            color: "rgba(245,240,232,0.82)",
+            color: "var(--pq-ivory-strong)",
             marginBottom: 20,
           }}
         >

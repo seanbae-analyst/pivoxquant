@@ -132,7 +132,7 @@ export function MarketingConsentCardV2() {
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.55)",
+          color: "var(--pq-ivory-dim)",
         }}
       >
         C3 · Marketing
@@ -170,7 +170,7 @@ export function MarketingConsentCardV2() {
             className="font-serif"
             style={{
               fontSize: "var(--pq-text-body)",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               marginTop: 2,
             }}
           >
@@ -183,7 +183,7 @@ export function MarketingConsentCardV2() {
                 fontVariantNumeric: "tabular-nums",
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.04em",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
                 marginTop: 8,
               }}
             >
@@ -197,7 +197,7 @@ export function MarketingConsentCardV2() {
                 fontVariantNumeric: "tabular-nums",
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.04em",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
                 marginTop: 8,
               }}
             >

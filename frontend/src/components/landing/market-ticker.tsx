@@ -123,7 +123,7 @@ function Row({
               className="font-serif text-pq-caption uppercase"
               style={{
                 letterSpacing: "0.22em",
-                color: "rgba(245, 240, 232, 0.82)",
+                color: "var(--pq-ivory-strong)",
               }}
             >
               {label}
@@ -152,7 +152,7 @@ function Row({
                 className="ml-2 font-mono uppercase text-pq-eyebrow"
                 style={{
                   letterSpacing: "0.18em",
-                  color: "rgba(245, 240, 232, 0.55)",
+                  color: "var(--pq-ivory-dim)",
                   borderLeft: "1px solid rgba(184, 149, 106, 0.32)",
                   paddingLeft: "0.5rem",
                 }}
@@ -184,7 +184,7 @@ function Row({
                   letterSpacing: "0.18em",
                   padding: "1px 4px",
                   border: "0.5px solid rgba(245, 240, 232, 0.25)",
-                  color: "rgba(245, 240, 232, 0.55)",
+                  color: "var(--pq-ivory-dim)",
                   borderRadius: 2,
                 }}
               >

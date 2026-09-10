@@ -106,7 +106,7 @@ export function RecentTransactionsBlock({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
@@ -119,7 +119,7 @@ export function RecentTransactionsBlock({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
@@ -174,7 +174,7 @@ export function RecentTransactionsBlock({
                     className="font-serif"
                     style={{
                       fontSize: "var(--pq-text-eyebrow)",
-                      color: "rgba(245,240,232,0.55)",
+                      color: "var(--pq-ivory-dim)",
                       marginTop: 2,
                     }}
                   >

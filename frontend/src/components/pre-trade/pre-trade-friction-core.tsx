@@ -416,7 +416,7 @@ export function QuestionsStep(props: {
                 <p className="font-serif text-pq-deck leading-snug text-[var(--pq-ivory)]">
                   {q.en}
                 </p>
-                <p className="font-serif text-pq-body-sm text-[rgba(245,240,232,0.55)]">
+                <p className="font-serif text-pq-body-sm text-[var(--pq-ivory-dim)]">
                   {q.ko}
                 </p>
                 {hints?.[q.n] && (
@@ -443,7 +443,7 @@ export function QuestionsStep(props: {
                 aria-label={`Answer to question ${q.n}: ${q.en}`}
                 className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
               />
-              <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm tracking-[0.18em] uppercase text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)]">
+              <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm tracking-[0.18em] uppercase text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]">
                 <input
                   type="checkbox"
                   checked={!!acks[q.n]}
@@ -465,7 +465,7 @@ export function QuestionsStep(props: {
             type="button"
             onClick={onBack}
             disabled={submitting}
-            className="px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)]"
+            className="px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]"
           >
             ← Back
           </button>
@@ -487,7 +487,7 @@ export function QuestionsStep(props: {
         <p
           aria-live="polite"
           role="status"
-          className="text-pq-mono-sm text-[rgba(245,240,232,0.5)] text-right tracking-[0.06em]"
+          className="text-pq-mono-sm text-[var(--pq-ivory-faint)] text-right tracking-[0.06em]"
         >
           {`모든 질문에 ✓ 표시해야 진입 시계가 시작됩니다 (${QUESTIONS.filter((q) => acks[q.n]).length}/${QUESTIONS.length}).`}
         </p>
@@ -566,7 +566,7 @@ export function CooldownStep({
           >
             {String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}
           </div>
-          <div className="mt-3 text-pq-eyebrow tracking-[0.22em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="mt-3 text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-ivory-faint)]">
             {isReady ? "Cooldown complete" : "Time remaining · 남은 시간"}
           </div>
         </div>
@@ -595,7 +595,7 @@ export function CooldownStep({
         {/* Rationale recap */}
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-4">
           <Caption>{t("preTrade.thesis")}</Caption>
-          <p className="mt-2 font-serif text-pq-body leading-relaxed text-[rgba(245,240,232,0.78)]">
+          <p className="mt-2 font-serif text-pq-body leading-relaxed text-[var(--pq-ivory-soft)]">
             &ldquo;{reflection.rationale}&rdquo;
           </p>
         </div>
@@ -607,7 +607,7 @@ export function CooldownStep({
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-error)]"
+          className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[var(--pq-ivory-dim)] hover:text-[var(--pq-error)]"
         >
           <X className="h-3.5 w-3.5" />
           Cancel · 취소
@@ -666,12 +666,12 @@ export function TerminalStep({
             </>
           )}
         </div>
-        <p className="font-serif text-pq-body leading-relaxed text-[rgba(245,240,232,0.65)]">
+        <p className="font-serif text-pq-body leading-relaxed text-[var(--pq-ivory-mid)]">
           {proceeded
             ? "We stamped your reflection and recorded the entry to your book. PivoxQuant does not place trades — open your broker (KIS, etc.) and submit the order yourself."
             : "취소되었습니다. 기록되지 않았습니다. 다음 결정 때 다시 7개 질문을 거치세요."}
         </p>
-        <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[rgba(245,240,232,0.55)]">
+        <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[var(--pq-ivory-dim)]">
           <span>
             {sideLabel(reflection.intended_side)} ·{" "}
             {reflection.intended_ticker_name || reflection.intended_ticker}
@@ -691,7 +691,7 @@ export function TerminalStep({
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] text-[rgba(245,240,232,0.65)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
+          className="inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           {resetLabel ?? "New checklist · 새로 시작"}
@@ -749,7 +749,7 @@ export function Field({
       <div className="block">
         <label
           htmlFor={htmlFor}
-          className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1"
+          className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-ivory-faint)] mb-1"
         >
           {label}
         </label>
@@ -759,7 +759,7 @@ export function Field({
   }
   return (
     <label className="block">
-      <span className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1">
+      <span className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-ivory-faint)] mb-1">
         {label}
       </span>
       {children}

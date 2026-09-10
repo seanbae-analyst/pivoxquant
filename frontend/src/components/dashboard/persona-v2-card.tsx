@@ -104,7 +104,7 @@ function PersonaHeader({
           >
             confidence · {confidence}
           </div>
-          <div className="mt-1 text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
+          <div className="mt-1 text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)]">
             {tradeCount} {tradeCount === 1 ? "trade" : "trades"} observed
           </div>
         </div>
@@ -141,7 +141,7 @@ function PersonaHeader({
       )}
 
       {dataSparse && (
-        <p className="mt-3 text-xs text-[rgba(245,240,232,0.5)]">
+        <p className="mt-3 text-xs text-[var(--pq-ivory-faint)]">
           Fewer than 10 closed trades in window — confidence is
           preliminary. More activity sharpens this classification.
         </p>
@@ -171,7 +171,7 @@ function FeatureBars({
       }}
     >
       <Kicker>9-dimension profile</Kicker>
-      <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
+      <p className="mt-2 text-xs text-[var(--pq-ivory-dim)]">
         Each bar compares your observed behaviour (filled) against the
         centroid of your classified persona (hairline). Closer bars
         pushed harder toward the classification.
@@ -195,7 +195,7 @@ function FeatureBars({
                   className={
                     "font-serif text-pq-body-sm truncate " +
                     (sparse
-                      ? "text-[rgba(245,240,232,0.55)]"
+                      ? "text-[var(--pq-ivory-dim)]"
                       : "text-[var(--pq-ivory)]")
                   }
                 >
@@ -241,7 +241,7 @@ function FeatureBars({
                 />
               </div>
 
-              <div className="text-right font-mono tabular-nums text-pq-caption text-[rgba(245,240,232,0.65)]">
+              <div className="text-right font-mono tabular-nums text-pq-caption text-[var(--pq-ivory-mid)]">
                 {fmt(observed, 2)}
               </div>
             </li>
@@ -271,7 +271,7 @@ function WhyThisPersona({
       }}
     >
       <Kicker>Why {label}?</Kicker>
-      <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
+      <p className="mt-2 text-xs text-[var(--pq-ivory-dim)]">
         The three strongest signals pulling your profile toward this
         persona — ordered by closeness to the centroid × feature weight.
       </p>
@@ -303,7 +303,7 @@ function WhyThisPersona({
               <div className="font-serif text-pq-body text-[var(--pq-ivory)]">
                 {row.label}
               </div>
-              <div className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
+              <div className="mt-1 text-xs text-[var(--pq-ivory-dim)]">
                 Observed{" "}
                 <span className="font-mono tabular-nums text-[var(--pq-ivory)]">
                   {fmt(row.value, 2)}
@@ -356,7 +356,7 @@ function ArchetypeRanking({
       style={{ background: PAPER_BG, border: `1px solid ${PAPER_BORDER}` }}
     >
       <Kicker>Archetype proximity · 8 personas</Kicker>
-      <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
+      <p className="mt-2 text-xs text-[var(--pq-ivory-dim)]">
         How closely your 9-dimension vector sits to each behavioural archetype
         the classifier scores — ranked by cosine proximity.
       </p>
@@ -399,7 +399,7 @@ function ArchetypeRanking({
                   }}
                 />
               </div>
-              <div className="text-right font-mono tabular-nums text-pq-caption text-[rgba(245,240,232,0.65)]">
+              <div className="text-right font-mono tabular-nums text-pq-caption text-[var(--pq-ivory-mid)]">
                 {pct}%
               </div>
             </li>

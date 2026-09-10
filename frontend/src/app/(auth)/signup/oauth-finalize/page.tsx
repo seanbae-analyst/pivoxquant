@@ -271,7 +271,7 @@ export default function OAuthFinalizePage() {
               fontSize: "var(--pq-text-micro)",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           >
             {BIRTHDATE_LABEL_KO} · {BIRTHDATE_LABEL_EN}

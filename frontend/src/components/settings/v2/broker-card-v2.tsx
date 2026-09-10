@@ -78,7 +78,7 @@ export function BrokerCardV2({
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
           }}
         >
           {supportedLabel}
@@ -90,7 +90,7 @@ export function BrokerCardV2({
         style={{
           fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
-          color: "rgba(245,240,232,0.82)",
+          color: "var(--pq-ivory-strong)",
           maxWidth: 720,
           marginBottom: 20,
         }}
@@ -128,7 +128,7 @@ export function BrokerCardV2({
               right: 14,
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
             }}
           >
             B1 · KIS · BYOK
@@ -138,7 +138,7 @@ export function BrokerCardV2({
               className="font-serif"
               style={{
                 fontSize: "var(--pq-text-body)",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
               }}
             >
               KIS surface unavailable in this environment.
@@ -149,7 +149,7 @@ export function BrokerCardV2({
             className="font-serif"
             style={{
               fontSize: "var(--pq-text-body)",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               marginTop: 16,
             }}
           >
