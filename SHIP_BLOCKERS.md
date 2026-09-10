@@ -64,6 +64,7 @@ CEO 가 이번 주 목표로 잡은 건 **무료** 배포다. 아래 R 목록이
 | R5 | terms-ko.md "변호사 검토 대기 중" 표기 제거 | legal | CEO | R1 후 | 변호사 사인 후 표기 제거 | BLOCKED |
 | R6 | privacy-ko.md "변호사 검토 대기 중" 표기 제거 | legal | CEO | R1 후 | 변호사 사인 후 표기 제거 | BLOCKED |
 | R7 | KIS 시세 재배포 라이선스 갭 — `kis_market_adapter.py`가 KIS Open API로 임의 KR 종목/지수 시세를 받아 전 유저 대시보드(/market)·PDF·시그널에 표출(fetcher "KR: KIS primary"). KIS 앱키 ≠ 상업 재배포 권한, KRX/KOSCOM 정보이용계약 필요(비제도권 핀테크 제휴 불가). 유료결제 활성화 시 상업 재배포 성립 | legal/data | CEO+변호사+엔지니어 | R1/R4 전 | (택1) FMP 상위플랜 업그레이드(⚠️실측 2026-06-03 현 Premium $29는 KR 미서빙·US만, KR fallback 배선도 없음) / 또는 금융위 공공데이터 T+1로 전환(무료·재배포OK but 실시간 아님) / 또는 KOSCOM 시세라이선스 체결(fintechdata@koscom.co.kr, 적격성 OPEN) / 또는 prod `KIS_USE_REAL=0`+KR 라우팅 제거(KR 실시간 시세 전면 중단). KIS는 본인계좌(표면1) 격리. **무료 드롭인 대체 없음** — 비용/품질/리스크 trade-off. Q-KIS1~4 변호사 사인 | BLOCKED |
+| R8 | **FMP Data Display Agreement — R7 의 미장(美場) 판.** FMP 약관 §2.2.2 는 별도 Data Display Agreement 없이 유저에게 데이터를 표시하는 것을 금지하며, *"complimentary or paid"* 를 명시하므로 **무료 베타도 대상**이다. 현재 노출면은 `/portfolio` 평가액(미장 종목)과 `/api/market/indices` 의 US 프록시(SPY/QQQ/DIA/IWM/VIXY, `services/data/indices.py::_US_INDEX_PROXY`). 랜딩 티커는 2026-09-02 에 이 조항 때문에 이미 내렸다(`hero.tsx` 주석). **2026-09-10 CEO 결정: 합의를 추진한다** — 대안(FMP 상위플랜/공공데이터 전환/노출 중단) 대신 정면 해결. | legal/data | CEO | 미정 | FMP 와 Data Display Agreement 체결(또는 서면 확인) | 🟡 진행 — CEO 가 FMP 에 문의 접수 |
 
 **출처**:
 - R1: `legal_question_queue.md:9-148` (21건 누적, 2026-05-28 Q-S4 추가)

@@ -1,9 +1,9 @@
 
-# 야간 빌드 검증 — 2026-09-10 03:00 KST
+# 야간 빌드 검증 — 2026-09-10 07:53 KST
 
 브랜치: `chore/email-flags-on`
-HEAD: `94cd7818 fix(qa): the nightly build gate failed open three different ways`
-미커밋: 1개 · untracked: 1개
+HEAD: `8f45b858 chore(pwa): realign the service-worker cache stamp`
+미커밋: 2개 · untracked: 0개
 
 ## 1. 앱 부팅
 - ✅ OK routes=121
@@ -22,7 +22,7 @@ tests/test_sendgrid_webhook.py::test_valid_signature_accepted
     assert Artifact.query.get(art_id).opened_at is not None
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-==== 2063 passed, 18 skipped, 1 xfailed, 483 warnings in 307.18s (0:05:07) =====
+==== 2071 passed, 18 skipped, 1 xfailed, 483 warnings in 328.95s (0:05:28) =====
 ```
 
 ## 3. 프론트엔드
@@ -33,17 +33,14 @@ tests/test_sendgrid_webhook.py::test_valid_signature_accepted
 ```
 ### vitest — ✅ exit 0
 ```
- [32m✓[39m src/components/portfolio/__tests__/to-position.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
- [32m✓[39m src/components/journal/__tests__/friction-outcome-mirror.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
- [32m✓[39m src/app/(dashboard)/__tests__/auth-redirect.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 2[2mms[22m[39m
- [32m✓[39m src/data/__tests__/onboarding-slider-seedable.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
- [32m✓[39m src/lib/cfo/__tests__/coerce-pulse.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
- [32m✓[39m src/__tests__/dashboard-redirect.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 2[2mms[22m[39m
 
-[2m Test Files [22m [1m[32m51 passed[39m[22m[90m (51)[39m
-[2m      Tests [22m [1m[32m382 passed[39m[22m[90m (382)[39m
-[2m   Start at [22m 03:05:31
-[2m   Duration [22m 8.97s[2m (transform 2.12s, setup 3.21s, import 9.61s, tests 9.53s, environment 29.75s)[22m
+ RUN  v4.1.5 /Users/seanbae/Desktop/취준/pivoxquant/frontend
+
+
+ Test Files  51 passed (51)
+      Tests  382 passed (382)
+   Start at  07:59:42
+   Duration  9.45s (transform 1.85s, setup 2.94s, import 10.29s, tests 9.94s, environment 31.40s)
 
 ```
 ### eslint — ✅ exit 0
@@ -85,10 +82,6 @@ tsc·vitest 가 구조적으로 못 잡는 층. 프론트의 `/api/...` 는 단�
 백엔드 라우트를 지워도 타입검사는 통과하고 런타임에만 404 가 난다.
 ```
 DORMANT 5 declared in dormant_endpoints.txt (not counted)
-STALE 3 dormant entries now served or renamed — prune the list:
-  /api/admin/artifacts/list
-  /api/admin/artifacts/preview/${type}?format=${format}
-  /api/admin/artifacts/preview/${type}?format=${format}&download=1
 OK 74 live frontend endpoints all match a backend route (119 rules parsed)
 ```
 
@@ -98,7 +91,7 @@ routes 파일    24
 endpoints      121
 services 파일  87
 Python 줄      42025
-tests 파일     162
+tests 파일     163
 ```
 
 ---

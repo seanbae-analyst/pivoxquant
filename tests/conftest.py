@@ -440,7 +440,7 @@ def mock_fetcher():
     mock = MagicMock()
     mock.currency.side_effect = lambda t: "KRW" if t.upper().endswith((".KS", ".KQ")) else "USD"
     mock.is_korean.side_effect = lambda t: t.upper().endswith((".KS", ".KQ"))
-    with patch("routes.market.fetcher", mock), \
+    with patch("services.data.indices.fetcher", mock), \
          patch("routes.portfolio.fetcher", mock):
         yield mock
 

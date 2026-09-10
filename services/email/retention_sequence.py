@@ -179,11 +179,13 @@ _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates" / "retention"
 
 
 def _utc_naive(dt: datetime | None) -> datetime:
-    if dt is None:
-        return datetime.now(timezone.utc).replace(tzinfo=None)
-    if dt.tzinfo is not None:
-        return dt.astimezone(timezone.utc).replace(tzinfo=None)
-    return dt
+    """Single source: :func:`services.email.format_helpers.utc_naive`.
+
+    Kept as a thin alias so the call site below reads unchanged. The two email
+    sequence modules held byte-identical copies of this until 2026-09-10.
+    """
+    from services.email.format_helpers import utc_naive
+    return utc_naive(dt)
 
 
 def _dashboard_url() -> str:

@@ -94,7 +94,7 @@ class TestKrIndicesKisGate:
                 _, hist = _LIVE.get(code, (2540.0, []))
                 return [{"date": "", "close": c} for c in hist]
 
-        with patch("routes.market.fetcher") as m_f, \
+        with patch("services.data.indices.fetcher") as m_f, \
              patch("services.container.realtime") as m_rt, \
              patch("services.kis.service.KISService", _MockKIS), \
              patch("services.data.fmp.get_history", return_value=None):

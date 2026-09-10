@@ -18,7 +18,7 @@ import pytest
 from services.email.record_summary import (
     MIN_EVENTS_TO_SPEAK,
     _compose,
-    _trades_in_window,
+    _count_trades_in_window,
 )
 
 
@@ -114,11 +114,11 @@ class TestTradeWindow:
                 )
 
         trades = [_T(1), _T(3), _T(20), _T(60)]
-        assert _trades_in_window(trades, 7) == 2
-        assert _trades_in_window(trades, 30) == 3
-        assert _trades_in_window(trades, 365) == 4
+        assert _count_trades_in_window(trades, 7) == 2
+        assert _count_trades_in_window(trades, 30) == 3
+        assert _count_trades_in_window(trades, 365) == 4
 
     def test_rows_without_a_timestamp_are_ignored(self):
         class _T:
             traded_at = None
-        assert _trades_in_window([_T(), _T()], 7) == 0
+        assert _count_trades_in_window([_T(), _T()], 7) == 0

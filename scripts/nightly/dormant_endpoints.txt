@@ -8,6 +8,11 @@
 # One path per line, exactly as it appears in frontend/src/lib/endpoints.ts.
 
 # ── artefact tree deleted in e064118e ──
+# The three admin/artifacts constants that sat here were removed from
+# endpoints.ts on 2026-09-07 (e1dc8e64), because admin/layout used
+# artifactsList as its allow-list probe and a 404 probe denied every
+# admin. Nothing declares them any more, so the entries were stale —
+# the contract checker flagged them as STALE 3, exactly as designed.
 # The 11 user-facing /api/artifacts/* constants were removed from endpoints.ts
 # (ac4ccb0f, 2026-09-04); the nightly contract check reported them STALE for
 # five runs before this prune (2026-09-06). Only the admin preview constants
@@ -17,9 +22,6 @@
 # deep link, because it already redirects to /reports on any failure. The route
 # is unreachable through the UI (the list it comes from is empty), so the cost
 # is one 404 in the log rather than a broken screen.
-/api/admin/artifacts/list
-/api/admin/artifacts/preview/${type}?format=${format}
-/api/admin/artifacts/preview/${type}?format=${format}&download=1
 
 # ── user-linked broker integration deleted in 237a1b67 ──
 # Legal, not technical: KIS partnership is unavailable to non-licensed firms and
