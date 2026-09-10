@@ -156,12 +156,19 @@ class TossReadOnlyClient:
     def _error_from(self, resp) -> TossApiError:
         code = msg = rid = None
         try:
-            err = resp.json().get("error") or {}
-            code, msg, rid = err.get("code"), err.get("message"), err.get("requestId")
+            body = resp.json()
+            err = body.get("error")
+            if isinstance(err, dict):
+                # BFF envelope: {"error": {"requestId", "code", "message", "data"}}
+                code, msg, rid = err.get("code"), err.get("message"), err.get("requestId")
+            elif isinstance(err, str):
+                # /oauth2/token uses the OAuth2 shape: {"error": "invalid_client", "error_description": "..."}
+                code, msg = err, body.get("error_description")
         except Exception:  # noqa: BLE001 — body may not be JSON
             pass
-        if resp.status_code == 403 and not msg:
-            msg = "forbidden — if the code is edge-blocked, register this machine's public IP under WTS 설정 → Open API → 허용 IP"
+        if resp.status_code == 403:
+            # Both shapes mean the same thing here: this IP is not on the client's allowlist.
+            msg = (msg or "forbidden") + " — register this machine's public IP under WTS 설정 → Open API → 허용 IP 관리"
         return TossApiError(resp.status_code, code, msg or redact(getattr(resp, "text", "") or ""), rid)
 
     def _get(self, path: str, *, params: dict | None = None, account_seq: int | None = None) -> dict:

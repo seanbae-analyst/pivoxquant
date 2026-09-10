@@ -31,7 +31,6 @@ KST = timezone(timedelta(hours=9))
 # Toss order sides as they appear in the payload. Data labels, not signals.
 _SIDE_IN = "BUY"   # // legal-ok — Toss enum value, compared only
 _SIDE_OUT = "SELL"  # // legal-ok — Toss enum value, compared only
-_FILLED_STATES = {"FILLED", "PARTIAL_FILLED"}
 _CANCELLED_STATES = {"CANCELED", "CANCELLED"}
 _REJECTED_STATES = {"REJECTED"}
 
@@ -194,12 +193,11 @@ def summarise_orders(
         status = o.get("status")
         if status in _CANCELLED_STATES:
             cancelled += 1
-            continue
-        if status in _REJECTED_STATES:
+        elif status in _REJECTED_STATES:
             rejected += 1
-            continue
-        if status not in _FILLED_STATES:
-            continue
+        # A fill is a fill whatever the record's final status: the spec says
+        # CANCELED / REJECTED / REPLACED carry execution.filledQuantity for the
+        # part that did execute before the order ended. Count by quantity.
         ex = o.get("execution") or {}
         qty = D(ex.get("filledQuantity"))
         if qty <= 0:

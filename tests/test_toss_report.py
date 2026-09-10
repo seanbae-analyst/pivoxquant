@@ -131,3 +131,21 @@ def test_cli_renders_from_raw_without_network(tmp_path):
     assert rep["account"]["account_no_masked"] == "***8901"
     assert (out / "pivox_report_2026-03-30.md").exists()
     assert (out / "pivox_report_2026-03-30.json").exists()
+
+
+def test_partial_fill_on_a_cancelled_order_still_counts_as_a_fill():
+    # Spec: CANCELED carries execution.filledQuantity for the part that executed first.
+    orders = [{
+        "orderId": "c1", "symbol": "005930", "side": "BUY", "status": "CANCELED", "currency": "KRW",
+        "orderedAt": "2026-03-28T09:30:00+09:00",
+        "execution": {"filledQuantity": "4", "averageFilledPrice": "70000", "filledAmount": "280000",
+                      "commission": "560", "tax": "0"},
+    }]
+    rep = build_report(
+        account={"accountNo": "1", "accountSeq": 1}, closed_orders=orders, open_orders=[], fx={"rate": "1300"},
+        holdings={"items": [], "totalPurchaseAmount": {"krw": "0", "usd": None}},
+        as_of=datetime(2026, 3, 30, tzinfo=KST),
+    )
+    a = rep["activity"]
+    assert a["cancelled"] == 1 and a["fills_in"] == 1
+    assert a["bought"] == {"KRW": 280000.0}

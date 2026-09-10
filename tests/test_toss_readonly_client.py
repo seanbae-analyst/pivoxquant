@@ -186,3 +186,19 @@ def test_redact_masks_secret_shaped_keys():
     out = redact(body)
     assert "eyJabcdefghijklmnop" not in out and "12345678901" not in out
     assert '"rate": "1380"' in out
+
+
+def test_token_endpoint_errors_use_the_oauth2_shape():
+    sess = _FakeSession({("POST", "/oauth2/token"): _Resp(401, {"error": "invalid_client", "error_description": "Client authentication failed."})})
+    c = TossReadOnlyClient("cid", "wrong", session=sess)
+    with pytest.raises(TossApiError) as ei:
+        c.accounts()
+    assert ei.value.code == "invalid_client" and "Client authentication failed" in str(ei.value)
+
+
+def test_token_endpoint_403_names_the_ip_allowlist():
+    sess = _FakeSession({("POST", "/oauth2/token"): _Resp(403, {"error": "access_denied", "error_description": "IP address not allowed"})})
+    c = TossReadOnlyClient("cid", "cs", session=sess)
+    with pytest.raises(TossApiError) as ei:
+        c.accounts()
+    assert ei.value.code == "access_denied" and "허용 IP" in str(ei.value)
