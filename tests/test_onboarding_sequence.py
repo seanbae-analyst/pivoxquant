@@ -26,6 +26,13 @@ Also asserts the marketing-copy ban list (``BANNED_MARKETING_PHRASES``)
 is absent from every onboarding template — HTML + text bodies. This
 keeps the d7 Pro step on the right side of 정통망법 §50 ①
 (information vs marketing reclassification).
+
+⚠️ Times here are 02:00 UTC = 11:00 KST, deliberately. They used to be 12:00
+UTC, which is 21:00 KST — the exact start of the 시행령 §61의2 night ban. Once
+d3_guide became 광고성 (2026-09-10) that gate began deferring it, and five
+tests that expected a send started failing for a reason that had nothing to do
+with what they were testing. A dispatch test that means "it sends" has to pick
+an hour when sending is legal.
 """
 from __future__ import annotations
 
@@ -83,7 +90,7 @@ class TestScheduleOnboarding:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            now = datetime(2026, 5, 19, 12, 0, 0)
+            now = datetime(2026, 5, 19, 2, 0, 0)
             stats = schedule_onboarding(user, now=now)
             db.session.commit()
 
@@ -103,14 +110,14 @@ class TestScheduleOnboarding:
             # d7_pro_nudge (paid-plan nudge) must NOT be queued at Stage 0.
             assert "d7_pro_nudge" not in [r.email_type for r in rows]
             assert [r.email_category for r in rows] == [
-                "transactional", "information",
+                "transactional", "marketing",
             ]
             expected_offsets = [
                 timedelta(days=0),
                 timedelta(days=3),
             ]
             for row, off in zip(rows, expected_offsets):
-                assert row.scheduled_send_at == datetime(2026, 5, 19, 12, 0, 0) + off
+                assert row.scheduled_send_at == datetime(2026, 5, 19, 2, 0, 0) + off
                 assert row.sent_at is None
                 assert row.skipped_reason is None
                 assert row.idempotency_key == f"u{u['id']}:{row.email_type}"
@@ -128,7 +135,7 @@ class TestScheduleOnboarding:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            now = datetime(2026, 5, 19, 12, 0, 0)
+            now = datetime(2026, 5, 19, 2, 0, 0)
             stats = schedule_onboarding(user, now=now)
             db.session.commit()
 
@@ -145,10 +152,10 @@ class TestScheduleOnboarding:
                 "welcome", "d3_guide", "d7_pro_nudge",
             ]
             assert [r.email_category for r in rows] == [
-                "transactional", "information", "information",
+                "transactional", "marketing", "information",
             ]
             d7 = rows[-1]
-            assert d7.scheduled_send_at == datetime(2026, 5, 19, 12, 0, 0) + timedelta(days=7)
+            assert d7.scheduled_send_at == datetime(2026, 5, 19, 2, 0, 0) + timedelta(days=7)
 
     def test_flag_off_enqueues_nothing(self, app, make_user, monkeypatch):
         _disable_flag(monkeypatch)
@@ -204,7 +211,7 @@ class TestPendingDue:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            base = datetime(2026, 5, 19, 12, 0, 0)
+            base = datetime(2026, 5, 19, 2, 0, 0)
             schedule_onboarding(user, now=base)
             db.session.commit()
 
@@ -231,7 +238,7 @@ class TestPendingDue:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            base = datetime(2026, 5, 19, 12, 0, 0)
+            base = datetime(2026, 5, 19, 2, 0, 0)
             schedule_onboarding(user, now=base)
             db.session.commit()
 
@@ -256,7 +263,7 @@ class TestPendingDue:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            base = datetime(2026, 5, 19, 12, 0, 0)
+            base = datetime(2026, 5, 19, 2, 0, 0)
             schedule_onboarding(user, now=base)
             db.session.commit()
 
@@ -289,7 +296,7 @@ class TestDispatchDue:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            base = datetime(2026, 5, 19, 12, 0, 0)
+            base = datetime(2026, 5, 19, 2, 0, 0)
             schedule_onboarding(user, now=base)
             db.session.commit()
 
@@ -322,7 +329,7 @@ class TestDispatchDue:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            base = datetime(2026, 5, 19, 12, 0, 0)
+            base = datetime(2026, 5, 19, 2, 0, 0)
             schedule_onboarding(user, now=base)
             db.session.commit()
 
@@ -356,7 +363,7 @@ class TestDispatchDue:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            base = datetime(2026, 5, 19, 12, 0, 0)
+            base = datetime(2026, 5, 19, 2, 0, 0)
             schedule_onboarding(user, now=base)
             db.session.commit()
 
@@ -390,7 +397,7 @@ class TestDispatchDue:
 
         with app.app_context():
             user = db.session.get(User, u["id"])
-            base = datetime(2026, 5, 19, 12, 0, 0)
+            base = datetime(2026, 5, 19, 2, 0, 0)
             schedule_onboarding(user, now=base)
             db.session.commit()
 
@@ -435,7 +442,7 @@ class TestDispatchDue:
             schedule_onboarding, dispatch_due,
         )
 
-        base = datetime(2026, 5, 19, 12, 0, 0)
+        base = datetime(2026, 5, 19, 2, 0, 0)
         with app.app_context():
             user = db.session.get(User, u["id"])
             schedule_onboarding(user, now=base)
@@ -507,7 +514,7 @@ class TestDispatchDue:
             schedule_onboarding, dispatch_due,
         )
 
-        base = datetime(2026, 5, 19, 12, 0, 0)
+        base = datetime(2026, 5, 19, 2, 0, 0)
         with app.app_context():
             user = db.session.get(User, u["id"])
             schedule_onboarding(user, now=base)

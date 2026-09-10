@@ -146,11 +146,25 @@ _BASE_SEQUENCE: tuple[_Step, ...] = (
         subject="PivoxQuant 가입을 환영합니다",
         template_basename="welcome",
     ),
+    # 2026-09-10 — reclassified 정보성 → 광고성 (CEO), on the same reasoning
+    # that moved the inactive nudge in f70bc8b4. This mail goes out on day 3
+    # regardless of whether the reader has recorded anything, and it states no
+    # fact about them: it explains the three screens and then says "아직 안
+    # 해보셨다면 1. 2. 3." with a dashboard CTA. That is a message asking
+    # someone to come back — 광고성 정보 under 정통망법 §50 ①. Containing
+    # instructions does not make it 정보성; the nudge's docstring says the
+    # same thing, and leaving these two classified differently was the
+    # inconsistency this fixes.
+    #
+    # The régime that follows from it: MARKETING consent (not INFORMATION),
+    # the literal "(광고)" in subject and body head (시행령 §62 ②), the
+    # 21:00–08:00 KST night ban (시행령 §61의2) and the sender-identity block
+    # (시행령 §62 ①).
     _Step(
         slug="d3_guide",
         offset=timedelta(days=3),
-        category="information",
-        subject="PivoxQuant 3일차 — 사용 가이드",
+        category="marketing",
+        subject="(광고) PivoxQuant 3일차 — 사용 가이드",
         template_basename="d3_guide",
     ),
 )
@@ -235,7 +249,23 @@ def _pricing_url() -> str:
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates" / "onboarding"
 
 
-def _render(basename: str, *, user: Any) -> tuple[str, str]:
+def _format_consent_kr(dt: Any) -> str:
+    """Single source: :func:`services.email.retention_sequence._format_consent_kr`.
+
+    Thin alias so the 시행령 §62 ① consent timestamp is formatted identically
+    in both queues — two formatters would drift, and this one appears in a
+    legally mandated block.
+    """
+    from services.email.retention_sequence import _format_consent_kr as _f
+    return _f(dt)
+
+
+def _render(
+    basename: str,
+    *,
+    user: Any,
+    unsubscribe_url: str = "",
+) -> tuple[str, str]:
     """Read the .html + .txt templates and substitute placeholders.
 
     Intentionally not pulling Flask's Jinja env in — these templates
@@ -249,10 +279,25 @@ def _render(basename: str, *, user: Any) -> tuple[str, str]:
         or (getattr(user, "email", "") or "").split("@")[0]
         or "고객"
     )
+    # 2026-09-10: d3_guide became 광고성, so it needs the 시행령 §62 ① block.
+    # These slots are filled for EVERY onboarding template, not only the
+    # marketing one — an unfilled `{{ ... }}` ships to the reader as literal
+    # braces, and tests/test_email_links_are_live.py fails on exactly that.
+    # `unsubscribe_url` is passed IN rather than built here — same contract as
+    # retention_sequence._render. Building it needs a Flask app context
+    # (it signs an HMAC with SECRET_KEY), and _render must stay callable from a
+    # plain unit test; tests/test_email_links_are_live.py renders all five
+    # shipping mails with no app at all. The caller supplies the real token;
+    # EmailSender's idempotent footer injection covers the empty case.
     ctx = {
         "{{ name }}": name,
         "{{ dashboard_url }}": _dashboard_url(),
         "{{ pricing_url }}": _pricing_url(),
+        "{{ unsubscribe_url }}": unsubscribe_url,
+        "{{ consent_at_kr }}": _format_consent_kr(
+            getattr(user, "marketing_consent_marketing_at", None)
+        ),
+        "{{ consent_source }}": "회원가입 시 동의",
     }
     html_path = _TEMPLATE_DIR / f"{basename}.html"
     txt_path = _TEMPLATE_DIR / f"{basename}.txt"
@@ -384,7 +429,12 @@ def _send_one(row: Any) -> bool:
         return False
 
     try:
-        html_body, _txt_body = _render(step.template_basename, user=user)
+        from services.email_token import build_unsubscribe_url
+        html_body, _txt_body = _render(
+            step.template_basename,
+            user=user,
+            unsubscribe_url=build_unsubscribe_url(user.id),
+        )
     except FileNotFoundError as exc:
         logger.exception("template missing for %s: %s", step.slug, exc)
         return False
@@ -459,6 +509,9 @@ def _dispatch_due_locked(now: datetime | None = None) -> dict[str, int]:
         # Provider-outage handling (silent-drop fix). ``deferred_provider`` =
         # rows left pending for a later retry; ``skipped_provider_expired`` =
         # rows still undeliverable past the retry window, closed permanently.
+        # 광고성 rows held back by the §61의2 night ban. Left PENDING,
+        # not skipped — the next tick after 08:00 KST sends them.
+        "deferred_night": 0,
         "deferred_provider": 0,
         "skipped_provider_expired": 0,
     }
@@ -489,12 +542,27 @@ def _dispatch_due_locked(now: datetime | None = None) -> dict[str, int]:
 
     flag_on = onboarding_enabled()
 
+    # 시행령 §61의2 night ban, for 광고성 steps only. Evaluated at DISPATCH
+    # time and implemented by leaving the row pending — exactly how
+    # retention_sequence handles it, and for the same reason: this queue is
+    # re-scanned every 15 minutes, so a row that comes due at 23:00 is simply
+    # picked up after 08:00 rather than being refused and lost. (The nudge had
+    # to widen its window instead, because it has no queue to wait in.)
+    from services.email.retention_sequence import is_night_kst
+    night = is_night_kst(now)
+    marketing_slugs = {s.slug for s in active_sequence() if s.category == "marketing"}
+
     for row in rows:
         try:
             if not flag_on:
                 row.mark_skipped("feature_flag_off")
                 db.session.commit()
                 stats["skipped_flag_off"] += 1
+                continue
+
+            if night and row.email_type in marketing_slugs:
+                # Left pending on purpose — no mark_skipped, no commit.
+                stats["deferred_night"] += 1
                 continue
 
             ok = _send_one(row)
