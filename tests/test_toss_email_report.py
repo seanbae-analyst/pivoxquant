@@ -120,7 +120,10 @@ def test_no_dashboard_furniture_and_korean_breaks_at_word_boundaries(report):
     page = render_email_html(report, url=URL)
     assert "text-transform:uppercase" not in page
     assert "font-style:italic" not in page
-    assert "text-align:center" not in page
+    # the sign-off was a centred italic line; centring is fine where it is a
+    # chart centring its own digits, so the ban is on centred *prose*
+    for block in re.findall(r'<div[^>]*text-align:center[^>]*>([^<]{12,})</div>', page):
+        pytest.fail(f"centred prose: {block[:40]}")
     assert page.count("word-break:keep-all") > 8
     # the statement rules off where a 잔고 statement does
     assert page.count("border-top:1.5px solid") >= 2

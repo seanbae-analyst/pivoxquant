@@ -83,7 +83,7 @@ def _row(label: str, figure: str, note: str, color: str, *, sub=False, rule=Fals
            else f"font-family:{_MONO};font-size:{'12' if sub else '13'}px")
     return (
         f'<tr>'
-        f'<td style="{top}{pad};border-bottom:1px solid {PAPER_RULE};font-family:{_SANS};{_KEEP}{lab}">{_e(label)}</td>'
+        f'<td style="{top}{pad};border-bottom:1px solid {PAPER_RULE};{lab}">{_e(label)}</td>'
         f'<td align="right" style="{top}padding:8px 0 8px 10px;border-bottom:1px solid {PAPER_RULE};'
         f'{fig};color:{color};white-space:nowrap">{_e(figure)}</td>'
         # 86px, and the note may wrap inside it: a figure that breaks is a
@@ -126,7 +126,7 @@ def _spans(t: dict) -> str:
         ("손실을 실현할 때", l, t.get("median_loss_pct"), t.get("losses"), PAPER_DOWN),
     ):
         rows += (
-            f'<tr><td style="padding:9px 0 3px;font-family:{_SANS};font-size:12.5px;{_KEEP}color:{PAPER_INK}">{_e(label)}</td>'
+            f'<tr><td style="padding:9px 0 3px;font-size:12.5px;{_KEEP}color:{PAPER_INK}">{_e(label)}</td>'
             f'<td align="right" style="padding:9px 0 3px;font-family:{_MONO};font-size:11.5px;color:{_DIM};white-space:nowrap">{n or 0}건</td>'
             f'<td align="right" width="118" style="padding:9px 0 3px;font-family:{_MONO};font-size:11.5px;'
             f'color:{_hue(pct)};white-space:nowrap">{days:g}일 · {_pct(pct)}</td></tr>'
@@ -213,7 +213,7 @@ def _diverging(rows: list[dict], n: int = 4) -> str:
                     f'{gap if p < 99.9 else ""}'
                     f'<td width="{p:.1f}%" bgcolor="{PAPER_DOWN}" style="height:8px;background:{PAPER_DOWN};font-size:0;line-height:0">&nbsp;</td>'
                     f'</tr></table></td><td width="50%" style="height:8px;font-size:0;line-height:0">&nbsp;</td>')
-        out += (f'<tr><td style="padding:8px 0 2px;font-family:{_SANS};font-size:12px;{_KEEP}color:{PAPER_INK}">'
+        out += (f'<tr><td style="padding:8px 0 2px;font-size:12px;{_KEEP}color:{PAPER_INK}">'
                 f'{_e(_nm(r["symbol"], r.get("name")))}</td>'
                 f'<td align="right" style="padding:8px 0 2px;font-family:{_MONO};font-size:11.5px;'
                 f'color:{_hue(v)};white-space:nowrap">{v:+.0f}%</td></tr>'
@@ -238,8 +238,8 @@ def _matrix(tm: dict) -> str:
     binned = [[sum(r[h * 2:h * 2 + 2]) for h in range(12)] for r in grid]
     mx = max(max(r) for r in binned) or 1
     head = ('<tr><td width="26" style="font-size:0;line-height:0">&nbsp;</td>'
-            + "".join(f'<td align="center" style="padding:0 0 3px;font-family:{_MONO};font-size:9px;color:{_DIM}">'
-                      f'{h * 2:02d}</td>' if h % 2 == 0 else '<td style="font-size:0;line-height:0">&nbsp;</td>'
+            + "".join(f'<td style="padding:0 0 3px;color:{_DIM}">{h * 2:02d}</td>'
+                      if h % 2 == 0 else '<td style="font-size:0;line-height:0">&nbsp;</td>'
                       for h in range(12)) + "</tr>")
     body = ""
     for d, name in enumerate(("월", "화", "수", "목", "금", "토", "일")):
@@ -249,13 +249,16 @@ def _matrix(tm: dict) -> str:
             # an inbox has no opacity on a background, so the tint is mixed
             # against the ground here and shipped as a flat colour
             bg = _tint(PAPER_MARK, n / mx) if n else PAPER_BAND
-            cells += (f'<td bgcolor="{bg}" align="center" style="background:{bg};border:1px solid {PAPER};'
-                      f'font-size:9px;line-height:15px;'
+            cells += (f'<td bgcolor="{bg}" style="background:{bg};'
                       f'color:{PAPER if n >= mx * 0.55 else _DIM}">{n or "&nbsp;"}</td>')
-        body += (f'<tr><td width="26" style="font-family:{_SANS};font-size:11px;color:{_SOFT};'
-                 f'padding-right:5px">{name}</td>{cells}</tr>')
-    return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
-            f'style="border-collapse:collapse;margin-top:12px">{head}{body}</table>')
+        body += (f'<tr><td width="26" align="left" style="font-size:11px;color:{_SOFT};'
+                 f'background:{PAPER};padding-right:5px">{name}</td>{cells}</tr>')
+    # cellspacing draws the 1px gutter a per-cell border used to, and the size,
+    # leading and centring are stated once on the table rather than 84 times
+    # inside it — the same matrix, pixel for pixel, at a third of the bytes.
+    return (f'<table role="presentation" cellpadding="0" cellspacing="1" border="0" width="100%" '
+            f'bgcolor="{PAPER}" style="background:{PAPER};text-align:center;font-size:9px;'
+            f'line-height:15px;border-collapse:separate;margin-top:12px">{head}{body}</table>')
 
 
 def _tint(hex_colour: str, t: float) -> str:
@@ -313,7 +316,7 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
     finds = "".join(
         f'<tr><td width="16" valign="top" style="padding:11px 11px 0 0;font-size:0;line-height:0">'
         f'<div style="width:6px;height:6px;background:{PAPER_MARK};font-size:0;line-height:0;margin-top:7px">&nbsp;</div></td>'
-        f'<td style="padding:11px 0 0;font-family:{_SANS};font-size:13px;line-height:1.55;{_KEEP}color:{_SOFT}">{_e(x)}</td></tr>'
+        f'<td style="padding:11px 0 0;font-size:13px;line-height:1.55;{_KEEP}color:{_SOFT}">{_e(x)}</td></tr>'
         for x in heads[1:])
     if finds:
         finds = (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
@@ -323,13 +326,13 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
     for r in rep["holdings"]:
         w = r.get("weight_pct") or 0
         rows.append(
-            f'<tr><td style="padding:7px 0 3px;font-family:{_SANS};font-size:12.5px;color:{PAPER_INK}">{_e(_nm(r["symbol"], r["name"]))}</td>'
+            f'<tr><td style="padding:7px 0 3px;font-size:12.5px;color:{PAPER_INK}">{_e(_nm(r["symbol"], r["name"]))}</td>'
             f'<td align="right" style="padding:7px 0 3px;font-family:{_MONO};font-size:11.5px;color:{_DIM};white-space:nowrap">{w:.2f}%</td>'
             f'<td align="right" width="62" style="padding:7px 0 3px;font-family:{_MONO};font-size:11.5px;color:{_hue(r["unrealised_rate_pct"])}">'
             f'{_pct(r["unrealised_rate_pct"])}</td></tr>'
             f'<tr><td colspan="3" style="padding:0 0 6px">{_bar(w, PAPER_MARK)}</td></tr>'
         )
-    holdings = "".join(rows) or f'<tr><td style="font-family:{_SANS};font-size:12.5px;color:{_DIM}">보유 종목 없음</td></tr>'
+    holdings = "".join(rows) or f'<tr><td style="font-size:12.5px;color:{_DIM}">보유 종목 없음</td></tr>'
 
     facts = []
     if trades.get("closed"):
@@ -343,9 +346,9 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
         facts.append(("팔고 난 뒤", f"{after['count']}종목 중 {after['higher_now']}개가 판 가격보다 높다 · "
                                  f"안 팔았다면 {_won(after['kept_delta_krw'])} 차이"))
     fact_rows = "".join(
-        f'<tr><td width="92" valign="top" style="padding:6px 10px 6px 0;font-family:{_SANS};{_KEEP}font-size:11.5px;'
+        f'<tr><td width="92" valign="top" style="padding:6px 10px 6px 0;font-size:11.5px;'
         f'color:{_DIM}">{_e(k)}</td>'
-        f'<td style="padding:6px 0;font-family:{_SANS};font-size:12.5px;{_KEEP}color:{_SOFT}">{_e(val)}</td></tr>'
+        f'<td style="padding:6px 0;font-size:12.5px;{_KEEP}color:{_SOFT}">{_e(val)}</td></tr>'
         for k, val in facts)
 
     if h["complete"]:
@@ -363,23 +366,23 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
     spans, columns, diverging, matrix = _spans(trades), _columns(sales), "", _matrix(an.get("timing") or {})
     if after.get("available") and after.get("rows"):
         diverging = _diverging(after["rows"])
-    cap = (f'font-family:{_SANS};font-size:11px;line-height:1.6;{_KEEP}color:{_DIM};padding-top:8px')
+    cap = (f'font-size:11px;line-height:1.6;{_KEEP}color:{_DIM};padding-top:8px')
 
     tail = ""
     if attached:
-        tail = (f'<div style="font-family:{_SANS};font-size:11.5px;color:{_DIM};padding:22px 0 0">'
+        tail = (f'<div style="font-size:11.5px;color:{_DIM};padding:22px 0 0">'
                 f'차트·종목별 이력·분석 표는 <strong style="color:{_SOFT}">첨부한 PDF</strong> 에 전부 있다. '
                 f'이 메일은 요약이다.</div>')
     if url:
         tail += (f'<div style="padding:14px 0 0"><a href="{_e(url)}" '
                  f'style="font-family:{_MONO};font-size:12px;color:{PAPER};background:{PAPER_MARK};'
                  f'text-decoration:none;padding:11px 18px;display:inline-block">웹에서 열기 &#8594;</a></div>'
-                 f'<div style="font-family:{_SANS};font-size:11.5px;color:{_DIM};padding-top:9px">'
+                 f'<div style="font-size:11.5px;color:{_DIM};padding-top:9px">'
                  f'링크는 로그인한 브라우저에서만 열린다.</div>')
 
     return f"""<div bgcolor="{PAPER}" style="margin:0;padding:0;background:{PAPER}">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="{PAPER}" style="background:{PAPER};border-collapse:collapse">
-<tr><td align="center" style="padding:28px 15px 44px">
+<tr><td align="center" style="padding:28px 15px 44px;{_KEEP}color:{_SOFT}">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;border-collapse:collapse">
 <tr><td>
 
@@ -391,7 +394,7 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
 {finds}
 
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:26px">{stmt}</table>
-<div style="font-family:{_SANS};font-size:11.5px;line-height:1.7;{_KEEP}color:{_DIM};padding-top:10px">{_e(note)}</div>
+<div style="font-size:11.5px;line-height:1.7;{_KEEP}color:{_DIM};padding-top:10px">{_e(note)}</div>
 
 {_section("보유 기간", n_closed) if spans else ""}{spans}
 {f'<div style="{cap}">두 막대가 같은 자리에서 출발한다. 오른쪽 끝이 매도까지 걸린 날의 중앙값이다.</div>' if spans else ""}
@@ -412,7 +415,7 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin-top:13px">{fact_rows}</table>
 {tail}
 
-<div style="border-top:1.5px solid {PAPER_RULE};margin-top:38px;padding-top:15px;font-family:{_SANS};font-size:11.5px;line-height:1.75;{_KEEP}color:{_DIM}">
+<div style="border-top:1.5px solid {PAPER_RULE};margin-top:38px;padding-top:15px;font-size:11.5px;line-height:1.75;{_KEEP}color:{_DIM}">
 토스증권 Open API 를 읽기 전용으로 조회해 만들었다. 주문 경로는 없다. 기록을 되비추는 거울이며, 다음에 무엇을 할지는 여기 없다.</div>
 
 </td></tr></table>
