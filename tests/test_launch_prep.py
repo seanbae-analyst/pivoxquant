@@ -167,6 +167,20 @@ class TestEnvHealthSummary:
         assert s["production"] is False
 
 
+    def test_summary_names_the_missing_vars(self, lp, monkeypatch):
+        """Counts alone forced a guess on 2026-09-10 — the summary must
+        say WHICH recommended/required vars are absent (names only)."""
+        monkeypatch.delenv("FMP_API_KEY", raising=False)
+        monkeypatch.setenv("KIS_APP_KEY", "x")
+        s = lp.env_health_summary()
+        assert "FMP_API_KEY" in s["missing_recommended_names"]
+        assert "KIS_APP_KEY" not in s["missing_recommended_names"]
+        assert len(s["missing_recommended_names"]) == s["missing_recommended"]
+        assert len(s["missing_required_names"]) == s["missing_required"]
+        # Names only — never values.
+        assert "x" not in str(s["missing_recommended_names"])
+
+
 class TestHealthEndpointIncludesEnv:
     def test_health_response_has_env_summary(self, client):
         r = client.get("/api/health")
