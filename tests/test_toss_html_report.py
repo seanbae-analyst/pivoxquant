@@ -30,8 +30,15 @@ def _page(**kw):
 def test_html_draws_the_three_charts_and_names_every_symbol():
     page = _page()
     # holdings · timeline · KR-US split · cumulative · scatter · attribution
-    # · slope · matrix — eight drawings, eight different marks
-    assert page.count("<svg") == 8
+    # · slope · matrix — eight page-width drawings, eight different marks —
+    # plus one average-cost track per symbol card
+    assert page.count('<div class="tbl"><svg') == 8
+    sy = _report()["analysis"]["symbols"]
+    # every card with a fill gets a track — one fill still says where the
+    # average sits against today. The odd card out is padded with an empty
+    # cell so the table's last row keeps its columns.
+    assert page.count('<svg class="spark"') == sum(1 for c in sy["cards"] if c["track"])
+    assert page.count('<div class="card">') == len(sy["cards"]) + len(sy["cards"]) % 2
     assert "팔고 난 뒤" in page and "엔비디아 (NVDA)" in page
     assert "삼성전자 (005930)" in page and "Apple Inc. (AAPL)" in page and "엔비디아 (NVDA)" in page
     assert "토스 잔고와 전부 일치" in page
@@ -73,7 +80,7 @@ def test_paper_mode_puts_the_whole_document_on_the_report_surface():
     for stock in (STOCK.ground, STOCK.ink, STOCK.mark, STOCK.rise, STOCK.fall):
         assert stock in paper, stock
     assert "color-scheme: light" in paper and "color-scheme: dark" in screen
-    assert paper.count("<svg") == screen.count("<svg") == 8
+    assert paper.count("<svg") == screen.count("<svg")
 
 
 def test_korean_comes_from_one_host_and_never_from_a_dynamic_subset():
@@ -141,13 +148,19 @@ def test_the_record_does_not_wear_the_product_s_tokens():
 
 
 def test_every_drawing_scrolls_inside_its_own_container():
-    """A phone is 390 CSS px and the drawings are 600 at their smallest legible
-    size, so each has to scroll inside something. Four of the eight used to be
-    emitted bare — instead of scrolling they widened the document, and every
-    line of text on the page went off-screen with them."""
+    """A phone is 390 CSS px and the page-width drawings are 600 at their
+    smallest legible size, so each has to scroll inside something. Four of the
+    eight used to be emitted bare — instead of scrolling they widened the
+    document, and every line of text on the page went off-screen with them.
+
+    The card tracks are the exception and must stay the exception: they are
+    drawn at 344 to fit the phone outright, so putting one in a scroller would
+    give it a scrollbar it can never use."""
     from services.toss.html_report import SCREEN, _split_bar_svg
     page = _page()
-    assert page.count('<div class="tbl"><svg') == page.count("<svg") == 8
+    wide = page.count("<svg") - page.count('<svg class="spark"')
+    assert page.count('<div class="tbl"><svg') == wide == 8
+    assert '<div class="tbl"><svg class="spark"' not in page
     assert _split_bar_svg(30.0, 70.0, SCREEN).startswith('<div class="tbl"><svg')
 
 

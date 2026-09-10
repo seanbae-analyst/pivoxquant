@@ -136,42 +136,6 @@ body {{ margin:0; background:var(--ground); color:var(--ink); font-family:var(--
   font-family:var(--mono); font-size:10.5px; color:var(--ink3); padding-left:20px; }}
 .body {{ padding-left:34px; }}
 
-/* A phone is 390 CSS px wide — an iPhone 14 exactly — and everything below is
-   what that width costs. Two-cell heads stack, the margin the plate numbers
-   hang in goes away, the third column of a statement gives up its padding
-   before its content, and the drawings keep their own scrollbar (see _svg)
-   with a shadow at the edge so it is discoverable rather than guessed at. */
-@media (max-width:640px) {{
-  .body {{ padding-left:0; }}
-  .mast h1, .mast .who {{ display:block; width:auto; padding-left:0; text-align:left; }}
-  .mast .who {{ padding-top:9px; }}
-  .ph, .ph .n, .ph h2, .ph .basis {{ display:block; width:auto; text-align:left; padding-left:0; }}
-  .ph .n {{ padding-bottom:2px; }}
-  .ph .basis {{ padding-top:3px; }}
-}}
-@media (max-width:440px) {{
-  body {{ padding-inline:15px; font-size:13.5px; padding-block:34px 56px; }}
-  .mast h1 {{ font-size:24px; }}
-  .lead p {{ font-size:18px; }}
-  .finds li, .cap {{ font-size:12.5px; }}
-  .stmt td.k {{ font-size:12.5px; }}
-  .stmt td.v {{ font-size:12.5px; padding-left:9px; }}
-  .stmt td.x {{ width:76px; font-size:10px; padding-left:8px; white-space:normal; }}
-  .stmt tr.big td.v {{ font-size:17px; }}
-  .rlist li, .rlist li > span {{ display:block; width:auto; padding-right:0; }}
-  .rlist .s {{ padding-bottom:3px; }}
-  .rlist .s em {{ display:inline; padding-left:6px; }}
-  .plate {{ margin-top:32px; }}
-  /* the classic scroll shadow: a fixed gradient at the right edge, over one
-     that scrolls with the content, so the shadow shows only while there is
-     more chart to the right of it */
-  .tbl {{
-    background:
-      linear-gradient(to left, var(--ground), rgba(0,0,0,0)) right / 26px 100% no-repeat,
-      radial-gradient(farthest-side at 100%, rgba(0,0,0,.18), rgba(0,0,0,0)) right / 9px 100% no-repeat;
-    background-attachment: local, scroll;
-  }}
-}}
 .cap {{ font-size:12.5px; line-height:1.6; color:var(--ink2); margin:11px 0 0; max-width:70ch; }}
 .cap b {{ font-weight:600; color:var(--ink); }}
 .rise {{ color:var(--rise); }} .fall {{ color:var(--fall); }} .dim {{ color:var(--ink3); }}
@@ -215,6 +179,34 @@ table.plain td.n {{ text-align:right; font-family:var(--mono); white-space:nowra
 .mirror td:first-child, .mirror th:first-child {{ text-align:left; color:var(--ink2); }}
 .mirror td {{ font-family:var(--mono); font-size:12.5px; }}
 
+/* Symbol cards. One card is drawn at 344 units and asks for ~360 CSS px, which
+   is exactly what an iPhone 14 has after the page gutter — so the phone gets
+   one column and never a sideways scroll. Where there is room for two the
+   table puts two side by side rather than stretching one to twice its design
+   width, which is also what fits an A4 column. Table, not grid: WeasyPrint. */
+.cards {{ display:table; width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; margin-top:6px; }}
+.crow {{ display:table-row; }}
+/* border-box or the gutter is added outside the 50%: a fixed-layout table cell
+   sizes its content box, so two 50% cells plus a 30px gutter come to 100%+30
+   and the right-hand card hangs off the page in the PDF. */
+.card {{ display:table-cell; box-sizing:border-box; width:50%; vertical-align:top; padding:14px 15px 20px; }}
+/* the gutter goes between the cards, never outside them, and both halves keep
+   the same drawing width — otherwise one card's chart is 30px narrower than
+   its twin and the pair stops reading as one object */
+.crow .card:first-child {{ padding-left:0; }}
+.crow .card:last-child {{ padding-right:0; }}
+.card:empty {{ padding:0; }}
+.ch {{ display:table; width:100%; border-top:1px solid var(--ink); padding-top:8px; }}
+.ch .s {{ display:table-cell; font-size:13.5px; font-weight:600; line-height:1.35; }}
+.ch .w {{ display:table-cell; text-align:right; white-space:nowrap; vertical-align:baseline;
+  font-family:var(--mono); font-size:11px; color:var(--ink3); padding-left:10px; }}
+.cm {{ font-family:var(--mono); font-size:10.5px; color:var(--ink3); margin:5px 0 0; line-height:1.55; }}
+.cn {{ font-size:12.5px; line-height:1.55; color:var(--ink2); margin:8px 0 0; border-left:2px solid var(--mark); padding-left:9px; }}
+svg.spark {{ min-width:0; margin-top:7px; }}
+.cf {{ width:100%; table-layout:fixed; border-collapse:collapse; font-variant-numeric:tabular-nums; margin-top:9px; }}
+.cf th {{ font-family:var(--mono); font-weight:400; font-size:9.5px; letter-spacing:.07em; color:var(--ink3);
+  text-align:left; padding:0 6px 2px 0; border-top:1px solid var(--grid); padding-top:7px; }}
+.cf td {{ font-family:var(--mono); font-size:11.5px; text-align:left; padding:0 6px 0 0; overflow-wrap:anywhere; }}
 .legend {{ display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:10.5px; color:var(--ink3); margin-top:10px; }}
 .legend i {{ display:inline-block; width:9px; height:9px; margin-right:6px; vertical-align:-1px; }}
 h3 {{ font-family:var(--sans); font-size:12px; font-weight:600; letter-spacing:.02em; color:var(--ink); margin:26px 0 0; padding-bottom:7px; border-bottom:1px solid var(--grid); }}
@@ -222,6 +214,45 @@ h3 {{ font-family:var(--sans); font-size:12px; font-weight:600; letter-spacing:.
 .foot {{ margin-top:50px; border-top:1.5px solid var(--ink); padding-top:16px; font-size:11.5px; line-height:1.8; color:var(--ink3); max-width:70ch; }}
 .foot ul {{ margin:8px 0 0; padding-left:16px; }}
 .foot .basis {{ color:var(--ink2); }}
+/* A phone is 390 CSS px wide — an iPhone 14 exactly — and everything below is
+   what that width costs. Two-cell heads stack, the margin the plate numbers
+   hang in goes away, the third column of a statement gives up its padding
+   before its content, and the drawings keep their own scrollbar (see _svg)
+   with a shadow at the edge so it is discoverable rather than guessed at. */
+@media (max-width:640px) {{
+  .body {{ padding-left:0; }}
+  .mast h1, .mast .who {{ display:block; width:auto; padding-left:0; text-align:left; }}
+  .mast .who {{ padding-top:9px; }}
+  .ph, .ph .n, .ph h2, .ph .basis {{ display:block; width:auto; text-align:left; padding-left:0; }}
+  .ph .n {{ padding-bottom:2px; }}
+  .ph .basis {{ padding-top:3px; }}
+  .cards, .crow, .card {{ display:block; width:auto; }}
+  .card {{ padding:13px 0 17px; }}
+  .card + .card {{ padding-left:0; }}
+}}
+@media (max-width:440px) {{
+  body {{ padding-inline:15px; font-size:13.5px; padding-block:34px 56px; }}
+  .mast h1 {{ font-size:24px; }}
+  .lead p {{ font-size:18px; }}
+  .finds li, .cap {{ font-size:12.5px; }}
+  .stmt td.k {{ font-size:12.5px; }}
+  .stmt td.v {{ font-size:12.5px; padding-left:9px; }}
+  .stmt td.x {{ width:76px; font-size:10px; padding-left:8px; white-space:normal; }}
+  .stmt tr.big td.v {{ font-size:17px; }}
+  .rlist li, .rlist li > span {{ display:block; width:auto; padding-right:0; }}
+  .rlist .s {{ padding-bottom:3px; }}
+  .rlist .s em {{ display:inline; padding-left:6px; }}
+  .plate {{ margin-top:32px; }}
+  /* the classic scroll shadow: a fixed gradient at the right edge, over one
+     that scrolls with the content, so the shadow shows only while there is
+     more chart to the right of it */
+  .tbl {{
+    background:
+      linear-gradient(to left, var(--ground), rgba(0,0,0,0)) right / 26px 100% no-repeat,
+      radial-gradient(farthest-side at 100%, rgba(0,0,0,.18), rgba(0,0,0,0)) right / 9px 100% no-repeat;
+    background-attachment: local, scroll;
+  }}
+}}
 """ + (_PRINT_CSS if p.scheme == "light" else "")
 
 
@@ -239,7 +270,9 @@ svg { min-width: 0; }
 .plate { margin-top: 26px; }
 .body { padding-left: 34px; }
 .ph, h2, h3 { break-after: avoid; }
-.ph, .stmt tr, svg, tr, .finds li, .rlist li, .lead { break-inside: avoid; }
+.ph, .stmt tr, svg, tr, .finds li, .rlist li, .lead, .card { break-inside: avoid; }
+.crow { break-inside: avoid; }
+.card { padding-top: 12px; }
 .mast h1 { font-size: 25px; }
 .lead p { font-size: 17.5px; }
 .foot { margin-top: 32px; }
@@ -276,6 +309,14 @@ def _pct(v, signed=True) -> str:
     if v is None:
         return "—"
     return f"{v:+.2f}%" if signed else f"{v:.2f}%"
+
+
+def _price(v, currency: str) -> str:
+    """A share price in the currency it was paid in — two decimals for dollars,
+    none for won, because a won price with cents is not a price anyone quotes."""
+    if v is None:
+        return "—"
+    return f"${v:,.2f}" if currency == "USD" else f"{v:,.0f}"
 
 
 def _cls(v) -> str:
@@ -333,7 +374,39 @@ def _stmt(rows) -> str:
     return "".join(out)
 
 
-def _svg(w: int, h: int, label: str, body: list[str]) -> str:
+# WeasyPrint does not apply the document stylesheet inside an <svg>: its SVG
+# engine reads presentation attributes and nothing else. Every `svg text`,
+# `.lbl` and `.fig` rule in _css is therefore screen-only, and on paper the
+# annotations came out at the 16px UA default in black — which is how a figure
+# placed for 11px ends up outside the viewBox and clipped. So the type is said
+# twice: once in CSS for the browser, once as attributes for the renderer that
+# cannot read it. Both from this table, so they cannot drift apart.
+_SVG_TYPE = {
+    None: ('"IBM Plex Mono", "IBM Plex Sans KR", monospace', "10.5", "ink3"),
+    "lbl": ('"IBM Plex Sans", "IBM Plex Sans KR", sans-serif', "11.5", "ink"),
+    "fig": ('"IBM Plex Mono", "IBM Plex Sans KR", monospace', "11", "ink2"),
+}
+_TEXT_TAG = re.compile(r"<text\b([^>]*)>")
+
+
+def _typeset(body: str, p: Palette) -> str:
+    """Stamp the type of every <text> onto the element itself."""
+    def one(m: re.Match) -> str:
+        attrs = m.group(1)
+        cls = re.search(r'class="([^"]*)"', attrs)
+        family, size, ink = _SVG_TYPE.get(cls.group(1) if cls else None, _SVG_TYPE[None])
+        add = f" font-family='{family}' font-size='{size}'"
+        # A drawing that named a colour meant it. It has to say so inline: a
+        # presentation attribute loses to the `svg .lbl { fill: … }` rule in the
+        # stylesheet, which is how the departed symbols' ghost grey and the
+        # matrix's knocked-out digits were being repainted on screen.
+        if "fill" not in attrs:
+            add += f' style="fill:{getattr(p, ink)}"'
+        return f"<text{attrs}{add}>"
+    return _TEXT_TAG.sub(one, body)
+
+
+def _svg(w: int, h: int, label: str, body: list[str], p: Palette) -> str:
     """A drawing, in the container that keeps it from widening the page.
 
     The drawings are ~600px wide at their smallest legible size and a phone is
@@ -342,10 +415,10 @@ def _svg(w: int, h: int, label: str, body: list[str]) -> str:
     every line of text on it went off-screen with them.
     """
     return (f'<div class="tbl"><svg viewBox="0 0 {w} {h}" role="img" aria-label="{_e(label)}">'
-            + "".join(body) + "</svg></div>")
+            + _typeset("".join(body), p) + "</svg></div>")
 
 
-# ── plate 3 · composition ────────────────────────────────────────────────────
+# ── the composition ─────────────────────────────────────────────────────────
 def _holdings_svg(holdings: list[dict], p: Palette, chunk: int | None = None) -> str:
     """One row per holding: weight as magnitude on the left, return diverging
     from a zero line on the right. Same order down both, so the two read as one
@@ -383,10 +456,10 @@ def _holdings_svg(holdings: list[dict], p: Palette, chunk: int | None = None) ->
                    f'<title>{_e(label)} · 손익률 {_pct(r)} · 평단 {h["avg_purchase_price"]:,}</title></rect>')
         tx = zero_x + rw + 7 if r >= 0 else zero_x - rw - 7
         out.append(f'<text x="{tx:.1f}" y="{cy}" text-anchor="{"start" if r >= 0 else "end"}" class="fig">{_pct(r)}</text>')
-    return _svg(W, H, "보유 종목의 비중과 손익률", out)
+    return _svg(W, H, "보유 종목의 비중과 손익률", out, p)
 
 
-# ── plate 4 · the path ───────────────────────────────────────────────────────
+# ── the path ────────────────────────────────────────────────────────────────
 def _timeline_svg(rep: dict, p: Palette, chunk: int | None = None) -> str:
     """One track per symbol from its first fill to today (open) or its last fill
     (departed), every fill a tick above or below the track."""
@@ -432,7 +505,7 @@ def _one_track_block(tracks, by_sym, x0d, today, span, p: Palette, W, name_w, ro
     out.append(f'<text x="{px(today) - 4:.1f}" y="{H - 5}" text-anchor="end">오늘</text>')
     for i, (label, a, b, is_open, sym) in enumerate(tracks):
         y = pad_top + i * row_h + 9
-        out.append(f'<text x="0" y="{y + 4}" class="lbl" fill="{p.ink if is_open else p.ghost}">{_e(_fit(label, name_w - 14))}</text>')
+        out.append(f'<text x="0" y="{y + 4}" class="lbl" style="fill:{p.ink if is_open else p.ghost}">{_e(_fit(label, name_w - 14))}</text>')
         xa, xb = px(a), px(b)
         out.append(f'<line x1="{xa:.1f}" y1="{y}" x2="{max(xb, xa + 2):.1f}" y2="{y}" stroke="{p.mark if is_open else p.ghost}" stroke-width="{2.5 if is_open else 1.5}">'
                    f'<title>{_e(label)} · {a} → {"오늘" if is_open else b} · {(b - a).days}일</title></line>')
@@ -442,10 +515,10 @@ def _one_track_block(tracks, by_sym, x0d, today, span, p: Palette, W, name_w, ro
                 out.append(f'<path d="M{x:.1f},{y - 2.5} l-3.5,-6.5 h7 z" fill="{p.rise}"><title>{f["date"]} 매수 {f["qty"]:g}주 @ {f["price"]:,}</title></path>')
             else:
                 out.append(f'<path d="M{x:.1f},{y + 2.5} l-3.5,6.5 h7 z" fill="{p.fall}"><title>{f["date"]} 매도 {f["qty"]:g}주 @ {f["price"]:,} · {_pct(f.get("pnl_pct"))}</title></path>')
-    return _svg(W, H, "종목별 보유 경로와 체결", out)
+    return _svg(W, H, "종목별 보유 경로와 체결", out, p)
 
 
-# ── plate 5 · realised, accumulating ─────────────────────────────────────────
+# ── realised, accumulating ──────────────────────────────────────────────────
 def _cumulative_svg(sales: list[dict], p: Palette) -> str:
     """Realised P&L accumulating over the record.
 
@@ -492,11 +565,11 @@ def _cumulative_svg(sales: list[dict], p: Palette) -> str:
     # The running total belongs inside the plot, above its own last step: at the
     # right margin it sat on the top gridline's own label.
     out.append(f'<text x="{W - right - 6}" y="{max(py(pts[-1][1]) - 9, top + 9):.1f}" text-anchor="end" '
-               f'class="fig" fill="{p.ink}">{_won(pts[-1][1])}</text>')
-    return _svg(W, H, "실현손익 누적", out)
+               f'class="fig" style="fill:{p.ink}">{_won(pts[-1][1])}</text>')
+    return _svg(W, H, "실현손익 누적", out, p)
 
 
-# ── plate 6 · every closed trade ─────────────────────────────────────────────
+# ── every closed trade ──────────────────────────────────────────────────────
 def _trade_scatter_svg(sales: list[dict], p: Palette) -> str:
     """Holding days against realised return, one mark per closed trade.
 
@@ -538,7 +611,7 @@ def _trade_scatter_svg(sales: list[dict], p: Palette) -> str:
                    f'fill="{colour}" fill-opacity=".42" stroke="{colour}" stroke-width="1">'
                    f'<title>{_e(s["symbol"])} {s["date"]} · 보유 {s["held_days"]}일 · {_pct(s["pnl_pct"])} · {_won(s["realised_krw"])}</title></circle>')
     out.append(f'<text x="{left}" y="{base + 30}">보유 기간 →</text>')
-    return _svg(W, H, "닫힌 거래: 보유 기간과 수익률", out)
+    return _svg(W, H, "닫힌 거래: 보유 기간과 수익률", out, p)
 
 
 def _ticks(lo: float, hi: float) -> list[float]:
@@ -553,7 +626,7 @@ def _ticks(lo: float, hi: float) -> list[float]:
     return out or [0.0]
 
 
-# ── plate 8 · after selling ──────────────────────────────────────────────────
+# ── after selling ───────────────────────────────────────────────────────────
 def _slope_svg(rows: list[dict], p: Palette) -> str:
     """Each sold-out symbol as one line from the day it was sold to now.
 
@@ -599,10 +672,10 @@ def _slope_svg(rows: list[dict], p: Palette) -> str:
         out.append(f'<text x="{W - right + 8}" y="{y + 3.5:.1f}" class="fig">'
                    f'{_e(_fit(r["symbol"], 74))} {r["since_sale_pct"]:+.0f}%</text>')
     out.append(f'<circle cx="{left}" cy="{zy:.1f}" r="3" fill="{p.ink}"/>')
-    return _svg(W, H, "정리한 종목: 판 날 대비 지금", out)
+    return _svg(W, H, "정리한 종목: 판 날 대비 지금", out, p)
 
 
-# ── plate 9 · rhythm ─────────────────────────────────────────────────────────
+# ── the rhythm of the fills ─────────────────────────────────────────────────
 _WEEK = ("월", "화", "수", "목", "금", "토", "일")
 
 
@@ -635,17 +708,17 @@ def _matrix_svg(tm: dict, p: Palette) -> str:
             out.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{cell - gap:.1f}" height="{cell - gap:.1f}" fill="{p.mark}" '
                        f'fill-opacity="{0.16 + 0.84 * (n / mx):.2f}"><title>{_WEEK[d]} {h:02d}시 · {n}건</title></rect>')
             if n >= mx * .5:
-                out.append(f'<text x="{x + (cell - gap) / 2:.1f}" y="{y + cell / 2 + 3:.1f}" text-anchor="middle" fill="{p.ground}">{n}</text>')
+                out.append(f'<text x="{x + (cell - gap) / 2:.1f}" y="{y + cell / 2 + 3:.1f}" text-anchor="middle" style="fill:{p.ground}">{n}</text>')
     bands = [(9, 15, "KR 정규"), (22, 24, "US 정규"), (0, 6, "US 정규")]
     by = top + rows * cell + 9
     for a, b, lab in bands:
         x1, x2 = left + a * cell, left + b * cell - gap
         out.append(f'<line x1="{x1:.1f}" y1="{by}" x2="{x2:.1f}" y2="{by}" stroke="{p.rule}" stroke-width="1"/>')
         out.append(f'<text x="{(x1 + x2) / 2:.1f}" y="{by + 14}" text-anchor="middle">{lab}</text>')
-    return _svg(W, H, "요일과 시간대별 체결", out)
+    return _svg(W, H, "요일과 시간대별 체결", out, p)
 
 
-# ── plate 7 · contribution ───────────────────────────────────────────────────
+# ── contribution ────────────────────────────────────────────────────────────
 def _attribution_svg(rows: list[dict], p: Palette) -> str:
     """One diverging bar per symbol: realised plus unrealised, in KRW."""
     if not rows:
@@ -676,7 +749,162 @@ def _attribution_svg(rows: list[dict], p: Palette) -> str:
         out.append(f'<text x="{tx:.1f}" y="{y + bar_h / 2 + 4}" class="fig">{_won(v)}</text>')
         if folded and i == 6:
             out.append(f'<text x="{zero:.1f}" y="{y + row_h + bar_h / 2 + 4}" text-anchor="middle">중간 {folded}종목 생략</text>')
-    return _svg(W, H, "종목별 손익 기여", out)
+    return _svg(W, H, "종목별 손익 기여", out, p)
+
+
+# ── one symbol at a time ────────────────────────────────────────────────────
+_REL = {"below": "아래", "above": "위", "flat": "와 같은 값"}
+
+
+def _track_svg(c: dict, p: Palette) -> str:
+    """The average-cost track for one symbol, with every fill on it.
+
+    A broker shows today's average and nothing about how it got there. Drawn,
+    the two habits separate on sight: buys under the line walk it down, buys
+    over it walk it up, and the line is flat wherever nothing was bought.
+
+    Sized to one card — 300 units — rather than to the page, and 300 is not a
+    round number chosen for looks: it is inside the narrowest card the layout
+    can produce, an A4 column (695) less the plate indent (34), halved, less
+    half the gutter, which is 316. WeasyPrint lays a viewBox'd SVG out at its
+    intrinsic width and then clips it to the cell instead of scaling it down,
+    so anything wider loses its right-hand figures in the PDF while looking
+    perfect on screen. Draw for the narrowest case and both are right.
+    """
+    track = c.get("track") or []
+    if not track:
+        return ""
+    xs = [_d(t["date"]) for t in track]
+    d0, d1 = min(xs), max(xs)
+    span = max((d1 - d0).days, 1)
+    W, H, left, top, bot = 300, 94, 6, 12, 16
+    # The right gutter is the widest end label, not a guess: "71,999" and
+    # "1,234,567" are 40px apart in mono, and a gutter cut for the first clips
+    # the second against the edge of the drawing, where SVG hides it silently.
+    now = (c["avg_now"] * (1 + c["unrealised_rate_pct"] / 100)
+           if c["held"] and c.get("avg_now") and c.get("unrealised_rate_pct") is not None else None)
+    ends = [_price(v, c["currency"]) for v in (c.get("avg_now"), track[-1]["price"], now) if v is not None]
+    right = min(max(7 + max(len(e) for e in ends) * 6.6, 44), 86)
+    plot_w = W - left - right
+    ys = ([t["price"] for t in track]
+          + [t["avg_after"] for t in track if t["avg_after"] is not None]
+          + ([now] if now is not None else []))
+    lo, hi = min(ys), max(ys)
+    pad = (hi - lo) * 0.14 or (hi or 1) * 0.04
+    lo, hi = lo - pad, hi + pad
+    px = lambda d: left + (d - d0).days / span * plot_w          # noqa: E731
+    py = lambda v: H - bot - (v - lo) / (hi - lo) * (H - bot - top)  # noqa: E731
+
+    out = [f'<line x1="{left}" y1="{H - bot + 1}" x2="{W - right:.1f}" y2="{H - bot + 1}" class="grid"/>']
+    # The average-cost line is a step: it moves only where a purchase moved it,
+    # and it ends where the position was emptied rather than sliding across the
+    # gap to the next holding.
+    seg: list[str] = []
+    prev = None
+    for t, x in zip(track, (px(d) for d in xs)):
+        a = t["avg_after"]
+        if a is None:
+            if prev is not None:
+                seg.append(f"{x:.1f},{py(prev):.1f}")
+            if len(seg) > 1:
+                out.append(f'<polyline points="{" ".join(seg)}" fill="none" stroke="{p.mark}" stroke-width="1.6"/>')
+            seg, prev = [], None
+            continue
+        if prev is not None:
+            seg.append(f"{x:.1f},{py(prev):.1f}")
+        seg.append(f"{x:.1f},{py(a):.1f}")
+        prev = a
+    if prev is not None:
+        seg.append(f"{W - right:.1f},{py(prev):.1f}")
+        if len(seg) > 1:
+            out.append(f'<polyline points="{" ".join(seg)}" fill="none" stroke="{p.mark}" stroke-width="1.6"/>')
+
+    for t, d in zip(track, xs):
+        x, y = px(d), py(t["price"])
+        buy = t["side"] == "BUY"  # // legal-ok — Toss enum, compared only
+        colour = p.rise if buy else p.fall
+        tip = f'{t["date"]} {"매수" if buy else "매도"} {_price(t["price"], c["currency"])} x {t["qty"]:g}'
+        if t.get("relation"):
+            tip += f' · 평단 {_price(t["avg_before"], c["currency"])} {_REL[t["relation"]]}'
+        if t.get("pnl_pct") is not None:
+            tip += f' · {_pct(t["pnl_pct"])}'
+        m = (f'{x:.1f},{y - 3.4:.1f} {x - 3.1:.1f},{y + 2.4:.1f} {x + 3.1:.1f},{y + 2.4:.1f}' if buy
+             else f'{x:.1f},{y + 3.4:.1f} {x - 3.1:.1f},{y - 2.4:.1f} {x + 3.1:.1f},{y - 2.4:.1f}')
+        out.append(f'<polygon points="{m}" fill="{colour}"><title>{_e(tip)}</title></polygon>')
+
+    if prev is not None:
+        out.append(f'<text x="{W - right + 5:.1f}" y="{py(prev) + 3.4:.1f}" class="fig" style="fill:{p.mark}">'
+                   f'{_e(_price(prev, c["currency"]))}</text>')
+    else:
+        # A position that was emptied has no average left to label, and without
+        # one the drawing carries no figure at all — the last sale is the number
+        # the reader is looking for there.
+        last = track[-1]
+        out.append(f'<text x="{W - right + 5:.1f}" y="{py(last["price"]) + 3.4:.1f}" class="fig" style="fill:{p.fall}">'
+                   f'{_e(_price(last["price"], c["currency"]))}</text>')
+    if now is not None:
+        yn = py(now)
+        colour = p.rise if now >= (prev or now) else p.fall
+        out.append(f'<circle cx="{W - right:.1f}" cy="{yn:.1f}" r="2.8" fill="{colour}">'
+                   f'<title>지금 {_e(_price(now, c["currency"]))}</title></circle>')
+        # The two end labels are the same two numbers the reader is comparing,
+        # so they must not land on each other when the position sits near even.
+        if abs(yn - py(prev)) < 10:
+            yn = py(prev) + (11 if now < (prev or now) else -11)
+        out.append(f'<text x="{W - right + 5:.1f}" y="{yn + 3.4:.1f}" class="fig" style="fill:{colour}">'
+                   f'{_e(_price(now, c["currency"]))}</text>')
+    out.append(f'<text x="{left}" y="{H - 4}">{d0.strftime("%y.%m")}</text>')
+    if d1 != d0:
+        out.append(f'<text x="{W - right:.1f}" y="{H - 4}" text-anchor="end">{d1.strftime("%y.%m")}</text>')
+    return (f'<svg class="spark" viewBox="0 0 {W} {H}" role="img" '
+            f'aria-label="{_e(c["symbol"])} 평단 궤적">' + _typeset("".join(out), p) + "</svg>")
+
+
+def _fo_phrase(fo: dict) -> str:
+    """"평단 아래 4 · 위 2", never the two nicknames those two counts have.
+
+    The report describes and does not label: a nickname is a verdict wearing a
+    noun, and the whole point of the drawing beside this line is that the reader
+    can see which one it was without being told.
+    """
+    bits = [f"{lab} {fo[k]}" for k, lab in (("below", "평단 아래"), ("above", "위"), ("flat", "같은 값")) if fo[k]]
+    return "추가 매수 " + " · ".join(bits) if bits else "추가 매수 없음"
+
+
+def _symbol_cards(sy: dict, p: Palette) -> str:
+    """The cards, two to a row where there is room for two.
+
+    A CSS table rather than a grid: this document's other renderer has no grid,
+    and a card that silently drops out of the flow in the PDF is the failure
+    that would not show up on screen.
+    """
+    cards = sy.get("cards") or []
+    if not cards:
+        return '<p class="cap dim">체결 이력이 있는 종목 없음</p>'
+    cells = []
+    for c in cards:
+        head = (f'<div class="ch"><span class="s">{_e(_fit(_nm(c["symbol"], c["name"]), 216, 13))}</span>'
+                f'<span class="w">{_pct(c["weight_pct"], False) if c["held"] else "정리함"}</span></div>')
+        line1 = " · ".join(filter(None, [
+            f'보유 {_days(c["held_days"])}' if c["held"] and c["held_days"] is not None else None,
+            f'매수 {c["buys"]} · 매도 {c["sells"]}',
+            _fo_phrase(c["follow_on"]),
+        ]))
+        closed = (f'닫힌 {c["closed"]}건 중 {c["wins"]}승 ({c["win_rate_pct"]}%) · 중앙값 {_pct(c["median_sell_pct"])}'
+                  if c["closed"] else "닫은 거래 없음")
+        # Label over figure, not label beside figure: three ₩ amounts in one
+        # nowrap row is ~430px of min-content and the card has 360.
+        figs = ('<table class="cf"><tr><th>실현</th><th>미실현</th><th>합계</th></tr><tr>'
+                + "".join(f'<td class="{_cls(c[k])}">{_won(c[k])}</td>'
+                          for k in ("realised_krw", "unrealised_krw", "total_krw"))
+                + "</tr></table>")
+        note = f'<p class="cn">{_e(c["note"])}</p>' if c.get("note") else ""
+        cells.append(f'<div class="card">{head}<p class="cm">{_e(line1)}</p>{_track_svg(c, p)}'
+                     f'<p class="cm">{_e(closed)}</p>{figs}{note}</div>')
+    if len(cells) % 2:
+        cells.append('<div class="card"></div>')
+    rows = "".join(f'<div class="crow">{cells[i]}{cells[i + 1]}</div>' for i in range(0, len(cells), 2))
+    return f'<div class="cards">{rows}</div>'
 
 
 def _split_bar_svg(kr: float | None, us: float | None, p: Palette) -> str:
@@ -688,7 +916,7 @@ def _split_bar_svg(kr: float | None, us: float | None, p: Palette) -> str:
         f'<rect x="0" y="8" width="{max(kw - 1.5, 0):.1f}" height="13" fill="{p.mark}"><title>국내 {kr:.2f}%</title></rect>',
         f'<rect x="{kw + 1.5:.1f}" y="8" width="{max(W - kw - 1.5, 0):.1f}" height="13" fill="{p.mark}" opacity=".38"><title>해외 {us:.2f}%</title></rect>',
         f'<text x="0" y="36" class="fig">국내 {kr:.2f}%</text>',
-        f'<text x="{W}" y="36" text-anchor="end" class="fig">해외 {us:.2f}%</text>'])
+        f'<text x="{W}" y="36" text-anchor="end" class="fig">해외 {us:.2f}%</text>'], p)
 
 
 # ── the mirror table ─────────────────────────────────────────────────────────
@@ -756,12 +984,27 @@ def _history_status(h: dict) -> str:
             f'<ul class="rlist">{items}</ul>')
 
 
-def _plate(n: int, title: str, basis: str, body: str) -> str:
-    """One plate: number in the margin, title in the voice face, and the basis of
-    the measurement stamped at the right on the same baseline."""
-    return (f'<section class="plate"><div class="ph"><span class="n">{n:02d}</span>'
+class _Plates:
+    """The plates in the order they are added, numbered on the way out.
+
+    They used to carry their numbers as literals at the call site, which meant
+    inserting one in the middle was a rename of every plate after it — and a
+    number that disagrees with the caption pointing at it is worse than no
+    number at all.
+    """
+
+    def __init__(self) -> None:
+        self._items: list[tuple[str, str, str]] = []
+
+    def add(self, title: str, basis: str, body: str) -> None:
+        self._items.append((title, basis, body))
+
+    def html(self) -> str:
+        return "".join(
+            f'<section class="plate"><div class="ph"><span class="n">{i:02d}</span>'
             f'<h2>{_e(title)}</h2><span class="basis">{_e(basis)}</span></div>'
-            f'<div class="body">{body}</div></section>')
+            f'<div class="body">{body}</div></section>'
+            for i, (title, basis, body) in enumerate(self._items, 1))
 
 
 def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
@@ -810,32 +1053,43 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
     finds = "".join(f"<li>{_e(x)}</li>" for x in heads[1:])
     finds = f'<ul class="finds">{finds}</ul>' if finds else ""
 
-    plates = [_plate(1, "평가", f"{gen} KST", stmt
-                     + f'<p class="cap">실현 손익 누계는 <b>{_e(basis)}</b> · 수수료·세금 차감 기준이다.</p>'),
-              _plate(2, "이력 대조", f"체결 {h['fills']}건", _history_status(h)
-                     + f'<p class="cap">조회 시작 {_e(h["since"] or "전체")} · 첫 체결 {_e(h["first_fill_at"] or "—")}</p>')]
+    plates = _Plates()
+    plates.add("평가", f"{gen} KST", stmt
+               + f'<p class="cap">실현 손익 누계는 <b>{_e(basis)}</b> · 수수료·세금 차감 기준이다.</p>')
+    plates.add("이력 대조", f"체결 {h['fills']}건", _history_status(h)
+               + f'<p class="cap">조회 시작 {_e(h["since"] or "전체")} · 첫 체결 {_e(h["first_fill_at"] or "—")}</p>')
 
     conc = (f'가장 큰 종목은 <b>{_e(_nm(c["largest"]["symbol"], c["largest"]["name"]))}</b>, 평가액의 {c["largest"]["weight_pct"]:.2f}%. '
             f'30% 선을 넘는 종목: {_e(", ".join(c["over_30pct"]) if c["over_30pct"] else "없음")}.' if c["largest"] else "보유 종목 없음.")
-    plates.append(_plate(3, "보유 구성", f"{n_hold}종목",
+    plates.add("보유 구성", f"{n_hold}종목",
                          f'{_holdings_svg(rep["holdings"], p, rows_per_page)}'
                          f'<div class="legend"><span><i style="background:{p.mark}"></i>비중</span>'
                          f'<span><i style="background:{p.rise}"></i>평단 위</span>'
                          f'<span><i style="background:{p.fall}"></i>평단 아래</span></div>'
                          f'<p class="cap">왼쪽은 평가액에서 차지하는 몫, 오른쪽은 평단 대비 지금 위치. 같은 줄이 같은 종목이다. {conc}</p>'
-                         f'{_split_bar_svg(c["kr_pct"], c["us_pct"], p)}'))
+                         f'{_split_bar_svg(c["kr_pct"], c["us_pct"], p)}')
 
-    plates.append(_plate(4, "경로", f"보유 {n_hold} · 정리 {n_dep}",
+    if (sy := an.get("symbols") or {}).get("cards"):
+        plates.add("종목 하나하나", f"{sy['held_shown']}종목 보유 · 카드 {len(sy['cards'])}장",
+                   '<p class="cap">앞의 표가 종목을 세로로 세운다면 여기는 한 종목씩 옆으로 눕힌다. '
+                   '초록 선이 <b>평단</b>이고, 매수 ▲ 가 그 선을 어디로 옮겼는지가 이 그림의 전부다 — '
+                   '선 아래에서 산 것들은 평단을 끌어내리고, 위에서 산 것들은 밀어올린다. '
+                   '선이 끊긴 자리는 그 종목을 한 번 비웠다는 뜻이고, 오른쪽 끝의 점은 지금 가격이다.'
+                   + (f' 기여가 작은 {sy["folded"]}종목은 카드 없이 원장에만 있다.' if sy.get("folded") else "")
+                   + '</p>'
+                   + _symbol_cards(sy, p))
+
+    plates.add("경로", f"보유 {n_hold} · 정리 {n_dep}",
                          f'{_timeline_svg(rep, p, tracks_per_page)}'
                          f'<div class="legend"><span><i style="background:{p.mark}"></i>보유 중</span>'
                          f'<span><i style="background:{p.ghost}"></i>정리함</span>'
                          f'<span style="color:{p.rise}">▲ 매수</span><span style="color:{p.fall}">▼ 매도</span></div>'
-                         f'<p class="cap">종목마다 처음 산 날부터 오늘까지의 선. 위쪽 삼각형이 매수, 아래쪽이 매도.</p>'))
+                         f'<p class="cap">종목마다 처음 산 날부터 오늘까지의 선. 위쪽 삼각형이 매수, 아래쪽이 매도.</p>')
 
     if (cum := _cumulative_svg(sales, p)):
-        plates.append(_plate(5, "실현손익 누적", f"매도 {len(sales)}건", cum
+        plates.add("실현손익 누적", f"매도 {len(sales)}건", cum
                              + '<p class="cap">매도가 있을 때만 값이 바뀌므로 계단이다. 사이의 평평한 구간은 아무 일도 없었다는 뜻이지 '
-                               '변화가 없었다는 뜻이 아니다 — 그 동안의 변화는 미실현 쪽에 있다. 점은 한 건이 전체 폭의 12%를 넘게 움직인 매도.</p>'))
+                               '변화가 없었다는 뜻이 아니다 — 그 동안의 변화는 미실현 쪽에 있다. 점은 한 건이 전체 폭의 12%를 넘게 움직인 매도.</p>')
 
     if (sc := _trade_scatter_svg(sales, p)):
         closed = _stmt([
@@ -849,42 +1103,42 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
                     f'({_pct(t["best"]["pnl_pct"])}) · 최저 {_e(t["worst"]["symbol"])} {t["worst"]["date"]} '
                     f'{_won(t["worst"]["realised_krw"])} ({_pct(t["worst"]["pnl_pct"])})'
                     + (f' · 실현 이익의 {t["top5_share_pct"]}%가 상위 5건' if t.get("top5_share_pct") else "") + "</p>")
-        plates.append(_plate(6, "닫힌 거래 하나하나", f"{t.get('closed')}건",
+        plates.add("닫힌 거래 하나하나", f"{t.get('closed')}건",
                              closed + extremes + sc + f'<p class="cap">가로는 보유 기간(로그), 세로는 실현 수익률, 원의 넓이는 그 거래의 크기. '
                                   f'중앙값은 <b>이익 {_days(t.get("win_hold_median_days"))} / 손실 {_days(t.get("loss_hold_median_days"))}</b> '
                                   f'이지만 그것이 규칙인지 두 습관의 평균인지는 이 흩어짐이 말한다. '
-                                  f'왼쪽 위에 몰리고 오른쪽 아래로 끌리면 이익은 빨리 끊고 손실은 오래 쥔 것이다.</p>'))
+                                  f'왼쪽 위에 몰리고 오른쪽 아래로 끌리면 이익은 빨리 끊고 손실은 오래 쥔 것이다.</p>')
 
     if a.get("rows"):
-        plates.append(_plate(7, "손익 기여", f"실현+미실현 {_won(a['total_krw'])}",
+        plates.add("손익 기여", f"실현+미실현 {_won(a['total_krw'])}",
                              f'<p class="cap">실현 <span class="{_cls(a["realised_krw"])}">{_won(a["realised_krw"])}</span> + '
                              f'미실현 <span class="{_cls(a["unrealised_krw"])}">{_won(a["unrealised_krw"])}</span> = '
                              f'<b>{_won(a["total_krw"])}</b> · 수수료·세금 {_won(a["fees_krw"])}. 흐린 이름은 이미 정리한 종목.</p>'
-                             f'{_attribution_svg(a["rows"], p)}'))
+                             f'{_attribution_svg(a["rows"], p)}')
 
     if af.get("available") and af.get("count"):
         rows = "".join(f'<tr><td>{_e(_nm(r["symbol"], r["name"]))}</td><td>{_e(r["last_sold_at"])}</td><td class="n">{r["avg_sell_price"]:,}</td>'
                        f'<td class="n">{r["price_now"]:,}</td><td class="n {_cls(r["since_sale_pct"])}">{_pct(r["since_sale_pct"])}</td>'
                        f'<td class="n {_cls(r["kept_delta_krw"])}">{_won(r["kept_delta_krw"])}</td></tr>' for r in af["rows"])
-        plates.append(_plate(8, "팔고 난 뒤", f"{af['count']}종목",
+        plates.add("팔고 난 뒤", f"{af['count']}종목",
                              _slope_svg(af["rows"], p)
                              + f'<p class="cap">정리한 {af["count"]}종목이 전부 같은 자리(판 날, 0%)에서 출발한다. '
                                f'지금 판 가격보다 위인 것 <b>{af["higher_now"]}</b>, 아래인 것 {af["lower_now"]}, 이후 변화 중앙값 {_pct(af["median_since_sale_pct"])}. '
                                f'판 수량을 그대로 들고 있었다면 지금 <span class="{_cls(af["kept_delta_krw"])}">{_won(af["kept_delta_krw"])}</span> 차이.</p>'
                                f'<div class="tbl"><table class="plain"><thead><tr><th>종목</th><th>마지막 매도</th><th>평균 매도가</th>'
-                               f'<th>지금</th><th>이후</th><th>안 팔았다면</th></tr></thead><tbody>{rows}</tbody></table></div>'))
+                               f'<th>지금</th><th>이후</th><th>안 팔았다면</th></tr></thead><tbody>{rows}</tbody></table></div>')
 
     if (mx := _matrix_svg(tm, p)):
-        plates.append(_plate(9, "체결의 리듬", f"체결 {tm['fills']}건",
+        plates.add("체결의 리듬", f"체결 {tm['fills']}건",
                              mx + f'<p class="cap">거래일 {tm["trade_days"]}일 · 하루 평균 {tm["fills_per_trade_day"]}건 · '
                                   f'3건 이상인 날 {tm["days_with_3plus"]}일 · 최다 {tm["busiest_day"]["date"]} {tm["busiest_day"]["fills"]}건'
                                   + (f' · 국내 체결 중 개장 첫 시간 {tm["kr_first_hour_pct"]}%' if tm.get("kr_first_hour_pct") is not None else "")
-                                  + '. 두 시장의 정규장이 시계의 반대편에 있어 요일과 시간을 따로 세면 서로를 가린다.</p>'))
+                                  + '. 두 시장의 정규장이 시계의 반대편에 있어 요일과 시간을 따로 세면 서로를 가린다.</p>')
 
-    plates.append(_plate(10, "거울", f"최근 {rep['window_days']}일 대 전체",
+    plates.add("거울", f"최근 {rep['window_days']}일 대 전체",
                          '<p class="cap">같은 잣대를 두 기간에 나란히 댄다. 두 열이 다르면 최근이 평소와 다른 것이다. '
                          '최근 열의 평단·보유일은 전체 이력을 딛고 계산한다.</p>'
-                         + _mirror_table(rep["mirrors"], rep["window_days"])))
+                         + _mirror_table(rep["mirrors"], rep["window_days"]))
 
     hold_rows = "".join(
         f'<tr><td>{_e(_nm(r["symbol"], r["name"]))}</td><td>{_e(r["opened_at"] or "이력 밖")}</td><td class="n">{_days(r["held_days"])}</td>'
@@ -911,7 +1165,7 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
     if market:
         ledger += (f'<h3>국내 vs 해외</h3><div class="tbl"><table class="plain"><thead><tr><th></th><th>종목</th><th>닫힌 거래</th>'
                    f'<th>승률</th><th>보유 중앙값</th><th>실현</th><th>미실현</th><th>합계</th></tr></thead><tbody>{market}</tbody></table></div>')
-    plates.append(_plate(11, "원장", f"보유 {n_hold} · 정리 {n_dep}", ledger))
+    plates.add("원장", f"보유 {n_hold} · 정리 {n_dep}", ledger)
 
     limits = "".join(f"<li>{_e(x)}</li>" for x in rep["limits"])
     return f"""<title>PivoxReport {acct}</title>
@@ -926,7 +1180,7 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
 {lead}
 {finds}
 
-{"".join(plates)}
+{plates.html()}
 
 <div class="foot">
   <span class="basis">토스증권 Open API 를 읽기 전용으로 조회해 만든 기록이다. 주문 경로는 없다.

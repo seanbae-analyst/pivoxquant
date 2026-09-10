@@ -9,6 +9,12 @@ day and week the fills happen, and how position sizes are distributed.
 Every statement is a number the reader could recompute from the book;
 the prose only names the pattern the numbers already form.
 
+Section 8 is the one that crosses the other way. Everything above answers
+"how do I trade"; the cards answer "what happened with this one" — where
+the average went as each purchase moved it, whether the position was ever
+emptied and re-entered, and what the symbol came to. The data was already
+in the book; nothing was reading it per symbol.
+
 Inputs are the rebuilt :class:`services.toss.history.PositionHistory` book,
 the holdings rows, the FX rate, and a ``prices`` map of current prices for
 symbols no longer held (from ``GET /api/v1/prices``) — without prices the
@@ -257,6 +263,117 @@ def headline(a: dict, t: dict, s: dict, m: list[dict], after: dict, tm: dict) ->
     return [text for _, text in cands[:3]]
 
 
+# ── 8. One symbol at a time ──────────────────────────────────────────────────
+# Everything above crosses the whole account. That answers "how do I trade" and
+# never "what happened with this one", which is the question a holdings list
+# actually raises. The book already holds the answer per symbol — the running
+# average before and after every fill — and nothing was reading it.
+_CARD_CAP = 16
+
+
+def _card_note(c: dict) -> str | None:
+    """The one sentence this symbol earns, or nothing.
+
+    Ranked inside the card rather than across the account: a card with no
+    pattern says nothing rather than reaching for the least weak one.
+    """
+    fo, closed = c["follow_on"], c["closed"]
+    # A won price with two decimals is not a price anyone quotes; a dollar one
+    # without them is not either. The note is prose and has to read like it.
+    def px(v):
+        return "—" if v is None else (f"${v:,.2f}" if c["currency"] == "USD" else f"{round(v):,}")
+
+    if c["reentries"]:
+        gap = f"{c['gap_days']:.0f}일" if c["gap_days"] is not None else "얼마 뒤"
+        return f"전량 정리하고 {gap} 만에 다시 샀다 — 이 종목에서 {c['reentries'] + 1}번째 자리다."
+    if fo["below"] >= 3 and fo["below"] > fo["above"] * 2:
+        return (f"추가 매수 {fo['below'] + fo['above'] + fo['flat']}건 중 {fo['below']}건이 평단 아래였다 — "
+                f"평단이 {px(c['avg_first'])}에서 {px(c['avg_now'])}까지 내려왔다.")
+    if fo["above"] >= 3 and fo["above"] > fo["below"] * 2:
+        return (f"추가 매수 {fo['below'] + fo['above'] + fo['flat']}건 중 {fo['above']}건이 평단 위였다 — "
+                f"오를수록 더 샀고 평단은 {px(c['avg_first'])}에서 {px(c['avg_now'])}가 됐다.")
+    if closed >= 3 and c["win_rate_pct"] is not None and c["win_rate_pct"] <= 34:
+        return f"이 종목에서 닫은 {closed}건 중 이익은 {c['wins']}건뿐이다."
+    if closed >= 3 and c["win_rate_pct"] is not None and c["win_rate_pct"] >= 75:
+        return f"이 종목에서 닫은 {closed}건 중 {c['wins']}건이 이익이다."
+    if c["held"] and (c["held_days"] or 0) >= 180 and abs(c["unrealised_rate_pct"] or 0) < 3:
+        return f"{c['held_days']}일 들고 있는 동안 평단 대비 {c['unrealised_rate_pct']:+.2f}%다 — 움직이지 않은 자리다."
+    if c["sells"] == 0 and c["buys"] >= 4:
+        return f"{c['buys']}번 사기만 하고 한 번도 팔지 않았다."
+    return None
+
+
+def per_symbol(book: dict, holdings_rows: list[dict], usdkrw: Decimal, names: dict[str, str],
+               attribution_rows: list[dict]) -> dict:
+    """One card per symbol: the average-cost track, what each buy did to it,
+    what the closed trades came to, and what the symbol contributed.
+
+    Held symbols first — they are what the reader owns and the question is about
+    them — then the departed ones by how much they moved the account. Both are
+    capped; the fold is reported, never silent.
+    """
+    held = {r["symbol"]: r for r in holdings_rows}
+    contrib = {r["symbol"]: r for r in attribution_rows}
+    cards = []
+    for sym, p in book.items():
+        events = sorted(
+            [("BUY", b.fill, b.avg_cost_before, b.avg_cost_after, b.relation) for b in p.buy_outcomes]  # // legal-ok — Toss enum
+            + [("SELL", s.fill, s.avg_cost_before, s.avg_cost_after, s.pnl_pct) for s in p.sell_outcomes],  # // legal-ok — Toss enum
+            key=lambda e: e[1].at)
+        if not events:
+            continue
+        track, reentries, gap_days, closed_at = [], 0, None, None
+        for side, f, before, after, extra in events:
+            if side == "BUY" and closed_at is not None:  # // legal-ok — Toss enum
+                reentries += 1
+                gap_days = round((f.at - closed_at).total_seconds() / 86400, 1)
+                closed_at = None
+            if side == "SELL" and after is None:  # // legal-ok — Toss enum
+                closed_at = f.at
+            track.append({
+                "date": f.at.date().isoformat(), "side": side, "price": _f(f.price, 4),
+                "qty": _f(f.quantity, 6), "amount_krw": _f(to_krw(f.amount, f.currency, usdkrw), 0),
+                "avg_before": _f(before, 4) if before is not None else None,
+                "avg_after": _f(after, 4) if after is not None else None,
+                "relation": extra if side == "BUY" else None,  # // legal-ok — Toss enum
+                "pnl_pct": round(extra, 2) if side == "SELL" else None,  # // legal-ok — Toss enum
+            })
+        fo = [b for b in p.buy_outcomes if b.follow_on]
+        wins = [o for o in p.sell_outcomes if o.pnl_pct > 0]
+        h = held.get(sym)
+        ct = contrib.get(sym) or {}
+        avgs = [t["avg_after"] for t in track if t["avg_after"] is not None]
+        c = {
+            "symbol": sym, "name": names.get(sym) or (h or {}).get("name") or "", "currency": p.currency,
+            "held": sym in held,
+            "weight_pct": (h or {}).get("weight_pct"),
+            "held_days": (h or {}).get("held_days"),
+            "unrealised_rate_pct": (h or {}).get("unrealised_rate_pct"),
+            "buys": p.buys, "sells": p.sells,
+            "follow_on": {"below": sum(1 for b in fo if b.relation == "below"),
+                          "above": sum(1 for b in fo if b.relation == "above"),
+                          "flat": sum(1 for b in fo if b.relation == "flat")},
+            "closed": len(p.sell_outcomes), "wins": len(wins),
+            "win_rate_pct": round(len(wins) / len(p.sell_outcomes) * 100, 1) if p.sell_outcomes else None,
+            "median_sell_pct": _med([o.pnl_pct for o in p.sell_outcomes]),
+            "realised_krw": ct.get("realised_krw", 0.0), "unrealised_krw": ct.get("unrealised_krw", 0.0),
+            "total_krw": ct.get("total_krw", 0.0),
+            "fees_krw": _f(to_krw(p.fees, p.currency, usdkrw), 0),
+            "reentries": reentries, "gap_days": gap_days,
+            "avg_first": avgs[0] if avgs else None,
+            "avg_now": _f(p.average_cost, 4) if p.average_cost is not None else (avgs[-1] if avgs else None),
+            "oversold": p.oversold,
+            "track": track,
+        }
+        c["note"] = _card_note(c)
+        cards.append(c)
+    live = sorted([c for c in cards if c["held"]], key=lambda c: -(c["weight_pct"] or 0))
+    gone = sorted([c for c in cards if not c["held"]], key=lambda c: -abs(c["total_krw"] or 0))
+    shown = (live + gone)[:_CARD_CAP]
+    return {"cards": shown, "total": len(cards), "folded": max(0, len(cards) - len(shown)),
+            "held_shown": sum(1 for c in shown if c["held"])}
+
+
 def analyse(*, book: dict, fills: list, holdings_rows: list[dict], usdkrw: Decimal, prices: dict | None, names: dict[str, str]) -> dict:
     held = {r["symbol"] for r in holdings_rows}
     a = attribution(book, holdings_rows, usdkrw, names)
@@ -268,5 +385,6 @@ def analyse(*, book: dict, fills: list, holdings_rows: list[dict], usdkrw: Decim
     return {
         "headline": headline(a, t, s, m, after, tm),
         "attribution": a, "trades": t, "after_selling": after, "timing": tm, "sizing": s, "by_market": m,
+        "symbols": per_symbol(book, holdings_rows, usdkrw, names, a["rows"]),
         "generated_at": datetime.now().isoformat(timespec="seconds"),
     }
