@@ -8,7 +8,7 @@
  *
  * Surface map (4-block structure):
  *   - LivingCFOStatusBar         (reused, sticky)
- *   - PortfolioHeroV2            (NAV + reconciled time + Add / Reconcile CTAs)
+ *   - PortfolioHeroV2            (NAV + observed time + Add CTA)
  *   - EquityCurveBlock           (timeframe toggle 1mo/3mo/6mo/1yr/All)
  *   - PositionsTableV2           (8 columns, 종목명 main pattern)
  *   - 3-col grid:
@@ -40,7 +40,6 @@ import {
   usePortfolioPositions,
   usePortfolioSummary,
   useFxRate,
-  useBrokerConnections,
   fetcher,
 } from "@/lib/hooks";
 import {
@@ -48,9 +47,8 @@ import {
   PORTFOLIO_SUMMARY,
   PORTFOLIO_TRADES,
 } from "@/lib/endpoints";
-import { apiFetch, ApiError } from "@/lib/api";
-import { useT } from "@/lib/locale";
 
+import { CapitalCardV2 } from "@/components/settings/v2/capital-card-v2";
 import { PortfolioHeroV2 } from "@/components/portfolio/v2/portfolio-hero-v2";
 import { EquityCurveBlock } from "@/components/portfolio/v2/equity-curve-block";
 import { PositionsTableV2 } from "@/components/portfolio/v2/positions-table-v2";
@@ -78,27 +76,12 @@ interface PositionsResponse {
   positions?: BackendPositionRow[];
 }
 
-interface ReconcileResponse {
-  ok: boolean;
-  broker?: "kis";
-  added?: string[];
-  updated?: string[];
-  removed?: string[];
-  synced_at?: string;
-  available_cash?: number;
-  total_value?: number;
-  error?: string;
-  code?: string;
-}
-
 export default function PortfolioPageV2() {
-  const tl = useT(); // "tl" to avoid shadowing setTimeout's `t` variable (line ~124)
   const [addOpen, setAddOpen] = React.useState(false);
   const [tradeAction, setTradeAction] = React.useState<TradeAction | null>(null);
   const [targetPosition, setTargetPosition] = React.useState<Position | null>(
     null,
   );
-  const [reconciling, setReconciling] = React.useState(false);
 
   const {
     data: posData,
@@ -111,10 +94,6 @@ export default function PortfolioPageV2() {
     error: sumErr,
   } = usePortfolioSummary();
 
-  // Broker connections — drives Reconcile CTA enabled state. KIS is the
-  // only broker that writes positions.
-  const { data: brokerData } = useBrokerConnections();
-  const reconcileAvailable = Boolean(brokerData?.kis_connected);
 
   // Skeleton flicker guard — same 1.2s window as v1.
   const [showSkeleton, setShowSkeleton] = React.useState(true);
@@ -271,90 +250,6 @@ export default function PortfolioPageV2() {
     );
   }
 
-  /**
-   * Reconcile from broker (KIS).
-   *
-   * ⚠️ 2026-09-06 — THE BACKEND ROUTE DOES NOT EXIST. `POST /api/portfolio/
-   * reconcile` was deleted with the rest of the broker surface in the 8-31
-   * prune (47a5e8f3); `routes/portfolio.py:1761`, which this line used to
-   * cite, is now a note explaining the removal. The response contract below
-   * is kept as the spec a revival would have to satisfy — it is not live.
-   *
-   * This is NOT a live 404. The CTA is gated on `reconcileAvailable =
-   * brokerData?.kis_connected`, and `useBrokerConnections()` hands SWR the key
-   * `false && ...`, so the request never fires and `kis_connected` is never
-   * truthy. Reviving it means solving the KIS partnership problem first
-   * (CLAUDE.md 함정 §12) — and rewriting the route, since it is gone.
-   *
-   * The path stays a literal rather than an `API.*` constant on purpose:
-   * putting it in endpoints.ts would add a symbol that resolves to a 404 and
-   * would pass the "every constant maps to a route" audit by being absent
-   * from neither side.
-   *   200  → {ok, broker, added, updated, removed, synced_at,
-   *           available_cash, total_value}
-   *   404  → NO_BROKER_CONNECTION  (no broker linked)
-   *   502  → SYNC_FAILED            (broker reachable but errored)
-   *
-   * CSRF is forwarded by `apiFetch` (X-CSRF-Token header from cookie).
-   * Trade rate limit is enforced server-side (@trade_rate_limit).
-   */
-  const handleReconcile = React.useCallback(async () => {
-    if (reconciling) return;
-    if (!reconcileAvailable) {
-      toast.error(tl("dashboard.portfolio.kisConnectRequired"));
-      return;
-    }
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm(tl("dashboard.portfolio.kisSyncConfirm"))
-    ) {
-      return;
-    }
-    setReconciling(true);
-    try {
-      const result = await apiFetch<ReconcileResponse>(
-        "/api/portfolio/reconcile",
-        { method: "POST" },
-      );
-      const added = result.added?.length ?? 0;
-      const updated = result.updated?.length ?? 0;
-      const removed = result.removed?.length ?? 0;
-      toast.success(
-        tl("dashboard.portfolio.kisSyncResult", {
-          added: String(added),
-          updated: String(updated),
-          removed: String(removed),
-        }),
-      );
-      refreshAll();
-    } catch (err) {
-      if (err instanceof ApiError) {
-        // Map backend `code` to user-facing copy. The error message field
-        // from the response body is preserved as `err.message` by apiFetch.
-        const code = err.message || "";
-        if (err.status === 501) {
-          toast.error(tl("dashboard.portfolio.kisSyncNotSupported"));
-        } else if (
-          err.status === 404 ||
-          code.includes("NO_BROKER_CONNECTION")
-        ) {
-          toast.error(tl("dashboard.portfolio.kisNoBroker"));
-        } else if (err.status === 502 || code.includes("SYNC_FAILED")) {
-          toast.error(tl("dashboard.portfolio.kisSyncFailed"));
-        } else if (err.status === 429) {
-          // apiFetch already surfaced the 429 toast — skip duplicate.
-        } else {
-          toast.error(err.message || tl("dashboard.portfolio.kisSyncError"));
-        }
-      } else {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        toast.error(`Reconcile: ${msg}`);
-      }
-    } finally {
-      setReconciling(false);
-    }
-  }, [reconciling, reconcileAvailable, tl]);
-
   // KPI deck values — preserved from v1 PortfolioPage (line 144-164).
   // Falls through to derived figures from positions when summary is silent.
   const kpis = React.useMemo(() => {
@@ -459,9 +354,7 @@ export default function PortfolioPageV2() {
         positionCount={positions.length}
         cashPct={cashPct}
         lastReconciledAt={lastReconciledAt}
-        reconcileAvailable={reconcileAvailable && !reconciling}
         onAddPosition={() => setAddOpen(true)}
-        onReconcile={handleReconcile}
         loading={isInitialLoad}
         todayPnl={kpis.todayPnl}
         todayPnlPct={kpis.todayPnlPct}
@@ -493,9 +386,16 @@ export default function PortfolioPageV2() {
         loading={posLoading}
         onAction={openAction}
         onAddPosition={() => setAddOpen(true)}
-        onReconcile={handleReconcile}
-        reconcileAvailable={reconcileAvailable && !reconciling}
       />
+
+      {/* ═══════════ SEED CAPITAL ═══════════
+          Moved here from /settings on 2026-09-10. This is the number the
+          cash buffer above and every add / trim draw down against, so it
+          belongs next to the holdings it constrains, not among account
+          settings. */}
+      <section aria-label="Seed capital">
+        <CapitalCardV2 />
+      </section>
 
       {/* ═══════════ 3-COL GRID — Sector / Watchlist / Recent ═══════════ */}
       <section

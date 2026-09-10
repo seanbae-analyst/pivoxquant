@@ -153,7 +153,7 @@ export function CapitalCardV2() {
           color: "var(--pq-ivory-dim)",
         }}
       >
-        A3 · Seed capital
+        Seed capital
       </span>
 
       <div

@@ -9,7 +9,8 @@
  * - 80px top / 64px bottom padding, hairline-bottom only (no card border).
  * - H1 Playfair 500 / 48px / line-height 1.05 / track-tight.
  * - Bronze italic accent on the word "book."
- * - Two CTAs: bronze-filled "Add position" + bronze-outline "Reconcile".
+ * - One CTA: bronze-filled "Add position". The broker "Reconcile" CTA was
+ *   removed 2026-09-10 — broker linking is not offered and its route is gone.
  * - Eyebrow: "Book · Volume {weekIndex} · {weekday}".
  *
  * Legal: action vocabulary `Add` / `Reconcile` / `Save observation` only.
@@ -34,12 +35,8 @@ interface PortfolioHeroV2Props {
   cashPct?: number;
   /** ISO timestamp of last reconciliation / observation. Optional. */
   lastReconciledAt?: string | null;
-  /** Whether at least one broker connection is wired. Drives CTA enabled state. */
-  reconcileAvailable?: boolean;
   /** Click handler for the primary "Add position" CTA. */
   onAddPosition: () => void;
-  /** Click handler for the secondary "Reconcile from broker" CTA. */
-  onReconcile?: () => void;
   loading?: boolean;
   /** Today P&L in display currency. v1 KPI parity (additive). */
   todayPnl?: number;
@@ -141,9 +138,7 @@ export function PortfolioHeroV2({
   positionCount,
   cashPct,
   lastReconciledAt,
-  reconcileAvailable = false,
   onAddPosition,
-  onReconcile,
   loading,
   todayPnl,
   todayPnlPct,
@@ -387,38 +382,6 @@ export function PortfolioHeroV2({
           }}
         >
           Add position →
-        </button>
-
-        <button
-          type="button"
-          onClick={onReconcile}
-          disabled={!reconcileAvailable}
-          className="pq-cta-outline font-mono"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 22px",
-            background: "transparent",
-            color: reconcileAvailable
-              ? "var(--pq-bronze)"
-              : "rgba(245,240,232,0.55)",
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            border: `1px solid ${reconcileAvailable ? "var(--pq-bronze)" : "rgba(245,240,232,0.20)"}`,
-            borderRadius: "var(--pq-radius-cta, 2px)",
-            cursor: reconcileAvailable ? "pointer" : "not-allowed",
-            transition: "border-color 200ms, color 200ms",
-          }}
-          aria-disabled={!reconcileAvailable}
-          title={
-            reconcileAvailable
-              ? "Reconcile from connected broker"
-              : "KIS broker 연결 필요 (Settings)"
-          }
-        >
-          Reconcile from broker
         </button>
       </div>
     </section>

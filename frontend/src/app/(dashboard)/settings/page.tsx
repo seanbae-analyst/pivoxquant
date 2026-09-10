@@ -7,7 +7,7 @@
  * Sole /settings surface — the legacy variant was deleted 2026-08-30.
  *
  * 3 sections (sticky anchor rail):
- *   A · Identity & security      (SettingsIdentityCardV2 + SignInProvidersCard + CapitalCardV2)
+ *   A · Identity & security      (SettingsIdentityCardV2 + SignInProvidersCard)
  *   B · Notifications            (NotificationsMatrix + Push/Email/Marketing sub-cards)
  *   C · Privacy · PIPA           (PrivacyCardV2 — Consent/Export/Sign out)
  *
@@ -20,6 +20,7 @@
  *     users a "Manage billing" button that called the disabled portal.
  *   - Sign-in "Disconnect": there is no backend endpoint; the button only
  *     toasted "not supported".
+ *   - Seed capital moved to /portfolio, next to the holdings it constrains.
  * The element ids (section-a / -c / -e) are kept so existing deep links
  * still land; only the visible letters changed. Bring a section back only
  * together with the thing it controls.
@@ -51,7 +52,6 @@ import { SettingsHeroV2 } from "@/components/settings/v2/settings-hero-v2";
 import { AnchorRail } from "@/components/settings/v2/anchor-rail";
 import { SettingsIdentityCardV2 } from "@/components/settings/v2/identity-card-v2";
 import { SignInProvidersCard } from "@/components/settings/v2/signin-providers-card";
-import { CapitalCardV2 } from "@/components/settings/v2/capital-card-v2";
 import { NotificationsMatrix } from "@/components/settings/v2/notifications-matrix";
 import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
 import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
@@ -449,13 +449,6 @@ export default function SettingsPageV2() {
               />
             </div>
 
-            {/* A3 · Seed capital (2026-05-20 Wave 5-B feature_preservation
-                restore). V1 had this section; V2 lost it during the editorial
-                redesign and breaks the contract that no v1 surface disappears.
-                Bound to PUT /api/profile/capital via useAuth().refresh(). */}
-            <div style={{ marginTop: 12 }}>
-              <CapitalCardV2 />
-            </div>
           </section>
 
           {/* SECTION C — Notifications */}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { TopBar } from "./top-bar";
 import { TerminalSidebar } from "./terminal-sidebar";
 import { BottomNav } from "./bottom-nav";
@@ -15,66 +14,60 @@ import { BottomNav } from "./bottom-nav";
  *   │                        │   <main> flex-1 padded         │
  *   └────────────────────────────────────────────────────────┘
  *
- * Mobile (< md): TopBar + main + BottomNav (stacked).
+ * Mobile (< md): TopBar + main + BottomNav (stacked). Same tree, same
+ * `main` — only the chrome around it changes with the breakpoint.
  *
  * Everything ink — no ivory canvas, no max-w-7xl. Content uses the full
  * available width (sidebar-excluded on desktop, full width on mobile).
  */
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   /*
-   * Skip-link target — both desktop and mobile shells render simultaneously
-   * (Tailwind `hidden md:flex` / `md:hidden` toggles `display`, the elements
-   * remain in the DOM). To avoid duplicate `id="main-content"` we attach the
-   * id to whichever <main> is currently visible based on viewport width.
-   * SSR pre-hydration: we default to `desktop` so server output matches the
-   * common case; the listener corrects post-mount. (WCAG 2.4.1 Level A.)
+   * ONE tree, not two (2026-09-10).
+   *
+   * This used to render a desktop shell and a mobile shell side by side and
+   * let `hidden md:flex` / `md:hidden` pick one. Both stayed in the DOM, so
+   * every dashboard page mounted TWICE: every effect, listener, toast and
+   * poll ran twice, and every `id` inside a page existed twice (the settings
+   * anchor rail resolved to the hidden copy on one of the two widths). The
+   * shells only ever differed in chrome — sidebar vs bottom nav, and main's
+   * padding — so the chrome is now responsive and `children` render once.
+   *
+   * Stacking: BottomNav stays inside the same wrapper as <main>, as before.
+   * `.pq-dash-shell > *` gives each direct child `position: relative;
+   * z-index: 1` (globals.css), so a fixed nav placed as a direct child would
+   * lose `position: fixed`, and in its own wrapper it would paint over page
+   * modals. Keep it here.
    */
-  const [isDesktop, setIsDesktop] = useState(true);
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const update = () => setIsDesktop(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
   return (
     <div
       className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)] pq-dash-shell"
       data-pq-dash-shell
     >
-      {/* ── Desktop + Tablet (≥ md) ── */}
-      <div className="hidden md:flex md:min-h-screen">
-        {/* Sidebar rail — sticky full-height column */}
+      <div className="flex min-h-screen">
+        {/* Sidebar rail — desktop / tablet only (≥ md) */}
         <aside
-          className="sticky top-0 h-screen w-[240px] shrink-0 border-r border-[var(--pq-ivory-line)] bg-[var(--pq-ink)]"
+          className="hidden md:block sticky top-0 h-screen w-[240px] shrink-0 border-r border-[var(--pq-ivory-line)] bg-[var(--pq-ink)]"
         >
           <TerminalSidebar variant="rail" />
         </aside>
 
-        {/* Right column — TopBar + scrollable main */}
+        {/* Content column — TopBar + main, at every width */}
         <div className="flex min-h-screen flex-1 flex-col min-w-0">
           <div data-pq-dash-topbar className="pq-dash-topbar">
             <TopBar />
           </div>
-          <main {...(isDesktop ? { id: "main-content" } : {})} className="flex-1 px-8 md:px-10 py-8">{children}</main>
+          {/* Mobile pb = bottom-nav (h-16 64px) + safe-area-bottom + 16px
+              gutter so the last block clears the fixed nav (z-50) on notch
+              devices. Desktop has no bottom nav, so it keeps py-8. */}
+          <main
+            id="main-content"
+            className="flex-1 px-4 py-6 pb-[var(--pq-bottomnav-clearance)] md:px-10 md:py-8 md:pb-8"
+          >
+            {children}
+          </main>
         </div>
-      </div>
 
-      {/* ── Mobile (< md) ── */}
-      <div className="flex min-h-screen flex-col md:hidden">
-        <div data-pq-dash-topbar className="pq-dash-topbar">
-          <TopBar />
-        </div>
-        {/* pb = bottom-nav (h-16 64px) + safe-area-bottom + 16px gutter so the
-            last block clears the fixed nav (z-50) on notch devices. The static
-            pb-24 (96px) was < 64px + ~34px notch and clipped ~2px. */}
-        <main
-          {...(!isDesktop ? { id: "main-content" } : {})}
-          className="flex-1 px-4 py-6 pb-[var(--pq-bottomnav-clearance)]"
-        >
-          {children}
-        </main>
+        {/* Bottom nav — fixed, and hides itself at ≥ md (bottom-nav.tsx) */}
         <BottomNav />
       </div>
 
