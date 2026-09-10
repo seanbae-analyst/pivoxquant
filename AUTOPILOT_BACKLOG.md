@@ -2,6 +2,46 @@
 
 P1 findings accumulated by the daily bug sweep. Not auto-fixed (detection-only or deferred). Check off when resolved.
 
+## 2026-09-10 야간 — 자율 세션 (CEO "자율모드로 코드버그 잡고 구조 정리")
+
+**머지 0건 — 전부 PR 대기.** 운영 배포가 CEO 부재 중에 나가지 않게 했다. 조사 에이전트 4개(핵심 루프 백엔드 / 포트폴리오·프로필·인증 백엔드 / 프론트 핵심 화면 / 죽은 코드·구조)의 보고는 **lead 가 코드를 다시 읽고 재현한 것만** 고쳤다.
+기준선: main `adc6d00e` pytest **2194 passed / 0 failed**, vitest **51 files / 380**. 브랜치 10개 사이 **파일 겹침 0** (`git diff --name-only` 교차 확인).
+
+### 🟥 먼저 볼 것 — 운영이 오늘 머지분을 받지 못하고 있다
+- [ ] **Render 배포 실패 ×2** (`4f30e3c1` #560, `adc6d00e` #562). 배포 로그: 부팅 중 `EMAXCONNSESSION ... pool_size: 15` (Supabase session pooler). prod 는 `b55ece3f` 유지. 같은 시각 `pg_stat_activity` 의 `pivox_app` idle **11**. 유력 기여 요인은 PR #568 이 제거(스케줄 스크립트 엔진 NullPool). **머지 후 Render 수동 재배포 필요.** 근본 대안: `DATABASE_URL` → transaction pooler(6543) 또는 pooler pool size 상향.
+- [ ] health `missing_recommended` 의 정체 = **`SENDGRID_WEBHOOK_PUBLIC_KEY`** (배포 로그로 확정). 없으면 SendGrid 이벤트 웹훅 전부 503 → 반송/스팸 자동 수신거부가 키 입력 전엔 동작하지 않는다.
+
+### PR — 권장 머지 순서
+| 순서 | PR | 내용 | 검증 |
+|---|---|---|---|
+| 1 | #568 | 스케줄 스크립트 6개 DB 엔진 NullPool (배포 실패 기여 요인) | 관련 테스트 35, 로컬 실험 |
+| 2 | #567 | 개인정보: 즉시 삭제 시 auth_events 익명화 · 만 14세 미만 계정 삭제 · 철회 동의 무시 · §35 내보내기 누락 · 삭제취소 링크 재사용 | pytest 2200 / 0 fail |
+| 3 | #565 | 핵심 루프: 거울이 측정 안 한 축 비교 · 30일 보유기간 · 매도 멈춤이 매수 추적 · 날짜만 입력한 거래 · 멈춤 입력 500 | pytest 2205 / 0 fail, vitest 383 |
+| 4 | #566 | 프론트: **오픈 리다이렉트** · 가짜 펄스 답변 · 저장 안 됐는데 "기록됨" · 죽은 재응답 버튼 · UTC 표시 · 키보드 · 옛 문구 | vitest 382 |
+| 5 | #563 | 대시보드 이중 렌더링 · 증권사 동기화 버튼 제거 · 투자금 카드 이동 · 8개 성향 이름 제거 | vitest 380 |
+| 6 | #564 | /support canonical 이 홈 · 사이트맵이 리다이렉트 주소 | vitest 프로브 |
+| 7 | #561 | 지수 캐시 워밍 잡 제거 (소비자 0, FMP 한도 소진·KIS 매분 호출) | 관련 테스트 56 |
+| 8 | #569 | 데모 픽스처(삭제된 화면·시그널 점수) + format.ts 미사용 19개 제거 (~480줄) | vitest 380 |
+| 9 | #570 | SendGrid 반송·스팸 자동 수신거부가 한 번도 실행되지 않던 것 (Artifact 없음 → 주소로 조회) | pytest 전체 |
+| 10 | 이 PR | CLAUDE.md 틀린 사실(§8 access_guard, 배포 상태) + 이 항목 | — |
+
+### 결정 필요 (코드로 풀지 않았다)
+- [ ] **멈춤 자동 진행** — 7문항 후 바로 proceed 되어 **취소가 불가능**하다. `friction_outcome` 의 취소 그룹이 영구 0 → CLAUDE.md 가 "남은 진짜 자산"이라 한 **일어나지 않은 거래를 원천적으로 못 모은다.** 확인/취소 한 단계를 되살릴지.
+- [ ] **거울 "정합도 %"** — 온보딩 결과 화면의 "점수도 유형도 매기지 않습니다" 와 충돌. 유지/제거.
+- [ ] **동의 컬럼 불일치** — `PIVOX_CS1_CONSENT_ENABLED=true` 는 카테고리 컬럼으로 게이트하는데 프론트는 legacy `marketing_consent_at` 만 기록 → d3/d7/inactive nudge 메일 **발송 불가**. Q-S1 변호사 사안.
+- [ ] **가입 필수 동의 문구**에 "분석·리포트·시그널" 잔존 — 법적 문구라 미변경.
+- [ ] **DB 백업이 없다** — `ops_db_backup` 이 컨테이너 디스크에만 쓴다. 재배포 시 소실, 업로드 없음.
+- [ ] 비밀번호 로그인/가입 라우트(OAuth-only 제품의 공격면)와 단수 `/api/portfolio/position*` 790줄 중복 — 테스트 이관이 필요해 보류.
+- [ ] "Retake assessment" 제거(#566) — 재응답 모드를 만들지.
+- [ ] 이 세션 도구 출력에 DB 접속 문자열이 한 번 찍혔다 — `pivox_app` 비밀번호 교체 권장(교체 시 Render `DATABASE_URL` 동시 갱신).
+
+### 확인했지만 이번에 안 고친 것
+- journal 5개 거울의 `?period` 필터가 FIFO 전에 적용 — 프론트가 period 를 안 보내 현재 무영향
+- 생년월일 단계가 서버 거절을 전부 같은 문구로 표시 · broker 단계 동의 모달 재등장
+- equity curve 오늘 점이 가격 없는 보유 종목을 뺌 · `PUT /api/portfolio/capital` NaN 허용(프론트 미사용 라우트)
+- 출력 소비처 없는 스케줄 잡: `ops_data_integrity_sweep`·`ops_ship_blockers_daily`(/tmp) · `ops_morning_brief_kpi` · `ops_lawyer_packet_weekly`(맥 경로) · `ops_env_audit`(railway CLI 없음)
+- 백엔드 죽은 함수 ~1,270줄 (`kis/service.py` 주문 메서드 — CLAUDE.md 가드 서술과 연동, `fmp.py` CAN SLIM 묶음, `fetcher.py` 브리프, `edgar.get_fundamentals`)
+
 ## 2026-09-02 (daily-sweep, prod, Wed) — DETECTION-ONLY
 
 **P0=2 · P1=5 · P2=6 · 자동수정 0건.** 미커밋 앱 소스 없음(dirty 서브모듈 + untracked QA 리포트만) — 하지만 자동수정을 안 한 이유는 가드가 아니라 **P0 2건 모두 코드 대상이 아니기 때문**이다(상세: `BUG_SWEEP_2026-09-02.md` §4).

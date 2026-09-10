@@ -69,7 +69,7 @@ FMP 재배포 문제와 R7 이 함께 닫힌다.
 
 ## 지금 상태 (2026-09-01 실측)
 
-### 🟡 백엔드 — DB 완료 / 앱 호스팅만 남음
+### 🟡 백엔드 — ⚠️ 아래 "앱 호스팅만 남음"은 09-01 기준이다. Render 는 09-04 부터 라이브, 현재 문제는 위 "지금 막혀 있는 것"
 
 **Supabase Postgres 가동 중.** 프로젝트 `pivoxquant` / `yjiztgummaxecriiuumt` /
 ap-northeast-2. 43 테이블 + alembic `049` stamp.
@@ -86,7 +86,7 @@ ap-northeast-2. 43 테이블 + alembic `049` stamp.
 **남은 것: Render 배포 하나.** `render.yaml` Blueprint 준비 완료.
 → 런북: `docs/ops/backend-restore-2026-09-01.md`
 
-### ✅ 프론트엔드 — prod 라이브
+### ✅ 프론트엔드 — prod 라이브 (⚠️ 아래 "Railway 를 가리킨다"는 09-01 기준. 09-04 에 Render 로 재연결, 09-10 `www.pivoxquant.com/api/health` 200)
 Vercel `www.pivoxquant.com` **200**. 단 `/api` 프록시가 죽은 Railway 를 가리켜
 **로그인 이후가 전부 동작하지 않는다.** Render URL 나오면 재연결.
 (`vercel` CLI 인증됨. SoT 는 `next.config.ts:9-10` 이 읽는
@@ -106,6 +106,9 @@ Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대�
 | vitest | **353 / 353** | 2026-09-01 |
 | next build | **36 routes** | 2026-09-01 |
 | alembic | 52 revisions, head `049_reflection_observed_context` | 2026-09-01 |
+| pytest (main `adc6d00e`) | **2194 passed / 0 failed** (18 skip, 1 xfail) | 2026-09-10 |
+| vitest (main `adc6d00e`) | **51 files / 380 passed** | 2026-09-10 |
+| 콜드스타트 (Render free) | `/api/health` 첫 응답 **46초** | 2026-09-10 |
 
 > pytest 가 **2175 → 2007 (-168)** 로 줄어든 것은 회귀가 아니다. 2026-09-01 정리로
 > **테스트 대상 자체가 사라져서** 함께 지운 수다:
@@ -119,32 +122,28 @@ Stripe 통합 완료. `BUSINESS_REGISTRATION` 미완 + 변호사 의견서 대�
 
 ---
 
-## 🔴 지금 막혀 있는 것 — 하나뿐이다
+## 🔴 지금 막혀 있는 것 — 배포가 실패한다 (2026-09-10 실측)
 
-**Render 배포.** 다른 모든 것이 이것 하나를 기다린다.
+Render 는 2026-09-04 부터 떠 있다 (`srv-dadcjiv10e5c73eb60vg`, free plan,
+Blueprint). 막힌 건 **새 커밋의 배포**다.
 
-1. Render → New Blueprint → 이 레포 (`render.yaml` 을 읽는다)
-2. 시크릿 **15칸** 붙여넣기 → **값은 `.secrets/RENDER_PASTE_VALUES.txt`** (gitignore)
-   - ✅ **15칸 전부 채워져 있다** (2026-09-01 재실측: 파일의 15개 키 이름이
-     `render.yaml` 의 `sync: false` 15개와 정확히 일치, 빈 값 0개).
-   - ⚠️ **`BREVO_API_KEY` 는 필요 없다.** 이 파일이 한때 "Brevo 하나만 없다"고
-     적었는데 **틀렸다** — HEAD 커밋 `cee3d291` 이 이미 뒤집었다. 전송 캐스케이드는
-     SendGrid → Brevo → SMTP 이고 SendGrid·SMTP 자격증명은 `.env` 에 있다. Brevo 는
-     **Railway 가 outbound SMTP 를 막아서**(OSError 101) 들어왔던 우회로일 뿐,
-     Render 에도 해당한다는 근거는 없다.
-   - 교훈은 그대로다: **키를 찾기 전에 `.env` 부터 열어라.** (2026-09-01 에
-     "키 4개를 콘솔에서 모아와라"고 안내했다가 틀린 적이 있는데, `.env` 를 안 열어본
-     실수였다. FMP·KIS×2 는 그때도 이미 `.env` 에 있었다 — `SHIP_BLOCKERS.md` B5 는
-     아직 이 stale 한 4개 목록을 들고 있으니 그쪽을 믿지 말 것.)
-3. URL 발급 → `RAILWAY_BACKEND_URL` 채우고 재배포 → Vercel 재연결 → E2E
+| 측정 | 값 | 방법 |
+|---|---|---|
+| 실패한 배포 | `4f30e3c1` (#560), `adc6d00e` (#562) | GitHub deployments API → 상태 failure |
+| 원인 (배포 로그) | 부팅 중 `(EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15` | Render 대시보드 deploy 로그 |
+| prod 가 실제로 도는 커밋 | `b55ece3f` | 마지막 success 배포 |
+| 같은 시각 DB 연결 | `pivox_app` Supavisor idle **11** | `pg_stat_activity` |
+| 앱 자체 풀 | `pool_size 3 + max_overflow 2`, gunicorn gevent 1 worker | `config.py`, `Dockerfile` |
 
-**OAuth 콘솔은 손댈 필요 없다** (2026-09-01 확인·조치 완료). Google 클라이언트는
-그날 삭제돼 있던 것을 **복원**했고 redirect URI 2개(`pivoxquant.com`,
-`www.pivoxquant.com`)가 정확하며, 게시 상태를 **테스트 중 → 프로덕션**으로 올렸다
-(민감 범위 0개라 Google 심사 불필요). Kakao 앱도 정상, Redirect URI 맞다.
-`.env` 의 client id 들이 콘솔 값과 일치함을 교차 확인했다.
-
----
+- **배포 중 구·신 인스턴스가 15-client 세션 풀러를 나눠 쓴다.** 구 인스턴스가
+  이미 11개를 쥐고 있으면 신 인스턴스 부팅이 실패하고 Render 는 구 버전을 유지한다.
+- **유력 기여 요인:** 웹 프로세스 안에서 도는 스케줄 스크립트 6개가 매 실행마다
+  `create_engine()` 을 만들고 dispose 하지 않았다 (`signup_funnel_check` 는 5분마다
+  엔진 6개). 수정은 PR #568 (NullPool). **유일 원인으로 증명된 것은 아니다.**
+- **머지 후 Render 에서 수동 재배포가 필요하다.** 근본 대안은 `DATABASE_URL` 을
+  transaction pooler(6543)로 바꾸거나 pooler pool size 를 올리는 것.
+- health 의 `missing_recommended: 1` 은 `SENDGRID_WEBHOOK_PUBLIC_KEY` 다 (같은
+  배포 로그에 이름이 찍힌다). 이 키가 없으면 SendGrid 이벤트 웹훅이 전부 503 이다.
 
 ## 기술 스택
 
@@ -322,16 +321,14 @@ QA 가 **없는 제품을 검사**하고 있었고, 산출물은 오탐 아니�
 검증: 삭제 전후 URL rule 120 · blueprint 23 동일. `SIM_ONBOARD_SECRET=x` 를 세팅하고
 부팅해도 120/23 그대로 — blueprint 가 실제로 사라졌다는 뜻이다.
 
-### 8. `services/access_guard.py` 는 **호출처 0곳**이다 (의도적으로 남김)
+### 8. `services/access_guard.py` 는 **없다** (2026-09-04 삭제)
 
-`is_user_allowed_ticker()` / `access_denied_response()` — §101 회피용 화이트리스트
-가드인데 **프로덕션 호출처가 없다.** `tests/test_access_guard.py` 만 부른다
-(2026-09-01 전수 grep 확인). 이걸 걸던 endpoint 들이 prune 으로 사라졌기 때문.
+이 절은 오래 "호출처 0곳이지만 일부러 남겼다"고 적었지만, 가드와
+`tests/test_access_guard.py` 는 `c1f61809` (2026-09-04) 에서 함께 삭제됐다
+(2026-09-10 `ls` + `git log --diff-filter=D` 확인). §101 화이트리스트 가드가
+필요해지면 **소비자(라우트)와 함께** 새로 만들 것. 옛 이름을 근거로 "가드가
+있다"고 판단하지 마라.
 
-**죽은 코드지만 2026-09-01 정리에서 일부러 남겼다** — 법무 성격의 가드를 agent
-판단으로 지우는 건 범위를 넘는다. 되살릴 거면 §101 게이트가 필요한 route 에
-붙이고, 영영 안 쓸 거면 테스트와 함께 지울 것. **"테스트가 green 이니 가드가
-동작 중"으로 읽지 말 것** — 가드는 아무것도 안 지키고 있다.
 ### 9. Docker 빌드 컨텍스트 — `.dockerignore` 를 지워도 되는 파일로 착각하지 마라
 
 `render.yaml` 이 `runtime: docker` 로 빌드하고 `Dockerfile` 끝이 `COPY . .` 다.
