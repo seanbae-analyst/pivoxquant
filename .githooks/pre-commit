@@ -41,44 +41,24 @@ done <<EOF
 $STAGED
 EOF
 
-# 2) SNAPSHOT_DATE staleness guard (market-ticker.tsx only).
-# Runs BEFORE the SCAN block so the early-exit on empty SCAN does not swallow it.
-# Only fires when market-ticker.tsx is staged — no impact on unrelated commits.
-# Uses python3 date arithmetic — avoids BSD vs GNU date incompatibility on macOS.
-# python3 is guaranteed on macOS 10.15+.
+# 2) (retired 2026-09-10) SNAPSHOT_DATE staleness guard.
 #
-# This makes the aspirational comment in market-ticker.tsx real:
-#   "pre-commit stale-guard which fails the commit if this date is older than 14 days"
-# Bypass: git commit --no-verify (same as all other checks here).
-if echo "$STAGED" | grep -q 'frontend/src/components/landing/market-ticker\.tsx'; then
-  # Get the new value from the diff (+lines only), falling back to git-show
-  # of the staged blob so `git add -p` partial stages also work.
-  SNAP_LINE=$(git diff --cached -U0 -- 'frontend/src/components/landing/market-ticker.tsx' \
-    | grep '^+export const SNAPSHOT_DATE' | head -1)
-  if [ -z "$SNAP_LINE" ]; then
-    SNAP_LINE=$(git show :frontend/src/components/landing/market-ticker.tsx 2>/dev/null \
-      | grep 'export const SNAPSHOT_DATE' | head -1)
-  fi
-  if [ -n "$SNAP_LINE" ]; then
-    SNAP_DATE=$(printf '%s' "$SNAP_LINE" | python3 -c "
-import sys, re
-line = sys.stdin.read()
-m = re.search(r'SNAPSHOT_DATE\s*=\s*[\"\x27]([0-9]{4}-[0-9]{2}-[0-9]{2})[\"\x27]', line)
-print(m.group(1) if m else '')
-" 2>/dev/null)
-    if [ -n "$SNAP_DATE" ]; then
-      DAYS_STALE=$(python3 -c "
-from datetime import date
-snap = date.fromisoformat('$SNAP_DATE')
-diff = (date.today() - snap).days
-print(diff)
-" 2>/dev/null)
-      if [ -n "$DAYS_STALE" ] && [ "$DAYS_STALE" -gt 14 ] 2>/dev/null; then
-        report "market-ticker.tsx SNAPSHOT_DATE ($SNAP_DATE) is ${DAYS_STALE} days stale (>14). Refresh values from FMP/FRED/KIS before commit."
-      fi
-    fi
-  fi
-fi
+# This guarded `export const SNAPSHOT_DATE` in market-ticker.tsx, failing a
+# commit when the hand-maintained snapshot went older than 14 days. That
+# constant was retired on 2026-05-15, when the ticker stopped carrying literal
+# index values and started reading GET /api/public/market-snapshot instead —
+# which is precisely the fix the guard existed to force.
+#
+# The check stayed for four months, and could not fire: no SNAPSHOT_DATE line
+# meant the inner `if` was never entered. docs/dev/local-hooks.md nonetheless
+# listed it as one of seven active defences. A guard that cannot fire while
+# being counted as protection is the same failure as the nightly build gate
+# (94cd7818) and the KIS order detector — it reads as coverage and is not.
+#
+# Deleted rather than repointed: there is nothing left to guard. The ticker's
+# values now come from the backend, whose freshness is checked by
+# scripts/nightly/fx_staleness_check.py and data_integrity_sweep.py.
+
 
 # 3) Pattern scans on staged content (catches partial stages — only +added lines).
 # W7.3: exclude self-referencing guard files so the hook does not catch its
