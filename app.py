@@ -1190,15 +1190,22 @@ def _init_scheduler(app):
         No new infra / cost: reuses the existing KIS + Alpaca licenses and
         the existing APScheduler. A failure here (KIS down, etc.) is logged
         and swallowed so it never takes down the scheduler or the app.
+
+        2026-09-10: KR only. The US leg fetched five ETF proxies through FMP
+        every tick (15s TTL intraday) for a landing ticker that was unmounted
+        from hero.tsx on 2026-09-02 (R8, FMP §2.2.2). It drained the free-tier
+        quota to 429 within an hour of the open, for a value no screen shows,
+        and left nothing for /portfolio valuation. The public snapshot still
+        emits the US rows as value=null (unchanged shape — it already did).
+        /api/market/indices?region=us still fetches on demand; no frontend
+        symbol calls it. Re-add the US leg only together with a consumer and
+        an FMP Data Display Agreement.
         """
         with app.app_context():
             try:
                 from services.data.indices import warm_indices_cache
-                us_n = warm_indices_cache("us")
                 kr_n = warm_indices_cache("kr")
-                logger.info(
-                    "Indices cache-warm done — us=%s kr=%s rows", us_n, kr_n
-                )
+                logger.info("Indices cache-warm done — kr=%s rows", kr_n)
                 _record_sched_success("sched_indices_cache_warm")
             except Exception as e:
                 logger.error(f"Indices cache-warm scheduler failed: {e}")
