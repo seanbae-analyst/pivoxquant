@@ -113,7 +113,7 @@ function StatusChip({ kind }: { kind: StatusKind }) {
         letterSpacing: "0.16em",
         border: "0.5px solid var(--pq-ivory-line)",
         background: "var(--pq-ivory-line-faint)",
-        color: dimmed ? "rgba(245,240,232,0.45)" : "rgba(245,240,232,0.82)",
+        color: dimmed ? "var(--pq-ivory-faint)" : "rgba(245,240,232,0.82)",
       }}
     >
       <span
@@ -160,7 +160,7 @@ function ObservedContextLine({
   if (parts.length === 0) return null;
   return (
     <p
-      className="mt-2 font-mono text-pq-caption text-[rgba(245,240,232,0.5)]"
+      className="mt-2 font-mono text-pq-caption text-[var(--pq-ivory-faint)]"
       data-testid="observed-context"
     >
       <span className="uppercase tracking-[0.14em] text-[var(--pq-bronze-light)]">
@@ -212,7 +212,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
             {name}
           </EditorialHead>
           {showTickerSub && (
-            <span className="font-mono text-pq-caption uppercase tracking-[0.14em] text-[rgba(245,240,232,0.45)]">
+            <span className="font-mono text-pq-caption uppercase tracking-[0.14em] text-[var(--pq-ivory-faint)]">
               {bareTicker}
             </span>
           )}
@@ -228,7 +228,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
           </span>
         )}
         {typeof r.intended_shares === "number" && r.intended_shares > 0 && (
-          <span className="font-mono text-pq-caption text-[rgba(245,240,232,0.55)]">
+          <span className="font-mono text-pq-caption text-[var(--pq-ivory-dim)]">
             {r.intended_shares.toLocaleString()}
             <span className="ml-1 opacity-60">
               {t("journal.page.sharesUnit")}
@@ -236,7 +236,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
           </span>
         )}
         {ts && (
-          <span className="font-mono text-pq-caption text-[rgba(245,240,232,0.45)]">
+          <span className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]">
             {relativeTime(ts, locale, { verbose: true })}
             <span className="mx-1.5 opacity-40">·</span>
             <span className="opacity-70">{absoluteDate(ts)}</span>
@@ -250,7 +250,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
           className="mt-3 font-serif text-pq-deck"
           style={{
             lineHeight: 1.6,
-            color: "rgba(245,240,232,0.82)",
+            color: "var(--pq-ivory-strong)",
             wordBreak: "keep-all",
           }}
         >
@@ -266,7 +266,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
 
       {/* Auto-extended cooldown note (volatility context) */}
       {r.auto_extended_reason && (
-        <p className="mt-2 font-mono text-pq-caption text-[rgba(245,240,232,0.45)]">
+        <p className="mt-2 font-mono text-pq-caption text-[var(--pq-ivory-faint)]">
           {r.auto_extended_reason}
         </p>
       )}
@@ -287,7 +287,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
               {t("journal.page.devilsAdvocateToggle")}
             </span>
             <ChevronDown
-              className="h-3.5 w-3.5 shrink-0 text-[rgba(245,240,232,0.5)] transition-transform duration-200"
+              className="h-3.5 w-3.5 shrink-0 text-[var(--pq-ivory-faint)] transition-transform duration-200"
               style={{ transform: open ? "rotate(180deg)" : undefined }}
             />
           </button>
@@ -380,7 +380,7 @@ function EmptyState() {
         className="mx-auto mt-4 max-w-md font-serif text-pq-h6"
         style={{
           lineHeight: 1.6,
-          color: "rgba(245,240,232,0.78)",
+          color: "var(--pq-ivory-soft)",
           wordBreak: "keep-all",
         }}
       >

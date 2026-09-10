@@ -246,7 +246,7 @@ export function SubscriptionCardV2({
                 style={{
                   fontVariantNumeric: "tabular-nums",
                   fontSize: "var(--pq-text-body)",
-                  color: "rgba(245,240,232,0.82)",
+                  color: "var(--pq-ivory-strong)",
                   marginTop: 4,
                 }}
               >
@@ -258,7 +258,7 @@ export function SubscriptionCardV2({
                 style={{
                   marginTop: 14,
                   fontSize: "var(--pq-text-body)",
-                  color: "rgba(245,240,232,0.82)",
+                  color: "var(--pq-ivory-strong)",
                   lineHeight: 1.7,
                   listStyle: "none",
                   padding: 0,
@@ -297,7 +297,7 @@ export function SubscriptionCardV2({
                       style={{
                         fontSize: "var(--pq-text-eyebrow)",
                         letterSpacing: "0.2em",
-                        color: "rgba(245,240,232,0.45)",
+                        color: "var(--pq-ivory-faint)",
                       }}
                     >
                       현재 플랜 · Current plan
@@ -401,7 +401,7 @@ export function SubscriptionCardV2({
             right: 14,
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
           }}
         >
           D1 · Receipt
@@ -425,7 +425,7 @@ export function SubscriptionCardV2({
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.18em",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                 }}
               >
                 {cell.label}
@@ -435,7 +435,7 @@ export function SubscriptionCardV2({
                 style={{
                   fontVariantNumeric: "tabular-nums",
                   fontSize: "var(--pq-text-body)",
-                  color: "rgba(245,240,232,0.82)",
+                  color: "var(--pq-ivory-strong)",
                   marginTop: 6,
                 }}
               >
@@ -449,7 +449,7 @@ export function SubscriptionCardV2({
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.18em",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
               }}
             >
               Receipts

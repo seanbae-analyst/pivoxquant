@@ -317,7 +317,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                     className="font-serif"
                     style={{
                       fontSize: "var(--pq-text-eyebrow)",
-                      color: "rgba(245,240,232,0.55)",
+                      color: "var(--pq-ivory-dim)",
                       marginTop: 2,
                     }}
                   >

@@ -136,7 +136,7 @@ export function DisclaimerBanner({
           <ChevronDown
             className={cn(
               "h-4 w-4 shrink-0 mt-1 transition-transform duration-200",
-              isDark ? "text-[rgba(245,240,232,0.55)]" : "text-slate-500",
+              isDark ? "text-[var(--pq-ivory-dim)]" : "text-slate-500",
               isExpanded && "rotate-180",
             )}
             aria-hidden="true"
@@ -188,7 +188,7 @@ export function DisclaimerBanner({
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: isDark
-                ? "rgba(245,240,232,0.45)"
+                ? "var(--pq-ivory-faint)"
                 : "rgb(100,116,139)",
               marginTop: 18,
               marginBottom: 8,

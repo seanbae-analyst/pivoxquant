@@ -77,7 +77,7 @@ export function RealtimeStatusBanner() {
             </p>
             <p
               className="mt-1 text-pq-caption leading-relaxed"
-              style={{ color: "rgba(245, 240, 232, 0.72)" }}
+              style={{ color: "var(--pq-ivory-muted)" }}
             >
               표시된 가격은 최신이 아닐 수 있습니다. 페이지를 새로고침하여 다시 시도해 주세요.
             </p>
@@ -128,7 +128,7 @@ export function RealtimeStatusBanner() {
           </p>
           <p
             className="mt-1 text-pq-caption leading-relaxed"
-            style={{ color: "rgba(245, 240, 232, 0.65)" }}
+            style={{ color: "var(--pq-ivory-mid)" }}
           >
             실시간 가격 스트림이 일시적으로 끊겼습니다. 표시된 가격은 최신이 아닐 수 있습니다.
           </p>

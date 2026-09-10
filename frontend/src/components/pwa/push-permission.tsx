@@ -138,7 +138,7 @@ export function PushPermission() {
             onClick={dismiss}
             aria-label="Dismiss notification prompt"
             className="-mr-1 -mt-1 rounded-full p-1"
-            style={{ color: "rgba(245, 240, 232, 0.5)" }}
+            style={{ color: "var(--pq-ivory-faint)" }}
           >
             <X className="h-4 w-4" />
           </button>

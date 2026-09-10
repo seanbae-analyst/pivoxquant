@@ -112,7 +112,7 @@ export default function DocsPage() {
                       <dt className="text-pq-body text-[var(--pq-ivory)] mb-1.5">
                         {item.q}
                       </dt>
-                      <dd className="text-pq-body-sm text-[rgba(245,240,232,0.65)] leading-relaxed">
+                      <dd className="text-pq-body-sm text-[var(--pq-ivory-mid)] leading-relaxed">
                         {item.a}
                       </dd>
                     </div>

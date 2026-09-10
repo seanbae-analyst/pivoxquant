@@ -55,7 +55,7 @@ export function KisCard({
             Connected
           </span>
         ) : (
-          <span className="inline-flex items-center border border-[rgba(245,240,232,0.2)] px-2 py-0.5 text-pq-eyebrow tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] shrink-0">
+          <span className="inline-flex items-center border border-[rgba(245,240,232,0.2)] px-2 py-0.5 text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)] shrink-0">
             Not connected
           </span>
         )}

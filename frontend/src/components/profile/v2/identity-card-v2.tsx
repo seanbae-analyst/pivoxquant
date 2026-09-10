@@ -74,7 +74,7 @@ export function IdentityCardV2({
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.55)",
+          color: "var(--pq-ivory-dim)",
           textTransform: "uppercase",
         }}
       >
@@ -139,7 +139,7 @@ export function IdentityCardV2({
             style={{
               fontVariantNumeric: "tabular-nums",
               fontSize: "var(--pq-text-eyebrow)",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               marginTop: 4,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -176,7 +176,7 @@ export function IdentityCardV2({
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                   textTransform: "uppercase",
                 }}
               >
@@ -198,7 +198,7 @@ export function IdentityCardV2({
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             marginBottom: 8,
           }}
         >
@@ -220,7 +220,7 @@ export function IdentityCardV2({
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.5,
-            color: "rgba(245,240,232,0.65)",
+            color: "var(--pq-ivory-mid)",
             marginTop: 8,
           }}
         >

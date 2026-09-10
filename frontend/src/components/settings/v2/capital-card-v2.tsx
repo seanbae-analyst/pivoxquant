@@ -59,13 +59,13 @@ const ROW_LABEL_STYLE: React.CSSProperties = {
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
   fontSize: "var(--pq-text-body)",
-  color: "rgba(245,240,232,0.55)",
+  color: "var(--pq-ivory-dim)",
   marginTop: 2,
 };
 const ROW_VALUE_STYLE: React.CSSProperties = {
   fontVariantNumeric: "tabular-nums",
   fontSize: "var(--pq-text-body)",
-  color: "rgba(245,240,232,0.82)",
+  color: "var(--pq-ivory-strong)",
 };
 
 export function CapitalCardV2() {
@@ -150,7 +150,7 @@ export function CapitalCardV2() {
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.55)",
+          color: "var(--pq-ivory-dim)",
         }}
       >
         A3 · Seed capital
@@ -195,7 +195,7 @@ export function CapitalCardV2() {
             style={{
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               marginBottom: 4,
             }}
           >
@@ -211,7 +211,7 @@ export function CapitalCardV2() {
             style={{
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               marginBottom: 4,
             }}
           >
@@ -236,7 +236,7 @@ export function CapitalCardV2() {
               display: "block",
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               marginBottom: 6,
             }}
           >
@@ -264,7 +264,7 @@ export function CapitalCardV2() {
               display: "block",
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               marginBottom: 6,
             }}
           >

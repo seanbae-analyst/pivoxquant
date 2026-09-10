@@ -192,7 +192,7 @@ export function PreTradeFrictionModal({
               style={{
                 fontSize: "var(--pq-text-body)",
                 lineHeight: 1.5,
-                color: "rgba(245,240,232,0.65)",
+                color: "var(--pq-ivory-mid)",
                 margin: "10px 0 0 0",
               }}
             >
@@ -204,7 +204,7 @@ export function PreTradeFrictionModal({
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.16em",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                 }}
               >
                 {sideLabel(side)}

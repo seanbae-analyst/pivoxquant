@@ -95,7 +95,7 @@ export function PeerBenchmarkBlockV2({
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.55)",
+          color: "var(--pq-ivory-dim)",
         }}
       >
         All cohorts ›
@@ -144,7 +144,7 @@ export function PeerBenchmarkBlockV2({
           style={{
             fontVariantNumeric: "tabular-nums",
             fontSize: "var(--pq-text-eyebrow)",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             letterSpacing: "0.18em",
           }}
         >
@@ -182,7 +182,7 @@ export function PeerBenchmarkBlockV2({
             style={{
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.55,
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               maxWidth: 560,
               margin: "0 auto",
             }}
@@ -234,7 +234,7 @@ export function PeerBenchmarkBlockV2({
                   style={{
                     fontVariantNumeric: "tabular-nums",
                     fontSize: "var(--pq-text-body)",
-                    color: "rgba(245,240,232,0.82)",
+                    color: "var(--pq-ivory-strong)",
                   }}
                 >
                   {m.value}
@@ -242,7 +242,7 @@ export function PeerBenchmarkBlockV2({
                     <>
                       {" "}
                       ·{" "}
-                      <span style={{ color: "rgba(245,240,232,0.55)" }}>
+                      <span style={{ color: "var(--pq-ivory-dim)" }}>
                         {m.percentile}
                       </span>
                     </>
@@ -297,7 +297,7 @@ export function PeerBenchmarkBlockV2({
             marginTop: 16,
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.16em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
           }}
         >
           YOU · BRONZE BAR &nbsp; · &nbsp; MEDIAN · IVORY TICK

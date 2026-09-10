@@ -151,7 +151,7 @@ export function SixDimensionsGrid({
             style={{
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.55,
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               maxWidth: 520,
               margin: "0 auto",
             }}
@@ -186,7 +186,7 @@ export function SixDimensionsGrid({
                 right: 14,
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.2em",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
               }}
             >
               {corner}
@@ -216,7 +216,7 @@ export function SixDimensionsGrid({
                   style={{
                     fontSize: "var(--pq-text-body)",
                     lineHeight: 1.5,
-                    color: "rgba(245,240,232,0.55)",
+                    color: "var(--pq-ivory-dim)",
                     marginTop: 4,
                   }}
                 >

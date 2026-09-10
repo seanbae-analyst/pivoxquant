@@ -206,7 +206,7 @@ function SetupStep(props: {
                 className={`px-4 py-2 text-pq-eyebrow uppercase tracking-[0.2em] transition-colors ${
                   side === s
                     ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
-                    : "border border-[rgba(245,240,232,0.15)] text-[rgba(245,240,232,0.65)] hover:border-[rgba(245,240,232,0.45)]"
+                    : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
                 }`}
               >
                 {SIDE_LABEL_EN[s]} · {SIDE_LABEL_KO[s]}
@@ -239,7 +239,7 @@ function SetupStep(props: {
           className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
           style={{ resize: "vertical" }}
         />
-        <div className="mt-1 text-pq-mono-sm text-[rgba(245,240,232,0.45)] tracking-[0.06em]">
+        <div className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]">
           {rationaleOk
             ? <span className="text-[var(--pq-bronze)]">✓ {rationale.trim().length} chars</span>
             : <span>{remaining} chars more required ({rationale.trim().length}/{MIN_RATIONALE_CHARS})</span>}
@@ -251,7 +251,7 @@ function SetupStep(props: {
           <p
             aria-live="polite"
             role="status"
-            className="text-pq-mono-sm text-[rgba(245,240,232,0.5)] tracking-[0.06em]"
+            className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]"
           >
             {ticker.trim().length === 0 && !rationaleOk
               ? "Ticker와 Thesis를 채워야 진행합니다."

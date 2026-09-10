@@ -123,7 +123,7 @@ export function Hero() {
               fontSize: "var(--pq-text-deck)",
               lineHeight: 1.6,
               letterSpacing: "0.005em",
-              color: "rgba(245, 240, 232, 0.72)",
+              color: "var(--pq-ivory-muted)",
             }}
           >
             {t("landing.hero.description")}

@@ -105,7 +105,7 @@ export function ProfileHeroV2({
         style={{
           fontSize: "var(--pq-text-h5)",
           lineHeight: 1.55,
-          color: "rgba(245,240,232,0.82)",
+          color: "var(--pq-ivory-strong)",
           maxWidth: 720,
           margin: "0 0 40px 0",
         }}
@@ -168,7 +168,7 @@ export function ProfileHeroV2({
             marginLeft: 16,
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             textTransform: "uppercase",
           }}
         >

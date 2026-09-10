@@ -84,7 +84,7 @@ export default function GlobalError({
           <p
             style={{
               fontSize: "14px",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               margin: "0 0 24px",
               lineHeight: 1.6,
             }}
@@ -111,7 +111,7 @@ export default function GlobalError({
               style={{
                 fontSize: "11px",
                 fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-                color: "rgba(245,240,232,0.5)",
+                color: "var(--pq-ivory-faint)",
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(245,240,232,0.08)",
                 borderRadius: "2px",

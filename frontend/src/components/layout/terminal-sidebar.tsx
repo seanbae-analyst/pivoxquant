@@ -145,7 +145,7 @@ export function TerminalSidebar({
           style={{
             fontSize: "var(--pq-text-kicker)",
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
           }}
           title="Paper mode — broker orders disabled, observation only"
         >
@@ -164,7 +164,7 @@ function GroupHeader({ label }: { label: string }) {
         style={{
           fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
-          color: "rgba(184, 149, 106, 0.55)",
+          color: "rgba(184, 149, 106, 0.78)",  /* 0.55 = 2.84:1; bronze needs ≥0.76 on #050505 */
           display: "block",
           paddingLeft: "14px",
         }}

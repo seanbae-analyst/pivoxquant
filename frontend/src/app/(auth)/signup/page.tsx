@@ -243,7 +243,7 @@ export default function SignupPageV2() {
   const consentLabelStyle: React.CSSProperties = {
     fontSize: "var(--pq-text-body)",
     lineHeight: 1.55,
-    color: "rgba(245,240,232,0.72)",
+    color: "var(--pq-ivory-muted)",
   };
 
   const consentRowStyle: React.CSSProperties = {
@@ -277,7 +277,7 @@ export default function SignupPageV2() {
 
   const optionalTagStyle: React.CSSProperties = {
     ...requiredTagStyle,
-    color: "rgba(245,240,232,0.55)",
+    color: "var(--pq-ivory-dim)",
   };
 
   return (
@@ -342,7 +342,7 @@ export default function SignupPageV2() {
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.20em",
-            color: "rgba(245,240,232,0.65)",
+            color: "var(--pq-ivory-mid)",
             textTransform: "uppercase",
             textDecoration: "none",
           }}
@@ -692,7 +692,7 @@ export default function SignupPageV2() {
               marginTop: 6,
               fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.20em",
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               textAlign: "center",
               textTransform: "uppercase",
             }}

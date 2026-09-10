@@ -201,7 +201,7 @@ export function InstallPrompt() {
             onClick={dismiss}
             aria-label="Dismiss install prompt"
             className="-mr-1 -mt-1 p-1 transition-colors"
-            style={{ color: "rgba(245, 240, 232, 0.5)" }}
+            style={{ color: "var(--pq-ivory-faint)" }}
           >
             <X className="h-4 w-4" />
           </button>
@@ -212,7 +212,7 @@ export function InstallPrompt() {
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
-            color: "rgba(245, 240, 232, 0.65)",
+            color: "var(--pq-ivory-mid)",
             letterSpacing: "-0.003em",
           }}
         >

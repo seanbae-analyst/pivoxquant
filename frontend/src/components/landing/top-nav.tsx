@@ -526,7 +526,7 @@ export default function TopNav() {
                         <p
                           className="font-serif"
                           style={{
-                            color: "rgba(245,240,232,0.78)",
+                            color: "var(--pq-ivory-soft)",
                             fontSize: "var(--pq-text-lead)",
                             lineHeight: 1.55,
                             maxWidth: 240,

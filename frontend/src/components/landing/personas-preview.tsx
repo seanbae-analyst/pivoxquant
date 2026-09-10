@@ -122,7 +122,7 @@ export default function PersonasPreview() {
           style={{
             fontSize: "clamp(15px, 1.3vw, 17px)",
             lineHeight: 1.65,
-            color: "rgba(245,240,232,0.65)",
+            color: "var(--pq-ivory-mid)",
             marginBottom: 56,
           }}
         >
@@ -173,7 +173,7 @@ export default function PersonasPreview() {
                 <span
                   className="font-serif"
                   style={{
-                    color: "rgba(245,240,232,0.50)",
+                    color: "var(--pq-ivory-faint)",
                     fontSize: "var(--pq-text-eyebrow)",
                   }}
                 >
@@ -207,7 +207,7 @@ export default function PersonasPreview() {
               <p
                 className="font-serif"
                 style={{
-                  color: "rgba(245,240,232,0.72)",
+                  color: "var(--pq-ivory-muted)",
                   fontSize: "var(--pq-text-body)",
                   lineHeight: 1.55,
                   marginBottom: 8,
@@ -242,7 +242,7 @@ export default function PersonasPreview() {
           <p
             className="font-serif"
             style={{
-              color: "rgba(245,240,232,0.55)",
+              color: "var(--pq-ivory-dim)",
               fontSize: "var(--pq-text-body)",
               maxWidth: 480,
             }}

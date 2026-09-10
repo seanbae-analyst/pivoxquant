@@ -91,7 +91,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[2px] p-1.5 text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] hover:bg-[var(--pq-ivory-line-faint)] transition-colors"
+            className="rounded-[2px] p-1.5 text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)] hover:bg-[var(--pq-ivory-line-faint)] transition-colors"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -99,7 +99,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
         </div>
 
         {/* Description */}
-        <p className="mb-5 text-pq-caption leading-relaxed text-[rgba(245,240,232,0.65)]">
+        <p className="mb-5 text-pq-caption leading-relaxed text-[var(--pq-ivory-mid)]">
           Enter your KIS API credentials to link your brokerage account. This is
           read-only — we observe holdings and transactions without trading.
         </p>

@@ -346,7 +346,7 @@ export function AddPositionModalV2({
             style={{
               fontSize: "var(--pq-text-body)",
               lineHeight: 1.5,
-              color: "rgba(245,240,232,0.65)",
+              color: "var(--pq-ivory-mid)",
               margin: 0,
             }}
           >
@@ -402,7 +402,7 @@ export function AddPositionModalV2({
                     style={{
                       fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.14em",
-                      color: "rgba(245,240,232,0.45)",
+                      color: "var(--pq-ivory-faint)",
                     }}
                   >
                     …
@@ -573,7 +573,7 @@ export function AddPositionModalV2({
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.06em",
-                  color: memoOk ? "var(--pq-bronze)" : "rgba(245,240,232,0.45)",
+                  color: memoOk ? "var(--pq-bronze)" : "var(--pq-ivory-faint)",
                   marginTop: 2,
                 }}
               >
@@ -613,7 +613,7 @@ export function AddPositionModalV2({
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
-                color: "rgba(245,240,232,0.55)",
+                color: "var(--pq-ivory-dim)",
               }}
             >
               Saved to your book · not sent to broker
@@ -626,7 +626,7 @@ export function AddPositionModalV2({
                 style={{
                   background: "transparent",
                   border: "none",
-                  color: "rgba(245,240,232,0.55)",
+                  color: "var(--pq-ivory-dim)",
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   cursor: "pointer",

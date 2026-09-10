@@ -112,7 +112,7 @@ export function OAuthButtonsV2({
     ...buttonShellBase,
     border: "1px solid var(--pq-ivory-line-soft)",
     background: "transparent",
-    color: "rgba(245,240,232,0.55)",
+    color: "var(--pq-ivory-dim)",
     cursor: "not-allowed",
   };
 

@@ -265,7 +265,7 @@ export function PortfolioHeroV2({
         style={{
           fontSize: "var(--pq-text-h5)",
           lineHeight: 1.55,
-          color: "rgba(245,240,232,0.82)",
+          color: "var(--pq-ivory-strong)",
           maxWidth: 720,
           margin: "0 0 32px 0",
         }}
@@ -484,7 +484,7 @@ function HeroKpi({
           className="font-mono tabular-nums"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            color: "rgba(245,240,232,0.55)",
+            color: "var(--pq-ivory-dim)",
             marginTop: 2,
           }}
         >
