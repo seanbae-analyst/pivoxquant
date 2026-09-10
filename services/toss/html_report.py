@@ -135,7 +135,43 @@ body {{ margin:0; background:var(--ground); color:var(--ink); font-family:var(--
 .ph .basis {{ display:table-cell; vertical-align:baseline; text-align:right; white-space:nowrap;
   font-family:var(--mono); font-size:10.5px; color:var(--ink3); padding-left:20px; }}
 .body {{ padding-left:34px; }}
-@media (max-width:640px) {{ .body {{ padding-left:0; }} .mast h1, .mast .who {{ display:block; width:auto; padding-left:0; text-align:left; }} .mast .who {{ padding-top:8px; }} }}
+
+/* A phone is 390 CSS px wide — an iPhone 14 exactly — and everything below is
+   what that width costs. Two-cell heads stack, the margin the plate numbers
+   hang in goes away, the third column of a statement gives up its padding
+   before its content, and the drawings keep their own scrollbar (see _svg)
+   with a shadow at the edge so it is discoverable rather than guessed at. */
+@media (max-width:640px) {{
+  .body {{ padding-left:0; }}
+  .mast h1, .mast .who {{ display:block; width:auto; padding-left:0; text-align:left; }}
+  .mast .who {{ padding-top:9px; }}
+  .ph, .ph .n, .ph h2, .ph .basis {{ display:block; width:auto; text-align:left; padding-left:0; }}
+  .ph .n {{ padding-bottom:2px; }}
+  .ph .basis {{ padding-top:3px; }}
+}}
+@media (max-width:440px) {{
+  body {{ padding-inline:15px; font-size:13.5px; padding-block:34px 56px; }}
+  .mast h1 {{ font-size:24px; }}
+  .lead p {{ font-size:18px; }}
+  .finds li, .cap {{ font-size:12.5px; }}
+  .stmt td.k {{ font-size:12.5px; }}
+  .stmt td.v {{ font-size:12.5px; padding-left:9px; }}
+  .stmt td.x {{ width:76px; font-size:10px; padding-left:8px; white-space:normal; }}
+  .stmt tr.big td.v {{ font-size:17px; }}
+  .rlist li, .rlist li > span {{ display:block; width:auto; padding-right:0; }}
+  .rlist .s {{ padding-bottom:3px; }}
+  .rlist .s em {{ display:inline; padding-left:6px; }}
+  .plate {{ margin-top:32px; }}
+  /* the classic scroll shadow: a fixed gradient at the right edge, over one
+     that scrolls with the content, so the shadow shows only while there is
+     more chart to the right of it */
+  .tbl {{
+    background:
+      linear-gradient(to left, var(--ground), rgba(0,0,0,0)) right / 26px 100% no-repeat,
+      radial-gradient(farthest-side at 100%, rgba(0,0,0,.18), rgba(0,0,0,0)) right / 9px 100% no-repeat;
+    background-attachment: local, scroll;
+  }}
+}}
 .cap {{ font-size:12.5px; line-height:1.6; color:var(--ink2); margin:11px 0 0; max-width:70ch; }}
 .cap b {{ font-weight:600; color:var(--ink); }}
 .rise {{ color:var(--rise); }} .fall {{ color:var(--fall); }} .dim {{ color:var(--ink3); }}
@@ -298,7 +334,15 @@ def _stmt(rows) -> str:
 
 
 def _svg(w: int, h: int, label: str, body: list[str]) -> str:
-    return f'<svg viewBox="0 0 {w} {h}" role="img" aria-label="{_e(label)}">' + "".join(body) + "</svg>"
+    """A drawing, in the container that keeps it from widening the page.
+
+    The drawings are ~600px wide at their smallest legible size and a phone is
+    390: they have to scroll inside something. Four of them used to be emitted
+    bare, so instead of scrolling they pushed the whole document sideways and
+    every line of text on it went off-screen with them.
+    """
+    return (f'<div class="tbl"><svg viewBox="0 0 {w} {h}" role="img" aria-label="{_e(label)}">'
+            + "".join(body) + "</svg></div>")
 
 
 # ── plate 3 · composition ────────────────────────────────────────────────────
@@ -774,7 +818,7 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
     conc = (f'가장 큰 종목은 <b>{_e(_nm(c["largest"]["symbol"], c["largest"]["name"]))}</b>, 평가액의 {c["largest"]["weight_pct"]:.2f}%. '
             f'30% 선을 넘는 종목: {_e(", ".join(c["over_30pct"]) if c["over_30pct"] else "없음")}.' if c["largest"] else "보유 종목 없음.")
     plates.append(_plate(3, "보유 구성", f"{n_hold}종목",
-                         f'<div class="tbl">{_holdings_svg(rep["holdings"], p, rows_per_page)}</div>'
+                         f'{_holdings_svg(rep["holdings"], p, rows_per_page)}'
                          f'<div class="legend"><span><i style="background:{p.mark}"></i>비중</span>'
                          f'<span><i style="background:{p.rise}"></i>평단 위</span>'
                          f'<span><i style="background:{p.fall}"></i>평단 아래</span></div>'
@@ -782,7 +826,7 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
                          f'{_split_bar_svg(c["kr_pct"], c["us_pct"], p)}'))
 
     plates.append(_plate(4, "경로", f"보유 {n_hold} · 정리 {n_dep}",
-                         f'<div class="tbl">{_timeline_svg(rep, p, tracks_per_page)}</div>'
+                         f'{_timeline_svg(rep, p, tracks_per_page)}'
                          f'<div class="legend"><span><i style="background:{p.mark}"></i>보유 중</span>'
                          f'<span><i style="background:{p.ghost}"></i>정리함</span>'
                          f'<span style="color:{p.rise}">▲ 매수</span><span style="color:{p.fall}">▼ 매도</span></div>'
@@ -816,7 +860,7 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
                              f'<p class="cap">실현 <span class="{_cls(a["realised_krw"])}">{_won(a["realised_krw"])}</span> + '
                              f'미실현 <span class="{_cls(a["unrealised_krw"])}">{_won(a["unrealised_krw"])}</span> = '
                              f'<b>{_won(a["total_krw"])}</b> · 수수료·세금 {_won(a["fees_krw"])}. 흐린 이름은 이미 정리한 종목.</p>'
-                             f'<div class="tbl">{_attribution_svg(a["rows"], p)}</div>'))
+                             f'{_attribution_svg(a["rows"], p)}'))
 
     if af.get("available") and af.get("count"):
         rows = "".join(f'<tr><td>{_e(_nm(r["symbol"], r["name"]))}</td><td>{_e(r["last_sold_at"])}</td><td class="n">{r["avg_sell_price"]:,}</td>'

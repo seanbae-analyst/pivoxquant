@@ -83,11 +83,13 @@ def _row(label: str, figure: str, note: str, color: str, *, sub=False, rule=Fals
            else f"font-family:{_MONO};font-size:{'12' if sub else '13'}px")
     return (
         f'<tr>'
-        f'<td style="{top}{pad};border-bottom:1px solid {PAPER_RULE};font-family:{_SANS};{lab}">{_e(label)}</td>'
-        f'<td align="right" style="{top}padding:8px 0 8px 16px;border-bottom:1px solid {PAPER_RULE};'
+        f'<td style="{top}{pad};border-bottom:1px solid {PAPER_RULE};font-family:{_SANS};{_KEEP}{lab}">{_e(label)}</td>'
+        f'<td align="right" style="{top}padding:8px 0 8px 10px;border-bottom:1px solid {PAPER_RULE};'
         f'{fig};color:{color};white-space:nowrap">{_e(figure)}</td>'
-        f'<td align="right" width="104" style="{top}padding:8px 0 8px 14px;border-bottom:1px solid {PAPER_RULE};'
-        f'font-family:{_MONO};font-size:11px;color:{_DIM};white-space:nowrap">{_e(note)}</td>'
+        # 86px, and the note may wrap inside it: a figure that breaks is a
+        # different number, but "USD/KRW 1340.8" on two lines is only narrower.
+        f'<td align="right" width="100" style="{top}padding:8px 0 8px 9px;border-bottom:1px solid {PAPER_RULE};'
+        f'font-family:{_MONO};font-size:10.5px;line-height:1.45;color:{_DIM}">{_e(note)}</td>'
         f'</tr>'
     )
 
@@ -161,8 +163,8 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
         w = r.get("weight_pct") or 0
         rows.append(
             f'<tr><td style="padding:7px 0 3px;font-family:{_SANS};font-size:12.5px;color:{PAPER_INK}">{_e(_nm(r["symbol"], r["name"]))}</td>'
-            f'<td align="right" style="padding:7px 0 3px;font-family:{_MONO};font-size:12px;color:{_DIM}">{w:.2f}%</td>'
-            f'<td align="right" width="72" style="padding:7px 0 3px;font-family:{_MONO};font-size:12px;color:{_hue(r["unrealised_rate_pct"])}">'
+            f'<td align="right" style="padding:7px 0 3px;font-family:{_MONO};font-size:11.5px;color:{_DIM};white-space:nowrap">{w:.2f}%</td>'
+            f'<td align="right" width="62" style="padding:7px 0 3px;font-family:{_MONO};font-size:11.5px;color:{_hue(r["unrealised_rate_pct"])}">'
             f'{_pct(r["unrealised_rate_pct"])}</td></tr>'
             f'<tr><td colspan="3" style="padding:0 0 6px">{_bar(w, PAPER_MARK)}</td></tr>'
         )
@@ -180,7 +182,7 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
         facts.append(("팔고 난 뒤", f"{after['count']}종목 중 {after['higher_now']}개가 판 가격보다 높다 · "
                                  f"안 팔았다면 {_won(after['kept_delta_krw'])} 차이"))
     fact_rows = "".join(
-        f'<tr><td width="120" valign="top" style="padding:6px 12px 6px 0;font-family:{_SANS};font-size:12px;'
+        f'<tr><td width="92" valign="top" style="padding:6px 10px 6px 0;font-family:{_SANS};{_KEEP}font-size:11.5px;'
         f'color:{_DIM}">{_e(k)}</td>'
         f'<td style="padding:6px 0;font-family:{_SANS};font-size:12.5px;{_KEEP}color:{_SOFT}">{_e(val)}</td></tr>'
         for k, val in facts)
@@ -211,16 +213,13 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
 
     return f"""<div bgcolor="{PAPER}" style="margin:0;padding:0;background:{PAPER}">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" bgcolor="{PAPER}" style="background:{PAPER};border-collapse:collapse">
-<tr><td align="center" style="padding:30px 16px 46px">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px;max-width:100%;border-collapse:collapse">
+<tr><td align="center" style="padding:28px 15px 44px">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;border-collapse:collapse">
 <tr><td>
 
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse">
-<tr>
-  <td valign="bottom" style="border-bottom:1.5px solid {PAPER_INK};padding-bottom:11px;font-family:{_SERIF};font-size:25px;line-height:1.18;color:{PAPER_INK}">기록이 되비추는 것</td>
-  <td valign="bottom" align="right" style="border-bottom:1.5px solid {PAPER_INK};padding:0 0 12px 20px;font-family:{_MONO};font-size:10.5px;line-height:1.7;color:{_DIM};white-space:nowrap">
-    토스증권 계좌 {_e(rep['account']['account_no_masked'])}<br>{_e(gen)} KST<br>Toss Open API · read-only</td>
-</tr></table>
+<div style="font-family:{_MONO};font-size:10.5px;line-height:1.75;color:{_DIM}">
+토스증권 계좌 {_e(rep['account']['account_no_masked'])} &#183; {_e(gen)} KST<br>Toss Open API &#183; read-only</div>
+<div style="border-bottom:1.5px solid {PAPER_INK};padding:4px 0 11px;font-family:{_SERIF};font-size:24px;line-height:1.2;{_KEEP}color:{PAPER_INK}">기록이 되비추는 것</div>
 
 {lead}
 {finds}

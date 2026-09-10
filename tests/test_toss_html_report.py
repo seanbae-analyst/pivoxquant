@@ -138,3 +138,22 @@ def test_the_record_does_not_wear_the_product_s_tokens():
                "Playfair", "Source Serif", "Geist", "Pretendard"):
         assert v3 not in both, v3
     assert "Fraunces" in both and "IBM+Plex" in both
+
+
+def test_every_drawing_scrolls_inside_its_own_container():
+    """A phone is 390 CSS px and the drawings are 600 at their smallest legible
+    size, so each has to scroll inside something. Four of the eight used to be
+    emitted bare — instead of scrolling they widened the document, and every
+    line of text on the page went off-screen with them."""
+    from services.toss.html_report import SCREEN, _split_bar_svg
+    page = _page()
+    assert page.count('<div class="tbl"><svg') == page.count("<svg") == 8
+    assert _split_bar_svg(30.0, 70.0, SCREEN).startswith('<div class="tbl"><svg')
+
+
+def test_the_page_is_laid_out_for_the_phone_it_is_read_on():
+    css = _page()
+    assert "@media (max-width:440px)" in css     # iPhone 14 is 390
+    assert "@media (max-width:640px)" in css     # two-cell heads stack first
+    # the plate-number margin is what a narrow screen cannot afford
+    assert ".body {{ padding-left:0; }}".replace("{{", "{").replace("}}", "}") in css

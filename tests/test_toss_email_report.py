@@ -124,3 +124,16 @@ def test_no_dashboard_furniture_and_korean_breaks_at_word_boundaries(report):
     assert page.count("word-break:keep-all") > 8
     # the statement rules off where a 잔고 statement does
     assert page.count("border-top:1.5px solid") >= 2
+
+
+def test_the_digest_fits_a_phone_with_no_stylesheet_to_help_it(report):
+    """An email has no media query to fall back on, so the one fixed layout has
+    to work at 390px. A nowrap masthead cell had a min-content width of 632 and
+    no max-width can shrink a table below its min-content — that one cell pushed
+    the whole screen sideways by 250px."""
+    page = render_email_html(report, url=URL)
+    head = page[:page.index("기록이 되비추는 것") + 40]
+    assert "nowrap" not in head
+    assert 'width="100%" style="max-width:600px' in page
+    # figures may never break; the notes beside them may
+    assert page.count("white-space:nowrap") >= 8
