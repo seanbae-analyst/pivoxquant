@@ -175,8 +175,8 @@ export function CapitalCardV2() {
           marginBottom: 16,
         }}
       >
-        Total investable capital used in signal sizing and portfolio
-        analytics. USD or KRW — set either, or both.
+        Total investable capital. Portfolio uses it for the cash buffer and
+        for what remains after each add or trim. USD or KRW — set either, or both.
       </p>
 
       {/* Current values */}

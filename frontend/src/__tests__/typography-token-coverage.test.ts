@@ -39,11 +39,6 @@ const TOP5_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> =
  *  must stay tokenized; future contributors cannot re-introduce them. */
 const PHASE2_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
   {
-    path: "components/settings/v2/subscription-card-v2.tsx",
-    cap: 1,
-    reason: "1× 28px secondary heading — no exact v3 token between quote(24) and h3(32)",
-  },
-  {
     path: "app/pricing/page.tsx",
     cap: 2,
     reason: "2× 15px/16px tier body copy — no exact v3 token between body(14) and quote(24)",
@@ -150,11 +145,6 @@ makeCapAssertion(
  *  previously tokenized sizes (12 / 14 / 24 / 32 / 16 / 18 / 20). */
 const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
   {
-    path: "components/settings/v2/broker-card-v2.tsx",
-    cap: 0,
-    reason: "all 10 literals (12/14/32) migrated → --pq-text-eyebrow/body/h3",
-  },
-  {
     path: "components/profile/v2/identity-card-v2.tsx",
     cap: 0,
     reason: "W17: 1×28 avatar initial migrated → --pq-text-avatar; no raw literals remain",
@@ -193,11 +183,6 @@ const PHASE7_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     path: "components/layout/terminal-sidebar.tsx",
     cap: 3,
     reason: "1×9 footer kicker migrated → --pq-text-kicker; 3 unrelated 12/14 literals remain",
-  },
-  {
-    path: "components/settings/v2/subscription-card-v2.tsx",
-    cap: 0,
-    reason: "W17: 1×28 secondary heading migrated → --pq-text-avatar (PHASE2 cap 1 → 0)",
   },
   {
     path: "app/(auth)/signup/oauth-finalize/page.tsx",

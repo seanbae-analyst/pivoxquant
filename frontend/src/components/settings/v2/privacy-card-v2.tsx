@@ -4,7 +4,7 @@
  * <PrivacyCardV2 />
  *
  * Section E of /settings v2 — Privacy (Cookie consent + Data export + Danger zone).
- * Mirror of settings-v2 mockup §889 ("E · Privacy · PIPA · GDPR").
+ * Mirror of settings-v2 mockup §889 ("C · Privacy · PIPA · GDPR").
  *
  * Three surfaces stacked:
  *   - E1 Cookie consent (4 categories — Strictly necessary always-on, Analytics,
@@ -212,7 +212,7 @@ export function PrivacyCardV2({
 
   return (
     // 2026-05-15 (bug-hunter Wave 4 P2 #4 sibling): same root cause as
-    // subscription-card-v2.tsx — duplicate `id="section-e"` (both here
+    // a since-removed sibling card — duplicate `id="section-e"` (both here
     // and on outer page-v2.tsx wrapper) broke AnchorRail sidebar
     // scroll. Outer keeps the id; inner drops it.
     <section
@@ -239,7 +239,7 @@ export function PrivacyCardV2({
               marginBottom: 8,
             }}
           >
-            E · Privacy · PIPA · GDPR
+            C · Privacy · PIPA · GDPR
           </div>
           <div
             className="font-display"
@@ -304,7 +304,7 @@ export function PrivacyCardV2({
               color: "var(--pq-ivory-dim)",
             }}
           >
-            E1 · Consent
+            C1 · Consent
           </span>
           <div
             className="font-mono uppercase"
@@ -403,7 +403,7 @@ export function PrivacyCardV2({
               color: "var(--pq-ivory-dim)",
             }}
           >
-            E2 · Export
+            C2 · Export
           </span>
           <div
             className="font-mono uppercase"
@@ -650,7 +650,7 @@ export function PrivacyCardV2({
             color: ERROR_COLOR,
           }}
         >
-          E3 · Danger zone
+          C3 · Danger zone
         </span>
         <div
           className="font-mono uppercase"
@@ -744,8 +744,8 @@ export function PrivacyCardV2({
                 marginBottom: 16,
               }}
             >
-              Permanent. Removes positions, watchlists, persona snapshots,
-              and delivered artifacts. PIPA · 30-day purge after request.
+              Permanent. Removes your holdings, trades, pre-trade records,
+              pulse answers and persona history. PIPA · 30-day purge after request.
             </p>
             <button
               type="button"
@@ -763,7 +763,7 @@ export function PrivacyCardV2({
                 cursor: "pointer",
               }}
             >
-              Contact support to delete
+              Delete account →
             </button>
           </div>
         </div>

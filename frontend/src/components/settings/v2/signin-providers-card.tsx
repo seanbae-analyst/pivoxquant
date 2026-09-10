@@ -7,16 +7,13 @@
  * Mirror of settings-v2 mockup §577 ("A2 · Sign-in").
  *
  * Renders three rows:
- *   - Google      (Linked / Not linked → Disconnect or Connect link)
- *   - Kakao       (Linked / Not linked → Disconnect or Connect link)
+ *   - Google      (Linked → "Primary" / Not linked → Connect link)
+ *   - Kakao       (Linked → "Primary" / Not linked → Connect link)
  *   - Password    (always "N/A — OAuth-only" — GAP-L · v3-OAuth-pure stays)
  *
- * Helper line warns the user that disconnecting the last provider locks the
- * account.
- *
- * GAP-D: backend `POST /api/auth/<provider>/disconnect` endpoint absent.
- *        UI surfaces the action; host wires a graceful error toast until the
- *        endpoint lands. See settings-v2/MIGRATION.md §2.
+ * 2026-09-10: the Disconnect button was removed. There is no backend
+ * disconnect endpoint, so it could only toast "not supported". Add it back
+ * together with the endpoint, and with the last-provider lockout guard.
  *
  * Pure presentational. Host wires `useAuth()` for the linked provider name.
  *
@@ -30,7 +27,6 @@ interface Props {
   oauthProvider?: string | null;
   /** Email of the linked Google identity (used in the helper line). */
   email?: string | null;
-  onDisconnect?: (provider: "google" | "kakao") => void;
   onConnect?: (provider: "google" | "kakao") => void;
 }
 
@@ -67,7 +63,6 @@ function ProviderRow({
   emailHint,
   helpUnlinked,
   onConnect,
-  onDisconnect,
   topPad,
 }: {
   name: "Google" | "Kakao";
@@ -75,7 +70,6 @@ function ProviderRow({
   emailHint?: string | null;
   helpUnlinked: string;
   onConnect?: () => void;
-  onDisconnect?: () => void;
   topPad?: boolean;
 }) {
   return (
@@ -108,24 +102,16 @@ function ProviderRow({
       </div>
 
       {linked ? (
-        <button
-          type="button"
-          onClick={onDisconnect}
+        <span
           className="font-mono uppercase"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
-            color: "var(--pq-error, #d18888)",
-            borderBottom: "1px solid rgba(209,136,136,0.30)",
-            paddingBottom: 2,
-            background: "transparent",
-            border: "none",
-            borderBottomStyle: "solid",
-            cursor: "pointer",
+            letterSpacing: "0.22em",
+            color: "var(--pq-ivory-dim)",
           }}
         >
-          Disconnect
-        </button>
+          Primary
+        </span>
       ) : (
         <button
           type="button"
@@ -153,7 +139,6 @@ function ProviderRow({
 export function SignInProvidersCard({
   oauthProvider,
   email,
-  onDisconnect,
   onConnect,
 }: Props) {
   const googleLinked = oauthProvider === "google";
@@ -201,7 +186,6 @@ export function SignInProvidersCard({
         emailHint={googleLinked ? email : null}
         helpUnlinked="Add Google as a sign-in method."
         onConnect={() => onConnect?.("google")}
-        onDisconnect={() => onDisconnect?.("google")}
       />
 
       <ProviderRow
@@ -210,7 +194,6 @@ export function SignInProvidersCard({
         emailHint={kakaoLinked ? email : null}
         helpUnlinked="Add Kakao as a backup sign-in method."
         onConnect={() => onConnect?.("kakao")}
-        onDisconnect={() => onDisconnect?.("kakao")}
         topPad
       />
 
@@ -242,19 +225,6 @@ export function SignInProvidersCard({
           N/A
         </span>
       </div>
-
-      <p
-        className="font-serif"
-        style={{
-          fontSize: "var(--pq-text-body)",
-          lineHeight: 1.55,
-          color: "var(--pq-ivory-dim)",
-          marginTop: 12,
-        }}
-      >
-        At least one OAuth provider must remain connected. Disconnecting your
-        last provider locks the account.
-      </p>
     </div>
   );
 }

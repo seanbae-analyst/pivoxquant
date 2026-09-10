@@ -3,8 +3,8 @@
 /**
  * <AnchorRail /> — sticky 2-col anchor rail for /settings v2.
  *
- * 5 sections (A·Identity / B·Brokers / C·Notifications / D·Subscription /
- * E·Privacy). Active state is computed via IntersectionObserver against the
+ * 3 sections (A·Identity / B·Notifications / C·Privacy). The element ids stay
+ * section-a / -c / -e so deep links from before 2026-09-10 still land. Active state is computed via IntersectionObserver against the
  * `id` of each section so the rail stays in sync with scroll.
  */
 
@@ -18,10 +18,8 @@ interface Item {
 
 const ITEMS: Item[] = [
   { id: "section-a", letter: "A", label: "Identity" },
-  { id: "section-b", letter: "B", label: "Brokers" },
-  { id: "section-c", letter: "C", label: "Notifications" },
-  { id: "section-d", letter: "D", label: "Subscription" },
-  { id: "section-e", letter: "E", label: "Privacy" },
+  { id: "section-c", letter: "B", label: "Notifications" },
+  { id: "section-e", letter: "C", label: "Privacy" },
 ];
 
 export function AnchorRail() {

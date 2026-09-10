@@ -100,7 +100,7 @@ export function SettingsIdentityCardV2({
         <div style={{ minWidth: 0 }}>
           <div className="font-serif" style={ROW_LABEL_STYLE}>Display name</div>
           <div className="font-serif" style={ROW_HELP_STYLE}>
-            Used on memos, brag cards, and exports.
+            Shown in the app and on your data exports.
           </div>
         </div>
         <div
