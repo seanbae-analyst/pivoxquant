@@ -262,10 +262,13 @@ class TestOAuthFinalize:
         })
         assert r.status_code == 400
         assert r.get_json()["error"] == "below_min_age"
-        # birthdate must NOT have been persisted.
+        # 2026-09-10 (PIPA §22 ⑥): the half-provisioned account is erased,
+        # not just left without a birthdate, and the session is ended.
         with app.app_context():
-            u = db.session.get(User, uid)
-            assert u.birthdate is None
+            assert db.session.get(User, uid) is None
+        me = client.get("/api/auth/me")
+        # The session is gone: either 401, or a 200 that carries no user.
+        assert me.status_code == 401 or not (me.get_json() or {}).get("user")
 
     def test_finalize_at_least_14_persists_birthdate(self, client, app):
         uid = self._make_oauth_user(app, email="ok-finalize@test.com")

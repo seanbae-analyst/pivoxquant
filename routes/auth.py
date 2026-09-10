@@ -1492,6 +1492,33 @@ def oauth_finalize():
     try:
         age_result = check_birthdate_payload(d.get("birthdate"))
     except BirthdateValidationError as exc:
+        if exc.code == "below_min_age" and current_user.birthdate is None:
+            # PIPA §22 ⑥ — no processing of an under-14's data without a
+            # guardian's consent. 2026-09-10: the OAuth callback had already
+            # created the row (email, name, avatar, provider id) and this
+            # branch only refused the birthdate, leaving the account in place
+            # with no exit. Erase it now, the same way the 30-day purge does,
+            # but without the "purge complete" email to the child's address.
+            erased_id, erased_email = current_user.id, current_user.email
+            try:
+                from scripts.nightly.pipa_purge import _delete_user_cascade
+                _delete_user_cascade(erased_id, erased_email, send_email=False)
+                logger.info("OAuth finalize: under-14 account erased (user_id=%s)", erased_id)
+            except Exception:
+                db.session.rollback()
+                logger.exception("OAuth finalize: under-14 erasure failed user_id=%s", erased_id)
+            logout_user()
+            session.clear()
+            _err = api_error(
+                en=exc.code,
+                kr="만 14세 미만은 가입할 수 없어 입력하신 정보를 삭제했습니다.",
+                code=exc.code,
+                status=400,
+            )
+            # api_error returns (response, status); cookies go on the response.
+            if isinstance(_err, tuple):
+                return (_clear_auth_cookies(_err[0]),) + tuple(_err[1:])
+            return _clear_auth_cookies(_err)
         return api_error(
             en=exc.code,
             kr="생년월일이 올바르지 않습니다.",
@@ -1535,6 +1562,7 @@ def oauth_finalize():
 def delete_account():
     """Delete user account and all associated data. Required by Korean PIPA."""
     user_id = current_user.id
+    user_email = current_user.email
 
     try:
         # Delete every user-owned row, each in its own SAVEPOINT.
@@ -1689,6 +1717,24 @@ def delete_account():
             logger.exception(
                 "delete_account: model-less user_id sweep init failed (continuing)"
             )
+
+        # auth_events is keyed by email with no users FK, so neither the list
+        # above nor the FK sweep reaches it. 2026-09-10: only the 30-day purge
+        # anonymized it, so "delete now" left the plaintext email in the login
+        # log indefinitely (privacy policy: access logs ≤ 30 days). Anonymize
+        # in place exactly as scripts/nightly/pipa_purge does — the aggregate
+        # audit trail survives, the person does not.
+        if user_email:
+            try:
+                from scripts.nightly.pipa_purge import _hash_email
+                with db.session.begin_nested():
+                    AuthEvent.query.filter(AuthEvent.email == user_email).update(
+                        {AuthEvent.email: _hash_email(user_email)},
+                        synchronize_session=False,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                purge_failures.append("auth_events")
+                logger.warning("delete_account: auth_events anonymize failed: %s", exc)
 
         # SHIP-BLOCKER: cancel any live Stripe subscription BEFORE dropping the
         # user row, otherwise Stripe keeps billing the card and the webhook can
@@ -1903,12 +1949,22 @@ def _delete_cancel_serializer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(secret, salt=_DELETE_CANCEL_SALT)
 
 
-def _make_delete_cancel_token(user_id) -> str:
-    """Sign a {uid} payload the /delete-cancel page later exchanges for a restore."""
-    return _delete_cancel_serializer().dumps({"uid": int(user_id)})
+def _make_delete_cancel_token(user_id, requested_at=None) -> str:
+    """Sign a {uid, req} payload the /delete-cancel page later exchanges for a restore.
+
+    ``req`` pins the token to ONE deletion request. 2026-09-10: the payload was
+    only ``{uid}`` and a token lives 31 days, so after request → cancel →
+    request again, the first email's link could still silently undo the second
+    request. Tokens issued before this change carry no ``req`` and are honoured
+    until they expire on their own (≤ 31 days).
+    """
+    payload = {"uid": int(user_id)}
+    if requested_at is not None:
+        payload["req"] = requested_at.isoformat()
+    return _delete_cancel_serializer().dumps(payload)
 
 
-def _delete_cancel_url(user_id) -> str:
+def _delete_cancel_url(user_id, requested_at=None) -> str:
     """Absolute frontend URL the user clicks to undo a deletion request.
 
     Resolves the origin the same way OAuth callbacks do (``_resolve_frontend_url``:
@@ -1923,7 +1979,7 @@ def _delete_cancel_url(user_id) -> str:
         base = _resolve_frontend_url().rstrip("/")
     except RuntimeError:
         base = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
-    return f"{base}/delete-cancel?token={_make_delete_cancel_token(user_id)}"
+    return f"{base}/delete-cancel?token={_make_delete_cancel_token(user_id, requested_at)}"
 
 
 def _send_deletion_request_email(user, *, scheduled_purge_at) -> bool:
@@ -1940,7 +1996,9 @@ def _send_deletion_request_email(user, *, scheduled_purge_at) -> bool:
     purge_iso = _compute_purge_at(scheduled_purge_at) or ""
     purge_display = purge_iso[:10] if purge_iso else "30일 후"
     user_name = escape((getattr(user, "name", "") or "").strip() or "고객")
-    cancel_url = escape(_delete_cancel_url(getattr(user, "id", None)))
+    cancel_url = escape(_delete_cancel_url(
+        getattr(user, "id", None), getattr(user, "deletion_requested_at", None)
+    ))
 
     html_body = f"""<!doctype html>
 <html lang="ko"><body style="margin:0;padding:24px;background:#F6F3EC;
@@ -2046,6 +2104,14 @@ def delete_cancel():
         if user.deletion_requested_at is None:
             # Not pending deletion — already active or already cancelled.
             return jsonify({"ok": True, "already_active": True})
+        req = payload.get("req")
+        if req is not None and req != user.deletion_requested_at.isoformat():
+            # A link from an earlier request that was already cancelled.
+            return api_error(
+                en="This cancellation link belongs to an earlier deletion request.",
+                kr="이전 삭제 요청의 철회 링크입니다. 가장 최근 메일의 링크를 사용해 주세요.",
+                code="AUTH_DELETE_CANCEL_STALE", status=400,
+            )
         user.deletion_requested_at = None
         user.deleted_at = None
         db.session.commit()

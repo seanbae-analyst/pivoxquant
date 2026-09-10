@@ -283,3 +283,44 @@ def test_revoked_consent_blocks_send_even_if_consent_at_set(monkeypatch, app):
     with _patch_transport_always_succeed():
         assert _send(EmailSender(), user, app=app,
                      email_category=EmailCategory.MARKETING) is False
+
+
+
+# ── 5. Baseline gate honours revocation (2026-09-10) ─────────────────
+
+
+def test_baseline_gate_blocks_after_revocation(monkeypatch, app):
+    """consent_at set but revoked_at later → no marketing send, flag on or off.
+    Before 2026-09-10 only ``marketing_consent_at IS NOT NULL`` was checked."""
+    from services.email.sender import EmailSender, EmailCategory
+    monkeypatch.setenv("PIVOX_CS1_CONSENT_ENABLED", "false")
+    monkeypatch.setenv("SENDGRID_API_KEY", "test")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    user = _FakeUser(marketing_consent_at=now - timedelta(days=3))
+    user.marketing_consent_revoked_at = now - timedelta(days=1)
+    with _patch_transport_always_succeed():
+        assert _send(EmailSender(), user, app=app,
+                     email_category=EmailCategory.MARKETING) is False
+        assert _send(EmailSender(), user, app=app) is False
+
+
+def test_baseline_gate_allows_reconsent_after_revocation(monkeypatch, app):
+    from services.email.sender import EmailSender
+    monkeypatch.setenv("PIVOX_CS1_CONSENT_ENABLED", "false")
+    monkeypatch.setenv("SENDGRID_API_KEY", "test")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    user = _FakeUser(marketing_consent_at=now - timedelta(hours=1))
+    user.marketing_consent_revoked_at = now - timedelta(days=2)
+    with _patch_transport_always_succeed():
+        assert _send(EmailSender(), user, app=app) is True
+
+
+def test_transactional_ignores_revocation(monkeypatch, app):
+    from services.email.sender import EmailSender, EmailCategory
+    monkeypatch.setenv("SENDGRID_API_KEY", "test")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    user = _FakeUser(marketing_consent_at=now - timedelta(days=3))
+    user.marketing_consent_revoked_at = now - timedelta(days=1)
+    with _patch_transport_always_succeed():
+        assert _send(EmailSender(), user, app=app,
+                     email_category=EmailCategory.TRANSACTIONAL) is True

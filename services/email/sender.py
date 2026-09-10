@@ -313,6 +313,19 @@ class EmailSender:
                     getattr(user, "id", "?"),
                 )
                 return False
+            # The comment above states the spec as "consent_at set AND
+            # (revoked_at IS NULL OR revoked_at < consent_at)"; the code only
+            # checked the first half. 2026-09-10: a user who revoked and then
+            # flipped the Settings delivery toggle back on (email_opt_out=false)
+            # was mailed again. Same rule as routes/consents._consent_state.
+            _revoked_at = getattr(user, "marketing_consent_revoked_at", None)
+            if _revoked_at is not None and _revoked_at >= user.marketing_consent_at:
+                logger.info(
+                    "skipping email for user %s — marketing consent revoked "
+                    "(정통망법 §50, revoked_at >= consent_at)",
+                    getattr(user, "id", "?"),
+                )
+                return False
 
             # ── 1c. category-split consent gate (Wave D Sub-wave 1, C-S1) ──
             # Feature-flagged behind ``PIVOX_CS1_CONSENT_ENABLED`` (default false)

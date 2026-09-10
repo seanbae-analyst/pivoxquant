@@ -192,3 +192,29 @@ def test_delete_account_purges_modelless_fkless_user_id_table(app, client, make_
         with app.app_context():
             db.session.execute(text("DROP TABLE IF EXISTS anthropic_usage_log"))
             db.session.commit()
+
+
+
+def test_delete_account_anonymizes_auth_events(app, client, make_user):
+    """2026-09-10: auth_events is keyed by email with no users FK. Immediate
+    deletion must anonymize it in place, as the 30-day purge does."""
+    from extensions import db
+    from models import AuthEvent
+
+    user = make_user(email="authlog_erase@test.com")
+    with app.app_context():
+        db.session.add_all([
+            AuthEvent(email=user["email"], provider="google", event_type="start"),
+            AuthEvent(email=user["email"], provider="google", event_type="success"),
+        ])
+        db.session.commit()
+
+    login = client.post("/api/auth/login",
+                        json={"email": user["email"], "password": user["password"]})
+    assert login.status_code == 200, login.data
+    resp = client.delete("/api/auth/delete-account")
+    assert resp.status_code == 200, resp.data
+
+    with app.app_context():
+        assert AuthEvent.query.filter_by(email=user["email"]).count() == 0
+        assert AuthEvent.query.filter(AuthEvent.provider == "google").count() == 2
