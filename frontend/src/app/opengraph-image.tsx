@@ -84,7 +84,7 @@ export default function OpengraphImage() {
               maxWidth: 900,
             }}
           >
-            멈춤 · 기록 · 거울. 종목을 골라주지 않습니다. 한국 + 미국 주식.
+            당신 포트폴리오의 CFO. 멈춤 · 기록 · 거울. 종목을 골라주지 않습니다.
           </span>
         </div>
 

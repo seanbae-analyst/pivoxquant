@@ -296,7 +296,7 @@ export default function TopNav() {
                   letterSpacing: "0.08em",
                 }}
               >
-                · Living Mirror
+                · Living CFO
               </span>
             </Link>
 
