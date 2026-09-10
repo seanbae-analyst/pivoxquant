@@ -159,6 +159,7 @@ def _query_usage(today_iso: str, month_iso: str) -> dict:
         # Flask app context 없이 raw SQLAlchemy engine 직접 사용
         from config import Config
         from sqlalchemy import create_engine, text as sa_text
+        from sqlalchemy.pool import NullPool  # transient engine, see note below
 
         db_url = (
             os.environ.get("DATABASE_URL")
@@ -169,7 +170,13 @@ def _query_usage(today_iso: str, month_iso: str) -> dict:
             logger.warning("anthropic_cost_estimate: DATABASE_URL 미설정 — DB 집계 skip")
             return empty
 
-        engine = create_engine(db_url, pool_pre_ping=True)
+        # NullPool: this engine is transient (one scheduler tick, in the web process).
+        # 2026-09-10: without it each create_engine kept an idle pooled connection to the
+        # Supabase session pooler (15 clients max) until garbage collection. The
+        # 5-minute signup-funnel job alone built six engines per tick; production held
+        # 11 idle app connections and the next deploy's worker died with
+        # EMAXCONNSESSION before it could boot.
+        engine = create_engine(db_url, poolclass=NullPool, pool_pre_ping=True)
         with engine.connect() as conn:
             # anthropic_usage_log 테이블 존재 확인
             check = conn.execute(
