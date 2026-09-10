@@ -4,11 +4,11 @@ description: "디자인 일관성 검증 전문 — Apple HIG + Bloomberg 방향
 model: sonnet
 effort: high
 tools:
-  - mcp__Claude_in_Chrome__tabs_context_mcp
-  - mcp__Claude_in_Chrome__navigate
-  - mcp__Claude_in_Chrome__computer
-  - mcp__Claude_in_Chrome__javascript_tool
-  - mcp__Claude_in_Chrome__read_page
+  - mcp__claude-in-chrome__tabs_context_mcp
+  - mcp__claude-in-chrome__navigate
+  - mcp__claude-in-chrome__computer
+  - mcp__claude-in-chrome__javascript_tool
+  - mcp__claude-in-chrome__read_page
   - Bash
   - Read
   - Grep

@@ -622,6 +622,21 @@ CAUS = retired(`938bfcf4`). PDF 172-케이스 매트릭스 = 월요일이라 스
 ### ❌ 이번 회차 미검증 (PASS 아님)
 콘솔 에러 · 네트워크 4xx/5xx · 375px 모바일 · DisclaimerBanner · naked ticker 회귀 — 인증 라우트가 클라이언트 셸(50.6~51.9KB 동일 크기대)이라 curl 판정 불가 + 위임한 bug-hunter 가 **브라우저 MCP 도구 없이 기동돼 600초 무진전 실패**.
 
+## 2026-09-10 저녁 — F1 근본원인 **정정** (실측: 스윕의 결론이 틀렸다)
+
+스윕 F1 은 "US 지수 null = Render env 에 `FMP_API_KEY` 누락" 이라 했고 CEO 액션도 그렇게 적혔다. **틀렸다.** 세 가지를 실측했다.
+
+1. **`missing_recommended:1` 은 FMP 를 가리키지 않는다.** `launch_prep.py` 의 recommended 항목은 3개가 아니라 **7개**다 (`SECRET_KEY`·`DATABASE_URL`·`SENDGRID_API_KEY`·`SENDGRID_WEBHOOK_PUBLIC_KEY`·`FMP_API_KEY`·`KIS_APP_KEY`·`KIS_APP_SECRET`). 이 중 **`SENDGRID_WEBHOOK_PUBLIC_KEY` 는 SHIP_BLOCKERS A3 에 "미설정 PENDING" 으로 이미 기록돼 있다.** 빠진 1개는 그것일 가능성이 압도적이다. → `/api/health` 가 이제 **이름을 반환**하므로 (`missing_recommended_names`, 이 PR) 다음 배포 뒤 1초에 확정된다.
+2. **FMP 키 자체가 죽어 있다.** 로컬 `.env` 의 키(prod 와 동일 키)로 `stable/quote?symbol=SPY|AAPL|QQQ` 를 치면 전부 **`429 "Limit Reach. Please upgrade your plan"`**. `api/v3` 는 `401 Invalid API KEY`(레거시 경로 폐쇄). 즉 Render 에 키가 있든 없든 US 시세는 나올 수 없다.
+3. **왜 한도가 차는가 — 아무도 안 보는 화면을 위해 분당 5콜을 태우고 있다.** `app.py` `indices_cache_warm` 은 **1분 interval**, `cache_ttl.indices_ttl()` 은 장중 **15초** → 매 틱마다 US 프록시 5종(SPY/QQQ/DIA/IWM/VIXY) quote 5콜 + 5분마다 history 5콜. 무료 한도 250/일(`FMP_DAILY_SOFT_LIMIT` 기본값)은 **장 시작 후 1시간 안에 소진**된다. 그런데 이 스냅샷의 유일한 소비자 `market-ticker.tsx` 는 **2026-09-02 에 `hero.tsx` 에서 언마운트됐다**(R8 FMP §2.2.2 때문). 즉 지금 이 워밍 잡은 (a) 아무 화면에도 안 나오는 값을 위해 (b) `/portfolio` 평가액이 써야 할 FMP 예산을 매일 전부 태운다.
+
+**따라서 CEO 액션은 "Render 에 FMP 키 입력" 이 아니다.** 결정할 것 하나:
+- [ ] **US 지수 워밍 중단.** `warm_indices_cache("us")` 호출 제거(KR 은 KIS 라 무관) 또는 `_US_INDEX_PROXY` 비움. 소비자 0 + R8 노출면 축소 + FMP 예산 전부 `/portfolio` 로 회수. 코드 10줄, `EXPECTED_JOB_COUNT` 무변경. agent 가 바로 할 수 있으나 **공개 API 응답 형태가 바뀌므로**(US 항목 사라짐) CEO 한 줄 승인 후.
+- [ ] (선택) FMP 플랜 결정 — 무료 250/일로 `/portfolio` 미장 평가액이 충분한지는 유저 수에 달렸다. 지금 유저 1명이면 충분하다. R8 합의 결과와 같이 결정.
+- [ ] `SENDGRID_WEBHOOK_PUBLIC_KEY` — 이름이 health 에 뜨면 그때 A3 대로 처리(발송 무관, 추적만 OFF).
+
+부수: bug-hunter 등 6 에이전트 툴명 케이스 불일치(F8) 는 이 PR 에서 수정. `memory_audit.sh` 주문 메서드 grep(F7) 은 같은 날 다른 세션이 이미 고쳤음을 실행으로 확인("KIS 주문 3개 전부 KIS_READ_ONLY 거부").
+
 ## 2026-09-10 (daily-sweep, prod, Thu) — 이월 P0 2건 CLOSED
 
 **신규/확인 P0=0 · P1=8 · P2=3.** 자동수정 0건 — 가드는 해제됐으나(어젯밤 `bf759f6c` 가 sw.js 스탬프 정합) **P0 0건이라 트리거 없음**. 상세: `BUG_SWEEP_2026-09-10.md`.

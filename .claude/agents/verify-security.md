@@ -9,10 +9,10 @@ tools:
   - Grep
   - Glob
   - WebFetch
-  - mcp__Claude_in_Chrome__read_network_requests
-  - mcp__Claude_in_Chrome__read_console_messages
-  - mcp__Claude_in_Chrome__navigate
-  - mcp__Claude_in_Chrome__tabs_context_mcp
+  - mcp__claude-in-chrome__read_network_requests
+  - mcp__claude-in-chrome__read_console_messages
+  - mcp__claude-in-chrome__navigate
+  - mcp__claude-in-chrome__tabs_context_mcp
 ---
 
 ## ⚖️ Iron Rules (절대 위반 금지)

@@ -4,17 +4,17 @@ description: "UX 검증 전문 — 버그 fix 후 실제 브라우저로 클릭�
 model: sonnet
 effort: high
 tools:
-  - mcp__Claude_in_Chrome__tabs_context_mcp
-  - mcp__Claude_in_Chrome__tabs_create_mcp
-  - mcp__Claude_in_Chrome__navigate
-  - mcp__Claude_in_Chrome__computer
-  - mcp__Claude_in_Chrome__find
-  - mcp__Claude_in_Chrome__read_page
-  - mcp__Claude_in_Chrome__read_console_messages
-  - mcp__Claude_in_Chrome__read_network_requests
-  - mcp__Claude_in_Chrome__javascript_tool
-  - mcp__Claude_in_Chrome__get_page_text
-  - mcp__Claude_in_Chrome__resize_window
+  - mcp__claude-in-chrome__tabs_context_mcp
+  - mcp__claude-in-chrome__tabs_create_mcp
+  - mcp__claude-in-chrome__navigate
+  - mcp__claude-in-chrome__computer
+  - mcp__claude-in-chrome__find
+  - mcp__claude-in-chrome__read_page
+  - mcp__claude-in-chrome__read_console_messages
+  - mcp__claude-in-chrome__read_network_requests
+  - mcp__claude-in-chrome__javascript_tool
+  - mcp__claude-in-chrome__get_page_text
+  - mcp__claude-in-chrome__resize_window
   - Bash
   - Read
 ---
@@ -95,7 +95,7 @@ fetch('/api/auth/dev-login', {
 ### 검증 단계
 각 버그에 대해:
 1. **재현 단계**: 정확히 어떤 클릭 시퀀스인지 나열
-2. **실행**: `mcp__Claude_in_Chrome__computer` 로 실제 클릭
+2. **실행**: `mcp__claude-in-chrome__computer` 로 실제 클릭
 3. **증거 수집 4종** (전체 필수 — 1종이라도 빠지면 unverified):
    1. **스크린샷** (visual) — before/after, 요소 위치 명시
    2. **Network 탭** (`read_network_requests`) — API status + response body
@@ -122,14 +122,14 @@ fetch('/api/auth/dev-login', {
 ### viewport spec
 ```javascript
 // 1) iPhone 13/14 (375x812)
-mcp__Claude_in_Chrome__resize_window({ width: 375, height: 812 });
+mcp__claude-in-chrome__resize_window({ width: 375, height: 812 });
 // 핵심 페이지 클릭 + 스크롤 + 스크린샷
 
 // 2) iPad (768x1024)
-mcp__Claude_in_Chrome__resize_window({ width: 768, height: 1024 });
+mcp__claude-in-chrome__resize_window({ width: 768, height: 1024 });
 
 // 3) Desktop (1440x900) — 기본 검증 viewport
-mcp__Claude_in_Chrome__resize_window({ width: 1440, height: 900 });
+mcp__claude-in-chrome__resize_window({ width: 1440, height: 900 });
 ```
 
 ### 모바일 회귀 검증 페이지 (필수)
