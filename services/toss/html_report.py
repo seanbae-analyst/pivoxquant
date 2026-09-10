@@ -233,8 +233,10 @@ def _attribution_svg(rows: list[dict]) -> str:
         label = _nm(r["symbol"], r["name"])
         out.append(f'<text x="0" y="{y + bar_h / 2 + 4}" class="lbl" fill="{IVORY if r["held"] else "rgba(245,240,232,.55)"}">{_e(label[:22])}</text>')
         out.append(f'<rect x="{x:.1f}" y="{y}" width="{max(w, 1):.1f}" height="{bar_h}" fill="{color}"><title>{_e(label)} · 실현 {_won(r["realised_krw"])} · 미실현 {_won(r["unrealised_krw"])} · 합계 {_won(v)}</title></rect>')
-        tx = zero + w + 6 if v >= 0 else zero - w - 6
-        out.append(f'<text x="{tx:.1f}" y="{y + bar_h / 2 + 4}" text-anchor="{"start" if v >= 0 else "end"}">{_won(v)}</text>')
+        # Loss labels sit just right of the zero line, where no bar competes for
+        # the space, so a long loss bar never runs its figure into the name column.
+        tx = zero + w + 6 if v >= 0 else zero + 6
+        out.append(f'<text x="{tx:.1f}" y="{y + bar_h / 2 + 4}" text-anchor="start">{_won(v)}</text>')
         if folded and i == 6:
             out.append(f'<text x="{zero:.1f}" y="{y + row_h + bar_h / 2 + 4}" class="muted" text-anchor="middle">… 중간 {folded}종목 생략 …</text>')
     out.append("</svg>")
