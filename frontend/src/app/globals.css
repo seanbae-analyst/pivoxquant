@@ -200,7 +200,10 @@
   --pq-ivory-soft: rgba(245, 240, 232, 0.78);
   --pq-ivory-mid: rgba(245, 240, 232, 0.65);
   --pq-ivory-dim: rgba(245, 240, 232, 0.55);
-  --pq-ivory-faint: rgba(245, 240, 232, 0.45);
+  /* 0.45 → 0.50 (2026-09-10): measured 4.05:1 on #050505, below WCAG AA's
+     4.5 for body text. Ivory needs alpha ≥ 0.49 against this ground; 0.50
+     gives 4.63. All four consumers use it as `color` on text. */
+  --pq-ivory-faint: rgba(245, 240, 232, 0.50);
 
   /* Hairline / surface tokens — α < 0.10 range, NOT for text.
      Use for borders, dividers, thin progress tracks, surface backgrounds.

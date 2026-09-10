@@ -391,7 +391,7 @@ function SiteFooter() {
               fontSize: "var(--pq-text-eyebrow)",
               lineHeight: 1.7,
               letterSpacing: "0.02em",
-              color: "rgba(245,240,232,0.45)",
+              color: "rgba(245,240,232,0.50)",
             }}
           >
             <strong style={{ color: "rgba(245,240,232,0.65)" }}>
@@ -499,7 +499,7 @@ function SiteFooter() {
               style={{
                 fontSize: "var(--pq-text-body-sm)",
                 lineHeight: 1.6,
-                color: "rgba(245,240,232,0.4)",
+                color: "rgba(245,240,232,0.50)",
               }}
             >
               PivoxQuant is not a licensed investment advisor, discretionary
@@ -517,7 +517,7 @@ function SiteFooter() {
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.12em",
-                  color: "rgba(245,240,232,0.4)",
+                  color: "rgba(245,240,232,0.50)",
                 }}
               >
                 EMAIL

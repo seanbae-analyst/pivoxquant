@@ -14,7 +14,8 @@
  *   - Subtle radial spotlight (ivory @ 3%) and a gentle breath
  *     pulse (4s ease-in-out) — both disabled under
  *     `prefers-reduced-motion`.
- *   - Serif/italic scroll hint at the bottom, bronze @ 40%.
+ *   - Serif scroll hint at the bottom, bronze @ 80% (raised from a
+ *     bronze-wash 40% that measured 1.57:1 — see the note inline).
  *
  * Input handlers (wheel / Space / ArrowDown / ArrowUp) are owned
  * by <FlipLandingShell/>. This component is purely presentational.
@@ -106,7 +107,7 @@ export default function SplashPage() {
           style={{
             width: "18px",
             height: "18px",
-            color: "rgba(var(--pq-bronze-wash-rgb), 0.55)",
+            color: "rgba(var(--pq-bronze-rgb), 0.70)",
           }}
           aria-hidden="true"
         />
@@ -116,7 +117,15 @@ export default function SplashPage() {
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.24em",
             textTransform: "uppercase",
-            color: "rgba(var(--pq-bronze-wash-rgb), 0.40)",
+            /* Was bronze-wash @ 0.40 → 1.57:1, effectively invisible. This
+               string is the ONLY instruction for getting past a full-viewport
+               splash, so it is an affordance, not decoration.
+
+               Alpha could not fix it: bronze-wash (139,111,71) tops out at
+               4.33:1 on #050505 even at full opacity — the colour itself is
+               the ceiling. Switched to --pq-bronze (184,149,106) @ 0.80,
+               which measures 4.80:1. */
+            color: "rgba(var(--pq-bronze-rgb), 0.80)",
           }}
         >
           {t("landing.splash.scrollHint")}

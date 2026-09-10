@@ -163,7 +163,7 @@ export default function PersonasPreview() {
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    color: "rgba(184,149,106,0.5)",
+                    color: "rgba(184,149,106,0.78)",
                     fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                   }}
@@ -173,7 +173,7 @@ export default function PersonasPreview() {
                 <span
                   className="font-serif"
                   style={{
-                    color: "rgba(245,240,232,0.4)",
+                    color: "rgba(245,240,232,0.50)",
                     fontSize: "var(--pq-text-eyebrow)",
                   }}
                 >

@@ -150,7 +150,7 @@ export default function ThreeSteps() {
                 <span
                   className="ml-auto font-mono"
                   style={{
-                    color: "rgba(245,240,232,0.34)",
+                    color: "rgba(245,240,232,0.50)",
                     fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.04em",
                   }}
@@ -175,7 +175,7 @@ export default function ThreeSteps() {
               <p
                 className="font-serif"
                 style={{
-                  color: "rgba(245,240,232,0.42)",
+                  color: "rgba(245,240,232,0.50)",
                   fontSize: "var(--pq-text-eyebrow)",
                   lineHeight: 1.6,
                   letterSpacing: "0.02em",
