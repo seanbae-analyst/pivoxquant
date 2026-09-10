@@ -25,28 +25,29 @@ from __future__ import annotations
 
 import html
 
-from services.toss.html_report import (
-    PAPER,
-    PAPER_BRONZE,
-    PAPER_DOWN,
-    PAPER_INK,
-    PAPER_RULE,
-    PAPER_TLDR,
-    PAPER_UP,
-    _nm,
-)
+from services.toss.html_report import STOCK, _nm
+
+# One palette, defined once, in html_report. The digest is the same record.
+PAPER = STOCK.ground
+PAPER_INK = STOCK.ink
+PAPER_RULE = STOCK.grid
+PAPER_BAND = STOCK.band
+PAPER_MARK = STOCK.mark
+PAPER_UP = STOCK.rise
+PAPER_DOWN = STOCK.fall
 
 # Web-safe stacks: the display face is a nicety, the fallback is the design.
-_SERIF = "Georgia, 'Times New Roman', serif"
+_SERIF = "Georgia, 'Times New Roman', serif"          # stands in for Fraunces
 # Korean breaks inside a word unless told not to; an email has no stylesheet to
 # say it once, so it rides on every rule that sets a Korean-bearing family.
 _KEEP = "word-break:keep-all;"
-_SANS = "-apple-system, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
-_MONO = "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace"
+_SANS = ("-apple-system, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', "
+         "'Malgun Gothic', sans-serif")                        # stands in for IBM Plex Sans KR
+_MONO = "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace"  # for IBM Plex Mono
 # Opaque greys rather than an alpha on the ink: a client that recolours the
 # ground underneath would otherwise drag the text with it.
-_DIM = "#5A5A5A"
-_SOFT = "#3A3A3A"
+_DIM = STOCK.ink3
+_SOFT = STOCK.ink2
 
 
 def _e(s) -> str:
@@ -98,8 +99,8 @@ def _bar(pct: float, color: str) -> str:
     cells = (f'<td width="{filled:.1f}%" bgcolor="{color}" '
              f'style="background:{color};font-size:0;line-height:0">&nbsp;</td>')
     if rest > 0.05:
-        cells += (f'<td width="{rest:.1f}%" bgcolor="{PAPER_TLDR}" '
-                  f'style="background:{PAPER_TLDR};font-size:0;line-height:0">&nbsp;</td>')
+        cells += (f'<td width="{rest:.1f}%" bgcolor="{PAPER_BAND}" '
+                  f'style="background:{PAPER_BAND};font-size:0;line-height:0">&nbsp;</td>')
     return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
             f'style="height:9px;border-collapse:collapse"><tr style="height:9px">{cells}</tr></table>')
 
@@ -144,15 +145,13 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
     if heads:
         lead = (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
                 f'style="border-collapse:collapse;margin-top:26px">'
-                f'<tr><td width="22" valign="top" style="padding:4px 10px 0 0;font-family:{_MONO};'
-                f'font-size:11px;color:{PAPER_BRONZE}">1</td>'
-                f'<td style="font-family:{_SERIF};font-size:19px;line-height:1.45;{_KEEP}color:{PAPER_INK}">'
+                f'<tr><td style="font-family:{_SERIF};font-size:20px;line-height:1.45;{_KEEP}color:{PAPER_INK}">'
                 f'{_e(heads[0])}</td></tr></table>')
     finds = "".join(
-        f'<tr><td width="22" valign="top" style="padding:9px 10px 0 0;font-family:{_MONO};'
-        f'font-size:11px;color:{PAPER_BRONZE}">{i}</td>'
-        f'<td style="padding:9px 0 0;font-family:{_SANS};font-size:13px;line-height:1.55;{_KEEP}color:{_SOFT}">{_e(x)}</td></tr>'
-        for i, x in enumerate(heads[1:], 2))
+        f'<tr><td width="16" valign="top" style="padding:11px 11px 0 0;font-size:0;line-height:0">'
+        f'<div style="width:6px;height:6px;background:{PAPER_MARK};font-size:0;line-height:0;margin-top:7px">&nbsp;</div></td>'
+        f'<td style="padding:11px 0 0;font-family:{_SANS};font-size:13px;line-height:1.55;{_KEEP}color:{_SOFT}">{_e(x)}</td></tr>'
+        for x in heads[1:])
     if finds:
         finds = (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
                  f'style="border-collapse:collapse;margin-top:6px">{finds}</table>')
@@ -165,7 +164,7 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
             f'<td align="right" style="padding:7px 0 3px;font-family:{_MONO};font-size:12px;color:{_DIM}">{w:.2f}%</td>'
             f'<td align="right" width="72" style="padding:7px 0 3px;font-family:{_MONO};font-size:12px;color:{_hue(r["unrealised_rate_pct"])}">'
             f'{_pct(r["unrealised_rate_pct"])}</td></tr>'
-            f'<tr><td colspan="3" style="padding:0 0 6px">{_bar(w, PAPER_BRONZE)}</td></tr>'
+            f'<tr><td colspan="3" style="padding:0 0 6px">{_bar(w, PAPER_MARK)}</td></tr>'
         )
     holdings = "".join(rows) or f'<tr><td style="font-family:{_SANS};font-size:12.5px;color:{_DIM}">보유 종목 없음</td></tr>'
 
@@ -205,7 +204,7 @@ def render_email_html(rep: dict, *, url: str | None = None, attached: bool = Fal
                 f'이 메일은 요약이다.</div>')
     if url:
         tail += (f'<div style="padding:14px 0 0"><a href="{_e(url)}" '
-                 f'style="font-family:{_MONO};font-size:12px;color:{PAPER};background:{PAPER_BRONZE};'
+                 f'style="font-family:{_MONO};font-size:12px;color:{PAPER};background:{PAPER_MARK};'
                  f'text-decoration:none;padding:11px 18px;display:inline-block">웹에서 열기 &#8594;</a></div>'
                  f'<div style="font-family:{_SANS};font-size:11.5px;color:{_DIM};padding-top:9px">'
                  f'링크는 로그인한 브라우저에서만 열린다.</div>')

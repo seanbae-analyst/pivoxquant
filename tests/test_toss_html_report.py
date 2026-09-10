@@ -29,8 +29,9 @@ def _page(**kw):
 
 def test_html_draws_the_three_charts_and_names_every_symbol():
     page = _page()
-    # holdings rows · timeline · KR/US split · attribution · hold-period spans · timing
-    assert page.count("<svg") == 6
+    # holdings · timeline · KR-US split · cumulative · scatter · attribution
+    # · slope · matrix — eight drawings, eight different marks
+    assert page.count("<svg") == 8
     assert "팔고 난 뒤" in page and "엔비디아 (NVDA)" in page
     assert "삼성전자 (005930)" in page and "Apple Inc. (AAPL)" in page and "엔비디아 (NVDA)" in page
     assert "토스 잔고와 전부 일치" in page
@@ -49,7 +50,8 @@ def test_the_realised_tile_agrees_with_the_verdict_above_it():
     the total is partial while the status block says it is whole."""
     page = _page()
     assert "부분 이력" not in page      # the fixture reconciles completely
-    assert "전체 이력 · 수수료·세금 차감" in page
+    assert ">전체 이력<" in page        # the statement's own basis column
+    assert "<b>전체 이력</b> · 수수료·세금 차감" in page
 
 
 def test_markdown_emphasis_in_shared_reason_strings_becomes_html_not_asterisks():
@@ -61,25 +63,27 @@ def test_markdown_emphasis_in_shared_reason_strings_becomes_html_not_asterisks()
 
 
 def test_paper_mode_puts_the_whole_document_on_the_report_surface():
-    """globals.css: "Light-theme ivory paper, regardless of app dark mode. Use on
-    printable/export views." The charts write literal fills, so the ground being
-    a parameter has to reach them too, not only the stylesheet."""
-    from services.toss.html_report import BRONZE, INK, IVORY, PAPER, PAPER_BRONZE, PAPER_INK
+    """The charts write literal fills, so the ground being a parameter has to
+    reach them too, not only the stylesheet. Neither ground is an inversion of
+    the other: the marks are re-stepped for each."""
+    from services.toss.html_report import SCREEN, STOCK
     paper, screen = _page(paper=True), _page()
-    assert INK in screen and IVORY in screen and BRONZE in screen
-    for app_chrome in (INK, IVORY, BRONZE):
-        assert app_chrome not in paper, app_chrome
-    assert PAPER in paper and PAPER_INK in paper and PAPER_BRONZE in paper
+    for lamp in (SCREEN.ground, SCREEN.ink, SCREEN.mark):
+        assert lamp in screen and lamp not in paper, lamp
+    for stock in (STOCK.ground, STOCK.ink, STOCK.mark, STOCK.rise, STOCK.fall):
+        assert stock in paper, stock
     assert "color-scheme: light" in paper and "color-scheme: dark" in screen
-    assert paper.count("<svg") == screen.count("<svg") == 6
+    assert paper.count("<svg") == screen.count("<svg") == 8
 
 
-def test_paper_drops_the_dynamic_subset_webfont_that_pdf_renderers_mis_map():
-    """Pretendard's dynamic subset is ~250 unicode-range faces. A renderer that
-    ignores the ranges paints hangul from whichever slice it loaded — the text
-    comes out as *other* hangul, which reads as writing and so hides the bug."""
-    assert "pretendard" in _page()
-    assert "pretendard" not in _page(paper=True)
+def test_korean_comes_from_one_host_and_never_from_a_dynamic_subset():
+    """Pretendard's dynamic subset is ~250 unicode-range faces, and a renderer
+    that ignores the ranges paints hangul from whichever slice it loaded — the
+    text arrives as *other* hangul, which reads as writing and so hides the bug.
+    IBM Plex Sans KR is one face from the one host every renderer here reaches."""
+    both = _page() + _page(paper=True)
+    assert "jsdelivr" not in both and "pretendard" not in both.lower()
+    assert both.count("IBM+Plex+Sans+KR") == 2
 
 
 def test_the_page_carries_no_dashboard_furniture():
@@ -90,7 +94,7 @@ def test_the_page_carries_no_dashboard_furniture():
     AND again inside 분석."""
     page = _page()
     for tell in ('class="tiles"', 'class="tile"', 'class="head"', 'class="eyebrow"',
-                 'class="sig"', 'class="status"', 'class="lede"'):
+                 'class="sig"', 'class="status"', 'class="lede"', 'text-align:center'):
         assert tell not in page, tell
     assert page.count('<table class="stmt">') >= 2
     assert page.count('class="lead"') == 1
@@ -106,13 +110,31 @@ def test_the_lead_finding_is_stated_once_not_twice():
         assert page.count(line) == 1, line
 
 
-def test_the_holding_period_asymmetry_gets_its_own_chart():
-    """The report's own first sentence is about holding losses longer than
-    gains; until now only the sentence said so."""
-    from services.toss.html_report import _hold_span_svg, SCREEN
+def test_each_measurement_gets_the_mark_its_data_asks_for():
+    """The record was four bar charts. A total accumulating over time is a line;
+    a distribution is points; a before-and-after from one origin is a slope; two
+    categorical dimensions that interact are a matrix. None of those is a bar."""
+    from services.toss.html_report import (
+        SCREEN, _cumulative_svg, _matrix_svg, _slope_svg, _trade_scatter_svg)
     rep = _report()
-    svg = _hold_span_svg(rep["analysis"]["trades"], SCREEN)
-    assert "이익을 실현할 때" in svg and "손실을 실현할 때" in svg
-    assert svg.count("<rect") == 2
-    # no closed trades, no chart — never a chart of nothing
-    assert _hold_span_svg({"closed": 0}, SCREEN) == ""
+    an = rep["analysis"]
+    assert "<path" in _cumulative_svg(an["trades"]["sales"], SCREEN)          # step line
+    assert "<circle" in _trade_scatter_svg(an["trades"]["sales"], SCREEN)     # points
+    assert "<line" in _slope_svg(an["after_selling"]["rows"], SCREEN)         # slopes
+    assert "<rect" in _matrix_svg(an["timing"], SCREEN)                       # cells
+    # and never a drawing of nothing
+    assert _cumulative_svg([], SCREEN) == ""
+    assert _trade_scatter_svg(an["trades"]["sales"][:1], SCREEN) == ""
+    assert _slope_svg([], SCREEN) == ""
+    assert _matrix_svg({"fills": 0}, SCREEN) == ""
+
+
+def test_the_record_does_not_wear_the_product_s_tokens():
+    """PivoxReport is a personal instrument, not a product surface. Dressing it
+    as the app made it read as the app's marketing rather than as a measurement,
+    so it has its own identity — and none of v3's."""
+    both = _page() + _page(paper=True)
+    for v3 in ("#050505", "#F5F0E8", "#B8956A", "#D18888", "#7AA0C8",
+               "Playfair", "Source Serif", "Geist", "Pretendard"):
+        assert v3 not in both, v3
+    assert "Fraunces" in both and "IBM+Plex" in both

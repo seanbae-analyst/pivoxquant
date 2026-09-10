@@ -14,7 +14,8 @@ from datetime import datetime
 import pytest
 
 from services.toss.email_report import render_email_html, render_email_text
-from services.toss.html_report import INK, IVORY, PAPER, PAPER_INK
+from services.toss.email_report import PAPER, PAPER_INK
+from services.toss.html_report import SCREEN
 from services.toss.mirror_report import build_mirror_report
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures", "toss", "sample_raw_history.json")
@@ -53,7 +54,8 @@ def test_every_element_that_paints_carries_its_own_style(report):
 
 def test_bars_are_table_cells_with_a_width_not_a_drawing(report):
     page = render_email_html(report, url=URL)
-    bars = re.findall(r'<td width="([\d.]+)%" bgcolor="#8A6A3E"', page)
+    from services.toss.email_report import PAPER_MARK
+    bars = re.findall(rf'<td width="([\d.]+)%" bgcolor="{PAPER_MARK}"', page)
     assert len(bars) == len(report["holdings"])
     assert all(0 <= float(w) <= 100 for w in bars)
 
@@ -92,7 +94,7 @@ def test_the_ground_is_paper_and_the_text_is_ink(report):
     the message is blank. Light ground, dark text is what survives it — and it
     is what globals.css already decided every export surface should be."""
     page = render_email_html(report, url=URL)
-    assert INK not in page and IVORY not in page          # no app-chrome ground
+    assert SCREEN.ground not in page and SCREEN.ink not in page   # no lamp-side ground
     assert page.count(f'bgcolor="{PAPER}"') >= 2          # attribute, not only CSS
     assert PAPER_INK in page
     # every colour that carries text is opaque, so a client that repaints the

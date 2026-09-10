@@ -98,6 +98,10 @@ def trade_stats(book: dict, usdkrw: Decimal) -> dict:
         "win_hold_median_days": _med(win_days), "loss_hold_median_days": _med(loss_days),
         "hold_asymmetry": round(statistics.median(loss_days) / statistics.median(win_days), 2) if win_days and loss_days and statistics.median(win_days) > 0 else None,
         "best": ex(*best), "worst": ex(*worst),
+        # Every closed trade, not just the medians of them. A median is a
+        # summary of a distribution and cannot be drawn as one; the scatter and
+        # the cumulative curve both need the trades themselves.
+        "sales": sorted((ex(p, o) for p, o in sells), key=lambda x: x["date"]),
         "top5_share_pct": round(sum(sorted(pos, reverse=True)[:5]) / sum(pos) * 100, 1) if (pos := [k for k in krw if k > 0]) else None,
     }
 
@@ -147,6 +151,7 @@ def timing(fills: list) -> dict:
     wd = Counter(f.at.weekday() for f in fills)
     hr = Counter(f.at.hour for f in fills)
     per_day = Counter(f.at.date() for f in fills)
+    slot = Counter((f.at.weekday(), f.at.hour) for f in fills)
     kr_open = sum(1 for f in fills if f.currency == "KRW" and 9 <= f.at.hour < 10)
     kr = sum(1 for f in fills if f.currency == "KRW")
     us_night = sum(1 for f in fills if f.currency == "USD" and (f.at.hour >= 22 or f.at.hour < 6))
@@ -156,6 +161,10 @@ def timing(fills: list) -> dict:
         "fills": len(fills),
         "by_weekday": [{"day": _WEEKDAYS[i], "fills": wd.get(i, 0)} for i in range(7)],
         "by_hour": [{"hour": h, "fills": hr.get(h, 0)} for h in range(24)],
+        # The two margins separately cannot show a weekday-hour interaction —
+        # "Friday nights" is invisible in a Friday total and a 22:00 total. The
+        # matrix is 7x24 of small integers, so it costs nothing to carry.
+        "matrix": [[slot.get((d, h), 0) for h in range(24)] for d in range(7)],
         "kr_first_hour_pct": round(kr_open / kr * 100, 1) if kr else None,
         "us_regular_night_pct": round(us_night / us * 100, 1) if us else None,
         "trade_days": len(per_day),
