@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = "https://pivoxquant.com";
+import { SITE_URL } from "@/lib/site-url";
+
+const BASE_URL = SITE_URL;
 
 // Wave C-2 SEO (2026-05-17): `new Date()` per request signalled "every URL
 // updated right now" on every crawl — false freshness that trains Googlebot
@@ -33,6 +35,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // missing — viral acquisition surfaces and unauthenticated demos) ──
     {
       url: `${BASE_URL}/contact`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+
+    // ── Support (2026-09-10: public FAQ + 전자상거래법 §13 business info;
+    // it was reachable and linked from the footer but missing here) ──
+    {
+      url: `${BASE_URL}/support`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.5,
