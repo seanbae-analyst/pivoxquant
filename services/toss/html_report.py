@@ -4,8 +4,9 @@ Same dict :func:`services.toss.mirror_report.build_mirror_report` returns,
 drawn instead of tabulated: weights and returns as one row per holding,
 the account's path as a timeline of every fill, the two mirror columns
 side by side. Design tokens are the product's v3 set (Vantablack ground,
-bronze accent, KR red-up / blue-down, Playfair for the headline figures)
-so the page reads as the same product as /mirror.
+bronze accent, carmine-rise / indigo-fall, and the same four type roles:
+Playfair to display, Source Serif to caption, Geist with Pretendard to read,
+JetBrains Mono to count) so the page reads as the same product as /mirror.
 
 No JavaScript beyond nothing — every chart is inline SVG computed here,
 hover detail rides on ``<title>``. No external asset but the fonts.
@@ -15,6 +16,7 @@ never derives a new one.
 from __future__ import annotations
 
 import html
+import re
 from datetime import date
 
 # ── v3 tokens (frontend/src/app/globals.css) ─────────────────────────────────
@@ -23,30 +25,42 @@ ONYX = "#111111"
 IVORY = "#F5F0E8"
 BRONZE = "#B8956A"
 BRONZE_LIGHT = "#A3845C"
-UP = "#D18888"     # KR convention: red = gain
-DOWN = "#7AA0C8"   # KR convention: blue = loss
+# --up / --down (globals.css :root) and lib/format.ts PRICE_COLOR_HEX carry the
+# same two values. Per the 2026-04-26 directive the Korean convention applies to
+# KR and US symbols alike, in muted carmine and indigo rather than RGB primaries,
+# so the pair sits inside the bronze palette instead of fighting it. (The
+# identical --pq-terminal-up / --pq-terminal-down are defined but unused.)
+UP = "#D18888"     # KR carmine — rise
+DOWN = "#7AA0C8"   # KR indigo — fall
 
 _CSS = f"""
 :root {{ --ink:{INK}; --onyx:{ONYX}; --ivory:{IVORY}; --ivory-soft:rgba(245,240,232,.78); --ivory-dim:rgba(245,240,232,.55);
   --ivory-faint:rgba(245,240,232,.45); --line:rgba(245,240,232,.08); --line-soft:rgba(245,240,232,.05); --veil:rgba(245,240,232,.04);
   --bronze:{BRONZE}; --bronze-light:{BRONZE_LIGHT}; --up:{UP}; --down:{DOWN};
-  --serif:"Playfair Display", Georgia, "Times New Roman", serif; --sans:"Noto Sans KR", Pretendard, -apple-system, system-ui, sans-serif;
+  /* The app's four roles, in its order. Geist carries latin and has no hangul,
+     so Korean falls to Pretendard exactly as it does in the product. Pretendard
+     is served from jsdelivr, which a published artifact's CSP does not admit for
+     stylesheets — there the link fails silently and Noto Sans KR, on the allowed
+     host, takes the Korean. The local file gets the real face. */
+  --display:"Playfair Display", Georgia, "Times New Roman", serif;
+  --serif:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --sans:Geist, "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, system-ui, sans-serif;
   --mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }}
 html {{ color-scheme: dark; }}
 body {{ margin:0; background:var(--ink); color:var(--ivory); font-family:var(--sans); font-size:14px; line-height:1.6; padding-block:40px 64px; padding-inline:20px; -webkit-font-smoothing:antialiased; }}
 .wrap {{ max-width:720px; margin:0 auto; }}
 .eyebrow {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--bronze); }}
-h1 {{ font-family:var(--serif); font-weight:400; font-size:clamp(28px,6vw,40px); line-height:1.15; margin:8px 0 6px; text-wrap:balance; }}
+h1 {{ font-family:var(--display); font-weight:400; font-size:clamp(28px,6vw,40px); line-height:1.15; margin:8px 0 6px; text-wrap:balance; }}
 .meta {{ font-family:var(--mono); font-size:11px; color:var(--ivory-dim); }}
-h2 {{ font-family:var(--serif); font-weight:400; font-size:22px; margin:0 0 4px; }}
+h2 {{ font-family:var(--display); font-weight:400; font-size:22px; margin:0 0 4px; }}
 section {{ padding-block:28px; border-top:1px solid var(--line); }}
 section:first-of-type {{ border-top:0; }}
-.lede {{ color:var(--ivory-soft); font-size:13px; margin:0 0 18px; max-width:62ch; }}
+.lede {{ font-family:var(--serif); color:var(--ivory-soft); font-size:13.5px; margin:0 0 18px; max-width:62ch; }}
 .tiles {{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--line); border:1px solid var(--line); margin-top:20px; }}
 @media (min-width:560px) {{ .tiles {{ grid-template-columns:repeat(4,1fr); }} }}
 .tile {{ background:var(--ink); padding:16px 14px 14px; }}
 .tile .k {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ivory-dim); }}
-.tile .v {{ font-family:var(--serif); font-size:24px; line-height:1.1; margin-top:8px; font-variant-numeric:tabular-nums; }}
+.tile .v {{ font-family:var(--display); font-size:24px; line-height:1.1; margin-top:8px; font-variant-numeric:tabular-nums; }}
 .tile .s {{ font-family:var(--mono); font-size:11px; color:var(--ivory-dim); margin-top:6px; }}
 .up {{ color:var(--up); }} .down {{ color:var(--down); }} .dim {{ color:var(--ivory-dim); }}
 .status {{ display:flex; gap:10px; align-items:flex-start; padding:12px 14px; background:var(--veil); border-left:2px solid var(--bronze); font-size:13px; }}
@@ -74,7 +88,7 @@ table.plain td.n {{ text-align:right; font-family:var(--mono); }}
 .legend i {{ display:inline-block; width:10px; height:10px; margin-right:6px; vertical-align:-1px; }}
 h3 {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--bronze); font-weight:400; margin:26px 0 8px; }}
 .heads {{ display:grid; gap:10px; margin:14px 0 6px; }}
-.head {{ margin:0; padding:10px 14px; border-left:2px solid var(--bronze); background:var(--veil); font-family:var(--serif); font-size:16px; line-height:1.5; text-wrap:balance; }}
+.head {{ margin:0; padding:10px 14px; border-left:2px solid var(--bronze); background:var(--veil); font-family:var(--display); font-size:16px; line-height:1.5; text-wrap:balance; }}
 ul.limits {{ margin:0; padding-left:18px; color:var(--ivory-soft); font-size:13px; }}
 .sig {{ margin-top:40px; font-family:var(--serif); font-style:italic; color:var(--ivory-dim); text-align:center; }}
 """
@@ -82,6 +96,13 @@ ul.limits {{ margin:0; padding-left:18px; color:var(--ivory-soft); font-size:13p
 
 def _e(s) -> str:
     return html.escape(str(s if s is not None else ""))
+
+
+def _em(s) -> str:
+    """Escape, then promote the ``**bold**`` the shared reason strings carry for
+    the markdown renderer. Escaping first means the promotion can never introduce
+    a tag the source did not ask for."""
+    return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", _e(s))
 
 
 def _won(v) -> str:
@@ -390,7 +411,7 @@ def _history_status(h: dict) -> str:
                 f'조회 시작 {_e(h["since"] or "전체")} · 첫 체결 {_e(h["first_fill_at"] or "—")} · 체결 {h["fills"]}건. 아래 실현손익은 전체 이력 기준.</div></div>')
     trust = h.get("realised_trustworthy")
     items = "".join(
-        f'<li><strong>{_e(m["symbol"])}</strong> <span class="dim">({_e(_mismatch_qty(m))})</span><br>{_e(m["reason"])}</li>'
+        f'<li><strong>{_e(m["symbol"])}</strong> <span class="dim">({_e(_mismatch_qty(m))})</span><br>{_em(m["reason"])}</li>'
         for m in h["mismatches"])
     verdict = ("주식 수가 바뀐 것뿐이고 들어오거나 나간 주식은 없다 — <strong>실현손익은 그대로 신뢰할 수 있다</strong>."
                if trust else "<strong>실현손익은 이만큼 비어 있다</strong>.")
@@ -405,7 +426,9 @@ def render_mirror_html(rep: dict) -> str:
     tiles = [
         ("주식 평가액", _won(v["equity_value_krw"]), f"국내 {_won(v['krw_leg'])} · 해외 ${(v['usd_leg'] or 0):,.2f}", ""),
         ("미실현", _won(v["unrealised_krw"]), f"매입 {_won(v['purchase_total_krw'])} 대비 {_pct(v['unrealised_rate_pct'])}", _cls(v["unrealised_krw"])),
-        ("실현 누계", _won(h["realised_net_krw"]), ("전체 이력 · 수수료·세금 차감" if h["complete"] else "부분 이력 · 수수료·세금 차감"), _cls(h["realised_net_krw"])),
+        ("실현 누계", _won(h["realised_net_krw"]),
+         ("전체 이력 · 수수료·세금 차감" if h.get("realised_trustworthy", h["complete"]) else "부분 이력 · 수수료·세금 차감"),
+         _cls(h["realised_net_krw"])),
         ("오늘", _won(v["daily_krw"]), _pct(v["daily_rate_pct"]), _cls(v["daily_krw"])),
     ]
     tiles_html = "".join(f'<div class="tile"><div class="k">{_e(k)}</div><div class="v {cl}">{_e(val)}</div><div class="s">{_e(s)}</div></div>' for k, val, s, cl in tiles)
@@ -427,7 +450,9 @@ def render_mirror_html(rep: dict) -> str:
 
     return f"""<title>PivoxReport {acct}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Noto+Sans+KR:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;1,8..60,400&family=Geist:wght@400;500&family=Noto+Sans+KR:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>{_CSS}</style>
 <div class="wrap">
 <header>
