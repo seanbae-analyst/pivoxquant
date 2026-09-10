@@ -127,14 +127,16 @@ def _naked_ticker(name_val: str | None, ticker: str) -> bool:
 def _run_psycopg2(db_url: str) -> list[dict]:
     import psycopg2  # type: ignore
 
-    conn = psycopg2.connect(db_url)
-    cur = conn.cursor()
-
-    # signal_cache 에서 name 필드 추출
-    cur.execute("SELECT ticker, data_json FROM signal_cache")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    conn = psycopg2.connect(db_url, connect_timeout=10)
+    try:
+        # signal_cache 에서 name 필드 추출
+        with conn.cursor() as cur:
+            cur.execute("SELECT ticker, data_json FROM signal_cache")
+            rows = cur.fetchall()
+    finally:
+        # 쿼리가 실패해도 닫는다 — 이 잡은 웹 프로세스 안에서 돌고, Supabase 세션
+        # 풀러는 클라이언트 15개가 한도다 (2026-09-11).
+        conn.close()
 
     missing: list[dict] = []
     for ticker, data_json_raw in rows:

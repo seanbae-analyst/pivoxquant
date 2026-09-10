@@ -222,19 +222,22 @@ def _check_artifact_solicitation(db_url: str) -> list[str]:
 
     try:
         import psycopg2  # type: ignore
-        conn = psycopg2.connect(db_url)
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT id, title, data_json
-            FROM artifacts
-            WHERE created_at >= NOW() - INTERVAL '24 hours'
-            LIMIT 200
-            """
-        )
-        _scan_rows(cur.fetchall())
-        cur.close()
-        conn.close()
+        conn = psycopg2.connect(db_url, connect_timeout=10)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, title, data_json
+                    FROM artifacts
+                    WHERE created_at >= NOW() - INTERVAL '24 hours'
+                    LIMIT 200
+                    """
+                )
+                _scan_rows(cur.fetchall())
+        finally:
+            # 쿼리가 실패해도 닫는다 — 이 잡은 웹 프로세스 안에서 돌고, Supabase 세션
+            # 풀러는 클라이언트 15개가 한도다 (2026-09-11).
+            conn.close()
         return hits
     except ImportError:
         pass
