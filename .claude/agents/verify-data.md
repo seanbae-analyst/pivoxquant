@@ -5,11 +5,11 @@ model: sonnet
 effort: high
 tools:
   - Bash
-  - mcp__Claude_in_Chrome__tabs_context_mcp
-  - mcp__Claude_in_Chrome__navigate
-  - mcp__Claude_in_Chrome__read_page
-  - mcp__Claude_in_Chrome__get_page_text
-  - mcp__Claude_in_Chrome__javascript_tool
+  - mcp__claude-in-chrome__tabs_context_mcp
+  - mcp__claude-in-chrome__navigate
+  - mcp__claude-in-chrome__read_page
+  - mcp__claude-in-chrome__get_page_text
+  - mcp__claude-in-chrome__javascript_tool
   - WebFetch
   - Read
   - Grep
