@@ -37,7 +37,9 @@
 ./venv/bin/python scripts/pivox_report.py --from-raw /tmp/raw.json   # 네트워크 없이 재렌더
 ```
 
-`reports/personal/` 은 gitignore 다.
+`reports/personal/` 은 gitignore 다. 같은 이름의 **`.html`** 도 함께 떨어진다 — 브라우저로 열면
+보유 비중·손익 막대, 경로 타임라인(매수 ▲ 매도 ▼), 거울 두 열이 그려진다. 서버 없음, 단일
+파일, 스크립트 없음. 디자인 토큰은 v3 그대로 (`services/toss/html_report.py` 상단).
 
 ## 리포트 구성 (v2, 2026-09-10 — 실계좌 첫 실행 뒤 재구성)
 

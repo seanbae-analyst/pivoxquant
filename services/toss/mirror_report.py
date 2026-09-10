@@ -215,6 +215,13 @@ def build_mirror_report(
         "window_days": window_days,
         "holdings": _holding_histories(book, val["holdings"], as_of_naive),
         "departed": _departed(book, held, names, usdkrw),
+        # Every fill, for the timeline chart: purchases and sales as they happened.
+        "fills_for_chart": [
+            {"symbol": f.symbol, "date": f.at.date().isoformat(), "side": "in" if f.side == "BUY" else "out",  # // legal-ok — Toss enum, compared only
+             "qty": float(f.quantity), "price": float(f.price),
+             "pnl_pct": next((round(o.pnl_pct, 2) for pp in book.values() for o in pp.sell_outcomes if o.fill.order_id == f.order_id), None)}
+            for f in fills
+        ],
         "open_orders": len(open_orders or []),
         "limits": [
             "평가액은 KR·US 주식만 — 예수금·옵션·채권은 holdings 응답에 없음",

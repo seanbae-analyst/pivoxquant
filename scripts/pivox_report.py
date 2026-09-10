@@ -5,7 +5,8 @@
 -----------
 1. ``TOSS_CLIENT_ID`` / ``TOSS_CLIENT_SECRET`` 로 토큰을 받고
 2. 계좌 목록 → 보유 주식 → 최근 N일 종료 주문 → 대기 주문 → 환율을 **GET 으로만** 읽어
-3. ``services/toss/report.py`` 로 계산한 뒤 markdown + json 을 ``reports/personal/`` 에 쓴다.
+3. ``services/toss/mirror_report.py`` 로 계산한 뒤 markdown + json + **html(차트 포함, 단일 파일)** 을
+   ``reports/personal/`` 에 쓴다. html 은 브라우저로 열면 된다 — 서버 없음.
 
 주문을 내는 코드는 이 스크립트에도, 클라이언트에도 없다. 토스 토큰은 scope 가
 없어서(같은 토큰으로 주문이 가능하다) 이 프로세스 경계가 유일한 방어선이다 —
@@ -41,6 +42,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.toss.client import TossApiError, TossReadOnlyClient  # noqa: E402
+from services.toss.html_report import render_mirror_html  # noqa: E402
 from services.toss.mirror_report import build_mirror_report, render_mirror_markdown  # noqa: E402
 from services.toss.report import KST  # noqa: E402
 
@@ -149,7 +151,9 @@ def main(argv: list[str] | None = None) -> int:
             fh.write(md)
         with open(stem + ".json", "w", encoding="utf-8") as fh:
             json.dump(report, fh, ensure_ascii=False, indent=2)
-        print(f"wrote {stem}.md / .json", file=sys.stderr)
+        with open(stem + ".html", "w", encoding="utf-8") as fh:
+            fh.write("<!doctype html><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n" + render_mirror_html(report))
+        print(f"wrote {stem}.md / .json / .html", file=sys.stderr)
 
     print(json.dumps(report, ensure_ascii=False, indent=2) if args.json else md)
     return 0
