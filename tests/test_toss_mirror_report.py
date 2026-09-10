@@ -1,0 +1,309 @@
+"""PivoxReport v2 — history reconstruction, reconciliation, and the mirrors,
+on a fixture whose book reconciles to the holdings payload exactly."""
+from __future__ import annotations
+
+import copy
+import json
+import os
+import subprocess
+import sys
+from datetime import datetime
+from decimal import Decimal
+
+import pytest
+
+from services.toss.history import fills_from_orders, reconcile, reconstruct
+from services.toss.mirror_report import build_mirror_report, render_mirror_markdown
+from services.toss.report import KST
+
+FIX = os.path.join(os.path.dirname(__file__), "fixtures", "toss", "sample_raw_history.json")
+
+
+@pytest.fixture
+def raw():
+    with open(FIX, encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def _build(raw):
+    return build_mirror_report(
+        account=raw["account"], holdings=raw["holdings"], closed_orders=raw["closed_orders"],
+        open_orders=raw["open_orders"], fx=raw["fx"], history_since=raw["history_since"],
+        window_days=90, names=raw["names"], prices=raw.get("prices"), as_of=datetime.fromisoformat(raw["fetched_at"]),
+    )
+
+
+# ── history ──────────────────────────────────────────────────────────────────
+def test_fills_are_chronological_and_skip_unfilled_records(raw):
+    fills = fills_from_orders(raw["closed_orders"])
+    assert [f.order_id for f in fills] == ["o1", "o2", "o4", "o3", "o5", "o6", "o7", "o8", "o9"]  # o4 (01-15) precedes o3 (01-20)
+    assert all(f.quantity > 0 for f in fills)
+
+
+def test_average_cost_walk_matches_toss_to_the_won(raw):
+    book = reconstruct(fills_from_orders(raw["closed_orders"]))
+    p = book["005930"]
+    # 10@60000 + 10@70000 → 65,000; sell 8 leaves 12@65,000; +3@62,000 → 966,000 / 15 = 64,400
+    assert p.quantity == Decimal(15) and p.average_cost == Decimal("64400")
+    assert p.buys == 3 and p.sells == 1
+    assert p.opened_at.date().isoformat() == "2025-10-01"
+    sell = p.sell_outcomes[0]
+    assert sell.avg_cost_before == Decimal("65000")
+    assert sell.realised_gross == Decimal("56000") and sell.realised_net == Decimal("53984")
+    assert sell.pnl_pct == pytest.approx(10.77, abs=0.01)
+    assert sell.held_days == pytest.approx(155, abs=1)
+
+
+def test_follow_on_buys_are_classified_against_the_average_at_that_instant(raw):
+    book = reconstruct(fills_from_orders(raw["closed_orders"]))
+    rel = [(b.fill.order_id, b.follow_on, b.relation) for b in book["005930"].buy_outcomes]
+    assert rel == [("o1", False, None), ("o5", True, "above"), ("o9", True, "below")]
+
+
+def test_full_liquidation_resets_the_position(raw):
+    book = reconstruct(fills_from_orders(raw["closed_orders"]))
+    nvda = book["NVDA"]
+    assert nvda.quantity == 0 and nvda.opened_at is None and nvda.average_cost is None
+    assert nvda.sell_outcomes[0].pnl_pct == pytest.approx(-16.67, abs=0.01)
+
+
+def test_reconcile_passes_when_the_book_equals_the_holdings(raw):
+    book = reconstruct(fills_from_orders(raw["closed_orders"]))
+    r = reconcile(book, raw["holdings"]["items"])
+    assert r == {"complete": True, "realised_trustworthy": True, "checked": 2, "mismatches": []}
+
+
+def test_reconcile_names_the_symbol_when_history_starts_too_late(raw):
+    orders = [o for o in raw["closed_orders"] if o["orderId"] != "o1"]   # lose the first 삼성전자 buy
+    book = reconstruct(fills_from_orders(orders))
+    r = reconcile(book, raw["holdings"]["items"])
+    assert r["complete"] is False
+    assert {m["symbol"] for m in r["mismatches"]} == {"005930"}
+    # Both the share count and the money are short, so shares are genuinely missing.
+    assert r["mismatches"][0]["kind"] == "quantity"
+    assert r["realised_trustworthy"] is False
+
+
+def test_reconcile_flags_a_symbol_held_but_absent_from_history(raw):
+    book = reconstruct(fills_from_orders([o for o in raw["closed_orders"] if o["symbol"] != "AAPL"]))
+    r = reconcile(book, raw["holdings"]["items"])
+    assert [m["symbol"] for m in r["mismatches"]] == ["AAPL"]
+    assert r["mismatches"][0]["kind"] == "absent"
+    assert r["realised_trustworthy"] is False
+
+
+# ── report ───────────────────────────────────────────────────────────────────
+def test_realised_total_is_the_fee_adjusted_sum_in_krw(raw):
+    rep = _build(raw)
+    # 삼성전자 +53,984 · NAVER +38,460 · NVDA −100.5 USD × 1380.5 = −138,740
+    assert rep["history"]["complete"] is True
+    assert rep["history"]["realised_net_krw"] == pytest.approx(53984 + 38460 - 138740, abs=1)
+
+
+def test_recent_window_keeps_the_full_history_cost_basis(raw):
+    m = _build(raw)["mirrors"]
+    w, a = m["window"], m["all"]
+    # 90 days back from 2026-09-10: the 07-01 NAVER sell and the 08-06 삼성전자 add. The add is a
+    # follow-on below the 65,000 average even though its first lot is outside the window.
+    assert (w["turnover"]["buy_count"], w["turnover"]["sell_count"]) == (1, 1)
+    assert (w["follow_on"]["follow_on_count"], w["follow_on"]["below_avg_count"]) == (1, 1)
+    assert w["profit_loss"]["take_profit"]["count"] == 1 and w["profit_loss"]["stop_loss"] is None
+    # Whole history: the product's own functions.
+    assert (a["turnover"]["buy_count"], a["turnover"]["sell_count"]) == (6, 3)
+    assert (a["follow_on"]["below_avg_count"], a["follow_on"]["above_avg_count"]) == (1, 1)
+    assert a["profit_loss"]["take_profit"]["count"] == 2 and a["profit_loss"]["stop_loss"]["count"] == 1
+
+
+def test_holdings_carry_their_history_and_departed_carry_realised(raw):
+    rep = _build(raw)
+    by = {h["symbol"]: h for h in rep["holdings"]}
+    assert by["005930"]["opened_at"] == "2025-10-01" and by["005930"]["buys"] == 3 and by["005930"]["rebuilt_avg"] == 64400
+    assert by["AAPL"]["held_days"] == 238 or by["AAPL"]["held_days"] == 237
+    dep = {d["symbol"]: d for d in rep["departed"]}
+    assert set(dep) == {"NVDA", "035420"}
+    assert dep["035420"]["name"] == "NAVER" and dep["035420"]["realised_net_krw"] == 38460
+    assert dep["NVDA"]["realised_net"] == -100.5
+
+
+def test_incomplete_history_is_said_in_the_first_lines(raw):
+    r2 = copy.deepcopy(raw)
+    r2["closed_orders"] = [o for o in r2["closed_orders"] if o["orderId"] != "o1"]
+    rep = _build(r2)
+    md = render_mirror_markdown(rep)
+    assert rep["history"]["complete"] is False
+    assert "종목에서 다르다" in md and "005930" in md.split("## 평가")[0]
+    assert "부분" in rep["history"]["realised_scope"]
+
+
+def test_markdown_has_no_grading_vocabulary_and_no_index(raw):
+    md = render_mirror_markdown(_build(raw))
+    for word in ("추천", "조언", "권유", "recommend", "advice", "물타기", "HHI", "회전율", "과잉", "편향", "처분효과", "점수"):
+        assert word not in md, word
+    assert "토스 잔고와 전부 일치" in md
+    assert "삼성전자 (005930)" in md and "엔비디아 (NVDA)" in md
+    assert "12345678901" not in md
+
+
+def test_cli_renders_v2_from_raw_without_network(tmp_path):
+    out = tmp_path / "out"
+    proc = subprocess.run(
+        [sys.executable, "scripts/pivox_report.py", "--from-raw", FIX, "--out", str(out), "--json"],
+        capture_output=True, text=True, cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        env={**os.environ, "TOSS_CLIENT_ID": "", "TOSS_CLIENT_SECRET": "", "RUN_SCHEDULER": "0", "POPULATE_CACHE_ON_BOOT": "0"},
+    )
+    assert proc.returncode == 0, proc.stderr
+    rep = json.loads(proc.stdout)
+    assert rep["version"] == 2 and rep["history"]["complete"] is True
+    assert (out / "pivox_report_2026-09-10.md").exists()
+
+
+def test_analysis_numbers_follow_from_the_book(raw):
+    an = _build(raw)["analysis"]
+    t, a, af = an["trades"], an["attribution"], an["after_selling"]
+    assert (t["closed"], t["wins"], t["losses"], t["win_rate_pct"]) == (3, 2, 1, 66.7)
+    assert t["expectancy_krw"] == round((53984 + 38460 - 138740) / 3)
+    assert t["top5_share_pct"] == 100.0                     # two wins, both in the top five
+    assert a["total_krw"] == a["realised_krw"] + a["unrealised_krw"]
+    assert [r["symbol"] for r in a["bottom"]] == ["NVDA"]   # only symbols that lost money
+    assert a["top"][0]["name"] == "Apple Inc."
+    # After selling: NVDA sold at 100, now 130 → 5 shares × 30 × 1380.5; NAVER sold 220,000, now 210,000
+    by = {r["symbol"]: r for r in af["rows"]}
+    assert by["NVDA"]["since_sale_pct"] == 30.0 and by["NVDA"]["kept_delta_krw"] == 5 * 30 * 1380.5
+    assert by["035420"]["kept_delta_krw"] == -20000
+    assert af["kept_delta_krw"] == by["NVDA"]["kept_delta_krw"] + by["035420"]["kept_delta_krw"]
+    assert len(an["headline"]) == 3 and all("₩" in h or "%" in h for h in an["headline"])
+
+
+def test_analysis_without_prices_skips_after_selling_instead_of_guessing(raw):
+    r2 = copy.deepcopy(raw)
+    r2["prices"] = {}
+    rep = build_mirror_report(
+        account=r2["account"], holdings=r2["holdings"], closed_orders=r2["closed_orders"], open_orders=[],
+        fx=r2["fx"], history_since=r2["history_since"], names=r2["names"], prices={},
+        as_of=datetime.fromisoformat(r2["fetched_at"]),
+    )
+    assert rep["analysis"]["after_selling"] == {"available": False, "rows": []}
+    assert "현재가를 받지 못해" in render_mirror_markdown(rep)
+
+
+def test_asymmetry_phrase_never_reports_a_ratio_below_one():
+    from services.toss.analysis import asymmetry_phrase
+    assert asymmetry_phrase(3.2) == "손실 쪽이 3.2배 길다"
+    assert asymmetry_phrase(0.5) == "이익 쪽이 2.0배 길다"
+
+
+def _order(oid, sym, side, qty, px, at, cur="USD"):
+    return {"orderId": oid, "symbol": sym, "side": side, "status": "FILLED", "currency": cur,
+            "orderedAt": at, "execution": {"filledQuantity": str(qty), "averageFilledPrice": str(px),
+                                           "filledAmount": str(qty * px), "commission": "0", "tax": "0", "filledAt": at}}
+
+
+def test_share_count_change_that_preserves_cost_is_not_read_as_missing_shares():
+    """A reverse split rewrites the share count and leaves the money alone.
+    177 × 6.3251 == 11 × 101.7771; nothing entered or left the account."""
+    book = reconstruct(fills_from_orders([_order("s1", "ABTC", "BUY", 177, 6.3251, "2025-09-19T23:30:00+09:00")]))
+    holdings = [{"symbol": "ABTC", "quantity": "11", "averagePurchasePrice": "101.7771"}]
+    r = reconcile(book, holdings)
+    m = r["mismatches"][0]
+    assert m["kind"] == "share_count_changed"
+    assert m["ratio"] == pytest.approx(16.09, abs=0.01)
+    assert "들어오거나 나간 주식은 없다" in m["reason"]
+    # The money is intact, so the realised figures stand.
+    assert r["complete"] is False and r["realised_trustworthy"] is True
+
+
+def test_share_count_change_with_a_different_cost_is_read_as_missing_shares():
+    book = reconstruct(fills_from_orders([_order("s1", "ABTC", "BUY", 177, 6.3251, "2025-09-19T23:30:00+09:00")]))
+    r = reconcile(book, [{"symbol": "ABTC", "quantity": "11", "averagePurchasePrice": "40"}])
+    assert r["mismatches"][0]["kind"] == "quantity"
+    assert r["realised_trustworthy"] is False
+
+
+def test_a_sale_with_no_cost_basis_is_measured_not_just_flagged():
+    """Selling shares the window never saw bought: the hole is reported in shares,
+    and that sale contributes nothing to realised rather than a wrong number."""
+    book = reconstruct(fills_from_orders([
+        _order("x1", "NVDA", "SELL", 4, 100, "2026-01-20T23:30:00+09:00"),
+        _order("x2", "NVDA", "BUY", 2, 80, "2026-02-01T23:30:00+09:00"),
+        _order("x3", "NVDA", "SELL", 2, 90, "2026-03-01T23:30:00+09:00"),
+    ]))
+    p = book["NVDA"]
+    assert p.oversold is True and p.unmatched_sell_qty == 4
+    assert len(p.sell_outcomes) == 1 and p.sell_outcomes[0].pnl_pct == pytest.approx(12.5)
+    r = reconcile(book, [])
+    m = r["mismatches"][0]
+    assert m["kind"] == "unmatched_sales" and m["unmatched_sell_qty"] == 4
+    assert "부풀리지 않음" in m["reason"] and r["realised_trustworthy"] is False
+
+
+def test_a_position_watched_opening_from_zero_cannot_be_missing_purchases():
+    """ABTC on the live account: 177 shares bought from zero inside the window,
+    11 reported. Every purchase is present, so the count was rewritten by an
+    event the order history does not carry — and widening --since cannot help.
+    The cost basis does not carry over cleanly, which is said rather than hidden."""
+    book = reconstruct(fills_from_orders([
+        # an earlier round trip that closes to zero — this is what makes the
+        # later re-open observed rather than merely the first fill in view
+        _order("a0a", "ABTC", "BUY", 386, 1.36, "2025-05-20T23:30:00+09:00"),
+        _order("a0b", "ABTC", "SELL", 386, 1.55, "2025-08-29T23:30:00+09:00"),
+        _order("a1", "ABTC", "BUY", 62, 7.51, "2025-09-19T23:30:00+09:00"),
+        _order("a2", "ABTC", "BUY", 48, 6.97, "2025-09-24T23:30:00+09:00"),
+        _order("a3", "ABTC", "BUY", 56, 6.22, "2025-10-11T23:30:00+09:00"),
+        _order("a4", "ABTC", "BUY", 11, 4.77, "2025-10-21T23:30:00+09:00"),
+    ]))
+    assert book["ABTC"].quantity == 177 and book["ABTC"].sells_since_open == 0
+    assert book["ABTC"].opened_from_observed_zero is True
+    r = reconcile(book, [{"symbol": "ABTC", "quantity": "11", "averagePurchasePrice": "101.777118"}])
+    m = r["mismatches"][0]
+    assert m["kind"] == "share_count_changed" and m["cost_preserved"] is False
+    assert m["ratio"] == pytest.approx(16.09, abs=0.01)
+    assert "--since 를 넓혀도 닫히지 않는다" in m["reason"]
+    assert "매도가 없어 실현손익은 영향받지 않았다" in m["reason"]
+    assert r["realised_trustworthy"] is True
+
+
+def test_a_sale_after_the_event_is_called_out_as_possibly_misscaled():
+    book = reconstruct(fills_from_orders([
+        _order("b0a", "ABTC", "BUY", 50, 2.0, "2025-05-20T23:30:00+09:00"),
+        _order("b0b", "ABTC", "SELL", 50, 2.5, "2025-08-29T23:30:00+09:00"),
+        _order("b1", "ABTC", "BUY", 100, 6.0, "2025-09-19T23:30:00+09:00"),
+        _order("b2", "ABTC", "SELL", 20, 7.0, "2025-10-19T23:30:00+09:00"),
+    ]))
+    r = reconcile(book, [{"symbol": "ABTC", "quantity": "5", "averagePurchasePrice": "120"}])
+    assert book["ABTC"].sells_since_open == 1
+    m = r["mismatches"][0]
+    assert m["kind"] == "share_count_changed" and m["straddled"] is True
+    assert "다른 눈금으로 계산됐을 수 있다" in m["reason"]
+
+
+def test_sub_share_residue_is_read_as_fractional_dust_not_a_history_gap():
+    """TSLA on the live account: 0.024 shares sold with no cost basis. A missing
+    purchase cannot be a fortieth of a share; this is rounding residue."""
+    book = reconstruct(fills_from_orders([
+        _order("d1", "TSLA", "SELL", 0.024334, 341.0, "2024-11-22T23:30:00+09:00"),
+        _order("d2", "TSLA", "SELL", 0.00008, 355.0, "2025-02-18T23:30:00+09:00"),
+    ]))
+    r = reconcile(book, [])
+    m = r["mismatches"][0]
+    assert m["kind"] == "fractional_dust"
+    assert m["unmatched_sell_qty"] == pytest.approx(0.024414, abs=1e-6)
+    assert m["unmatched_sell_value"] == pytest.approx(8.33, abs=0.01)
+    assert "한 주에 못 미치므로" in m["reason"]
+    # Pocket change does not put ₩5m of realised P&L in doubt.
+    assert r["realised_trustworthy"] is True
+
+
+def test_a_whole_share_sold_without_a_basis_is_still_a_gap():
+    book = reconstruct(fills_from_orders([_order("g1", "TSLA", "SELL", 3, 341.0, "2024-11-22T23:30:00+09:00")]))
+    r = reconcile(book, [])
+    assert r["mismatches"][0]["kind"] == "unmatched_sales"
+    assert r["realised_trustworthy"] is False
+
+
+def test_the_first_purchase_in_view_is_not_treated_as_a_watched_opening():
+    """A window that starts mid-position sees a purchase first and cannot tell
+    that from a genuine opening. Only a liquidation we processed proves it."""
+    book = reconstruct(fills_from_orders([_order("f1", "ABTC", "BUY", 177, 6.78, "2025-09-19T23:30:00+09:00")]))
+    assert book["ABTC"].opened_from_observed_zero is False
+    r = reconcile(book, [{"symbol": "ABTC", "quantity": "11", "averagePurchasePrice": "40"}])
+    assert r["mismatches"][0]["kind"] == "quantity"

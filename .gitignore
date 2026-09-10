@@ -97,3 +97,7 @@ instance/
 
 # Local-only secret material (Supabase DB password, etc). Never commit.
 .secrets/
+
+# PivoxReport — own-account Toss reports (scripts/pivox_report.py). Holdings
+# detail inside; account number is masked but the rest is personal. Local only.
+reports/personal/
