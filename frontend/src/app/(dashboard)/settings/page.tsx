@@ -6,30 +6,32 @@
  * Source of truth: `frontend/design-mockups/settings-v2/{mockup.html, SPEC.md, MIGRATION.md}`.
  * Sole /settings surface — the legacy variant was deleted 2026-08-30.
  *
- * 5 sections (sticky anchor rail):
- *   A · Identity & security      (SettingsIdentityCardV2 + SignInProvidersCard)
- *   B · Brokers · BYOK · RO      (BrokerCardV2 — wraps KisCard v1)
- *   C · Notifications matrix     (NotificationsMatrix + Push/Email sub-cards)
- *   D · Subscription · Stripe    (SubscriptionCardV2)
- *   E · Privacy · PIPA · GDPR    (PrivacyCardV2 — Cookie/Export/Danger zone)
+ * 3 sections (sticky anchor rail):
+ *   A · Identity & security      (SettingsIdentityCardV2 + SignInProvidersCard + CapitalCardV2)
+ *   B · Notifications            (NotificationsMatrix + Push/Email/Marketing sub-cards)
+ *   C · Privacy · PIPA           (PrivacyCardV2 — Consent/Export/Sign out)
  *
- * Reused (zero-modification imports):
- *   KisCard · KisConnectModal
- *   ModalShell · LivingCFOStatusBar · FootSignature · ErrorBoundary
- *
- * 11 CEO settings features mapped per MIGRATION §1; 6 GAPs surfaced as UI
- * with graceful fallbacks (mailto / localStorage / "TBD" hint).
+ * 2026-09-10 — removed three things that did nothing for a user:
+ *   - Brokers: broker linking is not offered, so the section was one
+ *     sentence saying so.
+ *   - Subscription: billing is off for the free beta. The card listed
+ *     "Broker sync" as a Pro perk while this page said linking is not
+ *     offered, listed the Mirror as Pro while everyone has it, and gave free
+ *     users a "Manage billing" button that called the disabled portal.
+ *   - Sign-in "Disconnect": there is no backend endpoint; the button only
+ *     toasted "not supported".
+ * The element ids (section-a / -c / -e) are kept so existing deep links
+ * still land; only the visible letters changed. Bring a section back only
+ * together with the thing it controls.
  *
  * Legal: persona vocabulary only. POSITIVE / NEGATIVE / NEUTRAL — never BUY/SELL.
  */
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import useSWR from "swr";
 import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth";
-import { useBrokerConnections } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useLocale } from "@/lib/locale";
@@ -44,135 +46,23 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 
-import { KisCard } from "@/components/broker/kis-card";
-import { KisConnectModal } from "@/components/broker/kis-connect-modal";
 
 import { SettingsHeroV2 } from "@/components/settings/v2/settings-hero-v2";
 import { AnchorRail } from "@/components/settings/v2/anchor-rail";
 import { SettingsIdentityCardV2 } from "@/components/settings/v2/identity-card-v2";
 import { SignInProvidersCard } from "@/components/settings/v2/signin-providers-card";
 import { CapitalCardV2 } from "@/components/settings/v2/capital-card-v2";
-import { BrokerCardV2 } from "@/components/settings/v2/broker-card-v2";
 import { NotificationsMatrix } from "@/components/settings/v2/notifications-matrix";
 import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
-import { SubscriptionCardV2 } from "@/components/settings/v2/subscription-card-v2";
 import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
 
-// 2026-05-17: keys aligned with backend `routes/billing.py:372` which
-// actually returns `subscription_tier` / `subscription_status` /
-// `has_active_subscription`. The old `tier` / `status` shape never
-// matched, so `subData?.tier` always evaluated `undefined`. The
-// fallback chain (`user?.subscription_tier || subData?.tier || "free"`)
-// silently masked the bug because `user` SWR almost always loads
-// first; but in cold-start or a user-SWR error the tier would lock
-// to "free" regardless of the real subscription. `tier` / `status`
-// kept as optional aliases so any other transitional consumer still
-// type-checks until it's swept.
-interface SubscriptionResponse {
-  subscription_tier?: string;
-  subscription_status?: string;
-  has_active_subscription?: boolean;
-  tier?: string;
-  status?: string;
-  current_period_end?: string;
-  cancel_at_period_end?: boolean;
-}
-
-const fetcher = async (url: string): Promise<SubscriptionResponse> => {
-  const r = await fetch(url, { credentials: "include" });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
-};
-
-/**
- * DORMANT since 237a1b67 — see onboarding/broker/page.tsx for the full reason.
- * KIS partnership is unavailable to non-licensed firms and Toss's Open API
- * terms §5② forbid sharing the app key, so the connect surface is withheld
- * rather than deleted. Section B keeps its anchor (#section-b, wired from
- * AnchorRail and the settings hero) and states what is actually true.
- */
-const BROKER_LINKING_AVAILABLE = false;
 
 export default function SettingsPageV2() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
   const { locale, setLocale } = useLocale();
 
-  /* ── Subscription ── */
-  const { data: subData } = useSWR<SubscriptionResponse>(
-    API.billing.subscription,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000 },
-  );
-  // Prefer the canonical backend key (`subscription_tier`) but keep the
-  // legacy `tier` alias as a fallback so any half-deployed env doesn't
-  // regress mid-rollout. 2026-05-17 — Wave 8 schema alignment.
-  const tier = (
-    user?.subscription_tier ||
-    subData?.subscription_tier ||
-    subData?.tier ||
-    "free"
-  ).toLowerCase();
-  // founding_lifetime / premium_plus carry every premium entitlement on the
-  // backend (PAID_TIERS_* frozensets) — omitting them here fell through to
-  // "free", hiding Billing/Cancel/Receipt UI from the highest-tier users.
-  // Same tier-drift bug class fixed in reports/_v2 (toUiTier) on 2026-06-11.
-  const currentTier: "free" | "pro" | "premium" =
-    tier === "pro" || tier === "operator"
-      ? "pro"
-      : tier === "premium" || tier === "partner" || tier === "premium_plus" || tier === "founding_lifetime"
-        ? "premium"
-        : "free";
-
   const { t } = useLocale();
-  const renewalLine = React.useMemo(() => {
-    if (!subData?.current_period_end) return null;
-    if (currentTier === "free") return null;
-    const d = new Date(subData.current_period_end);
-    if (Number.isNaN(d.getTime())) return null;
-    const formatted = d.toLocaleDateString(
-      locale === "ko" ? "ko-KR" : "en-US",
-      { day: "2-digit", month: "short", year: "numeric" },
-    );
-    return subData.cancel_at_period_end
-      ? `${t("settings.subscription.cancelsOn")} ${formatted}`
-      : `${t("settings.subscription.renewsOn")} ${formatted}`;
-  }, [subData, currentTier, locale, t]);
-
-  /* ── Brokers ── */
-  const { data: brokerData, mutate: refreshBrokers } = useBrokerConnections();
-  const [kisModalOpen, setKisModalOpen] = React.useState(false);
-  const [kisSyncing, setKisSyncing] = React.useState(false);
-  const [kisDisconnecting, setKisDisconnecting] = React.useState(false);
-
-  const handleKisSync = React.useCallback(async () => {
-    setKisSyncing(true);
-    try {
-      await apiFetch(API.broker.kisSync, { method: "POST" });
-      await refreshBrokers();
-      toast.success(t("settingsV2.toast.kisSynced"));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("settingsV2.toast.kisSyncFailed"));
-    } finally {
-      setKisSyncing(false);
-    }
-  }, [refreshBrokers, t]);
-
-  const handleKisDisconnect = React.useCallback(async () => {
-    if (typeof window !== "undefined" && !window.confirm(t("settingsV2.toast.kisDisconnectConfirm"))) {
-      return;
-    }
-    setKisDisconnecting(true);
-    try {
-      await apiFetch(API.broker.kisDisconnect, { method: "DELETE" });
-      await refreshBrokers();
-      toast.success(t("settingsV2.toast.kisDisconnected"));
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("settingsV2.toast.kisDisconnectFailed"));
-    } finally {
-      setKisDisconnecting(false);
-    }
-  }, [refreshBrokers, t]);
 
   /* ── Push (C1) ── */
   const [pushEnabled, setPushEnabled] = React.useState(false);
@@ -286,32 +176,6 @@ export default function SettingsPageV2() {
     }
   }, [emailEnabled, t]);
 
-  /* ── Subscription actions ── */
-  const handleManageBilling = React.useCallback(async () => {
-    try {
-      const r = await apiFetch<{ url: string }>(API.billing.portal, {
-        method: "POST",
-      });
-      if (r.url && typeof window !== "undefined") {
-        window.location.href = r.url;
-      }
-    } catch {
-      toast.error(t("settingsV2.toast.billingError"));
-    }
-  }, [t]);
-
-  // Wave G-1 Bug #7 (2026-05-18): 전자상거래법 §17 (청약철회 행사 방법 명시
-  // 의무) — 구독 취소 경로가 UI 에 노출되어야 한다. Stripe Customer Portal
-  // 내부에 cancel section 이 있으므로 그쪽으로 redirect. 사용자 confirm 필수.
-  const handleCancelPlan = React.useCallback(async () => {
-    if (typeof window === "undefined") return;
-    const ok = window.confirm(t("settingsV2.toast.cancelConfirm"));
-    if (!ok) return;
-    // Portal 내부 cancel flow 로 redirect — 별도 cancel endpoint 추가는
-    // migration + 환불 처리 책임 분리 필요 (별 PR). 현재는 portal 경유.
-    await handleManageBilling();
-  }, [handleManageBilling, t]);
-
   /* ── Sign in providers (GAP-D) ── */
   const handleProviderConnect = React.useCallback(
     (provider: "google" | "kakao") => {
@@ -323,12 +187,6 @@ export default function SettingsPageV2() {
     },
     [],
   );
-  const handleProviderDisconnect = React.useCallback(() => {
-    // GAP-D: backend disconnect endpoint not present.
-    // Surface a graceful TBD toast pointing the user to support; queued for
-    // resolution per settings-v2/MIGRATION §2.
-    toast.error(t("settingsV2.toast.providerDisconnectUnsupported"));
-  }, [t]);
 
   /* ── Sign out (E3) ── */
   const [signingOut, setSigningOut] = React.useState(false);
@@ -490,7 +348,7 @@ export default function SettingsPageV2() {
       {/* HERO */}
       <SettingsHeroV2 />
 
-      {/* MAIN — sticky rail + 5 sections.
+      {/* MAIN — sticky rail + 3 sections.
           Mobile fix (2026-05-05): the 12-col grid + 2-col AnchorRail makes
           the rail ~57px wide at 375px — unreadable. Hide the rail entirely
           on mobile (a sticky 2-col label list adds no value when the user
@@ -588,7 +446,6 @@ export default function SettingsPageV2() {
                 oauthProvider={user.oauth_provider}
                 email={user.email}
                 onConnect={handleProviderConnect}
-                onDisconnect={handleProviderDisconnect}
               />
             </div>
 
@@ -599,63 +456,6 @@ export default function SettingsPageV2() {
             <div style={{ marginTop: 12 }}>
               <CapitalCardV2 />
             </div>
-          </section>
-
-          {/* SECTION B — Brokers
-              `id="section-b"` anchor required by AnchorRail (2026-04-28 fix).
-              Without it, /settings#section-b URL changes but no scroll. */}
-          <section
-            id="section-b"
-            style={{ scrollMarginTop: 96 }}
-            aria-label="Brokers"
-          >
-            {BROKER_LINKING_AVAILABLE ? (
-              <BrokerCardV2
-                kisSlot={
-                  <KisCard
-                    connected={Boolean(brokerData?.kis_connected)}
-                    lastSync={brokerData?.kis_last_sync ?? null}
-                    onConnect={() => setKisModalOpen(true)}
-                    onSync={handleKisSync}
-                    onDisconnect={handleKisDisconnect}
-                    syncing={kisSyncing}
-                    disconnecting={kisDisconnecting}
-                  />
-                }
-              />
-            ) : (
-              <div
-                style={{
-                  border: "1px solid var(--pq-ivory-line)",
-                  borderRadius: 4,
-                  padding: 24,
-                }}
-              >
-                <span
-                  className="font-mono uppercase"
-                  style={{
-                    fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.2em",
-                    color: "var(--pq-ivory-dim)",
-                  }}
-                >
-                  B · Brokers
-                </span>
-                <p
-                  className="font-serif"
-                  style={{
-                    fontSize: "var(--pq-text-body)",
-                    lineHeight: 1.6,
-                    color: "var(--pq-ivory-muted)",
-                    margin: "12px 0 0",
-                    maxWidth: 620,
-                  }}
-                >
-                  증권사 계좌 연결은 제공하지 않습니다. 보유 종목은 포트폴리오에서
-                  직접 입력해 관리합니다.
-                </p>
-              </div>
-            )}
           </section>
 
           {/* SECTION C — Notifications */}
@@ -710,7 +510,7 @@ export default function SettingsPageV2() {
               }}
               className="pq-section-c-grid"
             >
-              {/* C1 · Push device permission */}
+              {/* B1 · Push device permission */}
               <div
                 style={{
                   background: "rgba(255,255,255,0.02)",
@@ -822,7 +622,7 @@ export default function SettingsPageV2() {
                 </div>
               </div>
 
-              {/* C2 · Email delivery */}
+              {/* B2 · Email delivery */}
               <div
                 style={{
                   background: "rgba(255,255,255,0.02)",
@@ -929,28 +729,13 @@ export default function SettingsPageV2() {
               </div>
             </div>
 
-            {/* C3 · Marketing-consent record (정통망법 §50 ① · PR #73 backend).
+            {/* B3 · Marketing-consent record (정통망법 §50 ① · PR #73 backend).
                 Sits below the C1/C2 split because the audit-trail surface
                 is wider than 2 columns and the timestamp line needs the
                 full row for legibility on mobile. */}
             <div style={{ marginTop: 12 }}>
               <MarketingConsentCardV2 />
             </div>
-          </section>
-
-          {/* SECTION D — Subscription
-              `id="section-d"` anchor required by AnchorRail (2026-04-28 fix). */}
-          <section
-            id="section-d"
-            style={{ scrollMarginTop: 96 }}
-            aria-label="Subscription"
-          >
-            <SubscriptionCardV2
-              currentTier={currentTier}
-              renewalLine={renewalLine}
-              onManageBilling={handleManageBilling}
-              onCancel={currentTier !== "free" ? handleCancelPlan : undefined}
-            />
           </section>
 
           {/* SECTION E — Privacy
@@ -996,14 +781,6 @@ export default function SettingsPageV2() {
           </div>
         </div>
       </main>
-
-      {/* Broker connect modal */}
-      {kisModalOpen && (
-        <KisConnectModal
-          onClose={() => setKisModalOpen(false)}
-          onSuccess={() => refreshBrokers()}
-        />
-      )}
 
       {/* Mobile/tablet collapse */}
       <style jsx>{`

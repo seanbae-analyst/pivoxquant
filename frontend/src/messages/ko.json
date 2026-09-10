@@ -328,12 +328,12 @@
       "profileLink": "프로필 상세 보기 ›"
     },
     "sectionC": {
-      "eyebrow": "C · 알림 · 채널 × 이벤트",
+      "eyebrow": "B · 알림 · 채널 × 이벤트",
       "heading": "PivoxQuant가",
       "headingItalic": "연락할 시점."
     },
     "push": {
-      "sectionLabel": "C1 · Push",
+      "sectionLabel": "B1 · Push",
       "channelLabel": "Push 채널 · 기기 권한",
       "deviceLabel": "브라우저 푸시",
       "granted": "이 기기에서 허용됨.",
@@ -341,7 +341,7 @@
       "notSupported": "이 기기에서 지원되지 않습니다."
     },
     "emailDelivery": {
-      "sectionLabel": "C2 · Email",
+      "sectionLabel": "B2 · Email",
       "channelLabel": "이메일 수신",
       "sendToLabel": "수신 이메일",
       "emailsSent": "가입 안내와 기록 요약 메일을 이 주소로 받습니다."

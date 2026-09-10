@@ -44,7 +44,7 @@ function formatTimestamp(iso: string | null): string | null {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   // Keep the format compatible with the rest of the v2 settings deck:
-  // mono digits, lowercase month — see SubscriptionCardV2 / NotificationsMatrix.
+  // mono digits, lowercase month — see NotificationsMatrix.
   return d.toLocaleString("en-US", {
     day: "2-digit",
     month: "short",
@@ -135,7 +135,7 @@ export function MarketingConsentCardV2() {
           color: "var(--pq-ivory-dim)",
         }}
       >
-        C3 · Marketing
+        B3 · Marketing
       </span>
       <div
         className="font-mono uppercase"

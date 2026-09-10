@@ -328,12 +328,12 @@
       "profileLink": "Profile detail ›"
     },
     "sectionC": {
-      "eyebrow": "C · Notifications · Channels × Events",
+      "eyebrow": "B · Notifications · Channels × Events",
       "heading": "When PivoxQuant",
       "headingItalic": "should reach you."
     },
     "push": {
-      "sectionLabel": "C1 · Push",
+      "sectionLabel": "B1 · Push",
       "channelLabel": "Push channel · device permission",
       "deviceLabel": "Browser push",
       "granted": "Granted on this device.",
@@ -341,7 +341,7 @@
       "notSupported": "Not supported on this device."
     },
     "emailDelivery": {
-      "sectionLabel": "C2 · Email",
+      "sectionLabel": "B2 · Email",
       "channelLabel": "Email delivery",
       "sendToLabel": "Send to",
       "emailsSent": "Onboarding and record-summary emails arrive at this address."

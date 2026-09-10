@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function SettingsHeroV2({
-  eyebrow = "Operations · Brokers · Subscription · Privacy",
+  eyebrow = "Operations · Notifications · Privacy",
 }: Props) {
   return (
     <section
@@ -67,7 +67,7 @@ export function SettingsHeroV2({
           lineHeight: 1.55,
           color: "var(--pq-ivory-strong)",
           maxWidth: 720,
-          margin: "0 0 40px 0",
+          margin: 0,
         }}
       >
         Identity and persona live on{" "}
@@ -86,65 +86,12 @@ export function SettingsHeroV2({
           Profile ›
         </a>
         . Settings is for the operational levers — how you sign in, which
-        brokers stream, which artifacts arrive in your inbox, and how you
-        exercise your{" "}
+        alerts and emails reach you, and how you exercise your{" "}
         <span style={{ color: "var(--pq-bronze)" }}>
           data rights.
         </span>
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <a
-          href="#section-d"
-          className="font-mono uppercase"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "12px 22px",
-            background: "var(--pq-bronze)",
-            color: "var(--pq-ink, #050505)",
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
-            borderRadius: 2,
-            textDecoration: "none",
-          }}
-        >
-          Manage subscription →
-        </a>
-        <a
-          href="#section-b"
-          className="font-mono uppercase"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
-            color: "var(--pq-bronze)",
-            borderBottom: "1px solid rgba(184,149,106,0.15)",
-            paddingBottom: 2,
-            textDecoration: "none",
-          }}
-        >
-          Connect a broker
-        </a>
-        <span
-          className="font-mono uppercase"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
-            color: "var(--pq-ivory-dim)",
-            marginLeft: 8,
-          }}
-        >
-          Drafted by AI · Reviewed by you
-        </span>
-      </div>
     </section>
   );
 }
