@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime
 
 import pytest
@@ -36,7 +37,9 @@ def test_offline_drops_every_remote_stylesheet_so_a_boxed_in_host_still_renders(
     from services.toss.html_report import render_mirror_html
     stripped = pdf_report._strip_remote_links(render_mirror_html(report, paper=True))
     assert "https://" not in stripped
-    assert "기록이 되비추는 것" in stripped          # the document itself is untouched
+    # paper wraps each Korean word in an unbreakable span (see _keep_all), so
+    # the title is read back through the same lens the renderer sees it with
+    assert "기록이 되비추는 것" in re.sub(r"</?span[^>]*>", "", stripped)
 
 
 def test_a_host_without_weasyprint_loses_the_attachment_and_nothing_else(report, monkeypatch):

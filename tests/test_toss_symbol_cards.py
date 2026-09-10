@@ -129,3 +129,58 @@ def test_the_two_palettes_reach_the_drawing_rather_than_the_stylesheet():
     assert STOCK.mark in _track_svg(c, STOCK)
     assert SCREEN.mark in _track_svg(c, SCREEN)
     assert STOCK.mark not in _track_svg(c, SCREEN)
+
+
+def test_a_position_still_held_runs_to_today_not_to_its_last_purchase():
+    """Buy once and keep it and the last fill is the last date there is. Ending
+    the axis there gives the whole holding zero width and draws no line at all."""
+    from datetime import date
+    c = _cards([_order("1", "AAPL", "BUY", 8, 190, "2025-01-10T23:30:00+09:00", "USD")],
+               [{"symbol": "AAPL", "name": "Apple Inc.", "weight_pct": 100.0, "held_days": 240,
+                 "unrealised_rate_pct": 27.9, "market_value_krw": 2_600_000,
+                 "purchase_amount_krw": 2_030_000}])["AAPL"]
+    svg = _track_svg(c, STOCK, date(2025, 9, 10))
+    assert ">25.01<" in svg and ">25.09<" in svg      # both ends stamped
+    assert "<polyline" in svg                          # and there is a line to see
+    # without today the axis is one day wide and the two stamps collapse to one
+    assert _track_svg(c, STOCK).count("<text") < svg.count("<text")
+
+
+# ── Korean on paper ──────────────────────────────────────────────────────────
+def test_korean_words_are_unbreakable_on_paper_because_weasyprint_ignores_keep_all():
+    """`word-break: keep-all` is in the stylesheet and WeasyPrint does not
+    implement it — measured, it splits 오르내린기록이다 after the first syllable
+    with the rule exactly as without it. Paper wraps each word instead.
+
+    The screen page must not carry the spans: browsers honour the rule, and the
+    markup is for the renderer that cannot."""
+    import json
+    import os
+    from datetime import datetime
+
+    from services.toss.html_report import render_mirror_html
+    from services.toss.mirror_report import build_mirror_report
+
+    fix = os.path.join(os.path.dirname(__file__), "fixtures", "toss", "sample_raw_history.json")
+    with open(fix, encoding="utf-8") as fh:
+        raw = json.load(fh)
+    rep = build_mirror_report(
+        account=raw["account"], holdings=raw["holdings"], closed_orders=raw["closed_orders"],
+        open_orders=raw["open_orders"], fx=raw["fx"], history_since=raw["history_since"],
+        window_days=90, names=raw["names"], prices=raw.get("prices"),
+        as_of=datetime.fromisoformat(raw["fetched_at"]))
+    screen, paper = render_mirror_html(rep), render_mirror_html(rep, paper=True)
+    assert '<span class="kr">' not in screen
+    assert paper.count('<span class="kr">') > 100
+    assert ".kr {" in paper.replace("{{", "{")
+
+
+def test_the_drawings_and_the_stylesheet_never_get_a_span_inside_them():
+    """SVG has no <span>, so one inside a <text> is broken markup — and CSS with
+    one inside is a broken stylesheet."""
+    from services.toss.html_report import _keep_all
+    out = _keep_all('<p>정리한 종목</p><svg><text>정리한 종목</text></svg>'
+                    '<style>/* 정리한 종목 */</style><p>남은 것</p>')
+    assert out.count('<span class="kr">') == 4          # two words in each <p>, none between
+    assert "<text>정리한 종목</text>" in out
+    assert "<style>/* 정리한 종목 */</style>" in out

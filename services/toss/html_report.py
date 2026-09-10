@@ -214,6 +214,8 @@ h3 {{ font-family:var(--sans); font-size:12px; font-weight:600; letter-spacing:.
 .foot {{ margin-top:50px; border-top:1.5px solid var(--ink); padding-top:16px; font-size:11.5px; line-height:1.8; color:var(--ink3); max-width:70ch; }}
 .foot ul {{ margin:8px 0 0; padding-left:16px; }}
 .foot .basis {{ color:var(--ink2); }}
+/* paper only — see _keep_all */
+.kr {{ white-space:nowrap; }}
 /* A phone is 390 CSS px wide — an iPhone 14 exactly — and everything below is
    what that width costs. Two-cell heads stack, the margin the plate numbers
    hang in goes away, the third column of a statement gives up its padding
@@ -756,7 +758,7 @@ def _attribution_svg(rows: list[dict], p: Palette) -> str:
 _REL = {"below": "아래", "above": "위", "flat": "와 같은 값"}
 
 
-def _track_svg(c: dict, p: Palette) -> str:
+def _track_svg(c: dict, p: Palette, today: date | None = None) -> str:
     """The average-cost track for one symbol, with every fill on it.
 
     A broker shows today's average and nothing about how it got there. Drawn,
@@ -775,7 +777,12 @@ def _track_svg(c: dict, p: Palette) -> str:
     if not track:
         return ""
     xs = [_d(t["date"]) for t in track]
-    d0, d1 = min(xs), max(xs)
+    # A position still held runs to today, not to its last purchase. Ending the
+    # axis at the last fill collapses the stretch since then to zero width —
+    # the flat run that is often the longest thing on the card, and on a symbol
+    # bought once and kept, the whole of it.
+    d0 = min(xs)
+    d1 = max([*xs, today] if c["held"] and today else xs)
     span = max((d1 - d0).days, 1)
     W, H, left, top, bot = 300, 94, 6, 12, 16
     # The right gutter is the widest end label, not a guess: "71,999" and
@@ -871,7 +878,7 @@ def _fo_phrase(fo: dict) -> str:
     return "추가 매수 " + " · ".join(bits) if bits else "추가 매수 없음"
 
 
-def _symbol_cards(sy: dict, p: Palette) -> str:
+def _symbol_cards(sy: dict, p: Palette, today: date | None = None) -> str:
     """The cards, two to a row where there is room for two.
 
     A CSS table rather than a grid: this document's other renderer has no grid,
@@ -899,7 +906,7 @@ def _symbol_cards(sy: dict, p: Palette) -> str:
                           for k in ("realised_krw", "unrealised_krw", "total_krw"))
                 + "</tr></table>")
         note = f'<p class="cn">{_e(c["note"])}</p>' if c.get("note") else ""
-        cells.append(f'<div class="card">{head}<p class="cm">{_e(line1)}</p>{_track_svg(c, p)}'
+        cells.append(f'<div class="card">{head}<p class="cm">{_e(line1)}</p>{_track_svg(c, p, today)}'
                      f'<p class="cm">{_e(closed)}</p>{figs}{note}</div>')
     if len(cells) % 2:
         cells.append('<div class="card"></div>')
@@ -982,6 +989,42 @@ def _history_status(h: dict) -> str:
     return (f'<p class="recon">이력으로 되짚은 결과가 토스 잔고와 '
             f'<strong>{len(h["mismatches"])}종목에서 다르다</strong>. {verdict}</p>'
             f'<ul class="rlist">{items}</ul>')
+
+
+# ── Korean line breaking on paper ────────────────────────────────────────────
+# `word-break: keep-all` is the difference between Korean that is typeset and
+# Korean that is merely wrapped, and WeasyPrint does not implement it:
+# measured, it breaks "오르내린기록이다" after the first syllable exactly as it
+# does without the rule. Every caption in every PDF this report has produced
+# has been splitting words down the middle.
+#
+# So on paper each Korean word is wrapped in a span that cannot break. A word
+# joiner would also work and is less markup, but it plants invisible characters
+# in the text layer, and a PDF you cannot search for 손익 is a worse trade than
+# a larger intermediate file that never leaves this process. Browsers get the
+# CSS rule and none of this.
+_EOJEOL = re.compile(r"[^\s<>&]*[가-힣][^\s<>&]*")
+_TEXT_NODE = re.compile(r">([^<>]+)<")
+# SVG has no <span>, and its text does not wrap anyway, so the drawings and the
+# <style> block are left alone.
+_NO_SPANS = re.compile(r"<svg\b.*?</svg>|<style\b.*?</style>", re.S)
+
+
+def _keep_all(page: str) -> str:
+    """Make every Korean word on the page unbreakable, in the markup itself."""
+    def word(m: re.Match) -> str:
+        return f'<span class="kr">{m.group(0)}</span>'
+
+    def text(m: re.Match) -> str:
+        return ">" + _EOJEOL.sub(word, m.group(1)) + "<"
+
+    out, at = [], 0
+    for skip in _NO_SPANS.finditer(page):
+        out.append(_TEXT_NODE.sub(text, page[at:skip.start()]))
+        out.append(skip.group(0))
+        at = skip.end()
+    out.append(_TEXT_NODE.sub(text, page[at:]))
+    return "".join(out)
 
 
 class _Plates:
@@ -1077,7 +1120,7 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
                    '선이 끊긴 자리는 그 종목을 한 번 비웠다는 뜻이고, 오른쪽 끝의 점은 지금 가격이다.'
                    + (f' 기여가 작은 {sy["folded"]}종목은 카드 없이 원장에만 있다.' if sy.get("folded") else "")
                    + '</p>'
-                   + _symbol_cards(sy, p))
+                   + _symbol_cards(sy, p, _d(rep["generated_at"][:10])))
 
     plates.add("경로", f"보유 {n_hold} · 정리 {n_dep}",
                          f'{_timeline_svg(rep, p, tracks_per_page)}'
@@ -1168,7 +1211,7 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
     plates.add("원장", f"보유 {n_hold} · 정리 {n_dep}", ledger)
 
     limits = "".join(f"<li>{_e(x)}</li>" for x in rep["limits"])
-    return f"""<title>PivoxReport {acct}</title>
+    page = f"""<title>PivoxReport {acct}</title>
 {_FONTS}
 <style>{_css(p)}</style>
 <div class="wrap">
@@ -1189,3 +1232,4 @@ def render_mirror_html(rep: dict, *, paper: bool = False) -> str:
 </div>
 </div>
 """
+    return _keep_all(page) if paper else page
