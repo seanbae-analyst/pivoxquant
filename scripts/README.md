@@ -29,6 +29,7 @@ Continuous Autonomous User Simulation(브라우저 sim 유저 1명/일 + Playwri
 
 | Script | Cadence | Purpose |
 |--------|---------|---------|
+| `pivox_report.py` | on-demand (CEO) | 본인 토스증권 계좌를 read-only 로 읽어 거울 리포트 → `reports/personal/`. 유저 기능 아님. `docs/ops/toss-personal-report.md` |
 | `morning_brief/build_brief_kpi.py` | Daily 06:00 KST | CEO morning brief (KPI) |
 | `nightly/*.py` | Daily 02:00~ KST | ops 점검 (db backup, ssl, env, error-rate, 이메일 컴플라이언스 등) |
 | `legal_monitor/*.py` | Daily 09:00 KST | Regulatory change scanner |
