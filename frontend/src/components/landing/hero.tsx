@@ -54,8 +54,10 @@ import { useT } from "@/lib/locale";
  * importers anywhere in src/. It is retained solely because its
  * proxy-disclosure logic is the work that would have to be redone if the FMP
  * Data Display Agreement (terms §2.2.2, still unresolved) is ever obtained.
- * Until then it renders nowhere. If that agreement is abandoned, delete it —
- * git holds the history either way.
+ * Until then it renders nowhere. 2026-09-10: the CEO decided to pursue that
+ * agreement rather than drop the surface, so the file is retained on a live
+ * plan and not on a maybe — tracked as SHIP_BLOCKERS R8. If R8 is ever closed
+ * as abandoned, delete this component; git holds the history either way.
  */
 
 export function Hero() {
