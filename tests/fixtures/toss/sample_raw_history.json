@@ -370,5 +370,17 @@
   "names": {
     "NVDA": "엔비디아",
     "035420": "NAVER"
+  },
+  "prices": {
+    "NVDA": {
+      "lastPrice": "130",
+      "currency": "USD",
+      "timestamp": "2026-09-10T05:00:00+09:00"
+    },
+    "035420": {
+      "lastPrice": "210000",
+      "currency": "KRW",
+      "timestamp": "2026-09-10T15:30:00+09:00"
+    }
   }
 }

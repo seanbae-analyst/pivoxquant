@@ -71,6 +71,9 @@ table.plain td {{ padding:8px; border-bottom:1px solid var(--line-soft); }}
 table.plain td.n {{ text-align:right; font-family:var(--mono); }}
 .legend {{ display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:11px; color:var(--ivory-dim); margin-top:8px; }}
 .legend i {{ display:inline-block; width:10px; height:10px; margin-right:6px; vertical-align:-1px; }}
+h3 {{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--bronze); font-weight:400; margin:26px 0 8px; }}
+.heads {{ display:grid; gap:10px; margin:14px 0 6px; }}
+.head {{ margin:0; padding:10px 14px; border-left:2px solid var(--bronze); background:var(--veil); font-family:var(--serif); font-size:16px; line-height:1.5; text-wrap:balance; }}
 ul.limits {{ margin:0; padding-left:18px; color:var(--ivory-soft); font-size:13px; }}
 .sig {{ margin-top:40px; font-family:var(--serif); font-style:italic; color:var(--ivory-dim); text-align:center; }}
 """
@@ -204,6 +207,125 @@ def _split_bar_svg(kr: float | None, us: float | None) -> str:
             f'<rect x="0" y="6" width="{max(kw - 1, 0):.1f}" height="14" fill="{BRONZE}"><title>국내 {kr:.2f}%</title></rect>'
             f'<rect x="{kw + 1:.1f}" y="6" width="{max(W - kw - 1, 0):.1f}" height="14" fill="{BRONZE_LIGHT}" opacity=".55"><title>해외 {us:.2f}%</title></rect>'
             f'<text x="0" y="32">국내 {kr:.2f}%</text><text x="{W}" y="32" text-anchor="end">해외 {us:.2f}%</text></svg>')
+
+
+def _attribution_svg(rows: list[dict]) -> str:
+    """One diverging bar per symbol: realised + unrealised, KRW. Largest
+    contributors and detractors; the middle is folded when there are many."""
+    if not rows:
+        return ""
+    shown = rows if len(rows) <= 14 else rows[:7] + rows[-7:]
+    folded = len(rows) - len(shown)
+    W, name_w, right, bar_h, row_h, pad_top = 720, 176, 96, 16, 26, 20
+    plot_w = W - name_w - right
+    mx = max(abs(r["total_krw"]) for r in shown) or 1
+    zero = name_w + plot_w * (max(0, -min(r["total_krw"] for r in shown)) / (mx + max(0, -min(r["total_krw"] for r in shown)))) if any(r["total_krw"] < 0 for r in shown) else name_w
+    scale = (W - right - zero) / mx if any(r["total_krw"] > 0 for r in shown) else (zero - name_w) / mx
+    H = pad_top + row_h * len(shown) + (row_h if folded else 0) + 8
+    out = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="종목별 손익 기여">',
+           f'<line x1="{zero:.1f}" y1="{pad_top - 6}" x2="{zero:.1f}" y2="{H - 4}" class="axis"/>']
+    for i, r in enumerate(shown):
+        y = pad_top + i * row_h + (row_h if folded and i >= 7 else 0)
+        v = r["total_krw"]
+        w = abs(v) * scale
+        x = zero if v >= 0 else zero - w
+        color = UP if v > 0 else DOWN
+        label = _nm(r["symbol"], r["name"])
+        out.append(f'<text x="0" y="{y + bar_h / 2 + 4}" class="lbl" fill="{IVORY if r["held"] else "rgba(245,240,232,.55)"}">{_e(label[:22])}</text>')
+        out.append(f'<rect x="{x:.1f}" y="{y}" width="{max(w, 1):.1f}" height="{bar_h}" fill="{color}"><title>{_e(label)} · 실현 {_won(r["realised_krw"])} · 미실현 {_won(r["unrealised_krw"])} · 합계 {_won(v)}</title></rect>')
+        tx = zero + w + 6 if v >= 0 else zero - w - 6
+        out.append(f'<text x="{tx:.1f}" y="{y + bar_h / 2 + 4}" text-anchor="{"start" if v >= 0 else "end"}">{_won(v)}</text>')
+        if folded and i == 6:
+            out.append(f'<text x="{zero:.1f}" y="{y + row_h + bar_h / 2 + 4}" class="muted" text-anchor="middle">… 중간 {folded}종목 생략 …</text>')
+    out.append("</svg>")
+    return "".join(out)
+
+
+def _timing_svg(tm: dict) -> str:
+    if not tm.get("fills"):
+        return ""
+    W, H = 720, 92
+    wd, hr = tm["by_weekday"], tm["by_hour"]
+    mw = max(x["fills"] for x in wd) or 1
+    mh = max(x["fills"] for x in hr) or 1
+    out = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="요일별 시간대별 체결">']
+    out.append('<text x="0" y="12" class="muted">요일</text>')
+    bw = 200 / 7
+    for i, x in enumerate(wd):
+        h = x["fills"] / mw * 44
+        out.append(f'<rect x="{i * bw:.1f}" y="{62 - h:.1f}" width="{bw - 2:.1f}" height="{h:.1f}" fill="{BRONZE}"><title>{x["day"]} {x["fills"]}건</title></rect>')
+        out.append(f'<text x="{i * bw + bw / 2 - 1:.1f}" y="{H - 14}" text-anchor="middle">{x["day"]}</text>')
+    out.append('<text x="240" y="12" class="muted">시간대 (KST)</text>')
+    hw = (W - 240) / 24
+    for i, x in enumerate(hr):
+        h = x["fills"] / mh * 44
+        out.append(f'<rect x="{240 + i * hw:.1f}" y="{62 - h:.1f}" width="{hw - 1.5:.1f}" height="{h:.1f}" fill="{BRONZE}" opacity="{0.45 if 9 <= i < 16 else 1}"><title>{i:02d}시 {x["fills"]}건</title></rect>')
+        if i % 3 == 0:
+            out.append(f'<text x="{240 + i * hw:.1f}" y="{H - 14}">{i:02d}</text>')
+    out.append("</svg>")
+    return "".join(out)
+
+
+def _analysis_section(an: dict) -> str:
+    if not an:
+        return ""
+    a, t, af, tm, sz, bm = an["attribution"], an["trades"], an["after_selling"], an["timing"], an["sizing"], an["by_market"]
+    head = "".join(f'<p class="head">{_e(x)}</p>' for x in an["headline"]) or '<p class="lede">분석할 닫힌 거래가 없다.</p>'
+    tiles = ""
+    if t.get("closed"):
+        tiles = "".join(f'<div class="tile"><div class="k">{_e(k)}</div><div class="v {cl}">{_e(v)}</div><div class="s">{_e(s)}</div></div>' for k, v, s, cl in [
+            ("승률", f"{t['win_rate_pct']}%", f"{t['closed']}건 중 이익 {t['wins']}", ""),
+            ("이길 때 중앙값", _pct(t["median_win_pct"]), f"보유 {_days(t['win_hold_median_days'])}", "up"),
+            ("질 때 중앙값", _pct(t["median_loss_pct"]), f"보유 {_days(t['loss_hold_median_days'])}", "down"),
+            ("거래당 기대값", _won(t["expectancy_krw"]), f"중앙값 {_won(t['median_trade_krw'])} · 크기 비 {t['payoff_ratio'] or '—'}", _cls(t["expectancy_krw"])),
+        ])
+        tiles = f'<div class="tiles">{tiles}</div>'
+        tiles += (f'<p class="lede" style="margin-top:14px">최고 {_e(t["best"]["symbol"])} {t["best"]["date"]} {_won(t["best"]["realised_krw"])} ({_pct(t["best"]["pnl_pct"])}) · '
+                  f'최저 {_e(t["worst"]["symbol"])} {t["worst"]["date"]} {_won(t["worst"]["realised_krw"])} ({_pct(t["worst"]["pnl_pct"])})'
+                  + (f' · 실현 이익의 {t["top5_share_pct"]}%가 상위 5건' if t.get("top5_share_pct") else "") + "</p>")
+    after = ""
+    if af.get("available") and af.get("count"):
+        rows = "".join(f'<tr><td>{_e(_nm(r["symbol"], r["name"]))}</td><td>{_e(r["last_sold_at"])}</td><td class="n">{r["avg_sell_price"]:,}</td><td class="n">{r["price_now"]:,}</td>'
+                       f'<td class="n {_cls(r["since_sale_pct"])}">{_pct(r["since_sale_pct"])}</td><td class="n {_cls(r["kept_delta_krw"])}">{_won(r["kept_delta_krw"])}</td></tr>' for r in af["rows"])
+        after = (f'<p class="lede">정리한 {af["count"]}종목 중 지금 가격이 판 가격보다 높은 것 {af["higher_now"]}, 낮은 것 {af["lower_now"]}. 이후 변화 중앙값 {_pct(af["median_since_sale_pct"])}. '
+                 f'판 수량을 그대로 들고 있었다면 지금 <span class="{_cls(af["kept_delta_krw"])}">{_won(af["kept_delta_krw"])}</span> 차이.</p>'
+                 f'<div class="tbl"><table class="plain"><thead><tr><th>종목</th><th>마지막 매도</th><th>평균 매도가</th><th>지금</th><th>이후</th><th>안 팔았다면</th></tr></thead><tbody>{rows}</tbody></table></div>')
+    else:
+        after = '<p class="lede dim">현재가를 받지 못해 건너뜀.</p>'
+    timing = ""
+    if tm.get("fills"):
+        timing = (_timing_svg(tm) + f'<p class="lede" style="margin-top:8px">거래일 {tm["trade_days"]}일 · 하루 평균 {tm["fills_per_trade_day"]}건 · 3건 이상인 날 {tm["days_with_3plus"]}일 · 최다 {tm["busiest_day"]["date"]} {tm["busiest_day"]["fills"]}건'
+                  + (f' · 국내 체결 중 개장 첫 시간 {tm["kr_first_hour_pct"]}%' if tm.get("kr_first_hour_pct") is not None else "") + "</p>")
+    size = (f'<p class="lede">매수 {sz["buys"]}건 · 중앙값 {_won(sz["median_buy_krw"])} · 평균 {_won(sz["mean_buy_krw"])} · 최대 {_won(sz["largest_buy_krw"])} (전체 매수액의 {sz["largest_share_pct"]}%) · 편차/평균 {sz["cv"]}</p>'
+            if sz.get("buys") else "")
+    market = "".join(f'<tr><td>{m["market"]}</td><td class="n">{m["symbols"]}</td><td class="n">{m["closed"]}</td><td class="n">{_pct(m["win_rate_pct"], False)}</td><td class="n">{_days(m["median_hold_days"])}</td>'
+                     f'<td class="n {_cls(m["realised_krw"])}">{_won(m["realised_krw"])}</td><td class="n {_cls(m["unrealised_krw"])}">{_won(m["unrealised_krw"])}</td><td class="n {_cls(m["total_krw"])}">{_won(m["total_krw"])}</td></tr>' for m in bm)
+    return f"""
+<section>
+  <h2>분석</h2>
+  <p class="lede">거울이 하나씩 보여준 숫자를 나란히 놓고, 그 배열이 가리키는 것을 문장으로 적는다. 모든 문장은 위의 숫자로 다시 계산할 수 있다.</p>
+  <div class="heads">{head}</div>
+
+  <h3>손익 분해</h3>
+  <p class="lede">실현 <span class="{_cls(a['realised_krw'])}">{_won(a['realised_krw'])}</span> + 미실현 <span class="{_cls(a['unrealised_krw'])}">{_won(a['unrealised_krw'])}</span> = <strong>{_won(a['total_krw'])}</strong> · 수수료·세금 {_won(a['fees_krw'])}. 밝은 이름은 보유 중, 흐린 이름은 정리한 종목.</p>
+  <div class="tbl">{_attribution_svg(a['rows'])}</div>
+
+  <h3>닫힌 거래</h3>
+  {tiles}
+
+  <h3>팔고 난 뒤</h3>
+  {after}
+
+  <h3>언제 사고파나</h3>
+  <div class="tbl">{timing}</div>
+
+  <h3>한 번에 얼마나 사나</h3>
+  {size}
+
+  <h3>국내 vs 해외</h3>
+  <div class="tbl"><table class="plain"><thead><tr><th></th><th>종목</th><th>닫힌 거래</th><th>승률</th><th>보유 중앙값</th><th>실현</th><th>미실현</th><th>합계</th></tr></thead><tbody>{market}</tbody></table></div>
+</section>
+"""
 
 
 # ── sections ─────────────────────────────────────────────────────────────────
@@ -340,6 +462,7 @@ def render_mirror_html(rep: dict) -> str:
   <div class="tbl"><table class="plain"><thead><tr><th>종목</th><th>처음</th><th>마지막</th><th>매수/매도</th><th>실현손익</th><th>매도 수익률 중앙값</th></tr></thead><tbody>{dep_rows}</tbody></table></div>
 </section>
 
+{_analysis_section(rep.get("analysis") or {})}
 <section>
   <h2>이 숫자가 말하지 않는 것</h2>
   <ul class="limits">{limits}</ul>

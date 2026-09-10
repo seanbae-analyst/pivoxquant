@@ -39,8 +39,9 @@ from services.behavior.averaging_down_mirror import compute_averaging_down_mirro
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
 from services.behavior.turnover_mirror import compute_turnover_mirror
 from services.profile.fifo_util import fifo_open_position_ages
+from services.toss.analysis import analyse, asymmetry_phrase
 from services.toss.history import fills_from_orders, reconcile, reconstruct, to_trade_rows
-from services.toss.report import KST, D, _f, _p, _px, _usd, _won, summarise_holdings, to_krw
+from services.toss.report import KST, D, _f, _n, _p, _px, _usd, _won, summarise_holdings, to_krw
 
 _MIN = {"min_trades": 1, "min_follow_on": 1, "min_pairs": 1}  # a personal report has n=1; the product's floors are for cohorts
 
@@ -171,6 +172,7 @@ def build_mirror_report(
     history_since: str | None,
     window_days: int = 90,
     names: dict[str, str] | None = None,
+    prices: dict[str, dict] | None = None,
     as_of: datetime | None = None,
 ) -> dict:
     as_of = as_of or datetime.now(KST)
@@ -223,6 +225,7 @@ def build_mirror_report(
             for f in fills
         ],
         "open_orders": len(open_orders or []),
+        "analysis": analyse(book=book, fills=fills, holdings_rows=val["holdings"], usdkrw=usdkrw, prices=prices, names=names),
         "limits": [
             "평가액은 KR·US 주식만 — 예수금·옵션·채권은 holdings 응답에 없음",
             "환율은 토스 표시환율(1분 갱신), 체결환율과 다를 수 있음",
@@ -266,6 +269,51 @@ def _mirror_block(m: dict, label: str) -> list[str]:
     else:
         L.append("- 매수→매도로 닫힌 거래 없음")
     L.append("")
+    return L
+
+
+def _analysis_markdown(an: dict) -> list[str]:
+    if not an:
+        return []
+    a, t, af, tm, sz = an["attribution"], an["trades"], an["after_selling"], an["timing"], an["sizing"]
+    L = ["", "## 분석", ""]
+    L += [f"**{i + 1}. {line}**" for i, line in enumerate(an["headline"])] or ["- 분석할 닫힌 거래가 없다"]
+    L += ["", "### 손익 분해", "",
+          f"- 실현 {_won(a['realised_krw'])} + 미실현 {_won(a['unrealised_krw'])} = {_won(a['total_krw'])} · 수수료+세금 {_won(a['fees_krw'])}"
+          + (f" (실현 손익 총액 대비 {a['fee_share_of_gross_pct']:.1f}%)" if a.get("fee_share_of_gross_pct") is not None else "")]
+    if a["rows"]:
+        L.append("- 가장 벌어준 종목: " + ", ".join(f"{_nm(r['symbol'], r['name'])} {_won(r['total_krw'])}" for r in a["top"]))
+        L.append("- 가장 까먹은 종목: " + ", ".join(f"{_nm(r['symbol'], r['name'])} {_won(r['total_krw'])}" for r in a["bottom"]))
+    if t.get("closed"):
+        L += ["", "### 닫힌 거래", "",
+              f"- {t['closed']}건 · 이익 {t['wins']} / 손실 {t['losses']} · 승률 {t['win_rate_pct']}%",
+              f"- 이길 때 중앙값 {t['median_win_pct']:+.2f}% · 질 때 {t['median_loss_pct']:+.2f}% · 이익/손실 크기 비 {t['payoff_ratio'] or '—'}",
+              f"- 거래당 기대값 {_won(t['expectancy_krw'])} · 거래당 중앙값 {_won(t['median_trade_krw'])}",
+              f"- 이익 거래 보유 중앙값 {_days(t['win_hold_median_days'])} · 손실 거래 {_days(t['loss_hold_median_days'])}"
+              + (f" · {asymmetry_phrase(t['hold_asymmetry'])}" if t.get("hold_asymmetry") else ""),
+              f"- 최고 {t['best']['symbol']} {t['best']['date']} {_won(t['best']['realised_krw'])} ({t['best']['pnl_pct']:+.2f}%) · 최저 {t['worst']['symbol']} {t['worst']['date']} {_won(t['worst']['realised_krw'])} ({t['worst']['pnl_pct']:+.2f}%)"]
+    L += ["", "### 팔고 난 뒤", ""]
+    if af.get("available") and af.get("count"):
+        L += [f"- 정리한 {af['count']}종목 중 지금 가격이 판 가격보다 높은 것 {af['higher_now']} · 낮은 것 {af['lower_now']} · 이후 변화 중앙값 {af['median_since_sale_pct']:+.2f}%",
+              f"- 판 수량을 그대로 들고 있었다면 지금 {_won(af['kept_delta_krw'])} 차이",
+              "", "| 종목 | 마지막 매도 | 평균 매도가 | 지금 | 이후 | 안 팔았다면 |", "|---|---|---:|---:|---:|---:|"]
+        L += [f"| {_nm(r['symbol'], r['name'])} | {r['last_sold_at']} | {_px(r['avg_sell_price'])} | {_px(r['price_now'])} | {_p(r['since_sale_pct'])} | {_won(r['kept_delta_krw'])} |" for r in af["rows"]]
+    else:
+        L.append("- 현재가를 받지 못해 건너뜀")
+    if tm.get("fills"):
+        wd = " · ".join(f"{x['day']} {x['fills']}" for x in tm["by_weekday"] if x["fills"])
+        peak = sorted(tm["by_hour"], key=lambda x: -x["fills"])[:3]
+        L += ["", "### 언제 사고파나", "",
+              f"- 요일: {wd}",
+              "- 시간대(KST) 상위: " + " · ".join(f"{x['hour']:02d}시 {x['fills']}건" for x in peak if x["fills"]),
+              f"- 거래일 {tm['trade_days']}일 · 하루 평균 {tm['fills_per_trade_day']}건 · 3건 이상인 날 {tm['days_with_3plus']}일 · 최다 {tm['busiest_day']['date']} {tm['busiest_day']['fills']}건"
+              + (f" · 국내 체결 중 개장 첫 시간 {tm['kr_first_hour_pct']}%" if tm.get("kr_first_hour_pct") is not None else "")
+              + (f" · 해외 체결 중 정규장 야간 {tm['us_regular_night_pct']}%" if tm.get("us_regular_night_pct") is not None else "")]
+    if sz.get("buys"):
+        L += ["", "### 한 번에 얼마나 사나", "",
+              f"- 매수 {sz['buys']}건 · 중앙값 {_won(sz['median_buy_krw'])} · 평균 {_won(sz['mean_buy_krw'])} · 최대 {_won(sz['largest_buy_krw'])} (전체의 {sz['largest_share_pct']}%) · 편차/평균 {sz['cv']}"]
+    L += ["", "### 국내 vs 해외", "", "| | 종목 | 닫힌 거래 | 승률 | 보유 중앙값 | 실현 | 미실현 | 합계 |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
+    L += [f"| {m['market']} | {m['symbols']} | {m['closed']} | {_n(m['win_rate_pct'])} | {_days(m['median_hold_days'])} | {_won(m['realised_krw'])} | {_won(m['unrealised_krw'])} | {_won(m['total_krw'])} |" for m in an["by_market"]]
     return L
 
 
@@ -342,6 +390,7 @@ def render_mirror_markdown(rep: dict) -> str:
             L.append(f"| {_nm(d['symbol'], d['name'])}{flag} | {d['first_fill_at']} | {d['last_fill_at']} | {d['buys']}/{d['sells']} | {amt} | {d['median_sell_pct']:+.2f}% |")
     else:
         L.append("- 이 이력 안에서 완전히 정리한 종목 없음")
+    L += _analysis_markdown(rep.get("analysis") or {})
     L += ["", "## 이 숫자가 말하지 않는 것", ""]
     L += [f"- {x}" for x in rep["limits"]]
     L += ["", "_기록을 되비추는 거울이다. 다음에 무엇을 할지는 여기 없다._", ""]

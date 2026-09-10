@@ -18,14 +18,15 @@ def _page():
     rep = build_mirror_report(
         account=raw["account"], holdings=raw["holdings"], closed_orders=raw["closed_orders"],
         open_orders=raw["open_orders"], fx=raw["fx"], history_since=raw["history_since"],
-        window_days=90, names=raw["names"], as_of=datetime.fromisoformat(raw["fetched_at"]),
+        window_days=90, names=raw["names"], prices=raw.get("prices"), as_of=datetime.fromisoformat(raw["fetched_at"]),
     )
     return render_mirror_html(rep)
 
 
 def test_html_draws_the_three_charts_and_names_every_symbol():
     page = _page()
-    assert page.count("<svg") == 3                      # holdings rows · timeline · KR/US split
+    assert page.count("<svg") == 5                      # holdings rows · timeline · KR/US split · attribution · timing
+    assert "팔고 난 뒤" in page and "엔비디아 (NVDA)" in page
     assert "삼성전자 (005930)" in page and "Apple Inc. (AAPL)" in page and "엔비디아 (NVDA)" in page
     assert "토스 잔고와 전부 일치" in page
 

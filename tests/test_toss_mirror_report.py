@@ -29,7 +29,7 @@ def _build(raw):
     return build_mirror_report(
         account=raw["account"], holdings=raw["holdings"], closed_orders=raw["closed_orders"],
         open_orders=raw["open_orders"], fx=raw["fx"], history_since=raw["history_since"],
-        window_days=90, names=raw["names"], as_of=datetime.fromisoformat(raw["fetched_at"]),
+        window_days=90, names=raw["names"], prices=raw.get("prices"), as_of=datetime.fromisoformat(raw["fetched_at"]),
     )
 
 
@@ -153,3 +153,38 @@ def test_cli_renders_v2_from_raw_without_network(tmp_path):
     rep = json.loads(proc.stdout)
     assert rep["version"] == 2 and rep["history"]["complete"] is True
     assert (out / "pivox_report_2026-09-10.md").exists()
+
+
+def test_analysis_numbers_follow_from_the_book(raw):
+    an = _build(raw)["analysis"]
+    t, a, af = an["trades"], an["attribution"], an["after_selling"]
+    assert (t["closed"], t["wins"], t["losses"], t["win_rate_pct"]) == (3, 2, 1, 66.7)
+    assert t["expectancy_krw"] == round((53984 + 38460 - 138740) / 3)
+    assert t["top5_share_pct"] == 100.0                     # two wins, both in the top five
+    assert a["total_krw"] == a["realised_krw"] + a["unrealised_krw"]
+    assert [r["symbol"] for r in a["bottom"]] == ["NVDA"]   # only symbols that lost money
+    assert a["top"][0]["name"] == "Apple Inc."
+    # After selling: NVDA sold at 100, now 130 → 5 shares × 30 × 1380.5; NAVER sold 220,000, now 210,000
+    by = {r["symbol"]: r for r in af["rows"]}
+    assert by["NVDA"]["since_sale_pct"] == 30.0 and by["NVDA"]["kept_delta_krw"] == 5 * 30 * 1380.5
+    assert by["035420"]["kept_delta_krw"] == -20000
+    assert af["kept_delta_krw"] == by["NVDA"]["kept_delta_krw"] + by["035420"]["kept_delta_krw"]
+    assert len(an["headline"]) == 3 and all("₩" in h or "%" in h for h in an["headline"])
+
+
+def test_analysis_without_prices_skips_after_selling_instead_of_guessing(raw):
+    r2 = copy.deepcopy(raw)
+    r2["prices"] = {}
+    rep = build_mirror_report(
+        account=r2["account"], holdings=r2["holdings"], closed_orders=r2["closed_orders"], open_orders=[],
+        fx=r2["fx"], history_since=r2["history_since"], names=r2["names"], prices={},
+        as_of=datetime.fromisoformat(r2["fetched_at"]),
+    )
+    assert rep["analysis"]["after_selling"] == {"available": False, "rows": []}
+    assert "현재가를 받지 못해" in render_mirror_markdown(rep)
+
+
+def test_asymmetry_phrase_never_reports_a_ratio_below_one():
+    from services.toss.analysis import asymmetry_phrase
+    assert asymmetry_phrase(3.2) == "손실 쪽이 3.2배 길다"
+    assert asymmetry_phrase(0.5) == "이익 쪽이 2.0배 길다"

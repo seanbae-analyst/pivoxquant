@@ -77,11 +77,17 @@ def fetch_raw(client: TossReadOnlyClient, *, days: int, since_days: int, account
     held = {it.get("symbol") for it in holdings.get("items") or []}
     departed = sorted({o.get("symbol") for o in closed if o.get("symbol")} - held)
     names: dict[str, str] = {}
+    prices: dict[str, dict] = {}
     if departed:
         try:  # reference data only; a failure here costs names, not numbers
             names = {s["symbol"]: s.get("name") or "" for s in client.stocks(departed)}
         except TossApiError as e:  # pragma: no cover - network path
             print(f"종목명 조회 실패 (무시): {e}", file=sys.stderr)
+        try:  # current prices for the "after selling" analysis; without them that section is skipped
+            prices = {x["symbol"]: {"lastPrice": x.get("lastPrice"), "currency": x.get("currency"), "timestamp": x.get("timestamp")}
+                      for x in client.prices(departed)}
+        except TossApiError as e:  # pragma: no cover - network path
+            print(f"현재가 조회 실패 (무시): {e}", file=sys.stderr)
     return {
         "fetched_at": as_of.isoformat(timespec="seconds"),
         "window_days": days,
@@ -93,6 +99,7 @@ def fetch_raw(client: TossReadOnlyClient, *, days: int, since_days: int, account
         "open_orders": client.open_orders(seq),
         "fx": client.exchange_rate("USD", "KRW"),
         "names": names,
+        "prices": prices,
     }
 
 
@@ -140,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         history_since=raw.get("history_since"),
         window_days=int(raw.get("window_days") or args.days),
         names=raw.get("names"),
+        prices=raw.get("prices"),
         as_of=as_of,
     )
     md = render_mirror_markdown(report)
