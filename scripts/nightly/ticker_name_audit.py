@@ -127,14 +127,16 @@ def _naked_ticker(name_val: str | None, ticker: str) -> bool:
 def _run_psycopg2(db_url: str) -> list[dict]:
     import psycopg2  # type: ignore
 
-    conn = psycopg2.connect(db_url)
-    cur = conn.cursor()
-
-    # signal_cache 에서 name 필드 추출
-    cur.execute("SELECT ticker, data_json FROM signal_cache")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    conn = psycopg2.connect(db_url, connect_timeout=10)
+    try:
+        # signal_cache 에서 name 필드 추출
+        with conn.cursor() as cur:
+            cur.execute("SELECT ticker, data_json FROM signal_cache")
+            rows = cur.fetchall()
+    finally:
+        # 쿼리가 실패해도 닫는다 — 이 잡은 웹 프로세스 안에서 돌고, Supabase 세션
+        # 풀러는 클라이언트 15개가 한도다 (2026-09-11).
+        conn.close()
 
     missing: list[dict] = []
     for ticker, data_json_raw in rows:
@@ -151,8 +153,15 @@ def _run_psycopg2(db_url: str) -> list[dict]:
 
 def _run_sqlalchemy(db_url: str) -> list[dict]:
     from sqlalchemy import create_engine, text  # type: ignore
+    from sqlalchemy.pool import NullPool  # transient engine, see note below
 
-    engine = create_engine(db_url, pool_pre_ping=True, connect_args={"connect_timeout": 10})
+    # NullPool: this engine is transient (one scheduler tick, in the web process).
+    # 2026-09-10: without it each create_engine kept an idle pooled connection to the
+    # Supabase session pooler (15 clients max) until garbage collection. The
+    # 5-minute signup-funnel job alone built six engines per tick; production held
+    # 11 idle app connections and the next deploy's worker died with
+    # EMAXCONNSESSION before it could boot.
+    engine = create_engine(db_url, poolclass=NullPool, pool_pre_ping=True, connect_args={"connect_timeout": 10})
     missing: list[dict] = []
     with engine.connect() as conn:
         rows = conn.execute(text("SELECT ticker, data_json FROM signal_cache")).fetchall()

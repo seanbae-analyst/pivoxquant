@@ -116,31 +116,60 @@ def post_slack(text: str) -> bool:
 
 # ── DB 쿼리 ───────────────────────────────────────────────────────────────────
 
-def _run_query(db_url: str, sql: str, params: dict | None = None) -> int | None:
-    """단일 scalar int 쿼리. 실패 시 None 반환."""
+def _query_scalars(db_url: str, queries: dict[str, str]) -> dict[str, int | None]:
+    """scalar int 쿼리 여러 개를 **커넥션 하나로** 실행. 실패한 쿼리는 그 키만 None.
+
+    2026-09-11: 예전 `_run_query` 는 쿼리마다 커넥션을 새로 열었다 — 이 잡은
+    5분마다 돌므로 Supabase 세션 풀러(클라이언트 15개 한도)에 시간당 72번 접속했다.
+    그리고 psycopg2 경로가 ImportError 만 잡아서, 쿼리 하나가 실패하면
+    ``conn.close()`` 에 닿지 못한 채 예외가 tick 전체를 끝냈다. 결제 쿼리 2개가
+    없는 테이블을 불러 **매 tick 이 그렇게 끝나고 있었다.**
+    """
+    results: dict[str, int | None] = {key: None for key in queries}
+
     try:
         import psycopg2  # type: ignore
-
-        conn = psycopg2.connect(db_url)
-        cur = conn.cursor()
-        cur.execute(sql, params or {})
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        return row[0] if row else 0
     except ImportError:
-        pass
+        psycopg2 = None
+
+    if psycopg2 is not None:
+        try:
+            conn = psycopg2.connect(db_url, connect_timeout=10)
+        except Exception as exc:
+            logger.error("DB connect error: %s", exc)
+            return results
+        try:
+            # autocommit: 쿼리 하나가 실패해도 다음 쿼리가 aborted transaction 에 막히지 않는다.
+            conn.autocommit = True
+            for key, sql in queries.items():
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute(sql)
+                        row = cur.fetchone()
+                    results[key] = (row[0] if row else 0) or 0
+                except Exception as exc:
+                    logger.error("DB query error: %s | sql=%s", exc, sql[:80])
+        finally:
+            conn.close()
+        return results
 
     try:
         from sqlalchemy import create_engine, text  # type: ignore
+        from sqlalchemy.pool import NullPool
 
-        engine = create_engine(db_url, pool_pre_ping=True, connect_args={"connect_timeout": 10})
+        # NullPool: 이 엔진은 tick 하나만 산다. 기본 QueuePool 이면 버려진 뒤에도
+        # 커넥션을 쥐고 있다 (2026-09-10, PR #568).
+        engine = create_engine(db_url, poolclass=NullPool, pool_pre_ping=True, connect_args={"connect_timeout": 10})
         with engine.connect() as conn:
-            result = conn.execute(text(sql)).scalar()
-            return result or 0
+            conn = conn.execution_options(isolation_level="AUTOCOMMIT")
+            for key, sql in queries.items():
+                try:
+                    results[key] = conn.execute(text(sql)).scalar() or 0
+                except Exception as exc:
+                    logger.error("DB query error: %s | sql=%s", exc, sql[:80])
     except Exception as exc:
-        logger.error("DB query error: %s | sql=%s", exc, sql[:80])
-        return None
+        logger.error("DB connect error: %s", exc)
+    return results
 
 
 def fetch_funnel_metrics(db_url: str) -> dict:
@@ -149,27 +178,37 @@ def fetch_funnel_metrics(db_url: str) -> dict:
     추측 라벨:
     - signup_5m: users.created_at 5분 내 (= 완료된 가입, OAuth start 아님)
     - oauth_success_24h: oauth_provider IS NOT NULL 비율 (대리 지표)
-    - payment_attempts_24h: 추적 테이블 없어 trade_history 또는 processed_stripe_event 사용
+    - payment_attempts_24h: 추적 테이블 없어 processed_stripe_events 사용
     """
-    metrics: dict = {}
+    v = _query_scalars(db_url, {
+        # 가입 5분
+        "signup_5m": "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '5 minutes'",
+        # 가입 1시간 (baseline 비교용)
+        "signup_1h": "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 hour'",
+        # OAuth 성공률 (24h 신규 유저 중 oauth_provider 설정 비율)
+        # 추측 라벨: OAuth start → complete 전이율 아님. 완료된 유저 중 비율.
+        "total_24h": "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours'",
+        "oauth_24h": (
+            "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours' "
+            "AND oauth_provider IS NOT NULL"
+        ),
+        # Stripe 이벤트 — models/processed_stripe_event.py. 테이블은 복수형
+        # processed_stripe_events 이고 시각 컬럼은 created_at 이 아니라 processed_at 이다
+        # (이전 쿼리는 둘 다 틀려 매번 UndefinedTable 로 실패했다).
+        "stripe_success_24h": (
+            "SELECT COUNT(*) FROM processed_stripe_events WHERE processed_at >= NOW() - INTERVAL '24 hours' "
+            "AND event_type = 'payment_intent.succeeded'"
+        ),
+        "stripe_fail_24h": (
+            "SELECT COUNT(*) FROM processed_stripe_events WHERE processed_at >= NOW() - INTERVAL '24 hours' "
+            "AND event_type = 'payment_intent.payment_failed'"
+        ),
+    })
 
-    # 가입 5분
-    v = _run_query(db_url, "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '5 minutes'")
-    metrics["signup_5m"] = v
+    metrics: dict = {"signup_5m": v["signup_5m"], "signup_1h": v["signup_1h"]}
 
-    # 가입 1시간 (baseline 비교용)
-    v = _run_query(db_url, "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '1 hour'")
-    metrics["signup_1h"] = v
-
-    # OAuth 성공률 (24h 신규 유저 중 oauth_provider 설정 비율)
-    # 추측 라벨: OAuth start → complete 전이율 아님. 완료된 유저 중 비율.
-    total_24h = _run_query(
-        db_url, "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours'"
-    )
-    oauth_24h = _run_query(
-        db_url,
-        "SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '24 hours' AND oauth_provider IS NOT NULL"
-    )
+    total_24h = v["total_24h"]
+    oauth_24h = v["oauth_24h"]
     metrics["total_24h"] = total_24h
     metrics["oauth_24h"] = oauth_24h
     if total_24h and total_24h > 0 and oauth_24h is not None:
@@ -177,17 +216,8 @@ def fetch_funnel_metrics(db_url: str) -> dict:
     else:
         metrics["oauth_pct"] = None  # 데이터 없음
 
-    # Stripe 이벤트 (processed_stripe_event 테이블 사용)
-    # 추측 라벨: processed_stripe_event.event_type 으로 success/fail 구분.
-    # 테이블 존재 여부 미확정 — 없으면 None.
-    success_v = _run_query(
-        db_url,
-        "SELECT COUNT(*) FROM processed_stripe_event WHERE created_at >= NOW() - INTERVAL '24 hours' AND event_type = 'payment_intent.succeeded'"
-    )
-    fail_v = _run_query(
-        db_url,
-        "SELECT COUNT(*) FROM processed_stripe_event WHERE created_at >= NOW() - INTERVAL '24 hours' AND event_type = 'payment_intent.payment_failed'"
-    )
+    success_v = v["stripe_success_24h"]
+    fail_v = v["stripe_fail_24h"]
     metrics["stripe_success_24h"] = success_v
     metrics["stripe_fail_24h"] = fail_v
     if (success_v is not None and fail_v is not None

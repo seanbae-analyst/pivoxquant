@@ -91,9 +91,16 @@ def collect_metrics(db_url: str) -> dict:
     Window uses the DB's own clock so it matches ``created_at`` semantics.
     """
     from sqlalchemy import create_engine, text
+    from sqlalchemy.pool import NullPool  # transient engine, see note below
 
+    # NullPool: this engine is transient (one scheduler tick, in the web process).
+    # 2026-09-10: without it each create_engine kept an idle pooled connection to the
+    # Supabase session pooler (15 clients max) until garbage collection. The
+    # 5-minute signup-funnel job alone built six engines per tick; production held
+    # 11 idle app connections and the next deploy's worker died with
+    # EMAXCONNSESSION before it could boot.
     engine = create_engine(
-        db_url, pool_pre_ping=True,
+        db_url, poolclass=NullPool, pool_pre_ping=True,
         connect_args={"connect_timeout": 10} if db_url.startswith("postgresql") else {},
     )
     is_pg = db_url.startswith("postgresql")

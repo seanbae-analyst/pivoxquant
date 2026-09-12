@@ -161,49 +161,50 @@ def fetch_db_kpi() -> dict:
     # psycopg2 또는 sqlalchemy 중 하나라도 있으면 사용
     try:
         import psycopg2  # type: ignore
-        conn = psycopg2.connect(db_url)
-        cur = conn.cursor()
+        conn = psycopg2.connect(db_url, connect_timeout=10)
+        try:
+            with conn.cursor() as cur:
+                # DAU: 오늘 artifacts 생성한 고유 user_id (추측 — 방문자 기준 아님)
+                cur.execute(
+                    """
+                    SELECT COUNT(DISTINCT user_id)
+                    FROM artifacts
+                    WHERE created_at >= NOW() - INTERVAL '24 hours'
+                    """
+                )
+                row = cur.fetchone()
+                result["dau"] = row[0] if row else 0
 
-        # DAU: 오늘 artifacts 생성한 고유 user_id (추측 — 방문자 기준 아님)
-        cur.execute(
-            """
-            SELECT COUNT(DISTINCT user_id)
-            FROM artifacts
-            WHERE created_at >= NOW() - INTERVAL '24 hours'
-            """
-        )
-        row = cur.fetchone()
-        result["dau"] = row[0] if row else 0
+                # WAU: 7일 artifacts 고유 user_id
+                cur.execute(
+                    """
+                    SELECT COUNT(DISTINCT user_id)
+                    FROM artifacts
+                    WHERE created_at >= NOW() - INTERVAL '7 days'
+                    """
+                )
+                row = cur.fetchone()
+                result["wau"] = row[0] if row else 0
 
-        # WAU: 7일 artifacts 고유 user_id
-        cur.execute(
-            """
-            SELECT COUNT(DISTINCT user_id)
-            FROM artifacts
-            WHERE created_at >= NOW() - INTERVAL '7 days'
-            """
-        )
-        row = cur.fetchone()
-        result["wau"] = row[0] if row else 0
+                # 신규 가입 24h
+                cur.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM users
+                    WHERE created_at >= NOW() - INTERVAL '24 hours'
+                    """
+                )
+                row = cur.fetchone()
+                result["new_users_24h"] = row[0] if row else 0
 
-        # 신규 가입 24h
-        cur.execute(
-            """
-            SELECT COUNT(*)
-            FROM users
-            WHERE created_at >= NOW() - INTERVAL '24 hours'
-            """
-        )
-        row = cur.fetchone()
-        result["new_users_24h"] = row[0] if row else 0
-
-        # 전체 유저 수
-        cur.execute("SELECT COUNT(*) FROM users")
-        row = cur.fetchone()
-        result["total_users"] = row[0] if row else 0
-
-        cur.close()
-        conn.close()
+                # 전체 유저 수
+                cur.execute("SELECT COUNT(*) FROM users")
+                row = cur.fetchone()
+                result["total_users"] = row[0] if row else 0
+        finally:
+            # 쿼리가 실패해도 닫는다 — 이 잡은 웹 프로세스 안에서 돌고, Supabase 세션
+            # 풀러는 클라이언트 15개가 한도다 (2026-09-11).
+            conn.close()
         result["caveat"] = "추측: DAU/WAU = artifacts 활동 기준 (방문자 아님)"
         return result
 
@@ -212,8 +213,15 @@ def fetch_db_kpi() -> dict:
 
     try:
         from sqlalchemy import create_engine, text  # type: ignore
+        from sqlalchemy.pool import NullPool  # transient engine, see note below
 
-        engine = create_engine(db_url, pool_pre_ping=True, connect_args={"connect_timeout": 10})
+        # NullPool: this engine is transient (one scheduler tick, in the web process).
+        # 2026-09-10: without it each create_engine kept an idle pooled connection to the
+        # Supabase session pooler (15 clients max) until garbage collection. The
+        # 5-minute signup-funnel job alone built six engines per tick; production held
+        # 11 idle app connections and the next deploy's worker died with
+        # EMAXCONNSESSION before it could boot.
+        engine = create_engine(db_url, poolclass=NullPool, pool_pre_ping=True, connect_args={"connect_timeout": 10})
         with engine.connect() as conn:
             dau = conn.execute(
                 text("SELECT COUNT(DISTINCT user_id) FROM artifacts WHERE created_at >= NOW() - INTERVAL '24 hours'")
