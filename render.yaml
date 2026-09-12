@@ -53,20 +53,8 @@ services:
       - key: POPULATE_CACHE_ON_BOOT
         value: "1"
       - key: RUN_SCHEDULER
-        # 2026-09-11 CEO: free-tier test period — scheduler OFF.
-        # The in-process scheduler was the main consumer of the 15-client
-        # Supabase session pooler: EMAXCONNSESSION ~200/h in production and two
-        # failed deploys on 2026-09-10. The core loop (pre-trade / journal /
-        # mirror) needs no scheduled job. What stops while this is "0":
-        # email queue drains and nudges, 52-week and concentration alerts, the
-        # 3-minute SignalCache price refresh (portfolio prices refresh only when a
-        # position is added), weekly persona snapshots (mirror drift stays
-        # unavailable), and ops_pipa_purge — erasure requests will not be purged
-        # automatically until this is back to "1".
-        # To turn it back on: set "1" here AND in the Render dashboard.
-        # Exactly one process may set "1"; the Dockerfile pins gunicorn to
-        # --workers 1, so that is the process.
-        value: "0"
+        value: "1" # exactly one process may set this; the Dockerfile pins
+        # gunicorn to --workers 1, so this is that process
       - key: ALPACA_ENABLED
         value: "0" # legal: enabling this needs an Alpaca commercial data licence
       - key: FRONTEND_URL
