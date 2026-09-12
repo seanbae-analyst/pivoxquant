@@ -167,7 +167,7 @@ export default function OnboardingBrokerPage() {
               {t("brokerOnboarding.stepLabel")}
             </span>
             <span className="text-pq-mono-sm tabular-nums text-[var(--pq-ivory-faint)]">
-              0 · 20
+              0 · 5
             </span>
           </div>
           <div className="relative h-[2px] w-full overflow-hidden bg-[var(--pq-ivory-line)]">

@@ -23,6 +23,7 @@
  * `@/lib/pre-trade`. The DB schema / audit row stay untouched.
  */
 
+import { parseUtcSafe } from "@/lib/relative-time";
 import {
   useCallback,
   useEffect,
@@ -124,6 +125,8 @@ export interface PreTradeCycleArgs {
 }
 
 export interface PreTradeCycle {
+  /** What happened to the host's record commit after proceed (drives finish copy). */
+  commit: "none" | "recorded" | "failed";
   phase: Phase;
   reflection: Reflection | null;
   submitting: boolean;
@@ -151,6 +154,7 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
   const [phase, setPhase] = useState<Phase>("setup");
   const [reflection, setReflection] = useState<Reflection | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [commit, setCommit] = useState<"none" | "recorded" | "failed">("none");
 
   /* ── Proceed against a *specific* reflection ──
    * Shared by the user-driven `proceed()` and the auto-proceed path in
@@ -167,18 +171,27 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
           },
         );
         setReflection(r.reflection);
-        setPhase("terminal");
         // Commit the host's real journal record AFTER the reflection is
-        // stamped. A failure here is surfaced but the reflection stands.
-        try {
-          await onProceeded?.();
-        } catch (commitErr) {
-          const cmsg =
-            commitErr instanceof Error
-              ? commitErr.message
-              : "Failed to record entry.";
-          toast.error(cmsg);
+        // stamped, and BEFORE the finish screen, so its copy can say what
+        // actually happened. 2026-09-10: the screen always said "recorded the
+        // entry to your book", including on /pre-trade (no host commit at all)
+        // and after a failed commit.
+        if (onProceeded) {
+          try {
+            await onProceeded();
+            setCommit("recorded");
+          } catch (commitErr) {
+            const cmsg =
+              commitErr instanceof Error
+                ? commitErr.message
+                : "Failed to record entry.";
+            toast.error(cmsg);
+            setCommit("failed");
+          }
+        } else {
+          setCommit("none");
         }
+        setPhase("terminal");
       } catch (err) {
         const msg = err instanceof ApiError ? err.message : "Could not proceed";
         toast.error(msg || "Could not proceed");
@@ -332,6 +345,7 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
   }, []);
 
   return {
+    commit,
     phase,
     reflection,
     submitting,
@@ -633,8 +647,11 @@ export function TerminalStep({
   onReset,
   resetLabel,
   bare,
+  commit = "none",
 }: {
   reflection: Reflection;
+  /** Outcome of the host's record commit; "none" when the host has no commit. */
+  commit?: "none" | "recorded" | "failed";
   onReset: () => void;
   /** Override the reset CTA label (modal: "Close"; page: "New checklist"). */
   resetLabel?: string;
@@ -668,7 +685,13 @@ export function TerminalStep({
         </div>
         <p className="font-serif text-pq-body leading-relaxed text-[var(--pq-ivory-mid)]">
           {proceeded
-            ? "We stamped your reflection and recorded the entry to your book. PivoxQuant does not place trades — open your broker (KIS, etc.) and submit the order yourself."
+            ? `${
+                commit === "recorded"
+                  ? "We stamped your reflection and recorded the entry to your book."
+                  : commit === "failed"
+                    ? "We stamped your reflection, but the entry could not be recorded — add it on Portfolio."
+                    : "We stamped your reflection."
+              } PivoxQuant does not place trades — submit the order with your own broker.`
             : "취소되었습니다. 기록되지 않았습니다. 다음 결정 때 다시 7개 질문을 거치세요."}
         </p>
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[var(--pq-ivory-dim)]">
@@ -783,7 +806,8 @@ export function extendReasonLabel(reason: string): string {
 export function formatTime(iso: string | null): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleTimeString("en-GB", {
+    // Backend timestamps are naive UTC (no "Z"); parse them as UTC, not local.
+    return new Date(parseUtcSafe(iso)).toLocaleTimeString("en-GB", {
       hour: "2-digit",
       minute: "2-digit",
     });

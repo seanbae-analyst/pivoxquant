@@ -23,8 +23,8 @@
  * Pulse posture pill rendered as STEADY (not HOLD) per CEO 2026-04-28.
  */
 
+import { parseUtcSafe } from "@/lib/relative-time";
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -86,24 +86,6 @@ interface PulseHistoryRow {
   dim?: boolean;
 }
 
-const FALLBACK_PULSE_HISTORY: PulseHistoryRow[] = [
-  {
-    date: "22 APR",
-    question: "How heavy did the semis trim feel?",
-    posture: "calm",
-  },
-  {
-    date: "15 APR",
-    question: "Cash buffer — protective or punitive?",
-    posture: "protective",
-  },
-  {
-    date: "08 APR",
-    question: "Earnings season — would you size up or stay steady?",
-    posture: "steady", // ← STEADY, never HOLD (legal)
-    dim: true,
-  },
-];
 
 function PulseRow({ row }: { row: PulseHistoryRow }) {
   const label =
@@ -180,14 +162,11 @@ export default function ProfilePageV2() {
     }
   }, [authLoading, user, router]);
 
-  /* ── Tier label (Free / Pro / Premium) ── */
-  const tier = (user?.subscription_tier ?? "observer").toLowerCase();
-  const tierLabel =
-    tier === "pro" || tier === "operator"
-      ? "Pro"
-      : tier === "premium" || tier === "partner"
-        ? "Premium"
-        : "Free";
+  /* ── Plan label ──
+   * 2026-09-10: this mapped subscription_tier to Free / Pro / Premium, but
+   * billing is off and every account is on the free beta; naming paid tiers
+   * on the identity card implied plans that cannot be bought. */
+  const tierLabel = "Free beta";
 
   /* ── Agent memory export ── */
   const handleExport = React.useCallback(async () => {
@@ -439,7 +418,7 @@ export default function ProfilePageV2() {
     pulse?.history && pulse.history.length > 0
       ? pulse.history.slice(-3).reverse().map((p) => ({
           date: p.submitted_at
-            ? new Date(p.submitted_at)
+            ? new Date(parseUtcSafe(p.submitted_at))
                 .toLocaleDateString("en-US", {
                   day: "2-digit",
                   month: "short",
@@ -448,10 +427,14 @@ export default function ProfilePageV2() {
             : "—",
           question: p.worry?.trim()
             ? p.worry
-            : "Weekly reflection on book + watchlist.",
+            : "Weekly reflection.",
           posture: moodToPosture(p.mood),
         }))
-      : FALLBACK_PULSE_HISTORY;
+      : [];
+  // 2026-09-10: this used to fall back to three hardcoded rows ("22 APR · How
+  // heavy did the semis trim feel?"), shown as the user's own answers to anyone
+  // without a pulse. lib/cfo/hooks.ts dropped its fabricated data on 09-06;
+  // this copy was missed. An empty history now renders as empty.
 
   // 2026-09-06: `personaIsMock` + its "sample data" banner are gone with the
   // fabricating fallback in lib/cfo/hooks.ts. The banner existed to confess
@@ -669,9 +652,15 @@ export default function ProfilePageV2() {
             </p>
 
             <div role="list" aria-label="Recent pulse answers">
-              {pulseHistory.map((r, i) => (
-                <PulseRow key={`${r.date}-${i}`} row={r} />
-              ))}
+              {pulseHistory.length === 0 ? (
+                <p className="font-serif text-pq-body-sm text-[var(--pq-ivory-dim)]">
+                  아직 남긴 펄스가 없습니다.
+                </p>
+              ) : (
+                pulseHistory.map((r, i) => (
+                  <PulseRow key={`${r.date}-${i}`} row={r} />
+                ))
+              )}
             </div>
 
             <div style={{ marginTop: 20 }}>
@@ -707,8 +696,8 @@ export default function ProfilePageV2() {
           className="font-serif" >
             Notice / 면책 고지.
           </strong>{" "}
-          PivoxQuant produces editorial memos and analytical artifacts for the
-          user&rsquo;s own record-keeping. The persona classifier describes
+          PivoxQuant reflects the user&rsquo;s own records back to them for
+          their own record-keeping. The persona classifier describes
           observed behaviour; it is not investment advice, a solicitation, or a
           recommendation to buy or sell any security. 본 서비스는 자본시장과
           금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며, 모든
@@ -720,10 +709,6 @@ export default function ProfilePageV2() {
           <FootSignature note="PivoxQuant · Profile · Vol. 14 — Seoul" />
         </div>
 
-        {/* Helper for retake link surfaced as anchor for keyboard users */}
-        <div className="sr-only">
-          <Link href="/onboarding">Retake the five onboarding questions</Link>
-        </div>
       </main>
 
       {/* Mobile/tablet collapse */}

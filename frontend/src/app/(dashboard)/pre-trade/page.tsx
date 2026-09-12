@@ -153,6 +153,7 @@ export default function PreTradePage() {
 
         {cycle.phase === "terminal" && cycle.reflection && (
           <TerminalStep
+            commit={cycle.commit}
             reflection={cycle.reflection}
             onReset={reset}
           />
