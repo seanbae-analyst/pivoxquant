@@ -29,7 +29,6 @@ import {
   surfaceLabel,
   type PersonaFeatureKey,
   type PersonaBreakdownRow,
-  type PersonaRankingEntry,
   type PersonaId,
 } from "@/lib/cfo/hooks";
 import { PeerBenchmarkBlock } from "@/components/shared/peer-benchmark-block";
@@ -325,91 +324,6 @@ function WhyThisPersona({
   );
 }
 
-/* ── 8-archetype proximity ranking ──
- * Portfolio-pivot (2026-06-18): the demo may now surface the full 8-persona
- * depth (the §101 3-bucket collapse above is the legacy disclosed-label rule;
- * this ranking intentionally names all eight behavioural archetypes the
- * classifier scores against). Reads `data.ranking` (already cosine-sorted). */
-const PERSONA_FULL_LABELS: Record<PersonaId, string> = {
-  growth: "성장형",
-  value: "가치형",
-  balanced: "균형형",
-  income: "수익형",
-  quant: "퀀트형",
-  speculator: "투기형",
-  daytrader: "단타형",
-  beginner: "입문형",
-};
-
-function ArchetypeRanking({
-  ranking,
-  winner,
-}: {
-  ranking: PersonaRankingEntry[];
-  winner: PersonaId;
-}) {
-  if (!ranking || ranking.length === 0) return null;
-  const max = Math.max(...ranking.map((r) => r.similarity), 1);
-  return (
-    <div
-      className="p-5 rounded-[2px]"
-      style={{ background: PAPER_BG, border: `1px solid ${PAPER_BORDER}` }}
-    >
-      <Kicker>Archetype proximity · 8 personas</Kicker>
-      <p className="mt-2 text-xs text-[var(--pq-ivory-dim)]">
-        How closely your 9-dimension vector sits to each behavioural archetype
-        the classifier scores — ranked by cosine proximity.
-      </p>
-
-      <ul className="mt-5 flex flex-col gap-2.5">
-        {ranking.map((r) => {
-          const isWinner = r.persona === winner;
-          const pct = Math.round(r.similarity * 100);
-          return (
-            <li
-              key={r.persona}
-              className="grid grid-cols-[92px_1fr_42px] items-center gap-3"
-            >
-              <div
-                className={
-                  "font-serif text-pq-body-sm " +
-                  (isWinner
-                    ? "text-[var(--pq-ivory)]"
-                    : "text-[rgba(245,240,232,0.6)]")
-                }
-              >
-                {PERSONA_FULL_LABELS[r.persona] ?? r.persona}
-              </div>
-              <div
-                className="relative h-[8px] rounded-sm"
-                style={{
-                  background: "var(--pq-ivory-line-soft)",
-                  border: "0.5px solid var(--pq-ivory-line)",
-                }}
-                aria-hidden
-              >
-                <div
-                  className="absolute top-0 bottom-0 left-0 rounded-sm"
-                  style={{
-                    width: `${(r.similarity / max) * 100}%`,
-                    background: isWinner
-                      ? "var(--pq-bronze)"
-                      : "rgba(184,149,106,0.4)",
-                    transition: "width 600ms cubic-bezier(0.16, 1, 0.3, 1)",
-                  }}
-                />
-              </div>
-              <div className="text-right font-mono tabular-nums text-pq-caption text-[var(--pq-ivory-mid)]">
-                {pct}%
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
 /* ── Main ── */
 
 interface Props {
@@ -464,7 +378,6 @@ export function PersonaV2Card({
         windowDays={data.window_days}
         declared={data.declared_persona}
       />
-      <ArchetypeRanking ranking={data.ranking} winner={data.persona} />
       <FeatureBars
         features={data.features}
         present={data.present}

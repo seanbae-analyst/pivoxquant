@@ -42,9 +42,7 @@ interface PositionsTableV2Props {
   onAction?: (action: TradeAction, position: Position) => void;
   onAddPosition?: () => void;
   /** Empty-state secondary path: broker sync (KIS). Optional. */
-  onReconcile?: () => void;
   /** Whether a broker is linked — drives the secondary CTA enabled state. */
-  reconcileAvailable?: boolean;
 }
 
 // Wave 4-B (2026-05-20): migrated to lib/fmtMoneyPlain + lib/fmtPctSignedMinus.
@@ -158,8 +156,6 @@ export function PositionsTableV2({
   loading,
   onAction,
   onAddPosition,
-  onReconcile,
-  reconcileAvailable = false,
 }: PositionsTableV2Props) {
   const [sortKey, setSortKey] = React.useState<SortKey>("weight");
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc");
@@ -316,35 +312,6 @@ export function PositionsTableV2({
                 </button>
               )}
               {/* Secondary path — broker sync */}
-              {onReconcile && (
-                <button
-                  type="button"
-                  onClick={onReconcile}
-                  disabled={!reconcileAvailable}
-                  className="font-mono uppercase"
-                  title={
-                    reconcileAvailable
-                      ? "KIS 계좌에서 동기화"
-                      : "KIS broker 연결 필요 (Settings)"
-                  }
-                  aria-disabled={!reconcileAvailable}
-                  style={{
-                    display: "inline-flex",
-                    padding: "11px 22px",
-                    background: "transparent",
-                    color: reconcileAvailable
-                      ? "var(--pq-bronze)"
-                      : "var(--pq-ivory-faint)",
-                    fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.2em",
-                    border: `1px solid ${reconcileAvailable ? "var(--pq-bronze)" : "rgba(245,240,232,0.20)"}`,
-                    borderRadius: "var(--pq-radius-cta, 2px)",
-                    cursor: reconcileAvailable ? "pointer" : "not-allowed",
-                  }}
-                >
-                  KIS 동기화
-                </button>
-              )}
             </div>
           </div>
         ) : (
