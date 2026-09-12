@@ -113,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dump-raw", metavar="FILE", help="API 응답 원본을 이 파일에 저장")
     ap.add_argument("--from-raw", metavar="FILE", help="네트워크 없이 저장된 원본으로 렌더")
     ap.add_argument("--no-write", action="store_true", help="파일을 쓰지 않고 stdout 만")
+    ap.add_argument("--pdf", action="store_true", help="종이 판(ivory) 을 PDF 로도 쓴다 — 로그인·CSP·웹폰트 없이 읽히는 사본")
     args = ap.parse_args(argv)
 
     if args.from_raw:
@@ -161,7 +162,17 @@ def main(argv: list[str] | None = None) -> int:
             json.dump(report, fh, ensure_ascii=False, indent=2)
         with open(stem + ".html", "w", encoding="utf-8") as fh:
             fh.write("<!doctype html><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n" + render_mirror_html(report))
-        print(f"wrote {stem}.md / .json / .html", file=sys.stderr)
+        written = ".md / .json / .html"
+        if args.pdf:
+            from services.toss.pdf_report import render_pdf
+            blob = render_pdf(report)
+            if blob:
+                with open(stem + ".pdf", "wb") as fh:
+                    fh.write(blob)
+                written += " / .pdf"
+            else:
+                print("PDF 를 만들지 못했다 — WeasyPrint 가 이 머신에 없다", file=sys.stderr)
+        print(f"wrote {stem}{written}", file=sys.stderr)
 
     print(json.dumps(report, ensure_ascii=False, indent=2) if args.json else md)
     return 0
