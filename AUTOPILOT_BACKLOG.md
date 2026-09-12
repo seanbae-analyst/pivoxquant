@@ -664,3 +664,47 @@ CAUS = retired(`938bfcf4`). PDF 172-케이스 매트릭스 = 월요일이라 스
 
 ### ❌ 미검증 (PASS 아님, 3일 연속 사각지대)
 인증 페이지 **콘솔 에러·네트워크 4xx/5xx·375px·DisclaimerBanner·naked ticker**. 인증 라우트가 클라이언트 셸("Loading…"만 SSR)이라 curl 판정 불가 + 세션 브라우저가 `pivoxquant.com` **정책 차단** + 위임 agent 불능. 해소 경로 = carry-over B7(브라우저 로그인 1회 직접 확인).
+
+## 2026-09-11 (daily-sweep, prod, Fri) — P0 0 · 이월 4건 CLOSED
+
+**신규 P0=0 · P1=2 신규(+이월 2) · P2=1.** 자동수정 0건 (P0 0건). 상세: `BUG_SWEEP_2026-09-11.md`.
+자동 레그: virtual-user **516 calls / findings 0** · 야간 게이트 완주(pytest 2194/0fail · tsc 0 · vitest 380 · eslint 0 · build 0 · 계약 74/74) · 비인증 API 76 경로 **5xx 0** · NaN·undefined·BUY/SELL/HOLD 0.
+
+### ✅ 이월 종결 (오늘 실측)
+- [x] ~~09-10 P1 US 지수 3종 null~~ → `7f635caf`(#561) 로 US 워머 의도적 제거, 소비자 MarketTicker 마운트 0곳 확인 = 버그 아닌 설계 상태
+- [x] ~~09-10 P1 `/settings` 아티팩트 리포트 이메일 약속~~ → `adc6d00e`(#562), 문자열 0건
+- [x] ~~09-10 P1 topbar 알림 드롭다운 시그널 참조~~ → 문자열 0건
+- [x] ~~09-10 P1 주문 메서드 감지기 fails open~~ → 오늘 SessionStart 훅이 `KIS 주문 3개 전부 KIS_READ_ONLY` 보고
+
+### 🟠 P1 신규 (2건 — 자동수정 금지, CEO 검토)
+- [ ] **P1 — 약관·처리방침이 철회된 브로커 계좌 연동을 현행 기능으로 기술.** `terms-ko.md:86,161` (§161 = "회원은 본인의 브로커 API 인증정보(KIS App Key/Secret)를 직접 입력·연동") + `privacy-ko.md:65-66,73,77,99,127,199` (선택 동의 절·수집항목 KIS 키/계좌번호/토큰·국내 위탁 KIS "이용자가 연동한 본인 계좌 조회"). 라이브 `/terms` KIS 4회·`/privacy` 2회. 반대 증거: `BROKER_LINKING_AVAILABLE=false`, prod `/api/broker/*` 5종 404, `dormant_endpoints.txt` "deleted in 237a1b67". 과대 고지(과소 아님)라 긴급도 낮으나 존재하지 않는 기능의 이용자 의무 조항. **법적 문서 → 변호사 큐 v2 에 시그널(F5) 과 묶어 처리.** 09-10 "철회 카피 전수 스캔 목록 종결" 선언에서 누락됨 → 종결 선언 철회.
+- [ ] **P1 — F8 반쪽 수정: 상위 cwd 에이전트 6개가 구 도구명.** `4f30e3c1`(#560) 은 repo `pivoxquant/.claude/agents/` 6개만 수정. `/Users/seanbae/Desktop/취준/.claude/agents/{bug-hunter,investigate-bug,verify-data,verify-design,verify-security,verify-ux}.md` 는 May 26 버전 그대로(`diff -q` 6/6 DIFFERS, `mcp__Claude_in_Chrome__*`). 이 daily-sweep 잡은 상위 cwd 에서 시작하므로 로드되는 정의가 구버전. 수정 = repo 6개를 상위로 복사. ⚠️ 단 오늘은 브라우저 두 표면 모두 정책 차단이라 고쳐도 브라우저 레그는 불능.
+
+### 🔁 이월 유지
+- F4 `/support` FAQ 시그널 라벨(`faq-section.tsx:84,116`) · F5 `/terms` 시그널 10회 · F2 백엔드 ~50초 502(오늘 재현 안 됨, 누적 2회)
+
+### 🔵 P2 ×1
+공개 스냅샷 KOSPI/KOSDAQ `observed_at` 31초 전인데 `is_stale:true`(3회째, `market.py:425`) — 소비자 0 이라 유저 영향 0.
+
+### ❌ 미검증 (PASS 아님, 5일 연속)
+인증 페이지 콘솔·네트워크·375px·DisclaimerBanner·naked ticker 실렌더. **오늘 신규: in-app Browser + Claude in Chrome 둘 다 `pivoxquant.com` 조직 정책 차단.** 해소 = B7(CEO 로그인 1회) 또는 브라우저 정책 허용.
+
+## 2026-09-12 (daily-sweep, prod, Sat) — P0 0 · 자동수정 0
+
+**P0=0 · P1=4 (전부 이월) · P2=3 (신규 2).** 미커밋 가드(09-11 산출물) → detection-only, 커밋 0. 상세: `BUG_SWEEP_2026-09-12.md`.
+자동 레그: virtual-user **516 calls / findings 0** · 야간 게이트 green(pytest 2194/0 · tsc 0 · vitest 380 · eslint 0 · build 0) · health 200 `db:ok`(cold 47.8s) · BUY/SELL/HOLD 0 · naked ticker 0 · NaN/undefined 0 · 인증 7 라우트 → /login 리다이렉트 정상.
+방법: 로컬 Playwright headless + curl (상위 cwd bug-hunter 정의가 구 도구명 = F8 미해결, 6/6 DIFFERS 재확인).
+
+### 🟠 P1 (4건 — 전부 이월, 자동수정 금지)
+- [ ] **P1-A — `/support` 가 삭제된 AI 챗봇 광고 (재부상).** `support/page.tsx:146` "로그인하면 AI 고객지원에게 바로 질문하거나…" + `messages/ko.json:320`·`en.json:320` 「AI 고객지원에게 물어보기」. 챗봇 제거 `3518216b`. 이 파일 L23 의 동일 항목(당시 `ko.json:283-286`)이 미체크인데 09-11 이월 목록에서 빠져 있었음 → 줄번호 갱신해 재등록. (리드 코드 확인 ✅)
+- [ ] **P1-B — `/api/auth/me` 간헐 502 (F2, 3회째).** 데스크톱 4 페이지 로드(/docs /support /contact /pre-trade)에서 502, 재시도 72회 전부 200. 원인 미확정. 코드 추론(미검증): 캐시 없는 첫 로드에서 502 면 로그인 유저가 /login 으로 튕김(`lib/auth.tsx:98-116` → `(dashboard)/layout.tsx:118-119`). Render free cold start 연관 의심.
+- [ ] **P1-C — 약관·처리방침 브로커 연동 기술 (09-11 N1 불변).** 라이브 `/terms` KIS 4·연동 3 / `/privacy` KIS 2·연동 9. 법적 문서 → 변호사 큐.
+- [ ] **P1-D — `/support` FAQ "시그널 라벨(POSITIVE/NEGATIVE/NEUTRAL)" (F4 불변).** `faq-section.tsx:84,116`.
+
+### 🔵 P2 ×3
+- **신규** `/terms` `**` 6개 · `/privacy` 10개 리터럴 노출 — 핵심 면책 "추천이 ** 아닙니다**" 포함. `unbreakKoreanBold` 정규식(`terms/page.tsx:35`, `privacy/page.tsx:33`)이 닫는 `**` 와 다음 여는 `**` 를 짝지어 공백 삽입 → bold 파손. 에이전트가 동일 md 라이브러리로 오프라인 재현(정규식 제거 시 0개). 면책 문구 가독성 문제라 P1 승격 검토 가치 있음.
+- **신규** 모든 인증 라우트가 /login 리다이렉트 전 `401 GET /api/alerts?limit=50` 콘솔 에러 — SWR 키가 로그인 여부 무게이트(`notification-dropdown.tsx:71-76`, 리드 확인 ✅). 가시 파손 없음.
+- 이월: 공개 스냅샷 KOSPI `is_stale:true`(데이터 42초 전, 4회째) — 소비자 0.
+
+### ❌ 미검증 (6일 연속)
+인증 페이지 실렌더 콘텐츠 · 502 발생 계층 · SW 캐시 상태. 해소 = B7.
