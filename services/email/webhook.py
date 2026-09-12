@@ -92,6 +92,27 @@ def _extract_message_id(raw: str) -> str:
     return raw.split(".", 1)[0]
 
 
+def _opt_out_by_email(email, reason: str) -> bool:
+    """Resolve a terminal event's recipient to a user and opt them out.
+
+    Returns True when a user matched. Case-insensitive on the address; an
+    unknown address is a silent no-op (test sends, deleted accounts).
+    """
+    if not isinstance(email, str) or "@" not in email:
+        return False
+    try:
+        from sqlalchemy import func
+        from models import User
+        user = User.query.filter(func.lower(User.email) == email.strip().lower()).first()
+    except Exception:  # noqa: BLE001 — never 500 the webhook on a lookup
+        logger.exception("sendgrid webhook: email lookup failed")
+        return False
+    if user is None:
+        return False
+    _auto_opt_out(user.id, reason=reason)
+    return True
+
+
 def _auto_opt_out(user_id, reason: str) -> None:
     """Force-flip ``User.email_opt_out=True`` after a terminal email event.
 
@@ -185,9 +206,18 @@ def sendgrid_event():
 
         artifact = Artifact.query.filter_by(sg_message_id=msg_id).first()
         if not artifact:
-            # Not every SendGrid send corresponds to an Artifact row
-            # (transactional auth emails, dev test sends, etc.). Silent
-            # skip is correct here.
+            # Not every SendGrid send corresponds to an Artifact row — and
+            # since the 2026-08-31 prune NO send does: the only mail that goes
+            # out today is onboarding / retention / nudge mail, which never
+            # creates an Artifact. 2026-09-10: skipping here meant a bounce or
+            # spam complaint never flipped email_opt_out for anyone (정통망법
+            # §50). Terminal events now fall back to the recipient address,
+            # which this signature-verified payload carries. Open events stay
+            # Artifact-only (there is nothing to record them on).
+            evt_type = event.get("event")
+            if evt_type in ("bounce", "spamreport", "unsubscribe", "group_unsubscribe"):
+                if _opt_out_by_email(event.get("email"), reason=evt_type):
+                    processed += 1
             continue
 
         ts_raw = event.get("timestamp")
