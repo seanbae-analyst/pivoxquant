@@ -65,6 +65,11 @@ logger = logging.getLogger(__name__)
 # out-of-precision Decimal, which the /start route (catching only ValueError)
 # would surface as an uncaught 500 instead of a clean 400.
 _MAX_SHARES = 1e9          # well within intended_shares Numeric(20,4)
+# 2026-09-10: free text had no ceiling and a non-string body field raised
+# AttributeError (500) instead of a 400. Both columns are EncryptedText, so the
+# cap is about request hygiene, not storage — generous for a paragraph.
+MAX_TEXT_CHARS = 5000
+_TICKER_MAX_LEN = 20       # intended_ticker String(20); Postgres enforces it
 _MAX_VOLATILITY = 9999.0   # market_volatility_at_request Numeric(8,4) ceiling
 
 
@@ -93,16 +98,24 @@ def start_cooldown(
     """
     if not ticker or not str(ticker).strip():
         raise ValueError("ticker is required")
+    if rationale is not None and not isinstance(rationale, str):
+        raise ValueError("rationale must be text")
+    if devil_advocate is not None and not isinstance(devil_advocate, str):
+        raise ValueError("devil_advocate must be text")
     # Canonicalise before any storage / lookup so a bare "035760" lands as
     # "035760.KQ" (registry-guided) instead of a naked code that the Journal
     # would later render without a company name. Mirrors the portfolio routes.
     ticker = normalize_ticker(str(ticker))
     if not ticker:
         raise ValueError("ticker is required")
+    if len(ticker) > _TICKER_MAX_LEN:
+        raise ValueError(f"ticker must be at most {_TICKER_MAX_LEN} characters")
     if not rationale or len(rationale.strip()) < MIN_RATIONALE_CHARS:
         raise ValueError(
             f"rationale must be at least {MIN_RATIONALE_CHARS} characters"
         )
+    if len(rationale) > MAX_TEXT_CHARS or len(devil_advocate or "") > MAX_TEXT_CHARS:
+        raise ValueError(f"text must be at most {MAX_TEXT_CHARS} characters")
     if shares is not None:
         try:
             shares_f = float(shares)

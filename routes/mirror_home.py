@@ -146,6 +146,19 @@ def get_mirror_home():
         clf = {}
     observed_features = clf.get("features", {}) or {}
     observed_vec = [float(observed_features.get(k, 0.5)) for k in FEATURE_KEYS]
+    # Which axes the classifier actually measured. Below its own evidence
+    # thresholds (e.g. holding period, sector diversity, hold variance and
+    # loss-cut discipline need 10 trades in the window) it leaves the 0.5
+    # "no evidence" default in ``features`` and says so in ``present``.
+    # 2026-09-10: this route used to ignore that mask, so a user with 6 buys
+    # was shown "평균 보유기간 ↓40%p" against a number that was never computed.
+    # A payload without the mask (older callers / test doubles) counts as fully
+    # measured, which is what the route assumed before.
+    present = clf.get("present")
+    if isinstance(present, dict) and present:
+        measured_axes = [k for k in FEATURE_KEYS if present.get(k)]
+    else:
+        measured_axes = list(FEATURE_KEYS)
     trade_count = int(clf.get("trade_count", 0) or 0)
     observed_code = clf.get("persona")
     # Gate on closed-trade count only — matches the Living Mirror artifact's
@@ -157,7 +170,15 @@ def get_mirror_home():
     stage = "observed" if has_observed else "new"
 
     # (3) The gap — only meaningful once behaviour is observed.
-    gap = _gap(declared_vec, observed_vec, declared_axes) if has_observed else []
+    gap: list[dict] = []
+    if has_observed:
+        comparable_axes = [
+            k for k in (declared_axes or FEATURE_KEYS) if k in measured_axes
+        ]
+        # An empty list must not reach _gap: it treats a falsy filter as
+        # "compare every axis", which would reintroduce the unmeasured ones.
+        if comparable_axes:
+            gap = _gap(declared_vec, observed_vec, comparable_axes)
 
     # Observed bucket (3-bucket disclosed label only — never the 8-code).
     observed_label = (
@@ -204,5 +225,9 @@ def get_mirror_home():
             "observed": (
                 [round(v, 3) for v in observed_vec] if has_observed else None
             ),
+            # Axes with real evidence behind ``observed``. The others still
+            # carry the classifier's 0.5 default so the vector stays 9 long;
+            # the client must not present them as measurements.
+            "observed_axes": measured_axes if has_observed else [],
         },
     })

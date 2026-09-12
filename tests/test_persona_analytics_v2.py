@@ -283,6 +283,24 @@ class TestClassifyPersonaMulti:
             r = classify_persona_multi(auth_user["id"])
         assert r["declared_persona"] == "value"
 
+    def test_long_holder_selling_old_positions_is_not_a_short_holder(self, app, auth_user):
+        """2026-09-10: the window's SELLs are matched against buys from before
+        the window. Five positions bought 300 days ago and sold this month,
+        plus five fresh buys, is a ~295-day holder — not a 2-day one."""
+        from services.profile import classify_persona_multi
+        specs = []
+        for tk in ("AAPL", "MSFT", "KO", "JNJ", "PG"):
+            specs.append({"ticker": tk, "action": "BUY", "shares": 10, "price": 100, "days_ago": 300})
+            specs.append({"ticker": tk, "action": "SELL", "shares": 10, "price": 120, "days_ago": 5})
+        for tk in ("NVDA", "AMZN", "V", "MA", "XOM"):
+            specs.append({"ticker": tk, "action": "BUY", "shares": 10, "price": 100, "days_ago": 2})
+        _add_trades(app, auth_user["id"], specs)
+        with app.app_context():
+            r = classify_persona_multi(auth_user["id"], window_days=30)
+        assert r["trade_count"] == 10
+        assert r["present"]["holding_period"] == 1
+        assert r["features"]["holding_period"] > 0.8
+
     def test_window_days_respected(self, app, auth_user):
         from services.profile import classify_persona_multi
         # Old trade — 200 days ago.

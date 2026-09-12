@@ -733,7 +733,13 @@ export interface MirrorGapDimension {
 export interface MirrorHomeResponse {
   ok: boolean;
   stage: MirrorStage;
-  declared: { label: string | null; tagline: string | null; score: number | null };
+  declared: {
+    label: string | null;
+    tagline: string | null;
+    score: number | null;
+    /** "self" = axes from the user's own onboarding answers; "centroid" = persona default. */
+    source?: "self" | "centroid";
+  };
   observed: { label: string | null; bucket_changed: boolean; trade_count: number };
   gap: MirrorGapDimension[];
   drift: { available: boolean; descriptor: string | null };
@@ -743,5 +749,11 @@ export interface MirrorHomeResponse {
     declared: number[];
     /** null in the "new" stage (not enough observed behaviour yet). */
     observed: number[] | null;
+    /**
+     * Keys whose `observed` value is backed by evidence. The rest still carry
+     * the classifier's 0.5 "no evidence" default and must not be shown as
+     * measurements. Absent from older backends → treat every axis as measured.
+     */
+    observed_axes?: string[];
   };
 }

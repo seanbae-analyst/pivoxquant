@@ -20,12 +20,19 @@ function leadSentence(d: MirrorHomeResponse): string {
   return `${label}으로 선언하셨고, 최근 30일 행동도 같은 결로 관찰됩니다.`;
 }
 
-/** 선언 centroid vs 30일 관찰 shape 의 정합도(%) — 두 9축 벡터의 평균 절대편차 기반. */
+/** 선언 vs 30일 관찰 shape 의 정합도(%) — 측정된 축만의 평균 절대편차 기반.
+ *  2026-09-10: 측정되지 않은 축(0.5 기본값)까지 평균에 넣어서, 기록이 거의
+ *  없는 사용자에게도 근거 없는 수치가 나왔다. 측정된 축이 없으면 표시하지 않는다. */
 function alignmentPct(d: MirrorHomeResponse): number | null {
   const a = d.radar.declared;
   const b = d.radar.observed;
   if (!b || a.length === 0 || a.length !== b.length) return null;
-  const mad = a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0) / a.length;
+  const measured = d.radar.observed_axes;
+  const idx = a
+    .map((_, i) => i)
+    .filter((i) => !measured || measured.includes(d.radar.keys[i]));
+  if (idx.length === 0) return null;
+  const mad = idx.reduce((s, i) => s + Math.abs(a[i] - b[i]), 0) / idx.length;
   return Math.round((1 - mad) * 100);
 }
 

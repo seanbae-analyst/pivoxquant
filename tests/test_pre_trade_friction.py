@@ -621,3 +621,41 @@ def test_start_without_cache_yields_null_context_but_writes(app, make_user):
         assert out["id"]
         # No cache row, no vix passed, no realtime service in tests → null.
         assert out["observed_context"] is None
+
+
+# ── 2026-09-10: malformed input is a 400, never a 500 ─────────────────────
+
+def test_non_string_rationale_rejected(app, make_user):
+    import pytest
+    from services.pre_trade.friction import start_cooldown
+    user = _make_user(make_user)
+    with app.app_context():
+        for bad in (12345678901, ["a" * 20], {"t": "a" * 20}):
+            with pytest.raises(ValueError):
+                start_cooldown(user_id=user["id"], ticker="AAPL", side=None,
+                               shares=None, rationale=bad)
+
+
+def test_overlong_ticker_and_text_rejected(app, make_user):
+    import pytest
+    from services.pre_trade.friction import MAX_TEXT_CHARS, start_cooldown
+    user = _make_user(make_user)
+    with app.app_context():
+        with pytest.raises(ValueError):
+            start_cooldown(user_id=user["id"], ticker="A" * 64, side=None,
+                           shares=None, rationale="a" * 30)
+        with pytest.raises(ValueError):
+            start_cooldown(user_id=user["id"], ticker="AAPL", side=None,
+                           shares=None, rationale="a" * (MAX_TEXT_CHARS + 1))
+
+
+def test_route_non_object_body_is_400(client, auth_user):
+    for body in ([1, 2, 3], "text", 42):
+        resp = client.post("/api/pre-trade/start", json=body)
+        assert resp.status_code == 400, body
+
+
+def test_route_non_string_rationale_is_400(client, auth_user):
+    resp = client.post("/api/pre-trade/start",
+                       json={"ticker": "AAPL", "rationale": 12345678901234})
+    assert resp.status_code == 400

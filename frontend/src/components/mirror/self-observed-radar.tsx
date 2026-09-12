@@ -17,6 +17,13 @@ interface SelfObservedRadarProps {
   declared: number[];
   /** Observed 30d shape, 0..1 per axis — null in the "new" stage. */
   observed: number[] | null;
+  /**
+   * Per-axis "was this measured?" in the same order as `labels`. When any axis
+   * is unmeasured the observed shape is drawn as points on the measured axes
+   * only, and unmeasured axes print "—": a polygon through a 0.5 default would
+   * draw a behaviour that was never observed. Omitted → every axis measured.
+   */
+  measured?: boolean[];
   /** Print the observed value (%) under each axis label. */
   showValues?: boolean;
   className?: string;
@@ -54,11 +61,15 @@ export function SelfObservedRadar({
   labels,
   declared,
   observed,
+  measured,
   showValues = true,
   className,
 }: SelfObservedRadarProps) {
   const n = declared.length || 9;
   const rings = [0.25, 0.5, 0.75, 1];
+  const hasObserved = Boolean(observed && observed.length === n);
+  const isMeasured = (i: number) => !measured || measured[i] !== false;
+  const fullyMeasured = hasObserved && Array.from({ length: n }).every((_, i) => isMeasured(i));
 
   return (
     <svg
@@ -86,15 +97,30 @@ export function SelfObservedRadar({
         strokeLinejoin="round"
       />
 
-      {/* 관찰 (observed) — ivory; absent in the "new" stage */}
-      {observed && observed.length === n && (
+      {/* 관찰 (observed) — ivory; absent in the "new" stage. A closed shape
+          only when every axis was measured; otherwise points on measured axes. */}
+      {hasObserved && fullyMeasured && (
         <polygon
-          points={polygon(observed)}
+          points={polygon(observed as number[])}
           style={{ fill: "rgba(var(--pq-ivory-rgb), 0.13)", stroke: "var(--pq-ivory)" }}
           strokeWidth={1.6}
           strokeLinejoin="round"
         />
       )}
+      {hasObserved && !fullyMeasured &&
+        (observed as number[]).map((v, i) => {
+          if (!isMeasured(i)) return null;
+          const p = point(i, n, v);
+          return (
+            <circle
+              key={`obs-${i}`}
+              cx={p.x.toFixed(1)}
+              cy={p.y.toFixed(1)}
+              r={3}
+              style={{ fill: "var(--pq-ivory)" }}
+            />
+          );
+        })}
 
       {/* axis labels + the observed value (%) for each behavioural dimension */}
       {labels.slice(0, n).map((label, i) => {
@@ -102,7 +128,8 @@ export function SelfObservedRadar({
         const lx = CX + LABEL_R * Math.cos(a);
         const ly = CY + LABEL_R * Math.sin(a);
         const anchor = lx < CX - 4 ? "end" : lx > CX + 4 ? "start" : "middle";
-        const obs = observed && observed.length === n ? observed[i] : null;
+        const obs = hasObserved ? (observed as number[])[i] : null;
+        const obsText = obs == null ? null : isMeasured(i) ? `${Math.round(obs * 100)}%` : "—";
         return (
           <text
             key={label}
@@ -117,7 +144,7 @@ export function SelfObservedRadar({
             }}
           >
             <tspan x={lx.toFixed(1)}>{label}</tspan>
-            {showValues && obs != null && (
+            {showValues && obsText != null && (
               <tspan
                 x={lx.toFixed(1)}
                 dy="1.3em"
@@ -127,7 +154,7 @@ export function SelfObservedRadar({
                   fontFamily: "var(--pq-font-mono)",
                 }}
               >
-                {Math.round(obs * 100)}%
+                {obsText}
               </tspan>
             )}
           </text>

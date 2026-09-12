@@ -87,6 +87,30 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+_KST = timedelta(hours=9)
+
+
+def _is_buy_side(r) -> bool:
+    """A pause before buying. EXIT pauses are stored as ``"SELL"``."""  # // legal-ok — stored enum value
+    return str(getattr(r, "intended_side", None) or "").upper() in ("", "BUY")  # // legal-ok — stored enum value
+
+
+def _at_or_after(trade_at: datetime, event_at: datetime) -> bool:
+    """Did this trade happen at or after the event?
+
+    Trades entered with only a date are stored at midnight, while the
+    reflection's ``proceeded_at`` / ``cancelled_at`` carry a real UTC time.
+    Compared as instants, a buy recorded for the same day as a 14:01 pause
+    fell *before* it and was counted as a buy without friction. A date-only
+    trade is therefore compared by calendar day, in KST — the day the user
+    typed — rather than by instant.
+    """
+    if trade_at >= event_at:
+        return True
+    date_only = (trade_at.hour, trade_at.minute, trade_at.second, trade_at.microsecond) == (0, 0, 0, 0)
+    return date_only and trade_at.date() >= (event_at + _KST).date()
+
+
 def _norm(ticker: Any) -> str:
     return str(ticker or "").strip().upper()
 
@@ -157,6 +181,13 @@ def compute_friction_outcome(
         "open": len(reflections) - len(proceeded) - len(cancelled),
     }
 
+    # 매수 추적(취소 후 결국 샀나 / 멈춤 경유 매수 귀속)에는 **매수 쪽 멈춤만**
+    # 쓴다. 2026-09-10: 매도 전 멈춤(EXIT → intended_side "SELL")까지 넣어서,  // legal-ok
+    # 팔려다 취소하고 이틀 뒤 산 것이 "결국 샀다"로, 매도 멈춤 뒤의 무관한
+    # 매수가 "멈춤 경유 매수"로 잡혔다. side 가 없는 옛 행은 매수로 본다.
+    buy_side_proceeded = [r for r in proceeded if _is_buy_side(r)]
+    buy_side_cancelled = [r for r in cancelled if _is_buy_side(r)]
+
     # 매수만 종목·시각으로 색인 (취소 추적과 귀속 양쪽에 쓴다)
     buys: dict[str, list[datetime]] = {}
     for t in trades:
@@ -172,17 +203,19 @@ def compute_friction_outcome(
     # ── 2. 취소가 회피였나 지연이었나 ────────────────────────────────────
     revisit_days: list[float] = []
     bought_anyway = 0
-    for r in cancelled:
+    for r in buy_side_cancelled:
         tk = _norm(r.intended_ticker)
-        later = [b for b in buys.get(tk, []) if b > r.cancelled_at]
+        later = [b for b in buys.get(tk, []) if _at_or_after(b, r.cancelled_at)]
         if later:
             bought_anyway += 1
-            revisit_days.append((later[0] - r.cancelled_at).total_seconds() / 86400.0)
+            revisit_days.append(
+                max(0.0, (later[0] - r.cancelled_at).total_seconds() / 86400.0)
+            )
     revisit_median, _ = _median_mean(revisit_days)
     cancelled_followthrough = {
-        "cancelled": len(cancelled),
+        "cancelled": len(buy_side_cancelled),
         "bought_later_anyway": bought_anyway,
-        "never_bought": len(cancelled) - bought_anyway,
+        "never_bought": len(buy_side_cancelled) - bought_anyway,
         "median_days_until_bought": revisit_median,
     }
 
@@ -191,10 +224,10 @@ def compute_friction_outcome(
     # 표시한다. (ticker, buy_time) 쌍으로 FIFO 슬라이스와 맞춘다.
     window = timedelta(days=ATTRIBUTION_WINDOW_DAYS)
     friction_buys: set[tuple[str, datetime]] = set()
-    for r in proceeded:
+    for r in buy_side_proceeded:
         tk = _norm(r.intended_ticker)
         for b in buys.get(tk, []):
-            if r.proceeded_at <= b <= r.proceeded_at + window:
+            if _at_or_after(b, r.proceeded_at) and b <= r.proceeded_at + window:
                 friction_buys.add((tk, b))
                 break
 

@@ -78,3 +78,47 @@ def test_observed_stage_gap_and_radar(client, auth_user, monkeypatch):
     assert data["observed"]["label"] in {"성장형", "균형형", "수익형"}
     blob = json.dumps(data, ensure_ascii=False).lower()
     assert "growth" not in blob and "speculator" not in blob
+
+
+def _observed_double(features, present):
+    return lambda *a, **k: {
+        "features": features,
+        "present": present,
+        "trade_count": 6,
+        "data_sparse": True,
+        "persona": "balanced",
+    }
+
+
+def test_unmeasured_axes_never_reach_the_gap(client, auth_user, monkeypatch):
+    """2026-09-10: below the classifier's evidence thresholds an axis keeps
+    the 0.5 default and ``present`` marks it 0. Such an axis must not be
+    compared against the declaration, however far the default sits from it."""
+    from services.profile.persona_classifier_v2 import FEATURE_KEYS
+    features = {k: 0.5 for k in FEATURE_KEYS}
+    features["turnover"] = 0.9          # measured, and different
+    present = {k: 0 for k in FEATURE_KEYS}
+    present["turnover"] = 1
+    present["ticker_diversity"] = 1
+    monkeypatch.setattr("routes.mirror_home.classify_persona_multi",
+                        _observed_double(features, present))
+
+    data = client.get("/api/mirror-home").get_json()
+    assert data["stage"] == "observed"
+    keys = {g["key"] for g in data["gap"]}
+    assert keys <= {"turnover", "ticker_diversity"}
+    assert "holding_period" not in keys
+    assert data["radar"]["observed_axes"] == ["turnover", "ticker_diversity"]
+
+
+def test_no_measured_axis_means_no_gap(client, auth_user, monkeypatch):
+    from services.profile.persona_classifier_v2 import FEATURE_KEYS
+    features = {k: 0.1 for k in FEATURE_KEYS}
+    present = {k: 0 for k in FEATURE_KEYS}
+    monkeypatch.setattr("routes.mirror_home.classify_persona_multi",
+                        _observed_double(features, present))
+
+    data = client.get("/api/mirror-home").get_json()
+    assert data["stage"] == "observed"
+    assert data["gap"] == []
+    assert data["radar"]["observed_axes"] == []
