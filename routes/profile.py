@@ -1471,9 +1471,21 @@ _EXPORT_PORTFOLIO_SHARE_LIMIT = 1000   # share links the user created
 _EXPORT_PUSH_SUB_LIMIT = 100           # browser push registrations
 _EXPORT_SCHEDULED_EMAIL_LIMIT = 1000   # onboarding email queue rows
 _EXPORT_CHECKOUT_EXPIRATION_LIMIT = 1000  # abandoned-checkout follow-up queue
+_EXPORT_NAV_SNAPSHOT_LIMIT = 5000        # one row per user per day
+_EXPORT_AGENT_AUDIT_LIMIT = 1000
 # P1 sections — login/funnel history (the user's own activity records).
 _EXPORT_AUTH_EVENT_LIMIT = 2000        # OAuth start/success/fail log (keyed by email)
 _EXPORT_FUNNEL_EVENT_LIMIT = 5000      # acquisition/activation funnel events
+
+
+def _num_or_none(value):
+    """Numeric (incl. Decimal) → float for JSON; None stays None."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _iso_or_none(value):
@@ -1516,6 +1528,58 @@ def _serialize_user(user) -> dict:
         "email_opt_out_earnings": bool(
             getattr(user, "email_opt_out_earnings", False)
         ),
+        # 2026-09-10 (PIPA §35): the privacy policy lists these as collected,
+        # and the user must be able to audit their own consent trail, but the
+        # export omitted them.
+        "birthdate": _iso_or_none(getattr(user, "birthdate", None)),
+        "locale": getattr(user, "locale", None),
+        "referral_code": getattr(user, "referral_code", None),
+        "referred_by": getattr(user, "referred_by", None),
+        "privacy_mode": getattr(user, "privacy_mode", None),
+        "notification_prefs": getattr(user, "notification_prefs", None),
+        "deletion_requested_at": _iso_or_none(getattr(user, "deletion_requested_at", None)),
+        "consents": {
+            k: _iso_or_none(getattr(user, k, None))
+            for k in (
+                "marketing_consent_at",
+                "marketing_consent_revoked_at",
+                "marketing_consent_information_at",
+                "marketing_consent_information_revoked_at",
+                "marketing_consent_marketing_at",
+                "marketing_consent_marketing_revoked_at",
+                "cross_border_consent_at",
+                "cross_border_consent_revoked_at",
+            )
+            if hasattr(user, k)
+        },
+    }
+
+
+def _serialize_nav_snapshot(n) -> dict:
+    return {
+        "as_of_date": _iso_or_none(getattr(n, "as_of_date", None)),
+        "nav_total_usd": _num_or_none(getattr(n, "nav_total_usd", None)),
+        "nav_us_usd": _num_or_none(getattr(n, "nav_us_usd", None)),
+        "nav_kr_krw": _num_or_none(getattr(n, "nav_kr_krw", None)),
+        "fx_rate": _num_or_none(getattr(n, "fx_rate", None)),
+        "created_at": _iso_or_none(getattr(n, "created_at", None)),
+    }
+
+
+def _serialize_user_agent_audit(a) -> dict:
+    """Audit row for a retired assistant surface. ``user_message_hash`` is
+    withheld (a derived fingerprint, not the user's content) — the length
+    and gate outcome are the auditable facts."""
+    return {
+        "request_id": getattr(a, "request_id", None),
+        "persona_code": getattr(a, "persona_code", None),
+        "user_message_len": getattr(a, "user_message_len", None),
+        "raw_output_len": getattr(a, "raw_output_len", None),
+        "gate_verdict": getattr(a, "gate_verdict", None),
+        "gate_reason": getattr(a, "gate_reason", None),
+        "model": getattr(a, "model", None),
+        "generated_at": _iso_or_none(getattr(a, "generated_at", None)),
+        "purge_after": _iso_or_none(getattr(a, "purge_after", None)),
     }
 
 
@@ -2542,6 +2606,23 @@ def export_profile():
             .limit(_EXPORT_CHECKOUT_EXPIRATION_LIMIT)
             .all()
         )
+        # 2026-09-10: both tables carry a users FK and both deletion paths
+        # purge them, but the export never queried them (PIPA §35).
+        from models import PortfolioNavSnapshot, UserAgentAudit
+        nav_snapshots = (
+            PortfolioNavSnapshot.query
+            .filter_by(user_id=user_id)
+            .order_by(PortfolioNavSnapshot.as_of_date.desc())
+            .limit(_EXPORT_NAV_SNAPSHOT_LIMIT)
+            .all()
+        )
+        agent_audit = (
+            UserAgentAudit.query
+            .filter_by(user_id=user_id)
+            .order_by(UserAgentAudit.generated_at.desc())
+            .limit(_EXPORT_AGENT_AUDIT_LIMIT)
+            .all()
+        )
 
         # AI Twin (paper-only) — portfolio is keyed by user_id; its positions
         # and trades are keyed by twin_id (the portfolio's PK), so resolve the
@@ -2650,6 +2731,8 @@ def export_profile():
         "checkout_expirations": [
             _serialize_checkout_expiration(c) for c in checkout_expirations
         ],
+        "portfolio_nav_snapshots": [_serialize_nav_snapshot(n) for n in nav_snapshots],
+        "user_agent_audit": [_serialize_user_agent_audit(a) for a in agent_audit],
         "ai_twin_portfolios": [p.to_dict() for p in ai_twin_portfolios],
         "ai_twin_positions": [p.to_dict() for p in ai_twin_positions],
         "ai_twin_trades": [t.to_dict() for t in ai_twin_trades],
@@ -2677,6 +2760,8 @@ def export_profile():
             "push_subscriptions": len(push_subscriptions),
             "scheduled_emails": len(scheduled_emails),
             "checkout_expirations": len(checkout_expirations),
+            "portfolio_nav_snapshots": len(nav_snapshots),
+            "user_agent_audit": len(agent_audit),
             "ai_twin_portfolios": len(ai_twin_portfolios),
             "ai_twin_positions": len(ai_twin_positions),
             "ai_twin_trades": len(ai_twin_trades),
@@ -2704,6 +2789,7 @@ def export_profile():
                 "portfolio_share.token",
                 "checkout_expiration.session_id",
                 "companion_waitlist.email_hash",
+                "user_agent_audit.user_message_hash",
             ],
             "trade_limit": _EXPORT_TRADE_LIMIT,
             "alert_limit": _EXPORT_ALERT_LIMIT,

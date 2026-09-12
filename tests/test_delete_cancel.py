@@ -172,3 +172,35 @@ def test_delete_request_email_embeds_self_service_cancel_link(
     assert "탈퇴 철회하기" in html
     # The old support-email cancel instruction must be gone.
     assert "고객센터(support@pivoxquant.com)로 연락" not in html
+
+
+
+def test_token_from_an_earlier_request_cannot_cancel_a_later_one(app, raw_client, make_user):
+    """2026-09-10: request → cancel → request again. The first email's link
+    must not undo the second request."""
+    from datetime import datetime, timedelta
+    from extensions import db
+    from models import User
+    from routes.auth import _make_delete_cancel_token
+
+    u = make_user(email="stale-cancel@test.com")
+    first = datetime(2026, 9, 1, 3, 0, 0)
+    second = first + timedelta(days=2)
+    with app.app_context():
+        row = db.session.get(User, u["id"])
+        row.deletion_requested_at = second
+        db.session.commit()
+        old_token = _make_delete_cancel_token(u["id"], first)
+        new_token = _make_delete_cancel_token(u["id"], second)
+
+    resp = raw_client.post("/api/auth/delete-cancel", json={"token": old_token})
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert "AUTH_DELETE_CANCEL_STALE" in (body.get("code"), body.get("error_code"), body.get("error"))
+    with app.app_context():
+        assert db.session.get(User, u["id"]).deletion_requested_at is not None
+
+    resp = raw_client.post("/api/auth/delete-cancel", json={"token": new_token})
+    assert resp.status_code == 200
+    with app.app_context():
+        assert db.session.get(User, u["id"]).deletion_requested_at is None

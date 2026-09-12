@@ -179,6 +179,8 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
         "push_subscriptions": 0,
         "scheduled_emails": 0,
         "checkout_expirations": 0,
+        "portfolio_nav_snapshots": 0,
+        "user_agent_audit": 0,
         "ai_twin_portfolios": 0,
         "ai_twin_positions": 0,
         "ai_twin_trades": 0,
@@ -444,6 +446,7 @@ def test_export_excludes_password_and_payment_secrets_strictly(
 # The full registry of list-valued export sections, kept here as the test's
 # source of truth so a section dropped from the route's `counts` is caught.
 _EXPECTED_SECTIONS = {
+    "portfolio_nav_snapshots", "user_agent_audit",
     "positions", "watchlist", "trade_history", "alerts",
     "behavioral_scores", "weekly_pulse", "persona_snapshots", "nps_feedback",
     "pre_trade_reflections", "artifacts", "artifact_feedback",
@@ -1167,3 +1170,29 @@ def test_json_export_still_default_when_no_format(client, auth_user):
     body = json.loads(resp.data)
     assert body["format_version"] == "1.0"
     assert body["scope"] == "self_only"
+
+
+
+def test_export_includes_consent_trail_birthdate_and_nav_history(app, client, auth_user):
+    """2026-09-10 (PIPA §35): birthdate, the consent timestamps and the NAV
+    snapshot history belong to the user and were missing from the export."""
+    from datetime import date, datetime, timezone
+    from extensions import db
+    from models import PortfolioNavSnapshot, User
+
+    uid = auth_user["id"]
+    with app.app_context():
+        u = db.session.get(User, uid)
+        u.marketing_consent_at = datetime(2026, 9, 1, 1, 0, 0)
+        db.session.add(PortfolioNavSnapshot(
+            user_id=uid, as_of_date=date(2026, 9, 1),
+            nav_total_usd=1234, nav_us_usd=1234, nav_kr_krw=0,
+        ))
+        db.session.commit()
+
+    body = json.loads(client.get("/api/profile/export").data)
+    assert body["user"]["birthdate"] is not None
+    assert body["user"]["consents"]["marketing_consent_at"].startswith("2026-09-01")
+    assert body["counts"]["portfolio_nav_snapshots"] == 1
+    assert body["portfolio_nav_snapshots"][0]["as_of_date"].startswith("2026-09-01")
+    assert "user_message_hash" not in json.dumps(body["user_agent_audit"])

@@ -157,7 +157,7 @@ def find_purge_candidates(*, now: datetime | None = None):
 
 # ── core delete cascade ──────────────────────────────────────────────────────
 
-def _delete_user_cascade(user_id: int, email: str) -> dict:
+def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -> dict:
     """Hard-delete one user + all owned rows. Returns a counts dict.
 
     Mirrors ``routes/auth.py:delete_account`` per-model list (explicit
@@ -264,7 +264,7 @@ def _delete_user_cascade(user_id: int, email: str) -> dict:
 
     # ── send TRANSACTIONAL "purge complete" email BEFORE deleting row ────────
     # Skip on a stuck-row retry — the email already went out on the first pass.
-    if user is not None and not is_retry:
+    if user is not None and not is_retry and send_email:
         try:
             _send_purge_complete_email(user)
         except Exception:
