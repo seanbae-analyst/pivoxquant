@@ -44,6 +44,7 @@ import { TurnoverMirror } from "@/components/journal/turnover-mirror";
 import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror";
 import { FrictionOutcomeMirror } from "@/components/journal/friction-outcome-mirror";
 import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
+import { WeeklyPulseSection } from "@/components/journal/weekly-pulse-section";
 import type { PreTradeReflection } from "@/lib/types";
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -484,6 +485,12 @@ function JournalContent() {
           ))}
         </div>
       )}
+
+      {/* Weekly pulse — the user's own self-report, so it lives with the
+          record. Moved from /profile 2026-09-12; behaviour unchanged. */}
+      <div className="mt-12">
+        <WeeklyPulseSection />
+      </div>
 
       <FootSignature />
     </div>

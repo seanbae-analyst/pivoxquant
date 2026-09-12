@@ -8,7 +8,7 @@
  * list; this pass deletes them instead of hiding them. What is left is
  * the behavioural loop (멈춤 → 기록 → 거울) plus the account:
  *   PRIMARY · Mirror / Portfolio / Pre-Trade
- *   MORE    · Journal / Profile · Persona / Settings
+ *   MORE    · Journal / Settings   (Profile · Persona removed 2026-09-12)
  *
  * There is no hidden list any more — an item in this file is a page that
  * exists, and every page that exists is in this file.
@@ -24,7 +24,6 @@ import {
   Briefcase,
   Settings as SettingsIcon,
   NotebookPen,
-  UserCircle,
   Gavel,
   Contrast,
 } from "lucide-react";
@@ -35,7 +34,6 @@ export type TerminalSidebarKey =
   | "portfolio"
   | "pre-trade"
   | "journal"
-  | "profile"
   | "settings";
 
 type Item = {
@@ -51,9 +49,9 @@ type Item = {
 // Naming rule: the product's OWN vocabulary is Korean, the generic app
 // shell stays English. 멈춤 / 기록 / 거울 are the words the landing page and
 // all six emails teach the reader; a nav that said "Pre-Trade" taught a
-// second vocabulary for the same three screens. Portfolio / Profile /
-// Settings are loanwords in Korean product UI already and carry no such
-// duty, so they keep the terminal tone.
+// second vocabulary for the same three screens. Portfolio / Settings are
+// loanwords in Korean product UI already and carry no such duty, so they
+// keep the terminal tone.
 //
 // Labels stay literal (no t()) — same reason bottom-nav.tsx gives: a missing
 // locale key must never be able to blank the navigation.
@@ -66,7 +64,6 @@ const PRIMARY: Item[] = [
 // MORE — the record's own surfaces plus the account.
 const MORE: Item[] = [
   { key: "journal", label: "기록", href: "/journal", icon: NotebookPen },
-  { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
 ];
 

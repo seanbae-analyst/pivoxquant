@@ -52,7 +52,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 시세는 **오직 `/portfolio` 의 평가액** 때문에 존재하고, 평가액을 유저 본인 계좌에서 받으면 FMP 재배포 문제와 R7 이 함께 닫힌다.
 
 ### 나머지 화면
-`/portfolio` (보유·NAV·거래내역) · `/profile` (페르소나·펄스·데이터 내보내기/삭제) · `/settings` · `/support/contact` · `/support/inbox`
+`/portfolio` (보유·NAV·거래내역) · `/settings` (이름·로그인·알림·데이터 내보내기/탈퇴) · `/support/contact` · `/support/inbox` — `/profile` 은 2026-09-12 해체(→ `/settings` 308)
 
 ---
 
@@ -84,7 +84,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 - `app.py` 의 `db.create_all()` 은 조건 없이 돈다. `models/` · `migrations/` 의 alembic 리비전은 **삭제 금지**.
 - `routes/market.py` 는 4 라우트다 — 사라진 14개(FMP 다량 사용)를 되살리지 마라. **퀀트 코드·autotrade 는 없다.**
 - `services/broker/` `mock_data/` `trading/` 은 추적 파일 0개인 빈 껍데기다.
-- 프론트 `(dashboard)` = mirror · portfolio · pre-trade · journal · profile · settings · support. `/home` → `/mirror` 308.
+- 프론트 `(dashboard)` = mirror · portfolio · pre-trade · journal · settings · support. `/home` → `/mirror`, `/profile` → `/settings` 308.
 - ⚠️ **프론트가 쓰는 API 는 경로 문자열로 grep 하지 마라** — `endpoints.ts` 의 **심볼**(`API.market.fx`)로 소비자를 추적하라.
 
 ---

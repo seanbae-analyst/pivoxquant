@@ -144,11 +144,7 @@ makeCapAssertion(
  *  below pin those remainders so a future contributor cannot re-introduce
  *  previously tokenized sizes (12 / 14 / 24 / 32 / 16 / 18 / 20). */
 const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
-  {
-    path: "components/profile/v2/identity-card-v2.tsx",
-    cap: 0,
-    reason: "W17: 1×28 avatar initial migrated → --pq-text-avatar; no raw literals remain",
-  },
+  // components/profile/v2/identity-card-v2.tsx — deleted 2026-09-12 with /profile.
   {
     path: "components/portfolio/v2/positions-table-v2.tsx",
     cap: 0,
@@ -205,24 +201,11 @@ makeCapAssertion(
  *    10 → --pq-text-eyebrow-sm (10.5px, 0.5px snap inside anti-alias band)
  *    15 → --pq-text-lead       (exact)
  *  Each surface below previously held raw 10/11/15 literals; after
- *  migration cap is 0 unless an unrelated bucket remains. */
-const PHASE8_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
-  {
-    path: "components/profile/v2/six-dimensions-grid.tsx",
-    cap: 8,
-    reason: "W18: 1×11 sub-eyebrow loading-state migrated → --pq-text-micro; 8 unrelated 12/14 literals remain",
-  },
-  {
-    path: "components/profile/v2/peer-benchmark-block-v2.tsx",
-    cap: 8,
-    reason: "W18: 1×11 sub-eyebrow loading-state migrated → --pq-text-micro; 8 unrelated 12/14 literals remain",
-  },
-];
-
-makeCapAssertion(
-  PHASE8_FILES,
-  "typography token coverage — Phase 8 (10/11/15 micro grid extension) inline fontSize offenders (W18)",
-);
+ *  migration cap is 0 unless an unrelated bucket remains.
+ *
+ *  2026-09-12: both Phase 8 files (components/profile/v2/six-dimensions-grid
+ *  and peer-benchmark-block-v2) were deleted with /profile, so the Phase 8
+ *  list is gone. The treewide cap below still covers everything that remains. */
 
 /** Treewide cap — Phase 9 (W20 long-tail closure, 2026-05-12).
  *

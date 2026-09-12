@@ -10,7 +10,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Settings, Keyboard, HelpCircle, LifeBuoy, LogOut } from "lucide-react";
+import { Settings, Keyboard, HelpCircle, LifeBuoy, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/utils";
@@ -149,9 +149,8 @@ export function ProfileDropdown() {
 
             {/* Menu items */}
             <nav className="py-1.5">
-              <MenuLink href="/profile" icon={<User className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                {t("profileMenu.myProfile")}
-              </MenuLink>
+              {/* "My Profile" (/profile) removed 2026-09-12 — the page was
+                  decomposed and now 308s to /settings, listed right here. */}
               <MenuLink href="/settings" icon={<Settings className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
                 {t("profileMenu.settings")}
               </MenuLink>

@@ -133,62 +133,8 @@ const DEMO_BROKER_CONNECTIONS = {
 
 
 
-/* ── Persona depth (/profile) — the 8-persona classifier showcase ── */
-const _PF = {
-  keys: ["holding_period", "turnover", "sector_diversity", "ticker_diversity", "hold_variance", "loss_cut_discipline", "declared_risk", "conviction_stability", "feedback_engagement"],
-  labels: ["평균 보유기간", "매매 회전율", "섹터 분산", "종목 다양성", "보유기간 편차", "손절 규율", "선언한 위험 감내", "확신 안정성", "피드백 반응도"],
-  observed: [0.55, 0.15, 0.85, 0.8, 0.3, 0.6, 0.5, 0.7, 0.6],
-  centroid: [0.5, 0.2, 0.72, 0.72, 0.35, 0.62, 0.55, 0.68, 0.6],
-  weight: [0.12, 0.14, 0.12, 0.1, 0.08, 0.12, 0.12, 0.1, 0.1],
-};
-const DEMO_PERSONA_DETAIL = {
-  persona: "balanced",
-  label: "균형형 CFO",
-  tagline: "분산과 보유기간의 균형을 추구하는 관찰 프로파일.",
-  confidence: 72,
-  window_days: 90,
-  data_sparse: false,
-  trade_count: 23,
-  declared_persona: "growth",
-  last_computed_at: "2026-06-18T07:30:00+09:00",
-  features: Object.fromEntries(_PF.keys.map((k, i) => [k, _PF.observed[i]])),
-  present: Object.fromEntries(_PF.keys.map((k) => [k, 1])),
-  ranking: [
-    { persona: "balanced", similarity: 0.88 },
-    { persona: "growth", similarity: 0.81 },
-    { persona: "quant", similarity: 0.74 },
-    { persona: "value", similarity: 0.69 },
-    { persona: "income", similarity: 0.62 },
-    { persona: "daytrader", similarity: 0.55 },
-    { persona: "speculator", similarity: 0.48 },
-    { persona: "beginner", similarity: 0.31 },
-  ],
-  breakdown: _PF.keys.map((k, i) => ({
-    feature: k, label: _PF.labels[i], value: _PF.observed[i], centroid: _PF.centroid[i],
-    closeness: +(1 - Math.abs(_PF.observed[i] - _PF.centroid[i])).toFixed(2), weight: _PF.weight[i],
-  })),
-};
-const DEMO_PERSONA_BENCHMARK = {
-  available: true, persona: "balanced", persona_label: "균형형", window_days: 90,
-  stats: {
-    avg_cagr: 0.142, avg_sharpe: 1.05, median_holding_days: 34, win_rate: 0.58, max_drawdown_avg: 0.12,
-    most_held_sectors: [{ sector: "Technology", share: 0.41 }, { sector: "Consumer Discretionary", share: 0.28 }, { sector: "Financials", share: 0.16 }],
-    common_mistakes: [{ label: "급등 추격 매수", count: 12 }, { label: "손절 지연", count: 8 }],
-    comparison_to_all: { avg_cagr_all: 0.108, avg_sharpe_all: 0.82, median_holding_days_all: 21 },
-    framing: "균형형은 분산과 보유기간에서 전체 평균을 상회합니다.",
-  },
-};
-const _pb = (label: string, c: number, s: number, d: number) => ({ available: true, label, stats: { avg_cagr: c, avg_sharpe: s, median_holding_days: d } });
-const DEMO_PERSONA_BENCHMARK_ALL = {
-  window_days: 90,
-  personas: {
-    growth: _pb("성장형", 0.165, 1.1, 28), value: _pb("가치형", 0.121, 0.95, 96),
-    balanced: _pb("균형형", 0.142, 1.05, 34), income: _pb("수익형", 0.098, 0.88, 120),
-    quant: _pb("퀀트형", 0.151, 1.22, 18), speculator: _pb("투기형", 0.062, 0.41, 6),
-    daytrader: _pb("단타형", 0.044, 0.35, 1),
-    beginner: { available: false, label: "입문형", reason: "insufficient_group_size" },
-  },
-};
+/* Persona-detail / group-benchmark fixtures removed 2026-09-12 with /profile —
+ * no UI calls those endpoints any more. */
 const DEMO_PROFILE = {
   has_profile: true,
   profile: { profile_type: "growth", risk_tolerance: "moderate", tagline: "성장 가능성에 무게를 두고 관찰합니다." },
@@ -363,12 +309,6 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_BROKER_CONNECTIONS;
     case "/api/profile":
       return DEMO_PROFILE;
-    case "/api/profile/persona-detail":
-      return DEMO_PERSONA_DETAIL;
-    case "/api/profile/persona-benchmark":
-      return DEMO_PERSONA_BENCHMARK;
-    case "/api/profile/persona-benchmark-all":
-      return DEMO_PERSONA_BENCHMARK_ALL;
     case "/api/alerts":
       return DEMO_ALERTS;
     case "/api/alerts/unread-count":

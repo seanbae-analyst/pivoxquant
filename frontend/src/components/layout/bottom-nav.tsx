@@ -30,7 +30,6 @@ import {
   NotebookPen,
   Settings as SettingsIcon,
   LogOut,
-  UserCircle,
   Gavel,
   Contrast,
 } from "lucide-react";
@@ -72,7 +71,6 @@ const DRAWER_GROUPS: DrawerGroup[] = [
   {
     label: "Account",
     items: [
-      { href: "/profile", label: "Profile · Persona", icon: UserCircle },
       { href: "/settings", label: "Settings", icon: SettingsIcon },
     ],
   },
