@@ -178,9 +178,10 @@ export async function revokeMarketingConsent(): Promise<MarketingConsentState> {
 // ── Cross-border data-transfer consent (PIPA §28-8) ──────────────────────
 //
 // 개인정보보호법 §28-8 (2024-09 시행): 개인정보 국외 이전 시 별도로 알리고
-// 명시적 동의를 받아야 함. PivoxQuant 의 위탁처는 미국 소재 7개(Anthropic /
-// Vercel / Railway / Google / SendGrid / Sentry / Stripe) + 프랑스 소재 1개
-// (Brevo) = 총 8개이며, 전체 목록·국가·이전 항목은 개인정보처리방침 §6 이
+// 명시적 동의를 받아야 함. PivoxQuant 의 국외 위탁처는 미국 법인 7개(Render /
+// Supabase(데이터는 서울 리전) / Vercel / SendGrid / Sentry / Google / Stripe)
+// + 프랑스 소재 1개(Brevo) = 총 8개이며(2026-09-10 정정: Anthropic·Railway 는
+// 은퇴), 전체 목록·국가·이전 항목은 개인정보처리방침 §6 이
 // SoT 이다(frontend/src/content/privacy-ko.md, #cross-border 앵커). 이 동의는
 // boolean opt-in + 타임스탬프(cross_border_consent_at)만 저장하고 위탁처 목록·
 // 동의 문안 버전은 보관하지 않으므로, 라벨에 열거되는 위탁처가 바뀌어도

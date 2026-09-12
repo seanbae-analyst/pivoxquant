@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/lib/site-url";
 import type { Metadata, Viewport } from "next";
 import {
   Geist,
@@ -68,7 +69,6 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pivoxquant.com";
 const SITE_NAME = "PivoxQuant";
 // Korean-first positioning.
 //
