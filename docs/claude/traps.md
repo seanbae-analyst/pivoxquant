@@ -91,16 +91,18 @@ QA 가 **없는 제품을 검사**하고 있었고, 산출물은 오탐 아니�
 검증: 삭제 전후 URL rule 120 · blueprint 23 동일. `SIM_ONBOARD_SECRET=x` 를 세팅하고
 부팅해도 120/23 그대로 — blueprint 가 실제로 사라졌다는 뜻이다.
 
-### 8. `services/access_guard.py` 는 **호출처 0곳**이다 (의도적으로 남김)
+### 8. `services/access_guard.py` 는 **없다** (2026-09-02 삭제)
 
 `is_user_allowed_ticker()` / `access_denied_response()` — §101 회피용 화이트리스트
-가드인데 **프로덕션 호출처가 없다.** `tests/test_access_guard.py` 만 부른다
-(2026-09-01 전수 grep 확인). 이걸 걸던 endpoint 들이 prune 으로 사라졌기 때문.
+가드였고, 프로덕션 호출처가 0곳이었다(2026-09-01 전수 grep).
 
-**죽은 코드지만 2026-09-01 정리에서 일부러 남겼다** — 법무 성격의 가드를 agent
-판단으로 지우는 건 범위를 넘는다. 되살릴 거면 §101 게이트가 필요한 route 에
-붙이고, 영영 안 쓸 거면 테스트와 함께 지울 것. **"테스트가 green 이니 가드가
-동작 중"으로 읽지 말 것** — 가드는 아무것도 안 지키고 있다.
+이 절은 오래 "죽은 코드지만 일부러 남겼다"고 적었지만, 가드와
+`tests/test_access_guard.py` 는 `c1f61809`(2026-09-02)에서 **함께 삭제됐다**.
+확인: `git cat-file -e origin/main:services/access_guard.py` 실패,
+`git log --diff-filter=D -- services/access_guard.py` → `c1f61809`
+(2026-09-12 재확인). **§101 화이트리스트 가드가 존재한다고 가정하지 마라.**
+되살릴 거면 `git show c1f61809^:services/access_guard.py` 에서 복원하고,
+§101 게이트가 필요한 route 에 실제로 붙여라.
 
 ### 9. Docker 빌드 컨텍스트 — `.dockerignore` 를 지워도 되는 파일로 착각하지 마라
 
