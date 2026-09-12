@@ -99,7 +99,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 5. 로컬 grep 은 **ugrep**, 로컬 파이썬 3.12 · prod 3.11, Docker 없음 — prod 파이썬·이미지 빌드는 여기서 검증 못 한다.
 6. pre-commit legal-guard 는 **추가된 줄만** 본다. 의도된 예외는 `// legal-ok` (`# noqa: legal` 은 ruff 가 오해).
 7. **CAUS 는 삭제됐다 — 되살리지 마라.** 단 `users.is_simulated` 와 메일·푸시 가드는 **지우지 마라** (가상 유저 스윕이 아직 쓴다).
-8. `services/access_guard.py` 는 호출처 0곳(의도적 보존) — 테스트 green ≠ 가드 동작.
+8. `services/access_guard.py` 는 **없다** — 테스트와 함께 `c1f61809`(2026-09-02)에서 삭제됐다. §101 화이트리스트 가드가 있다고 가정하지 마라.
 9. `.dockerignore` 에서 `docs/` · `frontend/` · `tests/` · `scripts/` 를 빼지 마라 — 인프로세스 크론이 런타임에 읽는다(실패는 조용하다).
 9-2. CSP `connect-src` 는 Render(`*.onrender.com`). `RAILWAY_BACKEND_URL` 이름은 render.yaml · next.config.ts · routes/auth.py · Vercel **네 곳을 한 번에**만 바꿔라.
 10. **법적 스크럽 구현은 `services/legal_filter.scrub_response()` 하나** — 라우트 쪽 편의 헬퍼로 두 번째 복사본을 만들지 마라.
