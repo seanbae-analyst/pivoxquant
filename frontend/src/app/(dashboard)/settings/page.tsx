@@ -21,6 +21,9 @@
  *   - Sign-in "Disconnect": there is no backend endpoint; the button only
  *     toasted "not supported".
  *   - Seed capital moved to /portfolio, next to the holdings it constrains.
+ * 2026-09-12 — /profile was decomposed and now 308s here. Section A no longer
+ * links out to it; data export and account deletion exist only in section C
+ * (PrivacyCardV2 — same /api/profile/export call, same DeleteAccountModal).
  * The element ids (section-a / -c / -e) are kept so existing deep links
  * still land; only the visible letters changed. Bring a section back only
  * together with the thing it controls.
@@ -409,20 +412,6 @@ export default function SettingsPageV2() {
                   {t("settingsV2.sectionA.heading")}
                 </EditorialHead>
               </div>
-              <a
-                href="/profile"
-                className="font-mono uppercase"
-                style={{
-                  fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.18em",
-                  color: "var(--pq-bronze)",
-                  borderBottom: "1px solid rgba(184,149,106,0.15)",
-                  paddingBottom: 2,
-                  textDecoration: "none",
-                }}
-              >
-                {t("settingsV2.sectionA.profileLink")}
-              </a>
             </div>
 
             <div

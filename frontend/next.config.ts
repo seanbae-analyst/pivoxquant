@@ -86,6 +86,13 @@ const nextConfig: NextConfig = {
       { source: "/reports/:path*", destination: "/journal", permanent: true },
       { source: "/alerts", destination: "/mirror", permanent: true },
       { source: "/alerts/:path*", destination: "/mirror", permanent: true },
+      // 2026-09-12 — /profile 해체 (2026-09-10 결정). 관찰 페르소나 흐름은 /mirror
+      // 「자세히」, 주간 펄스는 /journal, 이름·로그인·내보내기·탈퇴는 /settings 로
+      // 옮겼다. 백엔드 메일·PDF·옛 북마크가 /profile 을 가리킬 수 있어 404 대신 설정으로.
+      // /settings/profile 은 원래 /profile 로 보내던 옛 경로라 같이 정리한다.
+      { source: "/profile", destination: "/settings", permanent: true },
+      { source: "/profile/:path*", destination: "/settings", permanent: true },
+      { source: "/settings/profile", destination: "/settings", permanent: true },
       // 공개 마케팅 표면 — 랜딩으로.
       { source: "/features", destination: "/", permanent: true },
       { source: "/features/:path*", destination: "/", permanent: true },

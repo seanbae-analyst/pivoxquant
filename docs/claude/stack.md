@@ -75,11 +75,11 @@ autotrade 는 2026-05-05 물리 삭제 (투자일임업 회피).
 
 ```
 frontend/src/app/(dashboard)/
-  mirror · portfolio · pre-trade · journal · profile
-  settings(+/profile) · support/contact · support/inbox(+/[id])
+  mirror · portfolio · pre-trade · journal
+  settings · support/contact · support/inbox(+/[id])
 ```
 nav(`terminal-sidebar.tsx` / `bottom-nav.tsx`)에 있는 것 = 유저가 갈 수 있는 곳.
-`/home` 은 삭제 → `/mirror` 로 308.
+`/home` 은 삭제 → `/mirror` 로 308. `/profile`·`/settings/profile` 은 2026-09-12 삭제 → `/settings` 로 308.
 
 ⚠️ **프론트가 어떤 API 를 쓰는지 볼 땐 경로 문자열로 grep 하지 마라.**
 컴포넌트는 `endpoints.ts` 의 **심볼**(`API.market.fx` 등)로 호출한다. 경로 리터럴

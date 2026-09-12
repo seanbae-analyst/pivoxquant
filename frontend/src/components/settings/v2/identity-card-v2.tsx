@@ -7,7 +7,8 @@
  * Mirror of settings-v2 mockup §540 ("A1 · Identity").
  *
  * Renders three rows:
- *   - Display name (read-only mono · "Edit" link → /profile)
+ *   - Display name (read-only mono). 2026-09-12: the "Edit" link pointed at
+ *     /profile, which never had a name editor (and is now deleted) — removed.
  *   - Email (read-only)
  *   - Locale (한국어 / English pill toggle — bilingual labels per CEO 2026-04-28)
  *
@@ -17,7 +18,6 @@
  */
 
 import * as React from "react";
-import Link from "next/link";
 
 interface Props {
   displayName?: string | null;
@@ -25,8 +25,6 @@ interface Props {
   /** Active locale code. */
   locale: "ko" | "en";
   onLocaleChange: (next: "ko" | "en") => void;
-  /** Path to the page that owns name editing (Profile). */
-  editHref?: string;
 }
 
 const ROW_LABEL_STYLE: React.CSSProperties = {
@@ -49,7 +47,6 @@ export function SettingsIdentityCardV2({
   email,
   locale,
   onLocaleChange,
-  editHref = "/profile",
 }: Props) {
   return (
     <div
@@ -103,29 +100,7 @@ export function SettingsIdentityCardV2({
             Shown in the app and on your data exports.
           </div>
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <span className="font-mono" style={ROW_VALUE_STYLE}>{displayName || "—"}</span>
-          <Link
-            href={editHref}
-            className="font-mono uppercase"
-            style={{
-              fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.18em",
-              color: "var(--pq-bronze)",
-              borderBottom: "1px solid rgba(184,149,106,0.15)",
-              paddingBottom: 2,
-              textDecoration: "none",
-            }}
-          >
-            Edit
-          </Link>
-        </div>
+        <span className="font-mono" style={ROW_VALUE_STYLE}>{displayName || "—"}</span>
       </div>
 
       {/* Email */}

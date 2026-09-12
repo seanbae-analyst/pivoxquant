@@ -147,7 +147,6 @@
   },
   "profileMenu": {
     "ariaLabel": "프로필 메뉴",
-    "myProfile": "내 프로필",
     "settings": "설정",
     "keyboardShortcuts": "키보드 단축키",
     "helpDocs": "도움말 및 문서",
@@ -266,9 +265,6 @@
       "insufficient": "아직 추가 매수 기록이 적어 안정적으로 비추기 어렵습니다. 기록이 쌓이면 자동으로 나타납니다."
     }
   },
-  "persona": {
-    "classifierKicker": "투자자 유형 분류"
-  },
   "support": {
     "contactKicker": "문의하기",
     "faqHeading": "자주 묻는 질문",
@@ -324,8 +320,7 @@
   "settingsV2": {
     "sectionA": {
       "eyebrow": "A · 신원 및 보안",
-      "heading": "로그인된 계정.",
-      "profileLink": "프로필 상세 보기 ›"
+      "heading": "로그인된 계정."
     },
     "sectionC": {
       "eyebrow": "B · 알림 · 채널 × 이벤트",
@@ -370,15 +365,6 @@
       "exportReady": "내보내기 완료.",
       "exportFail": "내보내기 엔드포인트 준비 중. 수동 아카이브는 고객지원에 문의하세요.",
       "providerDisconnectUnsupported": "OAuth 공급자 연결 해제는 아직 지원되지 않습니다. 지원팀에 이메일로 문의해 주세요."
-    }
-  },
-  "profileV2": {
-    "toast": {
-      "exportReady": "내보내기 완료.",
-      "localExportReady": "로컬 메모리 내보내기 완료.",
-      "exportFailed": "내보내기 실패.",
-      "deleteConfirm": "이 브라우저에 저장된 로컬 기록을 지웁니다 — 페르소나·펄스·피드백 캐시. 계정에 저장된 데이터는 그대로이며, 그쪽은 설정의 회원탈퇴로 삭제됩니다. 계속할까요?",
-      "memoryCleared": "이 브라우저의 로컬 기록을 지웠습니다."
     }
   }
 }

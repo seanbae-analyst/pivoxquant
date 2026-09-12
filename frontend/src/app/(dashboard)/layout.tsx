@@ -47,7 +47,6 @@ const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   ["/mirror", "behavior-mirror"],
   ["/portfolio", "signal"],
   ["/settings", "signal"],
-  ["/profile", "signal"],
   ["/mirror", "signal"],
 ];
 

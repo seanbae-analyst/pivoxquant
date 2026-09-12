@@ -9,7 +9,7 @@
  *   5. /(dashboard)/risk    — NEXT_PUBLIC_RISK_V2
  *   6. /(dashboard)/signals — NEXT_PUBLIC_SIGNALS_V2
  *   7. /(dashboard)/reports — NEXT_PUBLIC_REPORTS_V2
- *   8. /(dashboard)/profile — NEXT_PUBLIC_PROFILE_V2
+ *   8. /(dashboard)/profile — deleted 2026-09-12 (308 → /settings)
  *   9. /(dashboard)/settings — NEXT_PUBLIC_SETTINGS_V2
  *
  * Each surface is captured at:
@@ -149,14 +149,6 @@ const SURFACES: readonly Surface[] = [
   {
     name: "07-journal",
     path: "/journal",
-    needsAuth: true,
-    assert: async (page) => {
-      await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });
-    },
-  },
-  {
-    name: "08-profile",
-    path: "/profile",
     needsAuth: true,
     assert: async (page) => {
       await expect(mainRegion(page)).toBeVisible({ timeout: 15000 });

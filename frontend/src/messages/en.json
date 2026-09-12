@@ -147,7 +147,6 @@
   },
   "profileMenu": {
     "ariaLabel": "Profile menu",
-    "myProfile": "My Profile",
     "settings": "Settings",
     "keyboardShortcuts": "Keyboard shortcuts",
     "helpDocs": "Help & Docs",
@@ -266,9 +265,6 @@
       "insufficient": "There are still too few follow-on buys to mirror stably. It will appear automatically as records accumulate."
     }
   },
-  "persona": {
-    "classifierKicker": "Persona classifier"
-  },
   "support": {
     "contactKicker": "Contact",
     "faqHeading": "Frequently Asked Questions",
@@ -324,8 +320,7 @@
   "settingsV2": {
     "sectionA": {
       "eyebrow": "A · Identity & security",
-      "heading": "Who is signed in.",
-      "profileLink": "Profile detail ›"
+      "heading": "Who is signed in."
     },
     "sectionC": {
       "eyebrow": "B · Notifications · Channels × Events",
@@ -370,15 +365,6 @@
       "exportReady": "Export ready.",
       "exportFail": "Export endpoint coming soon. Email support for a manual archive.",
       "providerDisconnectUnsupported": "Disconnecting an OAuth provider is not yet supported. Email support to remove a provider."
-    }
-  },
-  "profileV2": {
-    "toast": {
-      "exportReady": "Export ready.",
-      "localExportReady": "Local memory exported.",
-      "exportFailed": "Export failed.",
-      "deleteConfirm": "Clear the local record kept in this browser — cached persona, pulse and feedback. Data stored on your account is untouched; delete that by closing your account in Settings. Continue?",
-      "memoryCleared": "Local record cleared in this browser."
     }
   }
 }

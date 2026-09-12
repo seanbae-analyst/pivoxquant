@@ -64,3 +64,22 @@ describe("/dashboard/* redirect (W6.3 / E2E P1 #3)", () => {
     expect(exactIdx).toBeLessThan(wildcardIdx);
   });
 });
+
+/**
+ * /profile was decomposed on 2026-09-12 and its page deleted. Backend emails,
+ * PDFs and old bookmarks may still point at it (and at the older
+ * /settings/profile alias), so all of them must land on /settings, not 404.
+ */
+describe("/profile redirect (profile decomposition 2026-09-12)", () => {
+  it.each(["/profile", "/profile/:path*", "/settings/profile"])(
+    "redirects %s to /settings (308 permanent)",
+    async (source) => {
+      const rules = (await nextConfig.redirects!()) as RedirectRule[];
+      const rule = rules.find((r) => r.source === source);
+
+      expect(rule, `missing rule for ${source}`).toBeDefined();
+      expect(rule!.destination).toBe("/settings");
+      expect(rule!.permanent).toBe(true);
+    },
+  );
+});

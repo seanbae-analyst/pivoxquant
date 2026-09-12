@@ -70,22 +70,7 @@ export function SettingsHeroV2({
           margin: 0,
         }}
       >
-        Identity and persona live on{" "}
-        <a
-          href="/profile"
-          className="font-mono uppercase"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
-            color: "var(--pq-bronze)",
-            borderBottom: "1px solid rgba(184,149,106,0.15)",
-            paddingBottom: 2,
-            textDecoration: "none",
-          }}
-        >
-          Profile ›
-        </a>
-        . Settings is for the operational levers — how you sign in, which
+        Settings is for the operational levers — how you sign in, which
         alerts and emails reach you, and how you exercise your{" "}
         <span style={{ color: "var(--pq-bronze)" }}>
           data rights.
