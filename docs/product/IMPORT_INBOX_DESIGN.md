@@ -45,3 +45,39 @@
 ## 테스트
 - 백엔드 `tests/test_imports_route.py`: 동의 없음 400 · 한투식 헤더 CSV 파싱 · cp949 · 자체 export 왕복 · 토스 알림 텍스트 · 중복 표시 · needs_ticker → PATCH → 승인 · thesis 없으면 400 · 승인 후 Position/TradeHistory 생성 · 매도 초과 400 · 유저 격리.
 - 프론트 vitest: `ImportInbox` 대기 행 렌더 + thesis 비면 승인 비활성.
+
+---
+
+## Phase 2 v3-A — 개인 액세스 토큰(PAT) + 웹훅 (2026-09-13)
+
+전략: [launch/ACCOUNT_SYNC_STRATEGY_V2.md](../launch/ACCOUNT_SYNC_STRATEGY_V2.md) §Phase 2 v3. 원리: 유저가 자기 도구(MacroDroid, 메일 필터, cron)로 자기 데이터를 보낸다. 우리는 받는 쪽만 만든다.
+
+### 데이터
+- `import_tokens(id, user_id FK CASCADE idx, name String(60), token_hash String(64) unique idx, prefix String(16), consent_at DateTime NN, created_at, last_used_at?, revoked_at?)`
+- `import_batches.token_id` nullable FK → import_tokens (source `webhook`)
+- 원문 토큰 = `"pvx_" + secrets.token_urlsafe(24)`; DB에는 sha256 hex만. 발급 응답에 **한 번만** 원문 노출. prefix = 앞 12자(표시용).
+- 유저당 활성 토큰 최대 5개. 토큰당 하루 배치 200건.
+
+### API — 토큰 관리 (세션 인증 + CSRF, `@api_auth @general_rate_limit`)
+| 메서드 | 경로 | 본문 | 응답 |
+|---|---|---|---|
+| GET | `/api/portfolio/imports/tokens` | — | `{tokens:[{id,name,prefix,created_at,last_used_at,revoked_at,batches_today}], active_limit:5}` (폐기된 것도 포함, revoked_at 로 구분) |
+| POST | `/api/portfolio/imports/tokens` | `{name 1~60자, consent:true}` | 201 `{id,name,prefix,created_at,token:"pvx_…"}` |
+| DELETE | `/api/portfolio/imports/tokens/<id>` | — | `{ok}` (revoked_at 기록, 멱등) |
+에러: `IMPORT_CONSENT_REQUIRED` · `IMPORT_TOKEN_NAME_INVALID` · `IMPORT_TOKEN_LIMIT`(400) · `IMPORT_NOT_FOUND`(404, 타 유저 포함).
+
+### API — 웹훅 (Bearer 토큰, 세션 없음 → CSRF 자동 스킵)
+`POST /api/portfolio/imports/webhook`, 헤더 `Authorization: Bearer pvx_…`.
+본문 셋 중 하나: (a) JSON `{text:"…"}` → 텍스트 파서, (b) JSON `{rows:[{name?, ticker?, action:"BUY"|"SELL"|"매수"|"매도", shares, price, currency?, traded_at?}]}` → 행 직접, (c) `Content-Type: text/plain` 본문 전체 → 텍스트 파서.
+응답 201 = `POST /` 와 동일 `{batch, pending[], …}` (source `webhook`, `mapping:null`). 동의는 토큰 발급 시 받은 `consent_at` 을 배치에 승계.
+에러: 401 `IMPORT_TOKEN_INVALID`(없음·형식 불량·미존재·폐기 전부 같은 코드 — 존재 여부 누설 금지) · 429 `IMPORT_TOKEN_DAILY_LIMIT` · 400 `IMPORT_NO_ROWS`/`IMPORT_INVALID_FIELD` · 413.
+토큰 원문은 로그·에러·응답 어디에도 남기지 않는다. 성공 시 `last_used_at` 갱신. 조회는 `token_hash = sha256(raw)` 로 한 번, 비교는 DB 매칭(해시 충돌 무시 가능). 데코레이터 `@import_token_auth` 가 `g.import_user_id`, `g.import_token` 세팅.
+
+### 프론트
+- `/settings` 에 "가져오기 토큰" 섹션 (Privacy 섹션 위): 이름 입력 + 동의 체크박스 → 발급 → 원문 1회 표시(복사 버튼, "다시 볼 수 없음" 문구) + 사용 예(curl 한 줄, MacroDroid: URL·헤더·본문 힌트) → 목록(이름·prefix·마지막 사용·오늘 건수·폐기 버튼). 폐기는 확인 후.
+- `/journal/import` 하단에 "자동으로 보내려면 → 설정의 가져오기 토큰" 링크.
+- `endpoints.ts`: `API.imports.tokens`, `API.imports.token(id)`, `API.imports.webhook`(표시용 경로 문자열). i18n `settingsV2.importTokens.*`.
+
+### 테스트
+- 백엔드: 발급(원문 1회, 해시 저장)·목록에 원문 없음·5개 제한·폐기 후 401·타 유저 404·웹훅 text/rows/text-plain 3경로 → pending·중복·일일 200 초과 429·잘못된 Bearer 401 코드 단일·로그에 토큰 없음·consent 없는 발급 400.
+- 프론트: 섹션 렌더, 발급 후 원문 1회 표시, 폐기 버튼.
