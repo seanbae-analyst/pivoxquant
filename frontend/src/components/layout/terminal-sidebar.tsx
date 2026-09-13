@@ -7,8 +7,14 @@
  * 2026-06-15 kept every demoted surface alive behind "More" and a hidden
  * list; this pass deletes them instead of hiding them. What is left is
  * the behavioural loop (멈춤 → 기록 → 거울) plus the account:
- *   PRIMARY · Mirror / Portfolio / Pre-Trade
- *   MORE    · Journal / Settings   (Profile · Persona removed 2026-09-12)
+ *   거울 / 멈춤 / 기록 / Portfolio / Settings   (Profile · Persona removed 2026-09-12)
+ *
+ * 2026-09-13: one flat list in loop order. The "More" group had two items
+ * left after the 09-12 removals and split 기록 away from 멈춤 and 거울 — the
+ * three words the landing page teaches as one loop. Below the nav sits
+ * <SidebarRecordCard /> — the user's own record (30-day pause counts,
+ * seven-day rhythm, three latest entries), so the rail's lower 70% carries
+ * the product's one real asset instead of empty ink.
  *
  * There is no hidden list any more — an item in this file is a page that
  * exists, and every page that exists is in this file.
@@ -28,6 +34,7 @@ import {
   Contrast,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { SidebarRecordCard } from "./sidebar-record-card";
 
 export type TerminalSidebarKey =
   | "mirror"
@@ -43,8 +50,8 @@ type Item = {
   icon: LucideIcon;
 };
 
-// PRIMARY — the 3 doors. The behavioural loop IS the product
-// (멈춤 → 기록 → 거울).
+// One list, loop order: 거울 (home) → 멈춤 → 기록, then the two loanword
+// screens. The behavioural loop IS the product.
 //
 // Naming rule: the product's OWN vocabulary is Korean, the generic app
 // shell stays English. 멈춤 / 기록 / 거울 are the words the landing page and
@@ -55,19 +62,13 @@ type Item = {
 //
 // Labels stay literal (no t()) — same reason bottom-nav.tsx gives: a missing
 // locale key must never be able to blank the navigation.
-const PRIMARY: Item[] = [
+const ALL_ITEMS: Item[] = [
   { key: "mirror", label: "거울", href: "/mirror", icon: Contrast },
-  { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
   { key: "pre-trade", label: "멈춤", href: "/pre-trade", icon: Gavel },
-];
-
-// MORE — the record's own surfaces plus the account.
-const MORE: Item[] = [
   { key: "journal", label: "기록", href: "/journal", icon: NotebookPen },
+  { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
 ];
-
-const ALL_ITEMS: Item[] = [...PRIMARY, ...MORE];
 
 function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
   if (!pathname) return null;
@@ -110,9 +111,8 @@ export function TerminalSidebar({
 
       {/* Scrollable nav body */}
       <nav className="flex-1 overflow-y-auto" aria-label="Primary">
-        {/* The 3 doors — Mirror / Portfolio / Pre-Trade */}
-        <ul className="space-y-0.5 px-3" aria-label="Primary doors">
-          {PRIMARY.map((item) => (
+        <ul className="space-y-0.5 px-3" aria-label="Pages">
+          {ALL_ITEMS.map((item) => (
             <SidebarLink
               key={item.key}
               item={item}
@@ -121,16 +121,10 @@ export function TerminalSidebar({
           ))}
         </ul>
 
-        <GroupHeader label="More" />
-        <ul className="space-y-0.5 px-3 pb-4" aria-label="More">
-          {MORE.map((item) => (
-            <SidebarLink
-              key={item.key}
-              item={item}
-              isActive={resolvedActive === item.key}
-            />
-          ))}
-        </ul>
+        {/* The record — what only this product holds. Sits in the scroll
+            body, not the footer, so a long list on a short viewport scrolls
+            instead of overlapping the mode label. */}
+        <SidebarRecordCard />
       </nav>
 
       {/* Footer meta — FINDING-040: "v1.0 · Paper" was ambiguous ("paper"
@@ -149,29 +143,6 @@ export function TerminalSidebar({
           v1.0 · Paper mode (observation only)
         </span>
       </div>
-    </div>
-  );
-}
-
-function GroupHeader({ label }: { label: string }) {
-  return (
-    <div className="px-3 mt-6 mb-2" aria-hidden="true">
-      <span
-        className="font-serif uppercase"
-        style={{
-          fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
-          color: "rgba(184, 149, 106, 0.78)",  /* 0.55 = 2.84:1; bronze needs ≥0.76 on #050505 */
-          display: "block",
-          paddingLeft: "14px",
-        }}
-      >
-        {label}
-      </span>
-      <div
-        className="mt-1 h-px"
-        style={{ backgroundColor: "var(--pq-ivory-line)" }}
-      />
     </div>
   );
 }
