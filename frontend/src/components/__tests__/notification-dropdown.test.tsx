@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LocaleProvider } from "@/lib/locale";
+import { API } from "@/lib/endpoints";
 
 // Mock SWR — return canned alert state per test
 vi.mock("swr", () => ({
@@ -16,6 +17,14 @@ vi.mock("next/navigation", () => ({
 // Mock api fetch (network-free)
 vi.mock("@/lib/api", () => ({
   apiFetch: vi.fn().mockResolvedValue({}),
+}));
+
+// Mock auth — the dropdown only fetches for a signed-in user.
+const auth = vi.hoisted(() => ({
+  user: { id: 1, email: "u@example.com" } as { id: number; email: string } | null,
+}));
+vi.mock("@/lib/auth", () => ({
+  useAuth: () => ({ user: auth.user, loading: false }),
 }));
 
 import useSWR from "swr";
@@ -36,6 +45,35 @@ function makeSwrResult(data: unknown) {
 describe("NotificationDropdown", () => {
   beforeEach(() => {
     mockedSWR.mockReset();
+    auth.user = { id: 1, email: "u@example.com" };
+  });
+
+  it("does not request /api/alerts while signed out (SWR key is null)", () => {
+    // 2026-09-12 sweep: every protected route fired 401 GET /api/alerts?limit=50
+    // before the redirect to /login.
+    auth.user = null;
+    mockedSWR.mockReturnValue(makeSwrResult(undefined));
+    render(
+      <LocaleProvider>
+        <NotificationDropdown />
+      </LocaleProvider>,
+    );
+
+    expect(mockedSWR).toHaveBeenCalled();
+    for (const call of mockedSWR.mock.calls) {
+      expect(call[0]).toBeNull();
+    }
+  });
+
+  it("requests the shared ?limit=50 alerts key once signed in", () => {
+    mockedSWR.mockReturnValue(makeSwrResult({ alerts: [], unread: 0 }));
+    render(
+      <LocaleProvider>
+        <NotificationDropdown />
+      </LocaleProvider>,
+    );
+
+    expect(mockedSWR.mock.calls[0][0]).toBe(`${API.alerts.list}?limit=50`);
   });
 
   it("renders the bell button in closed state without exposing menu items", () => {

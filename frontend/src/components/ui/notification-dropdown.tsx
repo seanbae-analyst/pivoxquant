@@ -16,6 +16,7 @@ import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
+import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/lib/locale";
 import { relativeTime } from "@/lib/relative-time";
 
@@ -68,8 +69,14 @@ export function NotificationDropdown() {
   // The previous separate `useSWR(API.alerts.unreadCount)` call doubled
   // the alerts polling rate (~3-4 req/min). Now: one SWR subscription,
   // unread derived from `data.unread`. No backend change required.
+  //
+  // 2026-09-13: the key is null until there is a signed-in user. The top bar
+  // mounts before the auth guard redirects, so an ungated key fired a
+  // `401 GET /api/alerts?limit=50` on every protected route for signed-out
+  // visitors (2026-09-12 sweep).
+  const { user } = useAuth();
   const { data, error, isLoading, mutate } = useSWR<AlertsListResponse>(
-    `${API.alerts.list}?limit=50`,
+    user ? `${API.alerts.list}?limit=50` : null,
     fetcher,
     // Bug #3 (HANDOVER v22): focus revalidate compounded duplicate fetches
     // on page nav. The 60s polling already keeps the unread badge fresh.

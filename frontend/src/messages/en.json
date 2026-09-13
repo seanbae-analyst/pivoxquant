@@ -32,10 +32,24 @@
       "scrollHint": "Scroll or press Space"
     },
     "personas": {
-      "eyebrow": "Investor Personas · Selected shown",
-      "heading": "A mirror that speaks\nyour investor language.",
-      "description": "Five onboarding questions record what you say about your own habits. That is only what you declared; the mirror watches what your last 30 days of trades say instead.",
-      "alsoAvailable": "Eight in all — Income, Quant, Speculator and Daytrader round out the set. The mirror explains the gap in the language of the one you picked.",
+      "eyebrow": "Declared and observed",
+      "heading": "Your answers in your words,\nyour trades in three buckets.",
+      "description": "The five onboarding questions don't assign you a type. They write down what you said about your own habits, as you said it. The mirror sets those answers beside your last 30 days of trades.",
+      "buckets": {
+        "growth": {
+          "name": "Growth",
+          "line": "A pattern that accepts swings in pursuit of asset growth."
+        },
+        "balanced": {
+          "name": "Balanced",
+          "line": "A consistent pattern that doesn't lean hard to one side."
+        },
+        "income": {
+          "name": "Income",
+          "line": "A pattern centred on steady cash flow."
+        }
+      },
+      "bucketsNote": "When the mirror names a trading pattern, it uses only these three. It never splits them finer.",
       "takeQuiz": "Answer the five questions"
     },
     "topNav": {
@@ -278,11 +292,7 @@
     "faq": {
       "whatIsService": {
         "q": "What is PivoxQuant?",
-        "a": "PivoxQuant is an informational service providing generalized data, quant-model analysis, and AI-assisted observations for US and Korean equities. It is not investment advice and does not recommend specific securities or provide advice tailored to any individual. All information on the platform is for reference only. Investment decisions and their outcomes are entirely the responsibility of the user."
-      },
-      "signalLabels": {
-        "q": "What do signal labels (POSITIVE / NEGATIVE / NEUTRAL) mean?",
-        "a": "Signal labels are generalized summaries of observed data indicators — not directives to take any specific trading action (buy, sell, or hold). POSITIVE / NEGATIVE / NEUTRAL simply describe the direction in which the indicators were observed, presented neutrally without any recommendation."
+        "a": "PivoxQuant is an informational service that organizes the investment record you enter yourself and reflects it back to you. It is not investment advice and does not recommend specific securities or provide advice tailored to any individual. All information on the platform is for reference only. Investment decisions and their outcomes are entirely the responsibility of the user."
       },
       "dataSource": {
         "q": "Where does the data come from?",
@@ -314,7 +324,7 @@
       },
       "contact": {
         "q": "How can I get support?",
-        "a": "After signing in, you can ask quick questions about billing, your account, or how to use the platform via 'Ask AI Support', or submit a direct inquiry through the 1:1 inquiry form. Your submitted inquiries and responses are available in 'My Inquiries'."
+        "a": "After signing in, you can submit a question about billing, your account, or how to use the platform through the 1:1 inquiry form. Your submitted inquiries and responses are available in 'My Inquiries'."
       }
     }
   },

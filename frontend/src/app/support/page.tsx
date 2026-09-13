@@ -4,8 +4,9 @@
  * /support — 고객지원 (public, 비로그인 접근 가능).
  *
  * 공개 진입점: FAQ 아코디언 + 전자상거래법 §13 사업자 정보 블록 + 문의 채널
- * 안내. 로그인 유저는 AI 고객지원 / 1:1 문의 / 내 문의함 CTA 를 보고, 비로그인
- * 유저는 로그인 유도 + 이메일 문의 안내를 본다.
+ * 안내. 로그인 유저는 1:1 문의 / 내 문의함 CTA 를 보고, 비로그인 유저는 로그인
+ * 유도 + 이메일 문의 안내를 본다. (AI 고객지원 챗봇은 3518216b 에서 삭제됐다 —
+ * 그 이름을 이 페이지의 문구에 되살리지 마라.)
  *
  * 이 라우트는 (dashboard) 그룹 밖이므로 페이지 레벨 DisclaimerBanner 가 자동
  * 마운트되지 않는다. 본 페이지는 분석/시그널 surface 가 아닌 정보·지원 안내
@@ -143,7 +144,7 @@ export default function SupportPage() {
                 className="font-serif text-pq-lead"
                 style={{ color: "var(--pq-ivory-soft)", lineHeight: 1.6, wordBreak: "keep-all" }}
               >
-                로그인하면 AI 고객지원에게 바로 질문하거나 1:1 문의를 접수할 수
+                로그인하면 1:1 문의를 접수하고, 내 문의함에서 답변을 확인할 수
                 있습니다.
               </p>
               <Link
