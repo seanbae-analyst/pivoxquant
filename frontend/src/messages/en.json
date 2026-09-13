@@ -23,7 +23,8 @@
       "h1Part1": "We don't promise",
       "h1Italic": "to make you rich.",
       "description": "The data is clear: high-turnover trading shaves your returns every year — about 7 percentage points versus low turnover. PivoxQuant mirrors your own trading pattern back to you and makes you pause once, right before you hit buy or sell. No scoring, no recommendations. Observational data only, not a directive to act.",
-      "ctaPrimary": "See my mirror",
+      "ctaPrimary": "Get started",
+      "ctaOpenMirror": "See my mirror",
       "disclaimer": "Not investment advice. Informational research only. Past performance does not guarantee future results."
     },
     "splash": {
@@ -40,8 +41,8 @@
     "topNav": {
       "loginLink": "Log in",
       "goToDesk": "Go to desk",
-      "meetCfo": "See my mirror",
-      "openDesk": "Open desk",
+      "meetCfo": "Get started",
+      "openDesk": "See my mirror",
       "openMenu": "Open menu"
     },
     "cta": {
