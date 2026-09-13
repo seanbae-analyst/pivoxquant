@@ -792,14 +792,25 @@ export async function replyToInquiry(
   });
 }
 
+/** The only windows routes/behavior.py accepts — never an arbitrary integer. */
+export type FrictionOutcomePeriod = "all" | "90d" | "30d";
+
 /**
  * Friction Outcome — what the pause led to. Same SWR contract as the other
  * behaviour mirrors: 404 is a soft-empty (route not deployed yet), never an
  * error banner.
+ *
+ * `period` (2026-09-13): the sidebar record card reads the 30-day window on
+ * every dashboard page, while /journal keeps the all-time default. Omitting
+ * the argument keeps the exact key the journal has always used, so the two
+ * surfaces cache independently and nothing that mocked this hook changes.
  */
-export function useFrictionOutcome() {
+export function useFrictionOutcome(period?: FrictionOutcomePeriod) {
+  const key = period
+    ? `${API.behavior.frictionOutcome}?period=${period}`
+    : API.behavior.frictionOutcome;
   const swr = useSWR<FrictionOutcomeResponse | null>(
-    API.behavior.frictionOutcome,
+    key,
     async (url: string): Promise<FrictionOutcomeResponse | null> => {
       const res = await fetch(url, { credentials: "include" });
       if (res.status === 404) return null;

@@ -183,6 +183,25 @@ const DEMO_PRETRADE_LIST = {
     { id: 3, intended_ticker: "TSLA", intended_side: "BUY", rationale: "변동성 확대, 추격 매수 충동 점검 중.", status: "pending", proceeded_at: null, cancelled_at: null, observed_context: { sector: "Consumer Discretionary", vix: 14.2 } },
   ],
 };
+// Friction outcome (sidebar record card + /journal mirror). Counts agree with
+// DEMO_PRETRADE_LIST above: 3 started → 1 proceeded / 1 cancelled / 1 open.
+// `comparable: false` so the mirror honours the service's refusal and shows
+// no distribution block — the demo must not imply a verdict the data lacks.
+const DEMO_FRICTION_OUTCOME = {
+  ok: true,
+  period: "30d",
+  window_days: 30,
+  stopped: { started: 3, proceeded: 1, cancelled: 1, open: 1 },
+  cancelled_followthrough: { cancelled: 1, bought_later_anyway: 0, never_bought: 1, median_days_until_bought: null },
+  realised: {
+    with_friction: { n: 1, median_pct: null, mean_pct: null },
+    without_friction: { n: 2, median_pct: null, mean_pct: null },
+    comparable: false,
+    min_group_n: 5,
+  },
+  caveats: { not_randomised: true, attribution_window_days: 7, cooldown_seconds_currently: 0 },
+  insufficient: false,
+};
 
 
 /* ── Living CFO Layer-2 + profile depth (usePersona / usePulse / useRollingWindow,
@@ -325,6 +344,8 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_AVGDOWN_MIRROR;
     case "/api/pre-trade/list":
       return DEMO_PRETRADE_LIST;
+    case "/api/behavior/friction-outcome":
+      return DEMO_FRICTION_OUTCOME;
     // Living CFO Layer-2 + profile depth
     case "/api/profile/persona":
       return DEMO_PERSONA;
