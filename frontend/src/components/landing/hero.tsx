@@ -26,6 +26,7 @@
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/locale";
 
 /*
@@ -62,6 +63,7 @@ import { useT } from "@/lib/locale";
 
 export function Hero() {
   const t = useT();
+  const { user } = useAuth();
   return (
     <section
       aria-labelledby="pq-hero-heading"
@@ -130,17 +132,19 @@ export function Hero() {
           </p>
 
           {/* CTAs — plain bronze pill + ghost outline.
-              rounded-[2px] matches the /features pages exactly. */}
+              rounded-[2px] matches the /features pages exactly.
+              Signed-out visitors go to sign-up, signed-in users to their
+              mirror — same split as the top nav (top-nav.tsx). */}
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/signup"
+              href={user ? "/mirror" : "/signup"}
               className="group inline-flex items-center gap-2 rounded-[2px] px-6 py-3.5 text-sm font-medium tracking-wide transition-colors"
               style={{
                 backgroundColor: "var(--pq-bronze)",
                 color: "var(--pq-ink)",
               }}
             >
-              {t("landing.hero.ctaPrimary")}
+              {user ? t("landing.hero.ctaOpenMirror") : t("landing.hero.ctaPrimary")}
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
             </Link>
           </div>

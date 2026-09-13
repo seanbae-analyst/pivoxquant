@@ -34,7 +34,8 @@
       "h1Part1": "부자로 만들어 준다고",
       "h1Italic": "약속하지 않습니다.",
       "description": "고회전 매매가 매년 당신 수익을 깎는다는 건 데이터로 분명합니다 — 저회전 대비 연 7%p. PivoxQuant는 당신의 거래 패턴을 거울처럼 보여주고, 매수·매도 직전 한 번 멈춰 세웁니다. 채점도 추천도 없이. 관측 자료이며 투자 권유가 아닙니다.",
-      "ctaPrimary": "내 거울 보기",
+      "ctaPrimary": "시작하기",
+      "ctaOpenMirror": "내 거울 보기",
       "disclaimer": "투자 권유 아님. 정보 제공 전용 리서치. 과거 실적은 미래 수익을 보장하지 않습니다."
     },
     "splash": {
@@ -51,8 +52,8 @@
     "topNav": {
       "loginLink": "로그인",
       "goToDesk": "데스크로",
-      "meetCfo": "내 거울 보기",
-      "openDesk": "데스크 열기",
+      "meetCfo": "시작하기",
+      "openDesk": "내 거울 보기",
       "openMenu": "메뉴 열기"
     },
     "cta": {
