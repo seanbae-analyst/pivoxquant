@@ -9,6 +9,7 @@
  * 3 sections (sticky anchor rail):
  *   A · Identity & security      (SettingsIdentityCardV2 + SignInProvidersCard)
  *   B · Notifications            (NotificationsMatrix + Push/Email/Marketing sub-cards)
+ *   —   Import tokens            (ImportTokensSection — PAT for the import webhook, 2026-09-13)
  *   C · Privacy · PIPA           (PrivacyCardV2 — Consent/Export/Sign out)
  *
  * 2026-09-10 — removed three things that did nothing for a user:
@@ -58,6 +59,7 @@ import { SignInProvidersCard } from "@/components/settings/v2/signin-providers-c
 import { NotificationsMatrix } from "@/components/settings/v2/notifications-matrix";
 import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
 import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
+import { ImportTokensSection } from "@/components/settings/import-tokens-section";
 
 
 export default function SettingsPageV2() {
@@ -719,6 +721,11 @@ export default function SettingsPageV2() {
               <MarketingConsentCardV2 />
             </div>
           </section>
+
+          {/* IMPORT TOKENS — personal access tokens for the import webhook
+              (IMPORT_INBOX_DESIGN.md §Phase 2 v3-A). Deep link: /settings#import-tokens.
+              Not in the AnchorRail — the rail letters stay A/B/C. */}
+          <ImportTokensSection />
 
           {/* SECTION E — Privacy
               `id="section-e"` anchor required by AnchorRail (2026-04-28 fix). */}

@@ -847,6 +847,14 @@ def _do_migrations():
     # moment the reflection was opened. Nullable TEXT — purely additive.
     _add_column_if_missing("pre_trade_reflections", "observed_context_json", "TEXT")
 
+    # import_batches.token_id — Import Inbox Phase 2 (PAT + webhook,
+    # 2026-09-13). Alembic twin: 052_import_tokens. Nullable INTEGER that
+    # links a webhook batch to the import_tokens row that produced it. The
+    # FK constraint lives in the alembic path; this self-heal only makes
+    # sure the column exists so the ORM INSERT/SELECT never fails on a box
+    # whose import_batches table predates Phase 2.
+    _add_column_if_missing("import_batches", "token_id", "INTEGER")
+
     # anthropic_usage_log (Wave I G-3) — Anthropic API 비용 추적 테이블.
     # 이 테이블은 ORM 모델이 아니라 services/ai/service.py 가 raw SQL INSERT
     # 로 직접 기록하므로 db.create_all() 범위 밖이다. 생성은 alembic

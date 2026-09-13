@@ -817,3 +817,30 @@ export interface ImportApproveResponse {
   trade_id: number;
   position_id: number;
 }
+
+/* Phase 2 v3-A — personal access tokens for the import webhook. The raw
+ * token is returned ONCE by the create call; list rows carry the prefix only. */
+export interface ImportTokenDTO {
+  id: number;
+  name: string;
+  /** First 12 chars of the raw token, display only. */
+  prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  batches_today: number;
+}
+
+export interface ImportTokensResponse {
+  tokens: ImportTokenDTO[];
+  active_limit: number;
+}
+
+export interface ImportTokenCreateResponse {
+  id: number;
+  name: string;
+  prefix: string;
+  created_at: string;
+  /** Raw token — shown once, never returned again. */
+  token: string;
+}

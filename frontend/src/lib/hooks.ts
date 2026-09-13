@@ -20,6 +20,7 @@ import type {
   AveragingDownMirrorResponse,
   MirrorHomeResponse,
   PendingImportsResponse,
+  ImportTokensResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -209,6 +210,42 @@ export function usePendingImports() {
   return {
     pending: swr.data?.pending ?? [],
     count: swr.data?.count ?? 0,
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Import tokens — the user's own personal access tokens for the import
+ * webhook (IMPORT_INBOX_DESIGN.md §Phase 2 v3-A). Same resilience contract
+ * as `usePendingImports`: a 404 reads as an empty list. Revoked tokens are
+ * included (revoked_at set) so the list can show them dimmed. Callers
+ * `mutate()` after issue / revoke.
+ */
+export function useImportTokens() {
+  const swr = useSWR<ImportTokensResponse | null>(
+    API.imports.tokens,
+    async (url: string): Promise<ImportTokensResponse | null> => {
+      if (isDemoMode()) return null;
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & { status?: number };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30_000,
+      shouldRetryOnError: false,
+    },
+  );
+  return {
+    tokens: swr.data?.tokens ?? [],
+    activeLimit: swr.data?.active_limit ?? 5,
     isLoading: swr.isLoading,
     error: swr.error as Error | undefined,
     mutate: swr.mutate,

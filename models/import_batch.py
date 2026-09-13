@@ -23,7 +23,8 @@ Privacy
 account-number patterns masked (``services.imports.mask_sensitive``).
 ``approved_thesis`` is the user's own free text → encrypted at rest.
 
-Schema is mirrored 1:1 in ``migrations/versions/051_import_inbox.py``.
+Schema is mirrored 1:1 in ``migrations/versions/051_import_inbox.py``
+(``token_id``: ``052_import_tokens.py``).
 """
 from __future__ import annotations
 
@@ -35,7 +36,8 @@ from services.crypto_service import EncryptedText
 
 SOURCE_CSV = "csv"
 SOURCE_SCREENSHOT_TEXT = "screenshot_text"
-VALID_SOURCES = (SOURCE_CSV, SOURCE_SCREENSHOT_TEXT)
+SOURCE_WEBHOOK = "webhook"
+VALID_SOURCES = (SOURCE_CSV, SOURCE_SCREENSHOT_TEXT, SOURCE_WEBHOOK)
 
 STATUS_PENDING = "pending"
 STATUS_APPROVED = "approved"
@@ -64,7 +66,15 @@ class ImportBatch(db.Model):
         nullable=False,
         index=True,
     )
-    source = db.Column(db.String(20), nullable=False)  # csv | screenshot_text
+    source = db.Column(db.String(20), nullable=False)  # csv | screenshot_text | webhook
+    # Phase 2 — set when the batch arrived through the PAT webhook
+    # (models/import_token.py). NULL for session uploads.
+    token_id = db.Column(
+        db.Integer,
+        db.ForeignKey("import_tokens.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     broker_guess = db.Column(db.String(40), nullable=False, default="unknown")
     filename = db.Column(db.String(255), nullable=True)
     row_count = db.Column(db.Integer, nullable=False, default=0)
@@ -78,6 +88,7 @@ class ImportBatch(db.Model):
         return {
             "id": self.id,
             "source": self.source,
+            "token_id": self.token_id,
             "broker_guess": self.broker_guess,
             "filename": self.filename,
             "row_count": self.row_count,

@@ -61,6 +61,8 @@ from .inquiry import (
 )
 # Import Inbox — uploaded fills awaiting the user's thesis (docs/product/IMPORT_INBOX_DESIGN.md).
 from .import_batch import ImportBatch, PendingTrade
+# Import Inbox Phase 2 — personal access tokens for the import webhook.
+from .import_token import ImportToken
 from .auth_event import (
     AuthEvent,
     EVENT_TYPE_START as AUTH_EVENT_START,
@@ -100,4 +102,4 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory",
            "AUTH_PROVIDER_GOOGLE", "AUTH_PROVIDER_KAKAO",
            "FunnelEvent", "FUNNEL_ALLOWED_EVENTS",
            "Inquiry", "INQUIRY_VALID_STATUSES", "INQUIRY_VALID_CATEGORIES",
-           "ImportBatch", "PendingTrade"]
+           "ImportBatch", "PendingTrade", "ImportToken"]

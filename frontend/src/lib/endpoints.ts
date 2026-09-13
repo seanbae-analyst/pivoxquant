@@ -301,6 +301,13 @@ export const API = {
     pendingItem: (id: number) => `/api/portfolio/imports/pending/${id}`,
     approve: (id: number) => `/api/portfolio/imports/pending/${id}/approve`,
     reject: (id: number) => `/api/portfolio/imports/pending/${id}/reject`,
+    // Phase 2 v3-A — personal access tokens (IMPORT_INBOX_DESIGN.md §Phase 2).
+    //   tokens   GET → {tokens[], active_limit} · POST {name, consent:true} → 201 {…, token} (raw token appears here only)
+    //   token    DELETE → {ok} (revoke, idempotent)
+    //   webhook  display-only path: POST + `Authorization: Bearer pvx_…` + {"text": "…"}
+    tokens: "/api/portfolio/imports/tokens",
+    token: (id: number) => `/api/portfolio/imports/tokens/${id}`,
+    webhook: "/api/portfolio/imports/webhook",
   },
   support: {
     inquiries: "/api/support/inquiries",
