@@ -26,6 +26,14 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "ko-KR",
     dir: "ltr",
     prefer_related_applications: false,
+    // Web Share Target (Android share sheet → /journal/import?text=…). GET so
+    // the page can prefill its text tab from the query; no file/image share —
+    // the server never receives images (docs/product/IMPORT_INBOX_DESIGN.md).
+    share_target: {
+      action: "/journal/import",
+      method: "GET",
+      params: { title: "title", text: "text", url: "url" },
+    },
     icons: [
       { src: "/icons/icon-72x72.png", sizes: "72x72", type: "image/png", purpose: "any" },
       { src: "/icons/icon-96x96.png", sizes: "96x96", type: "image/png", purpose: "any" },

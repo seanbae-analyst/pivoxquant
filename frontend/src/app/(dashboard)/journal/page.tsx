@@ -45,6 +45,7 @@ import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror"
 import { FrictionOutcomeMirror } from "@/components/journal/friction-outcome-mirror";
 import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
 import { WeeklyPulseSection } from "@/components/journal/weekly-pulse-section";
+import { ImportInbox } from "@/components/journal/import-inbox";
 import type { PreTradeReflection } from "@/lib/types";
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -424,7 +425,20 @@ function JournalContent() {
         <Caption className="mt-2 max-w-lg">
           {t("journal.page.headingDesc")}
         </Caption>
+        <Link
+          href="/journal/import"
+          className="mt-3 inline-flex items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+        >
+          {t("journal.import.importLink")}
+        </Link>
       </header>
+
+      {/* Import Inbox — received fills waiting for a "why". A row is not a
+          record until the user approves it with a thesis; nothing here feeds
+          the mirrors below (docs/product/IMPORT_INBOX_DESIGN.md). */}
+      <ErrorBoundary fallback={null}>
+        <ImportInbox />
+      </ErrorBoundary>
 
       {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
           — no page-level banner here (CEO 2026-05-24: disclaimer only at the

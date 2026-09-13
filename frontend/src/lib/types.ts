@@ -757,3 +757,63 @@ export interface MirrorHomeResponse {
     observed_axes?: string[];
   };
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Import Inbox (2026-09-13) — docs/product/IMPORT_INBOX_DESIGN.md.
+ * A pending row is a *parsed fill*, not a record: it only becomes a trade
+ * once the user approves it with a thesis. Contract locked 1:1 with
+ * routes/imports.py.
+ * ────────────────────────────────────────────────────────────────────── */
+
+export type PendingTradeStatus = "pending" | "approved" | "rejected" | "duplicate";
+
+export interface PendingTradeDTO {
+  id: number;
+  batch_id: number;
+  ticker: string | null;
+  name: string;
+  action: "BUY" | "SELL";
+  shares: number;
+  price: number;
+  currency: "KRW" | "USD";
+  /** ISO timestamp of the fill. */
+  traded_at: string;
+  confidence: number;
+  status: PendingTradeStatus;
+  needs_ticker: boolean;
+  /** Matching pre-trade reflection (same ticker, ≤7d before) or null = no pause. */
+  pre_trade_reflection_id: number | null;
+  raw_snippet: string;
+  approved_trade_id: number | null;
+  approved_at: string | null;
+}
+
+export interface ImportBatch {
+  id: number;
+  source: "csv" | "screenshot_text";
+  broker_guess: string | null;
+  row_count: number;
+  parsed_count: number;
+  duplicate_count: number;
+  unresolved_count: number;
+  created_at: string;
+}
+
+export interface ImportCreateResponse {
+  batch: ImportBatch;
+  pending: PendingTradeDTO[];
+  mapping: Record<string, string> | null;
+  unmapped_headers: string[];
+}
+
+export interface PendingImportsResponse {
+  pending: PendingTradeDTO[];
+  count: number;
+}
+
+export interface ImportApproveResponse {
+  ok: boolean;
+  pending: PendingTradeDTO;
+  trade_id: number;
+  position_id: number;
+}

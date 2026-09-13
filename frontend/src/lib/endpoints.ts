@@ -285,6 +285,23 @@ export const API = {
     marketing: "/api/consents/marketing",
     crossBorder: "/api/consents/cross-border",
   },
+  // Import Inbox (2026-09-13, docs/product/IMPORT_INBOX_DESIGN.md §API).
+  // The server receives only what the user uploads — a CSV/XLSX file or
+  // pasted fill-notification text — and parks parsed rows in pending_trades.
+  // Nothing reaches trade_history/positions until the user approves a row
+  // with a thesis. No broker keys, no images, no AI on the server.
+  //   create      POST multipart {file, consent=true} | JSON {text, source, consent}
+  //   pending     GET  → {pending[], count}
+  //   pendingItem PATCH {ticker?, name?, action?, shares?, price?, traded_at?}
+  //   approve     POST {thesis} (3~500자) → {ok, pending, trade_id, position_id}
+  //   reject      POST → {ok}
+  imports: {
+    create: "/api/portfolio/imports",
+    pending: "/api/portfolio/imports/pending",
+    pendingItem: (id: number) => `/api/portfolio/imports/pending/${id}`,
+    approve: (id: number) => `/api/portfolio/imports/pending/${id}/approve`,
+    reject: (id: number) => `/api/portfolio/imports/pending/${id}/reject`,
+  },
   support: {
     inquiries: "/api/support/inquiries",
     inquiry: (id: string | number) => `/api/support/inquiries/${id}`,

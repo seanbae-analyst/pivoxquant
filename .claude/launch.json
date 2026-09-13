@@ -4,46 +4,82 @@
     {
       "name": "pivoxreport",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "echo 'pivoxreport already running via launchd on :3000' && sleep infinity"],
+      "runtimeArgs": [
+        "-c",
+        "echo 'pivoxreport already running via launchd on :3000' && sleep infinity"
+      ],
       "port": 3000
     },
     {
       "name": "pivox-brief-docs",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8123", "-d", "/Users/seanbae/Desktop/취준/pivox-brief/docs"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8123",
+        "-d",
+        "/Users/seanbae/Desktop/취준/pivox-brief/docs"
+      ],
       "port": 8123
     },
     {
       "name": "dataready-static",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8104", "--directory", "/Users/seanbae/Desktop/취준/dataready"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8104",
+        "--directory",
+        "/Users/seanbae/Desktop/취준/dataready"
+      ],
       "port": 8104
     },
     {
       "name": "PivoxQuant",
       "runtimeExecutable": "venv/bin/python",
-      "runtimeArgs": ["run.py"],
+      "runtimeArgs": [
+        "run.py"
+      ],
       "port": 5050
     },
     {
       "name": "frontend",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "source $HOME/.nvm/nvm.sh && cd frontend && npx next dev --port $PORT"],
+      "runtimeArgs": [
+        "-c",
+        "source $HOME/.nvm/nvm.sh && cd frontend && npx next dev --port $PORT"
+      ],
       "port": 3000,
       "autoPort": true
     },
     {
       "name": "frontend-prod",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "source $HOME/.nvm/nvm.sh && cd frontend && npx next start --port $PORT"],
+      "runtimeArgs": [
+        "-c",
+        "source $HOME/.nvm/nvm.sh && cd frontend && npx next start --port $PORT"
+      ],
       "port": 3100,
       "autoPort": true
     },
     {
       "name": "frontend-prod-utc",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "source $HOME/.nvm/nvm.sh && cd frontend && TZ=UTC npx next start --port $PORT"],
+      "runtimeArgs": [
+        "-c",
+        "source $HOME/.nvm/nvm.sh && cd frontend && TZ=UTC npx next start --port $PORT"
+      ],
       "port": 3200,
+      "autoPort": true
+    },
+    {
+      "name": "frontend-real",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "source $HOME/.nvm/nvm.sh && cd frontend && NEXT_PUBLIC_DEMO_MODE=0 npx next dev --port $PORT"
+      ],
+      "port": 3300,
       "autoPort": true
     }
   ]
