@@ -1,8 +1,46 @@
-# 지금 상태 — 2026-09-01 실측 스냅숏
+# 지금 상태 — 2026-09-12 실측 스냅숏
 
-> CLAUDE.md 에서 옮겨 온 원문 (2026-09-11). CLAUDE.md 는 매 세션 통째로 컨텍스트에 실리므로 이력·수치 스냅숏은 여기 둔다.
-> ⚠️ **2026-09-01 기준이다.** 2026-09-11 에 `https://www.pivoxquant.com/api/health` 가 200 을 냈다 — 아래
-> "남은 것: Render 배포" · "로그인 이후가 전부 동작하지 않는다" 는 그 뒤에 바뀌었을 수 있으니 **다시 재고 믿어라.**
+> CLAUDE.md 에서 옮겨 온 파일 (2026-09-11). CLAUDE.md 는 매 세션 통째로 컨텍스트에 실리므로 이력·수치 스냅숏은 여기 둔다.
+> 아래 09-12 절이 현재 상태, 그 밑 09-01 절은 **이력**이다(백엔드 재구축 당시 기록 — 지금은 해소됨).
+> 수치는 측정 시각과 함께 적는다. 오래됐으면 다시 재라.
+
+## 지금 상태 (2026-09-12 실측, HEAD `b6c451b3`)
+
+### ✅ 백엔드 — Render 라이브 (free 플랜)
+
+`https://pivoxquant-api.onrender.com/api/health` → **200** `db:ok · missing_required:0 · missing_recommended:1 (SENDGRID_WEBHOOK_PUBLIC_KEY) · version v37+` (2026-09-12 21:51 KST, curl).
+- **콜드스타트 43.9초** (같은 curl, `time_total`). free 플랜은 유휴 시 spin-down 하고, 스케줄러가 인프로세스(`RUN_SCHEDULER`)라 **잠들면 크론(52주·집중도 알림, 메일 큐)도 같이 멈춘다.** 09-12 에 `#572`→`#575` 로 스케줄러를 껐다 켰다.
+- DB Supabase Postgres, session pooler 경유, 롤 `pivox_app` (규칙은 CLAUDE.md "지금 상태").
+
+### ✅ 프론트엔드 — Vercel 라이브
+`https://www.pivoxquant.com/api/health` → **200**, 0.69초 (2026-09-12 21:51 KST). 프록시가 Render 를 가리킨다 (B6, 09-04 완료).
+🟡 **인증 이후 화면의 브라우저 실렌더는 아무도 못 봤다** — agent 브라우저가 조직 정책으로 pivoxquant.com 을 못 연다. `SHIP_BLOCKERS.md` B7. CEO 가 직접 로그인해 `/mirror` · `/portfolio` · `/pre-trade` · `/journal` · `/settings` 를 한 바퀴 돌면 닫힌다.
+
+### 🔴 결제 — 게이트로 비활성 (변동 없음)
+prod 503 `BUSINESS_REGISTRATION_PENDING`. 무료 베타라 켤 이유가 없다.
+
+### 측정값
+
+| 항목 | 값 | 측정 |
+|---|---|---|
+| 부팅 URL rules | **121** | 2026-09-12 (`RUN_SCHEDULER=0 POPULATE_CACHE_ON_BOOT=0` 부팅 프로브) |
+| blueprints | **23** | 2026-09-12 |
+| pytest | **2222 passed / 0 failed** (18 skip, 1 xfail, 604s; 09-11 야간 2194 대비 +28) | 2026-09-12 (`./venv/bin/python -m pytest -q`) |
+| vitest | **379 / 379** (52 files; 09-11 야간 380 대비 −1, 어느 테스트가 빠졌는지는 미확인) | 2026-09-12 (`npx vitest run`) |
+| alembic | 53 revisions, head `050_onboarding_v3_declared` | 2026-09-12 (`ls migrations/versions/*.py`) |
+| 야간 게이트 (참고) | pytest 2194/0 · vitest 380/380 · tsc·eslint·build 0 · 계약 74/74 | 2026-09-11 03:00, HEAD `a6cf9d99` — 오늘 13 PR 이전 값 |
+
+### 오늘 남은 결함 (스윕 재현 완료, 미수정)
+`BUG_SWEEP_2026-09-12.md` P2 2건: ① `terms-ko.md`/`privacy-ko.md` 렌더에서 `unbreakKoreanBold` 정규식이 `**` 리터럴을 남긴다(면책 문구 파손) ② 인증 라우트마다 `/api/alerts` 401 콘솔 에러(SWR 키 무게이트). P1 4건은 이월.
+
+### 막혀 있는 것 (2026-09-12)
+코드가 아니다. **R1 변호사 의견서**(미팅 미예약) · **R8 FMP Data Display Agreement**(09-10 문의 접수, 회신 대기) · **B7 CEO 브라우저 로그인 1회**. 상세는 `SHIP_BLOCKERS.md`.
+
+---
+
+# 이력 — 2026-09-01 실측 스냅숏 (백엔드 재구축 당시)
+
+> ⚠️ 아래는 **2026-09-01 기준 기록**이다. "남은 것: Render 배포" 는 09-04 에 끝났고, "로그인 이후가 전부 동작하지 않는다" 도 B6 로 해소됐다. 함정·교훈(pooler · `pivox_app` 롤 · `.env` 먼저 열기)만 여전히 유효하다.
 
 ## 지금 상태 (2026-09-01 실측)
 

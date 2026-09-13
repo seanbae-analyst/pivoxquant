@@ -1,7 +1,9 @@
 # PivoxQuant SHIP_BLOCKERS.md
 
 **SoT**: 출시를 막는 것들의 단일 목록.
-**최근 갱신**: 2026-09-07 18:48 KST (ship_blockers_audit 자동 — RELEASE-BLOCKER 7건 / SHIP-AT-RISK 5건 / POST-LAUNCH 15건 / 변호사 큐 21건)
+**최근 갱신**: 2026-09-12 21:55 KST (수동 — prod health 재실측, B7 상태 확인. 직전 자동 갱신 2026-09-07 18:48: RELEASE-BLOCKER 7건 / SHIP-AT-RISK 5건 / POST-LAUNCH 15건 / 변호사 큐 21건)
+
+> **2026-09-12 실측**: Render `/api/health` 200 (콜드스타트 43.9s, `missing_required:0`, 권장 누락 `SENDGRID_WEBHOOK_PUBLIC_KEY` 1건 = A3) · Vercel `/api/health` 200 (0.69s). 코드 측 블로커 없음 — 남은 건 **R1 · R8 · B7** 셋. B7 은 CEO 가 오늘 직접 로그인 확인 예정.
 
 > ⚠️ **2026-09-01 전면 재작성.** 직전 갱신이 2026-06-20 이었고, 그 사이
 > **Railway 계정이 삭제**되면서 이 파일의 상당수가 무효가 됐다. "Railway env
@@ -25,7 +27,7 @@
 | B4 | Render 앱 배포 | CEO | ✅ **완료 2026-09-04 22:38 KST** — Blueprint `pivoxquant` (srv-dadcjiv10e5c73eb60vg, singapore, plan free) `main@c1f6180`. `https://pivoxquant-api.onrender.com/api/health` → 200 `db:ok, missing_required:0`. ⚠️ free 플랜 = 유휴 시 spin-down, 첫 요청 50s+ 지연·일시 502 (실측) |
 | B5 | 남은 키 수집 | — | ✅ **불필요 — 2026-09-01 재실측으로 소멸.** `.secrets/RENDER_PASTE_VALUES.txt` 의 15개 키가 `render.yaml` 의 `sync:false` 15개와 정확히 일치하고 **빈 값이 0개**다. FMP·KIS×2 는 이미 로컬 `.env` 에 있었고(len 32/36/180), Brevo 는 `cee3d291` 이후 **필요 없다**(캐스케이드가 SendGrid→Brevo→SMTP 이고 SendGrid·SMTP 자격증명이 있음). B4 는 이 항목을 기다리지 않는다 |
 | B6 | Vercel 재연결 | agent | ✅ **완료 2026-09-04** — `RAILWAY_BACKEND_URL` **와 `NEXT_PUBLIC_API_URL`(sensitive, 우선순위 높음 — 5번째 연결점, pull 로는 빈값으로 보여 함정)** 둘 다 Render URL 로 PATCH + 재빌드. `www.pivoxquant.com/api/health` → 200, `/api/auth/me` → 200 |
-| B7 | 브라우저 E2E | agent | 🟡 **curl E2E 만 통과** — `/api/auth/google`·`/api/auth/kakao` → 302, redirect_uri=`https://www.pivoxquant.com/api/auth/*/callback` 정확. **브라우저 검증 NOT-TESTED**: pivoxquant.com 이 agent 브라우저(Chrome 확장·앱 내 브라우저 둘 다) 조직 정책으로 차단됨. CEO 가 직접 로그인 1회 확인 필요 |
+| B7 | 브라우저 E2E | agent | 🟡 **curl E2E 만 통과** — `/api/auth/google`·`/api/auth/kakao` → 302, redirect_uri=`https://www.pivoxquant.com/api/auth/*/callback` 정확. **브라우저 검증 NOT-TESTED**: pivoxquant.com 이 agent 브라우저(Chrome 확장·앱 내 브라우저 둘 다) 조직 정책으로 차단됨. CEO 가 직접 로그인 1회 확인 필요. **2026-09-12: 여전히 NOT-TESTED — 09-10·09-11 스윕이 같은 사각지대를 명시 기록. CEO 가 오늘 직접 확인 예정.** 확인 항목: 로그인 → `/mirror` 렌더 → `/portfolio` → `/pre-trade` 1건 기록 → `/journal` → `/settings` |
 
 ---
 
