@@ -1,11 +1,14 @@
 /**
  * FaqSection — Frequently Asked Questions (native <details> accordion).
  *
- * 4 categories / 10 items. Locale-aware: ko (Korean) | en (English).
+ * 4 categories / 9 items. Locale-aware: ko (Korean) | en (English).
+ *
+ * 2026-09-13: the "what do signal labels (POSITIVE/NEGATIVE/NEUTRAL) mean"
+ * item was removed — there is no signal surface left to explain. Every item
+ * here must describe something a user can actually reach.
  *
  * Compliance posture (자본시장법 §101 면제 트랙):
  *   - Not investment advice language preserved in both locales.
- *   - POSITIVE/NEGATIVE/NEUTRAL signal labels are observational, not directives.
  *   - No solicitation language used.
  *
  * v3 tone: hairline-ruled rows, Playfair UPRIGHT question, serif body.
@@ -81,7 +84,6 @@ export function FaqSection() {
             category: t("support.categories.service"),
             items: [
               { q: t("support.faq.whatIsService.q"), a: t("support.faq.whatIsService.a") },
-              { q: t("support.faq.signalLabels.q"), a: t("support.faq.signalLabels.a") },
               { q: t("support.faq.dataSource.q"), a: t("support.faq.dataSource.a") },
             ],
           },
@@ -113,7 +115,6 @@ export function FaqSection() {
             category: t("support.categories.service"),
             items: [
               { q: t("support.faq.whatIsService.q"), a: t("support.faq.whatIsService.a") },
-              { q: t("support.faq.signalLabels.q"), a: t("support.faq.signalLabels.a") },
               { q: t("support.faq.dataSource.q"), a: t("support.faq.dataSource.a") },
             ],
           },

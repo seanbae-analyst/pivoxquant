@@ -1,16 +1,25 @@
 "use client";
 
 /**
- * PersonasPreview — selected persona cards on the slim landing.
+ * PersonasPreview — the three names the mirror uses, on the slim landing.
  * ----------------------------------------------------------------
- * Surfaces Growth / Value / Balanced / Beginner — the four the onboarding
- * quiz resolves to most often in the first cohort — and ends with a link
- * into the quiz itself. The per-card "sample report" links and the
- * /features/personas showcase went with the surfaces they pointed at.
+ * 2026-09-13 rewrite. This section used to show four engine personas
+ * with two-letter engine codes, named four more to make "eight in all", and
+ * promised the mirror would speak "in the language of the one you picked".
+ * All of that was wrong for the product that ships:
  *
- * Palette-safe (Vantablack + Ivory + Bronze). 1-col mobile / 2-col tablet
- * / 4-col desktop. 21st.dev polish: gradient bronze border on hover,
- * itemized micro-ledger numbering.
+ *   • The 8 engine persona codes must never appear in UI. Only the 3 disclosed
+ *     buckets may — 성장형 / 균형형 / 수익형 (lib/cfo/hooks.ts
+ *     PERSONA_TO_SURFACE, mirroring backend persona_analytics).
+ *   • Onboarding v3 (2026-09-06) creates no type label. It records the user's
+ *     five answers, and /mirror compares them with observed trades. Nobody
+ *     "picks" a type.
+ *
+ * So the section now says exactly that: your answers stay in your words, and
+ * when the mirror names a trading pattern it uses only the three buckets. The
+ * one-line descriptions are the product's own SURFACE_TAGLINES wording.
+ *
+ * Palette-safe (Vantablack + Ivory + Bronze). 1-col mobile / 3-col desktop.
  */
 
 import Link from "next/link";
@@ -18,48 +27,13 @@ import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { fadeUp, stagger } from "@/lib/motion";
 import { useT } from "@/lib/locale";
+import { useAuth } from "@/lib/auth";
 
-type PreviewPersona = {
-  code: string;
-  en: string;
-  kr: string;
-  tagline: string;
-  italic: string;
-};
-
-const FOUR: readonly PreviewPersona[] = [
-  {
-    code: "GR",
-    en: "Growth",
-    kr: "성장형",
-    tagline: "High-beta compounders. Narrative-led.",
-    italic: "미래 현금흐름에 베팅한다.",
-  },
-  {
-    code: "VA",
-    en: "Value",
-    kr: "가치형",
-    tagline: "Margin of safety. Balance-sheet first.",
-    italic: "싼 값에 산다. 느리게 부자가 된다.",
-  },
-  {
-    code: "BA",
-    en: "Balanced",
-    kr: "균형형",
-    tagline: "Classic 60/40. Ballast over bravery.",
-    italic: "평온한 복리.",
-  },
-  {
-    code: "BE",
-    en: "Beginner",
-    kr: "입문형",
-    tagline: "First year. Learning the ropes.",
-    italic: "처음 내 돈을 굴려본다.",
-  },
-] as const;
+const BUCKETS = ["growth", "balanced", "income"] as const;
 
 export default function PersonasPreview() {
   const t = useT();
+  const { user } = useAuth();
   const reduce = useReducedMotion();
 
   return (
@@ -129,21 +103,21 @@ export default function PersonasPreview() {
           {t("landing.personas.description")}
         </motion.p>
 
-        {/* Grid */}
+        {/* Grid — the three disclosed buckets, nothing finer */}
         <motion.div
           initial={reduce ? undefined : "hidden"}
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-60px" }}
           variants={stagger}
-          className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+          className="grid grid-cols-1 gap-6 md:grid-cols-3"
         >
-          {FOUR.map((p, i) => (
+          {BUCKETS.map((bucket, i) => (
             <motion.article
-              key={p.code}
+              key={bucket}
               variants={fadeUp}
               className="pq-persona-card-v2 group relative flex flex-col overflow-hidden rounded-sm p-6 md:p-7 transition-all duration-500 hover:-translate-y-1"
               style={{
-                minHeight: 240,
+                minHeight: 180,
                 backgroundColor: "var(--pq-card-veil)",
                 border: "0.5px solid rgba(184,149,106,0.24)",
               }}
@@ -159,37 +133,15 @@ export default function PersonasPreview() {
               />
 
               {/* Numeric index */}
-              <div className="mb-4 flex items-baseline justify-between">
-                <span
-                  className="font-mono tabular-nums"
-                  style={{
-                    color: "rgba(184,149,106,0.78)",
-                    fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.22em",
-                  }}
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span
-                  className="font-serif"
-                  style={{
-                    color: "var(--pq-ivory-faint)",
-                    fontSize: "var(--pq-text-eyebrow)",
-                  }}
-                >
-                  {p.kr}
-                </span>
-              </div>
-
               <span
-                className="mb-2 font-mono uppercase"
+                className="mb-4 font-mono tabular-nums"
                 style={{
-                  color: "var(--pq-bronze)",
+                  color: "rgba(184,149,106,0.78)",
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.24em",
+                  letterSpacing: "0.22em",
                 }}
               >
-                {p.code}
+                {String(i + 1).padStart(2, "0")}
               </span>
 
               <h3
@@ -202,7 +154,7 @@ export default function PersonasPreview() {
                   marginBottom: 10,
                 }}
               >
-                {p.en}
+                {t(`landing.personas.buckets.${bucket}.name`)}
               </h3>
               <p
                 className="font-serif"
@@ -210,28 +162,15 @@ export default function PersonasPreview() {
                   color: "var(--pq-ivory-muted)",
                   fontSize: "var(--pq-text-body)",
                   lineHeight: 1.55,
-                  marginBottom: 8,
                 }}
               >
-                {p.tagline}
+                {t(`landing.personas.buckets.${bucket}.line`)}
               </p>
-              <p
-                className="font-serif"
-                style={{
-                  color: "rgba(184,149,106,0.78)",
-                  fontSize: "var(--pq-text-eyebrow)",
-                  lineHeight: 1.5,
-                  marginBottom: 24,
-                }}
-              >
-                {p.italic}
-              </p>
-
             </motion.article>
           ))}
         </motion.div>
 
-        {/* See all CTA */}
+        {/* Note + CTA */}
         <motion.div
           initial={reduce ? undefined : "hidden"}
           whileInView={reduce ? undefined : "visible"}
@@ -247,10 +186,12 @@ export default function PersonasPreview() {
               maxWidth: 480,
             }}
           >
-            {t("landing.personas.alsoAvailable")}
+            {t("landing.personas.bucketsNote")}
           </p>
+          {/* Same login split as hero.tsx — a signed-in user has already
+              answered the five questions; send them to the mirror instead. */}
           <Link
-            href="/signup"
+            href={user ? "/mirror" : "/signup"}
             className="group inline-flex items-center gap-2 rounded-sm px-5 py-3 font-serif transition-colors"
             style={{
               backgroundColor: "transparent",
@@ -260,7 +201,7 @@ export default function PersonasPreview() {
               letterSpacing: "0.02em",
             }}
           >
-            {t("landing.personas.takeQuiz")}
+            {user ? t("landing.hero.ctaOpenMirror") : t("landing.personas.takeQuiz")}
             <ArrowRight
               className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5"
               style={{ color: "var(--pq-bronze)" }}

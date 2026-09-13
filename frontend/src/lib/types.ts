@@ -613,11 +613,11 @@ export interface Artifact {
  */
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Customer support — 고객문의센터 + AI 고객지원 (2026-05-26).
+ * Customer support — 고객문의센터 (2026-05-26).
  *
  * Additive only. Backend contract locked in routes/support.py + endpoints.ts
- * `API.support`. The AI chat surface is "AI 고객지원" (customer-support
- * assistant) — never an investment coach (자본시장법). No BUY/SELL/HOLD or
+ * `API.support`. The AI support chat that shipped alongside it was deleted in
+ * 3518216b — only 1:1 inquiries and the inbox remain. No BUY/SELL/HOLD or
  * 추천/조언 vocabulary round-trips through these shapes.
  * ────────────────────────────────────────────────────────────────────────── */
 

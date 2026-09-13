@@ -19,6 +19,8 @@ import { ArrowRight, ChevronDown, X } from "lucide-react";
 import type { NavGroup } from "./top-nav";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST } from "@/lib/motion";
+import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/locale";
 
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
@@ -42,6 +44,8 @@ export default function MobileDrawer({
   groups: readonly NavGroup[];
 }) {
   const reduce = useReducedMotion();
+  const { user } = useAuth();
+  const t = useT();
   const [expanded, setExpanded] = useState<string | null>(null);
   const panelRef = useFocusTrap<HTMLElement>(open);
 
@@ -242,19 +246,22 @@ export default function MobileDrawer({
                 );
               })}
 
-              {/* Log in */}
-              <Link
-                href="/login"
-                onClick={onClose}
-                className="mt-4 inline-block px-3 py-3 font-serif"
-                style={{
-                  color: "var(--pq-ivory-muted)",
-                  fontSize: "var(--pq-text-body)",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                Log in →
-              </Link>
+              {/* Log in — signed-out only. A signed-in user's way in is the
+                  sticky CTA below (→ /mirror), same split as top-nav.tsx. */}
+              {!user && (
+                <Link
+                  href="/login"
+                  onClick={onClose}
+                  className="mt-4 inline-block px-3 py-3 font-serif"
+                  style={{
+                    color: "var(--pq-ivory-muted)",
+                    fontSize: "var(--pq-text-body)",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {t("landing.topNav.loginLink")} →
+                </Link>
+              )}
             </nav>
 
             {/* Sticky CTA */}
@@ -265,8 +272,10 @@ export default function MobileDrawer({
                 paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
               }}
             >
+              {/* Was a hardcoded "See my mirror" → /signup for everyone.
+                  Same split and labels as the desktop CTA in top-nav.tsx. */}
               <Link
-                href="/signup"
+                href={user ? "/mirror" : "/signup"}
                 onClick={onClose}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-[2px] font-serif transition-transform active:scale-[0.98]"
                 style={{
@@ -277,7 +286,7 @@ export default function MobileDrawer({
                   fontWeight: 500,
                 }}
               >
-                See my mirror
+                {user ? t("landing.topNav.openDesk") : t("landing.topNav.meetCfo")}
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>

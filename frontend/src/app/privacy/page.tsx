@@ -1,7 +1,8 @@
 /**
  * /privacy — PIPA-compliant Korean privacy policy.
  * Reads frontend/src/content/privacy-ko.md (single source of truth)
- * and renders via `marked`. Strips YAML frontmatter before parsing.
+ * and renders it through `renderLegalMarkdown` (lib/legal-markdown.ts — shared
+ * with /terms; see that file for why bold is paired before `marked`).
  *
  * 한국 이용자에게 한국어로 공시 (PIPA §30 의무).
  */
@@ -9,34 +10,18 @@
 import Link from "next/link";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { marked } from "marked";
 import type { Metadata } from "next";
+import { renderLegalMarkdown } from "@/lib/legal-markdown";
 
 export const metadata: Metadata = {
   title: "개인정보처리방침",
   alternates: { canonical: "/privacy" },
 };
 
-function stripFrontmatter(md: string): string {
-  if (!md.startsWith("---")) return md;
-  const end = md.indexOf("\n---", 3);
-  return end === -1 ? md : md.slice(end + 4).trimStart();
-}
-
-/**
- * Insert a hair-space after `**bold**` when a Korean syllable follows
- * immediately. CommonMark closes the bold delimiter only at a "word
- * boundary"; Hangul jamo aren't word-boundary chars in marked v18, so
- * `**초안(Draft)**이며` rendered as literal asterisks.
- */
-function unbreakKoreanBold(md: string): string {
-  return md.replace(/(\*\*[^*\n]+?\*\*)([ㄱ-ㆎ가-힣])/g, "$1 $2");
-}
-
 export default async function PrivacyPage() {
   const filePath = path.join(process.cwd(), "src/content/privacy-ko.md");
   const raw = await fs.readFile(filePath, "utf8");
-  const html = await marked.parse(unbreakKoreanBold(stripFrontmatter(raw)));
+  const html = renderLegalMarkdown(raw);
 
   return (
     <div className="min-h-[100dvh] bg-[var(--pq-ink)] text-[var(--pq-ivory)]">

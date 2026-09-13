@@ -685,15 +685,15 @@ export async function saveNotificationPreferences(
   );
 }
 
-/* ── Customer support — 고객문의센터 + AI 고객지원 (2026-05-26) ─────────────
+/* ── Customer support — 고객문의센터 (2026-05-26) ─────────────────────────
  *
- * Additive. SWR reads for the inquiry list/detail + mutation helpers for
- * creating an inquiry and sending an AI-support chat turn. Mutations route
- * through `apiFetch` so CSRF + credentials + 30s timeout + 401/429 handling
- * match the rest of the SPA (apiFetch throws `ApiError` with `.status`).
+ * Additive. SWR reads for the inquiry list/detail + a mutation helper for
+ * creating an inquiry (the AI-support chat turn was deleted in 3518216b).
+ * Mutations route through `apiFetch` so CSRF + credentials + 30s timeout +
+ * 401/429 handling match the rest of the SPA (apiFetch throws `ApiError`).
  *
- * Legal: this is a CUSTOMER-SUPPORT assistant (billing/account/usage) — not
- * an investment-guidance surface. No signal vocabulary round-trips here.
+ * Legal: this is CUSTOMER SUPPORT (billing/account/usage) — not an
+ * investment-guidance surface. No signal vocabulary round-trips here.
  */
 
 import type {

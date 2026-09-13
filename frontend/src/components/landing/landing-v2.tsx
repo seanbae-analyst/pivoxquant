@@ -8,7 +8,8 @@
  *   2. SplashPage      — wordmark cover
  *   3. Hero            — "부자로 만들어 준다고 약속하지 않습니다"
  *   4. ThreeSteps      — 멈춤 · 기록 · 거울, one card per shipping route
- *   5. PersonasPreview — 4 of the 8 real personas (models VALID_PERSONAS)
+ *   5. PersonasPreview — the 3 disclosed buckets only (성장형/균형형/수익형);
+ *                        engine persona codes never appear (2026-09-13)
  *   6. Faq             — 6 items, answered against what ships
  *   7. CtaFooter       — free closed beta, Google/Kakao only
  *   8. SiteFooter      — 전자상거래법 §13 business disclosure
@@ -49,6 +50,7 @@ import {
   SUPPORT_EMAIL_DEFAULT,
 } from "@/lib/business-info";
 import { useT } from "@/lib/locale";
+import { useAuth } from "@/lib/auth";
 
 /* ───────────── pricing: removed 2026-09-02 ─────────────
  *
@@ -170,6 +172,7 @@ function Faq() {
 function CtaFooter() {
   const reduce = useReducedMotion();
   const t = useT();
+  const { user } = useAuth();
   return (
     <section
       className="relative overflow-hidden py-32 md:py-44 lg:py-52"
@@ -255,8 +258,11 @@ function CtaFooter() {
           variants={fadeUp}
           className="flex flex-wrap items-center justify-center gap-5"
         >
+          {/* Signed-in users already have an account — offering them 회원가입
+              and 로그인 again was the 2026-09-12 sweep finding. Same split as
+              hero.tsx and top-nav.tsx. */}
           <Link
-            href="/signup"
+            href={user ? "/mirror" : "/signup"}
             className="group inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-transform active:scale-[0.98]"
             style={{
               backgroundColor: "var(--pq-bronze)",
@@ -265,26 +271,28 @@ function CtaFooter() {
               letterSpacing: "0.02em",
             }}
           >
-            {t("landing.cta.signUp")}
+            {user ? t("landing.hero.ctaOpenMirror") : t("landing.cta.signUp")}
             <ArrowRight
               className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
               strokeWidth={1.75}
               aria-hidden
             />
           </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-colors"
-            style={{
-              border: "0.75pt solid var(--pq-bronze)",
-              color: "var(--pq-bronze)",
-              fontSize: "var(--pq-text-body)",
-              letterSpacing: "0.02em",
-              backgroundColor: "transparent",
-            }}
-          >
-            {t("landing.cta.logIn")}
-          </Link>
+          {!user && (
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-colors"
+              style={{
+                border: "0.75pt solid var(--pq-bronze)",
+                color: "var(--pq-bronze)",
+                fontSize: "var(--pq-text-body)",
+                letterSpacing: "0.02em",
+                backgroundColor: "transparent",
+              }}
+            >
+              {t("landing.cta.logIn")}
+            </Link>
+          )}
         </motion.div>
       </div>
     </section>
