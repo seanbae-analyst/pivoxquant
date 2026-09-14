@@ -10,7 +10,7 @@
  *   4. ThreeSteps      — 멈춤 · 기록 · 거울, one card per shipping route
  *   5. PersonasPreview — the 3 disclosed buckets only (성장형/균형형/수익형);
  *                        engine persona codes never appear (2026-09-13)
- *   6. Faq             — 6 items, answered against what ships
+ *   6. Faq             — 7 items, answered against what ships
  *   7. CtaFooter       — free closed beta, Google/Kakao only
  *   8. SiteFooter      — 전자상거래법 §13 business disclosure
  *

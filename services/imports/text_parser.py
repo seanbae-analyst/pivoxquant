@@ -12,6 +12,14 @@ US  ``Bought 5 AAPL @ $190.12``
 No date on the line → today (UTC, 00:00) and confidence 0.6. Lines that
 do not contain a fill are returned with ``skip_reason`` so the route can
 tell the user which lines it could not read.
+
+Order-lifecycle notices are not fills. A broker app pushes "주문이 접수되었습니다",
+"정정 주문 완료", "주문 취소", "미체결", "Order placed", "cancelled" with the
+same 매수/N주/원 vocabulary as a fill, and with the webhook path every
+notification the user's macro matches arrives here unread. Those lines are
+skipped before any parsing (``_non_fill_reason``); a line that says 체결 /
+filled / executed is still a fill even if it also says 정정 (a modified order
+that then filled), except "체결 취소" (a fill reversal).
 """
 from __future__ import annotations
 
@@ -66,6 +74,40 @@ _KEYWORDS = {
 _TOKEN = re.compile(r"[A-Za-z0-9가-힣&+\-.]+")
 _HANGUL = re.compile(r"[가-힣]")
 
+# ── order-lifecycle notices (not fills) ─────────────────────────────
+# "미체결" and "체결 취소" are decisive on their own. The rest only count when
+# the line has no fill word at all — "정정 주문이 체결되었습니다" is a fill.
+_UNFILLED_KR = re.compile(r"미\s*체결")
+_FILL_REVERSAL_KR = re.compile(r"체결\s*취소")
+_FILL_WORD_KR = re.compile(r"체결")
+_ORDER_NOTICE_KR = re.compile(
+    r"접수|정정|취소|거부|만료|주문\s*완료|주문이\s*완료|주문\s*확인|주문이\s*확인|주문\s*내역|주문\s*(?:을|이)?\s*(?:냈|넣)"
+)
+_FILL_WORD_EN = re.compile(r"\b(?:filled|fill|executed|execution|bought|sold)\b", re.IGNORECASE)
+_ORDER_NOTICE_EN = re.compile(
+    r"\b(?:cancel(?:l)?ed|cancellation|placed|accepted|received|submitted|modified|replaced|"
+    r"rejected|expired|open\s+order|pending|unfilled|working\s+order)\b",
+    re.IGNORECASE,
+)
+
+_SKIP_UNFILLED = "미체결 알림 (체결 아님)"
+_SKIP_REVERSAL = "체결 취소 알림 (기록할 체결 아님)"
+_SKIP_ORDER_NOTICE = "주문 접수·정정·취소 알림 (체결 아님)"
+
+
+def _non_fill_reason(line: str) -> str | None:
+    """Return a skip reason when the line is an order notice rather than a fill."""
+    if _UNFILLED_KR.search(line):
+        return _SKIP_UNFILLED
+    if _FILL_REVERSAL_KR.search(line):
+        return _SKIP_REVERSAL
+    has_fill = bool(_FILL_WORD_KR.search(line) or _FILL_WORD_EN.search(line))
+    if has_fill:
+        return None
+    if _ORDER_NOTICE_KR.search(line) or _ORDER_NOTICE_EN.search(line):
+        return _SKIP_ORDER_NOTICE
+    return None
+
 
 def parse_text(text: str) -> list[RawTrade]:
     out: list[RawTrade] = []
@@ -81,6 +123,10 @@ def parse_text(text: str) -> list[RawTrade]:
 
 def _parse_line(line: str) -> RawTrade:
     t = RawTrade()
+    notice = _non_fill_reason(line)
+    if notice:
+        t.skip_reason = notice
+        return t
     side = _side(line)
     if side is None:
         t.skip_reason = "매수/매도 표시 없음"

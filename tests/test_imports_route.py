@@ -579,3 +579,63 @@ class TestReviewFixes:
         pid = r.get_json()["pending"][0]["id"]
         a = client.post(f"/api/portfolio/imports/pending/{pid}/approve", json={"thesis": "반도체 업황 회복"})
         assert a.status_code == 400 and a.get_json()["code"] == "TIER_LIMIT"
+
+
+# ── order-lifecycle notices are not fills ────────────────────────────
+
+class TestNonFillNotices:
+    """A macro forwards every broker notification, not only fills. 접수·정정·
+    취소·미체결 lines share the 매수/N주/원 vocabulary and must not land in the
+    inbox as trades."""
+
+    def _skipped_reasons(self, r):
+        return [s["reason"] for s in r.get_json()["skipped"]]
+
+    def test_order_accepted_notice_is_skipped(self, client, auth_user):
+        r = _paste(client, "[토스증권] 삼성전자 10주 매수 주문이 접수되었습니다 71,200원")
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_NO_ROWS"
+        assert self._skipped_reasons(r) == ["주문 접수·정정·취소 알림 (체결 아님)"]
+
+    def test_cancel_and_modify_notices_are_skipped(self, client, auth_user):
+        text = "\n".join([
+            "삼성전자 10주 매수 주문 취소 71,200원",
+            "삼성전자 10주 매수 정정 주문 완료 71,000원",
+            "삼성전자 10주 매수 미체결 71,200원",
+            "삼성전자 10주 매수 체결 취소 71,200원",
+        ])
+        r = _paste(client, text)
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_NO_ROWS"
+        assert self._skipped_reasons(r) == [
+            "주문 접수·정정·취소 알림 (체결 아님)",
+            "주문 접수·정정·취소 알림 (체결 아님)",
+            "미체결 알림 (체결 아님)",
+            "체결 취소 알림 (기록할 체결 아님)",
+        ]
+
+    def test_modified_order_that_filled_is_a_fill(self, client, auth_user):
+        r = _paste(client, "[키움증권] 정정 주문이 체결되었습니다 삼성전자 10주 매수 체결단가 71,000원")
+        assert r.status_code == 201, r.get_json()
+        p = r.get_json()["pending"][0]
+        assert p["name"] == "삼성전자" and p["shares"] == 10.0 and p["price"] == 71000.0
+
+    def test_mixed_paste_keeps_only_the_fill(self, client, auth_user):
+        text = "삼성전자 10주 매수 주문이 접수되었습니다 71,200원\n삼성전자 10주 매수 체결 71,200원\n"
+        r = _paste(client, text)
+        assert r.status_code == 201, r.get_json()
+        assert len(r.get_json()["pending"]) == 1
+        skipped = r.get_json()["skipped"]
+        assert len(skipped) == 1 and skipped[0]["row"] == 1
+
+    def test_english_order_placed_is_skipped_but_bought_is_not(self, client, auth_user):
+        r = _paste(client, "Order placed: Buy 5 AAPL @ $190.12")
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_NO_ROWS"
+        assert self._skipped_reasons(r) == ["주문 접수·정정·취소 알림 (체결 아님)"]
+        ok = _paste(client, "Bought 5 AAPL @ $190.12")
+        assert ok.status_code == 201, ok.get_json()
+        assert ok.get_json()["pending"][0]["ticker"] == "AAPL"
+
+    def test_webhook_forwarded_cancel_is_skipped(self, client, auth_user):
+        tok = client.post(f"{BASE}/tokens", json={"name": "macro", "consent": True}).get_json()["token"]
+        r = client.post(f"{BASE}/webhook", data="삼성전자 10주 매수 주문 취소 71,200원",
+                        content_type="text/plain", headers={"Authorization": f"Bearer {tok}"})
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_NO_ROWS"
