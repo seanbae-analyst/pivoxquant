@@ -68,7 +68,11 @@
 | 파일 | 최종 업데이트 | 요약 |
 |------|--------------|------|
 | [launch/AI_ARTIFACTS_IDEAS.md](launch/AI_ARTIFACTS_IDEAS.md) | 작성일 불명 | AI Artifact 기능 아이디어 30선. CFO 컨셉 기반. |
-| [launch/AUTO_SYNC_TECH_PLAN.md](launch/AUTO_SYNC_TECH_PLAN.md) | 2026-04-17 | 로그인 즉시 포트폴리오 자동 Sync 기술 설계서 (KIS/키움/SnapTrade). |
+| [launch/AUTO_SYNC_TECH_PLAN.md](launch/AUTO_SYNC_TECH_PLAN.md) | 2026-04-17 | 로그인 즉시 포트폴리오 자동 Sync 기술 설계서 (KIS/키움/SnapTrade). 유저 키 서버 보관 전제 → 약관 §5②로 폐기. |
+| [launch/ACCOUNT_SYNC_STRATEGY_V2.md](launch/ACCOUNT_SYNC_STRATEGY_V2.md) | 2026-09-13 | 계좌 동기화 전략 v2. 키는 서버에 오지 않는다 — CSV·스크린샷·로컬 에이전트·MCP 3단계 + R1 추가 질문 Q10-b~e. |
+| [product/IMPORT_INBOX_DESIGN.md](product/IMPORT_INBOX_DESIGN.md) | 2026-09-13 | Import Inbox 설계 — Phase 1(CSV·스크린샷 텍스트, PR #582) + Phase 2 v3-A(가져오기 토큰·웹훅, PR #583). |
+| [product/MACRODROID_RECIPE.md](product/MACRODROID_RECIPE.md) | 2026-09-14 | 안드로이드 탭 0회 — MacroDroid 알림→웹훅 레시피(트리거·제약·액션 값), .macro 는 CEO 기기에서 내보내 교체. |
+| [launch/LOCAL_AGENT_LEGAL_RISK_2026-09-13.md](launch/LOCAL_AGENT_LEGAL_RISK_2026-09-13.md) | 2026-09-13 | 로컬 CLI·MCP 경로 법적 리스크 4축 조사(신용정보법·전금법·자본시장법·PIPA). 최대 쟁점 = 마이데이터 해당성(Phase 1과 공유). 변호사 질문 Q10-b~f·Q6-b·Q-MCP + PIPA 구현 체크리스트. |
 | [launch/DOMAIN_SETUP.md](launch/DOMAIN_SETUP.md) | 작성일 불명 | Vercel Primary Domain 설정 + 가비아 DNS 체크리스트. 리다이렉트 루프 해결 가이드. |
 | [launch/LAWYER_CONSULTATION_PACKAGE.md](launch/LAWYER_CONSULTATION_PACKAGE.md) | 2026-04-17 | 변호사 대면 상담 60분 대비 패키지. |
 | [launch/MONETIZATION_STRATEGY.md](launch/MONETIZATION_STRATEGY.md) | 2026-04-17 | 수익화 전략 설계도. 유료 전환 드라이버 분석. |

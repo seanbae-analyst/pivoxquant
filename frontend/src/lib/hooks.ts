@@ -19,6 +19,8 @@ import type {
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
   MirrorHomeResponse,
+  PendingImportsResponse,
+  ImportTokensResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -173,6 +175,77 @@ export function usePreTradeJournal(limit = 50) {
   return {
     reflections: swr.data?.reflections ?? [],
     disclaimer: swr.data?.disclaimer ?? null,
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Import Inbox — the user's own parsed-but-unapproved fills
+ * (docs/product/IMPORT_INBOX_DESIGN.md). A 404 (backend not yet wired)
+ * reads as an empty inbox rather than an error, so /journal never breaks
+ * while the route lands. Callers `mutate()` after approve / reject.
+ */
+export function usePendingImports() {
+  const swr = useSWR<PendingImportsResponse | null>(
+    API.imports.pending,
+    async (url: string): Promise<PendingImportsResponse | null> => {
+      if (isDemoMode()) return null;
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & { status?: number };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30_000,
+      shouldRetryOnError: false,
+    },
+  );
+  return {
+    pending: swr.data?.pending ?? [],
+    count: swr.data?.count ?? 0,
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Import tokens — the user's own personal access tokens for the import
+ * webhook (IMPORT_INBOX_DESIGN.md §Phase 2 v3-A). Same resilience contract
+ * as `usePendingImports`: a 404 reads as an empty list. Revoked tokens are
+ * included (revoked_at set) so the list can show them dimmed. Callers
+ * `mutate()` after issue / revoke.
+ */
+export function useImportTokens() {
+  const swr = useSWR<ImportTokensResponse | null>(
+    API.imports.tokens,
+    async (url: string): Promise<ImportTokensResponse | null> => {
+      if (isDemoMode()) return null;
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & { status?: number };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30_000,
+      shouldRetryOnError: false,
+    },
+  );
+  return {
+    tokens: swr.data?.tokens ?? [],
+    activeLimit: swr.data?.active_limit ?? 5,
     isLoading: swr.isLoading,
     error: swr.error as Error | undefined,
     mutate: swr.mutate,

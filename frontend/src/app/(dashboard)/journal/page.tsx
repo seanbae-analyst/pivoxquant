@@ -27,7 +27,7 @@ import Link from "next/link";
 import { Briefcase, NotebookPen, ChevronDown } from "lucide-react";
 import { useLocale, useT } from "@/lib/locale";
 import { usePreTradeJournal } from "@/lib/hooks";
-import { displayName, normalizeTicker } from "@/lib/format";
+import { displayName, normalizeTicker, parseIsoUtc } from "@/lib/format";
 import { sideLabel } from "@/lib/pre-trade";
 import { relativeTime } from "@/lib/relative-time";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -45,6 +45,7 @@ import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror"
 import { FrictionOutcomeMirror } from "@/components/journal/friction-outcome-mirror";
 import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
 import { WeeklyPulseSection } from "@/components/journal/weekly-pulse-section";
+import { ImportInbox } from "@/components/journal/import-inbox";
 import type { PreTradeReflection } from "@/lib/types";
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -58,17 +59,15 @@ export function entryTimestamp(r: PreTradeReflection): string | null {
 
 /** Absolute KST-rendered date for the inline metadata row. */
 export function absoluteDate(iso: string | null): string {
-  if (!iso) return "";
-  const needsUtc = !iso.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(iso);
-  const d = new Date(needsUtc ? iso + "Z" : iso);
-  if (Number.isNaN(d.getTime())) return "";
+  const d = parseIsoUtc(iso);
+  if (!d) return "";
   return d.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
     // Pin to KST so the date doesn't roll back/forward a day for viewers in
-    // other timezones (2026-05-26 F#4 fix). The UTC-guard above ensures naive
-    // backend timestamps are treated as UTC before zone conversion.
+    // other timezones (2026-05-26 F#4 fix). parseIsoUtc (lib/format) reads
+    // naive backend timestamps as UTC before zone conversion.
     timeZone: "Asia/Seoul",
   });
 }
@@ -424,7 +423,20 @@ function JournalContent() {
         <Caption className="mt-2 max-w-lg">
           {t("journal.page.headingDesc")}
         </Caption>
+        <Link
+          href="/journal/import"
+          className="mt-3 inline-flex items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+        >
+          {t("journal.import.importLink")}
+        </Link>
       </header>
+
+      {/* Import Inbox — received fills waiting for a "why". A row is not a
+          record until the user approves it with a thesis; nothing here feeds
+          the mirrors below (docs/product/IMPORT_INBOX_DESIGN.md). */}
+      <ErrorBoundary fallback={null}>
+        <ImportInbox />
+      </ErrorBoundary>
 
       {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
           — no page-level banner here (CEO 2026-05-24: disclaimer only at the

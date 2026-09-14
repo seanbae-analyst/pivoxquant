@@ -579,3 +579,20 @@ export function fmtCompactLocale(
   if (abs >= 1e3)  return `${sign}${(abs / 1e3).toFixed(1)}K`;
   return `${sign}${Math.round(abs).toLocaleString("en-US")}`;
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+ * ISO timestamp parsing — single SoT for the "naive backend stamp is UTC"
+ * rule. Flask serialises `datetime.utcnow()` without a zone
+ * ("2026-09-13T01:02:03"); `new Date()` would read that as LOCAL time and
+ * shift both the clock and, for non-KST viewers, the calendar day.
+ * Consumers: journal/page.tsx absoluteDate · layout/sidebar-record-card.tsx ·
+ * journal/import-inbox.tsx fmtTradedAt · settings/import-tokens-section.tsx.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/** Parse an ISO stamp; one without a zone suffix is read as UTC. `null` when empty/invalid. */
+export function parseIsoUtc(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  const needsUtc = !iso.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(iso);
+  const d = new Date(needsUtc ? iso + "Z" : iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}

@@ -185,6 +185,10 @@ def birthdate_gate_blocks(path, is_authenticated, birthdate):
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    # Import Inbox (docs/product/IMPORT_INBOX_DESIGN.md): uploads are capped
+    # at 2MB. Werkzeug raises RequestEntityTooLarge (413) before the view
+    # runs; the JSON handler below keeps the API contract on that path.
+    app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
     # JSON safety net: coerce non-finite floats (NaN/Inf/-Inf) → null at the
     # serialisation boundary. Python's json emits the bare tokens `NaN`/
@@ -301,6 +305,15 @@ def create_app():
     # NOTE: @app.errorhandler(Exception) does NOT override the specific
     # @app.errorhandler(429) registered in security.init_security — Flask
     # dispatches to the most specific handler first.
+    @app.errorhandler(413)
+    def _handle_request_too_large(exc):
+        from services.error_responses import api_error
+        return api_error(
+            en="Request body exceeds the 2MB limit.",
+            kr="요청 본문이 2MB 제한을 넘습니다.",
+            code="IMPORT_FILE_TOO_LARGE", status=413,
+        )
+
     @app.errorhandler(Exception)
     def _handle_unhandled_exception(exc):
         # HTTPException (incl. 404/405/401/403/429) — preserve Flask's default
@@ -833,6 +846,14 @@ def _do_migrations():
     # the observation surfaces (signal label/score, VIX, 1h move) at the
     # moment the reflection was opened. Nullable TEXT — purely additive.
     _add_column_if_missing("pre_trade_reflections", "observed_context_json", "TEXT")
+
+    # import_batches.token_id — Import Inbox Phase 2 (PAT + webhook,
+    # 2026-09-13). Alembic twin: 052_import_tokens. Nullable INTEGER that
+    # links a webhook batch to the import_tokens row that produced it. The
+    # FK constraint lives in the alembic path; this self-heal only makes
+    # sure the column exists so the ORM INSERT/SELECT never fails on a box
+    # whose import_batches table predates Phase 2.
+    _add_column_if_missing("import_batches", "token_id", "INTEGER")
 
     # anthropic_usage_log (Wave I G-3) — Anthropic API 비용 추적 테이블.
     # 이 테이블은 ORM 모델이 아니라 services/ai/service.py 가 raw SQL INSERT

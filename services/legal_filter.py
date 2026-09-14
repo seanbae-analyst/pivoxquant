@@ -584,7 +584,8 @@ def scrub_signal(data: Any) -> Any:
     return data
 
 
-def scrub_response(data: Any, context: str = "response") -> Any:
+def scrub_response(data: Any, context: str = "response",
+                   skip_keys: "frozenset[str] | set[str] | tuple[str, ...] | None" = None) -> Any:
     """Deep-scrub an arbitrary JSON-shaped response payload.
 
     Walks every string leaf recursively and returns a NEW structure — the
@@ -613,9 +614,19 @@ def scrub_response(data: Any, context: str = "response") -> Any:
     if isinstance(data, str):
         return safe_scrub(data, context=context)
     if isinstance(data, dict):
-        return {k: scrub_response(v, context=f"{context}.{k}") for k, v in data.items()}
+        # ``skip_keys`` (2026-09-14): data fields that are NOT prose and must
+        # survive verbatim — e.g. ``trade_history.action`` ("BUY"/"SELL"), a  // legal-ok
+        # user's own pasted broker text echoed back for confirmation, or a
+        # one-time credential. The caller names them explicitly per route;
+        # everything else is still scrubbed. This is the one place the rule
+        # lives (CLAUDE.md 함정 10) — no route-side un-scrubbing.
+        return {
+            k: (v if (skip_keys and k in skip_keys)
+                else scrub_response(v, context=f"{context}.{k}", skip_keys=skip_keys))
+            for k, v in data.items()
+        }
     if isinstance(data, list):
-        return [scrub_response(x, context=context) for x in data]
+        return [scrub_response(x, context=context, skip_keys=skip_keys) for x in data]
     return data
 
 

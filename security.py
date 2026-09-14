@@ -124,6 +124,10 @@ _CSRF_EXEMPT_PREFIXES = (
     "/api/logout",
     "/api/email/unsubscribe",
     "/webhooks/sendgrid",
+    # Import Inbox webhook — authenticated by a Bearer import token, never by
+    # the session cookie, so the double-submit CSRF check does not apply
+    # (routes/imports.py::import_token_auth, 2026-09-13).
+    "/api/portfolio/imports/webhook",
 )
 
 

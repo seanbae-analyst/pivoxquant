@@ -127,8 +127,13 @@ async function apiFetchOnce<T = unknown>(
       ? Object.fromEntries(init.headers.entries())
       : init.headers as Record<string, string>)
     : {};
+  // A FormData body must NOT carry a caller-set Content-Type — the browser
+  // writes `multipart/form-data; boundary=…` itself, and forcing JSON here
+  // would make the server reject the upload (2026-09-13, Import Inbox).
+  const isFormData =
+    typeof FormData !== "undefined" && init?.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...extra,
     ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
   };
@@ -206,16 +211,24 @@ async function apiFetchOnce<T = unknown>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, pickErrorMessage(body, res.statusText));
+    throw new ApiError(
+      res.status,
+      pickErrorMessage(body, res.statusText),
+      typeof body.code === "string" ? body.code : undefined,
+    );
   }
   return res.json();
 }
 
 export class ApiError extends Error {
+  /** Backend `api_error(code=...)` machine code, e.g. IMPORT_THESIS_REQUIRED. */
+  public code?: string;
   constructor(
     public status: number,
     message: string,
+    code?: string,
   ) {
     super(message);
+    this.code = code;
   }
 }

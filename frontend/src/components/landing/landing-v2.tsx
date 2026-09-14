@@ -87,7 +87,7 @@ import { useAuth } from "@/lib/auth";
 // and weekly memos — none of which exist). 2026-09-02 moved them out of this
 // file: the questions were English with Korean answers, and the Korean rewrite
 // left the en locale rendering a half-Korean page.
-const FAQ_KEYS = ["1", "2", "3", "4", "5", "6"] as const;
+const FAQ_KEYS = ["1", "2", "3", "4", "5", "6", "7"] as const;
 
 /* ═══════════════════════════════════════════════════════════════
    FAQ
