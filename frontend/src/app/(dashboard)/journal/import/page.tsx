@@ -10,8 +10,12 @@
  * Android Lens); image files are never accepted. Nothing parsed here reaches
  * the trade log until the user approves a row with a thesis.
  *
- *   - Opt-in consent checkbox gates the submit; remembered per browser in
- *     localStorage (`pivox_import_consent=1`) so the second visit is one click.
+ *   - Opt-in consent checkbox gates the submit; remembered per user in
+ *     localStorage (`pivox_import_consent:<user.id>=1`) so the second visit is
+ *     one click. Keyed by user id so a shared device never pre-ticks it for
+ *     someone else; without an id nothing is stored.
+ *   - Upload / approve / reject also invalidate the `/pending` SWR key so the
+ *     /journal inbox card is fresh on return (its dedupingInterval is 30s).
  *   - `?text=` / `?title=` prefill the text tab — the PWA `share_target`
  *     (manifest.ts) points Android's share sheet here with GET.
  *   - Results reuse <PendingTradeList /> from the /journal inbox so a row can
@@ -23,6 +27,8 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { mutate } from "swr";
+import { useAuth } from "@/lib/auth";
 import { useLocale, useT } from "@/lib/locale";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
@@ -36,22 +42,29 @@ import {
 } from "@/components/ui/editorial";
 import type { ImportCreateResponse, PendingTradeDTO } from "@/lib/types";
 
-const CONSENT_KEY = "pivox_import_consent";
+const CONSENT_KEY_PREFIX = "pivox_import_consent";
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const ACCEPT = ".csv,.xlsx,.xls";
 
-function readConsent(): boolean {
+/** Per-user storage key; `null` when there is no signed-in id to scope it to. */
+function consentKey(userId: number | null | undefined): string | null {
+  return userId == null ? null : `${CONSENT_KEY_PREFIX}:${userId}`;
+}
+
+function readConsent(key: string | null): boolean {
+  if (!key) return false;
   try {
-    return typeof window !== "undefined" && window.localStorage.getItem(CONSENT_KEY) === "1";
+    return typeof window !== "undefined" && window.localStorage.getItem(key) === "1";
   } catch {
     return false;
   }
 }
 
-function writeConsent(on: boolean): void {
+function writeConsent(key: string | null, on: boolean): void {
+  if (!key) return;
   try {
-    if (on) window.localStorage.setItem(CONSENT_KEY, "1");
-    else window.localStorage.removeItem(CONSENT_KEY);
+    if (on) window.localStorage.setItem(key, "1");
+    else window.localStorage.removeItem(key);
   } catch {
     /* private mode / blocked storage — the checkbox still works for this visit */
   }
@@ -63,6 +76,8 @@ function ImportPageInner() {
   const t = useT();
   useLocale();
   const params = useSearchParams();
+  const { user } = useAuth();
+  const storageKey = consentKey(user?.id);
 
   // Share-sheet prefill: `?text=` wins, `?title=` alone is still text.
   const sharedText = params.get("text") ?? "";
@@ -79,10 +94,11 @@ function ImportPageInner() {
   const [rows, setRows] = useState<PendingTradeDTO[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Remembered consent — read after mount so SSR and first client render agree.
+  // Remembered consent — read after mount (and once the user id is known) so
+  // SSR and the first client render agree.
   useEffect(() => {
-    if (readConsent()) setConsent(true);
-  }, []);
+    if (readConsent(storageKey)) setConsent(true);
+  }, [storageKey]);
 
   const fileTooLarge = file != null && file.size > MAX_FILE_BYTES;
   const canSubmit =
@@ -92,7 +108,7 @@ function ImportPageInner() {
 
   function onConsentChange(next: boolean) {
     setConsent(next);
-    writeConsent(next);
+    writeConsent(storageKey, next);
   }
 
   async function submit(e: React.FormEvent) {
@@ -120,6 +136,8 @@ function ImportPageInner() {
       }
       setResult(res);
       setRows(res.pending.filter((p) => p.status === "pending"));
+      // The /journal inbox card reads the same list — refresh its cache now.
+      void mutate(API.imports.pending);
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setText("");
@@ -140,6 +158,7 @@ function ImportPageInner() {
     setRows((prev) =>
       next === null ? prev.filter((r) => r.id !== id) : prev.map((r) => (r.id === id ? next : r)),
     );
+    void mutate(API.imports.pending);
   }
 
   const tabClass = (active: boolean) =>

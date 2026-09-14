@@ -36,7 +36,7 @@
 
 import Link from "next/link";
 import { useFrictionOutcome, usePreTradeJournal } from "@/lib/hooks";
-import { displayName } from "@/lib/format";
+import { displayName, parseIsoUtc } from "@/lib/format";
 import type { FrictionOutcomeResponse, PreTradeReflection } from "@/lib/types";
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -67,13 +67,8 @@ function entryTimestamp(r: PreTradeReflection): string | null {
   return r.proceeded_at ?? r.cancelled_at ?? r.cooldown_started_at ?? null;
 }
 
-/** Naive backend timestamps are UTC — same guard journal/page.tsx applies. */
-function parseIso(iso: string | null): Date | null {
-  if (!iso) return null;
-  const needsUtc = !iso.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(iso);
-  const d = new Date(needsUtc ? iso + "Z" : iso);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
+/** Naive backend timestamps are UTC — shared guard, see lib/format parseIsoUtc. */
+const parseIso = parseIsoUtc;
 
 const SEOUL_DAY = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Seoul",

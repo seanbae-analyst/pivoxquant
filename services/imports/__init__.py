@@ -16,9 +16,10 @@ server only ever sees the file bytes or text the user pasted.
 """
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 RAW_SNIPPET_MAX = 300
 
@@ -207,12 +208,80 @@ def side_from_text(value) -> str | None:
     return None
 
 
+
+# ── shared validators (review 2026-09-14) ─────────────────────────────
+# Mirrors routes/portfolio.py::_validate_amount (finite, 0 < v <= 1e9) so an
+# imported fill can never carry NaN / inf / 1e300 into positions; a length /
+# charset rule for tickers so a Postgres String(20) column never raises; a
+# sane range for fill timestamps; and the KST → UTC shift, because broker
+# apps and files print Korean wall-clock while trade_history stores naive UTC.
+MAX_AMOUNT = 1e9
+MIN_FILL_YEAR = 1990
+KST_OFFSET = timedelta(hours=9)
+TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,19}$")
+
+
+def amount_ok(v) -> bool:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(f) and 0 < f <= MAX_AMOUNT
+
+
+def ticker_ok(t) -> bool:
+    return isinstance(t, str) and bool(TICKER_RE.match(t))
+
+
+def traded_at_ok(dt) -> bool:
+    if not isinstance(dt, datetime):
+        return False
+    return dt.year >= MIN_FILL_YEAR and dt <= utcnow_naive() + timedelta(days=1)
+
+
+def kst_to_utc(dt: datetime) -> datetime:
+    """Broker wall-clock (Asia/Seoul) → naive UTC. Date-only values (00:00)
+    are left alone so they line up with manual entries, which stamp
+    ``YYYY-MM-DD`` as 00:00 UTC (routes/portfolio.py::_parse_purchase_date)."""
+    if dt.hour == 0 and dt.minute == 0 and dt.second == 0:
+        return dt
+    return dt - KST_OFFSET
+
+
+_TZ_SUFFIX = re.compile(r"(Z|[+-]\d{2}:?\d{2})$")
+
+
+def parse_datetime_tz(value) -> tuple[datetime | None, bool]:
+    """Like :func:`parse_datetime` but honours an explicit zone.
+
+    Returns ``(naive_dt, is_utc)``: ``True`` when the input carried ``Z`` or
+    an offset (converted to UTC), ``False`` when it was wall-clock text the
+    caller should treat as KST.
+    """
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None), True
+    if isinstance(value, str) and _TZ_SUFFIX.search(value.strip()):
+        try:
+            aware = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+            if aware.tzinfo is not None:
+                return aware.astimezone(timezone.utc).replace(tzinfo=None), True
+        except ValueError:
+            pass
+    return parse_datetime(value), False
+
+
 __all__ = [
     "RawTrade",
     "ImportParseError",
     "mask_sensitive",
     "parse_number",
     "parse_datetime",
+    "parse_datetime_tz",
+    "amount_ok",
+    "ticker_ok",
+    "traded_at_ok",
+    "kst_to_utc",
+    "MAX_AMOUNT",
     "side_from_text",
     "utcnow_naive",
     "today_naive",

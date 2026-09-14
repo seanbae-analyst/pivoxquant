@@ -190,7 +190,7 @@ class TestWebhookIngest:
         pend = {p["ticker"]: p for p in r.get_json()["pending"]}
         assert pend["AAPL"]["currency"] == "USD" and pend["AAPL"]["action"] == "BUY"  # // legal-ok
         assert pend["005930.KS"]["action"] == "SELL"  # // legal-ok
-        assert pend["005930.KS"]["traded_at"].startswith("2026-09-02T10:30")
+        assert pend["005930.KS"]["traded_at"].startswith("2026-09-02T01:30")  # 10:30 KST → 01:30 UTC
 
     def test_text_plain_body(self, client, webhook_client, auth_user):
         raw = _issue(client).get_json()["token"]

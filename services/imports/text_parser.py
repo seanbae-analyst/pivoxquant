@@ -34,7 +34,7 @@ _SHARES_KR = re.compile(rf"(?P<n>{_NUM})\s*주(?!문|식|가)")
 # "Bought 5 AAPL", "매수 5주 AAPL", "Sold 3 shares TSLA", "Bought 5 shares of AAPL"
 _US_FILL = re.compile(
     rf"(?:bought|buy|sold|sell|매수|매도)\s+(?P<n>{_NUM})\s*(?:주|shares?)?\s*(?:of\s+)?"
-    r"(?P<code>[A-Z]{1,6}(?:[.\-][A-Z]{1,2})?)\b",
+    r"(?P<code>(?-i:[A-Z]{1,6}(?:[.\-][A-Z]{1,2})?))\b",
     re.IGNORECASE,
 )
 # "5 AAPL @ 190.12" without a verb
@@ -208,12 +208,26 @@ def _date(line: str):
     return dt
 
 
+# Push notifications are usually prefixed with the sender — "[키움증권]",
+# "토스증권 알림" — and every big broker is itself a listed company, so the
+# first Hangul token must not be taken as the security.
+_BROKER_WORDS = {
+    "키움", "키움증권", "한투", "한국투자", "한국투자증권", "토스", "토스증권", "삼성증권",
+    "미래에셋", "미래에셋증권", "NH투자증권", "KB증권", "신한투자증권", "대신증권",
+    "하나증권", "메리츠증권", "유안타증권", "카카오페이증권", "체결통보", "체결알림",
+}
+_BRACKETED = re.compile(r"[\[\(【][^\]\)】]*[\]\)】]")
+
+
 def _kr_name(line: str) -> str:
+    line = _BRACKETED.sub(" ", line)
     for tok in _TOKEN.findall(line):
         if not _HANGUL.search(tok):
             continue
         cleaned = tok.strip("-.")
         if cleaned in _KEYWORDS or not cleaned:
+            continue
+        if cleaned in _BROKER_WORDS or cleaned.endswith("증권"):
             continue
         # strip trailing particles/keywords glued to the name ("삼성전자를")
         for suffix in ("체결", "매수", "매도", "을", "를", "이", "가"):

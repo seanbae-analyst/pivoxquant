@@ -22,7 +22,7 @@ import hashlib
 import logging
 import re
 import secrets
-from functools import wraps
+from functools import lru_cache, wraps
 
 from flask import Blueprint, g, jsonify, request
 from flask_login import current_user
@@ -53,18 +53,21 @@ from services.error_responses import api_error
 from services.imports import (
     ImportParseError,
     RawTrade,
+    amount_ok,
+    kst_to_utc,
     mask_sensitive,
-    parse_datetime,
+    parse_datetime_tz,
     parse_number,
     side_from_text,
+    ticker_ok,
+    traded_at_ok,
     utcnow_naive,
 )
 from services.imports.csv_parser import parse_table
-from services.imports.dedupe import is_duplicate, make_key
-from services.imports.ledger import LedgerError, apply_pending, match_pre_trade
+from services.imports.dedupe import DedupeIndex, is_duplicate, make_key
+from services.imports.ledger import LedgerError, PreTradeIndex, apply_pending, match_pre_trade
 from services.imports.text_parser import parse_text
-from services.kr_stock_registry import get_name, search as registry_search
-from services.legal_filter import scrub_response
+from services.kr_stock_registry import KR_STOCKS, KR_STOCKS_FULL, get_name
 from services.ticker_normalizer import is_korean_ticker, normalize_ticker
 from .decorators import api_auth, legal_scrub_response
 
@@ -84,42 +87,12 @@ _KR_CODE_RE = re.compile(r"^\d{6}(?:\.(?:KS|KQ|KRX))?$", re.IGNORECASE)
 # rejected before the hash lookup so malformed input never reaches the DB.
 _TOKEN_RE = re.compile(r"^pvx_[A-Za-z0-9_\-]{16,64}$")
 
-# ``PendingTrade.action`` is the TradeHistory.action data value ("BUY" /  // legal-ok
-# "SELL"), not user copy. ``legal_scrub_response`` rewrites every string  // legal-ok
-# leaf, including that field (→ "ENTRY" / "EXIT"), which would break the
-# DTO the journal reads. This restores only that one data field on
-# pending rows, after the scrub has run over everything else.
-_ACTION_RESTORE = {"ENTRY": "BUY", "EXIT": "SELL"}  # // legal-ok — trade action data value, not user copy
-
-
-def _restore_action_field(obj):
-    if isinstance(obj, dict):
-        out = {}
-        for k, v in obj.items():
-            if k == "action" and isinstance(v, str) and v in _ACTION_RESTORE and "shares" in obj:
-                out[k] = _ACTION_RESTORE[v]
-            else:
-                out[k] = _restore_action_field(v)
-        return out
-    if isinstance(obj, list):
-        return [_restore_action_field(x) for x in obj]
-    return obj
-
-
-def keep_trade_action(f):
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        result = f(*args, **kwargs)
-        resp, status = (result if isinstance(result, tuple) else (result, None))
-        if hasattr(resp, "get_json") and getattr(resp, "is_json", False):
-            try:
-                data = resp.get_json()
-            except Exception:
-                return result
-            fixed = jsonify(_restore_action_field(data))
-            return (fixed, status) if status is not None else (fixed, resp.status_code)
-        return result
-    return wrapped
+# Response fields that are DATA, not prose, and must survive the legal scrub
+# verbatim: the trade side value the journal DTO declares, the user's own
+# pasted broker text echoed back for confirmation, and the one-time token.
+# Handled inside ``services.legal_filter.scrub_response`` (skip_keys) — the
+# single scrub implementation (CLAUDE.md 함정 10); nothing is un-scrubbed here.
+SCRUB_SKIP = ("action", "raw_snippet", "token", "prefix")
 
 
 # ── token auth (webhook) ─────────────────────────────────────────────
@@ -129,17 +102,9 @@ def _hash_token(raw: str) -> str:
 
 
 def _generate_token() -> str:
-    """``"pvx_" + token_urlsafe(24)``, re-drawn until the legal scrubber
-    leaves both the token and its display prefix untouched — a random
-    ``-BUY-`` fragment would otherwise be rewritten in the one response  // legal-ok
-    that shows the raw token, and the user would copy a broken value."""
-    for _ in range(32):
-        raw = TOKEN_PREFIX + secrets.token_urlsafe(24)
-        prefix = raw[:TOKEN_PREFIX_DISPLAY_LEN]
-        if scrub_response(raw, context="import_token") == raw and \
-           scrub_response(prefix, context="import_token") == prefix:
-            return raw
-    raise RuntimeError("import token generation exhausted retries")
+    """``"pvx_" + token_urlsafe(24)``. The issuance response skips the legal
+    scrub for the ``token`` field, so no re-draw is needed."""
+    return TOKEN_PREFIX + secrets.token_urlsafe(24)
 
 
 def _token_invalid():
@@ -195,6 +160,21 @@ def _truthy(v) -> bool:
     return str(v or "").strip().lower() in ("1", "true", "yes", "on")
 
 
+@lru_cache(maxsize=1)
+def _kr_name_index() -> dict[str, str]:
+    """Exact 종목명 → ticker, built once (was a linear scan of ~3k names per row)."""
+    index: dict[str, str] = {}
+    for ticker, info in KR_STOCKS_FULL.items():
+        name_kr = (info or {}).get("name") if isinstance(info, dict) else None
+        if name_kr:
+            index.setdefault(name_kr, ticker)
+    for ticker, names in KR_STOCKS.items():
+        name_kr = names[1] if isinstance(names, (tuple, list)) and len(names) > 1 else None
+        if name_kr:
+            index[name_kr] = ticker  # curated wins
+    return index
+
+
 def resolve_ticker(code: str, name: str) -> tuple[str | None, str]:
     """Return ``(ticker or None, display_name)``.
 
@@ -209,12 +189,15 @@ def resolve_ticker(code: str, name: str) -> tuple[str | None, str]:
         if _KR_CODE_RE.match(code) or _US_TICKER_RE.match(code):
             ticker = normalize_ticker(code) or None
     if ticker is None and name:
-        for hit in registry_search(name, limit=15):
-            if hit.get("name_kr") == name:
-                ticker = normalize_ticker(hit["ticker"])
-                break
-        if ticker is None and _US_TICKER_RE.match(name):
+        hit = _kr_name_index().get(name)
+        if hit:
+            ticker = normalize_ticker(hit)
+        elif _US_TICKER_RE.match(name):
             ticker = normalize_ticker(name)
+    if ticker is not None and not ticker_ok(ticker):
+        # Not a shape positions/trade_history (String(20), ASCII) can hold —
+        # leave it unresolved so the user picks a real symbol.
+        ticker = None
     display = name
     if ticker and is_korean_ticker(ticker):
         display = get_name(ticker) or name or ticker
@@ -235,17 +218,25 @@ def _pending_for_user(pid: int) -> PendingTrade | None:
     return PendingTrade.query.filter_by(id=pid, user_id=current_user.id).first()
 
 
-def _recompute(row: PendingTrade, seen: set[str] | None = None) -> None:
-    """Recalculate dedupe_key / needs_ticker / status(duplicate) for ``row``."""
+def _recompute(row: PendingTrade, seen: set[str] | None = None,
+               index: DedupeIndex | None = None) -> None:
+    """Recalculate dedupe_key / needs_ticker / status(duplicate) for ``row``.
+
+    ``index`` (batch prefetch) answers in memory; without it the per-row
+    query path is used (PATCH of a single row)."""
     row.needs_ticker = not bool(row.ticker)
     row.dedupe_key = make_key(
         row.user_id, row.ticker or row.name, row.action,
         row.shares, row.price, row.traded_at,
     )
-    dup = is_duplicate(
-        row.user_id, row.dedupe_key, row.ticker, row.action,
-        row.shares, row.price, row.traded_at, exclude_id=row.id,
-    )
+    if index is not None:
+        dup = index.is_duplicate(row.dedupe_key, row.ticker, row.action,
+                                 row.shares, row.price, row.traded_at)
+    else:
+        dup = is_duplicate(
+            row.user_id, row.dedupe_key, row.ticker, row.action,
+            row.shares, row.price, row.traded_at, exclude_id=row.id,
+        )
     if seen is not None:
         if row.dedupe_key in seen:
             dup = True
@@ -282,20 +273,20 @@ def _rows_to_raw(rows) -> list[RawTrade]:
             raise _RowError(f"{label}.action must be one of: buy, sell, 매수, 매도.",
                             f"{label}.action 은 매수/매도 중 하나여야 합니다.")
         shares = parse_number(item.get("shares"))
-        if shares is None or shares <= 0:
-            raise _RowError(f"{label}.shares must be a positive number.",
-                            f"{label}.shares 는 0보다 큰 숫자여야 합니다.")
+        if not amount_ok(shares):
+            raise _RowError(f"{label}.shares must be a finite number between 0 and 1e9.",
+                            f"{label}.shares 는 0보다 크고 10억 이하인 숫자여야 합니다.")
         price = parse_number(item.get("price"))
-        if price is None or price <= 0:
-            raise _RowError(f"{label}.price must be a positive number.",
-                            f"{label}.price 는 0보다 큰 숫자여야 합니다.")
+        if not amount_ok(price):
+            raise _RowError(f"{label}.price must be a finite number between 0 and 1e9.",
+                            f"{label}.price 는 0보다 크고 10억 이하인 숫자여야 합니다.")
         currency = str(item.get("currency") or "").strip().upper() or None
         if currency is not None and currency not in ("KRW", "USD"):
             raise _RowError(f"{label}.currency must be KRW or USD.",
                             f"{label}.currency 는 KRW 또는 USD 여야 합니다.")
         traded_at = None
         if item.get("traded_at") not in (None, ""):
-            traded_at = parse_datetime(item.get("traded_at"))
+            traded_at, _tz_utc = parse_datetime_tz(item.get("traded_at"))
             if traded_at is None:
                 raise _RowError(f"{label}.traded_at is not a recognised date.",
                                 f"{label}.traded_at 형식을 인식하지 못했습니다.")
@@ -306,6 +297,7 @@ def _rows_to_raw(rows) -> list[RawTrade]:
         out.append(RawTrade(
             name=name, code=code, action=side, shares=float(shares), price=float(price),
             currency=currency, traded_at=traded_at, confidence=1.0, raw_snippet=snippet,
+            extra={"tz_utc": bool(_tz_utc)},
         ))
     return out
 
@@ -386,6 +378,27 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
     if source == SOURCE_WEBHOOK:
         mapping = None
 
+    # Shared sanity pass (all three sources): finite amounts in range, a
+    # believable timestamp, and broker wall-clock (KST) → UTC. Our own CSV
+    # export already carries UTC; webhook rows may carry an explicit zone.
+    for r in raw_rows:
+        if r.skip_reason:
+            continue
+        if not amount_ok(r.shares) or not amount_ok(r.price):
+            r.skip_reason = "수량·단가 범위 초과"
+            continue
+        if r.traded_at is not None:
+            if not r.extra.get("tz_utc") and broker_guess != "pivoxquant":
+                r.traded_at = kst_to_utc(r.traded_at)
+            if not traded_at_ok(r.traded_at):
+                r.skip_reason = "거래 일시가 범위 밖 (미래 또는 1990년 이전)"
+                continue
+    if source != SOURCE_CSV or not skipped:
+        skipped = [
+            {"row": i + 1, "reason": r.skip_reason, "snippet": r.raw_snippet}
+            for i, r in enumerate(raw_rows) if r.skip_reason
+        ]
+
     fills = [r for r in raw_rows if not r.skip_reason]
     if not fills:
         return api_error(
@@ -403,7 +416,7 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
     db.session.add(batch)
     db.session.flush()
 
-    seen: set[str] = set()
+    # Pass 1 — build rows (ticker resolution is in-memory).
     pending: list[PendingTrade] = []
     for r in fills:
         ticker, display = resolve_ticker(r.code, r.name)
@@ -415,10 +428,21 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
             traded_at=r.traded_at or now, confidence=float(r.confidence),
             raw_snippet=r.raw_snippet or None, created_at=now,
         )
-        _recompute(row, seen)
-        row.pre_trade_reflection_id = match_pre_trade(user_id, ticker, row.traded_at)
-        db.session.add(row)
+        row.dedupe_key = make_key(user_id, ticker or display, r.action,
+                                  row.shares, row.price, row.traded_at)
         pending.append(row)
+
+    # Pass 2 — two prefetches for the whole batch instead of 3 queries/row.
+    tickers = {x.ticker for x in pending if x.ticker}
+    times = [x.traded_at for x in pending]
+    t_min, t_max = (min(times), max(times)) if times else (None, None)
+    index = DedupeIndex(user_id, {x.dedupe_key for x in pending}, tickers, t_min, t_max)
+    reflections = PreTradeIndex(user_id, tickers, t_min, t_max)
+    seen: set[str] = set()
+    for row in pending:
+        _recompute(row, seen, index)
+        row.pre_trade_reflection_id = reflections.match(row.ticker, row.traded_at)
+        db.session.add(row)
 
     batch.parsed_count = len(pending)
     batch.duplicate_count = sum(1 for x in pending if x.status == STATUS_DUPLICATE)
@@ -446,8 +470,7 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
 @imports_bp.route("/", methods=["POST"], strict_slashes=False)
 @api_auth
 @general_rate_limit
-@keep_trade_action
-@legal_scrub_response
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
 def create_import():
     upload = request.files.get("file")
     if upload is not None:
@@ -476,8 +499,7 @@ def create_import():
 @imports_bp.route("/webhook", methods=["POST"])
 @import_token_auth
 @general_rate_limit
-@keep_trade_action
-@legal_scrub_response
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
 def webhook_import():
     token: ImportToken = g.import_token
     if _batches_today(token.id) >= TOKEN_DAILY_BATCH_LIMIT:
@@ -524,7 +546,7 @@ def webhook_import():
 @imports_bp.route("/tokens", methods=["GET"])
 @api_auth
 @general_rate_limit
-@legal_scrub_response
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
 def list_tokens():
     tokens = (
         ImportToken.query
@@ -551,7 +573,7 @@ def list_tokens():
 @imports_bp.route("/tokens", methods=["POST"])
 @api_auth
 @general_rate_limit
-@legal_scrub_response
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
 def issue_token():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -627,8 +649,7 @@ def revoke_token(tid: int):
 @imports_bp.route("/pending", methods=["GET"])
 @api_auth
 @general_rate_limit
-@keep_trade_action
-@legal_scrub_response
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
 def list_pending():
     rows = (
         PendingTrade.query
@@ -645,8 +666,7 @@ def list_pending():
 @imports_bp.route("/pending/<int:pid>", methods=["PATCH"])
 @api_auth
 @general_rate_limit
-@keep_trade_action
-@legal_scrub_response
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
 def patch_pending(pid: int):
     row = _pending_for_user(pid)
     if row is None:
@@ -662,6 +682,10 @@ def patch_pending(pid: int):
 
     if "ticker" in data:
         t = normalize_ticker(str(data.get("ticker") or ""))
+        if t and not ticker_ok(t):
+            return api_error(en="ticker must be a symbol of 1–20 ASCII characters (e.g. 005930.KS, AAPL).",
+                             kr="티커는 영문·숫자 1~20자 심볼이어야 합니다 (예: 005930.KS, AAPL).",
+                             code="IMPORT_INVALID_FIELD", status=400)
         row.ticker = t or None
         if row.ticker and is_korean_ticker(row.ticker):
             row.name = (get_name(row.ticker) or row.name or row.ticker)[:100]
@@ -670,25 +694,34 @@ def patch_pending(pid: int):
     if "action" in data:
         a = str(data.get("action") or "").strip().upper()
         if a not in ("BUY", "SELL"):  # // legal-ok — trade action data value, not user copy
-            return api_error(en="action must be BUY or SELL.", kr="action 값이 올바르지 않습니다.",  # // legal-ok — trade action data value, not user copy
+            return api_error(en="action must be the buy or sell side value.",
+                             kr="action 값은 매수/매도 중 하나여야 합니다.",
                              code="IMPORT_INVALID_FIELD", status=400)
         row.action = a
     if "shares" in data:
         v = parse_number(data.get("shares"))
-        if v is None or v <= 0:
-            return api_error(en="shares must be a positive number.", kr="수량은 0보다 커야 합니다.",
+        if not amount_ok(v):
+            return api_error(en="shares must be a finite number between 0 and 1e9.",
+                             kr="수량은 0보다 크고 10억 이하인 숫자여야 합니다.",
                              code="IMPORT_INVALID_FIELD", status=400)
         row.shares = float(v)
     if "price" in data:
         v = parse_number(data.get("price"))
-        if v is None or v <= 0:
-            return api_error(en="price must be a positive number.", kr="단가는 0보다 커야 합니다.",
+        if not amount_ok(v):
+            return api_error(en="price must be a finite number between 0 and 1e9.",
+                             kr="단가는 0보다 크고 10억 이하인 숫자여야 합니다.",
                              code="IMPORT_INVALID_FIELD", status=400)
         row.price = float(v)
     if "traded_at" in data:
-        dt = parse_datetime(data.get("traded_at"))
+        dt, tz_utc = parse_datetime_tz(data.get("traded_at"))
         if dt is None:
             return api_error(en="traded_at is not a recognised date.", kr="거래 일시 형식을 인식하지 못했습니다.",
+                             code="IMPORT_INVALID_FIELD", status=400)
+        if not tz_utc:
+            dt = kst_to_utc(dt)
+        if not traded_at_ok(dt):
+            return api_error(en="traded_at must be between 1990 and tomorrow.",
+                             kr="거래 일시는 1990년 이후, 내일 이전이어야 합니다.",
                              code="IMPORT_INVALID_FIELD", status=400)
         row.traded_at = dt
     if "currency" in data and str(data.get("currency") or "").upper() in ("KRW", "USD"):
@@ -713,10 +746,16 @@ def patch_pending(pid: int):
 @imports_bp.route("/pending/<int:pid>/approve", methods=["POST"])
 @api_auth
 @general_rate_limit
-@keep_trade_action
-@legal_scrub_response
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
 def approve_pending(pid: int):
-    row = _pending_for_user(pid)
+    # SELECT … FOR UPDATE on the pending row so two concurrent approves of
+    # the same id cannot both pass the status check (SQLite no-ops it).
+    row = (
+        db.session.query(PendingTrade)
+        .filter_by(id=pid, user_id=current_user.id)
+        .with_for_update()
+        .first()
+    )
     if row is None:
         return api_error(en="Pending fill not found.", kr="대기 항목을 찾을 수 없습니다.",
                          code="IMPORT_NOT_FOUND", status=404)
@@ -767,8 +806,7 @@ def approve_pending(pid: int):
 @imports_bp.route("/pending/<int:pid>/reject", methods=["POST"])
 @api_auth
 @general_rate_limit
-@keep_trade_action
-@legal_scrub_response
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
 def reject_pending(pid: int):
     row = _pending_for_user(pid)
     if row is None:

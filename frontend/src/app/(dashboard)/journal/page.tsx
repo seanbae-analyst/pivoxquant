@@ -27,7 +27,7 @@ import Link from "next/link";
 import { Briefcase, NotebookPen, ChevronDown } from "lucide-react";
 import { useLocale, useT } from "@/lib/locale";
 import { usePreTradeJournal } from "@/lib/hooks";
-import { displayName, normalizeTicker } from "@/lib/format";
+import { displayName, normalizeTicker, parseIsoUtc } from "@/lib/format";
 import { sideLabel } from "@/lib/pre-trade";
 import { relativeTime } from "@/lib/relative-time";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -59,17 +59,15 @@ export function entryTimestamp(r: PreTradeReflection): string | null {
 
 /** Absolute KST-rendered date for the inline metadata row. */
 export function absoluteDate(iso: string | null): string {
-  if (!iso) return "";
-  const needsUtc = !iso.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(iso);
-  const d = new Date(needsUtc ? iso + "Z" : iso);
-  if (Number.isNaN(d.getTime())) return "";
+  const d = parseIsoUtc(iso);
+  if (!d) return "";
   return d.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
     // Pin to KST so the date doesn't roll back/forward a day for viewers in
-    // other timezones (2026-05-26 F#4 fix). The UTC-guard above ensures naive
-    // backend timestamps are treated as UTC before zone conversion.
+    // other timezones (2026-05-26 F#4 fix). parseIsoUtc (lib/format) reads
+    // naive backend timestamps as UTC before zone conversion.
     timeZone: "Asia/Seoul",
   });
 }

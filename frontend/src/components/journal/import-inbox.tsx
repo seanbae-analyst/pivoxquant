@@ -10,11 +10,14 @@
  * one-line thesis and approves. Reject discards it.
  *
  *   - Copy is observational: what was received, when, at what price. No
- *     추천/조언, no BUY/SELL labels on screen (매수/매도 · Buy/Sell).
+ *     추천/조언; the side is shown with `@/lib/pre-trade` sideLabel
+ *     ("Long Entry · 진입" / "Position Exit · 정리"), never a raw wire code.
  *   - `pre_trade_reflection_id` is surfaced as a plain fact: "멈춤 기록 있음"
  *     vs "멈춤 없이" — never a score or a judgement.
  *   - `needs_ticker` rows get the same debounced /api/search autocomplete the
- *     add-position modal uses; confirming PATCHes the row.
+ *     add-position modal uses; confirming PATCHes the row. The search is armed
+ *     only once the user focuses or types in the box — thirty unresolved rows
+ *     must not fire thirty searches on mount.
  *
  * Tone: v3 — Vantablack + Bronze + Playfair UPRIGHT. Same framed-card shell
  * as the behaviour mirrors in this folder (holding-mirror.tsx).
@@ -27,8 +30,9 @@ import { useT, useLocale } from "@/lib/locale";
 import { usePendingImports } from "@/lib/hooks";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { displayName } from "@/lib/format";
+import { displayName, parseIsoUtc } from "@/lib/format";
 import { fadeUp } from "@/lib/motion";
+import { sideLabel } from "@/lib/pre-trade";
 import {
   RuledKicker,
   EditorialHead,
@@ -67,10 +71,8 @@ export function fmtShares(shares: number): string {
 
 /** KST-pinned "2026. 9. 13. 09:31" — naive backend stamps are read as UTC. */
 export function fmtTradedAt(iso: string | null | undefined, locale: "ko" | "en"): string {
-  if (!iso) return "";
-  const needsUtc = !iso.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(iso);
-  const d = new Date(needsUtc ? iso + "Z" : iso);
-  if (Number.isNaN(d.getTime())) return "";
+  const d = parseIsoUtc(iso);
+  if (!d) return "";
   return d.toLocaleString(locale === "en" ? "en-US" : "ko-KR", {
     year: "numeric",
     month: "short",
@@ -120,11 +122,13 @@ function TickerResolver({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [picked, setPicked] = useState<Suggestion | null>(null);
   const [loading, setLoading] = useState(false);
+  /** False until the user focuses or types — no search fires on mount. */
+  const [armed, setArmed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const q = query.trim();
-    if (picked || q.length < 1) {
+    if (!armed || picked || q.length < 1) {
       setSuggestions([]);
       setLoading(false);
       abortRef.current?.abort();
@@ -152,7 +156,7 @@ function TickerResolver({
       window.clearTimeout(timer);
       ctrl.abort();
     };
-  }, [query, picked]);
+  }, [query, picked, armed]);
 
   return (
     <div className="mt-3" style={{ position: "relative" }}>
@@ -160,7 +164,9 @@ function TickerResolver({
       <div className="mt-2 flex items-center gap-2">
         <input
           value={query}
+          onFocus={() => setArmed(true)}
           onChange={(e) => {
+            setArmed(true);
             setQuery(e.target.value);
             setPicked(null);
           }}
@@ -290,7 +296,8 @@ export function PendingTradeRow({
   const [error, setError] = useState<string | null>(null);
 
   const canApprove = thesisOk(thesis) && !row.needs_ticker && busy === null;
-  const sideLabel = row.action === "SELL" ? t("journal.import.sell") : t("journal.import.buy");
+  // Same wording as the /journal entries: "Long Entry · 진입" / "Position Exit · 정리".
+  const sideText = sideLabel(row.action);
   const nameLabel = row.ticker ? displayName(row.ticker, row.name) : row.name;
 
   async function approve() {
@@ -359,7 +366,7 @@ export function PendingTradeRow({
             {row.ticker}
           </span>
         )}
-        <FieldLabel tone="bronze">{sideLabel}</FieldLabel>
+        <FieldLabel tone="bronze">{sideText}</FieldLabel>
         {row.status === "duplicate" && (
           <FieldLabel tone="muted">{t("journal.import.duplicate")}</FieldLabel>
         )}

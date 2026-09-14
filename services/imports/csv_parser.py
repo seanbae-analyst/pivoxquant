@@ -17,6 +17,7 @@ import re
 from dataclasses import dataclass, field
 
 from . import (
+    amount_ok,
     ImportParseError,
     RawTrade,
     mask_sensitive,
@@ -211,16 +212,20 @@ def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str
     raw: dict[str, str] = {}
     used: set[int] = set()
 
-    # Pass 1: exact matches.
+    # Pass 1: exact matches — the LONGEST matching header wins, so a file
+    # laid out as ``구분(현금/신용), …, 매매구분`` maps side to 매매구분 and
+    # ``체결수량`` beats ``수량`` regardless of column order.
     for fld, syns in HEADER_SYNONYMS.items():
+        best = None
         for i, h in enumerate(normed):
             if i in used or not h:
                 continue
-            if h in syns:
-                idx[fld] = i
-                raw[fld] = str(headers[i]).strip()
-                used.add(i)
-                break
+            if h in syns and (best is None or len(h) > len(normed[best])):
+                best = i
+        if best is not None:
+            idx[fld] = best
+            raw[fld] = str(headers[best]).strip()
+            used.add(best)
 
     # Pass 2: containment (longest synonym first, ≥2 chars, skip 1-char).
     for fld, syns in HEADER_SYNONYMS.items():
@@ -320,20 +325,23 @@ def _row_to_trade(row: list, idx: dict[str, int]) -> RawTrade:
         t.skip_reason = "종목명·종목코드 없음"
         return t
 
+    # Some brokers sign sells (매도, -10): take the magnitude, then range-check.
     shares = parse_number(_cell(row, idx, "shares"))
-    if shares is None or shares <= 0:
-        t.skip_reason = "수량 없음"
+    shares = abs(shares) if shares is not None else None
+    if not amount_ok(shares):
+        t.skip_reason = "수량 없음" if not shares else "수량 범위 초과"
         return t
-    t.shares = abs(shares)
+    t.shares = shares
 
     price = parse_number(_cell(row, idx, "price"))
-    if price is None or price <= 0:
+    price = abs(price) if price is not None else None
+    if not price:
         amount = parse_number(_cell(row, idx, "amount"))
         if amount and t.shares:
             price = abs(amount) / t.shares
             t.confidence -= 0.1
-    if price is None or price <= 0:
-        t.skip_reason = "단가·금액 없음"
+    if not amount_ok(price):
+        t.skip_reason = "단가·금액 없음" if not price else "단가 범위 초과"
         return t
     t.price = price
 

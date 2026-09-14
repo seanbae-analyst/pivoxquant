@@ -64,7 +64,16 @@ def apply_pending(user_id: int, pending: PendingTrade, thesis: str) -> tuple[int
     name = _display_name(pending, ticker, is_kr)
     now = utcnow_naive()
 
-    pos = Position.query.filter_by(user_id=user_id, ticker=ticker).first()
+    # Same lock as routes/portfolio.py (User→Position order there; we take no
+    # User lock because seed capital is never touched, so no cycle). SQLite
+    # no-ops the lock; on Postgres it serialises a webhook batch against a
+    # manual trade on the same position.
+    pos = (
+        db.session.query(Position)
+        .filter_by(user_id=user_id, ticker=ticker)
+        .with_for_update()
+        .first()
+    )
 
     if pending.action == "BUY":
         cost = shares * price
@@ -85,6 +94,9 @@ def apply_pending(user_id: int, pending: PendingTrade, thesis: str) -> tuple[int
                 pos.thesis_created_at = now
                 pos.thesis_status = "pending"
         else:
+            # Mirror the manual-entry cap (routes/portfolio.py TIER_LIMIT):
+            # an import must not open a 4th position that /positions refuses.
+            _enforce_position_cap(user_id)
             pos = Position(
                 user_id=user_id,
                 ticker=ticker,
@@ -140,6 +152,62 @@ def apply_pending(user_id: int, pending: PendingTrade, thesis: str) -> tuple[int
     return trade.id, position_id
 
 
+FREE_POSITION_CAP = 3
+
+
+def _enforce_position_cap(user_id: int) -> None:
+    from models import User
+    user = db.session.get(User, user_id)
+    tier = getattr(user, "effective_tier", None) if user is not None else None
+    if tier not in (None, "free"):
+        return
+    count = Position.query.filter_by(user_id=user_id).filter(Position.shares > 0).count()
+    if count >= FREE_POSITION_CAP:
+        raise LedgerError(
+            "TIER_LIMIT",
+            en=f"Free plan is limited to {FREE_POSITION_CAP} positions; this fill would open another.",
+            kr=f"무료 플랜은 보유 종목 {FREE_POSITION_CAP}개까지입니다. 이 체결은 새 종목을 여는 건이라 기록할 수 없습니다.",
+        )
+
+
+class PreTradeIndex:
+    """Prefetch every reflection that could match a batch, then answer
+    ``match(ticker, traded_at)`` in memory (one query per batch, not per row)."""
+
+    def __init__(self, user_id: int, tickers: set[str], start: datetime | None, end: datetime | None):
+        self.rows: dict[str, list[tuple[datetime, int]]] = {}
+        if not tickers or start is None or end is None:
+            return
+        candidates: set[str] = set()
+        for t in tickers:
+            candidates.add(t)
+            if "." in t:
+                candidates.add(t.split(".", 1)[0])
+        found = (
+            PreTradeReflection.query
+            .filter(PreTradeReflection.user_id == user_id,
+                    PreTradeReflection.intended_ticker.in_(list(candidates)),
+                    PreTradeReflection.created_at >= start - PRE_TRADE_WINDOW,
+                    PreTradeReflection.created_at <= end)
+            .order_by(PreTradeReflection.created_at.desc())
+            .all()
+        )
+        for r in found:
+            self.rows.setdefault(r.intended_ticker, []).append((r.created_at, r.id))
+
+    def match(self, ticker: str | None, traded_at: datetime | None) -> int | None:
+        if not ticker or traded_at is None:
+            return None
+        keys = [ticker] + ([ticker.split(".", 1)[0]] if "." in ticker else [])
+        best: tuple[datetime, int] | None = None
+        for k in keys:
+            for created, rid in self.rows.get(k, []):
+                if created <= traded_at and created >= traded_at - PRE_TRADE_WINDOW:
+                    if best is None or created > best[0]:
+                        best = (created, rid)
+        return best[1] if best else None
+
+
 def match_pre_trade(user_id: int, ticker: str | None, traded_at: datetime | None) -> int | None:
     """Latest reflection for the same ticker in the 7 days before the fill."""
     if not ticker or traded_at is None:
@@ -161,4 +229,4 @@ def match_pre_trade(user_id: int, ticker: str | None, traded_at: datetime | None
     return row.id if row else None
 
 
-__all__ = ["apply_pending", "match_pre_trade", "LedgerError"]
+__all__ = ["apply_pending", "match_pre_trade", "PreTradeIndex", "LedgerError", "FREE_POSITION_CAP"]

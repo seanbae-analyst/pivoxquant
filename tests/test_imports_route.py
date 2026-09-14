@@ -148,7 +148,7 @@ class TestCsvParsing:
         r = _upload(client, buf.getvalue(), "kis.xlsx")
         assert r.status_code == 201, r.data
         p = r.get_json()["pending"][0]
-        assert p["ticker"] == "005930.KS" and p["traded_at"].startswith("2026-09-01T09:30")
+        assert p["ticker"] == "005930.KS" and p["traded_at"].startswith("2026-09-01T00:30")  # 09:30 KST → 00:30 UTC
 
     def test_own_export_round_trip(self, client, auth_user, app):
         """Rows in our own export format re-import 1:1 and, once approved,
@@ -212,7 +212,7 @@ class TestTextParsing:
         assert len(body["pending"]) == 3
         assert body["skipped"][0]["row"] == 1
         by_ticker = {p["ticker"]: p for p in body["pending"]}
-        assert by_ticker["005930.KS"]["traded_at"] == "2026-09-01T10:32:00"
+        assert by_ticker["005930.KS"]["traded_at"] == "2026-09-01T01:32:00"  # 10:32 KST → 01:32 UTC
         assert by_ticker["005930.KS"]["confidence"] == pytest.approx(0.9)
         assert by_ticker["TSLA"]["action"] == "SELL"
         assert by_ticker["TSLA"]["currency"] == "USD"
@@ -350,7 +350,7 @@ class TestPatchAndApprove:
             th = db.session.get(TradeHistory, out["trade_id"])
             assert th.action == "BUY" and th.shares == 10 and th.price_per_share == 71200
             assert th.total_value == 712000 and th.currency == "KRW"
-            assert th.traded_at == datetime(2026, 9, 1, 10, 32)
+            assert th.traded_at == datetime(2026, 9, 1, 1, 32)  # KST 10:32 stored as UTC
             assert th.name == "삼성전자"
             u = db.session.get(User, auth_user["id"])
             assert u.available_capital == cap_usd
@@ -451,7 +451,7 @@ class TestPatchAndApprove:
             recent_id = recent.id
         r = _paste(client, "삼성전자 10주 매수 체결 71,200원 2026-09-01 10:32")
         assert r.get_json()["pending"][0]["pre_trade_reflection_id"] == recent_id
-        r = _paste(client, "삼성전자 10주 매수 체결 71,300원 2026-09-20 10:32")
+        r = _paste(client, "삼성전자 10주 매수 체결 71,300원 2026-09-12 10:32")  # 11d after the reflections → no match
         assert r.get_json()["pending"][0]["pre_trade_reflection_id"] is None
 
 
@@ -490,3 +490,92 @@ class TestListAndIsolation:
             assert db.session.get(PendingTrade, pid).status == "pending"
             assert Position.query.filter_by(user_id=owner["id"]).count() == 0
             assert TradeHistory.query.filter_by(user_id=owner["id"]).count() == 0
+
+
+# ── review fixes 2026-09-14 ───────────────────────────────────────────
+
+class TestReviewFixes:
+    def _csv(self, client, body: str, name="f.csv"):
+        import io
+        return client.post(
+            "/api/portfolio/imports/",
+            data={"file": (io.BytesIO(body.encode("utf-8")), name), "consent": "true"},
+            content_type="multipart/form-data",
+        )
+
+    def test_nan_and_huge_amounts_are_rejected(self, client, auth_user):
+        # JSON NaN / 1e300 used to pass ``v <= 0`` and poison positions on approve.
+        r = client.post("/api/portfolio/imports/", data='{"text": "", "consent": true, "source": "screenshot_text"}',
+                        content_type="application/json")
+        assert r.status_code == 400
+        r = self._csv(client, "거래일자,종목코드,거래구분,수량,단가\n2026-09-01,005930,매수,1000000000000,71200\n")
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_NO_ROWS"
+        assert "범위" in r.get_json()["skipped"][0]["reason"]
+
+    def test_patch_rejects_nan_inf_and_long_ticker(self, client, auth_user):
+        r = self._csv(client, "거래일자,종목코드,거래구분,수량,단가\n2026-09-01,005930,매수,10,71200\n")
+        pid = r.get_json()["pending"][0]["id"]
+        for body in ('{"shares": NaN}', '{"price": Infinity}', '{"shares": 1e300}'):
+            rr = client.patch(f"/api/portfolio/imports/pending/{pid}", data=body, content_type="application/json")
+            assert rr.status_code == 400 and rr.get_json()["code"] == "IMPORT_INVALID_FIELD", body
+        rr = client.patch(f"/api/portfolio/imports/pending/{pid}", json={"ticker": "A" * 21})
+        assert rr.status_code == 400 and rr.get_json()["code"] == "IMPORT_INVALID_FIELD"
+        rr = client.patch(f"/api/portfolio/imports/pending/{pid}", json={"ticker": "삼성전자"})
+        assert rr.status_code == 400
+        rr = client.patch(f"/api/portfolio/imports/pending/{pid}", json={"traded_at": "2099-01-01"})
+        assert rr.status_code == 400
+
+    def test_signed_sell_quantity_is_kept(self, client, auth_user):
+        r = self._csv(client, "거래일자,종목코드,거래구분,수량,단가\n2026-09-01,005930,매수,10,71200\n2026-09-02,005930,매도,-4,73000\n")
+        assert r.status_code == 201, r.get_json()
+        rows = {p["action"]: p for p in r.get_json()["pending"]}
+        assert rows["SELL"]["shares"] == 4.0  # // legal-ok — data field
+
+    def test_header_specificity_beats_column_order(self, client, auth_user):
+        # ``구분`` (현금/신용) comes first but ``매매구분`` is the side column.
+        r = self._csv(client, "거래일자,구분,종목명,종목코드,매매구분,수량,단가\n2026-09-01,현금,삼성전자,005930,매수,10,71200\n")
+        assert r.status_code == 201, r.get_json()
+        assert r.get_json()["mapping"]["side"] == "매매구분"
+
+    def test_broker_prefix_is_not_the_security(self, client, auth_user):
+        r = client.post("/api/portfolio/imports/",
+                        json={"text": "[키움증권] 삼성전자 10주 매수 체결 71,200원", "source": "screenshot_text", "consent": True})
+        assert r.status_code == 201, r.get_json()
+        p = r.get_json()["pending"][0]
+        assert p["ticker"] == "005930.KS" and p["name"] == "삼성전자"
+
+    def test_kst_wallclock_is_stored_as_utc(self, client, auth_user):
+        r = self._csv(client, "거래일자,체결시간,종목코드,거래구분,수량,단가\n2026-09-01,10:32:00,005930,매수,10,71200\n")
+        assert r.status_code == 201, r.get_json()
+        assert r.get_json()["pending"][0]["traded_at"].startswith("2026-09-01T01:32")
+        # Our own export is already UTC — round-trips untouched.
+        own = "\ufefftraded_at,ticker,name,action,shares,price_per_share,total_value,currency,pnl\n2026-08-20T10:00:00,005930.KS,삼성전자,BUY,5,70000,350000,KRW,0\n"
+        r2 = self._csv(client, own, name="export.csv")
+        assert r2.get_json()["pending"][0]["traded_at"].startswith("2026-08-20T10:00")
+
+    def test_future_fill_is_skipped(self, client, auth_user):
+        r = self._csv(client, "거래일자,종목코드,거래구분,수량,단가\n2099-01-01,005930,매수,10,71200\n")
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_NO_ROWS"
+
+    def test_rejected_row_does_not_block_reupload(self, client, auth_user):
+        body = "거래일자,종목코드,거래구분,수량,단가\n2026-09-01,005930,매수,10,71200\n"
+        pid = self._csv(client, body).get_json()["pending"][0]["id"]
+        assert client.post(f"/api/portfolio/imports/pending/{pid}/reject").status_code == 200
+        r = self._csv(client, body)
+        assert r.get_json()["pending"][0]["status"] == "pending"
+
+    def test_scrub_skips_data_fields_only(self, client, auth_user):
+        # raw_snippet is the user's own broker text — echoed back verbatim; action stays a data value.
+        r = client.post("/api/portfolio/imports/",
+                        json={"text": "삼성전자 10주 매수 체결 71,200원", "source": "screenshot_text", "consent": True})
+        p = r.get_json()["pending"][0]
+        assert p["raw_snippet"] == "삼성전자 10주 매수 체결 71,200원"
+        assert p["action"] == "BUY"  # // legal-ok — data field
+
+    def test_free_tier_position_cap_applies_to_imports(self, client, auth_user, add_position):
+        for t in ("AAPL", "MSFT", "NVDA"):
+            add_position(auth_user["id"], ticker=t)
+        r = self._csv(client, "거래일자,종목코드,거래구분,수량,단가\n2026-09-01,005930,매수,10,71200\n")
+        pid = r.get_json()["pending"][0]["id"]
+        a = client.post(f"/api/portfolio/imports/pending/{pid}/approve", json={"thesis": "반도체 업황 회복"})
+        assert a.status_code == 400 and a.get_json()["code"] == "TIER_LIMIT"

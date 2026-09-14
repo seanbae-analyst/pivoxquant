@@ -11,7 +11,7 @@
  * has at least 3 characters.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, cleanup, screen, within, fireEvent } from "@testing-library/react";
+import { render, cleanup, screen, within, fireEvent, act } from "@testing-library/react";
 
 const hooks = vi.hoisted(() => ({
   usePendingImports: vi.fn(),
@@ -26,7 +26,12 @@ vi.mock("@/lib/api", async (importOriginal) => {
   return { ...actual, apiFetch: vi.fn() };
 });
 
+import { apiFetch } from "@/lib/api";
+import { API } from "@/lib/endpoints";
 import { ImportInbox, thesisOk, fmtPrice } from "@/components/journal/import-inbox";
+import { sideLabel } from "@/lib/pre-trade";
+
+const apiFetchMock = vi.mocked(apiFetch);
 import type { PendingTradeDTO } from "@/lib/types";
 
 afterEach(() => {
@@ -114,12 +119,12 @@ describe("ImportInbox", () => {
 
     // Row 1 — KRW buy with a matching pause record.
     expect(within(rows[0]).getByText("삼성전자")).toBeInTheDocument();
-    expect(within(rows[0]).getByText("journal.import.buy")).toBeInTheDocument();
+    expect(within(rows[0]).getByText(sideLabel("BUY"))).toBeInTheDocument();
     expect(within(rows[0]).getByText(fmtPrice(71200, "KRW"))).toBeInTheDocument();
     expect(within(rows[0]).getByText("journal.import.reflectionMatched")).toBeInTheDocument();
 
     // Row 2 — USD sell, no pause.
-    expect(within(rows[1]).getByText("journal.import.sell")).toBeInTheDocument();
+    expect(within(rows[1]).getByText(sideLabel("SELL"))).toBeInTheDocument();
     expect(within(rows[1]).getByText(fmtPrice(189.2, "USD"))).toBeInTheDocument();
     expect(within(rows[1]).getByText("journal.import.reflectionNone")).toBeInTheDocument();
 
@@ -145,6 +150,32 @@ describe("ImportInbox", () => {
     // Whitespace does not count.
     fireEvent.change(thesis, { target: { value: "   " } });
     expect(approve).toBeDisabled();
+  });
+
+  it("does not search /api/search on mount — only after the user focuses or types", async () => {
+    vi.useFakeTimers();
+    try {
+      apiFetchMock.mockResolvedValue({ results: [] });
+      loaded([{ ...ROWS[0], id: 13, ticker: null, needs_ticker: true }]);
+      render(<ImportInbox />);
+      const input = screen.getByLabelText("journal.import.tickerPlaceholder");
+
+      // Mounted with `initialQuery` prefilled: the debounce window passes, nothing fires.
+      await act(async () => {
+        vi.advanceTimersByTime(1_000);
+      });
+      expect(apiFetchMock).not.toHaveBeenCalled();
+
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "삼성" } });
+      await act(async () => {
+        vi.advanceTimersByTime(400);
+      });
+      expect(apiFetchMock).toHaveBeenCalledTimes(1);
+      expect(apiFetchMock.mock.calls[0][0]).toBe(API.market.search("삼성"));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("thesisOk enforces the 3~500 window on trimmed length", () => {

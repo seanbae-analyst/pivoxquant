@@ -29,6 +29,7 @@ import { toast } from "sonner";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
+import { parseIsoUtc } from "@/lib/format";
 import { useImportTokens } from "@/lib/hooks";
 import { useLocale, useT } from "@/lib/locale";
 import type { ImportTokenCreateResponse, ImportTokenDTO } from "@/lib/types";
@@ -57,16 +58,17 @@ export function curlExample(origin: string, token: string): string {
   return `curl -X POST ${webhookUrl(origin)} -H "Authorization: Bearer ${token}" -H "Content-Type: application/json" -d '{"text":"삼성전자 10주 매수 체결 71,200원"}'`;
 }
 
+/** KST-pinned date (optionally with time); naive backend stamps are read as UTC. */
 function fmtDate(iso: string | null, locale: string, withTime = false): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
+  const d = parseIsoUtc(iso);
+  if (!d) return "";
   const tag = locale === "ko" ? "ko-KR" : "en-US";
   return d.toLocaleString(tag, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+    timeZone: "Asia/Seoul",
   });
 }
 

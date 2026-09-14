@@ -7,7 +7,7 @@ from flask_login import current_user
 from services.legal_filter import scrub_response
 
 
-def _deep_scrub(obj):
+def _deep_scrub(obj, skip_keys=None):
     """Recursively walk a JSON-shaped structure, scrubbing every string leaf.
 
     Used by :func:`legal_scrub_response` to enforce the legal boundary on
@@ -21,10 +21,10 @@ def _deep_scrub(obj):
     They are now one function; this stays as a thin alias so the ~12
     ``@legal_scrub_response`` call sites keep their own log context.
     """
-    return scrub_response(obj, context="legal_scrub_response")
+    return scrub_response(obj, context="legal_scrub_response", skip_keys=skip_keys)
 
 
-def legal_scrub_response(f):
+def legal_scrub_response(f=None, *, skip_keys=None):
     """Scrub legally risky phrases out of a JSON response before it ships.
 
     Wraps any route that may surface generated ``action`` / ``message``
@@ -42,27 +42,33 @@ def legal_scrub_response(f):
         def risk_defense_status():
             ...
     """
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        result = f(*args, **kwargs)
-        # Normalize to (response, status) — Flask view returns vary.
-        # Default status: prefer Response.status_code (preserves 4xx/5xx from
-        # _data_unavailable / abort-style returns); fall back to 200 only when
-        # there is no Response object at all.
-        if isinstance(result, tuple):
-            resp = result[0]
-            status = result[1] if len(result) > 1 else getattr(resp, "status_code", 200)
-        else:
-            resp = result
-            status = getattr(resp, "status_code", 200)
-        if hasattr(resp, "get_json") and getattr(resp, "is_json", False):
-            try:
-                data = resp.get_json()
-            except Exception:
-                return result
-            return jsonify(_deep_scrub(data)), status
-        return result
-    return wrapped
+    # Usable bare (``@legal_scrub_response``) or parameterised
+    # (``@legal_scrub_response(skip_keys=("action",))``).
+    skip = frozenset(skip_keys) if skip_keys else None
+
+    def _decorate(fn):
+        @wraps(fn)
+        def wrapped(*args, **kwargs):
+            result = fn(*args, **kwargs)
+            # Normalize to (response, status) — Flask view returns vary.
+            if isinstance(result, tuple):
+                resp = result[0]
+                status = result[1] if len(result) > 1 else getattr(resp, "status_code", 200)
+            else:
+                resp = result
+                status = getattr(resp, "status_code", 200)
+            if hasattr(resp, "get_json") and getattr(resp, "is_json", False):
+                try:
+                    data = resp.get_json()
+                except Exception:
+                    return result
+                return jsonify(_deep_scrub(data, skip)), status
+            return result
+        return wrapped
+
+    if f is not None and callable(f):
+        return _decorate(f)
+    return _decorate
 
 
 def api_auth(f):
