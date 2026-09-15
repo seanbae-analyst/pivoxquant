@@ -72,8 +72,11 @@ def utcnow_naive() -> datetime:
 
 
 def today_naive() -> datetime:
-    """Today at 00:00 UTC (naive). Used when a fill has no date."""
-    return utcnow_naive().replace(hour=0, minute=0, second=0, microsecond=0)
+    """The user's calendar today (Asia/Seoul) at 00:00, naive. Used when a
+    fill has no date. Date-only values are stored unshifted (see
+    ``kst_to_utc``), so this must be the KST date — the UTC date is
+    yesterday between 00:00 and 09:00 KST."""
+    return (utcnow_naive() + KST_OFFSET).replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def mask_sensitive(text: str | None, limit: int = RAW_SNIPPET_MAX) -> str:

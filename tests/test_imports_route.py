@@ -639,3 +639,123 @@ class TestNonFillNotices:
         r = client.post(f"{BASE}/webhook", data="삼성전자 10주 매수 주문 취소 71,200원",
                         content_type="text/plain", headers={"Authorization": f"Bearer {tok}"})
         assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_NO_ROWS"
+
+
+# ── 2026-09-15 overnight hunt regressions ────────────────────────────
+
+class TestHunt20260915:
+    def _token(self, client):
+        return client.post(f"{BASE}/tokens", json={"name": "macro", "consent": True}).get_json()["token"]
+
+    def _csv(self, client, body: str, name="kis.csv"):
+        return _upload(client, body.encode("utf-8"), name)
+
+    def test_webhook_rows_without_traded_at_is_201_not_500(self, client, auth_user):
+        tok = self._token(client)
+        r = client.post(f"{BASE}/webhook", json={"rows": [{"name": "삼성전자", "action": "buy", "shares": 10, "price": 71200}]},
+                        headers={"Authorization": f"Bearer {tok}"})
+        assert r.status_code == 201, r.get_json()
+        assert r.get_json()["pending"][0]["ticker"] == "005930.KS"
+
+    def test_webhook_rows_zone_flag_does_not_leak_to_next_row(self, client, auth_user):
+        tok = self._token(client)
+        rows = [
+            {"ticker": "AAPL", "action": "buy", "shares": 1, "price": 100, "traded_at": "2026-09-01T10:00:00Z"},
+            {"ticker": "MSFT", "action": "buy", "shares": 1, "price": 100, "traded_at": "2026-09-01 10:00"},
+        ]
+        r = client.post(f"{BASE}/webhook", json={"rows": rows}, headers={"Authorization": f"Bearer {tok}"})
+        assert r.status_code == 201, r.get_json()
+        by = {p["ticker"]: p["traded_at"] for p in r.get_json()["pending"]}
+        assert by["AAPL"].startswith("2026-09-01T10:00")   # explicit UTC, untouched
+        assert by["MSFT"].startswith("2026-09-01T01:00")   # KST wall-clock → UTC
+
+    def test_korean_name_with_dollar_price_is_usd(self, client, auth_user):
+        r = _paste(client, "토스증권 · 애플 3주 매수 체결 $190.12")
+        assert r.status_code == 201, r.get_json()
+        p = r.get_json()["pending"][0]
+        assert p["currency"] == "USD" and p["price"] == 190.12 and p["name"] == "애플"
+
+    def test_kis_overseas_fill_code_before_side(self, client, auth_user):
+        r = _paste(client, "[한국투자증권] 해외주식 체결통보 TSLA 매도 2주 체결단가 250.00 USD 2026-09-15 23:31")
+        assert r.status_code == 201, r.get_json()
+        p = r.get_json()["pending"][0]
+        assert p["ticker"] == "TSLA" and p["shares"] == 2.0 and p["price"] == 250.0
+        assert p["currency"] == "USD" and p["action"] == "SELL"  # // legal-ok — data field
+
+    def test_dollar_word_price(self, client, auth_user):
+        r = _paste(client, "NVDA 5주 매수 체결 118.5달러")
+        assert r.status_code == 201, r.get_json()
+        p = r.get_json()["pending"][0]
+        assert p["ticker"] == "NVDA" and p["price"] == 118.5 and p["currency"] == "USD"
+
+    def test_time_only_line_keeps_the_time_and_is_not_a_duplicate_of_a_dateless_one(self, client, auth_user):
+        r = _paste(client, "삼성전자 10주 매수 체결 71,200원\n09:31 삼성전자 10주 매수 체결 71,200원\n")
+        assert r.status_code == 201, r.get_json()
+        rows = r.get_json()["pending"]
+        assert [p["status"] for p in rows] == ["pending", "pending"]
+        timed = next(p for p in rows if "09:31" in p["raw_snippet"])
+        assert timed["traded_at"].endswith("T00:31:00")  # 09:31 KST → 00:31 UTC
+        assert timed["confidence"] >= 0.9
+
+    def test_unfilled_remainder_field_is_still_a_fill(self, client, auth_user):
+        text = "\n".join([
+            "[키움증권] 삼성전자 매수체결 10주 71,200원 미체결수량 0",
+            "삼성전자 10주 매수 체결 71,300원 (잔량/미체결 0주)",
+        ])
+        r = _paste(client, text)
+        assert r.status_code == 201, r.get_json()
+        assert len(r.get_json()["pending"]) == 2 and r.get_json()["skipped"] == []
+
+    def test_bare_unfilled_notice_is_skipped(self, client, auth_user):
+        r = _paste(client, "삼성전자 10주 매수 미체결 71,200원")
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_NO_ROWS"
+
+    def test_thousands_comma_does_not_become_the_name(self, client, auth_user):
+        r = _paste(client, "KODEX 200 20주 매수 체결 35,000원")
+        assert r.status_code == 201, r.get_json()
+        p = r.get_json()["pending"][0]
+        assert p["name"] != "000원" and p["price"] == 35000.0
+
+    def test_csv_currency_column_cannot_override_a_krx_ticker(self, client, auth_user):
+        r = self._csv(client, "거래일자,종목코드,거래구분,수량,단가,통화\n2026-09-01,005930,매수,10,71200,USD\n")
+        assert r.status_code == 201, r.get_json()
+        assert r.get_json()["pending"][0]["currency"] == "KRW"
+
+    def test_patch_currency_validated_and_ticker_wins(self, client, auth_user):
+        pid = _paste(client, TOSS_TEXT).get_json()["pending"][0]["id"]
+        bad = client.patch(f"{BASE}/pending/{pid}", json={"currency": "EUR"})
+        assert bad.status_code == 400 and bad.get_json()["code"] == "IMPORT_INVALID_FIELD"
+        ok = client.patch(f"{BASE}/pending/{pid}", json={"currency": "USD"})
+        assert ok.status_code == 200 and ok.get_json()["pending"]["currency"] == "KRW"
+
+    def test_csv_sanity_skips_are_reported_alongside_parser_skips(self, client, auth_user):
+        body = (
+            "거래일자,종목코드,거래구분,수량,단가\n"
+            "2026-09-01,005930,매수,10,71200\n"
+            "2026-09-01,005930,매수,abc,71200\n"      # parser skip
+            "2099-01-01,005930,매수,10,71200\n"       # sanity skip (future)
+        )
+        r = self._csv(client, body)
+        assert r.status_code == 201, r.get_json()
+        skipped = r.get_json()["skipped"]
+        assert sorted(s["row"] for s in skipped) == [3, 4]
+        assert len(skipped) == 2  # no double-reporting of the parser skip
+
+    def test_xlsx_zip_bomb_is_refused(self, client, auth_user):
+        import io as _io, zipfile
+        buf = _io.BytesIO()
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("[Content_Types].xml", "<Types/>")
+            zf.writestr("xl/sharedStrings.xml", b"\0" * (40 * 1024 * 1024))
+        data = buf.getvalue()
+        assert len(data) < 2 * 1024 * 1024
+        r = _upload(client, data, "bomb.xlsx")
+        assert r.status_code in (400, 413), r.get_json()
+        assert r.get_json()["code"] == "IMPORT_FILE_TOO_LARGE"
+
+    def test_dateless_fill_is_dated_today_in_kst(self, client, auth_user, monkeypatch):
+        from datetime import datetime
+        import services.imports as si
+        # 2026-09-14 23:30 UTC == 2026-09-15 08:30 KST — the user's "today" is the 15th.
+        monkeypatch.setattr(si, "utcnow_naive", lambda: datetime(2026, 9, 14, 23, 30))
+        assert si.today_naive() == datetime(2026, 9, 15)

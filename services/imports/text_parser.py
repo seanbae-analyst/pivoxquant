@@ -45,17 +45,30 @@ _US_FILL = re.compile(
     r"(?P<code>(?-i:[A-Z]{1,6}(?:[.\-][A-Z]{1,2})?))\b",
     re.IGNORECASE,
 )
+# KIS 해외주식 체결통보 word order: "TSLA 매도 2주 체결단가 250.00 USD"
+_US_CODE_FIRST = re.compile(
+    rf"\b(?P<code>[A-Z]{{1,6}}(?:[.\-][A-Z]{{1,2}})?)\s+(?:매수|매도|bought|sold|buy|sell)\s*(?:체결)?\s*"
+    rf"(?P<n>{_NUM})\s*(?:주|shares?)\b",
+    re.IGNORECASE,
+)
 # "5 AAPL @ 190.12" without a verb
 _US_QTY_CODE = re.compile(
     rf"(?P<n>{_NUM})\s*(?:주|shares?)\s+(?P<code>[A-Z]{{1,6}}(?:[.\-][A-Z]{{1,2}})?)\b"
 )
+# "NVDA 5주 매수 체결 118.5달러" — code, then the quantity
+_US_CODE_QTY = re.compile(
+    rf"\b(?P<code>[A-Z]{{1,6}}(?:[.\-][A-Z]{{1,2}})?)\s+(?P<n>{_NUM})\s*(?:주|shares?)\b"
+)
 _CODE_KR = re.compile(r"(?<!\d)(?P<code>\d{6})(?:\.(?:KS|KQ))?(?!\d)")
 
 _PRICE_LABELLED = re.compile(
-    rf"(?:체결단가|체결가격|체결가|단가|평균단가|가격|@)\s*:?\s*\$?(?P<p>{_NUM})"
+    rf"(?:체결단가|체결가격|체결가|단가|평균단가|가격|@|\bat)\s*:?\s*\$?(?P<p>{_NUM})", re.IGNORECASE
 )
 _PRICE_WON = re.compile(rf"(?P<p>{_NUM})\s*원")
 _PRICE_USD = re.compile(rf"\$\s*(?P<p>{_NUM})")
+# "118.5달러", "250.00 USD" — Korean broker apps spell the dollar out.
+_PRICE_DOLLAR_WORD = re.compile(rf"(?P<p>{_NUM})\s*(?:달러|USD|불)\b")
+_USD_MARK = re.compile(r"\$|달러|\bUSD\b")
 _AMOUNT_LABELLED = re.compile(rf"(?:체결금액|거래금액|매매금액|금액|total)\s*:?\s*\$?(?P<p>{_NUM})", re.IGNORECASE)
 
 _DATE_ANY = re.compile(
@@ -70,6 +83,9 @@ _KEYWORDS = {
     "매수", "매도", "체결", "알림", "주문", "단가", "체결단가", "체결가", "가격", "금액",
     "체결금액", "수량", "완료", "되었습니다", "체결되었습니다", "계좌", "종목", "국내",
     "해외", "주식", "정정", "취소", "총", "원", "주", "건", "시장가", "지정가",
+    # compounds broker apps emit as one token — never the security name
+    "해외주식", "국내주식", "미국주식", "해외주식체결", "체결통보", "체결알림", "매수체결", "매도체결",
+    "달러", "미체결", "미체결수량", "잔량", "체결수량", "체결시간", "체결일시",
 }
 _TOKEN = re.compile(r"[A-Za-z0-9가-힣&+\-.]+")
 _HANGUL = re.compile(r"[가-힣]")
@@ -77,9 +93,17 @@ _HANGUL = re.compile(r"[가-힣]")
 # ── order-lifecycle notices (not fills) ─────────────────────────────
 # "미체결" and "체결 취소" are decisive on their own. The rest only count when
 # the line has no fill word at all — "정정 주문이 체결되었습니다" is a fill.
+# A fill push often reports the unfilled remainder on the same line
+# ("매수체결 10주 71,200원 미체결수량 0", "(잔량/미체결 0주)"): that field is
+# stripped before the test, so only a bare 미체결 notice is skipped.
+_UNFILLED_FIELD = re.compile(
+    r"미\s*체결\s*(?:수량|잔량)\s*:?\s*\d[\d,]*\s*주?"   # 미체결수량 0
+    r"|미\s*체결\s*:?\s*\d[\d,]*\s*주"                   # 미체결 0주 (a quantity, not a price)
+    r"|잔량\s*:?\s*\d[\d,]*\s*주?"                       # 잔량 0
+)
 _UNFILLED_KR = re.compile(r"미\s*체결")
 _FILL_REVERSAL_KR = re.compile(r"체결\s*취소")
-_FILL_WORD_KR = re.compile(r"체결")
+_FILL_WORD_KR = re.compile(r"(?<!미)체결")
 _ORDER_NOTICE_KR = re.compile(
     r"접수|정정|취소|거부|만료|주문\s*완료|주문이\s*완료|주문\s*확인|주문이\s*확인|주문\s*내역|주문\s*(?:을|이)?\s*(?:냈|넣)"
 )
@@ -97,11 +121,12 @@ _SKIP_ORDER_NOTICE = "주문 접수·정정·취소 알림 (체결 아님)"
 
 def _non_fill_reason(line: str) -> str | None:
     """Return a skip reason when the line is an order notice rather than a fill."""
-    if _UNFILLED_KR.search(line):
+    stripped = _UNFILLED_FIELD.sub(" ", line)
+    if _UNFILLED_KR.search(stripped):
         return _SKIP_UNFILLED
     if _FILL_REVERSAL_KR.search(line):
         return _SKIP_REVERSAL
-    has_fill = bool(_FILL_WORD_KR.search(line) or _FILL_WORD_EN.search(line))
+    has_fill = bool(_FILL_WORD_KR.search(stripped) or _FILL_WORD_EN.search(line))
     if has_fill:
         return None
     if _ORDER_NOTICE_KR.search(line) or _ORDER_NOTICE_EN.search(line):
@@ -133,7 +158,7 @@ def _parse_line(line: str) -> RawTrade:
         return t
     t.action = side
 
-    us = _US_FILL.search(line)
+    us = _US_FILL.search(line) or _US_CODE_FIRST.search(line)
     if us and not _HANGUL.search(us.group("code")):
         t.shares = parse_number(us.group("n")) or 0.0
         t.code = us.group("code").upper()
@@ -141,6 +166,9 @@ def _parse_line(line: str) -> RawTrade:
         m = _SHARES_KR.search(line)
         if m:
             t.shares = parse_number(m.group("n")) or 0.0
+            cq = _US_CODE_QTY.search(line)
+            if cq and cq.group("n") == m.group("n"):
+                t.code = cq.group("code").upper()
         else:
             m2 = _US_QTY_CODE.search(line)
             if m2:
@@ -160,6 +188,10 @@ def _parse_line(line: str) -> RawTrade:
             us_code = _US_QTY_CODE.search(line)
             if us_code:
                 t.code = us_code.group("code").upper()
+            else:
+                # "KODEX 200 20주 …", "TIGER 미국S&P500 10주 …" — the security
+                # is the text before the quantity, and it is not Hangul-only.
+                t.name = _leading_name(line)
     if not t.name and not t.code:
         t.skip_reason = "종목 미인식"
         return t
@@ -170,10 +202,16 @@ def _parse_line(line: str) -> RawTrade:
         return t
     t.price = price
 
-    if "원" in line or "₩" in line or (t.name and _HANGUL.search(t.name)) or re.fullmatch(r"\d{6}", t.code or ""):
-        t.currency = "KRW"
-    elif "$" in line or t.code:
+    # An explicit money mark wins over the name's script: 토스 shows US
+    # stocks under Korean names ("애플 3주 매수 체결 $190.12").
+    if _USD_MARK.search(line) and "원" not in line and "₩" not in line:
         t.currency = "USD"
+    elif "원" in line or "₩" in line or re.fullmatch(r"\d{6}", t.code or ""):
+        t.currency = "KRW"
+    elif t.code:
+        t.currency = "USD"
+    elif t.name and _HANGUL.search(t.name):
+        t.currency = "KRW"
 
     dt = _date(line)
     if dt is None:
@@ -203,7 +241,7 @@ def _price(line: str, shares: float) -> tuple[float | None, bool]:
         p = parse_number(m.group("p"))
         if p and p > 0:
             return p, False
-    m = _PRICE_USD.search(line)
+    m = _PRICE_USD.search(line) or _PRICE_DOLLAR_WORD.search(line)
     if m:
         p = parse_number(m.group("p"))
         if p and p > 0:
@@ -235,6 +273,14 @@ def _price(line: str, shares: float) -> tuple[float | None, bool]:
 def _date(line: str):
     m = _DATE_ANY.search(line)
     if not m:
+        # Time only ("09:31 삼성전자 10주 매수 체결 71,200원"): today (KST) at
+        # that time. Dropping the time collapsed every same-day partial fill
+        # onto 00:00 and the second one was flagged a duplicate.
+        tm = _TIME_ONLY.search(line)
+        if tm:
+            h, mi = int(tm.group(1)), int(tm.group(2))
+            if h < 24 and mi < 60:
+                return today_naive().replace(hour=h, minute=mi, second=int(tm.group(3) or 0))
         return None
     s = m.group(1)
     if re.fullmatch(r"\d{1,2}/\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?", s):
@@ -267,11 +313,15 @@ _BRACKETED = re.compile(r"[\[\(【][^\]\)】]*[\]\)】]")
 
 def _kr_name(line: str) -> str:
     line = _BRACKETED.sub(" ", line)
+    # "35,000원" must not split into "35" + "000원" and hand back "000원" as the name.
+    line = re.sub(r"(?<=\d),(?=\d{3})", "", line)
     for tok in _TOKEN.findall(line):
         if not _HANGUL.search(tok):
             continue
         cleaned = tok.strip("-.")
         if cleaned in _KEYWORDS or not cleaned:
+            continue
+        if re.fullmatch(r"\d+(?:\.\d+)?(?:원|주|건|달러)?", cleaned):
             continue
         if cleaned in _BROKER_WORDS or cleaned.endswith("증권"):
             continue
@@ -286,6 +336,29 @@ def _kr_name(line: str) -> str:
             continue
         return cleaned
     return ""
+
+
+_NOISE_TOKEN = re.compile(r"\d{1,2}:\d{2}(?::\d{2})?|[\d/.\-:]+")
+
+
+def _leading_name(line: str) -> str:
+    """Last resort when no Hangul name and no ticker was found: the tokens
+    before the quantity, minus broker prefixes and vocabulary."""
+    m = _SHARES_KR.search(line)
+    if not m:
+        return ""
+    head = _BRACKETED.sub(" ", line[: m.start()])
+    keep: list[str] = []
+    for tok in _TOKEN.findall(head):
+        cleaned = tok.strip("-.")
+        if not cleaned or cleaned in _KEYWORDS or cleaned in _BROKER_WORDS:
+            continue
+        if cleaned.endswith("증권") or _SIDE_KR.fullmatch(cleaned) or _SIDE_EN.fullmatch(cleaned):
+            continue
+        if _NOISE_TOKEN.fullmatch(cleaned):
+            continue
+        keep.append(cleaned)
+    return " ".join(keep)[:100]
 
 
 __all__ = ["parse_text"]

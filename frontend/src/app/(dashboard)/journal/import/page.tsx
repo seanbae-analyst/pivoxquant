@@ -335,6 +335,30 @@ function ImportPageInner() {
               )}
             </Caption>
           )}
+          {(result.skipped?.length ?? 0) > 0 && (
+            <div className="mt-3" data-testid="import-skipped">
+              <Caption>
+                {t("journal.import.page.skippedTitle").replace(
+                  "{n}",
+                  String(result.skipped?.length ?? 0),
+                )}
+              </Caption>
+              <ul className="mt-1 space-y-1">
+                {(result.skipped ?? []).map((s) => (
+                  <li
+                    key={`${s.row}-${s.reason}`}
+                    className="font-mono"
+                    style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-ivory-dim)" }}
+                  >
+                    <span style={{ color: "var(--pq-ivory-mid)" }}>{s.row}</span>
+                    {" · "}
+                    {s.reason}
+                    {s.snippet ? ` — ${s.snippet}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <Caption className="mt-2 max-w-lg">{t("journal.import.page.resultDesc")}</Caption>
 
           {rows.length === 0 ? (

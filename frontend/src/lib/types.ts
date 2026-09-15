@@ -788,9 +788,16 @@ export interface PendingTradeDTO {
   approved_at: string | null;
 }
 
+/** A line/row the parser or the sanity pass dropped, with the reason shown to the user. */
+export interface ImportSkippedRow {
+  row: number;
+  reason: string;
+  snippet?: string | null;
+}
+
 export interface ImportBatch {
   id: number;
-  source: "csv" | "screenshot_text";
+  source: "csv" | "screenshot_text" | "webhook";
   broker_guess: string | null;
   row_count: number;
   parsed_count: number;
@@ -804,6 +811,7 @@ export interface ImportCreateResponse {
   pending: PendingTradeDTO[];
   mapping: Record<string, string> | null;
   unmapped_headers: string[];
+  skipped?: ImportSkippedRow[];
 }
 
 export interface PendingImportsResponse {

@@ -207,10 +207,14 @@ def resolve_ticker(code: str, name: str) -> tuple[str | None, str]:
 
 
 def _currency_for(ticker: str | None, given: str | None, name: str) -> str:
-    if given in ("KRW", "USD"):
-        return given
+    """A resolved ticker decides the currency; a file's 통화 column or a
+    PATCH value only fills in when the security is still unresolved. A KRX
+    code with ``USD`` in the file (2026-09-15 hunt) used to be stored as a
+    $71,200 Samsung fill."""
     if ticker:
         return "KRW" if is_korean_ticker(ticker) else "USD"
+    if given in ("KRW", "USD"):
+        return given
     return "KRW" if any("가" <= ch <= "힣" for ch in name) else "USD"
 
 
@@ -285,6 +289,7 @@ def _rows_to_raw(rows) -> list[RawTrade]:
             raise _RowError(f"{label}.currency must be KRW or USD.",
                             f"{label}.currency 는 KRW 또는 USD 여야 합니다.")
         traded_at = None
+        _tz_utc = False  # reset per row — a rowless-zone row must not inherit the previous row's flag
         if item.get("traded_at") not in (None, ""):
             traded_at, _tz_utc = parse_datetime_tz(item.get("traded_at"))
             if traded_at is None:
@@ -393,11 +398,15 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
             if not traded_at_ok(r.traded_at):
                 r.skip_reason = "거래 일시가 범위 밖 (미래 또는 1990년 이전)"
                 continue
-    if source != SOURCE_CSV or not skipped:
-        skipped = [
-            {"row": i + 1, "reason": r.skip_reason, "snippet": r.raw_snippet}
-            for i, r in enumerate(raw_rows) if r.skip_reason
-        ]
+    # Rows the parser dropped (CSV: real file line numbers) plus rows the
+    # sanity pass just dropped — both must reach the response, or a file's
+    # row_count exceeds parsed + skipped with no explanation.
+    already = {s.get("row") for s in skipped}
+    skipped = list(skipped) + [
+        {"row": r.extra.get("row", i + 1), "reason": r.skip_reason, "snippet": r.raw_snippet}
+        for i, r in enumerate(raw_rows)
+        if r.skip_reason and r.extra.get("row", i + 1) not in already
+    ]
 
     fills = [r for r in raw_rows if not r.skip_reason]
     if not fills:
@@ -497,8 +506,8 @@ def create_import():
 # ── POST /webhook (Bearer token, no session) ─────────────────────────
 
 @imports_bp.route("/webhook", methods=["POST"])
+@general_rate_limit  # outermost so an invalid-token 401 is rate-limited too
 @import_token_auth
-@general_rate_limit
 @legal_scrub_response(skip_keys=SCRUB_SKIP)
 def webhook_import():
     token: ImportToken = g.import_token
@@ -724,8 +733,12 @@ def patch_pending(pid: int):
                              kr="거래 일시는 1990년 이후, 내일 이전이어야 합니다.",
                              code="IMPORT_INVALID_FIELD", status=400)
         row.traded_at = dt
-    if "currency" in data and str(data.get("currency") or "").upper() in ("KRW", "USD"):
-        row.currency = str(data["currency"]).upper()
+    if "currency" in data:
+        given = str(data.get("currency") or "").upper()
+        if given not in ("KRW", "USD"):
+            return api_error(en="currency must be KRW or USD.", kr="통화는 KRW 또는 USD 여야 합니다.",
+                             code="IMPORT_INVALID_FIELD", status=400)
+        row.currency = _currency_for(row.ticker, given, row.name)
     elif "ticker" in data:
         row.currency = _currency_for(row.ticker, None, row.name)
 

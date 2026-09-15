@@ -152,7 +152,34 @@ def _read_csv(data: bytes) -> list[list]:
     return grid
 
 
+MAX_XLSX_UNCOMPRESSED = 32 * 1024 * 1024
+MAX_XLSX_ENTRIES = 512
+
+
+def _guard_xlsx_size(data: bytes) -> None:
+    """A 2MB upload can inflate ~1000:1; openpyxl parses sharedStrings.xml
+    in full before any row cap applies. Refuse archives that would."""
+    import zipfile
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            infos = zf.infolist()
+            total = sum(i.file_size for i in infos)
+    except zipfile.BadZipFile as exc:
+        raise ImportParseError(
+            "IMPORT_UNSUPPORTED_FORMAT",
+            en="XLSX file could not be opened.",
+            kr="XLSX 파일을 열 수 없습니다.",
+        ) from exc
+    if len(infos) > MAX_XLSX_ENTRIES or total > MAX_XLSX_UNCOMPRESSED:
+        raise ImportParseError(
+            "IMPORT_FILE_TOO_LARGE",
+            en="XLSX contents are too large to read. Save the sheet as CSV and retry.",
+            kr="XLSX 내용이 너무 큽니다. CSV 로 저장해 다시 올려 주세요.",
+        )
+
+
 def _read_xlsx(data: bytes) -> list[list]:
+    _guard_xlsx_size(data)
     try:
         import openpyxl
         wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)

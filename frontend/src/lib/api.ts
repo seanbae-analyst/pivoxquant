@@ -200,13 +200,17 @@ async function apiFetchOnce<T = unknown>(
   // Handle rate limiting — surface to user via toast (locale-aware).
   if (res.status === 429) {
     const retryAfter = res.headers.get("Retry-After") || "60";
+    // A route may answer 429 with its own body (IMPORT_TOKEN_DAILY_LIMIT);
+    // keep that code and localized message instead of the generic text.
+    const body = await res.json().catch(() => ({}));
+    const fallback = getLocale() === "ko"
+      ? `너무 많은 요청. ${retryAfter}초 후 다시 시도해주세요.`
+      : `Too many requests. Please try again in ${retryAfter}s.`;
+    const msg = pickErrorMessage(body, fallback);
     if (typeof window !== "undefined") {
-      const msg = getLocale() === "ko"
-        ? `너무 많은 요청. ${retryAfter}초 후 다시 시도해주세요.`
-        : `Too many requests. Please try again in ${retryAfter}s.`;
       toast.error(msg);
     }
-    throw new ApiError(429, "Rate limit exceeded");
+    throw new ApiError(429, msg, typeof body.code === "string" ? body.code : undefined);
   }
 
   if (!res.ok) {

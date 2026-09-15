@@ -94,8 +94,12 @@ def _sentry_filter(event, hint):
 
 _sentry_dsn = os.environ.get("SENTRY_DSN")
 if _sentry_dsn:
+    # include_local_variables=False: the SDK default ships every stack
+    # frame's locals, and an unhandled error inside routes/imports.py has the
+    # raw Bearer import token and the user's thesis text in scope.
     sentry_sdk.init(dsn=_sentry_dsn, traces_sample_rate=0.2,
-                    send_default_pii=False, before_send=_sentry_filter)
+                    send_default_pii=False, include_local_variables=False,
+                    before_send=_sentry_filter)
 
 
 def _set_sentry_user_type_tag() -> str:
