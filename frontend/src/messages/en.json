@@ -98,7 +98,7 @@
       "q6": "What does it cost?",
       "a6": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes.",
       "q7": "Do I have to type in every trade by hand?",
-      "a7": "Not the numbers. There are three paths. ① Download your trade history from your broker app as CSV/Excel and upload it — column names are matched automatically. ② Turn a fill-notification screenshot into text on your phone (iOS Shortcuts 'Extract Text from Image', Android Lens) and paste it; ticker, quantity, price and time are read from it. On Android you can send it straight from the share sheet. ③ Issue an import token in Settings and let your own automation app (MacroDroid, for example) forward fill notifications as they arrive. On every path the fill waits in your inbox until you write one line on why, and only then is it recorded. Images are never accepted. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked."
+      "a7": "Not the numbers. There are three paths. ① Download your trade history from your broker app as CSV/Excel and upload it — column names are matched automatically. ② Turn a fill-notification screenshot into text on your phone (iOS Shortcuts 'Extract Text from Image', Android Lens) and paste it; ticker, quantity, price and time are read from it. On Android you can send it straight from the share sheet. ③ Issue an import token in Settings and let your own automation forward fill notifications as they arrive: on Android an app like MacroDroid forwards the notification, on iPhone a Shortcuts automation can forward the broker's fill SMS. That works only with brokers that still send fills by text message; if yours sends only KakaoTalk or app push, path ② remains. On every path the fill waits in your inbox until you write one line on why, and only then is it recorded. Images are never accepted. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked."
     }
   },
   "errorBoundary": {
@@ -427,6 +427,10 @@
       "macrodroid1": "Notification-received trigger (brokerage app or KakaoTalk, containing \"체결\" / \"filled\")",
       "macrodroid2": "→ HTTP request (POST, the address above, Authorization header, body {\"text\": notification text})",
       "macrodroid3": "Sent notifications land on the pending list at the top of the journal; they are recorded only after you approve them with a reason.",
+      "iosLabel": "iPhone Shortcuts",
+      "ios1": "In the broker app, set fill notices to arrive by SMS",
+      "ios2": "Shortcuts → Automation → Message: when a text containing \"체결\" / \"filled\" arrives → Get Contents of URL (POST, the address above, Authorization header, body {\"text\": message text}) → Run Immediately",
+      "ios3": "Only brokers that still send fills by SMS work here. KakaoTalk and app push cannot be read by Shortcuts.",
       "listKicker": "Issued tokens",
       "listEmpty": "No tokens issued.",
       "colPrefix": "Prefix",

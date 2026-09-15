@@ -298,6 +298,14 @@ export function ImportTokensSection() {
                 <Caption>{t("settingsV2.importTokens.macrodroid2")}</Caption>
                 <Caption>{t("settingsV2.importTokens.macrodroid3")}</Caption>
               </div>
+            </div>
+            <div className="mt-3">
+              <FieldLabel tone="muted">{t("settingsV2.importTokens.iosLabel")}</FieldLabel>
+              <div className="mt-1 space-y-1">
+                <Caption>{t("settingsV2.importTokens.ios1")}</Caption>
+                <Caption>{t("settingsV2.importTokens.ios2")}</Caption>
+                <Caption>{t("settingsV2.importTokens.ios3")}</Caption>
+              </div>
               <Caption className="mt-2">
                 <span className="font-mono" style={{ color: "var(--pq-ivory-mid)" }}>
                   POST {address}
