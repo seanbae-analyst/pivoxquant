@@ -9,20 +9,22 @@ import { ClaimsSchema, PlanSchema, VerdictsSchema } from "./schemas";
 import {
   EXTRACTOR_SYSTEM,
   JUDGE_SYSTEM,
-  PLANNER_SYSTEM,
   SEARCHER_SYSTEM,
   SKEPTIC_SYSTEM,
-  WRITER_SYSTEM,
+  briefToQuestion,
   extractorUser,
   judgeUser,
+  plannerSystem,
   plannerUser,
   searcherUser,
   skepticUser,
+  writerSystem,
   writerUser,
 } from "./prompts";
 import { renderAppendix, reportHeader } from "./report";
 import { mergeSources } from "./sources";
-import type { Claim, ClaimVerdict, Llm, Plan, Report, ResearchEvent, Source, SubResult } from "./types";
+import { RESEARCH_TYPES } from "./types";
+import type { Brief, Claim, ClaimVerdict, Llm, Plan, Report, ResearchEvent, Source, SubResult } from "./types";
 
 export interface PipelineOptions {
   /** 하위 질문 상한. 기획이 더 내놓아도 여기서 자른다. */
@@ -49,8 +51,25 @@ export function normalizePlan(raw: { framing: string; sub_questions: string[]; k
   };
 }
 
+type RawClaim = {
+  text: string;
+  evidence: string;
+  source_urls: string[];
+  confidence: "high" | "medium" | "low";
+  metric?: string | null;
+  value?: string | null;
+  unit?: string | null;
+  year?: string | null;
+  geography?: string | null;
+};
+
+function nz(v: string | null | undefined): string | null {
+  const t = (v ?? "").trim();
+  return t.length ? t : null;
+}
+
 /** 추출된 주장에 id 를 붙이고, 출처 목록에 없는 URL 은 버린다 (지어낸 URL 차단). */
-export function toClaims(subIndex: number, subQuestion: string, raw: { claims: Array<{ text: string; evidence: string; source_urls: string[]; confidence: "high" | "medium" | "low" }> }, known: Source[]): Claim[] {
+export function toClaims(subIndex: number, subQuestion: string, raw: { claims: RawClaim[] }, known: Source[]): Claim[] {
   const knownUrls = new Set(known.map((s) => s.url));
   return raw.claims
     .filter((c) => c.text.trim().length > 0)
@@ -61,7 +80,22 @@ export function toClaims(subIndex: number, subQuestion: string, raw: { claims: A
       evidence: c.evidence.trim(),
       sourceUrls: c.source_urls.filter((u) => knownUrls.has(u)),
       confidence: c.confidence,
+      metric: nz(c.metric),
+      value: nz(c.value),
+      unit: nz(c.unit),
+      year: nz(c.year),
+      geography: nz(c.geography),
     }));
+}
+
+/** 요청 본문을 Brief 로 정리한다. type 이 모르는 값이면 custom. topic 이 비면 null. */
+export function normalizeBrief(raw: unknown): Brief | null {
+  const r = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const str = (k: string) => (typeof r[k] === "string" ? (r[k] as string).trim() : "");
+  const topic = str("topic") || str("question");
+  if (!topic) return null;
+  const type = RESEARCH_TYPES.includes(r.type as Brief["type"]) ? (r.type as Brief["type"]) : "custom";
+  return { type, topic, geography: str("geography"), timeframe: str("timeframe"), context: str("context") };
 }
 
 /** 모든 주장에 판정이 하나씩 있게 맞춘다. 빠진 건 open, 모르는 id 는 버린다. */
@@ -83,18 +117,19 @@ export function normalizeVerdicts(claims: Claim[], raw: { verdicts: Array<{ clai
 }
 
 export async function runResearch(
-  question: string,
+  input: Brief | string,
   llm: Llm,
   emit: (ev: ResearchEvent) => void,
   options: PipelineOptions = {},
 ): Promise<Report> {
   const opt = { ...DEFAULTS, ...options };
-  const q = question.trim();
-  if (!q) throw new Error("질문이 비어 있다.");
+  const brief = normalizeBrief(typeof input === "string" ? { topic: input, type: "custom" } : input);
+  if (!brief) throw new Error("질문이 비어 있다.");
+  const q = briefToQuestion(brief);
 
-  // 1. 계획
-  emit({ type: "status", stage: "planning", message: "질문을 하위 질문으로 쪼개는 중" });
-  const plan = normalizePlan(await llm.parseJson(PlanSchema, PLANNER_SYSTEM, plannerUser(q), "medium"), opt.maxSubQuestions);
+  // 1. 계획 — 유형별 이슈 트리 틀
+  emit({ type: "status", stage: "planning", message: "브리프를 이슈 트리로 쪼개는 중" });
+  const plan = normalizePlan(await llm.parseJson(PlanSchema, plannerSystem(brief.type), plannerUser(brief), "medium"), opt.maxSubQuestions);
   if (plan.subQuestions.length === 0) throw new Error("기획 단계가 하위 질문을 내놓지 않았다.");
   emit({ type: "plan", plan });
 
@@ -103,7 +138,7 @@ export async function runResearch(
   const subResults: SubResult[] = await Promise.all(
     plan.subQuestions.map(async (sq, index): Promise<SubResult> => {
       try {
-        const turn = await llm.searchTurn(SEARCHER_SYSTEM, searcherUser(q, sq), { maxSearches: opt.maxSearches, effort: "high" });
+        const turn = await llm.searchTurn(SEARCHER_SYSTEM, searcherUser(brief, sq), { maxSearches: opt.maxSearches, effort: "high" });
         const parsed = await llm.parseJson(ClaimsSchema, EXTRACTOR_SYSTEM, extractorUser(sq, turn.text, turn.sources), "medium");
         const claims = toClaims(index, sq, parsed, turn.sources);
         emit({ type: "sub_done", index, subQuestion: sq, claimCount: claims.length, sourceCount: turn.sources.length, error: null });
@@ -125,7 +160,7 @@ export async function runResearch(
   let verdicts: ClaimVerdict[] = [];
   if (claims.length > 0) {
     emit({ type: "status", stage: "verifying", message: `주장 ${claims.length}건의 반대 근거를 찾는 중` });
-    const counter = await llm.searchTurn(SKEPTIC_SYSTEM, skepticUser(q, plan, claims), { maxSearches: opt.maxSearches + 2, effort: "high" });
+    const counter = await llm.searchTurn(SKEPTIC_SYSTEM, skepticUser(brief, plan, claims), { maxSearches: opt.maxSearches + 2, effort: "high" });
     sources = mergeSources(sources, counter.sources);
     const judged = await llm.parseJson(VerdictsSchema, JUDGE_SYSTEM, judgeUser(claims, counter.text, counter.sources), "high");
     verdicts = normalizeVerdicts(claims, judged, sources);
@@ -133,12 +168,13 @@ export async function runResearch(
   emit({ type: "verdicts", verdicts });
 
   // 4. 집필
-  emit({ type: "status", stage: "writing", message: "보고서를 쓰는 중" });
-  const body = await llm.streamText(WRITER_SYSTEM, writerUser(q, plan, claims, verdicts, sources), (text) => emit({ type: "token", text }));
+  emit({ type: "status", stage: "writing", message: "리서치 노트를 쓰는 중" });
+  const body = await llm.streamText(writerSystem(brief.type), writerUser(brief, plan, claims, verdicts, sources), (text) => emit({ type: "token", text }));
 
   const createdAt = opt.now().toISOString();
   const report: Report = {
     id: opt.id(),
+    brief,
     question: q,
     createdAt,
     model: llm.model,

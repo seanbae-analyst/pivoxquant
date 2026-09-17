@@ -1,13 +1,15 @@
 "use client";
 
 /**
- * 리서치 데스크 화면 — 질문 하나, 진행 상황, 보고서, 보관함.
+ * 컨설팅 리서치 데스크 화면 — 브리프(유형·주제·범위·배경), 진행 상황, 리서치 노트, 보관함.
  * 상태는 서버 이벤트를 그대로 접은 것이다. 계산은 파이프라인이 하고 화면은 보여주기만 한다.
  */
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Markdown } from "@/components/markdown";
+import { TYPE_HINT, TYPE_LABEL } from "@/lib/research/prompts";
 import { reportFilename, verdictCounts, verdictLabel } from "@/lib/research/report";
-import type { ClaimVerdict, Plan, Report, ResearchEvent, Stage } from "@/lib/research/types";
+import { RESEARCH_TYPES } from "@/lib/research/types";
+import type { Brief, ClaimVerdict, Plan, Report, ResearchEvent, ResearchType, Stage } from "@/lib/research/types";
 import { runResearchStream } from "@/lib/run-client";
 import { dropReport, keepReport, useReports } from "@/lib/use-reports";
 
@@ -31,6 +33,16 @@ interface RunState {
 }
 
 const EMPTY: RunState = { stage: null, message: "", plan: null, subs: [], verdicts: null, draft: "", report: null, error: null };
+const EMPTY_BRIEF: Brief = { type: "market_sizing", topic: "", geography: "", timeframe: "", context: "" };
+
+const PLACEHOLDER: Record<ResearchType, string> = {
+  market_sizing: "예: 한국 반려동물 보험 시장 규모",
+  competitive_landscape: "예: 한국 개인투자자용 매매일지 앱",
+  industry_structure: "예: 국내 전기차 충전 산업",
+  benchmark: "예: 해외 핀테크의 무료 베타 → 유료 전환 사례",
+  regulation: "예: 한국에서 투자 기록 앱이 자본시장법상 투자자문업에 해당하는지",
+  custom: "예: 한국 개인투자자 중 매매일지를 쓰는 비율은 얼마인가",
+};
 
 const STAGES: Array<{ key: Stage; label: string }> = [
   { key: "planning", label: "계획" },
@@ -85,7 +97,8 @@ function download(report: Report) {
 }
 
 export function ResearchDesk() {
-  const [question, setQuestion] = useState("");
+  const [brief, setBrief] = useState<Brief>(EMPTY_BRIEF);
+  const setField = useCallback(<K extends keyof Brief>(k: K, v: Brief[K]) => setBrief((b) => ({ ...b, [k]: v })), []);
   const [running, setRunning] = useState(false);
   const [run, setRun] = useState<RunState>(EMPTY);
   const history = useReports();
@@ -94,15 +107,14 @@ export function ResearchDesk() {
   const abortRef = useRef<AbortController | null>(null);
 
   const start = useCallback(async () => {
-    const q = question.trim();
-    if (!q || running) return;
+    if (!brief.topic.trim() || running) return;
     const controller = new AbortController();
     abortRef.current = controller;
     setRunning(true);
     setRun({ ...EMPTY, stage: "planning", message: "연결 중" });
     try {
       await runResearchStream(
-        q,
+        brief,
         (ev) => {
           setRun((s) => reduce(s, ev));
           if (ev.type === "done") keepReport(ev.report);
@@ -116,12 +128,12 @@ export function ResearchDesk() {
       setRunning(false);
       abortRef.current = null;
     }
-  }, [question, running]);
+  }, [brief, running]);
 
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   const open = useCallback((r: Report) => {
-    setQuestion(r.question);
+    setBrief(r.brief ?? { ...EMPTY_BRIEF, type: "custom", topic: r.question });
     setRun({ ...EMPTY, stage: "done", plan: r.plan, verdicts: r.verdicts, report: r, subs: r.plan.subQuestions.map((q) => ({ subQuestion: q, state: "done", claimCount: r.claims.filter((c) => c.subQuestion === q).length, sourceCount: 0, error: null })) });
     setShowHistory(false);
   }, []);
@@ -144,8 +156,8 @@ export function ResearchDesk() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
       <header className="mb-8 flex items-baseline justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl tracking-tight">리서치 데스크</h1>
-          <p className="mt-1 text-sm text-dim">질문을 쪼개고, 찾고, 반박하고, 출처를 달아 쓴다.</p>
+          <h1 className="font-serif text-2xl tracking-tight">컨설팅 리서치 데스크</h1>
+          <p className="mt-1 text-sm text-dim">브리프를 이슈 트리로 쪼개고, 찾고, 반박하고, 출처를 달아 쓴다.</p>
         </div>
         <button
           type="button"
@@ -191,22 +203,67 @@ export function ResearchDesk() {
             }}
             className="rounded-lg border border-line bg-raised p-3"
           >
-            <label htmlFor="question" className="sr-only">
-              질문
+            <div role="radiogroup" aria-label="리서치 유형" className="mb-3 flex flex-wrap gap-1.5">
+              {RESEARCH_TYPES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={brief.type === t}
+                  disabled={running}
+                  onClick={() => setField("type", t)}
+                  className={`rounded-full border px-3 py-1 text-xs transition-colors ${brief.type === t ? "border-accent bg-accent/15 text-accent" : "border-line text-dim hover:text-ink"} disabled:opacity-60`}
+                >
+                  {TYPE_LABEL[t]}
+                </button>
+              ))}
+            </div>
+            <p className="mb-2 text-xs text-faint">{TYPE_HINT[brief.type]}</p>
+            <label htmlFor="topic" className="sr-only">
+              주제
             </label>
             <textarea
-              id="question"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
+              id="topic"
+              value={brief.topic}
+              onChange={(e) => setField("topic", e.target.value)}
               onKeyDown={(e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void start();
               }}
-              placeholder="예: 2026년 기준 한국 개인투자자 중 매매일지를 쓰는 비율은 얼마이고, 그 근거는 무엇인가?"
-              rows={3}
+              placeholder={PLACEHOLDER[brief.type]}
+              rows={2}
               maxLength={2000}
               disabled={running}
               className="w-full resize-y bg-transparent text-[15px] leading-relaxed outline-none placeholder:text-faint disabled:opacity-60"
             />
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <input
+                aria-label="지역 범위"
+                value={brief.geography}
+                onChange={(e) => setField("geography", e.target.value)}
+                placeholder="지역 범위 — 예: 한국 / 미국+한국 / 글로벌"
+                maxLength={1000}
+                disabled={running}
+                className="rounded border border-line bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-faint focus:border-accent disabled:opacity-60"
+              />
+              <input
+                aria-label="기간"
+                value={brief.timeframe}
+                onChange={(e) => setField("timeframe", e.target.value)}
+                placeholder="기간 — 예: 2024~2026 / 최근 3년"
+                maxLength={1000}
+                disabled={running}
+                className="rounded border border-line bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-faint focus:border-accent disabled:opacity-60"
+              />
+              <input
+                aria-label="의뢰 배경"
+                value={brief.context}
+                onChange={(e) => setField("context", e.target.value)}
+                placeholder="의뢰 배경 — 누가 왜 묻는가 (시사점의 방향을 정한다)"
+                maxLength={1000}
+                disabled={running}
+                className="rounded border border-line bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-faint focus:border-accent disabled:opacity-60 sm:col-span-2"
+              />
+            </div>
             <div className="mt-2 flex items-center justify-between gap-3">
               <span className="text-xs text-faint">⌘/Ctrl + Enter · 4~5개 하위 질문을 병렬 조사하므로 수 분 걸린다</span>
               {running ? (
@@ -214,8 +271,8 @@ export function ResearchDesk() {
                   중단
                 </button>
               ) : (
-                <button type="submit" disabled={!question.trim()} className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-bg disabled:opacity-40">
-                  조사 시작
+                <button type="submit" disabled={!brief.topic.trim()} className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-bg disabled:opacity-40">
+                  리서치 시작
                 </button>
               )}
             </div>

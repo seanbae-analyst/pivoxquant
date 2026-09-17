@@ -2,17 +2,17 @@
  * 브라우저 쪽 실행기 — POST 스트림을 읽어 이벤트로 바꾼다. React 를 모른다.
  */
 import { SseParser } from "./research/sse";
-import type { ResearchEvent } from "./research/types";
+import type { Brief, ResearchEvent } from "./research/types";
 
 export async function runResearchStream(
-  question: string,
+  brief: Brief,
   onEvent: (ev: ResearchEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch("/api/research", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify(brief),
     signal,
   });
   if (!res.ok || !res.body) {

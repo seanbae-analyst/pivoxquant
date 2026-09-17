@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { renderAppendix, reportFilename, slugify, verdictCounts } from "../report";
-import type { Claim, ClaimVerdict, Source } from "../types";
+import { renderAppendix, reportFilename, reportHeader, slugify, verdictCounts } from "../report";
+import type { Claim, ClaimVerdict, Report, Source } from "../types";
+
+const NUM = { metric: null, value: null, unit: null, year: null, geography: null };
 
 const sources: Source[] = [
   { url: "https://a.example", title: "A", pageAge: null },
   { url: "https://b.example", title: "B", pageAge: "3 days ago" },
 ];
 const claims: Claim[] = [
-  { id: "C1.1", subQuestion: "q1", text: "값은 | 12% 다", evidence: "표 3", sourceUrls: ["https://a.example"], confidence: "high" },
-  { id: "C1.2", subQuestion: "q1", text: "둘째", evidence: "", sourceUrls: [], confidence: "low" },
+  { id: "C1.1", subQuestion: "q1", text: "값은 | 12% 다", evidence: "표 3", sourceUrls: ["https://a.example"], confidence: "high", metric: "침투율", value: "12", unit: "%", year: "2025", geography: "한국" },
+  { id: "C1.2", subQuestion: "q1", text: "둘째", evidence: "", sourceUrls: [], confidence: "low", ...NUM },
 ];
 const verdicts: ClaimVerdict[] = [
   { claimId: "C1.1", verdict: "killed", reason: "최신 자료가 다르다", counterSourceUrls: ["https://b.example"] },
@@ -22,6 +24,27 @@ describe("renderAppendix", () => {
     expect(md).toContain("| C1.1 | 기각 | 값은 \\| 12% 다 | [1] | [2] | 최신 자료가 다르다 |");
     expect(md).toContain("| C1.2 | 미결 | 둘째 | — | — | 출처 없음 |");
     expect(md).toContain("2. [B](https://b.example) — 3 days ago");
+    // 수치 주장만 수치표에 오른다
+    expect(md).toContain("## 부록 B — 수치표");
+    expect(md).toContain("| C1.1 | 침투율 | 12 | % | 2025 | 한국 | 기각 | [1] |");
+    expect(md).not.toContain("| C1.2 | — |");
+    expect(md).toContain("## 부록 C — 출처");
+  });
+  it("수치 주장이 없으면 수치표를 만들지 않는다", () => {
+    const md = renderAppendix([claims[1]], [verdicts[1]], sources);
+    expect(md).not.toContain("수치표");
+    expect(md).toContain("## 부록 C — 출처");
+  });
+  it("머리말에 브리프의 유형·범위·배경을 쓴다", () => {
+    const report: Report = {
+      id: "r", question: "q", createdAt: "2026-09-17T00:00:00.000Z", model: "m", plan: { framing: "", subQuestions: [], killCriteria: [] },
+      claims: [], verdicts: [], sources, markdown: "",
+      brief: { type: "market_sizing", topic: "반려동물 보험", geography: "한국", timeframe: "2024~2026", context: "신규 진입 검토" },
+    };
+    const h = reportHeader(report);
+    expect(h).toContain("> 유형: 시장 규모 · 주제: 반려동물 보험 · 지역 한국 · 기간 2024~2026");
+    expect(h).toContain("> 의뢰 배경: 신규 진입 검토");
+    expect(reportHeader({ ...report, brief: { ...report.brief, geography: "", timeframe: "", context: "" } })).not.toContain("의뢰 배경");
   });
   it("주장·출처가 없을 때도 깨지지 않는다", () => {
     const md = renderAppendix([], [], []);

@@ -1,6 +1,7 @@
 /**
  * 보고서 부록과 파일 이름 — 순수 함수.
  */
+import { TYPE_LABEL } from "./prompts";
 import type { Claim, ClaimVerdict, Report, Source, Verdict } from "./types";
 
 const VERDICT_KO: Record<Verdict, string> = {
@@ -48,8 +49,22 @@ export function renderAppendix(claims: Claim[], verdicts: ClaimVerdict[], source
   } else {
     lines.push("검증 가능한 주장을 추출하지 못했다.");
   }
+  const numeric = claims.filter((c) => c.value !== null || c.metric !== null);
+  if (numeric.length) {
+    lines.push("");
+    lines.push("## 부록 B — 수치표");
+    lines.push("");
+    lines.push("| # | 지표 | 값 | 단위 | 연도 | 지역 | 판정 | 출처 |");
+    lines.push("|---|---|---|---|---|---|---|---|");
+    for (const c of numeric) {
+      const v = vmap.get(c.id);
+      lines.push(
+        `| ${c.id} | ${cell(c.metric ?? "—")} | ${cell(c.value ?? "—")} | ${cell(c.unit ?? "—")} | ${cell(c.year ?? "—")} | ${cell(c.geography ?? "—")} | ${v ? verdictLabel(v.verdict) : "미결"} | ${refNumbers(c.sourceUrls, sources)} |`,
+      );
+    }
+  }
   lines.push("");
-  lines.push("## 부록 B — 출처");
+  lines.push("## 부록 C — 출처");
   lines.push("");
   if (sources.length) {
     sources.forEach((s, i) => {
@@ -77,9 +92,14 @@ export function reportFilename(report: Pick<Report, "question" | "createdAt">): 
 }
 
 export function reportHeader(report: Report): string {
+  const b = report.brief;
+  const scope = [b.geography && `지역 ${b.geography}`, b.timeframe && `기간 ${b.timeframe}`].filter(Boolean).join(" · ");
   return [
-    `> 질문: ${report.question}`,
+    `> 유형: ${TYPE_LABEL[b.type]} · 주제: ${b.topic}${scope ? ` · ${scope}` : ""}`,
+    b.context ? `> 의뢰 배경: ${b.context}` : null,
     `> 작성: ${report.createdAt} · 모델: ${report.model} · 출처 ${report.sources.length}건`,
     "",
-  ].join("\n");
+  ]
+    .filter((l): l is string => l !== null)
+    .join("\n");
 }

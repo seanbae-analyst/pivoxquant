@@ -19,6 +19,12 @@ export const ClaimsSchema = z.object({
       evidence: z.string(),
       source_urls: z.array(z.string()),
       confidence: z.enum(["high", "medium", "low"]),
+      // 수치 주장에만 채운다. 정성 주장은 전부 null.
+      metric: z.string().nullable(),
+      value: z.string().nullable(),
+      unit: z.string().nullable(),
+      year: z.string().nullable(),
+      geography: z.string().nullable(),
     }),
   ),
 });
