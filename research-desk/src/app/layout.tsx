@@ -21,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body>
         <nav className="mx-auto flex max-w-6xl items-center gap-5 px-4 pt-4 text-sm text-dim">
+          <Link href="/concepts" className="hover:text-ink">개념 지도</Link>
           <Link href="/" className="hover:text-ink">질의응답</Link>
           <Link href="/research" className="hover:text-ink">리서치 데스크</Link>
           <span className="ml-auto text-xs text-faint">데이터 지식 베이스</span>
