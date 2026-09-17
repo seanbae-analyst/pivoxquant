@@ -1,0 +1,49 @@
+{
+  "name": "research-desk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "리서치 데스크 — 질문을 쪼개 웹에서 근거를 모으고, 반대 근거로 검증한 뒤, 출처가 달린 보고서를 쓰는 리서치 전용 에이전트",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "ingest": "tsx scripts/ingest.ts",
+    "kb:stats": "tsx scripts/kb-stats.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.126.0",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "@react-three/postprocessing": "^3.1.1",
+    "cheerio": "^1.2.0",
+    "fast-xml-parser": "^5.11.1",
+    "next": "^16.2.6",
+    "pg": "^8.23.0",
+    "postprocessing": "^6.39.5",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "robots-parser": "^3.0.1",
+    "three": "^0.186.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^25",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "vitest": "^4.1.5"
+  }
+}

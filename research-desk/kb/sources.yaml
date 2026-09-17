@@ -1,0 +1,135 @@
+# 지식 베이스 수집 대상. 한 항목 = 한 출처.
+#   kind: sitemap | rss | urls
+#   include / exclude: 경로 정규식. maxPages: 한 번에 가져올 상한.
+#   tier: standard | official_docs | paper | engineering_blog | analyst | vendor | community (답변 화면에 그대로 보인다)
+# 모든 수집은 robots.txt 를 지키고 호스트당 1초 간격을 둔다. 사이트맵 주소가 바뀌면 --dry-run 이 후보 0 으로 알려준다.
+
+sources:
+  # ── 데이터 카탈로그 (오픈소스) ──
+  - id: openmetadata
+    name: OpenMetadata Docs
+    kind: sitemap
+    url: https://docs.open-metadata.org/sitemap.xml
+    include: ["^/latest/"]
+    exclude: ["/releases/", "/sdk/"]
+    maxPages: 300
+    tier: official_docs
+    lang: en
+  - id: datahub
+    name: DataHub Docs
+    kind: sitemap
+    url: https://docs.datahub.com/sitemap.xml
+    include: ["^/docs/"]
+    exclude: ["/generated/", "/python-sdk/"]
+    maxPages: 300
+    tier: official_docs
+    lang: en
+  - id: unitycatalog
+    name: Unity Catalog (OSS) Docs
+    kind: sitemap
+    url: https://docs.unitycatalog.io/sitemap.xml
+    maxPages: 120
+    tier: official_docs
+    lang: en
+
+  # ── 데이터 카탈로그 (상용 — 벤더 문서, 자기 주장으로 표시) ──
+  - id: atlan
+    name: Atlan Docs
+    kind: sitemap
+    url: https://docs.atlan.com/sitemap.xml
+    include: ["^/(product|get-started|apps)/"]
+    maxPages: 200
+    tier: vendor
+    lang: en
+
+  # ── 변환·품질·관측·리니지 ──
+  - id: dbt
+    name: dbt Docs
+    kind: sitemap
+    url: https://docs.getdbt.com/sitemap.xml
+    include: ["^/docs/(build|collaborate|deploy|core)/"]
+    maxPages: 300
+    tier: official_docs
+    lang: en
+  - id: great_expectations
+    name: Great Expectations Docs
+    kind: sitemap
+    url: https://docs.greatexpectations.io/sitemap.xml
+    include: ["^/docs/"]
+    maxPages: 200
+    tier: official_docs
+    lang: en
+  - id: soda
+    name: Soda Docs
+    kind: sitemap
+    url: https://docs.soda.io/sitemap.xml
+    maxPages: 150
+    tier: official_docs
+    lang: en
+  - id: openlineage
+    name: OpenLineage (spec + docs)
+    kind: sitemap
+    url: https://openlineage.io/sitemap.xml
+    include: ["^/docs/"]
+    maxPages: 150
+    tier: standard
+    lang: en
+
+  # ── 플랫폼·테이블 포맷 ──
+  - id: iceberg
+    name: Apache Iceberg Docs
+    kind: sitemap
+    url: https://iceberg.apache.org/sitemap.xml
+    include: ["^/docs/latest/", "^/spec/"]
+    maxPages: 150
+    tier: official_docs
+    lang: en
+  - id: delta
+    name: Delta Lake Docs
+    kind: sitemap
+    url: https://docs.delta.io/sitemap.xml
+    include: ["^/latest/"]
+    maxPages: 100
+    tier: official_docs
+    lang: en
+
+  # ── 도입 기업 엔지니어링 블로그 (제3자 서술) ──
+  # 2026-09-17 실측: Medium 에 올라간 블로그(Netflix, Airbnb, DataHub 블로그)는 봇을 403/robots 로 막는다 → 뺐다.
+  # Uber·LinkedIn 은 피드 주소가 확인되지 않아 뺐다. 아래 넷은 RSS/Atom 이 열려 있고 본문이 잡힌다.
+  - id: spotify_eng
+    name: Spotify Engineering
+    kind: rss
+    url: https://engineering.atspotify.com/feed
+    maxPages: 30
+    tier: engineering_blog
+    lang: en
+  - id: shopify_eng
+    name: Shopify Engineering
+    kind: rss
+    url: https://shopify.engineering/blog.atom
+    maxPages: 30
+    tier: engineering_blog
+    lang: en
+  - id: slack_eng
+    name: Slack Engineering
+    kind: rss
+    url: https://slack.engineering/feed/
+    maxPages: 30
+    tier: engineering_blog
+    lang: en
+  - id: meta_eng
+    name: Meta Engineering
+    kind: rss
+    url: https://engineering.fb.com/feed/
+    maxPages: 30
+    tier: engineering_blog
+    lang: en
+
+  # ── 벤더 블로그 (자기 주장으로 표시) ──
+  - id: montecarlo_blog
+    name: Monte Carlo Blog (data observability)
+    kind: rss
+    url: https://www.montecarlodata.com/blog/feed/
+    maxPages: 40
+    tier: vendor
+    lang: en
