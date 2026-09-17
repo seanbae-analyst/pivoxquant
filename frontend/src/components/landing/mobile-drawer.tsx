@@ -275,9 +275,11 @@ export default function MobileDrawer({
               }}
             >
               {/* Was a hardcoded "See my mirror" → /signup for everyone.
-                  Same split and labels as the desktop CTA in top-nav.tsx. */}
+                  Same split and labels as the desktop CTA in top-nav.tsx.
+                  2026-09-17: signed-out destination is /login, the same
+                  screen the "로그인" link above opens. */}
               <Link
-                href={user ? "/mirror" : "/signup"}
+                href={user ? "/mirror" : "/login"}
                 onClick={onClose}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-[2px] font-serif transition-transform active:scale-[0.98]"
                 style={{

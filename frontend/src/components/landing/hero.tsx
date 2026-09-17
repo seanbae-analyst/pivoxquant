@@ -8,7 +8,7 @@
  *   [eyebrow rule + label]
  *   [H1  "부자로 만들어 준다고 / 약속하지 않습니다."]
  *   [description paragraph]
- *   [primary CTA → /signup]
+ *   [primary CTA → /login — the unified auth entry]
  *   [disclaimer]
  *
  * Pure Vantablack. Zero animation. Zero cursor tracking. No italic
@@ -139,11 +139,13 @@ export function Hero() {
 
           {/* CTAs — plain bronze pill + ghost outline.
               rounded-[2px] matches the /features pages exactly.
-              Signed-out visitors go to sign-up, signed-in users to their
-              mirror — same split as the top nav (top-nav.tsx). */}
+              Signed-out visitors go to the unified auth entry, signed-in
+              users to their mirror — same split as the top nav.
+              2026-09-17: the destination was /signup; /login and /signup are
+              now one screen and /login is the canonical route. */}
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href={user ? "/mirror" : "/signup"}
+              href={user ? "/mirror" : "/login"}
               className="group inline-flex items-center gap-2 rounded-[2px] px-6 py-3.5 text-sm font-medium tracking-wide transition-colors"
               style={{
                 backgroundColor: "var(--pq-bronze)",

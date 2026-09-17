@@ -100,25 +100,19 @@ const SURFACES: readonly Surface[] = [
     path: "/signup",
     needsAuth: false,
     assert: async (page) => {
-      // NOT the same shape as login, despite the shared OAuth providers.
-      // Signup gates the OAuth anchors behind the mandatory consent boxes
-      // (CLAUDE.md: "Terms checkbox 필수 (회원가입 시)"), so until every
-      // required box is ticked the page renders `aria-disabled` buttons that
-      // carry no href — see (auth)/signup/_v1/page-v1.tsx, `allRequired`.
-      // The old assertion reused login's href-only selector, which a freshly
-      // loaded /signup can never satisfy; it only passed while the suite ran
-      // against a browser that already had a session and got redirected off
-      // the page entirely. Assert what an anonymous visitor actually sees:
-      // the consent gate, and a Google affordance in either state.
+      // 2026-09-17: /signup and /login are ONE screen now. Both always sent
+      // the visitor to the same API.auth.google / .kakao anchors, and the
+      // callback creates the account whichever page the click came from — so
+      // the split was two decorations on one path, and the consent gate that
+      // only /signup carried was bypassable by entering through /login.
+      //
+      // The mandatory consents (CLAUDE.md: "Terms checkbox 필수 (회원가입 시)")
+      // moved to /signup/oauth-finalize, the interstitial that fires for new
+      // OAuth users only (birthdate_required === true). That surface is
+      // authenticated, so this anonymous smoke pass cannot reach it; what an
+      // anonymous visitor sees here is the same auth affordance as /login.
       await expect(
-        page.locator('input[type="checkbox"], [role="checkbox"]').first(),
-      ).toBeVisible({ timeout: 15000 });
-      await expect(
-        page
-          .locator(
-            'a[href*="/api/auth/google"], button:has-text("Google"), a[href*="/api/auth/kakao"], button:has-text("카카오")',
-          )
-          .first(),
+        page.locator('input[type="email"], a[href*="/api/auth/google"], a[href*="/api/auth/kakao"]').first(),
       ).toBeVisible({ timeout: 15000 });
     },
   },

@@ -1,3 +1,11 @@
+/**
+ * 통합 auth entry 화면 (`AuthEntryPage`) 회귀 게이트.
+ *
+ * 2026-09-17: `/login` 과 `/signup` 이 이 한 컴포넌트로 합쳐졌다
+ * (`signup/page.tsx` 가 이 파일을 그대로 렌더한다). 전환 링크
+ * ("계정이 없으신가요? 회원가입 ›") 는 갈 곳이 없어져 소스에서 제거됐고,
+ * 필수 동의는 OAuth 이후 인터스티셜에서 받는다.
+ */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
@@ -37,7 +45,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 // Import AFTER mocks are registered.
-import LoginPageV2 from "@/app/(auth)/login/page";
+import AuthEntryPage from "@/app/(auth)/login/page";
 import { LocaleProvider } from "@/lib/locale";
 
 function renderWithLocale(ui: React.ReactElement) {
@@ -45,7 +53,7 @@ function renderWithLocale(ui: React.ReactElement) {
   return render(<LocaleProvider>{ui}</LocaleProvider>);
 }
 
-describe("LoginPageV2", () => {
+describe("AuthEntryPage", () => {
   beforeEach(() => {
     replaceMock.mockClear();
     authState.user = null;
@@ -53,26 +61,38 @@ describe("LoginPageV2", () => {
   });
 
   it("renders Continue with Google + Continue with Kakao buttons (default unauth state)", () => {
-    renderWithLocale(<LoginPageV2 />);
+    renderWithLocale(<AuthEntryPage />);
 
     // i18n: ko default → "Google로 계속" / "Kakao로 계속"; match by provider name only.
     expect(screen.getByText(/Google/)).toBeInTheDocument();
     expect(screen.getByText(/Kakao/)).toBeInTheDocument();
   });
 
-  it("renders the editorial hero eyebrow + signup link", () => {
-    renderWithLocale(<LoginPageV2 />);
+  it("renders the editorial hero eyebrow + the OAuth affordance", () => {
+    renderWithLocale(<AuthEntryPage />);
 
-    // Eyebrow is rendered by AuthHeroV2.
-    expect(screen.getByText(/PivoxQuant/i)).toBeInTheDocument();
+    // Eyebrow is rendered by AuthHeroV2. 2026-09-17: neutral for both
+    // first-time and returning visitors ("PivoxQuant · Entry").
+    expect(screen.getByText(/PivoxQuant · Entry/)).toBeInTheDocument();
 
-    // Bottom switch link to /signup — i18n key "auth.login.createAccount" → "계정 만들기".
-    const signupLink = screen.getByRole("link", { name: /계정 만들기|Create account|회원가입/i });
-    expect(signupLink).toHaveAttribute("href", "/signup");
+    // 삭제된 단언: 하단 /signup 전환 링크.
+    //   `/login` 과 `/signup` 이 같은 화면이 되면서 전환 링크는 소스에서
+    //   제거됐다 — 옮길 대상 화면이 없어 단언을 유지할 수 없다. 대신
+    //   이 화면이 실제로 제공하는 것(두 OAuth 앵커)을 단언해 진입 경로
+    //   자체를 계속 보호한다.
+    const links = screen.getAllByRole("link");
+    const googleLink = links.find((l) =>
+      l.getAttribute("href")?.includes("google"),
+    );
+    const kakaoLink = links.find((l) =>
+      l.getAttribute("href")?.includes("kakao"),
+    );
+    expect(googleLink).toBeInTheDocument();
+    expect(kakaoLink).toBeInTheDocument();
   });
 
   it("renders terms + privacy footer links", () => {
-    renderWithLocale(<LoginPageV2 />);
+    renderWithLocale(<AuthEntryPage />);
 
     const terms = screen.getByRole("link", { name: /이용약관|Terms/i });
     const privacy = screen.getByRole("link", { name: /개인정보처리방침|Privacy/i });
@@ -83,7 +103,7 @@ describe("LoginPageV2", () => {
 
   it("shows the loading skeleton state when auth is still loading", () => {
     authState.loading = true;
-    const { container } = renderWithLocale(<LoginPageV2 />);
+    const { container } = renderWithLocale(<AuthEntryPage />);
 
     // Loading state: no OAuth buttons rendered.
     expect(screen.queryByText(/Google/)).not.toBeInTheDocument();

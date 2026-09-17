@@ -189,9 +189,10 @@ export default function PersonasPreview() {
             {t("landing.personas.bucketsNote")}
           </p>
           {/* Same login split as hero.tsx — a signed-in user has already
-              answered the five questions; send them to the mirror instead. */}
+              answered the five questions; send them to the mirror instead.
+              Signed-out visitors go to /login, the unified auth entry. */}
           <Link
-            href={user ? "/mirror" : "/signup"}
+            href={user ? "/mirror" : "/login"}
             className="group inline-flex items-center gap-2 rounded-sm px-5 py-3 font-serif transition-colors"
             style={{
               backgroundColor: "transparent",
