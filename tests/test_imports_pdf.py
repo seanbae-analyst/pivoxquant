@@ -14,12 +14,21 @@ Two layers:
 from __future__ import annotations
 
 import io
+import time
+import zlib
 
 import pytest
 
 from services.imports import ImportParseError
 from services.imports.csv_parser import parse_table
-from services.imports.pdf_parser import MAX_PDF_PAGES, grid_from_pages, read_pdf, rows_from_words
+from services.imports.pdf_parser import (
+    MAX_PDF_PAGES,
+    MAX_PDF_TEXT_OPS,
+    MAX_PDF_UNCOMPRESSED,
+    grid_from_pages,
+    read_pdf,
+    rows_from_words,
+)
 
 BASE = "/api/portfolio/imports"
 
@@ -159,6 +168,59 @@ class TestRowsFromWords:
     def test_no_header_line_returns_empty(self):
         assert rows_from_words([_w("안내문", 40, 20), _w("계좌", 40, 40)]) == []
 
+    # A spaced ETF name runs past the halfway point between two header
+    # centres long before the next column's text starts. Assigning by
+    # nearest centre alone tore the last token off the name and into
+    # 종목코드; a non-numeric ticker then made routes/imports.py read the
+    # KRW ETF as a US holding and book it in USD.
+    HEADER_6 = [
+        _w("거래일자", 40, 60), _w("종목명", 120, 60), _w("종목코드", 240, 60),
+        _w("거래구분", 320, 60), _w("수량", 400, 60), _w("단가", 460, 60),
+    ]
+
+    @staticmethod
+    def _run(tokens, x0, top, gap=3.0):
+        """Words of one cell, laid out with a 3pt space — what a name's own
+        spaces measure at this size; the columns sit 24pt or more apart."""
+        out, x = [], x0
+        for t in tokens:
+            out.append(_w(t, x, top))
+            x = out[-1]["x1"] + gap
+        return out
+
+    def _spaced_name_rows(self, with_code: bool):
+        def code(text, top):
+            return [_w(text, 245, top)] if with_code else []
+        return rows_from_words(self.HEADER_6 + [
+            _w("2026-09-02", 40, 80),
+            *self._run(["KODEX", "미국나스닥100", "TR"], 120, 80), *code("379810", 80),
+            _w("매수", 320, 80), _w("10", 400, 80), _w("31,500", 430, 80),
+            _w("2026-09-03", 40, 94.5),
+            *self._run(["ACE", "글로벌", "반도체", "TOP4", "Plus"], 120, 94.5),
+            *code("456250", 94.5),
+            _w("매도", 320, 94.5), _w("7", 400, 94.5), _w("9,880", 430, 94.5),
+        ])
+
+    def test_spaced_name_does_not_spill_into_an_empty_code_column(self):
+        rows = self._spaced_name_rows(with_code=False)
+        assert rows[1] == ["2026-09-02", "KODEX 미국나스닥100 TR", "", "매수", "10", "31,500"]
+        assert rows[2] == ["2026-09-03", "ACE 글로벌 반도체 TOP4 Plus", "", "매도", "7", "9,880"]
+        parsed = parse_table_grid(rows)
+        # An empty 종목코드 keeps the row Korean: a "TR" / "Plus" read as the
+        # ticker is what booked these KRW ETFs in USD.
+        assert [(r.name, r.code) for r in parsed] == [
+            ("KODEX 미국나스닥100 TR", ""), ("ACE 글로벌 반도체 TOP4 Plus", ""),
+        ]
+
+    def test_spaced_name_keeps_a_filled_code_column_clean(self):
+        rows = self._spaced_name_rows(with_code=True)
+        assert rows[1] == ["2026-09-02", "KODEX 미국나스닥100 TR", "379810", "매수", "10", "31,500"]
+        assert rows[2] == ["2026-09-03", "ACE 글로벌 반도체 TOP4 Plus", "456250", "매도", "7", "9,880"]
+        parsed = parse_table_grid(rows)
+        assert [(r.name, r.code) for r in parsed] == [
+            ("KODEX 미국나스닥100 TR", "379810"), ("ACE 글로벌 반도체 TOP4 Plus", "456250"),
+        ]
+
 
 def parse_table_grid(grid):
     """Run the shared grid parser the way parse_table does after read_pdf."""
@@ -197,6 +259,112 @@ class TestReadPdf:
         with pytest.raises(ImportParseError) as ei:
             read_pdf(_make_pdf(EN_LINES, pages=MAX_PDF_PAGES + 1))
         assert ei.value.code == "IMPORT_FILE_TOO_LARGE"
+
+    def test_a_real_statement_is_nowhere_near_the_caps(self):
+        """The caps have to clear the widest document this module accepts."""
+        rows = [EN_LINES[0], EN_LINES[1]] + [EN_LINES[2]] * 45
+        data = _make_pdf(rows, pages=MAX_PDF_PAGES)
+        unpacked, shows = _stream_totals(data)
+        assert unpacked * 10 < MAX_PDF_UNCOMPRESSED   # measured 328,320B vs 6MB
+        assert shows * 4 < MAX_PDF_TEXT_OPS           # measured 11,080 vs 50,000
+        assert read_pdf(data)                          # and it still parses
+
+
+# ── compression bombs ────────────────────────────────────────────────
+
+_BOMB_UNIT = b"BT /F1 1 Tf 1 1 Td (A) Tj ET\n"
+
+
+def _make_bomb_pdf(upload_bytes: int) -> bytes:
+    """One page whose content stream is _BOMB_UNIT repeated and deflated.
+
+    ``upload_bytes`` is the size of the finished file, so the test can
+    reproduce the sizes the security audit measured. The repeat count is
+    solved for rather than guessed: the stream deflates at a near-constant
+    ~0.0705 bytes of upload per repeat.
+    """
+    def build(repeats: int) -> bytes:
+        stream = zlib.compress(_BOMB_UNIT * repeats, 9)
+        objs: list[bytes] = []
+
+        def add(body: bytes) -> int:
+            objs.append(body)
+            return len(objs)
+
+        font = add(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+        content = add(b"<< /Length %d /Filter /FlateDecode >>\nstream\n" % len(stream)
+                      + stream + b"\nendstream")
+        page = add(b"<< /Type /Page /Parent 4 0 R /MediaBox [0 0 595 842] "
+                   b"/Resources << /Font << /F1 %d 0 R >> >> /Contents %d 0 R >>" % (font, content))
+        pages = add(b"<< /Type /Pages /Kids [%d 0 R] /Count 1 >>" % page)
+        catalog = add(b"<< /Type /Catalog /Pages %d 0 R >>" % pages)
+        out = io.BytesIO()
+        out.write(b"%PDF-1.4\n")
+        offsets = []
+        for i, body in enumerate(objs, start=1):
+            offsets.append(out.tell())
+            out.write(b"%d 0 obj\n" % i + body + b"\nendobj\n")
+        xref = out.tell()
+        out.write(b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1))
+        for off in offsets:
+            out.write(b"%010d 00000 n \n" % off)
+        out.write(b"trailer\n<< /Size %d /Root %d 0 R >>\nstartxref\n%d\n%%%%EOF\n"
+                  % (len(objs) + 1, catalog, xref))
+        return out.getvalue()
+
+    repeats = max(1, int(upload_bytes / 0.0705))
+    data = build(repeats)
+    for _ in range(6):  # converge on the asked-for upload size
+        if len(data) >= upload_bytes:
+            break
+        repeats = int(repeats * upload_bytes / len(data)) + 1
+        data = build(repeats)
+    return data
+
+
+def _stream_totals(data: bytes) -> tuple[int, int]:
+    """(bytes the streams unpack to, text-showing operators) — the test's
+    own reading of a PDF, independent of the guard it is checking."""
+    import re
+    total = shows = 0
+    for m in re.finditer(rb"(?<!end)stream(?:\r\n|\r|\n)", data):
+        start = m.end()
+        end = data.find(b"endstream", start)
+        body = data[start:end] if end >= 0 else data[start:]
+        try:
+            out = zlib.decompress(body)
+        except zlib.error:
+            out = body
+        total += len(out)
+        shows += len(re.findall(rb"T[jJ]", out))
+    return total, shows
+
+
+class TestCompressionBomb:
+    """A 1-page PDF whose content stream is a deflated run of text-showing
+    operators. Before the guard, parse_table on the 32KB file took 21.3s
+    and 972MB of RSS, and the 106KB file had not finished after 90s — on a
+    single gevent worker with a 120s timeout, that is every user's requests
+    stopped and then killed."""
+
+    @pytest.mark.parametrize("upload", [4_136, 32_279, 106_140])
+    def test_bomb_is_refused_immediately(self, upload):
+        data = _make_bomb_pdf(upload)
+        assert len(data) >= upload
+        unpacked, shows = _stream_totals(data)
+        assert unpacked > MAX_PDF_UNCOMPRESSED or shows > MAX_PDF_TEXT_OPS
+
+        started = time.perf_counter()
+        with pytest.raises(ImportParseError) as ei:
+            parse_table(data, "statement.pdf")
+        elapsed = time.perf_counter() - started
+
+        assert ei.value.code == "IMPORT_FILE_TOO_LARGE"
+        assert "너무 큽니다" in ei.value.kr and "too large" in ei.value.en
+        # A guard that takes a second is not a guard: pdfplumber must never
+        # have been reached, so this is zlib on at most the cap's worth of
+        # bytes. Measured at ~0.02s for all three sizes.
+        assert elapsed < 1.0, f"guard took {elapsed:.2f}s on a {len(data)}B upload"
 
 
 # ── the route ────────────────────────────────────────────────────────
