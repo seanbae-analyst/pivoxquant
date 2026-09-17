@@ -12,8 +12,19 @@
  * 커버리지는 삭제되지 않았다 — 위치만 옮겼다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+// 2026-09-17 P1 — 제출 계약(본문의 `consents` + 성공 시 스냅숏 정리)을
+// 검증하려면 네트워크를 가로채야 한다. `apiFetch` 만 mock 하고 `ApiError`
+// 는 실물을 쓴다(페이지가 `instanceof` 로 분기한다).
+// `vi.mock` 은 파일 최상단으로 호이스팅되므로 mock 함수도 `vi.hoisted` 로
+// 같이 올려야 한다(그러지 않으면 TDZ ReferenceError).
+const { apiFetchMock } = vi.hoisted(() => ({ apiFetchMock: vi.fn() }));
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+  return { ...actual, apiFetch: apiFetchMock };
+});
 
 const replaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -129,5 +140,121 @@ describe("OAuthFinalizePage — 법정 필수 동의 게이트", () => {
     expect(privacyLinks.length).toBeGreaterThanOrEqual(1);
     expect(termsLinks[0]).toHaveAttribute("href", "/terms");
     expect(privacyLinks[0]).toHaveAttribute("href", "/privacy");
+  });
+});
+
+/**
+ * ── 2026-09-17 P1: 동의는 서버 게이트다 ──────────────────────────────────
+ *
+ * 감사 실측: 동의 스택이 OAuth 이후 인터스티셜로 옮겨졌는데 서버는 여전히
+ * `{ birthdate }` 만 받아서, 세션만 있으면 체크박스를 하나도 건드리지 않고
+ * curl 로 전 기능을 열 수 있었다. 서버 쪽 게이트는
+ * `tests/test_oauth_finalize_consents.py` 가 지킨다. 이 블록은 **프론트가
+ * 그 계약을 실제로 지키는지** — 동의를 본문에 담아 보내는지, 성공 후
+ * localStorage 스냅숏을 지우는지 — 를 지킨다.
+ */
+describe("OAuthFinalizePage — 제출 계약 (서버 동의 게이트)", () => {
+  beforeEach(() => {
+    replaceMock.mockClear();
+    apiFetchMock.mockReset();
+    apiFetchMock.mockResolvedValue({ ok: true });
+    window.localStorage.clear();
+  });
+
+  /** 필수 4종을 모두 만족시킨 뒤 제출한다. */
+  async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
+    await user.click(
+      screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
+    );
+    fireEvent.change(screen.getByLabelText(/생년월일/), {
+      target: { value: "1990-01-01" },
+    });
+    await user.click(screen.getByRole("checkbox", { name: /국외 이전에 동의/ }));
+    await user.click(submitButton());
+  }
+
+  /** oauth-finalize 호출만 골라낸다 (마케팅 POST 와 구분). */
+  function finalizeCall() {
+    return apiFetchMock.mock.calls.find(
+      (c) => c[0] === "/api/auth/oauth-finalize",
+    );
+  }
+
+  it("sends the 3 mandatory consents in the request body", async () => {
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+    await fillAndSubmit(user);
+
+    await waitFor(() => expect(finalizeCall()).toBeTruthy());
+    const body = JSON.parse(finalizeCall()![1].body as string);
+
+    expect(body.birthdate).toBe("1990-01-01");
+    expect(body.consents).toEqual({
+      terms: true,
+      non_advisory: true,
+      cross_border: true,
+    });
+  });
+
+  it("does NOT double-record cross-border consent via /api/consents", async () => {
+    // 서버가 finalize 와 같은 트랜잭션에서 cross_border_consent_at 을 찍는다.
+    // 프론트가 별도로 POST 하면 같은 사실이 두 번 기록되어 타임스탬프가
+    // 실제 동의 시각에서 밀린다 — 그 경로를 제거했다는 회귀 가드.
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+    await fillAndSubmit(user);
+
+    await waitFor(() => expect(finalizeCall()).toBeTruthy());
+    const urls = apiFetchMock.mock.calls.map((c) => c[0]);
+    expect(urls).not.toContain("/api/consents/cross-border");
+  });
+
+  it("clears the localStorage snapshot after a successful finalize", async () => {
+    // 남겨 두면 (dashboard) 레이아웃의 flushPendingCrossBorderConsent 가
+    // 다음 마운트에서 재전송해 타임스탬프를 덮어쓴다 (감사 지적 사항).
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+    await fillAndSubmit(user);
+
+    await waitFor(() =>
+      expect(window.localStorage.getItem("pivox_signup_consents")).toBeNull(),
+    );
+  });
+
+  it("keeps the snapshot when the finalize request fails", async () => {
+    // 실패 시에는 증거를 버리지 않는다 — 스냅숏이 남아야 재시도 경로가 산다.
+    const { ApiError } = await vi.importActual<typeof import("@/lib/api")>(
+      "@/lib/api",
+    );
+    apiFetchMock.mockRejectedValueOnce(
+      new ApiError(400, "필수 동의 항목", "consents_required"),
+    );
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+    await fillAndSubmit(user);
+
+    await waitFor(() =>
+      expect(
+        window.localStorage.getItem("pivox_signup_consents"),
+      ).not.toBeNull(),
+    );
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the server's consents_required code as its own copy", async () => {
+    // ApiError.message 는 로케일에 따라 한국어 문구라 코드가 아니다 —
+    // 페이지는 ApiError.code 를 봐야 한다.
+    const { ApiError } = await vi.importActual<typeof import("@/lib/api")>(
+      "@/lib/api",
+    );
+    apiFetchMock.mockRejectedValueOnce(
+      new ApiError(400, "필수 동의 항목을 모두 확인해주세요.", "consents_required"),
+    );
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+    await fillAndSubmit(user);
+
+    expect(await screen.findByText(/새로고침한 뒤 다시 시도/)).toBeInTheDocument();
   });
 });

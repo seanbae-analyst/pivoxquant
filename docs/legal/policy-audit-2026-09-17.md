@@ -166,6 +166,21 @@ routes do not exist: … backtest". `routes/` 에 backtest 히트 0건.
 - §6.1 "회원가입 시 별도 동의" → 같은 취지로 시점 문구 정정 (§28-8 동의 시점이 OAuth 이후로 바뀌므로).
 - §11(만 14세) 의 생년월일 입력 시점도 동일하게 oauth-finalize 기준으로 기재.
 
+**동의 증거의 서버 기록 범위 (2026-09-17 P1 수정 후, 실측)**
+`POST /api/auth/oauth-finalize` 는 이제 `{ birthdate, consents: { terms, non_advisory,
+cross_border } }` 를 받고 3종이 모두 `true` 가 아니면 400 `consents_required` 로 거절한다
+(그 전에는 `{birthdate}` 만 받아 동의를 한 번도 체크하지 않고 전 기능을 열 수 있었다).
+- **서버에 남는 것**: 국외이전 동의 → `users.cross_border_consent_at` (PIPA §28-8,
+  `routes/auth.py` `oauth_finalize` 가 생년월일과 **같은 트랜잭션**에서 기록. 기록 방식은
+  `routes/consents.py` 와 동일) · 연령 → `users.birthdate` (§22 ⑥) · 마케팅(선택) →
+  `users.marketing_consent_at` (정통망법 §50 ①).
+- **서버에 남지 않는 것**: `terms`(이용약관·처리방침) / `non_advisory`(자본시장법상
+  투자자문업 아님 고지) 는 **대응 컬럼이 없다**. 컬럼 신설은 마이그레이션이라 CEO 승인
+  대상이므로 현행은 요청의 필수 필드로 받아 **검증만** 하고 시각은 남기지 않는다. 즉 이
+  2종의 증거는 "동의 없이는 가입이 완료되지 않는다(= `birthdate` 가 채워진 계정은 3종
+  동의를 거쳤다)"는 간접 증거뿐이며, 개별 동의 시각·동의 문안 버전은 보관되지 않는다.
+  회귀 가드: `tests/test_oauth_finalize_consents.py`.
+
 ### B-2. 월간 거울 리포트 PDF — 작업 중
 `routes/reports.py` · `services/reports/` · `services/reports_delivery.py` 전부 **untracked**
 (`git ls-files` 0건). 배포 전이므로 방침에 쓰지 않았다.

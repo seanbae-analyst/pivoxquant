@@ -32,17 +32,28 @@
  * 법정 필수 동의를 받을 유일하게 올바른 자리다. 동의 스택은
  * ``@/components/auth/v2/consent-stack`` 이 소유한다.
  *
- * 어디에 남는가 (증거 강도)
- *   - cross_border → POST /api/consents/cross-border (PIPA §28-8) — 서버 기록
- *   - marketing    → POST /api/consents/marketing (정통망법 §50 ①) — 서버 기록
- *   - terms / non_advisory → **서버 컬럼 없음**. 기존과 동일하게 localStorage
- *     ``pivox_signup_consents`` 스냅숏에만 남는다(브라우저 저장소가 지워지면
- *     증거도 사라진다 — 현행 유지, 서버 컬럼 추가는 별도 백엔드 작업).
- *   - age → 체크 자체는 스냅숏에만 남지만, 생년월일이
- *     ``/api/auth/oauth-finalize`` 로 서버에 저장되므로 간접 증거가 남는다.
- * 두 POST 는 best-effort 다 — 실패해도 플로우를 막지 않는다(기존 marketing
- * flush 와 같은 정책). 스냅숏이 남아 있으므로 (dashboard) 레이아웃의
- * flushPending* 가 다음 마운트에서 재시도한다.
+ * 어디에 남는가 (증거 강도) — 2026-09-17 P1 수정 후
+ *   - terms / non_advisory / cross_border → `/api/auth/oauth-finalize` 본문의
+ *     `consents` 로 **함께 전송**한다. 셋 다 `true` 가 아니면 서버가 400
+ *     (`consents_required`) 으로 거절하고 생년월일도 쓰지 않는다. 즉 동의는
+ *     이제 클라이언트 게이트가 아니라 서버 게이트다.
+ *   - cross_border → 서버가 **finalize 와 같은 트랜잭션**에서
+ *     `cross_border_consent_at` 에 기록한다 (PIPA §28-8). 그래서 예전에 여기
+ *     있던 best-effort `POST /api/consents/cross-border` 는 **제거했다** —
+ *     같은 사실을 두 번 기록하면 타임스탬프가 실제 동의 시각에서 밀린다.
+ *   - marketing    → POST /api/consents/marketing (정통망법 §50 ①) — 서버 기록.
+ *     선택 항목이라 여전히 best-effort 이고, 실패해도 /settings 토글에서 다시
+ *     세울 수 있다.
+ *   - terms / non_advisory → **서버 컬럼이 없다**(마이그레이션은 CEO 승인
+ *     대상). 서버가 필수로 받아 검증만 하므로 "동의 없이는 가입이 완료되지
+ *     않는다"는 사실이 증거이고, 개별 동의 시각은 남지 않는다.
+ *   - age → 생년월일이 서버에 저장되므로 간접 증거가 남는다.
+ *
+ * localStorage 스냅숏(`pivox_signup_consents`)
+ *   제출 직전에 남기고(네트워크가 죽어도 동의 사실은 남는다), **성공하면
+ *   지운다**. 남겨 두면 (dashboard) 레이아웃의 flushPending* 가 다음 마운트에서
+ *   cross-border 를 재전송해 방금 기록한 타임스탬프를 덮어쓴다(2026-09-17 감사
+ *   지적 사항).
  */
 
 import { safeNext } from "@/lib/safe-next";
@@ -53,8 +64,8 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
 import {
+  clearStagedSnapshot,
   CONSENT_STORAGE_KEY,
-  recordCrossBorderConsent,
   recordMarketingConsent,
 } from "@/lib/consents";
 import {
@@ -96,6 +107,18 @@ const ERROR_COPY: Record<string, { ko: string; en: string }> = {
   birthdate_already_set: {
     ko: "이미 등록된 생년월일이 있습니다. 고객센터에 문의해주세요.",
     en: "Your date of birth is already on file. Please contact support.",
+  },
+  // 2026-09-17 — 서버가 필수 동의 3종을 검증하기 시작했다(P1). 정상 UI 는
+  // 필수 항목이 다 체크돼야 제출 버튼이 열리므로 여기까지 오지 않는다.
+  // 이 문구가 보이는 경우는 사실상 하나뿐이다: 배포 순간 이미 열려 있던
+  // 구버전 번들이 `consents` 없이 POST 한 경우 → 새로고침하면 해결된다.
+  consents_required: {
+    ko: "필수 동의 항목을 모두 확인해주세요. 화면을 새로고침한 뒤 다시 시도해주세요.",
+    en: "Please accept all required consents. Refresh the page and try again.",
+  },
+  finalize_failed: {
+    ko: "가입 완료 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
+    en: "Could not finish signing you up. Please try again in a moment.",
   },
 };
 
@@ -171,10 +194,10 @@ export default function OAuthFinalizePage() {
 
   const stageConsentSnapshot = useCallback(
     (dob: string) => {
-      // terms / non_advisory 는 서버 컬럼이 없다 → 기존과 동일하게
-      // localStorage 스냅숏이 유일한 증거다(파일 상단 주석 참조).
-      // marketing / cross_border 도 같이 남겨서, 아래 best-effort POST 가
-      // 실패하면 (dashboard) 레이아웃의 flushPending* 가 재시도할 수 있게 한다.
+      // 제출이 서버까지 닿지 못한 경우(네트워크 단절 등)를 대비한 임시
+      // 스테이징이다. 성공하면 곧바로 지운다 — 남겨 두면 (dashboard)
+      // 레이아웃의 flushPending* 가 cross-border 를 재전송해 서버가 방금
+      // finalize 트랜잭션에서 찍은 타임스탬프를 덮어쓴다.
       if (typeof window === "undefined") return;
       try {
         window.localStorage.setItem(
@@ -203,20 +226,29 @@ export default function OAuthFinalizePage() {
     // 남고, 재시도 경로(flushPending*)도 이 스냅숏을 본다.
     stageConsentSnapshot(birthdate);
     try {
-      // 백엔드 계약 불변 — body 는 여전히 { birthdate } 뿐이다.
+      // 2026-09-17 P1 — 필수 동의 3종을 본문에 함께 보낸다. URL 은 그대로고
+      // 본문만 확장했다. 서버가 셋 다 `true` 인지 검증하고, 국외이전 동의는
+      // 같은 트랜잭션에서 `cross_border_consent_at` 에 기록한다.
+      // (`age` 는 보내지 않는다 — 생년월일에서 파생되는 값이라 서버가
+      //  `check_birthdate_payload` 로 직접 다시 판정한다.)
       await apiFetch(API.auth.oauthFinalize, {
         method: "POST",
-        body: JSON.stringify({ birthdate }),
+        body: JSON.stringify({
+          birthdate,
+          consents: {
+            terms: consents.terms,
+            non_advisory: consents.non_advisory,
+            cross_border: consents.cross_border,
+          },
+        }),
       });
-      // 국외이전(PIPA §28-8) + 마케팅(정통망법 §50 ①) 은 이미 있는 동의
-      // 엔드포인트로 기록한다. best-effort — 실패해도 가입을 막지 않는다.
-      if (consents.cross_border) {
-        try {
-          await recordCrossBorderConsent();
-        } catch (err) {
-          console.error("[oauth-finalize] cross-border consent POST failed:", err);
-        }
-      }
+      // 국외이전 동의는 위 finalize 가 서버에 기록했다 — 여기서 다시
+      // `/api/consents/cross-border` 를 때리면 같은 사실이 두 번 기록되어
+      // 타임스탬프가 실제 동의 시각에서 밀린다. 그래서 제거했다.
+      //
+      // 마케팅(정통망법 §50 ①)은 선택 항목이고 finalize 계약에 들어가지
+      // 않으므로 기존 엔드포인트로 남긴다. best-effort — 실패해도 가입을
+      // 막지 않고, 사용자는 /settings 토글에서 다시 세울 수 있다.
       if (consents.marketing) {
         try {
           await recordMarketingConsent();
@@ -224,21 +256,30 @@ export default function OAuthFinalizePage() {
           console.error("[oauth-finalize] marketing consent POST failed:", err);
         }
       }
+      // 가입이 끝났으니 스테이징 스냅숏을 지운다. 남겨 두면 (dashboard)
+      // 레이아웃의 flushPendingCrossBorderConsent 가 다음 마운트에서
+      // `/api/consents/cross-border` 를 재전송해 방금 finalize 가 찍은
+      // 타임스탬프를 덮어쓴다 (2026-09-17 감사 지적). 지우는 대가로 마케팅
+      // 재시도 경로를 잃지만, 마케팅은 선택 항목이고 /settings 에서 언제든
+      // 다시 기록할 수 있다 — 반대로 필수 동의의 감사 추적이 밀리는 쪽이
+      // 훨씬 비싸다.
+      clearStagedSnapshot();
       // Refresh the cached user so ``birthdate_required`` flips to false
       // before downstream pages mount.
       await refresh();
       const next = safeNext(searchParams.get("next"));
       router.replace(next);
     } catch (err) {
-      // ``apiFetch`` throws ``ApiError(status, body.error ?? statusText)``
-      // — so the i18n code lands in ``err.message``. Falling back to a
-      // generic format error keeps the user out of a stuck state if the
-      // server returns an unexpected payload.
-      const code =
-        err instanceof ApiError && typeof err.message === "string"
-          ? err.message
-          : "birthdate_invalid_format";
-      setErrorCode(code in ERROR_COPY ? code : "birthdate_invalid_format");
+      // ``apiFetch`` 는 ``ApiError(status, message, body.code)`` 를 던진다.
+      // ``message`` 는 로케일에 따라 골라진 사람용 문구(ko 면 ``error_kr``)라
+      // 기계 코드가 아니다 — 그래서 ``code`` 를 먼저 본다. ``code`` 가 없는
+      // 옛 응답만 ``message`` 로 폴백한다(백엔드는 이 엔드포인트에서
+      // ``en=<code>`` 관례를 쓰므로 en 로케일에서는 그쪽도 코드다).
+      const raw =
+        err instanceof ApiError
+          ? (err.code ?? (typeof err.message === "string" ? err.message : ""))
+          : "";
+      setErrorCode(raw in ERROR_COPY ? raw : "birthdate_invalid_format");
       setSubmitting(false);
     }
   };
