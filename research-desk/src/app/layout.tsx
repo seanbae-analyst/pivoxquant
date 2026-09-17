@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import { getDomain } from "@/lib/research/domains";
 import "./globals.css";
 
@@ -18,7 +19,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        <nav className="mx-auto flex max-w-6xl items-center gap-5 px-4 pt-4 text-sm text-dim">
+          <Link href="/" className="hover:text-ink">질의응답</Link>
+          <Link href="/research" className="hover:text-ink">리서치 데스크</Link>
+          <span className="ml-auto text-xs text-faint">데이터 지식 베이스</span>
+        </nav>
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,5 +1,5 @@
-import { ResearchDesk } from "@/components/research-desk";
+import { AskDesk } from "@/components/ask-desk";
 
 export default function Page() {
-  return <ResearchDesk />;
+  return <AskDesk />;
 }

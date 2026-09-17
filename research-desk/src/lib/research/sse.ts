@@ -5,17 +5,17 @@
  */
 import type { ResearchEvent } from "./types";
 
-export function encodeEvent(ev: ResearchEvent): string {
+export function encodeEvent(ev: object): string {
   return `data: ${JSON.stringify(ev)}\n\n`;
 }
 
-/** 조각난 청크를 이어 붙여 완전한 이벤트만 내놓는다. */
-export class SseParser {
+/** 조각난 청크를 이어 붙여 완전한 이벤트만 내놓는다. T 는 이벤트 합집합 (기본 ResearchEvent). */
+export class SseParser<T extends { type: string } = ResearchEvent> {
   private buffer = "";
 
-  push(chunk: string): ResearchEvent[] {
+  push(chunk: string): T[] {
     this.buffer += chunk;
-    const out: ResearchEvent[] = [];
+    const out: T[] = [];
     let idx: number;
     while ((idx = this.buffer.indexOf("\n\n")) !== -1) {
       const frame = this.buffer.slice(0, idx);
@@ -25,9 +25,9 @@ export class SseParser {
         const json = line.slice(5).trim();
         if (!json) continue;
         try {
-          out.push(JSON.parse(json) as ResearchEvent);
+          out.push(JSON.parse(json) as T);
         } catch {
-          out.push({ type: "error", message: "이벤트를 해석하지 못했다." });
+          out.push({ type: "error", message: "이벤트를 해석하지 못했다." } as unknown as T);
         }
       }
     }
