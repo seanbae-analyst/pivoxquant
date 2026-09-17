@@ -39,10 +39,10 @@ describe("renderAppendix", () => {
     const report: Report = {
       id: "r", question: "q", createdAt: "2026-09-17T00:00:00.000Z", model: "m", plan: { framing: "", subQuestions: [], killCriteria: [] },
       claims: [], verdicts: [], sources, markdown: "",
-      brief: { type: "market_sizing", topic: "반려동물 보험", geography: "한국", timeframe: "2024~2026", context: "신규 진입 검토" },
+      brief: { domain: "consulting", type: "market_sizing", topic: "반려동물 보험", geography: "한국", timeframe: "2024~2026", context: "신규 진입 검토" },
     };
     const h = reportHeader(report);
-    expect(h).toContain("> 유형: 시장 규모 · 주제: 반려동물 보험 · 지역 한국 · 기간 2024~2026");
+    expect(h).toContain("> 분야: 컨설팅 · 유형: 시장 규모 · 주제: 반려동물 보험 · 지역 한국 · 기간 2024~2026");
     expect(h).toContain("> 의뢰 배경: 신규 진입 검토");
     expect(reportHeader({ ...report, brief: { ...report.brief, geography: "", timeframe: "", context: "" } })).not.toContain("의뢰 배경");
   });

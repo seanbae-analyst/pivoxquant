@@ -56,7 +56,7 @@ describe("runResearch", () => {
   it("계획→조사→반증→집필 순서로 이벤트를 내고, 실패한 하위 질문을 건너뛴 채 보고서를 만든다", async () => {
     const llm = fakeLlm();
     const events: ResearchEvent[] = [];
-    const brief: Brief = { type: "market_sizing", topic: "  반려동물 보험  ", geography: "한국", timeframe: "", context: "진입 검토" };
+    const brief: Brief = { domain: "consulting", type: "market_sizing", topic: "  반려동물 보험  ", geography: "한국", timeframe: "", context: "진입 검토" };
     const report = await runResearch(brief, llm, (ev) => events.push(ev), {
       maxSubQuestions: 3,
       maxSearches: 4,
@@ -81,7 +81,7 @@ describe("runResearch", () => {
     // 수치 필드는 trim 되고 빈 문자열은 null
     expect(report.claims[0]).toMatchObject({ metric: "시장 규모", value: "3.2", unit: "조 원", year: "2025", geography: null });
     // 브리프가 보고서에 남고, 질문 한 줄은 유형·범위를 담는다
-    expect(report.brief).toEqual({ type: "market_sizing", topic: "반려동물 보험", geography: "한국", timeframe: "", context: "진입 검토" });
+    expect(report.brief).toEqual({ domain: "consulting", type: "market_sizing", topic: "반려동물 보험", geography: "한국", timeframe: "", context: "진입 검토" });
     expect(report.question).toBe("[시장 규모] 반려동물 보험 (한국)");
     // 유형별 지시문: 기획은 시장 규모 이슈 트리, 집필은 시장 규모 본문 틀
     expect(llm.systems[0]).toContain("탑다운 추정");
@@ -96,7 +96,7 @@ describe("runResearch", () => {
     // 반증 검색은 maxSearches + 2
     expect(llm.calls).toContain("search:6");
     // 보고서 = 머리말 + 본문 + 부록
-    expect(report.markdown).toContain("> 유형: 시장 규모 · 주제: 반려동물 보험 · 지역 한국");
+    expect(report.markdown).toContain("> 분야: 컨설팅 · 유형: 시장 규모 · 주제: 반려동물 보험 · 지역 한국");
     expect(report.markdown).toContain("## 한 줄 답");
     expect(report.markdown).toContain("## 부록 A — 주장과 판정");
     expect(report.markdown).toContain("## 부록 B — 수치표");
@@ -133,12 +133,28 @@ describe("runResearch", () => {
     expect(report.markdown).toContain("검증 가능한 주장을 추출하지 못했다.");
   });
 
-  it("문자열 입력은 custom 브리프가 된다", async () => {
+  it("문자열 입력은 기본 도메인(data)의 custom 브리프가 된다", async () => {
     const llm = fakeLlm();
     const report = await runResearch("자유 질문", llm, () => {});
+    expect(report.brief.domain).toBe("data");
     expect(report.brief.type).toBe("custom");
     expect(report.question).toBe("[자유 질문] 자유 질문");
     expect(llm.systems[0]).toContain("MECE");
+  });
+
+  it("데이터 도메인은 데이터 출처 위계와 유형별 틀을 쓴다", async () => {
+    const llm = fakeLlm();
+    const searchSystems: string[] = [];
+    llm.searchTurn = async (system) => {
+      searchSystems.push(system);
+      return { text: "메모", sources: [A] };
+    };
+    const report = await runResearch({ domain: "data", type: "data_catalog", topic: "카탈로그 도입", geography: "", timeframe: "", context: "데이터 팀 5명" }, llm, () => {});
+    expect(report.question).toBe("[데이터 카탈로그 구축] 카탈로그 도입");
+    expect(llm.systems[0]).toContain("메타데이터 모델");            // 기획: 카탈로그 이슈 트리
+    expect(searchSystems[0]).toContain("릴리스 노트");               // 조사: 데이터 출처 위계
+    expect(llm.systems.at(-1)).toContain("## 적용 시사점");          // 집필: 데이터 도메인 시사점 절
+    expect(llm.systems.at(-1)).toContain("## 도구 비교");            // 집필: 카탈로그 본문 틀
   });
 
   it("빈 질문과 빈 계획은 거부한다", async () => {
@@ -158,9 +174,12 @@ describe("helpers", () => {
     const out = toClaims(1, "sq", { claims: [{ text: " t ", evidence: " e ", source_urls: ["u", "z"], confidence: "medium" }] }, [{ url: "u", title: "U", pageAge: null }]);
     expect(out).toEqual([{ id: "C2.1", subQuestion: "sq", text: "t", evidence: "e", sourceUrls: ["u"], confidence: "medium", metric: null, value: null, unit: null, year: null, geography: null }]);
   });
-  it("normalizeBrief 는 모르는 유형을 custom 으로, 옛 question 을 topic 으로 받는다", () => {
-    expect(normalizeBrief({ type: "nope", question: " q " })).toEqual({ type: "custom", topic: "q", geography: "", timeframe: "", context: "" });
-    expect(normalizeBrief({ type: "regulation", topic: "t", geography: " 한국 ", timeframe: 3, context: "c" })).toEqual({ type: "regulation", topic: "t", geography: "한국", timeframe: "", context: "c" });
+  it("normalizeBrief 는 모르는 도메인·유형을 기본값으로, 옛 question 을 topic 으로 받는다", () => {
+    expect(normalizeBrief({ type: "nope", question: " q " })).toEqual({ domain: "data", type: "custom", topic: "q", geography: "", timeframe: "", context: "" });
+    expect(normalizeBrief({ domain: "consulting", type: "regulation", topic: "t", geography: " 한국 ", timeframe: 3, context: "c" })).toEqual({ domain: "consulting", type: "regulation", topic: "t", geography: "한국", timeframe: "", context: "c" });
+    // 도메인에 없는 유형은 그 도메인의 custom
+    expect(normalizeBrief({ domain: "data", type: "market_sizing", topic: "t" })?.type).toBe("custom");
+    expect(normalizeBrief({ domain: "zzz", type: "data_catalog", topic: "t" })?.domain).toBe("data");
     expect(normalizeBrief(null)).toBeNull();
     expect(normalizeBrief({ topic: "  " })).toBeNull();
   });

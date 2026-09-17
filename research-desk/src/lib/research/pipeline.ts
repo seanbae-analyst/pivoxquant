@@ -6,24 +6,24 @@
  * 전 구간을 결정론적으로 테스트할 수 있다.
  */
 import { ClaimsSchema, PlanSchema, VerdictsSchema } from "./schemas";
+import { getDomain, resolveType } from "./domains";
 import {
-  EXTRACTOR_SYSTEM,
   JUDGE_SYSTEM,
-  SEARCHER_SYSTEM,
-  SKEPTIC_SYSTEM,
   briefToQuestion,
+  extractorSystem,
   extractorUser,
   judgeUser,
   plannerSystem,
   plannerUser,
+  searcherSystem,
   searcherUser,
+  skepticSystem,
   skepticUser,
   writerSystem,
   writerUser,
 } from "./prompts";
 import { renderAppendix, reportHeader } from "./report";
 import { mergeSources } from "./sources";
-import { RESEARCH_TYPES } from "./types";
 import type { Brief, Claim, ClaimVerdict, Llm, Plan, Report, ResearchEvent, Source, SubResult } from "./types";
 
 export interface PipelineOptions {
@@ -88,14 +88,15 @@ export function toClaims(subIndex: number, subQuestion: string, raw: { claims: R
     }));
 }
 
-/** 요청 본문을 Brief 로 정리한다. type 이 모르는 값이면 custom. topic 이 비면 null. */
+/** 요청 본문을 Brief 로 정리한다. 모르는 domain 은 기본 도메인, 모르는 type 은 그 도메인의 custom. topic 이 비면 null. */
 export function normalizeBrief(raw: unknown): Brief | null {
   const r = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   const str = (k: string) => (typeof r[k] === "string" ? (r[k] as string).trim() : "");
   const topic = str("topic") || str("question");
   if (!topic) return null;
-  const type = RESEARCH_TYPES.includes(r.type as Brief["type"]) ? (r.type as Brief["type"]) : "custom";
-  return { type, topic, geography: str("geography"), timeframe: str("timeframe"), context: str("context") };
+  const domain = getDomain(str("domain"));
+  const { id: type } = resolveType(domain, str("type"));
+  return { domain: domain.id, type, topic, geography: str("geography"), timeframe: str("timeframe"), context: str("context") };
 }
 
 /** 모든 주장에 판정이 하나씩 있게 맞춘다. 빠진 건 open, 모르는 id 는 버린다. */
@@ -126,10 +127,12 @@ export async function runResearch(
   const brief = normalizeBrief(typeof input === "string" ? { topic: input, type: "custom" } : input);
   if (!brief) throw new Error("질문이 비어 있다.");
   const q = briefToQuestion(brief);
+  const domain = getDomain(brief.domain);
+  const { spec } = resolveType(domain, brief.type);
 
   // 1. 계획 — 유형별 이슈 트리 틀
   emit({ type: "status", stage: "planning", message: "브리프를 이슈 트리로 쪼개는 중" });
-  const plan = normalizePlan(await llm.parseJson(PlanSchema, plannerSystem(brief.type), plannerUser(brief), "medium"), opt.maxSubQuestions);
+  const plan = normalizePlan(await llm.parseJson(PlanSchema, plannerSystem(spec), plannerUser(brief), "medium"), opt.maxSubQuestions);
   if (plan.subQuestions.length === 0) throw new Error("기획 단계가 하위 질문을 내놓지 않았다.");
   emit({ type: "plan", plan });
 
@@ -138,8 +141,8 @@ export async function runResearch(
   const subResults: SubResult[] = await Promise.all(
     plan.subQuestions.map(async (sq, index): Promise<SubResult> => {
       try {
-        const turn = await llm.searchTurn(SEARCHER_SYSTEM, searcherUser(brief, sq), { maxSearches: opt.maxSearches, effort: "high" });
-        const parsed = await llm.parseJson(ClaimsSchema, EXTRACTOR_SYSTEM, extractorUser(sq, turn.text, turn.sources), "medium");
+        const turn = await llm.searchTurn(searcherSystem(domain), searcherUser(brief, sq), { maxSearches: opt.maxSearches, effort: "high" });
+        const parsed = await llm.parseJson(ClaimsSchema, extractorSystem(domain), extractorUser(sq, turn.text, turn.sources), "medium");
         const claims = toClaims(index, sq, parsed, turn.sources);
         emit({ type: "sub_done", index, subQuestion: sq, claimCount: claims.length, sourceCount: turn.sources.length, error: null });
         return { index, subQuestion: sq, notes: turn.text, sources: turn.sources, claims, error: null };
@@ -160,7 +163,7 @@ export async function runResearch(
   let verdicts: ClaimVerdict[] = [];
   if (claims.length > 0) {
     emit({ type: "status", stage: "verifying", message: `주장 ${claims.length}건의 반대 근거를 찾는 중` });
-    const counter = await llm.searchTurn(SKEPTIC_SYSTEM, skepticUser(brief, plan, claims), { maxSearches: opt.maxSearches + 2, effort: "high" });
+    const counter = await llm.searchTurn(skepticSystem(domain), skepticUser(brief, plan, claims), { maxSearches: opt.maxSearches + 2, effort: "high" });
     sources = mergeSources(sources, counter.sources);
     const judged = await llm.parseJson(VerdictsSchema, JUDGE_SYSTEM, judgeUser(claims, counter.text, counter.sources), "high");
     verdicts = normalizeVerdicts(claims, judged, sources);
@@ -169,7 +172,7 @@ export async function runResearch(
 
   // 4. 집필
   emit({ type: "status", stage: "writing", message: "리서치 노트를 쓰는 중" });
-  const body = await llm.streamText(writerSystem(brief.type), writerUser(brief, plan, claims, verdicts, sources), (text) => emit({ type: "token", text }));
+  const body = await llm.streamText(writerSystem(domain, spec), writerUser(brief, plan, claims, verdicts, sources), (text) => emit({ type: "token", text }));
 
   const createdAt = opt.now().toISOString();
   const report: Report = {

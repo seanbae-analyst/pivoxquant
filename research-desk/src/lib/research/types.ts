@@ -10,29 +10,6 @@
  */
 
 export type Verdict = "confirmed" | "killed" | "open";
-
-/** 컨설팅 리서치의 정형 유형. 유형마다 이슈 트리 틀·추출 규칙·보고서 구조가 다르다. */
-export type ResearchType =
-  | "market_sizing"          // 시장 규모 — TAM/SAM/SOM, 탑다운·바텀업 삼각검증
-  | "competitive_landscape"  // 경쟁 환경 — 플레이어, 점유율, 포지셔닝, 최근 움직임
-  | "industry_structure"     // 산업 구조 — 밸류체인, 5 forces, 수익 풀
-  | "benchmark"              // 사례 벤치마크 — 비슷한 시도의 결과와 조건
-  | "regulation"             // 규제·정책 — 현행 규정, 개정 동향, 인허가
-  | "custom";                // 자유 질문 — 일반 이슈 트리
-
-export const RESEARCH_TYPES: ResearchType[] = ["market_sizing", "competitive_landscape", "industry_structure", "benchmark", "regulation", "custom"];
-
-/** 사용자가 넣는 리서치 브리프. topic 만 필수. */
-export interface Brief {
-  type: ResearchType;
-  topic: string;
-  /** 지역 범위 ("한국", "미국+한국", "글로벌"). 비면 모델이 정하고 framing 에 적는다. */
-  geography: string;
-  /** 기간 ("2024~2026", "최근 3년"). */
-  timeframe: string;
-  /** 의뢰 배경 — 누가 왜 묻는가. 시사점의 방향을 정한다. */
-  context: string;
-}
 export type Confidence = "high" | "medium" | "low";
 export type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 
@@ -41,6 +18,22 @@ export interface Source {
   title: string;
   /** 검색 결과가 알려주는 페이지 나이 ("2 weeks ago" 등). 없으면 null. */
   pageAge: string | null;
+}
+
+/**
+ * 사용자가 넣는 리서치 브리프. topic 만 필수.
+ * domain 과 type 은 domains/ 등록부의 id — 모르는 값은 normalizeBrief 가 기본값으로 바꾼다.
+ */
+export interface Brief {
+  domain: string;
+  type: string;
+  topic: string;
+  /** 지역 범위 ("한국", "미국+한국", "글로벌"). 비면 모델이 정하고 framing 에 적는다. */
+  geography: string;
+  /** 기간 ("2024~2026", "최근 3년"). */
+  timeframe: string;
+  /** 의뢰 배경 — 누가 왜 묻는가. 시사점의 방향을 정한다. */
+  context: string;
 }
 
 export interface Plan {

@@ -1,7 +1,8 @@
 /**
  * 보고서 부록과 파일 이름 — 순수 함수.
  */
-import { TYPE_LABEL } from "./prompts";
+import { getDomain } from "./domains";
+import { typeLabel } from "./prompts";
 import type { Claim, ClaimVerdict, Report, Source, Verdict } from "./types";
 
 const VERDICT_KO: Record<Verdict, string> = {
@@ -95,7 +96,7 @@ export function reportHeader(report: Report): string {
   const b = report.brief;
   const scope = [b.geography && `지역 ${b.geography}`, b.timeframe && `기간 ${b.timeframe}`].filter(Boolean).join(" · ");
   return [
-    `> 유형: ${TYPE_LABEL[b.type]} · 주제: ${b.topic}${scope ? ` · ${scope}` : ""}`,
+    `> 분야: ${getDomain(b.domain).label} · 유형: ${typeLabel(b)} · 주제: ${b.topic}${scope ? ` · ${scope}` : ""}`,
     b.context ? `> 의뢰 배경: ${b.context}` : null,
     `> 작성: ${report.createdAt} · 모델: ${report.model} · 출처 ${report.sources.length}건`,
     "",

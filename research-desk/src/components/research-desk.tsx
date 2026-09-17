@@ -1,15 +1,14 @@
 "use client";
 
 /**
- * 컨설팅 리서치 데스크 화면 — 브리프(유형·주제·범위·배경), 진행 상황, 리서치 노트, 보관함.
+ * 리서치 데스크 화면 — 분야 탭, 브리프(유형·주제·범위·배경), 진행 상황, 리서치 노트, 보관함.
  * 상태는 서버 이벤트를 그대로 접은 것이다. 계산은 파이프라인이 하고 화면은 보여주기만 한다.
  */
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Markdown } from "@/components/markdown";
-import { TYPE_HINT, TYPE_LABEL } from "@/lib/research/prompts";
+import { DEFAULT_DOMAIN_ID, DOMAINS, getDomain, resolveType, typeIds } from "@/lib/research/domains";
 import { reportFilename, verdictCounts, verdictLabel } from "@/lib/research/report";
-import { RESEARCH_TYPES } from "@/lib/research/types";
-import type { Brief, ClaimVerdict, Plan, Report, ResearchEvent, ResearchType, Stage } from "@/lib/research/types";
+import type { Brief, ClaimVerdict, Plan, Report, ResearchEvent, Stage } from "@/lib/research/types";
 import { runResearchStream } from "@/lib/run-client";
 import { dropReport, keepReport, useReports } from "@/lib/use-reports";
 
@@ -33,16 +32,7 @@ interface RunState {
 }
 
 const EMPTY: RunState = { stage: null, message: "", plan: null, subs: [], verdicts: null, draft: "", report: null, error: null };
-const EMPTY_BRIEF: Brief = { type: "market_sizing", topic: "", geography: "", timeframe: "", context: "" };
-
-const PLACEHOLDER: Record<ResearchType, string> = {
-  market_sizing: "예: 한국 반려동물 보험 시장 규모",
-  competitive_landscape: "예: 한국 개인투자자용 매매일지 앱",
-  industry_structure: "예: 국내 전기차 충전 산업",
-  benchmark: "예: 해외 핀테크의 무료 베타 → 유료 전환 사례",
-  regulation: "예: 한국에서 투자 기록 앱이 자본시장법상 투자자문업에 해당하는지",
-  custom: "예: 한국 개인투자자 중 매매일지를 쓰는 비율은 얼마인가",
-};
+const EMPTY_BRIEF: Brief = { domain: DEFAULT_DOMAIN_ID, type: typeIds(getDomain(DEFAULT_DOMAIN_ID))[0], topic: "", geography: "", timeframe: "", context: "" };
 
 const STAGES: Array<{ key: Stage; label: string }> = [
   { key: "planning", label: "계획" },
@@ -99,6 +89,9 @@ function download(report: Report) {
 export function ResearchDesk() {
   const [brief, setBrief] = useState<Brief>(EMPTY_BRIEF);
   const setField = useCallback(<K extends keyof Brief>(k: K, v: Brief[K]) => setBrief((b) => ({ ...b, [k]: v })), []);
+  const switchDomain = useCallback((id: string) => setBrief((b) => ({ ...b, domain: id, type: typeIds(getDomain(id))[0] })), []);
+  const domain = getDomain(brief.domain);
+  const spec = resolveType(domain, brief.type).spec;
   const [running, setRunning] = useState(false);
   const [run, setRun] = useState<RunState>(EMPTY);
   const history = useReports();
@@ -133,7 +126,7 @@ export function ResearchDesk() {
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   const open = useCallback((r: Report) => {
-    setBrief(r.brief ?? { ...EMPTY_BRIEF, type: "custom", topic: r.question });
+    setBrief(r.brief ? { ...EMPTY_BRIEF, ...r.brief } : { ...EMPTY_BRIEF, type: "custom", topic: r.question });
     setRun({ ...EMPTY, stage: "done", plan: r.plan, verdicts: r.verdicts, report: r, subs: r.plan.subQuestions.map((q) => ({ subQuestion: q, state: "done", claimCount: r.claims.filter((c) => c.subQuestion === q).length, sourceCount: 0, error: null })) });
     setShowHistory(false);
   }, []);
@@ -156,8 +149,8 @@ export function ResearchDesk() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
       <header className="mb-8 flex items-baseline justify-between gap-4">
         <div>
-          <h1 className="font-serif text-2xl tracking-tight">컨설팅 리서치 데스크</h1>
-          <p className="mt-1 text-sm text-dim">브리프를 이슈 트리로 쪼개고, 찾고, 반박하고, 출처를 달아 쓴다.</p>
+          <h1 className="font-serif text-2xl tracking-tight">{domain.label} 리서치 데스크</h1>
+          <p className="mt-1 text-sm text-dim">{domain.tagline}</p>
         </div>
         <button
           type="button"
@@ -203,8 +196,25 @@ export function ResearchDesk() {
             }}
             className="rounded-lg border border-line bg-raised p-3"
           >
+            {DOMAINS.length > 1 && (
+              <div role="tablist" aria-label="분야" className="mb-3 flex gap-4 border-b border-line text-sm">
+                {DOMAINS.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={brief.domain === d.id}
+                    disabled={running}
+                    onClick={() => switchDomain(d.id)}
+                    className={`-mb-px border-b-2 pb-2 transition-colors ${brief.domain === d.id ? "border-accent text-ink" : "border-transparent text-dim hover:text-ink"} disabled:opacity-60`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div role="radiogroup" aria-label="리서치 유형" className="mb-3 flex flex-wrap gap-1.5">
-              {RESEARCH_TYPES.map((t) => (
+              {typeIds(domain).map((t) => (
                 <button
                   key={t}
                   type="button"
@@ -214,11 +224,11 @@ export function ResearchDesk() {
                   onClick={() => setField("type", t)}
                   className={`rounded-full border px-3 py-1 text-xs transition-colors ${brief.type === t ? "border-accent bg-accent/15 text-accent" : "border-line text-dim hover:text-ink"} disabled:opacity-60`}
                 >
-                  {TYPE_LABEL[t]}
+                  {domain.types[t].label}
                 </button>
               ))}
             </div>
-            <p className="mb-2 text-xs text-faint">{TYPE_HINT[brief.type]}</p>
+            <p className="mb-2 text-xs text-faint">{spec.hint}</p>
             <label htmlFor="topic" className="sr-only">
               주제
             </label>
@@ -229,7 +239,7 @@ export function ResearchDesk() {
               onKeyDown={(e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void start();
               }}
-              placeholder={PLACEHOLDER[brief.type]}
+              placeholder={spec.placeholder}
               rows={2}
               maxLength={2000}
               disabled={running}
