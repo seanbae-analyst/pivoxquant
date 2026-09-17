@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ConceptMap } from "@/components/concepts/concept-map";
+import { Scene3D } from "@/components/concepts/three/scene-frame";
 import { AREAS, conceptsInArea } from "@/lib/concepts/concepts";
 
 export const metadata = { title: "데이터 개념 지도" };
@@ -9,9 +10,9 @@ export default function Page() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
       <header className="mb-6">
         <h1 className="font-serif text-2xl tracking-tight">데이터 개념 지도</h1>
-        <p className="mt-1 text-sm text-dim">개념 하나를 글로만 읽으면 추상적이다. 여기서는 같은 데이터셋(온라인 쇼핑몰의 고객·주문 테이블) 위에서 모든 개념을 직접 만져 본다.</p>
+        <p className="mt-1 text-sm text-dim">개념 하나를 글로만 읽으면 추상적이다. 여기서는 같은 데이터셋(온라인 쇼핑몰의 고객·주문 테이블) 위에서 모든 개념을 직접 만져 본다. 끌어서 돌려 보고, 막대를 눌러 보라.</p>
       </header>
-      <ConceptMap />
+      <Scene3D kind="galaxy" label="개념 12개와 그 사이의 관계" flat={<ConceptMap />} />
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {AREAS.map((a) => (
           <section key={a.id}>
