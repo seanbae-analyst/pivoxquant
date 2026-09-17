@@ -28,14 +28,17 @@ logger = logging.getLogger(__name__)
 health_bp = Blueprint("health", __name__)
 
 # Health version surfaces the deployed commit SHA so probes can correlate
-# with Railway logs. 2026-05-12 bug-hunter found the hardcoded value
+# with the host's deploy log. 2026-05-12 bug-hunter found the hardcoded value
 # masked a real 3-week stale value (still showed 2026-04-19 even after
-# many deploys). Prefer Railway-injected RAILWAY_GIT_COMMIT_SHA, then
-# fall back to a generic platform-version stamp so the field never goes
-# silent.
+# many deploys). 2026-09-17: the backend has run on Render since 09-04
+# (CLAUDE.md §지금 상태) but this chain still read only the Railway and
+# Vercel names, so prod answered the "v37+" fallback on every deploy and
+# nobody could tell which commit was live. Render injects RENDER_GIT_COMMIT
+# (https://render.com/docs/environment-variables); it goes first.
 import os as _os
 HEALTH_VERSION = (
-    _os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:12]
+    _os.environ.get("RENDER_GIT_COMMIT", "")[:12]
+    or _os.environ.get("RAILWAY_GIT_COMMIT_SHA", "")[:12]
     or _os.environ.get("VERCEL_GIT_COMMIT_SHA", "")[:12]
     or _os.environ.get("GIT_COMMIT_SHA", "")[:12]
     or "v37+"
