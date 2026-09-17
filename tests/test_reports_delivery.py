@@ -42,8 +42,10 @@ def fake_renderer(monkeypatch):
     """
     calls = {"build": [], "render": []}
 
-    def _build(user_id, period_days=30):
-        calls["build"].append((user_id, period_days))
+    def _build(user_id, period_days=30, as_of=None):
+        # 시그니처는 services/reports/mirror_pdf.build_mirror_report 와 같아야
+        # 한다 — as_of 를 빠뜨렸다가 월간 발송 전체가 TypeError 로 죽었다.
+        calls["build"].append((user_id, period_days, as_of))
         return {"has_content": True, "user_id": user_id}
 
     def _render(data, locale="ko"):
@@ -58,7 +60,7 @@ def fake_renderer(monkeypatch):
 @pytest.fixture
 def empty_renderer(monkeypatch):
     """되비출 기록이 없는 사용자."""
-    def _build(user_id, period_days=30):
+    def _build(user_id, period_days=30, as_of=None):
         return {"has_content": False}
 
     def _render(data, locale="ko"):  # pragma: no cover - 불려선 안 된다
@@ -115,7 +117,7 @@ def test_mirror_pdf_download_returns_pdf(client, auth_user, fake_renderer):
     assert disposition.endswith('.pdf"')
     assert resp.data.startswith(b"%PDF")
     # 본인 id 로만 렌더된다.
-    assert fake_renderer["build"] == [(auth_user["id"], 30)]
+    assert fake_renderer["build"] == [(auth_user["id"], 30, None)]
 
 
 def test_mirror_pdf_filename_carries_year_month(client, auth_user, fake_renderer):
@@ -156,7 +158,7 @@ def test_mirror_pdf_ignores_user_id_parameter(client, auth_user, make_user,
 
     resp = client.get(f"/api/reports/mirror.pdf?user_id={other['id']}")
     assert resp.status_code == 200
-    assert fake_renderer["build"] == [(auth_user["id"], 30)]
+    assert fake_renderer["build"] == [(auth_user["id"], 30, None)]
 
 
 def test_mirror_pdf_is_not_publicly_cacheable(client, auth_user, fake_renderer):
@@ -330,7 +332,7 @@ def test_one_user_failure_does_not_stop_the_run(app, make_user, monkeypatch,
     for u in (good_a, bad, good_b):
         _grant(app, u["id"])
 
-    def _build(user_id, period_days=30):
+    def _build(user_id, period_days=30, as_of=None):
         if user_id == bad["id"]:
             raise RuntimeError("renderer blew up for this one user")
         return {"has_content": True, "user_id": user_id}
@@ -411,3 +413,74 @@ def test_notification_preferences_endpoint_exposes_the_event(client, auth_user):
     prefs = resp.get_json()["prefs"]
     assert "monthly_mirror" in prefs
     assert prefs["monthly_mirror"]["email"] is False
+
+
+# ── 라벨과 창이 같은 달을 가리키는가 (2026-09-17 회귀) ──────────────────────
+#
+# 발송은 달 이름으로 라벨을 붙이는데(파일명·제목) 렌더러의 기본 창은
+# "지금부터 30일 전"이라는 롤링 창이었다. 둘을 그대로 두면 31일인 달마다
+# 하루가 어긋나, 2026-10-01 에 기록한 체결이 9월 리포트(창이 닫힘)에도
+# 10월 리포트(창이 아직 안 열림)에도 들어가지 않았다. 2월은 반대로 1월의
+# 이틀을 2월에 넣고 1월과 중복 집계했다.
+
+from datetime import datetime as _dt, timedelta as _td  # noqa: E402
+
+from services.reports_delivery import (  # noqa: E402
+    calendar_month_window,
+    mirror_report_filename,
+    _to_kst,
+)
+
+
+def _fire(year: int, month: int) -> _dt:
+    """매월 1일 08:30 KST 에 도는 크론의 naive UTC 시각."""
+    return _dt(year, month, 1, 8, 30) - _td(hours=9)
+
+
+def _window_for(year: int, month: int):
+    label_ref = _fire(year, month) - _td(days=1)
+    as_of, days = calendar_month_window(label_ref)
+    return as_of - _td(days=days), as_of
+
+
+class TestCalendarMonthWindow:
+    def test_consecutive_windows_leave_no_gap_and_no_overlap(self):
+        months = [(2026, 10), (2026, 11), (2026, 12), (2027, 1), (2027, 2), (2027, 3)]
+        prev_end = None
+        for year, month in months:
+            start, end = _window_for(year, month)
+            if prev_end is not None:
+                assert start == prev_end, (
+                    f"{year}-{month:02d} window starts {start}, previous ended {prev_end}"
+                )
+            prev_end = end
+
+    def test_window_is_the_labelled_month_in_kst(self):
+        start, end = _window_for(2026, 11)  # 리포트가 덮는 달 = 2026-10
+        assert f"{_to_kst(end):%Y-%m}" == "2026-10"
+        # KST 로 10월 1일 00:00 직전에서 시작해 10월 31일 23:59:59 에 끝난다.
+        assert _to_kst(start).month == 9 and _to_kst(start).day == 30
+        assert _to_kst(end).month == 10 and _to_kst(end).day == 31
+
+    def test_a_fill_on_the_first_of_the_month_is_in_exactly_one_report(self):
+        # 이 체결이 어느 리포트에도 안 들어가던 것이 원래 결함이다.
+        fill_utc = _dt(2026, 10, 1, 10, 0) - _td(hours=9)  # 2026-10-01 10:00 KST
+        covering = [
+            (y, m) for (y, m) in [(2026, 10), (2026, 11), (2026, 12)]
+            if _window_for(y, m)[0] <= fill_utc <= _window_for(y, m)[1]
+        ]
+        assert covering == [(2026, 11)], covering
+
+    def test_february_does_not_reach_back_into_january(self):
+        start, _end = _window_for(2027, 3)  # 리포트가 덮는 달 = 2027-02
+        assert _to_kst(start).month == 1 and _to_kst(start).day == 31
+
+    def test_filename_month_follows_kst_not_utc(self):
+        # 한국 시간 10월 1일 새벽 5시 = UTC 9월 30일 20시. 파일명은 10월이어야 한다.
+        ref_utc = _dt(2026, 10, 1, 5, 0) - _td(hours=9)
+        assert mirror_report_filename(ref_utc) == "pivoxquant_mirror_2026-10.pdf"
+
+    def test_december_rolls_the_year(self):
+        start, end = _window_for(2027, 1)  # 리포트가 덮는 달 = 2026-12
+        assert f"{_to_kst(end):%Y-%m}" == "2026-12"
+        assert _to_kst(start).year == 2026 and _to_kst(start).month == 11

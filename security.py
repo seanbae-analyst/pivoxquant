@@ -547,6 +547,40 @@ def auth_rate_limit(f):
     return wrapped
 
 
+def report_render_rate_limit(f):
+    """5/minute · 20/hour, keyed on the USER — PDF render is the priciest
+    thing one request can ask this app to do.
+
+    2026-09-17: the monthly mirror report brought a WeasyPrint render back to
+    a live route (routes/reports.py). The comment above says to bring the
+    limiter back WITH the endpoint, so here it is.
+
+    Two departures from the other buckets, both deliberate:
+
+    * The key is the authenticated user, not the remote address. The route is
+      behind ``@api_auth``, and an IP-keyed bucket both punishes a shared
+      office NAT and is trivially widened by an attacker with addresses.
+    * Two windows. 5/min stops a burst; 20/hour stops a slow drip that a
+      per-minute bucket would wave through all day. Procfile runs ONE gevent
+      worker, and WeasyPrint is pure-Python CPU that gevent never yields on —
+      so a sustained render loop stalls every other user's requests.
+
+    Unauthenticated callers fall back to the address; they cannot reach the
+    route anyway, and keying on ``None`` would put them all in one bucket.
+    """
+    def _key():
+        from flask_login import current_user
+        uid = getattr(current_user, "id", None)
+        return f"user:{uid}" if uid else get_remote_address()
+
+    @wraps(f)
+    @limiter.limit("5 per minute", key_func=_key)
+    @limiter.limit("20 per hour", key_func=_key)
+    def wrapped(*args, **kwargs):
+        return f(*args, **kwargs)
+    return wrapped
+
+
 def general_rate_limit(f):
     """60 requests/minute — generic write-endpoint guard.
 

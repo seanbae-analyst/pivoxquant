@@ -11,11 +11,13 @@
 
 레이트리밋
 ==========
-PDF 렌더는 이 앱에서 한 요청이 할 수 있는 가장 비싼 일에 속한다. 다른
-라우트와 같은 ``@general_rate_limit`` 을 건다 (60/min). 더 좁은
-artefact 전용 리미터는 2026-09-01 에 소비자와 함께 security.py 에서
-지워졌고, 되살리려면 그 파일을 건드려야 하므로 여기서는 기존 데코레이터를
-그대로 쓴다.
+PDF 렌더는 이 앱에서 한 요청이 할 수 있는 가장 비싼 일에 속한다. 그래서
+``@report_render_rate_limit`` — **유저 단위** 5/min · 20/hour 다. 일반
+60/min 은 두 가지로 모자랐다: 키가 IP 라 공유 NAT 을 벌주면서 주소를
+바꿀 수 있는 공격자는 그만큼 곱하기였고, Procfile 이 gevent 워커 하나라
+순수 파이썬 CPU 인 WeasyPrint 렌더가 도는 동안 **다른 모든 유저의 요청이
+멈춘다**. 2026-09-01 에 소비자와 함께 지워졌던 artefact 전용 리미터를
+"엔드포인트와 함께 되살리라"던 security.py 의 주석대로 되살린 것이다.
 
 응답 계약
 =========
@@ -39,7 +41,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, Response
 from flask_login import current_user
 
-from security import general_rate_limit
+from security import report_render_rate_limit
 from services.error_responses import api_error
 from services.reports_delivery import build_mirror_pdf, mirror_report_filename
 
@@ -52,7 +54,7 @@ reports_bp = Blueprint("reports", __name__, url_prefix="/api/reports")
 
 @reports_bp.route("/mirror.pdf", methods=["GET"])
 @api_auth
-@general_rate_limit
+@report_render_rate_limit
 @legal_scrub_response
 def mirror_pdf():
     """본인의 월간 거울 리포트를 PDF 로 내려준다."""

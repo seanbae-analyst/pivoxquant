@@ -94,8 +94,13 @@ class RendererUnavailable(RuntimeError):
 #: ``models.user.NOTIFICATION_EVENT_IDS`` 의 이 리포트용 id.
 REPORT_EVENT_ID = "monthly_mirror"
 
-#: 렌더러에 넘기는 관찰 창. 9차원 관찰 페르소나와 같은 30일.
+#: 온디맨드 다운로드의 관찰 창. 9차원 관찰 페르소나와 같은 30일.
+#: 월간 발송은 이 값을 쓰지 않고 달력 달 자체를 창으로 쓴다 — 아래
+#: ``calendar_month_window`` 참조.
 REPORT_PERIOD_DAYS = 30
+
+#: 한국 표준시. 발송도 파일명도 유저가 사는 시간대를 기준으로 삼는다.
+KST = timezone(timedelta(hours=9))
 
 #: 발신 주소 env 오버라이드 (다른 artefact 메일러와 같은 관례).
 FROM_ENV_VAR = "MONTHLY_MIRROR_FROM_EMAIL"
@@ -104,16 +109,57 @@ FROM_DEFAULT = "reports@pivoxquant.com"
 
 # ── 파일명 ──────────────────────────────────────────────────────────────────
 
+def _to_kst(naive_utc: datetime) -> datetime:
+    """naive UTC → naive KST. 저장은 UTC, 사람이 읽는 것은 KST 다."""
+    return naive_utc.replace(tzinfo=timezone.utc).astimezone(KST).replace(tzinfo=None)
+
+
+def _to_utc(naive_kst: datetime) -> datetime:
+    """naive KST → naive UTC (``TradeHistory.traded_at`` 과 같은 눈금)."""
+    return naive_kst.replace(tzinfo=KST).astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def mirror_report_filename(ref: datetime | None = None) -> str:
     """``pivoxquant_mirror_<yyyy-mm>.pdf``.
 
-    ``ref`` 는 파일명에 박힐 달을 고르는 기준 시각이다. 온디맨드
-    다운로드는 "지금"을 넘기고(= 이번 달), 크론은 발송일 하루 전을
-    넘긴다 — 매월 1일 아침에 도는 잡이라 하루를 빼면 리포트가 실제로
+    ``ref`` 는 naive UTC 이고, 달은 **KST 로 환산한 뒤** 고른다. 그러지
+    않으면 한국 시간 10월 1일 새벽 5시(= UTC 9월 30일 20시)에 받은
+    파일이 9월로 이름 붙는다.
+
+    온디맨드 다운로드는 "지금"을 넘기고(= 이번 달), 크론은 발송일 하루
+    전을 넘긴다 — 매월 1일 아침에 도는 잡이라 하루를 빼면 리포트가 실제로
     덮는 지난달이 된다. 두 경로가 같은 함수를 쓰므로 규칙은 하나다.
     """
     ref = ref or datetime.now(timezone.utc).replace(tzinfo=None)
-    return f"pivoxquant_mirror_{ref:%Y-%m}.pdf"
+    return f"pivoxquant_mirror_{_to_kst(ref):%Y-%m}.pdf"
+
+
+def calendar_month_window(label_ref: datetime) -> tuple[datetime, int]:
+    """``label_ref`` 가 가리키는 **달력 달**을 창으로 돌려준다.
+
+    ``(as_of_utc, period_days)`` — 렌더러의 창은 ``as_of - period_days``
+    에서 시작하므로, 이 둘을 넘기면 창이 그 달의 KST 경계와 정확히
+    맞는다.
+
+    ⚠️ 이 함수가 있는 이유: 발송은 달 이름으로 라벨을 붙이는데(파일명
+    ``2026-10``, 제목 "· 2026-10") 렌더러 기본값은 "지금부터 30일 전"
+    이라는 롤링 창이다. 둘을 그대로 두면 31일인 달마다 하루가 어긋난다 —
+    2026-10-01 10:00 KST 에 기록한 체결은 9월 리포트의 창이 닫힌 뒤이고
+    10월 리포트의 창이 열리기 전이라 **어느 리포트에도 들어가지 않는다**.
+    2월은 반대로 1월의 이틀을 2월 리포트에 넣고 1월 리포트와 중복
+    집계한다. 달 이름을 붙일 거면 창도 달이어야 한다.
+    """
+    kst = _to_kst(label_ref)
+    month_start_kst = kst.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # 다음 달 1일 00:00 KST 에서 1초를 빼 그 달의 마지막 순간으로 만든다.
+    # 경계에 정확히 걸친 체결이 두 달에 중복으로 세지지 않게 하려는 것.
+    if month_start_kst.month == 12:
+        next_month_kst = month_start_kst.replace(year=month_start_kst.year + 1, month=1)
+    else:
+        next_month_kst = month_start_kst.replace(month=month_start_kst.month + 1)
+    month_end_kst = next_month_kst - timedelta(seconds=1)
+    period_days = (next_month_kst - month_start_kst).days
+    return _to_utc(month_end_kst), period_days
 
 
 # ── 렌더 ────────────────────────────────────────────────────────────────────
@@ -123,6 +169,7 @@ def build_mirror_pdf(
     *,
     locale: str = "ko",
     period_days: int = REPORT_PERIOD_DAYS,
+    as_of: datetime | None = None,
 ) -> tuple[dict, bytes] | None:
     """``(data, pdf_bytes)`` 를 돌려준다. 되비출 기록이 없으면 ``None``.
 
@@ -135,7 +182,7 @@ def build_mirror_pdf(
             "cannot build the monthly mirror report"
         )
 
-    data = build_mirror_report(user_id, period_days=period_days)
+    data = build_mirror_report(user_id, period_days=period_days, as_of=as_of)
     if not isinstance(data, dict) or not data.get("has_content"):
         return None
 
@@ -277,15 +324,21 @@ def send_report_to_user(user: Any, *, now: datetime | None = None) -> str:
         return RESULT_SKIPPED_CONSENT
 
     locale = (getattr(user, "locale", "") or "ko").lower()
-    built = build_mirror_pdf(user.id, locale=locale)
+
+    # 1일 아침에 도는 잡이므로 하루를 빼면 리포트가 덮는 지난달이 된다.
+    # 라벨과 창은 반드시 같은 달이어야 한다 — 라벨만 달 이름이고 창은
+    # 롤링 30일이면 31일인 달마다 하루가 어느 리포트에도 안 들어간다.
+    label_ref = now - timedelta(days=1)
+    as_of, period_days = calendar_month_window(label_ref)
+    filename = mirror_report_filename(label_ref)
+    period_label = f"{_to_kst(label_ref):%Y-%m}"
+
+    built = build_mirror_pdf(
+        user.id, locale=locale, period_days=period_days, as_of=as_of
+    )
     if built is None:
         return RESULT_SKIPPED_EMPTY
     _data, pdf_bytes = built
-
-    # 1일 아침에 도는 잡이므로 하루를 빼면 리포트가 덮는 지난달이 된다.
-    label_ref = now - timedelta(days=1)
-    filename = mirror_report_filename(label_ref)
-    period_label = f"{label_ref:%Y-%m}"
 
     subject, html_body = compose_email(user, period_label=period_label)
     assert_legal_safe(subject, "reports_delivery/subject")

@@ -260,7 +260,9 @@ _LABELS: dict[str, dict[str, Any]] = {
         "th_ticker": "종목",
         "none_followon": "이 기간에 이미 보유한 종목을 다시 취득한 기록이 없다.",
         "s_closed": "기간 안에서 닫힌 거래",
-        "s_closed_lede": "취득과 처분이 선입선출로 맞물린 거래다. 수익률은 기록된 체결가로만 계산한다.",
+        "s_closed_lede": "취득과 처분이 선입선출로 맞물린 거래다. 보유일은 맞물린 두 체결의 날짜 차이이고, "
+                          "수익률은 처분 시점에 기록해 둔 손익률 — 그 포지션 전체의 평균 취득가 기준이라 "
+                          "맞물린 한 쌍의 두 단가만으로는 다시 계산되지 않는다.",
         "k_gain_side": "이익을 실현한 처분",
         "k_loss_side": "손실을 실현한 처분",
         "k_count": "건수",
@@ -271,7 +273,9 @@ _LABELS: dict[str, dict[str, Any]] = {
         "one_sided": "이 기간에는 한쪽 처분만 있었다. 반대쪽은 기록이 없었다는 사실만 적는다.",
         "none_closed": "이 기간에 취득과 처분이 맞물려 닫힌 거래가 없다.",
         "s_concentration": "생성 시점의 보유 집중",
-        "s_concentration_lede": "리포트를 만든 시점의 보유분이다. 기간과 무관하고, 시장가가 아니라 평균매입가로 잰다.",
+        "s_concentration_lede": "리포트를 만든 시점의 보유분이다. 기간과 무관하고, 시장가가 아니라 평균매입가로 잰다. "
+                                "비중을 내려면 한 통화로 모아야 하므로, 달러 보유분은 취득 당시 환율로 원화로 "
+                                "바꿔 계산한다.",
         "k_symbols": "보유 종목 수",
         "k_max_weight": "가장 큰 종목의 비중",
         "k_largest": "가장 큰 종목",
@@ -280,7 +284,9 @@ _LABELS: dict[str, dict[str, Any]] = {
         "limits": [
             "이 리포트는 직접 기록한 체결만 읽는다. 기록하지 않은 거래는 처음부터 없는 것으로 집계된다.",
             "금액은 기록된 체결가 × 수량이다. 외부 시세도, 오늘의 평가액도 쓰지 않는다.",
-            "통화가 다른 금액은 합치지 않는다. 원화와 달러는 끝까지 따로 적는다.",
+            "체결 표의 거래대금은 통화별로 따로 적고 합치지 않는다. 다만 아래 집중도는 비중을 내기 위해 "
+            "달러 보유분을 취득 당시 환율로 원화로 바꿔 한 분모에 넣는다 — 이 리포트에서 환율이 쓰이는 "
+            "유일한 곳이다.",
             "기간 밖의 기록은 이 숫자에 들어가지 않는다. 기간 전에 취득한 종목을 기간 안에 다시 취득했다면 "
             "'추가 취득' 으로 세지 않고, 기간 전에 취득한 종목을 기간 안에 처분했다면 닫힌 거래로 세지 않는다.",
             "집중도는 생성 시점 보유분을 평균매입가로 잰 것이다. 시장가도 아니고 기간과도 무관하다.",
@@ -323,8 +329,10 @@ _LABELS: dict[str, dict[str, Any]] = {
         "th_ticker": "Symbol",
         "none_followon": "No position you already had was acquired again in this period.",
         "s_closed": "Round trips closed inside the period",
-        "s_closed_lede": "Acquisitions matched to disposals first-in-first-out. Returns come from recorded "
-                         "fill prices only.",
+        "s_closed_lede": "Acquisitions matched to disposals first-in-first-out. The days carried are the gap "
+                         "between the two matched fills; the return is the one recorded at the disposal, "
+                         "measured against that position's average cost, so it does not recompute from the "
+                         "two prices in the pair.",
         "k_gain_side": "Disposals that realised a gain",
         "k_loss_side": "Disposals that realised a loss",
         "k_count": "Count",
@@ -336,7 +344,9 @@ _LABELS: dict[str, dict[str, Any]] = {
         "none_closed": "No acquisition was matched to a disposal inside this period.",
         "s_concentration": "Concentration at the time of writing",
         "s_concentration_lede": "Positions as of the moment this report was made — independent of the period, "
-                                "measured at average cost rather than market price.",
+                                "measured at average cost rather than market price. To express a share of the "
+                                "book, dollar positions are converted to won at the rate recorded when they "
+                                "were acquired.",
         "k_symbols": "Symbols carried",
         "k_max_weight": "Largest symbol's share",
         "k_largest": "Largest symbol",
@@ -345,7 +355,9 @@ _LABELS: dict[str, dict[str, Any]] = {
         "limits": [
             "This report reads only the fills you recorded yourself. A trade never entered never happened here.",
             "Values are recorded price x quantity. No external quote and no present-day valuation is used.",
-            "Amounts in different currencies are never summed. Won and dollars stay on separate lines throughout.",
+            "In the fills table, turnover is listed per currency and never summed. The concentration section "
+            "below is the one exception: to express a share of the book it converts dollar positions to won "
+            "at the rate recorded when they were acquired.",
             "Records outside the period are not in these figures. A position acquired before the period and "
             "acquired again inside it is not counted as a follow-on, and one acquired before the period and "
             "disposed of inside it is not counted as a closed round trip.",
