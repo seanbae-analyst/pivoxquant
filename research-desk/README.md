@@ -5,7 +5,7 @@ PivoxQuant 와는 독립된 프로젝트다. 이 폴더만 떼어 새 저장소�
 
 ## 분야 (도메인 팩)
 
-분야는 `src/lib/research/domains/` 의 팩 하나로 정의된다. 팩 = 리서치 유형 목록(유형마다 이슈 트리 틀 + 노트 본문 틀) + 출처 위계 + 신뢰도 기준 + 시사점 절. 기본 분야는 `NEXT_PUBLIC_RESEARCH_DOMAIN` (기본 `data`), 화면 탭으로 언제든 바꿀 수 있다.
+분야는 `src/lib/research/domains/` 의 팩 하나로 정의된다. 팩 = 리서치 유형 목록(유형마다 이슈 트리 틀 + 노트 본문 틀) + 출처 위계 + 신뢰도 기준 + 시사점 절. 노출할 분야는 `NEXT_PUBLIC_RESEARCH_DOMAINS` (쉼표 구분, 예 `data` 면 데이터 전용 사이트), 기본 분야는 `NEXT_PUBLIC_RESEARCH_DOMAIN` (비면 첫 번째). 둘 이상 노출되면 화면에 탭이 생긴다.
 
 ### 데이터 (`data`, 기본)
 
