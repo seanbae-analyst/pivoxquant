@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { AREAS, CONCEPTS, conceptBySlug, conceptsInArea, edges } from "@/lib/concepts/concepts";
+import { STAGE_BG, Stage } from "./stage";
 import { AREA_TINT, C, labelStyle, prefersReducedMotion } from "./theme";
 
 const R = 11;
@@ -87,18 +88,20 @@ function Node({
           document.body.style.cursor = "";
         }}
       >
-        <icosahedronGeometry args={[0.72, 0]} />
+        <icosahedronGeometry args={[0.74, 0]} />
         <meshStandardMaterial
-          color={focus ? C.accent : tint}
-          emissive={focus ? C.accent : tint}
-          emissiveIntensity={focus ? 1.1 : linked ? 0.5 : 0.22}
-          roughness={0.35}
-          metalness={0.5}
+          color={tint}
+          emissive={tint}
+          emissiveIntensity={focus ? 2.2 : linked ? 0.95 : 0.42}
+          roughness={0.22}
+          metalness={0.85}
           flatShading
         />
       </mesh>
-      <Html position={[0, -1.25, 0]} center distanceFactor={16} zIndexRange={[20, 0]} style={labelStyle}>
-        <span ref={label} style={{ fontSize: 13, color: focus ? C.accent : C.ink, fontWeight: focus ? 600 : 400 }}>
+      {/* distanceFactor 를 쓰면 가까운 이름은 거대해지고 먼 이름은 못 읽는다.
+          크기는 화면 기준으로 고정하고, 깊이는 위 useFrame 의 투명도로만 말한다. */}
+      <Html position={[0, -1.35, 0]} center zIndexRange={[20, 0]} style={labelStyle}>
+        <span ref={label} style={{ fontSize: 12.5, whiteSpace: "nowrap", color: focus ? C.accentBright : "#efe7d9", fontWeight: focus ? 600 : 400, textShadow: "0 1px 6px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.9)" }}>
           {name}
         </span>
       </Html>
@@ -131,33 +134,25 @@ function Scene({ focus, hover, setHover }: { focus?: string; hover: string | nul
   });
 
   return (
-    <>
-      <color attach="background" args={[C.bg]} />
-      <fog attach="fog" args={[C.bg, 26, 62]} />
-      <ambientLight intensity={0.95} />
-      <directionalLight position={[8, 14, 12]} intensity={0.9} color={C.ink} />
-      <pointLight position={[0, 0, 0]} intensity={140} distance={34} color={C.accent} />
-      <pointLight position={[0, 10, 22]} intensity={90} distance={50} color={C.ink} />
+    <Stage bloom={1.35}>
+      <pointLight position={[0, 0, 0]} intensity={90} distance={30} color={C.accent} />
       <group ref={group}>
         {[R, R + 2.1].map((r) => (
           <mesh key={r} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[r, 0.012, 6, 128]} />
-            <meshBasicMaterial color="#39332c" toneMapped={false} />
+            <torusGeometry args={[r, 0.015, 8, 160]} />
+            <meshBasicMaterial color="#584936" toneMapped={false} />
           </mesh>
         ))}
         {curves.map((e) => {
           const on = !!activeC && (e.a === activeC.slug || e.b === activeC.slug);
           return (
             <mesh key={e.key}>
-              <tubeGeometry args={[e.curve, 36, on ? 0.055 : 0.026, 6, false]} />
-              <meshStandardMaterial
-                color={on ? C.accent : "#4a4238"}
-                emissive={on ? C.accent : "#000000"}
-                emissiveIntensity={on ? 1.3 : 0}
-                transparent
-                opacity={on ? 1 : 0.75}
-                toneMapped={false}
-              />
+              <tubeGeometry args={[e.curve, 40, on ? 0.05 : 0.02, 7, false]} />
+              {on ? (
+                <meshBasicMaterial color={C.accentBright} toneMapped={false} />
+              ) : (
+                <meshStandardMaterial color="#463e34" roughness={0.9} metalness={0.1} transparent opacity={0.7} />
+              )}
             </mesh>
           );
         })}
@@ -174,8 +169,8 @@ function Scene({ focus, hover, setHover }: { focus?: string; hover: string | nul
           />
         ))}
       </group>
-      <OrbitControls enablePan={false} enableDamping dampingFactor={0.08} minDistance={18} maxDistance={44} minPolarAngle={Math.PI * 0.18} maxPolarAngle={Math.PI * 0.7} />
-    </>
+      <OrbitControls enablePan={false} enableDamping dampingFactor={0.08} minDistance={22} maxDistance={48} minPolarAngle={Math.PI * 0.18} maxPolarAngle={Math.PI * 0.7} />
+    </Stage>
   );
 }
 
@@ -187,8 +182,8 @@ export function Galaxy3D({ focus }: { focus?: string }) {
 
   return (
     <div>
-      <div className="overflow-hidden rounded-lg border border-line" style={{ height: 520 }} aria-label="3D 개념 별자리 장면">
-        <Canvas dpr={[1, 1.8]} camera={{ position: [0, 6.5, 26], fov: 40 }} gl={{ antialias: true }}>
+      <div className="overflow-hidden rounded-xl border border-line" style={{ height: 540, background: STAGE_BG }} aria-label="3D 개념 별자리 장면">
+        <Canvas dpr={[1, 1.8]} camera={{ position: [0, 6.2, 29], fov: 40 }} gl={{ antialias: false, alpha: true }}>
           <Scene focus={focus} hover={hover} setHover={setHover} />
         </Canvas>
       </div>

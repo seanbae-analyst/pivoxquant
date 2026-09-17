@@ -7,7 +7,10 @@ export const C = {
   dim: "#9a9186",
   faint: "#5f584f",
   accent: "#c99a5b",
+  accentBright: "#f0b874",
   accentDim: "#7a5c33",
+  surface: "#1c1813",
+  surfaceHi: "#2a231b",
   ok: "#7fb069",
   bad: "#d1654f",
   open: "#b5a26b",
@@ -18,12 +21,12 @@ export const C = {
  * 색이 낫다 (이름표는 3D 에서 서로 겹친다). 전부 따뜻한 중성 계열로 묶어 톤을 지킨다.
  */
 export const AREA_TINT: Record<string, string> = {
-  storage: "#a98c6b",
-  metadata: "#c9a86b",
-  quality: "#8fa08a",
-  governance: "#c98a6b",
-  ai: "#d4b483",
-  org: "#9b8f9e",
+  storage: "#e0a45c",
+  metadata: "#ecc86a",
+  quality: "#6fc6a0",
+  governance: "#e8886a",
+  ai: "#f3dcae",
+  org: "#a596e0",
 };
 
 /** 라벨 DOM 공통 스타일 — 3D 안의 텍스트는 Html 로 그려서 한글이 또렷하게 남는다. */
