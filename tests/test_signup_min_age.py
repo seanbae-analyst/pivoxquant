@@ -218,6 +218,13 @@ class TestRegisterMinAge:
 
 # ── /oauth-finalize endpoint ───────────────────────────────────────────────
 
+# 2026-09-17 P1 — /api/auth/oauth-finalize 는 생년월일과 함께 법정 필수 동의
+# 3종을 받는다. 동의 게이트 자체의 회귀 테스트는
+# ``tests/test_oauth_finalize_consents.py`` 가 소유하고, 이 파일은 연령
+# 검증만 본다 — 그래서 여기서는 동의를 항상 채워 보낸다.
+_CONSENTS = {"terms": True, "non_advisory": True, "cross_border": True}
+
+
 class TestOAuthFinalize:
     """Exercise the interstitial that captures birthdate after OAuth.
 
@@ -250,6 +257,7 @@ class TestOAuthFinalize:
     def test_finalize_without_login_returns_401(self, client):
         r = client.post("/api/auth/oauth-finalize", json={
             "birthdate": _years_ago(20),
+            "consents": _CONSENTS,
         })
         # ``@api_auth`` returns 401 for unauthenticated requests.
         assert r.status_code == 401
@@ -259,6 +267,7 @@ class TestOAuthFinalize:
         self._login_as(client, app, uid)
         r = client.post("/api/auth/oauth-finalize", json={
             "birthdate": _years_ago(13),
+            "consents": _CONSENTS,
         })
         assert r.status_code == 400
         assert r.get_json()["error"] == "below_min_age"
@@ -275,6 +284,7 @@ class TestOAuthFinalize:
         self._login_as(client, app, uid)
         r = client.post("/api/auth/oauth-finalize", json={
             "birthdate": _years_ago(14),
+            "consents": _CONSENTS,
         })
         assert r.status_code == 200
         data = r.get_json()
@@ -287,7 +297,9 @@ class TestOAuthFinalize:
     def test_finalize_missing_birthdate_returns_400(self, client, app):
         uid = self._make_oauth_user(app, email="missing-finalize@test.com")
         self._login_as(client, app, uid)
-        r = client.post("/api/auth/oauth-finalize", json={})
+        r = client.post("/api/auth/oauth-finalize", json={
+            "consents": _CONSENTS,
+        })
         assert r.status_code == 400
         assert r.get_json()["error"] == "birthdate_required"
 
@@ -305,6 +317,7 @@ class TestOAuthFinalize:
         self._login_as(client, app, uid)
         r = client.post("/api/auth/oauth-finalize", json={
             "birthdate": _years_ago(14),  # different from the seeded 2000-01-01
+            "consents": _CONSENTS,
         })
         assert r.status_code == 409
         assert r.get_json()["error"] == "birthdate_already_set"
@@ -317,6 +330,7 @@ class TestOAuthFinalize:
         self._login_as(client, app, uid)
         r = client.post("/api/auth/oauth-finalize", json={
             "birthdate": "2000-01-01",
+            "consents": _CONSENTS,
         })
         assert r.status_code == 200
         assert r.get_json()["ok"] is True

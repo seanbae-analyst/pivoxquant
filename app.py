@@ -50,6 +50,42 @@ _SENSITIVE_ENV_KEYS = frozenset({
     "HTTP_X_CSRF_TOKEN", "HTTP_X_API_KEY",
 })
 
+# Request-body fields the SDK must not ship.
+#
+# 2026-09-17: sentry-sdk puts multipart form fields into
+# event["request"]["data"] regardless of send_default_pii=False, and its
+# built-in EventScrubber matches key names EXACTLY — "password" is filtered,
+# "pdf_password" is not. A security probe measured the leak with the real SDK:
+# a sub-10KB multipart body (the "medium" max_request_body_size threshold)
+# shipped {"pdf_password": "900131"} verbatim. Brokers lock the statement PDF
+# with the holder's 6-digit birth date, which is the same value PIPA §22 ⑥
+# age verification rests on — so this was sensitive personal data leaving the
+# country in plaintext. Matching is on the lower-cased key and also catches
+# any key ENDING in one of these, so a future "user_password" is covered.
+_SENSITIVE_BODY_KEYS = frozenset({
+    "pdf_password", "password", "passwd", "secret", "token",
+    "app_key", "appsecret", "api_key", "client_secret",
+})
+
+
+def _mask_body(data) -> None:
+    """In-place: redact sensitive request-body fields.
+
+    Walks nested dicts and lists because a JSON body can nest (the import
+    webhook posts ``{"rows": [...]}``). Leaves values that are not strings
+    alone — the point is the field name, not the shape.
+    """
+    if isinstance(data, dict):
+        for key in list(data.keys()):
+            low = str(key).lower()
+            if any(low == s or low.endswith("_" + s) for s in _SENSITIVE_BODY_KEYS):
+                data[key] = "[Filtered]"
+            else:
+                _mask_body(data[key])
+    elif isinstance(data, list):
+        for item in data:
+            _mask_body(item)
+
 
 def _mask_headers(headers: dict) -> None:
     """In-place: redact any sensitive header value to '***'.
@@ -71,6 +107,9 @@ def _sentry_filter(event, hint):
         env = event["request"].get("env", {})
         for key in _SENSITIVE_ENV_KEYS:
             env.pop(key, None)
+        # …and from the body. See _SENSITIVE_BODY_KEYS for why the SDK's own
+        # scrubber is not enough.
+        _mask_body(event["request"].get("data"))
 
     # Noise filtering — suppress noisy non-actionable errors
     msg = str(event.get("logentry", {}).get("message", "")) + str(hint.get("log_record", {}) if hint else "")

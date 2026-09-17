@@ -25,14 +25,32 @@ NOTIFICATION_CHANNELS: tuple[str, ...] = ("email", "push", "inapp")
 # These two are the notifications this product actually sends. Stale keys left
 # in a user's stored ``notification_prefs`` JSON are simply ignored by
 # ``notification_channel_enabled`` below, so no migration is required.
+# 2026-09-17: ``monthly_mirror`` joined the two alert sweeps. It is added
+# together with its producer — the monthly APScheduler job
+# ``ops_monthly_mirror_report`` (services/scheduler/cron_jobs.py) which calls
+# ``services.reports_delivery.main`` on the 1st of each month. The "되살리려면
+# 발신자부터" rule is satisfied: the sender ships in the same change.
 NOTIFICATION_EVENT_IDS: tuple[str, ...] = (
     "price_52w",
     "concentration",
+    "monthly_mirror",
 )
 
+# ``monthly_mirror`` channel defaults, and why they differ from the two
+# sweeps above:
+#   * email = False — this one is an explicit opt-in. It attaches a PDF built
+#     from the user's own record and arrives unprompted once a month; nobody
+#     gets it because we decided they would like it.
+#   * push / inapp = False — the two sweeps default those channels on because
+#     they HAVE push/in-app producers (services/alert.py maps their alert
+#     kinds onto these event ids). The monthly report has exactly one
+#     producer, the email cron. Defaulting a channel on with nothing behind it
+#     re-creates the dead toggles that the 2026-09-01 prune removed. Flip
+#     either to True in the same change that ships its sender, not before.
 NOTIFICATION_PREF_DEFAULTS: dict[str, dict[str, bool]] = {
-    "price_52w":     {"email": False, "push": True,  "inapp": True},
-    "concentration": {"email": True,  "push": True,  "inapp": True},
+    "price_52w":      {"email": False, "push": True,  "inapp": True},
+    "concentration":  {"email": True,  "push": True,  "inapp": True},
+    "monthly_mirror": {"email": False, "push": False, "inapp": False},
 }
 
 

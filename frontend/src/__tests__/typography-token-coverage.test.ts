@@ -121,15 +121,21 @@ const PHASE3_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     cap: 0,
     reason: "1×15 + 1×16 migrated → --pq-text-lead/h6; no others remain (only PHASE2 caps)",
   },
-  {
-    path: "app/(auth)/signup/page.tsx",
-    cap: 8,
-    reason: "2×13 migrated → --pq-text-button; 8 unrelated literals remain (12/14)",
-  },
+  // app/(auth)/signup/page.tsx — 2026-09-17 제외.
+  //   /login 과 /signup 이 하나의 `AuthEntryPage` 로 통합되면서 이 파일은
+  //   `import AuthEntryPage from "../login/page"` 만 하는 34행 재수출이 됐다.
+  //   인라인 스타일이 0줄이므로 "v3 토큰을 최소 1회 쓴다"는 sanity 체크가
+  //   구조적으로 성립하지 않는다(cap 체크는 여전히 0으로 통과한다).
+  //   체크의 의도 — /signup 이 그리는 타이포그래피가 토큰을 쓰도록 강제하는 것
+  //   — 은 바로 아래 login/page.tsx 항목이 그대로 이어받는다. 같은 컴포넌트를
+  //   렌더하므로 커버리지 손실은 없다. 동의 스택이 옮겨간
+  //   signup/oauth-finalize/page.tsx 는 PHASE7_FILES 에서 계속 검사된다.
   {
     path: "app/(auth)/login/page.tsx",
     cap: 3,
-    reason: "1×13 + 1×16 migrated → --pq-text-button/h6; 3 unrelated literals remain (12/14)",
+    reason:
+      "1×13 + 1×16 migrated → --pq-text-button/h6; 3 unrelated literals remain (12/14). " +
+      "2026-09-17: /signup 도 이 파일을 렌더한다 (통합 auth entry)",
   },
 ];
 
@@ -222,7 +228,9 @@ makeCapAssertion(
  *   - app/opengraph-image.tsx (4)   Next ImageResponse — edge runtime, no var resolution
  *   - app/global-error.tsx (6)      root error boundary — runs without document tokens
  *   - components/mirror/mirror-headline.tsx (1)      1.9rem rem-relative headline
- *   - app/(auth)/signup/page.tsx (1)          0.85em em-relative inline note
+ *   - components/auth/v2/consent-stack.tsx (1)       0.85em em-relative inline note
+ *     (2026-09-17: moved out of app/(auth)/signup/page.tsx with the consent
+ *      stack — same single literal, new home; treewide count unchanged)
  *   - components/ui/editorial.tsx (1)                JSDoc comment example
  *
  * The treewide cap below pins these counts. Any new file that introduces

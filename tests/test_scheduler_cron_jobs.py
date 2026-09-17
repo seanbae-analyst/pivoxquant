@@ -85,11 +85,16 @@ EXPECTED_JOB_IDS = {
     # + git log 1주 + SHIP_BLOCKERS RELEASE-BLOCKER 인용 → weekly_packet_<date>.md
     # (일요일 21:00 KST).
     "ops_lawyer_packet_weekly",
+    # 월간 거울 리포트 (2026-09-17) — 매월 1일 08:30 KST.
+    # services.reports_delivery.main() → 알림 설정 opt-in + 정보성 동의가
+    # 있는 사용자에게 지난 30일 기록 PDF 발송.
+    "ops_monthly_mirror_report",
 }
 # 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) + 1 (viral) + 1 (marketing)
 # + 1 (T9 launch audit) + 1 (T10 data integrity) + 1 (T11 lawyer packet) = 31,
-# minus ops_caus_daily_sweep (CAUS retired 2026-09-01 — CLAUDE.md 함정 §7) = 30
-EXPECTED_JOB_COUNT = 30
+# minus ops_caus_daily_sweep (CAUS retired 2026-09-01 — CLAUDE.md 함정 §7) = 30,
+# plus 1 (월간 거울 리포트, 2026-09-17) = 31
+EXPECTED_JOB_COUNT = 31
 
 
 @pytest.fixture
@@ -204,6 +209,8 @@ EXPECTED_TRIGGER_FIELDS = {
     "ops_data_integrity_sweep": {"hour": "4", "minute": "0"},
     # Lawyer packet weekly — 일요일 21:00 KST
     "ops_lawyer_packet_weekly": {"day_of_week": "sun", "hour": "21", "minute": "0"},
+    # 월간 거울 리포트 — 매월 1일 08:30 KST
+    "ops_monthly_mirror_report": {"day": "1", "hour": "8", "minute": "30"},
 }
 
 

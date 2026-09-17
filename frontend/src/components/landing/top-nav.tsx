@@ -364,8 +364,12 @@ export default function TopNav() {
               >
                 {user ? (user.name?.trim() ? user.name : t("landing.topNav.goToDesk")) : t("landing.topNav.loginLink")}
               </Link>
+              {/* Same destination as the "로그인" link above — /login and
+                  /signup are one screen (CEO 2026-09-17). The two controls
+                  stay because they read differently (returning vs. first
+                  visit), but they can no longer land on different copy. */}
               <Link
-                href={user ? "/mirror" : "/signup"}
+                href={user ? "/mirror" : "/login"}
                 className="group relative inline-flex items-center gap-2 overflow-hidden rounded-sm px-4 font-serif text-pq-body transition-transform duration-200 active:scale-[0.98]"
                 style={{
                   // WCAG 2.5.5 AA — 44x44 minimum tap target. Was 36 (failed

@@ -1,0 +1,299 @@
+{#
+  월간 거울 리포트 — 인쇄용 한 장.
+
+  톤과 CSS 접근은 services/toss/html_report.py (같은 거울 함수들로 그리는
+  statement 스타일)에서 가져왔다. 다만 저쪽은 화면용 Vantablack 바탕이고
+  이쪽은 인쇄용이라 팔레트를 뒤집었다: 흰 종이 + 검정 본문 + bronze 강조.
+  raw hex 는 아래 :root 안에만 있고 코드에는 한 글자도 흩뿌리지 않는다.
+
+  어휘 규칙: 지시로 읽힐 수 있는 낱말(매수/매도/추천/조언/익절/손절,  legal-ok
+  buy/sell/hold/advice)은 쓰지 않는다. 사실 명사 취득/처분만 쓴다.
+  services/legal/forbidden_terms.py 의 FORBIDDEN_DIRECTIVE_TERMS 를 통째로
+  통과해야 한다 (tests/test_mirror_report_pdf.py 가 렌더 결과로 검사한다).
+
+  면책 문구는 services/legal/disclaimers.py SoT 에서 환경 전역으로 주입된다
+  (disclaimer_mirror / disclaimer_artifact). 여기서 문구를 짓지 않는다.
+#}
+{% set turnover = d.get('turnover') or {} %}
+{% set followon = d.get('averaging_down') or {} %}
+{% set closed = d.get('profit_loss') or {} %}
+{% set conc = d.get('concentration') or {} %}
+{% set gain = closed.get('take_profit') or {} %}
+{% set loss = closed.get('stop_loss') or {} %}
+<!DOCTYPE html>
+<html lang="{{ L.lang }}">
+<head>
+<meta charset="utf-8">
+<title>{{ L.title }}</title>
+<style>
+  :root {
+    --paper: #FFFFFF;
+    --ink: #111111;
+    --ink-soft: #3A3A3A;
+    --ink-dim: #6B6B6B;
+    --bronze: #8A6A3C;
+    --bronze-soft: #B8956A;
+    --rule: #D9D4CC;
+    --rule-soft: #ECE8E1;
+    --wash: #FAF8F4;
+    --display: "Playfair Display", "Source Serif 4", Georgia, "Apple SD Gothic Neo", "Noto Serif KR", serif;
+    --serif: "Source Serif 4", Georgia, "Apple SD Gothic Neo", "Noto Serif KR", serif;
+    --sans: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  @page {
+    size: A4;
+    margin: 17mm 15mm 16mm;
+    @bottom-center {
+      content: "{{ L.page }} " counter(page) " / " counter(pages);
+      font-family: var(--mono);
+      font-size: 8pt;
+      color: var(--ink-dim);
+    }
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 9.5pt;
+    line-height: 1.6;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 7.5pt;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--bronze);
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: 24pt;
+    line-height: 1.15;
+    margin: 4mm 0 2mm;
+  }
+  .subtitle { font-family: var(--serif); color: var(--ink-soft); font-size: 10pt; margin: 0 0 3mm; }
+  .meta {
+    font-family: var(--mono);
+    font-size: 8pt;
+    color: var(--ink-dim);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 2mm 0;
+  }
+  .meta span + span { margin-left: 6mm; }
+  .topnotice {
+    font-family: var(--serif);
+    font-size: 8.5pt;
+    color: var(--ink-soft);
+    border-left: 2px solid var(--bronze);
+    background: var(--wash);
+    padding: 2mm 3mm;
+    margin: 3mm 0 0;
+  }
+  section { padding-top: 6mm; margin-top: 6mm; border-top: 1px solid var(--rule); break-inside: avoid; }
+  h2 { font-family: var(--display); font-weight: 400; font-size: 14pt; margin: 0 0 1mm; }
+  .lede { font-family: var(--serif); color: var(--ink-soft); font-size: 9pt; margin: 0 0 3mm; max-width: 62ch; }
+  .none { font-family: var(--serif); color: var(--ink-dim); font-size: 9pt; margin: 0; }
+  .tiles { display: table; width: 100%; border-collapse: collapse; margin-bottom: 3mm; }
+  .tile { display: table-cell; width: 25%; border: 1px solid var(--rule-soft); padding: 2.5mm 3mm; vertical-align: top; }
+  .tile .k {
+    font-family: var(--mono);
+    font-size: 7pt;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .tile .v { font-family: var(--display); font-size: 16pt; line-height: 1.2; margin-top: 1.5mm; white-space: nowrap; }
+  .tile .v .u { font-family: var(--sans); font-size: 8.5pt; color: var(--ink-dim); margin-left: 1mm; }
+  table.plain { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  table.plain th {
+    font-family: var(--mono);
+    font-size: 7pt;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    font-weight: 400;
+    text-align: left;
+    padding: 1.5mm 2mm;
+    border-bottom: 1px solid var(--rule);
+  }
+  table.plain td { padding: 1.8mm 2mm; border-bottom: 1px solid var(--rule-soft); }
+  table.plain td.n, table.plain th.n { text-align: right; font-family: var(--mono); }
+  .note { font-family: var(--mono); font-size: 8pt; color: var(--ink-dim); margin: 2mm 0 0; }
+  ul.limits { margin: 0; padding-left: 5mm; }
+  ul.limits li { font-family: var(--serif); font-size: 9pt; color: var(--ink-soft); margin-bottom: 1.8mm; }
+  .notice { margin-top: 6mm; padding: 3mm; border: 1px solid var(--rule); background: var(--wash); }
+  .notice .k {
+    font-family: var(--mono);
+    font-size: 7pt;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--bronze);
+  }
+  .notice p { font-family: var(--serif); font-size: 8.5pt; color: var(--ink-soft); margin: 1.5mm 0 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">{{ L.eyebrow }}</div>
+  <h1>{{ L.title }}</h1>
+  <p class="subtitle">{{ L.subtitle }}</p>
+  <div class="meta">
+    <span>{{ L.period }} {{ d.get('period_start', '') }} — {{ d.get('period_end', '') }} ({{ d.get('period_days', '') }}{{ L.unit_days }})</span>
+    <span>{{ L.generated }} {{ d.get('generated_at', '') }}</span>
+  </div>
+  {# 면책은 맨 앞과 맨 뒤 두 곳에 둔다 — 읽는 사람이 숫자보다 먼저 만나게. #}
+  <p class="topnotice">{{ disclaimer_mirror }}</p>
+</header>
+
+{% if not d.get('has_content', False) %}
+<section>
+  <h2>{{ L.empty_head }}</h2>
+  <p class="lede">{{ L.empty_body }}</p>
+</section>
+{% endif %}
+
+<section>
+  <h2>{{ L.s_fills }}</h2>
+  <p class="lede">{{ L.s_fills_lede }}</p>
+  {% if turnover.get('sufficient_data') %}
+  <div class="tiles">
+    <div class="tile"><div class="k">{{ L.k_fills }}</div><div class="v">{{ turnover.get('trade_count') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_acquire }}</div><div class="v">{{ turnover.get('buy_count') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_dispose }}</div><div class="v">{{ turnover.get('sell_count') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_days_median }}</div><div class="v">{{ turnover.get('median_hold_days') | fmt(1) }}<span class="u">{{ L.unit_days }}</span></div></div>
+  </div>
+  {% if turnover.get('by_currency') %}
+  <table class="plain">
+    <thead><tr><th>{{ L.th_currency }}</th><th class="n">{{ L.th_gross }}</th><th class="n">{{ L.th_count }}</th></tr></thead>
+    <tbody>
+      {% for row in turnover.get('by_currency') %}
+      <tr>
+        <td>{{ row.get('currency') }}</td>
+        <td class="n">{{ row.get('gross_value') | money(row.get('currency')) }}</td>
+        <td class="n">{{ row.get('trade_count') | fmt }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <p class="note">{{ L.k_days_mean }} {{ turnover.get('mean_hold_days') | fmt(1) }}{{ L.unit_days }}</p>
+  {% else %}
+  <p class="none">{{ L.none_fills }}</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>{{ L.s_followon }}</h2>
+  <p class="lede">{{ L.s_followon_lede }}</p>
+  {% if followon.get('sufficient_data') %}
+  <div class="tiles">
+    <div class="tile"><div class="k">{{ L.k_followon }}</div><div class="v">{{ followon.get('follow_on_count') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_below }}</div><div class="v">{{ followon.get('below_avg_count') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_above }}</div><div class="v">{{ followon.get('above_avg_count') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_flat }}</div><div class="v">{{ followon.get('flat_count') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+  </div>
+  {% if followon.get('by_ticker') %}
+  <table class="plain">
+    <thead>
+      <tr>
+        <th>{{ L.th_ticker }}</th>
+        <th class="n">{{ L.k_followon }}</th>
+        <th class="n">{{ L.k_below }}</th>
+        <th class="n">{{ L.k_above }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in followon.get('by_ticker') %}
+      <tr>
+        <td>{{ row.get('name') or row.get('ticker') }}</td>
+        <td class="n">{{ row.get('follow_on') | fmt }}</td>
+        <td class="n">{{ row.get('below_avg') | fmt }}</td>
+        <td class="n">{{ row.get('above_avg') | fmt }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% else %}
+  <p class="none">{{ L.none_followon }}</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>{{ L.s_closed }}</h2>
+  <p class="lede">{{ L.s_closed_lede }}</p>
+  {% if closed.get('sufficient_data') %}
+  <table class="plain">
+    <thead>
+      <tr>
+        <th></th>
+        <th class="n">{{ L.k_count }}</th>
+        <th class="n">{{ L.k_days_median_short }}</th>
+        <th class="n">{{ L.k_return_median }}</th>
+        <th class="n">{{ L.k_return_mean }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ L.k_gain_side }}</td>
+        <td class="n">{{ gain.get('count') | fmt }}</td>
+        <td class="n">{{ gain.get('median_hold_days') | fmt(1) }}</td>
+        <td class="n">{{ gain.get('median_gain_pct') | signed }}{{ L.unit_pct if gain.get('median_gain_pct') is not none }}</td>
+        <td class="n">{{ gain.get('mean_gain_pct') | signed }}{{ L.unit_pct if gain.get('mean_gain_pct') is not none }}</td>
+      </tr>
+      <tr>
+        <td>{{ L.k_loss_side }}</td>
+        <td class="n">{{ loss.get('count') | fmt }}</td>
+        <td class="n">{{ loss.get('median_hold_days') | fmt(1) }}</td>
+        <td class="n">{{ loss.get('median_loss_pct') | signed }}{{ L.unit_pct if loss.get('median_loss_pct') is not none }}</td>
+        <td class="n">{{ loss.get('mean_loss_pct') | signed }}{{ L.unit_pct if loss.get('mean_loss_pct') is not none }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="note">{{ L.k_total_closed }} {{ closed.get('total_closed_pairs') | fmt }}{{ L.unit_count }}</p>
+  {% if closed.get('one_sided') %}
+  <p class="note">{{ L.one_sided }}</p>
+  {% endif %}
+  {% else %}
+  <p class="none">{{ L.none_closed }}</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>{{ L.s_concentration }}</h2>
+  <p class="lede">{{ L.s_concentration_lede }}</p>
+  {% if conc.get('sufficient_data') %}
+  <div class="tiles">
+    <div class="tile"><div class="k">{{ L.k_symbols }}</div><div class="v">{{ conc.get('ticker_count') | fmt }}</div></div>
+    <div class="tile"><div class="k">{{ L.k_max_weight }}</div><div class="v">{{ conc.get('max_weight_pct') | fmt(1) }}<span class="u">{{ L.unit_pct }}</span></div></div>
+    <div class="tile" style="width:50%"><div class="k">{{ L.k_largest }}</div><div class="v">{{ conc.get('largest_ticker') or '—' }}</div></div>
+  </div>
+  {% if conc.get('cost_basis_note') %}
+  <p class="note">{{ conc.get('cost_basis_note') }}</p>
+  {% endif %}
+  {% else %}
+  <p class="none">{{ L.none_concentration }}</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>{{ L.s_limits }}</h2>
+  <ul class="limits">
+    {% for line in L.limits %}
+    <li>{{ line }}</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<div class="notice">
+  <div class="k">{{ L.s_notice }}</div>
+  <p>{{ disclaimer_mirror }}</p>
+  <p>{{ disclaimer_artifact }}</p>
+</div>
+
+</body>
+</html>

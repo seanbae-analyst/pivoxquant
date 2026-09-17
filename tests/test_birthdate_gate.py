@@ -113,7 +113,12 @@ def test_oauth_finalize_reachable_for_null_birthdate_user(client, make_user):
     _login(client, user)
 
     adult = date(2000, 1, 1).isoformat()
-    r = client.post("/api/auth/oauth-finalize", json={"birthdate": adult})
+    # 2026-09-17 P1 — 필수 동의 3종도 함께 보내야 통과한다
+    # (게이트 자체의 회귀 테스트는 tests/test_oauth_finalize_consents.py).
+    r = client.post("/api/auth/oauth-finalize", json={
+        "birthdate": adult,
+        "consents": {"terms": True, "non_advisory": True, "cross_border": True},
+    })
     assert r.status_code == 200, r.get_data(as_text=True)
     assert r.get_json()["ok"] is True
 

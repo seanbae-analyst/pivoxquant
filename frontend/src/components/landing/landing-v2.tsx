@@ -260,9 +260,12 @@ function CtaFooter() {
         >
           {/* Signed-in users already have an account — offering them 회원가입
               and 로그인 again was the 2026-09-12 sweep finding. Same split as
-              hero.tsx and top-nav.tsx. */}
+              hero.tsx and top-nav.tsx.
+              2026-09-17: the secondary "로그인" outline pill that used to sit
+              beside this one is gone. /login and /signup are one screen, and
+              two adjacent pills pointing at the same URL is not a choice. */}
           <Link
-            href={user ? "/mirror" : "/signup"}
+            href={user ? "/mirror" : "/login"}
             className="group inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-transform active:scale-[0.98]"
             style={{
               backgroundColor: "var(--pq-bronze)",
@@ -278,21 +281,6 @@ function CtaFooter() {
               aria-hidden
             />
           </Link>
-          {!user && (
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-colors"
-              style={{
-                border: "0.75pt solid var(--pq-bronze)",
-                color: "var(--pq-bronze)",
-                fontSize: "var(--pq-text-body)",
-                letterSpacing: "0.02em",
-                backgroundColor: "transparent",
-              }}
-            >
-              {t("landing.cta.logIn")}
-            </Link>
-          )}
         </motion.div>
       </div>
     </section>

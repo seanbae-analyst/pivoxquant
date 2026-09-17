@@ -1463,16 +1463,44 @@ def kakao_callback():
 
 # ── OAuth signup finalization (PIPA §22 ⑥ birthdate interstitial) ────────────
 
+# 법정 필수 동의 3종 — 인터스티셜의 제출 게이트와 1:1 로 맞춘다.
+#
+# 프론트의 필수 항목은 4종(terms / non_advisory / age / cross_border)이지만
+# ``age`` 는 생년월일에서 자동 도출되는 파생 체크박스이고, 그 사실은 아래
+# ``check_birthdate_payload`` 가 서버에서 다시 검증한다. 그래서 본문으로
+# 받아야 하는 것은 나머지 3종이다.
+#
+#   terms        — 이용약관 + 개인정보처리방침 동의
+#   non_advisory — 자본시장법상 투자자문업이 아니라는 고지 확인
+#   cross_border — 개인정보 국외 이전 동의 (PIPA §28-8)
+_OAUTH_FINALIZE_REQUIRED_CONSENTS = ("terms", "non_advisory", "cross_border")
+
+
 @auth_bp.route("/oauth-finalize", methods=["POST"])
 @auth_rate_limit
 @api_auth
 def oauth_finalize():
-    """Capture birthdate for an OAuth user who hasn't supplied one yet.
+    """Capture birthdate + the mandatory consents for a fresh OAuth user.
 
     Reached by the frontend ``/signup/oauth-finalize`` interstitial after
     the OAuth callback redirected the user there because
     ``user.birthdate IS NULL`` (new sign-up *or* legacy account from
     before migration 031).
+
+    Request body::
+
+        {
+          "birthdate": "yyyy-mm-dd",
+          "consents": {
+            "terms": true,
+            "non_advisory": true,
+            "cross_border": true
+          }
+        }
+
+    All three consents must be literal ``true`` or the request is
+    refused with 400 ``consents_required`` and **nothing is written** —
+    not the birthdate, not the consent timestamp.
 
     Idempotent — overwriting an already-set ``birthdate`` is rejected so
     a user can't lower their stored age via repeated POSTs. Re-running
@@ -1488,7 +1516,98 @@ def oauth_finalize():
             status=401,
         )
 
-    d = request.get_json() or {}
+    d = request.get_json(silent=True) or {}
+    if not isinstance(d, dict):
+        return api_error(
+            en="invalid_payload",
+            kr="요청 형식이 올바르지 않습니다.",
+            code="invalid_payload",
+            status=400,
+        )
+
+    # ── 필수 동의 검증 (생년월일보다 *먼저*) ────────────────────────────
+    #
+    # 2026-09-17 P1 (보안 감사): 동의 스택이 OAuth **이후** 인터스티셜로
+    # 옮겨졌는데(로그인 화면으로 들어온 신규 가입자도 덮으려면 그래야 한다)
+    # 서버는 계속 ``{birthdate}`` 만 받았다. 그래서 OAuth 콜백이 세션을 준
+    # 직후 체크박스를 하나도 건드리지 않고
+    #
+    #     curl -b <session> -X POST /api/auth/oauth-finalize \
+    #          -d '{"birthdate":"1990-01-01"}'
+    #
+    # 만 보내면 ``birthdate_required`` 가 false 로 떨어지며 전 기능이 열렸고,
+    # ``cross_border_consent_at`` 은 NULL, 약관·비자문 동의 증거는 0 이었다.
+    # 클라이언트 게이트는 증거가 아니다 — 서버가 게이트다.
+    #
+    # 순서가 중요하다: 동의를 먼저 보고 거절하면 birthdate 는 파싱조차 하지
+    # 않으므로, 동의 없는 요청은 어떤 컬럼도 건드리지 못한다.
+    #
+    # ── 하위 호환: ``consents`` 키가 아예 없는 요청은 400 으로 거절한다 ──
+    #
+    # 판단 근거
+    #   1. 통과시키면 고친 것이 아니다. 위 curl 은 ``consents`` 키가 없는
+    #      요청이고, "없으면 경고 로깅 + 통과" 로 두면 감사가 제출한 우회
+    #      재현 명령이 그대로 성공한다. 로그는 사후 관측이지 게이트가 아니고,
+    #      그 사이 가입한 사용자는 동의 증거가 영구히 0 인 채로 남는다.
+    #      P1 의 노출 창을 "언젠가 TODO 를 처리할 때까지" 로 열어 두는 셈이다.
+    #   2. 거절의 실패 모드는 복구 가능하고 자가 치유된다. 배포 순간 이미
+    #      인터스티셜을 열어 둔 구버전 번들만 400 을 받고, 새로고침하면 새
+    #      번들을 받아 정상 진행한다. 계정은 half-provisioned 상태 그대로
+    #      남으므로(birthdate NULL) 데이터 손상도 없다. 노출 범위는 배포
+    #      창에 제출 버튼을 누른 소수이고, 지속 시간은 새로고침 1회다.
+    #      통과의 실패 모드는 그 반대다 — 조용하고, 무기한이고, 사후에만
+    #      보인다.
+    #   3. 배포 순서는 운영으로 해결한다. **프론트(Vercel) 를 먼저 배포하고
+    #      백엔드(Render) 를 뒤에 배포하면 창 자체가 생기지 않는다** —
+    #      구버전 서버는 ``consents`` 를 무시할 뿐이라 신버전 프론트가
+    #      먼저 떠 있어도 아무것도 깨지지 않는다. 순서가 보장되지 않는다는
+    #      이유로 컴플라이언스 게이트를 여는 대신, 순서를 보장하는 쪽이
+    #      비용이 훨씬 싸다.
+    consents = d.get("consents")
+    if consents is None:
+        logger.warning(
+            "OAuth finalize: 'consents' missing → rejected "
+            "(user_id=%s provider=%s) — 구버전 번들이면 새로고침 후 재시도",
+            getattr(current_user, "id", None),
+            getattr(current_user, "oauth_provider", None),
+        )
+        return api_error(
+            en="consents_required",
+            kr="필수 동의 항목을 모두 확인해주세요. 화면을 새로고침한 뒤 다시 시도해주세요.",
+            code="consents_required",
+            status=400,
+            missing_consents=list(_OAUTH_FINALIZE_REQUIRED_CONSENTS),
+        )
+
+    if not isinstance(consents, dict):
+        return api_error(
+            en="consents_required",
+            kr="필수 동의 항목을 모두 확인해주세요.",
+            code="consents_required",
+            status=400,
+            missing_consents=list(_OAUTH_FINALIZE_REQUIRED_CONSENTS),
+        )
+
+    # ``is not True`` — 문자열 "true" / 1 / "on" 같은 truthy 값은 동의로
+    # 인정하지 않는다. 명시적 opt-in 만 증거가 된다.
+    missing = [
+        key
+        for key in _OAUTH_FINALIZE_REQUIRED_CONSENTS
+        if consents.get(key) is not True
+    ]
+    if missing:
+        logger.info(
+            "OAuth finalize: required consents missing=%s (user_id=%s)",
+            missing, getattr(current_user, "id", None),
+        )
+        return api_error(
+            en="consents_required",
+            kr="필수 동의 항목을 모두 확인해주셔야 가입이 완료됩니다.",
+            code="consents_required",
+            status=400,
+            missing_consents=missing,
+        )
+
     try:
         age_result = check_birthdate_payload(d.get("birthdate"))
     except BirthdateValidationError as exc:
@@ -1537,12 +1656,57 @@ def oauth_finalize():
             status=409,
         )
 
+    # ── 국외이전 동의 기록 (PIPA §28-8) — 생년월일과 같은 트랜잭션 ──────
+    #
+    # 기록 방식은 ``routes/consents.py``
+    # (``record_cross_border_consent`` / ``_utcnow_naive``) 를 그대로 따른다:
+    # 같은 두 컬럼, 같은 naive-UTC 컨벤션. 두 번째 구현을 만들지 않으려고
+    # 헬퍼를 그 모듈에서 import 한다.
+    #
+    # 프론트가 별도로 ``POST /api/consents/cross-border`` 를 때리던 best-effort
+    # 경로는 이 커밋으로 제거했다 — 같은 사실을 두 번 기록하면 타임스탬프가
+    # 실제 동의 시각에서 밀린다.
+    #
+    # ``cross_border_consent_at`` 이 이미 있으면 다시 스탬프하지 않는다.
+    # 재-finalize(같은 생년월일 멱등 경로)가 최초 동의 시각을 덮어써서
+    # 감사 추적을 뒤로 미는 것을 막는다.
+    from routes.consents import _utcnow_naive  # 기록 컨벤션 단일 SoT
+
+    consent_written = False
+    if getattr(user, "cross_border_consent_at", None) is None:
+        now = _utcnow_naive()
+        user.cross_border_consent_at = now
+        user.cross_border_consent_revoked_at = None
+        consent_written = True
+
+    # ⚠️ 증거 강도 한계 (의도적 현행 유지)
+    #   ``terms`` / ``non_advisory`` 는 대응하는 서버 컬럼이 **없다**.
+    #   컬럼 신설은 마이그레이션이라 CEO 승인 대상이므로, 여기서는 요청의
+    #   필수 필드로 받아 *검증*만 하고 타임스탬프는 남기지 않는다. 즉 이
+    #   두 건은 "동의 없이는 가입이 완료되지 않는다"는 사실이 증거이고,
+    #   개별 동의 시각은 서버에 남지 않는다(프론트 localStorage 스냅숏도
+    #   가입 완료 시 지워진다 — 그쪽은 애초에 증거로 쓸 수 없었다).
+    #   → docs/legal/policy-audit-2026-09-17.md B-1 에 같은 내용을 적어 두었다.
+
     if user.birthdate is None:
         user.birthdate = age_result.birthdate
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception(
+                "OAuth finalize commit failed (user_id=%s)", user.id,
+            )
+            return api_error(
+                en="finalize_failed",
+                kr="가입 완료 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
+                code="finalize_failed",
+                status=500,
+            )
         logger.info(
-            "OAuth finalize: birthdate set (user_id=%s provider=%s)",
-            user.id, user.oauth_provider,
+            "OAuth finalize: birthdate set (user_id=%s provider=%s "
+            "cross_border_consent_written=%s)",
+            user.id, user.oauth_provider, consent_written,
         )
         # Wave G S5 — OAuth signups don't complete until birthdate
         # lands here (PIPA §22 ⑥ gate). Enqueue D+0/D+3/D+7 sequence
@@ -1550,6 +1714,23 @@ def oauth_finalize():
         # attempts are 409'd above so this branch fires exactly once
         # per OAuth user. Fire-and-forget — never blocks signup.
         _schedule_onboarding_safe(user)
+    elif consent_written:
+        # 멱등 경로(같은 생년월일 재전송)인데 국외이전 동의만 아직 없던
+        # 케이스 — 동의 기록은 커밋한다.
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception(
+                "OAuth finalize cross-border consent commit failed "
+                "(user_id=%s)", user.id,
+            )
+            return api_error(
+                en="finalize_failed",
+                kr="가입 완료 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
+                code="finalize_failed",
+                status=500,
+            )
 
     return jsonify({"ok": True, "user": serialize_user(user)})
 

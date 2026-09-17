@@ -24,6 +24,7 @@ def register_blueprints(app):
     from .inbox import inbox_bp  # v57 CEO Inbox single-pane (admin only)
     from .mirror_home import mirror_home_bp  # 거울 home — composed 선언/관찰/트윈 read
     from .imports import imports_bp  # Import Inbox — uploaded fills awaiting the user's thesis
+    from .reports import reports_bp  # 월간 거울 리포트 — 온디맨드 PDF 다운로드
     from services.email.webhook import sendgrid_webhook_bp  # SendGrid Event Webhook
 
     blueprints = [
@@ -42,6 +43,7 @@ def register_blueprints(app):
         inbox_bp,
         mirror_home_bp,
         imports_bp,
+        reports_bp,
         sendgrid_webhook_bp,
     ]
 

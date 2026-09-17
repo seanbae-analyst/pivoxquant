@@ -13,8 +13,11 @@
     "login": {
       "continueWithGoogle": "Google로 계속",
       "continueWithKakao": "Kakao로 계속",
-      "noAccount": "계정이 없으신가요?",
-      "createAccount": "계정 만들기"
+      "eyebrow": "시작하기 · 로그인",
+      "heading": "소셜 계정으로 계속하기",
+      "heroHeadline": "처음이든 다시든, <span class=\"br\">문은 하나</span>입니다.<br/>데스크는 이미 <span class=\"br\">준비됐습니다.</span>",
+      "heroDeck": "계정이 있으면 이어서 들어가고, 없으면 여기서 만들어집니다. 당신이 남긴 기록과, 그 기록이 비추는 거울이 기다리고 있습니다.",
+      "heroSignature": "당신이 기록하고 · 당신이 확인합니다"
     }
   },
   "dashboard": {

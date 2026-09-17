@@ -1,22 +1,33 @@
 "use client";
 
 /**
- * /login v2 — Editorial entry, Vantablack split layout.
+ * Unified auth entry — Editorial entry, Vantablack split layout.
  *
- * Sole /login surface — the pre-v3 variant was deleted 2026-08-30.
+ * 2026-09-17 (CEO decision): /login and /signup are ONE screen. The backend
+ * OAuth callback provisions an account when none exists, so both routes were
+ * always two decorations on a single path. This module is the canonical
+ * surface; `/signup/page.tsx` renders this exact component so both URLs stay
+ * alive for `_safe_next()`, OAuth redirects and existing bookmarks.
+ *
+ * Consequences of the merge:
+ * - The "계정이 없으신가요? 회원가입 ›" switch link is gone — there is nowhere
+ *   else to go.
+ * - Copy is neutral for first-time and returning visitors alike
+ *   (auth.login.* keys in messages/{ko,en}.json).
+ * - Required consents are NOT collected here. New accounts are asked after
+ *   OAuth, on the post-callback interstitial.
  *
  * Visual rules (v3 lock-in):
  * - Full-bleed Vantablack (#050505) background.
- * - Left 50% — Editorial Hero (Playfair H1 + Bronze italic accent + deck).
+ * - Left 50% — Editorial Hero (Playfair H1 + Bronze accent + deck).
  * - Right 50% — OAuth card (Continue with Google / Kakao, mono uppercase).
  * - Hairline center divider, fleuron (❦) ornament.
- * - Bottom switch link "계정이 없으신가요? 회원가입 ›" — Bronze, mono UC.
- * - Mobile (< 900px) collapses to single column, hero on top.
+ * - Mobile (< 768px) collapses to single column, hero on top.
  *
  * Function preservation:
  * - OAuth handler unchanged — anchors point at API.auth.google / .kakao.
  * - useAuth + router.replace("/mirror") + loading + null user gating
- *   identical to v1, copied 1:1 (only visual layer changed).
+ *   unchanged.
  */
 
 import { useEffect, useState } from "react";
@@ -28,12 +39,11 @@ import { useT, useLocale } from "@/lib/locale";
 
 import { AuthHeroV2 } from "@/components/auth/v2/auth-hero-v2";
 import { OAuthButtonsV2 } from "@/components/auth/v2/oauth-buttons-v2";
-import { AuthLinkV2 } from "@/components/auth/v2/auth-link-v2";
 import { Fleuron } from "@/components/ui/editorial";
 
 // Error copy is locale-aware via errorsFor() computed inside the component.
 
-export default function LoginPageV2() {
+export default function AuthEntryPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const t = useT();
@@ -140,26 +150,15 @@ export default function LoginPageV2() {
           minHeight: "100dvh",
         }}
       >
+        {/* 2026-09-01: the deck used to sell weekly memos, earnings
+            pre-briefs and AI artifacts — all three deleted in the prune.
+            2026-09-17: it also greeted every visitor with "welcome back",
+            which is wrong for the half of them who have no account yet. */}
         <AuthHeroV2
           eyebrow={"PivoxQuant · Entry"}
-          headlineHtml={
-            locale === "ko"
-              ? '다시 오신 것을 <span class="br">환영합니다</span>.<br/>데스크는 이미 <span class="br">준비됐습니다.</span>'
-              : 'Welcome <span class="br">back</span>.<br/>The desk is <span class="br">already lit.</span>'
-          }
-          // 2026-09-01: this sold weekly memos, earnings pre-briefs and AI
-          // artifacts — all three deleted in the prune. The first screen a
-          // user sees promised three things the product no longer does.
-          deck={
-            locale === "ko"
-              ? "로그인하면 당신이 남긴 기록과, 그 기록이 비추는 거울이 기다리고 있습니다."
-              : "Sign in for the record you kept, and the mirror it holds up."
-          }
-          signature={
-            locale === "ko"
-              ? "당신이 기록하고 · 당신이 확인합니다"
-              : "You record it · You review it"
-          }
+          headlineHtml={t("auth.login.heroHeadline")}
+          deck={t("auth.login.heroDeck")}
+          signature={t("auth.login.heroSignature")}
         />
       </div>
 
@@ -194,7 +193,7 @@ export default function LoginPageV2() {
                 textTransform: "uppercase",
               }}
             >
-              {locale === "ko" ? "로그인" : "Sign in"}
+              {t("auth.login.eyebrow")}
             </span>
             <h2
               className="font-display"
@@ -207,7 +206,7 @@ export default function LoginPageV2() {
                 margin: 0,
               }}
             >
-              {locale === "ko" ? "소셜 계정으로 계속하기" : "Continue with your provider"}
+              {t("auth.login.heading")}
             </h2>
           </div>
 
@@ -287,16 +286,14 @@ export default function LoginPageV2() {
             />
           </div>
 
-          <AuthLinkV2
-            prompt={t("auth.login.noAccount")}
-            action={t("auth.login.createAccount")}
-            href="/signup"
-          />
-
           <p
             className="font-serif"
             style={{
-              marginTop: 12,
+              // Was marginTop: 12 on top of the 28px stack gap, which spaced
+              // this off the switch link that used to sit above. With that
+              // link removed the fleuron divider is the neighbour, so the
+              // plain 28px gap keeps the card's vertical rhythm.
+              marginTop: 0,
               fontSize: "var(--pq-text-eyebrow)",
               lineHeight: 1.55,
               color: "var(--pq-ivory-dim)",
