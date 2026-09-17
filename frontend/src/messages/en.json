@@ -19,7 +19,7 @@
   },
   "landing": {
     "hero": {
-      "eyebrow": "PivoxQuant · Living CFO",
+      "eyebrow": "PivoxQuant · Your portfolio's CFO",
       "h1Part1": "We don't promise",
       "h1Italic": "to make you rich.",
       "description": "The data is clear: high-turnover trading shaves your returns every year — about 7 percentage points versus low turnover. PivoxQuant mirrors your own trading pattern back to you and makes you pause once, right before you hit buy or sell. No scoring, no recommendations. Observational data only, not a directive to act.",
@@ -57,7 +57,10 @@
       "goToDesk": "Go to desk",
       "meetCfo": "Get started",
       "openDesk": "See my mirror",
-      "openMenu": "Open menu"
+      "openMenu": "Open menu",
+      "tagline": "Your portfolio's CFO",
+      "menuAria": "Menu",
+      "closeMenu": "Close menu"
     },
     "cta": {
       "signUp": "Sign up",
@@ -88,7 +91,7 @@
       "q1": "Is this the same as investment advisory?",
       "a1": "No. It falls outside licensed investment advisory under Article 6 of the Financial Investment Services and Capital Markets Act. PivoxQuant is an informational research tool that reflects back the record and holdings you entered yourself. It does not pick securities, score them, or tell you to buy or sell. Every decision remains yours.",
       "q2": "What do you do with my trade data — what does the mirror “observe”?",
-      "a2": "It places two things side by side: what you said about your own habits in the five onboarding questions, and the behaviour observed in your last 30 days of trades. Nine axes — average holding period, turnover, sector spread and so on — are computed from your own record; no new judgement is manufactured. Raw trade data is stored encrypted and is never used for advertising or sold onward. On account deletion it is fully erased within 30 days.",
+      "a2": "It places two things side by side: what you said about your own habits in the five onboarding questions, and the behaviour observed in your last 30 days of trades. Nine axes — average holding period, turnover, sector spread and so on — are computed from your own record; no new judgement is manufactured. Raw trade data is stored encrypted and is never used for advertising or sold onward. You can download it from Settings as JSON or CSV at any time, and on account deletion it is fully erased within 30 days.",
       "q3": "Does my investor type change over time?",
       "a3": "The observed persona is recomputed from your last 30 days of trades. What you declared stays put until you answer the five questions again — the point of the mirror is to show where the two diverge, not to pick one for you.",
       "q4": "What do I actually do here?",
@@ -98,7 +101,38 @@
       "q6": "What does it cost?",
       "a6": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes.",
       "q7": "Do I have to type in every trade by hand?",
-      "a7": "Not the numbers. There are three paths. ① Download your trade history from your broker app as CSV/Excel and upload it — column names are matched automatically. ② Turn a fill-notification screenshot into text on your phone (iOS Shortcuts 'Extract Text from Image', Android Lens) and paste it; ticker, quantity, price and time are read from it. On Android you can send it straight from the share sheet. ③ Issue an import token in Settings and let your own automation forward fill notifications as they arrive: on Android an app like MacroDroid forwards the notification, on iPhone a Shortcuts automation can forward the broker's fill SMS. That works only with brokers that still send fills by text message; if yours sends only KakaoTalk or app push, path ② remains. On every path the fill waits in your inbox until you write one line on why, and only then is it recorded. Images are never accepted. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked."
+      "a7": "Not the numbers. There are three paths. ① Download your trade history from your broker app as CSV/Excel/PDF and upload it — column names are matched automatically (scanned PDFs without text excluded). ② Turn a fill-notification screenshot into text on your phone (iOS Shortcuts 'Extract Text from Image', Android Lens) and paste it; ticker, quantity, price and time are read from it. On Android you can send it straight from the share sheet. ③ Issue an import token in Settings and let your own automation forward fill notifications as they arrive: on Android an app like MacroDroid forwards the notification, on iPhone a Shortcuts automation can forward the broker's fill SMS. That works only with brokers that still send fills by text message; if yours sends only KakaoTalk or app push, path ② remains. On every path the fill waits in your inbox until you write one line on why, and only then is it recorded. Images are never accepted. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked."
+    },
+    "nav": {
+      "docs": {
+        "label": "Docs",
+        "footnote": "Terms, privacy, and the non-advisory boundary."
+      },
+      "faq": {
+        "label": "FAQ",
+        "desc": "How observation differs from advice. Plainly."
+      },
+      "terms": {
+        "label": "Terms of Service",
+        "desc": "The agreement between you and the desk."
+      },
+      "privacy": {
+        "label": "Privacy Policy",
+        "desc": "What we store, for how long, and why."
+      },
+      "contact": {
+        "label": "Contact",
+        "desc": "{email} — the operator answers in person."
+      }
+    },
+    "footer": {
+      "tagline": "A record-keeping tool for the self-managed portfolio.",
+      "company": "Company",
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "contact": "Contact",
+      "email": "Email",
+      "disclaimer": "PivoxQuant is not a licensed investment advisor, discretionary manager, or broker-dealer. Informational tool only. Past performance does not guarantee future results."
     }
   },
   "errorBoundary": {
@@ -306,11 +340,11 @@
       "page": {
         "kicker": "Import",
         "heading": "Import fills",
-        "headingDesc": "Paste a CSV/Excel export from your broker app or fill-notification text. Only ticker, shares, price and time are read into a waiting list. The server never touches your broker account.",
+        "headingDesc": "Upload a CSV/Excel/PDF export from your broker app or fill-notification text. Only ticker, shares, price and time are read into a waiting list. The server never touches your broker account.",
         "consentLabel": "Collected: ticker, shares, price, time. Purpose: your trade log. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked. Anything imported can be deleted at any time via data export or account deletion in Settings. I agree.",
         "tabFile": "File",
         "tabText": "Text",
-        "fileHint": ".csv · .xlsx · .xls — up to 2MB",
+        "fileHint": ".csv · .xlsx · .xls · .pdf — up to 2MB (scanned/image PDFs cannot be read)",
         "fileChoose": "Choose file",
         "fileNone": "No file selected",
         "fileTooLarge": "Files over 2MB are not accepted.",
@@ -329,7 +363,9 @@
         "resultEmpty": "Nothing was added to the waiting list.",
         "resultDesc": "You can write the reason and approve right here. Or pick it up later at the top of the Log page.",
         "backToJournal": "Back to the log",
-        "tokensLink": "To send automatically → Import tokens in Settings"
+        "tokensLink": "To send automatically → Import tokens in Settings",
+        "pdfPasswordLabel": "PDF password (only if locked)",
+        "pdfPasswordHint": "Statements a broker emails are usually locked with your 6-digit birth date. The password is used to open the file and is not stored."
       }
     }
   },

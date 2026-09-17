@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Book, NotebookPen, Contrast, Shield } from "lucide-react";
+import { SUPPORT_EMAIL_DEFAULT } from "@/lib/business-info";
 
 export const metadata = {
   title: "Docs",
@@ -22,7 +23,7 @@ const SECTIONS = [
       },
       {
         q: "Can I connect my brokerage account?",
-        a: "Not in this beta. Positions are entered by hand in Portfolio, and every surface works on what you enter. Account linking is not offered.",
+        a: "No — account linking is not offered and no broker credentials are collected. Positions and fills are entered by hand, uploaded from the trade-history file (CSV/Excel/PDF) or fill-notification text your broker app gives you, or forwarded by your own automation with an import token issued in Settings. On every path a fill is not recorded until you write why and approve it.",
       },
     ],
   },
@@ -40,7 +41,7 @@ const SECTIONS = [
       },
       {
         q: "Do I need to connect a broker?",
-        a: "No — and there is nothing to connect. Positions are entered by hand and every surface works the same.",
+        a: "No — and there is nothing to connect. Whether you type a fill, upload a file, or forward a notification, every surface reads the same record.",
       },
     ],
   },
@@ -126,7 +127,7 @@ export default function DocsPage() {
         <footer className="mt-16 pt-8 border-t border-[var(--pq-ivory-line)] text-center">
           <div className="pq-fleuron inline-flex mb-3" aria-hidden="true">❦</div>
           <p className="pq-caption">
-            More questions? Email us · hello@pivoxquant.com
+            More questions? Email us · {SUPPORT_EMAIL_DEFAULT}
           </p>
           <div className="flex items-center justify-center gap-4 mt-4 flex-wrap">
             <Link

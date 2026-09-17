@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { ArrowRight, ChevronDown, X } from "lucide-react";
-import type { NavGroup } from "./top-nav";
+import { SUPPORT_EMAIL, type NavGroup } from "./top-nav";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST } from "@/lib/motion";
 import { useAuth } from "@/lib/auth";
@@ -95,7 +95,7 @@ export default function MobileDrawer({
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Menu"
+            aria-label={t("landing.topNav.menuAria")}
             tabIndex={-1}
             variants={reduce ? undefined : panelVariants}
             initial={reduce ? false : "hidden"}
@@ -129,7 +129,7 @@ export default function MobileDrawer({
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close menu"
+                aria-label={t("landing.topNav.closeMenu")}
                 className="inline-flex h-11 w-11 items-center justify-center rounded-sm"
                 style={{ color: "var(--pq-ivory)" }}
               >
@@ -161,7 +161,7 @@ export default function MobileDrawer({
                           fontWeight: 500,
                         }}
                       >
-                        {group.label}
+                        {t(`landing.nav.${group.key}.label`)}
                       </span>
                       <ChevronDown
                         className="h-4 w-4 transition-transform duration-300"
@@ -218,7 +218,7 @@ export default function MobileDrawer({
                                       fontWeight: 500,
                                     }}
                                   >
-                                    {item.label}
+                                    {t(`landing.nav.${item.key}.label`)}
                                   </div>
                                   <div
                                     className="font-serif"
@@ -228,7 +228,9 @@ export default function MobileDrawer({
                                       lineHeight: 1.45,
                                     }}
                                   >
-                                    {item.description}
+                                    {t(`landing.nav.${item.key}.desc`, {
+                                      email: SUPPORT_EMAIL,
+                                    })}
                                   </div>
                                 </div>
                                 <ArrowRight
