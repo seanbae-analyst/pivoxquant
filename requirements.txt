@@ -33,6 +33,10 @@ gevent>=24.2.1
 # xlrd fallback; CSV via stdlib. Keep openpyxl required so the /api/broker/
 # kiwoom/csv endpoint never 500s on a fresh install.
 openpyxl>=3.1.0
+# Broker trade-history PDF import (services/imports/pdf_parser.py). Pure
+# Python on top of pdfminer.six + pypdfium2 wheels — no system libraries,
+# unlike weasyprint. Reads tables/text only; never renders.
+pdfplumber>=0.11.0
 weasyprint>=62.0
 jinja2>=3.1.6
 # Wave I D-2: Railway OOM/CPU pressure detector

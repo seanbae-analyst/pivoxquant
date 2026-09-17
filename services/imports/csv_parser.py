@@ -1,4 +1,4 @@
-"""Table parser for broker exports (CSV / XLSX / XLS) and our own export.
+"""Table parser for broker exports (CSV / XLSX / XLS / PDF) and our own export.
 
 No per-broker fixture: a header-synonym dictionary maps whatever column
 names the file carries onto the fields we need. Encoding fallback
@@ -101,8 +101,12 @@ class ParseResult:
 
 # ── Public entry point ─────────────────────────────────────────────────
 
-def parse_table(data: bytes, filename: str) -> ParseResult:
-    """Parse ``data`` (file bytes) into fills. Raises ImportParseError."""
+def parse_table(data: bytes, filename: str, password: str | None = None) -> ParseResult:
+    """Parse ``data`` (file bytes) into fills. Raises ImportParseError.
+
+    ``password`` is only meaningful for ``.pdf`` (a broker-emailed statement
+    locked with the holder's birth date); it is used for the open and dropped.
+    """
     ext = (filename or "").rsplit(".", 1)[-1].lower() if "." in (filename or "") else ""
     if ext in ("csv", "txt", "tsv", ""):
         grid = _read_csv(data)
@@ -110,11 +114,16 @@ def parse_table(data: bytes, filename: str) -> ParseResult:
         grid = _read_xlsx(data)
     elif ext == "xls":
         grid = _read_xls(data)
+    elif ext == "pdf":
+        # 2026-09-17: the PDF a broker app exports is a table too; pdf_parser
+        # only lifts the cells, every column/row rule below is shared.
+        from .pdf_parser import read_pdf
+        grid = read_pdf(data, password=password)
     else:
         raise ImportParseError(
             "IMPORT_UNSUPPORTED_FORMAT",
-            en=f"Unsupported file type: .{ext}. Use CSV, XLSX or XLS.",
-            kr=f"지원하지 않는 파일 형식입니다(.{ext}). CSV·XLSX·XLS 파일을 올려 주세요.",
+            en=f"Unsupported file type: .{ext}. Use CSV, XLSX, XLS or PDF.",
+            kr=f"지원하지 않는 파일 형식입니다(.{ext}). CSV·XLSX·XLS·PDF 파일을 올려 주세요.",
         )
     return _parse_grid(grid)
 

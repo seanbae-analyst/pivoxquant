@@ -64,7 +64,9 @@ class TestGuards:
         assert r.get_json()["code"] == "IMPORT_FILE_REQUIRED"
 
     def test_unsupported_format_400(self, client, auth_user):
-        r = _upload(client, b"%PDF-1.4 ...", "statement.pdf")
+        # .pdf is accepted since 2026-09-17 (tests/test_imports_pdf.py);
+        # a word-processor file is still not.
+        r = _upload(client, b"PK\x03\x04 ...", "statement.docx")
         assert r.status_code == 400
         assert r.get_json()["code"] == "IMPORT_UNSUPPORTED_FORMAT"
 

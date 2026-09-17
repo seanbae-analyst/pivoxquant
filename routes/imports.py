@@ -310,7 +310,7 @@ def _rows_to_raw(rows) -> list[RawTrade]:
 # ── shared intake ────────────────────────────────────────────────────
 
 def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
-            consent_at, token_id: int | None = None):
+            consent_at, token_id: int | None = None, password: str | None = None):
     """Parse → dedupe → ``pending_trades`` for one batch.
 
     Exactly one of ``upload`` (werkzeug FileStorage), ``rows`` (webhook
@@ -342,7 +342,7 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
                 code="IMPORT_FILE_REQUIRED", status=400,
             )
         try:
-            parsed = parse_table(blob, filename)
+            parsed = parse_table(blob, filename, password=password)
         except ImportParseError as exc:
             return api_error(en=exc.en, kr=exc.kr, code=exc.code, status=400)
         raw_rows = parsed.rows
@@ -486,6 +486,9 @@ def create_import():
         consent = _truthy(request.form.get("consent"))
         source = SOURCE_CSV
         text = None
+        # PDF only (services/imports/pdf_parser.py). Used for the open() and
+        # never persisted or logged — the batch row stores the filename only.
+        password = (request.form.get("pdf_password") or "").strip()[:64] or None
     else:
         data = request.get_json(silent=True)
         if not isinstance(data, dict):
@@ -493,6 +496,7 @@ def create_import():
         consent = _truthy(data.get("consent"))
         source = SOURCE_SCREENSHOT_TEXT
         text = data.get("text")
+        password = None
 
     if not consent:
         return api_error(
@@ -500,7 +504,8 @@ def create_import():
             kr="파일·텍스트 처리에 대한 동의가 필요합니다.",
             code="IMPORT_CONSENT_REQUIRED", status=400,
         )
-    return _ingest(current_user.id, source, text=text, upload=upload, consent_at=utcnow_naive())
+    return _ingest(current_user.id, source, text=text, upload=upload,
+                   consent_at=utcnow_naive(), password=password)
 
 
 # ── POST /webhook (Bearer token, no session) ─────────────────────────

@@ -5,7 +5,7 @@
  * text, get back a list of received fills to approve one by one.
  *
  * docs/product/IMPORT_INBOX_DESIGN.md. The server receives ONLY what the user
- * uploads here: a .csv/.xlsx/.xls file (≤2MB) or pasted text. OCR, if any,
+ * uploads here: a .csv/.xlsx/.xls/.pdf file (≤2MB) or pasted text. OCR, if any,
  * happens on the user's own device (iOS Shortcuts "Extract Text from Image",
  * Android Lens); image files are never accepted. Nothing parsed here reaches
  * the trade log until the user approves a row with a thesis.
@@ -44,7 +44,7 @@ import type { ImportCreateResponse, PendingTradeDTO } from "@/lib/types";
 
 const CONSENT_KEY_PREFIX = "pivox_import_consent";
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
-const ACCEPT = ".csv,.xlsx,.xls";
+const ACCEPT = ".csv,.xlsx,.xls,.pdf";
 
 /** Per-user storage key; `null` when there is no signed-in id to scope it to. */
 function consentKey(userId: number | null | undefined): string | null {
@@ -101,6 +101,11 @@ function ImportPageInner() {
   }, [storageKey]);
 
   const fileTooLarge = file != null && file.size > MAX_FILE_BYTES;
+  // Broker-emailed PDF statements (Kiwoom 영웅문S# 서류발급 → 거래내역서) are
+  // locked with the holder's 6-digit birth date. Sent once as `pdf_password`,
+  // used for the open on the server, never stored there or here.
+  const [pdfPassword, setPdfPassword] = useState("");
+  const isPdf = file != null && /\.pdf$/i.test(file.name);
   const canSubmit =
     consent &&
     !submitting &&
@@ -122,6 +127,7 @@ function ImportPageInner() {
         const form = new FormData();
         form.append("file", file);
         form.append("consent", "true");
+        if (isPdf && pdfPassword) form.append("pdf_password", pdfPassword);
         res = await apiFetch<ImportCreateResponse>(API.imports.create, {
           method: "POST",
           body: form,
@@ -139,6 +145,7 @@ function ImportPageInner() {
       // The /journal inbox card reads the same list — refresh its cache now.
       void mutate(API.imports.pending);
       setFile(null);
+      setPdfPassword("");
       if (fileInputRef.current) fileInputRef.current.value = "";
       setText("");
     } catch (err) {
@@ -268,6 +275,30 @@ function ImportPageInner() {
                   {t("journal.import.page.fileTooLarge")}
                 </span>
               </Caption>
+            )}
+            {isPdf && (
+              <div className="mt-4">
+                <label htmlFor="import-pdf-password">
+                  <FieldLabel tone="bronze">{t("journal.import.page.pdfPasswordLabel")}</FieldLabel>
+                </label>
+                <input
+                  id="import-pdf-password"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={64}
+                  value={pdfPassword}
+                  onChange={(e) => setPdfPassword(e.target.value)}
+                  className="mt-2 block w-full max-w-xs bg-transparent px-3 py-2 font-mono outline-none"
+                  style={{
+                    fontSize: "var(--pq-text-mono-sm)",
+                    color: "var(--pq-ivory)",
+                    border: "0.5px solid var(--pq-ivory-line)",
+                    borderRadius: "var(--pq-radius-cta)",
+                  }}
+                />
+                <Caption className="mt-1">{t("journal.import.page.pdfPasswordHint")}</Caption>
+              </div>
             )}
           </div>
         ) : (
