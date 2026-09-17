@@ -54,6 +54,18 @@ const EVENTS: EventRow[] = [
     help: "When one sector passes 30% of the book, by average cost.",
     defaults: { email: true, push: true, inapp: true },
   },
+  // 2026-09-17: the monthly mirror report. Its only producer is the email
+  // cron (services/reports_delivery.py, 매월 1일 08:30 KST), so push and
+  // in-app default off and stay off — a channel with nothing behind it is
+  // the dead toggle the 2026-09-01 prune removed. Email defaults off too:
+  // the report is an INFORMATION-category send under 정통망법 §50, so it
+  // is opt-in here as well as consent-gated in the sender.
+  {
+    id: "monthly_mirror",
+    name: "Monthly mirror report",
+    help: "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices.",
+    defaults: { email: false, push: false, inapp: false },
+  },
 ];
 
 type Channel = "email" | "push" | "inapp";

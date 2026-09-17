@@ -643,6 +643,22 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
                 job_id="ops_lawyer_packet_weekly",
             ),
         ),
+        # ── 월간 거울 리포트 (2026-09-17) ────────────────────────────────────
+        # 30 8 1 * * — 매월 1일 08:30 KST. 지난 30일의 기록을 PDF 로 묶어
+        # 알림 설정에서 켜 둔 + 정보성 수신 동의가 있는 사용자에게 발송
+        # (정통망법 §50 ① 정보성). 08:30 슬롯은 08:00 (marketing-dispatch) 과
+        # 09:00 / 09:30 의 1일 cluster (commerce-registration / domain-expiry)
+        # 사이의 빈 자리다. 발송 대상이 없으면 그냥 0건으로 끝난다.
+        # scripts/ 가 아니라 services/ 모듈을 직접 부른다 — 이 잡은 ops
+        # 점검이 아니라 제품 발송이고, 온디맨드 라우트와 같은 코드를 쓴다.
+        (
+            "ops_monthly_mirror_report",
+            CronTrigger(day=1, hour=8, minute=30, timezone=KST),
+            _wrap_python_main(
+                "services.reports_delivery",
+                job_id="ops_monthly_mirror_report",
+            ),
+        ),
     ]
 
 
