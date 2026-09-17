@@ -10,7 +10,7 @@
  *   4. ThreeSteps      — 멈춤 · 기록 · 거울, one card per shipping route
  *   5. PersonasPreview — the 3 disclosed buckets only (성장형/균형형/수익형);
  *                        engine persona codes never appear (2026-09-13)
- *   6. Faq             — 6 items, answered against what ships
+ *   6. Faq             — 7 items, answered against what ships
  *   7. CtaFooter       — free closed beta, Google/Kakao only
  *   8. SiteFooter      — 전자상거래법 §13 business disclosure
  *
@@ -300,6 +300,12 @@ function CtaFooter() {
 }
 
 function SiteFooter() {
+  const t = useT();
+  // Same fallback chain as the §13 block below — one address on the whole
+  // footer. 2026-09-17: "Contact" and "EMAIL" went to hello@ while the legal
+  // block two lines down printed support@, which is the address terms-ko.md,
+  // privacy-ko.md and routes/support.py actually use.
+  const supportEmail = businessInfoRaw.supportEmail || SUPPORT_EMAIL_DEFAULT;
   return (
     <footer
       className="pt-24 pb-16 md:pt-32 md:pb-20"
@@ -333,21 +339,24 @@ function SiteFooter() {
                 color: "var(--pq-ivory-faint)",
               }}
             >
-              Research desk for the self-managed portfolio.
+              {t("landing.footer.tagline")}
             </p>
           </div>
 
           {[
             {
-              title: "Company",
+              title: t("landing.footer.company"),
               // Pricing 링크 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0).
               // /pricing 은 next.config.ts 307 redirect → /home. Stage 1 부활 시 복원.
               // Living Mirror / Personas / Signature 열은 /features/* 페이지와
               // 함께 삭제 — 없는 화면을 파는 링크는 남기지 않는다.
               links: [
-                { label: "Terms", href: "/terms" },
-                { label: "Privacy", href: "/privacy" },
-                { label: "Contact", href: "mailto:hello@pivoxquant.com" },
+                { label: t("landing.footer.terms"), href: "/terms" },
+                { label: t("landing.footer.privacy"), href: "/privacy" },
+                {
+                  label: t("landing.footer.contact"),
+                  href: `mailto:${supportEmail}`,
+                },
               ],
             },
           ].map((col) => (
@@ -469,10 +478,10 @@ function SiteFooter() {
             <br />
             이메일{" "}
             <a
-              href={`mailto:${businessInfoRaw.supportEmail || SUPPORT_EMAIL_DEFAULT}`}
+              href={`mailto:${supportEmail}`}
               style={{ color: "inherit", textDecoration: "underline" }}
             >
-              {businessInfoRaw.supportEmail || SUPPORT_EMAIL_DEFAULT}
+              {supportEmail}
             </a>
             {/* 전자상거래법 §13 은 호스팅사업자를 표시하게 한다 — 즉 이 값은
                 장식이 아니라 진술이다. 2026-09-02 까지 "Railway" 라고 적혀
@@ -510,9 +519,7 @@ function SiteFooter() {
                 color: "var(--pq-ivory-faint)",
               }}
             >
-              PivoxQuant is not a licensed investment advisor, discretionary
-              manager, or broker-dealer. Research tool only. Past performance
-              does not guarantee future results.
+              {t("landing.footer.disclaimer")}
             </p>
             {/* FINDING-LAND-006 (design-audit-20260514): removed the public
                 GitHub repo link — PivoxQuant is a private beta on the §101
@@ -520,15 +527,15 @@ function SiteFooter() {
                 ❦ separator was dropped with it since only one link remains. */}
             <div className="flex items-center gap-4 md:justify-end">
               <a
-                href="mailto:hello@pivoxquant.com"
-                className="font-serif transition-colors"
+                href={`mailto:${supportEmail}`}
+                className="font-serif uppercase transition-colors"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.12em",
                   color: "var(--pq-ivory-faint)",
                 }}
               >
-                EMAIL
+                {t("landing.footer.email")}
               </a>
             </div>
           </div>

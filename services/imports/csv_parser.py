@@ -1,4 +1,4 @@
-"""Table parser for broker exports (CSV / XLSX / XLS) and our own export.
+"""Table parser for broker exports (CSV / XLSX / XLS / PDF) and our own export.
 
 No per-broker fixture: a header-synonym dictionary maps whatever column
 names the file carries onto the fields we need. Encoding fallback
@@ -101,8 +101,12 @@ class ParseResult:
 
 # ── Public entry point ─────────────────────────────────────────────────
 
-def parse_table(data: bytes, filename: str) -> ParseResult:
-    """Parse ``data`` (file bytes) into fills. Raises ImportParseError."""
+def parse_table(data: bytes, filename: str, password: str | None = None) -> ParseResult:
+    """Parse ``data`` (file bytes) into fills. Raises ImportParseError.
+
+    ``password`` is only meaningful for ``.pdf`` (a broker-emailed statement
+    locked with the holder's birth date); it is used for the open and dropped.
+    """
     ext = (filename or "").rsplit(".", 1)[-1].lower() if "." in (filename or "") else ""
     if ext in ("csv", "txt", "tsv", ""):
         grid = _read_csv(data)
@@ -110,11 +114,16 @@ def parse_table(data: bytes, filename: str) -> ParseResult:
         grid = _read_xlsx(data)
     elif ext == "xls":
         grid = _read_xls(data)
+    elif ext == "pdf":
+        # 2026-09-17: the PDF a broker app exports is a table too; pdf_parser
+        # only lifts the cells, every column/row rule below is shared.
+        from .pdf_parser import read_pdf
+        grid = read_pdf(data, password=password)
     else:
         raise ImportParseError(
             "IMPORT_UNSUPPORTED_FORMAT",
-            en=f"Unsupported file type: .{ext}. Use CSV, XLSX or XLS.",
-            kr=f"지원하지 않는 파일 형식입니다(.{ext}). CSV·XLSX·XLS 파일을 올려 주세요.",
+            en=f"Unsupported file type: .{ext}. Use CSV, XLSX, XLS or PDF.",
+            kr=f"지원하지 않는 파일 형식입니다(.{ext}). CSV·XLSX·XLS·PDF 파일을 올려 주세요.",
         )
     return _parse_grid(grid)
 
@@ -152,7 +161,34 @@ def _read_csv(data: bytes) -> list[list]:
     return grid
 
 
+MAX_XLSX_UNCOMPRESSED = 32 * 1024 * 1024
+MAX_XLSX_ENTRIES = 512
+
+
+def _guard_xlsx_size(data: bytes) -> None:
+    """A 2MB upload can inflate ~1000:1; openpyxl parses sharedStrings.xml
+    in full before any row cap applies. Refuse archives that would."""
+    import zipfile
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            infos = zf.infolist()
+            total = sum(i.file_size for i in infos)
+    except zipfile.BadZipFile as exc:
+        raise ImportParseError(
+            "IMPORT_UNSUPPORTED_FORMAT",
+            en="XLSX file could not be opened.",
+            kr="XLSX 파일을 열 수 없습니다.",
+        ) from exc
+    if len(infos) > MAX_XLSX_ENTRIES or total > MAX_XLSX_UNCOMPRESSED:
+        raise ImportParseError(
+            "IMPORT_FILE_TOO_LARGE",
+            en="XLSX contents are too large to read. Save the sheet as CSV and retry.",
+            kr="XLSX 내용이 너무 큽니다. CSV 로 저장해 다시 올려 주세요.",
+        )
+
+
 def _read_xlsx(data: bytes) -> list[list]:
+    _guard_xlsx_size(data)
     try:
         import openpyxl
         wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)

@@ -17,7 +17,7 @@
 ## API (`routes/imports.py`, prefix `/api/portfolio/imports`)
 | 메서드 | 경로 | 본문 | 응답 |
 |---|---|---|---|
-| POST | `/` | multipart `file`(csv/xlsx/xls ≤2MB) + `consent=true` **또는** JSON `{text, source:"screenshot_text", consent:true}` | 201 `{batch, pending[], mapping, unmapped_headers}` |
+| POST | `/` | multipart `file`(csv/xlsx/xls/pdf ≤2MB) + `consent=true` (+ pdf 만 `pdf_password`, 미저장) **또는** JSON `{text, source:"screenshot_text", consent:true}` | 201 `{batch, pending[], mapping, unmapped_headers}` |
 | GET | `/pending` | — | `{pending[], count}` (status=pending, 최신순, ≤200) |
 | PATCH | `/pending/<id>` | `{ticker?, name?, action?, shares?, price?, traded_at?}` | `{pending}` — dedupe·needs_ticker 재계산 |
 | POST | `/pending/<id>/approve` | `{thesis}` 3~500자 필수 | `{ok, pending, trade_id, position_id}` |

@@ -28,8 +28,9 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { useT, useLocale } from "@/lib/locale";
 import { usePendingImports } from "@/lib/hooks";
+import { mutate as globalMutate } from "swr";
 import { apiFetch, ApiError } from "@/lib/api";
-import { API } from "@/lib/endpoints";
+import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { displayName, parseIsoUtc } from "@/lib/format";
 import { fadeUp } from "@/lib/motion";
 import { sideLabel } from "@/lib/pre-trade";
@@ -81,6 +82,28 @@ export function fmtTradedAt(iso: string | null | undefined, locale: "ko" | "en")
     minute: "2-digit",
     timeZone: "Asia/Seoul",
   });
+}
+
+/**
+ * An approval writes trade_history + positions. The manual-trade path
+ * (portfolio/page.tsx refreshAll) revalidates the book; the inbox used to
+ * refresh only its own pending list, so /portfolio and every behavior
+ * mirror kept showing pre-approval data for the rest of the session.
+ */
+export async function refreshBookAfterApprove(): Promise<void> {
+  await Promise.all([
+    globalMutate(PORTFOLIO_POSITIONS),
+    globalMutate(PORTFOLIO_SUMMARY),
+    globalMutate(
+      (key) =>
+        typeof key === "string" &&
+        (key.startsWith(PORTFOLIO_TRADES) ||
+          key.startsWith("/api/behavior/") ||
+          key.startsWith("/api/pre-trade/list")),
+      undefined,
+      { revalidate: true },
+    ),
+  ]);
 }
 
 export function thesisOk(thesis: string): boolean {
@@ -310,6 +333,7 @@ export function PendingTradeRow({
         body: JSON.stringify({ thesis: thesis.trim() }),
       });
       onChanged(null);
+      void refreshBookAfterApprove();
     } catch (err) {
       setError(errorMessage(err, t("journal.page.loadFailure")));
     } finally {
@@ -381,6 +405,15 @@ export function PendingTradeRow({
         </span>
         <span>{fmtPrice(row.price, row.currency)}</span>
         <span>{fmtTradedAt(row.traded_at, locale)}</span>
+        {row.confidence < 0.7 && (
+          <span
+            data-testid="import-low-confidence"
+            style={{ color: "var(--pq-bronze)" }}
+            title={t("journal.import.lowConfidenceTitle")}
+          >
+            {t("journal.import.lowConfidence")}
+          </span>
+        )}
       </div>
       <Caption className="mt-1">
         {row.pre_trade_reflection_id != null

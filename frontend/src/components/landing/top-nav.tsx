@@ -16,8 +16,13 @@
  *  • A11y: aria-haspopup, aria-expanded, focus-visible rings.
  *  • Mobile: hides desktop menu, shows hamburger that opens MobileDrawer.
  *
- * This replaces the inline <nav> inside legacy landing-page.tsx for the
- * new slim landing and for all /features/* pages.
+ * Copy: every label / description / footnote is an i18n key under
+ * `landing.nav.*` (messages/{ko,en}.json). 2026-09-17: the menu was hardcoded
+ * English on an otherwise Korean page, the brand tagline still read
+ * "Living CFO" (the deleted AI feature — the CEO's 2026-09-10 umbrella is
+ * "당신 포트폴리오의 CFO", see app/layout.tsx), and Contact pointed at
+ * hello@ while every legal page, the backend mailer and the footer's §13
+ * block say support@ (lib/business-info.ts SoT).
  */
 
 import Link from "next/link";
@@ -39,21 +44,25 @@ import { FilmGrain } from "./film-grain";
 import MobileDrawer from "./mobile-drawer";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/locale";
+import { businessInfoRaw, SUPPORT_EMAIL_DEFAULT } from "@/lib/business-info";
+
+/** Same fallback chain as the footer's 전자상거래법 §13 block. */
+export const SUPPORT_EMAIL =
+  businessInfoRaw.supportEmail || SUPPORT_EMAIL_DEFAULT;
 
 /* ───────────────────────── types ───────────────────────── */
 
 export type NavItem = {
-  label: string;
+  /** i18n key under `landing.nav.<key>` — `.label` + `.desc`. */
+  key: "faq" | "terms" | "privacy" | "contact";
   href: string;
-  description: string;
   icon: LucideIcon;
 };
 
 export type NavGroup = {
-  key: string;
-  label: string;
+  /** i18n key under `landing.nav.<key>` — `.label` + `.footnote`. */
+  key: "docs";
   items: NavItem[];
-  footnote?: string;
 };
 
 /* ───────────────────────── data ───────────────────────── */
@@ -64,33 +73,11 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   // the product no longer has is worse than no menu.
   {
     key: "docs",
-    label: "Docs",
-    footnote: "Terms, privacy, and the non-advisory boundary.",
     items: [
-      {
-        label: "FAQ",
-        href: "/#faq",
-        description: "How observation differs from advice. Plainly.",
-        icon: FileText,
-      },
-      {
-        label: "Terms of Service",
-        href: "/terms",
-        description: "The agreement between you and the desk.",
-        icon: Gavel,
-      },
-      {
-        label: "Privacy Policy",
-        href: "/privacy",
-        description: "What we store, for how long, and why.",
-        icon: Shield,
-      },
-      {
-        label: "Contact",
-        href: "mailto:hello@pivoxquant.com",
-        description: "hello@pivoxquant.com — real humans, promptly.",
-        icon: Compass,
-      },
+      { key: "faq", href: "/#faq", icon: FileText },
+      { key: "terms", href: "/terms", icon: Gavel },
+      { key: "privacy", href: "/privacy", icon: Shield },
+      { key: "contact", href: `mailto:${SUPPORT_EMAIL}`, icon: Compass },
     ],
   },
 ] as const;
@@ -296,7 +283,7 @@ export default function TopNav() {
                   letterSpacing: "0.08em",
                 }}
               >
-                · Living CFO
+                · {t("landing.topNav.tagline")}
               </span>
             </Link>
 
@@ -327,7 +314,7 @@ export default function TopNav() {
                         letterSpacing: "0.02em",
                       }}
                     >
-                      <span>{group.label}</span>
+                      <span>{t(`landing.nav.${group.key}.label`)}</span>
                       <span
                         aria-hidden
                         className="inline-block transition-transform duration-300"
@@ -446,7 +433,7 @@ export default function TopNav() {
               <motion.div
                 key="nav-mega-panel"
                 role="menu"
-                aria-label={`${activeGroup.label} menu`}
+                aria-label={t(`landing.nav.${activeGroup.key}.label`)}
                 data-active-key={activeGroup.key}
                 variants={panelVariants}
                 initial="hidden"
@@ -520,7 +507,7 @@ export default function TopNav() {
                               letterSpacing: "0.22em",
                             }}
                           >
-                            {activeGroup.label}
+                            {t(`landing.nav.${activeGroup.key}.label`)}
                           </span>
                         </div>
                         <p
@@ -532,7 +519,7 @@ export default function TopNav() {
                             maxWidth: 240,
                           }}
                         >
-                          {activeGroup.footnote}
+                          {t(`landing.nav.${activeGroup.key}.footnote`)}
                         </p>
                       </div>
 
@@ -590,7 +577,7 @@ export default function TopNav() {
                                     fontWeight: 500,
                                   }}
                                 >
-                                  {item.label}
+                                  {t(`landing.nav.${item.key}.label`)}
                                   <ArrowRight
                                     className="h-3 w-3 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
                                     style={{ color: "var(--pq-bronze)" }}
@@ -605,7 +592,9 @@ export default function TopNav() {
                                     lineHeight: 1.5,
                                   }}
                                 >
-                                  {item.description}
+                                  {t(`landing.nav.${item.key}.desc`, {
+                                    email: SUPPORT_EMAIL,
+                                  })}
                                 </p>
                               </div>
                             </Link>

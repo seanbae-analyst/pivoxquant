@@ -157,7 +157,10 @@ FREE_POSITION_CAP = 3
 
 def _enforce_position_cap(user_id: int) -> None:
     from models import User
-    user = db.session.get(User, user_id)
+    # Same User row lock as routes/portfolio.py (Bug C#2, 2026-05-26): two
+    # concurrent approves must not both count 2 and both open a 4th position.
+    # Lock order stays User → Position. No-op on SQLite.
+    user = User.query.filter_by(id=user_id).with_for_update().first()
     tier = getattr(user, "effective_tier", None) if user is not None else None
     if tier not in (None, "free"):
         return

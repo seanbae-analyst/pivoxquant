@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Mail, MessageSquare, FileText } from "lucide-react";
+import { Mail, FileText } from "lucide-react";
+import { SUPPORT_EMAIL_DEFAULT } from "@/lib/business-info";
 
 export const metadata = {
   title: "Contact",
@@ -7,20 +8,18 @@ export const metadata = {
   alternates: { canonical: "/contact" },
 };
 
+// One address. 2026-09-17: this used to list hello@ for "General" and
+// support@ for "Support", and the Support blurb offered help with "billing"
+// (gated 503 BUSINESS_REGISTRATION_PENDING — nobody is billed) and "broker
+// connection" (BROKER_LINKING_AVAILABLE=false — there is nothing to connect).
+// support@ is the address terms-ko.md, privacy-ko.md and routes/support.py use.
 const CHANNELS = [
   {
     icon: Mail,
-    title: "General",
-    address: "hello@pivoxquant.com",
+    title: "Email",
+    address: SUPPORT_EMAIL_DEFAULT,
     helper:
-      "Product questions, beta access, partnership conversations.",
-  },
-  {
-    icon: MessageSquare,
-    title: "Support",
-    address: "support@pivoxquant.com",
-    helper:
-      "Account, billing, broker connection, a record that is not showing up. We reply within one business day.",
+      "Product questions, beta access, account access, an import that did not parse, a record that is not showing up. The operator replies in person.",
   },
 ];
 

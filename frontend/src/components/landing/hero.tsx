@@ -66,6 +66,12 @@ export function Hero() {
   const { user } = useAuth();
   return (
     <section
+      // app/layout.tsx renders a "Skip to main content" link to #main-content.
+      // The dashboard shell owns that id on its <main>; the landing had no
+      // target at all (measured 2026-09-17: getElementById → null), so the
+      // skip link was a dead jump. The hero is the first content after the
+      // full-viewport splash, so it is the right landing spot.
+      id="main-content"
       aria-labelledby="pq-hero-heading"
       className="relative isolate"
       style={{
