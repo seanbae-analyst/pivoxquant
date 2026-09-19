@@ -1,372 +1,187 @@
 """
-tests/test_signup_min_age.py — PIPA §22 ⑥ server-side birthdate gate.
+tests/test_signup_min_age.py — PIPA §22 ⑥ server-side minimum-age gate.
 
-Audit W1.4 P0 finding: ``routes/auth.py:252 /register`` and the OAuth
-callbacks had **zero** server-side birthdate validation. ``curl POST
+Audit W1.4 P0 finding (birthdate era): ``/register`` and the OAuth
+callbacks had **zero** server-side age validation — ``curl POST
 /api/auth/register`` could create a 13-year-old account, bypassing the
-client-only check in ``frontend/src/app/(auth)/signup/_v2/page-v2.tsx``.
+client-only check.
 
-This file is the regression gate. Every gate that creates a ``User``
-row must reject under-14, and every error code must match
-``frontend/src/lib/age-verification.ts``.
+2026-09-19: the product stopped collecting a date of birth. The gate is
+now the "만 14세 이상입니다" self-declaration, which the server requires
+as a literal ``true`` and stamps into ``users.age_confirmed_at``. This
+file is the regression gate for that contract on every path that creates
+or completes a ``User`` row. The consent-stack gate on oauth-finalize is
+owned by ``tests/test_oauth_finalize_consents.py``; the API gate by
+``tests/test_age_gate.py``.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
 
 from extensions import db
 from models import User
 from services.age_verification import (
-    BirthdateValidationError,
-    MIN_AGE_YEARS,
-    check_birthdate_payload,
-    compute_age_years,
-    is_at_least_min_age,
-    parse_birthdate_strict,
+    MIN_AGE,
+    AgeConfirmationError,
+    check_age_confirmation_payload,
 )
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────
+# ── Pure helper (no Flask) ─────────────────────────────────────────────────
 
-def _years_ago(n: int) -> str:
-    """Return a yyyy-mm-dd birthdate exactly ``n`` years before today."""
-    today = date.today()
-    try:
-        bd = today.replace(year=today.year - n)
-    except ValueError:
-        # Feb 29 fallback — pin to Feb 28 in non-leap target years.
-        bd = today.replace(year=today.year - n, day=28)
-    return bd.isoformat()
+class TestCheckAgeConfirmationPayload:
+    def test_min_age_is_fourteen(self):
+        assert MIN_AGE == 14
 
+    def test_literal_true_passes(self):
+        assert check_age_confirmation_payload(True) is None
 
-# ── Pure helpers (no Flask) ────────────────────────────────────────────────
+    @pytest.mark.parametrize("value", [None, False, "true", "on", 1, "yes", "True", [], {}])
+    def test_anything_else_raises_required(self, value):
+        with pytest.raises(AgeConfirmationError) as exc:
+            check_age_confirmation_payload(value)
+        assert exc.value.code == "age_confirmation_required"
 
-class TestParseBirthdateStrict:
-    def test_valid_yyyy_mm_dd(self):
-        assert parse_birthdate_strict("2000-01-15") == date(2000, 1, 15)
+    def test_error_is_a_value_error_with_code(self):
+        err = AgeConfirmationError("age_confirmation_required")
+        assert isinstance(err, ValueError)
+        assert err.code == "age_confirmation_required"
 
-    def test_missing_field_raises_required(self):
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict(None)
-        assert exc.value.code == "birthdate_required"
-
-    def test_empty_string_raises_required(self):
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict("")
-        assert exc.value.code == "birthdate_required"
-
-    def test_non_string_raises_invalid_format(self):
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict(20000115)
-        assert exc.value.code == "birthdate_invalid_format"
-
-    def test_wrong_separator_raises_invalid_format(self):
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict("2000/01/15")
-        assert exc.value.code == "birthdate_invalid_format"
-
-    def test_short_form_raises_invalid_format(self):
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict("00-01-15")
-        assert exc.value.code == "birthdate_invalid_format"
-
-    def test_unparseable_calendar_raises_invalid_format(self):
-        # Feb 30 doesn't exist
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict("2020-02-30")
-        assert exc.value.code == "birthdate_invalid_format"
-
-    def test_future_date_raises_unrealistic(self):
-        future = (date.today() + timedelta(days=10)).isoformat()
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict(future)
-        assert exc.value.code == "birthdate_unrealistic"
-
-    def test_year_2200_raises_unrealistic(self):
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict("2200-01-01")
-        assert exc.value.code == "birthdate_unrealistic"
-
-    def test_year_below_1900_raises_unrealistic(self):
-        with pytest.raises(BirthdateValidationError) as exc:
-            parse_birthdate_strict("1899-12-31")
-        assert exc.value.code == "birthdate_unrealistic"
-
-
-class TestComputeAgeYears:
-    def test_birthday_today_counts_full_year(self):
-        today = date(2026, 5, 10)
-        bd = date(2010, 5, 10)
-        assert compute_age_years(bd, today) == 16
-
-    def test_birthday_tomorrow_subtracts_one(self):
-        today = date(2026, 5, 10)
-        bd = date(2010, 5, 11)
-        assert compute_age_years(bd, today) == 15
-
-    def test_birthday_yesterday_no_change(self):
-        today = date(2026, 5, 10)
-        bd = date(2010, 5, 9)
-        assert compute_age_years(bd, today) == 16
-
-
-class TestIsAtLeastMinAge:
-    def test_exactly_min_age_passes(self):
-        today = date(2026, 5, 10)
-        bd = date(2026 - MIN_AGE_YEARS, 5, 10)
-        assert is_at_least_min_age(bd, today=today) is True
-
-    def test_one_day_under_fails(self):
-        today = date(2026, 5, 10)
-        bd = date(2026 - MIN_AGE_YEARS, 5, 11)
-        assert is_at_least_min_age(bd, today=today) is False
-
-
-class TestCheckBirthdatePayload:
-    def test_under_14_raises_below_min_age(self):
-        thirteen = _years_ago(13)
-        with pytest.raises(BirthdateValidationError) as exc:
-            check_birthdate_payload(thirteen)
-        assert exc.value.code == "below_min_age"
-
-    def test_exactly_14_returns_ok(self):
-        fourteen = _years_ago(14)
-        result = check_birthdate_payload(fourteen)
-        assert result.ok is True
-        assert result.years >= MIN_AGE_YEARS
+    def test_birthdate_helpers_are_gone(self):
+        """The birthdate parsers must not quietly survive as dead code."""
+        import services.age_verification as mod
+        for name in ("BirthdateValidationError", "check_birthdate_payload",
+                     "parse_birthdate_strict", "is_at_least_min_age",
+                     "compute_age_years"):
+            assert not hasattr(mod, name), name
 
 
 # ── /register endpoint ─────────────────────────────────────────────────────
 
 class TestRegisterMinAge:
-    def test_register_without_birthdate_returns_400(self, client):
+    def test_register_without_age_confirmed_returns_400(self, client):
         r = client.post("/api/auth/register", json={
-            "email": "no-bd@test.com",
+            "email": "no-age@test.com",
             "password": "secretpass",
-            "name": "No Birthdate",
+            "name": "No Age",
         })
         assert r.status_code == 400
-        assert r.get_json()["error"] == "birthdate_required"
+        body = r.get_json()
+        assert body["error"] == "age_confirmation_required"
+        assert body["code"] == "age_confirmation_required"
+        assert body["error_kr"] == "만 14세 이상임을 확인해 주세요."
 
-    def test_register_under_14_returns_400(self, client):
+    def test_register_age_confirmed_false_returns_400(self, client):
         r = client.post("/api/auth/register", json={
             "email": "under14@test.com",
             "password": "secretpass",
-            "birthdate": _years_ago(13),
+            "age_confirmed": False,
         })
         assert r.status_code == 400
-        assert r.get_json()["error"] == "below_min_age"
+        assert r.get_json()["error"] == "age_confirmation_required"
 
-    def test_register_at_least_14_succeeds(self, client, app):
+    @pytest.mark.parametrize("truthy", ["true", 1, "on"])
+    def test_register_truthy_non_boolean_returns_400(self, client, truthy):
+        r = client.post("/api/auth/register", json={
+            "email": "truthy@test.com",
+            "password": "secretpass",
+            "age_confirmed": truthy,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["error"] == "age_confirmation_required"
+
+    def test_register_does_not_create_row_when_unconfirmed(self, client, app):
+        client.post("/api/auth/register", json={
+            "email": "leak13@test.com",
+            "password": "secretpass",
+            "age_confirmed": False,
+        })
+        with app.app_context():
+            assert User.query.filter_by(email="leak13@test.com").first() is None
+
+    def test_register_age_confirmed_true_succeeds_and_stamps(self, client, app):
         r = client.post("/api/auth/register", json={
             "email": "ok14@test.com",
             "password": "secretpass",
-            "birthdate": _years_ago(14),
+            "age_confirmed": True,
         })
         assert r.status_code == 200
         data = r.get_json()
         assert data["ok"] is True
         assert data["user"]["email"] == "ok14@test.com"
-        # Frontend gate flag should now be False (birthdate persisted).
-        assert data["user"]["birthdate_required"] is False
-        # DB persisted the birthdate.
+        assert data["user"]["age_confirmation_required"] is False
+        assert data["user"]["birthdate_required"] is False  # deprecated alias
         with app.app_context():
             u = User.query.filter_by(email="ok14@test.com").first()
             assert u is not None
-            assert u.birthdate is not None
-            assert u.birthdate.isoformat() == _years_ago(14)
+            assert u.age_confirmed_at is not None
+            assert u.age_confirmed_at.tzinfo is None  # naive UTC convention
+            assert u.birthdate is None  # never collected anymore
 
-    def test_register_future_birthdate_returns_400(self, client):
-        future = (date.today() + timedelta(days=30)).isoformat()
+    def test_register_ignores_legacy_birthdate_key(self, client, app):
+        """An old bundle may still send ``birthdate`` — it is neither stored
+        nor an error."""
         r = client.post("/api/auth/register", json={
-            "email": "future@test.com",
+            "email": "oldbundle@test.com",
             "password": "secretpass",
-            "birthdate": future,
-        })
-        assert r.status_code == 400
-        assert r.get_json()["error"] == "birthdate_unrealistic"
-
-    def test_register_year_2200_returns_400(self, client):
-        r = client.post("/api/auth/register", json={
-            "email": "y2200@test.com",
-            "password": "secretpass",
-            "birthdate": "2200-01-01",
-        })
-        assert r.status_code == 400
-        assert r.get_json()["error"] == "birthdate_unrealistic"
-
-    def test_register_malformed_birthdate_returns_400(self, client):
-        r = client.post("/api/auth/register", json={
-            "email": "malformed@test.com",
-            "password": "secretpass",
-            "birthdate": "not-a-date",
-        })
-        assert r.status_code == 400
-        assert r.get_json()["error"] == "birthdate_invalid_format"
-
-    def test_register_does_not_create_row_when_under_14(self, client, app):
-        client.post("/api/auth/register", json={
-            "email": "leak13@test.com",
-            "password": "secretpass",
-            "birthdate": _years_ago(13),
-        })
-        with app.app_context():
-            assert User.query.filter_by(email="leak13@test.com").first() is None
-
-
-# ── /oauth-finalize endpoint ───────────────────────────────────────────────
-
-# 2026-09-17 P1 — /api/auth/oauth-finalize 는 생년월일과 함께 법정 필수 동의
-# 3종을 받는다. 동의 게이트 자체의 회귀 테스트는
-# ``tests/test_oauth_finalize_consents.py`` 가 소유하고, 이 파일은 연령
-# 검증만 본다 — 그래서 여기서는 동의를 항상 채워 보낸다.
-_CONSENTS = {"terms": True, "non_advisory": True, "cross_border": True}
-
-
-class TestOAuthFinalize:
-    """Exercise the interstitial that captures birthdate after OAuth.
-
-    The OAuth callback creates a User row with ``birthdate=NULL`` and
-    logs the user in, then redirects to the frontend ``/signup/oauth-finalize``
-    page which POSTs back here.
-    """
-
-    def _make_oauth_user(self, app, email="oauth@test.com", with_bd=False):
-        """Insert a User row that mimics post-OAuth-callback state."""
-        with app.app_context():
-            u = User(
-                email=email,
-                name="OAuth User",
-                google_id=f"goog_{email}",
-                oauth_provider="google",
-            )
-            if with_bd:
-                u.birthdate = date(2000, 1, 1)
-            db.session.add(u)
-            db.session.commit()
-            return u.id
-
-    def _login_as(self, client, app, user_id):
-        """Establish a logged-in session for ``user_id`` via Flask-Login."""
-        with client.raw.session_transaction() as sess:
-            sess["_user_id"] = str(user_id)
-            sess["_fresh"] = True
-
-    def test_finalize_without_login_returns_401(self, client):
-        r = client.post("/api/auth/oauth-finalize", json={
-            "birthdate": _years_ago(20),
-            "consents": _CONSENTS,
-        })
-        # ``@api_auth`` returns 401 for unauthenticated requests.
-        assert r.status_code == 401
-
-    def test_finalize_under_14_returns_400(self, client, app):
-        uid = self._make_oauth_user(app)
-        self._login_as(client, app, uid)
-        r = client.post("/api/auth/oauth-finalize", json={
-            "birthdate": _years_ago(13),
-            "consents": _CONSENTS,
-        })
-        assert r.status_code == 400
-        assert r.get_json()["error"] == "below_min_age"
-        # 2026-09-10 (PIPA §22 ⑥): the half-provisioned account is erased,
-        # not just left without a birthdate, and the session is ended.
-        with app.app_context():
-            assert db.session.get(User, uid) is None
-        me = client.get("/api/auth/me")
-        # The session is gone: either 401, or a 200 that carries no user.
-        assert me.status_code == 401 or not (me.get_json() or {}).get("user")
-
-    def test_finalize_at_least_14_persists_birthdate(self, client, app):
-        uid = self._make_oauth_user(app, email="ok-finalize@test.com")
-        self._login_as(client, app, uid)
-        r = client.post("/api/auth/oauth-finalize", json={
-            "birthdate": _years_ago(14),
-            "consents": _CONSENTS,
+            "age_confirmed": True,
+            "birthdate": "1990-01-01",
         })
         assert r.status_code == 200
-        data = r.get_json()
-        assert data["ok"] is True
-        assert data["user"]["birthdate_required"] is False
         with app.app_context():
-            u = db.session.get(User, uid)
-            assert u.birthdate is not None
+            u = User.query.filter_by(email="oldbundle@test.com").first()
+            assert u.birthdate is None
+            assert u.age_confirmed_at is not None
 
-    def test_finalize_missing_birthdate_returns_400(self, client, app):
-        uid = self._make_oauth_user(app, email="missing-finalize@test.com")
-        self._login_as(client, app, uid)
-        r = client.post("/api/auth/oauth-finalize", json={
-            "consents": _CONSENTS,
+    def test_register_birthdate_alone_is_not_enough(self, client, app):
+        """A birthdate without the self-declaration does not pass the gate."""
+        r = client.post("/api/auth/register", json={
+            "email": "bd-only@test.com",
+            "password": "secretpass",
+            "birthdate": "1990-01-01",
         })
         assert r.status_code == 400
-        assert r.get_json()["error"] == "birthdate_required"
-
-    def test_finalize_overwrite_with_different_value_returns_409(
-        self, client, app
-    ):
-        """Once set, birthdate cannot be silently changed.
-
-        PIPA audit-trail requirement — a user can't lower their stored
-        age via repeated POSTs.
-        """
-        uid = self._make_oauth_user(
-            app, email="set-finalize@test.com", with_bd=True
-        )
-        self._login_as(client, app, uid)
-        r = client.post("/api/auth/oauth-finalize", json={
-            "birthdate": _years_ago(14),  # different from the seeded 2000-01-01
-            "consents": _CONSENTS,
-        })
-        assert r.status_code == 409
-        assert r.get_json()["error"] == "birthdate_already_set"
-
-    def test_finalize_idempotent_same_value(self, client, app):
-        """POSTing the same already-stored value is a no-op success."""
-        uid = self._make_oauth_user(
-            app, email="idem-finalize@test.com", with_bd=True
-        )
-        self._login_as(client, app, uid)
-        r = client.post("/api/auth/oauth-finalize", json={
-            "birthdate": "2000-01-01",
-            "consents": _CONSENTS,
-        })
-        assert r.status_code == 200
-        assert r.get_json()["ok"] is True
+        assert r.get_json()["error"] == "age_confirmation_required"
+        with app.app_context():
+            assert User.query.filter_by(email="bd-only@test.com").first() is None
 
 
-# ── serialize_user.birthdate_required gate ─────────────────────────────────
+# ── serialize_user gate keys ───────────────────────────────────────────────
 
-class TestSerializeUserBirthdateRequired:
-    def test_null_birthdate_sets_required_true(self, app):
+class TestSerializeUserAgeConfirmationRequired:
+    def _serialize(self, app, **kw):
         from services.serializers import serialize_user
         with app.app_context():
-            u = User(email="null-bd@test.com", name="x")
+            u = User(name="x", **kw)
             db.session.add(u)
             db.session.commit()
-            payload = serialize_user(u)
-            assert payload["birthdate_required"] is True
+            return serialize_user(u)
 
-    def test_set_birthdate_sets_required_false(self, app):
-        from services.serializers import serialize_user
-        with app.app_context():
-            u = User(
-                email="set-bd@test.com", name="x", birthdate=date(2000, 1, 1)
-            )
-            db.session.add(u)
-            db.session.commit()
-            payload = serialize_user(u)
-            assert payload["birthdate_required"] is False
+    def test_unconfirmed_sets_required_true_on_both_keys(self, app):
+        payload = self._serialize(app, email="null-age@test.com")
+        assert payload["age_confirmation_required"] is True
+        assert payload["birthdate_required"] is True
 
-    def test_raw_birthdate_value_not_leaked(self, app):
-        """We expose the *boolean gate* but not the date itself."""
-        from services.serializers import serialize_user
-        with app.app_context():
-            u = User(
-                email="leak-bd@test.com", name="x", birthdate=date(1990, 6, 15)
-            )
-            db.session.add(u)
-            db.session.commit()
-            payload = serialize_user(u)
-            assert "birthdate" not in payload
+    def test_stamped_sets_required_false_on_both_keys(self, app):
+        from datetime import datetime
+        payload = self._serialize(app, email="set-age@test.com",
+                                  age_confirmed_at=datetime(2026, 9, 19))
+        assert payload["age_confirmation_required"] is False
+        assert payload["birthdate_required"] is False
+
+    def test_legacy_birthdate_sets_required_false(self, app):
+        payload = self._serialize(app, email="legacy-bd@test.com",
+                                  birthdate=date(2000, 1, 1))
+        assert payload["age_confirmation_required"] is False
+        assert payload["birthdate_required"] is False
+
+    def test_raw_values_not_leaked(self, app):
+        """We expose the *boolean gate* but neither the date nor the stamp."""
+        from datetime import datetime
+        payload = self._serialize(app, email="leak-bd@test.com",
+                                  birthdate=date(1990, 6, 15),
+                                  age_confirmed_at=datetime(2026, 9, 19))
+        assert "birthdate" not in payload
+        assert "age_confirmed_at" not in payload

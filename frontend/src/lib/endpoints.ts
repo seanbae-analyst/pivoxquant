@@ -11,13 +11,16 @@ export const API = {
     google: "/api/auth/google",
     kakao: "/api/auth/kakao",
     /**
-     * PIPA §22 ⑥ — birthdate interstitial.
+     * PIPA §22 ⑥ — age self-declaration + required-consent interstitial
+     * (2026-09-19: no birthdate is collected any more).
      * Hit by the ``/signup/oauth-finalize`` page after the OAuth callback
-     * redirects new (and legacy NULL-birthdate) users there. Body =
-     * ``{ birthdate: "yyyy-mm-dd" }``. Errors return one of the i18n codes
-     * defined in ``services/age_verification.py``:
-     *   birthdate_required / birthdate_invalid_format /
-     *   birthdate_unrealistic / below_min_age / birthdate_already_set
+     * redirects users with ``age_confirmation_required === true`` there.
+     * Body = ``{ consents: { terms, non_advisory, cross_border, age } }``
+     * — all four must be literally ``true``; otherwise 400 with
+     * ``code: "consents_required"`` and ``missing_consents: [...]``.
+     * Re-submitting is idempotent (200). The server stamps
+     * ``users.age_confirmed_at`` + ``cross_border_consent_at``. Data
+     * endpoints answer 403 ``AGE_CONFIRMATION_REQUIRED`` until then.
      */
     oauthFinalize: "/api/auth/oauth-finalize",
     deleteAccount: "/api/auth/delete-account",

@@ -9,7 +9,8 @@
  *
  *   1. Terms of service + privacy policy (generic)
  *   2. Non-advisory disclosure (자본시장법)
- *   3. Age confirmation — 14+ (PIPA §22)
+ *   3. Age confirmation — 14+ self-declaration (PIPA §22 ⑥; 2026-09-19:
+ *      plain required checkbox, no birthdate is collected)
  *   4. Cross-border data transfer consent (PIPA §28-8, 2024-09 시행) —
  *      미국·프랑스 소재 8개 사업자 (처리방침 §6 이 SoT) 이전 동의
  *
@@ -25,18 +26,9 @@
  * does not render.
  */
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ModalShell } from "@/components/ui/modal-shell";
-import {
-  isValidBirthdate,
-  isAtLeastMinAge,
-  computeAgeYears,
-  UNDER_AGE_KO,
-  UNDER_AGE_EN,
-  BIRTHDATE_LABEL_KO,
-  BIRTHDATE_LABEL_EN,
-} from "@/lib/age-verification";
 
 const CONSENT_STORAGE_KEY = "pivox_signup_consents";
 
@@ -114,36 +106,12 @@ export function LegalConsentModal({
     cross_border: false,
     marketing: false,
   });
-  const [birthdate, setBirthdate] = useState("");
 
-  const ageCheck = useMemo(() => {
-    const valid = isValidBirthdate(birthdate);
-    return {
-      valid,
-      eligible: valid && isAtLeastMinAge(birthdate),
-      years: valid ? computeAgeYears(birthdate) : -1,
-    };
-  }, [birthdate]);
-
-  // SHIP-BLOCKER fix 2026-05-11: DOB ≥14 자동으로 agree_age=true 도출.
-  // 사용자가 별도 클릭 안 해도 진행 가능 (E2E user-tester P0 회귀). DOB
-  // invalid/<14 이면 agree_age=false 로 초기화하여 fail-fast 유지.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setConsents((prev) =>
-      prev.age === ageCheck.eligible
-        ? prev
-        : { ...prev, age: ageCheck.eligible },
-    );
-  }, [ageCheck.eligible]);
-
-  // PIPA §22 ⑥ — 만 14세 미만은 fail-fast. 자가선언 + 생년월일 이중 검증.
-  const ageOk = consents.age && ageCheck.eligible;
-
+  // PIPA §22 ⑥ — 만 14세 이상 자가선언 (2026-09-19: 생년월일 미수집).
   const allRequired =
     consents.terms &&
     consents.non_advisory &&
-    ageOk &&
+    consents.age &&
     consents.cross_border;
 
   useEffect(() => {
@@ -161,9 +129,6 @@ export function LegalConsentModal({
         CONSENT_STORAGE_KEY,
         JSON.stringify({
           ...consents,
-          // PIPA §22 ⑥ — 만나이 검증 흔적. 백엔드 promote 시 별도 저장 가능.
-          birthdate,
-          age_years: ageCheck.years,
           consented_at: new Date().toISOString(),
         }),
       );
@@ -275,76 +240,24 @@ export function LegalConsentModal({
             </span>
           </label>
 
-          {/* 3. 14세 이상 (PIPA §22 ⑥) — 생년월일 + 자가선언 이중 방어선 */}
-          <div className="flex flex-col gap-2">
-            <label
-              htmlFor="consent_birthdate"
-              className="flex flex-col gap-1"
+          {/* 3. 14세 이상 자가선언 (PIPA §22 ⑥) — 일반 필수 체크박스 */}
+          <label
+            htmlFor="consent_age"
+            className="flex cursor-pointer items-start gap-2"
+          >
+            <Checkbox
+              id="consent_age"
+              checked={consents.age}
+              onChange={setConsent("age")}
+            />
+            <span
+              className="text-xs leading-relaxed"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
             >
-              <span
-                className="text-pq-mono-sm uppercase tracking-[0.18em]"
-                style={{ color: "var(--pq-bronze)" }}
-              >
-                {BIRTHDATE_LABEL_KO} · {BIRTHDATE_LABEL_EN}
-              </span>
-              <input
-                id="consent_birthdate"
-                type="date"
-                value={birthdate}
-                max={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => setBirthdate(e.target.value)}
-                aria-invalid={birthdate !== "" && !ageCheck.eligible}
-                aria-describedby="consent_birthdate_msg"
-                className="rounded-[2px] border bg-transparent px-2 py-1.5 text-xs"
-                style={{
-                  borderColor: ageCheck.eligible
-                    ? "var(--pq-ivory-line)"
-                    : birthdate
-                      ? "rgba(244,108,108,0.6)"
-                      : "var(--pq-ivory-line)",
-                  color: "rgba(var(--pq-ivory-rgb), 0.85)",
-                  colorScheme: "dark",
-                }}
-              />
-              {birthdate && !ageCheck.eligible && (
-                <span
-                  id="consent_birthdate_msg"
-                  role="alert"
-                  className="text-pq-mono-sm leading-relaxed"
-                  style={{ color: "rgba(244,108,108,0.92)" }}
-                >
-                  {UNDER_AGE_KO}
-                  <br />
-                  <span style={{ opacity: 0.75 }}>{UNDER_AGE_EN}</span>
-                </span>
-              )}
-            </label>
-
-            <label
-              htmlFor="consent_age"
-              className="flex cursor-pointer items-start gap-2"
-              style={{
-                opacity: ageCheck.eligible ? 1 : 0.5,
-                pointerEvents: ageCheck.eligible ? "auto" : "none",
-              }}
-            >
-              <Checkbox
-                id="consent_age"
-                checked={consents.age && ageCheck.eligible}
-                onChange={(next) => {
-                  if (!ageCheck.eligible) return;
-                  setConsent("age")(next);
-                }}
-              />
-              <span
-                className="text-xs leading-relaxed"
-                style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
-              >
-                <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> 만 14세 이상임을 확인합니다.
-                (개인정보보호법 §22 ⑥)
-              </span>
-            </label>
-          </div>
+              <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> 만 14세 이상임을 확인합니다.
+              (개인정보보호법 §22 ⑥)
+            </span>
+          </label>
 
           {/* 4. 국외 이전 동의 (PIPA §28-8) */}
           <label
@@ -420,7 +333,7 @@ export function LegalConsentModal({
             {/* 2026-05-15 (bug-hunter Wave 7 HIGH #3): hint text was
                 "필수 항목 3개" but actual required checkboxes are 4
                 (이용약관 + 투자자문업 아님 + 만 14세 + 개인정보 국외
-                이전). The `allRequired` check (lines 143-147) already
+                이전). The `allRequired` check already
                 counted 4 fields + the file's own header comment §8
                 names "four required agreements" — only this hint
                 string was stale. Stale agreement count is a PIPA /

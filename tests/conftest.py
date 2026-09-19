@@ -109,7 +109,7 @@ os.environ["LAUNCH_FREE_ALL_TIERS"] = "0"
 # Eagerly import the app module NOW. ``app.py`` runs
 # ``load_dotenv(..., override=True)`` at module import, which RE-injects every
 # .env value (incl. DEV_LOGIN_SECRET). The test app uses the pure
-# ``app.birthdate_gate_blocks`` predicate for the PIPA §22 ⑥ age gate, so this
+# ``app.age_gate_blocks`` predicate for the PIPA §22 ⑥ age gate, so this
 # import is unavoidable. Triggering it here — then stripping the dev bypass
 # secret one more time — guarantees that by the time any test app is built
 # (and its blueprints conditionally registered), the dev-login route is absent
@@ -126,7 +126,7 @@ os.environ["LAUNCH_FREE_ALL_TIERS"] = "0"
 # test env set up above survives intact. (Prod is unaffected — run.py path.)
 import dotenv as _dotenv  # noqa: E402
 _dotenv.load_dotenv = lambda *a, **k: None  # type: ignore[assignment]
-import app as _app_module  # noqa: E402  (predicate source for birthdate gate)
+import app as _app_module  # noqa: E402  (predicate source for the age gate)
 # Belt-and-suspenders: re-apply isolation in case any import already ran.
 for _k in _KILL_KEYS:
     os.environ.pop(_k, None)
@@ -177,23 +177,23 @@ def _build_test_app():
         return redirect("/home")
 
     # PIPA §22 ⑥ age gate — registered exactly as create_app() wires it, so
-    # the half-provisioned-OAuth-user (birthdate NULL) bypass is covered by
-    # the integration tests rather than only in prod.
+    # the half-provisioned-OAuth-user (no age confirmation) bypass is covered
+    # by the integration tests rather than only in prod.
     from flask import request, jsonify as _jsonify
     from flask_login import current_user as _current_user
-    birthdate_gate_blocks = _app_module.birthdate_gate_blocks
+    age_gate_blocks = _app_module.age_gate_blocks
 
     @app.before_request
-    def _require_birthdate_test():
-        if birthdate_gate_blocks(
+    def _require_age_confirmation_test():
+        if age_gate_blocks(
             request.path,
             bool(getattr(_current_user, "is_authenticated", False)),
-            getattr(_current_user, "birthdate", None),
+            bool(getattr(_current_user, "age_confirmed", False)),
         ):
             return _jsonify({
-                "error":    "Birthdate confirmation required.",
-                "error_kr": "생년월일 확인이 필요합니다.",
-                "code":     "BIRTHDATE_REQUIRED",
+                "error":    "Age confirmation required.",
+                "error_kr": "만 14세 이상 확인이 필요합니다.",
+                "code":     "AGE_CONFIRMATION_REQUIRED",
             }), 403
 
     # Register all blueprints exactly as prod does.
@@ -365,23 +365,25 @@ def make_user(app):
 
     def _make(email="user@test.com", password="password123", name="Tester",
               capital_usd=10000.0, capital_krw=1_000_000.0, tier="free",
-              birthdate="_default"):
-        # Real provisioned users ALWAYS carry a birthdate — it is captured at
-        # /register or /api/auth/oauth-finalize before any feature endpoint is
-        # reachable (PIPA §22 ⑥ age gate, enforced by app._require_birthdate).
-        # Default the factory to an adult so the common "logged-in user" case
-        # mirrors production. Pass ``birthdate=None`` to model the transient
-        # half-provisioned OAuth state (birthdate not yet supplied) that the
-        # age gate is designed to block.
-        from datetime import date
+              age_confirmed=True, birthdate=None):
+        # Real provisioned users ALWAYS carry an age confirmation — the
+        # 만 14세 self-declaration is captured at /register or
+        # /api/auth/oauth-finalize before any feature endpoint is reachable
+        # (PIPA §22 ⑥ age gate, enforced by app._require_age_confirmation).
+        # Default the factory to a confirmed user so the common "logged-in
+        # user" case mirrors production. Pass ``age_confirmed=False`` to
+        # model the transient half-provisioned OAuth state the gate blocks.
+        # Pass ``birthdate=date(...)`` (with ``age_confirmed=False``) to model
+        # a legacy birthdate-era user who must still pass without re-prompt.
+        from datetime import datetime, timezone
         with app.app_context():
             u = User(email=email, name=name,
                      available_capital=capital_usd,
                      available_capital_krw=capital_krw,
                      subscription_tier=tier)
-            if birthdate == "_default":
-                u.birthdate = date(1990, 1, 1)
-            elif birthdate is not None:
+            if age_confirmed:
+                u.age_confirmed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            if birthdate is not None:
                 u.birthdate = birthdate
             u.set_pw(password)
             db.session.add(u)

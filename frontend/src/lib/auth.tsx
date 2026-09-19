@@ -62,13 +62,39 @@ export interface User {
   raw_subscription_status?: string;
   onboarding_completed?: boolean;
   /**
-   * PIPA §22 ⑥ — true iff the User row has ``birthdate IS NULL``.
-   * Set by ``services/serializers.py serialize_user``. New OAuth sign-ups
-   * and legacy pre-migration-031 accounts both reach the dashboard with
-   * this flag true; the protected layout must redirect them through
-   * ``/signup/oauth-finalize`` before any other route renders.
+   * PIPA §22 ⑥ — true until the user has self-declared that they are 14
+   * or older (``users.age_confirmed_at IS NULL``). Set by
+   * ``services/serializers.py serialize_user``. 2026-09-19: the product
+   * stopped collecting a birthdate — the gate is the required ``age``
+   * consent sent to ``/api/auth/oauth-finalize``. New OAuth sign-ups reach
+   * the dashboard with this flag true; the protected layout must redirect
+   * them through ``/signup/oauth-finalize`` before any other route
+   * renders. Read it through ``ageConfirmationRequired()`` below.
+   */
+  age_confirmation_required?: boolean;
+  /**
+   * @deprecated 2026-09-19 — same value as ``age_confirmation_required``,
+   * emitted by the backend for one deploy cycle and then removed. Do not
+   * read it directly; ``ageConfirmationRequired()`` handles the fallback.
    */
   birthdate_required?: boolean;
+}
+
+/**
+ * PIPA §22 ⑥ gate — the one place the (dashboard) layout and the
+ * ``/signup/oauth-finalize`` interstitial read during the deploy window in
+ * which the backend emits both ``age_confirmation_required`` and the
+ * deprecated ``birthdate_required``. Missing on both → not required
+ * (legacy / demo users).
+ */
+export function ageConfirmationRequired(
+  user:
+    | Pick<User, "age_confirmation_required" | "birthdate_required">
+    | null
+    | undefined,
+): boolean {
+  if (!user) return false;
+  return user.age_confirmation_required ?? user.birthdate_required ?? false;
 }
 
 interface AuthCtx {

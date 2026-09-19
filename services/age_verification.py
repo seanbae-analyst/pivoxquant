@@ -1,70 +1,66 @@
-"""PIPA §22 ⑥ — server-side birthdate parsing + minimum-age guard.
+"""PIPA §22 ⑥ — server-side minimum-age gate (self-declaration).
 
 개인정보 보호법 (PIPA) §22 ⑥ requires legal-guardian consent before
 collecting personal data from children under 14. PivoxQuant has no such
-guardian-consent flow at launch, so we **fail-fast** on registration.
+guardian-consent flow, so we **refuse** under-14 signups rather than
+build one.
 
-The frontend (``frontend/src/lib/age-verification.ts``) implements the
-same rules client-side. This module is the *server-side* defense in
-depth — every gate that creates a ``User`` row must call
-``parse_birthdate_strict`` + ``is_at_least_min_age`` before commit.
+History — why self-declaration, not a birthdate
+------------------------------------------------
+2026-05 → 2026-09-19 the product collected a date of birth and parsed it
+here (``parse_birthdate_strict`` / ``check_birthdate_payload``). On
+2026-09-19 that collection ended: a birthdate is more personal data than
+the gate needs, and it was the only PII the product asked for that it
+never used for anything else. The gate is now the "만 14세 이상입니다"
+checkbox in the signup consent stack. The server verifies the payload
+carries a literal ``true`` and stamps the submission time into
+``users.age_confirmed_at``.
+
+Whether a self-declaration is sufficient evidence under §22 ⑥ is an open
+lawyer question — Q9 in ``docs/legal/legal-audit-2026-06-05.md``. Until it
+is answered this module is the whole server-side defense; the frontend
+checkbox is UX, not evidence.
+
+``users.birthdate`` is kept (column + data) so users from the birthdate
+era stay unlocked — see ``User.age_confirmed``. Nothing writes it anymore.
 
 Why this lives in ``services/`` not ``routes/``
 ------------------------------------------------
-Two distinct routes need the same check:
+Two routes create or complete a ``User`` row and both must apply the
+same rule:
 
   1. ``routes/auth.py`` ``/api/auth/register`` (email + password)
   2. ``routes/auth.py`` ``/api/auth/oauth-finalize`` (Google / Kakao
      post-callback interstitial)
 
-Putting the rules in a single helper avoids drift between the two —
-audit W1.4 explicitly flagged that the OAuth path had **zero**
-birthdate validation. A shared helper makes that drift impossible.
+A shared helper keeps them from drifting — audit W1.4 flagged exactly
+that drift in the birthdate era (the OAuth path had zero validation).
 
 Error contract
 --------------
-The helpers raise ``BirthdateValidationError`` with a stable
-machine-readable ``code`` (i18n key). Routes translate the code into a
-400 JSON response; the frontend matches on the code, not the message.
+``check_age_confirmation_payload`` raises ``AgeConfirmationError`` with a
+stable machine-readable ``code`` (i18n key). Routes translate it into a
+400 JSON body; the frontend matches on the code, not the message.
 
 Codes:
-  * ``birthdate_required``        — payload is missing the field
-  * ``birthdate_invalid_format``  — not yyyy-mm-dd or unparseable
-  * ``birthdate_unrealistic``     — future date or > 120 years old
-  * ``below_min_age``             — under 14 (PIPA §22 ⑥)
-
-These match ``frontend/src/lib/age-verification.ts`` so a single
-``i18n`` key set covers both layers.
+  * ``age_confirmation_required`` — payload value is not literal ``true``
+    (missing, ``false``, ``"true"``, ``1``, ``"on"`` … all count as absent;
+    only an explicit boolean opt-in is evidence).
 """
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass
-from datetime import date, datetime
+
+# PIPA §22 ⑥ threshold — 만 14세. The number no longer drives any
+# arithmetic (no birthdate to subtract from) but it is the figure the
+# checkbox copy and the legal docs cite, so it stays as the single SoT.
+MIN_AGE: int = 14
 
 
-# PIPA §22 ⑥ threshold — 만 14세. Mirrors
-# ``frontend/src/lib/age-verification.ts`` MIN_AGE_YEARS.
-MIN_AGE_YEARS: int = 14
+class AgeConfirmationError(ValueError):
+    """Raised when a payload does not carry an explicit age self-declaration.
 
-# Upper sanity bound. Anyone claiming > 120 is either typo'd or hostile;
-# rejecting cuts garbage early without affecting real users (oldest
-# verified human at time of writing: 122).
-MAX_AGE_YEARS: int = 120
-
-# Earliest acceptable year. Mirrors the frontend `< 1900` reject so the
-# two layers cannot diverge.
-MIN_BIRTH_YEAR: int = 1900
-
-_BIRTHDATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-
-
-class BirthdateValidationError(ValueError):
-    """Raised when a payload-supplied birthdate fails validation.
-
-    ``code`` is a stable machine-readable key the route turns into a
-    400 JSON body (e.g. ``{"error": "birthdate_required"}``); ``message``
-    is a developer-facing log string only.
+    ``code`` is the stable key routes forward to the client; ``message``
+    is a developer-facing detail that never reaches the response.
     """
 
     def __init__(self, code: str, message: str = "") -> None:
@@ -73,122 +69,25 @@ class BirthdateValidationError(ValueError):
         self.message = message or code
 
 
-@dataclass(frozen=True)
-class AgeCheckResult:
-    """Outcome of ``check_birthdate_payload``.
+def check_age_confirmation_payload(value: object) -> None:
+    """Validate the self-declaration flag from a request payload.
 
-    ``birthdate``  — the parsed ``datetime.date`` value (only valid when
-                     ``ok`` is True).
-    ``years``      — completed-year age at ``today`` (only valid when
-                     ``ok`` is True).
-    ``ok``         — True when the user passes the §22 ⑥ gate.
+    Accepts only the literal boolean ``True``. Anything else — ``None``
+    (field missing), ``False``, truthy strings, ``1`` — raises
+    ``AgeConfirmationError("age_confirmation_required")``. Returns
+    ``None`` on success; the caller stamps ``age_confirmed_at`` itself so
+    the timestamp convention stays in one place (``routes/consents.py``
+    ``_utcnow_naive``).
     """
-
-    birthdate: date | None
-    years: int
-    ok: bool
-
-
-def parse_birthdate_strict(value: object) -> date:
-    """Parse a yyyy-mm-dd string into a ``date``.
-
-    Raises ``BirthdateValidationError`` with a stable code on failure.
-    Empty / non-string / wrong-format / unparseable / future / >120y all
-    raise — the caller never has to validate again.
-    """
-    if value is None:
-        raise BirthdateValidationError("birthdate_required", "missing field")
-    if not isinstance(value, str):
-        raise BirthdateValidationError(
-            "birthdate_invalid_format", f"not a string: {type(value).__name__}"
+    if value is not True:
+        raise AgeConfirmationError(
+            "age_confirmation_required",
+            f"age self-declaration not literal true: {value!r}",
         )
-    s = value.strip()
-    if not s:
-        raise BirthdateValidationError("birthdate_required", "empty string")
-    if not _BIRTHDATE_RE.match(s):
-        raise BirthdateValidationError(
-            "birthdate_invalid_format", f"not yyyy-mm-dd: {s!r}"
-        )
-    try:
-        bd = datetime.strptime(s, "%Y-%m-%d").date()
-    except ValueError as exc:
-        raise BirthdateValidationError(
-            "birthdate_invalid_format", f"unparseable date {s!r}: {exc}"
-        ) from exc
-    today = date.today()
-    if bd > today:
-        raise BirthdateValidationError(
-            "birthdate_unrealistic", f"future date {bd.isoformat()}"
-        )
-    if bd.year < MIN_BIRTH_YEAR:
-        raise BirthdateValidationError(
-            "birthdate_unrealistic", f"year {bd.year} < {MIN_BIRTH_YEAR}"
-        )
-    age = compute_age_years(bd, today)
-    if age > MAX_AGE_YEARS:
-        raise BirthdateValidationError(
-            "birthdate_unrealistic", f"age {age} > {MAX_AGE_YEARS}"
-        )
-    return bd
-
-
-def compute_age_years(birthdate: date, today: date | None = None) -> int:
-    """Return completed-year age. ``today`` is injectable for tests.
-
-    Mirrors ``computeAgeYears`` in ``frontend/src/lib/age-verification.ts``
-    so the two layers cannot drift.
-    """
-    if today is None:
-        today = date.today()
-    age = today.year - birthdate.year
-    before_birthday_this_year = (
-        today.month < birthdate.month
-        or (today.month == birthdate.month and today.day < birthdate.day)
-    )
-    if before_birthday_this_year:
-        age -= 1
-    return age
-
-
-def is_at_least_min_age(
-    birthdate: date,
-    min_age: int = MIN_AGE_YEARS,
-    today: date | None = None,
-) -> bool:
-    """True iff the subject is at least ``min_age`` completed years.
-
-    Defaults to ``MIN_AGE_YEARS`` (PIPA §22 ⑥ = 14).
-    """
-    return compute_age_years(birthdate, today) >= min_age
-
-
-def check_birthdate_payload(
-    value: object, today: date | None = None
-) -> AgeCheckResult:
-    """Convenience wrapper: parse + age check in one call.
-
-    Raises ``BirthdateValidationError`` for parse failures *and* for the
-    under-14 gate (code ``below_min_age``). Returns ``AgeCheckResult``
-    only when the user passes — callers never have to re-validate.
-    """
-    bd = parse_birthdate_strict(value)
-    age = compute_age_years(bd, today)
-    if age < MIN_AGE_YEARS:
-        raise BirthdateValidationError(
-            "below_min_age",
-            f"age {age} < required {MIN_AGE_YEARS}",
-        )
-    return AgeCheckResult(birthdate=bd, years=age, ok=True)
 
 
 __all__ = [
-    "MIN_AGE_YEARS",
-    "MAX_AGE_YEARS",
-    "MIN_BIRTH_YEAR",
-    "BirthdateValidationError",
-    "AgeCheckResult",
-    "parse_birthdate_strict",
-    "compute_age_years",
-    "is_at_least_min_age",
-    "check_birthdate_payload",
+    "MIN_AGE",
+    "AgeConfirmationError",
+    "check_age_confirmation_payload",
 ]

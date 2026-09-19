@@ -187,7 +187,8 @@ class Sweep:
                 subscription_tier=tier,
                 onboarding_completed=True,
             )
-            u.birthdate = date(1990, 1, 1)
+            # 만 14세 자가선언 스탬프 (2026-09-19 — 생년월일 수집 중단).
+            u.age_confirmed_at = datetime.now(timezone.utc).replace(tzinfo=None)
             u.is_simulated = True
             u.set_pw("sweep-pass-123")
             db.session.add(u)

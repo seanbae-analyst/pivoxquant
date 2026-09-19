@@ -1173,9 +1173,12 @@ def test_json_export_still_default_when_no_format(client, auth_user):
 
 
 
-def test_export_includes_consent_trail_birthdate_and_nav_history(app, client, auth_user):
-    """2026-09-10 (PIPA §35): birthdate, the consent timestamps and the NAV
-    snapshot history belong to the user and were missing from the export."""
+def test_export_includes_consent_trail_age_confirmation_and_nav_history(app, client, auth_user):
+    """2026-09-10 (PIPA §35): the consent timestamps and the NAV snapshot
+    history belong to the user and were missing from the export.
+    2026-09-19: ``age_confirmed_at`` (만 14세 self-declaration) joins them;
+    the legacy ``birthdate`` key stays in the export (None for post-switch
+    users) so birthdate-era users can still audit their own value."""
     from datetime import date, datetime, timezone
     from extensions import db
     from models import PortfolioNavSnapshot, User
@@ -1191,7 +1194,11 @@ def test_export_includes_consent_trail_birthdate_and_nav_history(app, client, au
         db.session.commit()
 
     body = json.loads(client.get("/api/profile/export").data)
-    assert body["user"]["birthdate"] is not None
+    # Default ``auth_user`` is a post-2026-09-19 user: self-declaration stamp
+    # present, no birthdate ever collected.
+    assert body["user"]["age_confirmed_at"] is not None
+    assert "birthdate" in body["user"]
+    assert body["user"]["birthdate"] is None
     assert body["user"]["consents"]["marketing_consent_at"].startswith("2026-09-01")
     assert body["counts"]["portfolio_nav_snapshots"] == 1
     assert body["portfolio_nav_snapshots"][0]["as_of_date"].startswith("2026-09-01")

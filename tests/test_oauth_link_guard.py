@@ -137,7 +137,7 @@ class TestNormalLoginUntouched:
             app, raw_client,
             _fake_token(sub="g-new-1", email="brandnew@example.com"),
         )
-        # New user has birthdate=None → redirected to the finalize interstitial,
+        # New user has no age confirmation → redirected to the finalize interstitial,
         # NOT to a login error. The user row must now exist with google_id set.
         assert r.status_code in (301, 302)
         assert "/login?error=" not in r.headers["Location"]
@@ -151,13 +151,14 @@ class TestNormalLoginUntouched:
     def test_returning_user_matching_google_id_logs_in(self, app, raw_client):
         from extensions import db
         from models import User
-        from datetime import date
-        # Pre-create a user already linked to this google_id, with birthdate set
-        # so the callback redirects to home (full login), not the interstitial.
+        from datetime import datetime
+        # Pre-create a user already linked to this google_id, with the 만 14세
+        # self-declaration stamped so the callback redirects to home (full
+        # login), not the interstitial.
         with app.app_context():
             u = User(email="returning@example.com", name="Ret",
                      google_id="g-ret-1", oauth_provider="google",
-                     birthdate=date(1990, 1, 1))
+                     age_confirmed_at=datetime(2026, 9, 19, 0, 0, 0))
             db.session.add(u)
             db.session.commit()
 
@@ -168,7 +169,31 @@ class TestNormalLoginUntouched:
         assert r.status_code in (301, 302)
         loc = r.headers["Location"]
         assert "/login?error=" not in loc
-        assert "oauth-finalize" not in loc  # birthdate present → straight to app
+        assert "oauth-finalize" not in loc  # age confirmed → straight to app
+
+    def test_returning_legacy_birthdate_user_is_not_reprompted(self, app, raw_client):
+        """Birthdate-era user (``birthdate`` set, ``age_confirmed_at`` NULL)
+        must go straight to the app — the 2026-09-19 switch to
+        self-declaration never re-prompts anyone who already supplied a
+        date of birth."""
+        from extensions import db
+        from models import User
+        from datetime import date
+        with app.app_context():
+            u = User(email="legacy-bd@example.com", name="Legacy",
+                     google_id="g-legacy-1", oauth_provider="google",
+                     birthdate=date(1990, 1, 1))
+            db.session.add(u)
+            db.session.commit()
+
+        r = _drive_google_callback(
+            app, raw_client,
+            _fake_token(sub="g-legacy-1", email="legacy-bd@example.com"),
+        )
+        assert r.status_code in (301, 302)
+        loc = r.headers["Location"]
+        assert "/login?error=" not in loc
+        assert "oauth-finalize" not in loc
 
 
 class TestEmailCollisionGuard:
@@ -204,11 +229,11 @@ class TestEmailCollisionGuard:
         verified → link is allowed AND a security-alert email fires."""
         from extensions import db
         from models import User
-        from datetime import date
+        from datetime import datetime
         with app.app_context():
             u = User(email="linkme@example.com", name="Link",
                      kakao_id="k-link-1", oauth_provider="kakao",
-                     birthdate=date(1990, 1, 1))
+                     age_confirmed_at=datetime(2026, 9, 19, 0, 0, 0))
             db.session.add(u)
             db.session.commit()
             uid = u.id

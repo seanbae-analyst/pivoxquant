@@ -181,18 +181,25 @@ class User(UserMixin, db.Model):
     cross_border_consent_at = db.Column(db.DateTime, nullable=True)
     cross_border_consent_revoked_at = db.Column(db.DateTime, nullable=True)
     # PIPA §22 ⑥ — 만 14세 미만 아동은 법정대리인 동의가 필요하다.
-    # PivoxQuant 출시 시점에 법정대리인 동의 절차가 없으므로 만 14세
-    # 미만 가입을 fail-fast 한다. ``birthdate`` 는 가입 시점 검증뿐
-    # 아니라 향후 감사 / 동의 철회 / 미성년자 보호 강화 시점에 사용.
+    # PivoxQuant 에는 법정대리인 동의 절차가 없으므로 만 14세 미만 가입을
+    # fail-fast 한다.
     #
-    # ``nullable=True`` 정책:
-    #   - 기존 사용자 (마이그레이션 031 이전 가입) 의 birthdate 는 NULL.
-    #   - OAuth 신규 가입은 콜백에서 User row 생성 직후 ``/oauth-finalize``
-    #     interstitial 로 redirect 되어 birthdate 를 수집한다.
-    #   - legacy NULL 사용자는 다음 요청 시 동일 interstitial 로 강제.
-    # 후속 PR 권고: 모든 row backfill 후 ``nullable=False`` 전환.
-    # Managed via migration 031_user_birthdate.
+    # 2026-09-19 — 생년월일 수집을 **중단**했다. 이제 증거는 가입 동의
+    # 스택의 "만 14세 이상입니다" 자가선언 체크박스이고, 그 제출 시각을
+    # ``age_confirmed_at`` (naive UTC, 다른 동의 타임스탬프와 같은 컨벤션)
+    # 에 남긴다. 자가선언의 충분성은 변호사 질문 Q9
+    # (docs/legal/legal-audit-2026-06-05.md) 로 아직 열려 있다.
+    #
+    # ``birthdate`` 컬럼과 그 데이터는 **유지**한다 (삭제 금지 — CLAUDE.md
+    # 구조 규칙). 생년월일 시대(2026-05 ~ 2026-09-19)에 가입한 사용자는
+    # 이 값이 있으면 재확인 없이 계속 통과한다 (``age_confirmed`` 참조).
+    # 새 코드는 이 컬럼에 쓰지 않는다. Managed via migration 031_user_birthdate.
     birthdate = db.Column(db.Date, nullable=True)
+    # 만 14세 이상 자가선언 제출 시각. NULL 이면 (그리고 ``birthdate`` 도
+    # NULL 이면) 아직 확인 전 — half-provisioned OAuth 계정 또는 레거시.
+    # Managed via migration 053_age_self_declaration; 부팅 시
+    # ``app._do_migrations`` 의 ``_add_column_if_missing`` 이 prod 안전망.
+    age_confirmed_at = db.Column(db.DateTime, nullable=True)
     # Continuous User Simulation (CAUS) Phase 1 격리 플래그.
     # ``docs/specs/continuous-user-sim-spec.md`` Q3 — 시뮬 user 와 실 user
     # 를 단일 BOOLEAN 으로 격리한다. TRUE 인 row 는:
@@ -294,6 +301,21 @@ class User(UserMixin, db.Model):
 
         # Fall back to the per-event default; unknown channel → fail-open.
         return defaults.get(channel, True)
+
+    @property
+    def age_confirmed(self) -> bool:
+        """True iff this user has cleared the PIPA §22 ⑥ (만 14세) gate.
+
+        Two kinds of evidence count, either one is enough:
+          * ``age_confirmed_at`` — self-declaration checkbox timestamp
+            (the only thing new code writes, since 2026-09-19);
+          * ``birthdate`` — legacy value from the birthdate era. Users who
+            already supplied one are never re-prompted.
+        The API gate (``app.age_gate_blocks``), the serializer
+        (``age_confirmation_required``) and the OAuth callbacks all read
+        this property so the two columns never drift apart.
+        """
+        return self.age_confirmed_at is not None or self.birthdate is not None
 
     @property
     def effective_tier(self) -> str:

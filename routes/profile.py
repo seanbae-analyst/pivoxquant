@@ -187,17 +187,18 @@ def save_onboarding_draft():
 @general_rate_limit
 def submit_onboarding():
     """Submit onboarding answers → calculate profile → save → return result."""
-    # PIPA §22 ⑥ fail-fast ( double defense behind app._require_birthdate).
+    # PIPA §22 ⑥ fail-fast (double defense behind app._require_age_confirmation).
     # onboarding_completed must never flip to True for a session whose age
-    # was never confirmed — a half-provisioned OAuth user (birthdate NULL)
-    # calling this directly would otherwise mark themselves onboarded. The
-    # global gate already 403s here, but this in-route guard keeps the
-    # invariant local and survives any future whitelist edit.
-    if getattr(current_user, "birthdate", None) is None:
+    # was never confirmed — a half-provisioned OAuth user (no 만 14세
+    # self-declaration stamp, no legacy birthdate) calling this directly
+    # would otherwise mark themselves onboarded. The global gate already
+    # 403s here, but this in-route guard keeps the invariant local and
+    # survives any future whitelist edit.
+    if not getattr(current_user, "age_confirmed", False):
         return api_error(
-            en="Birthdate confirmation required before onboarding.",
-            kr="온보딩 전에 생년월일 확인이 필요합니다.",
-            code="BIRTHDATE_REQUIRED", status=403,
+            en="Age confirmation required before onboarding.",
+            kr="온보딩 전에 만 14세 이상 확인이 필요합니다.",
+            code="AGE_CONFIRMATION_REQUIRED", status=403,
         )
 
     data = request.get_json() or {}
@@ -1531,7 +1532,10 @@ def _serialize_user(user) -> dict:
         # 2026-09-10 (PIPA §35): the privacy policy lists these as collected,
         # and the user must be able to audit their own consent trail, but the
         # export omitted them.
+        # ``birthdate`` is legacy (collection ended 2026-09-19) but still the
+        # user's data when present; ``age_confirmed_at`` is the successor.
         "birthdate": _iso_or_none(getattr(user, "birthdate", None)),
+        "age_confirmed_at": _iso_or_none(getattr(user, "age_confirmed_at", None)),
         "locale": getattr(user, "locale", None),
         "referral_code": getattr(user, "referral_code", None),
         "referred_by": getattr(user, "referred_by", None),

@@ -10,8 +10,8 @@
  * 계정이 없으면 **어느 화면에서 왔든** User 를 만든다. 즉 신규 사용자가
  * "로그인" 버튼으로 들어오면 동의를 한 번도 보지 않고 계정이 생겼다.
  * 그래서 동의 수집 지점을 OAuth **이전**(signup 화면)에서 OAuth **이후**
- * 인터스티셜(`/signup/oauth-finalize`, `user.birthdate_required === true`
- * 일 때만 렌더)로 옮겼다. 이 컴포넌트가 그 스택이다.
+ * 인터스티셜(`/signup/oauth-finalize`, `ageConfirmationRequired(user)` 가
+ * true 일 때만 렌더)로 옮겼다. 이 컴포넌트가 그 스택이다.
  *
  * 마크업 출처
  * -----------
@@ -19,18 +19,19 @@
  * 디자인·문구·a11y 속성 그대로 옮겨왔다. signup 페이지를 import 하지 않는다
  * (그 파일은 독립적으로 교체 중이며, 여기가 동의 UI 의 새 SoT 다).
  *
- * ⚠️ 증거 강도 한계 (현행 유지)
+ * ⚠️ 증거 강도 (2026-09-19 현재)
  * -----------------------------
- * 5종 중 서버에 기록되는 것은 2종뿐이다.
- *   - `cross_border` → POST /api/consents/cross-border (PIPA §28-8,
- *     `routes/consents.py`, 타임스탬프 컬럼 `cross_border_consent_at`)
+ * 필수 4종(`terms` / `non_advisory` / `age` / `cross_border`)은 호스트
+ * 인터스티셜이 `/api/auth/oauth-finalize` 본문의 `consents` 로 함께 보내고,
+ * 서버가 넷 다 `true` 인지 검증한다(아니면 400 `consents_required`).
+ *   - `age`          → 만 14세 이상 **자가선언**(PIPA §22 ⑥). 서버가
+ *     `users.age_confirmed_at` 에 확인 시각을 찍는다. 생년월일은 더 이상
+ *     수집하지 않는다 (2026-09-19 — 자동 도출 로직 삭제, 일반 필수 체크박스).
+ *   - `cross_border` → 같은 트랜잭션에서 `cross_border_consent_at` (PIPA §28-8).
  *   - `marketing`    → POST /api/consents/marketing (정통망법 §50 ①,
- *     `marketing_consent_at`)
- * 나머지 `terms` / `non_advisory` / `age` 는 **대응하는 서버 컬럼이 없다**.
- * 기존과 동일하게 localStorage `pivox_signup_consents` 스냅숏에만 남으므로
- * 브라우저 저장소가 지워지면 증거도 사라진다. (`age` 는 생년월일이
- * `/api/auth/oauth-finalize` 로 서버에 저장되므로 간접 증거는 남는다.)
- * 이 한계는 의도적인 현행 유지이며, 서버 컬럼 추가는 별도 백엔드 작업이다.
+ *     `marketing_consent_at`) — 선택, best-effort.
+ *   - `terms` / `non_advisory` → 서버가 필수로 받아 검증만 한다(개별 타임스탬프
+ *     컬럼 없음). "동의 없이는 가입이 완료되지 않는다"가 증거다.
  *
  * 문구
  * ----
@@ -41,7 +42,6 @@
  * 디자인: v3 Vantablack + Bronze 락-인. 기울임 금지, `--pq-*` 토큰만.
  */
 
-import { useEffect } from "react";
 import Link from "next/link";
 
 import { useLocale } from "@/lib/locale";
@@ -52,7 +52,7 @@ export interface ConsentState {
   terms: boolean;
   /** [필수] 자본시장법상 투자자문업 아님 고지 확인 */
   non_advisory: boolean;
-  /** [필수] 만 14세 이상 (PIPA §22 ⑥) — 생년월일에서 자동 도출 */
+  /** [필수] 만 14세 이상 자가선언 (PIPA §22 ⑥) — 서버가 `age_confirmed_at` 기록 */
   age: boolean;
   /** [필수] 개인정보 국외 이전 (PIPA §28-8) */
   cross_border: boolean;
@@ -78,10 +78,7 @@ export const EMPTY_CONSENTS: ConsentState = {
   marketing: false,
 };
 
-/**
- * 필수 4종 전부 true 인지. 호출부(인터스티셜)는 여기에 더해
- * `ageCheck.eligible` 을 AND 로 묶어 제출 버튼을 활성화한다.
- */
+/** 필수 4종 전부 true 인지 — 호출부(인터스티셜)의 제출 게이트. */
 export function allRequiredConsented(consents: ConsentState): boolean {
   return REQUIRED_CONSENT_KEYS.every((key) => consents[key]);
 }
@@ -237,11 +234,6 @@ export interface ConsentStackV2Props {
   consents: ConsentState;
   /** 한 항목 토글. */
   onChange: (key: ConsentKey, next: boolean) => void;
-  /**
-   * 생년월일이 만 14세 이상인지. `age` 행은 이 값이 false 면 비활성이고,
-   * true 로 바뀌면 `age` 가 자동으로 true 가 된다(아래 useEffect).
-   */
-  ageEligible: boolean;
   /** 미체크 항목을 한 번 붉게 강조 (호출부가 타이머로 해제). */
   pulseUnchecked?: boolean;
   /** 제목 행 숨김 — 호스트 페이지가 이미 제목을 가진 경우. */
@@ -251,22 +243,11 @@ export interface ConsentStackV2Props {
 export function ConsentStackV2({
   consents,
   onChange,
-  ageEligible,
   pulseUnchecked = false,
   showHeading = true,
 }: ConsentStackV2Props) {
   const { locale } = useLocale();
   const c = COPY[locale === "en" ? "en" : "ko"];
-
-  // SHIP-BLOCKER fix 2026-05-11 (signup/page.tsx 에서 이관): DOB ≥14 이면
-  // agree_age=true 를 자동 도출한다. 사용자가 따로 클릭하지 않아도 퍼널이
-  // 진행되고, DOB 가 invalid/<14 로 바뀌면 다시 false 로 초기화되어
-  // fail-fast 가 유지된다. eligible 일 때는 여전히 수동 토글 가능.
-  useEffect(() => {
-    if (consents.age !== ageEligible) {
-      onChange("age", ageEligible);
-    }
-  }, [ageEligible, consents.age, onChange]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -358,24 +339,20 @@ export function ConsentStackV2({
           </span>
         </label>
 
-        {/* PIPA §22 ⑥ — 생년월일 입력은 호스트 페이지가 소유하고, 여기서는
-            그 결과(ageEligible)에서 도출된 자가선언 행만 렌더한다. */}
+        {/* PIPA §22 ⑥ — 만 14세 이상 자가선언. 2026-09-19 부터 일반 필수
+            체크박스다(생년월일 입력·자동 도출 없음). 서버가 확인 시각을
+            `users.age_confirmed_at` 에 기록한다. */}
         <label
           htmlFor="agree_age"
           style={{
             ...consentRowStyle,
             ...pulseRowStyle(pulseUnchecked && !consents.age),
-            opacity: ageEligible ? 1 : 0.5,
-            pointerEvents: ageEligible ? "auto" : "none",
           }}
         >
           <CheckboxV2
             id="agree_age"
-            checked={consents.age && ageEligible}
-            onChange={(next) => {
-              if (!ageEligible) return;
-              onChange("age", next);
-            }}
+            checked={consents.age}
+            onChange={(next) => onChange("age", next)}
           />
           <span className="font-serif" style={consentLabelStyle}>
             <span className="font-mono" style={requiredTagStyle}>

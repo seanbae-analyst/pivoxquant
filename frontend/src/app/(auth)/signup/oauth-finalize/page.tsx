@@ -1,11 +1,15 @@
 "use client";
 
 /**
- * /signup/oauth-finalize — PIPA §22 ⑥ birthdate interstitial.
+ * /signup/oauth-finalize — PIPA §22 ⑥ age self-declaration + required
+ * consents interstitial (2026-09-19 rewrite: no birthdate is collected).
  *
  * Reached when the OAuth callback (``routes/auth.py`` Google/Kakao)
- * provisions a User row with ``birthdate IS NULL``. The page captures
- * a yyyy-mm-dd birthdate, POSTs it to ``/api/auth/oauth-finalize``, and
+ * provisions a User row whose ``age_confirmed_at`` is still NULL
+ * (``user.age_confirmation_required === true`` — read through
+ * ``ageConfirmationRequired()`` so the deprecated ``birthdate_required``
+ * key keeps working for one deploy cycle). The page collects the four
+ * required consents, POSTs them to ``/api/auth/oauth-finalize`` and
  * redirects to ``next`` (or ``/mirror``) on success.
  *
  * Why a dedicated page (not a modal):
@@ -14,29 +18,33 @@
  *   protected route, their cookie is fresh — so the interstitial is just
  *   another protected page they have to clear before reaching the
  *   dashboard. Putting it in a modal would couple it to a host page that
- *   may itself need ``birthdate_required = false`` to render properly.
- *
- * Error contract:
- *   The backend returns stable codes (see services/age_verification.py).
- *   We map each to a Korean + English message.
+ *   may itself need the age gate cleared to render properly.
  *
  * Visual layer follows v3 Vantablack lock-in tokens — same Bronze hairline
- * + JetBrains mono labels as ``signup/page.tsx`` so the page reads
- * as a continuation of the consent flow, not a stand-alone form.
+ * + JetBrains mono labels as the auth entry so the page reads as a
+ * continuation of the consent flow, not a stand-alone form.
  *
  * ── 법정 필수 동의 (2026-09-17 이관) ──────────────────────────────────
  * ``/login`` 과 ``/signup`` 은 같은 OAuth 엔드포인트로 가고, 백엔드 콜백은
  * 계정이 없으면 어느 화면에서 왔든 User 를 만든다. 그래서 "로그인"으로 들어온
  * 신규 사용자는 동의 화면을 한 번도 보지 않고 계정이 생겼다. 이 인터스티셜은
- * ``user.birthdate_required === true`` 인 **신규 OAuth 가입자에게만** 뜨므로,
- * 법정 필수 동의를 받을 유일하게 올바른 자리다. 동의 스택은
+ * 만 14세 확인이 끝나지 않은 **신규 OAuth 가입자에게만** 뜨므로, 법정 필수
+ * 동의를 받을 유일하게 올바른 자리다. 동의 스택은
  * ``@/components/auth/v2/consent-stack`` 이 소유한다.
  *
- * 어디에 남는가 (증거 강도) — 2026-09-17 P1 수정 후
- *   - terms / non_advisory / cross_border → `/api/auth/oauth-finalize` 본문의
- *     `consents` 로 **함께 전송**한다. 셋 다 `true` 가 아니면 서버가 400
- *     (`consents_required`) 으로 거절하고 생년월일도 쓰지 않는다. 즉 동의는
- *     이제 클라이언트 게이트가 아니라 서버 게이트다.
+ * ── 만 14세 확인 방식 (2026-09-19 자가선언 전환) ──────────────────────
+ * 종전에는 생년월일(yyyy-mm-dd)을 받아 만 나이를 계산하고 서버에 저장했다.
+ * 이제 생년월일은 **수집하지 않는다**. 이용자가 "만 14세 이상임을 확인합니다"
+ * 체크박스를 직접 켜는 자가선언이며(PIPA §22 ⑥), 그 값은 ``consents.age`` 로
+ * 서버에 전송되고 서버가 ``users.age_confirmed_at`` 에 확인 시각을 찍는다.
+ * 프론트에는 나이 계산 로직이 남아 있지 않다 (``lib/age-verification`` 삭제).
+ *
+ * 어디에 남는가 (증거 강도)
+ *   - terms / non_advisory / cross_border / age → `/api/auth/oauth-finalize`
+ *     본문의 `consents` 로 **함께 전송**한다. 넷 다 `true` 가 아니면 서버가
+ *     400 (`consents_required`, `missing_consents: [...]`) 으로 거절한다.
+ *     즉 동의는 클라이언트 게이트가 아니라 서버 게이트다. 재제출은 멱등(200).
+ *   - age → 서버가 `age_confirmed_at` 에 기록한다 (PIPA §22 ⑥).
  *   - cross_border → 서버가 **finalize 와 같은 트랜잭션**에서
  *     `cross_border_consent_at` 에 기록한다 (PIPA §28-8). 그래서 예전에 여기
  *     있던 best-effort `POST /api/consents/cross-border` 는 **제거했다** —
@@ -44,24 +52,22 @@
  *   - marketing    → POST /api/consents/marketing (정통망법 §50 ①) — 서버 기록.
  *     선택 항목이라 여전히 best-effort 이고, 실패해도 /settings 토글에서 다시
  *     세울 수 있다.
- *   - terms / non_advisory → **서버 컬럼이 없다**(마이그레이션은 CEO 승인
- *     대상). 서버가 필수로 받아 검증만 하므로 "동의 없이는 가입이 완료되지
- *     않는다"는 사실이 증거이고, 개별 동의 시각은 남지 않는다.
- *   - age → 생년월일이 서버에 저장되므로 간접 증거가 남는다.
+ *   - terms / non_advisory → 서버가 필수로 받아 검증만 한다(개별 타임스탬프
+ *     컬럼 없음). "동의 없이는 가입이 완료되지 않는다"는 사실이 증거다.
  *
  * localStorage 스냅숏(`pivox_signup_consents`)
  *   제출 직전에 남기고(네트워크가 죽어도 동의 사실은 남는다), **성공하면
  *   지운다**. 남겨 두면 (dashboard) 레이아웃의 flushPending* 가 다음 마운트에서
  *   cross-border 를 재전송해 방금 기록한 타임스탬프를 덮어쓴다(2026-09-17 감사
- *   지적 사항).
+ *   지적 사항). 스냅숏에는 동의 5종 + 시각만 들어간다.
  */
 
 import { safeNext } from "@/lib/safe-next";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { apiFetch, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+import { ageConfirmationRequired, useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
 import {
   clearStagedSnapshot,
@@ -75,46 +81,25 @@ import {
   type ConsentKey,
   type ConsentState,
 } from "@/components/auth/v2/consent-stack";
-import {
-  BIRTHDATE_LABEL_EN,
-  BIRTHDATE_LABEL_KO,
-  computeAgeYears,
-  isAtLeastMinAge,
-  isValidBirthdate,
-  UNDER_AGE_EN,
-  UNDER_AGE_KO,
-} from "@/lib/age-verification";
 
 /**
- * Map backend i18n code → user-facing copy. The codes are the same
- * keys ``services/age_verification.py`` raises and
- * ``frontend/src/lib/age-verification.ts`` exports.
+ * Map backend code → user-facing copy. The server answers this endpoint
+ * with ``code`` (machine) + a localized ``message``; the page keys on
+ * ``code``. Unknown codes fall back to ``consents_required``.
  */
 const ERROR_COPY: Record<string, { ko: string; en: string }> = {
-  birthdate_required: {
-    ko: "생년월일을 입력해주세요.",
-    en: "Please enter your date of birth.",
-  },
-  birthdate_invalid_format: {
-    ko: "yyyy-mm-dd 형식으로 입력해주세요.",
-    en: "Please use yyyy-mm-dd format.",
-  },
-  birthdate_unrealistic: {
-    ko: "올바른 생년월일을 입력해주세요.",
-    en: "Please enter a realistic date of birth.",
-  },
-  below_min_age: { ko: UNDER_AGE_KO, en: UNDER_AGE_EN },
-  birthdate_already_set: {
-    ko: "이미 등록된 생년월일이 있습니다. 고객센터에 문의해주세요.",
-    en: "Your date of birth is already on file. Please contact support.",
-  },
-  // 2026-09-17 — 서버가 필수 동의 3종을 검증하기 시작했다(P1). 정상 UI 는
-  // 필수 항목이 다 체크돼야 제출 버튼이 열리므로 여기까지 오지 않는다.
-  // 이 문구가 보이는 경우는 사실상 하나뿐이다: 배포 순간 이미 열려 있던
-  // 구버전 번들이 `consents` 없이 POST 한 경우 → 새로고침하면 해결된다.
+  // 2026-09-17 — 서버가 필수 동의를 검증한다. 정상 UI 는 필수 항목이 다
+  // 체크돼야 제출 버튼이 열리므로 여기까지 오지 않는다. 이 문구가 보이는
+  // 경우는 사실상 하나뿐이다: 배포 순간 이미 열려 있던 구버전 번들이
+  // 옛 본문으로 POST 한 경우 → 새로고침하면 해결된다.
   consents_required: {
     ko: "필수 동의 항목을 모두 확인해주세요. 화면을 새로고침한 뒤 다시 시도해주세요.",
     en: "Please accept all required consents. Refresh the page and try again.",
+  },
+  // 2026-09-19 — 만 14세 자가선언이 빠진 채 도착한 경우 (PIPA §22 ⑥).
+  age_confirmation_required: {
+    ko: "만 14세 이상임을 확인해 주세요.",
+    en: "Please confirm that you are 14 or older.",
   },
   finalize_failed: {
     ko: "가입 완료 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
@@ -122,12 +107,10 @@ const ERROR_COPY: Record<string, { ko: string; en: string }> = {
   },
 };
 
-
 export default function OAuthFinalizePage() {
   const { user, loading, refresh } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [birthdate, setBirthdate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [consents, setConsents] = useState<ConsentState>(EMPTY_CONSENTS);
@@ -135,17 +118,8 @@ export default function OAuthFinalizePage() {
 
   const setConsent = useCallback((key: ConsentKey, next: boolean) => {
     setConsents((prev) => (prev[key] === next ? prev : { ...prev, [key]: next }));
+    setErrorCode(null);
   }, []);
-
-  // Same client-side rule as signup _v2 — keeps the two surfaces aligned.
-  const ageCheck = useMemo(() => {
-    const valid = isValidBirthdate(birthdate);
-    return {
-      valid,
-      eligible: valid && isAtLeastMinAge(birthdate),
-      years: valid ? computeAgeYears(birthdate) : -1,
-    };
-  }, [birthdate]);
 
   // If the user is unauthenticated, send them back to /login. The OAuth
   // callback flow established a session before redirecting here, so an
@@ -156,89 +130,72 @@ export default function OAuthFinalizePage() {
     }
   }, [loading, user, router]);
 
-  // If the user *already* has a birthdate (interstitial visited by mistake),
-  // skip straight to the destination.
+  // If the user has *already* confirmed their age (interstitial visited by
+  // mistake), skip straight to the destination.
   useEffect(() => {
     if (loading || !user) return;
-    if (user.birthdate_required === false) {
+    if (!ageConfirmationRequired(user)) {
       const next = safeNext(searchParams.get("next"));
       router.replace(next);
     }
   }, [loading, user, searchParams, router]);
 
-  // 2026-09-17 — REMOVED: birthdate auto-submit ("2026-05-17 wave 12 UX P1",
-  // PR #429). That effect read the `pivox_signup_consents` localStorage
-  // snapshot, auto-filled the DOB it found and POSTed
-  // `/api/auth/oauth-finalize` immediately, so the interstitial never
-  // rendered. That was correct while the consent stack lived on
-  // `/signup` *before* OAuth — the snapshot only existed because the user
-  // had just ticked every box.
-  //
-  // It is NOT correct now. The consent stack moved here (see the file
-  // header): consent is collected on THIS page, after the OAuth callback,
-  // because a new user arriving via `/login` never sees `/signup` at all.
-  // An auto-submit would fire before the user could tick anything and
-  // would skip the legally required consents entirely — the exact hole
-  // this change closes. A stale snapshot from an older session would also
-  // finalize the account silently. So: no auto-fill, no auto-POST. The
-  // user must see the form, and submit it.
-  //
-  // (`isValidBirthdate` / `isAtLeastMinAge` are still used by `ageCheck`.)
+  // 2026-09-17 — REMOVED: auto-submit from the `pivox_signup_consents`
+  // localStorage snapshot (PR #429). Consent is collected on THIS page,
+  // after the OAuth callback, because a new user arriving via `/login`
+  // never sees `/signup` at all. An auto-submit would fire before the user
+  // could tick anything and would skip the legally required consents
+  // entirely. So: no auto-fill, no auto-POST. The user must see the form,
+  // and submit it.
 
-  // 미체크 항목 붉은 펄스 — signup/page.tsx 와 같은 900ms 자동 해제.
+  // 미체크 항목 붉은 펄스 — 900ms 자동 해제.
   useEffect(() => {
     if (!pulseUnchecked) return;
     const t = setTimeout(() => setPulseUnchecked(false), 900);
     return () => clearTimeout(t);
   }, [pulseUnchecked]);
 
-  const stageConsentSnapshot = useCallback(
-    (dob: string) => {
-      // 제출이 서버까지 닿지 못한 경우(네트워크 단절 등)를 대비한 임시
-      // 스테이징이다. 성공하면 곧바로 지운다 — 남겨 두면 (dashboard)
-      // 레이아웃의 flushPending* 가 cross-border 를 재전송해 서버가 방금
-      // finalize 트랜잭션에서 찍은 타임스탬프를 덮어쓴다.
-      if (typeof window === "undefined") return;
-      try {
-        window.localStorage.setItem(
-          CONSENT_STORAGE_KEY,
-          JSON.stringify({
-            ...consents,
-            birthdate: dob,
-            consented_at: new Date().toISOString(),
-          }),
-        );
-      } catch {
-        /* quota / private mode — 증거 저장 실패가 가입을 막으면 안 된다 */
-      }
-    },
-    [consents],
-  );
+  const stageConsentSnapshot = useCallback(() => {
+    // 제출이 서버까지 닿지 못한 경우(네트워크 단절 등)를 대비한 임시
+    // 스테이징이다. 성공하면 곧바로 지운다 — 남겨 두면 (dashboard)
+    // 레이아웃의 flushPending* 가 cross-border 를 재전송해 서버가 방금
+    // finalize 트랜잭션에서 찍은 타임스탬프를 덮어쓴다.
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        CONSENT_STORAGE_KEY,
+        JSON.stringify({
+          ...consents,
+          consented_at: new Date().toISOString(),
+        }),
+      );
+    } catch {
+      /* quota / private mode — 증거 저장 실패가 가입을 막으면 안 된다 */
+    }
+  }, [consents]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ageCheck.eligible || !allRequiredConsented(consents) || submitting) {
+    if (!allRequiredConsented(consents) || submitting) {
       return;
     }
     setSubmitting(true);
     setErrorCode(null);
     // 서버 왕복 전에 스냅숏을 먼저 남긴다 — 네트워크가 죽어도 동의 사실은
     // 남고, 재시도 경로(flushPending*)도 이 스냅숏을 본다.
-    stageConsentSnapshot(birthdate);
+    stageConsentSnapshot();
     try {
-      // 2026-09-17 P1 — 필수 동의 3종을 본문에 함께 보낸다. URL 은 그대로고
-      // 본문만 확장했다. 서버가 셋 다 `true` 인지 검증하고, 국외이전 동의는
-      // 같은 트랜잭션에서 `cross_border_consent_at` 에 기록한다.
-      // (`age` 는 보내지 않는다 — 생년월일에서 파생되는 값이라 서버가
-      //  `check_birthdate_payload` 로 직접 다시 판정한다.)
+      // 필수 동의 4종을 본문에 함께 보낸다. URL 은 그대로다. 서버가 넷 다
+      // `true` 인지 검증하고, 같은 트랜잭션에서 `age_confirmed_at`(PIPA
+      // §22 ⑥) 과 `cross_border_consent_at`(PIPA §28-8) 을 기록한다.
       await apiFetch(API.auth.oauthFinalize, {
         method: "POST",
         body: JSON.stringify({
-          birthdate,
           consents: {
             terms: consents.terms,
             non_advisory: consents.non_advisory,
             cross_border: consents.cross_border,
+            age: consents.age,
           },
         }),
       });
@@ -264,8 +221,8 @@ export default function OAuthFinalizePage() {
       // 다시 기록할 수 있다 — 반대로 필수 동의의 감사 추적이 밀리는 쪽이
       // 훨씬 비싸다.
       clearStagedSnapshot();
-      // Refresh the cached user so ``birthdate_required`` flips to false
-      // before downstream pages mount.
+      // Refresh the cached user so ``age_confirmation_required`` flips to
+      // false before downstream pages mount.
       await refresh();
       const next = safeNext(searchParams.get("next"));
       router.replace(next);
@@ -279,16 +236,16 @@ export default function OAuthFinalizePage() {
         err instanceof ApiError
           ? (err.code ?? (typeof err.message === "string" ? err.message : ""))
           : "";
-      setErrorCode(raw in ERROR_COPY ? raw : "birthdate_invalid_format");
+      setErrorCode(raw in ERROR_COPY ? raw : "consents_required");
       setSubmitting(false);
     }
   };
 
   if (loading || !user) {
     // Page-load skeleton — Vantablack surface matching the oauth finalize
-    // form layout (birthdate field + consent block + CTA). Replaces the
-    // legacy animate-spin border indicator so the perceived load is calmer
-    // and the layout shift is smaller when the live form mounts.
+    // form layout (header + consent block + CTA). Replaces the legacy
+    // animate-spin border indicator so the perceived load is calmer and
+    // the layout shift is smaller when the live form mounts.
     return (
       <div
         className="flex min-h-[100dvh] items-center justify-center px-6"
@@ -300,9 +257,9 @@ export default function OAuthFinalizePage() {
         <div className="w-full max-w-sm flex flex-col gap-3">
           <div className="pq-skeleton-dark h-8 w-48 rounded" />
           <div className="pq-skeleton-dark h-4 w-64 rounded" />
-          <div className="pq-skeleton-dark mt-6 h-11 w-full rounded-sm" />
-          <div className="pq-skeleton-dark mt-2 h-4 w-full rounded" />
+          <div className="pq-skeleton-dark mt-6 h-4 w-full rounded" />
           <div className="pq-skeleton-dark h-4 w-5/6 rounded" />
+          <div className="pq-skeleton-dark h-4 w-full rounded" />
           <div className="pq-skeleton-dark mt-4 h-12 w-full rounded-sm" />
           <span className="sr-only">Finalizing your account…</span>
         </div>
@@ -311,10 +268,10 @@ export default function OAuthFinalizePage() {
   }
 
   const errorMsg = errorCode ? ERROR_COPY[errorCode] : null;
-  // 제출 게이트 — 만 14세 이상 + 필수 4종(terms / non_advisory / age /
-  // cross_border) 전부 동의. marketing 은 선택이라 게이트에 들어가지 않는다.
+  // 제출 게이트 — 필수 4종(terms / non_advisory / age / cross_border) 전부
+  // 동의. marketing 은 선택이라 게이트에 들어가지 않는다.
   const consentsReady = allRequiredConsented(consents);
-  const canSubmit = ageCheck.eligible && consentsReady && !submitting;
+  const canSubmit = consentsReady && !submitting;
 
   return (
     <div
@@ -362,77 +319,17 @@ export default function OAuthFinalizePage() {
               margin: 0,
             }}
           >
-            개인정보 보호법 §22 ⑥ 에 따라 만 14세 이상 여부를 확인합니다.
-            법정대리인 동의 절차는 출시 후 별도 안내드립니다.
+            개인정보 보호법 §22 ⑥에 따라 만 14세 이상인지 직접 확인해 주세요.
+            생년월일은 수집하지 않습니다.
           </p>
         </header>
 
-        <label
-          htmlFor="oauth_finalize_birthdate"
-          style={{ display: "flex", flexDirection: "column", gap: 6 }}
-        >
-          <span
-            className="font-mono"
-            style={{
-              fontSize: "var(--pq-text-micro)",
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "var(--pq-ivory-dim)",
-            }}
-          >
-            {BIRTHDATE_LABEL_KO} · {BIRTHDATE_LABEL_EN}
-          </span>
-          <input
-            id="oauth_finalize_birthdate"
-            type="date"
-            required
-            className="pq-input-noom"
-            value={birthdate}
-            max={new Date().toISOString().slice(0, 10)}
-            onChange={(e) => {
-              setBirthdate(e.target.value);
-              setErrorCode(null);
-            }}
-            aria-invalid={!!errorCode || (birthdate !== "" && !ageCheck.eligible)}
-            aria-describedby="oauth_finalize_birthdate_msg"
-            style={{
-              background: "transparent",
-              color: "rgba(245,240,232,0.92)",
-              border: `1px solid ${
-                errorCode || (birthdate && !ageCheck.eligible)
-                  ? "rgba(244,108,108,0.6)"
-                  : "rgba(245,240,232,0.20)"
-              }`,
-              borderRadius: 2,
-              padding: "10px 12px",
-              colorScheme: "dark",
-            }}
-          />
-          {(errorMsg || (birthdate && !ageCheck.eligible)) && (
-            <span
-              id="oauth_finalize_birthdate_msg"
-              role="alert"
-              style={{
-                fontSize: "var(--pq-text-eyebrow)",
-                lineHeight: 1.55,
-                color: "rgba(244,108,108,0.92)",
-              }}
-            >
-              {errorMsg ? errorMsg.ko : UNDER_AGE_KO}
-              <br />
-              <span style={{ opacity: 0.75 }}>
-                {errorMsg ? errorMsg.en : UNDER_AGE_EN}
-              </span>
-            </span>
-          )}
-        </label>
-
-        {/* 법정 필수 동의 — 생년월일 폼 아래. 신규 OAuth 가입자만 이 페이지를
-            보므로, 여기가 `/login` 경유 신규자까지 덮는 유일한 지점이다. */}
+        {/* 법정 필수 동의 — 만 14세 자가선언 포함. 신규 OAuth 가입자만 이
+            페이지를 보므로, 여기가 `/login` 경유 신규자까지 덮는 유일한
+            지점이다. */}
         <ConsentStackV2
           consents={consents}
           onChange={setConsent}
-          ageEligible={ageCheck.eligible}
           pulseUnchecked={pulseUnchecked}
         />
 
@@ -445,7 +342,6 @@ export default function OAuthFinalizePage() {
             if (canSubmit || submitting) return;
             setPulseUnchecked(true);
             const firstMissing =
-              (!ageCheck.eligible && "oauth_finalize_birthdate") ||
               (!consents.terms && "agree_terms") ||
               (!consents.non_advisory && "agree_non_advisory") ||
               (!consents.age && "agree_age") ||
@@ -459,9 +355,26 @@ export default function OAuthFinalizePage() {
           }}
           style={{ display: "flex", flexDirection: "column", gap: 8 }}
         >
+          {errorMsg && (
+            <span
+              id="oauth_finalize_error"
+              role="alert"
+              style={{
+                fontSize: "var(--pq-text-eyebrow)",
+                lineHeight: 1.55,
+                color: "rgba(244,108,108,0.92)",
+              }}
+            >
+              {errorMsg.ko}
+              <br />
+              <span style={{ opacity: 0.75 }}>{errorMsg.en}</span>
+            </span>
+          )}
+
           <button
             type="submit"
             disabled={!canSubmit}
+            aria-describedby={errorMsg ? "oauth_finalize_error" : undefined}
             style={{
               width: "100%",
               padding: "12px 16px",

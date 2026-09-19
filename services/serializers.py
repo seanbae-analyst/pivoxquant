@@ -45,6 +45,8 @@ def serialize_user(u) -> dict:
     )
     eff_status = "active" if promoted_by_env else raw_status
 
+    # PIPA §22 ⑥ gate state — see the two keys at the bottom of the dict.
+    age_confirmed = bool(getattr(u, "age_confirmed", False))
     return {
         "id": u.id,
         "email": u.email,
@@ -70,12 +72,19 @@ def serialize_user(u) -> dict:
         "avatar_url": getattr(u, "avatar_url", None),
         "oauth_provider": getattr(u, "oauth_provider", None),
         # PIPA §22 ⑥ — frontend uses this to gate authenticated routes
-        # behind ``/signup/oauth-finalize`` until the user supplies a
-        # valid birthdate. ``birthdate_required`` is True iff the column
-        # is NULL (new OAuth sign-up *or* legacy pre-migration-031 row).
-        # The raw birthdate value itself is intentionally **not** returned —
-        # the frontend never needs the value, only the boolean gate.
-        "birthdate_required": getattr(u, "birthdate", None) is None,
+        # behind ``/signup/oauth-finalize`` until the user has confirmed
+        # they are 14+. True iff ``User.age_confirmed`` is False, i.e.
+        # neither the self-declaration stamp (``age_confirmed_at``) nor a
+        # legacy ``birthdate`` is present (new OAuth sign-up only — legacy
+        # birthdate-era users never see the interstitial again).
+        # The raw birthdate / timestamp values are intentionally **not**
+        # returned — the frontend only needs the boolean gate.
+        "age_confirmation_required": not age_confirmed,
+        # Deprecated alias — same value as ``age_confirmation_required``.
+        # Kept so a frontend bundle from the birthdate era keeps gating
+        # correctly during the deploy window. Remove after 2026-10-19 once
+        # every deployed frontend reads the new key.
+        "birthdate_required": not age_confirmed,
     }
 
 

@@ -1,44 +1,40 @@
 /**
- * Wave 1 Task 4 — PIPA §22 ⑥ 생년월일 검증 회귀 게이트.
+ * PIPA §22 ⑥ 만 14세 확인 회귀 게이트 — 자가선언 체크박스 (2026-09-19).
  *
- * Verifies:
- *   1. computeAgeYears / isAtLeastMinAge 헬퍼 정확성 (경계값 포함)
- *   2. 동의 스택 화면에서 만 13세 생년월일 입력 시 age 체크박스 disabled
- *      + 제출 버튼 disabled
- *   3. legal-consent-modal 에서 동일한 fail-fast 동작
+ * 2026-09-19 전환: 생년월일 입력 + 만 나이 계산(`lib/age-verification`) 은
+ * 삭제됐다. 만 14세 확인은 이용자가 직접 켜는 **일반 필수 체크박스**이며,
+ * 값은 `/api/auth/oauth-finalize` 본문의 `consents.age` 로 서버에 가고
+ * 서버가 `users.age_confirmed_at` 을 찍는다.
  *
- * 2026-09-17 대상 이동 (커버리지 삭제 아님): 2번의 대상이었던 `/signup` 의
- * 동의 스택 + 생년월일 입력이 OAuth 이후 인터스티셜
- * `/signup/oauth-finalize` 로 이사했다 (`/login` 으로 들어온 신규 가입자까지
- * 덮는 유일한 지점). 만 14세 미만 fail-fast 규칙 자체는 그대로다.
+ * Verifies (두 surface):
+ *   1. /signup/oauth-finalize — `age` 행이 잠기지 않은 일반 체크박스이고,
+ *      생년월일 입력이 없으며, `age` 미체크면 제출이 막힌다.
+ *   2. legal-consent-modal — 동일한 규칙.
  */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-
-import {
-  computeAgeYears,
-  isAtLeastMinAge,
-  isValidBirthdate,
-  MIN_AGE_YEARS,
-  UNDER_AGE_KO,
-} from "@/lib/age-verification";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import OAuthFinalizePage from "@/app/(auth)/signup/oauth-finalize/page";
 import { LegalConsentModal } from "@/components/ui/legal-consent-modal";
 
-// Mocks shared with oauth-finalize-consent.test.tsx — 인터스티셜은 인증된
-// 신규 OAuth 가입자(birthdate_required === true)에게만 폼을 렌더한다.
-vi.mock("@/lib/auth", () => ({
-  useAuth: () => ({
-    user: {
-      id: 1,
-      email: "new-oauth-user@example.com",
-      birthdate_required: true,
-    },
-    loading: false,
-    refresh: vi.fn(),
-  }),
-}));
+// 인터스티셜은 인증된 신규 OAuth 가입자(age_confirmation_required === true)
+// 에게만 폼을 렌더한다. `ageConfirmationRequired` 는 실물을 쓴다.
+vi.mock("@/lib/auth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+  return {
+    ...actual,
+    useAuth: () => ({
+      user: {
+        id: 1,
+        email: "new-oauth-user@example.com",
+        age_confirmation_required: true,
+      },
+      loading: false,
+      refresh: vi.fn(),
+    }),
+  };
+});
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -50,113 +46,65 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/signup/oauth-finalize",
 }));
 
-describe("age-verification helper", () => {
-  it("MIN_AGE_YEARS is 14 (PIPA §22 ⑥)", () => {
-    expect(MIN_AGE_YEARS).toBe(14);
-  });
-
-  it("rejects malformed birthdates", () => {
-    expect(isValidBirthdate("")).toBe(false);
-    expect(isValidBirthdate("2000")).toBe(false);
-    expect(isValidBirthdate("2000-13-01")).toBe(false);
-    expect(isValidBirthdate("2000-02-30")).toBe(false);
-    expect(isValidBirthdate("not-a-date")).toBe(false);
-  });
-
-  it("computes age in completed years correctly", () => {
-    const now = new Date("2026-05-10T00:00:00Z");
-    expect(computeAgeYears("2000-01-01", now)).toBe(26);
-    // Birthday not yet reached this year
-    expect(computeAgeYears("2000-12-31", now)).toBe(25);
-    // Exactly 14
-    expect(computeAgeYears("2012-05-10", now)).toBe(14);
-    // 13 years 11 months — fails
-    expect(computeAgeYears("2012-05-11", now)).toBe(13);
-  });
-
-  it("isAtLeastMinAge enforces ≥14", () => {
-    const now = new Date("2026-05-10T00:00:00Z");
-    expect(isAtLeastMinAge("2012-05-10", now)).toBe(true); // exactly 14
-    expect(isAtLeastMinAge("2012-05-11", now)).toBe(false); // 13y364d
-    expect(isAtLeastMinAge("2013-01-01", now)).toBe(false); // 13
-    expect(isAtLeastMinAge("2000-01-01", now)).toBe(true);
-  });
-
-  it("invalid birthdate returns -1 (treated as ineligible)", () => {
-    expect(computeAgeYears("")).toBe(-1);
-    expect(isAtLeastMinAge("")).toBe(false);
-  });
-});
-
-describe("<OAuthFinalizePage /> — PIPA §22 ⑥ birthdate fail-fast", () => {
-  it("age checkbox is disabled when birthdate makes user < 14", async () => {
+describe("<OAuthFinalizePage /> — PIPA §22 ⑥ age self-declaration", () => {
+  it("does not render a birthdate input any more", () => {
     render(<OAuthFinalizePage />);
-
-    // Compute a birthdate that is exactly 13 years before today.
-    const today = new Date();
-    const thirteen = new Date(
-      today.getFullYear() - 13,
-      today.getMonth(),
-      today.getDate(),
-    );
-    const yyyy = thirteen.getFullYear();
-    const mm = String(thirteen.getMonth() + 1).padStart(2, "0");
-    const dd = String(thirteen.getDate()).padStart(2, "0");
-    const birthdate = `${yyyy}-${mm}-${dd}`;
-
-    const input = screen.getByLabelText(/생년월일/) as HTMLInputElement;
-    // jsdom: type="date" inputs don't accept user.type() — use fireEvent.change
-    fireEvent.change(input, { target: { value: birthdate } });
-
-    // Under-age error message appears. 인터스티셜은 ko + en 을 한 span(role=alert)
-    // 안에 같이 렌더하므로 텍스트 일치가 아니라 alert 의 내용으로 확인한다.
-    expect(screen.getByRole("alert")).toHaveTextContent(UNDER_AGE_KO);
-
-    // Age checkbox is rendered but its parent label has pointer-events: none.
-    const ageCheckbox = screen.getByRole("checkbox", { name: /만 14세/ });
-    const label = ageCheckbox.closest("label");
-    expect(label).toHaveStyle({ pointerEvents: "none" });
-
-    // 제출 컨트롤은 잠긴 상태로 남는다 (이관 전에는 OAuth 앵커가 <button
-    // aria-disabled> 로 접히는 것을 확인했다).
-    expect(screen.getByRole("button", { name: /계속하기/ })).toBeDisabled();
+    expect(screen.queryByLabelText(/생년월일/)).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="date"]')).toBeNull();
   });
 
-  it("age checkbox unlocks when birthdate yields ≥14", async () => {
+  it("age checkbox is a plain, enabled checkbox (no pointer-events gating)", () => {
     render(<OAuthFinalizePage />);
-
-    const input = screen.getByLabelText(/생년월일/) as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "2000-01-01" } });
-
-    // Under-age error must NOT appear.
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-
     const ageCheckbox = screen.getByRole("checkbox", { name: /만 14세/ });
+    expect(ageCheckbox).toHaveAttribute("aria-checked", "false");
     const label = ageCheckbox.closest("label");
     expect(label).not.toHaveStyle({ pointerEvents: "none" });
+    expect(label).not.toHaveStyle({ opacity: "0.5" });
+  });
+
+  it("keeps submit disabled while age is unticked, even with the other 3 ticked", async () => {
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+
+    await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
+    await user.click(
+      screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
+    );
+    await user.click(screen.getByRole("checkbox", { name: /국외 이전에 동의/ }));
+
+    expect(screen.getByRole("button", { name: /계속하기/ })).toBeDisabled();
+
+    await user.click(screen.getByRole("checkbox", { name: /만 14세/ }));
+    expect(
+      screen.getByRole("checkbox", { name: /만 14세/ }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: /계속하기/ })).toBeEnabled();
   });
 });
 
-describe("<LegalConsentModal /> — PIPA §22 ⑥ birthdate fail-fast", () => {
-  it("submit button is disabled when birthdate makes user < 14", async () => {
+describe("<LegalConsentModal /> — PIPA §22 ⑥ age self-declaration", () => {
+  it("does not render a birthdate input any more", () => {
+    render(<LegalConsentModal onAgree={vi.fn()} />);
+    expect(screen.queryByLabelText(/생년월일/)).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+  });
+
+  it("submit stays disabled until the age checkbox is ticked", async () => {
+    const user = userEvent.setup();
     render(<LegalConsentModal onAgree={vi.fn()} />);
 
-    // Pick a birthdate clearly under 14.
-    const today = new Date();
-    const yyyy = today.getFullYear() - 13;
-    const birthdate = `${yyyy}-${String(today.getMonth() + 1).padStart(
-      2,
-      "0",
-    )}-${String(today.getDate()).padStart(2, "0")}`;
+    await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
+    await user.click(
+      screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
+    );
+    await user.click(screen.getByRole("checkbox", { name: /국외 이전/ }));
 
-    const input = screen.getByLabelText(/생년월일/) as HTMLInputElement;
-    // jsdom: type="date" inputs don't accept user.type() — use fireEvent.change
-    fireEvent.change(input, { target: { value: birthdate } });
-
-    expect(screen.getByText(UNDER_AGE_KO)).toBeInTheDocument();
-
-    // The submit button below the consent block must be disabled.
-    const submitBtn = screen.getByRole("button", { name: /동의|시작|계속|확인/ });
+    const submitBtn = screen.getByRole("button", { name: /동의하고 계속하기/ });
     expect(submitBtn).toBeDisabled();
+
+    const ageCheckbox = screen.getByRole("checkbox", { name: /만 14세/ });
+    expect(ageCheckbox.closest("label")).not.toHaveStyle({ pointerEvents: "none" });
+    await user.click(ageCheckbox);
+    expect(submitBtn).toBeEnabled();
   });
 });

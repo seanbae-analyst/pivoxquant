@@ -5,16 +5,16 @@ Registration, login, logout, session, CSRF cookie.
 
 Covers /api/auth/register, /api/auth/login, /api/auth/logout, /api/auth/me.
 
-PIPA §22 ⑥ — every successful /register payload below carries a
-``birthdate`` of an adult. The dedicated under-14 / parse-failure
-gate tests live in ``tests/test_signup_min_age.py``.
+PIPA §22 ⑥ — every successful /register payload below carries the
+``age_confirmed: true`` self-declaration (2026-09-19: no birthdate is
+collected anymore). The dedicated gate tests live in
+``tests/test_signup_min_age.py``.
 """
 
 
-# Adult birthdate used by every successful /register call below. Adults
-# are not subject to the §22 ⑥ legal-guardian rule. Pinned literal so
-# the tests don't drift if MIN_AGE_YEARS ever changes.
-_ADULT_BIRTHDATE = "1990-06-15"
+# 만 14세 이상 self-declaration sent by every /register call below. Only
+# the literal boolean ``True`` passes the server gate.
+_AGE_CONFIRMED = True
 
 
 # ── Registration ────────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ class TestRegister:
             "email": "new@test.com",
             "password": "secretpass",
             "name": "New User",
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r.status_code == 200
         data = r.get_json()
@@ -41,7 +41,7 @@ class TestRegister:
         r = client.post("/api/auth/register", json={
             "email": "dupe@test.com",
             "password": "anything",
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r.status_code == 409
         assert "already" in r.get_json()["error"].lower()
@@ -49,7 +49,7 @@ class TestRegister:
     def test_register_missing_email_returns_400(self, client):
         r = client.post("/api/auth/register", json={
             "password": "x" * 8,
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r.status_code == 400
 
@@ -57,7 +57,7 @@ class TestRegister:
         r = client.post("/api/auth/register", json={
             "email": "short@test.com",
             "password": "12345",  # < 6 chars
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r.status_code == 400
 
@@ -65,7 +65,7 @@ class TestRegister:
         r = client.post("/api/auth/register", json={
             "email": "MIXED@Test.COM",
             "password": "goodpass",
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r.status_code == 200
         assert r.get_json()["user"]["email"] == "mixed@test.com"
@@ -84,7 +84,7 @@ class TestRegister:
         r = client.post("/api/auth/register", json={
             "email": "newaccount@test.com",
             "password": "verystrongpw",
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r.status_code == 409
         body = r.get_json()
@@ -113,7 +113,7 @@ class TestRegister:
             json={
                 "email": "victim-precreate@test.com",
                 "password": "attackerchosenpw",
-                "birthdate": _ADULT_BIRTHDATE,
+                "age_confirmed": _AGE_CONFIRMED,
             },
             headers={"Origin": "https://evil.example.com"},
         )
@@ -130,7 +130,7 @@ class TestRegister:
             json={
                 "email": "legit-origin@test.com",
                 "password": "goodpassword",
-                "birthdate": _ADULT_BIRTHDATE,
+                "age_confirmed": _AGE_CONFIRMED,
             },
             headers={"Origin": "https://pivoxquant.com"},
         )
@@ -182,7 +182,7 @@ class TestRegisterRaceGuard:
         r = client.post("/api/auth/register", json={
             "email": "race@test.com",
             "password": "anotherpw",
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r.status_code == 409
         body = r.get_json()
@@ -204,7 +204,7 @@ class TestRegisterRaceGuard:
         r1 = client.post("/api/auth/register", json={
             "email": "integ@test.com",
             "password": "firstpass",
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r1.status_code == 200
 
@@ -232,7 +232,7 @@ class TestRegisterRaceGuard:
         r2 = client.post("/api/auth/register", json={
             "email": "integ@test.com",
             "password": "secondpass",
-            "birthdate": _ADULT_BIRTHDATE,
+            "age_confirmed": _AGE_CONFIRMED,
         })
         assert r2.status_code == 409, r2.get_data(as_text=True)
         body = r2.get_json()

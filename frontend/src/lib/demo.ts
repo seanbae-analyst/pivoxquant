@@ -21,8 +21,9 @@ export function isDemoMode(): boolean {
   return process.env.NEXT_PUBLIC_DEMO_MODE === "1";
 }
 
-/** Fixed demo identity — onboarding done + birthdate set so the layout guard
- *  (nextAuthRedirect) returns null and the dashboard renders straight away. */
+/** Fixed demo identity — onboarding done + age confirmation done (PIPA §22 ⑥)
+ *  so the layout guard (nextAuthRedirect) returns null and the dashboard
+ *  renders straight away. */
 export const DEMO_USER: User = {
   id: 1,
   email: "demo@pivoxquant.com",
@@ -36,6 +37,8 @@ export const DEMO_USER: User = {
   subscription_status: "active",
   raw_subscription_status: "active",
   onboarding_completed: true,
+  age_confirmation_required: false,
+  // Deprecated mirror of the key above — kept while the backend still emits it.
   birthdate_required: false,
   profile_changes_left: 3,
 };

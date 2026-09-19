@@ -65,8 +65,8 @@ from models import (
 )
 from security import auth_rate_limit, general_rate_limit
 from services.age_verification import (
-    BirthdateValidationError,
-    check_birthdate_payload,
+    AgeConfirmationError,
+    check_age_confirmation_payload,
 )
 from services.error_responses import api_error
 from services.serializers import serialize_user
@@ -79,7 +79,7 @@ def _schedule_onboarding_safe(user) -> None:
     """Fire-and-forget D+0/D+3/D+7 onboarding sequence enqueue.
 
     Wave G S5. Called at every signup completion point (password
-    ``/register`` final commit, OAuth-finalize birthdate commit, plus
+    ``/register`` final commit, OAuth-finalize age-confirmation commit, plus
     the brand-new-OAuth-user inline branch). Never raises — a failure
     to enqueue must never break signup. Feature flag
     (``PIVOX_ONBOARDING_SEQUENCE_ENABLED``) short-circuit lives inside
@@ -752,21 +752,24 @@ def register():
             code="AUTH_PASSWORD_TOO_SHORT",
             status=400,
         )
-    # PIPA §22 ⑥ — server-side under-14 gate. The frontend (signup _v1/_v2)
-    # already fail-fasts client-side, but a direct curl POST bypasses that.
-    # Audit W1.4 P0 finding: the client check was the *only* gate. Every
-    # error here returns a stable i18n code matching
-    # ``frontend/src/lib/age-verification.ts``.
+    # PIPA §22 ⑥ — server-side under-14 gate. The signup form's "만 14세
+    # 이상" checkbox is UX; a direct curl POST bypasses it, so the server
+    # requires ``age_confirmed`` to be literal ``true`` (audit W1.4 P0: the
+    # client check must never be the only gate). 2026-09-19: this replaced
+    # the birthdate field — no date of birth is collected anymore. Any
+    # ``birthdate`` key an old bundle still sends is ignored, not stored.
     try:
-        age_result = check_birthdate_payload(d.get("birthdate"))
-    except BirthdateValidationError as exc:
+        check_age_confirmation_payload(d.get("age_confirmed"))
+    except AgeConfirmationError as exc:
         # ``code`` is the stable machine-readable key; frontend matches on it.
         return api_error(
             en=exc.code,
-            kr="생년월일이 올바르지 않습니다.",
+            kr="만 14세 이상임을 확인해 주세요.",
             code=exc.code,
             status=400,
         )
+    if "birthdate" in d:
+        logger.debug("register: ignoring legacy 'birthdate' key (not collected since 2026-09-19)")
     # 2026-05-17 wave 12 P0: TOCTOU race. The previous "check then add"
     # let two concurrent POSTs with the same email both pass the existence
     # check and both reach commit(); the second raised IntegrityError that
@@ -782,10 +785,11 @@ def register():
             code="AUTH_EMAIL_ALREADY_REGISTERED",
             status=409,
         )
+    from routes.consents import _utcnow_naive  # 동의 타임스탬프 컨벤션 단일 SoT
     u = User(
         email=email,
         name=name or email.split("@")[0],
-        birthdate=age_result.birthdate,
+        age_confirmed_at=_utcnow_naive(),
     )
     u.set_pw(pw)
     db.session.add(u)
@@ -1128,11 +1132,12 @@ def google_callback():
                     user.avatar_url = avatar
                 link_alert["user"] = user
             else:
-                # Create new Google user. ``birthdate`` is left NULL — the
-                # frontend interstitial (``/signup/oauth-finalize``) will
-                # POST to ``/api/auth/oauth-finalize`` to fill it before
-                # the user can reach any other authenticated route.
-                # PIPA §22 ⑥: under-14 still fail-fasts there.
+                # Create new Google user. ``age_confirmed_at`` is left NULL —
+                # the frontend interstitial (``/signup/oauth-finalize``) will
+                # POST the consent stack (incl. the 만 14세 self-declaration)
+                # to ``/api/auth/oauth-finalize`` before the user can reach
+                # any other authenticated route. PIPA §22 ⑥: under-14 still
+                # fail-fasts there.
                 user = User(
                     email=email,
                     name=name,
@@ -1226,19 +1231,20 @@ def google_callback():
                 getattr(link_alert.get("user"), "id", None),
             )
 
-    # PIPA §22 ⑥ — birthdate gate. New users *and* legacy users (created
-    # before migration 031) reach here with ``birthdate IS NULL`` and must
-    # complete the interstitial before any other authenticated route. The
-    # frontend ``/signup/oauth-finalize`` page POSTs back to
-    # ``/api/auth/oauth-finalize`` once the user enters a valid birthdate.
-    if user.birthdate is None:
+    # PIPA §22 ⑥ — age-confirmation gate. New users (and legacy users who
+    # never supplied a birthdate in the 2026-05 → 2026-09-19 era) reach here
+    # with ``User.age_confirmed`` False and must complete the interstitial
+    # before any other authenticated route. The frontend
+    # ``/signup/oauth-finalize`` page POSTs the consent stack back to
+    # ``/api/auth/oauth-finalize``. Birthdate-era users pass straight through.
+    if not user.age_confirmed:
         next_param = request.args.get("next")
         finalize = "/signup/oauth-finalize"
         if next_param:
             from urllib.parse import quote
             finalize = f"{finalize}?next={quote(_safe_next(next_param), safe='/')}"
         logger.info(
-            "Google OAuth: birthdate missing → interstitial (user_id=%s)",
+            "Google OAuth: age not confirmed → interstitial (user_id=%s)",
             user.id,
         )
         return redirect(f"{origin}{finalize}")
@@ -1442,15 +1448,15 @@ def kakao_callback():
                 getattr(link_alert.get("user"), "id", None),
             )
 
-    # PIPA §22 ⑥ — birthdate gate (mirrors google_callback).
-    if user.birthdate is None:
+    # PIPA §22 ⑥ — age-confirmation gate (mirrors google_callback).
+    if not user.age_confirmed:
         next_param = request.args.get("next")
         finalize = "/signup/oauth-finalize"
         if next_param:
             from urllib.parse import quote
             finalize = f"{finalize}?next={quote(_safe_next(next_param), safe='/')}"
         logger.info(
-            "Kakao OAuth: birthdate missing → interstitial (user_id=%s)",
+            "Kakao OAuth: age not confirmed → interstitial (user_id=%s)",
             user.id,
         )
         return redirect(f"{origin}{finalize}")
@@ -1461,50 +1467,58 @@ def kakao_callback():
     return redirect(f"{origin}{redirect_url}")
 
 
-# ── OAuth signup finalization (PIPA §22 ⑥ birthdate interstitial) ────────────
+# ── OAuth signup finalization (PIPA §22 ⑥ age-confirmation interstitial) ─────
 
-# 법정 필수 동의 3종 — 인터스티셜의 제출 게이트와 1:1 로 맞춘다.
+# 법정 필수 동의 4종 — 인터스티셜의 제출 게이트와 1:1 로 맞춘다.
 #
-# 프론트의 필수 항목은 4종(terms / non_advisory / age / cross_border)이지만
-# ``age`` 는 생년월일에서 자동 도출되는 파생 체크박스이고, 그 사실은 아래
-# ``check_birthdate_payload`` 가 서버에서 다시 검증한다. 그래서 본문으로
-# 받아야 하는 것은 나머지 3종이다.
+# 2026-09-19 까지 ``age`` 는 생년월일에서 자동 도출되는 파생 체크박스였고
+# 본문에는 ``birthdate`` 가 따로 실렸다. 생년월일 수집을 중단한 지금은
+# ``age`` 체크박스 자체가 만 14세 이상 자가선언이자 유일한 증거라서, 나머지
+# 3종과 같은 자격으로 본문에서 리터럴 ``true`` 를 요구한다.
 #
 #   terms        — 이용약관 + 개인정보처리방침 동의
 #   non_advisory — 자본시장법상 투자자문업이 아니라는 고지 확인
 #   cross_border — 개인정보 국외 이전 동의 (PIPA §28-8)
-_OAUTH_FINALIZE_REQUIRED_CONSENTS = ("terms", "non_advisory", "cross_border")
+#   age          — 만 14세 이상 자가선언 (PIPA §22 ⑥) → ``age_confirmed_at``
+_OAUTH_FINALIZE_REQUIRED_CONSENTS = ("terms", "non_advisory", "cross_border", "age")
 
 
 @auth_bp.route("/oauth-finalize", methods=["POST"])
 @auth_rate_limit
 @api_auth
 def oauth_finalize():
-    """Capture birthdate + the mandatory consents for a fresh OAuth user.
+    """Capture the mandatory consents (incl. 만 14세 self-declaration) for a
+    fresh OAuth user.
 
     Reached by the frontend ``/signup/oauth-finalize`` interstitial after
     the OAuth callback redirected the user there because
-    ``user.birthdate IS NULL`` (new sign-up *or* legacy account from
-    before migration 031).
+    ``User.age_confirmed`` was False (new sign-up, or a legacy account
+    that never supplied a birthdate before the birthdate era ended on
+    2026-09-19).
 
     Request body::
 
         {
-          "birthdate": "yyyy-mm-dd",
           "consents": {
             "terms": true,
             "non_advisory": true,
-            "cross_border": true
+            "cross_border": true,
+            "age": true
           }
         }
 
-    All three consents must be literal ``true`` or the request is
-    refused with 400 ``consents_required`` and **nothing is written** —
-    not the birthdate, not the consent timestamp.
+    All four consents must be literal ``true`` or the request is refused
+    with 400 ``consents_required`` (``missing_consents`` lists the
+    offenders) and **nothing is written** — no age stamp, no consent
+    timestamp. A ``birthdate`` key from an old bundle is ignored: not
+    stored, not an error.
 
-    Idempotent — overwriting an already-set ``birthdate`` is rejected so
-    a user can't lower their stored age via repeated POSTs. Re-running
-    with the same value is a no-op success (200).
+    First finalize (``age_confirmed_at`` NULL and ``birthdate`` NULL):
+    stamps ``age_confirmed_at`` = now, stamps ``cross_border_consent_at``
+    if absent, commits once, and enqueues the onboarding sequence exactly
+    once. Re-finalize is an idempotent 200 — neither timestamp moves.
+
+    Response shape: ``{"ok": true, "user": serialize_user(...)}``.
     """
     if not current_user.is_authenticated:
         # ``@api_auth`` already gates this, but double-check explicitly so
@@ -1525,44 +1539,40 @@ def oauth_finalize():
             status=400,
         )
 
-    # ── 필수 동의 검증 (생년월일보다 *먼저*) ────────────────────────────
+    if "birthdate" in d:
+        # Old bundle (birthdate era). Ignore the value entirely — it is not
+        # collected anymore and must not land anywhere.
+        logger.debug(
+            "OAuth finalize: ignoring legacy 'birthdate' key (user_id=%s)",
+            getattr(current_user, "id", None),
+        )
+
+    # ── 필수 동의 검증 — 아무것도 쓰기 *전에* ───────────────────────────
     #
     # 2026-09-17 P1 (보안 감사): 동의 스택이 OAuth **이후** 인터스티셜로
-    # 옮겨졌는데(로그인 화면으로 들어온 신규 가입자도 덮으려면 그래야 한다)
-    # 서버는 계속 ``{birthdate}`` 만 받았다. 그래서 OAuth 콜백이 세션을 준
-    # 직후 체크박스를 하나도 건드리지 않고
+    # 옮겨졌는데 서버는 계속 ``{birthdate}`` 만 받았다. 그래서 OAuth 콜백이
+    # 세션을 준 직후 체크박스를 하나도 건드리지 않은 curl 한 줄로 전 기능이
+    # 열렸고, ``cross_border_consent_at`` 은 NULL, 약관·비자문 동의 증거는
+    # 0 이었다. 클라이언트 게이트는 증거가 아니다 — 서버가 게이트다.
+    # 2026-09-19 부터는 ``age`` 도 같은 스택에서 검증한다 (생년월일 폐지).
     #
-    #     curl -b <session> -X POST /api/auth/oauth-finalize \
-    #          -d '{"birthdate":"1990-01-01"}'
-    #
-    # 만 보내면 ``birthdate_required`` 가 false 로 떨어지며 전 기능이 열렸고,
-    # ``cross_border_consent_at`` 은 NULL, 약관·비자문 동의 증거는 0 이었다.
-    # 클라이언트 게이트는 증거가 아니다 — 서버가 게이트다.
-    #
-    # 순서가 중요하다: 동의를 먼저 보고 거절하면 birthdate 는 파싱조차 하지
-    # 않으므로, 동의 없는 요청은 어떤 컬럼도 건드리지 못한다.
+    # 순서가 중요하다: 동의를 먼저 보고 거절하면 어떤 컬럼도 건드리지 않는다.
     #
     # ── 하위 호환: ``consents`` 키가 아예 없는 요청은 400 으로 거절한다 ──
     #
     # 판단 근거
-    #   1. 통과시키면 고친 것이 아니다. 위 curl 은 ``consents`` 키가 없는
-    #      요청이고, "없으면 경고 로깅 + 통과" 로 두면 감사가 제출한 우회
-    #      재현 명령이 그대로 성공한다. 로그는 사후 관측이지 게이트가 아니고,
-    #      그 사이 가입한 사용자는 동의 증거가 영구히 0 인 채로 남는다.
-    #      P1 의 노출 창을 "언젠가 TODO 를 처리할 때까지" 로 열어 두는 셈이다.
+    #   1. 통과시키면 고친 것이 아니다. 감사가 제출한 우회 재현 명령이 그대로
+    #      성공한다. 로그는 사후 관측이지 게이트가 아니고, 그 사이 가입한
+    #      사용자는 동의 증거가 영구히 0 인 채로 남는다.
     #   2. 거절의 실패 모드는 복구 가능하고 자가 치유된다. 배포 순간 이미
     #      인터스티셜을 열어 둔 구버전 번들만 400 을 받고, 새로고침하면 새
-    #      번들을 받아 정상 진행한다. 계정은 half-provisioned 상태 그대로
-    #      남으므로(birthdate NULL) 데이터 손상도 없다. 노출 범위는 배포
-    #      창에 제출 버튼을 누른 소수이고, 지속 시간은 새로고침 1회다.
-    #      통과의 실패 모드는 그 반대다 — 조용하고, 무기한이고, 사후에만
-    #      보인다.
+    #      번들로 정상 진행한다. 계정은 half-provisioned 상태 그대로 남으므로
+    #      (age_confirmed_at NULL) 데이터 손상도 없다. 통과의 실패 모드는
+    #      그 반대다 — 조용하고, 무기한이고, 사후에만 보인다.
     #   3. 배포 순서는 운영으로 해결한다. **프론트(Vercel) 를 먼저 배포하고
     #      백엔드(Render) 를 뒤에 배포하면 창 자체가 생기지 않는다** —
-    #      구버전 서버는 ``consents`` 를 무시할 뿐이라 신버전 프론트가
-    #      먼저 떠 있어도 아무것도 깨지지 않는다. 순서가 보장되지 않는다는
-    #      이유로 컴플라이언스 게이트를 여는 대신, 순서를 보장하는 쪽이
-    #      비용이 훨씬 싸다.
+    #      구버전 서버는 모르는 키를 무시할 뿐이라 신버전 프론트가 먼저 떠
+    #      있어도 아무것도 깨지지 않는다.
     consents = d.get("consents")
     if consents is None:
         logger.warning(
@@ -1589,7 +1599,9 @@ def oauth_finalize():
         )
 
     # ``is not True`` — 문자열 "true" / 1 / "on" 같은 truthy 값은 동의로
-    # 인정하지 않는다. 명시적 opt-in 만 증거가 된다.
+    # 인정하지 않는다. 명시적 opt-in 만 증거가 된다. ``age`` 는
+    # ``services.age_verification.check_age_confirmation_payload`` 와 같은
+    # 규칙이다 (리터럴 true 만).
     missing = [
         key
         for key in _OAUTH_FINALIZE_REQUIRED_CONSENTS
@@ -1608,73 +1620,31 @@ def oauth_finalize():
             missing_consents=missing,
         )
 
-    try:
-        age_result = check_birthdate_payload(d.get("birthdate"))
-    except BirthdateValidationError as exc:
-        if exc.code == "below_min_age" and current_user.birthdate is None:
-            # PIPA §22 ⑥ — no processing of an under-14's data without a
-            # guardian's consent. 2026-09-10: the OAuth callback had already
-            # created the row (email, name, avatar, provider id) and this
-            # branch only refused the birthdate, leaving the account in place
-            # with no exit. Erase it now, the same way the 30-day purge does,
-            # but without the "purge complete" email to the child's address.
-            erased_id, erased_email = current_user.id, current_user.email
-            try:
-                from scripts.nightly.pipa_purge import _delete_user_cascade
-                _delete_user_cascade(erased_id, erased_email, send_email=False)
-                logger.info("OAuth finalize: under-14 account erased (user_id=%s)", erased_id)
-            except Exception:
-                db.session.rollback()
-                logger.exception("OAuth finalize: under-14 erasure failed user_id=%s", erased_id)
-            logout_user()
-            session.clear()
-            _err = api_error(
-                en=exc.code,
-                kr="만 14세 미만은 가입할 수 없어 입력하신 정보를 삭제했습니다.",
-                code=exc.code,
-                status=400,
-            )
-            # api_error returns (response, status); cookies go on the response.
-            if isinstance(_err, tuple):
-                return (_clear_auth_cookies(_err[0]),) + tuple(_err[1:])
-            return _clear_auth_cookies(_err)
-        return api_error(
-            en=exc.code,
-            kr="생년월일이 올바르지 않습니다.",
-            code=exc.code,
-            status=400,
-        )
-
     user = current_user
-    if user.birthdate is not None and user.birthdate != age_result.birthdate:
-        # Already set to a *different* value — refuse rather than silently
-        # overwrite. PIPA audit trail requirement.
-        return api_error(
-            en="birthdate_already_set",
-            kr="생년월일이 이미 설정되어 있습니다.",
-            code="birthdate_already_set",
-            status=409,
-        )
 
-    # ── 국외이전 동의 기록 (PIPA §28-8) — 생년월일과 같은 트랜잭션 ──────
+    # ── 기록 — 자가선언 시각 + 국외이전 동의 (PIPA §28-8), 한 트랜잭션 ──
     #
     # 기록 방식은 ``routes/consents.py``
     # (``record_cross_border_consent`` / ``_utcnow_naive``) 를 그대로 따른다:
-    # 같은 두 컬럼, 같은 naive-UTC 컨벤션. 두 번째 구현을 만들지 않으려고
+    # 같은 컬럼, 같은 naive-UTC 컨벤션. 두 번째 구현을 만들지 않으려고
     # 헬퍼를 그 모듈에서 import 한다.
     #
     # 프론트가 별도로 ``POST /api/consents/cross-border`` 를 때리던 best-effort
-    # 경로는 이 커밋으로 제거했다 — 같은 사실을 두 번 기록하면 타임스탬프가
+    # 경로는 2026-09-17 에 제거했다 — 같은 사실을 두 번 기록하면 타임스탬프가
     # 실제 동의 시각에서 밀린다.
     #
-    # ``cross_border_consent_at`` 이 이미 있으면 다시 스탬프하지 않는다.
-    # 재-finalize(같은 생년월일 멱등 경로)가 최초 동의 시각을 덮어써서
-    # 감사 추적을 뒤로 미는 것을 막는다.
+    # 둘 다 "이미 있으면 다시 스탬프하지 않는다". 재-finalize 가 최초 시각을
+    # 덮어써서 감사 추적을 뒤로 미는 것을 막는다. ``birthdate`` 가 있는
+    # 레거시 사용자는 ``age_confirmed`` 가 이미 True 라 age 스탬프를 새로
+    # 찍지 않는다 — 생년월일이 그 사용자의 증거다.
     from routes.consents import _utcnow_naive  # 기록 컨벤션 단일 SoT
 
+    first_finalize = not user.age_confirmed
     consent_written = False
+    now = _utcnow_naive()
+    if first_finalize:
+        user.age_confirmed_at = now
     if getattr(user, "cross_border_consent_at", None) is None:
-        now = _utcnow_naive()
         user.cross_border_consent_at = now
         user.cross_border_consent_revoked_at = None
         consent_written = True
@@ -1684,12 +1654,11 @@ def oauth_finalize():
     #   컬럼 신설은 마이그레이션이라 CEO 승인 대상이므로, 여기서는 요청의
     #   필수 필드로 받아 *검증*만 하고 타임스탬프는 남기지 않는다. 즉 이
     #   두 건은 "동의 없이는 가입이 완료되지 않는다"는 사실이 증거이고,
-    #   개별 동의 시각은 서버에 남지 않는다(프론트 localStorage 스냅숏도
-    #   가입 완료 시 지워진다 — 그쪽은 애초에 증거로 쓸 수 없었다).
+    #   개별 동의 시각은 서버에 남지 않는다.
     #   → docs/legal/policy-audit-2026-09-17.md B-1 에 같은 내용을 적어 두었다.
+    #   ``age`` 는 다르다 — ``age_confirmed_at`` 에 시각이 남는다 (2026-09-19).
 
-    if user.birthdate is None:
-        user.birthdate = age_result.birthdate
+    if first_finalize or consent_written:
         try:
             db.session.commit()
         except Exception:
@@ -1703,34 +1672,19 @@ def oauth_finalize():
                 code="finalize_failed",
                 status=500,
             )
+
+    if first_finalize:
         logger.info(
-            "OAuth finalize: birthdate set (user_id=%s provider=%s "
+            "OAuth finalize: age confirmed (user_id=%s provider=%s "
             "cross_border_consent_written=%s)",
             user.id, user.oauth_provider, consent_written,
         )
-        # Wave G S5 — OAuth signups don't complete until birthdate
-        # lands here (PIPA §22 ⑥ gate). Enqueue D+0/D+3/D+7 sequence
-        # only when we actually transition from NULL → set; re-finalize
-        # attempts are 409'd above so this branch fires exactly once
-        # per OAuth user. Fire-and-forget — never blocks signup.
+        # Wave G S5 — OAuth signups don't complete until the age
+        # confirmation lands here (PIPA §22 ⑥ gate). Enqueue D+0/D+3/D+7
+        # sequence only on the NULL → set transition; re-finalize takes the
+        # idempotent path above so this fires exactly once per OAuth user.
+        # Fire-and-forget — never blocks signup.
         _schedule_onboarding_safe(user)
-    elif consent_written:
-        # 멱등 경로(같은 생년월일 재전송)인데 국외이전 동의만 아직 없던
-        # 케이스 — 동의 기록은 커밋한다.
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            logger.exception(
-                "OAuth finalize cross-border consent commit failed "
-                "(user_id=%s)", user.id,
-            )
-            return api_error(
-                en="finalize_failed",
-                kr="가입 완료 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
-                code="finalize_failed",
-                status=500,
-            )
 
     return jsonify({"ok": True, "user": serialize_user(user)})
 

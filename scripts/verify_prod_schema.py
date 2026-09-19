@@ -50,7 +50,8 @@ REQUIRED_COLUMNS: list[tuple[str, str]] = [
     ("users", "email_opt_out"),                  # 021
     ("users", "marketing_consent_at"),           # 023
     ("users", "cross_border_consent_at"),        # 024
-    ("users", "birthdate"),                      # 031
+    ("users", "birthdate"),                      # 031 (legacy, kept)
+    ("users", "age_confirmed_at"),               # 053 — 만 14세 자가선언
     ("users", "is_simulated"),                   # 032 — SHIP-BLOCKER P0
     ("users", "onboarding_draft_json"),          # 035 — SHIP-BLOCKER P0 (PR #427+#466 OAuth provisioning hotfix)
     # --- broker_connections (encrypted) ---

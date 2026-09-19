@@ -4,7 +4,7 @@
  * 2026-09-17 이관: 이 4개 단언은 원래 `signup-v2.test.tsx` 에서 `/signup`
  * 화면을 대상으로 돌았다. `/login` 과 `/signup` 이 하나의 `AuthEntryPage` 로
  * 통합되면서 동의 수집 지점이 OAuth **이후** 인터스티셜로 옮겨졌고
- * (`user.birthdate_required === true` 인 신규 가입자만 본다), 게이트 대상도
+ * (`ageConfirmationRequired(user)` 가 true 인 신규 가입자만 본다), 게이트 대상도
  * OAuth 버튼 → 제출 버튼("계속하기")으로 바뀌었다. 보호 대상은 그대로다:
  *   - CLAUDE.md "가입 시 Terms checkbox 필수"
  *   - PIPA §22 ⑥ (만 14세) / §28-8 (국외 이전) / 정통망법 §50 ① (마케팅, 선택)
@@ -12,7 +12,7 @@
  * 커버리지는 삭제되지 않았다 — 위치만 옮겼다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // 2026-09-17 P1 — 제출 계약(본문의 `consents` + 성공 시 스냅숏 정리)을
@@ -41,22 +41,27 @@ vi.mock("next/navigation", () => ({
 }));
 
 // 인터스티셜은 인증된 신규 OAuth 가입자에게만 뜬다:
-// loading=false + user != null + birthdate_required === true.
+// loading=false + user != null + age_confirmation_required === true.
 // (false 면 페이지가 곧바로 `next` 로 replace 하므로 폼이 렌더되지 않는다.)
-vi.mock("@/lib/auth", () => ({
-  useAuth: () => ({
-    user: {
-      id: 1,
-      email: "new-oauth-user@example.com",
-      birthdate_required: true,
-    },
-    loading: false,
-    login: vi.fn(),
-    signup: vi.fn(),
-    logout: vi.fn(),
-    refresh: vi.fn(),
-  }),
-}));
+// `ageConfirmationRequired` 헬퍼는 실물을 쓴다.
+vi.mock("@/lib/auth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+  return {
+    ...actual,
+    useAuth: () => ({
+      user: {
+        id: 1,
+        email: "new-oauth-user@example.com",
+        age_confirmation_required: true,
+      },
+      loading: false,
+      login: vi.fn(),
+      signup: vi.fn(),
+      logout: vi.fn(),
+      refresh: vi.fn(),
+    }),
+  };
+});
 
 // Import AFTER mocks.
 import OAuthFinalizePage from "@/app/(auth)/signup/oauth-finalize/page";
@@ -103,21 +108,15 @@ describe("OAuthFinalizePage — 법정 필수 동의 게이트", () => {
     render(<OAuthFinalizePage />);
 
     // 2026-05-04 (commit 7084f60 / c9c6827): cross_border added per
-    // PIPA §28-8. Processors: 7 in US (Anthropic / Vercel / Railway /
-    // Google / SendGrid / Sentry / Stripe) + 1 in France (Brevo) = 8 total;
-    // privacy-ko.md §6 (#cross-border) is the authoritative list.
-    // 2026-05-10 (Wave 1 Task 4): birthdate ≥14 required before age
-    // checkbox is enabled per PIPA §22 ⑥ (만 14세 미만 fail-fast).
-    // 2026-05-11 SHIP-BLOCKER fix: agree_age auto-derived from valid DOB ≥14,
-    // so we no longer click the 만 14세 checkbox — it auto-checks on DOB change.
+    // PIPA §28-8; privacy-ko.md §6 (#cross-border) is the authoritative
+    // processor list.
+    // 2026-09-19: 만 14세 확인은 자가선언 체크박스다 — 생년월일 입력 없음.
+    // 이용자가 직접 켠다.
     await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
     await user.click(
       screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
     );
-    // Fill birthdate (>= 14 years ago) — agree_age auto-derives to true.
-    // jsdom: type="date" doesn't accept user.type — use fireEvent.change.
-    const birthdateInput = screen.getByLabelText(/생년월일/) as HTMLInputElement;
-    fireEvent.change(birthdateInput, { target: { value: "2000-01-01" } });
+    await user.click(screen.getByRole("checkbox", { name: /만 14세/ }));
     await user.click(
       screen.getByRole("checkbox", { name: /국외 이전에 동의/ }),
     );
@@ -125,6 +124,29 @@ describe("OAuthFinalizePage — 법정 필수 동의 게이트", () => {
     expect(submitButton()).toBeEnabled();
     // 안내 문구는 게이트가 열리면 사라진다.
     expect(screen.queryByText(/필수 항목 4개/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the submit control disabled when only the age consent is unticked", async () => {
+    // PIPA §22 ⑥ — 자가선언이 빠지면 나머지 셋이 다 켜져 있어도 제출 불가.
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+
+    await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
+    await user.click(
+      screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
+    );
+    await user.click(
+      screen.getByRole("checkbox", { name: /국외 이전에 동의/ }),
+    );
+
+    expect(submitButton()).toBeDisabled();
+    expect(screen.getByText(/필수 항목 4개/)).toBeInTheDocument();
+  });
+
+  it("does not render a birthdate input (2026-09-19 self-declaration)", () => {
+    render(<OAuthFinalizePage />);
+    expect(screen.queryByLabelText(/생년월일/)).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="date"]')).toBeNull();
   });
 
   it("renders terms + privacy links inside the consent block", () => {
@@ -146,9 +168,10 @@ describe("OAuthFinalizePage — 법정 필수 동의 게이트", () => {
 /**
  * ── 2026-09-17 P1: 동의는 서버 게이트다 ──────────────────────────────────
  *
- * 감사 실측: 동의 스택이 OAuth 이후 인터스티셜로 옮겨졌는데 서버는 여전히
- * `{ birthdate }` 만 받아서, 세션만 있으면 체크박스를 하나도 건드리지 않고
- * curl 로 전 기능을 열 수 있었다. 서버 쪽 게이트는
+ * 감사 실측: 동의 스택이 OAuth 이후 인터스티셜로 옮겨졌는데 서버는 동의를
+ * 받지 않아서, 세션만 있으면 체크박스를 하나도 건드리지 않고 curl 로 전
+ * 기능을 열 수 있었다. 2026-09-19 부터 본문은 `{ consents: {terms,
+ * non_advisory, cross_border, age} }` 뿐이다(생년월일 없음). 서버 쪽 게이트는
  * `tests/test_oauth_finalize_consents.py` 가 지킨다. 이 블록은 **프론트가
  * 그 계약을 실제로 지키는지** — 동의를 본문에 담아 보내는지, 성공 후
  * localStorage 스냅숏을 지우는지 — 를 지킨다.
@@ -161,15 +184,13 @@ describe("OAuthFinalizePage — 제출 계약 (서버 동의 게이트)", () => 
     window.localStorage.clear();
   });
 
-  /** 필수 4종을 모두 만족시킨 뒤 제출한다. */
+  /** 필수 4종을 모두 켠 뒤 제출한다. */
   async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
     await user.click(
       screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
     );
-    fireEvent.change(screen.getByLabelText(/생년월일/), {
-      target: { value: "1990-01-01" },
-    });
+    await user.click(screen.getByRole("checkbox", { name: /만 14세/ }));
     await user.click(screen.getByRole("checkbox", { name: /국외 이전에 동의/ }));
     await user.click(submitButton());
   }
@@ -181,7 +202,7 @@ describe("OAuthFinalizePage — 제출 계약 (서버 동의 게이트)", () => 
     );
   }
 
-  it("sends the 3 mandatory consents in the request body", async () => {
+  it("sends the 4 mandatory consents (and no birthdate) in the request body", async () => {
     const user = userEvent.setup();
     render(<OAuthFinalizePage />);
     await fillAndSubmit(user);
@@ -189,12 +210,35 @@ describe("OAuthFinalizePage — 제출 계약 (서버 동의 게이트)", () => 
     await waitFor(() => expect(finalizeCall()).toBeTruthy());
     const body = JSON.parse(finalizeCall()![1].body as string);
 
-    expect(body.birthdate).toBe("1990-01-01");
+    expect(body).not.toHaveProperty("birthdate");
     expect(body.consents).toEqual({
       terms: true,
       non_advisory: true,
       cross_border: true,
+      age: true,
     });
+  });
+
+  it("stages a snapshot without a birthdate field", async () => {
+    // 실패 경로에서 남는 스냅숏에도 생년월일이 없어야 한다 — 수집 항목 삭제.
+    const { ApiError } = await vi.importActual<typeof import("@/lib/api")>(
+      "@/lib/api",
+    );
+    apiFetchMock.mockRejectedValueOnce(
+      new ApiError(500, "finalize failed", "finalize_failed"),
+    );
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+    await fillAndSubmit(user);
+
+    await waitFor(() =>
+      expect(window.localStorage.getItem("pivox_signup_consents")).not.toBeNull(),
+    );
+    const staged = JSON.parse(
+      window.localStorage.getItem("pivox_signup_consents") as string,
+    );
+    expect(staged).not.toHaveProperty("birthdate");
+    expect(staged.age).toBe(true);
   });
 
   it("does NOT double-record cross-border consent via /api/consents", async () => {
@@ -250,6 +294,36 @@ describe("OAuthFinalizePage — 제출 계약 (서버 동의 게이트)", () => 
     );
     apiFetchMock.mockRejectedValueOnce(
       new ApiError(400, "필수 동의 항목을 모두 확인해주세요.", "consents_required"),
+    );
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+    await fillAndSubmit(user);
+
+    expect(await screen.findByText(/새로고침한 뒤 다시 시도/)).toBeInTheDocument();
+  });
+
+  it("surfaces the server's age_confirmation_required code as its own copy", async () => {
+    const { ApiError } = await vi.importActual<typeof import("@/lib/api")>(
+      "@/lib/api",
+    );
+    apiFetchMock.mockRejectedValueOnce(
+      new ApiError(400, "만 14세", "age_confirmation_required"),
+    );
+    const user = userEvent.setup();
+    render(<OAuthFinalizePage />);
+    await fillAndSubmit(user);
+
+    expect(
+      await screen.findByText(/만 14세 이상임을 확인해 주세요/),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to the consents_required copy for an unknown code", async () => {
+    const { ApiError } = await vi.importActual<typeof import("@/lib/api")>(
+      "@/lib/api",
+    );
+    apiFetchMock.mockRejectedValueOnce(
+      new ApiError(400, "whatever", "some_unknown_code"),
     );
     const user = userEvent.setup();
     render(<OAuthFinalizePage />);

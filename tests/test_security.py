@@ -43,11 +43,12 @@ class TestCSRFProtection:
 
     def test_unauthenticated_write_bypasses_csrf(self, raw_client):
         """Unauthenticated requests skip CSRF (by design — no session to fix)."""
-        # POST /api/auth/register is a legitimate unauth mutation. Birthdate
-        # included so we exercise the success path (CSRF, not §22 ⑥).
+        # POST /api/auth/register is a legitimate unauth mutation. The 만 14세
+        # self-declaration is included so we exercise the success path
+        # (CSRF, not §22 ⑥).
         r = raw_client.post("/api/auth/register", json={
             "email": "bypass@test.com", "password": "pwpwpw",
-            "birthdate": "1990-06-15",
+            "age_confirmed": True,
         })
         # Should NOT be 403 CSRF — either 200 (new user) or 409 (existing).
         assert r.status_code not in (403,), (
@@ -202,7 +203,7 @@ class TestInjectionGuards:
             "email": "xss@test.com",
             "password": "goodpass",
             "name": payload,
-            "birthdate": "1990-06-15",
+            "age_confirmed": True,
         })
         assert r.status_code == 200
         data = r.get_json()

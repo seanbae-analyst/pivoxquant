@@ -9,7 +9,7 @@
  *   - 전부 체크 전/후 게이트
  *   - 동의 블록 안 약관 · 개인정보 링크
  *   동의 스택은 `/signup/oauth-finalize` 인터스티셜로 이사했다
- *   (`user.birthdate_required === true` 인 신규 OAuth 가입자만 본다).
+ *   (`ageConfirmationRequired(user)` 가 true 인 신규 OAuth 가입자만 본다).
  *
  * 이 파일에서 삭제된 단언 (옮길 곳이 없음):
  *   - "renders a /login switch link in the footer"
@@ -20,7 +20,7 @@
  *       "renders the unified OAuth entry" 가 대신 맡는다.
  *
  * 여기에 남은 것: /signup 이 여전히 200 을 주고 통합 화면을 렌더하는지,
- * 그리고 동의·생년월일이 이 화면에 **다시 들어오지 않았는지**(재발 방지).
+ * 그리고 동의 스택이 이 화면에 **다시 들어오지 않았는지**(재발 방지).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -88,14 +88,15 @@ describe("SignupPageV2 — unified auth entry alias", () => {
     expect(kakaoLink).toBeInTheDocument();
   });
 
-  it("does not collect consents or birthdate here (they moved after OAuth)", () => {
+  it("does not collect consents here (they moved after OAuth)", () => {
     renderWithLocale(<SignupPageV2 />);
 
-    // 동의 스택 / 생년월일이 이 화면으로 되돌아오면 신규 가입자는 OAuth 전에
-    // 다시 동의를 요구받고, 로그인으로 들어온 신규 가입자는 여전히 동의를
-    // 건너뛴다 — 이관이 닫은 구멍이 다시 열린다.
+    // 동의 스택이 이 화면으로 되돌아오면 신규 가입자는 OAuth 전에 다시
+    // 동의를 요구받고, 로그인으로 들어온 신규 가입자는 여전히 동의를
+    // 건너뛴다 — 이관이 닫은 구멍이 다시 열린다. (생년월일 입력은
+    // 2026-09-19 에 제품 전체에서 삭제됐다.)
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-    expect(screen.queryByLabelText(/생년월일/)).not.toBeInTheDocument();
+    expect(document.querySelector('input[type="date"]')).toBeNull();
   });
 
   it("keeps the terms + privacy disclosure line on the entry screen", () => {

@@ -4,6 +4,13 @@
 > 아래 09-12 절이 현재 상태, 그 밑 09-01 절은 **이력**이다(백엔드 재구축 당시 기록 — 지금은 해소됨).
 > 수치는 측정 시각과 함께 적는다. 오래됐으면 다시 재라.
 
+## 변경 2026-09-19 — 만 14세 확인: 생년월일 입력 → 자가선언 체크 (CEO "굳이 14세 이거 필요함?" → "그렇게 해")
+
+- **왜**: PIPA §22⑥ 은 14세 미만을 걸러낼 장치를 요구하지, 생년월일 수집을 요구하지 않는다. 생년월일은 이 게이트 말고 어디서도 안 쓰였다(grep 실측). 자가선언 체크는 동의 스택에 이미 있었다.
+- **어떻게**: `users.age_confirmed_at`(053 + `_do_migrations` 가드) 신설. `/api/auth/oauth-finalize` 필수 동의 4종(`terms/non_advisory/cross_border/age`), 본문의 `birthdate` 는 무시. 게이트 403 코드 `AGE_CONFIRMATION_REQUIRED`, `/me` 는 `age_confirmation_required`(+ `birthdate_required` 별칭, 2026-10-19 이후 제거). 기존 가입자는 `birthdate` 가 있으면 확인된 것으로 간주 — 재입력 없음. `users.birthdate` 컬럼과 값은 **남겨 둔다**(삭제는 CEO 결정).
+- **방침**: `privacy-ko.md` §1.1·§3 에서 생년월일 삭제, §11 자가선언으로 정정, 변경 이력 1행. 자문 큐 **Q9(자가선언 충분성)** 는 그대로 열려 있다.
+- **실측** (2026-09-19, 로컬 SQLite 부팅 + dev-login): `age` 누락 → 400 `consents_required`, `birthdate` 섞인 본문 → 200 + DB `birthdate NULL / age_confirmed_at 기록`, 재전송 → 200 멱등.
+
 ## 지금 상태 (2026-09-12 실측, HEAD `b6c451b3`)
 
 ### ✅ 백엔드 — Render 라이브 (free 플랜)

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { ageConfirmationRequired, useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { PushPermission } from "@/components/pwa/push-permission";
@@ -60,12 +60,17 @@ const ALWAYS_EXPANDED_PREFIXES: ReadonlyArray<string> = [];
    Pure decision function so the priority order is unit-testable. The
    (dashboard) layout sits OUTSIDE the OAuth-finalize route, so sending an
    unfinalized user to /signup/oauth-finalize cannot loop. Priority:
-     1. no user                       → /login
-     2. birthdate_required === true   → /signup/oauth-finalize  (PIPA §22)
-     3. onboarding_completed === false → /onboarding/broker
+     1. no user                          → /login
+     2. age confirmation required (PIPA §22 ⑥) → /signup/oauth-finalize
+     3. onboarding_completed === false    → /onboarding/broker
    Returns null when the user may stay on the current dashboard route.
+   2026-09-19: the gate reads ``ageConfirmationRequired()`` so the new
+   ``age_confirmation_required`` key and the deprecated
+   ``birthdate_required`` key both work during the deploy window.
    ────────────────────────────────────────────────────────────────── */
 type GuardUser = {
+  age_confirmation_required?: boolean;
+  /** @deprecated 2026-09-19 — read via ageConfirmationRequired(). */
   birthdate_required?: boolean;
   onboarding_completed?: boolean;
 };
@@ -74,11 +79,12 @@ export function nextAuthRedirect(
   user: GuardUser | null | undefined,
 ): string | null {
   if (!user) return "/login";
-  // PIPA §22 minor-protection gate: OAuth provisioned the account but the
-  // age/birthdate step is still outstanding. The backend already returns 403
-  // on data endpoints; this completes the front-end UX so the user lands on
-  // the finalize step instead of a broken-looking dashboard.
-  if (user.birthdate_required === true) return "/signup/oauth-finalize";
+  // PIPA §22 ⑥ minor-protection gate: OAuth provisioned the account but the
+  // age confirmation (self-declaration) is still outstanding. The backend
+  // already returns 403 AGE_CONFIRMATION_REQUIRED on data endpoints; this
+  // completes the front-end UX so the user lands on the finalize step
+  // instead of a broken-looking dashboard.
+  if (ageConfirmationRequired(user)) return "/signup/oauth-finalize";
   if (user.onboarding_completed === false) return "/onboarding/broker";
   return null;
 }
@@ -111,7 +117,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    // Single prioritized guard: login → birthdate finalize (PIPA §22) →
+    // Single prioritized guard: login → age confirmation (PIPA §22 ⑥) →
     // onboarding broker. Step 0 of onboarding is the broker-connect screen,
     // which then routes into the five-question wizard.
     const dest = nextAuthRedirect(user);

@@ -170,30 +170,35 @@ def _set_sentry_user_type_tag() -> str:
         return "anon"
 
 
-# ── PIPA §22 ⑥ — age-verification gate (defense-in-depth) ───────────────────
+# ── PIPA §22 ⑥ — age-confirmation gate (defense-in-depth) ───────────────────
 #
 # An OAuth signup is only *provisioned* (``login_user``) so the frontend can
-# POST the birthdate via ``/api/auth/oauth-finalize``. Until that column is
-# set we must NOT let the authenticated session reach any data / feature
-# endpoint — otherwise a direct API caller (curl) bypasses the browser
-# interstitial and uses the product (and can flip ``onboarding_completed``)
-# without ever confirming they are 14+.
+# POST the consent stack via ``/api/auth/oauth-finalize``. Until the user has
+# confirmed they are 14+ we must NOT let the authenticated session reach any
+# data / feature endpoint — otherwise a direct API caller (curl) bypasses the
+# browser interstitial and uses the product (and can flip
+# ``onboarding_completed``) without ever confirming their age.
+#
+# 2026-09-19 — the birthdate era ended. Evidence is now the "만 14세 이상"
+# self-declaration checkbox, stamped into ``users.age_confirmed_at``. Legacy
+# users with ``users.birthdate`` set stay unlocked (``User.age_confirmed``
+# is true for either), so nobody is re-prompted.
 #
 # We gate only ``/api/*`` (rendered HTML / OAuth redirect HTML is not a data
-# surface). A tight whitelist keeps the very routes that LET a user reach a
-# set birthdate (or escape the half-provisioned state) open — dropping any
-# of these would lock every fresh OAuth user out entirely:
-#   - oauth-finalize: the ONLY route that writes birthdate.
-#   - me: how the frontend learns ``birthdate_required=True`` → redirect to
-#         the ``/signup/oauth-finalize`` interstitial.
+# surface). A tight whitelist keeps the very routes that LET a user confirm
+# their age (or escape the half-provisioned state) open — dropping any of
+# these would lock every fresh OAuth user out entirely:
+#   - oauth-finalize: the ONLY route that writes age_confirmed_at for OAuth.
+#   - me: how the frontend learns ``age_confirmation_required=True`` →
+#         redirect to the ``/signup/oauth-finalize`` interstitial.
 #   - logout / logout alias: must be able to abandon the session.
 #   - google|kakao callbacks: complete the OAuth handshake itself.
 #   - delete-account / delete-request: PIPA §36 (삭제권) cannot be blocked by
-#         a missing birthdate.
+#         a missing age confirmation.
 #   - health: liveness probe, no user data.
 # CSRF tokens ride on every response cookie (security._set_security_headers)
 # so no separate csrf-token endpoint exists to whitelist.
-BIRTHDATE_GATE_WHITELIST = frozenset({
+AGE_GATE_WHITELIST = frozenset({
     "/api/auth/oauth-finalize",
     "/api/auth/me",
     "/api/auth/logout",
@@ -206,21 +211,23 @@ BIRTHDATE_GATE_WHITELIST = frozenset({
 })
 
 
-def birthdate_gate_blocks(path, is_authenticated, birthdate):
-    """Return True iff this request must be 403'd for a missing birthdate.
+def age_gate_blocks(path, is_authenticated, age_confirmed):
+    """Return True iff this request must be 403'd for a missing age confirmation.
 
-    Pure predicate (no Flask globals) so it is directly unit-testable. The
-    ``before_request`` hook in :func:`create_app` is a thin wrapper around it.
+    ``age_confirmed`` is ``User.age_confirmed`` (self-declaration stamp OR
+    legacy birthdate). Pure predicate (no Flask globals) so it is directly
+    unit-testable. The ``before_request`` hook in :func:`create_app` is a
+    thin wrapper around it.
     """
     normalized = (path or "").rstrip("/") or "/"
     if not normalized.startswith("/api/"):
         return False
-    if normalized in BIRTHDATE_GATE_WHITELIST:
+    if normalized in AGE_GATE_WHITELIST:
         return False
     if not is_authenticated:
         # api_auth / public endpoints handle the unauthenticated case.
         return False
-    return birthdate is None
+    return not bool(age_confirmed)
 
 
 # ── App factory ───────────────────────────────────────────────────────────────
@@ -424,17 +431,17 @@ def create_app():
         _set_sentry_user_type_tag()
 
     @app.before_request
-    def _require_birthdate():
+    def _require_age_confirmation():
         from flask_login import current_user
-        if birthdate_gate_blocks(
+        if age_gate_blocks(
             request.path,
             bool(getattr(current_user, "is_authenticated", False)),
-            getattr(current_user, "birthdate", None),
+            bool(getattr(current_user, "age_confirmed", False)),
         ):
             return jsonify({
-                "error":    "Birthdate confirmation required.",
-                "error_kr": "생년월일 확인이 필요합니다.",
-                "code":     "BIRTHDATE_REQUIRED",
+                "error":    "Age confirmation required.",
+                "error_kr": "만 14세 이상 확인이 필요합니다.",
+                "code":     "AGE_CONFIRMATION_REQUIRED",
             }), 403
 
     # Public OG / social-share images intentionally set a long, cacheable
@@ -701,6 +708,10 @@ def _do_migrations():
     # 인해 prod에서 SELECT users.birthdate ProgrammingError 발생 (2026-05-12
     # bug-hunter 발견, Railway logs). 본 fallback은 prod safety net.
     _add_column_if_missing("users", "birthdate", "DATE")
+    # 2026-09-19 — 생년월일 수집 중단. 만 14세 이상 자가선언 체크박스의 제출
+    # 시각 (naive UTC). Alembic 053_age_self_declaration 과 같은 컬럼 — prod 는
+    # 이 boot 경로가 실제로 컬럼을 만든다. ``birthdate`` 는 레거시 증거로 유지.
+    _add_column_if_missing("users", "age_confirmed_at", "TIMESTAMP")
     # Continuous User Simulation (CAUS) Phase 1 — sim/real user 격리 플래그.
     # Alembic migration 032_users_is_simulated (PR #351). prod 가 alembic 미적용
     # 상태로 운영되어 (alembic_version 테이블 부재 — 2026-05-13 발견) 본 컬럼이
