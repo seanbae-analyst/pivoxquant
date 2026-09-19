@@ -59,6 +59,10 @@ const FULL_SERVER_PREFS = {
 describe("NotificationsMatrix — server wiring", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    // The 52-week row needs a vendor quote, so the matrix hides it whenever
+    // the vendor-display flag is off (lib/market-display.ts). These cases
+    // assert the ENABLED behaviour; the gate is asserted in its own block.
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "1");
     mockedUseHook.mockReset();
     mockedSave.mockReset();
     mockedMutate.mockReset();
@@ -69,6 +73,7 @@ describe("NotificationsMatrix — server wiring", () => {
   afterEach(() => {
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
+    vi.unstubAllEnvs();
   });
 
   it("reflects the server prefs map once loaded (price_52w email = off)", async () => {
@@ -233,5 +238,79 @@ describe("NotificationsMatrix — server wiring", () => {
     const sentMap = mockedSave.mock.calls[0][0];
     expect(sentMap.price_52w.email).toBe(true);
     expect(sentMap.concentration.push).toBe(false);
+  });
+});
+
+describe("NotificationsMatrix — the server owns the row list", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockedUseHook.mockReset();
+    mockedSave.mockReset();
+    mockedMutate.mockReset();
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it("drops the 52-week row when the market-data display flag is off", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "0");
+    mockedUseHook.mockReturnValue(hookReturn(FULL_SERVER_PREFS));
+    renderMatrix();
+    await act(async () => {});
+
+    expect(
+      screen.queryByRole("switch", { name: /52주 범위 · email/i }),
+    ).toBeNull();
+    // The event that does not need a quote is untouched.
+    expect(
+      screen.getByRole("switch", { name: /섹터 집중도 · email/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("drops a row the backend stops returning, even with the flag on", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "1");
+    // Backend with MARKET_DATA_DISPLAY_ENABLED off omits price_52w entirely.
+    mockedUseHook.mockReturnValue(
+      hookReturn({ concentration: { email: true, push: true, inapp: true } }),
+    );
+    renderMatrix();
+    await act(async () => {});
+
+    expect(
+      screen.queryByRole("switch", { name: /52주 범위 · email/i }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("switch", { name: /섹터 집중도 · email/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("never PUTs an id the server did not return", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "1");
+    const serverPrefs = {
+      concentration: { email: true, push: true, inapp: true },
+    };
+    mockedUseHook.mockReturnValue(hookReturn(serverPrefs));
+    mockedSave.mockResolvedValue({ prefs: serverPrefs });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderMatrix();
+
+    const concentrationEmail = await screen.findByRole("switch", {
+      name: /섹터 집중도 · email/i,
+    });
+    await waitFor(() => expect(concentrationEmail).not.toBeDisabled());
+    await user.click(concentrationEmail);
+
+    await act(async () => {
+      vi.advanceTimersByTime(700);
+    });
+
+    await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
+    const sentMap = mockedSave.mock.calls[0][0];
+    expect(Object.keys(sentMap)).toEqual(["concentration"]);
+    expect(sentMap.price_52w).toBeUndefined();
   });
 });

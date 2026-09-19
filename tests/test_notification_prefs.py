@@ -22,6 +22,7 @@ from models import User
 from models.user import (
     NOTIFICATION_CHANNELS,
     NOTIFICATION_EVENT_IDS,
+    visible_notification_event_ids,
     NOTIFICATION_PREF_DEFAULTS,
 )
 
@@ -70,7 +71,8 @@ def test_channel_enabled_unknown_event_fails_open(app, make_user):
 # ── (b) GET defaults ─────────────────────────────────────────────────────
 
 
-def test_get_preferences_returns_every_event(auth_user, client):
+def test_get_preferences_returns_every_event(auth_user, client, market_display_on):
+    """With every producer live, the matrix shows all canonical events."""
     resp = client.get("/api/notifications/preferences")
     assert resp.status_code == 200, resp.data
     prefs = resp.get_json()["prefs"]
@@ -78,6 +80,46 @@ def test_get_preferences_returns_every_event(auth_user, client):
     for event_id, channels in prefs.items():
         assert set(channels.keys()) == set(NOTIFICATION_CHANNELS)
         assert channels == NOTIFICATION_PREF_DEFAULTS[event_id]
+
+
+def test_get_preferences_hides_price_52w_when_display_off(
+    auth_user, client, market_display_off,
+):
+    """SoT rule: only events that can actually SEND are shown.
+
+    ``price_52w``'s only producer (``check_52w_highs_lows`` via the
+    ``price_alerts_daily`` cron) is skipped while MARKET_DATA_DISPLAY_ENABLED
+    is off, so its row must not render — otherwise it is a dead toggle.
+    ``concentration`` is cost-basis only and keeps its row.
+    """
+    resp = client.get("/api/notifications/preferences")
+    assert resp.status_code == 200, resp.data
+    prefs = resp.get_json()["prefs"]
+    assert "price_52w" not in prefs
+    assert "concentration" in prefs
+    assert set(prefs.keys()) == set(visible_notification_event_ids())
+    # The canonical vocabulary itself is untouched — this is a display filter.
+    assert "price_52w" in NOTIFICATION_EVENT_IDS
+
+
+def test_put_accepts_price_52w_even_while_hidden(
+    app, auth_user, client, market_display_off,
+):
+    """A hidden event stays VALID input, so a stored setting survives the
+    gate being flipped back on."""
+    resp = client.put(
+        "/api/notifications/preferences",
+        json={"prefs": {"price_52w": {"email": True, "push": False, "inapp": False}}},
+    )
+    assert resp.status_code == 200, resp.data
+    # Hidden from the response body...
+    assert "price_52w" not in resp.get_json()["prefs"]
+    # ...but persisted: it reappears once display is enabled again.
+    from models.user import User
+    from extensions import db
+    with app.app_context():
+        u = db.session.get(User, auth_user["id"])
+        assert u.notification_prefs["price_52w"]["email"] is True
 
 
 def test_get_preferences_requires_auth(client):
@@ -88,7 +130,7 @@ def test_get_preferences_requires_auth(client):
 # ── (c) PUT → GET round-trip ─────────────────────────────────────────────
 
 
-def test_put_then_get_round_trip(auth_user, client):
+def test_put_then_get_round_trip(auth_user, client, market_display_on):
     body = {"prefs": {"concentration": {"email": False, "push": False, "inapp": True}}}
     put = client.put("/api/notifications/preferences", json=body)
     assert put.status_code == 200, put.data

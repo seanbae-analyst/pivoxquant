@@ -491,3 +491,32 @@ def enable_rate_limit():
         limiter.reset()
     except Exception:
         pass
+
+
+# ── MARKET_DATA_DISPLAY_ENABLED (config.py) ──────────────────────────────────
+# The flag defaults to OFF, so every suite that asserts on a vendor price, a
+# market value, a NAV or an index level must opt IN — that is the point: an
+# accidental default flip would fail loudly here instead of shipping prices we
+# have no licence to display. Both fixtures restore the previous value, which
+# matters because the ``app`` fixture is session-scoped.
+
+def _set_market_display(app, value: bool):
+    previous = app.config.get("MARKET_DATA_DISPLAY_ENABLED")
+    app.config["MARKET_DATA_DISPLAY_ENABLED"] = value
+    return previous
+
+
+@pytest.fixture
+def market_display_on(app):
+    """Vendor-quote display ENABLED — pins today's (pre-flag) behaviour."""
+    previous = _set_market_display(app, True)
+    yield app
+    app.config["MARKET_DATA_DISPLAY_ENABLED"] = previous
+
+
+@pytest.fixture
+def market_display_off(app):
+    """Vendor-quote display DISABLED — the production default."""
+    previous = _set_market_display(app, False)
+    yield app
+    app.config["MARKET_DATA_DISPLAY_ENABLED"] = previous

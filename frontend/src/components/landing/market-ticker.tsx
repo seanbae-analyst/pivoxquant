@@ -34,6 +34,7 @@ import {
   usePublicMarketSnapshot,
   type PublicMarketSnapshotItem,
 } from "@/lib/hooks";
+import { isMarketDataDisplayEnabled } from "@/lib/market-display";
 
 // Korean market convention: ▲ rising = red, ▼ falling = blue.
 // CEO directive (2026-04-26) — single KR convention applied to both KR and
@@ -231,13 +232,22 @@ function TickerShell({
 }
 
 export function MarketTicker() {
+  // 2026-09-19 vendor-display gate. This component has no importer today
+  // (grep of src/ finds only comments), but it renders vendor index levels to
+  // an unauthenticated visitor — the single widest display surface in the
+  // app. Guarding it here means a future re-mount cannot re-open that surface
+  // while the flag is off; it is not a substitute for deciding whether the
+  // component should exist at all.
+  const gateOpen = isMarketDataDisplayEnabled();
   const { data } = usePublicMarketSnapshot();
 
   // `keepPreviousData` means `data` survives across refreshes and through a
   // transient error. When the endpoint has never resolved (cold load or a
   // hard failure on first paint) we render the empty shell — no fabricated
   // numbers, ever.
-  const items = data?.items ?? [];
+  const items = gateOpen ? (data?.items ?? []) : [];
+
+  if (!gateOpen) return null;
 
   if (items.length === 0) {
     // Loading / unavailable — render the band silhouette only. No CLS, no

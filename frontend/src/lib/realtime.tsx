@@ -34,6 +34,7 @@ import { useAuth } from "./auth";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY } from "./endpoints";
 import type { PortfolioResponse } from "./types";
 import { isDemoMode, demoResponseFor } from "./demo";
+import { isMarketDataDisplayEnabled } from "./market-display";
 
 /* ── Types ── */
 
@@ -221,6 +222,21 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       esRef.current = null;
     }
 
+    // 2026-09-19: vendor price DISPLAY is behind a flag (lib/market-display.ts).
+    // When it is off the backend answers /portfolio-stream with a single
+    // ``event: error`` (MARKET_DATA_DISPLAY_DISABLED) and closes, so opening
+    // the stream would only feed the reconnect backoff below and light the
+    // yellow "재연결 중" banner for a stream nobody wants. Don't open it —
+    // this is "intentionally idle", same as no positions.
+    if (!isMarketDataDisplayEnabled()) {
+      setState((s) =>
+        s.streamActive || s.connected
+          ? { ...s, streamActive: false, connected: false }
+          : s,
+      );
+      return;
+    }
+
     // Mark the stream as actively trying — the status banner reads this
     // to distinguish "intentionally idle" (no user / no positions / hidden
     // tab) from "trying but disconnected" (yellow banner).
@@ -265,7 +281,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         // error to be handled by the reconnect path.
         return;
       }
-      if (code === "SSE_LIMIT_EXCEEDED") {
+      // MARKET_DATA_DISPLAY_DISABLED (2026-09-19) is the same shape: the
+      // backend's display flag is off, so the stream is terminal — never
+      // retry. It is NOT a limit, so leave ``limitExceeded`` alone; the
+      // page already renders at cost when display is off.
+      if (code === "SSE_LIMIT_EXCEEDED" || code === "MARKET_DATA_DISPLAY_DISABLED") {
         es.close();
         esRef.current = null;
         retryRef.current = MAX_RETRIES; // belt+suspenders: stop reconnects
@@ -273,7 +293,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           ...s,
           connected: false,
           streamActive: false,
-          limitExceeded: true,
+          limitExceeded: code === "SSE_LIMIT_EXCEEDED",
         }));
       }
     });

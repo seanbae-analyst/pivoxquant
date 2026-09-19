@@ -42,8 +42,14 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import useSWR from "swr";
 import { DATA_STALE_STATUS } from "@/lib/endpoints";
+import {
+  isMarketDataDisplayEnabled,
+  resolveMarketDataDisplay,
+  routeUsesMarketData,
+} from "@/lib/market-display";
 
 const DISMISS_KEY = "pivox_stale_banner_dismissed_until";
 const DISMISS_DURATION_MS = 60 * 60 * 1000; // 1 h
@@ -55,6 +61,9 @@ export interface DataStaleStatus {
   affected_markets: Array<"KR" | "US">;
   updated_at: string | null;
   threshold_pct: number;
+  /** 2026-09-19 vendor-display gate. `false` = the backend is not showing
+   *  vendor prices at all, so a staleness warning about them is noise. */
+  market_data_display?: boolean;
 }
 
 // `credentials: "omit"` mirrors the publicFetcher pattern in lib/hooks.ts —
@@ -95,6 +104,13 @@ function formatMarkets(markets: ReadonlyArray<"KR" | "US">): string {
 }
 
 export function DataStaleBanner() {
+  // QA finding P3 (2026-09-19): this banner is mounted in the (dashboard)
+  // layout, so "한국 시세 데이터가 지연되고 있어요" appeared on /pre-trade and
+  // /settings — two screens that never read a price. A warning about prices
+  // is only true on a screen that shows prices, so it is scoped to the
+  // routes that do (lib/market-display.ts::MARKET_DATA_ROUTES), and it is
+  // silent altogether while the vendor-display gate is off.
+  const pathname = usePathname();
   // `dismissed` derives from the persisted expiry timestamp. A lazy useState
   // initializer keeps Date.now() OUT of the render body (react-hooks/purity),
   // and because SWR `data` is undefined on the server + first client paint the
@@ -115,8 +131,14 @@ export function DataStaleBanner() {
     };
   }, []);
 
+  // A null key stops SWR fetching entirely: with the gate off, or on a screen
+  // that shows no prices, the 5-minute poll would be a request whose answer
+  // can never change what the user sees.
+  const gateOpen =
+    isMarketDataDisplayEnabled() && routeUsesMarketData(pathname);
+
   const { data, error } = useSWR<DataStaleStatus>(
-    DATA_STALE_STATUS,
+    gateOpen ? DATA_STALE_STATUS : null,
     staleFetcher,
     {
       refreshInterval: REFRESH_INTERVAL_MS,
@@ -128,6 +150,8 @@ export function DataStaleBanner() {
   );
 
   if (error || !data) return null;
+  if (!resolveMarketDataDisplay(data.market_data_display)) return null;
+  if (!routeUsesMarketData(pathname)) return null;
   if (!data.is_stale) return null;
   if (dismissed) return null;
 

@@ -42,6 +42,9 @@ if not _secret:
 
 
 # ── Feature flags ─────────────────────────────────────────────────────────────
+# Shared truthy-env vocabulary so every boolean flag parses identically.
+_TRUTHY_ENV = ("1", "true", "True", "TRUE", "yes")
+
 # ALPACA_ENABLED — kill switch for the Alpaca market-data FALLBACK adapter
 # (server-owned keys). The user-facing Alpaca broker integration (connect/sync
 # UI, per-user credentials, /api/broker/alpaca/* routes) was fully removed on
@@ -62,7 +65,52 @@ if not _secret:
 # IMPORTANT: Flipping this to 1 re-enables the server-key fallback which would
 # require holding an Alpaca commercial data license. Do NOT enable in
 # production without legal sign-off.
-ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in ("1", "true", "True", "TRUE", "yes")
+ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in _TRUTHY_ENV
+
+# MARKET_DATA_DISPLAY_ENABLED — kill switch for every route that DISPLAYS a
+# vendor market quote (or a number derived from one) to an end user.
+#
+# Default "0" (disabled). An UNSET env var means OFF, and render.yaml
+# deliberately does NOT set it: "off" must be the production default, so a
+# fresh deploy can never accidentally start redistributing vendor prices.
+#
+# 켜는 조건 (the ONLY condition): an executed **FMP Data Display Agreement**.
+#   - FMP ToS §2.2.2 forbids displaying their data to end users without that
+#     agreement — a free closed beta is NOT exempt.
+#   - FMP ToS §2.2 additionally requires prior written approval for derived
+#     works, which is why anything COMPUTED from a quote (market value, NAV,
+#     day P&L, unrealized P&L, equity curve, benchmark overlay, 52-week
+#     high/low alerts) is gated by this same flag, not just raw prices.
+#   - 2026-09-19 sweep found no free+legal substitute: 금융위 공공데이터 4유형
+#     and KRX Open API both restrict redistribution, and all six free US EOD
+#     sources are personal-use only.
+# Until that agreement is signed the product runs on COST BASIS
+# (avg_cost x shares), which is the user's own data and carries no vendor
+# licence at all.
+#
+# NOT gated by this flag (deliberate):
+#   - /api/market/fx  — open.er-api.com permits commercial use, and the FX
+#     rate is required to add up a multi-currency COST basis.
+#   - /api/search     — returns ticker/name/exchange reference data, no quote.
+#     Gating it would make it impossible to record a new position.
+#   - Internal/operator paths: SignalCache warming, the operator's own KIS
+#     read-only account, and every scheduler job that does not emit a price to
+#     a user. This flag turns off USER DISPLAY, not the fetch layer.
+#
+# Read it through ``services.market_display.market_data_display_enabled()``
+# (never ``os.environ`` directly) so request handlers and tests can override
+# it via ``current_app.config``.
+#
+# Consumed by:
+#   - services/market_display.py   (single read point + shared 503 error)
+#   - routes/portfolio.py          (portfolio / positions / summary / history)
+#   - routes/market.py             (indices, public snapshot; fx exempt)
+#   - routes/realtime.py           (price, portfolio-stream, status flag)
+#   - routes/data_status.py        (stale banner -> "not displayed" state)
+#   - routes/notifications.py      (hides the price_52w row while muted)
+#   - app.py::_scheduled_price_alerts (skips the 52w sweep; concentration
+#                                      keeps running — it is cost-basis only)
+MARKET_DATA_DISPLAY_ENABLED = os.environ.get("MARKET_DATA_DISPLAY_ENABLED", "0").strip() in _TRUTHY_ENV
 
 
 class Config:
@@ -73,6 +121,10 @@ class Config:
     # Mirror the module-level flag onto the Flask config so request handlers
     # can read it via `current_app.config["ALPACA_ENABLED"]`.
     ALPACA_ENABLED = ALPACA_ENABLED
+
+    # Mirrored for the same reason — request handlers and tests read/override
+    # it via `current_app.config["MARKET_DATA_DISPLAY_ENABLED"]`.
+    MARKET_DATA_DISPLAY_ENABLED = MARKET_DATA_DISPLAY_ENABLED
 
     # Connection pool settings (only effective for PostgreSQL; SQLite ignores them)
     if IS_POSTGRES:

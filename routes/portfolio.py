@@ -13,6 +13,11 @@ from models import Position, SignalCache, TradeHistory
 from security import trade_rate_limit
 from services import fx_service, cache_service
 from services.error_responses import api_error
+from services.market_display import (
+    MARKET_DATA_DISPLAY_FIELD,
+    PRICE_SOURCE_DISABLED,
+    market_data_display_enabled,
+)
 from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.container import fetcher, realtime
 from services.price_overlay import overlay_prices, parse_price_display
@@ -144,6 +149,16 @@ def _avg_cost_implausible(ticker: str, avg_cost: float) -> str | None:
                 "(52w low=%.2f x %.2f) — rejecting",
                 ticker, avg_cost, floor, year_low, _AVG_COST_FLOOR_RATIO,
             )
+            # The guard itself keeps running with the display gate shut — it
+            # protects data integrity and the quote never leaves the server.
+            # Only the *message* is scrubbed: quoting the vendor's 52-week low
+            # back to the user would be a display of that data.
+            if not market_data_display_enabled():
+                return (
+                    f"Average cost {avg_cost:,.2f} is implausibly low for "
+                    f"{ticker} compared with its recent trading range. "
+                    "Please re-check the cost basis."
+                )
             return (
                 f"Average cost {avg_cost:,.2f} is implausibly low for "
                 f"{ticker} (below 50% of its 52-week low of "
@@ -172,8 +187,13 @@ def get_portfolio():
         c.ticker: c
         for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
     } if tickers else {}
+    # MARKET_DATA_DISPLAY_ENABLED (config.py): with the display gate shut we
+    # never call the quote overlay at all — no vendor price is fetched for a
+    # surface that is not allowed to show one. Cost-basis fields below are
+    # untouched; they are the user's own data.
+    display_on = market_data_display_enabled()
     # Freshness overlay — never let this endpoint emit a stale "current price".
-    overlay = overlay_prices(tickers)
+    overlay = overlay_prices(tickers) if display_on else {}
 
     out = []
     # NAV totals are accumulated on the suffix-derived `is_kr` (authoritative),
@@ -191,24 +211,32 @@ def get_portfolio():
         sd = cache_service.safe_cache_blob(cached)
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
         o = overlay.get(p.ticker) or {}
-        # Bug C (2026-04-24): add price_display parse as last-resort before
-        # avg_cost fallback. Matches the new behavior of overlay_prices
-        # tier-3 but also covers rows whose cache blob is so old that
-        # SignalCache.query returned no row at all.
-        cur_px_raw = o.get("price") or sd.get("price")
-        if not cur_px_raw:
-            cur_px_raw = parse_price_display(sd.get("price_display"))
-        cur_px = float(cur_px_raw or p.avg_cost or 0)
-        observed_at = o.get("observed_at")
-        if o.get("source"):
-            price_source = o["source"]
-        elif sd.get("price"):
-            price_source = "stale"
-        elif cur_px_raw:
-            price_source = "stale_display"
+        if not display_on:
+            # Withheld, not missing: the price fields go null and the source
+            # names the reason. avg_cost / shares / krw_cost below stay real.
+            cur_px = None
+            observed_at = None
+            price_source = PRICE_SOURCE_DISABLED
+            pnl = None
         else:
-            price_source = "avg_cost"
-        pnl = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
+            # Bug C (2026-04-24): add price_display parse as last-resort before
+            # avg_cost fallback. Matches the new behavior of overlay_prices
+            # tier-3 but also covers rows whose cache blob is so old that
+            # SignalCache.query returned no row at all.
+            cur_px_raw = o.get("price") or sd.get("price")
+            if not cur_px_raw:
+                cur_px_raw = parse_price_display(sd.get("price_display"))
+            cur_px = float(cur_px_raw or p.avg_cost or 0)
+            observed_at = o.get("observed_at")
+            if o.get("source"):
+                price_source = o["source"]
+            elif sd.get("price"):
+                price_source = "stale"
+            elif cur_px_raw:
+                price_source = "stale_display"
+            else:
+                price_source = "avg_cost"
+            pnl = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
 
         # 2026-05-09 abnormal-return guard (CEO live sanity flagged AAPL +877%):
         # An absolute pnl beyond ±500% is almost certainly stale FMP data
@@ -218,7 +246,7 @@ def get_portfolio():
         # "abnormal_pnl_guard" and clamp pnl to None so the UI shows "—"
         # instead of a garbage number. The avg_cost stays untouched — only
         # the display effect of cur_px is suppressed.
-        if p.avg_cost and abs(pnl) > 500:
+        if display_on and p.avg_cost and abs(pnl) > 500:
             logger.warning(
                 "portfolio.get %s pnl=%.2f%% (cur=%.4f vs avg=%.4f) exceeds "
                 "±500%% — likely stale price; demoting to avg_cost fallback",
@@ -231,14 +259,19 @@ def get_portfolio():
 
         buy_fx = getattr(p, 'buy_fx_rate', 0) or 0
         krw_pnl_pct = krw_cost = krw_value = None
+        # krw_cost is COST basis (avg_cost x shares at the purchase rate) — it
+        # carries no vendor licence, so it is computed in both flag states.
+        # krw_value / krw_pnl_pct need a live quote and are withheld when off.
         if is_kr:
             krw_cost = round(p.avg_cost * p.shares)
-            krw_value = round(cur_px * p.shares)
-            krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
+            if display_on:
+                krw_value = round(cur_px * p.shares)
+                krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
         elif buy_fx > 0:
             krw_cost = p.avg_cost * buy_fx * p.shares
-            krw_value = cur_px * fx_service.get_rate() * p.shares
-            krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
+            if display_on:
+                krw_value = cur_px * fx_service.get_rate() * p.shares
+                krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
 
         # Prefer cache name only when it differs from the raw ticker.
         # If SignalCache stored the ticker itself as name (fetcher fallback
@@ -251,19 +284,25 @@ def get_portfolio():
         else:
             display_name = resolve_stock_name(p.ticker) or p.ticker
 
-        market_value = round(cur_px * p.shares, 2)
-        if is_kr:
-            total_krw += market_value
+        if display_on:
+            market_value = round(cur_px * p.shares, 2)
+            if is_kr:
+                total_krw += market_value
+            else:
+                total_usd += market_value
         else:
-            total_usd += market_value
+            market_value = None
 
         out.append({
             "id": p.id, "ticker": p.ticker, "shares": p.shares,
             "avg_cost": p.avg_cost, "price": cur_px, "current_price": cur_px,
-            "price_display": sd.get("price_display", f"${cur_px:.2f}"),
+            "price_display": (
+                sd.get("price_display", f"${cur_px:.2f}") if display_on else None
+            ),
             "observed_at": observed_at,
             "price_source": price_source,
-            "pnl_pct": round(pnl, 2), "pnl_krw_pct": krw_pnl_pct,
+            "pnl_pct": round(pnl, 2) if display_on else None,
+            "pnl_krw_pct": krw_pnl_pct,
             "buy_fx_rate": buy_fx,
             "cur_fx_rate": fx_service.get_rate() if not is_kr else 0,
             "krw_cost": round(krw_cost) if krw_cost else None,
@@ -280,8 +319,10 @@ def get_portfolio():
             "sell_timing": sd.get("sell_timing", ""),
             "capital_needed": sd.get("capital_needed"),
             "capital_gap": sd.get("capital_gap"),
-            "take_profit": sd.get("take_profit"),
-            "stop_loss": sd.get("stop_loss"),
+            # Price LEVELS derived from a vendor quote — withheld with the
+            # quote itself (FMP ToS §2.2 derived works).
+            "take_profit": sd.get("take_profit") if display_on else None,
+            "stop_loss": sd.get("stop_loss") if display_on else None,
             "tp_pct": sd.get("tp_pct", 0), "sl_pct": sd.get("sl_pct", 0),
             "regime_profile": sd.get("regime_profile", ""),
             "regime_label": sd.get("regime_label", ""),
@@ -289,17 +330,32 @@ def get_portfolio():
             "priority": sd.get("priority", 0),
         })
 
-    total_all_krw = round(total_usd * fx_service.get_rate() + total_krw)
+    total_all_krw = (
+        round(total_usd * fx_service.get_rate() + total_krw) if display_on else None
+    )
     cap_krw = getattr(current_user, "available_capital_krw", 0.0) or 0.0
+
+    # Cost-basis total, always emitted. Computed by fx_service.cost_basis_krw —
+    # the SAME helper /journal's concentration mirror uses — so the two
+    # cost-basis aggregations cannot drift (Pattern 7). NOTE it is not simply
+    # sum(krw_cost): the helper falls back to cached spot for a USD row with no
+    # stored buy_fx_rate, where the per-row krw_cost stays null.
+    cost_basis_all_krw = 0.0
+    for _p in positions:
+        _cb = fx_service.cost_basis_krw(_p)
+        if _cb:
+            cost_basis_all_krw += _cb
 
     return jsonify({
         "positions": out,
         "available_capital": current_user.available_capital,
         "available_capital_krw": cap_krw,
-        "total_value_usd": round(total_usd, 2),
-        "total_value_krw": round(total_krw, 0),
+        "total_value_usd": round(total_usd, 2) if display_on else None,
+        "total_value_krw": round(total_krw, 0) if display_on else None,
         "total_value_all_krw": total_all_krw,
+        "cost_basis_all_krw": round(cost_basis_all_krw),
         "fx_rate": fx_service.get_rate(),
+        MARKET_DATA_DISPLAY_FIELD: display_on,
     })
 
 
@@ -1120,9 +1176,11 @@ def _build_positions_list():
         c.ticker: c
         for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
     } if tickers else {}
+    # MARKET_DATA_DISPLAY_ENABLED (config.py) — see module config comment.
+    display_on = market_data_display_enabled()
     # Freshness overlay: realtime (Alpaca/KIS) first, then non-stale cache.
     # Ensures "current" never shows a price older than the SignalCache TTL.
-    overlay = overlay_prices(tickers)
+    overlay = overlay_prices(tickers) if display_on else {}
 
     out = []
     for p in positions:
@@ -1130,7 +1188,12 @@ def _build_positions_list():
         sd = cache_service.safe_cache_blob(cached)
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
         o = overlay.get(p.ticker) or {}
-        if o.get("price"):
+        if not display_on:
+            cur_px = None
+            price_source = PRICE_SOURCE_DISABLED
+            observed_at = None
+            change_pct = None
+        elif o.get("price"):
             cur_px = float(o["price"])
             price_source = o.get("source") or "realtime"
             observed_at = o.get("observed_at")
@@ -1169,14 +1232,19 @@ def _build_positions_list():
             "side": "Long",  # short positions not represented in DB
             "shares": p.shares,
             "avgCost": round(p.avg_cost, 4),
-            "current": round(cur_px, 4),
-            "change_pct": round(change_pct, 4),
+            "current": round(cur_px, 4) if display_on else None,
+            "change_pct": round(change_pct, 4) if display_on else None,
             "observed_at": observed_at,
             "price_source": price_source,
+            # Cost basis normalised to KRW by the shared fx_service helper —
+            # the weight denominator the /risk aggregators fall back to when
+            # market_value is withheld. Same helper as the journal
+            # concentration mirror, so the two can never drift (Pattern 7).
+            "cost_basis_krw": fx_service.cost_basis_krw(p),
             # Native-currency market value — required by the /risk weight
             # aggregators (useConcentration / useSectorExposure). Its absence
             # made every concentration weight render 0% (CEO 2026-05-24).
-            "market_value": round(cur_px * p.shares, 2),
+            "market_value": round(cur_px * p.shares, 2) if display_on else None,
             "sector": _sector_for(sd),
             "purchaseDate": opened_at[:10] if opened_at else "",
             "notes": p.thesis or "",
@@ -1210,6 +1278,22 @@ def list_positions_alias():
         # from the .KS/.KQ suffix in _build_positions_list; the per-row
         # `currency` display field stays cache-echoed (unchanged).
         rate = fx_service.get_rate() or 0
+        display_on = market_data_display_enabled()
+        # Cost-basis denominator — always present, so the weight aggregators
+        # have a legal fallback while market values are withheld.
+        cost_basis_all_krw = round(
+            sum(p["cost_basis_krw"] or 0 for p in positions)
+        )
+        if not display_on:
+            return jsonify({
+                "positions": positions,
+                "total_value_usd": None,
+                "total_value_krw": None,
+                "total_value_all_krw": None,
+                "cost_basis_all_krw": cost_basis_all_krw,
+                "fx_rate": rate,
+                MARKET_DATA_DISPLAY_FIELD: False,
+            })
         total_usd = sum(
             p["market_value"] for p in positions if not p.get("is_korean")
         )
@@ -1222,7 +1306,9 @@ def list_positions_alias():
             "total_value_usd": round(total_usd, 2),
             "total_value_krw": round(total_krw, 0),
             "total_value_all_krw": total_all_krw,
+            "cost_basis_all_krw": cost_basis_all_krw,
             "fx_rate": rate,
+            MARKET_DATA_DISPLAY_FIELD: True,
         })
     except Exception:
         logger.exception("list_positions_alias failed")
@@ -1246,8 +1332,12 @@ def portfolio_summary_alias():
             for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
         } if tickers else {}
 
+        # MARKET_DATA_DISPLAY_ENABLED (config.py) — every KPI below except the
+        # realized-P&L block is a market-value derivative, so with the gate
+        # shut we skip the quote overlay entirely and null them out.
+        display_on = market_data_display_enabled()
         # Freshness overlay — ensures NAV/P&L use the latest price, not stale cache.
-        overlay = overlay_prices([p.ticker for p in positions])
+        overlay = overlay_prices([p.ticker for p in positions]) if display_on else {}
 
         total_nav_usd = 0.0
         unrealized_usd = 0.0
@@ -1264,11 +1354,33 @@ def portfolio_summary_alias():
         unrealized_us_usd = 0.0
         unrealized_kr_krw = 0.0
 
+        # Cost basis (avg_cost x shares) — the user's own data, accumulated in
+        # BOTH flag states. Native subtotals mirror navUsd / navKrw; the
+        # KRW-normalised total mirrors totalNav and reuses
+        # fx_service.cost_basis_krw (same helper as the journal concentration
+        # mirror — no second implementation, Pattern 7).
+        cost_basis_us_usd = 0.0
+        cost_basis_kr_krw = 0.0
+        cost_basis_total_krw = 0.0
+
         for p in positions:
             cached = cache_map.get(p.ticker)
             sd = cache_service.safe_cache_blob(cached)
             is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
             o = overlay.get(p.ticker) or {}
+
+            _native_cost = float(p.avg_cost or 0) * float(p.shares or 0)
+            if is_kr:
+                cost_basis_kr_krw += _native_cost
+            else:
+                cost_basis_us_usd += _native_cost
+            _cb_krw = fx_service.cost_basis_krw(p)
+            if _cb_krw:
+                cost_basis_total_krw += _cb_krw
+
+            if not display_on:
+                continue
+
             cur_px = float(o.get("price") or p.avg_cost or 0)
             mv = cur_px * p.shares
             cost = p.avg_cost * p.shares
@@ -1346,28 +1458,38 @@ def portfolio_summary_alias():
         cap_krw = float(getattr(current_user, "available_capital_krw", 0.0) or 0.0)
         cash_usd_total = cap_usd + (cap_krw / rate if (cap_krw and rate) else 0.0)
         equity_usd = total_nav_usd + cash_usd_total
-        if equity_usd > 0:
+        if not display_on:
+            # Denominator is holdings AT MARKET — no honest cash share exists
+            # while the market leg is withheld. Null, never a wrong number.
+            cash_pct = None
+        elif equity_usd > 0:
             cash_pct = max(0.0, min(100.0, (cash_usd_total / equity_usd) * 100.0))
         else:
             cash_pct = 0.0
 
         return jsonify({
-            "totalNav": round(total_nav_usd, 2),
+            "totalNav": round(total_nav_usd, 2) if display_on else None,
             # Native-currency stock subtotals (no FX unification). /home shows
             # US holdings in USD and KR holdings in KRW separately.
-            "navUsd": round(nav_us_usd, 2),
-            "navKrw": round(nav_kr_krw, 0),
-            "todayPnl": round(today_pnl_usd, 2),
-            "todayPnlPct": round(today_pnl_pct, 2),
-            "unrealized": round(unrealized_usd, 2),
+            "navUsd": round(nav_us_usd, 2) if display_on else None,
+            "navKrw": round(nav_kr_krw, 0) if display_on else None,
+            "todayPnl": round(today_pnl_usd, 2) if display_on else None,
+            "todayPnlPct": round(today_pnl_pct, 2) if display_on else None,
+            "unrealized": round(unrealized_usd, 2) if display_on else None,
+            # Realized P&L comes from the user's own recorded executions
+            # (TradeHistory), not from a vendor quote — never gated.
             "realizedYtd": round(realized_ytd_usd, 2),
             # Per-currency P&L (native) — hero KPIs show KR figures in KRW.
-            "todayPnlUsd": round(today_pnl_us_usd, 2),
-            "todayPnlKrw": round(today_pnl_kr_krw, 0),
-            "unrealizedUsd": round(unrealized_us_usd, 2),
-            "unrealizedKrw": round(unrealized_kr_krw, 0),
+            "todayPnlUsd": round(today_pnl_us_usd, 2) if display_on else None,
+            "todayPnlKrw": round(today_pnl_kr_krw, 0) if display_on else None,
+            "unrealizedUsd": round(unrealized_us_usd, 2) if display_on else None,
+            "unrealizedKrw": round(unrealized_kr_krw, 0) if display_on else None,
             "realizedUsd": round(realized_us_usd, 2),
             "realizedKrw": round(realized_kr_krw, 0),
+            # Cost basis — what the user actually deployed. Always real.
+            "costBasisUsd": round(cost_basis_us_usd, 2),
+            "costBasisKrw": round(cost_basis_kr_krw, 0),
+            "costBasisTotalKrw": round(cost_basis_total_krw, 0),
             "currency": "USD",
             "fxRate": rate,
             "positionCount": len(positions),
@@ -1377,7 +1499,8 @@ def portfolio_summary_alias():
             # frontend/src/app/(dashboard)/portfolio/_v2/page-v2.tsx and
             # renders "Cash buffer at {cashText}." in
             # frontend/src/components/portfolio/v2/portfolio-hero-v2.tsx.
-            "cashPct": round(cash_pct, 2),
+            "cashPct": round(cash_pct, 2) if cash_pct is not None else None,
+            MARKET_DATA_DISPLAY_FIELD: display_on,
         })
     except Exception:
         logger.exception("portfolio_summary_alias failed")
@@ -1922,9 +2045,19 @@ def create_trade_alias():
 @api_auth
 def portfolio_history():
     from datetime import datetime, timezone
+
+    # MARKET_DATA_DISPLAY_ENABLED (config.py): the equity curve IS a series of
+    # vendor-priced NAVs and the overlay is a vendor index series, so there is
+    # no cost-basis version of this response — it degrades to empty. We also
+    # skip record_today_snapshot(): storing a NAV nobody may see would burn a
+    # quote call per page load for nothing (the daily path can resume the day
+    # the Data Display Agreement lands).
+    if not market_data_display_enabled():
+        return jsonify({"data": [], MARKET_DATA_DISPLAY_FIELD: False})
+
     positions = Position.query.filter_by(user_id=current_user.id).all()
     if not positions:
-        return jsonify({"data": []})
+        return jsonify({"data": [], MARKET_DATA_DISPLAY_FIELD: True})
     from services.data import fmp as fmp
 
     period = request.args.get("period", "5d")
@@ -2085,7 +2218,7 @@ def portfolio_history():
                      exc_info=True)
         benchmark_label = None
 
-    payload: dict = {"data": data}
+    payload: dict = {"data": data, MARKET_DATA_DISPLAY_FIELD: True}
     if benchmark_label is not None and any("benchmark" in pt for pt in data):
         # Frontend `hooks-v2.ts` BackendEquityResponse already expects
         # `benchmark?: { name?: string }` — emit the label there so the

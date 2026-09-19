@@ -9,6 +9,12 @@ from flask_login import current_user
 
 from models import Position
 from services.container import realtime
+from services.market_display import (
+    DISABLED_CODE as _DISPLAY_DISABLED_CODE,
+    MARKET_DATA_DISPLAY_FIELD,
+    market_data_display_disabled_error,
+    market_data_display_enabled,
+)
 from services.market_status import get_market_status
 from security import general_rate_limit
 from .decorators import api_auth
@@ -86,6 +92,30 @@ def portfolio_stream():
     connections cannot exhaust the PostgreSQL connection pool.
     """
     user_id = current_user.id
+
+    # MARKET_DATA_DISPLAY_ENABLED (config.py): this stream exists only to push
+    # vendor quotes. Refuse as an SSE ``error`` event on a 200
+    # ``text/event-stream`` — the same shape Wave F-2 Bug #2 established,
+    # because EventSource cannot read the body of a non-200 reply and would
+    # retry forever with no diagnostic. The stream then ends immediately; no
+    # slot is taken and no upstream quote is fetched.
+    if not market_data_display_enabled():
+        @stream_with_context
+        def _display_disabled_stream():
+            yield (
+                "event: error\n"
+                "data: " + json.dumps({
+                    "error": "Market price streaming is turned off.",
+                    "error_kr": "시세 스트리밍이 중단되어 있습니다.",
+                    "code": _DISPLAY_DISABLED_CODE,
+                    MARKET_DATA_DISPLAY_FIELD: False,
+                }, ensure_ascii=False) + "\n\n"
+            )
+        return Response(
+            _display_disabled_stream(),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     # ── SSE connection limit check (atomic check + increment) ──
     # Wave F-2 Bug #2: emit the limit signal as an SSE error event over
@@ -282,6 +312,11 @@ def single(ticker):
       - 404 + ``{"error": "ticker_not_found", ...}`` when providers
         responded but have no data for this symbol.
     """
+    # MARKET_DATA_DISPLAY_ENABLED (config.py): the whole payload is a vendor
+    # quote — nothing to degrade to, so refuse.
+    if not market_data_display_enabled():
+        return market_data_display_disabled_error()
+
     t = ticker.upper()
     p = realtime.get_price(t)
     if p:
@@ -321,4 +356,7 @@ def status():
             "kr": "kis" if realtime.kis_available else "fmp",
         },
         "kr_health": kr_health,
+        # Provider health is not a quote, so this route is not gated — but a
+        # "live" indicator must not light up while no price may be shown.
+        MARKET_DATA_DISPLAY_FIELD: market_data_display_enabled(),
     })
