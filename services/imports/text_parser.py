@@ -94,12 +94,16 @@ _HANGUL = re.compile(r"[가-힣]")
 # "미체결" and "체결 취소" are decisive on their own. The rest only count when
 # the line has no fill word at all — "정정 주문이 체결되었습니다" is a fill.
 # A fill push often reports the unfilled remainder on the same line
-# ("매수체결 10주 71,200원 미체결수량 0", "(잔량/미체결 0주)"): that field is
-# stripped before the test, so only a bare 미체결 notice is skipped.
+# ("매수체결 10주 71,200원 미체결수량 0", "(잔량/미체결 0)"): that field is
+# stripped before the test, so only a bare 미체결 notice is skipped. The
+# remainder is a count, so the 주 unit is optional — but the number has to be
+# whole and must not carry a Korean unit, or the price in a real 미체결 notice
+# ("매수 미체결 71,200원") would be eaten and the notice read as a fill.
+_UNFILLED_QTY = r"\d[\d,]*(?![\d,])\s*주?(?![가-힣])"
 _UNFILLED_FIELD = re.compile(
-    r"미\s*체결\s*(?:수량|잔량)\s*:?\s*\d[\d,]*\s*주?"   # 미체결수량 0
-    r"|미\s*체결\s*:?\s*\d[\d,]*\s*주"                   # 미체결 0주 (a quantity, not a price)
-    r"|잔량\s*:?\s*\d[\d,]*\s*주?"                       # 잔량 0
+    # 미체결수량 0 · (미체결 0) · 잔량/미체결 0주
+    rf"(?:잔량\s*[/·]?\s*)?미\s*체결\s*(?:수량|잔량)?\s*:?\s*{_UNFILLED_QTY}"
+    rf"|잔량\s*:?\s*{_UNFILLED_QTY}"                     # 잔량 0
 )
 _UNFILLED_KR = re.compile(r"미\s*체결")
 _FILL_REVERSAL_KR = re.compile(r"체결\s*취소")

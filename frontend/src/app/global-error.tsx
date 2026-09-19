@@ -30,8 +30,10 @@ export default function GlobalError({
           padding: "24px",
           background: "#050505",
           color: "#F5F0E8",
+          // Pretendard for Hangul — Source Serif 4 is Latin-only. This page
+          // renders outside the app tree, so it cannot use the CSS tokens.
           fontFamily:
-            '"Source Serif 4", Georgia, "Times New Roman", serif',
+            '"Source Serif 4", "Pretendard Variable", Pretendard, Georgia, "Times New Roman", serif',
           WebkitFontSmoothing: "antialiased",
         }}
       >

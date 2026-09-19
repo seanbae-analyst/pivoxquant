@@ -15,6 +15,7 @@
  */
 
 import * as React from "react";
+import { useT } from "@/lib/locale";
 import { motion } from "motion/react";
 import { PQ_DUR_MICRO } from "@/lib/motion";
 import {
@@ -43,6 +44,8 @@ interface Props {
 }
 
 export function RollingWindowWidget({ className = "", paper = true }: Props) {
+  // named `tr`, not `t` — the tab map below already binds `t`.
+  const tr = useT();
   const { data, isLoading, error } = useRollingWindow();
   const [win, setWin] = React.useState<WindowKey>("window_30d");
 
@@ -89,7 +92,7 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
               letterSpacing: "-0.01em",
             }}
           >
-            Declared vs observed
+            {tr("rollingWindow.heading")}
           </h3>
         </div>
 

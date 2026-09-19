@@ -175,8 +175,7 @@ export function CapitalCardV2() {
           marginBottom: 16,
         }}
       >
-        Total investable capital. Portfolio uses it for the cash buffer and
-        for what remains after each add or trim. USD or KRW — set either, or both.
+        {t("settingsV2.capital.help")}
       </p>
 
       {/* Current values */}

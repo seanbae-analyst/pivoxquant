@@ -18,6 +18,18 @@ import {
 } from "@/lib/hooks";
 import { toast } from "sonner";
 import { NotificationsMatrix } from "@/components/settings/v2/notifications-matrix";
+import { LocaleProvider } from "@/lib/locale";
+
+// The matrix reads its event names/help from settingsV2.notifications via
+// useT (2026-09-19), so every render needs the provider. ko is the default
+// locale — hence the Korean row names in the accessible-name queries below.
+function renderMatrix() {
+  return render(
+    <LocaleProvider>
+      <NotificationsMatrix />
+    </LocaleProvider>,
+  );
+}
 
 const mockedUseHook = vi.mocked(useNotificationPreferences);
 const mockedSave = vi.mocked(saveNotificationPreferences);
@@ -61,11 +73,11 @@ describe("NotificationsMatrix — server wiring", () => {
 
   it("reflects the server prefs map once loaded (price_52w email = off)", async () => {
     mockedUseHook.mockReturnValue(hookReturn(FULL_SERVER_PREFS));
-    render(<NotificationsMatrix />);
+    renderMatrix();
 
     // price_52w email toggle should hydrate to OFF from the server map.
     const signalEmail = await screen.findByRole("switch", {
-      name: /52-week range · email/i,
+      name: /52주 범위 · email/i,
     });
     await waitFor(() => {
       expect(signalEmail).toHaveAttribute("aria-checked", "false");
@@ -73,7 +85,7 @@ describe("NotificationsMatrix — server wiring", () => {
 
     // concentration email is ON from the server map.
     const concentrationEmail = screen.getByRole("switch", {
-      name: /Sector concentration · email/i,
+      name: /섹터 집중도 · email/i,
     });
     expect(concentrationEmail).toHaveAttribute("aria-checked", "true");
   });
@@ -83,10 +95,10 @@ describe("NotificationsMatrix — server wiring", () => {
     mockedSave.mockResolvedValue({ prefs: FULL_SERVER_PREFS });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<NotificationsMatrix />);
+    renderMatrix();
 
     const signalEmail = await screen.findByRole("switch", {
-      name: /52-week range · email/i,
+      name: /52주 범위 · email/i,
     });
     await waitFor(() =>
       expect(signalEmail).toHaveAttribute("aria-checked", "false"),
@@ -118,10 +130,10 @@ describe("NotificationsMatrix — server wiring", () => {
     mockedSave.mockRejectedValue(new Error("boom"));
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<NotificationsMatrix />);
+    renderMatrix();
 
     const signalEmail = await screen.findByRole("switch", {
-      name: /52-week range · email/i,
+      name: /52주 범위 · email/i,
     });
     await waitFor(() =>
       expect(signalEmail).toHaveAttribute("aria-checked", "false"),
@@ -152,10 +164,10 @@ describe("NotificationsMatrix — server wiring", () => {
     mockedSave.mockResolvedValue({ prefs: FULL_SERVER_PREFS });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<NotificationsMatrix />);
+    renderMatrix();
 
     const signalEmail = screen.getByRole("switch", {
-      name: /52-week range · email/i,
+      name: /52주 범위 · email/i,
     });
     // Toggle is disabled while loading.
     expect(signalEmail).toBeDisabled();
@@ -178,10 +190,10 @@ describe("NotificationsMatrix — server wiring", () => {
     mockedSave.mockResolvedValue({ prefs: FULL_SERVER_PREFS });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<NotificationsMatrix />);
+    renderMatrix();
 
     const signalEmail = await screen.findByRole("switch", {
-      name: /52-week range · email/i,
+      name: /52주 범위 · email/i,
     });
     await waitFor(() => expect(signalEmail).not.toBeDisabled());
 
@@ -198,16 +210,16 @@ describe("NotificationsMatrix — server wiring", () => {
     mockedSave.mockResolvedValue({ prefs: FULL_SERVER_PREFS });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<NotificationsMatrix />);
+    renderMatrix();
 
     const signalEmail = await screen.findByRole("switch", {
-      name: /52-week range · email/i,
+      name: /52주 범위 · email/i,
     });
     await waitFor(() =>
       expect(signalEmail).toHaveAttribute("aria-checked", "false"),
     );
     const concentrationPush = screen.getByRole("switch", {
-      name: /Sector concentration · push/i,
+      name: /섹터 집중도 · push/i,
     });
 
     await user.click(signalEmail);

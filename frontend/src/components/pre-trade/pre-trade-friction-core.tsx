@@ -151,6 +151,13 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
     onCancelled,
   } = args;
 
+  // 2026-09-19: the four failure toasts below were hardcoded English — the
+  // moment a Korean reader most needs to be told what happened. Only the
+  // LOCAL fallbacks moved to i18n: an ApiError's `message` is already the
+  // server's `error_kr` under the ko locale (lib/api.ts pickErrorMessage ←
+  // services/error_responses.api_error), so overriding it would replace a
+  // specific Korean reason with a generic one.
+  const t = useT();
   const [phase, setPhase] = useState<Phase>("setup");
   const [reflection, setReflection] = useState<Reflection | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -182,9 +189,9 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
             setCommit("recorded");
           } catch (commitErr) {
             const cmsg =
-              commitErr instanceof Error
+              commitErr instanceof Error && commitErr.message
                 ? commitErr.message
-                : "Failed to record entry.";
+                : t("preTrade.errors.recordFailed");
             toast.error(cmsg);
             setCommit("failed");
           }
@@ -193,11 +200,12 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
         }
         setPhase("terminal");
       } catch (err) {
-        const msg = err instanceof ApiError ? err.message : "Could not proceed";
-        toast.error(msg || "Could not proceed");
+        const fallback = t("preTrade.errors.proceedFailed");
+        const msg = err instanceof ApiError ? err.message : fallback;
+        toast.error(msg || fallback);
       }
     },
-    [onProceeded],
+    [onProceeded, t],
   );
 
   /* ── POST /start ── */
@@ -251,15 +259,14 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
 
       setPhase("cooldown");
     } catch (err) {
+      const fallback = t("preTrade.errors.cooldownFailed");
       const msg =
-        err instanceof ApiError
-          ? err.message || "Could not start cooldown"
-          : "Could not start cooldown";
+        err instanceof ApiError ? err.message || fallback : fallback;
       toast.error(msg);
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, ticker, side, sharesText, rationale, answers, proceedWith]);
+  }, [submitting, ticker, side, sharesText, rationale, answers, proceedWith, t]);
 
   /* ── Cooldown polling — local clock + 5s server sync ── */
   const reflectionId = reflection?.id;
@@ -328,15 +335,16 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
       );
       setReflection(r.reflection);
       setPhase("terminal");
-      toast.success("Cancelled.");
+      toast.success(t("preTrade.errors.cancelled"));
       onCancelled?.();
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Could not cancel";
-      toast.error(msg || "Could not cancel");
+      const fallback = t("preTrade.errors.cancelFailed");
+      const msg = err instanceof ApiError ? err.message : fallback;
+      toast.error(msg || fallback);
     } finally {
       setSubmitting(false);
     }
-  }, [reflection, onCancelled, submitting]);
+  }, [reflection, onCancelled, submitting, t]);
 
   const reset = useCallback(() => {
     setPhase("setup");
@@ -657,7 +665,10 @@ export function TerminalStep({
   resetLabel?: string;
   bare?: boolean;
 }) {
+  const t = useT();
   const proceeded = reflection.status === "proceeded";
+  const d = (k: string, params?: Record<string, string>) =>
+    t(`preTrade.done.${k}`, params);
   return (
     <section className="space-y-6">
       {!bare && (
@@ -667,19 +678,30 @@ export function TerminalStep({
         />
       )}
       <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
+        {/* 2026-09-19: this screen — the product's single most important
+            confirmation moment — rendered entirely in English under the ko
+            locale, while the cancelled branch beside it was already Korean.
+            Both branches now go through useT (house rule: EN mono eyebrow,
+            localised heading + body). The bronze accent was an <em>, which
+            renders italic — banned product-wide (CEO 2026-06-15) — so it is
+            a <span> now. */}
         <div
           className="font-serif text-pq-avatar text-[var(--pq-ivory)]"
           style={{ letterSpacing: "-0.01em" }}
         >
           {proceeded ? (
             <>
-              You did the work.{" "}
-              <em style={{ color: "var(--pq-bronze)" }}>The record stands.</em>
+              {d("proceededHead")}{" "}
+              <span style={{ color: "var(--pq-bronze)" }}>
+                {d("proceededHeadAccent")}
+              </span>
             </>
           ) : (
             <>
-              Step away.{" "}
-              <em style={{ color: "var(--pq-bronze)" }}>The desk waits.</em>
+              {d("cancelledHead")}{" "}
+              <span style={{ color: "var(--pq-bronze)" }}>
+                {d("cancelledHeadAccent")}
+              </span>
             </>
           )}
         </div>
@@ -687,12 +709,12 @@ export function TerminalStep({
           {proceeded
             ? `${
                 commit === "recorded"
-                  ? "We stamped your reflection and recorded the entry to your book."
+                  ? d("recorded")
                   : commit === "failed"
-                    ? "We stamped your reflection, but the entry could not be recorded — add it on Portfolio."
-                    : "We stamped your reflection."
-              } PivoxQuant does not place trades — submit the order with your own broker.`
-            : "취소되었습니다. 기록되지 않았습니다. 다음 결정 때 다시 7개 질문을 거치세요."}
+                    ? d("recordFailed")
+                    : d("stampedOnly")
+              } ${d("noOrderTail")}`
+            : d("cancelledBody")}
         </p>
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[var(--pq-ivory-dim)]">
           <span>
@@ -700,7 +722,7 @@ export function TerminalStep({
             {reflection.intended_ticker_name || reflection.intended_ticker}
           </span>
           {reflection.intended_shares !== null && (
-            <span>{reflection.intended_shares} shares</span>
+            <span>{d("shares", { n: String(reflection.intended_shares) })}</span>
           )}
           <span>
             {proceeded

@@ -19,16 +19,20 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { useT } from "@/lib/locale";
 import {
   useNotificationPreferences,
   saveNotificationPreferences,
   type NotificationPrefsMap,
 } from "@/lib/hooks";
 
+// 2026-09-19: `name` / `help` used to be English literals here. This table
+// is the one the founder reads every day, so the copy moved to
+// settingsV2.notifications.<id>.{name,help} and is resolved through useT at
+// render time. The row keeps only what is NOT copy: the event id (which must
+// stay aligned with models.user.NOTIFICATION_EVENT_IDS) and the defaults.
 interface EventRow {
   id: string;
-  name: string;
-  help: string;
   defaults: { email: boolean; push: boolean; inapp: boolean };
 }
 
@@ -44,14 +48,10 @@ interface EventRow {
 const EVENTS: EventRow[] = [
   {
     id: "price_52w",
-    name: "52-week range",
-    help: "When a holding touches the top or bottom of its trailing 52-week range. Observation only.",
     defaults: { email: false, push: true, inapp: true },
   },
   {
     id: "concentration",
-    name: "Sector concentration",
-    help: "When one sector passes 30% of the book, by average cost.",
     defaults: { email: true, push: true, inapp: true },
   },
   // 2026-09-17: the monthly mirror report. Its only producer is the email
@@ -62,8 +62,6 @@ const EVENTS: EventRow[] = [
   // is opt-in here as well as consent-gated in the sender.
   {
     id: "monthly_mirror",
-    name: "Monthly mirror report",
-    help: "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices.",
     defaults: { email: false, push: false, inapp: false },
   },
 ];
@@ -147,6 +145,10 @@ interface Props {
 }
 
 export function NotificationsMatrix({ initial, onChange }: Props) {
+  const t = useT();
+  /** Event copy lives in settingsV2.notifications.<id>.{name,help}. */
+  const evName = (id: string) => t(`settingsV2.notifications.${id}.name`);
+  const evHelp = (id: string) => t(`settingsV2.notifications.${id}.help`);
   // Render the defaults first (no flash); the server map swaps in on load.
   const [state, setState] = React.useState<MatrixState>(
     () => initial ?? defaultMatrix(),
@@ -323,7 +325,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                       color: "var(--pq-ivory)",
                     }}
                   >
-                    {e.name}
+                    {evName(e.id)}
                   </div>
                   <div
                     className="font-serif"
@@ -333,7 +335,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                       marginTop: 2,
                     }}
                   >
-                    {e.help}
+                    {evHelp(e.id)}
                   </div>
                 </td>
                 {(["email", "push", "inapp"] as const).map((ch) => (
@@ -350,7 +352,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                     <MatrixToggle
                       on={row[ch]}
                       onChange={(next) => toggle(e.id, ch, next)}
-                      ariaLabel={`${e.name} · ${ch}`}
+                      ariaLabel={`${evName(e.id)} · ${ch}`}
                       disabled={togglesDisabled}
                     />
                   </td>

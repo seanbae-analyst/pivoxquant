@@ -120,10 +120,35 @@ def test_mirror_pdf_download_returns_pdf(client, auth_user, fake_renderer):
     assert fake_renderer["build"] == [(auth_user["id"], 30, None)]
 
 
+# ``mirror_report_filename`` 은 달을 **KST 로 환산한 뒤** 고른다
+# (services/reports_delivery.py::mirror_report_filename docstring). 이 테스트가
+# UTC 달과 비교하던 동안, 매월 말일 UTC 15:00–23:59 (= 1일 KST 00:00–09:00) 에만
+# 빨개졌다 — 야간 검증 잡이 03:00 KST 라 매월 1일마다 걸렸다. 연 12회.
+# 시계를 읽지 말고 ref 를 명시해서 계약 자체를 고정한다.
+@pytest.mark.parametrize(
+    ("ref_utc", "expected_month"),
+    [
+        # 한가운데 — UTC 달 == KST 달
+        (datetime(2026, 9, 19, 6, 0), "2026-09"),
+        # 말일 UTC 저녁 = 다음 달 1일 KST 새벽. 여기가 깨지던 창이다.
+        (datetime(2026, 9, 30, 15, 0), "2026-10"),  # KST 10-01 00:00
+        (datetime(2026, 9, 30, 18, 0), "2026-10"),  # KST 10-01 03:00 ← 야간 잡 슬롯
+        (datetime(2026, 9, 30, 23, 59), "2026-10"),  # KST 10-01 08:59
+        # 창 바로 바깥 — 아직 같은 달
+        (datetime(2026, 9, 30, 14, 59), "2026-09"),  # KST 09-30 23:59
+        # 연말 경계
+        (datetime(2026, 12, 31, 15, 0), "2027-01"),  # KST 2027-01-01 00:00
+    ],
+)
+def test_mirror_report_filename_picks_the_kst_month(ref_utc, expected_month):
+    assert rd.mirror_report_filename(ref_utc) == f"pivoxquant_mirror_{expected_month}.pdf"
+
+
 def test_mirror_pdf_filename_carries_year_month(client, auth_user, fake_renderer):
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    """라우트가 그 계약을 실제로 쓰는지 — 파일명 규칙 자체는 위에서 고정했다."""
+    now_kst = datetime.now(timezone.utc).astimezone(rd.KST)
     resp = client.get("/api/reports/mirror.pdf")
-    assert f'pivoxquant_mirror_{now:%Y-%m}.pdf' in resp.headers["Content-Disposition"]
+    assert f'pivoxquant_mirror_{now_kst:%Y-%m}.pdf' in resp.headers["Content-Disposition"]
 
 
 def test_mirror_pdf_empty_record_is_404_not_empty_pdf(client, auth_user, empty_renderer):

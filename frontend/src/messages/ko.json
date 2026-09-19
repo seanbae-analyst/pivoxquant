@@ -17,7 +17,10 @@
       "heading": "소셜 계정으로 계속하기",
       "heroHeadline": "처음이든 다시든, <span class=\"br\">문은 하나</span>입니다.<br/>데스크는 이미 <span class=\"br\">준비됐습니다.</span>",
       "heroDeck": "계정이 있으면 이어서 들어가고, 없으면 여기서 만들어집니다. 당신이 남긴 기록과, 그 기록이 비추는 거울이 기다리고 있습니다.",
-      "heroSignature": "당신이 기록하고 · 당신이 확인합니다"
+      "heroSignature": "당신이 기록하고 · 당신이 확인합니다",
+      "waking": "서버를 깨우는 중입니다 · 최대 1분",
+      "wakeFailed": "서버가 아직 응답하지 않습니다. 잠시 후 다시 시도해 주세요.",
+      "wakeRetry": "다시 시도"
     }
   },
   "dashboard": {
@@ -28,7 +31,34 @@
       "kisSyncNotSupported": "동기화가 지원되지 않습니다 — KIS 계좌를 연결해 주세요.",
       "kisNoBroker": "연결된 브로커가 없습니다.",
       "kisSyncFailed": "브로커 동기화에 실패했습니다. 잠시 후 재시도해 주세요.",
-      "kisSyncError": "동기화 중 오류가 발생했습니다."
+      "kisSyncError": "동기화 중 오류가 발생했습니다.",
+      "hero": {
+        "titleLead": "당신의",
+        "titleAccent": "장부.",
+        "emptyPrefix": "아직 아무것도 기록되지 않았습니다. 첫 종목을 더하면 여기에 ",
+        "emptyAccent": "장부",
+        "emptySuffix": "가 열립니다.",
+        "positions": "{n}종목",
+        "positionsOne": "{n}종목",
+        "observed": "관측",
+        "capital": "자본 {nav}",
+        "lastPrefix": "마지막",
+        "lastSuffix": "{when}.",
+        "cashBuffer": "현금 비중 {cash}.",
+        "never": "없음"
+      },
+      "equityCurve": {
+        "heading": "장부는 이렇게 움직입니다.",
+        "figcaption": "자산 곡선: 선택한 기간 동안 포트폴리오 NAV는 브론즈 실선, 벤치마크는 아이보리 점선으로 그립니다."
+      },
+      "positions": {
+        "heading": "한 줄, 한 줄의 비중."
+      },
+      "activity": {
+        "loading": "기록을 불러오는 중…",
+        "empty": "최근 기록이 없습니다.",
+        "sharesUnit": "{n}주"
+      }
     }
   },
   "landing": {
@@ -228,7 +258,28 @@
     }
   },
   "preTrade": {
-    "thesis": "나의 투자 논거"
+    "thesis": "나의 투자 논거",
+    "charsOk": "✓ {n}자",
+    "charsMore": "{remaining}자 더 필요합니다 ({n}/{min})",
+    "done": {
+      "proceededHead": "일곱 번을 다 거쳤습니다.",
+      "proceededHeadAccent": "기록이 남았습니다.",
+      "cancelledHead": "여기서 멈추었습니다.",
+      "cancelledHeadAccent": "데스크는 기다립니다.",
+      "recorded": "기록을 남기고, 보유 내역에도 반영했습니다.",
+      "recordFailed": "기록은 남겨지만 보유 내역에 반영하지 못했습니다 — 포트폴리오에서 직접 추가해 주세요.",
+      "stampedOnly": "기록을 남겼습니다.",
+      "noOrderTail": "PivoxQuant는 주문을 내지 않습니다 — 주문은 이용 중인 증권사에서 직접 넣으세요.",
+      "cancelledBody": "취소되었습니다. 기록되지 않았습니다. 다음 결정 때 다시 7개 질문을 거치세요.",
+      "shares": "{n}주"
+    },
+    "errors": {
+      "recordFailed": "기록을 남기지 못했습니다.",
+      "proceedFailed": "진행하지 못했습니다.",
+      "cooldownFailed": "기록을 시작하지 못했습니다.",
+      "cancelFailed": "취소하지 못했습니다.",
+      "cancelled": "취소되었습니다."
+    }
   },
   "journal": {
     "page": {
@@ -518,6 +569,47 @@
       "exportReady": "내보내기 완료.",
       "exportFail": "내보내기 엔드포인트 준비 중. 수동 아카이브는 고객지원에 문의하세요.",
       "providerDisconnectUnsupported": "OAuth 공급자 연결 해제는 아직 지원되지 않습니다. 지원팀에 이메일로 문의해 주세요."
+    },
+    "hero": {
+      "h1Lead": "이 데스크를 움직이는",
+      "h1Accent": "손잡이들.",
+      "h1Lead2": "당신이 맞추고,",
+      "h1Accent2": "우리가 기억합니다.",
+      "deckPrefix": "설정은 운영 손잡이입니다 — 어떻게 로그인하고, 어떤 알림과 메일을 받고, ",
+      "deckAccent": "데이터 권리",
+      "deckSuffix": "를 어떻게 행사할지."
+    },
+    "identity": {
+      "nameHelp": "앱 화면과 데이터 내보내기에 표시됩니다.",
+      "emailHelp": "인증됨 · 기본 연락처.",
+      "localeHelp": "한국어 / English. 숫자 표기는 로케일을 따릅니다."
+    },
+    "capital": {
+      "help": "분석의 기준이 되는 총 투자 가능 자본입니다. 포트폴리오가 현금 비중과, 종목을 더하거나 덜어낸 뒤 남는 금액을 계산할 때 씁니다. USD 또는 KRW — 한쪽만 넣어도 되고 둘 다 넣어도 됩니다."
+    },
+    "notifications": {
+      "price_52w": {
+        "name": "52주 범위",
+        "help": "보유 종목이 최근 52주 범위의 위쪽 또는 아래쪽 끝에 닿을 때. 관측 정보일 뿐입니다."
+      },
+      "concentration": {
+        "name": "섹터 집중도",
+        "help": "한 섹터가 평균 취득가 기준으로 장부의 30%를 넘을 때."
+      },
+      "monthly_mirror": {
+        "name": "월간 거울 리포트",
+        "help": "지난달에 기록한 내용을 PDF로 정리해 매월 1일에 메일로 보냅니다. 당신의 기록만 담기며 — 점수도, 시세도 없습니다."
+      }
+    },
+    "signin": {
+      "googleUnlinked": "Google을 로그인 수단으로 추가합니다.",
+      "kakaoUnlinked": "Kakao를 보조 로그인 수단으로 추가합니다.",
+      "passwordHelp": "OAuth 전용 — 이 계정에는 비밀번호가 없습니다.",
+      "linkedHelp": "{who} · 기본 로그인.",
+      "connected": "연결됨"
     }
+  },
+  "rollingWindow": {
+    "heading": "선언과 관찰"
   }
 }

@@ -8,7 +8,7 @@
  * Visual rules:
  * - 80px top / 64px bottom padding, hairline-bottom only (no card border).
  * - H1 Playfair 500 / 48px / line-height 1.05 / track-tight.
- * - Bronze italic accent on the word "book."
+ * - Bronze accent on the closing word of the H1 (upright — no italic).
  * - One CTA: bronze-filled "Add position". The broker "Reconcile" CTA was
  *   removed 2026-09-10 — broker linking is not offered and its route is gone.
  * - Eyebrow: "Book · Volume {weekIndex} · {weekday}".
@@ -19,6 +19,8 @@
 
 import * as React from "react";
 import { PRICE_COLOR_HEX } from "@/lib/format";
+import { useLocale } from "@/lib/locale";
+import { relativeTime as localisedRelativeTime } from "@/lib/relative-time";
 
 interface PortfolioHeroV2Props {
   /** Total NAV in display currency (USD or KRW). May be undefined. */
@@ -116,18 +118,19 @@ function fmtMoneySigned(
   return `${sign}${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
-function relativeTime(iso: string | null | undefined): string {
-  if (!iso) return "never";
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "never";
-  const diff = Date.now() - t;
-  const min = Math.floor(diff / 60_000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const days = Math.floor(hr / 24);
-  return `${days}d ago`;
+/* 2026-09-19: this used to be a second, English-only copy of the relative-time
+   formatter ("just now" / "3h ago"), which printed English inside the Korean
+   deck sentence and lacked the naive-UTC guard that drifts KST readings by 9h.
+   It now delegates to the shared locale-aware helper; only the null case
+   ("never") stays here, because the shared helper has no such case. */
+function relativeTime(
+  iso: string | null | undefined,
+  locale: "ko" | "en",
+  neverLabel: string,
+): string {
+  if (!iso) return neverLabel;
+  const out = localisedRelativeTime(iso, locale, { verbose: true });
+  return out || neverLabel;
 }
 
 export function PortfolioHeroV2({
@@ -151,6 +154,10 @@ export function PortfolioHeroV2({
   realizedUsd,
   realizedKrw,
 }: PortfolioHeroV2Props) {
+  const { locale, t } = useLocale();
+  /** `dashboard.portfolio.hero.*` — the eyebrow stays English by house rule. */
+  const h = (k: string, params?: Record<string, string>) =>
+    t(`dashboard.portfolio.hero.${k}`, params);
   const now = new Date();
   const eyebrow = `Book · Volume ${weekIndexOf(now)} · ${weekdayOf(now)}`;
 
@@ -207,7 +214,7 @@ export function PortfolioHeroV2({
   const cashText = loading ? "—" : fmtPct(cashPct);
   const reconcileText = loading
     ? "—"
-    : relativeTime(lastReconciledAt);
+    : relativeTime(lastReconciledAt, locale, h("never"));
 
   // 2026-09-01: an empty book used to get the same sentence as a real one —
   // "0 positions observed · USD 0 of capital · last reconciled just now. Cash
@@ -251,8 +258,8 @@ export function PortfolioHeroV2({
           margin: "0 0 28px 0",
         }}
       >
-        Your{" "}
-        <span style={{ color: "var(--pq-bronze)" }}>book.</span>
+        {h("titleLead")}{" "}
+        <span style={{ color: "var(--pq-bronze)" }}>{h("titleAccent")}</span>
       </h1>
 
       <p
@@ -267,22 +274,26 @@ export function PortfolioHeroV2({
       >
         {isEmptyBook ? (
           <>
-            아직 아무것도 기록되지 않았습니다. 첫 종목을 더하면 여기에{" "}
-            <span style={{ color: "var(--pq-bronze)" }}>책</span>이 열립니다.
+            {h("emptyPrefix")}
+            <span style={{ color: "var(--pq-bronze)" }}>{h("emptyAccent")}</span>
+            {h("emptySuffix")}
           </>
         ) : (
           <>
-            {positionsText} position{positionCount === 1 ? "" : "s"}{" "}
-            <span style={{ color: "var(--pq-bronze)" }}>observed</span>
+            {h(positionCount === 1 ? "positionsOne" : "positions", {
+              n: positionsText,
+            })}{" "}
+            <span style={{ color: "var(--pq-bronze)" }}>{h("observed")}</span>
             {" · "}
-            {navText} of capital
+            {h("capital", { nav: navText })}
             {" · "}
-            last{" "}
+            {h("lastPrefix")}{" "}
             {/* This timestamp is the summary's `observed_at` — when the data
                 was read, not when a broker reconciliation ran. Calling it
                 "reconciled" promised a sync to users who never connected one. */}
-            <span style={{ color: "var(--pq-bronze)" }}>observed</span>{" "}
-            {reconcileText}. Cash buffer at {cashText}.
+            <span style={{ color: "var(--pq-bronze)" }}>{h("observed")}</span>{" "}
+            {h("lastSuffix", { when: reconcileText })}{" "}
+            {h("cashBuffer", { cash: cashText })}
           </>
         )}
       </p>

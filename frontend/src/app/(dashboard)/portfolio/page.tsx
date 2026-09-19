@@ -277,7 +277,7 @@ export default function PortfolioPageV2() {
       >
       </div>
 
-      {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════
+      {/* ═══════════ CFO STATUS — sticky hairline ═══════════
           Mobile fix (2026-05-05): top:0 was overlapping the 56px TopBar.
           Anchor below the TopBar so the sticky bar slides under the
           header rather than colliding with it.
@@ -375,6 +375,10 @@ export default function PortfolioPageV2() {
         navUsd={navUsdFinal}
         navKrw={navKrwFinal}
         hasPositions={positions.length > 0}
+        // `dataPending` outlives the 1.2s `showSkeleton` window on purpose:
+        // while either response is missing we do not know the NAV, and an
+        // em-dash is the honest rendering of that for as long as it lasts.
+        loading={dataPending || isInitialLoad}
       />
 
       {/* ═══════════ POSITIONS TABLE ═══════════ */}

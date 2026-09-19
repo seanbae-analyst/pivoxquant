@@ -9,6 +9,7 @@
  */
 
 import * as React from "react";
+import { useT } from "@/lib/locale";
 import { EditorialHead } from "@/components/ui/editorial";
 import { pctColor } from "@/lib/format";
 import { useEquityCurve, type EquityRange, type EquityPoint } from "./hooks-v2";
@@ -25,6 +26,11 @@ interface EquityCurveBlockProps {
   /** Whether the book currently holds anything. Decides which empty-state
    *  reason the "building the curve" panel gives — see below. */
   hasPositions?: boolean;
+  /** True while the portfolio summary / positions are still in flight. The NAV
+   *  KPI renders an em-dash instead of a figure, matching the hero
+   *  (portfolio-hero-v2.tsx `navText`). Without it the KPI printed "USD 0" on
+   *  the first frame — a false zero on a funded account. */
+  loading?: boolean;
 }
 
 // Backend whitelist: "5d" | "1mo" | "3mo" | "6mo" | "1y" — Bug #8 fix.
@@ -157,7 +163,9 @@ export function EquityCurveBlock({
   navUsd,
   navKrw,
   hasPositions = false,
+  loading = false,
 }: EquityCurveBlockProps) {
+  const t = useT();
   // `activeId` is the tab the user clicked (id="5d"|"1mo"|"2mo" → 1주/4주/8주).
   // The backend period is resolved through the RANGES table.
   const [activeId, setActiveId] = React.useState<string>("1mo");
@@ -239,7 +247,7 @@ export function EquityCurveBlock({
             Equity · Curve
           </div>
           <EditorialHead size={30} as="h2" style={{ lineHeight: 1.1 }}>
-            How the book moves.
+            {t("dashboard.portfolio.equityCurve.heading")}
           </EditorialHead>
         </div>
 
@@ -305,6 +313,17 @@ export function EquityCurveBlock({
           <KpiCell
             label="NAV"
             value={(() => {
+              // Not-yet-known NAV must read as unknown, not as zero.
+              // `currentNav` is 0 until the summary resolves, so the final
+              // fallback below printed "USD 0" on the first frame — a false
+              // zero on an account that in fact holds ₩4,420,000. The hero on
+              // this same screen already answers this with an em-dash
+              // (portfolio-hero-v2.tsx: `navText = loading ? "—" : …`); reuse
+              // that character so one screen speaks with one voice.
+              // A LOADED book with no positions keeps its real "USD 0": that
+              // zero is measured, not assumed, and the panel below already
+              // tells that user to add a position. Only ignorance gets a dash.
+              if (loading) return "—";
               const hasUs = typeof navUsd === "number" && navUsd > 0;
               const hasKr = typeof navKrw === "number" && navKrw > 0;
               if (hasUs && hasKr) {
@@ -394,9 +413,10 @@ export function EquityCurveBlock({
 
         {/* Chart */}
         <figure style={{ margin: 0 }}>
+          {/* 2026-09-19: the only description a Korean screen-reader user
+              gets for this chart, and it was English-only. */}
           <figcaption className="sr-only">
-            Equity curve: portfolio NAV solid bronze line and benchmark dashed
-            ivory line over the selected timeframe.
+            {t("dashboard.portfolio.equityCurve.figcaption")}
           </figcaption>
 
           {isLoading && !data ? (

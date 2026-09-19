@@ -12,12 +12,16 @@
  *   - Email (read-only)
  *   - Locale (한국어 / English pill toggle — bilingual labels per CEO 2026-04-28)
  *
- * Pure presentational. Host wires `useAuth()` + `useLocale()`.
+ * Host wires `useAuth()` + `useLocale()`; the three help lines read from
+ * settingsV2.identity via useT (2026-09-19 — they were hardcoded English
+ * under the ko locale). Short field labels stay English: they are app-shell
+ * chrome, not product vocabulary (see commit a1327238).
  *
  * Legal: persona vocabulary only. No advice strings.
  */
 
 import * as React from "react";
+import { useT } from "@/lib/locale";
 
 interface Props {
   displayName?: string | null;
@@ -48,6 +52,7 @@ export function SettingsIdentityCardV2({
   locale,
   onLocaleChange,
 }: Props) {
+  const t = useT();
   return (
     <div
       style={{
@@ -97,7 +102,7 @@ export function SettingsIdentityCardV2({
         <div style={{ minWidth: 0 }}>
           <div className="font-serif" style={ROW_LABEL_STYLE}>Display name</div>
           <div className="font-serif" style={ROW_HELP_STYLE}>
-            Shown in the app and on your data exports.
+            {t("settingsV2.identity.nameHelp")}
           </div>
         </div>
         <span className="font-mono" style={ROW_VALUE_STYLE}>{displayName || "—"}</span>
@@ -116,7 +121,9 @@ export function SettingsIdentityCardV2({
       >
         <div style={{ minWidth: 0 }}>
           <div className="font-serif" style={ROW_LABEL_STYLE}>Email</div>
-          <div className="font-serif" style={ROW_HELP_STYLE}>Verified · primary contact.</div>
+          <div className="font-serif" style={ROW_HELP_STYLE}>
+            {t("settingsV2.identity.emailHelp")}
+          </div>
         </div>
         <span
           className="font-mono"
@@ -149,7 +156,7 @@ export function SettingsIdentityCardV2({
         <div style={{ minWidth: 0 }}>
           <div className="font-serif" style={ROW_LABEL_STYLE}>Locale</div>
           <div className="font-serif" style={ROW_HELP_STYLE}>
-            한국어 / English. Number convention follows locale.
+            {t("settingsV2.identity.localeHelp")}
           </div>
         </div>
         <div

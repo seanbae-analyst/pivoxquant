@@ -21,6 +21,7 @@
  */
 
 import * as React from "react";
+import { useT } from "@/lib/locale";
 
 interface Props {
   /** "google" | "kakao" | null — the provider currently linked. */
@@ -72,6 +73,7 @@ function ProviderRow({
   onConnect?: () => void;
   topPad?: boolean;
 }) {
+  const t = useT();
   return (
     <div
       style={{
@@ -96,7 +98,9 @@ function ProviderRow({
         </div>
         <div className="font-serif" style={ROW_HELP_STYLE}>
           {linked
-            ? `${emailHint ?? "Connected"} · primary login.`
+            ? t("settingsV2.signin.linkedHelp", {
+                who: emailHint ?? t("settingsV2.signin.connected"),
+              })
             : helpUnlinked}
         </div>
       </div>
@@ -141,6 +145,7 @@ export function SignInProvidersCard({
   email,
   onConnect,
 }: Props) {
+  const t = useT();
   const googleLinked = oauthProvider === "google";
   const kakaoLinked = oauthProvider === "kakao";
 
@@ -184,7 +189,7 @@ export function SignInProvidersCard({
         name="Google"
         linked={googleLinked}
         emailHint={googleLinked ? email : null}
-        helpUnlinked="Add Google as a sign-in method."
+        helpUnlinked={t("settingsV2.signin.googleUnlinked")}
         onConnect={() => onConnect?.("google")}
       />
 
@@ -192,7 +197,7 @@ export function SignInProvidersCard({
         name="Kakao"
         linked={kakaoLinked}
         emailHint={kakaoLinked ? email : null}
-        helpUnlinked="Add Kakao as a backup sign-in method."
+        helpUnlinked={t("settingsV2.signin.kakaoUnlinked")}
         onConnect={() => onConnect?.("kakao")}
         topPad
       />
@@ -211,7 +216,7 @@ export function SignInProvidersCard({
         <div style={{ minWidth: 0 }}>
           <div className="font-serif" style={ROW_LABEL_STYLE}>Password</div>
           <div className="font-serif" style={ROW_HELP_STYLE}>
-            OAuth-only — no password set on this account.
+            {t("settingsV2.signin.passwordHelp")}
           </div>
         </div>
         <span

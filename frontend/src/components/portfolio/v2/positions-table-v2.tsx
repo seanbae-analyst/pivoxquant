@@ -14,6 +14,7 @@
  */
 
 import * as React from "react";
+import { useT } from "@/lib/locale";
 import { EditorialHead } from "@/components/ui/editorial";
 import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
@@ -157,6 +158,7 @@ export function PositionsTableV2({
   onAction,
   onAddPosition,
 }: PositionsTableV2Props) {
+  const t = useT();
   const [sortKey, setSortKey] = React.useState<SortKey>("weight");
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc");
 
@@ -213,7 +215,7 @@ export function PositionsTableV2({
             Holdings · Ledger
           </div>
           <EditorialHead size={30} as="h2" style={{ lineHeight: 1.1 }}>
-            Every line, every weight.
+            {t("dashboard.portfolio.positions.heading")}
           </EditorialHead>
         </div>
         <span
