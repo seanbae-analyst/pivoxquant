@@ -17,7 +17,10 @@
       "heading": "Continue with your provider",
       "heroHeadline": "New or returning, <span class=\"br\">one door</span>.<br/>The desk is <span class=\"br\">already lit.</span>",
       "heroDeck": "If you have an account you continue; if not, it is created here. The record you kept, and the mirror it holds up.",
-      "heroSignature": "You record it · You review it"
+      "heroSignature": "You record it · You review it",
+      "waking": "Waking the server · up to a minute",
+      "wakeFailed": "The server is not responding yet. Please try again in a moment.",
+      "wakeRetry": "Try again"
     }
   },
   "landing": {

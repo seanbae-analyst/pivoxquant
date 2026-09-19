@@ -375,6 +375,10 @@ export default function PortfolioPageV2() {
         navUsd={navUsdFinal}
         navKrw={navKrwFinal}
         hasPositions={positions.length > 0}
+        // `dataPending` outlives the 1.2s `showSkeleton` window on purpose:
+        // while either response is missing we do not know the NAV, and an
+        // em-dash is the honest rendering of that for as long as it lasts.
+        loading={dataPending || isInitialLoad}
       />
 
       {/* ═══════════ POSITIONS TABLE ═══════════ */}

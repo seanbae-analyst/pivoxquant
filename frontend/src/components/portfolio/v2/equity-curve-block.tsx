@@ -25,6 +25,11 @@ interface EquityCurveBlockProps {
   /** Whether the book currently holds anything. Decides which empty-state
    *  reason the "building the curve" panel gives — see below. */
   hasPositions?: boolean;
+  /** True while the portfolio summary / positions are still in flight. The NAV
+   *  KPI renders an em-dash instead of a figure, matching the hero
+   *  (portfolio-hero-v2.tsx `navText`). Without it the KPI printed "USD 0" on
+   *  the first frame — a false zero on a funded account. */
+  loading?: boolean;
 }
 
 // Backend whitelist: "5d" | "1mo" | "3mo" | "6mo" | "1y" — Bug #8 fix.
@@ -157,6 +162,7 @@ export function EquityCurveBlock({
   navUsd,
   navKrw,
   hasPositions = false,
+  loading = false,
 }: EquityCurveBlockProps) {
   // `activeId` is the tab the user clicked (id="5d"|"1mo"|"2mo" → 1주/4주/8주).
   // The backend period is resolved through the RANGES table.
@@ -305,6 +311,17 @@ export function EquityCurveBlock({
           <KpiCell
             label="NAV"
             value={(() => {
+              // Not-yet-known NAV must read as unknown, not as zero.
+              // `currentNav` is 0 until the summary resolves, so the final
+              // fallback below printed "USD 0" on the first frame — a false
+              // zero on an account that in fact holds ₩4,420,000. The hero on
+              // this same screen already answers this with an em-dash
+              // (portfolio-hero-v2.tsx: `navText = loading ? "—" : …`); reuse
+              // that character so one screen speaks with one voice.
+              // A LOADED book with no positions keeps its real "USD 0": that
+              // zero is measured, not assumed, and the panel below already
+              // tells that user to add a position. Only ignorance gets a dash.
+              if (loading) return "—";
               const hasUs = typeof navUsd === "number" && navUsd > 0;
               const hasKr = typeof navKrw === "number" && navKrw > 0;
               if (hasUs && hasKr) {

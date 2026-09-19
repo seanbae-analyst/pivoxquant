@@ -1,0 +1,218 @@
+name: API Health Monitor
+
+# 2026-09-19 재활성화. 2026-05-19 에 6시간 주기로 켰다가, 2026-08-30 cron 감사
+# (docs/dev/cron-workflows-audit-2026-08-30.md §1 #8) 에서 "백엔드 복구 후"로
+# 판정돼 꺼져 있던 파일이다. 백엔드는 2026-09-01 Render 로 복구됐다.
+#
+# 켜기 전에 고친 것 (전부 실측 근거 있음):
+#
+#  1. 백엔드 URL. 옛 버전은 `secrets.RAILWAY_BACKEND_URL` 을 읽었다. 그 시크릿은
+#     updated_at 이 2026-05-07 로, Render 이전(2026-09-01)보다 앞선다. 값이
+#     가리키는 https://web-production-7b484b.up.railway.app/api/health 는
+#     2026-09-19 실측 HTTP 404 다. 그대로 켰으면 6시간마다 가짜 장애 이슈를
+#     열었을 것이다. 백엔드 base URL 은 비밀이 아니므로(공개 도메인) 기본값을
+#     리터럴로 박고 repo variable 로만 덮게 했다. 시크릿 드리프트 재발 불가.
+#     ⚠️ 이 이름은 CLAUDE.md 함정 9-2 의 네 곳(render.yaml · next.config.ts ·
+#     routes/auth.py · Vercel)과 무관한 다섯 번째 지점이다. 여기만 바꿔도 된다.
+#
+#  2. 콜드스타트. Render `free` 는 무트래픽 시 스핀다운하고, 깨어나는 동안의
+#     첫 요청은 502 로 떨어진다(실측: 유휴 뒤 첫 요청 502 → 직후 200 in 0.52s).
+#     단발 curl 로 판정하면 이 워크플로는 "Render 가 자는 중"을 "장애"로 신고한다.
+#     그래서 최대 5회 / 약 150초 동안 재시도하고, **1회차 결과와 복구까지 걸린
+#     시간을 always 로 기록**한다. 이 워크플로의 두 번째 역할이 그 콜드스타트
+#     분포를 모으는 것이다 — 6시간 간격이라 매 실행이 확실한 콜드 샘플이다.
+#     (핑 간격을 15분 밑으로 줄여 keep-warm 으로 쓰는 안은 별도 결정 사항.)
+#
+#  3. 프론트 대상. apex `https://pivoxquant.com/` 는 실측 307 →
+#     `https://www.pivoxquant.com/`. 옛 버전은 apex 만 찔러 307 을 통과로 셌는데,
+#     그건 리다이렉트가 살아 있다는 뜻일 뿐 앱이 뜬다는 증거가 아니다.
+#     정본(www)에서 200 을 확인하고, apex 는 리다이렉트 자체를 따로 본다.
+#
+#  4. 라벨. 옛 버전은 `--label autopilot,health` 로 이슈를 열었다. 실측 결과
+#     `health` 라벨이 이 레포에 **없다**(있는 것: autopilot, agent-health).
+#     즉 장애를 감지해도 이슈 생성이 에러로 죽었을 것이다. 멱등 생성 스텝 추가.
+#
+#  5. `actions/checkout` 제거. 이 잡은 레포 파일을 하나도 안 읽는다(curl + gh).
+#     체크아웃을 지우면 버전 드리프트 논의 자체가 사라지고 실행도 빨라진다.
+#     (참고: 활성 워크플로 19곳이 @v6 를 쓰고 2026-09-17 전부 success —
+#      @v6 는 유효하다. 여기서 안 쓸 뿐이다.)
+#
+# 비용: 레포가 2026-09-15 부터 PUBLIC 이다. 퍼블릭 레포의 표준 GitHub-hosted
+# 러너는 Actions 분이 과금되지 않는다 — 2026-09-13~15 을 막았던 분 소진은
+# 프라이빗 시절의 제약이었다.
+
+on:
+  schedule:
+    # 6시간마다 (하루 4회). 유휴 15분 임계보다 훨씬 길어서 keep-warm 효과는
+    # 없다 — 의도한 대로다. 이 주기는 "밤새 백엔드가 죽어 있었다"를 아침까지
+    # 잡기 위한 것이고, 분 단위 SLO 는 여기 말고 로컬 스케줄러가 맡는다.
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: api-health
+  cancel-in-progress: false
+
+env:
+  # repo variable 로 덮을 수 있다: gh variable set BACKEND_URL --body https://...
+  BACKEND_URL: ${{ vars.BACKEND_URL || 'https://pivoxquant-api.onrender.com' }}
+  FRONTEND_URL: ${{ vars.FRONTEND_URL || 'https://www.pivoxquant.com' }}
+  APEX_URL: https://pivoxquant.com
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Sanity-check the target URL
+        run: |
+          set -euo pipefail
+          echo "backend=$BACKEND_URL"
+          case "$BACKEND_URL" in
+            *railway.app*)
+              echo "::error::BACKEND_URL 이 아직 Railway 를 가리킨다. 백엔드는 2026-09-01 Render 로 옮겼다. 이건 프로덕션 장애가 아니라 설정 오류다."
+              exit 1 ;;
+            https://*) ;;
+            *)
+              echo "::error::BACKEND_URL 이 비었거나 https 가 아니다: '$BACKEND_URL'"
+              exit 1 ;;
+          esac
+
+      - name: Ping backend /api/health (cold-start aware)
+        id: backend
+        run: |
+          set +e
+          attempt=0
+          max=5
+          first_code=""
+          first_time=""
+          started=$(date +%s)
+          while [ $attempt -lt $max ]; do
+            attempt=$((attempt + 1))
+            out=$(curl -sS -m 30 -w "\n__CODE__%{http_code}\n__TIME__%{time_total}" "${BACKEND_URL}/api/health" 2>&1)
+            code=$(printf '%s' "$out" | sed -n 's/^__CODE__//p' | tail -n1)
+            ttime=$(printf '%s' "$out" | sed -n 's/^__TIME__//p' | tail -n1)
+            body=$(printf '%s' "$out" | sed '/^__CODE__/d;/^__TIME__/d')
+            [ -z "$code" ] && code="000"
+            if [ -z "$first_code" ]; then first_code="$code"; first_time="${ttime:-0}"; fi
+            echo "attempt=$attempt code=$code time=${ttime:-?}s"
+            if [ "$code" = "200" ] && printf '%s' "$body" | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+              break
+            fi
+            [ $attempt -lt $max ] && sleep 30
+          done
+          elapsed=$(( $(date +%s) - started ))
+
+          {
+            echo "first_code=$first_code"
+            echo "first_time=$first_time"
+            echo "code=$code"
+            echo "attempts=$attempt"
+            echo "elapsed=$elapsed"
+            echo "body<<HEALTHEOF"
+            echo "$body"
+            echo "HEALTHEOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$code" != "200" ] || ! printf '%s' "$body" | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+          fi
+          # 1회차가 실패하고 재시도로 살아났다면 그건 콜드스타트다 — 장애는 아니지만
+          # 기록은 남긴다. 유저의 첫 클릭이 바로 이 1회차다.
+          if [ "$first_code" != "200" ] && [ "$code" = "200" ] && printf '%s' "$body" | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+            echo "coldstart=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ping frontend (canonical host)
+        id: frontend
+        run: |
+          set +e
+          code=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" "$FRONTEND_URL/")
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          apex=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" "$APEX_URL/")
+          echo "apex_code=$apex" >> "$GITHUB_OUTPUT"
+          echo "frontend=$code apex=$apex"
+          if [ "$code" != "200" ]; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+          fi
+          # apex 는 리다이렉트만 살아 있으면 된다. 실패로 세지는 않고 표시만 한다.
+          case "$apex" in 200|301|302|307|308) ;; *) echo "apex_warn=true" >> "$GITHUB_OUTPUT" ;; esac
+
+      - name: Record cold-start telemetry
+        if: always()
+        run: |
+          {
+            echo "### API health probe"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| backend first attempt | HTTP ${{ steps.backend.outputs.first_code }} in ${{ steps.backend.outputs.first_time }}s |"
+            echo "| backend final | HTTP ${{ steps.backend.outputs.code }} after ${{ steps.backend.outputs.attempts }} attempt(s), ${{ steps.backend.outputs.elapsed }}s |"
+            echo "| cold start observed | ${{ steps.backend.outputs.coldstart || 'no' }} |"
+            echo "| frontend (www) | HTTP ${{ steps.frontend.outputs.code }} |"
+            echo "| apex redirect | HTTP ${{ steps.frontend.outputs.apex_code }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ensure incident labels exist
+        if: steps.backend.outputs.failed == 'true' || steps.frontend.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 2026-09-19 실측: `health` 라벨이 레포에 없어 옛 버전의 이슈 생성이
+          # 통째로 실패했을 경로다. --force 는 이미 있으면 갱신하므로 멱등.
+          gh label create health --repo "$GITHUB_REPOSITORY" --color B60205 --description "Production availability" --force || true
+          gh label create autopilot --repo "$GITHUB_REPOSITORY" --color 0E8A16 --description "Auto-generated by autopilot workflows" --force || true
+
+      - name: Open incident issue on failure
+        if: steps.backend.outputs.failed == 'true' || steps.frontend.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="🚨 Autopilot: API health failed @ $(date -u +%H:%M) UTC"
+          body=$(cat <<EOF
+          ## Autopilot health check failed
+
+          재시도를 다 쓰고도 살아나지 않았다. 콜드스타트라면 이 이슈는 열리지 않는다.
+
+          - Backend \`/api/health\`: 1회차 HTTP **${{ steps.backend.outputs.first_code }}** → 최종 HTTP **${{ steps.backend.outputs.code }}** (${{ steps.backend.outputs.attempts }}회 시도, ${{ steps.backend.outputs.elapsed }}초)
+          - Frontend \`${{ env.FRONTEND_URL }}\`: HTTP **${{ steps.frontend.outputs.code }}** · apex **${{ steps.frontend.outputs.apex_code }}**
+          - Target: \`${{ env.BACKEND_URL }}\`
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Timestamp: $(date -u +%FT%TZ)
+
+          ### Backend response
+          \`\`\`
+          ${{ steps.backend.outputs.body }}
+          \`\`\`
+
+          ### 어디부터 볼까
+          - Render 대시보드 → \`pivoxquant-api\` 의 Events / Logs. 배포 실패인지 크래시인지 여기서만 갈린다
+          - \`/api/health\` 의 \`version\` 이 main HEAD 와 다르면 배포가 안 끝났거나 롤백된 것
+          - \`"db"\` 가 ok 가 아니면 Supabase(ap-northeast-2) 쪽 — session pooler 호스트 확인
+          - 프론트만 죽었으면 Vercel 배포
+          - 둘 다 200 인데 이 이슈가 열렸다면 위 \`Target\` URL 설정을 먼저 의심할 것
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label autopilot --label health --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" --label autopilot --label health
+          fi
+
+      - name: Close stale incident on recovery
+        continue-on-error: true
+        if: steps.backend.outputs.failed != 'true' && steps.frontend.outputs.failed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for num in $(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label autopilot --label health --json number --jq '.[].number'); do
+            gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body "✅ Recovered at $(date -u +%FT%TZ). Auto-closing."
+            gh issue close "$num" --repo "$GITHUB_REPOSITORY"
+          done

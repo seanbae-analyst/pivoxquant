@@ -636,6 +636,26 @@ class TestNonFillNotices:
         assert ok.status_code == 201, ok.get_json()
         assert ok.get_json()["pending"][0]["ticker"] == "AAPL"
 
+    def test_unitless_remainder_field_is_still_a_fill(self, client, auth_user):
+        """"(미체결 0)" / "잔량/미체결 0" are remainder fields, not notices.
+
+        The unit (주) is often dropped, and the parser used to read the bare
+        number as a 미체결 notice and silently drop the fill — the webhook path
+        forwards these verbatim.
+        """
+        text = "\n".join([
+            "삼성전자 10주 매수 체결 71,200원 (미체결 0)",
+            "[키움증권] 삼성전자 10주 매수 체결 71,300원 잔량/미체결 0",
+            "삼성전자 10주 매수 주문 미체결",
+        ])
+        r = _paste(client, text)
+        assert r.status_code == 201, r.get_json()
+        rows = r.get_json()["pending"]
+        assert len(rows) == 2
+        assert [p["price"] for p in rows] == [71200.0, 71300.0]
+        assert all(p["name"] == "삼성전자" and p["shares"] == 10.0 for p in rows)
+        assert self._skipped_reasons(r) == ["미체결 알림 (체결 아님)"]
+
     def test_webhook_forwarded_cancel_is_skipped(self, client, auth_user):
         tok = client.post(f"{BASE}/tokens", json={"name": "macro", "consent": True}).get_json()["token"]
         r = client.post(f"{BASE}/webhook", data="삼성전자 10주 매수 주문 취소 71,200원",
