@@ -332,7 +332,7 @@ export default function SettingsPageV2() {
       >
       </div>
 
-      {/* LIVING CFO STATUS — sticky hairline.
+      {/* CFO STATUS — sticky hairline.
        * z-10 (2026-05-13 thorough-fix sweep): was z-40, clipped the
        * NotificationDropdown panel by stacking above the TopBar wrapper
        * (z=20 in globals.css). */}

@@ -70,7 +70,13 @@ export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
 
       <h1
         className="mt-3 text-[clamp(1.5rem,3.4vw,2.1rem)] leading-[1.4]"
-        style={{ fontFamily: "var(--font-display)", color: "var(--pq-ivory)" }}
+        /* --pq-font-display, not the raw next/font --font-display: the alias
+            is the one that carries the Korean face (globals.css @theme note).
+            Playfair has no Hangul, and this headline is Korean. */
+        style={{
+          fontFamily: "var(--pq-font-display)",
+          color: "var(--pq-ivory)",
+        }}
       >
         {leadSentence(data)}
       </h1>

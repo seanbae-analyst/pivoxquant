@@ -10,7 +10,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { fmtMoneyPlain, pctColor, displayTicker } from "@/lib/format";
+import { fmtMoneyPlain, pctColor, displayTicker, parseIsoUtc } from "@/lib/format";
+import { useLocale } from "@/lib/locale";
 import { useTransactions, type TransactionRow } from "./hooks-v2";
 
 interface RecentTransactionsBlockProps {
@@ -49,11 +50,20 @@ function fmtSignedAmount(amount: number, signed: number, currency: "USD" | "KRW"
   return `${sign}${fmtMoney(Math.abs(amount), currency)}`;
 }
 
-function shortDate(iso?: string): string {
+/* 2026-09-19: was `new Date(iso).toLocaleDateString("en-US", …)` — English
+   month names under the ko locale, a naive-ISO stamp parsed as LOCAL time
+   (the 9h KST drift `parseIsoUtc` exists to stop), and no Asia/Seoul pin, so
+   the printed day could differ from the day /journal shows for the same row.
+   All three closed here; ko now reads "9. 15." like the rest of the app. */
+function shortDate(iso: string | undefined, locale: "ko" | "en"): string {
   if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const d = parseIsoUtc(iso);
+  if (!d) return iso;
+  return d.toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", {
+    timeZone: "Asia/Seoul",
+    month: locale === "ko" ? "numeric" : "short",
+    day: "numeric",
+  });
 }
 
 // Cash-flow direction color via the site-canonical KR convention helper
@@ -67,6 +77,7 @@ function amountColor(signed: number): string {
 export function RecentTransactionsBlock({
   limit = 7,
 }: RecentTransactionsBlockProps) {
+  const { locale, t } = useLocale();
   const { data, isLoading, error } = useTransactions(limit);
 
   const trades: TransactionRow[] = React.useMemo(() => {
@@ -110,7 +121,7 @@ export function RecentTransactionsBlock({
             fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
-          Loading entries…
+          {t("dashboard.portfolio.activity.loading")}
         </div>
       ) : error || trades.length === 0 ? (
         <div
@@ -123,7 +134,7 @@ export function RecentTransactionsBlock({
             fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
-          No recent entries.
+          {t("dashboard.portfolio.activity.empty")}
         </div>
       ) : (
         <ul
@@ -136,16 +147,20 @@ export function RecentTransactionsBlock({
             flexDirection: "column",
           }}
         >
-          {trades.map((t, i) => {
-            const { label, signed } = actionLabel(t);
-            const cur = (t.currency as "USD" | "KRW") ?? "USD";
-            const shares = t.qty ?? t.shares ?? 0;
-            const price = t.price ?? 0;
-            const amount = (t.amount ?? shares * price) || 0;
-            const meta = `${label} · ${shares} sh @ ${fmtMoney(price, cur)} · ${shortDate(t.date)}`;
+          {trades.map((tx, i) => {
+            const { label, signed } = actionLabel(tx);
+            const cur = (tx.currency as "USD" | "KRW") ?? "USD";
+            const shares = tx.qty ?? tx.shares ?? 0;
+            const price = tx.price ?? 0;
+            const amount = (tx.amount ?? shares * price) || 0;
+            // `sh` and the month name are units and a date, i.e. data — not
+            // the English app-shell labels. The action verb stays English on
+            // purpose: Add / Trim / Close is the legal-safe vocabulary pinned
+            // by this file's header, not a style choice to make here.
+            const meta = `${label} · ${t("dashboard.portfolio.activity.sharesUnit", { n: String(shares) })} @ ${fmtMoney(price, cur)} · ${shortDate(tx.date, locale)}`;
             return (
               <li
-                key={t.id ?? `${t.symbol}-${t.date}-${i}`}
+                key={tx.id ?? `${tx.symbol}-${tx.date}-${i}`}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr auto",
@@ -168,7 +183,7 @@ export function RecentTransactionsBlock({
                       lineHeight: 1.2,
                     }}
                   >
-                    {t.symbol ? displayTicker(t.symbol, t.name) : (t.name ?? "—")}
+                    {tx.symbol ? displayTicker(tx.symbol, tx.name) : (tx.name ?? "—")}
                   </div>
                   <div
                     className="font-serif"

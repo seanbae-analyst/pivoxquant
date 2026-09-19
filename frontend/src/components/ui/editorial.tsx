@@ -314,7 +314,11 @@ export function StatRow({
 // trust-by-clarity. The signature is now a pure brand mark; the single
 // consolidated legal disclaimer lives in the DisclaimerBanner only.
 export function FootSignature({
-  note = "PivoxQuant \u00b7 Living CFO",
+  // 2026-09-19: the default read "PivoxQuant · Living CFO" — the deleted
+  // feature name, printed in the footer of every dashboard page. Replaced
+  // with the CEO-approved umbrella (2026-09-10), which is what the brand
+  // mark was reaching for.
+  note = "PivoxQuant \u00b7 \ub2f9\uc2e0 \ud3ec\ud2b8\ud3f4\ub9ac\uc624\uc758 CFO",
 }: {
   note?: string;
 }) {

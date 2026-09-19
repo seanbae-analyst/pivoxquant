@@ -1,8 +1,17 @@
 "use client";
 
 /**
- * <LivingCFOStatusBar /> — sticky hairline bar showing the two layers of
- * the Living CFO product:
+ * <LivingCFOStatusBar /> — sticky hairline bar showing the two layers the
+ * CFO reads about you.
+ *
+ * 2026-09-19: the visible strings said "Living CFO" — a feature name that
+ * was deleted (it is gone from the landing nav, top-nav.tsx:22) and that
+ * the dashboard was the last surface still carrying it. The CEO-approved
+ * umbrella "당신 포트폴리오의 CFO" is untouched; only the dead feature name
+ * is. These labels sit in the uppercase-mono eyebrow tier, which stays
+ * English by house rule (commit a09376e0), so only the name changed. The
+ * file name is kept so the three importing pages and the rollback path
+ * stay stable.
  *
  *   Layer 1 · Identity    → InvestmentProfile onboarding (green when set)
  *   Layer 2 · Learning    → Drift + Pulse + Feedback (yellow while training)
@@ -129,13 +138,13 @@ export function LivingCFOStatusBar() {
         style={{
           borderBottom: "0.5px solid rgba(184,149,106,0.22)",
         }}
-        aria-label="Living CFO status — click for details"
+        aria-label="CFO status — click for details"
       >
         <span
           className="uppercase text-pq-caption tracking-[0.26em]"
           style={{ color: "var(--pq-bronze)" }}
         >
-          Living CFO
+          CFO · Status
         </span>
         <div className="flex items-center gap-3 sm:gap-5 ml-auto">
           {layers.map((l) => (
@@ -272,7 +281,7 @@ function StatusModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Living CFO status"
+      aria-label="CFO status"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
     >
       <motion.div
@@ -291,7 +300,7 @@ function StatusModal({
               className="text-pq-eyebrow tracking-[0.26em] uppercase"
               style={{ color: "var(--pq-bronze)" }}
             >
-              Living CFO · What it knows
+              CFO · What it knows
             </div>
             <h3 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
               {personaLabel ?? "Your personal CFO"}

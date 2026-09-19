@@ -161,7 +161,34 @@
       "kisSyncNotSupported": "Sync not supported — please connect your KIS account.",
       "kisNoBroker": "No broker connected.",
       "kisSyncFailed": "Broker sync failed. Please try again later.",
-      "kisSyncError": "An error occurred during sync."
+      "kisSyncError": "An error occurred during sync.",
+      "hero": {
+        "titleLead": "Your",
+        "titleAccent": "book.",
+        "emptyPrefix": "Nothing is recorded yet. Add your first position and the ",
+        "emptyAccent": "book",
+        "emptySuffix": " opens here.",
+        "positions": "{n} positions",
+        "positionsOne": "{n} position",
+        "observed": "observed",
+        "capital": "{nav} of capital",
+        "lastPrefix": "last",
+        "lastSuffix": "{when}.",
+        "cashBuffer": "Cash buffer at {cash}.",
+        "never": "never"
+      },
+      "equityCurve": {
+        "heading": "How the book moves.",
+        "figcaption": "Equity curve: portfolio NAV solid bronze line and benchmark dashed ivory line over the selected timeframe."
+      },
+      "positions": {
+        "heading": "Every line, every weight."
+      },
+      "activity": {
+        "loading": "Loading entries…",
+        "empty": "No recent entries.",
+        "sharesUnit": "{n} sh"
+      }
     }
   },
   "settings": {
@@ -231,7 +258,28 @@
     }
   },
   "preTrade": {
-    "thesis": "Your thesis"
+    "thesis": "Your thesis",
+    "charsOk": "✓ {n} chars",
+    "charsMore": "{remaining} chars more required ({n}/{min})",
+    "done": {
+      "proceededHead": "You did the work.",
+      "proceededHeadAccent": "The record stands.",
+      "cancelledHead": "Step away.",
+      "cancelledHeadAccent": "The desk waits.",
+      "recorded": "We stamped your reflection and recorded the entry to your book.",
+      "recordFailed": "We stamped your reflection, but the entry could not be recorded — add it on Portfolio.",
+      "stampedOnly": "We stamped your reflection.",
+      "noOrderTail": "PivoxQuant does not place trades — submit the order with your own broker.",
+      "cancelledBody": "Cancelled. Nothing was recorded. The seven questions come round again on the next decision.",
+      "shares": "{n} shares"
+    },
+    "errors": {
+      "recordFailed": "Failed to record entry.",
+      "proceedFailed": "Could not proceed.",
+      "cooldownFailed": "Could not start cooldown.",
+      "cancelFailed": "Could not cancel.",
+      "cancelled": "Cancelled."
+    }
   },
   "journal": {
     "page": {
@@ -521,6 +569,47 @@
       "exportReady": "Export ready.",
       "exportFail": "Export endpoint coming soon. Email support for a manual archive.",
       "providerDisconnectUnsupported": "Disconnecting an OAuth provider is not yet supported. Email support to remove a provider."
+    },
+    "hero": {
+      "h1Lead": "The dials that run",
+      "h1Accent": "your CFO room.",
+      "h1Lead2": "Adjusted by you,",
+      "h1Accent2": "remembered by us.",
+      "deckPrefix": "Settings is for the operational levers — how you sign in, which alerts and emails reach you, and how you exercise your ",
+      "deckAccent": "data rights",
+      "deckSuffix": "."
+    },
+    "identity": {
+      "nameHelp": "Shown in the app and on your data exports.",
+      "emailHelp": "Verified · primary contact.",
+      "localeHelp": "한국어 / English. Number convention follows locale."
+    },
+    "capital": {
+      "help": "Total investable capital. Portfolio uses it for the cash buffer and for what remains after each add or trim. USD or KRW — set either, or both."
+    },
+    "notifications": {
+      "price_52w": {
+        "name": "52-week range",
+        "help": "When a holding touches the top or bottom of its trailing 52-week range. Observation only."
+      },
+      "concentration": {
+        "name": "Sector concentration",
+        "help": "When one sector passes 30% of the book, by average cost."
+      },
+      "monthly_mirror": {
+        "name": "Monthly mirror report",
+        "help": "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices."
+      }
+    },
+    "signin": {
+      "googleUnlinked": "Add Google as a sign-in method.",
+      "kakaoUnlinked": "Add Kakao as a backup sign-in method.",
+      "passwordHelp": "OAuth-only — no password set on this account.",
+      "linkedHelp": "{who} · primary login.",
+      "connected": "Connected"
     }
+  },
+  "rollingWindow": {
+    "heading": "Declared vs observed"
   }
 }

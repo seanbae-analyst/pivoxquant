@@ -10,6 +10,7 @@ vi.mock("@/components/portfolio/v2/hooks-v2", () => ({
 import { useEquityCurve } from "@/components/portfolio/v2/hooks-v2";
 import { EquityCurveBlock } from "@/components/portfolio/v2/equity-curve-block";
 import { PortfolioHeroV2 } from "@/components/portfolio/v2/portfolio-hero-v2";
+import { LocaleProvider } from "@/lib/locale";
 
 const mockedHook = vi.mocked(useEquityCurve);
 
@@ -55,10 +56,17 @@ describe("EquityCurveBlock — NAV KPI while the portfolio is still loading", ()
     // Two placeholders on one screen is the bug behind the bug. Render both
     // loading states and compare the characters that actually reach the DOM,
     // so a future change to either side has to change both.
+    // The hero's deck sentence goes through useT (2026-09-19), so it needs
+    // the provider; ko is the default locale, hence "자본 —" rather than
+    // "— of capital". Still the same assertion: the placeholder sits in the
+    // capital clause, not a fabricated zero.
     const hero = render(
-      <PortfolioHeroV2 nav={0} loading onAddPosition={() => {}} />,
+      <LocaleProvider>
+        <PortfolioHeroV2 nav={0} loading onAddPosition={() => {}} />
+      </LocaleProvider>,
     );
-    expect(hero.container.textContent ?? "").toContain("— of capital");
+    expect(hero.container.textContent ?? "").toContain("자본 —");
+    expect(hero.container.textContent ?? "").not.toContain("USD 0");
     hero.unmount();
 
     mockedHook.mockReturnValue(mkEmpty(true));

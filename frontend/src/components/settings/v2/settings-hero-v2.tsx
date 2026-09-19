@@ -4,12 +4,17 @@
  * <SettingsHeroV2 /> — editorial hero for /settings v2.
  *
  * Mirrors the home-v2 / risk-v2 hero rhythm: 80/64 padding, hairline-bottom,
- * Playfair 500 / 48px H1 with bronze italic accents, Source Serif deck.
+ * Playfair 500 / 48px H1 with bronze accents (upright), Source Serif deck.
+ *
+ * 2026-09-19: the H1 and deck were hardcoded English while every section
+ * heading below them was already Korean. Both now read from settingsV2.hero
+ * via useT; the eyebrow stays English (EN mono eyebrow is the house rule).
  *
  * Surface only — observation-language, no advice/recommend strings.
  */
 
 import * as React from "react";
+import { useT } from "@/lib/locale";
 
 interface Props {
   eyebrow?: string;
@@ -18,6 +23,8 @@ interface Props {
 export function SettingsHeroV2({
   eyebrow = "Operations · Notifications · Privacy",
 }: Props) {
+  const t = useT();
+  const h = (k: string) => t(`settingsV2.hero.${k}`);
   return (
     <section
       style={{
@@ -49,15 +56,11 @@ export function SettingsHeroV2({
           margin: "0 0 28px 0",
         }}
       >
-        The dials that run{" "}
-        <span style={{ color: "var(--pq-bronze)" }}>
-          your CFO room.
-        </span>
+        {h("h1Lead")}{" "}
+        <span style={{ color: "var(--pq-bronze)" }}>{h("h1Accent")}</span>
         <br />
-        Adjusted by you,{" "}
-        <span style={{ color: "var(--pq-bronze)" }}>
-          remembered by us.
-        </span>
+        {h("h1Lead2")}{" "}
+        <span style={{ color: "var(--pq-bronze)" }}>{h("h1Accent2")}</span>
       </h1>
 
       <p
@@ -70,11 +73,9 @@ export function SettingsHeroV2({
           margin: 0,
         }}
       >
-        Settings is for the operational levers — how you sign in, which
-        alerts and emails reach you, and how you exercise your{" "}
-        <span style={{ color: "var(--pq-bronze)" }}>
-          data rights.
-        </span>
+        {h("deckPrefix")}
+        <span style={{ color: "var(--pq-bronze)" }}>{h("deckAccent")}</span>
+        {h("deckSuffix")}
       </p>
 
     </section>

@@ -14,7 +14,9 @@
  *   2. Seven-day rhythm — one dot per day, filled when a record exists.
  *      The beta's open question is "do Korean retail investors record at
  *      all"; this shows each user their own answer, daily.
- *   3. The three most recent records — name + date, linking to /journal.
+ *   3. The last three records — name + date, linking to /journal. Headed
+ *      "마지막 기록 N건" (2026-09-19): unheaded, sitting under the 7-day
+ *      strip, a months-old entry read as one of the last seven days.
  *
  * Posture (identical to friction-outcome-mirror.tsx):
  *   - No score, grade, streak praise, or verdict. A cancelled count is
@@ -262,42 +264,72 @@ export function SidebarRecordCard() {
             </ol>
           </div>
 
-          {/* ── three most recent — link into the journal ────────────── */}
+          {/* ── last records — link into the journal ─────────────────────
+               2026-09-19: this list had no visible heading, only an
+               aria-label reading "최근 기록", and it sat directly under the
+               "최근 7일 · N일 기록" strip. A record from three months ago
+               therefore read as one of the last seven days, and the screen
+               reader said something the eye could not see.
+
+               Fixed with a visible heading rather than a date window: the
+               list's documented job (see the file header, fact 3) is the
+               three MOST RECENT records — windowing them to 7 days would
+               blank the rail for exactly the users who record rarely, which
+               is the beta's open question. The heading states the count and
+               drops the word "최근", so it makes no claim about when. Adding
+               a year to the date would not have helped either — the
+               misread date (6.10) is in the current year. */}
           {view.recent.length > 0 && (
-            <ul
+            <div
               className="mt-4 pt-3"
               style={{ borderTop: "0.5pt solid var(--pq-ivory-line)" }}
-              aria-label="최근 기록"
             >
-              {view.recent.map((r) => (
-                <li key={r.id}>
-                  <Link
-                    href="/journal"
-                    className="flex items-baseline justify-between gap-2 py-1 transition-colors hover:text-[var(--pq-ivory)]"
-                    style={{ color: "rgba(245,240,232,0.72)" }}
-                  >
-                    <span
-                      className="min-w-0 truncate font-serif"
-                      style={{ fontSize: "var(--pq-text-body-sm)" }}
+              <h3
+                id="pq-rail-last-records"
+                className="font-sans uppercase"
+                style={{
+                  fontSize: "var(--pq-text-kicker)",
+                  letterSpacing: "0.14em",
+                  color: "var(--pq-ivory-dim)",
+                  margin: 0,
+                }}
+              >
+                마지막 기록 {view.recent.length}건
+              </h3>
+              <ul
+                className="mt-2"
+                aria-labelledby="pq-rail-last-records"
+              >
+                {view.recent.map((r) => (
+                  <li key={r.id}>
+                    <Link
+                      href="/journal"
+                      className="flex items-baseline justify-between gap-2 py-1 transition-colors hover:text-[var(--pq-ivory)]"
+                      style={{ color: "rgba(245,240,232,0.72)" }}
                     >
-                      {r.name}
-                    </span>
-                    <span
-                      className="shrink-0 font-mono"
-                      style={{
-                        fontSize: "var(--pq-text-kicker)",
-                        color: "var(--pq-ivory-dim)",
-                        fontVariantNumeric: "tabular-nums",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
-                      {STATUS_LABEL[r.status]}
-                      {r.date ? ` · ${r.date}` : ""}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                      <span
+                        className="min-w-0 truncate font-serif"
+                        style={{ fontSize: "var(--pq-text-body-sm)" }}
+                      >
+                        {r.name}
+                      </span>
+                      <span
+                        className="shrink-0 font-mono"
+                        style={{
+                          fontSize: "var(--pq-text-kicker)",
+                          color: "var(--pq-ivory-dim)",
+                          fontVariantNumeric: "tabular-nums",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {STATUS_LABEL[r.status]}
+                        {r.date ? ` · ${r.date}` : ""}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </>
       )}

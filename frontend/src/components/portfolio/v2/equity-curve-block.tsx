@@ -9,6 +9,7 @@
  */
 
 import * as React from "react";
+import { useT } from "@/lib/locale";
 import { EditorialHead } from "@/components/ui/editorial";
 import { pctColor } from "@/lib/format";
 import { useEquityCurve, type EquityRange, type EquityPoint } from "./hooks-v2";
@@ -164,6 +165,7 @@ export function EquityCurveBlock({
   hasPositions = false,
   loading = false,
 }: EquityCurveBlockProps) {
+  const t = useT();
   // `activeId` is the tab the user clicked (id="5d"|"1mo"|"2mo" → 1주/4주/8주).
   // The backend period is resolved through the RANGES table.
   const [activeId, setActiveId] = React.useState<string>("1mo");
@@ -245,7 +247,7 @@ export function EquityCurveBlock({
             Equity · Curve
           </div>
           <EditorialHead size={30} as="h2" style={{ lineHeight: 1.1 }}>
-            How the book moves.
+            {t("dashboard.portfolio.equityCurve.heading")}
           </EditorialHead>
         </div>
 
@@ -411,9 +413,10 @@ export function EquityCurveBlock({
 
         {/* Chart */}
         <figure style={{ margin: 0 }}>
+          {/* 2026-09-19: the only description a Korean screen-reader user
+              gets for this chart, and it was English-only. */}
           <figcaption className="sr-only">
-            Equity curve: portfolio NAV solid bronze line and benchmark dashed
-            ivory line over the selected timeframe.
+            {t("dashboard.portfolio.equityCurve.figcaption")}
           </figcaption>
 
           {isLoading && !data ? (

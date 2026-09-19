@@ -33,6 +33,7 @@
 import { useCallback, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { useT } from "@/lib/locale";
 import { Caption, FootSignature, RuledKicker } from "@/components/ui/editorial";
 import {
   type Side,
@@ -180,6 +181,7 @@ function SetupStep(props: {
 }) {
   const { ticker, setTicker, side, setSide, sharesText, setSharesText, rationale, setRationale, rationaleOk, canAdvance, onNext } = props;
   const remaining = Math.max(0, MIN_RATIONALE_CHARS - rationale.trim().length);
+  const t = useT();
 
   return (
     <section className="space-y-6">
@@ -242,8 +244,20 @@ function SetupStep(props: {
         />
         <div className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]">
           {rationaleOk
-            ? <span className="text-[var(--pq-bronze)]">✓ {rationale.trim().length} chars</span>
-            : <span>{remaining} chars more required ({rationale.trim().length}/{MIN_RATIONALE_CHARS})</span>}
+            ? (
+              <span className="text-[var(--pq-bronze)]">
+                {t("preTrade.charsOk", { n: String(rationale.trim().length) })}
+              </span>
+            )
+            : (
+              <span>
+                {t("preTrade.charsMore", {
+                  remaining: String(remaining),
+                  n: String(rationale.trim().length),
+                  min: String(MIN_RATIONALE_CHARS),
+                })}
+              </span>
+            )}
         </div>
       </Field>
 
