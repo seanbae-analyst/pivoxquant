@@ -8,11 +8,15 @@
  *   2. SplashPage      — wordmark cover
  *   3. Hero            — "부자로 만들어 준다고 약속하지 않습니다"
  *   4. ThreeSteps      — 멈춤 · 기록 · 거울, one card per shipping route
- *   5. PersonasPreview — the 3 disclosed buckets only (성장형/균형형/수익형);
+ *   5. ImportInboxPreview — a pasted fill notification becoming tagged rows;
+ *                        /journal/import + /settings#import-tokens (2026-09-19).
+ *                        Deliberately its own section, not a Faq item: "typing
+ *                        every fill by hand" was the unanswered objection.
+ *   6. PersonasPreview — the 3 disclosed buckets only (성장형/균형형/수익형);
  *                        engine persona codes never appear (2026-09-13)
- *   6. Faq             — 7 items, answered against what ships
- *   7. CtaFooter       — free closed beta, Google/Kakao only
- *   8. SiteFooter      — 전자상거래법 §13 business disclosure
+ *   7. Faq             — 7 items, answered against what ships
+ *   8. CtaFooter       — free closed beta, Google/Kakao only
+ *   9. SiteFooter      — 전자상거래법 §13 business disclosure
  *
  * ⚠️ The header this replaced described a nine-section page whose middle
  * was <MarqueeLogos/> ("Built on the methodology of" — twelve quant models
@@ -39,6 +43,7 @@ import TopNav from "./top-nav";
 import SplashPage from "./splash-page";
 import { Hero } from "./hero";
 import ThreeSteps from "./three-steps";
+import ImportInboxPreview from "./import-inbox-preview";
 import PersonasPreview from "./personas-preview";
 import { FilmGrain } from "./film-grain";
 import { SectionCurtain } from "./section-curtain";
@@ -553,6 +558,9 @@ export default function LandingV2() {
       <Hero />
       <SectionCurtain divider={false}>
         <ThreeSteps />
+      </SectionCurtain>
+      <SectionCurtain>
+        <ImportInboxPreview />
       </SectionCurtain>
       <SectionCurtain>
         <PersonasPreview />
