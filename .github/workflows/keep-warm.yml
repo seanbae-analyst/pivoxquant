@@ -1,0 +1,275 @@
+name: Keep Warm (pre-wake for unrecoverable cron jobs)
+
+# Render Free 백엔드(`pivoxquant-api`)를 **놓치면 복구가 안 되는 잡 직전에만**
+# 깨우는 워크플로. 연속 warm 창은 없다.
+#
+# 설계 근거 (2026-09-19 CEO 확인): 당분간 유저는 창업자 본인 1명이다. 그러면
+# "낮 시간대를 계속 깨워 둔다"는 요구 자체가 없다 — 본인이 앱을 열면 44초를
+# 기다리면 되고 그건 로그인 웨이크 UI 가 설명한다. 반대로 연속 창(06-24 KST)은
+# 월 558h 를 태워서, 진짜 베타 유저를 부를 때 쓸 예산을 미리 없앤다.
+# 그래서 연속 창을 버리고 **선행 웨이크 3클러스터**만 남겼다. 월 37.9h (750 의 5.1%).
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# 0. 선결 확인 — "핑으로 깨우면 잡이 돈다"가 성립하는가 (2026-09-19 코드 실측)
+# ═══════════════════════════════════════════════════════════════════════════
+# 추론이 아니라 소스에서 확인했다. 이 전제가 깨지면 이 워크플로 전체가 무의미하다.
+#
+#  (a) 스케줄러는 인프로세스. `render.yaml`: `plan: free` · `RUN_SCHEDULER=1` ·
+#      gunicorn `--workers 1`. 서비스가 자면 잡도 잔다.
+#
+#  (b) **HTTP 200 은 스케줄러가 이미 떴다는 증거다.** `app.py::create_app()` 은
+#      마지막에 `_init_scheduler(app)` 를 **동기로** 부르고 그 다음에야 `return app`
+#      한다 (app.py:492-495). 워커가 `/api/health` 에 200 을 준다는 건 `sched.start()`
+#      와 잡 등록이 끝났다는 뜻이다. 부팅 캐시 워밍(`POPULATE_CACHE_ON_BOOT=1`)은
+#      daemon **스레드**라(app.py:479-485) 부팅을 막지 않는다.
+#      → 실측 콜드스타트 44초 안에 스케줄러 기동이 이미 포함돼 있다.
+#
+#  (c) **놓친 실행은 절대 복구되지 않는다.** jobstore 설정이 없다
+#      (`grep -n "jobstore" app.py services/scheduler/` → 0건) → 기본 MemoryJobStore.
+#      프로세스가 죽어 있던 동안의 발화는 어디에도 남지 않고, 재기동 시 `add_job` 이
+#      next_run_time 을 **현재 이후**로 새로 계산한다. 02:00 잡은 02:00:30 에 부팅하면
+#      그날 치를 통째로 건너뛰고 내일 02:00 이 된다.
+#
+#  (d) `misfire_grace_time=60` (app.py:1397-1404) 은 **이 상황에 도움이 안 된다.**
+#      그건 "스케줄러는 살아 있었는데 스레드풀이 밀려 늦은" 경우의 60초 창이다.
+#      프로세스가 아예 없던 시간은 복구 대상이 아니다. `coalesce=True` 도 마찬가지 —
+#      복구할 backlog 자체가 메모리와 함께 사라진다.
+#
+#  ⇒ 선행 웨이크는 **유효하다.** 단 조건 하나: **핑의 200 응답이 잡 발화 시각보다
+#     먼저 와야 한다.** "발화 후 60초 안"은 안 된다. 그래서 아래 선행 핑은
+#     콜드스타트 44초가 아니라 **GitHub schedule 지연**을 기준으로 여유를 잡았다
+#     (지연이 44초보다 훨씬 큰 변수다).
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# 1. KST 07:00 이전 고정시각 잡 8건 — 무엇을 덮고 무엇을 버렸나
+# ═══════════════════════════════════════════════════════════════════════════
+# 코드 실측 (`CronTrigger(...)` in services/scheduler/cron_jobs.py, app.py):
+#
+#   시각   잡 id                        위치                    이 워크플로
+#   ────────────────────────────────────────────────────────────────────────
+#   02:00  ops_db_backup                cron_jobs.py:344        ✅ 덮음 (C1)
+#   03:30  ops_pipa_purge               cron_jobs.py:570        ✅ 덮음 (C2, 매일)
+#   04:00  ops_data_integrity_sweep     cron_jobs.py:628        ❌ 제외
+#   06:00  ops_daily_regression         cron_jobs.py:371        ❌ 제외
+#   06:00  ops_ship_blockers_daily      cron_jobs.py:613        ❌ 제외
+#   06:05  ops_morning_brief_kpi        cron_jobs.py:389        ❌ 제외
+#   06:30  ops_ticker_name_audit        cron_jobs.py:434        ➖ 덤으로 덮임 (C3 안에 듦)
+#   06:35  price_alerts_daily (mon-fri) app.py:1475             ✅ 덮음 (C3)
+#
+# 덮은 이유
+#   · ops_db_backup — 본인 데이터가 날아가면 복구 수단이 없다. 유저가 1명이어도
+#     그 1명이 창업자다. 놓치면 그날 백업이 통째로 없다(§0-c).
+#   · price_alerts_daily — `price_52w` · `concentration`. 제품에서 **실제로 발송되는
+#     유일한 알림 2종**이고 본인이 도그푸딩하는 대상이다. mon-fri 만 발화한다.
+#
+# 제외한 이유 (5건)
+#   · ops_data_integrity_sweep / ops_daily_regression / ops_ship_blockers_daily /
+#     ops_morning_brief_kpi / ops_ticker_name_audit — 유저 1명 규모에서 **매일** 돌
+#     이유가 없다. daily_regression 과 ship_blockers 는 GitHub Actions 쪽
+#     (`ci.yml` · `daily-legal-scan.yml` · `alembic-head-guard.yml`)과 역할이 겹치고,
+#     morning_brief_kpi 는 집계할 KPI 가 유저 1명치다. 이들을 살리자고 06:00-06:35
+#     를 통째로 깨우면 월 +14h 를 태운다 — 지금 그 예산은 베타 유저 몫으로 남긴다.
+#   · 단 ops_ticker_name_audit(06:30)은 C3 의 웜 구간(06:20-06:47) 안에 우연히
+#     들어와서 mon-fri 에는 **덤으로 돈다**. 의도한 보장이 아니다 — 토·일엔 안 돈다.
+#     이걸 보장으로 착각하고 의존하는 코드를 만들지 마라.
+#
+# ops_pipa_purge 를 **매일** 돌리는 근거 (2026-09-19 CEO 결정)
+#   코드상으론 매일일 필요가 없다. cron_jobs.py:566-571 + scripts/nightly/pipa_purge.py
+#   기준 이 잡은 `deletion_requested_at >= 30일` 인 유저를 cascade hard-delete 하므로
+#   **요청 시점부터 30일의 유예**가 있고, 매 실행이 같은 조건을 다시 스캔한다.
+#   tests/test_pipa_purge.py:145-166 은 "deleted_at 만 찍히고 남은 stuck row 가
+#   다음 실행에 RE-INCLUDED" 됨을 검증한다 — **멱등이고 자가치유**다. 즉 하루
+#   놓쳐도 위반이 아니고, 유저가 본인 1명인 지금은 파기할 타인 정보가 사실상 0건이라
+#   실효도 거의 없다. 비용만 보면 주 2회(4h)로 줄이는 게 합리적이다.
+#
+#   그럼에도 **매일**로 둔다. 이유는 비용이 아니라 타이밍이다:
+#   이 잡은 **실제 유저가 들어오는 순간 이미 돌고 있어야** 하는 잡이고, 가장 위험한
+#   시나리오는 "그때 가서 켜는 걸 잊는 것"이다. 주 2회로 깎아 두면 유저가 생기는 날
+#   누군가 요일 필드를 매일로 되돌리는 걸 기억해야 하는데, 그 기억에 PIPA 파기
+#   의무를 걸 수 없다. 매일 돌려서 얻는 것은 "유저가 생긴 날 아무것도 안 해도 된다"이고,
+#   그 대가는 월 14h — 750 의 1.9% 다. 싸다.
+#   ⇒ 이 cron 의 빈도를 **줄이지 마라.** 줄이면 위 안전장치가 사라진다.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# 2. ⚠️ 덮지 못하는 것 — 알고도 남긴 구멍이다
+# ═══════════════════════════════════════════════════════════════════════════
+# 위 8건은 "고정 시각" 잡이다. 그 외에 **시(hour) 지정 없이 분 단위로 도는 잡이
+# 10건** 더 있고, 연속 창이 없어진 지금 이들은 **하루 대부분 안 돈다**:
+#
+#   ops_railway_resource      */2       ops_signup_funnel      */5
+#   ops_error_rate            */5       ops_checkout_followup  */15
+#   ops_oauth_failure_check   */15      ops_email_scheduler    1-59/15
+#   ops_vercel_canary         */30      ops_inactive_nudge     매시 :00
+#   ops_fx_staleness_check    매시 :00  ops_api_health         매 6시간 :00
+#   (+ app.py 의 interval 잡 refresh 3m · fx_rate_refresh 1m · indices_cache_warm 1m)
+#
+# 판단: 유저 1명 · 무트래픽 상황에서 이들은 대부분 감시할 대상이 없거나(모니터링),
+# 보낼 것이 없다(이메일 디스패처). 인스턴스가 깨어 있는 동안(유저가 앱을 열 때 +
+# 아래 클러스터)에는 정상으로 돈다. **수용한다.**
+# 이 10건까지 24시간 보장하려면 답은 keep-warm 이 아니라 `plan: 0.5c-512mb`
+# 유료 전환이다 — 24/7 keep-warm 은 아래 §3 대로 예산상 불가능하다.
+# 그건 CEO 결정 사항이지 이 워크플로가 우회할 문제가 아니다.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# 3. instance-hour 계산 — 이 계산식을 지우지 마라
+# ═══════════════════════════════════════════════════════════════════════════
+# Render Free = **워크스페이스당 월 750 instance-hour**. 스핀다운 중엔 소모 0.
+# 유휴 임계 15분, 콜드스타트 44초. **핑 1회 = 최소 15분 웜.**
+# 한 클러스터의 웜 길이 = (첫 핑) → (마지막 핑 + 15분).
+# 아래 세 클러스터는 전부 3핑 × 6분 간격이라 27분(= 12분 + 15분)이다.
+#
+#   C1 db_backup      02:00 매일   웜 01:45-02:12 = 27m × 31일    = 13.95 h
+#   C2 pipa_purge     03:30 매일   웜 03:15-03:42 = 27m × 31일    = 13.95 h
+#   C3 price_alerts   06:35 월-금  웜 06:20-06:47 = 27m × 22.14회 =  9.97 h
+#   ────────────────────────────────────────────────────────────────────────
+#   이 워크플로 소계                                              = 37.87 h  (750 의 5.1%)
+#
+#   + api-health.yml (`0 */6 * * *` = KST 03·09·15·21). 연속 창이 없어져서
+#     네 번 모두 각자 15분씩 깨운다 = 60m/일 × 31        = 31.00 h
+#     ※ 03:00 KST 는 C2 바로 앞이지만 03:00+15m = 03:15 로 C2 첫 핑과 정확히
+#       맞닿는다. 붙든 떨어지든 합계는 03:00-03:42 = 42분으로 같다 —
+#       **이중 계산 아님** (C2 는 03:15 부터만, api-health 는 15분만 센다).
+#   ────────────────────────────────────────────────────────────────────────
+#   Render 총계                                        ≈ 68.9 / 750  (9.2%)
+#
+#   참고) 연속 창 06-24 안 = 18h × 31 = 558h (74%) — 유저 1명이면 낭비라 버렸다.
+#         24/7 = 744 / 750 (99.2%) → **금지**. 한도를 넘기면 그 달 남은 기간
+#         워크스페이스의 **모든 Free 웹서비스가 suspend** 된다.
+#
+#   고칠 사람에게: 핑 **간격**(분)을 줄이는 건 instance-hour 에 영향이 없다.
+#   비용을 만드는 건 **클러스터의 개수 × 길이 × 빈도**다. 연속 창을 되살리기
+#   전에 Render 대시보드에서 이번 달 실사용을 먼저 확인할 것.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# 4. 역할 분리 — 이 워크플로는 장애를 신고하지 않는다
+# ═══════════════════════════════════════════════════════════════════════════
+# `api-health.yml` 이 장애 판정 · 이슈 생성 · 복구 클로즈를 담당한다. 여기서 같은
+# 걸 하면 6시간마다 열리던 이슈가 6분마다 열린다. 그래서 이 워크플로는:
+#   · 절대 실패하지 않는다 (모든 스텝 continue-on-error + 전 경로 exit 0 + set +e)
+#   · 이슈를 만들지 않는다 (`permissions: {}` — 토큰에 쓰기 권한 자체가 없다)
+#   · 결과는 step summary 에만 남긴다
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# 5. ⚠️ 함정: public repo 의 schedule 은 조용히 꺼진다
+# ═══════════════════════════════════════════════════════════════════════════
+# 이 레포는 2026-09-15 부터 PUBLIC 이다. GitHub 은 **60일간 레포 활동이 없으면
+# 예약(schedule) 트리거를 자동 비활성화**한다. 알림은 관리자 메일 한 통뿐이고
+# 워크플로는 실패하지 않는다 — 그냥 **안 돈다**. 이 워크플로는 설계상 절대
+# 빨개지지 않으므로 "녹색인데 안 도는" 상태를 알아채기 특히 어렵다.
+# 그리고 그 60일째에 조용히 죽는 건 keep-warm 만이 아니라 **매일 백업과 알림**이다.
+# 되살리려면 Actions 탭 → 이 워크플로 → "Enable workflow", 또는 커밋 1회.
+#
+# ═══════════════════════════════════════════════════════════════════════════
+# 6. Actions 분 — 750 instance-hour 와 **다른 자원**이다 (혼동 금지)
+# ═══════════════════════════════════════════════════════════════════════════
+# 위 750h 는 Render 예산, GitHub 러너 시간은 별개로 센다.
+#   주당 (3×7) + (3×7) + (3×5) = 57회 → 월 ≈ 250회 (2026-10 실측 249).
+#   GitHub 은 분 단위 올림 과금이라 ≈ 250 분/월.
+# 레포가 PUBLIC + 표준 GitHub-hosted 러너 → **요금 $0, 한도 없음**.
+# (프라이빗이어도 무료 2,000분/월 안이다. 연속 창 버전은 6,138분이었다.)
+
+on:
+  schedule:
+    # ── KST → UTC (한국은 서머타임이 없어 연중 고정 UTC+9). UTC = KST − 9h. ──
+    #    새벽 KST 는 **전날** UTC 저녁이 된다 → 요일 지정도 하루 당겨야 한다.
+    #
+    # ── 클러스터 모양: 잡 시각 T 기준 T-15 / T-9 / T-3 에 3발 ──
+    # 진짜 위험은 콜드스타트 44초가 아니라 **GitHub schedule 지연**이다(고부하 시
+    # 밀리고 누락되며, 특히 매시 0분 근처가 가장 심하다 — 그래서 분 오프셋은 전부
+    # 0이 아니다). 3발의 지연 내성은 각각 약 14분 / 8분 / 2분이고, **하나만 제때
+    # 도착해도 잡이 산다.** 6분 간격이라 한 발을 통째로 놓쳐도 다음 발까지 12분 <
+    # 유휴 임계 15분이라 인스턴스가 안 잔다.
+    # 마지막 핑 T-3 + 유휴 15분 = **T+12** 까지 생존 → 잡에 12분을 준다.
+    # 잡이 12분을 넘기면 중간에 잘린다. 그땐 후행 핑을 추가하라(1발당 +6분).
+
+    # C1 — ops_db_backup 02:00 KST, 매일
+    #      KST 01:45/01:51/01:57 = UTC 16:45/16:51/16:57
+    - cron: '45,51,57 16 * * *'
+
+    # C2 — ops_pipa_purge 03:30 KST, 매일 — 근거는 §1 참조
+    #      KST 03:15/03:21/03:27 = UTC 18:15/18:21/18:27
+    - cron: '15,21,27 18 * * *'
+
+    # C3 — price_alerts_daily 06:35 KST, 월-금 (KST). ops_ticker_name_audit(06:30)도
+    #      이 웜 구간에 덤으로 들어온다(보장 아님, §1).
+    #      KST 06:20/06:26/06:32 = UTC 21:20/21:26/21:32
+    #      ⚠️ 요일: KST 월-금 = UTC **일-목** = dow 0-4. mon-fri 로 쓰면 하루 밀려서
+    #         월요일 알림을 놓치고 토요일에 헛돈다.
+    - cron: '20,26,32 21 * * 0-4'
+  workflow_dispatch:
+
+# 이슈·커밋·아무것도 안 만든다. 토큰에서 권한을 아예 뺀다.
+permissions: {}
+
+concurrency:
+  # 지연으로 실행이 겹치면 오래된 쪽을 버린다. 깨우는 목적은 이미 달성됐다.
+  # 취소된 실행은 빨간 X 가 아니라 회색이다.
+  group: keep-warm
+  cancel-in-progress: true
+
+env:
+  # api-health.yml 과 동일한 참조 방식: 공개 도메인이라 리터럴 기본값 + repo
+  # variable 오버라이드. 시크릿을 안 쓰므로 2026-05-07 RAILWAY_BACKEND_URL 같은
+  # 드리프트가 재발할 수 없다.   gh variable set BACKEND_URL --body https://...
+  # ⚠️ CLAUDE.md 함정 9-2 의 네 곳(render.yaml · next.config.ts · routes/auth.py ·
+  #    Vercel)과 무관한 지점이다. api-health.yml 과 여기 둘만 맞추면 된다.
+  BACKEND_URL: ${{ vars.BACKEND_URL || 'https://pivoxquant-api.onrender.com' }}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    # 콜드스타트 44초 + 재시도 1회 + 여유. 6분 간격을 넘게 붙잡을 이유가 없다.
+    timeout-minutes: 3
+    steps:
+      - name: Wake the backend
+        id: wake
+        continue-on-error: true
+        run: |
+          # set -e 를 켜지 않는다. 이 워크플로는 실패로 끝나면 안 된다(§4).
+          set +e
+          echo "target=$BACKEND_URL"
+          echo "now: $(date -u +%FT%TZ) UTC · $(TZ=Asia/Seoul date +%FT%T) KST"
+          case "$BACKEND_URL" in
+            https://*) ;;
+            *)
+              # 설정 오류는 경고만. 빨간 X 는 api-health 의 몫이다.
+              echo "::warning::BACKEND_URL 이 비었거나 https 가 아니다: '$BACKEND_URL' — keep-warm 을 건너뛴다."
+              { echo "first_code=skipped"; echo "final_code=skipped"; } >> "$GITHUB_OUTPUT"
+              exit 0 ;;
+          esac
+
+          # 1회차. 자고 있었다면 이 요청 자체가 웨이크업이 되고 502 로 떨어질 수 있다.
+          code=$(curl -sS -m 60 -o /dev/null -w "%{http_code}" "${BACKEND_URL}/api/health")
+          rc=$?
+          [ -z "$code" ] && code="000"
+          echo "attempt=1 code=$code curl_exit=$rc"
+
+          # 콜드였으면 한 번 더 찔러 **정말 깨어났는지** 확인한다. 200 이 떠야
+          # create_app() 이 끝났다는 뜻이고 그래야 스케줄러가 산다(§0-b).
+          warmed="$code"
+          if [ "$code" != "200" ]; then
+            sleep 45
+            warmed=$(curl -sS -m 60 -o /dev/null -w "%{http_code}" "${BACKEND_URL}/api/health")
+            [ -z "$warmed" ] && warmed="000"
+            echo "attempt=2 code=$warmed"
+          fi
+
+          { echo "first_code=$code"; echo "final_code=$warmed"; } >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Summary
+        if: always()
+        continue-on-error: true
+        run: |
+          {
+            echo "### keep-warm pre-wake ping"
+            echo ""
+            echo "- target: \`${BACKEND_URL}/api/health\`"
+            echo "- first attempt: HTTP \`${{ steps.wake.outputs.first_code }}\`"
+            echo "- after wake: HTTP \`${{ steps.wake.outputs.final_code }}\`"
+            echo "- UTC $(date -u +%FT%TZ) · KST $(TZ=Asia/Seoul date +%FT%T)"
+            echo ""
+            echo "200 = APScheduler 기동 완료 (create_app 이 _init_scheduler 를 동기 호출한 뒤 응답)."
+            echo "장애 판정과 이슈 생성은 \`api-health.yml\` 담당이다. 이 워크플로는 깨우기만 한다."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0

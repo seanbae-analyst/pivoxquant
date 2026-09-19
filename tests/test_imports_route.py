@@ -6,7 +6,7 @@ inline as strings (no broker files in the repo).
 from __future__ import annotations
 
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -26,8 +26,29 @@ def _fixed_fx(monkeypatch):
     monkeypatch.setattr("services.fx_service.get_rate", lambda: 1300.0)
 
 
-def _now():
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+def _freeze_clock(monkeypatch, utc_naive: datetime) -> datetime:
+    """Pin the import path's clock to ``utc_naive`` (naive UTC) and return
+    the timestamp a dateless fill must carry.
+
+    ``services.imports.today_naive`` deliberately stamps the *KST* calendar
+    date — its docstring: "this must be the KST date — the UTC date is
+    yesterday between 00:00 and 09:00 KST" — because ``kst_to_utc`` leaves
+    00:00 values unshifted so they line up with manual entries. Asserting
+    against the wall clock therefore went red every night in that window
+    (nightly verify runs 03:00 KST). Freeze instead of reading the clock.
+
+    Both modules are patched: ``today_naive`` and ``traded_at_ok`` resolve
+    ``utcnow_naive`` in ``services.imports``, while ``routes.imports`` holds
+    its own from-import binding.
+    """
+    import routes.imports as routes_imports
+    import services.imports as services_imports
+
+    for module in (services_imports, routes_imports):
+        monkeypatch.setattr(module, "utcnow_naive", lambda: utc_naive)
+    return (utc_naive + services_imports.KST_OFFSET).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
 
 
 def _upload(client, data: bytes, filename: str, consent="true"):
@@ -185,7 +206,18 @@ class TestCsvParsing:
 
 
 class TestTextParsing:
-    def test_toss_notification_line(self, client, auth_user):
+    # A dateless fill is stamped with the KST calendar date, which is one day
+    # ahead of the UTC date between 00:00 and 09:00 KST. Walk both sides of
+    # that date line so the assertion can never depend on when it is run.
+    @pytest.mark.parametrize("utc_naive", [
+        datetime(2026, 9, 18, 15, 30),  # 00:30 KST 09-19 — UTC is still the 18th
+        datetime(2026, 9, 18, 18, 0),   # 03:00 KST 09-19 — the nightly-verify slot
+        datetime(2026, 9, 19, 0, 0),    # UTC midnight = 09:00 KST — dates meet
+        datetime(2026, 9, 19, 0, 30),   # 09:30 KST 09-19 — both on the 19th
+        datetime(2026, 9, 19, 23, 59),  # 08:59 KST 09-20 — KST is already the 20th
+    ])
+    def test_toss_notification_line(self, client, auth_user, monkeypatch, utc_naive):
+        expected_traded_at = _freeze_clock(monkeypatch, utc_naive)
         r = _paste(client, TOSS_TEXT)
         assert r.status_code == 201, r.data
         body = r.get_json()
@@ -198,7 +230,7 @@ class TestTextParsing:
         assert p["price"] == 71200.0
         assert p["currency"] == "KRW"
         assert p["confidence"] == pytest.approx(0.6)  # no date on the line
-        assert p["traded_at"].startswith(_now().strftime("%Y-%m-%d"))
+        assert p["traded_at"] == expected_traded_at.isoformat()  # KST date, 00:00 unshifted
         assert p["raw_snippet"] == TOSS_TEXT
 
     def test_multi_line_with_us_and_skips(self, client, auth_user):
