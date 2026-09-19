@@ -562,6 +562,19 @@ export interface PortfolioSummary {
   // cashPct as cash / totalNav. Optional for backwards compatibility with
   // pre-batch backend deploys that don't yet emit the field.
   cashPct?: number;
+  // 2026-09-19 vendor-display gate. `false` means the backend's
+  // MARKET_DATA_DISPLAY_ENABLED is off: every market-priced field above
+  // (totalNav / navUsd / navKrw / todayPnl* / unrealized* / cashPct) is null
+  // or omitted, and the frontend must not render a figure in its place.
+  // Absent on deploys that predate the contract — see lib/market-display.ts
+  // for why `undefined` is not treated as off.
+  market_data_display?: boolean;
+  // Cost basis, native currency — the user's own record, emitted in both
+  // modes. Mirrors navUsd / navKrw so the hero can show the same split with
+  // no vendor price. Absent on deploys that predate the gate, in which case
+  // /portfolio derives the same figures from the positions list.
+  costBasisUsd?: number;
+  costBasisKrw?: number;
 }
 
 export const PORTFOLIO_DEDUPE_MS = 10_000;

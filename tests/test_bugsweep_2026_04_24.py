@@ -63,6 +63,15 @@ class TestKrIndicesKisGate:
     credential check.
     """
 
+
+    # ── MARKET_DATA_DISPLAY_ENABLED ──────────────────────────
+    # MARKET_DATA_DISPLAY_ENABLED defaults to OFF (config.py — FMP Data Display
+    # Agreement pending). These assertions are about the ON behaviour, so they opt
+    # in explicitly; the OFF contract lives in tests/test_market_data_display_flag.py.
+    @pytest.fixture(autouse=True)
+    def _market_display_on(self, market_display_on):
+        yield
+
     def test_kr_indices_queries_kis_without_kis_available(
         self, client, auth_user,
     ):

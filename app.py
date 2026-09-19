@@ -1356,18 +1356,34 @@ def _init_scheduler(app):
             check_52w_highs_lows,
             check_concentration_alerts,
         )
+        from services.market_display import market_data_display_enabled
         with app.app_context():
             # Two independent jobs — track success per-job. A shared ``ok`` flag
             # would let a concentration failure suppress the 52w success record
             # (and vice-versa), leaving a clean sweep's 3-strike counter un-reset.
             ok_52w = True
-            try:
-                m = check_52w_highs_lows()
-                logger.info(f"52w high/low sweep: {m}")
-            except Exception as e:
-                ok_52w = False
-                logger.error(f"52w high/low sweep failed: {e}")
-                _alert_sched("sched_price_alerts_52w", e)
+            # MARKET_DATA_DISPLAY_ENABLED (config.py): a 52-week high/low alert
+            # IS a vendor quote delivered to the user (push + in-app + email),
+            # so the sweep is skipped while the gate is shut. The
+            # concentration sweep below keeps running — it is computed from
+            # avg_cost x shares and touches no vendor price.
+            #
+            # A skip counts as a SUCCESS for the 3-strike watchdog: the job
+            # did exactly what it was asked to do, and recording a failure (or
+            # recording nothing) would fire a false scheduler alarm every day.
+            if not market_data_display_enabled():
+                logger.info(
+                    "52w high/low sweep skipped — MARKET_DATA_DISPLAY_ENABLED "
+                    "is off (concentration sweep still runs)"
+                )
+            else:
+                try:
+                    m = check_52w_highs_lows()
+                    logger.info(f"52w high/low sweep: {m}")
+                except Exception as e:
+                    ok_52w = False
+                    logger.error(f"52w high/low sweep failed: {e}")
+                    _alert_sched("sched_price_alerts_52w", e)
             ok_conc = True
             try:
                 m = check_concentration_alerts()

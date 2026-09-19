@@ -46,6 +46,7 @@ from models.user import (
     NOTIFICATION_CHANNELS,
     NOTIFICATION_EVENT_IDS,
     NOTIFICATION_PREF_DEFAULTS,
+    visible_notification_event_ids,
 )
 from services.error_responses import api_error
 from .alerts import (
@@ -65,11 +66,18 @@ notifications_bp = Blueprint("notifications", __name__, url_prefix="/api/notific
 
 def _merged_prefs(stored) -> dict:
     """Merge a (possibly partial / NULL) stored dict over the canonical
-    defaults so the response ALWAYS contains all seven events with all
-    three channels as real bools."""
+    defaults so the response ALWAYS contains every CURRENTLY VISIBLE event
+    with all three channels as real bools.
+
+    Visible, not canonical: ``visible_notification_event_ids()`` drops an
+    event whose producer is currently muted (``price_52w`` while
+    ``MARKET_DATA_DISPLAY_ENABLED`` is off), so the Settings matrix never
+    renders a toggle that cannot fire. Stored values for a hidden event are
+    left untouched in the DB and reappear when its producer comes back.
+    """
     merged: dict[str, dict[str, bool]] = {}
     stored = stored if isinstance(stored, dict) else {}
-    for event_id in NOTIFICATION_EVENT_IDS:
+    for event_id in visible_notification_event_ids():
         defaults = NOTIFICATION_PREF_DEFAULTS[event_id]
         event_stored = stored.get(event_id)
         if not isinstance(event_stored, dict):

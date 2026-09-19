@@ -37,9 +37,17 @@
  */
 
 import { useRealtimeStatus } from "@/lib/realtime";
+import { isMarketDataDisplayEnabled } from "@/lib/market-display";
 
 export function RealtimeStatusBanner() {
   const { connected, failed, streamActive } = useRealtimeStatus();
+
+  // 2026-09-19 vendor-display gate. Every string in this banner is about
+  // prices ("실시간 데이터 연결 실패", "표시된 가격은 최신이 아닐 수 있습니다").
+  // With the gate off no price is displayed anywhere, so the banner cannot be
+  // true — and telling a user their prices are stale on a product that shows
+  // none is the same false claim as printing a stale price.
+  if (!isMarketDataDisplayEnabled()) return null;
 
   // Stream is intentionally idle (no user, no positions, hidden tab) —
   // hide the banner entirely. Without this guard, the default `connected:

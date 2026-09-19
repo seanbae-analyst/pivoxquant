@@ -18,11 +18,25 @@
  */
 
 import * as React from "react";
+import { Caption } from "@/components/ui/editorial";
 import { PRICE_COLOR_HEX } from "@/lib/format";
 import { useLocale } from "@/lib/locale";
 import { relativeTime as localisedRelativeTime } from "@/lib/relative-time";
 
 interface PortfolioHeroV2Props {
+  /**
+   * Vendor market-data display gate (lib/market-display.ts). When false the
+   * hero switches to cost basis: `취득금액` instead of NAV, no Today /
+   * Unrealized KPI (both need a market price), and an explicit
+   * "평균매입가 기준 (시장가 아님)" note borrowed verbatim from the holdings
+   * mirror on /journal. Defaults to true so an existing caller that has not
+   * been taught the flag keeps today's behaviour.
+   */
+  marketDataDisplay?: boolean;
+  /** Cost basis of US holdings in USD — shown in place of NAV when off. */
+  costUsd?: number;
+  /** Cost basis of KR holdings in KRW — shown in place of NAV when off. */
+  costKrw?: number;
   /** Total NAV in display currency (USD or KRW). May be undefined. */
   nav?: number;
   navCurrency?: "USD" | "KRW";
@@ -134,6 +148,9 @@ function relativeTime(
 }
 
 export function PortfolioHeroV2({
+  marketDataDisplay = true,
+  costUsd,
+  costKrw,
   nav,
   navCurrency = "USD",
   navUsd,
@@ -165,17 +182,30 @@ export function PortfolioHeroV2({
   // figure (CEO 2026-05-24): KR holdings in KRW, US holdings in USD. Falls back to
   // the single display-currency nav when only one market is held (or the
   // backend hasn't supplied the split).
-  const hasUs = typeof navUsd === "number" && navUsd > 0;
-  const hasKr = typeof navKrw === "number" && navKrw > 0;
+  //
+  // With the vendor-display gate off the same split is drawn from the cost
+  // basis instead — the amount the user paid, which is their own record and
+  // needs no vendor feed.
+  const amountUsd = marketDataDisplay ? navUsd : costUsd;
+  const amountKrw = marketDataDisplay ? navKrw : costKrw;
+  const hasUs = typeof amountUsd === "number" && amountUsd > 0;
+  const hasKr = typeof amountKrw === "number" && amountKrw > 0;
   const navText = loading
     ? "—"
     : hasUs && hasKr
-      ? `${fmtMoney(navUsd, "USD")} · ${fmtMoney(navKrw, "KRW")}`
+      ? `${fmtMoney(amountUsd, "USD")} · ${fmtMoney(amountKrw, "KRW")}`
       : hasKr
-        ? fmtMoney(navKrw, "KRW")
+        ? fmtMoney(amountKrw, "KRW")
         : hasUs
-          ? fmtMoney(navUsd, "USD")
-          : fmtMoney(nav, navCurrency);
+          ? fmtMoney(amountUsd, "USD")
+          : marketDataDisplay
+            ? fmtMoney(nav, navCurrency)
+            : // No cost basis and no market price to fall back on: there is
+              // nothing true to print, so the clause is dropped entirely by
+              // the caller-side `hasAmount` guard below rather than shown
+              // as an em-dash in a money slot.
+              "—";
+  const hasAmount = hasUs || hasKr || (marketDataDisplay && nav != null);
 
   // P&L KPIs: when both markets are held, stack the US (USD) and KR (KRW)
   // figures, each colored by its own sign — instead of one USD-unified number
@@ -212,6 +242,9 @@ export function PortfolioHeroV2({
       ? `${positionCount}`
       : "—";
   const cashText = loading ? "—" : fmtPct(cashPct);
+  /** Cost-basis sentence only prints the cash clause when it is a real number. */
+  const hasCash =
+    !loading && typeof cashPct === "number" && Number.isFinite(cashPct);
   const reconcileText = loading
     ? "—"
     : relativeTime(lastReconciledAt, locale, h("never"));
@@ -278,7 +311,7 @@ export function PortfolioHeroV2({
             <span style={{ color: "var(--pq-bronze)" }}>{h("emptyAccent")}</span>
             {h("emptySuffix")}
           </>
-        ) : (
+        ) : marketDataDisplay ? (
           <>
             {h(positionCount === 1 ? "positionsOne" : "positions", {
               n: positionsText,
@@ -295,27 +328,72 @@ export function PortfolioHeroV2({
             {h("lastSuffix", { when: reconcileText })}{" "}
             {h("cashBuffer", { cash: cashText })}
           </>
+        ) : (
+          /* Cost-basis sentence. The "마지막 관측 …" clause is dropped: its
+             timestamp is when the price feed was read, and there is no price
+             feed being read. Cash share and the amount are each omitted when
+             they are not computable, rather than printed as an em-dash in a
+             money slot. */
+          <>
+            {h(positionCount === 1 ? "positionsOne" : "positions", {
+              n: positionsText,
+            })}{" "}
+            <span style={{ color: "var(--pq-bronze)" }}>{h("observed")}</span>
+            {hasAmount ? (
+              <>
+                {" · "}
+                {h("costBasisAmount", { amount: navText })}
+              </>
+            ) : null}
+            {hasCash ? (
+              <>
+                {" · "}
+                {h("cashBuffer", { cash: cashText })}
+              </>
+            ) : null}
+          </>
         )}
       </p>
+
+      {/* Cost-basis clarifier — the verbatim wording /journal's holdings
+          mirror already uses, so the two screens read as one convention. */}
+      {!marketDataDisplay && !isEmptyBook ? (
+        <div data-testid="portfolio-cost-basis-note" style={{ margin: "-20px 0 32px 0" }}>
+          <Caption>{t("journal.concentrationMirror.costBasisNote")}</Caption>
+        </div>
+      ) : null}
 
       {/* KPI deck — v1 parity (today P&L / unrealized / realized YTD).
           Renders only when at least one figure is present so v2 doesn't
           get a row of em-dashes during the initial load — and never on an
           empty book, where the backend's zeros would print a "+0.00%" day
           for a portfolio that does not exist yet. */}
+      {/* With the vendor-display gate off, TODAY and UNREALIZED are removed
+          rather than blanked: both are (market price − cost) and there is no
+          market price. REALIZED YTD survives — it is computed from the user's
+          own executed trades (routes/portfolio.py sums `trade.pnl` over
+          sells), not from a quote. */}
       {!isEmptyBook &&
-        (todayPnl != null || unrealized != null || realizedYtd != null) && (
+        (marketDataDisplay
+          ? todayPnl != null || unrealized != null || realizedYtd != null
+          : realizedYtd != null ||
+            realizedUsd != null ||
+            realizedKrw != null) && (
         <div
           aria-label="Portfolio KPI deck"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gridTemplateColumns: marketDataDisplay
+              ? "repeat(3, minmax(0, 1fr))"
+              : "minmax(0, 1fr)",
             gap: 24,
             maxWidth: 720,
             marginBottom: 32,
             paddingTop: 4,
           }}
         >
+          {marketDataDisplay ? (
+            <>
           <HeroKpi
             label="Today"
             value={splitPnl(todayPnlUsd, todayPnlKrw, todayPnl)}
@@ -347,6 +425,8 @@ export function PortfolioHeroV2({
                     : "negative"
             }
           />
+            </>
+          ) : null}
           <HeroKpi
             label="Realized YTD"
             value={splitPnl(realizedUsd, realizedKrw, realizedYtd)}

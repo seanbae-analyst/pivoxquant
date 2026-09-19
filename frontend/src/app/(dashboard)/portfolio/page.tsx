@@ -31,6 +31,9 @@ import { toast } from "sonner";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { FootSignature } from "@/components/ui/editorial";
+import { FxAttribution } from "@/components/ui/fx-attribution";
+import { useAuth } from "@/lib/auth";
+import { resolveMarketDataDisplay } from "@/lib/market-display";
 
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
@@ -74,6 +77,9 @@ const SAFE_FX = (sumFx: number | undefined, liveFx: number | null) =>
 // to the camelCase `Position` the portfolio UI consumes (see toPosition).
 interface PositionsResponse {
   positions?: BackendPositionRow[];
+  /** See lib/market-display.ts — `false` means every `current` in the rows
+   *  above is null/absent and must not be rendered. */
+  market_data_display?: boolean;
 }
 
 export default function PortfolioPageV2() {
@@ -197,6 +203,45 @@ export default function PortfolioPageV2() {
     }
     return { navUsdDerived: u, navKrwDerived: k };
   }, [positions]);
+  // ── Vendor market-data display gate ───────────────────────────────
+  // Hidden when EITHER signal is off. The backend stamps
+  // `market_data_display: false` on both payloads and nulls the price
+  // fields; `toPosition` would coerce those nulls to 0 via `?? 0`, so a
+  // frontend that trusted only its own flag could still print "USD 0".
+  // Either response saying false is enough.
+  const marketDataDisplay = resolveMarketDataDisplay(
+    sumData?.market_data_display === false ||
+      posData?.market_data_display === false
+      ? false
+      : undefined,
+  );
+
+  // Cost basis — the user's own record, no vendor feed. Split by native
+  // currency exactly like the NAV split above, so the hero reads
+  // "USD X · KRW Y" in both modes. The backend emits `costBasisUsd` /
+  // `costBasisKrw`; deriving from the rows is the fallback for a deploy that
+  // predates them (same prefer-server-then-derive shape as navUsdFinal).
+  const { costUsdTotal, costKrwTotal } = React.useMemo(() => {
+    let u = 0;
+    let k = 0;
+    for (const p of positions) {
+      const c = p.shares * p.avgCost;
+      if (!Number.isFinite(c) || c <= 0) continue;
+      if (p.currency === "KRW") k += c;
+      else u += c;
+    }
+    return {
+      costUsdTotal:
+        typeof sumData?.costBasisUsd === "number" && sumData.costBasisUsd > 0
+          ? sumData.costBasisUsd
+          : u,
+      costKrwTotal:
+        typeof sumData?.costBasisKrw === "number" && sumData.costBasisKrw > 0
+          ? sumData.costBasisKrw
+          : k,
+    };
+  }, [positions, sumData]);
+
   const navUsdFinal =
     typeof sumData?.navUsd === "number" && sumData.navUsd > 0
       ? sumData.navUsd
@@ -209,7 +254,35 @@ export default function PortfolioPageV2() {
   // Cash percent — backend P1 batch emits `cashPct` from
   // routes/portfolio.py::portfolio_summary_alias. Falls through to undefined
   // (em-dash) when the backend deploy predates the P1 batch.
-  const cashPct: number | undefined = sumData?.cashPct;
+  //
+  // With the gate off that number is not available and would not mean the
+  // same thing if it were: its denominator is a market valuation. The cash
+  // share is still a real, useful ratio at cost — "how much of what I have
+  // committed is still idle" — so it is recomputed here with the identical
+  // shape the backend uses (cash / (cash + book)), swapping NAV for cost.
+  // When a cross-currency book has no FX rate it is dropped rather than
+  // reported from a partial sum.
+  const { user } = useAuth();
+  const cashPct: number | undefined = React.useMemo(() => {
+    if (marketDataDisplay) return sumData?.cashPct;
+    const capUsd = Number(user?.available_capital ?? 0) || 0;
+    const capKrw = Number(user?.available_capital_krw ?? 0) || 0;
+    const needsFx = capKrw > 0 || costKrwTotal > 0;
+    if (needsFx && !(fxRate && fxRate > 0)) return undefined;
+    const rate = fxRate && fxRate > 0 ? fxRate : 1;
+    const cashUsd = capUsd + capKrw / rate;
+    const bookUsd = costUsdTotal + costKrwTotal / rate;
+    const equity = cashUsd + bookUsd;
+    if (!(equity > 0)) return undefined;
+    return Math.max(0, Math.min(100, (cashUsd / equity) * 100));
+  }, [
+    marketDataDisplay,
+    sumData,
+    user,
+    fxRate,
+    costUsdTotal,
+    costKrwTotal,
+  ]);
   const lastReconciledAt = sumData?.observed_at ?? null;
 
   function openAction(action: TradeAction, position: Position) {
@@ -318,7 +391,10 @@ export default function PortfolioPageV2() {
           }}
         >
           <span>
-            Unable to load live portfolio data. No fallback values are shown.
+            {/* "live" left with the flag: nothing on this page is live when
+                the vendor-display gate is off, and the sentence is about the
+                fetch failing either way. */}
+            Unable to load your portfolio. No fallback values are shown.
           </span>
           <button
             type="button"
@@ -347,6 +423,9 @@ export default function PortfolioPageV2() {
           Gate on either fetch being in-flight without data, while honoring
           the existing 1.2s flicker guard. */}
       <PortfolioHeroV2
+        marketDataDisplay={marketDataDisplay}
+        costUsd={costUsdTotal}
+        costKrw={costKrwTotal}
         nav={totalNav}
         navCurrency={displayCurrency}
         navUsd={navUsdFinal}
@@ -368,21 +447,31 @@ export default function PortfolioPageV2() {
         realizedKrw={sumData?.realizedKrw}
       />
 
-      {/* ═══════════ EQUITY CURVE ═══════════ */}
-      <EquityCurveBlock
-        currency={displayCurrency}
-        currentNav={totalNav}
-        navUsd={navUsdFinal}
-        navKrw={navKrwFinal}
-        hasPositions={positions.length > 0}
-        // `dataPending` outlives the 1.2s `showSkeleton` window on purpose:
-        // while either response is missing we do not know the NAV, and an
-        // em-dash is the honest rendering of that for as long as it lasts.
-        loading={dataPending || isInitialLoad}
-      />
+      {/* ═══════════ EQUITY CURVE ═══════════
+          Every number in this block is a vendor price: the NAV series is a
+          daily close snapshot, the benchmark is an index close, and SPREAD is
+          the difference of the two. With the gate off the whole block is
+          unmounted — including its empty state, which promises "곡선은 매일
+          종가 스냅샷으로 그려집니다" and would be selling a screen we do not
+          have. Nothing replaces it: a placeholder explaining the absence
+          would be the same promise in smaller type. */}
+      {marketDataDisplay && (
+        <EquityCurveBlock
+          currency={displayCurrency}
+          currentNav={totalNav}
+          navUsd={navUsdFinal}
+          navKrw={navKrwFinal}
+          hasPositions={positions.length > 0}
+          // `dataPending` outlives the 1.2s `showSkeleton` window on purpose:
+          // while either response is missing we do not know the NAV, and an
+          // em-dash is the honest rendering of that for as long as it lasts.
+          loading={dataPending || isInitialLoad}
+        />
+      )}
 
       {/* ═══════════ POSITIONS TABLE ═══════════ */}
       <PositionsTableV2
+        marketDataDisplay={marketDataDisplay}
         positions={positions}
         totalNav={totalNav}
         fxRate={fxRate}
@@ -418,6 +507,7 @@ export default function PortfolioPageV2() {
             positions={positions}
             fxRate={fxRate}
             displayCurrency={displayCurrency}
+            marketDataDisplay={marketDataDisplay}
           />
           <RecentTransactionsBlock limit={6} />
         </div>
@@ -446,8 +536,14 @@ export default function PortfolioPageV2() {
         <RollingWindowWidget paper={false} />
       </section>
 
-      {/* ═══════════ Foot signature ═══════════ */}
+      {/* ═══════════ Foot signature ═══════════
+          FxAttribution is required, not decorative: the USD/KRW rate this
+          page converts with can come from open.er-api.com
+          (services/fx_service.py), whose free terms require attribution on
+          the page the rates are used with. /portfolio is the only screen
+          with a `useFxRate()` consumer today. */}
       <div className="mt-6">
+        <FxAttribution style={{ marginBottom: 14 }} />
         <FootSignature note="PivoxQuant · User-entered record · Not investment advice" />
       </div>
 

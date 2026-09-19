@@ -19,6 +19,19 @@ import requests
 from services.data.realtime import RealtimeService
 import services.data.realtime as rtmod
 
+import pytest
+
+# ── MARKET_DATA_DISPLAY_ENABLED ──────────────────────────────────────────────
+# This module's realtime price + stale-status assertions
+# only make sense while vendor-quote display is ON. The flag defaults to OFF
+# (config.py — FMP Data Display Agreement pending), so the whole module opts in
+# and thereby pins "flag on == exactly the pre-flag behaviour". The OFF
+# contract is pinned separately in tests/test_market_data_display_flag.py.
+@pytest.fixture(autouse=True)
+def _market_display_on(market_display_on):
+    yield
+
+
 _VTS = "https://openapivts.koreainvestment.com:29443"
 
 

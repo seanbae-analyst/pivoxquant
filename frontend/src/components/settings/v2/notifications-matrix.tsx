@@ -25,6 +25,10 @@ import {
   saveNotificationPreferences,
   type NotificationPrefsMap,
 } from "@/lib/hooks";
+import {
+  isMarketDataDisplayEnabled,
+  MARKET_DATA_NOTIFICATION_EVENTS,
+} from "@/lib/market-display";
 
 // 2026-09-19: `name` / `help` used to be English literals here. This table
 // is the one the founder reads every day, so the copy moved to
@@ -72,9 +76,36 @@ type MatrixState = NotificationPrefsMap;
 /** Debounce window before a toggle batch is flushed to the server. */
 const SAVE_DEBOUNCE_MS = 600;
 
+/**
+ * Which rows to render.
+ *
+ * 2026-09-19: `EVENTS` above is a hardcoded catalog, so a row survived here
+ * even after its producer went away on the server — the exact dead-toggle
+ * wart the 2026-09-01 prune removed by hand. Two filters replace the hand
+ * pruning:
+ *
+ *   1. The server's own map is the list. Once `prefs` has arrived, an id the
+ *      server does not return is not offered. `EVENTS` keeps only what is not
+ *      copy and not the server's business: display order and the defaults to
+ *      render before the server answers.
+ *   2. `price_52w` needs a vendor quote, so it also disappears whenever the
+ *      frontend's market-data display flag is off — without waiting for the
+ *      server round trip, and so the row never flashes in on first paint.
+ */
+function visibleEvents(serverPrefs: NotificationPrefsMap | undefined): EventRow[] {
+  const marketOk = isMarketDataDisplayEnabled();
+  return EVENTS.filter((e) => {
+    if (!marketOk && MARKET_DATA_NOTIFICATION_EVENTS.includes(e.id)) {
+      return false;
+    }
+    if (serverPrefs && !(e.id in serverPrefs)) return false;
+    return true;
+  });
+}
+
 function defaultMatrix(): MatrixState {
   const out: MatrixState = {};
-  for (const e of EVENTS) {
+  for (const e of visibleEvents(undefined)) {
     out[e.id] = { ...e.defaults };
   }
   return out;
@@ -157,6 +188,15 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
   // Server is the source of truth. Skip when an explicit `initial` is given.
   const { data, isLoading, mutate } = useNotificationPreferences();
 
+  /** Rows to render — see visibleEvents(). */
+  const rows = React.useMemo(() => visibleEvents(data?.prefs), [data]);
+  /** Ids the PUT body is allowed to carry (the backend does a full replace,
+   *  so an id it no longer knows must not be re-asserted from here). */
+  const visibleIds = React.useMemo(
+    () => new Set(rows.map((e) => e.id)),
+    [rows],
+  );
+
   // Whether we've reflected real server state yet. Until then the rendered
   // matrix is just the hardcoded defaults — a toggle now would PUT those
   // defaults and the backend's full-replace would wipe saved custom prefs.
@@ -170,15 +210,18 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
     if (initial) return;
     const serverPrefs = data?.prefs;
     if (!serverPrefs) return;
-    setState((prev) => {
-      const merged: MatrixState = { ...prev };
-      for (const e of EVENTS) {
-        merged[e.id] = serverPrefs[e.id] ?? prev[e.id] ?? { ...e.defaults };
+    setState(() => {
+      // Rebuild rather than spread over `prev`: an id that has left the
+      // server's map must leave the state too, or the next PUT would put it
+      // back. `rows` is already server-filtered.
+      const merged: MatrixState = {};
+      for (const e of rows) {
+        merged[e.id] = serverPrefs[e.id] ?? { ...e.defaults };
       }
       return merged;
     });
     setHydrated(true);
-  }, [data, initial]);
+  }, [data, initial, rows]);
 
   // Block toggles until the server map has been applied. `isLoading && !hydrated`
   // covers the initial fetch; `!data && !hydrated` covers the case where SWR
@@ -198,7 +241,11 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
     pendingRef.current = null;
     rollbackRef.current = null;
     if (!next) return;
-    saveNotificationPreferences(next)
+    const body: MatrixState = {};
+    for (const [id, channels] of Object.entries(next)) {
+      if (visibleIds.has(id)) body[id] = channels;
+    }
+    saveNotificationPreferences(body)
       .then((res) => {
         // Adopt the server-committed map (defaults merged) without a refetch.
         if (res?.prefs) {
@@ -213,7 +260,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
           err instanceof Error ? err.message : "알림 설정 저장에 실패했습니다.",
         );
       });
-  }, [mutate]);
+  }, [mutate, visibleIds]);
 
   // Flush any pending save on unmount so a quick navigation doesn't drop it.
   React.useEffect(() => {
@@ -305,9 +352,9 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
           </tr>
         </thead>
         <tbody>
-          {EVENTS.map((e, i) => {
+          {rows.map((e, i) => {
             const row = state[e.id] ?? { email: false, push: false, inapp: false };
-            const isLast = i === EVENTS.length - 1;
+            const isLast = i === rows.length - 1;
             return (
               <tr key={e.id}>
                 <td

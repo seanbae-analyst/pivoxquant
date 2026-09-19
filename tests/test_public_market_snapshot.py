@@ -16,6 +16,19 @@ import time
 import services.data.indices as market_mod   # _indices_cache lives here
 import routes.market as market_routes        # the view function does not
 
+import pytest
+
+# ── MARKET_DATA_DISPLAY_ENABLED ──────────────────────────────────────────────
+# This module's landing-ticker index + FX assertions
+# only make sense while vendor-quote display is ON. The flag defaults to OFF
+# (config.py — FMP Data Display Agreement pending), so the whole module opts in
+# and thereby pins "flag on == exactly the pre-flag behaviour". The OFF
+# contract is pinned separately in tests/test_market_data_display_flag.py.
+@pytest.fixture(autouse=True)
+def _market_display_on(market_display_on):
+    yield
+
+
 
 def _seed_indices_cache(us=None, kr=None):
     """Populate the in-process _indices_cache the way an authenticated

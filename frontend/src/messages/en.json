@@ -7,7 +7,7 @@
     "observations": "Observations",
     "markAllRead": "Mark all as read",
     "unableToLoad": "Unable to load alerts",
-    "noAlertsYet": "No alerts yet. 52-week highs/lows and sector concentration appear here."
+    "noAlertsYet": "No alerts yet. Observed alerts appear here."
   },
   "auth": {
     "login": {
@@ -171,6 +171,7 @@
         "positions": "{n} positions",
         "positionsOne": "{n} position",
         "observed": "observed",
+        "costBasisAmount": "{amount} at cost",
         "capital": "{nav} of capital",
         "lastPrefix": "last",
         "lastSuffix": "{when}.",
@@ -439,7 +440,7 @@
       },
       "dataSource": {
         "q": "Where does the data come from?",
-        "a": "Price, financial, and disclosure data are sourced exclusively from officially licensed providers (FMP, Korea Investment & Securities API, SEC EDGAR, KRX/DART official public data, etc.). Unofficial scraping is not used. Data may be delayed or temporarily unavailable depending on source conditions."
+        "a": "Company, financial, and disclosure data are sourced exclusively from officially licensed providers (Korea Investment & Securities API, SEC EDGAR, KRX/DART official public data, etc.). Unofficial scraping is not used. Holding amounts are calculated from the average cost you entered; market prices are not displayed."
       },
       "pricing": {
         "q": "How are the plans structured?",
@@ -463,7 +464,7 @@
       },
       "staleData": {
         "q": "The data or screen looks outdated.",
-        "a": "A data delay notice may appear at the top of the screen. Refreshing your browser will reload the latest data. If you have the PWA installed, try fully closing and reopening the app."
+        "a": "Refreshing your browser will reload the latest records. If you have the PWA installed, try fully closing and reopening the app."
       },
       "contact": {
         "q": "How can I get support?",

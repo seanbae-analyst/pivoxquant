@@ -11,6 +11,11 @@ These tests prove:
   2. /portfolio/history returns ONLY recorded NAV — a position opened 200 days
      ago no longer yields a 200-day fabricated curve.
 """
+
+# /api/portfolio/history serves a vendor-priced NAV series, so these tests
+# take the `market_display_on` fixture — MARKET_DATA_DISPLAY_ENABLED defaults
+# to OFF and the endpoint then returns an empty curve by design
+# (tests/test_market_data_display_flag.py::TestHistoryOff).
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
@@ -96,7 +101,8 @@ def _silence_benchmark(monkeypatch):
 
 
 def test_history_no_fabrication_for_old_position(
-    app, client, auth_user, add_position, mock_realtime, monkeypatch
+    app, client, auth_user, add_position, mock_realtime, monkeypatch,
+    market_display_on,
 ):
     """A position opened 200 days ago must NOT produce a 200-day curve."""
     old = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=200)
@@ -117,7 +123,8 @@ def test_history_no_fabrication_for_old_position(
 
 
 def test_history_returns_recorded_snapshots(
-    app, client, auth_user, add_position, mock_realtime, monkeypatch
+    app, client, auth_user, add_position, mock_realtime, monkeypatch,
+    market_display_on,
 ):
     """Pre-recorded real snapshots ARE returned as the curve."""
     add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=100.0)

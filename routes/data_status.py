@@ -26,6 +26,10 @@ Contract (locked — frontend depends on these field names)
         "affected_markets": ["KR" | "US", …], # only markets over threshold
         "updated_at":       "YYYY-MM-DDTHH:MM:SSZ" | null,
         "threshold_pct":    float,            # echo of the rule used
+        "market_data_display": bool,          # false ⇒ prices are not shown
+                                              #   at all, so is_stale is
+                                              #   always false (not "fresh",
+                                              #   "not applicable")
     }
 
 ==============================================================================
@@ -63,6 +67,11 @@ from typing import Any
 
 from flask import Blueprint, jsonify
 
+from services.market_display import (
+    MARKET_DATA_DISPLAY_FIELD,
+    market_data_display_enabled,
+)
+
 logger = logging.getLogger(__name__)
 
 data_status_bp = Blueprint("data_status", __name__)
@@ -96,6 +105,15 @@ def stale_status():
     """
     threshold_pct = _DEFAULT_STALE_THRESHOLD_PCT
 
+    # MARKET_DATA_DISPLAY_ENABLED (config.py): with no prices on screen there
+    # is nothing to be "지연" about — a stale-feed banner over a cost-basis
+    # portfolio would be pure noise. Report "not displayed", never "stale",
+    # and skip both the kr_health overlay and the artifact read.
+    if not market_data_display_enabled():
+        payload = _empty_payload(threshold_pct)
+        payload[MARKET_DATA_DISPLAY_FIELD] = False
+        return jsonify(payload)
+
     # Live in-process KR feed health overlays the nightly ticker_health
     # artifact: a mid-session KIS stall flips kr_health().degraded
     # immediately, so the banner surfaces a systemic KR delay before the next
@@ -109,8 +127,9 @@ def stale_status():
         logger.debug("kr_health overlay in stale-status failed", exc_info=True)
 
     def _respond(payload: dict[str, Any]):
+        payload = dict(payload)
+        payload[MARKET_DATA_DISPLAY_FIELD] = True
         if kr_live_degraded:
-            payload = dict(payload)
             payload["is_stale"] = True
             markets = list(payload.get("affected_markets") or [])
             if "KR" not in markets:

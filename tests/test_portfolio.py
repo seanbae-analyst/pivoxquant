@@ -9,6 +9,19 @@ External APIs are mocked — no network calls.
 import json
 from unittest.mock import patch
 
+import pytest
+
+# ── MARKET_DATA_DISPLAY_ENABLED ──────────────────────────────────────────────
+# This module's portfolio price / market-value / NAV assertions
+# only make sense while vendor-quote display is ON. The flag defaults to OFF
+# (config.py — FMP Data Display Agreement pending), so the whole module opts in
+# and thereby pins "flag on == exactly the pre-flag behaviour". The OFF
+# contract is pinned separately in tests/test_market_data_display_flag.py.
+@pytest.fixture(autouse=True)
+def _market_display_on(market_display_on):
+    yield
+
+
 
 
 # ── GET /api/portfolio ──────────────────────────────────────────────────────
@@ -491,7 +504,9 @@ class TestHistory:
     def test_history_empty_portfolio_returns_empty_list(self, client, auth_user):
         r = client.get("/api/portfolio/history")
         assert r.status_code == 200
-        assert r.get_json() == {"data": []}
+        # `market_data_display` rides on every quote-bearing response so the
+        # frontend has one field to branch on in both flag states.
+        assert r.get_json() == {"data": [], "market_data_display": True}
 
     def test_history_respects_period_whitelist(self, client, auth_user):
         # Invalid period should fall back to 5d (no crash).

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 // Mock the realtime hook before importing the component
@@ -14,6 +14,14 @@ const mockedHook = vi.mocked(useRealtimeStatus);
 describe("RealtimeStatusBanner", () => {
   beforeEach(() => {
     mockedHook.mockReset();
+    // Every string in this banner is about prices, so the component is gated
+    // on the vendor-display flag (lib/market-display.ts). These cases assert
+    // the ENABLED behaviour; the gate itself is asserted at the bottom.
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "1");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("renders nothing when connected and not failed (happy path)", () => {
@@ -74,6 +82,31 @@ describe("RealtimeStatusBanner", () => {
       connected: false,
       failed: true,
       streamActive: false,
+      lastUpdate: null,
+    });
+    const { container } = render(<RealtimeStatusBanner />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  // ── vendor market-data display gate (2026-09-19) ──────────────────
+  it("renders nothing when the market-data display flag is off, even on a hard failure", () => {
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "0");
+    mockedHook.mockReturnValue({
+      connected: false,
+      failed: true,
+      streamActive: true,
+      lastUpdate: null,
+    });
+    const { container } = render(<RealtimeStatusBanner />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders nothing when the flag is unset (unset === off)", () => {
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "");
+    mockedHook.mockReturnValue({
+      connected: false,
+      failed: false,
+      streamActive: true,
       lastUpdate: null,
     });
     const { container } = render(<RealtimeStatusBanner />);

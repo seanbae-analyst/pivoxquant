@@ -10,7 +10,7 @@
  * SWR is mocked so the test never touches `fetch` and runs deterministically
  * regardless of network availability in the jsdom env.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -23,6 +23,15 @@ vi.mock("swr", () => ({
   default: vi.fn(),
 }));
 
+// The banner is now route-scoped (QA finding P3, 2026-09-19): it only renders
+// on a screen that actually shows vendor prices. Default the mocked router to
+// /portfolio — the one such screen — so the pre-existing cases below keep
+// asserting the same rendering contract they always did.
+const mockPathname = vi.fn(() => "/portfolio");
+vi.mock("next/navigation", () => ({
+  usePathname: () => mockPathname(),
+}));
+
 import useSWR from "swr";
 import { DataStaleBanner } from "@/components/ui/data-stale-banner";
 
@@ -32,6 +41,7 @@ function mockStatus(payload: {
   is_stale: boolean;
   stale_ratio?: number;
   affected_markets?: Array<"KR" | "US">;
+  market_data_display?: boolean;
 }) {
   mockedSWR.mockReturnValue({
     data: {
@@ -40,6 +50,9 @@ function mockStatus(payload: {
       affected_markets: payload.affected_markets ?? [],
       updated_at: null,
       threshold_pct: 0.05,
+      ...(payload.market_data_display === undefined
+        ? {}
+        : { market_data_display: payload.market_data_display }),
     },
     error: undefined,
     isLoading: false,
@@ -54,7 +67,16 @@ function mockStatus(payload: {
 describe("DataStaleBanner", () => {
   beforeEach(() => {
     mockedSWR.mockReset();
+    mockPathname.mockReturnValue("/portfolio");
     window.localStorage.clear();
+    // A staleness warning about vendor prices presupposes vendor prices are
+    // displayed. The cases below assert the ENABLED behaviour; the gate
+    // itself is asserted in the block at the bottom.
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "1");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("renders nothing on the happy path (is_stale=false)", async () => {
@@ -185,5 +207,48 @@ describe("DataStaleBanner", () => {
     const { container } = render(<DataStaleBanner />);
     await act(async () => {});
     expect(container.firstChild).toBeNull();
+  });
+
+  // ── vendor market-data display gate + route scope (2026-09-19) ─────
+  it("renders nothing on a screen that shows no prices (/pre-trade)", async () => {
+    mockStatus({ is_stale: true, affected_markets: ["KR"] });
+    mockPathname.mockReturnValue("/pre-trade");
+    const { container } = render(<DataStaleBanner />);
+    await act(async () => {});
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders nothing on /settings", async () => {
+    mockStatus({ is_stale: true, affected_markets: ["KR"] });
+    mockPathname.mockReturnValue("/settings");
+    const { container } = render(<DataStaleBanner />);
+    await act(async () => {});
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders nothing when the market-data display flag is off", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "0");
+    mockStatus({ is_stale: true, affected_markets: ["KR"] });
+    const { container } = render(<DataStaleBanner />);
+    await act(async () => {});
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders nothing when the backend reports market_data_display=false", async () => {
+    mockStatus({
+      is_stale: true,
+      affected_markets: ["KR"],
+      market_data_display: false,
+    });
+    const { container } = render(<DataStaleBanner />);
+    await act(async () => {});
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("still renders when the backend omits market_data_display (pre-contract deploy)", async () => {
+    mockStatus({ is_stale: true, affected_markets: ["KR"] });
+    render(<DataStaleBanner />);
+    await act(async () => {});
+    expect(await screen.findByTestId("data-stale-banner")).toBeInTheDocument();
   });
 });

@@ -73,7 +73,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 - **Backend** Flask + SQLAlchemy + PostgreSQL(Supabase) / SQLite(local) · **Frontend** Next.js 16 + TS + Tailwind 4 + SWR + motion/react
 - **AI 없음 — 코드까지 삭제됨** (2026-09-01). 되살릴 거면 소비자부터. 🟥 개인정보처리방침·가입 필수 동의에 Anthropic 국외 이전이 **아직 남아 있다** → `SHIP_BLOCKERS.md` R0.
 - **Broker** KIS read-only (`KIS_READ_ONLY` 가드). 토스 Open API 는 **운영자 본인 계좌 read-only 전용** — 리포트는 `services/behavior/*_mirror` 함수를 그대로 쓴다(두 벌 금지). 유저 브로커 연동은 `BROKER_LINKING_AVAILABLE=false`.
-- **Data** FMP + KIS. ⚠️ **FMP 약관 §2.2.2 — Data Display Agreement 없이 유저 표시 금지(무료도 해당), 미해결.**
+- **Data** FMP + KIS. ⚠️ **FMP 약관 §2.2.2 — Data Display Agreement 없이 유저 표시 금지(무료도 해당), 미체결.** 그래서 **벤더 시세의 유저 표시는 플래그 뒤에 있고 기본 꺼짐**(2026-09-19): 백엔드 `MARKET_DATA_DISPLAY_ENABLED`(`config.py`, `services/market_display.py`) + 프론트 `NEXT_PUBLIC_MARKET_DATA_DISPLAY`(`lib/market-display.ts`, 둘 다 켜져야 표시). 꺼지면 `/portfolio` 는 취득가 기준, `/api/market/*`·`/api/realtime/*` 는 503(환율·검색 예외), 52주 알림 잠김, NAV 스냅숏 기록도 멈춤. **무료·재배포 가능한 종가 소스는 국내·미국 모두 없다**(2026-09-19 약관 실측 — `docs/legal/R7_kis_market_data_options_2026-06-09.md` 상단 추기). 켜는 조건 = Agreement 체결.
 - **Auth** Google + Kakao OAuth · **Payment** Stripe(게이트) · **Design** v3 락-인 (Vantablack + Bronze + Playfair + KR 컨벤션)
 
 ---
@@ -135,8 +135,8 @@ KIS 주문 disabled (read-only) · 한글+영문 면책 고지 · Cookie Consent
 
 ## 알림
 
-설정 → 알림은 **실제로 발신되는 2종만** 노출한다: `price_52w` · `concentration` (둘 다 `app.py::_scheduled_price_alerts`).
-SoT = `models/user.py::NOTIFICATION_EVENT_IDS`. 옛 7종은 발신자가 없어 삭제 — 되살리려면 **발신자부터**.
+설정 → 알림은 **실제로 발신되는 것만** 노출한다. 발신자는 `app.py::_scheduled_price_alerts`(`price_52w` · `concentration`) + 월간 거울 리포트(`monthly_mirror`).
+SoT = `models/user.py::NOTIFICATION_EVENT_IDS`, 노출 목록은 `visible_notification_event_ids()`. **`price_52w` 는 `MARKET_DATA_DISPLAY_ENABLED=0`(기본, 2026-09-19)이면 발신·노출 모두 꺼진다** — 벤더 시세라서. `concentration` 은 취득가 기준이라 계속 돈다. 옛 7종은 발신자가 없어 삭제 — 되살리려면 **발신자부터**.
 
 ---
 

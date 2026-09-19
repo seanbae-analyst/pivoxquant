@@ -36,6 +36,35 @@ NOTIFICATION_EVENT_IDS: tuple[str, ...] = (
     "monthly_mirror",
 )
 
+#: Events whose producer needs a vendor market quote. While
+#: ``MARKET_DATA_DISPLAY_ENABLED`` is off, ``app.py::_scheduled_price_alerts``
+#: skips their sweep, so nothing can ever send them.
+_MARKET_PRICED_EVENT_IDS: frozenset[str] = frozenset({"price_52w"})
+
+
+def visible_notification_event_ids() -> tuple[str, ...]:
+    """The event ids the Settings matrix may SHOW right now.
+
+    Same SoT rule as the 2026-09-01 prune — "실제로 발신되는 것만 노출".
+    ``price_52w`` has exactly one producer (``check_52w_highs_lows`` via the
+    ``price_alerts_daily`` cron) and that producer is skipped while
+    ``MARKET_DATA_DISPLAY_ENABLED`` is off, so leaving its row on screen would
+    re-create precisely the dead toggle that prune removed.
+
+    This filters DISPLAY only. ``NOTIFICATION_EVENT_IDS`` stays the full tuple
+    and remains the validation vocabulary: a stored ``price_52w`` preference
+    is still accepted and persisted, so a user's setting survives the gate
+    being flipped back on.
+    """
+    # Imported lazily — models must not import services at module scope.
+    from services.market_display import market_data_display_enabled
+
+    if market_data_display_enabled():
+        return NOTIFICATION_EVENT_IDS
+    return tuple(
+        e for e in NOTIFICATION_EVENT_IDS if e not in _MARKET_PRICED_EVENT_IDS
+    )
+
 # ``monthly_mirror`` channel defaults, and why they differ from the two
 # sweeps above:
 #   * email = False — this one is an explicit opt-in. It attaches a PDF built

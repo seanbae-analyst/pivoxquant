@@ -15,7 +15,7 @@
 
 import * as React from "react";
 import { useT } from "@/lib/locale";
-import { EditorialHead } from "@/components/ui/editorial";
+import { Caption, EditorialHead } from "@/components/ui/editorial";
 import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 
@@ -30,6 +30,13 @@ type SortKey =
   | "sector";
 
 interface PositionsTableV2Props {
+  /**
+   * Vendor market-data display gate (lib/market-display.ts). When false the
+   * LAST / P/L % / MKT VALUE columns are removed — each one is a vendor price
+   * or a function of one — and WEIGHT is recomputed at average cost. Defaults
+   * to true so the enabled path is byte-identical to before the flag.
+   */
+  marketDataDisplay?: boolean;
   positions: Position[];
   /** Total NAV in display currency for weight calc. */
   totalNav: number;
@@ -83,36 +90,72 @@ interface DerivedPosition {
   weight: number; // 0..100
 }
 
+/**
+ * Which price each row is measured at.
+ *
+ * "market" — `p.current`, the vendor quote. The original behaviour.
+ * "cost"   — `p.avgCost`, what the user paid. Used when the vendor-display
+ *            gate is off. The weight denominator is then the book's own total
+ *            cost rather than the backend's NAV, so the column still sums to
+ *            100% without a single quote being read.
+ */
+export type ValuationBasis = "market" | "cost";
+
+interface TableHeader {
+  key: SortKey;
+  label: string;
+  align: "left" | "right";
+}
+
 // Exported for unit testing the FX-aware weight math (KR-only/US-only/mixed).
 export function derive(
   positions: Position[],
   totalNav: number,
   fxRate: number | null,
   displayCurrency: "USD" | "KRW",
+  basis: ValuationBasis = "market",
 ): DerivedPosition[] {
   const safeFx = fxRate && fxRate > 0 ? fxRate : null;
+  const unitPrice = (p: Position) => (basis === "cost" ? p.avgCost : p.current);
+  /** Same cross-currency rule as below, hoisted so the cost denominator
+   *  and the per-row value are normalized identically. */
+  const normalize = (p: Position, v: number): number => {
+    if (displayCurrency === "USD" && p.currency === "KRW") {
+      return safeFx ? v / safeFx : 0;
+    }
+    if (displayCurrency === "KRW" && p.currency !== "KRW") {
+      return safeFx ? v * safeFx : 0;
+    }
+    return v;
+  };
   // `totalNav` is always USD-unified (backend portfolio summary alias). When the
   // display currency is KRW the per-position `mvNormalized` below is computed in
   // KRW, so the weight denominator must be KRW too — otherwise a KR-only book
   // divides KRW by USD and reports ~138,000% weights (v52 FX-split regression).
   const totalNavInDisplay =
     displayCurrency === "KRW" && safeFx ? totalNav * safeFx : totalNav;
-  const safeTotal = totalNavInDisplay > 0 ? totalNavInDisplay : 1;
+  // Cost basis owns its own denominator: `totalNav` is a market figure and is
+  // null/absent from the backend when the display gate is off. Summing the
+  // book's own normalized cost keeps the column at 100% with no quote.
+  const costDenominator =
+    basis === "cost"
+      ? positions.reduce(
+          (acc, p) => acc + Math.max(0, normalize(p, p.shares * p.avgCost)),
+          0,
+        )
+      : 0;
+  const denominator = basis === "cost" ? costDenominator : totalNavInDisplay;
+  const safeTotal = denominator > 0 ? denominator : 1;
   return positions.map((p) => {
-    const mv = p.shares * p.current;
+    const mv = p.shares * unitPrice(p);
     const cost = p.shares * p.avgCost;
     const pl = mv - cost;
     const plPct = cost > 0 ? (pl / cost) * 100 : 0;
 
-    // Normalize market value to display currency for weight calc.
+    // Normalize the value to display currency for weight calc.
     // When FX is unavailable for a cross-currency position, mvNormalized
     // is 0 and the weight column reports — (handled by fmtPctSigned).
-    let mvNormalized = mv;
-    if (displayCurrency === "USD" && p.currency === "KRW") {
-      mvNormalized = safeFx ? mv / safeFx : 0;
-    } else if (displayCurrency === "KRW" && p.currency !== "KRW") {
-      mvNormalized = safeFx ? mv * safeFx : 0;
-    }
+    const mvNormalized = normalize(p, mv);
     const weight = mvNormalized > 0 ? (mvNormalized / safeTotal) * 100 : 0;
 
     return { raw: p, pl, plPct, mv, mvNormalized, weight };
@@ -150,6 +193,7 @@ function sortRows(
 }
 
 export function PositionsTableV2({
+  marketDataDisplay = true,
   positions,
   totalNav,
   fxRate,
@@ -162,10 +206,30 @@ export function PositionsTableV2({
   const [sortKey, setSortKey] = React.useState<SortKey>("weight");
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc");
 
+  const basis: ValuationBasis = marketDataDisplay ? "market" : "cost";
+
   const rows = React.useMemo(
-    () => sortRows(derive(positions, totalNav, fxRate, displayCurrency), sortKey, sortDir),
-    [positions, totalNav, fxRate, displayCurrency, sortKey, sortDir],
+    () =>
+      sortRows(
+        derive(positions, totalNav, fxRate, displayCurrency, basis),
+        sortKey,
+        sortDir,
+      ),
+    [positions, totalNav, fxRate, displayCurrency, basis, sortKey, sortDir],
   );
+
+  // A sort key can outlive its column: the user sorts by P/L %, the gate
+  // flips, and the header it points at is gone. Fall back to Weight, which
+  // exists in both column sets.
+  React.useEffect(() => {
+    if (
+      !marketDataDisplay &&
+      (sortKey === "last" || sortKey === "plPct" || sortKey === "value")
+    ) {
+      setSortKey("weight");
+      setSortDir("desc");
+    }
+  }, [marketDataDisplay, sortKey]);
 
   function onSort(k: SortKey) {
     if (sortKey === k) {
@@ -181,14 +245,26 @@ export function PositionsTableV2({
     return sortDir === "asc" ? "ascending" : "descending";
   }
 
-  const headers: { key: SortKey; label: string; align: "left" | "right" }[] = [
-    { key: "name", label: "Name", align: "left" },
-    { key: "shares", label: "Shares", align: "right" },
-    { key: "avgCost", label: "Avg cost", align: "right" },
+  // LAST is the vendor quote; P/L % and MKT VALUE are derived from it. All
+  // three leave the table with the gate off — removed, not em-dashed, so no
+  // empty money column invites the reader to assume a zero.
+  const marketHeaders: TableHeader[] = [
     { key: "last", label: "Last", align: "right" },
     { key: "plPct", label: "P/L %", align: "right" },
     { key: "value", label: "Mkt value", align: "right" },
-    { key: "weight", label: "Weight", align: "right" },
+  ];
+  const headers: TableHeader[] = [
+    { key: "name", label: "Name", align: "left" },
+    { key: "shares", label: "Shares", align: "right" },
+    { key: "avgCost", label: "Avg cost", align: "right" },
+    ...(marketDataDisplay ? marketHeaders : []),
+    {
+      key: "weight",
+      // The header carries the basis so the number is never read as a
+      // market weight — same convention as /journal's 평균매입가 기준 비중.
+      label: marketDataDisplay ? "Weight" : "Weight · at cost",
+      align: "right",
+    },
     { key: "sector", label: "Sector", align: "left" },
   ];
 
@@ -324,7 +400,9 @@ export function PositionsTableV2({
           <table
             style={{
               width: "100%",
-              minWidth: 700,
+              // Three fewer columns need less room before the horizontal
+              // scroll kicks in on a 375px phone.
+              minWidth: marketDataDisplay ? 700 : 520,
               borderCollapse: "collapse",
             }}
           className="font-mono" >
@@ -367,13 +445,27 @@ export function PositionsTableV2({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <PositionRow key={r.raw.id} row={r} onAction={onAction} />
+                <PositionRow
+                  key={r.raw.id}
+                  row={r}
+                  onAction={onAction}
+                  marketDataDisplay={marketDataDisplay}
+                />
               ))}
             </tbody>
           </table>
           </div>
         )}
       </div>
+
+      {/* Basis footnote. The column header above sits in the uppercase-mono
+          eyebrow tier, which stays English by house rule, so the Korean
+          clarifier lives here — verbatim the wording /journal already uses. */}
+      {!marketDataDisplay && rows.length > 0 ? (
+        <div data-testid="positions-cost-basis-note" style={{ marginTop: 12 }}>
+          <Caption>{t("journal.concentrationMirror.costBasisNote")}</Caption>
+        </div>
+      ) : null}
 
       <style jsx>{`
         :global(.pq-pos-row) {
@@ -415,9 +507,11 @@ export function PositionsTableV2({
 function PositionRow({
   row,
   onAction,
+  marketDataDisplay = true,
 }: {
   row: DerivedPosition;
   onAction?: (action: TradeAction, position: Position) => void;
+  marketDataDisplay?: boolean;
 }) {
   const p = row.raw;
   const cur = p.currency ?? "USD";
@@ -497,26 +591,28 @@ function PositionRow({
         {fmtMoney(p.avgCost, cur)}
       </td>
 
-      {/* 4 · Last */}
-      <td style={{ ...cellStyle, textAlign: "right" }}>
-        {fmtMoney(p.current, cur)}
-      </td>
-
-      {/* 5 · P/L % */}
-      <td
-        style={{
-          ...cellStyle,
-          textAlign: "right",
-          color: pctColor(row.plPct),
-        }}
-      >
-        {fmtPctSigned(row.plPct)}
-      </td>
-
-      {/* 6 · Mkt Value */}
-      <td style={{ ...cellStyle, textAlign: "right" }}>
-        {fmtMoney(row.mv, cur)}
-      </td>
+      {/* 4 · Last · 5 · P/L % · 6 · Mkt Value — vendor price and its
+          derivatives. Omitted entirely (not blanked) when the gate is off,
+          so the row has no money cell without a price behind it. */}
+      {marketDataDisplay ? (
+        <>
+          <td style={{ ...cellStyle, textAlign: "right" }}>
+            {fmtMoney(p.current, cur)}
+          </td>
+          <td
+            style={{
+              ...cellStyle,
+              textAlign: "right",
+              color: pctColor(row.plPct),
+            }}
+          >
+            {fmtPctSigned(row.plPct)}
+          </td>
+          <td style={{ ...cellStyle, textAlign: "right" }}>
+            {fmtMoney(row.mv, cur)}
+          </td>
+        </>
+      ) : null}
 
       {/* 7 · Weight + bronze gradient bar */}
       <td style={{ ...cellStyle, textAlign: "right", width: 96 }}>

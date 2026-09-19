@@ -125,6 +125,15 @@ class TestServeUserEffectiveTierStatus:
 # ── Bug #5: /api/portfolio/summary cashPct ────────────────────────────────
 
 class TestPortfolioSummaryCashPct:
+
+    # ── MARKET_DATA_DISPLAY_ENABLED ──────────────────────────
+    # MARKET_DATA_DISPLAY_ENABLED defaults to OFF (config.py — FMP Data Display
+    # Agreement pending). These assertions are about the ON behaviour, so they opt
+    # in explicitly; the OFF contract lives in tests/test_market_data_display_flag.py.
+    @pytest.fixture(autouse=True)
+    def _market_display_on(self, market_display_on):
+        yield
+
     def test_summary_emits_cashpct_field(self, client, auth_user):
         """The endpoint must always emit a numeric ``cashPct``."""
         # auth_user fixture seeds default capital (10_000 USD + 1_000_000 KRW)

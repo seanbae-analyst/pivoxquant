@@ -30,6 +30,18 @@ from unittest.mock import patch
 import pytest
 
 
+# ── MARKET_DATA_DISPLAY_ENABLED ──────────────────────────────────────────────
+# This module's KOSPI index level assertions
+# only make sense while vendor-quote display is ON. The flag defaults to OFF
+# (config.py — FMP Data Display Agreement pending), so the whole module opts in
+# and thereby pins "flag on == exactly the pre-flag behaviour". The OFF
+# contract is pinned separately in tests/test_market_data_display_flag.py.
+@pytest.fixture(autouse=True)
+def _market_display_on(market_display_on):
+    yield
+
+
+
 # ─────────────────────────────────────────────────────────────────────
 # routes/market.py — _kis_index_snapshot per-ticker bounds
 # ─────────────────────────────────────────────────────────────────────

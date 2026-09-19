@@ -9,6 +9,10 @@ from flask import Blueprint, request, jsonify
 from security import general_rate_limit
 from services import fx_service
 from services.error_responses import api_error
+from services.market_display import (
+    market_data_display_disabled_error,
+    market_data_display_enabled,
+)
 from services.name_resolver import resolve_stock_name
 from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth, legal_scrub_response
@@ -183,6 +187,11 @@ def search_stocks():
 def get_fx_rates():
     """Return the live USD/KRW exchange rate.
 
+    NOT gated by MARKET_DATA_DISPLAY_ENABLED — deliberately. The rate comes
+    from open.er-api.com, whose terms permit commercial use, and a
+    multi-currency COST basis cannot be added up without it. (Attribution is
+    the frontend's job.)
+
     The backend scheduler refreshes this value every 1 minute, so the
     frontend can poll at 30s intervals for near-realtime cross-currency
     math (portfolio KRW equivalence, target allocation rebalancing, etc.).
@@ -266,6 +275,12 @@ def market_indices():
     80c7d26). Versioning the key guarantees we bypass any poisoned entry
     instead of waiting for the TTL to expire.
     """
+    # MARKET_DATA_DISPLAY_ENABLED (config.py): index levels, 52-week ranges
+    # and sparklines ARE the vendor payload — there is no cost-basis version
+    # of this response, so the route refuses rather than degrades.
+    if not market_data_display_enabled():
+        return market_data_display_disabled_error()
+
     region = (request.args.get("region") or "us").lower()
     if region not in ("us", "kr"):
         region = "us"
@@ -357,6 +372,13 @@ def public_market_snapshot():
     USDKRW. Any symbol whose cache entry is missing is still emitted with
     value=null, is_stale=true so the frontend renders a stable row count.
     """
+    # MARKET_DATA_DISPLAY_ENABLED (config.py): index levels and the VIX are
+    # vendor quotes no matter how generalised — unauthenticated display is
+    # still display. The USD/KRW row rides along in this payload, so the whole
+    # endpoint refuses; the authenticated /api/market/fx stays available.
+    if not market_data_display_enabled():
+        return market_data_display_disabled_error()
+
     now = _time.time()
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     ttl = _indices_ttl()

@@ -30,6 +30,16 @@ import pytest
 from extensions import db
 from models import PortfolioNavSnapshot
 
+
+# ── MARKET_DATA_DISPLAY_ENABLED ──────────────────────────────────────────────
+# MARKET_DATA_DISPLAY_ENABLED defaults to OFF (config.py — FMP Data Display
+# Agreement pending). These assertions are about the ON behaviour, so they opt
+# in explicitly; the OFF contract lives in tests/test_market_data_display_flag.py.
+@pytest.fixture(autouse=True)
+def _market_display_on(market_display_on):
+    yield
+
+
 # Positions are opened far in the past so the position itself is never the
 # limiting factor. The equity curve no longer reconstructs from holdings — it
 # plots REAL recorded NAV (PortfolioNavSnapshot). So benchmark tests seed real
@@ -296,7 +306,11 @@ class TestBenchmarkDateAlignment:
 # ── Backwards compatibility: empty portfolio still works ────────────────────
 
 def test_empty_portfolio_unchanged_response(client, auth_user):
-    """No positions → no benchmark logic, identical legacy shape."""
+    """No positions → no benchmark logic, identical legacy shape.
+
+    ``market_data_display`` is the one added key (true here, since this module
+    opts into display-on); ``benchmark`` must still be absent.
+    """
     r = client.get("/api/portfolio/history")
     assert r.status_code == 200
-    assert r.get_json() == {"data": []}
+    assert r.get_json() == {"data": [], "market_data_display": True}

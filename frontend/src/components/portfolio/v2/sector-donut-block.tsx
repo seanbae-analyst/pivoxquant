@@ -8,6 +8,8 @@
  */
 
 import * as React from "react";
+import { useT } from "@/lib/locale";
+import { Caption } from "@/components/ui/editorial";
 import type { Position } from "@/components/portfolio/types";
 
 interface SectorDonutBlockProps {
@@ -15,6 +17,13 @@ interface SectorDonutBlockProps {
   /** null when no live FX feed is available — KRW positions are then skipped. */
   fxRate: number | null;
   displayCurrency?: "USD" | "KRW";
+  /**
+   * Vendor market-data display gate (lib/market-display.ts). The mix is a
+   * ratio, so it survives the gate: with it off the same shares are weighed
+   * at average cost instead of at the vendor quote, and the card says so.
+   * Defaults to true — the enabled path is unchanged.
+   */
+  marketDataDisplay?: boolean;
 }
 
 interface SectorBucket {
@@ -37,11 +46,12 @@ function buildSectors(
   positions: Position[],
   fxRate: number | null,
   displayCurrency: "USD" | "KRW",
+  marketDataDisplay = true,
 ): SectorBucket[] {
   const totals: Record<string, number> = {};
   let total = 0;
   for (const p of positions) {
-    const mv = p.shares * p.current;
+    const mv = p.shares * (marketDataDisplay ? p.current : p.avgCost);
     let normalized: number;
     const needsConversion =
       (displayCurrency === "USD" && p.currency === "KRW") ||
@@ -83,10 +93,12 @@ export function SectorDonutBlock({
   positions,
   fxRate,
   displayCurrency = "USD",
+  marketDataDisplay = true,
 }: SectorDonutBlockProps) {
+  const t = useT();
   const sectors = React.useMemo(
-    () => buildSectors(positions, fxRate, displayCurrency),
-    [positions, fxRate, displayCurrency],
+    () => buildSectors(positions, fxRate, displayCurrency, marketDataDisplay),
+    [positions, fxRate, displayCurrency, marketDataDisplay],
   );
 
   // Donut geometry — circumference and rotation per segment
@@ -276,6 +288,13 @@ export function SectorDonutBlock({
               </li>
             ))}
           </ul>
+
+          {/* Same basis clarifier the ledger and /journal carry. */}
+          {!marketDataDisplay ? (
+            <div data-testid="sector-cost-basis-note" style={{ marginTop: 14 }}>
+              <Caption>{t("journal.concentrationMirror.costBasisNote")}</Caption>
+            </div>
+          ) : null}
         </>
       )}
     </div>

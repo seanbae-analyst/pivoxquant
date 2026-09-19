@@ -21,6 +21,17 @@ from __future__ import annotations
 
 from flask import current_app
 
+import pytest
+
+# ── MARKET_DATA_DISPLAY_ENABLED ──────────────────────────────────────────────
+# MARKET_DATA_DISPLAY_ENABLED defaults to OFF (config.py — FMP Data Display
+# Agreement pending). These assertions are about the ON behaviour, so they opt
+# in explicitly; the OFF contract lives in tests/test_market_data_display_flag.py.
+@pytest.fixture(autouse=True)
+def _market_display_on(market_display_on):
+    yield
+
+
 
 class _StopLoop(Exception):
     """Sentinel raised from the patched sleep to end the generator loop."""
