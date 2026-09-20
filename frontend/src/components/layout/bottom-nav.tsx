@@ -7,10 +7,15 @@
  * mirrors <TerminalSidebar/>: Vantablack ink ground, Ivory text, Bronze
  * accent on the active tab (top hairline + icon tint + label ink).
  *
- * Layout: 5 primary tabs (Home / Portfolio / Brief / Signals / More).
- * The fifth opens a full drawer (ModalShell, slides from bottom) that
- * mirrors the desktop sidebar's 4-group IA — Artifacts / Portfolio /
- * Research / System — plus a Bronze-accent Sign Out at the foot.
+ * Layout: 3 primary tabs (거울 / 멈춤 / 기록) + More. The fourth opens a
+ * full drawer (ModalShell, slides from bottom) holding Portfolio and
+ * Settings, plus a Bronze-accent Sign Out at the foot.
+ *
+ * 2026-09-20 — the bar used to be 거울 / Portfolio / 멈춤 with 기록 hidden
+ * under More. The landing promises exactly three screens (멈춤 · 기록 ·
+ * 거울, see landing/three-steps.tsx), and the CEO could not find 기록 on
+ * a phone. The three loop screens now own the bar; Portfolio, which is
+ * the only screen that needs a price feed, moved to the drawer.
  *
  * Accessibility:
  *   - `role="navigation"` + `aria-label`.
@@ -49,23 +54,23 @@ type DrawerGroup = {
   items: Tab[];
 };
 
-// Primary bottom-bar tabs — 거울 / Portfolio / 멈춤.
-// Labels are literal (no locale dep) so a missing i18n key can never
-// blank the bar on mobile.
+// Primary bottom-bar tabs — 거울 / 멈춤 / 기록, the same order as the
+// desktop sidebar (terminal-sidebar.tsx). Labels are literal (no locale
+// dep) so a missing i18n key can never blank the bar on mobile.
 //
-// 거울 (Mirror) leads as the product spine: 멈춤 → 기록 → 거울.
+// 거울 (Mirror) leads as the home; 멈춤 → 기록 → 거울 is the product loop.
 const PRIMARY_TABS: Tab[] = [
   { href: "/mirror", label: "거울", icon: Contrast },
-  { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/pre-trade", label: "멈춤", icon: Gavel },
+  { href: "/journal", label: "기록", icon: NotebookPen },
 ];
 
-// Drawer — mirrors the desktop sidebar exactly.
+// Drawer — everything the desktop sidebar has that the bar does not.
 const DRAWER_GROUPS: DrawerGroup[] = [
   {
     label: "More",
     items: [
-      { href: "/journal", label: "기록", icon: NotebookPen },
+      { href: "/portfolio", label: "Portfolio", icon: Briefcase },
     ],
   },
   {
