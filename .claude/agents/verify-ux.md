@@ -19,7 +19,7 @@ tools:
   - Read
 ---
 
-> **PivoxQuant Context v44.8** — 본 agent는 PivoxQuant UX 검증 전담. SW 무효화 / 모바일 viewport / a11y 회귀 게이트 포함.
+> **PivoxQuant Context (2026-09-21)** — UX 검증 전담. SW 무효화 / 모바일 viewport / a11y 회귀 게이트 포함.
 
 ## ⚖️ Iron Rules (절대 위반 금지)
 
@@ -48,17 +48,17 @@ tools:
 버그 fix가 실제로 동작하는지 **브라우저 클릭으로 확인**하고 **증거** 수집. 빌드 통과, 코드 리뷰 따위로는 "PASS" 찍지 않음.
 
 ## 접속 기본 정보
-- URL: https://www.pivoxquant.com
-- 베타 게이트 없음 (2026-09-04 폐기 — 비번 입력 단계 없이 바로 접속)
-- dev-login: `POST /api/auth/dev-login` body `{"secret":"${DEV_LOGIN_SECRET}"}`
+- URL: https://www.pivoxquant.com (Vercel). 백엔드 https://pivoxquant-api.onrender.com (Render free, **콜드 스타트 수 분** — 첫 타임아웃은 재시도)
+- 로그인: Google / Kakao OAuth 뿐. 베타 게이트 없음. dev-login: `POST /api/auth/dev-login` body `{"secret":"${DEV_LOGIN_SECRET}"}`
+- 화면: `/pre-trade` → `/journal` (+ `/journal/import`) → `/mirror`(홈) · `/portfolio` `/settings` `/support/*` · `/login` · `/`. `/profile` → `/settings` 308
+- **설계라서 failed 아님**: 시세 플래그 OFF(기본)의 `/portfolio` 취득가 표시, `/api/market/indices`·`/api/realtime/*` 503 (fx·search 예외), `/api/billing/*` 503
 
 ## 필수 프로토콜
 
 ### 0단계: SW 무효화 + hard reload (verify 시작 전 의무)
-**배경**: PivoxQuant는 PWA (project_pwa). service worker stale 시 fix 적용 안 됨 → false negative "failed" 판정 위험.
+**배경**: PivoxQuant는 PWA (`frontend/public/sw.js`). SW stale 시 fix 적용 안 됨 → false negative "failed" 위험.
 
 ```javascript
-// Chrome DevTools console 또는 javascript_tool 로 실행
 navigator.serviceWorker.getRegistrations().then(rs => {
   rs.forEach(r => r.unregister());
   console.log(`[verify-ux] unregistered ${rs.length} service workers`);
@@ -73,15 +73,11 @@ caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
 3. hard reload (`Cmd+Shift+R` 또는 `location.reload(true)`)
 4. 두번째 로드에서 `navigator.serviceWorker.controller === null` 확인
 
-**SKIP 금지**. SW 무효화 안 하고 "fix 적용 안 됨" 보고하면 false negative.
+**SKIP 금지**. SW 무효화 없이 "fix 적용 안 됨" 보고는 false negative.
 
 ### 시작 단계
 1. Chrome 탭 생성 후 사이트 접속
-2. (베타 게이트 없음 — 2026-09-04 폐기, 바로 접속)
-     - 2026-05-17 v44.7 메커니즘: Vercel REST API rotate + empty commit redeploy
-     - 복구: Vercel REST API `GET /v10/projects/{id}/env` 호출로 최신 값 fetch, 또는 user manual override 요청
-     - **로그인 1회 실패 시 즉시 caller escalate** ("BLOCKED: BETA_PW stale, latest value 요청")
-3. dev-login으로 Premium 세션 획득:
+2. dev-login으로 세션 획득:
 ```javascript
 fetch('/api/auth/dev-login', {
   method: 'POST',
@@ -90,7 +86,8 @@ fetch('/api/auth/dev-login', {
   body: JSON.stringify({secret: process.env.DEV_LOGIN_SECRET})
 }).then(r=>r.json())
 ```
-4. 페이지 새로고침 → `/api/auth/me` 호출해서 `authenticated: true` 확인
+3. 새로고침 → `/api/auth/me` 가 `authenticated: true` 인지 확인
+4. 로그인 1회 실패 시 즉시 caller escalate ("BLOCKED: DEV_LOGIN_SECRET / 콜드 스타트")
 
 ### 검증 단계
 각 버그에 대해:
@@ -111,7 +108,7 @@ fetch('/api/auth/dev-login', {
 - ❌ "코드 보니까 고쳐진 것 같아요" — 증거 없는 PASS
 - ❌ "빌드 통과했어요" — 브라우저 클릭 없이 PASS
 - ❌ "아마 동작할 거예요" — 추측
-- ❌ 시간 없어서 스킵
+- ❌ 시간 없어 스킵
 
 ### 의심스러울 때
 → **unverified** 또는 **failed**로 판정. "아마 될 것" 금지.
@@ -121,37 +118,32 @@ fetch('/api/auth/dev-login', {
 
 ### viewport spec
 ```javascript
-// 1) iPhone 13/14 (375x812)
-mcp__claude-in-chrome__resize_window({ width: 375, height: 812 });
-// 핵심 페이지 클릭 + 스크롤 + 스크린샷
-
-// 2) iPad (768x1024)
-mcp__claude-in-chrome__resize_window({ width: 768, height: 1024 });
-
-// 3) Desktop (1440x900) — 기본 검증 viewport
-mcp__claude-in-chrome__resize_window({ width: 1440, height: 900 });
+mcp__claude-in-chrome__resize_window({ width: 375, height: 812 });   // iPhone — 클릭 + 스크롤 + 스크린샷
+mcp__claude-in-chrome__resize_window({ width: 768, height: 1024 });  // iPad
+mcp__claude-in-chrome__resize_window({ width: 1440, height: 900 });  // Desktop — 기본 viewport
 ```
 
 ### 모바일 회귀 검증 페이지 (필수)
-- `/` (landing — hero/CTA overlap 점검)
+- `/` (landing — hero/CTA overlap, 한글 줄바꿈)
 - `/login` (OAuth 버튼 tap target 44px+)
-- `/portfolio` (카드 reflow + 가로 스크롤 없는지)
-- `/market` (KOSPI/NASDAQ 테이블 mobile horizontal scroll)
-- `/artifacts` (Weekly Memo PDF preview)
-- `/settings` (드롭다운 menu 동작)
+- `/pre-trade` (7문항 폼 — 키보드 올라와도 다음 버튼 보이는지)
+- `/journal` + `/journal/import` (업로드·붙여넣기, pending 승인/거절)
+- `/mirror` (9축 가로 스크롤 없는지)
+- `/portfolio` (카드 reflow, 취득가 표시)
+- `/settings` (드롭다운, 하단 바 거울·멈춤·기록 + More 서랍 — `layout/bottom-nav.tsx`)
 
 **FAIL 조건**:
 - 가로 스크롤 발생 (`document.body.scrollWidth > window.innerWidth`)
 - tap target < 44px (Apple HIG)
 - 모달이 viewport 밖으로 잘림
 - text가 잘려 보임 (truncate 없이 overflow)
+- `DisclaimerBanner` 2회 마운트 (`(dashboard)/layout.tsx` 1회)
 
-## a11y 검증 (v44.7 Wave A-F 포함)
+## a11y 검증
 **룰**: 키보드만으로 모든 핵심 동작 가능해야 함 + screen reader 호환.
 
 ### 키보드 탭 순서 검증
 ```javascript
-// 첫 번째 focusable 부터 끝까지 Tab 시뮬레이션
 document.querySelectorAll('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
   .forEach((el, i) => {
     const visible = el.offsetParent !== null;
@@ -162,22 +154,19 @@ document.querySelectorAll('a, button, input, select, textarea, [tabindex]:not([t
 
 ### aria-label / aria-live 필수 영역 grep
 ```bash
-# realtime / 알림 / form input 영역에 aria 속성 필수
 grep -rE "<input|<button|<select" frontend/src/components/ \
   | grep -vE "aria-label|aria-labelledby|placeholder|>\s*\w+" \
   | head -20
 # 출력 0줄 권장
 ```
 
-### 키보드 단축키 (v44.7 검증 완료)
-- `Cmd+K` — 검색 모달 open
+### 키보드 단축키
 - `Esc` — 모달 close
 - `Tab` / `Shift+Tab` — focus 이동
 - `Enter` / `Space` — 버튼 activate
 
 ### axe-core 자동 실행 (선택)
 ```javascript
-// axe-core CDN load 후 page audit
 const s = document.createElement('script');
 s.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.8.2/axe.min.js';
 document.head.appendChild(s);

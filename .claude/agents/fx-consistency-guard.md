@@ -44,38 +44,40 @@ permissions:
 
 ## Mission
 
-KR (KRW) + US (USD) 종목 혼합 portfolio / risk / dashboard 출력에서 **raw 합산 차단**. FX 변환 누락 시 KRW 1,300 + USD 1 = 1,301 같은 수학적 무의미 값 → dashboard / PDF에 비상식적 % (수만~수십만 %) 노출 위험.
+KR (KRW) + US (USD) 종목 혼합 portfolio / behavior mirror / 월간 거울 PDF 출력에서 **raw 합산 차단**. FX 변환 누락 시 KRW 1,300 + USD 1 = 1,301 같은 무의미 값 → 화면 / PDF 에 비상식적 % (수만~수십만 %) 노출.
 
-자동 회귀 게이트로 PR마다 강제 검증 — 사람 review에만 의존하지 않음.
+PR마다 강제 검증 — 사람 review 에만 의존하지 않음.
 
 ---
 
 ## SoT — Pattern 7: FX Consistency
 
-원본: `~/.claude/projects/-Users-seanbae-Desktop---/memory/feedback_bug_fix_patterns.md` 도메인 확장 §10.
+원본: `~/.claude/projects/-Users-seanbae-Desktop---/memory/feedback_bug_fix_patterns.md` §10.
 
 ### Precedent (확정 사례)
 
-| 시점 | 사이트 | 증상 | Fix Commit |
+| 시점 | 사이트 | 증상 | Fix |
 |---|---|---|---|
 | 2026-05-18 v44.8 | `portfolio_history` equity curve | KRW + USD raw 합산 → +52,281% | PR #484 (G-5) |
-| 2026-05-19 v45.3 | `risk_summary` aggregation | KRW + USD raw 합산 → 700배 inflation | commit `eea051e5` |
-| 2026-05-19 v45.3 | `build_portfolio_context` | 동일 패턴 (LLM 입력에 raw mixed 값) | commit `eea051e5` |
+| 2026-05-19 v45.3 | `risk_summary` aggregation (코드 삭제됨) | 700배 inflation | commit `eea051e5` |
+| 2026-05-19 v45.3 | `build_portfolio_context` (코드 삭제됨) | 동일 패턴 | commit `eea051e5` |
+
+### 살아있는 합산 사이트 (실측 2026-09-21)
+
+- `routes/portfolio.py` — `total_value_*` (표시 플래그 ON 일 때만, `fx_service.get_rate()` 로 USD→KRW) · `cost_basis_all_krw = sum(cost_basis_krw)` (항상)
+- `services/behavior/concentration_mirror.py:107` · `services/behavior/scorer.py:281` — `fx_service.cost_basis_krw(p)`
+- `services/profile/rolling_metrics.py:206-215` — `fx_service.amount_to_krw(money, currency, ticker, fx)`
+- `services/reports/mirror_pdf.py` — 월간 거울 PDF (WeasyPrint) 의 금액 표시
 
 ### 정의
 
-**위험 신호**:
-- portfolio holdings 합산 (multi-ticker)
-- equity curve 시계열 합산
-- risk metrics (VaR, ES) 다종목 통합
-- LLM prompt context 구성 (multi-position)
-- PDF report / dashboard total cards
+**위험 신호**: multi-ticker holdings 합산 · equity curve 시계열 합산 · dashboard / PDF total 카드 · behavior mirror 의 금액 기반 비율 (집중도·회전율)
 
-**안전 신호** (FX 적용됨):
-- `fx_service.get_rate(...)` 호출 직전
-- `convert_to_krw(...)` / `convert_to_usd(...)` helper 사용
-- holdings 객체에 `value_krw` / `value_usd` 별도 필드 존재
-- ticker → currency mapping (`.KS`/`.KQ` → KRW, 나머지 → USD) lookup
+**안전 신호** (`services/fx_service.py` 실제 API):
+- `fx_service.get_rate()` / `get_rate_at(d)` 호출 직전
+- `fx_service.cost_basis_krw(position)` / `amount_to_krw(amount, currency, ticker, rate)` helper
+- `is_krw_currency(currency, ticker)` 로 통화 판정 (`.KS`/`.KQ` → KRW)
+- holdings 에 `cost_basis_krw` / `value_krw` 별도 필드
 
 ---
 
@@ -86,69 +88,50 @@ KR (KRW) + US (USD) 종목 혼합 portfolio / risk / dashboard 출력에서 **ra
 ```bash
 cd /Users/seanbae/Desktop/취준/pivoxquant
 grep -rnE "sum\(|np\.sum\(|\.cumsum\(\)|total \+=|total_value|aggregate\(" \
-  services/quant/ services/ai/ routes/portfolio routes/risk 2>/dev/null | \
-  tee /tmp/agg-sites.txt
+  routes/portfolio.py services/behavior/ services/profile/ services/reports/ | tee /tmp/agg-sites.txt
 wc -l /tmp/agg-sites.txt
 ```
 
 ### Rule 2: 각 hit 직전 100줄 fx_service 검증
 
-각 grep hit에 대해:
 1. 해당 파일 Read (직전 100줄 + 직후 30줄)
-2. 패턴 매칭:
-   - `fx_service.get_rate(` 호출 발견 → ✅ PASS
-   - `convert_to_krw(` / `convert_to_usd(` 호출 발견 → ✅ PASS
-   - `value_krw` / `value_usd` 별도 필드 사용 → ✅ PASS
-   - 위 3개 모두 없으면 → ❌ P0 FLAG
-3. 함수 인자 분석:
-   - 인자가 `positions: list[Position]` (mixed ticker) → currency 변환 필수
-   - 인자가 단일 ticker 또는 단일 currency assumption → 화이트리스트 확인
+2. `get_rate(` / `cost_basis_krw(` / `amount_to_krw(` / `is_krw_currency(` 중 하나 발견 → ✅ PASS · 모두 없으면 → ❌ P0 FLAG
+3. 인자가 mixed ticker 리스트면 변환 필수, 단일 통화 가정이면 화이트리스트 확인
 
-### Rule 3: 화이트리스트 (이미 검증된 안전 사이트)
+### Rule 3: 화이트리스트 (2026-09-21 검증)
 
-| 파일:라인 | 패턴 | 검증 근거 |
-|---|---|---|
-| `services/quant/portfolio.py:260-272` | hard-checked manual FX | 2026-05-19 v45.3 검증 완료 |
-| `services/data/fx_service.py` | FX rate fetcher (self-aggregation 없음) | 정의상 안전 |
-
-화이트리스트는 commit/grep 결과로 정기 검증 (drift 방지).
+| 파일:라인 | 근거 |
+|---|---|
+| `services/fx_service.py` | FX 자체 (self-aggregation 없음) |
+| `routes/portfolio.py` total 블록 | `rate = fx_service.get_rate()`, `total_all_krw = total_usd * rate + total_krw` |
+| `services/behavior/scorer.py:281` · `concentration_mirror.py:107` | `cost_basis_krw` 사용 |
+| `services/profile/rolling_metrics.py:206-215` | `amount_to_krw` 사용 |
 
 ### Rule 4: Recent diff scan
 
 ```bash
-git diff origin/main..HEAD -- services/ routes/ | \
-  grep -E "^\+.*sum\(|^\+.*total_value|^\+.*\.cumsum\(\)"
+git diff origin/main..HEAD -- services/ routes/ | grep -E "^\+.*sum\(|^\+.*total_value|^\+.*\.cumsum\(\)"
 ```
 
 신규 aggregation 라인 발견 시 → 본 agent 강제 통과 필요.
 
-### Rule 5: 비상식 수치 회귀 fixture (권고)
+### Rule 5: 회귀 테스트 (기존)
 
-**Test fixture 권고**:
-- `tests/regression/test_fx_consistency.py` (신규 spec)
-- 50개 KR + US mix 종목 fixture
-- portfolio_history / risk_summary / build_portfolio_context output 값 assert
-- assert: `total_pct_change` ∈ [-100%, +1000%] (이 범위 벗어나면 raw 합산 의심)
-- assert: `total_value_krw > 0` AND `total_value_usd > 0` 별도 검증
+`tests/test_rolling_metrics_currency.py` · `tests/test_fx_staleness.py` · `tests/test_fx_historical.py` · `tests/test_fx_prefetch.py`. 새 합산 사이트엔 KR+US mix fixture 로 `total_pct_change ∈ [-100%, +1000%]` assert 추가 권고.
 
 ---
 
 ## Verification Commands (run order)
 
 ```bash
-# 1. 전체 aggregation sweep
-grep -rnE "sum\(|total_value|\.cumsum\(\)" services/ routes/ 2>/dev/null | tee /tmp/agg.txt
-wc -l /tmp/agg.txt
-
+cd /Users/seanbae/Desktop/취준/pivoxquant
+# 1. sweep
+grep -rnE "sum\(|total_value|\.cumsum\(\)" routes/portfolio.py services/behavior/ services/profile/ services/reports/ | tee /tmp/agg.txt
 # 2. 화이트리스트 차감
-grep -v "services/quant/portfolio.py:26[0-9]\|services/data/fx_service.py" /tmp/agg.txt
-
+grep -v "services/fx_service.py" /tmp/agg.txt
 # 3. 각 hit Read 검증
-
 # 4. precedent regression
-grep -n "fx_service\|convert_to_krw" services/quant/portfolio.py | head
-# AIRiskSummary 등은 services/ai/models.py 에 통합됨
-grep -n "fx_service\|convert_to_krw" services/ai/models.py | head
+grep -n "fx_service\.\(get_rate\|cost_basis_krw\|amount_to_krw\)" routes/portfolio.py services/behavior/*.py services/profile/rolling_metrics.py
 ```
 
 ---
@@ -156,37 +139,23 @@ grep -n "fx_service\|convert_to_krw" services/ai/models.py | head
 ## PR Gate
 
 다음 PR은 본 agent 통과 **필수**:
-- `services/quant/portfolio.py` 변경 (Iron Rule 동결이지만 P0 FX fix는 예외)
-- `services/ai/risk_*.py` aggregation 라인 추가
-- `routes/portfolio/**` total / aggregate endpoint 변경
-- `routes/risk/**` 변경
-- PDF report builder 변경 (`services/report/**`)
-
-CI 통합: PR diff에 aggregation 패턴 새 라인 있으면 본 agent invoke 강제.
+- `services/behavior/*.py` · `services/pre_trade/*.py` · `services/imports/ledger.py` 변경 (동결 파일 — escape 토큰 `fx-consistency-guard approved`, `.claude/frozen_files.yaml`)
+- `routes/portfolio.py` total / aggregate 변경 · `services/fx_service.py` · `services/profile/rolling_metrics.py` · `services/reports/mirror_pdf.py`
 
 ---
 
 ## Escalation
 
 P0 발견 시:
-1. **즉시 CEO 알림** Slack `#alerts`
+1. **즉시 CEO 알림**
 2. **메시지 템플릿**:
    ```
    🔴 P0 FX Consistency Violation
-   File: {path}:{line}
-   Function: {func_name}
-   Risk: KRW + USD raw 합산 → dashboard/PDF에 비상식 수치 노출
-   Precedent: PR #484 (+52,281% equity curve) / commit eea051e5 (700배 risk)
-   Action: 즉시 fx_service 변환 추가
+   File: {path}:{line} / Function: {func_name}
+   Risk: KRW + USD raw 합산 → 화면/PDF 에 비상식 수치 노출
+   Precedent: PR #484 (+52,281% equity curve) / commit eea051e5 (700배)
+   Action: fx_service.cost_basis_krw / amount_to_krw 로 환산
    ```
-3. **HANDOVER.md 외부 액션 카드 추가**
-
----
-
-## 0원 (feedback_no_extra_cost 준수)
-
-- grep + Read 만, 추가 API/dependency 0원
-- Slack webhook 기존 free tier 재사용
 
 ---
 
@@ -194,8 +163,8 @@ P0 발견 시:
 
 | 협업 | 역할 |
 |---|---|
-| `cache-poisoning-sentinel` | 동일 PR에서 페어로 회귀 검증 (Pattern 6 + 7) |
-| `release-coordinator` | 룰 5 wide-scope에 포함 권고 |
-| `frozen-file-diff-guard` | portfolio.py 변경 시 예외 조항 검증 |
-| `audit-finance` | 금액 표시 surface 회귀 검증 |
+| `cache-poisoning-sentinel` | 동일 PR 페어 (Pattern 6 + 7), `.claude/workflows/wave-data-integrity.md` |
+| `data-freshness-monitor` | 환율 stale 여부 (같은 웨이브) |
+| `frozen-file-diff-guard` | 동결 파일 변경 시 escape 토큰 검증 |
+| `verify-data` | 실제 화면 금액 회귀 |
 | `bug-hunter` | Pattern 7 발견 시 cross-reference |

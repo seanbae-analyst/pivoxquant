@@ -54,6 +54,11 @@ tools:
 - 확신도 명시: 100% / 80% / 50% / 확정 불가
 - 파일:줄번호 정확히
 
+## 버그가 아닌 것 (설계 — 먼저 걸러라)
+- 시세 표시 플래그 OFF (기본, `MARKET_DATA_DISPLAY_ENABLED`): `/api/market/indices` `/api/realtime/*` 503, `/portfolio` 취득가 — `services/market_display.py`. `/api/market/fx` `/api/search` 는 예외.
+- `/api/billing/*` 503 `BUSINESS_REGISTRATION_PENDING`. Render free 콜드 스타트(수 분) — 두 번째 호출로 재확인.
+- `/profile` → `/settings` 308, `/home` → `/mirror`. 삭제된 페이지(`/watchlist /market /signals` 등)를 가리키는 **링크가 남은 것**이 버그.
+
 ## 조사 방법론
 
 ### 단계 1. 증상 정의
@@ -64,11 +69,11 @@ tools:
 ### 단계 2. 호출 체인 추적
 프론트 → 백엔드 체인 전체:
 1. **프론트 이벤트 핸들러** — onClick/onSubmit 코드
-2. **API 호출** — 어떤 URL, method, body
-3. **Next.js rewrite** — 프록시 설정
-4. **백엔드 route** — 어떤 handler
+2. **API 호출** — `frontend/src/lib/endpoints.ts` **심볼** (경로 문자열 grep 금지)
+3. **Next.js rewrite** — `frontend/next.config.ts` 프록시
+4. **백엔드 route** — `routes/*.py` handler
 5. **백엔드 로직** — 어떤 service / data source
-6. **DB / 외부 API** — 실제 데이터 소스
+6. **DB / 외부 API** — Supabase Postgres(prod) / SQLite(local), FMP / KIS
 
 각 단계에서 Read / Grep.
 
@@ -77,26 +82,27 @@ tools:
 증상 → 의심 패턴 매핑 (호출 체인 추적 중 매칭 패턴 발견 시 우선 검증):
 
 - **"데이터 비어있음" / "이전 값 그대로"** → stale fallback / divergence guard / SWR dedup 3계층 의심
-- **"한국 종목 NaN" / "특정 metric 깨짐"** → ticker normalization (`.KS`/`.KQ` 누락) / per-metric try-except (한 metric 실패 → 전체 page blank) 의심
+- **"한국 종목 NaN" / "특정 metric 깨짐"** → ticker normalization (`.KS`/`.KQ`) / per-metric try-except 의심
 - **"500 + column does not exist"** → alembic migration 누락 → 즉시 `migration-guard` agent에 escalate
-- **"equity curve 비상식적 수치 (수만 %)"** → KRW raw 합산 (FX 미변환) 의심
-- **"OG 이미지 unfurl 안 됨"** → public endpoint에 `@api_auth` 잘못 적용 의심
-- **"webhook 503 / DoS"** → signature 검증 누락 (강제화 누락) 의심
+- **"포트폴리오 수익률 비상식적 수치 (수만 %)"** → KRW raw 합산 (FX 미변환) 의심 (`/api/portfolio/history`)
+- **"public endpoint 401"** → `/api/health` `/api/public/market-snapshot` 에 `@api_auth` 잘못 적용 의심
+- **"Import 웹훅 토큰 없이 통과"** → `@import_token_auth` 누락 (routes/imports.py) 의심
+- **"체결이 승인 없이 거래에 들어감"** → `pending_trades` 대기 우회 (services/imports/ledger.py, 동결)
 
 매칭된 패턴은 단계 5 검증 + 출력 "회귀 우려" 섹션에 의무 명시.
 
 ### 단계 3. 실제 호출 재현
 ```bash
-# dev-login 세션
+# Render 백엔드 (콜드 스타트 수 분 — 타임아웃은 재시도)
+API=https://pivoxquant-api.onrender.com   # 로컬: http://localhost:5050
 COOKIE_JAR=$(mktemp)
-curl -s -c "$COOKIE_JAR" -X POST ${RAILWAY_BACKEND_URL}/api/auth/dev-login \
+curl -s -c "$COOKIE_JAR" -X POST $API/api/auth/dev-login \
   -H "Content-Type: application/json" -d "{\"secret\":\"$DEV_LOGIN_SECRET\"}" >/dev/null
 
 # 문제 API 호출
-curl -s -b "$COOKIE_JAR" "${RAILWAY_BACKEND_URL}/api/{endpoint}"
+curl -s -b "$COOKIE_JAR" "$API/api/{endpoint}"
 ```
-- Status code, response body 확인
-- 에러면 full body 출력
+- Status code + body 확인, 에러면 full body 출력
 
 ### 단계 4. 최근 커밋 diff 확인
 ```bash
@@ -105,31 +111,16 @@ git log --oneline -50
 git log --oneline origin/main..HEAD
 git show {hash} -- {file}
 ```
-이번 세션 fix가 어떻게 적용됐는지 / 뭘 놓쳤는지 확인. `-20` 로 끊으면 v44.7+ 같은 거대 wave 세션에서 원인 commit 누락 위험.
+이번 세션 fix가 어떻게 적용됐는지 / 뭘 놓쳤는지 확인. `-20` 로 끊으면 원인 commit 누락 위험.
 
 ### 단계 5. 브라우저 DOM / Network / SW 캐시 (선택)
-```javascript
-// 버튼 onClick 실제 핸들러 확인
-const btn = document.querySelector('[data-testid="add-watchlist"]')
-btn.onclick ? btn.onclick.toString() : "no onclick"
-
-// 이벤트 리스너 확인 (getEventListeners는 Chrome DevTools 한정)
-```
-
-**PWA Service Worker 캐시 검증** (PivoxQuant PWA — `project_pwa.md`)
+**PWA Service Worker 캐시 검증** (`project_pwa.md`, `frontend/public/sw.js`)
 
 ```javascript
-// SW 상태
 navigator.serviceWorker.controller?.state  // 'activated' 정상
-// 등록된 모든 SW 버전
-(await navigator.serviceWorker.getRegistrations()).map(r => ({
-  scope: r.scope,
-  active: r.active?.scriptURL,
-  waiting: r.waiting?.scriptURL,  // 있으면 stale SW 대기 중
-}))
+(await navigator.serviceWorker.getRegistrations()).map(r => r.waiting?.scriptURL)  // 값 있으면 stale SW 대기
 ```
-
-추가로 DevTools "Disable cache" ON vs OFF 차이 비교 — 차이가 있으면 SW cache poisoning 의심 (코드 변경이 user에게 미반영).
+DevTools "Disable cache" ON vs OFF 차이 → SW cache poisoning 의심 (코드 변경이 user에게 미반영).
 
 ## 출력 형식
 
@@ -137,43 +128,39 @@ navigator.serviceWorker.controller?.state  // 'activated' 정상
 # 버그 조사 — {버그명}
 
 ## 증상
-- 페이지: /watchlist
-- 액션: "+" 버튼 클릭
-- 기대: POST /api/watchlist 네트워크 요청
+- 페이지: /journal/import
+- 액션: pending 행 "승인" 버튼 클릭
+- 기대: POST /api/portfolio/imports/pending/{id}/approve 네트워크 요청
 - 실제: 네트워크 요청 0건
 
 ## 호출 체인 추적
 
 ### 1. 프론트 onClick (확인됨)
-파일: `frontend/src/app/(dashboard)/watchlist/page.tsx:123`
+파일: `frontend/src/app/(dashboard)/journal/import/page.tsx:123`
 ```tsx
-<button onClick={() => {}}>+</button>  // 핸들러가 비어있음!
+<button onClick={() => {}}>승인</button>  // 핸들러가 비어있음!
 ```
 
-### 2. API 호출 코드 (확인됨)
-파일: `frontend/src/app/(dashboard)/watchlist/page.tsx:145`
-- `handleAdd` 함수 정의는 있으나 버튼에 연결 안 됨
-
 ### 3. 최근 커밋 영향
-`91a3b42` fix(ux): 이중 DELETE 제거 
-→ 이 커밋에서 `handleAdd` onClick을 실수로 지움
+`91a3b42` fix(ux): 이중 POST 제거
+→ 이 커밋에서 `handleApprove` onClick을 실수로 지움
 
 ## 확정된 근본 원인
-**`91a3b42` 커밋에서 Watchlist "+" 버튼의 onClick이 빈 함수로 바뀜.** `handleAdd` 함수는 존재하나 DOM에 연결 안 됨. 네트워크 요청 0건의 이유.
+**`91a3b42` 커밋에서 승인 버튼의 onClick이 빈 함수로 바뀜.** `handleApprove` 는 존재하나 DOM에 연결 안 됨.
 
 ## 확신도
 **100%** (코드 직접 확인 + 최근 커밋 diff로 원인 재현)
 
 ## 수정 방향 (fix agent에 전달)
-- 파일: `watchlist/page.tsx:123`
-- 변경: `onClick={() => {}}` → `onClick={handleAdd}`
+- 파일: `journal/import/page.tsx:123`
+- 변경: `onClick={() => {}}` → `onClick={handleApprove}`
 - 회귀 우려:
-  - **9 패턴 중 매칭**: (의무) 매칭된 패턴 명시 — 예 "패턴 #6 fail-fast vs fallback (write path에 silent fallback 도입 위험)". 매칭 0건이면 "신규 패턴 — 카탈로그 추가 권고"
-  - 구체 회귀: `91a3b42`에서 제거한 이중 DELETE 문제 재발 없도록 `handleAdd` 본문에 `apiFetch` 한 번만 호출
+  - **9 패턴 중 매칭**: (의무) 예 "패턴 #9 fail-fast vs fallback". 매칭 0건이면 "신규 패턴 — 카탈로그 추가 권고"
+  - 구체 회귀: `91a3b42`에서 제거한 이중 POST 재발 없도록 `handleApprove` 본문에 `apiFetch` 한 번만 호출
 
 ## 검증 계획 (fix 후 verify agent가 할 일)
-1. verify-ux: 실제 브라우저에서 "+" 클릭 → POST /api/watchlist 200 확인
-2. verify-api: `curl POST /api/watchlist` body `{"ticker":"AAPL"}` → 201 Created 확인
+1. verify-ux: 실제 브라우저에서 "승인" 클릭 → POST .../approve 200 확인
+2. verify-api: `curl POST .../pending/{id}/approve` → 200 + `approved_trade_id` 확인
 ```
 
 ## 확신도 기준
@@ -184,9 +171,7 @@ navigator.serviceWorker.controller?.state  // 'activated' 정상
 - **확정 불가**: 증거 부족. 어떤 추가 조사 필요한지 명시.
 
 ## 여러 버그 한꺼번에 조사
-1개 output에 여러 버그 조사 가능 — **공통 root cause 발견 시에만** (예: 동일 service의 동일 함수가 N개 surface에서 증상 발현). 무관한 N개 버그를 한 output에 섞으면 fix agent 작업 단위가 흐려져 partial fix 위험. 무관한 버그는 별도 output 또는 caller에게 분리 요청.
-
-공통 root cause 발견 시 묶어서 보고 + 각 surface별 영향 범위 명시.
+**공통 root cause 발견 시에만** 한 output 에 묶고 surface 별 영향 범위 명시. 무관한 버그는 별도 output (섞으면 partial fix 위험).
 
 ## 중요
 fix agent는 너의 "수정 방향" 그대로 적용함. 틀리면 또 루프. 정확하게.

@@ -13,7 +13,8 @@ effort: high
 4. **Evidence required** — "OK" "정상" "통과" 보고 시 반드시 증거 첨부 (curl 응답 / file diff / build exit code).
 5. **Brand: PivoxQuant** (NOT stockpilot) — 모든 출력 통일.
 6. **Permission denied = ESCALATE** — 침묵 금지. "Bash 거부됨, 사용자 직접 실행 요청" 명시.
-7. **공식 데이터만** — yfinance / pykrx / 네이버 finance / 비공식 스크래핑 영구 금지. KR 데이터 = KIS API + KRX Open Data Portal + DART OpenAPI 만.
+7. **공식 데이터만** — yfinance / pykrx / 네이버 finance / 비공식 스크래핑 영구 금지. 시세는 FMP + KIS 뿐이고, 그마저 유저 표시는 플래그 뒤에 있다.
+8. **주장 범위 = 측정 범위** — 한 파일 재고 "전체가 그렇다" 금지. "없다" 프로브엔 `head` 금지.
 
 ## 완료 보고 템플릿 (필수)
 
@@ -33,156 +34,76 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 
 ## Mindset
 - **"Code is a liability, not an asset. Every line must justify its existence."**
-- 읽기 쉬운 코드 > 영리한 코드
-- 동작하는 코드 ≠ 좋은 코드
-- 미래의 나도 이해할 수 있어야 한다
-- 장애는 반드시 온다. 문제는 언제, 그리고 복구 시간이다
+- 읽기 쉬운 코드 > 영리한 코드. 장애는 반드시 온다 — 문제는 복구 시간이다.
 
-## Tech Stack (2026-05-18 운영 기준)
-- Frontend: Next.js 16 (React), TypeScript (strict mode), Tailwind 4, SWR, motion/react
-- **Backend: Flask + SQLAlchemy ORM + alembic migrations** (Supabase 도입 보류 — `project_tech_decisions.md`)
-- **Database: Railway PostgreSQL** (SQLite 전환 완료)
-- **Auth: Google + Kakao OAuth (이메일+비밀번호 없음)** — stateless HMAC state, `@api_auth` decorator
-- **Hosting: Vercel (frontend), Railway (backend)** — Vercel REST API로 env rotate
-- **PWA: service worker + manifest** (`project_pwa.md` 2026-04-27 확정) — SW 캐시 무효화 필수
-- **Realtime: SSE (Server-Sent Events)** via Flask `services/data/realtime.py`
-- **Data: KIS API + DART OpenAPI + KRX Open Data Portal + FMP $29 plan** (yfinance/pykrx/네이버 finance 영구 금지)
-- Architecture: PWA, 3-Layer Adaptive Trading Parameters
+## Tech Stack (2026-09-21 실측 — 상세는 `docs/claude/stack.md`)
+- **Frontend**: Next.js 16 + TypeScript strict + Tailwind 4 + SWR + motion/react. Vercel (`https://www.pivoxquant.com`). 모션 SoT `frontend/src/lib/motion.ts`, 디자인 v3 `--pq-*` 토큰.
+- **Backend**: Flask + SQLAlchemy + alembic. Render free 플랜 (`https://pivoxquant-api.onrender.com`, 콜드스타트 수 분, 인프로세스 스케줄러 `RUN_SCHEDULER`, `render.yaml`). CSP `connect-src` = `*.onrender.com`.
+- **DB**: Supabase Postgres — session pooler `aws-0-ap-northeast-2.pooler.supabase.com:5432`, 롤 `pivox_app`. 로컬은 SQLite.
+- **Auth**: Google + Kakao OAuth 만 — stateless HMAC state, `routes/decorators.py::api_auth`.
+- **Data**: FMP + KIS (`KIS_READ_ONLY`, `BROKER_LINKING_AVAILABLE=false` — 유저는 계좌를 연동하지 않는다). 벤더 시세 표시는 `MARKET_DATA_DISPLAY_ENABLED` (`config.py`, `services/market_display.py`) + `NEXT_PUBLIC_MARKET_DATA_DISPLAY` (`lib/market-display.ts`) 둘 다 켜져야 한다 — 기본 OFF (FMP §2.2.2 Display Agreement 미체결). 꺼지면 `/portfolio` 취득가, `/api/market/*`·`/api/realtime/*` 503(환율·검색 예외). `routes/market.py` 는 4 라우트 — 늘리지 마라.
+- **Email**: `services/email/` (SendGrid ↔ Brevo cascade). **AI · 퀀트 · autotrade · Artifact 코드는 없다** — 되살리지 마라.
+- **Payment**: Stripe 는 prod 503 `BUSINESS_REGISTRATION_PENDING` 게이트 — 아무도 결제 못 한다.
+
+## 제품 루프 (코드 위치)
+**멈춤 → 기록 → 거울.** 셋 다 시세를 부르지 않는다 (`services/behavior/*.py` 는 시세 서비스 import 금지 — 의도된 설계).
+
+| 화면 | 코드 |
+|---|---|
+| `/pre-trade` 멈춤 | `routes/pre_trade.py`, `services/pre_trade/friction.py` + `friction_outcome.py` (7문항, 쿨다운 0초 — 마찰은 질문 자체) |
+| `/journal` 기록 | 기록 + 거울 `services/behavior/{averaging_down,concentration,profit_loss,turnover}_mirror.py` + `services/profile/holding_mirror.py`. **Import Inbox** `/journal/import`: CSV/XLSX/PDF · 체결 알림 텍스트 · 개인 토큰 webhook `/api/portfolio/imports/webhook` (`routes/imports.py`, `services/imports/`) → `pending_trades` (`models/import_batch.py`) 대기, 유저가 thesis 쓰고 승인해야 원장 반영 |
+| `/mirror` 거울 (홈) | `routes/mirror_home.py` — 선언 vs 관찰 (30일, 9축 = `services/profile/persona_classifier_v2.FEATURE_KEYS`). 라벨·점수 없음 |
+
+- 온보딩 v3 = `services/profile/questionnaire.py` 5문항 + 법적 확인. 답은 `investment_profiles.onboarding_answers_json` 원문 저장 → `declared_vector_json` 9축 투영. V1/V2 는 삭제 (`ONBOARDING_UNKNOWN_QUESTIONNAIRE` 400).
+- 연령 게이트 (2026-09-21) = 만 14세 자가선언 체크박스 → `users.age_confirmed_at` (migration `053_age_self_declaration.py`), 코드 `AGE_CONFIRMATION_REQUIRED` (`routes/profile.py`). 생년월일은 더 이상 받지 않는다 (`birthdate` 컬럼은 유지, 쓰지 않음).
+- 나머지: `/portfolio` `/settings` `/support`. `/profile` → `/settings` 308, `/home` → `/mirror`. 프론트 `(dashboard)` = journal · mirror · portfolio · pre-trade · settings · support.
+- 알림 발신자: `app.py::_scheduled_price_alerts` (`concentration`; `price_52w` 는 시세 표시 OFF 면 꺼짐) + `monthly_mirror` (WeasyPrint PDF — 유일한 PDF). SoT `models/user.py::NOTIFICATION_EVENT_IDS`.
+
+## 검증 명령 (CLAUDE.md 와 동일 — 보고서에 exit code 첨부)
+```bash
+./venv/bin/python -m pytest -q | tail -2                 # 백엔드
+./venv/bin/python -m ruff check .                        # lint
+cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run build
+# 법적 스위트 7파일 (CLAUDE.md 함정 4 — Template Hardcoding Guard 의 green 은 증거가 아니다)
+./venv/bin/python -m pytest tests/test_disclaimer_sot.py tests/test_forbidden_terms_sync.py tests/test_legal_deep_scan_local.py tests/test_legal_filter.py tests/test_legal_filter_forbidden_parity.py tests/test_legal_scrub_decorator.py tests/test_pivoxaudit_secret_leak.py
+```
+- 로컬 grep 은 ugrep(`ug`). 로컬 파이썬 3.12 · prod 3.11 · Docker 없음.
+- 야간 launchd `com.pivoxquant.nightly.verify` 03:00 → `scripts/nightly/verify_build.sh` → `docs/qa/nightly-verify-*.md`.
+- GitHub 워크플로우는 `.github/workflows/*.yml` 만 살아있다 (`*.disabled` 는 죽은 것) — 핵심: ci · frontend-tests · legal-guard · legal-deep-scan · regression-guards · alembic-head-guard.
 
 ## Engineering Standards
-
-### Code Quality Gates
-- TypeScript strict mode — `any` 타입 절대 금지
-- 모든 함수: 단일 책임 원칙 (SRP)
-- 함수 길이 50줄 이하, 파일 300줄 이하
-- Cyclomatic complexity 10 이하
-- 네이밍: 의도가 드러나는 이름 (축약어 금지)
-- 에러 핸들링: 모든 async 호출에 try-catch + 유저 피드백
-
-### Architecture Rules
-- Component: Presentational / Container 분리
-- State: Server state (React Query) / Client state (Zustand) 분리
-- API: 입력 검증 → 인증 확인 → 비즈니스 로직 → 응답 순서
-- DB: 모든 쿼리에 인덱스 확인, N+1 쿼리 금지
-- 캐싱: 시세 데이터 TTL, 사용자 데이터 SWR
-
-### Trading Logic Standards (매매 로직 — 0 오차 허용)
-- 모든 금액 계산: Decimal.js 또는 정수 연산 (부동소수점 금지)
-- 매매 파라미터 변경: 반드시 로그 + 이전값 백업
-- 주문 실행: 멱등성(idempotency) 보장
-- 실시간 데이터: 연결 끊김 감지 + 자동 재연결 + 유저 알림
-
-### Performance Budgets
-- FCP (First Contentful Paint): < 1.5s
-- TTI (Time to Interactive): < 3s
-- Bundle size: < 200KB (gzipped, initial)
-- API 응답: < 200ms (p95)
-- 실시간 데이터 딜레이: < 500ms
+- TypeScript strict — `any` 금지. 함수 단일 책임, 50줄 이하. 의도가 드러나는 이름.
+- API 순서: 입력 검증 → 인증(`@api_auth`) → 비즈니스 로직 → `@legal_scrub_response` → 응답.
+- **API endpoint URL 변경 금지** — `frontend/src/lib/endpoints.ts` 와 1:1. 소비자는 경로 문자열이 아니라 **심볼**(`API.market.fx`)로 grep (함정 12).
+- `routes/ · models/ · services/` 구조 유지. `app.py` 의 `db.create_all()` 은 조건 없이 돈다. `models/` · `migrations/` 리비전 삭제 금지.
+- 금액은 Decimal/정수. KRW+USD 합산은 FX 변환 후 (`fx-consistency-guard`). 0.00/NaN/null 을 값으로 흘리지 않는다. 캐시 키에 `user_id` 누락 금지 (`cache-poisoning-sentinel`).
+- 동결 파일은 `.claude/frozen_files.yaml` hard_frozen (legal_filter · behavior/* · pre_trade/* · imports/ledger · migrations · privacy-ko/terms-ko). 건드리려면 `legal-kr-fintech approved` / `fx-consistency-guard approved` / `migration-guard approved` / `CEO override: <reason>` 토큰.
+- PWA: 코드 변경 시 `frontend/public/sw.js` cacheName bump. `tests/test_scheduler_cron_jobs.py::EXPECTED_JOB_COUNT` 는 하드코딩 — cron 을 더하거나 빼면 같이.
+- 빈 DB 는 alembic 으로 세우지 마라 — 앱 1회 부팅 후 `flask db stamp head` (함정 1). `.env` 는 `override=True`.
+- 법적 스크럽 구현은 `services/legal_filter.scrub_response()` 하나 — 라우트 쪽 사본 금지 (함정 10). pre-commit legal-guard 는 추가된 줄만 본다, 예외는 `// legal-ok` (함정 6). `services/access_guard.py` 는 없다 (함정 8).
+- 시그널 라벨 POSITIVE/NEGATIVE/NEUTRAL. BUY/SELL/HOLD · 추천 · 조언 · "AI Coach" · "투자 코치" 금지. 없는 기능을 파는 카피·링크 금지.
+- console.log 커밋 금지, magic number 금지.
 
 ## Output Format
-```
-## 구현 결과: [기능명]
+`## 구현 결과: [기능명]` → 변경 파일(한줄씩) → 기술 결정(결정 — 이유 — 대안) → 검증(명령 + exit code) → 잠재 리스크.
 
-### 변경 파일
-- path/to/file.ts — [변경 내용 한줄]
+## PR 워크플로우
+1. `alembic heads` 단일 head 확인 (`migration-guard`) 2. `git fetch origin && git rebase origin/main` 3. >30 파일이면 분할 4. 머지 전 main 에서 pytest 재실행 5. 스키마 변경·50+ 파일 wave 는 `qa` + `security` 재검토
 
-### 기술 결정
-- [결정] — [이유] — [대안과 비교]
-
-### 테스트 필요 항목
-- [ ] 유닛 테스트: [대상]
-- [ ] 통합 테스트: [대상]
-- [ ] 엣지 케이스: [시나리오]
-
-### 잠재 리스크
-- [리스크] — [대응 방안]
-
-### Performance Impact
-- 번들 사이즈 변화: +/- KB
-- API 호출 변화: +/- N calls
-```
-
-## Rules
-- 기존 코드를 반드시 읽고 패턴을 파악한 후 작성
-- Copy-paste 코드 발견 시 즉시 추상화
-- TODO/FIXME 작성 시 반드시 이유 + 기한 포함
-- console.log 디버깅 코드 절대 커밋 금지
-- Magic number 금지 — 상수로 추출
-- 한 PR에 한 관심사만
-
----
-
-## 🚀 PivoxQuant Context (2026-05-18 v44.9 기준)
-
-**프로덕션 상태**: Railway + Vercel ACTIVE / 누적 PR/테스트 수는 `HANDOVER.md` + `git log` 실측 (하드코딩 금지) / pytest 3000+ / vitest 450+ / 0 회귀
-**베타 비밀번호**: 없음 — 게이트 2026-09-04 폐기(무료 공개). `BETA_PASSWORD`/`BETA_SIGNING_SECRET` 은 코드·env 에서 삭제됨.
-**최신 인수인계**: `HANDOVER.md` v44.7 (2026-05-17 갱신)
-**Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4 모두 시점 지남 — 출시 직전 단계)
-**자율 운영 인프라**: 6개 cron 워크플로우 정의 (`docs/AUTONOMOUS_OPS.md`) — 단 GitHub Actions billing 차단으로 현재 .disabled, 로컬 hooks/scheduled-tasks 로 운영 (autopilot-monitor SoT)
-
-### 도메인 reference
-- **40+ quant 모델** (`services/quant/model_catalog.py` + `services/quant/engine.py`)
-- **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
-- **법적 안전**: 자본시장법 §17 §101 면제 트랙 / 표시광고법 §3 / 신용정보법 / PIPA / 정통망법 §50 / 금소법 §19 / 전자상거래법 §17 — `services/legal/forbidden_terms.py` + `services/legal_filter.py`
-
-### 9-bug-pattern checklist (코드 작성 시 회귀 방지 — `feedback_bug_fix_patterns.md`)
-- [ ] **stale fallback** — old cache 그대로 반환 금지 (TTL 만료 시 fresh fetch + fallback)
-- [ ] **divergence guard** — 두 데이터 소스 불일치 시 fail-fast + 알림
-- [ ] **ticker normalization** — `005930` vs `005930.KS` vs `삼성전자` 입력 정규화 일관성
-- [ ] **per-metric try-except** — 한 metric 실패가 전체 응답 죽이지 않게 metric-level 격리
-- [ ] **SWR dedup 3계층** — Request key / dedupingInterval / revalidateOnFocus 모두 점검
-- [ ] **fail-fast** — silent error 금지, 즉시 사용자 알림 + Sentry
-- [ ] **equity curve FX 변환** — KRW raw 합산 금지 (v44.8 PR #484 +52,281% 데이터 손상 사례)
-- [ ] **viral loop endpoint auth** — 공유 OG는 public, 나머지는 `@api_auth` 강제 (PR #484 brag-card)
-- [ ] **webhook signature 강제** — Stripe webhook signature 미강제 → 항상 503 DoS (PR #484)
-
-### 공식 데이터만 룰 (`feedback_official_data_only.md`)
-- ❌ **영구 금지**: yfinance / pykrx / 네이버 finance / 비공식 스크래핑
-- ✅ **허용**: KIS API (KR 시세) / KRX Open Data Portal (정부 공식) / DART OpenAPI (공시) / FMP Stable (US) / SEC EDGAR  ※ Alpaca 는 2026-05-27(commit 6bea95f8) 완전 제거 — ALPACA_ENABLED 기본 OFF
-- KR 데이터 path 제시 시 KIS 우회 + KRX + DART 만 제안. yfinance 코드 발견 시 즉시 fix.
-
-### PR 워크플로우 5대 룰 (`feedback_pr_workflow.md`)
-1. **alembic heads 먼저** — `alembic heads`로 multi-head 검증 후 작업
-2. **worktree freshness** — `git fetch origin && git rebase origin/main` 전제
-3. **>30 files 분할** — 단일 PR이 30 file 초과 시 관심사별 split
-4. **spot check** — 머지 전 main 브랜치에서 grep / pytest re-run
-5. **DB 마이그·wide-scope audit 강제** — schema change / 50+ file touch wave는 audit team 패스 필수
-
-### PWA 컨텍스트 (`project_pwa.md` 2026-04-27 확정)
-- service worker 캐시 무효화 필수 — 코드 변경 시 `cacheName` bump 또는 `skipWaiting()` 트리거
-- manifest 변경 시 모든 icon size 동시 갱신
-- SW invalidation 회귀 패턴: 사용자가 stale JS bundle 잡으면 새 API 응답 schema 깨짐 → fail-fast로 catch
-- offline route는 fallback HTML 명시 (`/offline`)
-
-### Pre-Launch Full Throttle 모드 (`feedback_pre_launch_full_throttle.md` 2026-05-17)
-🟥 **출시 전까지 활성**. 토큰 / 모델 / wave 절약 금지.
-- Opus 4.7 default
-- 5-10 agent 병렬 허용
-- 분석 깊이 max
-- 보고서 압축 금지
-- `feedback_parallel_ops` 윈도우 다운그레이드 룰 **override**
-- `feedback_no_extra_cost` 만 유지 (추가 결제 금지)
-→ 출시 후 archive.
-
-### 자동 호출 매핑
-| 상황 | 호출할 agent |
+## 자동 호출 매핑 (활성 agent 만)
+| 상황 | agent |
 |---|---|
 | Alembic migration 작성 / 검증 | `migration-guard` |
-| 한국 핀테크 규제 / KIS / advisory 어휘 | `legal-kr-fintech` |
-| 페르소나 centroid / 퀀트 모델 학술 / 백테스트 math | `persona-quant-domain` |
-| Playwright / Vitest / Visual regression | `frontend-test-runner` |
-| 자율 운영 cron / Anthropic API cost / self-healing PR | `autopilot-monitor` |
-| Bloomberg Terminal 톤 / observational 어휘 / AI slop | `brand-voice` |
-| Background launch 결정 / verify gap 방지 | `verify-policy` |
-| PDCA 사이클 / bkit skill 활용 | `bkit-orchestrator` |
-| (예정) 출시 release 조정 | `release-coordinator` *placeholder — 다음 wave 생성* |
-| (예정) prod alembic 동기화 검증 | `prod-migration-sync-verifier` *placeholder* |
-| (예정) PWA SW 캐시 무효화 검증 | `pwa-cache-validator` *placeholder* |
+| 한국 핀테크 규제 / KIS / advisory 어휘 | `legal-kr-fintech` (정책 판정은 `legal`) |
+| 거울 9축 / 선언 벡터 / 행동 거울 수학 | `persona-quant-domain` |
+| KRW+USD 합산 / 캐시 user_id / 데이터 신선도 | `fx-consistency-guard` / `cache-poisoning-sentinel` / `data-freshness-monitor` |
+| 동결 파일 diff | `frozen-file-diff-guard` |
+| 톤 / observational 어휘 / AI slop / 모션 | `brand-voice` / `verify-design` / `motion-designer` |
+| 엔드포인트 실호출 / 브라우저 증거 / 보안 퇴행 | `verify-api` / `verify-ux` / `verify-security` |
+| 모르는 버그 발굴 / 알려진 증상 원인 | `bug-hunter` / `investigate-bug` |
+| 배포 · Render/Vercel/Supabase 운영 | `devops` |
 
-### Verify policy (background launch 강제)
-다음 작업이면 background launch 금지 (foreground 강제):
-- pytest / npm test / alembic 실행 필요
-- DB schema 변경
-- legal_filter / forbidden_terms 통과 검증
+`.claude/workflows/`: wave-bug-hunt · wave-data-integrity · wave-design-polish. archive/ 의 agent 는 호출하지 마라.
 
-→ 의심되면 `verify-policy` agent 먼저 호출.
+## Verify policy
+pytest / npm test / alembic / 스키마 변경 / legal 스위트가 필요한 작업은 foreground 강제. Bash 를 못 돌리면 즉시 BLOCKED 보고.

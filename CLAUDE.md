@@ -71,7 +71,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 
 상세·근거는 `docs/claude/stack.md`.
 - **Backend** Flask + SQLAlchemy + PostgreSQL(Supabase) / SQLite(local) · **Frontend** Next.js 16 + TS + Tailwind 4 + SWR + motion/react
-- **AI 없음 — 코드까지 삭제됨** (2026-09-01). 되살릴 거면 소비자부터. 🟥 개인정보처리방침·가입 필수 동의에 Anthropic 국외 이전이 **아직 남아 있다** → `SHIP_BLOCKERS.md` R0.
+- **AI 없음 — 코드까지 삭제됨** (2026-09-01). 되살릴 거면 소비자부터. 개인정보처리방침·가입 동의의 Anthropic 국외 이전 문구는 **2026-09-06 제거 완료**(§6-3 정정 이력에만 남음, `SHIP_BLOCKERS.md` R0 ✅ — 2026-09-21 grep 재확인). 남은 건 변호사 §28-8 확인뿐.
 - **Broker** KIS read-only (`KIS_READ_ONLY` 가드). 토스 Open API 는 **운영자 본인 계좌 read-only 전용** — 리포트는 `services/behavior/*_mirror` 함수를 그대로 쓴다(두 벌 금지). 유저 브로커 연동은 `BROKER_LINKING_AVAILABLE=false`.
 - **Data** FMP + KIS. ⚠️ **FMP 약관 §2.2.2 — Data Display Agreement 없이 유저 표시 금지(무료도 해당), 미체결.** 그래서 **벤더 시세의 유저 표시는 플래그 뒤에 있고 기본 꺼짐**(2026-09-19): 백엔드 `MARKET_DATA_DISPLAY_ENABLED`(`config.py`, `services/market_display.py`) + 프론트 `NEXT_PUBLIC_MARKET_DATA_DISPLAY`(`lib/market-display.ts`, 둘 다 켜져야 표시). 꺼지면 `/portfolio` 는 취득가 기준, `/api/market/*`·`/api/realtime/*` 는 503(환율·검색 예외), 52주 알림 잠김, NAV 스냅숏 기록도 멈춤. **무료·재배포 가능한 종가 소스는 국내·미국 모두 없다**(2026-09-19 약관 실측 — `docs/legal/R7_kis_market_data_options_2026-06-09.md` 상단 추기). 켜는 조건 = Agreement 체결.
 - **Auth** Google + Kakao OAuth · **Payment** Stripe(게이트) · **Design** v3 락-인 (Vantablack + Bronze + Playfair + KR 컨벤션)

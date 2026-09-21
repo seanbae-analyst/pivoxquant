@@ -1,119 +1,108 @@
 # PivoxQuant — Frozen Files SoT
 # Owner: frozen-file-diff-guard agent
 # 변경 시 CEO 승인 필수 + 본 yaml 갱신 PR 동봉
-# 2026-05-19 v45.3 마무리 (SoT 신규 작성)
+# 2026-05-19 v45.3 신규 작성 → 2026-09-21 전면 재작성 (services/quant · services/ai 는 삭제됐다)
 
 version: 1
-last_updated: "2026-09-04"  # beta-gate entry removed (page deleted, CEO retirement)
+last_updated: "2026-09-21"  # quant/ai 동결 해제(코드 삭제), 살아있는 법적·기록 코어로 교체
 
-# Iron Rule 7건 동결 — CLAUDE.md "중요 원칙" 절 명시
-# 변경 절대 금지 (예외: §exceptions 조항)
+# 읽는 곳 (2026-09-21 grep): §verification 스니펫 · .githooks/post-checkout(파일명만) ·
+# agents/frozen-file-diff-guard.md. .githooks/pre-commit 의 FROZEN_PATHS 는 하드코딩(옛 quant 경로) — 별도 PR.
+# path 는 fnmatch 글롭 (`*` 는 한 디렉터리 안에서만).
+
+# Hard frozen — 변경 절대 금지 (예외: §exceptions 조항)
 hard_frozen:
-  - path: services/quant/engine.py
-    owner: persona-quant-domain
-    reason: QuantEngine 1146줄 — 4-pillar scoring. 완성 상태.
-    legacy_path: engine.py  # 루트 폐기, services/quant/로 이동
-    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
-
-  - path: services/quant/models.py
-    owner: persona-quant-domain
-    reason: 40 quant 모델 (MODEL_CATALOG — StatArb, MeanReversion, TSMOM, ML 등)
-    legacy_path: quant_models.py
-    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
-
-  - path: services/quant/risk_metrics.py
-    owner: persona-quant-domain
-    reason: Risk metrics (GKYZ, LedoitWolf, ComponentES, ConditionalDD, TailRatio, Sortino)
-    legacy_path: risk_models.py
-    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
-
-  - path: services/quant/risk_defense.py
-    owner: persona-quant-domain
-    reason: 7-Layer Risk Defense (VaR, Correlation, VIX, Tail, Daily, Sector, Cash)
-    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
-
-  - path: services/quant/portfolio.py
-    owner: persona-quant-domain
-    reason: HRP, TailRiskParity, MaxDiv, ERC, MinVariance
-    legacy_path: portfolio_models.py
-    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+  - path: services/legal_filter.py
+    owner: legal-kr-fintech
+    reason: 법적 스크럽 구현 유일본 scrub_response() — CLAUDE.md 함정 10. 두 번째 복사본 금지.
+    iron_rule_source: "CLAUDE.md 함정 10 · 중요 원칙 (추천·조언 언어 금지)"
     exceptions:
-      - "Pattern 7 FX consistency fix (precedent v44.9 PR #484 / v45.3 commit eea051e5) — fx-consistency-guard agent 승인 시 허용"
+      - "금칙어 목록·법무 문구 변경 — legal-kr-fintech 승인 + 함정 4 legal 스위트 7파일 green"
 
-  - path: services/quant/signals.py
+  - path: services/behavior/*.py
     owner: persona-quant-domain
-    reason: Behavioral signals (DispositionEffect, Herding, SentimentDivergence, OrderFlow, Anchoring)
-    legacy_path: signal_models.py
-    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
-
-  - path: services/ai/models.py
-    owner: persona-quant-domain
-    reason: AI models (EarningsCallTone, SectorRotation, RiskSummary)
-    legacy_path: ai_models.py
-    iron_rule_source: "CLAUDE.md 중요 원칙 §1"
+    reason: 기록 거울 4종 (회전율·집중도·물타기·손익처분) — 점수·등급·라벨 없는 사실 서술. 시세 import 금지.
+    iron_rule_source: "CLAUDE.md 제품 §핵심 3축 (셋 다 시세를 안 부른다)"
     exceptions:
-      - "Pattern 6 cache poisoning fix (precedent v44.9 PR #488 / v45.3 commit 69b583af) — cache-poisoning-sentinel agent 승인 시 허용"
-      - "Pattern 10 prompt injection fix (precedent v45.3 commit 22bf5496) — legal-kr-fintech agent 승인 시 허용"
+      - "FX 합산 버그 fix — fx-consistency-guard 승인 시 허용"
 
-# Soft frozen — CEO 결정 대기 (현재 권고만, BLOCK 안 함)
-# 회귀 사고 학습 기반 동결 후보. 본 yaml 갱신 PR + CEO 승인 시 hard_frozen으로 승격.
+  - path: services/pre_trade/*.py
+    owner: persona-quant-domain
+    reason: 멈춤 7문항 + friction_outcome (일어나지 않은 거래) — 제품의 남은 진짜 자산.
+    iron_rule_source: "CLAUDE.md 제품 전제"
+
+  - path: services/imports/ledger.py
+    owner: engineering
+    reason: Import Inbox 원장 — pending_trades 승인 1건 = TradeHistory 1행. 체결 유실 fix 전력 (bcd45e02).
+    iron_rule_source: "CLAUDE.md 구조 (routes/models/services 유지)"
+
+  - path: migrations/versions/*.py
+    owner: migration-guard
+    reason: alembic 리비전 삭제·수정 금지 (001~053). prod alembic_version 동기화 사고 전력.
+    iron_rule_source: "CLAUDE.md 구조 · 함정 1"
+    exceptions:
+      - "새 리비전 추가는 동결 대상이 아니다 — 기존 파일 수정·삭제만 차단. migration-guard 승인 시 허용"
+
+  - path: frontend/src/content/privacy-ko.md
+    owner: legal-kr-fintech
+    reason: 개인정보처리방침 SoT (PIPA). Anthropic 국외 이전 문구 제거는 SHIP_BLOCKERS R0 — 법무 review 필수.
+    iron_rule_source: "CLAUDE.md 법적 컴플라이언스"
+
+  - path: frontend/src/content/terms-ko.md
+    owner: legal-kr-fintech
+    reason: 이용약관 SoT (자본시장법 §17 면책 · 정통망법 · 만 14세 자가선언).
+    iron_rule_source: "CLAUDE.md 법적 컴플라이언스"
+
+# Soft frozen — 권고만 (WARN, BLOCK 안 함). 승격은 CEO 승인 + 본 yaml 갱신 PR.
 soft_frozen_candidates:
-  - path: frontend/src/app/terms/page.tsx
-    reason: 자본시장법 §17 + 정통망법 §50 면책 + 통신판매업 §17 청약철회 문구 SoT
-    incident: "변경 시 법무 review 필수"
-    decision_owner: CEO + legal-kr-fintech
-
-  - path: frontend/src/app/privacy/page.tsx
-    reason: PIPA §28 + §17 처리방침 SoT
-    incident: "변경 시 PIPA 신고 검토 필요"
-    decision_owner: CEO + legal-kr-fintech
-
   - path: routes/auth.py
-    reason: OAuth callback section — v44.7 provisioning_failed P0 사고
-    incident: "alembic 035 prod 미적용 hotfix (runtime ADD COLUMN). 재발 위험 영역"
-    section_anchor: "def oauth_callback / _do_migrations"
-    decision_owner: CEO + release-coordinator
-
-  - path: migrations/versions/035_user_onboarding_draft.py
-    reason: v44.7 OAuth 사고 원인 — prod alembic_version 동기화 영구 가드
-    incident: "변경 시 migration-guard + prod-migration-sync-verifier 강제"
+    reason: OAuth callback (Google · Kakao) — provisioning_failed P0 전력 (_do_migrations 런타임 DDL)
+    incident: "CLAUDE.md 함정 13 — DDL 은 소비자와 함께"
     decision_owner: CEO + migration-guard
 
   - path: routes/health.py
-    reason: /api/health endpoint — release-coordinator 5분 window의 SoT
-    incident: "Railway health check 의존. status code 변경 = 배포 게이트 영향"
-    decision_owner: CEO + release-coordinator
+    reason: /api/health — Render health check 와 keep-warm.yml 이 의존
+    incident: "status code 변경 = 배포 게이트 영향"
+    decision_owner: CEO + devops
 
-  - path: frontend/public/manifest.json
-    reason: PWA manifest — service worker 캐시 무효화 트리거
-    incident: "변경 시 pwa-cache-validator agent + version bump 필수"
-    decision_owner: CEO + pwa-cache-validator
+  - path: models/user.py
+    reason: NOTIFICATION_EVENT_IDS · age_confirmed_at · is_simulated — 발신자·가상유저 스윕이 의존 (함정 7)
+    incident: "is_simulated 삭제 금지"
+    decision_owner: CEO + engineering
+
+  - path: frontend/public/sw.js
+    reason: PWA service worker — 캐시 무효화 회귀 전력 (CACHE_VERSION 은 scripts/inject-sw-version.mjs 가 빌드 시 주입)
+    incident: "precache 목록·claim 로직 변경 시 실기기 재검증"
+    decision_owner: CEO + devops
 
 # Exceptions 글로벌 규칙
 exceptions:
-  - "P0 SHIP-BLOCKER (cache poisoning / FX / prompt injection / OAuth 사고 재발) fix는 해당 가드 agent 승인 시 허용"
-  - "Brand rename / mass codegen은 CEO 명시 승인 + 본 yaml 갱신 PR 동봉 시 허용"
-  - "법무/규제 변경 (자본시장법 / PIPA / 통신판매업 개정) 대응 fix는 legal-kr-fintech 승인 시 허용"
+  - "P0 fix (FX 합산 / 크로스유저 캐시 / OAuth 사고 재발) 는 해당 가드 agent 승인 시 허용"
+  - "법무/규제 변경 (자본시장법 / PIPA / 정통망법) 대응 fix 는 legal-kr-fintech 승인 시 허용"
+  - "CEO override: <reason> — 커밋 메시지에 명시 시 모든 hard_frozen 일시 허용 (본 yaml 갱신 PR 동봉)"
 
 # Verification commands
 verification:
   pr_diff_check: |
     git diff --name-only origin/main..HEAD | \
       python3 -c "
-      import sys, yaml
+      import sys, yaml, fnmatch
       with open('.claude/frozen_files.yaml') as f:
           frozen = yaml.safe_load(f)
-      hard = {p['path'] for p in frozen['hard_frozen']}
-      changed = set(line.strip() for line in sys.stdin if line.strip())
-      blocked = changed & hard
+      hard = [p['path'] for p in frozen['hard_frozen']]
+      changed = {line.strip() for line in sys.stdin if line.strip()}
+      blocked = {c for c in changed if any(fnmatch.fnmatch(c, h) for h in hard)}
       if blocked:
-          print(f'BLOCKED: {blocked}')
+          print(f'BLOCKED: {sorted(blocked)}')
           sys.exit(1)
       "
 
-  pre_commit_hook: |
-    # .git/hooks/pre-commit (권고)
-    git diff --cached --name-only | python3 scripts/check_frozen.py
+  escape_tokens: |
+    # 커밋 메시지에 택1
+    #   legal-kr-fintech approved · fx-consistency-guard approved
+    #   migration-guard approved  · CEO override: <reason>
+    # (.githooks/pre-commit 은 아직 옛 3토큰만 grep 한다 — 훅 갱신 PR 에서 migration-guard 추가)
+    git log origin/main..HEAD --format="%B" | grep -Ei "approved|CEO override:"
 
 # 0원 (feedback_no_extra_cost 준수)
 cost: "0원 — git diff + python stdlib + yaml (이미 설치) 만"
