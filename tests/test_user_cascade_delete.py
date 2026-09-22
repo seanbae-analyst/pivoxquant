@@ -66,7 +66,7 @@ def seeded_user(app, cascade_user):
     from models import (
         Position, Watchlist, TradeHistory, BrokerConnection,
         PushSubscription, PositionDDCheck, Alert, PortfolioShare,
-        InvestmentProfile,
+        InvestmentProfile, ObservationNote,
     )
     from models.companion_waitlist import CompanionWaitlist
 
@@ -93,6 +93,9 @@ def seeded_user(app, cascade_user):
                 auth="dummy_auth",
             ),
             PositionDDCheck(user_id=user_id, position_id=position.id),
+            ObservationNote(user_id=user_id, body="관찰 노트 캐스케이드 확인",
+                            tickers_json='["TEST"]', tags_json="[]",
+                            source="journal"),
             Alert(user_id=user_id, ticker="TEST", title="T", message="M"),
             PortfolioShare(
                 user_id=user_id,
@@ -124,6 +127,7 @@ _USER_OWNED_TABLES = {
     "broker_connections":  "cascade",
     "push_subscriptions":  "cascade",
     "position_dd_checks":  "cascade",
+    "observation_notes":   "cascade",
     "alerts":              "cascade",
     "portfolio_shares":    "cascade",
     "investment_profiles": "cascade",
@@ -157,7 +161,7 @@ def _row_count_by_id_anywhere(db, table: str, user_id: int) -> int:
 @pytest.mark.parametrize("table_name", [
     "positions", "watchlist", "trade_history", "broker_connections",
     "push_subscriptions", "position_dd_checks", "alerts",
-    "portfolio_shares", "investment_profiles",
+    "portfolio_shares", "investment_profiles", "observation_notes",
 ])
 def test_cascade_delete_user_removes(seeded_user, app, table_name):
     """Each user-owned CASCADE table loses its rows when the User is deleted.

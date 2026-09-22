@@ -36,6 +36,13 @@ from .pre_trade_reflection import (
     AUTO_EXTEND_REASONS,
 )
 from .behavioral_score import BehavioralScore, SUB_SCORE_KEYS
+# 관찰 노트 — 거래 없이 적어 두는 기록 (docs/design/observation-notes_2026-09-22.md).
+# 캡 상수(MAX_TICKERS 등)는 이름이 너무 일반적이라 이 네임스페이스에 올리지
+# 않는다 — 소비자는 models.observation_note 에서 직접 가져온다.
+from .observation_note import (
+    ObservationNote,
+    VALID_SOURCES as OBSERVATION_NOTE_SOURCES,
+)
 # Feature 5 — AI Twin (paper portfolio simulator). 100% paper / no broker.
 from .ai_twin_portfolio import AITwinPortfolio, DEFAULT_STARTING_CASH
 from .ai_twin_position import AITwinPosition
@@ -102,4 +109,5 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory",
            "AUTH_PROVIDER_GOOGLE", "AUTH_PROVIDER_KAKAO",
            "FunnelEvent", "FUNNEL_ALLOWED_EVENTS",
            "Inquiry", "INQUIRY_VALID_STATUSES", "INQUIRY_VALID_CATEGORIES",
-           "ImportBatch", "PendingTrade", "ImportToken"]
+           "ImportBatch", "PendingTrade", "ImportToken",
+           "ObservationNote", "OBSERVATION_NOTE_SOURCES"]
