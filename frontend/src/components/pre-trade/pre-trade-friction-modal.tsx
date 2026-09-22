@@ -31,6 +31,7 @@ import {
   TerminalStep,
   QUESTIONS,
 } from "./pre-trade-friction-core";
+import { RelatedObservationNotes } from "./related-observation-notes";
 
 export interface PreTradeFrictionModalProps {
   open: boolean;
@@ -236,6 +237,16 @@ export function PreTradeFrictionModal({
 
         {/* Body — bare (no numbered SectionLabel) since the modal header
             already frames the step. */}
+        {/* Same read-back as the /pre-trade route (§4-1): the user's own past
+            observations on this symbol, above the questions, read-only. The
+            modal shares usePreTradeCycle but renders its own QuestionsStep,
+            so it needs its own mount. */}
+        {cycle.phase === "questions" && (
+          <div className="mb-5">
+            <RelatedObservationNotes ticker={ticker} />
+          </div>
+        )}
+
         {cycle.phase === "questions" && (
           <QuestionsStep
             bare

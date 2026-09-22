@@ -207,6 +207,59 @@ const DEMO_FRICTION_OUTCOME = {
 };
 
 
+/* ── 관찰 노트 (observation notes, 2026-09-22) ──
+ * The /journal timeline merges these with DEMO_PRETRADE_LIST above, and
+ * /pre-trade reads them back per ticker. Tickers are drawn from
+ * DEMO_POSITION_ROWS so the demo book and the demo record agree. Copy is
+ * observational — what the user saw, never what to do about it. One note
+ * carries no ticker at all (a market-wide note), which is the shape the
+ * backend allows and the UI must not choke on. */
+const DEMO_OBSERVATION_NOTES = [
+  {
+    id: 3,
+    user_id: 1,
+    body: "엔비디아는 지난주부터 장 초반 거래량이 평소보다 두껍다. 내가 왜 이걸 계속 보고 있는지는 아직 설명하지 못하겠다.",
+    tickers: [{ ticker: "NVDA", name: "NVIDIA" }],
+    tags: ["거래량", "관찰"],
+    source: "journal",
+    created_at: "2026-06-17T23:40:00Z",
+  },
+  {
+    id: 2,
+    user_id: 1,
+    body: "삼성전자 평단 근처에서 손이 근질거린다. 오늘은 아무것도 하지 않고 이 문장만 적어 둔다.",
+    tickers: [{ ticker: "005930", name: "삼성전자" }],
+    tags: ["충동"],
+    source: "portfolio",
+    created_at: "2026-06-16T07:10:00Z",
+  },
+  {
+    id: 1,
+    user_id: 1,
+    body: "지수가 이틀 연속 쉬었는데 내 계좌는 더 크게 흔들렸다. 종목 수보다 비중이 문제인 것 같다.",
+    tickers: [],
+    tags: ["집중도"],
+    source: "journal",
+    created_at: "2026-06-14T09:05:00Z",
+  },
+];
+
+const DEMO_OBSERVATION_NOTES_LIST = {
+  ok: true,
+  notes: DEMO_OBSERVATION_NOTES,
+  next_before: null,
+};
+
+/** `/api/observation-notes/by-ticker/<t>` — filtered from the same three. */
+function _demoNotesByTicker(base: string) {
+  const raw = base.slice("/api/observation-notes/by-ticker/".length);
+  const ticker = decodeURIComponent(raw).trim().toUpperCase();
+  const notes = DEMO_OBSERVATION_NOTES.filter((n) =>
+    n.tickers.some((t) => t.ticker.toUpperCase() === ticker),
+  );
+  return { ok: true, ticker, count: notes.length, notes };
+}
+
 /* ── Living CFO Layer-2 + profile depth (usePersona / usePulse / useRollingWindow,
  *    lib/cfo/hooks.ts). In demo mode apiFetch resolves {} WITHOUT throwing, so the
  *    cfoFetch mock fallback never fires — these must be canned or L2 reads "missing"
@@ -313,6 +366,8 @@ function matchDemoGet(path: string): unknown | undefined {
   const query = qIdx === -1 ? "" : path.slice(qIdx + 1);
 
   if (base === "/api/search") return _demoSearch(query);
+  if (base.startsWith("/api/observation-notes/by-ticker/"))
+    return _demoNotesByTicker(base);
   if (base === "/api/portfolio/history")
     return _demoEquity(new URLSearchParams(query).get("period") || "1mo");
 
@@ -347,6 +402,8 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_AVGDOWN_MIRROR;
     case "/api/pre-trade/list":
       return DEMO_PRETRADE_LIST;
+    case "/api/observation-notes/list":
+      return DEMO_OBSERVATION_NOTES_LIST;
     case "/api/behavior/friction-outcome":
       return DEMO_FRICTION_OUTCOME;
     // Living CFO Layer-2 + profile depth
