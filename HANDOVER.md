@@ -1,6 +1,8 @@
 # PivoxQuant — 인수인계서 (2026-06-12 v66 — 버그헌트 14건 처분 + 가상유저 3-레이어 감사·구축 완료)
 
-## v67 2026-09-22 — CEO "관찰 노트 기능 빌드 계획 짜고 agent 들 시켜서 빌드" (브랜치 `feat/observation-notes`, 미푸시)
+## v67 2026-09-22 — CEO "관찰 노트 기능 빌드 계획 짜고 agent 들 시켜서 빌드" → PR #590 **머지·배포 완료** (`fbbed00e`)
+
+> **배포 실측 (2026-09-22 14:04Z)**: Render `/api/health` version=`fbbed00e6043` db ok (+96s) · Vercel Production Ready · `/`·`/login`·`/journal` 200 · `/api/observation-notes/list` 비로그인 401. prod DB 에 `observation_notes` + 인덱스 2 + FK CASCADE 존재. **⚠ prod `alembic_version` = `049_reflection_observed_context`, 코드 head = `054`** — 테이블은 `db.create_all()` 이 만들어서 조용히 굴러가지만 050~054 가 stamp 안 됐다. `prod-migration-sync-verifier` 로 확인 후 `flask db stamp head` 결정 필요 (이 세션은 prod 를 건드리지 않았다).
 
 > **관찰 노트(observation notes)** — 거래 없이도 주식 흐름을 읽다가 든 생각을 적는 기록. 계획 `docs/design/observation-notes_2026-09-22.md`, 커밋 4개(`dd518070` 계획 · `f93f5cd5` 백엔드 · `59c8b85b` 프론트 배선 · `1c29db2c` 화면 연결).
 > - **백엔드**: `observation_notes` 테이블(054, EncryptedText 본문 ≤5000 · 종목 0~5 · 태그 0~10 · source) + `/api/observation-notes` 5 라우트(생성·목록 커서·단건·삭제·by-ticker 30일 창). append-only + 삭제, 수정 없음. PIPA: `routes/auth.py purge_ops` · `scripts/nightly/pipa_purge.py` · `routes/profile.py` JSON export 편입(CSV 는 미편입 — 범위 밖). `@legal_scrub_response` 미부착, docstring `# legal-exempt:` 사유 명시. 면책은 `DISCLAIMER_ARTIFACT_KR` SoT 재사용.
