@@ -48,6 +48,9 @@ export const OBS_NOTE_MAX_TICKERS = 5;
 export const OBS_NOTE_MAX_TAGS = 10;
 export const OBS_NOTE_MAX_TAG_CHARS = 40;
 
+/** Characters the backend refuses inside a tag. */
+const TAG_BANNED_CHARS = /["\\]/;
+
 export const OBS_NOTE_PLACEHOLDER =
   "지금 보고 있는 흐름을 그대로 적어 두세요. 나중에 이 종목을 멈춤 화면에서 만나면 이 글이 다시 보입니다.";
 
@@ -72,16 +75,33 @@ export function normalizeNoteTicker(raw: string): string {
 }
 
 /**
+ * The identity two chips share when they are the same note ticker.
+ *
+ * `services/observation_notes/service.py::normalize_ticker` appends `.KS` /
+ * `.KQ` to a bare 6-digit KR code, so `005930` and `005930.KS` land on ONE
+ * row server-side. Comparing the raw strings would let the user add both and
+ * then watch the saved note come back with a single ticker. We dedupe on the
+ * suffix-stripped form and still SEND the ticker exactly as search handed it
+ * over, suffix included, so the server never has to guess the exchange.
+ */
+export function noteTickerKey(raw: string): string {
+  return normalizeNoteTicker(raw).replace(/\.(KS|KQ)$/, "");
+}
+
+/**
  * Why a tag was rejected, or null when it is acceptable. Returned as a code
  * so the copy lives in one place below.
  */
 export function tagRejection(
   raw: string,
   existing: readonly string[],
-): "empty" | "too_long" | "duplicate" | "too_many" | null {
+): "empty" | "too_long" | "bad_chars" | "duplicate" | "too_many" | null {
   const tag = raw.trim();
   if (!tag) return "empty";
   if (tag.length > OBS_NOTE_MAX_TAG_CHARS) return "too_long";
+  // The backend rejects these two outright (400 OBS_NOTE_BAD_INPUT), so the
+  // chip never forms rather than the POST failing after the user has typed.
+  if (TAG_BANNED_CHARS.test(tag)) return "bad_chars";
   if (existing.includes(tag)) return "duplicate";
   if (existing.length >= OBS_NOTE_MAX_TAGS) return "too_many";
   return null;
@@ -94,13 +114,20 @@ export function ObservationNoteComposer({
   compact = false,
 }: ObservationNoteComposerProps) {
   const [body, setBody] = React.useState("");
-  const [tickers, setTickers] = React.useState<ObservationNoteTicker[]>(() =>
-    (defaultTickers ?? [])
-      .map(normalizeNoteTicker)
-      .filter(Boolean)
-      .slice(0, OBS_NOTE_MAX_TICKERS)
-      .map((ticker) => ({ ticker, name: null })),
-  );
+  const [tickers, setTickers] = React.useState<ObservationNoteTicker[]>(() => {
+    const seen = new Set<string>();
+    const out: ObservationNoteTicker[] = [];
+    for (const raw of defaultTickers ?? []) {
+      const ticker = normalizeNoteTicker(raw);
+      if (!ticker) continue;
+      const key = noteTickerKey(ticker);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ ticker, name: "" });
+      if (out.length >= OBS_NOTE_MAX_TICKERS) break;
+    }
+    return out;
+  });
   const [tickerQuery, setTickerQuery] = React.useState("");
   const [tags, setTags] = React.useState<string[]>([]);
   const [tagDraft, setTagDraft] = React.useState("");
@@ -108,21 +135,25 @@ export function ObservationNoteComposer({
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
-  const trimmedLength = body.trim().length;
-  const overLimit = body.length > OBS_NOTE_MAX_CHARS;
-  const canSubmit = trimmedLength > 0 && !overLimit && !submitting;
+  // Code points, not UTF-16 units — `Array.from` splits surrogate pairs the
+  // way Python's `len()` counts them, so an emoji costs the user 1 here and 1
+  // on the server instead of 1 here and 2 there.
+  const bodyLength = Array.from(body.trim()).length;
+  const overLimit = bodyLength > OBS_NOTE_MAX_CHARS;
+  const canSubmit = bodyLength > 0 && !overLimit && !submitting;
 
   function addTicker(result: TickerSearchResult) {
     const ticker = normalizeNoteTicker(result.ticker);
     setTickerQuery("");
     setNotice(null);
     if (!ticker) return;
-    if (tickers.some((t) => t.ticker === ticker)) return;
+    const key = noteTickerKey(ticker);
+    if (tickers.some((t) => noteTickerKey(t.ticker) === key)) return;
     if (tickers.length >= OBS_NOTE_MAX_TICKERS) {
       setNotice(`종목은 ${OBS_NOTE_MAX_TICKERS}개까지 담을 수 있습니다.`);
       return;
     }
-    setTickers((prev) => [...prev, { ticker, name: result.name ?? null }]);
+    setTickers((prev) => [...prev, { ticker, name: result.name ?? "" }]);
   }
 
   function removeTicker(ticker: string) {
@@ -135,6 +166,10 @@ export function ObservationNoteComposer({
     if (reason === "empty") return;
     if (reason === "too_long") {
       setNotice(`태그는 ${OBS_NOTE_MAX_TAG_CHARS}자까지 적을 수 있습니다.`);
+      return;
+    }
+    if (reason === "bad_chars") {
+      setNotice("태그에 큰따옴표와 역슬래시는 쓸 수 없습니다.");
       return;
     }
     if (reason === "too_many") {
@@ -199,7 +234,7 @@ export function ObservationNoteComposer({
     <form
       onSubmit={handleSubmit}
       aria-label="관찰 노트 작성"
-      className={`rounded-[2px] border border-[rgba(245,240,232,0.12)] ${
+      className={`rounded-[2px] border border-[var(--pq-ivory-line)] ${
         compact ? "p-4" : "p-5 sm:p-6"
       }`}
     >
@@ -216,7 +251,7 @@ export function ObservationNoteComposer({
         placeholder={OBS_NOTE_PLACEHOLDER}
         aria-label="관찰 노트 본문"
         rows={compact ? 3 : 5}
-        className="mt-3 w-full resize-y rounded-[2px] border border-[rgba(245,240,232,0.15)] bg-transparent p-3 font-serif text-pq-body-sm leading-relaxed text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
+        className="mt-3 w-full resize-y rounded-[2px] border border-[var(--pq-ivory-line)] bg-transparent p-3 font-serif text-pq-body-sm leading-relaxed text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
       />
 
       <div className="mt-1 flex items-baseline justify-between gap-3">
@@ -227,7 +262,7 @@ export function ObservationNoteComposer({
             color: overLimit ? "var(--pq-negative)" : "var(--pq-ivory-faint)",
           }}
         >
-          {body.length} / {OBS_NOTE_MAX_CHARS}
+          {bodyLength} / {OBS_NOTE_MAX_CHARS}
         </span>
         {overLimit && (
           <span
@@ -237,7 +272,7 @@ export function ObservationNoteComposer({
               color: "var(--pq-negative)",
             }}
           >
-            {OBS_NOTE_MAX_CHARS}자까지 저장됩니다.
+            {OBS_NOTE_MAX_CHARS}자를 넘으면 기록할 수 없습니다.
           </span>
         )}
       </div>
@@ -255,11 +290,11 @@ export function ObservationNoteComposer({
                   type="button"
                   onClick={() => removeTicker(t.ticker)}
                   aria-label={`${t.ticker} 빼기`}
-                  className="inline-flex items-center gap-2 rounded-[2px] border border-[rgba(184,149,106,0.35)] px-2 py-1 text-[var(--pq-bronze)]"
+                  className="inline-flex items-center gap-2 rounded-[2px] border border-[rgba(var(--pq-bronze-rgb),0.35)] px-2 py-1 text-[var(--pq-bronze)]"
                   style={{ fontSize: "var(--pq-text-eyebrow)" }}
                 >
                   <span className="font-mono">
-                    {displayName(t.ticker, t.name ?? "")}
+                    {displayName(t.ticker, t.name)}
                   </span>
                   <span aria-hidden="true">×</span>
                 </button>
@@ -276,7 +311,7 @@ export function ObservationNoteComposer({
               ariaLabel="종목 검색"
               placeholder="종목명 또는 티커"
               showPickedName={false}
-              inputClassName="w-full rounded-[2px] border border-[rgba(245,240,232,0.15)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
+              inputClassName="w-full rounded-[2px] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
             />
           </div>
         )}
@@ -295,7 +330,7 @@ export function ObservationNoteComposer({
                   type="button"
                   onClick={() => setTags((prev) => prev.filter((x) => x !== tag))}
                   aria-label={`${tag} 태그 빼기`}
-                  className="inline-flex items-center gap-2 rounded-[2px] border border-[rgba(245,240,232,0.15)] px-2 py-1 text-[var(--pq-ivory-dim)]"
+                  className="inline-flex items-center gap-2 rounded-[2px] border border-[var(--pq-ivory-line)] px-2 py-1 text-[var(--pq-ivory-dim)]"
                   style={{ fontSize: "var(--pq-text-eyebrow)" }}
                 >
                   <span className="font-mono">{tag}</span>
@@ -313,7 +348,7 @@ export function ObservationNoteComposer({
           aria-label="태그 입력"
           placeholder="Enter 또는 쉼표로 추가"
           autoComplete="off"
-          className="mt-2 w-full rounded-[2px] border border-[rgba(245,240,232,0.15)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
+          className="mt-2 w-full rounded-[2px] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
         />
       </div>
 

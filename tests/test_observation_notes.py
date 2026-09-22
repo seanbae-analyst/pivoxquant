@@ -162,6 +162,38 @@ def test_list_cursor_pagination(app, make_user):
         assert page3["next_before"] is None
 
 
+def test_list_pagination_survives_out_of_order_created_at(app, make_user):
+    """id desc is the ordering AND the cursor — a stale clock can't drop rows.
+
+    created_at is deliberately seeded out of id order (an import backfill, a
+    clock step). If the ORDER BY still leaned on created_at while the cursor
+    stayed ``id < before``, walking the pages would repeat some ids and skip
+    others.
+    """
+    user = make_user(email="obs-outoforder@test.com")
+    with app.app_context():
+        ids = [_seed(user["id"], body=f"노트 {i}")["id"] for i in range(5)]
+        # created_at 순서를 id 순서와 어긋나게 심는다.
+        offsets = [0, 40, 10, 30, 20]
+        base = _utc_now()
+        for note_id, minutes in zip(ids, offsets):
+            row = db.session.get(ObservationNote, note_id)
+            row.created_at = base - timedelta(minutes=minutes)
+        db.session.commit()
+
+        seen = []
+        cursor = None
+        for _ in range(10):  # 무한 루프 방지용 상한
+            page = list_notes(user["id"], limit=2, before=cursor)
+            seen.extend(n["id"] for n in page["notes"])
+            cursor = page["next_before"]
+            if cursor is None:
+                break
+        assert cursor is None, "페이지 순회가 끝나지 않았다"
+        assert seen == sorted(ids, reverse=True)
+        assert len(set(seen)) == len(ids)
+
+
 def test_list_limit_is_clamped(app, make_user):
     user = make_user(email="obs-limit@test.com")
     with app.app_context():
@@ -195,6 +227,40 @@ def test_tag_filter_wildcard_is_escaped(app, make_user):
         _seed(user["id"], body="평범한 노트", tags=["관찰"])
         rows = list_notes(user["id"], tag="%")["notes"]
         assert [n["body"] for n in rows] == ["와일드카드"]
+
+
+def test_tag_filter_is_case_insensitive(app, make_user):
+    """SQLite LIKE 는 ASCII 대소문자를 무시하고 Postgres 는 구분한다.
+
+    둘 중 하나로 고정해야 테스트와 prod 가 같은 답을 낸다 — func.lower()
+    양쪽으로 "대소문자 무시" 를 규칙으로 못 박는다.
+    """
+    user = make_user(email="obs-tagcase@test.com")
+    with app.app_context():
+        _seed(user["id"], body="반도체 노트", tags=["Semiconductor"])
+        _seed(user["id"], body="딴 노트", tags=["관찰"])
+        for query in ("semiconductor", "SEMICONDUCTOR", "SemiConductor"):
+            rows = list_notes(user["id"], tag=query)["notes"]
+            assert [n["body"] for n in rows] == ["반도체 노트"], query
+
+
+def test_tag_with_quote_or_backslash_rejected(app, make_user):
+    """태그는 짧은 라벨이다 — 따옴표/역슬래시는 JSON 이스케이프를 통해
+    LIKE 패턴의 요소 경계를 흐릴 수 있으므로 입력에서 막는다."""
+    user = make_user(email="obs-tagquote@test.com")
+    with app.app_context():
+        for bad in ['"AAPL"', 'a"b', "back\\slash", "줄\n바꿈"]:
+            with pytest.raises(ValueError):
+                _seed(user["id"], tags=[bad])
+
+
+def test_route_tag_with_quote_is_400(client, auth_user):
+    r = client.post(
+        "/api/observation-notes",
+        json={"body": "따옴표 태그", "tags": ['"AAPL"']},
+    )
+    assert r.status_code == 400, r.get_data(as_text=True)
+    assert r.get_json().get("code") == "OBS_NOTE_BAD_INPUT"
 
 
 def test_get_and_delete_reject_other_owner(app, make_user):
@@ -445,3 +511,27 @@ def test_body_is_encrypted_at_rest(app, make_user):
         assert "암호화되어야 하는 관찰 기록" not in raw
         # ORM 을 통하면 평문으로 되돌아온다.
         assert get_note(note["id"], user["id"])["body"] == "암호화되어야 하는 관찰 기록"
+
+
+
+def test_to_dict_never_calls_kis(app, make_user, monkeypatch):
+    """to_dict 는 레지스트리만 본다 — 네트워크(KIS) 로 절대 떨어지지 않는다.
+
+    resolve_stock_name 은 큐레이션 레지스트리에 없는 .KS/.KQ 티커에서
+    ``_kis_name`` (라이브 inquire-price HTTP) 으로 내려간다. 목록 한 번이
+    노트 × 티커 만큼의 호출로 번지므로 여기서는 부르지 않는다
+    (CLAUDE.md: 기록 3축은 시세를 부르지 않는다).
+    """
+    def _boom(*args, **kwargs):  # pragma: no cover - 호출되면 실패다
+        raise AssertionError("to_dict()가 KIS 라이브 조회를 호출했다")
+
+    monkeypatch.setattr("services.name_resolver._kis_name", _boom)
+
+    user = make_user(email="obs-nokis@test.com")
+    with app.app_context():
+        # 레지스트리에 없는 KR 코드 — 예전 경로라면 여기서 KIS 로 떨어졌다.
+        out = _seed(user["id"], tickers=["000001.KS"])
+        assert out["tickers"] == [{"ticker": "000001.KS", "name": "000001.KS"}]
+        # 목록 경로도 같은 규칙.
+        listed = list_notes(user["id"])["notes"]
+        assert listed[0]["tickers"][0]["name"] == "000001.KS"

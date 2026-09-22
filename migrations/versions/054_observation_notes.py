@@ -109,10 +109,10 @@ def downgrade():
     if _TABLE not in _tables():
         return
     for name in (_INDEX, "ix_observation_notes_user_id"):
+        # The inspector guard already makes this idempotent. No try/except:
+        # a swallowed failure on Postgres leaves the transaction aborted and
+        # every later statement fails with a confusing InFailedSqlTransaction
+        # instead of the real error.
         if name in _indexes(_TABLE):
-            try:
-                op.drop_index(name, table_name=_TABLE)
-            except Exception:
-                # Best-effort — some dialects drop the index with the table.
-                pass
+            op.drop_index(name, table_name=_TABLE)
     op.drop_table(_TABLE)

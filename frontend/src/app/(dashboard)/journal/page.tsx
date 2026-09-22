@@ -431,6 +431,46 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+/**
+ * One feed failed, the other did not — the timeline still renders and this
+ * strip sits above it naming the record that is missing.
+ *
+ * Deliberately NOT <LoadFailure />: that one replaces the feed and implies
+ * nothing loaded. Here rows are on screen, and the honest statement is "this
+ * half is missing", never a silent short feed the user reads as "그게 전부".
+ */
+function FeedRetryStrip({
+  label,
+  onRetry,
+}: {
+  label: string;
+  onRetry: () => void;
+}) {
+  const t = useT();
+  return (
+    <div
+      role="status"
+      className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[2px] border px-4 py-3"
+      style={{
+        borderColor: "var(--pq-ivory-line)",
+        background: "var(--pq-card-veil)",
+      }}
+    >
+      <p className="font-serif text-pq-mono-sm text-[var(--pq-ivory-soft)]">
+        {label}
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="rounded-[2px] border px-4 py-1.5 font-mono text-pq-caption uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        style={{ borderColor: "var(--pq-ivory-line)" }}
+      >
+        {t("journal.page.retry")}
+      </button>
+    </div>
+  );
+}
+
 function EmptyState() {
   const t = useT();
   return (
@@ -545,6 +585,17 @@ function FilterChips({
  * Page
  * ────────────────────────────────────────────────────────────────────── */
 
+/**
+ * How many 관찰 노트 the /journal feed asks for in one read.
+ *
+ * 200 is the backend's own cap (`routes/observation_notes.py`), so this is the
+ * widest single page the server will answer. There is no load-more control on
+ * this surface yet; when the server says there is more (`next_before`), the
+ * count line says so out loud rather than letting a truncated feed read as the
+ * whole record.
+ */
+const OBS_NOTE_FEED_LIMIT = 200;
+
 function JournalContent() {
   const t = useT();
   const { reflections, isLoading, error, mutate } = usePreTradeJournal();
@@ -554,9 +605,11 @@ function JournalContent() {
   // never takes the journal down.
   const {
     notes,
+    nextBefore,
     isLoading: notesLoading,
+    error: notesError,
     mutate: mutateNotes,
-  } = useObservationNotes(50);
+  } = useObservationNotes(OBS_NOTE_FEED_LIMIT);
 
   const retry = useCallback(() => {
     void mutate();
@@ -583,6 +636,21 @@ function JournalContent() {
   const weekly = useMemo(() => recentNoteSummary(notes), [notes]);
 
   const feedLoading = isLoading || notesLoading;
+  // Two independent feeds. Both down = nothing to show, so the page-level
+  // failure stands. One down = the surviving half still renders and the strip
+  // says which record is missing — a half-timeline presented as the whole
+  // record would be the one thing this screen must never do.
+  const reflectionsFailed = Boolean(error);
+  const notesFailed = Boolean(notesError);
+  const bothFailed = reflectionsFailed && notesFailed;
+  // An empty state is a claim ("아직 ...이 없습니다"). We only get to make it
+  // about a feed that actually answered.
+  const filterEmptyIsHonest =
+    filter === "note"
+      ? !notesFailed
+      : filter === "reflection"
+        ? !reflectionsFailed
+        : !reflectionsFailed && !notesFailed;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
@@ -669,52 +737,81 @@ function JournalContent() {
         </ErrorBoundary>
       </div>
 
-      {/* Chips + this-week count. Counts only — no score, no label (§4-2). */}
+      {/* Chips + this-week count. Counts only — no score, no label (§4-2).
+          The count is dropped entirely when the notes feed failed: "0개" read
+          off a failed fetch is a false statement about the user's own record. */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <FilterChips value={filter} onChange={setTimelineFilter} />
-        <p
-          className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]"
-          data-testid="journal-weekly-note-count"
-        >
-          이번 주 관찰 노트 {weekly.notes}개
-          <span className="mx-1.5 opacity-40">·</span>
-          종목 {weekly.tickers}개
-        </p>
+        {!notesFailed && (
+          <p
+            className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]"
+            data-testid="journal-weekly-note-count"
+          >
+            이번 주 관찰 노트 {weekly.notes}개
+            <span className="mx-1.5 opacity-40">·</span>
+            종목 {weekly.tickers}개
+            {nextBefore !== null && (
+              <span className="ml-1.5 opacity-70">
+                (최근 {OBS_NOTE_FEED_LIMIT}개 기준)
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Feed — 멈춤 기록 + 관찰 노트 in one reverse-chronological record. */}
       {feedLoading ? (
         <LoadingState />
-      ) : error && entries.length === 0 ? (
+      ) : bothFailed ? (
         <LoadFailure onRetry={retry} />
-      ) : entries.length === 0 ? (
-        <EmptyState />
-      ) : visible.length === 0 ? (
-        <FilterEmptyState filter={filter} />
       ) : (
-        <div className="space-y-4">
-          {visible.map((entry) =>
-            entry.kind === "reflection" ? (
-              <JournalEntry key={entry.id} r={entry.reflection} />
-            ) : (
-              <div
-                key={entry.id}
-                className="rounded-[2px] border px-4 sm:px-5"
-                style={{
-                  borderColor: "var(--pq-ivory-line)",
-                  background: "var(--pq-card-veil)",
-                }}
-              >
-                <ObservationNoteCard
-                  note={entry.note}
-                  onDeleted={() => {
-                    void mutateNotes();
-                  }}
-                />
-              </div>
-            ),
+        <>
+          {reflectionsFailed && (
+            <FeedRetryStrip
+              label="멈춤 기록을 불러오지 못했습니다."
+              onRetry={() => void mutate()}
+            />
           )}
-        </div>
+          {notesFailed && (
+            <FeedRetryStrip
+              label="관찰 노트를 불러오지 못했습니다."
+              onRetry={() => void mutateNotes()}
+            />
+          )}
+          {entries.length === 0 ? (
+            reflectionsFailed || notesFailed ? null : (
+              <EmptyState />
+            )
+          ) : visible.length === 0 ? (
+            filterEmptyIsHonest ? (
+              <FilterEmptyState filter={filter} />
+            ) : null
+          ) : (
+            <div className="space-y-4">
+              {visible.map((entry) =>
+                entry.kind === "reflection" ? (
+                  <JournalEntry key={entry.id} r={entry.reflection} />
+                ) : (
+                  <div
+                    key={entry.id}
+                    className="rounded-[2px] border px-4 sm:px-5"
+                    style={{
+                      borderColor: "var(--pq-ivory-line)",
+                      background: "var(--pq-card-veil)",
+                    }}
+                  >
+                    <ObservationNoteCard
+                      note={entry.note}
+                      onDeleted={() => {
+                        void mutateNotes();
+                      }}
+                    />
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Weekly pulse — the user's own self-report, so it lives with the

@@ -29,7 +29,6 @@ const mockedHook = vi.mocked(useObservationNotesByTicker);
 function note(id: number, body: string): ObservationNote {
   return {
     id,
-    user_id: 1,
     body,
     tickers: [{ ticker: "NVDA", name: "NVIDIA" }],
     tags: [],

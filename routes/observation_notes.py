@@ -111,6 +111,7 @@ def create():
 
 @observation_notes_bp.route("/list", methods=["GET"])
 @api_auth
+@general_rate_limit
 def list_own():
     """The caller's own notes, newest first.
 
@@ -157,6 +158,7 @@ def remove(note_id: int):
 
 @observation_notes_bp.route("/by-ticker/<ticker>", methods=["GET"])
 @api_auth
+@general_rate_limit
 def by_ticker(ticker: str):
     """Recent notes the caller wrote on one ticker — /pre-trade reads this.
 

@@ -214,10 +214,14 @@ const DEMO_FRICTION_OUTCOME = {
  * observational — what the user saw, never what to do about it. One note
  * carries no ticker at all (a market-wide note), which is the shape the
  * backend allows and the UI must not choke on. */
+/** Upper-case, `.KS`/`.KQ`-stripped identity for a demo note ticker. */
+function demoNoteTickerKey(raw: string): string {
+  return raw.trim().toUpperCase().replace(/\.(KS|KQ)$/, "");
+}
+
 const DEMO_OBSERVATION_NOTES = [
   {
     id: 3,
-    user_id: 1,
     body: "엔비디아는 지난주부터 장 초반 거래량이 평소보다 두껍다. 내가 왜 이걸 계속 보고 있는지는 아직 설명하지 못하겠다.",
     tickers: [{ ticker: "NVDA", name: "NVIDIA" }],
     tags: ["거래량", "관찰"],
@@ -226,16 +230,14 @@ const DEMO_OBSERVATION_NOTES = [
   },
   {
     id: 2,
-    user_id: 1,
     body: "삼성전자 평단 근처에서 손이 근질거린다. 오늘은 아무것도 하지 않고 이 문장만 적어 둔다.",
-    tickers: [{ ticker: "005930", name: "삼성전자" }],
+    tickers: [{ ticker: "005930.KS", name: "삼성전자" }],
     tags: ["충동"],
     source: "portfolio",
     created_at: "2026-06-16T07:10:00Z",
   },
   {
     id: 1,
-    user_id: 1,
     body: "지수가 이틀 연속 쉬었는데 내 계좌는 더 크게 흔들렸다. 종목 수보다 비중이 문제인 것 같다.",
     tickers: [],
     tags: ["집중도"],
@@ -250,12 +252,19 @@ const DEMO_OBSERVATION_NOTES_LIST = {
   next_before: null,
 };
 
-/** `/api/observation-notes/by-ticker/<t>` — filtered from the same three. */
+/**
+ * `/api/observation-notes/by-ticker/<t>` — filtered from the same three.
+ *
+ * The comparison drops a trailing `.KS`/`.KQ` on BOTH sides, the way the
+ * backend `normalize_ticker` does: a note stored as `005930.KS` must answer a
+ * lookup for the bare `005930` the user typed, and the reverse.
+ */
 function _demoNotesByTicker(base: string) {
   const raw = base.slice("/api/observation-notes/by-ticker/".length);
   const ticker = decodeURIComponent(raw).trim().toUpperCase();
+  const key = demoNoteTickerKey(ticker);
   const notes = DEMO_OBSERVATION_NOTES.filter((n) =>
-    n.tickers.some((t) => t.ticker.toUpperCase() === ticker),
+    n.tickers.some((t) => demoNoteTickerKey(t.ticker) === key),
   );
   return { ok: true, ticker, count: notes.length, notes };
 }

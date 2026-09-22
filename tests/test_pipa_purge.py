@@ -84,7 +84,9 @@ def test_under_30d_not_purged(app):
 def test_over_30d_purged_with_cascade(app):
     """Seed Position + Watchlist + AuthEvent rows; verify cascade + anonymize."""
     from extensions import db
-    from models import User, Position, Watchlist, AuthEvent
+    from models import (
+        User, Position, Watchlist, AuthEvent, ObservationNote,
+    )
     from scripts.nightly.pipa_purge import run_once, _hash_email
 
     uid = _make_user(app, email="over@test.com", requested_days_ago=31)
@@ -94,6 +96,11 @@ def test_over_30d_purged_with_cascade(app):
         db.session.add(Position(user_id=uid, ticker="AAPL",
                                   shares=10.0, avg_cost=150.0))
         db.session.add(Watchlist(user_id=uid, ticker="MSFT"))
+        # 관찰 노트 — 유저가 직접 쓴 사적 기록이므로 PIPA §21 30일 파기에
+        # 반드시 포함돼야 한다 (pre_trade_reflections 와 같은 취급).
+        db.session.add(ObservationNote(
+            user_id=uid, body="파기되어야 할 관찰 노트",
+        ))
         # AuthEvent rows keyed by email — should be ANONYMIZED, not deleted.
         for i in range(3):
             db.session.add(AuthEvent(
@@ -118,6 +125,9 @@ def test_over_30d_purged_with_cascade(app):
         # Cascade — dependent rows gone
         assert Position.query.filter_by(user_id=uid).count() == 0
         assert Watchlist.query.filter_by(user_id=uid).count() == 0
+        assert ObservationNote.query.filter_by(user_id=uid).count() == 0, (
+            "관찰 노트가 30일 파기에서 살아남았다 — PIPA §21 위반"
+        )
         # auth_events SURVIVES, but email is hashed
         expected_hash = _hash_email("over@test.com")
         anon = AuthEvent.query.filter_by(email=expected_hash).count()

@@ -37,11 +37,10 @@ function reflection(
 function note(
   id: number,
   createdAt: string,
-  tickers: { ticker: string; name: string | null }[] = [],
+  tickers: { ticker: string; name: string }[] = [],
 ): ObservationNote {
   return {
     id,
-    user_id: 1,
     body: "장 초반 거래량이 평소보다 두껍다.",
     tickers,
     tags: [],

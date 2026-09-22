@@ -279,15 +279,18 @@ export interface PreTradeStorageProofResponse {
 /** Which surface the note was written from — beta instrumentation, not a mode. */
 export type ObservationNoteSource = "journal" | "portfolio" | "pre_trade";
 
-/** One resolved ticker on a note. `name` is server-resolved (삼성전자) or null. */
+/**
+ * One resolved ticker on a note. `name` is server-resolved (삼성전자) and
+ * always a string — the backend falls back to the ticker itself when no name
+ * resolves, so the UI never has to render a null.
+ */
 export interface ObservationNoteTicker {
   ticker: string;
-  name: string | null;
+  name: string;
 }
 
 export interface ObservationNote {
   id: number;
-  user_id: number;
   /** What the user typed. Stored encrypted at rest; never scrubbed. */
   body: string;
   /** 0~5 entries. Empty = a market-wide note (§8 Q2). */

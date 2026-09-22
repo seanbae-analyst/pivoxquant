@@ -93,18 +93,24 @@ class ObservationNote(db.Model):
     def to_dict(self) -> dict:
         # 종목명은 서버에서 붙인다 — 프론트의 이름 맵이 모르는 KR 코드
         # (005930.KS) 까지 종목명으로 읽히게. PreTradeReflection.to_dict 의
-        # ``intended_name`` 관례와 동일. Lazy import 로 model→service
-        # 순환을 피하고, 실패는 티커 자체로 폴백한다.
-        try:
-            from services.name_resolver import resolve_stock_name
-        except Exception:  # pragma: no cover - import guard
-            resolve_stock_name = None
-
+        # ``intended_name`` 관례와 동일.
+        #
+        # registry-only, never network — CLAUDE.md: 기록 3축은 시세를
+        # 부르지 않는다. ``services.name_resolver.resolve_stock_name`` 은
+        # 큐레이션 레지스트리에 없는 .KS/.KQ 티커에서 ``_kis_name`` (라이브
+        # KIS inquire-price HTTP, positive-only 캐시) 으로 떨어진다. 목록
+        # 한 번이 노트 × 티커 만큼의 네트워크 호출로 번지므로 여기서는
+        # 오프라인 레지스트리만 본다. Lazy import 로 model→service 순환을
+        # 피하고, 실패는 티커 자체로 폴백한다.
         def _name(tk: str) -> str:
-            if resolve_stock_name is None:
-                return tk
             try:
-                return resolve_stock_name(tk) or tk
+                if tk.endswith((".KS", ".KQ")):
+                    from services import kr_stock_registry
+
+                    return kr_stock_registry.get_name(tk) or tk
+                from services import us_stock_registry
+
+                return us_stock_registry.get_name(tk) or tk
             except Exception:
                 return tk
 

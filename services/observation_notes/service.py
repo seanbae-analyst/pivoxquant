@@ -21,6 +21,8 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import func
+
 from extensions import db
 from models import ObservationNote
 from models.observation_note import (
@@ -47,6 +49,9 @@ MAX_TICKER_DAYS = 365
 DEFAULT_TICKER_LIMIT = 5
 MAX_TICKER_LIMIT = 50
 
+# 태그에 허용하지 않는 문자 — _validate_tags 참고.
+_TAG_FORBIDDEN_CHARS = ('"', "\\")
+
 
 # ── Public surface ───────────────────────────────────────────────────
 
@@ -66,7 +71,8 @@ def create_note(
     * ``tickers`` is not a list or holds more than :data:`MAX_TICKERS`
       entries (each normalized; a blank entry is dropped),
     * ``tags`` is not a list or holds more than :data:`MAX_TAGS` entries,
-      or any tag exceeds :data:`MAX_TAG_CHARS` after strip,
+      or any tag exceeds :data:`MAX_TAG_CHARS` after strip, or holds a
+      quote / backslash / control character,
     * ``source`` is outside :data:`VALID_SOURCES`.
     """
     clean_body = _validate_body(body)
@@ -116,11 +122,18 @@ def list_notes(
     if tag:
         tag_str = str(tag).strip()[:MAX_TAG_CHARS]
         if tag_str:
-            q = _filter_json_element(q, ObservationNote.tags_json, tag_str)
+            q = _filter_json_element(
+                q, ObservationNote.tags_json, tag_str, case_insensitive=True
+            )
 
     # limit + 1 so we know whether another page exists without a COUNT.
+    # Ordering is ``id desc`` ALONE and the cursor is ``id < before`` — the
+    # two must agree or a page can drop or repeat a row. ids are monotonic
+    # insert order and ``created_at`` is stamped at insert, so ``id desc`` is
+    # the same "newest first" without depending on a clock that can tie or
+    # go backwards (backfills, imports, a seeded created_at).
     rows = (
-        q.order_by(ObservationNote.created_at.desc(), ObservationNote.id.desc())
+        q.order_by(ObservationNote.id.desc())
         .limit(limit + 1)
         .all()
     )
@@ -178,8 +191,9 @@ def notes_for_ticker(
         normalized,
     )
     count = q.count()
+    # Same ordering rule as list_notes — id desc is insert order.
     rows = (
-        q.order_by(ObservationNote.created_at.desc(), ObservationNote.id.desc())
+        q.order_by(ObservationNote.id.desc())
         .limit(limit)
         .all()
     )
@@ -245,6 +259,14 @@ def _validate_tags(tags) -> list:
             continue
         if len(tag) > MAX_TAG_CHARS:
             raise ValueError(f"tag must be at most {MAX_TAG_CHARS} characters")
+        # 태그는 짧은 라벨이다 — 따옴표·역슬래시·제어문자가 들어갈 이유가
+        # 없고, 들어가면 JSON 이스케이프가 LIKE 패턴 경계를 흐린다:
+        # 저장된 ``"a\"AAPL\""`` 안에서 ``"AAPL"`` 패턴이 걸릴 수 있다.
+        # 필터는 요소 단위 매치여야 하므로 입력에서 잘라낸다.
+        if any(ch in tag for ch in _TAG_FORBIDDEN_CHARS):
+            raise ValueError('tag must not contain quotes or backslashes')
+        if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in tag):
+            raise ValueError("tag must not contain control characters")
         if tag not in out:
             out.append(tag)
     return out
@@ -270,18 +292,29 @@ def _load_owned(note_id: int, user_id: int) -> ObservationNote:
     return row
 
 
-def _filter_json_element(query, column, value: str):
+def _filter_json_element(query, column, value: str, *, case_insensitive=False):
     """Narrow ``query`` to rows whose JSON-array ``column`` holds ``value``.
 
     The arrays are small and stored as text, so a LIKE on the *quoted*
     element (``%"AAPL"%``) is an exact element match rather than a substring
     one. LIKE wildcards inside a user-supplied tag are escaped so a tag of
     ``%`` can't widen the match to every row.
+
+    ``case_insensitive`` lowers both sides explicitly. LIKE is ASCII
+    case-insensitive on SQLite but case-SENSITIVE on Postgres, so without
+    this the tag filter would answer differently in tests than in prod —
+    ``func.lower()`` makes the rule "case-insensitive" on both dialects.
+    Tickers are normalized to upper case before storage, so they stay
+    case-sensitive (an exact match by construction).
     """
     encoded = json.dumps(value, ensure_ascii=False)
     escaped = (
         encoded.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     )
+    if case_insensitive:
+        return query.filter(
+            func.lower(column).like(f"%{escaped.lower()}%", escape="\\")
+        )
     return query.filter(column.like(f"%{escaped}%", escape="\\"))
 
 
