@@ -36,12 +36,13 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { PORTFOLIO_POSITIONS, SEARCH } from "@/lib/endpoints";
+import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { displayName, isKrTicker, normalizeTicker } from "@/lib/format";
+import { isKrTicker } from "@/lib/format";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
 import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
+import { TickerSearch } from "@/components/shared/ticker-search";
 
 interface AddPositionModalV2Props {
   open: boolean;
@@ -51,15 +52,6 @@ interface AddPositionModalV2Props {
 
 /** Entry mode — journaling an existing holding vs. reflecting on a new entry. */
 type EntryMode = "holding" | "new";
-
-/** Symbol autocomplete result — mirrors the /api/search shape used by
- *  <AddSymbolModal /> (watchlist). { ticker, name, exchange?, is_korean? }. */
-interface Suggestion {
-  ticker: string;
-  name: string;
-  exchange?: string;
-  is_korean?: boolean;
-}
 
 /** Local-date "YYYY-MM-DD" (no UTC shift — matches the date input value). */
 function todayStr(): string {
@@ -93,14 +85,9 @@ export function AddPositionModalV2({
   // NEW_ENTRY mode; the real POST fires only on its onProceed.
   const [frictionOpen, setFrictionOpen] = React.useState(false);
 
-  // Symbol autocomplete (mirrors watchlist <AddSymbolModal />): debounced
-  // /api/search, AbortController to pre-empt stale requests, and a `picked`
-  // flag to suppress the popover after the user selects a suggestion.
-  const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
-  const [searchLoading, setSearchLoading] = React.useState(false);
-  const [picked, setPicked] = React.useState(false);
-  const [selectedName, setSelectedName] = React.useState("");
-  const abortRef = React.useRef<AbortController | null>(null);
+  // Symbol autocomplete lives in <TickerSearch /> (components/shared) since
+  // 2026-09-22 — debounce, AbortController and the `picked` flag are all
+  // owned there, and it unmounts with this modal so nothing needs resetting.
 
   const today = todayStr();
   // Thesis is required only in NEW_ENTRY mode (the reflection needs
@@ -120,54 +107,8 @@ export function AddPositionModalV2({
       setMemo("");
       setSubmitting(false);
       setFrictionOpen(false);
-      // Autocomplete state too.
-      setSuggestions([]);
-      setSearchLoading(false);
-      setPicked(false);
-      setSelectedName("");
-      abortRef.current?.abort();
     }
   }, [open]);
-
-  // Debounced symbol autocomplete. Pre-empts stale requests; skips while a
-  // suggestion is already picked (re-armed when the user edits the field).
-  React.useEffect(() => {
-    if (!open) return;
-    const q = symbol.trim();
-    if (picked || q.length < 1) {
-      setSuggestions([]);
-      setSearchLoading(false);
-      abortRef.current?.abort();
-      return;
-    }
-    setSearchLoading(true);
-    const ctrl = new AbortController();
-    abortRef.current?.abort();
-    abortRef.current = ctrl;
-    const t = window.setTimeout(async () => {
-      try {
-        // regression-guards: allow-raw-fetch (debounced /api/search autocomplete —
-        // mirrors the watchlist add-symbol modal; needs the AbortController signal
-        // to pre-empt stale keystrokes, which apiFetch does not expose).
-        const res = await fetch(`${SEARCH}?q=${encodeURIComponent(q)}&limit=6`, {
-          credentials: "include",
-          signal: ctrl.signal,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const body: { results?: Suggestion[] } = await res.json();
-        setSuggestions(body.results ?? []);
-      } catch (err) {
-        if ((err as { name?: string })?.name === "AbortError") return;
-        setSuggestions([]);
-      } finally {
-        if (abortRef.current === ctrl) setSearchLoading(false);
-      }
-    }, 300);
-    return () => {
-      window.clearTimeout(t);
-      ctrl.abort();
-    };
-  }, [symbol, picked, open]);
 
   // Escape closes — only when the friction modal is NOT open (it owns Escape
   // during its own lifecycle).
@@ -380,139 +321,15 @@ export function AddPositionModalV2({
         >
           {/* Symbol — full row, with debounced autocomplete dropdown */}
           <FormField label="Symbol">
-            <div style={{ position: "relative" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  required
-                  value={symbol}
-                  onChange={(e) => {
-                    setSymbol(e.target.value.toUpperCase());
-                    setPicked(false);
-                    setSelectedName("");
-                  }}
-                  placeholder="AAPL · 005930.KS"
-                  autoComplete="off"
-                  aria-label="Symbol"
-                  style={{ ...fieldInputStyle, flex: 1 }}
-                />
-                {searchLoading && (
-                  <span
-                    className="font-mono uppercase"
-                    aria-label="Searching"
-                    style={{
-                      fontSize: "var(--pq-text-eyebrow)",
-                      letterSpacing: "0.14em",
-                      color: "var(--pq-ivory-faint)",
-                    }}
-                  >
-                    …
-                  </span>
-                )}
-              </div>
-
-              {/* Picked-symbol confirmation — shows the resolved company name. */}
-              {picked && selectedName && (
-                <span
-                  className="font-serif"
-                  style={{
-                    display: "block",
-                    marginTop: 6,
-                    fontSize: "var(--pq-text-body)",
-                    color: "var(--pq-bronze)",
-                  }}
-                >
-                  {selectedName}
-                </span>
-              )}
-
-              {/* Autocomplete popover */}
-              {!picked && symbol.trim().length > 0 && suggestions.length > 0 && (
-                <div
-                  role="listbox"
-                  aria-label="종목 검색 결과"
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    top: "100%",
-                    zIndex: 20,
-                    marginTop: 4,
-                    maxHeight: 224,
-                    overflowY: "auto",
-                    background: "var(--pq-ink, #050505)",
-                    border:
-                      "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.16))",
-                    borderRadius: "var(--pq-radius-card, 4px)",
-                    boxShadow: "0 18px 44px -20px rgba(0,0,0,0.7)",
-                  }}
-                >
-                  {suggestions.map((s) => (
-                    <button
-                      key={s.ticker}
-                      type="button"
-                      role="option"
-                      aria-selected={false}
-                      onClick={() => {
-                        // Canonical exchange ticker (e.g. "005930.KS") — the
-                        // backend resolves this on submit; do NOT strip suffix.
-                        setSymbol(s.ticker.trim().toUpperCase());
-                        setSelectedName(displayName(s.ticker, s.name));
-                        setPicked(true);
-                        setSuggestions([]);
-                      }}
-                      style={{
-                        display: "flex",
-                        width: "100%",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "10px 12px",
-                        background: "transparent",
-                        border: "none",
-                        borderBottom:
-                          "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
-                        textAlign: "left",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background =
-                          "rgba(184,149,106,0.12)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
-                      }}
-                    >
-                      <span
-                        className="font-serif"
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          fontSize: "var(--pq-text-body)",
-                          fontWeight: 600,
-                          color: "var(--pq-ivory)",
-                        }}
-                      >
-                        {displayName(s.ticker, s.name)}
-                      </span>
-                      <span
-                        className="font-mono uppercase"
-                        style={{
-                          fontSize: "var(--pq-text-eyebrow)",
-                          letterSpacing: "0.12em",
-                          color: "var(--pq-bronze)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {normalizeTicker(s.ticker)}
-                        {s.exchange ? ` · ${s.exchange}` : ""}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <TickerSearch
+              required
+              value={symbol}
+              onChange={setSymbol}
+              onPick={(s) => setSymbol(s.ticker.trim().toUpperCase())}
+              placeholder="AAPL · 005930.KS"
+              limit={6}
+              inputStyle={fieldInputStyle}
+            />
           </FormField>
 
           {/* Row 1: Shares + Avg cost */}
