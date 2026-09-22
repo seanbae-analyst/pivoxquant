@@ -162,7 +162,12 @@ export function ObservationNoteComposer({
   }
 
   function commitTag() {
-    const reason = tagRejection(tagDraft, tags);
+    // 쉼표는 구분자다. keydown 이 아닌 경로(IME 조합 종료, 붙여넣기, blur,
+    // 자동화된 insertText)로 "거래량," 이 통째로 들어오면 쉼표를 떼고 커밋한다 —
+    // 2026-09-22 브라우저 E2E 에서 태그가 "거래량," 으로 저장된 사례.
+    const draft = tagDraft.replace(/,/g, " ").trim();
+    if (draft !== tagDraft) setTagDraft(draft);
+    const reason = tagRejection(draft, tags);
     if (reason === "empty") return;
     if (reason === "too_long") {
       setNotice(`태그는 ${OBS_NOTE_MAX_TAG_CHARS}자까지 적을 수 있습니다.`);
@@ -180,7 +185,7 @@ export function ObservationNoteComposer({
       setTagDraft("");
       return;
     }
-    setTags((prev) => [...prev, tagDraft.trim()]);
+    setTags((prev) => [...prev, draft]);
     setTagDraft("");
     setNotice(null);
   }

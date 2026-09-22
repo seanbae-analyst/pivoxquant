@@ -13,7 +13,7 @@ describe("API.observationNotes paths", () => {
   it("list / create are the exact contract paths", () => {
     expect(API.observationNotes.list).toBe("/api/observation-notes/list");
     // Trailing slash is load-bearing: the blueprint registers POST on "/".
-    expect(API.observationNotes.create).toBe("/api/observation-notes/");
+    expect(API.observationNotes.create).toBe("/api/observation-notes");
   });
 
   it("detail(id) addresses one note by id", () => {

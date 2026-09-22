@@ -292,7 +292,7 @@ export const API = {
   //   byTicker GET    /by-ticker/<ticker>?days=&limit= → {ticker, count, notes}
   observationNotes: {
     list: "/api/observation-notes/list",
-    create: "/api/observation-notes/",
+    create: "/api/observation-notes",
     detail: (id: number | string) => `/api/observation-notes/${id}`,
     byTicker: (ticker: string) =>
       `/api/observation-notes/by-ticker/${encodeURIComponent(ticker)}`,

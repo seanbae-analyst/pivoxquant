@@ -209,6 +209,19 @@ describe("<ObservationNoteComposer /> — tag cap", () => {
     expect(screen.getByLabelText(`${justFits} 태그 빼기`)).toBeTruthy();
   });
 
+  it("strips a comma that arrives inside the draft (paste / IME / blur) instead of saving it", async () => {
+    const user = userEvent.setup();
+    render(<ObservationNoteComposer source="journal" />);
+
+    const tagInput = screen.getByLabelText("태그 입력");
+    await user.click(tagInput);
+    await user.paste("거래량,");
+    await user.tab(); // blur commits the pending draft
+
+    expect(screen.getByLabelText("거래량 태그 빼기")).toBeTruthy();
+    expect(screen.queryByLabelText("거래량, 태그 빼기")).toBeNull();
+  });
+
   it("refuses a tag carrying a quote or a backslash — the server 400s them", async () => {
     const user = userEvent.setup();
     render(<ObservationNoteComposer source="journal" />);
