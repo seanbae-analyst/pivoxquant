@@ -266,6 +266,76 @@ export interface PreTradeStorageProofResponse {
 }
 
 /* ────────────────────────────────────────────────────────────────────────
+ * Observation Notes (관찰 노트) — 2026-09-22.
+ *
+ * docs/design/observation-notes_2026-09-22.md. The user's own free text
+ * written with NO trade attached — the entry point that sits *before* the
+ * pre-trade pause. Append-only + delete (no PATCH by design), and never a
+ * quote surface: the row carries no price snapshot.
+ *
+ * Keys are locked 1:1 with routes/observation_notes.py serialization.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/** Which surface the note was written from — beta instrumentation, not a mode. */
+export type ObservationNoteSource = "journal" | "portfolio" | "pre_trade";
+
+/**
+ * One resolved ticker on a note. `name` is server-resolved (삼성전자) and
+ * always a string — the backend falls back to the ticker itself when no name
+ * resolves, so the UI never has to render a null.
+ */
+export interface ObservationNoteTicker {
+  ticker: string;
+  name: string;
+}
+
+export interface ObservationNote {
+  id: number;
+  /** What the user typed. Stored encrypted at rest; never scrubbed. */
+  body: string;
+  /** 0~5 entries. Empty = a market-wide note (§8 Q2). */
+  tickers: ObservationNoteTicker[];
+  /** 0~10 free-text tags, each ≤40 chars. */
+  tags: string[];
+  /** Wire value of ObservationNoteSource; typed wide for forward-compat. */
+  source: string;
+  /** ISO timestamp (UTC). */
+  created_at: string;
+}
+
+/** `GET /api/observation-notes/list` — cursor feed, newest first. */
+export interface ObservationNotesResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  notes: ObservationNote[];
+  /** Pass back as `?before=` for the next page; null when exhausted. */
+  next_before: number | null;
+}
+
+/** `POST /api/observation-notes/` and `GET /api/observation-notes/<id>`. */
+export interface ObservationNoteResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  note: ObservationNote;
+}
+
+/** `DELETE /api/observation-notes/<id>`. */
+export interface ObservationNoteDeleteResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  deleted: number;
+}
+
+/** `GET /api/observation-notes/by-ticker/<ticker>` — read back on /pre-trade. */
+export interface ObservationNotesByTickerResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  ticker: string;
+  count: number;
+  notes: ObservationNote[];
+}
+
+/* ────────────────────────────────────────────────────────────────────────
  * Holding-Mirror — disposition-effect "mirror" (NOT a score / diagnosis).
  *
  * GET /api/behavior/holding-mirror returns factual holding-period statistics

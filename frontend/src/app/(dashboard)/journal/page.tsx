@@ -22,11 +22,16 @@
  * Carmine/indigo reserved for price direction, not used for status here.
  */
 
-import { useState, useCallback } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import { Briefcase, NotebookPen, ChevronDown } from "lucide-react";
 import { useLocale, useT } from "@/lib/locale";
-import { usePreTradeJournal } from "@/lib/hooks";
+import { usePreTradeJournal, useObservationNotes } from "@/lib/hooks";
 import { displayName, normalizeTicker, parseIsoUtc } from "@/lib/format";
 import { sideLabel } from "@/lib/pre-trade";
 import { relativeTime } from "@/lib/relative-time";
@@ -46,16 +51,27 @@ import { FrictionOutcomeMirror } from "@/components/journal/friction-outcome-mir
 import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
 import { WeeklyPulseSection } from "@/components/journal/weekly-pulse-section";
 import { ImportInbox } from "@/components/journal/import-inbox";
+import { ObservationNoteComposer } from "@/components/journal/observation-note-composer";
+import { ObservationNoteCard } from "@/components/journal/observation-note-card";
+import {
+  entryTimestamp,
+  filterTimeline,
+  mergeTimeline,
+  recentNoteSummary,
+  type TimelineFilter,
+} from "./timeline";
 import type { PreTradeReflection } from "@/lib/types";
 
 /* ────────────────────────────────────────────────────────────────────────
  * Helpers
  * ────────────────────────────────────────────────────────────────────── */
 
-/** When the entry was created — proceeded/cancelled stamp else cooldown start. */
-export function entryTimestamp(r: PreTradeReflection): string | null {
-  return r.proceeded_at ?? r.cancelled_at ?? r.cooldown_started_at ?? null;
-}
+/**
+ * Re-exported from `./timeline`, where it now lives so the merge can read it
+ * without importing this page (six mirrors + weekly pulse + import inbox).
+ * `__tests__/journal-helpers.test.ts` imports it from here.
+ */
+export { entryTimestamp };
 
 /** Absolute KST-rendered date for the inline metadata row. */
 export function absoluteDate(iso: string | null): string {
@@ -81,6 +97,59 @@ export function statusKind(r: PreTradeReflection): StatusKind {
 }
 
 // STATUS_COPY is now resolved via useT inside StatusChip
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Timeline filter — 전체 · 멈춤 기록 · 관찰 노트
+ *
+ * The chip choice is a per-device preference, so it is remembered in
+ * localStorage. It is read through useSyncExternalStore rather than a
+ * useState + mount effect: the server render has no localStorage, and this
+ * is exactly the "read a client-only external store" case React added the
+ * hook for (same pattern as the persona hint cache in
+ * components/pre-trade/pre-trade-friction-core.tsx). Every storage access is
+ * wrapped — Safari private mode throws on read as well as write.
+ * ────────────────────────────────────────────────────────────────────── */
+
+const FILTER_STORAGE_KEY = "pq:journal:timeline-filter";
+const FILTER_VALUES: readonly TimelineFilter[] = ["all", "reflection", "note"];
+
+const filterListeners = new Set<() => void>();
+/** Set by a click; preferred over storage so a blocked write still applies. */
+let filterOverride: TimelineFilter | null = null;
+
+function subscribeFilter(onChange: () => void): () => void {
+  filterListeners.add(onChange);
+  return () => {
+    filterListeners.delete(onChange);
+  };
+}
+
+function getFilterSnapshot(): TimelineFilter {
+  if (filterOverride) return filterOverride;
+  try {
+    const raw = window.localStorage.getItem(FILTER_STORAGE_KEY);
+    const found = FILTER_VALUES.find((v) => v === raw);
+    if (found) return found;
+  } catch {
+    /* storage unavailable — fall through to the default */
+  }
+  return "all";
+}
+
+/** SSR + first paint: always 전체, so hydration matches the server HTML. */
+function getServerFilterSnapshot(): TimelineFilter {
+  return "all";
+}
+
+function setTimelineFilter(next: TimelineFilter): void {
+  filterOverride = next;
+  try {
+    window.localStorage.setItem(FILTER_STORAGE_KEY, next);
+  } catch {
+    /* storage unavailable — the in-memory override still holds this session */
+  }
+  filterListeners.forEach((fn) => fn());
+}
 
 /* ────────────────────────────────────────────────────────────────────────
  * Status chip — neutral tone (no carmine), cancelled dimmed.
@@ -362,6 +431,46 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+/**
+ * One feed failed, the other did not — the timeline still renders and this
+ * strip sits above it naming the record that is missing.
+ *
+ * Deliberately NOT <LoadFailure />: that one replaces the feed and implies
+ * nothing loaded. Here rows are on screen, and the honest statement is "this
+ * half is missing", never a silent short feed the user reads as "그게 전부".
+ */
+function FeedRetryStrip({
+  label,
+  onRetry,
+}: {
+  label: string;
+  onRetry: () => void;
+}) {
+  const t = useT();
+  return (
+    <div
+      role="status"
+      className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[2px] border px-4 py-3"
+      style={{
+        borderColor: "var(--pq-ivory-line)",
+        background: "var(--pq-card-veil)",
+      }}
+    >
+      <p className="font-serif text-pq-mono-sm text-[var(--pq-ivory-soft)]">
+        {label}
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="rounded-[2px] border px-4 py-1.5 font-mono text-pq-caption uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        style={{ borderColor: "var(--pq-ivory-line)" }}
+      >
+        {t("journal.page.retry")}
+      </button>
+    </div>
+  );
+}
+
 function EmptyState() {
   const t = useT();
   return (
@@ -401,16 +510,147 @@ function EmptyState() {
   );
 }
 
+/** Shown when the feed has rows but the active chip hides all of them. */
+function FilterEmptyState({ filter }: { filter: TimelineFilter }) {
+  return (
+    <div
+      className="rounded-[2px] border px-6 py-10 text-center"
+      style={{
+        borderColor: "var(--pq-ivory-line)",
+        background: "var(--pq-card-veil)",
+      }}
+    >
+      <Caption>
+        {filter === "note"
+          ? "아직 관찰 노트가 없습니다. 위에서 지금 본 것을 적어 두세요."
+          : "이 기간에 남긴 멈춤 기록이 없습니다."}
+      </Caption>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Filter chips + this-week count
+ * ────────────────────────────────────────────────────────────────────── */
+
+const FILTER_LABELS: Record<TimelineFilter, string> = {
+  all: "전체",
+  reflection: "멈춤 기록",
+  note: "관찰 노트",
+};
+
+function FilterChips({
+  value,
+  onChange,
+}: {
+  value: TimelineFilter;
+  onChange: (next: TimelineFilter) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="기록 종류"
+      className="flex flex-wrap items-center gap-2"
+    >
+      {FILTER_VALUES.map((v) => {
+        const active = v === value;
+        return (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onChange(v)}
+            aria-pressed={active}
+            className="rounded-[2px] border px-3 py-1.5 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors"
+            style={{
+              borderColor: active
+                ? "var(--pq-bronze)"
+                : "var(--pq-ivory-line)",
+              background: active
+                ? "var(--pq-card-veil-strong)"
+                : "transparent",
+              color: active
+                ? "var(--pq-bronze-light)"
+                : "var(--pq-ivory-dim)",
+            }}
+          >
+            {FILTER_LABELS[v]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────────
  * Page
  * ────────────────────────────────────────────────────────────────────── */
 
+/**
+ * How many 관찰 노트 the /journal feed asks for in one read.
+ *
+ * 200 is the backend's own cap (`routes/observation_notes.py`), so this is the
+ * widest single page the server will answer. There is no load-more control on
+ * this surface yet; when the server says there is more (`next_before`), the
+ * count line says so out loud rather than letting a truncated feed read as the
+ * whole record.
+ */
+const OBS_NOTE_FEED_LIMIT = 200;
+
 function JournalContent() {
   const t = useT();
   const { reflections, isLoading, error, mutate } = usePreTradeJournal();
+  // Observation notes share the feed (docs/design/
+  // observation-notes_2026-09-22.md §5). A notes failure is NOT fatal to the
+  // page: the 멈춤 기록 still render, the same way a single mirror failing
+  // never takes the journal down.
+  const {
+    notes,
+    nextBefore,
+    isLoading: notesLoading,
+    error: notesError,
+    mutate: mutateNotes,
+  } = useObservationNotes(OBS_NOTE_FEED_LIMIT);
+
   const retry = useCallback(() => {
     void mutate();
-  }, [mutate]);
+    void mutateNotes();
+  }, [mutate, mutateNotes]);
+
+  const filter = useSyncExternalStore(
+    subscribeFilter,
+    getFilterSnapshot,
+    getServerFilterSnapshot,
+  );
+
+  const entries = useMemo(
+    () => mergeTimeline(reflections, notes),
+    [reflections, notes],
+  );
+  const visible = useMemo(
+    () => filterTimeline(entries, filter),
+    [entries, filter],
+  );
+  // Trailing 7 days, recomputed whenever the loaded notes change — the clock
+  // is read inside recentNoteSummary (see its comment on why 이번 주 means
+  // the last 7 days rather than the ISO week).
+  const weekly = useMemo(() => recentNoteSummary(notes), [notes]);
+
+  const feedLoading = isLoading || notesLoading;
+  // Two independent feeds. Both down = nothing to show, so the page-level
+  // failure stands. One down = the surviving half still renders and the strip
+  // says which record is missing — a half-timeline presented as the whole
+  // record would be the one thing this screen must never do.
+  const reflectionsFailed = Boolean(error);
+  const notesFailed = Boolean(notesError);
+  const bothFailed = reflectionsFailed && notesFailed;
+  // An empty state is a claim ("아직 ...이 없습니다"). We only get to make it
+  // about a feed that actually answered.
+  const filterEmptyIsHonest =
+    filter === "note"
+      ? !notesFailed
+      : filter === "reflection"
+        ? !reflectionsFailed
+        : !reflectionsFailed && !notesFailed;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
@@ -483,19 +723,95 @@ function JournalContent() {
 
       </section>
 
-      {/* Feed */}
-      {isLoading ? (
+      {/* Composer — the one place a record starts without a trade attached.
+          It sits ABOVE the chips on purpose: writing comes before reading
+          back (docs/design/observation-notes_2026-09-22.md §5 진입점). */}
+      <div className="mb-6">
+        <ErrorBoundary fallback={null}>
+          <ObservationNoteComposer
+            source="journal"
+            onCreated={() => {
+              void mutateNotes();
+            }}
+          />
+        </ErrorBoundary>
+      </div>
+
+      {/* Chips + this-week count. Counts only — no score, no label (§4-2).
+          The count is dropped entirely when the notes feed failed: "0개" read
+          off a failed fetch is a false statement about the user's own record. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <FilterChips value={filter} onChange={setTimelineFilter} />
+        {!notesFailed && (
+          <p
+            className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]"
+            data-testid="journal-weekly-note-count"
+          >
+            이번 주 관찰 노트 {weekly.notes}개
+            <span className="mx-1.5 opacity-40">·</span>
+            종목 {weekly.tickers}개
+            {nextBefore !== null && (
+              <span className="ml-1.5 opacity-70">
+                (최근 {OBS_NOTE_FEED_LIMIT}개 기준)
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+
+      {/* Feed — 멈춤 기록 + 관찰 노트 in one reverse-chronological record. */}
+      {feedLoading ? (
         <LoadingState />
-      ) : error ? (
+      ) : bothFailed ? (
         <LoadFailure onRetry={retry} />
-      ) : reflections.length === 0 ? (
-        <EmptyState />
       ) : (
-        <div className="space-y-4">
-          {reflections.map((r) => (
-            <JournalEntry key={r.id} r={r} />
-          ))}
-        </div>
+        <>
+          {reflectionsFailed && (
+            <FeedRetryStrip
+              label="멈춤 기록을 불러오지 못했습니다."
+              onRetry={() => void mutate()}
+            />
+          )}
+          {notesFailed && (
+            <FeedRetryStrip
+              label="관찰 노트를 불러오지 못했습니다."
+              onRetry={() => void mutateNotes()}
+            />
+          )}
+          {entries.length === 0 ? (
+            reflectionsFailed || notesFailed ? null : (
+              <EmptyState />
+            )
+          ) : visible.length === 0 ? (
+            filterEmptyIsHonest ? (
+              <FilterEmptyState filter={filter} />
+            ) : null
+          ) : (
+            <div className="space-y-4">
+              {visible.map((entry) =>
+                entry.kind === "reflection" ? (
+                  <JournalEntry key={entry.id} r={entry.reflection} />
+                ) : (
+                  <div
+                    key={entry.id}
+                    className="rounded-[2px] border px-4 sm:px-5"
+                    style={{
+                      borderColor: "var(--pq-ivory-line)",
+                      background: "var(--pq-card-veil)",
+                    }}
+                  >
+                    <ObservationNoteCard
+                      note={entry.note}
+                      onDeleted={() => {
+                        void mutateNotes();
+                      }}
+                    />
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* Weekly pulse — the user's own self-report, so it lives with the

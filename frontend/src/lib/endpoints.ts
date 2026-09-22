@@ -279,6 +279,24 @@ export const API = {
     // Each row is "user finished thinking" — never an executed order.
     list: "/api/pre-trade/list",
   },
+  // Observation Notes (관찰 노트, 2026-09-22 —
+  // docs/design/observation-notes_2026-09-22.md §3). The user's own text
+  // written WITHOUT a trade attached: "무엇을 보고 있었나". Append-only +
+  // delete (no PATCH by design — §8 Q1), quote-free (the three axes never
+  // call a market-data service), and read back on /pre-trade so a past
+  // observation meets the 7-question pause. Never an order surface.
+  //   create   POST   /            {body, tickers?, tags?, source?} → 201 {note}
+  //   list     GET    /list        ?limit=&before=&ticker=&tag= → {notes, next_before}
+  //   detail   GET    /<id>        → {note}   (another user's id → 404)
+  //   delete   DELETE /<id>        → {deleted}
+  //   byTicker GET    /by-ticker/<ticker>?days=&limit= → {ticker, count, notes}
+  observationNotes: {
+    list: "/api/observation-notes/list",
+    create: "/api/observation-notes",
+    detail: (id: number | string) => `/api/observation-notes/${id}`,
+    byTicker: (ticker: string) =>
+      `/api/observation-notes/by-ticker/${encodeURIComponent(ticker)}`,
+  },
   // Marketing-consent record (정통망법 §50 ① — sender bears the burden of
   // proving prior opt-in). Backend lives in routes/consents.py (PR #73).
   // - GET    : returns { opted_in, marketing_consent_at, marketing_consent_revoked_at }

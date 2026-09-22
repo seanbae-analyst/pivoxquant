@@ -43,6 +43,7 @@ from models import (
     Inquiry,
     InvestmentProfile,
     NpsFeedback,
+    ObservationNote,
     PersonaSnapshot,
     PortfolioShare,
     Position,
@@ -1463,6 +1464,10 @@ _EXPORT_ARTIFACT_LIMIT = 2000          # generated CFO artefacts (memo/brag/brie
 _EXPORT_ARTIFACT_FEEDBACK_LIMIT = 2000  # 👍/👎 on artefacts
 _EXPORT_REFERRAL_LIMIT = 50            # one row per user normally (UNIQUE user_id)
 _EXPORT_DD_CHECK_LIMIT = 5000          # one per position
+# PIPA §35 — 관찰 노트는 유저 본인의 암호화된 자유 텍스트이고 탈퇴 시
+# 삭제된다(routes/auth.py:delete_account + scripts/nightly/pipa_purge.py).
+# 개인정보이므로 열람권 export 에서 닿을 수 있어야 한다 (2026-09-22).
+_EXPORT_OBS_NOTE_LIMIT = 5000          # 거래에 묶이지 않은 관찰 기록
 _EXPORT_INQUIRY_LIMIT = 1000           # support inquiries (subject/body free-text)
 _EXPORT_TWIN_REPORT_LIMIT = 520        # ~10y weekly paper-twin reports
 _EXPORT_TWIN_POSITION_LIMIT = 5000     # paper twin open positions
@@ -2568,6 +2573,13 @@ def export_profile():
             .limit(_EXPORT_DD_CHECK_LIMIT)
             .all()
         )
+        observation_notes = (
+            ObservationNote.query
+            .filter_by(user_id=user_id)
+            .order_by(ObservationNote.created_at.desc())
+            .limit(_EXPORT_OBS_NOTE_LIMIT)
+            .all()
+        )
         inquiries = (
             Inquiry.query
             .filter_by(user_id=user_id)
@@ -2717,6 +2729,7 @@ def export_profile():
         "broker_connections": [b.to_dict() for b in broker_connections],
         "user_referrals": [r.to_dict() for r in user_referrals],
         "position_dd_checks": [d.to_dict() for d in position_dd_checks],
+        "observation_notes": [n.to_dict() for n in observation_notes],
         # Inquiry.to_dict(detail=True) — include the user's own subject/body
         # and any admin reply; this is their personal data under §35.
         "inquiries": [i.to_dict(detail=True) for i in inquiries],
@@ -2758,6 +2771,7 @@ def export_profile():
             "broker_connections": len(broker_connections),
             "user_referrals": len(user_referrals),
             "position_dd_checks": len(position_dd_checks),
+            "observation_notes": len(observation_notes),
             "inquiries": len(inquiries),
             "companion_waitlist": len(companion_waitlist),
             "portfolio_shares": len(portfolio_shares),

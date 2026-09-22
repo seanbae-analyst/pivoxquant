@@ -59,6 +59,7 @@ import { SectorDonutBlock } from "@/components/portfolio/v2/sector-donut-block";
 import { RecentTransactionsBlock } from "@/components/portfolio/v2/recent-transactions-block";
 import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal-v2";
 import { TradeModalV2 } from "@/components/portfolio/v2/trade-modal-v2";
+import { ObservationNoteModalV2 } from "@/components/portfolio/v2/observation-note-modal-v2";
 
 import {
   toPosition,
@@ -88,6 +89,9 @@ export default function PortfolioPageV2() {
   const [targetPosition, setTargetPosition] = React.useState<Position | null>(
     null,
   );
+  // 관찰 노트 target is separate state from `targetPosition`: a note is not a
+  // book mutation and must not share the trade modal's lifecycle.
+  const [notePosition, setNotePosition] = React.useState<Position | null>(null);
 
   const {
     data: posData,
@@ -478,6 +482,7 @@ export default function PortfolioPageV2() {
         displayCurrency={displayCurrency}
         loading={posLoading}
         onAction={openAction}
+        onObservationNote={setNotePosition}
         onAddPosition={() => setAddOpen(true)}
       />
 
@@ -563,6 +568,15 @@ export default function PortfolioPageV2() {
         action={tradeAction ?? "buy"}
         position={targetPosition}
         onSuccess={refreshAll}
+      />
+      {/* 관찰 노트 — no onSuccess refresh: a note does not change the book,
+          so there is nothing on this page to revalidate. */}
+      <ObservationNoteModalV2
+        key={notePosition?.id ?? "no-note"}
+        open={notePosition !== null}
+        symbol={notePosition?.symbol ?? null}
+        name={notePosition?.name ?? null}
+        onClose={() => setNotePosition(null)}
       />
     </ErrorBoundary>
   );

@@ -178,7 +178,7 @@ def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -
         ArtifactFeedback, BehavioralScore,
         AITwinPortfolio, AITwinWeeklyReport,
         PreTradeReflection, PersonaSnapshot, WeeklyPulse,
-        PositionDDCheck, Inquiry,
+        PositionDDCheck, Inquiry, ObservationNote,
         ScheduledEmail, NpsFeedback, AuthEvent, User,
         CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit,
         CompanionWaitlist,
@@ -206,6 +206,9 @@ def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -
     _cnt("ai_twin_portfolio", AITwinPortfolio.query.filter_by(user_id=user_id))
     _cnt("ai_twin_weekly_report", AITwinWeeklyReport.query.filter_by(user_id=user_id))
     _cnt("pre_trade_reflection", PreTradeReflection.query.filter_by(user_id=user_id))
+    # 관찰 노트 — 거래에 묶이지 않은 유저 본인의 암호화된 자유 텍스트
+    # (2026-09-22). routes/auth.py:delete_account 와 동기화.
+    _cnt("observation_note", ObservationNote.query.filter_by(user_id=user_id))
     _cnt("persona_snapshot", PersonaSnapshot.query.filter_by(user_id=user_id))
     _cnt("weekly_pulse", WeeklyPulse.query.filter_by(user_id=user_id))
     _cnt("scheduled_email", ScheduledEmail.query.filter_by(user_id=user_id))

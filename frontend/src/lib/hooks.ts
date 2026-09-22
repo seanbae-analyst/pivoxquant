@@ -21,6 +21,11 @@ import type {
   MirrorHomeResponse,
   PendingImportsResponse,
   ImportTokensResponse,
+  ObservationNoteSource,
+  ObservationNoteResponse,
+  ObservationNoteDeleteResponse,
+  ObservationNotesResponse,
+  ObservationNotesByTickerResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -179,6 +184,109 @@ export function usePreTradeJournal(limit = 50) {
     error: swr.error as Error | undefined,
     mutate: swr.mutate,
   };
+}
+
+/* ── Observation Notes (관찰 노트, 2026-09-22) ──────────────────────────
+ *
+ * docs/design/observation-notes_2026-09-22.md §5. Same SWR contract as
+ * `usePreTradeJournal` above (revalidateOnFocus off, 30s dedupe) so the
+ * /journal timeline merges two feeds without one of them re-fetching on
+ * every tab focus. Read-only; the create/delete mutations below are plain
+ * `apiFetch` helpers and the caller `mutate()`s afterwards.
+ * ──────────────────────────────────────────────────────────────────── */
+
+/**
+ * The user's own observation notes, newest first.
+ *
+ * `filters.ticker` / `filters.tag` map to the backend's `?ticker=` /
+ * `?tag=` narrowing. The SWR key is path+query, so each filter caches
+ * independently and an unfiltered feed is never clobbered by a filtered one.
+ * `limit` defaults to 50 (backend caps at 200).
+ */
+export function useObservationNotes(
+  limit = 50,
+  filters?: { ticker?: string; tag?: string },
+) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (filters?.ticker) params.set("ticker", filters.ticker);
+  if (filters?.tag) params.set("tag", filters.tag);
+  const key = `${API.observationNotes.list}?${params.toString()}`;
+  const swr = useSWR<ObservationNotesResponse>(key, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return {
+    notes: swr.data?.notes ?? [],
+    nextBefore: swr.data?.next_before ?? null,
+    disclaimer: swr.data?.disclaimer ?? null,
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Notes written about ONE ticker inside a trailing window — the read that
+ * /pre-trade performs once the user has chosen a symbol, so their own past
+ * observation is in front of them while they answer the seven questions.
+ *
+ * `ticker === null` disables the fetch (SWR null key), which is the state
+ * before a symbol is picked. Read-only: this surface never writes a note.
+ */
+export function useObservationNotesByTicker(ticker: string | null, days = 30) {
+  const key = ticker
+    ? `${API.observationNotes.byTicker(ticker)}?days=${days}`
+    : null;
+  const swr = useSWR<ObservationNotesByTickerResponse>(key, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return {
+    notes: swr.data?.notes ?? [],
+    count: swr.data?.count ?? 0,
+    disclaimer: swr.data?.disclaimer ?? null,
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/** Body of `POST /api/observation-notes/`. `body` is the only required field. */
+export interface CreateObservationNoteBody {
+  body: string;
+  tickers?: string[];
+  tags?: string[];
+  source?: ObservationNoteSource;
+}
+
+/**
+ * Create one note. Routed through `apiFetch` so CSRF + credentials + the
+ * 30s timeout + 401/429 handling match the rest of the SPA. Throws
+ * `ApiError` on 400 (`OBS_NOTE_BAD_INPUT`) so the composer can render the
+ * server's own `error_kr` instead of inventing a message. The caller
+ * `mutate()`s the list hook after success.
+ */
+export async function createObservationNote(
+  payload: CreateObservationNoteBody,
+): Promise<ObservationNoteResponse> {
+  return apiFetch<ObservationNoteResponse>(API.observationNotes.create, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Delete one note. 404 (`OBS_NOTE_NOT_FOUND`) covers both "gone" and
+ * "someone else's" — the backend never discloses existence. Throws
+ * `ApiError`; the caller `mutate()`s the list hook after success.
+ */
+export async function deleteObservationNote(
+  id: number,
+): Promise<ObservationNoteDeleteResponse> {
+  return apiFetch<ObservationNoteDeleteResponse>(
+    API.observationNotes.detail(id),
+    { method: "DELETE" },
+  );
 }
 
 /**

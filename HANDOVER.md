@@ -1,5 +1,17 @@
 # PivoxQuant — 인수인계서 (2026-06-12 v66 — 버그헌트 14건 처분 + 가상유저 3-레이어 감사·구축 완료)
 
+## v67 2026-09-22 — CEO "관찰 노트 기능 빌드 계획 짜고 agent 들 시켜서 빌드" (브랜치 `feat/observation-notes`, 미푸시)
+
+> **관찰 노트(observation notes)** — 거래 없이도 주식 흐름을 읽다가 든 생각을 적는 기록. 계획 `docs/design/observation-notes_2026-09-22.md`, 커밋 4개(`dd518070` 계획 · `f93f5cd5` 백엔드 · `59c8b85b` 프론트 배선 · `1c29db2c` 화면 연결).
+> - **백엔드**: `observation_notes` 테이블(054, EncryptedText 본문 ≤5000 · 종목 0~5 · 태그 0~10 · source) + `/api/observation-notes` 5 라우트(생성·목록 커서·단건·삭제·by-ticker 30일 창). append-only + 삭제, 수정 없음. PIPA: `routes/auth.py purge_ops` · `scripts/nightly/pipa_purge.py` · `routes/profile.py` JSON export 편입(CSV 는 미편입 — 범위 밖). `@legal_scrub_response` 미부착, docstring `# legal-exempt:` 사유 명시. 면책은 `DISCLAIMER_ARTIFACT_KR` SoT 재사용.
+> - **프론트**: `/journal` 멈춤 기록 + 관찰 노트 **한 타임라인**(`journal/timeline.ts mergeTimeline`, 필터 칩 전체·멈춤 기록·관찰 노트, 최근 7일 카운트) · `/pre-trade` 종목 선택 시 최근 30일 노트 **읽기 전용 되비침**(작성 동선 없음 — 7문항 우회 금지, 테스트로 고정) · `/portfolio` 행 액션 "관찰 노트" 모달 · 데모 fixture 3건. add-position 의 인라인 종목 자동완성을 `components/shared/ticker-search.tsx` 로 추출(동작 무변경).
+> - **PR 전 리뷰(3갈래 병렬: 체크리스트+테스팅+유지보수+디자인 / 보안+마이그레이션+API+성능 / 적대적)**: CRITICAL 2건 수정 — ① `to_dict()` 의 `resolve_stock_name` 이 미등록 KR 종목에서 **라이브 KIS 호출**로 떨어짐 → 레지스트리 전용(`kr/us_stock_registry.get_name`)으로 교체 + 테스트로 고정 ② 커서 페이지네이션 정렬(created_at)과 커서(id) 불일치 → `id desc` 단독. 정보성 13건 수정(태그 LIKE 대소문자 SQLite/Postgres 불일치 → `func.lower`, 태그 `"`/`\` 거부, GET 라우트 rate limit, downgrade try/except 제거, journal 피드 오류 시 빈 상태 오표시 방지 + 재시도 스트립, 노트 200개 상한 명시, 글자수 code point 통일, 토큰 리터럴 정리, `.KS` 접미사 중복 칩, 데모 fixture 정규화, 카드 테스트, nightly purge 테스트). `# legal-exempt:` 마커 무의미 지적은 **오탐**(`tests/test_legal_deep_scan_local.py:129` 가 검사).
+> - **브라우저 E2E(실 API, 2026-09-22)**: 로컬 백엔드 :5050 + `NEXT_PUBLIC_DEMO_MODE=0` 프론트, 비번 테스트 유저로 /journal 작성→카드→카운트, /pre-trade 종목 선택→30일 노트 되비침, /portfolio 종목 추가(추출한 TickerSearch)→행 액션→모달 작성까지 전부 실통과. **테스트로 못 잡은 버그 2건 발견·수정**: ① `API.observationNotes.create` 의 끝 슬래시 `/api/observation-notes/` 를 Next.js 가 308 로 리다이렉트(POST 유실, 브라우저는 https 로 따라가 SSL 오류) → 슬래시 제거(백엔드는 양쪽 등록 유지) ② 태그 입력이 keydown 이 아닌 경로(insertText/IME/blur)로 들어오면 "거래량," 처럼 쉼표째 저장 → commit 시 쉼표 분리. 로그인 원천 검사(`_LOGOUT_ALLOWED_ORIGINS` 는 :3000 하드코딩)는 로컬 임시 수정 후 원복. **Postgres 16 실검증**: 054 upgrade→downgrade→re-upgrade PASS, FK ondelete CASCADE 확인, 서비스 계층 커서·태그 필터 Postgres 에서 정상. 단 `test_migration_round_trip` 은 001 이 baseline 마커라 빈 DB 에서 002 에서 죽는다(pre-existing, 054 무관). brew `postgresql@16` 설치됨(서비스 미등록).
+> - **검증(수정 후)**: pytest **2493 passed** · 법적 스위트 229 passed · vitest **528/528** · tsc·lint·build clean · regression guards passed · 054 upgrade/downgrade/재upgrade SQLite 실증(Postgres 는 로컬 없음 → CI/첫 배포에서 확인).
+> - **미결**: 행동 점수 반영 안 함(계획 §4-3, v2 후보 `observation_link_mirror`) · 카피는 한국어 하드코딩(add-position 과 동일 방식) · 법률 큐에 "UGC 되비침이 §6 표시에 해당하나" 등록 필요.
+
+---
+
 ## v66 2026-06-11~12 — CEO "버그들 다 진행 + 가상유저 구축 제대로 됐는지 파악하고 구축해놔라" (야간 자율)
 
 > **Part A — 버그헌트 14건 처분 완료**: 11건 fix + 3건 근거 있는 no-fix (#4 interactive-before-tier = 테스트로 고정된 의도 + 프론트 도달 불가 / #8 observed_at = 관측시각이 정답 / #11 TOCTOU = max_instances=1로 실위험 없음, reserve/refund 배관이 더 위험). 커밋 4개: `9b9810b7`(백엔드 6건) `e4dd5f4e`(AI예산 — **인터랙티브 AI 라우트 일일 캡 신설** swot/competitor/sector-trend/commentary/morning-summary/coaching, 2000/day 글로벌 breaker, env `PIVOX_INTERACTIVE_AI_DAILY_LIMIT`, 2xx만 소비/장애시 fail-open) `30150213`(discover **proxy_ticker 고지 배지** "via SPY" + reports pickLatest sent_at??created_at + living_mirror 통합 다운로드 415 fix) `ff9ea9a1`(ruff F401/F541 12건 정리).

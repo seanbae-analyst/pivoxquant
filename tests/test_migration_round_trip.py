@@ -127,6 +127,9 @@ def test_migration_chain_upgrades_to_head(migration_app: Flask):
     assert "artifacts" in tables, "007_artifacts_table missing"
     assert "agent_tasks" in tables, "004_add_agent_tables missing"
     assert "broker_connections" in tables, "broker_connections missing"
+    # 054 — 관찰 노트. body 는 EncryptedText(=TEXT 암호문)라 048 류의 폭
+    # 문제가 여기서 재발하면 이 줄에서 먼저 걸린다.
+    assert "observation_notes" in tables, "054_observation_notes missing"
 
     # 023 marketing consent + 024 cross-border consent column adds.
     user_cols = _columns(migration_app, "users")

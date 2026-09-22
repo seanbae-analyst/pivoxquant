@@ -48,6 +48,14 @@ interface PositionsTableV2Props {
   displayCurrency?: "USD" | "KRW";
   loading?: boolean;
   onAction?: (action: TradeAction, position: Position) => void;
+  /**
+   * Open the 관찰 노트 composer for one row (docs/design/
+   * observation-notes_2026-09-22.md §5 진입점). Deliberately NOT a
+   * `TradeAction`: that union feeds <TradeModalV2 />'s copy table and its
+   * three members are all book mutations. Writing a note changes nothing
+   * about the position, so it gets its own channel.
+   */
+  onObservationNote?: (position: Position) => void;
   onAddPosition?: () => void;
   /** Empty-state secondary path: broker sync (KIS). Optional. */
   /** Whether a broker is linked — drives the secondary CTA enabled state. */
@@ -200,6 +208,7 @@ export function PositionsTableV2({
   displayCurrency = "USD",
   loading,
   onAction,
+  onObservationNote,
   onAddPosition,
 }: PositionsTableV2Props) {
   const t = useT();
@@ -449,6 +458,7 @@ export function PositionsTableV2({
                   key={r.raw.id}
                   row={r}
                   onAction={onAction}
+                  onObservationNote={onObservationNote}
                   marketDataDisplay={marketDataDisplay}
                 />
               ))}
@@ -507,10 +517,12 @@ export function PositionsTableV2({
 function PositionRow({
   row,
   onAction,
+  onObservationNote,
   marketDataDisplay = true,
 }: {
   row: DerivedPosition;
   onAction?: (action: TradeAction, position: Position) => void;
+  onObservationNote?: (position: Position) => void;
   marketDataDisplay?: boolean;
 }) {
   const p = row.raw;
@@ -520,6 +532,12 @@ function PositionRow({
     e.stopPropagation();
     e.preventDefault();
     onAction?.(action, p);
+  }
+
+  function handleNote(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    onObservationNote?.(p);
   }
 
   const cellStyle: React.CSSProperties = {
@@ -554,25 +572,46 @@ function PositionRow({
         >
           {normalizeTicker(p.symbol)}
         </div>
-        {/* Hover-revealed actions */}
-        {onAction && (
+        {/* Hover-revealed actions. `flexWrap` so the fourth button folds onto
+            a second line on a 375px phone instead of widening the already
+            horizontally-scrolling table. */}
+        {(onAction || onObservationNote) && (
           <div
             className="pq-row-actions"
             style={{
               marginTop: 8,
               display: "flex",
+              flexWrap: "wrap",
               gap: 8,
             }}
           >
-            <RowActionBtn label="Add" onClick={(e) => handleAction(e, "buy")} />
-            <RowActionBtn
-              label="Trim"
-              onClick={(e) => handleAction(e, "sell")}
-            />
-            <RowActionBtn
-              label="Edit"
-              onClick={(e) => handleAction(e, "edit")}
-            />
+            {onAction && (
+              <>
+                <RowActionBtn
+                  label="Add"
+                  onClick={(e) => handleAction(e, "buy")}
+                />
+                <RowActionBtn
+                  label="Trim"
+                  onClick={(e) => handleAction(e, "sell")}
+                />
+                <RowActionBtn
+                  label="Edit"
+                  onClick={(e) => handleAction(e, "edit")}
+                />
+              </>
+            )}
+            {/* Korean label in the mono eyebrow tier — the exception the
+                empty-state CTA already sets ("보유종목 직접 추가 →"). This is a
+                product noun the reader has to recognize from /journal, not a
+                column header. */}
+            {onObservationNote && (
+              <RowActionBtn
+                label="관찰 노트"
+                onClick={handleNote}
+                ariaLabel={`${normalizeTicker(p.symbol)} 관찰 노트 작성`}
+              />
+            )}
           </div>
         )}
       </td>
@@ -674,14 +713,18 @@ function PositionRow({
 function RowActionBtn({
   label,
   onClick,
+  ariaLabel,
 }: {
   label: string;
   onClick: (e: React.MouseEvent) => void;
+  /** Row-scoped accessible name — the visible label repeats on every row. */
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-label={ariaLabel}
       className="font-mono uppercase"
       style={{
         fontSize: "var(--pq-text-eyebrow)",

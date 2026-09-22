@@ -58,7 +58,7 @@ from models import (
     ArtifactFeedback, BehavioralScore,
     AITwinPortfolio, AITwinWeeklyReport,
     PreTradeReflection, PersonaSnapshot, WeeklyPulse,
-    PositionDDCheck, Inquiry,
+    PositionDDCheck, Inquiry, ObservationNote,
     ScheduledEmail, NpsFeedback,
     AuthEvent,
     CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit, CompanionWaitlist,
@@ -1736,6 +1736,9 @@ def delete_account():
             ("ai_twin_portfolios", lambda: _d(AITwinPortfolio.query.filter_by(user_id=user_id))),
             ("ai_twin_weekly_reports", lambda: _d(AITwinWeeklyReport.query.filter_by(user_id=user_id))),
             ("pre_trade_reflections", lambda: _d(PreTradeReflection.query.filter_by(user_id=user_id))),
+            # 관찰 노트 — 유저 본인의 암호화된 자유 텍스트. 멈춤 기록과 같은
+            # 이유로 명시적으로 지운다 (2026-09-22).
+            ("observation_notes", lambda: _d(ObservationNote.query.filter_by(user_id=user_id))),
             ("persona_snapshots", lambda: _d(PersonaSnapshot.query.filter_by(user_id=user_id))),
             ("weekly_pulse", lambda: _d(WeeklyPulse.query.filter_by(user_id=user_id))),
             ("scheduled_emails", lambda: _d(ScheduledEmail.query.filter_by(user_id=user_id))),

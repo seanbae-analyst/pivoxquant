@@ -51,6 +51,7 @@ import {
   TerminalStep,
   usePreTradeCycle,
 } from "@/components/pre-trade/pre-trade-friction-core";
+import { RelatedObservationNotes } from "@/components/pre-trade/related-observation-notes";
 
 export default function PreTradePage() {
   // Step 1 — setup (owned by this route page)
@@ -130,6 +131,14 @@ export default function PreTradePage() {
             canAdvance={setupOk}
             onNext={advanceToQuestions}
           />
+        )}
+
+        {/* The user's own past observations on this symbol — read-only, and
+            placed before the questions so it is context for the answers
+            (docs/design/observation-notes_2026-09-22.md §4-1). Renders
+            nothing when there are none. */}
+        {cycle.phase === "questions" && (
+          <RelatedObservationNotes ticker={ticker} />
         )}
 
         {cycle.phase === "questions" && (
