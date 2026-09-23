@@ -35,7 +35,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# 2026-09-23 DB 보안 감사 — 컨테이너를 root 로 돌리지 않는다. 앱이 런타임에
+# /app 아래에 쓰는 파일(.kis_token_cache.json, state/ 등)이 있으므로 소스를
+# app 유저 소유로 복사한다. pip 설치는 위에서 root 로 끝났다.
+RUN useradd --create-home --uid 10001 app
+COPY --chown=app:app . .
+USER app
 
 # ── Alpaca data-fallback kill switch ─────────────────────────────────────────
 # The user-facing Alpaca broker integration was fully removed 2026-05-27. This

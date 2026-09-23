@@ -546,8 +546,6 @@ def test_export_includes_new_user_owned_sections_with_data(
             encrypted_app_key="ENC-APP-KEY-SECRET",
             encrypted_app_secret="ENC-APP-SECRET-SECRET",
             encrypted_access_token="ENC-ACCESS-TOKEN-SECRET",
-            access_token="LEGACY-ACCESS-TOKEN-SECRET",
-            refresh_token="LEGACY-REFRESH-TOKEN-SECRET",
         ))
 
         # AI Twin chain (portfolio → positions/trades via twin_id).
@@ -613,8 +611,7 @@ def test_export_never_leaks_credential_or_push_secrets(app, client, auth_user):
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     secrets_seeded = [
         "ENC-APP-KEY-SECRET", "ENC-APP-SECRET-SECRET",
-        "ENC-ACCESS-TOKEN-SECRET", "LEGACY-ACCESS-TOKEN-SECRET",
-        "LEGACY-REFRESH-TOKEN-SECRET", "https://push.example/SECRET-ENDPOINT",
+        "ENC-ACCESS-TOKEN-SECRET", "https://push.example/SECRET-ENDPOINT",
         "SECRET-P256DH", "SECRET-PUSH-AUTH", "share-secret-token",
         "cs_test_SECRET_SESSION",
     ]
@@ -624,8 +621,6 @@ def test_export_never_leaks_credential_or_push_secrets(app, client, auth_user):
             encrypted_app_key="ENC-APP-KEY-SECRET",
             encrypted_app_secret="ENC-APP-SECRET-SECRET",
             encrypted_access_token="ENC-ACCESS-TOKEN-SECRET",
-            access_token="LEGACY-ACCESS-TOKEN-SECRET",
-            refresh_token="LEGACY-REFRESH-TOKEN-SECRET",
         ))
         db.session.add(PushSubscription(
             user_id=uid, endpoint="https://push.example/SECRET-ENDPOINT",
