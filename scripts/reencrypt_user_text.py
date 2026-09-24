@@ -34,6 +34,9 @@ Usage
 
     # Apply, after PIVOX_USER_TEXT_KEY_V2 is set in the environment:
     python scripts/reencrypt_user_text.py --apply
+
+    # Also encrypt legacy plaintext rows (prod had 0 on 2026-09-23):
+    python scripts/reencrypt_user_text.py --encrypt-plaintext --apply
 """
 from __future__ import annotations
 
@@ -61,10 +64,12 @@ ENCRYPTED_COLUMNS = [
     ("inquiries", "admin_reply"),
     ("ai_twin_trades", "rationale"),
     ("ai_twin_weekly_reports", "rationale_summary"),
+    ("observation_notes", "body"),
+    ("pending_trades", "approved_thesis"),
 ]
 
 
-def _sweep(apply: bool) -> dict:
+def _sweep(apply: bool, encrypt_plaintext: bool = False) -> dict:
     from sqlalchemy import text
 
     from extensions import db
@@ -76,7 +81,7 @@ def _sweep(apply: bool) -> dict:
         current, cs.user_text_key_versions(),
     )
 
-    totals = {"scanned": 0, "rolled": 0, "skipped": 0}
+    totals = {"scanned": 0, "rolled": 0, "skipped": 0, "plaintext": 0, "encrypted": 0}
     for table, column in ENCRYPTED_COLUMNS:
         try:
             rows = db.session.execute(
@@ -102,6 +107,32 @@ def _sweep(apply: bool) -> dict:
                     text(f"UPDATE {table} SET {column} = :v WHERE id = :id"),
                     {"v": new_ct, "id": row_id},
                 )
+        # Legacy plaintext rows (written before the column was switched to
+        # EncryptedText) otherwise stay plaintext until next ORM write.
+        # Counted always; encrypted only with --encrypt-plaintext.
+        plain_rows = db.session.execute(
+            text(
+                f"SELECT id, {column} FROM {table} "
+                f"WHERE {column} IS NOT NULL AND {column} <> '' "
+                f"AND {column} NOT LIKE 'pqenc:%'"
+            )
+        ).fetchall()
+        if plain_rows:
+            totals["plaintext"] += len(plain_rows)
+            logger.info(
+                "%s.%s: %s legacy plaintext row(s)%s",
+                table, column, len(plain_rows),
+                "" if encrypt_plaintext else " (pass --encrypt-plaintext)",
+            )
+            if encrypt_plaintext:
+                for row_id, stored in plain_rows:
+                    totals["encrypted"] += 1
+                    if apply:
+                        db.session.execute(
+                            text(f"UPDATE {table} SET {column} = :v WHERE id = :id"),
+                            {"v": cs.encrypt_user_text(stored), "id": row_id},
+                        )
+
         if rolled:
             logger.info(
                 "%s.%s: %s row(s) %s -> v%s",
@@ -122,18 +153,23 @@ def main() -> int:
         "--apply", action="store_true",
         help="actually write the rolled-forward ciphertext (default: dry-run)",
     )
+    parser.add_argument(
+        "--encrypt-plaintext", action="store_true",
+        help="also encrypt legacy plaintext rows (no pqenc: marker)",
+    )
     args = parser.parse_args()
 
     from app import create_app
 
     app = create_app()
     with app.app_context():
-        totals = _sweep(apply=args.apply)
+        totals = _sweep(apply=args.apply, encrypt_plaintext=args.encrypt_plaintext)
 
     mode = "APPLIED" if args.apply else "DRY-RUN"
     logger.info(
-        "%s — scanned=%s rolled=%s skipped=%s",
+        "%s — scanned=%s rolled=%s skipped=%s plaintext=%s encrypted=%s",
         mode, totals["scanned"], totals["rolled"], totals["skipped"],
+        totals["plaintext"], totals["encrypted"],
     )
     if not args.apply and totals["rolled"]:
         logger.info("re-run with --apply to write these changes.")

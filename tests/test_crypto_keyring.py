@@ -141,3 +141,30 @@ def test_corrupt_ciphertext_blanks_not_raises():
     flipped = "A" if body[mid] != "A" else "B"  # swap one base64 char → tag fails
     corrupt = prefix + body[:mid] + flipped + body[mid + 1:]
     assert et.process_result_value(corrupt, None) == ""
+
+
+def test_reencrypt_sweep_covers_every_encrypted_text_column(app):
+    """scripts/reencrypt_user_text.ENCRYPTED_COLUMNS must list every
+    EncryptedText column in the models — a missing entry is silently never
+    rotated (2026-09-23 audit found observation_notes.body and
+    pending_trades.approved_thesis missing)."""
+    import importlib.util
+    import pathlib
+
+    from extensions import db
+
+    path = pathlib.Path(__file__).resolve().parents[1] / "scripts" / "reencrypt_user_text.py"
+    spec = importlib.util.spec_from_file_location("reencrypt_user_text", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    with app.app_context():
+        in_models = {
+            (table.name, col.name)
+            for table in db.metadata.tables.values()
+            for col in table.columns
+            if isinstance(col.type, cs.EncryptedText)
+        }
+    assert in_models, "no EncryptedText columns found — metadata not loaded?"
+    missing = in_models - set(mod.ENCRYPTED_COLUMNS)
+    assert not missing, f"add to ENCRYPTED_COLUMNS: {sorted(missing)}"

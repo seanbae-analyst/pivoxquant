@@ -1,16 +1,21 @@
 name: DB Nightly Dump (Encrypted)
 
-# Nightly Railway PostgreSQL dump → GPG-encrypted → GitHub release asset.
-# Railway already runs its own backups on the paid plan, but this gives us
-# a second copy under our own control (defense-in-depth) and a verifiable
-# off-platform restore path.
+# Nightly Supabase PostgreSQL dump → GPG-encrypted → GitHub release asset.
+# 2026-09-23: DB moved Railway → Supabase (free plan: no PITR, no downloadable
+# backups). This workflow is the only off-platform copy we control.
+#
+# ⚠️ ENABLE ONLY WHILE THE REPO IS PRIVATE. Release assets of a public repo are
+# downloadable by anyone; the GPG layer then becomes the only protection.
+# To enable: make repo private → set the two secrets → rename to .yml.
 #
 # Cost: ~5 min/run × 30 runs/mo = 150 min/mo. Free tier = 2000 min/mo.
 # Release storage: GitHub Releases free for public repos. Retention is
 # enforced by deleting releases older than 7 days at the end of each run.
 #
 # Required secrets (CEO to set in repo settings):
-#   - DATABASE_URL        Railway PostgreSQL connection string (read-only
+#   - DATABASE_URL        Supabase *session pooler* URL with ?sslmode=require
+#                         (aws-0-ap-northeast-2.pooler.supabase.com:5432 —
+#                         the direct host has no IPv4 on GH runners). Read-only
 #                         role recommended; pg_dump needs SELECT on all
 #                         relations + USAGE on schema).
 #   - GPG_PASSPHRASE      Symmetric passphrase. Store the SAME passphrase
@@ -41,11 +46,13 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          # Pin to v16 — matches Railway's current PostgreSQL major version.
-          # If Railway upgrades, bump this. pg_dump is forward-compatible
-          # within a major; a newer client can dump an older server but not
-          # vice versa, so always prefer >= server version.
-          sudo apt-get install -y postgresql-client-16
+          # Supabase runs PostgreSQL 17 (2026-09-23). pg_dump must be >= the
+          # server major, and ubuntu-latest's default repo lags — use PGDG.
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
 
       - name: Verify secrets present
         env:
@@ -75,7 +82,7 @@ jobs:
           echo "stamp=$STAMP" >> "$GITHUB_OUTPUT"
 
           # --no-owner / --no-privileges: dump is restorable into any DB
-          # without needing the original Railway roles. -Fp = plain SQL for
+          # without needing the original Supabase roles. -Fp = plain SQL for
           # human-readable diff-ability (vs custom format).
           pg_dump \
             --no-owner --no-privileges --format=plain \

@@ -94,5 +94,7 @@ def health():
         except Exception:
             logger.debug("health: session rollback after DB ping failure also failed", exc_info=True)
         payload["status"] = "degraded"
-        payload["db"] = f"error: {exc.__class__.__name__}"
+        # 공개 엔드포인트라 예외 클래스명(드라이버·장애 종류)은 로그에만 남긴다.
+        logger.warning("health: DB ping failed: %s", exc.__class__.__name__)
+        payload["db"] = "error"
         return jsonify(payload), 503

@@ -806,8 +806,8 @@ def _do_migrations():
 
     # Broker connections — Week 1 (2026-04-18) added AES-256-GCM encrypted
     # credential columns. HIGH RISK of ProgrammingError on legacy DBs.
-    _add_column_if_missing("broker_connections", "access_token", "TEXT")
-    _add_column_if_missing("broker_connections", "refresh_token", "TEXT")
+    # access_token / refresh_token (plaintext, Alpaca legacy) — dropped in
+    # migration 055; do not re-add.
     _add_column_if_missing("broker_connections", "account_id", "VARCHAR(50)")
     _add_column_if_missing("broker_connections", "is_paper", "BOOLEAN", default="1")
     _add_column_if_missing("broker_connections", "is_active", "BOOLEAN", default="1")

@@ -154,3 +154,13 @@ class Config:
             "pool_recycle": 300,       # 5분마다 recycle — 유휴 커넥션 빨리 반환
             "pool_pre_ping": True,     # verify connections before use
         }
+        # 2026-09-23 DB 보안 감사 — .env.example 은 "sslmode=require enforced"
+        # 라고 적었지만 코드가 강제하지 않았다. URL 에 sslmode 가 이미 있으면
+        # 그 값을 존중하고, 없으면 prod 에서 require 를 건다. 로컬 Postgres
+        # (SSL 없음) 는 건드리지 않는다. DATABASE_SSLMODE 로 덮어쓸 수 있다
+        # (예: Supabase CA 를 받아 verify-full).
+        _sslmode = os.environ.get("DATABASE_SSLMODE", "").strip() or (
+            "require" if _IS_PRODUCTION else ""
+        )
+        if _sslmode and "sslmode=" not in _db_url:
+            SQLALCHEMY_ENGINE_OPTIONS["connect_args"] = {"sslmode": _sslmode}

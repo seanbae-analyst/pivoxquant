@@ -118,6 +118,18 @@ def _load_master_key() -> bytes:
             return key
         # If the supplied value isn't exactly 32 bytes, derive a 32-byte key
         # via SHA-256. Acceptable for a shared secret string.
+        # 2026-09-23 DB 보안 감사: 조용히 넘어가지 않게 prod 에선 크게 경고한다.
+        # 거부(부팅 실패)하지 않는 이유 — 지금 prod 키가 이 경로로 파생된
+        # 것이라면 거부가 곧 장애다. 키를 바꾸면 v1 암호문이 전부 못 읽히므로
+        # 새 32바이트 키는 PIVOX_USER_TEXT_KEY_V2 로 더하는 게 맞다.
+        if _is_production():
+            logger.warning(
+                "crypto_service: %s is not a base64 32-byte key (got %d bytes) "
+                "— deriving via SHA-256. Generate a proper key with "
+                "`python -c \"import os,base64;print(base64.b64encode(os.urandom(32)).decode())\"` "
+                "and add it as PIVOX_USER_TEXT_KEY_V2 (do NOT replace this one).",
+                var, len(key),
+            )
         return hashlib.sha256(key).digest()
 
     # No key configured.

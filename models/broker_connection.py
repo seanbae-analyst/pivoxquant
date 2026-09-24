@@ -1,9 +1,9 @@
 """Broker connection model — stores OAuth tokens for Alpaca/KIS real account linking.
 
 Week 1 (2026-04-18): Added AES-256-GCM encrypted columns for per-user KIS/Kiwoom
-credentials. Existing `access_token` / `refresh_token` columns are retained for
-backward compatibility with Alpaca and legacy code paths; new KIS flow writes
-into the `encrypted_*` columns via `services.crypto_service`.
+credentials. The KIS flow writes into the `encrypted_*` columns via
+`services.crypto_service`. The legacy plaintext Alpaca `access_token` /
+`refresh_token` columns were dropped in migration 055 (2026-09-23).
 """
 from datetime import datetime, timezone
 from extensions import db
@@ -16,8 +16,6 @@ class BrokerConnection(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
                          nullable=False, index=True)
     broker = db.Column(db.String(20), nullable=False)       # alpaca / kis / kiwoom
-    access_token = db.Column(db.Text)                       # legacy (Alpaca)
-    refresh_token = db.Column(db.Text)                      # legacy (Alpaca)
     account_id = db.Column(db.String(50))                   # legacy public account id
     is_paper = db.Column(db.Boolean, default=True)          # True=paper/mock, False=live
     is_active = db.Column(db.Boolean, default=True)
