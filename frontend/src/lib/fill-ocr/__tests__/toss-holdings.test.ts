@@ -1,0 +1,76 @@
+/**
+ * Toss 내 투자 — two unlabelled lines per stock, no average cost printed.
+ * Word boxes mimic the production OCR dump of a real capture (names and
+ * numbers here are synthetic), including its misreads: 주 read as "%" / "F",
+ * an empty digit re-read, and the round logo read as letters left of the name.
+ */
+import { describe, it, expect } from "vitest";
+import type { OcrWord } from "@/lib/fill-ocr/parse";
+import { parseHoldingsScreen } from "@/lib/fill-ocr/parse-holdings";
+
+let y = 0;
+type W = string | [string, string] | [string, string, number];
+function line(...ws: W[]): OcrWord[] {
+  y += 70;
+  let x = 190;
+  return ws.map((w) => {
+    const [t, alt, at] = Array.isArray(w) ? w : [w, /\d/.test(w) ? w : undefined];
+    if (at !== undefined) x = at;
+    const out: OcrWord = { t, c: 90, x0: x, y0: y, x1: x + t.length * 20, y1: y + 30, ...(alt !== undefined ? { alt } : {}) };
+    x += t.length * 20 + 20;
+    return out;
+  });
+}
+
+function toss(): OcrWord[] {
+  y = 0;
+  return [
+    ...line(["내", "", 60], "투자"),
+    ...line(["직접", "", 60], "설정한", "순", "현재가", "평가금", "원"),
+    ...line(["국내주식", "", 60], ["-20.4%", "20.4"]),
+    // cost = 859,449 + 982,051 = 1,841,500; 982,051 ÷ 1,841,500 = 53.33% → "53.3%" proves it
+    ...line("가나전자", ["859,449", "859,449", 700], "원"),
+    ...line(["©", "", 90]),
+    ...line("29", "주", ["-982,051", "982,051", 600], ["(53.3%)", "53.3"]),
+    // "19%" is 19주; the rate 37.6% is 37.667% truncated
+    ...line(["MA", "", 60], "다라화학", ["911,936", "911,936", 700], "원"),
+    ...line(["19%", "19"], ["-551,064", "551,064", 600], ["(37.6%)", "37.6"]),
+    // the rate does not reproduce → the quotient is only a hint
+    ...line("마바전자", ["1,000,000", "1,000,000", 700], "원"),
+    ...line(["3F", "3"], ["-100,000", "100,000", 600], ["(20.0%)", "20.0"]),
+    // the digit re-read came back empty → shares are a hint, so is the average
+    ...line("사아전자", ["3,717,420", "3,717,420", 700], "원"),
+    ...line(["2", ""], "주", ["-82,580", "82,580", 600], ["(2.1%)", "2.1"]),
+    ...line(["해외주식", "", 60], ["-59.1%", "59.1"]),
+    ...line("자차에너지", ["273,753", "273,753", 700], "원"),
+    ...line("24", "주", ["-536,937", "536,937", 600], ["(66.2%)", "66.2"]),
+  ];
+}
+
+describe("Toss 내 투자 capture", () => {
+  const { screenType, rows } = parseHoldingsScreen(toss());
+
+  it("is a holdings screen, one row per stock, logo letters dropped", () => {
+    expect(screenType).toBe("holdings");
+    expect(rows.map((r) => r.name.value)).toEqual(["가나전자", "다라화학", "마바전자", "사아전자", "자차에너지"]);
+  });
+
+  it("reads shares from the first token even when 주 is misread, if both readings agree", () => {
+    expect(rows.map((r) => r.shares.value)).toEqual([29, 19, 3, null, 24]);
+    expect(rows[3].shares.hint).toBe("2");
+  });
+
+  it("fills the average only when the printed rate proves (amount − P/L) is the cost", () => {
+    expect(rows[0].avgCost).toEqual({ value: 63500 }); // (859,449 + 982,051) ÷ 29
+    expect(rows[1].avgCost).toEqual({ value: 77000 });
+    expect(rows[0].flags).toContain("derived_avg");
+    expect(rows[2].avgCost).toEqual({ value: null, hint: "366667" });
+    expect(rows[3].avgCost).toEqual({ value: null, hint: "1900000" });
+  });
+
+  it("gives no won average for an overseas stock shown in won", () => {
+    expect(rows[4].currency).toBeNull();
+    expect(rows[4].flags).toContain("foreign_in_krw");
+    expect(rows[4].avgCost).toEqual({ value: null });
+  });
+});

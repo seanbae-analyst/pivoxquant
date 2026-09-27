@@ -222,6 +222,61 @@
         "loading": "Loading entries…",
         "empty": "No recent entries.",
         "sharesUnit": "{n} sh"
+      },
+      "holdingsImport": {
+        "title": "Import holdings from a capture",
+        "entry": "Import holdings from a capture",
+        "entryHint": "Capture your broker app's holdings screen and record several positions at once.",
+        "intro": "Reads ticker, shares and average cost from a holdings (balance) screen capture and records them as positions. Existing positions are replaced with the captured values by default.",
+        "guideScreen": "Your broker app's holdings / balance screen. Fill-history and order screens are not read.",
+        "guideColumns": "Must be visible: name or code · shares held · average cost. If the cost total is visible it is checked against shares × average cost. Current price and market value are not recorded.",
+        "guideReplace": "Positions you already recorded default to 'Replace' (shares and average cost set to the captured values). Each row can be switched to 'Add' or 'Skip'.",
+        "resolving": "Checking tickers",
+        "previewFailed": "Could not check the tickers. Please try again shortly.",
+        "saveFailed": "Could not save.",
+        "noteRead": "{rows} holdings read",
+        "screen": {
+          "fills": "Looks like a fill / trade history screen — not read. (Import fills from Journal → Import.)",
+          "orders": "Looks like an order screen — not read.",
+          "other": "Does not look like a holdings screen — not read.",
+          "empty": "No holding rows found.",
+          "holdings": "Holdings screen"
+        },
+        "reviewDesc": "Only cells read with certainty are filled. Fill each outlined blank from your capture; faint text inside a cell is only a hint. Current price is never used as average cost.",
+        "changeTicker": "Change",
+        "tickerPlaceholder": "Search ticker",
+        "confirmMatch": "I confirm this is the same stock as '{read}' on the capture.",
+        "col": {
+          "ticker": "Ticker",
+          "shares": "Shares",
+          "avgCost": "Avg cost",
+          "currency": "Currency",
+          "mode": "Action"
+        },
+        "mode": {
+          "replace": "Replace",
+          "add": "Add",
+          "new": "Add new",
+          "skip": "Skip"
+        },
+        "current": "Recorded now: {shares} sh · avg {avg} {currency}",
+        "notHeld": "Not recorded yet · new",
+        "issue": {
+          "ticker": "Pick the ticker",
+          "confirm": "Confirm the ticker",
+          "shares": "Fill shares (whole numbers for KRW)",
+          "avgCost": "Fill average cost",
+          "currency": "Pick the currency",
+          "currencyMismatch": "Differs from the ticker's currency — enter US holdings in USD",
+          "duplicate": "Same ticker twice — keep one and skip the other"
+        },
+        "amountMismatch": "Shares × average cost did not match the cost total on screen, so both cells were cleared.",
+        "foreignInKrw": "This overseas stock is shown in won, so its dollar average cost is not on screen. Switch the app to $ and capture again, or type it in.",
+        "back": "Back",
+        "save": "Save {n} positions",
+        "doneSummary": "Added {created} · replaced {replaced} · merged {added} · skipped {skipped}",
+        "tierLimit": "{n} not saved because of the free plan position limit: {tickers}",
+        "consentLabel": "Collected: ticker, shares held, average cost. Purpose: your position record. Screenshots are read on this device only and never uploaded; no source text is kept. Saved positions can be deleted at any time via data export or account deletion in Settings. I agree."
       }
     }
   },

@@ -70,7 +70,7 @@ export interface ScreenParse {
 
 // ── lines ──────────────────────────────────────────────────────────────
 
-interface Line {
+export interface Line {
   words: OcrWord[];
   y: number;
   h: number;
@@ -78,7 +78,7 @@ interface Line {
   text: string;
 }
 
-function median(xs: number[]): number {
+export function median(xs: number[]): number {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
   return s[Math.floor(s.length / 2)];
@@ -117,7 +117,10 @@ export function groupLines(words: OcrWord[]): Line[] {
 const FILL_KW = ["체결내역", "거래내역", "체결일자", "체결단가", "체결수량", "체결금액", "체결가", "구매완료", "판매완료", "주문체결"];
 // "잔고" / "현재가" are left out on purpose: they are bottom-tab labels on
 // most broker apps and show up on fill screens too.
-const HOLD_KW = ["보유종목", "보유주식", "평가금액", "평가손익", "평균단가", "매입가", "평균", "수익률"];
+// 잔고수량 / 매입금액 / 계좌잔고 / 주식잔고 / 평단 name balance screens that avoid the
+// words above (heldout n1: 계좌잔고 · 잔고수량 · 매입금액 · 현재가 · 손익).
+const HOLD_KW = ["보유종목", "보유주식", "평가금액", "평가손익", "평균단가", "매입가", "평균", "수익률",
+  "잔고수량", "보유수량", "매입금액", "계좌잔고", "주식잔고", "평단"];
 const ORDER_KW = ["주문유형", "지정가", "시장가", "호가", "주문가능", "주문수량", "주문금액", "매수하기", "매도하기", "정정"];
 
 function countKw(compact: string, kws: string[]): number {
@@ -132,7 +135,11 @@ export function classifyScreen(lines: Line[]): ScreenType {
   const detail = lines.filter((l) =>
     /체결\d[\d.,]*주|\d[\d.,]*주(구매|판매|매수|매도)|\d주?x\$\d/.test(l.compact)).length;
   fills += Math.min(3, detail);
-  const holds = countKw(all, HOLD_KW);
+  let holds = countKw(all, HOLD_KW);
+  // Toss 내 투자 prints no label at all: "이름 859,449원" over "29주 -982,051 (53.3%)".
+  // Two such quantity/P&L lines are a holdings list.
+  const tossRows = lines.filter((l) => /^\d[\d,.]*주[+\-−]\$?[\d,.]+원?\(\d+(\.\d+)?%\)$/.test(l.compact)).length;
+  if (tossRows >= 2) holds += 2;
   const orders = countKw(all, ORDER_KW);
   if (holds >= 2 && holds > fills) return "holdings";
   if (orders >= 2 && fills < 2) return "orders";
@@ -142,7 +149,7 @@ export function classifyScreen(lines: Line[]): ScreenType {
 
 // ── numbers: two readings must agree ───────────────────────────────────
 
-const digitsOf = (s: string) => s.replace(/[^\d]/g, "");
+export const digitsOf = (s: string) => s.replace(/[^\d]/g, "");
 
 /** Parse one printed number. Rejects malformed thousands grouping ("1448,000"). */
 export function parseAmount(raw: string): number | null {
@@ -158,7 +165,7 @@ export function parseAmount(raw: string): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-interface NumRead {
+export interface NumRead {
   /** Proven value (both readings agree) or null. */
   value: number | null;
   /** Every distinct parseable reading — used by the cross-check. */
@@ -166,7 +173,7 @@ interface NumRead {
   hint: string;
 }
 
-function readNumber(w: OcrWord): NumRead {
+export function readNumber(w: OcrWord): NumRead {
   const primary = parseAmount(w.t);
   const altRaw = (w.alt ?? "").trim();
   const alt = altRaw ? parseAmount(altRaw) : null;
@@ -211,7 +218,7 @@ function monthDay(compact: string): [number, number] | null {
   return m ? [+m[1], +m[2]] : null;
 }
 
-const TIME_RE = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
+export const TIME_RE = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
 
 function readTime(w: OcrWord): Cell<string> {
   const m = w.t.match(TIME_RE);
@@ -223,13 +230,13 @@ function readTime(w: OcrWord): Cell<string> {
   return ok ? { value: w.t } : { value: null, hint: w.t };
 }
 
-const isNumericWord = (t: string) => /^[~≈]?[$₩]?\d[\d,.]*(원|%|\))?$/.test(t);
-const isCode = (t: string) => /^\d{6}$/.test(t);
+export const isNumericWord = (t: string) => /^[~≈]?[$₩]?\d[\d,.]*(원|%|\))?$/.test(t);
+export const isCode = (t: string) => /^\d{6}$/.test(t);
 const STATUS_WORDS = ["체결", "완료", "구매완료", "판매완료", "원", "주", "주당", "당", "단가", "체결가", "금액", "체결금액"];
 
 // ── cross-check ────────────────────────────────────────────────────────
 
-function close(a: number, b: number, usd: boolean): boolean {
+export function close(a: number, b: number, usd: boolean): boolean {
   const tol = usd ? Math.max(0.011, b * 0.005) : Math.max(1, b * 0.005);
   return Math.abs(a - b) <= tol;
 }
@@ -290,7 +297,7 @@ interface Ctx {
   date: string | null;
 }
 
-function nameFrom(words: OcrWord[], usd: boolean): { name: string; code: string | null } {
+export function nameFrom(words: OcrWord[], usd: boolean): { name: string; code: string | null } {
   let code: string | null = null;
   const parts: string[] = [];
   for (const w of words) {
@@ -455,7 +462,9 @@ const COL_LABELS: [Col, string[]][] = [
 
 interface Column { col: Col; cx: number }
 
-function headerColumns(line: Line): Column[] | null {
+/** A header line split into labels: words closer than ~one glyph belong to
+ * the same label ("보 유 수량" → 보유수량). `text` keeps letters only. */
+export function headerSegments(line: Line): { text: string; cx: number }[] {
   const segs: { words: OcrWord[] }[] = [];
   for (const w of line.words) {
     const last = segs[segs.length - 1];
@@ -463,10 +472,15 @@ function headerColumns(line: Line): Column[] | null {
     if (prev && w.x0 - prev.x1 < line.h * 0.9) last.words.push(w);
     else segs.push({ words: [w] });
   }
-  const cols: Column[] = segs.map((s) => {
-    const c = s.words.map((w) => w.t).join("").replace(/[^가-힣A-Za-z]/g, "");
+  return segs.map((s) => ({
+    text: s.words.map((w) => w.t).join("").replace(/[^가-힣A-Za-z]/g, ""),
+    cx: (s.words[0].x0 + s.words[s.words.length - 1].x1) / 2,
+  }));
+}
+
+function headerColumns(line: Line): Column[] | null {
+  const cols: Column[] = headerSegments(line).map(({ text: c, cx }) => {
     const hit = COL_LABELS.find(([, ls]) => ls.some((l) => c.includes(l)));
-    const cx = (s.words[0].x0 + s.words[s.words.length - 1].x1) / 2;
     return { col: hit ? hit[0] : "unknown", cx };
   });
   const known = new Set(cols.map((c) => c.col).filter((c) => c !== "unknown"));

@@ -43,6 +43,8 @@ import { isKrTicker } from "@/lib/format";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
 import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
 import { TickerSearch } from "@/components/shared/ticker-search";
+import { HoldingsImportPanel } from "@/components/portfolio/v2/holdings-import-panel";
+import { useT } from "@/lib/locale";
 
 interface AddPositionModalV2Props {
   open: boolean;
@@ -73,6 +75,10 @@ export function AddPositionModalV2({
 }: AddPositionModalV2Props) {
   const headlineId = "add-pos-v2-headline";
   const trapRef = useFocusTrap<HTMLDivElement>(open);
+  const t = useT();
+  // Holdings-screen capture import (HOLDINGS_IMPORT_DESIGN.md) replaces the
+  // form inside the same dialog shell.
+  const [importing, setImporting] = React.useState(false);
 
   const [mode, setMode] = React.useState<EntryMode>("holding");
   const [symbol, setSymbol] = React.useState("");
@@ -107,6 +113,7 @@ export function AddPositionModalV2({
       setMemo("");
       setSubmitting(false);
       setFrictionOpen(false);
+      setImporting(false);
     }
   }, [open]);
 
@@ -245,6 +252,25 @@ export function AddPositionModalV2({
           color: "var(--pq-ivory)",
         }}
       >
+        {importing ? (
+          <>
+            <h2
+              id={headlineId}
+              className="font-display"
+              style={{ fontWeight: 500, fontSize: "var(--pq-text-h3)", lineHeight: 1.15, letterSpacing: "-0.02em", color: "var(--pq-ivory)", margin: "0 0 16px 0" }}
+            >
+              {t("dashboard.portfolio.holdingsImport.title")}
+            </h2>
+            <HoldingsImportPanel
+              onCancel={() => setImporting(false)}
+              onDone={() => {
+                onSuccess?.();
+                onClose();
+              }}
+            />
+          </>
+        ) : (
+        <>
         {/* Hero block — copy keys off mode */}
         <div style={{ marginBottom: 24 }}>
           <div
@@ -314,6 +340,35 @@ export function AddPositionModalV2({
             onClick={() => setMode("new")}
           />
         </div>
+
+        {/* Secondary entry: many positions at once from a holdings capture. */}
+        {mode === "holding" && (
+          <button
+            type="button"
+            onClick={() => setImporting(true)}
+            className="font-mono"
+            data-testid="open-holdings-import"
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              margin: "-12px 0 24px",
+              padding: "10px 12px",
+              background: "transparent",
+              border: "1px dashed rgba(184,149,106,0.45)",
+              borderRadius: "var(--pq-radius-cta, 2px)",
+              color: "var(--pq-bronze)",
+              fontSize: "var(--pq-text-mono-sm)",
+              letterSpacing: "0.04em",
+              cursor: "pointer",
+            }}
+          >
+            {t("dashboard.portfolio.holdingsImport.entry")} →
+            <span style={{ display: "block", marginTop: 4, color: "var(--pq-ivory-dim)", letterSpacing: 0 }}>
+              {t("dashboard.portfolio.holdingsImport.entryHint")}
+            </span>
+          </button>
+        )}
 
         <form
           onSubmit={handleSubmit}
@@ -481,6 +536,8 @@ export function AddPositionModalV2({
             </div>
           </div>
         </form>
+        </>
+        )}
       </div>
 
       {/* Inline Pre-Trade Friction (ENTRY). The real POST fires on onProceed.

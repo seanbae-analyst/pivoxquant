@@ -16,6 +16,10 @@
 - 채점: `cd frontend && OCR_EVAL_PRINT=1 npx vitest run src/lib/fill-ocr/__tests__/eval.test.ts --silent=false`
   (두 세트 모두 틀리게 확신 > 0 이면 실패).
 
+- `holdings/`, `holdings_heldout/` — 잔고(보유종목) 화면 합성 세트(`docs/product/HOLDINGS_IMPORT_DESIGN.md` §4).
+  렌더: `cd frontend && node scripts/holdings-fixtures-render.mjs <tune|heldout> <dir>` → 위와 같이 `ocr-eval-dump.mjs`.
+  `holdings/ground_truth_shared.json` 은 `synthetic/j_holdings`·`heldout/n1` 의 잔고 정답. 채점: `src/lib/fill-ocr/__tests__/holdings-eval.test.ts`.
+
 ## 없는 것 — 실기기 캡처 (TODO)
 **실제 증권사 앱 캡처로는 한 번도 재지 않았다.** 규칙은 위 합성 12장을 보며 조정했으니 그 점수는 낙관적이다.
 

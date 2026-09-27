@@ -253,6 +253,14 @@ class TestFuzzyUnit:
         assert fuzzy_kr_ticker("SK하이닉", index) == ("000660.KS", "SK하이닉스")
         assert fuzzy_kr_ticker("AB", index) is None  # no Hangul
 
+    def test_unique_hangul_tail(self):
+        from services.imports.ocr_rows import fuzzy_kr_ticker
+        index = {"SK하이닉스": "000660.KS", "이닉스": "452400.KQ", "삼성전자": "005930.KS", "LG전자": "066570.KS"}
+        # "SK" misread next to the logo — "이닉스" is closer by ratio, not by tail.
+        assert fuzzy_kr_ticker("이하이닉스", index) == ("000660.KS", "SK하이닉스")
+        assert fuzzy_kr_ticker("하이닉스", index) == ("000660.KS", "SK하이닉스")
+        assert fuzzy_kr_ticker("XX전자", index) is None  # tail "X전자" is not four Hangul
+
 
 # ── review fixes (2026-09-27): Postgres lock, currency, codes ───────
 

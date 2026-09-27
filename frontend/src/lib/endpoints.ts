@@ -333,6 +333,16 @@ export const API = {
     // The screenshot itself is read in the browser and never uploaded.
     image: "/api/portfolio/imports/image",
   },
+  // Holdings-screen capture → positions (docs/product/HOLDINGS_IMPORT_DESIGN.md).
+  // The capture is read in the browser; only reviewed JSON rows are sent.
+  //   preview POST {rows:[{name, code, currency}]} → {rows:[{index, ticker, name, currency,
+  //           status: resolved|needs_confirm|needs_ticker, currency_mismatch, existing}]} (no writes)
+  //   commit  POST {consent:true, rows:[{ticker, shares, avg_cost, currency, mode: replace|add|skip}]}
+  //           → {created[], replaced[], added[], skipped[{ticker, reason: USER_SKIP|TIER_LIMIT}]}
+  holdingsImport: {
+    preview: "/api/portfolio/holdings-import/preview",
+    commit: "/api/portfolio/holdings-import/commit",
+  },
   support: {
     inquiries: "/api/support/inquiries",
     inquiry: (id: string | number) => `/api/support/inquiries/${id}`,
