@@ -64,6 +64,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored Tesseract.js runtime copied from node_modules at predev/prebuild
+    // (scripts/copy-tesseract-assets.mjs) — minified third-party code.
+    "public/tesseract/**",
   ]),
 ]);
 

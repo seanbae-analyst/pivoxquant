@@ -1,0 +1,758 @@
+{
+  "a_card_list.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "삼성전자",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 10,
+        "price": 72400,
+        "amount": 724000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "SK하이닉스",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 2,
+        "price": 198500,
+        "amount": 397000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "카카오",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 15,
+        "price": 41850,
+        "amount": 627750,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "NAVER",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 3,
+        "price": 187300,
+        "amount": 561900,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-18",
+        "time": null,
+        "name": "현대차",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 4,
+        "price": 245000,
+        "amount": 980000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-18",
+        "time": null,
+        "name": "삼성전자",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 5,
+        "price": 71800,
+        "amount": 359000,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Toss-like clean card list, one trade per card. Year only in month header '2026년 9월'; day headers '9월 23일 수요일'. 구매=buy, 판매=sell. No tickers shown (ticker null)."
+  },
+  "b_hts_table.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "삼성전자",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 20,
+        "price": 72400,
+        "amount": 1448000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "SK하이닉스",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 3,
+        "price": 198500,
+        "amount": 595500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "현대차",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 5,
+        "price": 245000,
+        "amount": 1225000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "카카오",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 30,
+        "price": 41850,
+        "amount": 1255500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-21",
+        "time": null,
+        "name": "NAVER",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 7,
+        "price": 187300,
+        "amount": 1311100,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-17",
+        "time": null,
+        "name": "삼성전자",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 12,
+        "price": 71300,
+        "amount": 855600,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-16",
+        "time": null,
+        "name": "SK하이닉스",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 1,
+        "price": 201000,
+        "amount": 201000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-15",
+        "time": null,
+        "name": "카카오",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 25,
+        "price": 42300,
+        "amount": 1057500,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Kiwoom/HTS-like dense table, 11px font, columns 체결일자/종목명/구분/체결수량/체결단가/체결금액. Summary footer (매수합계/매도합계) must NOT be extracted as trades. No tickers shown."
+  },
+  "c_redblue_list.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-23",
+        "time": "14:21:07",
+        "name": "SK하이닉스",
+        "ticker": "000660",
+        "side": "buy",
+        "quantity": 4,
+        "price": 198500,
+        "amount": 794000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "09:03:44",
+        "name": "삼성전자",
+        "ticker": "005930",
+        "side": "sell",
+        "quantity": 30,
+        "price": 72600,
+        "amount": 2178000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "13:55:12",
+        "name": "NAVER",
+        "ticker": "035420",
+        "side": "buy",
+        "quantity": 2,
+        "price": 186900,
+        "amount": 373800,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "10:12:30",
+        "name": "카카오",
+        "ticker": "035720",
+        "side": "sell",
+        "quantity": 20,
+        "price": 41950,
+        "amount": 839000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-21",
+        "time": "11:40:02",
+        "name": "현대차",
+        "ticker": "005380",
+        "side": "buy",
+        "quantity": 3,
+        "price": 243500,
+        "amount": 730500,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "한투-like list: 매수 red / 매도 blue labels, date section headers 'YYYY.MM.DD(요일)', time per row, 6-digit codes shown next to names."
+  },
+  "d_us_usd_fractional.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-25",
+        "time": "15:42:18",
+        "name": "Direxion Daily TSLA Bull 2X",
+        "ticker": "TSLL",
+        "side": "buy",
+        "quantity": 12.5,
+        "price": 13.42,
+        "amount": 167.75,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-25",
+        "time": "10:05:51",
+        "name": "NVIDIA",
+        "ticker": "NVDA",
+        "side": "buy",
+        "quantity": 0.5321,
+        "price": 182.35,
+        "amount": 97.03,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-24",
+        "time": "14:30:09",
+        "name": "Apple",
+        "ticker": "AAPL",
+        "side": "sell",
+        "quantity": 1.25,
+        "price": 231.18,
+        "amount": 288.98,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-24",
+        "time": "09:31:02",
+        "name": "Direxion Daily Semicon Bull 3X",
+        "ticker": "SOXL",
+        "side": "buy",
+        "quantity": 3.1847,
+        "price": 28.76,
+        "amount": 91.59,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "11:17:40",
+        "name": "NVIDIA",
+        "ticker": "NVDA",
+        "side": "sell",
+        "quantity": 2.0,
+        "price": 179.9,
+        "amount": 359.8,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "09:45:33",
+        "name": "Direxion Daily TSLA Bull 2X",
+        "ticker": "TSLL",
+        "side": "sell",
+        "quantity": 20,
+        "price": 12.87,
+        "amount": 257.4,
+        "currency": "USD"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "US stocks, dark theme, USD with fractional shares (0.5321주, 3.1847주). Dates/times are US Eastern (ET), not KST. Gray '≈ N원' KRW conversion is a distractor — currency must be USD and amount the USD value."
+  },
+  "e_kr_time_fees.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-23",
+        "time": "09:00:12",
+        "name": "삼성전자",
+        "ticker": "005930",
+        "side": "buy",
+        "quantity": 50,
+        "price": 72100,
+        "amount": 3605000,
+        "currency": "KRW",
+        "fee": 540,
+        "tax": 0
+      },
+      {
+        "date": "2026-09-23",
+        "time": "09:14:38",
+        "name": "카카오",
+        "ticker": "035720",
+        "side": "buy",
+        "quantity": 40,
+        "price": 41700,
+        "amount": 1668000,
+        "currency": "KRW",
+        "fee": 250,
+        "tax": 0
+      },
+      {
+        "date": "2026-09-23",
+        "time": "10:02:55",
+        "name": "SK하이닉스",
+        "ticker": "000660",
+        "side": "sell",
+        "quantity": 5,
+        "price": 199000,
+        "amount": 995000,
+        "currency": "KRW",
+        "fee": 140,
+        "tax": 1990
+      },
+      {
+        "date": "2026-09-23",
+        "time": "11:27:09",
+        "name": "현대차",
+        "ticker": "005380",
+        "side": "buy",
+        "quantity": 2,
+        "price": 244500,
+        "amount": 489000,
+        "currency": "KRW",
+        "fee": 70,
+        "tax": 0
+      },
+      {
+        "date": "2026-09-23",
+        "time": "13:48:21",
+        "name": "삼성전자",
+        "ticker": "005930",
+        "side": "sell",
+        "quantity": 50,
+        "price": 72700,
+        "amount": 3635000,
+        "currency": "KRW",
+        "fee": 540,
+        "tax": 7270
+      },
+      {
+        "date": "2026-09-23",
+        "time": "14:59:47",
+        "name": "NAVER",
+        "ticker": "035420",
+        "side": "buy",
+        "quantity": 4,
+        "price": 187300,
+        "amount": 749200,
+        "currency": "KRW",
+        "fee": 110,
+        "tax": 0
+      },
+      {
+        "date": "2026-09-23",
+        "time": "15:19:33",
+        "name": "카카오",
+        "ticker": "035720",
+        "side": "sell",
+        "quantity": 40,
+        "price": 41900,
+        "amount": 1676000,
+        "currency": "KRW",
+        "fee": 250,
+        "tax": 3352
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Single-day table with HH:MM:SS time, 수수료 and 제세금 columns (extra 'fee'/'tax' keys are optional GT). Date appears once in header only. Fee/tax columns must not be confused with amount."
+  },
+  "f_cutoff_rows.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-18",
+        "time": "10:41:36",
+        "name": "삼성전자",
+        "ticker": "005930",
+        "side": "buy",
+        "quantity": 15,
+        "price": 71800,
+        "amount": 1077000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-17",
+        "time": "15:10:08",
+        "name": "현대차",
+        "ticker": "005380",
+        "side": "sell",
+        "quantity": 2,
+        "price": 246500,
+        "amount": 493000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-17",
+        "time": "09:22:47",
+        "name": "NAVER",
+        "ticker": "035420",
+        "side": "buy",
+        "quantity": 5,
+        "price": 185600,
+        "amount": 928000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-16",
+        "time": "13:05:19",
+        "name": "SK하이닉스",
+        "ticker": "000660",
+        "side": "sell",
+        "quantity": 3,
+        "price": 201000,
+        "amount": 603000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-16",
+        "time": "10:33:50",
+        "name": "삼성전자",
+        "ticker": "005930",
+        "side": "sell",
+        "quantity": 8,
+        "price": 72000,
+        "amount": 576000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-15",
+        "time": "11:18:24",
+        "name": "카카오",
+        "ticker": "035720",
+        "side": "sell",
+        "quantity": 12,
+        "price": 42300,
+        "amount": 507600,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [
+      "partial_rows_present"
+    ],
+    "partial_rows": [
+      {
+        "position": "top",
+        "visible": "lower part only: '체결 10주 | 단가 42,050원' and time 14:02:11; name, side label and amount are cut off above",
+        "date": "2026-09-18",
+        "name": "카카오",
+        "ticker": "035720",
+        "side": "buy",
+        "quantity": 10,
+        "price": 42050,
+        "amount": 420500,
+        "currency": "KRW"
+      },
+      {
+        "position": "bottom",
+        "visible": "top line only (bottom edge clipped by tab bar): '[매수] 현대차 005380' and amount 243,000원; quantity/price/time hidden",
+        "date": "2026-09-15",
+        "name": "현대차",
+        "ticker": "005380",
+        "side": "buy",
+        "quantity": 1,
+        "price": 243000,
+        "amount": 243000,
+        "currency": "KRW"
+      }
+    ],
+    "notes": "Scrolled list (style c): first row cut at top (no visible date header above it — its date 2026-09-18 must be inferred or left unknown), last row cut by bottom tab bar. Only the 6 fully visible rows count as trades; the two cut rows are listed in partial_rows (their hidden fields are for reference only)."
+  },
+  "g_mixed_status.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-23",
+        "time": "09:01:15",
+        "name": "삼성전자",
+        "ticker": "005930",
+        "side": "buy",
+        "quantity": 10,
+        "price": 72300,
+        "amount": 723000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "10:12:05",
+        "name": "카카오",
+        "ticker": "035720",
+        "side": "sell",
+        "quantity": 20,
+        "price": 42100,
+        "amount": 842000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "13:20:31",
+        "name": "현대차",
+        "ticker": "005380",
+        "side": "sell",
+        "quantity": 2,
+        "price": 245500,
+        "amount": 491000,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "excluded_rows": [
+      {
+        "name": "SK하이닉스",
+        "time": "09:30:40",
+        "status": "미체결"
+      },
+      {
+        "name": "NAVER",
+        "time": "11:03:52",
+        "status": "취소"
+      },
+      {
+        "name": "삼성전자",
+        "time": "14:45:09",
+        "status": "미체결"
+      },
+      {
+        "name": "카카오",
+        "time": "15:02:44",
+        "status": "취소"
+      }
+    ],
+    "notes": "Order history mixing 체결 / 미체결 / 취소. Only the 3 '체결' rows are trades; 미체결 (unfilled) and 취소 (cancelled, strikethrough) rows show 주문가 and 체결 0주 and must be ignored."
+  },
+  "h_hts_table_blurred.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "삼성전자",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 20,
+        "price": 72400,
+        "amount": 1448000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "SK하이닉스",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 3,
+        "price": 198500,
+        "amount": 595500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "현대차",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 5,
+        "price": 245000,
+        "amount": 1225000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "카카오",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 30,
+        "price": 41850,
+        "amount": 1255500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-21",
+        "time": null,
+        "name": "NAVER",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 7,
+        "price": 187300,
+        "amount": 1311100,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-17",
+        "time": null,
+        "name": "삼성전자",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 12,
+        "price": 71300,
+        "amount": 855600,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-16",
+        "time": null,
+        "name": "SK하이닉스",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 1,
+        "price": 201000,
+        "amount": 201000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-15",
+        "time": null,
+        "name": "카카오",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 25,
+        "price": 42300,
+        "amount": 1057500,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Same content as b_hts_table.png, rendered at 1x with CSS blur(0.6px) then downscaled to 312x675. Tests OCR robustness on small blurry digits (e.g. 1 vs 7, 3 vs 8)."
+  },
+  "i_amount_mismatch.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-22",
+        "time": "09:12:40",
+        "name": "삼성전자",
+        "ticker": "005930",
+        "side": "buy",
+        "quantity": 7,
+        "price": 72200,
+        "amount": 505400,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "10:48:03",
+        "name": "NAVER",
+        "ticker": "035420",
+        "side": "buy",
+        "quantity": 3,
+        "price": 187300,
+        "amount": 516900,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "13:31:27",
+        "name": "SK하이닉스",
+        "ticker": "000660",
+        "side": "sell",
+        "quantity": 2,
+        "price": 199500,
+        "amount": 399000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-21",
+        "time": "14:05:55",
+        "name": "현대차",
+        "ticker": "005380",
+        "side": "buy",
+        "quantity": 1,
+        "price": 244000,
+        "amount": 244000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-21",
+        "time": "09:40:18",
+        "name": "카카오",
+        "ticker": "035720",
+        "side": "sell",
+        "quantity": 25,
+        "price": 41800,
+        "amount": 1045000,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [
+      "amount_mismatch"
+    ],
+    "mismatch": {
+      "name": "NAVER",
+      "date": "2026-09-22",
+      "time": "10:48:03",
+      "quantity": 3,
+      "price": 187300,
+      "displayed_amount": 516900,
+      "expected_amount": 561900
+    },
+    "notes": "Style c. NAVER row shows 체결금액 516,900원 but 3 × 187,300 = 561,900 (digit transposition). GT amount is the DISPLAYED value; extractor should flag amount_mismatch on that row, not silently fix it."
+  },
+  "j_holdings.png": {
+    "screen_type": "holdings",
+    "trades": [],
+    "expect_flags": [
+      "not_fill_screen"
+    ],
+    "notes": "보유종목 (holdings) screen with quantity, 평균단가, 현재가, 평가금액. Has quantity×price-looking numbers but no fills — extractor should reject (screen_type=holdings, zero trades)."
+  },
+  "k_order_entry.png": {
+    "screen_type": "order",
+    "trades": [],
+    "expect_flags": [
+      "not_fill_screen"
+    ],
+    "notes": "Order-entry screen (OO증권 style): 호가창 + 매수 form with 가격 72,400 / 수량 10 / 주문금액 724,000. Looks like a trade (qty, price, amount) but nothing is filled — must be rejected."
+  },
+  "l_chat_app.png": {
+    "screen_type": "other",
+    "trades": [],
+    "expect_flags": [
+      "not_fill_screen"
+    ],
+    "notes": "Generic messenger chat. Messages mention trades in prose ('삼성전자 10주 72,400원에 샀음', '카카오 20주 41,850에 팔았는데') — a hard negative; extractor must return zero trades."
+  }
+}

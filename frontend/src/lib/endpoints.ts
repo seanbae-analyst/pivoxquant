@@ -329,6 +329,9 @@ export const API = {
     tokens: "/api/portfolio/imports/tokens",
     token: (id: number) => `/api/portfolio/imports/tokens/${id}`,
     webhook: "/api/portfolio/imports/webhook",
+    // POST JSON {consent, broker?, rows:[…reviewed OCR rows]} → same shape as `create`.
+    // The screenshot itself is read in the browser and never uploaded.
+    image: "/api/portfolio/imports/image",
   },
   support: {
     inquiries: "/api/support/inquiries",

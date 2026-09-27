@@ -1,0 +1,12 @@
+# Real-device captures carry personal trade data — never commit them.
+*.png
+*.jpg
+*.jpeg
+*.webp
+# The synthetic set is generated screens with no real account data.
+!synthetic/
+!synthetic/*.png
+!heldout/
+!heldout/*.png
+!regression/
+!regression/*.png

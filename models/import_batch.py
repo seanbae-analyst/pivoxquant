@@ -37,7 +37,10 @@ from services.crypto_service import EncryptedText
 SOURCE_CSV = "csv"
 SOURCE_SCREENSHOT_TEXT = "screenshot_text"
 SOURCE_WEBHOOK = "webhook"
-VALID_SOURCES = (SOURCE_CSV, SOURCE_SCREENSHOT_TEXT, SOURCE_WEBHOOK)
+# Fill-screen capture read by OCR in the user's browser; the server receives
+# only the rows the user reviewed (docs/product/SCREENSHOT_IMPORT_DESIGN.md).
+SOURCE_SCREENSHOT_IMAGE = "screenshot_image"
+VALID_SOURCES = (SOURCE_CSV, SOURCE_SCREENSHOT_TEXT, SOURCE_WEBHOOK, SOURCE_SCREENSHOT_IMAGE)
 
 STATUS_PENDING = "pending"
 STATUS_APPROVED = "approved"
@@ -46,6 +49,12 @@ STATUS_DUPLICATE = "duplicate"
 VALID_STATUSES = (STATUS_PENDING, STATUS_APPROVED, STATUS_REJECTED, STATUS_DUPLICATE)
 
 RAW_SNIPPET_MAX = 300
+
+# Below this a pending row is shown as "check this" (import-inbox.tsx). For
+# screenshot_image rows (a fuzzy-matched stock name) it also blocks approval
+# until the user picks the ticker (PATCH → user-verified, confidence 1.0) or
+# approves with ``confirm_values: true`` (docs/product/SCREENSHOT_IMPORT_DESIGN.md §5).
+LOW_CONFIDENCE_THRESHOLD = 0.7
 
 
 def _utcnow() -> datetime:
@@ -66,7 +75,7 @@ class ImportBatch(db.Model):
         nullable=False,
         index=True,
     )
-    source = db.Column(db.String(20), nullable=False)  # csv | screenshot_text | webhook
+    source = db.Column(db.String(20), nullable=False)  # csv | screenshot_text | webhook | screenshot_image
     # Phase 2 — set when the batch arrived through the PAT webhook
     # (models/import_token.py). NULL for session uploads.
     token_id = db.Column(
@@ -138,11 +147,32 @@ class PendingTrade(db.Model):
     approved_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
 
+    # Read-only: the batch's ``source`` decides whether a low-confidence row
+    # needs an explicit confirmation (screenshot_image only). "selectin", NOT
+    # "joined": approve_pending locks the row with SELECT … FOR UPDATE, and
+    # Postgres rejects FOR UPDATE on the nullable side of the LEFT OUTER JOIN
+    # a joined eager load adds (SQLite ignores FOR UPDATE, so tests never saw
+    # it). selectin loads batches in one extra IN query per list.
+    batch = db.relationship("ImportBatch", lazy="selectin", viewonly=True)
+
+    @property
+    def source(self) -> str | None:
+        return self.batch.source if self.batch is not None else None
+
+    @property
+    def needs_confirm(self) -> bool:
+        return (
+            self.source == SOURCE_SCREENSHOT_IMAGE
+            and (self.confidence or 0) < LOW_CONFIDENCE_THRESHOLD
+        )
+
     def to_dict(self) -> dict:
         """PendingTradeDTO (design §API)."""
         return {
             "id": self.id,
             "batch_id": self.batch_id,
+            "source": self.source,
+            "needs_confirm": self.needs_confirm,
             "ticker": self.ticker,
             "name": self.name,
             "action": self.action,
