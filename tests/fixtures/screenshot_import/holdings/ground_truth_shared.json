@@ -1,0 +1,23 @@
+{
+  "../synthetic/j_holdings.png": {
+    "screen_type": "holdings",
+    "notes": "PR #594 synthetic holdings screen (dark cards). Name line carries 평가금액 (unlabelled); 평가손익 on the detail line.",
+    "holdings": [
+      { "name": "삼성전자", "ticker": "005930", "shares": 65, "avg_cost": 70850, "currency": "KRW", "cost": 4605250 },
+      { "name": "SK하이닉스", "ticker": "000660", "shares": 8, "avg_cost": 185200, "currency": "KRW", "cost": 1481600 },
+      { "name": "현대차", "ticker": "005380", "shares": 6, "avg_cost": 251000, "currency": "KRW", "cost": 1506000 },
+      { "name": "카카오", "ticker": "035720", "shares": 40, "avg_cost": 47300, "currency": "KRW", "cost": 1892000 },
+      { "name": "NAVER", "ticker": "035420", "shares": 10, "avg_cost": 176400, "currency": "KRW", "cost": 1764000 }
+    ]
+  },
+  "../heldout/n1_balance_alt_wording.png": {
+    "screen_type": "holdings",
+    "notes": "PR #594 held-out balance screen (table 종목|잔고수량|매입금액|현재가|손익, no average-cost column). avg = 매입금액 / 수량.",
+    "holdings": [
+      { "name": "셀트리온", "ticker": "068270", "shares": 12, "avg_cost": 176400, "currency": "KRW", "cost": 2116800 },
+      { "name": "기아", "ticker": "000270", "shares": 20, "avg_cost": 101200, "currency": "KRW", "cost": 2024000 },
+      { "name": "KB금융", "ticker": "105560", "shares": 15, "avg_cost": 83100, "currency": "KRW", "cost": 1246500 },
+      { "name": "LG전자", "ticker": "066570", "shares": 12, "avg_cost": 99800, "currency": "KRW", "cost": 1197600 }
+    ]
+  }
+}

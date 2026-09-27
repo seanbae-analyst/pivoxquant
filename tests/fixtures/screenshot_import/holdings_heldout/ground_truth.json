@@ -1,0 +1,150 @@
+{
+  "v01_dark_cards_pyeongdan.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "하나금융지주",
+        "ticker": "086790",
+        "shares": 22,
+        "avg_cost": 58950,
+        "currency": "KRW",
+        "cost": 1296900
+      },
+      {
+        "name": "삼성전자",
+        "ticker": "005930",
+        "shares": 7,
+        "avg_cost": 74100,
+        "currency": "KRW",
+        "cost": 518700
+      },
+      {
+        "name": "LG전자",
+        "ticker": "066570",
+        "shares": 9,
+        "avg_cost": 103200,
+        "currency": "KRW",
+        "cost": 928800
+      },
+      {
+        "name": "KB금융",
+        "ticker": "105560",
+        "shares": 5,
+        "avg_cost": 79800,
+        "currency": "KRW",
+        "cost": 399000
+      }
+    ]
+  },
+  "v02_table_all_cols.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "POSCO홀딩스",
+        "ticker": "005490",
+        "shares": 3,
+        "avg_cost": 371000,
+        "currency": "KRW",
+        "cost": 1113000
+      },
+      {
+        "name": "셀트리온",
+        "ticker": "068270",
+        "shares": 14,
+        "avg_cost": 169800,
+        "currency": "KRW",
+        "cost": 2377200
+      },
+      {
+        "name": "한국전력",
+        "ticker": "015760",
+        "shares": 100,
+        "avg_cost": 19870,
+        "currency": "KRW",
+        "cost": 1987000
+      },
+      {
+        "name": "신한지주",
+        "ticker": "055550",
+        "shares": 16,
+        "avg_cost": 48200,
+        "currency": "KRW",
+        "cost": 771200
+      },
+      {
+        "name": "카카오",
+        "ticker": "035720",
+        "shares": 33,
+        "avg_cost": 44900,
+        "currency": "KRW",
+        "cost": 1481700
+      }
+    ]
+  },
+  "v03_kv_us.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "Apple",
+        "ticker": "AAPL",
+        "shares": 12,
+        "avg_cost": 171.25,
+        "currency": "USD",
+        "cost": 2055
+      },
+      {
+        "name": "Amazon",
+        "ticker": "AMZN",
+        "shares": 6,
+        "avg_cost": 188.4,
+        "currency": "USD",
+        "cost": 1130.4
+      },
+      {
+        "name": "Alphabet",
+        "ticker": "GOOGL",
+        "shares": 1.75,
+        "avg_cost": 152.3,
+        "currency": "USD",
+        "cost": 266.53
+      }
+    ]
+  },
+  "v04_table_us.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "TSLA",
+        "ticker": "TSLA",
+        "shares": 8,
+        "avg_cost": 212.5,
+        "currency": "USD",
+        "cost": 1700
+      },
+      {
+        "name": "NVDA",
+        "ticker": "NVDA",
+        "shares": 15,
+        "avg_cost": 118.2,
+        "currency": "USD",
+        "cost": 1773
+      },
+      {
+        "name": "MSFT",
+        "ticker": "MSFT",
+        "shares": 2,
+        "avg_cost": 415.6,
+        "currency": "USD",
+        "cost": 831.2
+      },
+      {
+        "name": "QQQ",
+        "ticker": "QQQ",
+        "shares": 5,
+        "avg_cost": 468.9,
+        "currency": "USD",
+        "cost": 2344.5
+      }
+    ]
+  }
+}

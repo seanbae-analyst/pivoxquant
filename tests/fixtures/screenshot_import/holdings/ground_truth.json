@@ -1,0 +1,240 @@
+{
+  "t01_dark_cards.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "삼성전자",
+        "ticker": "005930",
+        "shares": 42,
+        "avg_cost": 68200,
+        "currency": "KRW",
+        "cost": 2864400
+      },
+      {
+        "name": "LG에너지솔루션",
+        "ticker": "373220",
+        "shares": 3,
+        "avg_cost": 412000,
+        "currency": "KRW",
+        "cost": 1236000
+      },
+      {
+        "name": "기아",
+        "ticker": "000270",
+        "shares": 15,
+        "avg_cost": 96400,
+        "currency": "KRW",
+        "cost": 1446000
+      },
+      {
+        "name": "신한지주",
+        "ticker": "055550",
+        "shares": 30,
+        "avg_cost": 45150,
+        "currency": "KRW",
+        "cost": 1354500
+      },
+      {
+        "name": "한국전력",
+        "ticker": "015760",
+        "shares": 50,
+        "avg_cost": 21350,
+        "currency": "KRW",
+        "cost": 1067500
+      }
+    ]
+  },
+  "t02_table_codes.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "삼성전자",
+        "ticker": "005930",
+        "shares": 120,
+        "avg_cost": 61300,
+        "currency": "KRW",
+        "cost": 7356000
+      },
+      {
+        "name": "SK하이닉스",
+        "ticker": "000660",
+        "shares": 7,
+        "avg_cost": 131500,
+        "currency": "KRW",
+        "cost": 920500
+      },
+      {
+        "name": "NAVER",
+        "ticker": "035420",
+        "shares": 12,
+        "avg_cost": 214000,
+        "currency": "KRW",
+        "cost": 2568000
+      },
+      {
+        "name": "카카오",
+        "ticker": "035720",
+        "shares": 25,
+        "avg_cost": 58400,
+        "currency": "KRW",
+        "cost": 1460000
+      },
+      {
+        "name": "셀트리온",
+        "ticker": "068270",
+        "shares": 9,
+        "avg_cost": 176400,
+        "currency": "KRW",
+        "cost": 1587600
+      },
+      {
+        "name": "KB금융",
+        "ticker": "105560",
+        "shares": 20,
+        "avg_cost": 61800,
+        "currency": "KRW",
+        "cost": 1236000
+      }
+    ]
+  },
+  "t03_us_cards.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "Apple",
+        "ticker": "AAPL",
+        "shares": 10,
+        "avg_cost": 182.4,
+        "currency": "USD",
+        "cost": 1824
+      },
+      {
+        "name": "Microsoft",
+        "ticker": "MSFT",
+        "shares": 4,
+        "avg_cost": 402.15,
+        "currency": "USD",
+        "cost": 1608.6
+      },
+      {
+        "name": "Tesla",
+        "ticker": "TSLA",
+        "shares": 2.5,
+        "avg_cost": 244.8,
+        "currency": "USD",
+        "cost": 612
+      },
+      {
+        "name": "NVIDIA",
+        "ticker": "NVDA",
+        "shares": 30,
+        "avg_cost": 96.4,
+        "currency": "USD",
+        "cost": 2892
+      }
+    ]
+  },
+  "t04_kv_cost.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "현대차",
+        "ticker": "005380",
+        "shares": 6,
+        "avg_cost": 251000,
+        "currency": "KRW",
+        "cost": 1506000
+      },
+      {
+        "name": "POSCO홀딩스",
+        "ticker": "005490",
+        "shares": 4,
+        "avg_cost": 389500,
+        "currency": "KRW",
+        "cost": 1558000
+      },
+      {
+        "name": "하나금융지주",
+        "ticker": "086790",
+        "shares": 18,
+        "avg_cost": 57300,
+        "currency": "KRW",
+        "cost": 1031400
+      }
+    ]
+  },
+  "t05_table_cost_only.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "LG화학",
+        "ticker": "051910",
+        "shares": 5,
+        "avg_cost": 364200,
+        "currency": "KRW",
+        "cost": 1821000
+      },
+      {
+        "name": "삼성SDI",
+        "ticker": "006400",
+        "shares": 3,
+        "avg_cost": 287500,
+        "currency": "KRW",
+        "cost": 862500
+      },
+      {
+        "name": "크래프톤",
+        "ticker": "259960",
+        "shares": 8,
+        "avg_cost": 244750,
+        "currency": "KRW",
+        "cost": 1958000
+      },
+      {
+        "name": "LG전자",
+        "ticker": "066570",
+        "shares": 11,
+        "avg_cost": 98600,
+        "currency": "KRW",
+        "cost": 1084600
+      }
+    ]
+  },
+  "t06_table_avg_rate.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "카카오뱅크",
+        "ticker": "323410",
+        "shares": 40,
+        "avg_cost": 24150,
+        "currency": "KRW",
+        "cost": 966000
+      },
+      {
+        "name": "엔씨소프트",
+        "ticker": "036570",
+        "shares": 2,
+        "avg_cost": 231000,
+        "currency": "KRW",
+        "cost": 462000
+      },
+      {
+        "name": "삼성바이오로직스",
+        "ticker": "207940",
+        "shares": 1,
+        "avg_cost": 812000,
+        "currency": "KRW",
+        "cost": 812000
+      },
+      {
+        "name": "기아",
+        "ticker": "000270",
+        "shares": 13,
+        "avg_cost": 88900,
+        "currency": "KRW",
+        "cost": 1155700
+      }
+    ]
+  }
+}
