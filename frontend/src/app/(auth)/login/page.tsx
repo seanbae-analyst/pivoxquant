@@ -343,12 +343,18 @@ export default function AuthEntryPage() {
           :global(.pq-auth-hero-pane) {
             min-height: auto !important;
             border-right: 0 !important;
-            border-bottom: 0.5px solid rgba(184, 149, 106, 0.18) !important;
+            border-top: 0.5px solid rgba(184, 149, 106, 0.18) !important;
             justify-content: flex-start !important;
           }
+          /* 2026-09-27: on a phone the hero alone filled the first screen
+             (iPhone 12 Safari ≈ 390×664 visible), so the OAuth buttons and
+             the "세션이 만료" banner sat below the fold inside this fixed
+             scroller, half-covered by the cookie banner — users saw no way
+             to log in. The card goes first; the hero follows below it. */
           :global(.pq-auth-card-pane) {
             min-height: auto !important;
             justify-content: center !important;
+            order: -1;
           }
           :global(.pq-auth-card-inner) {
             padding: 40px 24px !important;
