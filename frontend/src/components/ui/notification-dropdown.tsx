@@ -132,7 +132,11 @@ export function NotificationDropdown() {
   }
 
   return (
-    <div ref={ref} className="relative">
+    /* Mobile (<sm): the root is NOT positioned, so the panel anchors to the
+       full-width TopBar <header> (relative) and spans it edge-to-edge with a
+       16px gutter. Anchoring to the bell itself pushed a 340px panel ~18px
+       past the left edge on a 390px iPhone (bell sits left of the avatar). */
+    <div ref={ref} className="sm:relative">
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
@@ -163,7 +167,7 @@ export function NotificationDropdown() {
 
       {open && (
         <div
-          className="absolute right-0 top-full z-[100] mt-2 w-[calc(100vw-2rem)] max-w-[340px] overflow-hidden rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
+          className="absolute inset-x-4 top-full z-[100] mt-2 overflow-hidden sm:inset-x-auto sm:right-0 sm:w-[340px] rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
           style={{ background: "color-mix(in srgb, var(--pq-ivory) 4%, var(--pq-ink))", border: "0.5px solid rgba(245,240,232,0.12)" }}
           role="menu"
         >

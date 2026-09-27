@@ -319,7 +319,7 @@ export function TradeModalV2({
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        padding: "10vh 24px 24px",
+        padding: "10vh 24px calc(24px + env(safe-area-inset-bottom, 0px))",
         overflowY: "auto",
       }}
       onClick={(e) => {

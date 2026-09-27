@@ -132,7 +132,7 @@ export function PreTradeFrictionModal({
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",
-        padding: "8vh 20px 24px",
+        padding: "8vh 20px calc(24px + env(safe-area-inset-bottom, 0px))",
         overflowY: "auto",
       }}
       onClick={(e) => {

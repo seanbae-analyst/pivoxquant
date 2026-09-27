@@ -73,8 +73,10 @@ export default function SplashPage() {
             // Matches the landing header wordmark (top-left) — same font
             // family, weight, tracking, casing. Only the size is scaled up
             // since this is the full-viewport cover treatment.
-            // v3 token: --pq-text-display = clamp(3rem, 7vw, 6rem).
-            fontSize: "var(--pq-text-display)",
+            // v3 token: --pq-text-display = clamp(3rem, 7vw, 6rem). Capped at
+            // 10vw: the token's 48px floor × 0.22em tracking made the word
+            // ~411px wide and clipped both edges on a 390px iPhone.
+            fontSize: "min(var(--pq-text-display), 10vw)",
             letterSpacing: "0.22em",
             lineHeight: 1,
             fontWeight: 500,

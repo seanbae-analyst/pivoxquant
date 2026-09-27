@@ -71,7 +71,7 @@ export function ObservationNoteModalV2({
         alignItems: "flex-start",
         justifyContent: "center",
         // 16px side gutter holds the dialog off the bezel on a 375px phone.
-        padding: "10vh 16px 24px",
+        padding: "10vh 16px calc(24px + env(safe-area-inset-bottom, 0px))",
         overflowY: "auto",
       }}
       onClick={(e) => {

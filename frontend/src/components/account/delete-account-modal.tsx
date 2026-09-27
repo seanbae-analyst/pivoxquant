@@ -238,7 +238,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
               disabled={busy}
               aria-label={`확인을 위해 ${CONFIRM_PHRASE} 입력`}
               placeholder={CONFIRM_PHRASE}
-              className="font-mono"
+              className="pq-input-noom font-mono"
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -247,7 +247,6 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
                 border: "1px solid rgba(245,240,232,0.18)",
                 borderRadius: 2,
                 color: "var(--pq-ivory)",
-                fontSize: "var(--pq-text-body)",
                 outline: "none",
               }}
             />

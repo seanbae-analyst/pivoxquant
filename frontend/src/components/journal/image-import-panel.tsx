@@ -196,8 +196,7 @@ export function ImageImportPanel({
           id="image-broker"
           value={broker}
           onChange={(e) => setBroker(e.target.value as Broker)}
-          className="mt-2 block bg-transparent px-3 py-2 font-mono outline-none text-[var(--pq-ivory)] border border-[rgba(245,240,232,0.15)] rounded-[2px] focus:border-[var(--pq-bronze)]"
-          style={{ fontSize: "var(--pq-text-mono-sm)" }}
+          className="pq-input-noom-mono mt-2 block bg-transparent px-3 py-2 font-mono outline-none text-[var(--pq-ivory)] border border-[rgba(245,240,232,0.15)] rounded-[2px] focus:border-[var(--pq-bronze)]"
         >
           {BROKERS.map((b) => (
             <option key={b} value={b} className="bg-black">
