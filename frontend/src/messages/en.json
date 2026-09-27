@@ -491,6 +491,8 @@
           "empty": "No fill rows found."
         },
         "inputError": {
+          "timeout": "Reading took too long and was stopped. Press Read again for the remaining captures.",
+          "too_long": "The image is too long. Split the list into several captures.",
           "too_small": "Image too small to read (short edge must be 320px or more).",
           "too_large": "Over 10MB.",
           "unreadable": "Could not open the image."
@@ -513,6 +515,7 @@
         "sideBuy": "Buy",
         "sideSell": "Sell",
         "etNote": "Shown in US Eastern time (ET), so only the date is kept, not the time.",
+        "notSaved": "Not saved (demo mode). The table was kept.",
         "usd_needed": "A US symbol needs a USD price. If the screen shows won, type the dollar price.",
         "krw_needed": "A KRX code with a USD price — check that the price is in KRW.",
         "send": "Add to inbox",

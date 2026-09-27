@@ -219,6 +219,7 @@ async function apiFetchOnce<T = unknown>(
       res.status,
       pickErrorMessage(body, res.statusText),
       typeof body.code === "string" ? body.code : undefined,
+      body && typeof body === "object" ? body : undefined,
     );
   }
   return res.json();
@@ -227,12 +228,16 @@ async function apiFetchOnce<T = unknown>(
 export class ApiError extends Error {
   /** Backend `api_error(code=...)` machine code, e.g. IMPORT_THESIS_REQUIRED. */
   public code?: string;
+  /** Parsed JSON error body, when there was one (e.g. `skipped[]` on IMPORT_NO_ROWS). */
+  public body?: Record<string, unknown>;
   constructor(
     public status: number,
     message: string,
     code?: string,
+    body?: Record<string, unknown>,
   ) {
     super(message);
     this.code = code;
+    this.body = body;
   }
 }

@@ -308,7 +308,11 @@ function nameFrom(words: OcrWord[], usd: boolean): { name: string; code: string 
     const curHangul = /^[가-힣]/.test(p);
     return acc && !(prevHangul && curHangul) ? `${acc} ${p}` : acc + p;
   }, "");
-  return { name: joined.trim(), code };
+  // A date header split into tokens ("2026 년 9 월 22 일 (화)") leaves only
+  // date words once the digits are dropped — that is not a stock name.
+  const name = joined.trim();
+  const dateOnly = /^[\s()（）]*((년|월|일|[월화수목금토일]요일|\(?[월화수목금토일]\)?)[\s()（）]*)+$/.test(name);
+  return { name: dateOnly ? "" : name, code };
 }
 
 function emptyFill(sourceText: string): ParsedFill {
@@ -433,8 +437,11 @@ function cardFill(recLines: Line[], detailIdx: number, ctx: Ctx): ParsedFill {
 
 // ── tables ─────────────────────────────────────────────────────────────
 
-type Col = "date" | "time" | "name" | "side" | "qty" | "price" | "amount" | "fee" | "tax" | "unknown";
+type Col = "date" | "time" | "name" | "side" | "qty" | "price" | "amount" | "fee" | "tax" | "ignore" | "unknown";
 const COL_LABELS: [Col, string[]][] = [
+  // Order / fill / account numbers are 6+ digit ids that look like stock
+  // codes — recognised only so they are never read as anything.
+  ["ignore", ["원주문번호", "주문번호", "체결번호", "접수번호", "계좌번호"]],
   ["amount", ["체결금액", "거래금액", "금액"]],
   ["price", ["체결단가", "단가", "체결가"]],
   ["qty", ["체결수량", "수량"]],
@@ -513,6 +520,7 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
     f.tz = "KST";
     let q: NumRead | null = null, p: NumRead | null = null, a: NumRead | null = null;
     const nameWords: OcrWord[] = [];
+    const codeWords: { w: OcrWord; col: Col }[] = [];
     for (const w of all.flatMap((l) => l.words)) {
       const d = fullDate(w.t);
       if (d) {
@@ -521,8 +529,13 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
       }
       if (TIME_RE.test(w.t)) { f.time = readTime(w); continue; }
       const col = nearestCol(w);
-      if (isCode(w.t) && (col === "name" || col === "unknown" || col === "time")) {
-        f.code = w.alt != null && digitsOf(w.alt) === w.t ? { value: w.t } : { value: null, hint: w.t };
+      if (col === "ignore") continue;
+      if (isCode(w.t) && col !== "qty" && col !== "price" && col !== "amount" && col !== "fee" && col !== "tax") {
+        // Decided after the name words are known: a code must sit in the
+        // name column or right under / beside the name — never in an
+        // arbitrary column (체결번호 000240 is also a real listing).
+        // (A 6-digit number in a numeric column is a price/amount.)
+        codeWords.push({ w, col });
         continue;
       }
       if (/\d/.test(w.t)) {
@@ -539,6 +552,17 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
       for (const w of all.flatMap((l) => l.words)) if (!nameWords.includes(w) && !/\d/.test(w.t)) nameWords.push(w);
     }
     [f.shares, f.price, f.amount] = reconcile(q, p, a, false, f.flags);
+    const hangulName = nameWords.filter((w) => /[가-힣A-Za-z]/.test(w.t));
+    const nearName = (w: OcrWord) => hangulName.some((n) => {
+      const gapX = Math.max(0, Math.max(n.x0, w.x0) - Math.min(n.x1, w.x1));
+      const gapY = Math.abs((n.y0 + n.y1) / 2 - (w.y0 + w.y1) / 2);
+      return gapX <= (n.y1 - n.y0) * 1.5 && gapY <= (n.y1 - n.y0) * 2.2;
+    });
+    const code = codeWords.find(({ w, col }) => col === "name" || nearName(w));
+    if (code) {
+      f.code = code.w.alt != null && digitsOf(code.w.alt) === code.w.t
+        ? { value: code.w.t } : { value: null, hint: code.w.t };
+    }
     const nm = nameFrom(nameWords, false);
     f.name = nm.name ? { value: nm.name } : { value: null };
     f.side = { value: sideFromText(compact) };
@@ -557,6 +581,8 @@ function yearContext(lines: Line[]): number | null {
 function headerDate(line: Line, ctx: Ctx): string | null {
   const d = fullDate(line.compact);
   if (d) return d;
+  const ymd = line.compact.match(/(20\d{2})년(\d{1,2})월(\d{1,2})일/);
+  if (ymd) return validYmd(+ymd[1], +ymd[2], +ymd[3]);
   const md = monthDay(line.compact);
   if (md && ctx.year && !ctx.yearAmbiguous) return validYmd(ctx.year, md[0], md[1]);
   return null;
@@ -592,7 +618,10 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
   const result: ScreenParse = { screenType, rows: [], excluded: [] };
   if (screenType !== "fills") return result;
 
-  const months = new Set(lines.map((l) => monthDay(l.compact)?.[0]).filter((m) => m !== undefined));
+  // Only month-day headers WITHOUT their own year count ("2026년 12월 30일" is explicit).
+  const months = new Set(lines
+    .filter((l) => !/20\d{2}년/.test(l.compact))
+    .map((l) => monthDay(l.compact)?.[0]).filter((m) => m !== undefined));
   const ctx: Ctx = { year: yearContext(lines), yearAmbiguous: months.has(12) && months.has(1), date: null };
 
   // Table layout?
@@ -613,7 +642,7 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
   const onlyDate = (l: Line) => {
     const rest = l.compact
       .replace(/(20\d{2})[./-]\d{1,2}[./-]\d{1,2}/, "")
-      .replace(/\d{1,2}월\d{1,2}일/, "")
+      .replace(/(20\d{2}년)?\d{1,2}월\d{1,2}일/, "")
       .replace(/\([^)]*\)?/g, "");
     return !/\d/.test(rest);
   };

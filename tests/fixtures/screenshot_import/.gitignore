@@ -8,3 +8,5 @@
 !synthetic/*.png
 !heldout/
 !heldout/*.png
+!regression/
+!regression/*.png

@@ -114,6 +114,7 @@ export function ImageImportPanel({
         } catch (err) {
           const code = err instanceof OcrInputError ? err.code : "unreadable";
           nextNotes.push({ index: i, fileName: f.name, kind: "error", errorCode: code });
+          if (code === "timeout") break; // the workers were terminated
         }
       }
     } finally {
@@ -135,13 +136,23 @@ export function ImageImportPanel({
         body: JSON.stringify({ consent: true, broker, rows: included.map(rowPayload) }),
         timeoutMs: 60_000,
       });
+      // Demo mode answers {ok:true} with no batch — keep the reviewed rows.
+      if (!result || !Array.isArray(result.pending)) {
+        setError(t("journal.import.image.notSaved"));
+        return;
+      }
       setRows([]);
       setNotes([]);
       setFiles([]);
       onResult(result);
     } catch (err) {
       const msg = err instanceof ApiError || err instanceof Error ? err.message : "";
-      setError(msg || t("journal.page.loadFailure"));
+      // Every row skipped (e.g. currency mismatch) → the reasons are in the body.
+      const skipped = err instanceof ApiError && Array.isArray(err.body?.skipped)
+        ? (err.body.skipped as { reason?: string; snippet?: string }[])
+        : [];
+      const reasons = skipped.map((x) => `· ${x.reason ?? ""}${x.snippet ? ` — ${x.snippet}` : ""}`);
+      setError([msg || t("journal.page.loadFailure"), ...reasons].join("\n"));
     } finally {
       setSending(false);
     }
@@ -271,7 +282,7 @@ export function ImageImportPanel({
       )}
       {error && (
         <Caption className="mt-3">
-          <span style={{ color: "var(--pq-error)" }}>{error}</span>
+          <span style={{ color: "var(--pq-error)", whiteSpace: "pre-line" }} data-testid="image-error">{error}</span>
         </Caption>
       )}
     </div>

@@ -225,3 +225,15 @@ describe("parser guards", () => {
     for (const r of res.rows) expect(r.date.value).toBeNull();
   });
 });
+
+describe("name guard", () => {
+  it("a split date header is never a stock name", () => {
+    const w = (t: string, y: number, x: number) => ({ t, c: 95, x0: x, y0: y, x1: x + 18 * t.length, y1: y + 20, alt: /\d/.test(t) ? t : undefined });
+    const words = [
+      w("체결내역", 10, 20),
+      w("2026", 60, 20), w("년", 60, 100), w("9", 60, 130), w("월", 60, 150), w("22", 60, 180), w("일", 60, 220), w("(화)", 60, 250),
+      w("10", 100, 20), w("주", 100, 70), w("구매", 100, 100), w("주당", 100, 160), w("72,400", 100, 220), w("원", 100, 340),
+    ];
+    for (const r of parseFillScreen(words).rows) expect(r.name.value ?? "").not.toMatch(/년|월|일/);
+  });
+});

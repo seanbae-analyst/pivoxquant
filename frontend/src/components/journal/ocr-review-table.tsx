@@ -75,7 +75,10 @@ export function rowComplete(r: ReviewRow): boolean {
  * with a dollar price would be recorded at the wrong scale — block it. */
 export function currencyConflict(r: ReviewRow): "usd_needed" | "krw_needed" | null {
   const code = r.values.code.trim().toUpperCase();
-  if (/^[A-Z][A-Z.]{0,5}$/.test(code) && r.values.currency === "KRW") return "usd_needed";
+  // Same shape the server takes as a US symbol (routes/imports.py _US_TICKER_RE),
+  // e.g. AAPL, BRK-B, BRK.B. Only the code field: a Latin NAME in won is
+  // usually a Korean ETF ("TIGER …") and the server leaves it unresolved.
+  if (/^[A-Z]{1,6}(?:[.-][A-Z]{1,2})?$/.test(code) && r.values.currency === "KRW") return "usd_needed";
   if (/^\d{6}$/.test(code) && r.values.currency === "USD") return "krw_needed";
   return null;
 }

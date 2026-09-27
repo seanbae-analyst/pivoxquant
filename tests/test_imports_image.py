@@ -295,3 +295,41 @@ class TestReviewFixes:
     def test_code_name_conflict_needs_confirm(self, client, auth_user):
         p = _post(client, _row(code="000660", name="삼성전자")).get_json()["pending"][0]
         assert p["needs_confirm"] is True
+
+
+# ── second review (2026-09-27) ────────────────────────────────────────
+
+class TestSecondReview:
+    def test_patch_ticker_with_explicit_currency_still_refused(self, client, auth_user):
+        p = _post(client, _row(code="", name="어떤이상한종목이름", price=312000)).get_json()["pending"][0]
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"ticker": "AAPL", "currency": "KRW"})
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_CURRENCY_MISMATCH"
+        again = client.get(f"{BASE}/pending").get_json()["pending"][0]
+        assert again["ticker"] is None and again["currency"] == "KRW" and again["price"] == 312000
+
+    def test_patch_currency_alone_refused_on_screenshot_row(self, client, auth_user):
+        p = _post(client, _row(code="", name="어떤이상한종목이름")).get_json()["pending"][0]
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"currency": "USD"})
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_CURRENCY_MISMATCH"
+
+    def test_latin_korean_etf_name_in_won_is_not_a_us_symbol(self, client, auth_user):
+        body = _post(client, _row(code="", name="TIGER", price=12000)).get_json()
+        assert body["skipped"] == [] or all("통화" not in s["reason"] for s in body["skipped"])
+        p = body["pending"][0]
+        assert p["ticker"] is None and p["needs_ticker"] is True and p["currency"] == "KRW"
+
+    def test_latin_name_in_usd_still_resolves(self, client, auth_user):
+        p = _post(client, _row(code="", name="AAPL", price=231.5, currency="USD")).get_json()["pending"][0]
+        assert p["ticker"] == "AAPL"
+
+    def test_all_rows_skipped_returns_reasons(self, client, auth_user):
+        r = _post(client, _row(name="애플", code="AAPL", price=312000, currency="KRW"))
+        assert r.status_code == 400
+        body = r.get_json()
+        assert body["code"] == "IMPORT_NO_ROWS"
+        assert any("통화 불일치" in s["reason"] for s in body["skipped"])
+
+    def test_renaming_does_not_clear_fuzzy_confirm(self, client, auth_user):
+        p = _post(client, _row(code="", name="SK하이닉")).get_json()["pending"][0]
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"name": "SK하이닉스"})
+        assert r.get_json()["pending"]["needs_confirm"] is True

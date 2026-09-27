@@ -25,7 +25,7 @@ export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_CANVAS_PIXELS = 16_000_000;
 
 export class OcrInputError extends Error {
-  constructor(public code: "too_small" | "too_large" | "unreadable") {
+  constructor(public code: "too_small" | "too_large" | "too_long" | "unreadable" | "timeout") {
     super(code);
   }
 }
@@ -83,7 +83,7 @@ function scaledCanvas(src: CanvasImageSource, sx: number, sy: number, sw: number
   c.width = Math.max(1, Math.round(sw * scale));
   c.height = Math.max(1, Math.round(sh * scale));
   const ctx = c.getContext("2d", { willReadFrequently: true });
-  if (!ctx) throw new OcrInputError("too_large");
+  if (!ctx) throw new OcrInputError("too_long");
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
   toGrayStretched(ctx, c.width, c.height);
@@ -96,6 +96,7 @@ export interface OcrSession {
 }
 
 const LOAD_TIMEOUT_MS = 90_000;
+const READ_TIMEOUT_MS = 120_000;
 
 /** Reject instead of hanging when the worker/core/language data cannot load
  * (a failed core load aborts inside the worker and never settles). */
@@ -134,18 +135,38 @@ export async function openOcrSession(): Promise<OcrSession> {
   try {
     [page, digits] = await withTimeout(load(), LOAD_TIMEOUT_MS);
     if (loadError) throw loadError;
+    await page.setParameters({ preserve_interword_spaces: "1" });
+    await digits.setParameters({
+      tessedit_char_whitelist: "0123456789,.:/$",
+      tessedit_pageseg_mode: PSM.SINGLE_LINE,
+    });
   } catch (e) {
     abandoned = true;
     await Promise.allSettled(created.map((w) => w.terminate()));
     throw e;
   }
-  await page.setParameters({ preserve_interword_spaces: "1" });
-  await digits.setParameters({
-    tessedit_char_whitelist: "0123456789,.:/$",
-    tessedit_pageseg_mode: PSM.SINGLE_LINE,
-  });
+  let closed = false;
+  const terminateAll = async () => {
+    closed = true;
+    await Promise.allSettled([page.terminate(), digits.terminate()]);
+  };
 
+  /** One capture, bounded: a recognise that never returns kills the workers
+   * (the session is then unusable) instead of leaving "reading…" forever. */
   async function read(file: File, onStage?: (stage: "page" | "digits") => void): Promise<OcrWord[]> {
+    if (closed) throw new OcrInputError("timeout");
+    try {
+      return await withTimeout(readInner(file, onStage), READ_TIMEOUT_MS);
+    } catch (e) {
+      if (e instanceof Error && e.message === "ocr_load_timeout") {
+        await terminateAll();
+        throw new OcrInputError("timeout");
+      }
+      throw e;
+    }
+  }
+
+  async function readInner(file: File, onStage?: (stage: "page" | "digits") => void): Promise<OcrWord[]> {
     if (file.size > MAX_IMAGE_BYTES) throw new OcrInputError("too_large");
     let bitmap: ImageBitmap;
     try {
@@ -162,7 +183,7 @@ export async function openOcrSession(): Promise<OcrSession> {
     try {
       onStage?.("page");
       const pageScale = Math.min(PAGE_SCALE, Math.sqrt(MAX_CANVAS_PIXELS / (width * height)));
-      if (pageScale < 1) throw new OcrInputError("too_large"); // even 1:1 is over the canvas limit
+      if (pageScale < 1) throw new OcrInputError("too_long"); // even 1:1 is over the canvas limit
       const big = scaledCanvas(bitmap, 0, 0, width, height, pageScale);
       const { data } = await page.recognize(big, {}, { blocks: true });
       const words: OcrWord[] = [];
@@ -199,7 +220,7 @@ export async function openOcrSession(): Promise<OcrSession> {
   return {
     read,
     async close() {
-      await Promise.allSettled([page.terminate(), digits.terminate()]);
+      if (!closed) await terminateAll();
     },
   };
 }

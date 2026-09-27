@@ -20,7 +20,9 @@ import { parseFillScreen, type OcrWord, type ParsedFill } from "@/lib/fill-ocr/p
 const FIXTURES = path.resolve(__dirname, "../../../../../tests/fixtures/screenshot_import");
 // synthetic = the set the rules were written against; heldout = screens the
 // rules were NOT tuned on (only structural root causes were fixed from it).
-const SETS = ["synthetic", "heldout"] as const;
+// regression = single screens kept to pin a specific safety rule (u02: 체결번호
+// columns must never become stock codes); the rest of that set stays unseen.
+const SETS = ["synthetic", "heldout", "regression"] as const;
 
 interface GtTrade {
   date: string; time: string | null; name: string; ticker: string | null;
