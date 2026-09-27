@@ -13,6 +13,11 @@
  *                              (app/(dashboard)/journal/import/page.tsx)
  *   share_target → /journal/import — Android share sheet, GET ?text=
  *                              (app/manifest.ts)
+ *   /journal/import (capture) — fill-screen screenshot, OCR in the browser
+ *                              (tesseract.js); only parsed rows are POSTed to
+ *                              API.imports.image, never the image. Unsure cells
+ *                              stay blank for the user (PR #594, 2026-09-27).
+ *                              Claim "주요 증권사 체결내역 화면", never "모든".
  *   /settings#import-tokens  — personal token, own automation POSTs to the
  *                              webhook (components/settings/import-tokens-section.tsx,
  *                              routes/imports.py Phase 2)
@@ -27,8 +32,9 @@
  * it does inside the app ("Long Entry · 진입"), never a raw BUY/SELL.
  *
  * What it must not say: account linking (BROKER_LINKING_AVAILABLE=false),
- * image upload (never accepted — OCR is on the user's device), anything
- * that sounds like the tool judges the fill. Copy lives in
+ * that an image reaches our server (it never does — OCR runs in the
+ * browser), support for every broker or screen, anything that sounds like
+ * the tool judges the fill. Copy lives in
  * messages/{ko,en}.json under `landing.inbox`.
  *
  * Palette: Vantablack + Bronze + Ivory only. No italic.
@@ -45,9 +51,12 @@ import { sideLabel } from "@/lib/pre-trade";
 const IMPORT_ROUTE = "/journal/import";
 const TOKEN_ROUTE = "/settings#import-tokens";
 
-/** The three ways a fill reaches the inbox. Route is printed as the receipt. */
+/** The four ways a fill reaches the inbox. Route is printed as the receipt.
+ *  Keys are stable i18n ids; the array order is the display order (p4, the
+ *  screenshot capture, sits next to the other upload path). */
 const PATHS = [
   { key: "p1", route: IMPORT_ROUTE },
+  { key: "p4", route: IMPORT_ROUTE },
   { key: "p2", route: IMPORT_ROUTE },
   { key: "p3", route: TOKEN_ROUTE },
 ] as const;
@@ -163,7 +172,7 @@ export default function ImportInboxPreview() {
                       letterSpacing: "0.22em",
                     }}
                   >
-                    {["I", "II", "III"][i]}
+                    {["I", "II", "III", "IV"][i]}
                   </span>
                   <div>
                     <div className="flex items-baseline gap-3">
