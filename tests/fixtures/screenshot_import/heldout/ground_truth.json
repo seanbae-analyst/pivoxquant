@@ -1,0 +1,715 @@
+{
+  "h01_light_zebra_table.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "셀트리온",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 6,
+        "price": 184300,
+        "amount": 1105800,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "기아",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 11,
+        "price": 98700,
+        "amount": 1085700,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-19",
+        "time": null,
+        "name": "POSCO홀딩스",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 2,
+        "price": 372500,
+        "amount": 745000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-19",
+        "time": null,
+        "name": "LG화학",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 3,
+        "price": 301000,
+        "amount": 903000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-17",
+        "time": null,
+        "name": "KB금융",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 9,
+        "price": 87600,
+        "amount": 788400,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-16",
+        "time": null,
+        "name": "삼성SDI",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 1,
+        "price": 268000,
+        "amount": 268000,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Light theme table, grey zebra rows, dates 2026/09/22, side 매수체결/매도체결, bare numbers (no 주/원)."
+  },
+  "h02_two_line_rows.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-24",
+        "time": null,
+        "name": "한화에어로스페이스",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 2,
+        "price": 612000,
+        "amount": 1224000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-24",
+        "time": null,
+        "name": "크래프톤",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 3,
+        "price": 318500,
+        "amount": 955500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "하이브",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 4,
+        "price": 203500,
+        "amount": 814000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "LG전자",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 12,
+        "price": 96300,
+        "amount": 1155600,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "한국전력",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 25,
+        "price": 22150,
+        "amount": 553750,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Two-line rows: name + side badge on line 1, '수량 N주 · 단가 P원' on line 2, amount right. Date headers '9월 24일 목요일'."
+  },
+  "h03_price_before_qty.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-22",
+        "time": "14:21:07",
+        "name": "현대모비스",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 3,
+        "price": 257500,
+        "amount": 772500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "10:02:44",
+        "name": "삼성화재",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 1,
+        "price": 389000,
+        "amount": 389000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-21",
+        "time": "13:48:19",
+        "name": "SK이노베이션",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 5,
+        "price": 117400,
+        "amount": 587000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-21",
+        "time": "09:15:02",
+        "name": "엔씨소프트",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 2,
+        "price": 193600,
+        "amount": 387200,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-18",
+        "time": "11:37:55",
+        "name": "카카오뱅크",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 30,
+        "price": 21850,
+        "amount": 655500,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Column order 단가 BEFORE 수량. Date '09.22' + time under name (year omitted, 2026)."
+  },
+  "h04_buy_sell_english.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-18",
+        "time": null,
+        "name": "삼성물산",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 4,
+        "price": 142300,
+        "amount": 569200,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-18",
+        "time": null,
+        "name": "에코프로비엠",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 7,
+        "price": 131900,
+        "amount": 923300,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-17",
+        "time": null,
+        "name": "HD현대중공업",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 2,
+        "price": 395500,
+        "amount": 791000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-16",
+        "time": null,
+        "name": "삼성바이오로직스",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 1,
+        "price": 1043000,
+        "amount": 1043000,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Cards with English 'Buy'/'Sell' side labels, '09.18' dates, 주/원 suffixes, label/value grid."
+  },
+  "h05_fourteen_rows.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-25",
+        "time": "15:12",
+        "name": "신한지주",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 8,
+        "price": 56300,
+        "amount": 450400,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-25",
+        "time": "14:40",
+        "name": "하나금융지주",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 5,
+        "price": 68900,
+        "amount": 344500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-25",
+        "time": "13:05",
+        "name": "대한항공",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 20,
+        "price": 24350,
+        "amount": 487000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-25",
+        "time": "10:22",
+        "name": "HMM",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 15,
+        "price": 19870,
+        "amount": 298050,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-24",
+        "time": "15:01",
+        "name": "고려아연",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 1,
+        "price": 842000,
+        "amount": 842000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-24",
+        "time": "11:48",
+        "name": "두산에너빌리티",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 10,
+        "price": 38650,
+        "amount": 386500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-24",
+        "time": "09:30",
+        "name": "SK텔레콤",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 6,
+        "price": 54700,
+        "amount": 328200,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "14:55",
+        "name": "LG디스플레이",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 40,
+        "price": 11280,
+        "amount": 451200,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "13:13",
+        "name": "넷마블",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 7,
+        "price": 47150,
+        "amount": 330050,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "10:09",
+        "name": "알테오젠",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 1,
+        "price": 412500,
+        "amount": 412500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "15:18",
+        "name": "CJ제일제당",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 2,
+        "price": 238500,
+        "amount": 477000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "13:27",
+        "name": "아모레퍼시픽",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 3,
+        "price": 128700,
+        "amount": 386100,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "10:44",
+        "name": "현대건설",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 12,
+        "price": 31950,
+        "amount": 383400,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-22",
+        "time": "09:03",
+        "name": "KT&G",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 4,
+        "price": 118200,
+        "amount": 472800,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "14 rows (long capture 390x1320). Right side '매수 8주 × 56,300' with amount below. Time HH:MM (KST)."
+  },
+  "h06_us_light_dollar.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "Amazon.com",
+        "ticker": "AMZN",
+        "side": "buy",
+        "quantity": 1.5,
+        "price": 214.62,
+        "amount": 321.93,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-23",
+        "time": null,
+        "name": "Microsoft",
+        "ticker": "MSFT",
+        "side": "buy",
+        "quantity": 0.8,
+        "price": 498.1,
+        "amount": 398.48,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "Meta Platforms",
+        "ticker": "META",
+        "side": "sell",
+        "quantity": 2,
+        "price": 731.45,
+        "amount": 1462.9,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-22",
+        "time": null,
+        "name": "Tesla",
+        "ticker": "TSLA",
+        "side": "buy",
+        "quantity": 0.2753,
+        "price": 412.88,
+        "amount": 113.67,
+        "currency": "USD"
+      },
+      {
+        "date": "2026-09-19",
+        "time": null,
+        "name": "Alphabet A",
+        "ticker": "GOOGL",
+        "side": "sell",
+        "quantity": 3,
+        "price": 243.07,
+        "amount": 729.21,
+        "currency": "USD"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "US stocks, light theme, $ prefix, tickers printed above names, fractional shares, no time."
+  },
+  "h07_lookalike_names_dark.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-25",
+        "time": "14:03:11",
+        "name": "삼성전자우",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 20,
+        "price": 61300,
+        "amount": 1226000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-25",
+        "time": "13:40:52",
+        "name": "삼성전자",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 5,
+        "price": 76200,
+        "amount": 381000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-24",
+        "time": "10:18:36",
+        "name": "SK스퀘어",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 3,
+        "price": 143800,
+        "amount": 431400,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-24",
+        "time": "09:22:05",
+        "name": "SK하이닉스",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 1,
+        "price": 336500,
+        "amount": 336500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "15:10:40",
+        "name": "현대차우",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 4,
+        "price": 187600,
+        "amount": 750400,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-23",
+        "time": "11:55:29",
+        "name": "현대차",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 2,
+        "price": 241500,
+        "amount": 483000,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Dark theme; similar names adjacent: 삼성전자우 vs 삼성전자, SK스퀘어 vs SK하이닉스, 현대차우 vs 현대차. Dates '9/25'."
+  },
+  "h08_equation_rows.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-19",
+        "time": "14:47",
+        "name": "삼성전기",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 3,
+        "price": 141200,
+        "amount": 423600,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-19",
+        "time": "10:31",
+        "name": "LG생활건강",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 2,
+        "price": 312500,
+        "amount": 625000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-18",
+        "time": "13:20",
+        "name": "포스코퓨처엠",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 5,
+        "price": 178900,
+        "amount": 894500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-18",
+        "time": "09:44",
+        "name": "한화솔루션",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 10,
+        "price": 27450,
+        "amount": 274500,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Rows written as '매도체결  3 × 141,200 = 423,600' (no 주/원), date/time '9월 19일 14:47' per row."
+  },
+  "h09_hts_codes.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-15",
+        "time": null,
+        "name": "LG에너지솔루션",
+        "ticker": "373220",
+        "side": "buy",
+        "quantity": 1,
+        "price": 402500,
+        "amount": 402500,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-15",
+        "time": null,
+        "name": "SK",
+        "ticker": "034730",
+        "side": "sell",
+        "quantity": 2,
+        "price": 168300,
+        "amount": 336600,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-12",
+        "time": null,
+        "name": "LG",
+        "ticker": "003550",
+        "side": "buy",
+        "quantity": 6,
+        "price": 79400,
+        "amount": 476400,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-12",
+        "time": null,
+        "name": "S-Oil",
+        "ticker": "010950",
+        "side": "sell",
+        "quantity": 5,
+        "price": 71200,
+        "amount": 356000,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-11",
+        "time": null,
+        "name": "에코프로",
+        "ticker": "086520",
+        "side": "buy",
+        "quantity": 3,
+        "price": 96800,
+        "amount": 290400,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "HTS-style bordered table, 6-digit code printed under each name, short names (SK, LG, S-Oil)."
+  },
+  "h10_mixed_cancel_pending.png": {
+    "screen_type": "fills",
+    "trades": [
+      {
+        "date": "2026-09-17",
+        "time": "13:52:18",
+        "name": "삼성전자",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 8,
+        "price": 75400,
+        "amount": 603200,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-17",
+        "time": "09:11:40",
+        "name": "카카오",
+        "ticker": null,
+        "side": "sell",
+        "quantity": 12,
+        "price": 40150,
+        "amount": 481800,
+        "currency": "KRW"
+      },
+      {
+        "date": "2026-09-16",
+        "time": "14:25:03",
+        "name": "NAVER",
+        "ticker": null,
+        "side": "buy",
+        "quantity": 1,
+        "price": 214000,
+        "amount": 214000,
+        "currency": "KRW"
+      }
+    ],
+    "expect_flags": [],
+    "notes": "Order history with 체결/취소/미체결 tags; only 3 체결 rows are fills (SK하이닉스 cancelled, 현대차 unfilled). Date headers '9월 17일(목)', side as '· 매수' after time."
+  },
+  "n1_balance_alt_wording.png": {
+    "screen_type": "holdings",
+    "trades": [],
+    "expect_flags": [
+      "not_fill_screen"
+    ],
+    "notes": "Balance screen worded 계좌잔고/잔고수량/매입금액/총평가/손익 (avoids 보유종목/평균단가/평가금액)."
+  },
+  "n2_deposit_withdrawal.png": {
+    "screen_type": "other",
+    "trades": [],
+    "expect_flags": [
+      "not_fill_screen"
+    ],
+    "notes": "입출금 (deposit/withdrawal) history with a '체결' tab label visible; amounts/balances but no trades."
+  }
+}

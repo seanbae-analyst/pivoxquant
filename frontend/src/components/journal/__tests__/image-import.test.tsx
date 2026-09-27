@@ -182,3 +182,46 @@ describe("PendingTradeRow — fuzzy stock match", () => {
     expect(screen.queryByTestId("import-needs-confirm")).toBeNull();
   });
 });
+
+import { currencyConflict, rowComplete, rowFromParsed } from "@/components/journal/ocr-review-table";
+import { parseFillScreen } from "@/lib/fill-ocr/parse";
+
+describe("review-table guards", () => {
+  const base = () => {
+    const f = parseFillScreen(dump("a_card_list.png")).rows[0];
+    const r = rowFromParsed(f, "image.jpeg", 0, 0);
+    r.values = { date: "2026-09-23", time: "", name: "Apple", code: "AAPL", side: "BUY",
+                 shares: "1", price: "312000", currency: "KRW" };
+    return r;
+  };
+
+  it("blocks a US symbol with a won price", () => {
+    const r = base();
+    expect(currencyConflict(r)).toBe("usd_needed");
+    expect(rowComplete(r)).toBe(false);
+    r.values.currency = "USD";
+    r.values.price = "231.5";
+    expect(rowComplete(r)).toBe(true);
+  });
+
+  it("keys stay unique when two picks share a file name", () => {
+    const f = parseFillScreen(dump("a_card_list.png")).rows[0];
+    expect(rowFromParsed(f, "image.jpeg", 0, 0).key).not.toBe(rowFromParsed(f, "image.jpeg", 0, 1).key);
+  });
+});
+
+describe("parser guards", () => {
+  it("does not date month-only headers across a Dec/Jan boundary", () => {
+    const w = (t: string, y: number, x = 40) => ({ t, c: 95, x0: x, y0: y, x1: x + 20 * t.length, y1: y + 20, alt: /\d/.test(t) ? t : undefined });
+    const words = [
+      w("거래내역", 10), w("2026년", 40),
+      w("12월", 80), w("30일", 80, 120),
+      w("삼성전자", 120), w("10", 150), w("주", 150, 90), w("구매", 150, 130), w("주당", 150, 200), w("72,400", 150, 260), w("원", 150, 380),
+      w("1월", 200), w("2일", 200, 100),
+      w("카카오", 240), w("5", 270), w("주", 270, 70), w("판매", 270, 110), w("주당", 270, 180), w("41,850", 270, 240), w("원", 270, 360),
+    ];
+    const res = parseFillScreen(words);
+    expect(res.rows.length).toBeGreaterThan(0);
+    for (const r of res.rows) expect(r.date.value).toBeNull();
+  });
+});

@@ -513,6 +513,8 @@
         "sideBuy": "Buy",
         "sideSell": "Sell",
         "etNote": "Shown in US Eastern time (ET), so only the date is kept, not the time.",
+        "usd_needed": "A US symbol needs a USD price. If the screen shows won, type the dollar price.",
+        "krw_needed": "A KRX code with a USD price — check that the price is in KRW.",
         "send": "Add to inbox",
         "checkTitle": "The stock name was matched to a similar name — please check it",
         "confirmLabel": "I checked this is the same stock as in the capture."

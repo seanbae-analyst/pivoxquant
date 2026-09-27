@@ -146,8 +146,11 @@ const digitsOf = (s: string) => s.replace(/[^\d]/g, "");
 
 /** Parse one printed number. Rejects malformed thousands grouping ("1448,000"). */
 export function parseAmount(raw: string): number | null {
+  // "%" is never part of a price or quantity here — it is how OCR misreads
+  // the "주" glyph ("8%" for 8주), so such a token proves nothing.
+  if (raw.includes("%")) return null;
   let s = raw.replace(/[원₩$\s]/g, "").replace(/^[~≈]/, "");
-  s = s.replace(/[)(%]+$/, "");
+  s = s.replace(/[)(]+$/, "");
   if (!/^\d[\d,]*(\.\d+)?$/.test(s)) return null;
   const [intPart, frac] = s.split(".");
   if (intPart.includes(",") && !/^\d{1,3}(,\d{3})+$/.test(intPart)) return null;
@@ -237,7 +240,25 @@ function reconcile(
   const cell = (r: NumRead | null): Cell<number> =>
     r ? { value: r.value, hint: r.value === null ? r.hint : undefined } : { value: null };
   const out: [Cell<number>, Cell<number>, Cell<number>] = [cell(q), cell(p), cell(a)];
+  const blankAll = (): [Cell<number>, Cell<number>, Cell<number>] => [
+    { value: null, hint: q?.hint }, { value: null, hint: p?.hint }, { value: null, hint: a?.hint },
+  ];
+  // Plausibility when nothing else can check the pair (no amount on screen).
+  if (!usd && out[1].value !== null && out[1].value < 100) out[1] = { value: null, hint: p?.hint };
+  if (out[0].value !== null && out[0].value > 1e6) out[0] = { value: null, hint: q?.hint };
   if (!q || !p || !a) return out;
+  // HARD gate: an amount is on screen, so quantity × price must match one of
+  // its readings. If no reading does, the three cells may belong to
+  // different trades (misaligned rows / columns) — prove nothing.
+  if (a.candidates.length > 0 && out[0].value !== null && out[1].value !== null &&
+      !a.candidates.some((av) => close(out[0].value! * out[1].value!, av, usd))) {
+    const combosAny = q.candidates.some((qv) => p.candidates.some((pv) =>
+      a.candidates.some((av) => close(qv * pv, av, usd))));
+    if (!combosAny) {
+      flags.push("amount_mismatch");
+      return blankAll();
+    }
+  }
   if (q.value !== null && p.value !== null && a.value !== null) {
     if (close(q.value * p.value, a.value, usd)) return out;
     // Every reading agrees but the printed arithmetic does not: the screen
@@ -263,6 +284,9 @@ function reconcile(
 
 interface Ctx {
   year: number | null;
+  /** Month-only headers span December and January: which year each belongs
+   * to is not printed, so month-day headers are not dated at all. */
+  yearAmbiguous?: boolean;
   date: string | null;
 }
 
@@ -274,7 +298,7 @@ function nameFrom(words: OcrWord[], usd: boolean): { name: string; code: string 
     if (!t) continue;
     if (isCode(t)) { code = t; continue; }
     if (isNumericWord(t) || /\d/.test(t)) continue;
-    if (sideFromText(t) || STATUS_WORDS.includes(t) || /^[·ㆍ,.\-_=~≈:;'"、|]+$/.test(t)) continue;
+    if (sideFromText(t) || STATUS_WORDS.includes(t) || /^[·ㆍ,.\-_=~≈:;'"、|x×*]+$/.test(t)) continue;
     if (usd && !code && /^[A-Z]{1,5}$/.test(t)) { code = t; continue; }
     parts.push(t);
   }
@@ -356,8 +380,19 @@ function cardFill(recLines: Line[], detailIdx: number, ctx: Ctx): ParsedFill {
   // Daily TSLA Bull 2X") — only the line carrying the $ amount names the
   // ticker; a symbol inside the description must never be taken for it.
   const before = recLines.slice(0, detailIdx);
-  const nameLineObj = usd ? before.find((l) => /\$\s*\d/.test(l.text)) : before[0];
-  const nameLine = nameLineObj ? nameLineObj.words : [];
+  // No separate name line → the anchor itself names the stock
+  // ("하나금융지주 매수 5주 x 68,900").
+  const anchorLine = recLines[detailIdx];
+  const anchorAsName = before.length === 0 && anchorLeadName(anchorLine);
+  const nameLineObj = usd
+    ? before.find((l) => /\$\s*\d/.test(l.text)) ?? (anchorAsName ? anchorLine : undefined)
+    : before[0] ?? (anchorAsName ? anchorLine : undefined);
+  // From the anchor line only the words before its first number are the name.
+  const nameLine = !nameLineObj
+    ? []
+    : nameLineObj === anchorLine
+      ? anchorLine.words.slice(0, Math.max(0, anchorLine.words.findIndex((w) => /\d/.test(w.t))))
+      : nameLineObj.words;
   const nm = nameFrom(nameLine, usd);
   // A code is only read from the name line — a 6-digit price or amount
   // printed without commas ("201000") must never become a stock code.
@@ -371,8 +406,28 @@ function cardFill(recLines: Line[], detailIdx: number, ctx: Ctx): ParsedFill {
   f.side = { value: sideFromText(compact) };
   const tw = words.find((w) => TIME_RE.test(w.t));
   if (tw) f.time = readTime(tw);
-  const rowDate = words.map((w) => fullDate(w.t)).find(Boolean) ?? null;
+  const rowDates = new Set(words.map((w) => fullDate(w.t)).filter(Boolean));
+  const rowDate = [...rowDates][0] ?? null;
   f.date = { value: rowDate ?? ctx.date };
+
+  // Merged-record guard: two clocks, two dates, or amounts on two lines mean
+  // this record swallowed a neighbouring trade's line. Keep only what the
+  // anchor (detail) line itself proves; everything else goes back to the user.
+  const times = new Set(words.filter((w) => TIME_RE.test(w.t)).map((w) => w.t));
+  // (the anchor line itself may carry a per-share price in 원 — not counted)
+  const amountLines = recLines.filter((l, k) =>
+    k !== detailIdx && /\d{1,3}(,\d{3})+\s*(원|₩)|\$\s*\d/.test(l.text)).length;
+  if (times.size > 1 || rowDates.size > 1 || amountLines > 1) {
+    f.flags.push("merged_record");
+    const anchor = recLines[detailIdx];
+    f.time = { value: null, hint: f.time.value ?? f.time.hint };
+    if (rowDates.size > 1) f.date = { value: null };
+    f.amount = { value: null, hint: f.amount.value != null ? String(f.amount.value) : f.amount.hint };
+    const anchorSide = sideFromText(anchor.compact);
+    f.side = { value: anchorSide };
+    if (!anchor.words.some((w) => nameLine.includes(w))) f.name = { value: null, hint: f.name.value ?? undefined };
+    if (!anchor.words.some((w) => w === codeWord)) f.code = { value: null, hint: f.code.value ?? f.code.hint };
+  }
   return f;
 }
 
@@ -422,21 +477,31 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
   const body = lines.slice(hi + 1);
   const footer = body.findIndex((l) => /합계|총계/.test(l.compact));
   const rows = footer >= 0 ? body.slice(0, footer) : body;
+  // Dates, times and codes do not make a line a trade row ("09.22 14:21:07"
+  // printed under each name is a detail of the row above, not a row).
   const numericCount = (l: Line) =>
-    l.words.filter((w) => /\d/.test(w.t) && !isCode(w.t)).length;
+    l.words.filter((w) => /\d/.test(w.t) && !isCode(w.t) && !TIME_RE.test(w.t) &&
+      !fullDate(w.t) && !/^\d{1,2}[./]\d{1,2}$/.test(w.t)).length;
   const data = rows.filter((l) => numericCount(l) >= 2);
   const aux = rows.filter((l) => numericCount(l) < 2);
   const pitch = data.length > 1 ? median(data.slice(1).map((l, i) => l.y - data[i].y)) : 40;
   const attached = new Map<Line, Line[]>(data.map((l) => [l, []]));
   for (const l of aux) {
-    let best: Line | null = null;
-    for (const d of data) if (!best || Math.abs(d.y - l.y) < Math.abs(best.y - l.y)) best = d;
-    if (best && Math.abs(best.y - l.y) < pitch * 0.75) attached.get(best)!.push(l);
+    const byDist = [...data].sort((x, y) => Math.abs(x.y - l.y) - Math.abs(y.y - l.y));
+    const [best, second] = byDist;
+    if (!best || Math.abs(best.y - l.y) >= pitch * 0.75) continue;
+    // Roughly between two rows → it could belong to either; attach to none.
+    if (second && Math.abs(second.y - l.y) < Math.abs(best.y - l.y) * 1.5) continue;
+    attached.get(best)!.push(l);
   }
+  const NUMERIC_COLS: Col[] = ["qty", "price", "amount", "fee", "tax"];
   const nearestCol = (w: OcrWord): Col => {
     const cx = (w.x0 + w.x1) / 2;
-    let best = cols[0];
-    for (const c of cols) if (Math.abs(c.cx - cx) < Math.abs(best.cx - cx)) best = c;
+    const byDist = [...cols].sort((x, y) => Math.abs(x.cx - cx) - Math.abs(y.cx - cx));
+    const [best, second] = byDist;
+    // A number about as close to two numeric columns is not assigned to either.
+    if (/\d/.test(w.t) && second && NUMERIC_COLS.includes(best.col) && NUMERIC_COLS.includes(second.col) &&
+        Math.abs(second.cx - cx) < Math.abs(best.cx - cx) * 1.3) return "unknown";
     return best.col;
   };
   return data.map((line) => {
@@ -493,14 +558,33 @@ function headerDate(line: Line, ctx: Ctx): string | null {
   const d = fullDate(line.compact);
   if (d) return d;
   const md = monthDay(line.compact);
-  if (md && ctx.year) return validYmd(ctx.year, md[0], md[1]);
+  if (md && ctx.year && !ctx.yearAmbiguous) return validYmd(ctx.year, md[0], md[1]);
   return null;
 }
 
-// "10주", "체결 10주", "12.5주 x $13.42", "12.5 x $13.42". The x-form must be
-// followed by a $ price — ETF names like "Bull 2X" / "3X" are not quantities.
+// "10주", "체결 10주", "12.5주 x $13.42", "5 x 68,900". The x-form is a
+// lowercase x / × / * followed by a price — ETF names like "Bull 2X" / "3X"
+// (uppercase X) are not quantities.
 const isDetail = (l: Line) =>
-  /\d\s*주/.test(l.text) || /\d\s*[x×]\s*\$\s*\d/i.test(l.text.replace(/,/g, ""));
+  /\d\s*주/.test(l.text) || /\d\s*[x×*]\s*\$?\s*\d/.test(l.text.replace(/,/g, ""));
+
+/** Does the anchor line itself start with a stock name ("하나금융지주 매수
+ * 5주 x 68,900")? Only words before the first number count — trailing OCR
+ * debris ("… 42,050원 제설") is not a name. */
+function anchorLeadName(l: Line): boolean {
+  const firstNum = l.words.findIndex((w) => /\d/.test(w.t));
+  const lead = firstNum < 0 ? l.words : l.words.slice(0, firstNum);
+  const nm = nameFrom(lead, /\$/.test(l.compact));
+  return Boolean(nm.name || nm.code);
+}
+
+/** A row with neither a quantity nor a price reading is not a trade row (a
+ * stray date/time line, a footer) — never emit it. A missing name is fine:
+ * the user fills it. */
+function hasTradeShape(f: ParsedFill): boolean {
+  const has = (c: Cell<unknown>) => c.value !== null || Boolean(c.hint);
+  return has(f.shares) || has(f.price);
+}
 
 export function parseFillScreen(words: OcrWord[]): ScreenParse {
   const lines = groupLines(words);
@@ -508,13 +592,14 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
   const result: ScreenParse = { screenType, rows: [], excluded: [] };
   if (screenType !== "fills") return result;
 
-  const ctx: Ctx = { year: yearContext(lines), date: null };
+  const months = new Set(lines.map((l) => monthDay(l.compact)?.[0]).filter((m) => m !== undefined));
+  const ctx: Ctx = { year: yearContext(lines), yearAmbiguous: months.has(12) && months.has(1), date: null };
 
   // Table layout?
   const hi = lines.findIndex((l) => headerColumns(l) !== null);
   if (hi >= 0) {
     for (const l of lines.slice(0, hi)) ctx.date = headerDate(l, ctx) ?? ctx.date;
-    result.rows = tableFills(lines, hi, headerColumns(lines[hi])!, ctx);
+    result.rows = tableFills(lines, hi, headerColumns(lines[hi])!, ctx).filter(hasTradeShape);
     return result;
   }
 
@@ -522,9 +607,19 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
   const detailIdx = lines.map((l, i) => (isDetail(l) ? i : -1)).filter((i) => i >= 0);
   const dateAt = new Map<number, string | null>();
   const headerLines = new Set<number>();
+  // A section date header carries only the date (+ weekday / notes in
+  // parentheses). A line that also has a time or an amount is a trade's own
+  // "date time amount" line — using it as a header would date the next trade.
+  const onlyDate = (l: Line) => {
+    const rest = l.compact
+      .replace(/(20\d{2})[./-]\d{1,2}[./-]\d{1,2}/, "")
+      .replace(/\d{1,2}월\d{1,2}일/, "")
+      .replace(/\([^)]*\)?/g, "");
+    return !/\d/.test(rest);
+  };
   lines.forEach((l, i) => {
     const d = headerDate(l, ctx);
-    if (d && !isDetail(l) && !/\d{1,3}(,\d{3})+/.test(l.compact.replace(/20\d{2}/, ""))) {
+    if (d && !isDetail(l) && onlyDate(l)) {
       headerLines.add(i);
       dateAt.set(i, d);
     }
@@ -542,8 +637,27 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
       if ([...headerLines].some((h) => h > lo && h < hiI)) continue;
       if (best < 0 || Math.abs(lines[d].y - l.y) < Math.abs(lines[best].y - l.y)) best = d;
     }
-    if (best >= 0 && Math.abs(lines[best].y - l.y) < lines[best].h * 6) owner.set(i, best);
+    if (best < 0 || Math.abs(lines[best].y - l.y) >= lines[best].h * 6) return;
+    // Between two trade lines at similar distance → belongs to neither.
+    const others = detailIdx.filter((d) => d !== best &&
+      ![...headerLines].some((h) => h > Math.min(i, d) && h < Math.max(i, d)));
+    const second = others.reduce((m, d) => Math.min(m, Math.abs(lines[d].y - l.y)), Infinity);
+    if (second < Math.abs(lines[best].y - l.y) * 1.25) return;
+    owner.set(i, best);
   });
+  // Layout orientation: when almost every trade keeps its extra lines on one
+  // side of its anchor (e.g. "name 5주 x 68,900" over "date time amount"), a
+  // line on the other side belongs to a neighbouring trade whose anchor was
+  // not recognised — attaching it would give this trade that one's values.
+  if (detailIdx.length >= 3) {
+    const withAbove = new Set([...owner.entries()].filter(([i, d]) => i < d).map(([, d]) => d)).size;
+    const withBelow = new Set([...owner.entries()].filter(([i, d]) => i > d).map(([, d]) => d)).size;
+    const n = detailIdx.length;
+    for (const [i, d] of [...owner.entries()]) {
+      if (i < d && withAbove <= n * 0.3 && withBelow > n * 0.5) owner.delete(i);
+      else if (i > d && withBelow <= n * 0.3 && withAbove > n * 0.5) owner.delete(i);
+    }
+  }
   const firstContent = Math.min(...[...headerLines, ...detailIdx, lines.length]);
   for (const d of detailIdx) {
     const before = [...owner.entries()].filter(([i, o]) => o === d && i < d).map(([i]) => i);
@@ -563,15 +677,17 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
       result.excluded.push({ text, reason: "cancelled" });
       continue;
     }
-    // Cut at the top edge: no name line and nothing above it on screen.
+    // Cut at the top edge: only the first record on screen can be, and only
+    // if neither a line above nor its own anchor line names a stock.
     const noNameLine = before.length === 0;
     const aboveHeaders = [...headerLines].some((h) => h < d);
-    if (noNameLine && (!aboveHeaders || d <= firstContent)) {
+    const anchorNamed = anchorLeadName(lines[d]);
+    if (noNameLine && !anchorNamed && d === detailIdx[0] && (!aboveHeaders || d <= firstContent)) {
       result.excluded.push({ text, reason: "partial" });
       continue;
     }
     const fill = cardFill(recLines, recIdx.indexOf(d), { ...ctx, date });
-    result.rows.push(fill);
+    if (hasTradeShape(fill)) result.rows.push(fill);
   }
   // A name line after the last detail line (cut at the bottom edge).
   const lastD = detailIdx[detailIdx.length - 1];

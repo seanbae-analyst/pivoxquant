@@ -37,10 +37,8 @@ from services.crypto_service import EncryptedText
 SOURCE_CSV = "csv"
 SOURCE_SCREENSHOT_TEXT = "screenshot_text"
 SOURCE_WEBHOOK = "webhook"
-# Fill-screen capture read by Claude vision (docs/product/SCREENSHOT_IMPORT_DESIGN.md).
-# A batch with this source exists only if the user gave BOTH the upload
-# consent and the PIPA §28-8 overseas-transfer consent, so ``consent_at``
-# records both.
+# Fill-screen capture read by OCR in the user's browser; the server receives
+# only the rows the user reviewed (docs/product/SCREENSHOT_IMPORT_DESIGN.md).
 SOURCE_SCREENSHOT_IMAGE = "screenshot_image"
 VALID_SOURCES = (SOURCE_CSV, SOURCE_SCREENSHOT_TEXT, SOURCE_WEBHOOK, SOURCE_SCREENSHOT_IMAGE)
 
@@ -53,9 +51,9 @@ VALID_STATUSES = (STATUS_PENDING, STATUS_APPROVED, STATUS_REJECTED, STATUS_DUPLI
 RAW_SNIPPET_MAX = 300
 
 # Below this a pending row is shown as "check this" (import-inbox.tsx). For
-# screenshot_image rows it also blocks approval until the user either edits
-# the row (PATCH → user-verified, confidence 1.0) or approves with
-# ``confirm_values: true`` (docs/product/SCREENSHOT_IMPORT_DESIGN.md §4).
+# screenshot_image rows (a fuzzy-matched stock name) it also blocks approval
+# until the user picks the ticker (PATCH → user-verified, confidence 1.0) or
+# approves with ``confirm_values: true`` (docs/product/SCREENSHOT_IMPORT_DESIGN.md §5).
 LOW_CONFIDENCE_THRESHOLD = 0.7
 
 
@@ -150,9 +148,12 @@ class PendingTrade(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
 
     # Read-only: the batch's ``source`` decides whether a low-confidence row
-    # needs an explicit confirmation (screenshot_image only). Joined so the
-    # pending list (≤200 rows) stays one query.
-    batch = db.relationship("ImportBatch", lazy="joined", viewonly=True)
+    # needs an explicit confirmation (screenshot_image only). "selectin", NOT
+    # "joined": approve_pending locks the row with SELECT … FOR UPDATE, and
+    # Postgres rejects FOR UPDATE on the nullable side of the LEFT OUTER JOIN
+    # a joined eager load adds (SQLite ignores FOR UPDATE, so tests never saw
+    # it). selectin loads batches in one extra IN query per list.
+    batch = db.relationship("ImportBatch", lazy="selectin", viewonly=True)
 
     @property
     def source(self) -> str | None:

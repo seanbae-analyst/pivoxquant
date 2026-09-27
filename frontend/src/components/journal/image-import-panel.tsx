@@ -17,7 +17,7 @@
  *     devices (TODO: verify with real captures, then add them to the guide).
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useT } from "@/lib/locale";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
@@ -40,6 +40,7 @@ const BROKERS = ["unknown", "kis", "kiwoom", "toss", "mirae", "samsung", "nh", "
 type Broker = (typeof BROKERS)[number];
 
 interface FileNote {
+  index: number;
   fileName: string;
   kind: "rejected" | "error" | "read";
   screenType?: ScreenType | "empty";
@@ -66,6 +67,8 @@ export function ImageImportPanel({
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A newer pick or read makes an in-flight run stale: its results are dropped.
+  const runId = useRef(0);
 
   const oversized = files.some((f) => f.size > MAX_IMAGE_BYTES);
   const canRead = files.length > 0 && !oversized && progress === null && !sending;
@@ -74,6 +77,7 @@ export function ImageImportPanel({
 
   async function read() {
     if (!canRead) return;
+    const myRun = ++runId.current;
     setError(null);
     setNotes([]);
     setRows([]);
@@ -98,23 +102,24 @@ export function ImageImportPanel({
           const words = await session.read(f);
           const parsed = parseFillScreen(words);
           if (parsed.screenType !== "fills") {
-            nextNotes.push({ fileName: f.name, kind: "rejected", screenType: parsed.screenType });
+            nextNotes.push({ index: i, fileName: f.name, kind: "rejected", screenType: parsed.screenType });
             continue;
           }
           if (parsed.rows.length === 0) {
-            nextNotes.push({ fileName: f.name, kind: "rejected", screenType: "empty" });
+            nextNotes.push({ index: i, fileName: f.name, kind: "rejected", screenType: "empty" });
             continue;
           }
-          parsed.rows.forEach((row, k) => nextRows.push(rowFromParsed(row, f.name, k)));
-          nextNotes.push({ fileName: f.name, kind: "read", rows: parsed.rows.length, excluded: parsed.excluded.length });
+          parsed.rows.forEach((row, k) => nextRows.push(rowFromParsed(row, f.name, k, i)));
+          nextNotes.push({ index: i, fileName: f.name, kind: "read", rows: parsed.rows.length, excluded: parsed.excluded.length });
         } catch (err) {
           const code = err instanceof OcrInputError ? err.code : "unreadable";
-          nextNotes.push({ fileName: f.name, kind: "error", errorCode: code });
+          nextNotes.push({ index: i, fileName: f.name, kind: "error", errorCode: code });
         }
       }
     } finally {
       await session.close();
     }
+    if (myRun !== runId.current) return;
     setNotes(nextNotes);
     setRows(nextRows);
     setProgress(null);
@@ -197,7 +202,9 @@ export function ImageImportPanel({
           type="file"
           accept={IMAGE_ACCEPT}
           multiple
+          disabled={progress !== null}
           onChange={(e) => {
+            runId.current += 1;
             setFiles(Array.from(e.target.files ?? []).slice(0, MAX_IMAGES_PER_PICK));
             setRows([]);
             setNotes([]);
@@ -237,7 +244,7 @@ export function ImageImportPanel({
       {notes.length > 0 && (
         <ul className="mt-3 space-y-1" data-testid="image-notes">
           {notes.map((n) => (
-            <li key={n.fileName} className="font-mono" style={{ fontSize: "var(--pq-text-mono-sm)", color: n.kind === "read" ? "var(--pq-ivory-mid)" : "var(--pq-bronze)" }}>
+            <li key={`${n.index}:${n.fileName}`} className="font-mono" style={{ fontSize: "var(--pq-text-mono-sm)", color: n.kind === "read" ? "var(--pq-ivory-mid)" : "var(--pq-bronze)" }}>
               {n.fileName} — {noteText(n)}
             </li>
           ))}

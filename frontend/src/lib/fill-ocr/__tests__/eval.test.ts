@@ -17,7 +17,10 @@ import path from "node:path";
 import { describe, it, expect } from "vitest";
 import { parseFillScreen, type OcrWord, type ParsedFill } from "@/lib/fill-ocr/parse";
 
-const DIR = path.resolve(__dirname, "../../../../../tests/fixtures/screenshot_import/synthetic");
+const FIXTURES = path.resolve(__dirname, "../../../../../tests/fixtures/screenshot_import");
+// synthetic = the set the rules were written against; heldout = screens the
+// rules were NOT tuned on (only structural root causes were fixed from it).
+const SETS = ["synthetic", "heldout"] as const;
 
 interface GtTrade {
   date: string; time: string | null; name: string; ticker: string | null;
@@ -51,14 +54,19 @@ function truth(t: GtTrade, k: Field): unknown {
 // (routes/imports.py::resolve_ticker). The eval models that with the same
 // master list (generated from services/kr_stock_registry).
 const KR_NAMES = JSON.parse(
-  fs.readFileSync(path.resolve(DIR, "../kr_names.json"), "utf8"),
+  fs.readFileSync(path.join(FIXTURES, "kr_names.json"), "utf8"),
 ) as Record<string, string>;
+const KR_CODES = new Set(Object.values(KR_NAMES));
 
-/** The stock the server would settle on without asking, or null. */
+/** The stock the server would settle on without asking, or null — same
+ * rules as routes/imports.py: a KR code counts only if it is in the master,
+ * an exact name counts, and a code/name conflict resolves to nothing. */
 function resolvedStock(f: ParsedFill): string | null {
-  if (f.code.value) return f.code.value.toUpperCase();
-  const n = (f.name.value ?? "").replace(/\s+/g, "");
-  return KR_NAMES[n] ?? null;
+  const raw = (f.code.value ?? "").toUpperCase();
+  const code = /^\d{6}$/.test(raw) ? (KR_CODES.has(raw) ? raw : null) : raw || null;
+  const byName = KR_NAMES[(f.name.value ?? "").replace(/\s+/g, "")] ?? null;
+  if (code && byName && code !== byName) return null;
+  return code ?? byName;
 }
 
 function equal(k: Field, got: unknown, want: unknown, f: ParsedFill, t: GtTrade): boolean {
@@ -76,12 +84,16 @@ function score(f: ParsedFill, t: GtTrade): number {
   if (f.date.value === t.date) s += 1;
   if (f.time.value && t.time && f.time.value.slice(0, 5) === t.time.slice(0, 5)) s += 3;
   if (equal("name", null, null, f, t)) s += 2;
-  const hints = [f.shares.hint, f.price.hint, f.amount.hint].join(" ").replace(/[^\d]/g, " ");
-  for (const v of [t.quantity, t.price, t.amount]) if (hints.includes(String(v).replace(".", ""))) s += 1;
+  if (f.side.value && f.side.value === (t.side === "buy" ? "BUY" : "SELL")) s += 1;
+  // Hints are what OCR saw in a blank cell — compare whole numbers only.
+  const hintNums = [f.shares.hint, f.price.hint, f.amount.hint]
+    .map((h) => (h ?? "").replace(/[^\d.]/g, ""))
+    .filter(Boolean);
+  for (const v of [t.quantity, t.price, t.amount]) if (hintNums.includes(String(v))) s += 2;
   return s;
 }
 
-function evaluate() {
+function evaluate(DIR: string) {
   const gt = JSON.parse(fs.readFileSync(path.join(DIR, "ground_truth.json"), "utf8")) as Record<string, GtScreen>;
   const tally = Object.fromEntries(FIELDS.map((k) => [k, { auto: 0, unknown: 0, wrong: 0, total: 0 }])) as Tally;
   const screens: { file: string; want: string; got: string; rows: number; gtRows: number; extra: number }[] = [];
@@ -134,12 +146,12 @@ function evaluate() {
   return { tally, screens, wrongs };
 }
 
-describe("fill-screen OCR eval (synthetic set)", () => {
-  const { tally, screens, wrongs } = evaluate();
+describe.each(SETS)("fill-screen OCR eval (%s set)", (set) => {
+  const { tally, screens, wrongs } = evaluate(path.join(FIXTURES, set));
 
   if (process.env.OCR_EVAL_PRINT) {
     const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : "-");
-    const lines = ["| 칸 | 자동 인식 | 판별불가(사용자 입력) | 틀리게 확신 | n |", "|---|---|---|---|---|"];
+    const lines = [`### ${set}`, "| 칸 | 자동 인식 | 판별불가(사용자 입력) | 틀리게 확신 | n |", "|---|---|---|---|---|"];
     for (const k of FIELDS) {
       const t = tally[k];
       lines.push(`| ${k} | ${pct(t.auto, t.total)} (${t.auto}) | ${pct(t.unknown, t.total)} (${t.unknown}) | ${t.wrong} | ${t.total} |`);
@@ -150,7 +162,10 @@ describe("fill-screen OCR eval (synthetic set)", () => {
     if (wrongs.length) console.log("WRONG:\n" + wrongs.join("\n"));
   }
 
-  it("classifies every screen (or rejects the input before reading)", () => {
+  // Exact screen types are pinned on the set the rules were written for. On
+  // the held-out set a fill screen read as "other" only costs recall (no
+  // rows, user types them) — the safety properties below still apply.
+  it.runIf(set === "synthetic")("classifies every screen (or rejects the input before reading)", () => {
     for (const s of screens) {
       if (s.got.startsWith("rejected:")) continue;
       expect(`${s.file}:${s.got}`).toBe(`${s.file}:${s.want}`);

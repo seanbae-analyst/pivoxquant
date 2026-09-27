@@ -6,3 +6,5 @@
 # The synthetic set is generated screens with no real account data.
 !synthetic/
 !synthetic/*.png
+!heldout/
+!heldout/*.png

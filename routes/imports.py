@@ -401,6 +401,15 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
         if not amount_ok(r.shares) or not amount_ok(r.price):
             r.skip_reason = "수량·단가 범위 초과"
             continue
+        if source == SOURCE_SCREENSHOT_IMAGE and r.currency:
+            # The user confirmed the price in the currency on screen. If the
+            # printed code/name is a stock that trades in the other currency
+            # (a US fill shown in won), recording it would silently rescale
+            # the price — skip it with the reason instead.
+            t, _ = resolve_ticker(r.code, r.name)
+            if t and _currency_for(t, None, "") != r.currency:
+                r.skip_reason = f"통화 불일치 — {t} 는 {_currency_for(t, None, '')} 종목인데 단가가 {r.currency}"
+                continue
         if r.traded_at is not None:
             if not r.extra.get("tz_utc") and broker_guess != "pivoxquant":
                 r.traded_at = kst_to_utc(r.traded_at)
@@ -438,7 +447,7 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
     pending: list[PendingTrade] = []
     for r in fills:
         ticker, display = resolve_ticker(r.code, r.name)
-        if source == SOURCE_SCREENSHOT_IMAGE and ticker is None and r.name:
+        if source == SOURCE_SCREENSHOT_IMAGE and ticker is None and r.name and r.currency != "USD":
             # OCR-garbled name ("하이닉스"): a clear unique master match is
             # offered, but as low confidence → the inbox asks for a check.
             hit = ocr_rows.fuzzy_kr_ticker(r.name, _kr_name_index())
@@ -551,6 +560,19 @@ def create_image_import():
         raw = ocr_rows.rows_to_raw(data.get("rows"))
     except ocr_rows.RowError as exc:
         return api_error(en=exc.en, kr=exc.kr, code="IMPORT_INVALID_FIELD", status=400)
+    index = _kr_name_index()
+    for r in raw:
+        # A 6-digit "code" that is not a listed stock is a comma-less price
+        # read off the screen ("372500") — drop it and fall back to the name.
+        if re.fullmatch(r"\d{6}", r.code or "") and not ocr_rows.known_kr_code(r.code, index):
+            r.raw_snippet = mask_sensitive(f"{r.raw_snippet} [코드 무시: {r.code} 는 상장 종목 코드가 아님]")
+            r.code = ""
+            continue
+        # Printed code and exact name point at different stocks → ask.
+        by_name = index.get(re.sub(r"\s+", "", r.name or ""))
+        if r.code and by_name and normalize_ticker(r.code) != normalize_ticker(by_name):
+            r.confidence = min(r.confidence, ocr_rows.LOW_CONFIDENCE)
+            r.raw_snippet = mask_sensitive(f"{r.raw_snippet} [확인: 코드 {r.code} 와 이름 '{r.name}' 이 다른 종목]")
     broker = str(data.get("broker") or "unknown").strip().lower()
     if broker not in ocr_rows.BROKERS or broker == "overseas":
         broker = "unknown"
@@ -795,13 +817,25 @@ def patch_pending(pid: int):
                              code="IMPORT_INVALID_FIELD", status=400)
         row.currency = _currency_for(row.ticker, given, row.name)
     elif "ticker" in data:
-        row.currency = _currency_for(row.ticker, None, row.name)
+        new_currency = _currency_for(row.ticker, None, row.name)
+        # A screenshot row's price was confirmed in the currency printed on
+        # screen (Toss can show a US fill in won). Silently flipping it to the
+        # ticker's currency would turn ₩312,000 into $312,000 — refuse instead.
+        if row.source == SOURCE_SCREENSHOT_IMAGE and new_currency != row.currency:
+            db.session.rollback()
+            return api_error(
+                en=f"This fill's price is in {row.currency}, but {row.ticker or 'that symbol'} trades in {new_currency}. "
+                   "Reject it and import it again with the price in the symbol's currency.",
+                kr=f"이 체결 단가는 {row.currency} 인데 고른 종목은 {new_currency} 종목입니다. "
+                   "거절한 뒤 종목 통화 기준 단가로 다시 가져와 주세요.",
+                code="IMPORT_CURRENCY_MISMATCH", status=400,
+            )
+        row.currency = new_currency
 
-    # A screenshot row the user has edited is user-verified: the values are
-    # now theirs, not the model's reading (design SCREENSHOT_IMPORT §4).
-    if row.source == SOURCE_SCREENSHOT_IMAGE and any(
-        k in data for k in ("ticker", "name", "action", "shares", "price", "traded_at", "currency")
-    ):
+    # The only low-confidence screenshot cell is a fuzzy-matched stock
+    # (design SCREENSHOT_IMPORT §5): it becomes user-verified only when the
+    # user sets the ticker or name — editing shares/price must not clear it.
+    if row.source == SOURCE_SCREENSHOT_IMAGE and ("ticker" in data or "name" in data):
         row.confidence = 1.0
     _recompute(row)
     row.pre_trade_reflection_id = match_pre_trade(current_user.id, row.ticker, row.traded_at)

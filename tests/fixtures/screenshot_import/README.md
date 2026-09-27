@@ -4,7 +4,9 @@
 (`frontend/src/lib/fill-ocr/ocr.ts`), 규칙 파서(`parse.ts`)가 증명된 칸만 채운다.
 
 ## 있는 것
-- `synthetic/*.png` — 합성 증권사 화면 12장(실제 계좌 정보 없음). `ground_truth.json` = 사람이 읽은 정답.
+- `synthetic/*.png` — 합성 증권사 화면 12장(실제 계좌 정보 없음). `ground_truth.json` = 사람이 읽은 정답. 규칙을 이걸 보며 작성.
+- `heldout/*.png` — 다른 세션이 따로 만든 합성 12장(새 레이아웃 10 + 음성 2). 처음엔 미공개였으나 틀림 13칸의 **원인을 찾는 데 썼다**
+  (구조 규칙만 고침) — 이제 완전한 미공개 세트가 아니다. 새 미공개 세트로 다시 재야 한다.
 - `synthetic/ocr/*.png.json` — 프로덕션 OCR 경로의 단어 덤프(헤드리스 Chromium). 재생성:
   ```
   cd frontend && node scripts/copy-tesseract-assets.mjs
@@ -12,7 +14,7 @@
   ```
 - `kr_names.json` — `services/kr_stock_registry` 에서 뽑은 {종목명: 코드}. 채점이 서버와 같은 기준(정확 일치만 자동)을 쓰려고 둔다.
 - 채점: `cd frontend && OCR_EVAL_PRINT=1 npx vitest run src/lib/fill-ocr/__tests__/eval.test.ts --silent=false`
-  (틀리게 확신 > 0 이면 실패).
+  (두 세트 모두 틀리게 확신 > 0 이면 실패).
 
 ## 없는 것 — 실기기 캡처 (TODO)
 **실제 증권사 앱 캡처로는 한 번도 재지 않았다.** 규칙은 위 합성 12장을 보며 조정했으니 그 점수는 낙관적이다.

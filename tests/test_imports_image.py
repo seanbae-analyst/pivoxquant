@@ -252,3 +252,46 @@ class TestFuzzyUnit:
         assert fuzzy_kr_ticker("삼성전", index) is None  # 전자 vs 전기 — ambiguous
         assert fuzzy_kr_ticker("SK하이닉", index) == ("000660.KS", "SK하이닉스")
         assert fuzzy_kr_ticker("AB", index) is None  # no Hangul
+
+
+# ── review fixes (2026-09-27): Postgres lock, currency, codes ───────
+
+class TestReviewFixes:
+    def test_approve_lock_query_has_no_outer_join_on_postgres(self, app):
+        """SELECT … FOR UPDATE must not carry a LEFT OUTER JOIN (Postgres
+        rejects it); SQLite hides this, so compile against the PG dialect."""
+        from sqlalchemy.dialects import postgresql
+        from extensions import db
+        from models.import_batch import PendingTrade
+        with app.app_context():
+            q = db.session.query(PendingTrade).filter_by(id=1, user_id=1).with_for_update()
+            sql = str(q.statement.compile(dialect=postgresql.dialect()))
+        assert "FOR UPDATE" in sql
+        assert "JOIN" not in sql.upper()
+
+    def test_us_code_with_krw_price_is_skipped(self, client, auth_user):
+        body = _post(client, _row(),
+                     _row(name="애플", code="AAPL", price=312000, currency="KRW")).get_json()
+        assert [p["ticker"] for p in body["pending"]] == ["005930.KS"]
+        assert any("통화 불일치" in s["reason"] for s in body["skipped"])
+
+    def test_patch_ticker_to_other_currency_refused(self, client, auth_user):
+        p = _post(client, _row(code="", name="어떤이상한종목이름")).get_json()["pending"][0]
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"ticker": "AAPL"})
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_CURRENCY_MISMATCH"
+        again = client.get(f"{BASE}/pending").get_json()["pending"][0]
+        assert again["ticker"] is None and again["currency"] == "KRW"
+
+    def test_editing_numbers_does_not_clear_fuzzy_confirm(self, client, auth_user):
+        p = _post(client, _row(code="", name="SK하이닉")).get_json()["pending"][0]
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"price": 71300})
+        assert r.get_json()["pending"]["needs_confirm"] is True
+
+    def test_unlisted_six_digit_code_ignored(self, client, auth_user):
+        p = _post(client, _row(code="372500", name="삼성전자")).get_json()["pending"][0]
+        assert p["ticker"] == "005930.KS"  # resolved by the name, not the price-shaped "code"
+        assert "코드 무시" in p["raw_snippet"]
+
+    def test_code_name_conflict_needs_confirm(self, client, auth_user):
+        p = _post(client, _row(code="000660", name="삼성전자")).get_json()["pending"][0]
+        assert p["needs_confirm"] is True

@@ -29,7 +29,9 @@ export interface ReviewRow {
 
 const REQUIRED: ReviewField[] = ["date", "side", "shares", "price", "currency"];
 
-export function rowFromParsed(f: ParsedFill, fileName: string, i: number): ReviewRow {
+/** `fileIndex` keeps keys unique when two picks share a name (iOS names every
+ * photo "image.jpeg"). */
+export function rowFromParsed(f: ParsedFill, fileName: string, i: number, fileIndex = 0): ReviewRow {
   const v = (x: string | number | null | undefined) => (x == null ? "" : String(x));
   const proven: Record<ReviewField, string> = {
     date: v(f.date.value),
@@ -42,7 +44,7 @@ export function rowFromParsed(f: ParsedFill, fileName: string, i: number): Revie
     currency: v(f.currency),
   };
   return {
-    key: `${fileName}#${i}`,
+    key: `${fileIndex}:${fileName}#${i}`,
     include: true,
     fileName,
     values: { ...proven },
@@ -66,7 +68,16 @@ export function rowComplete(r: ReviewRow): boolean {
   const n = (s: string) => Number(s.replace(/,/g, ""));
   if (!(n(v.shares) > 0 && n(v.price) > 0)) return false;
   if (v.currency === "KRW" && !Number.isInteger(n(v.shares))) return false;
-  return true;
+  return currencyConflict(r) === null;
+}
+
+/** A US symbol with a won price (Toss can show US fills in ₩) or a KRX code
+ * with a dollar price would be recorded at the wrong scale — block it. */
+export function currencyConflict(r: ReviewRow): "usd_needed" | "krw_needed" | null {
+  const code = r.values.code.trim().toUpperCase();
+  if (/^[A-Z][A-Z.]{0,5}$/.test(code) && r.values.currency === "KRW") return "usd_needed";
+  if (/^\d{6}$/.test(code) && r.values.currency === "USD") return "krw_needed";
+  return null;
 }
 
 /** JSON row for POST /api/portfolio/imports/image. */
@@ -163,6 +174,11 @@ export function OcrReviewTable({
                 </span>
               )}
             </div>
+            {r.include && currencyConflict(r) && (
+              <div className="mt-1 font-mono" style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-bronze)" }}>
+                {t(`journal.import.image.${currencyConflict(r)}`)}
+              </div>
+            )}
             {r.flags.includes("amount_mismatch") && (
               <div className="mt-1 font-mono" style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-bronze)" }}>
                 {t("journal.import.image.amountMismatch")}

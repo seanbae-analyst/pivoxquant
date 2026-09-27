@@ -99,6 +99,13 @@ def rows_to_raw(rows) -> list[RawTrade]:
     return out
 
 
+def known_kr_code(code: str, index: dict[str, str]) -> bool:
+    """A 6-digit KRX code counts only if it is in the master — a comma-less
+    price read off the screen ("372500") has the same shape."""
+    bare = (code or "").split(".")[0]
+    return bare in {t.split(".")[0] for t in index.values()}
+
+
 def fuzzy_kr_ticker(name: str, index: dict[str, str]) -> tuple[str, str] | None:
     """Unique close match of an OCR-garbled Korean name in the master
     (``{종목명: ticker}``). Returns ``(ticker, master_name)`` or None.

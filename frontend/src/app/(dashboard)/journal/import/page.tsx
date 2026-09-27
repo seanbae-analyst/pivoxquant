@@ -168,6 +168,8 @@ function ImportPageInner() {
 
   function onImageResult(res: ImportCreateResponse) {
     setError(null);
+    // Demo mode answers every POST with {ok:true} — no batch, no rows.
+    if (!res || !Array.isArray(res.pending) || !res.batch) return;
     setResult(res);
     setRows(res.pending.filter((p) => p.status === "pending"));
     void mutate(API.imports.pending);

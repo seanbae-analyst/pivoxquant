@@ -20,6 +20,9 @@ const PAD = 4;
 export const MIN_SHORT_EDGE = 320;
 export const MIN_LONG_EDGE = 480;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+// iOS Safari refuses canvases above ~16.7M pixels (getContext → null). A
+// long scroll capture ×2 exceeds that, so the page scale is clamped.
+const MAX_CANVAS_PIXELS = 16_000_000;
 
 export class OcrInputError extends Error {
   constructor(public code: "too_small" | "too_large" | "unreadable") {
@@ -79,7 +82,8 @@ function scaledCanvas(src: CanvasImageSource, sx: number, sy: number, sw: number
   const c = document.createElement("canvas");
   c.width = Math.max(1, Math.round(sw * scale));
   c.height = Math.max(1, Math.round(sh * scale));
-  const ctx = c.getContext("2d", { willReadFrequently: true })!;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new OcrInputError("too_large");
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
   toGrayStretched(ctx, c.width, c.height);
@@ -109,16 +113,31 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 export async function openOcrSession(): Promise<OcrSession> {
   const { createWorker, PSM } = await import("tesseract.js");
   let loadError: unknown = null;
+  let abandoned = false;
+  // Every worker ever created is tracked so a timeout or a failed second
+  // worker never leaves one running (a late-resolving createWorker after
+  // the timeout is terminated as soon as it arrives).
+  const created: TesseractWorker[] = [];
+  const track = (p: Promise<TesseractWorker>) =>
+    p.then((w) => {
+      created.push(w);
+      if (abandoned) void w.terminate();
+      return w;
+    });
   const opts = { ...workerOptions(), errorHandler: (e: unknown) => { loadError = e; } };
   const load = async () => {
-    const p = await createWorker(["kor", "eng"], 1, opts);
-    const d = await createWorker("eng", 1, opts);
+    const p = await track(createWorker(["kor", "eng"], 1, opts));
+    const d = await track(createWorker("eng", 1, opts));
     return [p, d] as const;
   };
-  const [page, digits]: readonly [TesseractWorker, TesseractWorker] = await withTimeout(load(), LOAD_TIMEOUT_MS);
-  if (loadError) {
-    await Promise.allSettled([page.terminate(), digits.terminate()]);
-    throw loadError;
+  let page: TesseractWorker, digits: TesseractWorker;
+  try {
+    [page, digits] = await withTimeout(load(), LOAD_TIMEOUT_MS);
+    if (loadError) throw loadError;
+  } catch (e) {
+    abandoned = true;
+    await Promise.allSettled(created.map((w) => w.terminate()));
+    throw e;
   }
   await page.setParameters({ preserve_interword_spaces: "1" });
   await digits.setParameters({
@@ -142,7 +161,9 @@ export async function openOcrSession(): Promise<OcrSession> {
     }
     try {
       onStage?.("page");
-      const big = scaledCanvas(bitmap, 0, 0, width, height, PAGE_SCALE);
+      const pageScale = Math.min(PAGE_SCALE, Math.sqrt(MAX_CANVAS_PIXELS / (width * height)));
+      if (pageScale < 1) throw new OcrInputError("too_large"); // even 1:1 is over the canvas limit
+      const big = scaledCanvas(bitmap, 0, 0, width, height, pageScale);
       const { data } = await page.recognize(big, {}, { blocks: true });
       const words: OcrWord[] = [];
       for (const b of data.blocks ?? [])
@@ -152,10 +173,10 @@ export async function openOcrSession(): Promise<OcrSession> {
               words.push({
                 t: w.text,
                 c: Math.round(w.confidence),
-                x0: Math.round(w.bbox.x0 / PAGE_SCALE),
-                y0: Math.round(w.bbox.y0 / PAGE_SCALE),
-                x1: Math.round(w.bbox.x1 / PAGE_SCALE),
-                y1: Math.round(w.bbox.y1 / PAGE_SCALE),
+                x0: Math.round(w.bbox.x0 / pageScale),
+                y0: Math.round(w.bbox.y0 / pageScale),
+                x1: Math.round(w.bbox.x1 / pageScale),
+                y1: Math.round(w.bbox.y1 / pageScale),
               });
       onStage?.("digits");
       for (const w of words) {
