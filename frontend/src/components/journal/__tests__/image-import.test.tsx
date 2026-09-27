@@ -237,3 +237,22 @@ describe("name guard", () => {
     for (const r of parseFillScreen(words).rows) expect(r.name.value ?? "").not.toMatch(/년|월|일/);
   });
 });
+
+describe("Dec/Jan with one explicit year", () => {
+  it("a year-less 1월 header above 2026년 12월 is not dated 2026", () => {
+    const w = (t: string, y: number, x: number) => ({ t, c: 95, x0: x, y0: y, x1: x + 18 * t.length, y1: y + 20, alt: /\d/.test(t) ? t : undefined });
+    const words = [
+      w("거래내역", 10, 20),
+      w("1월", 60, 20), w("2일", 60, 80),
+      w("삼성전자", 100, 20), w("10", 130, 20), w("주", 130, 70), w("구매", 130, 100), w("주당", 130, 160), w("72,400", 130, 220), w("원", 130, 340),
+      w("2026년", 190, 20), w("12월", 190, 120), w("30일", 190, 180),
+      w("카카오", 230, 20), w("5", 260, 20), w("주", 260, 60), w("판매", 260, 100), w("주당", 260, 160), w("41,850", 260, 220), w("원", 260, 340),
+    ];
+    const rows = parseFillScreen(words).rows;
+    const jan = rows.find((r) => r.shares.value === 10);
+    const dec = rows.find((r) => r.shares.value === 5);
+    expect(jan?.date.value ?? null).not.toBe("2026-01-02");
+    expect(jan?.date.value === null || jan?.date.value === "2027-01-02").toBe(true);
+    expect(dec?.date.value).toBe("2026-12-30");
+  });
+});

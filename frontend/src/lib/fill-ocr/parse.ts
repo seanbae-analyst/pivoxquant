@@ -618,10 +618,10 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
   const result: ScreenParse = { screenType, rows: [], excluded: [] };
   if (screenType !== "fills") return result;
 
-  // Only month-day headers WITHOUT their own year count ("2026년 12월 30일" is explicit).
-  const months = new Set(lines
-    .filter((l) => !/20\d{2}년/.test(l.compact))
-    .map((l) => monthDay(l.compact)?.[0]).filter((m) => m !== undefined));
+  // Every month-day header counts, with or without its own year: a year-less
+  // "1월 2일" next to "2026년 12월 30일" is 2027 (or unknowable) — never the
+  // header's year. Headers that print their year are still dated (headerDate).
+  const months = new Set(lines.map((l) => monthDay(l.compact)?.[0]).filter((m) => m !== undefined));
   const ctx: Ctx = { year: yearContext(lines), yearAmbiguous: months.has(12) && months.has(1), date: null };
 
   // Table layout?
