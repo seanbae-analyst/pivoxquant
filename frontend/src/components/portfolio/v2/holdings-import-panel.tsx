@@ -412,10 +412,10 @@ export function HoldingsImportPanel({
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
               className="mt-1 h-4 w-4 shrink-0 accent-[var(--pq-bronze)]"
-              aria-label={t("journal.import.page.consentLabel")}
+              aria-label={t("dashboard.portfolio.holdingsImport.consentLabel")}
               data-testid="holdings-consent"
             />
-            <span className="font-serif" style={body}>{t("journal.import.page.consentLabel")}</span>
+            <span className="font-serif" style={body}>{t("dashboard.portfolio.holdingsImport.consentLabel")}</span>
           </label>
         </>
       )}

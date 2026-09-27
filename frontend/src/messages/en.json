@@ -274,7 +274,8 @@
         "back": "Back",
         "save": "Save {n} positions",
         "doneSummary": "Added {created} · replaced {replaced} · merged {added} · skipped {skipped}",
-        "tierLimit": "{n} not saved because of the free plan position limit: {tickers}"
+        "tierLimit": "{n} not saved because of the free plan position limit: {tickers}",
+        "consentLabel": "Collected: ticker, shares held, average cost. Purpose: your position record. Screenshots are read on this device only and never uploaded; no source text is kept. Saved positions can be deleted at any time via data export or account deletion in Settings. I agree."
       }
     }
   },
