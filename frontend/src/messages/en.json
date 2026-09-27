@@ -409,6 +409,7 @@
       "desc": "Nothing enters the log or the mirrors until you approve it. Attach one line of reasoning and approve to add it to your trade log.",
       "emptyLine": "No fills waiting.",
       "importLink": "Import fills",
+      "captureLink": "Import from a screenshot",
       "sharesUnit": "sh",
       "reflectionMatched": "Pause on record",
       "reflectionNone": "No pause",

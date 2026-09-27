@@ -663,12 +663,22 @@ function JournalContent() {
         <Caption className="mt-2 max-w-lg">
           {t("journal.page.headingDesc")}
         </Caption>
-        <Link
-          href="/journal/import"
-          className="mt-3 inline-flex items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
-        >
-          {t("journal.import.importLink")}
-        </Link>
+        {/* The capture path is the easiest way in on a phone, so it gets a
+            real button; the text link keeps file / text import reachable. */}
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <Link
+            href="/journal/import?tab=image"
+            className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
+          >
+            {t("journal.import.captureLink")}
+          </Link>
+          <Link
+            href="/journal/import"
+            className="inline-flex min-h-[44px] items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+          >
+            {t("journal.import.importLink")}
+          </Link>
+        </div>
       </header>
 
       {/* Import Inbox — received fills waiting for a "why". A row is not a
