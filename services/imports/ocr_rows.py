@@ -115,6 +115,14 @@ def fuzzy_kr_ticker(name: str, index: dict[str, str]) -> tuple[str, str] | None:
     key = re.sub(r"\s+", "", name or "")
     if len(key) < 2 or not re.search(r"[가-힣]", key):
         return None
+    # A Latin prefix next to a round logo is where OCR fails ("SK하이닉스" →
+    # "이하이닉스", "하이닉스"): one master name ending in the same last four
+    # Hangul characters, and no other, is that stock.
+    tail = key[-4:]
+    if len(key) >= 4 and re.fullmatch(r"[가-힣]{4}", tail):
+        ends = [cand for cand in index if cand.endswith(tail) and abs(len(cand) - len(key)) <= 3]
+        if len(ends) == 1:
+            return index[ends[0]], ends[0]
     scored = sorted(
         ((difflib.SequenceMatcher(None, key, cand).ratio(), cand) for cand in index
          if abs(len(cand) - len(key)) <= 3),

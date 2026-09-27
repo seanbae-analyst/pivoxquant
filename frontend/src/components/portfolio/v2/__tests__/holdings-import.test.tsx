@@ -169,4 +169,13 @@ describe("row rules", () => {
     expect(mergeIdenticalReads([base, b])).toHaveLength(1);
     expect(mergeIdenticalReads([base, { ...b, avgCost: "70100" }])).toHaveLength(2);
   });
+
+  it("a proven read absorbs the same holding read only as hints elsewhere", () => {
+    const hinted = { ...base, key: "k3", shares: "", avgCost: "", hints: { shares: base.shares, avgCost: base.avgCost } };
+    const merged = mergeIdenticalReads([hinted, base]);
+    expect(merged).toHaveLength(1);
+    expect([merged[0].shares, merged[0].avgCost]).toEqual([base.shares, base.avgCost]);
+    const other = { ...hinted, hints: { shares: "9" } };
+    expect(mergeIdenticalReads([other, base])).toHaveLength(2);
+  });
 });

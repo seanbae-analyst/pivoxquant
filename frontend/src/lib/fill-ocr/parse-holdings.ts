@@ -463,17 +463,25 @@ function cardHoldings(lines: Line[], screenCur: "KRW" | "USD" | null): ParsedHol
 
 // ── Toss 내 투자 (two lines per stock, no labels) ─────────────────────────
 //
-//   아이티센글로벌            859,449원     ← name + 평가금 (or 현재가 / 매입금:
-//   29주          -982,051 (53.3%)          a toggle OCR cannot see)
+//   [logo] 아이티센글로벌            859,449원     ← name + 평가금
+//          29주          -982,051 (53.3%)          ← shares, 평가손익, 수익률
 //
-// Nothing on this screen is labelled, and no average cost is printed. Name and
-// shares are read as proven; the average is only ever a hint:
-// (amount − P/L) ÷ shares, for the user to confirm or overwrite.
+// Nothing is labelled and no average cost is printed, but the layout is fixed:
+//   - the first token of the second line IS the share count, so a misread 주
+//     glyph ("19%", "3F", "248 수") still reads as shares when both OCR
+//     readings of the digits agree;
+//   - 수익률 = 손익 ÷ (평가금 − 손익), truncated to 0.1%. When the printed rate reproduces from the
+//     printed amount and P/L, (평가금 − 손익) is proven to be the cost basis, and
+//     avg = cost ÷ shares. Exactly one reading combination must pass; otherwise
+//     the quotient is only a hint.
+//   - the name starts where the second line starts; anything left of it is the
+//     round logo that OCR reads as "©", "(vs)", "MA", "이 <".
 
 const TOSS_AMOUNT = /^[$]?\d{1,3}(,\d{3})*(\.\d{2})?원?$/;
 /** "29주" "29 주" and the glyph misreads OCR makes of 주 ("19%", "3F", "248 수"). */
-const TOSS_QTY = /^(\d[\d,.]*)(주|%|F|수|추)?$/;
+const TOSS_QTY = /^(\d[\d,.]*?)\.?(주|%|F|수|추)?$/;
 const TOSS_PL = /^[+\-−][$]?[\d,]+(\.\d+)?원?$/;
+const TOSS_RATE = /^\((\d+(\.\d+)?)%\)$/;
 
 export const tossQtyLine = (compact: string) =>
   /^\d[\d,.]*(주|%|F|수|추)[+\-−][$]?[\d,.]+원?\(\d+(\.\d+)?%\)$/.test(compact);
@@ -489,9 +497,54 @@ function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord } | null
   return { nameWords, amount: last };
 }
 
+/** Both readings of a digit token, with the trailing "." the digit pass adds
+ * ("2" / "2.") dropped. */
+function tossRead(t: string, alt: string | null | undefined): NumRead {
+  return readNumber({ t: t.replace(/\.$/, ""), alt: alt?.trim().replace(/\.$/, ""), c: 0, x0: 0, y0: 0, x1: 0, y1: 0 });
+}
+
+function tossShares(ws: OcrWord[]): Cell<number> {
+  const m = ws[0]?.t.match(TOSS_QTY);
+  if (!m) return { value: null };
+  const r = tossRead(m[1], ws[0].alt);
+  const n = r.value;
+  return n !== null && Number.isInteger(n) && n > 0 && n <= 1e7 ? { value: n } : { value: null, hint: m[1] };
+}
+
+function tossAvg(amount: NumRead, plw: OcrWord, ratew: OcrWord | undefined, shares: number, usd: boolean): Cell<number> {
+  const neg = /^[\-−]/.test(plw.t);
+  const pl = tossRead(plw.t.replace(/^[+\-−]/, ""), plw.alt);
+  const rate = ratew ? Number(ratew.t.match(TOSS_RATE)?.[1] ?? NaN) : NaN;
+  const avgOf = (a: number, p: number) => {
+    const d = (a - (neg ? -p : p)) / shares;
+    return usd ? Math.round(d * 100) / 100 : Math.round(d);
+  };
+  if (Number.isFinite(rate)) {
+    const ok = new Set<number>();
+    for (const a of amount.candidates) {
+      for (const p of pl.candidates) {
+        const cost = a - (neg ? -p : p);
+        if (cost <= 0) continue;
+        // Toss truncates the rate (37.667% → "37.6%"); rounding is accepted too.
+        const r = (p / cost) * 100;
+        if (r >= rate - 0.051 && r < rate + 0.1) ok.add(avgOf(a, p));
+      }
+    }
+    if (ok.size === 1) return { value: [...ok][0] };
+  }
+  const a = amount.candidates[0], p = pl.candidates[0];
+  if (a === undefined || p === undefined) return { value: null };
+  const d = avgOf(a, p);
+  return d > 0 ? { value: null, hint: String(d) } : { value: null };
+}
+
 function tossHoldings(lines: Line[]): ParsedHolding[] {
   const out: ParsedHolding[] = [];
   const hMed = median(lines.map((l) => l.h)) || 20;
+  // The name column starts where the quantity lines start — one x for the
+  // whole screen, so a row whose quantity line is cut off still has it.
+  const qx = lines.filter((l) => tossQtyLine(l.compact)).map((l) => l.words[0].x0);
+  const nameLeft = qx.length ? median(qx) - hMed : -Infinity;
   let foreign = false;
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
@@ -510,27 +563,24 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
 
     let shares: Cell<number> = { value: null };
     let avgCost: Cell<number> = { value: null };
+    let nameWords = nm.nameWords;
     if (ql) {
       const ws = ql.words;
-      const m = ws[0].t.match(TOSS_QTY);
-      const unitOk = m?.[2] === "주" || (!m?.[2] && ws[1]?.t === "주");
-      if (m) {
-        const r = readNumber({ ...ws[0], t: m[1] });
-        shares = unitOk && r.value !== null && Number.isInteger(r.value) && r.value > 0
-          ? { value: r.value } : { value: null, hint: m[1].replace(/\.$/, "") };
-      }
+      shares = tossShares(ws);
       const plw = ws.find((w) => TOSS_PL.test(w.t));
-      // A hint may rest on the first reading alone — the user confirms it.
-      const amount = parseAmount(nm.amount.t);
-      const pl = plw ? parseAmount(plw.t.replace(/^[+\-−]/, "")) : null;
+      const ratew = ws.find((w) => TOSS_RATE.test(w.t));
       const n = shares.value ?? (shares.hint ? Number(shares.hint) : NaN);
-      if (Number.isInteger(n) && n > 0 && amount !== null && pl !== null && !(foreign && !usd)) {
-        const signed = /^[\-−]/.test(plw!.t) ? -pl : pl;
-        const d = (amount - signed) / n;
-        if (d > 0) avgCost = { value: null, hint: usd ? d.toFixed(2) : String(Math.round(d)) };
+      if (plw && Number.isInteger(n) && n > 0 && !(foreign && !usd)) {
+        avgCost = tossAvg(tossRead(nm.amount.t.replace(/원$/, ""), nm.amount.alt), plw, ratew, n, usd);
+        // A proven average needs proven shares too.
+        if (avgCost.value !== null && shares.value === null) avgCost = { value: null, hint: String(avgCost.value) };
+        if (avgCost.value !== null) flags.push("derived_avg");
       }
     }
-    const nc = nameAndCode(nm.nameWords, [], usd, usd);
+    const kept = nameWords.filter((w) => w.x1 > nameLeft);
+    if (kept.length) nameWords = kept;
+    nameWords = nameWords.filter((w) => /[가-힣A-Za-z]/.test(w.t));
+    const nc = nameAndCode(nameWords, [], usd, usd);
     out.push({
       name: nc.name, code: nc.code, shares, avgCost, currency, flags,
       sourceText: [l, ql].filter(Boolean).map((x) => x!.text).join(" / "),

@@ -161,6 +161,24 @@ class TestPreview:
         assert rows[7]["ticker"] is None and rows[7]["status"] == "needs_ticker"
         assert all(x["existing"] is None and x["currency_mismatch"] is False for x in rows)
 
+    def test_toss_names(self, client, auth_user):
+        """Toss 내 투자: US stocks by Korean name, and the logo eating "SK"."""
+        rows = _preview(client,
+                        {"name": "뉴스케일파워", "code": None, "currency": None},
+                        {"name": "조비 에비에이션", "code": None, "currency": None},
+                        {"name": "조비에비에이선", "code": None, "currency": None},
+                        {"name": "이하이닉스", "code": None, "currency": "KRW"}).get_json()["rows"]
+        assert (rows[0]["ticker"], rows[0]["status"], rows[0]["currency"]) == ("SMR", "resolved", "USD")
+        assert (rows[1]["ticker"], rows[1]["status"]) == ("JOBY", "resolved")
+        assert (rows[2]["ticker"], rows[2]["status"]) == ("JOBY", "needs_confirm")
+        assert (rows[3]["ticker"], rows[3]["status"], rows[3]["name"]) == ("000660.KS", "needs_confirm", "SK하이닉스")
+
+    def test_us_kr_names_are_all_in_the_master(self):
+        from services.imports.holdings_import import _us_kr_index, _us_known
+        index = _us_kr_index()
+        assert len(index) > 100
+        assert [t for t in index.values() if not _us_known(t)] == []
+
     def test_currency_mismatch_flag(self, client, auth_user):
         rows = _preview(client, {"name": "애플", "code": "AAPL", "currency": "KRW"}).get_json()["rows"]
         assert rows[0]["ticker"] == "AAPL" and rows[0]["currency_mismatch"] is True

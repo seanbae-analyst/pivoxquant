@@ -58,7 +58,10 @@ Decisions (and why):
 """
 from __future__ import annotations
 
+import functools
+import json
 import math
+import os
 import re
 from dataclasses import dataclass
 
@@ -96,6 +99,20 @@ class HoldingsError(Exception):
 def _kr_index() -> dict[str, str]:
     from routes.imports import _kr_name_index
     return _kr_name_index()
+
+
+_US_KR_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "us_kr_names.json")
+
+
+@functools.lru_cache(maxsize=1)
+def _us_kr_index() -> dict[str, str]:
+    """US stocks by the Korean name Korean apps print ("엔비디아" → NVDA).
+    Curated (services/us_kr_names.json); every ticker is in the US master."""
+    try:
+        with open(_US_KR_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
 
 
 def _kr_by_bare() -> dict[str, str]:
@@ -158,8 +175,14 @@ def resolve_row(name: str, code: str, currency: str | None) -> dict:
     by_name = index.get(re.sub(r"\s+", "", name or ""))
     if ticker and code and by_name and normalize_ticker(code) != normalize_ticker(by_name):
         status = "needs_confirm"
+    us_kr = _us_kr_index()
+    if ticker is None and name:
+        us = us_kr.get(re.sub(r"\s+", "", name))
+        if us is not None:
+            ticker, display = us, name
     if ticker is None and name and currency != "USD":
-        hit = ocr_rows.fuzzy_kr_ticker(name, index)
+        # KRX names first; a US Korean name only where no KRX name is as close.
+        hit = ocr_rows.fuzzy_kr_ticker(name, index) or ocr_rows.fuzzy_kr_ticker(name, {**us_kr, **index})
         if hit is not None:
             ticker, display, status = normalize_ticker(hit[0]), hit[1], "needs_confirm"
     if ticker is not None and not is_korean_ticker(ticker) and not _us_known(ticker):

@@ -95,16 +95,32 @@ export function rowFromHolding(h: ParsedHolding, fileName: string, i: number, fi
   };
 }
 
-/** Same holding on two overlapping captures: merged only when everything
- * read is identical. Anything else stays as two rows for the user. */
+/** Same holding on two overlapping captures (same name/code and currency):
+ * merged when no cell contradicts — equal values, or one side empty with no
+ * reading (or a hint equal to the other side's proven value). A capture that
+ * read "2" for sure and one that only hinted "2" become one row with 2.
+ * Anything that disagrees stays as two rows for the user. */
 export function mergeIdenticalReads(rows: HoldingRow[]): HoldingRow[] {
   const out: HoldingRow[] = [];
-  const sig = (r: HoldingRow) =>
-    [r.readCode || r.readName.replace(/\s+/g, ""), r.shares, r.avgCost, r.currency].join("|");
+  const id = (r: HoldingRow) => r.readCode || r.readName.replace(/\s+/g, "");
+  const fits = (a: HoldingRow, b: HoldingRow, k: "shares" | "avgCost") => {
+    if (a[k] && b[k]) return a[k] === b[k];
+    if (!a[k] && !b[k]) return (a.hints[k] ?? "") === (b.hints[k] ?? "") || !a.hints[k] || !b.hints[k];
+    const [filled, empty] = a[k] ? [a, b] : [b, a];
+    return !empty.hints[k] || empty.hints[k] === filled[k];
+  };
   for (const r of rows) {
-    const id = r.readCode || r.readName;
-    if (id && r.shares && r.avgCost && out.some((o) => sig(o) === sig(r))) continue;
-    out.push(r);
+    const i = id(r) ? out.findIndex((o) => id(o) === id(r) && o.currency === r.currency &&
+      fits(o, r, "shares") && fits(o, r, "avgCost")) : -1;
+    if (i < 0) { out.push(r); continue; }
+    const o = out[i];
+    out[i] = {
+      ...o,
+      shares: o.shares || r.shares,
+      avgCost: o.avgCost || r.avgCost,
+      hints: { ...r.hints, ...o.hints, shares: o.hints.shares ?? r.hints.shares, avgCost: o.hints.avgCost ?? r.hints.avgCost },
+      flags: [...new Set([...o.flags, ...r.flags])],
+    };
   }
   return out;
 }
