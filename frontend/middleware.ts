@@ -67,9 +67,14 @@ export async function middleware(request: NextRequest) {
   // Dev keeps 'unsafe-eval' + 'unsafe-inline' for React Fast Refresh / HMR
   // (webpack injects literal `eval(…)` and inline `<script>` runtime patches
   // that don't carry a nonce). Prod drops both and switches to nonce + strict-dynamic.
+  //
+  // 'wasm-unsafe-eval' (2026-09-27): the fill-screenshot import runs
+  // Tesseract.js (WebAssembly) in a same-origin worker so the capture never
+  // leaves the device (docs/product/SCREENSHOT_IMPORT_DESIGN.md). It permits
+  // WebAssembly compilation only — not eval() / new Function().
   const scriptSrc = isDev
     ? "'self' 'unsafe-inline' 'unsafe-eval'"
-    : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    : `'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`;
 
   const cspHeader = `
     default-src 'self';

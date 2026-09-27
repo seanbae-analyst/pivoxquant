@@ -33,6 +33,7 @@ from models.import_batch import (
     ImportBatch,
     PendingTrade,
     SOURCE_CSV,
+    SOURCE_SCREENSHOT_IMAGE,
     SOURCE_SCREENSHOT_TEXT,
     SOURCE_WEBHOOK,
     STATUS_APPROVED,
@@ -64,6 +65,7 @@ from services.imports import (
     utcnow_naive,
 )
 from services.imports.csv_parser import parse_table
+from services.imports import ocr_rows
 from services.imports.dedupe import DedupeIndex, is_duplicate, make_key
 from services.imports.ledger import LedgerError, PreTradeIndex, apply_pending, match_pre_trade
 from services.imports.text_parser import parse_text
@@ -310,11 +312,14 @@ def _rows_to_raw(rows) -> list[RawTrade]:
 # ── shared intake ────────────────────────────────────────────────────
 
 def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
-            consent_at, token_id: int | None = None, password: str | None = None):
+            consent_at, token_id: int | None = None, password: str | None = None,
+            prebuilt: list[RawTrade] | None = None, prebuilt_broker: str = "unknown"):
     """Parse → dedupe → ``pending_trades`` for one batch.
 
-    Exactly one of ``upload`` (werkzeug FileStorage), ``rows`` (webhook
-    list) or ``text`` is used. Returns a Flask ``(response, status)``:
+    Exactly one of ``upload`` (werkzeug FileStorage), ``prebuilt``
+    (``RawTrade`` rows the user reviewed after in-browser OCR, validated by
+    ``services.imports.ocr_rows``), ``rows`` (webhook list) or ``text``
+    is used. Returns a Flask ``(response, status)``:
     201 with ``{batch, pending[], mapping, unmapped_headers, skipped}`` or
     an ``api_error``. Used by the session route and the webhook alike so
     the two paths can never drift.
@@ -350,6 +355,10 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
         unmapped = parsed.unmapped_headers
         broker_guess = parsed.broker_guess
         skipped = list(parsed.skipped)
+    elif prebuilt is not None:
+        raw_rows = prebuilt
+        broker_guess = prebuilt_broker
+        mapping = None
     elif rows is not None:
         if isinstance(rows, list) and len(rows) > MAX_WEBHOOK_ROWS:
             return api_error(
@@ -429,6 +438,15 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
     pending: list[PendingTrade] = []
     for r in fills:
         ticker, display = resolve_ticker(r.code, r.name)
+        if source == SOURCE_SCREENSHOT_IMAGE and ticker is None and r.name:
+            # OCR-garbled name ("하이닉스"): a clear unique master match is
+            # offered, but as low confidence → the inbox asks for a check.
+            hit = ocr_rows.fuzzy_kr_ticker(r.name, _kr_name_index())
+            if hit is not None:
+                ticker, display = normalize_ticker(hit[0]), hit[1]
+                r.confidence = min(r.confidence, ocr_rows.LOW_CONFIDENCE)
+                r.raw_snippet = mask_sensitive(
+                    f"{r.raw_snippet} [확인: 종목 — 읽은 이름 '{r.name}' → {hit[1]}]")
         row = PendingTrade(
             batch_id=batch.id, user_id=user_id,
             ticker=ticker, name=display, action=r.action,
@@ -506,6 +524,38 @@ def create_import():
         )
     return _ingest(current_user.id, source, text=text, upload=upload,
                    consent_at=utcnow_naive(), password=password)
+
+
+# ── POST /image (fill-screen screenshot, OCR done in the browser) ────
+# docs/product/SCREENSHOT_IMPORT_DESIGN.md. The image never leaves the
+# user's device: Tesseract.js reads it in the browser, the rule parser fills
+# only the cells it can prove, the user types the rest, and this route gets
+# the finished rows as JSON. They are re-validated here (the client is not
+# trusted) and join ``_ingest`` → ``pending_trades`` like every other source.
+
+@imports_bp.route("/image", methods=["POST"])
+@api_auth
+@general_rate_limit
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
+def create_image_import():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        data = {}
+    if not _truthy(data.get("consent")):
+        return api_error(
+            en="Upload consent is required before rows are recorded.",
+            kr="가져오기에 대한 동의가 필요합니다.",
+            code="IMPORT_CONSENT_REQUIRED", status=400,
+        )
+    try:
+        raw = ocr_rows.rows_to_raw(data.get("rows"))
+    except ocr_rows.RowError as exc:
+        return api_error(en=exc.en, kr=exc.kr, code="IMPORT_INVALID_FIELD", status=400)
+    broker = str(data.get("broker") or "unknown").strip().lower()
+    if broker not in ocr_rows.BROKERS or broker == "overseas":
+        broker = "unknown"
+    return _ingest(current_user.id, SOURCE_SCREENSHOT_IMAGE,
+                   prebuilt=raw, prebuilt_broker=broker, consent_at=utcnow_naive())
 
 
 # ── POST /webhook (Bearer token, no session) ─────────────────────────
@@ -747,6 +797,12 @@ def patch_pending(pid: int):
     elif "ticker" in data:
         row.currency = _currency_for(row.ticker, None, row.name)
 
+    # A screenshot row the user has edited is user-verified: the values are
+    # now theirs, not the model's reading (design SCREENSHOT_IMPORT §4).
+    if row.source == SOURCE_SCREENSHOT_IMAGE and any(
+        k in data for k in ("ticker", "name", "action", "shares", "price", "traded_at", "currency")
+    ):
+        row.confidence = 1.0
     _recompute(row)
     row.pre_trade_reflection_id = match_pre_trade(current_user.id, row.ticker, row.traded_at)
     try:
@@ -795,6 +851,12 @@ def approve_pending(pid: int):
         return api_error(en="A ticker is required before approval.",
                          kr="승인하려면 티커를 먼저 지정해 주세요.",
                          code="IMPORT_TICKER_REQUIRED", status=400)
+    if row.needs_confirm and not _truthy(data.get("confirm_values")):
+        return api_error(
+            en="Some values read from the screenshot are uncertain. Check them against the capture, then confirm.",
+            kr="캡처에서 읽은 값 중 확실하지 않은 칸이 있습니다. 캡처와 대조해 고치거나 확인해 주세요.",
+            code="IMPORT_CONFIRM_REQUIRED", status=400,
+        )
 
     try:
         trade_id, position_id = apply_pending(current_user.id, row, thesis)

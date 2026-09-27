@@ -5,10 +5,13 @@
  * text, get back a list of received fills to approve one by one.
  *
  * docs/product/IMPORT_INBOX_DESIGN.md. The server receives ONLY what the user
- * uploads here: a .csv/.xlsx/.xls/.pdf file (≤2MB) or pasted text. OCR, if any,
- * happens on the user's own device (iOS Shortcuts "Extract Text from Image",
- * Android Lens); image files are never accepted. Nothing parsed here reaches
- * the trade log until the user approves a row with a thesis.
+ * uploads here: a .csv/.xlsx/.xls/.pdf file (≤2MB) or pasted text. OCR of
+ * those happens on the user's own device (iOS Shortcuts "Extract Text from
+ * Image", Android Lens). The image tab (<ImageImportPanel />,
+ * docs/product/SCREENSHOT_IMPORT_DESIGN.md) also reads captures on the
+ * device (Tesseract.js) and sends only the rows the user reviewed — the
+ * server still never receives an image. Nothing parsed here reaches the
+ * trade log until the user approves a row with a thesis.
  *
  *   - Opt-in consent checkbox gates the submit; remembered per user in
  *     localStorage (`pivox_import_consent:<user.id>=1`) so the second visit is
@@ -33,6 +36,7 @@ import { useLocale, useT } from "@/lib/locale";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { PendingTradeList } from "@/components/journal/import-inbox";
+import { ImageImportPanel } from "@/components/journal/image-import-panel";
 import {
   RuledKicker,
   Caption,
@@ -70,7 +74,7 @@ function writeConsent(key: string | null, on: boolean): void {
   }
 }
 
-type Tab = "file" | "text";
+type Tab = "file" | "text" | "image";
 
 function ImportPageInner() {
   const t = useT();
@@ -109,6 +113,7 @@ function ImportPageInner() {
   const canSubmit =
     consent &&
     !submitting &&
+    tab !== "image" &&
     (tab === "file" ? file != null && !fileTooLarge : text.trim().length > 0);
 
   function onConsentChange(next: boolean) {
@@ -159,6 +164,13 @@ function ImportPageInner() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function onImageResult(res: ImportCreateResponse) {
+    setError(null);
+    setResult(res);
+    setRows(res.pending.filter((p) => p.status === "pending"));
+    void mutate(API.imports.pending);
   }
 
   function onRowChanged(id: number, next: PendingTradeDTO | null) {
@@ -241,9 +253,21 @@ function ImportPageInner() {
           >
             {t("journal.import.page.tabText")}
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "image"}
+            onClick={() => setTab("image")}
+            className={tabClass(tab === "image")}
+            data-testid="import-tab-image"
+          >
+            {t("journal.import.page.tabImage")}
+          </button>
         </div>
 
-        {tab === "file" ? (
+        {tab === "image" ? (
+          <ImageImportPanel consent={consent} onResult={onImageResult} />
+        ) : tab === "file" ? (
           <div className="mt-5">
             <FieldLabel tone="bronze">{t("journal.import.page.tabFile")}</FieldLabel>
             <Caption className="mt-1">{t("journal.import.page.fileHint")}</Caption>
@@ -326,7 +350,7 @@ function ImportPageInner() {
           </div>
         )}
 
-        <div className="mt-5 flex items-center gap-3">
+        <div className={`mt-5 flex items-center gap-3${tab === "image" ? " hidden" : ""}`}>
           <button
             type="submit"
             disabled={!canSubmit}

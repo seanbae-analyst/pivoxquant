@@ -317,8 +317,15 @@ export function PendingTradeRow({
   const [thesis, setThesis] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | "patch" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Screenshot rows whose stock name was fuzzy-matched from OCR text
+  // (docs/product/SCREENSHOT_IMPORT_DESIGN.md): the user either picks the
+  // symbol (PATCH → user-verified) or ticks that the match is right. The
+  // server enforces the same (IMPORT_CONFIRM_REQUIRED).
+  const needsConfirm = row.needs_confirm === true;
+  const [confirmed, setConfirmed] = useState(false);
 
-  const canApprove = thesisOk(thesis) && !row.needs_ticker && busy === null;
+  const canApprove =
+    thesisOk(thesis) && !row.needs_ticker && busy === null && (!needsConfirm || confirmed);
   // Same wording as the /journal entries: "Long Entry · 진입" / "Position Exit · 정리".
   const sideText = sideLabel(row.action);
   const nameLabel = row.ticker ? displayName(row.ticker, row.name) : row.name;
@@ -330,7 +337,9 @@ export function PendingTradeRow({
     try {
       await apiFetch<ImportApproveResponse>(API.imports.approve(row.id), {
         method: "POST",
-        body: JSON.stringify({ thesis: thesis.trim() }),
+        body: JSON.stringify(
+          needsConfirm ? { thesis: thesis.trim(), confirm_values: true } : { thesis: thesis.trim() },
+        ),
       });
       onChanged(null);
       void refreshBookAfterApprove();
@@ -420,6 +429,42 @@ export function PendingTradeRow({
           ? t("journal.import.reflectionMatched")
           : t("journal.import.reflectionNone")}
       </Caption>
+
+      {needsConfirm && (
+        <div
+          className="mt-3 rounded-[2px] border p-3"
+          style={{ borderColor: "var(--pq-bronze)" }}
+          data-testid="import-needs-confirm"
+        >
+          <FieldLabel tone="bronze">{t("journal.import.image.checkTitle")}</FieldLabel>
+          {row.raw_snippet && (
+            <div
+              className="mt-1 font-mono"
+              style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-ivory-mid)", wordBreak: "keep-all" }}
+            >
+              {row.raw_snippet}
+            </div>
+          )}
+          <TickerResolver
+            initialQuery={row.name}
+            onConfirm={confirmTicker}
+            busy={busy !== null}
+            t={t}
+          />
+          <label className="mt-3 flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 accent-[var(--pq-bronze)]"
+              aria-label={t("journal.import.image.confirmLabel")}
+            />
+            <span className="font-serif" style={{ fontSize: "var(--pq-text-body-sm)", color: "var(--pq-ivory-soft)", wordBreak: "keep-all" }}>
+              {t("journal.import.image.confirmLabel")}
+            </span>
+          </label>
+        </div>
+      )}
 
       {row.needs_ticker && (
         <TickerResolver

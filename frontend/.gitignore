@@ -41,3 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# Tesseract.js runtime, copied from node_modules by scripts/copy-tesseract-assets.mjs
+/public/tesseract/
