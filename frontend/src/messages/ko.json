@@ -409,6 +409,7 @@
       "desc": "승인 전에는 기록·거울에 반영되지 않습니다. 이유 한 줄을 붙여 승인하면 거래 기록에 들어갑니다.",
       "emptyLine": "대기 중인 체결이 없습니다.",
       "importLink": "체결 가져오기",
+      "captureLink": "캡처로 체결 가져오기",
       "sharesUnit": "주",
       "reflectionMatched": "멈춤 기록 있음",
       "reflectionNone": "멈춤 없이",

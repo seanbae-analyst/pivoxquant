@@ -88,7 +88,10 @@ function ImportPageInner() {
   const sharedTitle = params.get("title") ?? "";
   const prefill = [sharedTitle, sharedText].filter((s) => s.trim()).join("\n");
 
-  const [tab, setTab] = useState<Tab>(prefill ? "text" : "file");
+  // `?tab=image` — the journal page's "캡처로 가져오기" button lands here
+  // with the capture tab already open.
+  const initialTab: Tab = prefill ? "text" : params.get("tab") === "image" ? "image" : "file";
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [consent, setConsent] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState(prefill);
