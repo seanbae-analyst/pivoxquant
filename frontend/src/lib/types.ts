@@ -856,6 +856,10 @@ export interface PendingTradeDTO {
   raw_snippet: string;
   approved_trade_id: number | null;
   approved_at: string | null;
+  /** Batch source; `screenshot_image` rows read by the vision model. */
+  source?: ImportBatch["source"] | null;
+  /** Screenshot row whose stock name was fuzzy-matched — fix or confirm before approval. */
+  needs_confirm?: boolean;
 }
 
 /** A line/row the parser or the sanity pass dropped, with the reason shown to the user. */
@@ -867,7 +871,7 @@ export interface ImportSkippedRow {
 
 export interface ImportBatch {
   id: number;
-  source: "csv" | "screenshot_text" | "webhook";
+  source: "csv" | "screenshot_text" | "webhook" | "screenshot_image";
   broker_guess: string | null;
   row_count: number;
   parsed_count: number;

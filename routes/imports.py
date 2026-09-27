@@ -33,6 +33,7 @@ from models.import_batch import (
     ImportBatch,
     PendingTrade,
     SOURCE_CSV,
+    SOURCE_SCREENSHOT_IMAGE,
     SOURCE_SCREENSHOT_TEXT,
     SOURCE_WEBHOOK,
     STATUS_APPROVED,
@@ -64,6 +65,7 @@ from services.imports import (
     utcnow_naive,
 )
 from services.imports.csv_parser import parse_table
+from services.imports import ocr_rows
 from services.imports.dedupe import DedupeIndex, is_duplicate, make_key
 from services.imports.ledger import LedgerError, PreTradeIndex, apply_pending, match_pre_trade
 from services.imports.text_parser import parse_text
@@ -175,12 +177,14 @@ def _kr_name_index() -> dict[str, str]:
     return index
 
 
-def resolve_ticker(code: str, name: str) -> tuple[str | None, str]:
+def resolve_ticker(code: str, name: str, *, latin_name_is_symbol: bool = True) -> tuple[str | None, str]:
     """Return ``(ticker or None, display_name)``.
 
     code  → ``normalize_ticker`` (6-digit / .KS / .KQ / US symbol).
     name  → ``kr_stock_registry.search`` exact ``name_kr`` match only;
-            a bare Latin 1–6 letter name is taken as a US symbol.
+            a bare Latin 1–6 letter name is taken as a US symbol unless
+            ``latin_name_is_symbol`` is False (screenshot rows priced in won:
+            OCR-truncated Korean ETF names like "TIGER" / "KODEX" are Latin).
     """
     code = (code or "").strip()
     name = (name or "").strip()
@@ -192,7 +196,7 @@ def resolve_ticker(code: str, name: str) -> tuple[str | None, str]:
         hit = _kr_name_index().get(name)
         if hit:
             ticker = normalize_ticker(hit)
-        elif _US_TICKER_RE.match(name):
+        elif latin_name_is_symbol and _US_TICKER_RE.match(name):
             ticker = normalize_ticker(name)
     if ticker is not None and not ticker_ok(ticker):
         # Not a shape positions/trade_history (String(20), ASCII) can hold —
@@ -310,11 +314,14 @@ def _rows_to_raw(rows) -> list[RawTrade]:
 # ── shared intake ────────────────────────────────────────────────────
 
 def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
-            consent_at, token_id: int | None = None, password: str | None = None):
+            consent_at, token_id: int | None = None, password: str | None = None,
+            prebuilt: list[RawTrade] | None = None, prebuilt_broker: str = "unknown"):
     """Parse → dedupe → ``pending_trades`` for one batch.
 
-    Exactly one of ``upload`` (werkzeug FileStorage), ``rows`` (webhook
-    list) or ``text`` is used. Returns a Flask ``(response, status)``:
+    Exactly one of ``upload`` (werkzeug FileStorage), ``prebuilt``
+    (``RawTrade`` rows the user reviewed after in-browser OCR, validated by
+    ``services.imports.ocr_rows``), ``rows`` (webhook list) or ``text``
+    is used. Returns a Flask ``(response, status)``:
     201 with ``{batch, pending[], mapping, unmapped_headers, skipped}`` or
     an ``api_error``. Used by the session route and the webhook alike so
     the two paths can never drift.
@@ -350,6 +357,10 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
         unmapped = parsed.unmapped_headers
         broker_guess = parsed.broker_guess
         skipped = list(parsed.skipped)
+    elif prebuilt is not None:
+        raw_rows = prebuilt
+        broker_guess = prebuilt_broker
+        mapping = None
     elif rows is not None:
         if isinstance(rows, list) and len(rows) > MAX_WEBHOOK_ROWS:
             return api_error(
@@ -392,6 +403,15 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
         if not amount_ok(r.shares) or not amount_ok(r.price):
             r.skip_reason = "수량·단가 범위 초과"
             continue
+        if source == SOURCE_SCREENSHOT_IMAGE and r.currency:
+            # The user confirmed the price in the currency on screen. If the
+            # printed code/name is a stock that trades in the other currency
+            # (a US fill shown in won), recording it would silently rescale
+            # the price — skip it with the reason instead.
+            t, _ = resolve_ticker(r.code, r.name, latin_name_is_symbol=r.currency == "USD")
+            if t and _currency_for(t, None, "") != r.currency:
+                r.skip_reason = f"통화 불일치 — {t} 는 {_currency_for(t, None, '')} 종목인데 단가가 {r.currency}"
+                continue
         if r.traded_at is not None:
             if not r.extra.get("tz_utc") and broker_guess != "pivoxquant":
                 r.traded_at = kst_to_utc(r.traded_at)
@@ -428,7 +448,19 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
     # Pass 1 — build rows (ticker resolution is in-memory).
     pending: list[PendingTrade] = []
     for r in fills:
-        ticker, display = resolve_ticker(r.code, r.name)
+        ticker, display = resolve_ticker(
+            r.code, r.name,
+            latin_name_is_symbol=source != SOURCE_SCREENSHOT_IMAGE or r.currency == "USD",
+        )
+        if source == SOURCE_SCREENSHOT_IMAGE and ticker is None and r.name and r.currency != "USD":
+            # OCR-garbled name ("하이닉스"): a clear unique master match is
+            # offered, but as low confidence → the inbox asks for a check.
+            hit = ocr_rows.fuzzy_kr_ticker(r.name, _kr_name_index())
+            if hit is not None:
+                ticker, display = normalize_ticker(hit[0]), hit[1]
+                r.confidence = min(r.confidence, ocr_rows.LOW_CONFIDENCE)
+                r.raw_snippet = mask_sensitive(
+                    f"{r.raw_snippet} [확인: 종목 — 읽은 이름 '{r.name}' → {hit[1]}]")
         row = PendingTrade(
             batch_id=batch.id, user_id=user_id,
             ticker=ticker, name=display, action=r.action,
@@ -506,6 +538,51 @@ def create_import():
         )
     return _ingest(current_user.id, source, text=text, upload=upload,
                    consent_at=utcnow_naive(), password=password)
+
+
+# ── POST /image (fill-screen screenshot, OCR done in the browser) ────
+# docs/product/SCREENSHOT_IMPORT_DESIGN.md. The image never leaves the
+# user's device: Tesseract.js reads it in the browser, the rule parser fills
+# only the cells it can prove, the user types the rest, and this route gets
+# the finished rows as JSON. They are re-validated here (the client is not
+# trusted) and join ``_ingest`` → ``pending_trades`` like every other source.
+
+@imports_bp.route("/image", methods=["POST"])
+@api_auth
+@general_rate_limit
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
+def create_image_import():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        data = {}
+    if not _truthy(data.get("consent")):
+        return api_error(
+            en="Upload consent is required before rows are recorded.",
+            kr="가져오기에 대한 동의가 필요합니다.",
+            code="IMPORT_CONSENT_REQUIRED", status=400,
+        )
+    try:
+        raw = ocr_rows.rows_to_raw(data.get("rows"))
+    except ocr_rows.RowError as exc:
+        return api_error(en=exc.en, kr=exc.kr, code="IMPORT_INVALID_FIELD", status=400)
+    index = _kr_name_index()
+    for r in raw:
+        # A 6-digit "code" that is not a listed stock is a comma-less price
+        # read off the screen ("372500") — drop it and fall back to the name.
+        if re.fullmatch(r"\d{6}", r.code or "") and not ocr_rows.known_kr_code(r.code, index):
+            r.raw_snippet = mask_sensitive(f"{r.raw_snippet} [코드 무시: {r.code} 는 상장 종목 코드가 아님]")
+            r.code = ""
+            continue
+        # Printed code and exact name point at different stocks → ask.
+        by_name = index.get(re.sub(r"\s+", "", r.name or ""))
+        if r.code and by_name and normalize_ticker(r.code) != normalize_ticker(by_name):
+            r.confidence = min(r.confidence, ocr_rows.LOW_CONFIDENCE)
+            r.raw_snippet = mask_sensitive(f"{r.raw_snippet} [확인: 코드 {r.code} 와 이름 '{r.name}' 이 다른 종목]")
+    broker = str(data.get("broker") or "unknown").strip().lower()
+    if broker not in ocr_rows.BROKERS or broker == "overseas":
+        broker = "unknown"
+    return _ingest(current_user.id, SOURCE_SCREENSHOT_IMAGE,
+                   prebuilt=raw, prebuilt_broker=broker, consent_at=utcnow_naive())
 
 
 # ── POST /webhook (Bearer token, no session) ─────────────────────────
@@ -738,15 +815,36 @@ def patch_pending(pid: int):
                              kr="거래 일시는 1990년 이후, 내일 이전이어야 합니다.",
                              code="IMPORT_INVALID_FIELD", status=400)
         row.traded_at = dt
-    if "currency" in data:
-        given = str(data.get("currency") or "").upper()
-        if given not in ("KRW", "USD"):
-            return api_error(en="currency must be KRW or USD.", kr="통화는 KRW 또는 USD 여야 합니다.",
-                             code="IMPORT_INVALID_FIELD", status=400)
-        row.currency = _currency_for(row.ticker, given, row.name)
-    elif "ticker" in data:
-        row.currency = _currency_for(row.ticker, None, row.name)
+    if "currency" in data or "ticker" in data:
+        given = None
+        if "currency" in data:
+            given = str(data.get("currency") or "").upper()
+            if given not in ("KRW", "USD"):
+                return api_error(en="currency must be KRW or USD.", kr="통화는 KRW 또는 USD 여야 합니다.",
+                                 code="IMPORT_INVALID_FIELD", status=400)
+        new_currency = _currency_for(row.ticker, given, row.name)
+        # A screenshot row's price was confirmed in the currency printed on
+        # screen (Toss can show a US fill in won). Neither a new ticker nor an
+        # explicit currency may re-label that price: ₩312,000 must never
+        # become $312,000. Whatever the body holds, a change is refused.
+        if row.source == SOURCE_SCREENSHOT_IMAGE and (
+            new_currency != row.currency or (given is not None and given != new_currency)
+        ):
+            db.session.rollback()
+            return api_error(
+                en=f"This fill's price is in {row.currency}, but {row.ticker or 'that symbol'} trades in {new_currency}. "
+                   "Reject it and import it again with the price in the symbol's currency.",
+                kr=f"이 체결 단가는 {row.currency} 인데 고른 종목은 {new_currency} 종목입니다. "
+                   "거절한 뒤 종목 통화 기준 단가로 다시 가져와 주세요.",
+                code="IMPORT_CURRENCY_MISMATCH", status=400,
+            )
+        row.currency = new_currency
 
+    # The only low-confidence screenshot cell is a fuzzy-matched stock
+    # (design SCREENSHOT_IMPORT §5): it becomes user-verified only when the
+    # user picks the ticker — renaming or editing numbers must not clear it.
+    if row.source == SOURCE_SCREENSHOT_IMAGE and "ticker" in data:
+        row.confidence = 1.0
     _recompute(row)
     row.pre_trade_reflection_id = match_pre_trade(current_user.id, row.ticker, row.traded_at)
     try:
@@ -795,6 +893,12 @@ def approve_pending(pid: int):
         return api_error(en="A ticker is required before approval.",
                          kr="승인하려면 티커를 먼저 지정해 주세요.",
                          code="IMPORT_TICKER_REQUIRED", status=400)
+    if row.needs_confirm and not _truthy(data.get("confirm_values")):
+        return api_error(
+            en="Some values read from the screenshot are uncertain. Check them against the capture, then confirm.",
+            kr="캡처에서 읽은 값 중 확실하지 않은 칸이 있습니다. 캡처와 대조해 고치거나 확인해 주세요.",
+            code="IMPORT_CONFIRM_REQUIRED", status=400,
+        )
 
     try:
         trade_id, position_id = apply_pending(current_user.id, row, thesis)

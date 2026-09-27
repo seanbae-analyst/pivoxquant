@@ -453,7 +453,76 @@
         "backToJournal": "Back to the log",
         "tokensLink": "To send automatically → Import tokens in Settings",
         "pdfPasswordLabel": "PDF password (only if locked)",
-        "pdfPasswordHint": "Statements a broker emails are usually locked with your 6-digit birth date. The password is used to open the file and is not stored."
+        "pdfPasswordHint": "Statements a broker emails are usually locked with your 6-digit birth date. The password is used to open the file and is not stored.",
+        "tabImage": "Screenshot"
+      },
+      "image": {
+        "guideTitle": "Which screen to capture",
+        "guideScreen": "Your broker app's fill history or transaction history screen. Holdings (balance) and open-order screens are not read.",
+        "guideRequired": "Must be visible: fill date (and time if shown) · stock name or code · the word buy/sell · filled quantity · fill price",
+        "guideOptional": "Helpful: currency · fill amount (a visible amount is checked against quantity × price)",
+        "guideWhole": "Capture the whole screen. Rows cut off at the top or bottom are not read.",
+        "guideSharp": "Zoomed, blurred or sideways-cropped captures, or copies shrunk by a messenger, are hard to read. Upload the original screenshot.",
+        "guideFilter": "Dates can only be filled when a date header or the date range is visible.",
+        "guideMulti": "For a long list, pick several captures at once. Overlapping rows are marked as duplicates.",
+        "guideLocal": "Captures are read on this device only and never uploaded. Only the values you confirm in the table below are sent.",
+        "brokerLabel": "Broker",
+        "brokers": {
+          "unknown": "Not sure · other",
+          "kis": "Korea Investment & Securities",
+          "kiwoom": "Kiwoom",
+          "toss": "Toss Securities",
+          "mirae": "Mirae Asset",
+          "samsung": "Samsung Securities",
+          "nh": "NH Investment & Securities",
+          "overseas": "Overseas stock screen (USD)"
+        },
+        "choose": "Choose screenshots",
+        "chosen": "{n} selected",
+        "read": "Read",
+        "loadingOcr": "Preparing text recognition",
+        "ocrLoadFailed": "Could not load text recognition. Refresh and try again.",
+        "progress": "Reading {i}/{n}",
+        "limits": "PNG · JPEG · WEBP, up to 10MB each · the first time downloads recognition data (about 8MB)",
+        "tooLarge": "One or more images exceed 10MB.",
+        "noteRead": "{rows} read · {excluded} left out (cut off / unfilled / cancelled)",
+        "screen": {
+          "holdings": "Looks like a holdings (balance) screen — not read.",
+          "orders": "Looks like an order screen — not read.",
+          "other": "Does not look like a broker fill screen — not read.",
+          "empty": "No fill rows found."
+        },
+        "inputError": {
+          "timeout": "Reading took too long and was stopped. Press Read again for the remaining captures.",
+          "too_long": "The image is too long. Split the list into several captures.",
+          "too_small": "Image too small to read (short edge must be 320px or more).",
+          "too_large": "Over 10MB.",
+          "unreadable": "Could not open the image."
+        },
+        "reviewDesc": "Only cells read with certainty are filled. Fill the outlined blanks from your capture; blurry readings appear inside the cell as a hint only.",
+        "includeRow": "Include this row",
+        "fillBlanks": "Fill the blanks",
+        "amountMismatch": "Quantity × price does not match the amount on screen, so those three cells were left blank.",
+        "col": {
+          "date": "Date (YYYY-MM-DD)",
+          "time": "Time",
+          "name": "Name",
+          "code": "Code",
+          "side": "Side",
+          "shares": "Quantity",
+          "price": "Fill price",
+          "currency": "Currency"
+        },
+        "sideUnknown": "Choose side",
+        "sideBuy": "Buy",
+        "sideSell": "Sell",
+        "etNote": "Shown in US Eastern time (ET), so only the date is kept, not the time.",
+        "notSaved": "Not saved (demo mode). The table was kept.",
+        "usd_needed": "A US symbol needs a USD price. If the screen shows won, type the dollar price.",
+        "krw_needed": "A KRX code with a USD price — check that the price is in KRW.",
+        "send": "Add to inbox",
+        "checkTitle": "The stock name was matched to a similar name — please check it",
+        "confirmLabel": "I checked this is the same stock as in the capture."
       }
     }
   },
