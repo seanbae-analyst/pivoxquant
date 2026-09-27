@@ -1647,18 +1647,14 @@ def create_position_alias():
     # free-plan cap COUNT under that lock so concurrent adds of distinct tickers
     # can't both pass the cap and bypass the limit. Gate logic / message
     # unchanged. SQLite no-ops the lock.
-    from models import User as _U
-    locked_user = (
-        db.session.query(_U)
-        .filter(_U.id == current_user.id)
-        .with_for_update()
-        .one()
+    from services.position_writes import (
+        FREE_POSITION_CAP, active_position_count, is_capped_tier, lock_user_row,
+        merge_buy_into,
     )
-    if getattr(current_user, "effective_tier", None) in (None, "free"):
-        pos_count = Position.query.filter_by(user_id=current_user.id).filter(
-            Position.shares > 0
-        ).count()
-        if pos_count >= 3:
+    lock_user_row(current_user.id)
+    if is_capped_tier(current_user):
+        pos_count = active_position_count(current_user.id)
+        if pos_count >= FREE_POSITION_CAP:
             db.session.rollback()
             return jsonify({
                 "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
@@ -1674,21 +1670,7 @@ def create_position_alias():
     # NEW-D (2026-05-09): mirror add_position race-safe upsert. See the
     # uq_positions_user_ticker rationale on Position.__table_args__.
     def _merge_into_alias(ex_row):
-        total = ex_row.shares * ex_row.avg_cost + quantity * price
-        if not is_kr and ex_row.buy_fx_rate and fx_rate:
-            ex_row.buy_fx_rate = (
-                ex_row.buy_fx_rate * ex_row.shares * ex_row.avg_cost
-                + fx_rate * quantity * price
-            ) / total
-        elif not is_kr and not ex_row.buy_fx_rate and fx_rate:
-            # Initialize FX on a null/zero existing USD row (see _merge_into).
-            ex_row.buy_fx_rate = fx_rate
-        ex_row.shares += quantity
-        ex_row.avg_cost = total / ex_row.shares
-        if note and not ex_row.thesis:
-            ex_row.thesis = note
-            ex_row.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            ex_row.thesis_status = "pending"
+        merge_buy_into(ex_row, quantity, price, is_kr=is_kr, fx_rate=fx_rate, note=note)
 
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=symbol).first()
