@@ -1829,9 +1829,13 @@ button:hover > .pq-ink-pill,
 .pq-input-noom-xs {
   font-size: var(--pq-text-eyebrow);
 } /* 10.5px desktop */
+.pq-input-noom-mono {
+  font-size: var(--pq-text-mono-sm);
+} /* 11px desktop — mono selects/inputs (broker picker, PDF password) */
 @media (max-width: 767px) {
   .pq-input-noom,
-  .pq-input-noom-xs {
+  .pq-input-noom-xs,
+  .pq-input-noom-mono {
     font-size: 16px;
   }
 }
@@ -2887,6 +2891,7 @@ i.italic,
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* iOS Safari: 100vh includes the collapsing toolbar */
   overflow: hidden;
   perspective: 1800px;
   perspective-origin: center center;
@@ -2905,6 +2910,7 @@ i.italic,
   inset: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   transform-style: preserve-3d;
   backface-visibility: hidden;
   will-change: transform, opacity;

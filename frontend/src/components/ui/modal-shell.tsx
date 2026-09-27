@@ -156,7 +156,8 @@ export function ModalShell({
         // backdrop + close button hidden behind the bottom 64px). Lift to z-[60]
         // so the entire modal surface (including bottom-anchored sheet edge on
         // small screens) layers above BottomNav without collision.
-        "fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto bg-black/40 p-3 sm:items-center sm:p-4",
+        // pb clears the iPhone home indicator under the bottom-anchored sheet.
+        "fixed inset-0 z-[60] flex items-end justify-center overflow-y-auto bg-black/40 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4",
         className,
       )}
       onMouseDown={handleBackdropMouseDown}

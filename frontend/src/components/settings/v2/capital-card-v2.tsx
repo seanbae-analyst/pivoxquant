@@ -53,10 +53,6 @@ interface CapitalUpdateResponse {
   available_capital_krw: number;
 }
 
-const ROW_LABEL_STYLE: React.CSSProperties = {
-  fontSize: "var(--pq-text-body)",
-  color: "var(--pq-ivory)",
-};
 const ROW_HELP_STYLE: React.CSSProperties = {
   fontSize: "var(--pq-text-body)",
   color: "var(--pq-ivory-dim)",
@@ -251,8 +247,8 @@ export function CapitalCardV2() {
             value={usdInput}
             onChange={(e) => setUsdInput(e.target.value)}
             placeholder="10000"
-            className="pq-ink-input w-full tabular-nums"
-            style={ROW_LABEL_STYLE}
+            className="pq-ink-input pq-input-noom w-full tabular-nums"
+            style={{ color: "var(--pq-ivory)" }}
           />
         </div>
         <div>
@@ -279,8 +275,8 @@ export function CapitalCardV2() {
             value={krwInput}
             onChange={(e) => setKrwInput(e.target.value)}
             placeholder="10000000"
-            className="pq-ink-input w-full tabular-nums"
-            style={ROW_LABEL_STYLE}
+            className="pq-ink-input pq-input-noom w-full tabular-nums"
+            style={{ color: "var(--pq-ivory)" }}
           />
         </div>
         <button

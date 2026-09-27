@@ -24,7 +24,10 @@ export function CookieConsent() {
       role="dialog"
       aria-label="Cookie consent"
       data-cookie-banner="true"
-      className="pq-cookie-banner fixed bottom-0 left-0 right-0 z-50 p-4 md:flex md:items-center md:justify-between md:gap-6 md:px-8"
+      // z-[55]: explicitly above the mobile BottomNav (z-50) instead of tying
+      // with it on DOM order; it's a choice the user answers once. pb clears
+      // the iPhone home indicator (env() is 0 elsewhere → plain 1rem).
+      className="pq-cookie-banner fixed bottom-0 left-0 right-0 z-[55] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:flex md:items-center md:justify-between md:gap-6 md:px-8"
       style={{
         backgroundColor: "var(--pq-ink)",
         color: "var(--pq-ivory)",

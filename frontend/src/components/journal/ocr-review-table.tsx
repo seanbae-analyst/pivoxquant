@@ -134,7 +134,9 @@ export function OcrReviewTable({
       <input
         value={r.values[field]}
         onChange={(e) => setVal(r.key, field, e.target.value)}
-        placeholder={r.hints[field] ?? ""}
+        // No OCR hint → fall back to the column name. There is no header row,
+        // so on a 2-column phone grid an empty box was otherwise unlabeled.
+        placeholder={r.hints[field] ?? t(`journal.import.image.col.${field}`)}
         inputMode={inputMode}
         aria-label={t(`journal.import.image.col.${field}`)}
         data-missing={missing && needed ? "true" : undefined}
@@ -159,7 +161,7 @@ export function OcrReviewTable({
             data-testid="ocr-review-row"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex min-w-0 items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={r.include}
@@ -167,7 +169,9 @@ export function OcrReviewTable({
                   className="h-4 w-4 accent-[var(--pq-bronze)]"
                   aria-label={t("journal.import.image.includeRow")}
                 />
-                <span className="font-mono" style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-ivory-mid)" }}>
+                {/* OCR text can be one long unbroken token — let it wrap anywhere
+                    instead of pushing the card past a 390px viewport. */}
+                <span className="min-w-0 font-mono [overflow-wrap:anywhere]" style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-ivory-mid)" }}>
                   {r.sourceText.slice(0, 90)}
                 </span>
               </label>

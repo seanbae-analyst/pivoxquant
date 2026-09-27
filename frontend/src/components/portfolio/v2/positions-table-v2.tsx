@@ -492,6 +492,17 @@ export function PositionsTableV2({
           opacity: 0;
           transition: opacity 160ms ease;
         }
+        /* Touch screens (iPhone) have no hover: the Add / Trim / Edit / note
+           buttons stayed invisible yet still tappable. Show them always and
+           give them a finger-sized hit area. */
+        @media (hover: none) {
+          :global(.pq-row-actions) {
+            opacity: 1;
+          }
+          :global(.pq-row-actions button) {
+            min-height: 36px;
+          }
+        }
         :global(.pq-pos-row:focus-visible) {
           outline: 1px solid var(--pq-bronze);
           outline-offset: -1px;
