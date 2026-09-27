@@ -926,3 +926,41 @@ export interface ImportTokenCreateResponse {
   /** Raw token — shown once, never returned again. */
   token: string;
 }
+
+// ── Holdings capture import (API.holdingsImport, HOLDINGS_IMPORT_DESIGN.md) ──
+
+export interface HoldingsExisting {
+  id: number;
+  shares: number;
+  avg_cost: number;
+  currency: string;
+}
+
+export interface HoldingsPreviewRow {
+  index: number;
+  read_name: string | null;
+  read_code: string | null;
+  ticker: string | null;
+  name: string | null;
+  /** The resolved ticker's currency (not the screen's). */
+  currency: string | null;
+  status: "resolved" | "needs_confirm" | "needs_ticker";
+  currency_mismatch: boolean;
+  existing: HoldingsExisting | null;
+}
+
+export interface HoldingsCommitItem {
+  ticker: string;
+  shares: number;
+  avg_cost: number;
+  currency: string;
+  prev_shares?: number;
+  prev_avg_cost?: number;
+}
+
+export interface HoldingsCommitResponse {
+  created: HoldingsCommitItem[];
+  replaced: HoldingsCommitItem[];
+  added: HoldingsCommitItem[];
+  skipped: { ticker: string; reason: "USER_SKIP" | "TIER_LIMIT" | string }[];
+}
