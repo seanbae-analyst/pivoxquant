@@ -271,6 +271,7 @@
           "duplicate": "Same ticker twice — keep one and skip the other"
         },
         "amountMismatch": "Shares × average cost did not match the cost total on screen, so both cells were cleared.",
+        "foreignInKrw": "This overseas stock is shown in won, so its dollar average cost is not on screen. Switch the app to $ and capture again, or type it in.",
         "back": "Back",
         "save": "Save {n} positions",
         "doneSummary": "Added {created} · replaced {replaced} · merged {added} · skipped {skipped}",

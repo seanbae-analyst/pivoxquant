@@ -35,7 +35,7 @@ export interface ParsedHolding {
   shares: Cell<number>;
   avgCost: Cell<number>;
   currency: "KRW" | "USD" | null;
-  /** cross_checked · derived_avg · amount_mismatch · merged_record */
+  /** cross_checked · derived_avg · amount_mismatch · merged_record · foreign_in_krw */
   flags: string[];
   sourceText: string;
 }
@@ -461,6 +461,84 @@ function cardHoldings(lines: Line[], screenCur: "KRW" | "USD" | null): ParsedHol
   return out;
 }
 
+// ── Toss 내 투자 (two lines per stock, no labels) ─────────────────────────
+//
+//   아이티센글로벌            859,449원     ← name + 평가금 (or 현재가 / 매입금:
+//   29주          -982,051 (53.3%)          a toggle OCR cannot see)
+//
+// Nothing on this screen is labelled, and no average cost is printed. Name and
+// shares are read as proven; the average is only ever a hint:
+// (amount − P/L) ÷ shares, for the user to confirm or overwrite.
+
+const TOSS_AMOUNT = /^[$]?\d{1,3}(,\d{3})*(\.\d{2})?원?$/;
+/** "29주" "29 주" and the glyph misreads OCR makes of 주 ("19%", "3F", "248 수"). */
+const TOSS_QTY = /^(\d[\d,.]*)(주|%|F|수|추)?$/;
+const TOSS_PL = /^[+\-−][$]?[\d,]+(\.\d+)?원?$/;
+
+export const tossQtyLine = (compact: string) =>
+  /^\d[\d,.]*(주|%|F|수|추)[+\-−][$]?[\d,.]+원?\(\d+(\.\d+)?%\)$/.test(compact);
+
+function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord } | null {
+  const ws = l.words.filter((w) => w.t !== "원");
+  const last = ws[ws.length - 1];
+  if (!last || !TOSS_AMOUNT.test(last.t) || !last.t.includes(",")) return null;
+  const nameWords = ws.slice(0, -1);
+  const letters = nameWords.map((w) => w.t).join("").replace(/[^가-힣A-Za-z]/g, "");
+  if (letters.length < 2 || nameWords.some((w) => /\d/.test(w.t))) return null;
+  if (/내투자|주식$/.test(letters)) return null;
+  return { nameWords, amount: last };
+}
+
+function tossHoldings(lines: Line[]): ParsedHolding[] {
+  const out: ParsedHolding[] = [];
+  const hMed = median(lines.map((l) => l.h)) || 20;
+  let foreign = false;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (/해외주식/.test(l.compact)) foreign = true;
+    if (/국내주식/.test(l.compact)) foreign = false;
+    const nm = tossNameLine(l);
+    if (!nm) continue;
+    // The quantity line is the next line with a digit; logo glyphs ("©",
+    // "(vs)") in between carry none. Too far below → cut off at the edge.
+    const j = lines.findIndex((x, k) => k > i && /\d/.test(x.text));
+    const ql = j >= 0 && lines[j].y - l.y < hMed * 5 && tossQtyLine(lines[j].compact) ? lines[j] : null;
+    const usd = nm.amount.t.startsWith("$");
+    const currency: ParsedHolding["currency"] = usd ? "USD" : foreign ? null : "KRW";
+    const flags: string[] = [];
+    if (foreign && !usd) flags.push("foreign_in_krw");
+
+    let shares: Cell<number> = { value: null };
+    let avgCost: Cell<number> = { value: null };
+    if (ql) {
+      const ws = ql.words;
+      const m = ws[0].t.match(TOSS_QTY);
+      const unitOk = m?.[2] === "주" || (!m?.[2] && ws[1]?.t === "주");
+      if (m) {
+        const r = readNumber({ ...ws[0], t: m[1] });
+        shares = unitOk && r.value !== null && Number.isInteger(r.value) && r.value > 0
+          ? { value: r.value } : { value: null, hint: m[1].replace(/\.$/, "") };
+      }
+      const plw = ws.find((w) => TOSS_PL.test(w.t));
+      // A hint may rest on the first reading alone — the user confirms it.
+      const amount = parseAmount(nm.amount.t);
+      const pl = plw ? parseAmount(plw.t.replace(/^[+\-−]/, "")) : null;
+      const n = shares.value ?? (shares.hint ? Number(shares.hint) : NaN);
+      if (Number.isInteger(n) && n > 0 && amount !== null && pl !== null && !(foreign && !usd)) {
+        const signed = /^[\-−]/.test(plw!.t) ? -pl : pl;
+        const d = (amount - signed) / n;
+        if (d > 0) avgCost = { value: null, hint: usd ? d.toFixed(2) : String(Math.round(d)) };
+      }
+    }
+    const nc = nameAndCode(nm.nameWords, [], usd, usd);
+    out.push({
+      name: nc.name, code: nc.code, shares, avgCost, currency, flags,
+      sourceText: [l, ql].filter(Boolean).map((x) => x!.text).join(" / "),
+    });
+  }
+  return out;
+}
+
 // ── entry point ──────────────────────────────────────────────────────────
 
 export function parseHoldingsScreen(words: OcrWord[]): HoldingsParse {
@@ -469,7 +547,9 @@ export function parseHoldingsScreen(words: OcrWord[]): HoldingsParse {
   if (screenType !== "holdings") return { screenType, rows: [] };
   const cur = screenCurrency(lines);
   const hi = lines.findIndex((l) => holdingsHeader(l) !== null);
-  const rows = hi >= 0 ? tableHoldings(lines, hi, holdingsHeader(lines[hi])!, cur) : cardHoldings(lines, cur);
+  const toss = lines.filter((l) => tossQtyLine(l.compact)).length >= 2;
+  const rows = hi >= 0 ? tableHoldings(lines, hi, holdingsHeader(lines[hi])!, cur)
+    : toss ? tossHoldings(lines) : cardHoldings(lines, cur);
   // A row with no quantity, cost, name or code reading is not a holding.
   const some = (c: Cell<unknown>) => c.value !== null || Boolean(c.hint);
   return { screenType, rows: rows.filter((r) => some(r.shares) || some(r.avgCost) || some(r.name) || some(r.code)) };

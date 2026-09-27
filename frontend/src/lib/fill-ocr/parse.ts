@@ -135,7 +135,11 @@ export function classifyScreen(lines: Line[]): ScreenType {
   const detail = lines.filter((l) =>
     /체결\d[\d.,]*주|\d[\d.,]*주(구매|판매|매수|매도)|\d주?x\$\d/.test(l.compact)).length;
   fills += Math.min(3, detail);
-  const holds = countKw(all, HOLD_KW);
+  let holds = countKw(all, HOLD_KW);
+  // Toss 내 투자 prints no label at all: "이름 859,449원" over "29주 -982,051 (53.3%)".
+  // Two such quantity/P&L lines are a holdings list.
+  const tossRows = lines.filter((l) => /^\d[\d,.]*주[+\-−]\$?[\d,.]+원?\(\d+(\.\d+)?%\)$/.test(l.compact)).length;
+  if (tossRows >= 2) holds += 2;
   const orders = countKw(all, ORDER_KW);
   if (holds >= 2 && holds > fills) return "holdings";
   if (orders >= 2 && fills < 2) return "orders";

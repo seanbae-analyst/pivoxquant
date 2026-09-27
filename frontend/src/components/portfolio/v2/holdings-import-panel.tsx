@@ -593,6 +593,11 @@ function HoldingReviewRow({
           {t("dashboard.portfolio.holdingsImport.amountMismatch")}
         </div>
       )}
+      {r.flags.includes("foreign_in_krw") && (
+        <div className="mt-1 font-mono" style={{ ...small, color: "var(--pq-bronze)" }}>
+          {t("dashboard.portfolio.holdingsImport.foreignInKrw")}
+        </div>
+      )}
     </div>
   );
 }
