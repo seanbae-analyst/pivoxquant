@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time as _time
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
@@ -89,6 +90,24 @@ def search_stocks():
                 "is_korean": True,
             })
             seen.add(candidate)
+
+    # 1c) US stocks by the Korean name Korean broker apps print ("뉴스케일파워" →
+    # SMR). Curated map shared with the capture import
+    # (services/us_kr_names.json); substring match on the space-less name.
+    bare_q = re.sub(r"\s+", "", query)
+    if re.search(r"[가-힣]", bare_q) and len(bare_q) >= 2:
+        from services.imports.holdings_import import _us_kr_index
+        from services import us_stock_registry
+        for kr_name, sym in _us_kr_index().items():
+            if bare_q in kr_name and sym not in seen:
+                results.append({
+                    "ticker": sym,
+                    "name": f"{kr_name} ({us_stock_registry.get_name(sym) or sym})",
+                    "exchange": (us_stock_registry.US_STOCKS.get(sym) or {}).get("exchange", ""),
+                    "currency": "USD",
+                    "is_korean": False,
+                })
+                seen.add(sym)
 
     # 2) FMP search API for US/global stocks
     # NOTE: FMP's v3 endpoint (`/api/v3/search`) was deprecated 2025-08-31.
@@ -178,6 +197,14 @@ def search_stocks():
                     "exchange": "NASDAQ", "currency": "USD", "is_korean": False,
                 })
                 seen.add(sym)
+        # The local Alpaca master (~12,700 symbols) — without it a US stock
+        # outside the 40 above ("SMR", "NuScale") was unfindable whenever FMP
+        # failed.
+        from services import us_stock_registry
+        for hit in us_stock_registry.search(query, limit=limit):
+            if hit["ticker"] not in seen:
+                results.append(hit)
+                seen.add(hit["ticker"])
 
     return jsonify({"results": results[:limit]})
 
