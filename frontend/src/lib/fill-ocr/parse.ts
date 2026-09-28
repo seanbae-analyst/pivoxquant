@@ -127,6 +127,10 @@ function countKw(compact: string, kws: string[]): number {
   return kws.reduce((n, k) => n + (compact.includes(k) ? 1 : 0), 0);
 }
 
+/** Toss 내 투자 second line: "…-982,051(53.3%)" — signed P/L then its rate. */
+export const tossPlLine = (compact: string) =>
+  /[+\-−]\$?\d[\d,.]*원?\(\d+(\.\d+)?%\)$/.test(compact) && !/^[+\-−]/.test(compact);
+
 export function classifyScreen(lines: Line[]): ScreenType {
   const all = lines.map((l) => l.compact).join("|");
   let fills = countKw(all, FILL_KW);
@@ -137,9 +141,9 @@ export function classifyScreen(lines: Line[]): ScreenType {
   fills += Math.min(3, detail);
   let holds = countKw(all, HOLD_KW);
   // Toss 내 투자 prints no label at all: "이름 859,449원" over "29주 -982,051 (53.3%)".
-  // Two such quantity/P&L lines are a holdings list.
-  const tossRows = lines.filter((l) => /^\d[\d,.]*주[+\-−]\$?[\d,.]+원?\(\d+(\.\d+)?%\)$/.test(l.compact)).length;
-  if (tossRows >= 2) holds += 2;
+  // Two lines ending in a signed P/L and its rate are a holdings list — the
+  // 주 glyph itself is often misread ("110%", "(JES"), so it is not required.
+  if (lines.filter((l) => tossPlLine(l.compact)).length >= 2) holds += 2;
   const orders = countKw(all, ORDER_KW);
   if (holds >= 2 && holds > fills) return "holdings";
   if (orders >= 2 && fills < 2) return "orders";

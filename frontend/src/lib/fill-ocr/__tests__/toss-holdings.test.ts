@@ -74,3 +74,35 @@ describe("Toss 내 투자 capture", () => {
     expect(rows[4].avgCost).toEqual({ value: null });
   });
 });
+
+describe("Toss capture cropped to the rows only (no header, misread 주)", () => {
+  function cropped(): OcrWord[] {
+    y = 0;
+    return [
+      ...line("가나전자", ["4,305,923", "4,305,923", 700], "원"),
+      ...line(["자", "", 150], ["248", "248", 190], "주", ["-650,937", "0937", 600], ["(13.1%)", "13.19"]),
+      ...line("다라차", ["1.062,711", "1,062,711", 700], "원"),
+      ...line(["3", "3"], "수", ["-601,289", "601,289", 600], ["(36.1%)", "36.1"]),
+      ...line("마바코인", ["132,913", "132,913", 700], "원"),
+      ...line(["(JES", ""], ["-1,440,777", "1,440,777", 600], ["(91.5%)", "91.5"]),
+    ];
+  }
+  const { screenType, rows } = parseHoldingsScreen(cropped());
+
+  it("is still a holdings screen", () => {
+    expect(screenType).toBe("holdings");
+    expect(rows.map((r) => r.name.value)).toEqual(["가나전자", "다라차", "마바코인"]);
+  });
+
+  it("skips logo letters before the share count and reads a comma misread as '.'", () => {
+    expect(rows[0].shares).toEqual({ value: 248 });
+    expect(rows[0].avgCost).toEqual({ value: 19987 }); // (4,305,923 + 650,937) ÷ 248
+    expect(rows[1].shares).toEqual({ value: 3 });
+    expect(rows[1].avgCost).toEqual({ value: 554667 });
+  });
+
+  it("keeps a row whose share count is unreadable", () => {
+    expect(rows[2].shares.value).toBeNull();
+    expect(rows[2].avgCost.value).toBeNull();
+  });
+});

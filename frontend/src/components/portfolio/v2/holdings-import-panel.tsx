@@ -131,6 +131,14 @@ export function applyPreview(r: HoldingRow, p: HoldingsPreviewRow | undefined): 
   // KRX stocks trade only in won, so a KRX ticker settles an unread
   // currency. A US ticker never does: Korean apps may show US holdings in ₩.
   const currency: Cur = r.currency || (tickerCurrency === "KRW" && p.status === "resolved" ? "KRW" : "");
+  // A US stock shown in won (Toss 내 투자 cropped above its 해외주식 header):
+  // the average worked out of won amounts is not the dollar cost basis.
+  if (tickerCurrency === "USD" && r.currency === "KRW" && r.flags.includes("derived_avg")) {
+    return {
+      ...applyPreview({ ...r, currency: "", avgCost: "", hints: { ...r.hints, avgCost: undefined },
+        flags: [...r.flags.filter((f) => f !== "derived_avg"), "foreign_in_krw"] }, p),
+    };
+  }
   return {
     ...r,
     ticker: p.ticker ?? "",
