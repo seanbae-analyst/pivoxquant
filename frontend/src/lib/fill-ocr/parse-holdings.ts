@@ -24,7 +24,7 @@
  */
 import {
   classifyScreen, close, digitsOf, groupLines, headerSegments, isCode, median,
-  nameFrom, parseAmount, readNumber,
+  nameFrom, parseAmount, readNumber, tossPlLine,
   type Cell, type Line, type NumRead, type OcrWord, type ScreenType,
 } from "./parse";
 
@@ -483,13 +483,16 @@ const TOSS_QTY = /^(\d[\d,.]*?)\.?(주|%|F|수|추)?$/;
 const TOSS_PL = /^[+\-−][$]?[\d,]+(\.\d+)?원?$/;
 const TOSS_RATE = /^\((\d+(\.\d+)?)%\)$/;
 
-export const tossQtyLine = (compact: string) =>
-  /^\d[\d,.]*(주|%|F|수|추)[+\-−][$]?[\d,.]+원?\(\d+(\.\d+)?%\)$/.test(compact);
+export const tossQtyLine = tossPlLine;
+
+/** The amount as printed, or as the digit pass re-read it ("1.062,711" → 1,062,711). */
+const tossAmountWord = (w: OcrWord | undefined) =>
+  Boolean(w) && [w!.t, (w!.alt ?? "").trim()].some((t) => TOSS_AMOUNT.test(t) && t.includes(","));
 
 function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord } | null {
   const ws = l.words.filter((w) => w.t !== "원");
   const last = ws[ws.length - 1];
-  if (!last || !TOSS_AMOUNT.test(last.t) || !last.t.includes(",")) return null;
+  if (!tossAmountWord(last)) return null;
   const nameWords = ws.slice(0, -1);
   const letters = nameWords.map((w) => w.t).join("").replace(/[^가-힣A-Za-z]/g, "");
   if (letters.length < 2 || nameWords.some((w) => /\d/.test(w.t))) return null;
@@ -503,10 +506,15 @@ function tossRead(t: string, alt: string | null | undefined): NumRead {
   return readNumber({ t: t.replace(/\.$/, ""), alt: alt?.trim().replace(/\.$/, ""), c: 0, x0: 0, y0: 0, x1: 0, y1: 0 });
 }
 
-function tossShares(ws: OcrWord[]): Cell<number> {
-  const m = ws[0]?.t.match(TOSS_QTY);
+/** The share token is the one digit word before the P/L; logo glyphs read
+ * as letters ("자 248 주") may sit in front of it. */
+function tossShares(ws: OcrWord[], plIdx: number): Cell<number> {
+  const before = ws.slice(0, plIdx < 0 ? ws.length : plIdx).filter((w) => /\d/.test(w.t));
+  if (before.length !== 1) return { value: null };
+  const w = before[0];
+  const m = w.t.match(TOSS_QTY);
   if (!m) return { value: null };
-  const r = tossRead(m[1], ws[0].alt);
+  const r = tossRead(m[1], w.alt);
   const n = r.value;
   return n !== null && Number.isInteger(n) && n > 0 && n <= 1e7 ? { value: n } : { value: null, hint: m[1] };
 }
@@ -543,7 +551,8 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
   const hMed = median(lines.map((l) => l.h)) || 20;
   // The name column starts where the quantity lines start — one x for the
   // whole screen, so a row whose quantity line is cut off still has it.
-  const qx = lines.filter((l) => tossQtyLine(l.compact)).map((l) => l.words[0].x0);
+  const qx = lines.filter((l) => tossQtyLine(l.compact))
+    .map((l) => l.words.find((w) => /\d/.test(w.t))?.x0).filter((x): x is number => x !== undefined);
   const nameLeft = qx.length ? median(qx) - hMed : -Infinity;
   let foreign = false;
   for (let i = 0; i < lines.length; i++) {
@@ -566,8 +575,9 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
     let nameWords = nm.nameWords;
     if (ql) {
       const ws = ql.words;
-      shares = tossShares(ws);
-      const plw = ws.find((w) => TOSS_PL.test(w.t));
+      const plIdx = ws.findIndex((w) => TOSS_PL.test(w.t));
+      shares = tossShares(ws, plIdx);
+      const plw = plIdx >= 0 ? ws[plIdx] : undefined;
       const ratew = ws.find((w) => TOSS_RATE.test(w.t));
       const n = shares.value ?? (shares.hint ? Number(shares.hint) : NaN);
       if (plw && Number.isInteger(n) && n > 0 && !(foreign && !usd)) {

@@ -25,7 +25,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: v
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import {
-  HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, type HoldingRow,
+  HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, applyPreview, type HoldingRow,
 } from "@/components/portfolio/v2/holdings-import-panel";
 import type { OcrWord } from "@/lib/fill-ocr/parse";
 import type { HoldingsPreviewRow } from "@/lib/types";
@@ -168,6 +168,14 @@ describe("row rules", () => {
     const b = { ...base, key: "k2" };
     expect(mergeIdenticalReads([base, b])).toHaveLength(1);
     expect(mergeIdenticalReads([base, { ...b, avgCost: "70100" }])).toHaveLength(2);
+  });
+
+  it("a won average worked out for what resolves to a US stock is dropped", () => {
+    const row = { ...base, ticker: "", status: "needs_ticker" as const, flags: ["derived_avg"], avgCost: "33779", shares: "24" };
+    const out = applyPreview(row, { index: 0, read_name: "뉴스케일파워", read_code: null, ticker: "SMR", name: "뉴스케일파워",
+      currency: "USD", status: "resolved", currency_mismatch: true, existing: null } as HoldingsPreviewRow);
+    expect([out.ticker, out.shares, out.avgCost, out.currency]).toEqual(["SMR", "24", "", ""]);
+    expect(out.flags).toContain("foreign_in_krw");
   });
 
   it("a proven read absorbs the same holding read only as hints elsewhere", () => {
