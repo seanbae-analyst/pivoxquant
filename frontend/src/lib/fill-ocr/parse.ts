@@ -144,6 +144,8 @@ export function classifyScreen(lines: Line[]): ScreenType {
   // Two lines ending in a signed P/L and its rate are a holdings list — the
   // 주 glyph itself is often misread ("110%", "(JES"), so it is not required.
   if (lines.filter((l) => tossPlLine(l.compact)).length >= 2) holds += 2;
+  // Toss 자세히 보기 table header: "종목명 · 1주 평균 금액 · 총 금액".
+  if (lines.some((l) => /평균금액/.test(l.compact) && /총금액/.test(l.compact))) holds += 2;
   // "39주 · 평단 87,880원" summary lines (no other holdings word on screen).
   if (lines.filter((l) => /\d주.{0,4}(평단|평균|매입가)/.test(l.compact)).length >= 2) holds += 2;
   const orders = countKw(all, ORDER_KW);

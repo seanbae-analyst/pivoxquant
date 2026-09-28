@@ -35,7 +35,7 @@ export interface ParsedHolding {
   shares: Cell<number>;
   avgCost: Cell<number>;
   currency: "KRW" | "USD" | null;
-  /** cross_checked · derived_avg · amount_mismatch · merged_record · foreign_in_krw */
+  /** cross_checked · derived_avg · derived_shares · amount_mismatch · merged_record · foreign_in_krw */
   flags: string[];
   sourceText: string;
 }
@@ -725,6 +725,130 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
   return out;
 }
 
+// ── Toss 자세히 보기 table ───────────────────────────────────────────────────
+//
+//   종목명      | 총 수익 | 1주 평균 금액     | 총 금액
+//   삼성전자      -0.7%     272,000원           4,048,149원     ← top line
+//   15주          -31,851원 현재가 270,500원    원금 4,080,000원 ← bottom line
+//
+// The average cost is printed, and so is 원금 (cost). Columns come from the
+// header's x positions; inside a column the upper amount is the average /
+// 평가금 and the lower one 현재가 / 원금 — by position, so a misread label
+// ("원금" → "HZ") does not matter. A stock ends at the line carrying
+// 현재가 / 원금 (its share count may sit one line lower, under a wrapped
+// name). shares × avg must reproduce 원금, as in every other layout.
+
+const DETAIL_HEADER = (l: Line) => /평균금액/.test(l.compact) && /총금액/.test(l.compact) && /종목/.test(l.compact);
+
+interface DetailCols { nameRight: number; avg: [number, number]; total: [number, number]; pl: number | null }
+
+function detailCols(h: Line): DetailCols | null {
+  const ws = h.words;
+  const iAvg = ws.findIndex((w) => /평균/.test(w.t));
+  const iTot = ws.findIndex((w, k) => k > iAvg && /^총/.test(w.t));
+  if (iAvg < 0 || iTot < 0) return null;
+  const avgStart = ws.slice(0, iAvg).reverse().find((w) => /^[1주]$/.test(w.t)) ?? ws[iAvg];
+  const avgEnd = ws.slice(iAvg).find((w) => /금액/.test(w.t)) ?? ws[iAvg];
+  const totEnd = ws.slice(iTot).find((w) => /금액/.test(w.t)) ?? ws[iTot];
+  const iName = ws.findIndex((w) => /명/.test(w.t));
+  const nextAfterName = iName >= 0 ? ws.slice(iName + 1).find((w) => !/^[<>|^ㆍ·:;,.]$/.test(w.t) || w.x0 > ws[iName].x1 + 60) : undefined;
+  const nameRight = Math.min(nextAfterName ? nextAfterName.x0 - 5 : Infinity, avgStart.x0 - 60);
+  // 총 수익 (left of the average), when the header shows it.
+  const plW = ws.slice(0, iAvg).find((w, k) => k > iName && /수|익/.test(w.t));
+  return { nameRight, avg: [avgStart.x0, avgEnd.x1], total: [ws[iTot].x0, totEnd.x1], pl: plW ? plW.x0 + 40 : null };
+}
+
+const cxOf = (w: OcrWord) => (w.x0 + w.x1) / 2;
+const MARK = /현재가|원금/;
+
+function detailHoldings(lines: Line[], hMed: number): ParsedHolding[] {
+  const out: ParsedHolding[] = [];
+  const heads = lines.map((l, i) => (DETAIL_HEADER(l) ? i : -1)).filter((i) => i >= 0);
+  heads.forEach((hi, t) => {
+    const cols = detailCols(lines[hi]);
+    if (!cols) return;
+    const end = t + 1 < heads.length ? heads[t + 1] : lines.length;
+    const body = lines.slice(hi + 1, end);
+    // Each word goes to the nearest column centre — on a narrow phone the
+    // right-aligned average and total cells come close enough to overlap.
+    const centres: [string, number][] = [
+      ["avg", (cols.avg[0] + cols.avg[1]) / 2], ["total", (cols.total[0] + cols.total[1]) / 2],
+      ...(cols.pl !== null ? [["pl", cols.pl] as [string, number]] : []),
+    ];
+    const colOf = (w: OcrWord) => [...centres].sort((a, b) => Math.abs(a[1] - cxOf(w)) - Math.abs(b[1] - cxOf(w)))[0][0];
+    const inAvg = (w: OcrWord) => cxOf(w) >= cols.avg[0] - 100 && cxOf(w) <= cols.avg[1] + 40 && colOf(w) === "avg";
+    const inTot = (w: OcrWord) => cxOf(w) >= cols.total[0] - 150 && cxOf(w) <= cols.total[1] + 40 && colOf(w) === "total";
+    const inName = (w: OcrWord) => w.x1 <= cols.nameRight + 40 && w.x0 < cols.nameRight;
+    // No rates live in these two columns: a trailing "%" is "원" misread ("554,666%").
+    const amount = (w: OcrWord) => /\d/.test(w.t) && digitsOf(w.alt ?? w.t).length >= 1;
+    // A stock ends at its 현재가 / 원금 line; the share count may follow it.
+    // A wrapped cell puts 현재가 and 원금 on two lines: one stock, one mark (the last).
+    const marks = body.filter((l) => MARK.test(l.compact) || l.words.some((w) => inTot(w) && w.x0 < cols.total[0] - 40 && !/\d/.test(w.t)))
+      .filter((l, k, xs) => !(xs[k + 1] && xs[k + 1].y - l.y < hMed * 2.5));
+    let from = -Infinity;
+    for (const m of marks) {
+      const to = m.y + hMed * 1.8;
+      const band = body.filter((l) => l.y > from && l.y <= to);
+      from = to;
+      const words = band.flatMap((l) => l.words.map((w) => ({ w, l })));
+      const nameWs = words.filter(({ w }) => inName(w));
+      const qtyW = nameWs.find(({ w }) => /^\d/.test(w.t))?.w;
+      // The name sits above the 현재가 / 원금 line; what is on or below it in
+      // the name column is the share count and its misread 주 ("19 수").
+      const letters = nameWs.filter(({ l }) => l.y < m.y - hMed * 0.5).map(({ w }) => w)
+        .filter((w) => /[가-힣A-Za-z]/.test(w.t) && !/^[A-Za-z]{1,2}$/.test(w.t) && !/^\d/.test(w.t));
+      // Upper amount in a column first; a word right after 현재가 / 원금 is the lower one.
+      const colAmounts = (inCol: (w: OcrWord) => boolean) => words
+        .filter(({ w }) => inCol(w) && amount(w))
+        .map(({ w, l }) => ({ w, labelled: MARK.test(l.words[l.words.indexOf(w) - 1]?.t ?? ""), y: l.y }))
+        .sort((a, b) => a.y - b.y || a.w.x0 - b.w.x0);
+      const avgs = colAmounts(inAvg), tots = colAmounts(inTot);
+      const upper = (xs: typeof avgs) => xs.find((x) => !x.labelled && x !== xs[xs.length - 1]) ?? (xs.length === 1 && !xs[0].labelled ? xs[0] : undefined);
+      const lower = (xs: typeof avgs) => xs.find((x) => x.labelled) ?? (xs.length >= 2 ? xs[xs.length - 1] : undefined);
+      const avgW = upper(avgs)?.w, costW = lower(tots)?.w, valueW = upper(tots)?.w;
+      const reads = emptyReads();
+      if (qtyW) {
+        const m2 = qtyW.t.match(TOSS_QTY);
+        if (m2) reads.qty.push(tossRead(m2[1], qtyW.alt));
+      }
+      const money = (w: OcrWord) => tossRead(w.t.replace(/[원%]$/, "").replace(/^[_~]+/, "").replace(/^%(?=\d)/, "$"), w.alt);
+      if (avgW) reads.avg.push(money(avgW));
+      if (costW) reads.cost.push(money(costW));
+      if (valueW) reads.value.push(money(valueW));
+      const usd = [avgW, costW, valueW].some((w) => w && [w.t, w.alt ?? ""].some((x) => /^[_~]*\$/.test(x.trim())));
+      const flags: string[] = [];
+      // Share count unread ("29주" → "on"): 원금 ÷ 평균 is it when that lands
+      // on a whole number and gives 원금 back within the usual tolerance.
+      if (reads.qty.every((q) => q.candidates.length === 0) && reads.avg.length === 1 && reads.cost.length === 1) {
+        const ns = new Set<number>();
+        for (const p of reads.avg[0].candidates) for (const c of reads.cost[0].candidates) {
+          const n = Math.round(c / p);
+          if (n >= 1 && Math.abs(c / p - n) < 0.02 && close(n * p, c, usd)) ns.add(n);
+        }
+        if (ns.size === 1) {
+          const n = [...ns][0];
+          reads.qty = [{ value: n, candidates: [n], hint: String(n) }];
+          flags.push("derived_shares");
+        }
+      }
+      let { shares, avg } = prove(reads, usd, flags, { requireUnit: false });
+      // 원금 is always printed here, so a value that did not pass shares × avg
+      // ≈ 원금 is only a hint — a garbled avg lets 현재가 take its slot.
+      if (!flags.includes("cross_checked")) {
+        const h = (c: Cell<number>) => (c.value !== null ? { value: null, hint: String(c.value) } : c);
+        shares = h(shares); avg = h(avg);
+      }
+      const nc = nameAndCode(letters, [], usd, false);
+      if (!nc.name.value && shares.value === null && avg.value === null) continue;
+      out.push({
+        name: nc.name, code: nc.code, shares, avgCost: avg, currency: usd ? "USD" : "KRW", flags,
+        sourceText: band.map((l) => l.text).join(" / "),
+      });
+    }
+  });
+  return out;
+}
+
 // ── entry point ──────────────────────────────────────────────────────────
 
 export function parseHoldingsScreen(words: OcrWord[]): HoldingsParse {
@@ -736,7 +860,9 @@ export function parseHoldingsScreen(words: OcrWord[]): HoldingsParse {
   const hMed = median(lines.map((l) => l.h)) || 20;
   const stacked = hi < 0 ? stackedHeader(lines, hMed) : null;
   const toss = lines.filter((l) => tossQtyLine(l.compact)).length >= 2;
-  const rows = hi >= 0 ? tableHoldings(lines, hi, holdingsHeader(lines[hi])!, cur)
+  const detail = lines.some(DETAIL_HEADER);
+  const rows = detail ? detailHoldings(lines, hMed)
+    : hi >= 0 ? tableHoldings(lines, hi, holdingsHeader(lines[hi])!, cur)
     : stacked ? stackedHoldings(lines, stacked.at, stacked.cols, cur, hMed)
     : toss ? tossHoldings(lines) : cardHoldings(lines, cur);
   // A row with no quantity, cost, name or code reading is not a holding.
