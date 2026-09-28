@@ -500,10 +500,10 @@ function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord } | null
   return { nameWords, amount: last };
 }
 
-/** Both readings of a digit token, with the trailing "." the digit pass adds
- * ("2" / "2.") dropped. */
+/** Both readings of a digit token, with the trailing punctuation the digit
+ * pass adds ("2" / "2." / "2:") dropped. */
 function tossRead(t: string, alt: string | null | undefined): NumRead {
-  return readNumber({ t: t.replace(/\.$/, ""), alt: alt?.trim().replace(/\.$/, ""), c: 0, x0: 0, y0: 0, x1: 0, y1: 0 });
+  return readNumber({ t: t.replace(/[.:/]$/, ""), alt: alt?.trim().replace(/[.:/]$/, ""), c: 0, x0: 0, y0: 0, x1: 0, y1: 0 });
 }
 
 /** The share token is the one digit word before the P/L; logo glyphs read

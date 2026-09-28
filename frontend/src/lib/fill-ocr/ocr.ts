@@ -8,7 +8,9 @@
  *
  * Two passes, matching the offline eval (scripts/ocr-eval-dump.mjs):
  *   1. whole image ×2, grayscale, contrast-stretched → kor+eng words + boxes
- *   2. every word containing a digit, cropped ×3 → digits-only re-read (`alt`)
+ *   2. every word containing a digit, cropped ×3 → digits-only re-read (`alt`);
+ *      when its digits differ from pass 1, up to two more crops (tighter ×4,
+ *      looser ×2) are read, and one that agrees with pass 1 becomes `alt`
  * `parse.ts` fills a number only when the two readings agree.
  */
 import type { OcrWord } from "./parse";
@@ -17,6 +19,9 @@ const BASE = "/tesseract";
 const PAGE_SCALE = 2;
 const DIGIT_SCALE = 3;
 const PAD = 4;
+/** Re-crops tried when the first digit re-read disagrees: [pad, scale]. */
+const RETRY_CROPS: [number, number][] = [[1, 4], [8, 2]];
+const digitsOf = (s: string) => s.replace(/[^\d]/g, "");
 export const MIN_SHORT_EDGE = 320;
 export const MIN_LONG_EDGE = 480;
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -200,16 +205,40 @@ export async function openOcrSession(): Promise<OcrSession> {
                 y1: Math.round(w.bbox.y1 / pageScale),
               });
       onStage?.("digits");
+      const reread = async (w: OcrWord, pad: number, scale: number): Promise<string | null> => {
+        const left = Math.max(0, w.x0 - pad);
+        const top = Math.max(0, w.y0 - pad);
+        const cw = Math.min(width - left, w.x1 - w.x0 + 2 * pad);
+        const ch = Math.min(height - top, w.y1 - w.y0 + 2 * pad);
+        if (cw < 4 || ch < 4) return null;
+        const r = await digits.recognize(scaledCanvas(bitmap, left, top, cw, ch, scale));
+        return r.data.text.trim();
+      };
       for (const w of words) {
         if (!/\d/.test(w.t)) continue;
-        const left = Math.max(0, w.x0 - PAD);
-        const top = Math.max(0, w.y0 - PAD);
-        const cw = Math.min(width - left, w.x1 - w.x0 + 2 * PAD);
-        const ch = Math.min(height - top, w.y1 - w.y0 + 2 * PAD);
-        if (cw < 4 || ch < 4) continue;
-        const crop = scaledCanvas(bitmap, left, top, cw, ch, DIGIT_SCALE);
-        const r = await digits.recognize(crop);
-        w.alt = r.data.text.trim();
+        const first = await reread(w, PAD, DIGIT_SCALE);
+        if (first === null) continue;
+        w.alt = first;
+        const want = digitsOf(w.t);
+        if (digitsOf(first) === want) continue;
+        // A digit read against the unit glyph beside it ("2주" → "29") or a
+        // dropped digit ("110" → "10"): another crop settles it only if it
+        // agrees with the page reading — otherwise the disagreement stands.
+        let settled = false;
+        for (const [pad, scale] of RETRY_CROPS) {
+          const again = await reread(w, pad, scale);
+          if (again !== null && digitsOf(again) === want) { w.alt = again; settled = true; break; }
+        }
+        // A lone digit ("2주") is often returned empty by the line mode.
+        if (!settled && want.length === 1) {
+          await digits.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_CHAR });
+          try {
+            const again = await reread(w, 6, 4);
+            if (again !== null && digitsOf(again) === want) w.alt = again;
+          } finally {
+            await digits.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_LINE });
+          }
+        }
       }
       return words;
     } finally {
