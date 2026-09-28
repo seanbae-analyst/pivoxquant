@@ -199,3 +199,18 @@ describe("Toss 자세히 보기 table (word boxes as OCR read a real capture)", 
     expect(rows[2].flags).toContain("derived_shares");
   });
 });
+
+describe("Toss 내 투자: a share count with no 주 glyph", () => {
+  it("is a hint only — '7주' read as '73' must not become 73 shares", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line("가나증권", ["1,637,022", "1,637,022", 700], "원"),
+      ...line(["73", "73"], ["-4,662,978", "4,662,978", 600], ["(74.0%)", "74.0"]),
+      ...line("다라테크", ["2,245,202", "2,245,202", 700], "원"),
+      ...line(["93", "93"], "주", ["-2,320,698", "2,320,698", 600], ["(50.8%)", "50.8"]),
+    ]);
+    expect(rows[0].shares).toEqual({ value: null, hint: "73" });
+    expect(rows[0].avgCost.value).toBeNull();
+    expect(rows[1].shares).toEqual({ value: 93 });
+  });
+});

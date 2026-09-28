@@ -627,7 +627,13 @@ function tossShares(ws: OcrWord[], plIdx: number): Cell<number> {
   if (!m) return { value: null };
   const r = tossRead(m[1], w.alt);
   const n = r.value;
-  return n !== null && Number.isInteger(n) && n > 0 && n <= 1e7 ? { value: n } : { value: null, hint: m[1] };
+  // Nothing on this screen checks the count (the rate check covers amount and
+  // P/L only), so a 주 glyph must be seen after the digits — in the token
+  // ("19%", "3F") or as the next word ("29 주", "248 수"). Without one the 주
+  // may have been read as a digit ("7주" → "73").
+  const next = ws[ws.indexOf(w) + 1]?.t ?? "";
+  const unit = m[2] !== "" || /^[주수추%=+F]/.test(next);
+  return unit && n !== null && Number.isInteger(n) && n > 0 && n <= 1e7 ? { value: n } : { value: null, hint: m[1] };
 }
 
 function tossAvg(amount: NumRead, plw: OcrWord, ratew: OcrWord | undefined, shares: number, usd: boolean): Cell<number> {
