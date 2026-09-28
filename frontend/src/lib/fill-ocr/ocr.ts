@@ -69,6 +69,29 @@ function workerOptions() {
   };
 }
 
+/** Linear (tent) kernel — measured best of linear / Mitchell / Catmull-Rom on
+ * the real Toss captures (32 vs 30 vs 26 of 39 rows fully read). */
+function kern(x: number): number {
+  x = Math.abs(x);
+  return x < 1 ? 1 - x : 0;
+}
+
+/** Resampling taps (4 per output pixel) for a line of `n` pixels to `m`. */
+function taps(n: number, m: number): { idx: Int32Array; w: Float32Array } {
+  const idx = new Int32Array(m * 4), w = new Float32Array(m * 4);
+  const r = n / m;
+  for (let o = 0; o < m; o++) {
+    const x = (o + 0.5) * r - 0.5;
+    const i = Math.floor(x), t = x - i;
+    const ws = [kern(t + 1), kern(t), kern(1 - t), kern(2 - t)];
+    for (let k = 0; k < 4; k++) {
+      idx[o * 4 + k] = Math.min(n - 1, Math.max(0, i - 1 + k));
+      w[o * 4 + k] = ws[k];
+    }
+  }
+  return { idx, w };
+}
+
 /** Grayscale + min/max contrast stretch (sharp's `.grayscale().normalize()`). */
 function toGrayStretched(ctx: CanvasRenderingContext2D, w: number, h: number) {
   const img = ctx.getImageData(0, 0, w, h);
@@ -88,7 +111,9 @@ function toGrayStretched(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.putImageData(img, 0, 0);
 }
 
-function scaledCanvas(src: CanvasImageSource, sx: number, sy: number, sw: number, sh: number, scale: number) {
+/** Chromium's high-quality canvas upscaling reads best of everything we
+ * measured, so Chromium keeps it. */
+function nativeScaledCanvas(src: CanvasImageSource, sx: number, sy: number, sw: number, sh: number, scale: number) {
   const c = document.createElement("canvas");
   c.width = Math.max(1, Math.round(sw * scale));
   c.height = Math.max(1, Math.round(sh * scale));
@@ -97,6 +122,88 @@ function scaledCanvas(src: CanvasImageSource, sx: number, sy: number, sw: number
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
   toGrayStretched(ctx, c.width, c.height);
+  return c;
+}
+
+/** Chromium (desktop / Android Chrome, Edge, Samsung Internet) resamples well;
+ * WebKit — Safari and every iOS browser — does not ("1,900,000" vanished on
+ * iPhone), so everything else gets the in-code resampler. The eval dump
+ * script forces a path with `__OCR_RESAMPLE` to measure both. */
+function nativeResampleOk(): boolean {
+  const forced = (globalThis as { __OCR_RESAMPLE?: string }).__OCR_RESAMPLE;
+  if (forced) return forced === "native";
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  return /Chrome\/\d/.test(ua) && !/iPhone|iPad|iPod|CriOS/.test(ua);
+}
+
+function scaledCanvas(src: CanvasImageSource, sx: number, sy: number, sw: number, sh: number, scale: number) {
+  return nativeResampleOk()
+    ? nativeScaledCanvas(src, sx, sy, sw, sh, scale)
+    : codeScaledCanvas(src, sx, sy, sw, sh, scale);
+}
+
+/**
+ * Crop → grayscale → min/max contrast stretch → upscale, all computed here.
+ * The browser only copies pixels 1:1, so the OCR input is the same in every
+ * engine that takes this path.
+ */
+function codeScaledCanvas(src: CanvasImageSource, sx: number, sy: number, sw: number, sh: number, scale: number) {
+  const w0 = Math.max(1, Math.round(sw)), h0 = Math.max(1, Math.round(sh));
+  const base = document.createElement("canvas");
+  base.width = w0;
+  base.height = h0;
+  const bctx = base.getContext("2d", { willReadFrequently: true });
+  if (!bctx) throw new OcrInputError("too_long");
+  bctx.imageSmoothingEnabled = false;
+  bctx.drawImage(src, Math.round(sx), Math.round(sy), w0, h0, 0, 0, w0, h0);
+  const px = bctx.getImageData(0, 0, w0, h0).data;
+  const g = new Float32Array(w0 * h0);
+  let lo = 255, hi = 0;
+  for (let i = 0, j = 0; j < g.length; i += 4, j++) {
+    const y = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    g[j] = y;
+    if (y < lo) lo = y;
+    if (y > hi) hi = y;
+  }
+  const span = Math.max(1, hi - lo);
+  for (let j = 0; j < g.length; j++) g[j] = ((g[j] - lo) * 255) / span;
+
+  const W = Math.max(1, Math.round(w0 * scale)), H = Math.max(1, Math.round(h0 * scale));
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new OcrInputError("too_long");
+  const out = ctx.createImageData(W, H);
+  const d = out.data;
+  if (W === w0 && H === h0) {
+    for (let j = 0, i = 0; j < g.length; j++, i += 4) { const v = Math.round(g[j]); d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+  } else {
+    // Separable: rows first (w0 → W), then columns (h0 → H).
+    const hx = taps(w0, W), hy = taps(h0, H);
+    const tmp = new Float32Array(W * h0);
+    for (let y = 0; y < h0; y++) {
+      const row = y * w0, orow = y * W;
+      for (let x = 0; x < W; x++) {
+        const k = x * 4;
+        tmp[orow + x] = g[row + hx.idx[k]] * hx.w[k] + g[row + hx.idx[k + 1]] * hx.w[k + 1] +
+          g[row + hx.idx[k + 2]] * hx.w[k + 2] + g[row + hx.idx[k + 3]] * hx.w[k + 3];
+      }
+    }
+    for (let y = 0; y < H; y++) {
+      const k = y * 4;
+      const r0 = hy.idx[k] * W, r1 = hy.idx[k + 1] * W, r2 = hy.idx[k + 2] * W, r3 = hy.idx[k + 3] * W;
+      const w0_ = hy.w[k], w1 = hy.w[k + 1], w2 = hy.w[k + 2], w3 = hy.w[k + 3];
+      let i = y * W * 4;
+      for (let x = 0; x < W; x++, i += 4) {
+        const v = tmp[r0 + x] * w0_ + tmp[r1 + x] * w1 + tmp[r2 + x] * w2 + tmp[r3 + x] * w3;
+        const b = v < 0 ? 0 : v > 255 ? 255 : Math.round(v);
+        d[i] = d[i + 1] = d[i + 2] = b;
+        d[i + 3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(out, 0, 0);
   return c;
 }
 

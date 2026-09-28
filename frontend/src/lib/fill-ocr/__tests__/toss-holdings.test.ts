@@ -246,3 +246,29 @@ describe("extra digit readings (alts) are candidates, proven only by 원금", ()
     expect(r2[0]?.avgCost.value ?? null).toBeNull();
   });
 });
+
+describe("misreads that once passed every check (Safari-path OCR, 2026-09-28)", () => {
+  it("'2주' read '25' before the P/L is not 25 shares — '+' starts the P/L, not a 주 glyph", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line("가나기업", ["1,241,794", "1,241,794", 700], "원"),
+      ...line(["25", "25"], ["+688,794", "688,794", 600], ["(68.8%)", "68.8"]),
+      ...line("다라화학", ["911,936", "911,936", 700], "원"),
+      ...line(["19", "19"], "주", ["-551,064", "551,064", 600], ["(37.6%)", "37.6"]),
+    ]);
+    expect(rows[0].shares.value).toBeNull();
+    expect(rows[0].avgCost.value).toBeNull();
+  });
+
+  it("an amount split in two ('24,542' '952원') with a P/L read '9,542.952' fills nothing", () => {
+    // Both are 1/1000 of the truth, so the rate (a ratio) still checks out.
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line("가나우", ["24,542", "24,542", 700], ["952%]", "9522", 800]),
+      ...line(["30%", "30"], ["+9,542.952", "9,542.952", 600], ["(63.6%)", "63.6"]),
+      ...line("다라화학", ["911,936", "911,936", 700], "원"),
+      ...line(["19", "19"], "주", ["-551,064", "551,064", 600], ["(37.6%)", "37.6"]),
+    ]);
+    expect(rows[0].avgCost.value).toBeNull();
+  });
+});

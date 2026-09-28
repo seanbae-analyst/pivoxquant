@@ -16,7 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 
 const [inDir, outDir] = process.argv.slice(2);
 if (!inDir || !outDir) {
@@ -48,7 +48,9 @@ const bundle = fs.readFileSync(path.join(tmp, "ocr.js"), "utf8");
 
 // 2. Serve it + the assets + the images from a fake origin.
 const ORIGIN = "http://ocr-eval.test";
-const browser = await chromium.launch();
+// OCR_BROWSER=webkit runs the same OCR in Safari's engine (iOS users) — its
+// canvas scaling differs from Chromium's and so can the words.
+const browser = await (process.env.OCR_BROWSER === "webkit" ? webkit : chromium).launch();
 const page = await browser.newPage();
 await page.route(`${ORIGIN}/**`, async (route) => {
   const url = new URL(route.request().url());
@@ -62,6 +64,9 @@ await page.route(`${ORIGIN}/**`, async (route) => {
   return route.fulfill({ contentType: type, body: fs.readFileSync(file) });
 });
 await page.goto(`${ORIGIN}/`);
+// OCR_RESAMPLE=code measures the path Safari / iOS users get (in-code
+// resampling); the default in headless Chromium is the native one.
+if (process.env.OCR_RESAMPLE) await page.evaluate((m) => { globalThis.__OCR_RESAMPLE = m; }, process.env.OCR_RESAMPLE);
 await page.addScriptTag({ url: `${ORIGIN}/ocr.js` });
 
 fs.mkdirSync(outDir, { recursive: true });
