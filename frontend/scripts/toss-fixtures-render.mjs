@@ -18,7 +18,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
-const [outDir, countArg, seedArg] = process.argv.slice(2);
+const [outDir, countArg, seedArg, modeArg] = process.argv.slice(2);
+// "usd": every screen has 해외주식 rows shown with the app's $ toggle on.
+const USD_MODE = modeArg === "usd";
 if (!outDir) {
   console.error("usage: node scripts/toss-fixtures-render.mjs <out dir> [count] [seed]");
   process.exit(2);
@@ -46,6 +48,14 @@ const won = (n) => Math.round(n).toLocaleString("en-US");
 function holding(foreign) {
   const [name, ticker] = foreign ? pick(US) : [pick(KR), null];
   const shares = rnd() < 0.4 ? int(1, 9) : rnd() < 0.7 ? int(10, 99) : int(100, 999);
+  if (foreign && USD_MODE) {
+    const avg = int(100, 90000) / 100;
+    const cost = Math.round(shares * avg * 100) / 100;
+    const value = Math.max(0.01, Math.round(cost * (0.1 + rnd() * 1.8) * 100) / 100);
+    const pl = Math.round((value - cost) * 100) / 100;
+    const rate = Math.floor((Math.abs(pl) / cost) * 1000) / 10;
+    return { name, ticker, shares, avg, cost, value, pl, rate, foreign, usd: true };
+  }
   const avg = foreign ? int(3, 900) * 1000 + int(0, 999) : pick([int(1, 99) * 100, int(100, 999) * 100, int(1000, 9999) * 100, int(1, 9) * 100000]);
   const cost = shares * avg;
   const value = Math.max(1, Math.round(cost * (0.1 + rnd() * 1.8)));
@@ -72,10 +82,11 @@ body { background: ${bg}; color: ${fg}; font-family: -apple-system, "Apple SD Go
 
 function row(h, i) {
   const cls = h.pl < 0 ? "neg" : "pos";
-  const pl = `${h.pl < 0 ? "-" : "+"}${won(Math.abs(h.pl))} (${h.rate.toFixed(1)}%)`;
+  const m = (n) => (h.usd ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : won(n));
+  const pl = `${h.pl < 0 ? "-" : "+"}${m(Math.abs(h.pl))} (${h.rate.toFixed(1)}%)`;
   return `<div class="row" data-h="${i}"><div class="logo" style="background:${pick(LOGO)}">${pick(GLYPH)}</div>
 <div class="mid"><div class="nm">${h.name}</div><div class="sh">${h.shares}주</div></div>
-<div class="rt"><div class="amt">${won(h.value)}원</div><div class="pl ${cls}">${pl}</div></div></div>`;
+<div class="rt"><div class="amt">${h.usd ? m(h.value) : `${won(h.value)}원`}</div><div class="pl ${cls}">${pl}</div></div></div>`;
 }
 
 fs.mkdirSync(outDir, { recursive: true });
@@ -89,9 +100,10 @@ for (let k = 0; k < COUNT; k++) {
   const jpeg = rnd() < 0.5;
   const header = rnd() < 0.5;
   const kr = Array.from({ length: int(2, 6) }, () => holding(false));
-  const us = rnd() < 0.5 ? Array.from({ length: int(1, 3) }, () => holding(true)) : [];
+  const us = USD_MODE || rnd() < 0.5 ? Array.from({ length: int(1, 3) }, () => holding(true)) : [];
   const all = [...kr, ...us];
-  const total = all.reduce((s, h) => s + h.value, 0), totalPl = all.reduce((s, h) => s + h.pl, 0);
+  const total = all.reduce((s, h) => s + (h.usd ? h.value * 1400 : h.value), 0);
+  const totalPl = all.reduce((s, h) => s + (h.usd ? h.pl * 1400 : h.pl), 0);
   const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>${css(dark, fontScale)}</style></head><body>
 ${header ? `<div class="hdr"><div class="t">내 투자</div><div class="v">${won(total)}원 ›</div><div class="neg">${totalPl < 0 ? "-" : "+"}${won(Math.abs(totalPl))}원</div></div>` : ""}
 ${header ? `<div class="sec"><span>국내주식 <span class="r">-20.4%</span></span><span>⌃</span></div>` : ""}
@@ -113,7 +125,7 @@ ${us.length ? `<div class="sec"><span>해외주식 <span class="r">-59.1%</span>
   await page.close();
   truth[file] = {
     variant: { dark, width, dpr, fontScale, jpeg, header },
-    holdings: all.filter((_, i) => visible.includes(i)).map((x) => ({ name: x.name, ticker: x.ticker, shares: x.shares, avg_cost: x.foreign ? null : x.avg, foreign: x.foreign })),
+    holdings: all.filter((_, i) => visible.includes(i)).map((x) => ({ name: x.name, ticker: x.ticker, shares: x.shares, avg_cost: x.foreign && !x.usd ? null : x.avg, foreign: x.foreign })),
   };
   console.log(file, JSON.stringify(truth[file].variant));
 }
