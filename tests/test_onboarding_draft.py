@@ -117,12 +117,14 @@ def test_put_draft_round_trips_korean_text(client, auth_user):
 # ── Submit clears draft ─────────────────────────────────────────────────────
 
 
-def test_submit_onboarding_clears_draft(app, client, auth_user):
+def test_submit_onboarding_clears_draft(app, client, auth_user, add_position):
     """After POST /api/profile/onboarding the draft column must be NULL
     so a future session doesn't resurrect a stale wizard for an
     already-onboarded user."""
     from extensions import db
     from models import User
+
+    add_position(auth_user["id"])  # onboarding needs a holding (2026-09-28)
 
     # Seed a draft.
     r1 = client.put(

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
+import { usePortfolioPositions } from "@/lib/hooks";
 import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { useLocale } from "@/lib/locale";
@@ -592,6 +593,15 @@ export default function OnboardingPage() {
       router.replace("/mirror");
     }
   }, [authLoading, user, router]);
+
+  // Holdings come first (2026-09-28): opened by URL with an empty book, the
+  // questions send the user back to step 0. The server refuses to complete
+  // onboarding without a holding either (ONBOARDING_HOLDINGS_REQUIRED).
+  const { data: posData } = usePortfolioPositions<{ positions?: unknown[] }>();
+  useEffect(() => {
+    if (!user || user.onboarding_completed === true || posData === undefined) return;
+    if ((posData.positions ?? []).length === 0) router.replace("/onboarding/broker");
+  }, [user, posData, router]);
 
   // Restore saved step from answers — server draft wins if present so
   // a user who answered N questions on mobile picks up at N on desktop.

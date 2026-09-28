@@ -204,6 +204,15 @@ class TestGetQuestionnaire:
 # S4 / S5 — POST /onboarding
 # ═════════════════════════════════════════════════════════════════════════
 
+@pytest.fixture
+def auth_user(auth_user, add_position):
+    """Onboarding needs at least one holding (2026-09-28,
+    ONBOARDING_HOLDINGS_REQUIRED) — every test here starts from a user who
+    has uploaded their portfolio, as the real client guarantees."""
+    add_position(auth_user["id"])
+    return auth_user
+
+
 class TestSubmitOnboardingV3:
     def test_persists_answers_vector_and_columns(self, client, auth_user, app):
         r = client.post("/api/profile/onboarding", json={"answers": _v3()})
@@ -263,6 +272,20 @@ class TestSubmitOnboardingV3:
             row = InvestmentProfile.query.filter_by(user_id=auth_user["id"]).first()
             assert row.questionnaire_version is None
             assert row.declared_vector() == {}
+
+    def test_empty_book_rejected_even_on_skip(self, client, make_user, app):
+        """No holdings → onboarding cannot complete, skip path included."""
+        user = make_user(email="nobook@test.com")
+        assert client.post("/api/auth/login", json={
+            "email": user["email"], "password": user["password"],
+        }).status_code == 200
+        for answers in ({}, _v3()):
+            r = client.post("/api/profile/onboarding", json={"answers": answers})
+            assert r.status_code == 400
+            assert r.get_json()["code"] == "ONBOARDING_HOLDINGS_REQUIRED"
+        from models import User
+        with app.app_context():
+            assert User.query.get(user["id"]).onboarding_completed is False
 
     def test_legacy_v2_payload_rejected(self, client, auth_user, app):
         """V1/V2 questionnaires were removed 2026-09-06. An old client's

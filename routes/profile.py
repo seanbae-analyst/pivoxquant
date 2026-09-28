@@ -202,6 +202,18 @@ def submit_onboarding():
             code="AGE_CONFIRMATION_REQUIRED", status=403,
         )
 
+    # 2026-09-28 CEO — "무조건 포트폴리오 작성하고 가게끔". The product starts
+    # from the portfolio the user already holds, so onboarding cannot complete
+    # with an empty book — the skip path (``{}``) included. The client gates
+    # the same thing on /onboarding/broker; this keeps a direct POST, or
+    # /onboarding opened by URL, from walking around it.
+    if Position.query.filter_by(user_id=current_user.id).first() is None:
+        return api_error(
+            en="Add at least one holding before finishing onboarding.",
+            kr="보유 종목을 1개 이상 올린 뒤 시작할 수 있습니다.",
+            code="ONBOARDING_HOLDINGS_REQUIRED", status=400,
+        )
+
     data = request.get_json() or {}
     answers = data.get("answers", {})
     if not isinstance(answers, dict):
