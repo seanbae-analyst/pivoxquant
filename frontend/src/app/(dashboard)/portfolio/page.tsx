@@ -85,6 +85,18 @@ interface PositionsResponse {
 
 export default function PortfolioPageV2() {
   const [addOpen, setAddOpen] = React.useState(false);
+  // /portfolio?import=holdings (linked from the journal capture import when a
+  // holdings screen was dropped there) opens the holdings import directly.
+  const [addImport, setAddImport] = React.useState(false);
+  React.useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("import") !== "holdings") return;
+    setAddImport(true);
+    setAddOpen(true);
+    q.delete("import");
+    const rest = q.toString();
+    window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+  }, []);
   const [tradeAction, setTradeAction] = React.useState<TradeAction | null>(null);
   const [targetPosition, setTargetPosition] = React.useState<Position | null>(
     null,
@@ -558,8 +570,9 @@ export default function PortfolioPageV2() {
       {/* ═══════════ MODALS ═══════════ */}
       <AddPositionModalV2
         open={addOpen}
-        onClose={() => setAddOpen(false)}
+        onClose={() => { setAddOpen(false); setAddImport(false); }}
         onSuccess={refreshAll}
+        startWithImport={addImport}
       />
       <TradeModalV2
         key={targetPosition?.id ?? "none"}

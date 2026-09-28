@@ -50,6 +50,8 @@ interface AddPositionModalV2Props {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /** Open straight on the holdings-capture import (/portfolio?import=holdings). */
+  startWithImport?: boolean;
 }
 
 /** Entry mode — journaling an existing holding vs. reflecting on a new entry. */
@@ -72,6 +74,7 @@ export function AddPositionModalV2({
   open,
   onClose,
   onSuccess,
+  startWithImport = false,
 }: AddPositionModalV2Props) {
   const headlineId = "add-pos-v2-headline";
   const trapRef = useFocusTrap<HTMLDivElement>(open);
@@ -116,6 +119,9 @@ export function AddPositionModalV2({
       setImporting(false);
     }
   }, [open]);
+  React.useEffect(() => {
+    if (open && startWithImport) setImporting(true);
+  }, [open, startWithImport]);
 
   // Escape closes — only when the friction modal is NOT open (it owns Escape
   // during its own lifecycle).

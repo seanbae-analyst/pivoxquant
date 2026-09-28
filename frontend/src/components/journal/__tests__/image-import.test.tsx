@@ -66,6 +66,7 @@ describe("ImageImportPanel", () => {
     pick(["j.png"]);
     await readAll();
     expect(screen.getByTestId("image-notes").textContent).toContain("journal.import.image.screen.holdings");
+    expect(screen.getByTestId("to-holdings-import").getAttribute("href")).toBe("/portfolio?import=holdings");
     expect(screen.queryByTestId("ocr-review-table")).toBeNull();
     expect(s.close).toHaveBeenCalled();
   });
