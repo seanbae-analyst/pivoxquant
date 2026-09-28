@@ -1,0 +1,1472 @@
+{
+  "kiwoom_00.jpg": {
+    "variant": {
+      "style": "kiwoom",
+      "dark": false,
+      "width": 375,
+      "dpr": 2,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "라온피플",
+        "shares": 33,
+        "avg_cost": 92750,
+        "currency": "KRW"
+      },
+      {
+        "name": "우리금융지주",
+        "shares": 72,
+        "avg_cost": 531160,
+        "currency": "KRW"
+      },
+      {
+        "name": "아이에스티이",
+        "shares": 94,
+        "avg_cost": 7710,
+        "currency": "KRW"
+      },
+      {
+        "name": "동구바이오제약",
+        "shares": 1,
+        "avg_cost": 606940,
+        "currency": "KRW"
+      },
+      {
+        "name": "새빗켐",
+        "shares": 43,
+        "avg_cost": 84010,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kis_01.png": {
+    "variant": {
+      "style": "kis",
+      "dark": false,
+      "width": 393,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "아이디스",
+        "shares": 1098,
+        "avg_cost": 6800,
+        "currency": "KRW"
+      },
+      {
+        "name": "오비고",
+        "shares": 58,
+        "avg_cost": 46860,
+        "currency": "KRW"
+      },
+      {
+        "name": "이리츠코크렙",
+        "shares": 9,
+        "avg_cost": 6460,
+        "currency": "KRW"
+      },
+      {
+        "name": "다산솔루에타",
+        "shares": 970,
+        "avg_cost": 99040,
+        "currency": "KRW"
+      },
+      {
+        "name": "조이시티",
+        "shares": 66,
+        "avg_cost": 9440,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "mirae_02.png": {
+    "variant": {
+      "style": "mirae",
+      "dark": true,
+      "width": 430,
+      "dpr": 2,
+      "jpeg": false,
+      "us": true
+    },
+    "holdings": [
+      {
+        "name": "KO",
+        "shares": 70,
+        "avg_cost": 97.35,
+        "currency": "USD"
+      },
+      {
+        "name": "SOXL",
+        "shares": 10,
+        "avg_cost": 146.38,
+        "currency": "USD"
+      },
+      {
+        "name": "TSLA",
+        "shares": 82,
+        "avg_cost": 117.32,
+        "currency": "USD"
+      },
+      {
+        "name": "SMR",
+        "shares": 9,
+        "avg_cost": 179.46,
+        "currency": "USD"
+      },
+      {
+        "name": "NVDA",
+        "shares": 50,
+        "avg_cost": 335.39,
+        "currency": "USD"
+      }
+    ]
+  },
+  "samsung_03.png": {
+    "variant": {
+      "style": "samsung",
+      "dark": true,
+      "width": 375,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "KT",
+        "shares": 40,
+        "avg_cost": 14200,
+        "currency": "KRW"
+      },
+      {
+        "name": "금호전기",
+        "shares": 44,
+        "avg_cost": 9600,
+        "currency": "KRW"
+      },
+      {
+        "name": "일승",
+        "shares": 7,
+        "avg_cost": 383330,
+        "currency": "KRW"
+      },
+      {
+        "name": "두산",
+        "shares": 6,
+        "avg_cost": 8150,
+        "currency": "KRW"
+      },
+      {
+        "name": "동양파일",
+        "shares": 87,
+        "avg_cost": 57450,
+        "currency": "KRW"
+      },
+      {
+        "name": "모나용평",
+        "shares": 61,
+        "avg_cost": 9600,
+        "currency": "KRW"
+      },
+      {
+        "name": "신일제약",
+        "shares": 348,
+        "avg_cost": 8090,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "nh_04.png": {
+    "variant": {
+      "style": "nh",
+      "dark": false,
+      "width": 430,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "제놀루션",
+        "shares": 70,
+        "avg_cost": 454670,
+        "currency": "KRW"
+      },
+      {
+        "name": "사조오양",
+        "shares": 29,
+        "avg_cost": 21140,
+        "currency": "KRW"
+      },
+      {
+        "name": "동원산업",
+        "shares": 87,
+        "avg_cost": 637250,
+        "currency": "KRW"
+      },
+      {
+        "name": "KTcs",
+        "shares": 90,
+        "avg_cost": 71550,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kiwoom_05.png": {
+    "variant": {
+      "style": "kiwoom",
+      "dark": false,
+      "width": 393,
+      "dpr": 3,
+      "jpeg": false,
+      "us": true
+    },
+    "holdings": [
+      {
+        "name": "KO",
+        "shares": 85,
+        "avg_cost": 841.61,
+        "currency": "USD"
+      },
+      {
+        "name": "IONQ",
+        "shares": 49,
+        "avg_cost": 489.62,
+        "currency": "USD"
+      },
+      {
+        "name": "JOBY",
+        "shares": 1143,
+        "avg_cost": 225.7,
+        "currency": "USD"
+      },
+      {
+        "name": "GOOGL",
+        "shares": 1,
+        "avg_cost": 325.83,
+        "currency": "USD"
+      },
+      {
+        "name": "PLTR",
+        "shares": 56,
+        "avg_cost": 145.85,
+        "currency": "USD"
+      },
+      {
+        "name": "META",
+        "shares": 3,
+        "avg_cost": 110.63,
+        "currency": "USD"
+      },
+      {
+        "name": "QQQ",
+        "shares": 43,
+        "avg_cost": 336.66,
+        "currency": "USD"
+      }
+    ]
+  },
+  "kis_06.jpg": {
+    "variant": {
+      "style": "kis",
+      "dark": false,
+      "width": 390,
+      "dpr": 3,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "태양",
+        "shares": 4,
+        "avg_cost": 72270,
+        "currency": "KRW"
+      },
+      {
+        "name": "플랜티넷",
+        "shares": 5,
+        "avg_cost": 61230,
+        "currency": "KRW"
+      },
+      {
+        "name": "스페코",
+        "shares": 4,
+        "avg_cost": 285540,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "mirae_07.jpg": {
+    "variant": {
+      "style": "mirae",
+      "dark": false,
+      "width": 375,
+      "dpr": 2,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "코리아써키트",
+        "shares": 3,
+        "avg_cost": 6540,
+        "currency": "KRW"
+      },
+      {
+        "name": "에이치피오",
+        "shares": 4,
+        "avg_cost": 9480,
+        "currency": "KRW"
+      },
+      {
+        "name": "제이에스티나",
+        "shares": 57,
+        "avg_cost": 1540,
+        "currency": "KRW"
+      },
+      {
+        "name": "차바이오텍",
+        "shares": 6,
+        "avg_cost": 1770,
+        "currency": "KRW"
+      },
+      {
+        "name": "한국석유",
+        "shares": 8,
+        "avg_cost": 327140,
+        "currency": "KRW"
+      },
+      {
+        "name": "퓨쳐켐",
+        "shares": 9,
+        "avg_cost": 84280,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "samsung_08.jpg": {
+    "variant": {
+      "style": "samsung",
+      "dark": true,
+      "width": 430,
+      "dpr": 3,
+      "jpeg": true,
+      "us": true
+    },
+    "holdings": [
+      {
+        "name": "QQQ",
+        "shares": 48,
+        "avg_cost": 661.9,
+        "currency": "USD"
+      },
+      {
+        "name": "SCHD",
+        "shares": 81,
+        "avg_cost": 138.49,
+        "currency": "USD"
+      },
+      {
+        "name": "TSLA",
+        "shares": 54,
+        "avg_cost": 893.49,
+        "currency": "USD"
+      },
+      {
+        "name": "SOXL",
+        "shares": 13,
+        "avg_cost": 528.81,
+        "currency": "USD"
+      },
+      {
+        "name": "SMR",
+        "shares": 6,
+        "avg_cost": 390.45,
+        "currency": "USD"
+      }
+    ]
+  },
+  "nh_09.jpg": {
+    "variant": {
+      "style": "nh",
+      "dark": false,
+      "width": 393,
+      "dpr": 3,
+      "jpeg": true,
+      "us": true
+    },
+    "holdings": [
+      {
+        "name": "SCHD",
+        "shares": 58,
+        "avg_cost": 417.3,
+        "currency": "USD"
+      },
+      {
+        "name": "META",
+        "shares": 776,
+        "avg_cost": 498.92,
+        "currency": "USD"
+      },
+      {
+        "name": "NVDA",
+        "shares": 75,
+        "avg_cost": 421.39,
+        "currency": "USD"
+      },
+      {
+        "name": "O",
+        "shares": 717,
+        "avg_cost": 430.19,
+        "currency": "USD"
+      },
+      {
+        "name": "AMZN",
+        "shares": 6,
+        "avg_cost": 509.54,
+        "currency": "USD"
+      },
+      {
+        "name": "MSFT",
+        "shares": 8,
+        "avg_cost": 95.24,
+        "currency": "USD"
+      }
+    ]
+  },
+  "kiwoom_10.jpg": {
+    "variant": {
+      "style": "kiwoom",
+      "dark": true,
+      "width": 390,
+      "dpr": 2,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "모트렉스",
+        "shares": 4,
+        "avg_cost": 8240,
+        "currency": "KRW"
+      },
+      {
+        "name": "머큐리",
+        "shares": 1052,
+        "avg_cost": 939890,
+        "currency": "KRW"
+      },
+      {
+        "name": "센코",
+        "shares": 74,
+        "avg_cost": 73030,
+        "currency": "KRW"
+      },
+      {
+        "name": "SJM홀딩스",
+        "shares": 71,
+        "avg_cost": 4840,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kis_11.jpg": {
+    "variant": {
+      "style": "kis",
+      "dark": false,
+      "width": 375,
+      "dpr": 2,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "KSS해운",
+        "shares": 293,
+        "avg_cost": 320970,
+        "currency": "KRW"
+      },
+      {
+        "name": "이랜시스",
+        "shares": 1181,
+        "avg_cost": 9380,
+        "currency": "KRW"
+      },
+      {
+        "name": "아모레퍼시픽홀딩스",
+        "shares": 988,
+        "avg_cost": 515720,
+        "currency": "KRW"
+      },
+      {
+        "name": "SK텔레콤",
+        "shares": 47,
+        "avg_cost": 1050,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "mirae_12.png": {
+    "variant": {
+      "style": "mirae",
+      "dark": false,
+      "width": 390,
+      "dpr": 3,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "정상제이엘에스",
+        "shares": 61,
+        "avg_cost": 80070,
+        "currency": "KRW"
+      },
+      {
+        "name": "비투엔",
+        "shares": 117,
+        "avg_cost": 8370,
+        "currency": "KRW"
+      },
+      {
+        "name": "노머스",
+        "shares": 81,
+        "avg_cost": 7440,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "samsung_13.png": {
+    "variant": {
+      "style": "samsung",
+      "dark": false,
+      "width": 430,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "SNT다이내믹스",
+        "shares": 7,
+        "avg_cost": 870,
+        "currency": "KRW"
+      },
+      {
+        "name": "포스코스틸리온",
+        "shares": 99,
+        "avg_cost": 3710,
+        "currency": "KRW"
+      },
+      {
+        "name": "나라셀라",
+        "shares": 9,
+        "avg_cost": 32790,
+        "currency": "KRW"
+      },
+      {
+        "name": "하나금융지주",
+        "shares": 77,
+        "avg_cost": 30750,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "nh_14.jpg": {
+    "variant": {
+      "style": "nh",
+      "dark": false,
+      "width": 390,
+      "dpr": 2,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "LG화학우",
+        "shares": 29,
+        "avg_cost": 972960,
+        "currency": "KRW"
+      },
+      {
+        "name": "삼양컴텍",
+        "shares": 606,
+        "avg_cost": 53230,
+        "currency": "KRW"
+      },
+      {
+        "name": "폴라리스세원",
+        "shares": 1,
+        "avg_cost": 83050,
+        "currency": "KRW"
+      },
+      {
+        "name": "노블엠앤비",
+        "shares": 501,
+        "avg_cost": 389220,
+        "currency": "KRW"
+      },
+      {
+        "name": "동방선기",
+        "shares": 2,
+        "avg_cost": 4470,
+        "currency": "KRW"
+      },
+      {
+        "name": "사조동아원",
+        "shares": 64,
+        "avg_cost": 83320,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kiwoom_15.png": {
+    "variant": {
+      "style": "kiwoom",
+      "dark": true,
+      "width": 393,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "씨싸이트",
+        "shares": 51,
+        "avg_cost": 77290,
+        "currency": "KRW"
+      },
+      {
+        "name": "한국선재",
+        "shares": 567,
+        "avg_cost": 2090,
+        "currency": "KRW"
+      },
+      {
+        "name": "엔에프씨",
+        "shares": 56,
+        "avg_cost": 456280,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kis_16.png": {
+    "variant": {
+      "style": "kis",
+      "dark": false,
+      "width": 430,
+      "dpr": 2,
+      "jpeg": false,
+      "us": true
+    },
+    "holdings": [
+      {
+        "name": "TSLA",
+        "shares": 1092,
+        "avg_cost": 865.53,
+        "currency": "USD"
+      },
+      {
+        "name": "PLTR",
+        "shares": 600,
+        "avg_cost": 417.63,
+        "currency": "USD"
+      },
+      {
+        "name": "KO",
+        "shares": 8,
+        "avg_cost": 252.52,
+        "currency": "USD"
+      },
+      {
+        "name": "JOBY",
+        "shares": 9,
+        "avg_cost": 378.68,
+        "currency": "USD"
+      },
+      {
+        "name": "SMR",
+        "shares": 6,
+        "avg_cost": 50.34,
+        "currency": "USD"
+      },
+      {
+        "name": "AAPL",
+        "shares": 8,
+        "avg_cost": 481.38,
+        "currency": "USD"
+      }
+    ]
+  },
+  "mirae_17.png": {
+    "variant": {
+      "style": "mirae",
+      "dark": true,
+      "width": 430,
+      "dpr": 3,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "에스지헬스케어",
+        "shares": 6,
+        "avg_cost": 6460,
+        "currency": "KRW"
+      },
+      {
+        "name": "멕아이씨에스",
+        "shares": 2,
+        "avg_cost": 2510,
+        "currency": "KRW"
+      },
+      {
+        "name": "제이엘케이",
+        "shares": 5,
+        "avg_cost": 6380,
+        "currency": "KRW"
+      },
+      {
+        "name": "삼륭물산",
+        "shares": 4,
+        "avg_cost": 1830,
+        "currency": "KRW"
+      },
+      {
+        "name": "에이치엠넥스",
+        "shares": 1262,
+        "avg_cost": 4580,
+        "currency": "KRW"
+      },
+      {
+        "name": "캡스톤파트너스",
+        "shares": 66,
+        "avg_cost": 97510,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "samsung_18.jpg": {
+    "variant": {
+      "style": "samsung",
+      "dark": false,
+      "width": 430,
+      "dpr": 3,
+      "jpeg": true,
+      "us": true
+    },
+    "holdings": [
+      {
+        "name": "TSLA",
+        "shares": 8,
+        "avg_cost": 524.06,
+        "currency": "USD"
+      },
+      {
+        "name": "O",
+        "shares": 82,
+        "avg_cost": 108.78,
+        "currency": "USD"
+      },
+      {
+        "name": "TQQQ",
+        "shares": 20,
+        "avg_cost": 372.16,
+        "currency": "USD"
+      }
+    ]
+  },
+  "nh_19.jpg": {
+    "variant": {
+      "style": "nh",
+      "dark": false,
+      "width": 390,
+      "dpr": 2,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "미래산업",
+        "shares": 786,
+        "avg_cost": 955810,
+        "currency": "KRW"
+      },
+      {
+        "name": "동구바이오제약",
+        "shares": 13,
+        "avg_cost": 622320,
+        "currency": "KRW"
+      },
+      {
+        "name": "스모트로닉",
+        "shares": 27,
+        "avg_cost": 149500,
+        "currency": "KRW"
+      },
+      {
+        "name": "일월지엠엘",
+        "shares": 4,
+        "avg_cost": 254270,
+        "currency": "KRW"
+      },
+      {
+        "name": "압타머사이언스",
+        "shares": 78,
+        "avg_cost": 93170,
+        "currency": "KRW"
+      },
+      {
+        "name": "비엔케이제3호스팩",
+        "shares": 2,
+        "avg_cost": 5560,
+        "currency": "KRW"
+      },
+      {
+        "name": "인탑스",
+        "shares": 95,
+        "avg_cost": 824810,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kiwoom_20.png": {
+    "variant": {
+      "style": "kiwoom",
+      "dark": true,
+      "width": 393,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "NPX",
+        "shares": 7,
+        "avg_cost": 918880,
+        "currency": "KRW"
+      },
+      {
+        "name": "에코아이",
+        "shares": 93,
+        "avg_cost": 564950,
+        "currency": "KRW"
+      },
+      {
+        "name": "에스오에스랩",
+        "shares": 24,
+        "avg_cost": 634750,
+        "currency": "KRW"
+      },
+      {
+        "name": "베셀",
+        "shares": 841,
+        "avg_cost": 4050,
+        "currency": "KRW"
+      },
+      {
+        "name": "서전기전",
+        "shares": 445,
+        "avg_cost": 819060,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kis_21.jpg": {
+    "variant": {
+      "style": "kis",
+      "dark": false,
+      "width": 393,
+      "dpr": 2,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "휴림에이텍",
+        "shares": 23,
+        "avg_cost": 157380,
+        "currency": "KRW"
+      },
+      {
+        "name": "티움바이오",
+        "shares": 26,
+        "avg_cost": 1730,
+        "currency": "KRW"
+      },
+      {
+        "name": "상아프론테크",
+        "shares": 3,
+        "avg_cost": 230240,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "mirae_22.png": {
+    "variant": {
+      "style": "mirae",
+      "dark": true,
+      "width": 393,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "다날",
+        "shares": 5,
+        "avg_cost": 28570,
+        "currency": "KRW"
+      },
+      {
+        "name": "사조오양",
+        "shares": 27,
+        "avg_cost": 69340,
+        "currency": "KRW"
+      },
+      {
+        "name": "SK디스커버리우",
+        "shares": 7,
+        "avg_cost": 243180,
+        "currency": "KRW"
+      },
+      {
+        "name": "STX",
+        "shares": 30,
+        "avg_cost": 136630,
+        "currency": "KRW"
+      },
+      {
+        "name": "한국단자",
+        "shares": 1242,
+        "avg_cost": 49240,
+        "currency": "KRW"
+      },
+      {
+        "name": "코오롱인더",
+        "shares": 28,
+        "avg_cost": 542400,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "samsung_23.jpg": {
+    "variant": {
+      "style": "samsung",
+      "dark": true,
+      "width": 393,
+      "dpr": 2,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "NPC",
+        "shares": 3,
+        "avg_cost": 30640,
+        "currency": "KRW"
+      },
+      {
+        "name": "유안타제15호스팩",
+        "shares": 80,
+        "avg_cost": 256970,
+        "currency": "KRW"
+      },
+      {
+        "name": "동국산업",
+        "shares": 82,
+        "avg_cost": 26480,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "nh_24.png": {
+    "variant": {
+      "style": "nh",
+      "dark": false,
+      "width": 430,
+      "dpr": 3,
+      "jpeg": false,
+      "us": true
+    },
+    "holdings": [
+      {
+        "name": "TQQQ",
+        "shares": 9,
+        "avg_cost": 467.13,
+        "currency": "USD"
+      },
+      {
+        "name": "PLTR",
+        "shares": 77,
+        "avg_cost": 753.79,
+        "currency": "USD"
+      },
+      {
+        "name": "SOXL",
+        "shares": 5,
+        "avg_cost": 311.78,
+        "currency": "USD"
+      },
+      {
+        "name": "TSLA",
+        "shares": 77,
+        "avg_cost": 427.69,
+        "currency": "USD"
+      },
+      {
+        "name": "GOOGL",
+        "shares": 6,
+        "avg_cost": 235.52,
+        "currency": "USD"
+      }
+    ]
+  },
+  "kiwoom_25.png": {
+    "variant": {
+      "style": "kiwoom",
+      "dark": false,
+      "width": 393,
+      "dpr": 3,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "HS애드",
+        "shares": 41,
+        "avg_cost": 750,
+        "currency": "KRW"
+      },
+      {
+        "name": "화인베스틸",
+        "shares": 6,
+        "avg_cost": 2140,
+        "currency": "KRW"
+      },
+      {
+        "name": "에이에프더블류",
+        "shares": 37,
+        "avg_cost": 51730,
+        "currency": "KRW"
+      },
+      {
+        "name": "에프알텍",
+        "shares": 14,
+        "avg_cost": 923870,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kis_26.jpg": {
+    "variant": {
+      "style": "kis",
+      "dark": true,
+      "width": 390,
+      "dpr": 3,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "디와이파워",
+        "shares": 9,
+        "avg_cost": 77540,
+        "currency": "KRW"
+      },
+      {
+        "name": "진원생명과학",
+        "shares": 391,
+        "avg_cost": 15460,
+        "currency": "KRW"
+      },
+      {
+        "name": "디씨엠",
+        "shares": 8,
+        "avg_cost": 580340,
+        "currency": "KRW"
+      },
+      {
+        "name": "에스에너지",
+        "shares": 1401,
+        "avg_cost": 16460,
+        "currency": "KRW"
+      },
+      {
+        "name": "한국경제TV",
+        "shares": 61,
+        "avg_cost": 895210,
+        "currency": "KRW"
+      },
+      {
+        "name": "데이원컴퍼니",
+        "shares": 804,
+        "avg_cost": 641260,
+        "currency": "KRW"
+      },
+      {
+        "name": "오텍",
+        "shares": 97,
+        "avg_cost": 770840,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "mirae_27.png": {
+    "variant": {
+      "style": "mirae",
+      "dark": true,
+      "width": 393,
+      "dpr": 3,
+      "jpeg": false,
+      "us": true
+    },
+    "holdings": [
+      {
+        "name": "AMZN",
+        "shares": 3,
+        "avg_cost": 814.22,
+        "currency": "USD"
+      },
+      {
+        "name": "JOBY",
+        "shares": 8,
+        "avg_cost": 68.45,
+        "currency": "USD"
+      },
+      {
+        "name": "O",
+        "shares": 541,
+        "avg_cost": 756.12,
+        "currency": "USD"
+      },
+      {
+        "name": "SOXL",
+        "shares": 3,
+        "avg_cost": 118.26,
+        "currency": "USD"
+      },
+      {
+        "name": "GOOGL",
+        "shares": 80,
+        "avg_cost": 824.51,
+        "currency": "USD"
+      },
+      {
+        "name": "KO",
+        "shares": 47,
+        "avg_cost": 159.56,
+        "currency": "USD"
+      }
+    ]
+  },
+  "samsung_28.png": {
+    "variant": {
+      "style": "samsung",
+      "dark": false,
+      "width": 393,
+      "dpr": 3,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "프로텍",
+        "shares": 32,
+        "avg_cost": 5350,
+        "currency": "KRW"
+      },
+      {
+        "name": "이삭엔지니어링",
+        "shares": 7,
+        "avg_cost": 63510,
+        "currency": "KRW"
+      },
+      {
+        "name": "뷰웍스",
+        "shares": 44,
+        "avg_cost": 5240,
+        "currency": "KRW"
+      },
+      {
+        "name": "현대미포조선",
+        "shares": 921,
+        "avg_cost": 8520,
+        "currency": "KRW"
+      },
+      {
+        "name": "모베이스전자",
+        "shares": 31,
+        "avg_cost": 900670,
+        "currency": "KRW"
+      },
+      {
+        "name": "NH투자증권우",
+        "shares": 8,
+        "avg_cost": 25930,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "nh_29.jpg": {
+    "variant": {
+      "style": "nh",
+      "dark": false,
+      "width": 393,
+      "dpr": 3,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "iM금융지주",
+        "shares": 72,
+        "avg_cost": 1280,
+        "currency": "KRW"
+      },
+      {
+        "name": "피코그램",
+        "shares": 35,
+        "avg_cost": 208920,
+        "currency": "KRW"
+      },
+      {
+        "name": "티이엠씨",
+        "shares": 58,
+        "avg_cost": 183070,
+        "currency": "KRW"
+      },
+      {
+        "name": "시프트업",
+        "shares": 60,
+        "avg_cost": 8210,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kiwoom_30.png": {
+    "variant": {
+      "style": "kiwoom",
+      "dark": false,
+      "width": 375,
+      "dpr": 3,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "큐로셀",
+        "shares": 8,
+        "avg_cost": 89260,
+        "currency": "KRW"
+      },
+      {
+        "name": "파로스아이바이오",
+        "shares": 7,
+        "avg_cost": 88900,
+        "currency": "KRW"
+      },
+      {
+        "name": "클래시스",
+        "shares": 7,
+        "avg_cost": 18390,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kis_31.jpg": {
+    "variant": {
+      "style": "kis",
+      "dark": false,
+      "width": 390,
+      "dpr": 3,
+      "jpeg": true,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "팬젠",
+        "shares": 547,
+        "avg_cost": 390950,
+        "currency": "KRW"
+      },
+      {
+        "name": "티씨케이",
+        "shares": 194,
+        "avg_cost": 10140,
+        "currency": "KRW"
+      },
+      {
+        "name": "유유제약",
+        "shares": 35,
+        "avg_cost": 681450,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "mirae_32.png": {
+    "variant": {
+      "style": "mirae",
+      "dark": false,
+      "width": 393,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "넥스트아이",
+        "shares": 663,
+        "avg_cost": 5490,
+        "currency": "KRW"
+      },
+      {
+        "name": "실리콘투",
+        "shares": 3,
+        "avg_cost": 450350,
+        "currency": "KRW"
+      },
+      {
+        "name": "롯데렌탈",
+        "shares": 81,
+        "avg_cost": 9620,
+        "currency": "KRW"
+      },
+      {
+        "name": "아진산업",
+        "shares": 530,
+        "avg_cost": 6500,
+        "currency": "KRW"
+      },
+      {
+        "name": "KT",
+        "shares": 84,
+        "avg_cost": 93990,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "samsung_33.png": {
+    "variant": {
+      "style": "samsung",
+      "dark": true,
+      "width": 393,
+      "dpr": 3,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "아크솔루션스",
+        "shares": 410,
+        "avg_cost": 57210,
+        "currency": "KRW"
+      },
+      {
+        "name": "한성크린텍",
+        "shares": 2,
+        "avg_cost": 71640,
+        "currency": "KRW"
+      },
+      {
+        "name": "누리플렉스",
+        "shares": 467,
+        "avg_cost": 370240,
+        "currency": "KRW"
+      },
+      {
+        "name": "아이텍",
+        "shares": 9,
+        "avg_cost": 71220,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "nh_34.png": {
+    "variant": {
+      "style": "nh",
+      "dark": false,
+      "width": 375,
+      "dpr": 3,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "더핑크퐁컴퍼니",
+        "shares": 23,
+        "avg_cost": 1450,
+        "currency": "KRW"
+      },
+      {
+        "name": "메가스터디교육",
+        "shares": 1340,
+        "avg_cost": 973990,
+        "currency": "KRW"
+      },
+      {
+        "name": "ISC",
+        "shares": 7,
+        "avg_cost": 2110,
+        "currency": "KRW"
+      }
+    ]
+  },
+  "kiwoom_35.png": {
+    "variant": {
+      "style": "kiwoom",
+      "dark": true,
+      "width": 375,
+      "dpr": 2,
+      "jpeg": false,
+      "us": false
+    },
+    "holdings": [
+      {
+        "name": "이노스페이스",
+        "shares": 8,
+        "avg_cost": 55040,
+        "currency": "KRW"
+      },
+      {
+        "name": "MH에탄올",
+        "shares": 52,
+        "avg_cost": 173540,
+        "currency": "KRW"
+      },
+      {
+        "name": "코스나인",
+        "shares": 29,
+        "avg_cost": 36220,
+        "currency": "KRW"
+      },
+      {
+        "name": "라온로보틱스",
+        "shares": 220,
+        "avg_cost": 23820,
+        "currency": "KRW"
+      },
+      {
+        "name": "HEM파마",
+        "shares": 4,
+        "avg_cost": 8650,
+        "currency": "KRW"
+      },
+      {
+        "name": "삼양컴텍",
+        "shares": 5,
+        "avg_cost": 9480,
+        "currency": "KRW"
+      },
+      {
+        "name": "잉크테크",
+        "shares": 50,
+        "avg_cost": 701830,
+        "currency": "KRW"
+      }
+    ]
+  }
+}

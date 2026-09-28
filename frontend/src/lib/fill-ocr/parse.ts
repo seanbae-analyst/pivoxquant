@@ -144,6 +144,8 @@ export function classifyScreen(lines: Line[]): ScreenType {
   // Two lines ending in a signed P/L and its rate are a holdings list — the
   // 주 glyph itself is often misread ("110%", "(JES"), so it is not required.
   if (lines.filter((l) => tossPlLine(l.compact)).length >= 2) holds += 2;
+  // "39주 · 평단 87,880원" summary lines (no other holdings word on screen).
+  if (lines.filter((l) => /\d주.{0,4}(평단|평균|매입가)/.test(l.compact)).length >= 2) holds += 2;
   const orders = countKw(all, ORDER_KW);
   if (holds >= 2 && holds > fills) return "holdings";
   if (orders >= 2 && fills < 2) return "orders";
@@ -301,13 +303,21 @@ interface Ctx {
   date: string | null;
 }
 
+/** A 1–2 digit token between Hangul words is part of the name — "현대차 3 우 B"
+ * is 현대차3우B; dropping it would turn the name into another listed stock
+ * (현대차 / 현대차우). */
+export const nameDigitAt = (ws: OcrWord[], i: number) =>
+  /^\d{1,2}$/.test(ws[i].t) && i > 0 && /[가-힣]$/.test(ws[i - 1].t) && /^[가-힣]/.test(ws[i + 1]?.t ?? "");
+
 export function nameFrom(words: OcrWord[], usd: boolean): { name: string; code: string | null } {
   let code: string | null = null;
   const parts: string[] = [];
-  for (const w of words) {
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
     const t = w.t.replace(/[[\]|]/g, "");
     if (!t) continue;
     if (isCode(t)) { code = t; continue; }
+    if (nameDigitAt(words, i)) { parts.push(t); continue; }
     if (isNumericWord(t) || /\d/.test(t)) continue;
     if (sideFromText(t) || STATUS_WORDS.includes(t) || /^[·ㆍ,.\-_=~≈:;'"、|x×*]+$/.test(t)) continue;
     if (usd && !code && /^[A-Z]{1,5}$/.test(t)) { code = t; continue; }
@@ -315,8 +325,8 @@ export function nameFrom(words: OcrWord[], usd: boolean): { name: string; code: 
   }
   // Korean names come back split per syllable ("삼 성 전 자"): join Hangul runs.
   const joined = parts.reduce((acc, p) => {
-    const prevHangul = /[가-힣]$/.test(acc);
-    const curHangul = /^[가-힣]/.test(p);
+    const prevHangul = /[가-힣\d]$/.test(acc);
+    const curHangul = /^[가-힣\d]/.test(p);
     return acc && !(prevHangul && curHangul) ? `${acc} ${p}` : acc + p;
   }, "");
   // A date header split into tokens ("2026 년 9 월 22 일 (화)") leaves only

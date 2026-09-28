@@ -70,10 +70,10 @@ body { background: ${bg}; color: ${fg}; font-family: -apple-system, "Apple SD Go
 .neg { color: #3182f6; } .pos { color: #f04452; }`;
 }
 
-function row(h) {
+function row(h, i) {
   const cls = h.pl < 0 ? "neg" : "pos";
   const pl = `${h.pl < 0 ? "-" : "+"}${won(Math.abs(h.pl))} (${h.rate.toFixed(1)}%)`;
-  return `<div class="row"><div class="logo" style="background:${pick(LOGO)}">${pick(GLYPH)}</div>
+  return `<div class="row" data-h="${i}"><div class="logo" style="background:${pick(LOGO)}">${pick(GLYPH)}</div>
 <div class="mid"><div class="nm">${h.name}</div><div class="sh">${h.shares}주</div></div>
 <div class="rt"><div class="amt">${won(h.value)}원</div><div class="pl ${cls}">${pl}</div></div></div>`;
 }
@@ -96,20 +96,24 @@ for (let k = 0; k < COUNT; k++) {
 ${header ? `<div class="hdr"><div class="t">내 투자</div><div class="v">${won(total)}원 ›</div><div class="neg">${totalPl < 0 ? "-" : "+"}${won(Math.abs(totalPl))}원</div></div>` : ""}
 ${header ? `<div class="sec"><span>국내주식 <span class="r">-20.4%</span></span><span>⌃</span></div>` : ""}
 ${kr.map(row).join("")}
-${us.length ? `<div class="sec"><span>해외주식 <span class="r">-59.1%</span></span><span>⌃</span></div>${us.map(row).join("")}` : ""}
+${us.length ? `<div class="sec"><span>해외주식 <span class="r">-59.1%</span></span><span>⌃</span></div>${us.map((h, i) => row(h, kr.length + i)).join("")}` : ""}
 </body></html>`;
   const page = await browser.newPage({ viewport: { width, height: 844 }, deviceScaleFactor: dpr });
   await page.setContent(html);
   const h = await page.evaluate(() => document.body.scrollHeight);
+  const clipH = Math.min(h, 1400);
+  // Truth = the holdings whose row is fully inside the capture.
+  const visible = await page.evaluate((ch) => [...document.querySelectorAll("[data-h]")]
+    .filter((e) => e.getBoundingClientRect().bottom <= ch).map((e) => Number(e.getAttribute("data-h"))), clipH);
   const file = `toss_${String(k).padStart(2, "0")}.${jpeg ? "jpg" : "png"}`;
   await page.screenshot({
-    path: path.join(outDir, file), clip: { x: 0, y: 0, width, height: Math.min(h, 1400) },
+    path: path.join(outDir, file), fullPage: true, clip: { x: 0, y: 0, width, height: clipH },
     ...(jpeg ? { type: "jpeg", quality: pick([70, 80, 90]) } : {}),
   });
   await page.close();
   truth[file] = {
     variant: { dark, width, dpr, fontScale, jpeg, header },
-    holdings: all.map((x) => ({ name: x.name, ticker: x.ticker, shares: x.shares, avg_cost: x.foreign ? null : x.avg, foreign: x.foreign })),
+    holdings: all.filter((_, i) => visible.includes(i)).map((x) => ({ name: x.name, ticker: x.ticker, shares: x.shares, avg_cost: x.foreign ? null : x.avg, foreign: x.foreign })),
   };
   console.log(file, JSON.stringify(truth[file].variant));
 }

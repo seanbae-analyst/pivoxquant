@@ -106,3 +106,35 @@ describe("Toss capture cropped to the rows only (no header, misread 주)", () =>
     expect(rows[2].avgCost.value).toBeNull();
   });
 });
+
+describe("labelled cards: name digits and the cross-check gate", () => {
+  function kv(): OcrWord[] {
+    y = 0;
+    return [
+      ...line(["잔고", "", 20]),
+      ...line(["현", "", 20], "대", "차", ["3", "3"], "우", ["86", ""]),
+      ...line(["평가손익", "", 20], ["-76,060", "76,060", 500], "원"),
+      ...line(["보유수량", "", 20], ["4", "4", 500], "주"),
+      ...line(["평균단가", "", 20], ["34,570", "34,570", 500], "원"),
+      ...line(["평가금액", "", 20], ["62,220", "62,220", 500], "원"),
+      ...line(["비", "", 20], "투", "엔"),
+      ...line(["평가손익", "", 20], ["+90,675", "90,675", 500], "원"),
+      // 117주: the box missed the leading 1, so both readings say 17
+      ...line(["보유수량", "", 20], ["17", "17", 500], "주"),
+      ...line(["평균단가", "", 20], ["8.370", "8,370", 500], "원"),
+      ...line(["평가금액", "", 20], ["1,069,965", "1,069,965", 500], "원"),
+    ];
+  }
+  const { rows } = parseHoldingsScreen(kv());
+
+  it("keeps a digit inside a name — 현대차3우B is not 현대차", () => {
+    expect(rows[0].name.value).toBe("현대차3우");
+    expect(rows[0].shares).toEqual({ value: 4 });
+  });
+
+  it("fills nothing when the printed amounts disprove every reading", () => {
+    expect(rows[1].shares.value).toBeNull();
+    expect(rows[1].avgCost.value).toBeNull();
+    expect(rows[1].flags).toContain("amount_mismatch");
+  });
+});
