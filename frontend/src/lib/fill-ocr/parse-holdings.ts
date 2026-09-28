@@ -591,7 +591,8 @@ export const tossQtyLine = tossPlLine;
  * "3,231.920%" → 3,231,920). A sign makes it a P/L, not an amount. */
 const tossAmountWord = (w: OcrWord | undefined) =>
   Boolean(w) && !/^[+\-−]/.test(w!.t) &&
-  [w!.t.replace(/[,.]$/, ""), (w!.alt ?? "").trim()].some((t) => TOSS_AMOUNT.test(t) && t.includes(","));
+  [w!.t.replace(/[,.]$/, ""), (w!.alt ?? "").trim()].some((t) =>
+    TOSS_AMOUNT.test(t) && (t.includes(",") || /^\$\d+\.\d{2}$/.test(t))); // "$184.32" has no comma
 
 /** "이름 … 금액" — the first amount after at least one name word. Whatever
  * follows it ("원", or "원" misread as "839%") is ignored. Names may carry
@@ -632,12 +633,18 @@ function tossShares(ws: OcrWord[], plIdx: number): Cell<number> {
 function tossAvg(amount: NumRead, plw: OcrWord, ratew: OcrWord | undefined, shares: number, usd: boolean): Cell<number> {
   const neg = /^[\-−]/.test(plw.t);
   const pl = tossRead(plw.t.replace(/^[+\-−]/, ""), plw.alt);
-  const rate = ratew ? Number(ratew.t.match(TOSS_RATE)?.[1] ?? NaN) : NaN;
+  // Toss prints the rate with one decimal; a reading with more ("53.39" for
+  // 53.3) is a misread, so either reading with exactly one decimal is used.
+  // With no such reading, both are cut to one decimal (an extra trailing digit).
+  const read = ratew ? [ratew.t.match(TOSS_RATE)?.[1] ?? "", (ratew.alt ?? "").trim()] : [];
+  const one = read.filter((r) => /^\d+\.\d$/.test(r)).map(Number);
+  const rates = one.length ? one
+    : read.filter((r) => /^\d+\.\d+$/.test(r)).map((r) => Math.floor(Number(r) * 10) / 10);
   const avgOf = (a: number, p: number) => {
     const d = (a - (neg ? -p : p)) / shares;
     return usd ? Math.round(d * 100) / 100 : Math.round(d);
   };
-  if (Number.isFinite(rate)) {
+  for (const rate of [...new Set(rates)]) {
     const ok = new Set<number>();
     for (const a of amount.candidates) {
       for (const p of pl.candidates) {
@@ -679,7 +686,8 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
       if (tossQtyLine(lines[k].compact)) { ql = lines[k]; break; }
       if (tossNameLine(lines[k])) break;
     }
-    const usd = nm.amount.t.startsWith("$");
+    // The page pass often reads "$" as "%" ("%38,285.00"); the digit pass keeps it.
+    const usd = [nm.amount.t, nm.amount.alt ?? ""].some((t) => t.trim().startsWith("$"));
     const currency: ParsedHolding["currency"] = usd ? "USD" : foreign ? null : "KRW";
     const flags: string[] = [];
     if (foreign && !usd) flags.push("foreign_in_krw");
@@ -695,7 +703,7 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
       const ratew = ws.find((w) => TOSS_RATE.test(w.t));
       const n = shares.value ?? (shares.hint ? Number(shares.hint) : NaN);
       if (plw && Number.isInteger(n) && n > 0 && !(foreign && !usd)) {
-        const amount = tossRead(nm.amount.t.replace(/원$/, ""), nm.amount.alt);
+        const amount = tossRead(nm.amount.t.replace(/원$/, "").replace(/^%(?=\d)/, usd ? "$" : "%"), nm.amount.alt);
         // Malformed grouping ("17164,157") parses to nothing; its digits are
         // still a candidate — the rate check decides.
         if (amount.candidates.length === 0 && digitsOf(nm.amount.t)) amount.candidates.push(Number(digitsOf(nm.amount.t)));

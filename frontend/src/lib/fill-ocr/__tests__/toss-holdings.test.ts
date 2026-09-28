@@ -138,3 +138,26 @@ describe("labelled cards: name digits and the cross-check gate", () => {
     expect(rows[1].flags).toContain("amount_mismatch");
   });
 });
+
+describe("Toss 해외주식 with the $ toggle on", () => {
+  function usdScreen(): OcrWord[] {
+    y = 0;
+    return [
+      ...line(["해외주식", "", 60], ["-59.1%", "59.1"]),
+      // "$184.32" has no comma; the page pass reads "$" as "%"
+      ...line("가나파워", ["%184.32", "$184.32", 700]),
+      // cost $555.60, 371.28 ÷ 555.60 = 66.82% → "66.8%", page misreads it "66.89%"
+      ...line("24", "주", ["-$371.28", "$371.28", 600], ["(66.89%)", "66.8"]),
+      ...line("다라항공", ["$634.70", "$634.70", 700]),
+      ...line("110", "주", ["+$2.20", "$2.20", 600], ["(0.3%)", "0.3"]),
+    ];
+  }
+  const { rows } = parseHoldingsScreen(usdScreen());
+
+  it("reads dollar amounts and proves the dollar average", () => {
+    expect(rows.map((r) => [r.name.value, r.currency, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나파워", "USD", 24, 23.15],
+      ["다라항공", "USD", 110, 5.75],
+    ]);
+  });
+});
