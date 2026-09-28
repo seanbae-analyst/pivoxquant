@@ -613,8 +613,9 @@ function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord } | null
 
 /** Both readings of a digit token, with the trailing punctuation the digit
  * pass adds ("2" / "2." / "2:") dropped. */
-function tossRead(t: string, alt: string | null | undefined): NumRead {
-  return readNumber({ t: t.replace(/[.:/]$/, ""), alt: alt?.trim().replace(/[.:/]$/, ""), c: 0, x0: 0, y0: 0, x1: 0, y1: 0 });
+function tossRead(t: string, alt: string | null | undefined, alts?: string[]): NumRead {
+  const cut = (x: string) => x.trim().replace(/[.:/,]+$/, "").replace(/^[.:/,]+/, "");
+  return readNumber({ t: cut(t), alt: alt != null ? cut(alt) : alt, alts: alts?.map(cut), c: 0, x0: 0, y0: 0, x1: 0, y1: 0 });
 }
 
 /** The share token is the one digit word before the P/L; logo glyphs read
@@ -638,7 +639,7 @@ function tossShares(ws: OcrWord[], plIdx: number): Cell<number> {
 
 function tossAvg(amount: NumRead, plw: OcrWord, ratew: OcrWord | undefined, shares: number, usd: boolean): Cell<number> {
   const neg = /^[\-−]/.test(plw.t);
-  const pl = tossRead(plw.t.replace(/^[+\-−]/, ""), plw.alt);
+  const pl = tossRead(plw.t.replace(/^[+\-−]/, ""), plw.alt, plw.alts);
   // Toss prints the rate with one decimal; a reading with more ("53.39" for
   // 53.3) is a misread, so either reading with exactly one decimal is used.
   // With no such reading, both are cut to one decimal (an extra trailing digit).
@@ -709,7 +710,7 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
       const ratew = ws.find((w) => TOSS_RATE.test(w.t));
       const n = shares.value ?? (shares.hint ? Number(shares.hint) : NaN);
       if (plw && Number.isInteger(n) && n > 0 && !(foreign && !usd)) {
-        const amount = tossRead(nm.amount.t.replace(/원$/, "").replace(/^%(?=\d)/, usd ? "$" : "%"), nm.amount.alt);
+        const amount = tossRead(nm.amount.t.replace(/원$/, "").replace(/^%(?=\d)/, usd ? "$" : "%"), nm.amount.alt, nm.amount.alts);
         // Malformed grouping ("17164,157") parses to nothing; its digits are
         // still a candidate — the rate check decides.
         if (amount.candidates.length === 0 && digitsOf(nm.amount.t)) amount.candidates.push(Number(digitsOf(nm.amount.t)));
@@ -817,7 +818,7 @@ function detailHoldings(lines: Line[], hMed: number): ParsedHolding[] {
         const m2 = qtyW.t.match(TOSS_QTY);
         if (m2) reads.qty.push(tossRead(m2[1], qtyW.alt));
       }
-      const money = (w: OcrWord) => tossRead(w.t.replace(/[원%]$/, "").replace(/^[_~]+/, "").replace(/^%(?=\d)/, "$"), w.alt);
+      const money = (w: OcrWord) => tossRead(w.t.replace(/[원%]$/, "").replace(/^[_~]+/, "").replace(/^%(?=\d)/, "$"), w.alt, w.alts);
       if (avgW) reads.avg.push(money(avgW));
       if (costW) reads.cost.push(money(costW));
       if (valueW) reads.value.push(money(valueW));

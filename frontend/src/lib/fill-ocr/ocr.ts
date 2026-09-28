@@ -10,7 +10,12 @@
  *   1. whole image ×2, grayscale, contrast-stretched → kor+eng words + boxes
  *   2. every word containing a digit, cropped ×3 → digits-only re-read (`alt`);
  *      when its digits differ from pass 1, up to two more crops (tighter ×4,
- *      looser ×2) are read, and one that agrees with pass 1 becomes `alt`
+ *      looser ×2) are read, and one that agrees with pass 1 becomes `alt`.
+ *      Every other reading is kept in `alts` — a candidate only: the parsers
+ *      use it where a printed total (원금, 매입금액, rate) proves one reading.
+ *      A digit word with a wide empty gap before the next word on its line
+ *      ("2        원" for "1,900,000원", the box cut short) is also read with
+ *      the crop widened up to that next word.
  * `parse.ts` fills a number only when the two readings agree.
  */
 import type { OcrWord } from "./parse";
@@ -192,23 +197,31 @@ export async function openOcrSession(): Promise<OcrSession> {
       const big = scaledCanvas(bitmap, 0, 0, width, height, pageScale);
       const { data } = await page.recognize(big, {}, { blocks: true });
       const words: OcrWord[] = [];
+      // The recognised line of each word, for the widened crop.
+      const lineOf = new Map<OcrWord, OcrWord[]>();
       for (const b of data.blocks ?? [])
         for (const p of b.paragraphs)
-          for (const l of p.lines)
-            for (const w of l.words)
-              words.push({
+          for (const l of p.lines) {
+            const lineWords: OcrWord[] = [];
+            for (const w of l.words) {
+              const o: OcrWord = {
                 t: w.text,
                 c: Math.round(w.confidence),
                 x0: Math.round(w.bbox.x0 / pageScale),
                 y0: Math.round(w.bbox.y0 / pageScale),
                 x1: Math.round(w.bbox.x1 / pageScale),
                 y1: Math.round(w.bbox.y1 / pageScale),
-              });
+              };
+              words.push(o);
+              lineWords.push(o);
+              lineOf.set(o, lineWords);
+            }
+          }
       onStage?.("digits");
-      const reread = async (w: OcrWord, pad: number, scale: number): Promise<string | null> => {
-        const left = Math.max(0, w.x0 - pad);
+      const reread = async (w: OcrWord, pad: number, scale: number, right = w.x1 + pad, from = w.x0 - pad): Promise<string | null> => {
+        const left = Math.max(0, from);
         const top = Math.max(0, w.y0 - pad);
-        const cw = Math.min(width - left, w.x1 - w.x0 + 2 * pad);
+        const cw = Math.min(width - left, right - left);
         const ch = Math.min(height - top, w.y1 - w.y0 + 2 * pad);
         if (cw < 4 || ch < 4) return null;
         const r = await digits.recognize(scaledCanvas(bitmap, left, top, cw, ch, scale));
@@ -223,10 +236,13 @@ export async function openOcrSession(): Promise<OcrSession> {
         if (digitsOf(first) === want) continue;
         // A digit read against the unit glyph beside it ("2주" → "29") or a
         // dropped digit ("110" → "10"): another crop settles it only if it
-        // agrees with the page reading — otherwise the disagreement stands.
+        // agrees with the page reading — otherwise the disagreement stands,
+        // and every reading is kept as a candidate.
+        const alts = new Set<string>([first]);
         let settled = false;
         for (const [pad, scale] of RETRY_CROPS) {
           const again = await reread(w, pad, scale);
+          if (again) alts.add(again);
           if (again !== null && digitsOf(again) === want) { w.alt = again; settled = true; break; }
         }
         // A lone digit ("2주") is often returned empty by the line mode.
@@ -234,11 +250,31 @@ export async function openOcrSession(): Promise<OcrSession> {
           await digits.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_CHAR });
           try {
             const again = await reread(w, 6, 4);
-            if (again !== null && digitsOf(again) === want) w.alt = again;
+            if (again) alts.add(again);
+            if (again !== null && digitsOf(again) === want) { w.alt = again; settled = true; }
           } finally {
             await digits.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_LINE });
           }
         }
+        // The box may be cut short ("1,900,000원" boxed as "2", "1,841,500" as
+        // "841,500"): widen it across the non-digit words beside it — up to
+        // the next word carrying digits on the right, and to the end of the
+        // word before it on the left.
+        if (!settled) {
+          const ln = lineOf.get(w) ?? [w];
+          const k = ln.indexOf(w);
+          const nextDigit = ln.slice(k + 1).find((x) => /\d/.test(x.t));
+          const right = nextDigit ? nextDigit.x0 - 1 : Math.min(width, (ln[ln.length - 1]?.x1 ?? w.x1) + PAD);
+          const prev = ln[k - 1];
+          const from = prev && !/\d/.test(prev.t) ? prev.x1 + 1 : w.x0 - PAD;
+          if (right > w.x1 + PAD || from < w.x0 - PAD) {
+            const wide = await reread(w, PAD, DIGIT_SCALE, right, from);
+            if (wide) alts.add(wide);
+          }
+        }
+        alts.delete(w.alt ?? "");
+        const extra = [...alts].filter((a) => /\d/.test(a));
+        if (extra.length) w.alts = extra;
       }
       return words;
     } finally {
