@@ -5,26 +5,35 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronRight } from "lucide-react";
 
+import { mutate as swrMutate } from "swr";
+
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import { API } from "@/lib/endpoints";
-import { useBrokerConnections } from "@/lib/hooks";
+import { API, PORTFOLIO_POSITIONS } from "@/lib/endpoints";
+import { fetcher, useBrokerConnections, usePortfolioPositions } from "@/lib/hooks";
 import { useT } from "@/lib/locale";
 import { KisCard } from "@/components/broker/kis-card";
-import { ManualCard } from "@/components/broker/manual-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
+import { HoldingsImportPanel } from "@/components/portfolio/v2/holdings-import-panel";
+import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal-v2";
+import { toPosition, type BackendPositionRow } from "@/components/portfolio/types";
 import {
   LegalConsentModal,
   hasLocalConsent,
 } from "@/components/ui/legal-consent-modal";
 
 /**
- * Step 0 of the onboarding flow — broker connection. Ink theme.
+ * Step 0 of the onboarding flow — the user's holdings. Ink theme.
  *
  * Flow:
- *   /login success → /onboarding/broker (Step 0, optional) → /onboarding (20 Q's)
+ *   /login success → /onboarding/broker (Step 0, required) → /onboarding (5 Q's)
  *
- * Skip is always allowed; the user can connect a broker later from Settings.
+ * 2026-09-28 CEO — "무조건 포트폴리오 작성하고 가게끔". There is no skip: the
+ * product starts from the portfolio the user already holds, so "next" stays
+ * disabled until at least one position is saved. Upload is the holdings-screen
+ * capture (HoldingsImportPanel); one-at-a-time entry opens the /portfolio
+ * add dialog in holding-only mode. The server enforces the same rule
+ * (routes/profile.py::submit_onboarding → ONBOARDING_HOLDINGS_REQUIRED).
  */
 /**
  * DORMANT since 237a1b67, and unlikely to return in this form.
@@ -48,6 +57,12 @@ export default function OnboardingBrokerPage() {
   const t = useT();
   const { user, loading: authLoading } = useAuth();
   const { data, mutate, isLoading } = useBrokerConnections();
+
+  const { data: posData } = usePortfolioPositions<{ positions?: BackendPositionRow[] }>();
+  const held = (posData?.positions ?? []).map(toPosition);
+  const [manualOpen, setManualOpen] = useState(false);
+  // Remounts the capture panel after a save so it starts clean for the next batch.
+  const [panelKey, setPanelKey] = useState(0);
 
   const [kisModalOpen, setKisModalOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -105,13 +120,21 @@ export default function OnboardingBrokerPage() {
     }
   }, [mutate, t]);
 
-  const goNext = useCallback(() => {
-    router.push("/onboarding");
-  }, [router]);
+  // Bypass the positions dedupe window so a just-saved holding shows (and
+  // unlocks "next") immediately — same approach as /portfolio refreshAll.
+  const refreshHeld = useCallback(async () => {
+    try {
+      swrMutate(PORTFOLIO_POSITIONS, await fetcher(PORTFOLIO_POSITIONS), { revalidate: false });
+    } catch {
+      swrMutate(PORTFOLIO_POSITIONS);
+    }
+  }, []);
 
-  const handleSkip = useCallback(() => {
+  const canContinue = held.length > 0;
+  const goNext = useCallback(() => {
+    if (!canContinue) return;
     router.push("/onboarding");
-  }, [router]);
+  }, [router, canContinue]);
 
   if (authLoading) {
     // Page-load skeleton — Vantablack ink surface matching the broker step
@@ -153,13 +176,6 @@ export default function OnboardingBrokerPage() {
             <span className="font-serif text-base text-[var(--pq-ivory)]">
               PivoxQuant
             </span>
-            <button
-              type="button"
-              onClick={handleSkip}
-              className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)] transition-colors"
-            >
-              {t("brokerOnboarding.skip")}
-            </button>
           </div>
 
           <div className="mb-3 flex items-center justify-between">
@@ -187,7 +203,7 @@ export default function OnboardingBrokerPage() {
         <div className="mx-auto max-w-3xl py-10">
           <div className="mb-8">
             <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
-              Step 0 · Connection
+              Step 0 · Holdings
             </div>
             <h1 className="font-serif text-3xl text-[var(--pq-ivory)] sm:text-4xl">
               {t(BROKER_LINKING_AVAILABLE ? "brokerOnboarding.title" : "brokerOnboarding.titleDormant")}
@@ -197,7 +213,7 @@ export default function OnboardingBrokerPage() {
             </p>
           </div>
 
-          {isLoading ? (
+          {BROKER_LINKING_AVAILABLE && (isLoading ? (
             // Card-grid skeleton — mirrors the KisCard + ManualCard layout
             // below so the page does not jump when the live data lands.
             <div
@@ -228,9 +244,36 @@ export default function OnboardingBrokerPage() {
                   disconnecting={disconnecting}
                 />
               )}
-              <ManualCard onSelect={goNext} />
             </div>
-          )}
+          ))}
+
+          {/* Saved so far — the thing "next" waits on. */}
+          <div
+            className="mb-6 rounded-[2px] border border-[var(--pq-ivory-line)] px-4 py-3"
+            data-testid="onboarding-held"
+          >
+            <div className="text-pq-mono-sm text-[var(--pq-bronze)]">
+              {t("brokerOnboarding.heldCount").replace("{n}", String(held.length))}
+            </div>
+            <div className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-mid)] [overflow-wrap:anywhere]">
+              {held.length > 0
+                ? held.map((p) => p.name || p.symbol).join(" · ")
+                : t("brokerOnboarding.heldNone")}
+            </div>
+          </div>
+
+          <div className="rounded-[2px] border border-[var(--pq-ivory-line)] p-4 sm:p-6">
+            <HoldingsImportPanel key={panelKey} onDone={() => { void refreshHeld(); setPanelKey((k) => k + 1); }} />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setManualOpen(true)}
+            className="mt-4 w-full text-left text-pq-mono-sm text-[var(--pq-ivory-mid)] underline underline-offset-4 hover:text-[var(--pq-ivory)]"
+            data-testid="onboarding-manual"
+          >
+            {t("brokerOnboarding.manualLink")}
+          </button>
 
           <p className="mt-6 text-pq-mono-sm text-[rgba(245,240,232,0.4)] text-center leading-relaxed">
             {t(BROKER_LINKING_AVAILABLE ? "brokerOnboarding.note" : "brokerOnboarding.noteDormant")}
@@ -246,10 +289,18 @@ export default function OnboardingBrokerPage() {
           ("Continue without broker"); when connected, plain "Continue". */}
       <footer className="sticky bottom-0 z-20 border-t border-[var(--pq-ivory-line)] bg-[rgba(10,10,10,0.9)] backdrop-blur-xl px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-end gap-3">
+          {!canContinue && (
+            <span className="text-pq-mono-sm text-[var(--pq-ivory-faint)]">
+              {t("brokerOnboarding.nextLocked")}
+            </span>
+          )}
           <button
             type="button"
             onClick={goNext}
-            className="pq-ink-btn-bronze inline-flex items-center gap-1"
+            disabled={!canContinue}
+            aria-disabled={!canContinue}
+            className="pq-ink-btn-bronze inline-flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed"
+            data-testid="onboarding-next"
           >
             {!BROKER_LINKING_AVAILABLE
               ? t("brokerOnboarding.nextStep")
@@ -260,6 +311,13 @@ export default function OnboardingBrokerPage() {
           </button>
         </div>
       </footer>
+
+      <AddPositionModalV2
+        open={manualOpen}
+        holdingOnly
+        onClose={() => setManualOpen(false)}
+        onSuccess={() => void refreshHeld()}
+      />
 
       {kisModalOpen && (
         <KisConnectModal

@@ -209,7 +209,8 @@ export function HoldingsImportPanel({
   openSession = openOcrSession,
 }: {
   onDone: (result: HoldingsCommitResponse) => void;
-  onCancel: () => void;
+  /** Omit to hide the back button (onboarding has nowhere to go back to). */
+  onCancel?: () => void;
   openSession?: typeof openOcrSession;
 }) {
   const t = useT();
@@ -359,17 +360,22 @@ export function HoldingsImportPanel({
   };
   const body = { fontSize: "var(--pq-text-body-sm)", lineHeight: 1.5, color: "var(--pq-ivory-mid)", wordBreak: "keep-all" as const };
 
+  const hasExisting = rows.some((r) => r.existing && r.mode !== "skip");
+
   return (
     <div data-testid="holdings-import-panel">
       <p className="font-serif" style={{ ...body, margin: 0 }}>{t("dashboard.portfolio.holdingsImport.intro")}</p>
-      <CaptureGuide />
-      <ul className="mt-3 space-y-1 font-serif" style={body}>
-        <li>— {t("dashboard.portfolio.holdingsImport.guideForeign")}</li>
-        <li>— {t("dashboard.portfolio.holdingsImport.guideReplace")}</li>
-        <li>— {t("journal.import.image.guideLocal")}</li>
-      </ul>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      {/* 1 · which screen */}
+      <StepHead n={1} label={t("dashboard.portfolio.holdingsImport.step1")} />
+      <p className="font-serif" style={{ ...body, margin: 0, color: "var(--pq-ivory)" }}>
+        {t("dashboard.portfolio.holdingsImport.step1Body")}
+      </p>
+      <CaptureGuide />
+
+      {/* 2 · upload */}
+      <StepHead n={2} label={t("dashboard.portfolio.holdingsImport.step2")} />
+      <div className="flex flex-wrap items-center gap-3">
         <input
           id="holdings-images"
           type="file"
@@ -402,7 +408,11 @@ export function HoldingsImportPanel({
           {progress ?? t("journal.import.image.read")}
         </button>
       </div>
-      <div className="mt-2 font-mono" style={{ ...small, color: "var(--pq-ivory-dim)" }}>{t("journal.import.image.limits")}</div>
+      <div className="mt-2 font-mono" style={{ ...small, color: "var(--pq-ivory-dim)" }}>
+        {t("journal.import.image.limits")}
+        <br />
+        {t("dashboard.portfolio.holdingsImport.localNote")}
+      </div>
       {oversized && <div className="mt-1 font-mono" style={{ ...small, color: "var(--pq-error)" }}>{t("journal.import.image.tooLarge")}</div>}
 
       {notes.length > 0 && (
@@ -417,7 +427,14 @@ export function HoldingsImportPanel({
 
       {rows.length > 0 && (
         <>
-          <p className="mt-4 font-serif" style={body}>{t("dashboard.portfolio.holdingsImport.reviewDesc")}</p>
+          {/* 3 · review and save */}
+          <StepHead n={3} label={t("dashboard.portfolio.holdingsImport.step3")} />
+          <p className="font-serif" style={{ ...body, margin: 0 }}>{t("dashboard.portfolio.holdingsImport.reviewDesc")}</p>
+          {hasExisting && (
+            <p className="mt-1 font-serif" style={{ ...body, margin: 0 }} data-testid="holdings-replace-note">
+              {t("dashboard.portfolio.holdingsImport.guideReplace")}
+            </p>
+          )}
           <div className="mt-3 space-y-3" data-testid="holdings-review-table">
             {rows.map((r) => (
               <HoldingReviewRow
@@ -451,6 +468,7 @@ export function HoldingsImportPanel({
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-end gap-4">
+        {onCancel && (
         <button
           type="button"
           onClick={onCancel}
@@ -459,6 +477,7 @@ export function HoldingsImportPanel({
         >
           {t("dashboard.portfolio.holdingsImport.back")}
         </button>
+        )}
         {rows.length > 0 && (
           <button
             type="button"
@@ -478,8 +497,20 @@ export function HoldingsImportPanel({
   );
 }
 
-/** Which screen to capture — Toss 자세히 보기 first, with a small drawn
- * example of the table so the user recognises it. */
+/** Numbered step heading — the panel reads top to bottom as 1 · 2 · 3. */
+function StepHead({ n, label }: { n: number; label: string }) {
+  return (
+    <div
+      className="mt-5 mb-2 font-mono uppercase tracking-[0.18em]"
+      style={{ ...small, color: "var(--pq-bronze)" }}
+    >
+      {n} · {label}
+    </div>
+  );
+}
+
+/** Broker-specific tips, folded away — the one line above is all most
+ * users need. Toss 자세히 보기 carries a small drawn example of the table. */
 function CaptureGuide() {
   const t = useT();
   const k = (s: string) => t(`dashboard.portfolio.holdingsImport.shot.${s}`);
@@ -487,33 +518,40 @@ function CaptureGuide() {
   const cell = { padding: "4px 5px", textAlign: "right" as const, whiteSpace: "nowrap" as const };
   const hl = { outline: "1.5px solid var(--pq-bronze)", outlineOffset: -2 };
   const dim = { color: "var(--pq-ivory-dim)", fontSize: "var(--pq-text-eyebrow-sm)" };
+  const box = { borderColor: "var(--pq-ivory-line)" };
+  const summary = { ...small, color: "var(--pq-ivory-mid)", cursor: "pointer" };
   return (
-    <div className="mt-3 rounded-[2px] border p-3" style={{ borderColor: "var(--pq-ivory-line)" }} data-testid="holdings-capture-guide">
-      <div className="font-mono uppercase tracking-[0.18em]" style={{ ...small, color: "var(--pq-bronze)" }}>{k("title")}</div>
-      <p className="mt-2 font-serif" style={{ ...text, margin: 0, color: "var(--pq-ivory)" }}>{k("toss")}</p>
-      <figure className="mt-2" style={{ margin: 0 }}>
-        <div className="overflow-x-auto">
-          <table className="font-mono" style={{ fontSize: "var(--pq-text-mono-xs)", lineHeight: 1.45, borderCollapse: "collapse", color: "var(--pq-ivory)" }} aria-hidden="true">
-            <thead>
-              <tr style={{ color: "var(--pq-ivory-dim)" }}>
-                <td style={{ ...cell, textAlign: "left" }}>{k("colName")}</td>
-                <td style={cell}>{k("colAvg")}</td>
-                <td style={cell}>{k("colTotal")}</td>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderTop: "1px solid var(--pq-ivory-line)" }}>
-                <td style={{ ...cell, textAlign: "left" }}>삼성전자<div style={dim}>15주</div></td>
-                <td style={{ ...cell, ...hl }}>272,000<div style={dim}>{k("cur")} 270,500</div></td>
-                <td style={cell}>4,048,149<div style={{ ...dim, ...hl, color: "var(--pq-ivory)" }}>{k("cost")} 4,080,000</div></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <figcaption className="mt-1 font-mono" style={{ ...small, color: "var(--pq-ivory-dim)" }}>{k("exampleCaption")}</figcaption>
-      </figure>
-      <p className="mt-2 font-serif" style={{ ...text, margin: 0 }}>{k("tossAlt")}</p>
-      <p className="mt-1 font-serif" style={{ ...text, margin: 0 }}>{k("other")}</p>
+    <div className="mt-2 space-y-2" data-testid="holdings-capture-guide">
+      <details className="rounded-[2px] border px-3 py-2" style={box}>
+        <summary className="font-mono" style={summary}>{k("tossToggle")}</summary>
+        <p className="mt-2 font-serif" style={{ ...text, margin: 0, color: "var(--pq-ivory)" }}>{k("toss")}</p>
+        <figure className="mt-2" style={{ margin: 0 }}>
+          <div className="overflow-x-auto">
+            <table className="font-mono" style={{ fontSize: "var(--pq-text-mono-xs)", lineHeight: 1.45, borderCollapse: "collapse", color: "var(--pq-ivory)" }} aria-hidden="true">
+              <thead>
+                <tr style={{ color: "var(--pq-ivory-dim)" }}>
+                  <td style={{ ...cell, textAlign: "left" }}>{k("colName")}</td>
+                  <td style={cell}>{k("colAvg")}</td>
+                  <td style={cell}>{k("colTotal")}</td>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderTop: "1px solid var(--pq-ivory-line)" }}>
+                  <td style={{ ...cell, textAlign: "left" }}>삼성전자<div style={dim}>15주</div></td>
+                  <td style={{ ...cell, ...hl }}>272,000<div style={dim}>{k("cur")} 270,500</div></td>
+                  <td style={cell}>4,048,149<div style={{ ...dim, ...hl, color: "var(--pq-ivory)" }}>{k("cost")} 4,080,000</div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <figcaption className="mt-1 font-mono" style={{ ...small, color: "var(--pq-ivory-dim)" }}>{k("exampleCaption")}</figcaption>
+        </figure>
+        <p className="mt-2 font-serif" style={{ ...text, margin: 0 }}>{k("tossAlt")}</p>
+      </details>
+      <details className="rounded-[2px] border px-3 py-2" style={box}>
+        <summary className="font-mono" style={summary}>{k("foreignToggle")}</summary>
+        <p className="mt-2 font-serif" style={{ ...text, margin: 0 }}>{t("dashboard.portfolio.holdingsImport.guideForeign")}</p>
+      </details>
     </div>
   );
 }

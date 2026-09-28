@@ -52,6 +52,9 @@ interface AddPositionModalV2Props {
   onSuccess?: () => void;
   /** Open straight on the holdings-capture import (/portfolio?import=holdings). */
   startWithImport?: boolean;
+  /** Onboarding: record an existing holding only — no 7-question mode toggle
+   *  and no capture entry (the onboarding page shows the capture itself). */
+  holdingOnly?: boolean;
 }
 
 /** Entry mode — journaling an existing holding vs. reflecting on a new entry. */
@@ -75,6 +78,7 @@ export function AddPositionModalV2({
   onClose,
   onSuccess,
   startWithImport = false,
+  holdingOnly = false,
 }: AddPositionModalV2Props) {
   const headlineId = "add-pos-v2-headline";
   const trapRef = useFocusTrap<HTMLDivElement>(open);
@@ -330,6 +334,7 @@ export function AddPositionModalV2({
         </div>
 
         {/* Mode toggle */}
+        {!holdingOnly && (
         <div
           role="radiogroup"
           aria-label="기록 방식"
@@ -346,9 +351,10 @@ export function AddPositionModalV2({
             onClick={() => setMode("new")}
           />
         </div>
+        )}
 
         {/* Secondary entry: many positions at once from a holdings capture. */}
-        {mode === "holding" && (
+        {mode === "holding" && !holdingOnly && (
           <button
             type="button"
             onClick={() => setImporting(true)}
