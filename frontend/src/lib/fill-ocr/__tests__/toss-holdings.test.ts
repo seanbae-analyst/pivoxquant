@@ -214,3 +214,35 @@ describe("Toss 내 투자: a share count with no 주 glyph", () => {
     expect(rows[1].shares).toEqual({ value: 93 });
   });
 });
+
+describe("extra digit readings (alts) are candidates, proven only by 원금", () => {
+  function words(): OcrWord[] {
+    y = 0;
+    const out = [
+      ...line(["종", "", 74], "목", "명", ["|", "", 306], ["1", "", 450], "주", "평균", "금액", ["총", "", 873], "금액"),
+      // "1,900,000원" boxed as "2"; the widened crop read the whole amount.
+      ...line(["가나닉스", "", 73], ["2.0%", "2.0", 309], ["2", "1,9", 483], ["3,531,819", "3,531,819", 811], "원"),
+      ...line(["2", "2", 74], "주", ["81", "81", 313], ["현재가", "", 453], ["1,770,000", "1,770,000", 519], ["원금", "", 782], ["3,800,000", "3,800,000", 847]),
+      // "1,841,500" read "11841,500" / ",841,500"; the left-widened crop got it; 29주 unread.
+      ...line(["다라센", "", 74], ["1.0%", "0", 309], ["63,500", "63,500", 541], ["846,427", "846,427", 847]),
+      ...line(["on", "", 74], ["현재가", "", 473], ["29,250", "29,250", 567], ["원금", "", 782], ["11841,500", ",841,500", 867]),
+    ];
+    out.find((x) => x.t === "2" && x.x0 === 483)!.alts = ["1,900,000"];
+    out.find((x) => x.t === "11841,500")!.alts = ["841,500", "1,841,500"];
+    return out;
+  }
+  const { rows } = parseHoldingsScreen(words());
+
+  it("uses the reading that makes shares × avg = 원금", () => {
+    expect(rows.map((r) => [r.name.value, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나닉스", 2, 1900000],
+      ["다라센", 29, 63500],
+    ]);
+  });
+
+  it("does not use an extra reading without the 원금 check", () => {
+    const ws = words().filter((x) => x.t !== "3,800,000" && x.t !== "원금");
+    const { rows: r2 } = parseHoldingsScreen(ws);
+    expect(r2[0]?.avgCost.value ?? null).toBeNull();
+  });
+});

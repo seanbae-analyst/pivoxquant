@@ -30,6 +30,9 @@ export interface OcrWord {
   y1: number;
   /** Digits-only re-read of the same box (only for words containing a digit). */
   alt?: string | null;
+  /** Further digit readings (other crops) when they disagreed — candidates
+   * only, never a proof on their own. */
+  alts?: string[];
 }
 
 export type ScreenType = "fills" | "holdings" | "orders" | "other";
@@ -185,7 +188,8 @@ export function readNumber(w: OcrWord): NumRead {
   const primary = parseAmount(w.t);
   const altRaw = (w.alt ?? "").trim();
   const alt = altRaw ? parseAmount(altRaw) : null;
-  const candidates = [...new Set([primary, alt].filter((v): v is number => v !== null))];
+  const more = (w.alts ?? []).map((a) => parseAmount(a.trim()));
+  const candidates = [...new Set([primary, alt, ...more].filter((v): v is number => v !== null))];
   const agree =
     primary !== null &&
     alt !== null &&
