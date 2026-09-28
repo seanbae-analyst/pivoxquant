@@ -129,6 +129,33 @@ describe("HoldingsImportPanel", () => {
     for (const r of JSON.parse(String(prev[1]!.body)).rows) expect(Object.keys(r).sort()).toEqual(["code", "currency", "name"]);
   });
 
+  it("shows what to capture, labels each cell, and fills an unproven reading in one tap", async () => {
+    mockPreview();
+    // Toss 내 투자 row whose printed rate does not reproduce: the average is a hint only.
+    let y = 0;
+    const line = (...ws: [string, string | undefined, number][]) => {
+      y += 70;
+      return ws.map(([t, alt, x]) => ({ t, c: 90, x0: x, y0: y, x1: x + t.length * 20, y1: y + 30, ...(alt !== undefined ? { alt } : {}) }));
+    };
+    const words = [
+      ...line(["삼성전자", undefined, 190], ["1,000,000", "1,000,000", 700], ["원", undefined, 900]),
+      ...line(["3", "3", 190], ["주", undefined, 220], ["-100,000", "100,000", 600], ["(20.0%)", "20.0", 800]),
+      ...line(["기아", undefined, 190], ["500,000", "500,000", 700], ["원", undefined, 900]),
+      ...line(["5", "5", 190], ["주", undefined, 220], ["-50,000", "50,000", 600], ["(20.0%)", "20.0", 800]),
+    ] as OcrWord[];
+    render(<HoldingsImportPanel onDone={vi.fn()} onCancel={vi.fn()} openSession={fakeSession({ "toss.png": words }) as never} />);
+    expect(screen.getByTestId("holdings-capture-guide").textContent).toContain("dashboard.portfolio.holdingsImport.shot.toss");
+    await pickAndRead(["toss.png"], {});
+
+    const row = screen.getAllByTestId("holdings-review-row")[0];
+    expect(row.textContent).toContain("dashboard.portfolio.holdingsImport.help.shares");
+    expect(row.textContent).toContain("dashboard.portfolio.holdingsImport.help.avgCost");
+    const avg = row.querySelector("input[aria-label='dashboard.portfolio.holdingsImport.col.avgCost']") as HTMLInputElement;
+    expect(avg.value).toBe("");
+    fireEvent.click(row.querySelector("[data-testid=holdings-use-read]")!);
+    expect(avg.value).toBe("366667"); // (1,000,000 + 100,000) ÷ 3, read but not proven
+  });
+
   it("a fill screen alone yields no rows and no preview call", async () => {
     mockPreview();
     const byName = { "fills.png": dump("synthetic/ocr/b_hts_table.png.json") };

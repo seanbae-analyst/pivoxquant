@@ -232,6 +232,25 @@
         "guideColumns": "Must be visible: name or code · shares held · average cost. Screens without an average cost (e.g. Toss '내 투자') are worked out from market value, P/L and return. Current price and market value are not recorded.",
         "guideForeign": "For overseas stocks, switch the app to show amounts in $ before capturing. A screen shown in won has no dollar average cost, so that cell must be typed in. Won and $ captures can be picked together in one go.",
         "guideReplace": "Positions you already recorded default to 'Replace' (shares and average cost set to the captured values). Each row can be switched to 'Add' or 'Skip'.",
+        "shot": {
+          "title": "Which screen to capture",
+          "toss": "Toss Securities: 내 투자 → '자세히 보기' at the bottom of the list → the table showing '1주 평균 금액' (average cost) and '원금' (cost). Domestic and overseas stocks are on one screen and the average is printed, so this reads best.",
+          "tossAlt": "The list screen ('내 투자') works too: capture it with '평가금' selected at the top, and switch to $ for one more capture of the overseas stocks.",
+          "other": "Other brokers: the balance / holdings screen, with name · shares · average cost visible.",
+          "exampleCaption": "e.g. Toss '자세히 보기' — the two highlighted cells are read",
+          "colName": "Name",
+          "colAvg": "Avg cost / share",
+          "colTotal": "Total",
+          "cur": "Price",
+          "cost": "Cost"
+        },
+        "help": {
+          "ticker": "Stock — the name on screen (Korean is fine) or ticker. e.g. 삼성전자 · 뉴스케일파워 · SMR",
+          "shares": "Shares held. e.g. 15",
+          "avgCost": "Average cost per share — won for Korean stocks, dollars for US. e.g. 272000 · 23.16",
+          "currency": "Currency — KRW for Korean, USD for US",
+          "useRead": "Use read value {v}"
+        },
         "resolving": "Checking tickers",
         "previewFailed": "Could not check the tickers. Please try again shortly.",
         "saveFailed": "Could not save.",
@@ -245,7 +264,7 @@
         },
         "reviewDesc": "Only cells read with certainty are filled. Fill each outlined blank from your capture; faint text inside a cell is only a hint. Current price is never used as average cost.",
         "changeTicker": "Change",
-        "tickerPlaceholder": "Search ticker",
+        "tickerPlaceholder": "Search name or ticker",
         "confirmMatch": "I confirm this is the same stock as '{read}' on the capture.",
         "col": {
           "ticker": "Ticker",

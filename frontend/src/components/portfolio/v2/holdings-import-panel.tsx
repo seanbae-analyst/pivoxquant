@@ -362,9 +362,8 @@ export function HoldingsImportPanel({
   return (
     <div data-testid="holdings-import-panel">
       <p className="font-serif" style={{ ...body, margin: 0 }}>{t("dashboard.portfolio.holdingsImport.intro")}</p>
+      <CaptureGuide />
       <ul className="mt-3 space-y-1 font-serif" style={body}>
-        <li>— {t("dashboard.portfolio.holdingsImport.guideScreen")}</li>
-        <li>— {t("dashboard.portfolio.holdingsImport.guideColumns")}</li>
         <li>— {t("dashboard.portfolio.holdingsImport.guideForeign")}</li>
         <li>— {t("dashboard.portfolio.holdingsImport.guideReplace")}</li>
         <li>— {t("journal.import.image.guideLocal")}</li>
@@ -479,6 +478,72 @@ export function HoldingsImportPanel({
   );
 }
 
+/** Which screen to capture — Toss 자세히 보기 first, with a small drawn
+ * example of the table so the user recognises it. */
+function CaptureGuide() {
+  const t = useT();
+  const k = (s: string) => t(`dashboard.portfolio.holdingsImport.shot.${s}`);
+  const text = { fontSize: "var(--pq-text-body-sm)", lineHeight: 1.5, color: "var(--pq-ivory-mid)", wordBreak: "keep-all" as const };
+  const cell = { padding: "4px 5px", textAlign: "right" as const, whiteSpace: "nowrap" as const };
+  const hl = { outline: "1.5px solid var(--pq-bronze)", outlineOffset: -2 };
+  const dim = { color: "var(--pq-ivory-dim)", fontSize: "var(--pq-text-eyebrow-sm)" };
+  return (
+    <div className="mt-3 rounded-[2px] border p-3" style={{ borderColor: "var(--pq-ivory-line)" }} data-testid="holdings-capture-guide">
+      <div className="font-mono uppercase tracking-[0.18em]" style={{ ...small, color: "var(--pq-bronze)" }}>{k("title")}</div>
+      <p className="mt-2 font-serif" style={{ ...text, margin: 0, color: "var(--pq-ivory)" }}>{k("toss")}</p>
+      <figure className="mt-2" style={{ margin: 0 }}>
+        <div className="overflow-x-auto">
+          <table className="font-mono" style={{ fontSize: "var(--pq-text-mono-xs)", lineHeight: 1.45, borderCollapse: "collapse", color: "var(--pq-ivory)" }} aria-hidden="true">
+            <thead>
+              <tr style={{ color: "var(--pq-ivory-dim)" }}>
+                <td style={{ ...cell, textAlign: "left" }}>{k("colName")}</td>
+                <td style={cell}>{k("colAvg")}</td>
+                <td style={cell}>{k("colTotal")}</td>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderTop: "1px solid var(--pq-ivory-line)" }}>
+                <td style={{ ...cell, textAlign: "left" }}>삼성전자<div style={dim}>15주</div></td>
+                <td style={{ ...cell, ...hl }}>272,000<div style={dim}>{k("cur")} 270,500</div></td>
+                <td style={cell}>4,048,149<div style={{ ...dim, ...hl, color: "var(--pq-ivory)" }}>{k("cost")} 4,080,000</div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption className="mt-1 font-mono" style={{ ...small, color: "var(--pq-ivory-dim)" }}>{k("exampleCaption")}</figcaption>
+      </figure>
+      <p className="mt-2 font-serif" style={{ ...text, margin: 0 }}>{k("tossAlt")}</p>
+      <p className="mt-1 font-serif" style={{ ...text, margin: 0 }}>{k("other")}</p>
+    </div>
+  );
+}
+
+/** A labelled field with its example, and — when OCR read a value it could
+ * not prove — a one-tap button to use that reading. */
+function Field({ help, hint, empty, onUse, children }: {
+  help: string; hint?: string; empty: boolean; onUse: (v: string) => void; children: React.ReactNode;
+}) {
+  const t = useT();
+  const clean = hint?.replace(/[^\d.,$]/g, "").replace(/^\$/, "").replace(/,/g, "");
+  return (
+    <label className="block">
+      <span className="block font-mono" style={{ ...small, color: "var(--pq-ivory-dim)", wordBreak: "keep-all" }}>{help}</span>
+      {children}
+      {empty && clean && /^\d+(\.\d+)?$/.test(clean) && (
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); onUse(clean); }}
+          className="mt-1 underline font-mono"
+          style={{ ...small, color: "var(--pq-bronze)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          data-testid="holdings-use-read"
+        >
+          {t("dashboard.portfolio.holdingsImport.help.useRead").replace("{v}", clean)}
+        </button>
+      )}
+    </label>
+  );
+}
+
 function HoldingReviewRow({
   row: r,
   issues,
@@ -533,6 +598,9 @@ function HoldingReviewRow({
         )}
         {showSearch && (
           <div data-missing={!skip && issues.includes("ticker") ? "true" : undefined}>
+            <span className="block font-mono" style={{ ...small, color: "var(--pq-ivory-dim)", wordBreak: "keep-all" }}>
+              {t("dashboard.portfolio.holdingsImport.help.ticker")}
+            </span>
             <TickerSearch
               value={query}
               onChange={setQuery}
@@ -547,31 +615,36 @@ function HoldingReviewRow({
         )}
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <input
-          value={r.shares}
-          onChange={(e) => onPatch({ shares: e.target.value })}
-          placeholder={r.hints.shares ?? t("dashboard.portfolio.holdingsImport.col.shares")}
-          aria-label={t("dashboard.portfolio.holdingsImport.col.shares")}
-          inputMode="decimal"
-          data-missing={!skip && issues.includes("shares") ? "true" : undefined}
-          className={inputCls}
-          style={border(issues.includes("shares"))}
-        />
-        <input
-          value={r.avgCost}
-          onChange={(e) => onPatch({ avgCost: e.target.value })}
-          placeholder={r.hints.avgCost ?? t("dashboard.portfolio.holdingsImport.col.avgCost")}
-          aria-label={t("dashboard.portfolio.holdingsImport.col.avgCost")}
-          inputMode="decimal"
-          data-missing={!skip && issues.includes("avgCost") ? "true" : undefined}
-          className={inputCls}
-          style={border(issues.includes("avgCost"))}
-        />
+      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 items-end">
+        <Field help={t("dashboard.portfolio.holdingsImport.help.shares")} hint={r.hints.shares} empty={!r.shares} onUse={(v) => onPatch({ shares: v })}>
+          <input
+            value={r.shares}
+            onChange={(e) => onPatch({ shares: e.target.value })}
+            placeholder={t("dashboard.portfolio.holdingsImport.col.shares")}
+            aria-label={t("dashboard.portfolio.holdingsImport.col.shares")}
+            inputMode="decimal"
+            data-missing={!skip && issues.includes("shares") ? "true" : undefined}
+            className={inputCls}
+            style={border(issues.includes("shares"))}
+          />
+        </Field>
+        <Field help={t("dashboard.portfolio.holdingsImport.help.avgCost")} hint={r.hints.avgCost} empty={!r.avgCost} onUse={(v) => onPatch({ avgCost: v })}>
+          <input
+            value={r.avgCost}
+            onChange={(e) => onPatch({ avgCost: e.target.value })}
+            placeholder={t("dashboard.portfolio.holdingsImport.col.avgCost")}
+            aria-label={t("dashboard.portfolio.holdingsImport.col.avgCost")}
+            inputMode="decimal"
+            data-missing={!skip && issues.includes("avgCost") ? "true" : undefined}
+            className={inputCls}
+            style={border(issues.includes("avgCost"))}
+          />
+        </Field>
         <select
           value={r.currency}
           onChange={(e) => onPatch({ currency: e.target.value as Cur })}
-          aria-label={t("dashboard.portfolio.holdingsImport.col.currency")}
+          aria-label={t("dashboard.portfolio.holdingsImport.help.currency")}
+          title={t("dashboard.portfolio.holdingsImport.help.currency")}
           data-missing={!skip && (issues.includes("currency") || issues.includes("currencyMismatch")) ? "true" : undefined}
           className={`${inputCls} bg-black`}
           style={border(issues.includes("currency") || issues.includes("currencyMismatch"))}
