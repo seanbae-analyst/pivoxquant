@@ -24,7 +24,7 @@
  */
 import {
   classifyScreen, close, digitsOf, groupLines, headerSegments, isCode, median,
-  nameFrom, parseAmount, readNumber, tossPlLine,
+  nameDigitAt, nameFrom, parseAmount, readNumber, tossPlLine,
   type Cell, type Line, type NumRead, type OcrWord, type ScreenType,
 } from "./parse";
 
@@ -211,9 +211,12 @@ function prove(reads: Reads, usd: boolean, flags: string[], opts: { requireUnit:
         shares = { value: qv };
         avg = { value: pv };
         flags.push("cross_checked");
-      } else if (provenPair && combos.size === 0) {
-        // HARD gate: the screen prints the cost (or value − P/L) and the
-        // proven pair does not produce it — a misread or a misassigned column.
+      } else if (combos.size === 0) {
+        // HARD gate: the screen prints the cost (or value − P/L) and no
+        // reading of shares × avg produces it — a misread or a misassigned
+        // column. Neither cell is kept, even a shares value both readings
+        // agree on: both come from one box, so a digit the box missed
+        // ("117" → "17") is missed twice.
         flags.push("amount_mismatch");
         return { shares: { value: null, hint: q.hint }, avg: { value: null, hint: p.hint } };
       }
@@ -371,6 +374,101 @@ function nearNameColumn(w: OcrWord, cols: HCol[]): boolean {
   return best === nameCol || w.x0 < nameCol.cx;
 }
 
+// ── stacked-header tables (two values per cell) ─────────────────────────────
+//
+//   종목명 | 평가손익 | 잔고수량 | 평가금액        ← header line 1
+//          | 수익률   | 평균단가 | 현재가          ← header line 2
+//   삼성전자 +1,000   10        711,000          ← body top line
+//            +0.14%   71,000    71,100          ← body bottom line
+//
+// Each column carries a top and a bottom field; a stock is two body lines,
+// with its name on either line or centred between them.
+
+interface SCol { cx: number; top: Field; bot: Field }
+
+function stackedHeader(lines: Line[], hMed: number): { at: number; cols: SCol[] } | null {
+  // Header lines carry labels — "보유수량 817 · 매입단가 77,620" (two numbers)
+  // is data; one stray number is OCR junk ("2008 평균단가 현재가").
+  const numbered = (l: Line) => l.words.filter((w) => /\d{2,}/.test(w.t)).length >= 2;
+  const known = (xs: { f: Field }[]) => xs.filter((x) => x.f !== "unknown");
+  const fields = (l: Line) => headerSegments(l).map(({ text, cx }) => ({ f: headerField(text), cx }));
+  for (let i = 0; i + 1 < lines.length; i++) {
+    const a = lines[i];
+    if (numbered(a)) continue;
+    const top = fields(a);
+    if (known(top).length < 2) continue;
+    // The second header line, allowing one OCR junk line in between.
+    const j = [i + 1, i + 2].find((k) => k < lines.length && lines[k].y - a.y < hMed * 4 &&
+      !numbered(lines[k]) && known(fields(lines[k])).length >= 2);
+    if (j === undefined) continue;
+    const b = lines[j];
+    const bot = fields(b);
+    const all = new Set([...known(top), ...known(bot)].map((x) => x.f));
+    if (!all.has("qty") || !(all.has("avg") || all.has("cost"))) continue;
+    const cols: SCol[] = top.map((t) => {
+      const near = [...bot].sort((x, y) => Math.abs(x.cx - t.cx) - Math.abs(y.cx - t.cx))[0];
+      return { cx: t.cx, top: t.f, bot: near && Math.abs(near.cx - t.cx) < hMed * 3 ? near.f : "unknown" };
+    });
+    return { at: j, cols };
+  }
+  return null;
+}
+
+function stackedHoldings(lines: Line[], at: number, cols: SCol[], screenCur: "KRW" | "USD" | null, hMed: number): ParsedHolding[] {
+  const body = lines.slice(at + 1);
+  const numeric = body.filter((l) => l.words.filter((w) => /\d/.test(w.t)).length >= 2);
+  const nameLines = body.filter((l) => !numeric.includes(l) && /[가-힣A-Za-z]{2,}/.test(l.compact.replace(/[^가-힣A-Za-z]/g, "")));
+  const pairs: [Line, Line][] = [];
+  for (let k = 0; k + 1 < numeric.length; k++) {
+    if (numeric[k + 1].y - numeric[k].y < hMed * 3.2) { pairs.push([numeric[k], numeric[k + 1]]); k++; }
+  }
+  const nameCol = cols.find((c) => c.top === "name");
+  const colOf = (w: OcrWord) => [...cols].sort((x, y) => Math.abs(x.cx - (w.x0 + w.x1) / 2) - Math.abs(y.cx - (w.x0 + w.x1) / 2))[0];
+  return pairs.map(([top, bot]) => {
+    const mid = (top.y + bot.y) / 2;
+    const reads = emptyReads();
+    const nameWords: OcrWord[] = [];
+    const codeWords: OcrWord[] = [];
+    const put = (w: OcrWord, f: Field) => {
+      if (w.t.includes("%")) return;
+      switch (f) {
+        case "qty": reads.qty.push(readNumber({ ...w, t: w.t.replace(/주$/, "") })); break;
+        case "avg": reads.avg.push(readNumber(w)); break;
+        case "cost": reads.cost.push(readNumber(w)); break;
+        case "value": reads.value.push(readNumber(w)); break;
+        case "pl": reads.pl.push(signedCandidates(w)); break;
+        default: break;
+      }
+    };
+    for (const [line, which] of [[top, "top"], [bot, "bot"]] as const) {
+      for (const w of line.words) {
+        const c = colOf(w);
+        if (!/\d/.test(w.t) || (nameCol && c === nameCol)) {
+          if (isCode(w.t)) codeWords.push(w);
+          else if (/[가-힣A-Za-z]/.test(w.t) && (!nameCol || c === nameCol)) nameWords.push(w);
+          continue;
+        }
+        put(w, which === "top" ? c.top : c.bot);
+      }
+    }
+    // A name centred between the two lines.
+    if (!nameWords.length) {
+      const nl = nameLines.find((l) => Math.abs(l.y - mid) < hMed * 1.2);
+      if (nl) nameWords.push(...nl.words.filter((w) => /[가-힣A-Za-z]/.test(w.t)));
+    }
+    const compact = top.compact + bot.compact;
+    const currency = recordCurrency(compact, screenCur);
+    const usd = currency === "USD";
+    const flags: string[] = [];
+    const { shares, avg } = prove(reads, usd, flags, { requireUnit: false });
+    const nc = nameAndCode(nameWords, codeWords, usd, /\$\s*\d/.test(compact));
+    return {
+      name: nc.name, code: nc.code, shares, avgCost: avg, currency, flags,
+      sourceText: [top.text, bot.text].join(" / "),
+    };
+  });
+}
+
 // ── cards / key-value lists ────────────────────────────────────────────────
 
 /** A word that is a printed number ("1,040,000", "+$677.00", "42주"), as
@@ -392,8 +490,11 @@ function leadName(l: Line): boolean {
   return nm.name.replace(/[^가-힣A-Za-z]/g, "").length >= 2;
 }
 
+// A quantity label anywhere on the line counts — "보유수량 817 · 매입단가 77,620"
+// is a quantity line even though its whole text reads as 매입단가 first.
+const QTY_LABEL = /보유수량|잔고수량|보유량|수량/;
 const isAnchor = (l: Line) =>
-  /\d\s*주(?!당)/.test(l.text) || (labelOf(l.words.filter((w) => !/\d/.test(w.t)).map((w) => w.t).join(""), { suffix: false }) === "qty" && /\d/.test(l.text));
+  /\d\s*주(?!당)/.test(l.text) || (QTY_LABEL.test(l.compact.replace(/[\d,.]/g, "")) && /\d/.test(l.text));
 
 function cardHoldings(lines: Line[], screenCur: "KRW" | "USD" | null): ParsedHolding[] {
   const anchors = lines.map((l, i) => (isAnchor(l) ? i : -1)).filter((i) => i >= 0);
@@ -448,7 +549,7 @@ function cardHoldings(lines: Line[], screenCur: "KRW" | "USD" | null): ParsedHol
     let nc = { name: { value: null } as Cell<string>, code: { value: null } as Cell<string> };
     if (nameLine) {
       const codeWords = nameLine.words.filter(codeLike);
-      const firstNum = nameLine.words.findIndex((w) => numberish(w) && !codeWords.includes(w));
+      const firstNum = nameLine.words.findIndex((w, i) => numberish(w) && !codeWords.includes(w) && !nameDigitAt(nameLine.words, i));
       const lead = firstNum < 0 ? nameLine.words : nameLine.words.slice(0, firstNum);
       nc = nameAndCode(lead.filter((w) => !codeWords.includes(w)), codeWords, usd, /\$\s*\d/.test(nameLine.compact));
     }
@@ -624,8 +725,11 @@ export function parseHoldingsScreen(words: OcrWord[]): HoldingsParse {
   if (screenType !== "holdings") return { screenType, rows: [] };
   const cur = screenCurrency(lines);
   const hi = lines.findIndex((l) => holdingsHeader(l) !== null);
+  const hMed = median(lines.map((l) => l.h)) || 20;
+  const stacked = hi < 0 ? stackedHeader(lines, hMed) : null;
   const toss = lines.filter((l) => tossQtyLine(l.compact)).length >= 2;
   const rows = hi >= 0 ? tableHoldings(lines, hi, holdingsHeader(lines[hi])!, cur)
+    : stacked ? stackedHoldings(lines, stacked.at, stacked.cols, cur, hMed)
     : toss ? tossHoldings(lines) : cardHoldings(lines, cur);
   // A row with no quantity, cost, name or code reading is not a holding.
   const some = (c: Cell<unknown>) => c.value !== null || Boolean(c.hint);
