@@ -106,6 +106,30 @@ def known_kr_code(code: str, index: dict[str, str]) -> bool:
     return bare in {t.split(".")[0] for t in index.values()}
 
 
+_CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+_JUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"
+_JONG = " ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"
+# (min jamo ratio, min lead over the runner-up): a very close match may have
+# a near neighbour ("삼성전자" / "삼성전자우"), a looser one must stand alone.
+JAMO_RULES = ((0.80, 0.06), (0.70, 0.10))
+
+
+def jamo(s: str) -> str:
+    """Hangul syllables → their jamo ("뉴" → "ㄴㅠ"). OCR confuses glyphs
+    that share most strokes (뉴/느, 워/위/표); syllable-level matching counts
+    those as whole misses, jamo-level as one stroke off."""
+    out = []
+    for ch in s:
+        c = ord(ch) - 0xAC00
+        if 0 <= c < 11172:
+            out += [_CHO[c // 588], _JUNG[(c % 588) // 28]]
+            if c % 28:
+                out.append(_JONG[c % 28])
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def fuzzy_kr_ticker(name: str, index: dict[str, str]) -> tuple[str, str] | None:
     """Unique close match of an OCR-garbled Korean name in the master
     (``{종목명: ticker}``). Returns ``(ticker, master_name)`` or None.
@@ -128,9 +152,26 @@ def fuzzy_kr_ticker(name: str, index: dict[str, str]) -> tuple[str, str] | None:
          if abs(len(cand) - len(key)) <= 3),
         reverse=True,
     )
-    if not scored or scored[0][0] < FUZZY_MIN_RATIO:
+    if scored and scored[0][0] >= FUZZY_MIN_RATIO and (len(scored) < 2 or scored[0][0] - scored[1][0] >= FUZZY_MIN_MARGIN):
+        best = scored[0][1]
+        return index[best], best
+    # Stroke-level: compare jamo, ignoring OCR junk ("(", "=u") around the
+    # name. Same unique-and-clear rule, a little stricter.
+    # Hangul only: Latin letters in an OCR read are junk or a prefix the
+    # strokes cannot vouch for ("XX전자" is not LG전자).
+    hangul = re.sub(r"[^가-힣0-9]", "", key)
+    if len(re.findall(r"[가-힣]", hangul)) < 3:
         return None
-    if len(scored) > 1 and scored[0][0] - scored[1][0] < FUZZY_MIN_MARGIN:
+    kj = jamo(hangul)
+    jscored = sorted(
+        ((difflib.SequenceMatcher(None, kj, jamo(cand)).ratio(), cand) for cand in index
+         if abs(len(cand) - len(hangul)) <= 3),
+        reverse=True,
+    )
+    if not jscored:
         return None
-    best = scored[0][1]
+    top, lead = jscored[0][0], jscored[0][0] - (jscored[1][0] if len(jscored) > 1 else 0)
+    if not any(top >= r and lead >= m for r, m in JAMO_RULES):
+        return None
+    best = jscored[0][1]
     return index[best], best

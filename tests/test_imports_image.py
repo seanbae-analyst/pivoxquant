@@ -341,3 +341,26 @@ class TestSecondReview:
         p = _post(client, _row(code="", name="SK하이닉")).get_json()["pending"][0]
         r = client.patch(f"{BASE}/pending/{p['id']}", json={"name": "SK하이닉스"})
         assert r.get_json()["pending"]["needs_confirm"] is True
+
+
+class TestFuzzyJamo:
+    """OCR garbles strokes, not syllables: 뉴→느, 워→표, 조→소 (2026-09-28, iPhone
+    captures). Jamo-level matching is a fallback after the syllable match."""
+
+    def test_stroke_level_misreads_match(self):
+        from services.imports.ocr_rows import fuzzy_kr_ticker
+        index = {"뉴스케일파워": "SMR", "스카이라이프": "053210.KQ", "조비에비에이션": "JOBY",
+                 "삼성전자": "005930.KS", "삼성전자우": "005935.KS", "삼성전기": "009150.KS",
+                 "아이티센글로벌": "124500.KQ", "아이센스": "099190.KQ", "아이티센엔텍": "010280.KS"}
+        assert fuzzy_kr_ticker("느스케일표", index) == ("SMR", "뉴스케일파워")
+        assert fuzzy_kr_ticker("는스커 (일파이효워", index) == ("SMR", "뉴스케일파워")
+        assert fuzzy_kr_ticker("소비에비에이션", index) == ("JOBY", "조비에비에이션")
+        assert fuzzy_kr_ticker("아이티센글 =u", index) == ("124500.KQ", "아이티센글로벌")
+        assert fuzzy_kr_ticker("심성전자", index) == ("005930.KS", "삼성전자")
+
+    def test_ambiguous_or_foreign_words_stay_unmatched(self):
+        from services.imports.ocr_rows import fuzzy_kr_ticker
+        index = {"삼성전자": "005930.KS", "삼성전기": "009150.KS", "뉴스케일파워": "SMR"}
+        assert fuzzy_kr_ticker("삼성전", index) is None  # 전자 / 전기
+        assert fuzzy_kr_ticker("해외주식", index) is None
+        assert fuzzy_kr_ticker("현재가", index) is None
