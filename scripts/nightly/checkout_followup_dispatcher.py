@@ -200,7 +200,12 @@ def _drain_once_locked() -> dict[str, int]:
         # 25-conn ceiling. Dispose closes it now. Harmless under standalone
         # crontab (short-lived process exits anyway).
         try:
-            db.engine.dispose()
+            # db.engine resolves through the app context, which the `with`
+            # above has already popped — without re-entering it this raised
+            # "Working outside of application context" into the except below
+            # and the pool was never released.
+            with app.app_context():
+                db.engine.dispose()
         except Exception:  # noqa: BLE001
             logger.debug("engine dispose failed (non-fatal)", exc_info=True)
 

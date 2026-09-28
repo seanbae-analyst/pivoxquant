@@ -448,7 +448,10 @@ def main() -> int:
                 return 1
     finally:
         try:
-            db.engine.dispose()
+            # The `with` above already popped the app context; db.engine
+            # needs it, or this raises into the except and never disposes.
+            with app.app_context():
+                db.engine.dispose()
         except Exception:
             logger.debug("engine dispose failed (non-fatal)", exc_info=True)
 
