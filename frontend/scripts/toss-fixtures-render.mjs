@@ -20,7 +20,10 @@ import { chromium } from "playwright";
 
 const [outDir, countArg, seedArg, modeArg] = process.argv.slice(2);
 // "usd": every screen has 해외주식 rows shown with the app's $ toggle on.
-const USD_MODE = modeArg === "usd";
+// "detail": the 자세히 보기 table (1주 평균 금액 / 현재가, 총 금액 / 원금 columns),
+// 해외주식 in $.
+const DETAIL_MODE = modeArg === "detail";
+const USD_MODE = modeArg === "usd" || DETAIL_MODE;
 if (!outDir) {
   console.error("usage: node scripts/toss-fixtures-render.mjs <out dir> [count] [seed]");
   process.exit(2);
@@ -57,7 +60,8 @@ function holding(foreign) {
     return { name, ticker, shares, avg, cost, value, pl, rate, foreign, usd: true };
   }
   const avg = foreign ? int(3, 900) * 1000 + int(0, 999) : pick([int(1, 99) * 100, int(100, 999) * 100, int(1000, 9999) * 100, int(1, 9) * 100000]);
-  const cost = shares * avg;
+  // The detail table prints the average truncated: 원금 may carry a remainder.
+  const cost = shares * avg + (DETAIL_MODE && shares > 1 ? int(0, shares - 1) : 0);
   const value = Math.max(1, Math.round(cost * (0.1 + rnd() * 1.8)));
   const pl = value - cost;
   const rate = Math.floor((Math.abs(pl) / cost) * 1000) / 10; // Toss truncates
@@ -78,6 +82,19 @@ body { background: ${bg}; color: ${fg}; font-family: -apple-system, "Apple SD Go
 .mid { flex: 1; } .nm { font-size: 1.12em; } .sh { color: ${sub}; margin-top: 4px; font-size: .95em; }
 .rt { text-align: right; } .amt { font-size: 1.12em; font-weight: 700; } .pl { margin-top: 4px; font-size: .95em; }
 .neg { color: #3182f6; } .pos { color: #f04452; }`;
+}
+
+function detailTable(hs, start, dark) {
+  const sub = dark ? "#8b8f97" : "#8b95a1", line = dark ? "#23252b" : "#eef0f3";
+  const m = (h, n) => (h.usd ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${won(n)}원`);
+  const cur = (h) => (h.usd ? Math.round((h.value / h.shares) * 100) / 100 : Math.round(h.value / h.shares));
+  return `<table style="width:100%;border-collapse:collapse;font-size:.95em">
+<tr style="color:${sub};font-size:.9em"><td style="padding:10px 20px">종목명 ⌃</td><td>총 수익 ⌃</td><td style="text-align:right">1주 평균 금액 ⌃</td><td style="text-align:right;padding-right:14px">총 금액 ⌃</td></tr>
+${hs.map((h, i) => `<tr data-h="${start + i}" style="border-top:1px solid ${line}">
+<td style="padding:14px 20px;width:30%">${h.name}<div style="color:${sub};margin-top:4px">${h.shares}주</div></td>
+<td class="${h.pl < 0 ? "neg" : "pos"}">${h.pl < 0 ? "-" : "+"}${h.rate.toFixed(1)}%<div style="margin-top:4px">${h.pl < 0 ? "-" : "+"}${m(h, Math.abs(h.pl))}</div></td>
+<td style="text-align:right">${m(h, h.avg)}<div style="color:${sub};margin-top:4px">현재가 ${m(h, cur(h))}</div></td>
+<td style="text-align:right;padding-right:14px">${m(h, h.value)}<div style="color:${sub};margin-top:4px">원금 ${m(h, h.cost)}</div></td></tr>`).join("")}</table>`;
 }
 
 function row(h, i) {
@@ -104,7 +121,11 @@ for (let k = 0; k < COUNT; k++) {
   const all = [...kr, ...us];
   const total = all.reduce((s, h) => s + (h.usd ? h.value * 1400 : h.value), 0);
   const totalPl = all.reduce((s, h) => s + (h.usd ? h.pl * 1400 : h.pl), 0);
-  const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>${css(dark, fontScale)}</style></head><body>
+  const html = DETAIL_MODE ? `<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>${css(dark, fontScale)}</style></head><body>
+<div class="sec"><span>전체 · 국내주식 · 해외주식</span></div>
+${header ? `<div class="sec"><span>국내주식</span></div>` : ""}${detailTable(kr, 0, dark)}
+${us.length ? `<div class="sec"><span>해외주식</span></div>${detailTable(us, kr.length, dark)}` : ""}
+</body></html>` : `<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>${css(dark, fontScale)}</style></head><body>
 ${header ? `<div class="hdr"><div class="t">내 투자</div><div class="v">${won(total)}원 ›</div><div class="neg">${totalPl < 0 ? "-" : "+"}${won(Math.abs(totalPl))}원</div></div>` : ""}
 ${header ? `<div class="sec"><span>국내주식 <span class="r">-20.4%</span></span><span>⌃</span></div>` : ""}
 ${kr.map(row).join("")}
