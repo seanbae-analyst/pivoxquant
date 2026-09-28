@@ -367,7 +367,12 @@ def main() -> int:
         # Release the transient QueuePool now rather than letting it linger
         # ~300s toward Railway PG's 25-conn ceiling. Harmless standalone.
         try:
-            db.engine.dispose()
+            # db.engine resolves through the app context, which the `with`
+            # above has already popped — without re-entering it this raised
+            # "Working outside of application context" into the except below
+            # and the pool was never released.
+            with app.app_context():
+                db.engine.dispose()
         except Exception:
             logger.debug("engine dispose failed (non-fatal)", exc_info=True)
 

@@ -83,13 +83,27 @@ class TestPaymentFailedNotifications:
             "data": {"object": invoice},
         }
 
+        # The handler passes a live ORM ``User``. After the request, the
+        # idempotency commit (expire_on_commit) plus app-context teardown
+        # leave that instance expired + detached, so reading ``.id`` off
+        # ``call_args`` post-request raises DetachedInstanceError. Capture
+        # the id *at call time* — which is also exactly what the real
+        # notifiers observe (they run synchronously inside the request).
+        seen_user_ids: dict[str, object] = {}
+
+        def _record(name):
+            def _side_effect(*, user, invoice):
+                seen_user_ids[name] = user.id if user is not None else None
+                return True
+            return _side_effect
+
         with patch(
-            "services.billing_notifications.notify_payment_failed_slack"
+            "services.billing_notifications.notify_payment_failed_slack",
+            side_effect=_record("slack"),
         ) as mock_slack, patch(
-            "services.billing_notifications.notify_payment_failed_email"
+            "services.billing_notifications.notify_payment_failed_email",
+            side_effect=_record("email"),
         ) as mock_email:
-            mock_slack.return_value = True
-            mock_email.return_value = True
             r = _post_event(raw_client, event)
 
         assert r.status_code == 200
@@ -102,11 +116,11 @@ class TestPaymentFailedNotifications:
         # Invoice payload forwarded verbatim
         slack_kw = mock_slack.call_args.kwargs
         assert slack_kw["invoice"]["id"] == "in_pf_1"
-        assert slack_kw["user"].id == user_id
+        assert seen_user_ids["slack"] == user_id
 
         email_kw = mock_email.call_args.kwargs
         assert email_kw["invoice"]["id"] == "in_pf_1"
-        assert email_kw["user"].id == user_id
+        assert seen_user_ids["email"] == user_id
 
     def test_payment_failed_keeps_tier_active(self, raw_client, app):
         """Per docstring contract — tier intentionally not flipped."""

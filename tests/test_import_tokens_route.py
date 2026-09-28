@@ -34,7 +34,27 @@ def webhook_client(app):
     test pops the wrong context. A plain client carries no session cookie, so it
     also proves the webhook works without a login.
     """
-    return app.test_client()
+    raw = app.test_client()
+
+    class _FreshContextClient:
+        """Run each call in its own app context. The ``client`` fixture's
+        ``with`` block leaves its last request's app context pushed, and a
+        request from a second client reuses a pushed app context for the same
+        app — inheriting ``g._login_user`` (a User from an already-removed
+        session) instead of starting anonymous, which is what a real webhook
+        caller is."""
+
+        def __getattr__(self, name):
+            fn = getattr(raw, name)
+            if not callable(fn):
+                return fn
+
+            def call(*a, **kw):
+                with app.app_context():
+                    return fn(*a, **kw)
+            return call
+
+    return _FreshContextClient()
 
 
 def _issue(client, name="폰 자동화", consent=True):

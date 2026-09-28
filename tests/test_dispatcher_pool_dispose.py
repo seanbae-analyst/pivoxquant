@@ -39,12 +39,15 @@ def _patch_create_app(test_app, captured_env):
 
 
 @pytest.fixture
-def dispose_spy():
+def dispose_spy(app):
     """Spy on extensions.db.engine.dispose without actually tearing down the
     shared session-scoped test engine (which other tests reuse)."""
     from extensions import db
     calls = {"n": 0}
-    real = db.engine.dispose
+    # db.engine needs an app context; the spy itself patches the Engine class.
+    with app.app_context():
+        engine_cls = type(db.engine)
+        real = db.engine.dispose
 
     def _spy(*a, **kw):
         calls["n"] += 1
@@ -53,7 +56,7 @@ def dispose_spy():
         # the dispatcher *attempts* to release the pool.
         return None
 
-    with patch.object(type(db.engine), "dispose", _spy):
+    with patch.object(engine_cls, "dispose", _spy):
         yield calls
     _ = real  # keep ref
 
