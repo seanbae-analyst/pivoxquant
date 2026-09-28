@@ -365,6 +365,7 @@ export function HoldingsImportPanel({
       <ul className="mt-3 space-y-1 font-serif" style={body}>
         <li>— {t("dashboard.portfolio.holdingsImport.guideScreen")}</li>
         <li>— {t("dashboard.portfolio.holdingsImport.guideColumns")}</li>
+        <li>— {t("dashboard.portfolio.holdingsImport.guideForeign")}</li>
         <li>— {t("dashboard.portfolio.holdingsImport.guideReplace")}</li>
         <li>— {t("journal.import.image.guideLocal")}</li>
       </ul>
