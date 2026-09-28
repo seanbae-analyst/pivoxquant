@@ -377,7 +377,7 @@ function cardFill(recLines: Line[], detailIdx: number, ctx: Ctx): ParsedFill {
     if (/^[~≈]/.test(own) || /[~≈]$/.test(prev)) continue; // "≈ 233,424원" conversion
     const isQty =
       (/^주/.test(next) && next !== "주당" && !(next === "주" && next2.startsWith("당"))) ||
-      /주$/.test(own) || /^x$/i.test(next);
+      /주$/.test(own) || /^[x×]$/i.test(next);
     if (isQty && !/주문$/.test(prev)) {
       if (!q || /체결$/.test(prev)) {
         q = readNumber({ ...w, t: own.replace(/주$/, "") });
@@ -385,8 +385,11 @@ function cardFill(recLines: Line[], detailIdx: number, ctx: Ctx): ParsedFill {
       }
       continue;
     }
-    if (/(단가|주당|당|체결가|가|x)$/i.test(prev) || /^x\$/.test(own) || (usd && /x$/i.test(prev))) {
-      if (!p) p = readNumber({ ...w, t: own.replace(/^x/, "") });
+    // "x" / "×" (quantity × price) counts only as a word of its own — "AMEX"
+    // ends in x too, and the amount after it is not a price.
+    const times = /^[x×]$/i.test(seq[i - 1]?.t ?? "");
+    if (/(단가|주당|당|체결가|가)$/.test(prev) || times || /^[x×]\$/.test(own)) {
+      if (!p) p = readNumber({ ...w, t: own.replace(/^[x×]/, "") });
       continue;
     }
     const onNameLine = detailIdx > 0 && (usd

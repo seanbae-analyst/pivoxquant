@@ -74,6 +74,10 @@ function score(set: string) {
 const FLOORS: Record<string, { shares: number; avg: number }> = {
   broker_tune: { shares: 0.75, avg: 0.72 },
   broker_heldout: { shares: 0.75, avg: 0.72 },
+  // Safari / iOS path (in-code resampling). Measured 2026-09-28: shares
+  // 76 · 82%, avg 79 · 80%; wrong 0.
+  "safari/broker_tune": { shares: 0.72, avg: 0.72 },
+  "safari/broker_heldout": { shares: 0.72, avg: 0.72 },
 };
 
 describe.each(Object.keys(FLOORS))("broker-style holdings eval (%s)", (set) => {

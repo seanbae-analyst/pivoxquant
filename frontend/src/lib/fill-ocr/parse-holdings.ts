@@ -598,7 +598,16 @@ const tossAmountWord = (w: OcrWord | undefined) =>
  * follows it ("원", or "원" misread as "839%") is ignored. Names may carry
  * digits ("교보15호스팩"). A bare number right before a printed "원" is an
  * amount too ("832원", comma dropped "17164,157원"). */
-function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord } | null {
+/** Won amounts have no decimals: a reading with a fraction ("9,542.952" for
+ * 9,542,952) is a misread — and one that can scale a whole row by 1000 with
+ * the rate check still passing, since the rate is a ratio. */
+function wonOnly(r: NumRead, usd: boolean): NumRead {
+  if (usd) return r;
+  const candidates = r.candidates.filter((v) => Number.isInteger(v));
+  return { ...r, candidates, value: r.value !== null && Number.isInteger(r.value) ? r.value : null };
+}
+
+function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord; split: boolean } | null {
   // ≥3 digits: the 현재가 · 평가금 · $ · 원 toggle reads "$ 원" as "6 원".
   const beforeWon = new Set(l.words.filter((w, k) => l.words[k + 1]?.t === "원" && /^\d[\d,.]{2,}$/.test(w.t)));
   const ws = l.words.filter((w) => w.t !== "원");
@@ -608,7 +617,10 @@ function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord } | null
   const letters = nameWords.map((w) => w.t).join("").replace(/[^가-힣A-Za-z]/g, "");
   if (letters.length < 2) return null;
   if (/내투자|주식$/.test(letters)) return null;
-  return { nameWords, amount: ws[i] };
+  // More digits right after the amount: it was split ("24,542" "952원"), so
+  // this word is only part of it.
+  const split = ws.slice(i + 1).some((w) => /\d/.test(w.t));
+  return { nameWords, amount: ws[i], split };
 }
 
 /** Both readings of a digit token, with the trailing punctuation the digit
@@ -632,14 +644,16 @@ function tossShares(ws: OcrWord[], plIdx: number): Cell<number> {
   // P/L only), so a 주 glyph must be seen after the digits — in the token
   // ("19%", "3F") or as the next word ("29 주", "248 수"). Without one the 주
   // may have been read as a digit ("7주" → "73").
+  // The next word must BE the glyph — a word merely starting with "+" is the
+  // P/L that follows ("25 +688,794" is 2주 with the 주 read as 5).
   const next = ws[ws.indexOf(w) + 1]?.t ?? "";
-  const unit = m[2] !== "" || /^[주수추%=+F]/.test(next);
+  const unit = m[2] !== "" || /^[주수추]$/.test(next);
   return unit && n !== null && Number.isInteger(n) && n > 0 && n <= 1e7 ? { value: n } : { value: null, hint: m[1] };
 }
 
 function tossAvg(amount: NumRead, plw: OcrWord, ratew: OcrWord | undefined, shares: number, usd: boolean): Cell<number> {
   const neg = /^[\-−]/.test(plw.t);
-  const pl = tossRead(plw.t.replace(/^[+\-−]/, ""), plw.alt, plw.alts);
+  const pl = wonOnly(tossRead(plw.t.replace(/^[+\-−]/, ""), plw.alt, plw.alts), usd);
   // Toss prints the rate with one decimal; a reading with more ("53.39" for
   // 53.3) is a misread, so either reading with exactly one decimal is used.
   // With no such reading, both are cut to one decimal (an extra trailing digit).
@@ -709,8 +723,8 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
       const plw = plIdx >= 0 ? ws[plIdx] : undefined;
       const ratew = ws.find((w) => TOSS_RATE.test(w.t));
       const n = shares.value ?? (shares.hint ? Number(shares.hint) : NaN);
-      if (plw && Number.isInteger(n) && n > 0 && !(foreign && !usd)) {
-        const amount = tossRead(nm.amount.t.replace(/원$/, "").replace(/^%(?=\d)/, usd ? "$" : "%"), nm.amount.alt, nm.amount.alts);
+      if (plw && Number.isInteger(n) && n > 0 && !(foreign && !usd) && !nm.split) {
+        const amount = wonOnly(tossRead(nm.amount.t.replace(/원$/, "").replace(/^%(?=\d)/, usd ? "$" : "%"), nm.amount.alt, nm.amount.alts), usd);
         // Malformed grouping ("17164,157") parses to nothing; its digits are
         // still a candidate — the rate check decides.
         if (amount.candidates.length === 0 && digitsOf(nm.amount.t)) amount.candidates.push(Number(digitsOf(nm.amount.t)));
@@ -745,7 +759,8 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
 // 현재가 / 원금 (its share count may sit one line lower, under a wrapped
 // name). shares × avg must reproduce 원금, as in every other layout.
 
-const DETAIL_HEADER = (l: Line) => /평균금액/.test(l.compact) && /총금액/.test(l.compact) && /종목/.test(l.compact);
+// "종목명" is often garbled on this line ("느디노시"); the two money headers are enough.
+const DETAIL_HEADER = (l: Line) => /평균금액/.test(l.compact) && /총금액/.test(l.compact);
 
 interface DetailCols { nameRight: number; avg: [number, number]; total: [number, number]; pl: number | null }
 
@@ -795,14 +810,20 @@ function detailHoldings(lines: Line[], hMed: number): ParsedHolding[] {
     let from = -Infinity;
     for (const m of marks) {
       const to = m.y + hMed * 1.8;
-      const band = body.filter((l) => l.y > from && l.y <= to);
+      let band = body.filter((l) => l.y > from && l.y <= to);
       from = to;
+      // A section title or a (garbled) second table header inside the band:
+      // what lies above it belongs to the previous table — cut there, so a
+      // 해외주식 row never takes a 국내 name above it.
+      const cut = band.findLastIndex((l) => /해외주식|국내주식|종목명|평균금액|총금액/.test(l.compact) && l !== m);
+      if (cut >= 0) band = band.slice(cut + 1);
       const words = band.flatMap((l) => l.words.map((w) => ({ w, l })));
       const nameWs = words.filter(({ w }) => inName(w));
       const qtyW = nameWs.find(({ w }) => /^\d/.test(w.t))?.w;
       // The name sits above the 현재가 / 원금 line; what is on or below it in
       // the name column is the share count and its misread 주 ("19 수").
-      const letters = nameWs.filter(({ l }) => l.y < m.y - hMed * 0.5).map(({ w }) => w)
+      // …and within a few lines above it: a name further up is another stock's.
+      const letters = nameWs.filter(({ l }) => l.y < m.y - hMed * 0.5 && l.y > m.y - hMed * 6).map(({ w }) => w)
         .filter((w) => /[가-힣A-Za-z]/.test(w.t) && !/^[A-Za-z]{1,2}$/.test(w.t) && !/^\d/.test(w.t));
       // Upper amount in a column first; a word right after 현재가 / 원금 is the lower one.
       const colAmounts = (inCol: (w: OcrWord) => boolean) => words
@@ -819,10 +840,10 @@ function detailHoldings(lines: Line[], hMed: number): ParsedHolding[] {
         if (m2) reads.qty.push(tossRead(m2[1], qtyW.alt));
       }
       const money = (w: OcrWord) => tossRead(w.t.replace(/[원%]$/, "").replace(/^[_~]+/, "").replace(/^%(?=\d)/, "$"), w.alt, w.alts);
-      if (avgW) reads.avg.push(money(avgW));
-      if (costW) reads.cost.push(money(costW));
-      if (valueW) reads.value.push(money(valueW));
       const usd = [avgW, costW, valueW].some((w) => w && [w.t, w.alt ?? ""].some((x) => /^[_~]*\$/.test(x.trim())));
+      if (avgW) reads.avg.push(wonOnly(money(avgW), usd));
+      if (costW) reads.cost.push(wonOnly(money(costW), usd));
+      if (valueW) reads.value.push(wonOnly(money(valueW), usd));
       const flags: string[] = [];
       // Share count unread ("29주" → "on"): 원금 ÷ 평균 is it when that lands
       // on a whole number and gives 원금 back within the usual tolerance.

@@ -43,13 +43,23 @@ function score(set: string) {
     if (!Array.isArray(raw)) { s.inputRejected++; continue; }
     const p = parseHoldingsScreen(raw);
     if (p.screenType !== "holdings") s.notHoldings.push(file);
+    // Pair rows with holdings: exact names first, then — among rows whose
+    // name is no holding's — the same share reading.
     const used = new Set<ParsedHolding>();
+    const match = new Map<Truth, ParsedHolding>();
     for (const h of t.holdings) {
-      // The row for this holding: same name, else the same share reading.
-      const r = p.rows.find((x) => !used.has(x) && bare(x.name.value ?? "") === bare(h.name))
-        ?? p.rows.find((x) => !used.has(x) && (x.shares.value === h.shares || x.shares.hint === String(h.shares)));
+      const r = p.rows.find((x) => !used.has(x) && bare(x.name.value ?? "") === bare(h.name));
+      if (r) { used.add(r); match.set(h, r); }
+    }
+    for (const h of t.holdings) {
+      if (match.has(h)) continue;
+      const r = p.rows.find((x) => !used.has(x) && (x.shares.value === h.shares || x.shares.hint === String(h.shares)) &&
+        !t.holdings.some((o) => bare(o.name) === bare(x.name.value ?? "")));
+      if (r) { used.add(r); match.set(h, r); }
+    }
+    for (const h of t.holdings) {
+      const r = match.get(h);
       if (!r) continue;
-      used.add(r);
       s.found++;
       if (r.shares.value === null) s.shares.unknown++;
       else if (r.shares.value === h.shares) s.shares.auto++;
@@ -86,6 +96,13 @@ const FLOORS: Record<string, { shares: number; avg: number }> = {
   // start). Measured 2026-09-28: rows 62/174, shares 45/174. It gates wrong = 0;
   // the two real captures of this screen read 11 of 15 stocks fully.
   toss_detail: { shares: 0.2, avg: 0.5 },
+  // The same screens read on the Safari / iOS path (in-code resampling —
+  // `OCR_RESAMPLE=code node scripts/ocr-eval-dump.mjs …`). Measured
+  // 2026-09-28: shares 85/81/74/22%, avg 85/82/76/80%; wrong 0.
+  "safari/toss_tune": { shares: 0.8, avg: 0.78 },
+  "safari/toss_heldout": { shares: 0.75, avg: 0.75 },
+  "safari/toss_usd": { shares: 0.7, avg: 0.7 },
+  "safari/toss_detail": { shares: 0.18, avg: 0.5 },
 };
 
 describe.each(Object.keys(FLOORS))("Toss 내 투자 eval (%s)", (set) => {
@@ -98,7 +115,7 @@ describe.each(Object.keys(FLOORS))("Toss 내 투자 eval (%s)", (set) => {
     expect(s.foreignAvgFilled).toEqual([]);
   });
   it("classifies every readable screen as holdings", () => {
-    if (set === "toss_detail") return; // header line garbled on some — see FLOORS
+    if (set.endsWith("toss_detail")) return; // header line garbled on some — see FLOORS
     expect(s.notHoldings).toEqual([]);
   });
   it("keeps the auto-fill rate", () => {

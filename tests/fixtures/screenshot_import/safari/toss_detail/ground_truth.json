@@ -1,0 +1,1580 @@
+{
+  "toss_00.png": {
+    "variant": {
+      "dark": false,
+      "width": 393,
+      "dpr": 3,
+      "fontScale": 1,
+      "jpeg": false,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "에치에프알",
+        "ticker": null,
+        "shares": 7,
+        "avg_cost": 39700,
+        "foreign": false
+      },
+      {
+        "name": "퀀타매트릭스",
+        "ticker": null,
+        "shares": 33,
+        "avg_cost": 29400,
+        "foreign": false
+      },
+      {
+        "name": "ES큐브",
+        "ticker": null,
+        "shares": 1,
+        "avg_cost": 6600,
+        "foreign": false
+      },
+      {
+        "name": "컨텍",
+        "ticker": null,
+        "shares": 27,
+        "avg_cost": 337800,
+        "foreign": false
+      },
+      {
+        "name": "삼익악기",
+        "ticker": null,
+        "shares": 5,
+        "avg_cost": 400000,
+        "foreign": false
+      },
+      {
+        "name": "차이커뮤니케이션",
+        "ticker": null,
+        "shares": 2,
+        "avg_cost": 600000,
+        "foreign": false
+      },
+      {
+        "name": "암홀딩스",
+        "ticker": "ARM",
+        "shares": 3,
+        "avg_cost": 830.27,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_01.png": {
+    "variant": {
+      "dark": true,
+      "width": 375,
+      "dpr": 3,
+      "fontScale": 1,
+      "jpeg": false,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "세운메디칼",
+        "ticker": null,
+        "shares": 8,
+        "avg_cost": 100000,
+        "foreign": false
+      },
+      {
+        "name": "제일기획",
+        "ticker": null,
+        "shares": 33,
+        "avg_cost": 5800,
+        "foreign": false
+      },
+      {
+        "name": "코아스",
+        "ticker": null,
+        "shares": 9,
+        "avg_cost": 816600,
+        "foreign": false
+      },
+      {
+        "name": "팔로알토네트웍스",
+        "ticker": "PANW",
+        "shares": 18,
+        "avg_cost": 483.67,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_02.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 375,
+      "dpr": 2,
+      "fontScale": 1.08,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "다이나믹디자인",
+        "ticker": null,
+        "shares": 401,
+        "avg_cost": 688700,
+        "foreign": false
+      },
+      {
+        "name": "앱튼",
+        "ticker": null,
+        "shares": 957,
+        "avg_cost": 74000,
+        "foreign": false
+      },
+      {
+        "name": "세일즈포스",
+        "ticker": "CRM",
+        "shares": 1,
+        "avg_cost": 558.67,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_03.png": {
+    "variant": {
+      "dark": false,
+      "width": 393,
+      "dpr": 3,
+      "fontScale": 1,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "롯데정밀화학",
+        "ticker": null,
+        "shares": 69,
+        "avg_cost": 2700,
+        "foreign": false
+      },
+      {
+        "name": "미래에셋글로벌리츠",
+        "ticker": null,
+        "shares": 326,
+        "avg_cost": 470300,
+        "foreign": false
+      },
+      {
+        "name": "노바렉스",
+        "ticker": null,
+        "shares": 186,
+        "avg_cost": 70100,
+        "foreign": false
+      },
+      {
+        "name": "로체시스템즈",
+        "ticker": null,
+        "shares": 90,
+        "avg_cost": 800000,
+        "foreign": false
+      },
+      {
+        "name": "한빛소프트",
+        "ticker": null,
+        "shares": 68,
+        "avg_cost": 9800,
+        "foreign": false
+      },
+      {
+        "name": "레딧",
+        "ticker": "RDDT",
+        "shares": 61,
+        "avg_cost": 377.16,
+        "foreign": true
+      },
+      {
+        "name": "마이크로소프트",
+        "ticker": "MSFT",
+        "shares": 49,
+        "avg_cost": 1.8,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_04.jpg": {
+    "variant": {
+      "dark": true,
+      "width": 390,
+      "dpr": 2,
+      "fontScale": 0.95,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "피플바이오",
+        "ticker": null,
+        "shares": 83,
+        "avg_cost": 969700,
+        "foreign": false
+      },
+      {
+        "name": "아이씨에이치",
+        "ticker": null,
+        "shares": 83,
+        "avg_cost": 93400,
+        "foreign": false
+      },
+      {
+        "name": "오름테라퓨틱",
+        "ticker": null,
+        "shares": 95,
+        "avg_cost": 8800,
+        "foreign": false
+      },
+      {
+        "name": "세방전지",
+        "ticker": null,
+        "shares": 9,
+        "avg_cost": 6800,
+        "foreign": false
+      },
+      {
+        "name": "세일즈포스",
+        "ticker": "CRM",
+        "shares": 218,
+        "avg_cost": 394.99,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_05.jpg": {
+    "variant": {
+      "dark": true,
+      "width": 393,
+      "dpr": 2,
+      "fontScale": 1,
+      "jpeg": true,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "태양",
+        "ticker": null,
+        "shares": 475,
+        "avg_cost": 683000,
+        "foreign": false
+      },
+      {
+        "name": "서울가스",
+        "ticker": null,
+        "shares": 35,
+        "avg_cost": 77500,
+        "foreign": false
+      },
+      {
+        "name": "아마존",
+        "ticker": "AMZN",
+        "shares": 49,
+        "avg_cost": 841.56,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_06.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 390,
+      "dpr": 2,
+      "fontScale": 1,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "IBKS제25호스팩",
+        "ticker": null,
+        "shares": 6,
+        "avg_cost": 394200,
+        "foreign": false
+      },
+      {
+        "name": "소마젠",
+        "ticker": null,
+        "shares": 88,
+        "avg_cost": 5900,
+        "foreign": false
+      },
+      {
+        "name": "원풍물산",
+        "ticker": null,
+        "shares": 80,
+        "avg_cost": 801300,
+        "foreign": false
+      },
+      {
+        "name": "로빈후드마켓",
+        "ticker": "HOOD",
+        "shares": 2,
+        "avg_cost": 58.08,
+        "foreign": true
+      },
+      {
+        "name": "에어비앤비",
+        "ticker": "ABNB",
+        "shares": 2,
+        "avg_cost": 606.2,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_07.jpg": {
+    "variant": {
+      "dark": true,
+      "width": 430,
+      "dpr": 3,
+      "fontScale": 1.08,
+      "jpeg": true,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "오아",
+        "ticker": null,
+        "shares": 98,
+        "avg_cost": 500000,
+        "foreign": false
+      },
+      {
+        "name": "티로보틱스",
+        "ticker": null,
+        "shares": 23,
+        "avg_cost": 100000,
+        "foreign": false
+      },
+      {
+        "name": "피제이전자",
+        "ticker": null,
+        "shares": 895,
+        "avg_cost": 239200,
+        "foreign": false
+      },
+      {
+        "name": "이노스페이스",
+        "ticker": null,
+        "shares": 9,
+        "avg_cost": 72000,
+        "foreign": false
+      },
+      {
+        "name": "켄코아에어로스페이스",
+        "ticker": null,
+        "shares": 87,
+        "avg_cost": 82300,
+        "foreign": false
+      },
+      {
+        "name": "와이씨",
+        "ticker": null,
+        "shares": 50,
+        "avg_cost": 6300,
+        "foreign": false
+      },
+      {
+        "name": "쇼피파이",
+        "ticker": "SHOP",
+        "shares": 364,
+        "avg_cost": 384.45,
+        "foreign": true
+      },
+      {
+        "name": "엑슨모빌",
+        "ticker": "XOM",
+        "shares": 24,
+        "avg_cost": 874.85,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_08.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 430,
+      "dpr": 2,
+      "fontScale": 1,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "엑사이엔씨",
+        "ticker": null,
+        "shares": 85,
+        "avg_cost": 339600,
+        "foreign": false
+      },
+      {
+        "name": "인지소프트",
+        "ticker": null,
+        "shares": 33,
+        "avg_cost": 400,
+        "foreign": false
+      },
+      {
+        "name": "E1",
+        "ticker": null,
+        "shares": 75,
+        "avg_cost": 900000,
+        "foreign": false
+      },
+      {
+        "name": "아세아제지",
+        "ticker": null,
+        "shares": 74,
+        "avg_cost": 300000,
+        "foreign": false
+      },
+      {
+        "name": "코스트코",
+        "ticker": "COST",
+        "shares": 571,
+        "avg_cost": 867.55,
+        "foreign": true
+      },
+      {
+        "name": "크라우드스트라이크",
+        "ticker": "CRWD",
+        "shares": 2,
+        "avg_cost": 5.02,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_09.png": {
+    "variant": {
+      "dark": true,
+      "width": 393,
+      "dpr": 3,
+      "fontScale": 0.95,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "신도리코",
+        "ticker": null,
+        "shares": 33,
+        "avg_cost": 5000,
+        "foreign": false
+      },
+      {
+        "name": "GST",
+        "ticker": null,
+        "shares": 311,
+        "avg_cost": 500000,
+        "foreign": false
+      },
+      {
+        "name": "다우데이타",
+        "ticker": null,
+        "shares": 298,
+        "avg_cost": 500000,
+        "foreign": false
+      },
+      {
+        "name": "DL우",
+        "ticker": null,
+        "shares": 20,
+        "avg_cost": 766100,
+        "foreign": false
+      },
+      {
+        "name": "크레버스",
+        "ticker": null,
+        "shares": 8,
+        "avg_cost": 4900,
+        "foreign": false
+      },
+      {
+        "name": "이수화학",
+        "ticker": null,
+        "shares": 8,
+        "avg_cost": 71600,
+        "foreign": false
+      },
+      {
+        "name": "리얼티인컴",
+        "ticker": "O",
+        "shares": 84,
+        "avg_cost": 541.63,
+        "foreign": true
+      },
+      {
+        "name": "마이크로소프트",
+        "ticker": "MSFT",
+        "shares": 995,
+        "avg_cost": 660.77,
+        "foreign": true
+      },
+      {
+        "name": "라이엇플랫폼스",
+        "ticker": "RIOT",
+        "shares": 28,
+        "avg_cost": 755.11,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_10.jpg": {
+    "variant": {
+      "dark": true,
+      "width": 393,
+      "dpr": 3,
+      "fontScale": 0.95,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "유진스팩12호",
+        "ticker": null,
+        "shares": 1,
+        "avg_cost": 800000,
+        "foreign": false
+      },
+      {
+        "name": "시지메드텍",
+        "ticker": null,
+        "shares": 91,
+        "avg_cost": 657900,
+        "foreign": false
+      },
+      {
+        "name": "양지사",
+        "ticker": null,
+        "shares": 71,
+        "avg_cost": 835700,
+        "foreign": false
+      },
+      {
+        "name": "HD현대마린엔진",
+        "ticker": null,
+        "shares": 9,
+        "avg_cost": 270800,
+        "foreign": false
+      },
+      {
+        "name": "서클인터넷그룹",
+        "ticker": "CRCL",
+        "shares": 40,
+        "avg_cost": 626.31,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_11.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 393,
+      "dpr": 3,
+      "fontScale": 1,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "경창산업",
+        "ticker": null,
+        "shares": 4,
+        "avg_cost": 9500,
+        "foreign": false
+      },
+      {
+        "name": "지슨",
+        "ticker": null,
+        "shares": 52,
+        "avg_cost": 774900,
+        "foreign": false
+      },
+      {
+        "name": "프로셰어즈울트라프로QQQ",
+        "ticker": "TQQQ",
+        "shares": 265,
+        "avg_cost": 350.08,
+        "foreign": true
+      },
+      {
+        "name": "템퍼스AI",
+        "ticker": "TEM",
+        "shares": 78,
+        "avg_cost": 519.88,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_12.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 390,
+      "dpr": 2,
+      "fontScale": 1.08,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "삼익제약",
+        "ticker": null,
+        "shares": 41,
+        "avg_cost": 100000,
+        "foreign": false
+      },
+      {
+        "name": "삼보산업",
+        "ticker": null,
+        "shares": 400,
+        "avg_cost": 400000,
+        "foreign": false
+      },
+      {
+        "name": "MH에탄올",
+        "ticker": null,
+        "shares": 9,
+        "avg_cost": 700000,
+        "foreign": false
+      },
+      {
+        "name": "디케이티",
+        "ticker": null,
+        "shares": 1,
+        "avg_cost": 5500,
+        "foreign": false
+      },
+      {
+        "name": "세일즈포스",
+        "ticker": "CRM",
+        "shares": 85,
+        "avg_cost": 370.96,
+        "foreign": true
+      },
+      {
+        "name": "엔비디아",
+        "ticker": "NVDA",
+        "shares": 93,
+        "avg_cost": 536.17,
+        "foreign": true
+      },
+      {
+        "name": "서클인터넷그룹",
+        "ticker": "CRCL",
+        "shares": 308,
+        "avg_cost": 646.2,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_13.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 430,
+      "dpr": 2,
+      "fontScale": 1,
+      "jpeg": true,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "한화엔진",
+        "ticker": null,
+        "shares": 25,
+        "avg_cost": 83700,
+        "foreign": false
+      },
+      {
+        "name": "일신석재",
+        "ticker": null,
+        "shares": 84,
+        "avg_cost": 72300,
+        "foreign": false
+      },
+      {
+        "name": "HLB제약",
+        "ticker": null,
+        "shares": 1,
+        "avg_cost": 53300,
+        "foreign": false
+      },
+      {
+        "name": "잉글우드랩",
+        "ticker": null,
+        "shares": 5,
+        "avg_cost": 34400,
+        "foreign": false
+      },
+      {
+        "name": "아이엠바이오로직스",
+        "ticker": null,
+        "shares": 7,
+        "avg_cost": 200,
+        "foreign": false
+      },
+      {
+        "name": "존슨앤드존슨",
+        "ticker": "JNJ",
+        "shares": 83,
+        "avg_cost": 527.82,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_14.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 430,
+      "dpr": 3,
+      "fontScale": 0.95,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "유니트론텍",
+        "ticker": null,
+        "shares": 8,
+        "avg_cost": 9300,
+        "foreign": false
+      },
+      {
+        "name": "한세실업",
+        "ticker": null,
+        "shares": 3,
+        "avg_cost": 2900,
+        "foreign": false
+      },
+      {
+        "name": "ASML홀딩",
+        "ticker": "ASML",
+        "shares": 7,
+        "avg_cost": 378.46,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_15.png": {
+    "variant": {
+      "dark": true,
+      "width": 430,
+      "dpr": 3,
+      "fontScale": 1.08,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "심플랫폼",
+        "ticker": null,
+        "shares": 96,
+        "avg_cost": 530500,
+        "foreign": false
+      },
+      {
+        "name": "화인베스틸",
+        "ticker": null,
+        "shares": 34,
+        "avg_cost": 1600,
+        "foreign": false
+      },
+      {
+        "name": "포스코홀딩스",
+        "ticker": null,
+        "shares": 48,
+        "avg_cost": 900000,
+        "foreign": false
+      },
+      {
+        "name": "인지컨트롤스",
+        "ticker": null,
+        "shares": 4,
+        "avg_cost": 45000,
+        "foreign": false
+      },
+      {
+        "name": "삼양사",
+        "ticker": null,
+        "shares": 867,
+        "avg_cost": 17200,
+        "foreign": false
+      },
+      {
+        "name": "카프로",
+        "ticker": null,
+        "shares": 83,
+        "avg_cost": 8700,
+        "foreign": false
+      },
+      {
+        "name": "코인베이스",
+        "ticker": "COIN",
+        "shares": 85,
+        "avg_cost": 584.33,
+        "foreign": true
+      },
+      {
+        "name": "로빈후드마켓",
+        "ticker": "HOOD",
+        "shares": 52,
+        "avg_cost": 465.85,
+        "foreign": true
+      },
+      {
+        "name": "버크셔해서웨이B",
+        "ticker": "BRK.B",
+        "shares": 31,
+        "avg_cost": 316.66,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_16.png": {
+    "variant": {
+      "dark": true,
+      "width": 390,
+      "dpr": 3,
+      "fontScale": 1,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "인베니아",
+        "ticker": null,
+        "shares": 385,
+        "avg_cost": 800000,
+        "foreign": false
+      },
+      {
+        "name": "에스디시스템",
+        "ticker": null,
+        "shares": 61,
+        "avg_cost": 21400,
+        "foreign": false
+      },
+      {
+        "name": "삼일제약",
+        "ticker": null,
+        "shares": 8,
+        "avg_cost": 2400,
+        "foreign": false
+      },
+      {
+        "name": "샤페론",
+        "ticker": null,
+        "shares": 86,
+        "avg_cost": 97800,
+        "foreign": false
+      },
+      {
+        "name": "오디텍",
+        "ticker": null,
+        "shares": 3,
+        "avg_cost": 8300,
+        "foreign": false
+      },
+      {
+        "name": "에어비앤비",
+        "ticker": "ABNB",
+        "shares": 16,
+        "avg_cost": 135.08,
+        "foreign": true
+      },
+      {
+        "name": "퀄컴",
+        "ticker": "QCOM",
+        "shares": 71,
+        "avg_cost": 109.28,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_17.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 390,
+      "dpr": 3,
+      "fontScale": 1,
+      "jpeg": true,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "미스토홀딩스",
+        "ticker": null,
+        "shares": 68,
+        "avg_cost": 12300,
+        "foreign": false
+      },
+      {
+        "name": "서울식품우",
+        "ticker": null,
+        "shares": 8,
+        "avg_cost": 36300,
+        "foreign": false
+      },
+      {
+        "name": "슈왑미국배당주",
+        "ticker": "SCHD",
+        "shares": 64,
+        "avg_cost": 483.02,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_18.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 430,
+      "dpr": 3,
+      "fontScale": 0.95,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "코람코더원리츠",
+        "ticker": null,
+        "shares": 5,
+        "avg_cost": 200000,
+        "foreign": false
+      },
+      {
+        "name": "정원엔시스",
+        "ticker": null,
+        "shares": 6,
+        "avg_cost": 696800,
+        "foreign": false
+      },
+      {
+        "name": "압타머사이언스",
+        "ticker": null,
+        "shares": 68,
+        "avg_cost": 400000,
+        "foreign": false
+      },
+      {
+        "name": "일동홀딩스",
+        "ticker": null,
+        "shares": 48,
+        "avg_cost": 75600,
+        "foreign": false
+      },
+      {
+        "name": "인텍플러스",
+        "ticker": null,
+        "shares": 9,
+        "avg_cost": 25800,
+        "foreign": false
+      },
+      {
+        "name": "하나36호스팩",
+        "ticker": null,
+        "shares": 3,
+        "avg_cost": 558100,
+        "foreign": false
+      },
+      {
+        "name": "아마존",
+        "ticker": "AMZN",
+        "shares": 39,
+        "avg_cost": 228.62,
+        "foreign": true
+      },
+      {
+        "name": "비트마인이머전테크놀로지스",
+        "ticker": "BMNR",
+        "shares": 54,
+        "avg_cost": 520.4,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_19.png": {
+    "variant": {
+      "dark": true,
+      "width": 430,
+      "dpr": 2,
+      "fontScale": 1,
+      "jpeg": false,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "아모센스",
+        "ticker": null,
+        "shares": 334,
+        "avg_cost": 661800,
+        "foreign": false
+      },
+      {
+        "name": "SGA솔루션즈",
+        "ticker": null,
+        "shares": 5,
+        "avg_cost": 800000,
+        "foreign": false
+      },
+      {
+        "name": "마이크로소프트",
+        "ticker": "MSFT",
+        "shares": 65,
+        "avg_cost": 795.19,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_20.png": {
+    "variant": {
+      "dark": false,
+      "width": 430,
+      "dpr": 3,
+      "fontScale": 1,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "KISCO홀딩스",
+        "ticker": null,
+        "shares": 446,
+        "avg_cost": 93400,
+        "foreign": false
+      },
+      {
+        "name": "나라셀라",
+        "ticker": null,
+        "shares": 392,
+        "avg_cost": 132800,
+        "foreign": false
+      },
+      {
+        "name": "제이에스링크",
+        "ticker": null,
+        "shares": 263,
+        "avg_cost": 600000,
+        "foreign": false
+      },
+      {
+        "name": "버티브홀딩스",
+        "ticker": "VRT",
+        "shares": 2,
+        "avg_cost": 283.11,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_21.png": {
+    "variant": {
+      "dark": false,
+      "width": 390,
+      "dpr": 2,
+      "fontScale": 0.95,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "현대위아",
+        "ticker": null,
+        "shares": 224,
+        "avg_cost": 400,
+        "foreign": false
+      },
+      {
+        "name": "한화오션",
+        "ticker": null,
+        "shares": 6,
+        "avg_cost": 513400,
+        "foreign": false
+      },
+      {
+        "name": "보로노이",
+        "ticker": null,
+        "shares": 73,
+        "avg_cost": 10400,
+        "foreign": false
+      },
+      {
+        "name": "조흥",
+        "ticker": null,
+        "shares": 3,
+        "avg_cost": 7500,
+        "foreign": false
+      },
+      {
+        "name": "에프엔에스테크",
+        "ticker": null,
+        "shares": 2,
+        "avg_cost": 7800,
+        "foreign": false
+      },
+      {
+        "name": "아시아나항공",
+        "ticker": null,
+        "shares": 7,
+        "avg_cost": 687100,
+        "foreign": false
+      },
+      {
+        "name": "리얼티인컴",
+        "ticker": "O",
+        "shares": 70,
+        "avg_cost": 811.64,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_22.png": {
+    "variant": {
+      "dark": true,
+      "width": 390,
+      "dpr": 2,
+      "fontScale": 0.95,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "KB금융",
+        "ticker": null,
+        "shares": 25,
+        "avg_cost": 605400,
+        "foreign": false
+      },
+      {
+        "name": "러셀",
+        "ticker": null,
+        "shares": 3,
+        "avg_cost": 10800,
+        "foreign": false
+      },
+      {
+        "name": "에스트래픽",
+        "ticker": null,
+        "shares": 61,
+        "avg_cost": 669900,
+        "foreign": false
+      },
+      {
+        "name": "코칩",
+        "ticker": null,
+        "shares": 851,
+        "avg_cost": 800000,
+        "foreign": false
+      },
+      {
+        "name": "신영스팩11호",
+        "ticker": null,
+        "shares": 5,
+        "avg_cost": 807400,
+        "foreign": false
+      },
+      {
+        "name": "넷플릭스",
+        "ticker": "NFLX",
+        "shares": 90,
+        "avg_cost": 659.32,
+        "foreign": true
+      },
+      {
+        "name": "애플",
+        "ticker": "AAPL",
+        "shares": 3,
+        "avg_cost": 785.42,
+        "foreign": true
+      },
+      {
+        "name": "앱러빈",
+        "ticker": "APP",
+        "shares": 35,
+        "avg_cost": 624.48,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_23.png": {
+    "variant": {
+      "dark": false,
+      "width": 390,
+      "dpr": 2,
+      "fontScale": 1,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "우리산업홀딩스",
+        "ticker": null,
+        "shares": 81,
+        "avg_cost": 1800,
+        "foreign": false
+      },
+      {
+        "name": "세운메디칼",
+        "ticker": null,
+        "shares": 18,
+        "avg_cost": 452700,
+        "foreign": false
+      },
+      {
+        "name": "자람테크놀로지",
+        "ticker": null,
+        "shares": 705,
+        "avg_cost": 9200,
+        "foreign": false
+      },
+      {
+        "name": "플리토",
+        "ticker": null,
+        "shares": 25,
+        "avg_cost": 1700,
+        "foreign": false
+      },
+      {
+        "name": "인터지스",
+        "ticker": null,
+        "shares": 72,
+        "avg_cost": 36200,
+        "foreign": false
+      },
+      {
+        "name": "한국카본",
+        "ticker": null,
+        "shares": 6,
+        "avg_cost": 9500,
+        "foreign": false
+      },
+      {
+        "name": "스트래티지",
+        "ticker": "MSTR",
+        "shares": 5,
+        "avg_cost": 362.58,
+        "foreign": true
+      },
+      {
+        "name": "알파벳C",
+        "ticker": "GOOG",
+        "shares": 10,
+        "avg_cost": 262.53,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_24.png": {
+    "variant": {
+      "dark": false,
+      "width": 390,
+      "dpr": 3,
+      "fontScale": 1.08,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "우주일렉트로",
+        "ticker": null,
+        "shares": 13,
+        "avg_cost": 200000,
+        "foreign": false
+      },
+      {
+        "name": "아세아시멘트",
+        "ticker": null,
+        "shares": 74,
+        "avg_cost": 63100,
+        "foreign": false
+      },
+      {
+        "name": "더네이쳐홀딩스",
+        "ticker": null,
+        "shares": 97,
+        "avg_cost": 10000,
+        "foreign": false
+      },
+      {
+        "name": "데이원컴퍼니",
+        "ticker": null,
+        "shares": 111,
+        "avg_cost": 600000,
+        "foreign": false
+      },
+      {
+        "name": "에이치엠씨제6호스팩",
+        "ticker": null,
+        "shares": 2,
+        "avg_cost": 76300,
+        "foreign": false
+      },
+      {
+        "name": "케이엔더블유",
+        "ticker": null,
+        "shares": 88,
+        "avg_cost": 8600,
+        "foreign": false
+      },
+      {
+        "name": "에어비앤비",
+        "ticker": "ABNB",
+        "shares": 5,
+        "avg_cost": 430.57,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_25.jpg": {
+    "variant": {
+      "dark": false,
+      "width": 375,
+      "dpr": 2,
+      "fontScale": 1.08,
+      "jpeg": true,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "GS피앤엘",
+        "ticker": null,
+        "shares": 6,
+        "avg_cost": 100000,
+        "foreign": false
+      },
+      {
+        "name": "BGF리테일",
+        "ticker": null,
+        "shares": 6,
+        "avg_cost": 600000,
+        "foreign": false
+      },
+      {
+        "name": "인바이오젠",
+        "ticker": null,
+        "shares": 6,
+        "avg_cost": 8700,
+        "foreign": false
+      },
+      {
+        "name": "셀레스트라",
+        "ticker": null,
+        "shares": 9,
+        "avg_cost": 200000,
+        "foreign": false
+      },
+      {
+        "name": "아메리칸비트코인",
+        "ticker": "ABTC",
+        "shares": 63,
+        "avg_cost": 643.17,
+        "foreign": true
+      },
+      {
+        "name": "디렉시온반도체3배",
+        "ticker": "SOXL",
+        "shares": 856,
+        "avg_cost": 207.8,
+        "foreign": true
+      },
+      {
+        "name": "화이자",
+        "ticker": "PFE",
+        "shares": 8,
+        "avg_cost": 593.56,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_26.png": {
+    "variant": {
+      "dark": true,
+      "width": 393,
+      "dpr": 3,
+      "fontScale": 0.95,
+      "jpeg": false,
+      "header": false
+    },
+    "holdings": [
+      {
+        "name": "LG",
+        "ticker": null,
+        "shares": 77,
+        "avg_cost": 4500,
+        "foreign": false
+      },
+      {
+        "name": "이수스페셜티케미컬",
+        "ticker": null,
+        "shares": 48,
+        "avg_cost": 76700,
+        "foreign": false
+      },
+      {
+        "name": "인탑스",
+        "ticker": null,
+        "shares": 695,
+        "avg_cost": 400000,
+        "foreign": false
+      },
+      {
+        "name": "미래아이앤지",
+        "ticker": null,
+        "shares": 5,
+        "avg_cost": 79000,
+        "foreign": false
+      },
+      {
+        "name": "니오",
+        "ticker": "NIO",
+        "shares": 3,
+        "avg_cost": 855.36,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_27.jpg": {
+    "variant": {
+      "dark": true,
+      "width": 430,
+      "dpr": 3,
+      "fontScale": 1,
+      "jpeg": true,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "토비스",
+        "ticker": null,
+        "shares": 5,
+        "avg_cost": 600000,
+        "foreign": false
+      },
+      {
+        "name": "한전산업",
+        "ticker": null,
+        "shares": 93,
+        "avg_cost": 38300,
+        "foreign": false
+      },
+      {
+        "name": "경방",
+        "ticker": null,
+        "shares": 8,
+        "avg_cost": 503300,
+        "foreign": false
+      },
+      {
+        "name": "게임스톱",
+        "ticker": "GME",
+        "shares": 7,
+        "avg_cost": 660.23,
+        "foreign": true
+      },
+      {
+        "name": "팔란티어테크놀로지스",
+        "ticker": "PLTR",
+        "shares": 7,
+        "avg_cost": 323.95,
+        "foreign": true
+      },
+      {
+        "name": "메타",
+        "ticker": "META",
+        "shares": 5,
+        "avg_cost": 652.45,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_28.png": {
+    "variant": {
+      "dark": false,
+      "width": 390,
+      "dpr": 2,
+      "fontScale": 1,
+      "jpeg": false,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "세기상사",
+        "ticker": null,
+        "shares": 42,
+        "avg_cost": 6000,
+        "foreign": false
+      },
+      {
+        "name": "SK하이닉스",
+        "ticker": null,
+        "shares": 6,
+        "avg_cost": 100000,
+        "foreign": false
+      },
+      {
+        "name": "삼성화재",
+        "ticker": null,
+        "shares": 67,
+        "avg_cost": 73000,
+        "foreign": false
+      },
+      {
+        "name": "iMBC",
+        "ticker": null,
+        "shares": 72,
+        "avg_cost": 86900,
+        "foreign": false
+      },
+      {
+        "name": "기가비스",
+        "ticker": null,
+        "shares": 377,
+        "avg_cost": 800000,
+        "foreign": false
+      },
+      {
+        "name": "파인테크닉스",
+        "ticker": null,
+        "shares": 5,
+        "avg_cost": 500000,
+        "foreign": false
+      },
+      {
+        "name": "나이키",
+        "ticker": "NKE",
+        "shares": 5,
+        "avg_cost": 638.05,
+        "foreign": true
+      }
+    ]
+  },
+  "toss_29.png": {
+    "variant": {
+      "dark": false,
+      "width": 375,
+      "dpr": 3,
+      "fontScale": 0.95,
+      "jpeg": false,
+      "header": true
+    },
+    "holdings": [
+      {
+        "name": "데브시스터즈",
+        "ticker": null,
+        "shares": 69,
+        "avg_cost": 500000,
+        "foreign": false
+      },
+      {
+        "name": "금양그린파워",
+        "ticker": null,
+        "shares": 3,
+        "avg_cost": 644600,
+        "foreign": false
+      },
+      {
+        "name": "루시드그룹",
+        "ticker": "LCID",
+        "shares": 259,
+        "avg_cost": 417.07,
+        "foreign": true
+      }
+    ]
+  }
+}
