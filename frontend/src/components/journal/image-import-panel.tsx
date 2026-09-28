@@ -18,6 +18,7 @@
  */
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useT } from "@/lib/locale";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
@@ -256,6 +257,14 @@ export function ImageImportPanel({
           {notes.map((n) => (
             <li key={`${n.index}:${n.fileName}`} className="font-mono" style={{ fontSize: "var(--pq-text-mono-sm)", color: n.kind === "read" ? "var(--pq-ivory-mid)" : "var(--pq-bronze)" }}>
               {n.fileName} — {noteText(n)}
+              {n.kind === "rejected" && n.screenType === "holdings" && (
+                <>
+                  {" "}
+                  <Link href="/portfolio?import=holdings" className="underline" data-testid="to-holdings-import">
+                    {t("journal.import.image.toHoldingsImport")} →
+                  </Link>
+                </>
+              )}
             </li>
           ))}
         </ul>

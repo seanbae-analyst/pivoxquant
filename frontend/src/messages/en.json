@@ -542,8 +542,9 @@
         "limits": "PNG · JPEG · WEBP, up to 10MB each · the first time downloads recognition data (about 8MB)",
         "tooLarge": "One or more images exceed 10MB.",
         "noteRead": "{rows} read · {excluded} left out (cut off / unfilled / cancelled)",
+        "toHoldingsImport": "Import as holdings in Portfolio",
         "screen": {
-          "holdings": "Looks like a holdings (balance) screen — not read.",
+          "holdings": "This is a holdings (balance) screen. This import is for buy/sell fills, so it was not read.",
           "orders": "Looks like an order screen — not read.",
           "other": "Does not look like a broker fill screen — not read.",
           "empty": "No fill rows found."
