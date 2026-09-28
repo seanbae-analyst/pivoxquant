@@ -20,6 +20,12 @@
   렌더: `cd frontend && node scripts/holdings-fixtures-render.mjs <tune|heldout> <dir>` → 위와 같이 `ocr-eval-dump.mjs`.
   `holdings/ground_truth_shared.json` 은 `synthetic/j_holdings`·`heldout/n1` 의 잔고 정답. 채점: `src/lib/fill-ocr/__tests__/holdings-eval.test.ts`.
 
+- `toss_tune/`, `toss_heldout/` — 토스증권 '내 투자' 합성 화면 30장씩(라이트/다크, 폭 375–430, @2x/@3x, PNG/JPEG,
+  헤더 유무, 종목 2–9개, 1자리 수량 40%). **OCR 덤프와 정답만** 커밋(이미지는 시드로 재생성).
+  렌더: `cd frontend && node scripts/toss-fixtures-render.mjs <dir> 30 <7|11>` → `ocr-eval-dump.mjs`.
+  tune(시드 7)을 보며 규칙을 고쳤고, heldout(시드 11)은 그 뒤에 한 번 쟀다. 채점: `src/lib/fill-ocr/__tests__/toss-eval.test.ts`
+  (틀리게 확신 0 · 자동 인식 하한 게이트). 실기기 토스 캡처 4장(유저 제공, 커밋 안 함)도 같은 경로로 확인.
+
 ## 없는 것 — 실기기 캡처 (TODO)
 **실제 증권사 앱 캡처로는 한 번도 재지 않았다.** 규칙은 위 합성 12장을 보며 조정했으니 그 점수는 낙관적이다.
 

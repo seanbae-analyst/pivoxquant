@@ -478,26 +478,35 @@ function cardHoldings(lines: Line[], screenCur: "KRW" | "USD" | null): ParsedHol
 //     round logo that OCR reads as "©", "(vs)", "MA", "이 <".
 
 const TOSS_AMOUNT = /^[$]?\d{1,3}(,\d{3})*(\.\d{2})?원?$/;
-/** "29주" "29 주" and the glyph misreads OCR makes of 주 ("19%", "3F", "248 수"). */
-const TOSS_QTY = /^(\d[\d,.]*?)\.?(주|%|F|수|추)?$/;
+/** "29주" "29 주" and the glyph misreads OCR makes of 주 ("19%", "3F", "39=",
+ * "94+", "248 수"): digits, then at most two non-digit glyphs. */
+const TOSS_QTY = /^(\d[\d,.]*?)[.:]?([^\d\s]{0,2})$/;
 const TOSS_PL = /^[+\-−][$]?[\d,]+(\.\d+)?원?$/;
 const TOSS_RATE = /^\((\d+(\.\d+)?)%\)$/;
 
 export const tossQtyLine = tossPlLine;
 
-/** The amount as printed, or as the digit pass re-read it ("1.062,711" → 1,062,711). */
+/** The amount as printed, or as the digit pass re-read it ("1.062,711",
+ * "3,231.920%" → 3,231,920). A sign makes it a P/L, not an amount. */
 const tossAmountWord = (w: OcrWord | undefined) =>
-  Boolean(w) && [w!.t, (w!.alt ?? "").trim()].some((t) => TOSS_AMOUNT.test(t) && t.includes(","));
+  Boolean(w) && !/^[+\-−]/.test(w!.t) &&
+  [w!.t.replace(/[,.]$/, ""), (w!.alt ?? "").trim()].some((t) => TOSS_AMOUNT.test(t) && t.includes(","));
 
+/** "이름 … 금액" — the first amount after at least one name word. Whatever
+ * follows it ("원", or "원" misread as "839%") is ignored. Names may carry
+ * digits ("교보15호스팩"). A bare number right before a printed "원" is an
+ * amount too ("832원", comma dropped "17164,157원"). */
 function tossNameLine(l: Line): { nameWords: OcrWord[]; amount: OcrWord } | null {
+  // ≥3 digits: the 현재가 · 평가금 · $ · 원 toggle reads "$ 원" as "6 원".
+  const beforeWon = new Set(l.words.filter((w, k) => l.words[k + 1]?.t === "원" && /^\d[\d,.]{2,}$/.test(w.t)));
   const ws = l.words.filter((w) => w.t !== "원");
-  const last = ws[ws.length - 1];
-  if (!tossAmountWord(last)) return null;
-  const nameWords = ws.slice(0, -1);
+  const i = ws.findIndex((w, k) => k > 0 && (tossAmountWord(w) || beforeWon.has(w)));
+  if (i < 0) return null;
+  const nameWords = ws.slice(0, i);
   const letters = nameWords.map((w) => w.t).join("").replace(/[^가-힣A-Za-z]/g, "");
-  if (letters.length < 2 || nameWords.some((w) => /\d/.test(w.t))) return null;
+  if (letters.length < 2) return null;
   if (/내투자|주식$/.test(letters)) return null;
-  return { nameWords, amount: last };
+  return { nameWords, amount: ws[i] };
 }
 
 /** Both readings of a digit token, with the trailing punctuation the digit
@@ -561,10 +570,14 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
     if (/국내주식/.test(l.compact)) foreign = false;
     const nm = tossNameLine(l);
     if (!nm) continue;
-    // The quantity line is the next line with a digit; logo glyphs ("©",
-    // "(vs)") in between carry none. Too far below → cut off at the edge.
-    const j = lines.findIndex((x, k) => k > i && /\d/.test(x.text));
-    const ql = j >= 0 && lines[j].y - l.y < hMed * 5 && tossQtyLine(lines[j].compact) ? lines[j] : null;
+    // The quantity line is the first "…±손익(수익률%)" line below, before the
+    // next stock's name line; logo glyphs in between ("©", "5", "(vs)") are
+    // skipped. Too far below → cut off at the edge.
+    let ql: Line | null = null;
+    for (let k = i + 1; k < lines.length && lines[k].y - l.y < hMed * 5; k++) {
+      if (tossQtyLine(lines[k].compact)) { ql = lines[k]; break; }
+      if (tossNameLine(lines[k])) break;
+    }
     const usd = nm.amount.t.startsWith("$");
     const currency: ParsedHolding["currency"] = usd ? "USD" : foreign ? null : "KRW";
     const flags: string[] = [];
@@ -581,7 +594,11 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
       const ratew = ws.find((w) => TOSS_RATE.test(w.t));
       const n = shares.value ?? (shares.hint ? Number(shares.hint) : NaN);
       if (plw && Number.isInteger(n) && n > 0 && !(foreign && !usd)) {
-        avgCost = tossAvg(tossRead(nm.amount.t.replace(/원$/, ""), nm.amount.alt), plw, ratew, n, usd);
+        const amount = tossRead(nm.amount.t.replace(/원$/, ""), nm.amount.alt);
+        // Malformed grouping ("17164,157") parses to nothing; its digits are
+        // still a candidate — the rate check decides.
+        if (amount.candidates.length === 0 && digitsOf(nm.amount.t)) amount.candidates.push(Number(digitsOf(nm.amount.t)));
+        avgCost = tossAvg(amount, plw, ratew, n, usd);
         // A proven average needs proven shares too.
         if (avgCost.value !== null && shares.value === null) avgCost = { value: null, hint: String(avgCost.value) };
         if (avgCost.value !== null) flags.push("derived_avg");
@@ -589,7 +606,7 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
     }
     const kept = nameWords.filter((w) => w.x1 > nameLeft);
     if (kept.length) nameWords = kept;
-    nameWords = nameWords.filter((w) => /[가-힣A-Za-z]/.test(w.t));
+    nameWords = nameWords.filter((w) => /[가-힣A-Za-z]/.test(w.t) || /^\d+$/.test(w.t));
     const nc = nameAndCode(nameWords, [], usd, usd);
     out.push({
       name: nc.name, code: nc.code, shares, avgCost, currency, flags,
