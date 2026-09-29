@@ -162,6 +162,36 @@ describe("Toss 해외주식 with the $ toggle on", () => {
   });
 });
 
+describe("Toss 해외주식: fractional shares", () => {
+  it("'2.5주' of a dollar holding is 2.5 shares, and the average follows", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["해외주식", "", 60], ["-10.1%", "10.1"]),
+      // cost $300.00, 50 ÷ 300 = 16.67% → "16.6%"; avg = 300 ÷ 2.5
+      ...line("가나파워", ["$250.00", "$250.00", 700]),
+      ...line("2.5", "주", ["-$50.00", "$50.00", 600], ["(16.6%)", "16.6"]),
+      ...line("다라항공", ["$634.70", "$634.70", 700]),
+      ...line("110", "주", ["+$2.20", "$2.20", 600], ["(0.3%)", "0.3"]),
+    ]);
+    expect(rows.map((r) => [r.name.value, r.currency, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나파워", "USD", 2.5, 120],
+      ["다라항공", "USD", 110, 5.75],
+    ]);
+  });
+
+  it("a won holding still needs a whole share count", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line("가나전자", ["859,449", "859,449", 700], "원"),
+      ...line("2.5", "주", ["-982,051", "982,051", 600], ["(53.3%)", "53.3"]),
+      ...line("다라화학", ["911,936", "911,936", 700], "원"),
+      ...line(["19%", "19"], ["-551,064", "551,064", 600], ["(37.6%)", "37.6"]),
+    ]);
+    expect(rows[0].shares.value).toBeNull();
+    expect(rows[0].avgCost.value).toBeNull();
+  });
+});
+
 describe("Toss 자세히 보기 table (word boxes as OCR read a real capture)", () => {
   // x positions and misreads copied from the production OCR dump of a real
   // capture; names and numbers are synthetic.

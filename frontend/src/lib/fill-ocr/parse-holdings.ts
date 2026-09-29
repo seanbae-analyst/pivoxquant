@@ -652,7 +652,7 @@ function tossRead(t: string, alt: string | null | undefined, alts?: string[]): N
 
 /** The share token is the one digit word before the P/L; logo glyphs read
  * as letters ("자 248 주") may sit in front of it. */
-function tossShares(ws: OcrWord[], plIdx: number): Cell<number> {
+function tossShares(ws: OcrWord[], plIdx: number, usd: boolean): Cell<number> {
   const before = ws.slice(0, plIdx < 0 ? ws.length : plIdx).filter((w) => /\d/.test(w.t));
   if (before.length !== 1) return { value: null };
   const w = before[0];
@@ -668,7 +668,8 @@ function tossShares(ws: OcrWord[], plIdx: number): Cell<number> {
   // P/L that follows ("25 +688,794" is 2주 with the 주 read as 5).
   const next = ws[ws.indexOf(w) + 1]?.t ?? "";
   const unit = m[2] !== "" || /^[주수추]$/.test(next);
-  return unit && n !== null && Number.isInteger(n) && n > 0 && n <= 1e7 ? { value: n } : { value: null, hint: m[1] };
+  // Toss sells US stocks in fractions ("2.5주"); a won holding is whole shares.
+  return unit && n !== null && (usd || Number.isInteger(n)) && n > 0 && n <= 1e7 ? { value: n } : { value: null, hint: m[1] };
 }
 
 function tossAvg(amount: NumRead, plw: OcrWord, ratew: OcrWord | undefined, shares: number, usd: boolean): Cell<number> {
@@ -739,11 +740,11 @@ function tossHoldings(lines: Line[]): ParsedHolding[] {
     if (ql) {
       const ws = ql.words;
       const plIdx = ws.findIndex((w) => TOSS_PL.test(w.t));
-      shares = tossShares(ws, plIdx);
+      shares = tossShares(ws, plIdx, usd);
       const plw = plIdx >= 0 ? ws[plIdx] : undefined;
       const ratew = ws.find((w) => TOSS_RATE.test(w.t));
       const n = shares.value ?? (shares.hint ? Number(shares.hint) : NaN);
-      if (plw && Number.isInteger(n) && n > 0 && !(foreign && !usd) && !nm.split) {
+      if (plw && (usd || Number.isInteger(n)) && n > 0 && !(foreign && !usd) && !nm.split) {
         const amount = wonOnly(tossRead(nm.amount.t.replace(/원$/, "").replace(/^%(?=\d)/, usd ? "$" : "%"), nm.amount.alt, nm.amount.alts), usd);
         // Malformed grouping ("17164,157") parses to nothing; its digits are
         // still a candidate — the rate check decides.
