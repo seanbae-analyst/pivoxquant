@@ -87,6 +87,17 @@ def serialize_user(u) -> dict:
         # correctly during the deploy window. Remove after 2026-10-19 once
         # every deployed frontend reads the new key.
         "birthdate_required": not age_confirmed,
+        # PIPA §28-8 — True iff a cross-border consent was ever recorded
+        # server-side (``cross_border_consent_at`` set, by oauth-finalize or
+        # ``POST /api/consents/cross-border``). Revocation does NOT flip it
+        # back: revoking is the user's own decision, and the frontend reads
+        # this flag only to (a) skip re-asking consent in onboarding and
+        # (b) stop the (dashboard) localStorage flush from re-POSTing over
+        # the recorded timestamp. Raw timestamps stay unexposed here; the
+        # audit trail is ``GET /api/consents/cross-border``.
+        "cross_border_consent_recorded": (
+            getattr(u, "cross_border_consent_at", None) is not None
+        ),
     }
 
 

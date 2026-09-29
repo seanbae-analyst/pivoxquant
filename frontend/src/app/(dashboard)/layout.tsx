@@ -155,7 +155,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         // silently dropping a consent the user gave at signup.
         const [mkt, xb] = await Promise.allSettled([
           flushPendingMarketingConsent(snapshot),
-          flushPendingCrossBorderConsent(snapshot),
+          // Server already has the record (oauth-finalize) → no re-POST.
+          flushPendingCrossBorderConsent(snapshot, {
+            serverRecorded: user.cross_border_consent_recorded === true,
+          }),
         ]);
         const ok = (r: PromiseSettledResult<boolean>) =>
           r.status === "fulfilled" && r.value === true;

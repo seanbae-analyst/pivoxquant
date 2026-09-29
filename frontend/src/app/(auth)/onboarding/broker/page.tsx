@@ -13,6 +13,7 @@ import { API, PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { fetcher, useBrokerConnections, usePortfolioPositions } from "@/lib/hooks";
 import { useT } from "@/lib/locale";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
+import { serverHasRequiredConsents } from "@/lib/consents";
 import { KisCard } from "@/components/broker/kis-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
 import { HoldingsImportPanel } from "@/components/portfolio/v2/holdings-import-panel";
@@ -72,11 +73,14 @@ export default function OnboardingBrokerPage() {
   // Legal consent gate
   const [needsLegalConsent, setNeedsLegalConsent] = useState(false);
 
+  // 2026-09-29 — the server is the SoT. `/signup/oauth-finalize` records the
+  // required consents and then clears the localStorage snapshot, so checking
+  // only `hasLocalConsent()` re-asked every new OAuth user. Ask only when the
+  // server has no record AND this device has no snapshot (legacy accounts).
   useEffect(() => {
-    if (!hasLocalConsent()) {
-      setNeedsLegalConsent(true);
-    }
-  }, []);
+    if (authLoading || !user) return;
+    setNeedsLegalConsent(!serverHasRequiredConsents(user) && !hasLocalConsent());
+  }, [authLoading, user]);
 
   useEffect(() => {
     if (!authLoading && !user) {

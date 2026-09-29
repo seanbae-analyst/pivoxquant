@@ -23,6 +23,7 @@ import {
   recordMarketingConsent,
   revokeMarketingConsent,
   fetchMarketingConsent,
+  serverHasRequiredConsents,
 } from "@/lib/consents";
 
 const mockedFetch = vi.mocked(apiFetch);
@@ -112,6 +113,65 @@ describe("flushPendingCrossBorderConsent — PIPA §28-8 promotion leg", () => {
 
     expect(result).toBe(true);
     expect(mockedFetch).not.toHaveBeenCalled();
+  });
+
+  // 2026-09-29 — oauth-finalize already stamped cross_border_consent_at in
+  // its own transaction. A later re-POST from a leftover snapshot would move
+  // that timestamp off the real consent moment (or undo a revocation).
+  it("does NOT re-POST when the server already recorded a cross-border consent", async () => {
+    const result = await flushPendingCrossBorderConsent(
+      { cross_border: true },
+      { serverRecorded: true },
+    );
+
+    expect(result).toBe(true); // end-state reached → caller may clear snapshot
+    expect(mockedFetch).not.toHaveBeenCalled();
+  });
+
+  it("still POSTs for a legacy user with no server-side record", async () => {
+    mockedFetch.mockResolvedValue({ ok: true } as never);
+    const result = await flushPendingCrossBorderConsent(
+      { cross_border: true },
+      { serverRecorded: false },
+    );
+    expect(result).toBe(true);
+    expect(mockedFetch).toHaveBeenCalledWith(API.consents.crossBorder, {
+      method: "POST",
+    });
+  });
+});
+
+describe("serverHasRequiredConsents — server is the SoT for 'already consented'", () => {
+  it("true after oauth-finalize (age confirmed + cross-border recorded)", () => {
+    expect(
+      serverHasRequiredConsents({
+        age_confirmation_required: false,
+        cross_border_consent_recorded: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("false for a legacy account with no cross-border record", () => {
+    expect(
+      serverHasRequiredConsents({
+        age_confirmation_required: false,
+        cross_border_consent_recorded: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("false while the age self-declaration is still pending", () => {
+    expect(
+      serverHasRequiredConsents({
+        age_confirmation_required: true,
+        cross_border_consent_recorded: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("false when the backend does not send the flag (older deploy) or no user", () => {
+    expect(serverHasRequiredConsents({ age_confirmation_required: false })).toBe(false);
+    expect(serverHasRequiredConsents(null)).toBe(false);
   });
 });
 

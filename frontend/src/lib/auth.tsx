@@ -78,6 +78,14 @@ export interface User {
    * read it directly; ``ageConfirmationRequired()`` handles the fallback.
    */
   birthdate_required?: boolean;
+  /**
+   * PIPA §28-8 — true once a cross-border consent has been recorded
+   * server-side (``users.cross_border_consent_at`` set; a later revocation
+   * does not flip it back). Read through ``serverHasRequiredConsents()`` in
+   * ``@/lib/consents`` — onboarding and the (dashboard) consent flush use it
+   * instead of the localStorage snapshot (2026-09-29).
+   */
+  cross_border_consent_recorded?: boolean;
 }
 
 /**
