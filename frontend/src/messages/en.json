@@ -318,7 +318,7 @@
     "skip": "Skip for now",
     "nextStep": "Continue",
     "cancel": "Cancel",
-    "note": "You can update these connections anytime in Settings → Connections.",
+    "note": "You can skip linking and enter holdings by hand. You can edit them anytime in Portfolio.",
     "kis": {
       "name": "Korea Investment & Securities",
       "sync": "Sync",

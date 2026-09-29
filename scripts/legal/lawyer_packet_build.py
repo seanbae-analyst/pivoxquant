@@ -85,7 +85,7 @@ _CODE_PATH_MAP: dict[str, str] = {
     "Q2": "services/data/ (KIS read-only)",
     "Q3": "services/data/ (KIS read-only)",
     "Q4": "services/data/ (KIS read-only)",
-    "Q5": "frontend/src/app/pricing/",
+    "Q5": "(삭제됨: frontend/src/app/pricing/ — 2026-09-29, 무료 베타라 307 뒤에서 죽어 있던 코드. git 이력 e71c3b3 에 보존)",
     "Q6": "frontend/src/app/(auth)/signup/",
     "Q7": "docs/legal/terms-of-service.md §6.1",
     "Q8": "business_registration.md",

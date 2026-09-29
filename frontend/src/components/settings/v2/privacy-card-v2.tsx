@@ -162,14 +162,14 @@ function PrivacyToggle({
 
 /**
  * CSV datasets a user can download.
- *   - trades / positions / watchlist / journal / pulse → raw stored fields.
+ *   - trades / positions / journal / pulse → raw stored fields.
  *   - capital_gains / capital_gains_summary → 해외주식 양도소득세 참고용 추정
  *     (FIFO realised P&L + trade-date FX; KRW blank when FX unavailable).
+ * The backend also accepts "watchlist"; the UI no longer offers it.
  */
 export type CsvDataset =
   | "trades"
   | "positions"
-  | "watchlist"
   | "capital_gains"
   | "capital_gains_summary"
   | "journal"
@@ -426,9 +426,9 @@ export function PrivacyCardV2({
               marginBottom: 20,
             }}
           >
-            Download a portable JSON copy of your account: positions,
-            watchlist, persona snapshots, pulse history, and delivered
-            artifact metadata.
+            Download a portable JSON copy of everything stored for your
+            account: holdings, trades, pre-trade records, notes, pulse
+            history, and persona snapshots.
           </p>
 
           {lastExport ? (
@@ -540,7 +540,10 @@ export function PrivacyCardV2({
               {([
                 ["trades", "거래내역 · Trades"],
                 ["positions", "보유종목 · Positions"],
-                ["watchlist", "관심종목 · Watchlist"],
+                // No "watchlist" button (2026-09-29): /watchlist is gone, so
+                // offering its CSV advertised a feature nobody can use. The
+                // backend still exports legacy rows in the JSON / .xlsx copy
+                // (PIPA §35 full record) — only the button is gone.
                 ["journal", "기록 · Journal"],
                 ["pulse", "주간 기록 · Pulse"],
               ] as const).map(([dataset, label]) => (

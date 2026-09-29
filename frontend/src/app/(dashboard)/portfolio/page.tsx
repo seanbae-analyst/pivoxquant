@@ -11,7 +11,7 @@
  *   - PortfolioHeroV2            (NAV + observed time + Add CTA)
  *   - EquityCurveBlock           (timeframe toggle 1mo/3mo/6mo/1yr/All)
  *   - PositionsTableV2           (8 columns, 종목명 main pattern)
- *   - 3-col grid:
+ *   - 2-col grid:
  *       SectorDonutBlock | RecentTransactionsBlock
  *   - WeeklyPulsePrompt          (Monday-only link to the pulse form on /journal)
  *   - FootSignature              (reused)
@@ -511,9 +511,9 @@ export default function PortfolioPageV2() {
         <CapitalCardV2 />
       </section>
 
-      {/* ═══════════ 3-COL GRID — Sector / Watchlist / Recent ═══════════ */}
+      {/* ═══════════ 2-COL GRID — Sector / Recent ═══════════ */}
       <section
-        aria-label="Allocation, watchlist, and recent activity"
+        aria-label="Allocation and recent activity"
         style={{ marginBottom: 40 }}
       >
         <div
