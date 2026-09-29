@@ -13,7 +13,7 @@
  *   - PositionsTableV2           (8 columns, 종목명 main pattern)
  *   - 3-col grid:
  *       SectorDonutBlock | RecentTransactionsBlock
- *   - WeeklyPulseCard            (reused, invisible Mon 07:00 trigger)
+ *   - WeeklyPulsePrompt          (Monday-only link to the pulse form on /journal)
  *   - FootSignature              (reused)
  *
  * Modals:
@@ -36,7 +36,7 @@ import { useAuth } from "@/lib/auth";
 import { resolveMarketDataDisplay } from "@/lib/market-display";
 
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
-import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
+import { WeeklyPulsePrompt } from "@/components/dashboard/weekly-pulse-prompt";
 import { RollingWindowWidget } from "@/components/dashboard/rolling-window";
 
 import {
@@ -386,6 +386,10 @@ export default function PortfolioPageV2() {
         <LivingCFOStatusBar />
       </div>
 
+      {/* Monday nudge toward the weekly pulse. The form itself lives on
+          /journal only (2026-09-29 — this used to auto-open it as a modal). */}
+      <WeeklyPulsePrompt />
+
       {/* ═══════════ ERROR BANNER (v1 parity) ═══════════ */}
       {hasLoadError && (
         <div
@@ -563,9 +567,6 @@ export default function PortfolioPageV2() {
         <FxAttribution style={{ marginBottom: 14 }} />
         <FootSignature note="PivoxQuant · User-entered record · Not investment advice" />
       </div>
-
-      {/* Weekly Pulse — auto-triggers Monday 07:00 KST (invisible) */}
-      <WeeklyPulseCard />
 
       {/* ═══════════ MODALS ═══════════ */}
       <AddPositionModalV2

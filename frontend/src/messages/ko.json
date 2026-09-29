@@ -400,6 +400,11 @@
     }
   },
   "journal": {
+    "pulsePrompt": {
+      "text": "월요일입니다. 이번 주 펄스를 아직 적지 않았습니다.",
+      "link": "기록에서 적기 →",
+      "dismiss": "오늘은 닫기"
+    },
     "page": {
       "kicker": "Decision Journal",
       "heading": "기록",

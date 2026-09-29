@@ -825,7 +825,8 @@ function JournalContent() {
       )}
 
       {/* Weekly pulse — the user's own self-report, so it lives with the
-          record. Moved from /profile 2026-09-12; behaviour unchanged. */}
+          record. Moved from /profile 2026-09-12. The only pulse form in the
+          app; /portfolio links here on Mondays (#weekly-pulse). */}
       <div className="mt-12">
         <WeeklyPulseSection />
       </div>

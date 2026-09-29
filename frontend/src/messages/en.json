@@ -400,6 +400,11 @@
     }
   },
   "journal": {
+    "pulsePrompt": {
+      "text": "It's Monday. This week's pulse is not written yet.",
+      "link": "Write it in Log →",
+      "dismiss": "Hide for today"
+    },
     "page": {
       "kicker": "Decision Journal",
       "heading": "Log",

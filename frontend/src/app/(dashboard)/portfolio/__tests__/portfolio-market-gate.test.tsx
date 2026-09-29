@@ -39,8 +39,8 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/components/dashboard/living-cfo-status", () => ({
   LivingCFOStatusBar: () => null,
 }));
-vi.mock("@/components/dashboard/weekly-pulse", () => ({
-  WeeklyPulseCard: () => null,
+vi.mock("@/components/dashboard/weekly-pulse-prompt", () => ({
+  WeeklyPulsePrompt: () => null,
 }));
 vi.mock("@/components/dashboard/rolling-window", () => ({
   RollingWindowWidget: () => null,
