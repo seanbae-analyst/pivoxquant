@@ -132,7 +132,9 @@ function readLabelled(lines: Line[], nameLine: Line | null, reads: Reads) {
         if (!SEP.test(t)) between.push(t);
         continue;
       }
-      const label = labelOf(between.filter((x) => x !== "원" && x !== "주" && !/^\$$/.test(x)).join(""), { suffix: true });
+      const lbText = between.filter((x) => x !== "원" && x !== "주" && !/^\$$/.test(x)).join("");
+      // "매도가능수량" ends in 수량 but is not the holding.
+      const label = /(매도|주문)가능(수량)?[^가-힣]*$/.test(lbText) ? "ignore" : labelOf(lbText, { suffix: true });
       between = [];
       const next = ws[i + 1]?.t ?? "";
       if (t.includes("%")) {
@@ -143,6 +145,9 @@ function readLabelled(lines: Line[], nameLine: Line | null, reads: Reads) {
         reads.pl.push(signedCandidates(w));
         continue;
       }
+      // "매도가능 10주" / "주문가능 10주" is not the holding — a second 주
+      // count would read as a swallowed neighbour (merged_record).
+      if (label === "ignore") continue;
       const unitNext = /^주/.test(next) && next !== "주당";
       if ((unitNext || /주$/.test(t)) && label !== "avg" && label !== "cur" && label !== "cost" && label !== "value") {
         reads.qty.push(readNumber({ ...w, t: t.replace(/주$/, "") }));
@@ -493,8 +498,13 @@ function leadName(l: Line): boolean {
 // A quantity label anywhere on the line counts — "보유수량 817 · 매입단가 77,620"
 // is a quantity line even though its whole text reads as 매입단가 first.
 const QTY_LABEL = /보유수량|잔고수량|보유량|수량/;
-const isAnchor = (l: Line) =>
-  /\d\s*주(?!당)/.test(l.text) || (QTY_LABEL.test(l.compact.replace(/[\d,.]/g, "")) && /\d/.test(l.text));
+// "매도가능 10주" / "주문가능수량 10주" on a line of its own is not a record's
+// quantity line — as an anchor it would start a nameless record of its own.
+const SELLABLE = /(매도|주문)가능(수량)?[:：]?[\d,.]*(주(?!당))?/g;
+const isAnchor = (l: Line) => {
+  const c = l.compact.replace(SELLABLE, "");
+  return /\d주(?!당)/.test(c) || (QTY_LABEL.test(c.replace(/[\d,.]/g, "")) && /\d/.test(c));
+};
 
 function cardHoldings(lines: Line[], screenCur: "KRW" | "USD" | null): ParsedHolding[] {
   const anchors = lines.map((l, i) => (isAnchor(l) ? i : -1)).filter((i) => i >= 0);

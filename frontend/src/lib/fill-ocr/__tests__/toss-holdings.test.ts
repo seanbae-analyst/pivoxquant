@@ -272,3 +272,41 @@ describe("misreads that once passed every check (Safari-path OCR, 2026-09-28)", 
     expect(rows[0].avgCost.value).toBeNull();
   });
 });
+
+describe("매도가능 / 주문가능 N주 is not a second share count", () => {
+  it("on the same line as 보유 N주 it is skipped — no merged_record", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["보유종목", "", 20]),
+      ...line(["가나전자", "", 20]),
+      ...line(["보유", "", 20], ["10", "10"], "주", "매도가능", ["10", "10"], "주"),
+      ...line(["평균단가", "", 20], ["70,000", "70,000", 500], "원"),
+      ...line(["다라화학", "", 20]),
+      ...line(["보유", "", 20], ["5", "5"], "주", "주문가능", ["5", "5"], "주"),
+      ...line(["평균단가", "", 20], ["30,000", "30,000", 500], "원"),
+    ]);
+    expect(rows.map((r) => [r.name.value, r.shares.value, r.avgCost.value, r.flags])).toEqual([
+      ["가나전자", 10, 70000, []],
+      ["다라화학", 5, 30000, []],
+    ]);
+  });
+
+  it("on a line of its own it does not start a nameless record", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["보유종목", "", 20]),
+      ...line(["가나전자", "", 20]),
+      ...line(["보유", "", 20], ["10", "10"], "주"),
+      ...line(["매도가능", "", 20], ["10", "10"], "주"),
+      ...line(["평균단가", "", 20], ["70,000", "70,000", 500], "원"),
+      ...line(["다라화학", "", 20]),
+      ...line(["보유", "", 20], ["5", "5"], "주"),
+      ...line(["매도가능수량", "", 20], ["5", "5"], "주"),
+      ...line(["평균단가", "", 20], ["30,000", "30,000", 500], "원"),
+    ]);
+    expect(rows.map((r) => [r.name.value, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나전자", 10, 70000],
+      ["다라화학", 5, 30000],
+    ]);
+  });
+});
