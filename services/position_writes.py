@@ -4,6 +4,10 @@ Extracted from ``routes.portfolio.create_position_alias`` so the holdings
 capture import (``services/imports/holdings_import.py``) applies exactly the
 same user-row lock, free-plan cap and duplicate-merge arithmetic instead of a
 second copy. Behaviour is unchanged for the original caller.
+
+2026-09-29: the only copies left are here — POST /positions (cap + merge),
+POST /trades (lock + merge) and the holdings import use these helpers; the
+import ledger (services/imports/ledger.py, frozen) imports FREE_POSITION_CAP.
 """
 from __future__ import annotations
 
@@ -35,6 +39,17 @@ def is_capped_tier(user) -> bool:
 def active_position_count(user_id: int) -> int:
     from models import Position
     return Position.query.filter_by(user_id=user_id).filter(Position.shares > 0).count()
+
+
+def blocks_new_symbol(user, ticker: str) -> bool:
+    """True when the free-plan cap refuses ``ticker`` for ``user``: a capped
+    tier, a symbol not already held, and FREE_POSITION_CAP symbols held.
+    Call it after :func:`lock_user_row` so the count cannot race."""
+    return (
+        is_capped_tier(user)
+        and not holds_ticker(user.id, ticker)
+        and active_position_count(user.id) >= FREE_POSITION_CAP
+    )
 
 
 def holds_ticker(user_id: int, ticker: str) -> bool:

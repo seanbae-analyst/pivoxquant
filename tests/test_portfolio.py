@@ -829,6 +829,33 @@ class TestFreeTierCapUnderLock:
             })
         assert r.status_code == 200, r.get_json()
 
+    # 2026-09-29 — 캡은 services/position_writes 한 벌. 원장(ledger)도 같은 상수.
+    def test_cap_has_one_source(self):
+        from services.imports import ledger
+        from services import position_writes
+        assert ledger.FREE_POSITION_CAP is position_writes.FREE_POSITION_CAP
+
+    def test_blocks_new_symbol(self, app, auth_user, add_position):
+        from extensions import db
+        from models import User
+        from services.position_writes import blocks_new_symbol
+        self._fill_cap(auth_user["id"], add_position)
+        with app.app_context():
+            u = db.session.get(User, auth_user["id"])
+            assert blocks_new_symbol(u, "AMZN") is True
+            assert blocks_new_symbol(u, "AAPL") is False  # held → merge
+
+    def test_tier_limit_error_is_bilingual(self, client, auth_user, add_position):
+        self._fill_cap(auth_user["id"], add_position)
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "AMZN", "quantity": 1, "price": 100,
+            })
+        assert r.status_code == 403
+        body = r.get_json()
+        assert body["code"] == "TIER_LIMIT"
+        assert body["error_kr"]
+
 
 # ── Bug C#1: position lost-update — locked re-load preserves correctness ────
 # POST /trades re-loads the Position under

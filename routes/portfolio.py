@@ -628,23 +628,21 @@ def create_position_alias():
     # can't both pass the cap and bypass the limit. Gate logic / message
     # unchanged. SQLite no-ops the lock.
     from services.position_writes import (
-        FREE_POSITION_CAP, active_position_count, holds_ticker, is_capped_tier,
-        lock_user_row, merge_buy_into,
+        FREE_POSITION_CAP, blocks_new_symbol, lock_user_row, merge_buy_into,
     )
     # Resolved before the User lock (may hit a registry / KIS) — used for the
     # holding seed row and the response.
     resolved_name = resolve_stock_name(symbol)
     lock_user_row(current_user.id)
     # 2026-09-29: the cap limits symbols — adding to an already-held ticker
-    # merges and never raises the count, so look the ticker up first.
-    if is_capped_tier(current_user) and not holds_ticker(current_user.id, symbol):
-        pos_count = active_position_count(current_user.id)
-        if pos_count >= FREE_POSITION_CAP:
-            db.session.rollback()
-            return jsonify({
-                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
-                "code": "TIER_LIMIT",
-            }), 403
+    # merges and never raises the count (services/position_writes).
+    if blocks_new_symbol(current_user, symbol):
+        db.session.rollback()
+        return api_error(
+            en=f"Free plan limited to {FREE_POSITION_CAP} positions. Upgrade to Pro for unlimited.",
+            kr=f"무료 플랜은 보유 종목 {FREE_POSITION_CAP}개까지입니다.",
+            code="TIER_LIMIT", status=403,
+        )
 
     note = (d.get("note") or d.get("notes") or d.get("thesis") or "").strip()[:500] or None
     # Optional user-supplied open date ("YYYY-MM-DD"). None → default now().
