@@ -155,6 +155,72 @@ class TestTradeLink:
         assert r.get_json()["code"] == "REFLECTION_LINK_BUY_ONLY"
 
 
+# ── POST /api/portfolio/positions (신규 진입 검토) ─────────────────────
+
+POSITIONS = "/api/portfolio/positions"
+
+
+class TestPositionReviewLink:
+    """검토 모드 등록은 방금 찍은 멈춤을 보낸다 → 시드가 아니라 연결된 매수 행."""
+
+    @pytest.fixture(autouse=True)
+    def _no_network(self, monkeypatch):
+        monkeypatch.setattr("services.fx_service.get_rate", lambda: 1300.0)
+        monkeypatch.setattr("routes.portfolio.cache_service.cache_ticker", lambda *a, **k: None)
+
+    def test_review_entry_writes_linked_buy_and_friction_outcome_counts_it(
+        self, client, app, auth_user, seeded,
+    ):
+        from services.pre_trade.friction_outcome import compute_friction_outcome
+
+        uid = auth_user["id"]
+        with app.app_context():
+            rid = _refl(uid, "AAPL", days_ago=0)
+        r = client.post(POSITIONS, json={
+            "symbol": "AAPL", "quantity": 2, "price": 100, "note": "실적 전 진입 이유",
+            "reflection_id": rid,
+        })
+        assert r.status_code == 200, r.get_json()
+        t = _latest_trade(app, uid)
+        assert (t.action, t.source, t.reflection_id) == ("BUY", None, rid)  # // legal-ok — stored enum value
+        assert abs((t.traded_at - _now()).total_seconds()) < 120
+        # 매도해서 실현 쌍을 만든다 — 멈춤 경유 분포로 들어가야 한다.
+        pid = int(r.get_json()["id"])
+        s = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 2, "price": 120.0,
+        })
+        assert s.status_code == 200, s.get_json()
+        with app.app_context():
+            out = compute_friction_outcome(
+                PreTradeReflection.query.filter_by(user_id=uid).all(),
+                TradeHistory.query.filter_by(user_id=uid).all(),
+            )
+        assert out["stopped"]["proceeded"] == 1
+        assert out["caveats"]["explicit_links"] == 1
+        assert out["realised"]["with_friction"]["n"] == 1
+        assert out["realised"]["without_friction"]["n"] == 0
+
+    def test_holding_mode_still_seeds(self, client, app, auth_user, seeded):
+        r = client.post(POSITIONS, json={"symbol": "AAPL", "quantity": 2, "price": 100})
+        assert r.status_code == 200
+        t = _latest_trade(app, auth_user["id"])
+        assert (t.source, t.reflection_id) == ("holding_seed", None)
+
+    def test_invalid_link_rejected_and_nothing_written(self, client, app, auth_user, seeded):
+        from models import Position
+
+        with app.app_context():
+            rid = _refl(auth_user["id"], "MSFT")
+        r = client.post(POSITIONS, json={
+            "symbol": "AAPL", "quantity": 2, "price": 100, "reflection_id": rid,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "REFLECTION_LINK_TICKER_MISMATCH"
+        with app.app_context():
+            assert TradeHistory.query.filter_by(user_id=auth_user["id"]).count() == 0
+            assert Position.query.filter_by(user_id=auth_user["id"]).count() == 0
+
+
 # ── 가져오기 승인 ─────────────────────────────────────────────────────
 
 IMPORTS = "/api/portfolio/imports"

@@ -360,6 +360,9 @@ export const API = {
 
 // Portfolio (added 2026-04-22) — frontend-shape aliases for the new /portfolio page.
 // Existing `API.portfolio.*` entries above remain authoritative for legacy callers.
+// POST PORTFOLIO_POSITIONS {symbol, quantity, price, note?, purchase_date?, reflection_id?}
+//   reflection_id (2026-09-29): review-mode entry only — the pause just stamped;
+//   the server then writes a recorded buy linked to it, not a holding seed.
 export const PORTFOLIO_POSITIONS = "/api/portfolio/positions";
 export const PORTFOLIO_SUMMARY = "/api/portfolio/summary";
 export const PORTFOLIO_TRADES = "/api/portfolio/trades";

@@ -119,6 +119,25 @@ def add_holding_seed(user_id: int, ticker: str, shares: float, price: float,
     )
 
 
+def add_recorded_buy(user_id: int, ticker: str, shares: float, price: float,
+                     currency: str, name: str | None = None, *,
+                     reflection_id: int, traded_at=None):
+    """Add (not commit) a recorded 매수 row (``source`` NULL) linked to a pause.
+
+    2026-09-29: POST /positions in review mode ("신규 진입 검토 · 7문항") is a
+    real buy made right after the pause — not a registration of shares already
+    held — so it gets an ordinary 매수 row carrying ``reflection_id`` instead of
+    a holding seed (services/pre_trade/link.py validates the id first).
+    ``traded_at`` defaults to now. Returns the row or ``None``."""
+    row = _add_registration_row(
+        "BUY", None,  # // legal-ok — trade action data value, not user copy
+        user_id, ticker, shares, price, currency, name, traded_at,
+    )
+    if row is not None:
+        row.reflection_id = int(reflection_id)
+    return row
+
+
 def add_holding_adjust(user_id: int, ticker: str, shares: float, price: float,
                        currency: str, name: str | None = None, traded_at=None):
     """Add (not commit) a holding-adjust 매도 row for ``shares`` at ``price``.
@@ -138,7 +157,7 @@ def add_holding_adjust(user_id: int, ticker: str, shares: float, price: float,
     )
 
 
-def _add_registration_row(action: str, source: str, user_id: int, ticker: str,
+def _add_registration_row(action: str, source: str | None, user_id: int, ticker: str,
                           shares, price, currency: str, name, traded_at):
     from models import TradeHistory
 

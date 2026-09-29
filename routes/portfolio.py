@@ -583,6 +583,11 @@ def create_position_alias():
     future values fall back to the default server clock — see
     :func:`_parse_purchase_date`. On a merge into an existing position the
     original ``added_at`` is preserved (earliest open date wins).
+
+    ``reflection_id`` (optional, 2026-09-29): sent by the review-mode entry
+    ("신규 진입 검토 · 7문항") with the pause it just stamped. Validated by
+    ``services/pre_trade/link.py``; the trade row is then an ordinary buy
+    linked to that pause instead of a holding seed.
     """
     d = request.get_json() or {}
     raw_symbol = (d.get("symbol") or d.get("ticker") or "").strip().upper()
@@ -650,6 +655,18 @@ def create_position_alias():
             code="TIER_LIMIT", status=403,
         )
 
+    # 2026-09-29 — review-mode entry ("신규 진입 검토 · 7문항"): the modal sends
+    # the pause it just stamped. With a valid link this is a real buy made now,
+    # so it is written as an ordinary 매수 row linked to the pause (not a
+    # holding seed). Holding-mode registrations send nothing and keep seeding.
+    from services.pre_trade.link import ReflectionLinkError, resolve_reflection_link
+    try:
+        reflection_id = resolve_reflection_link(
+            current_user.id, d.get("reflection_id"), ticker=symbol, action="buy")
+    except ReflectionLinkError as e:
+        db.session.rollback()
+        return api_error(en=e.en, kr=e.kr, code=e.code, status=400)
+
     note = (d.get("note") or d.get("notes") or d.get("thesis") or "").strip()[:500] or None
     # Optional user-supplied open date ("YYYY-MM-DD"). None → default now().
     opened_dt = _parse_purchase_date(d.get("purchase_date"))
@@ -665,11 +682,17 @@ def create_position_alias():
     # the FIFO mirrors have a lot for them (services/position_writes).
     # traded_at is the registration time even when purchase_date is given —
     # the seed is excluded from hold-time statistics either way.
-    from services.position_writes import add_holding_seed
+    # With a reflection link the row is a recorded buy instead (see above).
+    from services.position_writes import add_holding_seed, add_recorded_buy
 
     def _seed():
+        currency = "KRW" if is_kr else "USD"
+        if reflection_id is not None:
+            add_recorded_buy(current_user.id, symbol, quantity, price, currency,
+                             resolved_name or symbol, reflection_id=reflection_id)
+            return
         add_holding_seed(current_user.id, symbol, quantity, price,
-                         "KRW" if is_kr else "USD", resolved_name or symbol)
+                         currency, resolved_name or symbol)
 
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=symbol).first()
