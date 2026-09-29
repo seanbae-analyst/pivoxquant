@@ -517,6 +517,25 @@ function headerColumns(line: Line): Column[] | null {
   return cols;
 }
 
+/** "$" / USD vs 원 / ₩ printed in the text — both or neither → null. A bare
+ * "원" is not enough ("원익IPS", "대원"): it must follow a digit or be "(원)". */
+function markedCurrency(compact: string): "KRW" | "USD" | null {
+  const dollar = /\$|USD/.test(compact);
+  const won = /\d원|₩|\(원\)|KRW/.test(compact);
+  if (dollar === won) return null;
+  return dollar ? "USD" : "KRW";
+}
+
+/** Row first, then its column header, then the screen (holdings' recordCurrency). */
+function rowCurrency(compact: string, head: "KRW" | "USD" | null, screen: "KRW" | "USD" | null): "KRW" | "USD" | null {
+  const dollar = /\$|USD/.test(compact);
+  const won = /\d원|₩|KRW/.test(compact);
+  if (dollar && won) return null;
+  if (dollar) return "USD";
+  if (won) return "KRW";
+  return head ?? screen;
+}
+
 function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): ParsedFill[] {
   const body = lines.slice(hi + 1);
   const footer = body.findIndex((l) => /합계|총계/.test(l.compact));
@@ -538,6 +557,10 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
     if (second && Math.abs(second.y - l.y) < Math.abs(best.y - l.y) * 1.5) continue;
     attached.get(best)!.push(l);
   }
+  // The currency is printed on the row, in the header ("체결단가($)") or
+  // somewhere on the screen — or it is not known. Never defaulted to KRW.
+  const headCur = markedCurrency(lines[hi].compact);
+  const screenCur = markedCurrency(lines.map((l) => l.compact).join("|"));
   const NUMERIC_COLS: Col[] = ["qty", "price", "amount", "fee", "tax"];
   const nearestCol = (w: OcrWord): Col => {
     const cx = (w.x0 + w.x1) / 2;
@@ -553,7 +576,8 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
     const all = [line, ...extra].sort((a, b) => a.y - b.y);
     const f = emptyFill(all.map((l) => l.text).join(" / "));
     const compact = all.map((l) => l.compact).join("");
-    f.currency = /\$/.test(compact) ? "USD" : "KRW";
+    f.currency = rowCurrency(compact, headCur, screenCur);
+    const usd = f.currency === "USD";
     f.tz = "KST";
     let q: NumRead | null = null, p: NumRead | null = null, a: NumRead | null = null;
     const nameWords: OcrWord[] = [];
@@ -588,7 +612,7 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
       // name column header missing (multi-line cells): Hangul/Latin words anywhere
       for (const w of all.flatMap((l) => l.words)) if (!nameWords.includes(w) && !/\d/.test(w.t)) nameWords.push(w);
     }
-    [f.shares, f.price, f.amount] = reconcile(q, p, a, false, f.flags);
+    [f.shares, f.price, f.amount] = reconcile(q, p, a, usd, f.flags);
     const hangulName = nameWords.filter((w) => /[가-힣A-Za-z]/.test(w.t));
     const nearName = (w: OcrWord) => hangulName.some((n) => {
       const gapX = Math.max(0, Math.max(n.x0, w.x0) - Math.min(n.x1, w.x1));
