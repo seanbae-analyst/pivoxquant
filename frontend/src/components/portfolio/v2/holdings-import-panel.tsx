@@ -47,6 +47,8 @@ export interface HoldingRow {
   currency: Cur;
   /** Currency read off the screen ("" = not proven). */
   screenCurrency: Cur;
+  /** The user set `currency` by hand — a later ticker pick keeps it. */
+  currencyByUser?: boolean;
   ticker: string;
   tickerName: string;
   tickerCurrency: string | null;
@@ -134,7 +136,8 @@ export function applyPreview(r: HoldingRow, p: HoldingsPreviewRow | undefined): 
   // A US stock shown in won (Toss 내 투자 / 자세히 보기 cropped above its
   // 해외주식 header): a won average — worked out or printed, cross-checked
   // against won 원금 or not — is not the dollar cost basis.
-  if (tickerCurrency === "USD" && r.currency === "KRW" && (r.avgCost || r.hints.avgCost)) {
+  // (A currency the user set by hand is theirs to settle — currencyMismatch.)
+  if (tickerCurrency === "USD" && r.currency === "KRW" && !r.currencyByUser && (r.avgCost || r.hints.avgCost)) {
     return {
       ...applyPreview({ ...r, currency: "", avgCost: "", hints: { ...r.hints, avgCost: undefined },
         flags: [...r.flags.filter((f) => f !== "derived_avg" && f !== "cross_checked" && f !== "foreign_in_krw"), "foreign_in_krw"] }, p),
@@ -158,9 +161,23 @@ export function applyPreview(r: HoldingRow, p: HoldingsPreviewRow | undefined): 
  * choosing a currency for a row that had none keeps what is there. */
 export function currencyPatch(r: HoldingRow, currency: Cur): Partial<HoldingRow> {
   if (r.currency && currency !== r.currency) {
-    return { currency, avgCost: "", hints: { ...r.hints, avgCost: undefined } };
+    return { currency, avgCost: "", hints: { ...r.hints, avgCost: undefined }, currencyByUser: true };
   }
-  return { currency };
+  return { currency, currencyByUser: true };
+}
+
+/** The user picked a ticker for a row. The row is re-resolved against it,
+ * but what the user decided stays: a skipped row stays skipped, and a
+ * currency they chose is not reset to the screen's. */
+export function pickedTicker(r: HoldingRow, p: HoldingsPreviewRow | undefined): HoldingRow {
+  const next = applyPreview({ ...r, currency: r.currencyByUser ? r.currency : r.screenCurrency }, p);
+  return {
+    ...next,
+    mode: r.mode === "skip" ? "skip" : next.mode,
+    // The user chose this stock — a fuzzy-match confirmation is not needed.
+    confirmed: true,
+    status: next.ticker ? (next.status === "needs_ticker" ? "needs_ticker" : "resolved") : "needs_ticker",
+  };
 }
 
 /** Rows whose resolved ticker repeats with different values: auto-merge the
@@ -324,12 +341,7 @@ export function HoldingsImportPanel({
     const bare = s.ticker.trim().toUpperCase().replace(/\.(KS|KQ)$/, "");
     try {
       const [p] = await preview([{ name: s.name ?? null, code: bare, currency: null }]);
-      setRows((rs) => rs.map((r) => {
-        if (r.key !== key) return r;
-        const next = applyPreview({ ...r, currency: r.screenCurrency }, p ? { ...p, index: 0 } : undefined);
-        // The user chose this stock — a fuzzy-match confirmation is not needed.
-        return { ...next, confirmed: true, status: next.ticker ? (next.status === "needs_ticker" ? "needs_ticker" : "resolved") : "needs_ticker" };
-      }));
+      setRows((rs) => rs.map((r) => (r.key === key ? pickedTicker(r, p ? { ...p, index: 0 } : undefined) : r)));
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : t("dashboard.portfolio.holdingsImport.previewFailed"));
     }

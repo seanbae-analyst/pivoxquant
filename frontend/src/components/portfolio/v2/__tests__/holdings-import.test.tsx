@@ -25,7 +25,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: v
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import {
-  HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, applyPreview, currencyPatch, type HoldingRow,
+  HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, applyPreview, currencyPatch, pickedTicker, type HoldingRow,
 } from "@/components/portfolio/v2/holdings-import-panel";
 import type { OcrWord } from "@/lib/fill-ocr/parse";
 import type { HoldingsPreviewRow } from "@/lib/types";
@@ -242,9 +242,21 @@ describe("row rules", () => {
   });
 
   it("switching a row's currency clears the average read in the other currency", () => {
-    expect(currencyPatch({ ...base, hints: { avgCost: "70000" } }, "USD")).toEqual({ currency: "USD", avgCost: "", hints: { avgCost: undefined } });
+    expect(currencyPatch({ ...base, hints: { avgCost: "70000" } }, "USD")).toEqual({ currency: "USD", avgCost: "", hints: { avgCost: undefined }, currencyByUser: true });
     // Choosing a currency for a row that had none keeps what was typed.
-    expect(currencyPatch({ ...base, currency: "" }, "KRW")).toEqual({ currency: "KRW" });
+    expect(currencyPatch({ ...base, currency: "" }, "KRW")).toEqual({ currency: "KRW", currencyByUser: true });
+  });
+
+  it("picking another ticker keeps a skipped row skipped and a currency the user chose", () => {
+    const p = { index: 0, read_name: null, read_code: "AAPL", ticker: "AAPL", name: "Apple",
+      currency: "USD", status: "resolved", currency_mismatch: false, existing: { id: 2, shares: 1, avg_cost: 100, currency: "USD" } } as HoldingsPreviewRow;
+    const chosen = { ...base, screenCurrency: "" as const, currency: "USD" as const, currencyByUser: true, mode: "skip" as const };
+    const out = pickedTicker(chosen, p);
+    expect([out.ticker, out.mode, out.currency, out.confirmed]).toEqual(["AAPL", "skip", "USD", true]);
+    // Not chosen by the user: back to what the screen proved, mode from the new ticker.
+    const read = { ...base, screenCurrency: "" as const, currency: "KRW" as const };
+    const out2 = pickedTicker(read, p);
+    expect([out2.currency, out2.mode]).toEqual(["", "replace"]);
   });
 
   it("a proven read absorbs the same holding read only as hints elsewhere", () => {
