@@ -113,6 +113,7 @@ def create_alert(
     # push on / in-app off received nothing. notify_bell_alert has its own
     # push pref gate, so the push decision stays there.
     inapp_enabled = True
+    push_enabled = True
     event_id = _BELL_KIND_TO_EVENT_ID.get(kind)
     if event_id is not None:
         try:
@@ -124,6 +125,7 @@ def create_alert(
                     "kind=%s event_id=%s", user_id, kind, event_id,
                 )
                 inapp_enabled = False
+                push_enabled = u.notification_channel_enabled(event_id, "push")
         except Exception:
             # Never fail-closed on a pref lookup hiccup.
             logger.debug("inapp pref gate lookup failed in create_alert",
@@ -143,25 +145,31 @@ def create_alert(
         if q.first() is not None:
             return None
 
-    a = None
-    if inapp_enabled:
-        try:
-            a = Alert(
-                user_id=user_id,
-                kind=kind,
-                title=title,
-                body=body,
-                ticker=ticker,
-                link=link,
-                message=title,  # legacy column mirror, for existing consumers
-                is_read=False,
-            )
-            db.session.add(a)
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            logger.exception("alert.create_alert failed user_id=%s kind=%s", user_id, kind)
-            return None
+    if not inapp_enabled and not push_enabled:
+        return None  # 두 채널 모두 꺼짐 — 남길 것도 보낼 것도 없다.
+
+    # in-app 이 꺼져 있어도 행은 쓴다 — 벨에는 안 보이는 push_only 행(읽음 처리)
+    # 으로. 위 dedup 조회가 이 행을 봐야 조건이 유지되는 동안 같은 푸시가 매
+    # 스윕마다 다시 나가지 않는다. 호출자에게는 벨 알림이 생기지 않았으므로 None.
+    try:
+        a = Alert(
+            user_id=user_id,
+            kind=kind,
+            title=title,
+            body=body,
+            ticker=ticker,
+            link=link,
+            message=title,  # legacy column mirror, for existing consumers
+            is_read=not inapp_enabled,
+            read_at=None if inapp_enabled else datetime.now(timezone.utc).replace(tzinfo=None),
+            push_only=not inapp_enabled,
+        )
+        db.session.add(a)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("alert.create_alert failed user_id=%s kind=%s", user_id, kind)
+        return None
 
     # Fan out to PWA Web Push. Silent fallback — push delivery must never
     # cause the bell-alert insert to fail. Routed through push_service so
@@ -179,7 +187,7 @@ def create_alert(
         logger.warning("push delivery failed for alert id=%s kind=%s",
                        getattr(a, "id", None), kind, exc_info=True)
 
-    return a
+    return a if inapp_enabled else None
 
 
 # ── Convenience wrappers ────────────────────────────────────────────────────

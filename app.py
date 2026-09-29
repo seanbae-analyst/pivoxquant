@@ -803,6 +803,8 @@ def _do_migrations():
     _add_column_if_missing("alerts", "title", "VARCHAR(200)")
     _add_column_if_missing("alerts", "body", "TEXT")
     _add_column_if_missing("alerts", "link", "VARCHAR(300)")
+    # 059 — in-app 꺼짐·푸시 켜짐 알림의 중복 억제용 숨김 행 (services/alert.py).
+    _add_column_if_missing("alerts", "push_only", "BOOLEAN", default="0")
     _add_column_if_missing("alerts", "read_at", "TIMESTAMP")
 
     # Artifacts table — full coverage of Artifact model columns.

@@ -72,7 +72,9 @@ def get_alerts():
         db.session.rollback()
         logger.exception("alerts.get_alerts TTL cleanup failed")
 
+    # push_only 행(in-app 꺼짐, 푸시 중복 억제용)은 벨에 보이지 않는다.
     alerts = (Alert.query.filter_by(user_id=current_user.id)
+              .filter(db.or_(Alert.push_only.is_(False), Alert.push_only.is_(None)))
               .order_by(Alert.created_at.desc()).limit(limit).all())
     # 2026-05-09 fix: previously this counted unread off the limit-sliced
     # `alerts` list, which produced a desk-vs-bell mismatch — the bell

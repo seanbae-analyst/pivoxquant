@@ -299,9 +299,58 @@ class TestSendPushOptOutGate:
                 )
             row = Alert.query.filter_by(user_id=user["id"],
                                         kind="concentration_alert").first()
-            assert row is None, "in-app off → no bell row"
+            # 벨에 안 보이는 push_only 행(읽음)만 남는다 — 중복 억제용.
+            assert row is not None and row.push_only is True
+            assert row.is_read is True, "in-app off → never counted as unread"
             assert mock_send.called, "push on → push must still be delivered"
             db.session.rollback()
+
+    def test_inapp_off_push_is_deduped_across_sweeps(self, app, make_user):
+        """2026-09-29: in-app 꺼짐이면 벨 행이 없어 dedup 창이 볼 것이 없었다 —
+        조건이 유지되는 동안 매 스윕마다 같은 푸시가 다시 나갔다. push_only
+        행이 dedup 을 받쳐 두 번째 스윕은 푸시하지 않는다."""
+        from extensions import db
+        from models import User
+        from services.alert import create_alert
+
+        user = make_user(email="inappoff2@test.com")
+        with app.app_context():
+            u = User.query.get(user["id"])
+            u.notification_prefs = {
+                "concentration": {"email": False, "push": True, "inapp": False},
+            }
+            db.session.commit()
+
+            with patch("services.push_service.send_push_to_user") as mock_send:
+                for _ in range(2):
+                    create_alert(
+                        user_id=user["id"],
+                        kind="concentration_alert",
+                        title="Portfolio concentration — Tech 42.0%",
+                        body="Observation",
+                        link="/mirror",
+                        dedup_window_hours=24,
+                    )
+            assert mock_send.call_count == 1, "second sweep inside the window must not re-push"
+            db.session.rollback()
+
+    def test_push_only_row_is_not_listed_in_the_bell(self, client, auth_user, app):
+        from extensions import db
+        from models import User
+        from services.alert import create_alert
+
+        with app.app_context():
+            u = User.query.get(auth_user["id"])
+            u.notification_prefs = {
+                "concentration": {"email": False, "push": True, "inapp": False},
+            }
+            db.session.commit()
+            with patch("services.push_service.send_push_to_user"):
+                create_alert(user_id=auth_user["id"], kind="concentration_alert",
+                             title="Portfolio concentration — Tech 42.0%")
+        data = client.get("/api/alerts").get_json()
+        assert data["alerts"] == []
+        assert data["unread"] == 0
 
     def test_marketing_push_consults_opt_out_when_not_opted_out(self, app, make_user):
         """Non-transactional pushes must read User.email_opt_out before
