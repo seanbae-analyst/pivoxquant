@@ -419,7 +419,8 @@ class TestV1BackwardCompat:
         r = client.get("/api/profile/persona")
         assert r.status_code == 200
         d = r.get_json()
-        assert {"declared", "observed", "sparkline", "last_computed_at"} <= set(d.keys())
+        assert {"declared", "observed", "last_computed_at"} <= set(d.keys())
+        assert "sparkline" not in d  # persona-score line removed 2026-09-29
         # 2026-09-29: ``drift`` (|declared score − observed score|) was removed
         # with the declared score it was computed from.
         assert "drift" not in d

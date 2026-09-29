@@ -70,8 +70,8 @@ export interface PersonaResponse {
     window_60d: PersonaScore;
     window_90d: PersonaScore;
   };
-  /** Sparkline for the hero card — last 12 weekly snapshots. */
-  sparkline: { week: string; score: number }[];
+  // 2026-09-29: `sparkline` (12 weekly persona scores) removed with the
+  // /mirror PersonaEvolution chart — scores are not made.
   /** When the backend last re-classified. */
   last_computed_at: string | null;
   // 2026-09-29: `drift` (|declared score − observed score|) removed with the
@@ -222,7 +222,7 @@ export function cachedPersonaId(): PersonaId | null {
   return cached.declared?.persona ?? null;
 }
 
-/** Declared + observed persona (30 / 60 / 90 day) and the weekly sparkline. */
+/** Declared + observed persona (30 / 60 / 90 day). */
 export function usePersona() {
   const swr = useSWR<PersonaResponse>(
     API.profile.persona,

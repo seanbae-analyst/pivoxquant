@@ -46,7 +46,6 @@ function seedPersona(persona: string, key: string = LS_PERSONA_KEY) {
     JSON.stringify({
       declared: { persona, label: "x", tagline: "x" },
       observed: {},
-      sparkline: [],
       last_computed_at: null,
     }),
   );

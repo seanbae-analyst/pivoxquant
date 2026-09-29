@@ -11,10 +11,10 @@
  * /home redirects here. The legal disclaimer is mounted once by
  * (dashboard)/layout.tsx (/mirror → "behavior-mirror"); this page mounts none.
  *
- * Below the mirror sits a collapsed 「자세히」 area (MirrorDetails) holding the
- * weekly persona evolution — moved from /profile on 2026-09-12. /profile's
- * observed-persona card and six-dimension grid were not moved: they redrew
- * the same 9 axes the radar and gap chips here already show.
+ * 2026-09-29: the collapsed 「자세히」 area (MirrorDetails) is gone. Its only
+ * content was PersonaEvolution — a 12-week 0–100 "persona score" line — and
+ * scores are not made (CLAUDE.md). The drift this page reads is the text
+ * descriptor from persona_history.compute_drift, not a score.
  *
  * Legal: 3 disclosed buckets only, POSITIVE/NEGATIVE/NEUTRAL framing, no
  * advice, no score on the radar. No italic (CEO 2026-06-15).
@@ -28,7 +28,6 @@ import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
-import { MirrorDetails } from "@/components/mirror/mirror-details";
 
 function LegendDot({ colorVar, label }: { colorVar: string; label: string }) {
   return (
@@ -148,7 +147,6 @@ export default function MirrorPage() {
               </section>
 
               <OneThingNudge data={data} />
-              <MirrorDetails />
             </div>
           </ErrorBoundary>
         )}

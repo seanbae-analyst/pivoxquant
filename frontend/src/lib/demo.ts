@@ -273,7 +273,6 @@ function _demoNotesByTicker(base: string) {
  *    lib/cfo/hooks.ts). In demo mode apiFetch resolves {} WITHOUT throwing, so the
  *    cfoFetch mock fallback never fires — these must be canned or L2 reads "missing"
  *    on every page's status bar. window_30d present + ≥3 pulses ⇒ L2 "ready". ── */
-const _wkBase = Date.parse("2026-03-27T00:00:00Z");
 const DEMO_PERSONA = {
   declared: { persona: "growth", label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다." },
   observed: {
@@ -281,10 +280,6 @@ const DEMO_PERSONA = {
     window_60d: { date: "2026-05-19", persona: "growth", score: 70 },
     window_90d: { date: "2026-04-19", persona: "growth", score: 74 },
   },
-  sparkline: Array.from({ length: 12 }, (_, i) => ({
-    week: new Date(_wkBase + i * 7 * 86_400_000).toISOString().slice(0, 10),
-    score: Math.round(70 + 6 * Math.sin(i / 2.4) + (i >= 8 ? 4 : 0)),
-  })),
   last_computed_at: "2026-06-18T07:30:00+09:00",
 };
 const DEMO_PULSE = {

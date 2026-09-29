@@ -20,9 +20,9 @@ Pipeline
    - sector_tilt         : 1 - HHI on sector exposure, capped at 1
                            (0 = everything in one sector, 1 = fully spread)
 
-3. ``sparkline`` returns the last 12 weekly observed-persona scores.
-   Missing weeks collapse to an empty list (degrade gracefully for
-   brand-new users).
+3. (2026-09-29) ``sparkline`` — 12 weekly observed-persona scores (0-100)
+   — is gone. Its only consumer was the /mirror 「자세히」 PersonaEvolution
+   chart, a persona *score* line; scores are not made (CLAUDE.md).
 
 All outputs pass through float coercion — no ``nan`` / ``inf`` leaks to
 the JSON response.
@@ -206,8 +206,6 @@ def compute_persona_response(user_id: int, now: datetime | None = None) -> dict:
         for d in (30, 60, 90)
     }
 
-    sparkline = _sparkline(trades, sector_map, now, weeks=12)
-
     return {
         "declared": {
             # `persona` stays the 8-code for engine grouping; the user-
@@ -225,7 +223,6 @@ def compute_persona_response(user_id: int, now: datetime | None = None) -> dict:
             # RollingWindowWidget that rendered the score.
         },
         "observed": observed,
-        "sparkline": sparkline,
         "last_computed_at": now.isoformat(),
     }
 
@@ -403,40 +400,6 @@ def _norm_log(value: float, *, floor: float, ceil: float) -> float:
     if value >= ceil:
         return 1.0
     return math.log(value / floor) / math.log(ceil / floor)
-
-
-# ─────────────────────────────────────────────────────────────────────
-# Sparkline
-# ─────────────────────────────────────────────────────────────────────
-
-def _sparkline(
-    trades: list[TradeHistory],
-    sector_map: dict[str, str],
-    now: datetime,
-    weeks: int,
-) -> list[dict]:
-    """Weekly observed-persona scores for the last ``weeks`` weeks."""
-    if not trades:
-        return []
-    out: list[dict] = []
-    for i in range(weeks):
-        # Each week's window ends on (now - i*7d), with a 30d lookback
-        # so the score is not dominated by sparse single-trade weeks.
-        end = now - timedelta(days=7 * i)
-        start = end - timedelta(days=30)
-        window = [t for t in trades if t.traded_at and start <= t.traded_at < end]
-        if not window:
-            continue
-        vec = _behaviour_vector(window, sector_map, 30)
-        _persona, sim = _nearest_centroid(vec)
-        score = max(0.0, min(100.0, (sim + 1.0) * 50.0))
-        out.append({
-            "week": end.date().isoformat(),
-            "score": int(round(score)),
-        })
-    # Oldest first, newest last.
-    out.reverse()
-    return out
 
 
 # ``_utc_now`` is now an alias for the canonical implementation in

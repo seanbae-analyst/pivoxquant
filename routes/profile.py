@@ -1198,60 +1198,15 @@ def get_persona_benchmark_all():
 # observational framing the legal filter expects is always present.
 
 
-# Bound the timeline lookback. ``days_back`` matches the service-layer
-# clamp (1..365) but we keep a separate constant for clarity at the
-# route boundary.
-_HISTORY_MIN_DAYS = 1
-_HISTORY_MAX_DAYS = 365
+# Lookback for /persona-drift.
 _HISTORY_DEFAULT_DAYS = 180
 
 
-@profile_bp.route("/persona-history", methods=["GET"])
-@api_auth
-@legal_scrub_response
-def get_persona_history():
-    """Return the authenticated user's PersonaSnapshot timeline.
-
-    Query params:
-        days: int (default 180, bounded to [1, 365])
-
-    Response shape:
-        {
-            "snapshots": [...],   # oldest → newest
-            "n":         int,
-            "days":      int,
-            "disclaimer": "...",
-        }
-
-    Empty list when no snapshots exist — the API always returns HTTP
-    200 so SWR doesn't fall back to mocks for fresh users.
-    """
-    raw = request.args.get("days", str(_HISTORY_DEFAULT_DAYS))
-    try:
-        days = int(raw)
-    except (TypeError, ValueError):
-        days = _HISTORY_DEFAULT_DAYS
-    days = max(_HISTORY_MIN_DAYS, min(_HISTORY_MAX_DAYS, days))
-
-    try:
-        snapshots = get_history(current_user.id, days_back=days)
-    except Exception:
-        logger.exception(
-            "profile.get_persona_history failed (user_id=%s, days=%s)",
-            current_user.id, days,
-        )
-        return api_error(
-            en="Failed to load persona history",
-            kr="페르소나 이력을 불러오지 못했습니다.",
-            code="PERSONA_HISTORY_FAILED", status=500,
-        )
-
-    return jsonify({
-        "snapshots": snapshots,
-        "n": len(snapshots),
-        "days": days,
-        "disclaimer": DRIFT_DISCLAIMER,
-    })
+# 2026-09-29: GET /persona-history (raw PersonaSnapshot timeline) removed.
+# It existed for the frontend Evolution Timeline, which had no endpoints.ts
+# symbol and whose last form — /mirror's PersonaEvolution score chart — was
+# deleted (scores are not made, CLAUDE.md). get_history/compute_drift stay:
+# /mirror's drift text (routes/mirror_home.py) and /persona-drift use them.
 
 
 @profile_bp.route("/persona-drift", methods=["GET"])

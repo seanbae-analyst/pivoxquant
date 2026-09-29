@@ -93,8 +93,8 @@ class TestGetPersona:
         # declared side of declared-vs-observed lives on /mirror only.
         assert "score" not in d["declared"]
         assert "drift" not in d
-        # Sparkline can be empty but must exist.
-        assert isinstance(d["sparkline"], list)
+        # 2026-09-29: the weekly persona-score sparkline is gone.
+        assert "sparkline" not in d
 
     def test_declared_resolves_from_profile(self, app, client, auth_user):
         _set_profile(app, auth_user["id"], profile_type="growth", risk_tolerance=8)
