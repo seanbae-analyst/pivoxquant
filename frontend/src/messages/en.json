@@ -255,8 +255,9 @@
         "previewFailed": "Could not check the tickers. Please try again shortly.",
         "saveFailed": "Could not save.",
         "noteRead": "{rows} holdings read",
+        "fillsLink": "Import fill captures in Journal → Import →",
         "screen": {
-          "fills": "Looks like a fill / trade history screen — not read. (Import fills from Journal → Import.)",
+          "fills": "Looks like a fill / trade history screen — not read.",
           "orders": "Looks like an order screen — not read.",
           "other": "Does not look like a holdings screen — not read.",
           "empty": "No holding rows found.",

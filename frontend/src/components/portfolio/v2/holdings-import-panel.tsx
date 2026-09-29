@@ -17,6 +17,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { useT } from "@/lib/locale";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
@@ -461,6 +462,20 @@ export function HoldingsImportPanel({
               {n.fileName} — {noteText(n)}
             </li>
           ))}
+          {/* A fill screen belongs to the journal's image import — say where,
+              as a link (the journal side already links back here). */}
+          {notes.some((n) => n.kind === "rejected" && n.screenType === "fills") && (
+            <li>
+              <Link
+                href="/journal/import?tab=image"
+                data-testid="holdings-fills-link"
+                className="font-mono"
+                style={{ ...small, color: "var(--pq-bronze)", textDecoration: "underline", textUnderlineOffset: 3 }}
+              >
+                {t("dashboard.portfolio.holdingsImport.fillsLink")}
+              </Link>
+            </li>
+          )}
         </ul>
       )}
 

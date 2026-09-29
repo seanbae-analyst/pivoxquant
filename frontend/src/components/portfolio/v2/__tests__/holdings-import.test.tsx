@@ -90,6 +90,10 @@ describe("HoldingsImportPanel", () => {
 
     const notes = screen.getByTestId("holdings-notes").textContent ?? "";
     expect(notes).toContain("dashboard.portfolio.holdingsImport.screen.fills");
+    // The rejected fill screen points at the journal's image import, as a link.
+    expect(screen.getByTestId("holdings-fills-link").getAttribute("href")).toBe(
+      "/journal/import?tab=image",
+    );
     expect(notes).toContain("dashboard.portfolio.holdingsImport.noteRead");
     const rows = screen.getAllByTestId("holdings-review-row");
     expect(rows.length).toBe(5);
