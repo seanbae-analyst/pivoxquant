@@ -119,7 +119,7 @@ export interface PreTradeCycleArgs {
    * here (e.g. POST /api/portfolio/positions). Errors thrown here surface a
    * toast but DO NOT roll back the reflection (it is already stamped).
    */
-  onProceeded?: () => Promise<void> | void;
+  onProceeded?: (reflectionId: number) => Promise<void> | void;
   /** Called once /cancel succeeds (host clears its UI). */
   onCancelled?: () => void;
 }
@@ -185,7 +185,7 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
         // and after a failed commit.
         if (onProceeded) {
           try {
-            await onProceeded();
+            await onProceeded(target.id);
             setCommit("recorded");
           } catch (commitErr) {
             const cmsg =

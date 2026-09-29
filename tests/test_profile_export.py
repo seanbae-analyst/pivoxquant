@@ -469,7 +469,7 @@ def test_export_covers_all_expected_sections(client, auth_user):
 
     Coverage gate: 26 sections (was 11/26 before this change). If a new
     user-owned model is added without wiring it into the export, update
-    this set (and the route + both delete paths) — the failure is the cue.
+    this set (and the route + services/account_erasure) — the failure is the cue.
     """
     resp = client.get("/api/profile/export")
     assert resp.status_code == 200
@@ -1353,3 +1353,39 @@ def test_capital_gains_notice_in_xlsx(app, client, auth_user):
         assert str(ws.cell(1, 1).value).startswith("# ")
         assert "보유 등록분 매도 1건" in str(ws.cell(2, 1).value)
         assert ws.cell(3, 1).value == "귀속연도"
+
+
+def test_json_export_trade_history_carries_source(app, client, auth_user):
+    """JSON 내보내기의 trade_history 는 CSV 와 같은 ``source`` 를 싣는다 —
+    보유 등록 시드/조정 행이 실제 체결처럼 보이면 안 된다. 직렬화는
+    ``services.serializers.serialize_trade`` 한 벌이다."""
+    from datetime import datetime
+    from models.trade_history import HOLDING_ADJUST_SOURCE, HOLDING_SEED_SOURCE
+    _cg_rows(app, auth_user["id"], [
+        ("AAPL", "BUY", 10, 100.0, datetime(2024, 1, 2), HOLDING_SEED_SOURCE),
+        ("AAPL", "BUY", 5, 90.0, datetime(2024, 2, 1), None),
+        ("AAPL", "SELL", 2, 90.0, datetime(2024, 3, 1), HOLDING_ADJUST_SOURCE),
+    ])
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200, resp.data
+    rows = json.loads(resp.data)["trade_history"]
+    by_date = {r["traded_at"][:10]: r for r in rows}
+    assert by_date["2024-01-02"]["source"] == HOLDING_SEED_SOURCE
+    assert by_date["2024-02-01"]["source"] is None
+    assert by_date["2024-03-01"]["source"] == HOLDING_ADJUST_SOURCE
+
+
+def test_serialize_trade_tolerates_null_traded_at():
+    """``traded_at`` 은 nullable 컬럼 — 내보내기가 한 행 때문에 500 이면 안 된다."""
+    from types import SimpleNamespace
+
+    from services.serializers import serialize_trade
+    t = SimpleNamespace(
+        id=1, ticker="AAPL", name=None, action="BUY", shares=1.0,
+        price_per_share=1.0, total_value=1.0, pnl=None, pnl_pct=None,
+        currency="USD", traded_at=None, source=None,
+    )
+    assert serialize_trade(t)["traded_at"] is None
+    # 2026-09-29: 옛 객체(연결 컬럼 없음)도 None 으로 나간다.
+    assert serialize_trade(t)["reflection_id"] is None
+    assert serialize_trade(t)["reflection_declined"] is None

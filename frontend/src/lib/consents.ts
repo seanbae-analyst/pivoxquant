@@ -200,6 +200,7 @@ export async function revokeMarketingConsent(): Promise<MarketingConsentState> {
  */
 export async function flushPendingCrossBorderConsent(
   stagedOverride?: SignupConsentSnapshot | null,
+  opts?: { serverRecorded?: boolean },
 ): Promise<boolean> {
   // 2026-05-17 wave F-4 P0 — see flushPendingMarketingConsent for the
   // race fix; this helper now accepts an explicit snapshot so the
@@ -208,6 +209,11 @@ export async function flushPendingCrossBorderConsent(
   const staged = stagedOverride !== undefined ? stagedOverride : readStagedSnapshot();
   if (!staged) return false;
   if (!staged.cross_border) return true;
+  // 2026-09-29 — the server already holds a cross-border record (oauth-finalize
+  // stamps it in its own transaction; `/api/auth/me` reports it as
+  // `cross_border_consent_recorded`). Re-POSTing would move that timestamp off
+  // the real consent moment, or undo a later revocation. End-state reached.
+  if (opts?.serverRecorded) return true;
 
   try {
     await apiFetch<{ ok: boolean } & CrossBorderConsentState>(
@@ -268,4 +274,32 @@ export async function revokeCrossBorderConsent(): Promise<CrossBorderConsentStat
     cross_border_consent_at: res.cross_border_consent_at ?? null,
     cross_border_consent_revoked_at: res.cross_border_consent_revoked_at ?? null,
   };
+}
+
+/**
+ * Server-side SoT for "this user already gave the required signup consents"
+ * (2026-09-29). `/signup/oauth-finalize` refuses to finish without all four
+ * required consents and, in the same transaction, stamps `age_confirmed_at`
+ * (→ `age_confirmation_required: false`) and `cross_border_consent_at`
+ * (→ `cross_border_consent_recorded: true`). So both flags together mean the
+ * consents are on record — onboarding must not ask again.
+ *
+ * Missing `cross_border_consent_recorded` (older backend) → false, i.e. the
+ * caller falls back to the localStorage check, the pre-2026-09-29 behaviour.
+ * Typed structurally so this module does not import `@/lib/auth`.
+ */
+export function serverHasRequiredConsents(
+  user:
+    | {
+        age_confirmation_required?: boolean;
+        birthdate_required?: boolean;
+        cross_border_consent_recorded?: boolean;
+      }
+    | null
+    | undefined,
+): boolean {
+  if (!user) return false;
+  const ageRequired =
+    user.age_confirmation_required ?? user.birthdate_required ?? false;
+  return !ageRequired && user.cross_border_consent_recorded === true;
 }

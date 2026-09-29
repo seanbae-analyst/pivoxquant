@@ -18,7 +18,7 @@ import pytest
 # calls), auth/billing/broker mutations. 4xx is fine (missing param / empty) — we
 # only flag 5xx crashes and non-finite numbers.
 READ_ENDPOINTS = [
-    "/api/portfolio", "/api/profile", "/api/profile/capital",
+    "/api/portfolio/positions", "/api/profile", "/api/profile/capital",
     "/api/risk/var", "/api/risk/drawdown", "/api/risk/stress-test",
     "/api/risk/component-es", "/api/risk/defense-status",
     "/api/signals", "/api/signals/herding",

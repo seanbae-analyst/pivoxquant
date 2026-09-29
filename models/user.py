@@ -100,6 +100,27 @@ NOTIFICATION_PREF_DEFAULTS: dict[str, dict[str, bool]] = {
 }
 
 
+def notification_pref_value(stored, event_id: str, channel: str) -> bool:
+    """알림 설정 한 칸의 값 — 발신 게이트(``User.notification_channel_enabled``)
+    와 설정 화면(``routes/notifications._merged_prefs``)이 같이 쓰는 한 벌.
+
+      1. 알 수 없는 event_id → True (fail-open, 모르는 라벨을 조용히 막지 않는다).
+      2. 알려진 채널인데 ``NOTIFICATION_EVENT_CHANNELS[event_id]`` 밖 → False.
+         발신자가 없는 채널이다 — 저장값이 True 여도 꺼짐 (2026-09-29).
+      3. 저장된 bool 이 있으면 그 값.
+      4. 없으면 ``NOTIFICATION_PREF_DEFAULTS``; 모르는 채널 → True (fail-open).
+    """
+    defaults = NOTIFICATION_PREF_DEFAULTS.get(event_id)
+    if defaults is None:
+        return True
+    if channel in NOTIFICATION_CHANNELS and channel not in NOTIFICATION_EVENT_CHANNELS.get(event_id, ()):
+        return False
+    event_stored = stored.get(event_id) if isinstance(stored, dict) else None
+    if isinstance(event_stored, dict) and isinstance(event_stored.get(channel), bool):
+        return event_stored[channel]
+    return defaults.get(channel, True)
+
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     id               = db.Column(db.Integer,     primary_key=True)
@@ -294,30 +315,14 @@ class User(UserMixin, db.Model):
     def notification_channel_enabled(self, event_id: str, channel: str) -> bool:
         """Whether *channel* is enabled for *event_id* for this user.
 
-        Resolution order:
-          1. Stored ``notification_prefs[event_id][channel]`` if present
-             (and a real bool).
-          2. ``NOTIFICATION_PREF_DEFAULTS[event_id][channel]`` otherwise.
-          3. For an **unknown** ``event_id`` (not in the canonical seven) we
-             return ``True`` — fail-open. The enforcement gate must never
-             silently swallow a notification just because the caller passed a
-             label we don't recognise; that would be a worse failure mode than
-             an over-send. Unknown *channel* on a known event likewise → True.
+        Rules live in :func:`notification_pref_value` (shared with the
+        Settings GET). In short: a known channel with no sender for this
+        event → False; else the stored bool; else the default. An **unknown**
+        ``event_id`` or channel fails open (True) — the enforcement gate must
+        never silently swallow a notification because the caller passed a
+        label we don't recognise.
         """
-        defaults = NOTIFICATION_PREF_DEFAULTS.get(event_id)
-        if defaults is None:
-            # Unknown event id — fail-open (never silently mute).
-            return True
-
-        stored = self.notification_prefs or {}
-        event_stored = stored.get(event_id) if isinstance(stored, dict) else None
-        if isinstance(event_stored, dict) and channel in event_stored:
-            val = event_stored[channel]
-            if isinstance(val, bool):
-                return val
-
-        # Fall back to the per-event default; unknown channel → fail-open.
-        return defaults.get(channel, True)
+        return notification_pref_value(self.notification_prefs, event_id, channel)
 
     @property
     def age_confirmed(self) -> bool:

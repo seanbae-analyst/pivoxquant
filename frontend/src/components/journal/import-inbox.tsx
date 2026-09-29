@@ -14,6 +14,12 @@
  *     ("Long Entry · 진입" / "Position Exit · 정리"), never a raw wire code.
  *   - `pre_trade_reflection_id` is surfaced as a plain fact: "멈춤 기록 있음"
  *     vs "멈춤 없이" — never a score or a judgement.
+ *   - Buy rows (2026-09-29): when a linkable pause exists for the ticker —
+ *     the import-time match first, else the most recent unlinked one — the
+ *     same <ReflectionLinkLine /> as the trade modal replaces that caption
+ *     (checkbox default ON). Approve then sends `reflection_id` explicitly:
+ *     the id when checked, `null` + `reflection_declined: true` when
+ *     unchecked (= do not link, and do not infer one later).
  *   - `needs_ticker` rows get the same debounced /api/search autocomplete the
  *     add-position modal uses; confirming PATCHes the row. The search is armed
  *     only once the user focuses or types in the box — thirty unresolved rows
@@ -29,6 +35,11 @@ import { motion } from "motion/react";
 import { useT, useLocale } from "@/lib/locale";
 import { usePendingImports } from "@/lib/hooks";
 import { mutate as globalMutate } from "swr";
+import {
+  ReflectionLinkLine,
+  reflectionLinkBody,
+  useReflectionLink,
+} from "@/components/pre-trade/reflection-link-line";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { displayName, parseIsoUtc } from "@/lib/format";
@@ -329,17 +340,27 @@ export function PendingTradeRow({
   // Same wording as the /journal entries: "Long Entry · 진입" / "Position Exit · 정리".
   const sideText = sideLabel(row.action);
   const nameLabel = row.ticker ? displayName(row.ticker, row.name) : row.name;
+  // Buy ↔ pause link (2026-09-29): buy rows with a resolved ticker only.
+  const reflectionLink = useReflectionLink(
+    row.action === "BUY" && !row.needs_ticker ? row.ticker : null,
+    row.pre_trade_reflection_id,
+  );
 
   async function approve() {
     if (!canApprove) return;
     setBusy("approve");
     setError(null);
     try {
+      const body: Record<string, unknown> = { thesis: thesis.trim() };
+      if (needsConfirm) body.confirm_values = true;
+      // A shown link line makes the choice explicit — the id, or null +
+      // `reflection_declined: true` (unchecked). With no line the keys are
+      // omitted and the server keeps its import-time match rule
+      // (services/pre_trade/link.py).
+      Object.assign(body, reflectionLinkBody(reflectionLink));
       await apiFetch<ImportApproveResponse>(API.imports.approve(row.id), {
         method: "POST",
-        body: JSON.stringify(
-          needsConfirm ? { thesis: thesis.trim(), confirm_values: true } : { thesis: thesis.trim() },
-        ),
+        body: JSON.stringify(body),
       });
       onChanged(null);
       void refreshBookAfterApprove();
@@ -424,11 +445,17 @@ export function PendingTradeRow({
           </span>
         )}
       </div>
-      <Caption className="mt-1">
-        {row.pre_trade_reflection_id != null
-          ? t("journal.import.reflectionMatched")
-          : t("journal.import.reflectionNone")}
-      </Caption>
+      {reflectionLink.candidate ? (
+        <div className="mt-3">
+          <ReflectionLinkLine link={reflectionLink} />
+        </div>
+      ) : (
+        <Caption className="mt-1">
+          {row.pre_trade_reflection_id != null
+            ? t("journal.import.reflectionMatched")
+            : t("journal.import.reflectionNone")}
+        </Caption>
+      )}
 
       {needsConfirm && (
         <div

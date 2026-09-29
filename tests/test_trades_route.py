@@ -1,8 +1,11 @@
-"""tests/test_trades_route.py — /api/trades user isolation.
+"""tests/test_trades_route.py — GET /api/portfolio/trades user isolation.
 
-Wave 11 (P1 critical path) — trades_bp had no direct HTTP test. Trades
+Wave 11 (P1 critical path) — trade history had no direct HTTP test. Trades
 are user-private financial records; an isolation regression here would
-leak one user's history to another. We verify:
+leak one user's history to another. 2026-09-29: the old GET /api/trades
+(routes/trades.py, no frontend consumer) was removed; these assertions now
+run against the live list endpoint the /portfolio page reads
+(PORTFOLIO_TRADES). We verify:
 
   - GET returns only the authenticated user's trades.
   - Other users' trades are excluded even when the DB has both.
@@ -39,11 +42,11 @@ class TestTradesOwnTrades:
         _make_trade(app, auth_user["id"], ticker="AAPL", action="BUY")
         _make_trade(app, auth_user["id"], ticker="MSFT", action="SELL")
 
-        r = client.get("/api/trades")
+        r = client.get("/api/portfolio/trades")
         assert r.status_code == 200, r.get_json()
         body = r.get_json()
         assert "trades" in body
-        tickers = {t["ticker"] for t in body["trades"]}
+        tickers = {t["symbol"] for t in body["trades"]}
         assert tickers == {"AAPL", "MSFT"}
 
 
@@ -64,9 +67,9 @@ class TestTradesUserIsolation:
         _make_trade(app, other["id"], ticker="TSLA", action="BUY")
         _make_trade(app, other["id"], ticker="NVDA", action="SELL")
 
-        r = client.get("/api/trades")
+        r = client.get("/api/portfolio/trades")
         assert r.status_code == 200, r.get_json()
-        tickers = {t["ticker"] for t in r.get_json()["trades"]}
+        tickers = {t["symbol"] for t in r.get_json()["trades"]}
         assert "AAPL" in tickers
         assert "TSLA" not in tickers, "IDOR: other user's trade leaked"
         assert "NVDA" not in tickers, "IDOR: other user's trade leaked"

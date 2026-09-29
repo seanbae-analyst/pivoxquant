@@ -253,7 +253,6 @@ def get_mirror_home():
         "declared": {
             "label": declared_label,
             "tagline": declared.get("tagline"),
-            "score": declared.get("score"),
             # "self" = axes come from the user's own V3 answers;
             # "centroid" = persona-centroid fallback (pre-V3 / skipped).
             "source": declared_source,

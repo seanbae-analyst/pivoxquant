@@ -519,7 +519,7 @@ def init_security(app):
 # ── Rate Limit Decorators for Routes ─────────────────────────────────────────
 # Usage in route files:
 #   from security import trade_rate_limit
-#   @trades_bp.route("/trades", methods=["POST"])
+#   @portfolio_bp.route("/trades", methods=["POST"])
 #   @trade_rate_limit
 #   def add_trade(): ...
 #

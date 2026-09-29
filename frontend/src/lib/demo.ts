@@ -48,7 +48,7 @@ export const DEMO_USER: User = {
 const DEMO_MIRROR_HOME: MirrorHomeResponse = {
   ok: true,
   stage: "observed",
-  declared: { label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다.", score: 78 },
+  declared: { label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다." },
   observed: { label: "균형형", bucket_changed: true, trade_count: 23 },
   gap: [
     { key: "sector_diversity", label: "섹터 분산", direction: "up", delta: 0.4, declared: 0.45, observed: 0.85 },
@@ -269,24 +269,18 @@ function _demoNotesByTicker(base: string) {
   return { ok: true, ticker, count: notes.length, notes };
 }
 
-/* ── Living CFO Layer-2 + profile depth (usePersona / usePulse / useRollingWindow,
+/* ── Living CFO Layer-2 + profile depth (usePersona / usePulse,
  *    lib/cfo/hooks.ts). In demo mode apiFetch resolves {} WITHOUT throwing, so the
  *    cfoFetch mock fallback never fires — these must be canned or L2 reads "missing"
  *    on every page's status bar. window_30d present + ≥3 pulses ⇒ L2 "ready". ── */
-const _wkBase = Date.parse("2026-03-27T00:00:00Z");
 const DEMO_PERSONA = {
-  declared: { persona: "growth", label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다.", score: 78 },
+  declared: { persona: "growth", label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다." },
   observed: {
     window_30d: { date: "2026-06-18", persona: "balanced", score: 72 },
     window_60d: { date: "2026-05-19", persona: "growth", score: 70 },
     window_90d: { date: "2026-04-19", persona: "growth", score: 74 },
   },
-  sparkline: Array.from({ length: 12 }, (_, i) => ({
-    week: new Date(_wkBase + i * 7 * 86_400_000).toISOString().slice(0, 10),
-    score: Math.round(70 + 6 * Math.sin(i / 2.4) + (i >= 8 ? 4 : 0)),
-  })),
   last_computed_at: "2026-06-18T07:30:00+09:00",
-  drift: 18,
 };
 const DEMO_PULSE = {
   history: [
@@ -298,19 +292,6 @@ const DEMO_PULSE = {
   next_due_at: "2026-06-23T22:00:00Z",
   cadence: "weekly",
 };
-const _rwBase2 = Date.parse("2026-03-20T00:00:00Z");
-const _rw = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({
-    date: new Date(_rwBase2 + i * 86_400_000).toISOString().slice(0, 10),
-    holdingPeriod: Math.round(26 + 7 * Math.sin(i / 6)),
-    turnover: +(0.18 + 0.06 * Math.cos(i / 7)).toFixed(2),
-    sectorTilt: +(0.34 + 0.09 * Math.abs(Math.sin(i / 8))).toFixed(2),
-  }));
-const DEMO_ROLLING_WINDOW = {
-  series: { window_30d: _rw(30), window_60d: _rw(60), window_90d: _rw(90) },
-  contrast: { declared_persona: "growth", declared_score: 78, observed_persona: "balanced", observed_score: 72, window_days: 30 },
-};
-
 /* ── Portfolio equity curve (/api/portfolio/history?period=) + trades. Backend
  *    shape = { data:[{date,value,benchmark}], benchmark:{name} }; hooks-v2
  *    normalizes. NAV grows to the canned summary total (~65,633 USD-unified). ── */
@@ -337,8 +318,6 @@ const DEMO_TRADES = {
     { id: 1, date: "2026-05-04T01:50:00Z", symbol: "JPM", name: "JPMorgan Chase", side: "buy", shares: 30, price: 248.0, amount: 7440, currency: "USD" },
   ],
 };
-/* Full /api/portfolio (legacy) so RealtimeProvider sees positions ⇒ ribbon "● Live". */
-const DEMO_FULL_PORTFOLIO = { positions: DEMO_POSITION_ROWS, total_value_usd: 65633, fx_rate: FX };
 
 /* ── Per-ticker detail (/detail/[ticker]): signal hero + chart + company profile.
 
@@ -420,13 +399,10 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_PERSONA;
     case "/api/profile/pulse":
       return DEMO_PULSE;
-    case "/api/profile/rolling-window":
-      return DEMO_ROLLING_WINDOW;
-    // Portfolio equity/trades + legacy full read
+    // Portfolio trades. (The legacy full read GET /api/portfolio was removed
+    // 2026-09-29 — RealtimeProvider now gates on PORTFOLIO_POSITIONS above.)
     case "/api/portfolio/trades":
       return DEMO_TRADES;
-    case "/api/portfolio":
-      return DEMO_FULL_PORTFOLIO;
     default:
       return undefined;
   }

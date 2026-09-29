@@ -32,12 +32,12 @@ import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 
 // REMOVED 2026-04-27 per CEO + legal: "auto-trade" disclaimer kind retired
 // alongside the autotrade feature removal (투자일임업 등록 회피).
-type DisclaimerKind = "signal" | "coaching" | "behavior-mirror";
+// REMOVED 2026-09-29: "signal" (algorithmic signals) and "coaching" (AI
+// assistant) — both described deleted features. Record surfaces take "record".
+type DisclaimerKind = "record" | "behavior-mirror";
 
-/** Longest-prefix matching: more specific paths first. */
+/** Longest-prefix matching: more specific paths first. Unlisted → "record". */
 const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
-  // most specific / multi-segment first
-  ["/pre-trade", "coaching"],  // behavioural pre-trade surface — educational AI framing, not the default "signal"
   // /journal and /mirror show statistics computed from the user's own trades
   // and holdings, so they take the legally-tuned "behavior-mirror" copy (not a
   // medical / psychological service, not a recommendation). Both pages used to
@@ -46,9 +46,9 @@ const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   // hidden. Mounting it once, here, from the path map fixes both.
   ["/journal", "behavior-mirror"],
   ["/mirror", "behavior-mirror"],
-  ["/portfolio", "signal"],
-  ["/settings", "signal"],
-  ["/mirror", "signal"],
+  // /pre-trade (the user's own written reasons), /portfolio (holdings and
+  // trades they entered or imported), /settings and /support fall through to
+  // "record".
 ];
 
 /** Routes that need the banner force-expanded (highest-risk surfaces). */
@@ -93,12 +93,12 @@ export function nextAuthRedirect(
   return null;
 }
 
-function resolveDisclaimerType(pathname: string | null): DisclaimerKind {
-  if (!pathname) return "signal";
+export function resolveDisclaimerType(pathname: string | null): DisclaimerKind {
+  if (!pathname) return "record";
   for (const [prefix, kind] of PATH_TO_TYPE) {
     if (pathname === prefix || pathname.startsWith(prefix + "/")) return kind;
   }
-  return "signal";
+  return "record";
 }
 
 function shouldAlwaysExpand(pathname: string | null): boolean {
@@ -155,7 +155,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         // silently dropping a consent the user gave at signup.
         const [mkt, xb] = await Promise.allSettled([
           flushPendingMarketingConsent(snapshot),
-          flushPendingCrossBorderConsent(snapshot),
+          // Server already has the record (oauth-finalize) → no re-POST.
+          flushPendingCrossBorderConsent(snapshot, {
+            serverRecorded: user.cross_border_consent_recorded === true,
+          }),
         ]);
         const ok = (r: PromiseSettledResult<boolean>) =>
           r.status === "fulfilled" && r.value === true;

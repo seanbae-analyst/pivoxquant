@@ -4,7 +4,6 @@ Also hosts the **Living CFO Layer 2** endpoints consumed by
 ``frontend/src/lib/cfo/hooks.ts``:
 
     GET  /api/profile/persona
-    GET  /api/profile/rolling-window
     POST /api/profile/feedback
     GET  /api/profile/pulse
     POST /api/profile/pulse
@@ -62,9 +61,9 @@ from models import (
     WeeklyPulse,
 )
 from services.error_responses import api_error
+from services.serializers import serialize_trade
 from services.profile import (
     compute_persona_response,
-    compute_rolling_response,
     classify_persona_multi,
     explain_persona_classification,
     DRIFT_DISCLAIMER,
@@ -751,26 +750,6 @@ def get_persona_explain():
     return jsonify(payload)
 
 
-@profile_bp.route("/rolling-window", methods=["GET"])
-@api_auth
-def get_rolling_window():
-    """Return 30/60/90-day rolling behavioural metrics for Layer 2.
-
-    Shape: see ``RollingWindowResponse`` in
-    ``frontend/src/lib/cfo/hooks.ts``.
-    """
-    try:
-        payload = compute_rolling_response(current_user.id)
-    except Exception:
-        logger.exception("profile.get_rolling_window failed (user_id=%s)", current_user.id)
-        return api_error(
-            en="Failed to compute rolling window",
-            kr="롤링 윈도우 분석에 실패했습니다.",
-            code="ROLLING_WINDOW_FAILED", status=500,
-        )
-    return jsonify(payload)
-
-
 # ── Feedback ──────────────────────────────────────────────────────────────
 
 # Per-section free-text length cap. Keep short — this is a vote, not an
@@ -1219,60 +1198,15 @@ def get_persona_benchmark_all():
 # observational framing the legal filter expects is always present.
 
 
-# Bound the timeline lookback. ``days_back`` matches the service-layer
-# clamp (1..365) but we keep a separate constant for clarity at the
-# route boundary.
-_HISTORY_MIN_DAYS = 1
-_HISTORY_MAX_DAYS = 365
+# Lookback for /persona-drift.
 _HISTORY_DEFAULT_DAYS = 180
 
 
-@profile_bp.route("/persona-history", methods=["GET"])
-@api_auth
-@legal_scrub_response
-def get_persona_history():
-    """Return the authenticated user's PersonaSnapshot timeline.
-
-    Query params:
-        days: int (default 180, bounded to [1, 365])
-
-    Response shape:
-        {
-            "snapshots": [...],   # oldest → newest
-            "n":         int,
-            "days":      int,
-            "disclaimer": "...",
-        }
-
-    Empty list when no snapshots exist — the API always returns HTTP
-    200 so SWR doesn't fall back to mocks for fresh users.
-    """
-    raw = request.args.get("days", str(_HISTORY_DEFAULT_DAYS))
-    try:
-        days = int(raw)
-    except (TypeError, ValueError):
-        days = _HISTORY_DEFAULT_DAYS
-    days = max(_HISTORY_MIN_DAYS, min(_HISTORY_MAX_DAYS, days))
-
-    try:
-        snapshots = get_history(current_user.id, days_back=days)
-    except Exception:
-        logger.exception(
-            "profile.get_persona_history failed (user_id=%s, days=%s)",
-            current_user.id, days,
-        )
-        return api_error(
-            en="Failed to load persona history",
-            kr="페르소나 이력을 불러오지 못했습니다.",
-            code="PERSONA_HISTORY_FAILED", status=500,
-        )
-
-    return jsonify({
-        "snapshots": snapshots,
-        "n": len(snapshots),
-        "days": days,
-        "disclaimer": DRIFT_DISCLAIMER,
-    })
+# 2026-09-29: GET /persona-history (raw PersonaSnapshot timeline) removed.
+# It existed for the frontend Evolution Timeline, which had no endpoints.ts
+# symbol and whose last form — /mirror's PersonaEvolution score chart — was
+# deleted (scores are not made, CLAUDE.md). get_history/compute_drift stay:
+# /mirror's drift text (routes/mirror_home.py) and /persona-drift use them.
 
 
 @profile_bp.route("/persona-drift", methods=["GET"])
@@ -1377,6 +1311,12 @@ def post_persona_snapshot():
 # token-based public unsubscribe link (GET /api/email/unsubscribe) lives
 # in routes/email_preferences.py and bypasses CSRF on purpose — see that
 # module for the rationale.
+#
+# Ownership (2026-09-29): ``email_opt_out`` is written by THIS route (the
+# Settings email-delivery toggle), the token unsubscribe link and the
+# bounce/spam webhook — never by the marketing-consent routes
+# (routes/consents.py). Consent is the legal basis; this is the user's
+# delivery preference. The monthly report needs both plus the matrix cell.
 
 @profile_bp.route("/email-preferences", methods=["PATCH"])
 @api_auth
@@ -1673,22 +1613,6 @@ def _serialize_watchlist(w) -> dict:
         "ticker": w.ticker,
         "note": getattr(w, "note", None),
         "added_at": _iso_or_none(getattr(w, "added_at", None)),
-    }
-
-
-def _serialize_trade(t) -> dict:
-    return {
-        "id": t.id,
-        "ticker": t.ticker,
-        "name": getattr(t, "name", None),
-        "action": t.action,
-        "shares": t.shares,
-        "price_per_share": t.price_per_share,
-        "total_value": t.total_value,
-        "pnl": getattr(t, "pnl", None),
-        "pnl_pct": getattr(t, "pnl_pct", None),
-        "currency": getattr(t, "currency", None),
-        "traded_at": _iso_or_none(getattr(t, "traded_at", None)),
     }
 
 
@@ -2457,8 +2381,8 @@ def export_profile():
     (ai_twin_positions / ai_twin_trades → ai_twin_portfolios.id) resolve the
     user's parent ids first, then filter. Global / non-user tables
     (signal_cache, persona_group_stats, processed_stripe_events,
-    agent_kill_switch) are out of scope. Keep in sync with the two deletion
-    paths (auth.py:delete_account + pipa_purge.py:_delete_user_cascade).
+    agent_kill_switch) are out of scope. Keep in sync with the deletion
+    list (services/account_erasure.py — shared by delete_account + pipa_purge).
 
     Excluded (PII minimization — the user may not self-exfiltrate secrets):
         - password_hash
@@ -2833,7 +2757,7 @@ def export_profile():
         "user": _serialize_user(user),
         "positions": [_serialize_position(p) for p in positions],
         "watchlist": [_serialize_watchlist(w) for w in watchlist],
-        "trade_history": [_serialize_trade(t) for t in trades],
+        "trade_history": [serialize_trade(t) for t in trades],
         "alerts": [_serialize_alert(a) for a in alerts],
         "investment_profile": (
             investment_profile.to_dict() if investment_profile else None

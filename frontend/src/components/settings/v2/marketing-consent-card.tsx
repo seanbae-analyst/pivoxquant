@@ -20,10 +20,14 @@
  * Wiring
  * ------
  * - Initial state hydrated via `fetchMarketingConsent()` (GET).
- * - Toggle ON  → POST   /api/consents/marketing  (also clears email_opt_out)
- * - Toggle OFF → DELETE /api/consents/marketing  (also sets   email_opt_out)
+ * - Toggle ON  → POST   /api/consents/marketing
+ * - Toggle OFF → DELETE /api/consents/marketing
  * Both calls land in `routes/consents.py` from PR #73. Optimistic UI;
- * on backend failure we revert and toast.
+ * on backend failure we revert and toast. 2026-09-29: neither call touches
+ * `email_opt_out` any more — that is the B2 email-delivery toggle's switch.
+ * `onConsentChange` reports the effective opt-in (after hydration and after
+ * every committed toggle) so the notifications matrix can say when this
+ * card is what keeps the monthly report from being sent.
  *
  * Visual layer matches sibling C1/C2 cards (push, email-delivery) verbatim:
  * Vantablack ink, Bronze hairline header, ivory body type — no new tokens.
@@ -32,6 +36,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
+import { MARKETING_CONSENT_ANCHOR } from "@/components/settings/v2/notifications-matrix";
 import {
   fetchMarketingConsent,
   recordMarketingConsent,
@@ -54,7 +59,12 @@ function formatTimestamp(iso: string | null): string | null {
   });
 }
 
-export function MarketingConsentCardV2() {
+export function MarketingConsentCardV2({
+  onConsentChange,
+}: {
+  /** Effective opt-in, reported after hydration and after each committed toggle. */
+  onConsentChange?: (optedIn: boolean) => void;
+} = {}) {
   const [state, setState] = React.useState<MarketingConsentState | null>(null);
   const [loaded, setLoaded] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -83,6 +93,11 @@ export function MarketingConsentCardV2() {
   }, []);
 
   const optedIn = state?.opted_in ?? false;
+
+  // Report the committed state (not the optimistic flip) to the host.
+  React.useEffect(() => {
+    if (loaded && !busy) onConsentChange?.(optedIn);
+  }, [loaded, busy, optedIn, onConsentChange]);
   const stampedAt = formatTimestamp(state?.marketing_consent_at ?? null);
   const revokedAt = formatTimestamp(state?.marketing_consent_revoked_at ?? null);
 
@@ -116,12 +131,14 @@ export function MarketingConsentCardV2() {
 
   return (
     <div
+      id={MARKETING_CONSENT_ANCHOR}
       style={{
         background: "rgba(255,255,255,0.02)",
         border: "1px solid var(--pq-ivory-line)",
         borderRadius: 4,
         padding: 24,
         position: "relative",
+        scrollMarginTop: 96,
       }}
     >
       <span

@@ -8,7 +8,6 @@ def register_blueprints(app):
     from .market import market_bp
     from .alerts import alerts_bp
     from .notifications import notifications_bp
-    from .trades import trades_bp
     from .realtime import realtime_bp
     from .profile import profile_bp
     from .billing import billing_bp
@@ -34,7 +33,7 @@ def register_blueprints(app):
         data_status_bp,
 
         auth_bp, auth_alias_bp, portfolio_bp,
-        market_bp, alerts_bp, notifications_bp, trades_bp,
+        market_bp, alerts_bp, notifications_bp,
         realtime_bp, profile_bp,
         billing_bp, push_bp,
         pre_trade_bp, behavior_bp,

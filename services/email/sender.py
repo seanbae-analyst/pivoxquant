@@ -38,6 +38,13 @@ Behaviour parity (must remain identical to the Phase 2 baseline)
    flips the order so Brevo is tried first and SendGrid is the
    fallback — useful when SendGrid's domain reputation degrades or
    its 100/day cap is exhausted early in the day.
+
+   2026-09-29: the order itself is no longer decided here —
+   :func:`services.email.system_mail.provider_order` owns it for every
+   sender (billing, support, this class). The SendGrid leg goes through
+   :func:`services.email.sendgrid_provider.send_tracked` instead of a
+   second copy of the SDK calls. Consent / opt-out / matrix gates are
+   unchanged and stay in this class.
 4. **Headers (RFC 8058).** Every outgoing message — SendGrid or SMTP —
    gets ``List-Unsubscribe: <url>`` plus ``List-Unsubscribe-Post:
    List-Unsubscribe=One-Click``. Gmail / Outlook surface the inbox-
@@ -63,7 +70,6 @@ the source of truth.
 """
 from __future__ import annotations
 
-import base64
 import logging
 import os
 import smtplib
@@ -399,21 +405,13 @@ class EmailSender:
 
         # ── 3. provider cascade: SendGrid → Brevo → SMTP ───────────────
         # Operational override: ``BREVO_PROVIDER_PRIMARY=true`` flips
-        # the first two tiers (Brevo first, SendGrid fallback). SMTP
-        # remains the last-resort transport in both orderings. The
-        # lazy import below avoids loading the provider modules when
-        # only SMTP / dev-mode is configured.
-        from services.email import brevo_provider as _brevo_provider  # local import
-
+        # the first two tiers (Brevo first, SendGrid fallback) — decided by
+        # ``system_mail.provider_order()`` below. SMTP remains the
+        # last-resort transport in both orderings.
         sg_key = os.environ.get("SENDGRID_API_KEY")
-        brevo_first = _brevo_provider.is_primary()
 
-        # Build the ordered tier list once so we don't repeat the
-        # ``brevo_first`` branch logic. Each entry is
-        # ``(label, predicate, callable)``; the predicate gates whether
-        # the tier is even attempted (e.g. SendGrid skipped when
-        # ``SENDGRID_API_KEY`` is unset). Each callable raises on
-        # non-2xx; ``True`` short-circuits the cascade.
+        # Each tier entry is ``(label, configured, callable)``. Each callable
+        # raises on non-2xx; ``True`` short-circuits the cascade.
         def _try_sendgrid() -> bool:
             # Returns the raw SendGrid X-Message-Id (truthy str) on success
             # so the cascade can stash it on ``self.last_message_id``. A
@@ -454,23 +452,18 @@ class EmailSender:
                 reply_to=reply_to,
             )
 
-        # Brevo predicate: any of the two accepted env keys present.
-        brevo_configured = bool(
-            os.environ.get("BREVO_API_KEY")
-            or os.environ.get("SENDINBLUE_API_KEY")
-        )
+        # Order + "is it configured" come from the shared rule
+        # (services.email.system_mail.provider_order) — the same one billing
+        # and support use. Every listed provider is configured.
+        from services.email.system_mail import BREVO, SENDGRID, provider_order
 
-        tiers: list[tuple[str, bool, Any]] = (
-            [
-                ("Brevo", brevo_configured, _try_brevo),
-                ("SendGrid", bool(sg_key), _try_sendgrid),
-            ]
-            if brevo_first
-            else [
-                ("SendGrid", bool(sg_key), _try_sendgrid),
-                ("Brevo", brevo_configured, _try_brevo),
-            ]
-        )
+        _tier_for = {
+            BREVO: ("Brevo", True, _try_brevo),
+            SENDGRID: ("SendGrid", True, _try_sendgrid),
+        }
+        tiers: list[tuple[str, bool, Any]] = [
+            _tier_for[name] for name in provider_order()
+        ]
 
         for label, configured, attempt in tiers:
             if not configured:
@@ -574,85 +567,34 @@ class EmailSender:
         (older stubs / some mocks) we return ``True`` to preserve the legacy
         truthy success contract.
 
-        Imports SendGrid lazily — keeps the dependency optional in
-        local dev (where ``pip install sendgrid`` may be skipped) and
-        in tests that mock the transport.
+        2026-09-29: delegates to
+        :func:`services.email.sendgrid_provider.send_tracked` (one copy of
+        the SDK calls, timeout and error typing). ``max_retries=1`` keeps the
+        old behaviour of falling through to Brevo / SMTP at once on a 5xx.
+        ``sg_key`` is kept for call-site compatibility; the provider reads
+        ``SENDGRID_API_KEY`` itself.
         """
-        from sendgrid import SendGridAPIClient  # type: ignore[import-not-found]
-        from sendgrid.helpers.mail import (  # type: ignore[import-not-found]
-            Attachment,
-            Disposition,
-            FileContent,
-            FileName,
-            FileType,
-            Mail,
-        )
+        from services.email import sendgrid_provider as _sg
 
-        from_value = self._format_from(display_name, from_email)
-        mail = Mail(
-            from_email=from_value,
-            to_emails=to_email,
+        headers = {
+            "List-Unsubscribe": f"<{unsubscribe_url}>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        }
+        return _sg.send_tracked(
+            # Post-gate: EmailSender.send already vetted sim-user / consent.
+            _sg.SystemMailRecipient(email=to_email),
             subject=subject,
-            html_content=html_body,
+            html_body=html_body,
+            from_email=from_email,
+            from_name=(display_name or "").replace('"', "").strip() or None,
+            reply_to=reply_to or None,
+            headers=headers,
+            pdf_bytes=pdf_bytes,
+            pdf_filename=pdf_filename,
+            attachment_mime=attachment_mime,
+            honour_consent=False,  # gates above already applied
+            max_retries=1,
         )
-
-        if pdf_bytes:
-            enc = base64.b64encode(pdf_bytes).decode()
-            mail.attachment = Attachment(
-                FileContent(enc),
-                FileName(pdf_filename or "report.pdf"),
-                FileType(attachment_mime),
-                Disposition("attachment"),
-            )
-
-        # Headers (Reply-To + List-Unsubscribe). SendGrid's Header
-        # helper occasionally raises during init on broken deps — keep
-        # the import inside the try and log+continue rather than
-        # blowing up the whole send for a header issue.
-        try:
-            from sendgrid.helpers.mail import Header  # type: ignore[import-not-found]
-
-            mail.add_header(Header("List-Unsubscribe", f"<{unsubscribe_url}>"))
-            mail.add_header(
-                Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
-            )
-            if reply_to:
-                mail.add_header(Header("Reply-To", reply_to))
-        except Exception:
-            logger.debug(
-                "SendGrid header injection failed", exc_info=True,
-            )
-
-        # SendGrid SDK는 python_http_client 기반. 기본 timeout이 무한이라
-        # send()가 hang될 수 있음 → 명시적 10s timeout 주입.
-        sg_client = SendGridAPIClient(sg_key)
-        try:
-            # python_http_client.Client.timeout 속성 (urllib2 timeout)
-            sg_client.client.timeout = 10
-        except Exception:
-            logger.debug("SendGrid timeout set failed", exc_info=True)
-        response = sg_client.send(mail)
-
-        # Capture the X-Message-Id response header so the SendGrid event
-        # webhook can later map bounce/spam/open events back to the
-        # Artifact row. ``response.headers`` may be a dict or a
-        # case-insensitive mapping depending on SDK version; guard for
-        # both and for the header being absent (return True → still a
-        # success, just untrackable).
-        try:
-            headers = getattr(response, "headers", None)
-            msg_id = None
-            if headers is not None:
-                getter = getattr(headers, "get", None)
-                if callable(getter):
-                    msg_id = headers.get("X-Message-Id") or headers.get(
-                        "x-message-id"
-                    )
-            if msg_id:
-                return str(msg_id)
-        except Exception:
-            logger.debug("SendGrid X-Message-Id capture failed", exc_info=True)
-        return True
 
     def _send_via_brevo(
         self,

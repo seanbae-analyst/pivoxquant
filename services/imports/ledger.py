@@ -25,6 +25,7 @@ from models import Position, PreTradeReflection, TradeHistory
 from models.import_batch import PendingTrade
 from services import fx_service
 from services.kr_stock_registry import get_name
+from services.position_writes import FREE_POSITION_CAP
 from services.ticker_normalizer import is_korean_ticker
 
 from . import utcnow_naive
@@ -150,9 +151,6 @@ def apply_pending(user_id: int, pending: PendingTrade, thesis: str) -> tuple[int
     db.session.add(trade)
     db.session.flush()
     return trade.id, position_id
-
-
-FREE_POSITION_CAP = 3
 
 
 def _enforce_position_cap(user_id: int) -> None:

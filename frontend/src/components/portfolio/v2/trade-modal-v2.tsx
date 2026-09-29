@@ -41,6 +41,11 @@ import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
 import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
+import {
+  ReflectionLinkLine,
+  reflectionLinkBody,
+  useReflectionLink,
+} from "@/components/pre-trade/reflection-link-line";
 
 interface TradeModalV2Props {
   open: boolean;
@@ -145,6 +150,8 @@ export function TradeModalV2({
   // Inline Pre-Trade Friction — only for buy (ENTRY) / sell (EXIT) in REVIEW
   // mode. Edit commits directly; RECORD mode skips friction.
   const [frictionOpen, setFrictionOpen] = React.useState(false);
+  // 2026-09-29 — record-mode buy: offer to link a recent pause on this ticker.
+  const reflectionLink = useReflectionLink(action === "buy" && mode === "record" ? position?.symbol : null);
 
   // Mode-aware copy for buy/sell; edit always uses its static entry.
   const copy = action === "edit" ? COPY.edit : modeCopy(action, mode);
@@ -261,7 +268,7 @@ export function TradeModalV2({
   // Commit the real buy/sell trade. Two callers:
   //   - RECORD mode: directly from handleSubmit (no friction).
   //   - REVIEW mode: from the friction modal's onProceed.
-  async function commitTrade() {
+  async function commitTrade(reviewReflectionId?: number) {
     if (!position) return;
     const parsedQty = Number(shares);
     const parsedPrice = Number(price);
@@ -276,6 +283,11 @@ export function TradeModalV2({
           price: parsedPrice,
           date,
           note: note.trim(),
+          // Review buy → the pause it just made; record buy → the link line's
+          // choice (id, or an explicit decline when the shown pause was unchecked).
+          ...(reviewReflectionId != null
+            ? { reflection_id: reviewReflectionId }
+            : reflectionLinkBody(reflectionLink)),
         }),
       });
       toast.success(copy.toast);
@@ -534,6 +546,7 @@ export function TradeModalV2({
                   />
                 </FormField>
               )}
+              <ReflectionLinkLine link={reflectionLink} />
             </>
           )}
 
@@ -614,8 +627,9 @@ export function TradeModalV2({
         tickerName={position.name}
         shares={shares}
         rationale={note}
-        onProceed={async () => {
-          await commitTrade();
+        onProceed={async (reflectionId) => {
+          // A buy after the seven questions is linked to the pause it just made.
+          await commitTrade(action === "buy" ? reflectionId : undefined);
           setFrictionOpen(false);
           onClose();
         }}

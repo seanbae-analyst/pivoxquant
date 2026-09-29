@@ -11,16 +11,14 @@ computed by the product's own functions over the account's full history:
 * 추가매수 — :func:`services.behavior.averaging_down_mirror.compute_averaging_down_mirror`
 * 손익처분 — :func:`services.behavior.profit_loss_mirror.compute_profit_loss_mirror`
 
-"전체 이력" runs those three functions unchanged, so that block says
-exactly what the product would say about this account. "최근 N일" is
-computed here from the rebuilt book instead: the product functions treat
-their window as the whole world (a follow-on buy whose first lot predates
-the window reads as an opening buy; a sell whose lot predates the window
-drops out of the profit/loss pairs), which is right for a cohort scan and
-wrong for one person's recent stretch. The recent block therefore keeps
-the full-history cost basis and simply restricts *which fills* it counts
-to the window, anchored on today rather than on the last trade. The two
-blocks share vocabulary and shape so the reader can lay them side by side. Positions are rebuilt by :mod:`services.toss.history`, and the
+Both blocks run those three functions unchanged, so they say exactly what
+the product would say about this account — no second copy of the math
+(CLAUDE.md: 두 벌 금지). "전체 이력" passes no window. "최근 N일" passes an
+explicit ``window_start``/``window_end`` = ``[as_of − N일, as_of]``, anchored
+on today rather than on the last trade; the functions keep the pre-window
+history for the average cost and FIFO lots, so a follow-on buy whose first
+lot predates the window is still a follow-on and a sale of an older lot
+still pairs. Positions are rebuilt by :mod:`services.toss.history`, and the
 report says in its first lines whether that rebuild agrees with Toss's
 own holdings; realised figures are called whole only when it does.
 
@@ -63,61 +61,25 @@ def _concentration(rows: list[dict]) -> dict:
     }
 
 
-def _window_block(book: dict, *, window_days: int, as_of_naive: datetime) -> dict:
-    """Same shape as the product mirrors, computed on the rebuilt book for
-    fills inside ``[as_of − window_days, as_of]``. See module docstring."""
-    start = as_of_naive - timedelta(days=window_days)
-    buys = [b for p in book.values() for b in p.buy_outcomes if start <= b.fill.at <= as_of_naive]
-    sells = [s for p in book.values() for s in p.sell_outcomes if start <= s.fill.at <= as_of_naive]
-    gross: dict[str, Decimal] = {}
-    for o in buys + sells:
-        gross[o.fill.currency] = gross.get(o.fill.currency, Decimal(0)) + o.fill.amount
-    holds = [s.held_days for s in sells]
-    n = len(buys) + len(sells)
-    turnover = {
-        "sufficient_data": n > 0, "period_days": window_days,
-        "trade_count": n, "buy_count": len(buys), "sell_count": len(sells),
-        "by_currency": [{"currency": c, "gross_value": float(v), "trade_count": sum(1 for o in buys + sells if o.fill.currency == c)}
-                        for c, v in sorted(gross.items(), key=lambda kv: (-kv[1], kv[0]))],
-        "median_hold_days": round(statistics.median(holds), 1) if holds else None,
-        "mean_hold_days": round(statistics.fmean(holds), 1) if holds else None,
+def _product_mirrors(trade_rows: list, **window) -> dict:
+    """The product's three mirrors, unchanged, with the n=1 floors."""
+    return {
+        "turnover": compute_turnover_mirror(trade_rows, min_trades=_MIN["min_trades"], **window),
+        "follow_on": compute_averaging_down_mirror(trade_rows, min_follow_on=_MIN["min_follow_on"], **window),
+        "profit_loss": compute_profit_loss_mirror(trade_rows, min_pairs=_MIN["min_pairs"], **window),
     }
-    fo = [b for b in buys if b.follow_on]
-    follow_on = {
-        "sufficient_data": bool(fo), "period_days": window_days,
-        "follow_on_count": len(fo) if fo else None,
-        "below_avg_count": sum(1 for b in fo if b.relation == "below") if fo else None,
-        "above_avg_count": sum(1 for b in fo if b.relation == "above") if fo else None,
-        "flat_count": sum(1 for b in fo if b.relation == "flat") if fo else None,
-        "by_ticker": [],
-    }
-    tp = [s for s in sells if s.pnl_pct > 0]
-    sl = [s for s in sells if s.pnl_pct < 0]
-
-    def side(xs, key):
-        if not xs:
-            return None
-        return {"count": len(xs),
-                "median_hold_days": round(statistics.median([x.held_days for x in xs]), 1),
-                "mean_hold_days": round(statistics.fmean([x.held_days for x in xs]), 1),
-                f"median_{key}_pct": round(statistics.median([x.pnl_pct for x in xs]), 2),
-                f"mean_{key}_pct": round(statistics.fmean([x.pnl_pct for x in xs]), 2)}
-    profit_loss = {
-        "sufficient_data": bool(tp or sl), "one_sided": bool(tp) != bool(sl),
-        "total_closed_pairs": len(sells), "take_profit": side(tp, "gain"), "stop_loss": side(sl, "loss"),
-    }
-    return {"turnover": turnover, "follow_on": follow_on, "profit_loss": profit_loss}
 
 
 def _mirrors(trade_rows: list, book: dict, *, window_days: int, as_of_naive: datetime) -> dict:
     ages = fifo_open_position_ages(trade_rows, reference_time=as_of_naive)
     return {
-        "window": _window_block(book, window_days=window_days, as_of_naive=as_of_naive),
-        "all": {
-            "turnover": compute_turnover_mirror(trade_rows, period_days=None, min_trades=_MIN["min_trades"]),
-            "follow_on": compute_averaging_down_mirror(trade_rows, period_days=None, min_follow_on=_MIN["min_follow_on"]),
-            "profit_loss": compute_profit_loss_mirror(trade_rows, period_days=None, min_pairs=_MIN["min_pairs"]),
-        },
+        # 최근 N일: 명시 창 [as_of − N일, as_of]. 함수가 창 이전 이력으로
+        # 평단·FIFO 를 잡으므로 창 밖에서 연 포지션의 추가 매수·매도도 제대로 센다.
+        "window": _product_mirrors(
+            trade_rows, period_days=window_days,
+            window_start=as_of_naive - timedelta(days=window_days), window_end=as_of_naive,
+        ),
+        "all": _product_mirrors(trade_rows, period_days=None),
         "open_lot_ages_days": {"median": round(statistics.median(ages), 1) if ages else None,
                                "oldest": round(max(ages), 1) if ages else None, "lots": len(ages)},
     }

@@ -51,7 +51,8 @@ models/ · migrations/   # alembic 리비전 전량 보존 — 삭제 금지
 routes/   alerts · auth(+auth_alias) · behavior · billing · consents · data_status
           · dev_auth · email_preferences · feedback · health · inbox
           · market · mirror_home · notifications · portfolio · pre_trade
-          · profile · push · realtime · sendgrid_webhook · support · trades
+          · profile · push · realtime · sendgrid_webhook · support
+          (trades — GET /api/trades — 는 2026-09-29 삭제: 소비자 0. 거래 내역은 portfolio /trades)
           (조건부·부팅 시 미등록: command_center=opt-in. 위 23 카운트에 없다.
            sim_onboard 은 2026-09-01 CAUS 와 함께 삭제 — 함정 §7)
 services/ behavior · customer · data · email · inbox · kis · legal

@@ -375,3 +375,72 @@ describe("NotificationsMatrix — only channels with a sender are toggles", () =
     expect(screen.getByRole("switch", { name: /월간 거울 리포트 · email/i })).toBeInTheDocument();
   });
 });
+
+// 2026-09-29 — the monthly report needs three switches: this cell, the B2
+// email-delivery toggle and the B3 marketing-consent card (the sender checks
+// all three). When this cell is on but another switch blocks it, the row says
+// which one, as a link to that card.
+describe("NotificationsMatrix — monthly mirror shows what blocks its email", () => {
+  const PREFS = (email: boolean) => ({
+    concentration: { email: false, push: true, inapp: true },
+    monthly_mirror: { email, push: false, inapp: false },
+  });
+
+  function renderWith(
+    email: boolean,
+    deps: { emailDeliveryOn?: boolean; marketingConsentOn?: boolean },
+  ) {
+    mockedUseHook.mockReturnValue(hookReturn(PREFS(email)));
+    return render(
+      <LocaleProvider>
+        <NotificationsMatrix {...deps} />
+      </LocaleProvider>,
+    );
+  }
+
+  beforeEach(() => {
+    mockedUseHook.mockReset();
+  });
+
+  it("points at the marketing-consent card when consent is missing", async () => {
+    renderWith(true, { emailDeliveryOn: true, marketingConsentOn: false });
+    await act(async () => {});
+    const note = screen.getByTestId("monthly-mirror-email-blocked");
+    expect(note.getAttribute("href")).toBe("#settings-marketing-consent");
+    expect(note.textContent).toContain("마케팅 정보 수신 동의");
+  });
+
+  it("points at the email-delivery toggle when delivery is off", async () => {
+    renderWith(true, { emailDeliveryOn: false, marketingConsentOn: true });
+    await act(async () => {});
+    const note = screen.getByTestId("monthly-mirror-email-blocked");
+    expect(note.getAttribute("href")).toBe("#settings-email-delivery");
+    expect(note.textContent).toContain("이메일 수신");
+  });
+
+  it("names both when both block it", async () => {
+    renderWith(true, { emailDeliveryOn: false, marketingConsentOn: false });
+    await act(async () => {});
+    const note = screen.getByTestId("monthly-mirror-email-blocked");
+    expect(note.textContent).toContain("이메일 수신");
+    expect(note.textContent).toContain("마케팅 정보 수신 동의");
+  });
+
+  it("says nothing when every switch is on", async () => {
+    renderWith(true, { emailDeliveryOn: true, marketingConsentOn: true });
+    await act(async () => {});
+    expect(screen.queryByTestId("monthly-mirror-email-blocked")).toBeNull();
+  });
+
+  it("says nothing when the cell itself is off", async () => {
+    renderWith(false, { emailDeliveryOn: false, marketingConsentOn: false });
+    await act(async () => {});
+    expect(screen.queryByTestId("monthly-mirror-email-blocked")).toBeNull();
+  });
+
+  it("says nothing while the other switches are still unknown", async () => {
+    renderWith(true, {});
+    await act(async () => {});
+    expect(screen.queryByTestId("monthly-mirror-email-blocked")).toBeNull();
+  });
+});

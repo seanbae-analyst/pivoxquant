@@ -340,7 +340,7 @@ function SiteFooter() {
             {
               title: t("landing.footer.company"),
               // Pricing 링크 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0).
-              // /pricing 은 next.config.ts 307 redirect → /home. Stage 1 부활 시 복원.
+              // /pricing 은 next.config.ts 307 redirect → /mirror (라우트 코드는 2026-09-29 삭제). Stage 1 부활 시 복원.
               // Living Mirror / Personas / Signature 열은 /features/* 페이지와
               // 함께 삭제 — 없는 화면을 파는 링크는 남기지 않는다.
               links: [

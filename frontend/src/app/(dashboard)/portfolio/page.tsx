@@ -11,9 +11,9 @@
  *   - PortfolioHeroV2            (NAV + observed time + Add CTA)
  *   - EquityCurveBlock           (timeframe toggle 1mo/3mo/6mo/1yr/All)
  *   - PositionsTableV2           (8 columns, 종목명 main pattern)
- *   - 3-col grid:
+ *   - 2-col grid:
  *       SectorDonutBlock | RecentTransactionsBlock
- *   - WeeklyPulseCard            (reused, invisible Mon 07:00 trigger)
+ *   - WeeklyPulsePrompt          (Monday-only link to the pulse form on /journal)
  *   - FootSignature              (reused)
  *
  * Modals:
@@ -36,8 +36,7 @@ import { useAuth } from "@/lib/auth";
 import { resolveMarketDataDisplay } from "@/lib/market-display";
 
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
-import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
-import { RollingWindowWidget } from "@/components/dashboard/rolling-window";
+import { WeeklyPulsePrompt } from "@/components/dashboard/weekly-pulse-prompt";
 
 import {
   usePortfolioPositions,
@@ -386,6 +385,10 @@ export default function PortfolioPageV2() {
         <LivingCFOStatusBar />
       </div>
 
+      {/* Monday nudge toward the weekly pulse. The form itself lives on
+          /journal only (2026-09-29 — this used to auto-open it as a modal). */}
+      <WeeklyPulsePrompt />
+
       {/* ═══════════ ERROR BANNER (v1 parity) ═══════════ */}
       {hasLoadError && (
         <div
@@ -507,9 +510,9 @@ export default function PortfolioPageV2() {
         <CapitalCardV2 />
       </section>
 
-      {/* ═══════════ 3-COL GRID — Sector / Watchlist / Recent ═══════════ */}
+      {/* ═══════════ 2-COL GRID — Sector / Recent ═══════════ */}
       <section
-        aria-label="Allocation, watchlist, and recent activity"
+        aria-label="Allocation and recent activity"
         style={{ marginBottom: 40 }}
       >
         <div
@@ -543,16 +546,12 @@ export default function PortfolioPageV2() {
         `}</style>
       </section>
 
-      {/* ═══════════ ROLLING WINDOW (Block 5) — v1 parity (Layer 2 learning) ═══════════ */}
-      {/* paper={false}: v2 페이지는 Vantablack v3 톤. ivory paper bg 는 v1 (paper desk)
-          전용. CEO 직접 지적 2026-04-29: "declared vs observed 부분 왜 얘만 노래" */}
-      <section
-        aria-label="Rolling window behavioural analysis"
-        style={{ marginBottom: 40 }}
-      >
-        <RollingWindowWidget paper={false} />
-      </section>
-
+      {/* 2026-09-29 — the RollingWindowWidget ("Declared · {bucket} {score}"
+          vs a 30/60/90d observed persona, plus rolling holding / turnover /
+          sector-tilt sparklines) was removed. It drew declared-vs-observed
+          with a second definition — a 0-100 declared score, a trades/day
+          ratio, an HHI that was mostly UNKNOWN — next to the canonical one on
+          /mirror, and its remaining metrics are the /journal mirrors'. */}
       {/* ═══════════ Foot signature ═══════════
           FxAttribution is required, not decorative: the USD/KRW rate this
           page converts with can come from open.er-api.com
@@ -563,9 +562,6 @@ export default function PortfolioPageV2() {
         <FxAttribution style={{ marginBottom: 14 }} />
         <FootSignature note="PivoxQuant · User-entered record · Not investment advice" />
       </div>
-
-      {/* Weekly Pulse — auto-triggers Monday 07:00 KST (invisible) */}
-      <WeeklyPulseCard />
 
       {/* ═══════════ MODALS ═══════════ */}
       <AddPositionModalV2

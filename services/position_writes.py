@@ -4,6 +4,10 @@ Extracted from ``routes.portfolio.create_position_alias`` so the holdings
 capture import (``services/imports/holdings_import.py``) applies exactly the
 same user-row lock, free-plan cap and duplicate-merge arithmetic instead of a
 second copy. Behaviour is unchanged for the original caller.
+
+2026-09-29: the only copies left are here — POST /positions (cap + merge),
+POST /trades (lock + merge) and the holdings import use these helpers; the
+import ledger (services/imports/ledger.py, frozen) imports FREE_POSITION_CAP.
 """
 from __future__ import annotations
 
@@ -37,6 +41,17 @@ def active_position_count(user_id: int) -> int:
     return Position.query.filter_by(user_id=user_id).filter(Position.shares > 0).count()
 
 
+def blocks_new_symbol(user, ticker: str) -> bool:
+    """True when the free-plan cap refuses ``ticker`` for ``user``: a capped
+    tier, a symbol not already held, and FREE_POSITION_CAP symbols held.
+    Call it after :func:`lock_user_row` so the count cannot race."""
+    return (
+        is_capped_tier(user)
+        and not holds_ticker(user.id, ticker)
+        and active_position_count(user.id) >= FREE_POSITION_CAP
+    )
+
+
 def holds_ticker(user_id: int, ticker: str) -> bool:
     """True when ``user_id`` already holds ``ticker`` with shares > 0.
 
@@ -58,7 +73,7 @@ def merge_buy_into(ex_row, quantity: float, price: float, *, is_kr: bool,
     """Merge a new lot into an existing position: weighted-average cost,
     cost-weighted FX (USD only), thesis filled only if empty.
 
-    NEW-D (2026-05-09): the race-safe upsert shared with add_position. See the
+    NEW-D (2026-05-09): the race-safe upsert. See the
     uq_positions_user_ticker rationale on Position.__table_args__."""
     total = ex_row.shares * ex_row.avg_cost + quantity * price
     if not is_kr and ex_row.buy_fx_rate and fx_rate:
@@ -78,8 +93,8 @@ def merge_buy_into(ex_row, quantity: float, price: float, *, is_kr: bool,
 
 
 # ── holding-registration seeds ────────────────────────────────────────
-# 2026-09-29: registering a holding (POST /positions, /position, the holdings
-# capture import) used to write only ``positions``. Every mirror rebuilds FIFO
+# 2026-09-29: registering a holding (POST /positions, the holdings capture
+# import) used to write only ``positions``. Every mirror rebuilds FIFO
 # lots from ``trade_history`` alone, so selling a registered holding hit an
 # empty queue (the 매도 was dropped) and a later add counted as a fresh open.
 # A full 매도 deletes the Position row, so the lot cannot be recovered from
@@ -104,13 +119,31 @@ def add_holding_seed(user_id: int, ticker: str, shares: float, price: float,
     )
 
 
+def add_recorded_buy(user_id: int, ticker: str, shares: float, price: float,
+                     currency: str, name: str | None = None, *,
+                     reflection_id: int, traded_at=None):
+    """Add (not commit) a recorded 매수 row (``source`` NULL) linked to a pause.
+
+    2026-09-29: POST /positions in review mode ("신규 진입 검토 · 7문항") is a
+    real buy made right after the pause — not a registration of shares already
+    held — so it gets an ordinary 매수 row carrying ``reflection_id`` instead of
+    a holding seed (services/pre_trade/link.py validates the id first).
+    ``traded_at`` defaults to now. Returns the row or ``None``."""
+    row = _add_registration_row(
+        "BUY", None,  # // legal-ok — trade action data value, not user copy
+        user_id, ticker, shares, price, currency, name, traded_at,
+    )
+    if row is not None:
+        row.reflection_id = int(reflection_id)
+    return row
+
+
 def add_holding_adjust(user_id: int, ticker: str, shares: float, price: float,
                        currency: str, name: str | None = None, traded_at=None):
     """Add (not commit) a holding-adjust 매도 row for ``shares`` at ``price``.
 
     2026-09-29: written when a registration path (holdings capture
-    ``replace`` to a lower count, PUT /position/<id> with fewer shares)
-    lowers a holding without a recorded 매도. ``price`` is the position's
+    ``replace`` to a lower count) lowers a holding without a recorded 매도. ``price`` is the position's
     average cost at that moment and ``pnl`` is 0 — it realises nothing. The
     row consumes FIFO lots so they stay in sync with the holding; consumers
     never read it as an observed 매도 (services/profile/fifo_util
@@ -124,7 +157,7 @@ def add_holding_adjust(user_id: int, ticker: str, shares: float, price: float,
     )
 
 
-def _add_registration_row(action: str, source: str, user_id: int, ticker: str,
+def _add_registration_row(action: str, source: str | None, user_id: int, ticker: str,
                           shares, price, currency: str, name, traded_at):
     from models import TradeHistory
 

@@ -15,6 +15,7 @@ import { render, cleanup, screen, within, fireEvent, act } from "@testing-librar
 
 const hooks = vi.hoisted(() => ({
   usePendingImports: vi.fn(),
+  useLinkableReflections: vi.fn(),
 }));
 vi.mock("@/lib/hooks", () => hooks);
 vi.mock("@/lib/locale", () => ({
@@ -32,12 +33,41 @@ import { ImportInbox, thesisOk, fmtPrice } from "@/components/journal/import-inb
 import { sideLabel } from "@/lib/pre-trade";
 
 const apiFetchMock = vi.mocked(apiFetch);
-import type { PendingTradeDTO } from "@/lib/types";
+import type { PendingTradeDTO, PreTradeReflection } from "@/lib/types";
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  hooks.useLinkableReflections.mockReset();
 });
+
+function linkable(reflections: PreTradeReflection[] = []) {
+  hooks.useLinkableReflections.mockImplementation((ticker: string | null) => ({
+    reflections: ticker ? reflections : [],
+    isLoading: false,
+    error: undefined,
+  }));
+}
+
+function refl(id: number, over: Partial<PreTradeReflection> = {}): PreTradeReflection {
+  return {
+    id,
+    intended_ticker: "005930.KS",
+    intended_side: null,
+    intended_shares: null,
+    rationale: "반도체 업황 회복을 보고 들어간다",
+    devil_advocate_seen: null,
+    market_volatility_at_request: null,
+    cooldown_started_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+    cooldown_ends_at: null,
+    proceeded_at: null,
+    cancelled_at: null,
+    auto_extended_reason: null,
+    seconds_remaining: 0,
+    status: "proceeded",
+    ...over,
+  };
+}
 
 const ROWS: PendingTradeDTO[] = [
   {
@@ -79,6 +109,7 @@ const ROWS: PendingTradeDTO[] = [
 ];
 
 function loaded(pending: PendingTradeDTO[]) {
+  if (!hooks.useLinkableReflections.getMockImplementation()) linkable([]);
   hooks.usePendingImports.mockReturnValue({
     pending,
     count: pending.length,
@@ -184,5 +215,69 @@ describe("ImportInbox", () => {
     expect(thesisOk("abc")).toBe(true);
     expect(thesisOk("a".repeat(500))).toBe(true);
     expect(thesisOk("a".repeat(501))).toBe(false);
+  });
+});
+
+describe("ImportInbox — buy ↔ pause link (2026-09-29)", () => {
+  async function approveRow(row: HTMLElement) {
+    fireEvent.change(within(row).getByLabelText("journal.import.thesisLabel"), {
+      target: { value: "반도체 업황 회복" },
+    });
+    await act(async () => {
+      fireEvent.click(within(row).getByRole("button", { name: "journal.import.approve" }));
+    });
+    const call = apiFetchMock.mock.calls.find(([url]) => url === API.imports.approve(11));
+    return JSON.parse((call?.[1] as RequestInit).body as string) as Record<string, unknown>;
+  }
+
+  it("shows the link line for a matched buy (default ON) and sends its id", async () => {
+    apiFetchMock.mockResolvedValue({ ok: true });
+    linkable([refl(9), refl(7)]);
+    loaded(ROWS);
+    render(<ImportInbox />);
+    const rows = screen.getAllByTestId("pending-trade-row");
+    const line = within(rows[0]).getByTestId("reflection-link-line");
+    expect(within(line).getByRole("checkbox")).toBeChecked();
+    // The import-time match (7) is preferred over the newest candidate (9).
+    const body = await approveRow(rows[0]);
+    expect(body).toMatchObject({ thesis: "반도체 업황 회복", reflection_id: 7 });
+    // Sell rows never fetch or show a link line.
+    expect(within(rows[1]).queryByTestId("reflection-link-line")).toBeNull();
+    expect(hooks.useLinkableReflections).not.toHaveBeenCalledWith("AAPL");
+  });
+
+  it("unchecking sends reflection_id: null + reflection_declined (don't link, don't infer)", async () => {
+    apiFetchMock.mockResolvedValue({ ok: true });
+    linkable([refl(7)]);
+    loaded([ROWS[0]]);
+    render(<ImportInbox />);
+    const row = screen.getByTestId("pending-trade-row");
+    fireEvent.click(within(row).getByRole("checkbox"));
+    const body = await approveRow(row);
+    expect(body).toHaveProperty("reflection_id", null);
+    expect(body).toHaveProperty("reflection_declined", true);
+  });
+
+  it("offers a linkable pause even without an import-time match", async () => {
+    apiFetchMock.mockResolvedValue({ ok: true });
+    linkable([refl(5)]);
+    loaded([{ ...ROWS[0], pre_trade_reflection_id: null }]);
+    render(<ImportInbox />);
+    const row = screen.getByTestId("pending-trade-row");
+    expect(within(row).getByTestId("reflection-link-line")).toBeInTheDocument();
+    const body = await approveRow(row);
+    expect(body).toMatchObject({ reflection_id: 5 });
+  });
+
+  it("without a candidate the caption stays and the key is omitted", async () => {
+    apiFetchMock.mockResolvedValue({ ok: true });
+    linkable([]);
+    loaded([ROWS[0]]);
+    render(<ImportInbox />);
+    const row = screen.getByTestId("pending-trade-row");
+    expect(within(row).getByText("journal.import.reflectionMatched")).toBeInTheDocument();
+    const body = await approveRow(row);
+    expect(body).not.toHaveProperty("reflection_id");
+    expect(body).not.toHaveProperty("reflection_declined");
   });
 });

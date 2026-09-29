@@ -3,20 +3,22 @@
 from __future__ import annotations
 
 from services.name_resolver import (
+    canonical_display_name,
     lookup_name_from_signal_cache,
-    resolve_stock_name,
 )
 
 
 def _resolve_display_name(ticker: str) -> str | None:
-    """Prefer the live SignalCache name (broker-provided), then static
-    registries. Returns None when nothing resolves — callers fall back
-    to the ticker itself to preserve legacy behaviour.
+    """표시 이름 — 규칙은 ``canonical_display_name`` 한 벌이다.
+
+    KR 종목은 kr_stock_registry 의 한글 이름이 항상 이기고(캐시에 옛 영문
+    이름이 남아 있어도), US 종목은 SignalCache(브로커) 이름 → 레지스트리 순.
+    아무것도 안 풀리면 None — 호출자가 티커로 대체한다.
     """
     if not ticker:
         return None
-    name = lookup_name_from_signal_cache(ticker) or resolve_stock_name(ticker)
-    return name
+    name = canonical_display_name(lookup_name_from_signal_cache(ticker), ticker)
+    return None if not name or name == ticker.strip() else name
 
 
 def serialize_user(u) -> dict:
@@ -85,10 +87,24 @@ def serialize_user(u) -> dict:
         # correctly during the deploy window. Remove after 2026-10-19 once
         # every deployed frontend reads the new key.
         "birthdate_required": not age_confirmed,
+        # PIPA §28-8 — True iff a cross-border consent was ever recorded
+        # server-side (``cross_border_consent_at`` set, by oauth-finalize or
+        # ``POST /api/consents/cross-border``). Revocation does NOT flip it
+        # back: revoking is the user's own decision, and the frontend reads
+        # this flag only to (a) skip re-asking consent in onboarding and
+        # (b) stop the (dashboard) localStorage flush from re-POSTing over
+        # the recorded timestamp. Raw timestamps stay unexposed here; the
+        # audit trail is ``GET /api/consents/cross-border``.
+        "cross_border_consent_recorded": (
+            getattr(u, "cross_border_consent_at", None) is not None
+        ),
     }
 
 
 def serialize_trade(t) -> dict:
+    # 거래 직렬화는 이것 한 벌 — /api/trades 와 PIPA JSON 내보내기
+    # (routes/profile.py) 가 같이 쓴다. traded_at 은 nullable 컬럼이다.
+    traded_at = getattr(t, "traded_at", None)
     return {
         "id": t.id,
         "ticker": t.ticker,
@@ -100,9 +116,13 @@ def serialize_trade(t) -> dict:
         "pnl": t.pnl,
         "pnl_pct": t.pnl_pct,
         "currency": t.currency,
-        "traded_at": t.traded_at.isoformat(),
+        "traded_at": traded_at.isoformat() if traded_at is not None else None,
         # 2026-09-29: "holding_seed" = 보유 등록 시드, None = 체결 기록.
         "source": getattr(t, "source", None),
+        # 2026-09-29: 이 매수를 사용자가 직접 이은 멈춤(PreTradeReflection) id,
+        # None = 연결 없음. reflection_declined True = 보여진 후보를 끄고 기록.
+        "reflection_id": getattr(t, "reflection_id", None),
+        "reflection_declined": getattr(t, "reflection_declined", None),
     }
 
 

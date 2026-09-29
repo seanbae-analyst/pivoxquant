@@ -9,11 +9,17 @@ The contract checked here:
 
   * GET unauthenticated → 401.
   * GET authenticated → ok, ``opted_in=False`` for a fresh user.
-  * POST → opted_in flips to True, ``marketing_consent_at`` stamped,
-    ``email_opt_out`` re-enabled in lock-step.
+  * POST → opted_in flips to True, ``marketing_consent_at`` stamped.
   * DELETE → opted_in flips to False, ``marketing_consent_revoked_at``
-    stamped, ``email_opt_out`` set to True so the runtime kill-switch
-    matches the legal state.
+    stamped.
+  * 2026-09-29 — neither touches ``email_opt_out``. Consent (the legal
+    basis, "may") and delivery (the user's mute switch, "do") are separate
+    facts with separate owners: ``email_opt_out`` belongs to the Settings
+    email-delivery toggle (PATCH /api/profile/email-preferences) and the
+    token unsubscribe link. POST used to force it False (silently undoing an
+    explicit "email off") and DELETE forced it True. Revocation still stops
+    every non-transactional send immediately because ``EmailSender`` checks
+    ``revoked_at >= consent_at`` itself — asserted below.
   * Re-POST after DELETE → ``opted_in`` is True again because the new
     consent timestamp is *after* the revocation timestamp (effective
     consent is derived, not stored, so history survives).
@@ -55,14 +61,27 @@ def test_post_marketing_consent_records_opt_in(app, client, auth_user):
     assert body["marketing_consent_at"] is not None
     assert body["marketing_consent_revoked_at"] is None
 
-    # Verify DB-level state and the email_opt_out lock-step.
     with app.app_context():
         from extensions import db
         from models import User
         u = db.session.get(User, auth_user["id"])
         assert u.marketing_consent_at is not None
         assert u.marketing_consent_revoked_at is None
-        assert u.email_opt_out is False
+
+
+def _email_opt_out(app, user_id):
+    with app.app_context():
+        from extensions import db
+        from models import User
+        return bool(db.session.get(User, user_id).email_opt_out)
+
+
+def test_post_consent_does_not_undo_explicit_email_off(app, client, auth_user):
+    """Email delivery switched off in Settings stays off after opting in."""
+    r = client.patch("/api/profile/email-preferences", json={"email_opt_out": True})
+    assert r.status_code == 200
+    assert client.post("/api/consents/marketing").status_code == 200
+    assert _email_opt_out(app, auth_user["id"]) is True
 
 
 def test_delete_marketing_consent_records_revocation(app, client, auth_user):
@@ -76,13 +95,43 @@ def test_delete_marketing_consent_records_revocation(app, client, auth_user):
     assert body["marketing_consent_at"] is not None  # preserved as audit trail
     assert body["marketing_consent_revoked_at"] is not None
 
-    # email_opt_out kill-switch must be engaged in lock-step so subsequent
-    # sends short-circuit immediately (no nightly-job lag).
+    # The delivery switch is not the consent route's to flip.
+    assert _email_opt_out(app, auth_user["id"]) is False
+
+
+def test_revocation_blocks_sends_without_email_opt_out(app, client, auth_user):
+    """정통망법 §50 — withdrawal is honoured "without delay" by the sender's
+    own consent check, not by a side effect on ``email_opt_out``."""
+    from unittest.mock import patch
+
+    from services.email.sender import EmailCategory, EmailSender
+
+    client.post("/api/consents/marketing")
+    client.delete("/api/consents/marketing")
+
     with app.app_context():
         from extensions import db
         from models import User
         u = db.session.get(User, auth_user["id"])
-        assert u.email_opt_out is True
+        assert u.email_opt_out is False
+        with patch("services.email.sender.build_unsubscribe_url") as unsub:
+            ok = EmailSender().send(
+                u, subject="s", html_body="<p>x</p>",
+                from_env_var="X_FROM", from_default="reports@pivoxquant.com",
+                email_category=EmailCategory.INFORMATION,
+            )
+        assert ok is False
+        unsub.assert_not_called()  # stopped at the consent gate, pre-transport
+
+
+def test_email_toggle_does_not_touch_consent(app, client, auth_user):
+    """The other direction: PATCH email-preferences leaves the §50 record alone."""
+    client.post("/api/consents/marketing")
+    client.patch("/api/profile/email-preferences", json={"email_opt_out": True})
+    client.patch("/api/profile/email-preferences", json={"email_opt_out": False})
+    body = client.get("/api/consents/marketing").get_json()
+    assert body["opted_in"] is True
+    assert body["marketing_consent_revoked_at"] is None
 
 
 def test_post_after_delete_re_opts_in(client, auth_user):

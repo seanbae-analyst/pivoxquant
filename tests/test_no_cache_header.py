@@ -52,7 +52,7 @@ def _run_hook(real_app, no_cache_hook, path, headers=None):
 
 
 @pytest.mark.parametrize("path", [
-    "/api/portfolio",
+    "/api/portfolio/positions",
     "/api/watchlist",
     "/api/auth/me",
     "/api/behavior/turnover-mirror",
@@ -73,7 +73,7 @@ def test_a_public_header_does_not_win(real_app, no_cache_hook):
     thereby publish an authenticated response to a CDN.
     """
     out = _run_hook(
-        real_app, no_cache_hook, "/api/portfolio",
+        real_app, no_cache_hook, "/api/portfolio/positions",
         {"Cache-Control": "public, max-age=3600"},
     )
     assert "no-store" in out.headers["Cache-Control"]

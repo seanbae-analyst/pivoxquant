@@ -155,7 +155,7 @@ export function ProfileDropdown() {
                 {t("profileMenu.settings")}
               </MenuLink>
               {/* Billing 진입점 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0).
-                  /pricing 은 next.config.ts 307 redirect → /home. i18n 키
+                  /pricing 은 next.config.ts 307 redirect → /mirror (라우트 코드는 2026-09-29 삭제). i18n 키
                   (profileMenu.billing) 는 보존 — Stage 1 부활 시 이 링크만 복원. */}
               <MenuButton
                 icon={<Keyboard className="h-4 w-4" />}

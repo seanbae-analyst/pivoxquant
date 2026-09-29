@@ -13,6 +13,10 @@
  * /profile copy said "One question, every Monday at 07:00 KST"; the form has
  * five fields and the inline card runs on no schedule.
  *
+ * This is the pulse's ONLY input surface (2026-09-29). /portfolio shows a
+ * Monday-only link here (<WeeklyPulsePrompt />, `/journal#weekly-pulse`)
+ * instead of its old auto-opening modal copy of the same form.
+ *
  * Legal: self-reported sentiment only, not investment advice. Mood bands
  * render as CALM / STEADY / PROTECTIVE / CAUTIOUS — never the literal "HOLD"
  * token (CEO + legal 2026-04-28).
@@ -104,6 +108,19 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
 
 export function WeeklyPulseSection() {
   const { data: pulse } = usePulse();
+  const sectionRef = React.useRef<HTMLElement>(null);
+
+  // Arriving from /portfolio's Monday link (`/journal#weekly-pulse`): the
+  // dashboard layout mounts this page after auth resolves and the feed above
+  // grows as it loads, so the router's own hash scroll can land short. Scroll
+  // once more after the first paint settles.
+  React.useEffect(() => {
+    if (window.location.hash !== "#weekly-pulse") return;
+    const id = window.setTimeout(() => {
+      sectionRef.current?.scrollIntoView({ block: "start" });
+    }, 400);
+    return () => window.clearTimeout(id);
+  }, []);
 
   // The 3 most recent submissions, newest first. An empty history renders as
   // empty — never as sample rows (see lib/cfo/hooks.ts, 2026-09-06).
@@ -124,7 +141,12 @@ export function WeeklyPulseSection() {
       : [];
 
   return (
-    <section aria-label="주간 펄스 · Weekly pulse">
+    <section
+      ref={sectionRef}
+      id="weekly-pulse"
+      aria-label="주간 펄스 · Weekly pulse"
+      style={{ scrollMarginTop: "calc(var(--pq-aux-sticky-top, 56px) + 16px)" }}
+    >
       <RuledKicker>주간 펄스 · Weekly pulse</RuledKicker>
       <EditorialHead as="h2" size={26} tone="ivory" className="mt-3">
         이번 주를 스스로 적어 두기
@@ -145,7 +167,7 @@ export function WeeklyPulseSection() {
       </div>
 
       <div style={{ marginTop: 20 }}>
-        <WeeklyPulseCard inline />
+        <WeeklyPulseCard />
       </div>
     </section>
   );

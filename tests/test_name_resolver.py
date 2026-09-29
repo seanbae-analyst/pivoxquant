@@ -244,3 +244,67 @@ class TestKrSuffixToggleFallback:
         # Pure resolver — no DB rung.
         name_resolver.clear_name_cache()
         assert name_resolver.resolve_stock_name("124500.KS") == "아이티센글로벌"
+
+
+def test_serialize_alert_kr_ticker_with_english_cache_name_is_korean(app):
+    """KR 종목은 SignalCache 에 영문 이름이 남아 있어도 한글로 나간다 —
+    ``canonical_display_name`` 규칙(KR 레지스트리 우선) 한 벌. 전에는
+    services/serializers 가 캐시를 먼저 봐서 "Samsung Electronics" 가 나갔다."""
+    import json
+    from datetime import datetime
+    from types import SimpleNamespace
+
+    from extensions import db
+    from models import SignalCache
+    from services.serializers import serialize_alert
+
+    with app.app_context():
+        db.session.merge(SignalCache(
+            ticker="005930.KS",
+            data_json=json.dumps({"name": "Samsung Electronics"}),
+        ))
+        db.session.commit()
+        a = SimpleNamespace(
+            id=1, ticker="005930.KS", kind="price_52w",
+            title="005930.KS reached 52-week high", message="", body=None,
+            link=None, read_at=None, signal=None, score=None, rec_shares=None,
+            rec_investment=None, created_at=datetime(2026, 9, 1), is_read=False,
+        )
+        out = serialize_alert(a)
+        assert out["name"] == "삼성전자"
+        assert out["title"] == "삼성전자 (005930.KS) reached 52-week high"
+
+
+def test_serialize_alert_us_ticker_keeps_cache_name(app):
+    """US 종목은 캐시(브로커) 이름이 이긴다 — 규칙 그대로."""
+    import json
+    from datetime import datetime
+    from types import SimpleNamespace
+
+    from extensions import db
+    from models import SignalCache
+    from services.serializers import serialize_alert
+
+    with app.app_context():
+        db.session.merge(SignalCache(
+            ticker="ZZZQ", data_json=json.dumps({"name": "Zeta Quux Corp"}),
+        ))
+        db.session.commit()
+        a = SimpleNamespace(
+            id=2, ticker="ZZZQ", kind="price_52w", title="", message="",
+            body=None, link=None, read_at=None, signal=None, score=None,
+            rec_shares=None, rec_investment=None,
+            created_at=datetime(2026, 9, 1), is_read=False,
+        )
+        assert serialize_alert(a)["name"] == "Zeta Quux Corp"
+
+
+def test_portfolio_position_name_prefers_korean_registry_over_english_cache():
+    """2026-09-29: /portfolio 의 보유 행 이름도 canonical_display_name 규칙 —
+    옛 영문 SignalCache 이름이 KR 종목에 남아 있어도 한글명이 나온다."""
+    from types import SimpleNamespace
+    from routes.portfolio import _position_display_name
+    p = SimpleNamespace(ticker="005930.KS")
+    assert _position_display_name(p, {"name": "Samsung Electronics"}) == "삼성전자"
+    us = SimpleNamespace(ticker="AAPL")
+    assert _position_display_name(us, {"name": "Apple Inc."}) == "Apple Inc."

@@ -1,7 +1,13 @@
 /**
  * FaqSection — Frequently Asked Questions (native <details> accordion).
  *
- * 4 categories / 9 items. Locale-aware: ko (Korean) | en (English).
+ * 3 categories / 8 items. Locale-aware: ko (Korean) | en (English).
+ *
+ * 2026-09-29: the 결제·환불 group (pricing + refund) was dissolved — billing is
+ * gated off (503 BUSINESS_REGISTRATION_PENDING) and nobody is charged, so the
+ * refund item described a process that cannot happen. "Is it free?" moved to
+ * the service group. /contact dropped billing copy on 2026-09-17 for the same
+ * reason. /docs reads the deletion answer from the same message key.
  *
  * 2026-09-13: the "what do signal labels (POSITIVE/NEGATIVE/NEUTRAL) mean"
  * item was removed — there is no signal surface left to explain. Every item
@@ -18,7 +24,7 @@
 "use client";
 
 import * as React from "react";
-import { useT, useLocale } from "@/lib/locale";
+import { useT } from "@/lib/locale";
 
 interface FaqItem {
   q: string;
@@ -75,72 +81,34 @@ function FaqRow({ item }: { item: FaqItem }) {
 
 export function FaqSection() {
   const t = useT();
-  const { locale } = useLocale();
 
-  const FAQ_GROUPS: FaqGroup[] =
-    locale === "ko"
-      ? [
-          {
-            category: t("support.categories.service"),
-            items: [
-              { q: t("support.faq.whatIsService.q"), a: t("support.faq.whatIsService.a") },
-              { q: t("support.faq.dataSource.q"), a: t("support.faq.dataSource.a") },
-            ],
-          },
-          {
-            category: t("support.categories.billing"),
-            items: [
-              { q: t("support.faq.pricing.q"), a: t("support.faq.pricing.a") },
-              { q: t("support.faq.refund.q"), a: t("support.faq.refund.a") },
-            ],
-          },
-          {
-            category: t("support.categories.account"),
-            items: [
-              { q: t("support.faq.howToLogin.q"), a: t("support.faq.howToLogin.a") },
-              { q: t("support.faq.deleteAccount.q"), a: t("support.faq.deleteAccount.a") },
-            ],
-          },
-          {
-            category: t("support.categories.tech"),
-            items: [
-              { q: t("support.faq.pwa.q"), a: t("support.faq.pwa.a") },
-              { q: t("support.faq.staleData.q"), a: t("support.faq.staleData.a") },
-              { q: t("support.faq.contact.q"), a: t("support.faq.contact.a") },
-            ],
-          },
-        ]
-      : [
-          {
-            category: t("support.categories.service"),
-            items: [
-              { q: t("support.faq.whatIsService.q"), a: t("support.faq.whatIsService.a") },
-              { q: t("support.faq.dataSource.q"), a: t("support.faq.dataSource.a") },
-            ],
-          },
-          {
-            category: t("support.categories.billing"),
-            items: [
-              { q: t("support.faq.pricing.q"), a: t("support.faq.pricing.a") },
-              { q: t("support.faq.refund.q"), a: t("support.faq.refund.a") },
-            ],
-          },
-          {
-            category: t("support.categories.account"),
-            items: [
-              { q: t("support.faq.howToLogin.q"), a: t("support.faq.howToLogin.a") },
-              { q: t("support.faq.deleteAccount.q"), a: t("support.faq.deleteAccount.a") },
-            ],
-          },
-          {
-            category: t("support.categories.tech"),
-            items: [
-              { q: t("support.faq.pwa.q"), a: t("support.faq.pwa.a") },
-              { q: t("support.faq.staleData.q"), a: t("support.faq.staleData.a") },
-              { q: t("support.faq.contact.q"), a: t("support.faq.contact.a") },
-            ],
-          },
-        ];
+  // Same keys in both locales — the copy switches through t(). (This used to
+  // be two byte-identical ko/en branches.)
+  const FAQ_GROUPS: FaqGroup[] = [
+    {
+      category: t("support.categories.service"),
+      items: [
+        { q: t("support.faq.whatIsService.q"), a: t("support.faq.whatIsService.a") },
+        { q: t("support.faq.dataSource.q"), a: t("support.faq.dataSource.a") },
+        { q: t("support.faq.pricing.q"), a: t("support.faq.pricing.a") },
+      ],
+    },
+    {
+      category: t("support.categories.account"),
+      items: [
+        { q: t("support.faq.howToLogin.q"), a: t("support.faq.howToLogin.a") },
+        { q: t("support.faq.deleteAccount.q"), a: t("support.faq.deleteAccount.a") },
+      ],
+    },
+    {
+      category: t("support.categories.tech"),
+      items: [
+        { q: t("support.faq.pwa.q"), a: t("support.faq.pwa.a") },
+        { q: t("support.faq.staleData.q"), a: t("support.faq.staleData.a") },
+        { q: t("support.faq.contact.q"), a: t("support.faq.contact.a") },
+      ],
+    },
+  ];
 
   return (
     <section aria-labelledby="faq-heading">

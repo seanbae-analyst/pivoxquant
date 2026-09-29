@@ -51,7 +51,7 @@ function errorMessageFor(err: unknown): string {
 function ContactForm() {
   const t = useT();
   const { mutate } = useSWRConfig();
-  const [category, setCategory] = useState<SupportCategory>("billing");
+  const [category, setCategory] = useState<SupportCategory>("account");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [state, setState] = useState<SubmitState>({ kind: "idle" });
@@ -80,7 +80,7 @@ function ContactForm() {
         setState({ kind: "success" });
         setSubject("");
         setBody("");
-        setCategory("billing");
+        setCategory("account");
       } catch (err) {
         setState({ kind: "error", message: errorMessageFor(err) });
       }
@@ -97,7 +97,7 @@ function ContactForm() {
           1:1 문의하기
         </EditorialHead>
         <Caption className="mt-2 max-w-lg">
-          결제·계정·기술 문의를 남겨 주세요. 접수한 문의와 답변은 내 문의함에서
+          계정·기술 문의를 남겨 주세요. 접수한 문의와 답변은 내 문의함에서
           확인할 수 있습니다.
         </Caption>
       </header>
@@ -209,7 +209,7 @@ function ContactForm() {
             maxLength={BODY_MAX}
             disabled={submitting}
             rows={8}
-            placeholder="문의 내용을 자세히 적어 주세요. 결제 관련 문의는 결제 내역도 함께 남겨 주시면 빠릅니다."
+            placeholder="문의 내용을 자세히 적어 주세요. 가져오기 문제라면 어떤 파일·알림이었는지 함께 남겨 주시면 빠릅니다."
             className="mt-2 w-full resize-y rounded-[2px] border bg-transparent px-3 py-2.5 font-sans text-pq-lead"
             style={{
               borderColor: "var(--pq-ivory-line)",

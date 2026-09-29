@@ -265,7 +265,7 @@
   --pq-live: #7db487;                /* muted lime — "data is fresh / streaming" */
   --pq-live-bronze: var(--pq-bronze-light);  /* bronze-only variant for chrome that bans green */
   --pq-stale: #a88f4a;               /* muted yellow-bronze — "data is delayed" */
-  /* #a35b3b measured 4.00:1 on #050505 as text (persona-evolution renders it
+  /* #a35b3b measured 4.00:1 on #050505 as text (persona-evolution rendered it
      as a label, not only as a fill). Lifted 8% to clear AA at 4.53 while
      staying the same hue — it must remain distinct from --up carmine. */
   --pq-drift: #b0623f;               /* behavioural drift / persona alert — semantically distinct from --up carmine */
@@ -3969,11 +3969,6 @@ html {
   }
 }
 
-/* Persona Evolution — hover cards fade in smoothly. */
-.pq-persona-evolution [role="tooltip"] {
-  animation: pq-dash-stage-in 0.25s var(--pq-dash-reveal-ease) forwards;
-}
-
 /* RuledKicker hairline — 260ms bronze grow on page mount. Applied to
    every page that uses the editorial kicker (portfolio / market /
    signals / reports, etc.). */
@@ -3988,7 +3983,6 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .pq-dash-stage,
   .pq-today-hairline,
-  .pq-persona-evolution [role="tooltip"],
   .pq-ruled-kicker-hairline {
     animation: none !important;
     opacity: 1 !important;

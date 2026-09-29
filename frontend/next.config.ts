@@ -102,14 +102,14 @@ const nextConfig: NextConfig = {
       { source: "/simulator/:path*", destination: "/", permanent: true },
       { source: "/mirror-preview", destination: "/", permanent: true },
       // 무료 출시 (DECISIONS.md ✅확정 2026-05-30: Stage 0 무료, 월구독
-      // ⬛superseded). `/pricing` 결제/플랜 비교 페이지는 코드를 보존하되
-      // URL 직접접근을 `/home` 으로 차단한다. 진입점 링크(nav/footer/dropdown/
-      // upsell)는 별도로 hidden 처리. 백엔드 routes/billing.py 는 이미
-      // require_business_registration 503 게이트로 보존됨.
+      // ⬛superseded). `/pricing` 결제/플랜 비교 페이지는 URL 직접접근을
+      // `/mirror` 로 돌린다. 2026-09-29: 307 뒤에서 아무도 import 하지 않던
+      // app/pricing/ 코드는 삭제했다(git 이력 e71c3b3 에 보존). 백엔드
+      // routes/billing.py 는 require_business_registration 503 게이트로 보존됨.
       //
       // ⚠️ permanent:false (307) — ai-chat 격리(§101 법적 영구차단)와 달리
       // pricing 은 Stage 1 유료화 부활 가능성이 있어 브라우저 영구캐시(308)를
-      // 피한다. 부활 = 이 두 줄 + sitemap/진입점 hidden 을 되돌리면 된다.
+      // 피한다. 부활 = 페이지를 새로 만들고 이 두 줄 + sitemap 을 되돌린다.
       { source: "/pricing", destination: "/mirror", permanent: false },
       { source: "/pricing/:path*", destination: "/mirror", permanent: false },
     ];

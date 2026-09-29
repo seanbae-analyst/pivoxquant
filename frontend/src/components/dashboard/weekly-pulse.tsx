@@ -1,26 +1,24 @@
 "use client";
 
 /**
- * <WeeklyPulseCard /> — 5-question Monday-morning pulse.
+ * <WeeklyPulseCard /> — the 5-field weekly pulse form + its history curve.
  *
- * Triggers automatically once per week on Monday 07:00 KST when the user
- * lands on /home. Dismissible. Once submitted, the 8-week emotion +
- * confidence curve is rendered inline below the form.
+ * Inline only. It is rendered in exactly one place, /journal's
+ * <WeeklyPulseSection /> (the single input surface for the pulse).
  *
- * Props let any page host render the same component in a non-modal
- * context (e.g. Settings → Living CFO → "Submit early" or history view).
+ * 2026-09-29: the modal mode was removed. /portfolio used to mount this card
+ * invisibly and auto-open it as a modal on Mondays from 07:00 KST, which made
+ * two input surfaces for the same answer. The Monday nudge survives as a
+ * one-line link on /portfolio (<WeeklyPulsePrompt />) that sends the user to
+ * this form on /journal.
  *
  * Legal: records self-reported sentiment, not investment advice.
  * No BUY/SELL/HOLD language.
  */
 
 import * as React from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { PQ_EASE, PQ_DUR_FAST, PQ_DUR_MICRO } from "@/lib/motion";
-import { X } from "lucide-react";
 import { toast } from "sonner";
 import { usePulse, type PulseEntry } from "@/lib/cfo/hooks";
-import { useFocusTrap } from "@/lib/useFocusTrap";
 
 const TOPICS = [
   "Macro",
@@ -33,155 +31,24 @@ const TOPICS = [
   "US market",
 ];
 
-interface Props {
-  /** External control of the modal. If omitted, component auto-opens
-   *  on Monday 07:00 KST provided no pulse has been submitted this week. */
-  open?: boolean;
-  onClose?: () => void;
-  /** Render inline (no modal chrome) — used by /settings history view. */
-  inline?: boolean;
-  className?: string;
-}
-
-export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
+export function WeeklyPulseCard({ className }: { className?: string }) {
   const { data, submit } = usePulse();
-  // Memo the array so the auto-open effect doesn't re-run on every render
-  // (a fresh `?? []` would otherwise be a new identity each pass).
-  const history = React.useMemo(() => data?.history ?? [], [data?.history]);
-
-  // Auto-trigger logic: if `open` is undefined the host defers to the
-  // component's own scheduler.
-  const [autoOpen, setAutoOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (open !== undefined || inline) return;
-    if (typeof window === "undefined") return;
-
-    const nowUtc = new Date();
-    const kstOffsetMs = 9 * 60 * 60 * 1000;
-    const kst = new Date(nowUtc.getTime() + kstOffsetMs);
-    const isMonday = kst.getUTCDay() === 1;
-    const hourKst = kst.getUTCHours();
-
-    const lastSubmittedAt = history[history.length - 1]?.submitted_at;
-    let alreadyThisWeek = false;
-    if (lastSubmittedAt) {
-      const last = new Date(lastSubmittedAt);
-      const diffDays = (nowUtc.getTime() - last.getTime()) / 86400000;
-      alreadyThisWeek = diffDays < 6;
-    }
-
-    if (isMonday && hourKst >= 7 && hourKst < 24 && !alreadyThisWeek) {
-      // Respect a per-session dismiss.
-      const dismissed = window.sessionStorage.getItem("pq_pulse_dismissed");
-      if (!dismissed) setAutoOpen(true);
-    }
-  }, [open, inline, history]);
-
-  const isOpen = inline || (open ?? autoOpen);
-  const trapActive = Boolean(isOpen) && !inline;
-  const dialogRef = useFocusTrap<HTMLDivElement>(trapActive);
-
-  const handleDismiss = React.useCallback(() => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem("pq_pulse_dismissed", "1");
-    }
-    setAutoOpen(false);
-    onClose?.();
-  }, [onClose]);
-
-  // ESC + body scroll lock while modal open
-  React.useEffect(() => {
-    if (!trapActive) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleDismiss();
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [trapActive, handleDismiss]);
-
-  if (inline) {
-    return (
-      <div className={className}>
-        <PulseForm
-          onSubmit={async (entry) => {
-            try {
-              await submit(entry);
-              toast.success("Pulse recorded.");
-            } catch {
-              toast.error("Could not save pulse.");
-            }
-          }}
-        />
-        {history.length > 0 && <PulseHistory history={history} />}
-      </div>
-    );
-  }
+  const history = data?.history ?? [];
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: PQ_DUR_MICRO }}
-          style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
-          onClick={handleDismiss}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Weekly pulse"
-        >
-          <motion.div
-            ref={dialogRef}
-            tabIndex={-1}
-            onClick={(e) => e.stopPropagation()}
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 10, opacity: 0 }}
-            transition={{ duration: PQ_DUR_FAST, ease: PQ_EASE }}
-            className="w-full max-w-lg bg-[var(--pq-ink)] border border-[rgba(245,240,232,0.12)] rounded-[2px] p-6"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <div className="text-pq-eyebrow tracking-[0.26em] uppercase text-[var(--pq-bronze)]">
-                  Layer 2 · Monday pulse
-                </div>
-                <h3 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
-                  How is this week looking?
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={handleDismiss}
-                className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)]"
-                aria-label="Dismiss pulse"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <PulseForm
-              onSubmit={async (entry) => {
-                try {
-                  await submit(entry);
-                  toast.success("Pulse recorded.");
-                  handleDismiss();
-                } catch {
-                  toast.error("Could not save pulse.");
-                }
-              }}
-            />
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div className={className}>
+      <PulseForm
+        onSubmit={async (entry) => {
+          try {
+            await submit(entry);
+            toast.success("Pulse recorded.");
+          } catch {
+            toast.error("Could not save pulse.");
+          }
+        }}
+      />
+      {history.length > 0 && <PulseHistory history={history} />}
+    </div>
   );
 }
 

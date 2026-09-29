@@ -357,3 +357,42 @@ def test_unauthenticated_still_401_before_consent_check(client):
     """동의 검증이 인증 게이트보다 앞서지 않는다."""
     r = client.post(ENDPOINT, json={"consents": FULL_CONSENTS})
     assert r.status_code == 401
+
+
+# ── /api/auth/me 가 "서버에 국외이전 동의가 있다"를 알려 준다 (2026-09-29) ──
+#
+# 온보딩(``/onboarding/broker``)의 LegalConsentModal 과 (dashboard) 레이아웃의
+# cross-border flush 는 localStorage 만 보고 판단했다. finalize 가 성공하면
+# 스냅숏을 지우므로 신규 OAuth 가입자는 온보딩에서 같은 동의를 한 번 더 했고,
+# 그 모달이 남긴 스냅숏을 레이아웃이 다시 POST 해 finalize 시각을 덮어썼다.
+# 이제 프론트는 ``cross_border_consent_recorded`` (서버 SoT) 를 본다.
+
+def _me_user(client):
+    r = client.get("/api/auth/me")
+    assert r.status_code == 200, r.get_data(as_text=True)
+    return (r.get_json() or {}).get("user") or {}
+
+
+def test_me_reports_cross_border_consent_recorded_after_finalize(client, app, oauth_user):
+    _login(client, oauth_user)
+    assert _me_user(client).get("cross_border_consent_recorded") is False
+
+    r = client.post(ENDPOINT, json={"consents": FULL_CONSENTS})
+    assert r.status_code == 200, r.get_data(as_text=True)
+    assert r.get_json()["user"]["cross_border_consent_recorded"] is True
+
+    me = _me_user(client)
+    assert me.get("cross_border_consent_recorded") is True
+    assert me.get("age_confirmation_required") is False
+    # 원시 타임스탬프는 여전히 내보내지 않는다 — 프론트는 boolean 만 필요하다.
+    assert "cross_border_consent_at" not in me
+
+
+def test_me_consent_recorded_stays_true_after_revocation(client, app, oauth_user):
+    """철회는 이용자의 결정이다 — 기록이 한 번이라도 있으면 recorded 는 True 로
+    남아, 프론트가 남은 스냅숏으로 재동의 POST 를 보내 철회를 뒤집지 않는다."""
+    _login(client, oauth_user)
+    client.post(ENDPOINT, json={"consents": FULL_CONSENTS})
+    assert client.delete("/api/consents/cross-border").status_code == 200
+
+    assert _me_user(client).get("cross_border_consent_recorded") is True

@@ -188,7 +188,10 @@ export function AddPositionModalV2({
   // {symbol, quantity, price, note, purchase_date?}. `purchase_date`
   // ("YYYY-MM-DD") sets opened_at; omitted → today. side / sector /
   // currency still have no Position-model column.
-  async function commitPosition() {
+  // `reflection_id` (NEW_ENTRY only, 2026-09-29): the pause the friction modal
+  // just stamped. The backend then writes a recorded buy linked to it instead
+  // of a holding seed, so the pause's outcome counts this purchase.
+  async function commitPosition(reflectionId?: number) {
     setSubmitting(true);
     try {
       const body: Record<string, unknown> = {
@@ -198,6 +201,7 @@ export function AddPositionModalV2({
         note: memo.trim(),
       };
       if (purchaseDate) body.purchase_date = purchaseDate;
+      if (reflectionId != null) body.reflection_id = reflectionId;
       await apiFetch(PORTFOLIO_POSITIONS, {
         method: "POST",
         body: JSON.stringify(body),
@@ -561,8 +565,10 @@ export function AddPositionModalV2({
         ticker={sym}
         shares={shares}
         rationale={memo}
-        onProceed={async () => {
-          await commitPosition();
+        onProceed={async (reflectionId) => {
+          // A new entry after the seven questions is a buy made now — link it
+          // to the pause it just made.
+          await commitPosition(reflectionId);
           // Position committed — close both modals.
           setFrictionOpen(false);
           onClose();

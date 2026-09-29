@@ -10,7 +10,6 @@
  *
  * Endpoint contract (to be finalised with backend-dev):
  *   GET  /api/profile/persona           → PersonaResponse
- *   GET  /api/profile/rolling-window    → RollingWindowResponse
  *   POST /api/profile/feedback          { artifact_id, section, vote }  → { ok: true }
  *   GET  /api/profile/pulse             → PulseResponse (history + next_due_at)
  *   POST /api/profile/pulse             PulseSubmission                 → { ok: true }
@@ -62,7 +61,8 @@ export interface PersonaResponse {
     persona: PersonaId;
     label: string;
     tagline: string;
-    score: number;
+    // 2026-09-29: `score` (25 + risk_tolerance*7) removed — scores are not
+    // made; the declared side of declared-vs-observed is /mirror's.
   };
   /** Rolling-window observed persona series — 30 / 60 / 90 day. */
   observed: {
@@ -70,39 +70,12 @@ export interface PersonaResponse {
     window_60d: PersonaScore;
     window_90d: PersonaScore;
   };
-  /** Sparkline for the hero card — last 12 weekly snapshots. */
-  sparkline: { week: string; score: number }[];
+  // 2026-09-29: `sparkline` (12 weekly persona scores) removed with the
+  // /mirror PersonaEvolution chart — scores are not made.
   /** When the backend last re-classified. */
   last_computed_at: string | null;
-  /** Drift delta vs declared persona. 0–100; >20 = material drift. */
-  drift: number;
-}
-
-export interface RollingWindowPoint {
-  /** ISO date yyyy-mm-dd */
-  date: string;
-  /** Average holding period in days. */
-  holdingPeriod: number;
-  /** Portfolio turnover ratio for the window (0–1). */
-  turnover: number;
-  /** Sector concentration tilt (Herfindahl index, 0–1). */
-  sectorTilt: number;
-}
-
-export interface RollingWindowResponse {
-  series: {
-    window_30d: RollingWindowPoint[];
-    window_60d: RollingWindowPoint[];
-    window_90d: RollingWindowPoint[];
-  };
-  /** Cross-window comparison for the CFO-vs-actual headline. */
-  contrast: {
-    declared_persona: PersonaId;
-    declared_score: number;
-    observed_persona: PersonaId;
-    observed_score: number;
-    window_days: 30 | 60 | 90;
-  };
+  // 2026-09-29: `drift` (|declared score − observed score|) removed with the
+  // declared score it was computed from.
 }
 
 export type FeedbackVote = "useful" | "meh" | "skip";
@@ -156,7 +129,6 @@ export interface PulseResponse {
 // producer of. `feedback` keeps v1 — it never went through cfoFetch.
 const LS_KEYS = {
   persona: "pq_cfo_persona_v2",
-  rolling: "pq_cfo_rolling_v2",
   feedback: "pq_cfo_feedback_v1",
   pulse: "pq_cfo_pulse_v2",
 } as const;
@@ -201,11 +173,12 @@ function nextMondayIso(): string {
  *     if (err.status === 404 || err.status === 501 || err.status >= 500)
  *       return fallback();
  *
- * Three hooks used it — `usePersona`, `useRollingWindow`, `usePulse` — and the
- * mocks they fell back to were not empty shells. `mockRolling` generated 30/60/
- * 90-day holding-period, turnover and sector-tilt series from `Math.sin`, plus
- * a declared-vs-observed contrast; `<RollingWindowWidget/>` renders that as
- * "You declared X. Your last 30 days look like Y." on /portfolio. Only
+ * Three hooks used it — `usePersona`, `useRollingWindow` (removed 2026-09-29
+ * with its widget), `usePulse` — and the mocks they fell back to were not
+ * empty shells. `mockRolling` generated 30/60/90-day holding-period, turnover
+ * and sector-tilt series from `Math.sin`, plus a declared-vs-observed
+ * contrast, which `<RollingWindowWidget/>` rendered as "You declared X. Your
+ * last 30 days look like Y." on /portfolio. Only
  * `mockPersona` carried an `_isMock` marker, and only /profile ever checked it,
  * so the other surfaces showed invented behavioural analysis with nothing
  * saying so.
@@ -249,7 +222,7 @@ export function cachedPersonaId(): PersonaId | null {
   return cached.declared?.persona ?? null;
 }
 
-/** Declared + observed persona, with rolling-window drift indicator. */
+/** Declared + observed persona (30 / 60 / 90 day). */
 export function usePersona() {
   const swr = useSWR<PersonaResponse>(
     API.profile.persona,
@@ -262,21 +235,6 @@ export function usePersona() {
   );
   // Persist last known persona so the card never flashes empty on refresh.
   if (swr.data) safeWrite(LS_KEYS.persona, swr.data);
-  return swr;
-}
-
-/** 30 / 60 / 90 day behavioural vectors for the Rolling Window widget. */
-export function useRollingWindow() {
-  const swr = useSWR<RollingWindowResponse>(
-    API.profile.rollingWindow,
-    (url) => cfoFetch<RollingWindowResponse>(url),
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 300_000,
-      fallbackData: safeRead<RollingWindowResponse>(LS_KEYS.rolling) ?? undefined,
-    },
-  );
-  if (swr.data) safeWrite(LS_KEYS.rolling, swr.data);
   return swr;
 }
 

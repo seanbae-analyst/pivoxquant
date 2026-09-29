@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from extensions import db
 
 # 2026-09-29 — ``TradeHistory.source`` 값. 보유 등록(POST /positions,
-# /position, 보유 캡처 가져오기)이 주식을 더할 때 쓰는 "시드" 매수 행.
+# 보유 캡처 가져오기 · 옛 /position — 2026-09-29 삭제)이 주식을 더할 때 쓰는 "시드" 매수 행.
 # 거울들이 FIFO 로트를 이력에서만 다시 세우므로, 등록 보유분에 행이 없으면
 # 그 종목의 매도·추가매수가 로트를 잃었다. 시드는 로트(보유 수량·평단)에는
 # 들어가지만 등록 시각이 실제 매수일이 아니라서 보유기간 통계에서 빠지고,
@@ -10,7 +10,7 @@ from extensions import db
 HOLDING_SEED_SOURCE = "holding_seed"
 
 # 2026-09-29 — 기록된 매도 없이 등록 경로가 보유를 *줄일* 때 쓰는 "조정" 매도
-# 행 (보유 캡처 replace 로 수량을 낮춤, PUT /position/<id> 로 주식 수를 낮춤).
+# 행 (보유 캡처 replace 로 수량을 낮춤, 옛 PUT /position/<id> — 2026-09-29 삭제).
 # 수량 = 줄어든 만큼, 단가 = 그때의 평단, pnl 0. FIFO 로트를 소모해 로트가 보유와
 # 맞게 남지만, 관찰된 매도가 아니라서 보유기간·손익처분·회전·체결 수 어디에도
 # 세지 않는다 (services/profile/fifo_util.is_holding_adjust / MatchedPair.sell_is_adjust).
@@ -38,3 +38,15 @@ class TradeHistory(db.Model):
     # NULL = 체결 기록 (기존 모든 행). "holding_seed" = 보유 등록 시드,
     # "holding_adjust" = 보유 등록 조정 매도 (위 상수).
     source          = db.Column(db.String(20), nullable=True)
+    # 2026-09-29 — 이 매수가 어느 멈춤(PreTradeReflection)의 결과인지 사용자가
+    # 기록 시점에 직접 이은 연결. NULL = 연결 없음 (기존 모든 행) — 그때
+    # friction_outcome 은 시간 창 추정으로 되돌아간다. services/pre_trade/link.py,
+    # alembic 060.
+    reflection_id   = db.Column(db.Integer,
+                                db.ForeignKey("pre_trade_reflections.id", ondelete="SET NULL"),
+                                nullable=True, index=True)
+    # 2026-09-29 — 사용자가 보여진 멈춤 후보를 끄고 기록한 매수 (명시 거절).
+    # True 면 friction_outcome 이 이 매수를 7일 창 추정으로 어느 멈춤에도
+    # 귀속하지 않는다. NULL = 거절 기록 없음 (기존 모든 행 · 후보가 없었음).
+    # services/pre_trade/link.py, alembic 061.
+    reflection_declined = db.Column(db.Boolean, nullable=True)

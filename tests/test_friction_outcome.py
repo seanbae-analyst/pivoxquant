@@ -332,3 +332,114 @@ class TestRealisedWindowMatchesFullHistory:
         assert out["stopped"]["started"] == 0          # the pause itself is old
         assert out["realised"]["with_friction"]["n"] == 1
         assert out["realised"]["without_friction"]["n"] == 0
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — 명시 연결 (TradeHistory.reflection_id) 이 추정보다 먼저다
+# ═════════════════════════════════════════════════════════════════════
+
+def _linked(trade, rid):
+    trade.reflection_id = rid
+    return trade
+
+
+def _with_id(r, rid):
+    r.id = rid
+    return r
+
+
+class TestExplicitLink:
+    def test_linked_buy_outside_window_is_attributed(self):
+        """추정 창(7일) 밖이어도 사용자가 이은 매수는 멈춤 경유다."""
+        paused = BASE
+        refl = _with_id(_refl("AAPL", created=paused, proceeded=paused), 11)
+        buy_at = paused + timedelta(days=ATTRIBUTION_WINDOW_DAYS + 10)
+        trades = [
+            _linked(_trade("AAPL", "BUY", buy_at, price=100.0), 11),
+            _trade("AAPL", "SELL", buy_at + timedelta(days=5), price=120.0),
+        ]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=60))
+        assert out["realised"]["with_friction"]["n"] == 1
+        assert out["realised"]["without_friction"]["n"] == 0
+        assert out["caveats"]["explicit_links"] == 1
+
+    def test_link_overrides_inference_for_that_reflection(self):
+        """연결이 있는 멈춤은 창 안의 첫 매수를 추정으로 빨아들이지 않는다."""
+        refl = _with_id(_refl("AAPL", created=BASE, proceeded=BASE), 12)
+        near = BASE + timedelta(hours=1)          # 추정이라면 이 매수가 귀속됐다
+        far = BASE + timedelta(days=3)
+        trades = [
+            _trade("AAPL", "BUY", near, price=100.0),
+            _linked(_trade("AAPL", "BUY", far, price=200.0), 12),
+            _trade("AAPL", "SELL", far + timedelta(days=5), shares=20.0, price=220.0),
+        ]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        # near(100→220 = +120%) 는 미경유, far(200→220 = +10%) 는 경유.
+        assert out["realised"]["with_friction"]["median_pct"] == 10.0
+        assert out["realised"]["without_friction"]["median_pct"] == 120.0
+
+    def test_cancelled_then_linked_counts_as_bought_later(self):
+        cancelled_at = BASE + timedelta(minutes=5)
+        refl = _with_id(_refl("AAPL", created=BASE, cancelled=cancelled_at), 13)
+        buy_at = cancelled_at + timedelta(days=4)
+        trades = [_linked(_trade("AAPL", "BUY", buy_at), 13)]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        cf = out["cancelled_followthrough"]
+        assert cf["bought_later_anyway"] == 1 and cf["never_bought"] == 0
+        assert round(cf["median_days_until_bought"], 2) == 4.0
+
+    def test_linked_buy_to_cancelled_pause_is_with_friction(self):
+        """취소를 누른 뒤 산 매수라도 사용자가 그 멈춤에 이었으면 멈춤을 거친 매수다."""
+        refl = _with_id(_refl("AAPL", created=BASE, cancelled=BASE), 14)
+        buy_at = BASE + timedelta(days=2)
+        trades = [
+            _linked(_trade("AAPL", "BUY", buy_at, price=100.0), 14),
+            _trade("AAPL", "SELL", buy_at + timedelta(days=5), price=90.0),
+        ]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        assert out["realised"]["with_friction"]["n"] == 1
+
+    def test_unlinked_data_still_uses_inference(self):
+        refl = _with_id(_refl("AAPL", created=BASE, proceeded=BASE), 15)
+        trades = _round_trip("AAPL", BASE + timedelta(hours=2), 100.0, 110.0)
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        assert out["realised"]["with_friction"]["n"] == 1
+        assert out["caveats"]["explicit_links"] == 0
+
+
+def _declined(trade):
+    trade.reflection_declined = True
+    return trade
+
+
+class TestDeclinedLink:
+    """보여진 후보를 끄고 기록한 매수는 추정으로 멈춤에 귀속하지 않는다 (2026-09-29)."""
+
+    def test_declined_buy_in_window_is_not_attributed(self):
+        refl = _with_id(_refl("AAPL", created=BASE, proceeded=BASE), 21)
+        trades = [
+            _declined(_trade("AAPL", "BUY", BASE + timedelta(hours=2), price=100.0)),
+            _trade("AAPL", "SELL", BASE + timedelta(days=5), price=110.0),
+        ]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        assert out["realised"]["with_friction"]["n"] == 0
+        assert out["realised"]["without_friction"]["n"] == 1
+
+    def test_declined_buy_after_cancel_is_not_bought_later(self):
+        refl = _with_id(_refl("AAPL", created=BASE, cancelled=BASE), 22)
+        trades = [_declined(_trade("AAPL", "BUY", BASE + timedelta(days=2)))]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        cf = out["cancelled_followthrough"]
+        assert cf["bought_later_anyway"] == 0 and cf["never_bought"] == 1
+
+    def test_declined_buy_does_not_block_the_next_undeclined_buy(self):
+        """거절한 매수는 건너뛰고, 창 안의 다음 (거절 없는) 매수는 여전히 추정된다."""
+        refl = _with_id(_refl("AAPL", created=BASE, proceeded=BASE), 23)
+        trades = [
+            _declined(_trade("AAPL", "BUY", BASE + timedelta(hours=1), price=100.0)),
+            _trade("AAPL", "BUY", BASE + timedelta(days=2), price=200.0),
+            _trade("AAPL", "SELL", BASE + timedelta(days=6), shares=20.0, price=220.0),
+        ]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        assert out["realised"]["with_friction"]["median_pct"] == 10.0
+        assert out["realised"]["without_friction"]["median_pct"] == 120.0

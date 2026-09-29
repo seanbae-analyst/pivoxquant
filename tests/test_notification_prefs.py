@@ -70,6 +70,28 @@ def test_channel_enabled_unknown_event_fails_open(app, make_user):
         assert u.notification_channel_enabled("concentration", "sms") is True
 
 
+def test_channel_enabled_masks_dead_channel_like_the_route(app, make_user):
+    """발신자가 없는 채널은 저장값이 True 여도 꺼짐 — 발신 게이트와 설정 화면
+    (GET /preferences) 이 같은 규칙 한 벌을 쓴다 (2026-09-29 전엔 route 만 가렸다)."""
+    from routes.notifications import _merged_prefs
+
+    user = make_user(email="np-dead@test.com")
+    with app.app_context():
+        u = db.session.get(User, user["id"])
+        u.notification_prefs = {
+            "concentration": {"email": True},
+            "monthly_mirror": {"push": True, "email": True},
+        }
+        db.session.commit()
+        assert u.notification_channel_enabled("concentration", "email") is False
+        assert u.notification_channel_enabled("monthly_mirror", "push") is False
+        assert u.notification_channel_enabled("monthly_mirror", "email") is True
+        merged = _merged_prefs(u.notification_prefs)
+        for event_id, chans in merged.items():
+            for ch, val in chans.items():
+                assert val is u.notification_channel_enabled(event_id, ch), (event_id, ch)
+
+
 # ── (b) GET defaults ─────────────────────────────────────────────────────
 
 

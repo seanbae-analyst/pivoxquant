@@ -10,7 +10,7 @@ Covers
 * ``services.profile.persona_history.detect_significant_drift``
 * ``services.profile.persona_history.iter_active_user_ids``
 * ``services.profile.persona_history.run_weekly_snapshots``
-* ``GET  /api/profile/persona-history``
+* ``GET  /api/profile/persona-history`` — removed 2026-09-29 (404 pinned)
 * ``GET  /api/profile/persona-drift``
 * ``POST /api/profile/persona-snapshot``
 
@@ -347,34 +347,11 @@ class TestDetectSignificantDrift:
 # ═════════════════════════════════════════════════════════════════════
 
 class TestPersonaHistoryAPI:
-    def test_endpoint_history_unauth_401(self, client):
+    def test_persona_history_endpoint_removed(self, client, auth_user):
+        """2026-09-29: GET /persona-history fed only the Evolution Timeline
+        (a persona-score chart) and is gone — scores are not made."""
         r = client.get("/api/profile/persona-history?days=180")
-        assert r.status_code == 401
-
-    def test_endpoint_history_returns_user_only(
-        self, app, client, auth_user, make_user,
-    ):
-        """Snapshots from another user MUST NOT appear in the response."""
-        # Auth user gets 1 snapshot.
-        _persist_snapshot(app, auth_user["id"], persona="balanced")
-
-        # Stranger user gets 2 snapshots — they must not leak.
-        stranger = make_user(email="stranger@test.com")
-        _persist_snapshot(app, stranger["id"], persona="quant")
-        _persist_snapshot(
-            app, stranger["id"], persona="quant",
-            computed_at=_utc_now() - timedelta(days=2),
-        )
-
-        r = client.get("/api/profile/persona-history?days=180")
-        assert r.status_code == 200
-        d = r.get_json()
-        assert d["n"] == 1
-        for row in d["snapshots"]:
-            assert row["user_id"] == auth_user["id"]
-        # Stranger persona never appears
-        assert all(row["persona"] != "quant" or row["user_id"] == auth_user["id"]
-                   for row in d["snapshots"])
+        assert r.status_code == 404
 
     def test_post_snapshot_creates_and_returns_row(self, client, auth_user):
         """POST /api/profile/persona-snapshot → row in DB + valid payload."""

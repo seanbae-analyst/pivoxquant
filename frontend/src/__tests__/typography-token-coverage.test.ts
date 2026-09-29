@@ -37,12 +37,8 @@ const TOP5_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> =
  *  Caps below pin the count of *remaining* raw literals (sizes with no exact
  *  v3 token — 9, 11, 15, 16, 18, 20, 28). Migrated sizes (12 / 14 / 24 / 32)
  *  must stay tokenized; future contributors cannot re-introduce them. */
+// app/pricing/page.tsx — 2026-09-29 제외: /pricing 라우트 코드 삭제(307 → /mirror 는 유지).
 const PHASE2_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
-  {
-    path: "app/pricing/page.tsx",
-    cap: 2,
-    reason: "2× 15px/16px tier body copy — no exact v3 token between body(14) and quote(24)",
-  },
   {
     path: "app/(dashboard)/settings/page.tsx",
     cap: 0,
@@ -116,11 +112,7 @@ const PHASE3_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
     cap: 4,
     reason: "1×15 + 1×18 migrated → --pq-text-lead/h5; 4 unrelated literals remain (12/14)",
   },
-  {
-    path: "app/pricing/page.tsx",
-    cap: 0,
-    reason: "1×15 + 1×16 migrated → --pq-text-lead/h6; no others remain (only PHASE2 caps)",
-  },
+  // app/pricing/page.tsx — 2026-09-29 제외 (라우트 코드 삭제).
   // app/(auth)/signup/page.tsx — 2026-09-17 제외.
   //   /login 과 /signup 이 하나의 `AuthEntryPage` 로 통합되면서 이 파일은
   //   `import AuthEntryPage from "../login/page"` 만 하는 34행 재수출이 됐다.

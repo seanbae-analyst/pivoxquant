@@ -42,6 +42,10 @@
 * **귀속의 불확실성.** reflection 은 주문이 아니다. ``proceeded_at`` 이후
   :data:`ATTRIBUTION_WINDOW_DAYS` 안에 같은 종목을 매수하면 그 매수로 귀속하는데,
   이건 추정이지 확정이 아니다. 같은 종목을 자주 사는 사용자는 오귀속될 수 있다.
+  2026-09-29: 사용자가 매수를 기록하며 멈춤을 직접 이었으면
+  (``TradeHistory.reflection_id``, ``services/pre_trade/link.py``) 추정 대신 그
+  연결을 먼저 쓴다. 추정은 연결이 없는 행(과거 데이터 포함)의 폴백으로 남는다.
+  보여진 후보를 끄고 기록한 매수(``reflection_declined``)는 추정하지 않는다.
 * **표본.** 그룹당 :data:`MIN_GROUP_N` 미만이면 비교를 **거부한다**
   (``comparable=False``). 3건과 2건을 비교해 주는 건 정보가 아니라 소음이다.
 * **쿨다운이 현재 0초다** (``DEFAULT_COOLDOWN_SECONDS``). 지금의 멈춤은 강제
@@ -197,6 +201,8 @@ def compute_friction_outcome(
 
     # 매수만 종목·시각으로 색인 (취소 추적과 귀속 양쪽에 쓴다)
     buys: dict[str, list[datetime]] = {}
+    # 2026-09-29 — 사용자가 직접 이은 연결: reflection id → 그 매수들 (ticker, 시각).
+    linked_buys: dict[int, list[tuple[str, datetime]]] = {}
     for t in trades:
         # // legal-ok — 아래 리터럴은 TradeHistory.action 의 저장값이다
         # (매수/매도 구분 필드). 자문 어휘가 아니라 데이터 값이며, 훅의
@@ -207,6 +213,13 @@ def compute_friction_outcome(
         # 기록이다 — "취소 후 결국 샀다" 에도, 멈춤 경유 귀속에도 넣지 않는다.
         if is_holding_seed(t):
             continue
+        rid = getattr(t, "reflection_id", None)
+        if rid:
+            linked_buys.setdefault(int(rid), []).append((_norm(t.ticker), t.traded_at))
+        # 사용자가 보여진 멈춤 후보를 끄고 기록한 매수 — "멈춤과 무관"이라고
+        # 직접 말했다. 추정 색인(취소 후 매수 · 7일 창)에 넣지 않는다.
+        elif getattr(t, "reflection_declined", None) is True:
+            continue
         buys.setdefault(_norm(t.ticker), []).append(t.traded_at)
     for v in buys.values():
         v.sort()
@@ -216,7 +229,10 @@ def compute_friction_outcome(
     bought_anyway = 0
     for r in buy_side_cancelled:
         tk = _norm(r.intended_ticker)
-        later = [b for b in buys.get(tk, []) if _at_or_after(b, r.cancelled_at)]
+        # 명시 연결이 있으면 그 매수가 답이다 (취소해 놓고 산 매수를 사용자가
+        # 그 멈춤에 이었다). 없으면 같은 종목의 이후 매수로 추정한다.
+        explicit = sorted(b for _, b in linked_buys.get(getattr(r, "id", None), []))
+        later = explicit or [b for b in buys.get(tk, []) if _at_or_after(b, r.cancelled_at)]
         if later:
             bought_anyway += 1
             revisit_days.append(
@@ -235,7 +251,13 @@ def compute_friction_outcome(
     # 표시한다. (ticker, buy_time) 쌍으로 FIFO 슬라이스와 맞춘다.
     window = timedelta(days=ATTRIBUTION_WINDOW_DAYS)
     friction_buys: set[tuple[str, datetime]] = set()
+    # 명시 연결된 매수는 어느 멈춤(진행·취소·미결)에 이어졌든 멈춤을 거친 매수다
+    # — 사용자가 7문항을 적은 뒤 산 것이라고 직접 말했다.
+    for keys in linked_buys.values():
+        friction_buys.update(keys)
     for r in buy_side_proceeded:
+        if getattr(r, "id", None) in linked_buys:  # 연결이 있으면 추정하지 않는다
+            continue
         tk = _norm(r.intended_ticker)
         for b in buys.get(tk, []):
             if _at_or_after(b, r.proceeded_at) and b <= r.proceeded_at + window:
@@ -282,6 +304,8 @@ def compute_friction_outcome(
         "caveats": {
             "not_randomised": True,
             "attribution_window_days": ATTRIBUTION_WINDOW_DAYS,
+            # 추정이 아니라 사용자가 직접 이은 매수 수 (2026-09-29).
+            "explicit_links": sum(len(v) for v in linked_buys.values()),
             "cooldown_seconds_currently": 0,
         },
         "insufficient": stopped["started"] == 0,

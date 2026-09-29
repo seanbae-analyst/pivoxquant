@@ -126,7 +126,7 @@ export interface AlertItem {
   title: string;
   /** Long-form body text. Optional — null for short alerts. */
   body: string | null;
-  /** Optional deep-link path (e.g. "/settings#capital"). */
+  /** Optional deep-link path (e.g. "/portfolio"). */
   link: string | null;
   /** Legacy message field — backend still emits it for v1 surfaces. */
   message: string | null;
@@ -806,7 +806,6 @@ export interface MirrorHomeResponse {
   declared: {
     label: string | null;
     tagline: string | null;
-    score: number | null;
     /** "self" = axes from the user's own onboarding answers; "centroid" = persona default. */
     source?: "self" | "centroid";
   };

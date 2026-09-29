@@ -31,14 +31,30 @@ prior consent — the absence of an opt-out is not consent.
 Endpoints
 ---------
 ``POST   /api/consents/marketing`` — record opt-in (timestamp = now UTC).
-``DELETE /api/consents/marketing`` — record revocation. Also flips
-                                    ``email_opt_out = True`` so the
-                                    kill-switch matches the legal state.
+``DELETE /api/consents/marketing`` — record revocation.
 ``GET    /api/consents/marketing`` — read current state for the UI
                                     Settings toggle.
 
 All three require an authenticated session; CSRF is enforced globally
 by ``security._csrf_protect`` for POST/DELETE.
+
+``email_opt_out`` is NOT written here (2026-09-29)
+--------------------------------------------------
+POST used to force ``email_opt_out = False`` and DELETE forced it True.
+That made the Settings email-delivery toggle and this consent card
+overwrite each other: a user who turned email off and then ticked the
+consent card was silently switched back on. The two facts now have one
+owner each:
+
+  * consent (``marketing_consent_*``) — this blueprint.
+  * delivery (``email_opt_out``) — ``PATCH /api/profile/email-preferences``
+    (Settings toggle) and the token unsubscribe link
+    (``routes/email_preferences.py``), plus the bounce/spam webhook.
+
+Withdrawal is still honoured "without delay" (정통망법 §50): every
+non-transactional send goes through ``services.email.sender.EmailSender``,
+which refuses when ``marketing_consent_revoked_at >= marketing_consent_at``
+regardless of ``email_opt_out`` (tests/test_marketing_consent.py).
 """
 from __future__ import annotations
 
@@ -102,9 +118,9 @@ def record_marketing_consent():
     """Persist an explicit marketing-email opt-in.
 
     Sets ``marketing_consent_at = now`` and clears any prior revocation
-    so the new opt-in supersedes earlier history. Also flips
-    ``email_opt_out`` back to False so the kill-switch matches the new
-    legal state — otherwise the user could "opt in" but stay muted.
+    so the new opt-in supersedes earlier history. Does not touch
+    ``email_opt_out`` — a user may consent and still keep delivery off
+    (see the module docstring).
 
     Idempotent — calling twice within the same second simply re-stamps
     the timestamp (which is what the act actually requires us to retain
@@ -113,11 +129,6 @@ def record_marketing_consent():
     now = _utcnow_naive()
     current_user.marketing_consent_at = now
     current_user.marketing_consent_revoked_at = None
-    # Re-enable the kill-switch in lock-step. A user who explicitly opts
-    # in cannot simultaneously want the global mute on; if they later
-    # change their mind they will issue DELETE /api/consents/marketing.
-    if getattr(current_user, "email_opt_out", False):
-        current_user.email_opt_out = False
 
     try:
         db.session.commit()
@@ -320,17 +331,14 @@ def revoke_marketing_consent():
     """Record a marketing-consent revocation.
 
     Sets ``marketing_consent_revoked_at = now`` (preserving the prior
-    ``marketing_consent_at`` for the audit trail) *and* flips
-    ``email_opt_out = True`` so every email sender service stops
-    immediately. Idempotent — re-revoking simply updates the timestamp.
+    ``marketing_consent_at`` for the audit trail). Idempotent —
+    re-revoking simply updates the timestamp. 정통망법 §50 "without delay"
+    is met by ``EmailSender``'s own revocation check, which every
+    non-transactional send passes through; ``email_opt_out`` stays the
+    delivery toggle's to own (module docstring).
     """
     now = _utcnow_naive()
     current_user.marketing_consent_revoked_at = now
-    # Engage the runtime kill-switch so subsequent sends short-circuit.
-    # 정통망법 §50 requires the company to honour withdrawals "without
-    # delay"; flipping the boolean here closes the gap that would
-    # otherwise exist between the user's click and the next nightly job.
-    current_user.email_opt_out = True
 
     try:
         db.session.commit()

@@ -4,7 +4,6 @@ tests/test_profile_layer2.py — Living CFO Layer 2 backend API
 Covers the 4 endpoints wired from ``frontend/src/lib/cfo/hooks.ts``:
 
     GET  /api/profile/persona
-    GET  /api/profile/rolling-window
     POST /api/profile/feedback
     GET  /api/profile/pulse
     POST /api/profile/pulse
@@ -90,10 +89,12 @@ class TestGetPersona:
             "growth", "value", "balanced", "income",
             "quant", "speculator", "daytrader", "beginner",
         )
-        # Drift is always bounded.
-        assert 0 <= d["drift"] <= 100
-        # Sparkline can be empty but must exist.
-        assert isinstance(d["sparkline"], list)
+        # 2026-09-29: no declared score and no score-gap "drift" — the
+        # declared side of declared-vs-observed lives on /mirror only.
+        assert "score" not in d["declared"]
+        assert "drift" not in d
+        # 2026-09-29: the weekly persona-score sparkline is gone.
+        assert "sparkline" not in d
 
     def test_declared_resolves_from_profile(self, app, client, auth_user):
         _set_profile(app, auth_user["id"], profile_type="growth", risk_tolerance=8)
@@ -105,7 +106,9 @@ class TestGetPersona:
         # §101 buckets (성장형 / 균형형 / 수익형) — never a CFO-style 8-label.
         assert d["declared"]["label"] == "성장형"
         assert d["declared"]["tagline"]  # non-empty
-        assert 35 <= d["declared"]["score"] <= 95
+        # No 0-100 declared score (was 25 + risk_tolerance*7) — scores are
+        # not made (CLAUDE.md: 유형 라벨·점수는 만들지 않는다).
+        assert "score" not in d["declared"]
 
     def test_short_horizon_persona_collapses_to_surface_bucket(
         self, app, client, auth_user
@@ -142,40 +145,23 @@ class TestGetPersona:
 # GET /api/profile/rolling-window
 # ═════════════════════════════════════════════════════════════════════
 
-class TestRollingWindow:
-    def test_unauthenticated_returns_401(self, client):
-        r = client.get("/api/profile/rolling-window")
-        assert r.status_code == 401
+class TestRollingWindowRemoved:
+    """2026-09-29 — /portfolio 의 RollingWindowWidget 과 이 엔드포인트를 걷어냈다.
 
-    def test_empty_user_returns_200_with_empty_series(self, client, auth_user):
-        r = client.get("/api/profile/rolling-window")
-        assert r.status_code == 200
-        d = r.get_json()
-        assert "series" in d and "contrast" in d
-        assert d["series"]["window_30d"] == []
-        assert d["series"]["window_60d"] == []
-        assert d["series"]["window_90d"] == []
-        assert d["contrast"]["window_days"] == 30
+    위젯은 "선언 · {버킷} {점수}" 대비(``25 + risk_tolerance*7`` — 점수 금지)와
+    ``len(trades)/window_days`` 회전율 비율(저널 회전율 거울은 비율이 없다),
+    대부분 UNKNOWN 인 섹터 HHI 를 보여 줬다. 선언 대 관찰은 /mirror 가, 보유기간·
+    회전 건수는 /journal 거울이 정본이다. 라우트가 돌아오면 두 번째 정의가 돌아온다.
+    """
 
-    def test_series_populated_with_trades(self, app, client, auth_user):
-        _set_profile(app, auth_user["id"], profile_type="growth", risk_tolerance=7)
-        specs = [
-            {"ticker": "AAPL", "action": "BUY",  "shares": 10, "price": 150, "days_ago": 25},
-            {"ticker": "AAPL", "action": "SELL", "shares": 10, "price": 160, "days_ago": 10},
-            {"ticker": "TSLA", "action": "BUY",  "shares": 5,  "price": 200, "days_ago": 15},
-            {"ticker": "NVDA", "action": "BUY",  "shares": 3,  "price": 500, "days_ago": 5},
-        ]
-        _add_trades(app, auth_user["id"], specs)
+    def test_route_is_gone(self, client, auth_user):
         r = client.get("/api/profile/rolling-window")
-        d = r.get_json()
-        # At least one point in the 30d window.
-        assert len(d["series"]["window_30d"]) >= 1
-        pt = d["series"]["window_30d"][0]
-        assert {"date", "holdingPeriod", "turnover", "sectorTilt"} <= set(pt.keys())
-        assert 0.0 <= pt["turnover"] <= 1.0
-        assert 0.0 <= pt["sectorTilt"] <= 1.0
-        # Contrast contains the declared persona.
-        assert d["contrast"]["declared_persona"] == "growth"
+        assert r.status_code == 404
+
+    def test_service_module_is_gone(self):
+        import importlib.util
+
+        assert importlib.util.find_spec("services.profile.rolling_metrics") is None
 
 
 # ═════════════════════════════════════════════════════════════════════

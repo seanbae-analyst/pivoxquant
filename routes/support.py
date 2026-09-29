@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import html
 import logging
-import os
 from datetime import datetime, timezone
 
 from flask import Blueprint, abort, jsonify, request
@@ -113,16 +112,10 @@ def _notify_operator(inquiry: Inquiry) -> None:
     2026-09-29: this used to call ``sendgrid_provider.send`` directly. The
     SendGrid key is dead in prod and Brevo is primary (render.yaml
     ``BREVO_PROVIDER_PRIMARY=true``), so the operator never got a ticket mail
-    and the failure sat at INFO. Now it walks the same Brevo/SendGrid order as
-    ``EmailSender`` (``brevo_provider.is_primary()``), skips unconfigured
-    tiers, and logs a total failure at WARNING.
+    and the failure sat at INFO. Provider order, skipping unconfigured
+    providers and the WARNING on total failure now live in
+    ``services.email.system_mail.send_system_mail`` (shared with billing).
     """
-    try:
-        from services.email import brevo_provider, sendgrid_provider
-    except Exception:  # pragma: no cover
-        logger.warning("operator notify: email providers failed to import",
-                       exc_info=True)
-        return
     admins = _admin_emails()
     operator = next(iter(sorted(admins)), None) if admins else None
     if not operator:
@@ -140,42 +133,16 @@ def _notify_operator(inquiry: Inquiry) -> None:
         "</div>"
     )
     subject = f"[PivoxQuant 문의 #{inquiry.id}] {inquiry.subject or ''}"[:200]
+    try:
+        from services.email.system_mail import send_system_mail
 
-    def _via_brevo() -> bool:
-        return brevo_provider.send(
-            operator, subject=subject, html_body=htmlbody,
-            tags=("support", "inquiry"),
+        send_system_mail(
+            operator, subject, htmlbody,
+            category=("support", "inquiry"),
+            log_label=f"operator notify for inquiry #{inquiry.id}",
         )
-
-    def _via_sendgrid() -> bool:
-        return sendgrid_provider.send(
-            operator, subject=subject, html_body=htmlbody,
-            categories=("support", "inquiry"),
-        )
-
-    brevo_tier = ("Brevo",
-                  bool(os.environ.get("BREVO_API_KEY")
-                       or os.environ.get("SENDINBLUE_API_KEY")),
-                  _via_brevo)
-    sendgrid_tier = ("SendGrid", bool(os.environ.get("SENDGRID_API_KEY")),
-                     _via_sendgrid)
-    tiers = ([brevo_tier, sendgrid_tier] if brevo_provider.is_primary()
-             else [sendgrid_tier, brevo_tier])
-
-    errors: list[str] = []
-    for label, configured, attempt in tiers:
-        if not configured:
-            continue
-        try:
-            if attempt():
-                return
-            errors.append(f"{label}: not accepted")
-        except Exception as exc:
-            errors.append(f"{label}: {exc}")
-    logger.warning(
-        "operator notify failed for inquiry #%s — no provider delivered (%s)",
-        inquiry.id, "; ".join(errors) or "no provider configured",
-    )
+    except Exception:  # pragma: no cover — helper never raises; belt+braces
+        logger.warning("operator notify: unexpected failure", exc_info=True)
 
 
 def _send_user_email(user, *, subject: str, html_body: str, ctx: str) -> None:

@@ -1,8 +1,11 @@
 """
 tests/test_portfolio.py — Portfolio CRUD + Trading
 ===================================================
-Covers /api/portfolio: GET, add/edit/delete positions, buyMore, sell,
-analytics, history, capital.
+Covers /api/portfolio: GET/POST/PATCH /positions, POST /trades (recorded
+fills), history. 2026-09-29: the deprecated singular write routes
+(/position, /position/<id>[/buy|/sell], /position/buy-new), DELETE
+/positions/<id>, PUT /capital and GET "" were removed; their meaningful assertions
+now run against the live routes below.
 
 External APIs are mocked — no network calls.
 """
@@ -24,32 +27,32 @@ def _market_display_on(market_display_on):
 
 
 
-# ── GET /api/portfolio ──────────────────────────────────────────────────────
+# ── GET /api/portfolio/positions ────────────────────────────────────────────
+# 2026-09-29: the legacy full list GET /api/portfolio was removed (its only
+# reader, RealtimeProvider, moved to /positions); its assertions run here.
 
 class TestGetPortfolio:
     def test_unauthenticated_returns_401(self, client):
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 401
 
     def test_empty_portfolio(self, client, auth_user):
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         d = r.get_json()
         assert d["positions"] == []
         assert d["total_value_usd"] == 0
-        # User capital fixtures set USD=10000, KRW=1,000,000.
-        assert d["available_capital"] == 10000.0
 
     def test_portfolio_with_positions(self, client, auth_user, add_position):
         add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=150.0)
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         d = r.get_json()
         assert len(d["positions"]) == 1
         p = d["positions"][0]
-        assert p["ticker"] == "AAPL"
+        assert p["symbol"] == "AAPL"
         assert p["shares"] == 10
-        assert p["avg_cost"] == 150.0
+        assert p["avgCost"] == 150.0
         assert p["market_value"] == 10 * 150.0  # no signal cache -> fallback to avg_cost
 
     def test_positions_alias_emits_market_value_and_totals(
@@ -96,7 +99,9 @@ class TestGetPortfolio:
             ))
             db.session.commit()
 
-        r = client.get("/api/portfolio")
+        # Wave-3 P1 (2026-06-10): /api/portfolio/positions is the endpoint the
+        # v2 frontend polls. Its totals must bucket on suffix.
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         d = r.get_json()
         # The KR market value must land in the KRW bucket despite the cache.
@@ -104,67 +109,49 @@ class TestGetPortfolio:
         assert d["total_value_usd"] == 0
         # And the blended total must NOT be FX-inflated (700k KRW, not 700k USD→KRW).
         assert d["total_value_all_krw"] == 700000
-        # The per-row display field still echoes the cache (unchanged behavior).
-        assert d["positions"][0]["currency"] == "USD"
-
-        # Wave-3 P1 (2026-06-10): the SAME poisoned-cache bucketing bug lived
-        # on in /api/portfolio/positions — the endpoint the v2 frontend
-        # actually polls. Its totals must bucket on suffix too.
-        r2 = client.get("/api/portfolio/positions")
-        assert r2.status_code == 200
-        d2 = r2.get_json()
-        assert d2["total_value_krw"] == 700000.0
-        assert d2["total_value_usd"] == 0
-        assert d2["total_value_all_krw"] == 700000
 
 
-# ── POST /api/portfolio/position (add) ──────────────────────────────────────
+# ── POST /api/portfolio/positions (add) ─────────────────────────────────────
 
 class TestAddPosition:
     def test_add_new_position(self, client, auth_user):
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
-                "ticker": "MSFT",
-                "shares": 5,
-                "avg_cost": 300.0,
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "MSFT", "quantity": 5, "price": 300.0,
             })
         assert r.status_code == 200
-        # Route returns ok + resolved display metadata (ticker, name, is_korean)
+        # Route returns ok + resolved display metadata (symbol, name, is_korean)
         # so the client can render 회사명 immediately without a second round-trip.
         payload = r.get_json()
         assert payload["ok"] is True
-        assert payload["ticker"] == "MSFT"
+        assert payload["symbol"] == "MSFT"
         assert payload["is_korean"] is False
 
     def test_add_position_missing_ticker_returns_400(self, client, auth_user):
-        r = client.post("/api/portfolio/position", json={
-            "shares": 1, "avg_cost": 1.0,
+        r = client.post("/api/portfolio/positions", json={
+            "quantity": 1, "price": 1.0,
         })
         assert r.status_code == 400
 
     def test_add_position_zero_shares_returns_400(self, client, auth_user):
-        r = client.post("/api/portfolio/position", json={
-            "ticker": "AAPL", "shares": 0, "avg_cost": 100.0,
+        r = client.post("/api/portfolio/positions", json={
+            "symbol": "AAPL", "quantity": 0, "price": 100.0,
         })
         assert r.status_code == 400
 
     def test_add_position_negative_cost_returns_400(self, client, auth_user):
-        r = client.post("/api/portfolio/position", json={
-            "ticker": "AAPL", "shares": 1, "avg_cost": -50,
+        r = client.post("/api/portfolio/positions", json={
+            "symbol": "AAPL", "quantity": 1, "price": -50,
         })
         assert r.status_code == 400
 
-    def test_free_tier_position_limit_enforced(self, client, auth_user, add_position):
-        # Free tier limit is 3.
-        add_position(auth_user["id"], "AAPL", 1, 100)
-        add_position(auth_user["id"], "MSFT", 1, 100)
-        add_position(auth_user["id"], "GOOG", 1, 100)
-        with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
-                "ticker": "AMZN", "shares": 1, "avg_cost": 100,
-            })
-        assert r.status_code == 403
-        assert r.get_json()["code"] == "TIER_LIMIT"
+    def test_add_position_too_long_ticker_returns_400(self, client, auth_user):
+        """SEC-004: Position.ticker is String(20) — rejected before SQL."""
+        r = client.post("/api/portfolio/positions", json={
+            "symbol": "X" * 21, "quantity": 1, "price": 10.0,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["code"] == "INVALID_TICKER"
 
 
 # ── POST /api/portfolio/positions — purchase_date (open date) ───────────────
@@ -266,63 +253,57 @@ class TestPurchaseDate:
         assert added.year == 2024 and added.month == 3 and added.day == 1
 
 
-# ── PUT /api/portfolio/position/<id> (edit) ─────────────────────────────────
+# ── PATCH /api/portfolio/positions/<id> (edit) ──────────────────────────────
 
 class TestEditPosition:
-    def test_edit_existing_position(self, client, auth_user, add_position):
+    def test_edit_existing_position(self, client, auth_user, add_position, app):
+        from extensions import db
+        from models import Position
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.put(f"/api/portfolio/position/{pid}", json={
-                "shares": 20, "avg_cost": 140.0,
-            })
+        r = client.patch(f"/api/portfolio/positions/{pid}", json={
+            "avg_cost": 140.0, "note": "메모",
+        })
         assert r.status_code == 200
+        with app.app_context():
+            p = db.session.get(Position, pid)
+            assert p.avg_cost == 140.0
+            assert p.shares == 10  # PATCH never touches shares
+            assert p.thesis == "메모"
 
     def test_edit_nonexistent_returns_404(self, client, auth_user):
-        r = client.put("/api/portfolio/position/99999", json={
-            "shares": 1, "avg_cost": 1,
-        })
+        r = client.patch("/api/portfolio/positions/99999", json={"avg_cost": 1})
         assert r.status_code == 404
 
-    def test_edit_with_zero_shares_rejected(self, client, auth_user, add_position):
+    def test_edit_with_zero_cost_rejected(self, client, auth_user, add_position):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        r = client.put(f"/api/portfolio/position/{pid}", json={
-            "shares": 0, "avg_cost": 150,
-        })
+        r = client.patch(f"/api/portfolio/positions/{pid}", json={"avg_cost": 0})
         assert r.status_code == 400
 
-
-# ── DELETE /api/portfolio/position/<id> ─────────────────────────────────────
-
-class TestDeletePosition:
-    def test_delete_existing(self, client, auth_user, add_position):
-        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        r = client.delete(f"/api/portfolio/position/{pid}")
-        assert r.status_code == 200
-
-    def test_delete_nonexistent_returns_404(self, client, auth_user):
-        r = client.delete("/api/portfolio/position/99999")
-        assert r.status_code == 404
-
-    def test_cannot_delete_other_users_position(self, client, auth_user,
-                                                  make_user, app, add_position):
+    def test_cannot_edit_other_users_position(self, client, auth_user,
+                                               make_user, app, add_position):
         """P0 security: must not be able to touch another user's position."""
         other = make_user(email="other@test.com")
         other_pid = add_position(other["id"], "TSLA", 5, 200.0)
-        r = client.delete(f"/api/portfolio/position/{other_pid}")
+        r = client.patch(f"/api/portfolio/positions/{other_pid}", json={"avg_cost": 1.0})
         assert r.status_code == 404, (
-            "CRITICAL: user can delete another user's position!"
+            "CRITICAL: user can edit another user's position!"
+        )
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": other_pid, "action": "sell", "quantity": 1, "price": 1.0,
+        })
+        assert r.status_code == 404, (
+            "CRITICAL: user can record a trade on another user's position!"
         )
 
 
-# ── POST /api/portfolio/position/<id>/buy (buyMore) ─────────────────────────
+# ── POST /api/portfolio/trades — 매수 ────────────────────────────────────────
 
-class TestBuyMore:
-    def test_buy_more_success(self, client, auth_user, add_position, app):
+class TestTradeBuy:
+    def test_buy_success(self, client, auth_user, add_position, app):
         from extensions import db
         from models import SignalCache
 
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        # Seed SignalCache with is_korean=False so USD path is used.
         with app.app_context():
             db.session.add(SignalCache(
                 ticker="AAPL",
@@ -333,46 +314,36 @@ class TestBuyMore:
             ))
             db.session.commit()
 
-        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-            "shares": 5, "price": 160.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 5, "price": 160.0,
         })
         assert r.status_code == 200
         d = r.get_json()
         assert d["ok"] is True
-        assert d["new_shares"] == 15
+        assert d["newShares"] == 15
         # New avg cost = (10*150 + 5*160) / 15 = 153.33
-        assert round(d["new_avg_cost"], 2) == 153.33
-        # Capital should be reduced: 10000 - 5*160 = 9200
-        assert d["new_capital_usd"] == 9200.0
+        assert round(d["newAvgCost"], 2) == 153.33
 
-    def test_buy_more_insufficient_capital(self, client, auth_user, add_position, app):
-        from extensions import db
-        from models import SignalCache
+    def test_buy_invalid_payload(self, client, auth_user, add_position):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        with app.app_context():
-            db.session.add(SignalCache(
-                ticker="AAPL",
-                data_json=json.dumps({"is_korean": False, "currency": "USD"}),
-            ))
-            db.session.commit()
-        # Try to buy way more than 10,000 available.
-        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-            "shares": 1000, "price": 500.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 0, "price": 100,
         })
         assert r.status_code == 400
-        assert "insufficient" in r.get_json()["error"].lower()
+        assert r.get_json()["code"] == "TRADE_FIELDS_REQUIRED"
 
-    def test_buy_more_invalid_payload(self, client, auth_user, add_position):
+    def test_invalid_action_rejected(self, client, auth_user, add_position):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-            "shares": 0, "price": 100,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "hold", "quantity": 1, "price": 100,
         })
         assert r.status_code == 400
+        assert r.get_json()["code"] == "TRADE_ACTION_INVALID"
 
 
-# ── POST /api/portfolio/position/<id>/sell ──────────────────────────────────
+# ── POST /api/portfolio/trades — 매도 ────────────────────────────────────────
 
-class TestSellPosition:
+class TestTradeSell:
     def test_sell_partial(self, client, auth_user, add_position, app):
         from extensions import db
         from models import SignalCache
@@ -386,116 +357,56 @@ class TestSellPosition:
                 }),
             ))
             db.session.commit()
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 3, "price": 170.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 3, "price": 170.0,
         })
         assert r.status_code == 200
         d = r.get_json()
         assert d["ok"] is True
         # pnl = 3 * (170-150) = 60
         assert d["pnl"] == 60.0
-        assert d["adjusted"] is False
+        assert d["closed"] is False
 
-    def test_sell_more_than_owned_triggers_oversell_guard(
-        self, client, auth_user, add_position, app,
-    ):
-        """P0: Oversell must not create negative positions."""
+    def test_sell_more_than_owned_rejected(self, client, auth_user, add_position, app):
+        """P0: Oversell must not create negative positions — rejected, and
+        the position is left as it was."""
         from extensions import db
-        from models import SignalCache
+        from models import Position, TradeHistory
         pid = add_position(auth_user["id"], "AAPL", 5, 100.0)
-        with app.app_context():
-            db.session.add(SignalCache(
-                ticker="AAPL",
-                data_json=json.dumps({
-                    "is_korean": False, "currency": "USD", "price": 110.0,
-                }),
-            ))
-            db.session.commit()
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 10, "price": 110.0,
-        })
-        assert r.status_code == 200
-        d = r.get_json()
-        assert d["adjusted"] is True
-        assert d["actual_shares"] == 5
-        assert d["requested_shares"] == 10
-
-    def test_sell_nonexistent_position_returns_404(self, client, auth_user):
-        r = client.post("/api/portfolio/position/99999/sell", json={"shares": 1, "price": 100})
-        assert r.status_code == 404
-
-    def test_sell_position_rejects_negative_shares(
-        self, client, auth_user, add_position,
-    ):
-        """SEC-001: negative share counts must be rejected.
-
-        Regression for ``sell_shares = float(d.get("shares") or p.shares)`` —
-        a negative number is truthy so the previous guard let it through, then
-        ``proceeds = actual_sell * sell_price`` flipped sign and credited the
-        user. Now we 400 before any state mutation.
-        """
-        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": -10, "price": 200.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 10, "price": 110.0,
         })
         assert r.status_code == 400
-        assert r.get_json()["error"] == "Shares must be positive"
+        assert r.get_json()["code"] == "TRADE_SELL_EXCEEDS_HOLDING"
+        with app.app_context():
+            assert db.session.get(Position, pid).shares == 5
+            assert TradeHistory.query.filter_by(user_id=auth_user["id"]).count() == 0
 
-    def test_sell_position_rejects_zero_shares(
-        self, client, auth_user, add_position,
-    ):
-        """FIX 3 (2026-05-22): an explicit shares=0 must be rejected with 400
-        and must NOT fall back to a full-position close.
-
-        Previously ``float(d.get("shares") or p.shares)`` treated 0 as falsy
-        and silently sold the entire position. The handler now distinguishes
-        "key omitted" (None → full-position fallback) from "explicit 0" (→ 400)."""
-        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 0, "price": 200.0,
+    def test_sell_nonexistent_position_returns_404(self, client, auth_user):
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": 99999, "action": "sell", "quantity": 1, "price": 100,
         })
-        assert r.status_code == 400, r.get_json()
-        assert r.get_json()["error"] == "Shares must be positive"
+        assert r.status_code == 404
 
-    def test_sell_position_zero_shares_does_not_full_close(
-        self, client, auth_user, add_position, app,
+    @pytest.mark.parametrize("qty", [-10, 0])
+    def test_sell_rejects_non_positive_quantity(
+        self, client, auth_user, add_position, app, qty,
     ):
-        """FIX 3 (2026-05-22): the rejected 0-share sell must leave the
-        position untouched (no accidental full-close, no trade recorded)."""
+        """SEC-001 / FIX 3: a negative or zero quantity is rejected before any
+        state mutation — no sign-flipped proceeds, no accidental full close,
+        no trade recorded."""
         from extensions import db
         from models import Position, TradeHistory
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 0, "price": 200.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": qty, "price": 200.0,
         })
         assert r.status_code == 400
         with app.app_context():
             p = db.session.get(Position, pid)
-            assert p is not None  # not full-closed
+            assert p is not None
             assert p.shares == 10
             assert TradeHistory.query.filter_by(user_id=auth_user["id"]).count() == 0
-
-    def test_sell_position_omitted_shares_full_closes(
-        self, client, auth_user, add_position, app,
-    ):
-        """FIX 3 (2026-05-22): omitting `shares` entirely preserves the
-        documented "sell entire position" fallback (None → p.shares)."""
-        from extensions import db
-        from models import Position, SignalCache
-        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        with app.app_context():
-            db.session.add(SignalCache(
-                ticker="AAPL",
-                data_json=json.dumps({"is_korean": False, "currency": "USD",
-                                      "price": 170.0}),
-            ))
-            db.session.commit()
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "price": 170.0,  # no "shares" key → full close
-        })
-        assert r.status_code == 200, r.get_json()
-        with app.app_context():
-            assert db.session.get(Position, pid) is None
 
 
 # ── GET /api/portfolio/analytics ────────────────────────────────────────────
@@ -514,108 +425,23 @@ class TestHistory:
         assert r.status_code == 200
 
 
-# ── PUT /api/portfolio/capital ──────────────────────────────────────────────
+# ── POST /api/profile/capital (seed capital) ────────────────────────────────
+# 2026-09-29: PUT /api/portfolio/capital (no frontend consumer) was removed;
+# the settings card writes seed capital through API.profile.capital.
 
 class TestCapital:
     def test_set_capital_ok(self, client, auth_user):
-        r = client.put("/api/portfolio/capital", json={
-            "capital_usd": 5000, "capital_krw": 500000,
+        r = client.post("/api/profile/capital", json={
+            "available_capital_usd": 5000, "available_capital_krw": 500000,
         })
         assert r.status_code == 200
         d = r.get_json()
-        assert d["capital_usd"] == 5000
-        assert d["capital_krw"] == 500000
+        assert d["available_capital"] == 5000
+        assert d["available_capital_krw"] == 500000
 
     def test_negative_capital_rejected(self, client, auth_user):
-        r = client.put("/api/portfolio/capital", json={"capital_usd": -100})
+        r = client.post("/api/profile/capital", json={"available_capital_usd": -100})
         assert r.status_code == 400
-
-
-# ── stale-cache KR suffix fallback (2026-05-21 fix) ─────────────────────────
-#
-# When the SignalCache row is stale (TTL expired → get_signal() returns None →
-# sd == {}), buy_more / sell_position used to read ``sd.get("is_korean", False)``
-# and mis-route .KS/.KQ capital into the USD bucket. The fix falls back to the
-# ticker suffix. These tests seed NO SignalCache row to reproduce the stale
-# state, then assert the KRW bucket moves while USD stays frozen.
-
-class TestStaleCacheKrFallback:
-    def test_buy_more_kr_no_cache_hits_krw_bucket(
-        self, client, auth_user, add_position, app,
-    ):
-        from extensions import db
-        from models import User
-
-        pid = add_position(auth_user["id"], "005930.KS", 10, 70000.0)
-        # Deliberately seed NO SignalCache → stale → sd == {}.
-        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-            "shares": 2, "price": 71000.0,  # cost = 142,000 KRW
-        })
-        assert r.status_code == 200, r.get_json()
-        d = r.get_json()
-        assert d["ok"] is True
-        # KRW bucket debited (1,000,000 - 142,000 = 858,000), USD untouched.
-        assert d["new_capital_krw"] == 858000.0
-        assert d["new_capital_usd"] == 10000.0
-        with app.app_context():
-            u = db.session.get(User, auth_user["id"])
-            assert u.available_capital_krw == 858000.0
-            assert u.available_capital == 10000.0
-
-    def test_sell_kr_no_cache_credits_krw_bucket(
-        self, client, auth_user, add_position, app,
-    ):
-        from extensions import db
-        from models import User
-
-        pid = add_position(auth_user["id"], "035720.KQ", 10, 50000.0)
-        # No SignalCache → stale path.
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 3, "price": 55000.0,  # proceeds = 165,000 KRW
-        })
-        assert r.status_code == 200, r.get_json()
-        d = r.get_json()
-        assert d["ok"] is True
-        # KRW bucket credited (1,000,000 + 165,000 = 1,165,000), USD untouched.
-        assert d["new_capital_krw"] == 1165000.0
-        assert d["new_capital_usd"] == 10000.0
-        with app.app_context():
-            u = db.session.get(User, auth_user["id"])
-            assert u.available_capital_krw == 1165000.0
-            assert u.available_capital == 10000.0
-
-
-# ── buy_new_position response reflects post-deduction balance ───────────────
-#
-# Regression for the 2026-05-21 fix: the response now reads
-# ``locked_user.available_capital`` (the row that actually holds the
-# deduction) instead of ``current_user``. Assert new_capital_usd/krw equal the
-# debited balance.
-
-class TestBuyNewCapitalResponse:
-    def test_buy_new_usd_response_matches_debited_balance(
-        self, client, auth_user, mock_fetcher,
-    ):
-        r = client.post("/api/portfolio/position/buy-new", json={
-            "ticker": "AAPL", "shares": 5, "price": 160.0,  # cost = 800 USD
-        })
-        assert r.status_code == 200, r.get_json()
-        d = r.get_json()
-        assert d["ok"] is True
-        assert d["new_capital_usd"] == 9200.0  # 10000 - 800
-        assert d["new_capital_krw"] == 1000000.0  # untouched
-
-    def test_buy_new_kr_response_matches_debited_balance(
-        self, client, auth_user, mock_fetcher,
-    ):
-        r = client.post("/api/portfolio/position/buy-new", json={
-            "ticker": "005930.KS", "shares": 2, "price": 70000.0,  # 140,000 KRW
-        })
-        assert r.status_code == 200, r.get_json()
-        d = r.get_json()
-        assert d["ok"] is True
-        assert d["new_capital_krw"] == 860000.0  # 1,000,000 - 140,000
-        assert d["new_capital_usd"] == 10000.0  # untouched
 
 
 # ── FIX 1 (2026-05-22): create_trade_alias honours user-supplied trade date ──
@@ -720,10 +546,10 @@ class TestCreateTradeAliasDate:
         assert t2.traded_at >= before
 
 
-# ── FIX 2 (2026-05-22): legacy buy_more/sell currency uses KR-aware default ──
+# ── FIX 2 (2026-05-22): trade currency uses KR-aware default ─────────────────
 #
-# When SignalCache is stale (sd == {}), buy_more (:539) and sell_position
-# (:821) used `sd.get("currency", "USD")`, stamping .KS/.KQ TradeHistory rows
+# When SignalCache is stale (sd == {}), the buy/sell paths
+# used `sd.get("currency", "USD")`, stamping .KS/.KQ TradeHistory rows
 # as "USD" → realizedYtd sums KRW pnl into the USD bucket (huge inflation).
 # Fix: default to "KRW" when the ticker suffix marks it KR.
 
@@ -735,13 +561,13 @@ class TestStaleCacheCurrencyFallback:
             return (TradeHistory.query.filter_by(user_id=user_id)
                     .order_by(TradeHistory.id.desc()).first())
 
-    def test_buy_more_kr_no_cache_records_krw_currency(
+    def test_trade_buy_kr_no_cache_records_krw_currency(
         self, client, auth_user, add_position, app,
     ):
         pid = add_position(auth_user["id"], "005930.KS", 10, 70000.0)
         # No SignalCache → stale → sd == {}.
-        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-            "shares": 2, "price": 71000.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 2, "price": 71000.0,
         })
         assert r.status_code == 200, r.get_json()
         t = self._latest_trade(app, auth_user["id"])
@@ -751,20 +577,20 @@ class TestStaleCacheCurrencyFallback:
         self, client, auth_user, add_position, app,
     ):
         pid = add_position(auth_user["id"], "035720.KQ", 10, 50000.0)
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 3, "price": 55000.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 3, "price": 55000.0,
         })
         assert r.status_code == 200, r.get_json()
         t = self._latest_trade(app, auth_user["id"])
         assert t.currency == "KRW"
 
-    def test_buy_more_us_no_cache_still_usd(
+    def test_trade_buy_us_no_cache_still_usd(
         self, client, auth_user, add_position, app,
     ):
         """Non-KR ticker keeps USD fallback (no regression)."""
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-            "shares": 2, "price": 160.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 2, "price": 160.0,
         })
         assert r.status_code == 200, r.get_json()
         t = self._latest_trade(app, auth_user["id"])
@@ -775,36 +601,10 @@ class TestStaleCacheCurrencyFallback:
 #
 # avg_cost was gradient-averaged on add-buy but buy_fx_rate stayed pinned to
 # the first lot's rate → KRW cost-basis / KRW P&L% drifted. Now buy_fx_rate is
-# cost-weighted (mirrors add_position._merge_into). KR keeps buy_fx_rate 0.
+# cost-weighted (services/position_writes.merge_buy_into). KR keeps buy_fx_rate 0.
 
 class TestAddBuyFxRate:
-    def test_buy_more_updates_buy_fx_rate_weighted(
-        self, client, auth_user, add_position, app,
-    ):
-        from extensions import db
-        from models import Position, SignalCache
-        # Existing lot: 10 sh @ 150, buy_fx_rate 1000 (from add_position default).
-        pid = add_position(auth_user["id"], "AAPL", 10, 150.0, buy_fx=1000.0)
-        with app.app_context():
-            db.session.add(SignalCache(
-                ticker="AAPL",
-                data_json=json.dumps({"is_korean": False, "currency": "USD",
-                                      "price": 160.0}),
-            ))
-            db.session.commit()
-        with patch("routes.portfolio.fx_service.get_rate", return_value=1400.0):
-            r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-                "shares": 5, "price": 160.0,  # cost-basis 800 @ fx 1400
-            })
-        assert r.status_code == 200, r.get_json()
-        with app.app_context():
-            p = db.session.get(Position, pid)
-            # Weighted: (1000*1500 + 1400*800) / (1500+800) = 2,620,000/2300
-            expected = (1000.0 * 1500 + 1400.0 * 800) / (1500 + 800)
-            assert round(p.buy_fx_rate, 4) == round(expected, 4)
-            assert p.buy_fx_rate != 1000.0  # actually moved
-
-    def test_buy_more_kr_keeps_zero_buy_fx_rate(
+    def test_trade_buy_kr_keeps_zero_buy_fx_rate(
         self, client, auth_user, add_position, app,
     ):
         from extensions import db
@@ -812,8 +612,8 @@ class TestAddBuyFxRate:
         # KR position seeded with buy_fx_rate 0 (KR convention).
         pid = add_position(auth_user["id"], "005930.KS", 10, 70000.0, buy_fx=0.0)
         with patch("routes.portfolio.fx_service.get_rate", return_value=1400.0):
-            r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-                "shares": 2, "price": 71000.0,
+            r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 2, "price": 71000.0,
             })
         assert r.status_code == 200, r.get_json()
         with app.app_context():
@@ -844,16 +644,17 @@ class TestAddBuyFxRate:
             expected = (1000.0 * 1500 + 1400.0 * 800) / (1500 + 800)
             assert round(p.buy_fx_rate, 4) == round(expected, 4)
 
-    def test_buy_new_position_merge_updates_buy_fx_rate(
-        self, client, auth_user, add_position, app, mock_fetcher,
+    def test_positions_merge_updates_buy_fx_rate(
+        self, client, auth_user, add_position, app,
     ):
         from extensions import db
         from models import Position
-        # buy-new merges into existing AAPL row when one exists.
+        # POST /positions merges into the existing AAPL row.
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0, buy_fx=1000.0)
-        with patch("routes.portfolio.fx_service.get_rate", return_value=1400.0):
-            r = client.post("/api/portfolio/position/buy-new", json={
-                "ticker": "AAPL", "shares": 5, "price": 160.0,
+        with patch("routes.portfolio.fx_service.get_rate", return_value=1400.0), \
+             patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "AAPL", "quantity": 5, "price": 160.0,
             })
         assert r.status_code == 200, r.get_json()
         with app.app_context():
@@ -884,7 +685,7 @@ class TestInfiniteAmountGuard:
 
     def test_add_position_rejects_huge_shares(self, client, auth_user):
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
+            r = client.post("/api/portfolio/positions", json={
                 "ticker": "AAPL", "shares": 1e308, "avg_cost": 100.0,
             })
         assert r.status_code == 400
@@ -892,7 +693,7 @@ class TestInfiniteAmountGuard:
 
     def test_add_position_rejects_huge_cost(self, client, auth_user):
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
+            r = client.post("/api/portfolio/positions", json={
                 "ticker": "AAPL", "shares": 5, "avg_cost": 1e308,
             })
         assert r.status_code == 400
@@ -901,7 +702,7 @@ class TestInfiniteAmountGuard:
     def test_add_position_rejects_inf(self, client, auth_user):
         with patch("routes.portfolio.cache_service.cache_ticker"):
             r = client.post(
-                "/api/portfolio/position",
+                "/api/portfolio/positions",
                 data='{"ticker":"AAPL","shares":Infinity,"avg_cost":100.0}',
                 content_type="application/json",
             )
@@ -911,25 +712,18 @@ class TestInfiniteAmountGuard:
     def test_add_position_rejects_nan(self, client, auth_user):
         with patch("routes.portfolio.cache_service.cache_ticker"):
             r = client.post(
-                "/api/portfolio/position",
+                "/api/portfolio/positions",
                 data='{"ticker":"AAPL","shares":NaN,"avg_cost":100.0}',
                 content_type="application/json",
             )
         assert r.status_code == 400
         assert r.get_json()["code"] == "INVALID_AMOUNT"
 
-    def test_buy_more_rejects_huge_price(self, client, auth_user, add_position, app):
+    def test_trade_buy_rejects_huge_price(self, client, auth_user, add_position, app):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
         self._signal(app)
-        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-            "shares": 1, "price": 1e308,
-        })
-        assert r.status_code == 400
-        assert r.get_json()["code"] == "INVALID_AMOUNT"
-
-    def test_buy_new_rejects_huge_shares(self, client, auth_user, mock_fetcher):
-        r = client.post("/api/portfolio/position/buy-new", json={
-            "ticker": "AAPL", "shares": 1e308, "price": 100.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 1, "price": 1e308,
         })
         assert r.status_code == 400
         assert r.get_json()["code"] == "INVALID_AMOUNT"
@@ -937,8 +731,8 @@ class TestInfiniteAmountGuard:
     def test_sell_rejects_huge_shares(self, client, auth_user, add_position, app):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
         self._signal(app)
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 1e308, "price": 100.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 1e308, "price": 100.0,
         })
         assert r.status_code == 400
         assert r.get_json()["code"] == "INVALID_AMOUNT"
@@ -946,17 +740,9 @@ class TestInfiniteAmountGuard:
     def test_sell_rejects_huge_price(self, client, auth_user, add_position, app):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
         self._signal(app)
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 1, "price": 1e308,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 1, "price": 1e308,
         })
-        assert r.status_code == 400
-        assert r.get_json()["code"] == "INVALID_AMOUNT"
-
-    def test_create_position_alias_rejects_huge_quantity(self, client, auth_user):
-        with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/positions", json={
-                "symbol": "AAPL", "quantity": 1e308, "price": 100.0,
-            })
         assert r.status_code == 400
         assert r.get_json()["code"] == "INVALID_AMOUNT"
 
@@ -973,7 +759,7 @@ class TestInfiniteAmountGuard:
 
     def test_normal_amounts_still_accepted(self, client, auth_user, app, mock_fetcher):
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
+            r = client.post("/api/portfolio/positions", json={
                 "ticker": "MSFT", "shares": 5, "avg_cost": 300.0,
             })
         assert r.status_code == 200, r.get_json()
@@ -983,12 +769,12 @@ class TestInfiniteAmountGuard:
         self, client, auth_user,
     ):
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            ok = client.post("/api/portfolio/position", json={
+            ok = client.post("/api/portfolio/positions", json={
                 "ticker": "BND", "shares": 1e9, "avg_cost": 1.0,
             })
         assert ok.status_code == 200, ok.get_json()
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            bad = client.post("/api/portfolio/position", json={
+            bad = client.post("/api/portfolio/positions", json={
                 "ticker": "BNX", "shares": 2e9, "avg_cost": 1.0,
             })
         assert bad.status_code == 400
@@ -999,31 +785,9 @@ class TestInfiniteAmountGuard:
 # The cap COUNT now runs while holding SELECT FOR UPDATE on the User row, which
 # serializes per-user adds and closes the TOCTOU window. True greenlet
 # concurrency isn't reproducible under SQLite's single-writer test harness, so
-# these assert the locked code path still enforces the cap across all three add
-# entry points and never deadlocks.
+# these assert the locked code path still enforces the cap and never deadlocks.
 
 class TestFreeTierCapUnderLock:
-    def test_add_position_cap_enforced(self, client, auth_user, add_position):
-        add_position(auth_user["id"], "AAPL", 1, 100)
-        add_position(auth_user["id"], "MSFT", 1, 100)
-        add_position(auth_user["id"], "GOOG", 1, 100)
-        with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
-                "ticker": "AMZN", "shares": 1, "avg_cost": 100,
-            })
-        assert r.status_code == 403
-        assert r.get_json()["code"] == "TIER_LIMIT"
-
-    def test_buy_new_cap_enforced(self, client, auth_user, add_position, mock_fetcher):
-        add_position(auth_user["id"], "AAPL", 1, 100)
-        add_position(auth_user["id"], "MSFT", 1, 100)
-        add_position(auth_user["id"], "GOOG", 1, 100)
-        r = client.post("/api/portfolio/position/buy-new", json={
-            "ticker": "TSLA", "shares": 1, "price": 100,
-        })
-        assert r.status_code == 403
-        assert r.get_json()["code"] == "TIER_LIMIT"
-
     def test_create_position_alias_cap_enforced(self, client, auth_user, add_position):
         add_position(auth_user["id"], "AAPL", 1, 100)
         add_position(auth_user["id"], "MSFT", 1, 100)
@@ -1047,15 +811,6 @@ class TestFreeTierCapUnderLock:
         with app.app_context():
             return Position.query.filter_by(user_id=uid, ticker=ticker).one().shares
 
-    def test_add_position_merge_into_held_ticker_at_cap(self, client, auth_user, add_position, app):
-        self._fill_cap(auth_user["id"], add_position)
-        with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
-                "ticker": "AAPL", "shares": 2, "avg_cost": 100,
-            })
-        assert r.status_code == 200, r.get_json()
-        assert self._shares(app, auth_user["id"], "AAPL") == 3
-
     def test_create_position_alias_merge_into_held_ticker_at_cap(self, client, auth_user, add_position, app):
         self._fill_cap(auth_user["id"], add_position)
         with patch("routes.portfolio.cache_service.cache_ticker"):
@@ -1065,30 +820,49 @@ class TestFreeTierCapUnderLock:
         assert r.status_code == 200, r.get_json()
         assert self._shares(app, auth_user["id"], "MSFT") == 3
 
-    def test_buy_new_merge_into_held_ticker_at_cap(self, client, auth_user, add_position, app, mock_fetcher):
-        self._fill_cap(auth_user["id"], add_position)
-        r = client.post("/api/portfolio/position/buy-new", json={
-            "ticker": "GOOG", "shares": 2, "price": 100,
-        })
-        assert r.status_code == 200, r.get_json()
-        assert self._shares(app, auth_user["id"], "GOOG") == 3
-
     def test_under_cap_add_still_succeeds(self, client, auth_user, add_position):
         add_position(auth_user["id"], "AAPL", 1, 100)
         add_position(auth_user["id"], "MSFT", 1, 100)
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
+            r = client.post("/api/portfolio/positions", json={
                 "ticker": "GOOG", "shares": 1, "avg_cost": 100,
             })
         assert r.status_code == 200, r.get_json()
 
+    # 2026-09-29 — 캡은 services/position_writes 한 벌. 원장(ledger)도 같은 상수.
+    def test_cap_has_one_source(self):
+        from services.imports import ledger
+        from services import position_writes
+        assert ledger.FREE_POSITION_CAP is position_writes.FREE_POSITION_CAP
+
+    def test_blocks_new_symbol(self, app, auth_user, add_position):
+        from extensions import db
+        from models import User
+        from services.position_writes import blocks_new_symbol
+        self._fill_cap(auth_user["id"], add_position)
+        with app.app_context():
+            u = db.session.get(User, auth_user["id"])
+            assert blocks_new_symbol(u, "AMZN") is True
+            assert blocks_new_symbol(u, "AAPL") is False  # held → merge
+
+    def test_tier_limit_error_is_bilingual(self, client, auth_user, add_position):
+        self._fill_cap(auth_user["id"], add_position)
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "AMZN", "quantity": 1, "price": 100,
+            })
+        assert r.status_code == 403
+        body = r.get_json()
+        assert body["code"] == "TIER_LIMIT"
+        assert body["error_kr"]
+
 
 # ── Bug C#1: position lost-update — locked re-load preserves correctness ────
-# buy_more / sell_position / create_trade_alias now re-load the Position under
+# POST /trades re-loads the Position under
 # SELECT FOR UPDATE *after* locking the User row (lock order User→Position on
 # every path → deadlock-free). SQLite no-ops row locks, so we can't reproduce a
 # true interleave; these assert the locked-reload path leaves shares /
-# avg_cost / capital consistent and that the reorder didn't break the 404 /
+# avg_cost consistent and that the reorder didn't break the 404 /
 # full-close / partial paths.
 
 class TestPositionLockedReload:
@@ -1105,15 +879,15 @@ class TestPositionLockedReload:
             ))
             db.session.commit()
 
-    def test_buy_more_locked_reload_updates_shares_and_capital(
+    def test_buy_locked_reload_updates_shares_not_capital(
         self, client, auth_user, add_position, app,
     ):
         from extensions import db
         from models import Position, User
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
         self._signal(app)
-        r = client.post(f"/api/portfolio/position/{pid}/buy", json={
-            "shares": 5, "price": 160.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "buy", "quantity": 5, "price": 160.0,
         })
         assert r.status_code == 200, r.get_json()
         with app.app_context():
@@ -1121,11 +895,11 @@ class TestPositionLockedReload:
             assert p.shares == 15
             assert round(p.avg_cost, 2) == 153.33
             u = db.session.get(User, auth_user["id"])
-            assert u.available_capital == 10000.0 - 5 * 160.0  # 9200
+            assert u.available_capital == 10000.0  # recorded fill: seed untouched
 
-    def test_buy_more_locked_reload_404_when_missing(self, client, auth_user):
-        r = client.post("/api/portfolio/position/99999/buy", json={
-            "shares": 1, "price": 100.0,
+    def test_buy_locked_reload_404_when_missing(self, client, auth_user):
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": 99999, "action": "buy", "quantity": 1, "price": 100.0,
         })
         assert r.status_code == 404
 
@@ -1136,14 +910,14 @@ class TestPositionLockedReload:
         from models import Position, User
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
         self._signal(app)
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 10, "price": 170.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 10, "price": 170.0,
         })
         assert r.status_code == 200, r.get_json()
         with app.app_context():
             assert db.session.get(Position, pid) is None
             u = db.session.get(User, auth_user["id"])
-            assert u.available_capital == 10000.0 + 10 * 170.0
+            assert u.available_capital == 10000.0  # recorded fill: seed untouched
 
     def test_sell_locked_reload_partial_decrements(
         self, client, auth_user, add_position, app,
@@ -1152,31 +926,10 @@ class TestPositionLockedReload:
         from models import Position
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
         self._signal(app)
-        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
-            "shares": 3, "price": 170.0,
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 3, "price": 170.0,
         })
         assert r.status_code == 200, r.get_json()
         with app.app_context():
             p = db.session.get(Position, pid)
             assert p.shares == 7
-
-    def test_create_trade_alias_buy_locked_reload(
-        self, client, auth_user, add_position, app,
-    ):
-        from extensions import db
-        from models import Position
-        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        self._signal(app)
-        r = client.post("/api/portfolio/trades", json={
-            "position_id": pid, "action": "buy", "quantity": 5, "price": 160.0,
-        })
-        assert r.status_code == 200, r.get_json()
-        with app.app_context():
-            p = db.session.get(Position, pid)
-            assert p.shares == 15
-
-    def test_create_trade_alias_404_when_missing(self, client, auth_user):
-        r = client.post("/api/portfolio/trades", json={
-            "position_id": 99999, "action": "buy", "quantity": 1, "price": 100.0,
-        })
-        assert r.status_code == 404

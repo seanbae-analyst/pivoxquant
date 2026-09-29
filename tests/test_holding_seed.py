@@ -1,6 +1,6 @@
 """tests/test_holding_seed.py — 보유 등록 시드 매수 행 (2026-09-29).
 
-보유 등록 경로(POST /api/portfolio/positions · /position · 보유 캡처 가져오기)가
+보유 등록 경로(POST /api/portfolio/positions · 보유 캡처 가져오기)가
 ``positions`` 만 쓰고 ``trade_history`` 를 쓰지 않아서, FIFO 로 로트를 다시
 세우는 거울들이 등록 종목의 매도를 버리고 추가매수를 새 진입으로 읽었다.
 
@@ -73,8 +73,8 @@ class TestRegistrationWritesSeed:
 
     def test_add_position_kr_currency(self, client, auth_user, app):
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            r = client.post("/api/portfolio/position", json={
-                "ticker": "005930.KS", "shares": 3, "avg_cost": 70000,
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "005930.KS", "quantity": 3, "price": 70000,
             })
         assert r.status_code == 200, r.get_json()
         hist = _history(app, auth_user["id"])
@@ -146,8 +146,9 @@ class TestSellAfterRegistration:
                 "symbol": "AAPL", "quantity": 10, "price": 100,
             })
         pid = int(r.get_json()["id"])
-        r = client.post(f"/api/portfolio/position/{pid}/sell",
-                        json={"shares": 10, "price": 120})
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 10, "price": 120,
+        })
         assert r.status_code == 200, r.get_json()
 
         with app.app_context():

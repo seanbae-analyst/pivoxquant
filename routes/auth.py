@@ -50,20 +50,7 @@ def _safe_next(next_url):
     return next_url
 
 from extensions import db
-from models import (
-    User, Position, TradeHistory, Alert, Watchlist,
-    InvestmentProfile, BrokerConnection, PushSubscription,
-    PortfolioShare,
-    Artifact, UserReferral,
-    ArtifactFeedback, BehavioralScore,
-    AITwinPortfolio, AITwinWeeklyReport,
-    PreTradeReflection, PersonaSnapshot, WeeklyPulse,
-    PositionDDCheck, Inquiry, ObservationNote,
-    ScheduledEmail, NpsFeedback,
-    AuthEvent,
-    CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit, CompanionWaitlist,
-    ImportBatch, ImportToken, PendingTrade,
-)
+from models import User, AuthEvent
 from security import auth_rate_limit, general_rate_limit
 from services.age_verification import (
     AgeConfirmationError,
@@ -1743,184 +1730,16 @@ def delete_account():
     try:
         # Delete every user-owned row, each in its own SAVEPOINT.
         #
-        # Why per-table savepoints (2026-06-07 — fixes a prod-only 500)
-        # ------------------------------------------------------------
-        # delete_account had NEVER run against prod until self-service deletion
-        # shipped (the UI was a mailto link). Its first real run 500'd because
-        # PostgreSQL aborts the WHOLE transaction on the first failing statement
-        # — so a single drifted FK or a table the model declares ``ondelete=
-        # CASCADE`` but whose prod constraint predates that clause (Railway's
-        # hybrid create_all + _do_migrations strategy lags alembic) blocks the
-        # user-row delete and 500s the entire erasure.
-        #
-        # Each purge now runs in a nested transaction (SAVEPOINT): one table's
-        # failure is isolated + logged, never poisoning the rest, and the user
-        # row delete below no longer depends on DB-level cascade being correct
-        # on prod. Belt-and-suspenders over the FK ondelete clauses.
-        #
-        # SignalCache is global (ticker-keyed, no user_id) — skipped.
-        # Keep this list in sync with scripts/nightly/pipa_purge._delete_user_cascade.
-        _d = lambda q: q.delete(synchronize_session=False)  # noqa: E731
-        purge_ops = [
-            ("positions", lambda: _d(Position.query.filter_by(user_id=user_id))),
-            ("trade_history", lambda: _d(TradeHistory.query.filter_by(user_id=user_id))),
-            ("alerts", lambda: _d(Alert.query.filter_by(user_id=user_id))),
-            ("watchlist", lambda: _d(Watchlist.query.filter_by(user_id=user_id))),
-            ("investment_profiles", lambda: _d(InvestmentProfile.query.filter_by(user_id=user_id))),
-            ("broker_connections", lambda: _d(BrokerConnection.query.filter_by(user_id=user_id))),
-            ("push_subscriptions", lambda: _d(PushSubscription.query.filter_by(user_id=user_id))),
-            ("portfolio_shares", lambda: _d(PortfolioShare.query.filter_by(user_id=user_id))),
-            ("artifacts", lambda: _d(Artifact.query.filter_by(user_id=user_id))),
-            ("user_referrals", lambda: _d(UserReferral.query.filter_by(user_id=user_id))),
-            ("artifact_feedback", lambda: _d(ArtifactFeedback.query.filter_by(user_id=user_id))),
-            ("behavioral_scores", lambda: _d(BehavioralScore.query.filter_by(user_id=user_id))),
-            ("ai_twin_portfolios", lambda: _d(AITwinPortfolio.query.filter_by(user_id=user_id))),
-            ("ai_twin_weekly_reports", lambda: _d(AITwinWeeklyReport.query.filter_by(user_id=user_id))),
-            # Import Inbox (2026-09-29) — 승인 이유(암호화 자유 텍스트)를 담은
-            # 대기 체결부터. FK 순서: pending_trades → import_batches →
-            # import_tokens. pending_trades 가 pre_trade_reflections 를
-            # 참조하므로 멈춤 기록보다 먼저 지운다.
-            ("pending_trades", lambda: _d(PendingTrade.query.filter_by(user_id=user_id))),
-            ("import_batches", lambda: _d(ImportBatch.query.filter_by(user_id=user_id))),
-            ("import_tokens", lambda: _d(ImportToken.query.filter_by(user_id=user_id))),
-            ("pre_trade_reflections", lambda: _d(PreTradeReflection.query.filter_by(user_id=user_id))),
-            # 관찰 노트 — 유저 본인의 암호화된 자유 텍스트. 멈춤 기록과 같은
-            # 이유로 명시적으로 지운다 (2026-09-22).
-            ("observation_notes", lambda: _d(ObservationNote.query.filter_by(user_id=user_id))),
-            ("persona_snapshots", lambda: _d(PersonaSnapshot.query.filter_by(user_id=user_id))),
-            ("weekly_pulse", lambda: _d(WeeklyPulse.query.filter_by(user_id=user_id))),
-            ("scheduled_emails", lambda: _d(ScheduledEmail.query.filter_by(user_id=user_id))),
-            ("nps_feedback", lambda: _d(NpsFeedback.query.filter_by(user_id=user_id))),
-            ("position_dd_checks", lambda: _d(PositionDDCheck.query.filter_by(user_id=user_id))),
-            ("inquiries", lambda: _d(Inquiry.query.filter_by(user_id=user_id))),
-            # 2026-06-07 — tables with a users FK that were MISSING from the
-            # explicit list (the prod 500 culprit class). Model ondelete is
-            # CASCADE, so a schema-correct prod cascades them — purging here
-            # makes erasure independent of prod FK drift.
-            ("checkout_expirations", lambda: _d(CheckoutExpiration.query.filter_by(user_id=user_id))),
-            ("portfolio_nav_snapshots", lambda: _d(PortfolioNavSnapshot.query.filter_by(user_id=user_id))),
-            # user_agent_audit: model FK is CASCADE (deleted with the user today
-            # regardless of the old "retain" comment, which tracked an
-            # unimplemented P1). Purge explicitly so a drifted prod FK can't
-            # block erasure. Real 2-yr retention, if pursued, needs nullable
-            # user_id + SET NULL + counsel sign-off (legal_question_queue).
-            ("user_agent_audit", lambda: _d(UserAgentAudit.query.filter_by(user_id=user_id))),
-            # companion_waitlist: SET NULL semantics — keep the (now anonymous)
-            # waitlist signal, just detach the user.
-            ("companion_waitlist", lambda: CompanionWaitlist.query.filter_by(
-                user_id=user_id).update({CompanionWaitlist.user_id: None},
-                                        synchronize_session=False)),
-        ]
-        purge_failures = []
-        for label, op in purge_ops:
-            try:
-                with db.session.begin_nested():
-                    op()
-            except Exception as exc:  # noqa: BLE001 — isolate per-table failure
-                purge_failures.append(label)
-                logger.warning(
-                    "delete_account: purge of %s failed (continuing): %s",
-                    label, exc,
-                )
-
-        # Dynamic safety net (2026-06-07): the explicit list covers ORM models,
-        # but a MIGRATION-ONLY table with a users FK and no model — e.g.
-        # ``morning_briefs`` (mig 003), whose FK is a plain ``ForeignKey(
-        # "users.id")`` with NO ON DELETE CASCADE — is invisible to it and
-        # BLOCKS the user-row delete on prod (ForeignKeyViolation, the actual
-        # 500 the user hit). Introspect the LIVE DB and clear every remaining
-        # users-referencing row so erasure can't be defeated by an unknown /
-        # cascade-less table. Each delete in its own SAVEPOINT.
-        #
-        # Tables already handled above (incl. companion_waitlist SET NULL) match
-        # zero rows here and are no-ops. funnel_events has no FK (deliberate
-        # analytics snapshot) so it is never touched.
-        try:
-            from sqlalchemy import inspect as _sa_inspect, text as _sa_text
-            _insp = _sa_inspect(db.engine)
-            for _tbl in _insp.get_table_names():
-                if _tbl == "users":
-                    continue
-                for _fk in _insp.get_foreign_keys(_tbl):
-                    if _fk.get("referred_table") != "users":
-                        continue
-                    if "id" not in (_fk.get("referred_columns") or []):
-                        continue
-                    _cols = _fk.get("constrained_columns") or []
-                    if not _cols:
-                        continue
-                    _col = _cols[0]
-                    try:
-                        with db.session.begin_nested():
-                            db.session.execute(
-                                _sa_text(f'DELETE FROM "{_tbl}" WHERE "{_col}" = :uid'),
-                                {"uid": user_id},
-                            )
-                    except Exception as exc:  # noqa: BLE001
-                        purge_failures.append(_tbl)
-                        logger.warning(
-                            "delete_account: dynamic purge of %s.%s failed: %s",
-                            _tbl, _col, exc,
-                        )
-        except Exception:
-            logger.exception(
-                "delete_account: dynamic FK sweep init failed (continuing)"
-            )
-
-        # 2026-06-08 — model-less, FK-less user_id tables. The explicit ORM list
-        # can't reach them (no model) and the FK-driven sweep above skips them
-        # (no users FK on prod — e.g. ``anthropic_usage_log``: migration 042
-        # declares the FK but never ran on prod, so the app.py self-heal CREATE
-        # TABLE owns the live schema and omits it). Without this, a deleted
-        # user's rows survive → orphaned PII (PIPA §21 right-to-erasure).
-        # Allowlist ONLY — a blanket "every user_id table" would wrongly wipe
-        # ``funnel_events`` (the deliberately-retained anonymous analytics
-        # snapshot). Each delete in its own SAVEPOINT so it can never block the
-        # user-row delete. Keep in sync with
-        # scripts/nightly/pipa_purge._delete_user_cascade.
-        try:
-            from sqlalchemy import inspect as _ml_inspect, text as _ml_text
-            _ml_insp = _ml_inspect(db.engine)
-            _ml_existing = set(_ml_insp.get_table_names())
-            for _ml_tbl in ("anthropic_usage_log",):
-                if _ml_tbl not in _ml_existing:
-                    continue
-                if "user_id" not in {c["name"] for c in _ml_insp.get_columns(_ml_tbl)}:
-                    continue
-                try:
-                    with db.session.begin_nested():
-                        db.session.execute(
-                            _ml_text(f'DELETE FROM "{_ml_tbl}" WHERE "user_id" = :uid'),
-                            {"uid": user_id},
-                        )
-                except Exception as exc:  # noqa: BLE001
-                    purge_failures.append(_ml_tbl)
-                    logger.warning(
-                        "delete_account: model-less purge of %s failed: %s",
-                        _ml_tbl, exc,
-                    )
-        except Exception:
-            logger.exception(
-                "delete_account: model-less user_id sweep init failed (continuing)"
-            )
-
-        # auth_events is keyed by email with no users FK, so neither the list
-        # above nor the FK sweep reaches it. 2026-09-10: only the 30-day purge
-        # anonymized it, so "delete now" left the plaintext email in the login
-        # log indefinitely (privacy policy: access logs ≤ 30 days). Anonymize
-        # in place exactly as scripts/nightly/pipa_purge does — the aggregate
-        # audit trail survives, the person does not.
-        if user_email:
-            try:
-                from scripts.nightly.pipa_purge import _hash_email
-                with db.session.begin_nested():
-                    AuthEvent.query.filter(AuthEvent.email == user_email).update(
-                        {AuthEvent.email: _hash_email(user_email)},
-                        synchronize_session=False,
-                    )
-            except Exception as exc:  # noqa: BLE001
-                purge_failures.append("auth_events")
-                logger.warning("delete_account: auth_events anonymize failed: %s", exc)
+        # Why per-table savepoints (2026-06-07 — fixes a prod-only 500):
+        # PostgreSQL aborts the WHOLE transaction on the first failing
+        # statement, so one drifted FK used to 500 the entire erasure. The
+        # explicit list, the dynamic users-FK sweep, the model-less allowlist
+        # and the auth_events anonymization now live in ONE place —
+        # services/account_erasure.purge_user_rows — shared with the 30-day
+        # purge (scripts/nightly/pipa_purge). One table's failure is isolated
+        # and reported back, never poisoning the rest.
+        from services.account_erasure import purge_user_rows
+        _counts, purge_failures = purge_user_rows(user_id, user_email)
 
         # SHIP-BLOCKER: cancel any live Stripe subscription BEFORE dropping the
         # user row, otherwise Stripe keeps billing the card and the webhook can

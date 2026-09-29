@@ -5,7 +5,7 @@ returns one record per matched share-quantity slice. Removes a 4-way
 duplication previously embedded in:
 
   * ``persona_analytics._avg_holding_period``
-  * ``rolling_metrics._holding_period_days``
+  * ``rolling_metrics._holding_period_days`` (모듈째 삭제 2026-09-29)
   * ``group_benchmark._avg_holding_days`` and ``_user_mistakes``
   * ``persona_classifier_v2._hold_time_cv`` and ``_loss_cut_discipline``
 

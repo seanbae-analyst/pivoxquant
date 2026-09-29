@@ -184,9 +184,51 @@ interface Props {
    *  server hydration is skipped — used by tests and any controlled host. */
   initial?: MatrixState;
   onChange?: (state: MatrixState) => void;
+  /** B2 email-delivery toggle (`!email_opt_out`). `undefined` = not known yet. */
+  emailDeliveryOn?: boolean;
+  /** B3 marketing-consent card (effective opt-in). `undefined` = not known yet. */
+  marketingConsentOn?: boolean;
 }
 
-export function NotificationsMatrix({ initial, onChange }: Props) {
+/** Anchor ids of the two cards the monthly-report email also depends on.
+ *  The settings page puts them on the B2 card / MarketingConsentCardV2. */
+export const EMAIL_DELIVERY_ANCHOR = "settings-email-delivery";
+export const MARKETING_CONSENT_ANCHOR = "settings-marketing-consent";
+
+/**
+ * 2026-09-29 — the monthly report goes out only when THREE switches are on:
+ * this row's email cell, B2 email delivery (`email_opt_out`) and B3 marketing
+ * consent (services/email/sender.py checks all three). They are owned by
+ * different cards, so an "on" cell here could silently send nothing. When the
+ * cell is on and another switch blocks it, name that switch. Unknown (still
+ * loading) never counts as blocking.
+ */
+function monthlyMirrorBlocker(
+  cellOn: boolean,
+  emailDeliveryOn: boolean | undefined,
+  marketingConsentOn: boolean | undefined,
+): { key: string; href: string } | null {
+  if (!cellOn) return null;
+  const delivery = emailDeliveryOn === false;
+  const consent = marketingConsentOn === false;
+  if (delivery && consent) {
+    return { key: "blockedByBoth", href: `#${EMAIL_DELIVERY_ANCHOR}` };
+  }
+  if (delivery) {
+    return { key: "blockedByDelivery", href: `#${EMAIL_DELIVERY_ANCHOR}` };
+  }
+  if (consent) {
+    return { key: "blockedByConsent", href: `#${MARKETING_CONSENT_ANCHOR}` };
+  }
+  return null;
+}
+
+export function NotificationsMatrix({
+  initial,
+  onChange,
+  emailDeliveryOn,
+  marketingConsentOn,
+}: Props) {
   const t = useT();
   /** Event copy lives in settingsV2.notifications.<id>.{name,help}. */
   const evName = (id: string) => t(`settingsV2.notifications.${id}.name`);
@@ -372,6 +414,10 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
           {rows.map((e, i) => {
             const row = state[e.id] ?? { email: false, push: false, inapp: false };
             const isLast = i === rows.length - 1;
+            const blocker =
+              e.id === "monthly_mirror"
+                ? monthlyMirrorBlocker(row.email, emailDeliveryOn, marketingConsentOn)
+                : null;
             return (
               <tr key={e.id}>
                 <td
@@ -401,6 +447,23 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                   >
                     {evHelp(e.id)}
                   </div>
+                  {blocker ? (
+                    <a
+                      href={blocker.href}
+                      data-testid="monthly-mirror-email-blocked"
+                      className="font-serif"
+                      style={{
+                        display: "block",
+                        fontSize: "var(--pq-text-eyebrow)",
+                        color: "var(--pq-bronze)",
+                        marginTop: 6,
+                        textDecoration: "underline",
+                        textUnderlineOffset: 2,
+                      }}
+                    >
+                      {t(`settingsV2.notifications.${e.id}.${blocker.key}`)}
+                    </a>
+                  ) : null}
                 </td>
                 {(["email", "push", "inapp"] as const).map((ch) => (
                   <td

@@ -32,19 +32,19 @@ export const API = {
     deleteCancel: "/api/auth/delete-cancel",
   },
   portfolio: {
-    list: "/api/portfolio",
+    // 2026-09-29: `list: "/api/portfolio"` removed with its backend route —
+    // its only reader was RealtimeProvider's has-positions gate, which now
+    // reads PORTFOLIO_POSITIONS.
     history: (period: string) => `/api/portfolio/history?period=${period}`,
     // Singular `/position` endpoints (addPosition / editPosition / deletePosition /
     // buyMore / sellShares / buyNew) were removed 2026-05-02 — the frontend uses
     // the plural `/api/portfolio/positions[/<id>]` aliases (see PORTFOLIO_POSITIONS
-    // and add-position-modal-v2.tsx). Backend handlers remain for back-compat
-    // but emit a Deprecation header and warning log on every call.
+    // and add-position-modal-v2.tsx). 2026-09-29: their backend handlers are
+    // gone too, along with DELETE /api/portfolio/positions/<id> (no caller).
     //
-    // 2026-05-17: `capital: "/api/portfolio/capital"` removed. The constant had
-    // zero call sites in frontend/src — `update_capital` is wired through
-    // `API.profile.capital` ("/api/profile/capital", PUT) instead. The backend
-    // PUT /api/portfolio/capital handler is still live (test_security.py +
-    // test_portfolio.py exercise it); deleting only the unused frontend slot.
+    // 2026-05-17: `capital: "/api/portfolio/capital"` removed — seed capital is
+    // set through `API.profile.capital` ("/api/profile/capital", POST). The
+    // backend PUT /api/portfolio/capital handler was removed 2026-09-29.
   },
   market: {
     // 2026-09-01 — 14개 죽은 라우트를 백엔드에서 제거하면서 함께 정리했다.
@@ -80,7 +80,8 @@ export const API = {
   // admin/layout probed artifactsList to decide who was an admin, so the 404
   // denied everyone including the owner. Removed 2026-09-07 (e1dc8e64) once
   // the gate moved to a live endpoint.
-  trades: "/api/trades",
+  // 2026-09-29: `trades: "/api/trades"` removed with its backend route
+  // (routes/trades.py) — zero callers. Trade history is PORTFOLIO_TRADES.
   realtime: {
     // 2026-05-17 — Wave F-2 Bug #5: `/api/realtime/stream` removed.
     // Had zero frontend consumers yet still shared the per-user SSE
@@ -163,7 +164,6 @@ export const API = {
     // found on 2026-09-02 (`/api/agent/delete`, `/api/portfolio/reconcile`)
     // were both outside it. A path that is not here is a path nothing audits.
     persona: "/api/profile/persona",
-    rollingWindow: "/api/profile/rolling-window",
     // GET returns the vote history; POST records one artifact vote.
     feedback: "/api/profile/feedback",
     // GET pulse history; POST appends one weekly entry.
@@ -303,8 +303,9 @@ export const API = {
   // Marketing-consent record (정통망법 §50 ① — sender bears the burden of
   // proving prior opt-in). Backend lives in routes/consents.py (PR #73).
   // - GET    : returns { opted_in, marketing_consent_at, marketing_consent_revoked_at }
-  // - POST   : record explicit opt-in (clears prior revocation, flips email_opt_out=false)
-  // - DELETE : record revocation (sets email_opt_out=true)
+  // - POST   : record explicit opt-in (clears prior revocation)
+  // - DELETE : record revocation
+  //   Neither touches email_opt_out (2026-09-29) — that is profile.emailPreferences'.
   consents: {
     marketing: "/api/consents/marketing",
     crossBorder: "/api/consents/cross-border",
@@ -317,7 +318,12 @@ export const API = {
   //   create      POST multipart {file, consent=true} | JSON {text, source, consent}
   //   pending     GET  → {pending[], count}
   //   pendingItem PATCH {ticker?, name?, action?, shares?, price?, traded_at?}
-  //   approve     POST {thesis} (3~500자) → {ok, pending, trade_id, position_id}
+  //   approve     POST {thesis} (3~500자), reflection_id?: number | null, reflection_declined?: true
+  //               → {ok, pending, trade_id, position_id}
+  //               reflection_id (2026-09-29): number = link that pause, null = do not link,
+  //               omitted = server keeps the import-time match (services/pre_trade/link.py).
+  //               reflection_declined: true — sent only when a pause was shown and unchecked;
+  //               stored so friction_outcome never infers a pause for this buy.
   //   reject      POST → {ok}
   imports: {
     create: "/api/portfolio/imports",
@@ -359,8 +365,15 @@ export const API = {
 
 // Portfolio (added 2026-04-22) — frontend-shape aliases for the new /portfolio page.
 // Existing `API.portfolio.*` entries above remain authoritative for legacy callers.
+// POST PORTFOLIO_POSITIONS {symbol, quantity, price, note?, purchase_date?, reflection_id?}
+//   reflection_id (2026-09-29): review-mode entry only — the pause just stamped;
+//   the server then writes a recorded buy linked to it, not a holding seed.
 export const PORTFOLIO_POSITIONS = "/api/portfolio/positions";
 export const PORTFOLIO_SUMMARY = "/api/portfolio/summary";
+// POST PORTFOLIO_TRADES {position_id, action, quantity, price, date?, note?,
+//   reflection_id?, reflection_declined?} — buy only (2026-09-29): reflection_id
+//   links the pause; reflection_declined: true is sent only when a pause was shown
+//   and unchecked (stored; friction_outcome then never infers one for this buy).
 export const PORTFOLIO_TRADES = "/api/portfolio/trades";
 
 // Watchlist + Search (added 2026-04-22) — spec-matched aliases used by the

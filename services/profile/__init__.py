@@ -2,15 +2,13 @@
 
 Public surfaces:
     persona_analytics.compute_persona_response(user) → dict
-    rolling_metrics.compute_rolling_response(user)   → dict
 
-Both return JSON-ready dicts shaped exactly to the frontend
-``frontend/src/lib/cfo/hooks.ts`` contract. Both degrade gracefully to
+Returns a JSON-ready dict shaped exactly to the frontend
+``frontend/src/lib/cfo/hooks.ts`` contract. Degrades gracefully to
 empty/zero payloads when the user has no trade history — never raise.
 """
 
 from .persona_analytics import compute_persona_response  # noqa: F401
-from .rolling_metrics import compute_rolling_response    # noqa: F401
 from .persona_classifier_v2 import (                     # noqa: F401
     classify_persona_multi,
     get_persona_confidence,
@@ -40,7 +38,6 @@ from .questionnaire import (                              # noqa: F401
 
 __all__ = [
     "compute_persona_response",
-    "compute_rolling_response",
     "classify_persona_multi",
     "get_persona_confidence",
     "explain_persona_classification",

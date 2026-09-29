@@ -114,6 +114,29 @@ def test_recent_window_keeps_the_full_history_cost_basis(raw):
     assert a["profit_loss"]["take_profit"]["count"] == 2 and a["profit_loss"]["stop_loss"]["count"] == 1
 
 
+def test_recent_window_is_the_products_own_mirrors_over_an_explicit_window(raw):
+    """두 벌 금지 — "최근 N일" 블록도 services/behavior 의 거울 함수가 낸
+    결과 그대로다 (명시 창 window_start/window_end, 창 이전 이력으로 평단·FIFO)."""
+    from datetime import timedelta
+
+    from services.behavior.averaging_down_mirror import compute_averaging_down_mirror
+    from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
+    from services.behavior.turnover_mirror import compute_turnover_mirror
+    from services.toss.history import to_trade_rows
+
+    rep = _build(raw)
+    as_of = datetime.fromisoformat(raw["fetched_at"]).astimezone(KST).replace(tzinfo=None)
+    start = as_of - timedelta(days=90)
+    fills = fills_from_orders(raw["closed_orders"])
+    names = {**{h["symbol"]: h["name"] for h in rep["holdings"] if h.get("name")}, **raw["names"]}
+    rows = to_trade_rows(fills, reconstruct(fills), names)
+    kw = {"period_days": 90, "window_start": start, "window_end": as_of}
+    w = rep["mirrors"]["window"]
+    assert w["turnover"] == compute_turnover_mirror(rows, min_trades=1, **kw)
+    assert w["follow_on"] == compute_averaging_down_mirror(rows, min_follow_on=1, **kw)
+    assert w["profit_loss"] == compute_profit_loss_mirror(rows, min_pairs=1, **kw)
+
+
 def test_holdings_carry_their_history_and_departed_carry_realised(raw):
     rep = _build(raw)
     by = {h["symbol"]: h for h in rep["holdings"]}

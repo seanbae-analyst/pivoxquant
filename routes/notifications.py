@@ -46,7 +46,7 @@ from models.user import (
     NOTIFICATION_CHANNELS,
     NOTIFICATION_EVENT_CHANNELS,
     NOTIFICATION_EVENT_IDS,
-    NOTIFICATION_PREF_DEFAULTS,
+    notification_pref_value,
     visible_notification_event_ids,
 )
 from services.error_responses import api_error
@@ -76,24 +76,18 @@ def _merged_prefs(stored) -> dict:
     renders a toggle that cannot fire. Stored values for a hidden event are
     left untouched in the DB and reappear when its producer comes back.
 
-    A channel outside ``NOTIFICATION_EVENT_CHANNELS[event_id]`` has no sender,
-    so it is always reported ``False`` whatever is stored (2026-09-29).
+    Each cell is ``models.user.notification_pref_value`` — the same rule the
+    senders' gate (``User.notification_channel_enabled``) uses, so a channel
+    outside ``NOTIFICATION_EVENT_CHANNELS[event_id]`` (no sender) reads
+    ``False`` here AND is muted at send time, whatever is stored.
     """
-    merged: dict[str, dict[str, bool]] = {}
-    stored = stored if isinstance(stored, dict) else {}
-    for event_id in visible_notification_event_ids():
-        defaults = NOTIFICATION_PREF_DEFAULTS[event_id]
-        event_stored = stored.get(event_id)
-        if not isinstance(event_stored, dict):
-            event_stored = {}
-        live = NOTIFICATION_EVENT_CHANNELS[event_id]
-        merged[event_id] = {
-            ch: (False if ch not in live
-                 else event_stored[ch] if isinstance(event_stored.get(ch), bool)
-                 else defaults[ch])
+    return {
+        event_id: {
+            ch: notification_pref_value(stored, event_id, ch)
             for ch in NOTIFICATION_CHANNELS
         }
-    return merged
+        for event_id in visible_notification_event_ids()
+    }
 
 
 def _live_channels() -> dict[str, list[str]]:

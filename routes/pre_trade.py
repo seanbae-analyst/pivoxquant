@@ -104,7 +104,23 @@ def list_own():
     Query: ``?limit=`` (default 50, clamped to 200). User isolation is
     enforced in the service layer — only ``current_user.id`` rows are
     ever returned.
+
+    2026-09-29 — ``?ticker=<sym>&linkable=1``: only the buy-side reflections
+    for that ticker from the last ``LINK_WINDOW_DAYS`` that are not yet linked
+    to a recorded purchase (services/pre_trade/link.py) — the candidates the
+    trade modal offers to link a recorded buy to. ``ticker`` is required then.
     """
+    if request.args.get("linkable") in ("1", "true"):
+        from services.pre_trade.link import linkable_reflections
+
+        ticker = (request.args.get("ticker") or "").strip()
+        if not ticker:
+            return api_error(
+                en="ticker is required with linkable=1.",
+                kr="linkable=1 에는 ticker 가 필요합니다.",
+                code="BAD_INPUT", status=400,
+            )
+        return _envelope({"reflections": linkable_reflections(current_user.id, ticker)})
     raw_limit = request.args.get("limit", default=None)
     rows = list_reflections(current_user.id, limit=raw_limit if raw_limit is not None else 50)
     return _envelope({"reflections": rows})

@@ -33,8 +33,8 @@ export default function ContactPage() {
             How to reach the desk.
           </h1>
           <p className="text-pq-body text-[rgba(245,240,232,0.7)] max-w-xl">
-            We do not staff a phone line. Email is the primary channel — pick
-            the address that fits your question and we will reply.
+            We do not staff a phone line. Email is the channel — write to the
+            address below and we will reply.
           </p>
         </header>
 

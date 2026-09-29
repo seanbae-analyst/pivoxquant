@@ -3,8 +3,7 @@ import logging
 import math
 import threading
 from datetime import datetime, timezone
-from functools import wraps
-from flask import Blueprint, current_app, request, jsonify, make_response
+from flask import Blueprint, current_app, request, jsonify
 from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
 
@@ -47,57 +46,13 @@ def _validate_amount(v):
     return math.isfinite(v) and 0 < v <= _MAX_AMOUNT
 
 
-# ── Deprecation marker for legacy singular `/position` endpoints ─────────────
-# 2026-05-02: frontend (endpoints.ts) was migrated to the plural
-# `/positions[/<id>]` aliases. The singular handlers remain so existing
-# pytest coverage and any out-of-tree callers keep working, but every call
-# emits a warning log + RFC 8594 Deprecation/Sunset response headers so
-# operators can monitor real-world usage before final removal.
-_SINGULAR_POSITION_SUNSET = "Sun, 01 Nov 2026 00:00:00 GMT"
-
-
-def _deprecated_singular(plural_hint: str):
-    """Decorator that wraps a Flask view to emit deprecation telemetry.
-
-    - logger.warning on every call (one-line, with user_id + path)
-    - adds `Deprecation: true`, `Sunset: <date>`, and a `Link` header
-      pointing at the recommended plural endpoint
-    - response body is unchanged so existing clients are unaffected
-    """
-    def decorator(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            try:
-                uid = getattr(current_user, "id", None)
-            except Exception:
-                uid = None
-            logger.warning(
-                "deprecated_singular_position_endpoint path=%s user_id=%s use_instead=%s",
-                request.path, uid, plural_hint,
-            )
-            rv = fn(*args, **kwargs)
-            try:
-                resp = make_response(rv)
-                resp.headers.setdefault("Deprecation", "true")
-                resp.headers.setdefault("Sunset", _SINGULAR_POSITION_SUNSET)
-                resp.headers.setdefault(
-                    "Link", f'<{plural_hint}>; rel="successor-version"',
-                )
-                return resp
-            except Exception:
-                # Defensive: never break the response just to attach a header.
-                return rv
-        return wrapper
-    return decorator
-
-
 def _cache_ticker_async(app, ticker: str, capital: float):
     """Warm the SignalCache for a newly-added ticker without blocking the
     HTTP response. The warm is a quote lookup rather than the old
     engine.analyze() run, so it is fast now, but it still hits FMP/KIS and
     can stall on a 402 fallback. Running it in a background thread keeps
-    add_position snappy and idempotent — the cache miss on the next
-    GET /portfolio call will simply fall back to stored avg_cost defaults,
+    POST /positions snappy and idempotent — the cache miss on the next
+    GET /positions call will simply fall back to stored avg_cost defaults,
     exactly as cache_service already handles."""
     def _run():
         with app.app_context():
@@ -170,1029 +125,14 @@ def _avg_cost_implausible(ticker: str, avg_cost: float) -> str | None:
         return None
 
 
-@portfolio_bp.route("")
-@api_auth
-@legal_scrub_response
-def get_portfolio():
-    # Refresh FX rate in background so a slow/unavailable upstream (FMP 402,
-    # exchangerate-api timeout) does not add 5-15s to every portfolio load.
-    # The stale cached rate (default 1380.0) is accurate enough for display;
-    # the scheduler refreshes it every 5 minutes via APScheduler.
-    threading.Thread(target=fx_service.refresh, daemon=True).start()
-    positions = Position.query.filter_by(user_id=current_user.id).all()
-
-    # Batch-load all SignalCache rows in a single query to avoid N+1.
-    tickers = [p.ticker for p in positions]
-    cache_map = {
-        c.ticker: c
-        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
-    } if tickers else {}
-    # MARKET_DATA_DISPLAY_ENABLED (config.py): with the display gate shut we
-    # never call the quote overlay at all — no vendor price is fetched for a
-    # surface that is not allowed to show one. Cost-basis fields below are
-    # untouched; they are the user's own data.
-    display_on = market_data_display_enabled()
-    # Freshness overlay — never let this endpoint emit a stale "current price".
-    overlay = overlay_prices(tickers) if display_on else {}
-
-    out = []
-    # NAV totals are accumulated on the suffix-derived `is_kr` (authoritative),
-    # NOT the cache-blob `currency` string echoed per-row. A cross-contaminated
-    # or stale SignalCache row can carry the wrong currency; bucketing a native
-    # USD market_value into the KRW bucket (or vice versa) skews
-    # total_value_all_krw by ~1380x for that position (Pattern-7 FX class).
-    # The sibling endpoints (_build_positions_list, summary) already bucket on
-    # the suffix — this brings get_portfolio in line. The per-row "currency"
-    # field is untouched (display only).
-    total_usd = 0.0
-    total_krw = 0.0
-    for p in positions:
-        cached = cache_map.get(p.ticker)
-        sd = cache_service.safe_cache_blob(cached)
-        is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-        o = overlay.get(p.ticker) or {}
-        if not display_on:
-            # Withheld, not missing: the price fields go null and the source
-            # names the reason. avg_cost / shares / krw_cost below stay real.
-            cur_px = None
-            observed_at = None
-            price_source = PRICE_SOURCE_DISABLED
-            pnl = None
-        else:
-            # Bug C (2026-04-24): add price_display parse as last-resort before
-            # avg_cost fallback. Matches the new behavior of overlay_prices
-            # tier-3 but also covers rows whose cache blob is so old that
-            # SignalCache.query returned no row at all.
-            cur_px_raw = o.get("price") or sd.get("price")
-            if not cur_px_raw:
-                cur_px_raw = parse_price_display(sd.get("price_display"))
-            cur_px = float(cur_px_raw or p.avg_cost or 0)
-            observed_at = o.get("observed_at")
-            if o.get("source"):
-                price_source = o["source"]
-            elif sd.get("price"):
-                price_source = "stale"
-            elif cur_px_raw:
-                price_source = "stale_display"
-            else:
-                price_source = "avg_cost"
-            pnl = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
-
-        # 2026-05-09 abnormal-return guard (CEO live sanity flagged AAPL +877%):
-        # An absolute pnl beyond ±500% is almost certainly stale FMP data
-        # or a split-mismatched price (the same FMP /quote bug guarded by
-        # `_quote_price_sane` upstream — but a self-consistent stale snapshot
-        # can still slip the marketCap cross-check). Demote price_source to
-        # "abnormal_pnl_guard" and clamp pnl to None so the UI shows "—"
-        # instead of a garbage number. The avg_cost stays untouched — only
-        # the display effect of cur_px is suppressed.
-        if display_on and p.avg_cost and abs(pnl) > 500:
-            logger.warning(
-                "portfolio.get %s pnl=%.2f%% (cur=%.4f vs avg=%.4f) exceeds "
-                "±500%% — likely stale price; demoting to avg_cost fallback",
-                p.ticker, pnl, cur_px, p.avg_cost,
-            )
-            cur_px = float(p.avg_cost)
-            pnl = 0
-            price_source = "abnormal_pnl_guard"
-        cur = sd.get("currency", "KRW" if is_kr else "USD")
-
-        buy_fx = getattr(p, 'buy_fx_rate', 0) or 0
-        krw_pnl_pct = krw_cost = krw_value = None
-        # krw_cost is COST basis (avg_cost x shares at the purchase rate) — it
-        # carries no vendor licence, so it is computed in both flag states.
-        # krw_value / krw_pnl_pct need a live quote and are withheld when off.
-        if is_kr:
-            krw_cost = round(p.avg_cost * p.shares)
-            if display_on:
-                krw_value = round(cur_px * p.shares)
-                krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
-        elif buy_fx > 0:
-            krw_cost = p.avg_cost * buy_fx * p.shares
-            if display_on:
-                krw_value = cur_px * fx_service.get_rate() * p.shares
-                krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
-
-        # Prefer cache name only when it differs from the raw ticker.
-        # If SignalCache stored the ticker itself as name (fetcher fallback
-        # when KIS/FMP returned no name), ignore it and re-resolve via
-        # kr_stock_registry/pyKRX (KR) or us_stock_registry (US).
-        # Option B: skip stale name == ticker entries.
-        cached_name = sd.get("name")
-        if cached_name and cached_name.upper() != p.ticker.upper():
-            display_name = cached_name
-        else:
-            display_name = resolve_stock_name(p.ticker) or p.ticker
-
-        if display_on:
-            market_value = round(cur_px * p.shares, 2)
-            if is_kr:
-                total_krw += market_value
-            else:
-                total_usd += market_value
-        else:
-            market_value = None
-
-        out.append({
-            "id": p.id, "ticker": p.ticker, "shares": p.shares,
-            "avg_cost": p.avg_cost, "price": cur_px, "current_price": cur_px,
-            "price_display": (
-                sd.get("price_display", f"${cur_px:.2f}") if display_on else None
-            ),
-            "observed_at": observed_at,
-            "price_source": price_source,
-            "pnl_pct": round(pnl, 2) if display_on else None,
-            "pnl_krw_pct": krw_pnl_pct,
-            "buy_fx_rate": buy_fx,
-            "cur_fx_rate": fx_service.get_rate() if not is_kr else 0,
-            "krw_cost": round(krw_cost) if krw_cost else None,
-            "krw_value": round(krw_value) if krw_value else None,
-            "market_value": market_value,
-            "signal": sd.get("signal", "—"), "score": sd.get("score", 0),
-            "rec_shares": sd.get("rec_shares", 0),
-            "rec_investment": sd.get("rec_investment", 0),
-            "rec_timing": sd.get("rec_timing", ""),
-            "name": display_name,
-            "sector": sd.get("sector", "Unknown"),
-            "currency": cur, "is_korean": sd.get("is_korean", is_kr),
-            "sell_pct": sd.get("sell_pct", 0),
-            "sell_timing": sd.get("sell_timing", ""),
-            "capital_needed": sd.get("capital_needed"),
-            "capital_gap": sd.get("capital_gap"),
-            # Price LEVELS derived from a vendor quote — withheld with the
-            # quote itself (FMP ToS §2.2 derived works).
-            "take_profit": sd.get("take_profit") if display_on else None,
-            "stop_loss": sd.get("stop_loss") if display_on else None,
-            "tp_pct": sd.get("tp_pct", 0), "sl_pct": sd.get("sl_pct", 0),
-            "regime_profile": sd.get("regime_profile", ""),
-            "regime_label": sd.get("regime_label", ""),
-            "regime_label_kr": sd.get("regime_label_kr", ""),
-            "priority": sd.get("priority", 0),
-        })
-
-    total_all_krw = (
-        round(total_usd * fx_service.get_rate() + total_krw) if display_on else None
-    )
-    cap_krw = getattr(current_user, "available_capital_krw", 0.0) or 0.0
-
-    # Cost-basis total, always emitted. Computed by fx_service.cost_basis_krw —
-    # the SAME helper /journal's concentration mirror uses — so the two
-    # cost-basis aggregations cannot drift (Pattern 7). NOTE it is not simply
-    # sum(krw_cost): the helper falls back to cached spot for a USD row with no
-    # stored buy_fx_rate, where the per-row krw_cost stays null.
-    cost_basis_all_krw = 0.0
-    for _p in positions:
-        _cb = fx_service.cost_basis_krw(_p)
-        if _cb:
-            cost_basis_all_krw += _cb
-
-    return jsonify({
-        "positions": out,
-        "available_capital": current_user.available_capital,
-        "available_capital_krw": cap_krw,
-        "total_value_usd": round(total_usd, 2) if display_on else None,
-        "total_value_krw": round(total_krw, 0) if display_on else None,
-        "total_value_all_krw": total_all_krw,
-        "cost_basis_all_krw": round(cost_basis_all_krw),
-        "fx_rate": fx_service.get_rate(),
-        MARKET_DATA_DISPLAY_FIELD: display_on,
-    })
-
-
-@portfolio_bp.route("/position", methods=["POST"])
-@api_auth
-@trade_rate_limit
-@_deprecated_singular("/api/portfolio/positions")
-def add_position():
-    # Tier check (Free users limited to 3 positions) is performed below under
-    # a User-row lock — see Bug C#2 TOCTOU note before the upsert.
-    d = request.get_json() or {}
-    raw_ticker = (d.get("ticker") or "").strip().upper()
-    # Bug #1 fix (2026-05-13): route through normalize_ticker so bare
-    # 6-digit KRX codes (e.g. "005930") auto-resolve to "005930.KS" /
-    # "035760.KQ". Without this every KR user's portfolio rows were
-    # stored as bare digits → name_resolver never matched → currency
-    # fell through to USD → "$54,000" instead of "₩54,000".
-    ticker = normalize_ticker(raw_ticker)
-    thesis = (d.get("thesis") or "").strip()[:500] or None
-    try:
-        shares = float(d.get("shares") or 0)
-        cost = float(d.get("avg_cost") or 0)
-    except (TypeError, ValueError):
-        return api_error(
-            en="Shares and average cost must be numbers", kr="주식 수와 평균가는 숫자여야 합니다.",
-            code="POSITION_NUMERIC_REQUIRED", status=400,
-        )
-    # SEC-004: Position.ticker is db.String(20). Reject before SQL so the DB
-    # never raises DataError (which would have bubbled up via the leaky
-    # f-string error response).
-    if not ticker or len(ticker) > 20:
-        return api_error(
-            en="Invalid ticker", kr="유효하지 않은 종목입니다.",
-            code="INVALID_TICKER", status=400,
-        )
-    if shares <= 0 or cost <= 0:
-        return api_error(
-            en="Shares and average cost required", kr="주식 수와 평균가가 필요합니다.",
-            code="POSITION_FIELDS_REQUIRED", status=400,
-        )
-    # Bug API#5 (2026-05-26): reject non-finite / out-of-range amounts so a
-    # value like 1e308 can't produce shares*price=Infinity → JSON Infinity →
-    # frontend crash. Applied after the >0 guard for both shares and cost.
-    if not _validate_amount(shares) or not _validate_amount(cost):
-        return api_error(
-            en="Shares and average cost out of range", kr="주식 수 또는 평균가가 허용 범위를 벗어났습니다.",
-            code="INVALID_AMOUNT", status=400,
-        )
-    # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
-    _implausible = _avg_cost_implausible(ticker, cost)
-    if _implausible:
-        return api_error(
-            en=_implausible,
-            kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
-            code="AVG_COST_IMPLAUSIBLE", status=400,
-        )
-    # Optional user-supplied open date ("YYYY-MM-DD"). Parity with the
-    # production alias endpoint. None → default now().
-    opened_dt = _parse_purchase_date(d.get("purchase_date"))
-    is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
-    fx_rate = fx_service.get_rate() if not is_kr else 0.0
-    # Resolved before the User lock (may hit a registry / KIS) — used for the
-    # holding seed row and the response.
-    resolved_name = resolve_stock_name(ticker)
-    # NEW-D (2026-05-09): two-phase race-safe upsert.
-    # Phase 1 (cheap path): SELECT + merge if row exists, else INSERT new.
-    # Phase 2 (race recovery): if a concurrent request inserted between our
-    # SELECT and INSERT, the new uq_positions_user_ticker constraint will
-    # raise IntegrityError on commit. We rollback, re-fetch, and retry the
-    # merge path — making concurrent add_position calls idempotent (the
-    # second one folds into the first).
-    def _merge_into(ex_row):
-        total = ex_row.shares * ex_row.avg_cost + shares * cost
-        if not is_kr and ex_row.buy_fx_rate and fx_rate:
-            ex_row.buy_fx_rate = (
-                ex_row.buy_fx_rate * ex_row.shares * ex_row.avg_cost
-                + fx_rate * shares * cost
-            ) / total
-        elif not is_kr and not ex_row.buy_fx_rate and fx_rate:
-            # Existing USD row had null/zero rate (e.g. KIS overseas sync
-            # without FX). Initialize it so KRW P&L isn't permanently blank.
-            ex_row.buy_fx_rate = fx_rate
-        ex_row.shares += shares
-        ex_row.avg_cost = total / ex_row.shares
-        if thesis and not ex_row.thesis:
-            ex_row.thesis = thesis
-            ex_row.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            ex_row.thesis_status = "pending"
-
-    # Bug C#2 (2026-05-26): free-tier 3-position cap had a TOCTOU window — two
-    # concurrent adds of *different* tickers both COUNT 2 (< 3), both insert,
-    # and the user ends with 4. Lock the User row FIRST (lock order User→
-    # Position is enforced across every buy/sell/add path to avoid deadlock),
-    # then COUNT under that lock so per-user adds serialize. effective_tier
-    # gate logic + the response message are unchanged. SQLite no-ops the lock.
-    from models import User as _U
-    locked_user = (
-        db.session.query(_U)
-        .filter(_U.id == current_user.id)
-        .with_for_update()
-        .one()
-    )
-    # 2026-09-29: the cap limits symbols — adding to an already-held ticker
-    # merges and never raises the count, so look the ticker up first.
-    from services.position_writes import holds_ticker as _holds_ticker
-    if (
-        getattr(current_user, "effective_tier", None) in (None, "free")
-        and not _holds_ticker(current_user.id, ticker)
-    ):
-        position_count = Position.query.filter_by(user_id=current_user.id).filter(
-            Position.shares > 0
-        ).count()
-        if position_count >= 3:
-            db.session.rollback()
-            return jsonify({
-                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
-                "code": "TIER_LIMIT",
-                "current_count": position_count,
-                "limit": 3,
-            }), 403
-
-    # 2026-09-29: registered shares get a holding-seed trade_history row so
-    # the FIFO mirrors have a lot for them (services/position_writes).
-    from services.position_writes import add_holding_seed
-
-    def _seed():
-        add_holding_seed(current_user.id, ticker, shares, cost,
-                         "KRW" if is_kr else "USD", resolved_name or ticker)
-
-    try:
-        ex = Position.query.filter_by(user_id=current_user.id, ticker=ticker).first()
-        if ex:
-            _merge_into(ex)
-        else:
-            new_pos = Position(
-                user_id=current_user.id, ticker=ticker,
-                shares=shares, avg_cost=cost, buy_fx_rate=fx_rate,
-                thesis=thesis,
-                thesis_created_at=datetime.now(timezone.utc).replace(tzinfo=None) if thesis else None,
-                thesis_status="pending" if thesis else "pending",
-            )
-            if opened_dt is not None:
-                new_pos.added_at = opened_dt
-            db.session.add(new_pos)
-        _seed()
-        db.session.commit()
-    except IntegrityError:
-        # Concurrent insert collided on uq_positions_user_ticker — recover
-        # by re-fetching the now-committed row and merging into it.
-        db.session.rollback()
-        logger.info("add_position race recovery for user=%s ticker=%s",
-                    current_user.id, ticker)
-        try:
-            ex = Position.query.filter_by(
-                user_id=current_user.id, ticker=ticker,
-            ).first()
-            if ex is None:
-                # Extremely unlikely: constraint hit but row vanished. Surface
-                # a 409 so the client can retry rather than masking as 500.
-                return jsonify({
-                    "error": "Position add raced; please retry.",
-                    "code": "POSITION_RACE",
-                }), 409
-            _merge_into(ex)
-            _seed()
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            logger.exception("add_position race recovery failed")
-            return api_error(
-            en="Failed to save position", kr="포지션 저장에 실패했습니다.",
-            code="POSITION_SAVE_FAILED", status=500,
-        )
-    except Exception:
-        db.session.rollback()
-        logger.exception("add_position DB commit failed")
-        return api_error(
-            en="Failed to save position", kr="포지션 저장에 실패했습니다.",
-            code="POSITION_SAVE_FAILED", status=500,
-        )
-
-    # Warm the signal cache in the background — see _cache_ticker_async.
-    _cache_ticker_async(
-        current_app._get_current_object(),
-        ticker,
-        current_user.available_capital,
-    )
-
-    # Display name (resolved above, before the lock) so the client can show
-    # 회사명 immediately, before the background cache warm finishes.
-    # Uses name_resolver (pyKRX for KR, us_stock_registry for US) so every
-    # long-tail KRX listing resolves even on first add.
-    return jsonify({
-        "ok": True,
-        "ticker": ticker,
-        "name": resolved_name or ticker,
-        "is_korean": is_kr,
-    })
-
-
-@portfolio_bp.route("/position/<int:pid>", methods=["PUT"])
-@api_auth
-@trade_rate_limit
-@_deprecated_singular("/api/portfolio/positions/<id>")
-def edit_position(pid):
-    p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
-    if not p:
-        return api_error(
-            en="Position not found", kr="포지션을 찾을 수 없습니다.",
-            code="POSITION_NOT_FOUND", status=404,
-        )
-    d = request.get_json() or {}
-    try:
-        shares = float(d.get("shares") or 0)
-        cost = float(d.get("avg_cost") or 0)
-    except (TypeError, ValueError):
-        return api_error(
-            en="Shares and average cost must be numbers", kr="주식 수와 평균가는 숫자여야 합니다.",
-            code="POSITION_NUMERIC_REQUIRED", status=400,
-        )
-    if shares <= 0 or cost <= 0:
-        return api_error(
-            en="Shares and average cost must be positive", kr="주식 수와 평균가는 양수여야 합니다.",
-            code="POSITION_POSITIVE_REQUIRED", status=400,
-        )
-    # Bug #4 guard: reject implausibly-low cost basis (test/typo data).
-    _implausible = _avg_cost_implausible(p.ticker, cost)
-    if _implausible:
-        return api_error(
-            en=_implausible,
-            kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
-            code="AVG_COST_IMPLAUSIBLE", status=400,
-        )
-    # 2026-09-29: an edit is a registration, not a fill — keep the FIFO lots in
-    # sync with the holding (services/position_writes). More shares → a
-    # holding-seed 매수 row for the increase at the entered average; fewer →
-    # a holding-adjust 매도 row for the decrease at the average held until now.
-    from services.position_writes import add_holding_adjust, add_holding_seed
-
-    delta = shares - float(p.shares or 0.0)
-    currency = "KRW" if p.ticker.endswith((".KS", ".KQ")) else "USD"
-    prev_cost = float(p.avg_cost or 0.0)
-    row_name = (resolve_stock_name(p.ticker) or p.ticker) if abs(delta) > 1e-9 else p.ticker
-    p.shares = shares
-    p.avg_cost = cost
-    try:
-        if delta > 0:
-            add_holding_seed(current_user.id, p.ticker, delta, cost, currency, row_name)
-        elif delta < 0:
-            add_holding_adjust(current_user.id, p.ticker, -delta, prev_cost, currency,
-                               row_name)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("edit_position commit failed")
-        return api_error(
-            en="Failed to update position", kr="포지션 업데이트에 실패했습니다.",
-            code="POSITION_UPDATE_FAILED", status=500,
-        )
-    cache_service.cache_ticker(p.ticker)
-    return jsonify({"ok": True})
-
-
-@portfolio_bp.route("/position/<int:pid>", methods=["DELETE"])
-@api_auth
-@trade_rate_limit
-@_deprecated_singular("/api/portfolio/positions/<id>")
-def del_position(pid):
-    p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
-    if not p:
-        return api_error(
-            en="Position not found", kr="포지션을 찾을 수 없습니다.",
-            code="POSITION_NOT_FOUND", status=404,
-        )
-    try:
-        db.session.delete(p)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("del_position failed")
-        return api_error(
-            en="Failed to delete position", kr="포지션 삭제에 실패했습니다.",
-            code="POSITION_DELETE_FAILED", status=500,
-        )
-    return jsonify({"ok": True})
-
-
-@portfolio_bp.route("/position/<int:pid>/buy", methods=["POST"])
-@api_auth
-@trade_rate_limit
-@_deprecated_singular("/api/portfolio/trades")
-def buy_more(pid):
-    p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
-    if not p:
-        return api_error(
-            en="Position not found", kr="포지션을 찾을 수 없습니다.",
-            code="POSITION_NOT_FOUND", status=404,
-        )
-    d = request.get_json() or {}
-    try:
-        buy_shares = float(d.get("shares") or 0)
-        buy_price = float(d.get("price") or 0)
-    except (TypeError, ValueError):
-        return api_error(
-            en="Shares and price must be numbers", kr="주식 수와 가격은 숫자여야 합니다.",
-            code="TRADE_NUMERIC_REQUIRED", status=400,
-        )
-    if buy_shares <= 0 or buy_price <= 0:
-        return api_error(
-            en="Shares and price required", kr="주식 수와 가격이 필요합니다.",
-            code="TRADE_FIELDS_REQUIRED", status=400,
-        )
-    # Bug API#5 (2026-05-26): reject non-finite / out-of-range amounts so
-    # buy_shares*buy_price can't overflow to Infinity → JSON crash downstream.
-    if not _validate_amount(buy_shares) or not _validate_amount(buy_price):
-        return api_error(
-            en="Shares and price out of range", kr="주식 수 또는 가격이 허용 범위를 벗어났습니다.",
-            code="INVALID_AMOUNT", status=400,
-        )
-
-    cost = buy_shares * buy_price
-    # Use TTL-aware cache accessor for consistency with the rest of the codebase.
-    # get_signal() returns None if the row is stale, so callers fall back to
-    # safe defaults below instead of rendering stale name/currency values.
-    cached = cache_service.get_signal(p.ticker)
-    sd = cache_service.safe_cache_blob(cached)
-    # When the SignalCache row is stale (TTL expired → sd == {}), a plain
-    # ``.get("is_korean", False)`` mis-classifies .KS/.KQ tickers as USD and
-    # routes their capital into the wrong bucket. Fall back to the ticker
-    # suffix so KR positions stay KR even with no cache (matches
-    # create_trade_alias' pattern).
-    is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
-    name = canonical_display_name(sd.get("name"), p.ticker)
-    # Data-integrity fix (2026-05-22): a flat "USD" fallback mis-stamps .KS/.KQ
-    # trades as USD whenever the SignalCache row is stale (sd == {}), poisoning
-    # TradeHistory.currency so realizedYtd sums KRW pnl into the USD bucket
-    # (thousands-fold inflation). Use the ticker-suffix-aware is_kr as the
-    # default currency — parity with create_trade_alias (:1520).
-    currency = sd.get("currency", "KRW" if is_kr else "USD")
-
-    # 2026-05-17 wave 14 P1 (PR #449): capital double-spend race fix.
-    # Pre-fix two concurrent buy_more (gevent greenlets, same user) both
-    # read ``current_user.available_capital_krw`` (or USD), both pass the
-    # ``avail < cost`` check, both subtract cost, both commit — last
-    # writer wins and one of the two deductions silently disappears.
-    # User effectively bought 2x for the price of 1x. Locking the User
-    # row with SELECT FOR UPDATE serializes the read-modify-write so
-    # the second greenlet sees the post-deduction balance and rejects.
-    # SQLite (dev) treats with_for_update() as a no-op without erroring.
-    from models import User as _U
-    locked_user = (
-        db.session.query(_U)
-        .filter(_U.id == current_user.id)
-        .with_for_update()
-        .one()
-    )
-    # Bug C#1 (2026-05-26): the initial ``p`` was loaded WITHOUT a row lock, so
-    # two concurrent buy/sell on the same position interleaved their
-    # read-modify-write on p.shares/p.avg_cost (last writer wins → data loss).
-    # Re-load the Position under SELECT FOR UPDATE *after* the User lock — lock
-    # order is always User→Position across every buy/sell/add path so no two
-    # greenlets can acquire them in opposite order (deadlock-free). The pre-lock
-    # first() above still serves the 404 fast-path. SQLite no-ops the lock.
-    p = (
-        db.session.query(Position)
-        .filter_by(id=pid, user_id=current_user.id)
-        .with_for_update()
-        .one_or_none()
-    )
-    if p is None:
-        db.session.rollback()
-        return api_error(
-            en="Position not found", kr="포지션을 찾을 수 없습니다.",
-            code="POSITION_NOT_FOUND", status=404,
-        )
-
-    if is_kr:
-        avail = getattr(locked_user, "available_capital_krw", 0) or 0
-        if avail < cost:
-            db.session.rollback()
-            return api_error(
-                en=f"Insufficient KRW capital (need ₩{cost:,.0f}, have ₩{avail:,.0f})",
-                kr=f"KRW 시드머니 부족 (필요 ₩{cost:,.0f}, 보유 ₩{avail:,.0f}).",
-                code="INSUFFICIENT_CAPITAL_KRW", status=400,
-            )
-        locked_user.available_capital_krw = avail - cost
-    else:
-        avail = locked_user.available_capital or 0
-        if avail < cost:
-            db.session.rollback()
-            return api_error(
-                en=f"Insufficient capital (need ${cost:,.2f}, have ${avail:,.2f})",
-                kr=f"USD 시드머니 부족 (필요 ${cost:,.2f}, 보유 ${avail:,.2f}).",
-                code="INSUFFICIENT_CAPITAL_USD", status=400,
-            )
-        locked_user.available_capital = avail - cost
-
-    total_cost = p.shares * p.avg_cost + buy_shares * buy_price
-    # Trade-accuracy fix (2026-05-22): cost-weight buy_fx_rate on add-buy
-    # (USD only) so KRW cost-basis / P&L% reflect blended purchase FX rather
-    # than the first lot's rate. Mirrors add_position._merge_into (:345-349).
-    # KR positions keep buy_fx_rate 0. Must use pre-update p.shares/avg_cost.
-    if not is_kr:
-        new_fx = fx_service.get_rate() or 0
-        if p.buy_fx_rate and new_fx and total_cost:
-            p.buy_fx_rate = (
-                p.buy_fx_rate * p.shares * p.avg_cost
-                + new_fx * buy_shares * buy_price
-            ) / total_cost
-        elif not p.buy_fx_rate and new_fx:
-            p.buy_fx_rate = new_fx
-    p.shares += buy_shares
-    p.avg_cost = total_cost / p.shares
-
-    db.session.add(TradeHistory(
-        user_id=current_user.id, ticker=p.ticker, name=name,
-        action="BUY", shares=buy_shares, price_per_share=round(buy_price, 2),
-        total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
-    ))
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("buy_more commit failed pid=%s", pid)
-        return api_error(
-            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
-            code="TRADE_RECORD_FAILED", status=500,
-        )
-    return jsonify({
-        "ok": True,
-        "new_shares": round(p.shares, 4),
-        "new_avg_cost": round(p.avg_cost, 2),
-        "new_capital_usd": locked_user.available_capital,
-        "new_capital_krw": getattr(locked_user, "available_capital_krw", 0) or 0,
-    })
-
-
-@portfolio_bp.route("/position/buy-new", methods=["POST"])
-@api_auth
-@trade_rate_limit
-@_deprecated_singular("/api/portfolio/trades")
-def buy_new_position():
-    # Free-tier cap is enforced below under a User-row lock — see Bug C#2 note
-    # before the upsert. Without the lock the 3-position cap had a TOCTOU race
-    # (two concurrent /buy-new of different tickers both COUNT < 3 → cap bypass).
-    d = request.get_json() or {}
-    raw_ticker = (d.get("ticker") or "").strip().upper()
-    # Bug #1 fix (2026-05-13): normalize before any downstream usage so
-    # "005930" routes to "005930.KS" / "035760.KQ" via the registry. See
-    # add_position for the full rationale.
-    ticker = normalize_ticker(raw_ticker)
-    try:
-        shares = float(d.get("shares") or 0)
-        price = float(d.get("price") or 0)
-    except (TypeError, ValueError):
-        return api_error(
-            en="Shares and price must be numbers", kr="주식 수와 가격은 숫자여야 합니다.",
-            code="TRADE_NUMERIC_REQUIRED", status=400,
-        )
-    # SEC-004: Position.ticker is db.String(20); validate before persisting.
-    if not ticker or len(ticker) > 20:
-        return api_error(
-            en="Invalid ticker", kr="유효하지 않은 종목입니다.",
-            code="INVALID_TICKER", status=400,
-        )
-    if shares <= 0 or price <= 0:
-        return api_error(
-            en="Ticker, shares, and price required", kr="종목, 주식 수, 가격이 필요합니다.",
-            code="TRADE_FIELDS_REQUIRED", status=400,
-        )
-    # Bug API#5 (2026-05-26): reject non-finite / out-of-range amounts.
-    if not _validate_amount(shares) or not _validate_amount(price):
-        return api_error(
-            en="Shares and price out of range", kr="주식 수 또는 가격이 허용 범위를 벗어났습니다.",
-            code="INVALID_AMOUNT", status=400,
-        )
-
-    cost = shares * price
-    currency = fetcher.currency(ticker)
-    is_kr = currency == "KRW"
-
-    # Wave G-5 P1 G5-03 (2026-05-18): SELECT FOR UPDATE on User row to
-    # serialize capital read-modify-write across concurrent gevent greenlets.
-    # Mirrors buy_more (PR #449). Without this, two simultaneous /buy-new
-    # calls (same user) can both pass `cap < cost`, both deduct, and one
-    # deduction silently disappears. SQLite (dev) no-ops with_for_update().
-    from models import User as _U
-    locked_user = (
-        db.session.query(_U)
-        .filter(_U.id == current_user.id)
-        .with_for_update()
-        .one()
-    )
-    # Bug C#2 (2026-05-26): free-tier cap COUNT now runs under the User lock so
-    # concurrent /buy-new of distinct tickers can't both pass the cap and
-    # bypass the limit. Lock order User→Position preserved (User locked here,
-    # any Position merge below). Gate logic / message unchanged.
-    # 2026-09-29: the cap limits symbols — adding to an already-held ticker
-    # merges and never raises the count, so look the ticker up first.
-    from services.position_writes import holds_ticker as _holds_ticker
-    if (
-        getattr(current_user, "effective_tier", None) in (None, "free")
-        and not _holds_ticker(current_user.id, ticker)
-    ):
-        position_count = Position.query.filter_by(user_id=current_user.id).filter(
-            Position.shares > 0
-        ).count()
-        if position_count >= 3:
-            db.session.rollback()
-            return jsonify({
-                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
-                "code": "TIER_LIMIT",
-                "current_count": position_count,
-                "limit": 3,
-            }), 403
-    cap = (getattr(locked_user, "available_capital_krw", 0) or 0) if is_kr else (locked_user.available_capital or 0)
-    if cap < cost:
-        db.session.rollback()
-        sym = "₩" if is_kr else "$"
-        return api_error(
-            en=f"Insufficient capital (need {sym}{cost:,.0f}, have {sym}{cap:,.0f})",
-            kr=f"시드머니 부족 (필요 {sym}{cost:,.0f}, 보유 {sym}{cap:,.0f}).",
-            code="INSUFFICIENT_CAPITAL", status=400,
-        )
-
-    # Trade-accuracy fix (2026-05-22): capture buy FX once for both the new-row
-    # and merge paths. KR positions keep buy_fx_rate 0 (matches add_position).
-    new_fx = fx_service.get_rate() if not is_kr else 0.0
-
-    # NEW-D (2026-05-09): race-safe upsert against uq_positions_user_ticker.
-    def _merge_buy_new(ex_row):
-        total = ex_row.shares * ex_row.avg_cost + shares * price
-        # Cost-weight buy_fx_rate on add-buy (USD only) so KRW cost-basis /
-        # P&L% reflect blended purchase FX. Mirrors add_position._merge_into.
-        if not is_kr and new_fx:
-            if ex_row.buy_fx_rate and total:
-                ex_row.buy_fx_rate = (
-                    ex_row.buy_fx_rate * ex_row.shares * ex_row.avg_cost
-                    + new_fx * shares * price
-                ) / total
-            elif not ex_row.buy_fx_rate:
-                ex_row.buy_fx_rate = new_fx
-        ex_row.shares += shares
-        ex_row.avg_cost = total / ex_row.shares
-
-    p = Position.query.filter_by(ticker=ticker, user_id=current_user.id).first()
-    if p:
-        _merge_buy_new(p)
-    else:
-        p = Position(user_id=current_user.id, ticker=ticker, shares=shares,
-                     avg_cost=price, buy_fx_rate=new_fx)
-        db.session.add(p)
-
-    if is_kr:
-        locked_user.available_capital_krw = cap - cost
-    else:
-        locked_user.available_capital = cap - cost
-
-    cached = cache_service.get_signal(ticker)
-    sd = cache_service.safe_cache_blob(cached)
-    name = canonical_display_name(sd.get("name"), ticker)
-    db.session.add(TradeHistory(
-        user_id=current_user.id, ticker=ticker, name=name,
-        action="BUY", shares=shares, price_per_share=round(price, 2),
-        total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
-    ))
-    try:
-        db.session.commit()
-    except IntegrityError:
-        # Concurrent add_position / create_position_alias / buy_new_position
-        # raced ahead. Roll back, re-fetch, and merge into the surviving row
-        # so capital + trade history still apply correctly.
-        db.session.rollback()
-        logger.info("buy_new_position race recovery user=%s ticker=%s",
-                    current_user.id, ticker)
-        try:
-            ex = Position.query.filter_by(
-                user_id=current_user.id, ticker=ticker,
-            ).first()
-            if ex is None:
-                return jsonify({
-                    "error": "Buy raced; please retry.",
-                    "code": "POSITION_RACE",
-                }), 409
-            _merge_buy_new(ex)
-            # Wave G-5 G5-03 (2026-05-18): re-acquire User lock after
-            # rollback (locked_user detached). Re-check cap to avoid
-            # double-spending if a parallel writer committed in the gap.
-            relocked = (
-                db.session.query(_U)
-                .filter(_U.id == current_user.id)
-                .with_for_update()
-                .one()
-            )
-            cap2 = (getattr(relocked, "available_capital_krw", 0) or 0) if is_kr else (relocked.available_capital or 0)
-            if cap2 < cost:
-                db.session.rollback()
-                sym = "₩" if is_kr else "$"
-                return api_error(
-                    en=f"Insufficient capital (need {sym}{cost:,.0f}, have {sym}{cap2:,.0f})",
-                    kr=f"시드머니 부족 (필요 {sym}{cost:,.0f}, 보유 {sym}{cap2:,.0f}).",
-                    code="INSUFFICIENT_CAPITAL", status=400,
-                )
-            if is_kr:
-                relocked.available_capital_krw = cap2 - cost
-            else:
-                relocked.available_capital = cap2 - cost
-            db.session.add(TradeHistory(
-                user_id=current_user.id, ticker=ticker, name=name,
-                action="BUY", shares=shares, price_per_share=round(price, 2),
-                total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
-            ))
-            db.session.commit()
-            p = ex
-            # Race-recovery applied the deduction to ``relocked`` (the
-            # original ``locked_user`` was detached on rollback). Point the
-            # response at the row that actually holds the post-deduction
-            # balance.
-            locked_user = relocked
-        except Exception:
-            db.session.rollback()
-            logger.exception("buy_new_position race recovery failed")
-            return api_error(
-            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
-            code="TRADE_RECORD_FAILED", status=500,
-        )
-    return jsonify({
-        "ok": True,
-        "new_shares": round(p.shares, 4),
-        "new_avg_cost": round(p.avg_cost, 2),
-        "new_capital_usd": locked_user.available_capital,
-        "new_capital_krw": getattr(locked_user, "available_capital_krw", 0) or 0,
-    })
-
-
-@portfolio_bp.route("/position/<int:pid>/sell", methods=["POST"])
-@api_auth
-@trade_rate_limit
-@_deprecated_singular("/api/portfolio/trades")
-def sell_position(pid):
-    p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
-    if not p:
-        return api_error(
-            en="Position not found", kr="포지션을 찾을 수 없습니다.",
-            code="POSITION_NOT_FOUND", status=404,
-        )
-    d = request.get_json() or {}
-
-    # Bug C#1 (2026-05-26): acquire the User row lock FIRST, then re-load the
-    # Position under SELECT FOR UPDATE — lock order User→Position across every
-    # buy/sell/add path (deadlock-free). All subsequent reads of p.shares (the
-    # "sell entire position" default + oversell clamp) and the delete/decrement
-    # mutation now run on the locked instance, so concurrent buy/sell on the
-    # same position can no longer interleave their read-modify-write. The
-    # pre-lock first() above still serves the 404 fast-path. SQLite no-ops the
-    # lock. (The User row was previously locked far below, after the mutation —
-    # too late to protect p; that ordering is corrected here.)
-    from models import User as _U
-    locked_user = (
-        db.session.query(_U)
-        .filter(_U.id == current_user.id)
-        .with_for_update()
-        .one()
-    )
-    p = (
-        db.session.query(Position)
-        .filter_by(id=pid, user_id=current_user.id)
-        .with_for_update()
-        .one_or_none()
-    )
-    if p is None:
-        db.session.rollback()
-        return api_error(
-            en="Position not found", kr="포지션을 찾을 수 없습니다.",
-            code="POSITION_NOT_FOUND", status=404,
-        )
-
-    # Trade-accuracy fix (2026-05-22): `float(d.get("shares") or p.shares)`
-    # treats an explicit shares=0 as falsy and silently falls back to the full
-    # position → an unintended full-close. Preserve the documented "shares
-    # omitted → sell entire position" behavior (raw is None) but reject an
-    # explicit 0 / negative via the <=0 guard below.
-    raw_shares = d.get("shares")
-    try:
-        sell_shares = float(raw_shares) if raw_shares is not None else float(p.shares)
-        sell_price = float(d.get("price") or 0)
-    except (TypeError, ValueError):
-        db.session.rollback()
-        return api_error(
-            en="Shares and price must be numbers", kr="주식 수와 가격은 숫자여야 합니다.",
-            code="TRADE_NUMERIC_REQUIRED", status=400,
-        )
-
-    # SEC-001: reject non-positive share counts. An explicit shares=0 (or a
-    # negative) now reaches this guard instead of full-closing the position;
-    # negatives are truthy and would otherwise invert proceeds/PnL.
-    if sell_shares <= 0:
-        db.session.rollback()
-        return api_error(
-            en="Shares must be positive", kr="주식 수는 양수여야 합니다.",
-            code="TRADE_SHARES_POSITIVE", status=400,
-        )
-    # Bug API#5 (2026-05-26): reject non-finite / out-of-range sell amounts so
-    # actual_sell*sell_price can't overflow to Infinity. sell_price may legitly
-    # default from cache below when omitted (<=0), so validate it there; here we
-    # bound the explicit shares (and any explicit price already parsed).
-    if not _validate_amount(sell_shares):
-        db.session.rollback()
-        return api_error(
-            en="Shares out of range", kr="주식 수가 허용 범위를 벗어났습니다.",
-            code="INVALID_AMOUNT", status=400,
-        )
-    if sell_price > 0 and not _validate_amount(sell_price):
-        db.session.rollback()
-        return api_error(
-            en="Price out of range", kr="가격이 허용 범위를 벗어났습니다.",
-            code="INVALID_AMOUNT", status=400,
-        )
-
-    cached = cache_service.get_signal(p.ticker)
-    sd = cache_service.safe_cache_blob(cached)
-    if sell_price <= 0:
-        sell_price = sd.get("price", p.avg_cost) if sd else p.avg_cost
-
-    # Detect oversell: requested more shares than available
-    if sell_shares > p.shares:
-        adjusted = True
-        requested_shares = sell_shares
-        actual_sell = p.shares
-    else:
-        adjusted = False
-        requested_shares = sell_shares
-        actual_sell = sell_shares
-
-    proceeds = actual_sell * sell_price
-    cost_basis = actual_sell * p.avg_cost
-    pnl = proceeds - cost_basis
-    pnl_pct = pnl / cost_basis * 100 if cost_basis > 0 else 0
-    name = canonical_display_name(sd.get("name"), p.ticker)
-    # Stale-cache safety: a False fallback would credit .KS/.KQ sell proceeds
-    # to the USD bucket once the SignalCache TTL expires. Use the ticker
-    # suffix as the authoritative fallback (matches create_trade_alias).
-    is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
-    # Data-integrity fix (2026-05-22): same stale-cache currency poisoning as
-    # buy_more — a flat "USD" fallback stamps KR sells as USD, corrupting
-    # TradeHistory.currency / realizedYtd. Default off is_kr (computed above).
-    currency = sd.get("currency", "KRW" if is_kr else "USD")
-
-    if actual_sell >= p.shares - 0.0001:
-        db.session.delete(p)
-    else:
-        p.shares = round(p.shares - actual_sell, 6)
-
-    # 2026-05-17 wave 14 P1 (PR #449): the sell-side proceeds credit shares the
-    # same TOCTOU window as the buy-side debit. The User row was already locked
-    # at the top of this handler (Bug C#1 reorder, 2026-05-26) so the
-    # read-modify-write below is serialized — no separate lock acquisition here.
-    if is_kr:
-        locked_user.available_capital_krw = (
-            getattr(locked_user, "available_capital_krw", 0) or 0
-        ) + proceeds
-    else:
-        locked_user.available_capital = (
-            locked_user.available_capital or 0
-        ) + proceeds
-
-    db.session.add(TradeHistory(
-        user_id=current_user.id, ticker=p.ticker, name=name,
-        action="SELL", shares=actual_sell, price_per_share=round(sell_price, 2),
-        total_value=round(proceeds, 2), pnl=round(pnl, 2), pnl_pct=round(pnl_pct, 2),
-        currency=currency,
-    ))
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("sell_position commit failed pid=%s", pid)
-        return api_error(
-            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
-            code="TRADE_RECORD_FAILED", status=500,
-        )
-    response = {
-        "ok": True,
-        "proceeds": round(proceeds, 2),
-        "pnl": round(pnl, 2),
-        "pnl_pct": round(pnl_pct, 2),
-        "currency": currency,
-        "new_capital_usd": locked_user.available_capital,
-        "new_capital_krw": getattr(locked_user, "available_capital_krw", 0) or 0,
-        "adjusted": adjusted,
-    }
-    if adjusted:
-        response["warning"] = (
-            f"Requested {requested_shares} shares but only "
-            f"{actual_sell} available. Sold all {actual_sell} shares."
-        )
-        response["requested_shares"] = requested_shares
-        response["actual_shares"] = actual_sell
-    return jsonify(response)
-
-
-@portfolio_bp.route("/capital", methods=["PUT"])
-@api_auth
-@trade_rate_limit
-def set_capital():
-    d = request.get_json() or {}
-    try:
-        cap_usd = float(d.get("capital_usd") or d.get("capital") or 0)
-        cap_krw = float(d.get("capital_krw") or 0)
-    except (TypeError, ValueError):
-        return api_error(
-            en="Capital must be numbers", kr="자본은 숫자여야 합니다.",
-            code="CAPITAL_NUMERIC_REQUIRED", status=400,
-        )
-    if cap_usd < 0 or cap_krw < 0:
-        return api_error(
-            en="Capital must be ≥ 0", kr="자본은 0 이상이어야 합니다.",
-            code="CAPITAL_NON_NEGATIVE", status=400,
-        )
-    current_user.available_capital = cap_usd
-    current_user.available_capital_krw = cap_krw
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("set_capital commit failed")
-        return api_error(
-            en="Failed to update capital", kr="자본 업데이트에 실패했습니다.",
-            code="CAPITAL_UPDATE_FAILED", status=500,
-        )
-    return jsonify({"ok": True, "capital_usd": cap_usd, "capital_krw": cap_krw})
-
-
 # ── Frontend-friendly aliases (added 2026-04-22) ──────────────────────────────
-# These endpoints expose a simpler schema for the new /portfolio page + modals
-# while leaving the richer legacy endpoints (/api/portfolio, /position/...)
-# intact for existing callers. No behavioral changes to legacy paths.
+# These endpoints expose the schema the /portfolio page + modals use.
+# 2026-09-29: the deprecated singular write routes (/position, /position/<id>,
+# /position/<id>/buy|sell, /position/buy-new), DELETE /positions/<id> and
+# PUT /capital were removed — none had a frontend consumer (endpoints.ts
+# symbols checked). Seed capital is set via POST /api/profile/capital.
+# 2026-09-29: GET "" (the legacy full list, API.portfolio.list) was removed
+# too — its only reader, RealtimeProvider, now reads GET /positions.
 
 
 def _sector_for(sd):
@@ -1200,10 +140,12 @@ def _sector_for(sd):
 
 
 def _position_display_name(p, sd):
+    # KR 종목은 레지스트리 한글명이 항상 이긴다 — 옛 SignalCache 행의 영문명이
+    # /portfolio 에만 남고 거래 내역·알림은 한글로 나오던 불일치를 없앤다.
     cached_name = sd.get("name")
-    if cached_name and cached_name.upper() != p.ticker.upper():
-        return cached_name
-    return resolve_stock_name(p.ticker) or p.ticker
+    if cached_name and cached_name.upper() == p.ticker.upper():
+        cached_name = None
+    return canonical_display_name(cached_name, p.ticker) or p.ticker
 
 
 def _build_positions_list():
@@ -1300,6 +242,10 @@ def _build_positions_list():
 
 @portfolio_bp.route("/positions", methods=["GET"])
 @api_auth
+# 2026-09-29 — the scrub contract moves here from the removed legacy GET ""
+# (this list replaced it as the RealtimeProvider/portfolio read). `notes` is
+# the user's own thesis text and is returned verbatim, like observation notes.
+@legal_scrub_response(skip_keys=("notes",))
 def list_positions_alias():
     """Simpler positions list tailored to the new frontend shape."""
     try:
@@ -1580,6 +526,8 @@ def list_trades_alias():
                 # 2026-09-29: "holding_seed" = 보유 등록 시드 (체결 아님),
                 # None = 체결 기록.
                 "source": t.source,
+                # 2026-09-29: the pause this buy was linked to, None = no link.
+                "reflection_id": t.reflection_id,
             })
         return jsonify({"trades": trades})
     except Exception:
@@ -1629,7 +577,7 @@ def _parse_purchase_date(raw):
 @trade_rate_limit
 def create_position_alias():
     """Accepts the new frontend shape {symbol, side, quantity, price,
-    purchase_date, note} and funnels into the existing add_position flow.
+    purchase_date, note} and registers (or merges into) a holding.
 
     ``purchase_date`` (optional, "YYYY-MM-DD") is the date the user opened
     the position. When valid it is stored as ``Position.added_at`` (the
@@ -1637,6 +585,11 @@ def create_position_alias():
     future values fall back to the default server clock — see
     :func:`_parse_purchase_date`. On a merge into an existing position the
     original ``added_at`` is preserved (earliest open date wins).
+
+    ``reflection_id`` (optional, 2026-09-29): sent by the review-mode entry
+    ("신규 진입 검토 · 7문항") with the pause it just stamped. Validated by
+    ``services/pre_trade/link.py``; the trade row is then an ordinary buy
+    linked to that pause instead of a holding seed.
     """
     d = request.get_json() or {}
     raw_symbol = (d.get("symbol") or d.get("ticker") or "").strip().upper()
@@ -1667,7 +620,7 @@ def create_position_alias():
             en="Quantity and price out of range", kr="수량 또는 가격이 허용 범위를 벗어났습니다.",
             code="INVALID_AMOUNT", status=400,
         )
-    # SEC-004 parity with add_position: Position.ticker is db.String(20).
+    # Position.ticker is db.String(20).
     if len(symbol) > 20:
         return api_error(
             en="Invalid ticker", kr="유효하지 않은 종목입니다.",
@@ -1682,30 +635,39 @@ def create_position_alias():
             code="AVG_COST_IMPLAUSIBLE", status=400,
         )
 
-    # Proxy to legacy add_position logic by rewriting request body.
     # Bug C#2 (2026-05-26): lock the User row FIRST (lock order User→Position,
     # consistent with every buy/sell/add path → deadlock-free), then run the
     # free-plan cap COUNT under that lock so concurrent adds of distinct tickers
     # can't both pass the cap and bypass the limit. Gate logic / message
     # unchanged. SQLite no-ops the lock.
     from services.position_writes import (
-        FREE_POSITION_CAP, active_position_count, holds_ticker, is_capped_tier,
-        lock_user_row, merge_buy_into,
+        FREE_POSITION_CAP, blocks_new_symbol, lock_user_row, merge_buy_into,
     )
     # Resolved before the User lock (may hit a registry / KIS) — used for the
     # holding seed row and the response.
     resolved_name = resolve_stock_name(symbol)
     lock_user_row(current_user.id)
     # 2026-09-29: the cap limits symbols — adding to an already-held ticker
-    # merges and never raises the count, so look the ticker up first.
-    if is_capped_tier(current_user) and not holds_ticker(current_user.id, symbol):
-        pos_count = active_position_count(current_user.id)
-        if pos_count >= FREE_POSITION_CAP:
-            db.session.rollback()
-            return jsonify({
-                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
-                "code": "TIER_LIMIT",
-            }), 403
+    # merges and never raises the count (services/position_writes).
+    if blocks_new_symbol(current_user, symbol):
+        db.session.rollback()
+        return api_error(
+            en=f"Free plan limited to {FREE_POSITION_CAP} positions. Upgrade to Pro for unlimited.",
+            kr=f"무료 플랜은 보유 종목 {FREE_POSITION_CAP}개까지입니다.",
+            code="TIER_LIMIT", status=403,
+        )
+
+    # 2026-09-29 — review-mode entry ("신규 진입 검토 · 7문항"): the modal sends
+    # the pause it just stamped. With a valid link this is a real buy made now,
+    # so it is written as an ordinary 매수 row linked to the pause (not a
+    # holding seed). Holding-mode registrations send nothing and keep seeding.
+    from services.pre_trade.link import ReflectionLinkError, resolve_reflection_link
+    try:
+        reflection_id = resolve_reflection_link(
+            current_user.id, d.get("reflection_id"), ticker=symbol, action="buy")
+    except ReflectionLinkError as e:
+        db.session.rollback()
+        return api_error(en=e.en, kr=e.kr, code=e.code, status=400)
 
     note = (d.get("note") or d.get("notes") or d.get("thesis") or "").strip()[:500] or None
     # Optional user-supplied open date ("YYYY-MM-DD"). None → default now().
@@ -1713,7 +675,7 @@ def create_position_alias():
     is_kr = symbol.endswith(".KS") or symbol.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
 
-    # NEW-D (2026-05-09): mirror add_position race-safe upsert. See the
+    # NEW-D (2026-05-09): race-safe upsert. See the
     # uq_positions_user_ticker rationale on Position.__table_args__.
     def _merge_into_alias(ex_row):
         merge_buy_into(ex_row, quantity, price, is_kr=is_kr, fx_rate=fx_rate, note=note)
@@ -1722,11 +684,17 @@ def create_position_alias():
     # the FIFO mirrors have a lot for them (services/position_writes).
     # traded_at is the registration time even when purchase_date is given —
     # the seed is excluded from hold-time statistics either way.
-    from services.position_writes import add_holding_seed
+    # With a reflection link the row is a recorded buy instead (see above).
+    from services.position_writes import add_holding_seed, add_recorded_buy
 
     def _seed():
+        currency = "KRW" if is_kr else "USD"
+        if reflection_id is not None:
+            add_recorded_buy(current_user.id, symbol, quantity, price, currency,
+                             resolved_name or symbol, reflection_id=reflection_id)
+            return
         add_holding_seed(current_user.id, symbol, quantity, price,
-                         "KRW" if is_kr else "USD", resolved_name or symbol)
+                         currency, resolved_name or symbol)
 
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=symbol).first()
@@ -1855,37 +823,13 @@ def patch_position_alias(pid):
     return jsonify({"ok": True, "id": str(p.id)})
 
 
-@portfolio_bp.route("/positions/<int:pid>", methods=["DELETE"])
-@api_auth
-@trade_rate_limit
-def delete_position_alias(pid):
-    p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
-    if not p:
-        return api_error(
-            en="Position not found", kr="포지션을 찾을 수 없습니다.",
-            code="POSITION_NOT_FOUND", status=404,
-        )
-    try:
-        db.session.delete(p)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("delete_position_alias failed")
-        return api_error(
-            en="Failed to delete", kr="삭제에 실패했습니다.",
-            code="POSITION_DELETE_FAILED", status=500,
-        )
-    return jsonify({"ok": True})
-
-
 @portfolio_bp.route("/trades", methods=["POST"])
 @api_auth
 @trade_rate_limit
 def create_trade_alias():
-    """Unified buy/sell endpoint accepting {position_id, action, quantity,
-    price, date, note}. Delegates to the existing buy_more / sell_position
-    business logic.
-    """
+    """Record an executed buy/sell fill on an existing position:
+    {position_id, action, quantity, price, date, note}. Seed capital is not
+    involved (see the note below the date parse)."""
     d = request.get_json() or {}
     try:
         pid = int(d.get("position_id") or d.get("positionId") or 0)
@@ -1923,6 +867,16 @@ def create_trade_alias():
             code="POSITION_NOT_FOUND", status=404,
         )
 
+    # 2026-09-29 — optional explicit buy ↔ pause link (services/pre_trade/link.py).
+    # `reflection_declined: true` = a candidate was shown and unchecked.
+    from services.pre_trade.link import ReflectionLinkError, link_declined, resolve_reflection_link
+    try:
+        reflection_id = resolve_reflection_link(
+            current_user.id, d.get("reflection_id"), ticker=p.ticker, action=action)
+    except ReflectionLinkError as e:
+        return api_error(en=e.en, kr=e.kr, code=e.code, status=400)
+    declined = link_declined(d, reflection_id, action=action)
+
     cached = cache_service.get_signal(p.ticker)
     sd = cache_service.safe_cache_blob(cached)
     is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
@@ -1937,26 +891,27 @@ def create_trade_alias():
     # falls back to the server clock via the column default.
     traded_at_dt = _parse_purchase_date(d.get("date"))
 
-    # Wave G-5 P1 G5-02 (2026-05-18): SELECT FOR UPDATE on User row to
-    # serialize capital read-modify-write across concurrent gevent greenlets.
-    # Without this, two simultaneous TradeModalV2 entries (same user) can
-    # both read `avail`, both pass `avail < cost`, both deduct, and one
-    # deduction silently disappears — user buys 2x for 1x cost. Mirrors
-    # buy_more (PR #449) and buy_new_position fixes. SQLite (dev) treats
-    # with_for_update() as a no-op without erroring.
-    from models import User as _U
-    locked_user = (
-        db.session.query(_U)
-        .filter(_U.id == current_user.id)
-        .with_for_update()
-        .one()
-    )
+    # 2026-09-29: this endpoint records a fill that already happened at the
+    # user's broker. TradeModalV2 sends the same body from both its RECORD
+    # ("이미 체결됨 · 기록만") and REVIEW (7문항) modes, and the app never
+    # places orders — so every call is a recorded fill. It follows the import
+    # ledger (services/imports/ledger.py): seed capital
+    # (User.available_capital*) is neither a gate nor a counter here. It used
+    # to reject a 매수 with 400 "Insufficient capital" (no code) whenever the
+    # seed was short — every new user starts at 0 — and to debit/credit the
+    # seed on each fill, so a typed fill moved capital while the same fill
+    # imported left it alone.
+    #
+    # Lock order User→Position, the same on every add/trade path
+    # (deadlock-free). The User row is no longer written, but taking it keeps
+    # the order uniform with POST /positions. SQLite no-ops the lock.
+    from services.position_writes import lock_user_row
+    lock_user_row(current_user.id)
     # Bug C#1 (2026-05-26): the initial ``p`` (first() above) was unlocked, so
     # concurrent buy/sell on the same position interleaved their
     # read-modify-write on p.shares/p.avg_cost. Re-load under SELECT FOR UPDATE
-    # *after* the User lock — lock order User→Position across all paths
-    # (deadlock-free). The pre-lock first() still serves the 404 + the
-    # display-name lookup above. SQLite no-ops the lock.
+    # *after* the User lock. The pre-lock first() still serves the 404 + the
+    # display-name lookup above.
     p = (
         db.session.query(Position)
         .filter_by(id=pid, user_id=current_user.id)
@@ -1970,57 +925,39 @@ def create_trade_alias():
             code="POSITION_NOT_FOUND", status=404,
         )
 
+    # 2026-09-29: the modal's note used to be dropped. It is kept the way the
+    # import ledger keeps an approved thesis — it fills Position.thesis when
+    # that is empty (the merge rule of merge_buy_into). A note with nowhere to
+    # go on the position (thesis already written, or a 매도 that may close
+    # it) becomes an observation note on the ticker — the existing home for
+    # free text outside a position (models/observation_note.py).
+    note = (d.get("note") or d.get("notes") or d.get("thesis") or "").strip()[:500] or None
+    ticker = p.ticker
+
     if action == "buy":
         cost = quantity * price
-        if is_kr:
-            avail = getattr(locked_user, "available_capital_krw", 0) or 0
-            if avail < cost:
-                db.session.rollback()
-                return jsonify({
-                    "error": f"Insufficient KRW capital (need ₩{cost:,.0f}, have ₩{avail:,.0f})"
-                }), 400
-            locked_user.available_capital_krw = avail - cost
-        else:
-            avail = locked_user.available_capital or 0
-            if avail < cost:
-                db.session.rollback()
-                return jsonify({
-                    "error": f"Insufficient capital (need ${cost:,.2f}, have ${avail:,.2f})"
-                }), 400
-            locked_user.available_capital = avail - cost
-        total_cost = p.shares * p.avg_cost + quantity * price
-        # Trade-accuracy fix (2026-05-22): cost-weight buy_fx_rate on add-buy
-        # (USD only) so the KRW cost-basis / KRW P&L% reflect the blended
-        # purchase FX, not just the first lot's rate. Mirrors
-        # add_position._merge_into (:345-349). KR positions keep buy_fx_rate 0.
-        if not is_kr:
-            new_fx = fx_service.get_rate() or 0
-            if p.buy_fx_rate and new_fx and total_cost:
-                p.buy_fx_rate = (
-                    p.buy_fx_rate * p.shares * p.avg_cost
-                    + new_fx * quantity * price
-                ) / total_cost
-            elif not p.buy_fx_rate and new_fx:
-                p.buy_fx_rate = new_fx
-        p.shares += quantity
-        p.avg_cost = total_cost / p.shares
+        from services.position_writes import merge_buy_into
+        thesis_was_empty = not (p.thesis or "").strip()
+        merge_buy_into(
+            p, quantity, price, is_kr=is_kr,
+            fx_rate=0.0 if is_kr else (fx_service.get_rate() or 0.0),
+            note=note if thesis_was_empty else None,
+        )
         _buy_th = TradeHistory(
-            user_id=current_user.id, ticker=p.ticker, name=name,
-            action="BUY", shares=quantity, price_per_share=round(price, 4),
+            user_id=current_user.id, ticker=ticker, name=name,
+            action="BUY", shares=quantity, price_per_share=round(price, 4),  # // legal-ok — trade action data value
             total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
         )
         if traded_at_dt is not None:
             _buy_th.traded_at = traded_at_dt
+        _buy_th.reflection_id = reflection_id
+        _buy_th.reflection_declined = True if declined else None
         db.session.add(_buy_th)
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            logger.exception("create_trade_alias buy failed")
-            return api_error(
-            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
-            code="TRADE_RECORD_FAILED", status=500,
+        err = _commit_recorded_trade(
+            ticker, None if thesis_was_empty else note, "buy",
         )
+        if err is not None:
+            return err
         return jsonify({
             "ok": True,
             "action": "buy",
@@ -2029,11 +966,14 @@ def create_trade_alias():
             "newAvgCost": round(p.avg_cost, 4),
         })
 
-    # sell
+    # 매도
     if quantity > p.shares:
-        return jsonify({
-            "error": f"Cannot sell {quantity}; only {p.shares} shares held."
-        }), 400
+        db.session.rollback()
+        return api_error(
+            en=f"Cannot sell {quantity:g}; only {p.shares:g} shares held.",
+            kr=f"보유 {p.shares:g}주보다 많은 {quantity:g}주는 매도로 기록할 수 없습니다.",
+            code="TRADE_SELL_EXCEEDS_HOLDING", status=400,
+        )
     proceeds = quantity * price
     cost_basis = quantity * p.avg_cost
     pnl = proceeds - cost_basis
@@ -2043,32 +983,18 @@ def create_trade_alias():
         db.session.delete(p)
     else:
         p.shares = round(p.shares - quantity, 6)
-    if is_kr:
-        locked_user.available_capital_krw = (
-            getattr(locked_user, "available_capital_krw", 0) or 0
-        ) + proceeds
-    else:
-        locked_user.available_capital = (
-            locked_user.available_capital or 0
-        ) + proceeds
     _sell_th = TradeHistory(
-        user_id=current_user.id, ticker=p.ticker, name=name,
-        action="SELL", shares=quantity, price_per_share=round(price, 4),
+        user_id=current_user.id, ticker=ticker, name=name,
+        action="SELL", shares=quantity, price_per_share=round(price, 4),  # // legal-ok — trade action data value
         total_value=round(proceeds, 2), pnl=round(pnl, 2),
         pnl_pct=round(pnl_pct, 2), currency=currency,
     )
     if traded_at_dt is not None:
         _sell_th.traded_at = traded_at_dt
     db.session.add(_sell_th)
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("create_trade_alias sell failed")
-        return api_error(
-            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
-            code="TRADE_RECORD_FAILED", status=500,
-        )
+    err = _commit_recorded_trade(ticker, note, "sell")
+    if err is not None:
+        return err
     return jsonify({
         "ok": True,
         "action": "sell",
@@ -2078,6 +1004,29 @@ def create_trade_alias():
         "pnlPct": round(pnl_pct, 2),
         "closed": closed,
     })
+
+
+def _commit_recorded_trade(ticker: str, observation_body: str | None, action: str):
+    """Commit the pending trade write. With ``observation_body`` the same
+    commit also stores it as an observation note on ``ticker`` —
+    ``services.observation_notes.create_note`` commits the session, so the
+    trade and its note land together or not at all. Returns an error
+    response, or ``None`` on success."""
+    try:
+        if observation_body:
+            from services.observation_notes import create_note
+            create_note(current_user.id, observation_body,
+                        tickers=[ticker], source="portfolio")
+        else:
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("create_trade_alias %s failed", action)
+        return api_error(
+            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
+            code="TRADE_RECORD_FAILED", status=500,
+        )
+    return None
 
 
 @portfolio_bp.route("/history")

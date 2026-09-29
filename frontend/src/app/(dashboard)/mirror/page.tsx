@@ -8,15 +8,13 @@
  * and a single pause-and-reflect nudge
  * into 「멈춤」. The behavioural loop's face: 멈춤 → 기록 → 거울.
  *
- * Additive route — does NOT replace /home (no feature flag flip here). The
- * page-level legal footer is mounted by (dashboard)/layout.tsx (/mirror →
- * "coaching"); the inline DisclaimerBanner below is the contextual
- * behaviour-mirror copy for the persona/behaviour data on this surface.
+ * /home redirects here. The legal disclaimer is mounted once by
+ * (dashboard)/layout.tsx (/mirror → "behavior-mirror"); this page mounts none.
  *
- * Below the mirror sits a collapsed 「자세히」 area (MirrorDetails) holding the
- * weekly persona evolution — moved from /profile on 2026-09-12. /profile's
- * observed-persona card and six-dimension grid were not moved: they redrew
- * the same 9 axes the radar and gap chips here already show.
+ * 2026-09-29: the collapsed 「자세히」 area (MirrorDetails) is gone. Its only
+ * content was PersonaEvolution — a 12-week 0–100 "persona score" line — and
+ * scores are not made (CLAUDE.md). The drift this page reads is the text
+ * descriptor from persona_history.compute_drift, not a score.
  *
  * Legal: 3 disclosed buckets only, POSITIVE/NEGATIVE/NEUTRAL framing, no
  * advice, no score on the radar. No italic (CEO 2026-06-15).
@@ -27,12 +25,9 @@ import { useAuth } from "@/lib/auth";
 import { useMirrorHome } from "@/lib/hooks";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
-import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
-import { ArchiveLinks } from "@/components/mirror/archive-links";
-import { MirrorDetails } from "@/components/mirror/mirror-details";
 
 function LegendDot({ colorVar, label }: { colorVar: string; label: string }) {
   return (
@@ -77,7 +72,6 @@ export default function MirrorPage() {
 
   return (
     <div className="min-h-screen bg-[rgb(5,5,5)] text-[var(--pq-ivory)]">
-      <LivingCFOStatusBar />
 
       <div className="mx-auto max-w-3xl space-y-8 px-5 py-8 md:px-8">
         <EditorialHead>거울</EditorialHead>
@@ -105,7 +99,6 @@ export default function MirrorPage() {
               보유 종목을 등록하고 사기 전에 이유를 남기면, 선언한 나와 기록 속의
               나를 나란히 보여드립니다.
             </p>
-            <ArchiveLinks />
           </div>
         )}
 
@@ -154,8 +147,6 @@ export default function MirrorPage() {
               </section>
 
               <OneThingNudge data={data} />
-              <ArchiveLinks />
-              <MirrorDetails />
             </div>
           </ErrorBoundary>
         )}

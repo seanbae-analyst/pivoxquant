@@ -212,8 +212,8 @@ DECLARED_VECTOR_MAP: dict[str, dict[str, float]] = {
 }
 
 # Q4 answer → risk_tolerance (1..10). Same scale V2's C1 used, so
-# ``persona_classifier_v2`` D7 and ``persona_analytics._declared_score``
-# keep reading the column unchanged.
+# ``persona_classifier_v2`` D7 keeps reading the column unchanged.
+# (``persona_analytics._declared_score`` also read it — removed 2026-09-29.)
 V3_DRAWDOWN_TO_RISK: dict[str, int] = {
     "sell_all": 1, "sell_half": 3, "hold": 6, "buy_some": 8, "buy_heavy": 10,
 }
