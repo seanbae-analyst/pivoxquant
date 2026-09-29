@@ -1,10 +1,10 @@
 """
 tests/test_portfolio.py — Portfolio CRUD + Trading
 ===================================================
-Covers /api/portfolio: GET, POST/PATCH /positions, POST /trades (recorded
+Covers /api/portfolio: GET/POST/PATCH /positions, POST /trades (recorded
 fills), history. 2026-09-29: the deprecated singular write routes
 (/position, /position/<id>[/buy|/sell], /position/buy-new), DELETE
-/positions/<id> and PUT /capital were removed; their meaningful assertions
+/positions/<id>, PUT /capital and GET "" were removed; their meaningful assertions
 now run against the live routes below.
 
 External APIs are mocked — no network calls.
@@ -27,32 +27,32 @@ def _market_display_on(market_display_on):
 
 
 
-# ── GET /api/portfolio ──────────────────────────────────────────────────────
+# ── GET /api/portfolio/positions ────────────────────────────────────────────
+# 2026-09-29: the legacy full list GET /api/portfolio was removed (its only
+# reader, RealtimeProvider, moved to /positions); its assertions run here.
 
 class TestGetPortfolio:
     def test_unauthenticated_returns_401(self, client):
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 401
 
     def test_empty_portfolio(self, client, auth_user):
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         d = r.get_json()
         assert d["positions"] == []
         assert d["total_value_usd"] == 0
-        # User capital fixtures set USD=10000, KRW=1,000,000.
-        assert d["available_capital"] == 10000.0
 
     def test_portfolio_with_positions(self, client, auth_user, add_position):
         add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=150.0)
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         d = r.get_json()
         assert len(d["positions"]) == 1
         p = d["positions"][0]
-        assert p["ticker"] == "AAPL"
+        assert p["symbol"] == "AAPL"
         assert p["shares"] == 10
-        assert p["avg_cost"] == 150.0
+        assert p["avgCost"] == 150.0
         assert p["market_value"] == 10 * 150.0  # no signal cache -> fallback to avg_cost
 
     def test_positions_alias_emits_market_value_and_totals(
@@ -99,7 +99,9 @@ class TestGetPortfolio:
             ))
             db.session.commit()
 
-        r = client.get("/api/portfolio")
+        # Wave-3 P1 (2026-06-10): /api/portfolio/positions is the endpoint the
+        # v2 frontend polls. Its totals must bucket on suffix.
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         d = r.get_json()
         # The KR market value must land in the KRW bucket despite the cache.
@@ -107,18 +109,6 @@ class TestGetPortfolio:
         assert d["total_value_usd"] == 0
         # And the blended total must NOT be FX-inflated (700k KRW, not 700k USD→KRW).
         assert d["total_value_all_krw"] == 700000
-        # The per-row display field still echoes the cache (unchanged behavior).
-        assert d["positions"][0]["currency"] == "USD"
-
-        # Wave-3 P1 (2026-06-10): the SAME poisoned-cache bucketing bug lived
-        # on in /api/portfolio/positions — the endpoint the v2 frontend
-        # actually polls. Its totals must bucket on suffix too.
-        r2 = client.get("/api/portfolio/positions")
-        assert r2.status_code == 200
-        d2 = r2.get_json()
-        assert d2["total_value_krw"] == 700000.0
-        assert d2["total_value_usd"] == 0
-        assert d2["total_value_all_krw"] == 700000
 
 
 # ── POST /api/portfolio/positions (add) ─────────────────────────────────────

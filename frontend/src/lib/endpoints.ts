@@ -32,7 +32,9 @@ export const API = {
     deleteCancel: "/api/auth/delete-cancel",
   },
   portfolio: {
-    list: "/api/portfolio",
+    // 2026-09-29: `list: "/api/portfolio"` removed with its backend route —
+    // its only reader was RealtimeProvider's has-positions gate, which now
+    // reads PORTFOLIO_POSITIONS.
     history: (period: string) => `/api/portfolio/history?period=${period}`,
     // Singular `/position` endpoints (addPosition / editPosition / deletePosition /
     // buyMore / sellShares / buyNew) were removed 2026-05-02 — the frontend uses

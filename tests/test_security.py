@@ -79,8 +79,8 @@ class TestRateLimit:
 
 class TestSessionAuth:
     def test_accessing_protected_endpoint_without_login_returns_401(self, client):
-        """/api/portfolio requires auth."""
-        r = client.get("/api/portfolio")
+        """/api/portfolio/positions requires auth."""
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 401
 
     def test_session_fixation_defense_on_login(self, raw_client, make_user):
@@ -176,7 +176,7 @@ class TestInactivityCookieCleanup:
     ):
         """The /api/ branch must keep its JSON-401 behaviour (unchanged)."""
         self._login_then_expire(raw_client, make_user)
-        r = raw_client.get("/api/portfolio", follow_redirects=False)
+        r = raw_client.get("/api/portfolio/positions", follow_redirects=False)
         assert r.status_code == 401
         assert r.get_json().get("code") == "SESSION_EXPIRED"
         assert self._remember_token_cleared(r)

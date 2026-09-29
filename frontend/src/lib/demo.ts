@@ -318,8 +318,6 @@ const DEMO_TRADES = {
     { id: 1, date: "2026-05-04T01:50:00Z", symbol: "JPM", name: "JPMorgan Chase", side: "buy", shares: 30, price: 248.0, amount: 7440, currency: "USD" },
   ],
 };
-/* Full /api/portfolio (legacy) so RealtimeProvider sees positions ⇒ ribbon "● Live". */
-const DEMO_FULL_PORTFOLIO = { positions: DEMO_POSITION_ROWS, total_value_usd: 65633, fx_rate: FX };
 
 /* ── Per-ticker detail (/detail/[ticker]): signal hero + chart + company profile.
 
@@ -401,11 +399,10 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_PERSONA;
     case "/api/profile/pulse":
       return DEMO_PULSE;
-    // Portfolio equity/trades + legacy full read
+    // Portfolio trades. (The legacy full read GET /api/portfolio was removed
+    // 2026-09-29 — RealtimeProvider now gates on PORTFOLIO_POSITIONS above.)
     case "/api/portfolio/trades":
       return DEMO_TRADES;
-    case "/api/portfolio":
-      return DEMO_FULL_PORTFOLIO;
     default:
       return undefined;
   }

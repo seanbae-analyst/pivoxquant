@@ -80,7 +80,6 @@ OK_EMPTYISH = frozenset({200, 204, 400, 404})      # legit empty-book 4xx
 OK_PROVIDER = frozenset({200, 503})                # graceful data-unavailable
 READ_ENDPOINTS = [
     # ── core book/profile surface (original 10) ──
-    ("portfolio",        "/api/portfolio",                 OK),
     ("positions",        "/api/portfolio/positions",       OK),
     ("journal",          "/api/pre-trade/list",            OK),
     ("persona",          "/api/profile/persona",           OK),
@@ -300,7 +299,7 @@ class Sweep:
         # 3b) Artifact generate leg — tier gates + dispatch + persistence.
 
         # 4) Portfolio totals: suffix bucketing must hold (2026-06-10 fix).
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         self.calls += 1
         if r.status_code == 200:
             d = r.get_json() or {}

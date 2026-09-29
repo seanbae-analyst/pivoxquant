@@ -49,8 +49,8 @@ class TestSequentialAddPositionMerges:
         assert r1.status_code == 200
         assert r2.status_code == 200
 
-        # GET /api/portfolio should show exactly one row with merged data.
-        r = client.get("/api/portfolio")
+        # GET /api/portfolio/positions should show exactly one row with merged data.
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         positions = r.get_json()["positions"]
         msft_rows = [p for p in positions if p["ticker"] == "MSFT"]
@@ -58,7 +58,7 @@ class TestSequentialAddPositionMerges:
             "NEW-D regression: duplicate MSFT rows after sequential adds"
         )
         # Weighted-avg cost = (10*300 + 10*320) / 20 = 310
-        assert abs(msft_rows[0]["avg_cost"] - 310.0) < 0.01
+        assert abs(msft_rows[0]["avgCost"] - 310.0) < 0.01
         assert msft_rows[0]["shares"] == 20
 
 

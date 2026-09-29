@@ -5,8 +5,8 @@
  *
  * Maintains a single EventSource to /api/realtime/portfolio-stream,
  * shares connection state + price data via React Context, and merges
- * incoming prices into the SWR portfolio cache so every usePortfolio()
- * consumer sees fresh data without refetching.
+ * incoming prices into the PORTFOLIO_POSITIONS SWR cache so every
+ * usePortfolioPositions() consumer sees fresh data without refetching.
  *
  * Features:
  *  - Exponential backoff with jitter (1s → 2s → 4s → 8s → 16s → 32s → 60s cap)
@@ -32,7 +32,6 @@ import {
 import useSWR, { mutate as globalMutate } from "swr";
 import { useAuth } from "./auth";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY } from "./endpoints";
-import type { PortfolioResponse } from "./types";
 import { isDemoMode, demoResponseFor } from "./demo";
 import { isMarketDataDisplayEnabled } from "./market-display";
 
@@ -169,13 +168,18 @@ const THROTTLE_MS = 500;
 
 /* ── Provider ── */
 
-/** Minimal fetcher — reads from the same endpoint usePortfolio() uses so
- *  SWR serves both from a single cache entry. We only need to know whether
- *  the user has >=1 position before opening the SSE stream (B6: the backend
- *  returns 400 when no positions exist, which triggered infinite onerror
- *  retries). */
-const portfolioFetcher = async (url: string): Promise<PortfolioResponse> => {
-  if (isDemoMode()) return demoResponseFor(url).body as PortfolioResponse;
+/** Minimal fetcher — reads the same key usePortfolioPositions() uses
+ *  (PORTFOLIO_POSITIONS) so SWR serves both from a single cache entry. We
+ *  only need to know whether the user has >=1 position before opening the
+ *  SSE stream (B6: the backend returns 400 when no positions exist, which
+ *  triggered infinite onerror retries). Same behaviour as hooks.ts
+ *  `fetcher`; kept local because hooks.ts re-exports from this module.
+ *
+ *  2026-09-29: this used to read the legacy GET /api/portfolio
+ *  (API.portfolio.list) — a second, heavier copy of the positions list
+ *  that nothing else read. That route is gone. */
+const positionsFetcher = async (url: string): Promise<PositionsAliasResponse> => {
+  if (isDemoMode()) return demoResponseFor(url).body as PositionsAliasResponse;
   const r = await fetch(url, { credentials: "include" });
   if (!r.ok) {
     const body = await r.json().catch(() => ({}));
@@ -188,16 +192,18 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [state, setState] = useState<RealtimeState>(INITIAL_STATE);
 
-  // Subscribe to the portfolio cache (shares a key with usePortfolio()) so
-  // we can gate the SSE connection on positions.length > 0. Using useSWR
-  // here with the same key is free — SWR de-duplicates by key.
-  const { data: portfolioData } = useSWR<PortfolioResponse>(
-    user ? API.portfolio.list : null,
-    portfolioFetcher,
+  // Subscribe to the positions cache (shares a key with
+  // usePortfolioPositions()) so we can gate the SSE connection on
+  // positions.length > 0. Using useSWR here with the same key is free — SWR
+  // de-duplicates by key. No refreshInterval: this provider is mounted on
+  // every page and only needs the count, not the /portfolio page's polling.
+  const { data: positionsData } = useSWR<PositionsAliasResponse>(
+    user ? PORTFOLIO_POSITIONS : null,
+    positionsFetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );
   const hasPositions =
-    !!portfolioData && Array.isArray(portfolioData.positions) && portfolioData.positions.length > 0;
+    !!positionsData && Array.isArray(positionsData.positions) && positionsData.positions.length > 0;
 
   const esRef = useRef<EventSource | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -380,33 +386,6 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           }, FLASH_DURATION_MS);
         }
 
-        // Merge into the legacy SWR portfolio cache (API.portfolio.list →
-        // /api/portfolio). This keeps existing consumers working.
-        globalMutate(
-          API.portfolio.list,
-          (current: PortfolioResponse | undefined) => {
-            if (!current) return current;
-            const updated = current.positions.map((pos) => {
-              const detail = details[pos.ticker];
-              if (!detail) return pos;
-              return {
-                ...pos,
-                price: detail.price,
-                current_price: detail.price,
-                price_display: detail.price_display,
-                observed_at: detail.observed_at,
-                pnl_pct:
-                  pos.avg_cost > 0
-                    ? ((detail.price - pos.avg_cost) / pos.avg_cost) * 100
-                    : pos.pnl_pct,
-                market_value: detail.price * pos.shares,
-              };
-            });
-            return { ...current, positions: updated };
-          },
-          { revalidate: false },
-        );
-
         // P0-A: Home / /portfolio pages consume /api/portfolio/positions
         // (alias shape). Mutate that cache key so SSE pushes reflect in UI.
         globalMutate(
@@ -578,7 +557,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     // Only connect SSE when user is authenticated AND owns >=1 position.
     // B6: portfolio-stream returns 400 for users with no positions, which
     // triggered the SSE `onerror` → 5 retries → persistent 400 spam in
-    // the network log. Wait for usePortfolio() to resolve before connecting,
+    // the network log. Wait for the PORTFOLIO_POSITIONS read to resolve before connecting,
     // and auto-(dis)connect as positions appear or go to zero.
     if (!user) {
       teardown();

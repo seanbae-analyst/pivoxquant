@@ -28,7 +28,7 @@ def test_health_ok(client):
 @pytest.mark.smoke
 def test_protected_route_requires_auth(client):
     """A protected route rejects an unauthenticated request (no 500/leak)."""
-    resp = client.get("/api/portfolio")
+    resp = client.get("/api/portfolio/positions")
     assert resp.status_code == 401, resp.data
 
 
@@ -39,7 +39,7 @@ def test_login_then_portfolio_ok(client, auth_user):
     Guards the v46.2 failure mode: an authenticated User query that 500s
     because the live schema drifted from the model.
     """
-    resp = client.get("/api/portfolio")
+    resp = client.get("/api/portfolio/positions")
     assert resp.status_code == 200, resp.data
     body = resp.get_json()
     assert isinstance(body, (dict, list)), type(body)

@@ -79,47 +79,28 @@ def test_helper_prefers_app_config(app):
 
 
 # ═════════════════════════════════════════════════════════════════════════
-# GET /api/portfolio
+# Portfolio reads (2026-09-29: the legacy GET /api/portfolio was removed —
+# these cases now pin the live GET /api/portfolio/positions)
 # ═════════════════════════════════════════════════════════════════════════
 
 class TestPortfolioOff:
-    def test_market_fields_null_cost_fields_intact(
+    def test_fx_rate_stays_available(
         self, client, auth_user, add_position, market_display_off,
     ):
-        add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=150.0)
-        r = client.get("/api/portfolio")
-        assert r.status_code == 200
-        d = r.get_json()
-        assert d["market_data_display"] is False
-
-        p = d["positions"][0]
-        # Market leg — withheld.
-        for field in ("price", "current_price", "price_display", "observed_at",
-                      "pnl_pct", "pnl_krw_pct", "market_value", "krw_value",
-                      "take_profit", "stop_loss"):
-            assert p[field] is None, f"{field} must be null while display is off"
-        assert p["price_source"] == "display_disabled"
-        # Cost leg — untouched, this is the user's own data.
-        assert p["ticker"] == "AAPL"
-        assert p["shares"] == 10
-        assert p["avg_cost"] == 150.0
-        # Totals.
-        assert d["total_value_usd"] is None
-        assert d["total_value_krw"] is None
-        assert d["total_value_all_krw"] is None
-        assert d["cost_basis_all_krw"] > 0
         # FX stays available — open.er-api.com permits commercial use and a
         # multi-currency cost basis cannot be summed without it.
+        add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=150.0)
+        d = client.get("/api/portfolio/positions").get_json()
         assert d["fx_rate"] > 0
 
     def test_kr_position_keeps_krw_cost(
         self, client, auth_user, add_position, market_display_off,
     ):
         add_position(auth_user["id"], ticker="005930.KS", shares=10, avg_cost=70000.0)
-        d = client.get("/api/portfolio").get_json()
+        d = client.get("/api/portfolio/positions").get_json()
         p = d["positions"][0]
-        assert p["krw_cost"] == 700000      # 10 x ₩70,000, no quote involved
-        assert p["krw_value"] is None
+        assert p["cost_basis_krw"] == 700000      # 10 x ₩70,000, no quote involved
+        assert p["market_value"] is None
         assert d["cost_basis_all_krw"] == 700000
 
     def test_no_quote_overlay_is_called(
@@ -129,7 +110,6 @@ class TestPortfolioOff:
         surface that may not render the answer."""
         add_position(auth_user["id"], ticker="AAPL", shares=1, avg_cost=100.0)
         with patch("routes.portfolio.overlay_prices") as spy:
-            client.get("/api/portfolio")
             client.get("/api/portfolio/positions")
             client.get("/api/portfolio/summary")
         spy.assert_not_called()
@@ -150,9 +130,9 @@ class TestPortfolioOff:
             })))
             db.session.commit()
 
-        body = client.get("/api/portfolio").data.decode()
+        body = client.get("/api/portfolio/positions").data.decode()
         assert "402.91" not in body
-        assert "450" not in body.split('"take_profit"')[1][:10]
+        assert '"take_profit"' not in body and '"stop_loss"' not in body
 
 
 # ═════════════════════════════════════════════════════════════════════════

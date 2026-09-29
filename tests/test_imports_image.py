@@ -222,26 +222,26 @@ class TestPriceSafety:
 
     def test_portfolio_after_approve_display_off(self, client, auth_user, market_display_off):
         self._approve_kr_and_fractional_us(client)
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         assert b"NaN" not in r.data and b"Infinity" not in r.data
         body = r.get_json()
         self._assert_finite(body)
         rows = {p["ticker"]: p for p in body["positions"]}
         assert set(rows) == {"005930.KS", "AAPL"}
-        assert rows["005930.KS"]["avg_cost"] == 71200 and rows["005930.KS"]["price"] is None
-        assert rows["AAPL"]["shares"] == 0.5 and rows["AAPL"]["avg_cost"] == 230.0
+        assert rows["005930.KS"]["avgCost"] == 71200 and rows["005930.KS"]["current"] is None
+        assert rows["AAPL"]["shares"] == 0.5 and rows["AAPL"]["avgCost"] == 230.0
 
     def test_portfolio_after_approve_no_quote_yet(self, client, auth_user, market_display_on, monkeypatch):
         monkeypatch.setattr("routes.portfolio.overlay_prices", lambda tickers: {})
         self._approve_kr_and_fractional_us(client)
-        r = client.get("/api/portfolio")
+        r = client.get("/api/portfolio/positions")
         assert r.status_code == 200
         assert b"NaN" not in r.data and b"Infinity" not in r.data
         body = r.get_json()
         self._assert_finite(body)
         rows = {p["ticker"]: p for p in body["positions"]}
-        assert rows["005930.KS"]["price"] == 71200 and rows["AAPL"]["price"] == 230.0
+        assert rows["005930.KS"]["current"] == 71200 and rows["AAPL"]["current"] == 230.0
         assert rows["005930.KS"]["currency"] == "KRW" and rows["AAPL"]["currency"] == "USD"
 
 

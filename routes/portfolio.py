@@ -21,7 +21,7 @@ from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.container import fetcher, realtime  # noqa: F401 — realtime: tests patch routes.portfolio.realtime (conftest mock_realtime)
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
-from .decorators import api_auth, legal_scrub_response
+from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def _cache_ticker_async(app, ticker: str, capital: float):
     engine.analyze() run, so it is fast now, but it still hits FMP/KIS and
     can stall on a 402 fallback. Running it in a background thread keeps
     POST /positions snappy and idempotent — the cache miss on the next
-    GET /portfolio call will simply fall back to stored avg_cost defaults,
+    GET /positions call will simply fall back to stored avg_cost defaults,
     exactly as cache_service already handles."""
     def _run():
         with app.app_context():
@@ -125,201 +125,14 @@ def _avg_cost_implausible(ticker: str, avg_cost: float) -> str | None:
         return None
 
 
-@portfolio_bp.route("")
-@api_auth
-@legal_scrub_response
-def get_portfolio():
-    # Refresh FX rate in background so a slow/unavailable upstream (FMP 402,
-    # exchangerate-api timeout) does not add 5-15s to every portfolio load.
-    # The stale cached rate (default 1380.0) is accurate enough for display;
-    # the scheduler refreshes it every 5 minutes via APScheduler.
-    threading.Thread(target=fx_service.refresh, daemon=True).start()
-    positions = Position.query.filter_by(user_id=current_user.id).all()
-
-    # Batch-load all SignalCache rows in a single query to avoid N+1.
-    tickers = [p.ticker for p in positions]
-    cache_map = {
-        c.ticker: c
-        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
-    } if tickers else {}
-    # MARKET_DATA_DISPLAY_ENABLED (config.py): with the display gate shut we
-    # never call the quote overlay at all — no vendor price is fetched for a
-    # surface that is not allowed to show one. Cost-basis fields below are
-    # untouched; they are the user's own data.
-    display_on = market_data_display_enabled()
-    # Freshness overlay — never let this endpoint emit a stale "current price".
-    overlay = overlay_prices(tickers) if display_on else {}
-
-    out = []
-    # NAV totals are accumulated on the suffix-derived `is_kr` (authoritative),
-    # NOT the cache-blob `currency` string echoed per-row. A cross-contaminated
-    # or stale SignalCache row can carry the wrong currency; bucketing a native
-    # USD market_value into the KRW bucket (or vice versa) skews
-    # total_value_all_krw by ~1380x for that position (Pattern-7 FX class).
-    # The sibling endpoints (_build_positions_list, summary) already bucket on
-    # the suffix — this brings get_portfolio in line. The per-row "currency"
-    # field is untouched (display only).
-    total_usd = 0.0
-    total_krw = 0.0
-    for p in positions:
-        cached = cache_map.get(p.ticker)
-        sd = cache_service.safe_cache_blob(cached)
-        is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-        o = overlay.get(p.ticker) or {}
-        if not display_on:
-            # Withheld, not missing: the price fields go null and the source
-            # names the reason. avg_cost / shares / krw_cost below stay real.
-            cur_px = None
-            observed_at = None
-            price_source = PRICE_SOURCE_DISABLED
-            pnl = None
-        else:
-            # Bug C (2026-04-24): add price_display parse as last-resort before
-            # avg_cost fallback. Matches the new behavior of overlay_prices
-            # tier-3 but also covers rows whose cache blob is so old that
-            # SignalCache.query returned no row at all.
-            cur_px_raw = o.get("price") or sd.get("price")
-            if not cur_px_raw:
-                cur_px_raw = parse_price_display(sd.get("price_display"))
-            cur_px = float(cur_px_raw or p.avg_cost or 0)
-            observed_at = o.get("observed_at")
-            if o.get("source"):
-                price_source = o["source"]
-            elif sd.get("price"):
-                price_source = "stale"
-            elif cur_px_raw:
-                price_source = "stale_display"
-            else:
-                price_source = "avg_cost"
-            pnl = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
-
-        # 2026-05-09 abnormal-return guard (CEO live sanity flagged AAPL +877%):
-        # An absolute pnl beyond ±500% is almost certainly stale FMP data
-        # or a split-mismatched price (the same FMP /quote bug guarded by
-        # `_quote_price_sane` upstream — but a self-consistent stale snapshot
-        # can still slip the marketCap cross-check). Demote price_source to
-        # "abnormal_pnl_guard" and clamp pnl to None so the UI shows "—"
-        # instead of a garbage number. The avg_cost stays untouched — only
-        # the display effect of cur_px is suppressed.
-        if display_on and p.avg_cost and abs(pnl) > 500:
-            logger.warning(
-                "portfolio.get %s pnl=%.2f%% (cur=%.4f vs avg=%.4f) exceeds "
-                "±500%% — likely stale price; demoting to avg_cost fallback",
-                p.ticker, pnl, cur_px, p.avg_cost,
-            )
-            cur_px = float(p.avg_cost)
-            pnl = 0
-            price_source = "abnormal_pnl_guard"
-        cur = sd.get("currency", "KRW" if is_kr else "USD")
-
-        buy_fx = getattr(p, 'buy_fx_rate', 0) or 0
-        krw_pnl_pct = krw_cost = krw_value = None
-        # krw_cost is COST basis (avg_cost x shares at the purchase rate) — it
-        # carries no vendor licence, so it is computed in both flag states.
-        # krw_value / krw_pnl_pct need a live quote and are withheld when off.
-        if is_kr:
-            krw_cost = round(p.avg_cost * p.shares)
-            if display_on:
-                krw_value = round(cur_px * p.shares)
-                krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
-        elif buy_fx > 0:
-            krw_cost = p.avg_cost * buy_fx * p.shares
-            if display_on:
-                krw_value = cur_px * fx_service.get_rate() * p.shares
-                krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
-
-        # Prefer cache name only when it differs from the raw ticker.
-        # If SignalCache stored the ticker itself as name (fetcher fallback
-        # when KIS/FMP returned no name), ignore it and re-resolve via
-        # kr_stock_registry/pyKRX (KR) or us_stock_registry (US).
-        # Option B: skip stale name == ticker entries.
-        cached_name = sd.get("name")
-        if cached_name and cached_name.upper() != p.ticker.upper():
-            display_name = cached_name
-        else:
-            display_name = resolve_stock_name(p.ticker) or p.ticker
-
-        if display_on:
-            market_value = round(cur_px * p.shares, 2)
-            if is_kr:
-                total_krw += market_value
-            else:
-                total_usd += market_value
-        else:
-            market_value = None
-
-        out.append({
-            "id": p.id, "ticker": p.ticker, "shares": p.shares,
-            "avg_cost": p.avg_cost, "price": cur_px, "current_price": cur_px,
-            "price_display": (
-                sd.get("price_display", f"${cur_px:.2f}") if display_on else None
-            ),
-            "observed_at": observed_at,
-            "price_source": price_source,
-            "pnl_pct": round(pnl, 2) if display_on else None,
-            "pnl_krw_pct": krw_pnl_pct,
-            "buy_fx_rate": buy_fx,
-            "cur_fx_rate": fx_service.get_rate() if not is_kr else 0,
-            "krw_cost": round(krw_cost) if krw_cost else None,
-            "krw_value": round(krw_value) if krw_value else None,
-            "market_value": market_value,
-            "signal": sd.get("signal", "—"), "score": sd.get("score", 0),
-            "rec_shares": sd.get("rec_shares", 0),
-            "rec_investment": sd.get("rec_investment", 0),
-            "rec_timing": sd.get("rec_timing", ""),
-            "name": display_name,
-            "sector": sd.get("sector", "Unknown"),
-            "currency": cur, "is_korean": sd.get("is_korean", is_kr),
-            "sell_pct": sd.get("sell_pct", 0),
-            "sell_timing": sd.get("sell_timing", ""),
-            "capital_needed": sd.get("capital_needed"),
-            "capital_gap": sd.get("capital_gap"),
-            # Price LEVELS derived from a vendor quote — withheld with the
-            # quote itself (FMP ToS §2.2 derived works).
-            "take_profit": sd.get("take_profit") if display_on else None,
-            "stop_loss": sd.get("stop_loss") if display_on else None,
-            "tp_pct": sd.get("tp_pct", 0), "sl_pct": sd.get("sl_pct", 0),
-            "regime_profile": sd.get("regime_profile", ""),
-            "regime_label": sd.get("regime_label", ""),
-            "regime_label_kr": sd.get("regime_label_kr", ""),
-            "priority": sd.get("priority", 0),
-        })
-
-    total_all_krw = (
-        round(total_usd * fx_service.get_rate() + total_krw) if display_on else None
-    )
-    cap_krw = getattr(current_user, "available_capital_krw", 0.0) or 0.0
-
-    # Cost-basis total, always emitted. Computed by fx_service.cost_basis_krw —
-    # the SAME helper /journal's concentration mirror uses — so the two
-    # cost-basis aggregations cannot drift (Pattern 7). NOTE it is not simply
-    # sum(krw_cost): the helper falls back to cached spot for a USD row with no
-    # stored buy_fx_rate, where the per-row krw_cost stays null.
-    cost_basis_all_krw = 0.0
-    for _p in positions:
-        _cb = fx_service.cost_basis_krw(_p)
-        if _cb:
-            cost_basis_all_krw += _cb
-
-    return jsonify({
-        "positions": out,
-        "available_capital": current_user.available_capital,
-        "available_capital_krw": cap_krw,
-        "total_value_usd": round(total_usd, 2) if display_on else None,
-        "total_value_krw": round(total_krw, 0) if display_on else None,
-        "total_value_all_krw": total_all_krw,
-        "cost_basis_all_krw": round(cost_basis_all_krw),
-        "fx_rate": fx_service.get_rate(),
-        MARKET_DATA_DISPLAY_FIELD: display_on,
-    })
-
-
 # ── Frontend-friendly aliases (added 2026-04-22) ──────────────────────────────
 # These endpoints expose the schema the /portfolio page + modals use.
 # 2026-09-29: the deprecated singular write routes (/position, /position/<id>,
 # /position/<id>/buy|sell, /position/buy-new), DELETE /positions/<id> and
 # PUT /capital were removed — none had a frontend consumer (endpoints.ts
-# symbols checked). Seed capital is set via PUT /api/profile/capital.
+# symbols checked). Seed capital is set via POST /api/profile/capital.
+# 2026-09-29: GET "" (the legacy full list, API.portfolio.list) was removed
+# too — its only reader, RealtimeProvider, now reads GET /positions.
 
 
 def _sector_for(sd):
