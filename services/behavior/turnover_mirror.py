@@ -64,7 +64,7 @@ Public API
 from __future__ import annotations
 
 import statistics
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from models import TradeHistory
@@ -87,14 +87,22 @@ _DEFAULT_CURRENCY: str = "USD"
 
 def _hold_day_stats(
     trades: list[TradeHistory],
+    *,
+    since: datetime | None = None,
 ) -> tuple[float | None, float | None]:
     """Return ``(median_hold_days, mean_hold_days)`` for closed pairs.
 
     Derived from the shared FIFO matcher so this never diverges from the
     holding / profit-loss mirrors. ``(None, None)`` when no round trip
     closed in the window (e.g. a user with only open buys).
+
+    ``trades`` 는 전체 이력이어야 한다; ``since`` 는 매도 시각이 그 이후인
+    쌍만 남긴다 (2026-09-29 — 창 안 체결만 맞추면 창보다 오래된 매수가 사라져
+    그 매도가 로트를 잃었다).
     """
     pairs = fifo_match_closed_trades(trades)
+    if since is not None:
+        pairs = [p for p in pairs if p.sell_time >= since]
     if not pairs:
         return None, None
     holds = [float(p.hold_days) for p in pairs]
@@ -174,6 +182,8 @@ def compute_turnover_mirror(
         fields are ``None`` (counts) / ``[]`` (by_currency).
     """
     materialised = [t for t in trades if t is not None]
+    full_history = materialised
+    cutoff: datetime | None = None
 
     # ── optional period window ──────────────────────────────────────
     if period_days is not None and period_days > 0:
@@ -215,7 +225,7 @@ def compute_turnover_mirror(
         t for t in materialised
         if (t.action or "").upper() in ("BUY", "SELL")
     ]
-    median_hold, mean_hold = _hold_day_stats(materialised)
+    median_hold, mean_hold = _hold_day_stats(full_history, since=cutoff)
 
     return {
         "sufficient_data": True,

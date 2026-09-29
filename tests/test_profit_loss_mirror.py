@@ -437,3 +437,21 @@ class TestSameDaySellNoCollision:
         # +30% take-profit must not contaminate the loss median.
         assert result["take_profit"]["median_gain_pct"] > 0
         _assert_no_scoring(result)
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — window after FIFO; one SELL = one observation
+# ═════════════════════════════════════════════════════════════════════
+
+class TestWindowMatchesFullHistory:
+    def test_old_buy_recent_sell_is_counted(self):
+        trades: list[TradeHistory] = []
+        for i in range(5):
+            trades += _round_trip(ticker=f"L{i}", pnl_pct=5.0, hold_days=100.0,
+                                  sell_days_ago=3.0)
+        result = compute_profit_loss_mirror(trades, period_days=30)
+        assert result["sufficient_data"] is True
+        assert result["total_closed_pairs"] == 5
+        assert result["take_profit"]["count"] == 5
+        assert result["take_profit"]["median_hold_days"] == 100.0
+

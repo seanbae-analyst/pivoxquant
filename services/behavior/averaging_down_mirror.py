@@ -59,7 +59,7 @@ Public API
 """
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Iterable, NamedTuple
 
 from models import TradeHistory
@@ -98,6 +98,8 @@ class _FollowOnTally(NamedTuple):
 
 def _classify_follow_ons(
     trades: list[TradeHistory],
+    *,
+    since: datetime | None = None,
 ) -> dict[str, _FollowOnTally]:
     """Walk each ticker's fills and tally follow-on adds vs running average.
 
@@ -105,6 +107,11 @@ def _classify_follow_ons(
     are omitted (their tally would be all-zero). The walk is deterministic:
     fills are sorted by ``traded_at`` so out-of-order ingestion (backfill)
     does not corrupt the running average.
+
+    ``trades`` must be the FULL history; ``since`` only decides which adds
+    are tallied (``traded_at >= since``). 2026-09-29: cutting the window
+    before the walk made an in-window add to a position opened earlier look
+    like a fresh open (or compared it with an average missing older lots).
     """
     ordered = sorted(
         (t for t in trades if t.traded_at and t.ticker),
@@ -148,7 +155,8 @@ def _classify_follow_ons(
                     _bump(key, None, name)
                 continue
             is_follow_on = held_shares > _SHARE_EPSILON
-            if is_follow_on:
+            in_window = since is None or t.traded_at >= since
+            if is_follow_on and in_window:
                 avg_before = held_cost / held_shares
                 if price < avg_before - _PRICE_EPSILON:
                     bucket = "below_avg"
@@ -266,19 +274,18 @@ def compute_averaging_down_mirror(
     materialised = [t for t in trades if t is not None]
 
     # ── optional period window ──────────────────────────────────────
+    # The window selects which adds are counted; the running average is
+    # walked over the full history (see _classify_follow_ons).
+    cutoff: datetime | None = None
     if period_days is not None and period_days > 0:
         dated = [t for t in materialised if t.traded_at]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)
-            materialised = [
-                t for t in materialised
-                if t.traded_at and t.traded_at >= cutoff
-            ]
         else:
             materialised = []
 
-    tallies = _classify_follow_ons(materialised)
+    tallies = _classify_follow_ons(materialised, since=cutoff)
 
     follow_on_count = sum(tly.follow_on for tly in tallies.values())
     below_avg_count = sum(tly.below_avg for tly in tallies.values())

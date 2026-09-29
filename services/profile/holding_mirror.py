@@ -63,7 +63,7 @@ Public API
 from __future__ import annotations
 
 import statistics
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from models import TradeHistory
@@ -91,6 +91,8 @@ _DEFAULT_MAX_EXAMPLES: int = 3
 
 def _classify_pairs(
     trades: list[TradeHistory],
+    *,
+    since: datetime | None = None,
 ) -> tuple[
     list[tuple[MatchedPair, float]],
     list[tuple[MatchedPair, float]],
@@ -108,8 +110,15 @@ def _classify_pairs(
 
     Break-even pairs (``pnl_pct == 0``) are returned in neither bucket
     but DO count toward ``total_closed``.
+
+    ``since`` 는 매도 시각이 그 이후인 쌍만 남긴다. 매칭은 항상 전체 이력으로
+    먼저 한다 (2026-09-29): FIFO 전에 창을 자르면 창보다 오래된 매수가 사라져
+    창 안의 매도가 로트를 잃었다 — ``persona_classifier_v2`` 가 2026-09-10 에
+    고친 것과 같은 버그.
     """
     attributed = fifo_match_closed_trades_with_pnl(trades)
+    if since is not None:
+        attributed = [(p, pct) for p, pct in attributed if p.sell_time >= since]
     total_closed = len(attributed)
 
     winners: list[tuple[MatchedPair, float]] = []
@@ -230,19 +239,18 @@ def compute_holding_mirror(
     materialised = [t for t in trades if t is not None]
 
     # ── optional period window ──────────────────────────────────────
+    # 창은 매도 시각으로 쌍을 고른다; FIFO 는 전체 이력으로 맞춘다
+    # (_classify_pairs 참조).
+    cutoff: datetime | None = None
     if period_days is not None and period_days > 0:
         dated = [t for t in materialised if t.traded_at]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)
-            materialised = [
-                t for t in materialised
-                if t.traded_at and t.traded_at >= cutoff
-            ]
         else:
             materialised = []
 
-    winners, losers, total_closed = _classify_pairs(materialised)
+    winners, losers, total_closed = _classify_pairs(materialised, since=cutoff)
     classified = len(winners) + len(losers)
 
     # ── insufficient data: new user, too few pairs, all break-even ──

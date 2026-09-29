@@ -371,3 +371,22 @@ class TestApi:
         resp = client.get("/api/behavior/turnover-mirror?period=30d")
         assert resp.status_code == 200
         assert resp.get_json()["period"] == "30d"
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — hold days: FIFO over full history, window by SELL time
+# ═════════════════════════════════════════════════════════════════════
+
+class TestHoldDaysWindowMatchesFullHistory:
+    def test_old_buy_recent_sell_keeps_its_lot(self):
+        trades: list[TradeHistory] = []
+        for i in range(5):
+            trades += _round_trip(ticker=f"L{i}", hold_days=100.0,
+                                  sell_days_ago=3.0)
+        win = compute_turnover_mirror(trades, period_days=30, min_trades=1)
+        # the window still counts only the in-window fills …
+        assert win["trade_count"] == 5
+        assert win["sell_count"] == 5
+        # … but each SELL is matched against its (older) BUY.
+        assert win["median_hold_days"] == 100.0
+        assert win["mean_hold_days"] == 100.0

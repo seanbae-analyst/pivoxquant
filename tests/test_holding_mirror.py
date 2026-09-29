@@ -541,3 +541,25 @@ class TestSameDaySellNoCollision:
         aapl_losses = [e for e in loser_examples if e["ticker"] == "AAPL"]
         # The loss side must hold ONLY the -30% AAPL pair, never the +30%.
         assert all(e["pnl_pct"] == -30.0 for e in aapl_losses), aapl_losses
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — window after FIFO; one SELL = one observation
+# ═════════════════════════════════════════════════════════════════════
+
+class TestWindowMatchesFullHistory:
+    """A SELL inside the window whose BUY is older than the window must keep
+    its lot. Pre-fix the window was cut BEFORE matching, so the old BUY was
+    gone and the SELL matched nothing."""
+
+    def test_old_buy_recent_sell_is_counted(self):
+        trades: list[TradeHistory] = []
+        for i in range(5):
+            trades += _round_trip(ticker=f"L{i}", pnl_pct=5.0, hold_days=100.0,
+                                  sell_days_ago=3.0)
+        result = compute_holding_mirror(trades, period_days=30)
+        assert result["sufficient_data"] is True
+        assert result["total_closed_pairs"] == 5
+        assert result["winners"]["count"] == 5
+        assert result["winners"]["median_hold_days"] == 100.0
+
