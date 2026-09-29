@@ -56,6 +56,11 @@ mirror_home_bp = Blueprint("mirror_home", __name__, url_prefix="/api/mirror-home
 _MIN_TRADES_FOR_OBSERVED = 5
 _OBSERVED_WINDOW_DAYS = 30
 _GAP_TOP_N = 3
+# A chip rounds |delta| to whole %p; below 1%p it would read "↑0%p" — noise,
+# not a gap. Such axes are dropped from the gap list.
+_GAP_MIN_DELTA = 0.01
+# Classifier features that are self-reported, not observed from trades.
+_NEVER_OBSERVED_AXES = frozenset({"declared_risk"})
 
 
 def _declared_centroid(code: str) -> list[float]:
@@ -110,6 +115,8 @@ def _gap(
         if axis_filter is not None and key not in axis_filter:
             continue
         delta = observed_vec[i] - declared_vec[i]
+        if abs(delta) < _GAP_MIN_DELTA:
+            continue
         diffs.append((abs(delta), key, delta, declared_vec[i], observed_vec[i]))
     diffs.sort(key=lambda t: t[0], reverse=True)
     out: list[dict] = []
@@ -159,6 +166,12 @@ def get_mirror_home():
         measured_axes = [k for k in FEATURE_KEYS if present.get(k)]
     else:
         measured_axes = list(FEATURE_KEYS)
+    # 2026-09-29: ``declared_risk`` is never observed behaviour — the
+    # classifier reads it from ``profile.risk_tolerance``, which onboarding
+    # writes from the same Q4 answer as the declared vector. Comparing it with
+    # the declaration is the answer against itself (delta≈0 → "↑0%p" chip and
+    # an inflated 정합도 on the client). It is not a measured axis here.
+    measured_axes = [k for k in measured_axes if k not in _NEVER_OBSERVED_AXES]
     trade_count = int(clf.get("trade_count", 0) or 0)
     observed_code = clf.get("persona")
     # Gate on closed-trade count only — matches the Living Mirror artifact's
