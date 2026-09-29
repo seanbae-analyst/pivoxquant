@@ -77,9 +77,20 @@ def _inactive_nudge():
     return inactive_nudge_dispatcher.main()
 
 
+def _friction_outcome_report():
+    # 수동 CLI 리포트 — 스케줄러 틱이 아니어도 임시 앱은 같은 키워드로 끈다
+    # (.env 가 override=True 라 셸의 RUN_SCHEDULER=0 도 덮인다, CLAUDE.md 함정 2).
+    import sys
+
+    from scripts import friction_outcome_report
+    with patch.object(sys, "argv", ["friction_outcome_report.py"]):
+        return friction_outcome_report.main()
+
+
 @pytest.mark.parametrize("call", [
     _reports_delivery, _pipa_purge, _oauth_failure_check,
     _email_scheduler, _checkout_followup, _inactive_nudge,
+    _friction_outcome_report,
 ], ids=lambda f: f.__name__.lstrip("_"))
 def test_transient_callers_disable_scheduler_and_warmup(app, call):
     kw = _capture_create_app_kwargs(call)

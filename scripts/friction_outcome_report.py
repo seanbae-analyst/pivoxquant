@@ -43,10 +43,6 @@ import json
 import os
 import sys
 
-# 스케줄러/캐시워밍 없이 앱 컨텍스트만 필요하다 — import 전에 꺼야 한다.
-os.environ.setdefault("RUN_SCHEDULER", "0")
-os.environ.setdefault("POPULATE_CACHE_ON_BOOT", "0")
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -108,7 +104,10 @@ def main() -> int:
     from models import PreTradeReflection, TradeHistory, User
     from services.pre_trade.friction_outcome import compute_friction_outcome
 
-    app = create_app()
+    # 스케줄러/캐시워밍 없이 앱 컨텍스트만 필요하다. 환경변수(setdefault)가
+    # 아니라 키워드로 끈다 — 프로세스에 RUN_SCHEDULER=1 이 있거나 .env 가
+    # override=True 로 덮으면 setdefault 는 아무것도 못 한다 (7ee1252 와 같은 이유).
+    app = create_app(start_scheduler=False, populate_cache=False)
     with app.app_context():
         q = User.query
         if args.user:
