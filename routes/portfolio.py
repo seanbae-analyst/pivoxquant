@@ -1882,10 +1882,9 @@ def delete_position_alias(pid):
 @api_auth
 @trade_rate_limit
 def create_trade_alias():
-    """Unified buy/sell endpoint accepting {position_id, action, quantity,
-    price, date, note}. Delegates to the existing buy_more / sell_position
-    business logic.
-    """
+    """Record an executed buy/sell fill on an existing position:
+    {position_id, action, quantity, price, date, note}. Seed capital is not
+    involved (see the note below the date parse)."""
     d = request.get_json() or {}
     try:
         pid = int(d.get("position_id") or d.get("positionId") or 0)
@@ -1937,26 +1936,27 @@ def create_trade_alias():
     # falls back to the server clock via the column default.
     traded_at_dt = _parse_purchase_date(d.get("date"))
 
-    # Wave G-5 P1 G5-02 (2026-05-18): SELECT FOR UPDATE on User row to
-    # serialize capital read-modify-write across concurrent gevent greenlets.
-    # Without this, two simultaneous TradeModalV2 entries (same user) can
-    # both read `avail`, both pass `avail < cost`, both deduct, and one
-    # deduction silently disappears — user buys 2x for 1x cost. Mirrors
-    # buy_more (PR #449) and buy_new_position fixes. SQLite (dev) treats
-    # with_for_update() as a no-op without erroring.
-    from models import User as _U
-    locked_user = (
-        db.session.query(_U)
-        .filter(_U.id == current_user.id)
-        .with_for_update()
-        .one()
-    )
+    # 2026-09-29: this endpoint records a fill that already happened at the
+    # user's broker. TradeModalV2 sends the same body from both its RECORD
+    # ("이미 체결됨 · 기록만") and REVIEW (7문항) modes, and the app never
+    # places orders — so every call is a recorded fill. It follows the import
+    # ledger (services/imports/ledger.py): seed capital
+    # (User.available_capital*) is neither a gate nor a counter here. It used
+    # to reject a 매수 with 400 "Insufficient capital" (no code) whenever the
+    # seed was short — every new user starts at 0 — and to debit/credit the
+    # seed on each fill, so a typed fill moved capital while the same fill
+    # imported left it alone.
+    #
+    # Lock order User→Position, the same on every add/trade path
+    # (deadlock-free). The User row is no longer written, but taking it keeps
+    # the order uniform with POST /positions. SQLite no-ops the lock.
+    from services.position_writes import lock_user_row
+    lock_user_row(current_user.id)
     # Bug C#1 (2026-05-26): the initial ``p`` (first() above) was unlocked, so
     # concurrent buy/sell on the same position interleaved their
     # read-modify-write on p.shares/p.avg_cost. Re-load under SELECT FOR UPDATE
-    # *after* the User lock — lock order User→Position across all paths
-    # (deadlock-free). The pre-lock first() still serves the 404 + the
-    # display-name lookup above. SQLite no-ops the lock.
+    # *after* the User lock. The pre-lock first() still serves the 404 + the
+    # display-name lookup above.
     p = (
         db.session.query(Position)
         .filter_by(id=pid, user_id=current_user.id)
@@ -1970,57 +1970,37 @@ def create_trade_alias():
             code="POSITION_NOT_FOUND", status=404,
         )
 
+    # 2026-09-29: the modal's note used to be dropped. It is kept the way the
+    # import ledger keeps an approved thesis — it fills Position.thesis when
+    # that is empty (the merge rule of merge_buy_into). A note with nowhere to
+    # go on the position (thesis already written, or a 매도 that may close
+    # it) becomes an observation note on the ticker — the existing home for
+    # free text outside a position (models/observation_note.py).
+    note = (d.get("note") or d.get("notes") or d.get("thesis") or "").strip()[:500] or None
+    ticker = p.ticker
+
     if action == "buy":
         cost = quantity * price
-        if is_kr:
-            avail = getattr(locked_user, "available_capital_krw", 0) or 0
-            if avail < cost:
-                db.session.rollback()
-                return jsonify({
-                    "error": f"Insufficient KRW capital (need ₩{cost:,.0f}, have ₩{avail:,.0f})"
-                }), 400
-            locked_user.available_capital_krw = avail - cost
-        else:
-            avail = locked_user.available_capital or 0
-            if avail < cost:
-                db.session.rollback()
-                return jsonify({
-                    "error": f"Insufficient capital (need ${cost:,.2f}, have ${avail:,.2f})"
-                }), 400
-            locked_user.available_capital = avail - cost
-        total_cost = p.shares * p.avg_cost + quantity * price
-        # Trade-accuracy fix (2026-05-22): cost-weight buy_fx_rate on add-buy
-        # (USD only) so the KRW cost-basis / KRW P&L% reflect the blended
-        # purchase FX, not just the first lot's rate. Mirrors
-        # add_position._merge_into (:345-349). KR positions keep buy_fx_rate 0.
-        if not is_kr:
-            new_fx = fx_service.get_rate() or 0
-            if p.buy_fx_rate and new_fx and total_cost:
-                p.buy_fx_rate = (
-                    p.buy_fx_rate * p.shares * p.avg_cost
-                    + new_fx * quantity * price
-                ) / total_cost
-            elif not p.buy_fx_rate and new_fx:
-                p.buy_fx_rate = new_fx
-        p.shares += quantity
-        p.avg_cost = total_cost / p.shares
+        from services.position_writes import merge_buy_into
+        thesis_was_empty = not (p.thesis or "").strip()
+        merge_buy_into(
+            p, quantity, price, is_kr=is_kr,
+            fx_rate=0.0 if is_kr else (fx_service.get_rate() or 0.0),
+            note=note if thesis_was_empty else None,
+        )
         _buy_th = TradeHistory(
-            user_id=current_user.id, ticker=p.ticker, name=name,
-            action="BUY", shares=quantity, price_per_share=round(price, 4),
+            user_id=current_user.id, ticker=ticker, name=name,
+            action="BUY", shares=quantity, price_per_share=round(price, 4),  # // legal-ok — trade action data value
             total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
         )
         if traded_at_dt is not None:
             _buy_th.traded_at = traded_at_dt
         db.session.add(_buy_th)
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            logger.exception("create_trade_alias buy failed")
-            return api_error(
-            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
-            code="TRADE_RECORD_FAILED", status=500,
+        err = _commit_recorded_trade(
+            ticker, None if thesis_was_empty else note, "buy",
         )
+        if err is not None:
+            return err
         return jsonify({
             "ok": True,
             "action": "buy",
@@ -2029,11 +2009,14 @@ def create_trade_alias():
             "newAvgCost": round(p.avg_cost, 4),
         })
 
-    # sell
+    # 매도
     if quantity > p.shares:
-        return jsonify({
-            "error": f"Cannot sell {quantity}; only {p.shares} shares held."
-        }), 400
+        db.session.rollback()
+        return api_error(
+            en=f"Cannot sell {quantity:g}; only {p.shares:g} shares held.",
+            kr=f"보유 {p.shares:g}주보다 많은 {quantity:g}주는 매도로 기록할 수 없습니다.",
+            code="TRADE_SELL_EXCEEDS_HOLDING", status=400,
+        )
     proceeds = quantity * price
     cost_basis = quantity * p.avg_cost
     pnl = proceeds - cost_basis
@@ -2043,32 +2026,18 @@ def create_trade_alias():
         db.session.delete(p)
     else:
         p.shares = round(p.shares - quantity, 6)
-    if is_kr:
-        locked_user.available_capital_krw = (
-            getattr(locked_user, "available_capital_krw", 0) or 0
-        ) + proceeds
-    else:
-        locked_user.available_capital = (
-            locked_user.available_capital or 0
-        ) + proceeds
     _sell_th = TradeHistory(
-        user_id=current_user.id, ticker=p.ticker, name=name,
-        action="SELL", shares=quantity, price_per_share=round(price, 4),
+        user_id=current_user.id, ticker=ticker, name=name,
+        action="SELL", shares=quantity, price_per_share=round(price, 4),  # // legal-ok — trade action data value
         total_value=round(proceeds, 2), pnl=round(pnl, 2),
         pnl_pct=round(pnl_pct, 2), currency=currency,
     )
     if traded_at_dt is not None:
         _sell_th.traded_at = traded_at_dt
     db.session.add(_sell_th)
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("create_trade_alias sell failed")
-        return api_error(
-            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
-            code="TRADE_RECORD_FAILED", status=500,
-        )
+    err = _commit_recorded_trade(ticker, note, "sell")
+    if err is not None:
+        return err
     return jsonify({
         "ok": True,
         "action": "sell",
@@ -2078,6 +2047,29 @@ def create_trade_alias():
         "pnlPct": round(pnl_pct, 2),
         "closed": closed,
     })
+
+
+def _commit_recorded_trade(ticker: str, observation_body: str | None, action: str):
+    """Commit the pending trade write. With ``observation_body`` the same
+    commit also stores it as an observation note on ``ticker`` —
+    ``services.observation_notes.create_note`` commits the session, so the
+    trade and its note land together or not at all. Returns an error
+    response, or ``None`` on success."""
+    try:
+        if observation_body:
+            from services.observation_notes import create_note
+            create_note(current_user.id, observation_body,
+                        tickers=[ticker], source="portfolio")
+        else:
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("create_trade_alias %s failed", action)
+        return api_error(
+            en="Failed to record trade", kr="거래 기록에 실패했습니다.",
+            code="TRADE_RECORD_FAILED", status=500,
+        )
+    return None
 
 
 @portfolio_bp.route("/history")
