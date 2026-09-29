@@ -10,8 +10,12 @@
  * umbrella "당신 포트폴리오의 CFO" is untouched; only the dead feature name
  * is. These labels sit in the uppercase-mono eyebrow tier, which stays
  * English by house rule (commit a09376e0), so only the name changed. The
- * file name is kept so the three importing pages and the rollback path
- * stay stable.
+ * file name is kept so the importing pages and the rollback path stay
+ * stable.
+ *
+ * 2026-09-29: mounted on /portfolio and /settings only. /mirror dropped it —
+ * the page IS the declared-vs-observed reading the modal summarised. The
+ * modal now links to /mirror for that reading instead of restating it.
  *
  *   Layer 1 · Identity    → InvestmentProfile onboarding (green when set)
  *   Layer 2 · Learning    → Drift + Pulse + Feedback (yellow while training)
@@ -103,7 +107,7 @@ export function LivingCFOStatusBar() {
       cta:
         layer1State === "ready"
           ? undefined
-          : { label: "Take assessment", href: "/onboarding" },
+          : { label: "Answer the five questions", href: "/onboarding" },
     },
     {
       id: 2,
@@ -112,6 +116,11 @@ export function LivingCFOStatusBar() {
       summary: `${pulseCount} weekly pulses · ${
         hasObservedPersona ? "30-day drift tracked" : "no drift data yet"
       }.`,
+      // The declared-vs-observed reading itself lives on /mirror; this bar
+      // only reports that it exists and points there (2026-09-29).
+      cta: hasObservedPersona
+        ? { label: "Declared vs observed on Mirror", href: "/mirror" }
+        : undefined,
     },
   ];
 
