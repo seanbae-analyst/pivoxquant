@@ -120,7 +120,12 @@ export function mergeIdenticalReads(rows: HoldingRow[]): HoldingRow[] {
       ...o,
       shares: o.shares || r.shares,
       avgCost: o.avgCost || r.avgCost,
-      hints: { ...r.hints, ...o.hints, shares: o.hints.shares ?? r.hints.shares, avgCost: o.hints.avgCost ?? r.hints.avgCost },
+      // Per key: rowFromHolding sets every key, often to undefined, so a
+      // spread would let an empty key wipe the other capture's reading.
+      hints: {
+        shares: o.hints.shares ?? r.hints.shares, avgCost: o.hints.avgCost ?? r.hints.avgCost,
+        name: o.hints.name ?? r.hints.name, code: o.hints.code ?? r.hints.code,
+      },
       flags: [...new Set([...o.flags, ...r.flags])],
     };
   }

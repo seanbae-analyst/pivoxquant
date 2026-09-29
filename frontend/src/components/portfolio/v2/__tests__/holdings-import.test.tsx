@@ -259,6 +259,13 @@ describe("row rules", () => {
     expect([out2.currency, out2.mode]).toEqual(["", "replace"]);
   });
 
+  it("merging keeps a name / code reading that only the later capture has", () => {
+    const first = { ...base, hints: { shares: undefined, avgCost: undefined, name: undefined, code: undefined } };
+    const later = { ...base, key: "k2", hints: { name: "삼성전자우", code: "005935" } };
+    const [m] = mergeIdenticalReads([first, later]);
+    expect([m.hints.name, m.hints.code]).toEqual(["삼성전자우", "005935"]);
+  });
+
   it("a proven read absorbs the same holding read only as hints elsewhere", () => {
     const hinted = { ...base, key: "k3", shares: "", avgCost: "", hints: { shares: base.shares, avgCost: base.avgCost } };
     const merged = mergeIdenticalReads([hinted, base]);
