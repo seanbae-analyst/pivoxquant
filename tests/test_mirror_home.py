@@ -233,3 +233,11 @@ def test_ticker_diversity_unmeasured_without_positions(client, auth_user, add_po
     data = client.get("/api/mirror-home").get_json()
     assert "ticker_diversity" not in data["radar"]["observed_axes"]
     assert "ticker_diversity" not in {g["key"] for g in data["gap"]}
+
+
+def test_declared_carries_no_score(client, auth_user):
+    """2026-09-29 — the declared side had a ``score`` (25 + risk_tolerance*7)
+    that no screen rendered. Scores are not made; the declared side is the
+    user's own answers (``declared.source``) projected onto the radar."""
+    data = client.get("/api/mirror-home").get_json()
+    assert "score" not in data["declared"]

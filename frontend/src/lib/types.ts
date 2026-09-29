@@ -806,7 +806,6 @@ export interface MirrorHomeResponse {
   declared: {
     label: string | null;
     tagline: string | null;
-    score: number | null;
     /** "self" = axes from the user's own onboarding answers; "centroid" = persona default. */
     source?: "self" | "centroid";
   };

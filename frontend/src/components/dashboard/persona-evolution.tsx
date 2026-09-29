@@ -11,8 +11,15 @@
  *   • Hover/focus any week → tooltip with that week's score, mood,
  *     and confidence (from usePulse history, best-effort matched by
  *     ISO week)
- *   • Drift weeks (declared ≠ observed 30d) are tagged with a bronze
+ *   • Weeks whose score sits far from the series median are tagged with a
  *     warning glyph at the plotted point
+ *
+ * 2026-09-29: the "Material drift" badge (`drift > 20 && declared ≠
+ * observed`) and the "declared ≠ observed on the latest week" flag are gone.
+ * `drift` was |declared score − observed score| with the declared score made
+ * from `25 + risk_tolerance*7` — a third declared-vs-observed next to the
+ * canonical one on /mirror (declared_vector_json, 9 axes). The backend no
+ * longer sends `drift` or `declared.score`.
  *
  * Pure presentation; no writes. Falls back to a skeleton when data
  * is loading. Rendered inline inside the Living CFO settings section
@@ -46,12 +53,8 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
 
   const points = data?.sparkline ?? [];
   const pulseHistory = pulse?.history ?? [];
-  const drift = data?.drift ?? 0;
-  const observedPersona =
-    (data?.observed?.window_30d?.persona as PersonaId | undefined) ?? null;
   const declaredPersona =
     (data?.declared?.persona as PersonaId | undefined) ?? null;
-  const hasDrift = drift > 20 && observedPersona !== declaredPersona;
 
   const shell: React.CSSProperties = bare
     ? {}
@@ -91,19 +94,6 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
             How your {declaredLabel.toLowerCase()} has drifted
           </h3>
         </div>
-        {hasDrift && (
-          <span
-            className="inline-flex items-center gap-1 font-mono uppercase text-pq-caption tracking-[0.22em] px-2 py-1 rounded-[2px]"
-            style={{
-              color: "var(--pq-drift)",
-              background: bare ? "rgba(163,91,59,0.10)" : "rgba(163,91,59,0.12)",
-              border: "0.5px solid rgba(163,91,59,0.35)",
-            }}
-          >
-            <AlertTriangle className="h-3 w-3" />
-            Material drift
-          </span>
-        )}
       </header>
 
       <div className="mt-5">
@@ -123,8 +113,6 @@ export function PersonaEvolution({ bare = false, className = "" }: Props) {
             pulseHistory={pulseHistory}
             reduceMotion={Boolean(reduceMotion)}
             bare={bare}
-            declaredPersona={declaredPersona}
-            observedPersona={observedPersona}
           />
         )}
       </div>
@@ -170,8 +158,6 @@ interface EvolutionChartProps {
   pulseHistory: { submitted_at: string; mood: number; confidence: number }[];
   reduceMotion: boolean;
   bare: boolean;
-  declaredPersona: PersonaId | null;
-  observedPersona: PersonaId | null;
 }
 
 function EvolutionChart({
@@ -179,8 +165,6 @@ function EvolutionChart({
   pulseHistory,
   reduceMotion,
   bare,
-  declaredPersona,
-  observedPersona,
 }: EvolutionChartProps) {
   const [hoverIdx, setHoverIdx] = React.useState<number | null>(null);
 
@@ -214,16 +198,12 @@ function EvolutionChart({
   const areaD = `${pathD} L ${x(points.length - 1)},${height - padY} L ${padX},${height - padY} Z`;
 
   // Drift flags per week — mark the ones where score deviates more than
-  // 15 points from the overall median (proxy: declared ≠ observed).
+  // 15 points from the series' own median. Observed-only: the declared ≠
+  // observed clause on the latest week was removed 2026-09-29.
   const median = [...points].map((p) => p.score).sort((a, b) => a - b)[
     Math.floor(points.length / 2)
   ];
-  const driftWeek = (i: number) =>
-    Math.abs(points[i].score - median) > 15 ||
-    (i === points.length - 1 &&
-      declaredPersona !== null &&
-      observedPersona !== null &&
-      declaredPersona !== observedPersona);
+  const driftWeek = (i: number) => Math.abs(points[i].score - median) > 15;
 
   // Pulse lookup — map week iso-start to the closest pulse submitted
   // within the 7-day window after that week's start.

@@ -61,7 +61,8 @@ export interface PersonaResponse {
     persona: PersonaId;
     label: string;
     tagline: string;
-    score: number;
+    // 2026-09-29: `score` (25 + risk_tolerance*7) removed — scores are not
+    // made; the declared side of declared-vs-observed is /mirror's.
   };
   /** Rolling-window observed persona series — 30 / 60 / 90 day. */
   observed: {
@@ -73,8 +74,8 @@ export interface PersonaResponse {
   sparkline: { week: string; score: number }[];
   /** When the backend last re-classified. */
   last_computed_at: string | null;
-  /** Drift delta vs declared persona. 0–100; >20 = material drift. */
-  drift: number;
+  // 2026-09-29: `drift` (|declared score − observed score|) removed with the
+  // declared score it was computed from.
 }
 
 export type FeedbackVote = "useful" | "meh" | "skip";
@@ -221,7 +222,7 @@ export function cachedPersonaId(): PersonaId | null {
   return cached.declared?.persona ?? null;
 }
 
-/** Declared + observed persona, with rolling-window drift indicator. */
+/** Declared + observed persona (30 / 60 / 90 day) and the weekly sparkline. */
 export function usePersona() {
   const swr = useSWR<PersonaResponse>(
     API.profile.persona,

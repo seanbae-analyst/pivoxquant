@@ -89,8 +89,10 @@ class TestGetPersona:
             "growth", "value", "balanced", "income",
             "quant", "speculator", "daytrader", "beginner",
         )
-        # Drift is always bounded.
-        assert 0 <= d["drift"] <= 100
+        # 2026-09-29: no declared score and no score-gap "drift" — the
+        # declared side of declared-vs-observed lives on /mirror only.
+        assert "score" not in d["declared"]
+        assert "drift" not in d
         # Sparkline can be empty but must exist.
         assert isinstance(d["sparkline"], list)
 
@@ -104,7 +106,9 @@ class TestGetPersona:
         # §101 buckets (성장형 / 균형형 / 수익형) — never a CFO-style 8-label.
         assert d["declared"]["label"] == "성장형"
         assert d["declared"]["tagline"]  # non-empty
-        assert 35 <= d["declared"]["score"] <= 95
+        # No 0-100 declared score (was 25 + risk_tolerance*7) — scores are
+        # not made (CLAUDE.md: 유형 라벨·점수는 만들지 않는다).
+        assert "score" not in d["declared"]
 
     def test_short_horizon_persona_collapses_to_surface_bucket(
         self, app, client, auth_user

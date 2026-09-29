@@ -48,7 +48,7 @@ export const DEMO_USER: User = {
 const DEMO_MIRROR_HOME: MirrorHomeResponse = {
   ok: true,
   stage: "observed",
-  declared: { label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다.", score: 78 },
+  declared: { label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다." },
   observed: { label: "균형형", bucket_changed: true, trade_count: 23 },
   gap: [
     { key: "sector_diversity", label: "섹터 분산", direction: "up", delta: 0.4, declared: 0.45, observed: 0.85 },
@@ -275,7 +275,7 @@ function _demoNotesByTicker(base: string) {
  *    on every page's status bar. window_30d present + ≥3 pulses ⇒ L2 "ready". ── */
 const _wkBase = Date.parse("2026-03-27T00:00:00Z");
 const DEMO_PERSONA = {
-  declared: { persona: "growth", label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다.", score: 78 },
+  declared: { persona: "growth", label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다." },
   observed: {
     window_30d: { date: "2026-06-18", persona: "balanced", score: 72 },
     window_60d: { date: "2026-05-19", persona: "growth", score: 70 },
@@ -286,7 +286,6 @@ const DEMO_PERSONA = {
     score: Math.round(70 + 6 * Math.sin(i / 2.4) + (i >= 8 ? 4 : 0)),
   })),
   last_computed_at: "2026-06-18T07:30:00+09:00",
-  drift: 18,
 };
 const DEMO_PULSE = {
   history: [

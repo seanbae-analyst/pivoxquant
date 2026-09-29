@@ -194,7 +194,6 @@ def compute_persona_response(user_id: int, now: datetime | None = None) -> dict:
     now = _utc_now() if now is None else now
     profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
     declared_code = _resolve_declared(profile)
-    declared_score = _declared_score(profile)
 
     # 2026-09-29: 보유 등록 시드·조정 행(fifo_util.is_registration_row)은 뺀다 — 이 경로는
     # 시드 도입 전과 같은 결과를 낸다 (시드는 라이브 거울·분류기만 읽는다).
@@ -208,7 +207,6 @@ def compute_persona_response(user_id: int, now: datetime | None = None) -> dict:
     }
 
     sparkline = _sparkline(trades, sector_map, now, weeks=12)
-    drift = _drift(declared_code, declared_score, observed["window_30d"])
 
     return {
         "declared": {
@@ -218,12 +216,17 @@ def compute_persona_response(user_id: int, now: datetime | None = None) -> dict:
             "persona": declared_code,
             "label": surface_label(declared_code),
             "tagline": surface_tagline(declared_code),
-            "score": int(declared_score),
+            # 2026-09-29: no ``score`` here and no top-level ``drift``. The
+            # score was ``25 + risk_tolerance*7`` (a 0-100 number for the
+            # declared persona — scores are not made, CLAUDE.md) and drift was
+            # |that − observed score|, a second declared-vs-observed next to
+            # the canonical one on /mirror (routes/mirror_home.py, declared
+            # from declared_vector_json). Both went with the /portfolio
+            # RollingWindowWidget that rendered the score.
         },
         "observed": observed,
         "sparkline": sparkline,
         "last_computed_at": now.isoformat(),
-        "drift": int(drift),
     }
 
 
@@ -236,19 +239,6 @@ def _resolve_declared(profile: InvestmentProfile | None) -> str:
         return "balanced"
     code = DECLARED_TO_PERSONA.get((profile.profile_type or "").lower(), "balanced")
     return code if code in PERSONA_CODES else "balanced"
-
-
-def _declared_score(profile: InvestmentProfile | None) -> float:
-    """Derive a 0-100 confidence score for the declared persona.
-
-    We reuse ``risk_tolerance`` (1-10) as a proxy since it's the only
-    onboarding answer with linear semantics. If missing → 60 (neutral).
-    """
-    if profile is None or profile.risk_tolerance is None:
-        return 60.0
-    rt = max(1, min(10, int(profile.risk_tolerance)))
-    # Map 1..10 → ~35..95 so the displayed score never feels like a failure.
-    return 25.0 + rt * 7.0
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -416,7 +406,7 @@ def _norm_log(value: float, *, floor: float, ceil: float) -> float:
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Sparkline + drift
+# Sparkline
 # ─────────────────────────────────────────────────────────────────────
 
 def _sparkline(
@@ -447,20 +437,6 @@ def _sparkline(
     # Oldest first, newest last.
     out.reverse()
     return out
-
-
-def _drift(declared_code: str, declared_score: float, observed_30d: dict) -> float:
-    observed_score = float(observed_30d.get("score") or 0)
-    observed_persona = observed_30d.get("persona")
-    # When observed has no data, drift is 0 — avoid false alarms on
-    # brand-new users.
-    if observed_score <= 0:
-        return 0.0
-    # Penalise large score gaps AND persona mismatches.
-    gap = abs(float(declared_score) - observed_score)
-    if observed_persona != declared_code:
-        gap = min(100.0, gap + 15.0)
-    return max(0.0, min(100.0, gap))
 
 
 # ``_utc_now`` is now an alias for the canonical implementation in
