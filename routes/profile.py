@@ -2159,7 +2159,12 @@ def _build_activity_summary_sheet(wb, user_id):
 
         trades = TradeHistory.query.filter_by(user_id=user_id).all()
         m_all = compute_turnover_mirror(trades, period_days=None)
-        m_30 = compute_turnover_mirror(trades, period_days=30)
+        # "최근 30일" = 오늘 기준. period_days=30 은 *마지막 체결* 기준이라
+        # 200일 전에 멈춘 유저의 옛 체결이 "최근 30일" 칸에 찍혔다 (2026-09-29).
+        m_30 = compute_turnover_mirror(
+            trades,
+            window_start=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30),
+        )
 
         ws = wb.create_sheet(title="활동 요약", index=0)
 

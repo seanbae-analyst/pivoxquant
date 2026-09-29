@@ -311,3 +311,28 @@ def test_xlsx_empty_user_still_valid_workbook(app, client, auth_user):
     assert {"보유종목", "관심종목", "거래내역"} <= set(wb.sheetnames)
     # Positions sheet exists and has at least the header row.
     assert wb["보유종목"].max_row >= 1
+
+
+def test_xlsx_recent_30d_column_is_relative_to_today(app, client, auth_user):
+    """'최근 30일' 칸은 오늘 기준이다 — 마지막 체결 기준이 아니다 (2026-09-29).
+    200일 전에 멈춘 유저의 체결이 '최근 30일' 에 찍히면 안 된다."""
+    from datetime import datetime, timedelta
+
+    uid = auth_user["id"]
+    old = datetime.utcnow() - timedelta(days=200)
+    with app.app_context():
+        for i in range(10):
+            db.session.add(TradeHistory(
+                user_id=uid, ticker="AAPL",
+                action="BUY" if i % 2 == 0 else "SELL",
+                shares=1.0, price_per_share=100.0, total_value=100.0,
+                currency="USD", traded_at=old - timedelta(days=i),
+            ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export?format=xlsx")
+    assert resp.status_code == 200, resp.data
+    ws = load_workbook(BytesIO(resp.data))["활동 요약"]
+    row = next(r for r in ws.iter_rows(values_only=True) if r and r[0] == "총 체결 (건)")
+    assert row[1] == 10          # 전체 기록
+    assert row[2] == "—", row    # 최근 30일: 체결 없음
