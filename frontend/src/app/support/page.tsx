@@ -103,7 +103,7 @@ export default function SupportPage() {
             고객지원
           </EditorialHead>
           <Caption className="mt-2 max-w-lg">
-            결제·계정·사용법에 대한 안내와 문의 채널입니다. 아래 자주 묻는
+            계정·사용법에 대한 안내와 문의 채널입니다. 아래 자주 묻는
             질문에서 답을 찾지 못하면 문의를 남겨 주세요.
           </Caption>
         </header>

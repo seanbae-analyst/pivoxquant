@@ -71,12 +71,19 @@ export const SUPPORT_STATUS_META: Record<SupportStatus, MetaEntry> = {
   },
 };
 
-/** Category options for the inquiry form select, in display order. */
+/**
+ * Category options for the inquiry form select, in display order.
+ *
+ * "billing" is deliberately NOT offered (2026-09-29): payment is gated off
+ * (503 BUSINESS_REGISTRATION_PENDING) in the free closed beta, so a 결제·환불
+ * category advertised a process nobody can reach. The value stays in
+ * `SupportCategory` / `SUPPORT_CATEGORY_META` so inquiries already filed under
+ * it still render in the inbox.
+ */
 export const SUPPORT_CATEGORY_OPTIONS: ReadonlyArray<{
   value: SupportCategory;
   label: string;
 }> = [
-  { value: "billing", label: "결제·환불" },
   { value: "account", label: "계정" },
   { value: "technical", label: "기술" },
   { value: "other", label: "기타" },

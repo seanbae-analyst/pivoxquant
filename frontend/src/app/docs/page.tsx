@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { Book, NotebookPen, Contrast, Shield } from "lucide-react";
 import { SUPPORT_EMAIL_DEFAULT } from "@/lib/business-info";
+import en from "@/messages/en.json";
+
+// Facts that /docs, /support (FAQ) and the landing FAQ all state are read from
+// messages/en.json so the three pages cannot drift apart again (2026-09-29:
+// /docs claimed every fill waits for approval — false for hand entry and the
+// holdings capture — and described deletion differently from /support).
+//   - broker linking + import paths → landing.faq.a5
+//   - account deletion              → support.faq.deleteAccount.a
 
 export const metadata = {
   title: "Docs",
@@ -23,7 +31,7 @@ const SECTIONS = [
       },
       {
         q: "Can I connect my brokerage account?",
-        a: "No — account linking is not offered and no broker credentials are collected. Positions and fills are entered by hand, uploaded from the trade-history file (CSV/Excel/PDF) or fill-notification text your broker app gives you, or forwarded by your own automation with an import token issued in Settings. On every path a fill is not recorded until you write why and approve it.",
+        a: en.landing.faq.a5,
       },
     ],
   },
@@ -37,11 +45,7 @@ const SECTIONS = [
       },
       {
         q: "Where do my entries go?",
-        a: "Journal keeps every pre-trade entry alongside the trades you recorded, so a decision and what followed sit next to each other.",
-      },
-      {
-        q: "Do I need to connect a broker?",
-        a: "No — and there is nothing to connect. Whether you type a fill, upload a file, or forward a notification, every surface reads the same record.",
+        a: "Journal keeps your pre-trade entries — including whether you went ahead or stopped — and the notes you write, in one timeline, under the behaviour mirrors computed from your trades. The trades and holdings themselves live on Portfolio.",
       },
     ],
   },
@@ -77,7 +81,7 @@ const SECTIONS = [
       },
       {
         q: "How do I delete my account?",
-        a: "Settings → Danger Zone → Delete Account. Per PIPA, all data is purged within 30 days.",
+        a: en.support.faq.deleteAccount.a,
       },
     ],
   },

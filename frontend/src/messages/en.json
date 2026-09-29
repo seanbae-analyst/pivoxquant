@@ -617,7 +617,6 @@
     "faqHeading": "Frequently Asked Questions",
     "categories": {
       "service": "Service",
-      "billing": "Billing & Refunds",
       "account": "Account & Login",
       "tech": "Technical & Usage"
     },
@@ -634,17 +633,13 @@
         "q": "How are the plans structured?",
         "a": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes."
       },
-      "refund": {
-        "q": "How are billing and refunds handled?",
-        "a": "For billing or refund inquiries, please sign in and submit a request under the Billing & Refunds category in the 1:1 inquiry form. Processing timelines follow the Terms of Service and applicable law (including the E-commerce Act). Including your payment receipt with your inquiry speeds up resolution."
-      },
       "howToLogin": {
         "q": "How do I sign in?",
         "a": "You can sign in with your Google or Kakao account. Separate email/password registration is not offered. If sign-in fails, try updating your browser to the latest version or disable private/incognito mode, then try again."
       },
       "deleteAccount": {
         "q": "How do I delete my account?",
-        "a": "You can initiate account deletion from the Settings screen. Upon deletion, personal data is handled in accordance with the Privacy Policy and applicable law (including PIPA). If you encounter any issues, please contact us via the 1:1 inquiry form."
+        "a": "Settings → Danger zone → Delete account. By default the request starts a 30-day grace period: you are signed out and sign-in is blocked, and the confirmation email carries a link to cancel. After 30 days every record is permanently purged (PIPA §21). The same dialog also offers an immediate, irreversible deletion. If you run into a problem, contact us via the 1:1 inquiry form."
       },
       "pwa": {
         "q": "Can I install PivoxQuant as an app? (PWA)",
@@ -656,7 +651,7 @@
       },
       "contact": {
         "q": "How can I get support?",
-        "a": "After signing in, you can submit a question about billing, your account, or how to use the platform through the 1:1 inquiry form. Your submitted inquiries and responses are available in 'My Inquiries'."
+        "a": "After signing in, you can submit a question about your account or how to use the platform through the 1:1 inquiry form. Your submitted inquiries and responses are available in 'My Inquiries'."
       }
     }
   },

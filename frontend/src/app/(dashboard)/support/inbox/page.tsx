@@ -113,7 +113,7 @@ function EmptyState() {
         아직 접수한 문의가 없습니다.
       </p>
       <Caption className="mx-auto mt-2 max-w-md">
-        결제·계정·사용법 문의를 1:1 문의로 남기시면 담당자가 확인 후
+        계정·사용법 문의를 1:1 문의로 남기시면 담당자가 확인 후
         답변드립니다.
       </Caption>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
