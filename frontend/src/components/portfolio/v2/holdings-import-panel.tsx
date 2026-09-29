@@ -197,12 +197,16 @@ export function dropIdenticalTickerDuplicates(rows: HoldingRow[]): HoldingRow[] 
   return out;
 }
 
-/** A usable average cost. Won has no sub-won prices and no stock trades
- * under 100원 — "170.85" is "170,850" misread (comma as dot), not a price. */
+/** A usable average cost. No stock trades under 100원, and a won figure with
+ * three or more decimals ("170.850") is "170,850" misread (comma as dot). */
 export function avgCostOk(s: string, currency: Cur): boolean {
   const a = num(s);
   if (!s.trim() || !(a > 0) || !Number.isFinite(a)) return false;
-  return currency !== "KRW" || (Number.isInteger(a) && a >= 100);
+  // 70,850.33원처럼 평단을 소수 둘째 자리까지 찍는 증권사가 있어 1,000원 이상의 소수는 받는다.
+  // 1,000원 미만의 소수("170.85")나 소수 셋째 자리("170.850")는 쉼표를 점으로 잘못 읽은 것이다.
+  if (currency !== "KRW") return true;
+  if (a < 100 || /\.\d{3,}\s*$/.test(s.trim())) return false;
+  return Number.isInteger(a) || a >= 1000;
 }
 
 export type RowIssue =

@@ -204,6 +204,9 @@ describe("row rules", () => {
   it("a won average is whole won and at least 100 — '170.85' is 170,850 misread", () => {
     expect(rowIssues({ ...base, avgCost: "170.85" }, [base])).toContain("avgCost");
     expect(rowIssues({ ...base, avgCost: "50" }, [base])).toContain("avgCost");
+    expect(rowIssues({ ...base, avgCost: "170.850" }, [base])).toContain("avgCost");
+    // 소수 둘째 자리까지 찍는 증권사의 평단은 그대로 받는다.
+    expect(rowIssues({ ...base, avgCost: "70850.33" }, [base])).not.toContain("avgCost");
     const us = { ...base, ticker: "AAPL", tickerCurrency: "USD", currency: "USD" as const, avgCost: "23.15" };
     expect(rowIssues(us, [us])).toEqual([]);
   });
