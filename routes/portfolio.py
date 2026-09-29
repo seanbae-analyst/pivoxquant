@@ -21,7 +21,7 @@ from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.container import fetcher, realtime  # noqa: F401 — realtime: tests patch routes.portfolio.realtime (conftest mock_realtime)
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
 
@@ -240,6 +240,10 @@ def _build_positions_list():
 
 @portfolio_bp.route("/positions", methods=["GET"])
 @api_auth
+# 2026-09-29 — the scrub contract moves here from the removed legacy GET ""
+# (this list replaced it as the RealtimeProvider/portfolio read). `notes` is
+# the user's own thesis text and is returned verbatim, like observation notes.
+@legal_scrub_response(skip_keys=("notes",))
 def list_positions_alias():
     """Simpler positions list tailored to the new frontend shape."""
     try:
