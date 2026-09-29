@@ -386,12 +386,21 @@ def dispatch_monthly_reports(
 
     for user in users:
         summary["candidates"] += 1
+        # 실패 뒤엔 user 행이 expired 일 수 있다 — id 는 미리 읽어 둔다.
+        uid = getattr(user, "id", "?")
         try:
             result = send_report_to_user(user, now=now)
         except Exception as exc:
+            # Postgres 는 실패한 문장 뒤 트랜잭션을 aborted 로 둔다. rollback
+            # 없이 넘어가면 뒤의 모든 사용자가 같은 오류로 죽는다(2026-09-29).
+            try:
+                from extensions import db
+                db.session.rollback()
+            except Exception:
+                logger.debug("rollback after report failure failed",
+                             exc_info=True)
             logger.exception(
-                "monthly mirror report failed for user %s: %s",
-                getattr(user, "id", "?"), exc,
+                "monthly mirror report failed for user %s: %s", uid, exc,
             )
             summary["errors"] += 1
             continue
