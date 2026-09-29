@@ -1356,6 +1356,12 @@ def post_persona_snapshot():
 # token-based public unsubscribe link (GET /api/email/unsubscribe) lives
 # in routes/email_preferences.py and bypasses CSRF on purpose — see that
 # module for the rationale.
+#
+# Ownership (2026-09-29): ``email_opt_out`` is written by THIS route (the
+# Settings email-delivery toggle), the token unsubscribe link and the
+# bounce/spam webhook — never by the marketing-consent routes
+# (routes/consents.py). Consent is the legal basis; this is the user's
+# delivery preference. The monthly report needs both plus the matrix cell.
 
 @profile_bp.route("/email-preferences", methods=["PATCH"])
 @api_auth

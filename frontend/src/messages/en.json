@@ -813,7 +813,10 @@
       },
       "monthly_mirror": {
         "name": "Monthly mirror report",
-        "help": "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices."
+        "help": "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices.",
+        "blockedByConsent": "Not being sent — Marketing emails consent (B3) below is off.",
+        "blockedByDelivery": "Not being sent — Email delivery (B2) below is off.",
+        "blockedByBoth": "Not being sent — Email delivery (B2) and Marketing emails consent (B3) below are off."
       }
     },
     "signin": {

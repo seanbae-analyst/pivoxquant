@@ -57,7 +57,10 @@ import { SettingsHeroV2 } from "@/components/settings/v2/settings-hero-v2";
 import { AnchorRail } from "@/components/settings/v2/anchor-rail";
 import { SettingsIdentityCardV2 } from "@/components/settings/v2/identity-card-v2";
 import { SignInProvidersCard } from "@/components/settings/v2/signin-providers-card";
-import { NotificationsMatrix } from "@/components/settings/v2/notifications-matrix";
+import {
+  EMAIL_DELIVERY_ANCHOR,
+  NotificationsMatrix,
+} from "@/components/settings/v2/notifications-matrix";
 import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
 import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
 import { ImportTokensSection } from "@/components/settings/import-tokens-section";
@@ -79,6 +82,14 @@ export default function SettingsPageV2() {
      opt-out state, not a localStorage shadow that drifts. */
   const [emailEnabled, setEmailEnabled] = React.useState(false);
   const [emailSaving, setEmailSaving] = React.useState(false);
+  /* Whether `emailEnabled` reflects the server yet — until then the matrix
+     must not claim the delivery toggle is blocking the monthly report. */
+  const [emailKnown, setEmailKnown] = React.useState(false);
+  /* B3 marketing consent, reported by MarketingConsentCardV2 (undefined until
+     it has hydrated). Feeds the monthly-report note in the matrix. */
+  const [marketingConsentOn, setMarketingConsentOn] = React.useState<
+    boolean | undefined
+  >(undefined);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -107,6 +118,7 @@ export default function SettingsPageV2() {
         const optOut =
           data?.email_opt_out ?? data?.profile?.email_opt_out ?? false;
         setEmailEnabled(!optOut);
+        setEmailKnown(true);
       })
       .catch(() => {
         /* Best-effort hydrate; localStorage cache wins on failure. */
@@ -484,7 +496,10 @@ export default function SettingsPageV2() {
               </div>
             </div>
 
-            <NotificationsMatrix />
+            <NotificationsMatrix
+              emailDeliveryOn={emailKnown ? emailEnabled : undefined}
+              marketingConsentOn={marketingConsentOn}
+            />
 
             <div
               style={{
@@ -609,12 +624,14 @@ export default function SettingsPageV2() {
 
               {/* B2 · Email delivery */}
               <div
+                id={EMAIL_DELIVERY_ANCHOR}
                 style={{
                   background: "rgba(255,255,255,0.02)",
                   border: "1px solid var(--pq-ivory-line)",
                   borderRadius: 4,
                   padding: 24,
                   position: "relative",
+                  scrollMarginTop: 96,
                 }}
               >
                 <span
@@ -719,7 +736,7 @@ export default function SettingsPageV2() {
                 is wider than 2 columns and the timestamp line needs the
                 full row for legibility on mobile. */}
             <div style={{ marginTop: 12 }}>
-              <MarketingConsentCardV2 />
+              <MarketingConsentCardV2 onConsentChange={setMarketingConsentOn} />
             </div>
           </section>
 

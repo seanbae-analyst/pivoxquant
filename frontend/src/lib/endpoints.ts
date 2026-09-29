@@ -302,8 +302,9 @@ export const API = {
   // Marketing-consent record (정통망법 §50 ① — sender bears the burden of
   // proving prior opt-in). Backend lives in routes/consents.py (PR #73).
   // - GET    : returns { opted_in, marketing_consent_at, marketing_consent_revoked_at }
-  // - POST   : record explicit opt-in (clears prior revocation, flips email_opt_out=false)
-  // - DELETE : record revocation (sets email_opt_out=true)
+  // - POST   : record explicit opt-in (clears prior revocation)
+  // - DELETE : record revocation
+  //   Neither touches email_opt_out (2026-09-29) — that is profile.emailPreferences'.
   consents: {
     marketing: "/api/consents/marketing",
     crossBorder: "/api/consents/cross-border",
