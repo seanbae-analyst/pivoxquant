@@ -428,12 +428,13 @@ def main() -> int:
         return 1
 
     # 이미 떠 있는 web 프로세스가 캐시를 데웠다 — 임시 앱이 FMP 를 다시
-    # 때리지 않게 하고, 스케줄러도 두 번 만들지 않는다.
-    os.environ["POPULATE_CACHE_ON_BOOT"] = "0"
-    os.environ.setdefault("RUN_SCHEDULER", "0")
+    # 때리지 않게 하고, 스케줄러도 두 번 만들지 않는다. env 가 아니라 키워드로
+    # 끈다: prod 는 RUN_SCHEDULER=1 이라 setdefault("RUN_SCHEDULER","0") 는
+    # 아무것도 안 했고, 틱마다 만든 스케줄러가 observability.alerts 의 살아있는
+    # 스케줄러 참조를 바꿔치기했다 (2026-09-29).
 
     try:
-        app = create_app()
+        app = create_app(start_scheduler=False, populate_cache=False)
     except Exception as exc:
         logger.error("create_app() failed: %s", exc)
         return 1

@@ -10,15 +10,17 @@ create_app(), and they are ALSO registered into the in-process APScheduler
 NEW QueuePool that lingers ~300s (pool_recycle) toward Railway PG's 25-conn
 ceiling. The fix:
 
-  * set POPULATE_CACHE_ON_BOOT="0" before create_app() (suppress redundant
-    FMP-hitting warmup thread), and
+  * call create_app(start_scheduler=False, populate_cache=False) (suppress the
+    redundant FMP-hitting warmup thread and a second APScheduler — 2026-09-29:
+    was an os.environ mutation, which setdefault made a no-op under prod's
+    RUN_SCHEDULER=1; see tests/test_transient_create_app.py), and
   * dispose the engine in a finally so the transient pool is freed even on
     error.
 
 These tests run each dispatcher's real flow against the test app/DB and assert
 db.engine.dispose() is invoked. The actual work (queue drains, alert scans) is
-stubbed where it would hit network so the test stays light. POPULATE_CACHE_ON_BOOT
-suppression is verified by asserting the env var is "0" at create_app() time.
+stubbed where it would hit network so the test stays light. Warmup/scheduler
+suppression is verified by the keywords passed to create_app().
 """
 from unittest.mock import patch
 
@@ -26,13 +28,12 @@ import pytest
 
 
 def _patch_create_app(test_app, captured_env):
-    """Return a create_app stub that records POPULATE_CACHE_ON_BOOT and yields
-    the shared test app (so db.engine is the real test engine)."""
-    import os
+    """Return a create_app stub that records the warmup/scheduler keywords and
+    yields the shared test app (so db.engine is the real test engine)."""
 
     def _fake_create_app(*a, **kw):
-        captured_env["populate"] = os.environ.get("POPULATE_CACHE_ON_BOOT")
-        captured_env["run_scheduler"] = os.environ.get("RUN_SCHEDULER")
+        captured_env["populate"] = kw.get("populate_cache")
+        captured_env["run_scheduler"] = kw.get("start_scheduler")
         return test_app
 
     return _fake_create_app
@@ -73,8 +74,8 @@ class TestCheckoutFollowupDispose:
             rc = mod.main()
         assert rc == 0
         assert dispose_spy["n"] >= 1, "engine.dispose must be called"
-        assert captured["populate"] == "0", "warmup must be suppressed"
-        assert captured["run_scheduler"] == "0", \
+        assert captured["populate"] is False, "warmup must be suppressed"
+        assert captured["run_scheduler"] is False, \
             "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
 
@@ -92,8 +93,8 @@ class TestEmailSchedulerDispose:
             rc = mod.main()
         assert rc == 0
         assert dispose_spy["n"] >= 1
-        assert captured["populate"] == "0"
-        assert captured["run_scheduler"] == "0", \
+        assert captured["populate"] is False
+        assert captured["run_scheduler"] is False, \
             "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
 
@@ -108,8 +109,8 @@ class TestOauthFailureCheckDispose:
             rc = mod.main()
         assert rc == 0
         assert dispose_spy["n"] >= 1
-        assert captured["populate"] == "0"
-        assert captured["run_scheduler"] == "0", \
+        assert captured["populate"] is False
+        assert captured["run_scheduler"] is False, \
             "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
 
@@ -124,8 +125,8 @@ class TestInactiveNudgeDispose:
             rc = mod.main()
         assert rc == 0
         assert dispose_spy["n"] >= 1
-        assert captured["populate"] == "0"
-        assert captured["run_scheduler"] == "0", \
+        assert captured["populate"] is False
+        assert captured["run_scheduler"] is False, \
             "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
 
@@ -140,8 +141,8 @@ class TestPipaPurgeDispose:
             rc = mod.main()
         assert rc == 0
         assert dispose_spy["n"] >= 1
-        assert captured["populate"] == "0"
-        assert captured["run_scheduler"] == "0", \
+        assert captured["populate"] is False
+        assert captured["run_scheduler"] is False, \
             "scheduler must be suppressed (no 49-job APScheduler in CLI)"
 
     def test_dispose_runs_even_on_error(self, app, dispose_spy):
