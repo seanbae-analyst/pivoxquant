@@ -182,7 +182,24 @@ describe("ImportTokensSection", () => {
     );
     expect(within(reveal).getByText("settingsV2.importTokens.revealOnce")).toBeInTheDocument();
     expect(within(reveal).getByText(/curl -X POST/)).toBeInTheDocument();
-    expect(within(reveal).getByText("settingsV2.importTokens.macrodroid1")).toBeInTheDocument();
+    // 폰 설정에 필요한 세 값(주소·헤더·본문)이 복사할 수 있게 채워져 있다.
+    expect(within(reveal).getByTestId("import-token-url")).toHaveTextContent(API.imports.webhook);
+    expect(within(reveal).getByTestId("import-token-header")).toHaveTextContent(
+      "Bearer pvx_newtoken_RAW_SECRET_VALUE",
+    );
+    expect(within(reveal).getByTestId("import-token-body")).toHaveTextContent(
+      '{"text":"[notification]"}',
+    );
+    // 안드로이드 7단계 · 아이폰 6단계가 모두 나온다.
+    const android = within(reveal).getByTestId("import-token-android");
+    for (const n of [1, 2, 3, 4, 5, 6, 7]) {
+      expect(within(android).getByText(`settingsV2.importTokens.android${n}`)).toBeInTheDocument();
+    }
+    const ios = within(reveal).getByTestId("import-token-ios");
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      expect(within(ios).getByText(`settingsV2.importTokens.ios${n}`)).toBeInTheDocument();
+    }
+    expect(within(reveal).getByText("settingsV2.importTokens.test2")).toBeInTheDocument();
 
     // Contract: POST tokens with {name, consent:true}; list re-fetched.
     expect(apiFetchMock).toHaveBeenCalledWith(
@@ -278,5 +295,30 @@ describe("ImportTokensSection", () => {
     expect(line).toContain("https://app.example/api/portfolio/imports/webhook");
     expect(line).toContain("Authorization: Bearer pvx_abc");
     expect(line).toContain('{"text":');
+  });
+});
+
+describe("first-time guide", () => {
+  it("is shown before any token exists, open by default, with all four steps", () => {
+    hooks.useImportTokens.mockReturnValue({
+      tokens: [], activeLimit: 5, isLoading: false, error: undefined,
+      mutate: vi.fn().mockResolvedValue(undefined),
+    });
+    render(<ImportTokensSection />);
+    const guide = screen.getByTestId("import-tokens-guide");
+    expect(guide).toHaveAttribute("open");
+    for (const n of [1, 2, 3, 4]) {
+      expect(within(guide).getByText(`settingsV2.importTokens.guideStep${n}`)).toBeInTheDocument();
+    }
+    expect(within(guide).getByText("settingsV2.importTokens.guideNeedIos")).toBeInTheDocument();
+  });
+
+  it("stays available but collapsed once the user has an active token", () => {
+    hooks.useImportTokens.mockReturnValue({
+      tokens: TOKENS, activeLimit: 5, isLoading: false, error: undefined,
+      mutate: vi.fn().mockResolvedValue(undefined),
+    });
+    render(<ImportTokensSection />);
+    expect(screen.getByTestId("import-tokens-guide")).not.toHaveAttribute("open");
   });
 });

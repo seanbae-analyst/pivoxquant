@@ -54,6 +54,18 @@ export function webhookUrl(origin: string): string {
   return `${origin}${API.imports.webhook}`;
 }
 
+/** The Authorization header value the phone tool sends. */
+export function authHeaderValue(token: string): string {
+  return `Bearer ${token}`;
+}
+
+/** Body template for MacroDroid — [notification] is its notification-text variable. */
+export const MACRODROID_BODY = '{"text":"[notification]"}';
+
+const ANDROID_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
+const IOS_STEPS = [1, 2, 3, 4, 5, 6] as const;
+const GUIDE_STEPS = [1, 2, 3, 4] as const;
+
 export function curlExample(origin: string, token: string): string {
   return `curl -X POST ${webhookUrl(origin)} -H "Authorization: Bearer ${token}" -H "Content-Type: application/json" -d '{"text":"삼성전자 10주 매수 체결 71,200원"}'`;
 }
@@ -106,6 +118,94 @@ const monoBox: React.CSSProperties = {
   whiteSpace: "pre-wrap",
   userSelect: "all",
 };
+
+/** A labelled value with its own copy button — the three things the phone tool needs. */
+function CopyField({ label, value, testId }: { label: string; value: string; testId: string }) {
+  const t = useT();
+  const [state, setState] = React.useState<"idle" | "copied" | "failed">("idle");
+  const copy = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(value);
+      setState("copied");
+    } catch {
+      setState("failed");
+    }
+  };
+  return (
+    <div className="mt-3">
+      <FieldLabel tone="muted">{label}</FieldLabel>
+      <div className="mt-1 flex flex-wrap items-start gap-3">
+        <code className="font-mono flex-1 min-w-0" style={monoBox} data-testid={testId} tabIndex={0}>
+          {value}
+        </code>
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={`${t("settingsV2.importTokens.copy")} · ${label}`}
+          className="pq-ink-btn-ghost inline-flex items-center px-3 py-2 text-pq-mono-sm uppercase tracking-[0.22em]"
+        >
+          {state === "copied"
+            ? t("settingsV2.importTokens.copied")
+            : t("settingsV2.importTokens.copy")}
+        </button>
+      </div>
+      {state === "failed" && (
+        <Caption className="mt-1">
+          <span style={{ color: "var(--pq-error)" }}>
+            {t("settingsV2.importTokens.copyFailed")}
+          </span>
+        </Caption>
+      )}
+    </div>
+  );
+}
+
+/** Always-visible first-time guide — what the feature does, what you need,
+ *  and the four steps. Open by default until the user has a token. */
+function ImportTokensGuide({ defaultOpen }: { defaultOpen: boolean }) {
+  const t = useT();
+  return (
+    <details
+      open={defaultOpen}
+      className="mt-4 rounded-[2px] border p-4"
+      style={{ borderColor: "var(--pq-ivory-line)", background: "rgba(0,0,0,0.2)" }}
+      data-testid="import-tokens-guide"
+    >
+      <summary
+        className="font-serif cursor-pointer"
+        style={{ fontSize: "var(--pq-text-body-sm)", color: "var(--pq-bronze)" }}
+      >
+        {t("settingsV2.importTokens.guideTitle")}
+      </summary>
+      <Caption className="mt-3 max-w-xl">{t("settingsV2.importTokens.guideIntro")}</Caption>
+
+      <div className="mt-4">
+        <RuledKicker>{t("settingsV2.importTokens.guideNeedKicker")}</RuledKicker>
+        <div className="mt-2 space-y-1">
+          <Caption>{t("settingsV2.importTokens.guideNeedAndroid")}</Caption>
+          <Caption>{t("settingsV2.importTokens.guideNeedIos")}</Caption>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <RuledKicker>{t("settingsV2.importTokens.guideStepsKicker")}</RuledKicker>
+        <ol className="mt-2 space-y-1">
+          {GUIDE_STEPS.map((n) => (
+            <li key={n}>
+              <Caption>{t(`settingsV2.importTokens.guideStep${n}`)}</Caption>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="mt-4 space-y-1">
+        <Caption>{t("settingsV2.importTokens.guideNote1")}</Caption>
+        <Caption>{t("settingsV2.importTokens.guideNote2")}</Caption>
+      </div>
+    </details>
+  );
+}
 
 export function ImportTokensSection() {
   const t = useT();
@@ -232,6 +332,11 @@ export function ImportTokensSection() {
       <div style={cardStyle}>
         <Caption className="max-w-xl">{t("settingsV2.importTokens.desc")}</Caption>
 
+        <ImportTokensGuide
+          key={isLoading ? "loading" : "ready"}
+          defaultOpen={!isLoading && activeCount === 0}
+        />
+
         {/* ── 2. One-time reveal ── */}
         {issued && (
           <div
@@ -284,34 +389,68 @@ export function ImportTokensSection() {
 
             <HairlineSoft className="my-4" />
 
-            <RuledKicker>{t("settingsV2.importTokens.usageKicker")}</RuledKicker>
-            <div className="mt-3">
-              <FieldLabel tone="muted">{t("settingsV2.importTokens.curlLabel")}</FieldLabel>
-              <code className="font-mono block mt-1" style={monoBox}>
+            <RuledKicker>{t("settingsV2.importTokens.setupKicker")}</RuledKicker>
+            <CopyField
+              label={t("settingsV2.importTokens.urlLabel")}
+              value={address}
+              testId="import-token-url"
+            />
+            <CopyField
+              label={t("settingsV2.importTokens.headerLabel")}
+              value={authHeaderValue(issued.token)}
+              testId="import-token-header"
+            />
+            <CopyField
+              label={t("settingsV2.importTokens.bodyLabel")}
+              value={MACRODROID_BODY}
+              testId="import-token-body"
+            />
+
+            <div className="mt-5" data-testid="import-token-android">
+              <FieldLabel tone="bronze">{t("settingsV2.importTokens.androidKicker")}</FieldLabel>
+              <ol className="mt-2 space-y-1">
+                {ANDROID_STEPS.map((n) => (
+                  <li key={n}>
+                    <Caption>{t(`settingsV2.importTokens.android${n}`)}</Caption>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="mt-5" data-testid="import-token-ios">
+              <FieldLabel tone="bronze">{t("settingsV2.importTokens.iosKicker")}</FieldLabel>
+              <ol className="mt-2 space-y-1">
+                {IOS_STEPS.map((n) => (
+                  <li key={n}>
+                    <Caption>{t(`settingsV2.importTokens.ios${n}`)}</Caption>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="mt-5">
+              <RuledKicker>{t("settingsV2.importTokens.testKicker")}</RuledKicker>
+              <div className="mt-2 space-y-1">
+                <Caption>{t("settingsV2.importTokens.test1")}</Caption>
+                <Caption>{t("settingsV2.importTokens.test2")}</Caption>
+              </div>
+            </div>
+
+            <details className="mt-5">
+              <summary
+                className="font-mono uppercase cursor-pointer"
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  letterSpacing: "0.16em",
+                  color: "var(--pq-ivory-mid)",
+                }}
+              >
+                {t("settingsV2.importTokens.curlKicker")}
+              </summary>
+              <code className="font-mono block mt-2" style={monoBox}>
                 {curlExample(origin, issued.token)}
               </code>
-            </div>
-            <div className="mt-3">
-              <FieldLabel tone="muted">{t("settingsV2.importTokens.macrodroidLabel")}</FieldLabel>
-              <div className="mt-1 space-y-1">
-                <Caption>{t("settingsV2.importTokens.macrodroid1")}</Caption>
-                <Caption>{t("settingsV2.importTokens.macrodroid2")}</Caption>
-                <Caption>{t("settingsV2.importTokens.macrodroid3")}</Caption>
-              </div>
-            </div>
-            <div className="mt-3">
-              <FieldLabel tone="muted">{t("settingsV2.importTokens.iosLabel")}</FieldLabel>
-              <div className="mt-1 space-y-1">
-                <Caption>{t("settingsV2.importTokens.ios1")}</Caption>
-                <Caption>{t("settingsV2.importTokens.ios2")}</Caption>
-                <Caption>{t("settingsV2.importTokens.ios3")}</Caption>
-              </div>
-              <Caption className="mt-2">
-                <span className="font-mono" style={{ color: "var(--pq-ivory-mid)" }}>
-                  POST {address}
-                </span>
-              </Caption>
-            </div>
+            </details>
 
             <div className="mt-4">
               <button
