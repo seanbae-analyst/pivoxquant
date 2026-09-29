@@ -77,7 +77,9 @@ def create_alert(
 ) -> Optional[Alert]:
     """Insert a new notification-bell alert.
 
-    Returns the created Alert or None if skipped by dedup / invalid kind.
+    Returns the created Alert or None if skipped by dedup / invalid kind, or
+    when the user turned in-app off for the event (the push fan-out still
+    runs in that case — it has its own push pref gate).
     Never raises on DB errors — logs and returns None.
     """
     if kind not in ALLOWED_KINDS:
@@ -105,6 +107,12 @@ def create_alert(
     # kind (every current one — see _BELL_KIND_TO_EVENT_ID) ships as before.
     # FAIL-OPEN: any lookup failure leaves the alert un-suppressed, because
     # wrongly muting a real alert is worse than an over-send.
+    #
+    # 2026-09-29: in-app off skips ONLY the Alert row. It used to ``return
+    # None`` here, which also skipped the push fan-out below — a user with
+    # push on / in-app off received nothing. notify_bell_alert has its own
+    # push pref gate, so the push decision stays there.
+    inapp_enabled = True
     event_id = _BELL_KIND_TO_EVENT_ID.get(kind)
     if event_id is not None:
         try:
@@ -112,10 +120,10 @@ def create_alert(
             u = User.query.get(user_id)
             if u is not None and not u.notification_channel_enabled(event_id, "inapp"):
                 logger.info(
-                    "alert.create_alert suppressed by inapp pref user_id=%s "
+                    "alert.create_alert inapp row suppressed by pref user_id=%s "
                     "kind=%s event_id=%s", user_id, kind, event_id,
                 )
-                return None
+                inapp_enabled = False
         except Exception:
             # Never fail-closed on a pref lookup hiccup.
             logger.debug("inapp pref gate lookup failed in create_alert",
@@ -135,23 +143,25 @@ def create_alert(
         if q.first() is not None:
             return None
 
-    try:
-        a = Alert(
-            user_id=user_id,
-            kind=kind,
-            title=title,
-            body=body,
-            ticker=ticker,
-            link=link,
-            message=title,  # legacy column mirror, for existing consumers
-            is_read=False,
-        )
-        db.session.add(a)
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("alert.create_alert failed user_id=%s kind=%s", user_id, kind)
-        return None
+    a = None
+    if inapp_enabled:
+        try:
+            a = Alert(
+                user_id=user_id,
+                kind=kind,
+                title=title,
+                body=body,
+                ticker=ticker,
+                link=link,
+                message=title,  # legacy column mirror, for existing consumers
+                is_read=False,
+            )
+            db.session.add(a)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception("alert.create_alert failed user_id=%s kind=%s", user_id, kind)
+            return None
 
     # Fan out to PWA Web Push. Silent fallback — push delivery must never
     # cause the bell-alert insert to fail. Routed through push_service so

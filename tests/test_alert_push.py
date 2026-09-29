@@ -255,7 +255,8 @@ class TestSendPushOptOutGate:
             # Sanity: this kind is mapped, so the muted pref above governs it.
             assert _BELL_KIND_TO_EVENT_ID.get("concentration_alert") == "concentration"
 
-            with patch("services.push_service.notify_bell_alert") as mock_notify:
+            # 실제 notify_bell_alert 를 태운다 — push 게이트는 그 안에 있다.
+            with patch("services.push_service.send_push_to_user") as mock_send:
                 a = create_alert(
                     user_id=user["id"],
                     kind="concentration_alert",
@@ -267,7 +268,39 @@ class TestSendPushOptOutGate:
             row = Alert.query.filter_by(user_id=user["id"],
                                         kind="concentration_alert").first()
             assert row is None
-            assert not mock_notify.called, "muted kind must not fan out to push"
+            assert not mock_send.called, "muted kind must not fan out to push"
+            db.session.rollback()
+
+    def test_inapp_off_push_on_still_delivers_push(self, app, make_user):
+        """in-app 만 끈 유저는 벨 행은 없어도 푸시는 받아야 한다.
+
+        2026-09-29: in-app 게이트가 ``return None`` 으로 함수 전체를 끝내서
+        push 경로(자체 push pref 게이트가 있다)까지 막았다 — push-on/in-app-off
+        조합은 아무것도 받지 못했다."""
+        from extensions import db
+        from models import Alert, User
+        from services.alert import create_alert
+
+        user = make_user(email="inappoff1@test.com")
+        with app.app_context():
+            u = User.query.get(user["id"])
+            u.notification_prefs = {
+                "concentration": {"email": False, "push": True, "inapp": False},
+            }
+            db.session.commit()
+
+            with patch("services.push_service.send_push_to_user") as mock_send:
+                create_alert(
+                    user_id=user["id"],
+                    kind="concentration_alert",
+                    title="Portfolio concentration — Tech 42.0%",
+                    body="Observation",
+                    link="/mirror",
+                )
+            row = Alert.query.filter_by(user_id=user["id"],
+                                        kind="concentration_alert").first()
+            assert row is None, "in-app off → no bell row"
+            assert mock_send.called, "push on → push must still be delivered"
             db.session.rollback()
 
     def test_marketing_push_consults_opt_out_when_not_opted_out(self, app, make_user):
