@@ -244,7 +244,8 @@ def test_notify_operator_uses_brevo_when_primary(monkeypatch, admin_env):
          patch("services.email.sendgrid_provider.send") as sg:
         support._notify_operator(_inquiry_obj())
     assert br.called
-    assert br.call_args.args[0] == "admin@pivoxquant.com"
+    # system_mail passes a SystemMailRecipient (carries is_simulated).
+    assert br.call_args.args[0].email == "admin@pivoxquant.com"
     sg.assert_not_called()
 
 

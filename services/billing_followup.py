@@ -143,10 +143,10 @@ def send_checkout_followup(*, user: Any) -> bool:
     Never raises — caller (cron dispatcher) treats False as a permanent
     skip and stamps ``skipped_reason``.
 
-    Provider cascade order: SendGrid → Brevo. Mirrors the cascade in
-    ``services/billing_notifications.py``. Both use
-    ``honour_consent=False`` because the call is transactional and the
-    user-row consent state is irrelevant.
+    Provider order is :func:`services.email.system_mail.send_system_mail`'s
+    (``BREVO_PROVIDER_PRIMARY``; 2026-09-29: was hard-coded SendGrid →
+    Brevo here). Providers get ``honour_consent=False`` because the call
+    is transactional and the user-row consent state is irrelevant.
     """
     if user is None or not getattr(user, "email", None):
         logger.debug("checkout_followup skipped: no user/email")
@@ -160,89 +160,20 @@ def send_checkout_followup(*, user: Any) -> bool:
         "BILLING_FROM_EMAIL", "billing@pivoxquant.com",
     )
 
-    sg_key = os.environ.get("SENDGRID_API_KEY")
-    brevo_key = (
-        os.environ.get("BREVO_API_KEY")
-        or os.environ.get("SENDINBLUE_API_KEY")
+    from services.email.system_mail import send_system_mail
+
+    return send_system_mail(
+        user.email,
+        subject,
+        html_body,
+        text_body,
+        user=user,
+        category=("billing", "checkout_followup"),
+        from_email=from_email,
+        from_name="PivoxQuant Billing",
+        reply_to="support@pivoxquant.com",
+        log_label="checkout_followup",
     )
-
-    # ── SendGrid primary ───────────────────────────────────────────────
-    if sg_key:
-        try:
-            from services.email import sendgrid_provider as _sg
-            rcpt = _sg.SystemMailRecipient(
-                email=user.email,
-                user_id=getattr(user, "id", None),
-            )
-            ok = _sg.send(
-                rcpt,
-                subject=subject,
-                html_body=html_body,
-                plain_body=text_body,
-                from_email=from_email,
-                from_name="PivoxQuant Billing",
-                reply_to="support@pivoxquant.com",
-                categories=("billing", "checkout_followup"),
-                honour_consent=False,  # transactional — §50 exempt
-            )
-            if ok:
-                logger.info(
-                    "checkout_followup sent via SendGrid (user=%s)",
-                    getattr(user, "id", "?"),
-                )
-                return True
-        except Exception as exc:
-            logger.exception(
-                "checkout_followup SendGrid path failed (user=%s): %s",
-                getattr(user, "id", "?"), exc,
-            )
-            try:
-                import sentry_sdk
-                sentry_sdk.capture_exception(exc)
-            except Exception:
-                pass
-
-    # ── Brevo fallback ─────────────────────────────────────────────────
-    if brevo_key:
-        try:
-            from services.email import brevo_provider as _brevo
-            rcpt = _brevo.SystemMailRecipient(
-                email=user.email,
-                user_id=getattr(user, "id", None),
-            )
-            ok = _brevo.send(
-                rcpt,
-                subject=subject,
-                html_body=html_body,
-                plain_body=text_body,
-                from_email=from_email,
-                from_name="PivoxQuant Billing",
-                reply_to="support@pivoxquant.com",
-                tags=("billing", "checkout_followup"),
-                honour_consent=False,  # transactional — §50 exempt
-            )
-            if ok:
-                logger.info(
-                    "checkout_followup sent via Brevo (user=%s)",
-                    getattr(user, "id", "?"),
-                )
-                return True
-        except Exception as exc:
-            logger.exception(
-                "checkout_followup Brevo path failed (user=%s): %s",
-                getattr(user, "id", "?"), exc,
-            )
-            try:
-                import sentry_sdk
-                sentry_sdk.capture_exception(exc)
-            except Exception:
-                pass
-
-    logger.info(
-        "checkout_followup: no provider succeeded (user=%s) — skipped",
-        getattr(user, "id", "?"),
-    )
-    return False
 
 
 __all__ = [

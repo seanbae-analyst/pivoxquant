@@ -222,9 +222,11 @@ def notify_payment_failed_email(
     raises — Sentry captures any provider error.
 
     정통망법 §50 transactional carve-out: bypasses ``EmailSender`` (which
-    enforces ``marketing_consent_at`` default-deny) and calls the lower-
-    level ``brevo_provider.send`` / ``sendgrid_provider.send`` directly
-    with ``honour_consent=False``. Cascade order: SendGrid → Brevo.
+    enforces ``marketing_consent_at`` default-deny) and goes through
+    :func:`services.email.system_mail.send_system_mail`, which calls the
+    providers with ``honour_consent=False``. Provider order is that
+    helper's (``BREVO_PROVIDER_PRIMARY``) — 2026-09-29: was hard-coded
+    SendGrid → Brevo here.
     """
     if user is None or not getattr(user, "email", None):
         logger.debug("payment_failed email skipped: no user/email")
@@ -243,89 +245,19 @@ def notify_payment_failed_email(
         "BILLING_FROM_EMAIL", "billing@pivoxquant.com",
     )
 
-    # ── Cascade: SendGrid first, then Brevo. Match the cascade order
-    # ── used by EmailSender (which defaults to SendGrid primary).
-    sg_key = os.environ.get("SENDGRID_API_KEY")
-    brevo_key = os.environ.get("BREVO_API_KEY") or os.environ.get(
-        "SENDINBLUE_API_KEY"
+    from services.email.system_mail import send_system_mail
+
+    return send_system_mail(
+        user.email,
+        subject,
+        html_body,
+        user=user,
+        category=("billing", "payment_failed"),
+        from_email=from_email,
+        from_name="PivoxQuant Billing",
+        reply_to="support@pivoxquant.com",
+        log_label="payment_failed email",
     )
-
-    # SendGrid path
-    if sg_key:
-        try:
-            from services.email import sendgrid_provider as _sg
-            rcpt = _sg.SystemMailRecipient(
-                email=user.email,
-                user_id=getattr(user, "id", None),
-            )
-            ok = _sg.send(
-                rcpt,
-                subject=subject,
-                html_body=html_body,
-                from_email=from_email,
-                from_name="PivoxQuant Billing",
-                reply_to="support@pivoxquant.com",
-                # SendGrid v3: stats bucket = ``categories`` (Brevo: ``tags``).
-                categories=("billing", "payment_failed"),
-                honour_consent=False,  # transactional — §50 exempt
-            )
-            if ok:
-                logger.info(
-                    "payment_failed email sent via SendGrid (user=%s)",
-                    user.id,
-                )
-                return True
-        except Exception as exc:
-            logger.exception(
-                "payment_failed email SendGrid path failed (user=%s): %s",
-                user.id, exc,
-            )
-            try:
-                import sentry_sdk
-                sentry_sdk.capture_exception(exc)
-            except Exception:
-                pass
-
-    # Brevo fallback
-    if brevo_key:
-        try:
-            from services.email import brevo_provider as _brevo
-            rcpt = _brevo.SystemMailRecipient(
-                email=user.email,
-                user_id=getattr(user, "id", None),
-            )
-            ok = _brevo.send(
-                rcpt,
-                subject=subject,
-                html_body=html_body,
-                from_email=from_email,
-                from_name="PivoxQuant Billing",
-                reply_to="support@pivoxquant.com",
-                tags=("billing", "payment_failed"),
-                honour_consent=False,  # transactional — §50 exempt
-            )
-            if ok:
-                logger.info(
-                    "payment_failed email sent via Brevo (user=%s)",
-                    user.id,
-                )
-                return True
-        except Exception as exc:
-            logger.exception(
-                "payment_failed email Brevo path failed (user=%s): %s",
-                user.id, exc,
-            )
-            try:
-                import sentry_sdk
-                sentry_sdk.capture_exception(exc)
-            except Exception:
-                pass
-
-    logger.info(
-        "payment_failed email: no provider succeeded (user=%s) — skipped",
-        getattr(user, "id", "?"),
-    )
-    return False
 
 
 __all__ = [

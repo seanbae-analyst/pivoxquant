@@ -48,11 +48,12 @@ Behaviour contract (must NOT silently expand)
 """
 from __future__ import annotations
 
+import base64
 import logging
 import os
 import time
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Mapping, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,91 @@ def send(
     honour_consent: bool = False,
 ) -> bool:
     """Send a single system / transactional email via SendGrid v3 API.
+
+    Returns ``True`` on accepted dispatch (``False`` for a simulated /
+    consent-skipped recipient); raises the typed errors below otherwise.
+    :func:`send_tracked` is the same transport with attachment, extra
+    headers and the ``X-Message-Id`` exposed — ``EmailSender`` uses it.
+    """
+    return bool(_send_impl(
+        recipient,
+        subject=subject,
+        html_body=html_body,
+        plain_body=plain_body,
+        from_email=from_email,
+        from_name=from_name,
+        reply_to=reply_to,
+        categories=categories,
+        honour_consent=honour_consent,
+    ))
+
+
+def send_tracked(
+    recipient: SystemMailRecipient | str,
+    *,
+    subject: str,
+    html_body: str,
+    plain_body: str | None = None,
+    from_email: str | None = None,
+    from_name: str | None = None,
+    reply_to: str | None = None,
+    categories: Sequence[str] = (),
+    honour_consent: bool = False,
+    headers: Mapping[str, str] | None = None,
+    pdf_bytes: bytes | None = None,
+    pdf_filename: str | None = None,
+    attachment_mime: str = "application/pdf",
+    max_retries: int | None = None,
+) -> str | bool:
+    """:func:`send` plus what ``EmailSender``'s SendGrid leg needs (2026-09-29).
+
+    * ``headers`` — extra SMTP headers (``List-Unsubscribe`` /
+      ``List-Unsubscribe-Post``, RFC 8058). A header that the SDK refuses is
+      logged and skipped, never fatal (same as the old inline leg).
+    * ``pdf_bytes`` / ``pdf_filename`` / ``attachment_mime`` — one attachment.
+    * ``max_retries`` — ``EmailSender`` passes 1: it has Brevo / SMTP behind
+      SendGrid, so a 5xx should fall through at once instead of sleeping.
+
+    Returns the SendGrid ``X-Message-Id`` (non-empty ``str``) on a 2xx that
+    carried the header, ``True`` on a 2xx without it, ``False`` for a
+    simulated / consent-skipped recipient. Raises like :func:`send`.
+    """
+    return _send_impl(
+        recipient,
+        subject=subject,
+        html_body=html_body,
+        plain_body=plain_body,
+        from_email=from_email,
+        from_name=from_name,
+        reply_to=reply_to,
+        categories=categories,
+        honour_consent=honour_consent,
+        headers=headers,
+        pdf_bytes=pdf_bytes,
+        pdf_filename=pdf_filename,
+        attachment_mime=attachment_mime,
+        max_retries=max_retries,
+    )
+
+
+def _send_impl(
+    recipient: SystemMailRecipient | str,
+    *,
+    subject: str,
+    html_body: str,
+    plain_body: str | None = None,
+    from_email: str | None = None,
+    from_name: str | None = None,
+    reply_to: str | None = None,
+    categories: Sequence[str] = (),
+    honour_consent: bool = False,
+    headers: Mapping[str, str] | None = None,
+    pdf_bytes: bytes | None = None,
+    pdf_filename: str | None = None,
+    attachment_mime: str = "application/pdf",
+    max_retries: int | None = None,
+) -> str | bool:
+    """Shared SendGrid v3 transport behind :func:`send` / :func:`send_tracked`.
 
     Parameters
     ----------
@@ -237,6 +323,31 @@ def send(
     for cat in categories:
         mail.add_category(Category(cat))
 
+    if pdf_bytes:
+        from sendgrid.helpers.mail import (  # type: ignore[import-not-found]
+            Attachment,
+            Disposition,
+            FileContent,
+            FileName,
+            FileType,
+        )
+
+        mail.attachment = Attachment(
+            FileContent(base64.b64encode(pdf_bytes).decode()),
+            FileName(pdf_filename or "report.pdf"),
+            FileType(attachment_mime),
+            Disposition("attachment"),
+        )
+
+    if headers:
+        try:
+            from sendgrid.helpers.mail import Header  # type: ignore[import-not-found]
+
+            for name, value in headers.items():
+                mail.add_header(Header(name, value))
+        except Exception:
+            logger.debug("SendGrid header injection failed", exc_info=True)
+
     client = SendGridAPIClient(api_key)
     try:
         # python_http_client timeout knob — same as sender.py:339.
@@ -245,17 +356,24 @@ def send(
         logger.debug("SendGrid timeout set failed", exc_info=True)
 
     # ── send with bounded retry ──
+    tries = max(1, max_retries if max_retries is not None else _MAX_RETRIES)
     last_exc: Exception | None = None
-    for attempt in range(1, _MAX_RETRIES + 1):
+    for attempt in range(1, tries + 1):
         try:
             resp = client.send(mail)
             status = getattr(resp, "status_code", None)
-            if status is not None and 200 <= status < 300:
+            if not isinstance(status, int):
+                # The SDK raises on every non-2xx, so a returned response
+                # without an integer status (older SDKs, test doubles) is an
+                # accepted send — the pre-2026-09-29 EmailSender leg never
+                # looked at the status at all.
+                status = 202
+            if 200 <= status < 300:
                 logger.info(
                     "sendgrid_provider sent to user_id=%s status=%s attempt=%d",
                     rcpt.user_id, status, attempt,
                 )
-                return True
+                return _message_id(resp) or True
             # SDK normally raises on non-2xx, but defensively handle a
             # raw-return path (some test doubles return resp instead of raise).
             if status == 429:
@@ -287,24 +405,43 @@ def send(
                 ) from exc
             # 5xx or network — retry with backoff.
             last_exc = exc
-            if attempt < _MAX_RETRIES:
+            if attempt < tries:
                 sleep_for = _BACKOFF_BASE_SEC * (2 ** (attempt - 1))
                 logger.warning(
                     "sendgrid_provider attempt=%d/%d failed status=%s; "
                     "sleeping %.1fs before retry",
-                    attempt, _MAX_RETRIES, status, sleep_for,
+                    attempt, tries, status, sleep_for,
                 )
                 time.sleep(sleep_for)
                 continue
             # exhausted
             raise SendGridUpstreamError(
-                f"SendGrid 5xx after {_MAX_RETRIES} attempts: {exc!r}"
+                f"SendGrid 5xx after {tries} attempts: {exc!r}"
             ) from exc
 
     # Unreachable (loop either returns True, raises, or continues).
     raise SendGridUpstreamError(  # pragma: no cover
         f"SendGrid send exhausted retries: {last_exc!r}"
     )
+
+
+def _message_id(resp: object) -> str | None:
+    """SendGrid ``X-Message-Id`` response header, or ``None``.
+
+    ``response.headers`` may be a dict or a case-insensitive mapping
+    depending on SDK version; the webhook
+    (``services/email/webhook.py``) matches ``Artifact.sg_message_id`` on it.
+    """
+    try:
+        hdrs = getattr(resp, "headers", None)
+        getter = getattr(hdrs, "get", None)
+        if callable(getter):
+            msg_id = getter("X-Message-Id") or getter("x-message-id")
+            if msg_id:
+                return str(msg_id)
+    except Exception:
+        logger.debug("SendGrid X-Message-Id capture failed", exc_info=True)
+    return None
 
 
 def _extract_status(exc: Exception) -> int | None:
