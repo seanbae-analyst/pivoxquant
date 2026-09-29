@@ -131,12 +131,13 @@ export function applyPreview(r: HoldingRow, p: HoldingsPreviewRow | undefined): 
   // KRX stocks trade only in won, so a KRX ticker settles an unread
   // currency. A US ticker never does: Korean apps may show US holdings in ₩.
   const currency: Cur = r.currency || (tickerCurrency === "KRW" && p.status === "resolved" ? "KRW" : "");
-  // A US stock shown in won (Toss 내 투자 cropped above its 해외주식 header):
-  // the average worked out of won amounts is not the dollar cost basis.
-  if (tickerCurrency === "USD" && r.currency === "KRW" && r.flags.includes("derived_avg")) {
+  // A US stock shown in won (Toss 내 투자 / 자세히 보기 cropped above its
+  // 해외주식 header): a won average — worked out or printed, cross-checked
+  // against won 원금 or not — is not the dollar cost basis.
+  if (tickerCurrency === "USD" && r.currency === "KRW" && (r.avgCost || r.hints.avgCost)) {
     return {
       ...applyPreview({ ...r, currency: "", avgCost: "", hints: { ...r.hints, avgCost: undefined },
-        flags: [...r.flags.filter((f) => f !== "derived_avg"), "foreign_in_krw"] }, p),
+        flags: [...r.flags.filter((f) => f !== "derived_avg" && f !== "cross_checked" && f !== "foreign_in_krw"), "foreign_in_krw"] }, p),
     };
   }
   return {
@@ -150,6 +151,16 @@ export function applyPreview(r: HoldingRow, p: HoldingsPreviewRow | undefined): 
     mode: p.existing ? "replace" : "add",
     currency,
   };
+}
+
+/** The user changes a row's currency. An average read in the other currency
+ * is not a price in the new one, so it is cleared (with its reading);
+ * choosing a currency for a row that had none keeps what is there. */
+export function currencyPatch(r: HoldingRow, currency: Cur): Partial<HoldingRow> {
+  if (r.currency && currency !== r.currency) {
+    return { currency, avgCost: "", hints: { ...r.hints, avgCost: undefined } };
+  }
+  return { currency };
 }
 
 /** Rows whose resolved ticker repeats with different values: auto-merge the
@@ -690,7 +701,7 @@ function HoldingReviewRow({
         </Field>
         <select
           value={r.currency}
-          onChange={(e) => onPatch({ currency: e.target.value as Cur })}
+          onChange={(e) => onPatch(currencyPatch(r, e.target.value as Cur))}
           aria-label={t("dashboard.portfolio.holdingsImport.help.currency")}
           title={t("dashboard.portfolio.holdingsImport.help.currency")}
           data-missing={!skip && (issues.includes("currency") || issues.includes("currencyMismatch")) ? "true" : undefined}

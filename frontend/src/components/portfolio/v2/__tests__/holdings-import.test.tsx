@@ -25,7 +25,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: v
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import {
-  HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, applyPreview, type HoldingRow,
+  HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, applyPreview, currencyPatch, type HoldingRow,
 } from "@/components/portfolio/v2/holdings-import-panel";
 import type { OcrWord } from "@/lib/fill-ocr/parse";
 import type { HoldingsPreviewRow } from "@/lib/types";
@@ -230,6 +230,21 @@ describe("row rules", () => {
       currency: "USD", status: "resolved", currency_mismatch: true, existing: null } as HoldingsPreviewRow);
     expect([out.ticker, out.shares, out.avgCost, out.currency]).toEqual(["SMR", "24", "", ""]);
     expect(out.flags).toContain("foreign_in_krw");
+  });
+
+  it("any won average read for what resolves to a US stock is dropped — printed and cross-checked too", () => {
+    const row = { ...base, ticker: "", status: "needs_ticker" as const, flags: ["cross_checked"], avgCost: "272000", shares: "15" };
+    const out = applyPreview(row, { index: 0, read_name: "다라파워", read_code: null, ticker: "SMR", name: "다라파워",
+      currency: "USD", status: "resolved", currency_mismatch: true, existing: null } as HoldingsPreviewRow);
+    expect([out.ticker, out.shares, out.avgCost, out.currency]).toEqual(["SMR", "15", "", ""]);
+    expect(out.flags).toContain("foreign_in_krw");
+    expect(out.flags).not.toContain("cross_checked");
+  });
+
+  it("switching a row's currency clears the average read in the other currency", () => {
+    expect(currencyPatch({ ...base, hints: { avgCost: "70000" } }, "USD")).toEqual({ currency: "USD", avgCost: "", hints: { avgCost: undefined } });
+    // Choosing a currency for a row that had none keeps what was typed.
+    expect(currencyPatch({ ...base, currency: "" }, "KRW")).toEqual({ currency: "KRW" });
   });
 
   it("a proven read absorbs the same holding read only as hints elsewhere", () => {

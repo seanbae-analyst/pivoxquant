@@ -273,6 +273,31 @@ describe("misreads that once passed every check (Safari-path OCR, 2026-09-28)", 
   });
 });
 
+describe("Toss 자세히 보기 under 해외주식, shown in won", () => {
+  function words(): OcrWord[] {
+    y = 0;
+    return [
+      ...line(["국내주식", "", 60]),
+      ...line(["종", "", 74], "목", "명", ["|", "", 306], ["1", "", 450], "주", "평균", "금액", ["총", "", 873], "금액"),
+      ...line(["가나전자", "", 73], [".7%", ".7", 309], ["272,000", "272,000", 517], "원", ["4,048,149", "4,048,149", 810], "원"),
+      ...line(["15%", "15", 76], ["51¢", "51", 309], ["현재가", "", 453], ["270,500", "270,500", 546], "원", ["원금", "", 782], ["4,080,000", "4,080,000", 846], "원"),
+      ...line(["해외주식", "", 60]),
+      ...line(["종", "", 74], "목", "명", ["|", "", 306], ["1", "", 450], "주", "평균", "금액", ["총", "", 873], "금액"),
+      ...line(["다라파워", "", 73], [".7%", ".7", 309], ["272,000", "272,000", 517], "원", ["4,048,149", "4,048,149", 810], "원"),
+      ...line(["15%", "15", 76], ["51¢", "51", 309], ["현재가", "", 453], ["270,500", "270,500", 546], "원", ["원금", "", 782], ["4,080,000", "4,080,000", 846], "원"),
+    ];
+  }
+
+  it("the won average of an overseas stock is not its cost basis — currency unknown, no average", () => {
+    const { rows } = parseHoldingsScreen(words());
+    expect(rows.map((r) => [r.name.value, r.currency, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나전자", "KRW", 15, 272000],
+      ["다라파워", null, 15, null],
+    ]);
+    expect(rows[1].flags).toContain("foreign_in_krw");
+  });
+});
+
 describe("a won amount with the comma read as a dot ('170.850원') is not 170.85", () => {
   it("card: no cross-check target, so the average stays a hint", () => {
     y = 0;

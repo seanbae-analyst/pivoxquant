@@ -886,10 +886,18 @@ function detailHoldings(lines: Line[], hMed: number): ParsedHolding[] {
         const h = (c: Cell<number>) => (c.value !== null ? { value: null, hint: String(c.value) } : c);
         shares = h(shares); avg = h(avg);
       }
+      // 해외주식 shown in won (Toss 내 투자 rule): the won average is not the
+      // dollar cost basis, and the currency is not known from the screen.
+      const sec = lines.filter((l) => l.y < m.y && /해외주식|국내주식/.test(l.compact)).pop();
+      const foreign = Boolean(sec && /해외주식/.test(sec.compact) && !/국내주식/.test(sec.compact));
+      if (foreign && !usd) {
+        flags.push("foreign_in_krw");
+        avg = { value: null };
+      }
       const nc = nameAndCode(letters, [], usd, false);
       if (!nc.name.value && shares.value === null && avg.value === null) continue;
       out.push({
-        name: nc.name, code: nc.code, shares, avgCost: avg, currency: usd ? "USD" : "KRW", flags,
+        name: nc.name, code: nc.code, shares, avgCost: avg, currency: usd ? "USD" : foreign ? null : "KRW", flags,
         sourceText: band.map((l) => l.text).join(" / "),
       });
     }
