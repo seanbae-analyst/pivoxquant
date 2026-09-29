@@ -1258,3 +1258,98 @@ def test_export_includes_import_inbox_scoped_and_without_token_secret(
     assert token_hash not in raw
     assert "theirs" not in raw
 
+
+
+# ── capital gains × holding-registration rows (2026-09-29) ─────────────────
+# A 매도 that closes a holding-registration seed lot has no known acquisition
+# date / FX, so its seed slices stay out of the computed rows — but the export
+# says how many 매도 were left out instead of dropping them silently. Adjust
+# 매도 (holding lowered without a recorded 매도) are never disposals.
+
+def _cg_rows(app, uid, spec):
+    from extensions import db
+    from models import TradeHistory
+    with app.app_context():
+        for ticker, action, shares, px, when, source in spec:
+            db.session.add(TradeHistory(
+                user_id=uid, ticker=ticker, name=ticker, action=action,
+                shares=shares, price_per_share=px, total_value=px * shares,
+                currency="USD", traded_at=when, source=source,
+            ))
+        db.session.commit()
+
+
+def _cg_csv(client, dataset="capital_gains"):
+    import csv as _c
+    import io as _i
+    with patch("services.fx_service.get_rate_at_strict", return_value=1000.0):
+        resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
+    assert resp.status_code == 200, resp.data
+    return list(_c.reader(_i.StringIO(resp.data.decode("utf-8-sig"))))
+
+
+def test_capital_gains_seed_sell_excluded_with_notice(app, client, auth_user):
+    from datetime import datetime
+    from models.trade_history import HOLDING_ADJUST_SOURCE, HOLDING_SEED_SOURCE
+    _cg_rows(app, auth_user["id"], [
+        # seed 10, then a real 매수 5; the 매도 of 8 closes seed shares first.
+        ("AAPL", "BUY", 10, 100.0, datetime(2024, 1, 2), HOLDING_SEED_SOURCE),
+        ("AAPL", "BUY", 5, 90.0, datetime(2024, 2, 1), None),
+        ("AAPL", "SELL", 8, 150.0, datetime(2024, 6, 3), None),
+        # MSFT: seed 5 + real 5, 매도 8 → 3 real shares stay in the rows.
+        ("MSFT", "BUY", 5, 300.0, datetime(2024, 1, 2), HOLDING_SEED_SOURCE),
+        ("MSFT", "BUY", 5, 310.0, datetime(2024, 2, 1), None),
+        ("MSFT", "SELL", 8, 350.0, datetime(2024, 6, 3), None),
+        # NVDA: an adjust 매도 is not a disposal and not a counted exclusion.
+        ("NVDA", "BUY", 4, 500.0, datetime(2024, 1, 2), None),
+        ("NVDA", "SELL", 4, 500.0, datetime(2024, 3, 1), HOLDING_ADJUST_SOURCE),
+    ])
+    rows = _cg_csv(client)
+    assert rows[0][0].startswith("# ") and "참고용" in rows[0][0]
+    notice = rows[1][0]
+    assert notice.startswith("# ")
+    assert "보유 등록분 매도 2건" in notice
+    assert "취득일·취득 환율" in notice
+    header = rows[2]
+    assert header[0] == "귀속연도"
+    data = [dict(zip(header, r)) for r in rows[3:]]
+    # AAPL: the seed-closing slice (8) is out; the later real 매수 is NOT
+    # mis-matched to that 매도. MSFT: only the 3 real shares. NVDA: nothing.
+    assert [(d["종목코드"], d["수량"], d["취득일"]) for d in data] == [
+        ("MSFT", "3.0", "2024-02-01"),
+    ]
+
+    summary = _cg_csv(client, "capital_gains_summary")
+    assert "보유 등록분 매도 2건" in summary[1][0]
+    assert summary[2][0] == "귀속연도"
+
+
+def test_capital_gains_no_notice_without_registration_sells(app, client, auth_user):
+    from datetime import datetime
+    _seed_us_round_trip(app, auth_user["id"], buy_dt=datetime(2024, 1, 2),
+                        sell_dt=datetime(2024, 6, 3))
+    rows = _cg_csv(client)
+    assert rows[1][0] == "귀속연도"
+    assert not any("보유 등록분" in c for r in rows for c in r)
+
+
+def test_capital_gains_notice_in_xlsx(app, client, auth_user):
+    from datetime import datetime
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    from models.trade_history import HOLDING_SEED_SOURCE
+    _cg_rows(app, auth_user["id"], [
+        ("AAPL", "BUY", 10, 100.0, datetime(2024, 1, 2), HOLDING_SEED_SOURCE),
+        ("AAPL", "SELL", 10, 150.0, datetime(2024, 6, 3), None),
+    ])
+    with patch("services.fx_service.get_rate_at_strict", return_value=1000.0):
+        resp = client.get("/api/profile/export?format=xlsx")
+    assert resp.status_code == 200, resp.data
+    wb = load_workbook(BytesIO(resp.data))
+    for title in ("양도손익(상세)", "양도손익(연간)"):
+        ws = wb[title]
+        assert str(ws.cell(1, 1).value).startswith("# ")
+        assert "보유 등록분 매도 1건" in str(ws.cell(2, 1).value)
+        assert ws.cell(3, 1).value == "귀속연도"

@@ -126,6 +126,20 @@ DISCLAIMER_KR: str = (
 )
 
 
+def registration_excluded_notice_kr(count: int) -> str:
+    """Export notice for 매도 left out because they closed holding-registration
+    lots (2026-09-29).
+
+    A registered holding's lot is dated at registration, not acquisition, so
+    its acquisition date / FX are unknown and the lot never becomes a row —
+    the notice says how many 매도 that touched, so the omission is not silent
+    (표시광고법: partial coverage is disclosed, like the FX/price counts)."""
+    return (
+        f"보유 등록분 매도 {int(count)}건은 취득일·취득 환율을 알 수 없어 계산에서 "
+        "뺐습니다(같은 매도 중 기록된 매수분은 포함). 증권사 거래내역으로 확인하세요."
+    )
+
+
 def _safe_year(sell_time) -> int | None:
     try:
         return int(sell_time.year)

@@ -2004,6 +2004,15 @@ def _safe_cell(value):
     return value
 
 
+def _disclaimer_lines(disclaimer):
+    """``None`` / one string / a list of strings → the comment lines to write."""
+    if not disclaimer:
+        return []
+    if isinstance(disclaimer, str):
+        return [disclaimer]
+    return [line for line in disclaimer if line]
+
+
 def _build_csv(dataset, rows, disclaimer=None):
     """Render ``rows`` of ``dataset`` to a UTF-8 (BOM-prefixed) CSV string.
 
@@ -2020,14 +2029,15 @@ def _build_csv(dataset, rows, disclaimer=None):
     ``disclaimer`` (optional): when set, a leading single-column comment row
     "# <text>" is written above the header — used by the capital-gains
     datasets to make the 참고용 추정 framing impossible to miss in a sheet.
-    The text is run through :func:`_safe_cell` so it can never become a
-    formula either.
+    A list writes one such row per line (the capital-gains notice about 매도
+    of registered holdings left out, 2026-09-29). The text is run through
+    :func:`_safe_cell` so it can never become a formula either.
     """
     header, row_fn = _CSV_SPECS[dataset]
     buf = io.StringIO()
     writer = csv.writer(buf)
-    if disclaimer:
-        writer.writerow([_safe_cell("# " + disclaimer)])
+    for line in _disclaimer_lines(disclaimer):
+        writer.writerow([_safe_cell("# " + line)])
     writer.writerow(header)
     for row in rows:
         writer.writerow([_safe_cell(c) for c in row_fn(row)])
@@ -2035,14 +2045,18 @@ def _build_csv(dataset, rows, disclaimer=None):
 
 
 def _capital_gain_rows(user_id):
-    """Build (lots, summary) for the user's own overseas-equity capital gains.
+    """Build (lots, summary, excluded_sells) for the user's own overseas-equity
+    capital gains.
 
     Pulls the user's TradeHistory (self-only), FIFO-matches via the shared
     :func:`fifo_match_closed_trades`, then computes lots + per-year summary
     with the STRICT FX resolver (``get_rate_at_strict``) so a missing
     historical rate yields a blank KRW cell + note, never a fabricated rate.
+
+    ``excluded_sells`` = number of 매도 whose FIFO slices closed a
+    holding-registration seed lot; those slices are not rows (see below).
     """
-    from services.profile.fifo_util import fifo_match_closed_trades, is_holding_seed
+    from services.profile.fifo_util import fifo_match_closed_trades
     from services.tax.capital_gains import (
         compute_capital_gain_lots,
         summarize_by_year,
@@ -2056,22 +2070,30 @@ def _capital_gain_rows(user_id):
         .limit(_EXPORT_TRADE_LIMIT)
         .all()
     )
-    # 2026-09-29: 보유 등록 시드는 뺀다 — 시드의 취득일은 등록 시각이지 실제
-    # 취득일이 아니고, 양도소득 명세에 그 날짜·환율을 쓰면 틀린 사실이 된다.
-    # 시드 도입 전과 같은 결과 (시드 로트만 닫은 처분은 명세에 없다).
-    trades = [t for t in trades if not is_holding_seed(t)]
-    pairs = fifo_match_closed_trades(trades)
+    # 2026-09-29: FIFO 는 보유 등록 시드·조정까지 전부 넣고 맞춘 뒤 거른다
+    # (먼저 빼면 등록분을 닫은 매도가 그 뒤의 기록된 매수와 잘못 맞춰졌다).
+    # - 시드 로트를 닫은 슬라이스: 시드의 취득일은 등록 시각이지 실제 취득일이
+    #   아니고, 그 날짜·환율을 명세에 쓰면 틀린 사실이 된다 → 행에서 빼고 그런
+    #   매도 수를 따로 센다 (내보내기 안내문).
+    # - 조정 매도(기록된 매도 없이 보유가 줄어든 것): 양도가 아니다 → 뺀다.
+    all_pairs = fifo_match_closed_trades(trades)
+    pairs = [p for p in all_pairs if not p.buy_is_seed and not p.sell_is_adjust]
+    excluded_sells = len({p.sell_seq for p in all_pairs
+                          if p.buy_is_seed and not p.sell_is_adjust})
     lots = compute_capital_gain_lots(
         pairs,
         fx_resolver=get_rate_at_strict,
         name_resolver=lambda tk: _csv_resolve_name(tk),
     )
     summary = summarize_by_year(lots)
-    return lots, summary
+    return lots, summary, excluded_sells
 
 
 def _query_dataset_rows(user_id, dataset):
     """Query the user's own rows for one export dataset → ``(rows, disclaimer)``.
+
+    ``disclaimer`` is ``None``, one string, or a list of strings (each written
+    as its own leading "# " comment row above the header).
 
     Self-only scope (``user_id == current_user.id``). Shared by the CSV and the
     XLSX export paths so both stay in lock-step on what each dataset contains.
@@ -2101,10 +2123,15 @@ def _query_dataset_rows(user_id, dataset):
         )
     elif dataset in ("capital_gains", "capital_gains_summary"):
         # Both views derive from one FIFO+tax pass over the user's trades.
-        from services.tax.capital_gains import DISCLAIMER_KR
-        lots, summary = _capital_gain_rows(user_id)
+        from services.tax.capital_gains import (
+            DISCLAIMER_KR,
+            registration_excluded_notice_kr,
+        )
+        lots, summary, excluded_sells = _capital_gain_rows(user_id)
         rows = lots if dataset == "capital_gains" else summary
         disclaimer = DISCLAIMER_KR
+        if excluded_sells:
+            disclaimer = [DISCLAIMER_KR, registration_excluded_notice_kr(excluded_sells)]
     elif dataset == "journal":
         rows = (
             PreTradeReflection.query
@@ -2344,9 +2371,9 @@ def _build_xlsx(user_id, datasets, include_summary=False):
         try:
             rows, disclaimer = _query_dataset_rows(user_id, dataset)
             header_row = 1
-            if disclaimer:
-                ws.append([_xlsx_cell("# " + disclaimer)])
-                header_row = 2
+            for line in _disclaimer_lines(disclaimer):
+                ws.append([_xlsx_cell("# " + line)])
+                header_row += 1
             ws.append([_xlsx_cell(h) for h in header])
             for r in rows:
                 ws.append([_xlsx_cell(c) for c in row_fn(r)])
