@@ -52,7 +52,7 @@ def _add_alert_row(app, user_id: int, ticker: str, message: str,
 
 
 def test_price_check_uses_single_batch_dedup_query(
-    client, auth_user, add_position, app
+    client, auth_user, add_position, app, market_display_on
 ):
     """N positions trip TP/SL → exactly ONE Alert.query.filter_by(...)
     .filter(Alert.ticker.in_(...)).filter(Alert.created_at > ...).all()
@@ -117,7 +117,7 @@ def test_price_check_uses_single_batch_dedup_query(
 
 
 def test_price_check_dedup_suppresses_existing_recent_alert(
-    client, auth_user, add_position, app
+    client, auth_user, add_position, app, market_display_on
 ):
     """If a TAKE_PROFIT alert already exists within the 4-hour window,
     no duplicate should be persisted (only one Alert row in DB at the end).
@@ -152,7 +152,7 @@ def test_price_check_dedup_suppresses_existing_recent_alert(
 
 
 def test_price_check_tp_and_sl_dedup_independently(
-    client, auth_user, add_position, app
+    client, auth_user, add_position, app, market_display_on
 ):
     """A recent TAKE_PROFIT alert must NOT suppress a brand-new STOP_LOSS
     alert on the same ticker — they're different `type` keys.
@@ -192,7 +192,8 @@ def test_price_check_tp_and_sl_dedup_independently(
 # ─── Test 4: empty portfolio short-circuits ────────────────────────────────
 
 
-def test_price_check_empty_portfolio_returns_empty(client, auth_user):
+def test_price_check_empty_portfolio_returns_empty(client, auth_user,
+                                                   market_display_on):
     r = client.get("/api/alerts/price-check")
     assert r.status_code == 200
     assert r.get_json() == {"alerts": []}
