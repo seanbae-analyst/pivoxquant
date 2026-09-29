@@ -156,6 +156,27 @@ describe("HoldingsImportPanel", () => {
     expect(avg.value).toBe("366667"); // (1,000,000 + 100,000) ÷ 3, read but not proven
   });
 
+  it("does not offer a won average reading that the row would reject ('170.850원')", async () => {
+    mockPreview();
+    let y = 0;
+    const line = (...ws: [string, string | undefined, number][]) => {
+      y += 70;
+      return ws.map(([t, alt, x]) => ({ t, c: 90, x0: x, y0: y, x1: x + t.length * 20, y1: y + 30, ...(alt !== undefined ? { alt } : {}) }));
+    };
+    const words = [
+      ...line(["보유종목", undefined, 20]),
+      ...line(["삼성전자", undefined, 20]),
+      ...line(["보유수량", undefined, 20], ["10", "10", 500], ["주", undefined, 560]),
+      ...line(["평균단가", undefined, 20], ["170.850", "170.850", 500], ["원", undefined, 660]),
+    ] as OcrWord[];
+    render(<HoldingsImportPanel onDone={vi.fn()} onCancel={vi.fn()} openSession={fakeSession({ "card.png": words }) as never} />);
+    await pickAndRead(["card.png"], {});
+    const row = screen.getAllByTestId("holdings-review-row")[0];
+    const avg = row.querySelector("input[aria-label='dashboard.portfolio.holdingsImport.col.avgCost']") as HTMLInputElement;
+    expect(avg.value).toBe("");
+    expect(row.querySelector("[data-testid=holdings-use-read]")).toBeNull();
+  });
+
   it("a fill screen alone yields no rows and no preview call", async () => {
     mockPreview();
     const byName = { "fills.png": dump("synthetic/ocr/b_hts_table.png.json") };
@@ -179,6 +200,12 @@ describe("row rules", () => {
     expect(rowIssues({ ...base, currency: "" }, [base])).toContain("currency");
     expect(rowIssues({ ...base, status: "needs_confirm" }, [base])).toContain("confirm");
     expect(rowIssues({ ...base, ticker: "", status: "needs_ticker" }, [base])).toContain("ticker");
+  });
+  it("a won average is whole won and at least 100 — '170.85' is 170,850 misread", () => {
+    expect(rowIssues({ ...base, avgCost: "170.85" }, [base])).toContain("avgCost");
+    expect(rowIssues({ ...base, avgCost: "50" }, [base])).toContain("avgCost");
+    const us = { ...base, ticker: "AAPL", tickerCurrency: "USD", currency: "USD" as const, avgCost: "23.15" };
+    expect(rowIssues(us, [us])).toEqual([]);
   });
   it("a US ticker with a won average is a currency mismatch, never silently converted", () => {
     const us = { ...base, ticker: "AAPL", tickerCurrency: "USD", currency: "KRW" as const };

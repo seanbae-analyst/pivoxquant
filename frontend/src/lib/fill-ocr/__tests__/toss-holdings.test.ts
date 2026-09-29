@@ -273,6 +273,45 @@ describe("misreads that once passed every check (Safari-path OCR, 2026-09-28)", 
   });
 });
 
+describe("a won amount with the comma read as a dot ('170.850원') is not 170.85", () => {
+  it("card: no cross-check target, so the average stays a hint", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["보유종목", "", 20]),
+      ...line(["가나전자", "", 20]),
+      ...line(["보유수량", "", 20], ["10", "10", 500], "주"),
+      ...line(["평균단가", "", 20], ["170.850", "170.850", 500], "원"),
+    ]);
+    expect(rows[0].shares).toEqual({ value: 10 });
+    expect(rows[0].avgCost.value).toBeNull();
+    expect(rows[0].avgCost.hint).toBe("170.850");
+  });
+
+  it("table: same", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["종목명", "", 20], ["보유수량", "", 300], ["평균단가", "", 500], ["평가금액", "", 700]),
+      ...line(["가나전자", "", 20], ["10", "10", 320], ["170.850", "170.850", 510], ["1,800,000", "1,800,000", 700]),
+      ...line(["다라화학", "", 20], ["5", "5", 320], ["30,000", "30,000", 510], ["160,000", "160,000", 700]),
+    ]);
+    expect(rows.map((r) => [r.name.value, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나전자", 10, null],
+      ["다라화학", 5, 30000],
+    ]);
+  });
+
+  it("a dollar average keeps its decimals", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["보유종목", "", 20]),
+      ...line(["가나파워", "", 20], ["$1,234.56", "$1,234.56", 500]),
+      ...line(["보유수량", "", 20], ["10", "10", 500], "주"),
+      ...line(["평균단가", "", 20], ["$123.456", "$123.456", 500]),
+    ]);
+    expect(rows[0].avgCost.value).toBe(123.456);
+  });
+});
+
 describe("매도가능 / 주문가능 N주 is not a second share count", () => {
   it("on the same line as 보유 N주 it is skipped — no merged_record", () => {
     y = 0;

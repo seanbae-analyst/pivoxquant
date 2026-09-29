@@ -119,9 +119,19 @@ const emptyReads = (): Reads => ({ qty: [], avg: [], cost: [], value: [], unl: [
 
 const SEP = /^[·ㆍ•|,:;\-–—/()（）]+$/;
 
+/** A money reading. Won is never printed with three or more decimals:
+ * "170.850원" is 170,850 with the comma read as a dot, and must not pass as
+ * 170.85 won when nothing else checks it. Such a reading is dropped; the
+ * word stays as the hint. */
+function readMoney(w: OcrWord, usd: boolean): NumRead {
+  if (usd) return readNumber(w);
+  const ok = (s: string | null | undefined) => (s != null && /\.\d{3,}/.test(s) ? "" : s);
+  return { ...readNumber({ ...w, t: ok(w.t)!, alt: ok(w.alt), alts: w.alts?.map((a) => ok(a)!) }), hint: w.t };
+}
+
 /** Cards / key-value lists: each number is typed by the label right before it
  * on the same line ("평균 70,850원", "보유수량 6주") or by a 주 unit after it. */
-function readLabelled(lines: Line[], nameLine: Line | null, reads: Reads) {
+function readLabelled(lines: Line[], nameLine: Line | null, reads: Reads, usd: boolean) {
   for (const line of lines) {
     let between: string[] = [];
     const ws = line.words;
@@ -156,15 +166,15 @@ function readLabelled(lines: Line[], nameLine: Line | null, reads: Reads) {
       }
       switch (label) {
         case "qty": reads.qty.push(readNumber({ ...w, t: t.replace(/주$/, "") })); break;
-        case "avg": reads.avg.push(readNumber(w)); break;
-        case "cost": reads.cost.push(readNumber(w)); break;
-        case "value": reads.value.push(readNumber(w)); break;
+        case "avg": reads.avg.push(readMoney(w, usd)); break;
+        case "cost": reads.cost.push(readMoney(w, usd)); break;
+        case "value": reads.value.push(readMoney(w, usd)); break;
         case "pl": reads.pl.push(signedCandidates(w)); break;
         case null:
           // Unlabelled money on the stock's own name line ("삼성전자 4,706,000원").
           if (line === nameLine && !isCode(t) &&
               (/원$/.test(t) || next.startsWith("원") || /^\$/.test(t) || /^\d{1,3}(,\d{3})+(\.\d{2})?$/.test(t))) {
-            reads.unl.push(readNumber(w));
+            reads.unl.push(readMoney(w, usd));
           }
           break;
         default: break; // cur / rate / ignore / name — evidence we do not use
@@ -350,9 +360,9 @@ function tableHoldings(lines: Line[], hi: number, cols: HCol[], screenCur: "KRW"
         if (w.t.includes("%")) continue;
         switch (f) {
           case "qty": reads.qty.push(readNumber(w)); break;
-          case "avg": reads.avg.push(readNumber(w)); break;
-          case "cost": reads.cost.push(readNumber(w)); break;
-          case "value": reads.value.push(readNumber(w)); break;
+          case "avg": reads.avg.push(readMoney(w, usd)); break;
+          case "cost": reads.cost.push(readMoney(w, usd)); break;
+          case "value": reads.value.push(readMoney(w, usd)); break;
           case "pl": reads.pl.push(signedCandidates(w)); break;
           case "name": if (/[가-힣A-Za-z]/.test(w.t)) nameWords.push(w); break;
           default: break;
@@ -431,6 +441,9 @@ function stackedHoldings(lines: Line[], at: number, cols: SCol[], screenCur: "KR
   const colOf = (w: OcrWord) => [...cols].sort((x, y) => Math.abs(x.cx - (w.x0 + w.x1) / 2) - Math.abs(y.cx - (w.x0 + w.x1) / 2))[0];
   return pairs.map(([top, bot]) => {
     const mid = (top.y + bot.y) / 2;
+    const compact = top.compact + bot.compact;
+    const currency = recordCurrency(compact, screenCur);
+    const usd = currency === "USD";
     const reads = emptyReads();
     const nameWords: OcrWord[] = [];
     const codeWords: OcrWord[] = [];
@@ -438,9 +451,9 @@ function stackedHoldings(lines: Line[], at: number, cols: SCol[], screenCur: "KR
       if (w.t.includes("%")) return;
       switch (f) {
         case "qty": reads.qty.push(readNumber({ ...w, t: w.t.replace(/주$/, "") })); break;
-        case "avg": reads.avg.push(readNumber(w)); break;
-        case "cost": reads.cost.push(readNumber(w)); break;
-        case "value": reads.value.push(readNumber(w)); break;
+        case "avg": reads.avg.push(readMoney(w, usd)); break;
+        case "cost": reads.cost.push(readMoney(w, usd)); break;
+        case "value": reads.value.push(readMoney(w, usd)); break;
         case "pl": reads.pl.push(signedCandidates(w)); break;
         default: break;
       }
@@ -461,9 +474,6 @@ function stackedHoldings(lines: Line[], at: number, cols: SCol[], screenCur: "KR
       const nl = nameLines.find((l) => Math.abs(l.y - mid) < hMed * 1.2);
       if (nl) nameWords.push(...nl.words.filter((w) => /[가-힣A-Za-z]/.test(w.t)));
     }
-    const compact = top.compact + bot.compact;
-    const currency = recordCurrency(compact, screenCur);
-    const usd = currency === "USD";
     const flags: string[] = [];
     const { shares, avg } = prove(reads, usd, flags, { requireUnit: false });
     const nc = nameAndCode(nameWords, codeWords, usd, /\$\s*\d/.test(compact));
@@ -553,7 +563,7 @@ function cardHoldings(lines: Line[], screenCur: "KRW" | "USD" | null): ParsedHol
     const usd = currency === "USD";
     const nameLine = s.nameIdx !== null ? lines[s.nameIdx] : null;
     const reads = emptyReads();
-    readLabelled(rec, nameLine, reads);
+    readLabelled(rec, nameLine, reads, usd);
     const flags: string[] = [];
     const { shares, avg } = prove(reads, usd, flags, { requireUnit: true });
     let nc = { name: { value: null } as Cell<string>, code: { value: null } as Cell<string> };

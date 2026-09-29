@@ -164,6 +164,14 @@ export function dropIdenticalTickerDuplicates(rows: HoldingRow[]): HoldingRow[] 
   return out;
 }
 
+/** A usable average cost. Won has no sub-won prices and no stock trades
+ * under 100원 — "170.85" is "170,850" misread (comma as dot), not a price. */
+export function avgCostOk(s: string, currency: Cur): boolean {
+  const a = num(s);
+  if (!s.trim() || !(a > 0) || !Number.isFinite(a)) return false;
+  return currency !== "KRW" || (Number.isInteger(a) && a >= 100);
+}
+
 export type RowIssue =
   | "ticker" | "confirm" | "shares" | "avgCost" | "currency" | "currencyMismatch" | "duplicate";
 
@@ -174,8 +182,7 @@ export function rowIssues(r: HoldingRow, all: HoldingRow[]): RowIssue[] {
   else if (r.status === "needs_confirm" && !r.confirmed) out.push("confirm");
   const s = num(r.shares);
   if (!r.shares.trim() || !(s > 0) || !Number.isFinite(s) || (r.currency === "KRW" && !Number.isInteger(s))) out.push("shares");
-  const a = num(r.avgCost);
-  if (!r.avgCost.trim() || !(a > 0) || !Number.isFinite(a)) out.push("avgCost");
+  if (!avgCostOk(r.avgCost, r.currency)) out.push("avgCost");
   if (!r.currency) out.push("currency");
   else if (r.tickerCurrency && r.currency !== r.tickerCurrency) out.push("currencyMismatch");
   if (r.ticker && all.some((o) => o !== r && o.mode !== "skip" && o.ticker === r.ticker)) out.push("duplicate");
@@ -558,8 +565,11 @@ function CaptureGuide() {
 
 /** A labelled field with its example, and — when OCR read a value it could
  * not prove — a one-tap button to use that reading. */
-function Field({ help, hint, empty, onUse, children }: {
-  help: string; hint?: string; empty: boolean; onUse: (v: string) => void; children: React.ReactNode;
+function Field({ help, hint, empty, onUse, valid, children }: {
+  help: string; hint?: string; empty: boolean; onUse: (v: string) => void;
+  /** The same check the row applies — a reading that fails it is not offered. */
+  valid?: (v: string) => boolean;
+  children: React.ReactNode;
 }) {
   const t = useT();
   const clean = hint?.replace(/[^\d.,$]/g, "").replace(/^\$/, "").replace(/,/g, "");
@@ -567,7 +577,7 @@ function Field({ help, hint, empty, onUse, children }: {
     <label className="block">
       <span className="block font-mono" style={{ ...small, color: "var(--pq-ivory-dim)", wordBreak: "keep-all" }}>{help}</span>
       {children}
-      {empty && clean && /^\d+(\.\d+)?$/.test(clean) && (
+      {empty && clean && /^\d+(\.\d+)?$/.test(clean) && (valid?.(clean) ?? true) && (
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); onUse(clean); }}
@@ -666,7 +676,7 @@ function HoldingReviewRow({
             style={border(issues.includes("shares"))}
           />
         </Field>
-        <Field help={t("dashboard.portfolio.holdingsImport.help.avgCost")} hint={r.hints.avgCost} empty={!r.avgCost} onUse={(v) => onPatch({ avgCost: v })}>
+        <Field help={t("dashboard.portfolio.holdingsImport.help.avgCost")} hint={r.hints.avgCost} empty={!r.avgCost} onUse={(v) => onPatch({ avgCost: v })} valid={(v) => avgCostOk(v, r.currency)}>
           <input
             value={r.avgCost}
             onChange={(e) => onPatch({ avgCost: e.target.value })}
