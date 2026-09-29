@@ -82,6 +82,7 @@ from typing import Iterable
 from models import TradeHistory
 from services.profile.fifo_util import (
     MatchedPair,
+    collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
 )
 
@@ -129,6 +130,10 @@ def _classify_pairs(
     attributed = fifo_match_closed_trades_with_pnl(trades)
     if since is not None:
         attributed = [(p, pct) for p, pct in attributed if p.sell_time >= since]
+    # 2026-09-29: 매도 한 번 = 관찰 한 건. 한 매도가 여러 로트를 닫으면 슬라이스
+    # 수만큼 세어 min_pairs 를 혼자 넘겼다. 보유일은 그 매도 슬라이스들의
+    # 수량 가중 평균 (collapse_pairs_by_sell 참조).
+    attributed = collapse_pairs_by_sell(attributed)
     total_closed = len(attributed)
 
     take_profit: list[tuple[MatchedPair, float]] = []

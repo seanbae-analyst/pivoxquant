@@ -33,7 +33,7 @@ Public API
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Iterable, NamedTuple
 
 from models import TradeHistory
@@ -78,6 +78,11 @@ class MatchedPair(NamedTuple):
     buy_price: float
     sell_price: float
     sell_pnl: float
+    # 2026-09-29 — 이 슬라이스를 닫은 매도 행의 식별자 (한 번의 매칭 호출 안에서
+    # 매도 행마다 0,1,2… 로 매긴다). 한 매도가 여러 매수 로트를 닫으면 슬라이스가
+    # 여럿 나오는데, "매도 한 번 = 관찰 한 건" 으로 세려면 이 값으로 묶는다
+    # (:func:`collapse_pairs_by_sell`). ``-1`` = 알 수 없음.
+    sell_seq: int = -1
 
     @property
     def hold_days(self) -> float:
@@ -126,6 +131,7 @@ def fifo_match_closed_trades(
     # ticker → FIFO queue of (time, remaining_shares, buy_price)
     opens: dict[str, list[tuple[datetime, float, float]]] = {}
     pairs: list[MatchedPair] = []
+    sell_seq = -1
 
     for t in ordered:
         action = (t.action or "").upper()
@@ -139,6 +145,7 @@ def fifo_match_closed_trades(
             continue
         if action != "SELL":
             continue
+        sell_seq += 1
         remaining = shares
         sell_pnl = float(t.pnl or 0.0)
         queue = opens.get(key, [])
@@ -154,6 +161,7 @@ def fifo_match_closed_trades(
                     buy_price=buy_px,
                     sell_price=price,
                     sell_pnl=sell_pnl,
+                    sell_seq=sell_seq,
                 )
             )
             remaining -= take
@@ -206,6 +214,7 @@ def fifo_match_closed_trades_with_pnl(
 
     opens: dict[str, list[tuple[datetime, float, float]]] = {}
     attributed: list[tuple[MatchedPair, float]] = []
+    sell_seq = -1
 
     for t in ordered:
         action = (t.action or "").upper()
@@ -223,6 +232,7 @@ def fifo_match_closed_trades_with_pnl(
             sell_pnl_pct = float(t.pnl_pct or 0.0)
         except (TypeError, ValueError):
             sell_pnl_pct = 0.0
+        sell_seq += 1
         remaining = shares
         sell_pnl = float(t.pnl or 0.0)
         queue = opens.get(key, [])
@@ -238,6 +248,7 @@ def fifo_match_closed_trades_with_pnl(
                     buy_price=buy_px,
                     sell_price=price,
                     sell_pnl=sell_pnl,
+                    sell_seq=sell_seq,
                 ),
                 sell_pnl_pct,
             ))
@@ -247,6 +258,62 @@ def fifo_match_closed_trades_with_pnl(
             else:
                 queue[0] = (buy_time, buy_sh - take, buy_px)
     return attributed
+
+
+def collapse_pairs_by_sell(
+    attributed: Iterable[tuple[MatchedPair, float]],
+) -> list[tuple[MatchedPair, float]]:
+    """Merge the slices of each 매도 행 into ONE ``(pair, pnl_pct)`` entry.
+
+    2026-09-29: the holding / profit-loss mirrors counted FIFO *slices*, so
+    one 매도 that closed five 매수 lots counted as five round trips and passed
+    ``min_pairs=5`` on its own. A user decides once per 매도 — that is the
+    unit these mirrors count.
+
+    The merged entry keeps the ticker, ``sell_time``, sell price, ``sell_seq``
+    and the 매도 행's ``pnl_pct`` (shared by all its slices). ``quantity`` is
+    the summed quantity and ``buy_price`` the share-weighted cost. Hold days
+    are the **share-weighted mean** of the slices' holds: ``buy_time`` is set
+    to ``sell_time - weighted_hold`` so ``pair.hold_days`` returns exactly
+    that. (Chosen over quantity-weighting the median across all slices so
+    every 매도 is one observation with one hold value.)
+
+    Input order is preserved by first appearance; entries whose
+    ``sell_seq`` is ``-1`` (unknown) are passed through unmerged.
+    """
+    groups: dict[int, list[tuple[MatchedPair, float]]] = {}
+    order: list[int | tuple[MatchedPair, float]] = []
+    for pair, pct in attributed:
+        if pair.sell_seq < 0:
+            order.append((pair, pct))
+            continue
+        if pair.sell_seq not in groups:
+            groups[pair.sell_seq] = []
+            order.append(pair.sell_seq)
+        groups[pair.sell_seq].append((pair, pct))
+
+    out: list[tuple[MatchedPair, float]] = []
+    for item in order:
+        if not isinstance(item, int):
+            out.append(item)
+            continue
+        slices = groups[item]
+        first, pct = slices[0]
+        qty = sum(p.quantity for p, _ in slices)
+        if qty <= _SHARE_EPSILON:
+            out.append(slices[0])
+            continue
+        hold = sum(p.hold_days * p.quantity for p, _ in slices) / qty
+        cost = sum(p.buy_price * p.quantity for p, _ in slices) / qty
+        out.append((
+            first._replace(
+                quantity=qty,
+                buy_time=first.sell_time - timedelta(days=hold),
+                buy_price=cost,
+            ),
+            pct,
+        ))
+    return out
 
 
 def fifo_open_position_ages(
@@ -334,6 +401,7 @@ def fifo_open_position_ages(
 
 __all__ = [
     "MatchedPair",
+    "collapse_pairs_by_sell",
     "fifo_match_closed_trades",
     "fifo_match_closed_trades_with_pnl",
     "fifo_open_position_ages",

@@ -455,3 +455,24 @@ class TestWindowMatchesFullHistory:
         assert result["take_profit"]["count"] == 5
         assert result["take_profit"]["median_hold_days"] == 100.0
 
+
+class TestCountPerSellNotPerSlice:
+    def test_single_sell_closing_five_lots_is_one(self):
+        now = _now()
+        sell_at = now - timedelta(days=1)
+        trades = [
+            _trade(ticker="AAPL", action="BUY",
+                   traded_at=sell_at - timedelta(days=d), shares=10.0)
+            for d in (50, 40, 30, 20, 10)
+        ]
+        trades.append(_trade(ticker="AAPL", action="SELL", traded_at=sell_at,
+                             shares=50.0, price_per_share=110.0, pnl_pct=10.0))
+        result = compute_profit_loss_mirror(trades, min_pairs=5)
+        assert result["sufficient_data"] is False
+        assert result["total_closed_pairs"] == 1
+
+        one = compute_profit_loss_mirror(trades, min_pairs=1)
+        assert one["take_profit"]["count"] == 1
+        assert one["take_profit"]["median_gain_pct"] == 10.0
+        # equal lots → share-weighted mean of 50/40/30/20/10 = 30
+        assert one["take_profit"]["median_hold_days"] == 30.0
