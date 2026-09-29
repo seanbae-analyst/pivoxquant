@@ -255,11 +255,17 @@ def compute_friction_outcome(
     # — 사용자가 7문항을 적은 뒤 산 것이라고 직접 말했다.
     for keys in linked_buys.values():
         friction_buys.update(keys)
-    for r in buy_side_proceeded:
+    # 먼저 진행한 멈춤부터 매수를 가져가고, 이미 다른 멈춤이 가져간 매수는
+    # 건너뛴다 — 같은 종목에 멈춤 두 번 + 매수 두 번이면 1:1 로 짝짓는다.
+    # (2026-09-29 전에는 두 멈춤이 첫 매수 하나를 같이 잡아, 두 번째 매수가
+    # "미경유"로 새어 나갔다.)
+    for r in sorted(buy_side_proceeded, key=lambda x: x.proceeded_at):
         if getattr(r, "id", None) in linked_buys:  # 연결이 있으면 추정하지 않는다
             continue
         tk = _norm(r.intended_ticker)
         for b in buys.get(tk, []):
+            if (tk, b) in friction_buys:
+                continue
             if _at_or_after(b, r.proceeded_at) and b <= r.proceeded_at + window:
                 friction_buys.add((tk, b))
                 break

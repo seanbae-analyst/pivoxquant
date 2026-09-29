@@ -101,7 +101,7 @@ def test_lookup_52w_kr_missing_kis_degrades_to_silent_skip(app):
         assert alert_mod._lookup_52w_range("035720.KQ") == (None, None)
 
 
-def test_check_52w_creates_alert_for_kr_high_via_kis(app, make_user, add_position):
+def test_check_52w_creates_alert_for_kr_high_via_kis(app, make_user, add_position, market_display_on):
     """KR 티커도 KIS 레인지가 있으면 52주 고점 알림이 실제로 발화한다."""
     user = make_user()
     add_position(user["id"], ticker="005930.KS", shares=10, avg_cost=70000)
@@ -129,7 +129,7 @@ def test_check_52w_creates_alert_for_kr_high_via_kis(app, make_user, add_positio
 # ─── 3. check_52w_highs_lows — US 티커 실제 발화 ───────────────────────────
 
 
-def test_check_52w_creates_alert_for_us_high(app, make_user, add_position):
+def test_check_52w_creates_alert_for_us_high(app, make_user, add_position, market_display_on):
     """US 티커가 52주 고점에 닿으면 벨 알림이 실제로 생성된다(기능 동작)."""
     user = make_user()
     add_position(user["id"], ticker="AAPL", shares=10, avg_cost=100)

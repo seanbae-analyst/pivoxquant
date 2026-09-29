@@ -55,7 +55,8 @@ class TestCheck52wKrRouting:
     must never touch the FMP quote path, and a missing KIS range must stay
     a silent no-alert skip."""
 
-    def test_kr_and_us_both_looked_up_us_alert_fires(self, app, make_user, add_position):
+    def test_kr_and_us_both_looked_up_us_alert_fires(self, app, make_user, add_position,
+                                                     market_display_on):
         from services import alert as alert_mod
 
         user = make_user(email="kr52w@test.com")

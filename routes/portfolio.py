@@ -788,7 +788,9 @@ def patch_position_alias(pid):
             en="avg_cost must be a number", kr="avg_cost 는 숫자여야 합니다.",
             code="AVG_COST_NUMERIC", status=400,
         )
-        if new_cost <= 0:
+        # _validate_amount (not a bare `<= 0`) — '1e400' parses to inf, and a
+        # stored inf 500s GET /positions forever (round(sum(...)) overflow).
+        if not _validate_amount(new_cost):
             return api_error(
             en="avg_cost must be positive", kr="avg_cost 는 양수여야 합니다.",
             code="AVG_COST_POSITIVE", status=400,

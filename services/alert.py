@@ -255,7 +255,15 @@ def check_52w_highs_lows() -> dict:
     """
     from models import Position, User
     from services.container import fetcher
+    from services.market_display import market_data_display_enabled
     from services.name_resolver import resolve_stock_name
+
+    # The gate lives here, not only in the cron wrapper, so every caller
+    # (admin /api/alerts/admin/check included) inherits it — vendor quotes
+    # must not reach users while MARKET_DATA_DISPLAY_ENABLED is off.
+    if not market_data_display_enabled():
+        return {"users_scanned": 0, "alerts_created": 0, "errors": 0,
+                "skipped": "display_disabled"}
 
     # Distinct users that currently hold at least one position.
     user_ids = [row[0] for row in db.session.query(Position.user_id).distinct().all()]

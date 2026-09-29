@@ -245,3 +245,46 @@ def test_declared_carries_no_score(client, auth_user):
     user's own answers (``declared.source``) projected onto the radar."""
     data = client.get("/api/mirror-home").get_json()
     assert "score" not in data["declared"]
+
+
+def test_observed_inside_declared_bucket_is_not_a_gap(
+    client, auth_user, add_position, monkeypatch,
+):
+    """2026-09-29: 답은 한 점이 아니라 구간이다. "1~3종목" 을 고르고 1종목을
+    들고 있으면 선언대로다 — 전에는 구간 중앙값(0.20)과 비교해 ↓20%p 간극을
+    헤드라인에 띄웠다."""
+    from services.profile.persona_classifier_v2 import FEATURE_KEYS
+    _onboard_v3(client, auth_user, add_position,
+                declared_positions="ultra_focused", declared_frequency="few")
+    add_position(auth_user["id"], ticker="AAPL", shares=1.0)     # 1종목 → 0.0
+    features = {k: 0.5 for k in FEATURE_KEYS}
+    features["turnover"] = 0.55     # "3~5번" 구간 [0.411, 0.589] 안 (중앙값 0.45)
+    present = {k: 0 for k in FEATURE_KEYS}
+    present["turnover"] = 1
+    monkeypatch.setattr("routes.mirror_home.classify_persona_multi",
+                        _observed_double(features, present))
+
+    data = client.get("/api/mirror-home").get_json()
+    assert data["stage"] == "observed"
+    assert data["gap"] == []
+
+
+def test_gap_outside_bucket_is_measured_to_the_nearest_edge(
+    client, auth_user, add_position, monkeypatch,
+):
+    import pytest
+    from services.profile.persona_classifier_v2 import FEATURE_KEYS
+    from services.profile.questionnaire import DECLARED_RANGE_MAP
+    _onboard_v3(client, auth_user, add_position, declared_frequency="few")
+    features = {k: 0.5 for k in FEATURE_KEYS}
+    features["turnover"] = 0.9
+    present = {k: 0 for k in FEATURE_KEYS}
+    present["turnover"] = 1
+    monkeypatch.setattr("routes.mirror_home.classify_persona_multi",
+                        _observed_double(features, present))
+
+    data = client.get("/api/mirror-home").get_json()
+    _, hi = DECLARED_RANGE_MAP["declared_frequency"]["few"]
+    assert [g["key"] for g in data["gap"]] == ["turnover"]
+    assert data["gap"][0]["direction"] == "up"
+    assert data["gap"][0]["delta"] == pytest.approx(0.9 - hi, abs=1e-3)

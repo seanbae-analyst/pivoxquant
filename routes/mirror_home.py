@@ -42,6 +42,7 @@ from services.profile import (
     get_history,
 )
 from services.profile.persona_analytics import _norm_log
+from services.profile.questionnaire import declared_ranges
 from services.profile.persona_classifier_v2 import (
     FEATURE_KEYS,
     FEATURE_LABELS,
@@ -89,7 +90,9 @@ def _declared_centroid(code: str) -> list[float]:
     return [float(v) for v in vec]
 
 
-def _declared_shape(user_id: int, code: str) -> tuple[list[float], list[str], str]:
+def _declared_shape(
+    user_id: int, code: str,
+) -> tuple[list[float], list[str], str, dict[str, tuple[float, float]]]:
     """The 9-dim "선언" vector and which axes the user actually declared.
 
     2026-09-06 (questionnaire V3): when the user answered the V3 wizard, the
@@ -102,39 +105,57 @@ def _declared_shape(user_id: int, code: str) -> tuple[list[float], list[str], st
 
     Pre-V3 rows and skip-path users have no declared vector; the centroid is
     used on every axis, exactly as before, and ``source`` says so.
+
+    The 4th element is the answer's bucket ``{axis: (lo, hi)}`` on the same
+    scale (2026-09-29) — the gap is measured against it, not the midpoint.
     """
     vec = _declared_centroid(code)
     try:
         profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
         declared = profile.declared_vector() if profile is not None else {}
+        ranges = declared_ranges(profile.onboarding_answers()) if profile is not None else {}
     except Exception:  # pragma: no cover — defensive; a bad row must not 500 the home
         logger.debug("mirror-home: declared vector unreadable", exc_info=True)
-        declared = {}
+        declared, ranges = {}, {}
     axes: list[str] = []
     for i, key in enumerate(FEATURE_KEYS):
         if key in declared:
             vec[i] = float(declared[key])
             axes.append(key)
-    return vec, axes, ("self" if axes else "centroid")
+    ranges = {k: v for k, v in ranges.items() if k in axes}
+    return vec, axes, ("self" if axes else "centroid"), ranges
 
 
 def _gap(
     declared_vec: list[float],
     observed_vec: list[float],
     declared_axes: list[str] | None = None,
+    declared_ranges: dict[str, tuple[float, float]] | None = None,
 ) -> list[dict]:
     """Top dimensions where 관찰 diverges most from 선언.
 
     Neutral, factual, directional — never a persona name or a verdict.
     When ``declared_axes`` is given, only those axes are compared — a gap
     against a centroid the user never stated is not a gap.
+
+    An axis with a declared range (the answer's bucket) is a gap only when the
+    observed value falls OUTSIDE it, and ``delta`` is the distance to the
+    nearest edge — 2026-09-29: comparing with the bucket midpoint told a user
+    who declared "1~3종목" and holds 1 that they diverged by 20%p.
     """
+    ranges = declared_ranges or {}
     diffs = []
     axis_filter = set(declared_axes) if declared_axes else None
     for i, key in enumerate(FEATURE_KEYS):
         if axis_filter is not None and key not in axis_filter:
             continue
-        delta = observed_vec[i] - declared_vec[i]
+        rng = ranges.get(key)
+        if rng is not None:
+            lo, hi = rng
+            o = observed_vec[i]
+            delta = o - hi if o > hi else (o - lo if o < lo else 0.0)
+        else:
+            delta = observed_vec[i] - declared_vec[i]
         if abs(delta) < _GAP_MIN_DELTA:
             continue
         diffs.append((abs(delta), key, delta, declared_vec[i], observed_vec[i]))
@@ -164,7 +185,9 @@ def get_mirror_home():
     persona = compute_persona_response(user_id)
     declared = persona.get("declared", {})
     declared_code = declared.get("persona", "balanced")
-    declared_vec, declared_axes, declared_source = _declared_shape(user_id, declared_code)
+    declared_vec, declared_axes, declared_source, declared_rngs = _declared_shape(
+        user_id, declared_code,
+    )
 
     # (2) Observed persona over 30d → 9-dim feature vector (ordered by FEATURE_KEYS).
     try:
@@ -229,7 +252,7 @@ def get_mirror_home():
         # An empty list must not reach _gap: it treats a falsy filter as
         # "compare every axis", which would reintroduce the unmeasured ones.
         if comparable_axes:
-            gap = _gap(declared_vec, observed_vec, comparable_axes)
+            gap = _gap(declared_vec, observed_vec, comparable_axes, declared_rngs)
 
     # (4) Drift descriptor — needs ≥2 persona snapshots; optional bonus framing.
     drift = {"available": False, "descriptor": None}
