@@ -4,14 +4,17 @@ The single composed read for the new Mirror-centric home. It assembles
 existing, already-shipped services into one payload so the frontend can
 render the "오늘의 거울" hero without four separate round-trips:
 
-  1. Declared persona (3-bucket disclosed label + tagline)   — persona_analytics
+  1. Declared shape (the user's own V3 answers, or centroid)  — persona_analytics
   2. Observed persona over 30d (9-dim feature vector)         — persona_classifier_v2
   3. The gap: top dimensions where 관찰 diverges from 선언     — computed here
   4. Drift descriptor (유지 / 이동 중 / 영역 이동 관찰)        — persona_history
 
 Legal posture (mirrors services/artifacts/living_mirror_service.py):
-  • NEVER surfaces an 8-code persona (value / speculator / daytrader …).
-    Only the 3 disclosed buckets 성장형 / 균형형 / 수익형 via surface_label.
+  • NEVER surfaces a persona name — neither an 8-code (value / speculator …)
+    nor a 3-bucket label (성장형 / 균형형 / 수익형). CEO 2026-09-29: the
+    mirror shows facts, no type labels (CLAUDE.md "유형 라벨·점수는 만들지
+    않는다"). The classifier still runs internally (declared centroid, the
+    observed feature vector, drift); only its label is no longer exposed.
   • No score / grade / percentile on the radar — raw 0..1 vectors are sent
     for *shape* rendering only; the frontend prints no numbers on them.
   • The "gap" is expressed as neutral behavioural dimensions
@@ -38,7 +41,7 @@ from services.profile import (
     compute_persona_response,
     get_history,
 )
-from services.profile.persona_analytics import _norm_log, surface_label
+from services.profile.persona_analytics import _norm_log
 from services.profile.persona_classifier_v2 import (
     FEATURE_KEYS,
     FEATURE_LABELS,
@@ -156,7 +159,8 @@ def get_mirror_home():
     """Composed read for the Mirror home. Read-only; never raises on sparse data."""
     user_id = int(current_user.id)
 
-    # (1) Declared persona — already collapsed to the 3 disclosed buckets.
+    # (1) Declared persona code — internal only (centroid fallback). Its label
+    # and tagline are not exposed (2026-09-29).
     persona = compute_persona_response(user_id)
     declared = persona.get("declared", {})
     declared_code = declared.get("persona", "balanced")
@@ -208,7 +212,6 @@ def get_mirror_home():
         measured.discard(_POSITIONS_AXIS)
     measured_axes = [k for k in FEATURE_KEYS if k in measured]
     trade_count = int(clf.get("trade_count", 0) or 0)
-    observed_code = clf.get("persona")
     # Gate on closed-trade count only — matches the Living Mirror artifact's
     # 5-trade threshold so the two surfaces agree. (The classifier's own
     # data_sparse flag uses a stricter 10; ANDing it here kept the home in the
@@ -228,13 +231,6 @@ def get_mirror_home():
         if comparable_axes:
             gap = _gap(declared_vec, observed_vec, comparable_axes)
 
-    # Observed bucket (3-bucket disclosed label only — never the 8-code).
-    observed_label = (
-        surface_label(observed_code) if (has_observed and observed_code) else None
-    )
-    declared_label = declared.get("label")
-    bucket_changed = bool(observed_label and observed_label != declared_label)
-
     # (4) Drift descriptor — needs ≥2 persona snapshots; optional bonus framing.
     drift = {"available": False, "descriptor": None}
     try:
@@ -250,16 +246,15 @@ def get_mirror_home():
     return jsonify({
         "ok": True,
         "stage": stage,
+        # 2026-09-29: declared.label / declared.tagline / observed.label /
+        # observed.bucket_changed removed — they carried 3-bucket type labels
+        # the mirror no longer shows. The headline is built from ``gap``.
         "declared": {
-            "label": declared_label,
-            "tagline": declared.get("tagline"),
             # "self" = axes come from the user's own V3 answers;
             # "centroid" = persona-centroid fallback (pre-V3 / skipped).
             "source": declared_source,
         },
         "observed": {
-            "label": observed_label,
-            "bucket_changed": bucket_changed,
             "trade_count": trade_count,
         },
         "gap": gap,

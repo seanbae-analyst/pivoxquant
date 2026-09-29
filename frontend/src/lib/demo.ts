@@ -43,17 +43,18 @@ export const DEMO_USER: User = {
   profile_changes_left: 3,
 };
 
-/** 거울 home sample — "성장형 선언 → 최근 30일 균형형 관찰" (영역 이동). Radar
- *  vectors are the real growth/balanced centroids so the shape gap is faithful. */
+/** 거울 home sample — declared on the growth centroid, observed nearer the
+ *  balanced one (영역 이동). Radar vectors are the real centroids so the shape
+ *  gap is faithful. No type label is sent (2026-09-29). */
 const DEMO_MIRROR_HOME: MirrorHomeResponse = {
   ok: true,
   stage: "observed",
-  declared: { label: "성장형", tagline: "성장 가능성에 무게를 두고 관찰합니다." },
-  observed: { label: "균형형", bucket_changed: true, trade_count: 23 },
+  declared: { source: "centroid" },
+  observed: { trade_count: 23 },
   gap: [
     { key: "sector_diversity", label: "섹터 분산", direction: "up", delta: 0.4, declared: 0.45, observed: 0.85 },
     { key: "ticker_diversity", label: "종목 다양성", direction: "up", delta: 0.25, declared: 0.55, observed: 0.8 },
-    { key: "declared_risk", label: "선언한 위험 감내", direction: "down", delta: -0.25, declared: 0.75, observed: 0.5 },
+    { key: "hold_variance", label: "보유기간 편차", direction: "down", delta: -0.15, declared: 0.45, observed: 0.3 },
   ],
   drift: { available: true, descriptor: "영역 이동 관찰" },
   radar: {
@@ -71,7 +72,7 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
   },
 };
 
-/* ── Consistent demo book — a 성장형→균형형 investor, mixed KR+US, 7 holdings
+/* ── Consistent demo book — a growth→balanced-shaped investor, mixed KR+US, 7 holdings
  *    across Tech / Consumer / Financials / Healthcare (matches the radar's high
  *    sector diversity). All page datasets below derive from this same book. ── */
 const FX = 1378.5;

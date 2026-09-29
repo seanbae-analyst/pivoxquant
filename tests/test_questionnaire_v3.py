@@ -360,10 +360,10 @@ class TestMirrorUsesDeclaredVector:
         assert dec[keys.index("turnover")] == pytest.approx(0.05)
         assert dec[keys.index("ticker_diversity")] == pytest.approx(1.0)
         assert dec[keys.index("declared_risk")] == pytest.approx(1.0, abs=1e-3)
-        # Still one of the 3 disclosed buckets, never an 8-code.
-        assert data["declared"]["label"] in {"성장형", "균형형", "수익형"}
+        # No persona name — neither an 8-code nor a 3-bucket label (2026-09-29).
+        assert "label" not in data["declared"]
         blob = json.dumps(data, ensure_ascii=False).lower()
-        for code in ("speculator", "daytrader", "quant", "beginner"):
+        for code in ("speculator", "daytrader", "quant", "beginner", "성장형", "균형형", "수익형"):
             assert code not in blob
 
     def test_gap_only_over_declared_axes(self, client, auth_user, monkeypatch):
