@@ -90,11 +90,13 @@ def _observed_double(features, present):
     }
 
 
-def test_unmeasured_axes_never_reach_the_gap(client, auth_user, monkeypatch):
+def test_unmeasured_axes_never_reach_the_gap(client, auth_user, add_position, monkeypatch):
     """2026-09-10: below the classifier's evidence thresholds an axis keeps
     the 0.5 default and ``present`` marks it 0. Such an axis must not be
     compared against the declaration, however far the default sits from it."""
     from services.profile.persona_classifier_v2 import FEATURE_KEYS
+    # 2026-09-29: ticker_diversity is measured from open positions on the mirror.
+    add_position(auth_user["id"], ticker="AAPL", shares=1.0)
     features = {k: 0.5 for k in FEATURE_KEYS}
     features["turnover"] = 0.9          # measured, and different
     present = {k: 0 for k in FEATURE_KEYS}
@@ -180,3 +182,50 @@ def test_near_zero_delta_is_not_a_gap_chip(client, auth_user, monkeypatch):
     assert keys == ["holding_period"]
     for g in data["gap"]:
         assert abs(g["delta"]) >= 0.01
+
+
+def test_ticker_diversity_measured_from_open_positions(
+    client, auth_user, add_position, monkeypatch,
+):
+    """2026-09-29: Q3 asks how many stocks you HOLD at once; the classifier's
+    ticker_diversity counts distinct tickers TRADED in 30 days. A buy-and-hold
+    user holding 20 names who traded 2 of them was shown a false top gap. The
+    mirror measures this axis from open positions on the declared scale."""
+    import pytest
+    from services.profile.persona_analytics import _norm_log
+    from services.profile.persona_classifier_v2 import FEATURE_KEYS
+    _onboard_v3(client, declared_positions="diversified")   # 16–25 → 0.90
+    for i in range(20):
+        add_position(auth_user["id"], ticker=f"T{i:02d}", shares=1.0)
+    add_position(auth_user["id"], ticker="SOLD", shares=0.0)  # closed row
+    features = {k: 0.5 for k in FEATURE_KEYS}
+    features["ticker_diversity"] = _norm_log(2.0, floor=1.0, ceil=25.0)  # traded 2
+    features["holding_period"] = 0.2
+    present = {k: 0 for k in FEATURE_KEYS}
+    present["ticker_diversity"] = 1
+    present["holding_period"] = 1
+    monkeypatch.setattr("routes.mirror_home.classify_persona_multi",
+                        _observed_double(features, present))
+
+    data = client.get("/api/mirror-home").get_json()
+    keys = data["radar"]["keys"]
+    obs = data["radar"]["observed"][keys.index("ticker_diversity")]
+    assert obs == pytest.approx(_norm_log(20.0, floor=1.0, ceil=25.0), abs=1e-3)
+    assert data["gap"][0]["key"] == "holding_period"
+    for g in data["gap"]:
+        if g["key"] == "ticker_diversity":
+            assert abs(g["delta"]) < 0.1
+
+
+def test_ticker_diversity_unmeasured_without_positions(client, auth_user, monkeypatch):
+    from services.profile.persona_classifier_v2 import FEATURE_KEYS
+    _onboard_v3(client)
+    features = {k: 0.5 for k in FEATURE_KEYS}
+    features["ticker_diversity"] = 0.1
+    present = {k: 1 for k in FEATURE_KEYS}
+    monkeypatch.setattr("routes.mirror_home.classify_persona_multi",
+                        _observed_double(features, present))
+
+    data = client.get("/api/mirror-home").get_json()
+    assert "ticker_diversity" not in data["radar"]["observed_axes"]
+    assert "ticker_diversity" not in {g["key"] for g in data["gap"]}

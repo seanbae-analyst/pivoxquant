@@ -29,7 +29,8 @@ import logging
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
-from models import InvestmentProfile
+from extensions import db
+from models import InvestmentProfile, Position
 
 from services.profile import (
     classify_persona_multi,
@@ -37,7 +38,7 @@ from services.profile import (
     compute_persona_response,
     get_history,
 )
-from services.profile.persona_analytics import surface_label
+from services.profile.persona_analytics import _norm_log, surface_label
 from services.profile.persona_classifier_v2 import (
     FEATURE_KEYS,
     FEATURE_LABELS,
@@ -61,6 +62,22 @@ _GAP_TOP_N = 3
 _GAP_MIN_DELTA = 0.01
 # Classifier features that are self-reported, not observed from trades.
 _NEVER_OBSERVED_AXES = frozenset({"declared_risk"})
+# The axis Q3 (declared_positions) is projected onto.
+_POSITIONS_AXIS = "ticker_diversity"
+
+
+def _open_position_count(user_id: int) -> int:
+    """Distinct tickers the user currently holds (shares > 0). No prices."""
+    try:
+        rows = (
+            db.session.query(Position.ticker)
+            .filter(Position.user_id == user_id, Position.shares > 0)
+            .all()
+        )
+    except Exception:  # pragma: no cover — defensive; must not 500 the home
+        logger.debug("mirror-home: positions unreadable", exc_info=True)
+        return 0
+    return len({(t or "").upper() for (t,) in rows if t})
 
 
 def _declared_centroid(code: str) -> list[float]:
@@ -172,6 +189,24 @@ def get_mirror_home():
     # the declaration is the answer against itself (delta≈0 → "↑0%p" chip and
     # an inflated 정합도 on the client). It is not a measured axis here.
     measured_axes = [k for k in measured_axes if k not in _NEVER_OBSERVED_AXES]
+    # 2026-09-29: Q3 ("보통 몇 종목을 동시에 들고 있나요?") is about HOLDINGS,
+    # but the classifier's ticker_diversity counts distinct tickers TRADED in
+    # the window — a buy-and-hold user with 20 names who traded 2 got a false
+    # top gap. For the mirror, the observed side of this axis is the open
+    # position count on the declared scale (_norm_log(n, 1, 25), see
+    # questionnaire.DECLARED_VECTOR_MAP). The classifier's own feature is left
+    # alone — it also drives persona classification, where "traded" is meant.
+    # No open positions → not measured (holdings may simply not be imported).
+    measured = set(measured_axes)
+    n_open = _open_position_count(user_id)
+    if n_open > 0:
+        observed_vec[FEATURE_KEYS.index(_POSITIONS_AXIS)] = _norm_log(
+            float(n_open), floor=1.0, ceil=25.0,
+        )
+        measured.add(_POSITIONS_AXIS)
+    else:
+        measured.discard(_POSITIONS_AXIS)
+    measured_axes = [k for k in FEATURE_KEYS if k in measured]
     trade_count = int(clf.get("trade_count", 0) or 0)
     observed_code = clf.get("persona")
     # Gate on closed-trade count only — matches the Living Mirror artifact's
