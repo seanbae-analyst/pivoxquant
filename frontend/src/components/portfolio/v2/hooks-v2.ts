@@ -149,6 +149,9 @@ export interface TransactionRow {
    *  a recorded trade. "holding_adjust" = SELL row auto-written when a holding
    *  was lowered without a recorded sale (edit / holdings-capture replace). */
   source?: string | null;
+  /** 2026-09-29: id of the pause (/pre-trade reflection) this buy was linked
+   *  to by the user; null/absent = no link. */
+  reflection_id?: number | null;
 }
 
 export interface TransactionsResponse {

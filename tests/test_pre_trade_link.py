@@ -112,6 +112,19 @@ class TestTradeLink:
         assert r2.status_code == 400
         assert r2.get_json()["code"] == "REFLECTION_LINK_ALREADY_USED"
 
+    def test_trade_serializers_carry_reflection_id(self, client, app, auth_user, add_position, seeded):
+        from services.serializers import serialize_trade
+
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        with app.app_context():
+            rid = _refl(auth_user["id"])
+        assert _buy(client, pid, reflection_id=rid).status_code == 200
+        listed = client.get("/api/portfolio/trades").get_json()["trades"]
+        assert listed[0]["reflection_id"] == rid
+        with app.app_context():
+            t = TradeHistory.query.filter_by(user_id=auth_user["id"]).first()
+            assert serialize_trade(t)["reflection_id"] == rid
+
     def test_buy_without_link_is_null(self, client, app, auth_user, add_position, seeded):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
         assert _buy(client, pid).status_code == 200

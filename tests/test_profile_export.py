@@ -1386,3 +1386,6 @@ def test_serialize_trade_tolerates_null_traded_at():
         currency="USD", traded_at=None, source=None,
     )
     assert serialize_trade(t)["traded_at"] is None
+    # 2026-09-29: 옛 객체(연결 컬럼 없음)도 None 으로 나간다.
+    assert serialize_trade(t)["reflection_id"] is None
+    assert serialize_trade(t)["reflection_declined"] is None

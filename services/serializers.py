@@ -119,6 +119,10 @@ def serialize_trade(t) -> dict:
         "traded_at": traded_at.isoformat() if traded_at is not None else None,
         # 2026-09-29: "holding_seed" = 보유 등록 시드, None = 체결 기록.
         "source": getattr(t, "source", None),
+        # 2026-09-29: 이 매수를 사용자가 직접 이은 멈춤(PreTradeReflection) id,
+        # None = 연결 없음. reflection_declined True = 보여진 후보를 끄고 기록.
+        "reflection_id": getattr(t, "reflection_id", None),
+        "reflection_declined": getattr(t, "reflection_declined", None),
     }
 
 

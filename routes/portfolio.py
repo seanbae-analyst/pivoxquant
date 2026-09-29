@@ -526,6 +526,8 @@ def list_trades_alias():
                 # 2026-09-29: "holding_seed" = 보유 등록 시드 (체결 아님),
                 # None = 체결 기록.
                 "source": t.source,
+                # 2026-09-29: the pause this buy was linked to, None = no link.
+                "reflection_id": t.reflection_id,
             })
         return jsonify({"trades": trades})
     except Exception:
