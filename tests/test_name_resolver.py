@@ -297,3 +297,14 @@ def test_serialize_alert_us_ticker_keeps_cache_name(app):
             created_at=datetime(2026, 9, 1), is_read=False,
         )
         assert serialize_alert(a)["name"] == "Zeta Quux Corp"
+
+
+def test_portfolio_position_name_prefers_korean_registry_over_english_cache():
+    """2026-09-29: /portfolio 의 보유 행 이름도 canonical_display_name 규칙 —
+    옛 영문 SignalCache 이름이 KR 종목에 남아 있어도 한글명이 나온다."""
+    from types import SimpleNamespace
+    from routes.portfolio import _position_display_name
+    p = SimpleNamespace(ticker="005930.KS")
+    assert _position_display_name(p, {"name": "Samsung Electronics"}) == "삼성전자"
+    us = SimpleNamespace(ticker="AAPL")
+    assert _position_display_name(us, {"name": "Apple Inc."}) == "Apple Inc."

@@ -140,10 +140,12 @@ def _sector_for(sd):
 
 
 def _position_display_name(p, sd):
+    # KR 종목은 레지스트리 한글명이 항상 이긴다 — 옛 SignalCache 행의 영문명이
+    # /portfolio 에만 남고 거래 내역·알림은 한글로 나오던 불일치를 없앤다.
     cached_name = sd.get("name")
-    if cached_name and cached_name.upper() != p.ticker.upper():
-        return cached_name
-    return resolve_stock_name(p.ticker) or p.ticker
+    if cached_name and cached_name.upper() == p.ticker.upper():
+        cached_name = None
+    return canonical_display_name(cached_name, p.ticker) or p.ticker
 
 
 def _build_positions_list():
