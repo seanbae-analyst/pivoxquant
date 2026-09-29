@@ -181,7 +181,7 @@ def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -
         PositionDDCheck, Inquiry, ObservationNote,
         ScheduledEmail, NpsFeedback, AuthEvent, User,
         CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit,
-        CompanionWaitlist,
+        CompanionWaitlist, ImportBatch, ImportToken, PendingTrade,
     )
 
     counts: dict[str, int] = {}
@@ -205,6 +205,12 @@ def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -
     _cnt("behavioral_score", BehavioralScore.query.filter_by(user_id=user_id))
     _cnt("ai_twin_portfolio", AITwinPortfolio.query.filter_by(user_id=user_id))
     _cnt("ai_twin_weekly_report", AITwinWeeklyReport.query.filter_by(user_id=user_id))
+    # Import Inbox (2026-09-29) — routes/auth.py:delete_account 와 동기화.
+    # FK 순서: pending_trades → import_batches → import_tokens, 그리고
+    # pending_trades 가 pre_trade_reflections 를 참조하므로 그보다 먼저.
+    _cnt("pending_trade", PendingTrade.query.filter_by(user_id=user_id))
+    _cnt("import_batch", ImportBatch.query.filter_by(user_id=user_id))
+    _cnt("import_token", ImportToken.query.filter_by(user_id=user_id))
     _cnt("pre_trade_reflection", PreTradeReflection.query.filter_by(user_id=user_id))
     # 관찰 노트 — 거래에 묶이지 않은 유저 본인의 암호화된 자유 텍스트
     # (2026-09-22). routes/auth.py:delete_account 와 동기화.

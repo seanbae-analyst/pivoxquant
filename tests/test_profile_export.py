@@ -188,6 +188,9 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
         "ai_twin_weekly_reports": 0,
         "auth_events": 0,
         "funnel_events": 0,
+        "import_batches": 0,
+        "pending_trades": 0,
+        "import_tokens": 0,
     }
     # Each list-valued section is an empty list (never null / missing).
     for section in body["counts"]:
@@ -457,6 +460,7 @@ _EXPECTED_SECTIONS = {
     "scheduled_emails", "checkout_expirations", "ai_twin_portfolios",
     "ai_twin_positions", "ai_twin_trades", "ai_twin_weekly_reports",
     "auth_events", "funnel_events",
+    "import_batches", "pending_trades", "import_tokens",
 }
 
 
@@ -1200,3 +1204,57 @@ def test_export_includes_consent_trail_age_confirmation_and_nav_history(app, cli
     assert body["counts"]["portfolio_nav_snapshots"] == 1
     assert body["portfolio_nav_snapshots"][0]["as_of_date"].startswith("2026-09-01")
     assert "user_message_hash" not in json.dumps(body["user_agent_audit"])
+
+
+def test_export_includes_import_inbox_scoped_and_without_token_secret(
+    app, client, make_user, auth_user,
+):
+    """2026-09-29 — PIPA §35: the Import Inbox tables (batches, pending fills
+    with the user's approved thesis, webhook tokens) are the user's own rows.
+    The token hash is a credential and never leaves; the thesis is decrypted
+    like every other EncryptedText field."""
+    import hashlib
+    from datetime import datetime, timezone
+
+    from extensions import db
+    from models import ImportBatch, ImportToken, PendingTrade
+
+    other = make_user(email="import_other@test.com")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    token_hash = hashlib.sha256(b"pvx_export_test_raw").hexdigest()
+    with app.app_context():
+        for uid, tag in ((auth_user["id"], "mine"), (other["id"], "theirs")):
+            tok = ImportToken(
+                user_id=uid, name=f"tok-{tag}",
+                token_hash=token_hash if tag == "mine" else hashlib.sha256(tag.encode()).hexdigest(),
+                prefix="pvx_abcd1234", consent_at=now, created_at=now,
+            )
+            db.session.add(tok)
+            db.session.flush()
+            batch = ImportBatch(user_id=uid, source="webhook", token_id=tok.id,
+                                filename=f"{tag}.csv", consent_at=now, created_at=now)
+            db.session.add(batch)
+            db.session.flush()
+            db.session.add(PendingTrade(
+                batch_id=batch.id, user_id=uid, ticker="005930.KS", name="삼성전자",
+                action="BUY", shares=1.0, price=71200.0, currency="KRW",  # // legal-ok — data field
+                traded_at=now, dedupe_key=f"k-{tag}", status="approved",
+                approved_thesis=f"{tag} 실적 발표 전에 담았다", approved_at=now,
+            ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    raw = resp.get_data(as_text=True)
+    body = json.loads(resp.data)
+
+    assert body["counts"]["import_batches"] == 1
+    assert body["counts"]["pending_trades"] == 1
+    assert body["counts"]["import_tokens"] == 1
+    assert body["import_batches"][0]["filename"] == "mine.csv"
+    assert body["pending_trades"][0]["approved_thesis"] == "mine 실적 발표 전에 담았다"
+    assert body["import_tokens"][0]["name"] == "tok-mine"
+    assert "token_hash" not in body["import_tokens"][0]
+    assert token_hash not in raw
+    assert "theirs" not in raw
+

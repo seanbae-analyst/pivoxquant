@@ -62,6 +62,7 @@ from models import (
     ScheduledEmail, NpsFeedback,
     AuthEvent,
     CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit, CompanionWaitlist,
+    ImportBatch, ImportToken, PendingTrade,
 )
 from security import auth_rate_limit, general_rate_limit
 from services.age_verification import (
@@ -1779,6 +1780,13 @@ def delete_account():
             ("behavioral_scores", lambda: _d(BehavioralScore.query.filter_by(user_id=user_id))),
             ("ai_twin_portfolios", lambda: _d(AITwinPortfolio.query.filter_by(user_id=user_id))),
             ("ai_twin_weekly_reports", lambda: _d(AITwinWeeklyReport.query.filter_by(user_id=user_id))),
+            # Import Inbox (2026-09-29) — 승인 이유(암호화 자유 텍스트)를 담은
+            # 대기 체결부터. FK 순서: pending_trades → import_batches →
+            # import_tokens. pending_trades 가 pre_trade_reflections 를
+            # 참조하므로 멈춤 기록보다 먼저 지운다.
+            ("pending_trades", lambda: _d(PendingTrade.query.filter_by(user_id=user_id))),
+            ("import_batches", lambda: _d(ImportBatch.query.filter_by(user_id=user_id))),
+            ("import_tokens", lambda: _d(ImportToken.query.filter_by(user_id=user_id))),
             ("pre_trade_reflections", lambda: _d(PreTradeReflection.query.filter_by(user_id=user_id))),
             # 관찰 노트 — 유저 본인의 암호화된 자유 텍스트. 멈춤 기록과 같은
             # 이유로 명시적으로 지운다 (2026-09-22).

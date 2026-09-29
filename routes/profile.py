@@ -40,6 +40,8 @@ from models import (
     CheckoutExpiration,
     CompanionWaitlist,
     FunnelEvent,
+    ImportBatch,
+    ImportToken,
     Inquiry,
     InvestmentProfile,
     NpsFeedback,
@@ -47,6 +49,7 @@ from models import (
     PersonaSnapshot,
     PortfolioShare,
     Position,
+    PendingTrade,
     PositionDDCheck,
     PreTradeReflection,
     PushSubscription,
@@ -1515,6 +1518,11 @@ _EXPORT_SCHEDULED_EMAIL_LIMIT = 1000   # onboarding email queue rows
 _EXPORT_CHECKOUT_EXPIRATION_LIMIT = 1000  # abandoned-checkout follow-up queue
 _EXPORT_NAV_SNAPSHOT_LIMIT = 5000        # one row per user per day
 _EXPORT_AGENT_AUDIT_LIMIT = 1000
+# Import Inbox (2026-09-29) — 업로드 묶음·대기/승인 체결(승인 이유는
+# EncryptedText, 평문으로 읽힘)·웹훅 토큰. 세 테이블 모두 탈퇴 시 삭제된다.
+_EXPORT_IMPORT_BATCH_LIMIT = 2000
+_EXPORT_PENDING_TRADE_LIMIT = 10000
+_EXPORT_IMPORT_TOKEN_LIMIT = 100
 # P1 sections — login/funnel history (the user's own activity records).
 _EXPORT_AUTH_EVENT_LIMIT = 2000        # OAuth start/success/fail log (keyed by email)
 _EXPORT_FUNNEL_EVENT_LIMIT = 5000      # acquisition/activation funnel events
@@ -1609,6 +1617,24 @@ def _serialize_nav_snapshot(n) -> dict:
         "fx_rate": _num_or_none(getattr(n, "fx_rate", None)),
         "created_at": _iso_or_none(getattr(n, "created_at", None)),
     }
+
+
+def _serialize_pending_trade(t) -> dict:
+    """PendingTradeDTO + the user's own approved thesis (EncryptedText —
+    the ORM already returns plaintext) and created_at."""
+    d = t.to_dict()
+    d["approved_thesis"] = getattr(t, "approved_thesis", None)
+    d["created_at"] = _iso_or_none(getattr(t, "created_at", None))
+    return d
+
+
+def _serialize_import_token(t) -> dict:
+    """Listing DTO — ``token_hash`` is a credential and is withheld (the raw
+    token is never stored). ``consent_at`` is the user's upload consent."""
+    d = t.to_dict()
+    d.pop("batches_today", None)
+    d["consent_at"] = _iso_or_none(getattr(t, "consent_at", None))
+    return d
 
 
 def _serialize_user_agent_audit(a) -> dict:
@@ -2676,6 +2702,29 @@ def export_profile():
             .all()
         )
 
+        # Import Inbox (2026-09-29, PIPA §35) — all three are keyed by user_id.
+        import_batches = (
+            ImportBatch.query
+            .filter_by(user_id=user_id)
+            .order_by(ImportBatch.created_at.desc())
+            .limit(_EXPORT_IMPORT_BATCH_LIMIT)
+            .all()
+        )
+        pending_trades = (
+            PendingTrade.query
+            .filter_by(user_id=user_id)
+            .order_by(PendingTrade.created_at.desc(), PendingTrade.id.desc())
+            .limit(_EXPORT_PENDING_TRADE_LIMIT)
+            .all()
+        )
+        import_tokens = (
+            ImportToken.query
+            .filter_by(user_id=user_id)
+            .order_by(ImportToken.id.asc())
+            .limit(_EXPORT_IMPORT_TOKEN_LIMIT)
+            .all()
+        )
+
         # AI Twin (paper-only) — portfolio is keyed by user_id; its positions
         # and trades are keyed by twin_id (the portfolio's PK), so resolve the
         # user's twin ids first, then ``.in_()`` filter. No cross-user leak:
@@ -2792,6 +2841,9 @@ def export_profile():
         "ai_twin_weekly_reports": [r.to_dict() for r in ai_twin_weekly_reports],
         "auth_events": [e.to_dict() for e in auth_events],
         "funnel_events": [e.to_dict() for e in funnel_events],
+        "import_batches": [b.to_dict() for b in import_batches],
+        "pending_trades": [_serialize_pending_trade(t) for t in pending_trades],
+        "import_tokens": [_serialize_import_token(t) for t in import_tokens],
         "counts": {
             "positions": len(positions),
             "watchlist": len(watchlist),
@@ -2822,6 +2874,9 @@ def export_profile():
             "ai_twin_weekly_reports": len(ai_twin_weekly_reports),
             "auth_events": len(auth_events),
             "funnel_events": len(funnel_events),
+            "import_batches": len(import_batches),
+            "pending_trades": len(pending_trades),
+            "import_tokens": len(import_tokens),
         },
         "notes": {
             "excluded_fields": [
@@ -2844,6 +2899,7 @@ def export_profile():
                 "checkout_expiration.session_id",
                 "companion_waitlist.email_hash",
                 "user_agent_audit.user_message_hash",
+                "import_token.token_hash",
             ],
             "trade_limit": _EXPORT_TRADE_LIMIT,
             "alert_limit": _EXPORT_ALERT_LIMIT,
