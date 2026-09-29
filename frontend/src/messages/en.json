@@ -221,7 +221,8 @@
       "activity": {
         "loading": "Loading entries…",
         "empty": "No recent entries.",
-        "sharesUnit": "{n} sh"
+        "sharesUnit": "{n} sh",
+        "holdingAdded": "Holding added"
       },
       "holdingsImport": {
         "title": "Upload your holdings",

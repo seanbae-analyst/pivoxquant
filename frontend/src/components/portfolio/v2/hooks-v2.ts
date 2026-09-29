@@ -144,6 +144,10 @@ export interface TransactionRow {
   price?: number;
   amount?: number;
   currency?: "USD" | "KRW";
+  /** 2026-09-29: "holding_seed" = BUY row auto-written when the user
+   *  registered a holding (date = registration, not purchase); null/absent =
+   *  a recorded trade. */
+  source?: string | null;
 }
 
 export interface TransactionsResponse {

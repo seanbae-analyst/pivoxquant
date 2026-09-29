@@ -26,6 +26,8 @@ export interface Trade {
   side: "Bought" | "Sold";
   qty: number;
   price: number;
+  /** "holding_seed" = registration seed, not a purchase (2026-09-29). */
+  source?: string | null;
 }
 
 export type TradeAction = "buy" | "sell" | "edit";
