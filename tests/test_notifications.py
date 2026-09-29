@@ -18,7 +18,7 @@ from models import Alert
 # ═════════════════════════════════════════════════════════════════════════════
 
 def _seed_alert(app, user_id: int, *, is_read: bool = False, title: str = "Observation",
-                body: str = "Ready.", kind: str = "price_52w_high") -> int:
+                body: str = "Ready.", kind: str = "concentration") -> int:
     with app.app_context():
         a = Alert(
             user_id=user_id,
