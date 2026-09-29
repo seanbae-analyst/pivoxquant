@@ -1868,8 +1868,10 @@ def _csv_currency_for(ticker):
 # Each tuple is (header, row->value). Only RAW stored fields are read.
 _CSV_SPECS = {
     "trades": (
+        # "source" (2026-09-29, appended last): "holding_seed" marks a row
+        # written when a holding was registered, not a fill; blank = fill.
         ["traded_at", "ticker", "name", "action", "shares",
-         "price_per_share", "total_value", "currency", "pnl"],
+         "price_per_share", "total_value", "currency", "pnl", "source"],
         lambda t: [
             _iso_or_none(getattr(t, "traded_at", None)) or "",
             t.ticker or "",
@@ -1882,6 +1884,7 @@ _CSV_SPECS = {
             t.total_value if t.total_value is not None else "",
             getattr(t, "currency", None) or _csv_currency_for(t.ticker),
             getattr(t, "pnl", None) if getattr(t, "pnl", None) is not None else "",
+            getattr(t, "source", None) or "",
         ],
     ),
     "positions": (
@@ -2039,7 +2042,7 @@ def _capital_gain_rows(user_id):
     with the STRICT FX resolver (``get_rate_at_strict``) so a missing
     historical rate yields a blank KRW cell + note, never a fabricated rate.
     """
-    from services.profile.fifo_util import fifo_match_closed_trades
+    from services.profile.fifo_util import fifo_match_closed_trades, is_holding_seed
     from services.tax.capital_gains import (
         compute_capital_gain_lots,
         summarize_by_year,
@@ -2053,6 +2056,10 @@ def _capital_gain_rows(user_id):
         .limit(_EXPORT_TRADE_LIMIT)
         .all()
     )
+    # 2026-09-29: 보유 등록 시드는 뺀다 — 시드의 취득일은 등록 시각이지 실제
+    # 취득일이 아니고, 양도소득 명세에 그 날짜·환율을 쓰면 틀린 사실이 된다.
+    # 시드 도입 전과 같은 결과 (시드 로트만 닫은 처분은 명세에 없다).
+    trades = [t for t in trades if not is_holding_seed(t)]
     pairs = fifo_match_closed_trades(trades)
     lots = compute_capital_gain_lots(
         pairs,

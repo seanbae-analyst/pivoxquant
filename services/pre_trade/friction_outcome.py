@@ -68,7 +68,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from models import PreTradeReflection, TradeHistory
-from services.profile.fifo_util import fifo_match_closed_trades
+from services.profile.fifo_util import fifo_match_closed_trades, is_holding_seed
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +203,10 @@ def compute_friction_outcome(
         # 화이트리스트가 `trade.action` 형태만 인식해서 여기선 안 걸린다.
         if str(t.action or "").upper() != "BUY" or t.traded_at is None:  # // legal-ok
             continue
+        # 2026-09-29: 보유 등록 시드는 매수가 아니라 이미 들고 있던 보유분의
+        # 기록이다 — "취소 후 결국 샀다" 에도, 멈춤 경유 귀속에도 넣지 않는다.
+        if is_holding_seed(t):
+            continue
         buys.setdefault(_norm(t.ticker), []).append(t.traded_at)
     for v in buys.values():
         v.sort()
@@ -244,6 +248,10 @@ def compute_friction_outcome(
         if since is not None and pair.sell_time < since:
             continue
         if not pair.buy_price:            # 체결가 없는 행은 수익률을 못 낸다
+            continue
+        # 시드 로트(등록 전에 산 보유분)는 멈춤을 거칠 기회가 없었다 — 경유/
+        # 미경유 어느 쪽 분포에도 넣지 않는다 (2026-09-29, 도입 전과 같은 결과).
+        if pair.buy_is_seed:
             continue
         ret = (pair.sell_price - pair.buy_price) / pair.buy_price * 100.0
         key = (_norm(pair.ticker), pair.buy_time)

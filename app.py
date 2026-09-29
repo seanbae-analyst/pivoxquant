@@ -849,6 +849,9 @@ def _do_migrations():
     _add_column_if_missing("trade_history", "pnl", "FLOAT", default="0.0")
     _add_column_if_missing("trade_history", "pnl_pct", "FLOAT", default="0.0")
     _add_column_if_missing("trade_history", "currency", "VARCHAR(5)", default="'USD'")
+    # 2026-09-29 — 보유 등록 시드 표시 (models/trade_history.py HOLDING_SEED_SOURCE,
+    # alembic 058). NULL = 체결 기록.
+    _add_column_if_missing("trade_history", "source", "VARCHAR(20)")
 
     # Investment profiles — covers onboarding answers + auto-calc quant params.
     _add_column_if_missing("investment_profiles", "experience_level", "VARCHAR(20)", default="'beginner'")

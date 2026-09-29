@@ -35,7 +35,7 @@ from typing import Iterable
 
 from models import Position, TradeHistory, InvestmentProfile
 from .common_util import sector_hhi, to_diversity_score, utc_now as _utc_now
-from .fifo_util import fifo_match_closed_trades, fifo_open_position_ages
+from .fifo_util import fifo_match_closed_trades, fifo_open_position_ages, is_holding_seed
 import logging
 
 logger = logging.getLogger(__name__)
@@ -196,7 +196,9 @@ def compute_persona_response(user_id: int, now: datetime | None = None) -> dict:
     declared_code = _resolve_declared(profile)
     declared_score = _declared_score(profile)
 
-    trades = _fetch_trades(user_id)
+    # 2026-09-29: 보유 등록 시드(fifo_util.is_holding_seed)는 뺀다 — 이 경로는
+    # 시드 도입 전과 같은 결과를 낸다 (시드는 라이브 거울·분류기만 읽는다).
+    trades = [t for t in _fetch_trades(user_id) if not is_holding_seed(t)]
     positions = _fetch_positions(user_id)
     sector_map = _sector_map_from_positions(positions)
 

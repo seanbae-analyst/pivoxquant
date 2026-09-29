@@ -37,6 +37,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Iterable, NamedTuple
 
 from models import TradeHistory
+from models.trade_history import HOLDING_SEED_SOURCE
 
 
 # Numerical epsilon for share-quantity comparisons. Matches the value
@@ -83,12 +84,30 @@ class MatchedPair(NamedTuple):
     # 여럿 나오는데, "매도 한 번 = 관찰 한 건" 으로 세려면 이 값으로 묶는다
     # (:func:`collapse_pairs_by_sell`). ``-1`` = 알 수 없음.
     sell_seq: int = -1
+    # 2026-09-29 — 이 슬라이스의 매수 로트가 보유 등록 시드인가
+    # (``TradeHistory.source == "holding_seed"``, :func:`is_holding_seed`).
+    # 시드의 ``buy_time`` 은 등록 시각이지 실제 매수일이 아니므로 보유기간
+    # 통계를 내는 호출자는 이 슬라이스를 건너뛴다. 수량·단가는 유효하다
+    # (평단 = 등록 때 적은 평균매입가).
+    buy_is_seed: bool = False
 
     @property
     def hold_days(self) -> float:
         """Days held for this slice — clamped at zero (no negative holds)."""
         delta_seconds = (self.sell_time - self.buy_time).total_seconds()
         return max(0.0, delta_seconds / 86400.0)
+
+
+def is_holding_seed(t) -> bool:
+    """True when ``t`` is a holding-registration seed row, not a fill.
+
+    Seeds are 매수 rows written when the user registers shares they already
+    hold (``TradeHistory.source == "holding_seed"``). They feed FIFO lots
+    (quantity / cost) but their ``traded_at`` is the registration time, so
+    they are never a hold-time observation, a counted fill or a follow-on.
+    Rows without the attribute (plain test doubles) are not seeds.
+    """
+    return (getattr(t, "source", None) or "") == HOLDING_SEED_SOURCE
 
 
 def fifo_match_closed_trades(
@@ -128,8 +147,8 @@ def fifo_match_closed_trades(
         key=lambda t: (t.traded_at, t.id or 0),
     )
 
-    # ticker → FIFO queue of (time, remaining_shares, buy_price)
-    opens: dict[str, list[tuple[datetime, float, float]]] = {}
+    # ticker → FIFO queue of (time, remaining_shares, buy_price, is_seed)
+    opens: dict[str, list[tuple[datetime, float, float, bool]]] = {}
     pairs: list[MatchedPair] = []
     sell_seq = -1
 
@@ -141,7 +160,9 @@ def fifo_match_closed_trades(
             continue
         price = float(t.price_per_share or 0.0)
         if action == "BUY":
-            opens.setdefault(key, []).append((t.traded_at, shares, price))
+            opens.setdefault(key, []).append(
+                (t.traded_at, shares, price, is_holding_seed(t))
+            )
             continue
         if action != "SELL":
             continue
@@ -150,7 +171,7 @@ def fifo_match_closed_trades(
         sell_pnl = float(t.pnl or 0.0)
         queue = opens.get(key, [])
         while remaining > _SHARE_EPSILON and queue:
-            buy_time, buy_sh, buy_px = queue[0]
+            buy_time, buy_sh, buy_px, buy_seed = queue[0]
             take = min(buy_sh, remaining)
             pairs.append(
                 MatchedPair(
@@ -162,13 +183,14 @@ def fifo_match_closed_trades(
                     sell_price=price,
                     sell_pnl=sell_pnl,
                     sell_seq=sell_seq,
+                    buy_is_seed=buy_seed,
                 )
             )
             remaining -= take
             if take >= buy_sh - _SHARE_EPSILON:
                 queue.pop(0)
             else:
-                queue[0] = (buy_time, buy_sh - take, buy_px)
+                queue[0] = (buy_time, buy_sh - take, buy_px, buy_seed)
     return pairs
 
 
@@ -212,7 +234,7 @@ def fifo_match_closed_trades_with_pnl(
         key=lambda t: (t.traded_at, t.id or 0),
     )
 
-    opens: dict[str, list[tuple[datetime, float, float]]] = {}
+    opens: dict[str, list[tuple[datetime, float, float, bool]]] = {}
     attributed: list[tuple[MatchedPair, float]] = []
     sell_seq = -1
 
@@ -224,7 +246,9 @@ def fifo_match_closed_trades_with_pnl(
             continue
         price = float(t.price_per_share or 0.0)
         if action == "BUY":
-            opens.setdefault(key, []).append((t.traded_at, shares, price))
+            opens.setdefault(key, []).append(
+                (t.traded_at, shares, price, is_holding_seed(t))
+            )
             continue
         if action != "SELL":
             continue
@@ -237,7 +261,7 @@ def fifo_match_closed_trades_with_pnl(
         sell_pnl = float(t.pnl or 0.0)
         queue = opens.get(key, [])
         while remaining > _SHARE_EPSILON and queue:
-            buy_time, buy_sh, buy_px = queue[0]
+            buy_time, buy_sh, buy_px, buy_seed = queue[0]
             take = min(buy_sh, remaining)
             attributed.append((
                 MatchedPair(
@@ -249,6 +273,7 @@ def fifo_match_closed_trades_with_pnl(
                     sell_price=price,
                     sell_pnl=sell_pnl,
                     sell_seq=sell_seq,
+                    buy_is_seed=buy_seed,
                 ),
                 sell_pnl_pct,
             ))
@@ -256,7 +281,7 @@ def fifo_match_closed_trades_with_pnl(
             if take >= buy_sh - _SHARE_EPSILON:
                 queue.pop(0)
             else:
-                queue[0] = (buy_time, buy_sh - take, buy_px)
+                queue[0] = (buy_time, buy_sh - take, buy_px, buy_seed)
     return attributed
 
 
@@ -303,13 +328,20 @@ def collapse_pairs_by_sell(
         if qty <= _SHARE_EPSILON:
             out.append(slices[0])
             continue
-        hold = sum(p.hold_days * p.quantity for p, _ in slices) / qty
+        # 2026-09-29: hold days come from the non-seed slices only — a seed's
+        # buy_time is the registration time, not a purchase date. When every
+        # slice is a seed the merged entry is flagged ``buy_is_seed`` and its
+        # hold value must not be used (callers skip it).
+        dated = [p for p, _ in slices if not p.buy_is_seed] or [p for p, _ in slices]
+        dated_qty = sum(p.quantity for p in dated) or qty
+        hold = sum(p.hold_days * p.quantity for p in dated) / dated_qty
         cost = sum(p.buy_price * p.quantity for p, _ in slices) / qty
         out.append((
             first._replace(
                 quantity=qty,
                 buy_time=first.sell_time - timedelta(days=hold),
                 buy_price=cost,
+                buy_is_seed=all(p.buy_is_seed for p, _ in slices),
             ),
             pct,
         ))
@@ -320,6 +352,7 @@ def fifo_open_position_ages(
     trades: Iterable[TradeHistory],
     *,
     reference_time: datetime | None = None,
+    include_seeds: bool = True,
 ) -> list[float]:
     """Return age-in-days of every still-open BUY share-slice.
 
@@ -338,6 +371,11 @@ def fifo_open_position_ages(
         empty. This priority order — ``traded_at`` > ``utcnow`` —
         matches the historical ``rolling_metrics`` behaviour and is the
         canonical contract going forward.
+    include_seeds : bool
+        ``False`` leaves out still-open holding-registration seed lots
+        (:func:`is_holding_seed`) — their age would be time since
+        registration, not since purchase. They still absorb 매도 수량 in
+        FIFO order either way.
 
     Returns
     -------
@@ -364,7 +402,7 @@ def fifo_open_position_ages(
     # summed them under one key, so a user with ≥2 same-day buys of one ticker
     # had still-open shares silently dropped from this average-holding fallback.
     ordered = sorted(materialised, key=lambda t: (t.traded_at, t.id or 0))
-    opens: dict[str, list[list]] = {}  # ticker → [[buy_time, remaining_sh], …]
+    opens: dict[str, list[list]] = {}  # ticker → [[buy_time, remaining_sh, is_seed], …]
     for t in ordered:
         action = (t.action or "").upper()
         key = t.ticker.upper()
@@ -372,14 +410,14 @@ def fifo_open_position_ages(
         if shares <= 0:
             continue
         if action == "BUY":
-            opens.setdefault(key, []).append([t.traded_at, shares])
+            opens.setdefault(key, []).append([t.traded_at, shares, is_holding_seed(t)])
             continue
         if action != "SELL":
             continue
         remaining = shares
         queue = opens.get(key, [])
         while remaining > _SHARE_EPSILON and queue:
-            buy_time, buy_sh = queue[0]
+            buy_time, buy_sh, _seed = queue[0]
             take = min(buy_sh, remaining)
             remaining -= take
             if take >= buy_sh - _SHARE_EPSILON:
@@ -389,8 +427,10 @@ def fifo_open_position_ages(
 
     elapsed: list[float] = []
     for queue in opens.values():
-        for buy_time, remaining_sh in queue:
+        for buy_time, remaining_sh, seed in queue:
             if remaining_sh <= _SHARE_EPSILON:
+                continue
+            if seed and not include_seeds:
                 continue
             delta_days = max(
                 0.0, (reference_time - buy_time).total_seconds() / 86400.0
@@ -405,4 +445,5 @@ __all__ = [
     "fifo_match_closed_trades",
     "fifo_match_closed_trades_with_pnl",
     "fifo_open_position_ages",
+    "is_holding_seed",
 ]

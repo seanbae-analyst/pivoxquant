@@ -417,6 +417,9 @@ def add_position():
     opened_dt = _parse_purchase_date(d.get("purchase_date"))
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
+    # Resolved before the User lock (may hit a registry / KIS) — used for the
+    # holding seed row and the response.
+    resolved_name = resolve_stock_name(ticker)
     # NEW-D (2026-05-09): two-phase race-safe upsert.
     # Phase 1 (cheap path): SELECT + merge if row exists, else INSERT new.
     # Phase 2 (race recovery): if a concurrent request inserted between our
@@ -474,6 +477,14 @@ def add_position():
                 "limit": 3,
             }), 403
 
+    # 2026-09-29: registered shares get a holding-seed trade_history row so
+    # the FIFO mirrors have a lot for them (services/position_writes).
+    from services.position_writes import add_holding_seed
+
+    def _seed():
+        add_holding_seed(current_user.id, ticker, shares, cost,
+                         "KRW" if is_kr else "USD", resolved_name or ticker)
+
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=ticker).first()
         if ex:
@@ -489,6 +500,7 @@ def add_position():
             if opened_dt is not None:
                 new_pos.added_at = opened_dt
             db.session.add(new_pos)
+        _seed()
         db.session.commit()
     except IntegrityError:
         # Concurrent insert collided on uq_positions_user_ticker — recover
@@ -508,6 +520,7 @@ def add_position():
                     "code": "POSITION_RACE",
                 }), 409
             _merge_into(ex)
+            _seed()
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -531,12 +544,10 @@ def add_position():
         current_user.available_capital,
     )
 
-    # Resolve display name synchronously so the client can show 회사명
-    # immediately, before the background cache warm finishes.
+    # Display name (resolved above, before the lock) so the client can show
+    # 회사명 immediately, before the background cache warm finishes.
     # Uses name_resolver (pyKRX for KR, us_stock_registry for US) so every
     # long-tail KRX listing resolves even on first add.
-    from services.name_resolver import resolve_stock_name
-    resolved_name = resolve_stock_name(ticker)
     return jsonify({
         "ok": True,
         "ticker": ticker,
@@ -1551,6 +1562,9 @@ def list_trades_alias():
                 "pnl": t.pnl or 0,
                 "pnlPct": t.pnl_pct or 0,
                 "currency": t.currency or "USD",
+                # 2026-09-29: "holding_seed" = 보유 등록 시드 (체결 아님),
+                # None = 체결 기록.
+                "source": t.source,
             })
         return jsonify({"trades": trades})
     except Exception:
@@ -1663,6 +1677,9 @@ def create_position_alias():
         FREE_POSITION_CAP, active_position_count, holds_ticker, is_capped_tier,
         lock_user_row, merge_buy_into,
     )
+    # Resolved before the User lock (may hit a registry / KIS) — used for the
+    # holding seed row and the response.
+    resolved_name = resolve_stock_name(symbol)
     lock_user_row(current_user.id)
     # 2026-09-29: the cap limits symbols — adding to an already-held ticker
     # merges and never raises the count, so look the ticker up first.
@@ -1686,6 +1703,16 @@ def create_position_alias():
     def _merge_into_alias(ex_row):
         merge_buy_into(ex_row, quantity, price, is_kr=is_kr, fx_rate=fx_rate, note=note)
 
+    # 2026-09-29: registered shares get a holding-seed trade_history row so
+    # the FIFO mirrors have a lot for them (services/position_writes).
+    # traded_at is the registration time even when purchase_date is given —
+    # the seed is excluded from hold-time statistics either way.
+    from services.position_writes import add_holding_seed
+
+    def _seed():
+        add_holding_seed(current_user.id, symbol, quantity, price,
+                         "KRW" if is_kr else "USD", resolved_name or symbol)
+
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=symbol).first()
         if ex:
@@ -1706,6 +1733,7 @@ def create_position_alias():
             if opened_dt is not None:
                 new_pos.added_at = opened_dt
             db.session.add(new_pos)
+        _seed()
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -1721,6 +1749,7 @@ def create_position_alias():
                     "code": "POSITION_RACE",
                 }), 409
             _merge_into_alias(ex)
+            _seed()
             db.session.commit()
             new_pos = ex
         except Exception:
@@ -1743,7 +1772,6 @@ def create_position_alias():
         symbol,
         current_user.available_capital,
     )
-    resolved_name = resolve_stock_name(symbol)
     return jsonify({
         "ok": True,
         "id": str(new_pos.id),

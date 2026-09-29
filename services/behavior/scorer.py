@@ -61,6 +61,7 @@ from services.legal_filter import safe_scrub
 from services.profile.fifo_util import (
     fifo_match_closed_trades,
     fifo_open_position_ages,
+    is_holding_seed,
 )
 
 logger = logging.getLogger(__name__)
@@ -460,7 +461,9 @@ def _persona_avg_with_floor(persona: str) -> dict | None:
 def _trades_in_window(
     user_id: int, start_dt: datetime, end_dt: datetime
 ) -> list[TradeHistory]:
-    return (
+    # 2026-09-29: 보유 등록 시드(fifo_util.is_holding_seed)는 뺀다 — 이 경로는
+    # 시드 도입 전과 같은 결과를 낸다 (시드는 라이브 거울·분류기만 읽는다).
+    return _drop_seeds(
         TradeHistory.query
         .filter(
             TradeHistory.user_id == user_id,
@@ -472,8 +475,14 @@ def _trades_in_window(
     )
 
 
+def _drop_seeds(rows: list[TradeHistory]) -> list[TradeHistory]:
+    return [t for t in rows if not is_holding_seed(t)]
+
+
 def _trades_through(user_id: int, end_dt: datetime) -> list[TradeHistory]:
-    return (
+    # 2026-09-29: 보유 등록 시드(fifo_util.is_holding_seed)는 뺀다 — 이 경로는
+    # 시드 도입 전과 같은 결과를 낸다 (시드는 라이브 거울·분류기만 읽는다).
+    return _drop_seeds(
         TradeHistory.query
         .filter(
             TradeHistory.user_id == user_id,

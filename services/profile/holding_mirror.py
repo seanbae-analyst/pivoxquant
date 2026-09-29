@@ -72,6 +72,7 @@ from services.profile.fifo_util import (
     MatchedPair,
     collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
+    is_holding_seed,
 )
 
 
@@ -124,6 +125,11 @@ def _classify_pairs(
     # 수만큼 세어 min_pairs 를 혼자 넘겼다. 보유일은 그 매도 슬라이스들의
     # 수량 가중 평균 (collapse_pairs_by_sell 참조).
     attributed = collapse_pairs_by_sell(attributed)
+    # 2026-09-29: 보유 등록 시드 로트만 닫은 매도는 보유일을 모른다 (시드의
+    # 매수 시각은 등록 시각이다). 이 거울은 보유일 거울이라 그 매도를 뺀다.
+    # 시드와 체결 로트를 함께 닫은 매도는 체결 로트의 보유일로 남는다
+    # (collapse_pairs_by_sell 참조).
+    attributed = [(p, pct) for p, pct in attributed if not p.buy_is_seed]
     total_closed = len(attributed)
 
     winners: list[tuple[MatchedPair, float]] = []
@@ -248,7 +254,8 @@ def compute_holding_mirror(
     # (_classify_pairs 참조).
     cutoff: datetime | None = None
     if period_days is not None and period_days > 0:
-        dated = [t for t in materialised if t.traded_at]
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드는 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_holding_seed(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)

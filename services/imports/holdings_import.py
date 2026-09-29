@@ -41,10 +41,14 @@ Decisions (and why):
   sets ``buy_fx_rate`` to the capture-time rate for USD rows: the captured
   average is a new cost basis, and pairing it with the old basis's rate would
   mix two bases. KR rows keep their stored rate (unused for KRW).
-* **No trade_history.** ``create_position`` (POST /positions), ``edit_position``
-  (PUT /position/<id>) and PATCH /positions/<id> write no trade_history rows —
-  they record holdings, not fills. This import records holdings too, so it
-  writes none for any mode. Side effect mirrored: the SignalCache warm
+* **Holding seeds, not fills.** 2026-09-29: like ``create_position`` (POST
+  /positions), every row that *adds* shares writes one trade_history 매수 row
+  marked ``source="holding_seed"`` (``services/position_writes.add_holding_seed``)
+  so the FIFO mirrors have a lot to close when the holding is later sold —
+  created / ``add`` rows seed the added shares, ``replace`` seeds only a
+  positive share delta and writes nothing for a decrease. Seeds are
+  registrations, not fills: the mirrors keep them out of hold-time statistics
+  and fill counts. Side effect mirrored: the SignalCache warm
   (``cache_service.cache_ticker``) for every written ticker, in one background
   thread.
 * **Free-plan cap.** Under the same User-row lock as ``create_position``, new
@@ -296,6 +300,19 @@ class RaceError(Exception):
     pass
 
 
+def _seed_name(ticker: str, is_kr: bool) -> str:
+    """Display name for a seed row from the static masters only — no vendor or
+    KIS call inside the user lock for a 200-row batch."""
+    try:
+        if is_kr:
+            from services.kr_stock_registry import get_name
+        else:
+            from services.us_stock_registry import get_name
+        return get_name(ticker) or ticker
+    except Exception:
+        return ticker
+
+
 def commit(user, rows: list[CommitRow], fx_rate_fn) -> tuple[dict, list[str]]:
     """Apply validated rows in one transaction. Returns ``(result, written
     tickers)``. Raises ``RaceError`` after rollback on a concurrent insert."""
@@ -304,7 +321,8 @@ def commit(user, rows: list[CommitRow], fx_rate_fn) -> tuple[dict, list[str]]:
     from extensions import db
     from models import Position
     from services.position_writes import (
-        FREE_POSITION_CAP, active_position_count, is_capped_tier, lock_user_row, merge_buy_into,
+        FREE_POSITION_CAP, active_position_count, add_holding_seed, is_capped_tier, lock_user_row,
+        merge_buy_into,
     )
 
     result = {"created": [], "replaced": [], "added": [], "skipped": []}
@@ -337,6 +355,8 @@ def commit(user, rows: list[CommitRow], fx_rate_fn) -> tuple[dict, list[str]]:
                                buy_fx_rate=0.0 if is_kr else fx_rate, thesis=None,
                                thesis_created_at=None, thesis_status="pending")
                 db.session.add(pos)
+                add_holding_seed(user.id, r.ticker, r.shares, r.avg_cost, r.currency,
+                                 _seed_name(r.ticker, is_kr))
                 result["created"].append({"ticker": r.ticker, "shares": r.shares,
                                           "avg_cost": r.avg_cost, "currency": r.currency})
             else:
@@ -346,9 +366,14 @@ def commit(user, rows: list[CommitRow], fx_rate_fn) -> tuple[dict, list[str]]:
                     if not is_kr and fx_rate:
                         ex.buy_fx_rate = fx_rate
                     bucket = "replaced"
+                    # Seed only the increase; a decrease writes nothing.
+                    seed_shares = r.shares - float(prev_shares or 0.0)
                 else:
                     merge_buy_into(ex, r.shares, r.avg_cost, is_kr=is_kr, fx_rate=fx_rate)
                     bucket = "added"
+                    seed_shares = r.shares
+                add_holding_seed(user.id, r.ticker, seed_shares, r.avg_cost, r.currency,
+                                 _seed_name(r.ticker, is_kr))
                 result[bucket].append({"ticker": r.ticker, "shares": ex.shares, "avg_cost": ex.avg_cost,
                                        "currency": r.currency, "prev_shares": prev_shares,
                                        "prev_avg_cost": prev_avg})

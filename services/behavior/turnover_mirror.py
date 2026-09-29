@@ -72,6 +72,7 @@ from models import TradeHistory
 from services.profile.fifo_util import (
     collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
+    is_holding_seed,
 )
 
 
@@ -111,7 +112,8 @@ def _hold_day_stats(
     attributed = fifo_match_closed_trades_with_pnl(trades)
     if since is not None:
         attributed = [(p, pct) for p, pct in attributed if p.sell_time >= since]
-    pairs = [p for p, _ in collapse_pairs_by_sell(attributed)]
+    # 보유 등록 시드 로트만 닫은 매도는 보유일을 모른다 — 뺀다 (2026-09-29).
+    pairs = [p for p, _ in collapse_pairs_by_sell(attributed) if not p.buy_is_seed]
     if not pairs:
         return None, None
     holds = [float(p.hold_days) for p in pairs]
@@ -216,7 +218,8 @@ def compute_turnover_mirror(
             if t.traded_at and t.traded_at >= cutoff
         ]
     elif period_days is not None and period_days > 0:
-        dated = [t for t in materialised if t.traded_at]
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드는 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_holding_seed(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)
@@ -226,6 +229,10 @@ def compute_turnover_mirror(
             ]
         else:
             materialised = []
+
+    # 2026-09-29: 보유 등록 시드는 체결이 아니다 — 체결 수·거래대금에서 뺀다.
+    # 보유일 매칭(FIFO)에는 full_history 로 그대로 들어간다.
+    materialised = [t for t in materialised if not is_holding_seed(t)]
 
     buy_count = sum(
         1 for t in materialised if (t.action or "").upper() == "BUY"

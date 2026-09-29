@@ -63,6 +63,7 @@ from datetime import datetime, timedelta
 from typing import Iterable, NamedTuple
 
 from models import TradeHistory
+from services.profile.fifo_util import is_holding_seed
 
 
 # ── tunables ─────────────────────────────────────────────────────────
@@ -154,7 +155,10 @@ def _classify_follow_ons(
                 if name:
                     _bump(key, None, name)
                 continue
-            is_follow_on = held_shares > _SHARE_EPSILON
+            # 2026-09-29: a holding-registration seed is never a follow-on add
+            # (it records shares already held), but its shares and cost do
+            # set the running average that later adds are compared with.
+            is_follow_on = held_shares > _SHARE_EPSILON and not is_holding_seed(t)
             in_window = since is None or t.traded_at >= since
             if is_follow_on and in_window:
                 avg_before = held_cost / held_shares
@@ -294,7 +298,8 @@ def compute_averaging_down_mirror(
     if window_start is not None:
         cutoff = window_start
     elif period_days is not None and period_days > 0:
-        dated = [t for t in materialised if t.traded_at]
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드는 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_holding_seed(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)

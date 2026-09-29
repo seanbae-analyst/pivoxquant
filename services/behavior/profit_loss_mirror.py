@@ -84,6 +84,7 @@ from services.profile.fifo_util import (
     MatchedPair,
     collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
+    is_holding_seed,
 )
 
 
@@ -166,15 +167,18 @@ def _side_summary(
     if not classified:
         return None
 
-    holds = [float(pair.hold_days) for pair, _ in classified]
+    # 2026-09-29: 보유 등록 시드 로트만 닫은 매도는 수익률은 유효하지만
+    # (평단 = 등록 때 적은 평균매입가) 보유일은 모른다 — 보유일 통계에서만 뺀다.
+    holds = [float(pair.hold_days) for pair, _ in classified if not pair.buy_is_seed]
     pcts = [pct for _, pct in classified]
 
     return {
         "count": len(classified),
         # median primary / mean secondary — both right-skew-resistant on
-        # the headline figure.
-        "median_hold_days": round(statistics.median(holds), 1),
-        "mean_hold_days": round(statistics.fmean(holds), 1),
+        # the headline figure. None when every 매도 on this side closed only
+        # holding-seed lots (hold time unknown).
+        "median_hold_days": round(statistics.median(holds), 1) if holds else None,
+        "mean_hold_days": round(statistics.fmean(holds), 1) if holds else None,
         f"median_{pct_key}_pct": round(statistics.median(pcts), 2),
         f"mean_{pct_key}_pct": round(statistics.fmean(pcts), 2),
     }
@@ -233,7 +237,8 @@ def compute_profit_loss_mirror(
     if window_start is not None:
         cutoff = window_start
     elif period_days is not None and period_days > 0:
-        dated = [t for t in materialised if t.traded_at]
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드는 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_holding_seed(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)

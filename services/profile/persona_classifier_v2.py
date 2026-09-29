@@ -53,7 +53,12 @@ from models import (
 )
 
 from .common_util import utc_now as _utc_now
-from .fifo_util import MatchedPair, fifo_match_closed_trades, fifo_open_position_ages
+from .fifo_util import (
+    MatchedPair,
+    fifo_match_closed_trades,
+    fifo_open_position_ages,
+    is_holding_seed,
+)
 from .persona_analytics import (
     PERSONA_CODES,
     PERSONA_LABELS,
@@ -198,7 +203,12 @@ def _extract_features(
 
     # ── window trades ─────────────────────────────────────────────
     cutoff = now - timedelta(days=window_days)
-    window_trades = [t for t in trades if t.traded_at and t.traded_at >= cutoff]
+    # 2026-09-29: 보유 등록 시드는 체결이 아니다 — 체결 수·회전·분산 축에서
+    # 뺀다. FIFO 로트에는 그대로 들어간다 (아래 전체 이력 매칭).
+    window_trades = [
+        t for t in trades
+        if t.traded_at and t.traded_at >= cutoff and not is_holding_seed(t)
+    ]
     trade_count = len(window_trades)
     sector_map = _sector_map_from_positions(positions)
 
@@ -207,14 +217,19 @@ def _extract_features(
     # buy older than the window, so a long-term holder who sold five positions
     # bought 300 days ago had nothing to match against, fell through to the
     # age of this month's new buys, and was reported as a 2-day holder.
-    window_pairs = [p for p in fifo_match_closed_trades(trades) if p.sell_time >= cutoff]
+    # Pairs whose lot is a holding-registration seed are skipped: the seed's
+    # buy time is the registration time, not a purchase date (2026-09-29).
+    window_pairs = [
+        p for p in fifo_match_closed_trades(trades)
+        if p.sell_time >= cutoff and not p.buy_is_seed
+    ]
 
     # D1 holding_period
     if trade_count >= MIN_TRADES_FOR_OBSERVATION:
         if window_pairs:
             hp_days = sum(p.hold_days for p in window_pairs) / len(window_pairs)
         else:
-            ages = fifo_open_position_ages(trades, reference_time=now)
+            ages = fifo_open_position_ages(trades, reference_time=now, include_seeds=False)
             hp_days = (sum(ages) / len(ages)) if ages else 0.0
         values["holding_period"] = _norm_log(hp_days, floor=1.0, ceil=180.0)
         present["holding_period"] = 1
@@ -548,7 +563,11 @@ def classify_persona_multi(
 
     # If we have no observed trade evidence at all, lean on declared persona
     # to avoid mis-labelling a brand-new account based on pure defaults.
-    trade_count = sum(1 for t in trades if t.traded_at and t.traded_at >= now - timedelta(days=window_days))
+    trade_count = sum(
+        1 for t in trades
+        if t.traded_at and t.traded_at >= now - timedelta(days=window_days)
+        and not is_holding_seed(t)
+    )
     if trade_count < 3 and declared in PERSONA_CODES:
         best_persona = declared
 

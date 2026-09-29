@@ -75,3 +75,50 @@ def merge_buy_into(ex_row, quantity: float, price: float, *, is_kr: bool,
         ex_row.thesis = note
         ex_row.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
         ex_row.thesis_status = "pending"
+
+
+# ── holding-registration seeds ────────────────────────────────────────
+# 2026-09-29: registering a holding (POST /positions, /position, the holdings
+# capture import) used to write only ``positions``. Every mirror rebuilds FIFO
+# lots from ``trade_history`` alone, so selling a registered holding hit an
+# empty queue (the 매도 was dropped) and a later add counted as a fresh open.
+# A full 매도 deletes the Position row, so the lot cannot be recovered from
+# ``positions`` either. Each registration that adds shares therefore writes one
+# 매수 row marked ``source="holding_seed"`` — see models/trade_history.py and
+# services/profile/fifo_util.is_holding_seed for how consumers treat it.
+
+_SEED_EPSILON = 1e-9
+
+
+def add_holding_seed(user_id: int, ticker: str, shares: float, price: float,
+                     currency: str, name: str | None = None, traded_at=None):
+    """Add (not commit) a holding-seed 매수 row for ``shares`` at ``price``.
+
+    ``traded_at`` defaults to now (registration time). No row for a
+    non-positive quantity. Returns the row or ``None``."""
+    from models import TradeHistory
+    from models.trade_history import HOLDING_SEED_SOURCE
+
+    try:
+        shares = float(shares or 0.0)
+        price = float(price or 0.0)
+    except (TypeError, ValueError):
+        return None
+    if shares <= _SEED_EPSILON:
+        return None
+    row = TradeHistory(
+        user_id=user_id,
+        ticker=ticker,
+        name=(name or "")[:100],
+        action="BUY",  # // legal-ok — trade action data value, not user copy
+        shares=shares,
+        price_per_share=price,
+        total_value=round(shares * price, 2),
+        pnl=0.0,
+        pnl_pct=0.0,
+        currency=currency,
+        source=HOLDING_SEED_SOURCE,
+        traded_at=traded_at or datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    db.session.add(row)
+    return row

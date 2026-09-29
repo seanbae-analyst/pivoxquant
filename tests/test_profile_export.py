@@ -791,7 +791,7 @@ def test_csv_export_trades_headers_rows_and_attachment(
     header, rows = _parse_csv(resp)
     assert header == [
         "traded_at", "ticker", "name", "action", "shares",
-        "price_per_share", "total_value", "currency", "pnl",
+        "price_per_share", "total_value", "currency", "pnl", "source",
     ]
     assert len(rows) == 1
     row = dict(zip(header, rows[0]))
@@ -841,7 +841,7 @@ def test_csv_export_empty_emits_header_only(client, auth_user):
     Honest: an empty CSV, never fabricated data."""
     # Datasets without a leading disclaimer row → _parse_csv reads header at row0.
     for dataset, expected_cols in (
-        ("trades", 9), ("positions", 6), ("watchlist", 4),
+        ("trades", 10), ("positions", 6), ("watchlist", 4),
         ("journal", 8), ("pulse", 6),
     ):
         resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
