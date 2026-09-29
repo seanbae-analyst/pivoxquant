@@ -9,12 +9,16 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
+const state = vi.hoisted(() => ({
+  profile: null as null | { profile_type: string },
+  declared: undefined as undefined | { persona: string; label: string },
+}));
 vi.mock("@/lib/hooks", () => ({
-  useInvestmentProfile: () => ({ data: { profile: null } }),
+  useInvestmentProfile: () => ({ data: { profile: state.profile } }),
 }));
 vi.mock("@/lib/cfo/hooks", async (orig) => ({
   ...(await orig<typeof import("@/lib/cfo/hooks")>()),
-  usePersona: () => ({ data: { observed: { window_30d: {} } } }),
+  usePersona: () => ({ data: { declared: state.declared, observed: { window_30d: {} } } }),
   usePulse: () => ({ data: { history: [] } }),
 }));
 
@@ -52,6 +56,23 @@ describe("LivingCFOStatusBar", () => {
   it("ko/en both carry dashboard.cfoStatus.pulsesRecorded", () => {
     expect(ko.dashboard.cfoStatus.pulsesRecorded).toContain("{n}");
     expect(en.dashboard.cfoStatus.pulsesRecorded).toContain("{n}");
+  });
+
+  it("names no persona type for a user who answered onboarding (2026-09-29)", () => {
+    state.profile = { profile_type: "growth" };
+    state.declared = { persona: "growth", label: "성장형" };
+    try {
+      const { container } = render(<LivingCFOStatusBar />);
+      fireEvent.click(screen.getByRole("button", { name: /CFO status/ }));
+      const text = container.ownerDocument.body.textContent ?? "";
+      for (const name of ["성장형", "균형형", "수익형", "Declared persona"]) {
+        expect(text).not.toContain(name);
+      }
+      expect(text).toContain("Five onboarding answers recorded.");
+    } finally {
+      state.profile = null;
+      state.declared = undefined;
+    }
   });
 
   it("is not mounted on /mirror", () => {

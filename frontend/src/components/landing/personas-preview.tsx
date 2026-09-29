@@ -1,34 +1,24 @@
 "use client";
 
 /**
- * PersonasPreview — the three names the mirror uses, on the slim landing.
+ * PersonasPreview — 선언과 관찰, on the slim landing.
  * ----------------------------------------------------------------
- * 2026-09-13 rewrite. This section used to show four engine personas
- * with two-letter engine codes, named four more to make "eight in all", and
- * promised the mirror would speak "in the language of the one you picked".
- * All of that was wrong for the product that ships:
+ * 2026-09-29 (CEO — CLAUDE.md "유형 라벨·점수는 만들지 않는다"): this section
+ * listed three bucket names (성장형 / 균형형 / 수익형) with a note calling them
+ * "names for a pattern". /mirror no longer names a type on either side — its
+ * headline states the axis where 선언 and 관찰 part most — so the landing no
+ * longer lists types either. What stays is the explanation: 선언 = your five
+ * onboarding answers, 관찰 = the last 30 days of records, the mirror shows
+ * where they diverge axis by axis, with no label and no score.
  *
- *   • The 8 engine persona codes must never appear in UI. Only the 3 disclosed
- *     buckets may — 성장형 / 균형형 / 수익형 (lib/cfo/hooks.ts
- *     PERSONA_TO_SURFACE, mirroring backend persona_analytics).
- *   • Onboarding v3 (2026-09-06) creates no type label. It records the user's
- *     five answers, and /mirror compares them with observed trades. Nobody
- *     "picks" a type.
+ * (2026-09-13 history: before that it showed four engine personas with
+ * two-letter codes and promised "eight in all". Engine persona codes never
+ * appear in UI.)
  *
- * So the section now says exactly that: your answers stay in your words, and
- * when the mirror names a trading pattern it uses only the three buckets. The
- * one-line descriptions are the product's own SURFACE_TAGLINES wording.
+ * The component/file name and the `landing.personas.*` key namespace are kept
+ * so the section anchor (#personas-preview) and landing-v2 wiring do not move.
  *
- * 2026-09-29 — checked against what /mirror actually renders: the buckets DO
- * reach users, in components/mirror/mirror-headline.tsx ("균형형으로 선언하셨는데,
- * 최근 30일은 성장형 쪽으로…"), on BOTH sides — declared.label and observed.label
- * from routes/mirror_home.py. So the old "관찰은 세 갈래로" heading undersold it
- * and "유형을 정하지 않습니다" contradicted the headline. The copy now says the
- * three are the names the one-sentence summary uses — names of a pattern, not
- * grades. Whether the headline should name the declaration at all (CLAUDE.md
- * "유형 라벨·점수는 만들지 않는다") is a CEO call, not a landing edit.
- *
- * Palette-safe (Vantablack + Ivory + Bronze). 1-col mobile / 3-col desktop.
+ * Palette-safe (Vantablack + Ivory + Bronze). 1-col mobile / 2-col desktop.
  */
 
 import Link from "next/link";
@@ -38,7 +28,7 @@ import { fadeUp, stagger } from "@/lib/motion";
 import { useT } from "@/lib/locale";
 import { useAuth } from "@/lib/auth";
 
-const BUCKETS = ["growth", "balanced", "income"] as const;
+const SIDES = ["declared", "observed"] as const;
 
 export default function PersonasPreview() {
   const t = useT();
@@ -112,17 +102,17 @@ export default function PersonasPreview() {
           {t("landing.personas.description")}
         </motion.p>
 
-        {/* Grid — the three disclosed buckets, nothing finer */}
+        {/* 선언 / 관찰 — two sides, no type names */}
         <motion.div
           initial={reduce ? undefined : "hidden"}
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-60px" }}
           variants={stagger}
-          className="grid grid-cols-1 gap-6 md:grid-cols-3"
+          className="grid grid-cols-1 gap-6 md:grid-cols-2"
         >
-          {BUCKETS.map((bucket, i) => (
+          {SIDES.map((side, i) => (
             <motion.article
-              key={bucket}
+              key={side}
               variants={fadeUp}
               className="pq-persona-card-v2 group relative flex flex-col overflow-hidden rounded-sm p-6 md:p-7 transition-all duration-500 hover:-translate-y-1"
               style={{
@@ -163,7 +153,7 @@ export default function PersonasPreview() {
                   marginBottom: 10,
                 }}
               >
-                {t(`landing.personas.buckets.${bucket}.name`)}
+                {t(`landing.personas.sides.${side}.name`)}
               </h3>
               <p
                 className="font-serif"
@@ -173,7 +163,7 @@ export default function PersonasPreview() {
                   lineHeight: 1.55,
                 }}
               >
-                {t(`landing.personas.buckets.${bucket}.line`)}
+                {t(`landing.personas.sides.${side}.line`)}
               </p>
             </motion.article>
           ))}
@@ -195,7 +185,7 @@ export default function PersonasPreview() {
               maxWidth: 480,
             }}
           >
-            {t("landing.personas.bucketsNote")}
+            {t("landing.personas.note")}
           </p>
           {/* Same login split as hero.tsx — a signed-in user has already
               answered the five questions; send them to the mirror instead.

@@ -23,11 +23,13 @@ def test_new_stage_for_fresh_user(client, auth_user):
     assert data["ok"] is True
     # Fresh user has no closed trades → declared-only "new" stage.
     assert data["stage"] == "new"
-    assert data["observed"]["label"] is None
     assert data["gap"] == []
 
-    # Declared label is always one of the 3 disclosed buckets.
-    assert data["declared"]["label"] in {"성장형", "균형형", "수익형"}
+    # No type label on either side (CEO 2026-09-29 — mirrors show facts).
+    assert "label" not in data["declared"]
+    assert "tagline" not in data["declared"]
+    assert "label" not in data["observed"]
+    assert "bucket_changed" not in data["observed"]
 
     # Radar always carries the 9-axis declared shape; observed blank in "new".
     assert len(data["radar"]["keys"]) == 9
@@ -45,7 +47,7 @@ def test_no_eight_code_persona_leaks(client, auth_user):
 
 def test_observed_stage_gap_and_radar(client, auth_user, add_position, monkeypatch):
     """With enough observed behaviour the endpoint surfaces the gap + observed
-    radar, mapping the observed code to a 3-bucket label (never the 8-code)."""
+    radar — and never a persona name, 8-code or 3-bucket."""
     fake_features = {
         "holding_period": 0.45, "turnover": 0.35, "sector_diversity": 0.40,
         "ticker_diversity": 0.50, "hold_variance": 0.50, "loss_cut_discipline": 0.50,
@@ -57,7 +59,7 @@ def test_observed_stage_gap_and_radar(client, auth_user, add_position, monkeypat
             "features": fake_features,
             "trade_count": 20,
             "data_sparse": False,
-            "persona": "growth",  # 8-code; endpoint must surface only the bucket
+            "persona": "growth",  # internal code; the endpoint must not surface it
         },
     )
 
@@ -74,10 +76,12 @@ def test_observed_stage_gap_and_radar(client, auth_user, add_position, monkeypat
     assert data["radar"]["observed"] is not None
     assert len(data["radar"]["observed"]) == 9
 
-    # Observed surfaced as a 3-bucket label only — the 8-code never leaks.
-    assert data["observed"]["label"] in {"성장형", "균형형", "수익형"}
+    # No persona name at all — neither the code nor a 3-bucket label.
+    assert "label" not in data["observed"]
     blob = json.dumps(data, ensure_ascii=False).lower()
     assert "growth" not in blob and "speculator" not in blob
+    for name in ("성장형", "균형형", "수익형"):
+        assert name not in blob
 
 
 def _observed_double(features, present):

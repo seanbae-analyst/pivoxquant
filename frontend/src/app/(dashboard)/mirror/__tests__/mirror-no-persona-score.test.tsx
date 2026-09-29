@@ -18,8 +18,8 @@ import type { MirrorHomeResponse } from "@/lib/types";
 const payload: MirrorHomeResponse = {
   ok: true,
   stage: "observed",
-  declared: { label: "성장형", tagline: "x", source: "self" },
-  observed: { label: "균형형", bucket_changed: true, trade_count: 12 },
+  declared: { source: "self" },
+  observed: { trade_count: 12 },
   gap: [
     {
       key: "holding_period",

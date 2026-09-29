@@ -782,8 +782,8 @@ export interface SupportAdminReplyBody {
 /* ── Mirror home (거울) — composed 선언/관찰/트윈 read ────────────────────
  * Backend: routes/mirror_home.py (GET /api/mirror-home, @api_auth).
  * Append-only (types.ts is add-only per frontend/CLAUDE.md). This payload
- * NEVER carries an 8-code persona — only the 3 disclosed buckets
- * (성장형/균형형/수익형) + neutral behavioural dimension labels. The radar
+ * carries no persona name — neither an 8-code nor a 3-bucket label (removed
+ * 2026-09-29) — only neutral behavioural dimension labels. The radar
  * vectors are raw 0..1 shapes for geometry only; no score is ever printed. */
 export type MirrorStage = "new" | "observed";
 
@@ -803,19 +803,25 @@ export interface MirrorGapDimension {
 export interface MirrorHomeResponse {
   ok: boolean;
   stage: MirrorStage;
+  /**
+   * 2026-09-29: `declared.label` / `declared.tagline` / `observed.label` /
+   * `observed.bucket_changed` removed — they carried the 3-bucket type labels
+   * the mirror no longer shows (backend stopped sending them; the only reader,
+   * mirror-headline.tsx, now builds its sentence from `gap`).
+   */
   declared: {
-    label: string | null;
-    tagline: string | null;
     /** "self" = axes from the user's own onboarding answers; "centroid" = persona default. */
     source?: "self" | "centroid";
   };
-  observed: { label: string | null; bucket_changed: boolean; trade_count: number };
+  observed: { trade_count: number };
   gap: MirrorGapDimension[];
   drift: { available: boolean; descriptor: string | null };
   radar: {
     keys: string[];
     labels: string[];
     declared: number[];
+    /** Keys the user declared themselves (V3 answers). Empty → centroid on every axis. */
+    declared_axes?: string[];
     /** null in the "new" stage (not enough observed behaviour yet). */
     observed: number[] | null;
     /**
