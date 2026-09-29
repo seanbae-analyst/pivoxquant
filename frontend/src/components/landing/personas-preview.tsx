@@ -19,6 +19,15 @@
  * when the mirror names a trading pattern it uses only the three buckets. The
  * one-line descriptions are the product's own SURFACE_TAGLINES wording.
  *
+ * 2026-09-29 — checked against what /mirror actually renders: the buckets DO
+ * reach users, in components/mirror/mirror-headline.tsx ("균형형으로 선언하셨는데,
+ * 최근 30일은 성장형 쪽으로…"), on BOTH sides — declared.label and observed.label
+ * from routes/mirror_home.py. So the old "관찰은 세 갈래로" heading undersold it
+ * and "유형을 정하지 않습니다" contradicted the headline. The copy now says the
+ * three are the names the one-sentence summary uses — names of a pattern, not
+ * grades. Whether the headline should name the declaration at all (CLAUDE.md
+ * "유형 라벨·점수는 만들지 않는다") is a CEO call, not a landing edit.
+ *
  * Palette-safe (Vantablack + Ivory + Bronze). 1-col mobile / 3-col desktop.
  */
 

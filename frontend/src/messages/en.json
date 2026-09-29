@@ -28,7 +28,7 @@
       "eyebrow": "PivoxQuant · Your portfolio's CFO",
       "h1Part1": "We don't promise",
       "h1Italic": "to make you rich.",
-      "description": "The data is clear: high-turnover trading shaves your returns every year — about 7 percentage points versus low turnover. PivoxQuant mirrors your own trading pattern back to you and makes you pause once, right before you hit buy or sell. No scoring, no recommendations. Observational data only, not a directive to act.",
+      "description": "In a study of some 66,000 US households from 1991–96 (Barber & Odean, 2000), the fifth that traded most earned about 7 percentage points a year less, after costs, than the fifth that traded least. PivoxQuant mirrors your own trading pattern back to you and makes you pause once, right before you trade. No scores, no stock picks. Observational data only, not a directive to act.",
       "ctaPrimary": "Get started",
       "ctaOpenMirror": "See my mirror",
       "disclaimer": "Not investment advice. Informational research only. Past performance does not guarantee future results."
@@ -39,8 +39,8 @@
     },
     "personas": {
       "eyebrow": "Declared and observed",
-      "heading": "Your answers in your words,\nyour trades in three buckets.",
-      "description": "The five onboarding questions don't assign you a type. They write down what you said about your own habits, as you said it. The mirror sets those answers beside your last 30 days of trades.",
+      "heading": "Your answers in your words,\nthe summary in three names.",
+      "description": "Your answers to the five onboarding questions are stored as you wrote them. The mirror sets them beside your last 30 days of trades across several axes, and when it sums the two up in one sentence it uses the three names below.",
       "buckets": {
         "growth": {
           "name": "Growth",
@@ -55,7 +55,7 @@
           "line": "A pattern centred on steady cash flow."
         }
       },
-      "bucketsNote": "When the mirror names a trading pattern, it uses only these three. It never splits them finer.",
+      "bucketsNote": "The three are names for a pattern, not grades or ranks. The mirror never says one is better, and never splits them finer.",
       "takeQuiz": "Answer the five questions"
     },
     "topNav": {
@@ -78,17 +78,24 @@
     },
     "steps": {
       "eyebrow": "The loop",
-      "heading": "There are only three screens.",
-      "deck": "Nothing is written for you. Your own record is the only material, and all the tool does is show it back to you later.",
-      "s1verb": "Pause",
-      "s1body": "Seven questions before you hit buy. Why now, what would prove you wrong, whether you can afford to lose this. The time it takes to write the answers is the only friction.",
-      "s1limit": "It does not pick stocks for you.",
-      "s2verb": "Record",
-      "s2body": "What you bought and what you almost bought sit in the same place. Upload a broker file or a fill notification and the numbers are filled in; you write only why. Holding period, turnover, concentration, averaging down, how you close winners and losers — five habits computed straight from that record.",
-      "s2limit": "It does not score you.",
-      "s3verb": "Mirror",
-      "s3body": "The investor you declared at onboarding, next to the investor your last 30 days of trades describe. Where those two diverge, across nine axes, is the whole of this tool.",
-      "s3limit": "It does not say which one is right."
+      "heading": "Upload. Pause. Record. Look back.",
+      "deck": "Your own record is the only material, and all the tool does is show it back to you later.",
+      "s1verb": "Holdings",
+      "s1body": "You start by uploading what you already hold. Capture your broker app's holdings screen and the ticker, quantity and average cost are read in your browser; you check each row before it is saved. If a capture does not fit, enter holdings one at a time.",
+      "s1limit": "It does not link to your account.",
+      "s2verb": "Pause",
+      "s2body": "Seven questions before you hit buy. Why now, what would prove you wrong, whether you can afford to lose this. The time it takes to write the answers is the only friction.",
+      "s2limit": "It does not pick stocks for you.",
+      "s3verb": "Record",
+      "s3body": "What you bought and what you almost bought sit in the same place. Upload a broker file or a fill notification and the numbers are filled in; you write only why. Holding period, turnover, concentration, averaging down, how you close winners and losers — five habits computed straight from that record.",
+      "s3limit": "It does not score you.",
+      "s4verb": "Mirror",
+      "s4body": "The investor you declared at onboarding, next to the investor your last 30 days of trades describe. Where those two diverge, across several axes, is the whole of this tool.",
+      "s4limit": "It does not say which one is right.",
+      "pauseTitle": "The trades you did not make count too",
+      "pauseBody": "When you record a buy and there is a recent pause on the same ticker, the two are linked — on by default, and you can untick it. The record page counts how your pauses ended (went ahead, cancelled, open) and, of the cancelled ones, how many you never bought and how many you bought anyway. It does not say which was better.",
+      "notifyTitle": "What comes to you",
+      "notifyBody": "If one sector passes 30% of your holdings at cost, you get an in-app alert. Turn it on in Settings and a PDF of last month's record arrives by email early each month. The weekly pulse is a short form on the record page where you write down your own mood and confidence for the week."
     },
     "inbox": {
       "eyebrow": "Import inbox",
@@ -134,13 +141,13 @@
       "q3": "Does my investor type change over time?",
       "a3": "The observed persona is recomputed from your last 30 days of trades. What you declared stays put until you answer the five questions again — the point of the mirror is to show where the two diverge, not to pick one for you.",
       "q4": "What do I actually do here?",
-      "a4": "Three things. Pause before you buy and leave your reasoning in seven questions (Pre-Trade), record your holdings and trades (Portfolio), and weeks later look at the you those records describe (Mirror). It is not a service that sends you reports — your own record is the material.",
+      "a4": "Four things. Upload what you already hold, pause before you buy and leave your reasoning in seven questions (Pre-Trade), record what you bought and sold with the reason (Portfolio · Journal), and weeks later look at the you those records describe (Mirror). Your own record is the only material.",
       "q5": "Do you have access to my brokerage account?",
-      "a5": "No — and there is nothing to connect. Automatic brokerage linking is not offered, and no API keys or account credentials are collected. Positions and fills can be entered by hand, uploaded from the trade-history file or fill-notification text your broker app gives you, or sent by your own automation tool with an import token issued in Settings. On every path the server never touches your brokerage, and an uploaded fill is not recorded until you write why and approve it.",
+      "a5": "No — and there is nothing to connect. Automatic brokerage linking is not offered, and no API keys or account credentials are collected. Holdings are uploaded from a capture of your broker app's holdings screen (read in your browser; the image is never sent to the server) or entered one at a time, and are registered as soon as you check and save them. Fills can be entered by hand, uploaded from a trade-history file, a fill-screen capture or fill-notification text, or sent by your own automation tool with an import token issued in Settings. On every path the server never touches your brokerage, and a fill that arrives by file, capture or notification is not recorded until you write why and approve it.",
       "q6": "What does it cost?",
       "a6": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes.",
       "q7": "Do I have to type in every trade by hand?",
-      "a7": "Not the numbers. There are three paths. ① Download your trade history from your broker app as CSV/Excel/PDF and upload it — column names are matched automatically (scanned PDFs without text excluded). ② Turn a fill-notification screenshot into text on your phone (iOS Shortcuts 'Extract Text from Image', Android Lens) and paste it; ticker, quantity, price and time are read from it. On Android you can send it straight from the share sheet. ③ Issue an import token in Settings and let your own automation forward fill notifications as they arrive: on Android an app like MacroDroid forwards the notification, on iPhone a Shortcuts automation can forward the broker's fill SMS. That works only with brokers that still send fills by text message; if yours sends only KakaoTalk or app push, path ② remains. On every path the fill waits in your inbox until you write one line on why, and only then is it recorded. Images are never accepted. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked."
+      "a7": "Not the numbers. There are four paths. ① Download your trade history from your broker app as CSV/Excel/PDF (up to 2MB) and upload it — column names are matched automatically (scanned PDFs without text excluded). ② Upload a capture of a major broker's fill-history screen and the text is read in your browser and laid out as fill rows. The image is never sent to the server — only the rows it read. Cells it is not sure of stay blank for you to fill in. ③ Copy a fill notification and paste it; ticker, quantity, price and time are read from it. On Android you can send it straight from the share sheet. ④ Issue an import token in Settings and let your own automation forward fill notifications as they arrive: on Android an app like MacroDroid forwards the notification, on iPhone a Shortcuts automation can forward the broker's fill SMS — only with brokers that still send fills by text message. On every path the fill waits in your inbox until you write one line on why and approve it, and only then is it recorded. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked."
     },
     "nav": {
       "docs": {
@@ -149,7 +156,7 @@
       },
       "faq": {
         "label": "FAQ",
-        "desc": "How observation differs from advice. Plainly."
+        "desc": "How observing differs from telling you what to do. Plainly."
       },
       "terms": {
         "label": "Terms of Service",

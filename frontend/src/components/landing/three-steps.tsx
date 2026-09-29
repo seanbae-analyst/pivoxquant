@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ThreeSteps — 멈춤 · 기록 · 거울.
+ * ThreeSteps — 보유 올리기 · 멈춤 · 기록 · 거울.
  * ----------------------------------------------------------------------
  * Replaces <MarqueeLogos/> in the slot directly under the Hero.
  *
@@ -24,11 +24,24 @@
  * Fabricated credibility is also the exact opposite of the product's premise:
  * the pitch is that we do NOT score you and do NOT know better than you.
  *
- * What replaces it is the loop that actually ships — three routes, three
- * verbs. Everything below is checkable against the running app:
+ * What replaces it is the loop that actually ships. Everything below is
+ * checkable against the running app:
+ *   보유 올리기 → /portfolio  onboarding step 0 requires ≥1 holding
+ *                (ONBOARDING_HOLDINGS_REQUIRED, commit 1ae4347) — holdings
+ *                capture read in-browser (portfolio/v2/holdings-import-panel)
+ *                or one-by-one entry
  *   멈춤  → /pre-trade   7 questions before the order (routes/pre_trade.py)
  *   기록  → /journal     the record + 5 behavior mirrors (services/behavior/)
  *   거울  → /mirror      declared persona vs observed persona over 30 days
+ *
+ * 2026-09-29: the two notes under the grid are also receipts —
+ *   pause   → buy↔pause link (services/pre_trade/link.py, default ON, can be
+ *             unticked) + journal friction-outcome-mirror counts (진행/취소/
+ *             미결, never_bought vs bought_later_anyway). No benefit claim.
+ *   notify  → only senders that fire today: concentration (services/alert.py,
+ *             cost basis, 30%), monthly_mirror email (services/reports_delivery,
+ *             opt-in), weekly pulse (self-written, /journal). price_52w is off
+ *             while MARKET_DATA_DISPLAY_ENABLED=0 — do not mention it here.
  *
  * None of the three calls a price feed. `services/behavior/*.py` imports no
  * quote service — `averaging_down_mirror.py` says so in its own docstring.
@@ -46,7 +59,7 @@ import { useT } from "@/lib/locale";
 type Step = {
   /** Ledger numeral — editorial, not a progress indicator. */
   numeral: string;
-  /** i18n key prefix under `landing.steps` (s1/s2/s3). */
+  /** i18n key prefix under `landing.steps` (s1…s4). */
   key: string;
   /** The route this step is, so the claim stays checkable. */
   route: string;
@@ -57,10 +70,14 @@ type Step = {
 // Korean when first written (2026-09-02), which rendered a half-Korean page for
 // anyone on the en locale.
 const STEPS: readonly Step[] = [
-  { numeral: "I", key: "s1", route: "/pre-trade" },
-  { numeral: "II", key: "s2", route: "/journal" },
-  { numeral: "III", key: "s3", route: "/mirror" },
+  { numeral: "I", key: "s1", route: "/portfolio" },
+  { numeral: "II", key: "s2", route: "/pre-trade" },
+  { numeral: "III", key: "s3", route: "/journal" },
+  { numeral: "IV", key: "s4", route: "/mirror" },
 ] as const;
+
+/** Short factual notes under the grid (`landing.steps.<key>Title/Body`). */
+const STEP_NOTES = ["pause", "notify"] as const;
 
 export default function ThreeSteps() {
   const t = useT();
@@ -113,7 +130,7 @@ export default function ThreeSteps() {
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-60px" }}
           variants={stagger}
-          className="grid grid-cols-1 gap-px md:grid-cols-3"
+          className="grid grid-cols-1 gap-px md:grid-cols-2 lg:grid-cols-4"
           style={{ backgroundColor: "rgba(184,149,106,0.18)" }}
         >
           {STEPS.map((s) => (
@@ -188,6 +205,41 @@ export default function ThreeSteps() {
             </motion.li>
           ))}
         </motion.ol>
+
+        <motion.div
+          initial={reduce ? undefined : "hidden"}
+          whileInView={reduce ? undefined : "visible"}
+          viewport={{ once: true, margin: "-60px" }}
+          variants={stagger}
+          className="mt-10 grid grid-cols-1 gap-8 md:mt-14 md:grid-cols-2 md:gap-12"
+        >
+          {STEP_NOTES.map((n) => (
+            <motion.div key={n} variants={fadeUp}>
+              <h3
+                className="mb-3 font-serif"
+                style={{
+                  color: "var(--pq-bronze)",
+                  fontSize: "var(--pq-text-body)",
+                  fontWeight: 500,
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {t(`landing.steps.${n}Title`)}
+              </h3>
+              <p
+                className="font-serif"
+                style={{
+                  color: "var(--pq-ivory-mid)",
+                  fontSize: "var(--pq-text-body-sm)",
+                  lineHeight: 1.7,
+                  maxWidth: 560,
+                }}
+              >
+                {t(`landing.steps.${n}Body`)}
+              </p>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     </section>
   );
