@@ -41,7 +41,7 @@ export interface PreTradeFrictionModalProps {
   /** Company name for display (falls back to ticker). */
   tickerName?: string | null;
   shares?: string;
-  /** Pre-filled thesis (≥50 chars expected — host validated before opening). */
+  /** Pre-filled thesis (≥ MIN_RATIONALE_CHARS = 10 chars expected — host validated before opening). */
   rationale: string;
   /**
    * Called once /proceed succeeds. Host commits the real journal record here

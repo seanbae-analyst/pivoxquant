@@ -16,7 +16,7 @@
  * Single source of truth; no duplicated step logic.
  *
  * Flow (route):
- *   1. Setup — ticker / side / shares / rationale (≥50 chars)
+ *   1. Setup — ticker / side / shares / rationale (≥ MIN_RATIONALE_CHARS = 10 chars)
  *   2. Devil's Advocate — 7 reflective questions (shared)
  *   3. Cooldown — REMOVED 2026-05-22 (CEO "2분 없애"): backend cooldown is 0,
  *      so the cycle goes straight from the 7 questions to Ready/Proceed (shared)
