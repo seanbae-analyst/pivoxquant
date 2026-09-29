@@ -269,7 +269,7 @@ function _demoNotesByTicker(base: string) {
   return { ok: true, ticker, count: notes.length, notes };
 }
 
-/* ── Living CFO Layer-2 + profile depth (usePersona / usePulse / useRollingWindow,
+/* ── Living CFO Layer-2 + profile depth (usePersona / usePulse,
  *    lib/cfo/hooks.ts). In demo mode apiFetch resolves {} WITHOUT throwing, so the
  *    cfoFetch mock fallback never fires — these must be canned or L2 reads "missing"
  *    on every page's status bar. window_30d present + ≥3 pulses ⇒ L2 "ready". ── */
@@ -298,19 +298,6 @@ const DEMO_PULSE = {
   next_due_at: "2026-06-23T22:00:00Z",
   cadence: "weekly",
 };
-const _rwBase2 = Date.parse("2026-03-20T00:00:00Z");
-const _rw = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({
-    date: new Date(_rwBase2 + i * 86_400_000).toISOString().slice(0, 10),
-    holdingPeriod: Math.round(26 + 7 * Math.sin(i / 6)),
-    turnover: +(0.18 + 0.06 * Math.cos(i / 7)).toFixed(2),
-    sectorTilt: +(0.34 + 0.09 * Math.abs(Math.sin(i / 8))).toFixed(2),
-  }));
-const DEMO_ROLLING_WINDOW = {
-  series: { window_30d: _rw(30), window_60d: _rw(60), window_90d: _rw(90) },
-  contrast: { declared_persona: "growth", declared_score: 78, observed_persona: "balanced", observed_score: 72, window_days: 30 },
-};
-
 /* ── Portfolio equity curve (/api/portfolio/history?period=) + trades. Backend
  *    shape = { data:[{date,value,benchmark}], benchmark:{name} }; hooks-v2
  *    normalizes. NAV grows to the canned summary total (~65,633 USD-unified). ── */
@@ -420,8 +407,6 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_PERSONA;
     case "/api/profile/pulse":
       return DEMO_PULSE;
-    case "/api/profile/rolling-window":
-      return DEMO_ROLLING_WINDOW;
     // Portfolio equity/trades + legacy full read
     case "/api/portfolio/trades":
       return DEMO_TRADES;

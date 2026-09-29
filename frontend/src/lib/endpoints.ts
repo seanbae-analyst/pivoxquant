@@ -163,7 +163,6 @@ export const API = {
     // found on 2026-09-02 (`/api/agent/delete`, `/api/portfolio/reconcile`)
     // were both outside it. A path that is not here is a path nothing audits.
     persona: "/api/profile/persona",
-    rollingWindow: "/api/profile/rolling-window",
     // GET returns the vote history; POST records one artifact vote.
     feedback: "/api/profile/feedback",
     // GET pulse history; POST appends one weekly entry.

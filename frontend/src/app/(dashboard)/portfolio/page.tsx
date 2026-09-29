@@ -37,7 +37,6 @@ import { resolveMarketDataDisplay } from "@/lib/market-display";
 
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { WeeklyPulsePrompt } from "@/components/dashboard/weekly-pulse-prompt";
-import { RollingWindowWidget } from "@/components/dashboard/rolling-window";
 
 import {
   usePortfolioPositions,
@@ -547,16 +546,12 @@ export default function PortfolioPageV2() {
         `}</style>
       </section>
 
-      {/* ═══════════ ROLLING WINDOW (Block 5) — v1 parity (Layer 2 learning) ═══════════ */}
-      {/* paper={false}: v2 페이지는 Vantablack v3 톤. ivory paper bg 는 v1 (paper desk)
-          전용. CEO 직접 지적 2026-04-29: "declared vs observed 부분 왜 얘만 노래" */}
-      <section
-        aria-label="Rolling window behavioural analysis"
-        style={{ marginBottom: 40 }}
-      >
-        <RollingWindowWidget paper={false} />
-      </section>
-
+      {/* 2026-09-29 — the RollingWindowWidget ("Declared · {bucket} {score}"
+          vs a 30/60/90d observed persona, plus rolling holding / turnover /
+          sector-tilt sparklines) was removed. It drew declared-vs-observed
+          with a second definition — a 0-100 declared score, a trades/day
+          ratio, an HHI that was mostly UNKNOWN — next to the canonical one on
+          /mirror, and its remaining metrics are the /journal mirrors'. */}
       {/* ═══════════ Foot signature ═══════════
           FxAttribution is required, not decorative: the USD/KRW rate this
           page converts with can come from open.er-api.com

@@ -10,7 +10,7 @@
  * The ON cases assert the screen is what it was before the flag existed.
  *
  * Heavyweight children that fetch on mount (CFO bar, capital card, recent
- * transactions, rolling window, weekly pulse, the modals) are stubbed; the
+ * transactions, weekly pulse, the modals) are stubbed; the
  * three components under test — hero, ledger, sector donut — are real.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -41,9 +41,6 @@ vi.mock("@/components/dashboard/living-cfo-status", () => ({
 }));
 vi.mock("@/components/dashboard/weekly-pulse-prompt", () => ({
   WeeklyPulsePrompt: () => null,
-}));
-vi.mock("@/components/dashboard/rolling-window", () => ({
-  RollingWindowWidget: () => null,
 }));
 vi.mock("@/components/settings/v2/capital-card-v2", () => ({
   CapitalCardV2: () => null,

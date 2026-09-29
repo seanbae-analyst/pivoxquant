@@ -4,7 +4,6 @@ Also hosts the **Living CFO Layer 2** endpoints consumed by
 ``frontend/src/lib/cfo/hooks.ts``:
 
     GET  /api/profile/persona
-    GET  /api/profile/rolling-window
     POST /api/profile/feedback
     GET  /api/profile/pulse
     POST /api/profile/pulse
@@ -64,7 +63,6 @@ from models import (
 from services.error_responses import api_error
 from services.profile import (
     compute_persona_response,
-    compute_rolling_response,
     classify_persona_multi,
     explain_persona_classification,
     DRIFT_DISCLAIMER,
@@ -747,26 +745,6 @@ def get_persona_explain():
             en="Failed to compute persona explanation",
             kr="페르소나 설명 생성에 실패했습니다.",
             code="PERSONA_EXPLAIN_FAILED", status=500,
-        )
-    return jsonify(payload)
-
-
-@profile_bp.route("/rolling-window", methods=["GET"])
-@api_auth
-def get_rolling_window():
-    """Return 30/60/90-day rolling behavioural metrics for Layer 2.
-
-    Shape: see ``RollingWindowResponse`` in
-    ``frontend/src/lib/cfo/hooks.ts``.
-    """
-    try:
-        payload = compute_rolling_response(current_user.id)
-    except Exception:
-        logger.exception("profile.get_rolling_window failed (user_id=%s)", current_user.id)
-        return api_error(
-            en="Failed to compute rolling window",
-            kr="롤링 윈도우 분석에 실패했습니다.",
-            code="ROLLING_WINDOW_FAILED", status=500,
         )
     return jsonify(payload)
 

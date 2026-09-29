@@ -823,8 +823,5 @@
       "linkedHelp": "{who} · primary login.",
       "connected": "Connected"
     }
-  },
-  "rollingWindow": {
-    "heading": "Declared vs observed"
   }
 }
