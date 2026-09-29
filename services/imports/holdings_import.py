@@ -46,7 +46,10 @@ Decisions (and why):
   marked ``source="holding_seed"`` (``services/position_writes.add_holding_seed``)
   so the FIFO mirrors have a lot to close when the holding is later sold —
   created / ``add`` rows seed the added shares, ``replace`` seeds only a
-  positive share delta and writes nothing for a decrease. Seeds are
+  positive share delta and, for a decrease, one 매도 row marked
+  ``source="holding_adjust"`` (``add_holding_adjust``; shares = the decrease,
+  price = the previous average cost, pnl 0) so the lots stay in sync with the
+  holding — an adjust is not an observed 매도 either. Seeds are
   registrations, not fills: the mirrors keep them out of hold-time statistics
   and fill counts. Side effect mirrored: the SignalCache warm
   (``cache_service.cache_ticker``) for every written ticker, in one background
@@ -321,8 +324,8 @@ def commit(user, rows: list[CommitRow], fx_rate_fn) -> tuple[dict, list[str]]:
     from extensions import db
     from models import Position
     from services.position_writes import (
-        FREE_POSITION_CAP, active_position_count, add_holding_seed, is_capped_tier, lock_user_row,
-        merge_buy_into,
+        FREE_POSITION_CAP, active_position_count, add_holding_adjust, add_holding_seed,
+        is_capped_tier, lock_user_row, merge_buy_into,
     )
 
     result = {"created": [], "replaced": [], "added": [], "skipped": []}
@@ -366,8 +369,11 @@ def commit(user, rows: list[CommitRow], fx_rate_fn) -> tuple[dict, list[str]]:
                     if not is_kr and fx_rate:
                         ex.buy_fx_rate = fx_rate
                     bucket = "replaced"
-                    # Seed only the increase; a decrease writes nothing.
+                    # Seed only the increase; a decrease writes an adjust 매도
+                    # at the previous average cost (2026-09-29).
                     seed_shares = r.shares - float(prev_shares or 0.0)
+                    add_holding_adjust(user.id, r.ticker, -seed_shares, prev_avg, r.currency,
+                                       _seed_name(r.ticker, is_kr))
                 else:
                     merge_buy_into(ex, r.shares, r.avg_cost, is_kr=is_kr, fx_rate=fx_rate)
                     bucket = "added"

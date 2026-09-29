@@ -63,7 +63,7 @@ from datetime import datetime, timedelta
 from typing import Iterable, NamedTuple
 
 from models import TradeHistory
-from services.profile.fifo_util import is_holding_seed
+from services.profile.fifo_util import is_holding_seed, is_registration_row
 
 
 # ── tunables ─────────────────────────────────────────────────────────
@@ -298,8 +298,8 @@ def compute_averaging_down_mirror(
     if window_start is not None:
         cutoff = window_start
     elif period_days is not None and period_days > 0:
-        # 창의 기준점은 마지막 *체결* — 보유 등록 시드는 체결이 아니다 (2026-09-29).
-        dated = [t for t in materialised if t.traded_at and not is_holding_seed(t)]
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드·조정은 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_registration_row(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)

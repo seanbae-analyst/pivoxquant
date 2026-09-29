@@ -253,6 +253,9 @@ def compute_friction_outcome(
         # 미경유 어느 쪽 분포에도 넣지 않는다 (2026-09-29, 도입 전과 같은 결과).
         if pair.buy_is_seed:
             continue
+        # 보유 등록 조정 매도는 기록된 매도가 아니다 — 실현 수익률이 없다 (2026-09-29).
+        if pair.sell_is_adjust:
+            continue
         ret = (pair.sell_price - pair.buy_price) / pair.buy_price * 100.0
         key = (_norm(pair.ticker), pair.buy_time)
         (with_f if key in friction_buys else without_f).append(ret)

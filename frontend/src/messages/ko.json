@@ -59,7 +59,8 @@
         "loading": "기록을 불러오는 중…",
         "empty": "최근 기록이 없습니다.",
         "sharesUnit": "{n}주",
-        "holdingAdded": "보유 등록"
+        "holdingAdded": "보유 등록",
+        "holdingAdjusted": "보유 조정"
       },
       "holdingsImport": {
         "title": "보유 종목 올리기",

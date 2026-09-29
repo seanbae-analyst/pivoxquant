@@ -589,9 +589,24 @@ def edit_position(pid):
             kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
             code="AVG_COST_IMPLAUSIBLE", status=400,
         )
+    # 2026-09-29: an edit is a registration, not a fill — keep the FIFO lots in
+    # sync with the holding (services/position_writes). More shares → a
+    # holding-seed 매수 row for the increase at the entered average; fewer →
+    # a holding-adjust 매도 row for the decrease at the average held until now.
+    from services.position_writes import add_holding_adjust, add_holding_seed
+
+    delta = shares - float(p.shares or 0.0)
+    currency = "KRW" if p.ticker.endswith((".KS", ".KQ")) else "USD"
+    prev_cost = float(p.avg_cost or 0.0)
+    row_name = (resolve_stock_name(p.ticker) or p.ticker) if abs(delta) > 1e-9 else p.ticker
     p.shares = shares
     p.avg_cost = cost
     try:
+        if delta > 0:
+            add_holding_seed(current_user.id, p.ticker, delta, cost, currency, row_name)
+        elif delta < 0:
+            add_holding_adjust(current_user.id, p.ticker, -delta, prev_cost, currency,
+                               row_name)
         db.session.commit()
     except Exception:
         db.session.rollback()

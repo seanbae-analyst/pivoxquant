@@ -26,7 +26,8 @@ export interface Trade {
   side: "Bought" | "Sold";
   qty: number;
   price: number;
-  /** "holding_seed" = registration seed, not a purchase (2026-09-29). */
+  /** "holding_seed" = registration seed, not a purchase; "holding_adjust" =
+   *  holding lowered without a recorded sale (2026-09-29). */
   source?: string | null;
 }
 

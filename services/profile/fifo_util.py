@@ -37,7 +37,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Iterable, NamedTuple
 
 from models import TradeHistory
-from models.trade_history import HOLDING_SEED_SOURCE
+from models.trade_history import (
+    HOLDING_ADJUST_SOURCE,
+    HOLDING_SEED_SOURCE,
+    REGISTRATION_SOURCES,
+)
 
 
 # Numerical epsilon for share-quantity comparisons. Matches the value
@@ -90,6 +94,12 @@ class MatchedPair(NamedTuple):
     # 통계를 내는 호출자는 이 슬라이스를 건너뛴다. 수량·단가는 유효하다
     # (평단 = 등록 때 적은 평균매입가).
     buy_is_seed: bool = False
+    # 2026-09-29 — 이 슬라이스를 닫은 매도 행이 보유 등록 조정인가
+    # (``TradeHistory.source == "holding_adjust"``, :func:`is_holding_adjust`).
+    # 조정은 기록된 매도 없이 보유가 줄어든 것을 로트에 반영할 뿐 관찰된 매도가
+    # 아니다 — 로트는 소모하지만 통계를 내는 호출자는 이 슬라이스를 건너뛴다.
+    # :func:`collapse_pairs_by_sell` 은 조정 매도를 아예 내보내지 않는다.
+    sell_is_adjust: bool = False
 
     @property
     def hold_days(self) -> float:
@@ -108,6 +118,24 @@ def is_holding_seed(t) -> bool:
     Rows without the attribute (plain test doubles) are not seeds.
     """
     return (getattr(t, "source", None) or "") == HOLDING_SEED_SOURCE
+
+
+def is_holding_adjust(t) -> bool:
+    """True when ``t`` is a holding-registration adjust 매도 row, not a fill.
+
+    Written when a registration path lowers a holding without a recorded
+    매도 (``TradeHistory.source == "holding_adjust"``). It consumes FIFO lots
+    so they stay in sync with the holding, but it is never an observed 매도:
+    no hold time, no P&L disposition, no fill count, no gross value.
+    """
+    return (getattr(t, "source", None) or "") == HOLDING_ADJUST_SOURCE
+
+
+def is_registration_row(t) -> bool:
+    """True for any row a registration path wrote (seed 매수 or adjust 매도)
+    rather than a recorded fill — the rows fill counts / gross values and
+    period anchors leave out."""
+    return (getattr(t, "source", None) or "") in REGISTRATION_SOURCES
 
 
 def fifo_match_closed_trades(
@@ -169,6 +197,7 @@ def fifo_match_closed_trades(
         sell_seq += 1
         remaining = shares
         sell_pnl = float(t.pnl or 0.0)
+        sell_adjust = is_holding_adjust(t)
         queue = opens.get(key, [])
         while remaining > _SHARE_EPSILON and queue:
             buy_time, buy_sh, buy_px, buy_seed = queue[0]
@@ -184,6 +213,7 @@ def fifo_match_closed_trades(
                     sell_pnl=sell_pnl,
                     sell_seq=sell_seq,
                     buy_is_seed=buy_seed,
+                    sell_is_adjust=sell_adjust,
                 )
             )
             remaining -= take
@@ -259,6 +289,7 @@ def fifo_match_closed_trades_with_pnl(
         sell_seq += 1
         remaining = shares
         sell_pnl = float(t.pnl or 0.0)
+        sell_adjust = is_holding_adjust(t)
         queue = opens.get(key, [])
         while remaining > _SHARE_EPSILON and queue:
             buy_time, buy_sh, buy_px, buy_seed = queue[0]
@@ -274,6 +305,7 @@ def fifo_match_closed_trades_with_pnl(
                     sell_pnl=sell_pnl,
                     sell_seq=sell_seq,
                     buy_is_seed=buy_seed,
+                    sell_is_adjust=sell_adjust,
                 ),
                 sell_pnl_pct,
             ))
@@ -305,10 +337,15 @@ def collapse_pairs_by_sell(
 
     Input order is preserved by first appearance; entries whose
     ``sell_seq`` is ``-1`` (unknown) are passed through unmerged.
+
+    Holding-registration adjust 매도 (``sell_is_adjust``) are dropped — they
+    keep the FIFO lots in sync but are not an observed 매도 (2026-09-29).
     """
     groups: dict[int, list[tuple[MatchedPair, float]]] = {}
     order: list[int | tuple[MatchedPair, float]] = []
     for pair, pct in attributed:
+        if pair.sell_is_adjust:
+            continue
         if pair.sell_seq < 0:
             order.append((pair, pct))
             continue
@@ -445,5 +482,7 @@ __all__ = [
     "fifo_match_closed_trades",
     "fifo_match_closed_trades_with_pnl",
     "fifo_open_position_ages",
+    "is_holding_adjust",
     "is_holding_seed",
+    "is_registration_row",
 ]

@@ -65,6 +65,7 @@ from services.behavior.averaging_down_mirror import compute_averaging_down_mirro
 from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
 from services.behavior.turnover_mirror import compute_turnover_mirror
+from services.profile.fifo_util import is_registration_row
 from services.legal.disclaimers import (
     DISCLAIMER_ARTIFACT_KR,
     DISCLAIMER_MIRROR_RETROSPECTIVE_KR,
@@ -134,9 +135,11 @@ def build_mirror_report(user_id: int, *, period_days: int = _DEFAULT_PERIOD_DAYS
     rows = TradeHistory.query.filter_by(user_id=user_id).all()
     # 창은 as_of 기준이다 (모듈 docstring "기간을 자르는 방식"). 거울 함수에는
     # 전체 이력과 명시적 창을 함께 준다 — FIFO/평단은 창 이전 로트까지 본다.
+    # 보유 등록 시드·조정 행은 체결이 아니다 — 창 안 기록 수에 세지 않는다 (2026-09-29).
     windowed = [
         t for t in rows
         if t is not None and t.traded_at and period_start <= t.traded_at <= period_end
+        and not is_registration_row(t)
     ]
     window = {"window_start": period_start, "window_end": period_end}
 

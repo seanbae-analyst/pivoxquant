@@ -222,7 +222,8 @@
         "loading": "Loading entries…",
         "empty": "No recent entries.",
         "sharesUnit": "{n} sh",
-        "holdingAdded": "Holding added"
+        "holdingAdded": "Holding added",
+        "holdingAdjusted": "Holding adjusted"
       },
       "holdingsImport": {
         "title": "Upload your holdings",

@@ -37,7 +37,7 @@ import pandas as pd
 
 from models import TradeHistory, InvestmentProfile
 from .common_util import sector_hhi, utc_now as _utc_now
-from .fifo_util import fifo_match_closed_trades, fifo_open_position_ages, is_holding_seed
+from .fifo_util import fifo_match_closed_trades, fifo_open_position_ages, is_registration_row
 from .persona_analytics import (
     DECLARED_TO_PERSONA,
     PERSONA_CODES,
@@ -58,9 +58,9 @@ def compute_rolling_response(user_id: int, now: datetime | None = None) -> dict:
     declared_code = _resolve_declared(profile)
     declared_score = _declared_score(profile)
 
-    # 2026-09-29: 보유 등록 시드(fifo_util.is_holding_seed)는 뺀다 — 이 경로는
+    # 2026-09-29: 보유 등록 시드·조정 행(fifo_util.is_registration_row)은 뺀다 — 이 경로는
     # 시드 도입 전과 같은 결과를 낸다 (시드는 라이브 거울·분류기만 읽는다).
-    trades = [t for t in _fetch_trades(user_id) if not is_holding_seed(t)]
+    trades = [t for t in _fetch_trades(user_id) if not is_registration_row(t)]
     positions = _fetch_positions(user_id)
     sector_map = _sector_map_from_positions(positions)
 

@@ -57,7 +57,7 @@ from .fifo_util import (
     MatchedPair,
     fifo_match_closed_trades,
     fifo_open_position_ages,
-    is_holding_seed,
+    is_registration_row,
 )
 from .persona_analytics import (
     PERSONA_CODES,
@@ -203,11 +203,11 @@ def _extract_features(
 
     # ── window trades ─────────────────────────────────────────────
     cutoff = now - timedelta(days=window_days)
-    # 2026-09-29: 보유 등록 시드는 체결이 아니다 — 체결 수·회전·분산 축에서
-    # 뺀다. FIFO 로트에는 그대로 들어간다 (아래 전체 이력 매칭).
+    # 2026-09-29: 보유 등록 시드·조정 매도는 체결이 아니다 — 체결 수·회전·분산
+    # 축에서 뺀다. FIFO 로트에는 그대로 들어간다 (아래 전체 이력 매칭).
     window_trades = [
         t for t in trades
-        if t.traded_at and t.traded_at >= cutoff and not is_holding_seed(t)
+        if t.traded_at and t.traded_at >= cutoff and not is_registration_row(t)
     ]
     trade_count = len(window_trades)
     sector_map = _sector_map_from_positions(positions)
@@ -218,10 +218,11 @@ def _extract_features(
     # bought 300 days ago had nothing to match against, fell through to the
     # age of this month's new buys, and was reported as a 2-day holder.
     # Pairs whose lot is a holding-registration seed are skipped: the seed's
-    # buy time is the registration time, not a purchase date (2026-09-29).
+    # buy time is the registration time, not a purchase date; pairs closed by a
+    # holding-registration adjust are not an observed 매도 (2026-09-29).
     window_pairs = [
         p for p in fifo_match_closed_trades(trades)
-        if p.sell_time >= cutoff and not p.buy_is_seed
+        if p.sell_time >= cutoff and not p.buy_is_seed and not p.sell_is_adjust
     ]
 
     # D1 holding_period
@@ -566,7 +567,7 @@ def classify_persona_multi(
     trade_count = sum(
         1 for t in trades
         if t.traded_at and t.traded_at >= now - timedelta(days=window_days)
-        and not is_holding_seed(t)
+        and not is_registration_row(t)
     )
     if trade_count < 3 and declared in PERSONA_CODES:
         best_persona = declared

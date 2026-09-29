@@ -33,6 +33,17 @@ const rows: TransactionRow[] = [
     currency: "USD",
     source: null,
   },
+  {
+    id: "3",
+    date: "2026-09-22",
+    symbol: "NVDA",
+    name: "NVIDIA",
+    side: "Sold",
+    qty: 3,
+    price: 70,
+    currency: "USD",
+    source: "holding_adjust",
+  },
 ];
 
 vi.mock("../hooks-v2", () => ({
@@ -56,5 +67,19 @@ describe("RecentTransactionsBlock — holding seed rows", () => {
     expect(screen.queryByText("−USD 1,000.00")).toBeNull();
     expect(screen.getByText("USD 1,000.00")).toBeInTheDocument();
     expect(screen.getByText("−USD 100.00")).toBeInTheDocument();
+  });
+
+  it("labels an adjust row as a holding adjustment, not a sale", () => {
+    render(
+      <LocaleProvider>
+        <RecentTransactionsBlock limit={6} />
+      </LocaleProvider>,
+    );
+    const adjMeta = screen.getByText(/보유 조정 ·/);
+    expect(adjMeta.textContent).not.toMatch(/^Trim\b/);
+    expect(screen.queryByText(/^Trim ·/)).toBeNull();
+    // 조정은 현금 유입이 아니다 — 부호 없이.
+    expect(screen.queryByText("+USD 210.00")).toBeNull();
+    expect(screen.getByText("USD 210.00")).toBeInTheDocument();
   });
 });

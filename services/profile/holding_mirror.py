@@ -72,7 +72,7 @@ from services.profile.fifo_util import (
     MatchedPair,
     collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
-    is_holding_seed,
+    is_registration_row,
 )
 
 
@@ -254,8 +254,8 @@ def compute_holding_mirror(
     # (_classify_pairs 참조).
     cutoff: datetime | None = None
     if period_days is not None and period_days > 0:
-        # 창의 기준점은 마지막 *체결* — 보유 등록 시드는 체결이 아니다 (2026-09-29).
-        dated = [t for t in materialised if t.traded_at and not is_holding_seed(t)]
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드·조정은 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_registration_row(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)

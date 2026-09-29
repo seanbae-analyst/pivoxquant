@@ -96,8 +96,37 @@ def add_holding_seed(user_id: int, ticker: str, shares: float, price: float,
 
     ``traded_at`` defaults to now (registration time). No row for a
     non-positive quantity. Returns the row or ``None``."""
-    from models import TradeHistory
     from models.trade_history import HOLDING_SEED_SOURCE
+
+    return _add_registration_row(
+        "BUY", HOLDING_SEED_SOURCE,  # // legal-ok — trade action data value, not user copy
+        user_id, ticker, shares, price, currency, name, traded_at,
+    )
+
+
+def add_holding_adjust(user_id: int, ticker: str, shares: float, price: float,
+                       currency: str, name: str | None = None, traded_at=None):
+    """Add (not commit) a holding-adjust 매도 row for ``shares`` at ``price``.
+
+    2026-09-29: written when a registration path (holdings capture
+    ``replace`` to a lower count, PUT /position/<id> with fewer shares)
+    lowers a holding without a recorded 매도. ``price`` is the position's
+    average cost at that moment and ``pnl`` is 0 — it realises nothing. The
+    row consumes FIFO lots so they stay in sync with the holding; consumers
+    never read it as an observed 매도 (services/profile/fifo_util
+    .is_holding_adjust, MatchedPair.sell_is_adjust). No row for a
+    non-positive quantity. Returns the row or ``None``."""
+    from models.trade_history import HOLDING_ADJUST_SOURCE
+
+    return _add_registration_row(
+        "SELL", HOLDING_ADJUST_SOURCE,  # // legal-ok — trade action data value, not user copy
+        user_id, ticker, shares, price, currency, name, traded_at,
+    )
+
+
+def _add_registration_row(action: str, source: str, user_id: int, ticker: str,
+                          shares, price, currency: str, name, traded_at):
+    from models import TradeHistory
 
     try:
         shares = float(shares or 0.0)
@@ -110,14 +139,14 @@ def add_holding_seed(user_id: int, ticker: str, shares: float, price: float,
         user_id=user_id,
         ticker=ticker,
         name=(name or "")[:100],
-        action="BUY",  # // legal-ok — trade action data value, not user copy
+        action=action,
         shares=shares,
         price_per_share=price,
         total_value=round(shares * price, 2),
         pnl=0.0,
         pnl_pct=0.0,
         currency=currency,
-        source=HOLDING_SEED_SOURCE,
+        source=source,
         traded_at=traded_at or datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.session.add(row)

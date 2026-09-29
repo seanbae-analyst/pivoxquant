@@ -150,15 +150,15 @@ def _count_trades_in_window(
     if getattr(ref, "tzinfo", None) is not None:
         ref = ref.astimezone(timezone.utc).replace(tzinfo=None)
     cutoff = ref - timedelta(days=window_days)
-    from services.profile.fifo_util import is_holding_seed
+    from services.profile.fifo_util import is_registration_row
 
     n = 0
     for t in trades:
         ts = getattr(t, "traded_at", None)
         if ts is None:
             continue
-        # 보유 등록 시드는 체결이 아니다 — 세지 않는다 (2026-09-29).
-        if is_holding_seed(t):
+        # 보유 등록 시드·조정 행은 체결이 아니다 — 세지 않는다 (2026-09-29).
+        if is_registration_row(t):
             continue
         if getattr(ts, "tzinfo", None) is not None:
             ts = ts.astimezone(timezone.utc).replace(tzinfo=None)

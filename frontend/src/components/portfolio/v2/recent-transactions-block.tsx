@@ -20,11 +20,15 @@ interface RecentTransactionsBlockProps {
 
 /** `source` of the BUY row written when a holding is registered. */
 export const HOLDING_SEED_SOURCE = "holding_seed";
+/** `source` of the SELL row written when a holding is lowered by an edit or a
+ *  holdings-capture replace, with no recorded sale (2026-09-29). */
+export const HOLDING_ADJUST_SOURCE = "holding_adjust";
 
 /** Map backend `side`/`action` to legal-safe display verb. */
 function actionLabel(
   row: TransactionRow,
   seedLabel: string,
+  adjustLabel: string,
 ): {
   label: string;
   signed: 1 | -1 | 0;
@@ -33,6 +37,8 @@ function actionLabel(
   // the holding was entered. Calling it "Add" states a purchase on that day,
   // which never happened — label the registration and drop the cash sign.
   if (row.source === HOLDING_SEED_SOURCE) return { label: seedLabel, signed: 0 };
+  // Same for the adjust row: a lowered holding, not a sale on that day.
+  if (row.source === HOLDING_ADJUST_SOURCE) return { label: adjustLabel, signed: 0 };
   const a = (row.action ?? "").toLowerCase();
   const s = (row.side ?? "").toLowerCase();
   if (a === "add" || s === "buy" || s === "bought") return { label: "Add", signed: -1 };
@@ -161,6 +167,7 @@ export function RecentTransactionsBlock({
             const { label, signed } = actionLabel(
               tx,
               t("dashboard.portfolio.activity.holdingAdded"),
+              t("dashboard.portfolio.activity.holdingAdjusted"),
             );
             const cur = (tx.currency as "USD" | "KRW") ?? "USD";
             const shares = tx.qty ?? tx.shares ?? 0;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""보유 등록 시드 백필 — 등록만 되고 매수 행이 없는 보유분에 시드를 심는다.
+"""보유 등록 시드·조정 백필 — 이력이 설명하지 못하는 보유분에 시드를, 이력보다 적은 보유분에 조정 행을 쓴다.
 
 왜
 --
@@ -16,7 +16,11 @@ N = 매수 − 매도 (모든 source 포함 — 이미 심은 시드도 N 에 �
 돌려도 같은 결과다) 를 비교해 S − N > 0.0001 이면 S − N 주의 시드를 한 줄
 쓴다. 단가 = ``Position.avg_cost``, 시각 = ``Position.added_at``, 통화 = 종목
 접미사(.KS/.KQ → KRW, 나머지 USD), 이름 = 정적 마스터(네트워크 없음).
-S − N ≤ 0 (이력이 보유보다 많거나 같다)은 건드리지 않는다.
+S − N < −0.0001 (보유가 이력이 설명하는 것보다 적다 — 기록된 매도 없이 줄었다)
+이면 N − S 주의 조정 매도 행(``source="holding_adjust"``)을 쓴다. 단가 =
+``Position.avg_cost``, 시각 = 지금(줄어든 시각을 모르므로 모든 이력 뒤), pnl 0.
+조정도 N 에 들어가므로(매도) 다시 돌려도 같은 결과다. 열린 ``Position`` 이 없는
+종목(전량 삭제 등)은 평단이 없어 건드리지 않는다.
 
 스케줄에 걸지 않는다. 기본은 dry-run(출력만), ``--apply`` 때만 쓴다.
 
@@ -60,11 +64,13 @@ def _name(ticker: str) -> str:
 def run(*, apply: bool = False, user_id: int | None = None) -> list[dict]:
     """Plan (and with ``apply`` write) the missing seeds. Needs an app context.
 
-    Returns one dict per seed: ``{user_id, ticker, shares, price, currency,
-    traded_at}``."""
+    Returns one dict per row: ``{user_id, ticker, action, source, shares,
+    price, currency, traded_at}`` — ``action`` "BUY" for a seed, "SELL" for a
+    holding adjust (``traded_at`` None = now at write time)."""
     from extensions import db
     from models import Position, TradeHistory
-    from services.position_writes import add_holding_seed
+    from models.trade_history import HOLDING_ADJUST_SOURCE, HOLDING_SEED_SOURCE
+    from services.position_writes import add_holding_adjust, add_holding_seed
 
     q = Position.query.filter(Position.shares > GAP_EPSILON)
     if user_id is not None:
@@ -86,20 +92,26 @@ def run(*, apply: bool = False, user_id: int | None = None) -> list[dict]:
     planned: list[dict] = []
     for p in positions:
         gap = float(p.shares) - net.get((int(p.user_id), p.ticker.upper()), 0.0)
-        if gap <= GAP_EPSILON:
+        if abs(gap) <= GAP_EPSILON:
             continue
-        seed = {
+        is_seed = gap > 0
+        row = {
             "user_id": int(p.user_id),
             "ticker": p.ticker,
-            "shares": round(gap, 6),
+            "action": "BUY" if is_seed else "SELL",  # // legal-ok — stored enum values
+            "source": HOLDING_SEED_SOURCE if is_seed else HOLDING_ADJUST_SOURCE,
+            "shares": round(abs(gap), 6),
             "price": float(p.avg_cost),
             "currency": _currency(p.ticker),
-            "traded_at": p.added_at,
+            # A seed sits at registration; the decrease happened at an unknown
+            # time, so the adjust goes after all history (write time).
+            "traded_at": p.added_at if is_seed else None,
         }
-        planned.append(seed)
+        planned.append(row)
         if apply:
-            add_holding_seed(seed["user_id"], p.ticker, seed["shares"], seed["price"],
-                             seed["currency"], _name(p.ticker), traded_at=p.added_at)
+            write = add_holding_seed if is_seed else add_holding_adjust
+            write(row["user_id"], p.ticker, row["shares"], row["price"],
+                  row["currency"], _name(p.ticker), traded_at=row["traded_at"])
     if apply and planned:
         db.session.commit()
     return planned
@@ -118,10 +130,11 @@ def main() -> int:
         planned = run(apply=args.apply, user_id=args.user)
     for s in planned:
         at = s["traded_at"].isoformat() if s["traded_at"] else "-"
-        print(f"user={s['user_id']} {s['ticker']} +{s['shares']:g} @ {s['price']:g} "
-              f"{s['currency']} at {at}")
+        sign = "+" if s["action"] == "BUY" else "-"  # // legal-ok — stored enum value
+        print(f"user={s['user_id']} {s['ticker']} {sign}{s['shares']:g} @ {s['price']:g} "
+              f"{s['currency']} at {at} ({s['source']})")
     mode = "written" if args.apply else "dry-run (use --apply to write)"
-    print(f"{len(planned)} seed(s) — {mode}")
+    print(f"{len(planned)} row(s) — {mode}")
     return 0
 
 
