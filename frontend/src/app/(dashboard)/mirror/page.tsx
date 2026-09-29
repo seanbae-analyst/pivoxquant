@@ -8,10 +8,8 @@
  * and a single pause-and-reflect nudge
  * into 「멈춤」. The behavioural loop's face: 멈춤 → 기록 → 거울.
  *
- * Additive route — does NOT replace /home (no feature flag flip here). The
- * page-level legal footer is mounted by (dashboard)/layout.tsx (/mirror →
- * "coaching"); the inline DisclaimerBanner below is the contextual
- * behaviour-mirror copy for the persona/behaviour data on this surface.
+ * /home redirects here. The legal disclaimer is mounted once by
+ * (dashboard)/layout.tsx (/mirror → "behavior-mirror"); this page mounts none.
  *
  * Below the mirror sits a collapsed 「자세히」 area (MirrorDetails) holding the
  * weekly persona evolution — moved from /profile on 2026-09-12. /profile's
