@@ -537,12 +537,14 @@ def _state_serializer() -> URLSafeTimedSerializer:
 
 
 def _record_signup_funnel(user, ref_code: str | None) -> None:
-    """Viral loop — log a ``signup`` funnel event + attribute referral.
+    """Viral loop — log a ``signup`` funnel event carrying the ``ref_code``.
 
     Best-effort and fully contained: any failure here must NEVER break the
     OAuth login (the user is already logged in by the time we reach this).
-    Attribution itself (``attribute_referral``) is idempotent + immutable and
-    logs its own ``referral_signup`` event when a valid inviter is found.
+    2026-09-29: the follow-up ``routes.growth.attribute_referral`` call was
+    removed — that module never existed in the repository's history, so every
+    signup swallowed an ImportError and logged a warning. The ref code stays
+    on the funnel event row.
     """
     try:
         from models import FunnelEvent
@@ -559,12 +561,6 @@ def _record_signup_funnel(user, ref_code: str | None) -> None:
         db.session.rollback()
         logger.warning("signup funnel event failed (user_id=%s)",
                        getattr(user, "id", None), exc_info=True)
-    try:
-        from routes.growth import attribute_referral
-        attribute_referral(user, ref_code)
-    except Exception:
-        logger.warning("referral attribution failed (user_id=%s)",
-                       getattr(user, "id", None), exc_info=True)
 
 
 def _build_signed_state(provider: str, origin: str, redirect_uri: str,
@@ -580,7 +576,7 @@ def _build_signed_state(provider: str, origin: str, redirect_uri: str,
     ``ref_code`` (viral loop) is the inviter's referral code, captured from
     the ``?ref=`` query param at login-start. It rides inside the SIGNED
     state so it can't be tampered with mid-flight, and is consumed once on
-    the callback for a brand-new user (``attribute_referral``).
+    the callback for a brand-new user (``_record_signup_funnel``).
     """
     nonce = secrets.token_urlsafe(16)
     payload = {
@@ -1251,7 +1247,7 @@ def google_callback():
 
     _log_auth_event(email, "google", "success")
 
-    # Viral loop — brand-new signup: log a signup funnel event + attribute
+    # Viral loop — brand-new signup: log a signup funnel event carrying
     # the inviter's referral code (if any). Best-effort, never blocks login.
     if signup_flag.get("new"):
         _record_signup_funnel(user, ref_code)
@@ -1479,7 +1475,7 @@ def kakao_callback():
 
     _log_auth_event(email, "kakao", "success")
 
-    # Viral loop — brand-new signup: funnel signup event + referral attribution.
+    # Viral loop — brand-new signup: funnel signup event (with the ref code).
     if signup_flag.get("new"):
         _record_signup_funnel(user, ref_code)
 
