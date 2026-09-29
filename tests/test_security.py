@@ -19,8 +19,8 @@ class TestCSRFProtection:
         })
         assert login.status_code == 200
 
-        # PUT /api/portfolio/capital without any CSRF header — should 403.
-        r = raw_client.put("/api/portfolio/capital", json={"capital_usd": 500})
+        # POST /api/profile/capital without any CSRF header — should 403.
+        r = raw_client.post("/api/profile/capital", json={"available_capital_usd": 500})
         assert r.status_code == 403
         body = r.get_json()
         assert body.get("code") in ("CSRF_MISSING", "CSRF_MISMATCH")
@@ -33,9 +33,9 @@ class TestCSRFProtection:
         })
         # Delete the csrf cookie, then send the header.
         raw_client.delete_cookie("csrf_token")
-        r = raw_client.put(
-            "/api/portfolio/capital",
-            json={"capital_usd": 100},
+        r = raw_client.post(
+            "/api/profile/capital",
+            json={"available_capital_usd": 100},
             headers={"X-CSRF-Token": "some.fake.token"},
         )
         # Either CSRF_MISSING (no cookie) or CSRF_MISMATCH (injected ≠ new)
@@ -328,8 +328,8 @@ class TestCSRFSessionBinding:
         })
         assert login.status_code == 200, login.data
         # CSRFTestClient auto-attaches the current csrf_token cookie as header.
-        r = client.put("/api/portfolio/capital", json={"capital_usd": 750})
-        assert r.status_code != 403, (
+        r = client.post("/api/profile/capital", json={"available_capital_usd": 750})
+        assert r.status_code == 200, (
             f"Authenticated mutation with valid CSRF wrongly blocked: {r.data!r}"
         )
 
@@ -343,7 +343,7 @@ class TestCSRFSessionBinding:
             "email": u["email"], "password": u["password"],
         })
         assert login.status_code == 200, login.data
-        r = raw_client.put("/api/portfolio/capital", json={"capital_usd": 750})
+        r = raw_client.post("/api/profile/capital", json={"available_capital_usd": 750})
         assert r.status_code == 403
         assert r.get_json().get("code") in ("CSRF_MISSING", "CSRF_MISMATCH")
 

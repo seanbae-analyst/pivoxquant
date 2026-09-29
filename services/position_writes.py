@@ -58,7 +58,7 @@ def merge_buy_into(ex_row, quantity: float, price: float, *, is_kr: bool,
     """Merge a new lot into an existing position: weighted-average cost,
     cost-weighted FX (USD only), thesis filled only if empty.
 
-    NEW-D (2026-05-09): the race-safe upsert shared with add_position. See the
+    NEW-D (2026-05-09): the race-safe upsert. See the
     uq_positions_user_ticker rationale on Position.__table_args__."""
     total = ex_row.shares * ex_row.avg_cost + quantity * price
     if not is_kr and ex_row.buy_fx_rate and fx_rate:
@@ -78,8 +78,8 @@ def merge_buy_into(ex_row, quantity: float, price: float, *, is_kr: bool,
 
 
 # ── holding-registration seeds ────────────────────────────────────────
-# 2026-09-29: registering a holding (POST /positions, /position, the holdings
-# capture import) used to write only ``positions``. Every mirror rebuilds FIFO
+# 2026-09-29: registering a holding (POST /positions, the holdings capture
+# import) used to write only ``positions``. Every mirror rebuilds FIFO
 # lots from ``trade_history`` alone, so selling a registered holding hit an
 # empty queue (the 매도 was dropped) and a later add counted as a fresh open.
 # A full 매도 deletes the Position row, so the lot cannot be recovered from
@@ -109,8 +109,7 @@ def add_holding_adjust(user_id: int, ticker: str, shares: float, price: float,
     """Add (not commit) a holding-adjust 매도 row for ``shares`` at ``price``.
 
     2026-09-29: written when a registration path (holdings capture
-    ``replace`` to a lower count, PUT /position/<id> with fewer shares)
-    lowers a holding without a recorded 매도. ``price`` is the position's
+    ``replace`` to a lower count) lowers a holding without a recorded 매도. ``price`` is the position's
     average cost at that moment and ``pnl`` is 0 — it realises nothing. The
     row consumes FIFO lots so they stay in sync with the holding; consumers
     never read it as an observed 매도 (services/profile/fifo_util

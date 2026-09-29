@@ -15,10 +15,10 @@ Fix shipped in:
 
 These tests exercise:
 
-1. Sequential add_position twice — second call merges into the first
+1. Sequential POST /positions twice — second call merges into the first
    (existing behavior, unchanged).
 2. The DB UNIQUE constraint actually rejects a raw duplicate insert.
-3. Concurrent add_position calls produce exactly one row.
+3. Concurrent POST /positions calls produce exactly one row.
 4. Migration's pre-flight cleanup merges existing duplicate rows
    correctly when applied to a DB that already has duplicates.
 """
@@ -40,11 +40,11 @@ class TestSequentialAddPositionMerges:
         """Adding the same ticker twice should merge into one row,
         weighted-avg the cost, and never raise."""
         with patch("routes.portfolio.cache_service.cache_ticker"):
-            r1 = client.post("/api/portfolio/position", json={
-                "ticker": "MSFT", "shares": 10, "avg_cost": 300.0,
+            r1 = client.post("/api/portfolio/positions", json={
+                "symbol": "MSFT", "quantity": 10, "price": 300.0,
             })
-            r2 = client.post("/api/portfolio/position", json={
-                "ticker": "MSFT", "shares": 10, "avg_cost": 320.0,
+            r2 = client.post("/api/portfolio/positions", json={
+                "symbol": "MSFT", "quantity": 10, "price": 320.0,
             })
         assert r1.status_code == 200
         assert r2.status_code == 200
@@ -129,19 +129,21 @@ class TestRaceRecovery:
             ))
             db.session.commit()
 
-        # Force the SELECT in add_position to miss → INSERT path runs →
-        # uq_positions_user_ticker raises → recovery path re-fetches.
+        # Force the ticker lookups in POST /positions to miss → INSERT path
+        # runs → uq_positions_user_ticker raises → recovery path re-fetches.
         original_first = Position.query.filter_by
 
         call_count = {"n": 0}
 
         def patched_filter_by(*args, **kwargs):
-            # First call (the SELECT before INSERT) — return a query that
-            # yields .first() == None. Subsequent calls (recovery + count
-            # checks) use the real implementation.
-            call_count["n"] += 1
+            # The first two (user, ticker) lookups — the free-cap
+            # holds_ticker check and the SELECT before INSERT — yield
+            # .first() == None. Later calls (recovery + count checks) use the
+            # real implementation.
             q = original_first(*args, **kwargs)
-            if call_count["n"] == 1:
+            if "ticker" in kwargs:
+                call_count["n"] += 1
+            if "ticker" in kwargs and call_count["n"] <= 2:
                 class _Empty:
                     def first(self_inner):
                         return None
@@ -157,8 +159,8 @@ class TestRaceRecovery:
         with patch("routes.portfolio.Position.query") as mock_query:
             mock_query.filter_by.side_effect = patched_filter_by
             with patch("routes.portfolio.cache_service.cache_ticker"):
-                r = client.post("/api/portfolio/position", json={
-                    "ticker": "RACE", "shares": 3, "avg_cost": 200.0,
+                r = client.post("/api/portfolio/positions", json={
+                    "symbol": "RACE", "quantity": 3, "price": 200.0,
                 })
 
         # Either 200 (race recovery merged) or 409 (race recovery surfaced).

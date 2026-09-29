@@ -37,14 +37,12 @@ export const API = {
     // Singular `/position` endpoints (addPosition / editPosition / deletePosition /
     // buyMore / sellShares / buyNew) were removed 2026-05-02 — the frontend uses
     // the plural `/api/portfolio/positions[/<id>]` aliases (see PORTFOLIO_POSITIONS
-    // and add-position-modal-v2.tsx). Backend handlers remain for back-compat
-    // but emit a Deprecation header and warning log on every call.
+    // and add-position-modal-v2.tsx). 2026-09-29: their backend handlers are
+    // gone too, along with DELETE /api/portfolio/positions/<id> (no caller).
     //
-    // 2026-05-17: `capital: "/api/portfolio/capital"` removed. The constant had
-    // zero call sites in frontend/src — `update_capital` is wired through
-    // `API.profile.capital` ("/api/profile/capital", PUT) instead. The backend
-    // PUT /api/portfolio/capital handler is still live (test_security.py +
-    // test_portfolio.py exercise it); deleting only the unused frontend slot.
+    // 2026-05-17: `capital: "/api/portfolio/capital"` removed — seed capital is
+    // set through `API.profile.capital` ("/api/profile/capital", POST). The
+    // backend PUT /api/portfolio/capital handler was removed 2026-09-29.
   },
   market: {
     // 2026-09-01 — 14개 죽은 라우트를 백엔드에서 제거하면서 함께 정리했다.
@@ -80,7 +78,8 @@ export const API = {
   // admin/layout probed artifactsList to decide who was an admin, so the 404
   // denied everyone including the owner. Removed 2026-09-07 (e1dc8e64) once
   // the gate moved to a live endpoint.
-  trades: "/api/trades",
+  // 2026-09-29: `trades: "/api/trades"` removed with its backend route
+  // (routes/trades.py) — zero callers. Trade history is PORTFOLIO_TRADES.
   realtime: {
     // 2026-05-17 — Wave F-2 Bug #5: `/api/realtime/stream` removed.
     // Had zero frontend consumers yet still shared the per-user SSE

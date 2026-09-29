@@ -1,14 +1,14 @@
 """tests/test_holding_adjust.py — 기록된 매도 없이 보유가 줄 때의 조정 행 (2026-09-29).
 
 보유 등록 시드(a70c7e2)는 등록이 주식을 *더할* 때만 행을 썼다. 보유 캡처
-replace 로 수량을 낮추거나 PUT /position/<id> 로 주식 수를 줄이면 이력은 그대로
+replace 로 수량을 낮추면(당시엔 PUT /position/<id> 도 — 2026-09-29 삭제) 이력은 그대로
 남아, FIFO 로트가 실제 보유보다 많아졌다 — 그 뒤의 매도가 "등록했지만 이미
 없는" 로트를 닫았다.
 
 잠그는 것:
 1. 등록 경로가 주식을 줄이면 ``source="holding_adjust"`` 매도 행 1줄
    (수량 = 줄어든 만큼, 단가 = 그때의 평단, pnl 0, 통화 = 종목 통화).
-   PUT /position/<id> 는 늘어난 만큼 시드 매수 행도 쓴다.
+   PATCH /positions/<id> 는 주식 수를 바꾸지 않으므로 행을 쓰지 않는다.
 2. 조정 매도는 FIFO 로트를 소모하지만 관찰된 매도가 아니다 — 보유기간·손익처분·
    회전·멈춤 실현 수익률·분류기·기록 요약 체결 수 어디에도 나오지 않는다.
 3. 백필은 보유가 이력보다 적으면(S − N < −0.0001) 그 차이만큼 조정 행을 계획한다.
@@ -89,29 +89,15 @@ class TestHoldingsImportReplaceDown:
 
 
 class TestEditPosition:
-    def _put(self, client, pid, shares, avg):
-        with patch("routes.portfolio.cache_service.cache_ticker"), \
-             patch("routes.portfolio._avg_cost_implausible", return_value=None):
-            return client.put(f"/api/portfolio/position/{pid}",
-                              json={"shares": shares, "avg_cost": avg})
-
-    def test_down_writes_adjust_at_previous_avg(self, client, auth_user, app, add_position):
-        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        assert self._put(client, pid, 6, 140.0).status_code == 200
-        assert _history(app, auth_user["id"]) == [
-            ("AAPL", "SELL", 4.0, 150.0, HOLDING_ADJUST_SOURCE, "USD", 0.0),
-        ]
-
-    def test_up_writes_seed_at_new_avg(self, client, auth_user, app, add_position):
-        pid = add_position(auth_user["id"], "005930.KS", 10, 70000.0)
-        assert self._put(client, pid, 14, 71000.0).status_code == 200
-        assert _history(app, auth_user["id"]) == [
-            ("005930.KS", "BUY", 4.0, 71000.0, HOLDING_SEED_SOURCE, "KRW", 0.0),
-        ]
+    """PATCH /positions/<id> edits avg_cost / note only — no registration row.
+    (The old PUT /position/<id>, which could change the share count and
+    wrote seed/adjust rows for it, was removed 2026-09-29 — no caller.)"""
 
     def test_cost_only_edit_writes_nothing(self, client, auth_user, app, add_position):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
-        assert self._put(client, pid, 10, 160.0).status_code == 200
+        with patch("routes.portfolio._avg_cost_implausible", return_value=None):
+            r = client.patch(f"/api/portfolio/positions/{pid}", json={"avg_cost": 160.0})
+        assert r.status_code == 200
         assert _history(app, auth_user["id"]) == []
 
 
@@ -144,8 +130,9 @@ class TestRegisterReplaceSell:
                                        "currency": "USD", "mode": "replace"}],
         })
         assert r.status_code == 200, r.get_json()
-        r = client.post(f"/api/portfolio/position/{pid}/sell",
-                        json={"shares": 60, "price": 120})
+        r = client.post("/api/portfolio/trades", json={
+            "position_id": pid, "action": "sell", "quantity": 60, "price": 120,
+        })
         assert r.status_code == 200, r.get_json()
 
         with app.app_context():
