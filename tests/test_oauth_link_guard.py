@@ -272,3 +272,87 @@ class TestEmailCollisionGuard:
         assert "error=oauth_link_refused" in r.headers["Location"]
         with app.app_context():
             assert User.query.get(uid).google_id is None
+
+
+# ── 신규 가입 경로의 미인증 이메일 (2026-09-29) ──────────────────────────────
+#
+# 링크 가드는 "기존 계정에 붙일 때"만 돈다. 신규 가입 경로에서 공급자가
+# 인증 안 된 이메일을 주면 그 이메일로 계정이 그대로 만들어졌다 — 공격자
+# 카카오(피해자 이메일, 미인증) → 계정 X 생성 → 나중에 피해자의 인증된
+# Google 로그인이 X 에 링크(가드 통과) → 공격자는 카카오로 계속 접근.
+# ADMIN_EMAILS 주소를 선점하는 것도 같은 구멍이었다.
+
+def _kakao_signed_state(app, origin="http://localhost:3000"):
+    with app.test_request_context("/"):
+        return auth_mod._build_signed_state(
+            "kakao", origin, f"{origin}/api/auth/kakao/callback"
+        )
+
+
+def _drive_kakao_callback(app, raw_client, profile, *, origin="http://localhost:3000"):
+    """kakao_callback 을 토큰 교환 + /v2/user/me 만 가짜로 바꿔 끝까지 돌린다."""
+    state = _kakao_signed_state(app, origin)
+    fake_kakao = MagicMock()
+    fake_kakao.authorize_access_token.return_value = {"access_token": "t"}
+    resp = MagicMock()
+    resp.raise_for_status.return_value = None
+    resp.json.return_value = profile
+    fake_kakao.get.return_value = resp
+    with patch.object(auth_mod, "oauth", SimpleNamespace(kakao=fake_kakao)):
+        return raw_client.get(
+            f"/api/auth/kakao/callback?state={state}",
+            headers={"Referer": f"{origin}/login"},
+        )
+
+
+def _kakao_profile(*, kid, email, verified):
+    return {
+        "id": kid,
+        "kakao_account": {
+            "email": email,
+            "is_email_verified": verified,
+            "profile": {"nickname": "닉"},
+        },
+    }
+
+
+class TestNewUserUnverifiedEmail:
+    def test_kakao_unverified_new_user_gets_placeholder_email(self, app, raw_client):
+        from models import User
+        r = _drive_kakao_callback(
+            app, raw_client,
+            _kakao_profile(kid=777001, email="victim-new@example.com", verified=False),
+        )
+        assert r.status_code in (301, 302)
+        assert "/login?error=" not in r.headers["Location"]
+        with app.app_context():
+            # 미인증 이메일로는 계정이 생기지 않는다.
+            assert User.query.filter_by(email="victim-new@example.com").first() is None
+            u = User.query.filter_by(kakao_id="777001").first()
+            assert u is not None
+            assert u.email == "kakao_777001@kakao.local"
+
+    def test_kakao_verified_new_user_keeps_real_email(self, app, raw_client):
+        from models import User
+        r = _drive_kakao_callback(
+            app, raw_client,
+            _kakao_profile(kid=777002, email="real-kakao@example.com", verified=True),
+        )
+        assert r.status_code in (301, 302)
+        with app.app_context():
+            u = User.query.filter_by(kakao_id="777002").first()
+            assert u is not None
+            assert u.email == "real-kakao@example.com"
+
+    def test_google_unverified_new_user_refused(self, app, raw_client):
+        from models import User
+        r = _drive_google_callback(
+            app, raw_client,
+            _fake_token(sub="g-unver-new", email="unver-new@example.com",
+                        email_verified=False),
+        )
+        assert r.status_code in (301, 302)
+        assert "error=oauth_link_refused" in r.headers["Location"]
+        with app.app_context():
+            assert User.query.filter_by(email="unver-new@example.com").first() is None
+            assert User.query.filter_by(google_id="g-unver-new").first() is None

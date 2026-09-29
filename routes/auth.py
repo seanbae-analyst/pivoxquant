@@ -1132,6 +1132,13 @@ def google_callback():
                     user.avatar_url = avatar
                 link_alert["user"] = user
             else:
+                # 2026-09-29: 링크 가드는 기존 계정에 붙일 때만 돈다. 신규 가입도
+                # 미인증 이메일은 받지 않는다 — 받으면 남의 이메일(또는
+                # ADMIN_EMAILS 주소)로 계정을 선점하고, 뒤이은 진짜 주인의 인증된
+                # 로그인이 그 계정에 링크된다. Google 은 이메일 없는 계정을 만들
+                # 수 없으니(자리표시자 없음) 거절한다.
+                if not email_verified:
+                    raise OAuthLinkRefused("email_unverified")
                 # Create new Google user. ``age_confirmed_at`` is left NULL —
                 # the frontend interstitial (``/signup/oauth-finalize``) will
                 # POST the consent stack (incl. the 만 14세 self-declaration)
@@ -1363,10 +1370,16 @@ def kakao_callback():
                     user.avatar_url = avatar
                 link_alert["user"] = user
             else:
-                # Create new Kakao user
+                # Create new Kakao user.
+                # 2026-09-29: 카카오가 인증하지 않은 이메일로는 계정을 만들지
+                # 않는다 — 이메일이 없을 때와 같은 자리표시자를 쓴다. 안 그러면
+                # 피해자 이메일(미인증)로 계정 X 를 만들고, 나중에 피해자의
+                # 인증된 Google 로그인이 X 에 링크돼(가드 통과) 공격자가 카카오로
+                # 계속 들어온다. ADMIN_EMAILS 주소 선점도 같은 구멍.
+                new_email = email if email_verified else f"kakao_{kakao_id}@kakao.local"
                 user = User(
-                    email=email,
-                    name=name or email.split("@")[0],
+                    email=new_email,
+                    name=name or new_email.split("@")[0],
                     kakao_id=kakao_id,
                     oauth_provider="kakao",
                     avatar_url=avatar,
