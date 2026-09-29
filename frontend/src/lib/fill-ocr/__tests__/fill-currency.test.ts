@@ -51,4 +51,38 @@ describe("fill table currency", () => {
     expect(parseFillScreen(table(["체결단가(원)", "체결금액(원)"], ["72,400", "217,200", "360,000"])).rows[0].currency).toBe("KRW");
     expect(parseFillScreen(table(["체결단가", "체결금액"], ["72,400원", "217,200원", "360,000원"])).rows[0].currency).toBe("KRW");
   });
+
+  it("a bare US price shaped like MM.DD (25.10) still makes the line a trade row", () => {
+    // "25.10" / "75.30" fit the month-day shape that marks a detail line
+    // ("09.22 14:21:07"); under the price / amount header they are numbers.
+    const { rows } = parseFillScreen(table(["체결단가($)", "체결금액($)"], ["25.10", "75.30", "360.00"]));
+    expect(rows.map((r) => [r.currency, r.shares.value, r.price.value, r.amount.value])).toEqual([
+      ["USD", 3, 25.1, 75.3],
+      ["USD", 2, 180, 360],
+    ]);
+  });
+
+  it("an MM.DD price under the price column keeps its row even with no currency printed", () => {
+    // The row is found; whether "25.10" is a proven price is reconcile's
+    // call (with the currency unknown it is not — the user types it).
+    const { rows } = parseFillScreen(table(["체결단가", "체결금액"], ["25.10", "75.30", "360.00"]));
+    expect(rows.map((r) => [r.name.value, r.shares.value, r.amount.value])).toEqual([
+      ["TSLA", 3, 75.3],
+      ["AAPL", 2, 360],
+    ]);
+    expect(rows[0].price.value ?? rows[0].price.hint).toBeTruthy();
+  });
+
+  it("an MM.DD under the date column stays a date, not a number, in a USD table", () => {
+    y = 0;
+    const { rows } = parseFillScreen([
+      ...line(["체결일", undefined, 40], ["종목명", undefined, 200], ["매매구분", undefined, 360], ["체결수량", undefined, 520], ["체결단가($)", undefined, 700]),
+      ...line(["09.28", "0928", 40], ["TSLA", undefined, 200], ["매수", undefined, 370], ["3", "3", 550], ["250.10", "250.10", 720]),
+      // A detail line of only a date + a number under the name is not a row.
+      ...line(["09.28", "0928", 40], ["2", "2", 200]),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect([rows[0].date.value, rows[0].date.hint, rows[0].shares.value, rows[0].price.value])
+      .toEqual([null, "09.28", 3, 250.1]);
+  });
 });

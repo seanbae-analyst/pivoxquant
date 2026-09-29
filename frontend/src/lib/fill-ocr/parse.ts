@@ -540,23 +540,6 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
   const body = lines.slice(hi + 1);
   const footer = body.findIndex((l) => /합계|총계/.test(l.compact));
   const rows = footer >= 0 ? body.slice(0, footer) : body;
-  // Dates, times and codes do not make a line a trade row ("09.22 14:21:07"
-  // printed under each name is a detail of the row above, not a row).
-  const numericCount = (l: Line) =>
-    l.words.filter((w) => /\d/.test(w.t) && !isCode(w.t) && !TIME_RE.test(w.t) &&
-      !fullDate(w.t) && !/^\d{1,2}[./]\d{1,2}$/.test(w.t)).length;
-  const data = rows.filter((l) => numericCount(l) >= 2);
-  const aux = rows.filter((l) => numericCount(l) < 2);
-  const pitch = data.length > 1 ? median(data.slice(1).map((l, i) => l.y - data[i].y)) : 40;
-  const attached = new Map<Line, Line[]>(data.map((l) => [l, []]));
-  for (const l of aux) {
-    const byDist = [...data].sort((x, y) => Math.abs(x.y - l.y) - Math.abs(y.y - l.y));
-    const [best, second] = byDist;
-    if (!best || Math.abs(best.y - l.y) >= pitch * 0.75) continue;
-    // Roughly between two rows → it could belong to either; attach to none.
-    if (second && Math.abs(second.y - l.y) < Math.abs(best.y - l.y) * 1.5) continue;
-    attached.get(best)!.push(l);
-  }
   // The currency is printed on the row, in the header ("체결단가($)") or
   // somewhere on the screen — or it is not known. Never defaulted to KRW.
   const headCur = markedCurrency(lines[hi].compact);
@@ -571,6 +554,34 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
         Math.abs(second.cx - cx) < Math.abs(best.cx - cx) * 1.3) return "unknown";
     return best.col;
   };
+  // Dates, times and codes do not make a line a trade row ("09.22 14:21:07"
+  // printed under each name is a detail of the row above, not a row). An
+  // "MM.DD"-shaped token is a number, though, when it sits under a numeric
+  // column, or anywhere but the date / time column of a USD table — "25.10"
+  // is a bare dollar price as often as it is a date.
+  const monthDayShaped = (w: OcrWord, usd: boolean) => {
+    if (!/^\d{1,2}[./]\d{1,2}$/.test(w.t)) return false;
+    const col = nearestCol(w);
+    if (NUMERIC_COLS.includes(col)) return false;
+    return !(usd && col !== "date" && col !== "time");
+  };
+  const numericCount = (l: Line) => {
+    const usd = rowCurrency(l.compact, headCur, screenCur) === "USD";
+    return l.words.filter((w) => /\d/.test(w.t) && !isCode(w.t) && !TIME_RE.test(w.t) &&
+      !fullDate(w.t) && !monthDayShaped(w, usd)).length;
+  };
+  const data = rows.filter((l) => numericCount(l) >= 2);
+  const aux = rows.filter((l) => numericCount(l) < 2);
+  const pitch = data.length > 1 ? median(data.slice(1).map((l, i) => l.y - data[i].y)) : 40;
+  const attached = new Map<Line, Line[]>(data.map((l) => [l, []]));
+  for (const l of aux) {
+    const byDist = [...data].sort((x, y) => Math.abs(x.y - l.y) - Math.abs(y.y - l.y));
+    const [best, second] = byDist;
+    if (!best || Math.abs(best.y - l.y) >= pitch * 0.75) continue;
+    // Roughly between two rows → it could belong to either; attach to none.
+    if (second && Math.abs(second.y - l.y) < Math.abs(best.y - l.y) * 1.5) continue;
+    attached.get(best)!.push(l);
+  }
   return data.map((line) => {
     const extra = attached.get(line) ?? [];
     const all = [line, ...extra].sort((a, b) => a.y - b.y);
