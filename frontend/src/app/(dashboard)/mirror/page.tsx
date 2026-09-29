@@ -29,7 +29,6 @@ import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
-import { ArchiveLinks } from "@/components/mirror/archive-links";
 import { MirrorDetails } from "@/components/mirror/mirror-details";
 
 function LegendDot({ colorVar, label }: { colorVar: string; label: string }) {
@@ -103,7 +102,6 @@ export default function MirrorPage() {
               보유 종목을 등록하고 사기 전에 이유를 남기면, 선언한 나와 기록 속의
               나를 나란히 보여드립니다.
             </p>
-            <ArchiveLinks />
           </div>
         )}
 
@@ -152,7 +150,6 @@ export default function MirrorPage() {
               </section>
 
               <OneThingNudge data={data} />
-              <ArchiveLinks />
               <MirrorDetails />
             </div>
           </ErrorBoundary>
