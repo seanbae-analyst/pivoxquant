@@ -842,6 +842,14 @@ def create_trade_alias():
             code="POSITION_NOT_FOUND", status=404,
         )
 
+    # 2026-09-29 — optional explicit buy ↔ pause link (services/pre_trade/link.py).
+    from services.pre_trade.link import ReflectionLinkError, resolve_reflection_link
+    try:
+        reflection_id = resolve_reflection_link(
+            current_user.id, d.get("reflection_id"), ticker=p.ticker, action=action)
+    except ReflectionLinkError as e:
+        return api_error(en=e.en, kr=e.kr, code=e.code, status=400)
+
     cached = cache_service.get_signal(p.ticker)
     sd = cache_service.safe_cache_blob(cached)
     is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
@@ -915,6 +923,7 @@ def create_trade_alias():
         )
         if traded_at_dt is not None:
             _buy_th.traded_at = traded_at_dt
+        _buy_th.reflection_id = reflection_id
         db.session.add(_buy_th)
         err = _commit_recorded_trade(
             ticker, None if thesis_was_empty else note, "buy",

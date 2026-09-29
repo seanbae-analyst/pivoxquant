@@ -854,6 +854,12 @@ def _do_migrations():
     # 2026-09-29 — 보유 등록 시드 표시 (models/trade_history.py HOLDING_SEED_SOURCE,
     # alembic 058). NULL = 체결 기록.
     _add_column_if_missing("trade_history", "source", "VARCHAR(20)")
+    # 2026-09-29 — 매수 ↔ 멈춤 명시 연결 (models/trade_history.py reflection_id,
+    # alembic 060, services/pre_trade/link.py). NULL = 연결 없음.
+    _add_column_if_missing(
+        "trade_history", "reflection_id",
+        "INTEGER REFERENCES pre_trade_reflections(id) ON DELETE SET NULL",
+    )
 
     # Investment profiles — covers onboarding answers + auto-calc quant params.
     _add_column_if_missing("investment_profiles", "experience_level", "VARCHAR(20)", default="'beginner'")

@@ -38,3 +38,10 @@ class TradeHistory(db.Model):
     # NULL = 체결 기록 (기존 모든 행). "holding_seed" = 보유 등록 시드,
     # "holding_adjust" = 보유 등록 조정 매도 (위 상수).
     source          = db.Column(db.String(20), nullable=True)
+    # 2026-09-29 — 이 매수가 어느 멈춤(PreTradeReflection)의 결과인지 사용자가
+    # 기록 시점에 직접 이은 연결. NULL = 연결 없음 (기존 모든 행) — 그때
+    # friction_outcome 은 시간 창 추정으로 되돌아간다. services/pre_trade/link.py,
+    # alembic 060.
+    reflection_id   = db.Column(db.Integer,
+                                db.ForeignKey("pre_trade_reflections.id", ondelete="SET NULL"),
+                                nullable=True, index=True)

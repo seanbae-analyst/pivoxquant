@@ -923,8 +923,17 @@ def approve_pending(pid: int):
             code="IMPORT_CONFIRM_REQUIRED", status=400,
         )
 
+    # 2026-09-29 — buy ↔ pause link: explicit body `reflection_id` wins, else
+    # the reflection matched at import time (services/pre_trade/link.py).
+    from services.pre_trade.link import ReflectionLinkError, attach_reflection, import_reflection_link
+    try:
+        link_id = import_reflection_link(current_user.id, data, row)
+    except ReflectionLinkError as e:
+        return api_error(en=e.en, kr=e.kr, code=e.code, status=400)
+
     try:
         trade_id, position_id = apply_pending(current_user.id, row, thesis)
+        attach_reflection(trade_id, link_id)
         row.approved_thesis = thesis
         row.approved_trade_id = trade_id
         row.approved_at = utcnow_naive()
