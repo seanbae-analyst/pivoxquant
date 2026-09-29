@@ -299,6 +299,51 @@ class TestDuplicates:
         assert r.status_code == 201
         assert r.get_json()["pending"][0]["status"] == "duplicate"
 
+    # 2026-09-29 — a 03:00 KST fill is stored 18:00 UTC the day before, while a
+    # date-only row is stamped with the KST date at 00:00. Bucketing by the UTC
+    # calendar day put the two on different days; both are compared on the
+    # KST day now.
+    def _history(self, app, user_id, traded_at):
+        from extensions import db
+        from models import TradeHistory
+        with app.app_context():
+            db.session.add(TradeHistory(
+                user_id=user_id, ticker="005930.KS", name="삼성전자",
+                action="BUY", shares=10.0, price_per_share=71200.0,
+                total_value=712000.0, currency="KRW", traded_at=traded_at,
+            ))
+            db.session.commit()
+
+    def test_early_morning_kst_fill_vs_date_only_import(self, client, auth_user, app):
+        self._history(app, auth_user["id"], datetime(2026, 9, 1, 18, 0))  # 09-02 03:00 KST
+        csv = f"{KIS_HEADER}\n2026-09-02,삼성전자,005930,매수,10,71200,712000,0\n"
+        r = _upload(client, csv.encode("utf-8"), "kis.csv")
+        assert r.status_code == 201, r.get_json()
+        assert r.get_json()["pending"][0]["status"] == "duplicate"
+
+    def test_date_only_history_vs_early_morning_kst_import(self, client, auth_user, app):
+        self._history(app, auth_user["id"], datetime(2026, 9, 2))  # date-only, KST date
+        r = _paste(client, "삼성전자 10주 매수 체결 71,200원 2026-09-02 03:00")
+        assert r.status_code == 201, r.get_json()
+        p = r.get_json()["pending"][0]
+        assert p["traded_at"] == "2026-09-01T18:00:00"
+        assert p["status"] == "duplicate"
+
+    def test_next_kst_day_is_not_a_duplicate(self, client, auth_user, app):
+        self._history(app, auth_user["id"], datetime(2026, 9, 2, 15, 0))  # 09-03 00:00 KST
+        csv = f"{KIS_HEADER}\n2026-09-02,삼성전자,005930,매수,10,71200,712000,0\n"
+        r = _upload(client, csv.encode("utf-8"), "kis.csv")
+        assert r.get_json()["pending"][0]["status"] == "pending"
+
+    def test_patch_path_uses_the_kst_day_too(self, app, auth_user):
+        from services.imports.dedupe import is_duplicate
+        self._history(app, auth_user["id"], datetime(2026, 9, 1, 18, 0))  # 09-02 03:00 KST
+        with app.app_context():
+            assert is_duplicate(auth_user["id"], "k", "005930.KS", "BUY", 10.0, 71200.0,
+                                datetime(2026, 9, 2))
+            assert not is_duplicate(auth_user["id"], "k", "005930.KS", "BUY", 10.0, 71200.0,
+                                    datetime(2026, 9, 1))
+
 
 # ── needs_ticker → PATCH → approve ───────────────────────────────────
 

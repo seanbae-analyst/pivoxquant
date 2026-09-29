@@ -4,19 +4,37 @@
 (design §데이터). A candidate is a duplicate when the same key already
 sits in ``pending_trades`` (any status) or when ``trade_history`` already
 holds the same fill — same ticker + side, shares within 1e-6, price within
-1e-4, on the same calendar day.
+1e-4, on the same **KST** calendar day (:func:`kst_day`).
 """
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from extensions import db
 from models import TradeHistory
 from models.import_batch import PendingTrade
+from services.imports import KST_OFFSET
 
 SHARES_TOL = 1e-6
 PRICE_TOL = 1e-4
+
+
+def kst_day(traded_at: datetime) -> date:
+    """The user's (Asia/Seoul) calendar day of a stored ``traded_at``.
+
+    Timed fills are stored in UTC; date-only ones are stamped with the KST
+    date at 00:00, unshifted (``services.imports.kst_to_utc``). ``+9h`` gives
+    the KST day for both: a 00:00 stamp stays on its own date. Bucketing by
+    the UTC day split a 00:00–09:00 KST fill (UTC: the day before) from the
+    same fill arriving date-only (2026-09-29)."""
+    return (traded_at + KST_OFFSET).date()
+
+
+def _kst_day_bounds(day: date) -> tuple[datetime, datetime]:
+    """Stored-``traded_at`` range ``[start, end)`` whose :func:`kst_day` is ``day``."""
+    start = datetime(day.year, day.month, day.day) - KST_OFFSET
+    return start, start + timedelta(days=1)
 
 
 def make_key(user_id: int, ticker_or_name: str, action: str, shares: float,
@@ -42,8 +60,7 @@ def is_duplicate(user_id: int, key: str, ticker: str | None, action: str,
 
     if not ticker:
         return False
-    day_start = traded_at.replace(hour=0, minute=0, second=0, microsecond=0)
-    day_end = day_start + timedelta(days=1)
+    day_start, day_end = _kst_day_bounds(kst_day(traded_at))
     rows = (
         TradeHistory.query
         .filter(
@@ -86,10 +103,10 @@ class DedupeIndex:
                 .all()
             )
             self.keys = {r[0] for r in rows}
-        self.history: dict[tuple[str, str, str], list[tuple[float, float]]] = {}
+        self.history: dict[tuple[str, str, date], list[tuple[float, float]]] = {}
         if tickers and start is not None and end is not None:
-            day_start = start.replace(hour=0, minute=0, second=0, microsecond=0)
-            day_end = end.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            day_start = _kst_day_bounds(kst_day(start))[0]
+            day_end = _kst_day_bounds(kst_day(end))[1]
             hist = (
                 TradeHistory.query
                 .filter(TradeHistory.user_id == user_id,
@@ -101,7 +118,7 @@ class DedupeIndex:
             for r in hist:
                 if r.shares is None or r.price_per_share is None or r.traded_at is None:
                     continue
-                k = (r.ticker, r.action, r.traded_at.strftime("%Y-%m-%d"))
+                k = (r.ticker, r.action, kst_day(r.traded_at))
                 self.history.setdefault(k, []).append((float(r.shares), float(r.price_per_share)))
 
     def is_duplicate(self, key: str, ticker: str | None, action: str,
@@ -110,10 +127,10 @@ class DedupeIndex:
             return True
         if not ticker:
             return False
-        for s, p in self.history.get((ticker, action, traded_at.strftime("%Y-%m-%d")), []):
+        for s, p in self.history.get((ticker, action, kst_day(traded_at)), []):
             if abs(s - float(shares)) <= SHARES_TOL and abs(p - float(price)) <= PRICE_TOL:
                 return True
         return False
 
 
-__all__ = ["make_key", "is_duplicate", "DedupeIndex", "SHARES_TOL", "PRICE_TOL"]
+__all__ = ["make_key", "is_duplicate", "kst_day", "DedupeIndex", "SHARES_TOL", "PRICE_TOL"]
