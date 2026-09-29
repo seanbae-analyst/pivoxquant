@@ -45,6 +45,7 @@ import {
   declaredSurfaceLabel,
 } from "@/lib/cfo/hooks";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { useT } from "@/lib/locale";
 
 type Readiness = "ready" | "learning" | "missing";
 
@@ -66,6 +67,7 @@ export function LivingCFOStatusBar() {
   const { data: profile } = useInvestmentProfile();
   const { data: persona } = usePersona();
   const { data: pulse } = usePulse();
+  const t = useT();
 
   const layer1State: Readiness = profile?.profile?.profile_type
     ? "ready"
@@ -113,9 +115,13 @@ export function LivingCFOStatusBar() {
       id: 2,
       name: "Learning",
       state: layer2State,
-      summary: `${pulseCount} weekly pulses · ${
-        hasObservedPersona ? "30-day drift tracked" : "no drift data yet"
-      }.`,
+      // 2026-09-29: "30-day drift tracked" is gone. It showed whenever
+      // `observed.window_30d` existed — and the backend always sends that
+      // window (an empty one too), so it claimed tracking that was not
+      // happening. Only the count that is actually measured stays.
+      summary: t("dashboard.cfoStatus.pulsesRecorded", {
+        n: String(pulseCount),
+      }),
       // The declared-vs-observed reading itself lives on /mirror; this bar
       // only reports that it exists and points there (2026-09-29).
       cta: hasObservedPersona

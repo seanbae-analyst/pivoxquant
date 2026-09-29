@@ -304,6 +304,9 @@
         "step3": "Review and save",
         "localNote": "Captures are read on this device only and never sent to the server."
       }
+    },
+    "cfoStatus": {
+      "pulsesRecorded": "{n} weekly pulses recorded."
     }
   },
   "settings": {

@@ -141,6 +141,9 @@
         "step3": "확인하고 저장",
         "localNote": "캡처는 이 기기 안에서만 읽고, 서버로 보내지 않습니다."
       }
+    },
+    "cfoStatus": {
+      "pulsesRecorded": "주간 펄스 {n}회 기록됨."
     }
   },
   "landing": {
