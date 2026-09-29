@@ -246,7 +246,7 @@ describe("ImportInbox — buy ↔ pause link (2026-09-29)", () => {
     expect(hooks.useLinkableReflections).not.toHaveBeenCalledWith("AAPL");
   });
 
-  it("unchecking sends reflection_id: null (don't link)", async () => {
+  it("unchecking sends reflection_id: null + reflection_declined (don't link, don't infer)", async () => {
     apiFetchMock.mockResolvedValue({ ok: true });
     linkable([refl(7)]);
     loaded([ROWS[0]]);
@@ -255,6 +255,7 @@ describe("ImportInbox — buy ↔ pause link (2026-09-29)", () => {
     fireEvent.click(within(row).getByRole("checkbox"));
     const body = await approveRow(row);
     expect(body).toHaveProperty("reflection_id", null);
+    expect(body).toHaveProperty("reflection_declined", true);
   });
 
   it("offers a linkable pause even without an import-time match", async () => {
@@ -277,5 +278,6 @@ describe("ImportInbox — buy ↔ pause link (2026-09-29)", () => {
     expect(within(row).getByText("journal.import.reflectionMatched")).toBeInTheDocument();
     const body = await approveRow(row);
     expect(body).not.toHaveProperty("reflection_id");
+    expect(body).not.toHaveProperty("reflection_declined");
   });
 });

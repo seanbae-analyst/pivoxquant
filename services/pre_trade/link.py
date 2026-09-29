@@ -18,6 +18,14 @@
   처럼 거래소 접미사만 다른 건 같은 종목).
 * 멈춤 하나는 매수 하나에만 잇는다 — 이미 다른 매수에 이어진 멈춤은 거부한다.
 * 시세를 부르지 않는다. 사용자 자신의 행만 읽는다.
+
+명시 거절 (``TradeHistory.reflection_declined``)
+------------------------------------------------
+후보가 보였는데 사용자가 체크를 끄고 기록했으면 그 매수는 "멈춤과 무관"이라고
+사용자가 말한 것이다. 연결 없는 옛 행과 구분이 안 되면 friction_outcome 의
+7일 창 추정이 그 매수를 다시 멈춤에 귀속시킨다. 그래서 거절을 저장한다.
+요청 계약: 본문 ``reflection_declined: true`` (``reflection_id`` 는 없거나
+null). 매수에만, 연결이 없을 때만 의미가 있다.
 """
 from __future__ import annotations
 
@@ -190,20 +198,62 @@ def import_reflection_link(user_id: int, data: dict, pending: Any) -> int | None
         return None
 
 
-def attach_reflection(trade_id: int | None, reflection_id: int | None) -> None:
-    """이미 만들어진 매수 행에 연결을 단다 (commit 은 호출자)."""
-    if not trade_id or not reflection_id:
+def link_declined(data: Any, reflection_id: int | None, *, action: str) -> bool:
+    """본문이 보여진 후보를 명시로 거절했는가 (``reflection_declined: true``).
+
+    매수에만, 연결이 없을 때만 True. 그 밖의 값(문자열 "true" 등)은 거절로
+    보지 않는다 — 프론트는 불리언만 보낸다.
+    """
+    if reflection_id is not None or str(action or "").lower() != "buy":
+        return False
+    return isinstance(data, dict) and data.get("reflection_declined") is True
+
+
+def import_link_declined(user_id: int, data: Any, pending: Any,
+                         reflection_id: int | None) -> bool:
+    """가져오기 승인의 명시 거절.
+
+    ``reflection_declined: true`` 이거나, 가져올 때 매치된 멈춤이 아직 이을 수
+    있었는데 본문이 ``reflection_id: null`` 로 끊었으면 거절이다.
+    """
+    action = str(getattr(pending, "action", "") or "").lower()
+    if link_declined(data, reflection_id, action=action):
+        return True
+    if (reflection_id is not None or not isinstance(data, dict)
+            or "reflection_id" not in data or data.get("reflection_id") is not None):
+        return False
+    inferred = getattr(pending, "pre_trade_reflection_id", None)
+    if not inferred:
+        return False
+    try:
+        resolve_reflection_link(user_id, inferred,
+                                ticker=getattr(pending, "ticker", None) or "", action=action)
+    except ReflectionLinkError:
+        return False
+    return True
+
+
+def attach_reflection(trade_id: int | None, reflection_id: int | None,
+                      *, declined: bool = False) -> None:
+    """이미 만들어진 매수 행에 연결(또는 명시 거절)을 단다 (commit 은 호출자)."""
+    if not trade_id or not (reflection_id or declined):
         return
     t = db.session.get(TradeHistory, int(trade_id))
-    if t is not None:
+    if t is None:
+        return
+    if reflection_id:
         t.reflection_id = int(reflection_id)
+    else:
+        t.reflection_declined = True
 
 
 __all__ = [
     "LINK_WINDOW_DAYS",
     "ReflectionLinkError",
     "attach_reflection",
+    "import_link_declined",
     "import_reflection_link",
+    "link_declined",
     "linkable_reflections",
     "resolve_reflection_link",
     "same_ticker",

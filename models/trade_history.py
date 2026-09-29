@@ -45,3 +45,8 @@ class TradeHistory(db.Model):
     reflection_id   = db.Column(db.Integer,
                                 db.ForeignKey("pre_trade_reflections.id", ondelete="SET NULL"),
                                 nullable=True, index=True)
+    # 2026-09-29 — 사용자가 보여진 멈춤 후보를 끄고 기록한 매수 (명시 거절).
+    # True 면 friction_outcome 이 이 매수를 7일 창 추정으로 어느 멈춤에도
+    # 귀속하지 않는다. NULL = 거절 기록 없음 (기존 모든 행 · 후보가 없었음).
+    # services/pre_trade/link.py, alembic 061.
+    reflection_declined = db.Column(db.Boolean, nullable=True)

@@ -41,7 +41,11 @@ import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
 import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
-import { ReflectionLinkLine, useReflectionLink } from "@/components/pre-trade/reflection-link-line";
+import {
+  ReflectionLinkLine,
+  reflectionLinkBody,
+  useReflectionLink,
+} from "@/components/pre-trade/reflection-link-line";
 
 interface TradeModalV2Props {
   open: boolean;
@@ -279,7 +283,11 @@ export function TradeModalV2({
           price: parsedPrice,
           date,
           note: note.trim(),
-          reflection_id: reviewReflectionId ?? reflectionLink.reflectionId ?? undefined,
+          // Review buy → the pause it just made; record buy → the link line's
+          // choice (id, or an explicit decline when the shown pause was unchecked).
+          ...(reviewReflectionId != null
+            ? { reflection_id: reviewReflectionId }
+            : reflectionLinkBody(reflectionLink)),
         }),
       });
       toast.success(copy.toast);

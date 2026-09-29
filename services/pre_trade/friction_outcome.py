@@ -45,6 +45,7 @@
   2026-09-29: 사용자가 매수를 기록하며 멈춤을 직접 이었으면
   (``TradeHistory.reflection_id``, ``services/pre_trade/link.py``) 추정 대신 그
   연결을 먼저 쓴다. 추정은 연결이 없는 행(과거 데이터 포함)의 폴백으로 남는다.
+  보여진 후보를 끄고 기록한 매수(``reflection_declined``)는 추정하지 않는다.
 * **표본.** 그룹당 :data:`MIN_GROUP_N` 미만이면 비교를 **거부한다**
   (``comparable=False``). 3건과 2건을 비교해 주는 건 정보가 아니라 소음이다.
 * **쿨다운이 현재 0초다** (``DEFAULT_COOLDOWN_SECONDS``). 지금의 멈춤은 강제
@@ -212,10 +213,14 @@ def compute_friction_outcome(
         # 기록이다 — "취소 후 결국 샀다" 에도, 멈춤 경유 귀속에도 넣지 않는다.
         if is_holding_seed(t):
             continue
-        buys.setdefault(_norm(t.ticker), []).append(t.traded_at)
         rid = getattr(t, "reflection_id", None)
         if rid:
             linked_buys.setdefault(int(rid), []).append((_norm(t.ticker), t.traded_at))
+        # 사용자가 보여진 멈춤 후보를 끄고 기록한 매수 — "멈춤과 무관"이라고
+        # 직접 말했다. 추정 색인(취소 후 매수 · 7일 창)에 넣지 않는다.
+        elif getattr(t, "reflection_declined", None) is True:
+            continue
+        buys.setdefault(_norm(t.ticker), []).append(t.traded_at)
     for v in buys.values():
         v.sort()
 

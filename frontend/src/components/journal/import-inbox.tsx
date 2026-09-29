@@ -18,7 +18,8 @@
  *     the import-time match first, else the most recent unlinked one — the
  *     same <ReflectionLinkLine /> as the trade modal replaces that caption
  *     (checkbox default ON). Approve then sends `reflection_id` explicitly:
- *     the id when checked, `null` when unchecked (= do not link).
+ *     the id when checked, `null` + `reflection_declined: true` when
+ *     unchecked (= do not link, and do not infer one later).
  *   - `needs_ticker` rows get the same debounced /api/search autocomplete the
  *     add-position modal uses; confirming PATCHes the row. The search is armed
  *     only once the user focuses or types in the box — thirty unresolved rows
@@ -34,7 +35,11 @@ import { motion } from "motion/react";
 import { useT, useLocale } from "@/lib/locale";
 import { usePendingImports } from "@/lib/hooks";
 import { mutate as globalMutate } from "swr";
-import { ReflectionLinkLine, useReflectionLink } from "@/components/pre-trade/reflection-link-line";
+import {
+  ReflectionLinkLine,
+  reflectionLinkBody,
+  useReflectionLink,
+} from "@/components/pre-trade/reflection-link-line";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { displayName, parseIsoUtc } from "@/lib/format";
@@ -348,10 +353,11 @@ export function PendingTradeRow({
     try {
       const body: Record<string, unknown> = { thesis: thesis.trim() };
       if (needsConfirm) body.confirm_values = true;
-      // A shown link line makes the choice explicit — the id, or null = don't
-      // link. With no line the key is omitted and the server keeps its
-      // import-time match rule (services/pre_trade/link.py).
-      if (reflectionLink.candidate) body.reflection_id = reflectionLink.reflectionId;
+      // A shown link line makes the choice explicit — the id, or null +
+      // `reflection_declined: true` (unchecked). With no line the keys are
+      // omitted and the server keeps its import-time match rule
+      // (services/pre_trade/link.py).
+      Object.assign(body, reflectionLinkBody(reflectionLink));
       await apiFetch<ImportApproveResponse>(API.imports.approve(row.id), {
         method: "POST",
         body: JSON.stringify(body),

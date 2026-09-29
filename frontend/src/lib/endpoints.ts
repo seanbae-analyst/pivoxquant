@@ -318,9 +318,12 @@ export const API = {
   //   create      POST multipart {file, consent=true} | JSON {text, source, consent}
   //   pending     GET  → {pending[], count}
   //   pendingItem PATCH {ticker?, name?, action?, shares?, price?, traded_at?}
-  //   approve     POST {thesis} (3~500자), reflection_id?: number | null → {ok, pending, trade_id, position_id}
+  //   approve     POST {thesis} (3~500자), reflection_id?: number | null, reflection_declined?: true
+  //               → {ok, pending, trade_id, position_id}
   //               reflection_id (2026-09-29): number = link that pause, null = do not link,
-  //               omitted = server keeps the import-time match (services/pre_trade/link.py)
+  //               omitted = server keeps the import-time match (services/pre_trade/link.py).
+  //               reflection_declined: true — sent only when a pause was shown and unchecked;
+  //               stored so friction_outcome never infers a pause for this buy.
   //   reject      POST → {ok}
   imports: {
     create: "/api/portfolio/imports",
@@ -367,6 +370,10 @@ export const API = {
 //   the server then writes a recorded buy linked to it, not a holding seed.
 export const PORTFOLIO_POSITIONS = "/api/portfolio/positions";
 export const PORTFOLIO_SUMMARY = "/api/portfolio/summary";
+// POST PORTFOLIO_TRADES {position_id, action, quantity, price, date?, note?,
+//   reflection_id?, reflection_declined?} — buy only (2026-09-29): reflection_id
+//   links the pause; reflection_declined: true is sent only when a pause was shown
+//   and unchecked (stored; friction_outcome then never infers one for this buy).
 export const PORTFOLIO_TRADES = "/api/portfolio/trades";
 
 // Watchlist + Search (added 2026-04-22) — spec-matched aliases used by the

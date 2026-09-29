@@ -18,6 +18,7 @@ import {
   ReflectionLinkLine,
   daysSince,
   rationaleFirstLine,
+  reflectionLinkBody,
   useReflectionLink,
   LINK_EXCERPT_CHARS,
 } from "@/components/pre-trade/reflection-link-line";
@@ -57,6 +58,7 @@ function Harness({ ticker }: { ticker: string | null }) {
     <div>
       <ReflectionLinkLine link={link} />
       <span data-testid="rid">{String(link.reflectionId)}</span>
+      <span data-testid="body">{JSON.stringify(reflectionLinkBody(link))}</span>
     </div>
   );
 }
@@ -96,9 +98,21 @@ describe("<ReflectionLinkLine />", () => {
     expect(screen.getByTestId("rid").textContent).toBe("7");
     expect(screen.getByText(/실적 발표 전에 비중을 늘린다/)).toBeTruthy();
     expect(screen.queryByText(/둘째 줄/)).toBeNull();
+    expect(JSON.parse(screen.getByTestId("body").textContent!)).toEqual({ reflection_id: 7 });
     fireEvent.click(box);
     expect(box.checked).toBe(false);
     expect(screen.getByTestId("rid").textContent).toBe("null");
+    // Unchecking a shown pause is an explicit decline (2026-09-29).
+    expect(JSON.parse(screen.getByTestId("body").textContent!)).toEqual({
+      reflection_id: null,
+      reflection_declined: true,
+    });
+  });
+
+  it("with no candidate the body carries no link keys", () => {
+    mockedHook.mockReturnValue(result([]));
+    render(<Harness ticker="AAPL" />);
+    expect(screen.getByTestId("body").textContent).toBe("{}");
   });
 
   it("a null ticker disables the fetch", () => {

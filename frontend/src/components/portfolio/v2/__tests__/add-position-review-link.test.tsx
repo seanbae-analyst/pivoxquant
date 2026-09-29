@@ -43,6 +43,14 @@ import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal
 
 const mockedFetch = vi.mocked(apiFetch);
 
+// fireEvent (not userEvent typing) keeps these off the wall clock under
+// parallel-suite contention.
+function fillCore() {
+  fireEvent.change(screen.getByPlaceholderText("AAPL · 005930.KS"), { target: { value: "AAPL" } });
+  fireEvent.change(screen.getByPlaceholderText("0"), { target: { value: "10" } });
+  fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "150" } });
+}
+
 describe("AddPositionModalV2 — review entry links the pause", () => {
   beforeEach(() => {
     mockedFetch.mockReset();
@@ -55,9 +63,7 @@ describe("AddPositionModalV2 — review entry links the pause", () => {
     render(<AddPositionModalV2 open onClose={onClose} onSuccess={vi.fn()} />);
 
     await user.click(screen.getByRole("radio", { name: "신규 진입 검토 · 7문항" }));
-    await user.type(screen.getByPlaceholderText("AAPL · 005930.KS"), "AAPL");
-    await user.type(screen.getByPlaceholderText("0"), "10");
-    await user.type(screen.getByPlaceholderText("0.00"), "150");
+    fillCore();
     fireEvent.change(
       screen.getByPlaceholderText("왜 지금 이 종목에 들어가는가? 한 문단으로 정직하게."),
       {
@@ -81,9 +87,7 @@ describe("AddPositionModalV2 — review entry links the pause", () => {
   it("holding mode sends no reflection_id", async () => {
     const user = userEvent.setup();
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
-    await user.type(screen.getByPlaceholderText("AAPL · 005930.KS"), "AAPL");
-    await user.type(screen.getByPlaceholderText("0"), "10");
-    await user.type(screen.getByPlaceholderText("0.00"), "150");
+    fillCore();
     await user.click(screen.getByRole("button", { name: /Record · 기록/ }));
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(1));
     const body = JSON.parse((mockedFetch.mock.calls[0][1] as RequestInit).body as string);

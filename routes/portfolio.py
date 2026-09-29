@@ -866,12 +866,14 @@ def create_trade_alias():
         )
 
     # 2026-09-29 — optional explicit buy ↔ pause link (services/pre_trade/link.py).
-    from services.pre_trade.link import ReflectionLinkError, resolve_reflection_link
+    # `reflection_declined: true` = a candidate was shown and unchecked.
+    from services.pre_trade.link import ReflectionLinkError, link_declined, resolve_reflection_link
     try:
         reflection_id = resolve_reflection_link(
             current_user.id, d.get("reflection_id"), ticker=p.ticker, action=action)
     except ReflectionLinkError as e:
         return api_error(en=e.en, kr=e.kr, code=e.code, status=400)
+    declined = link_declined(d, reflection_id, action=action)
 
     cached = cache_service.get_signal(p.ticker)
     sd = cache_service.safe_cache_blob(cached)
@@ -947,6 +949,7 @@ def create_trade_alias():
         if traded_at_dt is not None:
             _buy_th.traded_at = traded_at_dt
         _buy_th.reflection_id = reflection_id
+        _buy_th.reflection_declined = True if declined else None
         db.session.add(_buy_th)
         err = _commit_recorded_trade(
             ticker, None if thesis_was_empty else note, "buy",

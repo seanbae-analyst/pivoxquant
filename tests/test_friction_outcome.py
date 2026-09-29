@@ -405,3 +405,41 @@ class TestExplicitLink:
         out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
         assert out["realised"]["with_friction"]["n"] == 1
         assert out["caveats"]["explicit_links"] == 0
+
+
+def _declined(trade):
+    trade.reflection_declined = True
+    return trade
+
+
+class TestDeclinedLink:
+    """보여진 후보를 끄고 기록한 매수는 추정으로 멈춤에 귀속하지 않는다 (2026-09-29)."""
+
+    def test_declined_buy_in_window_is_not_attributed(self):
+        refl = _with_id(_refl("AAPL", created=BASE, proceeded=BASE), 21)
+        trades = [
+            _declined(_trade("AAPL", "BUY", BASE + timedelta(hours=2), price=100.0)),
+            _trade("AAPL", "SELL", BASE + timedelta(days=5), price=110.0),
+        ]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        assert out["realised"]["with_friction"]["n"] == 0
+        assert out["realised"]["without_friction"]["n"] == 1
+
+    def test_declined_buy_after_cancel_is_not_bought_later(self):
+        refl = _with_id(_refl("AAPL", created=BASE, cancelled=BASE), 22)
+        trades = [_declined(_trade("AAPL", "BUY", BASE + timedelta(days=2)))]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        cf = out["cancelled_followthrough"]
+        assert cf["bought_later_anyway"] == 0 and cf["never_bought"] == 1
+
+    def test_declined_buy_does_not_block_the_next_undeclined_buy(self):
+        """거절한 매수는 건너뛰고, 창 안의 다음 (거절 없는) 매수는 여전히 추정된다."""
+        refl = _with_id(_refl("AAPL", created=BASE, proceeded=BASE), 23)
+        trades = [
+            _declined(_trade("AAPL", "BUY", BASE + timedelta(hours=1), price=100.0)),
+            _trade("AAPL", "BUY", BASE + timedelta(days=2), price=200.0),
+            _trade("AAPL", "SELL", BASE + timedelta(days=6), shares=20.0, price=220.0),
+        ]
+        out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
+        assert out["realised"]["with_friction"]["median_pct"] == 10.0
+        assert out["realised"]["without_friction"]["median_pct"] == 120.0

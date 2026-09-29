@@ -143,6 +143,21 @@ class TestTradeLink:
         with app.app_context():
             assert TradeHistory.query.filter_by(user_id=auth_user["id"]).count() == before
 
+    def test_declined_is_stored_only_for_unlinked_buy(self, client, app, auth_user, add_position, seeded):
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        with app.app_context():
+            rid = _refl(auth_user["id"])
+        assert _buy(client, pid, reflection_declined=True).status_code == 200
+        t = _latest_trade(app, auth_user["id"])
+        assert (t.reflection_id, t.reflection_declined) == (None, True)
+        # 연결과 같이 오면 연결이 이긴다 — 거절은 남지 않는다.
+        assert _buy(client, pid, reflection_id=rid, reflection_declined=True).status_code == 200
+        t = _latest_trade(app, auth_user["id"])
+        assert (t.reflection_id, t.reflection_declined) == (rid, None)
+        # 불리언 true 만 거절이다.
+        assert _buy(client, pid, reflection_declined="true").status_code == 200
+        assert _latest_trade(app, auth_user["id"]).reflection_declined is None
+
     def test_sell_with_link_rejected(self, client, app, auth_user, add_position, seeded):
         pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
         with app.app_context():
@@ -268,7 +283,26 @@ class TestImportApproveLink:
                         json={"thesis": "반도체 업황 회복", "reflection_id": None})
         assert a.status_code == 200
         with app.app_context():
-            assert db.session.get(TradeHistory, a.get_json()["trade_id"]).reflection_id is None
+            t = db.session.get(TradeHistory, a.get_json()["trade_id"])
+            # null 로 끊은 매치가 아직 이을 수 있었다 → 명시 거절로 남는다.
+            assert (t.reflection_id, t.reflection_declined) == (None, True)
+
+    def test_declined_flag_without_match(self, client, app, auth_user):
+        p = self._pending(client, "삼성전자 10주 매수 체결 71,200원 2026-09-01 10:32")
+        assert p["pre_trade_reflection_id"] is None
+        a = client.post(f"{IMPORTS}/pending/{p['id']}/approve", json={
+            "thesis": "반도체 업황 회복", "reflection_id": None, "reflection_declined": True,
+        })
+        assert a.status_code == 200, a.get_json()
+        with app.app_context():
+            assert db.session.get(TradeHistory, a.get_json()["trade_id"]).reflection_declined is True
+
+    def test_no_key_leaves_decline_unset(self, client, app, auth_user):
+        p = self._pending(client, "삼성전자 10주 매수 체결 71,200원 2026-09-01 10:32")
+        a = client.post(f"{IMPORTS}/pending/{p['id']}/approve", json={"thesis": "반도체 업황 회복"})
+        assert a.status_code == 200
+        with app.app_context():
+            assert db.session.get(TradeHistory, a.get_json()["trade_id"]).reflection_declined is None
 
     def test_explicit_wrong_ticker_rejected(self, client, app, auth_user):
         with app.app_context():

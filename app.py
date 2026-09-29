@@ -860,6 +860,9 @@ def _do_migrations():
         "trade_history", "reflection_id",
         "INTEGER REFERENCES pre_trade_reflections(id) ON DELETE SET NULL",
     )
+    # 2026-09-29 — 멈춤 연결 명시 거절 (models/trade_history.py
+    # reflection_declined, alembic 061). NULL = 거절 기록 없음.
+    _add_column_if_missing("trade_history", "reflection_declined", "BOOLEAN")
 
     # Investment profiles — covers onboarding answers + auto-calc quant params.
     _add_column_if_missing("investment_profiles", "experience_level", "VARCHAR(20)", default="'beginner'")

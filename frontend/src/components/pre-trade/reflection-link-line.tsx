@@ -34,6 +34,25 @@ export interface ReflectionLinkState {
   setLinked: (on: boolean) => void;
   /** What to send as `reflection_id` — null when unlinked / no candidate. */
   reflectionId: number | null;
+  /**
+   * A candidate was shown and the user unchecked it (2026-09-29). The host
+   * then sends `reflection_declined: true` so the backend stores the decline
+   * and friction_outcome stops inferring a pause for this buy.
+   */
+  declined: boolean;
+}
+
+/**
+ * Request-body fields for the link choice (POST /api/portfolio/trades buy,
+ * import approve): `{}` with no candidate shown, `{reflection_id}` when
+ * linked, `{reflection_id: null, reflection_declined: true}` when unchecked.
+ */
+export function reflectionLinkBody(
+  link: Pick<ReflectionLinkState, "candidate" | "reflectionId" | "declined">,
+): { reflection_id?: number | null; reflection_declined?: true } {
+  if (!link.candidate) return {};
+  if (link.declined) return { reflection_id: null, reflection_declined: true };
+  return { reflection_id: link.reflectionId };
 }
 
 /**
@@ -59,7 +78,13 @@ export function useReflectionLink(
     (on: boolean) => setOptedOutId(on ? null : (candidate?.id ?? null)),
     [candidate],
   );
-  return { candidate, linked, setLinked, reflectionId: linked && candidate ? candidate.id : null };
+  return {
+    candidate,
+    linked,
+    setLinked,
+    reflectionId: linked && candidate ? candidate.id : null,
+    declined: candidate != null && !linked,
+  };
 }
 
 /** First line of the user's rationale, cut to the excerpt budget. Pure. */
