@@ -41,8 +41,6 @@ import { useInvestmentProfile } from "@/lib/hooks";
 import {
   usePersona,
   usePulse,
-  PERSONA_LABELS,
-  declaredSurfaceLabel,
 } from "@/lib/cfo/hooks";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { useT } from "@/lib/locale";
@@ -100,11 +98,12 @@ export function LivingCFOStatusBar() {
       id: 1,
       name: "Identity",
       state: layer1State,
+      // 2026-09-29: used to read "Declared persona · 성장형." — no type
+      // labels (CLAUDE.md "유형 라벨·점수는 만들지 않는다"). The fact is that
+      // the answers exist; what they say is on /mirror.
       summary:
         layer1State === "ready"
-          ? `Declared persona · ${
-              declaredSurfaceLabel(profile?.profile?.profile_type) ?? "set"
-            }.`
+          ? "Five onboarding answers recorded."
           : "Five onboarding questions not yet answered.",
       cta:
         layer1State === "ready"
@@ -184,7 +183,6 @@ export function LivingCFOStatusBar() {
               setFocusedLayer(null);
             }}
             layers={layers}
-            personaLabel={personaBarLabel(persona?.declared?.persona)}
             focusedLayer={focusedLayer}
           />
         )}
@@ -245,20 +243,13 @@ function LayerDot({
   );
 }
 
-function personaBarLabel(id: string | undefined): string | null {
-  if (!id) return null;
-  return PERSONA_LABELS[id as keyof typeof PERSONA_LABELS] ?? null;
-}
-
 function StatusModal({
   onClose,
   layers,
-  personaLabel,
   focusedLayer,
 }: {
   onClose: () => void;
   layers: LayerState[];
-  personaLabel: string | null;
   focusedLayer: LayerState["id"] | null;
 }) {
   const focusedRowRef = React.useRef<HTMLLIElement | null>(null);
@@ -318,7 +309,7 @@ function StatusModal({
               CFO · What it knows
             </div>
             <h3 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
-              {personaLabel ?? "Your personal CFO"}
+              Your personal CFO
             </h3>
           </div>
           <button
