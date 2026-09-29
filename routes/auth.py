@@ -715,6 +715,18 @@ def register():
     # cannot forge an allowlisted value; the absent-header case (curl, tests,
     # native clients) stays permitted exactly like /logout. This blocks the
     # browser-driven attack without breaking any same-origin flow.
+    #
+    # 2026-09-29: 위 Origin 가드는 브라우저만 막는다 — curl 은 헤더를 빼거나
+    # 허용 목록 값을 위조해 같은 선점을 그대로 할 수 있었다. 프론트에
+    # API.auth.register 소비자가 없으니(OAuth 전용) 가입 자체를 플래그 뒤로
+    # 뺐다. 기본 꺼짐 — config.py PASSWORD_REGISTRATION_ENABLED.
+    if not current_app.config.get("PASSWORD_REGISTRATION_ENABLED", False):
+        return api_error(
+            en="Email/password sign-up is not available. Use Google or Kakao.",
+            kr="이메일 가입은 지원하지 않습니다. Google 또는 카카오로 시작해 주세요.",
+            code="AUTH_PASSWORD_SIGNUP_DISABLED",
+            status=403,
+        )
     if not _logout_origin_ok():
         return api_error(
             en="Cross-origin registration is not allowed.",
