@@ -36,6 +36,21 @@ NOTIFICATION_EVENT_IDS: tuple[str, ...] = (
     "monthly_mirror",
 )
 
+#: Per-event channels that actually have a sender. The matrix used to offer
+#: all three channels for every event, but (measured 2026-09-29):
+#:   * ``price_52w`` / ``concentration`` — their only producer is
+#:     ``services/alert.create_alert`` (bell row + ``notify_bell_alert`` push).
+#:     Nothing emails them.
+#:   * ``monthly_mirror`` — its only producer is the email cron
+#:     (``services/reports_delivery``). No bell row, no push.
+#: A channel outside this allowlist is a dead toggle: GET reports it off and
+#: PUT drops it. Add a channel here in the same change that ships its sender.
+NOTIFICATION_EVENT_CHANNELS: dict[str, tuple[str, ...]] = {
+    "price_52w":      ("push", "inapp"),
+    "concentration":  ("push", "inapp"),
+    "monthly_mirror": ("email",),
+}
+
 #: Events whose producer needs a vendor market quote. While
 #: ``MARKET_DATA_DISPLAY_ENABLED`` is off, ``app.py::_scheduled_price_alerts``
 #: skips their sweep, so nothing can ever send them.
@@ -70,6 +85,8 @@ def visible_notification_event_ids() -> tuple[str, ...]:
 #   * email = False — this one is an explicit opt-in. It attaches a PDF built
 #     from the user's own record and arrives unprompted once a month; nobody
 #     gets it because we decided they would like it.
+#   * 2026-09-29: ``concentration`` email defaulted True with no sender behind
+#     it — now False, like every channel outside NOTIFICATION_EVENT_CHANNELS.
 #   * push / inapp = False — the two sweeps default those channels on because
 #     they HAVE push/in-app producers (services/alert.py maps their alert
 #     kinds onto these event ids). The monthly report has exactly one
@@ -78,7 +95,7 @@ def visible_notification_event_ids() -> tuple[str, ...]:
 #     either to True in the same change that ships its sender, not before.
 NOTIFICATION_PREF_DEFAULTS: dict[str, dict[str, bool]] = {
     "price_52w":      {"email": False, "push": True,  "inapp": True},
-    "concentration":  {"email": True,  "push": True,  "inapp": True},
+    "concentration":  {"email": False, "push": True,  "inapp": True},
     "monthly_mirror": {"email": False, "push": False, "inapp": False},
 }
 

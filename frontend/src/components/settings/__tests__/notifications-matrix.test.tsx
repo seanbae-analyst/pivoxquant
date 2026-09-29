@@ -36,9 +36,12 @@ const mockedSave = vi.mocked(saveNotificationPreferences);
 const mockedMutate = vi.fn();
 
 // Minimal SWR-hook return shape the component reads (data + mutate).
-function hookReturn(prefs: Record<string, Record<string, boolean>> | undefined) {
+function hookReturn(
+  prefs: Record<string, Record<string, boolean>> | undefined,
+  channels: Record<string, string[]> | undefined = FULL_SERVER_CHANNELS,
+) {
   return {
-    data: prefs ? { prefs } : undefined,
+    data: prefs ? { prefs, channels } : undefined,
     mutate: mockedMutate,
     // unused-by-component fields, present for type-shape parity
     error: undefined,
@@ -51,9 +54,19 @@ function hookReturn(prefs: Record<string, Record<string, boolean>> | undefined) 
 // 2026-09-01: was the seven legacy event ids. Six had lost their producer and
 // the seventh died with the quant engine; the matrix now exposes the two
 // notifications this product actually sends (models.user.NOTIFICATION_EVENT_IDS).
+//
+// 2026-09-29: every event used to render all three channels. The 52-week and
+// concentration sweeps only ever write a bell row + push (services/alert.py);
+// the monthly report only ever emails. Those are the only live cells — the
+// server says so in `channels`, the rest render as "—" with no switch.
 const FULL_SERVER_PREFS = {
-  price_52w: { email: false, push: true, inapp: true },
-  concentration: { email: true, push: true, inapp: true },
+  price_52w: { email: false, push: false, inapp: true },
+  concentration: { email: false, push: true, inapp: true },
+};
+const FULL_SERVER_CHANNELS = {
+  price_52w: ["push", "inapp"],
+  concentration: ["push", "inapp"],
+  monthly_mirror: ["email"],
 };
 
 describe("NotificationsMatrix — server wiring", () => {
@@ -80,19 +93,19 @@ describe("NotificationsMatrix — server wiring", () => {
     mockedUseHook.mockReturnValue(hookReturn(FULL_SERVER_PREFS));
     renderMatrix();
 
-    // price_52w email toggle should hydrate to OFF from the server map.
-    const signalEmail = await screen.findByRole("switch", {
-      name: /52주 범위 · email/i,
+    // price_52w push toggle should hydrate to OFF from the server map.
+    const signalPush = await screen.findByRole("switch", {
+      name: /52주 범위 · push/i,
     });
     await waitFor(() => {
-      expect(signalEmail).toHaveAttribute("aria-checked", "false");
+      expect(signalPush).toHaveAttribute("aria-checked", "false");
     });
 
-    // concentration email is ON from the server map.
-    const concentrationEmail = screen.getByRole("switch", {
-      name: /섹터 집중도 · email/i,
+    // concentration in-app is ON from the server map.
+    const concentrationInapp = screen.getByRole("switch", {
+      name: /섹터 집중도 · inapp/i,
     });
-    expect(concentrationEmail).toHaveAttribute("aria-checked", "true");
+    expect(concentrationInapp).toHaveAttribute("aria-checked", "true");
   });
 
   it("PUTs the updated map after the debounce on toggle, then toasts success", async () => {
@@ -102,16 +115,16 @@ describe("NotificationsMatrix — server wiring", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderMatrix();
 
-    const signalEmail = await screen.findByRole("switch", {
-      name: /52주 범위 · email/i,
+    const signalPush = await screen.findByRole("switch", {
+      name: /52주 범위 · push/i,
     });
     await waitFor(() =>
-      expect(signalEmail).toHaveAttribute("aria-checked", "false"),
+      expect(signalPush).toHaveAttribute("aria-checked", "false"),
     );
 
-    // Toggle price_52w email ON — optimistic update is immediate.
-    await user.click(signalEmail);
-    expect(signalEmail).toHaveAttribute("aria-checked", "true");
+    // Toggle price_52w push ON — optimistic update is immediate.
+    await user.click(signalPush);
+    expect(signalPush).toHaveAttribute("aria-checked", "true");
 
     // No PUT before the debounce window elapses.
     expect(mockedSave).not.toHaveBeenCalled();
@@ -123,7 +136,7 @@ describe("NotificationsMatrix — server wiring", () => {
 
     await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
     const sentMap = mockedSave.mock.calls[0][0];
-    expect(sentMap.price_52w.email).toBe(true);
+    expect(sentMap.price_52w.push).toBe(true);
 
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("알림 설정 저장됨"),
@@ -137,15 +150,15 @@ describe("NotificationsMatrix — server wiring", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderMatrix();
 
-    const signalEmail = await screen.findByRole("switch", {
-      name: /52주 범위 · email/i,
+    const signalPush = await screen.findByRole("switch", {
+      name: /52주 범위 · push/i,
     });
     await waitFor(() =>
-      expect(signalEmail).toHaveAttribute("aria-checked", "false"),
+      expect(signalPush).toHaveAttribute("aria-checked", "false"),
     );
 
-    await user.click(signalEmail);
-    expect(signalEmail).toHaveAttribute("aria-checked", "true");
+    await user.click(signalPush);
+    expect(signalPush).toHaveAttribute("aria-checked", "true");
 
     await act(async () => {
       vi.advanceTimersByTime(700);
@@ -155,7 +168,7 @@ describe("NotificationsMatrix — server wiring", () => {
 
     // Failure → rollback to the pre-edit OFF state + error toast.
     await waitFor(() =>
-      expect(signalEmail).toHaveAttribute("aria-checked", "false"),
+      expect(signalPush).toHaveAttribute("aria-checked", "false"),
     );
     expect(toast.error).toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
@@ -171,16 +184,16 @@ describe("NotificationsMatrix — server wiring", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderMatrix();
 
-    const signalEmail = screen.getByRole("switch", {
-      name: /52주 범위 · email/i,
+    const signalPush = screen.getByRole("switch", {
+      name: /52주 범위 · push/i,
     });
     // Toggle is disabled while loading.
-    expect(signalEmail).toBeDisabled();
-    expect(signalEmail).toHaveAttribute("aria-disabled", "true");
+    expect(signalPush).toBeDisabled();
+    expect(signalPush).toHaveAttribute("aria-disabled", "true");
 
     // Clicking a disabled toggle is a no-op (userEvent respects pointer-events;
     // assert no PUT regardless).
-    await user.click(signalEmail).catch(() => {});
+    await user.click(signalPush).catch(() => {});
 
     await act(async () => {
       vi.advanceTimersByTime(700);
@@ -197,12 +210,12 @@ describe("NotificationsMatrix — server wiring", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderMatrix();
 
-    const signalEmail = await screen.findByRole("switch", {
-      name: /52주 범위 · email/i,
+    const signalPush = await screen.findByRole("switch", {
+      name: /52주 범위 · push/i,
     });
-    await waitFor(() => expect(signalEmail).not.toBeDisabled());
+    await waitFor(() => expect(signalPush).not.toBeDisabled());
 
-    await user.click(signalEmail);
+    await user.click(signalPush);
     await act(async () => {
       vi.advanceTimersByTime(700);
     });
@@ -217,17 +230,17 @@ describe("NotificationsMatrix — server wiring", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderMatrix();
 
-    const signalEmail = await screen.findByRole("switch", {
-      name: /52주 범위 · email/i,
+    const signalPush = await screen.findByRole("switch", {
+      name: /52주 범위 · push/i,
     });
     await waitFor(() =>
-      expect(signalEmail).toHaveAttribute("aria-checked", "false"),
+      expect(signalPush).toHaveAttribute("aria-checked", "false"),
     );
     const concentrationPush = screen.getByRole("switch", {
       name: /섹터 집중도 · push/i,
     });
 
-    await user.click(signalEmail);
+    await user.click(signalPush);
     await user.click(concentrationPush);
 
     await act(async () => {
@@ -236,7 +249,7 @@ describe("NotificationsMatrix — server wiring", () => {
 
     await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
     const sentMap = mockedSave.mock.calls[0][0];
-    expect(sentMap.price_52w.email).toBe(true);
+    expect(sentMap.price_52w.push).toBe(true);
     expect(sentMap.concentration.push).toBe(false);
   });
 });
@@ -262,11 +275,11 @@ describe("NotificationsMatrix — the server owns the row list", () => {
     await act(async () => {});
 
     expect(
-      screen.queryByRole("switch", { name: /52주 범위 · email/i }),
+      screen.queryByRole("switch", { name: /52주 범위 · push/i }),
     ).toBeNull();
     // The event that does not need a quote is untouched.
     expect(
-      screen.getByRole("switch", { name: /섹터 집중도 · email/i }),
+      screen.getByRole("switch", { name: /섹터 집중도 · inapp/i }),
     ).toBeInTheDocument();
   });
 
@@ -280,10 +293,10 @@ describe("NotificationsMatrix — the server owns the row list", () => {
     await act(async () => {});
 
     expect(
-      screen.queryByRole("switch", { name: /52주 범위 · email/i }),
+      screen.queryByRole("switch", { name: /52주 범위 · push/i }),
     ).toBeNull();
     expect(
-      screen.getByRole("switch", { name: /섹터 집중도 · email/i }),
+      screen.getByRole("switch", { name: /섹터 집중도 · inapp/i }),
     ).toBeInTheDocument();
   });
 
@@ -298,11 +311,11 @@ describe("NotificationsMatrix — the server owns the row list", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderMatrix();
 
-    const concentrationEmail = await screen.findByRole("switch", {
-      name: /섹터 집중도 · email/i,
+    const concentrationInapp = await screen.findByRole("switch", {
+      name: /섹터 집중도 · inapp/i,
     });
-    await waitFor(() => expect(concentrationEmail).not.toBeDisabled());
-    await user.click(concentrationEmail);
+    await waitFor(() => expect(concentrationInapp).not.toBeDisabled());
+    await user.click(concentrationInapp);
 
     await act(async () => {
       vi.advanceTimersByTime(700);
@@ -312,5 +325,53 @@ describe("NotificationsMatrix — the server owns the row list", () => {
     const sentMap = mockedSave.mock.calls[0][0];
     expect(Object.keys(sentMap)).toEqual(["concentration"]);
     expect(sentMap.price_52w).toBeUndefined();
+  });
+});
+
+describe("NotificationsMatrix — only channels with a sender are toggles", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.stubEnv("NEXT_PUBLIC_MARKET_DATA_DISPLAY", "1");
+    mockedUseHook.mockReset();
+    mockedSave.mockReset();
+    mockedMutate.mockReset();
+  });
+
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  const PREFS_WITH_MIRROR = {
+    ...FULL_SERVER_PREFS,
+    monthly_mirror: { email: true, push: false, inapp: false },
+  };
+
+  it("renders no switch for a channel the server lists as dead", async () => {
+    mockedUseHook.mockReturnValue(hookReturn(PREFS_WITH_MIRROR));
+    renderMatrix();
+    await act(async () => {});
+
+    // concentration is never emailed; monthly mirror is only emailed.
+    expect(screen.queryByRole("switch", { name: /섹터 집중도 · email/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /52주 범위 · email/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · push/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · inapp/i })).toBeNull();
+    // Live cells are still switches.
+    expect(screen.getByRole("switch", { name: /섹터 집중도 · push/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("switch", { name: /월간 거울 리포트 · email/i }),
+    ).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("falls back to the local allowlist before / without a server channel map", async () => {
+    mockedUseHook.mockReturnValue(hookReturn(PREFS_WITH_MIRROR, undefined));
+    renderMatrix();
+    await act(async () => {});
+
+    expect(screen.queryByRole("switch", { name: /섹터 집중도 · email/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · push/i })).toBeNull();
+    expect(screen.getByRole("switch", { name: /월간 거울 리포트 · email/i })).toBeInTheDocument();
   });
 });

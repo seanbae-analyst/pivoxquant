@@ -186,9 +186,12 @@ export const API = {
   // Backend (2026-05-21) persists the 7-event × 3-channel toggle grid that
   // the <NotificationsMatrix /> previously kept only in a localStorage shadow
   // (GAP-E). Locked contract:
-  //   GET  → { prefs: { "<event_id>": { email, push, inapp }, ... } }  (server
-  //          always returns all 7 events with defaults merged)
-  //   PUT  body { prefs: {...} } → 200 { prefs: {...} } | 400 (validation)
+  //   GET  → { prefs: { "<event_id>": { email, push, inapp }, ... },
+  //            channels: { "<event_id>": ["push", ...], ... } }  (server
+  //          returns every visible event with defaults merged; `channels`
+  //          lists the cells that have a sender — the rest are always false)
+  //   PUT  body { prefs: {...} } → 200 { prefs, channels } | 400 (validation);
+  //          a channel with no sender is dropped, not stored
   notifications: {
     preferences: "/api/notifications/preferences",
   },
