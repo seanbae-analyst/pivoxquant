@@ -455,7 +455,13 @@ def add_position():
         .with_for_update()
         .one()
     )
-    if getattr(current_user, "effective_tier", None) in (None, "free"):
+    # 2026-09-29: the cap limits symbols — adding to an already-held ticker
+    # merges and never raises the count, so look the ticker up first.
+    from services.position_writes import holds_ticker as _holds_ticker
+    if (
+        getattr(current_user, "effective_tier", None) in (None, "free")
+        and not _holds_ticker(current_user.id, ticker)
+    ):
         position_count = Position.query.filter_by(user_id=current_user.id).filter(
             Position.shares > 0
         ).count()
@@ -821,7 +827,13 @@ def buy_new_position():
     # concurrent /buy-new of distinct tickers can't both pass the cap and
     # bypass the limit. Lock order User→Position preserved (User locked here,
     # any Position merge below). Gate logic / message unchanged.
-    if getattr(current_user, "effective_tier", None) in (None, "free"):
+    # 2026-09-29: the cap limits symbols — adding to an already-held ticker
+    # merges and never raises the count, so look the ticker up first.
+    from services.position_writes import holds_ticker as _holds_ticker
+    if (
+        getattr(current_user, "effective_tier", None) in (None, "free")
+        and not _holds_ticker(current_user.id, ticker)
+    ):
         position_count = Position.query.filter_by(user_id=current_user.id).filter(
             Position.shares > 0
         ).count()
@@ -1648,11 +1660,13 @@ def create_position_alias():
     # can't both pass the cap and bypass the limit. Gate logic / message
     # unchanged. SQLite no-ops the lock.
     from services.position_writes import (
-        FREE_POSITION_CAP, active_position_count, is_capped_tier, lock_user_row,
-        merge_buy_into,
+        FREE_POSITION_CAP, active_position_count, holds_ticker, is_capped_tier,
+        lock_user_row, merge_buy_into,
     )
     lock_user_row(current_user.id)
-    if is_capped_tier(current_user):
+    # 2026-09-29: the cap limits symbols — adding to an already-held ticker
+    # merges and never raises the count, so look the ticker up first.
+    if is_capped_tier(current_user) and not holds_ticker(current_user.id, symbol):
         pos_count = active_position_count(current_user.id)
         if pos_count >= FREE_POSITION_CAP:
             db.session.rollback()

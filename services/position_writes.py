@@ -37,6 +37,22 @@ def active_position_count(user_id: int) -> int:
     return Position.query.filter_by(user_id=user_id).filter(Position.shares > 0).count()
 
 
+def holds_ticker(user_id: int, ticker: str) -> bool:
+    """True when ``user_id`` already holds ``ticker`` with shares > 0.
+
+    2026-09-29: the free-plan cap limits the number of *symbols*. Adding shares
+    to a symbol already held does not raise that number, so every add path
+    checks this first and applies the cap only to a new symbol (the holdings
+    import already exempted merges)."""
+    from models import Position
+    return (
+        Position.query.filter_by(user_id=user_id, ticker=ticker)
+        .filter(Position.shares > 0)
+        .first()
+        is not None
+    )
+
+
 def merge_buy_into(ex_row, quantity: float, price: float, *, is_kr: bool,
                    fx_rate: float, note: str | None = None) -> None:
     """Merge a new lot into an existing position: weighted-average cost,
