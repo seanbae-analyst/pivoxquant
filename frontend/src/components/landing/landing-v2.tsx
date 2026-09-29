@@ -12,7 +12,7 @@
  *                        /journal/import + /settings#import-tokens (2026-09-19).
  *                        Deliberately its own section, not a Faq item: "typing
  *                        every fill by hand" was the unanswered objection.
- *   6. PersonasPreview — the 3 disclosed buckets only (성장형/균형형/수익형);
+ *   6. PersonasPreview — 선언 vs 관찰 explained, no type names (2026-09-29);
  *                        engine persona codes never appear (2026-09-13)
  *   7. Faq             — 7 items, answered against what ships
  *   8. CtaFooter       — free closed beta, Google/Kakao only
