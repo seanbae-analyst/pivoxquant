@@ -3,20 +3,22 @@
 from __future__ import annotations
 
 from services.name_resolver import (
+    canonical_display_name,
     lookup_name_from_signal_cache,
-    resolve_stock_name,
 )
 
 
 def _resolve_display_name(ticker: str) -> str | None:
-    """Prefer the live SignalCache name (broker-provided), then static
-    registries. Returns None when nothing resolves — callers fall back
-    to the ticker itself to preserve legacy behaviour.
+    """표시 이름 — 규칙은 ``canonical_display_name`` 한 벌이다.
+
+    KR 종목은 kr_stock_registry 의 한글 이름이 항상 이기고(캐시에 옛 영문
+    이름이 남아 있어도), US 종목은 SignalCache(브로커) 이름 → 레지스트리 순.
+    아무것도 안 풀리면 None — 호출자가 티커로 대체한다.
     """
     if not ticker:
         return None
-    name = lookup_name_from_signal_cache(ticker) or resolve_stock_name(ticker)
-    return name
+    name = canonical_display_name(lookup_name_from_signal_cache(ticker), ticker)
+    return None if not name or name == ticker.strip() else name
 
 
 def serialize_user(u) -> dict:
