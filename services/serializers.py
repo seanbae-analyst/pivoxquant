@@ -89,6 +89,9 @@ def serialize_user(u) -> dict:
 
 
 def serialize_trade(t) -> dict:
+    # 거래 직렬화는 이것 한 벌 — /api/trades 와 PIPA JSON 내보내기
+    # (routes/profile.py) 가 같이 쓴다. traded_at 은 nullable 컬럼이다.
+    traded_at = getattr(t, "traded_at", None)
     return {
         "id": t.id,
         "ticker": t.ticker,
@@ -100,7 +103,7 @@ def serialize_trade(t) -> dict:
         "pnl": t.pnl,
         "pnl_pct": t.pnl_pct,
         "currency": t.currency,
-        "traded_at": t.traded_at.isoformat(),
+        "traded_at": traded_at.isoformat() if traded_at is not None else None,
         # 2026-09-29: "holding_seed" = 보유 등록 시드, None = 체결 기록.
         "source": getattr(t, "source", None),
     }

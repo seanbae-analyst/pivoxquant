@@ -61,6 +61,7 @@ from models import (
     WeeklyPulse,
 )
 from services.error_responses import api_error
+from services.serializers import serialize_trade
 from services.profile import (
     compute_persona_response,
     classify_persona_multi,
@@ -1654,22 +1655,6 @@ def _serialize_watchlist(w) -> dict:
     }
 
 
-def _serialize_trade(t) -> dict:
-    return {
-        "id": t.id,
-        "ticker": t.ticker,
-        "name": getattr(t, "name", None),
-        "action": t.action,
-        "shares": t.shares,
-        "price_per_share": t.price_per_share,
-        "total_value": t.total_value,
-        "pnl": getattr(t, "pnl", None),
-        "pnl_pct": getattr(t, "pnl_pct", None),
-        "currency": getattr(t, "currency", None),
-        "traded_at": _iso_or_none(getattr(t, "traded_at", None)),
-    }
-
-
 def _serialize_alert(a) -> dict:
     return {
         "id": a.id,
@@ -2811,7 +2796,7 @@ def export_profile():
         "user": _serialize_user(user),
         "positions": [_serialize_position(p) for p in positions],
         "watchlist": [_serialize_watchlist(w) for w in watchlist],
-        "trade_history": [_serialize_trade(t) for t in trades],
+        "trade_history": [serialize_trade(t) for t in trades],
         "alerts": [_serialize_alert(a) for a in alerts],
         "investment_profile": (
             investment_profile.to_dict() if investment_profile else None
