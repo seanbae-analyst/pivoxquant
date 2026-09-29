@@ -69,6 +69,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
 import { ageConfirmationRequired, useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
+import { loginHref } from "@/lib/login-redirect";
 import {
   clearStagedSnapshot,
   CONSENT_STORAGE_KEY,
@@ -126,9 +127,10 @@ export default function OAuthFinalizePage() {
   // unauthenticated visit means a stale cookie or a direct bookmark.
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/login");
+      // Keep the destination the backend handed us (?next=) for the retry.
+      router.replace(loginHref(searchParams.get("next")));
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, searchParams]);
 
   // If the user has *already* confirmed their age (interstitial visited by
   // mistake), skip straight to the destination.

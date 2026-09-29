@@ -16,6 +16,7 @@ import {
   readStagedSnapshot,
 } from "@/lib/consents";
 import { useKeyboardNav } from "@/lib/use-keyboard-nav";
+import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 
 /* ──────────────────────────────────────────────────────────────────
    Path → DisclaimerBanner type resolver
@@ -77,8 +78,11 @@ type GuardUser = {
 
 export function nextAuthRedirect(
   user: GuardUser | null | undefined,
+  /** Path+query the visitor asked for — carried to /login as ?next= so the
+   *  OAuth round-trip lands them back here (2026-09-29). */
+  currentPath?: string | null,
 ): string | null {
-  if (!user) return "/login";
+  if (!user) return loginHref(currentPath);
   // PIPA §22 ⑥ minor-protection gate: OAuth provisioned the account but the
   // age confirmation (self-declaration) is still outstanding. The backend
   // already returns 403 AGE_CONFIRMATION_REQUIRED on data endpoints; this
@@ -120,7 +124,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     // Single prioritized guard: login → age confirmation (PIPA §22 ⑥) →
     // onboarding broker. Step 0 of onboarding is the broker-connect screen,
     // which then routes into the five-question wizard.
-    const dest = nextAuthRedirect(user);
+    const dest = nextAuthRedirect(user, currentLocationPath());
     if (dest) router.replace(dest);
   }, [user, loading, router]);
 

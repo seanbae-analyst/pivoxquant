@@ -45,6 +45,7 @@ import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-c
 import { TickerSearch } from "@/components/shared/ticker-search";
 import { HoldingsImportPanel } from "@/components/portfolio/v2/holdings-import-panel";
 import { useT } from "@/lib/locale";
+import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 
 interface AddPositionModalV2Props {
   open: boolean;
@@ -209,7 +210,7 @@ export function AddPositionModalV2({
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        if (typeof window !== "undefined") window.location.href = "/login";
+        if (typeof window !== "undefined") window.location.href = loginHref(currentLocationPath());
         return;
       }
       const message =
