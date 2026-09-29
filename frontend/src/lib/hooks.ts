@@ -186,6 +186,29 @@ export function usePreTradeJournal(limit = 50) {
   };
 }
 
+/**
+ * 2026-09-29 — the user's recent buy-side pauses for `ticker` that are not yet
+ * linked to a recorded purchase (backend `services/pre_trade/link.py`, last
+ * 30 days, newest first). Offered by the trade modal so a recorded buy can
+ * point at the pause that preceded it. Null ticker disables the fetch.
+ */
+export function useLinkableReflections(ticker: string | null) {
+  const key = ticker
+    ? `${API.preTrade.list}?ticker=${encodeURIComponent(ticker)}&linkable=1`
+    : null;
+  // Short dedupe: a pause becomes unavailable the moment a buy is linked to
+  // it, so the next modal open must not offer it again from a warm cache.
+  const swr = useSWR<PreTradeJournalResponse>(key, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 2_000,
+  });
+  return {
+    reflections: swr.data?.reflections ?? [],
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+  };
+}
+
 /* ── Observation Notes (관찰 노트, 2026-09-22) ──────────────────────────
  *
  * docs/design/observation-notes_2026-09-22.md §5. Same SWR contract as

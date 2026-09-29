@@ -46,9 +46,10 @@ export interface PreTradeFrictionModalProps {
   /**
    * Called once /proceed succeeds. Host commits the real journal record here
    * (add / trim / close). May be async; thrown errors surface a toast but the
-   * reflection stays stamped.
+   * reflection stays stamped. Receives the stamped reflection's id (2026-09-29)
+   * so a buy can be linked to it (`reflection_id`, services/pre_trade/link.py).
    */
-  onProceed: () => Promise<void> | void;
+  onProceed: (reflectionId: number) => Promise<void> | void;
   /** Called when the user cancels the reflection (host keeps its modal open). */
   onCancel?: () => void;
   /** Close the modal entirely (X / backdrop / terminal Close). */
