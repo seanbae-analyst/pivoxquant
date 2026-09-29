@@ -40,7 +40,8 @@ Average holding period
 -----------------------
 For context next to the activity counts we surface the same hold-day
 statistic the holding/profit-loss mirrors use, derived from the shared
-:func:`services.profile.fifo_util.fifo_match_closed_trades`
+:func:`services.profile.fifo_util.fifo_match_closed_trades_with_pnl`
+pairs collapsed to one observation per 매도 (``collapse_pairs_by_sell``),
 ``MatchedPair.hold_days`` — median primary (right-skew resistant), mean
 secondary. Both are ``None`` when there are no closed round trips in the
 window. This is the *only* derived statistic; everything else is a raw
@@ -68,7 +69,10 @@ from datetime import datetime, timedelta
 from typing import Iterable
 
 from models import TradeHistory
-from services.profile.fifo_util import fifo_match_closed_trades
+from services.profile.fifo_util import (
+    collapse_pairs_by_sell,
+    fifo_match_closed_trades_with_pnl,
+)
 
 
 # ── tunables ─────────────────────────────────────────────────────────
@@ -99,10 +103,15 @@ def _hold_day_stats(
     ``trades`` 는 전체 이력이어야 한다; ``since`` 는 매도 시각이 그 이후인
     쌍만 남긴다 (2026-09-29 — 창 안 체결만 맞추면 창보다 오래된 매수가 사라져
     그 매도가 로트를 잃었다).
+
+    2026-09-29: 매도 한 번 = 관찰 한 건 (보유기간 거울과 같은 단위). 한 매도가
+    여러 로트를 닫으면 슬라이스마다 세던 것을 ``collapse_pairs_by_sell`` 로
+    묶는다 — 보유일은 그 슬라이스들의 수량 가중 평균.
     """
-    pairs = fifo_match_closed_trades(trades)
+    attributed = fifo_match_closed_trades_with_pnl(trades)
     if since is not None:
-        pairs = [p for p in pairs if p.sell_time >= since]
+        attributed = [(p, pct) for p, pct in attributed if p.sell_time >= since]
+    pairs = [p for p, _ in collapse_pairs_by_sell(attributed)]
     if not pairs:
         return None, None
     holds = [float(p.hold_days) for p in pairs]
