@@ -325,3 +325,17 @@ class TestImportApproveLink:
                         json={"thesis": "반도체 업황 회복", "reflection_id": rid})
         assert a.status_code == 400
         assert a.get_json()["code"] == "REFLECTION_LINK_TICKER_MISMATCH"
+
+
+@pytest.mark.parametrize("a,b,expected", [
+    ("005930.KS", "005930", True),
+    ("035720.KQ", "035720.KQ", True),
+    ("aapl", "AAPL", True),
+    ("BRK.A", "BRK.B", False),   # 2026-09-29 — 클래스주는 다른 종목
+    ("BF.A", "BF.B", False),
+    ("BRK.B", "BRK.B", True),
+    ("BRK.B", "BRK", False),
+])
+def test_same_ticker_strips_only_kr_suffix(a, b, expected):
+    from services.pre_trade.link import same_ticker
+    assert same_ticker(a, b) is expected

@@ -443,3 +443,21 @@ class TestDeclinedLink:
         out = compute_friction_outcome([refl], trades, now=BASE + timedelta(days=30))
         assert out["realised"]["with_friction"]["median_pct"] == 10.0
         assert out["realised"]["without_friction"]["median_pct"] == 120.0
+
+
+def test_two_pauses_do_not_share_one_buy():
+    """2026-09-29: 같은 종목에 멈춤 두 번 → 매수 두 번이면 1:1 로 짝짓는다.
+    전에는 두 멈춤이 첫 매수 하나를 같이 잡아 두 번째 매수가 '미경유'로 샜다."""
+    refls = [
+        _refl("AAPL", proceeded=BASE + timedelta(minutes=1)),
+        _refl("AAPL", created=BASE + timedelta(minutes=2),
+              proceeded=BASE + timedelta(minutes=3)),
+    ]
+    trades = (
+        _round_trip("AAPL", BASE + timedelta(days=1), 100.0, 110.0)
+        + _round_trip("AAPL", BASE + timedelta(days=2), 100.0, 90.0)
+    )
+    out = compute_friction_outcome(refls, trades, now=BASE + timedelta(days=30))
+    r = out["realised"]
+    assert r["with_friction"]["n"] == 2
+    assert r["without_friction"]["n"] == 0

@@ -58,8 +58,17 @@ class ReflectionLinkError(Exception):
         self.kr = kr
 
 
+# 한국 거래소 접미사만 뗀다. 미국 클래스주(BRK.A / BRK.B, BF.A / BF.B)의
+# ".A" 는 거래소가 아니라 다른 종목이다 — 첫 "." 에서 자르면 둘이 같아진다.
+_KR_SUFFIXES = (".KS", ".KQ", ".KRX")
+
+
 def _base(ticker: Any) -> str:
-    return _norm(ticker).split(".", 1)[0]
+    t = _norm(ticker)
+    for suffix in _KR_SUFFIXES:
+        if t.endswith(suffix):
+            return t[: -len(suffix)]
+    return t
 
 
 def same_ticker(a: Any, b: Any) -> bool:

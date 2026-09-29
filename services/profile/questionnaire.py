@@ -14,6 +14,7 @@ docs/strategy/onboarding-questionnaire-v3_2026-09-06.md and
 docs/strategy/onboarding-competitor-research_2026-09-06.md.
 """
 
+import math
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -210,6 +211,74 @@ DECLARED_VECTOR_MAP: dict[str, dict[str, float]] = {
     # declared_risk is stored as risk_tolerance 1..10 and projected with the
     # classifier's own formula ``(rt - 1) / 9`` — see calculate_profile_v3.
 }
+
+# 2026-09-29 — each answer is a BUCKET, not a point. The midpoints above
+# place the radar; the gap on /mirror compares against these ranges instead,
+# so a user who holds 1 stock after declaring "1~3종목" is not shown a gap.
+# Edges sit on the same log curves as the classifier features (bucket i runs
+# from its own lower count up to the next bucket's lower count):
+#   holding  _norm_log(days, 1, 180):     1d · 7d · 30d
+#   turnover _norm_log(n/30, .02, 1):     3/mo · 6/mo · 16/mo · 30/mo(=ceil)
+#   tickers  _norm_log(n, 1, 25):         4 · 9 · 16 · 25
+def _edge(value: float, floor: float, ceil: float) -> float:
+    # Same formula as persona_analytics._norm_log (kept local: no import cycle).
+    if value <= floor:
+        return 0.0
+    if value >= ceil:
+        return 1.0
+    return math.log(value / floor) / math.log(ceil / floor)
+
+
+def _hold(d: float) -> float:
+    return _edge(d, 1.0, 180.0)
+
+
+def _turn(per_month: float) -> float:
+    return _edge(per_month / 30.0, 0.02, 1.0)
+
+
+def _tick(n: float) -> float:
+    return _edge(n, 1.0, 25.0)
+
+
+DECLARED_RANGE_MAP: dict[str, dict[str, tuple[float, float]]] = {
+    "declared_holding": {
+        "intraday": (0.0, _hold(1)),
+        "days":     (_hold(1), _hold(7)),
+        "weeks":    (_hold(7), _hold(30)),
+        "months":   (_hold(30), 1.0),
+        "years":    (1.0, 1.0),
+    },
+    "declared_frequency": {
+        "rare":     (0.0, _turn(3)),
+        "few":      (_turn(3), _turn(6)),
+        "moderate": (_turn(6), _turn(16)),
+        "frequent": (_turn(16), 1.0),
+        "daily":    (1.0, 1.0),
+    },
+    "declared_positions": {
+        "ultra_focused": (0.0, _tick(4)),
+        "focused":       (_tick(4), _tick(9)),
+        "moderate":      (_tick(9), _tick(16)),
+        "diversified":   (_tick(16), 1.0),
+        "broad":         (1.0, 1.0),
+    },
+}
+
+
+def declared_ranges(answers: dict | None) -> dict[str, tuple[float, float]]:
+    """``{mirror_axis: (lo, hi)}`` for each V3 answer that has a range."""
+    if not isinstance(answers, dict):
+        return {}
+    axis_of = {q["id"]: q.get("mirror_axis") for q in QUESTIONNAIRE_V3}
+    out: dict[str, tuple[float, float]] = {}
+    for qid, buckets in DECLARED_RANGE_MAP.items():
+        rng = buckets.get(str(answers.get(qid))) if qid in answers else None
+        axis = axis_of.get(qid)
+        if rng is not None and axis:
+            out[axis] = rng
+    return out
+
 
 # Q4 answer → risk_tolerance (1..10). Same scale V2's C1 used, so
 # ``persona_classifier_v2`` D7 keeps reading the column unchanged.
