@@ -2420,8 +2420,8 @@ def export_profile():
     (ai_twin_positions / ai_twin_trades → ai_twin_portfolios.id) resolve the
     user's parent ids first, then filter. Global / non-user tables
     (signal_cache, persona_group_stats, processed_stripe_events,
-    agent_kill_switch) are out of scope. Keep in sync with the two deletion
-    paths (auth.py:delete_account + pipa_purge.py:_delete_user_cascade).
+    agent_kill_switch) are out of scope. Keep in sync with the deletion
+    list (services/account_erasure.py — shared by delete_account + pipa_purge).
 
     Excluded (PII minimization — the user may not self-exfiltrate secrets):
         - password_hash

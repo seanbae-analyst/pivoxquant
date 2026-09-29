@@ -53,7 +53,6 @@ behavior (audit holds historical aggregates only).
 """
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
 import sys
@@ -67,18 +66,10 @@ GRACE_PERIOD_DAYS = 30
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-def _purge_salt() -> str:
-    return (
-        os.environ.get("PIPA_PURGE_SALT")
-        or os.environ.get("SECRET_KEY")
-        or "pivoxquant-purge-fallback-salt-do-not-use-in-prod"
-    )
-
-
 def _hash_email(email: str) -> str:
-    """Return ``sha256(salt + email)`` hex digest (length 64)."""
-    salt = _purge_salt().encode("utf-8")
-    return hashlib.sha256(salt + (email or "").encode("utf-8")).hexdigest()
+    """``sha256(salt + email)`` — services/account_erasure.hash_email 한 벌."""
+    from services.account_erasure import hash_email
+    return hash_email(email)
 
 
 def _cancel_stripe_subscription(user) -> None:
@@ -160,95 +151,27 @@ def find_purge_candidates(*, now: datetime | None = None):
 def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -> dict:
     """Hard-delete one user + all owned rows. Returns a counts dict.
 
-    Mirrors ``routes/auth.py:delete_account`` per-model list (explicit
-    deletes over FK CASCADE for defense in depth on SQLite). The list
-    is kept in sync — when a new user-owned model is added, BOTH
-    delete paths must be updated.
+    The row purge itself is ``services.account_erasure.purge_user_rows`` —
+    the same one ``routes/auth.py:delete_account`` calls. A new user-owned
+    model goes there, once.
 
     The ``auth_events`` table is *anonymized in place* (email → SHA256
     hash) rather than deleted, so the aggregate audit trail (per-provider
     fail rate, hourly OAuth volume) survives the principal.
     """
     from extensions import db
-    from models import (
-        Position, TradeHistory, Alert, Watchlist,
-        InvestmentProfile, BrokerConnection, PushSubscription,
-        PortfolioShare,
-        Artifact, UserReferral,
-        ArtifactFeedback, BehavioralScore,
-        AITwinPortfolio, AITwinWeeklyReport,
-        PreTradeReflection, PersonaSnapshot, WeeklyPulse,
-        PositionDDCheck, Inquiry, ObservationNote,
-        ScheduledEmail, NpsFeedback, AuthEvent, User,
-        CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit,
-        CompanionWaitlist, ImportBatch, ImportToken, PendingTrade,
-    )
+    from models import User
+    from services.account_erasure import purge_user_rows
 
-    counts: dict[str, int] = {}
-
-    def _cnt(label, q):
-        n = q.delete(synchronize_session=False)
-        counts[label] = n
-        return n
-
-    _cnt("position", Position.query.filter_by(user_id=user_id))
-    _cnt("trade_history", TradeHistory.query.filter_by(user_id=user_id))
-    _cnt("alert", Alert.query.filter_by(user_id=user_id))
-    _cnt("watchlist", Watchlist.query.filter_by(user_id=user_id))
-    _cnt("investment_profile", InvestmentProfile.query.filter_by(user_id=user_id))
-    _cnt("broker_connection", BrokerConnection.query.filter_by(user_id=user_id))
-    _cnt("push_subscription", PushSubscription.query.filter_by(user_id=user_id))
-    _cnt("portfolio_share", PortfolioShare.query.filter_by(user_id=user_id))
-    _cnt("artifact", Artifact.query.filter_by(user_id=user_id))
-    _cnt("user_referral", UserReferral.query.filter_by(user_id=user_id))
-    _cnt("artifact_feedback", ArtifactFeedback.query.filter_by(user_id=user_id))
-    _cnt("behavioral_score", BehavioralScore.query.filter_by(user_id=user_id))
-    _cnt("ai_twin_portfolio", AITwinPortfolio.query.filter_by(user_id=user_id))
-    _cnt("ai_twin_weekly_report", AITwinWeeklyReport.query.filter_by(user_id=user_id))
-    # Import Inbox (2026-09-29) — routes/auth.py:delete_account 와 동기화.
-    # FK 순서: pending_trades → import_batches → import_tokens, 그리고
-    # pending_trades 가 pre_trade_reflections 를 참조하므로 그보다 먼저.
-    _cnt("pending_trade", PendingTrade.query.filter_by(user_id=user_id))
-    _cnt("import_batch", ImportBatch.query.filter_by(user_id=user_id))
-    _cnt("import_token", ImportToken.query.filter_by(user_id=user_id))
-    _cnt("pre_trade_reflection", PreTradeReflection.query.filter_by(user_id=user_id))
-    # 관찰 노트 — 거래에 묶이지 않은 유저 본인의 암호화된 자유 텍스트
-    # (2026-09-22). routes/auth.py:delete_account 와 동기화.
-    _cnt("observation_note", ObservationNote.query.filter_by(user_id=user_id))
-    _cnt("persona_snapshot", PersonaSnapshot.query.filter_by(user_id=user_id))
-    _cnt("weekly_pulse", WeeklyPulse.query.filter_by(user_id=user_id))
-    _cnt("scheduled_email", ScheduledEmail.query.filter_by(user_id=user_id))
-    _cnt("nps_feedback", NpsFeedback.query.filter_by(user_id=user_id))
-    # 2026-06-02 — encrypted user free-text, listed explicitly per the
-    # belt-and-suspenders contract (kept in sync with routes/auth.py
-    # delete_account). position_dd_check is usually already gone via the
-    # positions cascade above, so its count is often 0 — harmless.
-    _cnt("position_dd_check", PositionDDCheck.query.filter_by(user_id=user_id))
-    _cnt("inquiry", Inquiry.query.filter_by(user_id=user_id))
-    # 2026-06-07 — user-FK tables previously missing from BOTH purge paths.
-    # Kept in sync with routes/auth.py:delete_account. Model FK is CASCADE, so
-    # a schema-correct prod cascades them; purge explicitly so a drifted prod
-    # FK can't block the user-row delete below.
-    _cnt("checkout_expiration", CheckoutExpiration.query.filter_by(user_id=user_id))
-    _cnt("portfolio_nav_snapshot", PortfolioNavSnapshot.query.filter_by(user_id=user_id))
-    _cnt("user_agent_audit", UserAgentAudit.query.filter_by(user_id=user_id))
-    # companion_waitlist: SET NULL (keep anonymous waitlist signal, detach user).
-    counts["companion_waitlist_detached"] = int(
-        CompanionWaitlist.query.filter_by(user_id=user_id)
-        .update({CompanionWaitlist.user_id: None}, synchronize_session=False) or 0
-    )
-
-    # ── auth_events: anonymize, do NOT delete ────────────────────────────────
-    # PIPA §29 requires retention of access/auth logs for security audit
-    # purposes. We satisfy that by hashing the email column so the row
-    # survives in unidentifiable form. The hash is salted (per-deployment
-    # SECRET_KEY) so cross-instance rainbow tables are useless.
-    hashed = _hash_email(email)
-    anon_n = (
-        AuthEvent.query.filter(AuthEvent.email == email)
-        .update({AuthEvent.email: hashed}, synchronize_session=False)
-    )
-    counts["auth_events_anonymized"] = int(anon_n or 0)
+    # 명시 목록 → 동적 users-FK 스윕 → 모델 없는 허용 목록 → auth_events
+    # 익명화. 표마다 SAVEPOINT 라 한 표의 실패가 이 유저의 파기 전체를 멈추지
+    # 않는다 (전에는 savepoint 가 없어 예외 한 번에 유저 전체가 롤백·skip).
+    counts, failures = purge_user_rows(user_id, email)
+    if failures:
+        logger.error(
+            "pipa_purge: user_id=%s unpurged tables=%s (continuing to row delete)",
+            user_id, failures,
+        )
 
     # ── stamp deleted_at + commit (audit-trail evidence) ─────────────────────
     user = User.query.get(user_id)
@@ -279,71 +202,6 @@ def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -
         except Exception:
             logger.exception(
                 "purge-complete email failed (non-fatal) user_id=%s", user_id,
-            )
-
-    # ── dynamic FK safety net ────────────────────────────────────────────────
-    # Mirrors routes/auth.py:delete_account. Clears any remaining users-
-    # referencing row (incl. migration-only / cascade-less tables like
-    # morning_briefs, mig 003) so the hard delete below can't be blocked by a
-    # ForeignKeyViolation. Each in its own savepoint; never raises.
-    if user is not None:
-        try:
-            from sqlalchemy import inspect as _sa_inspect, text as _sa_text
-            _insp = _sa_inspect(db.engine)
-            for _tbl in _insp.get_table_names():
-                if _tbl == "users":
-                    continue
-                for _fk in _insp.get_foreign_keys(_tbl):
-                    if _fk.get("referred_table") != "users":
-                        continue
-                    if "id" not in (_fk.get("referred_columns") or []):
-                        continue
-                    _cols = _fk.get("constrained_columns") or []
-                    if not _cols:
-                        continue
-                    try:
-                        with db.session.begin_nested():
-                            db.session.execute(
-                                _sa_text(f'DELETE FROM "{_tbl}" WHERE "{_cols[0]}" = :uid'),
-                                {"uid": user_id},
-                            )
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning(
-                            "pipa_purge: dynamic purge of %s.%s failed: %s",
-                            _tbl, _cols[0], exc,
-                        )
-        except Exception:
-            logger.exception("pipa_purge: dynamic FK sweep init failed (continuing)")
-
-        # Model-less, FK-less user_id tables (e.g. ``anthropic_usage_log``) —
-        # the ORM list and the FK sweep both miss them, so a deleted user's
-        # rows survive → orphaned PII (PIPA §21). Allowlist ONLY so the
-        # deliberately-retained funnel_events analytics snapshot is never
-        # touched. Kept in sync with routes/auth.py:delete_account.
-        try:
-            from sqlalchemy import inspect as _ml_inspect, text as _ml_text
-            _ml_insp = _ml_inspect(db.engine)
-            _ml_existing = set(_ml_insp.get_table_names())
-            for _ml_tbl in ("anthropic_usage_log",):
-                if _ml_tbl not in _ml_existing:
-                    continue
-                if "user_id" not in {c["name"] for c in _ml_insp.get_columns(_ml_tbl)}:
-                    continue
-                try:
-                    with db.session.begin_nested():
-                        n = db.session.execute(
-                            _ml_text(f'DELETE FROM "{_ml_tbl}" WHERE "user_id" = :uid'),
-                            {"uid": user_id},
-                        ).rowcount
-                        counts[_ml_tbl] = int(n or 0)
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning(
-                        "pipa_purge: model-less purge of %s failed: %s",
-                        _ml_tbl, exc,
-                    )
-        except Exception:
-            logger.exception(
-                "pipa_purge: model-less user_id sweep init failed (continuing)"
             )
 
     # ── final hard delete of the User row ────────────────────────────────────

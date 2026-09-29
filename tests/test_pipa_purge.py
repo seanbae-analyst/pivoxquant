@@ -374,8 +374,60 @@ def test_import_inbox_rows_listed_in_explicit_cascade(app):
 
         with _patch_transport_succeed():
             counts = _delete_user_cascade(uid, "import_purge@test.com", send_email=False)
-        assert counts.get("pending_trade") == 1
-        assert counts.get("import_batch") == 1
-        assert counts.get("import_token") == 1
+        assert counts.get("pending_trades") == 1
+        assert counts.get("import_batches") == 1
+        assert counts.get("import_tokens") == 1
         for model in (PendingTrade, ImportBatch, ImportToken):
             assert model.query.filter_by(user_id=uid).count() == 0
+
+
+def test_one_failing_table_does_not_abort_the_users_purge(app):
+    """한 테이블의 DELETE 가 실패해도 그 유저의 나머지 파기는 계속된다.
+
+    전에는 _delete_user_cascade 가 savepoint 없이 순서대로 지워서, 표 하나가
+    예외를 내면 유저 전체가 롤백·skip 됐다(errors += 1, 다음 밤까지 PII 잔존).
+    이제 services.account_erasure.purge_user_rows 가 표마다 SAVEPOINT 를 걸고
+    실패를 모은다 — routes/auth.py:delete_account 와 같은 한 벌.
+    """
+    from extensions import db
+    from models import Alert, User, Watchlist
+    from scripts.nightly.pipa_purge import run_once
+
+    uid = _make_user(app, email="partial@test.com", requested_days_ago=31)
+    with app.app_context():
+        db.session.add(Watchlist(user_id=uid, ticker="MSFT"))
+        db.session.commit()
+
+        class _Boom:
+            def filter_by(self, **kw):
+                raise RuntimeError("drifted table")
+
+        with _patch_transport_succeed(), patch.object(Alert, "query", _Boom()):
+            s = run_once()
+
+        assert s["errors"] == 0, "한 표의 실패가 유저 파기 전체를 멈췄다"
+        assert s["purged"] == 1
+        assert db.session.get(User, uid) is None
+        assert Watchlist.query.filter_by(user_id=uid).count() == 0
+
+
+def test_purge_user_rows_reports_failures_and_continues(app):
+    from extensions import db
+    from models import Alert, Watchlist
+    from services.account_erasure import purge_user_rows
+
+    uid = _make_user(app, email="svc_partial@test.com", requested_days_ago=None)
+    with app.app_context():
+        db.session.add(Watchlist(user_id=uid, ticker="MSFT"))
+        db.session.commit()
+
+        class _Boom:
+            def filter_by(self, **kw):
+                raise RuntimeError("drifted table")
+
+        with patch.object(Alert, "query", _Boom()):
+            counts, failures = purge_user_rows(uid, "svc_partial@test.com")
+        assert "alerts" in failures
+        assert counts.get("watchlist") == 1
+        assert Watchlist.query.filter_by(user_id=uid).count() == 0
+        db.session.rollback()

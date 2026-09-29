@@ -469,7 +469,7 @@ def test_export_covers_all_expected_sections(client, auth_user):
 
     Coverage gate: 26 sections (was 11/26 before this change). If a new
     user-owned model is added without wiring it into the export, update
-    this set (and the route + both delete paths) — the failure is the cue.
+    this set (and the route + services/account_erasure) — the failure is the cue.
     """
     resp = client.get("/api/profile/export")
     assert resp.status_code == 200
