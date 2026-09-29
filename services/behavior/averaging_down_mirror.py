@@ -240,6 +240,8 @@ def compute_averaging_down_mirror(
     *,
     period_days: int | None = None,
     min_follow_on: int = _DEFAULT_MIN_FOLLOW_ON,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
 ) -> dict:
     """Compute the retrospective follow-on-add mirror for one user.
 
@@ -257,6 +259,13 @@ def compute_averaging_down_mirror(
         When set, only trades whose ``traded_at`` falls within the last
         ``period_days`` days (relative to the latest trade in the input,
         for determinism) are considered. ``None`` → all history.
+    window_start, window_end : datetime | None
+        명시적 창 (naive UTC). ``window_start`` 가 있으면 ``period_days`` 의
+        "마지막 체결 기준" 창 대신 이 시각을 창의 시작으로 쓴다.
+        ``window_end`` 가 있으면 그 이후의 기록은 통째로 없는 것으로 본다
+        (as-of 리포트). 둘 다 FIFO/평단 계산은 창 이전 이력까지 본다 —
+        월간 리포트(``services/reports/mirror_pdf``)가 창을 잘라 넣던 것을
+        대체한다 (2026-09-29).
     min_follow_on : int
         Minimum number of follow-on BUY events in the window required
         before numeric facts are reported. Below this, ``sufficient_data``
@@ -272,12 +281,19 @@ def compute_averaging_down_mirror(
         ``by_ticker`` is ``[]``.
     """
     materialised = [t for t in trades if t is not None]
+    if window_end is not None:
+        materialised = [
+            t for t in materialised
+            if t.traded_at and t.traded_at <= window_end
+        ]
 
     # ── optional period window ──────────────────────────────────────
     # The window selects which adds are counted; the running average is
     # walked over the full history (see _classify_follow_ons).
     cutoff: datetime | None = None
-    if period_days is not None and period_days > 0:
+    if window_start is not None:
+        cutoff = window_start
+    elif period_days is not None and period_days > 0:
         dated = [t for t in materialised if t.traded_at]
         if dated:
             anchor = max(t.traded_at for t in dated)

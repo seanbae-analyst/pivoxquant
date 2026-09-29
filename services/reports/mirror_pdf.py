@@ -30,14 +30,14 @@
 거울 함수들의 ``period_days`` 는 **입력에 들어 있는 마지막 체결**을 기준으로
 창을 자른다. 코호트 스캔에는 맞지만 "지난 30일" 이라고 적어 보내는 월간
 리포트에는 맞지 않는다 — 반 년 전에 거래를 멈춘 유저에게 "반 년 전 그 30일"
-을 이번 달이라고 내밀게 된다. 그래서 여기서는 창을 ``as_of`` 기준으로 먼저
-잘라 넣고 함수에는 ``period_days=None`` 을 준다. 잘라 넣는 것과 함수가
-안에서 자르는 것은 계산상 같고, 기준점만 달라진다.
+을 이번 달이라고 내밀게 된다. 그래서 여기서는 ``as_of`` 기준의 창을
+``window_start`` / ``window_end`` 로 명시해 넘긴다.
 
-그 대가는 창 밖 원장을 못 본다는 것이다 — 기간 전에 취득한 종목을 기간 안에
-다시 취득하면 '추가 취득' 이 아니라 새 취득으로 읽히고, 기간 전에 취득한
-종목을 기간 안에 처분하면 닫힌 거래로 세지 않는다. 이 한계는 리포트의 "이
-숫자가 말하지 않는 것" 절에 그대로 적어서 내보낸다. 숨기지 않는다.
+입력은 **전체 이력**이다 (2026-09-29). 예전에는 창을 잘라 넣어서 기간 전에
+취득한 종목을 기간 안에 다시 취득하면 새 취득으로, 기간 안에 처분하면 닫힌
+거래가 아닌 것으로 읽혔다. 지금은 원장(FIFO·평균매입가)을 전체 이력으로
+돌리고, 창은 어떤 처분·추가 취득·체결을 셀지만 고른다. ``window_end``
+이후의 기록은 as-of 리포트에 들어오지 않는다.
 
 최소 표본
 ---------
@@ -132,15 +132,17 @@ def build_mirror_report(user_id: int, *, period_days: int = _DEFAULT_PERIOD_DAYS
     period_start = period_end - timedelta(days=window_days)
 
     rows = TradeHistory.query.filter_by(user_id=user_id).all()
-    # 창 자르기는 as_of 기준으로 여기서 한다 (모듈 docstring "기간을 자르는 방식").
+    # 창은 as_of 기준이다 (모듈 docstring "기간을 자르는 방식"). 거울 함수에는
+    # 전체 이력과 명시적 창을 함께 준다 — FIFO/평단은 창 이전 로트까지 본다.
     windowed = [
         t for t in rows
         if t is not None and t.traded_at and period_start <= t.traded_at <= period_end
     ]
+    window = {"window_start": period_start, "window_end": period_end}
 
-    turnover = compute_turnover_mirror(windowed, period_days=None, min_trades=_PERSONAL_MIN)
-    averaging_down = compute_averaging_down_mirror(windowed, period_days=None, min_follow_on=_PERSONAL_MIN)
-    profit_loss = compute_profit_loss_mirror(windowed, period_days=None, min_pairs=_PERSONAL_MIN)
+    turnover = compute_turnover_mirror(rows, min_trades=_PERSONAL_MIN, **window)
+    averaging_down = compute_averaging_down_mirror(rows, min_follow_on=_PERSONAL_MIN, **window)
+    profit_loss = compute_profit_loss_mirror(rows, min_pairs=_PERSONAL_MIN, **window)
     # 집중도는 '지금 보유분' 의 사실이라 창과 무관하다. 리포트에서도 그렇게 적는다.
     concentration = compute_concentration_mirror(user_id)
 
@@ -287,8 +289,8 @@ _LABELS: dict[str, dict[str, Any]] = {
             "체결 표의 거래대금은 통화별로 따로 적고 합치지 않는다. 다만 아래 집중도는 비중을 내기 위해 "
             "달러 보유분을 취득 당시 환율로 원화로 바꿔 한 분모에 넣는다 — 이 리포트에서 환율이 쓰이는 "
             "유일한 곳이다.",
-            "기간 밖의 기록은 이 숫자에 들어가지 않는다. 기간 전에 취득한 종목을 기간 안에 다시 취득했다면 "
-            "'추가 취득' 으로 세지 않고, 기간 전에 취득한 종목을 기간 안에 처분했다면 닫힌 거래로 세지 않는다.",
+            "기간 밖의 체결은 이 숫자에 세지 않는다. 다만 기간 안의 처분과 추가 취득은 기간 전에 취득한 "
+            "기록까지 이어 읽어 보유일과 평균매입가를 잰다. 기간이 끝난 뒤의 기록은 읽지 않는다.",
             "집중도는 생성 시점 보유분을 평균매입가로 잰 것이다. 시장가도 아니고 기간과도 무관하다.",
             "여기에는 잘함과 못함의 판정이 없다. 점수도 등급도 순위도 매기지 않는다. 읽고 해석하는 일은 본인의 몫이다.",
         ],
@@ -358,9 +360,9 @@ _LABELS: dict[str, dict[str, Any]] = {
             "In the fills table, turnover is listed per currency and never summed. The concentration section "
             "below is the one exception: to express a share of the book it converts dollar positions to won "
             "at the rate recorded when they were acquired.",
-            "Records outside the period are not in these figures. A position acquired before the period and "
-            "acquired again inside it is not counted as a follow-on, and one acquired before the period and "
-            "disposed of inside it is not counted as a closed round trip.",
+            "Fills outside the period are not counted in these figures. Disposals and follow-on acquisitions "
+            "inside the period are still read against lots acquired before it, for time held and average cost. "
+            "Records after the period end are not read.",
             "Concentration is measured on positions at the time of writing, at average cost. It is neither a "
             "market price nor tied to the period.",
             "Nothing here says well done or badly done. There is no score, no grade, no ranking. "

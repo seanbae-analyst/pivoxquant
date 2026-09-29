@@ -185,6 +185,8 @@ def compute_profit_loss_mirror(
     *,
     period_days: int | None = None,
     min_pairs: int = _DEFAULT_MIN_PAIRS,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
 ) -> dict:
     """Compute the retrospective profit/loss mirror for one user.
 
@@ -197,6 +199,13 @@ def compute_profit_loss_mirror(
         When set, only trades whose ``traded_at`` falls within the last
         ``period_days`` days (relative to the latest trade in the input,
         for determinism) are considered. ``None`` → all history.
+    window_start, window_end : datetime | None
+        명시적 창 (naive UTC). ``window_start`` 가 있으면 ``period_days`` 의
+        "마지막 체결 기준" 창 대신 이 시각을 창의 시작으로 쓴다.
+        ``window_end`` 가 있으면 그 이후의 기록은 통째로 없는 것으로 본다
+        (as-of 리포트). 둘 다 FIFO/평단 계산은 창 이전 이력까지 본다 —
+        월간 리포트(``services/reports/mirror_pdf``)가 창을 잘라 넣던 것을
+        대체한다 (2026-09-29).
     min_pairs : int
         Minimum number of *classified* (non-break-even) closed pairs
         required before numeric stats are reported. Below this,
@@ -211,12 +220,19 @@ def compute_profit_loss_mirror(
         their side is empty or when ``sufficient_data`` is ``False``.
     """
     materialised = [t for t in trades if t is not None]
+    if window_end is not None:
+        materialised = [
+            t for t in materialised
+            if t.traded_at and t.traded_at <= window_end
+        ]
 
     # ── optional period window ──────────────────────────────────────
     # 창은 매도 시각으로 쌍을 고른다; FIFO 는 전체 이력으로 맞춘다
     # (_classify_pairs 참조).
     cutoff: datetime | None = None
-    if period_days is not None and period_days > 0:
+    if window_start is not None:
+        cutoff = window_start
+    elif period_days is not None and period_days > 0:
         dated = [t for t in materialised if t.traded_at]
         if dated:
             anchor = max(t.traded_at for t in dated)
