@@ -36,11 +36,21 @@ export interface ReflectionLinkState {
   reflectionId: number | null;
 }
 
-/** Null ticker disables the fetch (e.g. sell, edit, review mode). */
-export function useReflectionLink(ticker: string | null | undefined): ReflectionLinkState {
+/**
+ * Null ticker disables the fetch (e.g. sell, edit, review mode).
+ * `preferId` (import inbox, 2026-09-29): the pause matched at import time —
+ * offered first when it is still linkable, else the most recent candidate.
+ */
+export function useReflectionLink(
+  ticker: string | null | undefined,
+  preferId?: number | null,
+): ReflectionLinkState {
   const symbol = (ticker ?? "").trim().toUpperCase();
   const { reflections } = useLinkableReflections(symbol || null);
-  const candidate = reflections[0] ?? null;
+  const candidate =
+    (preferId != null ? reflections.find((r) => r.id === preferId) : undefined) ??
+    reflections[0] ??
+    null;
   // Remember which candidate the user unchecked, so the default stays ON for
   // any other candidate (no effect needed to seed the default).
   const [optedOutId, setOptedOutId] = React.useState<number | null>(null);

@@ -13,7 +13,11 @@ import path from "node:path";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, cleanup, screen, fireEvent, act, within } from "@testing-library/react";
 
-vi.mock("@/lib/hooks", () => ({ usePendingImports: vi.fn() }));
+vi.mock("@/lib/hooks", () => ({
+  usePendingImports: vi.fn(),
+  // Buy ↔ pause link line (2026-09-29) — no candidates here.
+  useLinkableReflections: () => ({ reflections: [], isLoading: false, error: undefined }),
+}));
 vi.mock("@/lib/locale", () => ({
   useT: () => (k: string) => k,
   useLocale: () => ({ locale: "ko" }),

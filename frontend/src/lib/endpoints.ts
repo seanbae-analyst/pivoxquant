@@ -318,7 +318,9 @@ export const API = {
   //   create      POST multipart {file, consent=true} | JSON {text, source, consent}
   //   pending     GET  → {pending[], count}
   //   pendingItem PATCH {ticker?, name?, action?, shares?, price?, traded_at?}
-  //   approve     POST {thesis} (3~500자) → {ok, pending, trade_id, position_id}
+  //   approve     POST {thesis} (3~500자), reflection_id?: number | null → {ok, pending, trade_id, position_id}
+  //               reflection_id (2026-09-29): number = link that pause, null = do not link,
+  //               omitted = server keeps the import-time match (services/pre_trade/link.py)
   //   reject      POST → {ok}
   imports: {
     create: "/api/portfolio/imports",
