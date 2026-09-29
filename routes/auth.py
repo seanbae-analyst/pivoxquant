@@ -567,7 +567,8 @@ def _record_signup_funnel(user, ref_code: str | None) -> None:
 
 
 def _build_signed_state(provider: str, origin: str, redirect_uri: str,
-                        ref_code: str | None = None) -> str:
+                        ref_code: str | None = None,
+                        next_path: str | None = None) -> str:
     """Build a self-contained HMAC-signed state token.
 
     The full signed string is passed to the OAuth provider as `state=`.
@@ -591,7 +592,19 @@ def _build_signed_state(provider: str, origin: str, redirect_uri: str,
     if ref_code:
         # Defensive cap — referral codes are 8-char; never carry more than 16.
         payload["ref"] = str(ref_code).strip()[:16]
+    if next_path:
+        # 로그인 후 딥링크. 공급자 콜백 URL 엔 우리 쿼리가 안 실리니 state 에
+        # 태운다. 여기서 한 번, 콜백에서 한 번 더 _safe_next 로 거른다.
+        payload["nx"] = _safe_next(str(next_path)[:512])
     return _state_serializer().dumps(payload)
+
+
+def _state_next(payload) -> str | None:
+    """서명된 state 에 실려 온 ``next`` (없으면 None). 콜백 쿼리의 ``next`` 는
+    공급자 리다이렉트엔 실릴 수 없고 누구나 붙일 수 있으니 읽지 않는다."""
+    if isinstance(payload, dict) and payload.get("nx"):
+        return payload["nx"]
+    return None
 
 
 def _verify_signed_state(signed: str | None, expected_provider: str) -> dict | None:
@@ -1051,7 +1064,10 @@ def google_login():
     # Viral loop — capture inviter's referral code from ?ref=, carry it in
     # the signed state so the callback can attribute a brand-new signup.
     ref_code = (request.args.get("ref") or "").strip()[:16] or None
-    signed_state = _build_signed_state("google", origin, redirect_uri, ref_code)
+    signed_state = _build_signed_state(
+        "google", origin, redirect_uri, ref_code,
+        next_path=request.args.get("next"),
+    )
     # Extract the nonce from the signed payload so we pass the exact same
     # value to Google that our callback will later verify against.
     nonce = _state_serializer().loads(signed_state, max_age=_OAUTH_STATE_MAX_AGE)["n"]
@@ -1257,7 +1273,7 @@ def google_callback():
     # ``/signup/oauth-finalize`` page POSTs the consent stack back to
     # ``/api/auth/oauth-finalize``. Birthdate-era users pass straight through.
     if not user.age_confirmed:
-        next_param = request.args.get("next")
+        next_param = _state_next(payload)  # 서명된 state 에서 (쿼리 아님)
         finalize = "/signup/oauth-finalize"
         if next_param:
             from urllib.parse import quote
@@ -1269,7 +1285,7 @@ def google_callback():
         return redirect(f"{origin}{finalize}")
 
     # Validate redirect destination — must be relative path, no open redirect
-    redirect_url = _safe_next(request.args.get("next"))
+    redirect_url = _safe_next(_state_next(payload))
     logger.info("Google OAuth success: origin=%s path=%s", origin, redirect_url)
     return redirect(f"{origin}{redirect_url}")
 
@@ -1287,7 +1303,10 @@ def kakao_login():
         return redirect(f"{origin}/login?error=kakao_not_configured")
     redirect_uri = f"{origin}/api/auth/kakao/callback"
     ref_code = (request.args.get("ref") or "").strip()[:16] or None
-    signed_state = _build_signed_state("kakao", origin, redirect_uri, ref_code)
+    signed_state = _build_signed_state(
+        "kakao", origin, redirect_uri, ref_code,
+        next_path=request.args.get("next"),
+    )
     logger.info(
         "OAuth start: provider=kakao origin=%s redirect_uri=%s",
         origin, redirect_uri,
@@ -1475,7 +1494,7 @@ def kakao_callback():
 
     # PIPA §22 ⑥ — age-confirmation gate (mirrors google_callback).
     if not user.age_confirmed:
-        next_param = request.args.get("next")
+        next_param = _state_next(payload)  # 서명된 state 에서 (쿼리 아님)
         finalize = "/signup/oauth-finalize"
         if next_param:
             from urllib.parse import quote
@@ -1487,7 +1506,7 @@ def kakao_callback():
         return redirect(f"{origin}{finalize}")
 
     # Validate redirect destination — must be relative path, no open redirect
-    redirect_url = _safe_next(request.args.get("next"))
+    redirect_url = _safe_next(_state_next(payload))
     logger.info("Kakao OAuth success: origin=%s path=%s", origin, redirect_url)
     return redirect(f"{origin}{redirect_url}")
 
