@@ -300,12 +300,21 @@ def check_52w_highs_lows() -> dict:
 def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
     """Detect per-user sector concentration exceeding ``soft_limit_pct``.
 
-    Sector attribution is best-effort: we pull the cached sector from the
-    SignalCache row, falling back to "Unknown". A user with no cached signals
-    on any holding simply produces no concentration alert this cycle.
+    Weights are the **KRW cost basis** (``fx_service.cost_basis_krw`` — the
+    same helper ``services/behavior/concentration_mirror`` uses), never a
+    vendor price: this alert keeps running while ``MARKET_DATA_DISPLAY_ENABLED``
+    is off, so it must not surface FMP/KIS quotes (CLAUDE.md §알림). Summing
+    native ``shares * price`` raw mixed ₩ with $ (005930.KS 10주 + AAPL 100주
+    → "Semis 97.3%") — the FX-consistency bug (Pattern 7).
+
+    Sector attribution is best-effort from the SignalCache row. Holdings with
+    no cached sector fall into an "Unknown" bucket that still counts toward
+    the denominator but never alerts on its own — "Unknown 60%" is not an
+    observation about the user's portfolio.
     """
     import json as _json
     from models import Position, SignalCache, User
+    from services import fx_service
 
     user_ids = [row[0] for row in db.session.query(Position.user_id).distinct().all()]
     metrics = {"users_scanned": 0, "alerts_created": 0, "errors": 0}
@@ -320,28 +329,23 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
         if not positions:
             continue
 
-        # Build sector totals from market value.
+        # Build sector totals from KRW cost basis.
         totals: dict[str, float] = {}
         book_total = 0.0
         for p in positions:
-            # Prefer live price from SignalCache; fall back to avg_cost so a
-            # missing quote doesn't zero the exposure.
+            # None = 0/None shares-or-cost, or a USD row with no usable FX →
+            # EXCLUDE rather than mix currencies (same rule as the mirror).
+            mv = fx_service.cost_basis_krw(p)
+            if not mv or mv <= 0:
+                continue
             sector = "Unknown"
-            price = p.avg_cost or 0.0
             try:
                 cache = SignalCache.query.get(p.ticker)
                 if cache and cache.data_json:
                     payload = _json.loads(cache.data_json)
                     sector = payload.get("sector") or "Unknown"
-                    px = payload.get("price")
-                    if isinstance(px, (int, float)) and px > 0:
-                        price = float(px)
             except Exception:
                 metrics["errors"] += 1
-
-            mv = max(0.0, float(p.shares or 0) * float(price or 0))
-            if mv <= 0:
-                continue
             book_total += mv
             totals[sector] = totals.get(sector, 0.0) + mv
 
@@ -349,6 +353,8 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
             continue
 
         for sector, mv in totals.items():
+            if sector == "Unknown":
+                continue
             pct = (mv / book_total) * 100.0
             if pct >= soft_limit_pct:
                 a = alert_concentration(uid, sector, pct)
