@@ -104,6 +104,7 @@ describe("buildFrictionOutcomeView", () => {
   it("splits cancellations into stuck vs merely delayed", () => {
     const v = buildFrictionOutcomeView(withComparison())!;
     expect(v.cancelled).toBe(6);
+    expect(v.cancelledBuySide).toBe(6);
     expect(v.neverBought).toBe(4);
     expect(v.boughtLater).toBe(2);
     expect(v.medianDaysUntilBought).toBe(3);

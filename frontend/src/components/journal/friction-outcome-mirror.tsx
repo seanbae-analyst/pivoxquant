@@ -69,6 +69,9 @@ export interface FrictionOutcomeView {
   proceeded: number;
   cancelled: number;
   open: number;
+  /** Buy-side cancellations only — the base neverBought/boughtLater split.
+   *  `cancelled` above counts exit-side pauses too (2026-09-29). */
+  cancelledBuySide: number;
   /** Cancellations that stuck. */
   neverBought: number;
   /** Cancellations that turned out to be delays. */
@@ -98,6 +101,7 @@ export function buildFrictionOutcomeView(
     proceeded: s.proceeded,
     cancelled: s.cancelled,
     open: s.open,
+    cancelledBuySide: c.cancelled,
     neverBought: c.never_bought,
     boughtLater: c.bought_later_anyway,
     medianDaysUntilBought: c.median_days_until_bought,
@@ -199,7 +203,7 @@ export function FrictionOutcomeMirror() {
       </div>
 
       {/* ── avoidance vs delay ──────────────────────────────────── */}
-      {view.cancelled > 0 && (
+      {view.cancelledBuySide > 0 && (
         <div
           className="mt-6 pt-5"
           style={{ borderTop: "0.5pt solid var(--pq-ivory-line)" }}
@@ -214,7 +218,7 @@ export function FrictionOutcomeMirror() {
               wordBreak: "keep-all",
             }}
           >
-            {view.cancelled}건 중 {view.neverBought}건은 그 뒤로 사지 않았고,{" "}
+            {view.cancelledBuySide}건 중 {view.neverBought}건은 그 뒤로 사지 않았고,{" "}
             {view.boughtLater}건은 결국 샀습니다
             {view.medianDaysUntilBought !== null && (
               <> (중앙값 {view.medianDaysUntilBought}일 뒤)</>
