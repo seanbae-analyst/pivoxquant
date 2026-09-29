@@ -929,6 +929,12 @@ def _do_migrations():
     # whose import_batches table predates Phase 2.
     _add_column_if_missing("import_batches", "token_id", "INTEGER")
 
+    # pending_trades.currency_stated — 2026-09-29. Alembic twin:
+    # 057_pending_currency_stated. Nullable BOOLEAN: did the input state the
+    # currency (then a PATCHed ticker may not re-label the price)? NULL on
+    # rows that predate it — routes/imports.py treats those as stated.
+    _add_column_if_missing("pending_trades", "currency_stated", "BOOLEAN")
+
     # anthropic_usage_log (Wave I G-3) — Anthropic API 비용 추적 테이블.
     # 이 테이블은 ORM 모델이 아니라 services/ai/service.py 가 raw SQL INSERT
     # 로 직접 기록하므로 db.create_all() 범위 밖이다. 생성은 alembic

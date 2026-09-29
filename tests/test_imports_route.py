@@ -770,10 +770,9 @@ class TestHunt20260915:
         p = r.get_json()["pending"][0]
         assert p["name"] != "000원" and p["price"] == 35000.0
 
-    def test_csv_currency_column_cannot_override_a_krx_ticker(self, client, auth_user):
-        r = self._csv(client, "거래일자,종목코드,거래구분,수량,단가,통화\n2026-09-01,005930,매수,10,71200,USD\n")
-        assert r.status_code == 201, r.get_json()
-        assert r.get_json()["pending"][0]["currency"] == "KRW"
+    # test_csv_currency_column_cannot_override_a_krx_ticker → since 2026-09-29
+    # a stated currency that disagrees is skipped, not overridden:
+    # TestStatedCurrency.test_csv_usd_column_on_a_krx_code_is_skipped.
 
     def test_patch_currency_validated_and_ticker_wins(self, client, auth_user):
         pid = _paste(client, TOSS_TEXT).get_json()["pending"][0]["id"]
@@ -813,3 +812,79 @@ class TestHunt20260915:
         # 2026-09-14 23:30 UTC == 2026-09-15 08:30 KST — the user's "today" is the 15th.
         monkeypatch.setattr(si, "utcnow_naive", lambda: datetime(2026, 9, 14, 23, 30))
         assert si.today_naive() == datetime(2026, 9, 15)
+
+
+class TestStatedCurrency:
+    """2026-09-29 — the currency the input *states* (원/₩/$ on a pasted line,
+    a CSV 통화 column, a webhook ``currency``) is what the price is in. A
+    resolved ticker used to overwrite it for every source but the screenshot
+    one, so ``TSLA … 350,000원`` became a $350,000 fill. A mismatch is now
+    skipped with the reason, and a PATCH that would re-label a stated price
+    is refused."""
+
+    def test_pasted_won_price_for_a_us_ticker_is_skipped(self, client, auth_user):
+        r = _paste(client, "TSLA 10주 매수 체결 350,000원")
+        assert r.status_code == 400, r.get_json()
+        body = r.get_json()
+        assert body["code"] == "IMPORT_NO_ROWS"
+        assert any("통화 불일치" in s["reason"] for s in body["skipped"])
+
+    def test_csv_krw_price_for_a_us_ticker_is_skipped(self, client, auth_user):
+        csv = OWN_HEADER + "\n2026-09-01T10:00:00,AAPL,Apple,BUY,5,300000,1500000,KRW,0\n"
+        r = _upload(client, csv.encode("utf-8"), "pivoxquant_trades.csv")
+        assert r.status_code == 400, r.get_json()
+        assert any("통화 불일치" in s["reason"] for s in r.get_json()["skipped"])
+
+    def test_csv_usd_column_on_a_krx_code_is_skipped(self, client, auth_user):
+        # Was "ticker wins" (KRW); the stated USD makes 71200 ambiguous, so
+        # the row is reported instead of guessed.
+        body = "거래일자,종목코드,거래구분,수량,단가,통화\n2026-09-01,005930,매수,10,71200,USD\n"
+        r = _upload(client, body.encode("utf-8"), "kis.csv")
+        assert r.status_code == 400, r.get_json()
+        assert any("통화 불일치" in s["reason"] for s in r.get_json()["skipped"])
+
+    def test_webhook_stated_currency_mismatch_is_skipped(self, client, auth_user):
+        tok = client.post(f"{BASE}/tokens", json={"name": "t", "consent": True}).get_json()["token"]
+        rows = [{"ticker": "AAPL", "action": "BUY", "shares": 1, "price": 250000, "currency": "KRW"},  # // legal-ok — data field
+                {"ticker": "MSFT", "action": "BUY", "shares": 1, "price": 400, "currency": "USD"}]  # // legal-ok — data field
+        r = client.post(f"{BASE}/webhook", json={"rows": rows}, headers={"Authorization": f"Bearer {tok}"})
+        assert r.status_code == 201, r.get_json()
+        assert [p["ticker"] for p in r.get_json()["pending"]] == ["MSFT"]
+        assert any("통화 불일치" in s["reason"] for s in r.get_json()["skipped"])
+
+    def test_patch_ticker_cannot_relabel_a_stated_won_price(self, client, auth_user):
+        r = _paste(client, "엔비디아 3주 매수 체결 175,000원")
+        assert r.status_code == 201, r.get_json()
+        p = r.get_json()["pending"][0]
+        assert p["ticker"] is None and p["currency"] == "KRW"
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"ticker": "NVDA"})
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_CURRENCY_MISMATCH"
+        again = client.get(f"{BASE}/pending").get_json()["pending"][0]
+        assert again["ticker"] is None and again["currency"] == "KRW" and again["price"] == 175000
+
+    def test_patch_ticker_still_fixes_a_guessed_currency(self, client, auth_user):
+        # No 통화 column and a Hangul name → KRW was only a guess; picking a
+        # US ticker may still decide the currency.
+        csv = f"{KIS_HEADER}\n2026-09-01,미등록종목명,,매수,3,190.5,571.5,0\n"
+        p = _upload(client, csv.encode("utf-8"), "kis.csv").get_json()["pending"][0]
+        assert p["currency"] == "KRW"
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"ticker": "NVDA"})
+        assert r.status_code == 200, r.get_json()
+        assert r.get_json()["pending"]["currency"] == "USD"
+
+    def test_patch_ticker_with_the_user_naming_the_currency_is_allowed(self, client, auth_user):
+        p = _paste(client, "엔비디아 3주 매수 체결 175,000원").get_json()["pending"][0]
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"ticker": "NVDA", "currency": "USD"})
+        assert r.status_code == 200, r.get_json()
+        assert r.get_json()["pending"]["currency"] == "USD"
+
+    def test_won_priced_latin_name_is_not_a_us_symbol(self, client, auth_user):
+        # "KODEX" used to resolve to US ticker KODEX and store a $35,000 fill.
+        p = _paste(client, "KODEX 200 20주 매수 체결 35,000원").get_json()["pending"][0]
+        assert p["ticker"] is None and p["currency"] == "KRW" and p["price"] == 35000
+
+    def test_patch_same_currency_ticker_is_fine(self, client, auth_user):
+        p = _paste(client, "엔비디아 3주 매수 체결 $175").get_json()["pending"][0]
+        r = client.patch(f"{BASE}/pending/{p['id']}", json={"ticker": "NVDA"})
+        assert r.status_code == 200, r.get_json()
+        assert r.get_json()["pending"]["currency"] == "USD"
