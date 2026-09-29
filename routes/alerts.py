@@ -42,6 +42,19 @@ logger = logging.getLogger(__name__)
 
 alerts_bp = Blueprint("alerts", __name__, url_prefix="/api/alerts")
 
+# 52주 고/저 알림은 벤더 시세에서 나온다 — 게이트가 닫혀 있으면 게이트 전에
+# 쓰인 행(14일 TTL 안)도 벨·안 읽음 수에서 숨긴다. 발신 쪽 가드는
+# services/alert.check_52w_highs_lows 에 있다.
+_VENDOR_PRICE_ALERT_KINDS = ("price_52w_high", "price_52w_low")
+
+
+def _user_alerts_query():
+    q = Alert.query.filter_by(user_id=current_user.id)
+    if not market_data_display_enabled():
+        q = q.filter(db.or_(Alert.kind.is_(None),
+                            Alert.kind.notin_(_VENDOR_PRICE_ALERT_KINDS)))
+    return q
+
 
 # ── Legacy list endpoint (enriched with bell fields) ───────────────────────
 
@@ -73,7 +86,7 @@ def get_alerts():
         logger.exception("alerts.get_alerts TTL cleanup failed")
 
     # push_only 행(in-app 꺼짐, 푸시 중복 억제용)은 벨에 보이지 않는다.
-    alerts = (Alert.query.filter_by(user_id=current_user.id)
+    alerts = (_user_alerts_query()
               .filter(db.or_(Alert.push_only.is_(False), Alert.push_only.is_(None)))
               .order_by(Alert.created_at.desc()).limit(limit).all())
     # 2026-05-09 fix: previously this counted unread off the limit-sliced
@@ -87,9 +100,7 @@ def get_alerts():
     # Counting unread off a fresh query (independent of limit + ordering)
     # is the only honest source — and it matches /api/alerts/unread-count
     # exactly so both endpoints can never disagree.
-    unread_count = Alert.query.filter_by(
-        user_id=current_user.id, is_read=False,
-    ).count()
+    unread_count = _user_alerts_query().filter_by(is_read=False).count()
     return jsonify({
         "alerts": [serialize_alert(a) for a in alerts],
         "unread": int(unread_count),
@@ -103,9 +114,7 @@ def get_alerts():
 @general_rate_limit
 def unread_count():
     try:
-        count = Alert.query.filter_by(
-            user_id=current_user.id, is_read=False
-        ).count()
+        count = _user_alerts_query().filter_by(is_read=False).count()
     except Exception:
         logger.exception("alerts.unread_count failed")
         return api_error(
