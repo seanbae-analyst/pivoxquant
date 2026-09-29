@@ -19,7 +19,7 @@ from services.market_display import (
     market_data_display_enabled,
 )
 from services.name_resolver import resolve_stock_name, canonical_display_name
-from services.container import fetcher, realtime
+from services.container import fetcher, realtime  # noqa: F401 — realtime: tests patch routes.portfolio.realtime (conftest mock_realtime)
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth, legal_scrub_response
@@ -2092,22 +2092,19 @@ def portfolio_history():
         logger.debug("silent-fallback: nav snapshot read", exc_info=True)
         all_values = {}
 
+    # Today's point = the NAV record_today_snapshot just stored (already read
+    # above). It used to be overwritten by a re-sum over tickers WITH a
+    # realtime quote only, so a holding without one vanished from today and
+    # the curve dropped sharply (2026-09-29). compute_current_nav — the same
+    # avg_cost-fallback NAV the snapshot stores — fills in only when the row
+    # could not be written/read.
     try:
         today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
-        rt_prices = realtime.get_prices_batch([p.ticker for p in positions])
-        today_val = 0
-        # Today's realtime values: use today's spot rate (get_rate_at(today) →
-        # get_rate() for same-day dates — consistent with fx_service design).
-        fx_today = fx_service.get_rate() or fx_service.FALLBACK_USDKRW
-        for p in positions:
-            if p.ticker in rt_prices:
-                is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-                mv = rt_prices[p.ticker]["price"] * p.shares
-                if is_kr:
-                    mv = mv / fx_today
-                today_val += mv
-        if today_val > 0:
-            all_values[today] = today_val
+        if today not in all_values:
+            from services.portfolio.nav_snapshot import compute_current_nav
+            nav = compute_current_nav(current_user.id)
+            if nav and nav["nav_total_usd"] > 0:
+                all_values[today] = nav["nav_total_usd"]
     except Exception:
         logger.debug("silent-fallback: portfolio_history", exc_info=True)
         pass

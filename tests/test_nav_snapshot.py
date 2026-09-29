@@ -155,3 +155,26 @@ def test_history_returns_recorded_snapshots(
     dvals = {pt["date"]: pt["value"] for pt in data}
     assert dvals[d2.isoformat()] == 1000.0
     assert dvals[d1.isoformat()] == 1100.0
+
+
+def test_history_today_keeps_holdings_without_a_quote(
+    app, client, auth_user, add_position, mock_realtime, monkeypatch,
+    market_display_on,
+):
+    """2026-09-29 — today's point is the recorded NAV (avg_cost fallback for a
+    holding with no quote), not a re-sum over quoted tickers only. The route
+    used to overwrite today with 1500 (AAPL only), dropping MSFT's 1000."""
+    add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=100.0)
+    add_position(auth_user["id"], ticker="MSFT", shares=5, avg_cost=200.0)
+    quotes = {"AAPL": {"price": 150.0}}  # no MSFT quote
+
+    import services.portfolio.nav_snapshot as ns
+    monkeypatch.setattr(ns, "realtime", _FakeRealtime(quotes))
+    mock_realtime.get_prices_batch.return_value = quotes
+    _silence_benchmark(monkeypatch)
+
+    resp = client.get("/api/portfolio/history?period=5d")
+    assert resp.status_code == 200
+    today = datetime.now(timezone.utc).date().isoformat()
+    dvals = {pt["date"]: pt["value"] for pt in resp.get_json()["data"]}
+    assert dvals[today] == 2500.0  # 10×150 + 5×200 (avg_cost)
