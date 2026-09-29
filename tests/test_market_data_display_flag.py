@@ -295,6 +295,29 @@ class TestMarketRoutesOff:
         assert "results" in r.get_json()
 
 
+class TestAlertsPriceCheckOff:
+    """/api/alerts/price-check 의 응답은 벤더 시세(price·proceeds)다 — 다른 시세
+    라우트와 같이 503 으로 막는다 (2026-09-29, 그 전엔 플래그를 안 봤다)."""
+
+    def test_price_check_refuses(self, client, auth_user, add_position, app,
+                                 market_display_off):
+        import json
+        from extensions import db
+        from models import SignalCache
+
+        add_position(auth_user["id"], ticker="AAPL", shares=10, avg_cost=100)
+        with app.app_context():
+            db.session.merge(SignalCache(ticker="AAPL", data_json=json.dumps(
+                {"price": 250.0, "take_profit": 200.0, "name": "Apple"})))
+            db.session.commit()
+
+        r = client.get("/api/alerts/price-check")
+        assert r.status_code == 503
+        body = r.get_json()
+        assert body["code"] == "MARKET_DATA_DISPLAY_DISABLED"
+        assert "250" not in r.get_data(as_text=True)
+
+
 class TestRealtimeOff:
     def test_single_price_refuses(self, client, auth_user, market_display_off):
         r = client.get("/api/realtime/price/AAPL")

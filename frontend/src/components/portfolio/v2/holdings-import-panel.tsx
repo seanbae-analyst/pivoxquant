@@ -47,6 +47,8 @@ export interface HoldingRow {
   currency: Cur;
   /** Currency read off the screen ("" = not proven). */
   screenCurrency: Cur;
+  /** The user set `currency` by hand — a later ticker pick keeps it. */
+  currencyByUser?: boolean;
   ticker: string;
   tickerName: string;
   tickerCurrency: string | null;
@@ -118,7 +120,12 @@ export function mergeIdenticalReads(rows: HoldingRow[]): HoldingRow[] {
       ...o,
       shares: o.shares || r.shares,
       avgCost: o.avgCost || r.avgCost,
-      hints: { ...r.hints, ...o.hints, shares: o.hints.shares ?? r.hints.shares, avgCost: o.hints.avgCost ?? r.hints.avgCost },
+      // Per key: rowFromHolding sets every key, often to undefined, so a
+      // spread would let an empty key wipe the other capture's reading.
+      hints: {
+        shares: o.hints.shares ?? r.hints.shares, avgCost: o.hints.avgCost ?? r.hints.avgCost,
+        name: o.hints.name ?? r.hints.name, code: o.hints.code ?? r.hints.code,
+      },
       flags: [...new Set([...o.flags, ...r.flags])],
     };
   }
@@ -131,12 +138,14 @@ export function applyPreview(r: HoldingRow, p: HoldingsPreviewRow | undefined): 
   // KRX stocks trade only in won, so a KRX ticker settles an unread
   // currency. A US ticker never does: Korean apps may show US holdings in ₩.
   const currency: Cur = r.currency || (tickerCurrency === "KRW" && p.status === "resolved" ? "KRW" : "");
-  // A US stock shown in won (Toss 내 투자 cropped above its 해외주식 header):
-  // the average worked out of won amounts is not the dollar cost basis.
-  if (tickerCurrency === "USD" && r.currency === "KRW" && r.flags.includes("derived_avg")) {
+  // A US stock shown in won (Toss 내 투자 / 자세히 보기 cropped above its
+  // 해외주식 header): a won average — worked out or printed, cross-checked
+  // against won 원금 or not — is not the dollar cost basis.
+  // (A currency the user set by hand is theirs to settle — currencyMismatch.)
+  if (tickerCurrency === "USD" && r.currency === "KRW" && !r.currencyByUser && (r.avgCost || r.hints.avgCost)) {
     return {
       ...applyPreview({ ...r, currency: "", avgCost: "", hints: { ...r.hints, avgCost: undefined },
-        flags: [...r.flags.filter((f) => f !== "derived_avg"), "foreign_in_krw"] }, p),
+        flags: [...r.flags.filter((f) => f !== "derived_avg" && f !== "cross_checked" && f !== "foreign_in_krw"), "foreign_in_krw"] }, p),
     };
   }
   return {
@@ -152,6 +161,30 @@ export function applyPreview(r: HoldingRow, p: HoldingsPreviewRow | undefined): 
   };
 }
 
+/** The user changes a row's currency. An average read in the other currency
+ * is not a price in the new one, so it is cleared (with its reading);
+ * choosing a currency for a row that had none keeps what is there. */
+export function currencyPatch(r: HoldingRow, currency: Cur): Partial<HoldingRow> {
+  if (r.currency && currency !== r.currency) {
+    return { currency, avgCost: "", hints: { ...r.hints, avgCost: undefined }, currencyByUser: true };
+  }
+  return { currency, currencyByUser: true };
+}
+
+/** The user picked a ticker for a row. The row is re-resolved against it,
+ * but what the user decided stays: a skipped row stays skipped, and a
+ * currency they chose is not reset to the screen's. */
+export function pickedTicker(r: HoldingRow, p: HoldingsPreviewRow | undefined): HoldingRow {
+  const next = applyPreview({ ...r, currency: r.currencyByUser ? r.currency : r.screenCurrency }, p);
+  return {
+    ...next,
+    mode: r.mode === "skip" ? "skip" : next.mode,
+    // The user chose this stock — a fuzzy-match confirmation is not needed.
+    confirmed: true,
+    status: next.ticker ? (next.status === "needs_ticker" ? "needs_ticker" : "resolved") : "needs_ticker",
+  };
+}
+
 /** Rows whose resolved ticker repeats with different values: auto-merge the
  * identical ones, keep the rest for the user to settle. */
 export function dropIdenticalTickerDuplicates(rows: HoldingRow[]): HoldingRow[] {
@@ -164,6 +197,18 @@ export function dropIdenticalTickerDuplicates(rows: HoldingRow[]): HoldingRow[] 
   return out;
 }
 
+/** A usable average cost. No stock trades under 100원, and a won figure with
+ * three or more decimals ("170.850") is "170,850" misread (comma as dot). */
+export function avgCostOk(s: string, currency: Cur): boolean {
+  const a = num(s);
+  if (!s.trim() || !(a > 0) || !Number.isFinite(a)) return false;
+  // 70,850.33원처럼 평단을 소수 둘째 자리까지 찍는 증권사가 있어 1,000원 이상의 소수는 받는다.
+  // 1,000원 미만의 소수("170.85")나 소수 셋째 자리("170.850")는 쉼표를 점으로 잘못 읽은 것이다.
+  if (currency !== "KRW") return true;
+  if (a < 100 || /\.\d{3,}\s*$/.test(s.trim())) return false;
+  return Number.isInteger(a) || a >= 1000;
+}
+
 export type RowIssue =
   | "ticker" | "confirm" | "shares" | "avgCost" | "currency" | "currencyMismatch" | "duplicate";
 
@@ -174,8 +219,7 @@ export function rowIssues(r: HoldingRow, all: HoldingRow[]): RowIssue[] {
   else if (r.status === "needs_confirm" && !r.confirmed) out.push("confirm");
   const s = num(r.shares);
   if (!r.shares.trim() || !(s > 0) || !Number.isFinite(s) || (r.currency === "KRW" && !Number.isInteger(s))) out.push("shares");
-  const a = num(r.avgCost);
-  if (!r.avgCost.trim() || !(a > 0) || !Number.isFinite(a)) out.push("avgCost");
+  if (!avgCostOk(r.avgCost, r.currency)) out.push("avgCost");
   if (!r.currency) out.push("currency");
   else if (r.tickerCurrency && r.currency !== r.tickerCurrency) out.push("currencyMismatch");
   if (r.ticker && all.some((o) => o !== r && o.mode !== "skip" && o.ticker === r.ticker)) out.push("duplicate");
@@ -306,12 +350,7 @@ export function HoldingsImportPanel({
     const bare = s.ticker.trim().toUpperCase().replace(/\.(KS|KQ)$/, "");
     try {
       const [p] = await preview([{ name: s.name ?? null, code: bare, currency: null }]);
-      setRows((rs) => rs.map((r) => {
-        if (r.key !== key) return r;
-        const next = applyPreview({ ...r, currency: r.screenCurrency }, p ? { ...p, index: 0 } : undefined);
-        // The user chose this stock — a fuzzy-match confirmation is not needed.
-        return { ...next, confirmed: true, status: next.ticker ? (next.status === "needs_ticker" ? "needs_ticker" : "resolved") : "needs_ticker" };
-      }));
+      setRows((rs) => rs.map((r) => (r.key === key ? pickedTicker(r, p ? { ...p, index: 0 } : undefined) : r)));
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : t("dashboard.portfolio.holdingsImport.previewFailed"));
     }
@@ -558,8 +597,11 @@ function CaptureGuide() {
 
 /** A labelled field with its example, and — when OCR read a value it could
  * not prove — a one-tap button to use that reading. */
-function Field({ help, hint, empty, onUse, children }: {
-  help: string; hint?: string; empty: boolean; onUse: (v: string) => void; children: React.ReactNode;
+function Field({ help, hint, empty, onUse, valid, children }: {
+  help: string; hint?: string; empty: boolean; onUse: (v: string) => void;
+  /** The same check the row applies — a reading that fails it is not offered. */
+  valid?: (v: string) => boolean;
+  children: React.ReactNode;
 }) {
   const t = useT();
   const clean = hint?.replace(/[^\d.,$]/g, "").replace(/^\$/, "").replace(/,/g, "");
@@ -567,7 +609,7 @@ function Field({ help, hint, empty, onUse, children }: {
     <label className="block">
       <span className="block font-mono" style={{ ...small, color: "var(--pq-ivory-dim)", wordBreak: "keep-all" }}>{help}</span>
       {children}
-      {empty && clean && /^\d+(\.\d+)?$/.test(clean) && (
+      {empty && clean && /^\d+(\.\d+)?$/.test(clean) && (valid?.(clean) ?? true) && (
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); onUse(clean); }}
@@ -666,7 +708,7 @@ function HoldingReviewRow({
             style={border(issues.includes("shares"))}
           />
         </Field>
-        <Field help={t("dashboard.portfolio.holdingsImport.help.avgCost")} hint={r.hints.avgCost} empty={!r.avgCost} onUse={(v) => onPatch({ avgCost: v })}>
+        <Field help={t("dashboard.portfolio.holdingsImport.help.avgCost")} hint={r.hints.avgCost} empty={!r.avgCost} onUse={(v) => onPatch({ avgCost: v })} valid={(v) => avgCostOk(v, r.currency)}>
           <input
             value={r.avgCost}
             onChange={(e) => onPatch({ avgCost: e.target.value })}
@@ -680,7 +722,7 @@ function HoldingReviewRow({
         </Field>
         <select
           value={r.currency}
-          onChange={(e) => onPatch({ currency: e.target.value as Cur })}
+          onChange={(e) => onPatch(currencyPatch(r, e.target.value as Cur))}
           aria-label={t("dashboard.portfolio.holdingsImport.help.currency")}
           title={t("dashboard.portfolio.holdingsImport.help.currency")}
           data-missing={!skip && (issues.includes("currency") || issues.includes("currencyMismatch")) ? "true" : undefined}

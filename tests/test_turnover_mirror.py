@@ -371,3 +371,49 @@ class TestApi:
         resp = client.get("/api/behavior/turnover-mirror?period=30d")
         assert resp.status_code == 200
         assert resp.get_json()["period"] == "30d"
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — hold days: FIFO over full history, window by SELL time
+# ═════════════════════════════════════════════════════════════════════
+
+class TestHoldDaysWindowMatchesFullHistory:
+    def test_old_buy_recent_sell_keeps_its_lot(self):
+        trades: list[TradeHistory] = []
+        for i in range(5):
+            trades += _round_trip(ticker=f"L{i}", hold_days=100.0,
+                                  sell_days_ago=3.0)
+        win = compute_turnover_mirror(trades, period_days=30, min_trades=1)
+        # the window still counts only the in-window fills …
+        assert win["trade_count"] == 5
+        assert win["sell_count"] == 5
+        # … but each SELL is matched against its (older) BUY.
+        assert win["median_hold_days"] == 100.0
+        assert win["mean_hold_days"] == 100.0
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — hold days: one observation per SELL, not per FIFO slice
+# ═════════════════════════════════════════════════════════════════════
+
+class TestHoldDaysOnePerSell:
+    def test_multi_lot_sell_counts_once(self):
+        now = _now()
+        trades: list[TradeHistory] = []
+        # one SELL closes four 1-share lots, each held 100 days
+        for _ in range(4):
+            trades.append(_trade(ticker="MULTI", action="BUY", shares=1.0,
+                                 traded_at=now - timedelta(days=100)))
+        trades.append(_trade(ticker="MULTI", action="SELL", shares=4.0,
+                             traded_at=now))
+        # two ordinary 5-day round trips
+        for i in range(2):
+            trades.append(_trade(ticker=f"S{i}", action="BUY",
+                                 traded_at=now - timedelta(days=5)))
+            trades.append(_trade(ticker=f"S{i}", action="SELL",
+                                 traded_at=now))
+        result = compute_turnover_mirror(trades, min_trades=1)
+        # per-slice would be [100,100,100,100,5,5] → median 100;
+        # one observation per SELL is [100,5,5] → median 5.
+        assert result["median_hold_days"] == 5.0
+        assert result["mean_hold_days"] == round((100 + 5 + 5) / 3, 1)

@@ -100,19 +100,15 @@ def _drain_once() -> dict[str, int]:
     from services.email.onboarding_sequence import dispatch_due
     from services.email.retention_sequence import dispatch_retention
 
-    # Transient app: ALSO registered into the in-process APScheduler
-    # (services/scheduler/cron_jobs.py:_wrap_python_main). The main web app
-    # already warmed the cache; suppress the redundant FMP-hitting warmup
-    # thread here. create_app reads this env at call time (app.py:355).
-    os.environ["POPULATE_CACHE_ON_BOOT"] = "0"
-    # Transient CLI/scheduler-tick app: never build the 49-job APScheduler.
-    # The advisory lock already prevents a second instance from STARTING, but
-    # without this every create_app() still instantiates 49 Job objects +
-    # init overhead (same connection-pressure class as POPULATE_CACHE_ON_BOOT).
-    # crontab runs these standalone, so the scheduler is never wanted here.
-    os.environ.setdefault("RUN_SCHEDULER", "0")
+    # Transient app — built inside the live web process when the in-process
+    # APScheduler runs this job (services/scheduler/cron_jobs.py:
+    # _wrap_python_main), and standalone by crontab. Either way: no cache
+    # warmup (the web app already warmed it; FMP quota) and never a second
+    # APScheduler. Pass it as keywords, NOT os.environ — prod has
+    # RUN_SCHEDULER=1, so setdefault("RUN_SCHEDULER","0") was a no-op and
+    # each tick's scheduler replaced the live one in observability.alerts.
 
-    app = create_app()
+    app = create_app(start_scheduler=False, populate_cache=False)
     try:
         with app.app_context():
             onboarding_stats = dispatch_due()

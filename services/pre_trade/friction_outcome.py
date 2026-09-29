@@ -68,7 +68,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from models import PreTradeReflection, TradeHistory
-from services.profile.fifo_util import fifo_match_closed_trades
+from services.profile.fifo_util import fifo_match_closed_trades, is_holding_seed
 
 logger = logging.getLogger(__name__)
 
@@ -158,13 +158,15 @@ def compute_friction_outcome(
     now = now or _utc_now()
     since = now - timedelta(days=window_days) if window_days else None
 
+    # 2026-09-29: 창은 **기록**(멈춤 귀결·취소 추적)과 **실현 쌍의 매도 시각**에만
+    # 건다. 매매 행 자체를 먼저 자르면 창 밖에서 산 로트가 사라져, 창 안의
+    # 매도가 짝을 잃었다 (persona_classifier_v2 가 2026-09-10 에 고친 것과 같은
+    # 버그). 매수 색인·FIFO·귀속은 전체 이력으로 하고 쌍은 sell_time 으로 거른다.
+    all_reflections = list(reflections)
+    trades = list(trades)
     reflections = [
-        r for r in reflections
+        r for r in all_reflections
         if since is None or (r.created_at is not None and r.created_at >= since)
-    ]
-    trades = [
-        t for t in trades
-        if since is None or (t.traded_at is not None and t.traded_at >= since)
     ]
 
     # ── 1. 멈춤의 귀결 ────────────────────────────────────────────────────
@@ -185,7 +187,12 @@ def compute_friction_outcome(
     # 쓴다. 2026-09-10: 매도 전 멈춤(EXIT → intended_side "SELL")까지 넣어서,  // legal-ok
     # 팔려다 취소하고 이틀 뒤 산 것이 "결국 샀다"로, 매도 멈춤 뒤의 무관한
     # 매수가 "멈춤 경유 매수"로 잡혔다. side 가 없는 옛 행은 매수로 본다.
-    buy_side_proceeded = [r for r in proceeded if _is_buy_side(r)]
+    # 귀속(§3)은 매수의 속성이다 — 창 밖에서 멈춤을 거친 매수가 창 안에서
+    # 팔렸으면 그 쌍은 여전히 멈춤 경유다. 그래서 창으로 거르기 전 기록을 쓴다.
+    buy_side_proceeded = [
+        r for r in all_reflections
+        if r.proceeded_at is not None and _is_buy_side(r)
+    ]
     buy_side_cancelled = [r for r in cancelled if _is_buy_side(r)]
 
     # 매수만 종목·시각으로 색인 (취소 추적과 귀속 양쪽에 쓴다)
@@ -195,6 +202,10 @@ def compute_friction_outcome(
         # (매수/매도 구분 필드). 자문 어휘가 아니라 데이터 값이며, 훅의
         # 화이트리스트가 `trade.action` 형태만 인식해서 여기선 안 걸린다.
         if str(t.action or "").upper() != "BUY" or t.traded_at is None:  # // legal-ok
+            continue
+        # 2026-09-29: 보유 등록 시드는 매수가 아니라 이미 들고 있던 보유분의
+        # 기록이다 — "취소 후 결국 샀다" 에도, 멈춤 경유 귀속에도 넣지 않는다.
+        if is_holding_seed(t):
             continue
         buys.setdefault(_norm(t.ticker), []).append(t.traded_at)
     for v in buys.values():
@@ -234,7 +245,16 @@ def compute_friction_outcome(
     with_f: list[float] = []
     without_f: list[float] = []
     for pair in fifo_match_closed_trades(trades):
+        if since is not None and pair.sell_time < since:
+            continue
         if not pair.buy_price:            # 체결가 없는 행은 수익률을 못 낸다
+            continue
+        # 시드 로트(등록 전에 산 보유분)는 멈춤을 거칠 기회가 없었다 — 경유/
+        # 미경유 어느 쪽 분포에도 넣지 않는다 (2026-09-29, 도입 전과 같은 결과).
+        if pair.buy_is_seed:
+            continue
+        # 보유 등록 조정 매도는 기록된 매도가 아니다 — 실현 수익률이 없다 (2026-09-29).
+        if pair.sell_is_adjust:
             continue
         ret = (pair.sell_price - pair.buy_price) / pair.buy_price * 100.0
         key = (_norm(pair.ticker), pair.buy_time)

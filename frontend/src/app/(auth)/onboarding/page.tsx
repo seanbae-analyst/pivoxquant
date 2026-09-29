@@ -12,6 +12,7 @@ import { usePortfolioPositions } from "@/lib/hooks";
 import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { useLocale } from "@/lib/locale";
+import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
@@ -586,7 +587,7 @@ export default function OnboardingPage() {
   // Redirect if not logged in, or if onboarding is already complete
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace("/login");
+      router.replace(loginHref(currentLocationPath()));
       return;
     }
     if (!authLoading && user && user.onboarding_completed === true) {

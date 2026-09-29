@@ -232,7 +232,27 @@ def age_gate_blocks(path, is_authenticated, age_confirmed):
 
 # ── App factory ───────────────────────────────────────────────────────────────
 
-def create_app():
+def create_app(
+    *,
+    start_scheduler: bool | None = None,
+    populate_cache: bool | None = None,
+):
+    """Build the Flask app.
+
+    ``start_scheduler`` / ``populate_cache``: ``None`` (default) follows the
+    ``RUN_SCHEDULER`` / ``POPULATE_CACHE_ON_BOOT`` env as before. Transient
+    apps built inside the live web process (nightly jobs run by the in-process
+    APScheduler via ``_wrap_python_main``) must pass ``False`` — prod has
+    ``RUN_SCHEDULER=1`` set, so an ``os.environ.setdefault(..., "0")`` did
+    nothing and each tick built a second scheduler whose
+    ``register_scheduler`` replaced the live one in observability.alerts.
+    Env vars are process-global; never mutate them to steer one call.
+    """
+    if start_scheduler is None:
+        start_scheduler = os.environ.get("RUN_SCHEDULER", "0") == "1"
+    if populate_cache is None:
+        populate_cache = os.environ.get("POPULATE_CACHE_ON_BOOT", "1") == "1"
+
     app = Flask(__name__)
     app.config.from_object(Config)
     # Import Inbox (docs/product/IMPORT_INBOX_DESIGN.md): uploads are capped
@@ -483,7 +503,7 @@ def create_app():
     # quota burn when gunicorn ran 2+ workers. Now it runs in a daemon thread
     # so the HTTP server binds immediately, and is gated by POPULATE_CACHE_ON_BOOT
     # (default "1"; set "0" to skip entirely — e.g., for worker #2).
-    if os.environ.get("POPULATE_CACHE_ON_BOOT", "1") == "1":
+    if populate_cache:
         threading.Thread(
             target=_populate_cache,
             args=(app,),
@@ -496,7 +516,7 @@ def create_app():
     # scheduler, causing weekly_memo / refresh jobs to fire N times).
     # Default off. Set RUN_SCHEDULER=1 in exactly one process (e.g. a
     # dedicated worker dyno, or when Procfile is pinned to --workers 1).
-    if os.environ.get("RUN_SCHEDULER", "0") == "1":
+    if start_scheduler:
         _init_scheduler(app)
 
     return app
@@ -783,6 +803,8 @@ def _do_migrations():
     _add_column_if_missing("alerts", "title", "VARCHAR(200)")
     _add_column_if_missing("alerts", "body", "TEXT")
     _add_column_if_missing("alerts", "link", "VARCHAR(300)")
+    # 059 — in-app 꺼짐·푸시 켜짐 알림의 중복 억제용 숨김 행 (services/alert.py).
+    _add_column_if_missing("alerts", "push_only", "BOOLEAN", default="0")
     _add_column_if_missing("alerts", "read_at", "TIMESTAMP")
 
     # Artifacts table — full coverage of Artifact model columns.
@@ -829,6 +851,9 @@ def _do_migrations():
     _add_column_if_missing("trade_history", "pnl", "FLOAT", default="0.0")
     _add_column_if_missing("trade_history", "pnl_pct", "FLOAT", default="0.0")
     _add_column_if_missing("trade_history", "currency", "VARCHAR(5)", default="'USD'")
+    # 2026-09-29 — 보유 등록 시드 표시 (models/trade_history.py HOLDING_SEED_SOURCE,
+    # alembic 058). NULL = 체결 기록.
+    _add_column_if_missing("trade_history", "source", "VARCHAR(20)")
 
     # Investment profiles — covers onboarding answers + auto-calc quant params.
     _add_column_if_missing("investment_profiles", "experience_level", "VARCHAR(20)", default="'beginner'")
@@ -908,6 +933,12 @@ def _do_migrations():
     # sure the column exists so the ORM INSERT/SELECT never fails on a box
     # whose import_batches table predates Phase 2.
     _add_column_if_missing("import_batches", "token_id", "INTEGER")
+
+    # pending_trades.currency_stated — 2026-09-29. Alembic twin:
+    # 057_pending_currency_stated. Nullable BOOLEAN: did the input state the
+    # currency (then a PATCHed ticker may not re-label the price)? NULL on
+    # rows that predate it — routes/imports.py treats those as stated.
+    _add_column_if_missing("pending_trades", "currency_stated", "BOOLEAN")
 
     # anthropic_usage_log (Wave I G-3) — Anthropic API 비용 추적 테이블.
     # 이 테이블은 ORM 모델이 아니라 services/ai/service.py 가 raw SQL INSERT

@@ -56,7 +56,7 @@ from models import (
     VALID_WINDOWS,
 )
 from services.profile.common_util import is_finite as _finite, utc_now as _utc_now
-from services.profile.fifo_util import fifo_match_closed_trades
+from services.profile.fifo_util import fifo_match_closed_trades, is_registration_row
 from services.profile.persona_analytics import DECLARED_TO_PERSONA
 
 
@@ -291,6 +291,9 @@ def _aggregate_metrics(
         .filter(TradeHistory.traded_at >= cutoff)
         .all()
     )
+    # 2026-09-29: 보유 등록 시드·조정 행(fifo_util.is_registration_row)은 뺀다 — 이 경로는
+    # 시드 도입 전과 같은 결과를 낸다 (시드는 라이브 거울·분류기만 읽는다).
+    trades = [t for t in trades if not is_registration_row(t)]
 
     # Group trades by user for per-user metrics.
     by_user: dict[int, list[TradeHistory]] = {}
@@ -671,6 +674,9 @@ def _all_users_baseline(cutoff: datetime, window_days: int) -> dict:
         .filter(TradeHistory.traded_at >= cutoff)
         .all()
     )
+    # 2026-09-29: 보유 등록 시드·조정 행(fifo_util.is_registration_row)은 뺀다 — 이 경로는
+    # 시드 도입 전과 같은 결과를 낸다 (시드는 라이브 거울·분류기만 읽는다).
+    all_trades = [t for t in all_trades if not is_registration_row(t)]
     if not all_trades:
         result: dict = {}
         _baseline_cache[window_days] = (now, result)

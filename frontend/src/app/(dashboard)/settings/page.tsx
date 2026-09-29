@@ -40,6 +40,7 @@ import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useLocale } from "@/lib/locale";
+import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import {
   isPushSupported,
   subscribeToPush,
@@ -302,7 +303,7 @@ export default function SettingsPageV2() {
   /* ── Auth gate ── */
   React.useEffect(() => {
     if (!authLoading && !user) {
-      router.replace("/login");
+      router.replace(loginHref(currentLocationPath()));
     }
   }, [authLoading, user, router]);
 

@@ -24,7 +24,8 @@ account-number patterns masked (``services.imports.mask_sensitive``).
 ``approved_thesis`` is the user's own free text → encrypted at rest.
 
 Schema is mirrored 1:1 in ``migrations/versions/051_import_inbox.py``
-(``token_id``: ``052_import_tokens.py``).
+(``token_id``: ``052_import_tokens.py``; ``currency_stated``:
+``057_pending_currency_stated.py``).
 """
 from __future__ import annotations
 
@@ -131,6 +132,12 @@ class PendingTrade(db.Model):
     shares = db.Column(db.Float, nullable=False)
     price = db.Column(db.Float, nullable=False)
     currency = db.Column(db.String(5), nullable=False, default="KRW")
+    # True when the input stated ``currency`` (원/₩/$ on the line, a 통화
+    # column, a webhook field, the screenshot's currency) — the price is in
+    # it, so PATCHing a ticker of the other currency is refused. False when
+    # it was a guess a picked ticker may still correct. NULL = row predates
+    # the column: treated as stated (routes/imports.py::patch_pending).
+    currency_stated = db.Column(db.Boolean, nullable=True)
     traded_at = db.Column(db.DateTime, nullable=False)
     confidence = db.Column(db.Float, nullable=False, default=1.0)
     status = db.Column(db.String(12), nullable=False, default=STATUS_PENDING, index=True)

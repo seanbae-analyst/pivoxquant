@@ -25,7 +25,8 @@
  * - Mobile (< 768px) collapses to single column, hero on top.
  *
  * Function preservation:
- * - OAuth handler unchanged — anchors point at API.auth.google / .kakao.
+ * - OAuth handler unchanged — anchors point at API.auth.google / .kakao
+ *   (plus `?next=` when /login was reached with a safe `next`, 2026-09-29).
  * - useAuth + router.replace("/mirror") + loading + null user gating
  *   unchanged.
  */
@@ -36,6 +37,7 @@ import Link from "next/link";
 
 import { useAuth } from "@/lib/auth";
 import { useT, useLocale } from "@/lib/locale";
+import { loginNextPath } from "@/lib/login-redirect";
 
 import { AuthHeroV2 } from "@/components/auth/v2/auth-hero-v2";
 import { OAuthButtonsV2 } from "@/components/auth/v2/oauth-buttons-v2";
@@ -51,6 +53,9 @@ export default function AuthEntryPage() {
   const searchParams = useSearchParams();
   const errorParam = searchParams?.get("error") ?? null;
   const expiredParam = searchParams?.get("expired") ?? null;
+  // 2026-09-29: where to land after sign-in. Validated here (same-origin
+  // relative path, not /login itself) and again by the backend's _safe_next.
+  const nextPath = loginNextPath(searchParams?.get("next") ?? null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // Locale-aware error copy.
@@ -73,9 +78,9 @@ export default function AuthEntryPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/mirror");
+      router.replace(nextPath ?? "/mirror");
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, nextPath]);
 
   const sessionExpiredMsg =
     locale === "ko"
@@ -258,7 +263,7 @@ export default function AuthEntryPage() {
             </div>
           )}
 
-          <OAuthButtonsV2 />
+          <OAuthButtonsV2 next={nextPath} />
 
           <div
             style={{

@@ -38,6 +38,7 @@
 
 import * as React from "react";
 import { API } from "@/lib/endpoints";
+import { oauthHref } from "@/lib/login-redirect";
 import { useT } from "@/lib/locale";
 import { isDemoMode } from "@/lib/demo";
 import { useBackendWake } from "@/lib/backend-wake";
@@ -57,6 +58,10 @@ interface OAuthButtonsV2Props {
   hint?: string;
   /** When true, the hint is rendered with an alert role + warning tone. */
   hintEmphasized?: boolean;
+  /** Post-login destination (from /login?next=). Re-validated and appended to
+   *  the OAuth start route as ?next= — the backend carries it in signed state
+   *  and redirects there after the callback (2026-09-29). */
+  next?: string | null;
 }
 
 type Provider = "google" | "kakao";
@@ -98,6 +103,7 @@ export function OAuthButtonsV2({
   onDisabledClick,
   hint,
   hintEmphasized = false,
+  next = null,
 }: OAuthButtonsV2Props) {
   const t = useT();
   // Demo mode never reaches a backend (lib/demo.ts serves fixtures), so the
@@ -163,7 +169,7 @@ export function OAuthButtonsV2({
 
   function providerButton(provider: Provider) {
     const isGoogle = provider === "google";
-    const href = isGoogle ? API.auth.google : API.auth.kakao;
+    const href = oauthHref(isGoogle ? API.auth.google : API.auth.kakao, next);
     const label = t(
       isGoogle ? "auth.login.continueWithGoogle" : "auth.login.continueWithKakao",
     );

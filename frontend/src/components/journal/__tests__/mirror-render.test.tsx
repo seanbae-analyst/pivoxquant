@@ -168,3 +168,50 @@ describe.each(MIRRORS)("$name render states", ({ Comp, hook, key }) => {
     expect(container.textContent ?? "").not.toMatch(/NaN|undefined|null/);
   });
 });
+
+describe("FrictionOutcomeMirror cancellation sentence", () => {
+  // 2026-09-29: `stopped.cancelled` counts every side, but never_bought /
+  // bought_later_anyway are buy-side only. With 2 exit-side cancels the
+  // sentence read "6건 중 3건 … 1건" — the parts did not add up to the whole.
+  const base = LOADED.frictionOutcome as Record<string, unknown>;
+
+  it("states the buy-side cancelled count as the whole", () => {
+    hooks.useFrictionOutcome.mockReturnValue({
+      data: {
+        ...base,
+        stopped: { started: 22, proceeded: 14, cancelled: 6, open: 2 },
+        cancelled_followthrough: {
+          cancelled: 4,
+          bought_later_anyway: 1,
+          never_bought: 3,
+          median_days_until_bought: 3,
+        },
+      },
+      isLoading: false,
+      error: undefined,
+    });
+    const { container } = render(<FrictionOutcomeMirror />);
+    const text = container.textContent ?? "";
+    expect(text).toContain("4건 중 3건");
+    expect(text).not.toContain("6건 중");
+  });
+
+  it("omits the sentence when every cancel was exit-side", () => {
+    hooks.useFrictionOutcome.mockReturnValue({
+      data: {
+        ...base,
+        stopped: { started: 22, proceeded: 14, cancelled: 2, open: 6 },
+        cancelled_followthrough: {
+          cancelled: 0,
+          bought_later_anyway: 0,
+          never_bought: 0,
+          median_days_until_bought: null,
+        },
+      },
+      isLoading: false,
+      error: undefined,
+    });
+    const { container } = render(<FrictionOutcomeMirror />);
+    expect(container.textContent ?? "").not.toContain("취소한 뒤");
+  });
+});

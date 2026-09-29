@@ -161,6 +161,36 @@ class TestBuild:
         assert data["has_content"] is False
         assert data["window_trade_count"] == 0
 
+    def test_lots_acquired_before_the_window_are_still_matched(self, app, make_user, add_trade):
+        """2026-09-29 — 창은 매도·추가 취득 시각에만 건다. 원장은 전체 이력.
+
+        창 안에서 처분한 종목이 창 전에 취득한 것이어도 닫힌 거래로 세고,
+        창 전에 취득한 종목을 창 안에서 다시 취득하면 추가 취득으로 센다.
+        """
+        user = make_user(email="oldlots@test.com")
+        uid = user["id"]
+        add_trade(uid, ticker="OLD", action="BUY", shares=10, price=100.0, days_ago=60)
+        add_trade(uid, ticker="OLD", action="SELL", shares=10, price=120.0,
+                  days_ago=5, pnl_pct=20.0)
+        add_trade(uid, ticker="ADD", action="BUY", shares=10, price=100.0, days_ago=90)
+        add_trade(uid, ticker="ADD", action="BUY", shares=10, price=80.0, days_ago=10)
+        # 창이 끝난 뒤의 기록은 as_of 리포트에 들어오지 않는다.
+        add_trade(uid, ticker="ADD", action="BUY", shares=10, price=60.0, days_ago=-3)
+        with app.app_context():
+            data = build_mirror_report(uid, period_days=30, as_of=AS_OF)
+
+        assert data["window_trade_count"] == 2
+        assert data["turnover"]["trade_count"] == 2
+        assert data["turnover"]["median_hold_days"] == 55.0
+        closed = data["profit_loss"]
+        assert closed["sufficient_data"] is True
+        assert closed["total_closed_pairs"] == 1
+        assert closed["take_profit"]["count"] == 1
+        followon = data["averaging_down"]
+        assert followon["sufficient_data"] is True
+        assert followon["follow_on_count"] == 1
+        assert followon["below_avg_count"] == 1
+
     def test_as_of_accepts_a_date(self, app, active_user):
         """date 는 그 날의 끝으로 읽는다 — 그날의 체결이 빠지면 안 된다."""
         with app.app_context():

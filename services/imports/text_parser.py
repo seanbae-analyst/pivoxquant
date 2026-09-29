@@ -69,6 +69,8 @@ _PRICE_USD = re.compile(rf"\$\s*(?P<p>{_NUM})")
 # "118.5달러", "250.00 USD" — Korean broker apps spell the dollar out.
 _PRICE_DOLLAR_WORD = re.compile(rf"(?P<p>{_NUM})\s*(?:달러|USD|불)\b")
 _USD_MARK = re.compile(r"\$|달러|\bUSD\b")
+# A won amount ("71,200원", "₩71,200") — not just any 원 ("하나원큐", "회원").
+_KRW_MARK = re.compile(r"₩|\d\s*원|\bKRW\b")
 _AMOUNT_LABELLED = re.compile(rf"(?:체결금액|거래금액|매매금액|금액|total)\s*:?\s*\$?(?P<p>{_NUM})", re.IGNORECASE)
 
 _DATE_ANY = re.compile(
@@ -210,12 +212,14 @@ def _parse_line(line: str) -> RawTrade:
     # stocks under Korean names ("애플 3주 매수 체결 $190.12").
     if _USD_MARK.search(line) and "원" not in line and "₩" not in line:
         t.currency = "USD"
-    elif "원" in line or "₩" in line or re.fullmatch(r"\d{6}", t.code or ""):
-        t.currency = "KRW"
+    elif "원" in line or "₩" in line:
+        t.currency, t.currency_guessed = "KRW", not _KRW_MARK.search(line)
+    elif re.fullmatch(r"\d{6}", t.code or ""):
+        t.currency, t.currency_guessed = "KRW", True
     elif t.code:
-        t.currency = "USD"
+        t.currency, t.currency_guessed = "USD", True
     elif t.name and _HANGUL.search(t.name):
-        t.currency = "KRW"
+        t.currency, t.currency_guessed = "KRW", True
 
     dt = _date(line)
     if dt is None:

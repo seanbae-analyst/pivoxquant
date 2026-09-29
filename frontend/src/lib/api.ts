@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { hadSession } from "./had-session";
+import { currentLocationPath, loginHref } from "./login-redirect";
 import { isDemoMode, demoResponseFor } from "./demo";
 
 /** Default request timeout in milliseconds. */
@@ -190,7 +191,9 @@ async function apiFetchOnce<T = unknown>(
   if (res.status === 401) {
     const body = await res.json().catch(() => ({}));
     if (body.code === "SESSION_EXPIRED" && typeof window !== "undefined") {
-      const target = hadSession() ? "/login?expired=1" : "/login";
+      // 2026-09-29: carry where the user was so the OAuth round-trip can
+      // bring them back (backend reads ?next= on /api/auth/{google,kakao}).
+      const target = loginHref(currentLocationPath(), { expired: hadSession() });
       window.location.href = target;
       throw new ApiError(401, pickErrorMessage(body, "Session expired"));
     }

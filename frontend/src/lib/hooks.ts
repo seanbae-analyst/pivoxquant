@@ -838,6 +838,10 @@ export type NotificationPrefsMap = Record<string, NotificationChannelPrefs>;
 
 export interface NotificationPreferencesResponse {
   prefs: NotificationPrefsMap;
+  /** Per visible event, the channels that have a sender
+   *  (models.user.NOTIFICATION_EVENT_CHANNELS). Other channels are always
+   *  false in `prefs` and dropped on PUT. Added 2026-09-29. */
+  channels?: Record<string, NotificationChannel[]>;
 }
 
 /**

@@ -222,3 +222,58 @@ def test_admin_reply_validation(client, app, make_user, admin_env):
     })
     assert resp.status_code == 400
     assert resp.get_json()["code"] == "INVALID_REPLY"
+
+
+# ── operator notify — Brevo→SendGrid cascade (2026-09-29) ─────────────────────
+# _notify_operator 가 sendgrid_provider.send 만 직접 불렀다. render.yaml 은 SendGrid 가
+# 죽었고 Brevo 가 1순위(BREVO_PROVIDER_PRIMARY=true)라고 적는다 — 운영자는 문의
+# 메일을 한 통도 받지 못했고, 실패는 INFO 로만 남았다.
+def _inquiry_obj():
+    return Inquiry(id=7, user_id=1, category="other", subject="s", body="b",
+                   email_snapshot="u@test.com")
+
+
+def test_notify_operator_uses_brevo_when_primary(monkeypatch, admin_env):
+    from unittest.mock import patch
+    from routes import support
+
+    monkeypatch.setenv("BREVO_API_KEY", "x")
+    monkeypatch.setenv("BREVO_PROVIDER_PRIMARY", "true")
+    monkeypatch.setenv("SENDGRID_API_KEY", "dead")
+    with patch("services.email.brevo_provider.send", return_value=True) as br, \
+         patch("services.email.sendgrid_provider.send") as sg:
+        support._notify_operator(_inquiry_obj())
+    assert br.called
+    assert br.call_args.args[0] == "admin@pivoxquant.com"
+    sg.assert_not_called()
+
+
+def test_notify_operator_falls_through_to_next_provider(monkeypatch, admin_env):
+    from unittest.mock import patch
+    from routes import support
+
+    monkeypatch.setenv("BREVO_API_KEY", "x")
+    monkeypatch.setenv("BREVO_PROVIDER_PRIMARY", "true")
+    monkeypatch.setenv("SENDGRID_API_KEY", "y")
+    with patch("services.email.brevo_provider.send",
+               side_effect=RuntimeError("brevo down")), \
+         patch("services.email.sendgrid_provider.send",
+               return_value=True) as sg:
+        support._notify_operator(_inquiry_obj())
+    assert sg.called
+
+
+def test_notify_operator_total_failure_logs_warning(monkeypatch, admin_env, caplog):
+    import logging
+    from unittest.mock import patch
+    from routes import support
+
+    monkeypatch.setenv("BREVO_API_KEY", "x")
+    monkeypatch.delenv("SENDGRID_API_KEY", raising=False)
+    monkeypatch.delenv("BREVO_PROVIDER_PRIMARY", raising=False)
+    with patch("services.email.brevo_provider.send",
+               side_effect=RuntimeError("brevo down")), \
+         caplog.at_level(logging.INFO, logger=support.logger.name):
+        support._notify_operator(_inquiry_obj())  # never raises
+    assert any(r.levelno >= logging.WARNING for r in caplog.records), \
+        [(r.levelname, r.getMessage()) for r in caplog.records]

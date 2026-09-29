@@ -40,7 +40,8 @@ Average holding period
 -----------------------
 For context next to the activity counts we surface the same hold-day
 statistic the holding/profit-loss mirrors use, derived from the shared
-:func:`services.profile.fifo_util.fifo_match_closed_trades`
+:func:`services.profile.fifo_util.fifo_match_closed_trades_with_pnl`
+pairs collapsed to one observation per 매도 (``collapse_pairs_by_sell``),
 ``MatchedPair.hold_days`` — median primary (right-skew resistant), mean
 secondary. Both are ``None`` when there are no closed round trips in the
 window. This is the *only* derived statistic; everything else is a raw
@@ -64,11 +65,15 @@ Public API
 from __future__ import annotations
 
 import statistics
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from models import TradeHistory
-from services.profile.fifo_util import fifo_match_closed_trades
+from services.profile.fifo_util import (
+    collapse_pairs_by_sell,
+    fifo_match_closed_trades_with_pnl,
+    is_registration_row,
+)
 
 
 # ── tunables ─────────────────────────────────────────────────────────
@@ -87,14 +92,28 @@ _DEFAULT_CURRENCY: str = "USD"
 
 def _hold_day_stats(
     trades: list[TradeHistory],
+    *,
+    since: datetime | None = None,
 ) -> tuple[float | None, float | None]:
     """Return ``(median_hold_days, mean_hold_days)`` for closed pairs.
 
     Derived from the shared FIFO matcher so this never diverges from the
     holding / profit-loss mirrors. ``(None, None)`` when no round trip
     closed in the window (e.g. a user with only open buys).
+
+    ``trades`` 는 전체 이력이어야 한다; ``since`` 는 매도 시각이 그 이후인
+    쌍만 남긴다 (2026-09-29 — 창 안 체결만 맞추면 창보다 오래된 매수가 사라져
+    그 매도가 로트를 잃었다).
+
+    2026-09-29: 매도 한 번 = 관찰 한 건 (보유기간 거울과 같은 단위). 한 매도가
+    여러 로트를 닫으면 슬라이스마다 세던 것을 ``collapse_pairs_by_sell`` 로
+    묶는다 — 보유일은 그 슬라이스들의 수량 가중 평균.
     """
-    pairs = fifo_match_closed_trades(trades)
+    attributed = fifo_match_closed_trades_with_pnl(trades)
+    if since is not None:
+        attributed = [(p, pct) for p, pct in attributed if p.sell_time >= since]
+    # 보유 등록 시드 로트만 닫은 매도는 보유일을 모른다 — 뺀다 (2026-09-29).
+    pairs = [p for p, _ in collapse_pairs_by_sell(attributed) if not p.buy_is_seed]
     if not pairs:
         return None, None
     holds = [float(p.hold_days) for p in pairs]
@@ -142,6 +161,8 @@ def compute_turnover_mirror(
     *,
     period_days: int | None = None,
     min_trades: int = _DEFAULT_MIN_TRADES,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
 ) -> dict:
     """Compute the retrospective trade-activity mirror for one user.
 
@@ -159,6 +180,13 @@ def compute_turnover_mirror(
         When set, only trades whose ``traded_at`` falls within the last
         ``period_days`` days (relative to the latest trade in the input,
         for determinism) are considered. ``None`` → all history.
+    window_start, window_end : datetime | None
+        명시적 창 (naive UTC). ``window_start`` 가 있으면 ``period_days`` 의
+        "마지막 체결 기준" 창 대신 이 시각을 창의 시작으로 쓴다.
+        ``window_end`` 가 있으면 그 이후의 기록은 통째로 없는 것으로 본다
+        (as-of 리포트). 둘 다 FIFO/평단 계산은 창 이전 이력까지 본다 —
+        월간 리포트(``services/reports/mirror_pdf``)가 창을 잘라 넣던 것을
+        대체한다 (2026-09-29).
     min_trades : int
         Minimum number of fills (BUY+SELL) in the window required before
         numeric facts are reported. Below this, ``sufficient_data`` is
@@ -174,10 +202,24 @@ def compute_turnover_mirror(
         fields are ``None`` (counts) / ``[]`` (by_currency).
     """
     materialised = [t for t in trades if t is not None]
+    if window_end is not None:
+        materialised = [
+            t for t in materialised
+            if t.traded_at and t.traded_at <= window_end
+        ]
+    full_history = materialised
+    cutoff: datetime | None = None
 
     # ── optional period window ──────────────────────────────────────
-    if period_days is not None and period_days > 0:
-        dated = [t for t in materialised if t.traded_at]
+    if window_start is not None:
+        cutoff = window_start
+        materialised = [
+            t for t in materialised
+            if t.traded_at and t.traded_at >= cutoff
+        ]
+    elif period_days is not None and period_days > 0:
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드·조정은 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_registration_row(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)
@@ -187,6 +229,11 @@ def compute_turnover_mirror(
             ]
         else:
             materialised = []
+
+    # 2026-09-29: 보유 등록 시드·조정 매도는 체결이 아니다 — 체결 수·거래대금에서
+    # 뺀다. 보유일 매칭(FIFO)에는 full_history 로 그대로 들어간다 (조정 매도는
+    # collapse_pairs_by_sell 이 관찰에서 뺀다).
+    materialised = [t for t in materialised if not is_registration_row(t)]
 
     buy_count = sum(
         1 for t in materialised if (t.action or "").upper() == "BUY"
@@ -215,7 +262,7 @@ def compute_turnover_mirror(
         t for t in materialised
         if (t.action or "").upper() in ("BUY", "SELL")
     ]
-    median_hold, mean_hold = _hold_day_stats(materialised)
+    median_hold, mean_hold = _hold_day_stats(full_history, since=cutoff)
 
     return {
         "sufficient_data": True,

@@ -76,13 +76,15 @@ Public API
 from __future__ import annotations
 
 import statistics
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from models import TradeHistory
 from services.profile.fifo_util import (
     MatchedPair,
+    collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
+    is_registration_row,
 )
 
 
@@ -97,6 +99,8 @@ _DEFAULT_MIN_PAIRS: int = 5
 
 def _classify_pairs(
     trades: list[TradeHistory],
+    *,
+    since: datetime | None = None,
 ) -> tuple[
     list[tuple[MatchedPair, float]],
     list[tuple[MatchedPair, float]],
@@ -118,8 +122,19 @@ def _classify_pairs(
 
     Break-even pairs (``pnl_pct == 0``) land in neither bucket but DO
     count toward ``total_closed``.
+
+    ``since`` 는 매도 시각이 그 이후인 쌍만 남긴다. 매칭은 항상 전체 이력으로
+    먼저 한다 (2026-09-29): FIFO 전에 창을 자르면 창보다 오래된 매수가 사라져
+    창 안의 매도가 로트를 잃었다 — ``persona_classifier_v2`` 가 2026-09-10 에
+    고친 것과 같은 버그.
     """
     attributed = fifo_match_closed_trades_with_pnl(trades)
+    if since is not None:
+        attributed = [(p, pct) for p, pct in attributed if p.sell_time >= since]
+    # 2026-09-29: 매도 한 번 = 관찰 한 건. 한 매도가 여러 로트를 닫으면 슬라이스
+    # 수만큼 세어 min_pairs 를 혼자 넘겼다. 보유일은 그 매도 슬라이스들의
+    # 수량 가중 평균 (collapse_pairs_by_sell 참조).
+    attributed = collapse_pairs_by_sell(attributed)
     total_closed = len(attributed)
 
     take_profit: list[tuple[MatchedPair, float]] = []
@@ -152,15 +167,18 @@ def _side_summary(
     if not classified:
         return None
 
-    holds = [float(pair.hold_days) for pair, _ in classified]
+    # 2026-09-29: 보유 등록 시드 로트만 닫은 매도는 수익률은 유효하지만
+    # (평단 = 등록 때 적은 평균매입가) 보유일은 모른다 — 보유일 통계에서만 뺀다.
+    holds = [float(pair.hold_days) for pair, _ in classified if not pair.buy_is_seed]
     pcts = [pct for _, pct in classified]
 
     return {
         "count": len(classified),
         # median primary / mean secondary — both right-skew-resistant on
-        # the headline figure.
-        "median_hold_days": round(statistics.median(holds), 1),
-        "mean_hold_days": round(statistics.fmean(holds), 1),
+        # the headline figure. None when every 매도 on this side closed only
+        # holding-seed lots (hold time unknown).
+        "median_hold_days": round(statistics.median(holds), 1) if holds else None,
+        "mean_hold_days": round(statistics.fmean(holds), 1) if holds else None,
         f"median_{pct_key}_pct": round(statistics.median(pcts), 2),
         f"mean_{pct_key}_pct": round(statistics.fmean(pcts), 2),
     }
@@ -171,6 +189,8 @@ def compute_profit_loss_mirror(
     *,
     period_days: int | None = None,
     min_pairs: int = _DEFAULT_MIN_PAIRS,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
 ) -> dict:
     """Compute the retrospective profit/loss mirror for one user.
 
@@ -183,6 +203,13 @@ def compute_profit_loss_mirror(
         When set, only trades whose ``traded_at`` falls within the last
         ``period_days`` days (relative to the latest trade in the input,
         for determinism) are considered. ``None`` → all history.
+    window_start, window_end : datetime | None
+        명시적 창 (naive UTC). ``window_start`` 가 있으면 ``period_days`` 의
+        "마지막 체결 기준" 창 대신 이 시각을 창의 시작으로 쓴다.
+        ``window_end`` 가 있으면 그 이후의 기록은 통째로 없는 것으로 본다
+        (as-of 리포트). 둘 다 FIFO/평단 계산은 창 이전 이력까지 본다 —
+        월간 리포트(``services/reports/mirror_pdf``)가 창을 잘라 넣던 것을
+        대체한다 (2026-09-29).
     min_pairs : int
         Minimum number of *classified* (non-break-even) closed pairs
         required before numeric stats are reported. Below this,
@@ -197,21 +224,28 @@ def compute_profit_loss_mirror(
         their side is empty or when ``sufficient_data`` is ``False``.
     """
     materialised = [t for t in trades if t is not None]
+    if window_end is not None:
+        materialised = [
+            t for t in materialised
+            if t.traded_at and t.traded_at <= window_end
+        ]
 
     # ── optional period window ──────────────────────────────────────
-    if period_days is not None and period_days > 0:
-        dated = [t for t in materialised if t.traded_at]
+    # 창은 매도 시각으로 쌍을 고른다; FIFO 는 전체 이력으로 맞춘다
+    # (_classify_pairs 참조).
+    cutoff: datetime | None = None
+    if window_start is not None:
+        cutoff = window_start
+    elif period_days is not None and period_days > 0:
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드·조정은 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_registration_row(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)
-            materialised = [
-                t for t in materialised
-                if t.traded_at and t.traded_at >= cutoff
-            ]
         else:
             materialised = []
 
-    take_profit, stop_loss, total_closed = _classify_pairs(materialised)
+    take_profit, stop_loss, total_closed = _classify_pairs(materialised, since=cutoff)
     classified = len(take_profit) + len(stop_loss)
 
     # ── insufficient data: new user, too few pairs, all break-even ──

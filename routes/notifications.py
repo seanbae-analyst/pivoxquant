@@ -44,6 +44,7 @@ from flask_login import current_user
 from extensions import db
 from models.user import (
     NOTIFICATION_CHANNELS,
+    NOTIFICATION_EVENT_CHANNELS,
     NOTIFICATION_EVENT_IDS,
     NOTIFICATION_PREF_DEFAULTS,
     visible_notification_event_ids,
@@ -74,6 +75,9 @@ def _merged_prefs(stored) -> dict:
     ``MARKET_DATA_DISPLAY_ENABLED`` is off), so the Settings matrix never
     renders a toggle that cannot fire. Stored values for a hidden event are
     left untouched in the DB and reappear when its producer comes back.
+
+    A channel outside ``NOTIFICATION_EVENT_CHANNELS[event_id]`` has no sender,
+    so it is always reported ``False`` whatever is stored (2026-09-29).
     """
     merged: dict[str, dict[str, bool]] = {}
     stored = stored if isinstance(stored, dict) else {}
@@ -82,12 +86,23 @@ def _merged_prefs(stored) -> dict:
         event_stored = stored.get(event_id)
         if not isinstance(event_stored, dict):
             event_stored = {}
+        live = NOTIFICATION_EVENT_CHANNELS[event_id]
         merged[event_id] = {
-            ch: (event_stored[ch] if isinstance(event_stored.get(ch), bool)
+            ch: (False if ch not in live
+                 else event_stored[ch] if isinstance(event_stored.get(ch), bool)
                  else defaults[ch])
             for ch in NOTIFICATION_CHANNELS
         }
     return merged
+
+
+def _live_channels() -> dict[str, list[str]]:
+    """Channels that have a sender, per visible event — the matrix renders
+    only these as toggles."""
+    return {
+        event_id: list(NOTIFICATION_EVENT_CHANNELS[event_id])
+        for event_id in visible_notification_event_ids()
+    }
 
 
 @notifications_bp.route("/preferences", methods=["GET"])
@@ -108,7 +123,7 @@ def get_preferences():
             code="NOTIF_PREFS_LOAD_FAILED",
             status=500,
         )
-    return jsonify({"prefs": merged})
+    return jsonify({"prefs": merged, "channels": _live_channels()})
 
 
 @notifications_bp.route("/preferences", methods=["PUT"])
@@ -164,6 +179,11 @@ def put_preferences():
                     code="NOTIF_PREFS_BAD_VALUE",
                     status=400,
                 )
+            # Dead channel (no sender) — valid vocabulary, but never stored.
+            # Dropped rather than 400 so a client that still submits whole
+            # rows (all three channels) keeps saving its live toggles.
+            if channel not in NOTIFICATION_EVENT_CHANNELS[event_id]:
+                continue
             clean.setdefault(event_id, {})[channel] = value
 
     # Partial PUT: merge incoming events/channels over the stored matrix so a
@@ -193,7 +213,8 @@ def put_preferences():
             status=500,
         )
 
-    return jsonify({"prefs": _merged_prefs(merged_store)})
+    return jsonify({"prefs": _merged_prefs(merged_store),
+                    "channels": _live_channels()})
 
 
 # ── Alias routes ────────────────────────────────────────────────────────────

@@ -343,3 +343,39 @@ def test_modelless_fkless_user_id_table_purged_by_nightly(app):
         with app.app_context():
             db.session.execute(text("DROP TABLE IF EXISTS anthropic_usage_log"))
             db.session.commit()
+
+
+def test_import_inbox_rows_listed_in_explicit_cascade(app):
+    """2026-09-29 — pending_trades (with the encrypted approved thesis),
+    import_batches and import_tokens are user-owned; the explicit purge list
+    names them (FK order: pending_trades → import_batches → import_tokens)
+    instead of relying on the DB cascade / dynamic sweep."""
+    from extensions import db
+    from models import ImportBatch, ImportToken, PendingTrade
+    from scripts.nightly.pipa_purge import _delete_user_cascade
+
+    uid = _make_user(app, email="import_purge@test.com", requested_days_ago=31)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        tok = ImportToken(user_id=uid, name="t", token_hash="h" * 64,
+                          prefix="pvx_abcd1234", consent_at=now, created_at=now)
+        db.session.add(tok)
+        db.session.flush()
+        batch = ImportBatch(user_id=uid, source="webhook", token_id=tok.id,
+                            consent_at=now, created_at=now)
+        db.session.add(batch)
+        db.session.flush()
+        db.session.add(PendingTrade(
+            batch_id=batch.id, user_id=uid, ticker="AAPL", name="AAPL",
+            action="BUY", shares=1.0, price=190.0, currency="USD",  # // legal-ok — data field
+            traded_at=now, dedupe_key="k", approved_thesis="파기되어야 할 이유",
+        ))
+        db.session.commit()
+
+        with _patch_transport_succeed():
+            counts = _delete_user_cascade(uid, "import_purge@test.com", send_email=False)
+        assert counts.get("pending_trade") == 1
+        assert counts.get("import_batch") == 1
+        assert counts.get("import_token") == 1
+        for model in (PendingTrade, ImportBatch, ImportToken):
+            assert model.query.filter_by(user_id=uid).count() == 0

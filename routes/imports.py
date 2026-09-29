@@ -210,11 +210,20 @@ def resolve_ticker(code: str, name: str, *, latin_name_is_symbol: bool = True) -
     return ticker, display[:100]
 
 
+def _latin_name_is_symbol(r: RawTrade) -> bool:
+    """A bare Latin name ("KODEX", "TIGER") is a US symbol only when the
+    price is not stated in won — a won-priced "KODEX 200 … 35,000원" is a
+    Korean ETF, not ticker KODEX (screenshot rows always state a currency)."""
+    return not (r.currency == "KRW" and not r.currency_guessed)
+
+
 def _currency_for(ticker: str | None, given: str | None, name: str) -> str:
     """A resolved ticker decides the currency; a file's 통화 column or a
     PATCH value only fills in when the security is still unresolved. A KRX
     code with ``USD`` in the file (2026-09-15 hunt) used to be stored as a
-    $71,200 Samsung fill."""
+    $71,200 Samsung fill. A *stated* currency that disagrees with the ticker
+    never reaches here: ``_ingest`` skips the row and ``patch_pending``
+    refuses the change (2026-09-29: ``TSLA … 350,000원`` was a $350,000 fill)."""
     if ticker:
         return "KRW" if is_korean_ticker(ticker) else "USD"
     if given in ("KRW", "USD"):
@@ -403,12 +412,17 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
         if not amount_ok(r.shares) or not amount_ok(r.price):
             r.skip_reason = "수량·단가 범위 초과"
             continue
-        if source == SOURCE_SCREENSHOT_IMAGE and r.currency:
-            # The user confirmed the price in the currency on screen. If the
-            # printed code/name is a stock that trades in the other currency
-            # (a US fill shown in won), recording it would silently rescale
-            # the price — skip it with the reason instead.
-            t, _ = resolve_ticker(r.code, r.name, latin_name_is_symbol=r.currency == "USD")
+        if r.currency and not r.currency_guessed:
+            # The input stated the price's currency (the screen, 원/₩/$ on a
+            # pasted line, a 통화 column, a webhook field). If the code/name
+            # is a stock that trades in the other currency (a US fill shown
+            # in won), recording it would silently rescale the price — skip
+            # it with the reason instead. Only a guessed currency yields to
+            # the ticker.
+            t, _ = resolve_ticker(
+                r.code, r.name,
+                latin_name_is_symbol=_latin_name_is_symbol(r),
+            )
             if t and _currency_for(t, None, "") != r.currency:
                 r.skip_reason = f"통화 불일치 — {t} 는 {_currency_for(t, None, '')} 종목인데 단가가 {r.currency}"
                 continue
@@ -450,7 +464,7 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
     for r in fills:
         ticker, display = resolve_ticker(
             r.code, r.name,
-            latin_name_is_symbol=source != SOURCE_SCREENSHOT_IMAGE or r.currency == "USD",
+            latin_name_is_symbol=_latin_name_is_symbol(r),
         )
         if source == SOURCE_SCREENSHOT_IMAGE and ticker is None and r.name and r.currency != "USD":
             # OCR-garbled name ("하이닉스"): a clear unique master match is
@@ -466,6 +480,7 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
             ticker=ticker, name=display, action=r.action,
             shares=float(r.shares), price=float(r.price),
             currency=_currency_for(ticker, r.currency, display),
+            currency_stated=bool(r.currency) and not r.currency_guessed,
             traded_at=r.traded_at or now, confidence=float(r.confidence),
             raw_snippet=r.raw_snippet or None, created_at=now,
         )
@@ -823,13 +838,19 @@ def patch_pending(pid: int):
                 return api_error(en="currency must be KRW or USD.", kr="통화는 KRW 또는 USD 여야 합니다.",
                                  code="IMPORT_INVALID_FIELD", status=400)
         new_currency = _currency_for(row.ticker, given, row.name)
+        # A stated currency is the one the price is in: ₩175,000 must never
+        # become $175,000 just because a US ticker was picked — only the
+        # user naming the new currency themselves may change it. NULL = a
+        # row from before ``currency_stated`` existed — treated as stated.
         # A screenshot row's price was confirmed in the currency printed on
-        # screen (Toss can show a US fill in won). Neither a new ticker nor an
-        # explicit currency may re-label that price: ₩312,000 must never
-        # become $312,000. Whatever the body holds, a change is refused.
-        if row.source == SOURCE_SCREENSHOT_IMAGE and (
-            new_currency != row.currency or (given is not None and given != new_currency)
-        ):
+        # screen (Toss can show a US fill in won): neither a new ticker nor
+        # an explicit currency may re-label it — whatever the body holds.
+        if row.source == SOURCE_SCREENSHOT_IMAGE:
+            refused = new_currency != row.currency or (given is not None and given != new_currency)
+        else:
+            refused = (row.currency_stated is not False
+                       and new_currency != row.currency and given != new_currency)
+        if refused:
             db.session.rollback()
             return api_error(
                 en=f"This fill's price is in {row.currency}, but {row.ticker or 'that symbol'} trades in {new_currency}. "
@@ -838,6 +859,8 @@ def patch_pending(pid: int):
                    "거절한 뒤 종목 통화 기준 단가로 다시 가져와 주세요.",
                 code="IMPORT_CURRENCY_MISMATCH", status=400,
             )
+        if given is not None and given == new_currency:
+            row.currency_stated = True
         row.currency = new_currency
 
     # The only low-confidence screenshot cell is a fuzzy-matched stock

@@ -152,3 +152,64 @@ def test_check_52w_creates_alert_for_us_high(app, make_user, add_position):
         rows = Alert.query.filter_by(user_id=user["id"], ticker="AAPL").all()
         kinds = [r.kind for r in rows]
         assert "price_52w_high" in kinds, f"kinds={kinds}"
+
+
+# ─── 4. check_concentration_alerts — 취득가·원화 환산 기준 (2026-09-29) ─────
+
+
+def _seed_sector(ticker, sector, price=None):
+    import json
+    from extensions import db
+    from models import SignalCache
+    payload = {"sector": sector}
+    if price is not None:
+        payload["price"] = price
+    db.session.merge(SignalCache(ticker=ticker, data_json=json.dumps(payload)))
+    db.session.commit()
+
+
+def test_concentration_weights_by_krw_cost_basis_not_raw_native(
+    app, make_user, add_position,
+):
+    """₩ 과 $ 를 환산 없이 더하면 ₩ 종목이 97% 로 부풀었다(버그 재현).
+
+    005930.KS 10주 @ ₩71,200 = ₩712,000 · AAPL 100주 @ $200 (buy_fx 1,350)
+    = ₩27,000,000 → Semis 2.6% · Technology 97.4%. 벤더 시세(SignalCache price)
+    는 가중치에 쓰지 않는다 — 집중도 알림은 취득가 기준(CLAUDE.md §알림).
+    """
+    user = make_user()
+    add_position(user["id"], ticker="005930.KS", shares=10, avg_cost=71200)
+    add_position(user["id"], ticker="AAPL", shares=100, avg_cost=200,
+                 buy_fx=1350.0)
+
+    from services import alert as alert_mod
+    from models import Alert
+
+    with app.app_context():
+        # 벤더 시세가 이상해도(AAPL $0.01) 가중치는 흔들리지 않아야 한다.
+        _seed_sector("005930.KS", "Semis", price=71200.0)
+        _seed_sector("AAPL", "Technology", price=0.01)
+        alert_mod.check_concentration_alerts()
+
+        titles = [a.title for a in
+                  Alert.query.filter_by(user_id=user["id"],
+                                        kind="concentration_alert").all()]
+    assert not any("Semis" in t for t in titles), titles
+    assert any("Technology 97.4%" in t for t in titles), titles
+
+
+def test_concentration_never_alerts_on_unknown_sector(app, make_user, add_position):
+    """섹터 캐시가 없는 보유분은 "Unknown" 버킷 — 그 버킷으로는 알리지 않는다."""
+    user = make_user()
+    add_position(user["id"], ticker="ZZZQ", shares=10, avg_cost=100,
+                 buy_fx=1300.0)
+
+    from services import alert as alert_mod
+    from models import Alert
+
+    with app.app_context():
+        metrics = alert_mod.check_concentration_alerts()
+        rows = Alert.query.filter_by(user_id=user["id"],
+                                     kind="concentration_alert").all()
+    assert rows == [], [r.title for r in rows]
+    assert metrics["alerts_created"] == 0

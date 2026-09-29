@@ -297,3 +297,38 @@ class TestSideAndDateOnlyTrades:
         trades = _round_trip("AAPL", datetime(2026, 3, 2, 3, 0), 100.0, 110.0)
         out = compute_friction_outcome(refls, trades, now=proceeded + timedelta(days=30))
         assert out["realised"]["with_friction"]["n"] == 0
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — realised pairs: FIFO over full history, window by SELL time
+# ═════════════════════════════════════════════════════════════════════
+
+class TestRealisedWindowMatchesFullHistory:
+    def test_sell_in_window_keeps_older_buy(self):
+        trades = [
+            _trade("AAPL", "BUY", BASE - timedelta(days=100), price=100.0),
+            _trade("AAPL", "SELL", BASE - timedelta(days=3), price=130.0),
+        ]
+        out = compute_friction_outcome([], trades, window_days=30, now=BASE)
+        w = out["realised"]["without_friction"]
+        assert w["n"] == 1
+        assert w["median_pct"] == 30.0
+
+    def test_sell_before_window_is_excluded(self):
+        trades = _round_trip("AAPL", BASE - timedelta(days=100), 100.0, 130.0)
+        out = compute_friction_outcome([], trades, window_days=30, now=BASE)
+        assert out["realised"]["without_friction"]["n"] == 0
+
+    def test_paused_buy_before_window_stays_attributed(self):
+        """Whether a buy went through a pause is a property of the buy; a
+        pair whose SELL is in the window keeps that attribution."""
+        paused_at = BASE - timedelta(days=100)
+        refls = [_refl("AAPL", created=paused_at, proceeded=paused_at)]
+        trades = [
+            _trade("AAPL", "BUY", paused_at + timedelta(hours=1), price=100.0),
+            _trade("AAPL", "SELL", BASE - timedelta(days=3), price=110.0),
+        ]
+        out = compute_friction_outcome(refls, trades, window_days=30, now=BASE)
+        assert out["stopped"]["started"] == 0          # the pause itself is old
+        assert out["realised"]["with_friction"]["n"] == 1
+        assert out["realised"]["without_friction"]["n"] == 0

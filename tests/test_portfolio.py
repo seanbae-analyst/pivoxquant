@@ -1035,6 +1035,44 @@ class TestFreeTierCapUnderLock:
         assert r.status_code == 403
         assert r.get_json()["code"] == "TIER_LIMIT"
 
+    # 2026-09-29 — 캡은 "새 종목" 에만 건다. 이미 들고 있는 종목에 주식을
+    # 더하는 것은 종목 수를 늘리지 않으므로 3종목을 채운 무료 유저도 된다.
+    def _fill_cap(self, uid, add_position):
+        add_position(uid, "AAPL", 1, 100)
+        add_position(uid, "MSFT", 1, 100)
+        add_position(uid, "GOOG", 1, 100)
+
+    def _shares(self, app, uid, ticker):
+        from models import Position
+        with app.app_context():
+            return Position.query.filter_by(user_id=uid, ticker=ticker).one().shares
+
+    def test_add_position_merge_into_held_ticker_at_cap(self, client, auth_user, add_position, app):
+        self._fill_cap(auth_user["id"], add_position)
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/position", json={
+                "ticker": "AAPL", "shares": 2, "avg_cost": 100,
+            })
+        assert r.status_code == 200, r.get_json()
+        assert self._shares(app, auth_user["id"], "AAPL") == 3
+
+    def test_create_position_alias_merge_into_held_ticker_at_cap(self, client, auth_user, add_position, app):
+        self._fill_cap(auth_user["id"], add_position)
+        with patch("routes.portfolio.cache_service.cache_ticker"):
+            r = client.post("/api/portfolio/positions", json={
+                "symbol": "MSFT", "quantity": 2, "price": 100,
+            })
+        assert r.status_code == 200, r.get_json()
+        assert self._shares(app, auth_user["id"], "MSFT") == 3
+
+    def test_buy_new_merge_into_held_ticker_at_cap(self, client, auth_user, add_position, app, mock_fetcher):
+        self._fill_cap(auth_user["id"], add_position)
+        r = client.post("/api/portfolio/position/buy-new", json={
+            "ticker": "GOOG", "shares": 2, "price": 100,
+        })
+        assert r.status_code == 200, r.get_json()
+        assert self._shares(app, auth_user["id"], "GOOG") == 3
+
     def test_under_cap_add_still_succeeds(self, client, auth_user, add_position):
         add_position(auth_user["id"], "AAPL", 1, 100)
         add_position(auth_user["id"], "MSFT", 1, 100)

@@ -101,6 +101,8 @@ def serialize_trade(t) -> dict:
         "pnl_pct": t.pnl_pct,
         "currency": t.currency,
         "traded_at": t.traded_at.isoformat(),
+        # 2026-09-29: "holding_seed" = 보유 등록 시드, None = 체결 기록.
+        "source": getattr(t, "source", None),
     }
 
 

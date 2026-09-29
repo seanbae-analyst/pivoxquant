@@ -77,7 +77,9 @@ def create_alert(
 ) -> Optional[Alert]:
     """Insert a new notification-bell alert.
 
-    Returns the created Alert or None if skipped by dedup / invalid kind.
+    Returns the created Alert or None if skipped by dedup / invalid kind, or
+    when the user turned in-app off for the event (the push fan-out still
+    runs in that case — it has its own push pref gate).
     Never raises on DB errors — logs and returns None.
     """
     if kind not in ALLOWED_KINDS:
@@ -105,6 +107,13 @@ def create_alert(
     # kind (every current one — see _BELL_KIND_TO_EVENT_ID) ships as before.
     # FAIL-OPEN: any lookup failure leaves the alert un-suppressed, because
     # wrongly muting a real alert is worse than an over-send.
+    #
+    # 2026-09-29: in-app off skips ONLY the Alert row. It used to ``return
+    # None`` here, which also skipped the push fan-out below — a user with
+    # push on / in-app off received nothing. notify_bell_alert has its own
+    # push pref gate, so the push decision stays there.
+    inapp_enabled = True
+    push_enabled = True
     event_id = _BELL_KIND_TO_EVENT_ID.get(kind)
     if event_id is not None:
         try:
@@ -112,10 +121,11 @@ def create_alert(
             u = User.query.get(user_id)
             if u is not None and not u.notification_channel_enabled(event_id, "inapp"):
                 logger.info(
-                    "alert.create_alert suppressed by inapp pref user_id=%s "
+                    "alert.create_alert inapp row suppressed by pref user_id=%s "
                     "kind=%s event_id=%s", user_id, kind, event_id,
                 )
-                return None
+                inapp_enabled = False
+                push_enabled = u.notification_channel_enabled(event_id, "push")
         except Exception:
             # Never fail-closed on a pref lookup hiccup.
             logger.debug("inapp pref gate lookup failed in create_alert",
@@ -135,6 +145,12 @@ def create_alert(
         if q.first() is not None:
             return None
 
+    if not inapp_enabled and not push_enabled:
+        return None  # 두 채널 모두 꺼짐 — 남길 것도 보낼 것도 없다.
+
+    # in-app 이 꺼져 있어도 행은 쓴다 — 벨에는 안 보이는 push_only 행(읽음 처리)
+    # 으로. 위 dedup 조회가 이 행을 봐야 조건이 유지되는 동안 같은 푸시가 매
+    # 스윕마다 다시 나가지 않는다. 호출자에게는 벨 알림이 생기지 않았으므로 None.
     try:
         a = Alert(
             user_id=user_id,
@@ -144,7 +160,9 @@ def create_alert(
             ticker=ticker,
             link=link,
             message=title,  # legacy column mirror, for existing consumers
-            is_read=False,
+            is_read=not inapp_enabled,
+            read_at=None if inapp_enabled else datetime.now(timezone.utc).replace(tzinfo=None),
+            push_only=not inapp_enabled,
         )
         db.session.add(a)
         db.session.commit()
@@ -169,7 +187,7 @@ def create_alert(
         logger.warning("push delivery failed for alert id=%s kind=%s",
                        getattr(a, "id", None), kind, exc_info=True)
 
-    return a
+    return a if inapp_enabled else None
 
 
 # ── Convenience wrappers ────────────────────────────────────────────────────
@@ -300,12 +318,21 @@ def check_52w_highs_lows() -> dict:
 def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
     """Detect per-user sector concentration exceeding ``soft_limit_pct``.
 
-    Sector attribution is best-effort: we pull the cached sector from the
-    SignalCache row, falling back to "Unknown". A user with no cached signals
-    on any holding simply produces no concentration alert this cycle.
+    Weights are the **KRW cost basis** (``fx_service.cost_basis_krw`` — the
+    same helper ``services/behavior/concentration_mirror`` uses), never a
+    vendor price: this alert keeps running while ``MARKET_DATA_DISPLAY_ENABLED``
+    is off, so it must not surface FMP/KIS quotes (CLAUDE.md §알림). Summing
+    native ``shares * price`` raw mixed ₩ with $ (005930.KS 10주 + AAPL 100주
+    → "Semis 97.3%") — the FX-consistency bug (Pattern 7).
+
+    Sector attribution is best-effort from the SignalCache row. Holdings with
+    no cached sector fall into an "Unknown" bucket that still counts toward
+    the denominator but never alerts on its own — "Unknown 60%" is not an
+    observation about the user's portfolio.
     """
     import json as _json
     from models import Position, SignalCache, User
+    from services import fx_service
 
     user_ids = [row[0] for row in db.session.query(Position.user_id).distinct().all()]
     metrics = {"users_scanned": 0, "alerts_created": 0, "errors": 0}
@@ -320,28 +347,23 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
         if not positions:
             continue
 
-        # Build sector totals from market value.
+        # Build sector totals from KRW cost basis.
         totals: dict[str, float] = {}
         book_total = 0.0
         for p in positions:
-            # Prefer live price from SignalCache; fall back to avg_cost so a
-            # missing quote doesn't zero the exposure.
+            # None = 0/None shares-or-cost, or a USD row with no usable FX →
+            # EXCLUDE rather than mix currencies (same rule as the mirror).
+            mv = fx_service.cost_basis_krw(p)
+            if not mv or mv <= 0:
+                continue
             sector = "Unknown"
-            price = p.avg_cost or 0.0
             try:
                 cache = SignalCache.query.get(p.ticker)
                 if cache and cache.data_json:
                     payload = _json.loads(cache.data_json)
                     sector = payload.get("sector") or "Unknown"
-                    px = payload.get("price")
-                    if isinstance(px, (int, float)) and px > 0:
-                        price = float(px)
             except Exception:
                 metrics["errors"] += 1
-
-            mv = max(0.0, float(p.shares or 0) * float(price or 0))
-            if mv <= 0:
-                continue
             book_total += mv
             totals[sector] = totals.get(sector, 0.0) + mv
 
@@ -349,6 +371,8 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
             continue
 
         for sector, mv in totals.items():
+            if sector == "Unknown":
+                continue
             pct = (mv / book_total) * 100.0
             if pct >= soft_limit_pct:
                 a = alert_concentration(uid, sector, pct)

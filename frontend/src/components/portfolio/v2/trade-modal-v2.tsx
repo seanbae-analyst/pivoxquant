@@ -37,6 +37,7 @@ import { PORTFOLIO_POSITIONS, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { displayTicker, isKrTicker, normalizeTicker } from "@/lib/format";
 import { useFocusTrap } from "@/lib/useFocusTrap";
+import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
 import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
@@ -213,7 +214,7 @@ export function TradeModalV2({
         onClose();
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
-          if (typeof window !== "undefined") window.location.href = "/login";
+          if (typeof window !== "undefined") window.location.href = loginHref(currentLocationPath());
           return;
         }
         const message =
@@ -285,7 +286,7 @@ export function TradeModalV2({
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        if (typeof window !== "undefined") window.location.href = "/login";
+        if (typeof window !== "undefined") window.location.href = loginHref(currentLocationPath());
         return;
       }
       const message =

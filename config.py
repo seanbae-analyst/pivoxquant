@@ -112,6 +112,16 @@ ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in _TRUTHY_ENV
 #                                      keeps running — it is cost-basis only)
 MARKET_DATA_DISPLAY_ENABLED = os.environ.get("MARKET_DATA_DISPLAY_ENABLED", "0").strip() in _TRUTHY_ENV
 
+# PASSWORD_REGISTRATION_ENABLED — POST /api/auth/register (이메일+비번 가입).
+# 기본 꺼짐 (2026-09-29). 앱은 Google/Kakao OAuth 전용이고 프론트에
+# ``API.auth.register`` 소비자가 없다. 켜 두면 curl 로 피해자 이메일 계정을
+# 선점해 진짜 주인의 OAuth 로그인을 password_account 로 영구 거절시킬 수
+# 있었다(Origin 가드는 브라우저 CSRF 만 막는다 — 헤더는 위조된다).
+# 테스트 스위트는 /register 를 픽스처로 쓰므로 tests/conftest.py 가 켠다.
+PASSWORD_REGISTRATION_ENABLED = (
+    os.environ.get("PASSWORD_REGISTRATION_ENABLED", "0").strip() in _TRUTHY_ENV
+)
+
 
 class Config:
     SECRET_KEY = _secret
@@ -125,6 +135,9 @@ class Config:
     # Mirrored for the same reason — request handlers and tests read/override
     # it via `current_app.config["MARKET_DATA_DISPLAY_ENABLED"]`.
     MARKET_DATA_DISPLAY_ENABLED = MARKET_DATA_DISPLAY_ENABLED
+
+    # routes/auth.py::register 가 ``current_app.config`` 로 읽는다.
+    PASSWORD_REGISTRATION_ENABLED = PASSWORD_REGISTRATION_ENABLED
 
     # Connection pool settings (only effective for PostgreSQL; SQLite ignores them)
     if IS_POSTGRES:

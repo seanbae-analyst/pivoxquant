@@ -60,6 +60,11 @@ class RawTrade:
     shares: float = 0.0
     price: float = 0.0
     currency: str | None = None
+    # True when ``currency`` is the parser's guess (text line with no 원/₩/$
+    # mark: a 6-digit code, a Latin code, a Hangul name) rather than stated
+    # by the input. A stated currency is what the price is in, so a ticker of
+    # the other currency must not re-label it (routes/imports.py).
+    currency_guessed: bool = False
     traded_at: datetime | None = None
     confidence: float = 1.0
     raw_snippet: str = ""

@@ -25,7 +25,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: v
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import {
-  HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, applyPreview, type HoldingRow,
+  HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, applyPreview, currencyPatch, pickedTicker, type HoldingRow,
 } from "@/components/portfolio/v2/holdings-import-panel";
 import type { OcrWord } from "@/lib/fill-ocr/parse";
 import type { HoldingsPreviewRow } from "@/lib/types";
@@ -156,6 +156,27 @@ describe("HoldingsImportPanel", () => {
     expect(avg.value).toBe("366667"); // (1,000,000 + 100,000) ÷ 3, read but not proven
   });
 
+  it("does not offer a won average reading that the row would reject ('170.850원')", async () => {
+    mockPreview();
+    let y = 0;
+    const line = (...ws: [string, string | undefined, number][]) => {
+      y += 70;
+      return ws.map(([t, alt, x]) => ({ t, c: 90, x0: x, y0: y, x1: x + t.length * 20, y1: y + 30, ...(alt !== undefined ? { alt } : {}) }));
+    };
+    const words = [
+      ...line(["보유종목", undefined, 20]),
+      ...line(["삼성전자", undefined, 20]),
+      ...line(["보유수량", undefined, 20], ["10", "10", 500], ["주", undefined, 560]),
+      ...line(["평균단가", undefined, 20], ["170.850", "170.850", 500], ["원", undefined, 660]),
+    ] as OcrWord[];
+    render(<HoldingsImportPanel onDone={vi.fn()} onCancel={vi.fn()} openSession={fakeSession({ "card.png": words }) as never} />);
+    await pickAndRead(["card.png"], {});
+    const row = screen.getAllByTestId("holdings-review-row")[0];
+    const avg = row.querySelector("input[aria-label='dashboard.portfolio.holdingsImport.col.avgCost']") as HTMLInputElement;
+    expect(avg.value).toBe("");
+    expect(row.querySelector("[data-testid=holdings-use-read]")).toBeNull();
+  });
+
   it("a fill screen alone yields no rows and no preview call", async () => {
     mockPreview();
     const byName = { "fills.png": dump("synthetic/ocr/b_hts_table.png.json") };
@@ -180,6 +201,15 @@ describe("row rules", () => {
     expect(rowIssues({ ...base, status: "needs_confirm" }, [base])).toContain("confirm");
     expect(rowIssues({ ...base, ticker: "", status: "needs_ticker" }, [base])).toContain("ticker");
   });
+  it("a won average is whole won and at least 100 — '170.85' is 170,850 misread", () => {
+    expect(rowIssues({ ...base, avgCost: "170.85" }, [base])).toContain("avgCost");
+    expect(rowIssues({ ...base, avgCost: "50" }, [base])).toContain("avgCost");
+    expect(rowIssues({ ...base, avgCost: "170.850" }, [base])).toContain("avgCost");
+    // 소수 둘째 자리까지 찍는 증권사의 평단은 그대로 받는다.
+    expect(rowIssues({ ...base, avgCost: "70850.33" }, [base])).not.toContain("avgCost");
+    const us = { ...base, ticker: "AAPL", tickerCurrency: "USD", currency: "USD" as const, avgCost: "23.15" };
+    expect(rowIssues(us, [us])).toEqual([]);
+  });
   it("a US ticker with a won average is a currency mismatch, never silently converted", () => {
     const us = { ...base, ticker: "AAPL", tickerCurrency: "USD", currency: "KRW" as const };
     expect(rowIssues(us, [us])).toContain("currencyMismatch");
@@ -203,6 +233,40 @@ describe("row rules", () => {
       currency: "USD", status: "resolved", currency_mismatch: true, existing: null } as HoldingsPreviewRow);
     expect([out.ticker, out.shares, out.avgCost, out.currency]).toEqual(["SMR", "24", "", ""]);
     expect(out.flags).toContain("foreign_in_krw");
+  });
+
+  it("any won average read for what resolves to a US stock is dropped — printed and cross-checked too", () => {
+    const row = { ...base, ticker: "", status: "needs_ticker" as const, flags: ["cross_checked"], avgCost: "272000", shares: "15" };
+    const out = applyPreview(row, { index: 0, read_name: "다라파워", read_code: null, ticker: "SMR", name: "다라파워",
+      currency: "USD", status: "resolved", currency_mismatch: true, existing: null } as HoldingsPreviewRow);
+    expect([out.ticker, out.shares, out.avgCost, out.currency]).toEqual(["SMR", "15", "", ""]);
+    expect(out.flags).toContain("foreign_in_krw");
+    expect(out.flags).not.toContain("cross_checked");
+  });
+
+  it("switching a row's currency clears the average read in the other currency", () => {
+    expect(currencyPatch({ ...base, hints: { avgCost: "70000" } }, "USD")).toEqual({ currency: "USD", avgCost: "", hints: { avgCost: undefined }, currencyByUser: true });
+    // Choosing a currency for a row that had none keeps what was typed.
+    expect(currencyPatch({ ...base, currency: "" }, "KRW")).toEqual({ currency: "KRW", currencyByUser: true });
+  });
+
+  it("picking another ticker keeps a skipped row skipped and a currency the user chose", () => {
+    const p = { index: 0, read_name: null, read_code: "AAPL", ticker: "AAPL", name: "Apple",
+      currency: "USD", status: "resolved", currency_mismatch: false, existing: { id: 2, shares: 1, avg_cost: 100, currency: "USD" } } as HoldingsPreviewRow;
+    const chosen = { ...base, screenCurrency: "" as const, currency: "USD" as const, currencyByUser: true, mode: "skip" as const };
+    const out = pickedTicker(chosen, p);
+    expect([out.ticker, out.mode, out.currency, out.confirmed]).toEqual(["AAPL", "skip", "USD", true]);
+    // Not chosen by the user: back to what the screen proved, mode from the new ticker.
+    const read = { ...base, screenCurrency: "" as const, currency: "KRW" as const };
+    const out2 = pickedTicker(read, p);
+    expect([out2.currency, out2.mode]).toEqual(["", "replace"]);
+  });
+
+  it("merging keeps a name / code reading that only the later capture has", () => {
+    const first = { ...base, hints: { shares: undefined, avgCost: undefined, name: undefined, code: undefined } };
+    const later = { ...base, key: "k2", hints: { name: "삼성전자우", code: "005935" } };
+    const [m] = mergeIdenticalReads([first, later]);
+    expect([m.hints.name, m.hints.code]).toEqual(["삼성전자우", "005935"]);
   });
 
   it("a proven read absorbs the same holding read only as hints elsewhere", () => {

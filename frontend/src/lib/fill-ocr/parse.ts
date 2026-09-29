@@ -517,15 +517,59 @@ function headerColumns(line: Line): Column[] | null {
   return cols;
 }
 
+/** "$" / USD vs 원 / ₩ printed in the text — both or neither → null. A bare
+ * "원" is not enough ("원익IPS", "대원"): it must follow a digit or be "(원)". */
+function markedCurrency(compact: string): "KRW" | "USD" | null {
+  const dollar = /\$|USD/.test(compact);
+  const won = /\d원|₩|\(원\)|KRW/.test(compact);
+  if (dollar === won) return null;
+  return dollar ? "USD" : "KRW";
+}
+
+/** Row first, then its column header, then the screen (holdings' recordCurrency). */
+function rowCurrency(compact: string, head: "KRW" | "USD" | null, screen: "KRW" | "USD" | null): "KRW" | "USD" | null {
+  const dollar = /\$|USD/.test(compact);
+  const won = /\d원|₩|KRW/.test(compact);
+  if (dollar && won) return null;
+  if (dollar) return "USD";
+  if (won) return "KRW";
+  return head ?? screen;
+}
+
 function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): ParsedFill[] {
   const body = lines.slice(hi + 1);
   const footer = body.findIndex((l) => /합계|총계/.test(l.compact));
   const rows = footer >= 0 ? body.slice(0, footer) : body;
+  // The currency is printed on the row, in the header ("체결단가($)") or
+  // somewhere on the screen — or it is not known. Never defaulted to KRW.
+  const headCur = markedCurrency(lines[hi].compact);
+  const screenCur = markedCurrency(lines.map((l) => l.compact).join("|"));
+  const NUMERIC_COLS: Col[] = ["qty", "price", "amount", "fee", "tax"];
+  const nearestCol = (w: OcrWord): Col => {
+    const cx = (w.x0 + w.x1) / 2;
+    const byDist = [...cols].sort((x, y) => Math.abs(x.cx - cx) - Math.abs(y.cx - cx));
+    const [best, second] = byDist;
+    // A number about as close to two numeric columns is not assigned to either.
+    if (/\d/.test(w.t) && second && NUMERIC_COLS.includes(best.col) && NUMERIC_COLS.includes(second.col) &&
+        Math.abs(second.cx - cx) < Math.abs(best.cx - cx) * 1.3) return "unknown";
+    return best.col;
+  };
   // Dates, times and codes do not make a line a trade row ("09.22 14:21:07"
-  // printed under each name is a detail of the row above, not a row).
-  const numericCount = (l: Line) =>
-    l.words.filter((w) => /\d/.test(w.t) && !isCode(w.t) && !TIME_RE.test(w.t) &&
-      !fullDate(w.t) && !/^\d{1,2}[./]\d{1,2}$/.test(w.t)).length;
+  // printed under each name is a detail of the row above, not a row). An
+  // "MM.DD"-shaped token is a number, though, when it sits under a numeric
+  // column, or anywhere but the date / time column of a USD table — "25.10"
+  // is a bare dollar price as often as it is a date.
+  const monthDayShaped = (w: OcrWord, usd: boolean) => {
+    if (!/^\d{1,2}[./]\d{1,2}$/.test(w.t)) return false;
+    const col = nearestCol(w);
+    if (NUMERIC_COLS.includes(col)) return false;
+    return !(usd && col !== "date" && col !== "time");
+  };
+  const numericCount = (l: Line) => {
+    const usd = rowCurrency(l.compact, headCur, screenCur) === "USD";
+    return l.words.filter((w) => /\d/.test(w.t) && !isCode(w.t) && !TIME_RE.test(w.t) &&
+      !fullDate(w.t) && !monthDayShaped(w, usd)).length;
+  };
   const data = rows.filter((l) => numericCount(l) >= 2);
   const aux = rows.filter((l) => numericCount(l) < 2);
   const pitch = data.length > 1 ? median(data.slice(1).map((l, i) => l.y - data[i].y)) : 40;
@@ -538,22 +582,13 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
     if (second && Math.abs(second.y - l.y) < Math.abs(best.y - l.y) * 1.5) continue;
     attached.get(best)!.push(l);
   }
-  const NUMERIC_COLS: Col[] = ["qty", "price", "amount", "fee", "tax"];
-  const nearestCol = (w: OcrWord): Col => {
-    const cx = (w.x0 + w.x1) / 2;
-    const byDist = [...cols].sort((x, y) => Math.abs(x.cx - cx) - Math.abs(y.cx - cx));
-    const [best, second] = byDist;
-    // A number about as close to two numeric columns is not assigned to either.
-    if (/\d/.test(w.t) && second && NUMERIC_COLS.includes(best.col) && NUMERIC_COLS.includes(second.col) &&
-        Math.abs(second.cx - cx) < Math.abs(best.cx - cx) * 1.3) return "unknown";
-    return best.col;
-  };
   return data.map((line) => {
     const extra = attached.get(line) ?? [];
     const all = [line, ...extra].sort((a, b) => a.y - b.y);
     const f = emptyFill(all.map((l) => l.text).join(" / "));
     const compact = all.map((l) => l.compact).join("");
-    f.currency = /\$/.test(compact) ? "USD" : "KRW";
+    f.currency = rowCurrency(compact, headCur, screenCur);
+    const usd = f.currency === "USD";
     f.tz = "KST";
     let q: NumRead | null = null, p: NumRead | null = null, a: NumRead | null = null;
     const nameWords: OcrWord[] = [];
@@ -588,7 +623,7 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
       // name column header missing (multi-line cells): Hangul/Latin words anywhere
       for (const w of all.flatMap((l) => l.words)) if (!nameWords.includes(w) && !/\d/.test(w.t)) nameWords.push(w);
     }
-    [f.shares, f.price, f.amount] = reconcile(q, p, a, false, f.flags);
+    [f.shares, f.price, f.amount] = reconcile(q, p, a, usd, f.flags);
     const hangulName = nameWords.filter((w) => /[가-힣A-Za-z]/.test(w.t));
     const nearName = (w: OcrWord) => hangulName.some((n) => {
       const gapX = Math.max(0, Math.max(n.x0, w.x0) - Math.min(n.x1, w.x1));

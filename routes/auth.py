@@ -62,6 +62,7 @@ from models import (
     ScheduledEmail, NpsFeedback,
     AuthEvent,
     CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit, CompanionWaitlist,
+    ImportBatch, ImportToken, PendingTrade,
 )
 from security import auth_rate_limit, general_rate_limit
 from services.age_verification import (
@@ -536,12 +537,14 @@ def _state_serializer() -> URLSafeTimedSerializer:
 
 
 def _record_signup_funnel(user, ref_code: str | None) -> None:
-    """Viral loop — log a ``signup`` funnel event + attribute referral.
+    """Viral loop — log a ``signup`` funnel event carrying the ``ref_code``.
 
     Best-effort and fully contained: any failure here must NEVER break the
     OAuth login (the user is already logged in by the time we reach this).
-    Attribution itself (``attribute_referral``) is idempotent + immutable and
-    logs its own ``referral_signup`` event when a valid inviter is found.
+    2026-09-29: the follow-up ``routes.growth.attribute_referral`` call was
+    removed — that module never existed in the repository's history, so every
+    signup swallowed an ImportError and logged a warning. The ref code stays
+    on the funnel event row.
     """
     try:
         from models import FunnelEvent
@@ -558,16 +561,11 @@ def _record_signup_funnel(user, ref_code: str | None) -> None:
         db.session.rollback()
         logger.warning("signup funnel event failed (user_id=%s)",
                        getattr(user, "id", None), exc_info=True)
-    try:
-        from routes.growth import attribute_referral
-        attribute_referral(user, ref_code)
-    except Exception:
-        logger.warning("referral attribution failed (user_id=%s)",
-                       getattr(user, "id", None), exc_info=True)
 
 
 def _build_signed_state(provider: str, origin: str, redirect_uri: str,
-                        ref_code: str | None = None) -> str:
+                        ref_code: str | None = None,
+                        next_path: str | None = None) -> str:
     """Build a self-contained HMAC-signed state token.
 
     The full signed string is passed to the OAuth provider as `state=`.
@@ -578,7 +576,7 @@ def _build_signed_state(provider: str, origin: str, redirect_uri: str,
     ``ref_code`` (viral loop) is the inviter's referral code, captured from
     the ``?ref=`` query param at login-start. It rides inside the SIGNED
     state so it can't be tampered with mid-flight, and is consumed once on
-    the callback for a brand-new user (``attribute_referral``).
+    the callback for a brand-new user (``_record_signup_funnel``).
     """
     nonce = secrets.token_urlsafe(16)
     payload = {
@@ -591,7 +589,19 @@ def _build_signed_state(provider: str, origin: str, redirect_uri: str,
     if ref_code:
         # Defensive cap — referral codes are 8-char; never carry more than 16.
         payload["ref"] = str(ref_code).strip()[:16]
+    if next_path:
+        # 로그인 후 딥링크. 공급자 콜백 URL 엔 우리 쿼리가 안 실리니 state 에
+        # 태운다. 여기서 한 번, 콜백에서 한 번 더 _safe_next 로 거른다.
+        payload["nx"] = _safe_next(str(next_path)[:512])
     return _state_serializer().dumps(payload)
+
+
+def _state_next(payload) -> str | None:
+    """서명된 state 에 실려 온 ``next`` (없으면 None). 콜백 쿼리의 ``next`` 는
+    공급자 리다이렉트엔 실릴 수 없고 누구나 붙일 수 있으니 읽지 않는다."""
+    if isinstance(payload, dict) and payload.get("nx"):
+        return payload["nx"]
+    return None
 
 
 def _verify_signed_state(signed: str | None, expected_provider: str) -> dict | None:
@@ -715,6 +725,18 @@ def register():
     # cannot forge an allowlisted value; the absent-header case (curl, tests,
     # native clients) stays permitted exactly like /logout. This blocks the
     # browser-driven attack without breaking any same-origin flow.
+    #
+    # 2026-09-29: 위 Origin 가드는 브라우저만 막는다 — curl 은 헤더를 빼거나
+    # 허용 목록 값을 위조해 같은 선점을 그대로 할 수 있었다. 프론트에
+    # API.auth.register 소비자가 없으니(OAuth 전용) 가입 자체를 플래그 뒤로
+    # 뺐다. 기본 꺼짐 — config.py PASSWORD_REGISTRATION_ENABLED.
+    if not current_app.config.get("PASSWORD_REGISTRATION_ENABLED", False):
+        return api_error(
+            en="Email/password sign-up is not available. Use Google or Kakao.",
+            kr="이메일 가입은 지원하지 않습니다. Google 또는 카카오로 시작해 주세요.",
+            code="AUTH_PASSWORD_SIGNUP_DISABLED",
+            status=403,
+        )
     if not _logout_origin_ok():
         return api_error(
             en="Cross-origin registration is not allowed.",
@@ -1039,7 +1061,10 @@ def google_login():
     # Viral loop — capture inviter's referral code from ?ref=, carry it in
     # the signed state so the callback can attribute a brand-new signup.
     ref_code = (request.args.get("ref") or "").strip()[:16] or None
-    signed_state = _build_signed_state("google", origin, redirect_uri, ref_code)
+    signed_state = _build_signed_state(
+        "google", origin, redirect_uri, ref_code,
+        next_path=request.args.get("next"),
+    )
     # Extract the nonce from the signed payload so we pass the exact same
     # value to Google that our callback will later verify against.
     nonce = _state_serializer().loads(signed_state, max_age=_OAUTH_STATE_MAX_AGE)["n"]
@@ -1132,6 +1157,13 @@ def google_callback():
                     user.avatar_url = avatar
                 link_alert["user"] = user
             else:
+                # 2026-09-29: 링크 가드는 기존 계정에 붙일 때만 돈다. 신규 가입도
+                # 미인증 이메일은 받지 않는다 — 받으면 남의 이메일(또는
+                # ADMIN_EMAILS 주소)로 계정을 선점하고, 뒤이은 진짜 주인의 인증된
+                # 로그인이 그 계정에 링크된다. Google 은 이메일 없는 계정을 만들
+                # 수 없으니(자리표시자 없음) 거절한다.
+                if not email_verified:
+                    raise OAuthLinkRefused("email_unverified")
                 # Create new Google user. ``age_confirmed_at`` is left NULL —
                 # the frontend interstitial (``/signup/oauth-finalize``) will
                 # POST the consent stack (incl. the 만 14세 self-declaration)
@@ -1215,7 +1247,7 @@ def google_callback():
 
     _log_auth_event(email, "google", "success")
 
-    # Viral loop — brand-new signup: log a signup funnel event + attribute
+    # Viral loop — brand-new signup: log a signup funnel event carrying
     # the inviter's referral code (if any). Best-effort, never blocks login.
     if signup_flag.get("new"):
         _record_signup_funnel(user, ref_code)
@@ -1238,7 +1270,7 @@ def google_callback():
     # ``/signup/oauth-finalize`` page POSTs the consent stack back to
     # ``/api/auth/oauth-finalize``. Birthdate-era users pass straight through.
     if not user.age_confirmed:
-        next_param = request.args.get("next")
+        next_param = _state_next(payload)  # 서명된 state 에서 (쿼리 아님)
         finalize = "/signup/oauth-finalize"
         if next_param:
             from urllib.parse import quote
@@ -1250,7 +1282,7 @@ def google_callback():
         return redirect(f"{origin}{finalize}")
 
     # Validate redirect destination — must be relative path, no open redirect
-    redirect_url = _safe_next(request.args.get("next"))
+    redirect_url = _safe_next(_state_next(payload))
     logger.info("Google OAuth success: origin=%s path=%s", origin, redirect_url)
     return redirect(f"{origin}{redirect_url}")
 
@@ -1268,7 +1300,10 @@ def kakao_login():
         return redirect(f"{origin}/login?error=kakao_not_configured")
     redirect_uri = f"{origin}/api/auth/kakao/callback"
     ref_code = (request.args.get("ref") or "").strip()[:16] or None
-    signed_state = _build_signed_state("kakao", origin, redirect_uri, ref_code)
+    signed_state = _build_signed_state(
+        "kakao", origin, redirect_uri, ref_code,
+        next_path=request.args.get("next"),
+    )
     logger.info(
         "OAuth start: provider=kakao origin=%s redirect_uri=%s",
         origin, redirect_uri,
@@ -1363,10 +1398,16 @@ def kakao_callback():
                     user.avatar_url = avatar
                 link_alert["user"] = user
             else:
-                # Create new Kakao user
+                # Create new Kakao user.
+                # 2026-09-29: 카카오가 인증하지 않은 이메일로는 계정을 만들지
+                # 않는다 — 이메일이 없을 때와 같은 자리표시자를 쓴다. 안 그러면
+                # 피해자 이메일(미인증)로 계정 X 를 만들고, 나중에 피해자의
+                # 인증된 Google 로그인이 X 에 링크돼(가드 통과) 공격자가 카카오로
+                # 계속 들어온다. ADMIN_EMAILS 주소 선점도 같은 구멍.
+                new_email = email if email_verified else f"kakao_{kakao_id}@kakao.local"
                 user = User(
-                    email=email,
-                    name=name or email.split("@")[0],
+                    email=new_email,
+                    name=name or new_email.split("@")[0],
                     kakao_id=kakao_id,
                     oauth_provider="kakao",
                     avatar_url=avatar,
@@ -1434,7 +1475,7 @@ def kakao_callback():
 
     _log_auth_event(email, "kakao", "success")
 
-    # Viral loop — brand-new signup: funnel signup event + referral attribution.
+    # Viral loop — brand-new signup: funnel signup event (with the ref code).
     if signup_flag.get("new"):
         _record_signup_funnel(user, ref_code)
 
@@ -1450,7 +1491,7 @@ def kakao_callback():
 
     # PIPA §22 ⑥ — age-confirmation gate (mirrors google_callback).
     if not user.age_confirmed:
-        next_param = request.args.get("next")
+        next_param = _state_next(payload)  # 서명된 state 에서 (쿼리 아님)
         finalize = "/signup/oauth-finalize"
         if next_param:
             from urllib.parse import quote
@@ -1462,7 +1503,7 @@ def kakao_callback():
         return redirect(f"{origin}{finalize}")
 
     # Validate redirect destination — must be relative path, no open redirect
-    redirect_url = _safe_next(request.args.get("next"))
+    redirect_url = _safe_next(_state_next(payload))
     logger.info("Kakao OAuth success: origin=%s path=%s", origin, redirect_url)
     return redirect(f"{origin}{redirect_url}")
 
@@ -1735,6 +1776,13 @@ def delete_account():
             ("behavioral_scores", lambda: _d(BehavioralScore.query.filter_by(user_id=user_id))),
             ("ai_twin_portfolios", lambda: _d(AITwinPortfolio.query.filter_by(user_id=user_id))),
             ("ai_twin_weekly_reports", lambda: _d(AITwinWeeklyReport.query.filter_by(user_id=user_id))),
+            # Import Inbox (2026-09-29) — 승인 이유(암호화 자유 텍스트)를 담은
+            # 대기 체결부터. FK 순서: pending_trades → import_batches →
+            # import_tokens. pending_trades 가 pre_trade_reflections 를
+            # 참조하므로 멈춤 기록보다 먼저 지운다.
+            ("pending_trades", lambda: _d(PendingTrade.query.filter_by(user_id=user_id))),
+            ("import_batches", lambda: _d(ImportBatch.query.filter_by(user_id=user_id))),
+            ("import_tokens", lambda: _d(ImportToken.query.filter_by(user_id=user_id))),
             ("pre_trade_reflections", lambda: _d(PreTradeReflection.query.filter_by(user_id=user_id))),
             # 관찰 노트 — 유저 본인의 암호화된 자유 텍스트. 멈춤 기록과 같은
             # 이유로 명시적으로 지운다 (2026-09-22).

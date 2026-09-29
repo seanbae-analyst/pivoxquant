@@ -40,6 +40,8 @@ from models import (
     CheckoutExpiration,
     CompanionWaitlist,
     FunnelEvent,
+    ImportBatch,
+    ImportToken,
     Inquiry,
     InvestmentProfile,
     NpsFeedback,
@@ -47,6 +49,7 @@ from models import (
     PersonaSnapshot,
     PortfolioShare,
     Position,
+    PendingTrade,
     PositionDDCheck,
     PreTradeReflection,
     PushSubscription,
@@ -215,7 +218,8 @@ def submit_onboarding():
         )
 
     data = request.get_json() or {}
-    answers = data.get("answers", {})
+    # 2026-09-29: a JSON array body used to 500 on ``data.get``.
+    answers = data.get("answers", {}) if isinstance(data, dict) else None
     if not isinstance(answers, dict):
         return api_error(
             en="'answers' must be an object.",
@@ -266,7 +270,11 @@ def submit_onboarding():
             code="ONBOARDING_LEGAL_REQUIRED", status=400,
         )
 
-    from services.profile.questionnaire import calculate_profile_v3, is_v3_answers
+    from services.profile.questionnaire import (
+        calculate_profile_v3,
+        invalid_v3_answer_field,
+        is_v3_answers,
+    )
 
     # Two shapes are accepted: ``{}`` (skip — the user answers later or never)
     # and a V3 payload. Anything else is a client we no longer ship.
@@ -276,6 +284,13 @@ def submit_onboarding():
             en="Unrecognised questionnaire payload. Reload the app and try again.",
             kr="알 수 없는 문항 형식입니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
             code="ONBOARDING_UNKNOWN_QUESTIONNAIRE", status=400,
+        )
+    bad_field = invalid_v3_answer_field(answers) if is_v3_submission else None
+    if bad_field:
+        return api_error(
+            en=f"Invalid answer for '{bad_field}'. Reload the app and try again.",
+            kr=f"'{bad_field}' 응답 형식이 올바르지 않습니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
+            code="ONBOARDING_INVALID_ANSWER", status=400,
         )
     profile_v3_result = calculate_profile_v3(answers) if is_v3_submission else None
     if is_v3_submission and not profile_v3_result.get("legal_confirmed", False):
@@ -525,7 +540,8 @@ def update_profile():
         )
 
     data = request.get_json() or {}
-    answers = data.get("answers", {})
+    # 2026-09-29: a JSON array body used to 500 on ``data.get``.
+    answers = data.get("answers", {}) if isinstance(data, dict) else None
     if not isinstance(answers, dict):
         return api_error(
             en="'answers' must be an object.",
@@ -559,13 +575,24 @@ def update_profile():
             code="PROFILE_LEGAL_REQUIRED", status=400,
         )
 
-    from services.profile.questionnaire import calculate_profile_v3, is_v3_answers
+    from services.profile.questionnaire import (
+        calculate_profile_v3,
+        invalid_v3_answer_field,
+        is_v3_answers,
+    )
     is_v3_submission = is_v3_answers(answers)
     if not is_v3_submission:
         return api_error(
             en="Unrecognised questionnaire payload. Reload the app and try again.",
             kr="알 수 없는 문항 형식입니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
             code="PROFILE_UNKNOWN_QUESTIONNAIRE", status=400,
+        )
+    bad_field = invalid_v3_answer_field(answers)
+    if bad_field:
+        return api_error(
+            en=f"Invalid answer for '{bad_field}'. Reload the app and try again.",
+            kr=f"'{bad_field}' 응답 형식이 올바르지 않습니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
+            code="PROFILE_INVALID_ANSWER", status=400,
         )
     profile_v3_result = calculate_profile_v3(answers)
     if not profile_v3_result.get("legal_confirmed", False):
@@ -1491,6 +1518,11 @@ _EXPORT_SCHEDULED_EMAIL_LIMIT = 1000   # onboarding email queue rows
 _EXPORT_CHECKOUT_EXPIRATION_LIMIT = 1000  # abandoned-checkout follow-up queue
 _EXPORT_NAV_SNAPSHOT_LIMIT = 5000        # one row per user per day
 _EXPORT_AGENT_AUDIT_LIMIT = 1000
+# Import Inbox (2026-09-29) — 업로드 묶음·대기/승인 체결(승인 이유는
+# EncryptedText, 평문으로 읽힘)·웹훅 토큰. 세 테이블 모두 탈퇴 시 삭제된다.
+_EXPORT_IMPORT_BATCH_LIMIT = 2000
+_EXPORT_PENDING_TRADE_LIMIT = 10000
+_EXPORT_IMPORT_TOKEN_LIMIT = 100
 # P1 sections — login/funnel history (the user's own activity records).
 _EXPORT_AUTH_EVENT_LIMIT = 2000        # OAuth start/success/fail log (keyed by email)
 _EXPORT_FUNNEL_EVENT_LIMIT = 5000      # acquisition/activation funnel events
@@ -1585,6 +1617,24 @@ def _serialize_nav_snapshot(n) -> dict:
         "fx_rate": _num_or_none(getattr(n, "fx_rate", None)),
         "created_at": _iso_or_none(getattr(n, "created_at", None)),
     }
+
+
+def _serialize_pending_trade(t) -> dict:
+    """PendingTradeDTO + the user's own approved thesis (EncryptedText —
+    the ORM already returns plaintext) and created_at."""
+    d = t.to_dict()
+    d["approved_thesis"] = getattr(t, "approved_thesis", None)
+    d["created_at"] = _iso_or_none(getattr(t, "created_at", None))
+    return d
+
+
+def _serialize_import_token(t) -> dict:
+    """Listing DTO — ``token_hash`` is a credential and is withheld (the raw
+    token is never stored). ``consent_at`` is the user's upload consent."""
+    d = t.to_dict()
+    d.pop("batches_today", None)
+    d["consent_at"] = _iso_or_none(getattr(t, "consent_at", None))
+    return d
 
 
 def _serialize_user_agent_audit(a) -> dict:
@@ -1818,8 +1868,10 @@ def _csv_currency_for(ticker):
 # Each tuple is (header, row->value). Only RAW stored fields are read.
 _CSV_SPECS = {
     "trades": (
+        # "source" (2026-09-29, appended last): "holding_seed" marks a row
+        # written when a holding was registered, not a fill; blank = fill.
         ["traded_at", "ticker", "name", "action", "shares",
-         "price_per_share", "total_value", "currency", "pnl"],
+         "price_per_share", "total_value", "currency", "pnl", "source"],
         lambda t: [
             _iso_or_none(getattr(t, "traded_at", None)) or "",
             t.ticker or "",
@@ -1832,6 +1884,7 @@ _CSV_SPECS = {
             t.total_value if t.total_value is not None else "",
             getattr(t, "currency", None) or _csv_currency_for(t.ticker),
             getattr(t, "pnl", None) if getattr(t, "pnl", None) is not None else "",
+            getattr(t, "source", None) or "",
         ],
     ),
     "positions": (
@@ -1951,6 +2004,15 @@ def _safe_cell(value):
     return value
 
 
+def _disclaimer_lines(disclaimer):
+    """``None`` / one string / a list of strings → the comment lines to write."""
+    if not disclaimer:
+        return []
+    if isinstance(disclaimer, str):
+        return [disclaimer]
+    return [line for line in disclaimer if line]
+
+
 def _build_csv(dataset, rows, disclaimer=None):
     """Render ``rows`` of ``dataset`` to a UTF-8 (BOM-prefixed) CSV string.
 
@@ -1967,14 +2029,15 @@ def _build_csv(dataset, rows, disclaimer=None):
     ``disclaimer`` (optional): when set, a leading single-column comment row
     "# <text>" is written above the header — used by the capital-gains
     datasets to make the 참고용 추정 framing impossible to miss in a sheet.
-    The text is run through :func:`_safe_cell` so it can never become a
-    formula either.
+    A list writes one such row per line (the capital-gains notice about 매도
+    of registered holdings left out, 2026-09-29). The text is run through
+    :func:`_safe_cell` so it can never become a formula either.
     """
     header, row_fn = _CSV_SPECS[dataset]
     buf = io.StringIO()
     writer = csv.writer(buf)
-    if disclaimer:
-        writer.writerow([_safe_cell("# " + disclaimer)])
+    for line in _disclaimer_lines(disclaimer):
+        writer.writerow([_safe_cell("# " + line)])
     writer.writerow(header)
     for row in rows:
         writer.writerow([_safe_cell(c) for c in row_fn(row)])
@@ -1982,12 +2045,16 @@ def _build_csv(dataset, rows, disclaimer=None):
 
 
 def _capital_gain_rows(user_id):
-    """Build (lots, summary) for the user's own overseas-equity capital gains.
+    """Build (lots, summary, excluded_sells) for the user's own overseas-equity
+    capital gains.
 
     Pulls the user's TradeHistory (self-only), FIFO-matches via the shared
     :func:`fifo_match_closed_trades`, then computes lots + per-year summary
     with the STRICT FX resolver (``get_rate_at_strict``) so a missing
     historical rate yields a blank KRW cell + note, never a fabricated rate.
+
+    ``excluded_sells`` = number of 매도 whose FIFO slices closed a
+    holding-registration seed lot; those slices are not rows (see below).
     """
     from services.profile.fifo_util import fifo_match_closed_trades
     from services.tax.capital_gains import (
@@ -2003,18 +2070,30 @@ def _capital_gain_rows(user_id):
         .limit(_EXPORT_TRADE_LIMIT)
         .all()
     )
-    pairs = fifo_match_closed_trades(trades)
+    # 2026-09-29: FIFO 는 보유 등록 시드·조정까지 전부 넣고 맞춘 뒤 거른다
+    # (먼저 빼면 등록분을 닫은 매도가 그 뒤의 기록된 매수와 잘못 맞춰졌다).
+    # - 시드 로트를 닫은 슬라이스: 시드의 취득일은 등록 시각이지 실제 취득일이
+    #   아니고, 그 날짜·환율을 명세에 쓰면 틀린 사실이 된다 → 행에서 빼고 그런
+    #   매도 수를 따로 센다 (내보내기 안내문).
+    # - 조정 매도(기록된 매도 없이 보유가 줄어든 것): 양도가 아니다 → 뺀다.
+    all_pairs = fifo_match_closed_trades(trades)
+    pairs = [p for p in all_pairs if not p.buy_is_seed and not p.sell_is_adjust]
+    excluded_sells = len({p.sell_seq for p in all_pairs
+                          if p.buy_is_seed and not p.sell_is_adjust})
     lots = compute_capital_gain_lots(
         pairs,
         fx_resolver=get_rate_at_strict,
         name_resolver=lambda tk: _csv_resolve_name(tk),
     )
     summary = summarize_by_year(lots)
-    return lots, summary
+    return lots, summary, excluded_sells
 
 
 def _query_dataset_rows(user_id, dataset):
     """Query the user's own rows for one export dataset → ``(rows, disclaimer)``.
+
+    ``disclaimer`` is ``None``, one string, or a list of strings (each written
+    as its own leading "# " comment row above the header).
 
     Self-only scope (``user_id == current_user.id``). Shared by the CSV and the
     XLSX export paths so both stay in lock-step on what each dataset contains.
@@ -2044,10 +2123,15 @@ def _query_dataset_rows(user_id, dataset):
         )
     elif dataset in ("capital_gains", "capital_gains_summary"):
         # Both views derive from one FIFO+tax pass over the user's trades.
-        from services.tax.capital_gains import DISCLAIMER_KR
-        lots, summary = _capital_gain_rows(user_id)
+        from services.tax.capital_gains import (
+            DISCLAIMER_KR,
+            registration_excluded_notice_kr,
+        )
+        lots, summary, excluded_sells = _capital_gain_rows(user_id)
         rows = lots if dataset == "capital_gains" else summary
         disclaimer = DISCLAIMER_KR
+        if excluded_sells:
+            disclaimer = [DISCLAIMER_KR, registration_excluded_notice_kr(excluded_sells)]
     elif dataset == "journal":
         rows = (
             PreTradeReflection.query
@@ -2287,9 +2371,9 @@ def _build_xlsx(user_id, datasets, include_summary=False):
         try:
             rows, disclaimer = _query_dataset_rows(user_id, dataset)
             header_row = 1
-            if disclaimer:
-                ws.append([_xlsx_cell("# " + disclaimer)])
-                header_row = 2
+            for line in _disclaimer_lines(disclaimer):
+                ws.append([_xlsx_cell("# " + line)])
+                header_row += 1
             ws.append([_xlsx_cell(h) for h in header])
             for r in rows:
                 ws.append([_xlsx_cell(c) for c in row_fn(r)])
@@ -2652,6 +2736,29 @@ def export_profile():
             .all()
         )
 
+        # Import Inbox (2026-09-29, PIPA §35) — all three are keyed by user_id.
+        import_batches = (
+            ImportBatch.query
+            .filter_by(user_id=user_id)
+            .order_by(ImportBatch.created_at.desc())
+            .limit(_EXPORT_IMPORT_BATCH_LIMIT)
+            .all()
+        )
+        pending_trades = (
+            PendingTrade.query
+            .filter_by(user_id=user_id)
+            .order_by(PendingTrade.created_at.desc(), PendingTrade.id.desc())
+            .limit(_EXPORT_PENDING_TRADE_LIMIT)
+            .all()
+        )
+        import_tokens = (
+            ImportToken.query
+            .filter_by(user_id=user_id)
+            .order_by(ImportToken.id.asc())
+            .limit(_EXPORT_IMPORT_TOKEN_LIMIT)
+            .all()
+        )
+
         # AI Twin (paper-only) — portfolio is keyed by user_id; its positions
         # and trades are keyed by twin_id (the portfolio's PK), so resolve the
         # user's twin ids first, then ``.in_()`` filter. No cross-user leak:
@@ -2768,6 +2875,9 @@ def export_profile():
         "ai_twin_weekly_reports": [r.to_dict() for r in ai_twin_weekly_reports],
         "auth_events": [e.to_dict() for e in auth_events],
         "funnel_events": [e.to_dict() for e in funnel_events],
+        "import_batches": [b.to_dict() for b in import_batches],
+        "pending_trades": [_serialize_pending_trade(t) for t in pending_trades],
+        "import_tokens": [_serialize_import_token(t) for t in import_tokens],
         "counts": {
             "positions": len(positions),
             "watchlist": len(watchlist),
@@ -2798,6 +2908,9 @@ def export_profile():
             "ai_twin_weekly_reports": len(ai_twin_weekly_reports),
             "auth_events": len(auth_events),
             "funnel_events": len(funnel_events),
+            "import_batches": len(import_batches),
+            "pending_trades": len(pending_trades),
+            "import_tokens": len(import_tokens),
         },
         "notes": {
             "excluded_fields": [
@@ -2820,6 +2933,7 @@ def export_profile():
                 "checkout_expiration.session_id",
                 "companion_waitlist.email_hash",
                 "user_agent_audit.user_message_hash",
+                "import_token.token_hash",
             ],
             "trade_limit": _EXPORT_TRADE_LIMIT,
             "alert_limit": _EXPORT_ALERT_LIMIT,

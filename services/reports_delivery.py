@@ -386,12 +386,21 @@ def dispatch_monthly_reports(
 
     for user in users:
         summary["candidates"] += 1
+        # 실패 뒤엔 user 행이 expired 일 수 있다 — id 는 미리 읽어 둔다.
+        uid = getattr(user, "id", "?")
         try:
             result = send_report_to_user(user, now=now)
         except Exception as exc:
+            # Postgres 는 실패한 문장 뒤 트랜잭션을 aborted 로 둔다. rollback
+            # 없이 넘어가면 뒤의 모든 사용자가 같은 오류로 죽는다(2026-09-29).
+            try:
+                from extensions import db
+                db.session.rollback()
+            except Exception:
+                logger.debug("rollback after report failure failed",
+                             exc_info=True)
             logger.exception(
-                "monthly mirror report failed for user %s: %s",
-                getattr(user, "id", "?"), exc,
+                "monthly mirror report failed for user %s: %s", uid, exc,
             )
             summary["errors"] += 1
             continue
@@ -428,12 +437,13 @@ def main() -> int:
         return 1
 
     # 이미 떠 있는 web 프로세스가 캐시를 데웠다 — 임시 앱이 FMP 를 다시
-    # 때리지 않게 하고, 스케줄러도 두 번 만들지 않는다.
-    os.environ["POPULATE_CACHE_ON_BOOT"] = "0"
-    os.environ.setdefault("RUN_SCHEDULER", "0")
+    # 때리지 않게 하고, 스케줄러도 두 번 만들지 않는다. env 가 아니라 키워드로
+    # 끈다: prod 는 RUN_SCHEDULER=1 이라 setdefault("RUN_SCHEDULER","0") 는
+    # 아무것도 안 했고, 틱마다 만든 스케줄러가 observability.alerts 의 살아있는
+    # 스케줄러 참조를 바꿔치기했다 (2026-09-29).
 
     try:
-        app = create_app()
+        app = create_app(start_scheduler=False, populate_cache=False)
     except Exception as exc:
         logger.error("create_app() failed: %s", exc)
         return 1

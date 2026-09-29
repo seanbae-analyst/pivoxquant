@@ -151,6 +151,64 @@ class TestRegister:
         assert r.get_json()["code"] == "AUTH_ORIGIN_NOT_ALLOWED"
 
 
+# ── 비밀번호 가입은 기본 꺼짐 (2026-09-29) ───────────────────────────────────
+# Origin 가드는 브라우저 CSRF 만 막는다. curl 은 Origin 을 빼거나(허용 분기)
+# 허용 목록 값을 그대로 위조할 수 있어서, 피해자 이메일 + 공격자 비번으로
+# 계정을 선점 → 피해자의 OAuth 로그인이 password_account 로 영구 거절됐다.
+# 앱은 OAuth 전용이고 프론트엔 API.auth.register 소비자가 없다(lib/auth.tsx 의
+# signup() 은 아무도 호출하지 않는다). 그래서 가입 자체를 플래그 뒤로 뺐다.
+# 테스트 스위트는 conftest 에서 플래그를 켜고 /register 를 픽스처로 쓴다.
+
+class TestRegisterDisabledByDefault:
+    def test_register_refused_when_flag_off_even_without_origin(
+        self, raw_client, app, monkeypatch
+    ):
+        from models import User
+        monkeypatch.setitem(app.config, "PASSWORD_REGISTRATION_ENABLED", False)
+        r = raw_client.post("/api/auth/register", json={
+            "email": "precreate-victim@test.com",
+            "password": "attackerpass",
+            "age_confirmed": _AGE_CONFIRMED,
+        })
+        assert r.status_code == 403
+        assert r.get_json()["code"] == "AUTH_PASSWORD_SIGNUP_DISABLED"
+        with app.app_context():
+            assert User.query.filter_by(email="precreate-victim@test.com").first() is None
+
+    def test_register_refused_with_forged_allowlisted_origin(
+        self, raw_client, app, monkeypatch
+    ):
+        monkeypatch.setitem(app.config, "PASSWORD_REGISTRATION_ENABLED", False)
+        r = raw_client.post(
+            "/api/auth/register",
+            json={
+                "email": "forged-origin@test.com",
+                "password": "attackerpass",
+                "age_confirmed": _AGE_CONFIRMED,
+            },
+            headers={"Origin": "https://pivoxquant.com"},
+        )
+        assert r.status_code == 403
+        assert r.get_json()["code"] == "AUTH_PASSWORD_SIGNUP_DISABLED"
+
+    def test_config_default_is_off(self):
+        # 이 프로세스의 config 는 conftest 가 켠 env 를 이미 읽었다 — 기본값은
+        # env 없이 새 인터프리터에서 import 해 잰다.
+        import os
+        import subprocess
+        import sys
+        env = {k: v for k, v in os.environ.items()
+               if k != "PASSWORD_REGISTRATION_ENABLED"}
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        out = subprocess.run(
+            [sys.executable, "-c",
+             "import config; print(config.PASSWORD_REGISTRATION_ENABLED,"
+             " config.Config.PASSWORD_REGISTRATION_ENABLED)"],
+            cwd=root, env=env, capture_output=True, text=True, check=True,
+        )
+        assert out.stdout.strip() == "False False"
+
+
 # ── Register race condition (wave 12 P0) ────────────────────────────────────
 # 2026-05-17: TOCTOU race fix — the pre-fix code did `User.query.first()` then
 # `db.session.add+commit` with no transaction guard. Two concurrent POSTs

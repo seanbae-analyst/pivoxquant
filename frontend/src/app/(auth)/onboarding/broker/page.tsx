@@ -12,6 +12,7 @@ import { apiFetch } from "@/lib/api";
 import { API, PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { fetcher, useBrokerConnections, usePortfolioPositions } from "@/lib/hooks";
 import { useT } from "@/lib/locale";
+import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import { KisCard } from "@/components/broker/kis-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
 import { HoldingsImportPanel } from "@/components/portfolio/v2/holdings-import-panel";
@@ -79,7 +80,7 @@ export default function OnboardingBrokerPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace("/login");
+      router.replace(loginHref(currentLocationPath()));
       return;
     }
     if (!authLoading && user?.onboarding_completed === true) {

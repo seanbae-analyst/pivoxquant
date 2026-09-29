@@ -106,6 +106,11 @@ os.environ["DISABLE_SCHEDULER"] = "1"
 # tests/test_free_launch_tiers.py opts the flag back ON per-test via monkeypatch.
 os.environ["LAUNCH_FREE_ALL_TIERS"] = "0"
 
+# 비밀번호 가입(/api/auth/register)은 prod 기본 꺼짐(config.py, 2026-09-29).
+# 스위트 곳곳이 /register 로 유저를 만들므로 테스트에선 켠다. 꺼진 상태는
+# tests/test_auth.py::TestRegisterDisabledByDefault 가 monkeypatch 로 잰다.
+os.environ["PASSWORD_REGISTRATION_ENABLED"] = "1"
+
 # Eagerly import the app module NOW. ``app.py`` runs
 # ``load_dotenv(..., override=True)`` at module import, which RE-injects every
 # .env value (incl. DEV_LOGIN_SECRET). The test app uses the pure

@@ -38,6 +38,9 @@ import {
 interface EventRow {
   id: string;
   defaults: { email: boolean; push: boolean; inapp: boolean };
+  /** Channels that have a sender — models.user.NOTIFICATION_EVENT_CHANNELS.
+   *  Used until the server's own `channels` map arrives. */
+  channels: Channel[];
 }
 
 // Must stay aligned with models.user.NOTIFICATION_EVENT_IDS.
@@ -49,14 +52,21 @@ interface EventRow {
 // sweep and the sector-concentration sweep, both scheduled in app.py — mapped
 // to no event id at all, so their rows did not exist and their toggles could
 // not have worked. These two are what actually fires.
+//
+// 2026-09-29: every row rendered all three channels, but the two sweeps only
+// ever write a bell row + push (services/alert.py) and the monthly report only
+// ever emails. `channels` lists the cells with a sender; the rest render "—".
+// Concentration email defaulted ON with nothing behind it — now off.
 const EVENTS: EventRow[] = [
   {
     id: "price_52w",
     defaults: { email: false, push: true, inapp: true },
+    channels: ["push", "inapp"],
   },
   {
     id: "concentration",
-    defaults: { email: true, push: true, inapp: true },
+    defaults: { email: false, push: true, inapp: true },
+    channels: ["push", "inapp"],
   },
   // 2026-09-17: the monthly mirror report. Its only producer is the email
   // cron (services/reports_delivery.py, 매월 1일 08:30 KST), so push and
@@ -67,11 +77,12 @@ const EVENTS: EventRow[] = [
   {
     id: "monthly_mirror",
     defaults: { email: false, push: false, inapp: false },
+    channels: ["email"],
   },
 ];
+type MatrixState = NotificationPrefsMap;
 
 type Channel = "email" | "push" | "inapp";
-type MatrixState = NotificationPrefsMap;
 
 /** Debounce window before a toggle batch is flushed to the server. */
 const SAVE_DEBOUNCE_MS = 600;
@@ -190,6 +201,12 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
 
   /** Rows to render — see visibleEvents(). */
   const rows = React.useMemo(() => visibleEvents(data?.prefs), [data]);
+  /** Channels with a sender for this row: the server's map once it has
+   *  answered, the local allowlist before that (or from an older backend). */
+  const liveChannels = React.useCallback(
+    (e: EventRow): readonly Channel[] => data?.channels?.[e.id] ?? e.channels,
+    [data],
+  );
   /** Ids the PUT body is allowed to carry (the backend does a full replace,
    *  so an id it no longer knows must not be re-asserted from here). */
   const visibleIds = React.useMemo(
@@ -396,12 +413,22 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                         : "1px solid var(--pq-ivory-line)",
                     }}
                   >
-                    <MatrixToggle
-                      on={row[ch]}
-                      onChange={(next) => toggle(e.id, ch, next)}
-                      ariaLabel={`${evName(e.id)} · ${ch}`}
-                      disabled={togglesDisabled}
-                    />
+                    {liveChannels(e).includes(ch) ? (
+                      <MatrixToggle
+                        on={row[ch]}
+                        onChange={(next) => toggle(e.id, ch, next)}
+                        ariaLabel={`${evName(e.id)} · ${ch}`}
+                        disabled={togglesDisabled}
+                      />
+                    ) : (
+                      // No sender on this channel — nothing to toggle.
+                      <span
+                        aria-hidden="true"
+                        style={{ color: "var(--pq-ivory-dim)" }}
+                      >
+                        —
+                      </span>
+                    )}
                   </td>
                 ))}
               </tr>

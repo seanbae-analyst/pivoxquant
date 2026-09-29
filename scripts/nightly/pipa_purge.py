@@ -181,7 +181,7 @@ def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -
         PositionDDCheck, Inquiry, ObservationNote,
         ScheduledEmail, NpsFeedback, AuthEvent, User,
         CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit,
-        CompanionWaitlist,
+        CompanionWaitlist, ImportBatch, ImportToken, PendingTrade,
     )
 
     counts: dict[str, int] = {}
@@ -205,6 +205,12 @@ def _delete_user_cascade(user_id: int, email: str, *, send_email: bool = True) -
     _cnt("behavioral_score", BehavioralScore.query.filter_by(user_id=user_id))
     _cnt("ai_twin_portfolio", AITwinPortfolio.query.filter_by(user_id=user_id))
     _cnt("ai_twin_weekly_report", AITwinWeeklyReport.query.filter_by(user_id=user_id))
+    # Import Inbox (2026-09-29) — routes/auth.py:delete_account 와 동기화.
+    # FK 순서: pending_trades → import_batches → import_tokens, 그리고
+    # pending_trades 가 pre_trade_reflections 를 참조하므로 그보다 먼저.
+    _cnt("pending_trade", PendingTrade.query.filter_by(user_id=user_id))
+    _cnt("import_batch", ImportBatch.query.filter_by(user_id=user_id))
+    _cnt("import_token", ImportToken.query.filter_by(user_id=user_id))
     _cnt("pre_trade_reflection", PreTradeReflection.query.filter_by(user_id=user_id))
     # 관찰 노트 — 거래에 묶이지 않은 유저 본인의 암호화된 자유 텍스트
     # (2026-09-22). routes/auth.py:delete_account 와 동기화.
@@ -461,20 +467,16 @@ def main() -> int:
         logger.error("create_app import failed: %s", exc)
         return 1
 
-    # Transient app: ALSO registered into the in-process APScheduler
-    # (services/scheduler/cron_jobs.py:_wrap_python_main). Suppress the
-    # redundant FMP-hitting cache warmup — the main web app already warmed it.
-    # create_app reads this env at call time (app.py:355).
-    os.environ["POPULATE_CACHE_ON_BOOT"] = "0"
-    # Transient CLI/scheduler-tick app: never build the 49-job APScheduler.
-    # The advisory lock already prevents a second instance from STARTING, but
-    # without this every create_app() still instantiates 49 Job objects +
-    # init overhead (same connection-pressure class as POPULATE_CACHE_ON_BOOT).
-    # crontab runs these standalone, so the scheduler is never wanted here.
-    os.environ.setdefault("RUN_SCHEDULER", "0")
+    # Transient app — built inside the live web process when the in-process
+    # APScheduler runs this job (services/scheduler/cron_jobs.py:
+    # _wrap_python_main), and standalone by crontab. Either way: no cache
+    # warmup (the web app already warmed it; FMP quota) and never a second
+    # APScheduler. Pass it as keywords, NOT os.environ — prod has
+    # RUN_SCHEDULER=1, so setdefault("RUN_SCHEDULER","0") was a no-op and
+    # each tick's scheduler replaced the live one in observability.alerts.
 
     try:
-        app = create_app()
+        app = create_app(start_scheduler=False, populate_cache=False)
     except Exception as exc:
         logger.error("create_app() failed: %s", exc)
         return 1

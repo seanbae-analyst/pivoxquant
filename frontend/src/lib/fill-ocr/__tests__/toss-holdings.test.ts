@@ -162,6 +162,36 @@ describe("Toss 해외주식 with the $ toggle on", () => {
   });
 });
 
+describe("Toss 해외주식: fractional shares", () => {
+  it("'2.5주' of a dollar holding is 2.5 shares, and the average follows", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["해외주식", "", 60], ["-10.1%", "10.1"]),
+      // cost $300.00, 50 ÷ 300 = 16.67% → "16.6%"; avg = 300 ÷ 2.5
+      ...line("가나파워", ["$250.00", "$250.00", 700]),
+      ...line("2.5", "주", ["-$50.00", "$50.00", 600], ["(16.6%)", "16.6"]),
+      ...line("다라항공", ["$634.70", "$634.70", 700]),
+      ...line("110", "주", ["+$2.20", "$2.20", 600], ["(0.3%)", "0.3"]),
+    ]);
+    expect(rows.map((r) => [r.name.value, r.currency, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나파워", "USD", 2.5, 120],
+      ["다라항공", "USD", 110, 5.75],
+    ]);
+  });
+
+  it("a won holding still needs a whole share count", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line("가나전자", ["859,449", "859,449", 700], "원"),
+      ...line("2.5", "주", ["-982,051", "982,051", 600], ["(53.3%)", "53.3"]),
+      ...line("다라화학", ["911,936", "911,936", 700], "원"),
+      ...line(["19%", "19"], ["-551,064", "551,064", 600], ["(37.6%)", "37.6"]),
+    ]);
+    expect(rows[0].shares.value).toBeNull();
+    expect(rows[0].avgCost.value).toBeNull();
+  });
+});
+
 describe("Toss 자세히 보기 table (word boxes as OCR read a real capture)", () => {
   // x positions and misreads copied from the production OCR dump of a real
   // capture; names and numbers are synthetic.
@@ -270,5 +300,107 @@ describe("misreads that once passed every check (Safari-path OCR, 2026-09-28)", 
       ...line(["19", "19"], "주", ["-551,064", "551,064", 600], ["(37.6%)", "37.6"]),
     ]);
     expect(rows[0].avgCost.value).toBeNull();
+  });
+});
+
+describe("Toss 자세히 보기 under 해외주식, shown in won", () => {
+  function words(): OcrWord[] {
+    y = 0;
+    return [
+      ...line(["국내주식", "", 60]),
+      ...line(["종", "", 74], "목", "명", ["|", "", 306], ["1", "", 450], "주", "평균", "금액", ["총", "", 873], "금액"),
+      ...line(["가나전자", "", 73], [".7%", ".7", 309], ["272,000", "272,000", 517], "원", ["4,048,149", "4,048,149", 810], "원"),
+      ...line(["15%", "15", 76], ["51¢", "51", 309], ["현재가", "", 453], ["270,500", "270,500", 546], "원", ["원금", "", 782], ["4,080,000", "4,080,000", 846], "원"),
+      ...line(["해외주식", "", 60]),
+      ...line(["종", "", 74], "목", "명", ["|", "", 306], ["1", "", 450], "주", "평균", "금액", ["총", "", 873], "금액"),
+      ...line(["다라파워", "", 73], [".7%", ".7", 309], ["272,000", "272,000", 517], "원", ["4,048,149", "4,048,149", 810], "원"),
+      ...line(["15%", "15", 76], ["51¢", "51", 309], ["현재가", "", 453], ["270,500", "270,500", 546], "원", ["원금", "", 782], ["4,080,000", "4,080,000", 846], "원"),
+    ];
+  }
+
+  it("the won average of an overseas stock is not its cost basis — currency unknown, no average", () => {
+    const { rows } = parseHoldingsScreen(words());
+    expect(rows.map((r) => [r.name.value, r.currency, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나전자", "KRW", 15, 272000],
+      ["다라파워", null, 15, null],
+    ]);
+    expect(rows[1].flags).toContain("foreign_in_krw");
+  });
+});
+
+describe("a won amount with the comma read as a dot ('170.850원') is not 170.85", () => {
+  it("card: no cross-check target, so the average stays a hint", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["보유종목", "", 20]),
+      ...line(["가나전자", "", 20]),
+      ...line(["보유수량", "", 20], ["10", "10", 500], "주"),
+      ...line(["평균단가", "", 20], ["170.850", "170.850", 500], "원"),
+    ]);
+    expect(rows[0].shares).toEqual({ value: 10 });
+    expect(rows[0].avgCost.value).toBeNull();
+    expect(rows[0].avgCost.hint).toBe("170.850");
+  });
+
+  it("table: same", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["종목명", "", 20], ["보유수량", "", 300], ["평균단가", "", 500], ["평가금액", "", 700]),
+      ...line(["가나전자", "", 20], ["10", "10", 320], ["170.850", "170.850", 510], ["1,800,000", "1,800,000", 700]),
+      ...line(["다라화학", "", 20], ["5", "5", 320], ["30,000", "30,000", 510], ["160,000", "160,000", 700]),
+    ]);
+    expect(rows.map((r) => [r.name.value, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나전자", 10, null],
+      ["다라화학", 5, 30000],
+    ]);
+  });
+
+  it("a dollar average keeps its decimals", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["보유종목", "", 20]),
+      ...line(["가나파워", "", 20], ["$1,234.56", "$1,234.56", 500]),
+      ...line(["보유수량", "", 20], ["10", "10", 500], "주"),
+      ...line(["평균단가", "", 20], ["$123.456", "$123.456", 500]),
+    ]);
+    expect(rows[0].avgCost.value).toBe(123.456);
+  });
+});
+
+describe("매도가능 / 주문가능 N주 is not a second share count", () => {
+  it("on the same line as 보유 N주 it is skipped — no merged_record", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["보유종목", "", 20]),
+      ...line(["가나전자", "", 20]),
+      ...line(["보유", "", 20], ["10", "10"], "주", "매도가능", ["10", "10"], "주"),
+      ...line(["평균단가", "", 20], ["70,000", "70,000", 500], "원"),
+      ...line(["다라화학", "", 20]),
+      ...line(["보유", "", 20], ["5", "5"], "주", "주문가능", ["5", "5"], "주"),
+      ...line(["평균단가", "", 20], ["30,000", "30,000", 500], "원"),
+    ]);
+    expect(rows.map((r) => [r.name.value, r.shares.value, r.avgCost.value, r.flags])).toEqual([
+      ["가나전자", 10, 70000, []],
+      ["다라화학", 5, 30000, []],
+    ]);
+  });
+
+  it("on a line of its own it does not start a nameless record", () => {
+    y = 0;
+    const { rows } = parseHoldingsScreen([
+      ...line(["보유종목", "", 20]),
+      ...line(["가나전자", "", 20]),
+      ...line(["보유", "", 20], ["10", "10"], "주"),
+      ...line(["매도가능", "", 20], ["10", "10"], "주"),
+      ...line(["평균단가", "", 20], ["70,000", "70,000", 500], "원"),
+      ...line(["다라화학", "", 20]),
+      ...line(["보유", "", 20], ["5", "5"], "주"),
+      ...line(["매도가능수량", "", 20], ["5", "5"], "주"),
+      ...line(["평균단가", "", 20], ["30,000", "30,000", 500], "원"),
+    ]);
+    expect(rows.map((r) => [r.name.value, r.shares.value, r.avgCost.value])).toEqual([
+      ["가나전자", 10, 70000],
+      ["다라화학", 5, 30000],
+    ]);
   });
 });

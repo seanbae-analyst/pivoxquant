@@ -447,3 +447,25 @@ class TestApi:
         resp = client.get("/api/behavior/averaging-down-mirror?period=30d")
         assert resp.status_code == 200
         assert resp.get_json()["period"] == "30d"
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — running average over full history, adds counted by window
+# ═════════════════════════════════════════════════════════════════════
+
+class TestWindowKeepsPriorPosition:
+    """An add inside the window to a position opened before it IS a
+    follow-on, measured against the average built over full history.
+    Pre-fix the window was cut first, so the add looked like a fresh open."""
+
+    def test_in_window_add_to_old_position(self):
+        trades = [
+            _buy("OLD", 100.0, days_ago=90, shares=10),
+            _buy("OLD", 50.0, days_ago=80, shares=10),   # avg → 75 (outside window)
+            _buy("OLD", 80.0, days_ago=5, shares=10),    # in window: above 75
+        ]
+        win = compute_averaging_down_mirror(trades, period_days=30, min_follow_on=1)
+        assert win["follow_on_count"] == 1
+        assert win["above_avg_count"] == 1
+        assert win["below_avg_count"] == 0
+        _assert_no_scoring(win)

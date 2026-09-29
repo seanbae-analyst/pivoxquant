@@ -188,6 +188,9 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
         "ai_twin_weekly_reports": 0,
         "auth_events": 0,
         "funnel_events": 0,
+        "import_batches": 0,
+        "pending_trades": 0,
+        "import_tokens": 0,
     }
     # Each list-valued section is an empty list (never null / missing).
     for section in body["counts"]:
@@ -457,6 +460,7 @@ _EXPECTED_SECTIONS = {
     "scheduled_emails", "checkout_expirations", "ai_twin_portfolios",
     "ai_twin_positions", "ai_twin_trades", "ai_twin_weekly_reports",
     "auth_events", "funnel_events",
+    "import_batches", "pending_trades", "import_tokens",
 }
 
 
@@ -787,7 +791,7 @@ def test_csv_export_trades_headers_rows_and_attachment(
     header, rows = _parse_csv(resp)
     assert header == [
         "traded_at", "ticker", "name", "action", "shares",
-        "price_per_share", "total_value", "currency", "pnl",
+        "price_per_share", "total_value", "currency", "pnl", "source",
     ]
     assert len(rows) == 1
     row = dict(zip(header, rows[0]))
@@ -837,7 +841,7 @@ def test_csv_export_empty_emits_header_only(client, auth_user):
     Honest: an empty CSV, never fabricated data."""
     # Datasets without a leading disclaimer row → _parse_csv reads header at row0.
     for dataset, expected_cols in (
-        ("trades", 9), ("positions", 6), ("watchlist", 4),
+        ("trades", 10), ("positions", 6), ("watchlist", 4),
         ("journal", 8), ("pulse", 6),
     ):
         resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
@@ -1200,3 +1204,152 @@ def test_export_includes_consent_trail_age_confirmation_and_nav_history(app, cli
     assert body["counts"]["portfolio_nav_snapshots"] == 1
     assert body["portfolio_nav_snapshots"][0]["as_of_date"].startswith("2026-09-01")
     assert "user_message_hash" not in json.dumps(body["user_agent_audit"])
+
+
+def test_export_includes_import_inbox_scoped_and_without_token_secret(
+    app, client, make_user, auth_user,
+):
+    """2026-09-29 — PIPA §35: the Import Inbox tables (batches, pending fills
+    with the user's approved thesis, webhook tokens) are the user's own rows.
+    The token hash is a credential and never leaves; the thesis is decrypted
+    like every other EncryptedText field."""
+    import hashlib
+    from datetime import datetime, timezone
+
+    from extensions import db
+    from models import ImportBatch, ImportToken, PendingTrade
+
+    other = make_user(email="import_other@test.com")
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    token_hash = hashlib.sha256(b"pvx_export_test_raw").hexdigest()
+    with app.app_context():
+        for uid, tag in ((auth_user["id"], "mine"), (other["id"], "theirs")):
+            tok = ImportToken(
+                user_id=uid, name=f"tok-{tag}",
+                token_hash=token_hash if tag == "mine" else hashlib.sha256(tag.encode()).hexdigest(),
+                prefix="pvx_abcd1234", consent_at=now, created_at=now,
+            )
+            db.session.add(tok)
+            db.session.flush()
+            batch = ImportBatch(user_id=uid, source="webhook", token_id=tok.id,
+                                filename=f"{tag}.csv", consent_at=now, created_at=now)
+            db.session.add(batch)
+            db.session.flush()
+            db.session.add(PendingTrade(
+                batch_id=batch.id, user_id=uid, ticker="005930.KS", name="삼성전자",
+                action="BUY", shares=1.0, price=71200.0, currency="KRW",  # // legal-ok — data field
+                traded_at=now, dedupe_key=f"k-{tag}", status="approved",
+                approved_thesis=f"{tag} 실적 발표 전에 담았다", approved_at=now,
+            ))
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    raw = resp.get_data(as_text=True)
+    body = json.loads(resp.data)
+
+    assert body["counts"]["import_batches"] == 1
+    assert body["counts"]["pending_trades"] == 1
+    assert body["counts"]["import_tokens"] == 1
+    assert body["import_batches"][0]["filename"] == "mine.csv"
+    assert body["pending_trades"][0]["approved_thesis"] == "mine 실적 발표 전에 담았다"
+    assert body["import_tokens"][0]["name"] == "tok-mine"
+    assert "token_hash" not in body["import_tokens"][0]
+    assert token_hash not in raw
+    assert "theirs" not in raw
+
+
+
+# ── capital gains × holding-registration rows (2026-09-29) ─────────────────
+# A 매도 that closes a holding-registration seed lot has no known acquisition
+# date / FX, so its seed slices stay out of the computed rows — but the export
+# says how many 매도 were left out instead of dropping them silently. Adjust
+# 매도 (holding lowered without a recorded 매도) are never disposals.
+
+def _cg_rows(app, uid, spec):
+    from extensions import db
+    from models import TradeHistory
+    with app.app_context():
+        for ticker, action, shares, px, when, source in spec:
+            db.session.add(TradeHistory(
+                user_id=uid, ticker=ticker, name=ticker, action=action,
+                shares=shares, price_per_share=px, total_value=px * shares,
+                currency="USD", traded_at=when, source=source,
+            ))
+        db.session.commit()
+
+
+def _cg_csv(client, dataset="capital_gains"):
+    import csv as _c
+    import io as _i
+    with patch("services.fx_service.get_rate_at_strict", return_value=1000.0):
+        resp = client.get(f"/api/profile/export?format=csv&dataset={dataset}")
+    assert resp.status_code == 200, resp.data
+    return list(_c.reader(_i.StringIO(resp.data.decode("utf-8-sig"))))
+
+
+def test_capital_gains_seed_sell_excluded_with_notice(app, client, auth_user):
+    from datetime import datetime
+    from models.trade_history import HOLDING_ADJUST_SOURCE, HOLDING_SEED_SOURCE
+    _cg_rows(app, auth_user["id"], [
+        # seed 10, then a real 매수 5; the 매도 of 8 closes seed shares first.
+        ("AAPL", "BUY", 10, 100.0, datetime(2024, 1, 2), HOLDING_SEED_SOURCE),
+        ("AAPL", "BUY", 5, 90.0, datetime(2024, 2, 1), None),
+        ("AAPL", "SELL", 8, 150.0, datetime(2024, 6, 3), None),
+        # MSFT: seed 5 + real 5, 매도 8 → 3 real shares stay in the rows.
+        ("MSFT", "BUY", 5, 300.0, datetime(2024, 1, 2), HOLDING_SEED_SOURCE),
+        ("MSFT", "BUY", 5, 310.0, datetime(2024, 2, 1), None),
+        ("MSFT", "SELL", 8, 350.0, datetime(2024, 6, 3), None),
+        # NVDA: an adjust 매도 is not a disposal and not a counted exclusion.
+        ("NVDA", "BUY", 4, 500.0, datetime(2024, 1, 2), None),
+        ("NVDA", "SELL", 4, 500.0, datetime(2024, 3, 1), HOLDING_ADJUST_SOURCE),
+    ])
+    rows = _cg_csv(client)
+    assert rows[0][0].startswith("# ") and "참고용" in rows[0][0]
+    notice = rows[1][0]
+    assert notice.startswith("# ")
+    assert "보유 등록분 매도 2건" in notice
+    assert "취득일·취득 환율" in notice
+    header = rows[2]
+    assert header[0] == "귀속연도"
+    data = [dict(zip(header, r)) for r in rows[3:]]
+    # AAPL: the seed-closing slice (8) is out; the later real 매수 is NOT
+    # mis-matched to that 매도. MSFT: only the 3 real shares. NVDA: nothing.
+    assert [(d["종목코드"], d["수량"], d["취득일"]) for d in data] == [
+        ("MSFT", "3.0", "2024-02-01"),
+    ]
+
+    summary = _cg_csv(client, "capital_gains_summary")
+    assert "보유 등록분 매도 2건" in summary[1][0]
+    assert summary[2][0] == "귀속연도"
+
+
+def test_capital_gains_no_notice_without_registration_sells(app, client, auth_user):
+    from datetime import datetime
+    _seed_us_round_trip(app, auth_user["id"], buy_dt=datetime(2024, 1, 2),
+                        sell_dt=datetime(2024, 6, 3))
+    rows = _cg_csv(client)
+    assert rows[1][0] == "귀속연도"
+    assert not any("보유 등록분" in c for r in rows for c in r)
+
+
+def test_capital_gains_notice_in_xlsx(app, client, auth_user):
+    from datetime import datetime
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    from models.trade_history import HOLDING_SEED_SOURCE
+    _cg_rows(app, auth_user["id"], [
+        ("AAPL", "BUY", 10, 100.0, datetime(2024, 1, 2), HOLDING_SEED_SOURCE),
+        ("AAPL", "SELL", 10, 150.0, datetime(2024, 6, 3), None),
+    ])
+    with patch("services.fx_service.get_rate_at_strict", return_value=1000.0):
+        resp = client.get("/api/profile/export?format=xlsx")
+    assert resp.status_code == 200, resp.data
+    wb = load_workbook(BytesIO(resp.data))
+    for title in ("양도손익(상세)", "양도손익(연간)"):
+        ws = wb[title]
+        assert str(ws.cell(1, 1).value).startswith("# ")
+        assert "보유 등록분 매도 1건" in str(ws.cell(2, 1).value)
+        assert ws.cell(3, 1).value == "귀속연도"

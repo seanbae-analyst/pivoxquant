@@ -19,7 +19,7 @@ from services.market_display import (
     market_data_display_enabled,
 )
 from services.name_resolver import resolve_stock_name, canonical_display_name
-from services.container import fetcher, realtime
+from services.container import fetcher, realtime  # noqa: F401 — realtime: tests patch routes.portfolio.realtime (conftest mock_realtime)
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth, legal_scrub_response
@@ -417,6 +417,9 @@ def add_position():
     opened_dt = _parse_purchase_date(d.get("purchase_date"))
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
+    # Resolved before the User lock (may hit a registry / KIS) — used for the
+    # holding seed row and the response.
+    resolved_name = resolve_stock_name(ticker)
     # NEW-D (2026-05-09): two-phase race-safe upsert.
     # Phase 1 (cheap path): SELECT + merge if row exists, else INSERT new.
     # Phase 2 (race recovery): if a concurrent request inserted between our
@@ -455,7 +458,13 @@ def add_position():
         .with_for_update()
         .one()
     )
-    if getattr(current_user, "effective_tier", None) in (None, "free"):
+    # 2026-09-29: the cap limits symbols — adding to an already-held ticker
+    # merges and never raises the count, so look the ticker up first.
+    from services.position_writes import holds_ticker as _holds_ticker
+    if (
+        getattr(current_user, "effective_tier", None) in (None, "free")
+        and not _holds_ticker(current_user.id, ticker)
+    ):
         position_count = Position.query.filter_by(user_id=current_user.id).filter(
             Position.shares > 0
         ).count()
@@ -467,6 +476,14 @@ def add_position():
                 "current_count": position_count,
                 "limit": 3,
             }), 403
+
+    # 2026-09-29: registered shares get a holding-seed trade_history row so
+    # the FIFO mirrors have a lot for them (services/position_writes).
+    from services.position_writes import add_holding_seed
+
+    def _seed():
+        add_holding_seed(current_user.id, ticker, shares, cost,
+                         "KRW" if is_kr else "USD", resolved_name or ticker)
 
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=ticker).first()
@@ -483,6 +500,7 @@ def add_position():
             if opened_dt is not None:
                 new_pos.added_at = opened_dt
             db.session.add(new_pos)
+        _seed()
         db.session.commit()
     except IntegrityError:
         # Concurrent insert collided on uq_positions_user_ticker — recover
@@ -502,6 +520,7 @@ def add_position():
                     "code": "POSITION_RACE",
                 }), 409
             _merge_into(ex)
+            _seed()
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -525,12 +544,10 @@ def add_position():
         current_user.available_capital,
     )
 
-    # Resolve display name synchronously so the client can show 회사명
-    # immediately, before the background cache warm finishes.
+    # Display name (resolved above, before the lock) so the client can show
+    # 회사명 immediately, before the background cache warm finishes.
     # Uses name_resolver (pyKRX for KR, us_stock_registry for US) so every
     # long-tail KRX listing resolves even on first add.
-    from services.name_resolver import resolve_stock_name
-    resolved_name = resolve_stock_name(ticker)
     return jsonify({
         "ok": True,
         "ticker": ticker,
@@ -572,9 +589,24 @@ def edit_position(pid):
             kr="평균 매입가가 비현실적입니다. 다시 확인해 주세요.",
             code="AVG_COST_IMPLAUSIBLE", status=400,
         )
+    # 2026-09-29: an edit is a registration, not a fill — keep the FIFO lots in
+    # sync with the holding (services/position_writes). More shares → a
+    # holding-seed 매수 row for the increase at the entered average; fewer →
+    # a holding-adjust 매도 row for the decrease at the average held until now.
+    from services.position_writes import add_holding_adjust, add_holding_seed
+
+    delta = shares - float(p.shares or 0.0)
+    currency = "KRW" if p.ticker.endswith((".KS", ".KQ")) else "USD"
+    prev_cost = float(p.avg_cost or 0.0)
+    row_name = (resolve_stock_name(p.ticker) or p.ticker) if abs(delta) > 1e-9 else p.ticker
     p.shares = shares
     p.avg_cost = cost
     try:
+        if delta > 0:
+            add_holding_seed(current_user.id, p.ticker, delta, cost, currency, row_name)
+        elif delta < 0:
+            add_holding_adjust(current_user.id, p.ticker, -delta, prev_cost, currency,
+                               row_name)
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -821,7 +853,13 @@ def buy_new_position():
     # concurrent /buy-new of distinct tickers can't both pass the cap and
     # bypass the limit. Lock order User→Position preserved (User locked here,
     # any Position merge below). Gate logic / message unchanged.
-    if getattr(current_user, "effective_tier", None) in (None, "free"):
+    # 2026-09-29: the cap limits symbols — adding to an already-held ticker
+    # merges and never raises the count, so look the ticker up first.
+    from services.position_writes import holds_ticker as _holds_ticker
+    if (
+        getattr(current_user, "effective_tier", None) in (None, "free")
+        and not _holds_ticker(current_user.id, ticker)
+    ):
         position_count = Position.query.filter_by(user_id=current_user.id).filter(
             Position.shares > 0
         ).count()
@@ -1539,6 +1577,9 @@ def list_trades_alias():
                 "pnl": t.pnl or 0,
                 "pnlPct": t.pnl_pct or 0,
                 "currency": t.currency or "USD",
+                # 2026-09-29: "holding_seed" = 보유 등록 시드 (체결 아님),
+                # None = 체결 기록.
+                "source": t.source,
             })
         return jsonify({"trades": trades})
     except Exception:
@@ -1648,11 +1689,16 @@ def create_position_alias():
     # can't both pass the cap and bypass the limit. Gate logic / message
     # unchanged. SQLite no-ops the lock.
     from services.position_writes import (
-        FREE_POSITION_CAP, active_position_count, is_capped_tier, lock_user_row,
-        merge_buy_into,
+        FREE_POSITION_CAP, active_position_count, holds_ticker, is_capped_tier,
+        lock_user_row, merge_buy_into,
     )
+    # Resolved before the User lock (may hit a registry / KIS) — used for the
+    # holding seed row and the response.
+    resolved_name = resolve_stock_name(symbol)
     lock_user_row(current_user.id)
-    if is_capped_tier(current_user):
+    # 2026-09-29: the cap limits symbols — adding to an already-held ticker
+    # merges and never raises the count, so look the ticker up first.
+    if is_capped_tier(current_user) and not holds_ticker(current_user.id, symbol):
         pos_count = active_position_count(current_user.id)
         if pos_count >= FREE_POSITION_CAP:
             db.session.rollback()
@@ -1671,6 +1717,16 @@ def create_position_alias():
     # uq_positions_user_ticker rationale on Position.__table_args__.
     def _merge_into_alias(ex_row):
         merge_buy_into(ex_row, quantity, price, is_kr=is_kr, fx_rate=fx_rate, note=note)
+
+    # 2026-09-29: registered shares get a holding-seed trade_history row so
+    # the FIFO mirrors have a lot for them (services/position_writes).
+    # traded_at is the registration time even when purchase_date is given —
+    # the seed is excluded from hold-time statistics either way.
+    from services.position_writes import add_holding_seed
+
+    def _seed():
+        add_holding_seed(current_user.id, symbol, quantity, price,
+                         "KRW" if is_kr else "USD", resolved_name or symbol)
 
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=symbol).first()
@@ -1692,6 +1748,7 @@ def create_position_alias():
             if opened_dt is not None:
                 new_pos.added_at = opened_dt
             db.session.add(new_pos)
+        _seed()
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -1707,6 +1764,7 @@ def create_position_alias():
                     "code": "POSITION_RACE",
                 }), 409
             _merge_into_alias(ex)
+            _seed()
             db.session.commit()
             new_pos = ex
         except Exception:
@@ -1729,7 +1787,6 @@ def create_position_alias():
         symbol,
         current_user.available_capital,
     )
-    resolved_name = resolve_stock_name(symbol)
     return jsonify({
         "ok": True,
         "id": str(new_pos.id),
@@ -2092,22 +2149,19 @@ def portfolio_history():
         logger.debug("silent-fallback: nav snapshot read", exc_info=True)
         all_values = {}
 
+    # Today's point = the NAV record_today_snapshot just stored (already read
+    # above). It used to be overwritten by a re-sum over tickers WITH a
+    # realtime quote only, so a holding without one vanished from today and
+    # the curve dropped sharply (2026-09-29). compute_current_nav — the same
+    # avg_cost-fallback NAV the snapshot stores — fills in only when the row
+    # could not be written/read.
     try:
         today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
-        rt_prices = realtime.get_prices_batch([p.ticker for p in positions])
-        today_val = 0
-        # Today's realtime values: use today's spot rate (get_rate_at(today) →
-        # get_rate() for same-day dates — consistent with fx_service design).
-        fx_today = fx_service.get_rate() or fx_service.FALLBACK_USDKRW
-        for p in positions:
-            if p.ticker in rt_prices:
-                is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-                mv = rt_prices[p.ticker]["price"] * p.shares
-                if is_kr:
-                    mv = mv / fx_today
-                today_val += mv
-        if today_val > 0:
-            all_values[today] = today_val
+        if today not in all_values:
+            from services.portfolio.nav_snapshot import compute_current_nav
+            nav = compute_current_nav(current_user.id)
+            if nav and nav["nav_total_usd"] > 0:
+                all_values[today] = nav["nav_total_usd"]
     except Exception:
         logger.debug("silent-fallback: portfolio_history", exc_info=True)
         pass

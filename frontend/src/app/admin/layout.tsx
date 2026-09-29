@@ -7,6 +7,7 @@ import { ArrowLeft, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
+import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 
 /**
  * Admin-area layout. Gates the entire `/admin/*` tree on an allow-list
@@ -36,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     // Not logged in → punt to /login rather than showing admin chrome.
     if (!authLoading && !user) {
-      router.replace("/login");
+      router.replace(loginHref(currentLocationPath()));
       return;
     }
     if (!user) return;

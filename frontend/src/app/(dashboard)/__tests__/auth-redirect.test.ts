@@ -17,6 +17,12 @@ describe("nextAuthRedirect", () => {
     expect(nextAuthRedirect(undefined)).toBe("/login");
   });
 
+  it("carries the page the logged-out user asked for as ?next=", () => {
+    expect(nextAuthRedirect(null, "/journal?id=3")).toBe(
+      "/login?next=%2Fjournal%3Fid%3D3",
+    );
+  });
+
   it("redirects to finalize when age_confirmation_required is true", () => {
     expect(
       nextAuthRedirect({

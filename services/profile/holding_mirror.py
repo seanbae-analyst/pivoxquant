@@ -63,14 +63,16 @@ Public API
 from __future__ import annotations
 
 import statistics
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from models import TradeHistory
 from services.name_resolver import kr_display_name
 from services.profile.fifo_util import (
     MatchedPair,
+    collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
+    is_registration_row,
 )
 
 
@@ -91,6 +93,8 @@ _DEFAULT_MAX_EXAMPLES: int = 3
 
 def _classify_pairs(
     trades: list[TradeHistory],
+    *,
+    since: datetime | None = None,
 ) -> tuple[
     list[tuple[MatchedPair, float]],
     list[tuple[MatchedPair, float]],
@@ -108,8 +112,24 @@ def _classify_pairs(
 
     Break-even pairs (``pnl_pct == 0``) are returned in neither bucket
     but DO count toward ``total_closed``.
+
+    ``since`` 는 매도 시각이 그 이후인 쌍만 남긴다. 매칭은 항상 전체 이력으로
+    먼저 한다 (2026-09-29): FIFO 전에 창을 자르면 창보다 오래된 매수가 사라져
+    창 안의 매도가 로트를 잃었다 — ``persona_classifier_v2`` 가 2026-09-10 에
+    고친 것과 같은 버그.
     """
     attributed = fifo_match_closed_trades_with_pnl(trades)
+    if since is not None:
+        attributed = [(p, pct) for p, pct in attributed if p.sell_time >= since]
+    # 2026-09-29: 매도 한 번 = 관찰 한 건. 한 매도가 여러 로트를 닫으면 슬라이스
+    # 수만큼 세어 min_pairs 를 혼자 넘겼다. 보유일은 그 매도 슬라이스들의
+    # 수량 가중 평균 (collapse_pairs_by_sell 참조).
+    attributed = collapse_pairs_by_sell(attributed)
+    # 2026-09-29: 보유 등록 시드 로트만 닫은 매도는 보유일을 모른다 (시드의
+    # 매수 시각은 등록 시각이다). 이 거울은 보유일 거울이라 그 매도를 뺀다.
+    # 시드와 체결 로트를 함께 닫은 매도는 체결 로트의 보유일로 남는다
+    # (collapse_pairs_by_sell 참조).
+    attributed = [(p, pct) for p, pct in attributed if not p.buy_is_seed]
     total_closed = len(attributed)
 
     winners: list[tuple[MatchedPair, float]] = []
@@ -230,19 +250,19 @@ def compute_holding_mirror(
     materialised = [t for t in trades if t is not None]
 
     # ── optional period window ──────────────────────────────────────
+    # 창은 매도 시각으로 쌍을 고른다; FIFO 는 전체 이력으로 맞춘다
+    # (_classify_pairs 참조).
+    cutoff: datetime | None = None
     if period_days is not None and period_days > 0:
-        dated = [t for t in materialised if t.traded_at]
+        # 창의 기준점은 마지막 *체결* — 보유 등록 시드·조정은 체결이 아니다 (2026-09-29).
+        dated = [t for t in materialised if t.traded_at and not is_registration_row(t)]
         if dated:
             anchor = max(t.traded_at for t in dated)
             cutoff = anchor - timedelta(days=period_days)
-            materialised = [
-                t for t in materialised
-                if t.traded_at and t.traded_at >= cutoff
-            ]
         else:
             materialised = []
 
-    winners, losers, total_closed = _classify_pairs(materialised)
+    winners, losers, total_closed = _classify_pairs(materialised, since=cutoff)
     classified = len(winners) + len(losers)
 
     # ── insufficient data: new user, too few pairs, all break-even ──

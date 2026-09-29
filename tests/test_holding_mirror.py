@@ -541,3 +541,65 @@ class TestSameDaySellNoCollision:
         aapl_losses = [e for e in loser_examples if e["ticker"] == "AAPL"]
         # The loss side must hold ONLY the -30% AAPL pair, never the +30%.
         assert all(e["pnl_pct"] == -30.0 for e in aapl_losses), aapl_losses
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2026-09-29 — window after FIFO; one SELL = one observation
+# ═════════════════════════════════════════════════════════════════════
+
+class TestWindowMatchesFullHistory:
+    """A SELL inside the window whose BUY is older than the window must keep
+    its lot. Pre-fix the window was cut BEFORE matching, so the old BUY was
+    gone and the SELL matched nothing."""
+
+    def test_old_buy_recent_sell_is_counted(self):
+        trades: list[TradeHistory] = []
+        for i in range(5):
+            trades += _round_trip(ticker=f"L{i}", pnl_pct=5.0, hold_days=100.0,
+                                  sell_days_ago=3.0)
+        result = compute_holding_mirror(trades, period_days=30)
+        assert result["sufficient_data"] is True
+        assert result["total_closed_pairs"] == 5
+        assert result["winners"]["count"] == 5
+        assert result["winners"]["median_hold_days"] == 100.0
+
+
+class TestCountPerSellNotPerSlice:
+    """One SELL closing five BUY lots is one decision, not five."""
+
+    @staticmethod
+    def _one_sell_five_lots(hold_offsets=(10, 20, 30, 40, 50), shares=10.0):
+        now = _now()
+        sell_at = now - timedelta(days=1)
+        trades = [
+            _trade(ticker="AAPL", action="BUY",
+                   traded_at=sell_at - timedelta(days=d), shares=shares)
+            for d in sorted(hold_offsets, reverse=True)
+        ]
+        trades.append(_trade(ticker="AAPL", action="SELL", traded_at=sell_at,
+                             shares=shares * len(hold_offsets),
+                             price_per_share=110.0, pnl_pct=10.0))
+        return trades
+
+    def test_single_sell_does_not_pass_min_pairs(self):
+        result = compute_holding_mirror(self._one_sell_five_lots(), min_pairs=5)
+        assert result["sufficient_data"] is False
+        assert result["total_closed_pairs"] == 1
+
+    def test_hold_days_is_share_weighted_per_sell(self):
+        now = _now()
+        sell_at = now - timedelta(days=1)
+        trades = [
+            _trade(ticker="AAPL", action="BUY",
+                   traded_at=sell_at - timedelta(days=50), shares=30.0),
+            _trade(ticker="AAPL", action="BUY",
+                   traded_at=sell_at - timedelta(days=10), shares=10.0),
+            _trade(ticker="AAPL", action="SELL", traded_at=sell_at,
+                   shares=40.0, price_per_share=110.0, pnl_pct=10.0),
+        ]
+        result = compute_holding_mirror(trades, min_pairs=1)
+        assert result["winners"]["count"] == 1
+        # (30×50 + 10×10) / 40 = 40
+        assert result["winners"]["median_hold_days"] == 40.0
+        assert len(result["winners"]["examples"]) == 1
+        assert result["winners"]["examples"][0]["hold_days"] == 40.0

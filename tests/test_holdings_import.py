@@ -225,7 +225,11 @@ class TestCommit:
             p = db.session.get(Position, pid)
             assert (p.shares, p.avg_cost, p.buy_fx_rate) == (12.5, 180.25, 1300.0)
             assert p.thesis == "서비스 매출 성장" and p.added_at == opened
-            assert TradeHistory.query.filter_by(user_id=auth_user["id"]).count() == 0
+            # 2026-09-29: replace seeds only the share increase (10 → 12.5) as a
+            # holding-seed row — never a fill (tests/test_holding_seed.py).
+            rows = TradeHistory.query.filter_by(user_id=auth_user["id"]).all()
+            assert [(t.shares, t.price_per_share, t.source) for t in rows] == [
+                (2.5, 180.25, "holding_seed")]
 
     def test_add_merges_like_create_position(self, client, auth_user, app, add_position):
         add_position(auth_user["id"], "AAPL", 10, 100.0, buy_fx=1000.0)

@@ -11,6 +11,7 @@ import { render, screen } from "@testing-library/react";
 
 // next/navigation router mock — page calls router.replace on existing session.
 const replaceMock = vi.fn();
+let searchParamsMock = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     replace: replaceMock,
@@ -23,7 +24,7 @@ vi.mock("next/navigation", () => ({
   // M1 fix (2026-05-09 PR #171): page now reads ?error=&?expired= via
   // useSearchParams to surface OAuth/session-expired banners. Default mock
   // returns no params (clean state — no banner rendered).
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => searchParamsMock,
   usePathname: () => "/login",
 }));
 
@@ -56,6 +57,7 @@ function renderWithLocale(ui: React.ReactElement) {
 describe("AuthEntryPage", () => {
   beforeEach(() => {
     replaceMock.mockClear();
+    searchParamsMock = new URLSearchParams();
     authState.user = null;
     authState.loading = false;
   });
@@ -111,5 +113,34 @@ describe("AuthEntryPage", () => {
     expect(container.querySelector(".pq-skeleton-dark")).toBeTruthy();
     // role=status + aria-live="polite" is the a11y contract.
     expect(container.querySelector('[role="status"]')).toBeTruthy();
+  });
+
+  // 2026-09-29: 로그인 후 딥링크 — /login?next= 를 OAuth 시작 경로에 싣는다.
+  it("forwards a safe ?next= to both OAuth anchors", () => {
+    searchParamsMock = new URLSearchParams("next=/journal?id=3");
+    renderWithLocale(<AuthEntryPage />);
+    const links = screen.getAllByRole("link");
+    const google = links.find((l) => l.getAttribute("href")?.includes("/api/auth/google"));
+    const kakao = links.find((l) => l.getAttribute("href")?.includes("/api/auth/kakao"));
+    expect(google).toHaveAttribute("href", "/api/auth/google?next=%2Fjournal%3Fid%3D3");
+    expect(kakao).toHaveAttribute("href", "/api/auth/kakao?next=%2Fjournal%3Fid%3D3");
+  });
+
+  it("drops an unsafe ?next= and leaves the OAuth anchors plain", () => {
+    for (const bad of ["https://evil.example", "//evil.example", "/login"]) {
+      searchParamsMock = new URLSearchParams({ next: bad });
+      const { unmount } = renderWithLocale(<AuthEntryPage />);
+      const links = screen.getAllByRole("link");
+      const google = links.find((l) => l.getAttribute("href")?.includes("/api/auth/google"));
+      expect(google).toHaveAttribute("href", "/api/auth/google");
+      unmount();
+    }
+  });
+
+  it("sends an already-signed-in visitor to the safe next, not /mirror", () => {
+    searchParamsMock = new URLSearchParams("next=/journal");
+    authState.user = { id: 1 };
+    renderWithLocale(<AuthEntryPage />);
+    expect(replaceMock).toHaveBeenCalledWith("/journal");
   });
 });

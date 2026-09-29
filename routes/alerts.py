@@ -29,6 +29,10 @@ from extensions import db
 from models import Position, Alert, SignalCache
 from services import cache_service
 from services.error_responses import api_error
+from services.market_display import (
+    market_data_display_disabled_error,
+    market_data_display_enabled,
+)
 from services.serializers import serialize_alert
 from services.name_resolver import canonical_display_name
 from .decorators import api_auth, legal_scrub_response
@@ -68,7 +72,9 @@ def get_alerts():
         db.session.rollback()
         logger.exception("alerts.get_alerts TTL cleanup failed")
 
+    # push_only 행(in-app 꺼짐, 푸시 중복 억제용)은 벨에 보이지 않는다.
     alerts = (Alert.query.filter_by(user_id=current_user.id)
+              .filter(db.or_(Alert.push_only.is_(False), Alert.push_only.is_(None)))
               .order_by(Alert.created_at.desc()).limit(limit).all())
     # 2026-05-09 fix: previously this counted unread off the limit-sliced
     # `alerts` list, which produced a desk-vs-bell mismatch — the bell
@@ -233,6 +239,13 @@ def clear():
 @general_rate_limit
 @legal_scrub_response
 def price_check():
+    # The payload is a vendor quote (price / proceeds against TP·SL), so it
+    # sits behind the same FMP §2.2.2 gate as /api/market/* (2026-09-29 —
+    # it used to ignore MARKET_DATA_DISPLAY_ENABLED). No frontend consumer
+    # (API.alerts.priceCheck has no caller); refusing costs nothing.
+    if not market_data_display_enabled():
+        return market_data_display_disabled_error()
+
     positions = Position.query.filter_by(user_id=current_user.id).all()
     # Batch-load SignalCache for all user positions in a single query (avoid N+1).
     tickers = [p.ticker for p in positions]

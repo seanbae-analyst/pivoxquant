@@ -376,6 +376,45 @@ def test_one_user_failure_does_not_stop_the_run(app, make_user, monkeypatch,
     }
 
 
+def test_one_user_db_error_does_not_poison_later_users(app, make_user,
+                                                       monkeypatch,
+                                                       recording_sender):
+    """한 사람의 DB 오류 뒤 세션을 rollback 하지 않으면 뒤의 모두가 실패한다.
+
+    Postgres 는 실패한 문장 뒤 트랜잭션을 aborted 로 두고, SQLAlchemy 세션은
+    rollback 전까지 PendingRollbackError 를 낸다 — 사용자별 except 가 오류만
+    세고 넘어가면 그 뒤 모든 사용자의 쿼리가 같은 이유로 죽는다 (2026-09-29).
+    """
+    from sqlalchemy import text
+    from extensions import db
+    from models import Alert
+
+    good_a = make_user(email="db-good-a@test.com")
+    bad = make_user(email="db-bad@test.com")
+    good_b = make_user(email="db-good-b@test.com")
+    for u in (good_a, bad, good_b):
+        _grant(app, u["id"])
+
+    def _build(user_id, period_days=30, as_of=None):
+        if user_id == bad["id"]:
+            # NOT NULL 위반 → flush 실패, 세션은 rollback 대기 상태가 된다.
+            db.session.add(Alert(user_id=None, kind="concentration_alert",
+                                 title="x", message="x"))
+            db.session.flush()
+        # 실제 build_mirror_report 처럼 DB 를 읽는다.
+        db.session.execute(text("SELECT 1"))
+        return {"has_content": True, "user_id": user_id}
+
+    monkeypatch.setattr(rd, "build_mirror_report", _build)
+    monkeypatch.setattr(rd, "render_mirror_pdf",
+                        lambda data, locale="ko": PDF_MAGIC)
+
+    summary = _dispatch(app, [good_a["id"], bad["id"], good_b["id"]])
+
+    assert summary["errors"] == 1, summary
+    assert summary["sent"] == 2, summary
+
+
 def test_missing_renderer_module_raises_named_error(monkeypatch):
     monkeypatch.setattr(rd, "build_mirror_report", None)
     monkeypatch.setattr(rd, "render_mirror_pdf", None)

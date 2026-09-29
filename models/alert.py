@@ -31,3 +31,8 @@ class Alert(db.Model):
     rec_investment = db.Column(db.Float,   default=0)
     created_at     = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     is_read        = db.Column(db.Boolean,  default=False)
+    # 2026-09-29 — in-app 을 끄고 푸시만 켠 유저의 알림. 벨 목록에는 나오지 않고
+    # (routes/alerts.py 가 거른다) 읽음으로 저장돼 미읽음 수에도 안 잡힌다.
+    # 행을 남기는 이유는 중복 억제(dedup_window_hours) — 행이 없으면 조건이
+    # 유지되는 동안 매 스윕마다 같은 푸시가 다시 나간다.
+    push_only      = db.Column(db.Boolean,  default=False)

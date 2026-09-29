@@ -53,6 +53,23 @@ def test_delete_account_purges_all_user_fk_tables(app, client, make_user):
             # Non-FK analytics snapshot — MUST survive the deletion.
             FunnelEvent(user_id=uid, event="signup"),
         ])
+        # Import Inbox (2026-09-29) — token → batch → pending fill with the
+        # user's encrypted thesis; listed explicitly in the purge.
+        from models import ImportBatch, ImportToken, PendingTrade
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        tok = ImportToken(user_id=uid, name="t", token_hash="c" * 64,
+                          prefix="pvx_abcd1234", consent_at=now, created_at=now)
+        db.session.add(tok)
+        db.session.flush()
+        batch = ImportBatch(user_id=uid, source="webhook", token_id=tok.id,
+                            consent_at=now, created_at=now)
+        db.session.add(batch)
+        db.session.flush()
+        db.session.add(PendingTrade(
+            batch_id=batch.id, user_id=uid, ticker="AAPL", name="AAPL",
+            action="BUY", shares=1.0, price=190.0, currency="USD",  # // legal-ok — data field
+            traded_at=now, dedupe_key="k", approved_thesis="지워져야 할 이유",
+        ))
         db.session.commit()
 
     login = client.post("/api/auth/login",
@@ -66,7 +83,8 @@ def test_delete_account_purges_all_user_fk_tables(app, client, make_user):
         # User + the four formerly-missing tables are gone.
         assert db.session.get(User, uid) is None
         for tbl in ("checkout_expirations", "portfolio_nav_snapshots",
-                    "user_agent_audit", "positions", "inquiries"):
+                    "user_agent_audit", "positions", "inquiries",
+                    "pending_trades", "import_batches", "import_tokens"):
             n = db.session.execute(
                 text(f"SELECT COUNT(*) FROM {tbl} WHERE user_id = :u"), {"u": uid}
             ).scalar()
