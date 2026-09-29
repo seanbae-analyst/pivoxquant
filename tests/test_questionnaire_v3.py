@@ -391,3 +391,53 @@ class TestMirrorUsesDeclaredVector:
         assert data["gap"][0]["direction"] == "down"
         assert data["gap"][0]["declared"] == pytest.approx(1.0)
         assert set(gap_keys) <= {"holding_period", "turnover", "ticker_diversity", "declared_risk"}
+
+
+# ═════════════════════════════════════════════════════════════════════════
+# S9 — malformed answers are a 400, never a 500 and never stored (2026-09-29)
+# ═════════════════════════════════════════════════════════════════════════
+
+_MALFORMED = [
+    {"declared_holding": ["days"]},          # unhashable list
+    {"declared_holding": {"v": "days"}},     # unhashable dict
+    {"declared_holding": "bogus"},           # not an option
+    {"declared_holding": 3},                 # not a str
+    {"record_habit": None},
+    {"legal_confirmations": 5},              # not iterable
+    {"legal_confirmations": [{"a": 1}]},     # unhashable item
+    {"legal_confirmations": "age_18"},       # not a list
+    {"legal_confirmations": list(LEGAL) + ["bogus"]},
+]
+
+
+class TestMalformedAnswers:
+    @pytest.mark.parametrize("override", _MALFORMED)
+    def test_onboarding_rejects(self, client, auth_user, app, override):
+        r = client.post("/api/profile/onboarding", json={"answers": _v3(**override)})
+        assert r.status_code == 400, r.data
+        assert r.get_json()["code"] == "ONBOARDING_INVALID_ANSWER"
+        from models import InvestmentProfile, User
+        with app.app_context():
+            assert InvestmentProfile.query.filter_by(user_id=auth_user["id"]).first() is None
+            assert User.query.get(auth_user["id"]).onboarding_completed is False
+
+    @pytest.mark.parametrize("override", _MALFORMED)
+    def test_retake_rejects(self, client, auth_user, app, override):
+        assert client.post("/api/profile/onboarding", json={"answers": _v3()}).status_code == 200
+        r = client.put("/api/profile", json={"answers": _v3(**override)})
+        assert r.status_code == 400, r.data
+        assert r.get_json()["code"] == "PROFILE_INVALID_ANSWER"
+        from models import InvestmentProfile
+        with app.app_context():
+            row = InvestmentProfile.query.filter_by(user_id=auth_user["id"]).first()
+            assert row.onboarding_answers()["declared_holding"] == "months"
+
+    @pytest.mark.parametrize("path,method,code", [
+        ("/api/profile/onboarding", "post", "ONBOARDING_INVALID_PAYLOAD"),
+        ("/api/profile", "put", "PROFILE_INVALID_PAYLOAD"),
+    ])
+    def test_non_object_body_rejected(self, client, auth_user, path, method, code):
+        assert client.post("/api/profile/onboarding", json={"answers": _v3()}).status_code == 200
+        r = getattr(client, method)(path, json=[{"answers": _v3()}])
+        assert r.status_code == 400, r.data
+        assert r.get_json()["code"] == code

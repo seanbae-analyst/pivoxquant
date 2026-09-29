@@ -231,6 +231,33 @@ def is_v3_answers(answers: dict | None) -> bool:
     return any(k in V3_QUESTION_IDS for k in answers)
 
 
+def invalid_v3_answer_field(answers: dict) -> str | None:
+    """First field of a V3 payload whose value is not one of its options.
+
+    2026-09-29: the routes stored whatever arrived — ``"bogus"`` was persisted
+    verbatim, and a list / dict value (``{"declared_holding": ["days"]}``) or a
+    non-list ``legal_confirmations`` 500'd inside ``calculate_profile_v3``
+    (unhashable / not iterable). Each V3 answer must be a ``str`` among that
+    question's option values; ``legal_confirmations`` must be a list of ``str``
+    from the legal block. Keys that are not V3 questions are not checked here
+    (stale client drafts may carry them). Returns ``None`` when valid.
+    """
+    for q in QUESTIONNAIRE_V3:
+        qid = q["id"]
+        if qid not in answers:
+            continue
+        allowed = {str(o["value"]) for o in q["options"]}
+        value = answers[qid]
+        if qid == "legal_confirmations":
+            if not isinstance(value, list) or not all(
+                isinstance(v, str) and v in allowed for v in value
+            ):
+                return qid
+        elif not isinstance(value, str) or value not in allowed:
+            return qid
+    return None
+
+
 def _v3_option_label(question_id: str, value: Any) -> tuple[str, str]:
     for q in QUESTIONNAIRE_V3:
         if q["id"] != question_id:

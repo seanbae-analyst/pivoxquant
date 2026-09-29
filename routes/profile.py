@@ -215,7 +215,8 @@ def submit_onboarding():
         )
 
     data = request.get_json() or {}
-    answers = data.get("answers", {})
+    # 2026-09-29: a JSON array body used to 500 on ``data.get``.
+    answers = data.get("answers", {}) if isinstance(data, dict) else None
     if not isinstance(answers, dict):
         return api_error(
             en="'answers' must be an object.",
@@ -266,7 +267,11 @@ def submit_onboarding():
             code="ONBOARDING_LEGAL_REQUIRED", status=400,
         )
 
-    from services.profile.questionnaire import calculate_profile_v3, is_v3_answers
+    from services.profile.questionnaire import (
+        calculate_profile_v3,
+        invalid_v3_answer_field,
+        is_v3_answers,
+    )
 
     # Two shapes are accepted: ``{}`` (skip — the user answers later or never)
     # and a V3 payload. Anything else is a client we no longer ship.
@@ -276,6 +281,13 @@ def submit_onboarding():
             en="Unrecognised questionnaire payload. Reload the app and try again.",
             kr="알 수 없는 문항 형식입니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
             code="ONBOARDING_UNKNOWN_QUESTIONNAIRE", status=400,
+        )
+    bad_field = invalid_v3_answer_field(answers) if is_v3_submission else None
+    if bad_field:
+        return api_error(
+            en=f"Invalid answer for '{bad_field}'. Reload the app and try again.",
+            kr=f"'{bad_field}' 응답 형식이 올바르지 않습니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
+            code="ONBOARDING_INVALID_ANSWER", status=400,
         )
     profile_v3_result = calculate_profile_v3(answers) if is_v3_submission else None
     if is_v3_submission and not profile_v3_result.get("legal_confirmed", False):
@@ -525,7 +537,8 @@ def update_profile():
         )
 
     data = request.get_json() or {}
-    answers = data.get("answers", {})
+    # 2026-09-29: a JSON array body used to 500 on ``data.get``.
+    answers = data.get("answers", {}) if isinstance(data, dict) else None
     if not isinstance(answers, dict):
         return api_error(
             en="'answers' must be an object.",
@@ -559,13 +572,24 @@ def update_profile():
             code="PROFILE_LEGAL_REQUIRED", status=400,
         )
 
-    from services.profile.questionnaire import calculate_profile_v3, is_v3_answers
+    from services.profile.questionnaire import (
+        calculate_profile_v3,
+        invalid_v3_answer_field,
+        is_v3_answers,
+    )
     is_v3_submission = is_v3_answers(answers)
     if not is_v3_submission:
         return api_error(
             en="Unrecognised questionnaire payload. Reload the app and try again.",
             kr="알 수 없는 문항 형식입니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
             code="PROFILE_UNKNOWN_QUESTIONNAIRE", status=400,
+        )
+    bad_field = invalid_v3_answer_field(answers)
+    if bad_field:
+        return api_error(
+            en=f"Invalid answer for '{bad_field}'. Reload the app and try again.",
+            kr=f"'{bad_field}' 응답 형식이 올바르지 않습니다. 앱을 새로고침한 뒤 다시 시도해 주세요.",
+            code="PROFILE_INVALID_ANSWER", status=400,
         )
     profile_v3_result = calculate_profile_v3(answers)
     if not profile_v3_result.get("legal_confirmed", False):
