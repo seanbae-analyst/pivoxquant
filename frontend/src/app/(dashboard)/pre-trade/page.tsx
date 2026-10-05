@@ -28,9 +28,24 @@
  *
  * Side labels: internal Side enum ("ENTRY"/"EXIT") → legacy wire format via
  * `@/lib/pre-trade`. The DB schema / audit row stay untouched.
+ *
+ * 2026-10-05 — Setup ticker picking:
+ *   - The ticker field is the shared <TickerSearch /> (`/api/search`, names
+ *     only — live while MARKET_DATA_DISPLAY_ENABLED is off). Free text still
+ *     works; a pick just writes the canonical exchange ticker back.
+ *   - EXIT lists the holdings recorded on Portfolio as one-tap chips, and a
+ *     typed ticker that is not among them gets a non-blocking note (the user
+ *     may hold it without having recorded it). Shares/avg cost only — no
+ *     price is read or rendered here.
+ *   - After a proceeded pause, a one-line pointer to /journal/import: this
+ *     route records nothing to the book, so the fill is journaled there and
+ *     a buy can be linked back to this pause on approval
+ *     (services/pre_trade/link.py).
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
+import useSWR from "swr";
 import { ChevronRight } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { useT } from "@/lib/locale";
@@ -40,6 +55,7 @@ import {
   SIDE_LABEL_EN,
   SIDE_LABEL_KO,
   sideLabel,
+  isHeldTicker,
 } from "@/lib/pre-trade";
 import {
   MIN_RATIONALE_CHARS,
@@ -52,6 +68,11 @@ import {
   usePreTradeCycle,
 } from "@/components/pre-trade/pre-trade-friction-core";
 import { RelatedObservationNotes } from "@/components/pre-trade/related-observation-notes";
+import { TickerSearch } from "@/components/shared/ticker-search";
+import type { BackendPositionRow } from "@/components/portfolio/types";
+import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
+import { fetcher } from "@/lib/hooks";
+import { displayTicker, normalizeTicker } from "@/lib/format";
 
 export default function PreTradePage() {
   // Step 1 — setup (owned by this route page)
@@ -169,6 +190,10 @@ export default function PreTradePage() {
           />
         )}
 
+        {cycle.phase === "terminal" && cycle.reflection?.status === "proceeded" && (
+          <ImportHint />
+        )}
+
         {/* Single foot signature (v3 convention). Layout owns the global
             disclaimer above; this footer is the editorial sign-off. */}
         <FootSignature />
@@ -197,14 +222,15 @@ function SetupStep(props: {
       <SectionLabel n={1} title="The Trade · 거래 개요" />
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4">
         <Field label="Ticker" htmlFor="pre-trade-ticker">
-          <input
+          <TickerSearch
             id="pre-trade-ticker"
             value={ticker}
-            onChange={(e) => setTicker(e.target.value)}
-            placeholder="AAPL · 005930.KS"
+            onChange={setTicker}
+            onPick={(r) => setTicker(r.ticker)}
+            ariaLabel="Ticker"
             autoFocus
-            className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
-            style={{ letterSpacing: "0.04em" }}
+            inputClassName="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+            inputStyle={{ letterSpacing: "0.04em" }}
           />
         </Field>
         <Field label="Side">
@@ -240,6 +266,8 @@ function SetupStep(props: {
           />
         </Field>
       </div>
+
+      {side === "EXIT" && <HeldPicker ticker={ticker} setTicker={setTicker} />}
 
       <Field label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`} htmlFor="pre-trade-thesis">
         <textarea
@@ -296,5 +324,91 @@ function SetupStep(props: {
         </button>
       </div>
     </section>
+  );
+}
+
+/* ─── EXIT — pick from the holdings recorded on Portfolio ─────────────────── */
+
+function HeldPicker({ ticker, setTicker }: { ticker: string; setTicker: (s: string) => void }) {
+  const t = useT();
+  // One-shot read (no polling): only shares/name are used, never a price.
+  const { data, error } = useSWR<{ positions?: BackendPositionRow[] }>(
+    PORTFOLIO_POSITIONS,
+    fetcher,
+    { revalidateOnFocus: false, revalidateIfStale: false },
+  );
+  const rows = useMemo(
+    () => (data?.positions ?? []).filter((r) => (r.shares ?? 0) > 0),
+    [data],
+  );
+  // Loading or failed: say nothing — the free-text field still works.
+  if (!data || error) return null;
+
+  const typed = ticker.trim().length > 0;
+  return (
+    <div className="space-y-2">
+      <div className="text-pq-eyebrow uppercase tracking-[0.2em] text-[var(--pq-ivory-faint)]">
+        {t("preTrade.setup.heldLabel")}
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]">
+          {t("preTrade.setup.heldEmpty")}
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {rows.map((r) => {
+            const sym = r.symbol ?? r.ticker;
+            const active = normalizeTicker(sym) === normalizeTicker(ticker);
+            return (
+              <button
+                key={String(r.id)}
+                type="button"
+                onClick={() => setTicker(sym)}
+                aria-pressed={active}
+                className={`px-3 py-1.5 text-pq-mono-sm tracking-[0.06em] transition-colors ${
+                  active
+                    ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
+                    : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
+                }`}
+              >
+                {displayTicker(sym, r.name)}
+                <span className="ml-2 text-[var(--pq-ivory-faint)]">
+                  {t("preTrade.setup.heldShares", { n: String(r.shares) })}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {typed && rows.length > 0 && !isHeldTicker(ticker, rows) && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]"
+        >
+          {t("preTrade.setup.notHeld")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ─── After a proceeded pause — where the fill gets journaled ─────────────── */
+
+function ImportHint() {
+  const t = useT();
+  return (
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-t border-[var(--pq-ivory-line-soft)] pt-4">
+      <p className="font-serif text-pq-body leading-relaxed text-[var(--pq-ivory-mid)] max-w-[560px]">
+        {t("preTrade.done.importHint")}
+      </p>
+      <Link
+        href="/journal/import?tab=image"
+        className="inline-flex items-center gap-2 self-start md:self-auto px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
+      >
+        {t("preTrade.done.importCta")}
+        <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    </div>
   );
 }

@@ -396,7 +396,9 @@
       "stampedOnly": "We stamped your reflection.",
       "noOrderTail": "PivoxQuant does not place trades — submit the order with your own broker.",
       "cancelledBody": "Cancelled. Nothing was recorded. The seven questions come round again on the next decision.",
-      "shares": "{n} shares"
+      "shares": "{n} shares",
+      "importHint": "If the order filled at your broker, upload a screenshot of the fill to your journal. A purchase can be linked to this pause when you approve it.",
+      "importCta": "Upload a fill screenshot"
     },
     "link": {
       "today": "You wrote a pause record for this ticker today — link it to this buy",
@@ -409,6 +411,12 @@
       "cooldownFailed": "Could not start cooldown.",
       "cancelFailed": "Could not cancel.",
       "cancelled": "Cancelled."
+    },
+    "setup": {
+      "heldLabel": "Pick from your holdings",
+      "heldShares": "{n} sh",
+      "heldEmpty": "No holdings recorded on Portfolio. Type the ticker instead.",
+      "notHeld": "This ticker is not among the holdings recorded on Portfolio. You can still continue."
     }
   },
   "journal": {

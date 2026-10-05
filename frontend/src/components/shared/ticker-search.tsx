@@ -57,6 +57,8 @@ export interface TickerSearchProps {
   ariaLabel?: string;
   /** Forwarded to the input — the HTML `required` attribute. */
   required?: boolean;
+  /** Forwarded to the input so a surrounding `<label htmlFor>` can target it. */
+  id?: string;
   /** Inline style for the input (add-position passes its hairline field style). */
   inputStyle?: React.CSSProperties;
   /** Class list for the input (composer passes the journal bordered style). */
@@ -80,6 +82,7 @@ export function TickerSearch({
   autoFocus = false,
   ariaLabel = "Symbol",
   required = false,
+  id,
   inputStyle,
   inputClassName,
   showPickedName = true,
@@ -142,6 +145,7 @@ export function TickerSearch({
     <div style={{ position: "relative" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <input
+          id={id}
           required={required}
           disabled={disabled}
           autoFocus={autoFocus}
