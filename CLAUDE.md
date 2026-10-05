@@ -149,6 +149,8 @@ cd frontend && npm run dev                 # 프론트 :3000
 ```
 canonical 트리 = `~/Desktop/취준/pivoxquant` (여기서 작업·커밋·푸시). `~/dev/pivoxquant` 는 2026-05-17 에 멈춘 버려진 사본.
 
+**테스트 범위는 변경 크기로 정한다** (CEO 2026-10-05). 기본은 바뀐 모듈의 테스트 + 법적 문구를 건드렸으면 함정 4 의 legal 스위트. 백엔드 전체(~22분, CI 에는 백엔드 pytest 가 없다)는 스키마·공용 서비스·인증처럼 영향이 넓은 변경에만 돌리고, 돌리기 전에 CEO 에게 묻는다. 무엇을 돌렸는지는 항상 같이 보고한다.
+
 **테스트 계정**: Google `seanbae1521@gmail.com` / KIS 계좌 read-only
 
 ---
