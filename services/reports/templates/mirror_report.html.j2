@@ -18,6 +18,7 @@
 {% set followon = d.get('averaging_down') or {} %}
 {% set closed = d.get('profit_loss') or {} %}
 {% set conc = d.get('concentration') or {} %}
+{% set pauses = d.get('pauses') or {} %}
 {% set gain = closed.get('take_profit') or {} %}
 {% set loss = closed.get('stop_loss') or {} %}
 <!DOCTYPE html>
@@ -260,6 +261,52 @@
   {% endif %}
   {% else %}
   <p class="none">{{ L.none_closed }}</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>{{ L.s_pauses }}</h2>
+  <p class="lede">{{ L.s_pauses_lede }}</p>
+  {% if pauses.get('sufficient_data') %}
+  {% set st = pauses.get('stopped') or {} %}
+  {% set cf = pauses.get('cancelled_followthrough') or {} %}
+  {% set rl = pauses.get('realised') or {} %}
+  <div class="tiles">
+    <div class="tile"><div class="k">{{ L.k_started }}</div><div class="v">{{ st.get('started') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_proceeded }}</div><div class="v">{{ st.get('proceeded') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_cancelled }}</div><div class="v">{{ st.get('cancelled') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+    <div class="tile"><div class="k">{{ L.k_open }}</div><div class="v">{{ st.get('open') | fmt }}<span class="u">{{ L.unit_count }}</span></div></div>
+  </div>
+  {% if cf.get('cancelled') %}
+  <table class="plain">
+    <thead><tr><th>{{ L.s_pauses_cancel }}</th><th class="n">{{ L.th_count }}</th></tr></thead>
+    <tbody>
+      <tr><td>{{ L.k_cancel_total }}</td><td class="n">{{ cf.get('cancelled') | fmt }}</td></tr>
+      <tr><td>{{ L.k_bought_later }}</td><td class="n">{{ cf.get('bought_later_anyway') | fmt }}</td></tr>
+      <tr><td>{{ L.k_never_bought }}</td><td class="n">{{ cf.get('never_bought') | fmt }}</td></tr>
+    </tbody>
+  </table>
+  {% if cf.get('median_days_until_bought') is not none %}
+  <p class="note">{{ L.k_days_until }} {{ cf.get('median_days_until_bought') | fmt(1) }}{{ L.unit_days }}</p>
+  {% endif %}
+  {% endif %}
+  {% set rw = rl.get('with_friction') or {} %}
+  {% set ro = rl.get('without_friction') or {} %}
+  {% if rw.get('n') or ro.get('n') %}
+  <table class="plain" style="margin-top: 5mm">
+    <thead><tr><th>{{ L.s_pauses_realised }}</th><th class="n">{{ L.k_count }}</th>{% if rl.get('comparable') %}<th class="n">{{ L.k_return_median }}</th>{% endif %}</tr></thead>
+    <tbody>
+      <tr><td>{{ L.k_with }}</td><td class="n">{{ rw.get('n') | fmt }}</td>{% if rl.get('comparable') %}<td class="n">{{ rw.get('median_pct') | signed }}%</td>{% endif %}</tr>
+      <tr><td>{{ L.k_without }}</td><td class="n">{{ ro.get('n') | fmt }}</td>{% if rl.get('comparable') %}<td class="n">{{ ro.get('median_pct') | signed }}%</td>{% endif %}</tr>
+    </tbody>
+  </table>
+  {% if not rl.get('comparable') %}
+  <p class="note">{{ L.realised_hidden | replace('{n}', rl.get('min_group_n', 5) | string) }}</p>
+  {% endif %}
+  {% endif %}
+  <p class="note">{{ L.pauses_attr | replace('{links}', pauses.get('explicit_links', 0) | string) | replace('{days}', pauses.get('attribution_window_days', 7) | string) }}</p>
+  {% else %}
+  <p class="none">{{ L.none_pauses }}</p>
   {% endif %}
 </section>
 

@@ -195,6 +195,11 @@ export const API = {
   notifications: {
     preferences: "/api/notifications/preferences",
   },
+  // The caller's own monthly mirror report as a PDF (routes/reports.py).
+  // 200 application/pdf · 404 MIRROR_REPORT_EMPTY · 429 per-user render limit.
+  reports: {
+    mirrorPdf: "/api/reports/mirror.pdf",
+  },
   broker: {
     connections: "/api/broker/connections",
     // KIS (한국투자증권) — read-only Korean brokerage.

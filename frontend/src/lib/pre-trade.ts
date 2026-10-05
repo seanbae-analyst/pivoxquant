@@ -17,6 +17,8 @@
  * fire on the necessary wire constants below.
  */
 
+import { normalizeTicker } from "./format";
+
 export type Side = "ENTRY" | "EXIT";
 
 export const SIDE_LABEL_KO: Record<Side, string> = {
@@ -56,4 +58,18 @@ export function sideLabel(wireOrSide: string | null | undefined): string {
       : sideFromWire(wireOrSide);
   if (!s) return "—";
   return `${SIDE_LABEL_EN[s]} · ${SIDE_LABEL_KO[s]}`;
+}
+
+/**
+ * True when `ticker` names one of the recorded holdings (KR exchange suffix
+ * ignored — `005930` ≡ `005930.KS`). Used by the /pre-trade EXIT setup to
+ * note, without blocking, a sale ticker that is not on Portfolio.
+ */
+export function isHeldTicker(
+  ticker: string,
+  rows: ReadonlyArray<{ ticker: string; symbol?: string }>,
+): boolean {
+  const t = normalizeTicker(ticker);
+  if (!t) return false;
+  return rows.some((r) => normalizeTicker(r.symbol ?? r.ticker) === t);
 }

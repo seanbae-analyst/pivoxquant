@@ -396,7 +396,9 @@
       "stampedOnly": "We stamped your reflection.",
       "noOrderTail": "PivoxQuant does not place trades — submit the order with your own broker.",
       "cancelledBody": "Cancelled. Nothing was recorded. The seven questions come round again on the next decision.",
-      "shares": "{n} shares"
+      "shares": "{n} shares",
+      "importHint": "If the order filled at your broker, upload a screenshot of the fill to your journal. A purchase can be linked to this pause when you approve it.",
+      "importCta": "Upload a fill screenshot"
     },
     "link": {
       "today": "You wrote a pause record for this ticker today — link it to this buy",
@@ -409,6 +411,12 @@
       "cooldownFailed": "Could not start cooldown.",
       "cancelFailed": "Could not cancel.",
       "cancelled": "Cancelled."
+    },
+    "setup": {
+      "heldLabel": "Pick from your holdings",
+      "heldShares": "{n} sh",
+      "heldEmpty": "No holdings recorded on Portfolio. Type the ticker instead.",
+      "notHeld": "This ticker is not among the holdings recorded on Portfolio. You can still continue."
     }
   },
   "journal": {
@@ -836,6 +844,25 @@
       "passwordHelp": "OAuth-only — no password set on this account.",
       "linkedHelp": "{who} · primary login.",
       "connected": "Connected"
+    },
+    "monthlyReport": {
+      "eyebrow": "Monthly Mirror · Report",
+      "what": "On the 1st of each month at 08:30 KST, we email a PDF of the fills and pauses you recorded over the last 30 days. If you recorded nothing in that period, nothing is sent.",
+      "contents": "What it holds: fills you recorded · acquiring more of a position you already had · round trips closed in the period · concentration at average cost · how each pause ended. No quotes and no scores, and the reasons you wrote in a pause are not copied in.",
+      "gateCell": "Monthly mirror report · email, in the table above",
+      "gateDelivery": "Email delivery (B2)",
+      "gateConsent": "Marketing information consent (B3)",
+      "on": "On",
+      "off": "Off",
+      "checking": "Checking…",
+      "willSend": "All three are on. The next send is on {date}.",
+      "wontSend": "With the current settings nothing will be sent. Turn on what is off and it starts from the next 1st.",
+      "download": "Get my report now",
+      "downloading": "Building…",
+      "downloadNote": "The same PDF as the email, built for the last 30 days as of now.",
+      "empty": "No fills or pauses were recorded in the last 30 days, so there is no report to build yet.",
+      "tooMany": "Please try again in a moment. Reports can be built 5 times a minute.",
+      "failed": "The report could not be built. Please try again in a moment."
     }
   }
 }
