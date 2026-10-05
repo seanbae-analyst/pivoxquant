@@ -1,7 +1,13 @@
-"""월간 거울 리포트 — 온디맨드 다운로드.
+"""월간 거울 리포트 — 온디맨드 다운로드와 앱 안 보기.
 
-``GET /api/reports/mirror.pdf`` 하나뿐이다. 로그인한 사용자가 **자기**
-리포트를 그 자리에서 PDF 로 받는다.
+* ``GET /api/reports/mirror.pdf`` — 로그인한 사용자가 **자기** 리포트를 그
+  자리에서 PDF 로 받는다.
+* ``GET /api/reports/mirror`` (2026-10-05) — 같은 리포트를 JSON 으로. 앱의
+  ``/journal/report`` 화면이 그린다. 숫자는 PDF 와 같은 ``build_mirror_report``
+  에서, 문구는 PDF 템플릿과 같은 ``mirror_labels`` 에서 온다 — 계산도 말도
+  두 벌이 아니다. PDF 렌더가 없어 싸므로 일반 레이트리밋을 쓴다. 되비출 기록이
+  없어도 404 가 아니라 ``has_content: false`` 로 200 을 준다 — 화면은 빈 상태를
+  그 자리에서 말한다.
 
 본인 것만
 =========
@@ -37,17 +43,34 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from functools import wraps
 
-from flask import Blueprint, Response
+from flask import Blueprint, Response, jsonify, make_response, request
 from flask_login import current_user
 
-from security import report_render_rate_limit
+from security import general_rate_limit, report_render_rate_limit
 from services.error_responses import api_error
-from services.reports_delivery import build_mirror_pdf, mirror_report_filename
+from services.reports import mirror_pdf as _mirror_pdf
+from services.reports_delivery import (
+    REPORT_PERIOD_DAYS,
+    build_mirror_pdf,
+    mirror_report_filename,
+)
 
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
+
+
+def _no_store(f):
+    """개인 기록 — 공유 캐시·프록시에 남기지 않는다. ``legal_scrub_response`` 가
+    JSON 응답을 새로 만들어 뷰 안의 헤더를 버리므로, 그 바깥에서 단다."""
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        resp = make_response(f(*args, **kwargs))
+        resp.headers["Cache-Control"] = "private, no-store"
+        return resp
+    return wrapped
 
 reports_bp = Blueprint("reports", __name__, url_prefix="/api/reports")
 
@@ -91,3 +114,44 @@ def mirror_pdf():
     # 개인 기록이다 — 공유 캐시나 프록시에 남지 않게 한다.
     resp.headers["Cache-Control"] = "private, no-store"
     return resp
+
+
+@reports_bp.route("/mirror", methods=["GET"])
+@api_auth
+@general_rate_limit
+@_no_store
+@legal_scrub_response
+def mirror_json():
+    """본인의 월간 거울 리포트를 JSON 으로 — 앱 안 보기용.
+
+    Query: ``?locale=ko|en`` (없으면 계정 locale, 그다음 ko). 대상은 언제나
+    ``current_user.id`` 다 — user id 를 받지 않는다 (PDF 라우트와 같은 이유).
+    """
+    user_id = current_user.id
+    locale = (
+        request.args.get("locale")
+        or getattr(current_user, "locale", "")
+        or "ko"
+    ).lower()
+    if locale not in ("ko", "en"):
+        locale = "ko"
+
+    try:
+        data = _mirror_pdf.build_mirror_report(user_id, period_days=REPORT_PERIOD_DAYS)
+    except Exception:
+        logger.exception("mirror report build failed for user %s", user_id)
+        return api_error(
+            en="Failed to build the mirror report.",
+            kr="거울 리포트를 만들지 못했습니다.",
+            code="MIRROR_REPORT_FAILED",
+            status=500,
+        )
+
+    # user_id 는 화면에 쓸 데가 없다 — 응답에 싣지 않는다.
+    report = {k: v for k, v in data.items() if k != "user_id"}
+    return jsonify({
+        "ok": True,
+        "locale": locale,
+        "report": report,
+        "labels": _mirror_pdf.mirror_labels(locale),
+    })

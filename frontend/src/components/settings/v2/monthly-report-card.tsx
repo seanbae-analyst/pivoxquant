@@ -20,10 +20,11 @@
  */
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 
-import { API } from "@/lib/endpoints";
 import { useNotificationPreferences } from "@/lib/hooks";
+import { downloadMirrorPdf } from "@/lib/reports";
 import { useT } from "@/lib/locale";
 import {
   EMAIL_DELIVERY_ANCHOR,
@@ -83,34 +84,11 @@ export function MonthlyReportCard({
   const download = React.useCallback(async () => {
     setDownloading(true);
     setEmptyNote(false);
-    try {
-      // A binary attachment, not JSON — same raw-fetch pattern as the CSV
-      // export on this page.
-      const res = await fetch(API.reports.mirrorPdf, { credentials: "include" });
-      if (res.status === 404) {
-        setEmptyNote(true);
-        return;
-      }
-      if (res.status === 429) {
-        toast.error(m("tooMany"));
-        return;
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const disposition = res.headers.get("Content-Disposition") ?? "";
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename = match?.[1] ?? "pivoxquant_mirror.pdf";
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error(m("failed"));
-    } finally {
-      setDownloading(false);
-    }
+    const res = await downloadMirrorPdf();
+    setDownloading(false);
+    if (res === "empty") setEmptyNote(true);
+    else if (res === "rate_limited") toast.error(m("tooMany"));
+    else if (res === "error") toast.error(m("failed"));
     // `m` is derived from `t`; re-create only when the locale changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
@@ -226,13 +204,24 @@ export function MonthlyReportCard({
         >
           {downloading ? m("downloading") : m("download")}
         </button>
-        <span
-          className="font-serif"
-          style={{ fontSize: "var(--pq-text-body)", color: "var(--pq-ivory-faint)" }}
+        <Link
+          href="/journal/report"
+          className="font-mono uppercase underline-offset-4 hover:underline"
+          style={{
+            fontSize: "var(--pq-text-eyebrow)",
+            letterSpacing: "0.16em",
+            color: "var(--pq-bronze-light, var(--pq-bronze))",
+          }}
         >
-          {m("downloadNote")}
-        </span>
+          {m("openInApp")}
+        </Link>
       </div>
+      <p
+        className="font-serif"
+        style={{ fontSize: "var(--pq-text-body)", color: "var(--pq-ivory-faint)", marginTop: 8 }}
+      >
+        {m("downloadNote")}
+      </p>
       {emptyNote && (
         <p
           role="status"

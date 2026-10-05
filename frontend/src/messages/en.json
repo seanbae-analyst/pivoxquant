@@ -635,6 +635,22 @@
         "checkTitle": "The stock name was matched to a similar name — please check it",
         "confirmLabel": "I checked this is the same stock as in the capture."
       }
+    },
+    "report": {
+      "kicker": "PivoxQuant · Record mirror",
+      "title": "Monthly Mirror Report",
+      "loading": "Loading the report…",
+      "loadFailed": "The report could not be loaded.",
+      "retry": "Try again",
+      "pdfDownload": "Get the PDF",
+      "pdfBuilding": "Building…",
+      "pdfEmpty": "No fills or pauses were recorded in the last 30 days, so there is no PDF to build yet.",
+      "pdfTooMany": "Please try again in a moment. PDFs can be built 5 times a minute.",
+      "pdfFailed": "The PDF could not be built. Please try again in a moment.",
+      "emailSettings": "Email delivery settings",
+      "backToJournal": "← Back to journal",
+      "emptyHint": "Record a fill or leave a pause before a trade and this starts to fill in.",
+      "entry": "Open the monthly mirror report →"
     }
   },
   "support": {
@@ -862,7 +878,8 @@
       "downloadNote": "The same PDF as the email, built for the last 30 days as of now.",
       "empty": "No fills or pauses were recorded in the last 30 days, so there is no report to build yet.",
       "tooMany": "Please try again in a moment. Reports can be built 5 times a minute.",
-      "failed": "The report could not be built. Please try again in a moment."
+      "failed": "The report could not be built. Please try again in a moment.",
+      "openInApp": "Read the report in the app →"
     }
   }
 }
