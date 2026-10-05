@@ -8,7 +8,8 @@
  *
  * 3 sections (sticky anchor rail):
  *   A · Identity & security      (SettingsIdentityCardV2 + SignInProvidersCard)
- *   B · Notifications            (NotificationsMatrix + Push/Email/Marketing sub-cards)
+ *   B · Notifications            (NotificationsMatrix + Push/Email/Marketing sub-cards
+ *                                 + MonthlyReportCard, 2026-10-05)
  *   —   Import tokens            (ImportTokensSection — PAT for the import webhook, 2026-09-13)
  *   C · Privacy · PIPA           (PrivacyCardV2 — Consent/Export/Sign out)
  *
@@ -62,6 +63,7 @@ import {
   NotificationsMatrix,
 } from "@/components/settings/v2/notifications-matrix";
 import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
+import { MonthlyReportCard } from "@/components/settings/v2/monthly-report-card";
 import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
 import { ImportTokensSection } from "@/components/settings/import-tokens-section";
 
@@ -737,6 +739,16 @@ export default function SettingsPageV2() {
                 full row for legibility on mobile. */}
             <div style={{ marginTop: 12 }}>
               <MarketingConsentCardV2 onConsentChange={setMarketingConsentOn} />
+            </div>
+
+            {/* B4 · Monthly mirror report — what it carries, whether the next
+                run sends, and the same PDF on demand (2026-10-05). Below B3
+                because it reads all three switches above it. */}
+            <div style={{ marginTop: 12 }}>
+              <MonthlyReportCard
+                emailDeliveryOn={emailKnown ? emailEnabled : undefined}
+                marketingConsentOn={marketingConsentOn}
+              />
             </div>
           </section>
 

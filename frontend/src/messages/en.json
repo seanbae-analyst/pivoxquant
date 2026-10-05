@@ -844,6 +844,25 @@
       "passwordHelp": "OAuth-only — no password set on this account.",
       "linkedHelp": "{who} · primary login.",
       "connected": "Connected"
+    },
+    "monthlyReport": {
+      "eyebrow": "Monthly Mirror · Report",
+      "what": "On the 1st of each month at 08:30 KST, we email a PDF of the fills and pauses you recorded over the last 30 days. If you recorded nothing in that period, nothing is sent.",
+      "contents": "What it holds: fills you recorded · acquiring more of a position you already had · round trips closed in the period · concentration at average cost · how each pause ended. No quotes and no scores, and the reasons you wrote in a pause are not copied in.",
+      "gateCell": "Monthly mirror report · email, in the table above",
+      "gateDelivery": "Email delivery (B2)",
+      "gateConsent": "Marketing information consent (B3)",
+      "on": "On",
+      "off": "Off",
+      "checking": "Checking…",
+      "willSend": "All three are on. The next send is on {date}.",
+      "wontSend": "With the current settings nothing will be sent. Turn on what is off and it starts from the next 1st.",
+      "download": "Get my report now",
+      "downloading": "Building…",
+      "downloadNote": "The same PDF as the email, built for the last 30 days as of now.",
+      "empty": "No fills or pauses were recorded in the last 30 days, so there is no report to build yet.",
+      "tooMany": "Please try again in a moment. Reports can be built 5 times a minute.",
+      "failed": "The report could not be built. Please try again in a moment."
     }
   }
 }

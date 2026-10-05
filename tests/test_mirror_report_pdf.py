@@ -95,6 +95,34 @@ def active_user(app, make_user, add_trade):
     return user
 
 
+
+@pytest.fixture
+def add_pause(app):
+    """멈춤 기록을 한 줄 심는다. ``days_ago`` 는 AS_OF 기준 (2026-10-05)."""
+    from extensions import db
+    from models import PreTradeReflection
+
+    def _add(user_id, *, ticker="AAPL", side="BUY", days_ago=5,
+             outcome="proceeded", rationale="실적 발표 전에 산다는 이유를 적어 둔다"):
+        at = AS_OF - timedelta(days=days_ago)
+        with app.app_context():
+            row = PreTradeReflection(
+                user_id=user_id,
+                intended_ticker=ticker,
+                intended_side=side,
+                rationale=rationale,
+                created_at=at,
+                cooldown_started_at=at,
+                cooldown_ends_at=at,
+                proceeded_at=at if outcome == "proceeded" else None,
+                cancelled_at=at if outcome == "cancelled" else None,
+            )
+            db.session.add(row)
+            db.session.commit()
+            return row.id
+    return _add
+
+
 # ── build_mirror_report ──────────────────────────────────────────────
 
 class TestBuild:
@@ -364,3 +392,85 @@ def test_spec_banned_list_is_covered_by_the_regex():
     """가드의 가드 — 명세의 여섯 낱말을 regex 가 실제로 잡는지."""
     for word in _SPEC_BANNED:
         assert _SPEC_BANNED_RE.search(word) is not None, word
+
+
+# ── 멈춤 섹션 (2026-10-05) ───────────────────────────────────────────
+
+class TestPauses:
+    def test_pauses_alone_make_content(self, app, make_user, add_pause):
+        user = make_user(email="pauses-only@test.com")
+        uid = user["id"]
+        add_pause(uid, days_ago=10, outcome="proceeded")
+        add_pause(uid, ticker="TSLA", days_ago=8, outcome="cancelled")
+        add_pause(uid, ticker="NVDA", days_ago=2, outcome="open")
+        with app.app_context():
+            data = build_mirror_report(uid, as_of=AS_OF)
+
+        assert data["has_content"] is True
+        assert data["window_trade_count"] == 0
+        stopped = data["pauses"]["stopped"]
+        assert stopped == {"started": 3, "proceeded": 1, "cancelled": 1, "open": 1}
+        assert data["pauses"]["cancelled_followthrough"]["never_bought"] == 1
+
+    def test_cancelled_then_acquired_is_counted(self, app, make_user, add_pause, add_trade):
+        user = make_user(email="pauses-later@test.com")
+        uid = user["id"]
+        add_pause(uid, ticker="TSLA", days_ago=12, outcome="cancelled")
+        add_trade(uid, ticker="TSLA", action="BUY", days_ago=9)
+        with app.app_context():
+            data = build_mirror_report(uid, as_of=AS_OF)
+
+        cf = data["pauses"]["cancelled_followthrough"]
+        assert cf["cancelled"] == 1
+        assert cf["bought_later_anyway"] == 1
+
+    def test_pauses_outside_the_window_are_excluded(self, app, make_user, add_pause):
+        user = make_user(email="pauses-window@test.com")
+        uid = user["id"]
+        add_pause(uid, days_ago=45)   # 창 시작 전
+        add_pause(uid, days_ago=-3)   # as_of 이후 — as-of 리포트에 들어오면 안 된다
+        with app.app_context():
+            data = build_mirror_report(uid, as_of=AS_OF)
+
+        assert data["pauses"]["stopped"]["started"] == 0
+        assert data["pauses"]["sufficient_data"] is False
+        assert data["has_content"] is False
+
+    def test_other_users_pauses_never_leak(self, app, make_user, add_pause):
+        me = make_user(email="pauses-me@test.com")
+        other = make_user(email="pauses-other@test.com")
+        add_pause(other["id"], days_ago=3)
+        with app.app_context():
+            data = build_mirror_report(me["id"], as_of=AS_OF)
+
+        assert data["pauses"]["stopped"]["started"] == 0
+
+    @pytest.mark.parametrize("locale", LOCALES)
+    def test_rationale_text_is_never_rendered(self, app, make_user, add_pause, locale):
+        user = make_user(email=f"pauses-render-{locale}@test.com")
+        secret = "이 문장은 리포트에 나오면 안 된다 ZQX"
+        add_pause(user["id"], days_ago=4, rationale=secret)
+        with app.app_context():
+            data = build_mirror_report(user["id"], as_of=AS_OF)
+        html = render_mirror_html(data, locale=locale)
+
+        assert secret not in html
+        assert "ZQX" not in html
+        label = "멈춤 기록" if locale == "ko" else "Pauses you recorded"
+        assert label in html
+        assert not _SPEC_BANNED_RE.search(re.sub(r"<[^>]+>", " ", html))
+
+    def test_small_samples_hide_the_return_comparison(self, app, make_user, add_pause, add_trade):
+        user = make_user(email="pauses-small@test.com")
+        uid = user["id"]
+        add_pause(uid, ticker="AAPL", days_ago=20, outcome="proceeded")
+        add_trade(uid, ticker="AAPL", action="BUY", shares=1, price=100.0, days_ago=20)
+        add_trade(uid, ticker="AAPL", action="SELL", shares=1, price=110.0, days_ago=5, pnl_pct=10.0)
+        with app.app_context():
+            data = build_mirror_report(uid, as_of=AS_OF)
+        html = render_mirror_html(data, locale="ko")
+
+        assert data["pauses"]["realised"]["comparable"] is False
+        assert data["pauses"]["realised"]["with_friction"]["n"] == 1
+        # 표본이 작으면 수익률 숫자를 나란히 놓지 않는다 — 건수와 안내만.
+        assert "5건 미만" in html

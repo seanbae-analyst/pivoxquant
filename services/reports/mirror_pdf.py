@@ -14,6 +14,10 @@
   기간 안에서 닫힌 거래의 실현 손익
 * :func:`services.behavior.concentration_mirror.compute_concentration_mirror`
   — 생성 시점 보유분의 집중도(평균매입가 기준)
+* :func:`services.pre_trade.friction_outcome.compute_friction_outcome` — 기간
+  안에 시작한 멈춤의 귀결(진행·취소·미결)과, 취소한 종목을 그 뒤 취득했는지
+  (2026-10-05). 멈춤에 적은 이유(rationale) 본문은 **넣지 않는다** — DB 에
+  암호화돼 있는 글을 평문 메일 첨부로 내보내지 않는다. 개수와 귀결만 적는다.
 
 무엇이 아닌가
 -------------
@@ -60,11 +64,12 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from models import TradeHistory
+from models import PreTradeReflection, TradeHistory
 from services.behavior.averaging_down_mirror import compute_averaging_down_mirror
 from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
 from services.behavior.turnover_mirror import compute_turnover_mirror
+from services.pre_trade.friction_outcome import compute_friction_outcome
 from services.profile.fifo_util import is_registration_row
 from services.legal.disclaimers import (
     DISCLAIMER_ARTIFACT_KR,
@@ -121,11 +126,11 @@ def build_mirror_report(user_id: int, *, period_days: int = _DEFAULT_PERIOD_DAYS
         JSON 으로 그대로 직렬화 가능한 값만 담는다. 키:
         ``has_content, user_id, period_days, period_start, period_end,
         generated_at, window_trade_count, turnover, averaging_down,
-        profit_loss, concentration, disclaimers``.
+        profit_loss, concentration, pauses, disclaimers``.
 
         **점수 / 등급 / 순위 / 별점 필드는 어디에도 없다.**
 
-        기간 안에 기록이 하나도 없으면 ``has_content`` 가 ``False`` 다.
+        기간 안에 체결 기록도 멈춤 기록도 없으면 ``has_content`` 가 ``False`` 다.
         예외를 던지지 않는다 — 발송 쪽이 이 플래그로 스킵을 판단한다.
     """
     window_days = max(1, int(period_days or _DEFAULT_PERIOD_DAYS))
@@ -149,12 +154,31 @@ def build_mirror_report(user_id: int, *, period_days: int = _DEFAULT_PERIOD_DAYS
     # 집중도는 '지금 보유분' 의 사실이라 창과 무관하다. 리포트에서도 그렇게 적는다.
     concentration = compute_concentration_mirror(user_id)
 
+    # 멈춤 (2026-10-05). friction_outcome 은 창의 시작만 자르므로, as-of
+    # 리포트답게 창 끝 이후의 멈춤·체결은 넘기기 전에 뺀다.
+    reflections = [
+        r for r in PreTradeReflection.query.filter_by(user_id=user_id).all()
+        if r.created_at is not None and r.created_at <= period_end
+    ]
+    trades_as_of = [t for t in rows if t.traded_at is not None and t.traded_at <= period_end]
+    friction = compute_friction_outcome(
+        reflections, trades_as_of, window_days=window_days, now=period_end,
+    )
+    pauses = {
+        "sufficient_data": friction["stopped"]["started"] > 0,
+        "stopped": friction["stopped"],
+        "cancelled_followthrough": friction["cancelled_followthrough"],
+        "realised": friction["realised"],
+        "attribution_window_days": friction["caveats"]["attribution_window_days"],
+        "explicit_links": friction["caveats"]["explicit_links"],
+    }
+
     # 기간 안에 기록이 하나도 없으면 리포트가 할 말이 없다. 보유분만 있는
     # 유저에게 "이번 달 체결 없음" 을 매달 보내지 않으려고, 집중도는
-    # has_content 판정에 넣지 않는다.
+    # has_content 판정에 넣지 않는다. 멈춤은 그 자체가 기록이라 넣는다.
     has_content = any(
         bool(mirror.get("sufficient_data"))
-        for mirror in (turnover, averaging_down, profit_loss)
+        for mirror in (turnover, averaging_down, profit_loss, pauses)
     )
 
     return {
@@ -169,6 +193,7 @@ def build_mirror_report(user_id: int, *, period_days: int = _DEFAULT_PERIOD_DAYS
         "averaging_down": averaging_down,
         "profit_loss": profit_loss,
         "concentration": concentration,
+        "pauses": pauses,
         # 문구는 SoT 에서만 온다. 여기서 새로 짓지 않는다.
         "disclaimers": {
             "mirror": DISCLAIMER_MIRROR_RETROSPECTIVE_KR,
@@ -285,6 +310,26 @@ _LABELS: dict[str, dict[str, Any]] = {
         "k_max_weight": "가장 큰 종목의 비중",
         "k_largest": "가장 큰 종목",
         "none_concentration": "평균매입가를 잴 수 있는 보유 종목이 없다.",
+        "s_pauses": "멈춤 기록",
+        "s_pauses_lede": "이 기간에 거래 전에 멈추고 일곱 문항을 적은 기록이다. 각 멈춤이 무엇으로 끝났는지만 "
+                         "센다. 적어 둔 이유의 본문은 이 문서에 옮기지 않는다.",
+        "k_started": "시작한 멈춤",
+        "k_proceeded": "진행으로 끝남",
+        "k_cancelled": "취소로 끝남",
+        "k_open": "끝내지 않음",
+        "s_pauses_cancel": "취득 앞에서 취소한 멈춤, 그 뒤",
+        "k_cancel_total": "취득 앞 취소",
+        "k_bought_later": "그 뒤 같은 종목을 취득",
+        "k_never_bought": "그 뒤 취득 기록 없음",
+        "k_days_until": "취득까지 · 중앙값",
+        "s_pauses_realised": "멈춤을 거친 취득과 거치지 않은 취득의 실현 수익률",
+        "k_with": "멈춤을 거친 취득",
+        "k_without": "멈춤을 거치지 않은 취득",
+        "realised_hidden": "어느 한쪽이 {n}건 미만이라 두 숫자를 나란히 놓지 않는다. 건수만 적는다.",
+        "pauses_attr": "멈춤과 취득은 직접 연결한 기록({links}건)을 먼저 쓰고, 연결이 없으면 같은 종목을 "
+                       "{days}일 안에 취득한 기록으로 추정한다. 멈춤을 쓸 거래는 본인이 고르므로 두 그룹은 "
+                       "무작위로 나뉜 것이 아니다.",
+        "none_pauses": "이 기간에 시작한 멈춤이 없다.",
         "s_limits": "이 숫자가 말하지 않는 것",
         "limits": [
             "이 리포트는 직접 기록한 체결만 읽는다. 기록하지 않은 거래는 처음부터 없는 것으로 집계된다.",
@@ -295,6 +340,7 @@ _LABELS: dict[str, dict[str, Any]] = {
             "기간 밖의 체결은 이 숫자에 세지 않는다. 다만 기간 안의 처분과 추가 취득은 기간 전에 취득한 "
             "기록까지 이어 읽어 보유일과 평균매입가를 잰다. 기간이 끝난 뒤의 기록은 읽지 않는다.",
             "집중도는 생성 시점 보유분을 평균매입가로 잰 것이다. 시장가도 아니고 기간과도 무관하다.",
+            "멈춤은 주문이 아니다. 멈춤과 취득의 연결은 직접 이은 것이 아니면 추정이고, 멈춤의 효과를 말하지 않는다.",
             "여기에는 잘함과 못함의 판정이 없다. 점수도 등급도 순위도 매기지 않는다. 읽고 해석하는 일은 본인의 몫이다.",
         ],
         "s_notice": "면책 고지",
@@ -356,6 +402,26 @@ _LABELS: dict[str, dict[str, Any]] = {
         "k_max_weight": "Largest symbol's share",
         "k_largest": "Largest symbol",
         "none_concentration": "No position has an average cost that can be measured.",
+        "s_pauses": "Pauses you recorded",
+        "s_pauses_lede": "Times you stopped before a trade and answered the seven questions in this period. "
+                         "Only how each pause ended is counted; the reasons you wrote are not copied into this document.",
+        "k_started": "Pauses started",
+        "k_proceeded": "Ended by proceeding",
+        "k_cancelled": "Ended by cancelling",
+        "k_open": "Left open",
+        "s_pauses_cancel": "Pauses cancelled before an acquisition, afterwards",
+        "k_cancel_total": "Cancelled before acquiring",
+        "k_bought_later": "Same symbol acquired later",
+        "k_never_bought": "No acquisition since",
+        "k_days_until": "Days until acquired · median",
+        "s_pauses_realised": "Realised return: acquisitions after a pause vs without one",
+        "k_with": "Acquisitions after a pause",
+        "k_without": "Acquisitions without a pause",
+        "realised_hidden": "One side has fewer than {n}, so the two figures are not set side by side. Only the counts are shown.",
+        "pauses_attr": "A pause is tied to an acquisition by the link you made ({links}); without one, an "
+                       "acquisition of the same symbol within {days} days is assumed. You choose which trades "
+                       "to pause on, so the two groups are not randomised.",
+        "none_pauses": "No pause was started in this period.",
         "s_limits": "What these numbers do not say",
         "limits": [
             "This report reads only the fills you recorded yourself. A trade never entered never happened here.",
@@ -368,6 +434,8 @@ _LABELS: dict[str, dict[str, Any]] = {
             "Records after the period end are not read.",
             "Concentration is measured on positions at the time of writing, at average cost. It is neither a "
             "market price nor tied to the period.",
+            "A pause is not an order. Unless you linked them, tying a pause to an acquisition is an estimate, "
+            "and none of this says what a pause achieved.",
             "Nothing here says well done or badly done. There is no score, no grade, no ranking. "
             "Reading it is yours to do.",
         ],
