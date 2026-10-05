@@ -445,13 +445,20 @@ _LABELS: dict[str, dict[str, Any]] = {
 }
 
 
+def mirror_labels(locale: str = _DEFAULT_LOCALE) -> dict[str, Any]:
+    """리포트 문구 한 벌. PDF 템플릿과 앱 화면(``GET /api/reports/mirror``)이
+    같은 문구를 쓴다 — 두 표면의 말이 갈라지지 않게 (2026-10-05).
+    모르는 locale 은 한국어로 떨어진다."""
+    return _LABELS.get((locale or _DEFAULT_LOCALE).lower(), _LABELS[_DEFAULT_LOCALE])
+
+
 def render_mirror_html(data: dict, *, locale: str = _DEFAULT_LOCALE) -> str:
     """리포트 데이터를 인쇄용 HTML 로 렌더한다.
 
     weasyprint 없이도 돈다 — 문구 검사와 금지어 스캔이 네이티브 라이브러리에
     묶이지 않게 하려고 PDF 단계와 분리해 두었다.
     """
-    labels = _LABELS.get((locale or _DEFAULT_LOCALE).lower(), _LABELS[_DEFAULT_LOCALE])
+    labels = mirror_labels(locale)
     return _env().get_template(_TEMPLATE_NAME).render(d=data or {}, L=labels)
 
 
@@ -469,4 +476,4 @@ def render_mirror_pdf(data: dict, *, locale: str = _DEFAULT_LOCALE) -> bytes:
     return HTML(string=html, base_url=str(_TEMPLATE_DIR)).write_pdf()
 
 
-__all__ = ["build_mirror_report", "render_mirror_html", "render_mirror_pdf"]
+__all__ = ["build_mirror_report", "mirror_labels", "render_mirror_html", "render_mirror_pdf"]

@@ -199,6 +199,9 @@ export const API = {
   // 200 application/pdf · 404 MIRROR_REPORT_EMPTY · 429 per-user render limit.
   reports: {
     mirrorPdf: "/api/reports/mirror.pdf",
+    // Same report as JSON for the in-app /journal/report screen — numbers
+    // and copy come from the same backend functions as the PDF.
+    mirror: "/api/reports/mirror",
   },
   broker: {
     connections: "/api/broker/connections",

@@ -678,6 +678,13 @@ function JournalContent() {
           >
             {t("journal.import.importLink")}
           </Link>
+          {/* The monthly mirror report, read in the app (2026-10-05). */}
+          <Link
+            href="/journal/report"
+            className="inline-flex min-h-[44px] items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-ivory-mid)] underline-offset-4 hover:underline"
+          >
+            {t("journal.report.entry")}
+          </Link>
         </div>
       </header>
 
