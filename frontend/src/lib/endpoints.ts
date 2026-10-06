@@ -36,6 +36,8 @@ export const API = {
     // its only reader was RealtimeProvider's has-positions gate, which now
     // reads PORTFOLIO_POSITIONS.
     history: (period: string) => `/api/portfolio/history?period=${period}`,
+    // 2026-10-06 — 보유 종목 공시 사실표 (SEC EDGAR · DART). 시세 미사용.
+    filings: (positionId: number | string) => `/api/portfolio/positions/${positionId}/filings`,
     // Singular `/position` endpoints (addPosition / editPosition / deletePosition /
     // buyMore / sellShares / buyNew) were removed 2026-05-02 — the frontend uses
     // the plural `/api/portfolio/positions[/<id>]` aliases (see PORTFOLIO_POSITIONS

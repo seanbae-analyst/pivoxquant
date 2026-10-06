@@ -19,8 +19,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# SEC requires User-Agent with contact info
-_USER_AGENT = "PivoxQuant/1.0 (sanghyun0115@naver.com)"
+# SEC requires User-Agent "<Company> <contact email>".
+# 2026-10-06: the previous value "PivoxQuant/1.0 (sanghyun0115@naver.com)" got
+# 403 on every request (measured with curl — the naver address is refused even
+# in the plain "Name email" form), so every EDGAR call silently returned None.
+_USER_AGENT = "PivoxQuant support@pivoxquant.com"
 _HEADERS = {
     "User-Agent": _USER_AGENT,
     "Accept": "application/json",

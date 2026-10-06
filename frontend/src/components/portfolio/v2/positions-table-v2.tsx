@@ -56,6 +56,8 @@ interface PositionsTableV2Props {
    * about the position, so it gets its own channel.
    */
   onObservationNote?: (position: Position) => void;
+  /** 공시 숫자 (종목 상세) — SEC EDGAR · DART, 시세 미사용. */
+  onFilings?: (position: Position) => void;
   onAddPosition?: () => void;
   /** Empty-state secondary path: broker sync (KIS). Optional. */
   /** Whether a broker is linked — drives the secondary CTA enabled state. */
@@ -209,6 +211,7 @@ export function PositionsTableV2({
   loading,
   onAction,
   onObservationNote,
+  onFilings,
   onAddPosition,
 }: PositionsTableV2Props) {
   const t = useT();
@@ -459,6 +462,7 @@ export function PositionsTableV2({
                   row={r}
                   onAction={onAction}
                   onObservationNote={onObservationNote}
+                  onFilings={onFilings}
                   marketDataDisplay={marketDataDisplay}
                 />
               ))}
@@ -529,11 +533,14 @@ function PositionRow({
   row,
   onAction,
   onObservationNote,
+  onFilings,
   marketDataDisplay = true,
 }: {
   row: DerivedPosition;
   onAction?: (action: TradeAction, position: Position) => void;
   onObservationNote?: (position: Position) => void;
+  /** 공시 숫자 (종목 상세) — SEC EDGAR · DART, 시세 미사용. */
+  onFilings?: (position: Position) => void;
   marketDataDisplay?: boolean;
 }) {
   const p = row.raw;
@@ -549,6 +556,12 @@ function PositionRow({
     e.stopPropagation();
     e.preventDefault();
     onObservationNote?.(p);
+  }
+
+  function handleFilings(e: React.MouseEvent) {
+    e.stopPropagation();
+    e.preventDefault();
+    onFilings?.(p);
   }
 
   const cellStyle: React.CSSProperties = {
@@ -586,7 +599,7 @@ function PositionRow({
         {/* Hover-revealed actions. `flexWrap` so the fourth button folds onto
             a second line on a 375px phone instead of widening the already
             horizontally-scrolling table. */}
-        {(onAction || onObservationNote) && (
+        {(onAction || onObservationNote || onFilings) && (
           <div
             className="pq-row-actions"
             style={{
@@ -621,6 +634,13 @@ function PositionRow({
                 label="관찰 노트"
                 onClick={handleNote}
                 ariaLabel={`${normalizeTicker(p.symbol)} 관찰 노트 작성`}
+              />
+            )}
+            {onFilings && (
+              <RowActionBtn
+                label="공시"
+                onClick={handleFilings}
+                ariaLabel={`${normalizeTicker(p.symbol)} 공시 숫자 보기`}
               />
             )}
           </div>

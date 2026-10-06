@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from extensions import db
 from models import Position, SignalCache, TradeHistory
 from security import trade_rate_limit
-from services import fx_service, cache_service
+from services import fx_service, cache_service, filings
 from services.error_responses import api_error
 from services.market_display import (
     MARKET_DATA_DISPLAY_FIELD,
@@ -300,6 +300,47 @@ def list_positions_alias():
             en="Failed to load positions", kr="포지션 목록을 불러오지 못했습니다.",
             code="POSITIONS_LOAD_FAILED", status=500,
         )
+
+
+@portfolio_bp.route("/positions/<int:pid>/filings", methods=["GET"])
+@api_auth
+@legal_scrub_response
+def position_filings(pid):
+    """보유 종목 공시 사실표 (미국 SEC EDGAR · 한국 DART) + 내 평단 기준 PER.
+
+    시세를 쓰지 않는다 — 정기공시 재무제표와 유저 본인의 평단(avg_cost)뿐이라
+    MARKET_DATA_DISPLAY_ENABLED 와 무관하게 열린다. 본인 보유 종목만 조회된다
+    (남의 position id 는 404). 점수·판정 없이 숫자만 내보낸다.
+    """
+    p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
+    if p is None:
+        return api_error(
+            en="Position not found", kr="보유 종목을 찾을 수 없습니다.",
+            code="POSITION_NOT_FOUND", status=404,
+        )
+    market = filings.market_of(p.ticker)
+    if market is None or not filings.source_configured(market):
+        return jsonify({
+            "ticker": p.ticker,
+            "available": False,
+            "reason": "unsupported_market" if market is None else "source_unconfigured",
+        })
+    facts = filings.get_facts(p.ticker)
+    if facts is None:
+        return jsonify({"ticker": p.ticker, "available": False, "reason": "no_filings"})
+
+    avg_cost = float(p.avg_cost or 0)
+    per_share = facts.get("net_income_per_share_ttm")
+    pe_at_cost = None
+    if avg_cost > 0 and per_share and per_share > 0:
+        pe_at_cost = avg_cost / per_share
+    return jsonify({
+        "ticker": p.ticker,
+        "available": True,
+        "avg_cost": avg_cost,
+        "pe_at_cost": pe_at_cost,
+        "facts": facts,
+    })
 
 
 @portfolio_bp.route("/summary", methods=["GET"])
