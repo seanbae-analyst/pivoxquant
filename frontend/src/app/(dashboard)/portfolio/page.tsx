@@ -59,6 +59,7 @@ import { RecentTransactionsBlock } from "@/components/portfolio/v2/recent-transa
 import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal-v2";
 import { TradeModalV2 } from "@/components/portfolio/v2/trade-modal-v2";
 import { ObservationNoteModalV2 } from "@/components/portfolio/v2/observation-note-modal-v2";
+import { FilingFactsModalV2 } from "@/components/portfolio/v2/filing-facts-modal-v2";
 
 import {
   toPosition,
@@ -103,6 +104,7 @@ export default function PortfolioPageV2() {
   // 관찰 노트 target is separate state from `targetPosition`: a note is not a
   // book mutation and must not share the trade modal's lifecycle.
   const [notePosition, setNotePosition] = React.useState<Position | null>(null);
+  const [filingsPosition, setFilingsPosition] = React.useState<Position | null>(null);
 
   const {
     data: posData,
@@ -498,6 +500,7 @@ export default function PortfolioPageV2() {
         loading={posLoading}
         onAction={openAction}
         onObservationNote={setNotePosition}
+        onFilings={setFilingsPosition}
         onAddPosition={() => setAddOpen(true)}
       />
 
@@ -586,6 +589,15 @@ export default function PortfolioPageV2() {
         symbol={notePosition?.symbol ?? null}
         name={notePosition?.name ?? null}
         onClose={() => setNotePosition(null)}
+      />
+      {/* 공시 숫자 (종목 상세) — 읽기 전용, 장부를 바꾸지 않는다. */}
+      <FilingFactsModalV2
+        key={filingsPosition?.id ?? "no-filings"}
+        open={filingsPosition !== null}
+        positionId={filingsPosition?.id ?? null}
+        symbol={filingsPosition?.symbol ?? null}
+        name={filingsPosition?.name ?? null}
+        onClose={() => setFilingsPosition(null)}
       />
     </ErrorBoundary>
   );
