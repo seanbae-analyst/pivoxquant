@@ -352,7 +352,7 @@ export default function SettingsPageV2() {
        * NotificationDropdown panel by stacking above the TopBar wrapper
        * (z=20 in globals.css). */}
       <div
-        className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
+        className="sticky z-10 -mx-4 mb-2 hidden md:-ml-8 md:-mr-10 md:block"
         style={{
           // Pin beneath the TopBar (56px). On notch PWAs the shell adds
           // safe-area-top padding, so the offset must include it or the bar
@@ -366,7 +366,11 @@ export default function SettingsPageV2() {
       </div>
 
       {/* HERO */}
-      <SettingsHeroV2 />
+      {/* Phone: an editorial hero is a website's front page, not a settings
+          screen (2026-10-07). The app bar names it. */}
+      <div className="hidden md:block">
+        <SettingsHeroV2 />
+      </div>
 
       {/* MAIN — sticky rail + 3 sections.
           Mobile fix (2026-05-05): the 12-col grid + 2-col AnchorRail makes

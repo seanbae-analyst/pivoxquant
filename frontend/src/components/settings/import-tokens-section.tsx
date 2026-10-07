@@ -62,8 +62,8 @@ export function authHeaderValue(token: string): string {
 /** Body template for MacroDroid — [notification] is its notification-text variable. */
 export const MACRODROID_BODY = '{"text":"[notification]"}';
 
-const ANDROID_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
-const IOS_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
+export const ANDROID_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
+export const IOS_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
 const GUIDE_STEPS = [1, 2, 3, 4] as const;
 
 export function curlExample(origin: string, token: string): string {
@@ -84,7 +84,7 @@ function fmtDate(iso: string | null, locale: string, withTime = false): string {
   });
 }
 
-function errorKey(err: unknown): string {
+export function errorKey(err: unknown): string {
   if (err instanceof ApiError) {
     switch (err.code) {
       case "IMPORT_CONSENT_REQUIRED":
@@ -120,7 +120,7 @@ const monoBox: React.CSSProperties = {
 };
 
 /** A labelled value with its own copy button — the three things the phone tool needs. */
-function CopyField({ label, value, testId }: { label: string; value: string; testId: string }) {
+export function CopyField({ label, value, testId }: { label: string; value: string; testId: string }) {
   const t = useT();
   const [state, setState] = React.useState<"idle" | "copied" | "failed">("idle");
   const copy = async () => {

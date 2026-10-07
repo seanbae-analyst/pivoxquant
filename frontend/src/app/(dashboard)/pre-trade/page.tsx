@@ -119,9 +119,12 @@ export default function PreTradePage() {
         {/* ── Editorial header (v3 lock-in: Playfair UPRIGHT). Layout mounts
               a single DisclaimerBanner — pages MUST NOT mount their own. */}
         <header className="space-y-3">
-          <RuledKicker>Signature &middot; Pre-Trade Checklist</RuledKicker>
+          {/* Phone: the app bar already says 멈춤 — keep only the caption. */}
+          <div className="hidden md:block">
+            <RuledKicker>Signature &middot; Pre-Trade Checklist</RuledKicker>
+          </div>
           <h1
-            className="mt-3 font-display text-[var(--pq-ivory)]"
+            className="mt-3 hidden font-display text-[var(--pq-ivory)] md:block"
             style={{
               fontWeight: 500,
               fontSize: "var(--pq-text-h1-dash)",
