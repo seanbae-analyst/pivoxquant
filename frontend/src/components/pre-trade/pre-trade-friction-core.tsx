@@ -383,6 +383,13 @@ export function QuestionsStep(props: {
   onStart: () => void;
   /** When true, render without the leading numbered SectionLabel (modal). */
   bare?: boolean;
+  /**
+   * Phone only (2026-10-07, CEO "너무 웹사이트야"): one question per screen
+   * with a progress bar and a "검토했음 · 다음" button that ticks the current
+   * question and moves on. At md and up the list renders as before. The
+   * route page opts in; the modals keep the list.
+   */
+  pagedOnPhone?: boolean;
 }) {
   const {
     acks,
@@ -394,7 +401,11 @@ export function QuestionsStep(props: {
     onBack,
     onStart,
     bare,
+    pagedOnPhone = false,
   } = props;
+  const [cur, setCur] = useState(0);
+  const lastIdx = QUESTIONS.length - 1;
+  const paged = (i: number) => (pagedOnPhone && i !== cur ? "hidden md:block" : "");
 
   // Persona-aware hint lines (record-as-spine §7, 2026-06-10). Resolved
   // client-side from the usePersona() localStorage cache — no fetch from
@@ -421,11 +432,26 @@ export function QuestionsStep(props: {
   return (
     <section className="space-y-6">
       {!bare && <SectionLabel n={2} title="The Deposition · 7개 질문" />}
+      {pagedOnPhone && (
+        <div className="md:hidden" data-testid="questions-progress">
+          <div className="flex items-center justify-between text-[13px] text-[var(--pq-ivory-dim)]">
+            <span>질문 {cur + 1} / {QUESTIONS.length}</span>
+            <span>검토 {QUESTIONS.filter((q) => acks[q.n]).length}</span>
+          </div>
+          <div className="mt-2 h-[2px] w-full bg-[var(--pq-ivory-line)]">
+            <div
+              className="h-full bg-[var(--pq-bronze)] transition-[width]"
+              style={{ width: `${((cur + 1) / QUESTIONS.length) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
       <ol className="space-y-5">
-        {QUESTIONS.map((q) => (
+        {QUESTIONS.map((q, i) => (
           <li
             key={q.n}
-            className="border-l-2 border-[var(--pq-ivory-line)] pl-5 hover:border-[var(--pq-bronze)] transition-colors"
+            className={`border-l-2 border-[var(--pq-ivory-line)] pl-5 hover:border-[var(--pq-bronze)] transition-colors ${paged(i)}`}
+            data-testid={`question-${q.n}`}
           >
             <div className="flex items-baseline gap-3">
               <span
@@ -481,7 +507,39 @@ export function QuestionsStep(props: {
         ))}
       </ol>
 
-      <div className="flex flex-wrap gap-3 justify-between pt-3 border-t border-[var(--pq-ivory-line-soft)]">
+      {pagedOnPhone && (
+        <div className="flex gap-3 md:hidden" data-testid="questions-pager">
+          <button
+            type="button"
+            onClick={() => (cur === 0 ? onBack?.() : setCur(cur - 1))}
+            disabled={submitting || (cur === 0 && !onBack)}
+            className="min-h-[48px] px-4 text-[15px] text-[var(--pq-ivory-dim)] disabled:opacity-30"
+            data-testid="questions-prev"
+          >
+            이전
+          </button>
+          {cur < lastIdx && (
+            <button
+              type="button"
+              onClick={() => {
+                const n = QUESTIONS[cur].n;
+                setAcks((prev) => ({ ...prev, [n]: true }));
+                setCur(cur + 1);
+              }}
+              className="pq-ink-btn-bronze flex min-h-[48px] flex-1 items-center justify-center text-[15px]"
+              data-testid="questions-next"
+            >
+              검토했음 · 다음
+            </button>
+          )}
+        </div>
+      )}
+
+      <div
+        className={`flex-wrap gap-3 justify-between pt-3 border-t border-[var(--pq-ivory-line-soft)] ${
+          pagedOnPhone && cur < lastIdx ? "hidden md:flex" : "flex"
+        }`}
+      >
         {onBack ? (
           <button
             type="button"

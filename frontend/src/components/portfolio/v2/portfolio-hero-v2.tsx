@@ -267,8 +267,9 @@ export function PortfolioHeroV2({
         marginBottom: "clamp(24px, 5vw, 40px)",
       }}
     >
+      {/* Phone: the app bar names the screen (2026-10-07). */}
       <div
-        className="font-mono uppercase"
+        className="hidden font-mono uppercase md:block"
         style={{
           fontSize: "var(--pq-text-eyebrow, 10.5px)",
           letterSpacing: "0.22em",
@@ -280,7 +281,7 @@ export function PortfolioHeroV2({
       </div>
 
       <h1
-        className="font-display"
+        className="hidden font-display md:block"
         style={{
           fontWeight: 500,
           fontSize: "var(--pq-text-h2-dash)",

@@ -299,9 +299,10 @@ export function ImportTokensSection() {
       aria-label="Import tokens"
       data-testid="import-tokens-section"
     >
+      {/* Phone: the settings back row names this section (2026-10-07). */}
       <div
+        className="hidden md:flex"
         style={{
-          display: "flex",
           alignItems: "flex-end",
           justifyContent: "space-between",
           marginBottom: 16,
