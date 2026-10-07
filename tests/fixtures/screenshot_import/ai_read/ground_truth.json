@@ -1,0 +1,396 @@
+{
+  "a01_cards_no_avg.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "세아제강",
+        "ticker": "306200",
+        "shares": 180,
+        "avg_cost": 170490,
+        "currency": "KRW"
+      },
+      {
+        "name": "산일전기",
+        "ticker": "062040",
+        "shares": 243,
+        "avg_cost": 120010,
+        "currency": "KRW"
+      },
+      {
+        "name": "미래에셋증권",
+        "ticker": "006800",
+        "shares": 69,
+        "avg_cost": 245910,
+        "currency": "KRW"
+      },
+      {
+        "name": "두산밥캣",
+        "ticker": "241560",
+        "shares": 132,
+        "avg_cost": 391440,
+        "currency": "KRW"
+      },
+      {
+        "name": "GS",
+        "ticker": "078930",
+        "shares": 279,
+        "avg_cost": 369940,
+        "currency": "KRW"
+      }
+    ],
+    "pii": [
+      "최수아",
+      "40936427-52"
+    ]
+  },
+  "a02_dark_cards.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "해성디에스",
+        "ticker": "195870",
+        "shares": 70,
+        "avg_cost": 186820,
+        "currency": "KRW"
+      },
+      {
+        "name": "현대건설",
+        "ticker": "000720",
+        "shares": 237,
+        "avg_cost": 188500,
+        "currency": "KRW"
+      },
+      {
+        "name": "코오롱인더",
+        "ticker": "120110",
+        "shares": 217,
+        "avg_cost": 104640,
+        "currency": "KRW"
+      },
+      {
+        "name": "넥센타이어",
+        "ticker": "002350",
+        "shares": 22,
+        "avg_cost": 245700,
+        "currency": "KRW"
+      },
+      {
+        "name": "HJ중공업",
+        "ticker": "097230",
+        "shares": 109,
+        "avg_cost": 347240,
+        "currency": "KRW"
+      }
+    ],
+    "pii": [
+      "88328671-57"
+    ]
+  },
+  "a03_two_row_grid.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "DL이앤씨",
+        "ticker": "375500",
+        "shares": 242,
+        "avg_cost": 246700,
+        "currency": "KRW"
+      },
+      {
+        "name": "신한지주",
+        "ticker": "055550",
+        "shares": 120,
+        "avg_cost": 83280,
+        "currency": "KRW"
+      },
+      {
+        "name": "현대모비스",
+        "ticker": "012330",
+        "shares": 122,
+        "avg_cost": 337430,
+        "currency": "KRW"
+      },
+      {
+        "name": "한일홀딩스",
+        "ticker": "003300",
+        "shares": 171,
+        "avg_cost": 333370,
+        "currency": "KRW"
+      },
+      {
+        "name": "CJ CGV",
+        "ticker": "079160",
+        "shares": 64,
+        "avg_cost": 67880,
+        "currency": "KRW"
+      },
+      {
+        "name": "IPARK현대산업개발",
+        "ticker": "294870",
+        "shares": 264,
+        "avg_cost": 384080,
+        "currency": "KRW"
+      }
+    ],
+    "pii": [
+      "이서연",
+      "45160882-24"
+    ]
+  },
+  "a04_kv_blocks.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "넥스틸",
+        "ticker": "092790",
+        "shares": 12,
+        "avg_cost": 124900,
+        "currency": "KRW"
+      },
+      {
+        "name": "세아홀딩스",
+        "ticker": "058650",
+        "shares": 169,
+        "avg_cost": 378350,
+        "currency": "KRW"
+      },
+      {
+        "name": "CJ CGV",
+        "ticker": "079160",
+        "shares": 219,
+        "avg_cost": 290230,
+        "currency": "KRW"
+      }
+    ],
+    "pii": [
+      "2294-6947-29"
+    ]
+  },
+  "a05_us_with_krw.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "Invesco QQQ",
+        "ticker": "QQQ",
+        "shares": 101,
+        "avg_cost": 260.73,
+        "currency": "USD"
+      },
+      {
+        "name": "Alphabet A",
+        "ticker": "GOOGL",
+        "shares": 2.64,
+        "avg_cost": 191.26,
+        "currency": "USD"
+      },
+      {
+        "name": "SPDR S&P 500",
+        "ticker": "SPY",
+        "shares": 57,
+        "avg_cost": 548.75,
+        "currency": "USD"
+      },
+      {
+        "name": "Broadcom",
+        "ticker": "AVGO",
+        "shares": 63,
+        "avg_cost": 322.39,
+        "currency": "USD"
+      }
+    ],
+    "pii": [
+      "이서연"
+    ]
+  },
+  "a06_mixed_krw_usd.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "GS리테일",
+        "ticker": "007070",
+        "shares": 136,
+        "avg_cost": 344890,
+        "currency": "KRW"
+      },
+      {
+        "name": "고려제강",
+        "ticker": "002240",
+        "shares": 253,
+        "avg_cost": 396010,
+        "currency": "KRW"
+      },
+      {
+        "name": "대한유화",
+        "ticker": "006650",
+        "shares": 222,
+        "avg_cost": 41310,
+        "currency": "KRW"
+      },
+      {
+        "name": "JPMorgan Chase",
+        "ticker": "JPM",
+        "shares": 48,
+        "avg_cost": 301.74,
+        "currency": "USD"
+      },
+      {
+        "name": "SPDR S&P 500",
+        "ticker": "SPY",
+        "shares": 48,
+        "avg_cost": 462.86,
+        "currency": "USD"
+      },
+      {
+        "name": "Coca-Cola",
+        "ticker": "KO",
+        "shares": 113,
+        "avg_cost": 153.1,
+        "currency": "USD"
+      }
+    ],
+    "pii": [
+      "5648-7890-53"
+    ]
+  },
+  "a07_detail_kr.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "한화갤러리아",
+        "ticker": "452260",
+        "shares": 75,
+        "avg_cost": 173130,
+        "currency": "KRW"
+      }
+    ],
+    "pii": []
+  },
+  "a08_detail_us.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "SPDR S&P 500",
+        "ticker": "SPY",
+        "shares": 7,
+        "avg_cost": 131.03,
+        "currency": "USD"
+      }
+    ],
+    "pii": []
+  },
+  "a09_truncated.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "ESR켄달스퀘어리츠",
+        "ticker": "365550",
+        "shares": 87,
+        "avg_cost": 313900,
+        "currency": "KRW"
+      },
+      {
+        "name": "동서",
+        "ticker": "026960",
+        "shares": 294,
+        "avg_cost": 251790,
+        "currency": "KRW"
+      },
+      {
+        "name": "SK텔레콤",
+        "ticker": "017670",
+        "shares": 75,
+        "avg_cost": 291790,
+        "currency": "KRW"
+      },
+      {
+        "name": "지역난방공사",
+        "ticker": "071320",
+        "shares": 26,
+        "avg_cost": 299600,
+        "currency": "KRW"
+      }
+    ],
+    "truncated": {
+      "name": "NHN",
+      "ticker": "181710"
+    },
+    "pii": [
+      "56066340-22"
+    ]
+  },
+  "a10_dark_cards_us.png": {
+    "screen_type": "holdings",
+    "holdings": [
+      {
+        "name": "NVIDIA",
+        "ticker": "NVDA",
+        "shares": 119,
+        "avg_cost": 60.15,
+        "currency": "USD"
+      },
+      {
+        "name": "Palantir",
+        "ticker": "PLTR",
+        "shares": 8,
+        "avg_cost": 510.87,
+        "currency": "USD"
+      },
+      {
+        "name": "Costco",
+        "ticker": "COST",
+        "shares": 0.39,
+        "avg_cost": 343.52,
+        "currency": "USD"
+      },
+      {
+        "name": "JPMorgan Chase",
+        "ticker": "JPM",
+        "shares": 83,
+        "avg_cost": 21.51,
+        "currency": "USD"
+      },
+      {
+        "name": "Tesla",
+        "ticker": "TSLA",
+        "shares": 78,
+        "avg_cost": 360.41,
+        "currency": "USD"
+      }
+    ],
+    "pii": [
+      "37148478-93"
+    ]
+  },
+  "b01_fills.png": {
+    "screen_type": "fills",
+    "holdings": [],
+    "pii": [
+      "443-39-497028"
+    ]
+  },
+  "b02_order_ticket.png": {
+    "screen_type": "order",
+    "holdings": [],
+    "pii": [
+      "최수아"
+    ]
+  },
+  "b03_watchlist.png": {
+    "screen_type": "watchlist",
+    "holdings": [],
+    "pii": []
+  },
+  "b04_account_summary.png": {
+    "screen_type": "account_summary",
+    "holdings": [],
+    "pii": [
+      "조현우",
+      "7495-9498-44"
+    ]
+  },
+  "b05_quote_page.png": {
+    "screen_type": "quote",
+    "holdings": [],
+    "pii": []
+  }
+}
