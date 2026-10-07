@@ -243,3 +243,20 @@ Supabase 의 43 테이블은 그대로다. 새 DB 만 이 7개를 안 받는다.
 근본 해결: **② 로 결정됐다 (2026-09-04 CEO, 무료 공개).** 베타 게이트·비번·env 를
 전부 폐기했으므로 이 리터럴이 새로 생길 이유가 없다. 남은 것은 옛 리포트 오염뿐 —
 마스킹으로 처리한다.
+
+### 15. `SESSION_COOKIE_DOMAIN` 을 켜면 로그인 쿠키가 PivoxMap 으로 샌다
+
+2026-10-07 실측 (`curl -D - https://www.pivoxquant.com/api/auth/google`): `session` · `csrf_token` 의
+Set-Cookie 에 **Domain 속성이 없다** — host-only 라 `www.pivoxquant.com` 에만 실린다. 즉 prod 는 이 변수가 비어 있다.
+그런데 `security.py` 주석 · `.env.example` 은 prod 값이 `.pivoxquant.com` 이라고 적고 있었다(낡은 설명, 이번에 고침).
+
+켜면 생기는 일: `map.pivoxquant.com` 은 **PivoxMap**(별도 레포 `seanbae-analyst/pivoxmap`, 다른 제품 · Vercel 프로젝트 · Render 백엔드)이다.
+`Domain=.pivoxquant.com` 쿠키는 그 주소로도 실리고, PivoxMap 프론트의 Next rewrites 프록시가 요청 헤더를 그대로
+**PivoxMap 백엔드(`pivoxmap-api.onrender.com`)까지** 넘긴다 — PivoxQuant 세션이 남의 서버 로그에 남는다.
+
+알아둘 것 (같은 날 실측):
+- 분리돼 있는 것: Supabase 프로젝트(`pivoxquant` 서울 · `pivoxmap` 미국 서부), DB 테이블(서로의 테이블 0개), 로그인
+  (PivoxQuant 는 자체 OAuth · Supabase Auth 0명), CORS(`map.` 오리진에서 PivoxQuant API 응답에 허용 헤더 없음).
+- 그래도 `map.` 과 `www.` 은 **같은 사이트(same-site)** 다. `SameSite=Lax` 는 `map.` 에서 시작한 요청을 막지 못한다 —
+  PivoxMap 에 XSS 가 생기거나 `map` DNS(가비아 A → Vercel 76.76.21.21)가 주인 없는 Vercel 프로젝트를 가리키게 되면
+  (하위 도메인 탈취) PivoxQuant 의 CSRF 방어가 약해진다. PivoxMap 을 내릴 땐 DNS 부터 지워라. 근본 해결은 별도 도메인.

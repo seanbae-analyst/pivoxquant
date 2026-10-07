@@ -107,6 +107,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 12. `endpoints.ts` 경로가 404 를 가리킬 수 있다 — 삭제 전 **심볼로 소비자를 세라**, 검증 스크립트는 `${id}` 보간을 먼저 치환.
 13. `_do_migrations` 의 DDL 은 소비자(모델·라우트)부터 만들고, 소비자가 사라지면 DDL 도 지워라.
 14. **베타 비번 리터럴을 어디에도 인용하지 마라** (커밋 제목에도 있다 — `git log --all -S` 로 직접 조회). pytest 가 이 한 건으로 빨가면 코드가 아니라 스윕 리포트 오염부터 의심하고 리터럴만 마스킹.
+15. **`SESSION_COOKIE_DOMAIN` 을 켜지 마라** — prod 는 비어 있다(host-only 쿠키, 2026-10-07 실측). `.pivoxquant.com` 이면 로그인 쿠키가 `map.pivoxquant.com`(PivoxMap — 다른 제품 · 다른 백엔드)으로 샌다.
 
 ---
 

@@ -298,11 +298,13 @@ def init_security(app):
     if _IS_PRODUCTION:
         app.config["REMEMBER_COOKIE_SECURE"] = True
         # Wave F-4 Bug #1 P0 (2026-05-17): without this, Flask-Login issues
-        # remember_token as a host-only cookie (no Domain attr). Logout uses
-        # SESSION_COOKIE_DOMAIN=.pivoxquant.com — Domain mismatch per
+        # remember_token as a host-only cookie (no Domain attr). When
+        # SESSION_COOKIE_DOMAIN is set, logout deletes with that Domain — mismatch per
         # RFC 6265 §5.3 step 11 → browser silently ignores the deletion →
         # user stays authenticated after logout. Aligning REMEMBER_COOKIE_DOMAIN
         # with SESSION_COOKIE_DOMAIN makes _clear_auth_cookies() actually work.
+        # ⚠️ prod 는 SESSION_COOKIE_DOMAIN 이 비어 있다 (2026-10-07 실측: Set-Cookie 에 Domain 없음).
+        # 켜지 마라 — ".pivoxquant.com" 이면 쿠키가 map.pivoxquant.com(PivoxMap)으로 샌다. CLAUDE.md 함정 15.
         _session_domain = os.environ.get("SESSION_COOKIE_DOMAIN")
         if _session_domain:
             app.config["REMEMBER_COOKIE_DOMAIN"] = _session_domain
@@ -494,7 +496,7 @@ def init_security(app):
         # 2026-05-17 (PR #409 cookie sweep follow-up): pass domain= so the SET
         # attributes match _clear_auth_cookies' DELETE attributes. RFC 6265
         # treats {Domain=}-prefixed and host-only cookies as distinct slots,
-        # so when SESSION_COOKIE_DOMAIN is set (production) the previous SET
+        # so when SESSION_COOKIE_DOMAIN is set (prod 는 비어 있다 — 함정 15) the previous SET
         # was creating a host-only cookie that delete_cookie(..., domain=…)
         # would never clear on logout. Result: stale csrf_token after logout,
         # double-submit pair mismatch on next session.
