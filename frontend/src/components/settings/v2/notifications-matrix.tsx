@@ -79,6 +79,14 @@ const EVENTS: EventRow[] = [
     defaults: { email: false, push: false, inapp: false },
     channels: ["email"],
   },
+  // 2026-10-07: a fill forwarded by the user's own phone automation (import
+  // token → webhook) pushes "write down why" right away (services/fill_memo.py).
+  // Push only, on by default — only someone who set up that automation gets it.
+  {
+    id: "fill_memo",
+    defaults: { email: false, push: true, inapp: false },
+    channels: ["push"],
+  },
 ];
 type MatrixState = NotificationPrefsMap;
 

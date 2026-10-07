@@ -584,6 +584,21 @@ export function ImportInbox() {
   useLocale();
   const { pending, isLoading, error, mutate } = usePendingImports();
 
+  // /journal?pending=<id> — where the "a fill just arrived, write down why"
+  // push and the webhook's memo_url land (services/fill_memo.py). Bring that
+  // fill's reason box into view and put the cursor in it.
+  const target = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoading || pending.length === 0) return;
+    if (target.current === null) target.current = new URLSearchParams(window.location.search).get("pending") ?? "";
+    if (!target.current) return;
+    const el = document.getElementById(`import-thesis-${target.current}`);
+    if (!el) return;
+    target.current = "";
+    el.scrollIntoView?.({ block: "center" });
+    el.focus({ preventScroll: true });
+  }, [isLoading, pending.length]);
+
   // Hard failure → render nothing rather than a broken card (mirror rule).
   if (error) return null;
   if (isLoading) return null;

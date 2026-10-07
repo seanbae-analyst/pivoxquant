@@ -777,7 +777,9 @@
       "testKicker": "Check that it works",
       "test1": "When the next fill notice arrives, look at the pending list at the top of the Journal page. The 'Last used' time in the token list below also changes.",
       "test2": "Nothing arrived? Check that the notice text contains '체결', that the header value starts with 'Bearer ', and that MacroDroid's notification access is on.",
-      "loading": "Loading"
+      "loading": "Loading",
+      "guideMemo": "When a fill arrives, PivoxQuant sends a push right away (Settings → Notifications, 'A fill just arrived'). Tapping it opens that fill's reason box so you can note why before you forget.",
+      "ios7": "7. (Optional) To open the reason box right after a fill: below 'Get Contents of URL', add 'Get Dictionary Value' (key: memo_url), then 'Open URLs'."
     },
     "notice": {
       "title": "Notice / 면책 고지.",
@@ -836,6 +838,10 @@
         "blockedByConsent": "Not being sent — Marketing emails consent (B3) below is off.",
         "blockedByDelivery": "Not being sent — Email delivery (B2) below is off.",
         "blockedByBoth": "Not being sent — Email delivery (B2) and Marketing emails consent (B3) below are off."
+      },
+      "fill_memo": {
+        "name": "A fill just arrived — note why",
+        "help": "When your phone automation (import token) forwards a fill, a push is sent right away. Tapping it opens that fill's reason box."
       }
     },
     "signin": {

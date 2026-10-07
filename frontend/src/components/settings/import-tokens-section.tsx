@@ -63,7 +63,7 @@ export function authHeaderValue(token: string): string {
 export const MACRODROID_BODY = '{"text":"[notification]"}';
 
 const ANDROID_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
-const IOS_STEPS = [1, 2, 3, 4, 5, 6] as const;
+const IOS_STEPS = [1, 2, 3, 4, 5, 6, 7] as const;
 const GUIDE_STEPS = [1, 2, 3, 4] as const;
 
 export function curlExample(origin: string, token: string): string {
@@ -200,6 +200,7 @@ function ImportTokensGuide({ defaultOpen }: { defaultOpen: boolean }) {
       </div>
 
       <div className="mt-4 space-y-1">
+        <Caption>{t("settingsV2.importTokens.guideMemo")}</Caption>
         <Caption>{t("settingsV2.importTokens.guideNote1")}</Caption>
         <Caption>{t("settingsV2.importTokens.guideNote2")}</Caption>
       </div>
