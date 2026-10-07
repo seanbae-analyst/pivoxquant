@@ -51,6 +51,7 @@ from models.import_token import (
 )
 from security import ai_read_rate_limit, general_rate_limit
 from services.error_responses import api_error
+from services import fill_memo
 from services.imports import (
     ImportParseError,
     RawTrade,
@@ -685,14 +686,22 @@ def webhook_import():
         g.import_user_id, SOURCE_WEBHOOK, text=text, rows=rows,
         consent_at=token.consent_at, token_id=token.id,
     )
-    if result[1] == 201:
-        token.last_used_at = utcnow_naive()
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            logger.warning("imports.webhook last_used_at update failed token_id=%s", token.id)
-    return result
+    if result[1] != 201:
+        return result
+    token.last_used_at = utcnow_naive()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning("imports.webhook last_used_at update failed token_id=%s", token.id)
+    # A fill just arrived: push "write down why" (services/fill_memo.py) and
+    # hand the automation a link to the reason box, so an iOS Shortcut can
+    # open it right after posting ("URL 열기" with `memo_url`).
+    body = result[0].get_json() or {}
+    pending = body.get("pending") or []
+    fill_memo.notify_fill_memo(g.import_user_id, pending)
+    body["memo_url"] = fill_memo.memo_url(pending)
+    return jsonify(body), 201
 
 
 # ── token management (session) ───────────────────────────────────────

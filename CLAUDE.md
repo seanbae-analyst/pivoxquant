@@ -135,7 +135,7 @@ KIS 주문 disabled (read-only) · 한글+영문 면책 고지 · Cookie Consent
 
 ## 알림
 
-설정 → 알림은 **실제로 발신되는 것만** 노출한다. 발신자는 `app.py::_scheduled_price_alerts`(`price_52w` · `concentration`) + 월간 거울 리포트(`monthly_mirror`).
+설정 → 알림은 **실제로 발신되는 것만** 노출한다. 발신자는 `app.py::_scheduled_price_alerts`(`price_52w` · `concentration`) + 월간 거울 리포트(`monthly_mirror`) + 가져오기 웹훅의 "방금 체결" 푸시(`fill_memo`, `services/fill_memo.py`).
 SoT = `models/user.py::NOTIFICATION_EVENT_IDS`, 노출 목록은 `visible_notification_event_ids()`. **`price_52w` 는 `MARKET_DATA_DISPLAY_ENABLED=0`(기본, 2026-09-19)이면 발신·노출 모두 꺼진다** — 벤더 시세라서. `concentration` 은 취득가 기준이라 계속 돈다. 옛 7종은 발신자가 없어 삭제 — 되살리려면 **발신자부터**.
 
 ---

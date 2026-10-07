@@ -34,6 +34,7 @@ NOTIFICATION_EVENT_IDS: tuple[str, ...] = (
     "price_52w",
     "concentration",
     "monthly_mirror",
+    "fill_memo",
 )
 
 #: Per-event channels that actually have a sender. The matrix used to offer
@@ -49,6 +50,9 @@ NOTIFICATION_EVENT_CHANNELS: dict[str, tuple[str, ...]] = {
     "price_52w":      ("push", "inapp"),
     "concentration":  ("push", "inapp"),
     "monthly_mirror": ("email",),
+    # 2026-10-07: the import webhook (routes/imports.py::webhook_import) pushes
+    # "a fill just arrived — write down why" via services/fill_memo.py.
+    "fill_memo":      ("push",),
 }
 
 #: Events whose producer needs a vendor market quote. While
@@ -97,6 +101,10 @@ NOTIFICATION_PREF_DEFAULTS: dict[str, dict[str, bool]] = {
     "price_52w":      {"email": False, "push": True,  "inapp": True},
     "concentration":  {"email": False, "push": True,  "inapp": True},
     "monthly_mirror": {"email": False, "push": False, "inapp": False},
+    # Push on: it fires only for someone who issued an import token and set
+    # up their own phone automation to send fills here — the push is the
+    # point of that setup. Nothing else can trigger it.
+    "fill_memo":      {"email": False, "push": True,  "inapp": False},
 }
 
 

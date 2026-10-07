@@ -281,3 +281,25 @@ describe("ImportInbox — buy ↔ pause link (2026-09-29)", () => {
     expect(body).not.toHaveProperty("reflection_declined");
   });
 });
+
+// services/fill_memo.py: the "a fill just arrived — write down why" push and
+// the webhook's memo_url open /journal?pending=<id>; that fill's reason box
+// must be the one with the cursor.
+describe("ImportInbox — /journal?pending=<id>", () => {
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  it("focuses the reason box of the fill the push pointed at", () => {
+    linkable();
+    window.history.replaceState(null, "", `/journal?pending=${ROWS[0].id}`);
+    hooks.usePendingImports.mockReturnValue({ pending: ROWS, isLoading: false, error: undefined, mutate: vi.fn() });
+    render(<ImportInbox />);
+    expect(document.activeElement?.id).toBe(`import-thesis-${ROWS[0].id}`);
+  });
+
+  it("does nothing without the parameter", () => {
+    linkable();
+    hooks.usePendingImports.mockReturnValue({ pending: ROWS, isLoading: false, error: undefined, mutate: vi.fn() });
+    render(<ImportInbox />);
+    expect(document.activeElement?.id ?? "").not.toMatch(/^import-thesis-/);
+  });
+});
