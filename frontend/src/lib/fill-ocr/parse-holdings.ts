@@ -461,7 +461,11 @@ function stackedHoldings(lines: Line[], at: number, cols: SCol[], screenCur: "KR
     for (const [line, which] of [[top, "top"], [bot, "bot"]] as const) {
       for (const w of line.words) {
         const c = colOf(w);
-        if (!/\d/.test(w.t) || (nameCol && c === nameCol)) {
+        // A number in the name column is a name / code — unless that column's
+        // bottom field is numeric (종목명 over 보유수량), this is the bottom line,
+        // and the word is not a 6-digit code printed under the name.
+        const nameNumber = which === "bot" && NUMERIC_FIELDS.includes(c.bot) && !codeLike(w);
+        if (!/\d/.test(w.t) || (nameCol && c === nameCol && !nameNumber)) {
           if (isCode(w.t)) codeWords.push(w);
           else if (/[가-힣A-Za-z]/.test(w.t) && (!nameCol || c === nameCol)) nameWords.push(w);
           continue;
@@ -913,9 +917,25 @@ export function parseHoldingsScreen(words: OcrWord[]): HoldingsParse {
   const screenType = classifyScreen(lines);
   if (screenType !== "holdings") return { screenType, rows: [] };
   const cur = screenCurrency(lines);
-  const hi = lines.findIndex((l) => holdingsHeader(l) !== null);
+  let hi = lines.findIndex((l) => holdingsHeader(l) !== null);
   const hMed = median(lines.map((l) => l.h)) || 20;
-  const stacked = hi < 0 ? stackedHeader(lines, hMed) : null;
+  const stacked = stackedHeader(lines, hMed);
+  // Either row of a two-row header can pass as a one-row header on its own,
+  // and read as one-row each stock's other line became a row of its own under
+  // the wrong labels, filled as if proven (AI_READ_EXPERIMENT_2026-10-07.md):
+  //   - the TOP row (보유수량 · 평균가 · 평가손익 over 매도가능 · 현재가 ·
+  //     손익률, §6 r2): 매도가능 became shares, 현재가 the average cost.
+  //   - the BOTTOM row with nothing to check against (종목명 · 평가손익 ·
+  //     수익률 over 보유수량 · 매입가 · 현재가, §1 a03): 평가손익 became the
+  //     average cost. With 매입금액 / 평가금액 in that row (키움 style) the
+  //     one-row path proves each line and stays.
+  // In both, the two-row header wins.
+  if (hi >= 0 && stacked) {
+    const below = stacked.at > hi && stacked.at <= hi + 2;
+    const bottomUnprovable = stacked.at === hi &&
+      !holdingsHeader(lines[hi])!.some((c) => c.f === "cost" || c.f === "value");
+    if (below || bottomUnprovable) hi = -1;
+  }
   const toss = lines.filter((l) => tossQtyLine(l.compact)).length >= 2;
   const detail = lines.some(DETAIL_HEADER);
   const rows = detail ? detailHoldings(lines, hMed)
