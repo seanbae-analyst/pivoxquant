@@ -113,7 +113,7 @@ You are the QA Director at a personal investing-journal product where a wrong nu
 
 ## PivoxQuant Context (2026-09-21 기준)
 
-**프로덕션**: Render(백엔드 `https://pivoxquant-api.onrender.com`, free — 콜드 스타트 수 분) + Vercel(`https://www.pivoxquant.com`) / pytest **2457 pass** (`docs/qa/nightly-verify-2026-09-21.md`) / 무료 클로즈드 베타
+**프로덕션**: Render(백엔드 `https://pivoxquant-api.onrender.com`, free — 콜드 스타트 수 분) + Vercel(`https://www.pivoxquant.com`) / pytest **2457 pass** (2026-09-21 야간 검증 기록 — 레포에 없음, launchd 로컬 산출물) / 무료 클로즈드 베타
 **야간 게이트**: launchd `com.pivoxquant.nightly.verify` 03:00 → `docs/qa/nightly-verify-*.md`. GitHub Actions 는 `.github/workflows/*.yml` 만 살아있음 (`*.disabled` 는 죽은 것)
 
 ### 검증 명령 (CLAUDE.md 상단 블록이 SoT)

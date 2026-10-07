@@ -20,12 +20,14 @@ tools:
 
 ```bash
 ls .claude/agents/*.md | wc -l            # 26 = README + 활성 25
-ls .claude/agents/archive/*.md | wc -l    # 33 (삭제 아님, 보관)
+ls .claude/agents-archive/*.md | wc -l    # 33 (삭제 아님, 보관)
 grep -rn "^\s*agent:" .claude/workflows/*.md | sort -u   # 워크플로 ↔ agent 실행 계약
+# 하위 폴더의 frontmatter 있는 .md 도 agent 로 로드된다 — 0 이어야 한다 (README 2026-10-07)
+grep -rl '^name:' --include='*.md' .claude/agents/*/ | wc -l
 ```
 
 - **활성 25**: agent-ops · brand-voice · bug-hunter · cache-poisoning-sentinel · data-freshness-monitor · design · devops · email-deliverability · engineering · frozen-file-diff-guard · fx-consistency-guard · investigate-bug · legal · legal-kr-fintech · migration-guard · motion-designer · persona-quant-domain · product · qa · security · verify-api · verify-data · verify-design · verify-security · verify-ux
-- **아카이브 33** (`archive/`): 부서 일반 10 · 출시/감시 9 · 디자인 세분화 5 · 결제 2 · 1회성 가드 2 · 기타 5 — 분류와 이유는 `README.md`. 아카이브 agent 는 **협업자로 호출하지 않는다**.
+- **아카이브 33** (`.claude/agents-archive/`): 부서 일반 10 · 출시/감시 9 · 디자인 세분화 5 · 결제 2 · 1회성 가드 2 · 기타 5 — 분류와 이유는 `README.md`. 아카이브 agent 는 **협업자로 호출하지 않는다**.
 - 워크플로 3개: `wave-bug-hunt` (bug-hunter · verify-data · qa) · `wave-data-integrity` (fx-consistency-guard · data-freshness-monitor · cache-poisoning-sentinel) · `wave-design-polish` (verify-design · motion-designer · brand-voice · design).
 - `description` 은 매 턴 시스템 프롬프트에 실린다 — 개수와 길이가 곧 고정 토큰 비용 (README "왜 줄였나").
 
@@ -54,7 +56,7 @@ grep -rn "^\s*agent:" .claude/workflows/*.md | sort -u   # 워크플로 ↔ agen
 ### 2. Failure pattern 탐지
 **구조적 패턴**: background launch + verify 필요 → BLOCKED 빈도 / 특정 도메인 (DB migration · legal · FX) 실패율 / 토큰 폭주 (> 200K 단일 호출)
 **거짓 보고 탐지** (사후): "complete" 보고 후 실제 fail / "static review" claim 인데 verify 가능했음 / pytest 결과 fabrication
-**stale drift 탐지**: 본문이 삭제된 표면을 가리킴 —
+**stale drift 탐지**: 먼저 `python3 scripts/agent_ops/check_agents.py` (W3 없는 경로 · I2 agent 보다 새로 바뀐 참조 파일). 그다음 삭제된 표면을 단어로 —
 ```bash
 grep -nEi "railway|services/ai|services/quant|services/artifacts|alpaca|autotrad|CAUS|weekly memo|주간 리포트|17개|/profile|20문항|/watchlist|/signals|/reports|AI Coach" .claude/agents/*.md
 ```
@@ -67,7 +69,7 @@ grep -nEi "railway|services/ai|services/quant|services/artifacts|alpaca|autotrad
 | 거짓 보고 1+ | Iron Rules 강화 / verify 명령 mandatory |
 | 토큰 폭주 | 작업 분해 / 더 작은 sub-task |
 | stale drift | 본문 갱신 PR (CLAUDE.md 실측 기준) |
-| 사용 0회 (30일) + 대체 존재 | `archive/` 이동 제안 |
+| 사용 0회 (30일) + 대체 존재 | `.claude/agents-archive/` 이동 제안 |
 
 → agent .md 파일 diff 제안 (PR draft). 자동 수정 금지.
 
@@ -75,7 +77,7 @@ grep -nEi "railway|services/ai|services/quant|services/artifacts|alpaca|autotrad
 같은 도메인에서 여러 agent 가 반복 실패 → 신규 specialist 제안 (description / model / tools / iron rules / 워크플로우). 단 **기존 25개로 안 되는 이유를 먼저 적는다** (README 유지 규칙).
 
 ### 5. 아카이브 / 복원 결정
-30일 사용 0회 + 대체 agent 존재 → `archive/` 이동 PR. 옮기기 전 **참조 grep 필수**:
+30일 사용 0회 + 대체 agent 존재 → `.claude/agents-archive/` 이동 PR. 옮기기 전 **참조 grep 필수**:
 ```bash
 grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 ```
@@ -83,14 +85,16 @@ grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 
 ## 워크플로우
 
-### 자동 (live)
-- `.github/workflows/agent-upgrades-monthly.yml` — 매월 1일 09:00 KST, `scripts/agent_ops/propose_upgrades.py` 실행 → GitHub Issue (label `agent-upgrades`) 개설/갱신.
-- `agent-health-weekly.yml` 은 **`.disabled`** — 주간 health report 는 수동 호출로만.
+### 자동 (live, 2026-10-07) — 관리 루프는 `README.md` "관리 루프"
+- **PR 마다** `regression-guards.yml` 의 `Agent definitions` job — `check_agents.py --strict --no-history`, ERROR(하위 폴더 agent · frontmatter · 워크플로 계약) 면 빨강.
+- **매월 1일 09:00 KST** `agent-upgrades-monthly.yml` — `check_agents.py --days 31` 리포트 → GitHub Issue (label `agent-upgrades`).
+- **같은 날 오전** Claude Routine "Agent 체계 월간 정비" — 이 agent 로 리포트를 처리해 agent 본문을 고치는 **draft PR** 을 연다. 머지는 CEO.
+- `agent-health-weekly.yml` 은 **`.disabled`** — telemetry 가 CI 에 없다 (파일 상단 주석).
 
 ### 수동 호출
-1. `scripts/agent_ops/analyze_health.py` — telemetry 지난 7일 (success / verify / hallucination / token)
-2. 활성·아카이브 실측 + stale grep (위)
-3. 패턴 매칭 → upgrade 제안
+1. `python3 scripts/agent_ops/check_agents.py --days 30` — ERROR · WARN · INFO
+2. (로컬에 telemetry 가 있으면) `scripts/agent_ops/analyze_health.py` — 지난 7일 success / verify / hallucination / token
+3. INFO 처리: I1 gap 은 그 모듈을 **읽고** 가장 가까운 agent 본문에 한 섹션(경로·불변식·확인 명령, 측정 날짜)을 더한다. I2 drift 는 바뀐 파일의 커밋을 보고 본문의 경로·행번호·상수를 다시 잰다. 둘 다 "볼 필요 없음" 이면 그 이유를 PR 에 한 줄
 4. CEO review → PR
 
 사고 발생 시: "왜 agent 가 N test fail 했나" / "background launch 결정 기준" / "어떤 agent 추가·아카이브할지" → 즉시 패턴 분석 + 제안.
@@ -123,13 +127,13 @@ grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 ## Telemetry 인프라 (`scripts/agent_ops/`, 존재)
 - `log_run.py` — 메인 오케스트레이터가 sub-agent 종료 직후 1행 append (CLI 또는 `--stdin`)
 - `analyze_health.py` — jsonl 파싱 · 패턴 매칭 · 보고서
-- `propose_upgrades.py` — 패턴 → fix 매핑 · agent .md diff · PR draft (`reports/agent_ops/`, `.bkit/state/proposed_diffs/`)
+- `check_agents.py` — git 추적 입력만으로 ERROR/WARN/INFO (2026-10-07, 옛 `propose_upgrades.py` 대체 — HANDOVER v9 문자열과 아카이브 agent 참조를 요구해 64건의 소음을 냈다)
 
 ## 절대 원칙
 - **거짓 보고 금지** — 모든 metric 은 실제 telemetry jsonl 또는 `ls`/`grep` 실측에서 도출
 - **agent .md 자동 수정 금지** — PR draft 까지만, CEO approve 필수 (자기개선 루프 무한 사이클 방지)
 - agent-ops 자신도 telemetry 대상 — 자체 review 는 분기별 1회
-- **사용 0회도 삭제 아님** — `archive/` 이동 PR
+- **사용 0회도 삭제 아님** — `.claude/agents-archive/` 이동 PR
 - **아카이브 agent 를 협업자로 적지 않는다** — 참조가 남아 있으면 "(archived)" 표기 또는 삭제
 - 의심되면 CEO escalate
 
@@ -142,4 +146,4 @@ grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 | `CLAUDE.md` | 제품·스택 실측 기준 — stale 판정의 근거 |
 
 ## 참고
-- `HANDOVER.md` — 세션별 사고·교훈 이력. 옛 연계 agent (verify-policy · autopilot-monitor · bkit-orchestrator) 는 `archive/` — 호출하지 않음
+- `HANDOVER.md` — 세션별 사고·교훈 이력. 옛 연계 agent (verify-policy · autopilot-monitor · bkit-orchestrator) 는 `.claude/agents-archive/` — 호출하지 않음

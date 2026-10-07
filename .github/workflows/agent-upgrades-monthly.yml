@@ -1,3 +1,14 @@
+# Agent 체계 월간 점검 — scripts/agent_ops/check_agents.py
+#
+# 2026-10-07: propose_upgrades.py 를 대체. 그 스크립트는 HANDOVER v9(2026-04)
+# 문자열과 아카이브된 agent 참조를 요구해 매달 25개 중 64건의 소음을 냈다.
+# check_agents.py 는 git 추적 입력만 읽는다 — 하위 폴더 agent · frontmatter ·
+# 워크플로 계약(ERROR), description 예산 · 아카이브 참조 · 없는 경로 · 절대경로(WARN),
+# 최근 커밋이 바꿨는데 어느 agent 도 모르는 모듈 · agent 보다 새로 바뀐 참조 경로(INFO).
+# INFO 는 git 이력이 필요해서 fetch-depth: 0.
+#
+# 이슈는 사람이 아니라 월간 Claude Routine("Agent 체계 월간 정비")이 읽고
+# agent 본문을 고치는 draft PR 을 연다 — 규칙은 .claude/agents/README.md "관리 루프".
 name: Agent Upgrades Monthly
 
 on:
@@ -10,20 +21,20 @@ permissions:
   contents: read
 
 jobs:
-  propose:
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
-      - name: Generate upgrade proposals
+      - name: Check agents
         run: |
-          python3 scripts/agent_ops/propose_upgrades.py \
-            --out report.md
-          cat report.md
+          python3 scripts/agent_ops/check_agents.py --days 31 --out report.md
 
       - name: Open / update GitHub Issue
         env:
@@ -35,7 +46,7 @@ jobs:
             --label agent-upgrades \
             --json number \
             --jq '.[0].number // empty')
-          title="[Agent Upgrades] Monthly $(date -u +'%Y-%m')"
+          title="[Agent 점검] $(date -u +'%Y-%m')"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" \
               --repo "$GITHUB_REPOSITORY" \

@@ -103,7 +103,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 | 모르는 버그 발굴 / 알려진 증상 원인 | `bug-hunter` / `investigate-bug` |
 | 배포 · Render/Vercel/Supabase 운영 | `devops` |
 
-`.claude/workflows/`: wave-bug-hunt · wave-data-integrity · wave-design-polish. archive/ 의 agent 는 호출하지 마라.
+`.claude/workflows/`: wave-bug-hunt · wave-data-integrity · wave-design-polish. .claude/agents-archive/ 의 agent 는 호출하지 마라.
 
 ## Verify policy
 pytest / npm test / alembic / 스키마 변경 / legal 스위트가 필요한 작업은 foreground 강제. Bash 를 못 돌리면 즉시 BLOCKED 보고.
