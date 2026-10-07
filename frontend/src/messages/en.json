@@ -682,16 +682,16 @@
   },
   "settingsV2": {
     "sectionA": {
-      "eyebrow": "A · Identity & security",
+      "eyebrow": "Account · Sign-in",
       "heading": "Who is signed in."
     },
     "sectionC": {
-      "eyebrow": "B · Notifications · Channels × Events",
+      "eyebrow": "Notifications · By channel",
       "heading": "When PivoxQuant",
       "headingItalic": "should reach you."
     },
     "push": {
-      "sectionLabel": "B1 · Push",
+      "sectionLabel": "Push",
       "channelLabel": "Push channel · device permission",
       "deviceLabel": "Browser push",
       "granted": "Granted on this device.",
@@ -699,7 +699,7 @@
       "notSupported": "Not supported on this device."
     },
     "emailDelivery": {
-      "sectionLabel": "B2 · Email",
+      "sectionLabel": "Email",
       "channelLabel": "Email delivery",
       "sendToLabel": "Send to",
       "emailsSent": "Onboarding and record-summary emails arrive at this address."
@@ -835,9 +835,9 @@
       "monthly_mirror": {
         "name": "Monthly mirror report",
         "help": "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices.",
-        "blockedByConsent": "Not being sent — Marketing emails consent (B3) below is off.",
-        "blockedByDelivery": "Not being sent — Email delivery (B2) below is off.",
-        "blockedByBoth": "Not being sent — Email delivery (B2) and Marketing emails consent (B3) below are off."
+        "blockedByConsent": "Not being sent — Marketing emails consent below is off.",
+        "blockedByDelivery": "Not being sent — Email delivery below is off.",
+        "blockedByBoth": "Not being sent — Email delivery and Marketing emails consent below are off."
       },
       "fill_memo": {
         "name": "A fill just arrived — note why",
@@ -856,8 +856,8 @@
       "what": "On the 1st of each month at 08:30 KST, we email a PDF of the fills and pauses you recorded over the last 30 days. If you recorded nothing in that period, nothing is sent.",
       "contents": "What it holds: fills you recorded · acquiring more of a position you already had · round trips closed in the period · concentration at average cost · how each pause ended. No quotes and no scores, and the reasons you wrote in a pause are not copied in.",
       "gateCell": "Monthly mirror report · email, in the table above",
-      "gateDelivery": "Email delivery (B2)",
-      "gateConsent": "Marketing information consent (B3)",
+      "gateDelivery": "Email delivery",
+      "gateConsent": "Marketing information consent",
       "on": "On",
       "off": "Off",
       "checking": "Checking…",
