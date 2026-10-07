@@ -18,7 +18,7 @@
 | OCR | `frontend/scripts/ocr-eval-dump.mjs` (기존, 프로덕션 경로) |
 | 마스킹 | `frontend/scripts/ai-read-mask.mjs` |
 | 채점 | `frontend/scripts/ai-read-score.mjs <dir> <reader.json>` |
-| 데이터 | `tests/fixtures/screenshot_import/ai_read/` — png 15 · `ocr/` · `ground_truth.json`(`pii` 포함) · `reader_2026-10-07.json` · `baseline_rules_2026-10-07.json` |
+| 데이터 | `tests/fixtures/screenshot_import/ai_read/` — `ocr/` · `ground_truth.json`(`pii` 포함) · `reader_2026-10-07.json` · `baseline_rules_2026-10-07.json`. png 는 커밋 안 함(폴더 `.gitignore`) — 시드 20261007 로 같은 그림이 다시 나온다(재렌더 15/15 바이트 일치 확인) |
 
 **캡처 15장** — 증권사 로고·이름·색 없이 흔한 화면 꼴만 흉내 냈다.
 
