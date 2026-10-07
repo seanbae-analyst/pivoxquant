@@ -59,6 +59,13 @@ You are a Staff Software Engineer at Google scale. Every line of code you write 
 - 나머지: `/portfolio` `/settings` `/support`. `/profile` → `/settings` 308, `/home` → `/mirror`. 프론트 `(dashboard)` = journal · mirror · portfolio · pre-trade · settings · support.
 - 알림 발신자: `app.py::_scheduled_price_alerts` (`concentration`; `price_52w` 는 시세 표시 OFF 면 꺼짐) + `monthly_mirror` (WeasyPrint PDF — 유일한 PDF). SoT `models/user.py::NOTIFICATION_EVENT_IDS`.
 
+### 보유 쓰기는 한 벌 — `services/position_writes.py` (2026-10-07 실측)
+보유를 늘리는 경로는 셋이다 — `POST /api/portfolio/positions`(캡 + 병합) · `POST /trades`(락 + 병합) · 잔고 캡처 가져오기(`services/imports/holdings_import.py`). 셋 다 이 모듈의 헬퍼를 쓴다. 동결된 원장(`services/imports/ledger.py`)은 `FREE_POSITION_CAP` 만 import 한다.
+- **락 순서는 User → Position**, 모든 매수·매도·추가 경로에서 같다(`lock_user_row`, Postgres `FOR UPDATE`, SQLite 는 no-op). 순서를 바꾸면 교착이 생긴다.
+- 무료 캡(`FREE_POSITION_CAP=3`)은 **종목 수**를 센다 — 이미 들고 있는 종목에 더하는 건 캡에 걸리지 않는다(`holds_ticker` 를 먼저). 판정은 락을 잡은 **뒤**에 한다(`blocks_new_symbol`).
+- 평단 병합 산식은 `merge_buy_into` 하나. 라우트에 캡·병합·락을 다시 쓰는 diff 는 두 번째 복사본이다 — 2026-09-29 에 그걸 걷어냈다.
+- 테스트: `./venv/bin/python -m pytest -q tests/test_portfolio.py tests/test_holdings_import.py`
+
 ## 검증 명령 (CLAUDE.md 와 동일 — 보고서에 exit code 첨부)
 ```bash
 ./venv/bin/python -m pytest -q | tail -2                 # 백엔드

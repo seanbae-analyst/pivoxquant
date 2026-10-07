@@ -41,6 +41,7 @@ holding → `holding_period`, frequency → `turnover`, positions → `ticker_di
 
 - `services/behavior/`: `turnover_mirror` · `concentration_mirror`(취득가 기준) · `averaging_down_mirror` · `profit_loss_mirror` — 시세 서비스를 import 하지 않는다 (CLAUDE.md 제품 §).
 - `services/profile/holding_mirror.py`: 이익/손실 라운드트립 보유일 중앙값. **여기가 5번째 거울** — behavior/ 에 있다고 가정하지 마라.
+- **보유기간·라운드트립 계산은 `services/profile/fifo_util.py` 한 벌** (`fifo_match_closed_trades` · `fifo_open_position_ages`). 2026-10-07 소비자: `holding_mirror` · `persona_classifier_v2`(`_hold_time_cv` · `_loss_cut_discipline`) · `persona_analytics` · `group_benchmark` · `friction_outcome` · `email/record_summary` · `toss/mirror_report` · `tax/capital_gains`. 거울마다 FIFO 를 다시 짜지 마라 — 예전엔 4벌이 손으로 복사돼 폴백 시각(`utcnow` vs 마지막 `traded_at`)이 서로 달랐고, 한 벌의 버그 수정이 나머지로 전파되지 않았다. 폴백 규칙은 **마지막 `traded_at` 먼저, 비었을 때만 현재 시각**. 테스트 `tests/test_fifo_util.py`.
 - `services/pre_trade/friction_outcome.py`: 멈춤 뒤 진행/취소/재매수 집계 + 멈춤 유무별 실현수익 분포. 효과 판정 없음. 그룹당 `MIN_GROUP_N` 미만이면 `comparable=False` 로 비교를 거부하고, 한계는 `caveats` 로 payload 에 실린다.
 - 월간 거울 리포트(`services/reports/mirror_pdf.py`, 메일 `monthly_mirror`)가 위 거울들과 멈춤 섹션을 그대로 읽는다 — 계산을 복사하지 않는다(토스 운영자 리포트도 같은 규칙).
 
