@@ -56,6 +56,12 @@ import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 
 import { SettingsHeroV2 } from "@/components/settings/v2/settings-hero-v2";
 import { AnchorRail } from "@/components/settings/v2/anchor-rail";
+import {
+  SettingsPhoneBack,
+  SettingsPhoneList,
+  useSettingsPane,
+  type SettingsPane,
+} from "@/components/settings/v2/settings-phone-nav";
 import { SettingsIdentityCardV2 } from "@/components/settings/v2/identity-card-v2";
 import { SignInProvidersCard } from "@/components/settings/v2/signin-providers-card";
 import {
@@ -71,6 +77,7 @@ import { ImportTokensSection } from "@/components/settings/import-tokens-section
 export default function SettingsPageV2() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
+  const settingsPane = useSettingsPane();
   const { locale, setLocale } = useLocale();
 
   const { t } = useLocale();
@@ -338,6 +345,10 @@ export default function SettingsPageV2() {
     );
   }
 
+  // Phone: list → one section (settings-phone-nav.tsx). Desktop shows all.
+  const pane = settingsPane;
+  const onPhone = (p: SettingsPane) => (pane === p ? "" : "hidden md:block");
+
   return (
     <ErrorBoundary>
       {/* TOP TICKER */}
@@ -382,9 +393,8 @@ export default function SettingsPageV2() {
         style={{
           display: "grid",
           gap: 32,
-          paddingTop: 48,
         }}
-        className="pq-settings-grid grid-cols-1 md:[grid-template-columns:repeat(12,minmax(0,1fr))]"
+        className="pq-settings-grid grid-cols-1 pt-2 md:pt-12 md:[grid-template-columns:repeat(12,minmax(0,1fr))]"
       >
         <div
           style={{ gridColumn: "span 2" }}
@@ -401,15 +411,18 @@ export default function SettingsPageV2() {
             gap: 64,
           }}
         >
+          {pane === null ? <SettingsPhoneList /> : <SettingsPhoneBack pane={pane} />}
           {/* SECTION A — Identity & security */}
           <section
             id="section-a"
+            className={onPhone("account")}
             style={{ scrollMarginTop: 96 }}
             aria-label="Identity and security"
           >
+            {/* Phone: the back row already names this section. */}
             <div
+              className="hidden md:flex"
               style={{
-                display: "flex",
                 alignItems: "flex-end",
                 justifyContent: "space-between",
                 marginBottom: 16,
@@ -464,12 +477,14 @@ export default function SettingsPageV2() {
           {/* SECTION C — Notifications */}
           <section
             id="section-c"
+            className={onPhone("notifications")}
             style={{ scrollMarginTop: 96 }}
             aria-label="Notifications"
           >
+            {/* Phone: the back row already names this section. */}
             <div
+              className="hidden md:flex"
               style={{
-                display: "flex",
                 alignItems: "flex-end",
                 justifyContent: "space-between",
                 marginBottom: 16,
@@ -759,12 +774,15 @@ export default function SettingsPageV2() {
           {/* IMPORT TOKENS — personal access tokens for the import webhook
               (IMPORT_INBOX_DESIGN.md §Phase 2 v3-A). Deep link: /settings#import-tokens.
               Not in the AnchorRail — the rail letters stay A/B/C. */}
-          <ImportTokensSection />
+          <div className={onPhone("import")}>
+            <ImportTokensSection />
+          </div>
 
           {/* SECTION E — Privacy
               `id="section-e"` anchor required by AnchorRail (2026-04-28 fix). */}
           <section
             id="section-e"
+            className={onPhone("privacy")}
             style={{ scrollMarginTop: 96 }}
             aria-label="Privacy"
           >
@@ -777,7 +795,7 @@ export default function SettingsPageV2() {
             />
           </section>
 
-          {/* DISCLAIMER */}
+          {/* DISCLAIMER — on a phone it sits under the list, not under a section. */}
           <div
             style={{
               marginTop: 32,
@@ -787,7 +805,7 @@ export default function SettingsPageV2() {
               lineHeight: 1.6,
               color: "var(--pq-ivory-dim)",
             }}
-          className="font-serif" >
+          className={`font-serif ${pane === null ? "" : "hidden md:block"}`} >
             <strong
               style={{
                 color: "var(--pq-ivory-strong)",

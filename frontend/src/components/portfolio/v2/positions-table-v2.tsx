@@ -15,6 +15,7 @@
 
 import * as React from "react";
 import { useT } from "@/lib/locale";
+import { useIsPhone } from "@/lib/use-phone";
 import { Caption, EditorialHead } from "@/components/ui/editorial";
 import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
@@ -212,6 +213,7 @@ export function PositionsTableV2({
   onAddPosition,
 }: PositionsTableV2Props) {
   const t = useT();
+  const isPhone = useIsPhone();
   const [sortKey, setSortKey] = React.useState<SortKey>("weight");
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc");
 
@@ -287,7 +289,9 @@ export function PositionsTableV2({
           marginBottom: 20,
         }}
       >
-        <div>
+        {/* Phone: an editorial section headline over a list of cards is
+            page-chrome, not content (2026-10-07). */}
+        <div className="hidden md:block">
           <div
             className="font-mono uppercase"
             style={{
@@ -402,6 +406,22 @@ export function PositionsTableV2({
             </div>
           </div>
         ) : (
+          /* Phone (2026-10-07): one card per holding instead of a table
+             that scrolls sideways — the AVG COST column was cut off at 390px. */
+          isPhone ? (
+            <ul data-testid="positions-cards">
+              {rows.map((r, i) => (
+                <PositionCard
+                  key={r.raw.id}
+                  row={r}
+                  first={i === 0}
+                  onAction={onAction}
+                  onObservationNote={onObservationNote}
+                  marketDataDisplay={marketDataDisplay}
+                />
+              ))}
+            </ul>
+          ) : (
           /* Mobile fix (2026-05-05): wrap the 8-col table in overflow-x-auto
              so the table can horizontal-scroll within the section instead
              of forcing the entire page to horizontal-scroll on mobile. */
@@ -465,6 +485,7 @@ export function PositionsTableV2({
             </tbody>
           </table>
           </div>
+          )
         )}
       </div>
 
@@ -718,6 +739,80 @@ function PositionRow({
         </span>
       </td>
     </tr>
+  );
+}
+
+/** Phone card for one holding — same values and actions as PositionRow. */
+function PositionCard({
+  row,
+  first,
+  onAction,
+  onObservationNote,
+  marketDataDisplay = true,
+}: {
+  row: DerivedPosition;
+  first: boolean;
+  onAction?: (action: TradeAction, position: Position) => void;
+  onObservationNote?: (position: Position) => void;
+  marketDataDisplay?: boolean;
+}) {
+  const p = row.raw;
+  const cur = p.currency ?? "USD";
+  const name = normalizeTicker(p.symbol);
+  return (
+    <li
+      className={`px-4 py-4 ${first ? "" : "border-t border-[var(--pq-ivory-line)]"}`}
+      data-testid="position-card"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate font-serif text-[17px] text-[var(--pq-ivory)]">
+            {displayTicker(p.symbol, p.name)}
+          </div>
+          <div className="mt-0.5 font-mono text-[12px] text-[var(--pq-ivory-dim)]">{name}</div>
+        </div>
+        <div className="shrink-0 text-right font-mono text-[15px] text-[var(--pq-ivory)]">
+          {Number.isFinite(row.weight) ? row.weight.toFixed(1) : "—"}%
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[13px] text-[var(--pq-ivory-mid)]">
+        <span>{fmtShares(p.shares)}주</span>
+        <span>평균 {fmtMoney(p.avgCost, cur)}</span>
+        {marketDataDisplay && (
+          <>
+            <span>평가 {fmtMoney(row.mv, cur)}</span>
+            <span style={{ color: pctColor(row.plPct) }}>{fmtPctSigned(row.plPct)}</span>
+          </>
+        )}
+      </div>
+      {(onAction || onObservationNote) && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {onAction && (
+            <>
+              <CardActionBtn label="추가" ariaLabel={`${name} 추가 기록`} onClick={() => onAction("buy", p)} />
+              <CardActionBtn label="정리" ariaLabel={`${name} 정리 기록`} onClick={() => onAction("sell", p)} />
+              <CardActionBtn label="수정" ariaLabel={`${name} 수정`} onClick={() => onAction("edit", p)} />
+            </>
+          )}
+          {onObservationNote && (
+            <CardActionBtn label="관찰 노트" ariaLabel={`${name} 관찰 노트 작성`} onClick={() => onObservationNote(p)} />
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+function CardActionBtn({ label, ariaLabel, onClick }: { label: string; ariaLabel: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className="min-h-[36px] rounded-[2px] border border-[rgba(184,149,106,0.4)] px-3 text-[13px] text-[var(--pq-bronze-light)]"
+    >
+      {label}
+    </button>
   );
 }
 

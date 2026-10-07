@@ -173,6 +173,7 @@ export default function PreTradePage() {
             submitting={cycle.submitting}
             onBack={() => cycle.setPhase("setup")}
             onStart={cycle.startCooldown}
+            pagedOnPhone
           />
         )}
 
